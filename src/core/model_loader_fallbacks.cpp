@@ -49,7 +49,6 @@ extern "C" bool ModelLoaderShutdown(void) {
     return true;
 }
 
-extern "C" bool Enterprise_DevUnlock(void) {
-    g_state.devUnlocked = true;
-    return true;
+extern "C" int64_t Enterprise_DevUnlock(void) {
+    return 0;
 }

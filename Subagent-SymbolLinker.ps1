@@ -1,46 +1,52 @@
 # ============================================================================
 # RawrXD Production Subagent: SymbolLinker
-# Version: 1.0.0 | License: MIT
+# Version: 2.0.0 | License: MIT
 # Part of the RawrXD Autonomous Build System
 # ============================================================================
 #Requires -Version 7.0
 <#
 .SYNOPSIS
-    Subagent: Symbol Linker — Resolves unresolved external symbols by generating stubs.
+    Subagent: SymbolLinker - production unresolved-symbol auditor.
 
 .DESCRIPTION
-    Production-hardened subagent that parses MSVC linker error logs for
-    LNK2001/LNK2019 unresolved external symbol errors. For each missing symbol,
-    it generates a minimal C++ stub implementation that satisfies the linker.
-    Supports backup, WhatIf, JSON output, and structured reporting.
+    Parses linker logs (MSVC + GCC/Clang forms), finds unresolved symbols, and
+    classifies each symbol against source providers and CMake wiring:
+      - UNLINKED (no provider found)
+      - STUB_ONLY (only stub/fallback providers found)
+      - COMMENTED_OUT_IN_CMAKE (real providers exist but are commented out)
+      - UNWIRED_IN_CMAKE (real providers exist but are absent from CMake)
+      - REAL_PROVIDER_PRESENT (real provider exists and is wired)
+
+    This subagent no longer generates stubs in production mode.
 
 .PARAMETER LogPath
-    Path to the linker error log. Required.
+    Path to linker/build log. Required.
 
-.PARAMETER StubOutputDir
-    Directory to write generated stub files. Default: .\src\generated_stubs
+.PARAMETER CMakePath
+    Path to CMakeLists.txt. Defaults to repo-root CMakeLists.txt.
+
+.PARAMETER SourceRoot
+    Source tree root to scan for symbol providers. Defaults to .\src.
 
 .PARAMETER AutoFix
-    Automatically generate and write stub files.
+    Retained for orchestrator compatibility. In production mode this subagent
+    performs analysis only and does not write stub code.
 
 .PARAMETER OutputFormat
-    Text or JSON output.
+    Text (default) or JSON.
 
 .PARAMETER ReportPath
-    Path to write a JSON report file.
-
-.EXAMPLE
-    .\Subagent-SymbolLinker.ps1 -LogPath .\linker_output.log -AutoFix -Verbose
-    .\Subagent-SymbolLinker.ps1 -LogPath .\build.log -WhatIf
+    Optional path to write JSON report.
 #>
 
-[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
+[CmdletBinding()]
 param(
     [Parameter(Mandatory)]
     [ValidateScript({ Test-Path $_ -PathType Leaf })]
     [string]$LogPath,
 
-    [string]$StubOutputDir,
+    [string]$CMakePath,
+    [string]$SourceRoot,
 
     [switch]$AutoFix,
 
@@ -53,273 +59,304 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-if (-not $StubOutputDir) { $StubOutputDir = Join-Path $PSScriptRoot 'src' 'generated_stubs' }
+if (-not $CMakePath) { $CMakePath = Join-Path $PSScriptRoot 'CMakeLists.txt' }
+if (-not $SourceRoot) { $SourceRoot = Join-Path $PSScriptRoot 'src' }
 
-# ── Symbol Parser ────────────────────────────────────────────────────────────
+function Get-SymbolName {
+    param([string]$Signature)
+
+    # Typical demangled form:
+    # "struct Foo __cdecl handleBar(class Ctx const &)"
+    if ($Signature -match '__(?:cdecl|stdcall|fastcall|thiscall|vectorcall)\s+(?<name>[A-Za-z_~][\w:~]*)\s*\(') {
+        return $Matches['name']
+    }
+
+    # Generic function-like symbol:
+    # "Foo::Bar(Baz)"
+    if ($Signature -match '(?<name>[A-Za-z_~][\w:~]*)\s*\(') {
+        return $Matches['name']
+    }
+
+    # Best effort for mangled MSVC symbols
+    if ($Signature -match '^\?(?<name>[A-Za-z_]\w+)@@') {
+        return $Matches['name']
+    }
+
+    return $Signature
+}
 
 function Parse-UnresolvedSymbols {
     param([string]$Content)
 
-    $symbols = [System.Collections.Generic.List[hashtable]]::new()
-    $seen    = [System.Collections.Generic.HashSet[string]]::new()
+    $records = [System.Collections.Generic.List[object]]::new()
+    $seen = [System.Collections.Generic.HashSet[string]]::new()
 
-    # LNK2001: unresolved external symbol "type __cdecl name(params)" (?mangled)
-    # LNK2019: unresolved external symbol "..." referenced in ...
     $patterns = @(
         'unresolved external symbol\s+"(?<sig>[^"]+)"'
-        'unresolved external symbol\s+(?<sig>\?\w[^\s]+)'
+        'unresolved external symbol\s+(?<sig>\?\S+)'
+        "undefined reference to [`'\""](?<sig>[^`'\""]+)[`'\""]"
+        'undefined reference to (?<sig>[A-Za-z_~:\?\.\$][^\s,;]+)'
     )
 
     foreach ($pat in $patterns) {
-        foreach ($m in [regex]::Matches($Content, $pat)) {
-            $sig = $m.Groups['sig'].Value
+        foreach ($m in [regex]::Matches($Content, $pat, [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)) {
+            $sig = $m.Groups['sig'].Value.Trim()
+            if (-not $sig) { continue }
             if ($seen.Contains($sig)) { continue }
             [void]$seen.Add($sig)
-
-            $parsed = Parse-Signature $sig
-            if ($parsed) {
-                $symbols.Add($parsed)
-            }
-            else {
-                # Store raw mangled symbol
-                $symbols.Add(@{
-                    ReturnType    = 'void'
-                    Name          = $sig
-                    Parameters    = ''
-                    FullSignature = $sig
-                    IsMangled     = $true
-                })
-            }
+            $records.Add([PSCustomObject]@{
+                Signature = $sig
+                Name      = Get-SymbolName -Signature $sig
+            })
         }
     }
 
-    return $symbols
+    return $records
 }
 
-function Parse-Signature {
-    param([string]$Sig)
+function Get-SymbolSearchPatterns {
+    param([string]$SymbolName)
 
-    # "void __cdecl FunctionName(class Type const &)"
-    if ($Sig -match '^(?<ret>[\w\s\*&:]+?)\s+__(?:cdecl|stdcall|fastcall|thiscall|vectorcall)\s+(?<name>[\w:~]+)\s*\((?<params>[^)]*)\)') {
-        return @{
-            ReturnType    = $Matches['ret'].Trim()
-            Name          = $Matches['name'].Trim()
-            Parameters    = $Matches['params'].Trim()
-            FullSignature = $Sig
-            IsMangled     = $false
+    if (-not $SymbolName) {
+        return @()
+    }
+
+    $candidates = [System.Collections.Generic.List[string]]::new()
+    $seen = [System.Collections.Generic.HashSet[string]]::new()
+
+    $addCandidate = {
+        param([string]$value)
+        if (-not $value) { return }
+        if ($seen.Add($value)) {
+            $candidates.Add($value)
         }
     }
 
-    # Simpler: "RetType Name(Params)"
-    if ($Sig -match '^(?<ret>[\w\s\*&:]+?)\s+(?<name>[\w:~]+)\s*\((?<params>[^)]*)\)') {
-        return @{
-            ReturnType    = $Matches['ret'].Trim()
-            Name          = $Matches['name'].Trim()
-            Parameters    = $Matches['params'].Trim()
-            FullSignature = $Sig
-            IsMangled     = $false
+    & $addCandidate $SymbolName
+
+    if ($SymbolName -like '*::*') {
+        $parts = $SymbolName -split '::'
+        if ($parts.Count -ge 2) {
+            & $addCandidate (($parts[($parts.Count - 2)..($parts.Count - 1)] -join '::'))
         }
+        & $addCandidate $parts[-1]
     }
 
-    return $null
+    $patterns = [System.Collections.Generic.List[string]]::new()
+    foreach ($cand in $candidates) {
+        $escaped = [regex]::Escape($cand)
+        if ($escaped.Length -lt 2) { continue }
+        $patterns.Add("\b$escaped\s*\(")
+    }
+
+    return $patterns
 }
 
-# ── Stub Generator ───────────────────────────────────────────────────────────
-
-function Get-DefaultReturn {
-    param([string]$Type)
-    switch -Regex ($Type) {
-        '^void$'                      { return '' }
-        '^bool$|^BOOL$'              { return 'return false;' }
-        '^int$|^long$|^LONG$|^DWORD$|^UINT$|^HRESULT$|^LRESULT$|^int32_t$|^int64_t$|^size_t$|^uint32_t$' {
-            return 'return 0;'
-        }
-        '^float$|^double$'           { return 'return 0.0;' }
-        '^char\s*\*$|^const\s+char\s*\*$|^LPCSTR$|^LPSTR$' { return 'return "";' }
-        '^wchar_t\s*\*$|^const\s+wchar_t\s*\*$|^LPCWSTR$|^LPWSTR$' { return 'return L"";' }
-        '\*$'                         { return 'return nullptr;' }
-        '^std::string$'              { return 'return {};' }
-        '^std::vector'               { return 'return {};' }
-        default                       { return 'return {};' }
-    }
-}
-
-function Format-StubParams {
-    param([string]$Params)
-    if (-not $Params -or $Params -eq 'void') { return '' }
-
-    # Give anonymous params names
-    $parts = $Params -split ','
-    $named = @()
-    $idx = 0
-    foreach ($p in $parts) {
-        $p = $p.Trim()
-        $idx++
-        # If param has no name (just a type), add one
-        if ($p -match '^[\w\s\*&:<>]+$' -and $p -notmatch '\w+\s*$') {
-            $named += "$p p$idx"
-        }
-        else {
-            $named += $p
-        }
-    }
-    return ($named -join ', ')
-}
-
-function Generate-StubFile {
+function Convert-ToRepoRelativePath {
     param(
-        [System.Collections.Generic.List[hashtable]]$Symbols,
-        [string]$OutputPath
+        [string]$PathValue,
+        [string]$RepoRoot
     )
+    $full = [System.IO.Path]::GetFullPath($PathValue)
+    $root = [System.IO.Path]::GetFullPath($RepoRoot)
+    if ($full.StartsWith($root, [System.StringComparison]::OrdinalIgnoreCase)) {
+        $rel = $full.Substring($root.Length).TrimStart('\','/')
+    } else {
+        $rel = $PathValue
+    }
+    return ($rel -replace '\\','/')
+}
 
-    $sb = [System.Text.StringBuilder]::new()
-    [void]$sb.AppendLine('// ============================================================================')
-    [void]$sb.AppendLine('// Auto-generated linker stubs — RawrXD SymbolLinker Subagent')
-    [void]$sb.AppendLine("// Generated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')")
-    [void]$sb.AppendLine("// Symbols: $($Symbols.Count)")
-    [void]$sb.AppendLine('// WARNING: These are minimal stubs to satisfy the linker.')
-    [void]$sb.AppendLine('//          Replace with real implementations before shipping.')
-    [void]$sb.AppendLine('// ============================================================================')
-    [void]$sb.AppendLine('')
-    [void]$sb.AppendLine('#include <stdint.h>')
-    [void]$sb.AppendLine('#include <string>')
-    [void]$sb.AppendLine('#ifndef WIN32_LEAN_AND_MEAN')
-    [void]$sb.AppendLine('#define WIN32_LEAN_AND_MEAN')
-    [void]$sb.AppendLine('#endif')
-    [void]$sb.AppendLine('#include <windows.h>')
-    [void]$sb.AppendLine('')
-    [void]$sb.AppendLine('#pragma warning(push)')
-    [void]$sb.AppendLine('#pragma warning(disable: 4100)  // unreferenced formal parameter')
-    [void]$sb.AppendLine('')
+function Test-IsStubLikePath {
+    param([string]$RepoRelativePath)
+    return ($RepoRelativePath -match '(?i)(^|/)(stubs?\.cpp|.*_stubs?\.(cpp|asm)|.*_stub\.(cpp|asm)|.*_fallbacks?\.cpp|.*headless.*\.cpp|.*shim.*\.cpp|.*mock.*\.cpp|.*fake.*\.cpp|.*missing_handler.*\.cpp)$')
+}
 
-    foreach ($sym in $Symbols) {
-        if ($sym.IsMangled) {
-            [void]$sb.AppendLine("// MANGLED (could not demangle): $($sym.Name)")
-            [void]$sb.AppendLine("// Link with the correct .obj/.lib to resolve this symbol.")
-            [void]$sb.AppendLine('')
+function Get-CMakeWireStatus {
+    param(
+        [string[]]$CMakeLines,
+        [string]$RepoRelativePath
+    )
+    $escaped = [regex]::Escape($RepoRelativePath)
+    $commented = $false
+    $wired = $false
+
+    foreach ($line in $CMakeLines) {
+        if ($line -match "^\s*#.*$escaped") {
+            $commented = $true
             continue
         }
-
-        $ret    = $sym.ReturnType
-        $name   = $sym.Name
-        $params = Format-StubParams $sym.Parameters
-        $defRet = Get-DefaultReturn $ret
-
-        # Handle class::method
-        $isMethod = $name -match '::'
-
-        [void]$sb.AppendLine("// Stub: $($sym.FullSignature)")
-        if ($isMethod) {
-            [void]$sb.AppendLine("// NOTE: Class method stub — may need header include")
+        if ($line -match "^\s*[^#].*$escaped") {
+            $wired = $true
         }
-        [void]$sb.AppendLine("$ret $name($params) {")
-        [void]$sb.AppendLine("    // TODO: implement $name")
-        if ($defRet) {
-            [void]$sb.AppendLine("    $defRet")
-        }
-        [void]$sb.AppendLine('}')
-        [void]$sb.AppendLine('')
     }
 
-    [void]$sb.AppendLine('#pragma warning(pop)')
-
-    if (-not (Test-Path (Split-Path $OutputPath))) {
-        New-Item -ItemType Directory -Path (Split-Path $OutputPath) -Force | Out-Null
-    }
-    Set-Content $OutputPath $sb.ToString() -Encoding utf8
+    if ($wired) { return 'wired' }
+    if ($commented) { return 'commented' }
+    return 'unwired'
 }
 
-# ── Main ──────────────────────────────────────────────────────────────────────
-Write-Verbose "[SymbolLinker] Parsing: $LogPath"
+function Get-DissolvedCMakeEntries {
+    param([string[]]$CMakeLines)
+    $out = [System.Collections.Generic.List[object]]::new()
+    foreach ($line in $CMakeLines) {
+        if ($line -match '^\s*#\s*(?<path>src/[^\s]+)\s+#\s*excluded:.*(undefined|unresolved|missing)') {
+            $out.Add([PSCustomObject]@{
+                Path   = $Matches['path']
+                Reason = $line.Trim()
+            })
+        }
+    }
+    return $out
+}
 
-$logContent = Get-Content $LogPath -Raw -ErrorAction Stop
+if ($AutoFix) {
+    Write-Warning "[SymbolLinker] AutoFix requested, but production mode is analysis-only (no stub generation)."
+}
 
 $report = [PSCustomObject]@{
-    StubsGenerated    = 0
-    SymbolsParsed     = 0
-    MangledSymbols    = 0
-    StubFile          = ''
-    SymbolNames       = [System.Collections.Generic.List[string]]::new()
-    Errors            = [System.Collections.Generic.List[string]]::new()
+    SymbolsParsed           = 0
+    UnlinkedCount           = 0
+    StubOnlyCount           = 0
+    CommentedOutCount       = 0
+    UnwiredCount            = 0
+    RealProviderPresent     = 0
+    DissolvedCMakeEntries   = 0
+    StubsGenerated          = 0   # backward compatibility with orchestrator metric key
+    Findings                = [System.Collections.Generic.List[object]]::new()
+    DissolvedSources        = [System.Collections.Generic.List[object]]::new()
+    Errors                  = [System.Collections.Generic.List[string]]::new()
 }
 
 try {
+    if (-not (Test-Path $CMakePath -PathType Leaf)) {
+        throw "CMake file not found: $CMakePath"
+    }
+    if (-not (Test-Path $SourceRoot -PathType Container)) {
+        throw "Source root not found: $SourceRoot"
+    }
+
+    $repoRoot = $PSScriptRoot
+    $logContent = Get-Content $LogPath -Raw
+    $cmakeLines = Get-Content $CMakePath
+
     $symbols = Parse-UnresolvedSymbols -Content $logContent
     $report.SymbolsParsed = $symbols.Count
-    $report.MangledSymbols = ($symbols | Where-Object { $_.IsMangled }).Count
 
-    foreach ($s in $symbols) {
-        $report.SymbolNames.Add($s.Name)
-    }
+    $sourceFiles = Get-ChildItem $SourceRoot -Recurse -File -Include *.cpp,*.cc,*.cxx,*.c,*.h,*.hpp,*.asm -ErrorAction SilentlyContinue |
+        Where-Object { $_.FullName -notmatch '(?i)[\\/](build|bin|obj|out|history|runoff)[\\/]' } |
+        Select-Object -ExpandProperty FullName
 
-    $demangledSymbols = [System.Collections.Generic.List[hashtable]]::new()
-    foreach ($s in $symbols) {
-        if (-not $s.IsMangled) { $demangledSymbols.Add($s) }
-    }
+    $dissolved = Get-DissolvedCMakeEntries -CMakeLines $cmakeLines
+    $report.DissolvedCMakeEntries = $dissolved.Count
+    foreach ($d in $dissolved) { $report.DissolvedSources.Add($d) }
 
-    Write-Host "  Parsed $($symbols.Count) unresolved symbols ($($demangledSymbols.Count) demangled, $($report.MangledSymbols) mangled)"
-
-    if ($demangledSymbols.Count -gt 0) {
-        $stubFile = Join-Path $StubOutputDir "linker_stubs_$(Get-Date -Format 'yyyyMMdd_HHmmss').cpp"
-        $report.StubFile = $stubFile
-
-        if ($AutoFix -and $PSCmdlet.ShouldProcess($stubFile, "Generate $($demangledSymbols.Count) stub implementations")) {
-            Generate-StubFile -Symbols $demangledSymbols -OutputPath $stubFile
-            $report.StubsGenerated = $demangledSymbols.Count
-            Write-Verbose "  Stubs written → $stubFile"
+    foreach ($sym in $symbols) {
+        $name = $sym.Name
+        $sig = $sym.Signature
+        $providerMatches = @()
+        $searchPatterns = Get-SymbolSearchPatterns -SymbolName $name
+        foreach ($pat in $searchPatterns) {
+            $providerMatches += Select-String -Path $sourceFiles -Pattern $pat -CaseSensitive -ErrorAction SilentlyContinue
         }
-        elseif (-not $AutoFix) {
-            Write-Verbose "  [dry-run] Would generate $($demangledSymbols.Count) stubs to $stubFile"
+        $providerFiles = @($providerMatches | Select-Object -ExpandProperty Path -Unique)
+
+        if ($providerFiles.Count -eq 0) {
+            $report.UnlinkedCount++
+            $report.Findings.Add([PSCustomObject]@{
+                Symbol      = $name
+                Signature   = $sig
+                Status      = 'UNLINKED'
+                Providers   = @()
+                RealWired   = @()
+                RealCommented = @()
+                RealUnwired = @()
+            })
+            continue
         }
+
+        $providerRecords = [System.Collections.Generic.List[object]]::new()
+        foreach ($pf in $providerFiles) {
+            $rel = Convert-ToRepoRelativePath -PathValue $pf -RepoRoot $repoRoot
+            $wire = Get-CMakeWireStatus -CMakeLines $cmakeLines -RepoRelativePath $rel
+            $stubLike = Test-IsStubLikePath -RepoRelativePath $rel
+            $providerRecords.Add([PSCustomObject]@{
+                Path     = $rel
+                Wire     = $wire
+                StubLike = $stubLike
+            })
+        }
+
+        $realProviders = @($providerRecords | Where-Object { -not $_.StubLike })
+        $realWired = @($realProviders | Where-Object { $_.Wire -eq 'wired' } | Select-Object -ExpandProperty Path)
+        $realCommented = @($realProviders | Where-Object { $_.Wire -eq 'commented' } | Select-Object -ExpandProperty Path)
+        $realUnwired = @($realProviders | Where-Object { $_.Wire -eq 'unwired' } | Select-Object -ExpandProperty Path)
+
+        $status = 'REAL_PROVIDER_PRESENT'
+        if ($realProviders.Count -eq 0) {
+            $status = 'STUB_ONLY'
+            $report.StubOnlyCount++
+        } elseif ($realWired.Count -eq 0 -and $realCommented.Count -gt 0) {
+            $status = 'COMMENTED_OUT_IN_CMAKE'
+            $report.CommentedOutCount++
+        } elseif ($realWired.Count -eq 0 -and $realUnwired.Count -gt 0) {
+            $status = 'UNWIRED_IN_CMAKE'
+            $report.UnwiredCount++
+        } else {
+            $report.RealProviderPresent++
+        }
+
+        $report.Findings.Add([PSCustomObject]@{
+            Symbol        = $name
+            Signature     = $sig
+            Status        = $status
+            Providers     = @($providerRecords | Select-Object -ExpandProperty Path)
+            RealWired     = $realWired
+            RealCommented = $realCommented
+            RealUnwired   = $realUnwired
+        })
     }
 }
 catch {
-    $msg = "Error parsing symbols: $_"
-    Write-Warning $msg
-    $report.Errors.Add($msg)
+    $report.Errors.Add($_.ToString())
 }
 
-# ── Summary ───────────────────────────────────────────────────────────────────
 Write-Host ''
-Write-Host '╔══════════════════════════════════════════════╗' -ForegroundColor Cyan
-Write-Host '║  SymbolLinker — Summary                      ║' -ForegroundColor Cyan
-Write-Host '╠══════════════════════════════════════════════╣' -ForegroundColor Cyan
-Write-Host "║  Symbols parsed  : $($report.SymbolsParsed)" -ForegroundColor Cyan
-Write-Host "║  Stubs generated : $($report.StubsGenerated)" -ForegroundColor $(if ($report.StubsGenerated) { 'Green' } else { 'Cyan' })
-Write-Host "║  Mangled (skip)  : $($report.MangledSymbols)" -ForegroundColor $(if ($report.MangledSymbols) { 'Yellow' } else { 'Cyan' })
-Write-Host "║  Errors          : $($report.Errors.Count)" -ForegroundColor $(if ($report.Errors.Count) { 'Red' } else { 'Cyan' })
-Write-Host '╚══════════════════════════════════════════════╝' -ForegroundColor Cyan
+Write-Host '╔══════════════════════════════════════════════════════════════╗' -ForegroundColor Cyan
+Write-Host '║   SymbolLinker v2 — Production Symbol Audit                 ║' -ForegroundColor Cyan
+Write-Host '╠══════════════════════════════════════════════════════════════╣' -ForegroundColor Cyan
+Write-Host "║  Symbols parsed             : $($report.SymbolsParsed)" -ForegroundColor Cyan
+Write-Host "║  UNLINKED                   : $($report.UnlinkedCount)" -ForegroundColor $(if ($report.UnlinkedCount) { 'Yellow' } else { 'Green' })
+Write-Host "║  STUB_ONLY                  : $($report.StubOnlyCount)" -ForegroundColor $(if ($report.StubOnlyCount) { 'Yellow' } else { 'Green' })
+Write-Host "║  COMMENTED_OUT_IN_CMAKE     : $($report.CommentedOutCount)" -ForegroundColor $(if ($report.CommentedOutCount) { 'Yellow' } else { 'Green' })
+Write-Host "║  UNWIRED_IN_CMAKE           : $($report.UnwiredCount)" -ForegroundColor $(if ($report.UnwiredCount) { 'Yellow' } else { 'Green' })
+Write-Host "║  REAL_PROVIDER_PRESENT      : $($report.RealProviderPresent)" -ForegroundColor Green
+Write-Host "║  Dissolved CMake exclusions : $($report.DissolvedCMakeEntries)" -ForegroundColor $(if ($report.DissolvedCMakeEntries) { 'Yellow' } else { 'Green' })
+Write-Host "║  Errors                     : $($report.Errors.Count)" -ForegroundColor $(if ($report.Errors.Count) { 'Red' } else { 'Green' })
+Write-Host '╚══════════════════════════════════════════════════════════════╝' -ForegroundColor Cyan
 
-if ($report.SymbolNames.Count -gt 0 -and $report.SymbolNames.Count -le 30) {
-    Write-Host "`nUnresolved symbols:" -ForegroundColor Yellow
-    $report.SymbolNames | ForEach-Object { Write-Host "  ~ $_" -ForegroundColor Yellow }
-}
-elseif ($report.SymbolNames.Count -gt 30) {
-    Write-Host "`nFirst 30 unresolved symbols (of $($report.SymbolNames.Count)):" -ForegroundColor Yellow
-    $report.SymbolNames | Select-Object -First 30 | ForEach-Object { Write-Host "  ~ $_" -ForegroundColor Yellow }
-}
-
-if ($report.StubFile -and $report.StubsGenerated -gt 0) {
-    Write-Host "`nStub file: $($report.StubFile)" -ForegroundColor Green
-}
-if ($report.Errors.Count -gt 0) {
-    Write-Host "`nErrors:" -ForegroundColor Red
-    $report.Errors | ForEach-Object { Write-Host "  ! $_" -ForegroundColor Red }
+if ($report.Findings.Count -gt 0) {
+    $critical = @($report.Findings | Where-Object { $_.Status -ne 'REAL_PROVIDER_PRESENT' })
+    if ($critical.Count -gt 0) {
+        Write-Host "`nCritical symbol findings (first 25):" -ForegroundColor Yellow
+        $critical | Select-Object -First 25 | ForEach-Object {
+            Write-Host ("  [{0}] {1}" -f $_.Status, $_.Symbol) -ForegroundColor Yellow
+        }
+    }
 }
 
-# ── JSON report ───────────────────────────────────────────────────────────────
 if ($ReportPath) {
     try {
-        $report | ConvertTo-Json -Depth 4 | Set-Content $ReportPath -Encoding utf8
-        Write-Verbose "Report written -> $ReportPath"
+        $report | ConvertTo-Json -Depth 6 | Set-Content $ReportPath -Encoding utf8
     }
-    catch { Write-Warning "Could not write report: $_" }
+    catch {
+        Write-Warning "Could not write report to $ReportPath : $_"
+    }
 }
 
 if ($OutputFormat -eq 'JSON') {
-    $report | ConvertTo-Json -Depth 4
-}
-else {
+    $report | ConvertTo-Json -Depth 6
+} else {
     Write-Output $report
 }
 
