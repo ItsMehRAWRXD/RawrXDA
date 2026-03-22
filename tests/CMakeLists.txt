@@ -178,6 +178,30 @@ if(NOT TARGET test_gguf_integration AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test
     message(STATUS "  ✓ Added test_gguf_integration")
 endif()
 
+if(NOT TARGET test_basic_profiler AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/performance/test_basic_profiler.cpp")
+    add_executable(test_basic_profiler
+        performance/test_basic_profiler.cpp
+        ${CMAKE_SOURCE_DIR}/src/profiler.cpp
+        ${CMAKE_SOURCE_DIR}/src/profiling/AdvancedPerformanceProfiler.cpp
+    )
+    target_include_directories(test_basic_profiler PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_basic_profiler PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    add_test(NAME test_basic_profiler COMMAND test_basic_profiler)
+    message(STATUS "  ✓ Added test_basic_profiler")
+endif()
+
+if(NOT TARGET test_batch3_profiler_smoke AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/performance/test_batch3_profiler_smoke.cpp")
+    add_executable(test_batch3_profiler_smoke
+        performance/test_batch3_profiler_smoke.cpp
+        ${CMAKE_SOURCE_DIR}/src/profiler.cpp
+        ${CMAKE_SOURCE_DIR}/src/profiling/AdvancedPerformanceProfiler.cpp
+    )
+    target_include_directories(test_batch3_profiler_smoke PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_batch3_profiler_smoke PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    add_test(NAME test_batch3_profiler_smoke COMMAND test_batch3_profiler_smoke)
+    message(STATUS "  ✓ Added test_batch3_profiler_smoke")
+endif()
+
 # ============================================================
 # Test Summary
 # ============================================================
@@ -190,8 +214,11 @@ if(NOT TARGET test_production_regression AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_SOURCE_DIR}/src
         ${CMAKE_SOURCE_DIR}/3rdparty
     )
-    # Link against the core library (no Qt)
+    # Link against the core library when RawrEngine is built as a library target.
     if(TARGET RawrEngine)
+        get_target_property(_rawrengine_target_type RawrEngine TYPE)
+    endif()
+    if(TARGET RawrEngine AND NOT _rawrengine_target_type STREQUAL "EXECUTABLE")
         target_link_libraries(test_production_regression PRIVATE RawrEngine)
     endif()
     set_target_properties(test_production_regression PROPERTIES

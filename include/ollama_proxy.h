@@ -9,6 +9,7 @@
 #include <functional>
 #include <string>
 #include <vector>
+#include <cstdint>
 
 /**
  * Lightweight fallback proxy to Ollama REST API.
@@ -17,6 +18,15 @@
  */
 class OllamaProxy {
 public:
+    struct OllamaModelMeta {
+        std::string name;
+        std::string family;
+        std::string parameter_size;
+        std::string quantization_level;
+        std::uint64_t size = 0;
+        bool found = false;
+    };
+
     using TokenFn = std::function<void(const std::string&)>;
     using CompleteFn = std::function<void()>;
     using ErrorFn = std::function<void(const std::string&)>;
@@ -29,6 +39,10 @@ public:
 
     bool isOllamaAvailable();
     bool isModelAvailable(const std::string& modelName);
+    OllamaModelMeta getModelMetadata(const std::string& modelName);
+
+    void setBaseUrl(const std::string& baseUrl);
+    std::string baseUrl() const { return m_ollamaUrl; }
 
     void generateResponse(const std::string& prompt,
                          float temperature = 0.8f,

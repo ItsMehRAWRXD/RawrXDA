@@ -158,14 +158,14 @@ const ModelsPanel = () => {
       if (requestIdRef.current !== requestId) return;
       let message = loadError?.message || 'Failed to stream GGUF manifest';
       if (/GGUF|magic|range|truncat/i.test(message)) {
-        message = `${message} If this is a remote URL, confirm byte-range (206) responses and CORS; for local files, verify the download is complete.`;
+        message = `${message} Remote: HTTP 206 + CORS. Local: full file on disk.`;
       }
       setError(message);
       setProgress({ phase: 'error', percent: 0, detail: message });
       setStatusLine(`Models: ${message}`);
       pushToast({
         title: 'GGUF load failed',
-        message: `${message} — Check path, CORS (remote), or try a smaller local file.`,
+        message,
         variant: 'error',
         durationMs: 4200
       });
@@ -194,9 +194,9 @@ const ModelsPanel = () => {
     setProgress({
       phase: 'idle',
       percent: 0,
-      detail: 'M03 — Pick a local .gguf or a byte-range URL, then Load manifest.'
+      detail: 'Idle: local .gguf or Range-capable URL, then Load manifest.'
     });
-    setStatusLine('Models: reset — pick a source');
+    setStatusLine('Models: reset');
     noisyLog('[models]', 'picker reset (local file + saved URL cleared)');
   };
 
@@ -264,7 +264,7 @@ const ModelsPanel = () => {
       <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
         {!result && !isLoading && progress.phase === 'idle' && !error ? (
           <p className="text-[11px] text-gray-500 border border-gray-700/80 rounded-lg px-3 py-2 bg-gray-950/40">
-            M03 — No manifest loaded. Next: choose Local file or Remote URL, attach a source, then Load manifest.
+            No manifest loaded yet. Pick Local file or Remote URL, attach a source, then Load manifest.
             {idlePreAiGgufHint}
           </p>
         ) : null}
@@ -379,7 +379,9 @@ const ModelsPanel = () => {
           {error && (
             <div className="mt-3 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200 space-y-1">
               <div>{error}</div>
-              <div className="text-[10px] text-rose-300/90">Next: fix path or URL, confirm CORS/Range for remote, or Reset and retry.</div>
+              <div className="text-[10px] text-rose-300/90">
+                Remote loads need working URL + CORS/Range; local loads need a readable path. Reset clears the picker state.
+              </div>
             </div>
           )}
         </section>

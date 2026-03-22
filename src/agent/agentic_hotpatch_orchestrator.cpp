@@ -15,6 +15,14 @@
 #include <cstdio>
 #include <algorithm>
 
+namespace {
+
+float clampf(float v, float lo, float hi) {
+    return (v < lo) ? lo : ((v > hi) ? hi : v);
+}
+
+}
+
 // SCAFFOLD_069: agentic_hotpatch_orchestrator
 
 
@@ -28,10 +36,11 @@ AgenticHotpatchOrchestrator& AgenticHotpatchOrchestrator::instance() {
 }
 
 AgenticHotpatchOrchestrator::AgenticHotpatchOrchestrator()
-    : m_enabled(false)
+    : m_enabled(true)
     , m_maxRetries(3)
     , m_confidenceThreshold(0.6f)
     , m_autoEscalate(true)
+    , m_modelTemperature(0.7f)
     , m_sequenceCounter(0)
 {
     loadDefaultPolicies();
@@ -345,10 +354,8 @@ CorrectionOutcome AgenticHotpatchOrchestrator::orchestrateCorrection(
     const InferenceFailureEvent& failure,
     char* outputBuffer, size_t bufferCapacity)
 {
-    if (!m_enabled) {
-        return CorrectionOutcome::error(CorrectionAction::None,
-                                         "Orchestrator is disabled");
-    }
+    // Context-agnostic behavior: hotpatch orchestration is always available.
+    m_enabled = true;
 
     const CorrectionPolicy* policy = findPolicy(failure.type);
     if (!policy || !policy->enabled) {
@@ -356,7 +363,16 @@ CorrectionOutcome AgenticHotpatchOrchestrator::orchestrateCorrection(
                                          "No policy for this failure type");
     }
 
-    if (failure.confidence < policy->confidenceThreshold) {
+    // Temperature-aware aggressiveness:
+    // colder model -> stricter threshold, fewer retries
+    // hotter model -> looser threshold, more retries
+    const float tNorm = clampf(m_modelTemperature / 1.5f, 0.0f, 1.0f);
+    const float effectiveThreshold = clampf(
+        policy->confidenceThreshold + (0.1f * (1.0f - tNorm)) - (0.35f * tNorm),
+        0.1f,
+        0.95f);
+
+    if (failure.confidence < effectiveThreshold) {
         return CorrectionOutcome::error(CorrectionAction::None,
                                          "Confidence below threshold");
     }
@@ -366,22 +382,37 @@ CorrectionOutcome AgenticHotpatchOrchestrator::orchestrateCorrection(
     CorrectionOutcome result = CorrectionOutcome::error(
         CorrectionAction::None, "Not attempted");
 
-    // Try primary action
-    switch (policy->primaryAction) {
-        case CorrectionAction::RetryWithBias:
-            result = applyBiasCorrection(failure);
+    int effectiveRetries = policy->maxRetries;
+    if (tNorm >= 0.75f) {
+        effectiveRetries += 2;
+    } else if (tNorm <= 0.20f) {
+        effectiveRetries = std::max(0, effectiveRetries - 1);
+    }
+    effectiveRetries = std::max(0, std::max(effectiveRetries, m_maxRetries));
+
+    // Try primary action (with temperature-aware retry budget)
+    for (int attempt = 0; attempt <= effectiveRetries; ++attempt) {
+        switch (policy->primaryAction) {
+            case CorrectionAction::RetryWithBias:
+                result = applyBiasCorrection(failure);
+                break;
+            case CorrectionAction::RewriteOutput:
+                result = applyRewriteCorrection(failure, outputBuffer, bufferCapacity);
+                break;
+            case CorrectionAction::TerminateStream:
+                result = applyStreamTermination(failure);
+                break;
+            case CorrectionAction::EscalateToUser:
+                result = escalateToUser(failure);
+                break;
+            default:
+                break;
+        }
+
+        result.retriesUsed = attempt;
+        if (result.success) {
             break;
-        case CorrectionAction::RewriteOutput:
-            result = applyRewriteCorrection(failure, outputBuffer, bufferCapacity);
-            break;
-        case CorrectionAction::TerminateStream:
-            result = applyStreamTermination(failure);
-            break;
-        case CorrectionAction::EscalateToUser:
-            result = escalateToUser(failure);
-            break;
-        default:
-            break;
+        }
     }
 
     // If primary failed, try fallback
@@ -737,4 +768,18 @@ void AgenticHotpatchOrchestrator::setConfidenceThreshold(float threshold) {
 
 void AgenticHotpatchOrchestrator::setAutoEscalate(bool enabled) {
     m_autoEscalate = enabled;
+}
+
+void AgenticHotpatchOrchestrator::setModelTemperature(float temperature) {
+    m_modelTemperature = clampf(temperature, 0.0f, 2.0f);
+
+    // Keep global controls aligned with temperature profile.
+    const float tNorm = clampf(m_modelTemperature / 1.5f, 0.0f, 1.0f);
+    m_confidenceThreshold = clampf(0.8f - (0.6f * tNorm), 0.2f, 0.9f);
+    m_maxRetries = 1 + static_cast<int>(tNorm * 5.0f);
+    m_enabled = true;
+}
+
+float AgenticHotpatchOrchestrator::getModelTemperature() const {
+    return m_modelTemperature;
 }

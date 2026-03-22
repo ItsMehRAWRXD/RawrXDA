@@ -6,7 +6,16 @@
 #include <chrono>
 #include <filesystem>
 #include <iostream>
+#include <fstream>
+#include <set>
+#include <cctype>
 #include <thread>
+
+#ifdef _WIN32
+#include <windows.h>
+#include <dxgi.h>
+#pragma comment(lib, "dxgi.lib")
+#endif
 
 namespace {
 
@@ -41,9 +50,175 @@ static std::string SanitizePathComponent(std::string s) {
     return s;
 }
 
+static std::string ToLowerAscii(std::string s) {
+    for (char& c : s) {
+        c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    }
+    return s;
+}
+
+static bool StartsWith(const std::string& s, const std::string& prefix) {
+    return s.size() >= prefix.size() && s.compare(0, prefix.size(), prefix) == 0;
+}
+
+static bool EndsWith(const std::string& s, const std::string& suffix) {
+    return s.size() >= suffix.size() && s.compare(s.size() - suffix.size(), suffix.size(), suffix) == 0;
+}
+
+static bool IsLoopbackEndpoint(const std::string& endpoint) {
+    std::string lower = ToLowerAscii(endpoint);
+    std::string hostPort = lower;
+    const size_t scheme = lower.find("://");
+    if (scheme != std::string::npos) {
+        hostPort = lower.substr(scheme + 3);
+    }
+    const size_t pathPos = hostPort.find('/');
+    if (pathPos != std::string::npos) {
+        hostPort = hostPort.substr(0, pathPos);
+    }
+    return StartsWith(hostPort, "localhost") || StartsWith(hostPort, "127.0.0.1") ||
+           StartsWith(hostPort, "[::1]") || StartsWith(hostPort, "::1");
+}
+
+static bool HasReadPermission(const std::string& modelPath) {
+    std::ifstream f(modelPath, std::ios::binary);
+    return f.good();
+}
+
+static bool HasGgufMagic(const std::string& modelPath) {
+    std::ifstream f(modelPath, std::ios::binary);
+    if (!f.is_open()) {
+        return false;
+    }
+    uint32_t magic = 0;
+    f.read(reinterpret_cast<char*>(&magic), sizeof(magic));
+    return f.good() && magic == 0x46554747U;
+}
+
+static std::string ExtractQuantTag(const std::string& modelPath) {
+    const std::string name = ToLowerAscii(std::filesystem::path(modelPath).filename().string());
+    const std::vector<std::string> known = {
+        "q2_k", "q3_k", "q4_0", "q4_1", "q4_k_s", "q4_k_m", "q4_k",
+        "q5_0", "q5_1", "q5_k_s", "q5_k_m", "q5_k", "q6_k", "q8_0"
+    };
+    for (const std::string& tag : known) {
+        if (name.find(tag) != std::string::npos) {
+            return tag;
+        }
+    }
+    return "";
+}
+
 } // namespace
 
 EnhancedModelLoader::~EnhancedModelLoader() = default;
+
+void EnhancedModelLoader::setMemoryHeadroom(float ramReserveFrac, float vramReserveFrac) {
+    m_ramReserveFraction = std::max(0.0f, std::min(0.95f, ramReserveFrac));
+    m_vramReserveFraction = std::max(0.0f, std::min(0.95f, vramReserveFrac));
+}
+
+bool EnhancedModelLoader::endpointAllowed(const std::string& endpoint) const {
+    if (m_allowRemoteFallback) {
+        return true;
+    }
+    return IsLoopbackEndpoint(endpoint);
+}
+
+bool EnhancedModelLoader::validateModelFormatAndPermissions(const std::string& modelPath, std::string& reason) const {
+    const std::string lower = ToLowerAscii(modelPath);
+    if (!EndsWith(lower, ".gguf") || !HasGgufMagic(modelPath)) {
+        reason = "Model format rejected: only valid GGUF files are accepted";
+        return false;
+    }
+    if (!HasReadPermission(modelPath)) {
+        reason = "permission denied for runtime user";
+        return false;
+    }
+    return true;
+}
+
+bool EnhancedModelLoader::validateQuantizationAllowlist(const std::string& modelPath, std::string& reason) const {
+    const std::string quantTag = ExtractQuantTag(modelPath);
+    if (quantTag.empty() || m_quantAllowlist.find(quantTag) == m_quantAllowlist.end()) {
+        reason = "unsupported quant: rejected at model load";
+        return false;
+    }
+    return true;
+}
+
+bool EnhancedModelLoader::validateTokenizerConfigPair(const std::string& modelPath, std::string& reason) const {
+    if (!m_requireTokenizerConfigPair) {
+        return true;
+    }
+
+    const std::filesystem::path p(modelPath);
+    const std::filesystem::path dir = p.parent_path();
+    const std::string stem = p.stem().string();
+    const std::filesystem::path tokenizer = dir / (stem + ".tokenizer.json");
+    const std::filesystem::path config = dir / (stem + ".config.json");
+
+    if (!std::filesystem::exists(tokenizer) || !std::filesystem::exists(config)) {
+        reason = "Tokenizer/config mismatch: tokenizer/config pair missing for model stem";
+        return false;
+    }
+
+    std::ifstream t(tokenizer, std::ios::binary);
+    std::ifstream c(config, std::ios::binary);
+    if (!t.good() || !c.good()) {
+        reason = "Tokenizer/config mismatch: tokenizer/config not readable";
+        return false;
+    }
+
+    std::string tBlob((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
+    std::string cBlob((std::istreambuf_iterator<char>(c)), std::istreambuf_iterator<char>());
+    if (tBlob.find("version") == std::string::npos || cBlob.find("version") == std::string::npos) {
+        reason = "Tokenizer/config mismatch: tokenizer/config version field missing";
+        return false;
+    }
+    return true;
+}
+
+bool EnhancedModelLoader::preflightMemory(const std::string& modelPath, std::string& reason, bool& gpuUsable) const {
+    reason.clear();
+    gpuUsable = false;
+    const uint64_t modelBytes = static_cast<uint64_t>(std::filesystem::file_size(modelPath));
+
+#ifdef _WIN32
+    MEMORYSTATUSEX mem = {};
+    mem.dwLength = sizeof(mem);
+    if (!GlobalMemoryStatusEx(&mem)) {
+        reason = "unable to query system memory";
+        return false;
+    }
+
+    const uint64_t availRam = mem.ullAvailPhys;
+    const uint64_t ramLimit = static_cast<uint64_t>(static_cast<double>(availRam) * (1.0 - m_ramReserveFraction));
+    if (modelBytes > ramLimit) {
+        reason = "insufficient RAM headroom";
+        return false;
+    }
+
+    IDXGIFactory1* factory = nullptr;
+    if (SUCCEEDED(CreateDXGIFactory1(__uuidof(IDXGIFactory1), reinterpret_cast<void**>(&factory)))) {
+        IDXGIAdapter1* adapter = nullptr;
+        if (SUCCEEDED(factory->EnumAdapters1(0, &adapter))) {
+            DXGI_ADAPTER_DESC1 desc = {};
+            if (SUCCEEDED(adapter->GetDesc1(&desc)) && desc.DedicatedVideoMemory > 0) {
+                const uint64_t vramLimit = static_cast<uint64_t>(
+                    static_cast<double>(desc.DedicatedVideoMemory) * (1.0 - m_vramReserveFraction));
+                gpuUsable = modelBytes <= vramLimit;
+            }
+            adapter->Release();
+        }
+        factory->Release();
+    }
+#else
+    (void)modelPath;
+#endif
+
+    return true;
+}
 
 bool EnhancedModelLoader::loadModel(const std::string& modelInput) {
     if (!m_formatRouter) m_formatRouter = std::make_unique<FormatRouter>();
@@ -120,6 +295,52 @@ bool EnhancedModelLoader::loadGGUFLocal(const std::string& modelPath) {
         return false;
     }
 
+    std::string reason;
+    if (!validateModelFormatAndPermissions(modelPath, reason)) {
+        m_lastError = reason;
+        if (m_onError) m_onError(m_lastError);
+        return false;
+    }
+
+    if (!validateQuantizationAllowlist(modelPath, reason)) {
+        m_lastError = reason;
+        if (m_onError) m_onError(m_lastError);
+        return false;
+    }
+
+    if (!validateTokenizerConfigPair(modelPath, reason)) {
+        m_lastError = reason;
+        if (m_onError) m_onError(m_lastError);
+        return false;
+    }
+
+    bool gpuUsable = false;
+    if (!preflightMemory(modelPath, reason, gpuUsable)) {
+        m_lastError = "Memory preflight failed: " + reason;
+        if (m_onError) m_onError(m_lastError);
+        return false;
+    }
+
+    if (m_backendMode == LocalBackendMode::GPU_ONLY) {
+        // No GPU inference engine is wired in this lane yet; fail explicit instead of silent fallback.
+        m_lastError = gpuUsable
+            ? "backend mismatch: gpu-only selected but GPU backend is not available in this build lane"
+            : "backend mismatch: gpu-only selected and VRAM preflight failed";
+        if (m_onError) m_onError(m_lastError);
+        std::cout << "[EnhancedModelLoader] backend=gpu-only result=fail reason=" << m_lastError << "\n";
+        return false;
+    }
+
+    if (m_backendMode == LocalBackendMode::CPU_ONLY) {
+        m_resolvedRuntimeLane = "cpu-only";
+    } else {
+        m_resolvedRuntimeLane = gpuUsable ? "gpu-only" : "cpu-only";
+    }
+
+    std::cout << "[EnhancedModelLoader] backend=" << m_resolvedRuntimeLane
+              << " result=ok reason=" << (gpuUsable ? "gpu preflight passed" : "cpu fallback verified")
+              << "\n";
+
     if (!m_engine) {
         m_engine = std::make_unique<RawrXD::CPUInferenceEngine>();
     }
@@ -188,8 +409,16 @@ bool EnhancedModelLoader::loadOllamaModel(const std::string& modelName) {
     if (m_onLoadingStage) m_onLoadingStage("Connecting to Ollama...");
     if (!m_ollamaProxy) m_ollamaProxy = std::make_unique<OllamaProxy>();
 
+    if (!endpointAllowed(m_pinnedLocalEndpoint)) {
+        m_lastError = "Endpoint rejected: local runtime is pinned to localhost unless remote fallback is enabled";
+        if (m_onError) m_onError(m_lastError);
+        return false;
+    }
+
+    m_ollamaProxy->setBaseUrl(m_pinnedLocalEndpoint);
+
     if (!m_ollamaProxy->isOllamaAvailable()) {
-        m_lastError = "Ollama not available at http://localhost:11434";
+        m_lastError = "Ollama not available at " + m_pinnedLocalEndpoint;
         if (m_onError) m_onError(m_lastError);
         return false;
     }
@@ -202,6 +431,7 @@ bool EnhancedModelLoader::loadOllamaModel(const std::string& modelName) {
     m_ollamaProxy->setModel(modelName);
     m_modelPath = "ollama:" + modelName;
     m_loadedFormat = ModelFormat::OLLAMA_REMOTE;
+    std::cout << "[EnhancedModelLoader] endpoint=" << m_pinnedLocalEndpoint << " local=true\n";
 
     // --- Metadata hotpatch: populate metadata so Ollama models display
     //     family/parameter_size/quantization in the agent tab like GitHub models ---

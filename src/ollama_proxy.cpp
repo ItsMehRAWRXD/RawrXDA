@@ -57,6 +57,16 @@ OllamaProxy::~OllamaProxy() {
     m_currentRequest = nullptr;
 }
 
+void OllamaProxy::setBaseUrl(const std::string& baseUrl) {
+    if (!baseUrl.empty()) {
+        m_ollamaUrl = baseUrl;
+    }
+    auto* ctx = reinterpret_cast<OllamaProxyCtx*>(m_networkContext);
+    if (ctx) {
+        ctx->client.setBaseUrl(m_ollamaUrl);
+    }
+}
+
 void OllamaProxy::setModel(const std::string& modelName) {
     m_modelName = modelName;
 }

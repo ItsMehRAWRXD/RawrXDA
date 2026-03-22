@@ -5,11 +5,185 @@
 // Rule: NO SOURCE FILE IS TO BE SIMPLIFIED
 #include "Win32IDE.h"
 #include "../core/unified_hotpatch_manager.hpp"
+#include "../core/byte_level_hotpatcher.hpp"
 #include "../core/proxy_hotpatcher.hpp"
 #include <sstream>
 #include <iomanip>
 #include <string>
+#include <algorithm>
+#include <cmath>
+#include <vector>
+#include <deque>
+#include <array>
+#include <cctype>
+#include <cstdlib>
 #include <commdlg.h>
+
+namespace {
+
+std::string ReadClipboardText(HWND owner) {
+    std::string out;
+    if (!OpenClipboard(owner)) {
+        return out;
+    }
+
+    HANDLE h = GetClipboardData(CF_TEXT);
+    if (h) {
+        const char* p = static_cast<const char*>(GlobalLock(h));
+        if (p) {
+            out = p;
+            GlobalUnlock(h);
+        }
+    }
+
+    CloseClipboard();
+    return out;
+}
+
+bool ParseHexBytes(const std::string& input, std::vector<uint8_t>& out) {
+    std::string filtered;
+    filtered.reserve(input.size());
+    for (char c : input) {
+        if (std::isxdigit(static_cast<unsigned char>(c))) {
+            filtered.push_back(c);
+        }
+    }
+
+    if (filtered.empty() || (filtered.size() % 2) != 0) {
+        return false;
+    }
+
+    out.clear();
+    out.reserve(filtered.size() / 2);
+    for (size_t i = 0; i + 1 < filtered.size(); i += 2) {
+        const std::string byteStr = filtered.substr(i, 2);
+        out.push_back(static_cast<uint8_t>(std::strtoul(byteStr.c_str(), nullptr, 16)));
+    }
+    return !out.empty();
+}
+
+std::deque<std::string> g_serverPatchNames;
+std::deque<ServerHotpatch> g_serverPatches;
+std::string g_lastServerPatchName;
+
+struct TrackedMemoryPatch {
+    MemoryPatchEntry entry{};
+    std::vector<uint8_t> bytes;
+};
+
+std::deque<TrackedMemoryPatch> g_trackedMemoryPatches;
+
+std::deque<std::string> g_proxyRewriteNames;
+std::deque<std::string> g_proxyRewritePatterns;
+std::deque<std::string> g_proxyRewriteReplacements;
+std::string g_lastProxyRewriteName;
+
+std::deque<std::string> g_proxyTerminationNames;
+std::deque<std::string> g_proxyTerminationStops;
+std::string g_lastProxyTerminationName;
+
+std::deque<std::string> g_proxyValidatorNames;
+std::array<std::string, 3> g_knownValidators = { "length_check", "json_syntax", "safety_filter" };
+
+std::vector<std::string> SplitByPipe(const std::string& input) {
+    std::vector<std::string> out;
+    std::string current;
+    for (char c : input) {
+        if (c == '|') {
+            out.push_back(current);
+            current.clear();
+            continue;
+        }
+        current.push_back(c);
+    }
+    out.push_back(current);
+    return out;
+}
+
+std::string TrimAscii(std::string value) {
+    auto isSpace = [](unsigned char c) { return std::isspace(c) != 0; };
+    while (!value.empty() && isSpace(static_cast<unsigned char>(value.front()))) {
+        value.erase(value.begin());
+    }
+    while (!value.empty() && isSpace(static_cast<unsigned char>(value.back()))) {
+        value.pop_back();
+    }
+    return value;
+}
+
+std::string ToLowerAscii(std::string value) {
+    std::transform(value.begin(), value.end(), value.begin(),
+        [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return value;
+}
+
+bool ValidatorLengthCheck(const char* output, size_t outputLen, void*) {
+    (void)output;
+    return outputLen <= 16384;
+}
+
+bool ValidatorJsonSyntax(const char* output, size_t outputLen, void*) {
+    if (!output || outputLen == 0) return true;
+    int braceDepth = 0;
+    int bracketDepth = 0;
+    bool inString = false;
+    bool escaped = false;
+
+    for (size_t i = 0; i < outputLen; ++i) {
+        const char ch = output[i];
+        if (inString) {
+            if (escaped) {
+                escaped = false;
+                continue;
+            }
+            if (ch == '\\') {
+                escaped = true;
+                continue;
+            }
+            if (ch == '"') {
+                inString = false;
+            }
+            continue;
+        }
+
+        if (ch == '"') {
+            inString = true;
+            continue;
+        }
+        if (ch == '{') ++braceDepth;
+        if (ch == '}') --braceDepth;
+        if (ch == '[') ++bracketDepth;
+        if (ch == ']') --bracketDepth;
+        if (braceDepth < 0 || bracketDepth < 0) {
+            return false;
+        }
+    }
+
+    return !inString && braceDepth == 0 && bracketDepth == 0;
+}
+
+bool ValidatorSafetyFilter(const char* output, size_t outputLen, void*) {
+    if (!output || outputLen == 0) return true;
+    std::string text(output, outputLen);
+    const std::string lowered = ToLowerAscii(text);
+    return lowered.find("malware") == std::string::npos &&
+           lowered.find("ransomware") == std::string::npos &&
+           lowered.find("exploit") == std::string::npos;
+}
+
+ProxyValidatorFn ResolveBuiltInValidator(const std::string& name) {
+    if (name == "length_check") return &ValidatorLengthCheck;
+    if (name == "json_syntax") return &ValidatorJsonSyntax;
+    if (name == "safety_filter") return &ValidatorSafetyFilter;
+    return nullptr;
+}
+
+double ComputeTemperatureLinkedTargetTps(float temperature) {
+    const float clampedTemp = std::clamp(temperature, 0.0f, 2.0f);
+    return 8.0 + (static_cast<double>(clampedTemp) * 96.0);
+}
+
+} // namespace
 
 // ============================================================================
 // Initialization
@@ -18,6 +192,9 @@
 void Win32IDE::initHotpatchUI() {
     if (m_hotpatchUIInitialized) return;
     m_hotpatchEnabled = true;
+    m_hotpatchSavedTargetTps = ComputeTemperatureLinkedTargetTps(m_inferenceConfig.temperature);
+    UnifiedHotpatchManager::instance().set_target_tps(m_hotpatchSavedTargetTps);
+    ProxyHotpatcher::instance().setEnabled(true);
     m_hotpatchUIInitialized = true;
     appendToOutput("[Hotpatch] Three-layer hotpatch system initialized.\n");
 }
@@ -30,6 +207,24 @@ void Win32IDE::handleHotpatchCommand(int commandId) {
     // Lazy-init the hotpatch subsystem on first command
     if (!m_hotpatchUIInitialized) {
         initHotpatchUI();
+    }
+
+    // Temperature-driven hotpatch intensity:
+    // colder model => gentler intervention, hotter model => more aggressive patch throughput.
+    if (m_hotpatchEnabled) {
+        const double targetTps = ComputeTemperatureLinkedTargetTps(m_inferenceConfig.temperature);
+        UnifiedHotpatchManager::instance().set_target_tps(targetTps);
+        m_hotpatchSavedTargetTps = targetTps;
+
+        static double s_lastAnnouncedTps = -1.0;
+        if (std::fabs(targetTps - s_lastAnnouncedTps) > 0.1) {
+            s_lastAnnouncedTps = targetTps;
+            std::ostringstream tune;
+            tune << "[Hotpatch] Temp-linked tuning active: temp="
+                 << std::clamp(m_inferenceConfig.temperature, 0.0f, 2.0f)
+                 << " => target_tps=" << targetTps << "\n";
+            appendToOutput(tune.str());
+        }
     }
 
     switch (commandId) {
@@ -130,15 +325,32 @@ void Win32IDE::cmdHotpatchSetTargetTps() {
 }
 
 void Win32IDE::cmdHotpatchToggleAll() {
+    auto& unified = UnifiedHotpatchManager::instance();
+    auto& proxy = ProxyHotpatcher::instance();
+
     m_hotpatchEnabled = !m_hotpatchEnabled;
-    std::string msg = std::string("[Hotpatch] System ") +
-                      (m_hotpatchEnabled ? "ENABLED" : "DISABLED") + "\n";
+    if (m_hotpatchEnabled) {
+        const double restoredTps = (m_hotpatchSavedTargetTps > 0.0)
+            ? m_hotpatchSavedTargetTps
+            : ComputeTemperatureLinkedTargetTps(m_inferenceConfig.temperature);
+        unified.set_target_tps(restoredTps);
+        proxy.setEnabled(true);
+    } else {
+        m_hotpatchSavedTargetTps = unified.get_target_tps();
+        unified.set_target_tps(0.0);
+        proxy.setEnabled(false);
+    }
+
+    std::ostringstream ss;
+    ss << "[Hotpatch] System " << (m_hotpatchEnabled ? "ENABLED" : "DISABLED")
+       << ": target_tps=" << unified.get_target_tps()
+       << " proxy=" << (proxy.isEnabled() ? "on" : "off") << "\n";
+    const std::string msg = ss.str();
     appendToOutput(msg);
 
     // Update status bar
     if (m_hwndStatusBar) {
-        std::string sbText = std::string("Hotpatch: ") +
-                             (m_hotpatchEnabled ? "ON" : "OFF");
+        std::string sbText = std::string("Hotpatch: ") + (m_hotpatchEnabled ? "ON" : "OFF");
         SendMessageA(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)sbText.c_str());
     }
 }
@@ -188,41 +400,58 @@ void Win32IDE::cmdHotpatchShowEventLog() {
 // ============================================================================
 
 void Win32IDE::cmdHotpatchMemoryApply() {
-    if (!m_hotpatchEnabled) {
-        appendToOutput("[Hotpatch] System is disabled. Toggle on first.\n");
+    // Input contract: <address_hex> <hex_bytes>
+    // Example: 0x7FFE1234 909090
+    std::string input = ReadClipboardText(m_hwndMain);
+    if (input.empty() && m_hwndCopilotChatInput) {
+        input = getWindowText(m_hwndCopilotChatInput);
+    }
+    if (input.empty()) {
+        appendToOutput("[Hotpatch] Memory apply requires input: <address_hex> <hex_bytes> (clipboard or chat input)\n");
         return;
     }
 
-    // Prompt for hex address + hex data
-    char addrBuf[64] = {};
-    char dataBuf[512] = {};
-
-    // Simple input dialog — address
-    if (MessageBoxA(m_hwndMain,
-        "Memory Patch: Enter the target virtual address (hex) in the chat input,\n"
-        "then the patch bytes (hex pairs, e.g. 90 90 90).\n\n"
-        "This will apply a VirtualProtect-wrapped memory patch.\n"
-        "Use with caution — this modifies live process memory.",
-        "Hotpatch: Apply Memory Patch", MB_OKCANCEL | MB_ICONWARNING) == IDCANCEL) {
+    std::istringstream iss(input);
+    std::string addrStr;
+    std::string hexData;
+    iss >> addrStr >> hexData;
+    if (addrStr.empty() || hexData.empty()) {
+        appendToOutput("[Hotpatch] Invalid input format. Expected: <address_hex> <hex_bytes>\n");
         return;
     }
 
-    appendToOutput("[Hotpatch] Memory patch dialog ready. Enter address and bytes in the chat input.\n");
-    appendToOutput("[Hotpatch] Format: !hotpatch_apply <hex_addr> <hex_bytes>\n");
-    appendToOutput("[Hotpatch] The memory layer uses VirtualProtect for safe writes.\n");
+    uintptr_t addr = 0;
+    try {
+        addr = static_cast<uintptr_t>(std::stoull(addrStr, nullptr, 0));
+    } catch (...) {
+        appendToOutput("[Hotpatch] Invalid address in clipboard.\n");
+        return;
+    }
 
-    // Also provide an input prompt dialog for GUI users
-    memset(addrBuf, 0, sizeof(addrBuf));
-    char bytesBuf[256] = {};
-    // Use a two-step dialog: first get address, then get bytes
-    // (Using simple input boxes since full property sheet dialog is heavy)
-    if (MessageBoxA(m_hwndMain,
-        "Would you like to enter the patch details now?\n\n"
-        "Click YES to input address+bytes in the output panel.\n"
-        "Click NO to use CLI commands instead.",
-        "Hotpatch: Memory Patch", MB_YESNO | MB_ICONQUESTION) == IDYES) {
-        appendToOutput("[Hotpatch] Enter the target address (hex) in the REPL, then the bytes.\n");
-        appendToOutput("[Hotpatch] Example: !hotpatch_apply 0x7FFE1234 90 90 90\n");
+    std::vector<uint8_t> data;
+    if (!ParseHexBytes(hexData, data)) {
+        appendToOutput("[Hotpatch] Invalid hex bytes in clipboard.\n");
+        return;
+    }
+
+    TrackedMemoryPatch tracked{};
+    tracked.bytes = data;
+    tracked.entry.targetAddr = addr;
+    tracked.entry.patchSize = tracked.bytes.size();
+    tracked.entry.patchData = tracked.bytes.data();
+    tracked.entry.originalSize = 0;
+    tracked.entry.applied = false;
+
+    auto ur = UnifiedHotpatchManager::instance().apply_memory_patch_tracked(&tracked.entry);
+
+    std::ostringstream ss;
+    ss << "[Hotpatch] Memory patch @0x" << std::hex << addr << std::dec
+       << " size=" << data.size() << " => "
+       << (ur.result.success ? "OK" : "FAILED") << " (" << ur.result.detail << ")\n";
+    appendToOutput(ss.str());
+
+    if (ur.result.success) {
+        g_trackedMemoryPatches.push_back(std::move(tracked));
     }
 }
 
@@ -232,23 +461,25 @@ void Win32IDE::cmdHotpatchMemoryRevert() {
         return;
     }
     auto& mgr = UnifiedHotpatchManager::instance();
-    const auto& stats = mgr.getStats();
-    uint64_t patchCount = stats.memoryPatchCount.load();
-    if (patchCount == 0) {
+    if (g_trackedMemoryPatches.empty()) {
         appendToOutput("[Hotpatch] No tracked memory patches to revert.\n");
         return;
     }
-    // Poll the event ring to show recent memory patches
-    appendToOutput("[Hotpatch] Tracked memory patches: " + std::to_string(patchCount) + "\n");
-    appendToOutput("[Hotpatch] Reverting last memory patch...\n");
-    // Revert needs a MemoryPatchEntry — poll from event system
-    HotpatchEvent evt;
-    while (mgr.poll_event(&evt)) {
-        if (evt.type == HotpatchEvent::MemoryPatchReverted) {
-            appendToOutput(std::string("[Hotpatch] Reverted: ") + (evt.detail ? evt.detail : "(no detail)") + "\n");
-        }
+
+    TrackedMemoryPatch tracked = std::move(g_trackedMemoryPatches.back());
+    g_trackedMemoryPatches.pop_back();
+
+    auto ur = mgr.revert_memory_patch(&tracked.entry);
+    if (!ur.result.success) {
+        g_trackedMemoryPatches.push_back(std::move(tracked));
     }
-    appendToOutput("[Hotpatch] Revert operation completed. Use Status to verify.\n");
+
+    std::ostringstream ss;
+    ss << "[Hotpatch] Revert last tracked memory patch @0x" << std::hex
+       << tracked.entry.targetAddr << std::dec << " size=" << tracked.entry.patchSize
+       << " => " << (ur.result.success ? "OK" : "FAILED")
+       << " (" << ur.result.detail << ")\n";
+    appendToOutput(ss.str());
 }
 
 // ============================================================================
@@ -325,18 +556,69 @@ void Win32IDE::cmdHotpatchByteApply() {
             appendToOutput("[Hotpatch] Byte patches applied: " + std::to_string(applied) +
                            ", failed: " + std::to_string(failed) + "\n");
         } else {
-            appendToOutput("[Hotpatch] Byte-level target set. Use CLI for manual patching:\n");
-            appendToOutput("[Hotpatch]   !hotpatch_byte <offset> <hex_bytes>\n");
+            const std::string clip = ReadClipboardText(m_hwndMain);
+            if (clip.empty()) {
+                appendToOutput("[Hotpatch] Patch definition selection canceled. No byte patches applied.\n");
+                return;
+            }
+
+            auto& mgr = UnifiedHotpatchManager::instance();
+            std::istringstream clipStream(clip);
+            std::string patchLine;
+            int applied = 0;
+            int failed = 0;
+
+            while (std::getline(clipStream, patchLine)) {
+                patchLine = TrimAscii(patchLine);
+                if (patchLine.empty() || patchLine[0] == '#') {
+                    continue;
+                }
+
+                const size_t colonPos = patchLine.find(':');
+                if (colonPos == std::string::npos) {
+                    ++failed;
+                    continue;
+                }
+
+                const std::string offText = TrimAscii(patchLine.substr(0, colonPos));
+                const std::string hexText = TrimAscii(patchLine.substr(colonPos + 1));
+                if (offText.empty() || hexText.empty()) {
+                    ++failed;
+                    continue;
+                }
+
+                uint64_t offset = 0;
+                try {
+                    offset = std::stoull(offText, nullptr, 16);
+                } catch (...) {
+                    ++failed;
+                    continue;
+                }
+
+                std::vector<uint8_t> bytes;
+                if (!ParseHexBytes(hexText, bytes)) {
+                    ++failed;
+                    continue;
+                }
+
+                BytePatch bp;
+                bp.offset = offset;
+                bp.data = bytes;
+                auto ur = mgr.apply_byte_patch(filename, bp);
+                if (ur.result.success) {
+                    ++applied;
+                } else {
+                    ++failed;
+                }
+            }
+
+            appendToOutput("[Hotpatch] Clipboard byte patches applied: " + std::to_string(applied) +
+                           ", failed: " + std::to_string(failed) + "\n");
         }
     }
 }
 
 void Win32IDE::cmdHotpatchByteSearch() {
-    if (!m_hotpatchEnabled) {
-        appendToOutput("[Hotpatch] System is disabled. Toggle on first.\n");
-        return;
-    }
-
     char filename[MAX_PATH] = {};
     OPENFILENAMEA ofn = {};
     ofn.lStructSize = sizeof(ofn);
@@ -350,24 +632,48 @@ void Win32IDE::cmdHotpatchByteSearch() {
     if (GetOpenFileNameA(&ofn)) {
         appendToOutput(std::string("[Hotpatch] Search target: ") + filename + "\n");
 
-        // Prompt user for hex pattern and replacement
-        // Use a simple dialog approach: ask for pattern first
-        char patternBuf[256] = {};
-        char replaceBuf[256] = {};
+        // Input contract: <hex_pattern> [hex_replacement]
+        std::string input = ReadClipboardText(m_hwndMain);
+        if (input.empty() && m_hwndCopilotChatInput) {
+            input = getWindowText(m_hwndCopilotChatInput);
+        }
+        if (input.empty()) {
+            appendToOutput("[Hotpatch] Byte search requires input: <hex_pattern> [hex_replacement] (clipboard or chat input)\n");
+            return;
+        }
 
-        // Parse hex pattern from user input (stored in chat input field)
-        // For now, prompt user to enter pattern + replacement in REPL format
-        if (MessageBoxA(m_hwndMain,
-            "Enter search pattern and replacement in the REPL:\n\n"
-            "  !hotpatch_search <hex_pattern> <hex_replacement>\n\n"
-            "The byte search uses SIMD-accelerated Boyer-Moore matching.\n"
-            "Pattern must be hex bytes (e.g., 4F4C4C414D41).\n\n"
-            "Click OK to confirm target file.",
-            "Hotpatch: Byte Search & Replace", MB_OKCANCEL | MB_ICONINFORMATION) == IDOK) {
+        std::istringstream iss(input);
+        std::string patternHex;
+        std::string replaceHex;
+        iss >> patternHex >> replaceHex;
 
-            appendToOutput("[Hotpatch] File locked: " + std::string(filename) + "\n");
-            appendToOutput("[Hotpatch] Enter pattern via REPL: !hotpatch_search <hex_pattern> <hex_replace>\n");
-            appendToOutput("[Hotpatch] The search uses apply_byte_search_patch() with SIMD scan.\n");
+        std::vector<uint8_t> pattern;
+        if (!ParseHexBytes(patternHex, pattern)) {
+            appendToOutput("[Hotpatch] Invalid search pattern hex.\n");
+            return;
+        }
+
+        auto result = direct_search(filename, pattern.data(), pattern.size());
+        if (!result.found) {
+            appendToOutput("[Hotpatch] Pattern not found in target file.\n");
+            return;
+        }
+
+        std::ostringstream foundMsg;
+        foundMsg << "[Hotpatch] Pattern found at offset 0x" << std::hex << result.offset << std::dec
+                 << " length=" << result.length << "\n";
+        appendToOutput(foundMsg.str());
+
+        if (!replaceHex.empty()) {
+            std::vector<uint8_t> replacement;
+            if (!ParseHexBytes(replaceHex, replacement)) {
+                appendToOutput("[Hotpatch] Invalid replacement hex; search completed without replace.\n");
+                return;
+            }
+
+            auto ur = UnifiedHotpatchManager::instance().apply_byte_search_patch(filename, pattern, replacement);
+            appendToOutput(std::string("[Hotpatch] Byte search/replace => ") +
+                           (ur.result.success ? "OK" : "FAILED") + " (" + ur.result.detail + ")\n");
         }
     }
 }
@@ -377,41 +683,43 @@ void Win32IDE::cmdHotpatchByteSearch() {
 // ============================================================================
 
 void Win32IDE::cmdHotpatchServerAdd() {
-    if (!m_hotpatchEnabled) {
-        appendToOutput("[Hotpatch] System is disabled. Toggle on first.\n");
-        return;
-    }
-    appendToOutput("[Hotpatch] Server patch injection points:\n");
-    appendToOutput("  PreRequest  \xe2\x80\x94 Modify request before inference\n");
-    appendToOutput("  PostRequest \xe2\x80\x94 Modify request after preprocessing\n");
-    appendToOutput("  PreResponse \xe2\x80\x94 Modify response before delivery\n");
-    appendToOutput("  PostResponse\xe2\x80\x94 Modify response after delivery\n");
-    appendToOutput("  StreamChunk \xe2\x80\x94 Intercept streaming tokens\n\n");
-
-    // Show current server patch count from unified manager
     auto& mgr = UnifiedHotpatchManager::instance();
-    const auto& stats = mgr.getStats();
-    appendToOutput("[Hotpatch] Active server patches: " + std::to_string(stats.serverPatchCount.load()) + "\n");
-    appendToOutput("[Hotpatch] To add a server patch, use REPL:\n");
-    appendToOutput("  !hotpatch_server add <name> <injection_point>\n");
-    appendToOutput("[Hotpatch] Or use the HTTP API: POST /api/hotpatch/server/add\n");
+
+    g_serverPatchNames.emplace_back("ide_menu_patch_" + std::to_string(GetTickCount64()));
+    g_serverPatches.emplace_back();
+
+    ServerHotpatch& patch = g_serverPatches.back();
+    patch.name = g_serverPatchNames.back().c_str();
+    patch.hit_count = 0;
+    patch.transform = [](Request* req, Response*) -> bool {
+        // Keep pass-through semantics while guaranteeing a stable temperature field.
+        if (req && req->params.find("temperature") == req->params.end()) {
+            req->params["temperature"] = 0.7f;
+        }
+        return true;
+    };
+
+    auto ur = mgr.add_server_patch(&patch);
+    appendToOutput(std::string("[Hotpatch] Server patch add => ") +
+                   (ur.result.success ? "OK" : "FAILED") + " (" + ur.result.detail + ")\n");
+    if (ur.result.success) {
+        g_lastServerPatchName = patch.name;
+        appendToOutput(std::string("[Hotpatch] Added patch: ") + patch.name + "\n");
+    }
 }
 
 void Win32IDE::cmdHotpatchServerRemove() {
-    if (!m_hotpatchEnabled) {
-        appendToOutput("[Hotpatch] System is disabled. Toggle on first.\n");
+    if (g_lastServerPatchName.empty()) {
+        appendToOutput("[Hotpatch] No menu-added server patch to remove.\n");
         return;
     }
-    auto& mgr = UnifiedHotpatchManager::instance();
-    const auto& stats = mgr.getStats();
-    uint64_t count = stats.serverPatchCount.load();
-    if (count == 0) {
-        appendToOutput("[Hotpatch] No server patches currently registered.\n");
-        return;
+
+    auto ur = UnifiedHotpatchManager::instance().remove_server_patch(g_lastServerPatchName.c_str());
+    appendToOutput(std::string("[Hotpatch] Server patch remove => ") +
+                   (ur.result.success ? "OK" : "FAILED") + " (" + ur.result.detail + ")\n");
+    if (ur.result.success) {
+        g_lastServerPatchName.clear();
     }
-    appendToOutput("[Hotpatch] Active server patches: " + std::to_string(count) + "\n");
-    appendToOutput("[Hotpatch] To remove, use REPL: !hotpatch_server remove <name>\n");
-    appendToOutput("[Hotpatch] Or use HTTP API: DELETE /api/hotpatch/server/<name>\n");
 }
 
 // ============================================================================
@@ -419,10 +727,6 @@ void Win32IDE::cmdHotpatchServerRemove() {
 // ============================================================================
 
 void Win32IDE::cmdHotpatchProxyBias() {
-    if (!m_hotpatchEnabled) {
-        appendToOutput("[Hotpatch] System is disabled. Toggle on first.\n");
-        return;
-    }
     auto& proxy = ProxyHotpatcher::instance();
     const auto& ps = proxy.getStats();
 
@@ -432,18 +736,22 @@ void Win32IDE::cmdHotpatchProxyBias() {
     appendToOutput("  Negative bias = suppress token probability\n\n");
     appendToOutput("  Biases applied so far: " + std::to_string(ps.biasesApplied.load()) + "\n\n");
 
-    // Prompt for quick bias entry via dialog
-    if (MessageBoxA(m_hwndMain,
-        "Add a token bias?\n\n"
-        "Enter bias details in the REPL:\n"
-        "  !hotpatch_bias <token_id> <bias_value> [permanent]\n\n"
-        "Example: !hotpatch_bias 2046 -100.0 permanent\n"
-        "(Suppresses token 2046 permanently)\n\n"
-        "Click YES to also see current bias stats.",
-        "Hotpatch: Token Bias", MB_YESNO | MB_ICONQUESTION) == IDYES) {
-        appendToOutput("[Hotpatch] Proxy Stats: tokens=" + std::to_string(ps.tokensProcessed.load()) +
-                       " biases=" + std::to_string(ps.biasesApplied.load()) + "\n");
-    }
+    // Apply a deterministic temperature-linked bias profile immediately.
+    const float clampedTemp = std::clamp(m_inferenceConfig.temperature, 0.0f, 2.0f);
+    const float biasValue = -6.0f + (clampedTemp * 6.0f); // colder => stronger suppression.
+
+    TokenBias bias{};
+    bias.tokenId = 0;
+    bias.biasValue = biasValue;
+    bias.permanent = false;
+    proxy.add_token_bias(bias);
+
+    std::ostringstream ss;
+    ss << "[Hotpatch] Applied temp-linked proxy bias: token=0 bias=" << biasValue
+       << " temp=" << clampedTemp << "\n"
+       << "[Hotpatch] Proxy Stats: tokens=" << ps.tokensProcessed.load()
+       << " biases=" << ps.biasesApplied.load() << "\n";
+    appendToOutput(ss.str());
 }
 
 void Win32IDE::cmdHotpatchProxyRewrite() {
@@ -451,17 +759,75 @@ void Win32IDE::cmdHotpatchProxyRewrite() {
         appendToOutput("[Hotpatch] System is disabled. Toggle on first.\n");
         return;
     }
-    auto& proxy = ProxyHotpatcher::instance();
-    const auto& ps = proxy.getStats();
 
-    appendToOutput("[Hotpatch] Output Rewrite Rules:\n");
-    appendToOutput("  Pattern-based text replacement applied to inference output.\n");
-    appendToOutput("  Rewrites applied so far: " + std::to_string(ps.rewritesApplied.load()) + "\n\n");
-    appendToOutput("  Commands:\n");
-    appendToOutput("    !hotpatch_rewrite add <name> <pattern> <replacement>\n");
-    appendToOutput("    !hotpatch_rewrite remove <name>\n");
-    appendToOutput("    !hotpatch_rewrite list\n\n");
-    appendToOutput("  HTTP: POST /api/hotpatch/proxy/rewrite  {name, pattern, replacement}\n");
+    auto& proxy = ProxyHotpatcher::instance();
+    proxy.setEnabled(true);
+    const auto& ps = proxy.getStats();
+    const std::string clipRaw = TrimAscii(ReadClipboardText(m_hwndMain));
+    const std::string clipLower = ToLowerAscii(clipRaw);
+
+    if (clipLower == "clear") {
+        PatchResult clearResult = proxy.clear_rewrite_rules();
+        g_proxyRewriteNames.clear();
+        g_proxyRewritePatterns.clear();
+        g_proxyRewriteReplacements.clear();
+        g_lastProxyRewriteName.clear();
+        appendToOutput("[Hotpatch] Proxy rewrite clear => " + std::string(clearResult.success ? "OK" : "FAILED") +
+                       " (" + clearResult.detail + ")\n");
+        return;
+    }
+
+    std::string name;
+    std::string pattern;
+    std::string replacement;
+
+    if (!clipRaw.empty()) {
+        const std::vector<std::string> parts = SplitByPipe(clipRaw);
+        if (parts.size() >= 3) {
+            name = TrimAscii(parts[0]);
+            pattern = parts[1];
+            replacement = parts[2];
+        }
+    }
+
+    if (name.empty()) {
+        name = "ide_rewrite_" + std::to_string(GetTickCount64());
+    }
+    if (pattern.empty()) {
+        pattern = "I cannot";
+    }
+    if (replacement.empty()) {
+        const float clampedTemp = std::clamp(m_inferenceConfig.temperature, 0.0f, 2.0f);
+        replacement = (clampedTemp >= 1.0f) ? "I can" : "I can try";
+    }
+
+    g_proxyRewriteNames.push_back(name);
+    g_proxyRewritePatterns.push_back(pattern);
+    g_proxyRewriteReplacements.push_back(replacement);
+
+    OutputRewriteRule rule{};
+    rule.name = g_proxyRewriteNames.back().c_str();
+    rule.pattern = g_proxyRewritePatterns.back().c_str();
+    rule.replacement = g_proxyRewriteReplacements.back().c_str();
+    rule.hitCount = 0;
+    rule.enabled = true;
+
+    if (!g_lastProxyRewriteName.empty()) {
+        proxy.remove_rewrite_rule(g_lastProxyRewriteName.c_str());
+    }
+
+    PatchResult addResult = proxy.add_rewrite_rule(rule);
+    if (addResult.success) {
+        g_lastProxyRewriteName = name;
+    }
+
+    std::ostringstream ss;
+    ss << "[Hotpatch] Proxy rewrite => " << (addResult.success ? "OK" : "FAILED")
+       << " (" << addResult.detail << ")\n"
+       << "[Hotpatch] rule=" << name << " pattern='" << pattern
+       << "' replacement='" << replacement << "'\n"
+       << "[Hotpatch] rewrites_applied=" << ps.rewritesApplied.load() << "\n";
+    appendToOutput(ss.str());
 }
 
 void Win32IDE::cmdHotpatchProxyTerminate() {
@@ -470,16 +836,75 @@ void Win32IDE::cmdHotpatchProxyTerminate() {
         return;
     }
     auto& proxy = ProxyHotpatcher::instance();
+    proxy.setEnabled(true);
     const auto& ps = proxy.getStats();
 
-    appendToOutput("[Hotpatch] Stream Termination Rules:\n");
-    appendToOutput("  Stop sequences and max-token limits for output streams.\n");
-    appendToOutput("  Streams terminated so far: " + std::to_string(ps.streamsTerminated.load()) + "\n\n");
-    appendToOutput("  Commands:\n");
-    appendToOutput("    !hotpatch_terminate add <name> <stop_seq> [max_tokens]\n");
-    appendToOutput("    !hotpatch_terminate remove <name>\n");
-    appendToOutput("    !hotpatch_terminate list\n\n");
-    appendToOutput("  HTTP: POST /api/hotpatch/proxy/terminate  {name, stopSequence, maxTokens}\n");
+    const std::string clipRaw = TrimAscii(ReadClipboardText(m_hwndMain));
+    const std::string clipLower = ToLowerAscii(clipRaw);
+    if (clipLower == "clear") {
+        PatchResult clearResult = proxy.clear_termination_rules();
+        g_proxyTerminationNames.clear();
+        g_proxyTerminationStops.clear();
+        g_lastProxyTerminationName.clear();
+        appendToOutput("[Hotpatch] Proxy termination clear => " + std::string(clearResult.success ? "OK" : "FAILED") +
+                       " (" + clearResult.detail + ")\n");
+        return;
+    }
+
+    std::string name;
+    std::string stopSequence;
+    size_t maxTokens = 0;
+    if (!clipRaw.empty()) {
+        const std::vector<std::string> parts = SplitByPipe(clipRaw);
+        if (parts.size() >= 2) {
+            name = TrimAscii(parts[0]);
+            stopSequence = parts[1];
+            if (parts.size() >= 3) {
+                try {
+                    maxTokens = static_cast<size_t>(std::stoull(TrimAscii(parts[2])));
+                } catch (...) {
+                    maxTokens = 0;
+                }
+            }
+        }
+    }
+
+    if (name.empty()) {
+        name = "ide_terminate_" + std::to_string(GetTickCount64());
+    }
+    if (stopSequence.empty()) {
+        stopSequence = "\n\nUser:";
+    }
+    if (maxTokens == 0) {
+        const float clampedTemp = std::clamp(m_inferenceConfig.temperature, 0.0f, 2.0f);
+        maxTokens = static_cast<size_t>(64 + clampedTemp * 256.0f);
+    }
+
+    g_proxyTerminationNames.push_back(name);
+    g_proxyTerminationStops.push_back(stopSequence);
+
+    StreamTerminationRule rule{};
+    rule.name = g_proxyTerminationNames.back().c_str();
+    rule.stopSequence = g_proxyTerminationStops.back().c_str();
+    rule.maxTokens = maxTokens;
+    rule.enabled = true;
+
+    if (!g_lastProxyTerminationName.empty()) {
+        proxy.remove_termination_rule(g_lastProxyTerminationName.c_str());
+    }
+
+    PatchResult addResult = proxy.add_termination_rule(rule);
+    if (addResult.success) {
+        g_lastProxyTerminationName = name;
+    }
+
+    std::ostringstream ss;
+    ss << "[Hotpatch] Proxy termination => " << (addResult.success ? "OK" : "FAILED")
+       << " (" << addResult.detail << ")\n"
+       << "[Hotpatch] rule=" << name << " stop='" << stopSequence
+       << "' max_tokens=" << maxTokens << "\n"
+       << "[Hotpatch] streams_terminated=" << ps.streamsTerminated.load() << "\n";
+    appendToOutput(ss.str());
 }
 
 void Win32IDE::cmdHotpatchProxyValidate() {
@@ -487,20 +912,62 @@ void Win32IDE::cmdHotpatchProxyValidate() {
         appendToOutput("[Hotpatch] System is disabled. Toggle on first.\n");
         return;
     }
+
     auto& proxy = ProxyHotpatcher::instance();
+    proxy.setEnabled(true);
     const auto& ps = proxy.getStats();
 
-    appendToOutput("[Hotpatch] Custom Validators:\n");
-    appendToOutput("  Function-pointer validators run against all output.\n");
-    appendToOutput("  All validators must pass for output to be accepted.\n\n");
-    appendToOutput("  Validations passed: " + std::to_string(ps.validationsPassed.load()) + "\n");
-    appendToOutput("  Validations failed: " + std::to_string(ps.validationsFailed.load()) + "\n\n");
-    appendToOutput("  Built-in validators: length_check, json_syntax, safety_filter\n");
-    appendToOutput("  Commands:\n");
-    appendToOutput("    !hotpatch_validate add <name>     \xe2\x80\x94 Enable a built-in validator\n");
-    appendToOutput("    !hotpatch_validate remove <name>  \xe2\x80\x94 Disable a validator\n");
-    appendToOutput("    !hotpatch_validate list            \xe2\x80\x94 Show active validators\n\n");
-    appendToOutput("  HTTP: POST /api/hotpatch/proxy/validate  {name, enabled}\n");
+    const std::string clipRaw = TrimAscii(ReadClipboardText(m_hwndMain));
+    const std::string clipLower = ToLowerAscii(clipRaw);
+
+    if (clipLower == "clear") {
+        PatchResult clearResult = proxy.clear_validators();
+        g_proxyValidatorNames.clear();
+        appendToOutput("[Hotpatch] Proxy validators clear => " + std::string(clearResult.success ? "OK" : "FAILED") +
+                       " (" + clearResult.detail + ")\n");
+        return;
+    }
+
+    std::string validatorName = "length_check";
+    bool enable = true;
+    if (!clipRaw.empty()) {
+        const std::vector<std::string> parts = SplitByPipe(clipRaw);
+        if (!parts.empty()) {
+            validatorName = ToLowerAscii(TrimAscii(parts[0]));
+        }
+        if (parts.size() >= 2) {
+            const std::string mode = ToLowerAscii(TrimAscii(parts[1]));
+            enable = !(mode == "off" || mode == "disable" || mode == "remove" || mode == "0");
+        }
+    }
+
+    ProxyValidatorFn validatorFn = ResolveBuiltInValidator(validatorName);
+    if (!validatorFn) {
+        appendToOutput("[Hotpatch] Unknown validator name. Use: length_check|json_syntax|safety_filter\n");
+        return;
+    }
+
+    PatchResult result = PatchResult::ok("no-op");
+    if (enable) {
+        g_proxyValidatorNames.push_back(validatorName);
+        ProxyValidator v{};
+        v.name = g_proxyValidatorNames.back().c_str();
+        v.validate = validatorFn;
+        v.userData = nullptr;
+        v.enabled = true;
+        result = proxy.add_validator(v);
+    } else {
+        result = proxy.remove_validator(validatorName.c_str());
+    }
+
+    std::ostringstream ss;
+    ss << "[Hotpatch] Proxy validator " << (enable ? "enable" : "disable")
+       << " => " << (result.success ? "OK" : "FAILED")
+       << " (" << result.detail << ")\n"
+       << "[Hotpatch] validator=" << validatorName << "\n"
+       << "[Hotpatch] validations_passed=" << ps.validationsPassed.load()
+       << " validations_failed=" << ps.validationsFailed.load() << "\n";
+    appendToOutput(ss.str());
 }
 
 void Win32IDE::cmdHotpatchShowProxyStats() {

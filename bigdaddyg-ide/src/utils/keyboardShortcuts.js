@@ -15,6 +15,7 @@
  * | symbols         | Ctrl+Shift+Y         | RE: Symbols & xrefs              | symbols           |
  * | models          | Ctrl+Shift+G         | Models: Open GGUF Streamer       | models            |
  * | sidebarToggle   | Ctrl+B               | View: Toggle project sidebar     | sidebar-toggle    |
+ * | save            | Ctrl+S               | File: Save                       | save              |
  * | openProject     | Ctrl+O               | File: Open Project…              | (palette only*)   |
  *
  * *openProject: bound in App.js keydown; not in onIdeAction switch (no ipc id). Palette-only: close-dock, etc.
@@ -32,6 +33,7 @@ export const DEFAULT_SHORTCUTS = {
   symbols: { requireMod: true, shift: true, alt: false, key: 'y' },
   models: { requireMod: true, shift: true, alt: false, key: 'g' },
   sidebarToggle: { requireMod: true, shift: false, alt: false, key: 'b' },
+  save: { requireMod: true, shift: false, alt: false, key: 's' },
   openProject: { requireMod: true, shift: false, alt: false, key: 'o' }
 };
 
@@ -44,6 +46,7 @@ const ACTION_ORDER = [
   'symbols',
   'models',
   'sidebarToggle',
+  'save',
   'openProject'
 ];
 
@@ -168,6 +171,9 @@ export function shortcutsToElectronAccelerators(shortcuts) {
         case 'sidebarToggle':
           base.sidebarToggle = toElectronAccelerator(s);
           break;
+        case 'save':
+          base.save = toElectronAccelerator(s);
+          break;
         case 'openProject':
           base.openProject = toElectronAccelerator(s);
           break;
@@ -251,6 +257,7 @@ export const SHORTCUT_STATUS_HINTS = {
   symbols: 'symbols',
   models: 'models',
   sidebarToggle: 'sidebar',
+  save: 'save',
   openProject: 'project'
 };
 

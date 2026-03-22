@@ -1,7 +1,6 @@
 /**
- * Optional shared UI bits (copy button, focus ring, optional footnote block).
- * **Primary contract** for shell polish: M01–M07 in `docs/MINIMALISTIC_7_ENHANCEMENTS.md` (repo root).
- * The footnote below is extra UI copy only — not a separate ship gate.
+ * Shared shell UI: focus ring, one-line clipboard helper, optional footer note.
+ * Extra reference: `docs/MINIMALISTIC_7_ENHANCEMENTS.md` (exported as MINIMALISTIC_DOC).
  */
 import React from 'react';
 
@@ -17,7 +16,7 @@ export {
 export const focusVisibleRing =
   'focus:outline-none focus-visible:ring-2 focus-visible:ring-ide-accent/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900';
 
-/** M11 — optional build-time gate (CRA/Vite inject at bundle time). */
+/** Optional build-time gate (CRA/Vite inject at bundle time). */
 export const EXPERIMENTAL_UI_ENV = 'REACT_APP_RAWRXD_EXPERIMENTAL';
 
 export function readExperimentalUiFlag() {
@@ -42,14 +41,12 @@ export function copyTextToClipboard(text, { onDone, onFail } = {}) {
   }
 }
 
-/**
- * M10 — one-line diagnostic copy (caller must avoid secrets in getText).
- */
+/** One-line diagnostic copy (caller must avoid secrets in getText). */
 export function CopySupportLineButton({
   getText,
   label = 'Copy support line',
   className = '',
-  title = 'M10 — copies a single grep-friendly line (no full dumps).',
+  title = 'Copy one short support line (no full dumps or secrets).',
   onCopied,
   onFailed
 }) {
@@ -66,31 +63,20 @@ export function CopySupportLineButton({
   );
 }
 
-/**
- * M08–M14 footnote — wording grounded in `docs/MINIMALISTIC_7_ENHANCEMENTS.md`.
- * M11: IdeFeaturesContext (runtime) + optional REACT_APP_RAWRXD_EXPERIMENTAL (build).
- */
 export function MinimalM08M14Footnote({ offlineHint, docPath = MINIMALISTIC_DOC, surfaceId = 'surface', m13Hint }) {
   const gate = readExperimentalUiFlag() ? 'on' : 'off';
-  const m13 =
+  const devExtra =
     m13Hint ||
-    'Dev: IdeFeaturesContext noisyConsole + noisyLogVerbose (Settings › Noise) when enabled or MAX noise.';
+    'Verbose dev logs: Settings › Noise (console + tagged lines when enabled or MAX noise).';
   return (
     <p
       className="text-[9px] leading-snug text-gray-600 border-t border-gray-800/60 pt-1.5 mt-1.5"
-      title={`M08–M14 (modify-only); ${surfaceId} — see ${MINIMALISTIC_DOC}`}
+      title={`${surfaceId} · ${docPath}`}
     >
-      <span className="text-gray-500 font-medium">M08</span> Tab / Enter; palette{' '}
-      <kbd className="px-0.5 rounded bg-gray-800 text-[8px]">Ctrl+Shift+P</kbd>.{' '}
-      <span className="text-gray-500 font-medium">M09</span> {offlineHint}{' '}
-      <span className="text-gray-500 font-medium">M10</span> Use copy buttons where shown.{' '}
-      <span className="text-gray-500 font-medium">M11</span>{' '}
-      <code className="text-[8px] text-cyan-800/90">IdeFeaturesContext</code> +{' '}
-      <code className="text-[8px] text-cyan-800/90">{EXPERIMENTAL_UI_ENV}</code>={gate}.{' '}
-      <span className="text-gray-500 font-medium">M12</span>{' '}
-      <span className="text-cyan-700/80 break-all">{docPath}</span>.{' '}
-      <span className="text-gray-500 font-medium">M13</span> {m13}{' '}
-      <span className="text-gray-500 font-medium">M14</span> No secrets in tooltips; relative paths in UI.
+      <kbd className="px-0.5 rounded bg-gray-800 text-[8px]">Ctrl+Shift+P</kbd> opens the command palette. {offlineHint}{' '}
+      Use copy buttons for a single-line diagnostic (no secrets). Experimental UI flag{' '}
+      <code className="text-[8px] text-cyan-800/90">{EXPERIMENTAL_UI_ENV}</code>={gate}. {devExtra}{' '}
+      <span className="text-cyan-700/80 break-all">{docPath}</span>
     </p>
   );
 }

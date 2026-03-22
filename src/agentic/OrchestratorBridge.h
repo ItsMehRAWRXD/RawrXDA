@@ -40,6 +40,7 @@ public:
     // ---- Configuration ----
     void SetModel(const std::string& model);
     void SetFIMModel(const std::string& model);
+    void SetTemperature(float temperature);
     void SetMaxSteps(int steps);
     void SetWorkingDirectory(const std::string& dir);
     OrchestratorBridge() = default;
@@ -62,3 +63,23 @@ public:
 
 } // namespace Agent
 } // namespace RawrXD
+
+// ---------------------------------------------------------------------------
+// MASM/C interop surface (single-hop request model)
+// ---------------------------------------------------------------------------
+// Returns 0 on success, negative on error.
+// If out_buf is provided, output is always NUL-terminated when out_buf_size > 0.
+// out_required receives the full required byte count including terminating NUL.
+extern "C" __declspec(dllexport) int RawrXD_AgentRunSync(const char* prompt,
+                                                          char* out_buf,
+                                                          unsigned int out_buf_size,
+                                                          unsigned int* out_required);
+
+extern "C" __declspec(dllexport) int RawrXD_AgentRequestFIMSync(const char* prefix,
+                                                                  const char* suffix,
+                                                                  const char* file_path,
+                                                                  char* out_buf,
+                                                                  unsigned int out_buf_size,
+                                                                  unsigned int* out_required);
+
+extern "C" __declspec(dllexport) int RawrXD_AgentSetTemperature(float temperature);

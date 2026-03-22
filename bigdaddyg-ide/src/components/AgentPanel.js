@@ -3,7 +3,6 @@ import { useIdeFeatures } from '../contexts/IdeFeaturesContext';
 import {
   focusVisibleRing,
   MinimalSurfaceM814Footer,
-  MINIMALISTIC_DOC,
   CopySupportLineButton
 } from '../utils/minimalisticM08M14';
 
@@ -152,14 +151,14 @@ const AgentPanel = ({
         <h3 className="font-semibold mb-1">Autonomous agent</h3>
         <p
           className="text-[10px] text-gray-500 mb-2"
-          title="M01 — Uses main-process orchestrator + approval gates from Settings › Copilot. Does not bypass files on disk you have not approved."
+          title="Main orchestrator; approval gates from Settings › Copilot and main policy."
         >
           Planning orchestrator · plan / mutation batch gates · rollback snapshots · risk tiers
         </p>
         <div className="flex flex-col gap-1.5 text-xs text-gray-400 mb-2">
           <label
             className="flex items-center gap-2 cursor-pointer"
-            title="M06 — Default off: mutating steps need approval unless you enable this."
+            title="Off by default: write/append steps wait for approval unless enabled."
           >
             <input
               type="checkbox"
@@ -255,7 +254,7 @@ const AgentPanel = ({
             <button
               type="button"
               className="text-[10px] px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 shrink-0"
-              title="Refresh task list from the orchestrator. If nothing updates, check the main process log."
+              title="agent:list-tasks IPC. No new rows: main-process log."
               onClick={() => {
                 noisyLog('[agent]', 'refresh task list');
                 setStatusLine('agent: refreshing tasks…');
@@ -434,30 +433,28 @@ const AgentPanel = ({
         {!taskId && (
           <div className="text-gray-500 text-sm space-y-2">
             <p>
-              M03 — No task selected. Next: open a project, type a goal, click Run. If the list never fills, open Settings ›
-              Copilot and confirm the shell is running under Electron with the orchestrator IPC. Mutating steps pause unless
-              you auto-approve writes; tighten ask_ai gates for more manual review.
+              Idle: no task id. Run needs Electron + preload <code className="text-gray-400">startAgent</code>. Gates:
+              Settings › Copilot (auto-approve writes / ask_ai approval).
             </p>
             {typeof window !== 'undefined' && typeof window.electronAPI?.startAgent !== 'function' ? (
               <p className="text-amber-500/95 text-xs border border-amber-700/40 rounded-lg px-2 py-1.5 bg-amber-950/25">
-                Recovery: run the packaged Electron app (preload must expose <code className="text-amber-200/90">startAgent</code>
-                ); plain browser dev preview cannot start agent tasks over IPC.
+                Browser preview: no <code className="text-amber-200/90">startAgent</code> IPC. Agent runs in Electron with
+                preload.
               </p>
             ) : null}
           </div>
         )}
         {taskId && (taskStatus === 'failed' || taskStatus === 'cancelled') && (
           <p className="text-gray-500 text-xs mt-2 border-t border-gray-800 pt-2">
-            M03 — Task ended with {taskStatus}. Next: read the last step error above, fix the goal or workspace, then start
-            a new run. Check the main process log if steps show no detail.
+            Task state: {taskStatus}. Step errors above; empty detail → main-process log.
           </p>
         )}
       </div>
       <MinimalSurfaceM814Footer
         surfaceId="agent"
-        offlineHint="Panel UI works offline; running tasks need main-process orchestrator IPC."
+        offlineHint="UI works offline; running tasks need the Electron main process."
         docPath="docs/AUTONOMOUS_AGENT_ELECTRON.md"
-        m13Hint={`Dev: main-process logs; Settings › Noise (verboseDevLogs). Also ${MINIMALISTIC_DOC}.`}
+        m13Hint="Dev: main-process logs; Settings › Noise (verbose dev logs)."
         className="px-2 border-t border-gray-800/80"
       >
         <div className="flex flex-wrap gap-1 px-1 pb-1">

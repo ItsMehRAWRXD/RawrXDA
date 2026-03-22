@@ -172,7 +172,9 @@ AIDigestionWorker::AIDigestionWorker(AIDigestionEngine* engine, )
     , m_failedFiles()
     , m_filePaths()
     , m_remainingFiles() {
-    m_progressTimer->setInterval(500);  // Signal connection removed\n// Initialize progress
+    m_progressTimer->setInterval(500);
+    m_progressTimer->onTimeout([this] { updateProgress(); });
+    // Initialize progress
     m_progress.currentFile = 0;
     m_progress.totalFiles = 0;
     m_progress.percentage = 0.0;
@@ -535,7 +537,9 @@ AITrainingWorker::AITrainingWorker(AITrainingPipeline* pipeline, )
     , m_agentExplorationRates()
     , m_agentIterationCount(0)
     , m_agentState() {
-    m_progressTimer->setInterval(1000);  // Signal connection removed\n// Initialize progress
+    m_progressTimer->setInterval(1000);
+    m_progressTimer->onTimeout([this] { updateProgress(); });
+    // Initialize progress
     m_progress.currentEpoch = 0;
     m_progress.totalEpochs = 0;
     m_progress.currentBatch = 0;
@@ -1427,8 +1431,8 @@ void AIWorkerManager::startDigestionWorker(AIDigestionWorker* worker, const std:
     std::thread* thread = new std::thread(this);
     m_threads.append(thread);
 
-    worker->;  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\n  // Signal
-               // connection removed\nthread->start();
+    moveWorkerToThread(worker, thread);
+    thread->start();
     workerStarted(worker);
 
     // Start the actual work
@@ -1459,8 +1463,8 @@ void AIWorkerManager::startTrainingWorker(AITrainingWorker* worker, const AIDige
     std::thread* thread = new std::thread(this);
     m_threads.append(thread);
 
-    worker->;  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\n  // Signal
-               // connection removed\nthread->start();
+    moveWorkerToThread(worker, thread);
+    thread->start();
     workerStarted(worker);
 
     // Start the actual work
@@ -1583,6 +1587,6 @@ void AIWorkerManager::moveWorkerToThread(void* worker, std::thread* thread)
 {
     if (worker && thread)
     {
-        worker->;
+        // Native worker dispatch uses the queued invoke helper; there is no Qt moveToThread equivalent here.
     }
 }

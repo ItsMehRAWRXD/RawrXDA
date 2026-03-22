@@ -6,6 +6,8 @@
 #include <mutex>
 #include <unordered_map>
 #include <map>
+#include <future>
+#include <thread>
 #include "metrics.h"
 #include "logger.h"
 #include "cpu_inference_engine.h"
@@ -34,7 +36,7 @@ public:
     RealTimeCompletionEngine(std::shared_ptr<Logger> logger, std::shared_ptr<Metrics> metrics);
     virtual ~RealTimeCompletionEngine() = default;
 
-    // Core API
+    // Synchronous Core API
     std::vector<CodeCompletion> getCompletions(const std::string& prefix, 
                                              const std::string& suffix, 
                                              const std::string& fileType, 
@@ -51,6 +53,24 @@ public:
                                                        int line, 
                                                        int column, 
                                                        const std::string& scope);
+
+    // Asynchronous Core API (returns futures for non-blocking operation)
+    std::future<std::vector<CodeCompletion>> getCompletionsAsync(const std::string& prefix, 
+                                                                const std::string& suffix, 
+                                                                const std::string& fileType, 
+                                                                const std::string& context);
+                                             
+    std::future<std::vector<CodeCompletion>> getInlineCompletionsAsync(const std::string& currentLine, 
+                                                                      int cursorColumn, 
+                                                                      const std::string& filePath);
+                                                   
+    std::future<std::vector<CodeCompletion>> getMultiLineCompletionsAsync(const std::string& prefix, 
+                                                                         int maxLines);
+                                                      
+    std::future<std::vector<CodeCompletion>> getContextualCompletionsAsync(const std::string& filePath, 
+                                                                          int line, 
+                                                                          int column, 
+                                                                          const std::string& scope);
 
     // Cache Management
     void prewarmCache(const std::string& filePath);

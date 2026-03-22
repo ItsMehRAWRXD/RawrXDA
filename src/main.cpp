@@ -48,6 +48,7 @@
 
 // Phase 33: Voice Chat Engine
 #include "core/voice_chat.hpp"
+#include "core/shared_feature_dispatch.h"
 
 // Enterprise License & Feature Manager
 #include "core/enterprise_license.h"
@@ -62,6 +63,51 @@ void SignalHandler(int signal)
 {
     std::cout << "\n[ENGINE] Exiting...\n";
     exit(0);
+}
+
+static void cliRegistryOutput(const char* text, void* userData)
+{
+    (void)userData;
+    if (text)
+        std::cout << text;
+}
+
+static bool dispatchProfileBangCommand(const std::string& input)
+{
+    if (input.empty() || input[0] != '!')
+        return false;
+
+    size_t split = input.find_first_of(" \t");
+    std::string cmd = (split == std::string::npos) ? input : input.substr(0, split);
+    std::string args = (split == std::string::npos) ? "" : input.substr(split + 1);
+
+    // Accept both canonical profile commands and tool-prefixed aliases.
+    if (cmd == "!tools_profile_start") cmd = "!profile_start";
+    else if (cmd == "!tools_profile_stop") cmd = "!profile_stop";
+    else if (cmd == "!tools_profile_results") cmd = "!profile_results";
+
+    if (!(cmd == "!profile_start" || cmd == "!profile_stop" || cmd == "!profile_results"))
+        return false;
+
+    CommandContext ctx{};
+    ctx.rawInput = input.c_str();
+    ctx.args = args.c_str();
+    ctx.idePtr = nullptr;
+    ctx.cliStatePtr = nullptr;
+    ctx.commandId = 0;
+    ctx.isGui = false;
+    ctx.isHeadless = true;
+    ctx.hwnd = nullptr;
+    ctx.emitEvent = nullptr;
+    ctx.outputFn = &cliRegistryOutput;
+    ctx.outputUserData = nullptr;
+
+    CommandResult result = SharedFeatureRegistry::instance().dispatchByCli(cmd.c_str(), ctx);
+    if (!result.success && result.detail)
+    {
+        std::cout << "[Profile] " << result.detail << "\n";
+    }
+    return true;
 }
 
 // Build guard: compile this entry point only for the CLI target.
@@ -1882,6 +1928,10 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                 {
                     std::cout << "[Models] Usage: /models cycle <1-4>\n";
                 }
+            }
+            else if (dispatchProfileBangCommand(input))
+            {
+                // Profile command handled via shared feature dispatcher hotpatch path.
             }
             // ── Phase 20: Model Hotpatcher ! Commands ──
             else if (input.substr(0, 12) == "!model_load ")

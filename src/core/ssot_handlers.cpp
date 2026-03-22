@@ -36,6 +36,8 @@
 #include <algorithm>
 #include <map>
 #include <mutex>
+#include <atomic>
+#include <unordered_map>
 #include <fstream>
 #include <iomanip>
 #include <cstdlib>
@@ -51,6 +53,163 @@ static RawrXD::Agent::AgentOllamaClient& getAgentClient();
 // ============================================================================
 
 namespace {
+struct ReverseTraceStats {
+    uint64_t calls = 0;
+    uint64_t totalUs = 0;
+    uint64_t maxUs = 0;
+    uint64_t lastUs = 0;
+};
+
+struct ReverseTraceState {
+    std::mutex mtx;
+    std::unordered_map<std::string, ReverseTraceStats> byName;
+    LARGE_INTEGER qpcFreq{};
+    bool freqReady = false;
+
+    static ReverseTraceState& instance() {
+        static ReverseTraceState s;
+        return s;
+    }
+};
+
+static uint64_t reverseTraceNowTicks() {
+    LARGE_INTEGER now{};
+    QueryPerformanceCounter(&now);
+    return static_cast<uint64_t>(now.QuadPart);
+}
+
+static uint64_t reverseTraceTicksToUs(uint64_t ticks) {
+    auto& st = ReverseTraceState::instance();
+    if (!st.freqReady) {
+        LARGE_INTEGER freq{};
+        QueryPerformanceFrequency(&freq);
+        st.qpcFreq = freq;
+        st.freqReady = true;
+    }
+    const uint64_t denom = static_cast<uint64_t>(st.qpcFreq.QuadPart > 0 ? st.qpcFreq.QuadPart : 1);
+    return (ticks * 1000000ull) / denom;
+}
+
+static void reverseTraceRecord(const char* name, uint64_t elapsedUs) {
+    if (!name || !name[0]) return;
+    auto& st = ReverseTraceState::instance();
+    std::lock_guard<std::mutex> lock(st.mtx);
+    ReverseTraceStats& s = st.byName[name];
+    s.calls += 1;
+    s.totalUs += elapsedUs;
+    s.lastUs = elapsedUs;
+    if (elapsedUs > s.maxUs) s.maxUs = elapsedUs;
+}
+
+class ReverseTraceScope {
+public:
+    explicit ReverseTraceScope(const char* name) : m_name(name), m_start(reverseTraceNowTicks()) {}
+    ~ReverseTraceScope() {
+        const uint64_t end = reverseTraceNowTicks();
+        const uint64_t elapsedTicks = (end >= m_start) ? (end - m_start) : 0;
+        reverseTraceRecord(m_name, reverseTraceTicksToUs(elapsedTicks));
+    }
+
+private:
+    const char* m_name;
+    uint64_t m_start;
+};
+
+static std::string reverseTraceHotspotsReport(size_t topN) {
+    struct Row {
+        std::string name;
+        ReverseTraceStats stats;
+        uint64_t avgUs = 0;
+    };
+
+    std::vector<Row> rows;
+    {
+        auto& st = ReverseTraceState::instance();
+        std::lock_guard<std::mutex> lock(st.mtx);
+        rows.reserve(st.byName.size());
+        for (const auto& kv : st.byName) {
+            Row r;
+            r.name = kv.first;
+            r.stats = kv.second;
+            r.avgUs = (r.stats.calls > 0) ? (r.stats.totalUs / r.stats.calls) : 0;
+            rows.push_back(r);
+        }
+    }
+
+    std::sort(rows.begin(), rows.end(), [](const Row& a, const Row& b) {
+        return a.stats.totalUs > b.stats.totalUs;
+    });
+
+    if (rows.empty()) {
+        return "  Reverse Trace: no samples yet\\n";
+    }
+
+    std::ostringstream oss;
+    oss << "  Reverse Trace Hotspots (top " << topN << "):\\n";
+    const size_t count = std::min(topN, rows.size());
+    for (size_t i = 0; i < count; ++i) {
+        const auto& r = rows[i];
+        oss << "    [" << (i + 1) << "] " << r.name
+            << " calls=" << r.stats.calls
+            << " total=" << r.stats.totalUs << "us"
+            << " avg=" << r.avgUs << "us"
+            << " max=" << r.stats.maxUs << "us"
+            << " last=" << r.stats.lastUs << "us\\n";
+    }
+    return oss.str();
+}
+
+static void reverseTraceResetAll() {
+    auto& st = ReverseTraceState::instance();
+    std::lock_guard<std::mutex> lock(st.mtx);
+    st.byName.clear();
+}
+
+static bool reverseTraceExportCsv(const std::string& outPath) {
+    struct Row {
+        std::string name;
+        ReverseTraceStats stats;
+        uint64_t avgUs = 0;
+    };
+
+    std::vector<Row> rows;
+    {
+        auto& st = ReverseTraceState::instance();
+        std::lock_guard<std::mutex> lock(st.mtx);
+        rows.reserve(st.byName.size());
+        for (const auto& kv : st.byName) {
+            Row r;
+            r.name = kv.first;
+            r.stats = kv.second;
+            r.avgUs = (r.stats.calls > 0) ? (r.stats.totalUs / r.stats.calls) : 0;
+            rows.push_back(r);
+        }
+    }
+
+    std::sort(rows.begin(), rows.end(), [](const Row& a, const Row& b) {
+        return a.stats.totalUs > b.stats.totalUs;
+    });
+
+    FILE* f = fopen(outPath.c_str(), "wb");
+    if (!f) return false;
+
+    fprintf(f, "name,calls,total_us,avg_us,max_us,last_us\n");
+    for (const auto& r : rows) {
+        std::string safe = r.name;
+        std::replace(safe.begin(), safe.end(), '"', '\'');
+        fprintf(f, "\"%s\",%llu,%llu,%llu,%llu,%llu\n",
+                safe.c_str(),
+                static_cast<unsigned long long>(r.stats.calls),
+                static_cast<unsigned long long>(r.stats.totalUs),
+                static_cast<unsigned long long>(r.avgUs),
+                static_cast<unsigned long long>(r.stats.maxUs),
+                static_cast<unsigned long long>(r.stats.lastUs));
+    }
+
+    fclose(f);
+    return true;
+}
+
 struct CliVisualState {
     std::mutex mtx;
     std::string activeTheme = "theme.oneDarkPro";
@@ -255,6 +414,7 @@ static const char* themeNameFromId(uint32_t cmdId) {
 } // namespace
 
 static CommandResult routeToIde(const CommandContext& ctx, uint32_t cmdId, const char* name) {
+    ReverseTraceScope _trace("ssot.routeToIde");
     if (ctx.isGui && ctx.idePtr) {
         // Route to Win32IDE's WM_COMMAND handler (use ctx.hwnd when set by adapter)
         HWND hwnd = reinterpret_cast<HWND>(ctx.hwnd);
@@ -1581,6 +1741,7 @@ CommandResult handleBackendSwitchLocal(const CommandContext& ctx) {
 }
 
 CommandResult handleBackendSwitchOllama(const CommandContext& ctx) {
+    ReverseTraceScope _trace("ssot.backend.switchOllama");
     auto& bs = SSOBackendState::instance();
     RawrXD::Agent::OllamaConfig config;
     {
@@ -1862,6 +2023,7 @@ CommandResult handleBackendConfigure(const CommandContext& ctx) {
 }
 
 CommandResult handleBackendHealthCheck(const CommandContext& ctx) {
+    ReverseTraceScope _trace("ssot.backend.healthCheck");
     ctx.output("[BACKEND] Health Check:\n");
     auto client = createSsoOllamaClient();
     bool ok = client.TestConnection();
@@ -2605,6 +2767,7 @@ CommandResult handleGovStatus(const CommandContext& ctx) {
     return CommandResult::ok("gov.status");
 }
 CommandResult handleGovSubmitCommand(const CommandContext& ctx) {
+    ReverseTraceScope _trace("ssot.gov.submit");
     if (ctx.isGui && ctx.idePtr) routeToIde(ctx, 5119, "gov.submit");
 
     std::string cmd = trimAscii(ctx.args ? std::string(ctx.args) : std::string());
@@ -2653,6 +2816,7 @@ CommandResult handleGovSubmitCommand(const CommandContext& ctx) {
     return CommandResult::ok("gov.submit");
 }
 CommandResult handleGovTaskList(const CommandContext& ctx) {
+    ReverseTraceScope _trace("ssot.gov.taskList");
     if (ctx.isGui && ctx.idePtr) routeToIde(ctx, 5121, "gov.taskList");
 
     ExecutionGovernor& execGov = ExecutionGovernor::instance();
@@ -6662,6 +6826,7 @@ CommandResult handleAuditDashboard(const CommandContext& ctx) {
 }
 #ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleAuditRunFull(const CommandContext& ctx) {
+    ReverseTraceScope _trace("ssot.audit.runFull");
     if (ctx.isGui && ctx.idePtr) {
         HWND hwnd = reinterpret_cast<HWND>(ctx.hwnd);
         if (!hwnd) hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
@@ -6679,6 +6844,7 @@ CommandResult handleAuditRunFull(const CommandContext& ctx) {
     oss << "  Orchestrator: " << orchStats.repairsAttempted << " repairs, " << orchStats.anomaliesDetected << " anomalies\n"
         << "  Hotpatch:     " << hpStats.totalOperations.load() << " applied\n"
         << "  Proxy:        biases=" << pStats.biasesApplied << " rewrites=" << pStats.rewritesApplied << "\n"
+        << reverseTraceHotspotsReport(8)
         << "  Audit complete.\n";
     ctx.output(oss.str().c_str());
     return CommandResult::ok("audit.runFull");
@@ -6704,6 +6870,18 @@ CommandResult handleAuditDetectStubs(const CommandContext& ctx) {
     return CommandResult::ok("audit.detectStubs");
 }
 CommandResult handleAuditQuickStats(const CommandContext& ctx) {
+    ReverseTraceScope _trace("ssot.audit.quickStats");
+    const std::string args = trimAscii(ctx.args ? std::string(ctx.args) : std::string());
+    if (!args.empty()) {
+        const std::string lowerArgs = toLowerCopy(args);
+        if (lowerArgs == "trace_reset" || lowerArgs == "reset" ||
+            lowerArgs == "trace reset" || lowerArgs == "--trace-reset") {
+            reverseTraceResetAll();
+            ctx.output("[AUDIT] Reverse trace samples reset.\n");
+            return CommandResult::ok("audit.quickStats.traceReset");
+        }
+    }
+
     if (ctx.isGui && ctx.idePtr) {
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
         PostMessageA(hwnd, WM_COMMAND, 9506, 0);
@@ -6718,7 +6896,8 @@ CommandResult handleAuditQuickStats(const CommandContext& ctx) {
     oss << "=== Quick Stats ===\n"
         << "  RAM:     " << mem.dwMemoryLoad << "% used (" << (mem.ullAvailPhys/(1024*1024)) << " MB free)\n"
         << "  Patches: " << stats.totalOperations.load() << " total\n"
-        << "  Uptime:  " << (GetTickCount64() / 1000) << " seconds\n";
+        << "  Uptime:  " << (GetTickCount64() / 1000) << " seconds\n"
+        << reverseTraceHotspotsReport(6);
     ctx.output(oss.str().c_str());
     return CommandResult::ok("audit.quickStats");
 }
@@ -6753,6 +6932,7 @@ CommandResult handleAuditRunTests(const CommandContext& ctx) {
     return CommandResult::ok("audit.runTests");
 }
 CommandResult handleAuditExportReport(const CommandContext& ctx) {
+    ReverseTraceScope _trace("ssot.audit.exportReport");
     if (ctx.isGui && ctx.idePtr) {
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
         PostMessageA(hwnd, WM_COMMAND, 9505, 0);
@@ -6769,10 +6949,22 @@ CommandResult handleAuditExportReport(const CommandContext& ctx) {
         fprintf(f, "Hotpatches: %llu (M:%llu B:%llu S:%llu)\n",
                 (unsigned long long)stats.totalOperations.load(), (unsigned long long)stats.memoryPatchCount.load(), (unsigned long long)stats.bytePatchCount.load(), (unsigned long long)stats.serverPatchCount.load());
         fprintf(f, "Repairs: %llu  Anomalies: %llu\n", (unsigned long long)oStats.repairsAttempted, (unsigned long long)oStats.anomaliesDetected);
+        const std::string traceText = reverseTraceHotspotsReport(20);
+        fprintf(f, "%s", traceText.c_str());
         fclose(f);
         ctx.output("[AUDIT] Report exported to: ");
         ctx.output(outFile);
         ctx.output("\n");
+
+        std::string csvPath = outFile;
+        csvPath += ".reverse_trace.csv";
+        if (reverseTraceExportCsv(csvPath)) {
+            ctx.output("[AUDIT] Reverse trace CSV exported to: ");
+            ctx.output(csvPath.c_str());
+            ctx.output("\n");
+        } else {
+            ctx.output("[AUDIT] Reverse trace CSV export failed.\n");
+        }
     } else {
         ctx.output("[AUDIT] Failed to write report.\n");
     }

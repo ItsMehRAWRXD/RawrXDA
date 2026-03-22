@@ -12,6 +12,10 @@ namespace RawrXD {
 class UniversalModelRouter;
 class ContextManager; 
 
+namespace CPUInference {
+class CPUInferenceEngine;
+}
+
 class ChatInterface {
 public:
     struct Message {
@@ -31,8 +35,11 @@ public:
     void attachModelRouter(UniversalModelRouter* router);
     void attachContextManager(ContextManager* ctx);
     
+    // Native engine integration
+    void setModel(const std::string& modelPath);
+    
     // Callback for UI updates
-    std::function<void(const Message&)> onMessageReceived;
+    // std::function<void(const Message&)> onMessageReceived;
     
 private:
     std::vector<Message> m_history;
@@ -40,6 +47,8 @@ private:
     
     UniversalModelRouter* m_router = nullptr;
     ContextManager* m_context = nullptr;
+    
+    std::unique_ptr<CPUInference::CPUInferenceEngine> m_engine;
     
     void processResponse(const std::string& modelOutput);
     void appendToHistory(const std::string& role, const std::string& content);

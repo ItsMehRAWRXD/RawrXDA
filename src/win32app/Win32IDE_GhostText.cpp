@@ -333,21 +333,19 @@ std::string Win32IDE::requestGhostTextCompletion(const std::string& context,
             // ---- Primary: OrchestratorBridge FIM (uses AgentOllamaClient + FIMPromptBuilder) ----
             {
                 auto& orchBridge = RawrXD::Agent::OrchestratorBridge::Instance();
-                if (orchBridge.IsInitialized()) {
-                    RawrXD::Prediction::PredictionContext bCtx;
-                    bCtx.prefix       = context;
-                    bCtx.suffix       = suffix;
-                    bCtx.language     = language;
-                    bCtx.filePath     = filePath;
-                    bCtx.cursorLine   = cursorLine;
-                    bCtx.cursorColumn = cursorCol;
+                RawrXD::Prediction::PredictionContext bCtx;
+                bCtx.prefix       = context;
+                bCtx.suffix       = suffix;
+                bCtx.language     = language;
+                bCtx.filePath     = filePath;
+                bCtx.cursorLine   = cursorLine;
+                bCtx.cursorColumn = cursorCol;
 
-                    auto bResult = orchBridge.RequestGhostText(bCtx);
-                    if (bResult.success && !bResult.completion.empty()) {
-                        std::lock_guard<std::mutex> lock(m_ghostTextCacheMutex);
-                        m_ghostTextMetrics.localWins++;
-                        return trimGhostText(bResult.completion);
-                    }
+                auto bResult = orchBridge.RequestGhostText(bCtx);
+                if (bResult.success && !bResult.completion.empty()) {
+                    std::lock_guard<std::mutex> lock(m_ghostTextCacheMutex);
+                    m_ghostTextMetrics.localWins++;
+                    return trimGhostText(bResult.completion);
                 }
             }
 

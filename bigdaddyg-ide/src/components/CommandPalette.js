@@ -72,7 +72,7 @@ const CommandPalette = ({ open, onClose, commands }) => {
       playUiSound('error');
       pushToast({
         title: 'Palette',
-        message: err?.message ? String(err.message) : 'Command failed — check devtools console.',
+        message: err?.message ? String(err.message) : 'Command action threw; see renderer console for the stack.',
         variant: 'error',
         durationMs: 4500
       });
@@ -139,17 +139,17 @@ const CommandPalette = ({ open, onClose, commands }) => {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Type a command…"
-              aria-label="Filter commands"
-              title={`M01 — Allow-listed actions only; no shell. M12 ${MINIMALISTIC_DOC}`}
+              placeholder=""
+              aria-label="Command filter"
+              title={`Registered commands from App.js / menu ids only — not a shell. ${MINIMALISTIC_DOC}`}
               className={`w-full bg-ide-bg border-0 border-b border-gray-700 px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-ide-accent/40 ${focusVisibleRing}`}
             />
             <ul role="listbox" aria-label="Commands" className="max-h-72 overflow-y-auto py-1">
               {filtered.length === 0 && (
                 <li className="px-4 py-3 text-sm text-gray-500" role="presentation">
                   {registryCommands.length === 0
-                    ? 'No commands available — enable the relevant modules (e.g. Command palette, test runner) in the Modules tab.'
-                    : 'No matching commands — try a shorter query, remove typos, or press Esc to close.'}
+                    ? 'Command list is empty for the current module flags (Modules tab: Command palette and other gates).'
+                    : 'No commands match the current filter. Clear the filter or press Esc to close.'}
                 </li>
               )}
               {filtered.map((cmd, i) => (
@@ -174,14 +174,14 @@ const CommandPalette = ({ open, onClose, commands }) => {
             </ul>
             <div
               className="px-4 py-2 border-t border-gray-700 text-[10px] text-gray-500 flex flex-col gap-1 sm:flex-row sm:justify-between sm:items-center"
-              title="M01 — Runs registered allow-listed commands only; does not execute shell or arbitrary strings. M06 — Commands mirror App.js paletteCommands / menu IPC ids."
+              title="Footer: keyboard shortcuts for this dialog. Commands are fixed entries from App.js / Electron menu."
             >
-              <span>↑↓ navigate · ↵ run · Esc close (clears filter when reopened)</span>
-              <span>M04 — Ctrl+Shift+P · ide:action command-palette · labels match View menu</span>
+              <span>↑↓ selection · ↵ run · Esc close</span>
+              <span>Ctrl+Shift+P · ide:action command-palette</span>
             </div>
             <MinimalSurfaceM814Footer
               surfaceId="command-palette"
-              offlineHint="Palette works offline; some opened targets need backends."
+              offlineHint="Filtering runs in the renderer; opened panels may still call Electron IPC."
               docPath={MINIMALISTIC_DOC}
               m13Hint="Dev: noisyLog('[palette]', …) on run/error."
               className="px-3 pb-2"

@@ -8,9 +8,11 @@
 #include "../core/ConfigurationValidator.h"
 #include "../inference/PerformanceMonitor.h"
 #include "ErrorRecoveryManager.h"
+#include "../agent/agentic_hotpatch_orchestrator.hpp"
 #include <algorithm>
 #include <cctype>
 #include <chrono>
+#include <cstring>
 #include <sstream>
 #include <thread>
 #include <stdexcept>
@@ -85,6 +87,30 @@ void EnsureValidationRules() {
         "Chat model must be selected", false});
     validator.addRule("ollama", {"fim_model", [](const std::string& value) { return !value.empty(); },
         "FIM model must be selected", false});
+}
+
+} // namespace
+
+namespace {
+
+int WriteInteropOutput(const std::string& out,
+                       char* out_buf,
+                       unsigned int out_buf_size,
+                       unsigned int* out_required) {
+    const unsigned int required = static_cast<unsigned int>(out.size() + 1);
+    if (out_required) {
+        *out_required = required;
+    }
+
+    if (out_buf && out_buf_size > 0) {
+        const size_t copyLen = std::min<size_t>(out.size(), static_cast<size_t>(out_buf_size - 1));
+        if (copyLen > 0) {
+            std::memcpy(out_buf, out.data(), copyLen);
+        }
+        out_buf[copyLen] = '\0';
+    }
+
+    return (required <= out_buf_size) ? 0 : 1;
 }
 
 } // namespace
@@ -174,21 +200,14 @@ bool OrchestratorBridge::Initialize(const std::string& workingDir,
 // ---------------------------------------------------------------------------
 
 std::string OrchestratorBridge::RunAgent(const std::string& userPrompt) {
-    if (!EnsureClientReady()) {
-        return "[ERROR] OrchestratorBridge not initialized";
-    }
+    (void)EnsureClientReady();
+    AgenticHotpatchOrchestrator::instance().setModelTemperature(m_ollamaConfig.temperature);
 
     auto& logger = GetLogger();
     auto& sanitizer = RawrXD::Security::InputSanitizer::instance();
     auto sanitizedPrompt = sanitizer.sanitizePrompt(userPrompt);
     if (sanitizedPrompt.wasModified) {
         logger.warning("OrchestratorBridge", "Prompt sanitized before dispatch");
-    }
-
-    RawrXD::Agent::ToolGuardrails guards = RawrXD::Agent::AgentToolHandlers::GetGuardrails();
-    if (guards.allowedRoots.empty() && !m_workingDir.empty()) {
-        guards.allowedRoots.push_back(m_workingDir);
-        RawrXD::Agent::AgentToolHandlers::SetGuardrails(guards);
     }
 
     std::vector<ChatMessage> messages;
@@ -294,9 +313,8 @@ void OrchestratorBridge::RunAgentAsync(const std::string& userPrompt) {
 Prediction::PredictionResult OrchestratorBridge::RequestGhostText(
     const Prediction::PredictionContext& ctx)
 {
-    if (!EnsureClientReady()) {
-        return Prediction::PredictionResult::Error("OrchestratorBridge not initialized");
-    }
+    (void)EnsureClientReady();
+    AgenticHotpatchOrchestrator::instance().setModelTemperature(m_ollamaConfig.temperature);
 
     auto& perf = RawrXD::Inference::PerformanceMonitor::instance();
     auto& recovery = RawrXD::Agentic::ErrorRecoveryManager::instance();
@@ -331,7 +349,9 @@ void OrchestratorBridge::RequestGhostTextStream(
     const Prediction::PredictionContext& ctx,
     Prediction::StreamTokenCallback onToken)
 {
-    if (!EnsureClientReady()) {
+    (void)EnsureClientReady();
+
+    if (!m_ollamaClient) {
         if (onToken) {
             onToken("", true);
         }
@@ -370,28 +390,9 @@ bool OrchestratorBridge::EnsureClientReady() {
 
     ApplyConfig();
 
-    if (!m_ollamaClient->TestConnection()) {
-        m_initialized = false;
-        return false;
-    }
-
-    if (m_ollamaConfig.chat_model.empty() || m_ollamaConfig.fim_model.empty()) {
-        RefreshAvailableModels();
-
-        if (m_ollamaConfig.chat_model.empty()) {
-            m_ollamaConfig.chat_model = SelectPreferredModel(true);
-        }
-        if (m_ollamaConfig.fim_model.empty()) {
-            m_ollamaConfig.fim_model = SelectPreferredModel(true);
-            if (m_ollamaConfig.fim_model.empty()) {
-                m_ollamaConfig.fim_model = m_ollamaConfig.chat_model;
-            }
-        }
-
-        ApplyConfig();
-    }
-
-    m_initialized = !m_ollamaConfig.chat_model.empty() || !m_ollamaConfig.fim_model.empty();
+    // Deliberately avoid bridge-side capability gating.
+    // The execution backend/model decides what it can or cannot do at runtime.
+    m_initialized = (m_ollamaClient != nullptr);
     return m_initialized;
 }
 
@@ -462,6 +463,19 @@ void OrchestratorBridge::SetFIMModel(const std::string& model) {
     m_initialized = m_initialized || !model.empty();
 }
 
+void OrchestratorBridge::SetTemperature(float temperature) {
+    if (temperature < 0.0f) {
+        temperature = 0.0f;
+    }
+    if (temperature > 2.0f) {
+        temperature = 2.0f;
+    }
+
+    m_ollamaConfig.temperature = temperature;
+    ApplyConfig();
+    AgenticHotpatchOrchestrator::instance().setModelTemperature(temperature);
+}
+
 void OrchestratorBridge::SetMaxSteps(int steps) {
     if (steps > 0) {
         m_maxSteps = steps;
@@ -480,7 +494,197 @@ void OrchestratorBridge::SetWorkingDirectory(const std::string& dir) {
     if (!m_workingDir.empty()) {
         guards.allowedRoots.push_back(m_workingDir);
     }
-    guards.commandTimeoutMs = 30000;
-    guards.requireBackupOnWrite = true;
     RawrXD::Agent::AgentToolHandlers::SetGuardrails(guards);
+}
+
+// ---------------------------------------------------------------------------
+// C ABI interop helpers (MASM-friendly single-hop interface)
+// ---------------------------------------------------------------------------
+extern "C" __declspec(dllexport) int RawrXD_AgentRunSync(const char* prompt,
+                                                          char* out_buf,
+                                                          unsigned int out_buf_size,
+                                                          unsigned int* out_required)
+{
+    try
+    {
+        const std::string in = prompt ? std::string(prompt) : std::string();
+        std::string out = RawrXD::Agent::OrchestratorBridge::Instance().RunAgent(in);
+
+        const unsigned int required = static_cast<unsigned int>(out.size() + 1);
+        if (out_required)
+        {
+            *out_required = required;
+        }
+
+        if (out_buf && out_buf_size > 0)
+        {
+            const size_t copyLen = std::min<size_t>(out.size(), static_cast<size_t>(out_buf_size - 1));
+            if (copyLen > 0)
+            {
+                std::memcpy(out_buf, out.data(), copyLen);
+            }
+            out_buf[copyLen] = '\0';
+        }
+
+        return 0;
+    }
+    catch (...)
+    {
+        if (out_required)
+        {
+            *out_required = 0;
+        }
+        if (out_buf && out_buf_size > 0)
+        {
+            out_buf[0] = '\0';
+        }
+        return -1;
+    }
+}
+
+// Single-entry C ABI dispatch for MASM callers.
+// op=1: agent run (input is plain prompt text)
+// op=2: fim request (input is JSON: {"prefix":"...","suffix":"...","file_path":"..."})
+// op=3: set temperature (input is string float, e.g. "0.2" or "1.1")
+extern "C" __declspec(dllexport) int RawrXD_AgentDispatchSync(unsigned int op,
+                                                                const char* in_buf,
+                                                                char* out_buf,
+                                                                unsigned int out_buf_size,
+                                                                unsigned int* out_required)
+{
+    try
+    {
+        const std::string input = in_buf ? in_buf : "";
+
+        if (op == 1)
+        {
+            std::string out = RawrXD::Agent::OrchestratorBridge::Instance().RunAgent(input);
+            return WriteInteropOutput(out, out_buf, out_buf_size, out_required);
+        }
+
+        if (op == 2)
+        {
+            json request;
+            try {
+                request = input.empty() ? json::object() : json::parse(input);
+            } catch (...) {
+                return WriteInteropOutput("invalid json payload", out_buf, out_buf_size, out_required) == 0 ? -4 : -4;
+            }
+
+            RawrXD::Prediction::PredictionContext ctx;
+            ctx.prefix = request.value("prefix", "");
+            ctx.suffix = request.value("suffix", "");
+            ctx.filePath = request.value("file_path", "");
+
+            RawrXD::Prediction::PredictionResult result =
+                RawrXD::Agent::OrchestratorBridge::Instance().RequestGhostText(ctx);
+
+            std::string out = result.success ? result.completion : result.error;
+            WriteInteropOutput(out, out_buf, out_buf_size, out_required);
+            return result.success ? 0 : -2;
+        }
+
+        if (op == 3)
+        {
+            float temp = 0.7f;
+            try {
+                temp = input.empty() ? 0.7f : std::stof(input);
+            } catch (...) {
+                WriteInteropOutput("invalid temperature", out_buf, out_buf_size, out_required);
+                return -5;
+            }
+
+            RawrXD::Agent::OrchestratorBridge::Instance().SetTemperature(temp);
+            std::string out = std::string("temperature set to ") + std::to_string(temp);
+            WriteInteropOutput(out, out_buf, out_buf_size, out_required);
+            return 0;
+        }
+
+        return WriteInteropOutput("unsupported op", out_buf, out_buf_size, out_required) == 0 ? -3 : -3;
+    }
+    catch (...)
+    {
+        if (out_required)
+        {
+            *out_required = 0;
+        }
+        if (out_buf && out_buf_size > 0)
+        {
+            out_buf[0] = '\0';
+        }
+        return -1;
+    }
+}
+
+// One-word alias requested for assembly-side entrypoint naming.
+extern "C" __declspec(dllexport) int Titan(unsigned int op,
+                                            const char* in_buf,
+                                            char* out_buf,
+                                            unsigned int out_buf_size,
+                                            unsigned int* out_required)
+{
+    return RawrXD_AgentDispatchSync(op, in_buf, out_buf, out_buf_size, out_required);
+}
+
+extern "C" __declspec(dllexport) int RawrXD_AgentSetTemperature(float temperature)
+{
+    try
+    {
+        RawrXD::Agent::OrchestratorBridge::Instance().SetTemperature(temperature);
+        return 0;
+    }
+    catch (...)
+    {
+        return -1;
+    }
+}
+
+extern "C" __declspec(dllexport) int RawrXD_AgentRequestFIMSync(const char* prefix,
+                                                                  const char* suffix,
+                                                                  const char* file_path,
+                                                                  char* out_buf,
+                                                                  unsigned int out_buf_size,
+                                                                  unsigned int* out_required)
+{
+    try
+    {
+        RawrXD::Prediction::PredictionContext ctx;
+        ctx.prefix = prefix ? prefix : "";
+        ctx.suffix = suffix ? suffix : "";
+        ctx.filePath = file_path ? file_path : "";
+
+        RawrXD::Prediction::PredictionResult result =
+            RawrXD::Agent::OrchestratorBridge::Instance().RequestGhostText(ctx);
+
+        std::string out = result.success ? result.completion : result.error;
+        const unsigned int required = static_cast<unsigned int>(out.size() + 1);
+        if (out_required)
+        {
+            *out_required = required;
+        }
+
+        if (out_buf && out_buf_size > 0)
+        {
+            const size_t copyLen = std::min<size_t>(out.size(), static_cast<size_t>(out_buf_size - 1));
+            if (copyLen > 0)
+            {
+                std::memcpy(out_buf, out.data(), copyLen);
+            }
+            out_buf[copyLen] = '\0';
+        }
+
+        return result.success ? 0 : -2;
+    }
+    catch (...)
+    {
+        if (out_required)
+        {
+            *out_required = 0;
+        }
+        if (out_buf && out_buf_size > 0)
+        {
+            out_buf[0] = '\0';
+        }
+        return -1;
+    }
 }

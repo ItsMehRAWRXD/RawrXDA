@@ -99,7 +99,7 @@ function patchTreeChildren(nodes, targetPath, newChildren) {
 
 /**
  * Provides `projectRoot`, sidebar tree, and `activeFile` buffer state.
- * Does not: write files to disk from here — Save flows call IPC from UI when wired.
+ * Save: `saveActiveFile()` → preload `writeFile` / main `fs:write-file` (active buffer only).
  */
 export function ProjectProvider({ children }) {
   const [projectRoot, setProjectRoot] = useState(null);
@@ -113,14 +113,14 @@ export function ProjectProvider({ children }) {
   const loadDirectoryChildren = useCallback(async (dirPath) => {
     const api = window.electronAPI;
     if (!api?.readDir) {
-      const err = 'readDir unavailable — open the app in Electron or check preload exposes readDir.';
+      const err = 'readDir unavailable (Electron + preload readDir required).';
       devProjectWarn('loadDirectoryChildren:', err);
       return { success: false, error: err };
     }
     const dirResult = await api.readDir(dirPath);
     if (!dirResult?.success) {
       const base = dirResult.error || 'readDir failed';
-      const err = `${base} — pick another folder or check main-process log.`;
+      const err = `${base} — main-process log for fs:read-dir.`;
       devProjectWarn('loadDirectoryChildren failed:', dirPath, base);
       return { success: false, error: err };
     }
@@ -233,11 +233,49 @@ export function ProjectProvider({ children }) {
     setActiveFileState(file);
   }, []);
 
+  /**
+   * Writes the active file via main `fs:write-file` (path must be under project root).
+   * Pass `contentOverride` (e.g. Monaco `getValue()`) so disk matches the editor before React state catches up.
+   * @param {string | undefined} [contentOverride]
+   * @returns {Promise<{ success: boolean, error?: string }>}
+   */
+  const saveActiveFile = useCallback(async (contentOverride) => {
+    const api = window.electronAPI;
+    if (!activeFile?.path) {
+      devProjectWarn('saveActiveFile: no on-disk path — pick a file from the sidebar.');
+      return {
+        success: false,
+        error: 'No on-disk path: only tree-opened files can save via fs:write-file.'
+      };
+    }
+    if (!api?.writeFile) {
+      return { success: false, error: 'writeFile unavailable — open this app in Electron with preload enabled.' };
+    }
+    const content =
+      contentOverride !== undefined && contentOverride !== null
+        ? String(contentOverride)
+        : fileContentCache[activeFile.path] !== undefined
+          ? fileContentCache[activeFile.path]
+          : (activeFile.content ?? '');
+    const result = await api.writeFile(activeFile.path, content);
+    if (!result?.success) {
+      const base = result?.error || 'write failed';
+      devProjectWarn('saveActiveFile failed:', base);
+      return { success: false, error: `${base} — confirm the path is inside the opened project folder.` };
+    }
+    setFileContentCache((prev) => ({ ...prev, [activeFile.path]: content }));
+    setActiveFileState((prev) => {
+      if (!prev || prev.path !== activeFile.path) return prev;
+      return { ...prev, content };
+    });
+    return { success: true };
+  }, [activeFile, fileContentCache]);
+
   React.useEffect(() => {
     const api = window.electronAPI;
-    if (api?.onProjectOpened) {
-      api.onProjectOpened((path) => openProject(path));
-    }
+    if (!api?.onProjectOpened) return undefined;
+    const off = api.onProjectOpened((path) => openProject(path));
+    return typeof off === 'function' ? off : undefined;
   }, [openProject]);
 
   const value = {
@@ -253,7 +291,8 @@ export function ProjectProvider({ children }) {
     openFile,
     updateFile,
     setActiveFile,
-    loadDirectoryChildren
+    loadDirectoryChildren,
+    saveActiveFile
   };
 
   return <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>;

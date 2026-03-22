@@ -13,6 +13,11 @@
 #include <algorithm>
 #include <cwchar>
 
+// Compatibility alias for older call sites.
+#ifndef handleReverseEngineeringAnalyzeBinary
+#define handleReverseEngineeringAnalyzeBinary handleReverseEngineeringAnalyze
+#endif
+
 #pragma comment(lib, "shlwapi.lib")
 #pragma comment(lib, "comdlg32.lib")
 
@@ -322,8 +327,11 @@ void Win32IDE::handleReverseEngineeringDisassemble() {
     LOG_FUNCTION();
     
     if (s_reCurrentBinary.empty()) {
-        MessageBoxA(m_hwndMain, "No binary loaded. Use 'Analyze Binary' first.", "Error", MB_OK | MB_ICONWARNING);
-        return;
+        handleReverseEngineeringAnalyze();
+        if (s_reCurrentBinary.empty()) {
+            MessageBoxA(m_hwndMain, "No binary loaded.", "Error", MB_OK | MB_ICONWARNING);
+            return;
+        }
     }
     
     // Simple dialog for address input (you can enhance this with a proper dialog)
@@ -342,8 +350,11 @@ void Win32IDE::handleReverseEngineeringDumpBin() {
     LOG_FUNCTION();
     
     if (s_reCurrentBinary.empty()) {
-        MessageBoxA(m_hwndMain, "No binary loaded. Use 'Analyze Binary' first.", "Error", MB_OK | MB_ICONWARNING);
-        return;
+        handleReverseEngineeringAnalyze();
+        if (s_reCurrentBinary.empty()) {
+            MessageBoxA(m_hwndMain, "No binary loaded.", "Error", MB_OK | MB_ICONWARNING);
+            return;
+        }
     }
     
     std::string result = s_reDumpbin.DumpAll(s_reCurrentBinary);
@@ -420,8 +431,11 @@ void Win32IDE::handleReverseEngineeringDetectVulns() {
     LOG_FUNCTION();
     
     if (s_reCurrentBinary.empty()) {
-        MessageBoxA(m_hwndMain, "No binary loaded. Use 'Analyze Binary' first.", "Error", MB_OK | MB_ICONWARNING);
-        return;
+        handleReverseEngineeringAnalyze();
+        if (s_reCurrentBinary.empty()) {
+            MessageBoxA(m_hwndMain, "No binary loaded.", "Error", MB_OK | MB_ICONWARNING);
+            return;
+        }
     }
     
     std::string result = s_reDumpbin.DumpVulnerabilities(s_reCurrentBinary);
@@ -433,8 +447,11 @@ void Win32IDE::handleReverseEngineeringExportIDA() {
     LOG_FUNCTION();
     
     if (s_reCurrentBinary.empty()) {
-        MessageBoxA(m_hwndMain, "No binary loaded. Use 'Analyze Binary' first.", "Error", MB_OK | MB_ICONWARNING);
-        return;
+        handleReverseEngineeringAnalyze();
+        if (s_reCurrentBinary.empty()) {
+            MessageBoxA(m_hwndMain, "No binary loaded.", "Error", MB_OK | MB_ICONWARNING);
+            return;
+        }
     }
     
     char filename[MAX_PATH] = {0};
@@ -467,8 +484,11 @@ void Win32IDE::handleReverseEngineeringExportGhidra() {
     LOG_FUNCTION();
     
     if (s_reCurrentBinary.empty()) {
-        MessageBoxA(m_hwndMain, "No binary loaded. Use 'Analyze Binary' first.", "Error", MB_OK | MB_ICONWARNING);
-        return;
+        handleReverseEngineeringAnalyze();
+        if (s_reCurrentBinary.empty()) {
+            MessageBoxA(m_hwndMain, "No binary loaded.", "Error", MB_OK | MB_ICONWARNING);
+            return;
+        }
     }
     
     char filename[MAX_PATH] = {0};
@@ -536,8 +556,11 @@ void Win32IDE::handleReverseEngineeringCFG() {
     LOG_FUNCTION();
     
     if (s_reCurrentBinary.empty()) {
-        MessageBoxA(m_hwndMain, "No binary loaded. Use 'Analyze Binary' first.", "Error", MB_OK | MB_ICONWARNING);
-        return;
+        handleReverseEngineeringAnalyze();
+        if (s_reCurrentBinary.empty()) {
+            MessageBoxA(m_hwndMain, "No binary loaded.", "Error", MB_OK | MB_ICONWARNING);
+            return;
+        }
     }
     
     // Get entry point from the codex analysis
@@ -565,8 +588,11 @@ void Win32IDE::handleReverseEngineeringFunctions() {
     LOG_FUNCTION();
     
     if (s_reCurrentBinary.empty()) {
-        MessageBoxA(m_hwndMain, "No binary loaded. Use 'Analyze Binary' first.", "Error", MB_OK | MB_ICONWARNING);
-        return;
+        handleReverseEngineeringAnalyze();
+        if (s_reCurrentBinary.empty()) {
+            MessageBoxA(m_hwndMain, "No binary loaded.", "Error", MB_OK | MB_ICONWARNING);
+            return;
+        }
     }
     
     s_reEngine.LoadBinary(s_reCurrentBinary);
@@ -579,8 +605,11 @@ void Win32IDE::handleReverseEngineeringDemangle() {
     LOG_FUNCTION();
     
     if (s_reCurrentBinary.empty()) {
-        MessageBoxA(m_hwndMain, "No binary loaded. Use 'Analyze Binary' first.", "Error", MB_OK | MB_ICONWARNING);
-        return;
+        handleReverseEngineeringAnalyze();
+        if (s_reCurrentBinary.empty()) {
+            MessageBoxA(m_hwndMain, "No binary loaded.", "Error", MB_OK | MB_ICONWARNING);
+            return;
+        }
     }
     
     s_reEngine.LoadBinary(s_reCurrentBinary);
@@ -593,8 +622,11 @@ void Win32IDE::handleReverseEngineeringSSA() {
     LOG_FUNCTION();
     
     if (s_reCurrentBinary.empty()) {
-        MessageBoxA(m_hwndMain, "No binary loaded. Use 'Analyze Binary' first.", "Error", MB_OK | MB_ICONWARNING);
-        return;
+        handleReverseEngineeringAnalyze();
+        if (s_reCurrentBinary.empty()) {
+            MessageBoxA(m_hwndMain, "No binary loaded.", "Error", MB_OK | MB_ICONWARNING);
+            return;
+        }
     }
     
     // Determine function entry point for SSA lifting
@@ -622,8 +654,11 @@ void Win32IDE::handleReverseEngineeringRecursiveDisasm() {
     LOG_FUNCTION();
     
     if (s_reCurrentBinary.empty()) {
-        MessageBoxA(m_hwndMain, "No binary loaded. Use 'Analyze Binary' first.", "Error", MB_OK | MB_ICONWARNING);
-        return;
+        handleReverseEngineeringAnalyze();
+        if (s_reCurrentBinary.empty()) {
+            MessageBoxA(m_hwndMain, "No binary loaded.", "Error", MB_OK | MB_ICONWARNING);
+            return;
+        }
     }
     
     // Determine entry point for recursive descent
@@ -651,8 +686,11 @@ void Win32IDE::handleReverseEngineeringTypeRecovery() {
     LOG_FUNCTION();
     
     if (s_reCurrentBinary.empty()) {
-        MessageBoxA(m_hwndMain, "No binary loaded. Use 'Analyze Binary' first.", "Error", MB_OK | MB_ICONWARNING);
-        return;
+        handleReverseEngineeringAnalyze();
+        if (s_reCurrentBinary.empty()) {
+            MessageBoxA(m_hwndMain, "No binary loaded.", "Error", MB_OK | MB_ICONWARNING);
+            return;
+        }
     }
     
     auto symbols = s_reCodex.GetSymbols();
@@ -679,8 +717,11 @@ void Win32IDE::handleReverseEngineeringDataFlow() {
     LOG_FUNCTION();
     
     if (s_reCurrentBinary.empty()) {
-        MessageBoxA(m_hwndMain, "No binary loaded. Use 'Analyze Binary' first.", "Error", MB_OK | MB_ICONWARNING);
-        return;
+        handleReverseEngineeringAnalyze();
+        if (s_reCurrentBinary.empty()) {
+            MessageBoxA(m_hwndMain, "No binary loaded.", "Error", MB_OK | MB_ICONWARNING);
+            return;
+        }
     }
     
     auto symbols = s_reCodex.GetSymbols();
@@ -724,8 +765,11 @@ void Win32IDE::handleReverseEngineeringDecompilerView() {
     LOG_FUNCTION();
 
     if (s_reCurrentBinary.empty()) {
-        MessageBoxA(m_hwndMain, "No binary loaded. Use 'Analyze Binary' first.", "Error", MB_OK | MB_ICONWARNING);
-        return;
+        handleReverseEngineeringAnalyze();
+        if (s_reCurrentBinary.empty()) {
+            MessageBoxA(m_hwndMain, "No binary loaded.", "Error", MB_OK | MB_ICONWARNING);
+            return;
+        }
     }
 
     // Load the binary into the full engine
@@ -949,3 +993,5 @@ void Win32IDE::handleReverseEngineeringDecompilerView() {
     // Show the Direct2D decompiler view
     showDecompilerView(decompCode, disasmText, displayName);
 }
+
+

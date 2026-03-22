@@ -1,15 +1,18 @@
 /**
  * RawrXD BigDaddyG IDE — Electron main process (Win32-native lane)
  *
- * Gutted: IRC bridge, terminal PTY, knowledge store, approval audit,
- * WASM runtime, enterprise export, auto-updater, ollama probe.
- * Replaced: win32_bridge.js — RXIP named-pipe client to RawrXD-Win32IDE.exe.
+ * IRC bridge and WASM runtime are not in this lane. Restored: knowledge store,
+ * Ollama probe (optional diagnostics), local compliance JSON export, terminal PTY.
+ * AI/agent: win32_bridge.js — RXIP named-pipe client to RawrXD-Win32IDE.exe.
  */
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const { spawn } = require('child_process');
 const path  = require('path');
 const fs    = require('fs').promises;
+const http  = require('http');
+const https = require('https');
 const isDev = require('electron-is-dev');
+const axios = require('axios');
 
 const AIProviderManager = require(path.join(__dirname, '..', 'src', 'agentic', 'providers'));
 const { createWin32Bridge } = require(path.join(__dirname, 'win32_bridge'));
@@ -20,11 +23,33 @@ const AgenticPlanningOrchestrator = require(path.join(
   'agentic',
   'agentic_planning_orchestrator'
 ));
+const { registerTerminalPtyIpc, disposeAllTerminalSessions } = require(path.join(
+  __dirname,
+  'terminal_pty_bridge'
+));
+const { createKnowledgeStore } = require(path.join(__dirname, 'knowledge_store'));
 
 let mainWindow = null;
 let projectRoot = null;
 /** @type {Record<string, string> | null} merged into electron/menu.js DEFAULT_ACCEL */
 let menuAccelFromRenderer = null;
+
+function ensureKnowledgeStore() {
+  return createKnowledgeStore(app);
+}
+
+/** @type {{ name?: string, version?: string } | null} */
+let pkgJsonCache = null;
+function readPackageJson() {
+  if (pkgJsonCache) return pkgJsonCache;
+  try {
+    // eslint-disable-next-line import/no-dynamic-require, global-require
+    pkgJsonCache = require(path.join(__dirname, '..', 'package.json'));
+  } catch {
+    pkgJsonCache = { name: 'bigdaddyg-ide', version: '0.0.0' };
+  }
+  return pkgJsonCache;
+}
 
 function rebuildAppMenu() {
   try {
@@ -421,6 +446,7 @@ function createWindow() {
   });
 
   mainWindow.on('closed', () => {
+    disposeAllTerminalSessions();
     mainWindow = null;
   });
 }
@@ -428,16 +454,14 @@ function createWindow() {
 /**
  * Renderer ↔ main IPC — register all `ipcMain.handle` channels for this app.
  * Production path: ai:*, native:status, agent:*, fs:* (sandboxed to projectRoot), project:open, menu:set-accelerators.
- * Win32 lane: no IRC bridge IPC; renderer is local-first with main-process AI/agent/file lanes only.
+ * Win32 lane: knowledge:*, ollama:probe, enterprise:export-compliance-bundle, terminal PTY, plus ai/agent/fs/project/menu.
  * Does not expose Node `require` or arbitrary shell to the renderer.
  */
 function setupIPC() {
   ipcMain.handle('ai:invoke', async (_, provider, prompt, context) => {
-    void provider;
     try {
       const ctx = context && typeof context === 'object' ? context : {};
-      // Local-only routing: all IPC inference goes through the built-in provider.
-      const result = await aiManager.invoke('rawrxd-local', prompt, ctx);
+      const result = await aiManager.invoke(provider, prompt, ctx);
       return { success: true, data: result };
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -625,6 +649,134 @@ function setupIPC() {
     return { success: true };
   });
 
+  ipcMain.handle('knowledge:append-artifact', async (_, rec) => {
+    if (!projectRoot) {
+      return {
+        success: false,
+        error: 'No project open — use File › Open Project, then retry.'
+      };
+    }
+    try {
+      await ensureKnowledgeStore().appendArtifact(projectRoot, rec && typeof rec === 'object' ? rec : {});
+      return { success: true };
+    } catch (e) {
+      const msg = e && e.message ? e.message : String(e);
+      // eslint-disable-next-line no-console
+      console.error('[knowledge] append-artifact failed:', msg);
+      return {
+        success: false,
+        error: `${msg} — Check disk space and write access under Electron userData/knowledge.`
+      };
+    }
+  });
+
+  ipcMain.handle('knowledge:rank-signatures', async (_, payload) => {
+    if (!projectRoot) {
+      return { success: false, error: 'No project open — open a folder first.' };
+    }
+    try {
+      const sigs =
+        payload && typeof payload === 'object' && Array.isArray(payload.signatures)
+          ? payload.signatures
+          : [];
+      const ranked = await ensureKnowledgeStore().rankSignatures(projectRoot, sigs);
+      return { success: true, data: ranked };
+    } catch (e) {
+      const msg = e && e.message ? e.message : String(e);
+      // eslint-disable-next-line no-console
+      console.error('[knowledge] rank-signatures failed:', msg);
+      return { success: false, error: msg };
+    }
+  });
+
+  ipcMain.handle('knowledge:record-signature-outcome', async (_, signature, success) => {
+    if (!projectRoot) {
+      return { success: false, error: 'No project open — open a folder first.' };
+    }
+    try {
+      const cur = await ensureKnowledgeStore().recordSignatureOutcome(
+        projectRoot,
+        signature,
+        Boolean(success)
+      );
+      return { success: true, data: cur };
+    } catch (e) {
+      const msg = e && e.message ? e.message : String(e);
+      // eslint-disable-next-line no-console
+      console.error('[knowledge] record-signature-outcome failed:', msg);
+      return { success: false, error: msg };
+    }
+  });
+
+  ipcMain.handle('ollama:probe', async (_, baseUrl) => {
+    const raw = String(baseUrl || 'http://127.0.0.1:11434')
+      .trim()
+      .replace(/\/+$/, '');
+    const start = Date.now();
+    try {
+      const res = await axios.get(`${raw}/api/tags`, {
+        timeout: 20000,
+        validateStatus: () => true,
+        httpAgent: new http.Agent({ family: 4 }),
+        httpsAgent: new https.Agent({ family: 4 })
+      });
+      const latencyMs = Date.now() - start;
+      if (res.status >= 200 && res.status < 300) {
+        const modelCount = Array.isArray(res.data && res.data.models) ? res.data.models.length : 0;
+        return {
+          success: true,
+          data: {
+            ok: true,
+            modelCount,
+            latencyMs,
+            baseUrl: raw,
+            status: res.status
+          }
+        };
+      }
+      return {
+        success: false,
+        error: `Ollama HTTP ${res.status} at ${raw}/api/tags — is the server running?`
+      };
+    } catch (e) {
+      const msg = e && e.message ? e.message : String(e);
+      return {
+        success: false,
+        error: `${msg} — Try base URL http://127.0.0.1:11434 (IPv4) if localhost fails.`
+      };
+    }
+  });
+
+  ipcMain.handle('enterprise:export-compliance-bundle', async () => {
+    try {
+      const dir = path.join(app.getPath('userData'), 'exports');
+      await fs.mkdir(dir, { recursive: true });
+      const name = `compliance-bundle-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+      const outPath = path.join(dir, name);
+      const pkg = readPackageJson();
+      const bundle = {
+        version: 1,
+        generatedAt: new Date().toISOString(),
+        app: { name: pkg.name, version: pkg.version },
+        host: {
+          platform: process.platform,
+          projectRoot,
+          envLicenseStub: process.env.RAWRXD_LICENSE_KEY_STUB || null,
+          envHwidStub: process.env.RAWRXD_HWID_STUB || null
+        },
+        note: 'Local JSON only under userData/exports — not uploaded.'
+      };
+      await fs.writeFile(outPath, JSON.stringify(bundle, null, 2), 'utf8');
+      return { success: true, data: { path: outPath } };
+    } catch (e) {
+      const msg = e && e.message ? e.message : String(e);
+      // eslint-disable-next-line no-console
+      console.error('[enterprise] export-compliance-bundle failed:', msg);
+      return { success: false, error: msg };
+    }
+  });
+
+  registerTerminalPtyIpc(ipcMain, () => projectRoot);
 }
 
 function setupAutoUpdater() {

@@ -266,7 +266,7 @@ class OllamaCompatibleProvider {
 
     if (!String(content).trim()) {
       throw new Error(
-        `[${this.id}] Empty model response — check model name "${this.model}" is pulled on the host (ollama pull).`
+        `[${this.id}] Empty Ollama response for model "${this.model}" (host may not have that tag; compare ollama list on the machine running Ollama).`
       );
     }
 

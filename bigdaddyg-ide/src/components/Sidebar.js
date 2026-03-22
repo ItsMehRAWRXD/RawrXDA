@@ -10,7 +10,7 @@ import {
   MINIMALISTIC_DOC
 } from '../utils/minimalisticM08M14';
 
-/** M02 — remember expanded folders per project root */
+/** Remember expanded folders per project root (localStorage). */
 const EXPANDED_STORAGE_KEY = 'rawrxd.ide.sidebarExpanded.v1';
 
 function loadExpandedSet(projectRoot) {
@@ -95,7 +95,7 @@ const Sidebar = ({
           if (!r.success) {
             pushToast({
               title: 'Folder',
-              message: `${r.error || 'Could not read directory'} — try Refresh or pick another folder (paths must stay under the project).`,
+              message: `${r.error || 'Could not read directory'} — paths must stay under project root.`,
               variant: 'error',
               durationMs: 5000
             });
@@ -214,7 +214,7 @@ const Sidebar = ({
               type="button"
               onClick={onOpenFolder}
               className={`text-xs text-ide-accent hover:underline shrink-0 rounded px-0.5 ${focusVisibleRing}`}
-              title="Pick a project folder. Tree is scoped to that root; ignored dirs match workspace policy (node_modules, .git, …)."
+                title="Sets projectRoot; tree uses workspace ignore set (node_modules, .git, …)."
             >
               Open folder…
             </button>
@@ -223,7 +223,7 @@ const Sidebar = ({
                 type="button"
                 onClick={resetSidebarTree}
                 className={`text-[10px] text-gray-500 hover:text-gray-300 shrink-0 ml-1 rounded px-0.5 ${focusVisibleRing}`}
-                title="M02 — Clear remembered expanded folders for this project only"
+                title="Clears expanded-folder set in localStorage for this projectRoot."
               >
                 Reset tree
               </button>
@@ -266,8 +266,7 @@ const Sidebar = ({
                   <div className="font-semibold text-rose-100">Could not list project root</div>
                   <div className="text-[11px] font-mono break-words text-rose-200/90">{rootListingError}</div>
                   <p className="text-[10px] text-rose-300/80">
-                    This message comes from Electron <code className="text-rose-100/90">readDir</code> / main-process
-                    sandboxing — not a generic placeholder. Try Open folder… again or check the main log.
+                    Source: <code className="text-rose-100/90">fs:read-dir</code> on projectRoot. Main log for stack.
                   </p>
                 </div>
               ) : fileTree && fileTree.length > 0 ? (
@@ -283,22 +282,21 @@ const Sidebar = ({
           ) : (
             <div className="text-gray-500 text-xs px-2 py-2 space-y-2">
               <p>
-                M03 — No project open. Next: click <span className="text-gray-400">Open folder…</span> or use the
-                palette <kbd className="bg-gray-800 px-1 rounded text-[10px]">Ctrl+O</kbd>.
+                No projectRoot. <span className="text-gray-400">Open folder…</span> or palette{' '}
+                <kbd className="bg-gray-800 px-1 rounded text-[10px]">Ctrl+O</kbd>.
               </p>
               {lastRoot ? (
                 <button
                   type="button"
                   onClick={() => reopenLastProject()}
                   className={`block w-full text-left text-[11px] text-cyan-300 hover:text-cyan-200 border border-gray-700 rounded px-2 py-1.5 ${focusVisibleRing}`}
-                  title="M02 — Reopens the last folder you opened in this shell (stored locally only)."
+                  title="Opens last projectRoot from localStorage (this shell only)."
                 >
                   Open last project: {workspaceFolderBasename(lastRoot) || '…'}
                 </button>
               ) : null}
               <p className="text-[10px] text-gray-600">
-                M06 — Files load through Electron IPC; only paths under the chosen root are readable. Does not bypass
-                workspace sandbox.
+                Files load through Electron IPC; only paths under the chosen project root are readable.
               </p>
             </div>
           )}

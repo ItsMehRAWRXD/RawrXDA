@@ -15,36 +15,11 @@ import ModelsPanel from './ModelsPanel';
 import SymbolsPanel from './SymbolsPanel';
 
 const TABS = [
-  {
-    id: 'chat',
-    label: 'Chat',
-    title:
-      'M01 — Chat: switches view; does not stop running tasks or in-flight requests. M04 — Ctrl+L / palette “Chat: Open AI Chat”.'
-  },
-  {
-    id: 'agent',
-    label: 'Agent',
-    title:
-      'M01 — Agent: switches view; does not stop running tasks. Does not bypass approval_policy.json. M04 — Ctrl+Shift+A / “Agent: Open Agent Panel”.'
-  },
-  {
-    id: 'modules',
-    label: 'Modules',
-    title:
-      'M01 — Modules: switches view; does not stop running tasks. Toggles load hooks; does not install from network. M04 — Ctrl+Shift+M / “View: Extension Modules”.'
-  },
-  {
-    id: 'symbols',
-    label: 'Symbols',
-    title:
-      'M01 — Symbols: switches view; does not stop running tasks. Text index from editor buffer (regex); not LSP or binary disasm. M04 — Ctrl+Shift+Y / “RE: Symbols & xrefs”.'
-  },
-  {
-    id: 'models',
-    label: 'Models',
-    title:
-      'M01 — Models: switches view; does not stop running tasks. Streams GGUF manifest/metadata; does not download arbitrary URLs without confirm. M04 — Ctrl+Shift+G / “Models: Open GGUF Streamer”.'
-  }
+  { id: 'chat', label: 'Chat', title: 'Chat panel (Ctrl+L)' },
+  { id: 'agent', label: 'Agent', title: 'Agent panel (Ctrl+Shift+A)' },
+  { id: 'modules', label: 'Modules', title: 'Module toggles (Ctrl+Shift+M)' },
+  { id: 'symbols', label: 'Symbols', title: 'Text symbol index (Ctrl+Shift+Y)' },
+  { id: 'models', label: 'Models', title: 'GGUF streamer (Ctrl+Shift+G)' }
 ];
 
 /**
@@ -114,7 +89,7 @@ const RightSidebarDock = ({
                 aria-selected={tab === t.id}
                 aria-controls={`rawrxd-dock-panel-${t.id}`}
                 onClick={() => onSelectTab(t.id)}
-                title={`${t.title} M09 — Panel chrome works offline; chat/agent need backend.`}
+                title={t.title}
                 aria-label={`${t.label} panel`}
                 className={`flex-1 py-2 text-xs font-medium ${focusVisibleRing} ${
                   tab === t.id ? 'text-white border-b-2 border-ide-accent bg-gray-800/40' : 'text-gray-500 hover:text-gray-300'
@@ -128,7 +103,7 @@ const RightSidebarDock = ({
               onClick={onClose}
               className={`px-3 text-gray-500 hover:text-white text-xs ${focusVisibleRing}`}
               aria-label="Close side panel"
-              title="M01 — Hide dock; inner panel state stays mounted. M02 — Last tab persisted in IdeFeaturesContext."
+              title="Close dock (panels stay mounted; last tab is remembered)"
             >
               ✕
             </button>

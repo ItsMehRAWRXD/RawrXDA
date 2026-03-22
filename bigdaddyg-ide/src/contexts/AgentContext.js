@@ -60,7 +60,7 @@ export function AgentProvider({ children }) {
         history: Array.isArray(result.data.history) ? result.data.history : []
       });
     } else if (result && !result.success) {
-      devAgentWarn('listAgentTasks failed:', result.error || 'unknown — check main process log.');
+      devAgentWarn('listAgentTasks failed:', result.error || 'unknown (main log).');
     }
   }, []);
 
@@ -77,7 +77,7 @@ export function AgentProvider({ children }) {
     async (goal, policy = {}) => {
       const api = window.electronAPI;
       if (!api?.startAgent) {
-        devAgentWarn('startAgent unavailable — check preload exposes startAgent.');
+        devAgentWarn('startAgent unavailable (preload IPC).');
         return;
       }
       const result = await api.startAgent(goal, policy);
@@ -91,7 +91,7 @@ export function AgentProvider({ children }) {
         setRollbackCount(0);
         await refreshTaskList();
       } else if (result && !result.success) {
-        devAgentWarn('startAgent failed:', result.error || 'unknown — verify local provider routing and main log.');
+        devAgentWarn('startAgent failed:', result.error || 'unknown (main log).');
       }
     },
     [refreshTaskList]
@@ -107,7 +107,7 @@ export function AgentProvider({ children }) {
       if (!api?.getAgentStatus) {
         if (!warnedMissingGetAgentStatus) {
           warnedMissingGetAgentStatus = true;
-          devAgentWarn('getAgentStatus unavailable — check preload (further polls silent).');
+          devAgentWarn('getAgentStatus unavailable (preload); further polls silent.');
         }
         return;
       }

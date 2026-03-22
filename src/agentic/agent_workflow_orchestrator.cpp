@@ -35,8 +35,11 @@ namespace Agentic {
 enum class TaskState {
     Pending,        // Not yet started
     Ready,          // Dependencies satisfied, ready to run
+    AwaitingApproval, // Waiting for human-in-the-loop approval
     Running,        // Currently executing
     Validating,     // Execution done, validating output
+    RollingBack,    // Rollback in progress
+    RolledBack,     // Rollback completed
     Succeeded,      // Completed successfully
     Failed,         // Execution or validation failed
     Aborted,        // Manually aborted
@@ -47,8 +50,11 @@ static const char* taskStateName(TaskState s) {
     switch (s) {
         case TaskState::Pending:    return "Pending";
         case TaskState::Ready:      return "Ready";
+        case TaskState::AwaitingApproval: return "AwaitingApproval";
         case TaskState::Running:    return "Running";
         case TaskState::Validating: return "Validating";
+        case TaskState::RollingBack:return "RollingBack";
+        case TaskState::RolledBack: return "RolledBack";
         case TaskState::Succeeded:  return "Succeeded";
         case TaskState::Failed:     return "Failed";
         case TaskState::Aborted:    return "Aborted";
@@ -64,6 +70,33 @@ struct ToolCall {
     std::string result;
     bool success = false;
     int64_t durationMs = 0;
+};
+
+// ─── Approval Model ─────────────────────────────────────────────────────────
+enum class ApprovalLevel {
+    None,
+    ReadOnly,
+    Modify,
+    Execute,
+    Destructive,
+};
+
+static const char* approvalLevelName(ApprovalLevel a) {
+    switch (a) {
+        case ApprovalLevel::None: return "None";
+        case ApprovalLevel::ReadOnly: return "ReadOnly";
+        case ApprovalLevel::Modify: return "Modify";
+        case ApprovalLevel::Execute: return "Execute";
+        case ApprovalLevel::Destructive: return "Destructive";
+        default: return "Unknown";
+    }
+}
+
+struct ApprovalRequest {
+    std::string workflowId;
+    std::string taskId;
+    ApprovalLevel level = ApprovalLevel::None;
+    std::string reason;
 };
 
 // ─── Task Node ───────────────────────────────────────────────────────────────
@@ -93,6 +126,14 @@ struct TaskNode {
     // Retry
     uint32_t maxRetries = 2;
     uint32_t retryCount = 0;
+
+    // Human-in-the-loop escalation
+    ApprovalLevel approvalLevel = ApprovalLevel::None;
+    bool approvalGranted = false;
+
+    // Structured rollback (first-class workflow path)
+    std::function<bool(TaskNode&)> rollback;
+    bool rollbackDone = false;
 
     // Error info
     std::string errorMessage;
@@ -125,6 +166,14 @@ enum class WorkflowEventKind {
     WorkflowCompleted,
     WorkflowFailed,
     WorkflowAborted,
+    WorkflowResumed,
+    ApprovalRequested,
+    ApprovalGranted,
+    ApprovalRejected,
+    RollbackStarted,
+    RollbackSucceeded,
+    RollbackFailed,
+    SchemaValidationFailed,
     CheckpointSaved,
 };
 
@@ -137,6 +186,7 @@ struct WorkflowEvent {
 };
 
 using EventCallback = std::function<void(const WorkflowEvent&)>;
+using ApprovalCallback = std::function<bool(const ApprovalRequest&)>;
 
 // =============================================================================
 // AgentWorkflowOrchestrator — Main Engine
@@ -159,6 +209,12 @@ public:
     void setEventCallback(EventCallback cb) {
         std::lock_guard<std::mutex> lock(m_mutex);
         m_eventCallback = std::move(cb);
+    }
+
+    // ── Human-in-the-loop approval callback ─────────────────────────────────
+    void setApprovalCallback(ApprovalCallback cb) {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_approvalCallback = std::move(cb);
     }
 
     // ── Create Workflow ──────────────────────────────────────────────────────
@@ -185,6 +241,15 @@ public:
         return true;
     }
 
+    // ── Configure Checkpoint Persistence Path ───────────────────────────────
+    bool setCheckpointPath(const std::string& workflowId, const std::string& checkpointPath) {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        auto it = m_workflows.find(workflowId);
+        if (it == m_workflows.end()) return false;
+        it->second.checkpointPath = checkpointPath;
+        return true;
+    }
+
     // ── Build a Plan→Execute→Validate→Commit Workflow ────────────────────────
     std::string buildStandardWorkflow(const std::string& name, const std::string& goal,
                                        const std::vector<std::string>& stepDescriptions) {
@@ -203,6 +268,8 @@ public:
             plan.validator = [](TaskNode& self) -> bool {
                 return !self.outputs["plan_summary"].empty();
             };
+            plan.approvalLevel = ApprovalLevel::ReadOnly;
+            plan.approvalGranted = true;
             addTask(wfId, std::move(plan));
         }
 
@@ -221,6 +288,11 @@ public:
             step.validator = [](TaskNode& self) -> bool {
                 return self.outputs.count("result") > 0;
             };
+            step.approvalLevel = ApprovalLevel::Modify;
+            step.rollback = [](TaskNode& self) -> bool {
+                self.outputs["rollback"] = "Rolled back: " + self.description;
+                return true;
+            };
             addTask(wfId, std::move(step));
             prevId = "exec_" + std::to_string(i);
         }
@@ -235,6 +307,8 @@ public:
                 self.outputs["validation"] = "All steps validated";
                 return true;
             };
+            validate.approvalLevel = ApprovalLevel::ReadOnly;
+            validate.approvalGranted = true;
             addTask(wfId, std::move(validate));
         }
 
@@ -248,6 +322,7 @@ public:
                 self.outputs["commit_status"] = "committed";
                 return true;
             };
+            commit.approvalLevel = ApprovalLevel::Execute;
             addTask(wfId, std::move(commit));
         }
 
@@ -261,6 +336,15 @@ public:
         if (it == m_workflows.end()) return false;
 
         auto& wf = it->second;
+
+        // Plan -> Validate(schema) -> Execute
+        std::string schemaError;
+        if (!validateWorkflowSchema(wf, schemaError)) {
+            wf.overallState = TaskState::Failed;
+            emitEvent(WorkflowEventKind::SchemaValidationFailed, workflowId, "", schemaError);
+            return false;
+        }
+
         wf.overallState = TaskState::Running;
         wf.startTime = std::chrono::steady_clock::now();
 
@@ -275,6 +359,7 @@ public:
         }
 
         bool allSucceeded = true;
+        size_t firstFailedIndex = static_cast<size_t>(-1);
         for (auto idx : order) {
             auto& task = wf.tasks[idx];
 
@@ -307,10 +392,21 @@ public:
             bool taskOk = executeTask(wf, task);
             lock.lock();
 
-            if (!taskOk) allSucceeded = false;
+            if (!taskOk) {
+                allSucceeded = false;
+                if (firstFailedIndex == static_cast<size_t>(-1)) {
+                    firstFailedIndex = idx;
+                }
+            }
 
             // Checkpoint after each task
             saveCheckpoint(wf);
+
+            // On first hard failure, rollback immediately as first-class workflow path.
+            if (!taskOk) {
+                runRollback(wf, firstFailedIndex);
+                break;
+            }
         }
 
         wf.endTime = std::chrono::steady_clock::now();
@@ -320,6 +416,53 @@ public:
         emitEvent(eventKind, workflowId, "", allSucceeded ? "Workflow completed" : "Workflow failed");
 
         return allSucceeded;
+    }
+
+    // ── Resume Workflow from Checkpoint ─────────────────────────────────────
+    bool resumeWorkflow(const std::string& checkpointPath) {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        Workflow wf;
+        if (!loadCheckpoint(checkpointPath, wf)) {
+            return false;
+        }
+
+        std::string schemaError;
+        if (!validateWorkflowSchema(wf, schemaError)) {
+            emitEvent(WorkflowEventKind::SchemaValidationFailed, wf.id, "", schemaError);
+            return false;
+        }
+
+        wf.overallState = TaskState::Running;
+        wf.startTime = std::chrono::steady_clock::now();
+        m_workflows[wf.id] = std::move(wf);
+        emitEvent(WorkflowEventKind::WorkflowResumed, m_workflows[wf.id].id, "", "Workflow resumed from checkpoint");
+        lock.unlock();
+
+        return executeWorkflow(m_workflows[wf.id].id);
+    }
+
+    // ── Manual approval gates (IDE-driven granular escalation) ─────────────
+    bool approveTask(const std::string& workflowId, const std::string& taskId) {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        auto it = m_workflows.find(workflowId);
+        if (it == m_workflows.end()) return false;
+        auto idxIt = it->second.taskIndex.find(taskId);
+        if (idxIt == it->second.taskIndex.end()) return false;
+        it->second.tasks[idxIt->second].approvalGranted = true;
+        it->second.tasks[idxIt->second].state = TaskState::Ready;
+        return true;
+    }
+
+    bool rejectTask(const std::string& workflowId, const std::string& taskId, const std::string& reason) {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        auto it = m_workflows.find(workflowId);
+        if (it == m_workflows.end()) return false;
+        auto idxIt = it->second.taskIndex.find(taskId);
+        if (idxIt == it->second.taskIndex.end()) return false;
+        auto& t = it->second.tasks[idxIt->second];
+        t.state = TaskState::Failed;
+        t.errorMessage = reason.empty() ? "Rejected by human gate" : reason;
+        return true;
     }
 
     // ── Execute Workflow in Parallel (thread pool for independent branches) ──
@@ -527,6 +670,24 @@ private:
 
     // ── Execute a Single Task with Retry ─────────────────────────────────────
     bool executeTask(Workflow& wf, TaskNode& task) {
+        std::string schemaError;
+        if (!validateTaskSchema(task, wf, schemaError)) {
+            task.state = TaskState::Failed;
+            task.errorMessage = schemaError;
+            std::lock_guard<std::mutex> lock(m_mutex);
+            emitEvent(WorkflowEventKind::SchemaValidationFailed, wf.id, task.id, schemaError);
+            return false;
+        }
+
+        // Two-phase actions: PLAN/GATE first, then EXECUTE/VALIDATE.
+        if (!ensureApproval(wf, task)) {
+            task.state = TaskState::Failed;
+            task.errorMessage = "Approval rejected for level: " + std::string(approvalLevelName(task.approvalLevel));
+            std::lock_guard<std::mutex> lock(m_mutex);
+            emitEvent(WorkflowEventKind::TaskFailed, wf.id, task.id, task.errorMessage);
+            return false;
+        }
+
         for (uint32_t attempt = 0; attempt <= task.maxRetries; ++attempt) {
             task.state = TaskState::Running;
             task.startTime = std::chrono::steady_clock::now();
@@ -608,6 +769,138 @@ private:
         return false;
     }
 
+    // ── Human-in-the-loop escalation ────────────────────────────────────────
+    bool ensureApproval(const Workflow& wf, TaskNode& task) {
+        if (task.approvalLevel == ApprovalLevel::None || task.approvalGranted) {
+            return true;
+        }
+
+        task.state = TaskState::AwaitingApproval;
+        ApprovalRequest req;
+        req.workflowId = wf.id;
+        req.taskId = task.id;
+        req.level = task.approvalLevel;
+        req.reason = task.description;
+
+        emitEvent(WorkflowEventKind::ApprovalRequested, wf.id, task.id,
+                  "Approval required: " + std::string(approvalLevelName(req.level)));
+
+        bool approved = false;
+        if (m_approvalCallback) {
+            approved = m_approvalCallback(req);
+        } else {
+            // Conservative default: auto-approve only read-only / none.
+            approved = (task.approvalLevel == ApprovalLevel::ReadOnly ||
+                        task.approvalLevel == ApprovalLevel::None);
+        }
+
+        if (approved) {
+            task.approvalGranted = true;
+            emitEvent(WorkflowEventKind::ApprovalGranted, wf.id, task.id,
+                      "Approved at level: " + std::string(approvalLevelName(req.level)));
+        } else {
+            emitEvent(WorkflowEventKind::ApprovalRejected, wf.id, task.id,
+                      "Rejected at level: " + std::string(approvalLevelName(req.level)));
+        }
+        return approved;
+    }
+
+    // ── Structured Rollback Path ────────────────────────────────────────────
+    bool runRollback(Workflow& wf, size_t failedIndex) {
+        emitEvent(WorkflowEventKind::RollbackStarted, wf.id, "", "Rollback started");
+        bool ok = true;
+
+        for (int i = static_cast<int>(failedIndex) - 1; i >= 0; --i) {
+            auto& t = wf.tasks[static_cast<size_t>(i)];
+            if (t.state != TaskState::Succeeded || t.rollbackDone) {
+                continue;
+            }
+
+            t.state = TaskState::RollingBack;
+            bool rb = true;
+            if (t.rollback) {
+                try {
+                    rb = t.rollback(t);
+                } catch (const std::exception& e) {
+                    t.errorMessage = "Rollback exception: " + std::string(e.what());
+                    rb = false;
+                }
+            }
+
+            if (rb) {
+                t.rollbackDone = true;
+                t.state = TaskState::RolledBack;
+            } else {
+                t.state = TaskState::Failed;
+                ok = false;
+            }
+        }
+
+        emitEvent(ok ? WorkflowEventKind::RollbackSucceeded : WorkflowEventKind::RollbackFailed,
+                  wf.id, "", ok ? "Rollback completed" : "Rollback failed");
+        return ok;
+    }
+
+    // ── Schema-gated execution: no compute before schema validation ─────────
+    bool validateWorkflowSchema(const Workflow& wf, std::string& err) const {
+        if (wf.id.empty()) {
+            err = "Schema: workflow id is empty";
+            return false;
+        }
+        if (wf.tasks.empty()) {
+            err = "Schema: workflow has no tasks";
+            return false;
+        }
+
+        std::unordered_set<std::string> ids;
+        for (const auto& t : wf.tasks) {
+            if (t.id.empty()) {
+                err = "Schema: task id is empty";
+                return false;
+            }
+            if (!ids.insert(t.id).second) {
+                err = "Schema: duplicate task id: " + t.id;
+                return false;
+            }
+            if (t.description.empty()) {
+                err = "Schema: task description is empty for task: " + t.id;
+                return false;
+            }
+        }
+
+        for (const auto& t : wf.tasks) {
+            for (const auto& dep : t.dependsOn) {
+                if (ids.find(dep) == ids.end()) {
+                    err = "Schema: dependency not found: " + dep + " (task: " + t.id + ")";
+                    return false;
+                }
+                if (dep == t.id) {
+                    err = "Schema: self-dependency in task: " + t.id;
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    bool validateTaskSchema(const TaskNode& t, const Workflow& wf, std::string& err) const {
+        if (t.id.empty()) {
+            err = "Schema: task id empty";
+            return false;
+        }
+        if (t.description.empty()) {
+            err = "Schema: task description empty (" + t.id + ")";
+            return false;
+        }
+        for (const auto& dep : t.dependsOn) {
+            if (wf.taskIndex.find(dep) == wf.taskIndex.end()) {
+                err = "Schema: unresolved dependency " + dep + " for task " + t.id;
+                return false;
+            }
+        }
+        return true;
+    }
+
     // ── Topological Sort ─────────────────────────────────────────────────────
     std::vector<size_t> topologicalSort(const Workflow& wf) const {
         std::unordered_map<std::string, int> inDeg;
@@ -652,10 +945,17 @@ private:
         ofs << "RXWF\n"; // magic
         ofs << wf.id << "\n";
         ofs << wf.name << "\n";
+        ofs << wf.goal << "\n";
         ofs << wf.tasks.size() << "\n";
 
         for (auto& t : wf.tasks) {
-            ofs << t.id << "|" << static_cast<int>(t.state) << "|" << t.description << "\n";
+            ofs << t.id << "|" << static_cast<int>(t.state) << "|" << static_cast<int>(t.approvalLevel)
+                << "|" << (t.approvalGranted ? 1 : 0) << "|" << (t.rollbackDone ? 1 : 0)
+                << "|" << t.description << "\n";
+            ofs << t.dependsOn.size() << "\n";
+            for (auto& dep : t.dependsOn) {
+                ofs << dep << "\n";
+            }
             ofs << t.outputs.size() << "\n";
             for (auto& [k, v] : t.outputs) {
                 ofs << k << "=" << v << "\n";
@@ -666,6 +966,65 @@ private:
             // No need to lock here — called from within locked context
             emitEvent(WorkflowEventKind::CheckpointSaved, wf.id, "", wf.checkpointPath);
         }
+    }
+
+    bool loadCheckpoint(const std::string& path, Workflow& out) {
+        std::ifstream ifs(path);
+        if (!ifs.is_open()) return false;
+
+        std::string line;
+        std::getline(ifs, line);
+        if (line != "RXWF") return false;
+
+        std::getline(ifs, out.id);
+        std::getline(ifs, out.name);
+        std::getline(ifs, out.goal);
+        std::getline(ifs, line);
+        size_t count = static_cast<size_t>(std::stoull(line));
+
+        out.tasks.clear();
+        out.taskIndex.clear();
+        out.checkpointPath = path;
+
+        for (size_t i = 0; i < count; ++i) {
+            TaskNode t;
+            std::getline(ifs, line);
+            // Format: id|state|approvalLevel|approvalGranted|rollbackDone|description
+            std::vector<std::string> parts;
+            std::stringstream ss(line);
+            std::string tok;
+            while (std::getline(ss, tok, '|')) parts.push_back(tok);
+            if (parts.size() < 6) return false;
+
+            t.id = parts[0];
+            t.state = static_cast<TaskState>(std::stoi(parts[1]));
+            t.approvalLevel = static_cast<ApprovalLevel>(std::stoi(parts[2]));
+            t.approvalGranted = (std::stoi(parts[3]) != 0);
+            t.rollbackDone = (std::stoi(parts[4]) != 0);
+            t.description = parts[5];
+
+            std::getline(ifs, line);
+            size_t depCount = static_cast<size_t>(std::stoull(line));
+            for (size_t d = 0; d < depCount; ++d) {
+                std::getline(ifs, line);
+                t.dependsOn.push_back(line);
+            }
+
+            std::getline(ifs, line);
+            size_t outCount = static_cast<size_t>(std::stoull(line));
+            for (size_t k = 0; k < outCount; ++k) {
+                std::getline(ifs, line);
+                auto pos = line.find('=');
+                if (pos != std::string::npos) {
+                    t.outputs[line.substr(0, pos)] = line.substr(pos + 1);
+                }
+            }
+
+            out.taskIndex[t.id] = out.tasks.size();
+            out.tasks.push_back(std::move(t));
+        }
+
+        return true;
     }
 
     // ── Event Emission ───────────────────────────────────────────────────────
@@ -686,6 +1045,7 @@ private:
     std::unordered_map<std::string, std::function<std::string(
         const std::unordered_map<std::string, std::string>&)>> m_tools;
     EventCallback m_eventCallback;
+    ApprovalCallback m_approvalCallback;
     std::atomic<uint64_t> m_idCounter{1};
 };
 
@@ -719,6 +1079,28 @@ __declspec(dllexport) const char* AgentWorkflow_BuildStandard(const char* name, 
 __declspec(dllexport) int AgentWorkflow_Execute(const char* workflowId) {
     return RawrXD::Agentic::AgentWorkflowOrchestrator::instance().executeWorkflow(
         workflowId ? workflowId : "") ? 1 : 0;
+}
+
+__declspec(dllexport) int AgentWorkflow_SetCheckpointPath(const char* workflowId,
+                                                          const char* checkpointPath) {
+    return RawrXD::Agentic::AgentWorkflowOrchestrator::instance().setCheckpointPath(
+        workflowId ? workflowId : "", checkpointPath ? checkpointPath : "") ? 1 : 0;
+}
+
+__declspec(dllexport) int AgentWorkflow_Resume(const char* checkpointPath) {
+    return RawrXD::Agentic::AgentWorkflowOrchestrator::instance().resumeWorkflow(
+        checkpointPath ? checkpointPath : "") ? 1 : 0;
+}
+
+__declspec(dllexport) int AgentWorkflow_ApproveTask(const char* workflowId, const char* taskId) {
+    return RawrXD::Agentic::AgentWorkflowOrchestrator::instance().approveTask(
+        workflowId ? workflowId : "", taskId ? taskId : "") ? 1 : 0;
+}
+
+__declspec(dllexport) int AgentWorkflow_RejectTask(const char* workflowId, const char* taskId,
+                                                   const char* reason) {
+    return RawrXD::Agentic::AgentWorkflowOrchestrator::instance().rejectTask(
+        workflowId ? workflowId : "", taskId ? taskId : "", reason ? reason : "") ? 1 : 0;
 }
 
 __declspec(dllexport) const char* AgentWorkflow_Status(const char* workflowId) {

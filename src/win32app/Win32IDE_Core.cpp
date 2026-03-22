@@ -3166,6 +3166,9 @@ void Win32IDE::onCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
                 CheckMenuItem(m_hMenu, 2027, MF_BYCOMMAND | (m_useVulkanRenderer ? MF_CHECKED : MF_UNCHECKED));
             appendToOutput(std::string("Vulkan renderer ") + (m_useVulkanRenderer ? "ON" : "OFF") + "\n", "Output",
                            OutputSeverity::Info);
+            persistPerformanceVulkanRendererToConfig();
+            appendToOutput("[Vulkan] Saved preference performance.vulkanRenderer to rawrxd.config.json (cwd or exe dir).\n",
+                           "Output", OutputSeverity::Info);
             return;
         case 502:   // Tools > Settings (IDM_TOOLS_SETTINGS)
         case 1024:  // Title bar gear (IDC_BTN_SETTINGS)
@@ -3241,4 +3244,22 @@ void Win32IDE::onCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
     }
 #endif
     DefWindowProcA(hwnd, WM_COMMAND, MAKEWPARAM(id, codeNotify), (LPARAM)hwndCtl);
+}
+
+void Win32IDE::persistPerformanceVulkanRendererToConfig()
+{
+    auto& cfg = IDEConfig::getInstance();
+    cfg.setBool("performance.vulkanRenderer", m_useVulkanRenderer);
+    if (cfg.saveToFile("rawrxd.config.json"))
+        return;
+    char exePath[MAX_PATH] = {};
+    if (GetModuleFileNameA(nullptr, exePath, MAX_PATH) == 0)
+        return;
+    std::string dir(exePath);
+    const size_t ls = dir.find_last_of("\\/");
+    if (ls != std::string::npos)
+    {
+        dir = dir.substr(0, ls + 1);
+        cfg.saveToFile(dir + "rawrxd.config.json");
+    }
 }

@@ -3,6 +3,7 @@
 #include <vector>
 #include <unordered_map>
 #include <cstdint>
+#include <string>
 #ifdef RAWR_ENABLE_VULKAN
 #include <vulkan/vulkan.h>
 #else
@@ -64,6 +65,9 @@ private:
     int n_ctx = 4096;
     int vocab_size = 32000;
     int n_ffn = 0;  // feed_forward_length (0 = infer from dim*4)
+    std::string metadataArchitecture;
+    std::string metadataTokenizerModel;
+    bool m_gpuUploadEnabled = true;
 
 public:
     int getDim() const { return n_embd; }

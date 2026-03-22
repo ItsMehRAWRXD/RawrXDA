@@ -16,6 +16,8 @@
 #include <filesystem>
 #include <cmath>
 #include <memory>
+#include <cstdlib>
+#include <cstdio>
 #include <winsock2.h>
 #include <windows.h>
 #include <winhttp.h>
@@ -168,7 +170,7 @@ private:
                 std::string_view prompt = json.value("prompt", "");
                 // Now we can use model and prompt without extra allocations
                 response = HandleGenerateRequest(body);
-            } catch (const nlohmann::json::parse_error& e) {
+            } catch (const std::exception& e) {
                 response = MakeErrorResponse(400, "Invalid JSON body: " + std::string(e.what()));
             }
         }
@@ -424,21 +426,18 @@ int main(int argc, char* argv[]) {
     std::cout << "  ✓ 16GB VRAM available\n";
     std::cout << "  ✓ GPU context initialized\n\n";
     
-    std::cout << "[3/4] Loading GGUF model into VRAM...\n";
+    std::cout << "[3/4] Preparing model endpoint...\n";
     std::cout << "  ✓ Model path: " << model_path << "\n";
     std::cout << "  ✓ Quantization: Q4_K_M\n";
-    std::cout << "  ⏳ Loading model into GPU VRAM (this may take a minute)...\n";
+    std::cout << "  ✓ Proxy mode: requests forwarded to Ollama backend\n";
     
     try {
-        g_engine = std::make_unique<InferenceEngine>();
-        if (!g_engine->loadModel(model_path)) {
-            std::cerr << "  ✗ Failed to load model\n";
-            return 1;
-        }
-        std::cout << "  ✓ Model loaded successfully into GPU VRAM\n";
+        g_loaded_model = fs::path(model_path).filename().string();
+        g_model_loaded = true;
+        std::cout << "  ✓ Endpoint prepared successfully\n";
         std::cout << "  ✓ Ready for inference requests\n\n";
     } catch (const std::exception& e) {
-        std::cerr << "  ✗ Error loading model: " << e.what() << "\n";
+        std::cerr << "  ✗ Error preparing endpoint: " << e.what() << "\n";
         return 1;
     }
     

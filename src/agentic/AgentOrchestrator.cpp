@@ -11,6 +11,7 @@
 #include "agentic_observability.h"
 #include <chrono>
 #include <cstdio>
+#include <filesystem>
 #include <iomanip>
 #include <random>
 #include <sstream>
@@ -36,6 +37,39 @@ namespace Agent
 {
 
 namespace {
+std::vector<std::string> CollectPromptContextFiles(const std::string& rootDir)
+{
+    namespace fs = std::filesystem;
+    std::vector<std::string> files;
+
+    std::error_code ec;
+    fs::path base = rootDir.empty() ? fs::path(".") : fs::path(rootDir);
+    if (!fs::exists(base, ec) || !fs::is_directory(base, ec)) {
+        return files;
+    }
+
+    constexpr size_t kMaxFiles = 16;
+    for (const auto& entry : fs::recursive_directory_iterator(base, fs::directory_options::skip_permission_denied, ec)) {
+        if (ec) {
+            break;
+        }
+        if (!entry.is_regular_file(ec)) {
+            continue;
+        }
+
+        const fs::path& p = entry.path();
+        std::string ext = p.extension().string();
+        if (ext == ".cpp" || ext == ".h" || ext == ".hpp" || ext == ".c" || ext == ".asm" || ext == ".py" || ext == ".md") {
+            files.push_back(p.string());
+            if (files.size() >= kMaxFiles) {
+                break;
+            }
+        }
+    }
+
+    return files;
+}
+
 std::string extractToolNameFromPayload(const nlohmann::json& payload)
 {
     auto readKey = [&](const char* key) -> std::string {
@@ -153,13 +187,23 @@ using RawrXD::Agent::InferenceResult;
 AgentOrchestrator::AgentOrchestrator() : m_registry(AgentToolRegistry::Instance())
 {
     m_client = std::make_unique<AgentOllamaClient>(m_ollamaConfig);
+
+    // Batch 2: Initialize Advanced Agent Coordinator
+    m_advancedCoordinator = std::make_unique<Agentic::AdvancedAgentCoordinator>();
+
     GetObservability().logInfo(kComponent, "AgentOrchestrator initialized",
                                nlohmann::json::object({{"max_tool_rounds", m_config.max_tool_rounds},
-                                                       {"max_conversation_tokens", m_config.max_conversation_tokens}}));
+                                                       {"max_conversation_tokens", m_config.max_conversation_tokens},
+                                                       {"advanced_coordination", true}}));
 }
 
 AgentOrchestrator::~AgentOrchestrator()
 {
+    // Batch 2: Shutdown Advanced Coordinator first
+    if (m_advancedCoordinator) {
+        m_advancedCoordinator->shutdown();
+    }
+
     Cancel();
     if (m_asyncThread.joinable())
     {
@@ -177,11 +221,16 @@ void AgentOrchestrator::SetConfig(const OrchestratorConfig& config)
     m_config = config;
 }
 
-void AgentOrchestrator::SetOllamaConfig(const OllamaConfig& config)
+void AgentOrchestrator::SetNativeConfig(const OllamaConfig& config)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_ollamaConfig = config;
     m_client = std::make_unique<AgentOllamaClient>(config);
+}
+
+void AgentOrchestrator::SetOllamaConfig(const OllamaConfig& config)
+{
+    SetNativeConfig(config);
 }
 
 // ---------------------------------------------------------------------------
@@ -210,9 +259,9 @@ AgentSession AgentOrchestrator::RunAgentLoop(const std::string& user_message, St
     // System prompt
     ChatMessage sysMsg;
     sysMsg.role = "system";
-    sysMsg.content = m_registry.GetSystemPrompt(m_config.working_directory.empty() ? "." : m_config.working_directory,
-                                                {}  // open files — to be wired from IDE bridge
-    );
+    const std::string cwd = m_config.working_directory.empty() ? "." : m_config.working_directory;
+    const std::vector<std::string> promptFiles = CollectPromptContextFiles(cwd);
+    sysMsg.content = m_registry.GetSystemPrompt(cwd, promptFiles);
     session.messages.push_back(sysMsg);
 
     // User message
@@ -660,4 +709,72 @@ std::string AgentOrchestrator::GenerateSessionId()
         oss << dist(rng);
     }
     return oss.str();
+}
+
+// =============================================================================
+// Batch 2: Advanced Agent Coordination Implementation
+// =============================================================================
+
+void AgentOrchestrator::EnableAdvancedCoordination(const Agentic::ScalingPolicy& scaling,
+                                                   const Agentic::RedundancyConfig& redundancy)
+{
+    if (m_advancedCoordinator) {
+        bool success = m_advancedCoordinator->initialize(scaling, redundancy);
+        if (success) {
+            GetObservability().logInfo(kComponent, "Advanced Agent Coordination enabled",
+                                       nlohmann::json::object({
+                                           {"min_agents", scaling.minAgents},
+                                           {"max_agents", scaling.maxAgents},
+                                           {"replication_factor", redundancy.replicationFactor}
+                                       }));
+        } else {
+            GetObservability().logError(kComponent, "Failed to initialize Advanced Agent Coordination");
+        }
+    }
+}
+
+RawrXD::Agentic::AgentMetrics AgentOrchestrator::GetCoordinatorMetrics() const
+{
+    if (m_advancedCoordinator) {
+        return m_advancedCoordinator->getCoordinatorMetrics();
+    }
+    return RawrXD::Agentic::AgentMetrics{};
+}
+
+void AgentOrchestrator::SubmitCoordinatedTask(const std::string& taskDescription,
+                                             const std::string& specialization,
+                                             RawrXD::Agentic::TaskPriority priority)
+{
+    if (!m_advancedCoordinator) {
+        GetObservability().logWarn(kComponent, "Advanced coordination not enabled, using basic dispatch");
+        // Fallback to basic task dispatch
+        nlohmann::json payload = {
+            {"action", "coordinated_task"},
+            {"description", taskDescription},
+            {"specialization", specialization}
+        };
+        DispatchTask("coordinated_" + std::to_string(rand()), payload);
+        return;
+    }
+
+    // Create coordinated task
+    auto task = std::make_shared<RawrXD::Agentic::AgentTask>();
+    task->id = "coord_" + GenerateSessionId();
+    task->description = taskDescription;
+    task->specialization = specialization;
+    task->parameters = nlohmann::json{
+        {"description", taskDescription},
+        {"specialization", specialization},
+        {"coordinated", true}
+    };
+
+    // Submit to advanced coordinator
+    m_advancedCoordinator->submitTask(task, priority);
+
+    GetObservability().logInfo(kComponent, "Coordinated task submitted",
+                               nlohmann::json::object({
+                                   {"task_id", task->id},
+                                   {"specialization", specialization},
+                                   {"priority", static_cast<int>(priority)}
+                               }));
 }

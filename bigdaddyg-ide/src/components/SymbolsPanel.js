@@ -1,5 +1,6 @@
 import React from 'react';
 import { useIdeFeatures } from '../contexts/IdeFeaturesContext';
+import useElectron from '../hooks/useElectron';
 import { extractSymbolsFromText } from '../utils/textSymbolIndex';
 import {
   CopySupportLineButton,
@@ -8,6 +9,8 @@ import {
   MINIMALISTIC_DOC
 } from '../utils/minimalisticM08M14';
 
+const ARTIFACT_LABEL_KEY = 'rawrxd.ide.symbols.artifactLabel';
+
 /**
  * Text-based symbol index from the active editor buffer (regex / line-oriented).
  * Not LSP, not binary disassembly, not xref resolution.
@@ -15,10 +18,26 @@ import {
  * @param {{ path?: string, content?: string } | null | undefined} [activeFile]
  */
 const SymbolsPanel = ({ activeFile }) => {
+  const { appendKnowledgeArtifact } = useElectron();
   const { setStatusLine, pushToast, playUiSound, noisyLog } = useIdeFeatures();
+  const [artifactLabel, setArtifactLabel] = React.useState(() => {
+    try {
+      return localStorage.getItem(ARTIFACT_LABEL_KEY) || '';
+    } catch {
+      return '';
+    }
+  });
   const [symbols, setSymbols] = React.useState([]);
   const [loading, setLoading] = React.useState(false);
   const [loadError, setLoadError] = React.useState('');
+
+  React.useEffect(() => {
+    try {
+      localStorage.setItem(ARTIFACT_LABEL_KEY, artifactLabel);
+    } catch {
+      /* ignore */
+    }
+  }, [artifactLabel]);
 
   const activePath = activeFile?.path || '';
   const activeContent = activeFile?.content ?? '';
@@ -63,11 +82,66 @@ const SymbolsPanel = ({ activeFile }) => {
     }
   };
 
+  const appendKnowledgeSnapshot = async () => {
+    const base = (artifactLabel || 'symbol_index')
+      .replace(/[^a-zA-Z0-9_.-]+/g, '_')
+      .slice(0, 64) || 'symbol_index';
+    setLoading(true);
+    setLoadError('');
+    playUiSound('tick');
+    noisyLog('[symbols] knowledge snapshot append', base);
+    setStatusLine('Symbols: appending index snapshot to knowledge…');
+
+    if (!appendKnowledgeArtifact) {
+      setLoadError('appendKnowledgeArtifact is not available (not in Electron or preload missing).');
+      setLoading(false);
+      setStatusLine('Symbols: knowledge IPC unavailable');
+      return;
+    }
+    const maxLines = 250;
+    const lines = symbols.slice(0, maxLines).map((s) => `L${s.line}\t${s.kind}\t${s.name}`);
+    const body = [
+      `Symbol text-index snapshot (${new Date().toISOString()})`,
+      `File: ${activePath || '(unsaved buffer)'}`,
+      `Language hint: ${activeFile?.language || '(none)'}`,
+      `Count in panel: ${symbols.length}${symbols.length > maxLines ? ` (showing first ${maxLines} rows)` : ''}`,
+      '',
+      ...lines
+    ].join('\n');
+    try {
+      const result = await appendKnowledgeArtifact({
+        kind: 'symbols_text_index_snapshot',
+        path: base,
+        text: body
+      });
+      if (result && result.success === false) {
+        throw new Error(result.error || 'appendKnowledgeArtifact failed');
+      }
+      setLoading(false);
+      setStatusLine('Symbols: knowledge snapshot appended');
+      pushToast({
+        title: 'Symbols',
+        message:
+          'Appended via knowledge:append-artifact (Electron userData). Layout: docs/PROJECT_KNOWLEDGE_STORE.md (repo root).',
+        variant: 'success',
+        durationMs: 3200
+      });
+    } catch (e) {
+      const msg = e?.message || 'appendKnowledgeArtifact failed';
+      setLoadError(
+        `${msg} — knowledge:append-artifact requires projectRoot (File › Open Project).`
+      );
+      noisyLog('[symbols] knowledge append failed', msg);
+      setLoading(false);
+      setStatusLine(`Symbols: knowledge error — ${msg}`);
+    }
+  };
+
   return (
     <div className="flex h-full min-h-0 flex-col bg-ide-sidebar text-white">
       <div
         className="border-b border-gray-700 px-3 py-2"
-        title="Line-oriented regex index of the open editor buffer. Not LSP, not disassembly, not xref resolution. M06 — Read-only navigation default."
+        title="Line-oriented text index of the open editor buffer — not LSP, disassembly, or xref resolution."
       >
         <h3 className="text-sm font-semibold">Symbols &amp; xrefs</h3>
         <p className="text-[10px] text-gray-500 mt-0.5">Text index from editor · line numbers only</p>
@@ -99,6 +173,15 @@ const SymbolsPanel = ({ activeFile }) => {
           >
             Reset
           </button>
+          <button
+            type="button"
+            onClick={() => void appendKnowledgeSnapshot()}
+            disabled={loading || symbols.length === 0}
+            className={`px-2 py-2 rounded border border-emerald-700/50 text-emerald-200/90 text-xs hover:bg-emerald-950/40 disabled:opacity-40 ${focusVisibleRing}`}
+            title="Same as “Append snapshot” below — uses artifact label from the expandable section (default symbol_index)."
+          >
+            To knowledge
+          </button>
         </div>
 
         {!canIndex ? (
@@ -122,6 +205,41 @@ const SymbolsPanel = ({ activeFile }) => {
             </span>
           </p>
         )}
+
+        <details className="text-[10px] text-gray-500 border border-gray-800 rounded px-2 py-1">
+          <summary className="cursor-pointer text-gray-400 select-none">
+            Append current index to knowledge store (main process)
+          </summary>
+          <p className="mt-1 text-gray-500">
+            Requires an open project and <code className="text-gray-400">knowledge:append-artifact</code> IPC.
+          </p>
+          <label className="block text-gray-500 mt-2 mb-1" htmlFor="symbols-artifact-input">
+            Artifact label
+          </label>
+          <input
+            id="symbols-artifact-input"
+            className={`w-full bg-ide-bg border border-gray-600 rounded px-2 py-1 text-xs ${focusVisibleRing}`}
+            value={artifactLabel}
+            onChange={(e) => setArtifactLabel(e.target.value)}
+            placeholder="e.g. session-2026-symbols"
+            title="Stored in knowledge JSON under userData/knowledge"
+            disabled={loading}
+            autoComplete="off"
+          />
+          <button
+            type="button"
+            onClick={appendKnowledgeSnapshot}
+            disabled={loading || !symbols.length}
+            className={`mt-2 w-full py-1.5 rounded border border-gray-600 text-gray-400 text-xs hover:bg-gray-800 disabled:opacity-50 ${focusVisibleRing}`}
+            title={
+              symbols.length
+                ? 'Send indexed rows to the per-workspace knowledge file.'
+                : 'Index active file first so there are rows to send.'
+            }
+          >
+            Append snapshot
+          </button>
+        </details>
 
         {loadError ? (
           <div className="text-[11px] text-rose-300 bg-rose-950/40 border border-rose-800/50 rounded px-2 py-2" role="alert">
@@ -155,9 +273,9 @@ const SymbolsPanel = ({ activeFile }) => {
       </div>
       <MinimalSurfaceM814Footer
         surfaceId="symbols"
-        offlineHint="Text index runs in the renderer; knowledge append needs Electron IPC when used."
+        offlineHint="Text index runs in the renderer; “To knowledge” calls appendKnowledgeArtifact (project must be open)."
         docPath="docs/RE_MVP_SYMBOLS_XREFS.md"
-        m13Hint={`Dev: noisyLog('[symbols]', …). Also ${MINIMALISTIC_DOC}.`}
+        m13Hint="Dev: noisyLog('[symbols]', …)."
         className="px-2"
       >
         <div className="flex flex-wrap gap-1 px-1 pb-1">

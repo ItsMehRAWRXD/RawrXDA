@@ -18,6 +18,7 @@
 #include "ToolRegistry.h"
 #include "AgentOllamaClient.h"
 #include "FIMPromptBuilder.h"
+#include "AdvancedAgentCoordinator.h"  // Batch 2: Advanced Agent Coordination
 #include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
@@ -95,6 +96,8 @@ public:
 
     // -- Configuration --
     void SetConfig(const OrchestratorConfig& config);
+    void SetNativeConfig(const OllamaConfig& config);
+    // Backward-compatible alias.
     void SetOllamaConfig(const OllamaConfig& config);
     const OrchestratorConfig& GetConfig() const { return m_config; }
 
@@ -126,9 +129,13 @@ public:
     void Cancel();
     bool IsRunning() const { return m_running.load(); }
 
-    // -- Stats --
-    uint64_t GetTotalSessions() const { return m_totalSessions.load(); }
-    uint64_t GetTotalToolCalls() const { return m_totalToolCalls.load(); }
+    // -- Advanced Agent Coordination (Batch 2) --
+    void EnableAdvancedCoordination(const Agentic::ScalingPolicy& scaling = {},
+                                   const Agentic::RedundancyConfig& redundancy = {});
+    Agentic::AgentMetrics GetCoordinatorMetrics() const;
+    void SubmitCoordinatedTask(const std::string& taskDescription,
+                              const std::string& specialization,
+                              Agentic::TaskPriority priority = Agentic::TaskPriority::NORMAL);
 
 private:
     // Core agentic loop iteration
@@ -171,6 +178,9 @@ private:
     AgentToolRegistry& m_registry;
     std::unique_ptr<AgentOllamaClient> m_client;
     FIMPromptBuilder m_fimBuilder;
+
+    // Batch 2: Advanced Agent Coordination
+    std::unique_ptr<Agentic::AdvancedAgentCoordinator> m_advancedCoordinator;
 
     AgentSession m_currentSession;
     std::mutex m_mutex;

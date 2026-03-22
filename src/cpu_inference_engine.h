@@ -104,9 +104,11 @@ public:
     
     // Matrix-vector operations for GPU dispatch gate
     bool MatVecQ4(const float* matrix, const float* vector, float* output, uint32_t rows, uint32_t cols);
-    bool Softmax(float* data, uint32_t size);
     
     // Tokenization
+    // Functions declared in this section handle conversion between raw text and
+    // integer token IDs used by the model. They are used by Eval and
+    // GenerateStreaming to prepare input sequences and decode generated output.
     
     // Model information
     int GetVocabSize() const { return m_vocabSize; }
@@ -120,7 +122,8 @@ public:
     void SetDeepResearch(bool enabled);
     
     bool IsMaxMode() const { return m_maxMode; }
-    bool IsDeepThinking() const { return m_deepThinking; }
+    virtual bool IsDeepThinking() const override { return m_deepThinking; }
+    // Titan assembly engine (RawrXD_Interconnect / static ASM) — toggleable
     bool IsDeepResearch() const { return m_deepResearch; }
 
     // Titan assembly engine (RawrXD_Interconnect / static ASM) — toggable
@@ -130,7 +133,6 @@ public:
     // Performance settings
     void SetThreadCount(int threads) { m_threadCount = threads; }
     int GetThreadCount() const { return m_threadCount; }
-
     // Memory scaling for context
     void SetContextSize(size_t size);
     size_t GetContextSize() const { return m_contextLimit; }
@@ -168,7 +170,7 @@ private:
 
     // Internal tensor operations
     void MatMul(const float* A, const float* B, float* C, int m, int n, int k);
-    void Softmax(float* data, int size);
+    void ApplySoftmax(float* data, int size);
     void LayerNorm(float* data, int size, float epsilon = 1e-5f);
     void GELU(float* data, int size);
     void RMSNorm(float* data, int size, float epsilon = 1e-5f);

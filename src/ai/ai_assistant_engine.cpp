@@ -10,12 +10,16 @@
 #include <condition_variable>
 #include <filesystem>
 #include <unordered_set>
+#include <unordered_map>
+#include <fstream>
+#include <set>
 #include <cctype>
 #include <cstdlib>
 #include <atomic>
 #include <memory>
 #include <windows.h>
 #include <winhttp.h>
+#include "../gguf_loader.h"
 
 #pragma comment(lib, "winhttp.lib")
 
@@ -41,6 +45,100 @@ std::string GetCurrentTimestamp();
 std::string EscapeJSON(const std::string& str);
 
 namespace {
+constexpr char kBackendCpuOnly[] = "cpu-only";
+constexpr char kBackendGpuOnly[] = "gpu-only";
+constexpr char kBackendAutoVerifiedFallback[] = "auto-with-verified-fallback";
+
+std::string ToLowerCopy(std::string s) {
+    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+    });
+    return s;
+}
+
+bool IsTruthy(const std::string& value) {
+    const std::string v = ToLowerCopy(value);
+    return v == "1" || v == "true" || v == "yes" || v == "on";
+}
+
+void LogBackendSelection(const std::string& backend, bool success, const std::string& reason) {
+    std::cerr << "[BackendSelect] backend=" << backend
+              << " status=" << (success ? "success" : "fail")
+              << " reason=" << reason << std::endl;
+}
+
+bool HasGgufExtension(const std::string& path) {
+    const std::filesystem::path p(path);
+    const std::string ext = ToLowerCopy(p.extension().string());
+    return ext == ".gguf";
+}
+
+bool HasValidGgufMagic(const std::string& path) {
+    std::ifstream in(path, std::ios::binary);
+    if (!in.is_open()) {
+        return false;
+    }
+    uint32_t magic = 0;
+    in.read(reinterpret_cast<char*>(&magic), sizeof(magic));
+    return in.gcount() == static_cast<std::streamsize>(sizeof(magic)) && magic == 0x46554747U;
+}
+
+std::set<int> ParseIntAllowlist(const std::string& csv) {
+    std::set<int> out;
+    std::stringstream ss(csv);
+    std::string item;
+    while (std::getline(ss, item, ',')) {
+        item.erase(std::remove_if(item.begin(), item.end(), [](unsigned char c) { return std::isspace(c) != 0; }), item.end());
+        if (item.empty()) {
+            continue;
+        }
+        try {
+            out.insert(std::stoi(item));
+        } catch (...) {
+        }
+    }
+    return out;
+}
+
+std::string GetBackendMode(const ModelConfig& config) {
+    auto it = config.custom_params.find("backend_mode");
+    if (it == config.custom_params.end() || it->second.empty()) {
+        return kBackendAutoVerifiedFallback;
+    }
+    return ToLowerCopy(it->second);
+}
+
+bool IsLocalEndpoint(const std::string& endpoint) {
+    std::wstring w = ToWide(endpoint);
+    if (w.empty()) {
+        return false;
+    }
+
+    URL_COMPONENTSW parts;
+    ZeroMemory(&parts, sizeof(parts));
+    parts.dwStructSize = sizeof(parts);
+    parts.dwSchemeLength = static_cast<DWORD>(-1);
+    parts.dwHostNameLength = static_cast<DWORD>(-1);
+    parts.dwUrlPathLength = static_cast<DWORD>(-1);
+    parts.dwExtraInfoLength = static_cast<DWORD>(-1);
+    if (!WinHttpCrackUrl(w.c_str(), 0, 0, &parts)) {
+        return false;
+    }
+
+    std::wstring host(parts.lpszHostName, parts.dwHostNameLength);
+    std::string hostUtf8;
+    if (!host.empty()) {
+        int bytes = WideCharToMultiByte(CP_UTF8, 0, host.c_str(), static_cast<int>(host.size()), nullptr, 0, nullptr, nullptr);
+        if (bytes > 0) {
+            hostUtf8.resize(bytes);
+            WideCharToMultiByte(CP_UTF8, 0, host.c_str(), static_cast<int>(host.size()), &hostUtf8[0], bytes, nullptr, nullptr);
+        }
+    }
+
+    const std::string h = ToLowerCopy(hostUtf8);
+    return h == "localhost" || h == "127.0.0.1" || h == "::1";
+}
+
 std::wstring ToWide(const std::string& input) {
     if (input.empty()) return std::wstring();
     int size = MultiByteToWideChar(CP_UTF8, 0, input.c_str(), static_cast<int>(input.size()), nullptr, 0);
@@ -153,15 +251,19 @@ bool AIAssistantEngine::Initialize(const ModelConfig& config) {
     switch (config.provider) {
         case ModelProvider::Local_GGUF:
             m_backend = std::make_unique<GGUFBackend>();
+            LogBackendSelection("local_gguf", true, "selected provider");
             break;
         case ModelProvider::Ollama:
             m_backend = std::make_unique<OllamaBackend>();
+            LogBackendSelection("ollama", true, "selected provider");
             break;
         case ModelProvider::OpenAI_Compatible:
         case ModelProvider::Anthropic:
             m_backend = std::make_unique<OpenAIBackend>();
+            LogBackendSelection("openai_compatible", true, "selected provider");
             break;
         default:
+            LogBackendSelection("unknown", false, "unsupported model provider");
             if (m_error_callback) {
                 m_error_callback("Unsupported model provider");
             }
@@ -169,6 +271,7 @@ bool AIAssistantEngine::Initialize(const ModelConfig& config) {
     }
 
     if (!m_backend->Initialize(config)) {
+        LogBackendSelection("backend_init", false, "backend initialize returned false");
         if (m_error_callback) {
             m_error_callback("Failed to initialize model backend");
         }
@@ -1017,9 +1120,136 @@ std::string GetCurrentTimestamp() {
 // ============================================================================
 
 bool GGUFBackend::Initialize(const ModelConfig& config) {
+    const std::string backendMode = GetBackendMode(config);
+    if (backendMode != kBackendCpuOnly &&
+        backendMode != kBackendGpuOnly &&
+        backendMode != kBackendAutoVerifiedFallback) {
+        LogBackendSelection("local_gguf", false, "invalid backend_mode; expected cpu-only, gpu-only, or auto-with-verified-fallback");
+        return false;
+    }
+
+    if (backendMode == kBackendGpuOnly) {
+        LogBackendSelection("local_gguf", false, "gpu-only requested but this build has no verified GGUF GPU backend");
+        return false;
+    }
+
+    if (!HasGgufExtension(config.model_name)) {
+        LogBackendSelection("local_gguf", false, "model format rejected: only .gguf is allowed");
+        return false;
+    }
+
+    {
+        std::ifstream file(config.model_name, std::ios::binary);
+        if (!file.is_open()) {
+            LogBackendSelection("local_gguf", false, "permission denied for runtime user");
+            return false;
+        }
+    }
+
+    if (!HasValidGgufMagic(config.model_name)) {
+        LogBackendSelection("local_gguf", false, "invalid GGUF header magic");
+        return false;
+    }
+
+    GGUFLoader loader;
+    try {
+        if (!loader.Open(config.model_name) || !loader.ParseMetadata()) {
+            LogBackendSelection("local_gguf", false, "unable to parse GGUF metadata");
+            return false;
+        }
+    } catch (const std::exception& ex) {
+        LogBackendSelection("local_gguf", false, std::string("GGUF parse failed: ") + ex.what());
+        return false;
+    }
+
+    const auto metadata = loader.GetMetadata();
+    auto fileTypeIt = metadata.kv_pairs.find("general.file_type");
+    if (fileTypeIt == metadata.kv_pairs.end()) {
+        LogBackendSelection("local_gguf", false, "unsupported quant: missing general.file_type metadata");
+        return false;
+    }
+
+    int fileType = -1;
+    try {
+        fileType = std::stoi(fileTypeIt->second);
+    } catch (...) {
+        LogBackendSelection("local_gguf", false, "unsupported quant: invalid general.file_type metadata");
+        return false;
+    }
+
+    std::set<int> quantAllowlist = {1, 2, 3, 7, 8, 9, 10, 11, 12, 13, 14};
+    auto allowlistIt = config.custom_params.find("allowed_quant_file_types");
+    if (allowlistIt != config.custom_params.end() && !allowlistIt->second.empty()) {
+        const std::set<int> parsed = ParseIntAllowlist(allowlistIt->second);
+        if (!parsed.empty()) {
+            quantAllowlist = parsed;
+        }
+    }
+
+    if (quantAllowlist.find(fileType) == quantAllowlist.end()) {
+        LogBackendSelection("local_gguf", false, "unsupported quant");
+        return false;
+    }
+
+    auto requiredTokenizerModel = config.custom_params.find("tokenizer_model");
+    auto requiredTokenizerPre = config.custom_params.find("tokenizer_pre");
+    if (requiredTokenizerModel == config.custom_params.end() || requiredTokenizerPre == config.custom_params.end()) {
+        LogBackendSelection("local_gguf", false, "tokenizer/config pairing required: tokenizer_model and tokenizer_pre must be configured");
+        return false;
+    }
+
+    auto tokenizerModelIt = metadata.kv_pairs.find("tokenizer.ggml.model");
+    auto tokenizerPreIt = metadata.kv_pairs.find("tokenizer.ggml.pre");
+    if (tokenizerModelIt == metadata.kv_pairs.end() || tokenizerPreIt == metadata.kv_pairs.end()) {
+        LogBackendSelection("local_gguf", false, "tokenizer/config mismatch: required tokenizer metadata missing");
+        return false;
+    }
+
+    if (tokenizerModelIt->second != requiredTokenizerModel->second || tokenizerPreIt->second != requiredTokenizerPre->second) {
+        LogBackendSelection("local_gguf", false, "tokenizer/config mismatch");
+        return false;
+    }
+
+    auto requiredTokenizerVersion = config.custom_params.find("tokenizer_version");
+    if (requiredTokenizerVersion != config.custom_params.end()) {
+        auto modelVersion = metadata.kv_pairs.find("general.quantization_version");
+        if (modelVersion == metadata.kv_pairs.end() || modelVersion->second != requiredTokenizerVersion->second) {
+            LogBackendSelection("local_gguf", false, "tokenizer/config version mismatch");
+            return false;
+        }
+    }
+
+    std::error_code ec;
+    const uint64_t modelBytes = static_cast<uint64_t>(std::filesystem::file_size(config.model_name, ec));
+    if (ec || modelBytes == 0) {
+        LogBackendSelection("local_gguf", false, "failed to stat model file for memory preflight");
+        return false;
+    }
+
+    MEMORYSTATUSEX mem{};
+    mem.dwLength = sizeof(mem);
+    if (!GlobalMemoryStatusEx(&mem)) {
+        LogBackendSelection("local_gguf", false, "memory preflight failed: unable to query RAM status");
+        return false;
+    }
+
+    const uint64_t ramHeadroom = static_cast<uint64_t>(static_cast<long double>(mem.ullTotalPhys) * 0.20L);
+    const uint64_t workingSetEstimate = static_cast<uint64_t>(static_cast<long double>(modelBytes) * 1.25L);
+    const uint64_t required = workingSetEstimate + ramHeadroom;
+    if (mem.ullAvailPhys < required) {
+        LogBackendSelection("local_gguf", false, "memory preflight failed: insufficient RAM headroom");
+        return false;
+    }
+
+    if (backendMode == kBackendAutoVerifiedFallback) {
+        LogBackendSelection("local_gguf", true, "auto-with-verified-fallback resolved to cpu-only; verified GPU backend not available");
+    } else {
+        LogBackendSelection("local_gguf", true, "cpu-only backend selected");
+    }
+
     m_engine = std::make_unique<CPUInference::CPUInferenceEngine>();
-    
     if (!m_engine->LoadModel(config.model_name)) {
+        LogBackendSelection("local_gguf", false, "engine failed to load GGUF model");
         return false;
     }
 
@@ -1063,6 +1293,15 @@ bool OllamaBackend::Initialize(const ModelConfig& config) {
     m_endpoint = config.api_endpoint.empty() ? "http://localhost:11434/api/generate" : config.api_endpoint;
     m_model_name = config.model_name;
 
+    const bool allowRemote = IsTruthy(config.custom_params.count("allow_remote_endpoint")
+                                          ? config.custom_params.at("allow_remote_endpoint")
+                                          : "false");
+    if (!allowRemote && !IsLocalEndpoint(m_endpoint)) {
+        LogBackendSelection("ollama", false, "remote endpoint blocked; local host endpoint required");
+        m_ready = false;
+        return false;
+    }
+
     std::string tags_url = m_endpoint;
     size_t api_pos = tags_url.find("/api/");
     if (api_pos != std::string::npos) {
@@ -1074,9 +1313,19 @@ bool OllamaBackend::Initialize(const ModelConfig& config) {
     }
 
     std::string tags = WinHttpRequest(tags_url, L"GET", "", {L"Accept: application/json"});
-    // Enhanced readiness: mark as ready if we have a model name, even if server tag check fails.
-    // This allows custom names or SHAs to bypass strict initial check and fail later if actually invalid.
-    m_ready = !m_model_name.empty(); 
+    if (tags.empty()) {
+        LogBackendSelection("ollama", false, "local endpoint not reachable at startup");
+        m_ready = false;
+        return false;
+    }
+
+    m_ready = !m_model_name.empty();
+    if (!m_ready) {
+        LogBackendSelection("ollama", false, "model name is empty");
+        return false;
+    }
+
+    LogBackendSelection("ollama", true, "local endpoint verified");
     return m_ready;
 }
 

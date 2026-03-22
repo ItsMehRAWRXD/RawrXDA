@@ -15,7 +15,7 @@ using namespace RawrXD;
 
 class IDEWindow : public Window {
     UniversalModelRouter router;
-    String status = "Ready. Press F5 to run inference (Titan + Assembly).";
+    String status = "Ready. Press F5 to run Titan+Assembly inference.";
     String outputText;
     
 public:
@@ -76,7 +76,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     // Create minimal main window
     IDEWindow window;
-    window.create(nullptr, "RawrXD Agentic IDE (Titan Powered)", WS_OVERLAPPEDWINDOW | WS_VISIBLE);
+    window.create(nullptr, "RawrXD Agentic IDE Titan Powered", WS_OVERLAPPEDWINDOW | WS_VISIBLE);
     window.resize(1024, 768);
 
     // Message Loop

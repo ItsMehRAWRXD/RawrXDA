@@ -52,7 +52,8 @@ class Win32IDE_AgenticPlanningPanel
         BUTTON_APPROVE = 1004,
         BUTTON_REJECT = 1005,
         BUTTON_EXECUTE = 1006,
-        BUTTON_ROLLBACK = 1007
+        BUTTON_ROLLBACK = 1007,
+        BUTTON_RESUME = 1008
     };
 
     // Control initialization
@@ -71,12 +72,14 @@ class Win32IDE_AgenticPlanningPanel
     void onRejectClicked();
     void onExecuteClicked();
     void onRollbackClicked();
+    void onResumeClicked();
     void onPlanSelectionChanged();
     void onStepSelectionChanged();
     void onApprovalRequested(const Agentic::ExecutionPlan* plan, int step_idx);
 
     // Logging
     void addLogEntry(const std::string& entry);
+    void showToastStatus(const std::wstring& text);
 
     // Members
     HWND m_hWnd;

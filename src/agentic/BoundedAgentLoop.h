@@ -49,7 +49,7 @@ namespace Agent {
 struct AgentLoopConfig {
     int maxSteps                = 8;        // Bounded step limit
     int maxTokensPerRequest     = 8192;     // Context window budget
-    std::string model;                              // Auto-detected from Ollama /api/tags
+    std::string model;                              // Active model tag
     std::string ollamaBaseUrl   = "http://localhost:11434";
     std::string workingDirectory;
     std::vector<std::string> openFiles;
@@ -152,8 +152,8 @@ private:
     nlohmann::json BuildToolResultMessage(const std::string& callId, const ToolCallResult& result);
     nlohmann::json BuildAssistantToolCallMessage(const LLMChatResponse& response);
 
-    // ---- Default LLM backend (Ollama /api/chat) ----
-    static LLMChatResponse OllamaChat(const LLMChatRequest& request, const std::string& baseUrl);
+        // ---- Default LLM backend (native orchestrator path) ----
+        static LLMChatResponse NativeChat(const LLMChatRequest& request, const std::string& baseUrl);
 
     // ---- State ----
     std::atomic<AgentLoopState> m_state{AgentLoopState::Idle};

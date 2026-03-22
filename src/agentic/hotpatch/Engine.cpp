@@ -4,6 +4,14 @@
 #include <memory>
 #include <cstdint>
 
+namespace {
+double Clamp01(double v) {
+    if (v < 0.0) return 0.0;
+    if (v > 1.0) return 1.0;
+    return v;
+}
+}
+
 namespace RawrXD::Agentic::Hotpatch {
 
 // MemoryProtection implementation
@@ -162,8 +170,15 @@ Engine& Engine::instance() {
 }
 
 bool Engine::installHook(const std::string& name, HookType type, void* target, void* replacement) {
-    if (hooks_.find(name) != hooks_.end()) {
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    if (hooks_.find(name) != hooks_.end() && unrestrictiveDial_ < 0.80) {
         return false; // Already exists
+    }
+
+    if (hooks_.find(name) != hooks_.end() && unrestrictiveDial_ >= 0.80) {
+        // Unrestricted mode: allow replacing an existing hook definition.
+        removeHook(name);
     }
     
     if (!validateTarget(target)) {
@@ -175,21 +190,24 @@ bool Engine::installHook(const std::string& name, HookType type, void* target, v
     config.type = type;
     config.target = target;
     config.replacement = replacement;
-    config.enabled = true;
+    config.trampoline = nullptr;
+    config.runtimeHandle = nullptr;
+    config.patchSize = 0;
+    config.enabled = false;
     
     // Create appropriate hook based on type
     switch (type) {
-        case HookType::DETOUR: {
-            auto detour = std::make_unique<Detour>(target, replacement);
-            if (!detour->install()) {
-                return false;
-            }
-            config.trampoline = reinterpret_cast<void*>(detour->getTrampoline<void()>());
+        case HookType::DETOUR:
             break;
-        }
         case HookType::PATCH:
             // Simple patch - save original code
-            config.patchSize = 16; // Default patch size
+            if (hotness_ < 0.34) {
+                config.patchSize = 8;
+            } else if (hotness_ < 0.67) {
+                config.patchSize = 16;
+            } else {
+                config.patchSize = 32;
+            }
             config.originalCode.resize(config.patchSize);
             memcpy(config.originalCode.data(), target, config.patchSize);
             break;
@@ -198,10 +216,16 @@ bool Engine::installHook(const std::string& name, HookType type, void* target, v
     }
     
     hooks_[name] = config;
+
+    if (hotpatchingEnabled_) {
+        return applyHook(hooks_[name]);
+    }
     return true;
 }
 
 bool Engine::removeHook(const std::string& name) {
+    std::lock_guard<std::mutex> lock(mutex_);
+
     auto it = hooks_.find(name);
     if (it == hooks_.end()) {
         return false;
@@ -216,6 +240,12 @@ bool Engine::removeHook(const std::string& name) {
 }
 
 bool Engine::enableHook(const std::string& name) {
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    if (!hotpatchingEnabled_) {
+        return false;
+    }
+
     auto config = findHook(name);
     if (!config || config->enabled) {
         return false;
@@ -225,6 +255,8 @@ bool Engine::enableHook(const std::string& name) {
 }
 
 bool Engine::disableHook(const std::string& name) {
+    std::lock_guard<std::mutex> lock(mutex_);
+
     auto config = findHook(name);
     if (!config || !config->enabled) {
         return false;
@@ -233,7 +265,90 @@ bool Engine::disableHook(const std::string& name) {
     return removeHook(*config);
 }
 
+bool Engine::setHotpatchingEnabled(bool enabled) {
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    if (hotpatchingEnabled_ == enabled) {
+        return true;
+    }
+
+    hotpatchingEnabled_ = enabled;
+    bool allOk = true;
+
+    for (auto& [name, config] : hooks_) {
+        (void)name;
+        if (enabled) {
+            if (!config.enabled) {
+                allOk = applyHook(config) && allOk;
+            }
+        } else {
+            if (config.enabled) {
+                allOk = removeHook(config) && allOk;
+            }
+        }
+    }
+
+    return allOk;
+}
+
+bool Engine::isHotpatchingEnabled() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return hotpatchingEnabled_;
+}
+
+bool Engine::setModelTemperature(double temperature01) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    modelTemperature_ = Clamp01(temperature01);
+    hotness_ = modelTemperature_;
+    applyTemperaturePolicyLocked();
+    return true;
+}
+
+bool Engine::setUnrestrictiveDial(double dial01) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    unrestrictiveDial_ = Clamp01(dial01);
+    return true;
+}
+
+double Engine::getUnrestrictiveDial() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return unrestrictiveDial_;
+}
+
+double Engine::getModelTemperature() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return modelTemperature_;
+}
+
+double Engine::getHotness() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return hotness_;
+}
+
+void Engine::applyTemperaturePolicyLocked() {
+    const bool shouldEnable = modelTemperature_ > 0.10;
+    if (hotpatchingEnabled_ == shouldEnable) {
+        return;
+    }
+
+    hotpatchingEnabled_ = shouldEnable;
+    for (auto& [name, config] : hooks_) {
+        (void)name;
+        if (hotpatchingEnabled_) {
+            if (!config.enabled) {
+                applyHook(config);
+            }
+        } else {
+            if (config.enabled) {
+                removeHook(config);
+            }
+        }
+    }
+}
+
 bool Engine::registerHotkey(UINT vkCode, std::function<void()> callback) {
+    std::lock_guard<std::mutex> lock(mutex_);
+
     if (hotkeys_.find(vkCode) != hotkeys_.end()) {
         return false; // Already registered
     }
@@ -243,14 +358,22 @@ bool Engine::registerHotkey(UINT vkCode, std::function<void()> callback) {
 }
 
 bool Engine::unregisterHotkey(UINT vkCode) {
+    std::lock_guard<std::mutex> lock(mutex_);
     return hotkeys_.erase(vkCode) > 0;
 }
 
 bool Engine::isHotkey(UINT vkCode) const {
+    std::lock_guard<std::mutex> lock(mutex_);
     return hotkeys_.find(vkCode) != hotkeys_.end();
 }
 
 bool Engine::execute(UINT vkCode) {
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    if (!hotpatchingEnabled_) {
+        return false;
+    }
+
     auto it = hotkeys_.find(vkCode);
     if (it == hotkeys_.end()) {
         return false;
@@ -261,6 +384,10 @@ bool Engine::execute(UINT vkCode) {
 }
 
 bool Engine::installModuleHooks(HMODULE module) {
+    if (!hotpatchingEnabled_) {
+        return true;
+    }
+
     // Module-wide hook installation
     // This would scan module exports and install hooks automatically
     // For now, just track the module
@@ -273,6 +400,8 @@ bool Engine::removeModuleHooks(HMODULE module) {
 }
 
 size_t Engine::getActiveHookCount() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+
     size_t count = 0;
     for (const auto& [name, config] : hooks_) {
         if (config.enabled) {
@@ -286,13 +415,17 @@ bool Engine::validateTarget(void* target) const {
     if (!target) {
         return false;
     }
-    
+
+    // High dial means broad, context-agnostic patch acceptance.
+    if (unrestrictiveDial_ >= 0.50) {
+        return true;
+    }
+
     MEMORY_BASIC_INFORMATION mbi;
     if (!VirtualQuery(target, &mbi, sizeof(mbi))) {
         return false;
     }
-    
-    // Check if executable
+
     return (mbi.Protect & (PAGE_EXECUTE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE)) != 0;
 }
 
@@ -311,17 +444,23 @@ HookConfig* Engine::findHook(const std::string& name) {
 }
 
 bool Engine::applyHook(HookConfig& config) {
+    if (!hotpatchingEnabled_) {
+        return false;
+    }
+
     if (config.enabled) {
         return true; // Already applied
     }
     
     switch (config.type) {
         case HookType::DETOUR: {
-            auto detour = std::make_unique<Detour>(config.target, config.replacement);
+            auto* detour = new Detour(config.target, config.replacement);
             if (!detour->install()) {
+                delete detour;
                 return false;
             }
             config.trampoline = reinterpret_cast<void*>(detour->getTrampoline<void()>());
+            config.runtimeHandle = detour;
             break;
         }
         case HookType::PATCH: {
@@ -352,12 +491,24 @@ bool Engine::removeHook(HookConfig& config) {
     
     switch (config.type) {
         case HookType::DETOUR: {
-            // Restore original code
-            MemoryProtection prot(config.target, 5, PAGE_EXECUTE_READWRITE);
-            if (!prot.isValid()) {
-                return false;
+            auto* detour = static_cast<Detour*>(config.runtimeHandle);
+            if (detour) {
+                if (!detour->remove()) {
+                    return false;
+                }
+                delete detour;
+                config.runtimeHandle = nullptr;
+                config.trampoline = nullptr;
+            } else {
+                // Best-effort fallback if runtime handle is missing.
+                MemoryProtection prot(config.target, 5, PAGE_EXECUTE_READWRITE);
+                if (!prot.isValid()) {
+                    return false;
+                }
+                if (config.originalCode.size() >= 5) {
+                    memcpy(config.target, config.originalCode.data(), 5);
+                }
             }
-            memcpy(config.target, config.originalCode.data(), 5);
             break;
         }
         case HookType::PATCH: {

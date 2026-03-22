@@ -31,9 +31,53 @@ static std::wstring s2ws(const std::string& str) {
     return wstrTo;
 }
 
+static std::string toLowerCopy(std::string value) {
+    std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+    });
+    return value;
+}
+
+static bool isTruthy(std::string value) {
+    value = toLowerCopy(value);
+    return value == "1" || value == "true" || value == "yes" || value == "on";
+}
+
+static bool isLocalEndpoint(const std::string& endpoint) {
+    std::wstring wUrl = s2ws(endpoint);
+    URL_COMPONENTS urlComp;
+    ZeroMemory(&urlComp, sizeof(urlComp));
+    urlComp.dwStructSize = sizeof(urlComp);
+    urlComp.dwSchemeLength = (DWORD)-1;
+    urlComp.dwHostNameLength = (DWORD)-1;
+    urlComp.dwUrlPathLength = (DWORD)-1;
+    urlComp.dwExtraInfoLength = (DWORD)-1;
+
+    if (!WinHttpCrackUrl(wUrl.c_str(), (DWORD)wUrl.length(), 0, &urlComp)) {
+        return false;
+    }
+
+    std::wstring hostName(urlComp.lpszHostName, urlComp.dwHostNameLength);
+    std::string host;
+    if (!hostName.empty()) {
+        int size = WideCharToMultiByte(CP_UTF8, 0, hostName.c_str(), (int)hostName.size(), nullptr, 0, nullptr, nullptr);
+        if (size > 0) {
+            host.resize(size);
+            WideCharToMultiByte(CP_UTF8, 0, hostName.c_str(), (int)hostName.size(), &host[0], size, nullptr, nullptr);
+        }
+    }
+
+    host = toLowerCopy(host);
+    return host == "localhost" || host == "127.0.0.1" || host == "::1";
+}
+
 AICompletionProvider::AICompletionProvider(void* parent)
 {
     // Parent ignored in pure C++ version
+    const char* allowRemote = std::getenv("RAWRXD_ALLOW_REMOTE_ENDPOINT");
+    if (allowRemote != nullptr) {
+        m_allowRemoteEndpoint = isTruthy(allowRemote);
+    }
 }
 
 AICompletionProvider::~AICompletionProvider()
@@ -42,7 +86,17 @@ AICompletionProvider::~AICompletionProvider()
 }
 
 void AICompletionProvider::setModelEndpoint(const std::string& endpoint) {
+    if (!m_allowRemoteEndpoint && !isLocalEndpoint(endpoint)) {
+        if (m_errorCallback) {
+            m_errorCallback("Remote endpoint blocked for local jobs");
+        }
+        return;
+    }
     m_modelEndpoint = endpoint;
+}
+
+void AICompletionProvider::setAllowRemoteEndpoint(bool enabled) {
+    m_allowRemoteEndpoint = enabled;
 }
 
 void AICompletionProvider::setModel(const std::string& modelName) {

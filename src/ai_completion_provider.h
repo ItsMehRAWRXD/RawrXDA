@@ -37,6 +37,7 @@ public:
 
     // Configuration
     void setModelEndpoint(const std::string& endpoint);
+    void setAllowRemoteEndpoint(bool enabled);
     void setModel(const std::string& modelName);
     void setRequestTimeout(int timeoutMs);
     void setTimeoutFallback(bool enabled);
@@ -84,6 +85,7 @@ private:
 
     // Configuration
     std::string m_modelEndpoint = "http://localhost:11434";
+    bool m_allowRemoteEndpoint = false;
     std::string m_modelName = "llama2";
     int m_requestTimeoutMs = 5000;
     bool m_useTimeoutFallback = true;

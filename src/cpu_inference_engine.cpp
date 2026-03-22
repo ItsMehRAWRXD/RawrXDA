@@ -189,6 +189,38 @@ void CPUInferenceEngine::GenerateStreaming(
 }
 
 // ============================================================================
+// AI Mode setters
+// ============================================================================
+void CPUInferenceEngine::SetMaxMode(bool enabled) {
+    m_maxMode = enabled;
+}
+
+void CPUInferenceEngine::SetDeepThinking(bool enabled) {
+    m_deepThinking = enabled;
+}
+
+void CPUInferenceEngine::SetDeepResearch(bool enabled) {
+    m_deepResearch = enabled;
+}
+
+// ============================================================================
+// Context and memory management
+// ============================================================================
+void CPUInferenceEngine::SetContextSize(size_t size) {
+    m_contextLimit = size;
+}
+
+size_t CPUInferenceEngine::GetMemoryUsage() const {
+    return m_totalMemoryAllocated;
+}
+
+void CPUInferenceEngine::ClearCache() {
+    m_kv_cache.clear();
+    m_memoryPool.clear();
+    m_totalMemoryAllocated = 0;
+}
+
+// ============================================================================
 // Training stubs (weight updates)
 // ============================================================================
 void CPUInferenceEngine::UpdateWeights(
@@ -210,32 +242,9 @@ void CPUInferenceEngine::SetContextLimit(size_t limit) {
     m_contextLimit = limit;
 }
 
-void CPUInferenceEngine::SetContextSize(size_t size) {
-    m_contextLimit = size;
-}
-
 void CPUInferenceEngine::RegisterMemoryPlugin(std::shared_ptr<RawrXD::IMemoryPlugin> plugin) {
     m_memoryPlugins.push_back(std::move(plugin));
 }
-
-size_t CPUInferenceEngine::GetMemoryUsage() const {
-    return m_totalMemoryAllocated;
-}
-
-void CPUInferenceEngine::ClearCache() {
-    m_kv_cache.clear();
-    m_memoryPool.clear();
-    m_totalMemoryAllocated = 0;
-    m_currentPos = 0;
-    m_lastState.clear();
-}
-
-// ============================================================================
-// AI Mode Settings
-// ============================================================================
-void CPUInferenceEngine::SetMaxMode(bool enabled)      { m_maxMode = enabled; }
-void CPUInferenceEngine::SetDeepThinking(bool enabled)  { m_deepThinking = enabled; }
-void CPUInferenceEngine::SetDeepResearch(bool enabled)  { m_deepResearch = enabled; }
 
 // ============================================================================
 // Memory Allocation
@@ -281,20 +290,26 @@ void CPUInferenceEngine::MatMul(const float* A, const float* B, float* C, int m,
     }
 }
 
-void CPUInferenceEngine::Softmax(float* data, int size) {
+void CPUInferenceEngine::ApplySoftmax(float* data, int size) {
     if (!data || size <= 0) return;
+
     float maxVal = *std::max_element(data, data + size);
     float sum = 0.0f;
+
     for (int i = 0; i < size; i++) {
         data[i] = std::exp(data[i] - maxVal);
         sum += data[i];
     }
+
     if (!(sum > 0.0f) || !std::isfinite(sum)) {
         const float uniform = 1.0f / static_cast<float>(size);
         for (int i = 0; i < size; i++) data[i] = uniform;
         return;
     }
-    for (int i = 0; i < size; i++) data[i] /= sum;
+
+    for (int i = 0; i < size; i++) {
+        data[i] /= sum;
+    }
 }
 
 void CPUInferenceEngine::LayerNorm(float* data, int size, float epsilon) {
@@ -358,9 +373,9 @@ void CPUInferenceEngine::MultiHeadAttention(
                 attn_scores[i * seq_len + j] = -1e9f;  // Mask future
             }
         }
-        // Softmax per row, then attn * V
+        // ApplySoftmax per row, then attn * V
         for (int i = 0; i < seq_len; i++) {
-            Softmax(&attn_scores[i * seq_len], seq_len);
+            ApplySoftmax(&attn_scores[i * seq_len], seq_len);
             for (int d = 0; d < head_dim; d++) {
                 float sum = 0.0f;
                 for (int j = 0; j < seq_len; j++) {
@@ -401,6 +416,20 @@ void CPUInferenceEngine::ApplyNorm(const std::string& name, float* data) {
     } else {
         LayerNorm(data, dim);
     }
+}
+
+// ============================================================================
+// Forward declarations for CPUOps dequantization functions
+// ============================================================================
+namespace CPUOps {
+    void DequantizeQ4_0(const uint8_t* quantized, float* output, int size);
+    void DequantizeQ8_0(const uint8_t* quantized, float* output, int size);
+    void DequantizeQ4_K(const uint8_t* quantized, float* output, int num_elements);
+    void DequantizeQ5_K(const uint8_t* quantized, float* output, int num_elements);
+    void DequantizeQ6_K(const uint8_t* quantized, float* output, int num_elements);
+    void DequantizeQ2_K(const uint8_t* quantized, float* output, int num_elements);
+    void DequantizeQ3_K(const uint8_t* quantized, float* output, int num_elements);
+    void DequantizeF16(const uint8_t* quantized, float* output, int num_elements);
 }
 
 void CPUInferenceEngine::DequantizeTensor(

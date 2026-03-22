@@ -7,10 +7,13 @@
 namespace RawrXD {
 
     // Forward declaration if needed, or define shared structs
+    #ifndef RAWRXD_RENDER_COMMAND_DEFINED
+    #define RAWRXD_RENDER_COMMAND_DEFINED
     struct RenderCommand {
         std::string type;
         // extended fields...
     };
+    #endif
 
     #ifndef RAWRXD_RENDERER_INTERFACE_DEFINED
     #define RAWRXD_RENDERER_INTERFACE_DEFINED

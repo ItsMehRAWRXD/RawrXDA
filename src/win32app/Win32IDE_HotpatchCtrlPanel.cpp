@@ -15,6 +15,7 @@
 void Win32IDE::initHotpatchCtrlPanel() {
     if (m_hotpatchCtrlPanelInitialized) return;
 
+    m_hotpatchCtrlActiveTransactionId = 0;
     appendToOutput("[HotpatchCtrl] Phase 14 — Hotpatch Control Plane initialized.\n");
     m_hotpatchCtrlPanelInitialized = true;
 }
@@ -75,7 +76,46 @@ void Win32IDE::cmdHPCtrlListPatches() {
 }
 
 void Win32IDE::cmdHPCtrlPatchDetail() {
-    appendToOutput("[HotpatchCtrl] Patch detail requires a patch ID. Use List Patches first.\n");
+    auto& cp = HotpatchControlPlane::instance();
+    auto patches = cp.getAllPatches();
+    if (patches.empty()) {
+        appendToOutput("[HotpatchCtrl] No patches registered.\n");
+        return;
+    }
+
+    const PatchManifest* pick = nullptr;
+    for (auto* m : patches) {
+        if (m->state == PatchLifecycleState::Applied) {
+            pick = m;
+            break;
+        }
+    }
+    if (!pick) {
+        for (auto* m : patches) {
+            if (m->state == PatchLifecycleState::Staged || m->state == PatchLifecycleState::Validated) {
+                pick = m;
+                break;
+            }
+        }
+    }
+    if (!pick) {
+        pick = patches.front();
+    }
+
+    std::ostringstream oss;
+    oss << "[HotpatchCtrl] Patch Detail\n"
+        << "  id=" << pick->manifestId << "\n"
+        << "  name=" << pick->name << "\n"
+        << "  author=" << pick->author << "\n"
+        << "  version=" << pick->version.toString() << "\n"
+        << "  state=" << static_cast<int>(pick->state) << "\n"
+        << "  safety=" << static_cast<int>(pick->safetyLevel) << "\n"
+        << "  validated=" << (pick->validated ? "yes" : "no") << "\n"
+        << "  dependencies=" << pick->dependencies.size() << "\n"
+        << "  conflicts=" << pick->conflicts.size() << "\n"
+        << "  description=" << pick->description << "\n";
+
+    appendToOutput(oss.str());
 }
 
 void Win32IDE::cmdHPCtrlValidate() {
@@ -110,6 +150,9 @@ void Win32IDE::cmdHPCtrlStage() {
             break;
         }
     }
+    if (!pick && !patches.empty()) {
+        pick = patches.front();
+    }
     if (!pick) {
         appendToOutput("[HotpatchCtrl] No validated patch to stage. List Patches, then validate one.\n");
         return;
@@ -130,9 +173,37 @@ void Win32IDE::cmdHPCtrlApply() {
         }
     }
     if (!pick) {
-        appendToOutput("[HotpatchCtrl] No staged patch to apply. Stage a validated patch first.\n");
+        for (auto* m : patches) {
+            if (m->state == PatchLifecycleState::Validated) {
+                pick = m;
+                break;
+            }
+        }
+    }
+    if (!pick && !patches.empty()) {
+        pick = patches.front();
+    }
+    if (!pick) {
+        appendToOutput("[HotpatchCtrl] No patch available to apply.\n");
         return;
     }
+    if (m_hotpatchCtrlActiveTransactionId != 0) {
+        if (pick->state == PatchLifecycleState::Validated) {
+            auto stageResult = cp.stagePatch(pick->manifestId);
+            if (!stageResult.success) {
+                appendToOutput("[HotpatchCtrl] " + std::string(stageResult.detail) +
+                               " (unable to stage for txn: " + pick->name + " v" + pick->version.toString() + ")\n");
+                return;
+            }
+        }
+
+        auto queueResult = cp.addToTransaction(m_hotpatchCtrlActiveTransactionId, pick->manifestId);
+        appendToOutput("[HotpatchCtrl] " + std::string(queueResult.detail) +
+                       " (queued in txn " + std::to_string(m_hotpatchCtrlActiveTransactionId) + ": " +
+                       pick->name + " v" + pick->version.toString() + ")\n");
+        return;
+    }
+
     auto result = cp.applyPatch(pick->manifestId, "IDE", "Menu Apply");
     appendToOutput("[HotpatchCtrl] " + std::string(result.detail) +
                    " (applied: " + pick->name + " v" + pick->version.toString() + ")\n");
@@ -148,8 +219,11 @@ void Win32IDE::cmdHPCtrlRollback() {
             break;
         }
     }
+    if (!pick && !patches.empty()) {
+        pick = patches.front();
+    }
     if (!pick) {
-        appendToOutput("[HotpatchCtrl] No applied patch to roll back. Apply a patch first.\n");
+        appendToOutput("[HotpatchCtrl] No patch available to roll back.\n");
         return;
     }
     auto result = cp.rollbackPatch(pick->manifestId, "IDE", "Menu Rollback");
@@ -167,8 +241,11 @@ void Win32IDE::cmdHPCtrlSuspend() {
             break;
         }
     }
+    if (!pick && !patches.empty()) {
+        pick = patches.front();
+    }
     if (!pick) {
-        appendToOutput("[HotpatchCtrl] No applied patch to suspend. Apply a patch first.\n");
+        appendToOutput("[HotpatchCtrl] No patch available to suspend.\n");
         return;
     }
     auto result = cp.suspendPatch(pick->manifestId, "IDE", "Menu Suspend");
@@ -202,8 +279,19 @@ void Win32IDE::cmdHPCtrlAuditLog() {
 
 void Win32IDE::cmdHPCtrlTxnBegin() {
     auto& cp = HotpatchControlPlane::instance();
+    if (m_hotpatchCtrlActiveTransactionId != 0) {
+        const PatchTransaction* activeTxn = cp.getTransaction(m_hotpatchCtrlActiveTransactionId);
+        if (activeTxn && !activeTxn->committed && !activeTxn->rolledBack) {
+            appendToOutput("[HotpatchCtrl] Transaction already active: ID=" +
+                           std::to_string(m_hotpatchCtrlActiveTransactionId) + "\n");
+            return;
+        }
+        m_hotpatchCtrlActiveTransactionId = 0;
+    }
+
     uint64_t txnId = cp.beginTransaction("IDE-Transaction");
     if (txnId > 0) {
+        m_hotpatchCtrlActiveTransactionId = txnId;
         appendToOutput("[HotpatchCtrl] Transaction started: ID=" + std::to_string(txnId) + "\n");
     } else {
         appendToOutput("[HotpatchCtrl] Failed to begin transaction.\n");
@@ -212,15 +300,32 @@ void Win32IDE::cmdHPCtrlTxnBegin() {
 
 void Win32IDE::cmdHPCtrlTxnCommit() {
     auto& cp = HotpatchControlPlane::instance();
-    // Find most recent active transaction — simplified for UI
-    auto result = cp.commitTransaction(0, "IDE");  // Would need real txnId
-    appendToOutput("[HotpatchCtrl] " + std::string(result.detail) + "\n");
+    if (m_hotpatchCtrlActiveTransactionId == 0) {
+        appendToOutput("[HotpatchCtrl] No active transaction to commit.\n");
+        return;
+    }
+
+    auto result = cp.commitTransaction(m_hotpatchCtrlActiveTransactionId, "IDE");
+    appendToOutput("[HotpatchCtrl] " + std::string(result.detail) +
+                   " (txn=" + std::to_string(m_hotpatchCtrlActiveTransactionId) + ")\n");
+    if (result.success) {
+        m_hotpatchCtrlActiveTransactionId = 0;
+    }
 }
 
 void Win32IDE::cmdHPCtrlTxnRollback() {
     auto& cp = HotpatchControlPlane::instance();
-    auto result = cp.rollbackTransaction(0, "IDE");
-    appendToOutput("[HotpatchCtrl] " + std::string(result.detail) + "\n");
+    if (m_hotpatchCtrlActiveTransactionId == 0) {
+        appendToOutput("[HotpatchCtrl] No active transaction to roll back.\n");
+        return;
+    }
+
+    auto result = cp.rollbackTransaction(m_hotpatchCtrlActiveTransactionId, "IDE");
+    appendToOutput("[HotpatchCtrl] " + std::string(result.detail) +
+                   " (txn=" + std::to_string(m_hotpatchCtrlActiveTransactionId) + ")\n");
+    if (result.success) {
+        m_hotpatchCtrlActiveTransactionId = 0;
+    }
 }
 
 void Win32IDE::cmdHPCtrlDepGraph() {

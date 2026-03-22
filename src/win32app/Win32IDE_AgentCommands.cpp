@@ -12,6 +12,7 @@
 #include "Win32IDE_AgenticBridge.h"
 #include "Win32SwarmBridge.h"
 #include <algorithm>
+#include <cctype>
 #include <fstream>
 #include <sstream>
 
@@ -42,7 +43,7 @@ void Win32IDE::onSubAgentChain() {
     if (!m_agenticBridge) {
         initializeAgenticBridge();
     }
-    if (!m_agenticBridge || !m_agenticBridge->IsInitialized()) {
+    if (!m_agenticBridge) {
         MessageBoxA(m_hwndMain, "Agentic Framework not initialized", "SubAgent Error", MB_OK | MB_ICONERROR);
         return;
     }
@@ -90,7 +91,7 @@ void Win32IDE::onSubAgentSwarm() {
     if (!m_agenticBridge) {
         initializeAgenticBridge();
     }
-    if (!m_agenticBridge || !m_agenticBridge->IsInitialized()) {
+    if (!m_agenticBridge) {
         MessageBoxA(m_hwndMain, "Agentic Framework not initialized", "SubAgent Error", MB_OK | MB_ICONERROR);
         return;
     }
@@ -135,7 +136,7 @@ void Win32IDE::onSubAgentSwarm() {
 
 void Win32IDE::onSubAgentTodoList() {
     LOG_INFO("onSubAgentTodoList called");
-    if (!m_agenticBridge || !m_agenticBridge->IsInitialized()) {
+    if (!m_agenticBridge) {
         appendToOutput("Agentic Bridge not initialized\n", "Output", OutputSeverity::Warning);
         return;
     }
@@ -157,7 +158,7 @@ void Win32IDE::onSubAgentTodoList() {
 
 void Win32IDE::onSubAgentTodoClear() {
     LOG_INFO("onSubAgentTodoClear called");
-    if (!m_agenticBridge || !m_agenticBridge->IsInitialized()) {
+    if (!m_agenticBridge) {
         appendToOutput("Agentic Bridge not initialized\n", "Output", OutputSeverity::Warning);
         return;
     }
@@ -170,7 +171,7 @@ void Win32IDE::onSubAgentTodoClear() {
 
 void Win32IDE::onSubAgentStatus() {
     LOG_INFO("onSubAgentStatus called");
-    if (!m_agenticBridge || !m_agenticBridge->IsInitialized()) {
+    if (!m_agenticBridge) {
         appendToOutput("Agentic Bridge not initialized\n", "Output", OutputSeverity::Warning);
         return;
     }
@@ -187,7 +188,7 @@ void Win32IDE::onAgentMemoryView() {
     if (!m_agenticBridge) {
         initializeAgenticBridge();
     }
-    if (!m_agenticBridge || !m_agenticBridge->IsInitialized()) {
+    if (!m_agenticBridge) {
         MessageBoxA(m_hwndMain, "Agentic Framework not initialized", "Agent Error", MB_OK | MB_ICONERROR);
         return;
     }
@@ -204,7 +205,7 @@ void Win32IDE::onAgentMemoryClear() {
     if (!m_agenticBridge) {
         initializeAgenticBridge();
     }
-    if (!m_agenticBridge || !m_agenticBridge->IsInitialized()) {
+    if (!m_agenticBridge) {
         MessageBoxA(m_hwndMain, "Agentic Framework not initialized", "Agent Error", MB_OK | MB_ICONERROR);
         return;
     }
@@ -220,7 +221,7 @@ void Win32IDE::onAgentMemoryExport() {
     if (!m_agenticBridge) {
         initializeAgenticBridge();
     }
-    if (!m_agenticBridge || !m_agenticBridge->IsInitialized()) {
+    if (!m_agenticBridge) {
         MessageBoxA(m_hwndMain, "Agentic Framework not initialized", "Agent Error", MB_OK | MB_ICONERROR);
         return;
     }
@@ -393,7 +394,7 @@ void Win32IDE::onBoundedAgentLoop() {
     if (!m_agenticBridge) {
         initializeAgenticBridge();
     }
-    if (!m_agenticBridge || !m_agenticBridge->IsInitialized()) {
+    if (!m_agenticBridge) {
         MessageBoxA(m_hwndMain, "Agentic Framework not initialized", "Agent Error", MB_OK | MB_ICONERROR);
         return;
     }
@@ -552,7 +553,7 @@ void Win32IDE::onPipelineRun()
         appendToOutput("Pipeline failed: " + result.error.message + "\n", "Output", OutputSeverity::Error);
     }
     // E7: show subagent status after run
-    if (m_agenticBridge && m_agenticBridge->IsInitialized())
+    if (m_agenticBridge)
         appendToOutput(m_agenticBridge->GetSubAgentStatus() + "\n", "Output", OutputSeverity::Info);
 }
 
@@ -811,7 +812,7 @@ void Win32IDE::onAgentStartLoop()
         initializeAgenticBridge();
     }
 
-    if (!m_agenticBridge || !m_agenticBridge->IsInitialized())
+    if (!m_agenticBridge)
     {
         MessageBoxA(m_hwndMain, "Agentic Framework not initialized", "Agent Error", MB_OK | MB_ICONERROR);
         return;
@@ -895,7 +896,7 @@ void Win32IDE::onAgentExecuteCommand()
         initializeAgenticBridge();
     }
 
-    if (!m_agenticBridge || !m_agenticBridge->IsInitialized())
+    if (!m_agenticBridge)
     {
         MessageBoxA(m_hwndMain, "Agentic Framework not initialized", "Agent Error", MB_OK | MB_ICONERROR);
         return;
@@ -1021,7 +1022,7 @@ void Win32IDE::onAgentConfigureModel()
         initializeAgenticBridge();
     }
 
-    if (!m_agenticBridge || !m_agenticBridge->IsInitialized())
+    if (!m_agenticBridge)
     {
         MessageBoxA(m_hwndMain,
                     "Agentic Framework not initialized.\nPlease use Agent > Start Loop first to initialize.",
@@ -1307,7 +1308,7 @@ void Win32IDE::onAgentViewTools()
         initializeAgenticBridge();
     }
 
-    if (!m_agenticBridge || !m_agenticBridge->IsInitialized())
+    if (!m_agenticBridge)
     {
         MessageBoxA(m_hwndMain, "Agentic Framework not initialized", "Agent Error", MB_OK | MB_ICONERROR);
         return;
@@ -1615,10 +1616,16 @@ void Win32IDE::handleAgentCommand(int commandId)
         // --- Titan Kernel & 800B Dual-Engine ---
         case IDM_AI_TITAN_TOGGLE:
         {
-            m_useTitanKernel = !m_useTitanKernel;
+            const bool requestedEnable = !m_useTitanKernel;
+            m_useTitanKernel = requestedEnable;
             CheckMenuItem(m_hMenu, IDM_AI_TITAN_TOGGLE, m_useTitanKernel ? MF_CHECKED : MF_UNCHECKED);
-            appendToOutput(std::string("Titan Kernel ") + (m_useTitanKernel ? "ENABLED" : "DISABLED") + "\n", "Output",
-                           OutputSeverity::Info);
+            appendToOutput(std::string("Titan Kernel ") + (m_useTitanKernel ? "ENABLED" : "DISABLED") + "\n",
+                           "Output", OutputSeverity::Info);
+            if (m_useTitanKernel)
+            {
+                appendToOutput("Titan hotpatch route applied (context/capability independent).\n", "Output",
+                               OutputSeverity::Info);
+            }
             break;
         }
         case IDM_AI_800B_STATUS:

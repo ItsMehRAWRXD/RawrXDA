@@ -1,5 +1,6 @@
 /**
- * Default chat inference WASM bytes — bundled so the renderer never uses HTTP `fetch()` to load this module.
+ * Default chat inference WASM bytes — bundled so the renderer never uses HTTP `fetch()` for the default module.
+ * Load policy and cache keys live in `rawrxdWasmLoader.js` (embedded bytes only for `rawrxd-inference.wasm`).
  * Regenerate after `npm run build:wasm-inference`:
  *   node scripts/sync-chat-wasm-embed.js
  */

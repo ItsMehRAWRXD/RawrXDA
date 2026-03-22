@@ -1,5 +1,6 @@
-// RawrXD-Win32IDE resource script - embeds DPI-aware manifest
+// RawrXD-Win32IDE resource script - embeds DPI-aware manifest + agent prompt dialog
 #include <winver.h>
+#include <windows.h>
 
 VS_VERSION_INFO VERSIONINFO
 FILEVERSION 7,4,0,0
@@ -27,3 +28,17 @@ BEGIN
 END
 
 1 RT_MANIFEST "RawrXD-Win32IDE.manifest"
+
+// Used by DialogBoxParamA(..., "AGENT_PROMPT_DLG", ...) across agent / planning / LSP rename paths.
+// Control IDs: 101 = caption static, 102 = single-line edit (filled by WM_INITDIALOG handlers in code).
+LANGUAGE 9, 1
+AGENT_PROMPT_DLG DIALOGEX 0, 0, 340, 118
+STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "RawrXD"
+FONT 9, "Segoe UI"
+BEGIN
+    LTEXT           "", 101, 12, 8, 316, 22
+    EDITTEXT        102, 12, 34, 316, 14, ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK", IDOK, 168, 68, 72, 16
+    PUSHBUTTON      "Cancel", IDCANCEL, 252, 68, 72, 16
+END

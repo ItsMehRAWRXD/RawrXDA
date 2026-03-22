@@ -22,7 +22,7 @@ function parsePlanResponse(content) {
     steps: [
       {
         type: 'ask_ai',
-        description: `M03 — Planner reply was not a usable JSON plan (${issue}). Next: shorten the goal, confirm Settings › AI and the active provider, then check the main-process log for the raw planner output.`,
+        description: `Planner reply was not usable JSON (${issue}). Try a shorter goal, confirm Settings › AI and the active provider, then check the main-process log for the raw planner output.`,
         prompt: 'Explain briefly what went wrong and propose a smaller follow-up goal.',
         status: 'pending'
       }
@@ -486,7 +486,7 @@ class AgentOrchestrator {
       if (parsedPlan.parseIssue) {
         this.appendLog(
           task,
-          `[plan-parse] ${parsedPlan.parseIssue} — M03 next: ensure the planner model returns only the JSON object from buildPlanPrompt (steps array).`
+          `[plan-parse] ${parsedPlan.parseIssue} — expect a single JSON object from buildPlanPrompt (steps array).`
         );
       }
       let planSteps = this.filterDisallowedPlanSteps(task, parsedPlan.steps || []);

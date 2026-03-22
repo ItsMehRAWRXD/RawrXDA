@@ -1,6 +1,7 @@
 const { Menu, dialog } = require('electron');
 
 const DEFAULT_ACCEL = {
+  save: 'CmdOrCtrl+S',
   openProject: 'CmdOrCtrl+O',
   commandPalette: 'CmdOrCtrl+Shift+P',
   settings: 'CmdOrCtrl+,',
@@ -47,6 +48,11 @@ function setApplicationMenu(mainWindow, setProjectRoot, accelerators = {}) {
               mainWindow.webContents.send('project:opened', root);
             }
           }
+        },
+        {
+          label: 'Save',
+          accelerator: acc.save || DEFAULT_ACCEL.save,
+          click: () => sendIde('save')
         },
         { type: 'separator' },
         { role: 'quit', label: 'Quit' }

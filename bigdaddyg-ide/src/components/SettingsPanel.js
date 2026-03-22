@@ -20,6 +20,7 @@ const KEYBOARD_ACTION_LABELS = {
   symbols: 'Symbols & xrefs',
   models: 'GGUF streamer',
   sidebarToggle: 'Toggle project sidebar',
+  save: 'Save file',
   openProject: 'Open project…'
 };
 
@@ -91,7 +92,7 @@ const SettingsPanel = ({ open, onClose, settings, setSettings }) => {
           <div className="flex border-b border-gray-700">
             <div
               className="flex-1 px-4 py-3 font-semibold text-white"
-              title="Shell preferences and IRC form. Copilot/agent toggles persist with other shell settings unless noted."
+              title="Shell preferences (localStorage). Copilot/agent toggles persist with other shell settings unless noted."
             >
               Settings
             </div>
@@ -100,7 +101,7 @@ const SettingsPanel = ({ open, onClose, settings, setSettings }) => {
               onClick={onClose}
               className="px-4 text-gray-400 hover:text-white"
               aria-label="Close settings"
-              title="Close — unsaved IRC edits stay in memory until you Save IRC config."
+              title="Close settings — values already applied live to shell state."
             >
               ✕
             </button>
@@ -119,7 +120,7 @@ const SettingsPanel = ({ open, onClose, settings, setSettings }) => {
                   className={`w-full text-left px-3 py-2 text-sm ${
                     tab === t.id ? 'bg-ide-accent/20 text-white' : 'text-gray-400 hover:bg-gray-700/40'
                   }`}
-                  title={`${t.label} — values persist via shell storage or IRC save where noted.`}
+                  title={`${t.label} — values persist in shell storage (localStorage) when changed.`}
                 >
                   {t.label}
                 </button>
@@ -131,10 +132,50 @@ const SettingsPanel = ({ open, onClose, settings, setSettings }) => {
                   <p className="text-gray-400 text-xs">
                     RawrXD shell — Cursor / Copilot–style preferences (persisted locally).
                   </p>
-                  <p className="text-[10px] text-gray-500 border border-gray-700/80 rounded p-2 bg-gray-950/40">
-                    Support snapshot export is disabled in this Win32-focused lane. Use local logs and the copy support line
-                    action below for diagnostics.
-                  </p>
+                  <div className="text-[10px] text-gray-500 border border-gray-700/80 rounded p-2 bg-gray-950/40 space-y-2">
+                    <p>
+                      Export a local compliance JSON bundle under Electron <code className="text-gray-400">userData/exports</code>{' '}
+                      (no upload). Use logs and copy-support-line actions for day-to-day diagnostics.
+                    </p>
+                    <button
+                      type="button"
+                      className={`px-2 py-1 rounded border border-gray-600 text-gray-300 hover:bg-gray-800 text-xs ${focusVisibleRing}`}
+                      title="IPC enterprise:export-compliance-bundle → userData/exports/*.json. Doc: docs/ENTERPRISE_COMPLIANCE_BUNDLE.md"
+                      onClick={async () => {
+                        noisyLog('[settings]', 'export compliance bundle');
+                        const api = typeof window !== 'undefined' ? window.electronAPI : null;
+                        if (!api?.exportComplianceBundle) {
+                          pushToast({
+                            title: 'Export',
+                            message: 'Compliance export needs Electron (preload exportComplianceBundle).',
+                            variant: 'warn',
+                            durationMs: 4000
+                          });
+                          return;
+                        }
+                        const r = await api.exportComplianceBundle();
+                        if (r?.success && r.data?.path) {
+                          pushToast({
+                            title: 'Compliance',
+                            message: `Saved ${r.data.path}`,
+                            variant: 'success',
+                            durationMs: 5500
+                          });
+                          setStatusLine(`Compliance: exported → ${r.data.path}`);
+                        } else {
+                          pushToast({
+                            title: 'Compliance',
+                            message: r?.error || 'Export failed',
+                            variant: 'error',
+                            durationMs: 5000
+                          });
+                          setStatusLine('Compliance: export failed — see main log');
+                        }
+                      }}
+                    >
+                      Export compliance bundle…
+                    </button>
+                  </div>
                   <label
                     className="flex items-center gap-2"
                     title="Includes the open editor buffer in chat prompts when supported. Does not auto-save the file to disk."
@@ -152,37 +193,68 @@ const SettingsPanel = ({ open, onClose, settings, setSettings }) => {
                 <>
                   {settings.accessibilityVerboseLocalModelHints ? (
                     <p id="rawrxd-settings-chat-transport-hint" className="sr-only">
-                      Local WASM chat runs RawrXD inference in this browser window. External HTTP providers are disabled
-                      in this build mode.
+                      Chat dock: WASM-first runs embedded inference in this window, then may call main-process ai invoke
+                      when bootstrap WASM echoes or fails. HTTP provider transport skips WASM and uses the same stack as the
+                      toolbar provider.
                     </p>
                   ) : null}
                   <div
                     className="rounded border border-gray-700/80 p-3 space-y-2 bg-black/20"
                     role="group"
-                    aria-label="Chat transport: local WASM"
+                    aria-label="Chat transport and autonomous provider fallback"
                     {...(settings.accessibilityVerboseLocalModelHints
                       ? { 'aria-describedby': 'rawrxd-settings-chat-transport-hint' }
                       : {})}
                   >
                     <p className="text-gray-400 text-xs font-medium">Chat transport (dock Chat panel)</p>
-                    <p className="text-gray-500 text-xs">
-                      <strong className="text-gray-200">Local WASM</strong> is always enabled in this mode.
-                    </p>
-                    <label className="block">
-                      <span className="text-gray-400 text-xs">WASM file name (local only - no http://)</span>
+                    <label className="flex items-center gap-2 text-gray-300 text-xs cursor-pointer">
                       <input
-                        className="mt-1 w-full bg-ide-bg border border-gray-600 rounded px-2 py-1 font-mono text-xs"
-                        value={settings.wasmChatUrl || '/rawrxd-inference.wasm'}
-                        onChange={(e) => setSettings({ wasmChatUrl: e.target.value })}
-                        placeholder="/rawrxd-inference.wasm"
+                        type="radio"
+                        name="chatTransport"
+                        checked={settings.chatTransport !== 'ollama-http'}
+                        onChange={() => setSettings({ chatTransport: 'wasm-local' })}
                       />
-                      <p className="text-[10px] text-gray-500 mt-1">
-                        Build: <code className="text-gray-400">npm run build:wasm-inference</code> →{' '}
-                        <code className="text-gray-400">public/rawrxd-inference.wasm</code>.{' '}
-                        Browser shell uses embedded default bytes only; HTTP URLs are rejected.{' '}
-                        <code className="text-gray-400">docs/ELECTRON_WASM_CHAT.md</code>
-                      </p>
+                      WASM first (then optional delegation in Electron)
                     </label>
+                    <label className="flex items-center gap-2 text-gray-300 text-xs cursor-pointer">
+                      <input
+                        type="radio"
+                        name="chatTransport"
+                        checked={settings.chatTransport === 'ollama-http'}
+                        onChange={() => setSettings({ chatTransport: 'ollama-http' })}
+                      />
+                      HTTP provider only (main <code className="text-gray-500">ai:invoke</code>, no WASM round-trip)
+                    </label>
+                    <label
+                      className={`flex items-center gap-2 text-gray-300 text-xs ${
+                        settings.chatTransport === 'ollama-http' ? 'opacity-50' : 'cursor-pointer'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        disabled={settings.chatTransport === 'ollama-http'}
+                        checked={settings.chatAgenticProviderFallback !== false}
+                        onChange={(e) => setSettings({ chatAgenticProviderFallback: e.target.checked })}
+                      />
+                      Autonomous provider fallback (echo-stub or WASM error → toolbar provider via Electron)
+                    </label>
+                    {settings.chatTransport !== 'ollama-http' && (
+                      <label className="block">
+                        <span className="text-gray-400 text-xs">WASM file name (local only — no http://)</span>
+                        <input
+                          className="mt-1 w-full bg-ide-bg border border-gray-600 rounded px-2 py-1 font-mono text-xs"
+                          value={settings.wasmChatUrl || '/rawrxd-inference.wasm'}
+                          onChange={(e) => setSettings({ wasmChatUrl: e.target.value })}
+                          placeholder="/rawrxd-inference.wasm"
+                        />
+                        <p className="text-[10px] text-gray-500 mt-1">
+                          Build: <code className="text-gray-400">npm run build:wasm-inference</code> →{' '}
+                          <code className="text-gray-400">public/rawrxd-inference.wasm</code>.{' '}
+                          Browser shell uses embedded default bytes only; HTTP URLs are rejected.{' '}
+                          <code className="text-gray-400">docs/ELECTRON_WASM_CHAT.md</code>
+                        </p>
+                      </label>
+                    )}
                   </div>
                   <div>
                     <label className="block text-gray-400 mb-1">Temperature</label>
@@ -211,9 +283,63 @@ const SettingsPanel = ({ open, onClose, settings, setSettings }) => {
                       ))}
                     </select>
                   </div>
-                  <p className="text-[10px] text-gray-500">
-                    Self-contained mode: external Ollama probes and HTTP provider routing are disabled.
-                  </p>
+                  <div
+                    className="rounded border border-gray-700/80 p-3 space-y-2 bg-black/20"
+                    role="group"
+                    aria-label="Ollama connectivity probe"
+                  >
+                    <p className="text-gray-400 text-xs font-medium">Ollama probe (toolbar strip + manual test)</p>
+                    <p className="text-[10px] text-gray-500">
+                      <code className="text-gray-400">ollama:probe</code> hits <code className="text-gray-400">/api/tags</code>.
+                      Chat can use HTTP transport or WASM fallback to the same main-process providers; probe is connectivity diagnostics.
+                    </p>
+                    <label className="block">
+                      <span className="text-gray-400 text-xs">Base URL</span>
+                      <input
+                        className="mt-1 w-full bg-ide-bg border border-gray-600 rounded px-2 py-1 font-mono text-xs"
+                        value={settings.ollamaProbeBaseUrl || ''}
+                        onChange={(e) => setSettings({ ollamaProbeBaseUrl: e.target.value })}
+                        placeholder="http://127.0.0.1:11434"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      className={`px-2 py-1 rounded border border-cyan-700/50 text-cyan-100/90 text-xs hover:bg-cyan-950/40 ${focusVisibleRing}`}
+                      onClick={async () => {
+                        noisyLog('[settings]', 'ollama probe manual');
+                        const api = typeof window !== 'undefined' ? window.electronAPI : null;
+                        if (!api?.probeOllama) {
+                          pushToast({
+                            title: 'Ollama',
+                            message: 'Probe needs Electron preload (probeOllama).',
+                            variant: 'warn',
+                            durationMs: 4000
+                          });
+                          return;
+                        }
+                        const r = await api.probeOllama(settings.ollamaProbeBaseUrl);
+                        if (r?.success && r.data?.ok) {
+                          pushToast({
+                            title: 'Ollama',
+                            message: `${r.data.modelCount} model(s) · ${r.data.latencyMs}ms @ ${r.data.baseUrl}`,
+                            variant: 'success',
+                            durationMs: 4500
+                          });
+                          setStatusLine(`Ollama: OK · ${r.data.modelCount} models`);
+                        } else {
+                          pushToast({
+                            title: 'Ollama',
+                            message: r?.error || 'Probe failed',
+                            variant: 'error',
+                            durationMs: 5500
+                          });
+                          setStatusLine('Ollama: probe failed — URL /api/tags');
+                        }
+                      }}
+                    >
+                      Test Ollama now
+                    </button>
+                  </div>
                 </>
               )}
               {tab === 'accessibility' && (
@@ -303,14 +429,10 @@ const SettingsPanel = ({ open, onClose, settings, setSettings }) => {
               )}
               {tab === 'copilot' && (
                 <>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={settings.copilotInlineHints}
-                      onChange={(e) => setSettings({ copilotInlineHints: e.target.checked })}
-                    />
-                    Inline hints (Copilot-style ghost text — when editor supports it)
-                  </label>
+                  <p className="text-[10px] text-gray-500 border border-gray-700/80 rounded p-2 bg-black/20">
+                    Editor: Monaco word completion, parameter hints, and inline ghost text are off in this shell (no
+                    typing-triggered suggestion UI).
+                  </p>
                   <label className="flex items-center gap-2">
                     <input
                       type="checkbox"
@@ -512,7 +634,7 @@ const SettingsPanel = ({ open, onClose, settings, setSettings }) => {
                       checked={Boolean(settings.verboseDevLogs)}
                       onChange={(e) => setSettings({ verboseDevLogs: e.target.checked })}
                     />
-                    M13 — Tagged verbose logs <span className="text-gray-500">(noisyLogVerbose in dev)</span>
+                    Tagged verbose logs <span className="text-gray-500">(dev console, noisyLogVerbose)</span>
                   </label>
                   <div>
                     <label className="block text-gray-400 mb-1">Noise intensity</label>
@@ -566,7 +688,7 @@ const SettingsPanel = ({ open, onClose, settings, setSettings }) => {
                   <button
                     type="button"
                     className={`text-[11px] px-2 py-1 rounded border border-gray-600 text-gray-400 hover:text-white ${focusVisibleRing}`}
-                    title="M02 — Restores default key bindings in shell storage. Does not change IRC or AI model files."
+                    title="M02 — Restores default key bindings in shell storage. Does not change project files or GGUF models."
                     onClick={() => {
                       resetShortcutsToDefaults();
                       noisyLog('[settings]', 'shortcuts reset to defaults');
@@ -581,7 +703,7 @@ const SettingsPanel = ({ open, onClose, settings, setSettings }) => {
                 surfaceId="settings"
                 offlineHint="UI works offline; IRC/bridge actions need Electron main + network when used."
                 docPath={MINIMALISTIC_DOC}
-                m13Hint="IRC → docs/IRC_MIRC_IDE_BRIDGE.md · AI → docs/INFERENCE_PATH_MATRIX.md · M14: no secrets in this line."
+                m13Hint="AI routing: docs/INFERENCE_PATH_MATRIX.md · WASM chat: docs/ELECTRON_WASM_CHAT.md · never put secrets in copied lines."
                 className="mt-4"
               >
                 <div className="flex flex-wrap gap-1 px-1 pb-1">

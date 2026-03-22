@@ -1,7 +1,7 @@
 import React from 'react';
 import { Terminal as XTerm } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
-import 'xterm/css/xterm.css';
+import '../styles/xterm-terminal.css';
 import { useIdeFeatures } from '../contexts/IdeFeaturesContext';
 import {
   CopySupportLineButton,
@@ -14,9 +14,8 @@ import {
 const SHELL_STORAGE = 'rawrxd.terminal.shell';
 
 /**
- * Embedded PTY (optional; depends on preload/main IPC surface).
- * M01 — Runs a real shell in-panel when terminal IPC is present; elevated shells still open as separate windows.
- * M03/M07 — If terminal IPC is not exposed in this Win32-focused build, show an honest disabled message.
+ * Embedded PTY when preload/main expose terminal IPC; otherwise shows a clear disabled state.
+ * Elevated shells may still open in separate windows.
  */
 const Terminal = React.forwardRef(function Terminal({ projectRoot }, ref) {
   const { pushToast, noisyLog, playUiSound, setStatusLine } = useIdeFeatures();
@@ -91,7 +90,7 @@ const Terminal = React.forwardRef(function Terminal({ projectRoot }, ref) {
       setPtyError(create.error || 'terminal session init failed');
       setStatusNote('');
       noisyLog('[terminal] create failed', create.error);
-      setStatusLine('[terminal] PTY unavailable — see npm run rebuild:pty');
+      setStatusLine('[terminal] PTY create failed — npm run rebuild:pty (node-pty vs Electron ABI)');
       return;
     }
 
@@ -169,7 +168,7 @@ const Terminal = React.forwardRef(function Terminal({ projectRoot }, ref) {
   const copyProjectRoot = () => {
     if (!projectRoot) {
       playUiSound('warn');
-      setStatusLine('[terminal] no project — open a folder first');
+      setStatusLine('[terminal] no projectRoot — Open project');
       noisyLog('[terminal] copy cwd skipped — no project');
       pushToast({
         title: 'Workspace',
@@ -255,7 +254,7 @@ const Terminal = React.forwardRef(function Terminal({ projectRoot }, ref) {
           type="button"
           onClick={copyProjectRoot}
           className={`px-2 py-0.5 rounded border border-gray-600 text-gray-300 hover:bg-gray-700 ${focusVisibleRing}`}
-          title="Copies workspace root path (full path for external use). M14: basename shown in support line only."
+          title="Clipboard: full projectRoot path."
         >
           Copy cwd path
         </button>
@@ -285,7 +284,7 @@ const Terminal = React.forwardRef(function Terminal({ projectRoot }, ref) {
       </div>
       {ptyError ? (
         <div className="p-3 text-xs text-rose-200 space-y-2 overflow-auto">
-          <p>Embedded PTY is not available. Native module must match Electron:</p>
+          <p>Embedded PTY unavailable (node-pty build must match this Electron version).</p>
           <pre className="bg-black/40 p-2 rounded text-[10px] whitespace-pre-wrap">{ptyError}</pre>
           <p className="text-gray-400">
             From <code className="text-cyan-300">bigdaddyg-ide</code>: run{' '}

@@ -143,10 +143,8 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt)
 
     // E2: sync OrchestratorBridge model + workdir before routing
     auto& orch = RawrXD::Agent::OrchestratorBridge::Instance();
-    if (orch.IsInitialized()) {
-        if (!m_modelName.empty()) { orch.SetModel(m_modelName); orch.SetFIMModel(m_modelName); }
-        if (!m_workspaceRoot.empty()) orch.SetWorkingDirectory(m_workspaceRoot);
-    }
+    if (!m_modelName.empty()) { orch.SetModel(m_modelName); orch.SetFIMModel(m_modelName); }
+    if (!m_workspaceRoot.empty()) orch.SetWorkingDirectory(m_workspaceRoot);
 
     // E7: track consecutive failures for LLM router
     bool routeSuccess = false;
@@ -279,22 +277,19 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt)
     bool localReady = g_cpuEngine && g_cpuEngine->IsModelLoaded();
     if (!localReady)
     {
-        // Prefer the orchestrator bridge (Ollama-backed, tool-aware). If it is not initialized,
-        // fall back to the legacy routing path so we still get a best-effort answer.
+        // Prefer the orchestrator bridge (Ollama-backed, tool-aware) and let it decide
+        // capability at runtime. If it cannot serve, fall back to legacy routing.
         auto& orch = RawrXD::Agent::OrchestratorBridge::Instance();
-        if (orch.IsInitialized())
+        if (!m_modelName.empty())
         {
-            if (!m_modelName.empty())
-            {
-                orch.SetModel(m_modelName);
-                orch.SetFIMModel(m_modelName);
-            }
-            if (!m_workspaceRoot.empty())
-            {
-                orch.SetWorkingDirectory(m_workspaceRoot);
-            }
-            response = orch.RunAgent(refinedPrompt);
+            orch.SetModel(m_modelName);
+            orch.SetFIMModel(m_modelName);
         }
+        if (!m_workspaceRoot.empty())
+        {
+            orch.SetWorkingDirectory(m_workspaceRoot);
+        }
+        response = orch.RunAgent(refinedPrompt);
 
         if (response.empty() && m_ide)
         {
@@ -329,7 +324,6 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt)
             LOG_INFO("AgenticPuppeteer correction applied");
         }
     }
-    if (AgenticHotpatchOrchestrator::instance().isEnabled())
     {
         char correctedBuf[65536];
         CorrectionOutcome hot = AgenticHotpatchOrchestrator::instance().analyzeAndCorrect(
@@ -585,11 +579,8 @@ void AgenticBridge::SetModel(const std::string& modelName)
         // Keep OrchestratorBridge (agentic/tool-calling path) in sync so IDE agent flows
         // use the same selected model as chat/FIM.
         auto& orch = RawrXD::Agent::OrchestratorBridge::Instance();
-        if (orch.IsInitialized())
-        {
-            orch.SetModel(modelName);
-            orch.SetFIMModel(modelName);
-        }
+        orch.SetModel(modelName);
+        orch.SetFIMModel(modelName);
     }
 }
 

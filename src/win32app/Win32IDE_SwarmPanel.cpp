@@ -394,8 +394,34 @@ void Win32IDE::cmdSwarmAddNode() {
     }
 
     if (input.empty()) {
-        appendToOutput("[Swarm] Copy IP:PORT to clipboard, then run this command");
-        return;
+        char endpointBuf[256] = {};
+        if (DialogBoxParamA(m_hInstance, "AGENT_PROMPT_DLG", m_hwndMain,
+            [](HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) -> INT_PTR {
+                switch (msg) {
+                case WM_INITDIALOG:
+                    SetWindowTextA(hwnd, "Swarm Add Node");
+                    SetWindowTextA(GetDlgItem(hwnd, 101), "Enter node endpoint (IP:PORT):");
+                    return TRUE;
+                case WM_COMMAND:
+                    if (LOWORD(wp) == IDOK) {
+                        GetDlgItemTextA(hwnd, 102, (char*)lp, 256);
+                        EndDialog(hwnd, IDOK);
+                        return TRUE;
+                    } else if (LOWORD(wp) == IDCANCEL) {
+                        EndDialog(hwnd, IDCANCEL);
+                        return TRUE;
+                    }
+                    break;
+                }
+                return FALSE;
+            }, (LPARAM)endpointBuf) == IDOK)
+        {
+            input = endpointBuf;
+        }
+        if (input.empty()) {
+            appendToOutput("[Swarm] Add node cancelled or empty endpoint");
+            return;
+        }
     }
 
     // Parse IP:port
@@ -427,8 +453,34 @@ void Win32IDE::cmdSwarmRemoveNode() {
     }
 
     if (input.empty()) {
-        appendToOutput("[Swarm] Copy node slot number to clipboard, then run this command");
-        return;
+        char slotBuf[64] = {};
+        if (DialogBoxParamA(m_hInstance, "AGENT_PROMPT_DLG", m_hwndMain,
+            [](HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) -> INT_PTR {
+                switch (msg) {
+                case WM_INITDIALOG:
+                    SetWindowTextA(hwnd, "Swarm Remove Node");
+                    SetWindowTextA(GetDlgItem(hwnd, 101), "Enter node slot number:");
+                    return TRUE;
+                case WM_COMMAND:
+                    if (LOWORD(wp) == IDOK) {
+                        GetDlgItemTextA(hwnd, 102, (char*)lp, 64);
+                        EndDialog(hwnd, IDOK);
+                        return TRUE;
+                    } else if (LOWORD(wp) == IDCANCEL) {
+                        EndDialog(hwnd, IDCANCEL);
+                        return TRUE;
+                    }
+                    break;
+                }
+                return FALSE;
+            }, (LPARAM)slotBuf) == IDOK)
+        {
+            input = slotBuf;
+        }
+        if (input.empty()) {
+            appendToOutput("[Swarm] Remove node cancelled or empty slot");
+            return;
+        }
     }
 
     uint32_t slot = static_cast<uint32_t>(std::atoi(input.c_str()));

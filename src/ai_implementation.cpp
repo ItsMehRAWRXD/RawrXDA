@@ -2,6 +2,260 @@
 #include <iostream>
 #include <chrono>
 #include <algorithm>
+#include <cctype>
+#include <cstdint>
+#include <filesystem>
+#include <fstream>
+#include <set>
+#include <string>
+
+#ifdef _WIN32
+#include <windows.h>
+#include <dxgi.h>
+#pragma comment(lib, "dxgi.lib")
+#endif
+
+namespace {
+
+std::string toLowerAscii(std::string s) {
+    for (char& c : s) {
+        c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    }
+    return s;
+}
+
+bool startsWith(const std::string& s, const std::string& prefix) {
+    return s.size() >= prefix.size() && s.compare(0, prefix.size(), prefix) == 0;
+}
+
+bool endsWith(const std::string& s, const std::string& suffix) {
+    return s.size() >= suffix.size() && s.compare(s.size() - suffix.size(), suffix.size(), suffix) == 0;
+}
+
+bool isLikelyFilePath(const std::string& value) {
+    if (value.empty()) {
+        return false;
+    }
+    return value.find('\\') != std::string::npos || value.find('/') != std::string::npos ||
+           toLowerAscii(value).find(".gguf") != std::string::npos;
+}
+
+bool isLoopbackEndpoint(const std::string& endpoint) {
+    std::string lower = toLowerAscii(endpoint);
+    std::string hostPort = lower;
+
+    const size_t scheme = lower.find("://");
+    if (scheme != std::string::npos) {
+        hostPort = lower.substr(scheme + 3);
+    }
+    const size_t pathPos = hostPort.find('/');
+    if (pathPos != std::string::npos) {
+        hostPort = hostPort.substr(0, pathPos);
+    }
+    if (startsWith(hostPort, "localhost") || startsWith(hostPort, "127.0.0.1") ||
+        startsWith(hostPort, "[::1]") || startsWith(hostPort, "::1")) {
+        return true;
+    }
+    return false;
+}
+
+bool hasReadPermission(const std::string& modelPath) {
+    std::ifstream f(modelPath, std::ios::binary);
+    return f.good();
+}
+
+bool isValidGgufHeader(const std::string& modelPath) {
+    std::ifstream f(modelPath, std::ios::binary);
+    if (!f.is_open()) {
+        return false;
+    }
+    uint32_t magic = 0;
+    f.read(reinterpret_cast<char*>(&magic), sizeof(magic));
+    return f.good() && magic == 0x46554747U;
+}
+
+std::string extractQuantTag(const std::string& modelPath) {
+    const std::string name = toLowerAscii(std::filesystem::path(modelPath).filename().string());
+    const std::vector<std::string> known = {
+        "q2_k", "q3_k", "q4_0", "q4_1", "q4_k_s", "q4_k_m", "q4_k",
+        "q5_0", "q5_1", "q5_k_s", "q5_k_m", "q5_k", "q6_k", "q8_0"
+    };
+    for (const std::string& tag : known) {
+        if (name.find(tag) != std::string::npos) {
+            return tag;
+        }
+    }
+    return "";
+}
+
+bool isSupportedQuantTag(const std::string& quantTag) {
+    static const std::set<std::string> allowlisted = {
+        "q2_k", "q3_k", "q4_0", "q4_1", "q4_k", "q4_k_s", "q4_k_m",
+        "q5_0", "q5_1", "q5_k", "q5_k_s", "q5_k_m", "q6_k", "q8_0"
+    };
+    return allowlisted.find(quantTag) != allowlisted.end();
+}
+
+// ---------------------------------------------------------------------------
+// GGUF embedded-metadata reader
+// Parses KV pairs directly from the binary GGUF file without llama.cpp.
+// Used for:
+//   Gate 3  — general.file_type  (quant enum, fallback when filename lacks tag)
+//   Gate 6  — general.architecture + tokenizer.ggml.model  (strict pairing)
+// ---------------------------------------------------------------------------
+
+static size_t ggufValTypeBytes(uint32_t t) {
+    switch (t) {
+        case 0: case 1: case 7: return 1;
+        case 2: case 3: return 2;
+        case 4: case 5: case 6: return 4;
+        case 10: case 11: case 12: return 8;
+        default: return 0;
+    }
+}
+
+struct GGUFMeta {
+    bool        hasArchitecture   = false;
+    bool        hasTokenizerModel = false;
+    bool        hasFileType       = false;
+    std::string architecture;
+    std::string tokenizerModel;
+    uint32_t    fileType          = 0xFFFFFFFFu;
+};
+
+static bool ggufReadStr(std::ifstream& f, uint32_t version, std::string& out, size_t maxLen = 65536) {
+    uint64_t len = 0;
+    if (version == 1) { uint32_t l32 = 0; f.read(reinterpret_cast<char*>(&l32), 4); len = l32; }
+    else              { f.read(reinterpret_cast<char*>(&len), 8); }
+    if (!f.good() || len > maxLen) return false;
+    out.assign(len, '\0');
+    f.read(&out[0], static_cast<std::streamsize>(len));
+    return f.good();
+}
+
+// Forward declare so array handling can recurse for nested string arrays.
+static bool ggufSkipVal(std::ifstream& f, uint32_t version, uint32_t valType);
+
+static bool ggufSkipArray(std::ifstream& f, uint32_t version) {
+    uint32_t arrType = 0;
+    f.read(reinterpret_cast<char*>(&arrType), 4);
+    uint64_t arrCount = 0;
+    if (version == 1) { uint32_t c = 0; f.read(reinterpret_cast<char*>(&c), 4); arrCount = c; }
+    else              { f.read(reinterpret_cast<char*>(&arrCount), 8); }
+    if (!f.good() || arrCount > 16000000ULL) return false;
+    const size_t esz = ggufValTypeBytes(arrType);
+    if (esz > 0) {
+        f.seekg(static_cast<std::streamoff>(arrCount * esz), std::ios::cur);
+        return f.good();
+    }
+    for (uint64_t j = 0; j < arrCount && f.good(); ++j) {
+        if (!ggufSkipVal(f, version, arrType)) return false;
+    }
+    return f.good();
+}
+
+static bool ggufSkipVal(std::ifstream& f, uint32_t version, uint32_t valType) {
+    const size_t fixed = ggufValTypeBytes(valType);
+    if (fixed > 0) { f.seekg(static_cast<std::streamoff>(fixed), std::ios::cur); return f.good(); }
+    if (valType == 8) { std::string s; return ggufReadStr(f, version, s); }  // STRING
+    if (valType == 9) { return ggufSkipArray(f, version); }                   // ARRAY
+    return false;
+}
+
+static GGUFMeta readGGUFMeta(const std::string& modelPath) {
+    GGUFMeta meta;
+    std::ifstream f(modelPath, std::ios::binary);
+    if (!f.is_open()) return meta;
+
+    uint32_t magic = 0, version = 0;
+    f.read(reinterpret_cast<char*>(&magic),   4);
+    f.read(reinterpret_cast<char*>(&version), 4);
+    if (!f.good() || magic != 0x46554747u || version < 1 || version > 4) return meta;
+
+    uint64_t nTensors = 0, nKV = 0;
+    if (version == 1) {
+        uint32_t t32 = 0, k32 = 0;
+        f.read(reinterpret_cast<char*>(&t32), 4);
+        f.read(reinterpret_cast<char*>(&k32), 4);
+        nTensors = t32; nKV = k32;
+    } else {
+        f.read(reinterpret_cast<char*>(&nTensors), 8);
+        f.read(reinterpret_cast<char*>(&nKV),      8);
+    }
+    if (!f.good() || nKV > 8192u) return meta;
+    (void)nTensors;
+
+    for (uint64_t i = 0; i < nKV && f.good(); ++i) {
+        std::string key;
+        if (!ggufReadStr(f, version, key, 256)) break;
+        uint32_t valType = 0;
+        f.read(reinterpret_cast<char*>(&valType), 4);
+        if (!f.good()) break;
+
+        if (valType == 8 /* STRING */) {
+            std::string val;
+            if (!ggufReadStr(f, version, val)) break;
+            if      (key == "general.architecture")   { meta.hasArchitecture   = true; meta.architecture   = val; }
+            else if (key == "tokenizer.ggml.model")   { meta.hasTokenizerModel = true; meta.tokenizerModel = val; }
+        } else if (valType == 4 /* UINT32 */ && key == "general.file_type") {
+            f.read(reinterpret_cast<char*>(&meta.fileType), 4);
+            if (f.good()) meta.hasFileType = true;
+        } else {
+            if (!ggufSkipVal(f, version, valType)) break;
+        }
+        if (meta.hasArchitecture && meta.hasTokenizerModel && meta.hasFileType) break;
+    }
+    return meta;
+}
+
+bool preflightMemory(const std::string& modelPath, const std::string& mode, std::string& reason, bool& gpuUsable) {
+    reason.clear();
+    gpuUsable = false;
+    const uint64_t modelBytes = static_cast<uint64_t>(std::filesystem::file_size(modelPath));
+
+#ifdef _WIN32
+    MEMORYSTATUSEX mem = {};
+    mem.dwLength = sizeof(mem);
+    if (!GlobalMemoryStatusEx(&mem)) {
+        reason = "unable to query system memory";
+        return false;
+    }
+
+    const uint64_t availRam = mem.ullAvailPhys;
+    const uint64_t ramLimit = static_cast<uint64_t>(static_cast<double>(availRam) * 0.80);
+    if (modelBytes > ramLimit) {
+        reason = "insufficient RAM headroom (20% reserve)";
+        return false;
+    }
+
+    IDXGIFactory1* factory = nullptr;
+    if (SUCCEEDED(CreateDXGIFactory1(__uuidof(IDXGIFactory1), reinterpret_cast<void**>(&factory)))) {
+        IDXGIAdapter1* adapter = nullptr;
+        if (SUCCEEDED(factory->EnumAdapters1(0, &adapter))) {
+            DXGI_ADAPTER_DESC1 desc = {};
+            if (SUCCEEDED(adapter->GetDesc1(&desc)) && desc.DedicatedVideoMemory > 0) {
+                const uint64_t vramLimit = static_cast<uint64_t>(static_cast<double>(desc.DedicatedVideoMemory) * 0.85);
+                gpuUsable = modelBytes <= vramLimit;
+                if (mode == "gpu-only" && !gpuUsable) {
+                    reason = "insufficient VRAM headroom (15% reserve)";
+                    adapter->Release();
+                    factory->Release();
+                    return false;
+                }
+            }
+            adapter->Release();
+        }
+        factory->Release();
+    }
+#else
+    (void)mode;
+    (void)modelBytes;
+#endif
+
+    return true;
+}
+
+} // namespace
 
 AIImplementation::AIImplementation(
     std::shared_ptr<Logger> logger,
@@ -18,8 +272,128 @@ AIImplementation::AIImplementation(
 
 bool AIImplementation::initialize(const LLMConfig& config) {
     m_config = config;
-    if (m_logger) {
-        m_logger->info("AIImplementation", "Initializing with backend: " + config.backend);
+
+    const bool isLocalRuntime = (m_config.backend == "local" || m_config.backend == "ollama");
+    if (m_config.backend != "local" && m_config.backend != "ollama" && m_config.backend != "openai" &&
+        m_config.backend != "anthropic") {
+        if (m_logger) {
+            m_logger->error("AIImplementation", "Unsupported backend: " + m_config.backend);
+        }
+        return false;
+    }
+
+    if (isLocalRuntime && !m_config.allowRemoteFallback && !isLoopbackEndpoint(m_config.endpoint)) {
+        if (m_logger) {
+            m_logger->error("AIImplementation",
+                            "Endpoint rejected: local runtime is pinned to localhost unless allowRemoteFallback=true");
+        }
+        return false;
+    }
+
+    if (m_config.localBackendMode != "cpu-only" && m_config.localBackendMode != "gpu-only" &&
+        m_config.localBackendMode != "auto-with-verified-fallback") {
+        if (m_logger) {
+            m_logger->error("AIImplementation", "Invalid localBackendMode: " + m_config.localBackendMode);
+        }
+        return false;
+    }
+
+    if (isLocalRuntime && isLikelyFilePath(m_config.modelName)) {
+        const std::string modelPath = m_config.modelName;
+        const std::string lowerPath = toLowerAscii(modelPath);
+
+        // Gate 1: GGUF format — extension + 4-byte header magic 0x46554747
+        if (!endsWith(lowerPath, ".gguf") || !isValidGgufHeader(modelPath)) {
+            if (m_logger) m_logger->error("AIImplementation",
+                "[GATE-1] Model format rejected: only valid GGUF files accepted");
+            return false;
+        }
+
+        // Gate 5: File read permission — same process account that runs inference
+        if (!hasReadPermission(modelPath)) {
+            if (m_logger) m_logger->error("AIImplementation",
+                "[GATE-5] permission denied for runtime user: " + modelPath);
+            return false;
+        }
+
+        // Read embedded GGUF KV metadata — drives gates 3 and 6
+        const GGUFMeta meta = readGGUFMeta(modelPath);
+
+        // Gate 3: Quant allowlist — filename-tag primary, GGUF file_type enum fallback
+        // file_type values: 0=F32 1=F16 2=Q4_0 3=Q4_1 7=Q8_0 8=Q5_0 9=Q5_1
+        //                   10=Q2_K 11=Q3_K_S 12=Q3_K_M 13=Q3_K_L
+        //                   14=Q4_K_S 15=Q4_K_M 16=Q5_K_S 17=Q5_K_M 18=Q6_K
+        const std::string quantTag = extractQuantTag(modelPath);
+        bool quantOk = !quantTag.empty() && isSupportedQuantTag(quantTag);
+        if (!quantOk && meta.hasFileType) {
+            static const std::set<uint32_t> allowedFT = {
+                0u, 1u,           // F32, F16
+                2u, 3u,           // Q4_0, Q4_1
+                7u, 8u, 9u,       // Q8_0, Q5_0, Q5_1
+                10u,              // Q2_K
+                11u, 12u, 13u,    // Q3_K_S/M/L
+                14u, 15u,         // Q4_K_S/M
+                16u, 17u,         // Q5_K_S/M
+                18u               // Q6_K
+            };
+            quantOk = allowedFT.count(meta.fileType) > 0;
+        }
+        if (!quantOk) {
+            if (m_logger) m_logger->error("AIImplementation",
+                "[GATE-3] unsupported quant: rejected at model load");
+            return false;
+        }
+
+        // Gate 6: Tokenizer/config pair — verified via GGUF embedded metadata.
+        // general.architecture and tokenizer.ggml.model must both be present.
+        // Any model missing these fields is structurally incomplete; reject at
+        // initialization, not during generation.
+        if (!meta.hasArchitecture || !meta.hasTokenizerModel) {
+            if (m_logger) m_logger->error("AIImplementation",
+                "[GATE-6] GGUF required metadata missing: architecture=" +
+                std::string(meta.hasArchitecture ? meta.architecture : "MISSING") +
+                " tokenizer.ggml.model=" +
+                std::string(meta.hasTokenizerModel ? meta.tokenizerModel : "MISSING") +
+                " — mismatch fails at initialization");
+            return false;
+        }
+
+        // Gate 4: Memory preflight — RAM (20% headroom) + VRAM (15% headroom)
+        std::string preflightReason;
+        bool gpuUsable = false;
+        if (!preflightMemory(modelPath, m_config.localBackendMode, preflightReason, gpuUsable)) {
+            if (m_logger) m_logger->error("AIImplementation",
+                "[GATE-4] Memory preflight failed: " + preflightReason);
+            return false;
+        }
+
+        // Gate 2: Lock runtime lane — one backend, one lane, no silent routing
+        if (m_config.localBackendMode == "gpu-only") {
+            m_resolvedRuntimeLane = "gpu-only";
+        } else if (m_config.localBackendMode == "cpu-only") {
+            m_resolvedRuntimeLane = "cpu-only";
+        } else {
+            // auto-with-verified-fallback: GPU if VRAM sufficient, else CPU
+            m_resolvedRuntimeLane = gpuUsable ? "gpu-only" : "cpu-only";
+        }
+
+        // All 7 gates passed — startup banner: exactly one backend + one lane
+        if (m_logger) {
+            m_logger->info("AIImplementation",
+                "[BACKEND] backend=local lane=" + m_resolvedRuntimeLane +
+                " arch=" + meta.architecture +
+                " tokenizer=" + meta.tokenizerModel +
+                " quant=" + (!quantTag.empty() ? quantTag : "f32") +
+                " endpoint=" + m_config.endpoint + " - READY");
+        }
+    } else {
+        m_resolvedRuntimeLane = "cpu-only";
+        if (m_logger) {
+            m_logger->info("AIImplementation",
+                "[BACKEND] backend=" + config.backend +
+                " lane=" + m_resolvedRuntimeLane +
+                " endpoint=" + m_config.endpoint);
+        }
     }
     return testConnectivity();
 }
@@ -29,7 +403,7 @@ CompletionResponse AIImplementation::complete(const CompletionRequest& request) 
     CompletionResponse response;
 
     try {
-        if (m_config.backend == "ollama") {
+        if (m_config.backend == "ollama" || m_config.backend == "local") {
             // Build Ollama request (simplified)
             std::string ollamaBody = "{\"model\":\"" + m_config.modelName + "\",\"prompt\":\"" + request.prompt + "\",\"stream\":false}";
 
@@ -142,11 +516,6 @@ CompletionResponse AIImplementation::complete(const CompletionRequest& request) 
                 response.success = false;
                 response.errorMessage = httpResp.errorMessage;
             }
-        } else if (m_config.backend == "local") {
-            // Local GGUF model inference via CPUInferenceEngine
-            // This path is used when a model is loaded directly, not via remote API
-            response.success = false;
-            response.errorMessage = "Local backend: use api_server inference endpoint instead";
         } else {
             response.success = false;
             response.errorMessage = "Unsupported backend: " + m_config.backend;
@@ -192,7 +561,7 @@ CompletionResponse AIImplementation::streamComplete(
     CompletionResponse response;
 
     try {
-        if (m_config.backend == "ollama") {
+        if (m_config.backend == "ollama" || m_config.backend == "local") {
             // Build Ollama streaming request
             std::string ollamaBody = "{\"model\":\"" + m_config.modelName + 
                 "\",\"prompt\":\"" + request.prompt + "\",\"stream\":true}";
@@ -422,7 +791,10 @@ bool AIImplementation::supportsToolCalling() const {
 
 bool AIImplementation::testConnectivity() {
     try {
-        if (m_config.backend == "ollama") {
+        if (m_config.backend == "ollama" || m_config.backend == "local") {
+            if (!m_config.allowRemoteFallback && !isLoopbackEndpoint(m_config.endpoint)) {
+                return false;
+            }
             auto response = m_httpClient->get(m_config.endpoint + "/api/tags");
             return response.success && response.statusCode == 200;
         } else if (m_config.backend == "openai" || m_config.backend == "anthropic") {

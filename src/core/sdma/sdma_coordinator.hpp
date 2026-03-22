@@ -10,7 +10,8 @@
 #include <cstdint>
 #include <windows.h>
 
-namespace rawrxd::sdma {
+namespace rawrxd {
+namespace sdma {
 
 // ============================================================
 // SDMA WORK QUEUE ENTRY (64 bytes, zero-copy descriptor)
@@ -30,24 +31,24 @@ static_assert(sizeof(SDMAWorkItem) == 64, "SDMAWorkItem must be 64 bytes");
 // SDMA SCHEDULER STATE (exported to MASM)
 // ============================================================
 struct alignas(64) SDMASchedulerState {
-    void* ring_base;            // Host VA (Write-Combined)
-    uint64_t ring_gpu_addr;     // GPU-visible bus address
-    uint64_t head;              // Write pointer (bytes, 32-aligned)
-    uint64_t tail_cache;        // Cached read pointer
-    volatile uint32_t* mmio_wptr;  // GPU MMIO: SDMA0_QUEUE0_RB_WPTR
-    volatile uint32_t* mmio_rptr;  // GPU MMIO: SDMA0_QUEUE0_RB_RPTR
+    void* ring_base = nullptr;            // Host VA (Write-Combined)
+    uint64_t ring_gpu_addr = 0;           // GPU-visible bus address
+    uint64_t head = 0;                    // Write pointer (bytes, 32-aligned)
+    uint64_t tail_cache = 0;              // Cached read pointer
+    volatile uint32_t* mmio_wptr = nullptr;  // GPU MMIO: SDMA0_QUEUE0_RB_WPTR
+    volatile uint32_t* mmio_rptr = nullptr;  // GPU MMIO: SDMA0_QUEUE0_RB_RPTR
     
     // Burst scheduling state
-    uint64_t burst_accumulator;
-    uint64_t burst_deadline;    // RDTSC deadline
-    uint64_t pending_desc_count;
-    uint64_t last_src;
+    uint64_t burst_accumulator = 0;
+    uint64_t burst_deadline = 0;    // RDTSC deadline
+    uint64_t pending_desc_count = 0;
+    uint64_t last_src = 0;
     
     // Statistics
-    std::atomic<uint64_t> descriptors_submitted;
-    std::atomic<uint64_t> bytes_moved;
-    std::atomic<uint64_t> coalescing_hits;
-    std::atomic<uint64_t> scheduling_stalls;
+    uint64_t descriptors_submitted = 0;
+    uint64_t bytes_moved = 0;
+    uint64_t coalescing_hits = 0;
+    uint64_t scheduling_stalls = 0;
 };
 
 // ============================================================
@@ -131,4 +132,5 @@ extern "C" {
     uint64_t sdma_ring_advance_head(uint64_t head, uint32_t count);
 }
 
-} // namespace rawrxd::sdma
+} // namespace sdma
+} // namespace rawrxd

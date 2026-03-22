@@ -227,6 +227,7 @@ struct RefactoringOption
 class Win32IDE
 {
     friend class AgenticBridge;
+    friend class PeekOverlayWindow;
     friend class vscode::VSCodeExtensionAPI;
     friend void onCreateTrampoline(void* self, HWND hwnd);
     friend void deferredInitTrampoline(void* self);
@@ -1130,6 +1131,8 @@ class Win32IDE
     void saveSessionEditorState(nlohmann::json& session);
     void restoreSessionEditorState(const nlohmann::json& session);
     std::string getSessionFilePath() const;
+    /** Writes `performance.vulkanRenderer` to rawrxd.config.json (cwd, else exe dir). */
+    void persistPerformanceVulkanRendererToConfig();
 
     // Agent Inline Annotations
     enum class AnnotationSeverity
@@ -2341,18 +2344,33 @@ class Win32IDE
     // ========================================================================
     // Peek Overlay — Definition/References Overlay (Win32IDE_PeekOverlay.cpp)
     // ========================================================================
+    struct LSPLocation;
+
     void initPeekOverlay();
     void shutdownPeekOverlay();
     void showPeekDefinition(int line, int col);
     void showPeekReferences(int line, int col);
+    /** Show peek overlay without re-querying LSP (uses pre-built items). */
+    void showPeekOverlayWithItems(const std::vector<PeekItem>& items, int triggerLine, int triggerCol);
+    /** Build peek rows from LSP locations by reading source files on disk. */
+    std::vector<PeekItem> buildPeekItemsFromLspLocations(const std::vector<LSPLocation>& locations,
+                                                         PeekItemType type,
+                                                         int contextLinesBefore,
+                                                         int contextLinesAfter);
     std::vector<PeekItem> findDefinitionsAt(int line, int col);
     std::vector<PeekItem> findReferencesAt(int line, int col);
     void handlePeekOverlayKey(UINT vk, bool ctrl, bool alt, bool shift);
     bool isPeekOverlayActive() const;
+    /// Deferred dismiss / navigate — safe from peek overlay WndProc (posts to main HWND).
+    void postPeekFinishFromOverlay(bool navigate, const std::string& filePath, uint32_t line1Based);
 
     // Peek overlay state
+    static constexpr UINT WM_RAWRXD_PEEK_FINISH = WM_USER + 520;
     std::unique_ptr<PeekOverlayWindow, PeekOverlayWindowDeleter> m_peekOverlayWindow;
     bool m_peekOverlayActive = false;
+    bool m_peekDeferredNavigate = false;
+    std::string m_peekDeferredFile;
+    uint32_t m_peekDeferredLine = 1;
 
     // ========================================================================
     // Agent Panel — Multi-File Edit Session (Win32IDE_AgentPanel.cpp)
@@ -4263,6 +4281,7 @@ class Win32IDE
     // Hotpatch state
     bool m_hotpatchEnabled = false;
     bool m_hotpatchUIInitialized = false;
+    double m_hotpatchSavedTargetTps = 0.0;
 
     // ========================================================================
     // PDB SYMBOL SERVER — Phase 29: Native PDB Symbol Server
@@ -4792,6 +4811,7 @@ class Win32IDE
     void cmdHPCtrlDepGraph();
     void cmdHPCtrlStats();
     bool m_hotpatchCtrlPanelInitialized = false;
+    uint64_t m_hotpatchCtrlActiveTransactionId = 0;
 
     static constexpr int IDM_HPCTRL_LIST_PATCHES = 11100;
     static constexpr int IDM_HPCTRL_PATCH_DETAIL = 11101;

@@ -367,9 +367,9 @@ if(RAWR_HAS_MASM)
         src/asm/Code_Pattern_Reconstructor.asm
         src/asm/agentic_deep_thinking_kernels.asm
         
-        # SDMA Phase 1: Scheduler + Ring Allocator (burst scheduling optimization)
-        src/core/sdma/sdma_scheduler.asm
-        src/core/sdma/sdma_ring_allocator.asm
+        # SDMA Phase 2: Migrated to C++ implementations (sdma_scheduler.cpp, sdma_ring_allocator.cpp)
+        # Previously broken MASM64 syntax now portable C++20 with extern "C" ABI compatibility.
+
         
         # Keep C++ reverse_engineered_stubs.cpp as single source of truth for these symbols.
         # ASM unresolved stubs duplicate AllocateDMABuffer and cause LNK2005 in Win32IDE.
@@ -2425,7 +2425,17 @@ if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
     list(FILTER INFERENCE_ENGINE_SOURCES EXCLUDE REGEX ".*/link_stubs_.*\\.asm$")
 endif()
 
-add_executable(RawrXD-InferenceEngine EXCLUDE_FROM_ALL ${INFERENCE_ENGINE_SOURCES})
+set(INFERENCE_ENGINE_LIBRARY_SOURCES ${INFERENCE_ENGINE_SOURCES})
+list(REMOVE_ITEM INFERENCE_ENGINE_LIBRARY_SOURCES
+    src/inference/inference_standalone_main.cpp
+)
+
+add_library(InferenceEngine STATIC ${INFERENCE_ENGINE_LIBRARY_SOURCES})
+
+add_executable(RawrXD-InferenceEngine EXCLUDE_FROM_ALL
+    src/inference/inference_standalone_main.cpp
+)
+target_link_libraries(RawrXD-InferenceEngine PRIVATE InferenceEngine)
 if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
     set_target_properties(RawrXD-InferenceEngine PROPERTIES
         EXCLUDE_FROM_ALL FALSE
@@ -2433,15 +2443,21 @@ if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
     )
 endif()
 
-target_compile_definitions(RawrXD-InferenceEngine PRIVATE
+target_compile_definitions(InferenceEngine PRIVATE
     RAWRXD_STRICT_PRODUCTION_PROFILE=$<IF:$<BOOL:${RAWRXD_PRODUCTION_STRIP_STUB_SOURCES}>,1,0>
     RAWR_STANDALONE_INFERENCE=1
     RAWR_HAS_SOVEREIGN_ENGINES=1
     RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=$<IF:$<BOOL:${RAWRXD_PRODUCTION_STRIP_STUB_SOURCES}>,1,0>
     ${_RAWR_ASM_FEATURE_DEFINITIONS}
 )
+target_compile_definitions(RawrXD-InferenceEngine PRIVATE
+    RAWRXD_STRICT_PRODUCTION_PROFILE=$<IF:$<BOOL:${RAWRXD_PRODUCTION_STRIP_STUB_SOURCES}>,1,0>
+    RAWR_STANDALONE_INFERENCE=1
+    RAWR_HAS_SOVEREIGN_ENGINES=1
+    RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=$<IF:$<BOOL:${RAWRXD_PRODUCTION_STRIP_STUB_SOURCES}>,1,0>
+)
 
-target_include_directories(RawrXD-InferenceEngine PRIVATE
+target_include_directories(InferenceEngine PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/src/inference
     ${CMAKE_CURRENT_SOURCE_DIR}/src/engine
@@ -2450,10 +2466,10 @@ target_include_directories(RawrXD-InferenceEngine PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-target_link_libraries(RawrXD-InferenceEngine PRIVATE Threads::Threads)
+target_link_libraries(InferenceEngine PUBLIC Threads::Threads)
 
 if(WIN32)
-    target_link_libraries(RawrXD-InferenceEngine PRIVATE
+    target_link_libraries(InferenceEngine PUBLIC
         shlwapi psapi dbghelp winhttp bcrypt advapi32 crypt32
     )
 endif()
@@ -2474,26 +2490,27 @@ endif()
             # src/asm/RawrXD_Pyre_Compute.asm
         )
     set_source_files_properties(${INFERENCE_ASM_SOURCES} PROPERTIES LANGUAGE ASM_MASM)
-    target_sources(RawrXD-InferenceEngine PRIVATE ${INFERENCE_ASM_SOURCES})
+    target_sources(InferenceEngine PRIVATE ${INFERENCE_ASM_SOURCES})
 
-    target_link_libraries(RawrXD-InferenceEngine PRIVATE ${ASM_DEFLATE_BRUTAL_OBJ})
+    target_link_libraries(InferenceEngine PRIVATE ${ASM_DEFLATE_BRUTAL_OBJ})
+    add_dependencies(InferenceEngine masm_kernels)
     add_dependencies(RawrXD-InferenceEngine masm_kernels)
-    target_compile_definitions(RawrXD-InferenceEngine PRIVATE HAS_BRUTAL_GZIP_MASM=1)
+    target_compile_definitions(InferenceEngine PRIVATE HAS_BRUTAL_GZIP_MASM=1)
 
     # NanoQuant integration (optional)
     if(TARGET RawrXD_NanoQuant)
-        target_link_libraries(RawrXD-InferenceEngine PRIVATE RawrXD_NanoQuant)
-        target_compile_definitions(RawrXD-InferenceEngine PRIVATE RAWR_HAS_NANOQUANT=1)
+        target_link_libraries(InferenceEngine PRIVATE RawrXD_NanoQuant)
+        target_compile_definitions(InferenceEngine PRIVATE RAWR_HAS_NANOQUANT=1)
     endif()
 endif()
 
 if(MSVC)
-    target_compile_options(RawrXD-InferenceEngine PRIVATE
+    target_compile_options(InferenceEngine PRIVATE
         $<$<COMPILE_LANGUAGE:CXX>:/EHsc /W0 /arch:AVX512>
         $<$<AND:$<COMPILE_LANGUAGE:CXX>,$<NOT:$<CONFIG:Debug>>>:/O2>
     )
 else()
-    target_compile_options(RawrXD-InferenceEngine PRIVATE -O3 -w -mavx2 -mfma -mavx512f -mavx512bw -mavx512dq -mavx512vl -march=native)
+    target_compile_options(InferenceEngine PRIVATE -O3 -w -mavx2 -mfma -mavx512f -mavx512bw -mavx512dq -mavx512vl -march=native)
 endif()
 
 set_target_properties(RawrXD-InferenceEngine PROPERTIES
@@ -3393,6 +3410,10 @@ if(WIN32)
         RAWRXD_HAS_MW_KERNEL=${RAWRXD_HAS_MW_KERNEL_FLAG}
         RAWRXD_HAS_PROMPT_ENGINE=${RAWRXD_HAS_PROMPT_ENGINE_FLAG}
     )
+    target_compile_definitions(InferenceEngine PRIVATE
+        RAWRXD_HAS_MW_KERNEL=${RAWRXD_HAS_MW_KERNEL_FLAG}
+        RAWRXD_HAS_PROMPT_ENGINE=${RAWRXD_HAS_PROMPT_ENGINE_FLAG}
+    )
     target_compile_definitions(RawrXD-InferenceEngine PRIVATE
         RAWRXD_HAS_MW_KERNEL=${RAWRXD_HAS_MW_KERNEL_FLAG}
         RAWRXD_HAS_PROMPT_ENGINE=${RAWRXD_HAS_PROMPT_ENGINE_FLAG}
@@ -3758,15 +3779,36 @@ if(WIN32)
         src/runtime_surface/GenerationStopwatch.cpp
     )
 
+    # ── Performance-optimization batches 3–6 ───────────────────────────────────
+    # Batch 3: Unified tiered memory pool (CPU / GPU / disk / compressed)
+    # Batch 4: Work-stealing ExecutionScheduler (resolves friend-class declaration)
+    # Batch 5: InferenceProfiler — per-layer profiling + Prometheus export
+    # Batch 6: BackendOrchestrator — dynamic switching, sharding, semantic cache
+    list(APPEND WIN32IDE_SOURCES
+        src/memory/UnifiedMemoryPool.cpp
+        src/ExecutionScheduler.cpp
+        src/InferenceProfiler.cpp
+        src/BackendOrchestrator.cpp
+    )
+
+    # ── SDMA GPU Scheduler (C++ replacement for MASM) ───────────────────────
+    # Replaced broken MASM syntax with portable C++ implementations
+    # sdma_scheduler: GPU DMA event loop, burst coalescing, TSC-based scheduling
+    # sdma_ring_allocator: O(1) tensor slot bitmap allocator with spinlock
+    list(APPEND WIN32IDE_SOURCES
+        src/core/sdma/sdma_scheduler.cpp
+        src/core/sdma/sdma_ring_allocator.cpp
+    )
+
     add_executable(RawrXD-Win32IDE WIN32 ${WIN32IDE_SOURCES} ${ASM_KERNEL_SOURCES} ${WIN32IDE_EXTRA_ASM})
 
     # Ensure link output dir exists; clear prior exe/pdb before link (mitigates MSVC LNK1104 when
     # a stale handle, indexer, or crashed link left the binary busy — harmless if files are absent).
     file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
-    # Best-effort only: cmake -E rm fails hard if the exe is locked (running IDE). cmd del ignores errors + exit 0.
+    # Use CMake-native removal to avoid shell quoting issues in generated link commands.
     if(MSVC)
         add_custom_command(TARGET RawrXD-Win32IDE PRE_LINK
-            COMMAND cmd /c "del /f /q \"$<TARGET_FILE:RawrXD-Win32IDE>\" 2>nul & del /f /q \"$<TARGET_PDB_FILE:RawrXD-Win32IDE>\" 2>nul & exit /b 0"
+            COMMAND ${CMAKE_COMMAND} -E rm -f "$<TARGET_FILE:RawrXD-Win32IDE>" "$<TARGET_PDB_FILE:RawrXD-Win32IDE>"
             COMMENT "RawrXD-Win32IDE: PRE_LINK optional del exe/pdb if unlocked"
             VERBATIM
         )
@@ -3920,6 +3962,10 @@ if(WIN32)
             target_link_libraries(RawrXD_Gold PRIVATE quickjs_static)
             target_include_directories(RawrXD_Gold PRIVATE ${QUICKJS_DIR}/..)
         endif()
+        if(TARGET InferenceEngine)
+            target_link_libraries(InferenceEngine PRIVATE quickjs_static)
+            target_include_directories(InferenceEngine PRIVATE ${QUICKJS_DIR}/..)
+        endif()
         if(TARGET RawrXD-InferenceEngine)
             target_link_libraries(RawrXD-InferenceEngine PRIVATE quickjs_static)
             target_include_directories(RawrXD-InferenceEngine PRIVATE ${QUICKJS_DIR}/..)
@@ -3931,6 +3977,9 @@ if(WIN32)
         if(TARGET RawrXD_Gold)
             target_compile_definitions(RawrXD_Gold PRIVATE RAWR_HAS_QUICKJS=1)
         endif()
+        if(TARGET InferenceEngine)
+            target_compile_definitions(InferenceEngine PRIVATE RAWR_HAS_QUICKJS=1)
+        endif()
         if(TARGET RawrXD-InferenceEngine)
             target_compile_definitions(RawrXD-InferenceEngine PRIVATE RAWR_HAS_QUICKJS=1)
         endif()
@@ -3940,6 +3989,9 @@ if(WIN32)
         endif()
         if(TARGET RawrXD_Gold)
             target_compile_definitions(RawrXD_Gold PRIVATE RAWR_QUICKJS_STUB=0)
+        endif()
+        if(TARGET InferenceEngine)
+            target_compile_definitions(InferenceEngine PRIVATE RAWR_QUICKJS_STUB=0)
         endif()
         if(TARGET RawrXD-InferenceEngine)
             target_compile_definitions(RawrXD-InferenceEngine PRIVATE RAWR_QUICKJS_STUB=0)
@@ -3960,6 +4012,10 @@ if(WIN32)
         if(TARGET RawrXD_Gold)
             target_compile_definitions(RawrXD_Gold PRIVATE RAWR_HAS_QUICKJS=0)
             target_compile_definitions(RawrXD_Gold PRIVATE RAWR_QUICKJS_STUB=1)
+        endif()
+        if(TARGET InferenceEngine)
+            target_compile_definitions(InferenceEngine PRIVATE RAWR_HAS_QUICKJS=0)
+            target_compile_definitions(InferenceEngine PRIVATE RAWR_QUICKJS_STUB=1)
         endif()
         if(TARGET RawrXD-InferenceEngine)
             target_compile_definitions(RawrXD-InferenceEngine PRIVATE RAWR_HAS_QUICKJS=0)
@@ -4567,3 +4623,12 @@ else()
 endif()
 
 message(STATUS "[AgenticOrchestrator] Smoke test target: agentic_orchestrator_smoke_test (build with: cmake --build . --target agentic_orchestrator_smoke_test)")
+
+if(EXISTS "${CMAKE_SOURCE_DIR}/tests/CMakeLists.txt")
+    enable_testing()
+    add_subdirectory(tests)
+endif()
+
+if(EXISTS "${CMAKE_SOURCE_DIR}/src/tools/CMakeLists.txt")
+    add_subdirectory(src/tools)
+endif()

@@ -11,44 +11,38 @@ const MODULE_META = [
   {
     key: 'commandPalette',
     label: 'Command palette',
-    desc: 'When off: Ctrl+Shift+P, toolbar Palette, and menu “Command Palette” are blocked (enable here to restore).',
-    title:
-      'M01 — Gates the renderer command palette (shortcut, toolbar, ide:action command-palette). Does not install from network. M06 — Known module id only.'
+    desc: 'Off: keyboard shortcut, toolbar button, and menu entry for the palette are disabled.',
+    title: 'Command palette (Ctrl+Shift+P). No extensions installed from the network.'
   },
   {
     key: 'inlineCompletion',
     label: 'Inline completion',
-    desc: 'Ghost-text style suggestions (editor integration)',
-    title:
-      'M01 — Toggles load hook for Monaco inline hints. Toggles load hook; does not install from network. Does not call cloud APIs by itself.'
+    desc: 'On: Monaco shows buffer-local inline hints from the open file (with Settings › Copilot inline hints).',
+    title: 'Inline hint provider in the editor; local regex/identifier picks, not a cloud Copilot service.'
   },
   {
     key: 'gitIntegration',
     label: 'Git integration',
-    desc: 'SCM-aware context for agents',
-    title:
-      'M01 — Toggles load hook for Git context. Toggles load hook; does not install from network. Does not push or commit automatically.'
+    desc: 'Reserved hook for future SCM context in agents. Does not run git commands yet.',
+    title: 'Future: git-aware agent context. No auto-commit or push.'
   },
   {
     key: 'testRunner',
     label: 'Test runner',
-    desc: 'Discover & run tests from palette',
-    title:
-      'M01 — Toggles load hook for test discovery. Toggles load hook; does not install from network. Does not execute shell without explicit command.'
+    desc: 'Reserved hook for test discovery from the palette.',
+    title: 'Future: palette test commands. Does not run shell without an explicit action.'
   },
   {
     key: 'lspBridge',
     label: 'LSP bridge',
-    desc: 'Language server protocol (experimental)',
-    title:
-      'M01 — Toggles load hook for LSP wiring (experimental). Toggles load hook; does not install from network. Does not bundle language servers.'
+    desc: 'Reserved hook for language-server wiring.',
+    title: 'Experimental. No language server is bundled.'
   },
   {
     key: 'telemetryOptIn',
     label: 'Telemetry',
-    desc: 'Optional usage analytics',
-    title:
-      'M01 — Toggles load hook for opt-in analytics. Toggles load hook; does not install from network. Default off (M06).'
+    desc: 'Reserved hook for opt-in analytics. Default off.',
+    title: 'Opt-in analytics hook. Off unless you enable this and a collector exists.'
   }
 ];
 
@@ -88,7 +82,7 @@ const ModulesPanel = ({ modules, toggleModule }) => {
           type="button"
           onClick={onReset}
           className={`shrink-0 text-[10px] px-2 py-1 rounded border border-gray-600 text-gray-400 hover:text-white hover:border-gray-500 ${focusVisibleRing}`}
-          title="M02 — Restore default module flags (git, tests, palette on; LSP off; telemetry off)."
+          title="Restore defaults: palette on, inline on, git/tests/LSP/telemetry hooks off."
         >
           Reset defaults
         </button>
@@ -96,7 +90,7 @@ const ModulesPanel = ({ modules, toggleModule }) => {
       <ul className="flex-1 min-h-0 overflow-y-auto p-2 space-y-1">
         {MODULE_META.length === 0 ? (
           <li className="text-xs text-gray-500 px-2 py-4">
-            M03 — No modules in list — check MODULE_META in source. If a hook fails at runtime, see main process log.
+            No modules defined for this panel.
           </li>
         ) : null}
         {MODULE_META.map((m) => (

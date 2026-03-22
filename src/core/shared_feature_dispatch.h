@@ -21,6 +21,7 @@
 #include <mutex>
 #include <atomic>
 #include <chrono>
+#include <algorithm>
 
 // ============================================================================
 // FEATURE CATEGORIES — Shared between CLI & GUI
@@ -169,6 +170,7 @@ public:
     
     CommandResult dispatch(const char* featureId, const CommandContext& ctx) {
         FeatureHandler handler = nullptr;
+        std::string traceKey;
         {
             std::lock_guard<std::mutex> lock(m_mutex);
             auto it = m_byId.find(featureId);
@@ -176,13 +178,23 @@ public:
                 return CommandResult::error("Feature not found");
             }
             handler = m_features[it->second].handler;
+            traceKey = m_features[it->second].id ? m_features[it->second].id : "<unknown>";
             if (!handler) {
                 return CommandResult::error("Feature has no handler");
             }
         }
+        const bool traceEnabled = m_perfTraceEnabled.load(std::memory_order_relaxed);
+        const auto t0 = traceEnabled ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
         // Handler runs OUTSIDE lock — re-entrancy safe
         m_dispatchCount.fetch_add(1, std::memory_order_relaxed);
-        return handler(ctx);
+        const CommandResult result = handler(ctx);
+        if (traceEnabled) {
+            const auto t1 = std::chrono::steady_clock::now();
+            const uint64_t elapsedNs = static_cast<uint64_t>(
+                std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count());
+            recordPerfTraceSample(traceKey, elapsedNs, result.success, ctx);
+        }
+        return result;
     }
 
     // ── Dispatch by Win32 command ID ────────────────────────────────────────
@@ -190,6 +202,7 @@ public:
     
     CommandResult dispatchByCommandId(uint32_t cmdId, const CommandContext& ctx) {
         FeatureHandler handler = nullptr;
+        std::string traceKey;
         {
             std::lock_guard<std::mutex> lock(m_mutex);
             auto it = m_byCommandId.find(cmdId);
@@ -197,13 +210,23 @@ public:
                 return CommandResult::error("Command ID not registered");
             }
             handler = m_features[it->second].handler;
+            traceKey = m_features[it->second].id ? m_features[it->second].id : "<unknown>";
             if (!handler) {
                 return CommandResult::error("Feature has no handler");
             }
         }
+        const bool traceEnabled = m_perfTraceEnabled.load(std::memory_order_relaxed);
+        const auto t0 = traceEnabled ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
         // Handler runs OUTSIDE lock — re-entrancy safe
         m_dispatchCount.fetch_add(1, std::memory_order_relaxed);
-        return handler(ctx);
+        const CommandResult result = handler(ctx);
+        if (traceEnabled) {
+            const auto t1 = std::chrono::steady_clock::now();
+            const uint64_t elapsedNs = static_cast<uint64_t>(
+                std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count());
+            recordPerfTraceSample(traceKey, elapsedNs, result.success, ctx);
+        }
+        return result;
     }
 
     // ── Dispatch by CLI command string ──────────────────────────────────────
@@ -211,6 +234,7 @@ public:
     
     CommandResult dispatchByCli(const char* cliCmd, const CommandContext& ctx) {
         FeatureHandler handler = nullptr;
+        std::string traceKey;
         {
             std::lock_guard<std::mutex> lock(m_mutex);
             auto it = m_byCli.find(cliCmd);
@@ -218,13 +242,23 @@ public:
                 return CommandResult::error("CLI command not registered");
             }
             handler = m_features[it->second].handler;
+            traceKey = m_features[it->second].id ? m_features[it->second].id : "<unknown>";
             if (!handler) {
                 return CommandResult::error("Feature has no handler");
             }
         }
+        const bool traceEnabled = m_perfTraceEnabled.load(std::memory_order_relaxed);
+        const auto t0 = traceEnabled ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
         // Handler runs OUTSIDE lock — re-entrancy safe
         m_dispatchCount.fetch_add(1, std::memory_order_relaxed);
-        return handler(ctx);
+        const CommandResult result = handler(ctx);
+        if (traceEnabled) {
+            const auto t1 = std::chrono::steady_clock::now();
+            const uint64_t elapsedNs = static_cast<uint64_t>(
+                std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count());
+            recordPerfTraceSample(traceKey, elapsedNs, result.success, ctx);
+        }
+        return result;
     }
 
     // ── Query ───────────────────────────────────────────────────────────────
@@ -286,6 +320,110 @@ public:
         return m_dispatchCount.load(std::memory_order_relaxed); 
     }
 
+    // ── Reverse Trace Controls ─────────────────────────────────────────────
+
+    void setPerfTraceEnabled(bool enabled) {
+        m_perfTraceEnabled.store(enabled, std::memory_order_relaxed);
+    }
+
+    bool isPerfTraceEnabled() const {
+        return m_perfTraceEnabled.load(std::memory_order_relaxed);
+    }
+
+    void setPerfSlowThresholdUs(uint64_t thresholdUs) {
+        if (thresholdUs == 0) thresholdUs = 1;
+        m_perfSlowThresholdUs.store(thresholdUs, std::memory_order_relaxed);
+    }
+
+    uint64_t getPerfSlowThresholdUs() const {
+        return m_perfSlowThresholdUs.load(std::memory_order_relaxed);
+    }
+
+    void resetPerfTraceStats() {
+        {
+            std::lock_guard<std::mutex> lock(m_perfMutex);
+            m_perfByFeature.clear();
+        }
+        m_perfSamples.store(0, std::memory_order_relaxed);
+        m_perfSlowSamples.store(0, std::memory_order_relaxed);
+    }
+
+    std::string generatePerfTraceJSON(size_t topN = 25) const {
+        std::vector<std::pair<std::string, PerfTraceStats>> rows;
+        {
+            std::lock_guard<std::mutex> lock(m_perfMutex);
+            rows.reserve(m_perfByFeature.size());
+            for (const auto& kv : m_perfByFeature) rows.push_back(kv);
+        }
+
+        std::sort(rows.begin(), rows.end(), [](const auto& a, const auto& b) {
+            return a.second.totalNs > b.second.totalNs;
+        });
+        if (topN > 0 && rows.size() > topN) rows.resize(topN);
+
+        std::string json = "{\n";
+        json += "  \"enabled\": " + std::string(isPerfTraceEnabled() ? "true" : "false") + ",\n";
+        json += "  \"slowThresholdUs\": " + std::to_string(getPerfSlowThresholdUs()) + ",\n";
+        json += "  \"totalSamples\": " + std::to_string(m_perfSamples.load(std::memory_order_relaxed)) + ",\n";
+        json += "  \"slowSamples\": " + std::to_string(m_perfSlowSamples.load(std::memory_order_relaxed)) + ",\n";
+        json += "  \"features\": [\n";
+        for (size_t i = 0; i < rows.size(); ++i) {
+            const auto& key = rows[i].first;
+            const auto& st = rows[i].second;
+            const uint64_t avgUs = st.calls ? (st.totalNs / st.calls) / 1000ull : 0ull;
+            const uint64_t maxUs = st.maxNs / 1000ull;
+            json += "    {\n";
+            json += "      \"id\": \"" + key + "\",\n";
+            json += "      \"calls\": " + std::to_string(st.calls) + ",\n";
+            json += "      \"failures\": " + std::to_string(st.failures) + ",\n";
+            json += "      \"avgUs\": " + std::to_string(avgUs) + ",\n";
+            json += "      \"maxUs\": " + std::to_string(maxUs) + ",\n";
+            json += "      \"totalMs\": " + std::to_string(st.totalNs / 1000000ull) + "\n";
+            json += "    }";
+            if (i + 1 < rows.size()) json += ",";
+            json += "\n";
+        }
+        json += "  ]\n";
+        json += "}\n";
+        return json;
+    }
+
+    std::string generatePerfTraceMarkdown(size_t topN = 25) const {
+        std::vector<std::pair<std::string, PerfTraceStats>> rows;
+        {
+            std::lock_guard<std::mutex> lock(m_perfMutex);
+            rows.reserve(m_perfByFeature.size());
+            for (const auto& kv : m_perfByFeature) rows.push_back(kv);
+        }
+
+        std::sort(rows.begin(), rows.end(), [](const auto& a, const auto& b) {
+            return a.second.totalNs > b.second.totalNs;
+        });
+        if (topN > 0 && rows.size() > topN) rows.resize(topN);
+
+        std::string md;
+        md += "# Reverse Trace Report\n\n";
+        md += "- Enabled: ";
+        md += isPerfTraceEnabled() ? "yes\n" : "no\n";
+        md += "- Slow threshold (us): " + std::to_string(getPerfSlowThresholdUs()) + "\n";
+        md += "- Total samples: " + std::to_string(m_perfSamples.load(std::memory_order_relaxed)) + "\n";
+        md += "- Slow samples: " + std::to_string(m_perfSlowSamples.load(std::memory_order_relaxed)) + "\n\n";
+        md += "| Feature | Calls | Failures | Avg us | Max us | Total ms |\n";
+        md += "|---|---:|---:|---:|---:|---:|\n";
+        for (const auto& row : rows) {
+            const auto& st = row.second;
+            const uint64_t avgUs = st.calls ? (st.totalNs / st.calls) / 1000ull : 0ull;
+            const uint64_t maxUs = st.maxNs / 1000ull;
+            md += "| " + row.first + " | "
+                + std::to_string(st.calls) + " | "
+                + std::to_string(st.failures) + " | "
+                + std::to_string(avgUs) + " | "
+                + std::to_string(maxUs) + " | "
+                + std::to_string(st.totalNs / 1000000ull) + " |\n";
+        }
+        return md;
+    }
+
     // ── Manifest Generation (for cross-IDE alignment) ───────────────────────
     
     std::string generateManifestJSON() const {
@@ -332,6 +470,42 @@ public:
     }
 
 private:
+    struct PerfTraceStats {
+        uint64_t calls = 0;
+        uint64_t failures = 0;
+        uint64_t totalNs = 0;
+        uint64_t maxNs = 0;
+    };
+
+    void recordPerfTraceSample(const std::string& featureId,
+                               uint64_t elapsedNs,
+                               bool success,
+                               const CommandContext& ctx) {
+        {
+            std::lock_guard<std::mutex> lock(m_perfMutex);
+            auto& st = m_perfByFeature[featureId];
+            st.calls += 1;
+            if (!success) st.failures += 1;
+            st.totalNs += elapsedNs;
+            if (elapsedNs > st.maxNs) st.maxNs = elapsedNs;
+        }
+
+        m_perfSamples.fetch_add(1, std::memory_order_relaxed);
+        const uint64_t elapsedUs = elapsedNs / 1000ull;
+        const uint64_t slowThresholdUs = m_perfSlowThresholdUs.load(std::memory_order_relaxed);
+        if (elapsedUs >= slowThresholdUs) {
+            m_perfSlowSamples.fetch_add(1, std::memory_order_relaxed);
+            if (ctx.emitEvent) {
+                std::string payload = "{\"feature\":\"" + featureId
+                                    + "\",\"elapsedUs\":" + std::to_string(elapsedUs)
+                                    + ",\"slowThresholdUs\":" + std::to_string(slowThresholdUs)
+                                    + ",\"success\":" + std::string(success ? "true" : "false")
+                                    + "}";
+                ctx.emitEvent("perf.reverse_trace.slow", payload.c_str());
+            }
+        }
+    }
+
     SharedFeatureRegistry() = default;
     SharedFeatureRegistry(const SharedFeatureRegistry&) = delete;
     SharedFeatureRegistry& operator=(const SharedFeatureRegistry&) = delete;
@@ -340,9 +514,15 @@ private:
     std::unordered_map<std::string, size_t>                 m_byId;
     std::unordered_map<uint32_t, size_t>                    m_byCommandId;
     std::unordered_map<std::string, size_t>                 m_byCli;
+    std::unordered_map<std::string, PerfTraceStats>         m_perfByFeature;
     mutable std::mutex                                      m_mutex;
+    mutable std::mutex                                      m_perfMutex;
     std::atomic<size_t>                                     m_totalRegistered{0};
     std::atomic<uint64_t>                                   m_dispatchCount{0};
+    std::atomic<bool>                                       m_perfTraceEnabled{false};
+    std::atomic<uint64_t>                                   m_perfSlowThresholdUs{2000};
+    std::atomic<uint64_t>                                   m_perfSamples{0};
+    std::atomic<uint64_t>                                   m_perfSlowSamples{0};
 };
 
 // ============================================================================

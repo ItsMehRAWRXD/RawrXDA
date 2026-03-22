@@ -33,7 +33,7 @@ std::string AgenticExecutor::executeUserRequest(const std::string& request) {
     // Check if request involves massive sharding (800B Mesh)
     if (request.find("800B") != std::string::npos || request.find("mesh") != std::string::npos) {
         // Direct Native Call to Titan Master Loader
-        return "Task " + std::to_string(task_id) + " routed to Titan Sovereign Mesh (MASM64).";
+        return "Task " + std::to_string(task_id) + " routed to Titan Sovereign Mesh MASM64.";
     }
 
     // Standard Agentic Loop

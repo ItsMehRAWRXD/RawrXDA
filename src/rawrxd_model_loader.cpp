@@ -8,6 +8,9 @@
 #include <cstdint>
 #include <cstring>
 #include <limits>
+#include <cstdlib>
+#include <set>
+#include <string>
 
 extern "C" void Dequant_Q4_0(void* src, float* dst);
 extern "C" void Dequant_Q4_K(void* src, float* dst);
@@ -57,6 +60,36 @@ static float f16_to_f32(uint16_t h) {
     return f;
 }
 
+static std::string toLowerAscii(std::string s) {
+    for (char& c : s) {
+        if (c >= 'A' && c <= 'Z') {
+            c = static_cast<char>(c - 'A' + 'a');
+        }
+    }
+    return s;
+}
+
+static bool endsWith(const std::string& s, const std::string& suffix) {
+    return s.size() >= suffix.size() &&
+        s.compare(s.size() - suffix.size(), suffix.size(), suffix) == 0;
+}
+
+static std::string WideToUtf8(const wchar_t* ws) {
+    if (!ws) {
+        return std::string();
+    }
+    const int n = WideCharToMultiByte(CP_UTF8, 0, ws, -1, nullptr, 0, nullptr, nullptr);
+    if (n <= 1) {
+        return std::string();
+    }
+    std::string out(static_cast<size_t>(n), '\0');
+    WideCharToMultiByte(CP_UTF8, 0, ws, -1, out.data(), n, nullptr, nullptr);
+    if (!out.empty() && out.back() == '\0') {
+        out.pop_back();
+    }
+    return out;
+}
+
 // Raw GGUF file header — matches binary layout exactly
 struct GGUFFileHeader {
     uint32_t magic;        // 0x46554747 = "GGUF" LE
@@ -67,6 +100,19 @@ struct GGUFFileHeader {
 
 bool RawrXDModelLoader::Load(const wchar_t* path, VkDevice vkDevice, VkPhysicalDevice physDevice) {
     device = vkDevice;
+
+    const std::string modelPathUtf8 = WideToUtf8(path);
+    const std::string modelPathLower = toLowerAscii(modelPathUtf8);
+
+    // Gate 1: enforce GGUF extension before any heavy work.
+    if (!endsWith(modelPathLower, ".gguf")) {
+        printf("[RawrXD][GATE-1] Model format rejected: only valid GGUF files accepted\n");
+        return false;
+    }
+
+    metadataArchitecture.clear();
+    metadataTokenizerModel.clear();
+    metadataFileType = 0xFFFFFFFFu;
 
 #ifdef RAWR_ENABLE_VULKAN
     vkGetPhysicalDeviceMemoryProperties(physDevice, &memProps);
@@ -79,13 +125,26 @@ bool RawrXDModelLoader::Load(const wchar_t* path, VkDevice vkDevice, VkPhysicalD
     hFile = CreateFileW(path, GENERIC_READ, FILE_SHARE_READ, nullptr, 
                        OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
     if (hFile == INVALID_HANDLE_VALUE) {
-        printf("[RawrXD] Could not open model file: %ls\n", path);
+        // Gate 5: explicit permission/access failure for runtime user.
+        printf("[RawrXD][GATE-5] permission denied for runtime user: %ls\n", path);
         return false;
     }
     
     LARGE_INTEGER size;
     GetFileSizeEx(hFile, &size);
     fileSize = size.QuadPart;
+
+        std::string laneReason;
+        std::string resolvedLane;
+        if (!ResolveBackendModeAndPreflight(path, static_cast<uint64_t>(fileSize), resolvedLane, laneReason)) {
+         printf("[RawrXD][BACKEND] backend=%s result=fail reason=%s\n",
+             resolvedLane.c_str(), laneReason.c_str());
+         CloseHandle(hFile);
+         hFile = INVALID_HANDLE_VALUE;
+         return false;
+        }
+        printf("[RawrXD][BACKEND] backend=%s result=ok reason=%s\n",
+            resolvedLane.c_str(), laneReason.c_str());
     
     hMapping = CreateFileMapping(hFile, nullptr, PAGE_READONLY, 0, 0, nullptr);
     mappedView = MapViewOfFile(hMapping, FILE_MAP_READ, 0, 0, 0);
@@ -101,7 +160,7 @@ bool RawrXDModelLoader::Load(const wchar_t* path, VkDevice vkDevice, VkPhysicalD
     
     GGUFFileHeader* hdr = (GGUFFileHeader*)ptr;
     if (hdr->magic != 0x46554747) { // "GGUF" LE
-        printf("[RawrXD] Invalid GGUF magic: %08x\n", hdr->magic);
+        printf("[RawrXD][GATE-1] Model format rejected: invalid GGUF header magic (%08x)\n", hdr->magic);
         return false;
     }
     
@@ -109,6 +168,18 @@ bool RawrXDModelLoader::Load(const wchar_t* path, VkDevice vkDevice, VkPhysicalD
     
     // Skip metadata (simple parser to just skip it)
     ptr = ParseMetadata(ptr, hdr->kv_count);
+
+    // Gate 3: quantization allowlist based on GGUF file_type metadata.
+    if (!IsSupportedFileType(metadataFileType)) {
+        printf("[RawrXD][GATE-3] unsupported quant: rejected at model load (file_type=%u)\n", metadataFileType);
+        return false;
+    }
+
+    // Gate 6: strict tokenizer/config pairing via required embedded metadata fields.
+    if (metadataArchitecture.empty() || metadataTokenizerModel.empty()) {
+        printf("[RawrXD][GATE-6] tokenizer/config mismatch: GGUF metadata missing architecture/tokenizer pairing\n");
+        return false;
+    }
     
     // 3. Tensor info array
     std::vector<Tensor> tensorInfos;
@@ -195,6 +266,11 @@ uint8_t* RawrXDModelLoader::ParseMetadata(uint8_t* ptr, uint64_t count) {
             {
                 uint64_t vlen = *(uint64_t*)ptr; ptr += 8;
                 // Capture useful string metadata if needed
+                if (key == "general.architecture") {
+                    metadataArchitecture.assign((char*)ptr, static_cast<size_t>(vlen));
+                } else if (key == "tokenizer.ggml.model") {
+                    metadataTokenizerModel.assign((char*)ptr, static_cast<size_t>(vlen));
+                }
                 ptr += vlen;
                 break;
             }
@@ -227,6 +303,7 @@ uint8_t* RawrXDModelLoader::ParseMetadata(uint8_t* ptr, uint64_t count) {
                 
                 if (type >= 4 && type <= 7) {
                     uint32_t val = *(uint32_t*)ptr;
+                    if (key == "general.file_type") metadataFileType = val;
                     if (key == "llama.embedding_length" || key == "general.embedding_length") n_embd = val;
                     if (key == "llama.block_count" || key == "general.block_count") n_layers = val;
                     if (key == "llama.attention.head_count" || key == "general.attention.head_count") n_heads = val;
@@ -352,6 +429,9 @@ void RawrXDModelLoader::UploadF32(Tensor& t, void* data, size_t N) {
     if (data) memcpy(t.cpuFloatData.data(), data, N * sizeof(float));
 
 #ifdef RAWR_ENABLE_VULKAN
+    if (!m_gpuUploadEnabled) {
+        return;
+    }
     size_t dstSize = N * sizeof(uint16_t);
     uint16_t* staging = (uint16_t*)malloc(dstSize);
     memset(staging, 0, dstSize);
@@ -363,6 +443,9 @@ void RawrXDModelLoader::UploadF32(Tensor& t, void* data, size_t N) {
 
 void RawrXDModelLoader::CreateGPUBuffer(Tensor& t, void* data, size_t size) {
 #ifdef RAWR_ENABLE_VULKAN
+    if (!m_gpuUploadEnabled) {
+        return;
+    }
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     bufferInfo.size = size;
@@ -396,6 +479,98 @@ void RawrXDModelLoader::CreateGPUBuffer(Tensor& t, void* data, size_t size) {
     // CPU-only mode: no GPU buffers
     (void)t; (void)data; (void)size;
 #endif
+}
+
+bool RawrXDModelLoader::IsSupportedFileType(uint32_t fileType) const {
+    static const std::set<uint32_t> allowlisted = {
+        0u, 1u,        // F32, F16
+        2u, 3u,        // Q4_0, Q4_1
+        7u, 8u, 9u,    // Q8_0, Q5_0, Q5_1
+        10u,           // Q2_K
+        11u, 12u, 13u, // Q3_K_S/M/L
+        14u, 15u,      // Q4_K_S/M
+        16u, 17u,      // Q5_K_S/M
+        18u            // Q6_K
+    };
+    return allowlisted.count(fileType) > 0;
+}
+
+bool RawrXDModelLoader::ResolveBackendModeAndPreflight(const wchar_t* path, uint64_t modelBytes, std::string& lane, std::string& reason) {
+    const char* modeEnv = std::getenv("RAWRXD_LOCAL_BACKEND_MODE");
+    std::string mode = modeEnv ? toLowerAscii(std::string(modeEnv)) : "auto-with-verified-fallback";
+
+    if (mode != "cpu-only" && mode != "gpu-only" && mode != "auto-with-verified-fallback") {
+        lane = "invalid";
+        reason = "invalid backend mode (expected cpu-only|gpu-only|auto-with-verified-fallback)";
+        return false;
+    }
+
+    MEMORYSTATUSEX mem = {};
+    mem.dwLength = sizeof(mem);
+    if (!GlobalMemoryStatusEx(&mem)) {
+        lane = "unknown";
+        reason = "unable to query system memory";
+        return false;
+    }
+
+    const uint64_t availRam = mem.ullAvailPhys;
+    const uint64_t ramLimit = static_cast<uint64_t>(static_cast<double>(availRam) * 0.80);
+    if (modelBytes > ramLimit) {
+        lane = mode;
+        reason = "insufficient RAM headroom (20% reserve)";
+        return false;
+    }
+
+    bool gpuUsable = false;
+#ifdef RAWR_ENABLE_VULKAN
+    uint64_t maxVram = 0;
+    for (uint32_t i = 0; i < memProps.memoryTypeCount; ++i) {
+        // memory heaps are not directly indexed by memoryTypeCount in this fallback map,
+        // so we keep a conservative path and rely on provided physical-device props where available.
+        (void)i;
+    }
+    IDXGIFactory1* factory = nullptr;
+    if (SUCCEEDED(CreateDXGIFactory1(__uuidof(IDXGIFactory1), reinterpret_cast<void**>(&factory)))) {
+        IDXGIAdapter1* adapter = nullptr;
+        if (SUCCEEDED(factory->EnumAdapters1(0, &adapter))) {
+            DXGI_ADAPTER_DESC1 desc = {};
+            if (SUCCEEDED(adapter->GetDesc1(&desc)) && desc.DedicatedVideoMemory > 0) {
+                maxVram = static_cast<uint64_t>(desc.DedicatedVideoMemory);
+            }
+            adapter->Release();
+        }
+        factory->Release();
+    }
+    const uint64_t vramLimit = static_cast<uint64_t>(static_cast<double>(maxVram) * 0.85);
+    gpuUsable = maxVram > 0 && modelBytes <= vramLimit;
+#else
+    gpuUsable = false;
+#endif
+
+    if (mode == "gpu-only") {
+        if (!gpuUsable) {
+            lane = "gpu-only";
+            reason = "gpu-only requested but VRAM preflight failed or GPU backend unavailable";
+            return false;
+        }
+        lane = "gpu-only";
+        reason = "gpu preflight passed";
+        m_gpuUploadEnabled = true;
+        return true;
+    }
+
+    if (mode == "cpu-only") {
+        lane = "cpu-only";
+        reason = "cpu-only pinned by configuration";
+        m_gpuUploadEnabled = false;
+        return true;
+    }
+
+    lane = gpuUsable ? "gpu-only" : "cpu-only";
+    reason = gpuUsable ? "gpu preflight passed" : "cpu fallback verified";
+    m_gpuUploadEnabled = gpuUsable;
+    (void)path;
+    return true;
 }
 
 #ifdef RAWR_ENABLE_VULKAN

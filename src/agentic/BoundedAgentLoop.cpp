@@ -22,16 +22,12 @@
 #include <sstream>
 #include <thread>
 #include <chrono>
-#include <windows.h>
-#include <winhttp.h>
 
 // SCAFFOLD_295: BoundedAgentLoop integration
 
 
 // SCAFFOLD_060: BoundedAgentLoop and cycle limit
 
-
-#pragma comment(lib, "winhttp.lib")
 
 using RawrXD::Agent::BoundedAgentLoop;
 using RawrXD::Agent::AgentLoopState;
@@ -50,24 +46,6 @@ uint64_t NowMs() {
             std::chrono::steady_clock::now().time_since_epoch()
         ).count()
     );
-}
-
-std::wstring ToWide(const std::string& s) {
-    if (s.empty()) return L"";
-    int len = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, nullptr, 0);
-    std::wstring out(len, L'\0');
-    MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, out.data(), len);
-    if (!out.empty() && out.back() == L'\0') out.pop_back();
-    return out;
-}
-
-std::string ToUtf8(const std::wstring& s) {
-    if (s.empty()) return "";
-    int len = WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, nullptr, 0, nullptr, nullptr);
-    std::string out(len, '\0');
-    WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, out.data(), len, nullptr, nullptr);
-    if (!out.empty() && out.back() == '\0') out.pop_back();
-    return out;
 }
 
 // Approximate token count (4 chars per token heuristic)
@@ -150,7 +128,7 @@ void BoundedAgentLoop::ExecuteAsync(const std::string& userPrompt) {
 // ============================================================================
 
 std::string BoundedAgentLoop::RunLoop(const std::string& userPrompt) {
-    // Set up LLM backend (default to Ollama if not configured)
+    // Set up LLM backend (defaults to native client path)
     LLMChatFunction llm;
     {
         std::lock_guard<std::mutex> lock(m_mutex);
@@ -159,7 +137,7 @@ std::string BoundedAgentLoop::RunLoop(const std::string& userPrompt) {
     if (!llm) {
         std::string baseUrl = m_config.ollamaBaseUrl;
         llm = [baseUrl](const LLMChatRequest& req) {
-            return OllamaChat(req, baseUrl);
+            return NativeChat(req, baseUrl);
         };
     }
 
@@ -414,189 +392,75 @@ json BoundedAgentLoop::BuildAssistantToolCallMessage(const LLMChatResponse& resp
 }
 
 // ============================================================================
-// Default LLM backend — Ollama /api/chat
+// Default LLM backend — native client path (no direct HTTP transport)
 // ============================================================================
 
-LLMChatResponse BoundedAgentLoop::OllamaChat(const LLMChatRequest& request,
+LLMChatResponse BoundedAgentLoop::NativeChat(const LLMChatRequest& request,
                                                const std::string& baseUrl) {
     LLMChatResponse response;
 
-    // Build Ollama chat request body
-    json body;
+    // Parse host:port from config URL for backward compatibility with existing config.
+    RawrXD::Agent::OllamaConfig cfg;
+    cfg.timeout_ms = 300000;
+    cfg.temperature = request.temperature;
+    cfg.max_tokens = request.maxTokens;
+    cfg.chat_model = request.model;
 
-    // Auto-detect model if not explicitly set
-    std::string modelName = request.model;
-    if (modelName.empty()) {
-        // Query Ollama /api/tags for the first available model
-        RawrXD::Agent::OllamaConfig detectCfg;
-        detectCfg.timeout_ms = 3000;
-        RawrXD::Agent::AgentOllamaClient detectClient(detectCfg);
-        // Constructor auto-detects — use whatever it found
-        modelName = detectClient.GetConfig().chat_model;
-    }
-
-    body["model"] = modelName;
-    body["messages"] = request.messages;
-    body["stream"] = false;
-    body["options"] = nlohmann::json::object({
-        {"temperature", request.temperature},
-        {"num_predict", request.maxTokens}
-    });
-
-    // Include tools if available
-    if (!request.tools.empty()) {
-        body["tools"] = request.tools;
-    }
-
-    std::string bodyStr = body.dump();
-
-    // Parse URL
-    // Expected format: http://localhost:11434
-    std::wstring host = L"localhost";
-    INTERNET_PORT port = 11434;
-
-    // Extract host/port from baseUrl
     size_t colonSlash = baseUrl.find("://");
-    if (colonSlash != std::string::npos) {
-        std::string hostPort = baseUrl.substr(colonSlash + 3);
-        size_t colonPos = hostPort.find(':');
-        if (colonPos != std::string::npos) {
-            host = ToWide(hostPort.substr(0, colonPos));
-            try {
-                port = static_cast<INTERNET_PORT>(std::stoi(hostPort.substr(colonPos + 1)));
-            } catch (...) {}
-        } else {
-            host = ToWide(hostPort);
+    std::string hostPort = (colonSlash == std::string::npos) ? baseUrl : baseUrl.substr(colonSlash + 3);
+    size_t slashPos = hostPort.find('/');
+    if (slashPos != std::string::npos) {
+        hostPort = hostPort.substr(0, slashPos);
+    }
+    size_t colonPos = hostPort.find(':');
+    if (colonPos != std::string::npos) {
+        cfg.host = hostPort.substr(0, colonPos);
+        try {
+            cfg.port = static_cast<uint16_t>(std::stoi(hostPort.substr(colonPos + 1)));
+        } catch (...) {
+            cfg.port = 11434;
         }
+    } else if (!hostPort.empty()) {
+        cfg.host = hostPort;
     }
 
-    // WinHTTP request
-    HINTERNET hSession = WinHttpOpen(L"RawrXD-Agent/1.0",
-                                      WINHTTP_ACCESS_TYPE_NO_PROXY,
-                                      WINHTTP_NO_PROXY_NAME,
-                                      WINHTTP_NO_PROXY_BYPASS, 0);
-    if (!hSession) {
-        response.error = "WinHttpOpen failed";
-        return response;
-    }
-
-    HINTERNET hConnect = WinHttpConnect(hSession, host.c_str(), port, 0);
-    if (!hConnect) {
-        WinHttpCloseHandle(hSession);
-        response.error = "WinHttpConnect failed";
-        return response;
-    }
-
-    HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"POST", L"/api/chat",
-                                             nullptr, WINHTTP_NO_REFERER,
-                                             WINHTTP_DEFAULT_ACCEPT_TYPES, 0);
-    if (!hRequest) {
-        WinHttpCloseHandle(hConnect);
-        WinHttpCloseHandle(hSession);
-        response.error = "WinHttpOpenRequest failed";
-        return response;
-    }
-
-    // Set timeout (5 minutes for model inference)
-    DWORD timeout = 300000;
-    WinHttpSetTimeouts(hRequest, timeout, timeout, timeout, timeout);
-
-    // Send request
-    std::wstring headers = L"Content-Type: application/json";
-    BOOL sent = WinHttpSendRequest(hRequest, headers.c_str(), (DWORD)headers.size(),
-                                    (LPVOID)bodyStr.data(), (DWORD)bodyStr.size(),
-                                    (DWORD)bodyStr.size(), 0);
-    if (!sent) {
-        WinHttpCloseHandle(hRequest);
-        WinHttpCloseHandle(hConnect);
-        WinHttpCloseHandle(hSession);
-        response.error = "Failed to send request to Ollama";
-        return response;
-    }
-
-    BOOL received = WinHttpReceiveResponse(hRequest, nullptr);
-    if (!received) {
-        WinHttpCloseHandle(hRequest);
-        WinHttpCloseHandle(hConnect);
-        WinHttpCloseHandle(hSession);
-        response.error = "No response from Ollama (is it running?)";
-        return response;
-    }
-
-    // Read response
-    std::string responseBody;
-    DWORD bytesAvailable = 0;
-    while (WinHttpQueryDataAvailable(hRequest, &bytesAvailable) && bytesAvailable > 0) {
-        std::vector<char> buffer(bytesAvailable);
-        DWORD bytesRead = 0;
-        if (WinHttpReadData(hRequest, buffer.data(), bytesAvailable, &bytesRead)) {
-            responseBody.append(buffer.data(), bytesRead);
+    std::vector<RawrXD::Agent::ChatMessage> nativeMessages;
+    nativeMessages.reserve(request.messages.size());
+    for (const auto& msg : request.messages) {
+        RawrXD::Agent::ChatMessage native;
+        if (msg.contains("role") && msg["role"].is_string()) {
+            native.role = msg["role"].get<std::string>();
         }
+        if (msg.contains("content") && msg["content"].is_string()) {
+            native.content = msg["content"].get<std::string>();
+        }
+        if (msg.contains("tool_call_id") && msg["tool_call_id"].is_string()) {
+            native.tool_call_id = msg["tool_call_id"].get<std::string>();
+        }
+        if (msg.contains("tool_calls")) {
+            native.tool_calls = msg["tool_calls"];
+        }
+        nativeMessages.push_back(std::move(native));
     }
 
-    WinHttpCloseHandle(hRequest);
-    WinHttpCloseHandle(hConnect);
-    WinHttpCloseHandle(hSession);
-
-    // Parse response
-    try {
-        json respJson = json::parse(responseBody);
-
-        if (respJson.contains("error")) {
-            response.error = respJson["error"].get<std::string>();
-            return response;
-        }
-
-        response.success = true;
-
-        // Extract message
-        if (respJson.contains("message")) {
-            json respMsg = respJson["message"];
-
-            if (respMsg.contains("content") && respMsg["content"].is_string()) {
-                response.content = respMsg["content"].get<std::string>();
-            }
-
-            // Check for tool calls (Ollama format)
-            if (respMsg.contains("tool_calls") && respMsg["tool_calls"].is_array() &&
-                !respMsg["tool_calls"].empty()) {
-
-                json tcVal = respMsg["tool_calls"][static_cast<size_t>(0)]; // Handle first tool call
-                response.hasToolCall = true;
-
-                if (tcVal.contains("function")) {
-                    json funcVal = tcVal["function"];
-                    if (funcVal.contains("name")) {
-                        response.toolName = funcVal["name"].get<std::string>();
-                    }
-                    if (funcVal.contains("arguments")) {
-                        if (funcVal["arguments"].is_string()) {
-                            response.toolArgs = json::parse(funcVal["arguments"].get<std::string>());
-                        } else {
-                            response.toolArgs = funcVal["arguments"];
-                        }
-                    }
-                }
-
-                if (tcVal.contains("id")) {
-                    response.toolCallId = tcVal["id"].get<std::string>();
-                } else {
-                    response.toolCallId = "call_" + std::to_string(NowMs());
-                }
-            }
-        }
-
-        // Token counts
-        if (respJson.contains("prompt_eval_count")) {
-            response.promptTokens = respJson["prompt_eval_count"].get<int>();
-        }
-        if (respJson.contains("eval_count")) {
-            response.completionTokens = respJson["eval_count"].get<int>();
-        }
-
-    } catch (const std::exception& ex) {
+    RawrXD::Agent::AgentOllamaClient client(cfg);
+    InferenceResult native = client.ChatSync(nativeMessages, request.tools);
+    if (!native.success) {
         response.success = false;
-        response.error = std::string("Failed to parse Ollama response: ") + ex.what();
+        response.error = native.error_message.empty() ? "Native inference failed" : native.error_message;
+        return response;
+    }
+
+    response.success = true;
+    response.content = native.response;
+    response.promptTokens = static_cast<int>(native.prompt_tokens);
+    response.completionTokens = static_cast<int>(native.completion_tokens);
+
+    if (native.has_tool_calls && !native.tool_calls.empty()) {
+        response.hasToolCall = true;
+        response.toolName = native.tool_calls.front().first;
+        response.toolArgs = native.tool_calls.front().second;
+        response.toolCallId = "call_" + std::to_string(NowMs());
     }
 
     return response;

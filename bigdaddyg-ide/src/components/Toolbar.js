@@ -24,7 +24,15 @@ const Toolbar = ({
   activeDockTab,
   settings: appSettings
 }) => {
-  const { playUiSound, settings: shellSettings, setStatusLine, noisyLog, noisyLogVerbose, pushToast } = useIdeFeatures();
+  const {
+    playUiSound,
+    settings: shellSettings,
+    setStatusLine,
+    noisyLog,
+    noisyLogVerbose,
+    pushToast,
+    setToolbarActiveProviderId
+  } = useIdeFeatures();
   const [providers, setProviders] = useState([]);
   const [activeProvider, setActiveProvider] = useState('');
   const [providerListError, setProviderListError] = useState('');
@@ -35,22 +43,26 @@ const Toolbar = ({
 
   useEffect(() => {
     if (!window.electronAPI?.listAIProviders) {
-      setProviderListError('listAIProviders not in preload — run the Electron shell, not a plain browser tab.');
+      setProviderListError('Provider list needs the Electron app (preload exposes listAIProviders).');
       setProviders([]);
       setActiveProvider('');
+      setToolbarActiveProviderId('');
       noisyLog('[toolbar]', 'listAIProviders unavailable (browser or old preload)');
       setStatusLine('toolbar: provider list needs Electron');
-      return;
+      return undefined;
     }
+    let cancelled = false;
     window.electronAPI
       .listAIProviders()
       .then((list) => {
+        if (cancelled) return;
         if (!Array.isArray(list)) {
           const ipcErr =
             list && typeof list === 'object' && list.error != null ? String(list.error) : 'Unexpected response from ai:list-providers.';
           setProviderListError(ipcErr);
           setProviders([]);
           setActiveProvider('');
+          setToolbarActiveProviderId('');
           noisyLog('[toolbar]', 'listAIProviders non-array', ipcErr);
           setStatusLine(`toolbar: providers IPC error — ${ipcErr.slice(0, 120)}`);
           pushToast({ title: 'Providers', message: ipcErr, variant: 'error', durationMs: 6000 });
@@ -61,8 +73,10 @@ const Toolbar = ({
         const active = list.find((p) => p.active && p.enabled) || list.find((p) => p.enabled);
         if (active) {
           setActiveProvider(active.id);
+          setToolbarActiveProviderId(active.id);
         } else {
           setActiveProvider('');
+          setToolbarActiveProviderId('');
         }
         if (list.length === 0) {
           const msg =
@@ -79,10 +93,12 @@ const Toolbar = ({
         }
       })
       .catch((err) => {
+        if (cancelled) return;
         const msg = err && err.message ? err.message : String(err);
         setProviderListError(msg);
         setProviders([]);
         setActiveProvider('');
+        setToolbarActiveProviderId('');
         noisyLog('[toolbar]', 'listAIProviders failed', msg);
         setStatusLine(`toolbar: listAIProviders failed — ${msg.slice(0, 100)}`);
         pushToast({
@@ -92,12 +108,16 @@ const Toolbar = ({
           durationMs: 6000
         });
       });
-  }, [noisyLog, setStatusLine, pushToast]);
+    return () => {
+      cancelled = true;
+    };
+  }, [noisyLog, setStatusLine, pushToast, setToolbarActiveProviderId]);
 
   const handleProviderChange = (e) => {
     const id = e.target.value;
     if (!id) return;
     setActiveProvider(id);
+    setToolbarActiveProviderId(id);
     if (window.electronAPI?.setActiveAIProvider) {
       window.electronAPI.setActiveAIProvider(id);
     }
@@ -117,7 +137,7 @@ const Toolbar = ({
       <div className="flex items-center gap-3 flex-wrap min-w-0">
         <span
           className="font-semibold text-white shrink-0"
-          title="M01 — Shell title. M09 — Chrome works offline; file tree needs project opened. M12 docs/MINIMALISTIC_7_ENHANCEMENTS.md"
+          title="RawrXD IDE shell"
         >
           {title}
         </span>
@@ -125,7 +145,7 @@ const Toolbar = ({
           type="button"
           onClick={onOpenProject}
           className={`px-3 py-1 rounded bg-ide-accent hover:bg-blue-600 text-white text-xs ${focusVisibleRing}`}
-          title="M01 — Pick workspace folder. M06 — IPC keeps reads under project root. M08–M14 see docs/MINIMALISTIC_7_ENHANCEMENTS.md"
+          title="Choose project folder (file access stays under that root)"
         >
           Open project
         </button>
@@ -150,7 +170,7 @@ const Toolbar = ({
           className={`${dockBtn(false)} disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-ide-sidebar`}
           title={
             commandPaletteModuleEnabled
-              ? 'M01 — Palette = registered commands (Ctrl+Shift+P). M06 — No shell execution. M12 docs/MINIMALISTIC_7_ENHANCEMENTS.md'
+              ? 'Registered commands (Ctrl+Shift+P). Does not run shell commands by itself.'
               : 'Command palette module is off — open Modules and enable Command palette.'
           }
         >
@@ -163,7 +183,7 @@ const Toolbar = ({
             onSettings();
           }}
           className={dockBtn(false)}
-          title="Local settings for this Electron shell — does not configure the Win32 native IDE."
+          title="Shell settings (this window)"
         >
           Settings
         </button>
@@ -174,7 +194,7 @@ const Toolbar = ({
             onOpenChat();
           }}
           className={dockBtn(rightDockOpen && activeDockTab === 'chat')}
-          title="M01 — Chat follows Settings › AI › Chat transport (WASM vs Ollama HTTP). Models tab = GGUF manifest stream."
+          title="Chat: WASM first; optional delegation to toolbar provider (Settings › AI). Agent: main-process orchestrator."
         >
           Chat
         </button>
@@ -185,7 +205,7 @@ const Toolbar = ({
             onToggleAgent();
           }}
           className={dockBtn(rightDockOpen && activeDockTab === 'agent')}
-          title="Agent tasks with approvals — prototype; tune in Settings / approval_policy.json."
+          title="Main-process orchestrator; gates in Settings › Copilot and approval_policy.json."
         >
           Agent
         </button>
@@ -196,7 +216,7 @@ const Toolbar = ({
             onOpenModules();
           }}
           className={dockBtn(rightDockOpen && activeDockTab === 'modules')}
-          title="Feature toggles for this shell, stored locally — not an extension store."
+          title="Feature toggles (saved locally)"
         >
           Modules
         </button>
@@ -208,7 +228,7 @@ const Toolbar = ({
               onOpenSymbols();
             }}
             className={dockBtn(rightDockOpen && activeDockTab === 'symbols')}
-            title="M01 — Text-based symbol index from the editor buffer (regex). Not LSP. M04 Ctrl+Shift+Y. M12 docs/RE_MVP_SYMBOLS_XREFS.md"
+            title="Text symbol index from the editor (Ctrl+Shift+Y) — not LSP"
           >
             Symbols
           </button>
@@ -220,7 +240,7 @@ const Toolbar = ({
             onOpenModels();
           }}
           className={dockBtn(rightDockOpen && activeDockTab === 'models')}
-          title="M01 — Browser GGUF manifest stream. M12 docs/GGUF_PRODUCTION_DEPTH.md (context). No native runner here."
+          title="GGUF manifest / metadata in the browser"
         >
           Models
         </button>
@@ -235,7 +255,7 @@ const Toolbar = ({
           onChange={handleProviderChange}
           aria-label="Active AI provider for chat and invoke"
           className={`bg-ide-bg border border-gray-600 rounded px-2 py-1 text-xs text-white max-w-[140px] ${focusVisibleRing}`}
-          title="M01 — Inference routing. M12 docs/INFERENCE_PATH_MATRIX.md · config/providers.json. M14 — no secrets in tooltips."
+          title="Main-process AI provider (config/providers.json)"
         >
           {providers.length === 0 ? (
             <option value="">{providerListError ? 'No providers — see message below' : 'Loading providers…'}</option>
@@ -263,9 +283,9 @@ const Toolbar = ({
       ) : null}
       <MinimalSurfaceM814Footer
         surfaceId="toolbar"
-        offlineHint="Toolbar works offline; provider list needs Electron preload."
+        offlineHint="Toolbar works offline; AI provider list loads in Electron."
         docPath={MINIMALISTIC_DOC}
-        m13Hint="Dev: noisyLogVerbose('inference', …) when verboseDevLogs or MAX noise."
+        m13Hint="Dev: noisyLogVerbose('inference', …)"
       >
         <div className="flex flex-wrap gap-1 items-center px-3 pb-1">
           <CopySupportLineButton

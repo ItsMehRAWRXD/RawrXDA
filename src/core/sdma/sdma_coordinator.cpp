@@ -10,7 +10,8 @@
 #include <thread>
 #include <chrono>
 
-namespace rawrxd::sdma {
+namespace rawrxd {
+namespace sdma {
 
 // ============================================================
 // EXTERNAL SYMBOLS (defined in MASM)
@@ -81,27 +82,45 @@ bool SDMACoordinator::submit_transfer(
         return false;  // Scheduler not running
     }
     
-    // Allocate slot in work queue
-    uint32_t head = m_work_head.load(std::memory_order_acquire);
-    uint32_t tail = m_work_tail.load(std::memory_order_acquire);
-    
-    // Check for space (leave 1 slot gap)
-    uint32_t next_head = (head + 1) % WORK_QUEUE_SIZE;
-    if (next_head == tail) {
-        return false;  // Queue full
+    // Allocate slot in work queue (lock-free MPSC with CAS on head)
+    uint32_t claimed_head;
+    uint32_t next_head;
+    for (;;) {
+        uint32_t head = m_work_head.load(std::memory_order_acquire);
+        uint32_t tail = m_work_tail.load(std::memory_order_acquire);
+
+        // Check for space (leave 1 slot gap)
+        next_head = (head + 1) % WORK_QUEUE_SIZE;
+        if (next_head == tail) {
+            return false;  // Queue full
+        }
+
+        // Try to claim this slot by advancing head atomically.
+        if (m_work_head.compare_exchange_weak(
+                head,
+                next_head,
+                std::memory_order_acq_rel,
+                std::memory_order_acquire)) {
+            claimed_head = head;
+            break;
+        }
+
+        // Another producer advanced head; retry.
     }
     
     // Write work item
-    SDMAWorkItem& item = m_work_queue[head];
+    SDMAWorkItem& item = m_work_queue[claimed_head];
     item.src_gpu_va = src_gpu_va;
     item.dst_gpu_va = dst_gpu_va;
     item.size_bytes = size_bytes;
     item.flags = wait_for_completion ? 0x1 : 0x0;
     item.completion_fence = 0;
     
-    // Advance head (publish)
-    m_work_head.store(next_head, std::memory_order_release);
-    g_sdma_work_queue_head = (uint64_t)next_head * 64;  // Convert to byte offset
+    // Head has already been advanced by CAS; publish to MASM-visible state
+    _InterlockedExchange64(
+        reinterpret_cast<volatile long long*>(&g_sdma_work_queue_head),
+        static_cast<long long>((uint64_t)next_head * 64)  // Convert to byte offset
+    );
     
     return true;
 }
@@ -119,7 +138,7 @@ bool SDMACoordinator::start_scheduler_thread() {
         nullptr,  // lpThreadAttributes
         0,        // dwStackSize (default)
         [](LPVOID param) -> DWORD {
-            SDMACoordinator* self = static_cast<SDMACoordinator*>(param);
+            (void)param;
             
             // Bind to core 15
             HANDLE hCurrent = GetCurrentThread();
@@ -156,12 +175,14 @@ bool SDMACoordinator::start_scheduler_thread() {
     
     // Resume thread
     if (ResumeThread(hThread) == (DWORD)-1) {
+        // Failed to resume scheduler thread; clean up and reset state
         CloseHandle(hThread);
         m_scheduler_thread = nullptr;
         m_running.store(false, std::memory_order_release);
         return false;
     }
-    
+
+    // Scheduler thread successfully started
     return true;
 }
 
@@ -170,7 +191,7 @@ bool SDMACoordinator::start_scheduler_thread() {
 // ============================================================
 void SDMACoordinator::stop_scheduler() {
     m_running.store(false, std::memory_order_release);
-    
+
     if (m_scheduler_thread) {
         // Wait for graceful shutdown (timeout 1s)
         WaitForSingleObject(m_scheduler_thread, 1000);
@@ -183,7 +204,22 @@ void SDMACoordinator::stop_scheduler() {
 // STATISTICS
 // ============================================================
 SDMASchedulerState SDMACoordinator::get_stats() const {
-    return g_sdma_scheduler_state;
+    SDMASchedulerState snapshot{};
+    snapshot.ring_base = g_sdma_scheduler_state.ring_base;
+    snapshot.ring_gpu_addr = g_sdma_scheduler_state.ring_gpu_addr;
+    snapshot.head = g_sdma_scheduler_state.head;
+    snapshot.tail_cache = g_sdma_scheduler_state.tail_cache;
+    snapshot.mmio_wptr = g_sdma_scheduler_state.mmio_wptr;
+    snapshot.mmio_rptr = g_sdma_scheduler_state.mmio_rptr;
+    snapshot.burst_accumulator = g_sdma_scheduler_state.burst_accumulator;
+    snapshot.burst_deadline = g_sdma_scheduler_state.burst_deadline;
+    snapshot.pending_desc_count = g_sdma_scheduler_state.pending_desc_count;
+    snapshot.last_src = g_sdma_scheduler_state.last_src;
+    snapshot.descriptors_submitted = g_sdma_scheduler_state.descriptors_submitted;
+    snapshot.bytes_moved = g_sdma_scheduler_state.bytes_moved;
+    snapshot.coalescing_hits = g_sdma_scheduler_state.coalescing_hits;
+    snapshot.scheduling_stalls = g_sdma_scheduler_state.scheduling_stalls;
+    return snapshot;
 }
 
 bool SDMACoordinator::is_beacon_full() const {
@@ -197,4 +233,5 @@ SDMACoordinator::~SDMACoordinator() {
     stop_scheduler();
 }
 
-} // namespace rawrxd::sdma
+} // namespace sdma
+} // namespace rawrxd

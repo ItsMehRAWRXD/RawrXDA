@@ -4,9 +4,8 @@
 ; Target: RX 7800 XT (RDNA3), 16GB BAR, GGML inference
 ; ============================================================
 
-.code
 
-ALIGN 64
+; Struct type definitions (before .code to avoid block nesting errors)
 SDMA_SCHEDULER_STATE STRUCT
     ring_base           DQ ?                ; Host VA (WC mapped)
     ring_gpu_addr       DQ ?                ; GPU-visible bus address
@@ -50,8 +49,15 @@ SDMA_PKT_COPY_LINEAR STRUCT
     count_hi            DD ?
 SDMA_PKT_COPY_LINEAR ENDS
 
-ALIGN 64
+
+; ============================================================
+; Data segment for BSS state variable
+; ============================================================
+.data?
+ALIGN 16
 g_sdma_scheduler_state  SDMA_SCHEDULER_STATE <>
+
+.code
 
 ; ============================================================
 ; EXTERNAL SYMBOLS (defined by C++ coordinator)
@@ -82,11 +88,10 @@ sdma_scheduler_init_state PROC
     mov     [g_sdma_scheduler_state.mmio_rptr], r9
     mov     [g_sdma_scheduler_state.burst_accumulator], 0
     mov     [g_sdma_scheduler_state.descriptors_submitted], 0
-    mov     [g_sdma_scheduler_state.bytes_moved], 0
     mov     [g_sdma_scheduler_state.coalescing_hits], 0
     mov     [g_sdma_scheduler_state.scheduling_stalls], 0
     ret
-ENDP
+sdma_scheduler_init_state ENDP
 
 ; ============================================================
 ; MAIN SCHEDULER LOOP - Runs on isolated core
@@ -113,13 +118,15 @@ scheduler_loop:
     ; PHASE 1: Check for completed work (update tail cache)
     mov     rax, [rbp]                      ; Read GPU RPTR (MMIO)
     and     rax, BAR_RING_MASK
+    lfence                                 ; Ensure MMIO RPTR read is ordered before subsequent loads
     mov     r12, rax                        ; Update tail_cache in r12
 
     ; PHASE 2: Poll work queue (lock-free MPSC)
     mov     rsi, [g_sdma_work_queue_head]
     mov     rdi, [g_sdma_work_queue_tail]
+    lfence                                 ; Ensure tail load has acquire semantics
     cmp     rsi, rdi
-    je      .no_work
+    je      sched_no_work
 
     ; Prefetch next work item (64 bytes ahead)
     prefetchnta [rsi + 64]                  ; Next item
@@ -141,13 +148,13 @@ scheduler_loop:
     
     mov     rcx, [r15 + SDMA_SCHEDULER_STATE.burst_deadline]
     cmp     rax, rcx
-    ja      .flush_burst                    ; Deadline expired
+    ja      sched_flush_burst                    ; Deadline expired
     
     ; Check if we can coalesce
     mov     rcx, [r15 + SDMA_SCHEDULER_STATE.burst_accumulator]
     mov     rax, [rsi + 16]                 ; size_bytes
     test    rcx, rcx
-    jz      .start_new_burst
+    jz      sched_start_new_burst
     
     ; Check 4MB page alignment match
     mov     rdx, [rsi]                      ; New src
@@ -155,25 +162,64 @@ scheduler_loop:
     shr     rdx, 22                         ; Extract 4MB page
     shr     r8, 22
     cmp     rdx, r8
-    jne     .flush_burst
+    jne     sched_flush_burst
     
     ; Check size limit (avoid exceeding 2MB burst)
     add     rcx, rax
     cmp     rcx, SDMA_MAX_BURST_BYTES
-    ja      .flush_burst
+    ja      sched_flush_burst
     
     ; Coalesce: accumulate
     mov     [r15 + SDMA_SCHEDULER_STATE.burst_accumulator], rcx
-    inc     qword [r15 + SDMA_SCHEDULER_STATE.coalescing_hits]
-    jmp     .advance_queue
+    inc     qword ptr [r15 + SDMA_SCHEDULER_STATE.coalescing_hits]
+    jmp     sched_advance_queue
 
-.flush_burst:
-    ; Emit accumulated burst descriptor
-    ; (stub: full implementation in Phase 2)
-    mov     qword [r15 + SDMA_SCHEDULER_STATE.burst_accumulator], 0
-    mov     r10, 0                          ; Reset pending count
+sched_flush_burst:
+    ; Emit accumulated burst descriptor if any
+    mov     rax, [r15 + SDMA_SCHEDULER_STATE.burst_accumulator]
+    test    rax, rax
+    jz      sched_flush_burst_noop               ; Nothing accumulated, skip emission
 
-.start_new_burst:
+    ; PHASE 4-style ring space check for burst descriptor
+    mov     rcx, r13                        ; Head
+    sub     rcx, r12                        ; minus Tail
+    and     rcx, BAR_RING_MASK              ; Wrapped distance: (head - tail) & mask
+    neg     rcx                             ; Convert to (tail - head)
+    dec     rcx                             ; Reserve one slot: (tail - head - 1)
+    shr     rcx, 5                          ; Convert to entries
+    test    rcx, rcx
+    jz      sched_ring_full                      ; Defer burst emission until space exists
+
+    ; Build burst descriptor: SDMA_PKT_COPY_LINEAR in zmm1
+    ; (stub: full descriptor construction in Phase 2, using last_src + burst_accumulator)
+
+    ; Non-temporal store to ring for burst (placeholder)
+    ; vmovntdq ZMMWORD PTR [r14 + r13], zmm1
+
+    ; Advance head for burst descriptor
+    add     r13, 32
+    and     r13, BAR_RING_MASK
+
+    ; Update stats
+    inc     qword ptr [r15 + SDMA_SCHEDULER_STATE.descriptors_submitted]
+
+    ; Update pending_desc_count and possibly write WPTR for burst
+    inc     r10                             ; pending_desc_count++
+    cmp     r10, 16
+    jb      sched_after_burst_wptr
+
+    ; Write to MMIO (GPU WPTR) for burst
+    mov     eax, r13d
+    mov     [rbx], eax
+    mov     qword ptr [r15 + SDMA_SCHEDULER_STATE.head], r13
+    xor     r10, r10                        ; Reset pending count
+
+sched_after_burst_wptr:
+sched_flush_burst_noop:
+    jmp     scheduler_loop                 ; No burst to emit, resume main loop
+
+sched_after_burst_noop:
+sched_start_new_burst:
     ; Initialize new burst tracking
     mov     rax, [rsi + 16]                 ; size_bytes
     mov     [r15 + SDMA_SCHEDULER_STATE.burst_accumulator], rax
@@ -187,56 +233,58 @@ scheduler_loop:
     add     rax, [g_tsc_freq_500ns]
     mov     [r15 + SDMA_SCHEDULER_STATE.burst_deadline], rax
 
-.advance_queue:
+sched_advance_queue:
+    mov     [g_sdma_work_queue_head], rsi
+    mfence                                 ; Ensure head update is globally visible (release)
     ; Advance work queue pointer
     add     rsi, 64
     mov     [g_sdma_work_queue_head], rsi
     
     ; PHASE 4: Ring space check and descriptor emission
     mov     rax, r12                        ; Tail
-    sub     rax, r13                        ; Head
-    dec     rax                             ; Available space
-    shr     rax, 5                          ; Convert to entries
+    sub     rax, r13                        ; Tail - Head
+    dec     rax                             ; (Tail - Head - 1) in bytes
+    and     rax, BAR_RING_MASK              ; Wrap to ring size (modulo)
+    shr     rax, 5                          ; Convert bytes to descriptor entries
     test    rax, rax
-    jz      .ring_full
-
-    ; Build descriptor: SDMA_PKT_COPY_LINEAR in zmm1
-    ; (stub: full descriptor construction in Phase 2)
-    
+    jz      sched_ring_full
+    ; Non-temporal store to ring
+    vmovntdq ZMMWORD PTR [r14 + r13], zmm1
+    ; Idle: spin-hint before re-checking work/beacon state
     ; Non-temporal store to ring (placeholder)
-    ; vmovntdq [r14 + r13], zmm1
+    ; vmovntdq ZMMWORD PTR [r14 + r13], zmm1
     
     ; Advance head
     add     r13, 32
     and     r13, BAR_RING_MASK
     
     ; Update stats
-    inc     qword [r15 + SDMA_SCHEDULER_STATE.descriptors_submitted]
+    inc     qword ptr [r15 + SDMA_SCHEDULER_STATE.descriptors_submitted]
     
     ; PHASE 5: Periodic WPTR update
     inc     r10                             ; pending_desc_count++
     cmp     r10, 16
-    jb      .skip_wptr_update
+    jb      sched_skip_wptr_update
     
     ; Write to MMIO (GPU WPTR)
     mov     eax, r13d
     mov     [rbx], eax
-    mov     qword [r15 + SDMA_SCHEDULER_STATE.head], r13
+    mov     qword ptr [r15 + SDMA_SCHEDULER_STATE.head], r13
     xor     r10, r10                        ; Reset pending count
 
-.skip_wptr_update:
+sched_skip_wptr_update:
     jmp     scheduler_loop
 
-.ring_full:
-    inc     qword [r15 + SDMA_SCHEDULER_STATE.scheduling_stalls]
+sched_ring_full:
+    inc     qword ptr [r15 + SDMA_SCHEDULER_STATE.scheduling_stalls]
     pause                                   ; Spin-hint
     jmp     scheduler_loop
 
-.no_work:
-    ; Flush any pending partial burst
+sched_no_work:
+
     mov     rax, [r15 + SDMA_SCHEDULER_STATE.burst_accumulator]
     test    rax, rax
-    jnz     .flush_final_burst
+    jnz     sched_flush_final_burst
     
     ; Idle: sleep with exponential backoff
     mov     eax, 1
@@ -251,13 +299,13 @@ scheduler_loop:
     ; (Stub for Windows YieldProcessor or Sleep(0))
     jmp     scheduler_loop
 
-.flush_final_burst:
+sched_flush_final_burst:
     ; Flush remaining descriptors before idle
-    mov     qword [r15 + SDMA_SCHEDULER_STATE.burst_accumulator], 0
+    mov     qword ptr [r15 + SDMA_SCHEDULER_STATE.burst_accumulator], 0
     mov     eax, r13d
     mov     [rbx], eax                      ; Final WPTR
-    jmp     .no_work
+    jmp     sched_no_work
 
-ENDP
+sdma_scheduler_entry ENDP
 
 END

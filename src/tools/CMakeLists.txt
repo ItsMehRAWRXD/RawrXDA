@@ -1,5 +1,10 @@
 # Tools - Command-line utilities for benchmarking and testing
 
+set(_RAWRXD_OPTIONAL_GGML_LINK_LIBS)
+if(TARGET ggml)
+    list(APPEND _RAWRXD_OPTIONAL_GGML_LINK_LIBS ggml)
+endif()
+
 # RawrXD KeyGen — RSA-4096 Key Authority & License Signer (unlock 800B kernel / enterprise)
 # Build: standalone Win32 CLI; no Qt/engine deps. Use for --genkey, --hwid, --issue, --sign.
 add_executable(RawrXD_KeyGen WIN32
@@ -11,43 +16,86 @@ if(MSVC)
 endif()
 
 # Simple GPU Test - For hotpatch testing framework
-add_executable(simple_gpu_test
-    simple_gpu_test.cpp
-)
+if(TARGET InferenceEngine)
+  add_executable(simple_gpu_test
+      simple_gpu_test.cpp
+  )
 
-# Qt-free: pure C++ with STL
-target_link_libraries(simple_gpu_test PRIVATE
-    InferenceEngine
-    ggml
-)
+  # Qt-free: pure C++ with STL
+  target_link_libraries(simple_gpu_test PRIVATE
+      InferenceEngine
+      ${_RAWRXD_OPTIONAL_GGML_LINK_LIBS}
+  )
 
-# Real Multi-Model Benchmark - For comprehensive model testing
-add_executable(real_multi_model_benchmark
-    real_multi_model_benchmark.cpp
-)
+  # Real Multi-Model Benchmark - For comprehensive model testing
+  add_executable(real_multi_model_benchmark
+      real_multi_model_benchmark.cpp
+  )
 
-target_link_libraries(real_multi_model_benchmark PRIVATE
-    InferenceEngine
-    ggml
-)
+  target_link_libraries(real_multi_model_benchmark PRIVATE
+      InferenceEngine
+      ${_RAWRXD_OPTIONAL_GGML_LINK_LIBS}
+  )
 
-# GGUF API Server - Real HTTP API with GPU inference
-add_executable(gguf_api_server
-    ../gguf_api_server.cpp
-)
+  add_executable(bench_cpu
+      bench_cpu.cpp
+  )
 
-target_link_libraries(gguf_api_server PRIVATE
-    InferenceEngine
-    ggml
-    ws2_32
-)
+  target_include_directories(bench_cpu PRIVATE
+      ${CMAKE_SOURCE_DIR}/src
+      ${CMAKE_SOURCE_DIR}/include
+  )
 
-target_include_directories(gguf_api_server PRIVATE
-    ${CMAKE_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/include
-)
+  target_link_libraries(bench_cpu PRIVATE
+      InferenceEngine
+      ${_RAWRXD_OPTIONAL_GGML_LINK_LIBS}
+  )
+
+  add_executable(comprehensive_benchmark
+      comprehensive_benchmark.cpp
+      ../backend_selector.cpp
+      ../inference_benchmark.cpp
+  )
+
+  target_include_directories(comprehensive_benchmark PRIVATE
+      ${CMAKE_SOURCE_DIR}/src
+      ${CMAKE_SOURCE_DIR}/include
+  )
+
+  target_link_libraries(comprehensive_benchmark PRIVATE
+      InferenceEngine
+      ${_RAWRXD_OPTIONAL_GGML_LINK_LIBS}
+  )
+
+  # GGUF API Server - Real HTTP API with GPU inference
+  add_executable(gguf_api_server
+      ../gguf_api_server.cpp
+  )
+
+  target_link_libraries(gguf_api_server PRIVATE
+      InferenceEngine
+      ${_RAWRXD_OPTIONAL_GGML_LINK_LIBS}
+      ws2_32
+  )
+
+  target_include_directories(gguf_api_server PRIVATE
+      ${CMAKE_SOURCE_DIR}/src
+      ${CMAKE_SOURCE_DIR}/include
+  )
+else()
+  message(STATUS "[Tools] InferenceEngine library target not available; skipping inference-dependent CLI tools")
+endif()
 
 # Install targets (RawrXD_KeyGen ships with IDE for License Creator > Launch KeyGen)
-install(TARGETS RawrXD_KeyGen simple_gpu_test real_multi_model_benchmark gguf_api_server
-    RUNTIME DESTINATION bin
+set(_RAWRXD_TOOL_INSTALL_TARGETS RawrXD_KeyGen)
+
+foreach(_rawrxd_tool_target simple_gpu_test real_multi_model_benchmark bench_cpu comprehensive_benchmark gguf_api_server)
+    if(TARGET ${_rawrxd_tool_target})
+        list(APPEND _RAWRXD_TOOL_INSTALL_TARGETS ${_rawrxd_tool_target})
+    endif()
+endforeach()
+
+install(TARGETS ${_RAWRXD_TOOL_INSTALL_TARGETS}
+        RUNTIME DESTINATION bin
 )
+

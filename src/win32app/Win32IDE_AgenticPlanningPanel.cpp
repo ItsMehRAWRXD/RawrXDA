@@ -9,6 +9,51 @@
 #include <iomanip>
 #include <sstream>
 
+namespace
+{
+std::wstring wideFromUtf8(const std::string& s)
+{
+    if (s.empty())
+    {
+        return std::wstring();
+    }
+    int needed = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), static_cast<int>(s.size()), nullptr, 0);
+    if (needed <= 0)
+    {
+        return std::wstring(s.begin(), s.end());
+    }
+    std::wstring out;
+    out.resize(static_cast<size_t>(needed));
+    MultiByteToWideChar(CP_UTF8, 0, s.c_str(), static_cast<int>(s.size()), out.data(), needed);
+    return out;
+}
+
+std::string narrowFromWide(const std::wstring& ws)
+{
+    if (ws.empty())
+    {
+        return std::string();
+    }
+    int needed = WideCharToMultiByte(CP_UTF8, 0, ws.c_str(), static_cast<int>(ws.size()), nullptr, 0, nullptr, nullptr);
+    if (needed <= 0)
+    {
+        int acpNeeded = WideCharToMultiByte(CP_ACP, 0, ws.c_str(), static_cast<int>(ws.size()), nullptr, 0, nullptr, nullptr);
+        if (acpNeeded <= 0)
+        {
+            return std::string();
+        }
+        std::string acpOut;
+        acpOut.resize(static_cast<size_t>(acpNeeded));
+        WideCharToMultiByte(CP_ACP, 0, ws.c_str(), static_cast<int>(ws.size()), acpOut.data(), acpNeeded, nullptr, nullptr);
+        return acpOut;
+    }
+    std::string out;
+    out.resize(static_cast<size_t>(needed));
+    WideCharToMultiByte(CP_UTF8, 0, ws.c_str(), static_cast<int>(ws.size()), out.data(), needed, nullptr, nullptr);
+    return out;
+}
+}  // namespace
+
 
 namespace Win32IDE
 {
@@ -165,6 +210,10 @@ LRESULT Win32IDE_AgenticPlanningPanel::handleCommand(WORD wID, WORD wCode, HWND 
             this->onRollbackClicked();
             return 0;
 
+        case BUTTON_RESUME:
+            this->onResumeClicked();
+            return 0;
+
         case LIST_PLANS:
             if (wCode == LBN_SELCHANGE)
             {
@@ -236,6 +285,9 @@ void Win32IDE_AgenticPlanningPanel::initializeControls()
 
     CreateWindowW(L"BUTTON", L"Rollback", WS_CHILD | BS_PUSHBUTTON, rc.left + 270, rc.top + 210, 80, 25, m_hWnd,
                   (HMENU)BUTTON_ROLLBACK, GetModuleHandle(nullptr), nullptr);
+
+    CreateWindowW(L"BUTTON", L"Resume", WS_CHILD | BS_PUSHBUTTON, rc.left + 360, rc.top + 210, 80, 25, m_hWnd,
+                  (HMENU)BUTTON_RESUME, GetModuleHandle(nullptr), nullptr);
 
     // Status text
     m_hStatusText =
@@ -365,6 +417,9 @@ void Win32IDE_AgenticPlanningPanel::onApproveClicked()
     if (plan && m_selectedStepIndex < static_cast<int>(plan->steps.size()))
     {
         m_orchestrator->approveStep(plan, m_selectedStepIndex, "user", "Approved via UI");
+        addLogEntry("Approved step: " + plan->steps[m_selectedStepIndex].id);
+        showToastStatus(L"Step approved");
+        updateApprovalQueue();
         updateStepsList();
     }
 }
@@ -381,6 +436,9 @@ void Win32IDE_AgenticPlanningPanel::onRejectClicked()
     if (plan && m_selectedStepIndex < static_cast<int>(plan->steps.size()))
     {
         m_orchestrator->rejectStep(plan, m_selectedStepIndex, "user", "Rejected via UI");
+        addLogEntry("Rejected step: " + plan->steps[m_selectedStepIndex].id);
+        showToastStatus(L"Step rejected");
+        updateApprovalQueue();
         updateStepsList();
     }
 }
@@ -398,6 +456,7 @@ void Win32IDE_AgenticPlanningPanel::onExecuteClicked()
     {
         m_orchestrator->executeEntirePlan(plan);
         addLogEntry("Plan execution started: " + m_selectedPlanId);
+        showToastStatus(L"Plan execution started");
     }
 }
 
@@ -415,7 +474,81 @@ void Win32IDE_AgenticPlanningPanel::onRollbackClicked()
         m_orchestrator->rollbackStep(plan, m_selectedStepIndex);
         updateStepsList();
         addLogEntry("Step rolled back: " + plan->steps[m_selectedStepIndex].id);
+        showToastStatus(L"Rollback applied");
     }
+}
+
+void Win32IDE_AgenticPlanningPanel::onResumeClicked()
+{
+    if (m_selectedPlanId.empty())
+    {
+        MessageBoxW(m_hWnd, L"Select a plan first", L"Resume Plan", MB_OK | MB_ICONINFORMATION);
+        return;
+    }
+
+    auto* plan = m_orchestrator->getPlan(m_selectedPlanId);
+    if (!plan)
+    {
+        MessageBoxW(m_hWnd, L"Selected plan is no longer available.", L"Resume Plan", MB_OK | MB_ICONWARNING);
+        return;
+    }
+
+    if (plan->is_executing.load())
+    {
+        MessageBoxW(m_hWnd, L"The selected plan is already executing.", L"Resume Plan", MB_OK | MB_ICONINFORMATION);
+        return;
+    }
+
+    bool has_resumable_step = false;
+    bool has_pending_approval = false;
+    bool has_failed_step = false;
+    for (const auto& step : plan->steps)
+    {
+        if (step.status == Agentic::ExecutionStatus::Failed)
+        {
+            has_failed_step = true;
+        }
+        if (step.status != Agentic::ExecutionStatus::Waiting)
+        {
+            continue;
+        }
+        if (step.approval_status == Agentic::ApprovalStatus::Pending)
+        {
+            has_pending_approval = true;
+            continue;
+        }
+        if (step.approval_status == Agentic::ApprovalStatus::Approved ||
+            step.approval_status == Agentic::ApprovalStatus::ApprovedAuto)
+        {
+            has_resumable_step = true;
+        }
+    }
+
+    if (!has_resumable_step)
+    {
+        if (has_pending_approval)
+        {
+            MessageBoxW(m_hWnd, L"This plan still has steps waiting for approval.", L"Resume Plan",
+                        MB_OK | MB_ICONINFORMATION);
+        }
+        else if (has_failed_step)
+        {
+            MessageBoxW(m_hWnd, L"This plan already contains a failed step. Review or roll back before resuming.",
+                        L"Resume Plan", MB_OK | MB_ICONWARNING);
+        }
+        else
+        {
+            MessageBoxW(m_hWnd, L"There are no remaining approved steps to resume.", L"Resume Plan",
+                        MB_OK | MB_ICONINFORMATION);
+        }
+        return;
+    }
+
+    m_orchestrator->executeEntirePlan(plan);
+    addLogEntry("Plan resumed: " + m_selectedPlanId);
+    showToastStatus(L"Plan resumed");
+    updateApprovalQueue();
+    updateStepsList();
 }
 
 // ============================================================================
@@ -445,7 +578,34 @@ void Win32IDE_AgenticPlanningPanel::onApprovalRequested(const Agentic::Execution
     std::string msg = "Approval required for step: " + step.title;
     addLogEntry(msg);
 
-    // Could show a notification popup here
+    std::wstringstream prompt;
+    prompt << L"Plan: " << wideFromUtf8(plan->plan_id) << L"\n"
+           << L"Step: " << wideFromUtf8(step.title) << L"\n\n"
+           << L"Approve this step now?\n"
+           << L"Yes = Approve, No = Reject, Cancel = Keep Pending";
+
+    int choice = MessageBoxW(m_hWnd, prompt.str().c_str(), L"Approval Required", MB_YESNOCANCEL | MB_ICONQUESTION);
+    if (choice == IDYES)
+    {
+        m_orchestrator->approveStep(plan, step_idx, "user", "Approved via approval modal");
+
+        addLogEntry("Approved step via modal: " + step.id);
+        showToastStatus(L"Step approved");
+    }
+    else if (choice == IDNO)
+    {
+        m_orchestrator->rejectStep(plan, step_idx, "user", "Rejected via approval modal");
+
+        addLogEntry("Rejected step via modal: " + step.id);
+        showToastStatus(L"Step rejected");
+    }
+    else
+    {
+        addLogEntry("Approval left pending: " + step.id);
+    }
+
+    updateApprovalQueue();
+    updateStepsList();
 }
 
 void Win32IDE_AgenticPlanningPanel::onResize(int width, int height)
@@ -471,4 +631,31 @@ std::vector<std::string> Win32IDE_AgenticPlanningPanel::getLogSnapshot()
     return m_logEntries;
 }
 
+void Win32IDE_AgenticPlanningPanel::showToastStatus(const std::wstring& text)
+{
+    if (m_hStatusText)
+    {
+        SetWindowTextW(m_hStatusText, text.c_str());
+    }
+    addLogEntry(narrowFromWide(text));
+}
+
 }  // namespace Win32IDE
+
+extern "C" HWND Win32IDE_ShowAgenticPlanningPanel(HWND hParent)
+{
+    auto* panel = Win32IDE::GetAgenticPlanningPanel();
+    if (!panel)
+    {
+        return nullptr;
+    }
+
+    HWND hwnd = panel->createWindow(hParent);
+    if (hwnd)
+    {
+        ShowWindow(hwnd, SW_SHOW);
+        SetFocus(hwnd);
+    }
+
+    return hwnd;
+}

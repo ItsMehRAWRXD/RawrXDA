@@ -5068,6 +5068,7 @@ CommandResult handleToolsExtensions(const CommandContext& ctx) {
 }
 
 CommandResult handleToolsProfileResults(const CommandContext& ctx) {
+    auto& reg = SharedFeatureRegistry::instance();
     auto& pt = RawrXD::Perf::PerfTelemetry::instance();
     auto report = pt.generateReport(0);
     ctx.output("[Tools] Profile results:\n");
@@ -5078,20 +5079,48 @@ CommandResult handleToolsProfileResults(const CommandContext& ctx) {
     ctx.output(buf);
     snprintf(buf, sizeof(buf), "  Samples:      %zu\n", report.count);
     ctx.output(buf);
+
+    const std::string md = reg.generatePerfTraceMarkdown(20);
+    ctx.output("\n[Tools] Shared dispatch reverse trace:\n");
+    ctx.output(md.c_str());
     return CommandResult::ok("tools.profileResults");
 }
 
 CommandResult handleToolsProfileStart(const CommandContext& ctx) {
+    auto& reg = SharedFeatureRegistry::instance();
+    reg.resetPerfTraceStats();
+    reg.setPerfTraceEnabled(true);
+
+    if (ctx.args && ctx.args[0]) {
+        const int thresholdUs = std::atoi(ctx.args);
+        if (thresholdUs > 0) {
+            reg.setPerfSlowThresholdUs(static_cast<uint64_t>(thresholdUs));
+        }
+    }
+
     RawrXD::Perf::PerfTelemetry::instance().captureBaseline();
-    ctx.output("[Tools] CPU profiler started — baseline captured.\n");
+    char msg[256];
+    snprintf(msg, sizeof(msg),
+             "[Tools] CPU profiler started; shared reverse trace ON (slow threshold: %llu us).\n",
+             static_cast<unsigned long long>(reg.getPerfSlowThresholdUs()));
+    ctx.output(msg);
     return CommandResult::ok("tools.profileStart");
 }
 
 CommandResult handleToolsProfileStop(const CommandContext& ctx) {
+    auto& reg = SharedFeatureRegistry::instance();
+    reg.setPerfTraceEnabled(false);
+
     auto report = RawrXD::Perf::PerfTelemetry::instance().generateReport(0);
     char buf[256];
-    snprintf(buf, sizeof(buf), "[Tools] CPU profiler stopped — %zu samples collected.\n", report.count);
+    snprintf(buf, sizeof(buf),
+             "[Tools] CPU profiler stopped — %zu samples collected. Shared reverse trace OFF.\n",
+             report.count);
     ctx.output(buf);
+
+    const std::string md = reg.generatePerfTraceMarkdown(20);
+    ctx.output("[Tools] Shared dispatch reverse trace snapshot:\n");
+    ctx.output(md.c_str());
     return CommandResult::ok("tools.profileStop");
 }
 

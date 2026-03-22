@@ -3,8 +3,10 @@
 ; Manages 256MB BAR ring buffer + tensor slot bitmap
 ; ============================================================
 
-.code
 
+; ============================================================
+; Type definitions (must be before .code to avoid block nesting errors)
+; ============================================================
 ; Constants
 SDMA_DESCRIPTOR_SIZE        EQU 32
 SDMA_MAX_IN_FLIGHT          EQU 256
@@ -20,22 +22,29 @@ TENSOR_ARENA_SLOTS          EQU 262144       ; 16GB / 64KB
 TENSOR_SLOT_MAP STRUCT
     bitmap              DQ ?                ; 32KB bitmap (262144 bits)
     next_scan           DQ ?                ; Hint for O(1) allocation
-    lock                DD ?                ; Spinlock
+    spin_latch          DD ?                ; Spinlock
     _pad                DD ?
 TENSOR_SLOT_MAP ENDS
 
-ALIGN 64
-g_tensor_slot_map TENSOR_SLOT_MAP <>
+
+
+; Struct for ring allocator state (type definition only, no storage)
+SDMA_RING_STATE STRUCT
+    entries_allocated   DQ ?
+    total_bytes         DQ ?
+    ring_overflow_count DQ ?
+SDMA_RING_STATE ENDS
 
 ; ============================================================
-; RING BUFFER ALLOCATOR STATE
+; Data segment for BSS allocations
 ; ============================================================
-ALIGN 64
-g_sdma_ring_allocator STRUCT
-    entries_allocated   DQ ?                ; Count of in-flight descriptors
-    total_bytes         DQ ?                ; Total bytes submitted
-    ring_overflow_count DQ ?                ; Wrap-around counter
-ENDS
+.data?
+ALIGN 16
+g_tensor_slot_map TENSOR_SLOT_MAP <>
+ALIGN 16
+g_sdma_ring_allocator SDMA_RING_STATE <>
+
+.code
 
 ; PUBLIC EXPORTS
 PUBLIC allocate_tensor_slot
@@ -55,7 +64,7 @@ sdma_ring_advance_head PROC
     add     rax, rcx
     and     rax, BAR_RING_MASK              ; Wrap at ring boundary
     ret
-ENDP
+sdma_ring_advance_head ENDP
 
 ; ============================================================
 ; ALLOCATE_TENSOR_SLOT
@@ -65,130 +74,89 @@ ENDP
 ; ============================================================
 ALIGN 16
 allocate_tensor_slot PROC
-    ; Convert size to slot count
+    ; Convert size to slot count (minimum 1)
     add     rcx, TENSOR_SLOT_GRANULARITY - 1
-    shr     rcx, 16                        ; rcx = slots needed
-    mov     r8, rcx                        ; r8 = slot count
-    
-    ; Acquire spinlock
-    lea     r9, [g_tensor_slot_map.lock]
+    shr     rcx, 16
+    test    rcx, rcx
+    jnz     alloc_slots_ready
+    mov     rcx, 1
+alloc_slots_ready:
+    mov     r8, rcx                        ; r8 = slots needed
+
+    ; Acquire spin lock
+    lea     r11, [g_tensor_slot_map.spin_latch]
     mov     r10d, 1
-.spin_lock:
-    xchg    [r9], r10d
+alloc_lock_spin:
+    xchg    dword ptr [r11], r10d
     test    r10d, r10d
-    jz      .lock_acquired
+    jz      alloc_lock_acquired
     pause
-    jmp     .spin_lock
+    mov     r10d, 1
+    jmp     alloc_lock_spin
 
-.lock_acquired:
-    ; Preload bitmap base
-    lea     rsi, [g_tensor_slot_map.bitmap]
+alloc_lock_acquired:
+    lea     r10, [g_tensor_slot_map.bitmap] ; bitmap base
     mov     rdx, [g_tensor_slot_map.next_scan]
-    
-    ; Validate scan hint
     cmp     rdx, TENSOR_ARENA_SLOTS
-    jb      @f
-    xor     rdx, rdx                       ; Wrap hint if invalid
-@@:
-    
-    mov     rdi, TENSOR_ARENA_SLOTS         ; Loop count
+    jb      alloc_scan_start
+    xor     rdx, rdx
 
-.scan_loop:
-    ; Load 64 bytes (512 slots) at once using AVX-512
-    vmovdqu64 zmm0, [rsi + rdx * 8]
-    vpternlogd zmm0, zmm0, zmm0, 0xFF      ; Invert: 1=free, 0=allocated
-    vpmovmskb k0, zmm0                      ; Extract to bitmask
-    
-    ; Find first run of r8 consecutive 1s
-    mov     r10, FFFFFFFFFFFFFFFF h
-    cmp     r8d, 64
-    ja      .need_multiword
-    
-    ; Single-word search (up to 64 slots)
-    kmovq   rax, k0
-    
-    ; Find first set bit run of length r8
-    mov     rcx, r8
-    mov     r11, rax
-    
-.find_run:
-    test    rax, rax
-    jz      .advance_scan
-    
-    ; Check if lowest r8 bits are all set
-    mov     r10, (1 << 0)
-    mov     r9d, r8d
-.check_bits:
-    cmp     r9d, 0
-    je      .run_found
-    test    rax, r10
-    jz      .try_next_bit
-    shl     r10, 1
-    dec     r9d
-    jmp     .check_bits
-    
-.try_next_bit:
-    shr     rax, 1
-    mov     r9d, r8d
-    jmp     .find_run
-    
-.run_found:
-    ; Calculate slot index: rdx * 512 + bit_position
-    mov     rax, rdx
-    shl     rax, 9                         ; ×512 slots per 64B chunk
-    
-    ; Extract bit position
-    mov     rcx, r11
-    sub     rcx, rax                       ; Remaining bits
-    bsf     r10, rcx
-    add     rax, r10
-    
-    ; Mark slots as allocated in bitmap
-    mov     r9d, r8d
-.mark_loop:
-    ; Set bit in bitmap
-    mov     r10, rax
-    shr     r10, 3                         ; Byte offset
-    mov     r11b, al
-    and     r11b, 7                        ; Bit offset
-    mov     r12b, 1
-    shl     r12b, cl
-    or      byte ptr [rsi + r10], r12b
-    
+alloc_scan_start:
+    mov     r9, TENSOR_ARENA_SLOTS          ; max candidates
+
+alloc_candidate_loop:
+    mov     rax, rdx                        ; candidate start slot
+    mov     rcx, r8                         ; remaining slots to verify
+
+alloc_verify_loop:
+    cmp     rax, TENSOR_ARENA_SLOTS
+    jae     alloc_candidate_fail
+
+    mov     rdx, rax
+    shr     rdx, 6                          ; qword index
+    mov     r8, rax
+    and     r8, 63                          ; bit index within qword
+    bt      qword ptr [r10 + rdx*8], r8
+    jc      alloc_candidate_fail
+
     inc     rax
-    dec     r9d
-    jne     .mark_loop
-    
-    ; Update next_scan hint
+    dec     rcx
+    jnz     alloc_verify_loop
+
+    ; Mark the verified run as allocated
+    mov     rax, rdx
+    mov     rcx, r8
+alloc_mark_loop:
+    mov     rdx, rax
+    shr     rdx, 6
+    mov     r8, rax
+    and     r8, 63
+    bts     qword ptr [r10 + rdx*8], r8
+    inc     rax
+    dec     rcx
+    jnz     alloc_mark_loop
+
+    ; Save next scan and release lock
     mov     [g_tensor_slot_map.next_scan], rax
-    
-    ; Release spinlock
-    mov     dword ptr [r9], 0
-    
-    ; Return original slot index
-    sub     rax, r8
+    mov     dword ptr [r11], 0
+    mov     rax, rdx                        ; return start slot index
     ret
 
-.need_multiword:
-    ; Multi-word search (>64 slots)
-    ; Stub: implement if needed for >4MB allocations
-    jmp     .advance_scan
-
-.advance_scan:
-    add     rdx, 512                       ; Next 64-byte chunk
+alloc_candidate_fail:
+    inc     rdx
     cmp     rdx, TENSOR_ARENA_SLOTS
-    jb      @f
-    xor     rdx, rdx                       ; Wrap around
-@@:
-    dec     rdi
-    jnz     .scan_loop
-    
-    ; Allocation failed (bitmap full)
-    mov     dword ptr [r9], 0              ; Release lock
+    jb      alloc_candidate_advance_done
+    xor     rdx, rdx
+alloc_candidate_advance_done:
+    dec     r9
+    jnz     alloc_candidate_loop
+
+    ; Allocation failed
+    mov     dword ptr [r11], 0
     mov     rax, -1
     ret
 
-ENDP
+allocate_tensor_slot ENDP
 
 ; ============================================================
 ; FREE_TENSOR_SLOT
@@ -197,39 +165,36 @@ ENDP
 ALIGN 16
 free_tensor_slot PROC
     ; Acquire spinlock
-    lea     r9, [g_tensor_slot_map.lock]
+    lea     r9, [g_tensor_slot_map.spin_latch]
     mov     r10d, 1
-.spin_lock_free:
+free_spin_lock:
     xchg    [r9], r10d
     test    r10d, r10d
-    jz      .lock_acq_free
+    jz      free_lock_acq
     pause
-    jmp     .spin_lock_free
+    jmp     free_spin_lock
 
-.lock_acq_free:
-    lea     rsi, [g_tensor_slot_map.bitmap]
+free_lock_acq:
+    lea     r10, [g_tensor_slot_map.bitmap]
     mov     rax, rcx                       ; slot_index
-    mov     r8d, edx                       ; slot_count
+    mov     ecx, edx                       ; slot_count
     
-.clear_loop:
+free_clear_loop:
     ; Clear bit in bitmap
-    mov     r10, rax
-    shr     r10, 3
-    mov     r11b, al
-    and     r11b, 7
-    mov     r12b, 1
-    shl     r12b, cl
-    not     r12b
-    and     byte ptr [rsi + r10], r12b
+    mov     rdx, rax
+    shr     rdx, 6
+    mov     r8, rax
+    and     r8, 63
+    btr     qword ptr [r10 + rdx*8], r8
     
     inc     rax
-    dec     r8d
-    jne     .clear_loop
+    dec     ecx
+    jne     free_clear_loop
     
     ; Release spinlock
     mov     dword ptr [r9], 0
     ret
 
-ENDP
+free_tensor_slot ENDP
 
 END

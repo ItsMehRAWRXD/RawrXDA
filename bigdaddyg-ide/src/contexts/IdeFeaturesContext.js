@@ -37,8 +37,8 @@ const STORAGE_KEY = 'rawrxd.ide.shell.v1';
 const defaultSettings = {
   temperature: 0.2,
   maxTokens: 4096,
-  /** Copilot-like: show ghost-style hints in editor (Monaco inline completions when enabled) */
-  copilotInlineHints: true,
+  /** Legacy persisted key; editor no longer registers Monaco inline/suggest providers. */
+  copilotInlineHints: false,
   /** Auto-run mutating agent steps (write/append) without approval */
   agentAutoApprove: false,
   /** Auto-run read-only steps (read_file, list_dir, search_repo) without approval */
@@ -102,8 +102,16 @@ const defaultSettings = {
   verboseDevLogs: false,
   /** 'normal' | 'maximum' — extra motion + sounds */
   noiseIntensity: 'normal',
-  /** 'wasm-local' | 'ollama-http' — WASM is renderer-only; HTTP uses main-process ai:invoke. */
+  /**
+   * `wasm-local` — Chat dock runs embedded WASM first; see `chatAgenticProviderFallback`.
+   * `ollama-http` — Chat dock skips WASM and calls main `ai:invoke` only (same HTTP stack as toolbar).
+   */
   chatTransport: 'wasm-local',
+  /**
+   * When true (default): WASM echo-stub or WASM load/ABI failure delegates to `ai:invoke` in Electron
+   * so the dock still gets a real model answer when a provider is configured.
+   */
+  chatAgenticProviderFallback: true,
   /** Relative to page origin or absolute URL; default matches `invokeRawrxdWasmChat` default asset path */
   wasmChatUrl: '/rawrxd-inference.wasm',
 
@@ -178,7 +186,13 @@ function readInitialDockTab() {
  */
 export function IdeFeaturesProvider({ children }) {
   const persisted = loadPersisted();
-  const [settings, setSettingsState] = useState(() => ({ ...defaultSettings, ...persisted.settings }));
+  const [settings, setSettingsState] = useState(() => {
+    const merged = { ...defaultSettings, ...persisted.settings };
+    if (merged.chatAgenticProviderFallback === undefined) merged.chatAgenticProviderFallback = true;
+    return merged;
+  });
+  /** Toolbar dropdown selection — Chat dock uses this for `ai:invoke` when delegating */
+  const [toolbarActiveProviderId, setToolbarActiveProviderId] = useState('');
   const [modules, setModulesState] = useState({ ...defaultModules, ...persisted.modules });
   const [shortcuts, setShortcutsState] = useState(() => mergeShortcuts(persisted.shortcuts));
   const [systemPrefersReducedMotion, setSystemPrefersReducedMotion] = useState(false);
@@ -406,6 +420,8 @@ export function IdeFeaturesProvider({ children }) {
   const value = {
     settings,
     setSettings,
+    toolbarActiveProviderId,
+    setToolbarActiveProviderId,
     modules,
     toggleModule,
     resetModulesToDefaults,

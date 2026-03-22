@@ -37,9 +37,8 @@ bool Win32IDEBridge::initialize(HINSTANCE hInst, int nCmdShow) {
         return false;
     }
     
-    // Initialize hotpatching
-    if (config_.enableHotpatching && !initializeHotpatching()) {
-        
+    // Initialize hotpatching unconditionally so it is callable in any context.
+    if (!initializeHotpatching()) {
         return false;
     }
     
@@ -163,7 +162,7 @@ bool Win32IDEBridge::registerCapability(const char* name, uint32_t version,
 }
 
 bool Win32IDEBridge::registerHotpatch(const char* target, void* replacement) {
-    if (!hotpatch_) {
+    if (!hotpatch_ && !initializeHotpatching()) {
         return false;
     }
     
@@ -176,7 +175,7 @@ bool Win32IDEBridge::registerHotpatch(const char* target, void* replacement) {
 }
 
 bool Win32IDEBridge::enableHotpatch(const char* name) {
-    if (!hotpatch_) {
+    if (!hotpatch_ && !initializeHotpatching()) {
         return false;
     }
     
@@ -184,7 +183,7 @@ bool Win32IDEBridge::enableHotpatch(const char* name) {
 }
 
 bool Win32IDEBridge::disableHotpatch(const char* name) {
-    if (!hotpatch_) {
+    if (!hotpatch_ && !initializeHotpatching()) {
         return false;
     }
     

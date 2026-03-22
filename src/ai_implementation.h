@@ -36,6 +36,8 @@ struct LLMConfig {
     std::string endpoint = "http://localhost:11434";
     std::string modelName = "llama2";
     std::string apiKey;
+    std::string localBackendMode = "auto-with-verified-fallback"; // "cpu-only", "gpu-only", "auto-with-verified-fallback"
+    bool allowRemoteFallback = false;
     int maxTokens = 2048;
     float temperature = 0.7f;
     float topP = 0.9f;
@@ -251,6 +253,7 @@ private:
     
     int64_t m_totalLatency = 0;
     int64_t m_totalTokensUsed = 0;
+    std::string m_resolvedRuntimeLane = "unresolved";
 };
 
 //=============================================================================

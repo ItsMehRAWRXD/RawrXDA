@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useCallback, useMemo } from 'react';
 import Editor from '@monaco-editor/react';
 import { useIdeFeatures } from '../contexts/IdeFeaturesContext';
+import { useProject } from '../contexts/ProjectContext';
 import {
   CopySupportLineButton,
   MinimalSurfaceM814Footer,
@@ -10,7 +11,6 @@ import {
 } from '../utils/minimalisticM08M14';
 import { extractSymbolsFromText } from '../utils/textSymbolIndex';
 
-/** Pick a file symbol at or before the cursor line for inline hints (textSymbolIndex; not LSP). */
 function pickInlineIdentifierHint(text, filePath, monacoLanguageId, lineNumber) {
   const syms = extractSymbolsFromText(text || '', filePath || '', monacoLanguageId || '');
   if (!syms.length) return null;
@@ -42,7 +42,41 @@ const EditorPanel = ({ activeFile, projectRoot, onUpdateFile }) => {
   const editorRef = useRef(null);
   const monacoRef = useRef(null);
   const inlineDisposableRef = useRef(null);
+  const { saveActiveFile } = useProject();
   const { settings, modules, playUiSound, pushToast, noisyLog, noisyLogVerbose, setStatusLine } = useIdeFeatures();
+
+  const runSaveRef = useRef(async () => ({ success: false }));
+
+  const runSave = useCallback(async () => {
+    const live = editorRef.current != null ? editorRef.current.getValue() : undefined;
+    const r = await saveActiveFile(live);
+    if (r.success) {
+      playUiSound('tick');
+      pushToast({
+        title: 'Saved',
+        message: activeFile?.name || 'File',
+        variant: 'success',
+        durationMs: 2200
+      });
+      setStatusLine(`[editor] saved ${activeFile?.name || ''}`);
+      noisyLog('[editor] save ok', activeFile?.path);
+    } else {
+      playUiSound('warn');
+      pushToast({
+        title: 'Save',
+        message: r.error || 'Save failed',
+        variant: 'error',
+        durationMs: 5200
+      });
+      setStatusLine('[editor] save failed');
+      noisyLog('[editor] save failed', r.error);
+    }
+    return r;
+  }, [saveActiveFile, activeFile?.name, activeFile?.path, playUiSound, pushToast, setStatusLine, noisyLog]);
+
+  useEffect(() => {
+    runSaveRef.current = runSave;
+  }, [runSave]);
 
   const displayPath = useMemo(
     () => (activeFile?.path ? workspaceRelativePath(activeFile.path, projectRoot) : ''),
@@ -83,7 +117,6 @@ const EditorPanel = ({ activeFile, projectRoot, onUpdateFile }) => {
               filterText: word.word
             });
           }
-
           if (lineText.trim().startsWith('//') || lineText.trim().startsWith('#')) {
             items.push({
               insertText: noisy ? ' RAWRXD-NOISY: refactor into small functions' : ' summarize behavior in one line',
@@ -108,7 +141,6 @@ const EditorPanel = ({ activeFile, projectRoot, onUpdateFile }) => {
               filterText: word.word
             });
           }
-
           noisyLog('[editor]', 'inline completions offered', model.uri?.toString(), items.length);
           return { items };
         },
@@ -117,15 +149,14 @@ const EditorPanel = ({ activeFile, projectRoot, onUpdateFile }) => {
 
       try {
         inlineDisposableRef.current = monaco.languages.registerInlineCompletionsProvider(INLINE_LANGS, provider);
-        noisyLog('[editor]', 'inline completions provider registered', INLINE_LANGS.length, 'langs');
+        noisyLog('[editor]', 'inline completions registered', INLINE_LANGS.length);
         if (settings.noiseIntensity === 'maximum') {
           playUiSound('tick');
           pushToast({
             title: 'Editor',
-            message:
-              'Buffer-local inline hints on — regex/identifier picks from the open file, not a hosted Copilot service.',
+            message: 'Buffer-local inline hints enabled (regex on open file).',
             variant: 'success',
-            durationMs: 2600
+            durationMs: 2200
           });
         }
       } catch (e) {
@@ -165,24 +196,29 @@ const EditorPanel = ({ activeFile, projectRoot, onUpdateFile }) => {
   const handleEditorDidMount = (editor, monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
-    if (editor) {
-      const opts = {
-        scrollBeyondLastLine: false,
-        minimap: { enabled: true },
-        fontSize: 14,
-        lineHeight: 1.4,
-        renderLineHighlight: 'all',
-        renderWhitespace: 'boundary',
-        largeFileOptimizations: true,
-        stopRenderingLineAfter: 10000,
-        maxTokenizationLineLength: 20000,
-        renderControlCharacters: false
-      };
-      if (settings.noiseIntensity === 'maximum') {
-        opts.quickSuggestions = { other: true, comments: true, strings: true };
-      }
-      editor.updateOptions(opts);
+    try {
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+        void runSaveRef.current();
+      });
+    } catch {
+      /* ignore */
     }
+    const opts = {
+      scrollBeyondLastLine: false,
+      minimap: { enabled: true },
+      fontSize: 14,
+      lineHeight: 1.4,
+      renderLineHighlight: 'all',
+      renderWhitespace: 'boundary',
+      largeFileOptimizations: true,
+      stopRenderingLineAfter: 10000,
+      maxTokenizationLineLength: 20000,
+      renderControlCharacters: false
+    };
+    if (settings.noiseIntensity === 'maximum') {
+      opts.quickSuggestions = { other: true, comments: true, strings: true };
+    }
+    editor.updateOptions(opts);
     registerInlineCompletions(monaco);
   };
 
@@ -198,11 +234,11 @@ const EditorPanel = ({ activeFile, projectRoot, onUpdateFile }) => {
         className="flex-1 flex items-center justify-center bg-ide-bg px-6"
         role="region"
         aria-label="Editor — no file open"
-        title="M03 — Pick a file from the sidebar. Buffer stays in memory until Save IPC exists."
+        title="Open a project file from the sidebar. Ctrl+S saves through Electron."
       >
         <div className="text-center text-gray-400 max-w-md">
           <h2 className="text-xl font-semibold mb-2 text-white">No file open</h2>
-          <p className="text-sm mb-2">M03 — Open a project, then select a file in the sidebar.</p>
+          <p className="text-sm mb-2">Open a project folder, then pick a file in the sidebar.</p>
           <CopySupportLineButton
             getText={() => '[editor] no_file_open=true'}
             label="Copy support line"
@@ -217,9 +253,9 @@ const EditorPanel = ({ activeFile, projectRoot, onUpdateFile }) => {
           />
           <MinimalSurfaceM814Footer
             surfaceId="editor-empty"
-            offlineHint="Empty state works offline; opening files needs Electron project IPC."
+            offlineHint="Works offline. Project files load after you open a folder."
             docPath={MINIMALISTIC_DOC}
-            m13Hint="Dev: noisyLogVerbose('editor', …) when verbose or MAX noise."
+            m13Hint="Dev: noisyLogVerbose('editor', …)"
           />
         </div>
       </div>
@@ -232,14 +268,22 @@ const EditorPanel = ({ activeFile, projectRoot, onUpdateFile }) => {
     <div className="flex-1 flex flex-col min-h-0">
       <div className="flex items-stretch px-4 py-2 bg-ide-toolbar border-b border-gray-700">
         <div className="flex flex-col gap-1 min-w-0 flex-1">
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-2 min-w-0 flex-wrap">
             <span
               className="text-sm font-medium text-white truncate"
-              title={`M01 — ${displayPath || activeFile.path}\nDoes not auto-save to disk until Save is wired.`}
+              title={`${displayPath || activeFile.path} — Save writes this buffer (Ctrl+S).`}
             >
               {activeFile.name}
             </span>
             <span className="text-xs text-gray-400 bg-ide-sidebar px-2 py-1 rounded shrink-0">{language}</span>
+            <button
+              type="button"
+              onClick={() => void runSave()}
+              className={`text-xs px-2 py-1 rounded border border-cyan-700/50 text-cyan-200 hover:bg-cyan-950/40 shrink-0 ${focusVisibleRing}`}
+              title="Save to disk (Ctrl+S)"
+            >
+              Save
+            </button>
             {settings.copilotInlineHints && modules.inlineCompletion && (
               <span className="text-[10px] uppercase tracking-wider text-cyan-400/90 animate-pulse shrink-0">
                 inline on
@@ -247,10 +291,7 @@ const EditorPanel = ({ activeFile, projectRoot, onUpdateFile }) => {
             )}
           </div>
           {displayPath && displayPath !== activeFile.name ? (
-            <span
-              className="text-[10px] text-gray-500 truncate font-mono"
-              title="M14 — workspace-relative path for display"
-            >
+            <span className="text-[10px] text-gray-500 truncate font-mono" title="Relative to project root">
               {displayPath}
             </span>
           ) : null}
@@ -265,12 +306,9 @@ const EditorPanel = ({ activeFile, projectRoot, onUpdateFile }) => {
           onMount={handleEditorDidMount}
           onChange={handleChange}
           loading={
-            <div
-              className="flex flex-col items-center justify-center h-full text-white gap-2 px-4 text-center"
-              title="M03 — If this hangs, reload the window; Monaco loads from the CDN bundle."
-            >
+            <div className="flex flex-col items-center justify-center h-full text-white gap-2 px-4 text-center">
               <span className="animate-pulse">Loading editor…</span>
-              <span className="text-xs text-gray-500">Stuck? Reload the window (Ctrl+R).</span>
+              <span className="text-xs text-gray-500">Monaco is loading.</span>
             </div>
           }
           options={{
@@ -286,9 +324,9 @@ const EditorPanel = ({ activeFile, projectRoot, onUpdateFile }) => {
       </div>
       <MinimalSurfaceM814Footer
         surfaceId="editor"
-        offlineHint="Buffer edits work offline; LSP/remote features degrade if backends are down."
+        offlineHint="Save persists changes. Inline hints: enable in Settings › Copilot and Modules › Inline completion."
         docPath={MINIMALISTIC_DOC}
-        m13Hint="Dev: noisyLogVerbose('editor', …) on active file changes."
+        m13Hint="Dev: noisyLogVerbose('editor', …)"
       />
     </div>
   );

@@ -1,0 +1,2 @@
+/* CRA resolves package subpaths like `xterm/css/xterm.css` inconsistently; load from disk. */
+@import '../../node_modules/xterm/css/xterm.css';

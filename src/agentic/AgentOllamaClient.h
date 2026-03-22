@@ -1,13 +1,13 @@
 // =============================================================================
-// AgentOllamaClient.h — Streaming Ollama Client for Agentic + FIM inference
+// AgentOllamaClient.h — Native streaming client for Agentic + FIM inference
 // =============================================================================
-// Wraps the existing Backend::OllamaClient with:
+// Wraps the native BackendOrchestrator with:
 //   1. Tool-calling dispatch (function calling via structured output)
 //   2. FIM (Fill-in-Middle) streaming for Ghost Text completions
 //   3. Conversation history management
 //   4. Token streaming with callback interface
 //
-// Uses WinHTTP for streaming (no curl dependency on Windows).
+// Native BackendOrchestrator integration only.
 // No exceptions — all errors via AgentResult pattern.
 // =============================================================================
 #pragma once
@@ -21,11 +21,6 @@
 #include <deque>
 #include <nlohmann/json.hpp>
 
-#ifdef _WIN32
-#include <windows.h>
-#include <winhttp.h>
-#endif
-
 using json = nlohmann::json;
 
 namespace RawrXD {
@@ -37,8 +32,8 @@ namespace Agent {
 struct OllamaConfig {
     std::string host = "127.0.0.1";
     uint16_t port = 11434;
-    std::string chat_model;                         // Auto-detected from Ollama /api/tags
-    std::string fim_model;                          // Auto-detected from Ollama /api/tags
+    std::string chat_model;                         // Active chat model tag
+    std::string fim_model;                          // Active FIM model tag
     int timeout_ms = 120000;
     float temperature = 0.2f;
     float top_p = 0.9f;
@@ -120,7 +115,7 @@ struct OllamaHealth {
 };
 
 // ---------------------------------------------------------------------------
-// AgentOllamaClient — streaming Ollama interface for agentic + FIM
+// AgentOllamaClient — native streaming interface for agentic + FIM
 // ---------------------------------------------------------------------------
 class AgentOllamaClient {
 public:
@@ -193,24 +188,10 @@ public:
     MetricsSnapshot GetMetricsSnapshot() const;
 
 private:
-    // HTTP helpers
-    std::string MakeGetRequest(const std::string& endpoint);
-    std::string MakePostRequest(const std::string& endpoint, const std::string& body);
-    bool MakeStreamingPost(const std::string& endpoint,
-                           const std::string& body,
-                           std::function<bool(const std::string& line)> on_line,
-                           ErrorCallback on_error);
-
-    // JSON builders
-    json BuildChatPayload(const std::vector<ChatMessage>& messages,
-                          const json& tools, bool stream) const;
-    json BuildFIMPayload(const std::string& prefix,
-                         const std::string& suffix,
-                         const std::string& filename, bool stream) const;
-
-    // Response parsers
-    InferenceResult ParseChatResponse(const std::string& json_str);
-    InferenceResult ParseFIMResponse(const std::string& json_str);
+    // RawrXD native inference helpers
+    std::string BuildPromptFromMessages(const std::vector<ChatMessage>& messages,
+                                        const json& tools) const;
+    void ParseToolCallsFromResponse(const std::string& response, InferenceResult& result) const;
 
     OllamaConfig m_config;
     std::mutex m_mutex;
@@ -218,16 +199,11 @@ private:
     std::atomic<bool> m_cancelRequested{false};
     std::atomic<uint64_t> m_totalRequests{0};
     std::atomic<uint64_t> m_totalTokens{0};
+    std::atomic<uint64_t> m_nextRequestId{1};
     double m_totalDurationMs{0.0};
     int m_consecutiveErrors{0};
     std::deque<std::string> m_recentErrors;
     bool ShouldEmitError(const std::string& msg);
-
-#ifdef _WIN32
-    HINTERNET m_hSession{nullptr};
-    void InitWinHTTP();
-    void CleanupWinHTTP();
-#endif
 };
 
 } // namespace Agent

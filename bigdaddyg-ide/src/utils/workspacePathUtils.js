@@ -1,4 +1,4 @@
-/** Repo-root-relative path to the M01–M07 polish checklist (for tooltips / footers). */
+/** Repo-root-relative path to the shell polish checklist (footers / reference). */
 export const MINIMALISTIC_DOC = 'docs/MINIMALISTIC_7_ENHANCEMENTS.md';
 
 /**

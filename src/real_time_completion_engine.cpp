@@ -390,3 +390,48 @@ std::string RealTimeCompletionEngine::generateCacheKey(
 
     return prefix + "|" + suffix;
 }
+
+// ============================================================================
+// Asynchronous API Implementations
+// ============================================================================
+
+std::future<std::vector<CodeCompletion>> RealTimeCompletionEngine::getCompletionsAsync(
+    const std::string& prefix,
+    const std::string& suffix,
+    const std::string& fileType,
+    const std::string& context) {
+
+    return std::async(std::launch::async, [this, prefix, suffix, fileType, context]() {
+        return getCompletions(prefix, suffix, fileType, context);
+    });
+}
+
+std::future<std::vector<CodeCompletion>> RealTimeCompletionEngine::getInlineCompletionsAsync(
+    const std::string& currentLine,
+    int cursorColumn,
+    const std::string& filePath) {
+
+    return std::async(std::launch::async, [this, currentLine, cursorColumn, filePath]() {
+        return getInlineCompletions(currentLine, cursorColumn, filePath);
+    });
+}
+
+std::future<std::vector<CodeCompletion>> RealTimeCompletionEngine::getMultiLineCompletionsAsync(
+    const std::string& prefix,
+    int maxLines) {
+
+    return std::async(std::launch::async, [this, prefix, maxLines]() {
+        return getMultiLineCompletions(prefix, maxLines);
+    });
+}
+
+std::future<std::vector<CodeCompletion>> RealTimeCompletionEngine::getContextualCompletionsAsync(
+    const std::string& filePath,
+    int line,
+    int column,
+    const std::string& scope) {
+
+    return std::async(std::launch::async, [this, filePath, line, column, scope]() {
+        return getContextualCompletions(filePath, line, column, scope);
+    });
+}

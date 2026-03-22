@@ -97,7 +97,7 @@ const NoisyLayer = () => {
         role="status"
         aria-live="polite"
         aria-relevant="text"
-        title="M01 — Status line + toasts: audio/UI feedback only; does not alter inference routing or agent policy. M06 — MAX noise is explicit opt-in (Settings → Noise). M12 docs/MINIMALISTIC_7_ENHANCEMENTS.md"
+        title="Renderer status and toasts; does not alter main-process inference or agent policy. MAX noise toggles in Settings › Noise."
         className={`fixed bottom-0 left-0 right-0 z-[140] h-7 flex items-center px-3 text-[11px] font-mono border-t overflow-hidden ${
           max && !reduce
             ? 'bg-gradient-to-r from-violet-950 via-cyan-950 to-fuchsia-950 border-fuchsia-500/50 text-fuchsia-100 animate-pulse'
@@ -111,15 +111,14 @@ const NoisyLayer = () => {
         >
           <span className="text-amber-400 font-bold">● RAWRXD</span>
           <span>
-            {statusLine ||
-              `Ready — Keys: ${keysHint} · (full list: Settings › Keyboard) · dock: Ctrl+Shift+A/M/Y/G · sidebar Ctrl+B · project Ctrl+O`}
+            {statusLine || `Idle · ${keysHint}`}
           </span>
           {max && (
             <>
               <span className="text-fuchsia-300">MAXIMUM NOISE MODE</span>
               <span>🔊 sounds on</span>
               <span>✨ toasts on</span>
-              <span>⚡ inline hints</span>
+              <span>⚡ chrome FX</span>
             </>
           )}
         </motion.div>

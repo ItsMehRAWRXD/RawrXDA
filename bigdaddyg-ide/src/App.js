@@ -20,10 +20,10 @@ import {
 import './styles/tailwind.css';
 
 /**
- * IDE shell composition: providers, keyboard shortcuts, status line, and dock/palette toggles.
- * Renders UI only — does not merge `config/providers.json` or enforce `approval_policy.json` in this layer.
- * Terminal uses Electron PTY IPC when available (`electron/preload.js` terminal*); it is not a UI stub when that IPC is present — web-only previews show an honest offline shell message instead.
+ * IDE shell: providers, shortcuts, status line, dock/palette. UI layer — provider merge and approval policy are main-process concerns.
+ * Terminal is a real PTY when Electron exposes terminal IPC; browser-only previews show an offline message.
  */
+
 function AppContent() {
   const { platform } = useElectron();
   const e03SuccessLoggedRef = React.useRef(false);
@@ -52,7 +52,8 @@ function AppContent() {
     openProject,
     openFile,
     updateFile,
-    loadDirectoryChildren
+    loadDirectoryChildren,
+    saveActiveFile
   } = useProject();
 
   const {
@@ -95,6 +96,24 @@ function AppContent() {
     shortcuts
   } = ide;
 
+  const saveWithFeedback = React.useCallback(async () => {
+    const r = await saveActiveFile();
+    if (r.success) {
+      playUiSound('tick');
+      pushToast({
+        title: 'Saved',
+        message: activeFile?.name || 'File',
+        variant: 'success',
+        durationMs: 2200
+      });
+      setStatusLine('[file] saved');
+    } else if (r.error) {
+      playUiSound('warn');
+      pushToast({ title: 'Save', message: r.error, variant: 'error', durationMs: 5200 });
+      setStatusLine('[file] save failed');
+    }
+  }, [saveActiveFile, activeFile?.name, playUiSound, pushToast, setStatusLine]);
+
   const startAgentWithSettings = React.useCallback(
     (goal, panelPolicy) => {
       const po = panelPolicy && typeof panelPolicy === 'object' ? panelPolicy : {};
@@ -124,12 +143,14 @@ function AppContent() {
 
   /** E03: default main-process AI lane for agent / HTTP tools (independent of dock chat transport). */
   React.useEffect(() => {
-    if (!settings.preferLocalInferenceFirst) return;
+    if (!settings.preferLocalInferenceFirst) return undefined;
     const api = window.electronAPI;
-    if (!api?.setActiveAIProvider) return;
+    if (!api?.setActiveAIProvider) return undefined;
+    let cancelled = false;
     api
       .setActiveAIProvider('bigdaddyg')
       .then((r) => {
+        if (cancelled) return;
         if (r?.success) {
           if (!e03SuccessLoggedRef.current) {
             e03SuccessLoggedRef.current = true;
@@ -137,28 +158,37 @@ function AppContent() {
           }
         } else {
           setStatusLine(
-            '[E03] Set AI provider failed — open Settings, confirm provider list, or check the main process log.'
+            '[E03] setActiveAIProvider failed: provider list or main-process log.'
           );
           noisyLog('[E03] setActiveAIProvider returned unsuccessful');
         }
       })
       .catch((err) => {
+        if (cancelled) return;
         setStatusLine(
-          '[E03] Set AI provider failed — retry after the app is fully loaded; check Settings → AI / main log if it persists.'
+          '[E03] setActiveAIProvider error — retry after load; inspect main log if repeated.'
         );
         noisyLog('[E03] setActiveAIProvider error', err?.message || String(err));
       });
+    return () => {
+      cancelled = true;
+    };
   }, [settings.preferLocalInferenceFirst, noisyLog, setStatusLine]);
 
   /** Sync dynamic accelerators to Electron application menu */
   React.useEffect(() => {
     const api = window.electronAPI;
-    if (!api?.setMenuAccelerators) return;
+    if (!api?.setMenuAccelerators) return undefined;
     const electronMap = shortcutsToElectronAccelerators(shortcuts);
+    let cancelled = false;
     api.setMenuAccelerators(electronMap).catch((err) => {
+      if (cancelled) return;
       noisyLog('[menu] setMenuAccelerators failed', err?.message || String(err));
-      setStatusLine('[menu] Shortcut sync failed — restart the app or check the main process log.');
+      setStatusLine('[menu] setMenuAccelerators failed — main log');
     });
+    return () => {
+      cancelled = true;
+    };
   }, [shortcuts, noisyLog, setStatusLine]);
 
   const prevDockRef = React.useRef(null);
@@ -182,7 +212,7 @@ function AppContent() {
   React.useEffect(() => {
     if (commandPaletteOpen && !paletteWasOpenRef.current) {
       playUiSound('palette');
-      setStatusLine('Command palette — allow-listed commands only; type to filter, ↵ to run (does not execute shell)');
+      setStatusLine('Command palette — filter with keyboard · Enter runs selection · fixed command list (not a shell)');
       noisyLog('[palette] opened');
     }
     paletteWasOpenRef.current = commandPaletteOpen;
@@ -192,12 +222,10 @@ function AppContent() {
   React.useEffect(() => {
     if (settingsOpen && !settingsWasOpenRef.current) {
       playUiSound('open');
-      setStatusLine(
-        'Settings — shell prefs persist in localStorage (IdeFeaturesContext key); Noise tab for MAX volume (opt-in loud UI sounds)'
-      );
+      setStatusLine('Settings — stored under localStorage key rawrxd.ide.shell.v1');
       pushToast({
         title: 'Settings',
-        message: 'Tweak AI, Copilot, and 🔊 Noise. Clear site storage to reset shell prefs if something feels stuck.',
+        message: 'AI, Copilot/agent gates, accessibility, keyboard, and Noise (UI sounds) live here.',
         variant: 'info',
         durationMs: 2600
       });
@@ -269,6 +297,13 @@ function AppContent() {
         action: () => setRightDockTab(null)
       },
       {
+        id: 'save',
+        label: 'File: Save',
+        category: 'File',
+        accelerator: formatShortcutDisplayFixed(shortcuts.save),
+        action: () => void saveWithFeedback()
+      },
+      {
         id: 'open-project',
         label: 'File: Open Project…',
         category: 'File',
@@ -295,7 +330,9 @@ function AppContent() {
     openRightDock,
     setRightDockTab,
     openProject,
-    setSidebarOpen
+    setSidebarOpen,
+    shortcuts.save,
+    saveWithFeedback
   ]);
 
   const onIdeAction = useCallback(
@@ -335,11 +372,14 @@ function AppContent() {
         case 'sidebar-toggle':
           setSidebarOpen((o) => !o);
           break;
+        case 'save':
+          void saveWithFeedback();
+          break;
         default:
           break;
       }
     },
-    [setCommandPaletteOpen, setSettingsOpen, openRightDock, setSidebarOpen]
+    [setCommandPaletteOpen, setSettingsOpen, openRightDock, setSidebarOpen, saveWithFeedback]
   );
 
   useEffect(() => {
@@ -393,6 +433,11 @@ function AppContent() {
         setSidebarOpen((o) => !o);
         return;
       }
+      if (matchesShortcut(e, shortcuts.save)) {
+        e.preventDefault();
+        void saveWithFeedback();
+        return;
+      }
       if (matchesShortcut(e, shortcuts.openProject)) {
         e.preventDefault();
         openProject();
@@ -409,7 +454,8 @@ function AppContent() {
     openRightDock,
     toggleRightDock,
     celebrate,
-    setSidebarOpen
+    setSidebarOpen,
+    saveWithFeedback
   ]);
 
   const agentDockProps = {

@@ -1,5 +1,6 @@
 #include "chat_interface.h"
 #include "universal_model_router.h"
+#include "cpu_inference_engine.h"
 #include <iostream>
 #include <thread>
 #include <chrono>
@@ -10,6 +11,14 @@ ChatInterface::ChatInterface() {
 }
 
 ChatInterface::~ChatInterface() {
+}
+
+void ChatInterface::setModel(const std::string& modelPath) {
+    m_engine = std::make_unique<CPUInference::CPUInferenceEngine>();
+    if (!m_engine->LoadModel(modelPath)) {
+        std::cerr << "Failed to load model: " << modelPath << std::endl;
+        m_engine.reset();
+    }
 }
 
 void ChatInterface::attachModelRouter(UniversalModelRouter* router) {
@@ -23,41 +32,43 @@ void ChatInterface::attachContextManager(ContextManager* ctx) {
 void ChatInterface::sendMessage(const std::string& text) {
     appendToHistory("user", text);
     
-    if (onMessageReceived) {
-        onMessageReceived({ "user", text, std::time(nullptr) });
-    }
-    
-    if (!m_router) {
-        processResponse("Error: Model Router not attached.");
-        return;
-    }
-    
-    // Launch async inference
-    // In a real app, we'd pick the model from a selector. 
-    // For now, we hardcode or pick "default" if router supports it, or "gpt-4" placeholder
-    std::string model = "gpt-4"; // Fallback
-    // Ideally router->getDefaultModel()
-    
-    std::thread([this, text, model]() {
-        try {
-            // Context Management would happen here
-            // e.g. std::string context = m_context->retrieveContext(text);
-            // std::string fullPrompt = context + "\n" + text;
-            
-            std::string response = m_router->routeQuery(model, text);
-            processResponse(response);
-        } catch (const std::exception& e) {
-            processResponse(std::string("Error: ") + e.what());
+    if (m_engine) {
+        // Use native engine
+        std::string prompt = "System: You are a helpful AI assistant.\n";
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            for (const auto& msg : m_history) {
+                prompt += msg.role + ": " + msg.content + "\n";
+            }
         }
-    }).detach();
+        prompt += "Assistant: ";
+        
+        std::string response;
+        std::vector<int32_t> tokens = m_engine->Tokenize(prompt);
+        m_engine->GenerateStreaming(tokens, 100, [&response](const std::string& token) { response += token; }, [](){}, nullptr);
+        
+        processResponse(response);
+    } else if (m_router) {
+        // Fallback to router
+        std::string model = "gpt-4"; // Fallback
+        
+        std::thread([this, text, model]() {
+            try {
+                std::string response = m_router->routeQuery(model, text);
+                processResponse(response);
+            } catch (const std::exception& e) {
+                processResponse(std::string("Error: ") + e.what());
+            }
+        }).detach();
+    } else {
+        processResponse("Error: No model router or engine attached.");
+    }
 }
 
 void ChatInterface::processResponse(const std::string& modelOutput) {
     appendToHistory("assistant", modelOutput);
     
-    if (onMessageReceived) {
-        onMessageReceived({ "assistant", modelOutput, std::time(nullptr) });
-    }
+    // Removed bidirectional callback
 }
 
 void ChatInterface::appendToHistory(const std::string& role, const std::string& content) {

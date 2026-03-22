@@ -193,6 +193,8 @@ public:
     void setMaxRetries(int retries);
     void setConfidenceThreshold(float threshold);
     void setAutoEscalate(bool enabled);
+    void setModelTemperature(float temperature);
+    float getModelTemperature() const;
 
 private:
     AgenticHotpatchOrchestrator();
@@ -235,6 +237,7 @@ private:
     int                                         m_maxRetries;
     float                                       m_confidenceThreshold;
     bool                                        m_autoEscalate;
+    float                                       m_modelTemperature;
     uint64_t                                    m_sequenceCounter;
 
     // Callback storage

@@ -8,7 +8,7 @@
  * ABI v2: module exports `rawrxd_input_base`, `rawrxd_input_cap`, `rawrxd_output_base`, `rawrxd_output_cap`,
  * `rawrxd_abi_version` so the host cannot desync from the `.wat` / `.wasm` layout.
  *
- * M07 — Echo bootstrap → ok:true, lane wasm-echo-stub, empty content (ChatPanel shows finished WASM-only message; no host API).
+ * M07 — Echo bootstrap → ok:true, lane wasm-echo-stub, empty content; ChatPanel may delegate to `ai:invoke` when enabled.
  * Generative WASM → ok:true, lane wasm-rawrxd, content is model output only.
  */
 
@@ -60,7 +60,7 @@ export async function invokeRawrxdWasmChat(fullPrompt, options = {}) {
   } catch (e) {
     return {
       ok: false,
-      error: `${e.message} — Run npm run build:wasm-inference && node scripts/sync-chat-wasm-embed.js, or open via Electron for disk-loaded wasm.`
+      error: `${e.message} — Rebuild WASM and refresh the embed: npm run build:wasm-inference && node scripts/sync-chat-wasm-embed.js`
     };
   }
 
@@ -82,7 +82,7 @@ export async function invokeRawrxdWasmChat(fullPrompt, options = {}) {
   if (payload.length > abi.inputCap) {
     return {
       ok: false,
-      error: `Prompt exceeds WASM input cap (${abi.inputCap} bytes). Shorten the message or set Settings › AI → Chat transport → Ollama HTTP.`
+      error: `Prompt exceeds WASM input cap (${abi.inputCap} bytes). Shorten the message or trim the active-file attachment in Settings › General.`
     };
   }
   if (abi.inputBase + payload.length > memory.buffer.byteLength) {

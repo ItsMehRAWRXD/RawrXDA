@@ -10,6 +10,9 @@
 #include <functional>
 #include <cstdint>
 
+// Forward declaration for AdvancedPerformanceProfiler
+namespace RawrXD { namespace Profiling { class AdvancedPerformanceProfiler; } }
+
 struct ProfilerImpl;
 
 struct ProfileSnapshot {
@@ -35,8 +38,8 @@ public:
     using ProfilingCompletedFn = std::function<void(const std::string& reportJson)>;
     using PerformanceWarningFn = std::function<void(const std::string&)>;
 
-    Profiler() = default;
-    ~Profiler() = default;
+    Profiler();
+    ~Profiler();
 
     void setOnMetricsUpdated(MetricsUpdatedFn f)       { m_onMetricsUpdated = std::move(f); }
     void setOnProfilingCompleted(ProfilingCompletedFn f) { m_onProfilingCompleted = std::move(f); }
@@ -56,6 +59,44 @@ public:
     ProfileSnapshot getCurrentSnapshot() const;
     std::string getProfilingReport() const;
     bool exportReport(const std::string& filePath) const;
+
+    // Batch 3: Advanced Performance Profiling Enhancements
+    void enableAdvancedProfiling();
+    void disableAdvancedProfiling();
+    bool isAdvancedProfilingEnabled() const;
+
+    // Enhancement 1: Real-time Performance Monitoring
+    void startRealTimeMonitoring();
+    void stopRealTimeMonitoring();
+    std::vector<ProfileSnapshot> getMetricsHistory(int minutes = 60) const;
+
+    // Enhancement 2: Bottleneck Detection
+    std::vector<std::string> detectBottlenecks();
+    void analyzeComponentBottlenecks(const std::string& componentName);
+
+    // Enhancement 3: Memory Usage Profiling
+    void startMemoryProfiling();
+    void stopMemoryProfiling();
+    std::string getMemoryProfileReport() const;
+
+    // Enhancement 4: Execution Path Tracing
+    std::string startTrace(const std::string& operationName, const std::string& component = "unknown");
+    void endTrace(const std::string& traceId);
+    void addTraceEvent(const std::string& traceId, const std::string& eventName);
+    std::string getTraceReport(const std::string& traceId) const;
+
+    // Enhancement 5: Resource Contention Analysis
+    void monitorResourceContention(const std::string& resourceName, const std::string& resourceType);
+    std::string getResourceContentionReport() const;
+
+    // Enhancement 6: Performance Regression Detection
+    void establishPerformanceBaseline(const std::string& metricName, double value);
+    std::vector<std::string> detectPerformanceRegressions();
+
+    // Enhancement 7: Profiling Data Analytics
+    std::string generateAnalyticsReport(const std::string& timeRange = "1h");
+    void exportAdvancedProfilingData(const std::string& filePath);
+    std::string getProfilingSummary() const;
 
 private:
     void collectSystemMetrics();
@@ -83,7 +124,7 @@ private:
     std::chrono::high_resolution_clock::time_point m_lastMetricsCollection;
     float m_lastGpuUsagePercent = 0.0f;
     float m_lastGpuMemoryMB = 0.0f;
-    std::vector<ProfileSnapshot> m_snapshots;
+    mutable std::vector<ProfileSnapshot> m_snapshots;
     float m_cpuThresholdPercent = 95.0f;
     float m_memoryThresholdPercent = 85.0f;
     float m_gpuThresholdPercent = 95.0f;
@@ -91,4 +132,8 @@ private:
     MetricsUpdatedFn     m_onMetricsUpdated;
     ProfilingCompletedFn m_onProfilingCompleted;
     PerformanceWarningFn m_onPerformanceWarning;
+
+    // Batch 3: Advanced Performance Profiling
+    bool m_advancedProfilingEnabled = false;
+    std::unique_ptr<RawrXD::Profiling::AdvancedPerformanceProfiler> m_advancedProfiler;
 };
