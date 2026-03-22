@@ -14,11 +14,14 @@
 #include "copilot_gap_closer.h"
 #include <sstream>
 #include <iomanip>
+#include <cstdlib>
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
+#ifdef _WIN32
 #include <windows.h>
+#endif
 
 extern "C" {
     int32_t Task_SubmitRequest(const char* task, const void** files, int32_t count) { return 0; }
@@ -75,7 +78,7 @@ std::string CrdtEngine::GetStatusString() const {
     ss << "CRDT Collaboration Engine\n"
        << "  Initialized:  " << (IsInitialized() ? "YES" : "NO") << "\n"
        << "  Peer ID:      " << GetPeerId() << "\n"
-       << "  Doc Length:    " << GetDocLength() << " bytes\n"
+       << "  Doc Length: " << GetDocLength() << " bytes\n"
        << "  Lamport:      " << GetLamport() << "\n"
        << "  Max Peers:    " << CRDT_MAX_PEERS << "\n"
        << "  Max Content:  " << CRDT_MAX_CONTENT << " per op\n";
@@ -93,7 +96,11 @@ std::string GitContextProvider::ExtractContext(const char* repoPath,
     if (!ctx) return "(no context available)";
 
     std::string result(static_cast<const char*>(ctx));
+#ifdef _WIN32
     GlobalFree(ctx);
+#else
+    free(ctx);
+#endif
     return result;
 }
 
@@ -114,14 +121,26 @@ std::string GitContextProvider::GetStatusString() const {
 int32_t TaskDispatcher::Submit(const std::string& task, const std::vector<std::string>& files) {
     // Current ASM implementation doesn't have Task_SubmitRequest, so we stub it for now
     // to allow the link to proceed.
-    return 0; 
+    //
+    // Return value semantics:
+    //   - Future implementation: on success, this should return a positive task identifier
+    //     that can be passed to GetStatus/Cancel; on failure, it should return 0 or a
+    //     negative error code as defined by the final API contract.
+    //   - Current stub: always returns 0, which means "no task was submitted / not supported
+    //     yet". Callers must treat 0 as a failed or unimplemented submission.
+    return 0;
 }
 
 int32_t TaskDispatcher::GetStatus(int32_t taskId) {
+    // Stub implementation: task status queries are not yet supported and always
+    // report status code 0. The concrete status-code semantics will be defined
+    // when the underlying dispatcher is implemented.
     return 0;
 }
 
 bool TaskDispatcher::Cancel(int32_t taskId) {
+    // Stub implementation: task cancellation is not yet supported and always
+    // returns false to indicate that no cancellation was performed.
     return false;
 }
 
@@ -151,7 +170,7 @@ std::string CopilotGapCloser::GetStatusString() const {
        << m_composer.GetStatusString() << "\n"
        << m_crdt.GetStatusString() << "\n"
        << m_gitCtx.GetStatusString() << "\n"
-       << "Subsystems Active: " << m_initCount << " / 4\n";
+       << "Subsystems Active: " << m_initCount << " / 5\n";
     return ss.str();
 }
 

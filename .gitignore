@@ -81,6 +81,14 @@ models/*.bin
 *.sqlite
 *.zip
 
+# ─── PATCH FIREWALL: Sovereign Data Plane ───
+# Critical for preventing VS Code patch-storm freeze.
+# DO NOT TRACK THESE MODEL DIRECTORIES.
+OllamaModels/
+blobs/
+F:/OllamaModels/
+*.sqlite3
+
 # Temp
 tmp/
 temp/
