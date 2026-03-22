@@ -5,36 +5,44 @@
   "main": "electron/main.js",
   "homepage": "./",
   "scripts": {
-    "start": "concurrently \"npm run dev:react\" \"wait-on http://localhost:3000 && electron .\"",
+    "start": "concurrently \"npm run dev:react\" \"wait-on http://127.0.0.1:3000 && electron .\"",
     "dev:react": "react-scripts start",
     "dev:electron": "electron .",
     "build": "react-scripts build",
     "build:electron": "npm run build && electron-builder",
     "build:nightly": "node scripts/nightly-build.js",
     "pack": "electron-builder --dir",
-    "dist": "electron-builder"
+    "dist": "electron-builder",
+    "build:wasm-inference": "wat2wasm public/rawrxd-inference.wat -o public/rawrxd-inference.wasm && node scripts/sync-chat-wasm-embed.js",
+    "sync:chat-wasm-embed": "node scripts/sync-chat-wasm-embed.js",
+    "rebuild:pty": "npx @electron/rebuild -f -w node-pty"
   },
   "dependencies": {
+    "@monaco-editor/react": "^4.6.0",
+    "autoprefixer": "^10.4.16",
+    "axios": "^1.6.0",
+    "chokidar": "^3.5.3",
+    "electron-updater": "^6.1.0",
+    "framer-motion": "^10.16.0",
+    "lucide-react": "^0.288.0",
+    "monaco-editor": "^0.44.0",
+    "node-pty": "^1.0.0",
+    "postcss": "^8.4.31",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-scripts": "5.0.1",
-    "monaco-editor": "^0.44.0",
-    "@monaco-editor/react": "^4.6.0",
     "tailwindcss": "^3.3.0",
-    "autoprefixer": "^10.4.16",
-    "postcss": "^8.4.31",
-    "axios": "^1.6.0",
     "ws": "^8.14.0",
-    "chokidar": "^3.5.3",
-    "framer-motion": "^10.16.0",
-    "lucide-react": "^0.288.0",
-    "electron-updater": "^6.1.0"
+    "xterm": "5.3.0",
+    "xterm-addon-fit": "0.8.0"
   },
   "devDependencies": {
+    "@electron/rebuild": "^3.6.0",
+    "concurrently": "^8.2.0",
     "electron": "^28.0.0",
     "electron-builder": "^24.0.0",
     "electron-is-dev": "^2.0.0",
-    "concurrently": "^8.2.0",
+    "wabt": "^1.0.36",
     "wait-on": "^7.0.1"
   },
   "browserslist": {
@@ -60,6 +68,9 @@
       "electron/**/*",
       "config/**/*",
       "node_modules/**/*"
+    ],
+    "asarUnpack": [
+      "**/node_modules/node-pty/**/*"
     ],
     "mac": {
       "category": "public.app-category.developer-tools"

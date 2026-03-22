@@ -558,8 +558,9 @@ void FileRegistry::registerAllFiles() {
     registerFile("./Ship/QT-REMOVAL-PHASE3.ps1");
     registerFile("./Ship/QT-REMOVAL-PHASE4.ps1");
     registerFile("./Ship/QT-REMOVAL-PHASE5.ps1");
-    registerFile("./Ship/QtMigrationTracker.hpp");
-    registerFile("./Ship/QtReplacements.hpp");
+    registerFile("./Ship/MigrationProgressTracker.hpp");
+    registerFile("./Ship/RawrCompatIo.hpp");
+    registerFile("./Ship/StdReplacements.hpp");
     registerFile("./Ship/RawrEngine.py");
     registerFile("./Ship/RawrXD_AICompletion.c");
     registerFile("./Ship/RawrXD_AdvancedCodingAgent.cpp");

@@ -1,8 +1,8 @@
 # IDE master progress tracker
 
-Cross-cutting backlog and **measured** doc-derived counts. Use this alongside category-specific lists (sovereign batches, bridge audit).
+Cross-cutting backlog and **measured** doc-derived counts. Use this alongside category-specific lists (sovereign batches, bridge audit). **North-star themes (7 pillars):** `docs/IDE_STRATEGIC_PILLARS.md`. **Partial → ship:** `docs/ENHANCEMENT_15_PRODUCT_READY_7.md` (E01–E15, PR01–PR07).
 
-Last updated: 2026-03-20.
+Last updated: 2026-03-20 (batch 4 UI/remediation).
 
 ---
 
@@ -30,7 +30,7 @@ If your personal “200 tasks” list lives outside the repo, keep the **63** co
 | **`Win32IDE_Window.cpp`** | **Orphan TU** | Not in root CMake Win32IDE list — do not assume its `WM_APP+200` path runs in production. |
 | **Command routing** | **Intentional legacy-first** | See `docs/COMMAND_DISPATCH_BRIDGE.md` — inverting order is unsafe until SSOT handlers stop re-posting same command IDs. |
 | **Swarm** | **Partial** | `RawrXD_SwarmFacade` + IAT lane vs `subagent_core` / CLI — still multiple entrypoints; façade reduces menu vs IAT drift, not a single process-wide API yet. |
-| **Inference matrix** | **Open** | No single doc table “menu action → backend”; still P0 **D** in bridge audit. |
+| **Inference matrix** | **Partial** | `docs/INFERENCE_PATH_MATRIX.md` maps major actions → lanes; exhaustive menu-ID coverage still P0 **D** in bridge audit. |
 
 ---
 
@@ -55,3 +55,16 @@ If your personal “200 tasks” list lives outside the repo, keep the **63** co
 **Clangd:** Spurious `~L730` parse errors on `Win32IDE.cpp` were reported in one session; the menu code around that line is normal wide-string `AppendMenuW` calls—re-index or ignore if the file compiles.
 
 **Open:** P0 B–D, P1–P2 per `docs/BRIDGE_GAP_AUDIT.md`; inference matrix doc optional.
+
+---
+
+## Batch 4 of N — UI / diagnostics remediation (2026-03-20)
+
+1. **EditorOperations:** linear undo with redo truncation; no re-entrant mutex in `ReplaceText`/`Undo`/`Redo`; `Cut` uses one lock + clipboard (no `Copy` deadlock); multi-line cut clears undo stack.
+2. **RouterOperations:** Vista+ **IFileOpenDialog** / **IFileSaveDialog** with UTF-8 result paths; optional UTF-8 initial path for save via `SHCreateItemFromParsingName`.
+3. **Win32IDE_SwarmModelSelector:** real `enumerateSwarmModelCandidates()` + `Win32IDE_SwarmModelSelector.h`; wired in `CMakeLists.txt` for `RawrXD-Win32IDE`.
+4. **WindowManager::Initialize:** explicit `IDELogger` WARNING (secondary shell vs `Win32IDE_Core`).
+5. **`.github/workflows/ci.yml`:** removed conflict markers; added `master` to branch filters.
+6. **Docs:** `docs/FULL_SOURCE_DIAGNOSTICS_AUDIT_2026-03-20.md` remediation table updated.
+
+**Verify:** MSVC build `RawrXD-Win32IDE`; smoke: open/save/folder dialogs on a UTF-8 path; editor undo/redo after replace.

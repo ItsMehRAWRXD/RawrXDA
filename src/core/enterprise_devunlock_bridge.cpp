@@ -142,15 +142,16 @@ extern "C" int64_t Enterprise_DevUnlock() {
             g_800B_Unlocked = 1;
             g_EnterpriseFeatures = 0xFFFFFFFFFFFFFFFFULL;
 
-            std::cout << "[Enterprise] Dev Unlock SUCCEEDED — all features enabled\n";
-            std::cout << "[Enterprise]   License hash: 0x" << std::hex << x << std::dec << "\n";
-            std::cout << "[Enterprise]   HWID: 0x" << std::hex << hwid << std::dec << "\n";
+            char buf[256];
+            enterpriseLogLine("[Enterprise] Dev Unlock SUCCEEDED — all features enabled");
+            (void)std::snprintf(buf, sizeof(buf), "[Enterprise]   License hash: 0x%llX", static_cast<unsigned long long>(x));
+            enterpriseLogLine(buf);
+            (void)std::snprintf(buf, sizeof(buf), "[Enterprise]   HWID: 0x%llX", static_cast<unsigned long long>(hwid));
+            enterpriseLogLine(buf);
             return 1;
         }
     }
 
-    std::cout << "[Enterprise] Dev Unlock FAILED — no valid hash found\n";
+    enterpriseLogLine("[Enterprise] Dev Unlock FAILED — no valid hash found");
     return 0;
 }
-
-#endif // RAWR_HAS_MASM

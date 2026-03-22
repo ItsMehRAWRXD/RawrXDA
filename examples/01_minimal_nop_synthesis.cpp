@@ -33,7 +33,7 @@ int main()
     const std::vector<std::uint8_t> pe = fmt::composePe64MinimalImageFromManifest(peM, codeBytes);
 
     sv::TargetManifest machM{};
-    machM.os = sv::TargetOs::MacOS;
+    cmake-- build / workspace / build - mingw-- target RawrXD - Win32IDE - j 4 Result : machM.os = sv::TargetOs::MacOS;
     machM.arch = sv::TargetArch::X86_64;
     machM.objectFormat = sv::ObjectFormat::MachO;
     const std::vector<std::uint8_t> mach = fmt::composeMacho64MinimalImageFromManifest(machM, codeBytes);
@@ -44,10 +44,7 @@ int main()
         return 1;
     }
 
-    std::fprintf(stderr,
-                 "lab synthesis OK: ELF=%zu bytes, PE=%zu bytes, Mach-O=%zu bytes\n",
-                 elf.size(),
-                 pe.size(),
+    std::fprintf(stderr, "lab synthesis OK: ELF=%zu bytes, PE=%zu bytes, Mach-O=%zu bytes\n", elf.size(), pe.size(),
                  mach.size());
     return 0;
 }

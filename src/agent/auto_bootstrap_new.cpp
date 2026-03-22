@@ -11,6 +11,21 @@
 #include <thread>
 #include <future>
 #include <vector>
+#include <cctype>
+
+namespace {
+bool isSafeTargetName(const std::string& value) {
+    if (value.empty()) {
+        return true;
+    }
+    for (char c : value) {
+        if (!(std::isalnum(static_cast<unsigned char>(c)) || c == '_' || c == '-' || c == '.')) {
+            return false;
+        }
+    }
+    return true;
+}
+}
 
 AutoBootstrap* AutoBootstrap::s_instance = nullptr;
 
@@ -232,12 +247,31 @@ void AutoBootstrap::executePlan(const std::string& wish, const json& plan) {
             } 
             else if (type == "build") {
                 std::string target = t.value("target", "");
+                if (!isSafeTargetName(target)) {
+                    std::cerr << "Rejected unsafe build target: " << target << std::endl;
+                    success = false;
+                    break;
+                }
                 std::string cmd = "cmake --build build --config Release";
                 if (!target.empty()) {
                     cmd += " --target " + target;
                 }
+#ifdef _WIN32
+                {
+                    STARTUPINFOA si{}; si.cb = sizeof(si);
+                    PROCESS_INFORMATION pi{};
+                    std::vector<char> buf(cmd.begin(), cmd.end()); buf.push_back('\0');
+                    if (CreateProcessA(nullptr, buf.data(), nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi)) {
+                        WaitForSingleObject(pi.hProcess, 300000);
+                        DWORD ec = 1; GetExitCodeProcess(pi.hProcess, &ec);
+                        CloseHandle(pi.hProcess); CloseHandle(pi.hThread);
+                        success = (ec == 0);
+                    } else { success = false; }
+                }
+#else
                 int rc = system(cmd.c_str());
                 success = (rc == 0);
+#endif
             } 
             else if (type == "hot_reload") {
                 success = patch.hotReload();
@@ -264,7 +298,29 @@ void AutoBootstrap::executePlan(const std::string& wish, const json& plan) {
                 // Benchmarks run during build
             }
             else if (type == "self_test") {
-                // TODO: implement test runner
+                std::string testCmd = t.value("command", "ctest --test-dir build --output-on-failure -C Release");
+#ifdef _WIN32
+                {
+                    STARTUPINFOA si{};
+                    si.cb = sizeof(si);
+                    PROCESS_INFORMATION pi{};
+                    std::vector<char> buf(testCmd.begin(), testCmd.end());
+                    buf.push_back('\0');
+                    if (CreateProcessA(nullptr, buf.data(), nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi)) {
+                        WaitForSingleObject(pi.hProcess, 600000);
+                        DWORD ec = 1;
+                        GetExitCodeProcess(pi.hProcess, &ec);
+                        CloseHandle(pi.hProcess);
+                        CloseHandle(pi.hThread);
+                        success = (ec == 0);
+                    } else {
+                        success = false;
+                    }
+                }
+#else
+                int rc = system(testCmd.c_str());
+                success = (rc == 0);
+#endif
             }
             
             if (!success) {

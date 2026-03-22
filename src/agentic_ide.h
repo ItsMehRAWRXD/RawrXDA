@@ -4,6 +4,7 @@
 #include <vector>
 #include <deque>
 #include <mutex>
+#include <shared_mutex>
 #include <functional>
 #include <atomic>
 #include <thread>
@@ -50,7 +51,7 @@ public:
 private:
     IDEConfig m_config;
     std::atomic<bool> m_running{false};
-    mutable std::mutex m_mutex;
+    mutable std::shared_mutex m_mutex;
     
     // Task Queue
     std::mutex m_queueMutex;
@@ -76,6 +77,7 @@ private:
     std::shared_ptr<PlanOrchestrator> m_planOrchestrator;
     
     Editor* m_guiEditor = nullptr;
+    std::string m_workspaceRoot;
 
     Result<void> setupLogging();
     Result<void> initializeComponents();
@@ -88,6 +90,7 @@ private:
     void startOrchestrator();
     void submitTask(std::function<void()> task);
     std::string getTimestamp() const;
+    std::string detectWorkspaceRoot();
 
     template<typename T>
     std::shared_ptr<T> getComponent() const;

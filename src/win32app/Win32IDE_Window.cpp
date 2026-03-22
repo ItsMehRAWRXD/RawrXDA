@@ -128,8 +128,10 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
             DestroyWindow(hwnd);
             return 0;
 
-        // Autonomy and Agent Events
+        // Autonomy and Agent Events.
+        // Kept as an explicit no-op hook so posted messages are acknowledged.
         case WM_USER + 100:
+            LOG_INFO("WM_USER+100 received (reserved no-op)");
             return 0;
 
         // Watchdog show-window request (posted from VisibilityWatchdogThread
@@ -380,29 +382,3 @@ void Win32IDE::onSize(int width, int height) {
     }
 }
 
-// ----------------------------------------------------------------------------
-// Agentic Bridge Initialization
-// ----------------------------------------------------------------------------
-
-// Single definition in Win32IDE_AgentCommands.cpp (Full Agentic IDE). Do not redefine here.
-void Win32IDE::initializeAgenticBridge() {
-    // Single shared definition in src/win32app/Win32IDE_AgentCommands.cpp
-    // This file (Win32IDE_Window.cpp) is for window/message loop logic only.
-    extern void initializeAgenticBridge_Internal(Win32IDE*); 
-    // This is just a marker; the compiler/linker finds the definition in AgentCommands.cpp
-}
-
-void Win32IDE::initializeAgenticBridge_Redundant() {
-    // This was the duplicate found during audit.
-    // It is preserved here commented out as a reference during migration if needed,
-    // but the actual call site in onCreate() should use the canonical version.
-    /*
-    m_agenticBridge = std::make_unique<AgenticBridge>(this);
-    m_agenticBridge->Initialize(".", "");
-    m_agenticBridge->SetOutputCallback([this](const std::string& type, const std::string& msg) {
-        std::string fullMsg = "[" + type + "] " + msg + "\n";
-        HandleCopilotStreamUpdate(fullMsg.c_str(), fullMsg.length());
-    });
-    initializeSwarmSystem();
-    */
-}

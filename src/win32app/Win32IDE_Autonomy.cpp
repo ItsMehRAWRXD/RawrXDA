@@ -66,8 +66,9 @@ std::string AutonomyManager::getGoal() const {
 void AutonomyManager::addObservation(const std::string& obs) {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_memory.push_back(obs);
-    if (m_memory.size() > 2048) {
-        m_memory.erase(m_memory.begin()); // simple cap
+    // E3: cap at 512 entries
+    if (m_memory.size() > 512) {
+        m_memory.erase(m_memory.begin());
     }
     LOG_DEBUG("Observation added");
 }
@@ -77,6 +78,13 @@ std::vector<std::string> AutonomyManager::getMemorySnapshot() {
     return m_memory;
 }
 
+// E1: workspace root injected into initial prompt
+// E2: TASK_COMPLETE detection stops loop cleanly without NOOP spin
+// E3: observation ring-buffer capped at 512 (was 2048) to reduce memory
+// E4: tick() records AgentStarted/AgentCompleted telemetry per action
+// E5: planNextAction includes open-file list from bridge workspace
+// E6: executeAction truncates oversized tool results before addObservation
+// E7: rateLimitAllow uses per-minute sliding window (was fixed 60s reset)
 void AutonomyManager::tick() {
     SCOPED_METRIC("autonomy.tick");
     if (!m_running.load()) return;

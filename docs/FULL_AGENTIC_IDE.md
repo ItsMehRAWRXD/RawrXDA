@@ -12,6 +12,7 @@
 |------|------|
 | **FullAgenticIDE.h** | Public API: `initialize()`, `loadModel()`, `chat()`, `setWorkspaceRoot()`, `getStatus()`, `getAvailableTools()`, `getBridge()` |
 | **FullAgenticIDE.cpp** | Implementation: owns `AgenticBridge`, forwards all operations |
+| **AgenticPlanningOrchestrator.{h,cpp}** | Plan risk tiers, workspace/shell safety gates, full vs low-risk approval; wired from `Win32IDE_PlanExecutor.cpp` (see **`docs/AGENTIC_PLANNING_ORCHESTRATOR.md`**) |
 | **README.md** | Module manifest and usage |
 
 All agentic entry points for the IDE go through this module. The rest of the codebase (AgenticBridge, AgenticEngine, tools) are implementation details used by FullAgenticIDE.

@@ -1,0 +1,15 @@
+{
+  "$schema": "./approval_policy.schema.json",
+  "version": 1,
+  "description": "Machine-readable defaults for agent approval gates (merged with renderer IdeFeaturesContext at runtime).",
+  "autoApproveReads": true,
+  "autoApproveWrites": false,
+  "requirePlanApproval": false,
+  "batchApproveMutations": false,
+  "requireAskAiApproval": false,
+  "enableRollbackSnapshots": true,
+  "audit": {
+    "enabled": true,
+    "appendOnlyPath": "approval-audit.jsonl"
+  }
+}

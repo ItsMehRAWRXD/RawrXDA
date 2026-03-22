@@ -318,8 +318,9 @@ static const wchar_t* s_paths[3488] = {
     L"Ship/QT-REMOVAL-PHASE3.ps1",
     L"Ship/QT-REMOVAL-PHASE4.ps1",
     L"Ship/QT-REMOVAL-PHASE5.ps1",
-    L"Ship/QtMigrationTracker.hpp",
-    L"Ship/QtReplacements.hpp",
+    L"Ship/MigrationProgressTracker.hpp",
+    L"Ship/RawrCompatIo.hpp",
+    L"Ship/StdReplacements.hpp",
     L"Ship/RawrEngine.py",
     L"Ship/RawrXD_AICompletion.c",
     L"Ship/RawrXD_AdvancedCodingAgent.cpp",
@@ -3737,8 +3738,8 @@ HMENU BuildSourceFileMenu() {
     AppendMenuW(h_0_60145, MF_STRING, 60161, L"QT-REMOVAL-PHASE3.ps1");
     AppendMenuW(h_0_60145, MF_STRING, 60162, L"QT-REMOVAL-PHASE4.ps1");
     AppendMenuW(h_0_60145, MF_STRING, 60163, L"QT-REMOVAL-PHASE5.ps1");
-    AppendMenuW(h_0_60145, MF_STRING, 60164, L"QtMigrationTracker.hpp");
-    AppendMenuW(h_0_60145, MF_STRING, 60165, L"QtReplacements.hpp");
+    AppendMenuW(h_0_60145, MF_STRING, 60164, L"MigrationProgressTracker.hpp");
+    AppendMenuW(h_0_60145, MF_STRING, 60165, L"RawrCompatIo.hpp");
     AppendMenuW(h_0_60145, MF_STRING, 60166, L"RawrEngine.py");
     AppendMenuW(h_0_60145, MF_STRING, 60167, L"RawrXD_AICompletion.c");
     AppendMenuW(h_0_60145, MF_STRING, 60168, L"RawrXD_AdvancedCodingAgent.cpp");

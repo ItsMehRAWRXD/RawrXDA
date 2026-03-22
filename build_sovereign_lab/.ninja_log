@@ -1,0 +1,14 @@
+# ninja log v6
+17	712	7957472876540367	D:/rawrxd/build_sovereign_lab/src/reverse_engineering/cmake_install.cmake	7dabc927ca8fc7ca
+17	712	7957472876510225	D:/rawrxd/build_sovereign_lab/cmake_install.cmake	7dabc927ca8fc7ca
+17	712	7957472876570629	build.ninja	7dabc927ca8fc7ca
+17	1334	7957318047700381	CMakeFiles/test_sovereign_compose_lab.dir/tests/test_sovereign_compose_lab.cpp.obj	1cd7ee1679dcb947
+17	712	7957472876525295	D:/rawrxd/build_sovereign_lab/CTestTestfile.cmake	7dabc927ca8fc7ca
+1335	2082	7957318060549721	tests/test_sovereign_compose_lab.exe	442e70f321207624
+13	614	7957472876570629	build.ninja	7dabc927ca8fc7ca
+13	614	7957472876570629	D:/rawrxd/build_sovereign_lab/cmake_install.cmake	7dabc927ca8fc7ca
+13	614	7957472876570629	D:/rawrxd/build_sovereign_lab/src/reverse_engineering/cmake_install.cmake	7dabc927ca8fc7ca
+13	614	7957472876570629	D:/rawrxd/build_sovereign_lab/CTestTestfile.cmake	7dabc927ca8fc7ca
+20	62	7957472876964738	CMakeFiles/rawrxd_minimal_link_example.dir/toolchain/sovereign_minimal/rawrxd_minimal_link.c.obj	de897cccbc3d0879
+16	69	7957472876934259	CMakeFiles/rawrxd_minimal_link_example.dir/examples/rawrxd_minimal_link_example.c.obj	b1be42ab968bb21a
+69	225	7957472877464935	bin/rawrxd_minimal_link_example.exe	dfbf8fa38320f077

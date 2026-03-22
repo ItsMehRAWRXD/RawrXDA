@@ -106,6 +106,20 @@ switch ($Mode) {
         Write-Host "`n▶ QUICK BUILD - Essentials only" -ForegroundColor Green
         Write-Host "  Time estimate: 2-5 minutes`n" -ForegroundColor Gray
         & .\BUILD_IDE_FAST.ps1 -What all -Test
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "  → Building RawrXD-ModelAnalysis target..." -ForegroundColor Yellow
+            Push-Location "$ProjectRoot\build"
+            try {
+                cmake --build . --target RawrXD-ModelAnalysis 2>&1 | Out-Host
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host "  ✓ RawrXD-ModelAnalysis built" -ForegroundColor Green
+                } else {
+                    Write-Host "  ! RawrXD-ModelAnalysis build returned exit code $LASTEXITCODE" -ForegroundColor Yellow
+                }
+            } finally {
+                Pop-Location
+            }
+        }
     }
     
     'dev' {

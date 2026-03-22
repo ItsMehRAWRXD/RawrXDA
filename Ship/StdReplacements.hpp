@@ -1,4 +1,4 @@
-// StdReplacements.hpp — Pure C++20 / Win32. No Qt; types use C++20 naming.
+// StdReplacements.hpp — Pure C++20 / Win32. Native types only.
 #pragma once
 
 #include "agent_kernel_main.hpp"
@@ -15,7 +15,7 @@
 
 namespace RawrXD {
 
-// WideString — std::wstring with utility methods (replaces Qt QString)
+// WideString — std::wstring with utility helpers for Win32 text
 class WideString {
 public:
     WideString() = default;
@@ -112,7 +112,7 @@ private:
     String m_data;
 };
 
-// WideStringList — vector of wide strings (replaces Qt QStringList)
+// WideStringList — vector of wide strings
 class WideStringList : public Vector<WideString> {
 public:
     using Vector<WideString>::Vector;
@@ -149,7 +149,7 @@ public:
     }
 };
 
-// Variant — std::any-based (replaces Qt QVariant)
+// Variant — std::any-based tagged holder
 class Variant {
 public:
     Variant() = default;
@@ -185,7 +185,7 @@ private:
     Type m_type = Type::Invalid;
 };
 
-// StdMap — ordered map with Qt-like API (replaces Qt QMap)
+// StdMap — ordered map with convenience helpers
 template<typename K, typename V>
 class StdMap : public std::map<K, V> {
 public:
@@ -214,7 +214,7 @@ public:
     }
 };
 
-// StdUnorderedMap — hash map with Qt-like API (replaces Qt QHash)
+// StdUnorderedMap — hash map with convenience helpers
 template<typename K, typename V>
 class StdUnorderedMap : public std::unordered_map<K, V> {
 public:
@@ -231,7 +231,7 @@ public:
     void remove(const K& key) { this->erase(key); }
 };
 
-// JsonDoc — JSON document (replaces Qt QJsonDocument)
+// JsonDoc — JSON document wrapper
 class JsonDoc {
 public:
     JsonDoc() = default;
@@ -261,7 +261,7 @@ private:
     JsonValue m_root;
 };
 
-// StdFile — file I/O (replaces Qt QFile)
+// StdFile — narrow stream file I/O
 class StdFile {
 public:
     StdFile() = default;
@@ -293,7 +293,7 @@ private:
     std::ifstream m_stream;
 };
 
-// StdDir — directory (replaces Qt QDir)
+// StdDir — directory helpers
 class StdDir {
 public:
     StdDir() : m_path(std::filesystem::current_path()) {}
@@ -340,7 +340,7 @@ private:
     std::filesystem::path m_path;
 };
 
-// FileInfo — path info (replaces Qt QFileInfo)
+// FileInfo — path metadata
 class FileInfo {
 public:
     FileInfo() = default;
@@ -365,7 +365,7 @@ private:
     std::filesystem::path m_path;
 };
 
-// Timer — periodic callback (replaces Qt QTimer)
+// Timer — periodic callback
 class Timer {
 public:
     Timer() = default;
@@ -418,7 +418,7 @@ private:
     std::thread m_thread;
 };
 
-// DateTime — system time (replaces Qt QDateTime)
+// DateTime — system time
 class DateTime {
 public:
     DateTime() = default;
@@ -461,7 +461,7 @@ private:
     std::chrono::system_clock::time_point m_time;
 };
 
-// Uuid — GUID (replaces Qt QUuid)
+// Uuid — GUID
 class Uuid {
 public:
     Uuid() = default;
@@ -489,7 +489,7 @@ private:
     GUID m_guid = {};
 };
 
-// Mutex (replaces Qt QMutex)
+// Mutex — std::mutex wrapper
 class Mutex {
 public:
     void lock() { m_mutex.lock(); }
@@ -509,7 +509,7 @@ private:
     Mutex* m_mutex;
 };
 
-// StdThread — run in thread (replaces Qt QThread)
+// StdThread — background work unit
 class StdThread {
 public:
     StdThread() = default;
@@ -539,7 +539,7 @@ private:
     std::thread m_thread;
 };
 
-// StdRegex — regex (replaces Qt QRegularExpression)
+// StdRegex — regex helper
 class StdRegex {
 public:
     StdRegex() = default;

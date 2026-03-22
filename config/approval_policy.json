@@ -1,0 +1,11 @@
+{
+  "auto_approve_very_low_risk": true,
+  "auto_approve_low_risk": false,
+  "require_approval_medium": true,
+  "require_approval_high": true,
+  "require_approval_critical": true,
+  "min_complexity_for_human_review": 7,
+  "approval_timeout_hours": 24,
+  "allow_parallel_approvals": false,
+  "allow_partial_execution": false
+}

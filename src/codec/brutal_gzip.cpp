@@ -1,17 +1,11 @@
 #include "brutal_gzip.h"
-#include <iostream>
+#include "codec/gzip_brutal_inflate.hpp"
+
 #include <cstdlib>
 #include <cstring>
 
-// Forward-declare the zlib-based MASM fallback used by brutal_gzip_fallback.cpp
-// If zlib is not available, we use a raw DEFLATE decoder.
+// MASM x64: linked via deflate_brutal_masm.obj when HAS_BRUTAL_GZIP_MASM=1
 extern "C" void* deflate_brutal_masm(const void* src, size_t len, size_t* out_len);
-
-// Forward declaration — implemented in inflate_deflate_cpp.cpp
-namespace codec { std::vector<uint8_t> inflate(const std::vector<uint8_t>&, bool*); }
-static inline std::vector<uint8_t> codec_inflate_impl(const std::vector<uint8_t>& d, bool* ok) {
-    return codec::inflate(d, ok);
-}
 
 namespace brutal {
 
@@ -46,15 +40,14 @@ std::vector<uint8_t> decompress(const std::vector<uint8_t>& data) {
         return std::vector<uint8_t>(data.begin() + 4, data.end());
     }
 
-    // Try gzip decompression using codec::inflate
-    // The codec::inflate function handles DEFLATE/gzip streams
-    bool ok = false;
-    std::vector<uint8_t> result = codec_inflate_impl(data, &ok);
-    if (ok && !result.empty()) {
-        return result;
+    // Inflate gzip from real MASM encoder (stored DEFLATE blocks) — no codec::inflate
+    // (avoids recursion: codec::inflate -> brutal::decompress -> …).
+    std::vector<uint8_t> inflated;
+    if (RawrXD::Codec::gzipBrutalInflateStoredBlocks(reinterpret_cast<const uint8_t*>(data.data()), data.size(),
+                                                     inflated)) {
+        return inflated;
     }
 
-    // If inflation fails, data may already be uncompressed — return as-is
     return data;
 }
 

@@ -13,6 +13,10 @@
 //   4100–4120   Agent loop commands
 //   4150–4162   Autonomy + pipeline
 //   4200–4242   AI modes, engine 800B/Titan, context window, multi-agent
+//   4243–4260   Omega Orchestrator (Phase Ω)
+//   4261–4270   Agentic Planning Orchestrator (approval gates)
+//   4271–4280   KnowledgeGraphCore (cross-session learning)
+//   4281–4299   FailureIntelligence Orchestrator (autonomous recovery)
 //   4300–4323   Reverse engineering / decompiler
 //   5001–5004   AI mode toggle controls (IDC_)
 //   5037–5081   Backend switcher, LLM router, LSP, UX extras
@@ -164,6 +168,85 @@
 #define IDM_AI_TITAN_TOGGLE         4241
 #define IDM_AI_800B_STATUS          4242
 
+// ---- Omega Orchestrator — Phase Ω commands (4243–4260) ---------------------
+// The Last Tool: autonomous software development pipeline
+#define IDM_OMEGA_START             4243
+#define IDM_OMEGA_STOP              4244
+#define IDM_OMEGA_SUBMIT_TASK       4245
+#define IDM_OMEGA_RUN_CYCLE         4246
+#define IDM_OMEGA_SHOW_STATUS       4247
+#define IDM_OMEGA_VIEW_PIPELINE     4248
+#define IDM_OMEGA_SPAWN_AGENT       4249
+#define IDM_OMEGA_SET_QUALITY_AUTO  4250
+#define IDM_OMEGA_SET_QUALITY_BALANCE 4251
+#define IDM_OMEGA_SET_QUALITY_MAX   4252
+#define IDM_OMEGA_CANCEL_TASK       4253
+#define IDM_OMEGA_WORLD_MODEL       4254
+#define IDM_OMEGA_EXPORT_STATS      4255
+#define IDM_OMEGA_DIAGNOSTICS       4256
+#define IDM_OMEGA_VERSION           4257
+#define IDM_OMEGA_HELP              4258
+#define IDM_OMEGA_ADVANCED_SETTINGS 4259
+#define IDM_OMEGA_SHELL_INTEGRATION 4260
+
+// ---- Agentic Planning Orchestrator — Full Approval Gates (4261–4270) ------
+// Multi-step planning with risk analysis, auto-approval policies, and human-in-the-loop
+#define IDM_PLANNING_START          4261
+#define IDM_PLANNING_SHOW_QUEUE     4262
+#define IDM_PLANNING_APPROVE_STEP   4263
+#define IDM_PLANNING_REJECT_STEP    4264
+#define IDM_PLANNING_EXECUTE_STEP   4265
+#define IDM_PLANNING_EXECUTE_ALL    4266
+#define IDM_PLANNING_ROLLBACK       4267
+#define IDM_PLANNING_SET_POLICY     4268
+#define IDM_PLANNING_VIEW_STATUS    4269
+#define IDM_PLANNING_DIAGNOSTICS    4270
+
+// ---- KnowledgeGraphCore — Cross-session learning + decision archaeology (4271–4280)
+// SQLite-backed WHY table, Bayesian preference learning, codebase archaeology
+#define IDM_KNOWLEDGE_INIT          4271
+#define IDM_KNOWLEDGE_RECORD        4272
+#define IDM_KNOWLEDGE_SEARCH        4273
+#define IDM_KNOWLEDGE_DECISIONS     4274
+#define IDM_KNOWLEDGE_PREFERENCES   4275
+#define IDM_KNOWLEDGE_ARCHAEOLOGY   4276
+#define IDM_KNOWLEDGE_GRAPH         4277
+#define IDM_KNOWLEDGE_EXPORT        4278
+#define IDM_KNOWLEDGE_STATS         4279
+#define IDM_KNOWLEDGE_FLUSH         4280
+
+// ---- FailureIntelligence Orchestrator — Autonomous recovery & root cause analysis (4281–4299)
+// Real-time failure detection, pattern recognition, recovery strategy selection, autonomous healing
+#define IDM_FAILURE_DETECT          4281
+#define IDM_FAILURE_ANALYZE         4282
+#define IDM_FAILURE_SHOW_QUEUE      4283
+#define IDM_FAILURE_SHOW_HISTORY    4284
+#define IDM_FAILURE_GENERATE_RECOVERY 4285
+#define IDM_FAILURE_EXECUTE_RECOVERY 4286
+#define IDM_FAILURE_AUTONOMOUS_HEAL 4287
+#define IDM_FAILURE_VIEW_PATTERNS   4288
+#define IDM_FAILURE_LEARN_PATTERN   4289
+#define IDM_FAILURE_STATS           4290
+#define IDM_FAILURE_SET_POLICY      4291
+#define IDM_FAILURE_SHOW_HEALTH     4292
+#define IDM_FAILURE_EXPORT_ANALYSIS 4293
+#define IDM_FAILURE_CLEAR_HISTORY   4294
+#define IDM_FAILURE_DIAGNOSTICS     4295
+
+// ---- Change Impact Analyzer — Pre-commit ripple effect prediction (4350–4370)
+// Dependency graph traversal, risk scoring, commit blocking, approval gate integration
+#define IDM_IMPACT_ANALYZE_STAGED       4350
+#define IDM_IMPACT_ANALYZE_UNSTAGED     4351
+#define IDM_IMPACT_ANALYZE_FILE         4352
+#define IDM_IMPACT_SHOW_REPORT          4353
+#define IDM_IMPACT_SHOW_ZONES           4354
+#define IDM_IMPACT_RISK_SCORE           4355
+#define IDM_IMPACT_CHECK_COMMIT         4356
+#define IDM_IMPACT_SET_CONFIG           4357
+#define IDM_IMPACT_HISTORY              4358
+#define IDM_IMPACT_DIAGNOSTICS          4359
+#define IDM_IMPACT_EXPORT_JSON          4360
+
 // ---- Reverse engineering commands (4300–4323) ------------------------------
 #define IDM_REVENG_ANALYZE              4300
 #define IDM_REVENG_DISASM               4301
@@ -284,6 +367,7 @@
 #define IDC_PLAN_GOAL_LABEL         7003
 #define IDC_PLAN_SUMMARY_LABEL      7004
 #define IDC_PLAN_BTN_APPROVE        7010
+#define IDC_PLAN_BTN_APPROVE_SAFE   7015
 #define IDC_PLAN_BTN_EDIT           7011
 #define IDC_PLAN_BTN_REJECT         7012
 #define IDC_PLAN_BTN_PAUSE          7013

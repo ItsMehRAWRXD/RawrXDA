@@ -71,6 +71,9 @@ set(COORDINATION_SOURCES
 # Source files - Planning (Phase 2)
 set(PLANNING_SOURCES
     planning/ModelGuidedPlanner.cpp
+    agentic_planning_orchestrator.cpp
+    agentic_orchestrator_integration.cpp
+    agentic_audit_sink.cpp
 )
 
 # Source files - Agentic Agent Loop (Phase: Analysis→Agent Pivot)

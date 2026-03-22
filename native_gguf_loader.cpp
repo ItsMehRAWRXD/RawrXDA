@@ -1,6 +1,8 @@
 #include "native_gguf_loader.h"
 #include <iostream>
 #include <cstring>
+#include <algorithm>
+#include <windows.h>
 
 namespace GGUFUtils {
     uint32_t GetDataTypeSize(uint32_t type) {
@@ -32,9 +34,103 @@ namespace GGUFUtils {
     }
 }
 
+NativeGGUFLoader::NativeGGUFLoader()
+    : fileHandle(INVALID_HANDLE_VALUE)
+    , mappingHandle(nullptr)
+    , mappedBase(nullptr)
+    , mappedSize(0)
+    , version(0)
+    , metadataCount(0)
+    , tensorCount(0) {}
+
+NativeGGUFLoader::~NativeGGUFLoader() {
+    Close();
+}
+
+bool NativeGGUFLoader::OpenMemoryMap(const std::string& filePath) {
+    fileHandle = static_cast<void*>(CreateFileA(
+        filePath.c_str(),
+        GENERIC_READ,
+        FILE_SHARE_READ,
+        nullptr,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        nullptr
+    ));
+
+    if (fileHandle == INVALID_HANDLE_VALUE) {
+        return false;
+    }
+
+    LARGE_INTEGER fileSize{};
+    if (!GetFileSizeEx(static_cast<HANDLE>(fileHandle), &fileSize) || fileSize.QuadPart <= 0) {
+        CloseMemoryMap();
+        return false;
+    }
+
+    mappingHandle = static_cast<void*>(CreateFileMappingA(static_cast<HANDLE>(fileHandle), nullptr, PAGE_READONLY, 0, 0, nullptr));
+    if (!mappingHandle) {
+        CloseMemoryMap();
+        return false;
+    }
+
+    mappedBase = static_cast<const uint8_t*>(MapViewOfFile(static_cast<HANDLE>(mappingHandle), FILE_MAP_READ, 0, 0, 0));
+    if (!mappedBase) {
+        CloseMemoryMap();
+        return false;
+    }
+
+    mappedSize = static_cast<uint64_t>(fileSize.QuadPart);
+    return true;
+}
+
+void NativeGGUFLoader::CloseMemoryMap() {
+    if (mappedBase) {
+        UnmapViewOfFile(mappedBase);
+        mappedBase = nullptr;
+    }
+    if (mappingHandle) {
+        CloseHandle(static_cast<HANDLE>(mappingHandle));
+        mappingHandle = nullptr;
+    }
+    if (fileHandle != INVALID_HANDLE_VALUE) {
+        CloseHandle(static_cast<HANDLE>(fileHandle));
+        fileHandle = INVALID_HANDLE_VALUE;
+    }
+    mappedSize = 0;
+}
+
 bool NativeGGUFLoader::Open(const std::string& filePath) {
+    Close();
+
+    if (!OpenMemoryMap(filePath)) {
+        return false;
+    }
+
     file.open(filePath, std::ios::binary);
-    return file.is_open();
+    if (!file.is_open()) {
+        CloseMemoryMap();
+        return false;
+    }
+
+    metadata.clear();
+    tensors.clear();
+    version = 0;
+    metadataCount = 0;
+    tensorCount = 0;
+    return true;
+}
+
+void NativeGGUFLoader::Close() {
+    if (file.is_open()) {
+        file.close();
+    }
+    CloseMemoryMap();
+    metadata.clear();
+    tensors.clear();
+    version = 0;
+    metadataCount = 0;
+    tensorCount = 0;
 }
 
 bool NativeGGUFLoader::ParseHeader() {
@@ -131,22 +227,43 @@ bool NativeGGUFLoader::ParseTensorInfo() {
 }
 
 bool NativeGGUFLoader::LoadTensorData(const std::string& tensorName, std::vector<uint8_t>& data) {
-    if (!file) return false;
+    uint64_t size = 0;
+    const uint8_t* ptr = GetTensorDataPointer(tensorName, &size);
+    if (!ptr || size == 0) return false;
+
+    data.assign(ptr, ptr + size);
+    return true;
+}
+
+const uint8_t* NativeGGUFLoader::GetTensorDataPointer(const std::string& tensorName, uint64_t* sizeBytes) const {
+    if (!mappedBase || mappedSize == 0) return nullptr;
 
     auto it = std::find_if(tensors.begin(), tensors.end(), [&](const NativeGGUFTensorInfo& t) {
         return t.name == tensorName;
     });
-    if (it == tensors.end()) return false;
+    if (it == tensors.end()) return nullptr;
 
     uint64_t size = 1;
-    for (auto dim : it->shape) size *= dim;
+    for (auto dim : it->shape) {
+        size *= dim;
+    }
     size *= GGUFUtils::GetDataTypeSize(it->type);
 
-    data.resize(size);
-    file.seekg(it->offset);
-    file.read(reinterpret_cast<char*>(&data[0]), size);
+    if (it->offset >= mappedSize) return nullptr;
+    if (size > mappedSize - it->offset) return nullptr;
 
-    return true;
+    if (sizeBytes) {
+        *sizeBytes = size;
+    }
+    return mappedBase + it->offset;
+}
+
+bool NativeGGUFLoader::IsMemoryMapped() const {
+    return mappedBase != nullptr && mappedSize > 0;
+}
+
+uint64_t NativeGGUFLoader::GetMappedSize() const {
+    return mappedSize;
 }
 
 const std::vector<NativeGGUFTensorInfo>& NativeGGUFLoader::GetTensors() const {

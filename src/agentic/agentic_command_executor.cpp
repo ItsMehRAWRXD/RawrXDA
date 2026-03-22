@@ -143,6 +143,15 @@ CommandExecResult AgenticCommandExecutor::executeCommand(const std::string& comm
     if (onOutput && !res.stdOut.empty()) onOutput(res.stdOut);
     if (onOutput && !res.stdErr.empty()) onOutput(res.stdErr);
 
+    {
+        std::lock_guard<std::mutex> lk2(m_mutex);
+        m_lastOutput = res.stdOut;
+        if (!res.stdErr.empty()) {
+            if (!m_lastOutput.empty()) m_lastOutput += "\n";
+            m_lastOutput += res.stdErr;
+        }
+    }
+
     fprintf(stderr, "[AgenticCmdExec] Finished: exit=%d success=%d\n",
             res.exitCode, res.success ? 1 : 0);
 
@@ -152,7 +161,8 @@ CommandExecResult AgenticCommandExecutor::executeCommand(const std::string& comm
 
 std::string AgenticCommandExecutor::getOutput() const
 {
-    return {};
+    std::lock_guard<std::mutex> lk(m_mutex);
+    return m_lastOutput;
 }
 
 void AgenticCommandExecutor::cancelCommand()

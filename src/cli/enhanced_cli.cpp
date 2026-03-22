@@ -109,25 +109,170 @@ RawrXD::Expected<std::string, CLIError> EnhancedCLI::cmdExit(const std::vector<s
 }
 
 // Stubs for other commands mentioned in header
-RawrXD::Expected<std::string, CLIError> EnhancedCLI::cmdStatus(const std::vector<std::string>&) { return "Status: OK"; }
-RawrXD::Expected<std::string, CLIError> EnhancedCLI::cmdLoadModel(const std::vector<std::string>&) { return "Model loaded"; }
-RawrXD::Expected<std::string, CLIError> EnhancedCLI::cmdGenerate(const std::vector<std::string>&) { return "Generated text"; }
-RawrXD::Expected<std::string, CLIError> EnhancedCLI::cmdSwarm(const std::vector<std::string>&) { return "Swarm executed"; }
-RawrXD::Expected<std::string, CLIError> EnhancedCLI::cmdChain(const std::vector<std::string>&) { return "Chain executed"; }
-RawrXD::Expected<std::string, CLIError> EnhancedCLI::cmdHistory(const std::vector<std::string>&) { return "History"; }
-RawrXD::Expected<std::string, CLIError> EnhancedCLI::cmdClearHistory(const std::vector<std::string>&) { return "History cleared"; }
+RawrXD::Expected<std::string, CLIError> EnhancedCLI::cmdStatus(const std::vector<std::string>&) {
+    std::stringstream ss;
+    ss << "RawrXD CLI Status\n";
+    ss << "  Swarm Mode: " << (m_swarmMode.load() ? "enabled" : "disabled") << "\n";
+    ss << "  Chain-of-Thought: " << (m_chainOfThoughtEnabled.load() ? "enabled" : "disabled") << "\n";
+    ss << "  Commands registered: " << m_commands.size() << "\n";
+    ss << "  History entries: " << m_commandHistory.size() << "\n";
+    ss << "  Inference Engine: " << (m_inferenceEngine ? "loaded" : "not loaded") << "\n";
+    return ss.str();
+}
 
-RawrXD::Expected<void, CLIError> EnhancedCLI::startSwarmMode() { return {}; }
-RawrXD::Expected<void, CLIError> EnhancedCLI::stopSwarmMode() { return {}; }
-RawrXD::Expected<void, CLIError> EnhancedCLI::enableChainOfThought() { return {}; }
-RawrXD::Expected<void, CLIError> EnhancedCLI::disableChainOfThought() { return {}; }
-RawrXD::Expected<std::string, CLIError> EnhancedCLI::executeWithSwarm(const std::string&, const std::vector<std::string>&) { return ""; }
-RawrXD::Expected<std::string, CLIError> EnhancedCLI::executeWithChainOfThought(const std::string&, const std::vector<std::string>&) { return ""; }
-json EnhancedCLI::getStatus() const { return json{}; }
-void EnhancedCLI::loadHistory(const std::string&) {}
-void EnhancedCLI::saveHistory(const std::string&) {}
-std::string EnhancedCLI::applySyntaxHighlighting(const std::string& input) { return input; }
-RawrXD::Expected<void, CLIError> EnhancedCLI::runBatch(const std::vector<std::string>&) { return {}; }
+RawrXD::Expected<std::string, CLIError> EnhancedCLI::cmdLoadModel(const std::vector<std::string>& args) {
+    if (args.empty()) return RawrXD::unexpected(CLIError::InvalidArgument);
+    if (!m_inferenceEngine) return RawrXD::unexpected(CLIError::NotInitialized);
+    bool ok = m_inferenceEngine->loadModel(args[0]);
+    return ok ? ("Model loaded: " + args[0]) : ("Failed to load: " + args[0]);
+}
+
+RawrXD::Expected<std::string, CLIError> EnhancedCLI::cmdGenerate(const std::vector<std::string>& args) {
+    if (args.empty()) return RawrXD::unexpected(CLIError::InvalidArgument);
+    if (!m_inferenceEngine) return RawrXD::unexpected(CLIError::NotInitialized);
+    std::string prompt;
+    for (size_t i = 0; i < args.size(); ++i) {
+        if (i > 0) prompt += " ";
+        prompt += args[i];
+    }
+    return m_inferenceEngine->generate(prompt);
+}
+
+RawrXD::Expected<std::string, CLIError> EnhancedCLI::cmdSwarm(const std::vector<std::string>& args) {
+    if (!m_swarmMode.load()) {
+        auto r = startSwarmMode();
+        if (!r) return RawrXD::unexpected(r.error());
+    }
+    if (args.empty()) return "Swarm mode active. Pass a prompt to execute.";
+    std::string prompt;
+    for (size_t i = 0; i < args.size(); ++i) {
+        if (i > 0) prompt += " ";
+        prompt += args[i];
+    }
+    return executeWithSwarm(prompt, args);
+}
+
+RawrXD::Expected<std::string, CLIError> EnhancedCLI::cmdChain(const std::vector<std::string>& args) {
+    if (!m_chainOfThoughtEnabled.load()) {
+        auto r = enableChainOfThought();
+        if (!r) return RawrXD::unexpected(r.error());
+    }
+    if (args.empty()) return "Chain-of-thought enabled. Pass a prompt.";
+    std::string prompt;
+    for (size_t i = 0; i < args.size(); ++i) {
+        if (i > 0) prompt += " ";
+        prompt += args[i];
+    }
+    return executeWithChainOfThought(prompt, args);
+}
+
+RawrXD::Expected<std::string, CLIError> EnhancedCLI::cmdHistory(const std::vector<std::string>&) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (m_commandHistory.empty()) return "No history.";
+    std::stringstream ss;
+    int idx = 1;
+    for (const auto& entry : m_commandHistory) {
+        ss << idx++ << ". " << entry << "\n";
+    }
+    return ss.str();
+}
+
+RawrXD::Expected<std::string, CLIError> EnhancedCLI::cmdClearHistory(const std::vector<std::string>&) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_commandHistory.clear();
+    return "History cleared";
+}
+
+RawrXD::Expected<void, CLIError> EnhancedCLI::startSwarmMode() {
+    m_swarmMode.store(true);
+    return {};
+}
+RawrXD::Expected<void, CLIError> EnhancedCLI::stopSwarmMode() {
+    m_swarmMode.store(false);
+    return {};
+}
+RawrXD::Expected<void, CLIError> EnhancedCLI::enableChainOfThought() {
+    m_chainOfThoughtEnabled.store(true);
+    return {};
+}
+RawrXD::Expected<void, CLIError> EnhancedCLI::disableChainOfThought() {
+    m_chainOfThoughtEnabled.store(false);
+    return {};
+}
+
+RawrXD::Expected<std::string, CLIError> EnhancedCLI::executeWithSwarm(const std::string& prompt, const std::vector<std::string>&) {
+    if (!m_swarmOrchestrator) return RawrXD::unexpected(CLIError::NotInitialized);
+    // Delegate to swarm orchestrator — it manages multi-agent reasoning
+    return m_swarmOrchestrator->execute(prompt);
+}
+
+RawrXD::Expected<std::string, CLIError> EnhancedCLI::executeWithChainOfThought(const std::string& prompt, const std::vector<std::string>&) {
+    if (!m_chainOfThought) return RawrXD::unexpected(CLIError::NotInitialized);
+    return m_chainOfThought->reason(prompt);
+}
+
+json EnhancedCLI::getStatus() const {
+    return json{
+        {"swarm_mode", m_swarmMode.load()},
+        {"chain_of_thought", m_chainOfThoughtEnabled.load()},
+        {"commands_registered", m_commands.size()},
+        {"history_size", m_commandHistory.size()},
+        {"inference_engine", m_inferenceEngine != nullptr}
+    };
+}
+
+void EnhancedCLI::loadHistory(const std::string& path) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    std::ifstream file(path);
+    if (!file.is_open()) return;
+    m_commandHistory.clear();
+    std::string line;
+    while (std::getline(file, line)) {
+        if (!line.empty()) m_commandHistory.push_back(line);
+    }
+}
+
+void EnhancedCLI::saveHistory(const std::string& path) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    std::ofstream file(path);
+    if (!file.is_open()) return;
+    for (const auto& entry : m_commandHistory) {
+        file << entry << "\n";
+    }
+}
+
+std::string EnhancedCLI::applySyntaxHighlighting(const std::string& input) {
+    // ANSI color codes for terminal syntax highlighting
+    std::string result = input;
+    // Highlight keywords in cyan
+    static const char* keywords[] = {"help", "exit", "status", "load", "generate", "swarm", "chain"};
+    for (const char* kw : keywords) {
+        size_t pos = 0;
+        std::string kwStr(kw);
+        while ((pos = result.find(kwStr, pos)) != std::string::npos) {
+            // Only highlight at word boundaries
+            bool atStart = (pos == 0 || result[pos-1] == ' ');
+            bool atEnd = (pos + kwStr.size() >= result.size() || result[pos+kwStr.size()] == ' ');
+            if (atStart && atEnd) {
+                result.insert(pos + kwStr.size(), "\033[0m");
+                result.insert(pos, "\033[36m");
+                pos += kwStr.size() + 9; // skip past the color codes
+            } else {
+                pos += kwStr.size();
+            }
+        }
+    }
+    return result;
+}
+
+RawrXD::Expected<void, CLIError> EnhancedCLI::runBatch(const std::vector<std::string>& commands) {
+    for (const auto& cmd : commands) {
+        auto result = executeCommand(cmd);
+        if (!result) return RawrXD::unexpected(result.error());
+        std::cout << result.value() << "\n";
+    }
+    return {};
+}
 
 } // namespace RawrXD
 

@@ -1,12 +1,16 @@
 # Inference Path Matrix
 
-Last updated: 2026-03-20 (Batch 5 consistency verification).
+Last updated: 2026-03-21 (E01 façade + InferenceFacade log field).
 
 This matrix maps major Win32 IDE user actions to their inference/backend execution lane.
 
+**Loopback roles:** **`docs/LOCALHOST_COMMUNICATION_MAP.md`** — who **hosts** vs who **connects** on `127.0.0.1` (IDE client-first; optional Win32 bridge on **11435**).
+
+**E01 — Single façade:** All chat/completion routes must align with this table. **No silent alternate path.** Unified error-channel contract: **`docs/INFERENCE_FACADE_CONTRACT.md`**. Win32 emits **`[InferenceFacade] inference_lane=… op=routeInferenceRequest`** on each façade call (`Win32IDE_BackendSwitcher.cpp`). Electron shell: **`ai:invoke`** → `AIProviderManager` with **`preferLocalInferenceFirst`** + `localGgufManifestOk` (see `IdeFeaturesContext`, `ChatPanel.js`, `electron/main.js`).
+
 | User action (Win32) | Primary lane | Bridge/engine path | Notes |
 | --- | --- | --- | --- |
-| Chat send (active backend = LocalGGUF) | BackendSwitcher | `routeInferenceRequest()` -> `routeToLocalGGUF()` -> native engine (`generateResponse`) | No `OrchestratorBridge` dependency for primary response generation. |
+| Chat send (active backend = LocalGGUF) | BackendSwitcher | `routeInferenceRequest()` -> `routeToLocalGGUF()` -> native engine (`generateResponse`) | **Your integrated path (WASM-aligned):** **BGzipXD** stack — loader + runner + codec + RE on Win32 (`GGUFRunner` / native pipeline). Same logical stack as the **WASM** build in **`docs/BGZIPXD_WASM.md`**; **not** Electron’s Ollama HTTP. No `OrchestratorBridge` dependency for primary generation. |
 | Chat send (active backend = Ollama) | BackendSwitcher | `routeInferenceRequest()` -> `routeToOllama()` -> Ollama HTTP `/api/generate` | Uses backend config endpoint/model from backend switcher state. |
 | Chat send (active backend = OpenAI / Claude / Gemini) | BackendSwitcher | `routeToOpenAI()` / `routeToClaude()` / `routeToGemini()` | Routed by explicit backend selection only; no automatic backend swap. |
 | Chat send (active backend = ReasoningEngine) | BackendSwitcher | `routeToReasoningEngine()` -> local reasoning integration | Local analysis lane (non-Ollama). |
@@ -30,6 +34,7 @@ This matrix maps major Win32 IDE user actions to their inference/backend executi
 ## Lane definitions
 
 - `BackendSwitcher routeTo*`: explicit per-backend user-selected inference route for chat requests.
+- **BGzipXD / WASM parity (LocalGGUF):** in-repo **integrated** inference — GGUF loader + token runner + codec/transport + RE hooks; Win32 uses native I/O; **WASM** target swaps the platform layer only (**`docs/BGZIPXD_WASM.md`**). This is **not** “call Ollama from the IDE.”
 - `OrchestratorBridge`: Ollama-backed orchestrator used for agentic/tool workflows and FIM/ghost text.
 - `AgenticBridge`: glue layer that can emit backend mutation calls into backend switcher.
 

@@ -145,3 +145,15 @@ Point-in-time diagnostics closure snapshot based on live source state in `D:/raw
 
 4. **P1 - Maintain inference matrix consistency on every backend mutation path change.**
    - References: `src/win32app/Win32IDE_BackendSwitcher.cpp`, `docs/INFERENCE_PATH_MATRIX.md`
+
+---
+
+## Remediation delta (same day — hardening pass)
+
+| Item | Change |
+|------|--------|
+| **EditorOperations** | Undo stack uses a consistent “applied count” model; `ReplaceText` no longer double-locks; `Cut` avoids `Copy`+lock deadlock; `Undo`/`Redo` apply inverses without pushing nested ops; multi-line **Cut** clears undo (honest reset). |
+| **RouterOperations** | Open/save/folder dialogs use **IFileDialog** + UTF-8 paths (`shlobj` + `SHCreateItemFromParsingName` for save-as hint); includes `#include <string>`. |
+| **Win32IDE_SwarmModelSelector** | Replaced dummy TU with `enumerateSwarmModelCandidates()` (`RAWRXD_SWARM_MODEL_DIR` or `%USERPROFILE%\.ollama\models`, `*.gguf`). Added header; **CMake** lists the `.cpp`. |
+| **WindowManager** | `Initialize()` logs a **WARNING** via `IDELogger` that this is not the primary IDE window path. |
+| **CI** | `.github/workflows/ci.yml` merge conflict markers removed; `master` added to `push` branches. |

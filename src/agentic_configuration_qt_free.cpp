@@ -171,7 +171,22 @@ ConfigVar AgenticConfiguration::getEnvironmentSpecific(const std::string& key, E
 
 void AgenticConfiguration::applyEnvironmentOverrides()
 {
-    // Placeholder for environment-specific overrides
+    // Override config values from environment variables
+    // Convention: RAWRXD_<UPPER_KEY> maps to config key
+    for (auto& [key, cfg] : m_config) {
+        std::string envKey = "RAWRXD_";
+        for (char c : key) {
+            if (c == '.' || c == '-') envKey += '_';
+            else envKey += static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+        }
+        const char* envVal = std::getenv(envKey.c_str());
+        if (envVal && envVal[0] != '\0') {
+            cfg.value = parseValue(envVal, cfg.type);
+            if (m_debugMode) {
+                fprintf(stderr, "[AgenticConfig] Override from env: %s=%s\n", key.c_str(), envVal);
+            }
+        }
+    }
 }
 
 // ===== FEATURE TOGGLES =====
@@ -375,7 +390,29 @@ std::string AgenticConfiguration::maskSecrets(const std::string& text) const
 
 bool AgenticConfiguration::validateNoSecretsInLogs() const
 {
-    return true;  // Placeholder
+    // Scan configured secret patterns against log output paths
+    static const char* sensitivePatterns[] = {
+        "password", "api_key", "secret", "token", "bearer",
+        "private_key", "auth", "credential"
+    };
+    for (const auto& [key, cfg] : m_config) {
+        if (!cfg.isSecret) continue;
+        // If a secret value appears in a non-secret field, flag it
+        std::string secretVal;
+        if (auto* s = std::get_if<std::string>(&cfg.value)) {
+            secretVal = *s;
+        }
+        if (secretVal.empty() || secretVal.size() < 4) continue;
+        for (const auto& [otherKey, otherCfg] : m_config) {
+            if (otherCfg.isSecret) continue;
+            if (auto* otherS = std::get_if<std::string>(&otherCfg.value)) {
+                if (otherS->find(secretVal) != std::string::npos) {
+                    return false;  // Secret leaked into non-secret config
+                }
+            }
+        }
+    }
+    return true;
 }
 
 // ===== DEFAULTS =====
@@ -452,11 +489,69 @@ ConfigVar AgenticConfiguration::parseValue(const std::string& valueStr, ConfigTy
 
 bool AgenticConfiguration::validateValue(const std::string& key, const ConfigVar& value)
 {
-    // Placeholder validation
-    return true;
+    auto it = m_config.find(key);
+    if (it == m_config.end()) return true;  // Unknown keys are accepted
+    const auto& cfg = it->second;
+    // Type check: ensure the variant holds the expected type
+    switch (cfg.type) {
+        case ConfigType::Integer:
+            return std::holds_alternative<int>(value);
+        case ConfigType::Float:
+            return std::holds_alternative<float>(value);
+        case ConfigType::Boolean:
+            return std::holds_alternative<bool>(value);
+        case ConfigType::String:
+            if (auto* s = std::get_if<std::string>(&value)) {
+                return !s->empty() || !cfg.isRequired;
+            }
+            return false;
+        default:
+            return true;
+    }
 }
 
 json AgenticConfiguration::parseYamlFile(const std::string& filePath)
 {
-    return json::object();
+    // Minimal YAML-subset parser: handles key: value pairs and nested objects (2-space indent)
+    json result = json::object();
+    std::ifstream file(filePath);
+    if (!file.is_open()) return result;
+
+    std::string line;
+    std::string currentSection;
+    while (std::getline(file, line)) {
+        // Skip comments and empty lines
+        size_t firstNonSpace = line.find_first_not_of(" \t");
+        if (firstNonSpace == std::string::npos || line[firstNonSpace] == '#') continue;
+
+        size_t colonPos = line.find(':');
+        if (colonPos == std::string::npos) continue;
+
+        std::string key = line.substr(firstNonSpace, colonPos - firstNonSpace);
+        // Trim trailing spaces from key
+        while (!key.empty() && (key.back() == ' ' || key.back() == '\t')) key.pop_back();
+
+        std::string val;
+        if (colonPos + 1 < line.size()) {
+            val = line.substr(colonPos + 1);
+            size_t valStart = val.find_first_not_of(" \t");
+            if (valStart != std::string::npos) val = val.substr(valStart);
+            else val.clear();
+            // Trim trailing whitespace
+            while (!val.empty() && (val.back() == ' ' || val.back() == '\t' || val.back() == '\r')) val.pop_back();
+        }
+
+        if (val.empty()) {
+            // This is a section header
+            currentSection = key;
+            if (!result.contains(currentSection)) result[currentSection] = json::object();
+        } else if (firstNonSpace >= 2 && !currentSection.empty()) {
+            // Nested under section
+            result[currentSection][key] = val;
+        } else {
+            currentSection.clear();
+            result[key] = val;
+        }
+    }
+    return result;
 }

@@ -32,6 +32,10 @@
 #include <unordered_set>
 #include <richedit.h>
 
+// CORS origin for local HTTP endpoints — restrict to localhost only.
+// Do not use "*" (wildcard); that would allow any origin to query IDE internals.
+static const char* kAsmCorsOrigin = "http://localhost";
+
 // ============================================================================
 // EDITOR HELPERS
 // ============================================================================
@@ -93,10 +97,17 @@ std::string Win32IDE::getWordAtCursor() const {
 }
 
 // ============================================================================
-// STATIC DATA — INSTRUCTION DATABASE
+// STATIC DATA — INSTRUCTION DATABASE & CONSTANTS
 // ============================================================================
 // 300+ x86/x64 instructions organized by category.
 // Each entry: { mnemonic, category, description, operands, affectsFlags }
+
+// Calling convention identifiers
+static constexpr const char* ASM_CC_WIN64      = "win64";
+static constexpr const char* ASM_CC_SYSV_AMD64 = "sysv_amd64";
+static constexpr const char* ASM_CC_STDCALL    = "stdcall";
+static constexpr const char* ASM_CC_CDECL      = "cdecl";
+static constexpr const char* ASM_CC_UNKNOWN    = "unknown";
 
 struct StaticInstructionEntry {
     const char* mnemonic;
@@ -1818,25 +1829,25 @@ std::string Win32IDE::detectCallingConvention(
 
     // Heuristic classification
     if ((usesRcx || usesRdx || usesR8 || usesR9) && hasShadow) {
-        return "win64";
+        return ASM_CC_WIN64;
     }
     if (usesRdi && usesRsi) {
-        return "sysv_amd64";
+        return ASM_CC_SYSV_AMD64;
     }
     if (hasRetN && retCleanup > 0) {
-        return "stdcall";
+        return ASM_CC_STDCALL;
     }
     if (usesRcx || usesRdx) {
-        return "win64";  // Likely Win64 even without full shadow space
+        return ASM_CC_WIN64;  // Likely Win64 even without full shadow space
     }
     if (usesRdi || usesRsi) {
-        return "sysv_amd64";
+        return ASM_CC_SYSV_AMD64;
     }
     if (hasRet && !hasRetN) {
-        return "cdecl";  // Caller cleans up — most likely cdecl
+        return ASM_CC_CDECL;  // Caller cleans up — most likely cdecl
     }
 
-    return "unknown";
+    return ASM_CC_UNKNOWN;
 }
 
 std::string Win32IDE::getAsmBlockAnalysisString(const AsmBlockAnalysis& analysis) const {
@@ -2138,7 +2149,7 @@ void Win32IDE::handleAsmSymbolsEndpoint(SOCKET client, const std::string& path) 
 
     std::string body = j.dump();
     std::string response = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n"
-                           "Access-Control-Allow-Origin: *\r\n"
+                           "Access-Control-Allow-Origin: " + std::string(kAsmCorsOrigin) + "\r\n"
                            "Content-Length: " + std::to_string(body.size()) + "\r\n\r\n" + body;
     send(client, response.c_str(), (int)response.size(), 0);
 }
@@ -2155,7 +2166,7 @@ void Win32IDE::handleAsmNavigateEndpoint(SOCKET client, const std::string& body)
         j["message"] = "'symbol' field is required";
         std::string respBody = j.dump();
         std::string response = "HTTP/1.1 400 Bad Request\r\nContent-Type: application/json\r\n"
-                               "Access-Control-Allow-Origin: *\r\n"
+                               "Access-Control-Allow-Origin: " + std::string(kAsmCorsOrigin) + "\r\n"
                                "Content-Length: " + std::to_string(respBody.size()) + "\r\n\r\n" + respBody;
         send(client, response.c_str(), (int)response.size(), 0);
         return;
@@ -2211,7 +2222,7 @@ void Win32IDE::handleAsmNavigateEndpoint(SOCKET client, const std::string& body)
 
     std::string respBody = j.dump();
     std::string response = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n"
-                           "Access-Control-Allow-Origin: *\r\n"
+                           "Access-Control-Allow-Origin: " + std::string(kAsmCorsOrigin) + "\r\n"
                            "Content-Length: " + std::to_string(respBody.size()) + "\r\n\r\n" + respBody;
     send(client, response.c_str(), (int)response.size(), 0);
 }
@@ -2249,7 +2260,7 @@ void Win32IDE::handleAsmAnalyzeEndpoint(SOCKET client, const std::string& body) 
 
     std::string respBody = j.dump();
     std::string response = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n"
-                           "Access-Control-Allow-Origin: *\r\n"
+                           "Access-Control-Allow-Origin: " + std::string(kAsmCorsOrigin) + "\r\n"
                            "Content-Length: " + std::to_string(respBody.size()) + "\r\n\r\n" + respBody;
     send(client, response.c_str(), (int)response.size(), 0);
 }

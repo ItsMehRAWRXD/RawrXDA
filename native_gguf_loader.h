@@ -22,16 +22,30 @@ struct NativeGGUFMetadata {
 
 class NativeGGUFLoader {
 public:
+    NativeGGUFLoader();
+    ~NativeGGUFLoader();
+
     bool Open(const std::string& filePath);
+    void Close();
     bool ParseHeader();
     bool ParseMetadata();
     bool ParseTensorInfo();
     bool LoadTensorData(const std::string& tensorName, std::vector<uint8_t>& data);
+    const uint8_t* GetTensorDataPointer(const std::string& tensorName, uint64_t* sizeBytes = nullptr) const;
+    bool IsMemoryMapped() const;
+    uint64_t GetMappedSize() const;
     const std::vector<NativeGGUFTensorInfo>& GetTensors() const;
     const std::vector<NativeGGUFMetadata>& GetMetadata() const;
 
 private:
+    bool OpenMemoryMap(const std::string& filePath);
+    void CloseMemoryMap();
+
     std::ifstream file;
+    void* fileHandle;
+    void* mappingHandle;
+    const uint8_t* mappedBase;
+    uint64_t mappedSize;
     uint32_t version;
     uint64_t metadataCount;
     uint64_t tensorCount;

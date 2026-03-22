@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": false,
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "forceConsistentCasingInFileNames": false
+  },
+  "include": [
+    "src/**/*",
+    "electron/**/*",
+    "scripts/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "build"
+  ]
+}

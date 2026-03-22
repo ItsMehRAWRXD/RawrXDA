@@ -1,13 +1,14 @@
 // ============================================================================
 // copilot_gap_closer.h — C++ Bridge to RawrXD_CopilotGapCloser.asm
 // ============================================================================
-// Declares extern "C" ASM exports and C++ wrapper classes for the four
+// Declares extern "C" ASM exports and C++ wrapper classes for the five
 // Copilot feature-parity subsystems:
 //
 //   Module 1: HNSW Vector Database (semantic code search across 1M snippets)
 //   Module 2: Multi-file Composer (atomic transactions across 256 files)
 //   Module 3: CRDT Collaboration Engine (real-time 16-peer collaboration)
 //   Module 4: Git Context Extractor (repo-wide AI context assembly)
+//   Module 5: Task Dispatcher (low-latency orchestration of Copilot requests)
 //
 // ASM Source:  src/asm/RawrXD_CopilotGapCloser.asm
 // License:     Pro tier — gated behind FEATURE_COPILOT_PARITY
@@ -25,8 +26,12 @@
 #include <cstring>
 #include <string>
 #include <vector>
+#include <memory>
 
 namespace RawrXD {
+
+// Forward declaration
+class AutonomousAgenticOrchestrator;
 
 // ============================================================================
 // Constants — must match ASM definitions
@@ -108,7 +113,7 @@ extern "C" {
     int64_t Crdt_GetLamport(void* doc);
 
     // ── Task Ingestion & Dispatcher ──
-    // Stubbed in copilot_gap_closer.cpp because implementaiton is in monolithic/tasks.asm 
+    // Stubbed in copilot_gap_closer.cpp because implementation is in monolithic/tasks.asm 
     // which uses different naming conventions.
     // int32_t Task_SubmitRequest(const char* taskDescription, const void** attachments, int32_t attachmentCount);
     // int32_t Task_GetStatus(int32_t taskId);
@@ -125,7 +130,7 @@ extern "C" {
     void    Git_SetCommitHash(const char* hash);
 
     // ── Performance ──
-    void    GapCloser_GetPerfCounters(GapCloserPerfCounter* out3);
+    void    GapCloser_GetPerfCounters(GapCloserPerfCounter* perfCounters);
 }
 
 // ============================================================================
@@ -153,8 +158,11 @@ public:
     /// Search for K approximate nearest neighbors.
     /// Returns number of results found.
     int32_t Search(const float* query, std::vector<int32_t>& outIds, int32_t k = 10) {
+        if (k <= 0) return 0;
         outIds.resize(k);
         int32_t found = VecDb_Search(query, outIds.data(), k);
+        if (found < 0) found = 0;
+        if (found > k) found = k;  // Clamp to prevent buffer overread
         outIds.resize(found);
         return found;
     }
@@ -199,7 +207,14 @@ public:
 class MultiFileComposer {
 public:
     MultiFileComposer()  = default;
-    ~MultiFileComposer() = default;
+    ~MultiFileComposer() {
+        // If a transaction is still in progress, attempt to commit
+        // to avoid resource leaks in the ASM layer.
+        if (m_txHandle) {
+            Composer_Commit(m_txHandle);
+            m_txHandle = nullptr;
+        }
+    }
 
     MultiFileComposer(const MultiFileComposer&) = delete;
     MultiFileComposer& operator=(const MultiFileComposer&) = delete;
@@ -277,6 +292,7 @@ public:
     /// Initialize a new CRDT document.
     /// UUID must be 16 bytes. PeerId is 0..15.
     bool InitDocument(const uint8_t uuid[16], int32_t peerId) {
+        if (peerId < 0 || peerId >= CRDT_MAX_PEERS) return false;
         m_docHandle = Crdt_InitDocument(uuid, peerId);
         m_peerId    = peerId;
         return m_docHandle != nullptr;
@@ -285,7 +301,8 @@ public:
     /// Insert text at a logical position.
     /// Returns Lamport timestamp of the operation.
     int64_t InsertText(uint64_t position, const char* text, int32_t length) {
-        if (!m_docHandle) return -1;
+        if (!m_docHandle || !text) return -1;
+        if (length <= 0 || length > CRDT_MAX_CONTENT) return -1;
         return Crdt_InsertText(m_docHandle, position, text, length);
     }
 
@@ -350,8 +367,10 @@ public:
         Git_SetCommitHash(hash);
     }
 
-    /// Extract AI context string for the given repo/file/line.
-    /// Caller must free the returned string via GlobalFree.
+    /// Returns a std::string whose memory is managed automatically by C++.
+    /// Callers do not need to, and must not, free it with GlobalFree; any
+    /// GlobalAlloc/GlobalFree usage is internal to the underlying ASM
+    /// implementation.
     std::string ExtractContext(const char* repoPath,
                                const char* currentFile = nullptr,
                                int32_t lineNumber = 0);
@@ -390,8 +409,8 @@ public:
 // ============================================================================
 class CopilotGapCloser {
 public:
-    CopilotGapCloser()  = default;
-    ~CopilotGapCloser() = default;
+    CopilotGapCloser();
+    ~CopilotGapCloser();
 
     CopilotGapCloser(const CopilotGapCloser&) = delete;
     CopilotGapCloser& operator=(const CopilotGapCloser&) = delete;
@@ -406,6 +425,14 @@ public:
     CrdtEngine&        GetCrdt()     { return m_crdt; }
     GitContextProvider& GetGitCtx()  { return m_gitCtx; }
     TaskDispatcher&    GetDispatcher() { return m_dispatcher; }
+    
+    /// Access autonomous orchestrator
+    AutonomousAgenticOrchestrator* GetOrchestrator() { return m_orchestrator.get(); }
+    
+    /// High-level autonomous operations
+    std::string CreateAutonomousPlan(const std::string& objective);
+    bool ExecuteAutonomousPlan(const std::string& plan_id);
+    void EnableMaxAutonomy(bool enable = true);
 
     /// Get performance counters for measured subsystems.
     void GetPerfCounters(GapCloserPerfCounter& vecDb,
@@ -427,7 +454,13 @@ private:
     CrdtEngine         m_crdt;
     GitContextProvider m_gitCtx;
     TaskDispatcher     m_dispatcher;
+    std::unique_ptr<AutonomousAgenticOrchestrator> m_orchestrator;
     int                m_initCount = 0;
 };
+
+// ============================================================================
+// AutonomousOrchestrator — Forward declaration (defined in autonomous_orchestrator.h)
+// ============================================================================
+class AutonomousOrchestrator;
 
 } // namespace RawrXD

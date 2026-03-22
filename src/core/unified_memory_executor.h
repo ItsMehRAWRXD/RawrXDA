@@ -6,31 +6,34 @@
 // CPU and GPU share same address space - zero copy, zero transfer
 // ============================================================================
 
+#include "utils/Expected.h"
+#include <atomic>
 #include <cstdint>
 #include <memory>
-#include <string>
-#include <expected>
 #include <mutex>
-#include <atomic>
+#include <string>
 
-namespace RawrXD {
-namespace UnifiedMemory {
+namespace RawrXD
+{
+namespace UnifiedMemory
+{
 
 // ============================================================================
 // Error Types
 // ============================================================================
 
-enum class UnifiedMemoryError {
+enum class UnifiedMemoryError
+{
     Success = 0,
-    SAMNotEnabled,          // Resizable BAR not enabled in BIOS
-    BARMappingFailed,       // Failed to map BAR0 to CPU address space
-    InsufficientMemory,     // Not enough unified memory available
-    InvalidParameter,       // Invalid function parameter
-    AlreadyInitialized,     // Unified memory already initialized
-    NotInitialized,         // Unified memory not initialized
-    AllocationFailed,       // Memory allocation failed
-    ModelLoadFailed,        // Failed to load model into unified memory
-    CoherencyTestFailed     // Memory coherency test failed
+    SAMNotEnabled,       // Resizable BAR not enabled in BIOS
+    BARMappingFailed,    // Failed to map BAR0 to CPU address space
+    InsufficientMemory,  // Not enough unified memory available
+    InvalidParameter,    // Invalid function parameter
+    AlreadyInitialized,  // Unified memory already initialized
+    NotInitialized,      // Unified memory not initialized
+    AllocationFailed,    // Memory allocation failed
+    ModelLoadFailed,     // Failed to load model into unified memory
+    CoherencyTestFailed  // Memory coherency test failed
 };
 
 // ============================================================================
@@ -38,16 +41,17 @@ enum class UnifiedMemoryError {
 // ============================================================================
 
 constexpr uint64_t SAM_ENABLED = 1;
-constexpr uint64_t BAR0_SIZE_16GB = 0x400000000ULL;  // 16GB flat mapping
-constexpr uint64_t PAGE_SIZE = 0x1000ULL;             // 4KB pages
-constexpr uint64_t SYSTEM_RAM_RESERVE = 0x40000000ULL; // 1GB reserved for OS/system
-constexpr uint64_t GPU_ACCESSIBLE = 0x3C0000000ULL;    // 15GB for unified compute
+constexpr uint64_t BAR0_SIZE_16GB = 0x400000000ULL;     // 16GB flat mapping
+constexpr uint64_t PAGE_SIZE = 0x1000ULL;               // 4KB pages
+constexpr uint64_t SYSTEM_RAM_RESERVE = 0x40000000ULL;  // 1GB reserved for OS/system
+constexpr uint64_t GPU_ACCESSIBLE = 0x3C0000000ULL;     // 15GB for unified compute
 
 // ============================================================================
 // Execution Modes
 // ============================================================================
 
-enum class ExecutionMode {
+enum class ExecutionMode
+{
     CPU_ONLY = 0,
     GPU_ONLY = 1,
     HETEROGENEOUS = 2  // CPU prep + GPU compute
@@ -57,50 +61,53 @@ enum class ExecutionMode {
 // Unified Memory Buffer
 // ============================================================================
 
-struct UnifiedBuffer {
-    void* ptr = nullptr;           // Unified pointer (valid on both CPU and GPU)
-    uint64_t sizeBytes = 0;        // Size in bytes
-    uint64_t alignment = 0;        // Alignment requirement
-    bool isMapped = false;         // Whether buffer is mapped
-    uint32_t bufferId = 0;         // Unique buffer identifier
+struct UnifiedBuffer
+{
+    void* ptr = nullptr;     // Unified pointer (valid on both CPU and GPU)
+    uint64_t sizeBytes = 0;  // Size in bytes
+    uint64_t alignment = 0;  // Alignment requirement
+    bool isMapped = false;   // Whether buffer is mapped
+    uint32_t bufferId = 0;   // Unique buffer identifier
 };
 
 // ============================================================================
 // Unified Memory Executor
 // ============================================================================
 
-class UnifiedMemoryExecutor {
-public:
+class UnifiedMemoryExecutor
+{
+  public:
     static UnifiedMemoryExecutor& instance();
 
     // Lifecycle
-    std::expected<void, UnifiedMemoryError> initialize();
+    RawrXD::Expected<void, UnifiedMemoryError> initialize();
     void shutdown();
     bool isInitialized() const { return m_initialized.load(); }
 
-    // Memory Management
-    std::expected<UnifiedBuffer, UnifiedMemoryError> allocate(uint64_t sizeBytes, uint64_t alignment = 64);
-    std::expected<void, UnifiedMemoryError> free(UnifiedBuffer& buffer);
+    // Memory Management (RawrXD::Expected — C++20-friendly; avoids MSVC <expected> / std::free name clashes)
+    RawrXD::Expected<UnifiedBuffer, UnifiedMemoryError> allocate(uint64_t sizeBytes, uint64_t alignment = 64);
+    RawrXD::Expected<void, UnifiedMemoryError> free(UnifiedBuffer& buffer);
 
     // Model Loading (zero-copy)
-    std::expected<UnifiedBuffer, UnifiedMemoryError> loadModelUnified(
-        const std::string& filePath, uint64_t fileSize);
+    RawrXD::Expected<UnifiedBuffer, UnifiedMemoryError> loadModelUnified(const std::string& filePath,
+                                                                         uint64_t fileSize);
 
     // Execution
-    std::expected<void, UnifiedMemoryError> executeLayerUnified(
-        uint32_t layerIndex, const UnifiedBuffer& input, UnifiedBuffer& output);
+    RawrXD::Expected<void, UnifiedMemoryError> executeLayerUnified(uint32_t layerIndex, const UnifiedBuffer& input,
+                                                                   UnifiedBuffer& output);
 
-    std::expected<void, UnifiedMemoryError> streamingExecutorUnified();
+    RawrXD::Expected<void, UnifiedMemoryError> streamingExecutorUnified();
 
-    std::expected<void, UnifiedMemoryError> heterogeneousScheduler();
+    RawrXD::Expected<void, UnifiedMemoryError> heterogeneousScheduler();
 
     // Coherency and Synchronization
-    std::expected<void, UnifiedMemoryError> testUnifiedCoherency();
-    void unifiedFence();  // Lightweight fence (no cache flush on unified)
+    RawrXD::Expected<void, UnifiedMemoryError> testUnifiedCoherency();
+    void unifiedFence();       // Lightweight fence (no cache flush on unified)
     void waitForGpuUnified();  // Poll unified flag for GPU completion
 
     // Statistics
-    struct Stats {
+    struct Stats
+    {
         uint64_t totalAllocatedBytes = 0;
         uint64_t peakAllocatedBytes = 0;
         uint64_t allocationCount = 0;
@@ -112,14 +119,15 @@ public:
     Stats getStats() const;
 
     // BAR0 Information
-    struct BAR0Info {
+    struct BAR0Info
+    {
         uint64_t physicalAddress = 0;
         void* virtualAddress = nullptr;
         uint64_t sizeBytes = 0;
         bool samEnabled = false;
     };
 
-    std::expected<BAR0Info, UnifiedMemoryError> getBAR0Info() const;
+    RawrXD::Expected<BAR0Info, UnifiedMemoryError> getBAR0Info() const;
 
     /** True when hardware SAM BAR mapping failed and a host RAM arena is used (dev / no driver). */
     bool isHostBackedMode() const { return m_hostBackedUnified; }
@@ -127,7 +135,10 @@ public:
     /** Bump-allocator span (bytes) after reserve; meaningful once initialized. */
     uint64_t getUnifiedHeapCapacityBytes() const { return m_heapLimit; }
 
-private:
+    /// Bytes still available in the bump heap (for sizing `loadModelUnified` / GGUF copies).
+    uint64_t getUnifiedHeapRemainingBytes();
+
+  private:
     UnifiedMemoryExecutor() = default;
     ~UnifiedMemoryExecutor() { shutdown(); }
 
@@ -136,11 +147,11 @@ private:
     UnifiedMemoryExecutor& operator=(const UnifiedMemoryExecutor&) = delete;
 
     // Internal Implementation
-    std::expected<void, UnifiedMemoryError> initializeBAR0();
-    std::expected<void, UnifiedMemoryError> mapBAR0ToCPU();
-    std::expected<void, UnifiedMemoryError> establishUnifiedHeap();
-    std::expected<void, UnifiedMemoryError> initializeGPUUnifiedMemory();
-    std::expected<void, UnifiedMemoryError> initializeHostBackedUnified();
+    RawrXD::Expected<void, UnifiedMemoryError> initializeBAR0();
+    RawrXD::Expected<void, UnifiedMemoryError> mapBAR0ToCPU();
+    RawrXD::Expected<void, UnifiedMemoryError> establishUnifiedHeap();
+    RawrXD::Expected<void, UnifiedMemoryError> initializeGPUUnifiedMemory();
+    RawrXD::Expected<void, UnifiedMemoryError> initializeHostBackedUnified();
 
     // State
     std::atomic<bool> m_initialized{false};

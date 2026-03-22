@@ -12,7 +12,7 @@ Full-featured IDE built on Electron and React. Core experience: file explorer, M
 - **Monaco Editor** – code editing
 - **node-pty** – integrated terminal (required)
 - **sqlite3** – local DB features (required)
-- **Ollama** – local BigDaddyG model (optional; enables AI features)
+- **Ollama** – local BigDaddyG model (optional; enables AI features). The IDE **calls** `http://127.0.0.1:11434` as an **HTTP client**; it does **not** host Ollama. See **`docs/LOCALHOST_COMMUNICATION_MAP.md`** (repo root).
 
 ## Prerequisites (Required for IDE)
 

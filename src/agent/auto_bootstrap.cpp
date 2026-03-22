@@ -215,12 +215,28 @@ void AutoBootstrap::executePlan(const std::string& wish, const nlohmann::json& p
                 success = patch.addCpp(v.value("target", ""), v.value("deps", ""));
             } else if (type == "build") {
                 std::string target = v.value("target", "");
-                std::string cmd = "cmake --build build --config Release";
-                if (!target.empty()) cmd += " --target " + target;
+                std::vector<std::string> buildArgs = {"--build", "build", "--config", "Release"};
+                if (!target.empty()) { buildArgs.push_back("--target"); buildArgs.push_back(target); }
 #ifdef _WIN32
-                success = (std::system(cmd.c_str()) == 0);
+                {
+                    std::string cmdLine = "cmake";
+                    for (const auto& a : buildArgs) cmdLine += " " + a;
+                    STARTUPINFOA si{}; si.cb = sizeof(si);
+                    PROCESS_INFORMATION pi{};
+                    std::vector<char> buf(cmdLine.begin(), cmdLine.end()); buf.push_back('\0');
+                    if (CreateProcessA(nullptr, buf.data(), nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi)) {
+                        WaitForSingleObject(pi.hProcess, 300000);
+                        DWORD ec = 1; GetExitCodeProcess(pi.hProcess, &ec);
+                        CloseHandle(pi.hProcess); CloseHandle(pi.hThread);
+                        success = (ec == 0);
+                    } else { success = false; }
+                }
 #else
-                success = (std::system(cmd.c_str()) == 0);
+                {
+                    std::string cmd = "cmake";
+                    for (const auto& a : buildArgs) cmd += " " + a;
+                    success = (std::system(cmd.c_str()) == 0);
+                }
 #endif
             } else if (type == "hot_reload") {
                 success = patch.hotReload();

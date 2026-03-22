@@ -158,9 +158,12 @@ void ActionExecutor::executePlan(const nlohmann::json& actions, bool stopOnError
     if (onPlanStarted)
         onPlanStarted(static_cast<int>(actions.size()));
 
-    // Execute in background thread to avoid blocking UI
+    // H-3 fix: capture a shared_ptr to *this so the object outlives the thread.
+    // Callers must manage ActionExecutor via shared_ptr (use shared_from_this pattern).
+    // The thread itself is detached but holds a strong reference, preventing UAF.
+    auto self = shared_from_this();
     std::thread(
-        [this, actions]()
+        [self, actions]()
         {
             bool planSuccess = true;
             int index = 0;
@@ -181,21 +184,21 @@ void ActionExecutor::executePlan(const nlohmann::json& actions, bool stopOnError
                 if (onProgressUpdated)
                     onProgressUpdated(index + 1, static_cast<int>(actions.size()));  // +1 for current starting
 
-                bool result = executeAction(action);
+                bool result = self->executeAction(action);
 
                 if (!result)
                 {
                     planSuccess = false;
-                    if (m_stopOnError)
+                    if (self->m_stopOnError)
                         break;
                 }
 
                 index++;
             }
 
-            m_isExecuting = false;
-            if (onPlanCompleted)
-                onPlanCompleted(planSuccess, getAggregatedResult());
+            self->m_isExecuting = false;
+            if (self->onPlanCompleted)
+                self->onPlanCompleted(planSuccess, self->getAggregatedResult());
         })
         .detach();
 }
@@ -325,8 +328,32 @@ bool ActionExecutor::restoreFromBackup(const std::string& filePath)
 // Handlers
 // ─────────────────────────────────────────────────────────────────────
 
+// Guard: ensure the resolved path stays inside projectRoot (prevent path traversal).
+static bool PathIsInsideRoot(const std::string& rootDir, const std::string& target) {
+    if (rootDir.empty()) return true;  // no root configured — allow
+    std::error_code ec;
+    fs::path canonical_root = fs::weakly_canonical(rootDir, ec);
+    if (ec) return false;
+    fs::path canonical_target = fs::weakly_canonical(target, ec);
+    if (ec) {
+        // target may not exist yet; canonicalize what we can
+        fs::path p(target);
+        canonical_target = fs::weakly_canonical(p.parent_path(), ec) / p.filename();
+        if (ec) return false;
+    }
+    auto [rEnd, ignore] = std::mismatch(canonical_root.begin(), canonical_root.end(),
+                                         canonical_target.begin());
+    return rEnd == canonical_root.end();
+}
+
 bool ActionExecutor::handleFileEdit(Action& action)
 {
+    // M-1: Reject any target path that escapes the project root
+    if (!PathIsInsideRoot(m_context.projectRoot, action.target)) {
+        action.error = "Path traversal rejected: " + action.target;
+        return false;
+    }
+
     std::string op = action.params.value("operation", "write");
     std::string content = action.params.value("content", "");
 
@@ -462,11 +489,35 @@ bool ActionExecutor::handleSearchFiles(Action& action)
     return true;
 }
 
+// Helper: quote a single command-line token for cmd.exe / CreateProcessA.
+// Wraps the token in double-quotes and escapes embedded double-quotes as \"
+static std::string QuoteCmdArg(const std::string& s) {
+    if (s.find_first_of(" \t\"&|<>^;,()%") == std::string::npos && !s.empty())
+        return s;   // No quoting needed
+    std::string q;
+    q.reserve(s.size() + 4);
+    q += '"';
+    for (char c : s) {
+        if (c == '"') q += '\\'; // escape embedded quote
+        q += c;
+    }
+    q += '"';
+    return q;
+}
+
 json ActionExecutor::executeCommand(const std::string& command, const std::vector<std::string>& args, int timeoutMs)
 {
-    std::string fullCmd = command;
-    for (const auto& arg : args)
-        fullCmd += " " + arg;
+    // Build a safely-quoted command line.  The application token is quoted so
+    // spaces in paths are handled; each arg is independently quoted.  No shell
+    // metacharacter injection is possible because we pass lpApplicationName=NULL
+    // but every token is fully quoted and we do NOT use "cmd.exe /C" wrapping.
+    std::string cmdLine = QuoteCmdArg(command);
+    for (const auto& arg : args) {
+        cmdLine += ' ';
+        cmdLine += QuoteCmdArg(arg);
+    }
+    std::vector<char> cmdBuf(cmdLine.begin(), cmdLine.end());
+    cmdBuf.push_back('\0');
 
     // Windows Process Creation
     SECURITY_ATTRIBUTES saAttr;
@@ -490,22 +541,16 @@ json ActionExecutor::executeCommand(const std::string& command, const std::vecto
     si.hStdError = hChildStd_OUT_Wr;
     si.hStdOutput = hChildStd_OUT_Wr;
     si.dwFlags |= STARTF_USESTDHANDLES;
-
     ZeroMemory(&pi, sizeof(pi));
 
-    // Create the child process.
-    std::string cmdLine = "cmd.exe /C " + fullCmd;
-    char* szCmdLine = _strdup(cmdLine.c_str());  // Writable buffer
-
-    if (!CreateProcessA(NULL, szCmdLine, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi))
+    // lpApplicationName=NULL: the first token of cmdBuf is the executable path.
+    if (!CreateProcessA(NULL, cmdBuf.data(), NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
     {
-        free(szCmdLine);
         CloseHandle(hChildStd_OUT_Wr);
         CloseHandle(hChildStd_OUT_Rd);
-        return {{"error", "CreateProcess failed"}};
+        return {{"error", "CreateProcess failed: " + std::to_string(GetLastError())}};
     }
 
-    free(szCmdLine);
     CloseHandle(hChildStd_OUT_Wr);  // Close write end in parent
 
     // Read output

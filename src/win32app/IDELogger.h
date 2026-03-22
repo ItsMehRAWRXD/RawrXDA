@@ -9,8 +9,10 @@
 #include <sstream>
 #include <iomanip>
 
-// Pull in canonical LogLevel from logging/Logger.h and alias for IDELogger consumers
-#include "logging/Logger.h"
+// Pull in canonical LogLevel + RAWRXD_LOG_* from src/logging/Logger.h.
+// Do NOT use "logging/Logger.h" alone: -Iinclude is ordered before -Isrc on MSVC, so that
+// would pick include/logging/logger.h (different API, no RAWRXD_LOG_* macros).
+#include "../logging/Logger.h"
 namespace RawrXD { namespace Logging { enum class LogLevel; } }
 using IDELogLevel = RawrXD::Logging::LogLevel;
 

@@ -224,6 +224,7 @@ public:
     bool init();
     void shutdown();
     void reset();  // Reset budgets and violations
+    bool isInitialized() const { return m_initialized.load(); }
 
     // ── Contract Checks ────────────────────────────────────────────────
     ContractCheckResult checkAction(

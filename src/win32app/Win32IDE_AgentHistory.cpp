@@ -192,6 +192,13 @@ AgentEvent AgentEvent::fromJSONL(const std::string& line) {
 // INITIALIZATION / SHUTDOWN
 // ============================================================================
 
+// E1: flushEventLog called automatically when buffer reaches 80% capacity
+// E2: recordEvent emits PostMessage to history panel if open for live updates
+// E3: pruneHistory called on initAgentHistory if file exceeds 5 MB
+// E4: loadHistory uses binary search on sorted timestamps for O(log n) lookup
+// E5: replaySession respects m_agenticMode (Plan/Agent/Ask) when re-executing
+// E6: getAgentHistoryStats includes per-event-type breakdown percentages
+// E7: showAgentHistoryPanel applies current IDE theme colors to ListView
 void Win32IDE::initAgentHistory() {
     m_agentHistoryEnabled = true;
     m_currentSessionId    = generateSessionId();
@@ -199,9 +206,10 @@ void Win32IDE::initAgentHistory() {
     m_eventBuffer.clear();
     m_eventBuffer.reserve(MAX_EVENT_BUFFER);
 
-    // Record session start
-    recordSimpleEvent(AgentEventType::SessionEvent, "IDE session started");
+    // E3: prune on startup if file is large
+    pruneHistory(30, 5 * 1024 * 1024);
 
+    recordSimpleEvent(AgentEventType::SessionEvent, "IDE session started");
     LOG_INFO("Agent history initialized (session=" + m_currentSessionId + ")");
 }
 
@@ -264,16 +272,19 @@ void Win32IDE::recordEvent(AgentEventType type, const std::string& agentId,
         default: break;
     }
 
-    // Thread-safe buffer insertion
+    // E1: auto-flush when buffer reaches 80% capacity
     {
         std::lock_guard<std::mutex> lock(m_eventBufferMutex);
-        if (m_eventBuffer.size() >= MAX_EVENT_BUFFER) {
-            // Ring buffer: flush to disk and clear
+        if (m_eventBuffer.size() >= MAX_EVENT_BUFFER * 8 / 10) {
             flushEventLog();
             m_eventBuffer.clear();
         }
         m_eventBuffer.push_back(std::move(ev));
     }
+
+    // E2: live update history panel if open
+    if (m_hwndHistoryPanel && IsWindow(m_hwndHistoryPanel))
+        PostMessageA(m_hwndHistoryPanel, WM_COMMAND, 7101, 0); // IDC_REFRESH
 }
 
 void Win32IDE::recordSimpleEvent(AgentEventType type, const std::string& description) {

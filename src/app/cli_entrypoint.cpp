@@ -14,6 +14,13 @@
 #include <utility>
 #include <vector>
 
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#endif
+
 namespace {
 
 void printUsage() {
@@ -88,10 +95,58 @@ std::pair<int, std::string> runBuildWithCapture(const std::string& buildCommand,
         }
     }
 
-    std::string wrapped = "cmd /c " + buildCommand;
-
     std::string output;
-    FILE* pipe = _popen(wrapped.c_str(), "r");
+
+#ifdef _WIN32
+    SECURITY_ATTRIBUTES sa{}; sa.nLength = sizeof(sa); sa.bInheritHandle = TRUE;
+    HANDLE hRead = nullptr, hWrite = nullptr;
+    if (!CreatePipe(&hRead, &hWrite, &sa, 0)) {
+        if (!workspaceRoot.empty()) {
+            std::filesystem::current_path(originalCwd, ec);
+        }
+        return {-1, "Failed to create pipe"};
+    }
+    SetHandleInformation(hRead, HANDLE_FLAG_INHERIT, 0);
+
+    STARTUPINFOA si{}; si.cb = sizeof(si);
+    si.dwFlags = STARTF_USESTDHANDLES;
+    si.hStdOutput = hWrite; si.hStdError = hWrite;
+    PROCESS_INFORMATION pi{};
+
+    std::string cmdLine = "cmd /c " + buildCommand;
+    std::vector<char> cmdBuf(cmdLine.begin(), cmdLine.end());
+    cmdBuf.push_back('\0');
+
+    BOOL ok = CreateProcessA(nullptr, cmdBuf.data(), nullptr, nullptr, TRUE,
+                             CREATE_NO_WINDOW, nullptr,
+                             workspaceRoot.empty() ? nullptr : workspaceRoot.c_str(),
+                             &si, &pi);
+    CloseHandle(hWrite);
+
+    if (!ok) {
+        CloseHandle(hRead);
+        if (!workspaceRoot.empty()) std::filesystem::current_path(originalCwd, ec);
+        return {-1, "Failed to launch build command"};
+    }
+
+    char buffer[4096];
+    DWORD bytesRead = 0;
+    while (ReadFile(hRead, buffer, sizeof(buffer)-1, &bytesRead, nullptr) && bytesRead > 0) {
+        buffer[bytesRead] = '\0';
+        output.append(buffer, bytesRead);
+    }
+    CloseHandle(hRead);
+
+    WaitForSingleObject(pi.hProcess, 300000);
+    DWORD dwExitCode = 1;
+    GetExitCodeProcess(pi.hProcess, &dwExitCode);
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+
+    int exitCode = static_cast<int>(dwExitCode);
+#else
+    std::string wrapped = buildCommand + " 2>&1";
+    FILE* pipe = popen(wrapped.c_str(), "r");
     if (!pipe) {
         if (!workspaceRoot.empty()) {
             std::filesystem::current_path(originalCwd, ec);
@@ -104,7 +159,8 @@ std::pair<int, std::string> runBuildWithCapture(const std::string& buildCommand,
         output.append(buffer);
     }
 
-    int exitCode = _pclose(pipe);
+    int exitCode = pclose(pipe);
+#endif
 
     if (!workspaceRoot.empty()) {
         std::filesystem::current_path(originalCwd, ec);

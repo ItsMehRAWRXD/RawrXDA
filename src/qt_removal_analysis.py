@@ -197,7 +197,7 @@ def main():
     print("6. Utility and platform code")
     
     print("\nReplacement strategy:")
-    print("- Add #include \"QtReplacements.hpp\" to all files")
+    print("- Add #include \"RawrCompatIo.hpp\" (Ship/) to files that still need legacy-shaped helpers")
     print("- Remove all #include <Q*> directives")
     print("- Use std::wstring instead of QString")
     print("- Use std::vector instead of QList/QVector")

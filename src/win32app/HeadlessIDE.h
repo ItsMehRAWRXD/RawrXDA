@@ -43,6 +43,7 @@
 #include <functional>
 #include <condition_variable>
 #include <climits>
+#include <deque>
 
 #include "IOutputSink.h"
 #include "Win32IDE_AgenticBridge.h"

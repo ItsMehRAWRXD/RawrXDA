@@ -51,6 +51,7 @@ private:
     void*                   m_processHandle = nullptr;
 #endif
     std::vector<std::string> m_autoApproveList;
+    std::string             m_lastOutput;
 };
 
 #endif // AGENTIC_COMMAND_EXECUTOR_H

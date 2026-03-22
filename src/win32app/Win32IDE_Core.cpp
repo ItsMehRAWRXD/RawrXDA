@@ -27,6 +27,7 @@
 #include "RawrXD_AgentCoordinator.h"
 #include "RawrXD_AutonomousAgenticPipeline.h"
 #include "Win32IDE.h"
+#include "Win32IDE_AgenticBrowser.h"
 #include "Win32IDE_ComponentManagers.h"  // Complete types for unique_ptr<T> dtor
 #include "Win32IDE_IELabels.h"
 #include "enterprise_feature_manager.hpp"
@@ -1624,6 +1625,8 @@ void Win32IDE::onSize(int width, int height)
 
     // Store editor rect for GPU surface sync
     m_editorRect = {editorLeft, contentTop, editorLeft + editorWidth, contentTop + editorAreaHeight};
+
+    Win32IDE_AgenticBrowser_Relayout();
 }
 
 // ============================================================================

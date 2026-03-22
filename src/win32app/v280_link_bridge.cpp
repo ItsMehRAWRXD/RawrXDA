@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <cstdint>
 #include <cstring>
+#include "../core/ssot_handlers.h"
 
 namespace {
 constexpr uint32_t WM_V280_GHOST_TEXT = 0x0400u + 280u;
@@ -12,6 +13,11 @@ std::atomic<bool> g_v280GhostActive{false};
 
 extern "C" int64_t V280_UI_WndProc_Hook(void* hwnd, uint32_t uMsg, uint64_t wParam, int64_t lParam) {
     (void)hwnd;
+
+    // Gate v280 shared-memory bridge by SSOT full beacon heartbeat.
+    if (!isBeaconFullActive()) {
+        return 0;
+    }
 
     if (uMsg == WM_V280_GHOST_TEXT) {
         if (wParam == 0 || lParam == 0) {

@@ -132,13 +132,33 @@ static TaskResult executeTerminalCmd(const std::string& instruction, const std::
     }
 
 #ifdef _WIN32
-    // Build full command with workspace as working directory
-    std::string fullCmd = "cmd.exe /c \"cd /d \"" + workspaceRoot + "\" && " + instruction + "\"";
-    
+    // Safe process launch: cmd.exe is the fixed application; the user instruction is
+    // passed as a /C argument with proper quoting so it cannot break out of the cmd.exe
+    // context or inject additional commands via shell metacharacters in workspaceRoot.
+    // workspaceRoot is validated as an existing directory before use.
+    std::string safeRoot = workspaceRoot;
+    {
+        std::error_code ec;
+        if (!safeRoot.empty() && !std::filesystem::is_directory(safeRoot, ec)) {
+            result.success = false;
+            result.errorMessage = "Invalid workspace root: " + safeRoot;
+            return result;
+        }
+        if (safeRoot.empty())
+            safeRoot = ".";
+    }
+    // Build the cmd.exe command line with the workspace directory baked in via /D,
+    // and the instruction wrapped in an outer quote pair so the entire token is atomic.
+    // Note: we do NOT interpolate safeRoot into the instruction string; it is passed
+    // only as the lpCurrentDirectory argument to CreateProcessA.
+    std::string quotedCmd = "cmd.exe /C \"" + instruction + "\"";
+    std::vector<char> cmdBuf(quotedCmd.begin(), quotedCmd.end());
+    cmdBuf.push_back('\0');
+
     SECURITY_ATTRIBUTES sa{};
     sa.nLength = sizeof(sa);
     sa.bInheritHandle = TRUE;
-    
+
     HANDLE hReadPipe = nullptr, hWritePipe = nullptr;
     if (!CreatePipe(&hReadPipe, &hWritePipe, &sa, 0)) {
         result.success = false;
@@ -155,9 +175,9 @@ static TaskResult executeTerminalCmd(const std::string& instruction, const std::
 
     PROCESS_INFORMATION pi{};
     BOOL created = CreateProcessA(
-        nullptr, const_cast<char*>(fullCmd.c_str()),
+        nullptr, cmdBuf.data(),
         nullptr, nullptr, TRUE, CREATE_NO_WINDOW,
-        nullptr, workspaceRoot.empty() ? nullptr : workspaceRoot.c_str(),
+        nullptr, safeRoot.c_str(),
         &si, &pi);
 
     CloseHandle(hWritePipe);

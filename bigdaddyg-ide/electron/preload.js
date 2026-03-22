@@ -1,39 +1,67 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
-contextBridge.exposeInMainWorld('electronAPI', {
-  invokeAI: (provider, prompt, context) =>
-    ipcRenderer.invoke('ai:invoke', provider, prompt, context),
+/**
+ * Preload runs in an isolated world; this IIFE closure captures `ipcRenderer` once and builds the
+ * exposed API object — reverse-engineered from a flat list of stubs into a single lexical scope
+ * (no accidental reassignment of channel helpers at module top).
+ *
+ * IPC surface (see `electron/main.js` → `setupIPC()`):
+ * ai:*, native:status, agent:*, fs:*, project:open, menu:set-accelerators, ide:action
+ *
+ * Win32 lane note:
+ * Keeps the IPC surface minimal for AI, agent, project, and file operations.
+ */
+const electronAPI = (() => {
+  const invoke = (channel, ...args) => ipcRenderer.invoke(channel, ...args);
 
-  listAIProviders: () =>
-    ipcRenderer.invoke('ai:list-providers'),
+  return {
+    invokeAI: (provider, prompt, context) => invoke('ai:invoke', provider, prompt, context),
 
-  setActiveAIProvider: (providerId) =>
-    ipcRenderer.invoke('ai:set-active', providerId),
+    listAIProviders: () => invoke('ai:list-providers'),
 
-  startAgent: (goal) =>
-    ipcRenderer.invoke('agent:start', goal),
+    setActiveAIProvider: (providerId) => invoke('ai:set-active', providerId),
 
-  getAgentStatus: (taskId) =>
-    ipcRenderer.invoke('agent:status', taskId),
+    startAgent: (goal, policy) => invoke('agent:start', goal, policy),
 
-  readFile: (filePath) =>
-    ipcRenderer.invoke('fs:read-file', filePath),
+    getAgentStatus: (taskId) => invoke('agent:status', taskId),
 
-  writeFile: (filePath, content) =>
-    ipcRenderer.invoke('fs:write-file', filePath, content),
+    approveAgentStep: (taskId, approved) => invoke('agent:approve', taskId, approved),
 
-  readDir: (dirPath) =>
-    ipcRenderer.invoke('fs:read-dir', dirPath),
+    cancelAgentTask: (taskId) => invoke('agent:cancel', taskId),
 
-  openProject: () =>
-    ipcRenderer.invoke('project:open'),
+    listAgentTasks: () => invoke('agent:list-tasks'),
 
-  onProjectOpened: (callback) => {
-    if (typeof callback === 'function') {
-      ipcRenderer.on('project:opened', (_, path) => callback(path));
-    }
-  },
+    rollbackAgentMutations: (taskId) => invoke('agent:rollback', taskId),
 
-  platform: process.platform,
-  isDev: process.env.NODE_ENV === 'development'
-});
+    readFile: (filePath) => invoke('fs:read-file', filePath),
+
+    writeFile: (filePath, content) => invoke('fs:write-file', filePath, content),
+
+    readDir: (dirPath) => invoke('fs:read-dir', dirPath),
+
+    openProject: () => invoke('project:open'),
+
+    onProjectOpened: (callback) => {
+      if (typeof callback === 'function') {
+        ipcRenderer.on('project:opened', (_, path) => callback(path));
+      }
+    },
+
+    setMenuAccelerators: (accelerators) => invoke('menu:set-accelerators', accelerators),
+
+    /** Menu / shell: command-palette | settings | chat | agent | modules | symbols | models | sidebar-toggle */
+    onIdeAction: (callback) => {
+      if (typeof callback !== 'function') return undefined;
+      const fn = (_, action) => callback(action);
+      ipcRenderer.on('ide:action', fn);
+      return () => ipcRenderer.removeListener('ide:action', fn);
+    },
+
+    platform: process.platform,
+    isDev: process.env.NODE_ENV === 'development',
+
+    nativeStatus: () => invoke('native:status')
+  };
+})();
+
+contextBridge.exposeInMainWorld('electronAPI', electronAPI);

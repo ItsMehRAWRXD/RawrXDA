@@ -568,16 +568,35 @@ public:
                     asmFormat = "arm64";
                 }
                 
+                // Helper lambda: run a build tool via CreateProcessA (Windows) or system (POSIX)
+                auto runBuildTool = [&](const std::string& cmdLine) -> int {
+#ifdef _WIN32
+                    STARTUPINFOA si{}; si.cb = sizeof(si);
+                    PROCESS_INFORMATION pi{};
+                    std::vector<char> buf(cmdLine.begin(), cmdLine.end());
+                    buf.push_back('\0');
+                    if (!CreateProcessA(nullptr, buf.data(), nullptr, nullptr,
+                                        FALSE, 0, nullptr, nullptr, &si, &pi))
+                        return -1;
+                    WaitForSingleObject(pi.hProcess, 300000);
+                    DWORD ec = 1; GetExitCodeProcess(pi.hProcess, &ec);
+                    CloseHandle(pi.hProcess); CloseHandle(pi.hThread);
+                    return static_cast<int>(ec);
+#else
+                    return std::system(cmdLine.c_str());
+#endif
+                };
+
                 // Try NASM first
                 std::string asmCmd = "nasm -f " + asmFormat + " \"" + asmFile + "\" -o \"" + objFile + "\"";
                 if (options.verbose) std::cout << "[ASM] " << asmCmd << "\n";
-                if (std::system(asmCmd.c_str()) == 0) {
+                if (runBuildTool(asmCmd) == 0) {
                     assembled = true;
                 } else {
                     // Try MASM (ml64) on Windows
                     asmCmd = "ml64 /nologo /c /Fo\"" + objFile + "\" \"" + asmFile + "\"";
                     if (options.verbose) std::cout << "[ASM] " << asmCmd << "\n";
-                    if (std::system(asmCmd.c_str()) == 0) {
+                    if (runBuildTool(asmCmd) == 0) {
                         assembled = true;
                     }
                 }
@@ -619,7 +638,7 @@ public:
                     }
                     
                     if (options.verbose) std::cout << "[LINK] " << linkCmd << "\n";
-                    if (std::system(linkCmd.c_str()) == 0) {
+                    if (runBuildTool(linkCmd) == 0) {
                         linked = true;
                     } else {
                         // Try GCC linker as fallback
@@ -633,7 +652,7 @@ public:
                         for (const auto& lib : options.libraries) gccLink += " -l\"" + lib + "\"";
                         
                         if (options.verbose) std::cout << "[LINK] " << gccLink << "\n";
-                        if (std::system(gccLink.c_str()) == 0) {
+                        if (runBuildTool(gccLink) == 0) {
                             linked = true;
                         } else {
                             Diagnostic diag;
@@ -673,12 +692,36 @@ public:
     
 private:
     bool invokeSystemCompiler(const std::string& inputFile, const std::string& outputFile, const CompileOptions& options) {
+        // Safe process execution helper — uses CreateProcessA on Windows
+        auto runCmd = [&](const std::string& cmdLine) -> int {
+#ifdef _WIN32
+            STARTUPINFOA si{}; si.cb = sizeof(si);
+            PROCESS_INFORMATION pi{};
+            std::vector<char> buf(cmdLine.begin(), cmdLine.end());
+            buf.push_back('\0');
+            if (!CreateProcessA(nullptr, buf.data(), nullptr, nullptr,
+                                FALSE, 0, nullptr, nullptr, &si, &pi))
+                return -1;
+            WaitForSingleObject(pi.hProcess, 300000);
+            DWORD ec = 1; GetExitCodeProcess(pi.hProcess, &ec);
+            CloseHandle(pi.hProcess); CloseHandle(pi.hThread);
+            return static_cast<int>(ec);
+#else
+            return std::system(cmdLine.c_str());
+#endif
+        };
+
+        // Tool availability check helper
+        auto toolExists = [&](const std::string& checkCmd) -> bool {
+            return runCmd(checkCmd) == 0;
+        };
+
         std::string cmd;
         std::string ext = std::filesystem::path(inputFile).extension().string();
         
         // C++
         if (ext == ".cpp" || ext == ".cc" || ext == ".cxx") {
-            if (std::system("cl >nul 2>nul") == 0) {
+            if (toolExists("cl >nul 2>nul")) {
                  cmd = "cl /nologo /EHsc /std:c++17";
                  if (options.optimization >= OptLevel::O2) cmd += " /O2";
                  
@@ -693,7 +736,7 @@ private:
                  for(const auto& libPath : options.libraryPaths) cmd += " /LIBPATH:\"" + libPath + "\"";
                  for(const auto& lib : options.libraries) cmd += " \"" + lib + "\"";
 
-            } else if (std::system("g++ --version >nul 2>nul") == 0) {
+            } else if (toolExists("g++ --version >nul 2>nul")) {
                  cmd = "g++ -std=c++17";
                  if (options.optimization >= OptLevel::O2) cmd += " -O2";
                  
@@ -708,7 +751,7 @@ private:
                  for(const auto& libPath : options.libraryPaths) cmd += " -L\"" + libPath + "\"";
                  for(const auto& lib : options.libraries) cmd += " -l\"" + lib + "\"";
                  
-            } else if (std::system("clang++ --version >nul 2>nul") == 0) {
+            } else if (toolExists("clang++ --version >nul 2>nul")) {
                  cmd = "clang++ -std=c++17";
                  if (options.optimization >= OptLevel::O2) cmd += " -O2";
                  
@@ -727,7 +770,7 @@ private:
         } 
         // C
         else if (ext == ".c") {
-            if (std::system("cl >nul 2>nul") == 0) {
+            if (toolExists("cl >nul 2>nul")) {
                  cmd = "cl /nologo";
                  if (options.optimization >= OptLevel::O2) cmd += " /O2";
                  
@@ -742,7 +785,7 @@ private:
                  for(const auto& libPath : options.libraryPaths) cmd += " /LIBPATH:\"" + libPath + "\"";
                  for(const auto& lib : options.libraries) cmd += " \"" + lib + "\"";
 
-            } else if (std::system("gcc --version >nul 2>nul") == 0) {
+            } else if (toolExists("gcc --version >nul 2>nul")) {
                  cmd = "gcc";
                  if (options.optimization >= OptLevel::O2) cmd += " -O2";
                  
@@ -761,32 +804,32 @@ private:
         }
         // Rust
         else if (ext == ".rs") {
-            if (std::system("rustc --version >nul 2>nul") == 0) {
+            if (toolExists("rustc --version >nul 2>nul")) {
                 cmd = "rustc \"" + inputFile + "\" -o \"" + outputFile + "\"";
                 if (options.optimization >= OptLevel::O2) cmd += " -C opt-level=3";
             } else return false;
         }
         // Go
         else if (ext == ".go") {
-            if (std::system("go version >nul 2>nul") == 0) {
+            if (toolExists("go version >nul 2>nul")) {
                 cmd = "go build -o \"" + outputFile + "\" \"" + inputFile + "\"";
                 // Go optimizes by default
             } else return false;
         }
         // Assembly
         else if (ext == ".asm" || ext == ".s") {
-            if (std::system("nasm -v >nul 2>nul") == 0) {
+            if (toolExists("nasm -v >nul 2>nul")) {
                 // NASM assembly
                 std::string objFile = outputFile + ".obj";
                 std::string format = "win64"; // Defaulting to win64 for now
                 
                 cmd = "nasm -f " + format + " \"" + inputFile + "\" -o \"" + objFile + "\"";
-                if (std::system(cmd.c_str()) != 0) return false;
+                if (runCmd(cmd) != 0) return false;
                 
                 // Link
-                 if (std::system("cl >nul 2>nul") == 0) { // checking linker availability
+                 if (toolExists("cl >nul 2>nul")) { // checking linker availability
                     cmd = "link /nologo /ENTRY:main /SUBSYSTEM:CONSOLE \"" + objFile + "\" /OUT:\"" + outputFile + "\" kernel32.lib user32.lib"; // minimal libs
-                 } else if (std::system("gcc --version >nul 2>nul") == 0) {
+                 } else if (toolExists("gcc --version >nul 2>nul")) {
                     cmd = "gcc \"" + objFile + "\" -o \"" + outputFile + "\"";
                  } else {
                      return false; 
@@ -802,21 +845,45 @@ private:
             if (ext == ".py") interpreter = "python";
             else if (ext == ".js") interpreter = "node";
             else if (ext == ".ts") {
-                if (std::system("ts-node --version >nul 2>nul") == 0) interpreter = "ts-node";
-                else if (std::system("npx --version >nul 2>nul") == 0) interpreter = "npx ts-node";
+                if (toolExists("ts-node --version >nul 2>nul")) interpreter = "ts-node";
+                else if (toolExists("npx --version >nul 2>nul")) interpreter = "npx ts-node";
                 else return false;
             }
             
             // Check if interpreter exists (for non-npx case or double check)
             if (interpreter.rfind("npx", 0) != 0) { // if not starting with npx
                  std::string checkCmd = interpreter + " --version >nul 2>nul";
-                 if (std::system(checkCmd.c_str()) != 0) return false;
+                 if (runCmd(checkCmd) != 0) return false;
             }
             // For npx, we assume it works if npx --version worked, handling npx ts-node execution lazily
 
             // Create wrapper source
             // Writes the script to a temp file and runs it with the interpreter
-            std::string wrapperSrc = "#include <cstdlib>\n#include <string>\n#include <fstream>\n#include <iostream>\n#include <cstdio>\n";
+            std::string wrapperSrc;
+#ifdef _WIN32
+            wrapperSrc += "#define WIN32_LEAN_AND_MEAN\n#include <windows.h>\n";
+            wrapperSrc += "#include <string>\n#include <fstream>\n#include <iostream>\n#include <cstdio>\n";
+            wrapperSrc += "int main(int argc, char* argv[]) {\n";
+            wrapperSrc += "    std::string scriptContent = R\"RAW_SCRIPT(" + Utils::readFile(inputFile) + ")RAW_SCRIPT\";\n";
+            wrapperSrc += "    std::string tempFile = \"temp_script" + ext + "\";\n";
+            wrapperSrc += "    std::ofstream out(tempFile);\n";
+            wrapperSrc += "    out << scriptContent;\n";
+            wrapperSrc += "    out.close();\n";
+            wrapperSrc += "    std::string cmd = \"" + interpreter + " \" + tempFile;\n";
+            wrapperSrc += "    STARTUPINFOA si{}; si.cb = sizeof(si);\n";
+            wrapperSrc += "    PROCESS_INFORMATION pi{};\n";
+            wrapperSrc += "    std::vector<char> buf(cmd.begin(), cmd.end()); buf.push_back('\\0');\n";
+            wrapperSrc += "    int ret = 1;\n";
+            wrapperSrc += "    if (CreateProcessA(nullptr, buf.data(), nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi)) {\n";
+            wrapperSrc += "        WaitForSingleObject(pi.hProcess, INFINITE);\n";
+            wrapperSrc += "        DWORD ec = 1; GetExitCodeProcess(pi.hProcess, &ec); ret = (int)ec;\n";
+            wrapperSrc += "        CloseHandle(pi.hProcess); CloseHandle(pi.hThread);\n";
+            wrapperSrc += "    }\n";
+            wrapperSrc += "    std::remove(tempFile.c_str());\n";
+            wrapperSrc += "    return ret;\n";
+            wrapperSrc += "}\n";
+#else
+            wrapperSrc += "#include <cstdlib>\n#include <string>\n#include <fstream>\n#include <iostream>\n#include <cstdio>\n";
             wrapperSrc += "int main(int argc, char* argv[]) {\n";
             wrapperSrc += "    std::string scriptContent = R\"RAW_SCRIPT(" + Utils::readFile(inputFile) + ")RAW_SCRIPT\";\n";
             wrapperSrc += "    std::string tempFile = \"temp_script" + ext + "\";\n";
@@ -828,6 +895,7 @@ private:
             wrapperSrc += "    std::remove(tempFile.c_str());\n";
             wrapperSrc += "    return ret;\n";
             wrapperSrc += "}\n";
+#endif
             
             std::string wrapperFile = outputFile + ".wrapper.cpp";
             Utils::writeFile(wrapperFile, wrapperSrc);
@@ -846,7 +914,7 @@ private:
         }
 
         if (options.verbose) std::cout << "[System] " << cmd << "\n";
-        return (std::system(cmd.c_str()) == 0);
+        return (runCmd(cmd) == 0);
     }
 
     bool tokenize(const std::string& source, CompileResult& result) {

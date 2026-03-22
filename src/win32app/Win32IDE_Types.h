@@ -11,6 +11,7 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
+#include <commctrl.h>
 
 #include <cstdint>
 #include <functional>
@@ -281,6 +282,36 @@ enum class PlanStatus {
     Executing, Completed, Failed
 };
 
+/** Normalized risk tier (agent string + step-type heuristics). */
+enum class PlanRiskTier : std::uint8_t {
+    Unknown = 0,
+    Low,
+    Medium,
+    High,
+    Critical
+};
+
+/**
+ * Mutation / execution gate for human-in-the-loop + auto-low-risk policy.
+ * Queued steps stay AwaitingHuman until the plan dialog approves (full or low-only).
+ */
+enum class PlanMutationGate : std::uint8_t {
+    PendingClassification,
+    AutoApproved,       // Policy: low-risk read-only steps — no extra click per step
+    AwaitingHuman,      // Needs plan-level approval in UI
+    HumanApproved,      // User approved this step for execution
+    HumanRejected,
+    SafetyBlocked,      // Path / shell policy denied
+    SkippedByPolicy     // User chose "low-risk only" and this step was excluded
+};
+
+/** How executePlan() filters steps after approval. */
+enum class PlanExecutionPolicy : std::uint8_t {
+    None,
+    FullApproval,    // Run all human-approved / auto-approved (non-blocked)
+    SafeStepsOnly    // Run only Low-tier steps (medium/high skipped by policy)
+};
+
 struct PlanStep {
     int            id               = 0;
     std::string    title;
@@ -292,6 +323,14 @@ struct PlanStep {
     std::string    risk;
     PlanStepStatus status           = PlanStepStatus::Pending;
     std::string    output;
+    // Enhancement 3: dependency graph (step IDs this step depends on)
+    std::vector<int> dependsOn;
+    // Enhancement 6: per-step token budget (tokens allocated from plan total)
+    int            tokenBudget      = 0;
+    // AgenticPlanningOrchestrator: tier + gate + audit text
+    PlanRiskTier     riskTier       = PlanRiskTier::Unknown;
+    PlanMutationGate mutationGate   = PlanMutationGate::PendingClassification;
+    std::string      gateDetail;    // Why auto / blocked / needs review
 };
 
 struct AgentPlan {
@@ -300,6 +339,7 @@ struct AgentPlan {
     PlanStatus            status            = PlanStatus::None;
     int                   currentStepIndex  = -1;
     float                 overallConfidence = 0.0f;
+    PlanExecutionPolicy   executionPolicy   = PlanExecutionPolicy::None;
 };
 
 // =============================================================================

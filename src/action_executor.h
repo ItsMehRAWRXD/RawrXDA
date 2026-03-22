@@ -40,7 +40,7 @@ struct ExecutionContext {
     int currentActionIndex = 0;
 };
 
-class ActionExecutor {
+class ActionExecutor : public std::enable_shared_from_this<ActionExecutor> {
 public:
     ActionExecutor();
     ~ActionExecutor();

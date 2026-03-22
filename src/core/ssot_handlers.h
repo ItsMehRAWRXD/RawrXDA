@@ -249,6 +249,16 @@ CommandResult handleBackendSwitchClaude(const CommandContext& ctx);
 CommandResult handleBackendSwitchGemini(const CommandContext& ctx);
 CommandResult handleBackendShowStatus(const CommandContext& ctx);
 CommandResult handleBackendShowSwitcher(const CommandContext& ctx);
+
+// ═══════════════════ BEACON HEARTBEAT CONTROLLER ═══════════════════
+CommandResult handleBeaconHalfPulse(const CommandContext& ctx);
+CommandResult handleBeaconFullBeacon(const CommandContext& ctx);
+CommandResult handleBeaconStatus(const CommandContext& ctx);
+
+// Returns true when the full beacon state is active and ultra-high throughput
+// inference mode (v280 dispatch path) is allowed.
+bool isBeaconFullActive();
+
 CommandResult handleBackendConfigure(const CommandContext& ctx);
 CommandResult handleBackendHealthCheck(const CommandContext& ctx);
 CommandResult handleBackendSetApiKey(const CommandContext& ctx);

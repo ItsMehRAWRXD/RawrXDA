@@ -4,9 +4,13 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <mutex>
 #include <functional>
+#include <filesystem>
+#include <nlohmann/json.hpp>
 
 class AgenticEngine;
+class ModelTrainer;
 
 namespace RawrXD {
     class InferenceEngine;
@@ -15,31 +19,38 @@ using RawrXD::InferenceEngine;
 
 /**
  * @class AgenticExecutor
- * @brief Real agentic execution - not simulated, actually performs tasks
+ * @brief Real agentic execution - not simulated, actually performs tasks.
+ *
+ * Security: All file-system operations are sandboxed to m_workspaceRoot.
+ *           Shell commands use a compiler whitelist and reject metacharacters.
+ *           Retry logic is iterative (bounded, not recursive).
  */
 class AgenticExecutor {
 
 public:
+    using json = nlohmann::json;
+
     // Callback typedefs
     using StepStartedCB  = std::function<void(const char*, void*)>;
     using StepCompletedCB = std::function<void(const char*, bool, void*)>;
     using LogMessageCB   = std::function<void(const char*, void*)>;
     using ExecCompleteCB = std::function<void(const char*, void*)>;
 
-    AgenticExecutor();
+    explicit AgenticExecutor(void* parent = nullptr);
     ~AgenticExecutor();
 
     void initialize(AgenticEngine* engine, InferenceEngine* inference);
+    void setWorkspaceRoot(const std::filesystem::path& root);
 
     // Main agentic execution entry point
-    std::string executeUserRequest(const std::string& request);
+    json executeUserRequest(const std::string& request);
 
     // Core agentic capabilities
-    std::string decomposeTask(const std::string& goal);
-    bool executeStep(const std::string& stepJson);
-    bool verifyStepCompletion(const std::string& stepJson, const std::string& result);
+    json decomposeTask(const std::string& goal);
+    bool executeStep(const json& step);
+    bool verifyStepCompletion(const json& step, const std::string& result);
 
-    // File system operations (real, not simulated)
+    // File system operations (real, sandboxed to workspace root)
     bool createDirectory(const std::string& path);
     bool createFile(const std::string& path, const std::string& content);
     bool writeFile(const std::string& path, const std::string& content);
@@ -48,29 +59,33 @@ public:
     bool deleteDirectory(const std::string& path);
     std::vector<std::string> listDirectory(const std::string& path);
 
-    // Compiler integration (real compilation)
-    std::string compileProject(const std::string& projectPath, const std::string& compiler = "g++");
-    std::string runExecutable(const std::string& executablePath, const std::vector<std::string>& args = std::vector<std::string>());
+    // Compiler integration (real compilation, whitelisted compilers only)
+    json compileProject(const std::string& projectPath, const std::string& compiler = "g++");
+    json runExecutable(const std::string& executablePath, const std::vector<std::string>& args = {});
 
     // Function calling system (tool use)
-    std::string getAvailableTools();
-    std::string callTool(const std::string& toolName, const std::string& paramsJson);
+    json getAvailableTools();
+    json callTool(const std::string& toolName, const json& params);
 
     // Model training capabilities
-    std::string trainModel(const std::string& datasetPath, const std::string& modelPath, const std::string& configJson);
+    json trainModel(const std::string& datasetPath, const std::string& modelPath, const json& config);
     bool isTrainingModel() const;
 
     // Memory and context
-    void addToMemory(const std::string& key, const std::string& valueJson);
+    void addToMemory(const std::string& key, const std::string& value);
     std::string getFromMemory(const std::string& key);
     void clearMemory();
     std::string getFullContext();
     void removeMemoryItem(const std::string& key);
 
-    // Self-correction
+    // Self-correction (iterative, bounded)
     bool detectFailure(const std::string& output);
     std::string generateCorrectionPlan(const std::string& failureReason);
-    std::string retryWithCorrection(const std::string& failedStepJson);
+    json retryWithCorrection(const json& failedStep);
+
+    // Logging
+    void logMessage(const std::string& msg);
+    void errorOccurred(const std::string& msg);
 
     // Callbacks
     StepStartedCB  m_onStepStarted;
@@ -80,9 +95,17 @@ public:
     void*          m_callbackContext = nullptr;
 
 private:
+    // Path safety — all FS ops go through these
+    bool isPathSafe(const std::filesystem::path& p) const;
+    std::filesystem::path safePath(const std::string& userPath) const;
+
+    // Shell safety
+    static bool hasShellMetachars(const std::string& s);
+    static bool isCompilerAllowed(const std::string& compiler);
+
     // Agent reasoning using model
     std::string planNextAction(const std::string& currentState, const std::string& goal);
-    std::string generateCode(const std::string& specification);
+    json generateCode(const std::string& specification);
     std::string analyzeError(const std::string& errorOutput);
     std::string improveCode(const std::string& code, const std::string& issue);
 
@@ -99,14 +122,17 @@ private:
 
     AgenticEngine* m_agenticEngine = nullptr;
     InferenceEngine* m_inferenceEngine = nullptr;
+    std::unique_ptr<ModelTrainer> m_modelTrainer;
 
+    std::filesystem::path m_workspaceRoot;
     std::map<std::string, std::string> m_memory;
+    mutable std::mutex m_memoryMutex;
     std::string m_currentWorkingDirectory;
+    json m_executionHistory;
 
     bool m_memoryEnabled = false;
     int64_t m_memoryLimitBytes = 10 * 1024 * 1024; // 10 MB default
 
-    int m_maxRetries = 3;
-    int m_currentRetryCount = 0;
+    static constexpr int m_maxRetries = 3;
 };
 

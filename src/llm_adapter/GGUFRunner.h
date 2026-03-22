@@ -2,13 +2,14 @@
 
 #include "BinaryStream.hpp"
 #include "QuantBackend.h"
+#include "core/unified_memory_executor.h"
 #include <algorithm>
 #include <cstddef>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
-// GGML tensor types
+// GGML tensor types (numeric values match llama.cpp / ggml_type)
 enum class GgmlType : uint32_t
 {
     F32 = 0,
@@ -18,7 +19,13 @@ enum class GgmlType : uint32_t
     Q5_0 = 6,
     Q5_1 = 7,
     Q8_0 = 8,
-    Q8_1 = 9
+    Q8_1 = 9,
+    Q2_K = 10,
+    Q3_K = 11,
+    Q4_K = 12,
+    Q5_K = 13,
+    Q6_K = 14,
+    Q8_K = 15
 };
 
 // Q4_0 block: 32 weights in 16 bytes + 1 float16 delta
@@ -59,7 +66,16 @@ class GGUFRunner
     std::string architecture() const { return context_.architecture; }
     size_t vocabularySize() const { return context_.vocabSize; }
     size_t embeddingDim() const { return context_.embedDim; }
-    bool isLoaded() const { return context_.mappedData != nullptr; }
+    /// Transformer block count from GGUF metadata (for diagnostics / harnesses).
+    size_t layerCount() const { return context_.nLayers; }
+    bool isLoaded() const { return hasModelFileBacking(); }
+
+    /// True only when per-layer transformer weights are present (blk.* tensors loaded). Without this,
+    /// runInference would access empty layer matrices → access violation on Windows (exit 0xC0000005).
+    bool inferenceWeightsReady() const;
+
+    /// Decoder steps completed in the last successful `runInference` (each forward/token; EOS early exit counts).
+    int lastDecodeSteps() const { return context_.lastDecodeSteps; }
 
     /**
      * @brief Compresses a raw buffer using the "Brutal" stored-block algorithm.
@@ -99,11 +115,25 @@ class GGUFRunner
         // Memory management
         float* mappedData{nullptr};
         bool usesMmap{false};
+#if defined(_WIN32)
+        /// Win32 file map (not heap); UnmapViewOfFile + CloseHandle — never delete[] mappedData when set.
+        void* win32MapView{nullptr};
+        void* win32MapHandle{nullptr};
+        void* win32FileHandle{nullptr};
+#endif
+        /// Optional: full GGUF bytes copied into `UnifiedMemoryExecutor` (SAM / host arena). Tensor reads use
+        /// `unifiedFileBase + TensorDesc.offset` instead of `NativeFile` seeks (see `RAWRXD_GGUF_USE_UNIFIED_MEMORY`).
+        bool usesUnifiedFileBacking{false};
+        void* unifiedFileBase{nullptr};
+        uint64_t unifiedFileBytes{0};
+        RawrXD::UnifiedMemory::UnifiedBuffer unifiedModelBuffer{};
         size_t embedDim{0};
         size_t vocabSize{0};
         size_t nLayers{0};
         size_t nHeads{0};
         size_t nKVHeads{0};
+        /// Feed-forward hidden (`ffn_gate` / `ffn_up` column dim). From KV `llama.feed_forward_length` or tensor shape.
+        size_t ffnDim{0};
         size_t headDim{0};
         float ropeBase{10000.0f};    // RoPE frequency base
         std::vector<float> invFreq;  // Precomputed inverse frequencies for RoPE [headDim/2]
@@ -116,6 +146,7 @@ class GGUFRunner
 
         // Generation parameters
         int maxTokens{64};
+        int lastDecodeSteps{0};
         int eosTokenId{-1};
         float temperature{0.8f};    // 0.0 = greedy, 1.0 = creative, 2.0 = chaos
         float topP{0.95f};          // nucleus sampling threshold
@@ -162,13 +193,19 @@ class GGUFRunner
         std::vector<float> valueCache;  // [nLayers, nKVHeads, maxTokens, headDim]
         size_t kvLen{0};
 
+        /// After `parseGgufTensorTable`: byte offset where tensor **payload** region starts (aligned per GGUF).
+        uint64_t tensorDataBaseOffset{0};
+        /// From KV `general.alignment` when present; default 32. Pads end-of-metadata → tensor data.
+        uint32_t ggufTensorAlignment{32};
+
         // Tensor directory
         struct TensorDesc
         {
             std::string name;
             std::vector<uint32_t> dims;
             GgmlType type;
-            uint64_t offset;
+            /// After `parseGgufTensorTable`: **absolute** file offset for `seek` / IO.
+            uint64_t offset{};
         };
         std::unordered_map<std::string, TensorDesc> tensorTable;
     };
@@ -188,6 +225,9 @@ class GGUFRunner
     void detectExtendedCpuFeatures();
 
     bool parseGgufTensors(RawrXD::NativeFile& file);
+    /// Load `blk.N.*` llama-architecture tensors into `context_.layers` (float32 mirror). Respects
+    /// `RAWRXD_GGUF_MAX_LAYER_FLOAT_RAM_GB` to avoid OOM on multi-hundred-GB dequant.
+    bool parseGgufLayerWeights(RawrXD::NativeFile& file);
     bool parseGgufTensorTable(RawrXD::NativeFile& file);
     bool readTensorFloat32(RawrXD::NativeFile& file, int64_t offset, int64_t count, std::vector<float>& out);
     bool loadTensor(RawrXD::NativeFile& file, const std::string& name, std::vector<float>& weights);
@@ -201,6 +241,13 @@ class GGUFRunner
     void matmul(const float* A, const float* B, float* C, int N, int M, int K);
     void attentionForward(int layerIdx, const float* x, float* y);
     void mlpForward(int layerIdx, const float* x, float* y);
+    void releaseWeightFileBacking();
+    bool hasModelFileBacking() const;
+
+    /// Read standard llama.cpp-style GGUF KV fields (authoritative vs. ASCII substring scan).
+    void ingestGgufKvMetadata(RawrXD::BinaryStream& ds, uint64_t kvCount);
+    /// Clamp insane metadata that can overflow KV cache sizing or enable bogus n_layers==0 "ready" paths.
+    void sanitizeArchMetadata();
 
     ModelContext context_;
 };

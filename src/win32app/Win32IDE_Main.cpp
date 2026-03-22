@@ -1,3 +1,10 @@
+// Win32IDE_Main.cpp — LEGACY ENTRY POINT (NOT INCLUDED IN BUILD)
+//
+// DO NOT add this file to CMakeLists.txt / WIN32IDE_SOURCES.
+// The canonical WinMain is src/win32app/main_win32.cpp (line 1557).
+// This file is kept as a reference/diagnostic minimal entry point only.
+// H-1: Guard prevents accidental double-WinMain link errors.
+#if defined(RAWRXD_BUILD_LEGACY_MAIN)
 #include "Win32IDE.h"
 #include "../modules/vsix_loader.h"
 #include "../modules/memory_manager.h"
@@ -34,14 +41,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
     RawrXD::Diagnostics::SelfDiagnoser::CheckHeapOrDie("Post.AgenticInit");
     
     // Initialize engine manager
-    auto* engine_mgr = new EngineManager();
-    engine_mgr->LoadEngine("engines/800b-5drive/800b_engine.dll", "800b-5drive");
-    engine_mgr->LoadEngine("engines/codex-ultimate/codex.dll", "codex-ultimate");
-    engine_mgr->LoadEngine("engines/rawrxd-compiler/compiler.dll", "rawrxd-compiler");
+    EngineManager engine_mgr;
+    engine_mgr.LoadEngine("engines/800b-5drive/800b_engine.dll", "800b-5drive");
+    engine_mgr.LoadEngine("engines/codex-ultimate/codex.dll", "codex-ultimate");
+    engine_mgr.LoadEngine("engines/rawrxd-compiler/compiler.dll", "rawrxd-compiler");
     RawrXD::Diagnostics::SelfDiagnoser::CheckHeapOrDie("Post.EngineLoad");
     
     // Initialize Codex Ultimate
-    auto* codex = new CodexUltimate();
+    CodexUltimate codex;
     (void)codex;
 
     const std::size_t suspicious = RawrXD::Diagnostics::CorruptionScanner::ScanCurrentModule();

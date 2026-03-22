@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RawrXD approval policy",
+  "type": "object",
+  "properties": {
+    "version": { "type": "integer" },
+    "autoApproveReads": { "type": "boolean" },
+    "autoApproveWrites": { "type": "boolean" },
+    "requirePlanApproval": { "type": "boolean" },
+    "batchApproveMutations": { "type": "boolean" },
+    "requireAskAiApproval": { "type": "boolean" },
+    "enableRollbackSnapshots": { "type": "boolean" },
+    "audit": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "appendOnlyPath": { "type": "string" }
+      }
+    }
+  }
+}

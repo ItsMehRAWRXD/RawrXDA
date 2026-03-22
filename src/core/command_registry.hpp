@@ -244,6 +244,9 @@ enum CmdFlags : uint32_t {
     X(5041, BACKEND_GEMINI,        "backend.switchGemini",  "!backend gemini",   BOTH, "Backend",    handleBackendSwitchGemini,  CMD_REQUIRES_NET) \
     X(5042, BACKEND_STATUS,        "backend.status",        "!backend status",   BOTH, "Backend",    handleBackendShowStatus,    CMD_NONE) \
     X(5043, BACKEND_SWITCHER,      "backend.switcher",      "!backend list",     BOTH, "Backend",    handleBackendShowSwitcher,  CMD_NONE) \
+    X(5048, BEACON_HALF_PULSE,     "beacon.halfPulse",     "!beacon_half",      BOTH, "Performance", handleBeaconHalfPulse,      CMD_NONE) \
+    X(5049, BEACON_FULL,           "beacon.full",          "!beacon_full",      BOTH, "Performance", handleBeaconFullBeacon,      CMD_NONE) \
+    X(5050, BEACON_STATUS,         "beacon.status",        "!beacon_status",    BOTH, "Performance", handleBeaconStatus,          CMD_NONE) \
     X(5044, BACKEND_CONFIGURE,     "backend.configure",     "!backend config",   BOTH, "Backend",    handleBackendConfigure,     CMD_NONE) \
     X(5045, BACKEND_HEALTH,        "backend.healthCheck",   "!backend health",   BOTH, "Backend",    handleBackendHealthCheck,   CMD_ASYNC) \
     X(5046, BACKEND_API_KEY,       "backend.setApiKey",     "!backend apikey",   BOTH, "Backend",    handleBackendSetApiKey,     CMD_NONE) \

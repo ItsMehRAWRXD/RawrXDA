@@ -2,6 +2,7 @@
 // Implements all agentic framework menu commands and integrations
 
 #include "../agentic/AgentOllamaClient.h"
+#include "../agentic/agentic_orchestrator_integration.hpp"
 #include "../core/enterprise_license.h"
 #include "IDELogger.h"
 #include "ModelConnection.h"
@@ -454,13 +455,55 @@ void Win32IDE::onBoundedAgentLoop() {
 #endif  // 0
 
 // ensureAutonomousPipelineInitialized + pipeline handlers (defined here so they are compiled)
+// E1: workspace-aware prompt injection  E2: loop telemetry  E3: shutdown guard
+// E4: backend health pre-check          E5: memory snapshot E6: context-window sync
+// E7: subagent status on loop end
 void Win32IDE::ensureAutonomousPipelineInitialized()
 {
     if (m_autonomousPipeline)
         return;
+
+    // E4: probe active backend before wiring the pipeline
+    if (m_backendManagerInitialized)
+        probeBackendHealth(m_activeBackend);
+
     m_autonomousPipeline = std::make_unique<RawrXD::AutonomousAgenticPipelineCoordinator>();
-    m_autonomousPipeline->setBuildPrompt([this](const std::string& m) { return buildChatPrompt(m); });
-    m_autonomousPipeline->setRouteLLM([this](const std::string& p) { return routeWithIntelligence(p); });
+
+    // E6: context window size — not yet exposed on pipeline coordinator
+    // TODO: add setContextWindow() to AutonomousAgenticPipelineCoordinator
+
+    // E1 + E5: workspace root + recent memory snapshot injected into every prompt
+    m_autonomousPipeline->setBuildPrompt(
+        [this](const std::string& m)
+        {
+            std::string enriched = m;
+            // E1: prepend workspace root
+            const std::string ws = !m_projectRoot.empty() ? m_projectRoot : m_explorerRootPath;
+            if (!ws.empty())
+                enriched = "[Workspace: " + ws + "]\n" + enriched;
+            // E5: prepend last 3 agent memory entries
+            if (m_agentHistoryEnabled)
+            {
+                std::lock_guard<std::mutex> lk(m_eventBufferMutex);
+                int shown = 0;
+                std::string mem;
+                for (auto it = m_eventBuffer.rbegin(); it != m_eventBuffer.rend() && shown < 3; ++it, ++shown)
+                    if (!it->prompt.empty())
+                        mem = "[ctx] " + truncateForLog(it->prompt, 80) + "\n" + mem;
+                if (!mem.empty())
+                    enriched = mem + enriched;
+            }
+            return buildChatPrompt(enriched);
+        });
+
+    // E3: wrap LLM route with shutdown guard
+    m_autonomousPipeline->setRouteLLM(
+        [this](const std::string& p) -> std::string
+        {
+            if (isShuttingDown())
+                return "[pipeline] shutdown requested";
+            return routeWithIntelligence(p);
+        });
     m_autonomousPipeline->setOnToken([this](const std::string& t, bool) { onInferenceToken(t); });
     m_autonomousPipeline->setAppendRenderer([this](const std::string& s) { appendStreamingToken(s); });
     if (!m_agentCoordinatorForPipeline)
@@ -494,12 +537,23 @@ void Win32IDE::onPipelineRun()
     ensureAutonomousPipelineInitialized();
     if (!m_autonomousPipeline)
         return;
+    // E2: record telemetry
+    recordSimpleEvent(AgentEventType::AgentStarted, "pipeline:run");
     std::string msg = "Run pipeline once from IDE.";
     auto result = m_autonomousPipeline->runPipeline(msg);
     if (result.success)
+    {
+        recordSimpleEvent(AgentEventType::AgentCompleted, "pipeline:run");
         appendToOutput("Pipeline run completed.\n", "Output", OutputSeverity::Info);
+    }
     else
+    {
+        recordSimpleEvent(AgentEventType::AgentFailed, "pipeline:run:" + result.error.message);
         appendToOutput("Pipeline failed: " + result.error.message + "\n", "Output", OutputSeverity::Error);
+    }
+    // E7: show subagent status after run
+    if (m_agenticBridge && m_agenticBridge->IsInitialized())
+        appendToOutput(m_agenticBridge->GetSubAgentStatus() + "\n", "Output", OutputSeverity::Info);
 }
 
 void Win32IDE::onPipelineAutonomyStart()
@@ -709,6 +763,8 @@ void Win32IDE::initializeAgenticBridge()
                 }
 
                 LOG_INFO("Agentic Bridge fully initialized with enhancements");
+
+                wireAgenticOrchestratorIntegration();
 
                 syncAgentModeUiFromBridge();
             }
@@ -1423,6 +1479,38 @@ void Win32IDE::handleAgentCommand(int commandId)
             onSubAgentStatus();
             break;
 
+        // --- Agentic Planning Orchestrator (Full Approval Gates) ---
+        case IDM_PLANNING_START:
+            onPlanningStart();
+            break;
+        case IDM_PLANNING_SHOW_QUEUE:
+            onPlanningShowQueue();
+            break;
+        case IDM_PLANNING_APPROVE_STEP:
+            onPlanningApproveStep();
+            break;
+        case IDM_PLANNING_REJECT_STEP:
+            onPlanningRejectStep();
+            break;
+        case IDM_PLANNING_EXECUTE_STEP:
+            onPlanningExecuteStep();
+            break;
+        case IDM_PLANNING_EXECUTE_ALL:
+            onPlanningExecuteAll();
+            break;
+        case IDM_PLANNING_ROLLBACK:
+            onPlanningRollback();
+            break;
+        case IDM_PLANNING_SET_POLICY:
+            onPlanningSetPolicy();
+            break;
+        case IDM_PLANNING_VIEW_STATUS:
+            onPlanningViewStatus();
+            break;
+        case IDM_PLANNING_DIAGNOSTICS:
+            onPlanningDiagnostics();
+            break;
+
         // --- AI Options (Max Mode / Reasoning) ---
         case IDM_AI_MODE_MAX:
         {
@@ -1823,6 +1911,307 @@ void Win32IDE::onAIModeNoRefusal()
         SendMessage(m_hwndChkNoRefusal, BM_SETCHECK, newState ? BST_CHECKED : BST_UNCHECKED, 0);
     appendToOutput(std::string("No Refusal Mode ") + (newState ? "ENABLED" : "DISABLED") + "\n", "Output",
                    OutputSeverity::Info);
+}
+
+// ============================================================================
+// AGENTIC PLANNING ORCHESTRATOR — Full Approval Gate Handlers
+// ============================================================================
+
+void Win32IDE::onPlanningStart()
+{
+    LOG_INFO("onPlanningStart called");
+    auto& orch = Agentic::OrchestratorIntegration::instance();
+    if (!orch.getOrchestrator())
+    {
+        orch.initialize();
+    }
+
+    char taskDesc[1024] = {0};
+    if (DialogBoxParamA(
+            m_hInstance, "AGENT_PROMPT_DLG", m_hwndMain,
+            [](HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) -> INT_PTR
+            {
+                switch (msg)
+                {
+                    case WM_INITDIALOG:
+                        SetWindowTextA(GetDlgItem(hwnd, 101), "Enter task to plan:");
+                        return TRUE;
+                    case WM_COMMAND:
+                        if (LOWORD(wp) == IDOK)
+                        {
+                            GetDlgItemTextA(hwnd, 102, (char*)lp, 1024);
+                            EndDialog(hwnd, IDOK);
+                            return TRUE;
+                        }
+                        else if (LOWORD(wp) == IDCANCEL)
+                        {
+                            EndDialog(hwnd, IDCANCEL);
+                            return TRUE;
+                        }
+                        break;
+                }
+                return FALSE;
+            },
+            (LPARAM)taskDesc) != IDOK ||
+        strlen(taskDesc) == 0)
+    {
+        return;
+    }
+
+    auto* plan = orch.planAndApproveTask(std::string(taskDesc));
+    if (!plan)
+    {
+        appendToOutput("Failed to generate plan\n", "Errors", OutputSeverity::Error);
+        return;
+    }
+
+    appendToOutput("Plan created: " + plan->plan_id + " (" + std::to_string(plan->steps.size()) + " steps, " +
+                       std::to_string(plan->pending_approvals) + " pending approvals)\n",
+                   "Output", OutputSeverity::Info);
+    appendToOutput(plan->toSummary(), "Output", OutputSeverity::Info);
+}
+
+void Win32IDE::onPlanningShowQueue()
+{
+    auto* orc = AGENTIC_GET_ORCHESTRATOR();
+    if (!orc)
+    {
+        appendToOutput("Orchestrator not initialized\n", "Output", OutputSeverity::Warning);
+        return;
+    }
+
+    auto pending = orc->getPendingApprovals();
+    if (pending.empty())
+    {
+        appendToOutput("No pending approvals\n", "Output", OutputSeverity::Info);
+        return;
+    }
+
+    std::stringstream ss;
+    ss << "=== Pending Approvals (" << pending.size() << ") ===\n";
+    for (const auto& [plan, idx] : pending)
+    {
+        if (idx >= 0 && idx < static_cast<int>(plan->steps.size()))
+        {
+            const auto& step = plan->steps[idx];
+            ss << "  [" << plan->plan_id << "] Step " << idx << ": " << step.title
+               << " (risk=" << static_cast<int>(step.risk_level) << ")\n";
+        }
+    }
+    appendToOutput(ss.str(), "Output", OutputSeverity::Info);
+}
+
+void Win32IDE::onPlanningApproveStep()
+{
+    auto* orc = AGENTIC_GET_ORCHESTRATOR();
+    if (!orc)
+    {
+        appendToOutput("Orchestrator not initialized\n", "Output", OutputSeverity::Warning);
+        return;
+    }
+
+    auto pending = orc->getPendingApprovals();
+    if (pending.empty())
+    {
+        appendToOutput("No steps pending approval\n", "Output", OutputSeverity::Info);
+        return;
+    }
+
+    // Approve the first pending step
+    auto [plan, idx] = pending[0];
+    orc->approveStep(plan, idx, "user", "Manually approved via IDE");
+    appendToOutput("Approved: " + plan->steps[idx].title + "\n", "Output", OutputSeverity::Info);
+}
+
+void Win32IDE::onPlanningRejectStep()
+{
+    auto* orc = AGENTIC_GET_ORCHESTRATOR();
+    if (!orc)
+    {
+        appendToOutput("Orchestrator not initialized\n", "Output", OutputSeverity::Warning);
+        return;
+    }
+
+    auto pending = orc->getPendingApprovals();
+    if (pending.empty())
+    {
+        appendToOutput("No steps pending rejection\n", "Output", OutputSeverity::Info);
+        return;
+    }
+
+    auto [plan, idx] = pending[0];
+    orc->rejectStep(plan, idx, "user", "Manually rejected via IDE");
+    appendToOutput("Rejected: " + plan->steps[idx].title + "\n", "Output", OutputSeverity::Info);
+}
+
+void Win32IDE::onPlanningExecuteStep()
+{
+    auto* orc = AGENTIC_GET_ORCHESTRATOR();
+    if (!orc)
+    {
+        appendToOutput("Orchestrator not initialized\n", "Output", OutputSeverity::Warning);
+        return;
+    }
+
+    auto plans = orc->getActivePlans();
+    if (plans.empty())
+    {
+        appendToOutput("No active plans\n", "Output", OutputSeverity::Info);
+        return;
+    }
+
+    auto* plan = plans[0];
+    if (orc->executeNextApprovedStep(plan))
+    {
+        appendToOutput("Executed next approved step in plan " + plan->plan_id + "\n", "Output", OutputSeverity::Info);
+    }
+    else
+    {
+        appendToOutput("No approved steps ready to execute\n", "Output", OutputSeverity::Info);
+    }
+}
+
+void Win32IDE::onPlanningExecuteAll()
+{
+    auto* orc = AGENTIC_GET_ORCHESTRATOR();
+    if (!orc)
+    {
+        appendToOutput("Orchestrator not initialized\n", "Output", OutputSeverity::Warning);
+        return;
+    }
+
+    auto plans = orc->getActivePlans();
+    if (plans.empty())
+    {
+        appendToOutput("No active plans\n", "Output", OutputSeverity::Info);
+        return;
+    }
+
+    auto* plan = plans[0];
+    appendToOutput("Executing entire plan " + plan->plan_id + "...\n", "Output", OutputSeverity::Info);
+
+    std::thread(
+        [this, orc, plan]()
+        {
+            DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+            if (_guard.cancelled)
+                return;
+            orc->executeEntirePlan(plan);
+            PostMessage(m_hwndMain, WM_APP + 200, 0, 0);
+        })
+        .detach();
+}
+
+void Win32IDE::onPlanningRollback()
+{
+    auto* orc = AGENTIC_GET_ORCHESTRATOR();
+    if (!orc)
+    {
+        appendToOutput("Orchestrator not initialized\n", "Output", OutputSeverity::Warning);
+        return;
+    }
+
+    auto plans = orc->getActivePlans();
+    if (plans.empty())
+    {
+        appendToOutput("No active plans\n", "Output", OutputSeverity::Info);
+        return;
+    }
+
+    auto* plan = plans[0];
+    // Rollback last executed step
+    for (int i = static_cast<int>(plan->steps.size()) - 1; i >= 0; --i)
+    {
+        if (plan->steps[i].status == Agentic::ExecutionStatus::Success ||
+            plan->steps[i].status == Agentic::ExecutionStatus::Failed)
+        {
+            orc->rollbackStep(plan, i);
+            appendToOutput("Rolled back step: " + plan->steps[i].title + "\n", "Output", OutputSeverity::Info);
+            return;
+        }
+    }
+    appendToOutput("No steps to rollback\n", "Output", OutputSeverity::Info);
+}
+
+void Win32IDE::onPlanningSetPolicy()
+{
+    auto* orc = AGENTIC_GET_ORCHESTRATOR();
+    if (!orc)
+    {
+        appendToOutput("Orchestrator not initialized\n", "Output", OutputSeverity::Warning);
+        return;
+    }
+
+    int choice = MessageBoxA(m_hwndMain,
+                             "Select approval policy:\n\n"
+                             "YES = Conservative (approve almost nothing)\n"
+                             "NO = Standard (auto-approve VeryLow only)\n"
+                             "CANCEL = Aggressive (auto-approve Low + VeryLow)",
+                             "Set Approval Policy", MB_YESNOCANCEL | MB_ICONQUESTION);
+
+    if (choice == IDYES)
+    {
+        orc->setApprovalPolicy(Agentic::ApprovalPolicy::Conservative());
+        appendToOutput("Policy set to: Conservative\n", "Output", OutputSeverity::Info);
+    }
+    else if (choice == IDNO)
+    {
+        orc->setApprovalPolicy(Agentic::ApprovalPolicy::Standard());
+        appendToOutput("Policy set to: Standard\n", "Output", OutputSeverity::Info);
+    }
+    else
+    {
+        orc->setApprovalPolicy(Agentic::ApprovalPolicy::Aggressive());
+        appendToOutput("Policy set to: Aggressive\n", "Output", OutputSeverity::Info);
+    }
+}
+
+void Win32IDE::onPlanningViewStatus()
+{
+    auto* orc = AGENTIC_GET_ORCHESTRATOR();
+    if (!orc)
+    {
+        appendToOutput("Orchestrator not initialized\n", "Output", OutputSeverity::Warning);
+        return;
+    }
+
+    auto status = orc->getExecutionStatusJson();
+    appendToOutput("=== Planning Orchestrator Status ===\n" + status.dump(2) + "\n", "Output", OutputSeverity::Info);
+}
+
+void Win32IDE::onPlanningDiagnostics()
+{
+    auto* orc = AGENTIC_GET_ORCHESTRATOR();
+    if (!orc)
+    {
+        appendToOutput("Orchestrator not initialized\n", "Output", OutputSeverity::Warning);
+        return;
+    }
+
+    std::stringstream ss;
+    ss << "=== Planning Orchestrator Diagnostics ===\n";
+
+    auto policy = orc->getApprovalPolicy();
+    ss << "Policy: auto_verylow=" << policy.auto_approve_very_low_risk << " auto_low=" << policy.auto_approve_low_risk
+       << " partial_exec=" << policy.allow_partial_execution << "\n";
+
+    auto plans = orc->getActivePlans();
+    ss << "Active plans: " << plans.size() << "\n";
+    ss << "Pending approvals: " << orc->getPendingApprovalCount() << "\n";
+
+    for (const auto* plan : plans)
+    {
+        ss << "\n--- Plan: " << plan->plan_id << " ---\n";
+        ss << plan->toSummary();
+    }
+
+    auto queue = orc->getApprovalQueueJson();
+    if (!queue.empty())
+    {
+        ss << "\nApproval Queue:\n" << queue.dump(2) << "\n";
+    }
+
+    appendToOutput(ss.str(), "Output", OutputSeverity::Info);
 }
 
 // ============================================================================

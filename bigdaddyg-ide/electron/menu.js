@@ -1,13 +1,39 @@
 const { Menu, dialog } = require('electron');
 
-function setApplicationMenu(mainWindow, setProjectRoot) {
+const DEFAULT_ACCEL = {
+  openProject: 'CmdOrCtrl+O',
+  commandPalette: 'CmdOrCtrl+Shift+P',
+  settings: 'CmdOrCtrl+,',
+  chat: 'CmdOrCtrl+L',
+  agent: 'CmdOrCtrl+Shift+A',
+  modules: 'CmdOrCtrl+Shift+M',
+  symbols: 'CmdOrCtrl+Shift+Y',
+  models: 'CmdOrCtrl+Shift+G',
+  sidebarToggle: 'CmdOrCtrl+B'
+};
+
+/**
+ * @param {Electron.BrowserWindow | null} mainWindow
+ * @param {(root: string) => void} setProjectRoot
+ * @param {Partial<typeof DEFAULT_ACCEL>} [accelerators] merged over defaults (from renderer sync)
+ */
+function setApplicationMenu(mainWindow, setProjectRoot, accelerators = {}) {
+  // Forwards menu choices to renderer (ide:action); does not run agent/IRC or touch disk by itself.
+  const sendIde = (action) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('ide:action', action);
+    }
+  };
+
+  const acc = { ...DEFAULT_ACCEL, ...accelerators };
+
   const template = [
     {
       label: 'File',
       submenu: [
         {
           label: 'Open Project...',
-          accelerator: 'CmdOrCtrl+O',
+          accelerator: acc.openProject || DEFAULT_ACCEL.openProject,
           click: async () => {
             if (!mainWindow || mainWindow.isDestroyed()) return;
             const result = await dialog.showOpenDialog(mainWindow, {
@@ -17,6 +43,7 @@ function setApplicationMenu(mainWindow, setProjectRoot) {
             if (!result.canceled && result.filePaths && result.filePaths[0]) {
               const root = result.filePaths[0];
               if (typeof setProjectRoot === 'function') setProjectRoot(root);
+              // Renderer must handle project:opened for UI; main IPC projectRoot used for fs:* — keep both in sync.
               mainWindow.webContents.send('project:opened', root);
             }
           }
@@ -40,6 +67,49 @@ function setApplicationMenu(mainWindow, setProjectRoot) {
     {
       label: 'View',
       submenu: [
+        {
+          label: 'Command Palette',
+          accelerator: acc.commandPalette,
+          click: () => sendIde('command-palette')
+        },
+        {
+          label: 'Settings',
+          accelerator: acc.settings,
+          click: () => sendIde('settings')
+        },
+        { type: 'separator' },
+        {
+          label: 'Toggle project sidebar',
+          accelerator: acc.sidebarToggle,
+          click: () => sendIde('sidebar-toggle')
+        },
+        { type: 'separator' },
+        {
+          label: 'AI Chat',
+          accelerator: acc.chat,
+          click: () => sendIde('chat')
+        },
+        {
+          label: 'Agent Panel',
+          accelerator: acc.agent,
+          click: () => sendIde('agent')
+        },
+        {
+          label: 'Modules',
+          accelerator: acc.modules,
+          click: () => sendIde('modules')
+        },
+        {
+          label: 'Symbols & xrefs',
+          accelerator: acc.symbols,
+          click: () => sendIde('symbols')
+        },
+        {
+          label: 'GGUF streamer',
+          accelerator: acc.models,
+          click: () => sendIde('models')
+        },
+        { type: 'separator' },
         { role: 'reload' },
         { role: 'forceReload' },
         { role: 'toggleDevTools', label: 'Toggle Developer Tools' },
@@ -62,7 +132,7 @@ function setApplicationMenu(mainWindow, setProjectRoot) {
                 type: 'info',
                 title: 'BigDaddyG IDE',
                 message: 'BigDaddyG IDE',
-                detail: 'Fully Agentic IDE with Multi-AI Provider Support (Ollama, Copilot, Amazon Q, Cursor). Version 2.0.0'
+                detail: 'RawrXD shell — WASM-local or Ollama-backed chat (Settings › AI). Version 2.0.0'
               });
             }
           }
@@ -75,4 +145,4 @@ function setApplicationMenu(mainWindow, setProjectRoot) {
   Menu.setApplicationMenu(menu);
 }
 
-module.exports = { setApplicationMenu };
+module.exports = { setApplicationMenu, DEFAULT_ACCEL };

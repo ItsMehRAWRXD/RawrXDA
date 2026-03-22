@@ -116,7 +116,12 @@ endif()
 # RawrXD - Zero Bloat Horizon (Phase 14.7.3+)
 project(RawrXD VERSION 14.7.3 LANGUAGES C CXX ASM_MASM)
 
-set(CMAKE_CXX_STANDARD 20)
+# MSVC: std::expected (<expected>) is only available at C++23 (STL4038 at C++20).
+if(MSVC)
+    set(CMAKE_CXX_STANDARD 23)
+else()
+    set(CMAKE_CXX_STANDARD 20)
+endif()
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # v14.7.3 Performance/throughput flags
@@ -126,8 +131,6 @@ if(MSVC)
         $<$<COMPILE_LANGUAGE:C,CXX>:/MP>
         $<$<COMPILE_LANGUAGE:C,CXX>:/GS->
         $<$<COMPILE_LANGUAGE:C,CXX>:/sdl->
-        $<$<AND:$<COMPILE_LANGUAGE:C,CXX>,$<NOT:$<CONFIG:Debug>>>:/O2>
-        $<$<AND:$<COMPILE_LANGUAGE:C,CXX>,$<NOT:$<CONFIG:Debug>>>:/GL>
     )
 else()
     add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:-O3>)
@@ -228,7 +231,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     message(STATUS "[Build] Defaulting CMAKE_BUILD_TYPE to Release")
 endif()
 
-set(CMAKE_CXX_STANDARD 20)
+# CXX standard set above (MSVC 23, others 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Static link MSVC runtime — no vcruntime140.dll dependency
@@ -363,6 +366,11 @@ if(RAWR_HAS_MASM)
         src/asm/Advanced_Code_Deobfuscator.asm
         src/asm/Code_Pattern_Reconstructor.asm
         src/asm/agentic_deep_thinking_kernels.asm
+        
+        # SDMA Phase 1: Scheduler + Ring Allocator (burst scheduling optimization)
+        src/core/sdma/sdma_scheduler.asm
+        src/core/sdma/sdma_ring_allocator.asm
+        
         # Keep C++ reverse_engineered_stubs.cpp as single source of truth for these symbols.
         # ASM unresolved stubs duplicate AllocateDMABuffer and cause LNK2005 in Win32IDE.
         # src/unresolved_asm_stubs.asm
@@ -431,9 +439,6 @@ set(SOURCES
     src/engine/pyre_compute.cpp
     src/engine/sovereign_engines.cpp
     
-    src/codec/compression.cpp
-    src/codec/brutal_gzip.cpp
-
     src/core/execution_scheduler.cpp
     
     # Agentic Decision Tree + CLI Autonomy (Phase 19)
@@ -552,6 +557,8 @@ set(SOURCES
     # Phase 25: AMD/ATI GPU Acceleration Toggle
     src/core/amd_gpu_accelerator.cpp
     src/core/unified_memory_executor.cpp
+    src/core/model_runtime_gate.cpp
+    src/runtime_surface/GenerationStopwatch.cpp
     
     # Phase 29: Multi-Architecture GPU/Accelerator Backends
     src/core/intel_gpu_accelerator.cpp
@@ -1423,6 +1430,9 @@ target_compile_definitions(RawrXD_Gold PRIVATE
     RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=$<IF:$<BOOL:${RAWRXD_PRODUCTION_STRIP_STUB_SOURCES}>,1,0>
     ${_RAWR_ASM_FEATURE_DEFINITIONS}
 )
+if(RAWR_HAS_MASM)
+    target_compile_definitions(RawrXD_Gold PRIVATE HAS_BRUTAL_GZIP_MASM=1)
+endif()
 
 if(MSVC)
     target_compile_options(RawrXD_Gold PRIVATE
@@ -2168,7 +2178,7 @@ if(MSVC)
         )
     endif()
 
-    # Brutal GZip deflate (stub returns nullptr for fallback)
+    # Brutal gzip deflate — stored DEFLATE blocks + gzip wrap (deflate_brutal_masm)
     set(ASM_DEFLATE_BRUTAL_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/gpu_masm/deflate_brutal_masm.asm")
     set(ASM_DEFLATE_BRUTAL_OBJ "${CMAKE_CURRENT_BINARY_DIR}/deflate_brutal_masm.obj")
     add_custom_command(
@@ -2381,8 +2391,6 @@ set(INFERENCE_ENGINE_SOURCES
     src/engine/sovereign_engines.cpp
     src/core/layer_offload_manager.cpp
     src/core/engine_registry.cpp
-    src/codec/compression.cpp
-    src/codec/brutal_gzip.cpp
     src/utils/Diagnostics.cpp
     src/inference/TitanLoaderDiagnostics.cpp
     src/inference/MemoryPressureGuard.cpp
@@ -2467,6 +2475,10 @@ endif()
         )
     set_source_files_properties(${INFERENCE_ASM_SOURCES} PROPERTIES LANGUAGE ASM_MASM)
     target_sources(RawrXD-InferenceEngine PRIVATE ${INFERENCE_ASM_SOURCES})
+
+    target_link_libraries(RawrXD-InferenceEngine PRIVATE ${ASM_DEFLATE_BRUTAL_OBJ})
+    add_dependencies(RawrXD-InferenceEngine masm_kernels)
+    target_compile_definitions(RawrXD-InferenceEngine PRIVATE HAS_BRUTAL_GZIP_MASM=1)
 
     # NanoQuant integration (optional)
     if(TARGET RawrXD_NanoQuant)
@@ -2579,6 +2591,8 @@ if(WIN32)
         src/win32app/Win32IDE_Logger.cpp
         src/win32app/Win32IDE_AgenticBridge.cpp
         src/full_agentic_ide/FullAgenticIDE.cpp
+        src/full_agentic_ide/AgenticPlanningOrchestrator.cpp
+        src/full_agentic_ide/AgenticIOCPBridge.cpp
         src/win32app/Win32IDE_AgentCommands.cpp
         src/win32app/Win32IDE_AutonomousCommunicator.cpp
         src/win32app/Win32IDE_AgenticComposerUX.cpp
@@ -2591,6 +2605,7 @@ if(WIN32)
         src/win32app/Win32IDE_FileOps.cpp
         src/win32app/Win32IDE_DecompilerView.cpp
         src/win32app/Win32IDE_NativePipeline.cpp
+        src/win32app/Win32IDE_ModelAnatomy.cpp
         Ship/RawrXD_AutonomousAgenticPipeline.cpp
         Ship/RawrXD_AgentCoordinator.cpp
 
@@ -2602,6 +2617,13 @@ if(WIN32)
         src/win32app/Win32IDE_Tier1Cosmetics.cpp
         src/win32app/Win32IDE_Breadcrumbs.cpp
         src/win32app/Win32IDE_PlanExecutor.cpp
+        src/agentic/agentic_planning_orchestrator.cpp
+        src/agentic/failure_intelligence_orchestrator.cpp
+        src/agentic/agentic_orchestrator_integration.cpp
+        src/agentic/agentic_audit_sink.cpp
+        src/agentic/change_impact_analyzer.cpp
+
+        src/win32app/Win32IDE_AgenticPlanningPanel.cpp
         src/win32app/Win32IDE_FailureDetector.cpp
         src/win32app/Win32IDE_FailureIntelligence.cpp
         src/win32app/Win32IDE_Settings.cpp
@@ -2613,6 +2635,7 @@ if(WIN32)
         src/win32app/Win32IDE_CaretAnimation.cpp
         src/win32app/Win32IDE_AgentOllamaClient.cpp
         src/win32app/Win32IDE_ModelDiscovery.cpp
+        src/win32app/Win32IDE_SwarmModelSelector.cpp
         src/win32app/Win32IDE_AsmSemantic.cpp
         src/win32app/Win32IDE_LSP_AI_Bridge.cpp
         src/win32app/Win32IDE_MultiResponse.cpp
@@ -2629,13 +2652,15 @@ if(WIN32)
         # Plugin System — Phase 43: Native Win32 DLL loading (C ABI)
         src/plugin_system/win32_plugin_loader.cpp
         src/win32app/Win32IDE_Plugins.cpp
-        
+        src/win32app/Win32IDE_HandleExtensionCommand.cpp
+
         # Configuration management
         src/config/IDEConfig.cpp
 
-        # LLM adapter + Auth (Qt-free: QtReplacements, no Qt dependency)
+        # LLM adapter + Auth (Win32/STL only; Ship/StdReplacements.hpp + Ship/RawrCompatIo.hpp when needed)
         src/llm_adapter/QuantBackend.cpp
         src/llm_adapter/GGUFRunner.cpp
+        src/llm_adapter/gguf_k_quants.cpp
         src/auth/QuantumAuthUI.cpp
         
         # Core engine files needed by IDE
@@ -2662,9 +2687,14 @@ if(WIN32)
         src/agentic/RawrXD_AgentLoop.cpp
         src/agentic/agentic_executor.cpp
         src/agentic/FIMPromptBuilder.cpp
+        
+        # SDMA Phase 1: Coordinator (burst scheduling bridge/thread management)
+        src/core/sdma/sdma_coordinator.cpp
+        
         src/agentic_observability.cpp
         src/core/rawrxd_subsystem_api.cpp
         src/runtime_core.cpp
+        src/tool_registry.cpp
         src/agent/telemetry_collector.cpp
 
         # T6: Autonomous Repair Orchestrator + Agent Memory Indexer
@@ -2688,6 +2718,7 @@ if(WIN32)
         # already added above in this block; keep single provider per file
 
         # Disk Recovery Agent (C++ implementation) + Tool handler + ASM wrapper
+        src/agent/DiskRecoveryAgent.cpp
         src/agentic/DiskRecoveryAgent.cpp
         src/agentic/DiskRecoveryToolHandler.cpp
         src/agent_history.cpp
@@ -2723,9 +2754,6 @@ if(WIN32)
         src/engine/core_generator.cpp
         src/engine/pyre_compute.cpp
         src/engine/sovereign_engines.cpp
-        src/codec/compression.cpp
-        src/codec/brutal_gzip.cpp
-        
         # Streaming engine registry (Phase 9)
         src/core/streaming_engine_registry.cpp
         src/core/gpu_backend_bridge.cpp
@@ -2846,6 +2874,7 @@ if(WIN32)
         # Phase 25: AMD/ATI GPU Acceleration Toggle
         src/core/amd_gpu_accelerator.cpp
         src/core/unified_memory_executor.cpp
+        src/core/model_runtime_gate.cpp
         
         # Phase 29: Multi-Architecture GPU/Accelerator Backends
         src/core/intel_gpu_accelerator.cpp
@@ -2863,6 +2892,8 @@ if(WIN32)
         
         # Phase 26: WebView2 + Monaco Editor Integration
         src/win32app/Win32IDE_WebView2.cpp
+        src/win32app/AgenticBrowserLayer.cpp
+        src/win32app/Win32IDE_AgenticBrowser.cpp
         src/win32app/Win32IDE_MonacoThemes.cpp
 
         # Phase 27: Embedded LSP Server (JSON-RPC 2.0)
@@ -3052,16 +3083,22 @@ if(WIN32)
         src/win32app/Win32IDE_TelemetryDashboard.cpp
         src/win32app/Win32IDE_MarketplacePanel.cpp
         src/win32app/Win32IDE_Collab.cpp
+
+        # Phase 51: mIRC Control Bridge — IRC bot for remote IDE control
+        src/win32app/Win32IDE_IRCBridge.cpp
+        src/win32app/Win32IDE_IRCBridgeCommands.cpp
         src/collab/websocket_hub.cpp
         src/win32app/Win32IDE_TestExplorerTree.cpp
         src/win32app/Win32IDE_NetworkPanel.cpp
         src/core/omega_orchestrator.cpp
+        src/core/omega_asm_native_kernel.cpp
         src/core/mesh_brain.cpp
         src/core/speciator_engine.cpp
         src/core/neural_bridge.cpp
         src/core/self_host_engine.cpp
         src/core/hardware_synthesizer.cpp
         src/core/transcendence_coordinator.cpp
+        src/core/integrated_runtime.cpp
         src/win32app/Win32IDE_TranscendencePanel.cpp
         src/win32app/VulkanRenderer.cpp
         src/win32app/OSExplorerInterceptor.cpp
@@ -3374,7 +3411,7 @@ if(WIN32)
         # Real lane - keep isolated handlers and runtime menu/command handlers.
         # DO NOT remove ssot_handlers_ext_isolated.cpp - it has working VSCEXT handlers 10000-10009
         # DO NOT add ssot_handlers_ext.cpp - it has unresolved symbols we haven't fixed
-        # win32_ide_link_stubs.cpp keeps only non-menu fallback symbols and is appended
+        # Fallback TUs (below) + rawr_engine_link_shims when linked; no win32_ide_link_stubs.cpp (removed from tree).
         # only in explicit non-strict MSVC compatibility lanes.
         message(STATUS "Win32IDE: Real lane - using isolated handlers + runtime handlers")
     endif()
@@ -3421,8 +3458,9 @@ if(WIN32)
     list(APPEND WIN32IDE_SOURCES src/core/local_parity_bridge.cpp)
     if(NOT RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
         if(MSVC)
-            list(APPEND WIN32IDE_SOURCES
-                src/core/win32_ide_link_stubs.cpp
+            # Link closure: rawr_engine_link_shims.cpp + fallbacks (Win32IDE removes rawr_engine.cpp — shims satisfy externals).
+            set(_RAWRXD_WIN32IDE_FALLBACK_UNITS
+                src/core/rawr_engine_link_shims.cpp
                 src/core/win32ide_asm_fallback.cpp
                 src/core/cot_fallback_system.cpp
                 src/core/subsystem_mode_fallbacks.cpp
@@ -3436,6 +3474,13 @@ if(WIN32)
                 src/win32app/rtp_protocol_fallback.cpp
                 src/modules/quickjs_node_shims.cpp
             )
+            foreach(_rawr_fallback IN LISTS _RAWRXD_WIN32IDE_FALLBACK_UNITS)
+                if(EXISTS "${CMAKE_SOURCE_DIR}/${_rawr_fallback}")
+                    list(APPEND WIN32IDE_SOURCES "${_rawr_fallback}")
+                else()
+                    message(WARNING "[Win32IDE] Optional fallback unit missing, skipping: ${_rawr_fallback}")
+                endif()
+            endforeach()
         else()
             message(STATUS "[Win32IDE] Non-MSVC fallback append skipped")
         endif()
@@ -3465,10 +3510,18 @@ if(WIN32)
     endif()
 
     # Gold Lane: prefer real implementations for Win32IDE agentic/autonomy path.
+    # Default ON: without fallback TUs, Win32IDE hits 100+ LNK2001s (asm_*, RTP_*, GGUF stubs, etc.).
+    # Production/CI can force -DRAWRXD_ALLOW_AGENTIC_STUB_FALLBACK=OFF when the full ASM graph is linked.
     option(RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK
         "Allow stub/link-fallback units in RawrXD-Win32IDE agentic path"
-        OFF
+        ON
     )
+    if(NOT RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK)
+        message(WARNING
+            "[Win32IDE] RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK=OFF strips fallback/shim TUs (strict lane). "
+            "The IDE usually will not link unless every ASM symbol is provided elsewhere. "
+            "For a normal dev link: -DRAWRXD_ALLOW_AGENTIC_STUB_FALLBACK=ON or remove that cache entry.")
+    endif()
     if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES AND RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK)
         message(FATAL_ERROR "[ProductionLane] RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK=ON is incompatible with RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=ON.")
     endif()
@@ -3619,9 +3672,12 @@ if(WIN32)
         endif()
     endfunction()
     
-    # Mandatory symbol providers for Win32IDE link closure (no generic link_stubs units allowed).
-    # Remove any other stubs that may have been added
-    list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX "(_stubs\\.cpp$|/stubs\\.cpp$|_stub\\.cpp$|/stub_.*\\.cpp$|_stubs\\.asm$|/stubs\\.asm$|_stub\\.asm$|/stub_.*\\.asm$|/shim_.*\\.(cpp|asm)$|missing_handler|link_stubs_.*\\.(cpp|asm)$|_shims?\\.(cpp|asm)$|_link_shims?\\.(cpp|asm)$|_fallback[^/]*\\.(cpp|asm)$|_(mock|fake)\\.(cpp|asm)$|stub_|shim_|mock_|fake_)")
+    # Mandatory symbol providers for Win32IDE link closure.
+    # When RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK=ON, keep *_fallback*.cpp / link shims so the IDE links.
+    # When OFF, strip generic stub/fallback units (strict lane).
+    if(NOT RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK)
+        list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX "(_stubs\\.cpp$|/stubs\\.cpp$|_stub\\.cpp$|/stub_.*\\.cpp$|_stubs\\.asm$|/stubs\\.asm$|_stub\\.asm$|/stub_.*\\.asm$|/shim_.*\\.(cpp|asm)$|missing_handler|link_stubs_.*\\.(cpp|asm)$|_shims?\\.(cpp|asm)$|_link_shims?\\.(cpp|asm)$|_fallback[^/]*\\.(cpp|asm)$|_(mock|fake)\\.(cpp|asm)$|stub_|shim_|mock_|fake_)")
+    endif()
     # Keep required MASM bridge provider after broad stub filtering.
     if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES AND NOT EXISTS "${CMAKE_SOURCE_DIR}/src/core/ai_agent_masm_stubs.cpp")
         message(FATAL_ERROR "[ProductionLane] Required MASM bridge provider src/core/ai_agent_masm_stubs.cpp is missing.")
@@ -3696,7 +3752,25 @@ if(WIN32)
         src/win32app/Win32IDE_ResourceGenerator.cpp
     )
 
+    # Runtime surface — unity module (single TU) + GenerationStopwatch (separate TU: shared with model_runtime_gate)
+    list(APPEND WIN32IDE_SOURCES
+        src/runtime_surface/RuntimeSurfaceModule.cpp
+        src/runtime_surface/GenerationStopwatch.cpp
+    )
+
     add_executable(RawrXD-Win32IDE WIN32 ${WIN32IDE_SOURCES} ${ASM_KERNEL_SOURCES} ${WIN32IDE_EXTRA_ASM})
+
+    # Ensure link output dir exists; clear prior exe/pdb before link (mitigates MSVC LNK1104 when
+    # a stale handle, indexer, or crashed link left the binary busy — harmless if files are absent).
+    file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+    # Best-effort only: cmake -E rm fails hard if the exe is locked (running IDE). cmd del ignores errors + exit 0.
+    if(MSVC)
+        add_custom_command(TARGET RawrXD-Win32IDE PRE_LINK
+            COMMAND cmd /c "del /f /q \"$<TARGET_FILE:RawrXD-Win32IDE>\" 2>nul & del /f /q \"$<TARGET_PDB_FILE:RawrXD-Win32IDE>\" 2>nul & exit /b 0"
+            COMMENT "RawrXD-Win32IDE: PRE_LINK optional del exe/pdb if unlocked"
+            VERBATIM
+        )
+    endif()
 
     # =========================================================================
     # PRODUCTION POLICY ENFORCEMENT
@@ -3718,7 +3792,10 @@ if(WIN32)
     # External infra pack is mirrored into the project tree under D: and wired
     # as include/lib providers for Win32IDE.
     set(RAWRXD_INFRA_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/external/rawr_infra")
-    target_include_directories(RawrXD-Win32IDE PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Ship")
+    target_include_directories(RawrXD-Win32IDE PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/Ship"
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    )
     if(EXISTS "${RAWRXD_INFRA_ROOT}/Headers")
         target_include_directories(RawrXD-Win32IDE PRIVATE
             "${RAWRXD_INFRA_ROOT}/Headers"
@@ -3763,6 +3840,9 @@ if(WIN32)
         RAWRXD_USE_DEDICATED_HOVER=1
         RAWRXD_USE_DEDICATED_MINIMAP=1
     )
+    if(RAWR_HAS_MASM)
+        target_compile_definitions(RawrXD-Win32IDE PRIVATE HAS_BRUTAL_GZIP_MASM=1)
+    endif()
 
     # =========================================================================
     # Phase 36: QuickJS Static Library (embedded JS runtime)
@@ -3991,7 +4071,7 @@ if(WIN32)
 
     if(MSVC)
         target_compile_options(RawrXD-Win32IDE PRIVATE
-            $<$<COMPILE_LANGUAGE:CXX>:/EHsc /W0 /arch:AVX512>
+            $<$<COMPILE_LANGUAGE:CXX>:/EHsc /W0 /arch:AVX2>
             # Avoid /RTC1 + /O2 conflict in Debug (CMake injects /RTC1 for Debug by default).
             $<$<AND:$<COMPILE_LANGUAGE:CXX>,$<NOT:$<CONFIG:Debug>>>:/O2>
         )
@@ -4002,7 +4082,7 @@ if(WIN32)
     set_target_properties(RawrXD-Win32IDE PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY bin
         OUTPUT_NAME RawrXD-Win32IDE
-        CXX_STANDARD 20
+        CXX_STANDARD 23
         CXX_STANDARD_REQUIRED ON
         MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
     )
@@ -4342,6 +4422,96 @@ if(WIN32)
         OUTPUT_NAME RawrXD-KVBenchmark
     )
     message(STATUS "[Phase E] KV Cache Benchmark target: RawrXD-KVBenchmark")
+
+    # ═══════════════════════════════════════════════════════════════════
+    # TPS smoke — GGUFRunner + model_runtime_gate + runtime_surface unity + decode TPS vs ref (default 239)
+    # ═══════════════════════════════════════════════════════════════════
+    add_executable(RawrXD-TpsSmoke EXCLUDE_FROM_ALL
+        src/tools/RawrXD_TpsSmoke.cpp
+        src/llm_adapter/GGUFRunner.cpp
+        src/llm_adapter/gguf_k_quants.cpp
+        src/llm_adapter/QuantBackend.cpp
+        src/llm_adapter/ggufrunner_link_fallbacks.cpp
+        src/core/unified_memory_executor.cpp
+        src/core/model_runtime_gate.cpp
+        src/runtime_surface/GenerationStopwatch.cpp
+        src/runtime_surface/RuntimeSurfaceModule.cpp
+        src/logging/Logger.cpp
+    )
+    target_include_directories(RawrXD-TpsSmoke PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/llm_adapter
+        ${CMAKE_SOURCE_DIR}/src/core
+        ${CMAKE_SOURCE_DIR}/src/codec
+        ${CMAKE_SOURCE_DIR}/include
+    )
+    if(MSVC)
+        target_compile_options(RawrXD-TpsSmoke PRIVATE /EHsc /W2 /O2 /arch:AVX2)
+    endif()
+    target_link_libraries(RawrXD-TpsSmoke PRIVATE kernel32)
+    set_target_properties(RawrXD-TpsSmoke PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+        OUTPUT_NAME RawrXD-TpsSmoke
+        CXX_STANDARD 23
+        CXX_STANDARD_REQUIRED ON
+    )
+    message(STATUS "[Smoke] RawrXD-TpsSmoke target (Run-TpsSmoke.ps1)")
+
+    # ═══════════════════════════════════════════════════════════════════
+    # Model analysis — shared lib (Win32IDE + CLI) + CLI tool (docs/ANALYSIS_QUICKSTART.md)
+    # Note: gguf_k_quants.cpp stays out of the lib — Win32IDE already links one copy.
+    # ═══════════════════════════════════════════════════════════════════
+    add_library(RawrXD-ModelAnalysisLib STATIC EXCLUDE_FROM_ALL
+        src/core/model_anatomy.cpp
+        src/core/neurological_diff.cpp
+    )
+    target_include_directories(RawrXD-ModelAnalysisLib PUBLIC
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src/llm_adapter
+    )
+    if(MSVC)
+        target_compile_options(RawrXD-ModelAnalysisLib PRIVATE /EHsc /W2)
+        target_compile_options(RawrXD-ModelAnalysisLib PRIVATE
+            $<$<CONFIG:Release>:/O2>
+            $<$<CONFIG:RelWithDebInfo>:/O2>
+        )
+    endif()
+    set_target_properties(RawrXD-ModelAnalysisLib PROPERTIES
+        CXX_STANDARD 23
+        CXX_STANDARD_REQUIRED ON
+    )
+
+    add_executable(RawrXD-ModelAnalysis EXCLUDE_FROM_ALL
+        src/tools/model_analysis_cli.cpp
+        src/llm_adapter/gguf_k_quants.cpp
+    )
+    target_include_directories(RawrXD-ModelAnalysis PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src/llm_adapter
+    )
+    if(MSVC)
+        target_compile_options(RawrXD-ModelAnalysis PRIVATE /EHsc /W2)
+        target_compile_options(RawrXD-ModelAnalysis PRIVATE
+            $<$<CONFIG:Release>:/O2>
+            $<$<CONFIG:RelWithDebInfo>:/O2>
+        )
+    endif()
+    target_link_libraries(RawrXD-ModelAnalysis PRIVATE RawrXD-ModelAnalysisLib kernel32)
+    set_target_properties(RawrXD-ModelAnalysis PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+        OUTPUT_NAME RawrXD-ModelAnalysis
+        CXX_STANDARD 23
+        CXX_STANDARD_REQUIRED ON
+    )
+    message(STATUS "[Analysis] RawrXD-ModelAnalysis target (Implant_Model_Analysis.ps1 / ANALYSIS_QUICKSTART.md)")
+
+    if(TARGET RawrXD-Win32IDE AND TARGET RawrXD-ModelAnalysisLib)
+        target_link_libraries(RawrXD-Win32IDE PRIVATE RawrXD-ModelAnalysisLib)
+        target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWR_HAS_MODEL_ANATOMY=1)
+        message(STATUS "[Analysis] Win32IDE linked to RawrXD-ModelAnalysisLib (RAWR_HAS_MODEL_ANATOMY)")
+    endif()
 endif()
 
 # Swarm smoke test (manual)
@@ -4366,3 +4536,34 @@ if(NOT RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
 else()
     message(STATUS "SwarmSmokeTest skipped in strict production strip mode (uses swarm_smoke_stubs.cpp)")
 endif()
+
+# ============================================================================
+# Agentic Planning Orchestrator Smoke Tests
+# ============================================================================
+add_executable(agentic_orchestrator_smoke_test EXCLUDE_FROM_ALL
+    src/agentic/agentic_planning_orchestrator.cpp
+    src/agentic/agentic_orchestrator_integration.cpp
+    src/agentic/agentic_audit_sink.cpp
+    src/agentic/agentic_orchestrator_smoke_test.cpp
+)
+
+target_include_directories(agentic_orchestrator_smoke_test PRIVATE
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/src/agentic
+    ${CMAKE_SOURCE_DIR}/src/win32app
+)
+
+target_compile_features(agentic_orchestrator_smoke_test PRIVATE cxx_std_17)
+
+if(WIN32)
+    target_link_libraries(agentic_orchestrator_smoke_test PRIVATE
+        Threads::Threads
+        user32 gdi32 shell32
+    )
+else()
+    target_link_libraries(agentic_orchestrator_smoke_test PRIVATE Threads::Threads)
+endif()
+
+message(STATUS "[AgenticOrchestrator] Smoke test target: agentic_orchestrator_smoke_test (build with: cmake --build . --target agentic_orchestrator_smoke_test)")

@@ -1118,6 +1118,8 @@ void MainWindow::handleMenuCommand(WORD cmdId)
             "(c) 2025 RawrXD Team",
             "About RawrXD IDE", MB_OK | MB_ICONINFORMATION);
         break;
+    default:
+        break;
     }
 #endif
 }

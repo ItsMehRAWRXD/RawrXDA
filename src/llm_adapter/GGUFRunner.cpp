@@ -1,10 +1,19 @@
 #include "GGUFRunner.h"
+#include "../core/model_runtime_gate.h"
+#include "../logging/Logger.h"
 #include "QuantBackend.h"
 #include "brutal_gzip.h"
+#include "gguf_k_quants.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
+#include <filesystem>
 #include <fstream>
+#include <limits>
 #include <random>
 
 #if defined(_MSC_VER)
@@ -23,6 +32,17 @@
 #define USE_MMAP 1
 #else
 #define USE_MMAP 0
+#endif
+
+#if defined(_WIN32)
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+// winreg.h / related headers can define Logging as a macro name — breaks RawrXD::Logging::Logger below.
+#ifdef Logging
+#undef Logging
+#endif
 #endif
 
 // Keep linkage visible to the ASM translation unit.
@@ -228,11 +248,18 @@ bool GGUFRunner::parseGgufTensorTable(RawrXD::NativeFile& file)
     }
 
     context_.tensorTable.clear();
+    context_.tensorDataBaseOffset = 0;
+
     for (uint64_t i = 0; i < tensorCount; ++i)
     {
         ModelContext::TensorDesc desc;
         uint64_t nameLen;
         ds >> nameLen;
+        constexpr uint64_t kMaxTensorNameLen = 1u << 20;
+        if (nameLen > kMaxTensorNameLen || nameLen > static_cast<uint64_t>(std::numeric_limits<int>::max()))
+        {
+            return false;
+        }
         std::vector<uint8_t> nameBa = file.read(static_cast<int>(nameLen));
         desc.name = std::string(reinterpret_cast<const char*>(nameBa.data()), nameBa.size());
         uint32_t nDims;
@@ -247,12 +274,109 @@ bool GGUFRunner::parseGgufTensorTable(RawrXD::NativeFile& file)
         uint32_t typeRaw;
         ds >> typeRaw;
         desc.type = static_cast<GgmlType>(typeRaw);
-        uint64_t offset;
-        ds >> offset;
-        desc.offset = offset;
+        uint64_t relOffset = 0;
+        ds >> relOffset;
+        // GGUF: stored offset is relative to aligned tensor-data base (not file[0]). See ggml/llama.cpp writers.
+        desc.offset = relOffset;
         context_.tensorTable.emplace(desc.name, desc);
     }
-    return ds.status() == RawrXD::StreamStatus::Ok;
+    if (ds.status() != RawrXD::StreamStatus::Ok)
+    {
+        return false;
+    }
+
+    const std::streampos endMetaPos = file.getStream().tellg();
+    if (endMetaPos == std::streampos(-1))
+    {
+        context_.tensorTable.clear();
+        context_.tensorDataBaseOffset = 0;
+        return false;
+    }
+    const uint64_t endMeta = static_cast<uint64_t>(endMetaPos);
+    uint64_t align = static_cast<uint64_t>(context_.ggufTensorAlignment);
+    if (align == 0)
+    {
+        align = 32;
+    }
+    // GGUF: tensor.offset in the file is relative to the aligned start of the tensor *blob*, not to byte 0.
+    // Equivalent to: abs = mmap_base + tensor_data_offset + rel, where tensor_data_offset is the aligned
+    // end of the tensor info table (we compute it as tensorDataBase; KV general.alignment drives padding).
+    const uint64_t tensorDataBase = (endMeta + align - 1u) / align * align;
+    context_.tensorDataBaseOffset = tensorDataBase;
+
+    const int64_t sz64 = file.size();
+    const uint64_t fileSize = sz64 > 0 ? static_cast<uint64_t>(sz64) : 0u;
+    for (auto& kv : context_.tensorTable)
+    {
+        const uint64_t rel = kv.second.offset;
+        if (rel > UINT64_MAX - tensorDataBase)
+        {
+            context_.tensorTable.clear();
+            context_.tensorDataBaseOffset = 0;
+            return false;
+        }
+        const uint64_t absOff = tensorDataBase + rel;
+        if (fileSize != 0 && absOff > fileSize)
+        {
+            context_.tensorTable.clear();
+            context_.tensorDataBaseOffset = 0;
+            return false;
+        }
+        kv.second.offset = absOff;
+    }
+
+    return true;
+}
+
+bool GGUFRunner::hasModelFileBacking() const
+{
+    return context_.mappedData != nullptr || context_.usesUnifiedFileBacking;
+}
+
+void GGUFRunner::releaseWeightFileBacking()
+{
+#if defined(_WIN32)
+    if (context_.usesUnifiedFileBacking && context_.unifiedModelBuffer.ptr != nullptr)
+    {
+        (void)RawrXD::UnifiedMemory::UnifiedMemoryExecutor::instance().free(context_.unifiedModelBuffer);
+    }
+    context_.unifiedModelBuffer = {};
+    context_.usesUnifiedFileBacking = false;
+    context_.unifiedFileBase = nullptr;
+    context_.unifiedFileBytes = 0;
+#endif
+#if USE_MMAP
+    if (context_.mappedData != nullptr && context_.usesMmap)
+    {
+        (void)::munmap(static_cast<void*>(context_.mappedData), static_cast<size_t>(context_.modelFileSize));
+        context_.mappedData = nullptr;
+        context_.usesMmap = false;
+    }
+#endif
+#if defined(_WIN32)
+    if (context_.win32MapView != nullptr)
+    {
+        (void)UnmapViewOfFile(context_.win32MapView);
+        context_.win32MapView = nullptr;
+        context_.mappedData = nullptr;
+        context_.usesMmap = false;
+    }
+    if (context_.win32MapHandle != nullptr)
+    {
+        (void)CloseHandle(static_cast<HANDLE>(context_.win32MapHandle));
+        context_.win32MapHandle = nullptr;
+    }
+    if (context_.win32FileHandle != nullptr)
+    {
+        (void)CloseHandle(static_cast<HANDLE>(context_.win32FileHandle));
+        context_.win32FileHandle = nullptr;
+    }
+#endif
+    if (context_.mappedData != nullptr)
+    {
+        delete[] context_.mappedData;
+        context_.mappedData = nullptr;
+    }
 }
 
 GGUFRunner::GGUFRunner(void* parent)
@@ -265,34 +389,321 @@ GGUFRunner::GGUFRunner(void* parent)
     {
         context_.logits.resize(context_.vocabSize);
     }
+
+    if (hasModelFileBacking() && !context_.modelPath.empty())
+    {
+        RawrXD::Runtime::ModelRuntimeGate::instance().notifyModelResident(
+            context_.modelPath, static_cast<std::uint64_t>(context_.modelFileSize));
+    }
 }
 
 GGUFRunner::~GGUFRunner()
 {
-#if USE_MMAP
-    if (context_.mappedData && context_.usesMmap)
+    if (!context_.modelPath.empty())
     {
-        if (::munmap(static_cast<void*>(context_.mappedData), static_cast<size_t>(context_.modelFileSize)) != 0)
-        {
-        }
-        context_.mappedData = nullptr;
+        RawrXD::Runtime::ModelRuntimeGate::instance().notifyModelUnloaded(context_.modelPath);
     }
-#endif
-
-    if (context_.mappedData)
-    {
-        delete[] context_.mappedData;
-        context_.mappedData = nullptr;
-    }
+    releaseWeightFileBacking();
 
     context_.logits.clear();
     context_.vocabulary.clear();
 }
 
+bool GGUFRunner::inferenceWeightsReady() const
+{
+    if (!hasModelFileBacking())
+    {
+        return false;
+    }
+    // n_layers==0 is malformed for this runner; do not treat as "ready" (would skip the layer loop then
+    // hit QuantBackend / logits paths with inconsistent state).
+    if (context_.nLayers == 0)
+    {
+        return false;
+    }
+    if (context_.layers.size() < context_.nLayers)
+    {
+        return false;
+    }
+    const auto& L0 = context_.layers[0];
+    const size_t d = context_.embedDim;
+    if (d == 0)
+    {
+        return false;
+    }
+    const size_t kvDim = context_.nKVHeads * context_.headDim;
+    if (kvDim == 0)
+    {
+        return false;
+    }
+    const size_t expectedSq = d * d;
+    if (L0.attn_q_w.size() < expectedSq || L0.attn_o_w.size() < expectedSq)
+    {
+        return false;
+    }
+    if (L0.attn_k_w.size() < d * kvDim || L0.attn_v_w.size() < d * kvDim)
+    {
+        return false;
+    }
+    const size_t f = context_.ffnDim;
+    if (f == 0 || L0.mlp_up_w.size() < d * f || L0.mlp_gate_w.size() < d * f || L0.mlp_down_w.size() < f * d)
+    {
+        return false;
+    }
+    return true;
+}
+
+void GGUFRunner::ingestGgufKvMetadata(RawrXD::BinaryStream& ds, uint64_t kvCount)
+{
+    using RawrXD::StreamStatus;
+    for (uint64_t i = 0; i < kvCount; ++i)
+    {
+        uint64_t keyLen = 0;
+        ds >> keyLen;
+        if (ds.status() != StreamStatus::Ok)
+        {
+            return;
+        }
+        constexpr uint64_t kMaxKeyBytes = 4096;
+        if (keyLen > kMaxKeyBytes)
+        {
+            ds.setStatus(StreamStatus::ReadCorruptData);
+            return;
+        }
+        std::string key(static_cast<size_t>(keyLen), '\0');
+        if (keyLen > 0)
+        {
+            const int n = static_cast<int>(keyLen);
+            if (ds.readRawData(key.data(), n) != n)
+            {
+                return;
+            }
+        }
+        uint32_t valueType = 0;
+        ds >> valueType;
+        if (ds.status() != StreamStatus::Ok)
+        {
+            return;
+        }
+
+        const auto skipValue = [&]() { skipGgufValue(ds, valueType); };
+
+        if (key == "llama.block_count")
+        {
+            if (valueType == 4)
+            {
+                uint32_t v = 0;
+                ds >> v;
+                context_.nLayers = static_cast<size_t>(v);
+            }
+            else if (valueType == 5)
+            {
+                int32_t v = 0;
+                ds >> v;
+                context_.nLayers = (v > 0) ? static_cast<size_t>(v) : 0;
+            }
+            else
+            {
+                skipValue();
+            }
+        }
+        else if (key == "llama.embedding_length")
+        {
+            if (valueType == 4)
+            {
+                uint32_t v = 0;
+                ds >> v;
+                context_.embedDim = static_cast<size_t>(v);
+            }
+            else if (valueType == 5)
+            {
+                int32_t v = 0;
+                ds >> v;
+                context_.embedDim = (v > 0) ? static_cast<size_t>(v) : 0;
+            }
+            else
+            {
+                skipValue();
+            }
+        }
+        else if (key == "llama.vocab_size")
+        {
+            if (valueType == 4)
+            {
+                uint32_t v = 0;
+                ds >> v;
+                context_.vocabSize = static_cast<size_t>(v);
+            }
+            else if (valueType == 5)
+            {
+                int32_t v = 0;
+                ds >> v;
+                context_.vocabSize = (v > 0) ? static_cast<size_t>(v) : 0;
+            }
+            else
+            {
+                skipValue();
+            }
+        }
+        else if (key == "llama.attention.head_count")
+        {
+            if (valueType == 4)
+            {
+                uint32_t v = 0;
+                ds >> v;
+                context_.nHeads = static_cast<size_t>(v);
+            }
+            else if (valueType == 5)
+            {
+                int32_t v = 0;
+                ds >> v;
+                context_.nHeads = (v > 0) ? static_cast<size_t>(v) : 0;
+            }
+            else
+            {
+                skipValue();
+            }
+        }
+        else if (key == "llama.attention.head_count_kv")
+        {
+            if (valueType == 4)
+            {
+                uint32_t v = 0;
+                ds >> v;
+                context_.nKVHeads = static_cast<size_t>(v);
+            }
+            else if (valueType == 5)
+            {
+                int32_t v = 0;
+                ds >> v;
+                context_.nKVHeads = (v > 0) ? static_cast<size_t>(v) : 0;
+            }
+            else
+            {
+                skipValue();
+            }
+        }
+        else if (key == "general.alignment")
+        {
+            if (valueType == 4)
+            {
+                uint32_t v = 0;
+                ds >> v;
+                if (v > 0 && (v & (v - 1u)) == 0)
+                {
+                    context_.ggufTensorAlignment = v;
+                }
+            }
+            else if (valueType == 5)
+            {
+                int32_t v = 0;
+                ds >> v;
+                const uint32_t u = static_cast<uint32_t>(v);
+                if (v > 0 && (u & (u - 1u)) == 0)
+                {
+                    context_.ggufTensorAlignment = u;
+                }
+            }
+            else
+            {
+                skipValue();
+            }
+        }
+        else if (key == "llama.feed_forward_length")
+        {
+            if (valueType == 4)
+            {
+                uint32_t v = 0;
+                ds >> v;
+                context_.ffnDim = static_cast<size_t>(v);
+            }
+            else if (valueType == 5)
+            {
+                int32_t v = 0;
+                ds >> v;
+                if (v > 0)
+                {
+                    context_.ffnDim = static_cast<size_t>(v);
+                }
+            }
+            else
+            {
+                skipValue();
+            }
+        }
+        else if (key == "general.architecture" && valueType == 8)
+        {
+            context_.architecture = readGgufStr(ds);
+        }
+        else if (key == "general.name" && valueType == 8)
+        {
+            context_.modelName = readGgufStr(ds);
+        }
+        else
+        {
+            skipValue();
+        }
+
+        if (ds.status() != StreamStatus::Ok)
+        {
+            return;
+        }
+    }
+}
+
+void GGUFRunner::sanitizeArchMetadata()
+{
+    constexpr size_t kMaxLayers = 1024;
+    constexpr size_t kMaxEmbed = 262144;
+    constexpr size_t kMaxVocab = size_t{1} << 28;
+    constexpr size_t kMaxHeads = 4096;
+
+    if (context_.nLayers > kMaxLayers)
+    {
+        RawrXD::Logging::Logger::instance().warning(
+            std::string("[GGUFRunner] llama.block_count=") + std::to_string(context_.nLayers) +
+                " exceeds sanity cap; treating as unloadable to avoid KV cache overflow / UB.",
+            "GGUFRunner");
+        context_.nLayers = 0;
+    }
+    if (context_.embedDim > kMaxEmbed)
+    {
+        RawrXD::Logging::Logger::instance().warning(std::string("[GGUFRunner] embedding_length=") +
+                                                        std::to_string(context_.embedDim) +
+                                                        " exceeds sanity cap; clamping metadata.",
+                                                    "GGUFRunner");
+        context_.embedDim = 0;
+    }
+    if (context_.vocabSize > kMaxVocab)
+    {
+        context_.vocabSize = 0;
+    }
+    if (context_.nHeads > kMaxHeads)
+    {
+        context_.nHeads = 0;
+    }
+    if (context_.nKVHeads > kMaxHeads)
+    {
+        context_.nKVHeads = 0;
+    }
+}
+
 bool GGUFRunner::runInference(const std::string& prompt, float* outputBuffer)
 {
-    if (!context_.mappedData)
+    if (!hasModelFileBacking())
     {
+        inferenceComplete(false);
+        return false;
+    }
+
+    if (!inferenceWeightsReady())
+    {
+        RawrXD::Logging::Logger::instance().error(
+            std::string("[GGUFRunner] runInference refused: per-layer weights not loaded (layers in RAM=") +
+                std::to_string(context_.layers.size()) + " metadata n_layers=" + std::to_string(context_.nLayers) +
+                "). Per-layer `blk.*` tensors missing, RAM cap hit (RAWRXD_GGUF_MAX_LAYER_FLOAT_RAM_GB), or "
+                "unsupported GGML type (e.g. IQ*); see parseGgufLayerWeights + gguf_k_quants.cpp.",
+            "GGUFRunner");
         inferenceComplete(false);
         return false;
     }
@@ -321,14 +732,39 @@ bool GGUFRunner::runInference(const std::string& prompt, float* outputBuffer)
         return false;
     }
 
+    RawrXD::Runtime::LaneGuard execLane(RawrXD::Runtime::SubsystemLane::Execute);
+    if (!execLane.allowed())
+    {
+        inferenceComplete(false);
+        return false;
+    }
+    RawrXD::Runtime::GenerationScope genScope("GGUFRunner", context_.modelPath);
+
     auto totalTimerStart = std::chrono::steady_clock::now();
     (void)totalTimerStart;
 
     const int maxTokens = std::max(1, context_.maxTokens > 0 ? context_.maxTokens : 64);
     size_t lastTokenId = 0;
+    context_.lastDecodeSteps = 0;
+
+    const bool logDecodeProgress = []
+    {
+        const char* e = std::getenv("RAWRXD_GGUF_DECODE_PROGRESS");
+        return e && (e[0] == '1' || e[0] == 'y' || e[0] == 'Y');
+    }();
+
+    RawrXD::Logging::Logger::instance().info(
+        std::string("[GGUFRunner] decode loop starting: maxTokens=") + std::to_string(maxTokens) +
+            " nLayers=" + std::to_string(context_.nLayers) + " embedDim=" + std::to_string(context_.embedDim) +
+            " vocabSize=" + std::to_string(context_.vocabSize) +
+            " — first token may take a long time on large CPU-only models (this is not a hang). "
+            "Set RAWRXD_GGUF_DECODE_PROGRESS=1 for per-step logs.",
+        "GGUFRunner");
 
     for (int t = 0; t < maxTokens; ++t)
     {
+        const auto stepWall0 = std::chrono::steady_clock::now();
+
         // Transformer forward (scalar) to produce logits
         if (context_.logits.size() != context_.vocabSize)
         {
@@ -408,6 +844,18 @@ bool GGUFRunner::runInference(const std::string& prompt, float* outputBuffer)
             embeddings.back() = static_cast<float>(tokenId % 1024) / 1024.0f;
         }
 
+        context_.lastDecodeSteps = t + 1;
+
+        if (logDecodeProgress)
+        {
+            const auto stepWall1 = std::chrono::steady_clock::now();
+            const double stepSec = std::chrono::duration<double>(stepWall1 - stepWall0).count();
+            RawrXD::Logging::Logger::instance().info(std::string("[GGUFRunner] decode step ") + std::to_string(t + 1) +
+                                                         "/" + std::to_string(maxTokens) +
+                                                         " done wall_s=" + std::to_string(stepSec),
+                                                     "GGUFRunner");
+        }
+
         if (context_.eosTokenId >= 0 && static_cast<size_t>(context_.eosTokenId) == tokenId)
         {
             break;
@@ -416,6 +864,10 @@ bool GGUFRunner::runInference(const std::string& prompt, float* outputBuffer)
         // advance KV position
         context_.kvLen = std::min<size_t>(context_.kvLen + 1, static_cast<size_t>(context_.maxTokens - 1));
     }
+
+    RawrXD::Logging::Logger::instance().info(std::string("[GGUFRunner] decode loop finished lastDecodeSteps=") +
+                                                 std::to_string(context_.lastDecodeSteps),
+                                             "GGUFRunner");
 
     inferenceComplete(true);
     return true;
@@ -461,24 +913,108 @@ void GGUFRunner::checkCpuFeatures()
 
 void GGUFRunner::loadGGUFModel(const std::string& filePath)
 {
+    const std::string previousResident = context_.modelPath;
+    if (!previousResident.empty() && previousResident != filePath)
+    {
+        RawrXD::Runtime::ModelRuntimeGate::instance().notifyModelUnloaded(previousResident);
+    }
+    // Tear down prior mmap/heap mirror and drop parsed weights so a new file cannot inherit stale layers
+    // (would otherwise risk 0xC0000005 in attentionForward).
+    releaseWeightFileBacking();
+    context_.layers.clear();
+    context_.tok_embeddings.clear();
+    context_.output_norm_w.clear();
+    context_.output_w.clear();
+    context_.raw_q4_output.clear();
+    context_.raw_q8_output.clear();
+    context_.ln_f_g.clear();
+    context_.ln_f_b.clear();
+    context_.keyCache.clear();
+    context_.valueCache.clear();
+    context_.tensorTable.clear();
+    context_.tensorDataBaseOffset = 0;
+    context_.ggufTensorAlignment = 32;
+    context_.ffnDim = 0;
+    context_.kvLen = 0;
+
     context_.modelPath = filePath;
     context_.embedDim = 0;
     context_.vocabSize = 0;
+    context_.nLayers = 0;
+    context_.nHeads = 0;
+    context_.nKVHeads = 0;
+    context_.architecture.clear();
+    context_.modelName.clear();
     context_.usesMmap = false;
-    context_.mappedData = nullptr;
 
     RawrXD::NativeFile file(filePath);
+    // Missing file: do not allocate new float[0] (was non-null on MSVC and looked "loaded").
     if (!file.exists())
     {
-        context_.modelFileSize = static_cast<int64_t>(context_.embedDim * context_.vocabSize * sizeof(float));
-        context_.mappedData = new float[context_.embedDim * context_.vocabSize]{};
-        loadVocabulary(filePath + ".vocab");
         return;
     }
     if (!file.open())
+    {
         return;
+    }
 
     context_.modelFileSize = file.size();
+    if (context_.modelFileSize < 16)
+    {
+        return;
+    }
+
+#if defined(_WIN32)
+    // Optional: copy the full GGUF into UnifiedMemoryExecutor's host arena so tensor reads use memcpy from
+    // unifiedFileBase (see readTensorData). Large files exceed the ~448 MiB default arena — we fall back to mmap.
+    const char* unifiedGgufEnv = std::getenv("RAWRXD_GGUF_USE_UNIFIED_MEMORY");
+    const bool wantGgufUnified = unifiedGgufEnv != nullptr && unifiedGgufEnv[0] != '\0' &&
+                                 (unifiedGgufEnv[0] == '1' || unifiedGgufEnv[0] == 'y' || unifiedGgufEnv[0] == 'Y' ||
+                                  unifiedGgufEnv[0] == 't' || unifiedGgufEnv[0] == 'T');
+    if (wantGgufUnified)
+    {
+        const uint64_t ggufBytesU64 = static_cast<uint64_t>(context_.modelFileSize);
+        auto& um = RawrXD::UnifiedMemory::UnifiedMemoryExecutor::instance();
+        (void)um.initialize();
+        // loadModelUnified uses allocate(..., 64 KiB alignment); reserve slop for align-up waste.
+        constexpr uint64_t kUnifiedGgufSlop = 65536u * 2u;
+        if (um.isInitialized() && ggufBytesU64 > 0 &&
+            um.getUnifiedHeapRemainingBytes() >= ggufBytesU64 + kUnifiedGgufSlop)
+        {
+            auto ub = um.loadModelUnified(filePath, ggufBytesU64);
+            if (ub)
+            {
+                context_.unifiedModelBuffer = ub.value();
+                context_.unifiedFileBase = context_.unifiedModelBuffer.ptr;
+                context_.unifiedFileBytes = ggufBytesU64;
+                context_.usesUnifiedFileBacking = true;
+                context_.mappedData = nullptr;
+                context_.usesMmap = false;
+                RawrXD::Logging::Logger::instance().info(
+                    std::string("[GGUFRunner] GGUF bytes resident in UnifiedMemoryExecutor "
+                                "(RAWRXD_GGUF_USE_UNIFIED_MEMORY): ") +
+                        std::to_string(ggufBytesU64) + " bytes",
+                    "GGUFRunner");
+            }
+            else
+            {
+                RawrXD::Logging::Logger::instance().warning(
+                    std::string("[GGUFRunner] UnifiedMemoryExecutor::loadModelUnified failed for ") + filePath +
+                        " — falling back to map / heap.",
+                    "GGUFRunner");
+            }
+        }
+        else
+        {
+            RawrXD::Logging::Logger::instance().warning(
+                std::string("[GGUFRunner] GGUF (") + std::to_string(ggufBytesU64) +
+                    " B) does not fit unified heap remaining (" +
+                    std::to_string(um.isInitialized() ? um.getUnifiedHeapRemainingBytes() : 0) +
+                    " B); using standard file backing. Unset RAWRXD_GGUF_USE_UNIFIED_MEMORY or use a smaller GGUF.",
+                "GGUFRunner");
+        }
+    }
+#endif
 
     {
         RawrXD::BinaryStream ds(file.getStream());
@@ -486,9 +1022,20 @@ void GGUFRunner::loadGGUFModel(const std::string& filePath)
         GGUFHeader h{};
         ds >> h.magic >> h.version >> h.tensorCount >> h.kvCount;
 
-        if (h.magic == 0x46554747)
-        {  // 'GGUF'
-            context_.ggufVersion = h.version;
+        if (h.magic != 0x46554747)
+        {  // 'GGUF' little-endian
+            return;
+        }
+        context_.ggufVersion = h.version;
+
+        ingestGgufKvMetadata(ds, h.kvCount);
+        if (ds.status() != RawrXD::StreamStatus::Ok)
+        {
+            RawrXD::Logging::Logger::instance().warning(
+                std::string("[GGUFRunner] GGUF KV metadata read ended with non-Ok stream status (truncated or "
+                            "corrupt header?): ") +
+                    filePath,
+                "GGUFRunner");
         }
 
         file.seek(0);
@@ -539,14 +1086,35 @@ void GGUFRunner::loadGGUFModel(const std::string& filePath)
             return val;
         };
 
-        context_.embedDim = findInt("ggml.embedding_length", 4096);
-        context_.vocabSize = findInt("ggml.vocab_size", 32000);
-        context_.nLayers = findInt("llama.block_count", 32);
-        context_.nHeads = findInt("llama.attention.head_count", 32);
-        context_.nKVHeads = findInt("llama.attention.head_count_kv", context_.nHeads);
+        if (context_.embedDim == 0)
+        {
+            context_.embedDim = static_cast<size_t>(std::max(0, findInt("ggml.embedding_length", 4096)));
+        }
+        if (context_.vocabSize == 0)
+        {
+            context_.vocabSize = static_cast<size_t>(std::max(0, findInt("ggml.vocab_size", 32000)));
+        }
+        if (context_.nLayers == 0)
+        {
+            context_.nLayers = static_cast<size_t>(std::max(0, findInt("llama.block_count", 32)));
+        }
+        if (context_.nHeads == 0)
+        {
+            context_.nHeads = static_cast<size_t>(std::max(0, findInt("llama.attention.head_count", 32)));
+        }
+        if (context_.nKVHeads == 0)
+        {
+            context_.nKVHeads = context_.nHeads;
+        }
 
-        context_.modelName = findString("general.name");
-        context_.architecture = findString("general.architecture");
+        if (context_.modelName.empty())
+        {
+            context_.modelName = findString("general.name");
+        }
+        if (context_.architecture.empty())
+        {
+            context_.architecture = findString("general.architecture");
+        }
         std::string quantStr = findString("general.file_type");
 
         // Detect quantization type (case-insensitive)
@@ -574,9 +1142,32 @@ void GGUFRunner::loadGGUFModel(const std::string& filePath)
         }
 
         if (context_.embedDim <= 0)
+        {
             context_.embedDim = 4096;
+        }
         if (context_.vocabSize <= 0)
+        {
             context_.vocabSize = 32000;
+        }
+
+        sanitizeArchMetadata();
+
+        if (context_.embedDim <= 0)
+        {
+            context_.embedDim = 4096;
+        }
+        if (context_.vocabSize <= 0)
+        {
+            context_.vocabSize = 32000;
+        }
+        if (context_.nHeads == 0 && context_.embedDim > 0)
+        {
+            context_.nHeads = 32;
+            if (context_.nKVHeads == 0)
+            {
+                context_.nKVHeads = context_.nHeads;
+            }
+        }
 
         // Multi-head attention parameters
         context_.headDim = (context_.nHeads > 0) ? (context_.embedDim / context_.nHeads) : 128;
@@ -597,20 +1188,73 @@ void GGUFRunner::loadGGUFModel(const std::string& filePath)
     }
 
 #if USE_MMAP
-    void* mapped =
-        ::mmap(nullptr, static_cast<size_t>(context_.modelFileSize), PROT_READ, MAP_PRIVATE, file.handle(), 0);
-    if (mapped == MAP_FAILED)
+    if (!context_.usesUnifiedFileBacking)
     {
-    }
-    else
-    {
-        context_.mappedData = static_cast<float*>(mapped);
-        context_.usesMmap = true;
+        void* mapped =
+            ::mmap(nullptr, static_cast<size_t>(context_.modelFileSize), PROT_READ, MAP_PRIVATE, file.handle(), 0);
+        if (mapped == MAP_FAILED)
+        {
+        }
+        else
+        {
+            context_.mappedData = static_cast<float*>(mapped);
+            context_.usesMmap = true;
+        }
     }
 #endif
 
-    if (!context_.mappedData)
+#if defined(_WIN32)
+    // Windows: map the GGUF read-only (same role as mmap on Unix). Without this, the code below
+    // heap-mirrors the entire file as float[] — tens of GB for large checkpoints → OOM/abort right
+    // after generation starts (TpsSmoke shows beginGeneration then silent exit).
+    if (!context_.mappedData && !context_.usesUnifiedFileBacking)
     {
+        const std::filesystem::path winPath(filePath);
+        const std::wstring& wpath = winPath.native();
+        HANDLE hf = CreateFileW(wpath.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                                nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+        if (hf != INVALID_HANDLE_VALUE)
+        {
+            HANDLE hm = CreateFileMappingW(hf, nullptr, PAGE_READONLY, 0, 0, nullptr);
+            if (hm != nullptr)
+            {
+                void* view = MapViewOfFile(hm, FILE_MAP_READ, 0, 0, 0);
+                if (view != nullptr)
+                {
+                    context_.win32FileHandle = hf;
+                    context_.win32MapHandle = hm;
+                    context_.win32MapView = view;
+                    context_.mappedData = static_cast<float*>(view);
+                    context_.usesMmap = true;
+                }
+                else
+                {
+                    CloseHandle(hm);
+                    CloseHandle(hf);
+                }
+            }
+            else
+            {
+                CloseHandle(hf);
+            }
+        }
+    }
+#endif
+
+    if (!context_.mappedData && !context_.usesUnifiedFileBacking)
+    {
+        constexpr size_t kMaxHeapMirrorBytes = 512u * 1024u * 1024u;
+        if (static_cast<size_t>(context_.modelFileSize) > kMaxHeapMirrorBytes)
+        {
+            RawrXD::Logging::Logger::instance().error(
+                std::string("[GGUFRunner] Model is ") + std::to_string(context_.modelFileSize) +
+                    " bytes: refusing heap mirror (Win32 map/unix mmap unavailable). "
+                    "Large GGUFs require a successful memory map.",
+                "GGUFRunner");
+            context_.modelPath.clear();
+            releaseWeightFileBacking();
+            return;
+        }
         const size_t floatCount = static_cast<size_t>(context_.modelFileSize / sizeof(float));
         context_.mappedData = new float[floatCount];
         size_t totalRead = 0;
@@ -625,9 +1269,28 @@ void GGUFRunner::loadGGUFModel(const std::string& filePath)
         }
     }
 
-    // Build tensor directory and read essential weights
+    // Build tensor directory and read embeddings + per-layer llama `blk.*` tensors (when present / supported).
     if (!parseGgufTensorTable(file) || !parseGgufTensors(file))
     {
+    }
+    else
+    {
+        if (parseGgufLayerWeights(file))
+        {
+            RawrXD::Logging::Logger::instance().info(
+                std::string("[GGUFRunner] blk.* weights loaded: n_layers=") + std::to_string(context_.layers.size()) +
+                    " embed_dim=" + std::to_string(context_.embedDim) + " ffn_dim=" + std::to_string(context_.ffnDim) +
+                    " inference_ready=" + (inferenceWeightsReady() ? "yes" : "no"),
+                "GGUFRunner");
+        }
+        else
+        {
+            RawrXD::Logging::Logger::instance().warning(
+                std::string("[GGUFRunner] parseGgufLayerWeights failed for ") + filePath +
+                    " — missing blk.* tensors, unsupported quant in GgufTensorBytes, or GQA/FFN shape mismatch. "
+                    "runInference will refuse (weights_incomplete) until loads succeed.",
+                "GGUFRunner");
+        }
     }
 
     // Allocate KV-cache for multi-head GQA: [nLayers, nKVHeads, maxTokens, headDim]
@@ -685,7 +1348,15 @@ void GGUFRunner::loadVocabulary(const std::string& vocabPath)
 
 float* GGUFRunner::getLayerWeights()
 {
-    return context_.mappedData;
+    if (context_.mappedData != nullptr)
+    {
+        return context_.mappedData;
+    }
+    if (context_.usesUnifiedFileBacking && context_.unifiedFileBase != nullptr)
+    {
+        return reinterpret_cast<float*>(context_.unifiedFileBase);
+    }
+    return nullptr;
 }
 
 bool GGUFRunner::prepareLLMInput(const std::string& prompt, std::vector<float>& embeddings)
@@ -919,64 +1590,21 @@ void GGUFRunner::attentionForward(int layerIdx, const float* x, float* y)
     const size_t nKVHead = context_.nKVHeads;
     const size_t headDim = context_.headDim;
 
+    const size_t kvDim = nKVHead * headDim;
+
     if (nHead == 0 || headDim == 0 || nKVHead == 0)
     {
-        // Fallback to single-head scalar path if metadata missing
-        std::vector<float> n(D), q(D), k(D), v(D), attnOut(D);
-        const auto& L = context_.layers[static_cast<size_t>(layerIdx)];
-        layerNorm(x, n.data(), L.ln_1_g, L.ln_1_b, D);
-        matmul(n.data(), L.attn_q_w.data(), q.data(), 1, static_cast<int>(D), static_cast<int>(D));
-        matmul(x, L.attn_k_w.data(), k.data(), 1, static_cast<int>(D), static_cast<int>(D));
-        matmul(x, L.attn_v_w.data(), v.data(), 1, static_cast<int>(D), static_cast<int>(D));
-        size_t pos = context_.kvLen;
-        size_t stride = static_cast<size_t>(D);
-        size_t layerStride = static_cast<size_t>(context_.maxTokens) * stride;
-        float* Kc = context_.keyCache.data() + static_cast<size_t>(layerIdx) * layerStride + pos * stride;
-        float* Vc = context_.valueCache.data() + static_cast<size_t>(layerIdx) * layerStride + pos * stride;
-        std::memcpy(Kc, k.data(), static_cast<size_t>(D) * sizeof(float));
-        std::memcpy(Vc, v.data(), static_cast<size_t>(D) * sizeof(float));
-        std::vector<float> weights(pos + 1);
-        float scale = 1.0f / std::sqrt(static_cast<float>(D));
-        for (size_t t = 0; t <= pos; ++t)
-        {
-            const float* Kt = context_.keyCache.data() + static_cast<size_t>(layerIdx) * layerStride + t * stride;
-            float dot = 0.0f;
-            for (size_t i = 0; i < D; ++i)
-                dot += q[i] * Kt[i];
-            weights[t] = dot * scale;
-        }
-        float maxw = weights[0];
-        for (size_t t = 1; t < weights.size(); ++t)
-            if (weights[t] > maxw)
-                maxw = weights[t];
-        float sumw = 0.0f;
-        for (size_t t = 0; t < weights.size(); ++t)
-        {
-            weights[t] = std::exp(weights[t] - maxw);
-            sumw += weights[t];
-        }
-        for (size_t t = 0; t < weights.size(); ++t)
-            weights[t] /= (sumw + 1e-9f);
-        std::fill(attnOut.begin(), attnOut.end(), 0.0f);
-        for (size_t t = 0; t < weights.size(); ++t)
-        {
-            const float* Vt = context_.valueCache.data() + static_cast<size_t>(layerIdx) * layerStride + t * stride;
-            float wt = weights[t];
-            for (size_t i = 0; i < D; ++i)
-                attnOut[i] += wt * Vt[i];
-        }
-        matmul(attnOut.data(), context_.layers[static_cast<size_t>(layerIdx)].attn_o_w.data(), y, 1,
-               static_cast<int>(D), static_cast<int>(D));
+        std::fill_n(y, D, 0.0f);
         return;
     }
 
     // Multi-head attention with GQA and RoPE
-    std::vector<float> n(D), q(D), k(D), v(D);
+    std::vector<float> n(D), q(D), k(kvDim), v(kvDim);
     const auto& L = context_.layers[static_cast<size_t>(layerIdx)];
     layerNorm(x, n.data(), L.ln_1_g, L.ln_1_b, D);
     matmul(n.data(), L.attn_q_w.data(), q.data(), 1, static_cast<int>(D), static_cast<int>(D));
-    matmul(x, L.attn_k_w.data(), k.data(), 1, static_cast<int>(D), static_cast<int>(D));
-    matmul(x, L.attn_v_w.data(), v.data(), 1, static_cast<int>(D), static_cast<int>(D));
+    matmul(n.data(), L.attn_k_w.data(), k.data(), 1, static_cast<int>(D), static_cast<int>(kvDim));
+    matmul(n.data(), L.attn_v_w.data(), v.data(), 1, static_cast<int>(D), static_cast<int>(kvDim));
 
     // Apply RoPE to Q and K (in-place rotation per head)
     size_t pos = context_.kvLen;
@@ -1066,18 +1694,23 @@ void GGUFRunner::attentionForward(int layerIdx, const float* x, float* y)
 void GGUFRunner::mlpForward(int layerIdx, const float* x, float* y)
 {
     const size_t D = context_.embedDim;
+    const size_t F = context_.ffnDim;
+    if (F == 0)
+    {
+        return;
+    }
     const auto& L = context_.layers[static_cast<size_t>(layerIdx)];
     std::vector<float> n(D);
     layerNorm(x, n.data(), L.ln_2_g, L.ln_2_b, D);
-    std::vector<float> up(4 * D), gate(4 * D), act(4 * D);
-    matmul(n.data(), L.mlp_up_w.data(), up.data(), 1, static_cast<int>(D), static_cast<int>(4 * D));
-    matmul(n.data(), L.mlp_gate_w.data(), gate.data(), 1, static_cast<int>(D), static_cast<int>(4 * D));
-    for (size_t i = 0; i < 4 * D; ++i)
+    std::vector<float> up(F), gate(F), act(F);
+    matmul(n.data(), L.mlp_up_w.data(), up.data(), 1, static_cast<int>(D), static_cast<int>(F));
+    matmul(n.data(), L.mlp_gate_w.data(), gate.data(), 1, static_cast<int>(D), static_cast<int>(F));
+    for (size_t i = 0; i < F; ++i)
     {
-        float s = 1.0f / (1.0f + std::exp(-gate[i]));
+        const float s = 1.0f / (1.0f + std::exp(-gate[i]));
         act[i] = up[i] * (gate[i] * s);
     }
-    matmul(act.data(), L.mlp_down_w.data(), y, 1, static_cast<int>(4 * D), static_cast<int>(D));
+    matmul(act.data(), L.mlp_down_w.data(), y, 1, static_cast<int>(F), static_cast<int>(D));
 }
 
 void GGUFRunner::fallback_matrix_multiply(float* A, float* B, float* C, int N, int M, int K)
@@ -1099,8 +1732,10 @@ void GGUFRunner::fallback_matrix_multiply(float* A, float* B, float* C, int N, i
 bool GGUFRunner::loadModel(const std::string& filePath)
 {
     loadGGUFModel(filePath);
-    if (context_.mappedData)
+    if (hasModelFileBacking())
     {
+        RawrXD::Runtime::ModelRuntimeGate::instance().notifyModelResident(
+            filePath, static_cast<std::uint64_t>(context_.modelFileSize));
         modelLoaded(filePath, context_.modelFileSize);
         return true;
     }
@@ -1119,6 +1754,8 @@ size_t GGUFRunner::ggmlTypeSize(GgmlType type)
             return 18;  // 18 bytes per 32-element block
         case GgmlType::Q8_0:
             return 34;  // 34 bytes per 32-element block
+        case GgmlType::Q8_K:
+            return sizeof(float) + 256 + 16 * sizeof(int16_t);  // 292 bytes per 256-element block
         default:
             return 4;
     }
@@ -1126,6 +1763,43 @@ size_t GGUFRunner::ggmlTypeSize(GgmlType type)
 
 std::vector<uint8_t> GGUFRunner::readTensorData(RawrXD::NativeFile& file, uint64_t offset, uint64_t numBytes)
 {
+#if defined(_WIN32)
+    if (context_.usesUnifiedFileBacking && context_.unifiedFileBase != nullptr && context_.unifiedFileBytes > 0)
+    {
+        if (numBytes > static_cast<uint64_t>(std::numeric_limits<int>::max()))
+        {
+            return std::vector<uint8_t>();
+        }
+        const uint64_t end = offset + numBytes;
+        if (end < offset || end > context_.unifiedFileBytes)
+        {
+            return std::vector<uint8_t>();
+        }
+        std::vector<uint8_t> out(static_cast<size_t>(numBytes));
+        std::memcpy(out.data(), static_cast<const std::uint8_t*>(context_.unifiedFileBase) + offset,
+                    static_cast<size_t>(numBytes));
+        return out;
+    }
+#endif
+    // Full file is contiguous: POSIX mmap, Win32 MapViewOfFile, or small-file heap mirror. Avoid seek+read I/O.
+    if (context_.mappedData != nullptr && !context_.usesUnifiedFileBacking && context_.modelFileSize > 0)
+    {
+        if (numBytes > static_cast<uint64_t>(std::numeric_limits<int>::max()))
+        {
+            return std::vector<uint8_t>();
+        }
+        const uint64_t fileSz = static_cast<uint64_t>(context_.modelFileSize);
+        const uint64_t end = offset + numBytes;
+        if (end < offset || end > fileSz)
+        {
+            return std::vector<uint8_t>();
+        }
+        std::vector<uint8_t> out(static_cast<size_t>(numBytes));
+        const auto* base = reinterpret_cast<const std::uint8_t*>(context_.mappedData);
+        std::memcpy(out.data(), base + offset, static_cast<size_t>(numBytes));
+        return out;
+    }
+
     if (!file.seek(static_cast<size_t>(offset)))
         return std::vector<uint8_t>();
     return file.read(static_cast<int>(numBytes));
@@ -1140,44 +1814,31 @@ bool GGUFRunner::loadTensor(RawrXD::NativeFile& file, const std::string& name, s
     const auto& desc = context_.tensorTable[name];
     size_t totalElements = 1;
     for (auto dim : desc.dims)
-        totalElements *= dim;
+    {
+        totalElements *= static_cast<size_t>(dim);
+    }
 
     size_t numBytes = 0;
-    if (desc.type == GgmlType::F32)
+    const uint32_t typeU = static_cast<uint32_t>(desc.type);
+    if (!RawrXD::GgufTensorBytes::payloadBytes(typeU, totalElements, numBytes))
     {
-        numBytes = totalElements * 4;
-    }
-    else if (desc.type == GgmlType::Q4_0)
-    {
-        numBytes = (totalElements / 32) * 18;
-    }
-    else if (desc.type == GgmlType::Q8_0)
-    {
-        numBytes = (totalElements / 32) * 34;
+        return false;
     }
 
     std::vector<uint8_t> rawData = readTensorData(file, desc.offset, numBytes);
-    if (rawData.empty())
+    if (rawData.size() != numBytes)
+    {
         return false;
+    }
 
     weights.resize(totalElements);
-    if (desc.type == GgmlType::F32)
+    if (!RawrXD::GgufTensorBytes::dequantizeToFloat(typeU, rawData.data(), totalElements, weights.data()))
     {
-        const float* ptr = reinterpret_cast<const float*>(rawData.data());
-        std::copy(ptr, ptr + totalElements, weights.begin());
+        return false;
     }
-    else if (desc.type == GgmlType::Q4_0)
+    if (name == "output.weight" && desc.type == GgmlType::Q4_0)
     {
-        // Keep raw bytes for output.weight to enable runtime-dispatched GEMM
-        if (name == "output.weight")
-        {
-            context_.raw_q4_output.assign(rawData.data(), rawData.data() + rawData.size());
-        }
-        dequantizeRowQ4_0_scalar(rawData.data(), weights.data(), totalElements);
-    }
-    else if (desc.type == GgmlType::Q8_0)
-    {
-        dequantizeRowQ8_0_scalar(rawData.data(), weights.data(), totalElements);
+        context_.raw_q4_output.assign(rawData.data(), rawData.data() + rawData.size());
     }
     return true;
 }
@@ -1196,6 +1857,164 @@ bool GGUFRunner::parseGgufTensors(RawrXD::NativeFile& file)
     }
     if (!loadTensor(file, "output.weight", context_.output_w))
     {
+    }
+
+    return true;
+}
+
+namespace
+{
+
+/// Upper-bound float32 RAM for full per-layer dequant (env caps huge models before `std::bad_alloc`).
+bool ggufEstimatedLayerFloatMirrorWithinRamBudget(size_t nLayers, size_t d, size_t kvDim, size_t ffnDim)
+{
+    const char* e = std::getenv("RAWRXD_GGUF_MAX_LAYER_FLOAT_RAM_GB");
+    if (!e || !e[0])
+    {
+        return true;
+    }
+    char* end = nullptr;
+    const double maxGb = std::strtod(e, &end);
+    if (end == e || !(maxGb > 0.0))
+    {
+        return true;
+    }
+    const double qo = 2.0 * static_cast<double>(d) * static_cast<double>(d);
+    const double kv = 2.0 * static_cast<double>(d) * static_cast<double>(kvDim);
+    const double mlp = 3.0 * static_cast<double>(d) * static_cast<double>(ffnDim);
+    const double norms = 2.0 * static_cast<double>(d);
+    const double perLayer = (qo + kv + mlp + norms) * static_cast<double>(sizeof(float));
+    const double totalBytes = perLayer * static_cast<double>(nLayers);
+    const double cap = maxGb * 1024.0 * 1024.0 * 1024.0;
+    return totalBytes <= cap;
+}
+
+}  // namespace
+
+bool GGUFRunner::parseGgufLayerWeights(RawrXD::NativeFile& file)
+{
+    if (context_.nLayers == 0 || context_.embedDim == 0 || context_.tensorTable.empty())
+    {
+        return false;
+    }
+
+    auto inferFfnDim = [&]()
+    {
+        if (context_.ffnDim != 0)
+        {
+            return;
+        }
+        const auto it = context_.tensorTable.find("blk.0.ffn_gate.weight");
+        if (it == context_.tensorTable.end())
+        {
+            return;
+        }
+        const auto& d = it->second.dims;
+        if (d.size() >= 2)
+        {
+            const size_t a = static_cast<size_t>(d[0]);
+            const size_t b = static_cast<size_t>(d[1]);
+            const size_t em = context_.embedDim;
+            if (a == em)
+            {
+                context_.ffnDim = b;
+            }
+            else if (b == em)
+            {
+                context_.ffnDim = a;
+            }
+        }
+    };
+    inferFfnDim();
+
+    {
+        const size_t d = context_.embedDim;
+        const size_t kvD = context_.nKVHeads * context_.headDim;
+        size_t ffnEst = context_.ffnDim;
+        if (ffnEst == 0)
+        {
+            const auto itg = context_.tensorTable.find("blk.0.ffn_gate.weight");
+            if (itg != context_.tensorTable.end() && itg->second.dims.size() >= 2)
+            {
+                const size_t a = static_cast<size_t>(itg->second.dims[0]);
+                const size_t b = static_cast<size_t>(itg->second.dims[1]);
+                if (a == d)
+                {
+                    ffnEst = b;
+                }
+                else if (b == d)
+                {
+                    ffnEst = a;
+                }
+            }
+        }
+        if (ffnEst == 0)
+        {
+            ffnEst = d * 4;
+        }
+        if (!ggufEstimatedLayerFloatMirrorWithinRamBudget(context_.nLayers, d, kvD, ffnEst))
+        {
+            RawrXD::Logging::Logger::instance().warning(
+                std::string("[GGUFRunner] parseGgufLayerWeights skipped: estimated float32 layer mirror exceeds "
+                            "RAWRXD_GGUF_MAX_LAYER_FLOAT_RAM_GB; unset env to allow (may OOM). Path: ") +
+                    context_.modelPath,
+                "GGUFRunner");
+            return false;
+        }
+    }
+
+    context_.layers.clear();
+    context_.layers.resize(context_.nLayers);
+
+    for (size_t li = 0; li < context_.nLayers; ++li)
+    {
+        const std::string pre = "blk." + std::to_string(li) + ".";
+        ModelContext::Layer& L = context_.layers[li];
+
+        (void)loadTensor(file, pre + "attn_norm.weight", L.ln_1_g);
+        (void)loadTensor(file, pre + "ffn_norm.weight", L.ln_2_g);
+
+        if (!loadTensor(file, pre + "attn_q.weight", L.attn_q_w))
+        {
+            context_.layers.clear();
+            return false;
+        }
+        if (!loadTensor(file, pre + "attn_k.weight", L.attn_k_w))
+        {
+            context_.layers.clear();
+            return false;
+        }
+        if (!loadTensor(file, pre + "attn_v.weight", L.attn_v_w))
+        {
+            context_.layers.clear();
+            return false;
+        }
+        if (!loadTensor(file, pre + "attn_output.weight", L.attn_o_w))
+        {
+            context_.layers.clear();
+            return false;
+        }
+        if (!loadTensor(file, pre + "ffn_gate.weight", L.mlp_gate_w))
+        {
+            context_.layers.clear();
+            return false;
+        }
+        if (!loadTensor(file, pre + "ffn_up.weight", L.mlp_up_w))
+        {
+            context_.layers.clear();
+            return false;
+        }
+        if (!loadTensor(file, pre + "ffn_down.weight", L.mlp_down_w))
+        {
+            context_.layers.clear();
+            return false;
+        }
+
+        if (li == 0 && context_.ffnDim == 0 && context_.embedDim > 0 && !L.mlp_gate_w.empty() &&
+            L.mlp_gate_w.size() % context_.embedDim == 0)
+        {
+            context_.ffnDim = L.mlp_gate_w.size() / context_.embedDim;
+        }
     }
 
     return true;
@@ -1227,51 +2046,24 @@ bool GGUFRunner::readTensorFloat32(RawrXD::NativeFile& file, int64_t offset, int
         return false;
     }
 
-    // 3. Compute byte size on disk
-    uint64_t typeSize = ggmlTypeSize(desc->type);
-    uint64_t byteSize = 0;
-    if (desc->type == GgmlType::F32 || desc->type == GgmlType::F16)
+    size_t byteSize = 0;
+    if (!RawrXD::GgufTensorBytes::payloadBytes(static_cast<uint32_t>(desc->type), static_cast<size_t>(expect),
+                                               byteSize))
     {
-        byteSize = expect * typeSize;
-    }
-    else if (desc->type == GgmlType::Q4_0 || desc->type == GgmlType::Q8_0)
-    {
-        byteSize = (expect / 32) * typeSize;  // typeSize is bytes per block
+        return false;
     }
 
-    // 4. Read raw bytes
-    if (!file.seek(static_cast<size_t>(offset)))
-        return false;
-    std::vector<uint8_t> raw = file.read(static_cast<int>(byteSize));
+    std::vector<uint8_t> raw = readTensorData(file, static_cast<uint64_t>(offset), byteSize);
     if (raw.size() != byteSize)
     {
         return false;
     }
 
-    // 5. Convert to float32 (scalar path only)
     out.resize(static_cast<size_t>(count));
-    const char* src = reinterpret_cast<const char*>(raw.data());
-    switch (desc->type)
+    if (!RawrXD::GgufTensorBytes::dequantizeToFloat(static_cast<uint32_t>(desc->type), raw.data(),
+                                                    static_cast<size_t>(expect), out.data()))
     {
-        case GgmlType::F32:
-            std::memcpy(out.data(), src, byteSize);
-            break;
-
-        case GgmlType::F16:
-        {
-            const uint16_t* h = reinterpret_cast<const uint16_t*>(src);
-            for (uint64_t i = 0; i < expect; ++i)
-                out[i] = f16ToF32(h[i]);
-            break;
-        }
-        case GgmlType::Q4_0:
-            dequantizeRowQ4_0_scalar(src, out.data(), expect);
-            break;
-        case GgmlType::Q8_0:
-            dequantizeRowQ8_0_scalar(src, out.data(), expect);
-            break;
-        default:
-            return false;
+        return false;
     }
     return true;
 }
@@ -1299,7 +2091,8 @@ std::vector<uint8_t> GGUFRunner::compressBrutal(const void* data, size_t len)
     // std::vector<uint8_t> makes a copy by default, so we copy and free.
     // To avoid copy, we would need to wrap it, but std::vector<uint8_t> doesn't easily take malloc ownership without
     // custom deleter. Given the speed, a memcpy here is negligible compared to qCompress.
-    std::vector<uint8_t> result(reinterpret_cast<const uint8_t*>(out_ptr), reinterpret_cast<const uint8_t*>(out_ptr) + out_len);
+    std::vector<uint8_t> result(reinterpret_cast<const uint8_t*>(out_ptr),
+                                reinterpret_cast<const uint8_t*>(out_ptr) + out_len);
     free(out_ptr);
     return result;
 }

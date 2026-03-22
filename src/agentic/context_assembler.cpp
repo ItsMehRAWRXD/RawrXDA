@@ -164,23 +164,41 @@ std::vector<DiffHunk> GitDiffParser::getRecentChanges(const fs::path& repoRoot) 
     // Execute git diff HEAD
     std::string command = "git -C \"" + repoRoot.string() + "\" diff HEAD";
 
+    std::string output;
+
 #ifdef _WIN32
-    FILE* pipe = _popen(command.c_str(), "r");
+    STARTUPINFOA si{}; si.cb = sizeof(si);
+    SECURITY_ATTRIBUTES sa{}; sa.nLength = sizeof(sa); sa.bInheritHandle = TRUE;
+    HANDLE hRead = nullptr, hWrite = nullptr;
+    if (!CreatePipe(&hRead, &hWrite, &sa, 0)) return {};
+    SetHandleInformation(hRead, HANDLE_FLAG_INHERIT, 0);
+    si.dwFlags = STARTF_USESTDHANDLES;
+    si.hStdOutput = hWrite; si.hStdError = hWrite;
+    PROCESS_INFORMATION pi{};
+    std::vector<char> cmdBuf(command.begin(), command.end());
+    cmdBuf.push_back('\0');
+    BOOL ok = CreateProcessA(nullptr, cmdBuf.data(), nullptr, nullptr, TRUE,
+                             CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi);
+    CloseHandle(hWrite);
+    if (!ok) { CloseHandle(hRead); return {}; }
+    char buffer[4096];
+    DWORD bytesRead = 0;
+    while (ReadFile(hRead, buffer, sizeof(buffer)-1, &bytesRead, nullptr) && bytesRead > 0) {
+        buffer[bytesRead] = '\0';
+        output.append(buffer, bytesRead);
+    }
+    CloseHandle(hRead);
+    WaitForSingleObject(pi.hProcess, 30000);
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
 #else
     FILE* pipe = popen(command.c_str(), "r");
-#endif
-
     if (!pipe) return {};
 
-    std::string output;
     char buffer[4096];
     while (fgets(buffer, sizeof(buffer), pipe)) {
         output += buffer;
     }
-
-#ifdef _WIN32
-    _pclose(pipe);
-#else
     pclose(pipe);
 #endif
 

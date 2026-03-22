@@ -1,6 +1,7 @@
 /**
- * Default config for the renderer. Actual provider config is loaded in the main process
- * from config/providers.json. This module provides defaults and structure reference.
+ * Default config for the renderer (structure + conservative defaults).
+ * Live provider enablement and API keys are merged in the main process from `config/providers.json` — this object is not authoritative at runtime.
+ * Escape hatch: edit providers JSON or env the main process reads; renderer-only builds see these defaults only.
  */
 export const defaultConfig = {
   experimental: {

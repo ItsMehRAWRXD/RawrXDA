@@ -26,6 +26,7 @@
 #include "execution_governor.h"
 #include "agentic/AgentOllamaClient.h"
 #include "model_source_resolver.h"
+#include "../../native_gguf_loader.h"
 #include <windows.h>
 #include <cstdio>
 #include <sstream>
@@ -449,6 +450,45 @@ static BackendLocalModelResolution resolveBackendLocalModel(const std::string& i
         result.error = "Unable to resolve model source";
     }
     return result;
+}
+
+static std::string summarizeEmbeddedGgufProbe(const std::string& resolvedPath) {
+    if (resolvedPath.empty()) {
+        return "  Embedded GGUF probe: skipped (no resolved local path)\n";
+    }
+
+    NativeGGUFLoader loader;
+    if (!loader.Open(resolvedPath)) {
+        return "  Embedded GGUF probe: OPEN FAILED\n";
+    }
+
+    if (!loader.ParseHeader()) {
+        loader.Close();
+        return "  Embedded GGUF probe: HEADER FAILED\n";
+    }
+    if (!loader.ParseMetadata()) {
+        loader.Close();
+        return "  Embedded GGUF probe: METADATA FAILED\n";
+    }
+    if (!loader.ParseTensorInfo()) {
+        loader.Close();
+        return "  Embedded GGUF probe: TENSOR INDEX FAILED\n";
+    }
+
+    const bool mmapped = loader.IsMemoryMapped();
+    const uint64_t mappedBytes = loader.GetMappedSize();
+    const size_t tensorCount = loader.GetTensors().size();
+    const size_t metadataCount = loader.GetMetadata().size();
+    loader.Close();
+
+    char buf[256];
+    snprintf(buf, sizeof(buf),
+             "  Embedded GGUF probe: OK (mmap=%s, mapped=%llu MB, tensors=%llu, metadata=%llu)\n",
+             mmapped ? "yes" : "no",
+             static_cast<unsigned long long>(mappedBytes / (1024ull * 1024ull)),
+             static_cast<unsigned long long>(tensorCount),
+             static_cast<unsigned long long>(metadataCount));
+    return std::string(buf);
 }
 
 static std::string ssoGetArg(const CommandContext& ctx, int index) {
@@ -1528,6 +1568,8 @@ CommandResult handleBackendSwitchLocal(const CommandContext& ctx) {
         if (!localResolvedPath.empty()) {
             msg = "  Resolved Path: " + localResolvedPath + "\n";
             ctx.output(msg.c_str());
+            const std::string probe = summarizeEmbeddedGgufProbe(localResolvedPath);
+            ctx.output(probe.c_str());
         } else if (!localError.empty()) {
             msg = "  WARNING: Local model unresolved: " + localError + "\n";
             ctx.output(msg.c_str());
@@ -1683,6 +1725,13 @@ CommandResult handleBackendShowStatus(const CommandContext& ctx) {
     return CommandResult::ok("backend.showStatus");
 }
 
+static std::atomic<uint32_t> g_ssot_beacon_state{0}; // bit0=AVX2 half, bit1=AVX512 half
+static std::atomic<uint32_t> g_ssot_full_beacon{0};      // 0=not full,1=full
+
+bool isBeaconFullActive() {
+    return g_ssot_full_beacon.load(std::memory_order_relaxed) != 0;
+}
+
 CommandResult handleBackendShowSwitcher(const CommandContext& ctx) {
     ctx.output("[BACKEND] Available backends:\n"
                "  1. ollama   - Local Ollama server (default)\n"
@@ -1694,6 +1743,61 @@ CommandResult handleBackendShowSwitcher(const CommandContext& ctx) {
                "  Switch: !backend_ollama, !backend_local, !backend_openai, etc.\n");
     if (ctx.isGui && ctx.idePtr) routeToIde(ctx, 5043, "backend.showSwitcher");
     return CommandResult::ok("backend.showSwitcher");
+}
+
+static void updateBeaconState(bool avx512Pulse) {
+    if (avx512Pulse) {
+        g_ssot_beacon_state.fetch_or(0x2, std::memory_order_relaxed);
+    } else {
+        g_ssot_beacon_state.fetch_or(0x1, std::memory_order_relaxed);
+    }
+    uint32_t state = g_ssot_beacon_state.load(std::memory_order_relaxed);
+    if ((state & 0x3) == 0x3) {
+        g_ssot_full_beacon.store(1, std::memory_order_relaxed);
+    }
+}
+
+CommandResult handleBeaconHalfPulse(const CommandContext& ctx) {
+    bool elegible = false;
+    std::string arg = ssoGetArg(ctx, 0);
+    if (arg == "avx2" || arg == "low" || arg == "0") {
+        updateBeaconState(false);
+        ctx.output("[BEACON] AVX2 half-pulse registered.\n");
+        elegible = true;
+    } else if (arg == "avx512" || arg == "high" || arg == "1") {
+        updateBeaconState(true);
+        ctx.output("[BEACON] AVX512 half-pulse registered.\n");
+        elegible = true;
+    } else {
+        ctx.output("[BEACON] Usage: !beacon_half <avx2|avx512>\n");
+    }
+    if (elegible && g_ssot_full_beacon.load(std::memory_order_relaxed)) {
+        ctx.output("[BEACON] Full beacon acquired - ready for full inference mode\n");
+    }
+    return CommandResult::ok("beacon.halfPulse");
+}
+
+CommandResult handleBeaconFullBeacon(const CommandContext& ctx) {
+    g_ssot_beacon_state.store(0x3, std::memory_order_relaxed);
+    g_ssot_full_beacon.store(1, std::memory_order_relaxed);
+    ctx.output("[BEACON] Full beacon forced (0x3). AVX512 path engaged.\n");
+    return CommandResult::ok("beacon.full");
+}
+
+CommandResult handleBeaconStatus(const CommandContext& ctx) {
+    uint32_t state = g_ssot_beacon_state.load(std::memory_order_relaxed);
+    uint32_t full = g_ssot_full_beacon.load(std::memory_order_relaxed);
+    char buf[256];
+    snprintf(buf, sizeof(buf), "[BEACON] State=0x%X, Full=%u\n", state, full);
+    ctx.output(buf);
+    if (full == 1) {
+        ctx.output("[BEACON] Full beacon active: high-throughput inference mode\n");
+    } else {
+        if (state == 0) ctx.output("[BEACON] Idle (no half-pulses seen).\n");
+        if (state == 1) ctx.output("[BEACON] AVX2 half only (Half-Beat mode).\n");
+        if (state == 2) ctx.output("[BEACON] AVX512 half only (Half-Beat mode).\n");
+    }
+    return CommandResult::ok("beacon.status");
 }
 
 CommandResult handleBackendConfigure(const CommandContext& ctx) {
@@ -1770,7 +1874,23 @@ CommandResult handleBackendHealthCheck(const CommandContext& ctx) {
         ctx.output(bs.apiKeys.count("anthropic") ? "  claude:  Key configured\n" : "  claude:  No API key\n");
         ctx.output(bs.apiKeys.count("google") ? "  gemini:  Key configured\n" : "  gemini:  No API key\n");
     }
-    ctx.output("  local:   Always available (CPU)\n");
+    std::string localModelPath;
+    std::string localModelError;
+    {
+        std::lock_guard<std::mutex> lock(bs.mtx);
+        localModelPath = bs.localModelResolvedPath;
+        localModelError = bs.localModelError;
+    }
+    if (!localModelPath.empty()) {
+        const std::string probe = summarizeEmbeddedGgufProbe(localModelPath);
+        ctx.output(probe.c_str());
+    } else {
+        ctx.output("  local:   configured path not resolved\n");
+        if (!localModelError.empty()) {
+            std::string msg = "  local.error: " + localModelError + "\n";
+            ctx.output(msg.c_str());
+        }
+    }
     if (ctx.isGui && ctx.idePtr) routeToIde(ctx, 5045, "backend.healthCheck");
     return CommandResult::ok("backend.healthCheck");
 }

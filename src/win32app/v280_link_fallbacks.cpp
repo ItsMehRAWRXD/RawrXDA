@@ -2,6 +2,7 @@
 #include <cstring>
 #include <atomic>
 #include <windows.h>
+#include "../core/ssot_handlers.h"
 
 namespace {
 bool g_v280GhostActive = false;
@@ -13,6 +14,9 @@ std::atomic<uint32_t> g_v280SpengineShutdownCount{0};
 extern "C" int64_t V280_UI_WndProc_Hook(void* hwnd, uint32_t uMsg, uint64_t wParam, int64_t lParam) {
     (void)hwnd;
     (void)wParam;
+    if (!isBeaconFullActive()) {
+        return 0;
+    }
     if (uMsg == WM_SETTEXT && lParam != 0) {
         const char* text = reinterpret_cast<const char*>(lParam);
         std::strncpy(g_v280GhostText, text, sizeof(g_v280GhostText) - 1);

@@ -10,6 +10,7 @@ creating_ide_instance
 createWindow
 enterprise_license
 showWindow
+integrated_runtime
 camellia_init
 masm_init
 swarm

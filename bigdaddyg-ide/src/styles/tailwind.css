@@ -16,3 +16,46 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* Win32 parity: UltimateAgenticChatSystem + high-contrast theme hooks (data attrs set by IdeFeaturesContext). */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.rawrxd-a11y-dock {
+  font-size: calc(14px * var(--rawrxd-a11y-text-scale, 1));
+}
+
+html[data-rawrxd-a11y-high-contrast='1'] .rawrxd-a11y-dock {
+  background-color: #050505 !important;
+  color: #fafafa !important;
+  outline: 2px solid #fbbf24;
+  outline-offset: -2px;
+}
+
+html[data-rawrxd-a11y-high-contrast='1'] .rawrxd-a11y-dock .text-gray-400,
+html[data-rawrxd-a11y-high-contrast='1'] .rawrxd-a11y-dock .text-gray-500 {
+  color: #e5e7eb !important;
+}
+
+html[data-rawrxd-a11y-focus='1'] .rawrxd-a11y-dock :where(button, a, input, select, textarea):focus-visible {
+  outline: 3px solid #fbbf24 !important;
+  outline-offset: 2px !important;
+}
+
+html[data-rawrxd-a11y-reduced-motion='1'] *,
+html[data-rawrxd-a11y-reduced-motion='1'] *::before,
+html[data-rawrxd-a11y-reduced-motion='1'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}

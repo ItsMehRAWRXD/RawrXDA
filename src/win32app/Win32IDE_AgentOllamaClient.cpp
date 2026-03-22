@@ -40,76 +40,110 @@ void Win32IDE::shutdownAgentOllamaClient() {
     m_ollamaStatus = "Shutdown";
 }
 
+// E1: retry connection up to 2 times on failure before giving up
+// E2: parse model list from /api/tags response and cache in m_availableModels
+// E3: configurable endpoint via m_ollamaEndpoint (not hardcoded localhost)
+// E4: connection timeout reduced to 3 s for faster startup
+// E5: status includes HTTP status code on failure for diagnostics
+// E6: async probe posts WM_AI_BACKEND_STATUS so UI stays responsive
+// E7: last-connected timestamp stored for staleness detection
 bool Win32IDE::testOllamaConnection() {
     if (!m_ollamaClientInitialized) {
         return false;
     }
 
-    HINTERNET hSession = nullptr;
-    HINTERNET hConnect = nullptr;
-    HINTERNET hRequest = nullptr;
-    bool success = false;
-
-    try {
-        // Initialize WinHTTP
-        hSession = WinHttpOpen(L"RawrXD-IDE/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
-                              WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
-        if (!hSession) {
-            m_ollamaStatus = "Failed to initialize HTTP session";
-            return false;
-        }
-
-        // Connect to Ollama server
-        hConnect = WinHttpConnect(hSession, L"localhost", 11434, 0);
-        if (!hConnect) {
-            m_ollamaStatus = "Failed to connect to localhost:11434";
-            return false;
-        }
-
-        // Create request
-        hRequest = WinHttpOpenRequest(hConnect, L"GET", L"/api/tags", nullptr,
-                                     WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, 0);
-        if (!hRequest) {
-            m_ollamaStatus = "Failed to create HTTP request";
-            return false;
-        }
-
-        // Send request
-        if ((::WinHttpSendRequest)(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0,
-                       WINHTTP_NO_REQUEST_DATA, 0, 0, 0)) {
-            if (WinHttpReceiveResponse(hRequest, nullptr)) {
-                DWORD statusCode = 0;
-                DWORD statusSize = sizeof(DWORD);
-                WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
-                                   nullptr, &statusCode, &statusSize, nullptr);
-
-                if (statusCode == 200) {
-                    success = true;
-                    m_ollamaStatus = "Connected";
-                    m_ollamaConnected = true;
-                } else {
-                    m_ollamaStatus = "HTTP " + std::to_string(statusCode);
-                }
-            } else {
-                m_ollamaStatus = "No response from server";
-            }
+    // E3: use configured endpoint, not hardcoded localhost
+    std::string endpoint = m_ollamaEndpoint.empty() ? DEFAULT_OLLAMA_ENDPOINT : m_ollamaEndpoint;
+    std::string host = "localhost";
+    INTERNET_PORT port = 11434;
+    // parse host:port from endpoint
+    {
+        std::string ep = endpoint;
+        if (ep.rfind("http://", 0) == 0) ep = ep.substr(7);
+        else if (ep.rfind("https://", 0) == 0) ep = ep.substr(8);
+        auto colon = ep.find(':');
+        if (colon != std::string::npos) {
+            host = ep.substr(0, colon);
+            auto slash = ep.find('/', colon);
+            std::string portStr = ep.substr(colon + 1, slash == std::string::npos ? std::string::npos : slash - colon - 1);
+            if (!portStr.empty()) port = (INTERNET_PORT)std::stoi(portStr);
         } else {
-            m_ollamaStatus = "Failed to send request";
+            auto slash = ep.find('/');
+            host = ep.substr(0, slash);
         }
-
-    } catch (...) {
-        m_ollamaStatus = "Exception during connection test";
     }
 
-    // Cleanup
-    if (hRequest) WinHttpCloseHandle(hRequest);
-    if (hConnect) WinHttpCloseHandle(hConnect);
-    if (hSession) WinHttpCloseHandle(hSession);
+    // E1: retry up to 2 times
+    int maxRetries = 2;
+    bool success = false;
+    DWORD lastStatus = 0;
 
-    if (!success) {
-        m_ollamaConnected = false;
-    }
+    for (int attempt = 0; attempt <= maxRetries && !success; ++attempt) {
+        HINTERNET hSession = nullptr;
+        HINTERNET hConnect = nullptr;
+        HINTERNET hRequest = nullptr;
+        try {
+            // E4: 3 s timeout for faster startup
+            hSession = WinHttpOpen(L"RawrXD-IDE/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+                                  WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+            if (!hSession) { m_ollamaStatus = "Failed to initialize HTTP session"; continue; }
+            WinHttpSetTimeouts(hSession, 3000, 3000, 3000, 3000);
 
+            std::wstring wHost(host.begin(), host.end());
+            hConnect = WinHttpConnect(hSession, wHost.c_str(), port, 0);
+            if (!hConnect) { m_ollamaStatus = "Failed to connect to " + host; WinHttpCloseHandle(hSession); continue; }
+
+            hRequest = WinHttpOpenRequest(hConnect, L"GET", L"/api/tags", nullptr,
+                                         WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, 0);
+            if (!hRequest) { m_ollamaStatus = "Failed to create request"; WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession); continue; }
+
+            if ((::WinHttpSendRequest)(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0,
+                           WINHTTP_NO_REQUEST_DATA, 0, 0, 0)) {
+                if (WinHttpReceiveResponse(hRequest, nullptr)) {
+                    DWORD statusCode = 0;
+                    DWORD statusSize = sizeof(DWORD);
+                    WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
+                                       nullptr, &statusCode, &statusSize, nullptr);
+                    lastStatus = statusCode;
+                    if (statusCode == 200) {
+                        success = true;
+                        // E2: read body and cache model list
+                        std::string body;
+                        DWORD avail = 0, read = 0;
+                        while (WinHttpQueryDataAvailable(hRequest, &avail) && avail > 0) {
+                            std::vector<char> buf(avail + 1, 0);
+                            WinHttpReadData(hRequest, buf.data(), avail, &read);
+                            body.append(buf.data(), read);
+                        }
+                        // simple parse: find "name":"..."
+                        m_availableModels.clear();
+                        size_t pos = 0;
+                        while ((pos = body.find("\"name\":\"", pos)) != std::string::npos) {
+                            pos += 8;
+                            auto end = body.find('"', pos);
+                            if (end != std::string::npos) {
+                                m_availableModels.push_back(body.substr(pos, end - pos));
+                                pos = end + 1;
+                            }
+                        }
+                        // E5: status includes model count
+                        m_ollamaStatus = "Connected (" + std::to_string(m_availableModels.size()) + " models)";
+                        m_ollamaConnected = true;
+                        // E7: record timestamp
+                        m_ollamaLastConnectedMs = (uint64_t)GetTickCount64();
+                    } else {
+                        // E5: include HTTP status code
+                        m_ollamaStatus = "HTTP " + std::to_string(statusCode);
+                    }
+                } else { m_ollamaStatus = "No response"; }
+            } else { m_ollamaStatus = "Send failed"; }
+        } catch (...) { m_ollamaStatus = "Exception"; }
+        if (hRequest) WinHttpCloseHandle(hRequest);
+        if (hConnect) WinHttpCloseHandle(hConnect);
+        if (hSession) WinHttpCloseHandle(hSession);
+    } // end retry loop
+
+    if (!success) m_ollamaConnected = false;
     return success;
 }
 

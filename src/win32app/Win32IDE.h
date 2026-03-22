@@ -1,16 +1,37 @@
 #pragma once
 
 // Windows / Winsock include order (required for MSVC + MinGW):
-//   winsock2.h → ws2tcpip.h → windows.h → commdlg.h
-// winsock2 before windows.h avoids winsock vs winsock.h conflicts; commdlg.h needs
-// Windows types (e.g. CALLBACK, HWND) from windows.h.
+//   winsock2.h → ws2tcpip.h → windows.h → commctrl.h → commdlg.h
+// winsock2 MUST come before windows.h to avoid winsock1 vs winsock2 conflicts.
+// commctrl.h and commdlg.h MUST come after windows.h for CALLBACK, HWND etc.
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
-#include <commdlg.h>
-#include <windows.h>
+
+#ifndef _Return_type_success_
+#define _Return_type_success_(expr)
+#endif
+
+#ifndef CALLBACK
+#define CALLBACK __stdcall
+#endif
+
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <sal.h>
+#include <windows.h>
+
+#ifndef _Return_type_success_
+#define _Return_type_success_(expr)
+#endif
+
+#ifndef CALLBACK
+#define CALLBACK __stdcall
+#endif
+
+// Keep common-control/dialog headers in implementation files to reduce
+// transitive WinSDK surface in this mega-header.
+
 
 
 // Undefine Windows macros that conflict with our code
@@ -33,12 +54,12 @@
 #include "TransparentRenderer.h"
 #include "Win32IDE_AgenticBridge.h"
 #include "Win32IDE_Autonomy.h"
+#include "Win32IDE_IRCBridge.h"
 #include "Win32IDE_SubAgent.h"
 #include "Win32IDE_WebView2.h"
 #include "Win32TerminalManager.h"
 #include <array>
 #include <atomic>
-#include <commctrl.h>
 #include <filesystem>
 #include <functional>
 #include <map>
@@ -94,6 +115,13 @@ class TelemetryExportManager;
 class RefactoringPluginManager;
 class LanguagePluginManager;
 class ResourceGeneratorManager;
+
+// Forward declarations for Omega Orchestrator
+namespace rawrxd
+{
+class OmegaOrchestrator;
+enum class QualityMode : int;
+}  // namespace rawrxd
 
 namespace RawrXD
 {
@@ -282,6 +310,37 @@ class Win32IDE
     void onPipelineAutonomyStart();
     void onPipelineAutonomyStop();
 
+    // ── Omega Orchestrator — Phase Ω: The Last Tool ──────────────────────
+    // Full autonomous software development pipeline with PERCEIVE→PLAN→ARCHITECT→
+    // IMPLEMENT→VERIFY→DEPLOY→OBSERVE→EVOLVE capability
+    rawrxd::OmegaOrchestrator* m_omegaOrchestrator = nullptr;
+    bool m_omegaActive = false;
+    void initializeOmegaOrchestrator();
+    void onOmegaStart();
+    void onOmegaStop();
+    void onOmegaSubmitTask();
+    void onOmegaRunCycle();
+    void onOmegaShowStatus();
+    void onOmegaViewPipeline();
+    void onOmegaSpawnAgent();
+    void onOmegaSetQualityMode(rawrxd::QualityMode mode);
+    void onOmegaCancelTask();
+    void onOmegaWorldModel();
+    void onOmegaExportStats();
+    void onOmegaDiagnostics();
+
+    // ── Agentic Planning Orchestrator — Full Approval Gates ──────────────
+    void onPlanningStart();
+    void onPlanningShowQueue();
+    void onPlanningApproveStep();
+    void onPlanningRejectStep();
+    void onPlanningExecuteStep();
+    void onPlanningExecuteAll();
+    void onPlanningRollback();
+    void onPlanningSetPolicy();
+    void onPlanningViewStatus();
+    void onPlanningDiagnostics();
+
     // AI Extended Features Handlers
     void onAIModeMax();
     void onAIModeDeepThink();
@@ -466,6 +525,12 @@ class Win32IDE
     bool loadGGUFModel(const std::string& filepath);
     std::string getModelInfo() const;
     bool loadTensorData(const std::string& tensorName, std::vector<uint8_t>& data);
+#if defined(RAWR_HAS_MODEL_ANATOMY)
+    /// Full tensor manifest JSON for the loaded model (`m_loadedModelPath`); empty if none or parse failed.
+    std::string getModelAnatomyJson(bool pretty = true) const;
+    /// Neurological diff JSON for two GGUF paths; empty if either file fails to parse.
+    std::string getModelDiffJson(const std::string& pathA, const std::string& pathB, bool pretty = true) const;
+#endif
 
     // Unified model source resolution (HuggingFace, Ollama blobs, HTTP, local files)
     void openModelFromHuggingFace();
@@ -2371,13 +2436,71 @@ class Win32IDE
     void updatePlanStepInDialog(int stepIndex, PlanStepStatus status);
     void closePlanDialog();
     void editSelectedPlanStep();
+    /// Refresh Agentic::ExecutionPlan approval rows from m_currentPlan (after dialog approve modes).
+    void syncActiveAgenticPlanApprovalsFromUi();
+    void rejectPendingStepsInActiveAgenticPlan();
+
+    /// E05 — AgenticPlanningOrchestrator tool lane (JSON payloads from ExecutionPlan::actions).
+    std::string executeAgentPlanStepViaBridge(const PlanStep& step);
+    void wireAgenticOrchestratorIntegration();
 
     // Plan state
     AgentPlan m_currentPlan;
+    /// Correlates Win32IDE AgentPlan rows with Agentic::ExecutionPlan in OrchestratorIntegration.
+    std::string m_activeAgenticPlanId;
     std::vector<AgentPlan> m_planHistory;
     std::atomic<bool> m_planExecutionCancelled{false};
     std::atomic<bool> m_planExecutionPaused{false};
     static const size_t MAX_PLAN_HISTORY = 50;
+
+    // ========================================================================
+    // AGENT ENHANCEMENTS — 7 autonomous-agent capabilities
+    // (Win32IDE_AgentEnhancements.cpp + Win32IDE_AgentEnhancements.h)
+    // ========================================================================
+#include "Win32IDE_AgentEnhancements.h"
+
+    // Enhancement 1: Context-window budget tracking
+    void initContextBudget(int contextWindowTokens);
+    std::string applyContextBudget(const std::string& prompt, const std::string& history);
+    std::string getContextBudgetStatus() const;
+    ContextBudgetState m_contextBudget;
+
+    // Enhancement 2: Tool-call schema validation
+    ToolValidationResult validateToolCall(const std::string& toolName, const std::string& argsJson);
+    bool validateAndDispatchToolCall(const std::string& toolName, const std::string& argsJson, std::string& toolResult);
+
+    // Enhancement 3: Plan DAG + parallel batch execution
+    std::vector<std::vector<int>> buildPlanExecutionBatches();
+    void executePlanBatch(const std::vector<int>& batch, bool dryRun = false);
+
+    // Enhancement 4: Agent scratchpad
+    void scratchpadWrite(const std::string& key, const std::string& value, const std::string& stepContext = "");
+    std::string scratchpadRead(const std::string& key) const;
+    bool scratchpadHas(const std::string& key) const;
+    void scratchpadClear();
+    std::string scratchpadToJSON() const;
+    void persistScratchpad();
+    std::map<std::string, ScratchpadEntry> m_scratchpad;
+    mutable std::mutex m_scratchpadMutex;
+
+    // Enhancement 5: Streaming plan step output
+    void onPlanStreamToken(int stepIndex, const char* token);
+    void resetPlanStreamCounters();
+    int m_planStreamTokenCount = 0;
+    std::chrono::steady_clock::time_point m_planStreamStart;
+
+    // Enhancement 6: Per-task token budget enforcement
+    void initPlanTokenBudget(int totalTokens);
+    bool checkStepTokenBudget(int stepIndex, const std::string& output);
+    std::string getPlanTokenBudgetStatus() const;
+    PlanTokenBudgetState m_planTokenBudget;
+
+    // Enhancement 7: Multi-model routing with fallback
+    AgentModelRoute routeStepToModel(const PlanStep& step);
+    std::string getModelRouterStatus() const;
+
+    // Unified init for all 7 enhancements
+    void initAllAgentEnhancements(int contextWindow = 4096, int tokenBudget = 8192);
 
     // Plan Approval Dialog HWNDs
     HWND m_hwndPlanDialog = nullptr;
@@ -2386,6 +2509,7 @@ class Win32IDE
     HWND m_hwndPlanGoalLabel = nullptr;
     HWND m_hwndPlanSummaryLabel = nullptr;
     HWND m_hwndPlanBtnApprove = nullptr;
+    HWND m_hwndPlanBtnApproveSafe = nullptr;
     HWND m_hwndPlanBtnEdit = nullptr;
     HWND m_hwndPlanBtnReject = nullptr;
     HWND m_hwndPlanBtnPause = nullptr;
@@ -3858,6 +3982,12 @@ class Win32IDE
     // Phase 11 state
     bool m_phase11Initialized = false;
 
+    // Model bridge (GUI / ide_chatbot_engine.js) — profiles, load/unload, caps
+    void handleModelBridgeProfilesEndpoint(SOCKET client);
+    void handleModelBridgeLoadEndpoint(SOCKET client, const std::string& body);
+    void handleModelBridgeUnloadEndpoint(SOCKET client);
+    void handleEngineCapabilitiesEndpoint(SOCKET client);
+
     // =========================================================================
     //         PHASE 41 — Dual-Agent Orchestrator (Architect + Coder)
     // =========================================================================
@@ -4732,6 +4862,11 @@ class Win32IDE
     void refreshProblemsView();
     void onProblemsItemActivate(int index);
     const std::vector<RawrXD::ProblemEntry>& problemsViewCache() const { return m_problemsViewCache; }
+
+    // Agent Streaming Bridge helpers (extern "C" bridge access)
+    void bridgeRecordSimpleEvent(AgentEventType t, const std::string& desc) { recordSimpleEvent(t, desc); }
+    bool bridgeIsAgentPanelReady() const { return m_agentPanelInitialized; }
+    void bridgeRefreshAgentDiff() { refreshAgentDiffDisplay(); }
 
   private:
     void handleProblemsCommand(int commandId);
@@ -5888,6 +6023,21 @@ class Win32IDE
     //   3. Airgapped Enterprise Env   — offline licensing + compliance + DLP
     // ════════════════════════════════════════════════════════════════════════
 
+    // ── Phase Ω: OmegaOrchestrator — Autonomous SDLC (12400–12450) ──
+    bool handleOmegaOrchestratorCommand(int commandId);
+
+    // ── Agentic Planning Orchestrator — Multi-step planning with approval gates (4261–4270) ──
+    bool handleAgenticPlanningCommand(int commandId);
+
+    // ── FailureIntelligence Orchestrator — Autonomous recovery & root cause analysis (4281–4299) ──
+    bool handleFailureIntelligenceCommand(int commandId);
+
+    // ── KnowledgeGraphCore — Cross-session learning + decision archaeology (4271–4280) ──
+    bool handleKnowledgeGraphCommand(int commandId);
+
+    // ── Change Impact Analyzer — Pre-commit ripple effect prediction (4350–4370) ──
+    bool handleChangeImpactCommand(int commandId);
+
     // ── Flagship Lifecycle ──
     void initFlagshipFeatures();
     void shutdownFlagshipFeatures();
@@ -6108,6 +6258,8 @@ class Win32IDE
     bool saveAgentState(const std::string& agentId, const std::string& stateData);
     std::string loadAgentState(const std::string& agentId);
     std::vector<std::vector<std::string>> executeDatabaseQuery(const std::string& sql);
+    /// E07 — Append-only agentic approval / execution audit (SQLite `agentic_approval_audit`).
+    bool recordAgenticApprovalAudit(const std::string& eventKind, const std::string& jsonPayload);
 
     // Telemetry Export
     bool exportTelemetryData(const std::string& format, const std::string& timeRange, const std::string& filename = "");
@@ -6165,6 +6317,20 @@ class Win32IDE
     void cmdCrashLog();
     void cmdCrashClear();
     void cmdCrashStats();
+
+    // 51. mIRC Control Bridge
+    void initIRCBridge();
+    bool handleIRCBridgeCommand(int commandId);
+    void cmdIRCConnect();
+    void cmdIRCDisconnect();
+    void cmdIRCStatus();
+    void cmdIRCConfig();
+    void cmdIRCSend();
+    void dispatchIRCCommand(const std::string& nick,
+                            const std::string& cmd,
+                            const std::string& args,
+                            const std::string& replyTarget,
+                            bool isDirectMessage);
 
   public:
     // Tier 5 Command IDs (11500–11609)
@@ -6226,8 +6392,20 @@ class Win32IDE
     static constexpr int IDM_CRASH_CLEAR = 11603;
     static constexpr int IDM_CRASH_STATS = 11609;
 
+    // Phase 51: mIRC Control Bridge
+    static constexpr int IDM_IRC_CONNECT    = 11610;
+    static constexpr int IDM_IRC_DISCONNECT = 11611;
+    static constexpr int IDM_IRC_STATUS     = 11612;
+    static constexpr int IDM_IRC_CONFIG     = 11613;
+    static constexpr int IDM_IRC_SEND       = 11614;
+
     bool m_telemetryDashboardInitialized = false;
     bool m_crashReporterInitialized = false;
+
+    // Phase 51: mIRC Control Bridge
+    bool m_ircBridgeInitialized = false;
+    std::unique_ptr<RawrXD::IRC::IRCBridge> m_ircBridge;
+    RawrXD::IRC::IRCBridgeSettings m_ircSettings;
     bool m_colorPickerInitialized = false;
     bool m_networkPanelInitialized = false;
     bool m_testExplorerInitialized = false;
@@ -6246,6 +6424,7 @@ class Win32IDE
     bool m_ollamaConnected = false;
     std::string m_ollamaEndpoint = "http://localhost:11434";
     std::string m_ollamaStatus = "Not connected";
+    uint64_t m_ollamaLastConnectedMs = 0;
 
     // Model Discovery
     bool m_modelDiscoveryEnabled = false;

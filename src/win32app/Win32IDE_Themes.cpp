@@ -15,8 +15,11 @@
 
 #include "Win32IDE.h"
 #include "IDELogger.h"
+
+#ifndef _RICHEDIT_VER
+#define _RICHEDIT_VER 0x0500
+#endif
 #include <richedit.h>
-#include <commctrl.h>
 #include <fstream>
 #include <sstream>
 #include <algorithm>

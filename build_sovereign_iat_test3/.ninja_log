@@ -1,0 +1,7 @@
+# ninja log v6
+14	30	7957253129134377	CMakeFiles/RawrXD_PE64_IAT_Fabricator_v224.obj	28b1bcc82439fe1f
+14	30	7957253129134377	D:/rawrxd/build_sovereign_iat_test3/CMakeFiles/RawrXD_PE64_IAT_Fabricator_v224.obj	28b1bcc82439fe1f
+19	34	7957253129180028	CMakeFiles/RawrXD_Sovereign_MinimalEntry_v224.obj	16d819b6f243739e
+19	34	7957253129180028	D:/rawrxd/build_sovereign_iat_test3/CMakeFiles/RawrXD_Sovereign_MinimalEntry_v224.obj	16d819b6f243739e
+34	58	7957253129377021	bin/rawrxd_sovereign_iat_smoke.exe	e7957f359a6ab743
+34	58	7957253129377021	D:/rawrxd/build_sovereign_iat_test3/bin/rawrxd_sovereign_iat_smoke.exe	e7957f359a6ab743

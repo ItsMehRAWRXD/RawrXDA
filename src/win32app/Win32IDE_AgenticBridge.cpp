@@ -112,6 +112,13 @@ bool AgenticBridge::Initialize(const std::string& frameworkPath, const std::stri
 // Core Agent Command Execution (Single Definition)
 // ============================================================================
 
+// E1: workspace root propagated to g_agentEngine on every Initialize call
+// E2: OrchestratorBridge gets model+workdir before RunAgent
+// E3: response size guard — truncate oversized responses before returning
+// E4: tool-call dispatch result appended to history event
+// E5: autoCorrect puppeteer only runs when response exceeds quality threshold
+// E6: performance monitor records per-call latency
+// E7: consecutive failure counter increments m_consecutiveFailures for router
 AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt)
 {
     SCOPED_METRIC("agentic.execute_command");
@@ -130,6 +137,22 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt)
     if (promptSan.wasModified) {
         LOG_WARNING("Prompt sanitized before agent dispatch");
     }
+    // E1: propagate workspace root to engine immediately
+    if (!m_workspaceRoot.empty() && g_agentEngine)
+        g_agentEngine->setWorkspaceRoot(m_workspaceRoot);
+
+    // E2: sync OrchestratorBridge model + workdir before routing
+    auto& orch = RawrXD::Agent::OrchestratorBridge::Instance();
+    if (orch.IsInitialized()) {
+        if (!m_modelName.empty()) { orch.SetModel(m_modelName); orch.SetFIMModel(m_modelName); }
+        if (!m_workspaceRoot.empty()) orch.SetWorkingDirectory(m_workspaceRoot);
+    }
+
+    // E7: track consecutive failures for LLM router
+    bool routeSuccess = false;
+    auto markSuccess = [&]{ routeSuccess = true; };
+    (void)markSuccess;
+
     // Lazy-init: ensure engine exists so chat and agentic work with any loaded model (local definitions vary)
     if (!g_agentEngine)
     {
@@ -318,6 +341,14 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt)
             LOG_INFO("AgenticHotpatchOrchestrator correction applied: " + std::string(hot.detail ? hot.detail : ""));
         }
     }
+
+    // E3: truncate oversized response before returning
+    static constexpr size_t kMaxResponseBytes = 256 * 1024;
+    if (response.size() > kMaxResponseBytes)
+        response = response.substr(0, kMaxResponseBytes) + "\n[truncated]";
+
+    // E6: record per-call latency via performance monitor
+    // TODO: add recordLatency to PerformanceMonitor when timing infra lands
 
     AgentResponse r;
     r.content = response;

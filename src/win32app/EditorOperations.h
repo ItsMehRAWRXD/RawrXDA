@@ -97,7 +97,10 @@ private:
     struct EditOperation {
         enum class Type { Insert, Delete, Replace } type;
         int line, column, length;
+        /// Inserted text (Insert), deleted text (Delete), or replaced-out text (Replace).
         std::string content;
+        /// New text for Replace operations; unused for Insert/Delete.
+        std::string replacement;
     };
 
     struct FileContext {
@@ -107,11 +110,20 @@ private:
         bool isDirty = false;
         bool isReadOnly = false;
         std::vector<EditOperation> undoStack;
+        /// Number of operations from the front of `undoStack` currently applied to the buffer.
         size_t undoPos = 0;
+        Selection selection{};
     };
 
     FileContext* GetFileContext(int fileId);
     const FileContext* GetFileContext(int fileId) const;
+
+    static void discardRedoBranch(FileContext& ctx);
+    static bool applyInsertToBuffer(std::string& content, int line, int column, const std::string& text);
+    static bool applyDeleteFromBuffer(std::string& content, int line, int column, int length,
+                                      std::string* outDeleted);
+    static bool peekLineSubstring(const std::string& content, int line, int column, int length,
+                                  std::string& out);
     
     std::vector<FileContext> m_openFiles;
     int m_nextFileId = 0;

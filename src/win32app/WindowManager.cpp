@@ -2,6 +2,7 @@
 // WindowManager.cpp — Implementation
 // ============================================================================
 #include "WindowManager.h"
+#include "IDELogger.h"
 #include <cassert>
 
 namespace RawrXD {
@@ -31,11 +32,11 @@ WindowManager::~WindowManager() {
 }
 
 bool WindowManager::Initialize() {
-    // This will be fully implemented to:
-    // 1. Create main window with CreateWindowExW
-    // 2. Register window class if not done
-    // 3. Set up message loop
-    // For now, placeholder implementation
+    // Secondary shell only: production main HWND + message loop live in Win32IDE_Core.
+    IDELogger::getInstance().log(
+        IDELogger::Level::WARNING,
+        "WindowManager::Initialize",
+        "Placeholder: WindowManager does not create the primary IDE frame; use Win32IDE_Core startup path.");
     m_isVisible = false;
     return true;
 }

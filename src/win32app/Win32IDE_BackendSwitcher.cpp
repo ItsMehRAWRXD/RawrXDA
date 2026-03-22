@@ -14,16 +14,17 @@
 //   - No auto-routing (explicit user selection only)
 // ============================================================================
 
-#include "Win32IDE.h"
+#include "../agent/local_reasoning_integration.hpp"
 #include "../agentic/AgentOllamaClient.h"
 #include "../modules/vsix_loader.h"
-#include <winhttp.h>
+#include "Win32IDE.h"
+#include "rawrxd/ide/inference_facade.hpp"
+#include <algorithm>
+#include <chrono>
+#include <filesystem>
 #include <fstream>
 #include <sstream>
-#include <filesystem>
-#include <chrono>
-#include <algorithm>
-#include "../agent/local_reasoning_integration.hpp"
+#include <winhttp.h>
 
 // nlohmann/json already included via Win32IDE.h
 
@@ -31,116 +32,119 @@
 // INITIALIZATION & LIFECYCLE
 // ============================================================================
 
-void Win32IDE::initBackendManager() {
-    if (m_backendManagerInitialized) return;
+void Win32IDE::initBackendManager()
+{
+    if (m_backendManagerInitialized)
+        return;
 
     logFunction("initBackendManager");
 
     // ---- Populate default configs for each backend type --------------------
-    auto& local  = m_backendConfigs[(size_t)AIBackendType::LocalGGUF];
-    local.type      = AIBackendType::LocalGGUF;
-    local.name      = "Local GGUF";
-    local.endpoint  = "";       // No endpoint — uses native engine directly
-    local.model     = "";       // Determined by loaded model file
-    local.apiKey    = "";
-    local.enabled   = true;
-    local.timeoutMs = 60000;    // Local can be slow on large models
+    auto& local = m_backendConfigs[(size_t)AIBackendType::LocalGGUF];
+    local.type = AIBackendType::LocalGGUF;
+    local.name = "Local GGUF";
+    local.endpoint = "";  // No endpoint — uses native engine directly
+    local.model = "";     // Determined by loaded model file
+    local.apiKey = "";
+    local.enabled = true;
+    local.timeoutMs = 60000;  // Local can be slow on large models
     local.maxTokens = 2048;
     local.temperature = 0.7f;
 
     auto& ollama = m_backendConfigs[(size_t)AIBackendType::Ollama];
-    ollama.type      = AIBackendType::Ollama;
-    ollama.name      = "Ollama";
-    ollama.endpoint  = "http://localhost:11434";
-    ollama.model     = "";  // Will be populated from Ollama /api/tags or settings
-    ollama.apiKey    = "";
-    ollama.enabled   = true;
+    ollama.type = AIBackendType::Ollama;
+    ollama.name = "Ollama";
+    ollama.endpoint = "http://localhost:11434";
+    ollama.model = "";  // Will be populated from Ollama /api/tags or settings
+    ollama.apiKey = "";
+    ollama.enabled = true;
     ollama.timeoutMs = 30000;
     ollama.maxTokens = 2048;
     ollama.temperature = 0.7f;
 
     auto& openai = m_backendConfigs[(size_t)AIBackendType::OpenAI];
-    openai.type      = AIBackendType::OpenAI;
-    openai.name      = "OpenAI";
-    openai.endpoint  = "https://api.openai.com";
-    openai.model     = "gpt-4o";
-    openai.apiKey    = "";
-    openai.enabled   = false;   // Disabled until API key set
+    openai.type = AIBackendType::OpenAI;
+    openai.name = "OpenAI";
+    openai.endpoint = "https://api.openai.com";
+    openai.model = "gpt-4o";
+    openai.apiKey = "";
+    openai.enabled = false;  // Disabled until API key set
     openai.timeoutMs = 30000;
     openai.maxTokens = 4096;
     openai.temperature = 0.7f;
 
     auto& claude = m_backendConfigs[(size_t)AIBackendType::Claude];
-    claude.type      = AIBackendType::Claude;
-    claude.name      = "Claude";
-    claude.endpoint  = "https://api.anthropic.com";
-    claude.model     = "claude-sonnet-4-20250514";
-    claude.apiKey    = "";
-    claude.enabled   = false;   // Disabled until API key set
+    claude.type = AIBackendType::Claude;
+    claude.name = "Claude";
+    claude.endpoint = "https://api.anthropic.com";
+    claude.model = "claude-sonnet-4-20250514";
+    claude.apiKey = "";
+    claude.enabled = false;  // Disabled until API key set
     claude.timeoutMs = 30000;
     claude.maxTokens = 4096;
     claude.temperature = 0.7f;
 
     auto& gemini = m_backendConfigs[(size_t)AIBackendType::Gemini];
-    gemini.type      = AIBackendType::Gemini;
-    gemini.name      = "Gemini";
-    gemini.endpoint  = "https://generativelanguage.googleapis.com";
-    gemini.model     = "gemini-2.0-flash";
-    gemini.apiKey    = "";
-    gemini.enabled   = false;   // Disabled until API key set
+    gemini.type = AIBackendType::Gemini;
+    gemini.name = "Gemini";
+    gemini.endpoint = "https://generativelanguage.googleapis.com";
+    gemini.model = "gemini-2.0-flash";
+    gemini.apiKey = "";
+    gemini.enabled = false;  // Disabled until API key set
     gemini.timeoutMs = 30000;
     gemini.maxTokens = 4096;
     gemini.temperature = 0.7f;
 
     auto& reasoning = m_backendConfigs[(size_t)AIBackendType::ReasoningEngine];
-    reasoning.type      = AIBackendType::ReasoningEngine;
-    reasoning.name      = "RawrXD Reasoning (Alpha)";
-    reasoning.endpoint  = "local://reasoning";
-    reasoning.model     = "Expert-v1";
-    reasoning.apiKey    = "";
-    reasoning.enabled   = true;
+    reasoning.type = AIBackendType::ReasoningEngine;
+    reasoning.name = "RawrXD Reasoning (Alpha)";
+    reasoning.endpoint = "local://reasoning";
+    reasoning.model = "Expert-v1";
+    reasoning.apiKey = "";
+    reasoning.enabled = true;
     reasoning.timeoutMs = 120000;
     reasoning.maxTokens = 8192;
     reasoning.temperature = 0.1f;  // Lower temperature for reasoning
 
     auto& copilot = m_backendConfigs[(size_t)AIBackendType::GitHubCopilot];
-    copilot.type      = AIBackendType::GitHubCopilot;
-    copilot.name      = "GitHub Copilot";
-    copilot.endpoint  = "extension://github.copilot";
-    copilot.model     = "copilot-latest";
-    copilot.apiKey    = "";
-    copilot.enabled   = true;
+    copilot.type = AIBackendType::GitHubCopilot;
+    copilot.name = "GitHub Copilot";
+    copilot.endpoint = "extension://github.copilot";
+    copilot.model = "copilot-latest";
+    copilot.apiKey = "";
+    copilot.enabled = true;
     copilot.timeoutMs = 30000;
     copilot.maxTokens = 4096;
     copilot.temperature = 0.7f;
 
     auto& amazonq = m_backendConfigs[(size_t)AIBackendType::AmazonQ];
-    amazonq.type      = AIBackendType::AmazonQ;
-    amazonq.name      = "Amazon Q";
-    amazonq.endpoint  = "extension://amazonwebservices.aws-toolkit-vscode";
-    amazonq.model     = "amazonq-latest";
-    amazonq.apiKey    = "";
-    amazonq.enabled   = true;
+    amazonq.type = AIBackendType::AmazonQ;
+    amazonq.name = "Amazon Q";
+    amazonq.endpoint = "extension://amazonwebservices.aws-toolkit-vscode";
+    amazonq.model = "amazonq-latest";
+    amazonq.apiKey = "";
+    amazonq.enabled = true;
     amazonq.timeoutMs = 30000;
     amazonq.maxTokens = 4096;
     amazonq.temperature = 0.7f;
 
     // ---- Initialize statuses -----------------------------------------------
-    for (size_t i = 0; i < (size_t)AIBackendType::Count; ++i) {
-        m_backendStatuses[i].type         = (AIBackendType)i;
-        m_backendStatuses[i].connected    = false;
-        m_backendStatuses[i].healthy      = false;
-        m_backendStatuses[i].latencyMs    = -1;
+    for (size_t i = 0; i < (size_t)AIBackendType::Count; ++i)
+    {
+        m_backendStatuses[i].type = (AIBackendType)i;
+        m_backendStatuses[i].connected = false;
+        m_backendStatuses[i].healthy = false;
+        m_backendStatuses[i].latencyMs = -1;
         m_backendStatuses[i].requestCount = 0;
         m_backendStatuses[i].failureCount = 0;
-        m_backendStatuses[i].lastError    = "";
-        m_backendStatuses[i].lastModel    = "";
+        m_backendStatuses[i].lastError = "";
+        m_backendStatuses[i].lastModel = "";
         m_backendStatuses[i].lastUsedEpochMs = 0;
     }
 
     // Mark local as connected by default (it's always available if model loaded)
     m_backendStatuses[(size_t)AIBackendType::LocalGGUF].connected = true;
-    m_backendStatuses[(size_t)AIBackendType::LocalGGUF].healthy   = (m_nativeEngine && m_nativeEngine->IsModelLoaded());
+    m_backendStatuses[(size_t)AIBackendType::LocalGGUF].healthy = (m_nativeEngine && m_nativeEngine->IsModelLoaded());
 
     // ---- Load saved configs (overrides defaults) ---------------------------
     loadBackendConfigs();
@@ -148,21 +152,27 @@ void Win32IDE::initBackendManager() {
     // ---- Auto-detect Ollama model if still empty ----------------------------
     {
         auto& ollamaCfg = m_backendConfigs[(size_t)AIBackendType::Ollama];
-        if (ollamaCfg.model.empty() && ollamaCfg.enabled) {
-            try {
+        if (ollamaCfg.model.empty() && ollamaCfg.enabled)
+        {
+            try
+            {
                 RawrXD::Agent::OllamaConfig probeCfg;
                 probeCfg.host = "127.0.0.1";
                 probeCfg.port = 11434;
                 probeCfg.timeout_ms = 3000;
                 RawrXD::Agent::AgentOllamaClient probeClient(probeCfg);
-                if (probeClient.TestConnection()) {
+                if (probeClient.TestConnection())
+                {
                     auto models = probeClient.ListModels();
-                    if (!models.empty()) {
+                    if (!models.empty())
+                    {
                         ollamaCfg.model = models[0];
                         logInfo("[BackendSwitcher] Auto-detected Ollama model: " + ollamaCfg.model);
                     }
                 }
-            } catch (...) {
+            }
+            catch (...)
+            {
                 // Non-fatal — leave model empty; user can set it via UI
             }
         }
@@ -174,8 +184,10 @@ void Win32IDE::initBackendManager() {
     logInfo("[BackendSwitcher] Initialized — active backend: " + getActiveBackendName());
 }
 
-void Win32IDE::shutdownBackendManager() {
-    if (!m_backendManagerInitialized) return;
+void Win32IDE::shutdownBackendManager()
+{
+    if (!m_backendManagerInitialized)
+        return;
     logFunction("shutdownBackendManager");
     saveBackendConfigs();
     m_backendManagerInitialized = false;
@@ -185,70 +197,92 @@ void Win32IDE::shutdownBackendManager() {
 // CONFIG PERSISTENCE (JSON)
 // ============================================================================
 
-std::string Win32IDE::getBackendConfigFilePath() const {
+std::string Win32IDE::getBackendConfigFilePath() const
+{
     // Store next to session file
     std::string dir = getSessionFilePath();
     // Replace session.json with backends.json
     size_t pos = dir.find_last_of("/\\");
-    if (pos != std::string::npos) {
+    if (pos != std::string::npos)
+    {
         dir = dir.substr(0, pos + 1) + "backends.json";
-    } else {
+    }
+    else
+    {
         dir = "backends.json";
     }
     return dir;
 }
 
-void Win32IDE::loadBackendConfigs() {
+void Win32IDE::loadBackendConfigs()
+{
     std::string path = getBackendConfigFilePath();
     std::ifstream ifs(path);
-    if (!ifs.is_open()) {
+    if (!ifs.is_open())
+    {
         logInfo("[BackendSwitcher] No saved config at " + path + " — using defaults");
         return;
     }
 
-    try {
-        std::string fileContent((std::istreambuf_iterator<char>(ifs)),
-                                 std::istreambuf_iterator<char>());
+    try
+    {
+        std::string fileContent((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
         nlohmann::json j = nlohmann::json::parse(fileContent);
 
-        if (j.contains("active")) {
+        if (j.contains("active"))
+        {
             std::string activeName = j["active"].get<std::string>();
             m_activeBackend = backendTypeFromString(activeName);
         }
 
-        if (j.contains("backends") && j["backends"].is_array()) {
-            for (size_t bi = 0; bi < j["backends"].size(); ++bi) {
+        if (j.contains("backends") && j["backends"].is_array())
+        {
+            for (size_t bi = 0; bi < j["backends"].size(); ++bi)
+            {
                 nlohmann::json bj = j["backends"][bi];
                 std::string typeName = bj.contains("type") ? bj["type"].get<std::string>() : "";
                 AIBackendType bt = backendTypeFromString(typeName);
-                if (bt == AIBackendType::Count) continue; // unknown type
+                if (bt == AIBackendType::Count)
+                    continue;  // unknown type
 
                 size_t idx = (size_t)bt;
                 auto& cfg = m_backendConfigs[idx];
-                cfg.type      = bt;
-                if (bj.contains("name"))        cfg.name      = bj["name"].get<std::string>();
-                if (bj.contains("endpoint"))    cfg.endpoint  = bj["endpoint"].get<std::string>();
-                if (bj.contains("model"))       cfg.model     = bj["model"].get<std::string>();
-                if (bj.contains("apiKey"))      cfg.apiKey    = bj["apiKey"].get<std::string>();
-                if (bj.contains("enabled"))     cfg.enabled   = bj["enabled"].get<bool>();
-                if (bj.contains("timeoutMs"))   cfg.timeoutMs = bj["timeoutMs"].get<int>();
-                if (bj.contains("maxTokens"))   cfg.maxTokens = bj["maxTokens"].get<int>();
-                if (bj.contains("temperature")) cfg.temperature = bj["temperature"].get<float>();
+                cfg.type = bt;
+                if (bj.contains("name"))
+                    cfg.name = bj["name"].get<std::string>();
+                if (bj.contains("endpoint"))
+                    cfg.endpoint = bj["endpoint"].get<std::string>();
+                if (bj.contains("model"))
+                    cfg.model = bj["model"].get<std::string>();
+                if (bj.contains("apiKey"))
+                    cfg.apiKey = bj["apiKey"].get<std::string>();
+                if (bj.contains("enabled"))
+                    cfg.enabled = bj["enabled"].get<bool>();
+                if (bj.contains("timeoutMs"))
+                    cfg.timeoutMs = bj["timeoutMs"].get<int>();
+                if (bj.contains("maxTokens"))
+                    cfg.maxTokens = bj["maxTokens"].get<int>();
+                if (bj.contains("temperature"))
+                    cfg.temperature = bj["temperature"].get<float>();
             }
         }
 
         logInfo("[BackendSwitcher] Loaded configs from " + path);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e)
+    {
         logError("loadBackendConfigs", std::string("JSON parse error: ") + e.what());
     }
 }
 
-void Win32IDE::saveBackendConfigs() {
+void Win32IDE::saveBackendConfigs()
+{
     std::string path = getBackendConfigFilePath();
 
     // Ensure parent directory exists
     std::filesystem::path p(path);
-    if (p.has_parent_path()) {
+    if (p.has_parent_path())
+    {
         std::filesystem::create_directories(p.parent_path());
     }
 
@@ -256,28 +290,32 @@ void Win32IDE::saveBackendConfigs() {
     j["active"] = backendTypeString(m_activeBackend);
 
     nlohmann::json arr = nlohmann::json::array();
-    for (size_t i = 0; i < (size_t)AIBackendType::Count; ++i) {
+    for (size_t i = 0; i < (size_t)AIBackendType::Count; ++i)
+    {
         const auto& cfg = m_backendConfigs[i];
         nlohmann::json bj;
-        bj["type"]        = backendTypeString(cfg.type);
-        bj["name"]        = cfg.name;
-        bj["endpoint"]    = cfg.endpoint;
-        bj["model"]       = cfg.model;
+        bj["type"] = backendTypeString(cfg.type);
+        bj["name"] = cfg.name;
+        bj["endpoint"] = cfg.endpoint;
+        bj["model"] = cfg.model;
         // NOTE: API keys are stored in plaintext — user-local config only
-        bj["apiKey"]      = cfg.apiKey;
-        bj["enabled"]     = cfg.enabled;
-        bj["timeoutMs"]   = cfg.timeoutMs;
-        bj["maxTokens"]   = cfg.maxTokens;
+        bj["apiKey"] = cfg.apiKey;
+        bj["enabled"] = cfg.enabled;
+        bj["timeoutMs"] = cfg.timeoutMs;
+        bj["maxTokens"] = cfg.maxTokens;
         bj["temperature"] = cfg.temperature;
         arr.push_back(bj);
     }
     j["backends"] = arr;
 
     std::ofstream ofs(path);
-    if (ofs.is_open()) {
+    if (ofs.is_open())
+    {
         ofs << j.dump(2);
         logInfo("[BackendSwitcher] Saved configs to " + path);
-    } else {
+    }
+    else
+    {
         logError("saveBackendConfigs", "Failed to write " + path);
     }
 }
@@ -286,8 +324,10 @@ void Win32IDE::saveBackendConfigs() {
 // CORE SWITCHING LOGIC
 // ============================================================================
 
-bool Win32IDE::setActiveBackend(AIBackendType type) {
-    if (type >= AIBackendType::Count) {
+bool Win32IDE::setActiveBackend(AIBackendType type)
+{
+    if (type >= AIBackendType::Count)
+    {
         logError("setActiveBackend", "Invalid backend type: " + std::to_string((int)type));
         return false;
     }
@@ -295,10 +335,12 @@ bool Win32IDE::setActiveBackend(AIBackendType type) {
     std::lock_guard<std::mutex> lock(m_backendMutex);
 
     const auto& cfg = m_backendConfigs[(size_t)type];
-    if (!cfg.enabled) {
+    if (!cfg.enabled)
+    {
         logWarning("setActiveBackend", "Backend '" + cfg.name + "' is disabled — enable it first");
-        appendToOutput("[BackendSwitcher] Cannot switch to '" + cfg.name + "' — backend is disabled.\n"
-                       "  Configure it via 'AI: Configure Backend' or set an API key first.",
+        appendToOutput("[BackendSwitcher] Cannot switch to '" + cfg.name +
+                           "' — backend is disabled.\n"
+                           "  Configure it via 'AI: Configure Backend' or set an API key first.",
                        "General", OutputSeverity::Warning);
         return false;
     }
@@ -312,8 +354,8 @@ bool Win32IDE::setActiveBackend(AIBackendType type) {
     // Persist the choice
     saveBackendConfigs();
 
-    std::string msg = "[BackendSwitcher] Switched from '" + backendTypeString(previous) +
-                      "' to '" + backendTypeString(type) + "' (model: " + cfg.model + ")";
+    std::string msg = "[BackendSwitcher] Switched from '" + backendTypeString(previous) + "' to '" +
+                      backendTypeString(type) + "' (model: " + cfg.model + ")";
     logInfo(msg);
     appendToOutput(msg, "General", OutputSeverity::Info);
 
@@ -323,15 +365,18 @@ bool Win32IDE::setActiveBackend(AIBackendType type) {
     return true;
 }
 
-Win32IDE::Win32IDE::AIBackendType Win32IDE::getActiveBackendType() const {
+Win32IDE::Win32IDE::AIBackendType Win32IDE::getActiveBackendType() const
+{
     return m_activeBackend;
 }
 
-const Win32IDE::AIBackendConfig& Win32IDE::getActiveBackendConfig() const {
+const Win32IDE::AIBackendConfig& Win32IDE::getActiveBackendConfig() const
+{
     return m_backendConfigs[(size_t)m_activeBackend];
 }
 
-std::string Win32IDE::getActiveBackendName() const {
+std::string Win32IDE::getActiveBackendName() const
+{
     return m_backendConfigs[(size_t)m_activeBackend].name;
 }
 
@@ -339,42 +384,52 @@ std::string Win32IDE::getActiveBackendName() const {
 // LISTING & INSPECTION
 // ============================================================================
 
-std::vector<Win32IDE::AIBackendConfig> Win32IDE::listBackends() const {
+std::vector<Win32IDE::AIBackendConfig> Win32IDE::listBackends() const
+{
     std::vector<AIBackendConfig> result;
     result.reserve((size_t)AIBackendType::Count);
-    for (size_t i = 0; i < (size_t)AIBackendType::Count; ++i) {
+    for (size_t i = 0; i < (size_t)AIBackendType::Count; ++i)
+    {
         result.push_back(m_backendConfigs[i]);
     }
     return result;
 }
 
-Win32IDE::AIBackendConfig Win32IDE::getBackendConfig(AIBackendType type) const {
-    if (type >= AIBackendType::Count) return AIBackendConfig{};
+Win32IDE::AIBackendConfig Win32IDE::getBackendConfig(AIBackendType type) const
+{
+    if (type >= AIBackendType::Count)
+        return AIBackendConfig{};
     return m_backendConfigs[(size_t)type];
 }
 
-Win32IDE::AIBackendStatus Win32IDE::getBackendStatus(AIBackendType type) const {
-    if (type >= AIBackendType::Count) return AIBackendStatus{};
+Win32IDE::AIBackendStatus Win32IDE::getBackendStatus(AIBackendType type) const
+{
+    if (type >= AIBackendType::Count)
+        return AIBackendStatus{};
     return m_backendStatuses[(size_t)type];
 }
 
-std::string Win32IDE::getBackendStatusString() const {
+std::string Win32IDE::getBackendStatusString() const
+{
     std::ostringstream ss;
     ss << "[BackendSwitcher] Status:\n";
     ss << "  Active: " << backendTypeString(m_activeBackend) << "\n";
     ss << "  ──────────────────────────────────────\n";
 
-    for (size_t i = 0; i < (size_t)AIBackendType::Count; ++i) {
+    for (size_t i = 0; i < (size_t)AIBackendType::Count; ++i)
+    {
         const auto& cfg = m_backendConfigs[i];
-        const auto& st  = m_backendStatuses[i];
+        const auto& st = m_backendStatuses[i];
         bool isActive = ((AIBackendType)i == m_activeBackend);
 
         ss << "  " << (isActive ? "▶ " : "  ") << cfg.name;
         ss << " [" << (cfg.enabled ? "enabled" : "DISABLED") << "]";
         ss << " — " << (st.healthy ? "healthy" : "unhealthy");
-        if (st.latencyMs >= 0) ss << " (" << st.latencyMs << "ms)";
+        if (st.latencyMs >= 0)
+            ss << " (" << st.latencyMs << "ms)";
         ss << "  reqs=" << st.requestCount << " fails=" << st.failureCount;
-        if (!st.lastError.empty()) ss << "  err=\"" << st.lastError.substr(0, 80) << "\"";
+        if (!st.lastError.empty())
+            ss << "  err=\"" << st.lastError.substr(0, 80) << "\"";
         ss << "\n";
         ss << "     endpoint: " << (cfg.endpoint.empty() ? "(native)" : cfg.endpoint) << "\n";
         ss << "     model:    " << (cfg.model.empty() ? "(loaded file)" : cfg.model) << "\n";
@@ -386,40 +441,51 @@ std::string Win32IDE::getBackendStatusString() const {
 // CONFIGURATION MUTATIONS
 // ============================================================================
 
-void Win32IDE::setBackendEndpoint(AIBackendType type, const std::string& endpoint) {
-    if (type >= AIBackendType::Count) return;
+void Win32IDE::setBackendEndpoint(AIBackendType type, const std::string& endpoint)
+{
+    if (type >= AIBackendType::Count)
+        return;
     std::lock_guard<std::mutex> lock(m_backendMutex);
     m_backendConfigs[(size_t)type].endpoint = endpoint;
     logInfo("[BackendSwitcher] Set endpoint for " + backendTypeString(type) + " → " + endpoint);
 }
 
-void Win32IDE::setBackendModel(AIBackendType type, const std::string& model) {
-    if (type >= AIBackendType::Count) return;
+void Win32IDE::setBackendModel(AIBackendType type, const std::string& model)
+{
+    if (type >= AIBackendType::Count)
+        return;
     std::lock_guard<std::mutex> lock(m_backendMutex);
     m_backendConfigs[(size_t)type].model = model;
     logInfo("[BackendSwitcher] Set model for " + backendTypeString(type) + " → " + model);
 }
 
-void Win32IDE::setBackendApiKey(AIBackendType type, const std::string& apiKey) {
-    if (type >= AIBackendType::Count) return;
+void Win32IDE::setBackendApiKey(AIBackendType type, const std::string& apiKey)
+{
+    if (type >= AIBackendType::Count)
+        return;
     std::lock_guard<std::mutex> lock(m_backendMutex);
     m_backendConfigs[(size_t)type].apiKey = apiKey;
     // Auto-enable if a key is provided for remote backends
-    if (!apiKey.empty() && type != AIBackendType::LocalGGUF) {
+    if (!apiKey.empty() && type != AIBackendType::LocalGGUF)
+    {
         m_backendConfigs[(size_t)type].enabled = true;
     }
     logInfo("[BackendSwitcher] API key updated for " + backendTypeString(type));
 }
 
-void Win32IDE::setBackendEnabled(AIBackendType type, bool enabled) {
-    if (type >= AIBackendType::Count) return;
+void Win32IDE::setBackendEnabled(AIBackendType type, bool enabled)
+{
+    if (type >= AIBackendType::Count)
+        return;
     std::lock_guard<std::mutex> lock(m_backendMutex);
     m_backendConfigs[(size_t)type].enabled = enabled;
     logInfo("[BackendSwitcher] " + backendTypeString(type) + " → " + (enabled ? "enabled" : "disabled"));
 }
 
-void Win32IDE::setBackendTimeout(AIBackendType type, int timeoutMs) {
-    if (type >= AIBackendType::Count) return;
+void Win32IDE::setBackendTimeout(AIBackendType type, int timeoutMs)
+{
+    if (type >= AIBackendType::Count)
+        return;
     std::lock_guard<std::mutex> lock(m_backendMutex);
     m_backendConfigs[(size_t)type].timeoutMs = timeoutMs;
 }
@@ -428,81 +494,115 @@ void Win32IDE::setBackendTimeout(AIBackendType type, int timeoutMs) {
 // HEALTH PROBING
 // ============================================================================
 
-bool Win32IDE::probeBackendHealth(AIBackendType type) {
-    if (type >= AIBackendType::Count) return false;
+bool Win32IDE::probeBackendHealth(AIBackendType type)
+{
+    if (type >= AIBackendType::Count)
+        return false;
 
     auto startTime = std::chrono::steady_clock::now();
     bool healthy = false;
     std::string error;
 
-    switch (type) {
-        case AIBackendType::LocalGGUF: {
+    switch (type)
+    {
+        case AIBackendType::LocalGGUF:
+        {
             healthy = (m_nativeEngine && m_nativeEngine->IsModelLoaded());
-            if (!healthy) error = "No model loaded";
+            if (!healthy)
+                error = "No model loaded";
             break;
         }
-        case AIBackendType::Ollama: {
+        case AIBackendType::Ollama:
+        {
             // Probe /api/tags endpoint
             const auto& cfg = m_backendConfigs[(size_t)type];
-            try {
+            try
+            {
                 std::string resp = httpPost(cfg.endpoint + "/api/tags", "", {}, 5000);
                 healthy = !resp.empty() && resp.find("models") != std::string::npos;
-                if (!healthy) error = "Ollama not responding or no models available";
-            } catch (...) {
+                if (!healthy)
+                    error = "Ollama not responding or no models available";
+            }
+            catch (...)
+            {
                 error = "Connection failed to " + cfg.endpoint;
             }
             break;
         }
-        case AIBackendType::OpenAI: {
+        case AIBackendType::OpenAI:
+        {
             const auto& cfg = m_backendConfigs[(size_t)type];
             healthy = !cfg.apiKey.empty();
-            if (!healthy) error = "No API key configured";
-            else {
-                try {
-                    std::string resp = httpPost(cfg.endpoint + "/v1/models", "",
-                        {"Authorization: Bearer " + cfg.apiKey}, 5000);
+            if (!healthy)
+                error = "No API key configured";
+            else
+            {
+                try
+                {
+                    std::string resp =
+                        httpPost(cfg.endpoint + "/v1/models", "", {"Authorization: Bearer " + cfg.apiKey}, 5000);
                     healthy = !resp.empty() && resp.find("data") != std::string::npos;
-                    if (!healthy) error = "OpenAI API returned unexpected response";
-                } catch (...) {
+                    if (!healthy)
+                        error = "OpenAI API returned unexpected response";
+                }
+                catch (...)
+                {
                     error = "Connection failed to OpenAI";
                 }
             }
             break;
         }
-        case AIBackendType::Claude: {
+        case AIBackendType::Claude:
+        {
             const auto& cfg = m_backendConfigs[(size_t)type];
             healthy = !cfg.apiKey.empty();
-            if (!healthy) error = "No API key configured";
+            if (!healthy)
+                error = "No API key configured";
             // Anthropic doesn't have a lightweight health endpoint; we trust the key
             break;
         }
-        case AIBackendType::Gemini: {
+        case AIBackendType::Gemini:
+        {
             const auto& cfg = m_backendConfigs[(size_t)type];
             healthy = !cfg.apiKey.empty();
-            if (!healthy) error = "No API key configured";
+            if (!healthy)
+                error = "No API key configured";
             break;
         }
-        case AIBackendType::ReasoningEngine: {
-            healthy = true; // Local static reasoning engine always available
+        case AIBackendType::ReasoningEngine:
+        {
+            healthy = true;  // Local static reasoning engine always available
             break;
         }
-        case AIBackendType::GitHubCopilot: {
+        case AIBackendType::GitHubCopilot:
+        {
             // Probe GitHub Copilot extension via VSIXLoader (Install from VSIX / extension registry)
-            try {
+            try
+            {
                 healthy = VSIXLoader::GetInstance().IsPluginLoaded("github.copilot");
-                if (!healthy) error = "GitHub Copilot extension not loaded. Use AI menu > Install from VSIX, or switch to Ollama/Local.";
-            } catch (...) {
+                if (!healthy)
+                    error = "GitHub Copilot extension not loaded. Use AI menu > Install from VSIX, or switch to "
+                            "Ollama/Local.";
+            }
+            catch (...)
+            {
                 healthy = false;
                 error = "VSIXLoader unavailable or GitHub Copilot not installed.";
             }
             break;
         }
-        case AIBackendType::AmazonQ: {
+        case AIBackendType::AmazonQ:
+        {
             // Probe Amazon Q (AWS Toolkit) extension via VSIXLoader
-            try {
+            try
+            {
                 healthy = VSIXLoader::GetInstance().IsPluginLoaded("amazonwebservices.aws-toolkit-vscode");
-                if (!healthy) error = "Amazon Q extension not loaded. Use AI menu > Install from VSIX, or switch to Ollama/Local.";
-            } catch (...) {
+                if (!healthy)
+                    error =
+                        "Amazon Q extension not loaded. Use AI menu > Install from VSIX, or switch to Ollama/Local.";
+            }
+            catch (...)
+            {
                 healthy = false;
                 error = "VSIXLoader unavailable or Amazon Q not installed.";
             }
@@ -519,46 +619,61 @@ bool Win32IDE::probeBackendHealth(AIBackendType type) {
     return healthy;
 }
 
-void Win32IDE::probeAllBackendsAsync() {
-    std::thread([this]() {
-        DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
-        if (_guard.cancelled) return;
-        for (size_t i = 0; i < (size_t)AIBackendType::Count; ++i) {
-            if (isShuttingDown()) return;
-            if (m_backendConfigs[i].enabled) {
-                probeBackendHealth((AIBackendType)i);
+void Win32IDE::probeAllBackendsAsync()
+{
+    std::thread(
+        [this]()
+        {
+            DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+            if (_guard.cancelled)
+                return;
+            for (size_t i = 0; i < (size_t)AIBackendType::Count; ++i)
+            {
+                if (isShuttingDown())
+                    return;
+                if (m_backendConfigs[i].enabled)
+                {
+                    probeBackendHealth((AIBackendType)i);
+                }
             }
-        }
-    }).detach();
+        })
+        .detach();
 }
 
-void Win32IDE::onBackendHealthResult(AIBackendType type, bool healthy, int latencyMs, const std::string& error) {
-    if (type >= AIBackendType::Count) return;
+void Win32IDE::onBackendHealthResult(AIBackendType type, bool healthy, int latencyMs, const std::string& error)
+{
+    if (type >= AIBackendType::Count)
+        return;
     std::lock_guard<std::mutex> lock(m_backendMutex);
 
-    auto& st        = m_backendStatuses[(size_t)type];
-    st.connected    = healthy;
-    st.healthy      = healthy;
-    st.latencyMs    = latencyMs;
-    st.lastError    = error;
+    auto& st = m_backendStatuses[(size_t)type];
+    st.connected = healthy;
+    st.healthy = healthy;
+    st.latencyMs = latencyMs;
+    st.lastError = error;
 }
 
 // ============================================================================
 // INFERENCE ROUTING
 // ============================================================================
 
-std::string Win32IDE::routeInferenceRequest(const std::string& prompt) {
+std::string Win32IDE::routeInferenceRequest(const std::string& prompt)
+{
     AIBackendType active;
     {
         std::lock_guard<std::mutex> lock(m_backendMutex);
         active = m_activeBackend;
     }
 
+    logInfo(std::string("[InferenceFacade] ") + rawrxd::ide::inferenceFacadeLaneField(backendTypeString(active)) +
+            " op=routeInferenceRequest");
+
     std::string result;
     auto startTime = std::chrono::steady_clock::now();
     bool success = false;
 
-    switch (active) {
+    switch (active)
+    {
         case AIBackendType::LocalGGUF:
             result = routeToLocalGGUF(prompt);
             break;
@@ -600,10 +715,13 @@ std::string Win32IDE::routeInferenceRequest(const std::string& prompt) {
         st.latencyMs = latencyMs;
         st.lastUsedEpochMs = currentEpochMs();
         st.lastModel = m_backendConfigs[(size_t)active].model;
-        if (!success) {
+        if (!success)
+        {
             st.failureCount++;
             st.lastError = result.substr(0, 256);
-        } else {
+        }
+        else
+        {
             st.lastError = "";
         }
     }
@@ -612,64 +730,78 @@ std::string Win32IDE::routeInferenceRequest(const std::string& prompt) {
 }
 
 void Win32IDE::routeInferenceRequestAsync(const std::string& prompt,
-                                            std::function<void(const std::string&, bool)> callback) {
-    std::thread([this, prompt, callback]() {
-        DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
-        if (_guard.cancelled) return;
-        std::string result = routeInferenceRequest(prompt);
-        bool ok = !result.empty() && result.find("[BackendSwitcher] Error") == std::string::npos;
-        if (callback && !isShuttingDown()) callback(result, ok);
-    }).detach();
+                                          std::function<void(const std::string&, bool)> callback)
+{
+    std::thread(
+        [this, prompt, callback]()
+        {
+            DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+            if (_guard.cancelled)
+                return;
+            std::string result = routeInferenceRequest(prompt);
+            bool ok = !result.empty() && result.find("[BackendSwitcher] Error") == std::string::npos;
+            if (callback && !isShuttingDown())
+                callback(result, ok);
+        })
+        .detach();
 }
 
 // ============================================================================
 // PER-BACKEND ROUTING IMPLEMENTATIONS
 // ============================================================================
 
-std::string Win32IDE::routeToLocalGGUF(const std::string& prompt) {
+std::string Win32IDE::routeToLocalGGUF(const std::string& prompt)
+{
     // Use the existing native engine path
-    if (!m_nativeEngine || !m_nativeEngine->IsModelLoaded()) {
+    if (!m_nativeEngine || !m_nativeEngine->IsModelLoaded())
+    {
         return "[BackendSwitcher] Error: No local GGUF model loaded. Use File > Load Model first.";
     }
     // Delegate to existing generateResponse (which uses m_nativeEngine)
     return generateResponse(prompt);
 }
 
-std::string Win32IDE::routeToOllama(const std::string& prompt) {
+std::string Win32IDE::routeToOllama(const std::string& prompt)
+{
     const auto& cfg = m_backendConfigs[(size_t)AIBackendType::Ollama];
-    if (cfg.endpoint.empty()) {
+    if (cfg.endpoint.empty())
+    {
         return "[BackendSwitcher] Error: Ollama endpoint not configured";
     }
 
     // Build Ollama /api/generate request body
     nlohmann::json reqBody;
-    reqBody["model"]  = cfg.model;
+    reqBody["model"] = cfg.model;
     reqBody["prompt"] = prompt;
     reqBody["stream"] = false;
-    reqBody["options"] = {
-        {"temperature", cfg.temperature},
-        {"num_predict", cfg.maxTokens}
-    };
+    reqBody["options"] = {{"temperature", cfg.temperature}, {"num_predict", cfg.maxTokens}};
 
-    try {
-        std::string resp = httpPost(cfg.endpoint + "/api/generate",
-                                     reqBody.dump(), {"Content-Type: application/json"}, cfg.timeoutMs);
+    try
+    {
+        std::string resp =
+            httpPost(cfg.endpoint + "/api/generate", reqBody.dump(), {"Content-Type: application/json"}, cfg.timeoutMs);
         nlohmann::json rj = nlohmann::json::parse(resp);
-        if (rj.contains("response")) {
+        if (rj.contains("response"))
+        {
             return rj["response"].get<std::string>();
         }
-        if (rj.contains("error")) {
+        if (rj.contains("error"))
+        {
             return "[BackendSwitcher] Error (Ollama): " + rj["error"].get<std::string>();
         }
         return "[BackendSwitcher] Error (Ollama): Unexpected response format";
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e)
+    {
         return std::string("[BackendSwitcher] Error (Ollama): ") + e.what();
     }
 }
 
-std::string Win32IDE::routeToOpenAI(const std::string& prompt) {
+std::string Win32IDE::routeToOpenAI(const std::string& prompt)
+{
     const auto& cfg = m_backendConfigs[(size_t)AIBackendType::OpenAI];
-    if (cfg.apiKey.empty()) {
+    if (cfg.apiKey.empty())
+    {
         return "[BackendSwitcher] Error: OpenAI API key not set. Use 'AI: Set API Key (OpenAI)'.";
     }
 
@@ -687,31 +819,33 @@ std::string Win32IDE::routeToOpenAI(const std::string& prompt) {
         reqBody["messages"] = msgs;
     }
 
-    std::vector<std::string> headers = {
-        "Content-Type: application/json",
-        "Authorization: Bearer " + cfg.apiKey
-    };
+    std::vector<std::string> headers = {"Content-Type: application/json", "Authorization: Bearer " + cfg.apiKey};
 
-    try {
-        std::string resp = httpPost(cfg.endpoint + "/v1/chat/completions",
-                                     reqBody.dump(), headers, cfg.timeoutMs);
+    try
+    {
+        std::string resp = httpPost(cfg.endpoint + "/v1/chat/completions", reqBody.dump(), headers, cfg.timeoutMs);
         nlohmann::json rj = nlohmann::json::parse(resp);
-        if (rj.contains("choices") && rj["choices"].is_array() && !rj["choices"].empty()) {
+        if (rj.contains("choices") && rj["choices"].is_array() && !rj["choices"].empty())
+        {
             return rj["choices"][(size_t)0]["message"]["content"].get<std::string>();
         }
-        if (rj.contains("error")) {
-            return "[BackendSwitcher] Error (OpenAI): " +
-                   rj["error"].value("message", "Unknown error");
+        if (rj.contains("error"))
+        {
+            return "[BackendSwitcher] Error (OpenAI): " + rj["error"].value("message", "Unknown error");
         }
         return "[BackendSwitcher] Error (OpenAI): Unexpected response format";
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e)
+    {
         return std::string("[BackendSwitcher] Error (OpenAI): ") + e.what();
     }
 }
 
-std::string Win32IDE::routeToClaude(const std::string& prompt) {
+std::string Win32IDE::routeToClaude(const std::string& prompt)
+{
     const auto& cfg = m_backendConfigs[(size_t)AIBackendType::Claude];
-    if (cfg.apiKey.empty()) {
+    if (cfg.apiKey.empty())
+    {
         return "[BackendSwitcher] Error: Claude API key not set. Use 'AI: Set API Key (Claude)'.";
     }
 
@@ -728,32 +862,34 @@ std::string Win32IDE::routeToClaude(const std::string& prompt) {
         reqBody["messages"] = msgs;
     }
 
-    std::vector<std::string> headers = {
-        "Content-Type: application/json",
-        "x-api-key: " + cfg.apiKey,
-        "anthropic-version: 2023-06-01"
-    };
+    std::vector<std::string> headers = {"Content-Type: application/json", "x-api-key: " + cfg.apiKey,
+                                        "anthropic-version: 2023-06-01"};
 
-    try {
-        std::string resp = httpPost(cfg.endpoint + "/v1/messages",
-                                     reqBody.dump(), headers, cfg.timeoutMs);
+    try
+    {
+        std::string resp = httpPost(cfg.endpoint + "/v1/messages", reqBody.dump(), headers, cfg.timeoutMs);
         nlohmann::json rj = nlohmann::json::parse(resp);
-        if (rj.contains("content") && rj["content"].is_array() && !rj["content"].empty()) {
+        if (rj.contains("content") && rj["content"].is_array() && !rj["content"].empty())
+        {
             return rj["content"][(size_t)0]["text"].get<std::string>();
         }
-        if (rj.contains("error")) {
-            return "[BackendSwitcher] Error (Claude): " +
-                   rj["error"].value("message", "Unknown error");
+        if (rj.contains("error"))
+        {
+            return "[BackendSwitcher] Error (Claude): " + rj["error"].value("message", "Unknown error");
         }
         return "[BackendSwitcher] Error (Claude): Unexpected response format";
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e)
+    {
         return std::string("[BackendSwitcher] Error (Claude): ") + e.what();
     }
 }
 
-std::string Win32IDE::routeToGemini(const std::string& prompt) {
+std::string Win32IDE::routeToGemini(const std::string& prompt)
+{
     const auto& cfg = m_backendConfigs[(size_t)AIBackendType::Gemini];
-    if (cfg.apiKey.empty()) {
+    if (cfg.apiKey.empty())
+    {
         return "[BackendSwitcher] Error: Gemini API key not set. Use 'AI: Set API Key (Gemini)'.";
     }
 
@@ -777,112 +913,136 @@ std::string Win32IDE::routeToGemini(const std::string& prompt) {
         reqBody["generationConfig"] = genCfg;
     }
 
-    std::string url = cfg.endpoint + "/v1beta/models/" + cfg.model +
-                      ":generateContent?key=" + cfg.apiKey;
-    std::vector<std::string> headers = {
-        "Content-Type: application/json"
-    };
+    std::string url = cfg.endpoint + "/v1beta/models/" + cfg.model + ":generateContent?key=" + cfg.apiKey;
+    std::vector<std::string> headers = {"Content-Type: application/json"};
 
-    try {
+    try
+    {
         std::string resp = httpPost(url, reqBody.dump(), headers, cfg.timeoutMs);
         nlohmann::json rj = nlohmann::json::parse(resp);
-        if (rj.contains("candidates") && rj["candidates"].is_array() && !rj["candidates"].empty()) {
+        if (rj.contains("candidates") && rj["candidates"].is_array() && !rj["candidates"].empty())
+        {
             auto& content = rj["candidates"][(size_t)0]["content"];
-            if (content.contains("parts") && content["parts"].is_array() && !content["parts"].empty()) {
+            if (content.contains("parts") && content["parts"].is_array() && !content["parts"].empty())
+            {
                 return content["parts"][(size_t)0]["text"].get<std::string>();
             }
         }
-        if (rj.contains("error")) {
-            return "[BackendSwitcher] Error (Gemini): " +
-                   rj["error"].value("message", "Unknown error");
+        if (rj.contains("error"))
+        {
+            return "[BackendSwitcher] Error (Gemini): " + rj["error"].value("message", "Unknown error");
         }
         return "[BackendSwitcher] Error (Gemini): Unexpected response format";
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e)
+    {
         return std::string("[BackendSwitcher] Error (Gemini): ") + e.what();
     }
 }
 
-std::string Win32IDE::routeToReasoningEngine(const std::string& prompt) {
+std::string Win32IDE::routeToReasoningEngine(const std::string& prompt)
+{
     // Phase 14B: Direct Integration of converted LocalReasoningEngine
     // This uses the pure C++20 engine to analyze the context of the prompt.
 
     // If prompt is empty or just a generic greeting, use current editor content as context
     std::string sourceToAnalyze = prompt;
     bool isGeneric = (prompt.length() < 20);
-    
-    if (isGeneric && m_hwndEditor) {
+
+    if (isGeneric && m_hwndEditor)
+    {
         std::string editorText = getWindowText(m_hwndEditor);
-        if (!editorText.empty()) {
+        if (!editorText.empty())
+        {
             sourceToAnalyze = editorText;
         }
     }
 
     // Attempt to detect language from current file
     std::string lang = "cpp";
-    if (!m_currentFile.empty()) {
+    if (!m_currentFile.empty())
+    {
         std::string ext = std::filesystem::path(m_currentFile).extension().string();
         std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-        if (ext == ".asm" || ext == ".s" || ext == ".inc") lang = "asm";
-        else if (ext == ".py") lang = "python";
-        else if (ext == ".js" || ext == ".ts") lang = "javascript";
+        if (ext == ".asm" || ext == ".s" || ext == ".inc")
+            lang = "asm";
+        else if (ext == ".py")
+            lang = "python";
+        else if (ext == ".js" || ext == ".ts")
+            lang = "javascript";
     }
 
-    try {
+    try
+    {
         auto result = LocalReasoningIntegration::analyzeCode(sourceToAnalyze, lang, true, true);
-        
+
         std::stringstream ss;
         ss << "### RawrXD Local Reasoning Analysis (" << lang << ") ###\n\n";
-        
-        if (isGeneric) {
+
+        if (isGeneric)
+        {
             ss << "*Analysis performed on active editor content.*\n\n";
         }
 
         ss << "**Summary:** " << result.summary << "\n\n";
-        
-        if (!result.issues.empty()) {
+
+        if (!result.issues.empty())
+        {
             ss << "**Detected Issues:**\n";
-            for (const auto& issue : result.issues) {
+            for (const auto& issue : result.issues)
+            {
                 ss << "- [" << issue.severity << "] **" << issue.issueType << "**: " << issue.description << "\n";
-                if (!issue.recommendation.empty()) {
+                if (!issue.recommendation.empty())
+                {
                     ss << "  *Recommendation:* " << issue.recommendation << "\n";
                 }
             }
             ss << "\n";
         }
-        
-        if (!result.suggestions.empty()) {
+
+        if (!result.suggestions.empty())
+        {
             ss << "**Optimization Suggestions:**\n";
-            for (const auto& sug : result.suggestions) {
+            for (const auto& sug : result.suggestions)
+            {
                 ss << "- " << sug << "\n";
             }
             ss << "\n";
         }
-        
-        if (!result.patterns.empty()) {
-            ss << "**Identified Patterns:** " ;
-            for (size_t i=0; i < result.patterns.size(); ++i) {
-                ss << result.patterns[i] << (i == result.patterns.size()-1 ? "" : ", ");
+
+        if (!result.patterns.empty())
+        {
+            ss << "**Identified Patterns:** ";
+            for (size_t i = 0; i < result.patterns.size(); ++i)
+            {
+                ss << result.patterns[i] << (i == result.patterns.size() - 1 ? "" : ", ");
             }
             ss << "\n\n";
         }
 
-        ss << "---\n*Confidence: " << (int)(result.overallConfidence * 100) 
+        ss << "---\n*Confidence: " << (int)(result.overallConfidence * 100)
            << "% | Strategy: C++20/MASM Static Analysis | Passes: " << result.passesCompleted << "*";
-           
+
         return ss.str();
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e)
+    {
         return std::string("[BackendSwitcher] Error (Reasoning): ") + e.what();
-    } catch (...) {
+    }
+    catch (...)
+    {
         return "[BackendSwitcher] Error (Reasoning): Unknown engine exception";
     }
 }
 
-std::string Win32IDE::routeToGitHubCopilot(const std::string& prompt) {
+std::string Win32IDE::routeToGitHubCopilot(const std::string& prompt)
+{
     // Phase 29: Route to GitHub Copilot VS Code Extension
     auto& api = vscode::VSCodeExtensionAPI::instance();
-    
+
     // Check if the extension is active
-    if (!api.isInitialized()) {
+    if (!api.isInitialized())
+    {
         return "[BackendSwitcher] Error: VS Code Extension API not initialized";
     }
 
@@ -891,44 +1051,54 @@ std::string Win32IDE::routeToGitHubCopilot(const std::string& prompt) {
     nlohmann::json args;
     args["prompt"] = prompt;
     args["context"] = "ide_backend_switcher";
-    
+
     // Route the prompt to GitHub Copilot VS Code Extension via the extension API
     std::string result = "[BackendSwitcher] Routing to GitHub Copilot extension...\n";
 
     auto apiResult = api.executeCommand("github.copilot.chat.proxy", args.dump().c_str());
-    if (apiResult.success) {
+    if (apiResult.success)
+    {
         // If the command returned immediately with a result string in 'detail'
-        if (apiResult.detail && strlen(apiResult.detail) > 0 && strcmp(apiResult.detail, "Success") != 0) {
+        if (apiResult.detail && strlen(apiResult.detail) > 0 && strcmp(apiResult.detail, "Success") != 0)
+        {
             return apiResult.detail;
         }
         // Command was triggered successfully, extension will handle streaming
         return result + "Extension command triggered successfully. Awaiting response stream...";
-    } else {
+    }
+    else
+    {
         return "[BackendSwitcher] Error: Failed to trigger GitHub Copilot extension command: " +
                std::string(apiResult.detail ? apiResult.detail : "Unknown error");
     }
 }
 
-std::string Win32IDE::routeToAmazonQ(const std::string& prompt) {
+std::string Win32IDE::routeToAmazonQ(const std::string& prompt)
+{
     // Phase 29: Route to Amazon Q (AWS Toolkit) VS Code Extension
     auto& api = vscode::VSCodeExtensionAPI::instance();
-    
-    if (!api.isInitialized()) {
+
+    if (!api.isInitialized())
+    {
         return "[BackendSwitcher] Error: VS Code Extension API not initialized";
     }
 
     nlohmann::json args;
     args["prompt"] = prompt;
-    
+
     auto apiResult = api.executeCommand("amazon.q.chat.proxy", args.dump().c_str());
-    if (apiResult.success) {
-        if (apiResult.detail && strlen(apiResult.detail) > 0 && strcmp(apiResult.detail, "Success") != 0) {
+    if (apiResult.success)
+    {
+        if (apiResult.detail && strlen(apiResult.detail) > 0 && strcmp(apiResult.detail, "Success") != 0)
+        {
             return apiResult.detail;
         }
         return "[BackendSwitcher] Routing to Amazon Q extension...\n"
                "Extension command triggered successfully. Awaiting stream...";
-    } else {
-        return "[BackendSwitcher] Error: Failed to trigger Amazon Q extension command: " + 
+    }
+    else
+    {
+        return "[BackendSwitcher] Error: Failed to trigger Amazon Q extension command: " +
                std::string(apiResult.detail);
     }
 }
@@ -937,8 +1107,9 @@ std::string Win32IDE::routeToAmazonQ(const std::string& prompt) {
 // HTTP POST HELPER (WinHTTP)
 // ============================================================================
 
-std::string Win32IDE::httpPost(const std::string& url, const std::string& body,
-                                const std::vector<std::string>& headers, int timeoutMs) {
+std::string Win32IDE::httpPost(const std::string& url, const std::string& body, const std::vector<std::string>& headers,
+                               int timeoutMs)
+{
     // Parse URL into components
     std::string scheme, host, path;
     int port = 80;
@@ -946,24 +1117,33 @@ std::string Win32IDE::httpPost(const std::string& url, const std::string& body,
 
     // Extract scheme
     size_t schemeEnd = url.find("://");
-    if (schemeEnd != std::string::npos) {
+    if (schemeEnd != std::string::npos)
+    {
         scheme = url.substr(0, schemeEnd);
         size_t hostStart = schemeEnd + 3;
         size_t pathStart = url.find('/', hostStart);
-        if (pathStart != std::string::npos) {
+        if (pathStart != std::string::npos)
+        {
             host = url.substr(hostStart, pathStart - hostStart);
             path = url.substr(pathStart);
-        } else {
+        }
+        else
+        {
             host = url.substr(hostStart);
             path = "/";
         }
-    } else {
+    }
+    else
+    {
         // No scheme — assume http
         size_t pathStart = url.find('/');
-        if (pathStart != std::string::npos) {
+        if (pathStart != std::string::npos)
+        {
             host = url.substr(0, pathStart);
             path = url.substr(pathStart);
-        } else {
+        }
+        else
+        {
             host = url;
             path = "/";
         }
@@ -974,7 +1154,8 @@ std::string Win32IDE::httpPost(const std::string& url, const std::string& body,
 
     // Extract port from host if present
     size_t colonPos = host.find(':');
-    if (colonPos != std::string::npos) {
+    if (colonPos != std::string::npos)
+    {
         port = std::stoi(host.substr(colonPos + 1));
         host = host.substr(0, colonPos);
     }
@@ -983,53 +1164,53 @@ std::string Win32IDE::httpPost(const std::string& url, const std::string& body,
     std::wstring wHost(host.begin(), host.end());
     std::wstring wPath(path.begin(), path.end());
 
-    HINTERNET hSession = WinHttpOpen(L"RawrXD-BackendSwitcher/1.0",
-                                      WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
-                                      WINHTTP_NO_PROXY_NAME,
-                                      WINHTTP_NO_PROXY_BYPASS, 0);
-    if (!hSession) return "";
+    HINTERNET hSession = WinHttpOpen(L"RawrXD-BackendSwitcher/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+                                     WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+    if (!hSession)
+        return "";
 
     // Set timeouts
     WinHttpSetTimeouts(hSession, timeoutMs, timeoutMs, timeoutMs, timeoutMs);
 
     HINTERNET hConnect = WinHttpConnect(hSession, wHost.c_str(), (INTERNET_PORT)port, 0);
-    if (!hConnect) {
+    if (!hConnect)
+    {
         WinHttpCloseHandle(hSession);
         return "";
     }
 
     DWORD flags = useSSL ? WINHTTP_FLAG_SECURE : 0;
     LPCWSTR verb = body.empty() ? L"GET" : L"POST";
-    HINTERNET hRequest = WinHttpOpenRequest(hConnect, verb, wPath.c_str(),
-                                             NULL, WINHTTP_NO_REFERER,
-                                             WINHTTP_DEFAULT_ACCEPT_TYPES, flags);
-    if (!hRequest) {
+    HINTERNET hRequest = WinHttpOpenRequest(hConnect, verb, wPath.c_str(), NULL, WINHTTP_NO_REFERER,
+                                            WINHTTP_DEFAULT_ACCEPT_TYPES, flags);
+    if (!hRequest)
+    {
         WinHttpCloseHandle(hConnect);
         WinHttpCloseHandle(hSession);
         return "";
     }
 
     // Add custom headers
-    for (const auto& hdr : headers) {
+    for (const auto& hdr : headers)
+    {
         std::wstring wHdr(hdr.begin(), hdr.end());
-        WinHttpAddRequestHeaders(hRequest, wHdr.c_str(), (DWORD)wHdr.length(),
-                                  WINHTTP_ADDREQ_FLAG_ADD);
+        WinHttpAddRequestHeaders(hRequest, wHdr.c_str(), (DWORD)wHdr.length(), WINHTTP_ADDREQ_FLAG_ADD);
     }
 
     // Send request
-    BOOL sent = WinHttpSendRequest(hRequest,
-                                    WINHTTP_NO_ADDITIONAL_HEADERS, 0,
-                                    body.empty() ? WINHTTP_NO_REQUEST_DATA : (LPVOID)body.c_str(),
-                                    (DWORD)body.size(),
-                                    (DWORD)body.size(), 0);
-    if (!sent) {
+    BOOL sent = WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0,
+                                   body.empty() ? WINHTTP_NO_REQUEST_DATA : (LPVOID)body.c_str(), (DWORD)body.size(),
+                                   (DWORD)body.size(), 0);
+    if (!sent)
+    {
         WinHttpCloseHandle(hRequest);
         WinHttpCloseHandle(hConnect);
         WinHttpCloseHandle(hSession);
         return "";
     }
 
-    if (!WinHttpReceiveResponse(hRequest, NULL)) {
+    if (!WinHttpReceiveResponse(hRequest, NULL))
+    {
         WinHttpCloseHandle(hRequest);
         WinHttpCloseHandle(hConnect);
         WinHttpCloseHandle(hSession);
@@ -1040,10 +1221,12 @@ std::string Win32IDE::httpPost(const std::string& url, const std::string& body,
     std::string responseBody;
     DWORD bytesRead = 0;
     DWORD bytesAvailable = 0;
-    do {
+    do
+    {
         bytesAvailable = 0;
         WinHttpQueryDataAvailable(hRequest, &bytesAvailable);
-        if (bytesAvailable == 0) break;
+        if (bytesAvailable == 0)
+            break;
 
         std::vector<char> buf(bytesAvailable + 1, 0);
         WinHttpReadData(hRequest, buf.data(), bytesAvailable, &bytesRead);
@@ -1061,7 +1244,8 @@ std::string Win32IDE::httpPost(const std::string& url, const std::string& body,
 // UI HELPERS
 // ============================================================================
 
-void Win32IDE::showBackendSwitcherDialog() {
+void Win32IDE::showBackendSwitcherDialog()
+{
     // Show a quick picker via the output panel (full dialog would be Phase 8C+)
     std::string status = getBackendStatusString();
     appendToOutput(status, "General", OutputSeverity::Info);
@@ -1074,8 +1258,10 @@ void Win32IDE::showBackendSwitcherDialog() {
                    "General", OutputSeverity::Info);
 }
 
-void Win32IDE::showBackendConfigDialog(AIBackendType type) {
-    if (type >= AIBackendType::Count) return;
+void Win32IDE::showBackendConfigDialog(AIBackendType type)
+{
+    if (type >= AIBackendType::Count)
+        return;
 
     const auto& cfg = m_backendConfigs[(size_t)type];
     std::ostringstream ss;
@@ -1083,7 +1269,10 @@ void Win32IDE::showBackendConfigDialog(AIBackendType type) {
     ss << "  Type:        " << backendTypeString(cfg.type) << "\n";
     ss << "  Endpoint:    " << (cfg.endpoint.empty() ? "(native engine)" : cfg.endpoint) << "\n";
     ss << "  Model:       " << (cfg.model.empty() ? "(loaded file)" : cfg.model) << "\n";
-    ss << "  API Key:     " << (cfg.apiKey.empty() ? "(not set)" : "****" + cfg.apiKey.substr(cfg.apiKey.size() > 4 ? cfg.apiKey.size() - 4 : 0)) << "\n";
+    ss << "  API Key:     "
+       << (cfg.apiKey.empty() ? "(not set)"
+                              : "****" + cfg.apiKey.substr(cfg.apiKey.size() > 4 ? cfg.apiKey.size() - 4 : 0))
+       << "\n";
     ss << "  Enabled:     " << (cfg.enabled ? "yes" : "no") << "\n";
     ss << "  Timeout:     " << cfg.timeoutMs << " ms\n";
     ss << "  Max Tokens:  " << cfg.maxTokens << "\n";
@@ -1092,9 +1281,11 @@ void Win32IDE::showBackendConfigDialog(AIBackendType type) {
     appendToOutput(ss.str(), "General", OutputSeverity::Info);
 }
 
-void Win32IDE::updateStatusBarBackend() {
+void Win32IDE::updateStatusBarBackend()
+{
     // Update the status bar to show active backend
-    if (m_hwndStatusBar) {
+    if (m_hwndStatusBar)
+    {
         std::string label = "[" + getActiveBackendName() + "]";
         // Use m_statusBarInfo.copilotActive area or a dedicated section
         m_statusBarInfo.copilotActive = true;
@@ -1102,22 +1293,36 @@ void Win32IDE::updateStatusBarBackend() {
     }
 }
 
-std::string Win32IDE::backendTypeString(AIBackendType type) const {
-    switch (type) {
-        case AIBackendType::LocalGGUF: return "LocalGGUF";
-        case AIBackendType::Ollama:    return "Ollama";
-        case AIBackendType::OpenAI:    return "OpenAI";
-        case AIBackendType::Claude:    return "Claude";
-        case AIBackendType::Gemini:    return "Gemini";
-        default:                       return "Unknown";
+std::string Win32IDE::backendTypeString(AIBackendType type) const
+{
+    switch (type)
+    {
+        case AIBackendType::LocalGGUF:
+            return "LocalGGUF";
+        case AIBackendType::Ollama:
+            return "Ollama";
+        case AIBackendType::OpenAI:
+            return "OpenAI";
+        case AIBackendType::Claude:
+            return "Claude";
+        case AIBackendType::Gemini:
+            return "Gemini";
+        default:
+            return "Unknown";
     }
 }
 
-Win32IDE::Win32IDE::AIBackendType Win32IDE::backendTypeFromString(const std::string& name) const {
-    if (name == "LocalGGUF" || name == "local" || name == "Local GGUF") return AIBackendType::LocalGGUF;
-    if (name == "Ollama"    || name == "ollama")                        return AIBackendType::Ollama;
-    if (name == "OpenAI"    || name == "openai")                        return AIBackendType::OpenAI;
-    if (name == "Claude"    || name == "claude")                        return AIBackendType::Claude;
-    if (name == "Gemini"    || name == "gemini")                        return AIBackendType::Gemini;
-    return AIBackendType::Count; // sentinel for "not found"
+Win32IDE::Win32IDE::AIBackendType Win32IDE::backendTypeFromString(const std::string& name) const
+{
+    if (name == "LocalGGUF" || name == "local" || name == "Local GGUF")
+        return AIBackendType::LocalGGUF;
+    if (name == "Ollama" || name == "ollama")
+        return AIBackendType::Ollama;
+    if (name == "OpenAI" || name == "openai")
+        return AIBackendType::OpenAI;
+    if (name == "Claude" || name == "claude")
+        return AIBackendType::Claude;
+    if (name == "Gemini" || name == "gemini")
+        return AIBackendType::Gemini;
+    return AIBackendType::Count;  // sentinel for "not found"
 }

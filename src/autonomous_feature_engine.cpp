@@ -336,9 +336,31 @@ std::vector<AutonomousSuggestion> AutonomousFeatureEngine::getActiveSuggestions(
     return activeSuggestions;
 }
 
-void AutonomousFeatureEngine::acceptSuggestion(const std::string& id) {}
-void AutonomousFeatureEngine::rejectSuggestion(const std::string& id) {}
-void AutonomousFeatureEngine::dismissSuggestion(const std::string& id) {}
+void AutonomousFeatureEngine::acceptSuggestion(const std::string& id) {
+    auto it = std::find_if(activeSuggestions.begin(), activeSuggestions.end(),
+                           [&](const AutonomousSuggestion& s){ return s.suggestionId == id; });
+    if (it != activeSuggestions.end()) {
+        it->wasAccepted = true;
+        recordUserInteraction(id, true);
+        activeSuggestions.erase(it);
+    }
+}
+void AutonomousFeatureEngine::rejectSuggestion(const std::string& id) {
+    auto it = std::find_if(activeSuggestions.begin(), activeSuggestions.end(),
+                           [&](const AutonomousSuggestion& s){ return s.suggestionId == id; });
+    if (it != activeSuggestions.end()) {
+        it->wasAccepted = false;
+        recordUserInteraction(id, false);
+        activeSuggestions.erase(it);
+    }
+}
+void AutonomousFeatureEngine::dismissSuggestion(const std::string& id) {
+    auto it = std::find_if(activeSuggestions.begin(), activeSuggestions.end(),
+                           [&](const AutonomousSuggestion& s){ return s.suggestionId == id; });
+    if (it != activeSuggestions.end()) {
+        activeSuggestions.erase(it);
+    }
+}
 std::vector<GeneratedTest> AutonomousFeatureEngine::generateTestSuite(const std::string& filePath) {
     std::vector<GeneratedTest> tests;
     if (!codebaseEngine) return tests;

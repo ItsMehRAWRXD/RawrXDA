@@ -906,34 +906,79 @@ std::string AgenticEngine::executeCommand(const std::string& command, bool isPow
     }
 
 #ifdef _WIN32
-    fullCmd += " 2>&1";
-#endif
+    // Use CreateProcessA with piped stdout instead of _popen to avoid
+    // shell-interpolation injection through the command string.
+    SECURITY_ATTRIBUTES sa{};
+    sa.nLength = sizeof(sa);
+    sa.bInheritHandle = TRUE;
 
-#ifdef _WIN32
-    FILE* pipe = _popen(fullCmd.c_str(), "r");
+    HANDLE hReadPipe = nullptr, hWritePipe = nullptr;
+    if (!CreatePipe(&hReadPipe, &hWritePipe, &sa, 0))
+        return "[Error] Failed to create pipe for command execution.";
+    SetHandleInformation(hReadPipe, HANDLE_FLAG_INHERIT, 0);
+
+    STARTUPINFOA si{};
+    si.cb = sizeof(si);
+    si.dwFlags = STARTF_USESTDHANDLES;
+    si.hStdOutput = hWritePipe;
+    si.hStdError  = hWritePipe;
+
+    PROCESS_INFORMATION pi{};
+    std::string cmdLine = "cmd.exe /C " + fullCmd;
+    std::vector<char> cmdBuf(cmdLine.begin(), cmdLine.end());
+    cmdBuf.push_back('\0');
+
+    std::string cwd = m_workspaceRoot.empty() ? "." : m_workspaceRoot;
+    BOOL created = CreateProcessA(
+        nullptr, cmdBuf.data(), nullptr, nullptr, TRUE,
+        CREATE_NO_WINDOW, nullptr, cwd.c_str(), &si, &pi);
+    CloseHandle(hWritePipe);
+
+    std::string result;
+    if (!created) {
+        CloseHandle(hReadPipe);
+        return "[Error] CreateProcess failed (" + std::to_string(GetLastError()) + ")";
+    }
+
+    char buffer[4096];
+    DWORD bytesRead;
+    while (ReadFile(hReadPipe, buffer, sizeof(buffer) - 1, &bytesRead, nullptr) && bytesRead > 0) {
+        buffer[bytesRead] = '\0';
+        result += buffer;
+        if (result.size() > 512 * 1024) break; // 512KB cap
+    }
+    CloseHandle(hReadPipe);
+
+    WaitForSingleObject(pi.hProcess, 60000);
+    DWORD exitCode = 1;
+    GetExitCodeProcess(pi.hProcess, &exitCode);
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+
+    if (result.empty()) {
+        result = "[Command executed with no output]";
+    }
+    result += "\n[exit_code=" + std::to_string(exitCode) + "]";
+    return result;
 #else
+    fullCmd += " 2>&1";
     FILE* pipe = popen(fullCmd.c_str(), "r");
-#endif
-
     if (!pipe) return "[Error] Failed to open pipe for command execution.";
 
     char buffer[4096];
     std::string result;
     while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
         result += buffer;
+        if (result.size() > 512 * 1024) break;
     }
-
-#ifdef _WIN32
-    int rc = _pclose(pipe);
-#else
     int rc = pclose(pipe);
-#endif
 
     if (result.empty()) {
         result = "[Command executed with no output]";
     }
     result += "\n[exit_code=" + std::to_string(rc) + "]";
     return result;
+#endif
 }
 
 bool AgenticEngine::loadLocalModel(const std::string& modelPath) {

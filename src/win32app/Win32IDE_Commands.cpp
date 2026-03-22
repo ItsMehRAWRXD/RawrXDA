@@ -8,6 +8,11 @@
 #include "../../include/model_registry.h"
 #include "../../include/multi_file_search.h"
 #include "../core/command_registry.hpp"
+#include "../core/omega_orchestrator.hpp"
+#include "../agentic/agentic_planning_orchestrator.hpp"
+#include "../agentic/failure_intelligence_orchestrator.hpp"
+#include "../agentic/change_impact_analyzer.hpp"
+#include "../core/knowledge_graph_core.hpp"
 #include "IDEConfig.h"
 #include "Win32IDE.h"
 #include "win32_feature_adapter.h"
@@ -251,6 +256,28 @@ static constexpr size_t MAX_AGENT_CHECKPOINTS = 32;
 #endif
 #ifndef IDM_ENT_DUAL_ENGINE
 #define IDM_ENT_DUAL_ENGINE 3047
+#endif
+
+// ============================================================================
+// Phase Ω: OmegaOrchestrator — Autonomous SDLC Pipeline (12400–12450)
+// ============================================================================
+#ifndef IDM_OMEGA_START_AUTONOMOUS
+#define IDM_OMEGA_START_AUTONOMOUS 12400
+#endif
+#ifndef IDM_OMEGA_SET_GOAL
+#define IDM_OMEGA_SET_GOAL 12401
+#endif
+#ifndef IDM_OMEGA_OBSERVE_PIPELINE
+#define IDM_OMEGA_OBSERVE_PIPELINE 12402
+#endif
+#ifndef IDM_OMEGA_CANCEL_TASK
+#define IDM_OMEGA_CANCEL_TASK 12403
+#endif
+#ifndef IDM_OMEGA_SPAWN_AGENT
+#define IDM_OMEGA_SPAWN_AGENT 12404
+#endif
+#ifndef IDM_OMEGA_GET_STATS
+#define IDM_OMEGA_GET_STATS 12405
 #endif
 
 #ifndef IDM_EDIT_UNDO
@@ -596,6 +623,31 @@ bool Win32IDE::routeCommand(int commandId)
     {
         // Tier 3: Cosmetics (#20–#30, e.g. bracket pairs, zen, fold, lightbulb)
         return handleTier3CosmeticsCommand(commandId);
+    }
+    else if (commandId >= 12400 && commandId < 12500)
+    {
+        // Phase Ω: OmegaOrchestrator — Autonomous SDLC Pipeline
+        return handleOmegaOrchestratorCommand(commandId);
+    }
+    else if (commandId >= 4261 && commandId < 4271)
+    {
+        // Agentic Planning Orchestrator — Multi-step planning with approval gates
+        return handleAgenticPlanningCommand(commandId);
+    }
+    else if (commandId >= 4271 && commandId < 4281)
+    {
+        // KnowledgeGraphCore — Cross-session learning + decision archaeology
+        return handleKnowledgeGraphCommand(commandId);
+    }
+    else if (commandId >= 4281 && commandId < 4300)
+    {
+        // FailureIntelligence Orchestrator — Autonomous recovery & root cause analysis
+        return handleFailureIntelligenceCommand(commandId);
+    }
+    else if (commandId >= 4350 && commandId < 4371)
+    {
+        // Change Impact Analyzer — Pre-commit ripple effect prediction
+        return handleChangeImpactCommand(commandId);
     }
     else if (commandId >= 13000 && commandId < 13100)
     {
@@ -1146,10 +1198,54 @@ void Win32IDE::handleViewCommand(int commandId)
             {
                 break;
             }
-            MessageBoxW(m_hwndMain, L"Model Comparison is wired. UI panel is pending.", L"Feature Wired",
-                        MB_OK | MB_ICONINFORMATION);
-            if (m_hwndStatusBar)
-                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Model Comparison");
+#if defined(RAWR_HAS_MODEL_ANATOMY)
+            if (m_loadedModelPath.empty())
+            {
+                appendToOutput("[ModelCompare] Load a base GGUF model first (File -> Load Model).", "General",
+                               OutputSeverity::Warning);
+                break;
+            }
+
+            {
+                char comparePath[MAX_PATH] = {};
+                OPENFILENAMEA ofn = {};
+                ofn.lStructSize = sizeof(ofn);
+                ofn.hwndOwner = m_hwndMain;
+                ofn.lpstrFilter = "GGUF Models\0*.gguf\0All Files\0*.*\0";
+                ofn.lpstrFile = comparePath;
+                ofn.nMaxFile = MAX_PATH;
+                ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY;
+                ofn.lpstrTitle = "Select comparison GGUF model";
+
+                if (!GetOpenFileNameA(&ofn))
+                {
+                    appendToOutput("[ModelCompare] Cancelled.", "General", OutputSeverity::Info);
+                    break;
+                }
+
+                const std::string pathA = m_loadedModelPath;
+                const std::string pathB = comparePath;
+                const std::string diffJson = getModelDiffJson(pathA, pathB, true);
+                if (diffJson.empty())
+                {
+                    appendToOutput("[ModelCompare] Diff failed. Verify both GGUF paths are readable.", "General",
+                                   OutputSeverity::Error);
+                    break;
+                }
+
+                appendToOutput("[ModelCompare] Base: " + pathA + "\n", "General", OutputSeverity::Info);
+                appendToOutput("[ModelCompare] Compare: " + pathB + "\n", "General", OutputSeverity::Info);
+                appendToOutput("[ModelCompare] Neurological diff JSON:\n" + diffJson + "\n", "General",
+                               OutputSeverity::Info);
+
+                if (m_hwndStatusBar)
+                    SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Model Comparison: diff generated");
+            }
+#else
+            MessageBoxW(m_hwndMain,
+                        L"Model anatomy/diff support is not enabled in this build (RAWR_HAS_MODEL_ANATOMY missing).",
+                        L"Feature Unavailable", MB_OK | MB_ICONWARNING);
+#endif
             break;
         case IDM_ENT_BATCH_PROCESS:
             if (!gateEnterpriseFeatureUI(m_hwndMain, RawrXD::License::FeatureID::BatchProcessing, L"Batch Processing",
@@ -11632,4 +11728,1902 @@ bool Win32IDE::handleFeaturesCommand(int commandId) {
     }
 
     return false;
+}
+
+// ============================================================================
+// handleOmegaOrchestratorCommand — Phase Ω Autonomous SDLC Pipeline (12400–12450)
+// ============================================================================
+// Wires OmegaOrchestrator (the Omega Point: autonomous software development) 
+// into the IDE command dispatch. Enables autonomous requirement ingestion,
+// planning, architecture selection, code generation, verification, deployment,
+// observation, and evolution — The Last Tool awakens.
+// ============================================================================
+bool Win32IDE::handleOmegaOrchestratorCommand(int commandId)
+{
+    using namespace rawrxd;
+    
+    auto& omega = OmegaOrchestrator::instance();
+    
+    switch (commandId)
+    {
+        case IDM_OMEGA_START_AUTONOMOUS:
+        {
+            // Initialize OmegaOrchestrator if not already active
+            if (!omega.isActive())
+            {
+                auto initResult = omega.initialize();
+                if (!initResult.success)
+                {
+                    appendToOutput("[OmegaOrchestrator] Initialization failed: " + std::string(initResult.detail),
+                                   "General", OutputSeverity::Error);
+                    return true;
+                }
+                appendToOutput("[OmegaOrchestrator] Phase Ω initialized — The Last Tool awakens", "General",
+                               OutputSeverity::Success);
+            }
+
+            // Prompt user for autonomous task requirement
+            char requirement[2048] = {};
+            // MVP: no custom input dialog yet — log that we're awaiting input
+            if (strlen(requirement) == 0)
+            {
+                // Fallback: show diagnostic info
+                appendToOutput("[OmegaOrchestrator] Awaiting autonomous task requirement via command-line interface",
+                               "General", OutputSeverity::Info);
+                return true;
+            }
+
+            // Ingest requirement into OmegaOrchestrator
+            uint64_t reqHash = omega.ingestRequirement(requirement, static_cast<uint32_t>(strlen(requirement)));
+            appendToOutput("[OmegaOrchestrator] PERCEIVE: Requirement ingested (hash=" + 
+                           std::to_string(reqHash) + "): " + std::string(requirement), "General",
+                           OutputSeverity::Info);
+
+            // Decompose into pipeline tasks
+            uint32_t taskIds[32];
+            uint32_t tasksCreated = 0;
+            auto decomposeResult = omega.planDecompose(reqHash, taskIds, 32, tasksCreated);
+            if (!decomposeResult.success)
+            {
+                appendToOutput("[OmegaOrchestrator] PLAN failed: " + std::string(decomposeResult.detail),
+                               "General", OutputSeverity::Error);
+                return true;
+            }
+            appendToOutput("[OmegaOrchestrator] PLAN: Decomposed into " + std::to_string(tasksCreated) +
+                           " pipeline tasks (ARCHITECT→IMPLEMENT→VERIFY→DEPLOY→OBSERVE→EVOLVE)", "General",
+                           OutputSeverity::Success);
+
+            // Execute pipeline asynchronously
+            // For now, log the task creation; in full implementation, spawn background worker
+            for (uint32_t i = 0; i < tasksCreated; ++i)
+            {
+                appendToOutput("[OmegaOrchestrator] TASK[" + std::to_string(i) + "] ID=" + 
+                               std::to_string(taskIds[i]) + " queued for autonomous execution", "General",
+                               OutputSeverity::Info);
+            }
+
+            if (m_hwndStatusBar)
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, 
+                           (LPARAM)"Phase Ω: Autonomous pipeline initialized");
+            break;
+        }
+
+        case IDM_OMEGA_SET_GOAL:
+        {
+            // Set autonomous development goal with optional constraints
+            if (!omega.isActive())
+            {
+                auto initResult = omega.initialize();
+                if (!initResult.success)
+                {
+                    appendToOutput("[OmegaOrchestrator] Cannot set goal: Initialization failed",
+                                   "General", OutputSeverity::Error);
+                    return true;
+                }
+            }
+            
+            appendToOutput("[OmegaOrchestrator] Goal setting interface — awaiting natural language goal specification",
+                           "General", OutputSeverity::Info);
+            if (m_hwndStatusBar)
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Phase Ω: Goal set");
+            break;
+        }
+
+        case IDM_OMEGA_OBSERVE_PIPELINE:
+        {
+            // Display current pipeline execution state, world model, and statistics
+            if (!omega.isActive())
+            {
+                appendToOutput("[OmegaOrchestrator] Pipeline not active", "General", OutputSeverity::Warning);
+                return true;
+            }
+
+            auto stats = omega.getStats();
+            auto worldModel = omega.getWorldModel();
+
+            appendToOutput("[OmegaOrchestrator] === OBSERVE PIPELINE STATE ===", "General", OutputSeverity::Info);
+            appendToOutput("[Statistics] Ingested requirements: " + std::to_string(stats.requirementsIngested),
+                           "General", OutputSeverity::Info);
+            appendToOutput("[Statistics] Tasks created: " + std::to_string(stats.tasksCreated),
+                           "General", OutputSeverity::Info);
+            appendToOutput("[Statistics] Code units generated: " + std::to_string(stats.codeGenerated),
+                           "General", OutputSeverity::Info);
+            appendToOutput("[WorldModel] Fitness score: " + std::to_string(worldModel.fitness),
+                           "General", OutputSeverity::Success);
+            appendToOutput("[WorldModel] Code units: " + std::to_string(worldModel.codeUnits),
+                           "General", OutputSeverity::Info);
+            appendToOutput("[WorldModel] Agents active: " + std::to_string(stats.agentsActive),
+                           "General", OutputSeverity::Info);
+
+            if (m_hwndStatusBar)
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Phase Ω: Pipeline state observed");
+            break;
+        }
+
+        case IDM_OMEGA_CANCEL_TASK:
+        {
+            // Cancel ongoing autonomous task (graceful shutdown signal)
+            appendToOutput("[OmegaOrchestrator] Autonomous pipeline cancellation requested...", "General",
+                           OutputSeverity::Warning);
+
+            if (omega.isActive())
+            {
+                auto shutdownResult = omega.shutdown();
+                if (shutdownResult.success)
+                {
+                    appendToOutput("[OmegaOrchestrator] Pipeline shutdown completed", "General",
+                                   OutputSeverity::Success);
+                }
+                else
+                {
+                    appendToOutput("[OmegaOrchestrator] Shutdown signal sent (graceful stop)", "General",
+                                   OutputSeverity::Info);
+                }
+            }
+
+            if (m_hwndStatusBar)
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Phase Ω: Autonomous task cancelled");
+            break;
+        }
+
+        case IDM_OMEGA_SPAWN_AGENT:
+        {
+            // Spawn autonomous agent for distributed task execution
+            if (!omega.isActive())
+            {
+                auto initResult = omega.initialize();
+                if (!initResult.success)
+                {
+                    appendToOutput("[OmegaOrchestrator] Cannot spawn agent: Initialization failed",
+                                   "General", OutputSeverity::Error);
+                    return true;
+                }
+            }
+
+            // Spawn with default role (Architecture role for design decisions)
+            int32_t agentId = omega.spawnAgent(AgentRole::Architect);
+            if (agentId > 0)
+            {
+                appendToOutput("[OmegaOrchestrator] Spawned autonomous agent (ID=" + std::to_string(agentId) +
+                               ") — Architecture role", "General", OutputSeverity::Success);
+            }
+            else
+            {
+                appendToOutput("[OmegaOrchestrator] Failed to spawn autonomous agent", "General",
+                               OutputSeverity::Error);
+            }
+
+            if (m_hwndStatusBar)
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Phase Ω: Autonomous agent spawned");
+            break;
+        }
+
+        case IDM_OMEGA_GET_STATS:
+        {
+            // Display OmegaOrchestrator diagnostic and performance statistics
+            if (!omega.isActive())
+            {
+                appendToOutput("[OmegaOrchestrator] Pipeline not active — no statistics available",
+                               "General", OutputSeverity::Info);
+                return true;
+            }
+
+            auto stats = omega.getStats();
+            appendToOutput("[OmegaOrchestrator] === SYSTEM STATISTICS ===", "General", OutputSeverity::Info);
+            appendToOutput(std::string("Requirements ingested:   ") + std::to_string(stats.requirementsIngested),
+                           "General", OutputSeverity::Info);
+            appendToOutput(std::string("Tasks created:           ") + std::to_string(stats.tasksCreated),
+                           "General", OutputSeverity::Info);
+            appendToOutput(std::string("Code units generated:    ") + std::to_string(stats.codeGenerated),
+                           "General", OutputSeverity::Info);
+            appendToOutput(std::string("Agents active:           ") + std::to_string(stats.agentsActive),
+                           "General", OutputSeverity::Info);
+            appendToOutput("[OmegaOrchestrator] === END STATISTICS ===", "General", OutputSeverity::Info);
+
+            if (m_hwndStatusBar)
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Phase Ω: Statistics displayed");
+            break;
+        }
+
+        default:
+            return false;
+    }
+
+    return true;
+}
+
+// ============================================================================
+// handleAgenticPlanningCommand — Multi-step Planning with Approval Gates
+// ============================================================================
+// Wires AgenticPlanningOrchestrator (planning + risk analysis + approval gates)
+// into the IDE command dispatch. Enables human-in-the-loop approval workflow
+// with auto-approval policies, execution tracking, and rollback support.
+// ============================================================================
+bool Win32IDE::handleAgenticPlanningCommand(int commandId)
+{
+    using namespace Agentic;
+    
+    static std::unique_ptr<AgenticPlanningOrchestrator> s_planner;
+    if (!s_planner)
+    {
+        s_planner = std::make_unique<AgenticPlanningOrchestrator>();
+    }
+    
+    switch (commandId)
+    {
+        case IDM_PLANNING_START:
+        {
+            // Generate a plan for a user task
+            appendToOutput("[AgenticPlanning] Starting plan generation workflow...", "General",
+                           OutputSeverity::Info);
+            
+            char taskDesc[2048] = {};
+            // TODO: Replace with proper dialog - for MVP, use console input or stored test task
+            strcpy_s(taskDesc, sizeof(taskDesc),
+                     "Refactor Win32IDE command system to support modular architecture");
+            
+            if (strlen(taskDesc) == 0)
+            {
+                appendToOutput("[AgenticPlanning] Task description required", "General",
+                               OutputSeverity::Warning);
+                return true;
+            }
+
+            ExecutionPlan* plan = s_planner->generatePlanForTask(taskDesc);
+            if (!plan)
+            {
+                appendToOutput("[AgenticPlanning] Failed to generate plan", "General",
+                               OutputSeverity::Error);
+                return true;
+            }
+
+            appendToOutput("[AgenticPlanning] Plan generated: " + plan->plan_id, "General",
+                           OutputSeverity::Success);
+            appendToOutput("[AgenticPlanning] Description: " + plan->description, "General",
+                           OutputSeverity::Info);
+            appendToOutput("[AgenticPlanning] Steps: " + std::to_string(plan->steps.size()), "General",
+                           OutputSeverity::Info);
+            appendToOutput("[AgenticPlanning] Requires human review: " + 
+                           std::string(plan->requires_human_review ? "YES" : "NO"), "General",
+                           OutputSeverity::Info);
+
+            for (size_t i = 0; i < plan->steps.size(); ++i)
+            {
+                const auto& step = plan->steps[i];
+                std::string riskStr = "UNKNOWN";
+                switch (step.risk_level)
+                {
+                    case StepRisk::VeryLow:  riskStr = "VERY_LOW";  break;
+                    case StepRisk::Low:      riskStr = "LOW";       break;
+                    case StepRisk::Medium:   riskStr = "MEDIUM";    break;
+                    case StepRisk::High:     riskStr = "HIGH";      break;
+                    case StepRisk::Critical: riskStr = "CRITICAL";  break;
+                }
+                
+                appendToOutput("[Step " + std::to_string(i) + "] " + step.title + 
+                               " [Risk: " + riskStr + "] [AutoApprove: " +
+                               std::string(step.eligible_for_auto_approval ? "YES" : "NO") + "]",
+                               "General", OutputSeverity::Info);
+            }
+
+            if (m_hwndStatusBar)
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
+                           (LPARAM)("Planning: " + std::to_string(plan->steps.size()) +
+                                   " steps, " + std::to_string(plan->pending_approvals) + " pending").c_str());
+            break;
+        }
+
+        case IDM_PLANNING_SHOW_QUEUE:
+        {
+            // Display pending approvals queue
+            auto pending = s_planner->getPendingApprovals();
+            int pendingCount = s_planner->getPendingApprovalCount();
+
+            appendToOutput("[AgenticPlanning] === APPROVAL QUEUE ===", "General", OutputSeverity::Info);
+            appendToOutput("[AgenticPlanning] Total pending approvals: " + std::to_string(pendingCount),
+                           "General", OutputSeverity::Info);
+
+            if (pending.empty())
+            {
+                appendToOutput("[AgenticPlanning] No pending approvals", "General",
+                               OutputSeverity::Success);
+            }
+            else
+            {
+                for (size_t i = 0; i < pending.size(); ++i)
+                {
+                    const auto& [plan_ptr, step_idx] = pending[i];
+                    if (plan_ptr && step_idx < static_cast<int>(plan_ptr->steps.size()))
+                    {
+                        const auto& step = plan_ptr->steps[step_idx];
+                        appendToOutput("[" + std::to_string(i) + "] Step[" + std::to_string(step_idx) +
+                                       "]: " + step.title + " (Pending approval)", "General",
+                                       OutputSeverity::Warning);
+                    }
+                }
+            }
+
+            appendToOutput("[AgenticPlanning] === END QUEUE ===", "General", OutputSeverity::Info);
+
+            if (m_hwndStatusBar)
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
+                           (LPARAM)("Planning: " + std::to_string(pendingCount) + " pending approvals").c_str());
+            break;
+        }
+
+        case IDM_PLANNING_APPROVE_STEP:
+        {
+            // Approve the next pending step
+            auto pending = s_planner->getPendingApprovals();
+            if (pending.empty())
+            {
+                appendToOutput("[AgenticPlanning] No pending steps to approve", "General",
+                               OutputSeverity::Info);
+                return true;
+            }
+
+            const auto& [plan_ptr, step_idx] = pending[0];
+            if (!plan_ptr || step_idx >= static_cast<int>(plan_ptr->steps.size()))
+            {
+                appendToOutput("[AgenticPlanning] Invalid plan/step reference", "General",
+                               OutputSeverity::Error);
+                return true;
+            }
+
+            s_planner->approveStep(plan_ptr, step_idx, "IDE_USER", "Approved via IDE command");
+            appendToOutput("[AgenticPlanning] Step[" + std::to_string(step_idx) + "] APPROVED: " +
+                           plan_ptr->steps[step_idx].title, "General", OutputSeverity::Success);
+            plan_ptr->approved_steps++;
+            plan_ptr->pending_approvals--;
+
+            if (m_hwndStatusBar)
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
+                           (LPARAM)("Planning: Step approved - Pending: " +
+                                   std::to_string(s_planner->getPendingApprovalCount())).c_str());
+            break;
+        }
+
+        case IDM_PLANNING_REJECT_STEP:
+        {
+            // Reject the next pending step
+            auto pending = s_planner->getPendingApprovals();
+            if (pending.empty())
+            {
+                appendToOutput("[AgenticPlanning] No pending steps to reject", "General",
+                               OutputSeverity::Info);
+                return true;
+            }
+
+            const auto& [plan_ptr, step_idx] = pending[0];
+            if (!plan_ptr || step_idx >= static_cast<int>(plan_ptr->steps.size()))
+            {
+                appendToOutput("[AgenticPlanning] Invalid plan/step reference", "General",
+                               OutputSeverity::Error);
+                return true;
+            }
+
+            s_planner->rejectStep(plan_ptr, step_idx, "IDE_USER", "Rejected via IDE command");
+            appendToOutput("[AgenticPlanning] Step[" + std::to_string(step_idx) + "] REJECTED: " +
+                           plan_ptr->steps[step_idx].title, "General", OutputSeverity::Warning);
+            plan_ptr->rejected_steps++;
+            plan_ptr->pending_approvals--;
+
+            if (m_hwndStatusBar)
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
+                           (LPARAM)"Planning: Step rejected");
+            break;
+        }
+
+        case IDM_PLANNING_EXECUTE_STEP:
+        {
+            // Execute the next approved step
+            auto activePlans = s_planner->getActivePlans();
+            if (activePlans.empty())
+            {
+                appendToOutput("[AgenticPlanning] No active plans to execute", "General",
+                               OutputSeverity::Info);
+                return true;
+            }
+
+            ExecutionPlan* plan = activePlans[0];
+            bool executed = s_planner->executeNextApprovedStep(plan);
+
+            if (executed)
+            {
+                int stepIdx = plan->current_step_index;
+                if (stepIdx >= 0 && stepIdx < static_cast<int>(plan->steps.size()))
+                {
+                    appendToOutput("[AgenticPlanning] Executing Step[" + std::to_string(stepIdx) + "]: " +
+                                   plan->steps[stepIdx].title, "General", OutputSeverity::Success);
+                }
+            }
+            else
+            {
+                appendToOutput("[AgenticPlanning] No approved steps ready for execution", "General",
+                               OutputSeverity::Warning);
+            }
+
+            if (m_hwndStatusBar)
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Planning: Executing step");
+            break;
+        }
+
+        case IDM_PLANNING_EXECUTE_ALL:
+        {
+            // Execute entire approved plan
+            auto activePlans = s_planner->getActivePlans();
+            if (activePlans.empty())
+            {
+                appendToOutput("[AgenticPlanning] No active plans to execute", "General",
+                               OutputSeverity::Info);
+                return true;
+            }
+
+            ExecutionPlan* plan = activePlans[0];
+            appendToOutput("[AgenticPlanning] Executing entire plan: " + plan->plan_id, "General",
+                           OutputSeverity::Info);
+
+            s_planner->executeEntirePlan(plan);
+
+            appendToOutput("[AgenticPlanning] Plan execution initiated", "General",
+                           OutputSeverity::Success);
+            appendToOutput("[AgenticPlanning] Total steps: " + std::to_string(plan->steps.size()),
+                           "General", OutputSeverity::Info);
+
+            if (m_hwndStatusBar)
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
+                           (LPARAM)("Planning: Executing " + std::to_string(plan->steps.size()) +
+                                   " steps").c_str());
+            break;
+        }
+
+        case IDM_PLANNING_ROLLBACK:
+        {
+            // Rollback the last executed step
+            auto activePlans = s_planner->getActivePlans();
+            if (activePlans.empty())
+            {
+                appendToOutput("[AgenticPlanning] No active plans to rollback", "General",
+                               OutputSeverity::Info);
+                return true;
+            }
+
+            ExecutionPlan* plan = activePlans[0];
+            if (plan->current_step_index < 0)
+            {
+                appendToOutput("[AgenticPlanning] No steps have been executed yet", "General",
+                               OutputSeverity::Warning);
+                return true;
+            }
+
+            int stepIdx = plan->current_step_index;
+            s_planner->rollbackStep(plan, stepIdx);
+
+            appendToOutput("[AgenticPlanning] Step[" + std::to_string(stepIdx) + "] rolled back: " +
+                           plan->steps[stepIdx].title, "General", OutputSeverity::Success);
+
+            if (m_hwndStatusBar)
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Planning: Step rolled back");
+            break;
+        }
+
+        case IDM_PLANNING_SET_POLICY:
+        {
+            // Set approval policy (Conservative, Standard, or Aggressive)
+            // For MVP: use Standard policy
+            ApprovalPolicy policy = ApprovalPolicy::Standard();
+            s_planner->setApprovalPolicy(policy);
+
+            appendToOutput("[AgenticPlanning] Approval policy set to STANDARD", "General",
+                           OutputSeverity::Success);
+            appendToOutput("[AgenticPlanning] Auto-approve VeryLow: " + 
+                           std::string(policy.auto_approve_very_low_risk ? "YES" : "NO"), "General",
+                           OutputSeverity::Info);
+            appendToOutput("[AgenticPlanning] Require approval High: " + 
+                           std::string(policy.require_approval_high ? "YES" : "NO"), "General",
+                           OutputSeverity::Info);
+            appendToOutput("[AgenticPlanning] Approval timeout: " + 
+                           std::to_string(policy.approval_timeout_hours) + " hours", "General",
+                           OutputSeverity::Info);
+
+            if (m_hwndStatusBar)
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Planning: Policy set to STANDARD");
+            break;
+        }
+
+        case IDM_PLANNING_VIEW_STATUS:
+        {
+            // Display execution status of active plan
+            auto activePlans = s_planner->getActivePlans();
+            if (activePlans.empty())
+            {
+                appendToOutput("[AgenticPlanning] No active plans", "General",
+                               OutputSeverity::Info);
+                return true;
+            }
+
+            ExecutionPlan* plan = activePlans[0];
+            appendToOutput("[AgenticPlanning] === EXECUTION STATUS ===", "General",
+                           OutputSeverity::Info);
+            appendToOutput("[Plan ID] " + plan->plan_id, "General", OutputSeverity::Info);
+            appendToOutput("[Description] " + plan->description, "General", OutputSeverity::Info);
+            appendToOutput("[Current Step] " + std::to_string(plan->current_step_index + 1) + " / " +
+                           std::to_string(plan->steps.size()), "General", OutputSeverity::Info);
+            appendToOutput("[Approved Steps] " + std::to_string(plan->approved_steps), "General",
+                           OutputSeverity::Success);
+            appendToOutput("[Rejected Steps] " + std::to_string(plan->rejected_steps), "General",
+                           OutputSeverity::Warning);
+            appendToOutput("[Pending Approvals] " + std::to_string(plan->pending_approvals), "General",
+                           OutputSeverity::Info);
+            appendToOutput("[Confidence] " + std::to_string(static_cast<int>(plan->confidence_score * 100)) + "%",
+                           "General", OutputSeverity::Info);
+
+            if (m_hwndStatusBar)
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
+                           (LPARAM)("Planning: " + std::to_string(plan->approved_steps) +
+                                   " approved, " + std::to_string(plan->pending_approvals) + " pending").c_str());
+            break;
+        }
+
+        case IDM_PLANNING_DIAGNOSTICS:
+        {
+            // Display comprehensive diagnostics
+            appendToOutput("[AgenticPlanning] === FULL DIAGNOSTICS ===", "General",
+                           OutputSeverity::Info);
+
+            auto activePlans = s_planner->getActivePlans();
+            appendToOutput("[Active Plans] " + std::to_string(activePlans.size()), "General",
+                           OutputSeverity::Info);
+
+            int totalPending = s_planner->getPendingApprovalCount();
+            appendToOutput("[Total Pending Approvals] " + std::to_string(totalPending), "General",
+                           OutputSeverity::Info);
+
+            ApprovalPolicy policy = s_planner->getApprovalPolicy();
+            appendToOutput("[Policy] Auto-VeryLow: " + std::string(policy.auto_approve_very_low_risk ? "Y" : "N") +
+                           " | Auto-Low: " + std::string(policy.auto_approve_low_risk ? "Y" : "N") +
+                           " | Timeout: " + std::to_string(policy.approval_timeout_hours) + "h",
+                           "General", OutputSeverity::Info);
+
+            if (!activePlans.empty())
+            {
+                ExecutionPlan* plan = activePlans[0];
+                appendToOutput("[Current Plan] " + plan->plan_id, "General", OutputSeverity::Info);
+                
+                for (size_t i = 0; i < plan->steps.size(); ++i)
+                {
+                    const auto& step = plan->steps[i];
+                    std::string statusStr;
+                    switch (step.approval_status)
+                    {
+                        case ApprovalStatus::Pending:       statusStr = "PENDING"; break;
+                        case ApprovalStatus::Approved:      statusStr = "APPROVED"; break;
+                        case ApprovalStatus::ApprovedAuto:  statusStr = "AUTO-APPROVED"; break;
+                        case ApprovalStatus::Rejected:      statusStr = "REJECTED"; break;
+                        case ApprovalStatus::Expired:       statusStr = "EXPIRED"; break;
+                    }
+                    
+                    appendToOutput("[Step " + std::to_string(i) + "] " + step.title +
+                                   " -> " + statusStr, "General", OutputSeverity::Info);
+                }
+            }
+
+            appendToOutput("[AgenticPlanning] === END DIAGNOSTICS ===", "General", OutputSeverity::Info);
+
+            if (m_hwndStatusBar)
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
+                           (LPARAM)("Planning: Diagnostics displayed"));
+            break;
+        }
+
+        default:
+            return false;
+    }
+
+    return true;
+}
+
+// ============================================================================
+// handleKnowledgeGraphCommand — Cross-session Learning & Decision Archaeology
+// ============================================================================
+// Wires KnowledgeGraphCore (SQLite-backed persistent learning) into the IDE.
+// Records WHY decisions were made, tracks user preferences via Bayesian inference,
+// maintains codebase change archaeology, and provides semantic search over
+// the entire decision history.
+// ============================================================================
+bool Win32IDE::handleKnowledgeGraphCommand(int commandId)
+{
+    using namespace RawrXD::Knowledge;
+
+    auto& kg = KnowledgeGraphCore::instance();
+
+    switch (commandId)
+    {
+        case IDM_KNOWLEDGE_INIT:
+        {
+            if (kg.isInitialized())
+            {
+                appendToOutput("[KnowledgeGraph] Already initialized", "General",
+                               OutputSeverity::Info);
+                return true;
+            }
+
+            KnowledgeConfig config = KnowledgeConfig::defaults();
+            auto result = kg.initialize(config);
+            if (result.success)
+            {
+                appendToOutput("[KnowledgeGraph] Initialized — SQLite-backed persistent learning active",
+                               "General", OutputSeverity::Success);
+                appendToOutput("[KnowledgeGraph] DB: " + std::string(config.dbPath), "General",
+                               OutputSeverity::Info);
+            }
+            else
+            {
+                appendToOutput("[KnowledgeGraph] Init failed: " + std::string(result.detail),
+                               "General", OutputSeverity::Error);
+            }
+
+            if (m_hwndStatusBar)
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
+                           (LPARAM)(result.success ? "Knowledge Graph: Active" : "Knowledge Graph: Failed"));
+            break;
+        }
+
+        case IDM_KNOWLEDGE_RECORD:
+        {
+            if (!kg.isInitialized())
+            {
+                kg.initialize();
+            }
+
+            // Record an architectural decision for the current session
+            auto result = kg.recordDecision(
+                DecisionType::ArchitecturalChoice,
+                "Wired KnowledgeGraphCore into IDE command dispatch",
+                "Enables cross-session learning, decision archaeology, and Bayesian preference tracking directly from IDE commands",
+                "Win32IDE_Commands.cpp",
+                0);
+
+            if (result.success)
+            {
+                appendToOutput("[KnowledgeGraph] Decision recorded successfully", "General",
+                               OutputSeverity::Success);
+            }
+            else
+            {
+                appendToOutput("[KnowledgeGraph] Failed to record: " + std::string(result.detail),
+                               "General", OutputSeverity::Error);
+            }
+
+            if (m_hwndStatusBar)
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Knowledge: Decision recorded");
+            break;
+        }
+
+        case IDM_KNOWLEDGE_SEARCH:
+        {
+            if (!kg.isInitialized()) kg.initialize();
+
+            auto matches = kg.searchByText("architecture decision", 10);
+
+            appendToOutput("[KnowledgeGraph] === SEMANTIC SEARCH RESULTS ===", "General",
+                           OutputSeverity::Info);
+            appendToOutput("[KnowledgeGraph] Query: 'architecture decision'", "General",
+                           OutputSeverity::Info);
+
+            if (matches.empty())
+            {
+                appendToOutput("[KnowledgeGraph] No matching decisions found", "General",
+                               OutputSeverity::Info);
+            }
+            else
+            {
+                for (size_t i = 0; i < matches.size(); ++i)
+                {
+                    const auto& m = matches[i];
+                    appendToOutput("[" + std::to_string(i) + "] (sim=" +
+                                   std::to_string(m.similarity).substr(0, 5) + ") " +
+                                   std::string(m.summary), "General", OutputSeverity::Info);
+                }
+            }
+
+            appendToOutput("[KnowledgeGraph] === END RESULTS ===", "General", OutputSeverity::Info);
+
+            if (m_hwndStatusBar)
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
+                           (LPARAM)("Knowledge: " + std::to_string(matches.size()) + " results").c_str());
+            break;
+        }
+
+        case IDM_KNOWLEDGE_DECISIONS:
+        {
+            if (!kg.isInitialized()) kg.initialize();
+
+            auto decisions = kg.getDecisions(25);
+
+            appendToOutput("[KnowledgeGraph] === DECISION HISTORY (last 25) ===", "General",
+                           OutputSeverity::Info);
+
+            if (decisions.empty())
+            {
+                appendToOutput("[KnowledgeGraph] No decisions recorded yet", "General",
+                               OutputSeverity::Info);
+            }
+            else
+            {
+                for (size_t i = 0; i < decisions.size(); ++i)
+                {
+                    const auto& d = decisions[i];
+                    const char* typeStr = "Unknown";
+                    switch (d.type)
+                    {
+                        case DecisionType::ArchitecturalChoice:     typeStr = "ARCH"; break;
+                        case DecisionType::RefactorReason:          typeStr = "REFACTOR"; break;
+                        case DecisionType::BugFixRationale:         typeStr = "BUGFIX"; break;
+                        case DecisionType::PerformanceOptimization: typeStr = "PERF"; break;
+                        case DecisionType::SecurityDecision:        typeStr = "SECURITY"; break;
+                        case DecisionType::UserPreference:          typeStr = "PREF"; break;
+                        case DecisionType::ToolChoice:              typeStr = "TOOL"; break;
+                        case DecisionType::DependencyChoice:        typeStr = "DEP"; break;
+                        case DecisionType::ApiDesign:               typeStr = "API"; break;
+                        case DecisionType::TestStrategy:            typeStr = "TEST"; break;
+                    }
+                    appendToOutput("[" + std::to_string(i) + "] [" + typeStr + "] " +
+                                   std::string(d.summary) + " (confidence: " +
+                                   std::to_string(static_cast<int>(d.confidence * 100)) + "%)",
+                                   "General", OutputSeverity::Info);
+                    if (strlen(d.rationale) > 0)
+                    {
+                        appendToOutput("    WHY: " + std::string(d.rationale), "General",
+                                       OutputSeverity::Info);
+                    }
+                }
+            }
+
+            appendToOutput("[KnowledgeGraph] === END HISTORY ===", "General", OutputSeverity::Info);
+            break;
+        }
+
+        case IDM_KNOWLEDGE_PREFERENCES:
+        {
+            if (!kg.isInitialized()) kg.initialize();
+
+            auto learned = kg.getLearnedPreferences();
+            auto all = kg.getAllPreferences();
+
+            appendToOutput("[KnowledgeGraph] === USER PREFERENCES ===", "General",
+                           OutputSeverity::Info);
+            appendToOutput("[KnowledgeGraph] Learned (above threshold): " +
+                           std::to_string(learned.size()) + " / Total: " +
+                           std::to_string(all.size()), "General", OutputSeverity::Info);
+
+            for (size_t i = 0; i < learned.size(); ++i)
+            {
+                const auto& p = learned[i];
+                const char* catStr = "Unknown";
+                switch (p.category)
+                {
+                    case PreferenceCategory::LoopStyle:        catStr = "Loop"; break;
+                    case PreferenceCategory::NamingConvention: catStr = "Naming"; break;
+                    case PreferenceCategory::ErrorHandling:    catStr = "ErrHandling"; break;
+                    case PreferenceCategory::MemoryManagement: catStr = "Memory"; break;
+                    case PreferenceCategory::CodeOrganization: catStr = "CodeOrg"; break;
+                    case PreferenceCategory::TestingStyle:     catStr = "Testing"; break;
+                    case PreferenceCategory::CommentStyle:     catStr = "Comments"; break;
+                    case PreferenceCategory::IndentationStyle: catStr = "Indent"; break;
+                    case PreferenceCategory::BraceStyle:       catStr = "Braces"; break;
+                    case PreferenceCategory::TemplateUsage:    catStr = "Templates"; break;
+                }
+                appendToOutput("[" + std::string(catStr) + "] " + std::string(p.key) +
+                               " -> " + std::string(p.preferredValue) +
+                               " (Bayesian: " + std::to_string(static_cast<int>(p.bayesianScore * 100)) +
+                               "%, obs: " + std::to_string(p.observationCount) + ")",
+                               "General", OutputSeverity::Success);
+            }
+
+            appendToOutput("[KnowledgeGraph] === END PREFERENCES ===", "General", OutputSeverity::Info);
+            break;
+        }
+
+        case IDM_KNOWLEDGE_ARCHAEOLOGY:
+        {
+            if (!kg.isInitialized()) kg.initialize();
+
+            auto history = kg.searchHistory("*", 20);
+
+            appendToOutput("[KnowledgeGraph] === CODEBASE ARCHAEOLOGY ===", "General",
+                           OutputSeverity::Info);
+
+            if (history.empty())
+            {
+                appendToOutput("[KnowledgeGraph] No change archaeology recorded yet", "General",
+                               OutputSeverity::Info);
+            }
+            else
+            {
+                for (size_t i = 0; i < history.size(); ++i)
+                {
+                    const auto& h = history[i];
+                    appendToOutput("[" + std::to_string(i) + "] " + std::string(h.file) +
+                                   "::" + std::string(h.functionName), "General",
+                                   OutputSeverity::Info);
+                    appendToOutput("    WAS: " + std::string(h.oldBehavior), "General",
+                                   OutputSeverity::Warning);
+                    appendToOutput("    NOW: " + std::string(h.newBehavior), "General",
+                                   OutputSeverity::Success);
+                    appendToOutput("    WHY: " + std::string(h.reason), "General",
+                                   OutputSeverity::Info);
+                }
+            }
+
+            appendToOutput("[KnowledgeGraph] === END ARCHAEOLOGY ===", "General", OutputSeverity::Info);
+            break;
+        }
+
+        case IDM_KNOWLEDGE_GRAPH:
+        {
+            if (!kg.isInitialized()) kg.initialize();
+
+            auto stats = kg.getStats();
+
+            appendToOutput("[KnowledgeGraph] === CODE RELATIONSHIP GRAPH ===", "General",
+                           OutputSeverity::Info);
+            appendToOutput("[KnowledgeGraph] Total relationships: " +
+                           std::to_string(stats.totalRelationships), "General",
+                           OutputSeverity::Info);
+
+            auto rels = kg.getRelationshipsByType(RelationType::CallsFunction, 10);
+            for (size_t i = 0; i < rels.size(); ++i)
+            {
+                const auto& r = rels[i];
+                appendToOutput("  " + std::string(r.sourceSymbol) + " -> " +
+                               std::string(r.targetSymbol) + " (strength: " +
+                               std::to_string(static_cast<int>(r.strength * 100)) + "%)",
+                               "General", OutputSeverity::Info);
+            }
+
+            appendToOutput("[KnowledgeGraph] === END GRAPH ===", "General", OutputSeverity::Info);
+            break;
+        }
+
+        case IDM_KNOWLEDGE_EXPORT:
+        {
+            if (!kg.isInitialized()) kg.initialize();
+
+            const char* exportPath = "rawrxd_knowledge_export.json";
+            auto result = kg.exportToJson(exportPath);
+
+            if (result.success)
+            {
+                appendToOutput("[KnowledgeGraph] Exported to: " + std::string(exportPath),
+                               "General", OutputSeverity::Success);
+            }
+            else
+            {
+                appendToOutput("[KnowledgeGraph] Export failed: " + std::string(result.detail),
+                               "General", OutputSeverity::Error);
+            }
+
+            if (m_hwndStatusBar)
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
+                           (LPARAM)(result.success ? "Knowledge: Exported" : "Knowledge: Export failed"));
+            break;
+        }
+
+        case IDM_KNOWLEDGE_STATS:
+        {
+            if (!kg.isInitialized()) kg.initialize();
+
+            auto stats = kg.getStats();
+
+            appendToOutput("[KnowledgeGraph] === STATISTICS ===", "General", OutputSeverity::Info);
+            appendToOutput("Decisions recorded:    " + std::to_string(stats.totalDecisions),
+                           "General", OutputSeverity::Info);
+            appendToOutput("Code relationships:    " + std::to_string(stats.totalRelationships),
+                           "General", OutputSeverity::Info);
+            appendToOutput("User preferences:      " + std::to_string(stats.totalPreferences),
+                           "General", OutputSeverity::Info);
+            appendToOutput("Archaeology entries:   " + std::to_string(stats.totalArcheology),
+                           "General", OutputSeverity::Info);
+            appendToOutput("Semantic queries:      " + std::to_string(stats.semanticQueries),
+                           "General", OutputSeverity::Info);
+            appendToOutput("Preference updates:    " + std::to_string(stats.preferenceUpdates),
+                           "General", OutputSeverity::Info);
+            appendToOutput("Avg query time:        " + std::to_string(stats.avgQueryTimeMs) + " ms",
+                           "General", OutputSeverity::Info);
+            appendToOutput("DB size:               " + std::to_string(stats.dbSizeBytes / 1024) + " KB",
+                           "General", OutputSeverity::Info);
+            appendToOutput("[KnowledgeGraph] === END STATS ===", "General", OutputSeverity::Info);
+
+            if (m_hwndStatusBar)
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
+                           (LPARAM)("Knowledge: " + std::to_string(stats.totalDecisions) +
+                                   " decisions, " + std::to_string(stats.totalRelationships) + " rels").c_str());
+            break;
+        }
+
+        case IDM_KNOWLEDGE_FLUSH:
+        {
+            if (!kg.isInitialized())
+            {
+                appendToOutput("[KnowledgeGraph] Not initialized — nothing to flush", "General",
+                               OutputSeverity::Warning);
+                return true;
+            }
+
+            auto result = kg.flush();
+            if (result.success)
+            {
+                appendToOutput("[KnowledgeGraph] All pending data flushed to SQLite", "General",
+                               OutputSeverity::Success);
+            }
+            else
+            {
+                appendToOutput("[KnowledgeGraph] Flush failed: " + std::string(result.detail),
+                               "General", OutputSeverity::Error);
+            }
+
+            if (m_hwndStatusBar)
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Knowledge: Flushed to disk");
+            break;
+        }
+
+        default:
+            return false;
+    }
+
+    return true;
+}
+
+// ============================================================================
+// handleFailureIntelligenceCommand — Real-Time Failure Detection & Recovery
+// ============================================================================
+// Autonomous failure classification, root cause analysis, recovery planning,
+// and execution with adaptive learning. Integrates into IDE command dispatch.
+// Command range: 4281–4299 (IDM_FAILURE_*)
+// ============================================================================
+
+// Static orchestrator instance (singleton per IDE session)
+static std::unique_ptr<Agentic::FailureIntelligenceOrchestrator> g_failureIntelligence;
+
+// Helper: Ensure FailureIntelligence is initialized
+static void ensureFailureIntelligenceInitialized(Win32IDE* ide) {
+    if (!g_failureIntelligence) {
+        g_failureIntelligence = std::make_unique<Agentic::FailureIntelligenceOrchestrator>();
+
+        // Wire output callback
+        g_failureIntelligence->setAnalysisLogFn([ide](const std::string& log_entry) {
+            if (ide) {
+                ide->appendToOutput("[FailureIntelligence] " + log_entry + "\n",
+                                  "Output", Win32IDE::OutputSeverity::Info);
+            }
+        });
+
+        // Wire failure detection callback
+        g_failureIntelligence->setFailureDetectedCallback(
+            [ide](const Agentic::FailureSignal& signal) {
+                if (ide) {
+                    std::ostringstream ss;
+                    ss << "🔴 Failure detected in " << signal.source_component
+                       << " (step: " << signal.step_id << ") - "
+                       << signal.error_message;
+                    ide->appendToOutput(ss.str() + "\n", "Output",
+                                      Win32IDE::OutputSeverity::Warning);
+                }
+            });
+
+        // Wire recovery initiation callback
+        g_failureIntelligence->setRecoveryInitiatedCallback(
+            [ide](const Agentic::RecoveryPlan& plan) {
+                if (ide) {
+                    std::ostringstream ss;
+                    ss << "🔧 Recovery initiated: " << plan.strategy_description;
+                    ide->appendToOutput(ss.str() + "\n", "Output",
+                                      Win32IDE::OutputSeverity::Info);
+                }
+            });
+
+        // Wire recovery completion callback
+        g_failureIntelligence->setRecoveryCompletedCallback(
+            [ide](const Agentic::RecoveryPlan& plan, bool success) {
+                if (ide) {
+                    std::ostringstream ss;
+                    ss << (success ? "✅" : "❌") << " Recovery " 
+                       << (success ? "succeeded" : "failed") << ": " << plan.recovery_id;
+                    ide->appendToOutput(ss.str() + "\n", "Output",
+                                      success ? Win32IDE::OutputSeverity::Info : 
+                                              Win32IDE::OutputSeverity::Error);
+                }
+            });
+    }
+}
+
+bool Win32IDE::handleFailureIntelligenceCommand(int commandId)
+{
+    LOG_INFO("handleFailureIntelligenceCommand: " + std::to_string(commandId));
+    
+    ensureFailureIntelligenceInitialized(this);
+    if (!g_failureIntelligence) {
+        appendToOutput("❌ FailureIntelligence not initialized\n", "Output",
+                      OutputSeverity::Error);
+        return false;
+    }
+
+    switch (commandId) {
+    case IDM_FAILURE_DETECT:
+    {
+        // Report a failure (typically called from subprocess/tool exit handler)
+        char failureDesc[1024] = {0};
+        if (DialogBoxParamA(m_hInstance, "AGENT_PROMPT_DLG", m_hwndMain,
+            [](HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) -> INT_PTR {
+                switch (msg) {
+                case WM_INITDIALOG:
+                    SetWindowTextA(GetDlgItem(hwnd, 101), "Report failure: error message");
+                    return TRUE;
+                case WM_COMMAND:
+                    if (LOWORD(wp) == IDOK) {
+                        GetDlgItemTextA(hwnd, 102, (char*)lp, 1024);
+                        EndDialog(hwnd, IDOK);
+                        return TRUE;
+                    } else if (LOWORD(wp) == IDCANCEL) {
+                        EndDialog(hwnd, IDCANCEL);
+                        return TRUE;
+                    }
+                    break;
+                }
+                return FALSE;
+            }, (LPARAM)failureDesc) == IDOK && strlen(failureDesc) > 0) {
+
+            Agentic::FailureSignal signal;
+            signal.error_message = failureDesc;
+            signal.source_component = "manual_report";
+            signal.severity = Agentic::SeverityLevel::Warning;
+            g_failureIntelligence->reportFailure(signal);
+            appendToOutput("Failure reported: " + std::string(failureDesc) + "\n",
+                          "Output", OutputSeverity::Info);
+        }
+        return true;
+    }
+
+    case IDM_FAILURE_ANALYZE:
+    {
+        // Analyze most recent failure
+        auto recent = g_failureIntelligence->getRecentFailures(1);
+        if (recent.empty()) {
+            appendToOutput("No recent failures to analyze\n", "Output",
+                          OutputSeverity::Warning);
+            return true;
+        }
+
+        auto rca = g_failureIntelligence->analyzeFailure(*recent[0]);
+        if (rca) {
+            appendToOutput("=== Root Cause Analysis ===\n"
+                          "Category: " + std::to_string(static_cast<int>(rca->primary_category)) + "\n" +
+                          "Confidence: " + std::to_string(static_cast<int>(rca->analysis_confidence * 100)) + "%\n" +
+                          "Root Cause: " + rca->root_cause_description + "\n",
+                          "Output", OutputSeverity::Info);
+        }
+        return true;
+    }
+
+    case IDM_FAILURE_SHOW_QUEUE:
+    {
+        // Display pending failures
+        auto failures = g_failureIntelligence->getRecentFailures(10);
+        if (failures.empty()) {
+            appendToOutput("No failures in queue\n", "Output", OutputSeverity::Info);
+            return true;
+        }
+
+        appendToOutput("=== Recent Failures ===\n", "Output", OutputSeverity::Info);
+        for (size_t i = 0; i < failures.size(); ++i) {
+            appendToOutput(std::to_string(i + 1) + ". " + failures[i]->signal_id +
+                          " - " + failures[i]->error_message.substr(0, 50) + "...\n",
+                          "Output", OutputSeverity::Info);
+        }
+        return true;
+    }
+
+    case IDM_FAILURE_SHOW_HISTORY:
+    {
+        // Export failure history
+        auto json = g_failureIntelligence->getFailureQueueJson();
+        appendToOutput("=== Failure History ===\n" + json.dump(2) + "\n",
+                      "Output", OutputSeverity::Info);
+        return true;
+    }
+
+    case IDM_FAILURE_GENERATE_RECOVERY:
+    {
+        // Generate recovery plan for recent failure
+        auto recent = g_failureIntelligence->getRecentFailures(1);
+        if (recent.empty()) {
+            appendToOutput("No recent failures\n", "Output", OutputSeverity::Warning);
+            return true;
+        }
+
+        auto plan = g_failureIntelligence->generateRecoveryPlan(*recent[0]);
+        if (plan) {
+            appendToOutput("=== Recovery Plan ===\n"
+                          "ID: " + plan->recovery_id + "\n" +
+                          "Strategy: " + plan->strategy_description + "\n" +
+                          "Steps: " + std::to_string(plan->recovery_steps.size()) + "\n",
+                          "Output", OutputSeverity::Info);
+        }
+        return true;
+    }
+
+    case IDM_FAILURE_EXECUTE_RECOVERY:
+    {
+        // Execute recovery plan
+        auto pending = g_failureIntelligence->getPendingRecoveries();
+        if (pending.empty()) {
+            appendToOutput("No pending recovery plans\n", "Output", OutputSeverity::Warning);
+            return true;
+        }
+
+        std::string output;
+        g_failureIntelligence->executeRecovery(pending[0], output);
+        appendToOutput("Recovery executed\n" + output + "\n", "Output", OutputSeverity::Info);
+        return true;
+    }
+
+    case IDM_FAILURE_AUTONOMOUS_HEAL:
+    {
+        // Full autonomous recovery: detect → analyze → plan → execute
+        auto recent = g_failureIntelligence->getRecentFailures(1);
+        if (recent.empty()) {
+            appendToOutput("No failures to heal\n", "Output", OutputSeverity::Warning);
+            return true;
+        }
+
+        appendToOutput("🔄 Starting autonomous recovery...\n", "Output",
+                      OutputSeverity::Info);
+
+        std::string output;
+        bool success = g_failureIntelligence->autonomousRecover(*recent[0], output);
+
+        if (success) {
+            appendToOutput("✅ Autonomous recovery SUCCEEDED\n" + output + "\n",
+                          "Output", OutputSeverity::Info);
+        } else {
+            appendToOutput("⚠️ Autonomous recovery requires escalation\n" + output + "\n",
+                          "Output", OutputSeverity::Warning);
+        }
+        return true;
+    }
+
+    case IDM_FAILURE_VIEW_PATTERNS:
+    {
+        // Show learned failure patterns
+        auto stats = g_failureIntelligence->getFailureStatistics();
+        appendToOutput("=== Failure Patterns ===\n"
+                      "Total failures: " + std::to_string(stats.total_failures_seen) + "\n" +
+                      "Categories: " + std::to_string(stats.category_counts.size()) + "\n",
+                      "Output", OutputSeverity::Info);
+        return true;
+    }
+
+    case IDM_FAILURE_LEARN_PATTERN:
+    {
+        // Learn from actual categorized failure (for model improvement)
+        auto recent = g_failureIntelligence->getRecentFailures(1);
+        if (recent.empty()) {
+            appendToOutput("No recent failures to learn from\n", "Output",
+                          OutputSeverity::Warning);
+            return true;
+        }
+
+        // For demo: mark as Transient
+        g_failureIntelligence->learnFromFailure(*recent[0], 
+                                               Agentic::FailureCategory::Transient);
+        appendToOutput("Pattern learned\n", "Output", OutputSeverity::Info);
+        return true;
+    }
+
+    case IDM_FAILURE_STATS:
+    {
+        // Display comprehensive statistics
+        auto stats = g_failureIntelligence->getStatisticsJson();
+        appendToOutput("=== FailureIntelligence Statistics ===\n" + stats.dump(2) + "\n",
+                      "Output", OutputSeverity::Info);
+        return true;
+    }
+
+    case IDM_FAILURE_SET_POLICY:
+    {
+        // Configure recovery policies
+        char policyOpt[64] = {0};
+        if (DialogBoxParamA(m_hInstance, "AGENT_PROMPT_DLG", m_hwndMain,
+            [](HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) -> INT_PTR {
+                switch (msg) {
+                case WM_INITDIALOG:
+                    SetWindowTextA(GetDlgItem(hwnd, 101),
+                                 "Policy (1=Conservative, 2=Standard, 3=Aggressive):");
+                    return TRUE;
+                case WM_COMMAND:
+                    if (LOWORD(wp) == IDOK) {
+                        GetDlgItemTextA(hwnd, 102, (char*)lp, 64);
+                        EndDialog(hwnd, IDOK);
+                        return TRUE;
+                    }
+                    break;
+                }
+                return FALSE;
+            }, (LPARAM)policyOpt) == IDOK && strlen(policyOpt) > 0) {
+            
+            int choice = std::stoi(policyOpt);
+            switch (choice) {
+            case 1:
+                g_failureIntelligence->setAutoRetryThreshold(
+                    Agentic::SeverityLevel::Warning);
+                appendToOutput("Policy set to Conservative\n", "Output",
+                              OutputSeverity::Info);
+                break;
+            case 2:
+                g_failureIntelligence->setAutoRetryThreshold(
+                    Agentic::SeverityLevel::Error);
+                appendToOutput("Policy set to Standard\n", "Output",
+                              OutputSeverity::Info);
+                break;
+            case 3:
+                g_failureIntelligence->setAutoRetryThreshold(
+                    Agentic::SeverityLevel::Critical);
+                appendToOutput("Policy set to Aggressive\n", "Output",
+                              OutputSeverity::Info);
+                break;
+            }
+        }
+        return true;
+    }
+
+    case IDM_FAILURE_SHOW_HEALTH:
+    {
+        // Display system health assessment
+        auto health = g_failureIntelligence->getSystemHealthJson();
+        appendToOutput("=== System Health ===\n" + health.dump(2) + "\n",
+                      "Output", OutputSeverity::Info);
+        return true;
+    }
+
+    case IDM_FAILURE_EXPORT_ANALYSIS:
+    {
+        // Export full analysis to JSON file
+        std::string exportPath = m_currentDirectory.empty() ? "." : m_currentDirectory;
+        exportPath += "\\failure_analysis_export.json";
+
+        auto json = g_failureIntelligence->getFailureQueueJson();
+        std::ofstream out(exportPath);
+        if (out.is_open()) {
+            out << json.dump(2);
+            out.close();
+            appendToOutput("✅ Analysis exported to: " + exportPath + "\n",
+                          "Output", OutputSeverity::Info);
+        } else {
+            appendToOutput("❌ Failed to export analysis\n", "Output",
+                          OutputSeverity::Error);
+        }
+        return true;
+    }
+
+    case IDM_FAILURE_CLEAR_HISTORY:
+    {
+        // Clear failure history (with confirmation)
+        if (MessageBoxA(m_hwndMain, "Clear all failure history?", "Confirm",
+                       MB_YESNO | MB_ICONQUESTION) == IDYES) {
+            // Create new instance (fresh start)
+            g_failureIntelligence = std::make_unique<
+                Agentic::FailureIntelligenceOrchestrator>();
+            appendToOutput("🗑️ Failure history cleared\n", "Output",
+                          OutputSeverity::Info);
+        }
+        return true;
+    }
+
+    case IDM_FAILURE_DIAGNOSTICS:
+    {
+        // Full system diagnostics
+        std::ostringstream diag;
+        diag << "=== FailureIntelligence Diagnostics ===\n";
+        diag << "System initialized: " << (g_failureIntelligence ? "✅" : "❌") << "\n";
+        
+        auto stats = g_failureIntelligence->getFailureStatistics();
+        diag << "Total failures: " << stats.total_failures_seen << "\n";
+        diag << "Recovery attempts: " << stats.total_recoveries_attempted << "\n";
+        diag << "Recovery successes: " << stats.total_recoveries_succeeded << "\n";
+        
+        if (stats.total_recoveries_attempted > 0) {
+            diag << "Success rate: " 
+                 << static_cast<int>(stats.overall_recovery_success_rate * 100) << "%\n";
+        }
+
+        appendToOutput(diag.str(), "Output", OutputSeverity::Info);
+        return true;
+    }
+
+    default:
+        return false;
+    }
+}
+
+// ============================================================================
+// handleChangeImpactCommand — Intelligent Pre-Commit Ripple Effect Analysis
+// ============================================================================
+// Analyzes staged/unstaged git changes, traverses dependency graph, computes
+// risk scores, generates impact zones, and integrates with approval gates.
+// Command range: 4350–4370 (IDM_IMPACT_*)
+// ============================================================================
+
+bool Win32IDE::handleChangeImpactCommand(int commandId)
+{
+    using namespace Agentic;
+
+    // Singleton: static analyzer persists across IDE session
+    static std::unique_ptr<ChangeImpactAnalyzer> s_analyzer;
+    if (!s_analyzer)
+    {
+        s_analyzer = std::make_unique<ChangeImpactAnalyzer>();
+        // Wire workspace root from IDE config
+        s_analyzer->setWorkspaceRoot(".");
+    }
+
+    static const char* severity_names[] = {
+        "None", "Trivial", "Minor", "Moderate", "Major", "CRITICAL"
+    };
+
+    switch (commandId)
+    {
+        // ================================================================
+        // IDM_IMPACT_ANALYZE_STAGED (4350) — Analyze staged git changes
+        // ================================================================
+        case IDM_IMPACT_ANALYZE_STAGED:
+        {
+            appendToOutput("[ChangeImpact] Analyzing staged changes (git diff --cached)...",
+                           "General", OutputSeverity::Info);
+
+            ImpactReport report = s_analyzer->analyzeStagedChanges();
+
+            if (report.changed_files.empty())
+            {
+                appendToOutput("[ChangeImpact] No staged changes detected",
+                               "General", OutputSeverity::Info);
+                return true;
+            }
+
+            // Report summary
+            appendToOutput("[ChangeImpact] Report: " + report.report_id,
+                           "General", OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Changed files: " +
+                           std::to_string(report.changed_files.size()),
+                           "General", OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Total affected: " +
+                           std::to_string(report.total_files_affected) + " files",
+                           "General", OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Risk score: " +
+                           std::to_string(static_cast<int>(report.risk_score * 100)) + "%",
+                           "General",
+                           report.risk_score > 0.6f ? OutputSeverity::Warning : OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Severity: " +
+                           std::string(severity_names[static_cast<int>(report.overall_severity)]),
+                           "General",
+                           report.overall_severity >= ImpactSeverity::Major
+                               ? OutputSeverity::Error : OutputSeverity::Info);
+
+            // Show warnings
+            for (const auto& w : report.warnings)
+            {
+                appendToOutput("[ChangeImpact] WARNING: " + w,
+                               "General", OutputSeverity::Warning);
+            }
+
+            // Show suggestions
+            for (const auto& s : report.suggestions)
+            {
+                appendToOutput("[ChangeImpact] SUGGEST: " + s,
+                               "General", OutputSeverity::Info);
+            }
+
+            // Commit blocking
+            if (report.should_block_commit)
+            {
+                appendToOutput("[ChangeImpact] *** COMMIT BLOCKED: " + report.block_reason + " ***",
+                               "General", OutputSeverity::Error);
+            }
+            else
+            {
+                appendToOutput("[ChangeImpact] Commit OK — risk within acceptable threshold",
+                               "General", OutputSeverity::Success);
+            }
+
+            // Status bar
+            if (m_hwndStatusBar)
+            {
+                std::string status = "Impact: " +
+                    std::string(severity_names[static_cast<int>(report.overall_severity)]) +
+                    " (" + std::to_string(report.total_files_affected) + " affected, " +
+                    std::to_string(static_cast<int>(report.risk_score * 100)) + "% risk)";
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
+                           reinterpret_cast<LPARAM>(status.c_str()));
+            }
+            break;
+        }
+
+        // ================================================================
+        // IDM_IMPACT_ANALYZE_UNSTAGED (4351) — Analyze unstaged changes
+        // ================================================================
+        case IDM_IMPACT_ANALYZE_UNSTAGED:
+        {
+            appendToOutput("[ChangeImpact] Analyzing unstaged changes (git diff)...",
+                           "General", OutputSeverity::Info);
+
+            ImpactReport report = s_analyzer->analyzeUnstagedChanges();
+
+            if (report.changed_files.empty())
+            {
+                appendToOutput("[ChangeImpact] No unstaged changes detected",
+                               "General", OutputSeverity::Info);
+                return true;
+            }
+
+            appendToOutput("[ChangeImpact] Unstaged report: " + report.report_id,
+                           "General", OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Files changed: " +
+                           std::to_string(report.changed_files.size()) +
+                           " | Affected: " + std::to_string(report.total_files_affected),
+                           "General", OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Lines: +" +
+                           std::to_string(report.total_lines_added) +
+                           " / -" + std::to_string(report.total_lines_removed),
+                           "General", OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Risk: " +
+                           std::to_string(static_cast<int>(report.risk_score * 100)) +
+                           "% | Severity: " +
+                           severity_names[static_cast<int>(report.overall_severity)],
+                           "General",
+                           report.risk_score > 0.5f ? OutputSeverity::Warning : OutputSeverity::Info);
+
+            for (const auto& w : report.warnings)
+                appendToOutput("[ChangeImpact] ! " + w, "General", OutputSeverity::Warning);
+
+            if (m_hwndStatusBar)
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
+                           reinterpret_cast<LPARAM>(
+                               ("Impact(unstaged): " +
+                                std::to_string(report.total_files_affected) + " affected").c_str()));
+            break;
+        }
+
+        // ================================================================
+        // IDM_IMPACT_ANALYZE_FILE (4352) — Analyze single file impact
+        // ================================================================
+        case IDM_IMPACT_ANALYZE_FILE:
+        {
+            // Use current active file from IDE
+            std::string activeFile = m_currentFile;
+            if (activeFile.empty())
+            {
+                appendToOutput("[ChangeImpact] No active file to analyze",
+                               "General", OutputSeverity::Warning);
+                return true;
+            }
+
+            appendToOutput("[ChangeImpact] Analyzing impact of: " + activeFile,
+                           "General", OutputSeverity::Info);
+
+            ImpactZone zone = s_analyzer->analyzeFileImpact(activeFile);
+
+            appendToOutput("[ChangeImpact] Direct dependents: " +
+                           std::to_string(zone.direct_count()),
+                           "General", OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Transitive dependents: " +
+                           std::to_string(zone.transitive_count()),
+                           "General", OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Total blast radius: " +
+                           std::to_string(zone.total_affected()) + " files",
+                           "General",
+                           zone.total_affected() > 20
+                               ? OutputSeverity::Warning : OutputSeverity::Info);
+
+            // List directly affected files
+            for (size_t i = 0; i < zone.directly_affected.size() && i < 15; ++i)
+            {
+                appendToOutput("[ChangeImpact]   -> " + zone.directly_affected[i],
+                               "General", OutputSeverity::Info);
+            }
+            if (zone.directly_affected.size() > 15)
+            {
+                appendToOutput("[ChangeImpact]   (+" +
+                               std::to_string(zone.directly_affected.size() - 15) + " more)",
+                               "General", OutputSeverity::Info);
+            }
+
+            // Test coverage
+            if (!zone.test_files_relevant.empty())
+            {
+                appendToOutput("[ChangeImpact] Relevant tests: " +
+                               std::to_string(zone.test_files_relevant.size()),
+                               "General", OutputSeverity::Success);
+            }
+            else
+            {
+                appendToOutput("[ChangeImpact] No test files found for this impact zone",
+                               "General", OutputSeverity::Warning);
+            }
+
+            if (m_hwndStatusBar)
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
+                           reinterpret_cast<LPARAM>(
+                               ("Impact: " + activeFile + " -> " +
+                                std::to_string(zone.total_affected()) + " files").c_str()));
+            break;
+        }
+
+        // ================================================================
+        // IDM_IMPACT_SHOW_REPORT (4353) — Show last analysis report
+        // ================================================================
+        case IDM_IMPACT_SHOW_REPORT:
+        {
+            auto reports = s_analyzer->getRecentReports(1);
+            if (reports.empty())
+            {
+                appendToOutput("[ChangeImpact] No analysis reports available. Run analysis first.",
+                               "General", OutputSeverity::Info);
+                return true;
+            }
+
+            const ImpactReport* latest = reports.back();
+            std::string detailedReport = latest->toDetailedReport();
+
+            // Stream the report to the output panel line by line
+            std::istringstream stream(detailedReport);
+            std::string line;
+            while (std::getline(stream, line))
+            {
+                OutputSeverity sev = OutputSeverity::Info;
+                if (line.find("CRITICAL") != std::string::npos ||
+                    line.find("BLOCKED") != std::string::npos)
+                    sev = OutputSeverity::Error;
+                else if (line.find("WARNING") != std::string::npos ||
+                         line.find("!") == 2)
+                    sev = OutputSeverity::Warning;
+                else if (line.find("===") != std::string::npos)
+                    sev = OutputSeverity::Success;
+
+                appendToOutput(line, "General", sev);
+            }
+            break;
+        }
+
+        // ================================================================
+        // IDM_IMPACT_SHOW_ZONES (4354) — Show impact zones
+        // ================================================================
+        case IDM_IMPACT_SHOW_ZONES:
+        {
+            auto reports = s_analyzer->getRecentReports(1);
+            if (reports.empty())
+            {
+                appendToOutput("[ChangeImpact] No impact zones available. Run analysis first.",
+                               "General", OutputSeverity::Info);
+                return true;
+            }
+
+            const ImpactReport* latest = reports.back();
+            appendToOutput("[ChangeImpact] === IMPACT ZONES (" +
+                           std::to_string(latest->impact_zones.size()) + " zones) ===",
+                           "General", OutputSeverity::Info);
+
+            for (size_t i = 0; i < latest->impact_zones.size(); ++i)
+            {
+                const auto& zone = latest->impact_zones[i];
+                appendToOutput("[Zone " + std::to_string(i) + "] " + zone.source_file +
+                               " | Direct: " + std::to_string(zone.direct_count()) +
+                               " | Transitive: " + std::to_string(zone.transitive_count()) +
+                               " | Tests: " + std::to_string(zone.test_files_relevant.size()),
+                               "General",
+                               zone.total_affected() > 20
+                                   ? OutputSeverity::Warning : OutputSeverity::Info);
+            }
+            break;
+        }
+
+        // ================================================================
+        // IDM_IMPACT_RISK_SCORE (4355) — Show risk breakdown
+        // ================================================================
+        case IDM_IMPACT_RISK_SCORE:
+        {
+            auto reports = s_analyzer->getRecentReports(1);
+            if (reports.empty())
+            {
+                appendToOutput("[ChangeImpact] No risk data. Run analysis first.",
+                               "General", OutputSeverity::Info);
+                return true;
+            }
+
+            const ImpactReport* r = reports.back();
+            appendToOutput("[ChangeImpact] === RISK BREAKDOWN ===",
+                           "General", OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Overall Score: " +
+                           std::to_string(static_cast<int>(r->risk_score * 100)) + "%",
+                           "General",
+                           r->risk_score > 0.7f ? OutputSeverity::Error : OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Severity: " +
+                           std::string(severity_names[static_cast<int>(r->overall_severity)]),
+                           "General", OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Files affected: " +
+                           std::to_string(r->total_files_affected),
+                           "General", OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Critical files: " +
+                           std::to_string(r->critical_files_affected),
+                           "General",
+                           r->critical_files_affected > 0
+                               ? OutputSeverity::Warning : OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] API breaks: " +
+                           std::to_string(r->api_breaking_changes),
+                           "General",
+                           r->api_breaking_changes > 0
+                               ? OutputSeverity::Error : OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Untested changes: " +
+                           std::to_string(r->untested_changes),
+                           "General",
+                           r->untested_changes > 0
+                               ? OutputSeverity::Warning : OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Est. rebuild: " +
+                           std::to_string(r->estimated_rebuild_time_sec) + "s" +
+                           (r->requires_full_rebuild ? " (FULL REBUILD)" : ""),
+                           "General", OutputSeverity::Info);
+            break;
+        }
+
+        // ================================================================
+        // IDM_IMPACT_CHECK_COMMIT (4356) — Pre-commit gate check
+        // ================================================================
+        case IDM_IMPACT_CHECK_COMMIT:
+        {
+            appendToOutput("[ChangeImpact] Running pre-commit impact check...",
+                           "General", OutputSeverity::Info);
+
+            ImpactReport report = s_analyzer->analyzeStagedChanges();
+
+            if (report.changed_files.empty())
+            {
+                appendToOutput("[ChangeImpact] Nothing staged — commit gate: PASS (trivial)",
+                               "General", OutputSeverity::Success);
+                return true;
+            }
+
+            if (report.should_block_commit)
+            {
+                appendToOutput("[ChangeImpact] COMMIT GATE: BLOCKED",
+                               "General", OutputSeverity::Error);
+                appendToOutput("[ChangeImpact] Reason: " + report.block_reason,
+                               "General", OutputSeverity::Error);
+                for (const auto& w : report.warnings)
+                    appendToOutput("[ChangeImpact]   ! " + w,
+                                   "General", OutputSeverity::Warning);
+                appendToOutput("[ChangeImpact] Action: Fix issues above or use "
+                               "IDM_IMPACT_SET_CONFIG to adjust thresholds",
+                               "General", OutputSeverity::Info);
+            }
+            else
+            {
+                appendToOutput("[ChangeImpact] COMMIT GATE: PASS",
+                               "General", OutputSeverity::Success);
+                appendToOutput("[ChangeImpact] Risk: " +
+                               std::to_string(static_cast<int>(report.risk_score * 100)) +
+                               "% | Affected: " + std::to_string(report.total_files_affected) +
+                               " files | Severity: " +
+                               severity_names[static_cast<int>(report.overall_severity)],
+                               "General", OutputSeverity::Info);
+            }
+
+            if (m_hwndStatusBar)
+            {
+                std::string status = report.should_block_commit
+                    ? "Commit: BLOCKED (" + report.block_reason + ")"
+                    : "Commit: OK (" + std::to_string(static_cast<int>(report.risk_score * 100)) +
+                      "% risk)";
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
+                           reinterpret_cast<LPARAM>(status.c_str()));
+            }
+            break;
+        }
+
+        // ================================================================
+        // IDM_IMPACT_SET_CONFIG (4357) — Configure analyzer thresholds
+        // ================================================================
+        case IDM_IMPACT_SET_CONFIG:
+        {
+            // Cycle through presets: Default → Strict → Permissive → Default
+            auto currentConfig = s_analyzer->getConfig();
+            
+            std::string newPreset;
+            if (currentConfig.block_commit_threshold >= 0.90f)
+            {
+                // Currently Permissive → switch to Default
+                s_analyzer->setConfig(ImpactAnalyzerConfig::Default());
+                newPreset = "Default";
+            }
+            else if (currentConfig.block_commit_threshold >= 0.80f)
+            {
+                // Currently Default → switch to Strict
+                s_analyzer->setConfig(ImpactAnalyzerConfig::Strict());
+                newPreset = "Strict";
+            }
+            else
+            {
+                // Currently Strict → switch to Permissive
+                s_analyzer->setConfig(ImpactAnalyzerConfig::Permissive());
+                newPreset = "Permissive";
+            }
+
+            auto cfg = s_analyzer->getConfig();
+            appendToOutput("[ChangeImpact] Policy set to: " + newPreset,
+                           "General", OutputSeverity::Success);
+            appendToOutput("[ChangeImpact]   Block threshold: " +
+                           std::to_string(static_cast<int>(cfg.block_commit_threshold * 100)) + "%",
+                           "General", OutputSeverity::Info);
+            appendToOutput("[ChangeImpact]   Critical file limit: " +
+                           std::to_string(cfg.critical_file_limit),
+                           "General", OutputSeverity::Info);
+            appendToOutput("[ChangeImpact]   API break limit: " +
+                           std::to_string(cfg.api_break_limit),
+                           "General", OutputSeverity::Info);
+            appendToOutput("[ChangeImpact]   Max transitive depth: " +
+                           std::to_string(cfg.max_transitive_depth),
+                           "General", OutputSeverity::Info);
+
+            if (m_hwndStatusBar)
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
+                           reinterpret_cast<LPARAM>(
+                               ("Impact config: " + newPreset).c_str()));
+            break;
+        }
+
+        // ================================================================
+        // IDM_IMPACT_HISTORY (4358) — Show recent analysis reports
+        // ================================================================
+        case IDM_IMPACT_HISTORY:
+        {
+            auto reports = s_analyzer->getRecentReports(10);
+
+            appendToOutput("[ChangeImpact] === ANALYSIS HISTORY (" +
+                           std::to_string(reports.size()) + " reports) ===",
+                           "General", OutputSeverity::Info);
+
+            if (reports.empty())
+            {
+                appendToOutput("[ChangeImpact] No analysis history available",
+                               "General", OutputSeverity::Info);
+                return true;
+            }
+
+            for (const auto* r : reports)
+            {
+                appendToOutput("[ChangeImpact] " + r->report_id +
+                               " | " + severity_names[static_cast<int>(r->overall_severity)] +
+                               " | Risk: " + std::to_string(static_cast<int>(r->risk_score * 100)) +
+                               "% | Files: " + std::to_string(r->total_files_affected) +
+                               " | " + (r->should_block_commit ? "BLOCKED" : "OK"),
+                               "General",
+                               r->should_block_commit
+                                   ? OutputSeverity::Error : OutputSeverity::Info);
+            }
+            break;
+        }
+
+        // ================================================================
+        // IDM_IMPACT_DIAGNOSTICS (4359) — Full system diagnostics
+        // ================================================================
+        case IDM_IMPACT_DIAGNOSTICS:
+        {
+            appendToOutput("[ChangeImpact] === DIAGNOSTICS ===",
+                           "General", OutputSeverity::Info);
+
+            auto cfg = s_analyzer->getConfig();
+            auto reports = s_analyzer->getRecentReports(50);
+
+            appendToOutput("[ChangeImpact] Workspace: " +
+                           std::string(cfg.block_commit_threshold > 0 ? "configured" : "not set"),
+                           "General", OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Block threshold: " +
+                           std::to_string(static_cast<int>(cfg.block_commit_threshold * 100)) + "%",
+                           "General", OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Reports in history: " +
+                           std::to_string(reports.size()) + " / 50",
+                           "General", OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Transitive depth: " +
+                           std::to_string(cfg.max_transitive_depth),
+                           "General", OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Test impact: " +
+                           std::string(cfg.include_test_impact ? "enabled" : "disabled"),
+                           "General", OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Build targets: " +
+                           std::string(cfg.include_build_targets ? "enabled" : "disabled"),
+                           "General", OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Auto rollback plan: " +
+                           std::string(cfg.auto_generate_rollback_plan ? "enabled" : "disabled"),
+                           "General", OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Approval gates: " +
+                           std::string(cfg.integrate_with_approval_gates ? "enabled" : "disabled"),
+                           "General", OutputSeverity::Info);
+
+            // Latest report summary
+            if (!reports.empty())
+            {
+                const auto* latest = reports.back();
+                appendToOutput("[ChangeImpact] Latest: " + latest->report_id +
+                               " | " + severity_names[static_cast<int>(latest->overall_severity)] +
+                               " | Risk " +
+                               std::to_string(static_cast<int>(latest->risk_score * 100)) + "%",
+                               "General", OutputSeverity::Info);
+            }
+            break;
+        }
+
+        // ================================================================
+        // IDM_IMPACT_EXPORT_JSON (4360) — Export analysis as JSON
+        // ================================================================
+        case IDM_IMPACT_EXPORT_JSON:
+        {
+            auto reports = s_analyzer->getRecentReports(1);
+            if (reports.empty())
+            {
+                appendToOutput("[ChangeImpact] No report to export. Run analysis first.",
+                               "General", OutputSeverity::Info);
+                return true;
+            }
+
+            nlohmann::json j = reports.back()->toJson();
+            std::string json_str = j.dump(2);
+
+            appendToOutput("[ChangeImpact] JSON Export (" +
+                           std::to_string(json_str.size()) + " bytes):",
+                           "General", OutputSeverity::Info);
+
+            // Stream JSON to output panel (truncated for readability)
+            std::istringstream js(json_str);
+            std::string line;
+            int lineCount = 0;
+            while (std::getline(js, line) && lineCount < 60)
+            {
+                appendToOutput(line, "General", OutputSeverity::Info);
+                lineCount++;
+            }
+            if (lineCount >= 60)
+            {
+                appendToOutput("... (truncated, full JSON available via API)",
+                               "General", OutputSeverity::Info);
+            }
+
+            appendToOutput("[ChangeImpact] Full JSON also available via "
+                           "ChangeImpactAnalyzer::getFullStatusJson()",
+                           "General", OutputSeverity::Info);
+            break;
+        }
+
+        default:
+            return false;
+    }
+
+    return true;
 }

@@ -332,11 +332,11 @@ bool GoldSigner::isAlreadySigned(const std::string& filePath) {
     // execProcess sets error on failure, but we don't want that here
     std::string savedError = m_lastError;
 
-    std::string cmdLine = "\"" + m_signtoolPath + "\" verify /pa /q \"" + filePath + "\"";
-    int rc = std::system(cmdLine.c_str());
+    std::vector<std::string> verifyArgs = {"verify", "/pa", "/q", filePath};
+    bool verified = execProcess(m_signtoolPath, verifyArgs);
     m_lastError = savedError; // Restore
 
-    return (rc == 0);
+    return verified;
 #else
     (void)filePath;
     return false;
@@ -512,11 +512,16 @@ GoldSignResult GoldSigner::signFile(const std::string& filePath) {
     }
     else if (m_config.dualSign) {
         // Dual-sign: SHA1 pass first, then SHA256 appended
-        std::string sha1Cmd = m_signtoolPath + " " +
-                              buildSignArgs(filePath, "SHA1");
-        int rc1 = std::system(sha1Cmd.c_str());
-
-        if (rc1 != 0) {
+        // SHA1 pass via execProcess (safe: no shell interpolation)
+        std::string sha1ArgsStr = buildSignArgs(filePath, "SHA1");
+        std::vector<std::string> sha1Args;
+        // Split the arg string — buildSignArgs returns a space-delimited string
+        {
+            std::istringstream iss(sha1ArgsStr);
+            std::string tok;
+            while (iss >> tok) sha1Args.push_back(tok);
+        }
+        if (!execProcess(m_signtoolPath, sha1Args)) {
             result.errorDetail = "SHA1 signing failed";
             setError(result.errorDetail);
             if (onFileSigned) onFileSigned(filePath, false);
@@ -524,17 +529,19 @@ GoldSignResult GoldSigner::signFile(const std::string& filePath) {
             return result;
         }
 
-        // Append SHA256 signature
-        std::string sha256Args = buildSignArgs(filePath, "SHA256");
-        // Insert /as after "sign"
-        auto pos = sha256Args.find("sign ");
-        if (pos != std::string::npos)
-            sha256Args.insert(pos + 5, "/as ");
+        // Append SHA256 signature via execProcess
+        std::string sha256ArgsStr = buildSignArgs(filePath, "SHA256");
+        std::vector<std::string> sha256Args;
+        {
+            std::istringstream iss(sha256ArgsStr);
+            std::string tok;
+            while (iss >> tok) sha256Args.push_back(tok);
+        }
+        // Insert /as after "sign" token
+        auto it = std::find(sha256Args.begin(), sha256Args.end(), "sign");
+        if (it != sha256Args.end()) sha256Args.insert(it + 1, "/as");
 
-        std::string sha256Cmd = m_signtoolPath + " " + sha256Args;
-        int rc2 = std::system(sha256Cmd.c_str());
-
-        result.signed_ok = (rc2 == 0);
+        result.signed_ok = execProcess(m_signtoolPath, sha256Args);
         if (!result.signed_ok) {
             result.errorDetail = "SHA256 append signing failed";
             setError(result.errorDetail);
@@ -542,12 +549,16 @@ GoldSignResult GoldSigner::signFile(const std::string& filePath) {
     }
     else {
         // Standard single-pass signing
-        std::string cmd = m_signtoolPath + " " +
-                          buildSignArgs(filePath, m_config.digestAlgorithm);
-        int rc = std::system(cmd.c_str());
-        result.signed_ok = (rc == 0);
+        std::string singleArgsStr = buildSignArgs(filePath, m_config.digestAlgorithm);
+        std::vector<std::string> singleArgs;
+        {
+            std::istringstream iss(singleArgsStr);
+            std::string tok;
+            while (iss >> tok) singleArgs.push_back(tok);
+        }
+        result.signed_ok = execProcess(m_signtoolPath, singleArgs);
         if (!result.signed_ok) {
-            result.errorDetail = "signtool exited with code " + std::to_string(rc);
+            result.errorDetail = "signtool signing failed";
             setError(result.errorDetail);
         }
     }

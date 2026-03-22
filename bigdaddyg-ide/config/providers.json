@@ -1,25 +1,25 @@
 {
   "bigdaddyg": {
-    "url": "http://localhost:11434",
+    "url": "http://127.0.0.1:11434",
     "model": "bigdaddyg",
     "enabled": true
   },
   "copilot": {
     "enabled": false,
     "token": "",
-    "url": "http://localhost:11434",
+    "url": "http://127.0.0.1:11434",
     "model": "codellama"
   },
   "amazonq": {
     "enabled": false,
     "region": "us-east-1",
-    "url": "http://localhost:11434",
+    "url": "http://127.0.0.1:11434",
     "model": "qwen2.5-coder"
   },
   "cursor": {
     "enabled": false,
     "apiKey": "",
-    "url": "http://localhost:11434",
+    "url": "http://127.0.0.1:11434",
     "model": "deepseek-coder"
   },
   "experimental": {

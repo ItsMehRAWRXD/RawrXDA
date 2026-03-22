@@ -150,21 +150,21 @@ class QtRemovalProcessor:
             if not has_qt:
                 return False
             
-            # 1. Add QtReplacements.hpp include (after #pragma once)
+            # 1. Add RawrCompatIo.hpp include (after #pragma once)
             if '#pragma once' in content:
                 content = content.replace(
                     '#pragma once',
-                    '#pragma once\n#include "QtReplacements.hpp"',
+                    '#pragma once\n#include "RawrCompatIo.hpp"',
                     1
                 )
             elif content.startswith('#ifndef'):
                 # Header guard style
                 lines = content.split('\n', 3)
                 if len(lines) >= 3:
-                    content = '\n'.join(lines[:3]) + '\n#include "QtReplacements.hpp"\n' + '\n'.join(lines[3:])
+                    content = '\n'.join(lines[:3]) + '\n#include "RawrCompatIo.hpp"\n' + '\n'.join(lines[3:])
             else:
                 # No header guards - add at very top
-                content = '#include "QtReplacements.hpp"\n' + content
+                content = '#include "RawrCompatIo.hpp"\n' + content
             
             # 2. Remove all Qt includes
             for qt_inc in self.QT_INCLUDES:
