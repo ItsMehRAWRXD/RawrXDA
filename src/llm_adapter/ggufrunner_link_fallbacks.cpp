@@ -1,18 +1,36 @@
 #include "GGUFRunner.h"
 
 #include <cstdint>
+#include <string>
+
+namespace {
+struct GgufRunnerFallbackSignals {
+    uint64_t chunkEvents = 0;
+    uint64_t completeEvents = 0;
+    uint64_t loadedEvents = 0;
+    bool lastSuccess = false;
+    std::string lastChunk;
+    std::string lastPath;
+    int64_t lastSizeBytes = 0;
+};
+
+GgufRunnerFallbackSignals g_signals{};
+}
 
 void GGUFRunner::tokenChunkGenerated(const std::string& chunk) {
-    (void)chunk;
+    g_signals.chunkEvents += 1;
+    g_signals.lastChunk = chunk;
 }
 
 void GGUFRunner::inferenceComplete(bool success) {
-    (void)success;
+    g_signals.completeEvents += 1;
+    g_signals.lastSuccess = success;
 }
 
 void GGUFRunner::modelLoaded(const std::string& path, int64_t sizeBytes) {
-    (void)path;
-    (void)sizeBytes;
+    g_signals.loadedEvents += 1;
+    g_signals.lastPath = path;
+    g_signals.lastSizeBytes = sizeBytes;
 }
 
 extern "C" void matmul_kernel_avx2(float* A, float* B, float* C, int N, int M, int K, bool accumulate) {
