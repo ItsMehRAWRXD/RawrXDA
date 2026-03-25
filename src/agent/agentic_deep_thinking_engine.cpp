@@ -2914,6 +2914,7 @@ AgenticDeepThinkingEngine::AgentResult AgenticDeepThinkingEngine::selectBestByVo
     }
 
     return *best;
+<<<<<<< HEAD
 }
 
 AgenticDeepThinkingEngine::ThinkingResult
@@ -3000,6 +3001,8 @@ float AgenticDeepThinkingEngine::calculateEnhancedConfidence(const ThinkingResul
     }
     confidence += result.quantumOptimizationBonus;
     return std::clamp(confidence, 0.0f, 1.0f);
+=======
+>>>>>>> origin/main
 }
 
 // ============================================================================
@@ -3284,5 +3287,9 @@ std::vector<std::string> AgenticDeepThinkingEngine::findDisagreements(
     }
     
     return disagreements;
+<<<<<<< HEAD
 }
 #endif
+=======
+}
+>>>>>>> origin/main

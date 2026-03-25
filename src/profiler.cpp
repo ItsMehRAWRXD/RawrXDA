@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 #include "profiler.h"
 #include "profiling/AdvancedPerformanceProfiler.h"
 
@@ -564,3 +565,70 @@ std::string Profiler::getProfilingSummary() const {
     ss << "Peak Memory: " << (m_peakAllocated / (1024.0 * 1024.0)) << " MB\n";
     return ss.str();
 }
+=======
+#include "profiler.h"
+#include <fstream>
+#include <iostream>
+
+Profiler::Profiler() : m_isProfiling(false), m_memoryAllocated(0) {
+}
+
+void Profiler::startProfiling() {
+    m_isProfiling = true;
+    m_startTime = std::chrono::steady_clock::now();
+}
+
+void Profiler::stopProfiling() {
+    m_isProfiling = false;
+}
+
+void Profiler::markPhaseStart(const std::string& phaseName) {
+    if (!m_isProfiling) return;
+    m_phaseStarts[phaseName] = std::chrono::steady_clock::now();
+}
+
+void Profiler::markPhaseEnd(const std::string& phaseName) {
+     if (!m_isProfiling) return;
+     // In real implementation, calculate delta and store in stats
+}
+
+void Profiler::recordBatchCompleted(int sampleCount, int tokenCount) {
+    if (!m_isProfiling) return;
+    // Store throughput
+}
+
+void Profiler::recordMemoryAllocation(size_t bytes) {
+    m_memoryAllocated += bytes;
+}
+
+void Profiler::recordMemoryDeallocation(size_t bytes) {
+    if (bytes > m_memoryAllocated) m_memoryAllocated = 0;
+    else m_memoryAllocated -= bytes;
+}
+
+void Profiler::updateGpuMetrics(float gpuUsagePercent, float gpuMemoryMB) {
+    // No-op for now
+}
+
+Profiler::ProfileSnapshot Profiler::getCurrentSnapshot() const {
+    ProfileSnapshot s;
+    s.timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+    s.memoryUsageMB = static_cast<float>(m_memoryAllocated) / (1024.0f * 1024.0f);
+    return s;
+}
+
+json Profiler::getProfilingReport() const {
+    return {
+        {"status", "Profiling completed"},
+        {"duration_sec", 0}
+    };
+}
+
+bool Profiler::exportReport(const std::string& filePath) const {
+    std::ofstream f(filePath);
+    if (!f.is_open()) return false;
+    f << getProfilingReport().dump(4);
+    return true;
+}
+>>>>>>> origin/main

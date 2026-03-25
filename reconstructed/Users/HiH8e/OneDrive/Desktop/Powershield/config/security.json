@@ -1,0 +1,41 @@
+{
+  "EncryptSensitiveData": true,
+  "MaxErrorsPerMinute": 10,
+  "DangerousExtensions": [
+    ".exe",
+    ".bat",
+    ".cmd",
+    ".com",
+    ".scr",
+    ".pif",
+    ".vbs",
+    ".js",
+    ".jar",
+    ".msi"
+  ],
+  "TwoFactorAuth": false,
+  "SecurityCheckInterval": 60000,
+  "StealthMode": true,
+  "ValidateAllInputs": true,
+  "LogToEventLog": true,
+  "AuthenticationRequired": false,
+  "MaxFileSize": 10485760,
+  "AllowedExtensions": [
+    ".txt",
+    ".md",
+    ".ps1",
+    ".json",
+    ".xml",
+    ".yaml",
+    ".yml",
+    ".log"
+  ],
+  "MaxLoginAttempts": 3,
+  "ProcessHiding": true,
+  "EnableAuditTrail": true,
+  "AntiForensics": true,
+  "RequireAuthentication": false,
+  "SessionTimeout": 3600,
+  "LogSecurityEvents": true,
+  "SecureConnections": true
+}

@@ -1,0 +1,152 @@
+^E:\RAWRXD\BUILD_UNIVERSAL\_DEPS\ZLIB-SUBBUILD\CMAKEFILES\5269F2E137BE59C5A30C8AFA5235CB52\ZLIB-POPULATE-MKDIR.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -Dcfgdir=/Debug -P E:/RawrXD/build_universal/_deps/zlib-subbuild/zlib-populate-prefix/tmp/zlib-populate-mkdirs.cmake
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch E:/RawrXD/build_universal/_deps/zlib-subbuild/zlib-populate-prefix/src/zlib-populate-stamp/Debug/zlib-populate-mkdir
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^E:\RAWRXD\BUILD_UNIVERSAL\_DEPS\ZLIB-SUBBUILD\CMAKEFILES\5269F2E137BE59C5A30C8AFA5235CB52\ZLIB-POPULATE-DOWNLOAD.RULE
+setlocal
+cd E:\RawrXD\build_universal\_deps
+if %errorlevel% neq 0 goto :cmEnd
+E:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -DCMAKE_MESSAGE_LOG_LEVEL=VERBOSE -P E:/RawrXD/build_universal/_deps/zlib-subbuild/zlib-populate-prefix/src/zlib-populate-stamp/download-zlib-populate.cmake
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -DCMAKE_MESSAGE_LOG_LEVEL=VERBOSE -P E:/RawrXD/build_universal/_deps/zlib-subbuild/zlib-populate-prefix/src/zlib-populate-stamp/verify-zlib-populate.cmake
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -DCMAKE_MESSAGE_LOG_LEVEL=VERBOSE -P E:/RawrXD/build_universal/_deps/zlib-subbuild/zlib-populate-prefix/src/zlib-populate-stamp/extract-zlib-populate.cmake
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch E:/RawrXD/build_universal/_deps/zlib-subbuild/zlib-populate-prefix/src/zlib-populate-stamp/Debug/zlib-populate-download
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^E:\RAWRXD\BUILD_UNIVERSAL\_DEPS\ZLIB-SUBBUILD\CMAKEFILES\5269F2E137BE59C5A30C8AFA5235CB52\ZLIB-POPULATE-UPDATE.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch E:/RawrXD/build_universal/_deps/zlib-subbuild/zlib-populate-prefix/src/zlib-populate-stamp/Debug/zlib-populate-update
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^E:\RAWRXD\BUILD_UNIVERSAL\_DEPS\ZLIB-SUBBUILD\CMAKEFILES\5269F2E137BE59C5A30C8AFA5235CB52\ZLIB-POPULATE-PATCH.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch E:/RawrXD/build_universal/_deps/zlib-subbuild/zlib-populate-prefix/src/zlib-populate-stamp/Debug/zlib-populate-patch
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^E:\RAWRXD\BUILD_UNIVERSAL\_DEPS\ZLIB-SUBBUILD\CMAKEFILES\5269F2E137BE59C5A30C8AFA5235CB52\ZLIB-POPULATE-CONFIGURE.RULE
+setlocal
+cd E:\RawrXD\build_universal\_deps\zlib-build
+if %errorlevel% neq 0 goto :cmEnd
+E:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch E:/RawrXD/build_universal/_deps/zlib-subbuild/zlib-populate-prefix/src/zlib-populate-stamp/Debug/zlib-populate-configure
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^E:\RAWRXD\BUILD_UNIVERSAL\_DEPS\ZLIB-SUBBUILD\CMAKEFILES\5269F2E137BE59C5A30C8AFA5235CB52\ZLIB-POPULATE-BUILD.RULE
+setlocal
+cd E:\RawrXD\build_universal\_deps\zlib-build
+if %errorlevel% neq 0 goto :cmEnd
+E:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch E:/RawrXD/build_universal/_deps/zlib-subbuild/zlib-populate-prefix/src/zlib-populate-stamp/Debug/zlib-populate-build
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^E:\RAWRXD\BUILD_UNIVERSAL\_DEPS\ZLIB-SUBBUILD\CMAKEFILES\5269F2E137BE59C5A30C8AFA5235CB52\ZLIB-POPULATE-INSTALL.RULE
+setlocal
+cd E:\RawrXD\build_universal\_deps\zlib-build
+if %errorlevel% neq 0 goto :cmEnd
+E:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch E:/RawrXD/build_universal/_deps/zlib-subbuild/zlib-populate-prefix/src/zlib-populate-stamp/Debug/zlib-populate-install
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^E:\RAWRXD\BUILD_UNIVERSAL\_DEPS\ZLIB-SUBBUILD\CMAKEFILES\5269F2E137BE59C5A30C8AFA5235CB52\ZLIB-POPULATE-TEST.RULE
+setlocal
+cd E:\RawrXD\build_universal\_deps\zlib-build
+if %errorlevel% neq 0 goto :cmEnd
+E:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch E:/RawrXD/build_universal/_deps/zlib-subbuild/zlib-populate-prefix/src/zlib-populate-stamp/Debug/zlib-populate-test
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^E:\RAWRXD\BUILD_UNIVERSAL\_DEPS\ZLIB-SUBBUILD\CMAKEFILES\B8D33B8381EE9F6DD0FF2C58987BC185\ZLIB-POPULATE-COMPLETE.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E make_directory E:/RawrXD/build_universal/_deps/zlib-subbuild/CMakeFiles/Debug
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch E:/RawrXD/build_universal/_deps/zlib-subbuild/CMakeFiles/Debug/zlib-populate-complete
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch E:/RawrXD/build_universal/_deps/zlib-subbuild/zlib-populate-prefix/src/zlib-populate-stamp/Debug/zlib-populate-done
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^E:\RAWRXD\BUILD_UNIVERSAL\_DEPS\ZLIB-SUBBUILD\CMAKEFILES\729953E0F5E3EFBBBD626D478A669860\ZLIB-POPULATE.RULE
+setlocal
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^E:\RAWRXD\BUILD_UNIVERSAL\_DEPS\ZLIB-SUBBUILD\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SE:/RawrXD/build_universal/_deps/zlib-subbuild -BE:/RawrXD/build_universal/_deps/zlib-subbuild --check-stamp-file E:/RawrXD/build_universal/_deps/zlib-subbuild/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

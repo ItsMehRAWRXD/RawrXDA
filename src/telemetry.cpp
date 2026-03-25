@@ -1,5 +1,8 @@
 #include "telemetry.h"
+<<<<<<< HEAD
 #include "win32app/IDELogger.h"
+=======
+>>>>>>> origin/main
 #if defined(_WIN32) && defined(__has_include)
 #  if __has_include(<windows.h>)
 #    include <windows.h>
@@ -80,6 +83,7 @@ void Telemetry::recordEvent(const std::string& event_name, const nlohmann::json&
     event["timestamp"] = CurrentISOTimestamp();
     event["metadata"] = metadata;
     events_.push_back(event);
+<<<<<<< HEAD
     LOG_INFO(std::string("Telemetry event recorded: ") + event_name);
 
     // Forward to AgenticObservability
@@ -93,6 +97,10 @@ void Telemetry::recordEvent(const std::string& event_name, const nlohmann::json&
             AgenticObservability::instance().updateAgentLoopIterationTime(metadata["iteration_time_ms"].get<float>());
         }
     }
+=======
+    // In a production system we would also stream this event to a logger.
+    std::cout << "Telemetry event recorded: " << event_name << std::endl;
+>>>>>>> origin/main
 }
 
 bool Telemetry::saveTelemetry(const std::string& filepath) {

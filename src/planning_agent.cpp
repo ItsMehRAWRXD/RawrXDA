@@ -5,6 +5,7 @@
 #include <sstream>
 #include <chrono>
 #include <random>
+<<<<<<< HEAD
 #include <thread>
 #include <queue>
 #include <unordered_set>
@@ -12,6 +13,8 @@
 #include <algorithm>
 #include <mutex>
 #include <fstream>
+=======
+>>>>>>> origin/main
 
 using json = nlohmann::json;
 
@@ -158,16 +161,24 @@ void PlanningAgent::generateCodePlan(const std::string& goal) {
     t1.id = generateUUID();
     t1.title = "Analyze Requirements";
     t1.status = "pending";
+<<<<<<< HEAD
     t1.associatedAction.type = ActionType::SearchFiles;
     t1.associatedAction.params["query"] = goal;
     t1.associatedAction.description = "Search codebase for context: " + goal;
     m_tasks.push_back(t1);
 
+=======
+    t1.associatedAction.type = ActionType::SearchFiles; // Search for context
+    t1.associatedAction.params["query"] = goal;
+    m_tasks.push_back(t1);
+    
+>>>>>>> origin/main
     // 2. Implement
     PlanningTask t2;
     t2.id = generateUUID();
     t2.title = "Implement Code";
     t2.status = "pending";
+<<<<<<< HEAD
     t2.dependsOn.push_back(t1.id);
     t2.associatedAction.type = ActionType::FileEdit;
     t2.associatedAction.description = "Implement: " + goal;
@@ -841,4 +852,48 @@ void PlanningAgent::createRollbackPoint(PlanningTask& task) {
         task.rollbackFilePath = path;
         task.canRollback = true;
     }
+=======
+    t2.associatedAction.type = ActionType::FileEdit; // Placeholder for edit
+    t2.associatedAction.description = "Implement: " + goal;
+    m_tasks.push_back(t2);
+    
+    // 3. Build Not included in default plan to avoid errors, 
+    // but user can add it.
+}
+
+void PlanningAgent::generateDebugPlan(const std::string& goal) {
+     // 1. Reproduce (Search)
+    PlanningTask t1;
+    t1.id = generateUUID();
+    t1.title = "Search for Error Context";
+    t1.status = "pending";
+    t1.associatedAction.type = ActionType::SearchFiles; 
+    t1.associatedAction.params["query"] = goal;
+    m_tasks.push_back(t1);
+}
+
+void PlanningAgent::generateGenericPlan(const std::string& goal) {
+    PlanningTask t1;
+    t1.id = generateUUID();
+    t1.title = "Research Strategy";
+    t1.status = "pending";
+    t1.associatedAction.type = ActionType::Unknown; // Abstract
+    m_tasks.push_back(t1);
+}
+
+bool PlanningAgent::isComplete() const {
+    for (const auto& task : m_tasks) {
+        if (task.status != "completed") return false;
+    }
+    return !m_tasks.empty();
+}
+
+std::string PlanningAgent::generateSummary() const {
+    std::stringstream ss;
+    ss << "Plan Status:\n";
+    for (const auto& task : m_tasks) {
+        ss << " - " << task.title << ": " << task.status << "\n";
+    }
+    return ss.str();
+>>>>>>> origin/main
 }

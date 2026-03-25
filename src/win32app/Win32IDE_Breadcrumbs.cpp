@@ -15,6 +15,17 @@
 
 // SCAFFOLD_028: Breadcrumbs and navigation
 
+<<<<<<< HEAD
+=======
+
+#ifndef RAWRXD_LOG_INFO
+#define RAWRXD_LOG_INFO(msg) do { \
+    std::ostringstream _oss; _oss << "[INFO] " << msg << "\n"; \
+    OutputDebugStringA(_oss.str().c_str()); \
+} while(0)
+#endif
+
+>>>>>>> origin/main
 // Breadcrumb bar colors (VS Code dark theme)
 static const COLORREF BC_BG           = RGB(37, 37, 38);
 static const COLORREF BC_TEXT         = RGB(169, 169, 169);

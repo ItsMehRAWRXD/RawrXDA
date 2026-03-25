@@ -127,8 +127,12 @@ bool CoreGenerator::GenerateWithAllFeatures(const std::string& name, LanguageTyp
         std::cerr << "[Core Generator] Batch Processing requires a Professional license.\n";
         return false;
     }
+<<<<<<< HEAD
     auto* g = EnsureGenerator(generator);
     if (!g) return false;
+=======
+    if (!generator) return false;
+>>>>>>> origin/main
     // Generate base project, then layer tests + CI + Docker
     bool ok = g->GenerateWithTests(name, language, output_dir);
     if (!ok) return false;

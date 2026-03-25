@@ -1,3 +1,4 @@
+<<<<<<< HEAD:Full Source/runoff/docs_txt_ps1/part_0001/build_output3.txt
 [1/915] Building CXX object CMakeFiles\RawrEngine.dir\src\stubs.cpp.obj
 [2/915] Building CXX object CMakeFiles\RawrEngine.dir\src\compression_interface.cpp.obj
 [3/915] Building CXX object CMakeFiles\RawrEngine.dir\src\engine\inference_kernels.cpp.obj
@@ -967,3 +968,76 @@ Copyright (C) Microsoft Corporation.  All rights reserved.
 [377/915] Building CXX object CMakeFiles\RawrXD-InferenceEngine.dir\src\cpu_inference_engine.cpp.obj
 [378/915] Building CXX object CMakeFiles\RawrXD-InferenceEngine.dir\src\utils\Diagnostics.cpp.obj
 [379/915] Building CXX object CMakeFiles\RawrXD-InferenceEngine.dir\src\engine\core_generator.cpp.obj
+=======
+[1/1] Linking CXX executable RawrEngine.exe
+FAILED: RawrEngine.exe 
+C:\WINDOWS\system32\cmd.exe /C "cd . && "C:\Program Files\CMake\bin\cmake.exe" -E vs_link_exe --msvc-ver=1950 --intdir=CMakeFiles\RawrEngine.dir --rc=C:\PROGRA~2\WI3CF2~1\10\bin\100226~1.0\x64\rc.exe --mt=C:\PROGRA~2\WI3CF2~1\10\bin\100226~1.0\x64\mt.exe --manifests  -- C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\link.exe /nologo @CMakeFiles\RawrEngine.rsp  /out:RawrEngine.exe /implib:RawrEngine.lib /pdb:RawrEngine.pdb /version:0.0 /machine:x64 /INCREMENTAL:NO /subsystem:console /LARGEADDRESSAWARE:NO && cd ."
+LINK: command "C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\link.exe /nologo @CMakeFiles\RawrEngine.rsp /out:RawrEngine.exe /implib:RawrEngine.lib /pdb:RawrEngine.pdb /version:0.0 /machine:x64 /INCREMENTAL:NO /subsystem:console /LARGEADDRESSAWARE:NO /MANIFEST:EMBED,ID=1" failed (exit code 1120) with the following output:
+RawrXD_EnterpriseLicense.obj : error LNK2005: g_EnterpriseFeatures already defined in RawrXD_EnterpriseLicense.asm.obj
+
+RawrXD_EnterpriseLicense.obj : error LNK2005: g_800B_Unlocked already defined in RawrXD_EnterpriseLicense.asm.obj
+
+RawrXD_EnterpriseLicense.obj : error LNK2005: Enterprise_InitLicenseSystem already defined in RawrXD_EnterpriseLicense.asm.obj
+
+RawrXD_EnterpriseLicense.obj : error LNK2005: Enterprise_ValidateLicense already defined in RawrXD_EnterpriseLicense.asm.obj
+
+RawrXD_EnterpriseLicense.obj : error LNK2005: Enterprise_CheckFeature already defined in RawrXD_EnterpriseLicense.asm.obj
+
+RawrXD_EnterpriseLicense.obj : error LNK2005: Enterprise_Unlock800BDualEngine already defined in RawrXD_EnterpriseLicense.asm.obj
+
+RawrXD_EnterpriseLicense.obj : error LNK2005: Enterprise_RuntimeIntegrityCheck already defined in RawrXD_EnterpriseLicense.asm.obj
+
+RawrXD_EnterpriseLicense.obj : error LNK2005: Enterprise_GenerateHardwareHash already defined in RawrXD_EnterpriseLicense.asm.obj
+
+RawrXD_EnterpriseLicense.obj : error LNK2005: Enterprise_InstallLicense already defined in RawrXD_EnterpriseLicense.asm.obj
+
+RawrXD_EnterpriseLicense.obj : error LNK2005: Enterprise_GetLicenseStatus already defined in RawrXD_EnterpriseLicense.asm.obj
+
+RawrXD_EnterpriseLicense.obj : error LNK2005: Enterprise_GetFeatureString already defined in RawrXD_EnterpriseLicense.asm.obj
+
+RawrXD_EnterpriseLicense.obj : error LNK2005: Enterprise_Shutdown already defined in RawrXD_EnterpriseLicense.asm.obj
+
+RawrXD_EnterpriseLicense.obj : error LNK2005: Titan_CheckEnterpriseUnlock already defined in RawrXD_EnterpriseLicense.asm.obj
+
+RawrXD_EnterpriseLicense.obj : error LNK2005: Streaming_CheckEnterpriseBudget already defined in RawrXD_EnterpriseLicense.asm.obj
+
+RawrXD_License_Shield.obj : error LNK2005: IsDebuggerPresent_Native already defined in RawrXD_License_Shield.asm.obj
+
+RawrXD_License_Shield.obj : error LNK2005: Shield_TimingCheck already defined in RawrXD_License_Shield.asm.obj
+
+RawrXD_License_Shield.obj : error LNK2005: Shield_GenerateHWID already defined in RawrXD_License_Shield.asm.obj
+
+RawrXD_License_Shield.obj : error LNK2005: Shield_AES_DecryptShim already defined in RawrXD_License_Shield.asm.obj
+
+RawrXD_License_Shield.obj : error LNK2005: Shield_VerifyIntegrity already defined in RawrXD_License_Shield.asm.obj
+
+RawrXD_License_Shield.obj : error LNK2005: Unlock_800B_Kernel already defined in RawrXD_License_Shield.asm.obj
+
+RawrXD_License_Shield.obj : error LNK2005: Shield_CheckHeapFlags already defined in RawrXD_License_Shield.asm.obj
+
+RawrXD_License_Shield.obj : error LNK2005: Shield_CheckKernelDebug already defined in RawrXD_License_Shield.asm.obj
+
+RawrXD_License_Shield.obj : error LNK2005: Shield_MurmurHash3_x64 already defined in RawrXD_License_Shield.asm.obj
+
+RawrXD_License_Shield.obj : error LNK2005: Shield_DecryptKernelEntry already defined in RawrXD_License_Shield.asm.obj
+
+RawrXD_License_Shield.obj : error LNK2005: Shield_InitializeDefense already defined in RawrXD_License_Shield.asm.obj
+
+license_enforcement.cpp.obj : error LNK2019: unresolved external symbol "public: static class RawrXD::License::EnterpriseLicenseV2 & __cdecl RawrXD::License::EnterpriseLicenseV2::Instance(void)" (?Instance@EnterpriseLicenseV2@License@RawrXD@@SAAEAV123@XZ) referenced in function "public: struct RawrXD::Enforce::EnforcementResult __cdecl RawrXD::Enforce::LicenseEnforcer::checkGate(enum RawrXD::License::FeatureID,char const *)" (?checkGate@LicenseEnforcer@Enforce@RawrXD@@QEAA?AUEnforcementResult@23@W4FeatureID@License@3@PEBD@Z)
+
+feature_flags_runtime.cpp.obj : error LNK2001: unresolved external symbol "public: static class RawrXD::License::EnterpriseLicenseV2 & __cdecl RawrXD::License::EnterpriseLicenseV2::Instance(void)" (?Instance@EnterpriseLicenseV2@License@RawrXD@@SAAEAV123@XZ)
+
+license_enforcement.cpp.obj : error LNK2019: unresolved external symbol "public: enum RawrXD::License::LicenseTierV2 __cdecl RawrXD::License::EnterpriseLicenseV2::currentTier(void)const " (?currentTier@EnterpriseLicenseV2@License@RawrXD@@QEBA?AW4LicenseTierV2@23@XZ) referenced in function "public: struct RawrXD::Enforce::EnforcementResult __cdecl RawrXD::Enforce::LicenseEnforcer::checkGate(enum RawrXD::License::FeatureID,char const *)" (?checkGate@LicenseEnforcer@Enforce@RawrXD@@QEAA?AUEnforcementResult@23@W4FeatureID@License@3@PEBD@Z)
+
+license_enforcement.cpp.obj : error LNK2019: unresolved external symbol "struct RawrXD::License::FeatureDefV2 const * const RawrXD::License::g_FeatureManifest" (?g_FeatureManifest@License@RawrXD@@3QBUFeatureDefV2@12@B) referenced in function "public: struct RawrXD::Enforce::EnforcementResult __cdecl RawrXD::Enforce::LicenseEnforcer::checkGate(enum RawrXD::License::FeatureID,char const *)" (?checkGate@LicenseEnforcer@Enforce@RawrXD@@QEAA?AUEnforcementResult@23@W4FeatureID@License@3@PEBD@Z)
+
+feature_flags_runtime.cpp.obj : error LNK2001: unresolved external symbol "struct RawrXD::License::FeatureDefV2 const * const RawrXD::License::g_FeatureManifest" (?g_FeatureManifest@License@RawrXD@@3QBUFeatureDefV2@12@B)
+
+feature_flags_runtime.cpp.obj : error LNK2019: unresolved external symbol "public: struct RawrXD::License::FeatureMask __cdecl RawrXD::License::EnterpriseLicenseV2::currentMask(void)const " (?currentMask@EnterpriseLicenseV2@License@RawrXD@@QEBA?AUFeatureMask@23@XZ) referenced in function "public: unsigned int __cdecl RawrXD::Flags::FeatureFlagsRuntime::enabledCount(void)const " (?enabledCount@FeatureFlagsRuntime@Flags@RawrXD@@QEBAIXZ)
+
+
+RawrEngine.exe : fatal error LNK1120: 4 unresolved externals
+
+
+ninja: build stopped: subcommand failed.
+>>>>>>> origin/main:build_output3.txt

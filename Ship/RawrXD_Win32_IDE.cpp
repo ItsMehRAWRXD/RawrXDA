@@ -29,6 +29,7 @@
 // RawrXD Settings (API Key Manager)
 #include "RawrXD_SettingsDialog.hpp"
 
+<<<<<<< HEAD
 // Smoke-test markers for command palette/WM_COMMAND wiring:
 // Agent: Start Loop (4100), Agent: Execute Command (4101), Agent: Bounded Agent Loop (4120), Autonomy: Toggle (4150)
 
@@ -42,6 +43,8 @@ static void RunAutonomousMode() {
     AppendWindowText(g_hwndOutput, L"[Agent] Agent loop ready — use chat panel to interact.\r\n");
 }
 
+=======
+>>>>>>> origin/main
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "gdi32.lib")
 #pragma comment(lib, "shell32.lib")

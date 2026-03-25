@@ -21,6 +21,10 @@
 #include "Win32IDE.h"
 #include "Win32IDE_SubAgent.h"
 #include <algorithm>
+<<<<<<< HEAD
+=======
+#include <memory>
+>>>>>>> origin/main
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -509,14 +513,22 @@ bool AgenticBridge::StartAgentLoop(const std::string& initialPrompt, int maxIter
     METRICS.increment("agentic.loops_started");
     LOG_INFO("StartAgentLoop: " + initialPrompt);
 
+<<<<<<< HEAD
     if (!m_initialized)
     {
+=======
+    if (!m_initialized) {
+>>>>>>> origin/main
         LOG_ERROR("Cannot start agent loop - not initialized");
         return false;
     }
 
+<<<<<<< HEAD
     if (m_agentLoopRunning)
     {
+=======
+    if (m_agentLoopRunning) {
+>>>>>>> origin/main
         LOG_WARNING("Agent loop already running");
         return false;
     }
@@ -569,12 +581,21 @@ void AgenticBridge::StopAgentLoop()
 // Status & Capability Queries
 // ============================================================================
 
+<<<<<<< HEAD
 std::vector<std::string> AgenticBridge::GetAvailableTools()
 {
     return {"shell",       "powershell",       "run_in_terminal", "read_file",    "write_file",
             "list_dir",    "list_directory",   "grep_files",      "search_files", "reference_symbol",
             "load_model",  "model_status",     "web_search",      "git_status",   "task_orchestrator",
             "runSubagent", "manage_todo_list", "chain",           "hexmag_swarm"};
+=======
+std::vector<std::string> AgenticBridge::GetAvailableTools() {
+    return {
+        "shell", "powershell", "read_file", "write_file",
+        "web_search", "list_dir", "git_status", "task_orchestrator",
+        "runSubagent", "manage_todo_list", "chain", "hexmag_swarm"
+    };
+>>>>>>> origin/main
 }
 
 std::string AgenticBridge::GetAgentStatus()
@@ -612,6 +633,7 @@ void AgenticBridge::SetModel(const std::string& modelName)
 {
     m_modelName = modelName;
     LOG_INFO("Model set to: " + modelName);
+<<<<<<< HEAD
 
     auto endsWith = [](const std::string& s, const std::string& ext) -> bool
     {
@@ -647,6 +669,14 @@ void AgenticBridge::SetModel(const std::string& modelName)
         auto& orch = RawrXD::Agent::OrchestratorBridge::Instance();
         orch.SetModel(modelName);
         orch.SetFIMModel(modelName);
+=======
+    // Only load as GGUF path when it looks like a file path (agentic autonomous: Ollama tags are valid, don't LoadModel)
+    if (g_cpuEngine && !modelName.empty()) {
+        bool isPath = modelName.find_first_of("/\\") != std::string::npos
+                   || modelName.size() > 4 && modelName.compare(modelName.size() - 5, 5, ".gguf") == 0;
+        if (isPath)
+            g_cpuEngine->LoadModel(modelName);
+>>>>>>> origin/main
     }
 }
 
@@ -674,15 +704,23 @@ bool AgenticBridge::SpawnPowerShellProcess(const std::string& scriptPath, const 
     sa.bInheritHandle = TRUE;
     sa.lpSecurityDescriptor = NULL;
 
+<<<<<<< HEAD
     if (!CreatePipe(&m_hStdoutRead, &m_hStdoutWrite, &sa, 0))
     {
+=======
+    if (!CreatePipe(&m_hStdoutRead, &m_hStdoutWrite, &sa, 0)) {
+>>>>>>> origin/main
         LOG_ERROR("Failed to create stdout pipe");
         return false;
     }
     SetHandleInformation(m_hStdoutRead, HANDLE_FLAG_INHERIT, 0);
 
+<<<<<<< HEAD
     if (!CreatePipe(&m_hStdinRead, &m_hStdinWrite, &sa, 0))
     {
+=======
+    if (!CreatePipe(&m_hStdinRead, &m_hStdinWrite, &sa, 0)) {
+>>>>>>> origin/main
         LOG_ERROR("Failed to create stdin pipe");
         CloseHandle(m_hStdoutRead);
         CloseHandle(m_hStdoutWrite);
@@ -704,8 +742,12 @@ bool AgenticBridge::SpawnPowerShellProcess(const std::string& scriptPath, const 
     BOOL success = CreateProcessA(NULL, const_cast<char*>(cmdLine.c_str()), NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL,
                                   NULL, &si, &pi);
 
+<<<<<<< HEAD
     if (!success)
     {
+=======
+    if (!success) {
+>>>>>>> origin/main
         LOG_ERROR("Failed to create PowerShell process");
         CloseHandle(m_hStdoutRead);
         CloseHandle(m_hStdoutWrite);
@@ -726,8 +768,12 @@ bool AgenticBridge::ReadProcessOutput(std::string& output, DWORD timeoutMs)
     LOG_DEBUG("Reading process output");
     output.clear();
 
+<<<<<<< HEAD
     if (!m_hStdoutRead)
     {
+=======
+    if (!m_hStdoutRead) {
+>>>>>>> origin/main
         LOG_ERROR("No stdout handle");
         return false;
     }
@@ -743,14 +789,19 @@ bool AgenticBridge::ReadProcessOutput(std::string& output, DWORD timeoutMs)
     DWORD startTime = GetTickCount();
     constexpr DWORD kMaxChunk = static_cast<DWORD>(sizeof(buffer) - 1);
 
+<<<<<<< HEAD
     while (true)
     {
+=======
+    while (true) {
+>>>>>>> origin/main
         DWORD available = 0;
         if (!PeekNamedPipe(m_hStdoutRead, NULL, 0, NULL, &available, NULL))
         {
             break;
         }
 
+<<<<<<< HEAD
         if (available > 0)
         {
             if (ReadFile(m_hStdoutRead, buffer, kMaxChunk, &bytesRead, NULL) && bytesRead > 0)
@@ -762,17 +813,29 @@ bool AgenticBridge::ReadProcessOutput(std::string& output, DWORD timeoutMs)
             }
             else
             {
+=======
+        if (available > 0) {
+            if (ReadFile(m_hStdoutRead, buffer, sizeof(buffer) - 1, &bytesRead, NULL) && bytesRead > 0) {
+                buffer[bytesRead] = '\0';
+                output += buffer;
+            } else {
+>>>>>>> origin/main
                 break;
             }
         }
 
+<<<<<<< HEAD
         if (GetTickCount() - startTime > timeoutMs)
         {
+=======
+        if (GetTickCount() - startTime > timeoutMs) {
+>>>>>>> origin/main
             LOG_WARNING("ReadProcessOutput timeout");
             break;
         }
 
         DWORD exitCode;
+<<<<<<< HEAD
         if (GetExitCodeProcess(m_hProcess, &exitCode) && exitCode != STILL_ACTIVE)
         {
             while (PeekNamedPipe(m_hStdoutRead, NULL, 0, NULL, &available, NULL) && available > 0)
@@ -783,6 +846,13 @@ bool AgenticBridge::ReadProcessOutput(std::string& output, DWORD timeoutMs)
                         (bytesRead <= kMaxChunk) ? static_cast<size_t>(bytesRead) : static_cast<size_t>(kMaxChunk);
                     buffer[safeBytes] = '\0';
                     output.append(buffer, safeBytes);
+=======
+        if (GetExitCodeProcess(m_hProcess, &exitCode) && exitCode != STILL_ACTIVE) {
+            while (PeekNamedPipe(m_hStdoutRead, NULL, 0, NULL, &available, NULL) && available > 0) {
+                if (ReadFile(m_hStdoutRead, buffer, sizeof(buffer) - 1, &bytesRead, NULL) && bytesRead > 0) {
+                    buffer[bytesRead] = '\0';
+                    output += buffer;
+>>>>>>> origin/main
                 }
             }
             break;
@@ -804,6 +874,7 @@ void AgenticBridge::KillPowerShellProcess()
         m_hProcess = nullptr;
         LOG_DEBUG("PowerShell process terminated");
     }
+<<<<<<< HEAD
     if (m_hStdoutRead)
     {
         CloseHandle(m_hStdoutRead);
@@ -824,14 +895,24 @@ void AgenticBridge::KillPowerShellProcess()
         CloseHandle(m_hStdinWrite);
         m_hStdinWrite = nullptr;
     }
+=======
+    if (m_hStdoutRead)  { CloseHandle(m_hStdoutRead);  m_hStdoutRead  = nullptr; }
+    if (m_hStdoutWrite) { CloseHandle(m_hStdoutWrite); m_hStdoutWrite = nullptr; }
+    if (m_hStdinRead)   { CloseHandle(m_hStdinRead);   m_hStdinRead   = nullptr; }
+    if (m_hStdinWrite)  { CloseHandle(m_hStdinWrite);  m_hStdinWrite  = nullptr; }
+>>>>>>> origin/main
 }
 
 // ============================================================================
 // Response Parsing (Full Implementation)
 // ============================================================================
 
+<<<<<<< HEAD
 AgentResponse AgenticBridge::ParseAgentResponse(const std::string& rawOutput)
 {
+=======
+AgentResponse AgenticBridge::ParseAgentResponse(const std::string& rawOutput) {
+>>>>>>> origin/main
     AgentResponse response;
     response.type = AgentResponseType::THINKING;
     response.rawOutput = rawOutput;
@@ -915,8 +996,12 @@ std::string AgenticBridge::ResolveFrameworkPath()
                                             "Agentic-Framework.ps1",        "scripts\\Agentic-Framework.ps1",
                                             "..\\Agentic-Framework.ps1",    "..\\scripts\\Agentic-Framework.ps1"};
 
+<<<<<<< HEAD
     for (const auto& path : searchPaths)
     {
+=======
+    for (const auto& path : searchPaths) {
+>>>>>>> origin/main
         DWORD attr = GetFileAttributesA(path.c_str());
         if (attr != INVALID_FILE_ATTRIBUTES)
         {
@@ -929,8 +1014,12 @@ std::string AgenticBridge::ResolveFrameworkPath()
     return "Agentic-Framework.ps1";
 }
 
+<<<<<<< HEAD
 std::string AgenticBridge::ResolveToolsModulePath()
 {
+=======
+std::string AgenticBridge::ResolveToolsModulePath() {
+>>>>>>> origin/main
     std::string base = ResolveFrameworkPath();
     if (base.empty() || base == "Agentic-Framework.ps1")
         return "";
@@ -1158,6 +1247,7 @@ bool AgenticBridge::LoadModel(const std::string& path)
         m_modelLoadErrorCallback(m_lastModelLoadError);
     }
     return false;
+<<<<<<< HEAD
 }
 
 // ============================================================================
@@ -1200,4 +1290,6 @@ void AgenticBridge::WarmUpModel()
     // Keep it deterministic and fast; ignore the output.
     (void)g_agentEngine->chat("warmup");
     LOG_INFO("AgenticBridge warmup complete");
+=======
+>>>>>>> origin/main
 }

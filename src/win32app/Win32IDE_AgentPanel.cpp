@@ -511,7 +511,11 @@ void Win32IDE::startAgentSession(const std::string& prompt) {
 
         AgentLoopConfig config;
         config.maxSteps = std::clamp(IDEConfig::getInstance().getInt("agent.cycleCount", 10), 1, 99);
+<<<<<<< HEAD
         // model left empty — auto-detected from Ollama /api/tags at runtime
+=======
+        config.model = "qwen2.5-coder:14b";
+>>>>>>> origin/main
         config.ollamaBaseUrl = m_ollamaBaseUrl.empty() ? "http://localhost:11434" : m_ollamaBaseUrl;
         config.workingDirectory = m_settings.workingDirectory;
 

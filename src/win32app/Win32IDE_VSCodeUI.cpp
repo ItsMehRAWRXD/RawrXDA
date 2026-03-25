@@ -7,6 +7,10 @@
 #include <richedit.h>
 #include <sstream>
 #include <iomanip>
+<<<<<<< HEAD
+=======
+#include <iostream>
+>>>>>>> origin/main
 #include <fstream>
 #include <map>
 
@@ -25,6 +29,25 @@
 // SCAFFOLD_002: Activity bar and primary sidebar layout
 
 
+<<<<<<< HEAD
+=======
+// Win32-native debug logging (replaces Qt qInfo/qDebug/qWarning)
+#ifndef RAWRXD_LOG_INFO
+#define RAWRXD_LOG_INFO(msg) do { \
+    std::ostringstream _oss; _oss << "[INFO] " << msg << "\n"; \
+    OutputDebugStringA(_oss.str().c_str()); \
+    std::cout << _oss.str(); \
+} while(0)
+#endif
+#ifndef RAWRXD_LOG_WARNING
+#define RAWRXD_LOG_WARNING(msg) do { \
+    std::ostringstream _oss; _oss << "[WARN] " << msg << "\n"; \
+    OutputDebugStringA(_oss.str().c_str()); \
+    std::cerr << _oss.str(); \
+} while(0)
+#endif
+
+>>>>>>> origin/main
 // Define GET_X_LPARAM and GET_Y_LPARAM if not available
 #ifndef GET_X_LPARAM
 #define GET_X_LPARAM(lp) ((int)(short)LOWORD(lp))
@@ -330,8 +353,13 @@ void Win32IDE::sendCopilotMessage(const std::string& message)
 {
     if (message.empty()) return;
     
+<<<<<<< HEAD
     RAWRXD_LOG_INFO("Win32IDE_VSCodeUI") << "=== SEND MESSAGE CLICKED ===";
     RAWRXD_LOG_INFO("Win32IDE_VSCodeUI") << "[sendCopilotMessage] Message: " << message;
+=======
+    RAWRXD_LOG_INFO("=== SEND MESSAGE CLICKED ===");
+    RAWRXD_LOG_INFO("[sendCopilotMessage] Message: " << message);
+>>>>>>> origin/main
     
     // Add user message to history
     m_chatHistory.push_back({"user", message});
@@ -340,6 +368,7 @@ void Win32IDE::sendCopilotMessage(const std::string& message)
     std::string response;
     
     if (isModelLoaded()) {
+<<<<<<< HEAD
         RAWRXD_LOG_INFO("Win32IDE_VSCodeUI") << "[sendCopilotMessage] Model is loaded, calling generateResponse...";
         // Use the loaded GGUF model for inference
         response = generateResponse(message);
@@ -347,6 +376,15 @@ void Win32IDE::sendCopilotMessage(const std::string& message)
     } else {
         // No model loaded - prompt user to load one
         RAWRXD_LOG_WARNING("Win32IDE_VSCodeUI") << "[sendCopilotMessage] No model loaded!";
+=======
+        RAWRXD_LOG_INFO("[sendCopilotMessage] Model is loaded, calling generateResponse...");
+        // Use the loaded GGUF model for inference
+        response = generateResponse(message);
+        RAWRXD_LOG_INFO("[sendCopilotMessage] Inference response: " << response);
+    } else {
+        // No model loaded - prompt user to load one
+        RAWRXD_LOG_WARNING("[sendCopilotMessage] No model loaded!");
+>>>>>>> origin/main
         response = "⚠️ No AI model loaded.\r\n\r\n"
                    "To use AI assistance, please load a GGUF model:\r\n"
                    "1. Open the File Explorer (Activity Bar → Explorer icon)\r\n"
@@ -372,8 +410,13 @@ void Win32IDE::sendCopilotMessage(const std::string& message)
         m_currentToolActions.clear();
     }
 
+<<<<<<< HEAD
     RAWRXD_LOG_INFO("Win32IDE_VSCodeUI") << "[sendCopilotMessage] Added response to history, updating UI...";
     RAWRXD_LOG_INFO("Win32IDE_VSCodeUI") << "=== SEND MESSAGE END ===";
+=======
+    RAWRXD_LOG_INFO("[sendCopilotMessage] Added response to history, updating UI...");
+    RAWRXD_LOG_INFO("=== SEND MESSAGE END ===");
+>>>>>>> origin/main
     
     // Update display
     updateSecondarySidebarContent();

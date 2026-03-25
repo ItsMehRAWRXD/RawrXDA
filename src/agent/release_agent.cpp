@@ -297,6 +297,7 @@ bool ReleaseAgent::tweetRelease(const std::string& text) {
     fprintf(stderr, "[INFO] Would tweet release: %s\n", text.c_str());
     if (onTweetSent) onTweetSent(text);
     return true;
+<<<<<<< HEAD
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -446,4 +447,6 @@ bool ReleaseAgent::goldSignDirectory(const std::string& buildDir) {
     fprintf(stderr, "[ReleaseAgent] GOLD_SIGN directory complete: %zu files signed\n",
             results.size());
     return true;
+=======
+>>>>>>> origin/main
 }

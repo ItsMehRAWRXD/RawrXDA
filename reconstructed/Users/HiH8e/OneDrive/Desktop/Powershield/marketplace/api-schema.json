@@ -1,0 +1,661 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RawrXD Marketplace API Schema",
+  "description": "API endpoints and response formats for RawrXD marketplace integration",
+  "type": "object",
+  "properties": {
+    "api": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string",
+          "default": "v2"
+        },
+        "baseUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "authentication": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "bearer",
+                "apikey",
+                "oauth2"
+              ]
+            },
+            "tokenEndpoint": {
+              "type": "string",
+              "format": "uri"
+            },
+            "scopes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "rateLimit": {
+          "type": "object",
+          "properties": {
+            "requests": {
+              "type": "integer"
+            },
+            "window": {
+              "type": "string"
+            },
+            "headers": {
+              "type": "object",
+              "properties": {
+                "limit": {
+                  "type": "string"
+                },
+                "remaining": {
+                  "type": "string"
+                },
+                "reset": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "endpoints": {
+      "type": "object",
+      "properties": {
+        "extensions": {
+          "type": "object",
+          "properties": {
+            "list": {
+              "type": "object",
+              "properties": {
+                "method": {
+                  "type": "string",
+                  "enum": [
+                    "GET"
+                  ]
+                },
+                "path": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "query": {
+                      "type": "object",
+                      "properties": {
+                        "category": {
+                          "type": "string"
+                        },
+                        "search": {
+                          "type": "string"
+                        },
+                        "tags": {
+                          "type": "string"
+                        },
+                        "sort": {
+                          "type": "string",
+                          "enum": [
+                            "name",
+                            "downloads",
+                            "rating",
+                            "updated"
+                          ]
+                        },
+                        "order": {
+                          "type": "string",
+                          "enum": [
+                            "asc",
+                            "desc"
+                          ]
+                        },
+                        "page": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "limit": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100
+                        }
+                      }
+                    }
+                  }
+                },
+                "responses": {
+                  "type": "object",
+                  "properties": {
+                    "200": {
+                      "type": "object",
+                      "properties": {
+                        "description": {
+                          "type": "string"
+                        },
+                        "schema": {
+                          "$ref": "#/definitions/ExtensionListResponse"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "get": {
+              "type": "object",
+              "properties": {
+                "method": {
+                  "type": "string",
+                  "enum": [
+                    "GET"
+                  ]
+                },
+                "path": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                },
+                "responses": {
+                  "type": "object",
+                  "properties": {
+                    "200": {
+                      "type": "object",
+                      "properties": {
+                        "description": {
+                          "type": "string"
+                        },
+                        "schema": {
+                          "$ref": "#/definitions/Extension"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "download": {
+              "type": "object",
+              "properties": {
+                "method": {
+                  "type": "string",
+                  "enum": [
+                    "GET"
+                  ]
+                },
+                "path": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "version": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                },
+                "responses": {
+                  "type": "object",
+                  "properties": {
+                    "200": {
+                      "type": "object",
+                      "properties": {
+                        "description": {
+                          "type": "string"
+                        },
+                        "contentType": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "install": {
+              "type": "object",
+              "properties": {
+                "method": {
+                  "type": "string",
+                  "enum": [
+                    "POST"
+                  ]
+                },
+                "path": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "body": {
+                      "type": "object",
+                      "properties": {
+                        "extensionId": {
+                          "type": "string"
+                        },
+                        "version": {
+                          "type": "string"
+                        },
+                        "autoUpdate": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                },
+                "responses": {
+                  "type": "object",
+                  "properties": {
+                    "201": {
+                      "type": "object",
+                      "properties": {
+                        "description": {
+                          "type": "string"
+                        },
+                        "schema": {
+                          "$ref": "#/definitions/InstallationResult"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "community": {
+          "type": "object",
+          "properties": {
+            "list": {
+              "type": "object",
+              "properties": {
+                "method": {
+                  "type": "string",
+                  "enum": [
+                    "GET"
+                  ]
+                },
+                "path": {
+                  "type": "string"
+                },
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "query": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "theme",
+                            "snippet",
+                            "template",
+                            "keybinding",
+                            "setting-preset",
+                            "workflow",
+                            "macro"
+                          ]
+                        },
+                        "category": {
+                          "type": "string"
+                        },
+                        "search": {
+                          "type": "string"
+                        },
+                        "featured": {
+                          "type": "boolean"
+                        },
+                        "trending": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "upload": {
+              "type": "object",
+              "properties": {
+                "method": {
+                  "type": "string",
+                  "enum": [
+                    "POST"
+                  ]
+                },
+                "path": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "body": {
+                      "type": "object",
+                      "properties": {
+                        "content": {
+                          "$ref": "#/definitions/CommunityContent"
+                        },
+                        "files": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string"
+                              },
+                              "content": {
+                                "type": "string"
+                              },
+                              "encoding": {
+                                "type": "string",
+                                "enum": [
+                                  "base64",
+                                  "utf8"
+                                ]
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "responses": {
+                  "type": "object",
+                  "properties": {
+                    "201": {
+                      "type": "object",
+                      "properties": {
+                        "description": {
+                          "type": "string"
+                        },
+                        "schema": {
+                          "$ref": "#/definitions/UploadResult"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "search": {
+          "type": "object",
+          "properties": {
+            "global": {
+              "type": "object",
+              "properties": {
+                "method": {
+                  "type": "string",
+                  "enum": [
+                    "GET"
+                  ]
+                },
+                "path": {
+                  "type": "string"
+                },
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "query": {
+                      "type": "object",
+                      "properties": {
+                        "q": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "all",
+                            "extensions",
+                            "community"
+                          ]
+                        },
+                        "filters": {
+                          "type": "object",
+                          "properties": {
+                            "category": {
+                              "type": "string"
+                            },
+                            "tags": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "rating": {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 5
+                            },
+                            "free": {
+                              "type": "boolean"
+                            },
+                            "verified": {
+                              "type": "boolean"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "analytics": {
+          "type": "object",
+          "properties": {
+            "track": {
+              "type": "object",
+              "properties": {
+                "method": {
+                  "type": "string",
+                  "enum": [
+                    "POST"
+                  ]
+                },
+                "path": {
+                  "type": "string"
+                },
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "body": {
+                      "type": "object",
+                      "properties": {
+                        "event": {
+                          "type": "string",
+                          "enum": [
+                            "view",
+                            "download",
+                            "install",
+                            "uninstall",
+                            "rate",
+                            "share"
+                          ]
+                        },
+                        "extensionId": {
+                          "type": "string"
+                        },
+                        "userId": {
+                          "type": "string"
+                        },
+                        "sessionId": {
+                          "type": "string"
+                        },
+                        "metadata": {
+                          "type": "object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "ExtensionListResponse": {
+      "type": "object",
+      "properties": {
+        "extensions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Extension"
+          }
+        },
+        "pagination": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer"
+            },
+            "limit": {
+              "type": "integer"
+            },
+            "total": {
+              "type": "integer"
+            },
+            "totalPages": {
+              "type": "integer"
+            }
+          }
+        },
+        "filters": {
+          "type": "object",
+          "properties": {
+            "categories": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "count": {
+                    "type": "integer"
+                  }
+                }
+              }
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "count": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Extension": {
+      "$ref": "extensions-schema.json#/properties/extensions/items"
+    },
+    "CommunityContent": {
+      "$ref": "community-schema.json#/properties/content/items"
+    },
+    "InstallationResult": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "extensionId": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "installPath": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "UploadResult": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "contentId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "approved",
+            "rejected"
+          ]
+        },
+        "message": {
+          "type": "string"
+        },
+        "reviewUrl": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    }
+  }
+}

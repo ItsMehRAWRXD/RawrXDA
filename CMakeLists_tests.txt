@@ -1,0 +1,35 @@
+# AgentHotPatcher tests — C++20, no Qt.
+# test_agent_hot_patcher.cpp and test_agent_hot_patcher_integration.cpp are Qt-free.
+cmake_minimum_required(VERSION 3.16)
+project(AgentHotPatcherTests LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/agent
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+# Unit tests (C++20, no Qt Test)
+add_executable(test_agent_hot_patcher
+    test_agent_hot_patcher.cpp
+    src/agent/agent_hot_patcher.cpp
+)
+
+# Integration tests (C++20, no Qt)
+add_executable(test_agent_hot_patcher_integration
+    test_agent_hot_patcher_integration.cpp
+    src/agent/agent_hot_patcher.cpp
+)
+
+if(MSVC)
+    target_compile_options(test_agent_hot_patcher PRIVATE /W4)
+    target_compile_options(test_agent_hot_patcher_integration PRIVATE /W4)
+else()
+    target_compile_options(test_agent_hot_patcher PRIVATE -Wall -Wextra -pedantic)
+    target_compile_options(test_agent_hot_patcher_integration PRIVATE -Wall -Wextra -pedantic)
+endif()
+
+add_test(NAME AgentHotPatcher_UnitTest COMMAND test_agent_hot_patcher)
+add_test(NAME AgentHotPatcher_IntegrationTest COMMAND test_agent_hot_patcher_integration)

@@ -1,3 +1,4 @@
+<<<<<<< HEAD:.archived_orphans/vulkan_compute_stub.cpp
 ﻿// ============================================================================
 // vulkan_compute_stub.cpp — CPU Compute Fallback Implementation
 // ============================================================================
@@ -33,6 +34,43 @@ static double GetPerfMs() {
     if (freq.QuadPart == 0) QueryPerformanceFrequency(&freq);
     LARGE_INTEGER now;
     QueryPerformanceCounter(&now);
+=======
+// ============================================================================
+// vulkan_compute_stub.cpp — CPU Compute Fallback Implementation
+// ============================================================================
+// Full CPU-based matrix operations providing Vulkan-compatible API.
+// Implements GEMM, quantized matmul, RMSNorm, SoftMax, GeLU, SiLU, RoPE.
+// Uses Windows thread pool for parallel execution.
+//
+// Pattern: PatchResult-style structured results, no exceptions
+// Rule: NO SOURCE FILE IS TO BE SIMPLIFIED
+// ============================================================================
+
+#include "../include/vulkan_compute_stub.hpp"
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
+#include <cstdio>
+#include <algorithm>
+#include <immintrin.h>
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+static constexpr int TILE_SIZE = 64;    // Cache-friendly tile for GEMM
+static constexpr float PI = 3.14159265358979323846f;
+
+// ============================================================================
+// Performance timer helper
+// ============================================================================
+
+static double GetPerfMs() {
+    static LARGE_INTEGER freq = {};
+    if (freq.QuadPart == 0) QueryPerformanceFrequency(&freq);
+    LARGE_INTEGER now;
+    QueryPerformanceCounter(&now);
+>>>>>>> origin/main:src/vulkan_compute_stub.cpp
     return (double)now.QuadPart / freq.QuadPart * 1000.0;
     return true;
 }
@@ -686,7 +724,10 @@ void VulkanCompute_Destroy(VulkanCompute* vc) {
     return true;
 }
 
+<<<<<<< HEAD:.archived_orphans/vulkan_compute_stub.cpp
     return true;
+=======
+>>>>>>> origin/main:src/vulkan_compute_stub.cpp
 }
 
     return true;

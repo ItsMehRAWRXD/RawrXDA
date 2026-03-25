@@ -1,5 +1,9 @@
 // ============================================================================
+<<<<<<< HEAD
 // ssot_handlers.cpp ? SSOT-Bridged Command Handlers (real implementations)
+=======
+// ssot_handlers.cpp — SSOT-Bridged Command Handlers (real implementations)
+>>>>>>> origin/main
 // ============================================================================
 // Architecture: C++20, Win32, no Qt, no exceptions
 //
@@ -52,6 +56,7 @@ static RawrXD::Agent::AgentOllamaClient& getAgentClient();
 // HELPER: Route to IDE UI via WM_COMMAND when in GUI mode (CLI gets text output)
 // ============================================================================
 
+<<<<<<< HEAD
 namespace
 {
 struct ReverseTraceStats
@@ -521,6 +526,14 @@ static CommandResult routeToIde(const CommandContext& ctx, uint32_t cmdId, const
             hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);  // Fallback for older callers
         if (hwnd)
             PostMessageA(hwnd, WM_COMMAND, cmdId, 0);
+=======
+static CommandResult delegateToGui(const CommandContext& ctx, uint32_t cmdId, const char* name) {
+    if (ctx.isGui && ctx.idePtr) {
+        // Route to Win32IDE's WM_COMMAND handler (use ctx.hwnd when set by adapter)
+        HWND hwnd = reinterpret_cast<HWND>(ctx.hwnd);
+        if (!hwnd) hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);  // Fallback for older callers
+        if (hwnd) PostMessageA(hwnd, WM_COMMAND, cmdId, 0);
+>>>>>>> origin/main
         return CommandResult::ok(name);
     }
     // CLI visual-mode support for theme/transparency/monaco commands.
@@ -5574,10 +5587,15 @@ CommandResult handleVisionAnalyzeImage(const CommandContext& ctx)
 // ============================================================================
 
 #ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
+<<<<<<< HEAD
 CommandResult handleFileRecentClear(const CommandContext& ctx)
 {
     if (ctx.isGui && ctx.idePtr)
         return routeToIde(ctx, 1020, "file.recentClear");
+=======
+CommandResult handleFileRecentClear(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) return delegateToGui(ctx, 1020, "file.recentClear");
+>>>>>>> origin/main
     ctx.output("[FILE] Recent files list cleared.\n");
     return CommandResult::ok("file.recentClear");
 }
@@ -5600,10 +5618,15 @@ CommandResult handleFileExit(const CommandContext& ctx)
 // ============================================================================
 
 #ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
+<<<<<<< HEAD
 CommandResult handleEditSnippet(const CommandContext& ctx)
 {
     if (ctx.isGui && ctx.idePtr)
         return routeToIde(ctx, 2012, "edit.snippet");
+=======
+CommandResult handleEditSnippet(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) return delegateToGui(ctx, 2012, "edit.snippet");
+>>>>>>> origin/main
     ctx.output("[EDIT] Snippet insertion requires editor context.\n");
     ctx.output("  Use !snippet_list to view available snippets.\n");
     return CommandResult::ok("edit.snippet");
@@ -5635,10 +5658,15 @@ CommandResult handleEditClipboardHist(const CommandContext& ctx)
 }
 
 #ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
+<<<<<<< HEAD
 CommandResult handleEditFindNext(const CommandContext& ctx)
 {
     if (ctx.isGui && ctx.idePtr)
         return routeToIde(ctx, 2018, "edit.findNext");
+=======
+CommandResult handleEditFindNext(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) return delegateToGui(ctx, 2018, "edit.findNext");
+>>>>>>> origin/main
     ctx.output("[EDIT] Find-next requires active editor search context.\n");
     ctx.output("  In CLI: use findstr or Select-String.\n");
     return CommandResult::ok("edit.findNext");
@@ -5658,6 +5686,7 @@ CommandResult handleEditFindPrev(const CommandContext& ctx)
 // VIEW
 // ============================================================================
 
+<<<<<<< HEAD
 CommandResult handleViewStreamingLoader(const CommandContext& ctx)
 {
     return routeToIde(ctx, 2026, "view.streamingLoader");
@@ -5748,6 +5777,19 @@ CommandResult handleViewTerminal(const CommandContext& ctx)
 {
     return routeToIde(ctx, 2029, "view.terminal");
 }
+=======
+CommandResult handleViewStreamingLoader(const CommandContext& ctx){ return delegateToGui(ctx, 2026, "view.streamingLoader"); }
+CommandResult handleViewVulkanRenderer(const CommandContext& ctx) { return delegateToGui(ctx, 2027, "view.vulkanRenderer"); }
+#ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
+CommandResult handleViewMinimap(const CommandContext& ctx)        { return delegateToGui(ctx, 2020, "view.minimap"); }
+CommandResult handleViewOutputTabs(const CommandContext& ctx)     { return delegateToGui(ctx, 2021, "view.outputTabs"); }
+CommandResult handleViewModuleBrowser(const CommandContext& ctx)  { return delegateToGui(ctx, 2022, "view.moduleBrowser"); }
+CommandResult handleViewThemeEditor(const CommandContext& ctx)    { return delegateToGui(ctx, 2023, "view.themeEditor"); }
+CommandResult handleViewFloatingPanel(const CommandContext& ctx)  { return delegateToGui(ctx, 2024, "view.floatingPanel"); }
+CommandResult handleViewOutputPanel(const CommandContext& ctx)    { return delegateToGui(ctx, 2025, "view.outputPanel"); }
+CommandResult handleViewSidebar(const CommandContext& ctx)        { return delegateToGui(ctx, 2028, "view.sidebar"); }
+CommandResult handleViewTerminal(const CommandContext& ctx)       { return delegateToGui(ctx, 2029, "view.terminal"); }
+>>>>>>> origin/main
 #endif
 
 // ============================================================================
@@ -5759,6 +5801,7 @@ static CommandResult setTheme(const CommandContext& ctx, uint32_t themeId, const
     return routeToIde(ctx, themeId, name);
 }
 
+<<<<<<< HEAD
 // Theme handlers ? always in ssot_handlers
 #ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleThemeLightPlus(const CommandContext& ctx)
@@ -5872,6 +5915,41 @@ CommandResult handleHelpCmdRef(const CommandContext& ctx)
 {
     if (ctx.isGui && ctx.idePtr)
         return routeToIde(ctx, 4002, "help.cmdref");
+=======
+// Theme handlers — always in ssot_handlers
+CommandResult handleThemeLightPlus(const CommandContext& ctx)   { return setTheme(ctx, 3102, "theme.lightPlus"); }
+CommandResult handleThemeMonokai(const CommandContext& ctx)     { return setTheme(ctx, 3103, "theme.monokai"); }
+CommandResult handleThemeDracula(const CommandContext& ctx)     { return setTheme(ctx, 3104, "theme.dracula"); }
+CommandResult handleThemeNord(const CommandContext& ctx)        { return setTheme(ctx, 3105, "theme.nord"); }
+CommandResult handleThemeSolDark(const CommandContext& ctx)     { return setTheme(ctx, 3106, "theme.solarizedDark"); }
+CommandResult handleThemeSolLight(const CommandContext& ctx)    { return setTheme(ctx, 3107, "theme.solarizedLight"); }
+CommandResult handleThemeCyberpunk(const CommandContext& ctx)   { return setTheme(ctx, 3108, "theme.cyberpunk"); }
+CommandResult handleThemeGruvbox(const CommandContext& ctx)     { return setTheme(ctx, 3109, "theme.gruvbox"); }
+CommandResult handleThemeCatppuccin(const CommandContext& ctx)  { return setTheme(ctx, 3110, "theme.catppuccin"); }
+CommandResult handleThemeTokyo(const CommandContext& ctx)       { return setTheme(ctx, 3111, "theme.tokyoNight"); }
+CommandResult handleThemeCrimson(const CommandContext& ctx)     { return setTheme(ctx, 3112, "theme.rawrxdCrimson"); }
+CommandResult handleThemeHighContrast(const CommandContext& ctx){ return setTheme(ctx, 3113, "theme.highContrast"); }
+CommandResult handleThemeOneDark(const CommandContext& ctx)     { return setTheme(ctx, 3114, "theme.oneDarkPro"); }
+CommandResult handleThemeSynthwave(const CommandContext& ctx)   { return setTheme(ctx, 3115, "theme.synthwave84"); }
+CommandResult handleThemeAbyss(const CommandContext& ctx)       { return setTheme(ctx, 3116, "theme.abyss"); }
+
+// TRANSPARENCY (always in ssot_handlers)
+CommandResult handleTrans100(const CommandContext& ctx) { return delegateToGui(ctx, 3200, "view.transparency100"); }
+CommandResult handleTrans90(const CommandContext& ctx)  { return delegateToGui(ctx, 3201, "view.transparency90"); }
+CommandResult handleTrans80(const CommandContext& ctx)  { return delegateToGui(ctx, 3202, "view.transparency80"); }
+CommandResult handleTrans70(const CommandContext& ctx)  { return delegateToGui(ctx, 3203, "view.transparency70"); }
+CommandResult handleTrans60(const CommandContext& ctx)  { return delegateToGui(ctx, 3204, "view.transparency60"); }
+CommandResult handleTrans50(const CommandContext& ctx)  { return delegateToGui(ctx, 3205, "view.transparency50"); }
+CommandResult handleTrans40(const CommandContext& ctx)  { return delegateToGui(ctx, 3206, "view.transparency40"); }
+CommandResult handleTransCustom(const CommandContext& ctx) { return delegateToGui(ctx, 3210, "view.transparencySet"); }
+CommandResult handleTransToggle(const CommandContext& ctx) { return delegateToGui(ctx, 3211, "view.transparencyToggle"); }
+
+// ============================================================================
+// HELP (extended) — always in ssot_handlers
+// ============================================================================
+CommandResult handleHelpCmdRef(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) return delegateToGui(ctx, 4002, "help.cmdref");
+>>>>>>> origin/main
     ctx.output("=== RawrXD Command Reference ===\n");
     ctx.output("Type !help <command> for details on a specific command.\n");
     ctx.output("Categories: file, edit, agent, debug, hotpatch, ai, re, voice, server, git, swarm\n");
@@ -5907,22 +5985,31 @@ CommandResult handleHelpSearch(const CommandContext& ctx)
 #endif
 
 // TERMINAL (extended)
+<<<<<<< HEAD
 #ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleTerminalSplitCode(const CommandContext& ctx)
 {
     return routeToIde(ctx, 4009, "terminal.splitCode");
 }
 #endif
+=======
+CommandResult handleTerminalSplitCode(const CommandContext& ctx) { return delegateToGui(ctx, 4009, "terminal.splitCode"); }
+>>>>>>> origin/main
 
 // ============================================================================
 // AUTONOMY (extended)
 // ============================================================================
 
 #ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
+<<<<<<< HEAD
 CommandResult handleAutonomyStatus(const CommandContext& ctx)
 {
     if (ctx.isGui && ctx.idePtr)
     {
+=======
+CommandResult handleAutonomyStatus(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+>>>>>>> origin/main
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
         PostMessageA(hwnd, WM_COMMAND, 4154, 0);
         return CommandResult::ok("autonomy.status");
@@ -6921,10 +7008,15 @@ CommandResult handleSwarmBlacklist(const CommandContext& ctx)
     return CommandResult::ok("swarm.blacklistNode");
 }
 #ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
+<<<<<<< HEAD
 CommandResult handleSwarmBuildSources(const CommandContext& ctx)
 {
     if (ctx.isGui && ctx.idePtr)
     {
+=======
+CommandResult handleSwarmBuildSources(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+>>>>>>> origin/main
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
         PostMessageA(hwnd, WM_COMMAND, 5141, 0);
         return CommandResult::ok("swarm.buildSources");
@@ -6964,10 +7056,15 @@ CommandResult handleSwarmBuildSources(const CommandContext& ctx)
 }
 #endif
 #ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
+<<<<<<< HEAD
 CommandResult handleSwarmBuildCmake(const CommandContext& ctx)
 {
     if (ctx.isGui && ctx.idePtr)
     {
+=======
+CommandResult handleSwarmBuildCmake(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+>>>>>>> origin/main
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
         PostMessageA(hwnd, WM_COMMAND, 5142, 0);
         return CommandResult::ok("swarm.buildCmake");
@@ -6993,11 +7090,16 @@ CommandResult handleSwarmBuildCmake(const CommandContext& ctx)
     return CommandResult::ok("swarm.buildCmake");
 }
 #endif
+<<<<<<< HEAD
 #ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleSwarmStartBuild(const CommandContext& ctx)
 {
     if (ctx.isGui && ctx.idePtr)
     {
+=======
+CommandResult handleSwarmStartBuild(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+>>>>>>> origin/main
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
         PostMessageA(hwnd, WM_COMMAND, 5143, 0);
         return CommandResult::ok("swarm.startBuild");
@@ -7182,8 +7284,13 @@ CommandResult handleSwarmEvents(const CommandContext& ctx)
     auto& orch = AutoRepairOrchestrator::instance();
     auto orchStats = orch.getStats();
     char buf[128];
+<<<<<<< HEAD
     snprintf(buf, sizeof(buf), "  Repairs: %llu  Anomalies: %llu\n", (unsigned long long)orchStats.repairsAttempted,
              (unsigned long long)orchStats.anomaliesDetected);
+=======
+    snprintf(buf, sizeof(buf), "  Repairs: %llu  Anomalies: %llu\n",
+             (unsigned long long)orchStats.repairsAttempted, (unsigned long long)orchStats.anomaliesDetected);
+>>>>>>> origin/main
     ctx.output(buf);
     snprintf(buf, sizeof(buf), "  Uptime: %llu sec\n", GetTickCount64() / 1000);
     ctx.output(buf);
@@ -7205,11 +7312,18 @@ CommandResult handleSwarmStats(const CommandContext& ctx)
     GlobalMemoryStatusEx(&mem);
     char buf[256];
     snprintf(buf, sizeof(buf),
+<<<<<<< HEAD
              "  CPU cores:     %u\n  RAM used:      %lu%%\n  RAM free:      %llu MB\n"
              "  Hotpatches:    %llu\n  Uptime:        %llu sec\n",
              (unsigned)std::thread::hardware_concurrency(), (unsigned long)mem.dwMemoryLoad,
              (unsigned long long)(mem.ullAvailPhys / (1024 * 1024)), (unsigned long long)stats.totalOperations.load(),
              (unsigned long long)(GetTickCount64() / 1000));
+=======
+        "  CPU cores:     %u\n  RAM used:      %lu%%\n  RAM free:      %llu MB\n"
+        "  Hotpatches:    %llu\n  Uptime:        %llu sec\n",
+        (unsigned)std::thread::hardware_concurrency(), (unsigned long)mem.dwMemoryLoad,
+        (unsigned long long)(mem.ullAvailPhys / (1024*1024)), (unsigned long long)stats.totalOperations.load(), (unsigned long long)(GetTickCount64()/1000));
+>>>>>>> origin/main
     ctx.output(buf);
     return CommandResult::ok("swarm.stats");
 }
@@ -7351,10 +7465,15 @@ CommandResult handleHotpatchMemRevert(const CommandContext& ctx)
     return CommandResult::ok("hotpatch.memRevert");
 }
 #ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
+<<<<<<< HEAD
 CommandResult handleHotpatchByteSearch(const CommandContext& ctx)
 {
     if (ctx.isGui && ctx.idePtr)
     {
+=======
+CommandResult handleHotpatchByteSearch(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+>>>>>>> origin/main
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
         PostMessageA(hwnd, WM_COMMAND, 9005, 0);
         return CommandResult::ok("hotpatch.byteSearch");
@@ -7365,10 +7484,15 @@ CommandResult handleHotpatchByteSearch(const CommandContext& ctx)
 }
 #endif
 #ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
+<<<<<<< HEAD
 CommandResult handleHotpatchServerRemove(const CommandContext& ctx)
 {
     if (ctx.isGui && ctx.idePtr)
     {
+=======
+CommandResult handleHotpatchServerRemove(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+>>>>>>> origin/main
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
         PostMessageA(hwnd, WM_COMMAND, 9007, 0);
         return CommandResult::ok("hotpatch.serverRemove");
@@ -7390,10 +7514,15 @@ CommandResult handleHotpatchServerRemove(const CommandContext& ctx)
 }
 #endif
 #ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
+<<<<<<< HEAD
 CommandResult handleHotpatchProxyBias(const CommandContext& ctx)
 {
     if (ctx.isGui && ctx.idePtr)
     {
+=======
+CommandResult handleHotpatchProxyBias(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+>>>>>>> origin/main
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
         PostMessageA(hwnd, WM_COMMAND, 9008, 0);
         return CommandResult::ok("hotpatch.proxyBias");
@@ -7407,10 +7536,15 @@ CommandResult handleHotpatchProxyBias(const CommandContext& ctx)
 }
 #endif
 #ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
+<<<<<<< HEAD
 CommandResult handleHotpatchProxyRewrite(const CommandContext& ctx)
 {
     if (ctx.isGui && ctx.idePtr)
     {
+=======
+CommandResult handleHotpatchProxyRewrite(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+>>>>>>> origin/main
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
         PostMessageA(hwnd, WM_COMMAND, 9009, 0);
         return CommandResult::ok("hotpatch.proxyRewrite");
@@ -7424,10 +7558,15 @@ CommandResult handleHotpatchProxyRewrite(const CommandContext& ctx)
 }
 #endif
 #ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
+<<<<<<< HEAD
 CommandResult handleHotpatchProxyTerminate(const CommandContext& ctx)
 {
     if (ctx.isGui && ctx.idePtr)
     {
+=======
+CommandResult handleHotpatchProxyTerminate(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+>>>>>>> origin/main
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
         PostMessageA(hwnd, WM_COMMAND, 9010, 0);
         return CommandResult::ok("hotpatch.proxyTerminate");
@@ -7437,10 +7576,15 @@ CommandResult handleHotpatchProxyTerminate(const CommandContext& ctx)
 }
 #endif
 #ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
+<<<<<<< HEAD
 CommandResult handleHotpatchProxyValidate(const CommandContext& ctx)
 {
     if (ctx.isGui && ctx.idePtr)
     {
+=======
+CommandResult handleHotpatchProxyValidate(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+>>>>>>> origin/main
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
         PostMessageA(hwnd, WM_COMMAND, 9011, 0);
         return CommandResult::ok("hotpatch.proxyValidate");
@@ -7454,10 +7598,15 @@ CommandResult handleHotpatchProxyValidate(const CommandContext& ctx)
 }
 #endif
 #ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
+<<<<<<< HEAD
 CommandResult handleHotpatchPresetSave(const CommandContext& ctx)
 {
     if (ctx.isGui && ctx.idePtr)
     {
+=======
+CommandResult handleHotpatchPresetSave(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+>>>>>>> origin/main
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
         PostMessageA(hwnd, WM_COMMAND, 9012, 0);
         return CommandResult::ok("hotpatch.presetSave");
@@ -7479,10 +7628,15 @@ CommandResult handleHotpatchPresetSave(const CommandContext& ctx)
 }
 #endif
 #ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
+<<<<<<< HEAD
 CommandResult handleHotpatchPresetLoad(const CommandContext& ctx)
 {
     if (ctx.isGui && ctx.idePtr)
     {
+=======
+CommandResult handleHotpatchPresetLoad(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+>>>>>>> origin/main
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
         PostMessageA(hwnd, WM_COMMAND, 9013, 0);
         return CommandResult::ok("hotpatch.presetLoad");
@@ -7503,10 +7657,15 @@ CommandResult handleHotpatchPresetLoad(const CommandContext& ctx)
     return CommandResult::ok("hotpatch.presetLoad");
 }
 #endif
+<<<<<<< HEAD
 CommandResult handleHotpatchEventLog(const CommandContext& ctx)
 {
     if (ctx.isGui && ctx.idePtr)
     {
+=======
+CommandResult handleHotpatchEventLog(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+>>>>>>> origin/main
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
         PostMessageA(hwnd, WM_COMMAND, 9014, 0);
         return CommandResult::ok("hotpatch.eventLog");
@@ -7526,10 +7685,15 @@ CommandResult handleHotpatchEventLog(const CommandContext& ctx)
     return CommandResult::ok("hotpatch.eventLog");
 }
 #ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
+<<<<<<< HEAD
 CommandResult handleHotpatchResetStats(const CommandContext& ctx)
 {
     if (ctx.isGui && ctx.idePtr)
     {
+=======
+CommandResult handleHotpatchResetStats(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+>>>>>>> origin/main
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
         PostMessageA(hwnd, WM_COMMAND, 9015, 0);
         return CommandResult::ok("hotpatch.resetStats");
@@ -7543,10 +7707,15 @@ CommandResult handleHotpatchResetStats(const CommandContext& ctx)
 }
 #endif
 #ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
+<<<<<<< HEAD
 CommandResult handleHotpatchToggleAll(const CommandContext& ctx)
 {
     if (ctx.isGui && ctx.idePtr)
     {
+=======
+CommandResult handleHotpatchToggleAll(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+>>>>>>> origin/main
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
         PostMessageA(hwnd, WM_COMMAND, 9016, 0);
         return CommandResult::ok("hotpatch.toggleAll");
@@ -7557,10 +7726,15 @@ CommandResult handleHotpatchToggleAll(const CommandContext& ctx)
     return CommandResult::ok("hotpatch.toggleAll");
 }
 #endif
+<<<<<<< HEAD
 CommandResult handleHotpatchProxyStats(const CommandContext& ctx)
 {
     if (ctx.isGui && ctx.idePtr)
     {
+=======
+CommandResult handleHotpatchProxyStats(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+>>>>>>> origin/main
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
         PostMessageA(hwnd, WM_COMMAND, 9017, 0);
         return CommandResult::ok("hotpatch.proxyStats");
@@ -8248,10 +8422,15 @@ CommandResult handleEditorStatus(const CommandContext& ctx)
 // PDB
 // ============================================================================
 #ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
+<<<<<<< HEAD
 CommandResult handlePdbLoad(const CommandContext& ctx)
 {
     if (ctx.isGui && ctx.idePtr)
     {
+=======
+CommandResult handlePdbLoad(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+>>>>>>> origin/main
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
         PostMessageA(hwnd, WM_COMMAND, 9400, 0);
         return CommandResult::ok("pdb.load");
@@ -8521,6 +8700,7 @@ CommandResult handlePdbIatStatus(const CommandContext& ctx)
 // AUDIT
 // ============================================================================
 
+<<<<<<< HEAD
 CommandResult handleAuditDashboard(const CommandContext& ctx)
 {
     if (ctx.isGui && ctx.idePtr)
@@ -8530,6 +8710,13 @@ CommandResult handleAuditDashboard(const CommandContext& ctx)
             hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);  // Fallback for older callers
         if (hwnd)
             PostMessageA(hwnd, WM_COMMAND, 9500, 0);
+=======
+CommandResult handleAuditDashboard(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+        HWND hwnd = reinterpret_cast<HWND>(ctx.hwnd);
+        if (!hwnd) hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);  // Fallback for older callers
+        if (hwnd) PostMessageA(hwnd, WM_COMMAND, 9500, 0);
+>>>>>>> origin/main
         return CommandResult::ok("audit.dashboard");
     }
     auto& mgr = UnifiedHotpatchManager::instance();
@@ -8552,10 +8739,15 @@ CommandResult handleAuditRunFull(const CommandContext& ctx)
     if (ctx.isGui && ctx.idePtr)
     {
         HWND hwnd = reinterpret_cast<HWND>(ctx.hwnd);
+<<<<<<< HEAD
         if (!hwnd)
             hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
         if (hwnd)
             PostMessageA(hwnd, WM_COMMAND, 9501, 0);
+=======
+        if (!hwnd) hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
+        if (hwnd) PostMessageA(hwnd, WM_COMMAND, 9501, 0);
+>>>>>>> origin/main
         return CommandResult::ok("audit.runFull");
     }
     ctx.output("[AUDIT] Running full system audit...\n");
@@ -8574,10 +8766,15 @@ CommandResult handleAuditRunFull(const CommandContext& ctx)
     ctx.output(oss.str().c_str());
     return CommandResult::ok("audit.runFull");
 }
+<<<<<<< HEAD
 CommandResult handleAuditDetectStubs(const CommandContext& ctx)
 {
     if (ctx.isGui && ctx.idePtr)
     {
+=======
+CommandResult handleAuditDetectStubs(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+>>>>>>> origin/main
         HWND hwnd = reinterpret_cast<HWND>(ctx.hwnd);
         if (!hwnd)
             hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
@@ -8586,10 +8783,15 @@ CommandResult handleAuditDetectStubs(const CommandContext& ctx)
         return CommandResult::ok("audit.detectStubs");
     }
     ctx.output("[AUDIT] Scanning for stub handlers...\n");
+<<<<<<< HEAD
     FILE* pipe = _popen(
         "findstr /c:\"ctx.output(\" src\\core\\*handlers*.cpp 2>&1 | find /c \"return CommandResult::ok\" 2>&1", "r");
     if (pipe)
     {
+=======
+    FILE* pipe = _popen("findstr /c:\"ctx.output(\" src\\core\\*handlers*.cpp 2>&1 | find /c \"return CommandResult::ok\" 2>&1", "r");
+    if (pipe) {
+>>>>>>> origin/main
         char buf[128];
         if (fgets(buf, sizeof(buf), pipe))
         {
@@ -8697,6 +8899,7 @@ CommandResult handleAuditExportReport(const CommandContext& ctx)
     if (f)
     {
         fprintf(f, "=== RawrXD Audit Report ===\n");
+<<<<<<< HEAD
         fprintf(f, "Hotpatches: %llu (M:%llu B:%llu S:%llu)\n", (unsigned long long)stats.totalOperations.load(),
                 (unsigned long long)stats.memoryPatchCount.load(), (unsigned long long)stats.bytePatchCount.load(),
                 (unsigned long long)stats.serverPatchCount.load());
@@ -8704,6 +8907,11 @@ CommandResult handleAuditExportReport(const CommandContext& ctx)
                 (unsigned long long)oStats.anomaliesDetected);
         const std::string traceText = reverseTraceHotspotsReport(20);
         fprintf(f, "%s", traceText.c_str());
+=======
+        fprintf(f, "Hotpatches: %llu (M:%llu B:%llu S:%llu)\n",
+                (unsigned long long)stats.totalOperations.load(), (unsigned long long)stats.memoryPatchCount.load(), (unsigned long long)stats.bytePatchCount.load(), (unsigned long long)stats.serverPatchCount.load());
+        fprintf(f, "Repairs: %llu  Anomalies: %llu\n", (unsigned long long)oStats.repairsAttempted, (unsigned long long)oStats.anomaliesDetected);
+>>>>>>> origin/main
         fclose(f);
         ctx.output("[AUDIT] Report exported to: ");
         ctx.output(outFile);
@@ -8733,10 +8941,15 @@ CommandResult handleAuditExportReport(const CommandContext& ctx)
 // GAUNTLET
 // ============================================================================
 #ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
+<<<<<<< HEAD
 CommandResult handleGauntletRun(const CommandContext& ctx)
 {
     if (ctx.isGui && ctx.idePtr)
         return routeToIde(ctx, 9600, "gauntlet.run");
+=======
+CommandResult handleGauntletRun(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) return delegateToGui(ctx, 9600, "gauntlet.run");
+>>>>>>> origin/main
     // CLI: run the self_test_gate build target
     ctx.output("[GAUNTLET] Running self-test suite...\n");
     FILE* pipe = _popen("cmake --build build --config Release --target self_test_gate 2>&1", "r");
@@ -8836,6 +9049,7 @@ CommandResult handleVoiceModeDisabled(const CommandContext& ctx)
 // QW (Quality/Workflow)
 // ============================================================================
 #ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
+<<<<<<< HEAD
 CommandResult handleQwShortcutEditor(const CommandContext& ctx)
 {
     return routeToIde(ctx, 9800, "qw.shortcutEditor");
@@ -8848,6 +9062,12 @@ CommandResult handleQwBackupCreate(const CommandContext& ctx)
 {
     if (ctx.isGui && ctx.idePtr)
     {
+=======
+CommandResult handleQwShortcutEditor(const CommandContext& ctx)     { return delegateToGui(ctx, 9800, "qw.shortcutEditor"); }
+CommandResult handleQwShortcutReset(const CommandContext& ctx)      { return delegateToGui(ctx, 9801, "qw.shortcutReset"); }
+CommandResult handleQwBackupCreate(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+>>>>>>> origin/main
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
         PostMessageA(hwnd, WM_COMMAND, 9810, 0);
         return CommandResult::ok("qw.backupCreate");
@@ -9038,12 +9258,18 @@ CommandResult handleTelemetryExportJson(const CommandContext& ctx)
     auto& orch = AutoRepairOrchestrator::instance();
     auto oStats = orch.getStats();
     FILE* f = fopen(outFile, "w");
+<<<<<<< HEAD
     if (f)
     {
         fprintf(f,
                 "{\n  \"hotpatches\": %llu,\n  \"repairs\": %llu,\n  \"anomalies\": %llu,\n  \"uptime_sec\": %llu\n}\n",
                 (unsigned long long)stats.totalOperations.load(), (unsigned long long)oStats.repairsAttempted,
                 (unsigned long long)oStats.anomaliesDetected, (unsigned long long)(GetTickCount64() / 1000));
+=======
+    if (f) {
+        fprintf(f, "{\n  \"hotpatches\": %llu,\n  \"repairs\": %llu,\n  \"anomalies\": %llu,\n  \"uptime_sec\": %llu\n}\n",
+                (unsigned long long)stats.totalOperations.load(), (unsigned long long)oStats.repairsAttempted, (unsigned long long)oStats.anomaliesDetected, (unsigned long long)(GetTickCount64()/1000));
+>>>>>>> origin/main
         fclose(f);
         ctx.output("[TELEMETRY] Exported to: ");
         ctx.output(outFile);
@@ -9067,6 +9293,7 @@ CommandResult handleTelemetryExportCsv(const CommandContext& ctx)
     auto& mgr = UnifiedHotpatchManager::instance();
     const auto& stats = mgr.getStats();
     FILE* f = fopen(outFile, "w");
+<<<<<<< HEAD
     if (f)
     {
         fprintf(f,
@@ -9075,6 +9302,11 @@ CommandResult handleTelemetryExportCsv(const CommandContext& ctx)
                 (unsigned long long)stats.totalOperations.load(), (unsigned long long)stats.memoryPatchCount.load(),
                 (unsigned long long)stats.bytePatchCount.load(), (unsigned long long)stats.serverPatchCount.load(),
                 (unsigned long long)(GetTickCount64() / 1000));
+=======
+    if (f) {
+        fprintf(f, "metric,value\nhotpatches,%llu\nmemory_patches,%llu\nbyte_patches,%llu\nserver_patches,%llu\nuptime_sec,%llu\n",
+                (unsigned long long)stats.totalOperations.load(), (unsigned long long)stats.memoryPatchCount.load(), (unsigned long long)stats.bytePatchCount.load(), (unsigned long long)stats.serverPatchCount.load(), (unsigned long long)(GetTickCount64()/1000));
+>>>>>>> origin/main
         fclose(f);
         ctx.output("[TELEMETRY] CSV exported to: ");
         ctx.output(outFile);
@@ -9142,10 +9374,16 @@ CommandResult handleTelemetrySnapshot(const CommandContext& ctx)
     snprintf(filename, sizeof(filename), "snapshot_%04d%02d%02d_%02d%02d%02d.json", st.wYear, st.wMonth, st.wDay,
              st.wHour, st.wMinute, st.wSecond);
     FILE* f = fopen(filename, "w");
+<<<<<<< HEAD
     if (f)
     {
         fprintf(f, "{\"timestamp\":\"%04d-%02d-%02dT%02d:%02d:%02d\",\"patches\":%llu}\n", st.wYear, st.wMonth, st.wDay,
                 st.wHour, st.wMinute, st.wSecond, (unsigned long long)stats.totalOperations.load());
+=======
+    if (f) {
+        fprintf(f, "{\"timestamp\":\"%04d-%02d-%02dT%02d:%02d:%02d\",\"patches\":%llu}\n",
+                st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, (unsigned long long)stats.totalOperations.load());
+>>>>>>> origin/main
         fclose(f);
         ctx.output("[TELEMETRY] Snapshot saved: ");
         ctx.output(filename);

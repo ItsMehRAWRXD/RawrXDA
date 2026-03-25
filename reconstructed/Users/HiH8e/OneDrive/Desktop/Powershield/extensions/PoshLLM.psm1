@@ -64,7 +64,9 @@ class SimpleTokenizer {
             $line = $line.ToLower().Trim()
             if ($line -eq '') { continue }
             $chars = [char[]]$line
-            $all.AddRange($chars | ForEach-Object { $_.ToString() })
+            foreach ($ch in $chars) {
+                $all.Add($ch.ToString())
+            }
             $all.Add('<|endoftext|>')
         }
 
@@ -110,7 +112,10 @@ class SimpleTokenizer {
 
     static [int[]] Encode([string]$text) {
         $chars = [char[]]$text.ToLower().Trim()
-        $seq = [System.Collections.Generic.List[string]]($chars | ForEach-Object { $_.ToString() })
+        $seq = [System.Collections.Generic.List[string]]::new()
+        foreach ($ch in $chars) {
+            $seq.Add($ch.ToString())
+        }
         $ids = [System.Collections.Generic.List[int]]::new()
         while ($seq.Count -gt 0) {
             $found = $false
@@ -133,7 +138,7 @@ class SimpleTokenizer {
 
     static [string] Decode([int[]]$ids) {
         $str = ($ids | ForEach-Object { [SimpleTokenizer]::Id2Str[$_] }) -join ''
-        $str.Replace('<|endoftext|>', "`n")
+        return $str.Replace('<|endoftext|>', "`n")
     }
 }
 # endregion

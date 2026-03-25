@@ -8,12 +8,18 @@
 #include <vector>
 
 // Win32: parent is HWND for CreateWindowExW when embedding the orchestration UI.
+<<<<<<< HEAD
 namespace RawrXD
 {
 
 class OrchestrationUI
 {
   public:
+=======
+namespace RawrXD {
+
+class OrchestrationUI {public:
+>>>>>>> origin/main
     explicit OrchestrationUI(TaskOrchestrator* orchestrator, void* parent = nullptr);
 
     \nprivate :\n void onOrchestrateClicked();

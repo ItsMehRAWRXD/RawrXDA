@@ -1367,7 +1367,38 @@ void Win32IDE::onPlanDialogCommand(int controlId)
             ShowWindow(m_hwndPlanProgress, SW_SHOW);
             ShowWindow(m_hwndPlanProgressLabel, SW_SHOW);
 
+<<<<<<< HEAD
             // Update dialog title
+=======
+        // Update dialog title
+        SetWindowTextA(m_hwndPlanDialog, "Agent Plan — Executing...");
+
+        // Re-enable main window (dialog stays open for progress)
+        EnableWindow(m_hwndMain, TRUE);
+
+        executePlan();
+        break;
+    }
+
+    case IDC_PLAN_BTN_EDIT: {
+        editSelectedPlanStep();
+        break;
+    }
+
+    case IDC_PLAN_BTN_REJECT: {
+        m_currentPlan.status = PlanStatus::Rejected;
+        appendToOutput("[Plan] Rejected by user.", "General", OutputSeverity::Warning);
+        appendToOutput("[Plan] Plan rejected by user.\n", "Agent", OutputSeverity::Info);
+        LOG_INFO("Plan rejected by user: " + m_currentPlan.goal);
+        closePlanDialog();
+        break;
+    }
+
+    case IDC_PLAN_BTN_PAUSE: {
+        if (m_planExecutionPaused.load()) {
+            resumePlan();
+            SetWindowTextA(m_hwndPlanBtnPause, "Pause");
+>>>>>>> origin/main
             SetWindowTextA(m_hwndPlanDialog, "Agent Plan — Executing...");
 
             // Re-enable main window (dialog stays open for progress)

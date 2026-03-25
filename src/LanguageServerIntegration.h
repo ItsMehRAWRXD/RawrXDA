@@ -4,7 +4,10 @@
 #include <vector>
 #include <map>
 #include <memory>
+<<<<<<< HEAD
 #include <functional>
+=======
+>>>>>>> origin/main
 #include "lsp_client.h"
 
 namespace RawrXD {
@@ -29,6 +32,7 @@ struct PrepareRenameResult {
     std::string placeholder;
 };
 
+<<<<<<< HEAD
 struct TextEdit {
     int startLine = 0;
     int startColumn = 0;
@@ -57,6 +61,8 @@ enum class ServerCapability {
     FormattingProvider = 64
 };
 
+=======
+>>>>>>> origin/main
 // Diagnostics structure that might differ from LSPClient's internal on
 // reusing struct from existing headers if available.
 // For now, using LSPClient's Diagnostic via inclusion or mapping.
@@ -75,6 +81,7 @@ public:
     HoverInfo provideHoverInfo(const std::string& filePath, int line, int column, const std::string& language, const std::string& codeContext);
     Location goToDefinition(const std::string& filePath, int line, int column, const std::string& language);
     std::vector<Location> findReferences(const std::string& filePath, int line, int column, const std::string& language);
+<<<<<<< HEAD
     std::vector<Diagnostic> getDiagnostics(const std::string& filePath, const std::string& code, const std::string& language);
     PrepareRenameResult prepareRename(const std::string& filePath, int line, int column, const std::string& language);
     
@@ -95,13 +102,22 @@ public:
                                 const std::function<std::string(const std::string&)>& handler);
     
     // Helper methods
+=======
+    std::vector<RawrXD::Diagnostic> getDiagnostics(const std::string& filePath, const std::string& code, const std::string& language);
+    PrepareRenameResult prepareRename(const std::string& filePath, int line, int column, const std::string& language);
+    
+    // Helper helpers
+>>>>>>> origin/main
     std::string extractTokenAtPosition(const std::string& code, int line, int column);
     
 private:
     bool m_isInitialized;
     int m_serverCapabilities;
     std::string m_rootPath;
+<<<<<<< HEAD
     std::map<std::string, std::function<std::string(const std::string&)>> m_languageHandlers;
+=======
+>>>>>>> origin/main
     
     // Map language ID to client
     std::map<std::string, std::shared_ptr<LSPClient>> m_clients;
@@ -113,6 +129,7 @@ private:
     std::string generatePythonHoverInfo(const std::string& token, const std::string& file);
     std::string generateJsHoverInfo(const std::string& token, const std::string& file);
     
+<<<<<<< HEAD
     std::vector<Diagnostic> checkSyntax(const std::string& code, const std::string& language);
     std::vector<Diagnostic> checkSemantics(const std::string& code, const std::string& language);
     std::vector<Diagnostic> checkStyle(const std::string& code, const std::string& language);
@@ -134,3 +151,12 @@ private:
 
 } // namespace IDE
 } // namespace RawrXD
+=======
+    std::vector<RawrXD::Diagnostic> checkSyntax(const std::string& code, const std::string& language);
+    std::vector<RawrXD::Diagnostic> checkSemantics(const std::string& code, const std::string& language);
+    std::vector<RawrXD::Diagnostic> checkStyle(const std::string& code, const std::string& language);
+};
+
+}
+}
+>>>>>>> origin/main

@@ -12,8 +12,14 @@
 #include "Win32IDE_SubAgent.h"
 #include <functional>
 #include <memory>
+<<<<<<< HEAD
 #include <string>
 #include <vector>
+=======
+#include "../native_agent.hpp"
+#include "../cpu_inference_engine.h"
+#include "Win32IDE_SubAgent.h"
+>>>>>>> origin/main
 
 // Forward declaration
 class Win32IDE;
@@ -88,15 +94,20 @@ class AgenticBridge
     void SetLanguageContext(const std::string& language, const std::string& filePath);
     std::string GetLanguageContext() const { return m_languageContext; }
     std::string GetFileContext() const { return m_fileContext; }
+<<<<<<< HEAD
 
     // Workspace root for agent context (project folder / drive)
     void SetWorkspaceRoot(const std::string& workspaceRoot);
     std::string GetWorkspaceRoot() const { return m_workspaceRoot; }
 
+=======
+    
+>>>>>>> origin/main
     // Output callback
     using OutputCallback = std::function<void(const std::string&, const std::string&)>;
     void SetOutputCallback(OutputCallback callback);
 
+<<<<<<< HEAD
     // Compatibility callbacks used by Win32IDE_AgentCommands.cpp
     using ErrorCallback = std::function<void(const std::string&)>;
     using ProgressCallback = std::function<void(const std::string&)>;
@@ -106,6 +117,8 @@ class AgenticBridge
     void SetModelLoadErrorCallback(ModelLoadErrorCallback cb) { m_modelLoadErrorCallback = std::move(cb); }
     const std::string& GetLastModelLoadError() const { return m_lastModelLoadError; }
 
+=======
+>>>>>>> origin/main
     // RE Tools Access
     std::string RunDumpbin(const std::string& path, const std::string& mode);
     std::string RunCodex(const std::string& path);
@@ -186,7 +199,11 @@ class AgenticBridge
     HANDLE m_hStdoutWrite;
     HANDLE m_hStdinRead;
     HANDLE m_hStdinWrite;
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> origin/main
     // Config Cache
     // Default ON: agent chat panel should ship with full reasoning modes enabled (user can toggle off).
     bool m_maxMode = true;

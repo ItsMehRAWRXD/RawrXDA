@@ -117,6 +117,7 @@ Fixed_Reverse_Engineered/
 Consolidated_Modules_*/
 *.exe.WebView2/
 build_universal/
+<<<<<<< HEAD
 
 # ═══════════════════════════════════════════════════════════════
 # Bloat Prevention (March 2026 cleanup)
@@ -153,3 +154,5 @@ build_smoke_verify2/
 # Large scan/report files (>100MB)
 **/todo-scan-*.json
 **/Powershield_Audit_Report.json
+=======
+>>>>>>> origin/main

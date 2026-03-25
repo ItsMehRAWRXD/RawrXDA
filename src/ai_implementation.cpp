@@ -516,6 +516,14 @@ CompletionResponse AIImplementation::complete(const CompletionRequest& request) 
                 response.success = false;
                 response.errorMessage = httpResp.errorMessage;
             }
+<<<<<<< HEAD
+=======
+        } else if (m_config.backend == "local") {
+            // Local GGUF model inference via CPUInferenceEngine
+            // This path is used when a model is loaded directly, not via remote API
+            response.success = false;
+            response.errorMessage = "Local backend: use api_server inference endpoint instead";
+>>>>>>> origin/main
         } else {
             response.success = false;
             response.errorMessage = "Unsupported backend: " + m_config.backend;

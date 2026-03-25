@@ -17,9 +17,14 @@
 ;  12. SwarmCoord_Init       — beacon-based work distribution
 ;  13. ExtHostInit           — extension host (sandboxed DLL loader)
 ;  14. WebView2Init          — WebView2 shell (graceful GDI fallback)
+<<<<<<< HEAD
 ;  15. CLI parse             — --bench, --model, --prompt, --build flags
 ;  16. UIMainLoop            — window + message pump (blocks until WM_QUIT)
 ;      OR --build            — WritePEFile + SavePEToDisk (sovereign PE emit)
+=======
+;  15. CLI parse             — --bench, --model, --prompt flags
+;  16. UIMainLoop            — window + message pump (blocks until WM_QUIT)
+>>>>>>> origin/main
 
 EXTERN InferenceEngineInit:PROC
 EXTERN UIMainLoop:PROC
@@ -32,15 +37,19 @@ EXTERN Test_Init:PROC
 EXTERN Task_Init:PROC
 EXTERN Swarm_Init:PROC
 EXTERN SwarmCoord_Init:PROC
+<<<<<<< HEAD
 EXTERN SwarmNet_Init:PROC
 EXTERN Consensus_Init:PROC
 EXTERN Batch_Init:PROC
 EXTERN StressTest_Run:PROC
 EXTERN StressTest_LogStats:PROC
+=======
+>>>>>>> origin/main
 EXTERN StreamLoaderInit:PROC
 EXTERN StreamMapModel:PROC
 EXTERN WebView2Init:PROC
 EXTERN ExtHostInit:PROC
+<<<<<<< HEAD
 EXTERN Mesh_Init:PROC
 
 ; PE Writer — Final Directive (Non-Stubbed)
@@ -69,6 +78,9 @@ EXTERN OllamaClient_Shutdown:PROC
 EXTERN InferenceRouter_Init:PROC
 EXTERN RunInference:PROC
 EXTERN HeapAlloc:PROC
+=======
+EXTERN RunInference:PROC
+>>>>>>> origin/main
 EXTERN HeapCreate:PROC
 EXTERN GetModuleHandleW:PROC
 EXTERN GetCommandLineW:PROC
@@ -78,8 +90,11 @@ EXTERN WriteFile:PROC
 EXTERN GetStdHandle:PROC
 EXTERN CommandLineToArgvW:PROC
 EXTERN lstrcmpiW:PROC
+<<<<<<< HEAD
 EXTERN RawrXD_RunExternalTestsW:PROC
 EXTERN RawrXD_HealBuild:PROC
+=======
+>>>>>>> origin/main
 
 PUBLIC WinMain
 PUBLIC WinMainCRTStartup
@@ -96,14 +111,20 @@ g_hInstance   dq 0
 g_hHeap       dq 0
 g_cmdShow     dd 0
 g_benchMode   dd 0                  ; 1 = --benchmark mode
+<<<<<<< HEAD
 g_buildMode   dd 0                  ; 1 = --build mode (PE writer)
 g_pModelPath  dq 0                  ; pointer to --model argument (wide)
 g_pPrompt     dq 0                  ; pointer to --prompt argument (wide)
 g_pLSPPath    dq 0                  ; pointer to --lsp argument (wide), defaults to szLSPDefault
+=======
+g_pModelPath  dq 0                  ; pointer to --model argument (wide)
+g_pPrompt     dq 0                  ; pointer to --prompt argument (wide)
+>>>>>>> origin/main
 g_cmdLineW    dq 0                  ; raw GetCommandLineW result
 g_benchStart  dq 0                  ; GetTickCount64 at bench start
 g_benchTokens dd 0                  ; tokens generated in bench
 g_hStdOut     dq 0                  ; stdout handle for bench output
+<<<<<<< HEAD
 g_multiNode   dd 0                  ; 1 = --multi-node mode
 g_stressMode  dd 0                  ; 1 = --stress mode
 g_healBuildMode dd 0                 ; 1 = --heal-build mode
@@ -116,6 +137,12 @@ g_pTestArgs   dq 0                   ; pointer to --test-args arg   (wide)
 .data
 align 8
 g_benchBuf    db 256 dup(0)         ; output buffer for benchmark results
+=======
+
+.data?
+align 8
+g_benchBuf    db 256 dup(?)         ; output buffer for benchmark results
+>>>>>>> origin/main
 
 .const
 szClassName   db "RawrXD_Monolithic",0
@@ -125,6 +152,7 @@ szBench       dw '-','-','b','e','n','c','h',0
 szBenchmark   dw '-','-','b','e','n','c','h','m','a','r','k',0
 szModel       dw '-','-','m','o','d','e','l',0
 szPrompt      dw '-','-','p','r','o','m','p','t',0
+<<<<<<< HEAD
 szNodes       dw '-','-','m','u','l','t','i','-','n','o','d','e',0
 szBuild       dw '-','-','b','u','i','l','d',0
 szStress      dw '-','-','s','t','r','e','s','s',0
@@ -138,6 +166,8 @@ szBuildCmd    dw '-','-','b','u','i','l','d','-','c','o','m','m','a','n','d',0
 szWorkspace   dw '-','-','w','o','r','k','s','p','a','c','e','-','r','o','o','t',0
 ; Default LSP server path (wide, can be overridden by --lsp <path>)
 szLSPDefault  dw 'c','l','a','n','g','d','.','e','x','e',0
+=======
+>>>>>>> origin/main
 ; Benchmark output template (narrow for WriteFile)
 szBenchHdr    db "RawrXD Benchmark Results",13,10
               db "========================",13,10,0
@@ -177,6 +207,7 @@ WinMain PROC FRAME
     jz      @fail
     mov     g_hHeap, rax
 
+<<<<<<< HEAD
     ; Parse CLI before any optional subsystem startup.
     ; Interactive mode stays on the minimal stable path and only
     ; explicit headless modes initialize heavier subsystems.
@@ -214,10 +245,63 @@ WinMain PROC FRAME
     call    Task_Init
     call    ExtHostInit
     call    WebView2Init
+=======
+    ; 2. Beacon first — all other modules signal through this
+    call    BeaconRouterInit
+    test    eax, eax
+    jnz     @fail
+
+    ; 3. Inference engine (depends on heap, uses beacon slot 2)
+    call    InferenceEngineInit
+
+    ; 4. Stream loader — VEH + LRU for demand-paged GGUF
+    call    StreamLoaderInit
+
+    ; 5. Model loader — SRWLOCK hot-swap
+    call    ModelLoaderInit
+
+    ; 6. LSP bridge (stub)
+    xor     rcx, rcx
+    call    LSPBridgeInit
+
+    ; 7. Agent core (depends on Inference + Beacon)
+    call    AgentCoreInit
+
+    ; 8. DAP engine (debug adapter protocol)
+    call    DAP_Init
+
+    ; 9. Test explorer (test discovery + execution)
+    call    Test_Init
+
+    ; 10. Task runner (task configs + process management)
+    call    Task_Init
+
+    ; 11. Swarm — multi-GPU Vulkan orchestrator (graceful fallback)
+    call    Swarm_Init
+
+    ; 12. Swarm coordinator — beacon-based work distribution
+    call    SwarmCoord_Init
+
+    ; 13. Extension host — sandboxed DLL loader
+    call    ExtHostInit
+
+    ; 14. WebView2 shell — graceful GDI fallback if loader absent
+    call    WebView2Init
+
+    ; 15. Parse CLI flags: --bench, --model <path>, --prompt <text>
+    call    ParseCommandLine
+
+    ; 16. Branch: benchmark mode or interactive UI
+    cmp     g_benchMode, 0
+    jne     @benchmark
+
+    ; ── Interactive mode ──────────────────────────────────────
+>>>>>>> origin/main
     call    UIMainLoop
     xor     eax, eax
     jmp     @exit
 
+<<<<<<< HEAD
     ; ── Stress test mode (--stress) ───────────────────────────
 @stress_test:
     call    SwarmNet_Init
@@ -282,6 +366,10 @@ WinMain PROC FRAME
     call    StreamLoaderInit
     call    ModelLoaderInit
     call    InferenceRouter_Init
+=======
+    ; ── Benchmark mode ────────────────────────────────────────
+@benchmark:
+>>>>>>> origin/main
     call    GetTickCount64
     mov     g_benchStart, rax
 
@@ -292,7 +380,10 @@ WinMain PROC FRAME
     call    StreamMapModel
 
 @bench_infer:
+<<<<<<< HEAD
     mov     rcx, g_pPrompt               ; Pass --prompt text (or NULL)
+=======
+>>>>>>> origin/main
     call    RunInference
 
     ; Elapsed = GetTickCount64() - start
@@ -381,6 +472,7 @@ ParseCommandLine PROC FRAME
     test    eax, eax
     jz      @pcl_prompt
 
+<<<<<<< HEAD
     ; ── try --build ───────────────────────────
     mov     rcx, r12
     lea     rdx, [szBuild]
@@ -449,6 +541,8 @@ ParseCommandLine PROC FRAME
     call    lstrcmpiW
     test    eax, eax
     jz      @pcl_workspace
+=======
+>>>>>>> origin/main
     inc     ebx
     jmp     @pcl_loop
 
@@ -457,6 +551,7 @@ ParseCommandLine PROC FRAME
     inc     ebx
     jmp     @pcl_loop
 
+<<<<<<< HEAD
 @pcl_stress:
     mov     g_stressMode, 1
     inc     ebx
@@ -491,6 +586,8 @@ ParseCommandLine PROC FRAME
     inc     ebx
     jmp     @pcl_loop
 
+=======
+>>>>>>> origin/main
 @pcl_model:
     inc     ebx
     cmp     ebx, edi
@@ -509,6 +606,7 @@ ParseCommandLine PROC FRAME
     inc     ebx
     jmp     @pcl_loop
 
+<<<<<<< HEAD
 @pcl_autofix:
     mov     g_healBuildMode, 1
     inc     ebx
@@ -541,6 +639,8 @@ ParseCommandLine PROC FRAME
     inc     ebx
     jmp     @pcl_loop
 
+=======
+>>>>>>> origin/main
 @pcl_done:
     lea     rsp, [rbp]
     pop     r12

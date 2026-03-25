@@ -1,7 +1,17 @@
 ; ═══════════════════════════════════════════════════════════════════
+<<<<<<< HEAD
 ; RawrXD DAP Engine — Debug Adapter Protocol subsystem (v14.5.0-SOVEREIGN)
 ; STATUS: COMPLETE — MINIMALISM MINIMIZED. COMPLEXITY: MAXIMUM.
 ; Integrates with: beacon.asm (slot 4), ui.asm (debug panel)
+=======
+; RawrXD DAP Engine — Debug Adapter Protocol subsystem
+; Integrates with: beacon.asm (slot 4), ui.asm (debug panel)
+; Exports: DAP_Init, DAP_Launch, DAP_Step, DAP_StackTrace, DAP_Evaluate
+;
+; Process lifecycle: CreateProcessA with DEBUG_PROCESS flag,
+; WaitForDebugEvent loop in background thread, Beacon notifications
+; to UI for breakpoint hits, step completions, and exit events.
+>>>>>>> origin/main
 ; ═══════════════════════════════════════════════════════════════════
 
 ; ── Win32 API imports ────────────────────────────────────────────
@@ -21,6 +31,7 @@ EXTERN OpenThread:PROC
 EXTERN lstrcpyA:PROC
 EXTERN lstrcatA:PROC
 EXTERN wsprintfA:PROC
+<<<<<<< HEAD
 EXTERN lstrlenA:PROC
 EXTERN lstrcmpA:PROC
 EXTERN lstrcmpiA:PROC
@@ -31,13 +42,18 @@ EXTERN WriteFile:PROC
 EXTERN GetLastError:PROC
 EXTERN FlushInstructionCache:PROC
 EXTERN GetTickCount64:PROC
+=======
+>>>>>>> origin/main
 
 ; ── Cross-module imports ─────────────────────────────────────────
 EXTERN BeaconSend:PROC
 
+<<<<<<< HEAD
 ; ── Forward declarations ─────────────────────────────────────────
 DAP_EventLoop PROTO
 
+=======
+>>>>>>> origin/main
 ; ── Exports ──────────────────────────────────────────────────────
 PUBLIC DAP_Init
 PUBLIC DAP_Launch
@@ -153,6 +169,7 @@ BP_REC_SIZE              equ 24
 ; offset 32: reserved (QWORD)
 FRAME_REC_SIZE           equ 40
 
+<<<<<<< HEAD
 ; ── DAP Protocol States ──────────────────────────────────────────
 DAP_STATE_UNINITIALIZED  equ 0
 DAP_STATE_INITIALIZED    equ 1
@@ -234,6 +251,8 @@ DAP_CMD_UNKNOWN          equ 0
 PARSE_STATE_HEADER       equ 0
 PARSE_STATE_BODY         equ 1
 
+=======
+>>>>>>> origin/main
 ; ═════════════════════════════════════════════════════════════════
 .data
 align 8
@@ -247,6 +266,7 @@ g_stepType          dd 0
 g_frameCount        dd 0
 g_bpCount           dd 0
 
+<<<<<<< HEAD
 ; ── DAP Session State ────────────────────────────────────────────
 align 8
 g_dapSessionId      dq 0
@@ -294,6 +314,8 @@ g_dapInputHandle    dq 0
 g_dapOutputHandle   dq 0
 g_dapPipeHandle     dq 0
 
+=======
+>>>>>>> origin/main
 .data?
 align 16
 ; Cached stack frames: MAX_STACK_FRAMES * FRAME_REC_SIZE = 4000 bytes
@@ -308,6 +330,7 @@ g_evalResult        db 256 dup(?)
 ; Event notification buffer (128 bytes, sent via Beacon)
 g_eventBuf          db 128 dup(?)
 
+<<<<<<< HEAD
 ; ── DAP Protocol Buffers ─────────────────────────────────────────
 align 16
 g_jsonScratchBuf    db JSON_SCRATCH_SIZE dup(?)
@@ -332,12 +355,15 @@ g_instDecodeLen     dd ?
 ; ── Content-Length Header Parse ───────────────────────────────────
 g_contentLenBuf     db CONTENT_LENGTH_HDR_MAX dup(?)
 
+=======
+>>>>>>> origin/main
 .const
 szDapStarted    db "DAP: Debug session started",0
 szDapExited     db "DAP: Debuggee exited",0
 szDapBpHit      db "DAP: Breakpoint hit",0
 szDapStepped    db "DAP: Step complete",0
 szEvalDefault   db "0",0
+<<<<<<< HEAD
 szEvalFmt       db "0x%016I64X",0
 szEvalReadErr   db "<read error>",0
 szEvalNoDebug   db "<no debug session>",0
@@ -391,11 +417,14 @@ szEvtContinued  db '{"seq":%d,"type":"event","event":"continued",'
                 db '"body":{"threadId":1,"allThreadsContinued":true}}',0
 szEvtInitialized db '{"seq":%d,"type":"event",'
                 db '"event":"initialized"}',0
+=======
+>>>>>>> origin/main
 
 ; ═════════════════════════════════════════════════════════════════
 .code
 
 ; ────────────────────────────────────────────────────────────────
+<<<<<<< HEAD
 ; DAP_Init — Full DAP session initialization
 ;   Allocates session state, JSON parser scratch buffer (16KB),
 ;   breakpoint table (64 entries w/ condition hash, hit count),
@@ -640,6 +669,27 @@ DAP_Init PROC FRAME
     pop     rbx
     pop     rbp
     xor     eax, eax                     ; return 0 = success
+=======
+; DAP_Init — Zero state, prepare breakpoint table
+;   No args. Returns EAX=0.
+; ────────────────────────────────────────────────────────────────
+DAP_Init PROC FRAME
+    sub     rsp, 28h
+    .allocstack 28h
+    .endprolog
+
+    mov     g_hDebugProcess, 0
+    mov     g_hDebugThread, 0
+    mov     g_dwProcessId, 0
+    mov     g_dwThreadId, 0
+    mov     g_bDebugging, 0
+    mov     g_bStepping, 0
+    mov     g_frameCount, 0
+    mov     g_bpCount, 0
+
+    add     rsp, 28h
+    xor     eax, eax
+>>>>>>> origin/main
     ret
 DAP_Init ENDP
 
@@ -745,6 +795,7 @@ DAP_Launch PROC FRAME
 DAP_Launch ENDP
 
 ; ────────────────────────────────────────────────────────────────
+<<<<<<< HEAD
 ; DAP_EventLoop — Background thread: DAP wire protocol + debug events
 ;   RCX = lpParameter (unused)
 ;   Implements full DAP protocol: Content-Length header parsing,
@@ -762,10 +813,21 @@ DAP_Launch ENDP
 ;   [rsp+0x5E0..0x5FF] = temporaries (bytesRead, etc.)
 ;   Pushes: rbx,rsi,rdi,r12,r13,r14,r15 = 7*8 = 56
 ;   8(ret)+56(push)+1536 = 1600 → 1600 mod 16 = 0 ✓
+=======
+; DAP_EventLoop — Background thread: process debug events
+;   RCX = lpParameter (unused)
+;   Runs until EXIT_PROCESS_DEBUG_EVENT or g_bDebugging == 0
+;
+; Stack layout: DEBUG_EVENT at [rsp+30h] = 176 bytes
+;   1 push (rbx) + sub 0E8h (232) = 240 total
+;   8 (ret) + 8 (push) + 232 = 248 → 248 mod 16 = 8
+;   Need 0F0h (240): 8+8+240 = 256 → 256 mod 16 = 0 ✓
+>>>>>>> origin/main
 ; ────────────────────────────────────────────────────────────────
 DAP_EventLoop PROC FRAME
     push    rbx
     .pushreg rbx
+<<<<<<< HEAD
     push    rsi
     .pushreg rsi
     push    rdi
@@ -1798,11 +1860,33 @@ DAP_EventLoop PROC FRAME
     call    WaitForDebugEvent
     test    eax, eax
     jz      @@evloop_main               ; no event (timeout), loop back
+=======
+    sub     rsp, 0F0h
+    .allocstack 0F0h
+    .endprolog
+
+    ; DEBUG_EVENT at [rsp+30h], 176 bytes
+    ; rsp+00h..rsp+27h = shadow space + scratch
+    ; rsp+28h..rsp+2Fh = alignment pad
+
+@event_loop:
+    ; Check if still debugging
+    cmp     g_bDebugging, 0
+    je      @evloop_exit
+
+    ; WaitForDebugEvent(&de, INFINITE)
+    lea     rcx, [rsp+30h]             ; lpDebugEvent
+    mov     edx, INFINITE_WAIT         ; dwMilliseconds
+    call    WaitForDebugEvent
+    test    eax, eax
+    jz      @evloop_exit               ; WaitForDebugEvent failed
+>>>>>>> origin/main
 
     ; Read dwDebugEventCode at [rsp+30h]
     mov     eax, dword ptr [rsp+30h]
 
     cmp     eax, EXCEPTION_DEBUG_EVENT
+<<<<<<< HEAD
     je      @@dbg_exception
     cmp     eax, EXIT_PROCESS_DEBUG_EVENT
     je      @@dbg_exit_process
@@ -1872,10 +1956,48 @@ DAP_EventLoop PROC FRAME
 
     ; Notify UI via Beacon
     xor     ecx, ecx
+=======
+    je      @ev_exception
+    cmp     eax, EXIT_PROCESS_DEBUG_EVENT
+    je      @ev_exit_process
+    cmp     eax, CREATE_PROCESS_DEBUG_EVENT
+    je      @ev_continue
+    cmp     eax, CREATE_THREAD_DEBUG_EVENT
+    je      @ev_continue
+    cmp     eax, EXIT_THREAD_DEBUG_EVENT
+    je      @ev_continue
+    cmp     eax, LOAD_DLL_DEBUG_EVENT
+    je      @ev_continue
+    cmp     eax, OUTPUT_DEBUG_STRING_EVENT
+    je      @ev_dbgstr
+    jmp     @ev_continue
+
+@ev_exception:
+    ; DEBUG_EVENT: dwProcessId at +4, dwThreadId at +8
+    ; EXCEPTION_DEBUG_INFO.ExceptionRecord.ExceptionCode at +10h
+    mov     eax, dword ptr [rsp+30h+10h]   ; ExceptionCode
+
+    cmp     eax, STATUS_BREAKPOINT
+    je      @ev_breakpoint
+    cmp     eax, STATUS_SINGLE_STEP
+    je      @ev_singlestep
+
+    ; Other exception — pass to debuggee (not handled)
+    mov     ecx, dword ptr [rsp+30h+4]     ; dwProcessId
+    mov     edx, dword ptr [rsp+30h+8]     ; dwThreadId
+    mov     r8d, DBG_EXCEPTION_NOT_HANDLED
+    call    ContinueDebugEvent
+    jmp     @event_loop
+
+@ev_breakpoint:
+    ; Notify UI: breakpoint hit
+    xor     ecx, ecx                       ; UI beacon slot 0
+>>>>>>> origin/main
     lea     rdx, szDapBpHit
     mov     r8d, DAP_EVENT_BREAKPOINT
     call    BeaconSend
 
+<<<<<<< HEAD
     ; Update breakpoint hit counts in extended table
     xor     esi, esi
     mov     edi, g_bpCount
@@ -1895,10 +2017,15 @@ DAP_EventLoop PROC FRAME
 @@bp_hit_done:
 
     ; Continue debuggee
+=======
+    ; If we're stepping, auto-continue (user resumes via DAP_Step)
+    ; For now, continue the debuggee
+>>>>>>> origin/main
     mov     ecx, dword ptr [rsp+30h+4]
     mov     edx, dword ptr [rsp+30h+8]
     mov     r8d, DBG_CONTINUE
     call    ContinueDebugEvent
+<<<<<<< HEAD
     jmp     @@evloop_main
 
 @@dbg_singlestep:
@@ -1919,6 +2046,15 @@ DAP_EventLoop PROC FRAME
     inc     g_eventRingCount
 
     ; Notify UI
+=======
+    jmp     @event_loop
+
+@ev_singlestep:
+    ; Clear stepping flag
+    mov     g_bStepping, 0
+
+    ; Notify UI: step completed
+>>>>>>> origin/main
     xor     ecx, ecx
     lea     rdx, szDapStepped
     mov     r8d, DAP_EVENT_STEPPED
@@ -1929,6 +2065,7 @@ DAP_EventLoop PROC FRAME
     mov     edx, dword ptr [rsp+30h+8]
     mov     r8d, DBG_CONTINUE
     call    ContinueDebugEvent
+<<<<<<< HEAD
     jmp     @@evloop_main
 
 @@dbg_output_string:
@@ -1943,10 +2080,28 @@ DAP_EventLoop PROC FRAME
     mov     g_bDebugging, 0
     mov     g_dapState, DAP_STATE_TERMINATED
 
+=======
+    jmp     @event_loop
+
+@ev_dbgstr:
+    ; OutputDebugString from debuggee — forward to UI
+    xor     ecx, ecx
+    lea     rdx, g_eventBuf                 ; would contain the string
+    mov     r8d, DAP_EVENT_OUTPUT
+    call    BeaconSend
+    jmp     @ev_continue
+
+@ev_exit_process:
+    ; Debuggee exited
+    mov     g_bDebugging, 0
+
+    ; Notify UI
+>>>>>>> origin/main
     xor     ecx, ecx
     lea     rdx, szDapExited
     mov     r8d, DAP_EVENT_EXIT
     call    BeaconSend
+<<<<<<< HEAD
     jmp     @@evloop_main
 
 @@dbg_auto_continue:
@@ -1978,12 +2133,27 @@ DAP_EventLoop PROC FRAME
     pop     r12
     pop     rdi
     pop     rsi
+=======
+    jmp     @evloop_exit
+
+@ev_continue:
+    ; Default: continue debug event
+    mov     ecx, dword ptr [rsp+30h+4]     ; dwProcessId
+    mov     edx, dword ptr [rsp+30h+8]     ; dwThreadId
+    mov     r8d, DBG_CONTINUE
+    call    ContinueDebugEvent
+    jmp     @event_loop
+
+@evloop_exit:
+    add     rsp, 0F0h
+>>>>>>> origin/main
     pop     rbx
     xor     eax, eax
     ret
 DAP_EventLoop ENDP
 
 ; ────────────────────────────────────────────────────────────────
+<<<<<<< HEAD
 ; DAP_Step — Full single-step implementation with instruction decode
 ;   ECX = stepType (STEP_INTO=1, STEP_OVER=2, STEP_OUT=3)
 ;   Reads current RIP, decodes instruction length (1-15 bytes),
@@ -2032,11 +2202,39 @@ DAP_Step PROC FRAME
     je      @@step_fail
 
     ; ── Open the debuggee's main thread ──────────────────────────
+=======
+; DAP_Step — Single-step the debuggee
+;   ECX = stepType (STEP_INTO=1, STEP_OVER=2, STEP_OUT=3)
+;   Sets EFLAGS.TF on the debuggee's main thread via SetThreadContext.
+;   Returns: EAX = 1 success, 0 failure
+;
+; Stack: 1 push (rbx) + 0D8h = 216 + 8(push) + 8(ret) = 232
+;   232 mod 16 = 8 → need 0E0h (224): 8+8+224 = 240 → 0 ✓
+;   CONTEXT at [rsp+30h], CONTEXT_FULL needs ~1232 bytes
+;   Increase to 560h: 8+8+1376 = 1392 → 1392 mod 16 = 0 ✓
+; ────────────────────────────────────────────────────────────────
+DAP_Step PROC FRAME
+    push    rbx
+    .pushreg rbx
+    sub     rsp, 560h
+    .allocstack 560h
+    .endprolog
+
+    mov     g_stepType, ecx
+    mov     g_bStepping, 1
+
+    cmp     g_bDebugging, 0
+    je      @step_fail
+
+    ; Open the debuggee's main thread
+    ; OpenThread(dwDesiredAccess, bInheritHandle, dwThreadId)
+>>>>>>> origin/main
     mov     ecx, THREAD_ALL_ACCESS
     xor     edx, edx                    ; bInheritHandle = FALSE
     mov     r8d, g_dwThreadId
     call    OpenThread
     test    rax, rax
+<<<<<<< HEAD
     jz      @@step_fail
     mov     r12, rax                     ; r12 = hThread
 
@@ -2790,6 +2988,62 @@ DAP_Step PROC FRAME
     pop     rbx
     pop     rbp
     xor     eax, eax                     ; failure
+=======
+    jz      @step_fail
+    mov     rbx, rax                    ; rbx = hThread
+
+    ; Suspend the thread before modifying context
+    mov     rcx, rbx
+    call    SuspendThread
+
+    ; Zero CONTEXT area at [rsp+30h]
+    lea     rdi, [rsp+30h]
+    xor     eax, eax
+    mov     ecx, 308                    ; 1232/4 ≈ 308 DWORDs
+    rep     stosd
+
+    ; Set ContextFlags = CONTEXT_FULL
+    mov     dword ptr [rsp+30h+30h], CONTEXT_FULL  ; ContextFlags at offset 30h
+
+    ; GetThreadContext(hThread, lpContext)
+    mov     rcx, rbx
+    lea     rdx, [rsp+30h]
+    call    GetThreadContext
+    test    eax, eax
+    jz      @step_resume
+
+    ; Set Trap Flag: EFlags is at offset 44h in CONTEXT (x64)
+    ; Actually on x64, CONTEXT.EFlags is at offset 30h+14h = 44h from CONTEXT base
+    ; CONTEXT layout: P1Home(8) P2Home(8) P3Home(8) P4Home(8) P5Home(8) P6Home(8) 
+    ;   ContextFlags(4) MxCsr(4) ... EFlags at offset 44h
+    mov     eax, dword ptr [rsp+30h+44h]   ; EFlags
+    or      eax, EFLAGS_TF                  ; Set TF
+    mov     dword ptr [rsp+30h+44h], eax
+
+    ; SetThreadContext(hThread, lpContext)
+    mov     rcx, rbx
+    lea     rdx, [rsp+30h]
+    call    SetThreadContext
+
+@step_resume:
+    ; Resume the thread
+    mov     rcx, rbx
+    call    ResumeThread
+
+    ; Close thread handle
+    mov     rcx, rbx
+    call    CloseHandle
+
+    add     rsp, 560h
+    pop     rbx
+    mov     eax, 1
+    ret
+
+@step_fail:
+    add     rsp, 560h
+    pop     rbx
+    xor     eax, eax
+>>>>>>> origin/main
     ret
 DAP_Step ENDP
 
@@ -2937,10 +3191,15 @@ DAP_StackTrace ENDP
 DAP_Evaluate PROC FRAME
     push    rbx
     .pushreg rbx
+<<<<<<< HEAD
     push    rsi
     .pushreg rsi
     sub     rsp, 50h
     .allocstack 50h
+=======
+    sub     rsp, 40h
+    .allocstack 40h
+>>>>>>> origin/main
     .endprolog
 
     mov     rbx, rcx                    ; rbx = pExpr
@@ -2960,6 +3219,7 @@ DAP_Evaluate PROC FRAME
     jmp     @eval_send
 
 @eval_deref:
+<<<<<<< HEAD
     ; Parse hex address after '*'
     ; Skip the '*' character
     lea     rsi, [rbx + 1]
@@ -3059,6 +3319,10 @@ DAP_Evaluate PROC FRAME
     jmp     @eval_send
 
 @eval_zero:
+=======
+    ; TODO: Parse hex address after '*', ReadProcessMemory, format result
+    ; For now, return placeholder
+>>>>>>> origin/main
     lea     rcx, g_evalResult
     lea     rdx, szEvalDefault
     call    lstrcpyA
@@ -3071,8 +3335,12 @@ DAP_Evaluate PROC FRAME
     call    BeaconSend
 
     lea     rax, g_evalResult
+<<<<<<< HEAD
     add     rsp, 50h
     pop     rsi
+=======
+    add     rsp, 40h
+>>>>>>> origin/main
     pop     rbx
     ret
 DAP_Evaluate ENDP

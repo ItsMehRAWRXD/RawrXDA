@@ -398,10 +398,13 @@ void Win32IDE::executePowerShellInput() {
 }
 
 void Win32IDE::executePowerShellPanelCommand(const std::string& command) {
+<<<<<<< HEAD
     if (!m_powerShellSessionActive) {
         startPowerShellSession();
     }
 
+=======
+>>>>>>> origin/main
     // Route to active terminal: tabbed terminals (Tier2) or dedicated PowerShell session
     if (!m_terminalTabs.empty() && m_activeTerminalTab >= 0 && m_activeTerminalTab < static_cast<int>(m_terminalTabs.size())) {
         auto& tab = m_terminalTabs[m_activeTerminalTab];

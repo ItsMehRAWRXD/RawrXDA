@@ -5,6 +5,7 @@
 #ifdef RAWRXD_AGENTIC_MAIN
 
 
+<<<<<<< HEAD
 #include <windows.h>
 #include "RawrXD_Application.h"
 #include "RawrXD_Editor.h"
@@ -13,6 +14,17 @@
 #include "agentic_ide.h"
 #include <iostream>
 
+=======
+
+#include <windows.h>
+#include "RawrXD_Application.h"
+#include "RawrXD_Editor.h"
+#include "RawrXD_Lexer_MASM.h"
+#include "RawrXD_StyleManager.h"
+#include "agentic_ide.h"
+#include <iostream>
+
+>>>>>>> origin/main
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     // Optional console for debug output if we want
     // AllocConsole();
@@ -59,4 +71,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     }
 }
 
+<<<<<<< HEAD
 #endif // RAWRXD_AGENTIC_MAIN
+=======
+>>>>>>> origin/main

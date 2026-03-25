@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // ============================================================================
 // chat_panel.cpp — Rich Chat Panel with Markdown→RichEdit Rendering
 // ============================================================================
@@ -6,6 +7,8 @@
 // action status cards — all via Win32 RichEdit 4.1 (no WebView2 needed).
 // ============================================================================
 
+=======
+>>>>>>> origin/main
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
@@ -448,13 +451,23 @@ std::string ChatPanel::getInput() const {
     if (len <= 0) return {};
     std::wstring buf(len + 1, L'\0');
     GetWindowTextW(m_input, buf.data(), (int)buf.size());
+<<<<<<< HEAD
     return fromWide(buf.substr(0, len));
+=======
+    int utf8Len = WideCharToMultiByte(CP_UTF8, 0, buf.c_str(), -1, nullptr, 0, nullptr, nullptr);
+    if (utf8Len <= 0) return {};
+    std::string result(utf8Len, '\0');
+    WideCharToMultiByte(CP_UTF8, 0, buf.c_str(), -1, result.data(), utf8Len, nullptr, nullptr);
+    result.resize(utf8Len - 1);  // Exclude null terminator
+    return result;
+>>>>>>> origin/main
 }
 
 void ChatPanel::clearInput() {
     if (m_input) SetWindowTextW(m_input, L"");
 }
 
+<<<<<<< HEAD
 void ChatPanel::setDarkMode(bool dark) {
     m_darkMode = dark;
     if (dark) {
@@ -470,6 +483,16 @@ void ChatPanel::setDarkMode(bool dark) {
         SendMessageW(m_transcript, EM_SETBKGNDCOLOR, 0, (LPARAM)m_bgColor);
         InvalidateRect(m_transcript, nullptr, TRUE);
     }
+=======
+void ChatPanel::appendToolAction(const ToolActionStatus& action) {
+    if (!m_transcript) return;
+    std::string text = ToolActionStatusFormatter::formatPlainText(action);
+    std::wstring wtext(text.begin(), text.end());
+    int len = GetWindowTextLengthW(m_transcript);
+    SendMessageW(m_transcript, EM_SETSEL, (WPARAM)len, (LPARAM)len);
+    std::wstring line = L"  " + wtext;
+    SendMessageW(m_transcript, EM_REPLACESEL, TRUE, (LPARAM)line.c_str());
+>>>>>>> origin/main
 }
 
 void ChatPanel::setFontSize(int points) {

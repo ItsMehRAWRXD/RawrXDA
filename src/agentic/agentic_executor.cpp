@@ -18,6 +18,7 @@
 #include <vector>
 #include <windows.h>
 
+<<<<<<< HEAD
 // SCAFFOLD_066: agentic_executor executeUserRequest implementation
 // Reverse-engineered from IDE coordination patterns:
 // 1. Request Normalization & Metadata (Task ID, Priority)
@@ -37,6 +38,88 @@ std::string AgenticExecutor::executeUserRequest(const std::string& request) {
     }
 
     // Standard Agentic Loop
+=======
+// SCAFFOLD_066: agentic_executor executeUserRequest
+
+#endif
+
+namespace fs = std::filesystem;
+
+// -----------------------------------------------------------------------------
+// Construction / initialization
+// -----------------------------------------------------------------------------
+
+AgenticExecutor::AgenticExecutor() = default;
+
+AgenticExecutor::~AgenticExecutor() = default;
+
+void AgenticExecutor::initialize(AgenticEngine* engine, InferenceEngine* inference) {
+    m_agenticEngine = engine;
+    m_inferenceEngine = inference;
+    loadMemorySettings();
+    loadMemoryFromDisk();
+}
+
+// -----------------------------------------------------------------------------
+// File API — C++20 / std::filesystem + std::fstream (no Qt)
+// -----------------------------------------------------------------------------
+
+bool AgenticExecutor::createDirectory(const std::string& path) {
+    std::error_code ec;
+    return fs::create_directories(fs::path(path), ec) || (ec ? false : fs::is_directory(fs::path(path), ec));
+}
+
+bool AgenticExecutor::createFile(const std::string& path, const std::string& content) {
+    std::error_code ec;
+    fs::path p(path);
+    if (p.has_parent_path() && !fs::exists(p.parent_path(), ec))
+        fs::create_directories(p.parent_path(), ec);
+    std::ofstream f(path, std::ios::out | std::ios::trunc);
+    if (!f) return false;
+    f << content;
+    return true;
+}
+
+bool AgenticExecutor::writeFile(const std::string& path, const std::string& content) {
+    std::ofstream f(path, std::ios::out | std::ios::trunc);
+    if (!f) return false;
+    f << content;
+    return true;
+}
+
+std::string AgenticExecutor::readFile(const std::string& path) {
+    return FileManager::readFile(path);
+}
+
+bool AgenticExecutor::deleteFile(const std::string& path) {
+    std::error_code ec;
+    return fs::remove(fs::path(path), ec);
+}
+
+bool AgenticExecutor::deleteDirectory(const std::string& path) {
+    std::error_code ec;
+    return fs::remove_all(fs::path(path), ec) >= 0;
+}
+
+std::vector<std::string> AgenticExecutor::listDirectory(const std::string& path) {
+    std::vector<std::string> out;
+    std::error_code ec;
+    fs::path p(path.empty() ? m_currentWorkingDirectory : path);
+    if (!fs::exists(p, ec) || !fs::is_directory(p, ec)) return out;
+    for (const auto& e : fs::directory_iterator(p, fs::directory_options::skip_permission_denied, ec)) {
+        if (ec) continue;
+        out.push_back(e.path().filename().string());
+    }
+    return out;
+}
+
+// -----------------------------------------------------------------------------
+// Execution — delegates to agentic engine when available; otherwise minimal flow
+// -----------------------------------------------------------------------------
+
+std::string AgenticExecutor::executeUserRequest(const std::string& request) {
+    if (m_onStepStarted) m_onStepStarted("executeUserRequest", m_callbackContext);
+>>>>>>> origin/main
     std::string result;
     if (m_agenticEngine) {
         if (m_onLogMessage) m_onLogMessage("[AgenticExecutor] Delegating to agentic engine", m_callbackContext);
@@ -70,6 +153,7 @@ bool AgenticExecutor::verifyStepCompletion(const std::string& stepJson, const st
 }
 
 std::string AgenticExecutor::compileProject(const std::string& projectPath, const std::string& compiler) {
+<<<<<<< HEAD
     namespace fs = std::filesystem;
     fs::path root = projectPath.empty() ? fs::current_path() : fs::path(projectPath);
     if (!fs::exists(root)) {
@@ -106,6 +190,11 @@ std::string AgenticExecutor::compileProject(const std::string& projectPath, cons
     }
 
     return "{\"success\":false,\"output\":\"No supported build manifest found (CMakeLists.txt/.sln/.cpp)\"}";
+=======
+    (void)projectPath;
+    (void)compiler;
+    return "{\"success\":false,\"output\":\"Compile integration requires build system wiring\"}";
+>>>>>>> origin/main
 }
 
 std::string AgenticExecutor::runExecutable(const std::string& executablePath, const std::vector<std::string>& args) {
@@ -162,6 +251,7 @@ std::string AgenticExecutor::runExecutable(const std::string& executablePath, co
 #endif // _WIN32
 
 std::string AgenticExecutor::getAvailableTools() {
+<<<<<<< HEAD
     return "{\"tools\":[\"createDirectory\",\"createFile\",\"writeFile\",\"readFile\",\"deleteFile\",\"deleteDirectory\",\"listDirectory\",\"compileProject\",\"runExecutable\"],\"source\":\"AgenticExecutor\"}";
 }
 
@@ -217,6 +307,16 @@ std::vector<std::string> AgenticExecutor::listDirectory(const std::string& path)
     }
     std::sort(out.begin(), out.end());
     return out;
+=======
+    // Tools are registered via SubAgentManager / tool server; executor has no direct registry.
+    return "{\"tools\":[],\"source\":\"tool_server\",\"message\":\"Tools registered via SubAgentManager or POST /api/tool; use Agent > Run Tool or CLI /run-tool\"}";
+}
+
+std::string AgenticExecutor::callTool(const std::string& toolName, const std::string& paramsJson) {
+    (void)toolName;
+    (void)paramsJson;
+    return "{\"error\":\"Tool dispatch via SubAgentManager or POST /api/tool\",\"hint\":\"Use Agent > Run Tool in IDE or CLI: /run-tool <name> [json]\"}";
+>>>>>>> origin/main
 }
 
 std::string AgenticExecutor::trainModel(const std::string& datasetPath, const std::string& modelPath, const std::string& configJson) {

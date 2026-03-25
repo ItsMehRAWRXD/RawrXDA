@@ -29,6 +29,11 @@
 // SCAFFOLD_060: BoundedAgentLoop and cycle limit
 
 
+<<<<<<< HEAD
+=======
+#pragma comment(lib, "winhttp.lib")
+
+>>>>>>> origin/main
 using RawrXD::Agent::BoundedAgentLoop;
 using RawrXD::Agent::AgentLoopState;
 using RawrXD::Agent::ToolCallResult;

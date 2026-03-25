@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // JWT validator — native (no Qt). HS256 via BCrypt; RS256 stub.
 #include "auth/jwt_validator.h"
 #include <nlohmann/json.hpp>
@@ -86,15 +87,33 @@ JWTValidator::JWTValidator() = default;
 JWTValidator::~JWTValidator() = default;
 
 void JWTValidator::setHS256Secret(const std::string& secret)
+=======
+#include "jwt_validator.h"
+JWTValidator::JWTValidator()
+    
+{
+}
+
+JWTValidator::~JWTValidator()
+{
+}
+
+void JWTValidator::setHS256Secret(const std::string &secret)
+>>>>>>> origin/main
 {
     m_hs256Secret = secret;
 }
 
+<<<<<<< HEAD
 void JWTValidator::setRS256PublicKey(const std::string& publicKey)
+=======
+void JWTValidator::setRS256PublicKey(const std::string &publicKey)
+>>>>>>> origin/main
 {
     m_rs256PublicKey = publicKey;
 }
 
+<<<<<<< HEAD
 static bool verifyHmacSha256(const std::string& secret, const std::string& message, const std::string& signature)
 {
 #ifdef _WIN32
@@ -193,3 +212,63 @@ bool JWTValidator::validateRS256(const std::string& token)
     // RS256: would need PEM parse + BCryptVerifySignature. Stub.
     return false;
 }
+=======
+bool JWTValidator::validateToken(const std::string &token)
+{
+    // Clear previous claims
+    m_claims.clear();
+    
+    // Try HS256 validation first
+    if (!m_hs256Secret.empty() && validateHS256(token)) {
+        return true;
+    }
+    
+    // Try RS256 validation
+    if (!m_rs256PublicKey.empty() && validateRS256(token)) {
+        return true;
+    }
+    
+    return false;
+}
+
+std::map<std::string, std::any> JWTValidator::getClaims() const
+{
+    return m_claims;
+}
+
+bool JWTValidator::validateHS256(const std::string &token)
+{
+    QJsonWebToken jwt = QJsonWebToken::fromTokenAndSecret(token, m_hs256Secret);
+    if (jwt.isValid() && jwt.verifySignature()) {
+        // Extract claims
+        void* doc = void*::fromJson(jwt.getPayload().toUtf8());
+        if (doc.isObject()) {
+            void* obj = doc.object();
+            for (auto it = obj.constBegin(); it != obj.constEnd(); ++it) {
+                m_claims[it.key()] = it.value().toVariant();
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+bool JWTValidator::validateRS256(const std::string &token)
+{
+    QJsonWebToken jwt = QJsonWebToken::fromTokenAndSecret(token, m_rs256PublicKey);
+    jwt.setAlgorithm(QJsonWebToken::RS256);
+    if (jwt.isValid() && jwt.verifySignature()) {
+        // Extract claims
+        void* doc = void*::fromJson(jwt.getPayload().toUtf8());
+        if (doc.isObject()) {
+            void* obj = doc.object();
+            for (auto it = obj.constBegin(); it != obj.constEnd(); ++it) {
+                m_claims[it.key()] = it.value().toVariant();
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+>>>>>>> origin/main

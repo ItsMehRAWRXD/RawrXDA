@@ -16,10 +16,17 @@
 //   - Thread-safe access via existing mutex
 // ============================================================================
 
+<<<<<<< HEAD
+=======
+#include "Win32IDE.h"
+#include "IDELogger.h"
+#include "../core/unified_hotpatch_manager.hpp"
+>>>>>>> origin/main
 #include "../../include/chain_of_thought_engine.h"
 #include "../core/dual_agent_session.hpp"
 #include "../core/instructions_provider.hpp"
 #include "../core/model_name_util.h"
+<<<<<<< HEAD
 #include "../core/unified_hotpatch_manager.hpp"
 #include "IDELogger.h"
 #include "Win32IDE.h"
@@ -36,6 +43,18 @@
 #include <vector>
 #include <winsock2.h>
 #include <ws2tcpip.h>
+=======
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <thread>
+#include <atomic>
+#include <sstream>
+#include <chrono>
+#include <algorithm>
+#include <cstring>
+#include <iomanip>
+#include <vector>
+>>>>>>> origin/main
 
 // Forward: socket type
 using LocalServerSocket = SOCKET;
@@ -842,6 +861,7 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd)
         closesocket(client);
         return;
     }
+<<<<<<< HEAD
     // ========== Model bridge (GUI ide_chatbot_engine.js) ==========
     else if (method == "GET" && path == "/api/model/profiles")
     {
@@ -867,6 +887,8 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd)
         closesocket(client);
         return;
     }
+=======
+>>>>>>> origin/main
     // ========== HTML Frontend: /ask — unified chat endpoint ==========
     else if (method == "POST" && path == "/ask")
     {
@@ -1413,8 +1435,12 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd)
         closesocket(client);
         return;
     }
+<<<<<<< HEAD
     if (method == "POST" && path == "/api/re/set-binary")
     {
+=======
+    if (method == "POST" && path == "/api/re/set-binary") {
+>>>>>>> origin/main
         handleReSetBinaryEndpoint(client, body);
         closesocket(client);
         return;
@@ -1602,8 +1628,12 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd)
         closesocket(client);
         return;
     }
+<<<<<<< HEAD
     else if ((method == "POST" || method == "GET") && path == "/api/hotpatch/target-tps")
     {
+=======
+    else if ((method == "POST" || method == "GET") && path == "/api/hotpatch/target-tps") {
+>>>>>>> origin/main
         handleHotpatchTargetTpsEndpoint(client, method, body);
         closesocket(client);
         return;
@@ -1810,8 +1840,12 @@ void Win32IDE::handleOllamaApiTags(SOCKET client)
     std::ostringstream j;
     j << "{\"models\":[";
 
+<<<<<<< HEAD
     if (m_nativeEngine && m_nativeEngine->IsModelLoaded() && !m_loadedModelPath.empty())
     {
+=======
+    if (m_nativeEngine && m_nativeEngine->IsModelLoaded() && !m_loadedModelPath.empty()) {
+>>>>>>> origin/main
         // Use automatic namer so model is READ correctly (e.g. BigDaddyG-F32-FROM-Q4.gguf -> BigDaddyG-F32-FROM-Q4)
         std::string name = RawrXD::DeriveModelNameFromPath(m_loadedModelPath);
 
@@ -2225,8 +2259,12 @@ void Win32IDE::handleModelsEndpoint(SOCKET client)
         count++;
     }
 
+<<<<<<< HEAD
     // 2. Scan each candidate model root for .gguf and blobs (OLLAMA_MODELS, %LOCALAPPDATA%\Ollama, D:\OllamaModels,
     // ...)
+=======
+    // 2. Scan each candidate model root for .gguf and blobs (OLLAMA_MODELS, %LOCALAPPDATA%\Ollama, D:\OllamaModels, ...)
+>>>>>>> origin/main
     std::vector<std::string> roots = Win32IDE::getCandidateModelRootPaths();
     WIN32_FIND_DATAA findData;
     for (const auto& root : roots)
@@ -2751,8 +2789,12 @@ void Win32IDE::handleCliEndpoint(SOCKET client, const std::string& body)
         else
         {
             std::string filePath = cmdArgs;
+<<<<<<< HEAD
             if (filePath[0] != '/' && (filePath.size() < 2 || filePath[1] != ':'))
             {
+=======
+            if (filePath[0] != '/' && (filePath.size() < 2 || filePath[1] != ':')) {
+>>>>>>> origin/main
                 char cwd[MAX_PATH] = {};
                 if (GetCurrentDirectoryA(MAX_PATH, cwd))
                     filePath = std::string(cwd) + "\\" + filePath;

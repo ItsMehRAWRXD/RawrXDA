@@ -1,0 +1,37 @@
+[1/239] Building CXX object CMakeFiles\RawrEngine.dir\src\core\sentinel_watchdog.cpp.obj
+[2/239] Building CXX object CMakeFiles\RawrEngine.dir\src\core\shadow_page_detour.cpp.obj
+D:\rawrxd\src\core\shadow_page_detour.cpp(151): warning C4477: 'snprintf' : format string '%lu' requires an argument of type 'unsigned long', but variadic argument 1 has type 'const char *'
+D:\rawrxd\src\core\shadow_page_detour.cpp(151): warning C4313: 'snprintf': '%u' in format string conflicts with argument 1 of type 'const char *'
+[3/239] Building CXX object CMakeFiles\RawrEngine.dir\src\core\vision_token_gate.cpp.obj
+[4/239] Building CXX object CMakeFiles\RawrEngine.dir\src\core\vision_embedding_cache.cpp.obj
+[5/239] Building CXX object CMakeFiles\RawrEngine.dir\src\core\vision_kv_isolation.cpp.obj
+[6/239] Building CXX object CMakeFiles\RawrEngine.dir\src\core\vision_quantized_encoder.cpp.obj
+[7/239] Building CXX object CMakeFiles\RawrEngine.dir\src\core\vision_gpu_staging.cpp.obj
+[8/239] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\agentic_hotpatch_orchestrator.cpp.obj
+[9/239] Building CXX object CMakeFiles\RawrEngine.dir\src\server\gguf_server_hotpatch.cpp.obj
+[10/239] Building CXX object CMakeFiles\RawrEngine.dir\src\complete_server.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/complete_server.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_SOVEREIGN_ENGINES=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\inference -ID:\rawrxd\src\core -ID:\rawrxd\src\win32app -ID:\rawrxd\src\modules -ID:\rawrxd\src\config -ID:\rawrxd\src\agent -ID:\rawrxd\src\server -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\include\enterprise -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\complete_server.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\complete_server.cpp
+D:\rawrxd\src\complete_server.cpp(2297): error C2838: 'Professional': illegal qualified name in member declaration
+D:\rawrxd\src\complete_server.cpp(2297): error C2065: 'Professional': undeclared identifier
+D:\rawrxd\src\complete_server.cpp(2297): error C2131: expression did not evaluate to a constant
+D:\rawrxd\src\complete_server.cpp(2297): note: a non-constant (sub-)expression was encountered
+D:\rawrxd\src\complete_server.cpp(2297): error C2051: case expression not constant
+[11/239] Building CXX object CMakeFiles\RawrEngine.dir\src\core\vision_encoder.cpp.obj
+[12/239] Building CXX object CMakeFiles\RawrEngine.dir\src\auth\rbac_engine.cpp.obj
+[13/239] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\agentic_failure_detector.cpp.obj
+[14/239] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\autonomous_subagent.cpp.obj
+[15/239] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\agent_self_healing_orchestrator.cpp.obj
+[16/239] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic_loop_state.cpp.obj
+[17/239] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\agent_self_repair.cpp.obj
+[18/239] Building CXX object CMakeFiles\RawrEngine.dir\src\marketplace\extension_marketplace.cpp.obj
+[19/239] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\eval_framework.cpp.obj
+[20/239] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\agentic_puppeteer.cpp.obj
+[21/239] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\llm_http_client.cpp.obj
+[22/239] Building CXX object CMakeFiles\RawrEngine.dir\src\core\embedding_engine.cpp.obj
+[23/239] Building CXX object CMakeFiles\RawrEngine.dir\src\core\agentic_task_graph.cpp.obj
+[24/239] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\planner.cpp.obj
+[25/239] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\DeterministicReplayEngine.cpp.obj
+[26/239] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\model_invoker.cpp.obj
+[27/239] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\local_reasoning_engine.cpp.obj
+ninja: build stopped: subcommand failed.

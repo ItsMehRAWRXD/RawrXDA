@@ -767,5 +767,9 @@ private:
 
 // Factory helper
 RawrXD::IRenderer* CreateVulkanRenderer() {
+<<<<<<< HEAD
     return new RawrXD::VulkanRenderer();
+=======
+    return new VulkanRenderer();
+>>>>>>> origin/main
 }

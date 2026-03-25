@@ -716,7 +716,7 @@ function Show-Marketplace {
         catch {
             Write-ExtensionLog "⚠️ Could not force refresh catalog: $_" "WARNING"
         }
-        
+
         $searchBox.Add_TextChanged($refreshResults)
 
         # Try to load marketplace catalog in background
@@ -1033,16 +1033,16 @@ function Start-BigDaddyAgent {
     .SYNOPSIS
         Starts the BigDaddy-G agentic assistant with function-calling capabilities
     .DESCRIPTION
-        Launches an interactive agent loop that monitors for {{function:Name(args)}} 
+        Launches an interactive agent loop that monitors for {{function:Name(args)}}
         patterns in the model's replies and executes them automatically.
     .EXAMPLE
         Start-BigDaddyAgent
     .NOTES
         Press Ctrl+C to exit the agent loop
     #>
-    
+
     Write-Host "🤖 Initializing BigDaddy-G Agent..." -ForegroundColor Cyan
-    
+
     # ---------- 1. Load agent tools ----------
     # Try multiple possible locations for AgentTools.ps1
     $agentToolsPaths = @(
@@ -1050,7 +1050,7 @@ function Start-BigDaddyAgent {
         (Join-Path $PSScriptRoot "..\agents\AgentTools.ps1"),                          # Workspace agents folder
         (Join-Path (Split-Path $PSScriptRoot -Parent) "agents\AgentTools.ps1")        # Relative to Powershield root
     )
-    
+
     $agentToolsPath = $null
     foreach ($path in $agentToolsPaths) {
         if (Test-Path $path) {
@@ -1058,17 +1058,17 @@ function Start-BigDaddyAgent {
             break
         }
     }
-    
+
     if (-not $agentToolsPath) {
         Write-Host "❌ AgentTools.ps1 not found in any of the following locations:" -ForegroundColor Red
         $agentToolsPaths | ForEach-Object { Write-Host "   - $_" -ForegroundColor Yellow }
         Write-Host "`n💡 Copy AgentTools.ps1 to one of the above locations or update the path" -ForegroundColor Cyan
         return
     }
-    
+
     . $agentToolsPath
     Write-Host "✅ Loaded agent tools from $agentToolsPath" -ForegroundColor Green
-    
+
     # Verify required functions exist
     $requiredFuncs = @('Invoke-WebScrape', 'Invoke-RawrZPayload')
     foreach ($func in $requiredFuncs) {
@@ -1076,7 +1076,7 @@ function Start-BigDaddyAgent {
             Write-Host "⚠️  Warning: Function '$func' not found in AgentTools.ps1" -ForegroundColor Yellow
         }
     }
-    
+
     # ---------- 2. Primed history ----------
     $history = @(
         "You are BigDaddy-G, a helpful security-testing assistant.",
@@ -1084,24 +1084,24 @@ function Start-BigDaddyAgent {
         "When you want to deploy a test payload, reply exactly: {{function:Invoke-RawrZPayload(IP)}}",
         "User: scan 192.168.1.1 and summarise any open ports."
     )
-    
+
     Write-Host "🚀 BigDaddy-G Agent Active - Press Ctrl+C to exit" -ForegroundColor Green
     Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Gray
-    
+
     # ---------- 3. Agent loop ----------
     while ($true) {
         try {
             $prompt = $history -join "`n"
             $reply = ollama run bg40-unleashed $prompt
             Write-Host "`n>>> $reply" -ForegroundColor White
-            
+
             # Check for function call pattern
             if ($reply -match '\{\{function:(\w+)\(([^)]*)\)\}\}') {
                 $func = $Matches[1]
                 $arg = $Matches[2]
-                
+
                 Write-Host "⚡ Executing: $func($arg)" -ForegroundColor Yellow
-                
+
                 if (Get-Command $func -ErrorAction SilentlyContinue) {
                     $result = & $func $arg
                     $history += "Function returned: $result"
@@ -1116,7 +1116,7 @@ function Start-BigDaddyAgent {
             else {
                 $history += $reply
             }
-            
+
             # Trim history to last 50 entries
             if ($history.Count -gt 50) {
                 $history = $history[-50..-1]
@@ -1130,6 +1130,6 @@ function Start-BigDaddyAgent {
             }
         }
     }
-    
+
     Write-Host "`n🛑 BigDaddy-G Agent stopped" -ForegroundColor Yellow
 }

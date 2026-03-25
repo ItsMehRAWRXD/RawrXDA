@@ -345,6 +345,7 @@ std::string AgenticCopilotBridge::hotpatchResponse(const std::string& originalRe
 
     fprintf(stderr, "[AgenticCopilotBridge] Hotpatching response\n");
 
+<<<<<<< HEAD
     double temp = 0.7;
     auto tIt = context.find("temperature");
     if (tIt != context.end()) {
@@ -356,6 +357,8 @@ std::string AgenticCopilotBridge::hotpatchResponse(const std::string& originalRe
     }
     temp = std::clamp(temp, 0.0, 2.0);
 
+=======
+>>>>>>> origin/main
     std::string correctedResponse = originalResponse;
     correctedResponse = correctHallucinations(correctedResponse, context);
     correctedResponse = enforceResponseFormat(correctedResponse, "json");

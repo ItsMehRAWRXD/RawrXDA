@@ -7,13 +7,16 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 # Extension metadata
+# Note: Capabilities must be integer (bitwise OR of capability flags)
+# CAP_TEXT_EDITOR = 1024, CAP_FILE_OPERATIONS = 2048, CAP_SYNTAX_HIGHLIGHT = 1
 $global:RawrXDEditorAdvancedExtension = @{
     Name = "Advanced Editor"
     Version = "1.0.0"
     Author = "RawrXD"
     Description = "Advanced text editor with toolbar and enhanced editing features"
     Id = "rawrxd-editor-advanced"
-    Capabilities = @("TextEditor", "Advanced", "Toolbar")
+    Language = 0  # LANG_CUSTOM
+    Capabilities = 3073  # CAP_TEXT_EDITOR (1024) | CAP_FILE_OPERATIONS (2048) | CAP_SYNTAX_HIGHLIGHT (1)
     EditorType = "Advanced"
     Dependencies = @()
     Enabled = $true
@@ -21,17 +24,26 @@ $global:RawrXDEditorAdvancedExtension = @{
 
 # Extension initialization
 function Initialize-RawrXD-Editor-AdvancedExtension {
-    Write-DevConsole "🔧 Initializing Advanced Editor Extension..." "INFO"
+    # Helper for logging
+    if (Get-Command Write-DevConsole -ErrorAction SilentlyContinue) {
+        Write-DevConsole "🔧 Initializing Advanced Editor Extension..." "INFO"
+    } else {
+        Write-Host "[INFO] 🔧 Initializing Advanced Editor Extension..." -ForegroundColor Cyan
+    }
 
     # Register extension
     if ($global:extensionRegistry) {
         $extension = Register-Extension -Id "rawrxd-editor-advanced" -Name "Advanced Editor" `
             -Description "Advanced text editor with toolbar and enhanced editing features" `
-            -Author "RawrXD" -Capabilities @("TextEditor", "Advanced", "Toolbar") `
-            -Version "1.0.0" -EditorType "Advanced"
+            -Author "RawrXD" -Language 0 -Capabilities 3073 `
+            -Version "1.0.0"
     }
 
-    Write-DevConsole "✅ Advanced Editor Extension loaded successfully" "SUCCESS"
+    if (Get-Command Write-DevConsole -ErrorAction SilentlyContinue) {
+        Write-DevConsole "✅ Advanced Editor Extension loaded successfully" "SUCCESS"
+    } else {
+        Write-Host "[SUCCESS] ✅ Advanced Editor Extension loaded successfully" -ForegroundColor Green
+    }
 }
 
 # Editor creation functions
@@ -187,11 +199,15 @@ function New-AdvancedEditor {
         $container.Controls.Add($editor)
         $container.Tag = @{ Editor = $editor; Toolbar = $toolbar }
 
-        Write-DevConsole "✅ Advanced Editor created successfully" "SUCCESS"
+        if (Get-Command Write-DevConsole -ErrorAction SilentlyContinue) {
+            Write-DevConsole "✅ Advanced Editor created successfully" "SUCCESS"
+        }
         return $container
     }
     catch {
-        Write-DevConsole "❌ Failed to create Advanced Editor: $($_.Exception.Message)" "ERROR"
+        if (Get-Command Write-DevConsole -ErrorAction SilentlyContinue) {
+            Write-DevConsole "❌ Failed to create Advanced Editor: $($_.Exception.Message)" "ERROR"
+        }
         return $null
     }
 }

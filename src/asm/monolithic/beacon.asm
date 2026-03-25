@@ -4,15 +4,21 @@
 
 EXTERN g_hHeap:QWORD
 EXTERN HeapAlloc:PROC
+<<<<<<< HEAD
 EXTERN QueryPerformanceCounter:PROC
 EXTERN GetTickCount64:PROC
+=======
+>>>>>>> origin/main
 
 PUBLIC BeaconRouterInit
 PUBLIC BeaconSend
 PUBLIC BeaconRecv
 PUBLIC TryBeaconRecv
 PUBLIC RegisterAgent
+<<<<<<< HEAD
 PUBLIC BeaconTraceLog
+=======
+>>>>>>> origin/main
 
 ; X+4 hotpatch message types (for agent slot dispatch)
 MODEL_HOTSWAP_REQUEST   equ 1001h
@@ -21,6 +27,7 @@ MODEL_HOTSWAP_FAILED    equ 1003h
 
 .data?
 align 16
+<<<<<<< HEAD
 BEACON_SLOTS           equ 16
 AGENT_STRUCT_SIZE      equ 64
 AGENT_REGISTERED_EVENT equ 2001h
@@ -61,6 +68,13 @@ g_agentData     db (256 * AGENT_STRUCT_SIZE) dup(?)
 .data
 align 8
 g_beaconTimeout dq 100000000   ; QPC-tick timeout (~10s @ 10 MHz; 0=infinite)
+=======
+BEACON_SLOTS  equ 16
+g_beacons     dq BEACON_SLOTS dup(?)
+g_agent_map   dq 256 dup(?)
+
+RING_SIZE     equ 100000h
+>>>>>>> origin/main
 
 .code
 BeaconRouterInit PROC FRAME
@@ -126,6 +140,7 @@ BeaconSend PROC FRAME
     ret
 BeaconSend ENDP
 
+<<<<<<< HEAD
 BeaconRecv PROC FRAME
     ; ECX=beaconID, RDX=ppData, R8=pLen
     ; Blocking recv with PAUSE yield, QPC timeout, integrity checks,
@@ -268,10 +283,32 @@ BeaconRecv PROC FRAME
     pop     rsi
     pop     rdi
     pop     rbx
+=======
+BeaconRecv PROC
+    ; ECX=beaconID, RDX=ppData, R8=pLen
+    ; Blocking recv. Spins until writePos != readPos.
+    movsxd  rax, ecx
+    lea     r10, g_beacons
+    mov     r10, [r10 + rax*8]
+@wait:
+    mov     eax, dword ptr [r10]
+    mov     r11d, dword ptr [r10+4]
+    cmp     eax, r11d
+    je      @wait
+    add     r11d, 16
+    and     r11d, 0FFFF0h
+    mov     rax, [r10 + r11]
+    mov     [rdx], rax
+    mov     eax, dword ptr [r10 + r11 + 8]
+    mov     dword ptr [r8], eax
+    mov     dword ptr [r10+4], r11d
+    xor     eax, eax
+>>>>>>> origin/main
     ret
 BeaconRecv ENDP
 
 ; TryBeaconRecv(ECX=beaconID, RDX=ppData, R8=pLen) — non-blocking
+<<<<<<< HEAD
 ; Returns: 1=message received, 0=ring empty, -1=corruption detected
 TryBeaconRecv PROC FRAME
     ; Non-blocking recv with integrity validation, sequence tracking,
@@ -499,4 +536,39 @@ BeaconTraceLog PROC FRAME
     ret
 BeaconTraceLog ENDP
 
+=======
+; Returns EAX=1 if message read, 0 if ring empty
+TryBeaconRecv PROC
+    ; Non-blocking recv. Returns EAX=1 if message read, 0 if empty.
+    movsxd  rax, ecx
+    lea     r10, g_beacons
+    mov     r10, [r10 + rax*8]
+    mov     eax, dword ptr [r10]
+    mov     r11d, dword ptr [r10+4]
+    cmp     eax, r11d
+    je      @try_none
+    add     r11d, 16
+    and     r11d, 0FFFF0h
+    mov     rax, [r10 + r11]
+    mov     [rdx], rax
+    mov     eax, dword ptr [r10 + r11 + 8]
+    mov     dword ptr [r8], eax
+    mov     dword ptr [r10+4], r11d
+    mov     eax, 1
+    ret
+@try_none:
+    xor     eax, eax
+    ret
+TryBeaconRecv ENDP
+
+RegisterAgent PROC
+    ; ECX=agentID, EDX=beaconSlot
+    movsxd  rax, ecx
+    lea     rcx, g_agent_map
+    mov     [rcx + rax*8], rdx
+    xor     eax, eax
+    ret
+RegisterAgent ENDP
+
+>>>>>>> origin/main
 END

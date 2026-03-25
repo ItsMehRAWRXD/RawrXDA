@@ -7,10 +7,13 @@ EXTERN ReadFile:PROC
 EXTERN WriteFile:PROC
 EXTERN CloseHandle:PROC
 EXTERN BeaconSend:PROC
+<<<<<<< HEAD
 EXTERN PeekNamedPipe:PROC
 EXTERN Sleep:PROC
 EXTERN GetTickCount64:PROC
 EXTERN VirtualFree:PROC
+=======
+>>>>>>> origin/main
 
 PUBLIC LSPBridgeInit
 PUBLIC LSPSendRequest
@@ -24,6 +27,7 @@ hLSPOutWrite  dq ?
 hLSPProcess   dq ?
 hLSPThread    dq ?
 g_lspReady    dd ?
+<<<<<<< HEAD
 g_lspState    dd ?
 
 ; LSP allocated buffer pointers
@@ -35,6 +39,8 @@ g_lspDiagBuf  dq ?
 g_lspShutdownCount dd ?
 align 8
 g_lspShutdownTs    dq ?
+=======
+>>>>>>> origin/main
 
 ; SECURITY_ATTRIBUTES (24 bytes on x64)
 align 8
@@ -54,6 +60,7 @@ CREATE_NO_WINDOW     equ 8000000h
 SA_SIZE              equ 24
 STARTUPINFO_SIZE     equ 104
 LSP_BEACON_SLOT      equ 4
+<<<<<<< HEAD
 LSP_SHUTDOWN_MSG_LEN equ 66
 LSP_EXIT_MSG_LEN     equ 55
 MEM_RELEASE          equ 8000h
@@ -63,27 +70,42 @@ szLspShutdownMsg db 'Content-Length: 44', 13, 10, 13, 10
                  db '{', '"jsonrpc":"2.0","id":1,"method":"shutdown"', '}'
 szLspExitMsg     db 'Content-Length: 33', 13, 10, 13, 10
                  db '{', '"jsonrpc":"2.0","method":"exit"', '}'
+=======
+>>>>>>> origin/main
 
 .code
 ; ────────────────────────────────────────────────────────────────
 ; LSPBridgeInit — create pipes and launch LSP subprocess
 ;   RCX = lspPath (LPCWSTR); NULL = deferred init (no-op)
 ;   Returns: EAX = 0 on success, -1 on failure
+<<<<<<< HEAD
 ;   FRAME: 2 pushes (rbp, rbx) + 58h alloc
 ;     ABI: 8(ret) + 16(pushes) + 58h(88) = 112 → 112/16=7. Good.
 ;     CreateProcessW: 10 params → 4 regs + 6 stack (20h..48h) = needs 50h min
+=======
+;   FRAME: 2 pushes (rbp, rbx) + 40h alloc
+;     ABI: 8(ret) + 16(pushes) + 40h(64) = 88 → not aligned
+;     Fix: 2 pushes + 38h = 8+16+56 = 80 → 80/16=5. Good.
+>>>>>>> origin/main
 ; ────────────────────────────────────────────────────────────────
 LSPBridgeInit PROC FRAME
     push    rbp
     .pushreg rbp
     push    rbx
     .pushreg rbx
+<<<<<<< HEAD
     push    rdi
     .pushreg rdi
     mov     rbp, rsp
     .setframe rbp, 0
     sub     rsp, 50h
     .allocstack 50h
+=======
+    mov     rbp, rsp
+    .setframe rbp, 0
+    sub     rsp, 38h
+    .allocstack 38h
+>>>>>>> origin/main
     .endprolog
 
     mov     rbx, rcx                    ; rbx = lspPath
@@ -136,6 +158,7 @@ LSPBridgeInit PROC FRAME
     mov     rdx, rbx                    ; lpCommandLine = lspPath
     xor     r8d, r8d                    ; lpProcessAttributes
     xor     r9d, r9d                    ; lpThreadAttributes
+<<<<<<< HEAD
     mov     dword ptr [rsp+20h], 1      ; bInheritHandles = TRUE          (param 5)
     mov     dword ptr [rsp+28h], CREATE_NO_WINDOW ;                      (param 6)
     mov     qword ptr [rsp+30h], 0      ; lpEnvironment = NULL           (param 7)
@@ -144,6 +167,20 @@ LSPBridgeInit PROC FRAME
     mov     [rsp+40h], rax              ; lpStartupInfo                  (param 9)
     lea     rax, procInfo
     mov     [rsp+48h], rax              ; lpProcessInformation           (param 10)
+=======
+    mov     dword ptr [rsp+20h], 1      ; bInheritHandles = TRUE
+    mov     dword ptr [rsp+28h], CREATE_NO_WINDOW
+    mov     qword ptr [rsp+30h], 0      ; lpEnvironment
+    ; stack slots [38h], [40h] need startInfo & procInfo — use direct push pattern
+    ; NOTE: We've run out of stack-param slots in 38h alloc.
+    ;       CreateProcessW needs 10 params (4 reg + 6 stack).
+    ;       Handled via the 38h alloc = 56 bytes = 7 slots. Slots 20h..50h.
+    lea     rax, startInfo
+    mov     [rsp+38h], rax              ; lpStartupInfo
+    lea     rax, procInfo
+    mov     [rsp+40h], rax              ; lpProcessInformation
+    mov     qword ptr [rsp+48h], 0      ; lpCurrentDirectory = NULL
+>>>>>>> origin/main
     call    CreateProcessW
     test    eax, eax
     jz      @lsp_fail_close_all
@@ -165,7 +202,10 @@ LSPBridgeInit PROC FRAME
 
 @lsp_deferred:
     lea     rsp, [rbp]
+<<<<<<< HEAD
     pop     rdi
+=======
+>>>>>>> origin/main
     pop     rbx
     pop     rbp
     xor     eax, eax
@@ -184,7 +224,10 @@ LSPBridgeInit PROC FRAME
 @lsp_fail:
     mov     g_lspReady, 0
     lea     rsp, [rbp]
+<<<<<<< HEAD
     pop     rdi
+=======
+>>>>>>> origin/main
     pop     rbx
     pop     rbp
     mov     eax, -1
@@ -233,6 +276,7 @@ LSPSendRequest PROC FRAME
 LSPSendRequest ENDP
 
 ; ────────────────────────────────────────────────────────────────
+<<<<<<< HEAD
 ; LSPBridgeShutdown — graceful JSON-RPC shutdown + full cleanup
 ;   Returns: EAX = 0 on clean shutdown, -1 on timeout / send failure
 ;   FRAME: 4 pushes (rbp,rbx,rsi,rdi) + 148h alloc
@@ -411,6 +455,44 @@ LSPBridgeShutdown PROC FRAME
     pop     rsi
     pop     rbx
     pop     rbp
+=======
+; LSPBridgeShutdown — close all pipe and process handles
+;   Returns: EAX = 0
+; ────────────────────────────────────────────────────────────────
+LSPBridgeShutdown PROC FRAME
+    sub     rsp, 28h
+    .allocstack 28h
+    .endprolog
+
+    cmp     g_lspReady, 0
+    je      @shutdown_done
+
+    mov     rcx, hLSPInWrite
+    test    rcx, rcx
+    jz      @skip_inwrite
+    call    CloseHandle
+@skip_inwrite:
+    mov     rcx, hLSPOutRead
+    test    rcx, rcx
+    jz      @skip_outread
+    call    CloseHandle
+@skip_outread:
+    mov     rcx, hLSPProcess
+    test    rcx, rcx
+    jz      @skip_proc
+    call    CloseHandle
+@skip_proc:
+    mov     rcx, hLSPThread
+    test    rcx, rcx
+    jz      @skip_thread
+    call    CloseHandle
+@skip_thread:
+    mov     g_lspReady, 0
+
+@shutdown_done:
+    add     rsp, 28h
+    xor     eax, eax
+>>>>>>> origin/main
     ret
 LSPBridgeShutdown ENDP
 

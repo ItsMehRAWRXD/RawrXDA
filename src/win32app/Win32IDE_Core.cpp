@@ -2,6 +2,7 @@
 // Win32IDE_Core.cpp - Core Window Management Functions
 // createWindow, showWindow, runMessageLoop, ~Win32IDE, onSize,
 // syncEditorToGpuSurface, initializeEditorSurface, trySendToOllama,
+<<<<<<< HEAD
 // createReverseEngineeringMenu, handleReverseEngineering* — implemented in Win32IDE_ReverseEngineering.cpp (output to
 // IDE Output tab)
 // ============================================================================
@@ -10,10 +11,34 @@
 #include "../../include/benchmark_menu_widget.hpp"
 #include "../../include/checkpoint_manager.h"
 #include "../../include/ci_cd_settings.h"
+=======
+// createReverseEngineeringMenu, handleReverseEngineering* — implemented in Win32IDE_ReverseEngineering.cpp (output to IDE Output tab)
+// ============================================================================
+
+#include "Win32IDE.h"
+#include "Win32IDE_IELabels.h"
+#include "../../include/model_registry.h"
+#include "../../include/interpretability_panel.h"
+#include "../../include/benchmark_menu_widget.hpp"
+#include "IDELogger.h"
+#include "IDEConfig.h"
+#include "../../include/agentic_autonomous_config.h"
+#include "lsp/RawrXD_LSPServer.h"
+#include "ModelConnection.h"
+#include "multi_response_engine.h"
+#include "../cpu_inference_engine.h"
+#include "../modules/native_memory.hpp"
+#include "../modules/ExtensionLoader.hpp"
+#include "../native_agent.hpp"
+#include "win32_feature_adapter.h"  // Unified Feature Dispatch adapter
+#include "../core/enterprise_license.h"
+#include "enterprise_feature_manager.hpp"
+>>>>>>> origin/main
 #include "../../include/enterprise_license.h"
 #include "../../include/feature_flags_runtime.h"
 #include "../../include/interpretability_panel.h"
 #include "../../include/license_enforcement.h"
+<<<<<<< HEAD
 #include "../../include/model_registry.h"
 #include "../../include/multi_file_search.h"
 #include "../core/enterprise_license.h"
@@ -35,12 +60,15 @@
 #include "lsp/RawrXD_LSPServer.h"
 #include "multi_response_engine.h"
 #include "win32_feature_adapter.h"  // Unified Feature Dispatch adapter
+=======
+>>>>>>> origin/main
 #include <commctrl.h>
 #include <richedit.h>
 
 #ifndef WM_DPICHANGED
 #define WM_DPICHANGED 0x02E0
 #endif
+<<<<<<< HEAD
 #include <algorithm>
 #include <cstring>
 #include <filesystem>
@@ -49,6 +77,13 @@
 #include <shlobj.h>
 #include <sstream>
 
+=======
+#include <shlobj.h>
+#include <sstream>
+#include <fstream>
+#include <algorithm>
+#include <nlohmann/json.hpp>
+>>>>>>> origin/main
 
 // Menu command IDs — must match Win32IDE.cpp definitions
 #ifndef IDM_FILE_NEW
@@ -423,13 +458,172 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
         return 0;  // Message consumed by v280 bridge
     }
 
+<<<<<<< HEAD
     switch (uMsg)
     {
         case WM_CREATE:
             sehCallOnCreate(onCreateTrampoline, this, hwnd);
+=======
+    case WM_DPICHANGED: {
+        // Tier 3 (Feature 33): Full High-DPI polish — scale fonts, UI dimensions, relayout
+        UINT newDpi = HIWORD(wParam);
+        RECT* prc = reinterpret_cast<RECT*>(lParam);
+        onDpiChanged(newDpi, prc);
+        return 0;
+    }
+
+    case WM_GETMINMAXINFO:
+    case WM_NCCALCSIZE:
+    case WM_WINDOWPOSCHANGING:
+    case WM_WINDOWPOSCHANGED:
+    case WM_ACTIVATEAPP:
+    case WM_ACTIVATE:
+    case WM_NCACTIVATE:
+    case WM_KILLFOCUS:
+    case WM_IME_SETCONTEXT:
+    case WM_IME_NOTIFY:
+    case WM_SHOWWINDOW:
+    case WM_NCPAINT:
+        return DefWindowProcA(hwnd, uMsg, wParam, lParam);
+
+    case WM_SETFOCUS:
+        // Forward focus to the editor so the caret appears and keyboard input works
+        if (m_hwndEditor && IsWindow(m_hwndEditor)) {
+            SetFocus(m_hwndEditor);
+        }
+        return 0;
+
+    case WM_KEYDOWN:
+        // Command Palette from main window (e.g. when frame has focus)
+        if ((GetKeyState(VK_CONTROL) & 0x8000) && (GetKeyState(VK_SHIFT) & 0x8000) && (wParam == 'P')) {
+            if (m_commandPaletteVisible)
+                hideCommandPalette();
+            else
+                showCommandPalette();
+>>>>>>> origin/main
             return 0;
 
+<<<<<<< HEAD
         case WM_SIZE:
+=======
+    case WM_ERASEBKGND: {
+        // Paint the background dark instead of default white
+        HDC hdc = (HDC)wParam;
+        RECT rc;
+        GetClientRect(hwnd, &rc);
+        if (!m_backgroundBrush) {
+            m_backgroundBrush = CreateSolidBrush(RGB(30, 30, 30));
+        }
+        FillRect(hdc, &rc, m_backgroundBrush);
+        return 1; // We handled it
+    }
+
+    case WM_PAINT: {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hwnd, &ps);
+        if (!m_backgroundBrush) {
+            m_backgroundBrush = CreateSolidBrush(RGB(30, 30, 30));
+        }
+        FillRect(hdc, &ps.rcPaint, m_backgroundBrush);
+        EndPaint(hwnd, &ps);
+        return 0;
+    }
+
+    case WM_COMMAND:
+        onCommand(hwnd, LOWORD(wParam), (HWND)lParam, HIWORD(wParam));
+        return 0;
+
+    case WM_NOTIFY: {
+        NMHDR* pNMHDR = reinterpret_cast<NMHDR*>(lParam);
+        if (pNMHDR) {
+            // Tier 3 (Feature 38/39): Status bar click → language/encoding selector (use part index for reliable dispatch)
+            if (pNMHDR->hwndFrom == m_hwndStatusBar && pNMHDR->code == NM_CLICK) {
+                NMMOUSE* pNMMouse = reinterpret_cast<NMMOUSE*>(lParam);
+                handleStatusBarClick(static_cast<int>(pNMMouse->dwItemSpec));
+            }
+            // Output panel tab switch (Output / Errors / Debug / Find Results)
+            if (pNMHDR->code == TCN_SELCHANGE && pNMHDR->hwndFrom == m_hwndOutputTabs) {
+                int idx = (int)TabCtrl_GetCurSel(m_hwndOutputTabs);
+                static const char* outputTabKeys[] = { "Output", "Errors", "Debug", "Find Results" };
+                if (idx >= 0 && idx < 4) {
+                    m_activeOutputTab = outputTabKeys[idx];
+                    m_selectedOutputTab = idx;
+                    for (auto& kv : m_outputWindows) {
+                        ShowWindow(kv.second, (kv.first == m_activeOutputTab && m_outputPanelVisible) ? SW_SHOW : SW_HIDE);
+                    }
+                }
+            }
+            // Output panel tab switch (Output / Errors / Debug / Find Results / Problems)
+            if (pNMHDR->code == TCN_SELCHANGE && pNMHDR->hwndFrom == m_hwndOutputTabs) {
+                int idx = (int)TabCtrl_GetCurSel(m_hwndOutputTabs);
+                static const char* outputTabKeys[] = { "Output", "Errors", "Debug", "Find Results", "Problems" };
+                if (idx >= 0 && idx < 5) {
+                    m_activeOutputTab = outputTabKeys[idx];
+                    m_selectedOutputTab = idx;
+                    for (auto& kv : m_outputWindows) {
+                        ShowWindow(kv.second, (kv.first == m_activeOutputTab && m_outputPanelVisible) ? SW_SHOW : SW_HIDE);
+                    }
+                    if (m_hwndProblemsListView) {
+                        ShowWindow(m_hwndProblemsListView, (idx == 4 && m_outputPanelVisible) ? SW_SHOW : SW_HIDE);
+                    }
+                }
+            }
+            // Problems ListView double-click → goToProblem
+            if (pNMHDR->hwndFrom == m_hwndProblemsListView &&
+                (pNMHDR->code == NM_DBLCLK || pNMHDR->code == LVN_ITEMACTIVATE)) {
+                int idx = (int)ListView_GetNextItem(m_hwndProblemsListView, -1, LVNI_SELECTED);
+                if (idx >= 0) goToProblem(idx);
+            }
+            // Handle tab bar selection change
+            if (pNMHDR->code == TCN_SELCHANGE && pNMHDR->hwndFrom == m_hwndTabBar) {
+                onTabChanged();
+            }
+            // Handle RichEdit scroll/change notifications for line number sync
+            if (pNMHDR->hwndFrom == m_hwndEditor) {
+                if (pNMHDR->code == EN_VSCROLL || pNMHDR->code == EN_SELCHANGE ||
+                    pNMHDR->code == EN_CHANGE) {
+                    updateLineNumbers();
+                    // Debounce syntax coloring on content change
+                    if (pNMHDR->code == EN_CHANGE && m_syntaxColoringEnabled) {
+                        onEditorContentChanged();
+                    }
+                    // Tier 3 (Feature 36): Mark file dirty on any content change
+                    if (pNMHDR->code == EN_CHANGE) {
+                        markFileModified();
+                    }
+                    // Tier 3 (Feature 31): Update smooth caret target on selection change
+                    if (pNMHDR->code == EN_SELCHANGE) {
+                        updateCaretTarget();
+                    }
+                    // Dismiss ghost text when caret moves (anchor becomes stale)
+                    if (pNMHDR->code == EN_SELCHANGE && m_ghostTextVisible) {
+                        dismissGhostText();
+                    }
+                    // Update status bar cursor position
+                    CHARRANGE sel;
+                    SendMessage(m_hwndEditor, EM_EXGETSEL, 0, (LPARAM)&sel);
+                    int line = (int)SendMessage(m_hwndEditor, EM_LINEFROMCHAR, sel.cpMin, 0);
+                    int lineStart = (int)SendMessage(m_hwndEditor, EM_LINEINDEX, line, 0);
+                    int col = sel.cpMin - lineStart;
+                    char posBuf[64];
+                    snprintf(posBuf, sizeof(posBuf), "Ln %d, Col %d", line + 1, col + 1);
+                    if (m_hwndStatusBar) {
+                        SendMessage(m_hwndStatusBar, SB_SETTEXT, 1, (LPARAM)posBuf);
+                    }
+                    // Breadcrumb: update symbol path (File > Class > Method) on cursor move
+                    if (pNMHDR->code == EN_SELCHANGE) {
+                        updateBreadcrumbsOnCursorMove();
+                    }
+                }
+            }
+        }
+        return 0;
+    }
+
+    case WM_HSCROLL:
+    case WM_VSCROLL:
+        // Forward scrollbar messages and update line numbers
+>>>>>>> origin/main
         {
             int width = LOWORD(lParam);
             int height = HIWORD(lParam);
@@ -593,6 +787,7 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
                         idx = 3;
                     switchPanelTab(static_cast<PanelTab>(idx));
                 }
+<<<<<<< HEAD
                 // Tier 3 (Feature 38/39): Status bar click → language/encoding selector (use part index for reliable
                 // dispatch)
                 if (pNMHDR->hwndFrom == m_hwndStatusBar && pNMHDR->code == NM_CLICK)
@@ -698,10 +893,146 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
                             updateBreadcrumbsOnCursorMove();
                         }
                     }
+=======
+            } else {
+                hideModelProgressBar();
+            }
+            return 0;
+        }
+        if (wParam == 42) { // IDT_STATUS_FLASH
+            KillTimer(hwnd, 42);
+            // Restore default status bar text
+            if (m_hwndStatusBar) {
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Ready");
+            }
+            return 0;
+        }
+        if (wParam == 0x7C01) { // VOICE_TIMER_ID (voice chat VU meter)
+            onVoiceChatTimer();
+            return 0;
+        }
+        if (wParam == 0x7C10) { // VA_TIMER_ID (Phase 44: VoiceAutomation status)
+            extern void Win32IDE_VoiceAutomationTimerTick();
+            Win32IDE_VoiceAutomationTimerTick();
+            return 0;
+        }
+        if (wParam == 0xDC01) { // RECOVERY_TIMER_ID (Phase 45: DiskRecovery progress)
+            onRecoveryTimer();
+            return 0;
+        }
+        // Tier 3: Polish timers (caret animation, theme transition, format status)
+        if (handleTier3Timer(wParam)) {
+            return 0;
+        }
+        // Tier 1: Critical cosmetic timers (smooth scroll, minimap, auto-update)
+        if (handleTier1Timer(wParam)) {
+            return 0;
+        }
+        break;
+
+    // Phase 33: Voice Chat Global Hotkeys
+    case WM_HOTKEY:
+        if (wParam == 0xA001) { // VOICE_HOTKEY_TOGGLE_PTT
+            cmdVoicePTT();
+            return 0;
+        }
+        if (wParam == 0xA002) { // VOICE_HOTKEY_TOGGLE_PANEL
+            cmdVoiceTogglePanel();
+            return 0;
+        }
+        if (wParam == 0xA003) { // VOICE_HOTKEY_STOP
+            cmdVoiceRecord(); // stop recording
+            return 0;
+        }
+        break;
+
+    case WM_CLOSE:
+        if (!m_fileModified || promptSaveChanges()) {
+            DestroyWindow(hwnd);
+        }
+        return 0;
+
+    // Tier 1: Auto-update notification (WM_APP+501)
+    case (WM_APP + 501):
+        showUpdateNotification();
+        return 0;
+
+    // Model progress update from background thread
+    case WM_APP + 300: { // WM_MODEL_PROGRESS_UPDATE
+        float pct = (float)wParam / 10.0f;
+        if (m_hwndModelProgressBar) {
+            SendMessage(m_hwndModelProgressBar, PBM_SETPOS, wParam, 0);
+        }
+        return 0;
+    }
+    case WM_APP + 301: { // WM_MODEL_PROGRESS_DONE
+        hideModelProgressBar();
+        return 0;
+    }
+
+    // Ghost Text delivery from background completion thread
+    case WM_GHOST_TEXT_READY: {
+        int cursorPos = (int)wParam;
+        const char* text = reinterpret_cast<const char*>(lParam);
+        onGhostTextReady(cursorPos, text);
+        if (text) free(const_cast<char*>(text));  // Allocated with _strdup
+        return 0;
+    }
+
+    case WM_DESTROY:
+        onDestroy();
+        PostQuitMessage(0);
+        return 0;
+
+    case WM_CTLCOLORSTATIC:
+    case WM_CTLCOLOREDIT:
+    case WM_CTLCOLORLISTBOX: {
+        // Dark mode colors for controls
+        HDC hdcCtrl = (HDC)wParam;
+        SetTextColor(hdcCtrl, RGB(220, 220, 220));
+        SetBkColor(hdcCtrl, RGB(30, 30, 30));
+        if (!m_backgroundBrush) {
+            m_backgroundBrush = CreateSolidBrush(RGB(30, 30, 30));
+        }
+        return (LRESULT)m_backgroundBrush;
+    }
+
+    default:
+        // Handle deferred heavy initialization (posted from onCreate)
+        if (uMsg == WM_APP + 100) {
+            sehCallDeferredInit(deferredInitTrampoline, this);
+            return 0;
+        }
+        // Handle background init completion — refresh UI (Tier 5 menus enabled here after initTier5Cosmetics)
+        if (uMsg == WM_APP + 101) {
+            applyTheme();
+            updateMenuEnableStates();
+            InvalidateRect(hwnd, nullptr, TRUE);
+            UpdateWindow(hwnd);
+            return 0;
+        }
+        // Tier 3 (Feature 35): File changed externally → show reload toast
+        if (uMsg == WM_FILE_CHANGED_EXTERNAL) {
+            showFileChangedToast();
+            return 0;
+        }
+        // Handle "load downloaded model" signal from background download threads
+        // (HuggingFace / URL downloads complete, m_loadedModelPath already set)
+        if (uMsg == WM_APP + 201) {
+            if (!m_loadedModelPath.empty()) {
+                std::string pathToLoad = m_loadedModelPath;
+                appendToOutput("Loading downloaded model: " + pathToLoad + "\n", "Output", OutputSeverity::Info);
+                if (loadGGUFModel(pathToLoad)) {
+                    loadModelForInference(pathToLoad);
+                    appendToOutput("Downloaded model loaded successfully!\n", "Output", OutputSeverity::Info);
+                } else {
+                    appendToOutput("Failed to load downloaded model: " + pathToLoad + "\n", "Errors", OutputSeverity::Error);
+>>>>>>> origin/main
                 }
             }
             return 0;
         }
+<<<<<<< HEAD
 
         case WM_HSCROLL:
         case WM_VSCROLL:
@@ -901,6 +1232,20 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
         case WM_GHOST_TEXT_READY:
         {
             int cursorPos = (int)wParam;
+=======
+        // RE: set binary from build output (Game Engine or other build that posted path)
+        if (uMsg == WM_APP + 202) {
+            std::string* path = reinterpret_cast<std::string*>(lParam);
+            if (path && !path->empty()) {
+                setCurrentBinaryForReverseEngineering(*path);
+                appendToOutput("[RE] Binary set from build output: " + *path + "\n", "Output", OutputSeverity::Info);
+                delete path;
+            }
+            return 0;
+        }
+        // Handle custom agent output message
+        if (uMsg == WM_AGENT_OUTPUT_SAFE) {
+>>>>>>> origin/main
             const char* text = reinterpret_cast<const char*>(lParam);
             onGhostTextReady(cursorPos, text);
             if (text)
@@ -1164,6 +1509,7 @@ bool Win32IDE::createWindow()
         }
     }
 
+<<<<<<< HEAD
     // Create the main window on the primary monitor's work area so it is always visible
     int winW = 1600, winH = 1000;
     int winX = 50, winY = 50;
@@ -1181,6 +1527,19 @@ bool Win32IDE::createWindow()
         CreateWindowExA(WS_EX_APPWINDOW, kWindowClassName, "RawrXD IDE - Native Win32 AI Development Environment",
                         WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN | WS_VISIBLE, winX, winY, winW, winH, nullptr, nullptr,
                         m_hInstance, this);
+=======
+    // Create the main window at explicit position so it is never off-screen (e.g. disconnected monitor)
+    // WS_VISIBLE so window is visible from creation; SW_SHOWNORMAL when showing.
+    int winW = 1600, winH = 1000;
+    int winX = 50, winY = 50;
+    m_hwndMain = CreateWindowExA(
+        WS_EX_APPWINDOW,
+        kWindowClassName,
+        "RawrXD IDE - Native Win32 AI Development Environment",
+        WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN | WS_VISIBLE,
+        winX, winY, winW, winH,
+        nullptr, nullptr, m_hInstance, this);
+>>>>>>> origin/main
 
     if (!m_hwndMain)
     {
@@ -1188,7 +1547,11 @@ bool Win32IDE::createWindow()
         return false;
     }
 
+<<<<<<< HEAD
     ShowWindow(m_hwndMain, SW_SHOW);
+=======
+    // Show immediately, normal (not minimized), and on top
+>>>>>>> origin/main
     ShowWindow(m_hwndMain, SW_SHOWNORMAL);
     UpdateWindow(m_hwndMain);
     SetWindowPos(m_hwndMain, HWND_TOPMOST, winX, winY, winW, winH, SWP_SHOWWINDOW | SWP_NOACTIVATE);
@@ -1214,6 +1577,7 @@ bool Win32IDE::createWindow()
 // Force window to foreground (SetForegroundWindow often fails when launched by
 // another process; AttachThreadInput + BringWindowToTop works around it).
 // ============================================================================
+<<<<<<< HEAD
 static void forceWindowToForeground(HWND hwnd)
 {
     if (!hwnd || !IsWindow(hwnd))
@@ -1226,6 +1590,19 @@ static void forceWindowToForeground(HWND hwnd)
     if (fgTid != myTid && fgTid != 0)
     {
         AttachThreadInput(myTid, fgTid, TRUE);
+=======
+void Win32IDE::showWindow() {
+    if (m_hwndMain) {
+        ShowWindow(m_hwndMain, SW_RESTORE);   // restore if minimized
+        ShowWindow(m_hwndMain, SW_SHOWNORMAL);
+        UpdateWindow(m_hwndMain);
+        BringWindowToTop(m_hwndMain);
+        SetForegroundWindow(m_hwndMain);
+        SetActiveWindow(m_hwndMain);
+        // Flash taskbar button so user sees the window if it was behind others
+        FLASHWINFO fwi = { sizeof(FLASHWINFO), m_hwndMain, FLASHW_ALL | FLASHW_TIMERNOFG, 3, 0 };
+        FlashWindowEx(&fwi);
+>>>>>>> origin/main
     }
     BringWindowToTop(hwnd);
     ShowWindow(hwnd, SW_RESTORE);
@@ -1286,12 +1663,20 @@ int Win32IDE::runMessageLoop()
         {
             METRICS.increment("app.messages_processed");
 
+<<<<<<< HEAD
             // Handle accelerator keys
             if (msg.message == WM_KEYDOWN)
             {
                 bool ctrl = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
                 bool shift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
                 bool alt = (GetKeyState(VK_MENU) & 0x8000) != 0;
+=======
+        // Handle accelerator keys
+        if (msg.message == WM_KEYDOWN) {
+            bool ctrl = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
+            bool shift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+            bool alt = (GetKeyState(VK_MENU) & 0x8000) != 0;
+>>>>>>> origin/main
 
                 if (ctrl && shift && msg.wParam == 'P')
                 {
@@ -1305,10 +1690,48 @@ int Win32IDE::runMessageLoop()
                     }
                     continue;
                 }
+<<<<<<< HEAD
                 if (ctrl && msg.wParam == 'N')
                 {
                     routeCommandUnified(IDM_FILE_NEW, this, m_hwndMain);
                     continue;
+=======
+                continue;
+            }
+            if (ctrl && msg.wParam == 'N') { routeCommandUnified(IDM_FILE_NEW, this, m_hwndMain); continue; }
+            if (ctrl && msg.wParam == 'O') { routeCommandUnified(IDM_FILE_OPEN, this, m_hwndMain); continue; }
+            if (ctrl && msg.wParam == 'S') {
+                if (shift) routeCommandUnified(IDM_FILE_SAVEAS, this, m_hwndMain);
+                else routeCommandUnified(IDM_FILE_SAVE, this, m_hwndMain);
+                continue;
+            }
+            // Ctrl+Shift+L → License Creator, Ctrl+Shift+F → Feature Registry (before plain Ctrl+F)
+            if (ctrl && shift && msg.wParam == 'L') { routeCommand(3015); continue; }
+            if (ctrl && shift && msg.wParam == 'F') { routeCommand(3016); continue; }
+            if (ctrl && msg.wParam == 'F') { routeCommandUnified(IDM_EDIT_FIND, this, m_hwndMain); continue; }
+            if (ctrl && msg.wParam == 'H') { routeCommandUnified(IDM_EDIT_REPLACE, this, m_hwndMain); continue; }
+            if (ctrl && msg.wParam == 'B') { toggleSidebar(); continue; }
+            if (ctrl && alt && msg.wParam == 'B') { toggleSecondarySidebar(); continue; }
+            // Ctrl+Shift+E → File Explorer (show sidebar with Explorer view)
+            if (ctrl && shift && msg.wParam == 'E') { routeCommand(IDM_VIEW_FILE_EXPLORER); continue; }
+            // Ctrl+Shift+X → Extensions view
+            if (ctrl && shift && msg.wParam == 'X') { routeCommand(2031); continue; }
+            // Ctrl+Shift+C → AI Chat panel toggle
+            if (ctrl && shift && msg.wParam == 'C') { toggleSecondarySidebar(); continue; }
+            // Ctrl+Shift+A → Audit Dashboard
+            if (ctrl && shift && msg.wParam == 'A') { routeCommandUnified(IDM_AUDIT_SHOW_DASHBOARD, this, m_hwndMain); continue; }
+            // Ctrl+Shift+I → Bounded Agent Loop (tool-calling autonomous agent)
+            if (ctrl && shift && msg.wParam == 'I') { routeCommandUnified(IDM_AGENT_BOUNDED_LOOP, this, m_hwndMain); continue; }
+            // Ctrl+, → Settings (full GUI)
+            if (ctrl && msg.wParam == VK_OEM_COMMA) { this->showSettingsGUIDialog(); continue; }
+            // Ctrl+= / Ctrl+- → UI Zoom In/Out, Ctrl+0 → Reset zoom
+            if (ctrl && (msg.wParam == VK_OEM_PLUS || msg.wParam == 0xBB)) {
+                // Zoom in: increase scale by 10%
+                if (m_settings.uiScalePercent == 0) {
+                    m_settings.uiScalePercent = MulDiv(100, m_currentDpi, 96) + 10;
+                } else {
+                    m_settings.uiScalePercent = (std::min)(m_settings.uiScalePercent + 10, 300);
+>>>>>>> origin/main
                 }
                 if (ctrl && msg.wParam == 'O')
                 {
@@ -1908,8 +2331,12 @@ void Win32IDE::onCreate(HWND hwnd)
     if (m_hwndMain)
     {
         SetPropA(m_hwndMain, "RawrXD.IDE.Label", (HANDLE)RAWRXD_IDE_LABEL_MAIN_WINDOW);
+<<<<<<< HEAD
         if (m_interpretabilityPanel)
             m_interpretabilityPanel->setParent(m_hwndMain);
+=======
+        if (m_interpretabilityPanel) m_interpretabilityPanel->setParent(m_hwndMain);
+>>>>>>> origin/main
     }
 
     LOG_INFO("onCreate complete — all panels created");
@@ -2069,6 +2496,7 @@ void bgInitBody(void* self)
     ide->deferredHeavyInitBody();
 }
 
+<<<<<<< HEAD
 void Win32IDE::deferredHeavyInitBody()
 {
     // Initialize logger under %APPDATA%\RawrXD\ide.log (fallback: RawrXD_IDE.log in cwd)
@@ -2077,6 +2505,192 @@ void Win32IDE::deferredHeavyInitBody()
         std::string logPath = "RawrXD_IDE.log";
         char appData[MAX_PATH] = {};
         if (SUCCEEDED(SHGetFolderPathA(nullptr, CSIDL_APPDATA, nullptr, 0, appData)))
+=======
+void Win32IDE::deferredHeavyInitBody() {
+        // Initialize logger under %APPDATA%\RawrXD\ide.log (fallback: RawrXD_IDE.log in cwd)
+        try {
+            std::string logPath = "RawrXD_IDE.log";
+            char appData[MAX_PATH] = {};
+            if (SUCCEEDED(SHGetFolderPathA(nullptr, CSIDL_APPDATA, nullptr, 0, appData))) {
+                std::string dir = std::string(appData) + "\\RawrXD";
+                CreateDirectoryA(dir.c_str(), nullptr);
+                logPath = dir + "\\ide.log";
+            }
+            IDELogger::getInstance().initialize(logPath);
+        } catch (...) {
+            OutputDebugStringA("ERROR: Logger init failed\n");
+        }
+        if (isShuttingDown()) return;
+
+        // ================================================================
+        // Enterprise License System — initialize FIRST (gates engine registration)
+        // ================================================================
+        try {
+            auto& license = RawrXD::EnterpriseLicense::Instance();
+            license.Initialize();
+
+            auto& featureMgr = EnterpriseFeatureManager::Instance();
+            featureMgr.Initialize();
+
+            // V2 license system (61-feature manifest) + runtime enforcement
+            auto& licV2 = RawrXD::License::EnterpriseLicenseV2::Instance();
+            licV2.initialize();
+            RawrXD::Flags::FeatureFlagsRuntime::Instance().refreshFromLicense();
+            RawrXD::Enforce::LicenseEnforcer::Instance().initialize();
+
+            OutputDebugStringA("[deferredHeavyInit] Enterprise license initialized\n");
+
+            // Update status bar with license tier badge
+            std::string tierBadge = std::string("[") + license.GetEditionName() + "]";
+            PostMessage(m_hwndMain, WM_USER + 200, 0,
+                reinterpret_cast<LPARAM>(_strdup(tierBadge.c_str())));
+        } catch (...) {
+            OutputDebugStringA("ERROR: Enterprise license init failed\n");
+        }
+        if (isShuttingDown()) return;
+
+        // Initialize Native CPU Inference Engine
+        try {
+            m_nativeEngine = std::make_unique<RawrXD::CPUInferenceEngine>();
+            auto memPlugin = std::make_shared<RawrXD::Modules::NativeMemoryModule>();
+            m_nativeEngine->RegisterMemoryPlugin(memPlugin);
+            m_nativeEngineLoaded = true;
+        } catch (...) {
+            m_nativeEngine.reset();
+            m_nativeEngineLoaded = false;
+            OutputDebugStringA("ERROR: CPUInferenceEngine init failed\n");
+        }
+        if (isShuttingDown()) return;
+
+        // Initialize DirectX renderer (needs to be on UI thread ideally, but creation is OK)
+        try {
+            m_renderer = std::make_unique<TransparentRenderer>();
+        } catch (...) {
+            m_renderer = nullptr;
+            OutputDebugStringA("ERROR: TransparentRenderer creation failed\n");
+        }
+
+        // Initialize PowerShell state
+        try {
+            initializePowerShellState();
+        } catch (...) {
+            OutputDebugStringA("ERROR: PowerShell init failed\n");
+        }
+
+        // Theme already applied in onCreate — skip here
+
+        // Load code snippets
+        try {
+            loadCodeSnippets();
+        } catch (...) {
+            OutputDebugStringA("ERROR: Code snippets loading failed\n");
+        }
+
+        // Initialize Agent
+        try {
+            if (m_nativeEngine) {
+                m_agent = std::make_unique<RawrXD::NativeAgent>(m_nativeEngine.get());
+                m_agent->SetOutputCallback([this](const std::string& text) {
+                    postAgentOutputSafe(text);
+                });
+            }
+        } catch (...) {
+            OutputDebugStringA("ERROR: NativeAgent init failed\n");
+        }
+
+        // Initialize Extension Loader
+        try {
+            m_extensionLoader = std::make_unique<RawrXD::ExtensionLoader>();
+            m_extensionLoader->Scan();
+            m_extensionLoader->LoadNativeModules();
+        } catch (...) {
+            OutputDebugStringA("ERROR: ExtensionLoader init failed\n");
+        }
+        if (isShuttingDown()) return;
+
+        // Initialise the agentic bridge (needs m_hwndMain, which is set)
+        try {
+            initializeAgenticBridge();
+        } catch (...) {
+            OutputDebugStringA("ERROR: initializeAgenticBridge failed\n");
+        }
+
+        // Initialize AI/Extensions panels so menu -> show() creates real UI
+        if (isShuttingDown()) return;
+        try {
+            if (m_modelRegistry) m_modelRegistry->initialize();
+            if (m_interpretabilityPanel) m_interpretabilityPanel->initialize();
+            if (m_benchmarkMenu && m_hwndMain) {
+                m_benchmarkMenu->setMainWindow(m_hwndMain);
+                m_benchmarkMenu->initialize();
+            }
+        } catch (...) {
+            OutputDebugStringA("ERROR: AI panels init failed\n");
+        }
+
+        // Initialize Ghost Text renderer (Copilot-style inline completions)
+        try {
+            initGhostText();
+        } catch (...) {
+            OutputDebugStringA("ERROR: initGhostText failed\n");
+        }
+
+        // Initialize Failure Detector (agent self-correction)
+        try {
+            initFailureDetector();
+        } catch (...) {
+            OutputDebugStringA("ERROR: initFailureDetector failed\n");
+        }
+
+        // Initialize Agent Diff Panel (Win32IDE_AgentPanel.cpp)
+        try {
+            initAgentPanel();
+        } catch (...) {
+            OutputDebugStringA("ERROR: initAgentPanel failed\n");
+        }
+
+        // Load persistent settings from %APPDATA%\RawrXD\settings.json
+        try {
+            loadSettings();
+            applySettings();
+        } catch (...) {
+            OutputDebugStringA("ERROR: loadSettings/applySettings failed\n");
+        }
+        if (isShuttingDown()) return;
+
+        // Initialize Agent History (append-only JSONL event log)
+        try {
+            initAgentHistory();
+        } catch (...) {
+            OutputDebugStringA("ERROR: initAgentHistory failed\n");
+        }
+
+        // Initialize Failure Intelligence — Phase 6 (classification + retry strategies)
+        try {
+            initFailureIntelligence();
+        } catch (...) {
+            OutputDebugStringA("ERROR: initFailureIntelligence failed\n");
+        }
+
+        // Initialize Unified Model Source Resolver (HuggingFace, Ollama blobs, HTTP, local)
+        try {
+            m_modelResolver = std::make_unique<RawrXD::ModelSourceResolver>();
+            // Set cache directory for downloaded models
+            m_modelResolver->SetCacheDirectory(
+                m_modelResolver->GetCacheDirectory()); // Use default: %USERPROFILE%/.cache/rawrxd/models
+            OutputDebugStringA("ModelSourceResolver initialized OK\n");
+        } catch (const std::exception& e) {
+            m_modelResolver.reset();
+            OutputDebugStringA("ERROR: ModelSourceResolver init failed: ");
+            OutputDebugStringA(e.what());
+            OutputDebugStringA("\n");
+        } catch (...) {
+            m_modelResolver.reset();
+            OutputDebugStringA("ERROR: ModelSourceResolver init failed (unknown)\n");
+        }
+
+        // GPU Backend Bridge — detect and initialize Vulkan compute if available
+>>>>>>> origin/main
         {
             std::string dir = std::string(appData) + "\\RawrXD";
             CreateDirectoryA(dir.c_str(), nullptr);
@@ -2105,6 +2719,7 @@ void Win32IDE::deferredHeavyInitBody()
     if (isShuttingDown())
         return;
 
+<<<<<<< HEAD
     // Initialize Native CPU Inference Engine
     try
     {
@@ -2166,6 +2781,30 @@ void Win32IDE::deferredHeavyInitBody()
             m_agent->SetDeepThink(true);
             m_agent->SetDeepResearch(true);
             m_agent->SetNoRefusal(true);
+=======
+        // Initialize MultiResponse, LSP Server, Hotpatch UI (lazy-ready)
+        try {
+            initMultiResponse();
+        } catch (...) {
+            OutputDebugStringA("ERROR: initMultiResponse failed\n");
+        }
+        try {
+            initLSPServer();
+        } catch (...) {
+            OutputDebugStringA("ERROR: initLSPServer failed\n");
+        }
+        try {
+            initHotpatchUI();
+        } catch (...) {
+            OutputDebugStringA("ERROR: initHotpatchUI failed\n");
+        }
+
+        // Initialize Phase 11: Distributed Swarm Compilation
+        try {
+            initPhase11();
+        } catch (...) {
+            OutputDebugStringA("ERROR: initPhase11 failed\n");
+>>>>>>> origin/main
         }
     }
     catch (...)

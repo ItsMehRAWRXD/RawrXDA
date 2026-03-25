@@ -3,7 +3,10 @@
 #include <queue>
 #include <algorithm>
 #include <chrono>
+<<<<<<< HEAD
 #include <unordered_set>
+=======
+>>>>>>> origin/main
 
 namespace RawrXD {
 
@@ -143,6 +146,7 @@ nlohmann::json ChainOfThought::getStatus() const {
 }
 
 nlohmann::json ChainOfThought::exportTree() const {
+<<<<<<< HEAD
     nlohmann::json tree;
     tree["status"]       = "complete";
     tree["config"]       = {
@@ -256,6 +260,9 @@ nlohmann::json ChainOfThought::exportTree() const {
         });
     }
     return tree;
+=======
+    return {{"status", "not_implemented"}}; 
+>>>>>>> origin/main
 }
 
 } // namespace RawrXD

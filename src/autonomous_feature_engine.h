@@ -6,7 +6,10 @@
 #include <thread>
 #include <atomic>
 #include <functional>
+<<<<<<< HEAD
 #include <chrono>
+=======
+>>>>>>> origin/main
 
 // Forward declarations
 class HybridCloudManager;
@@ -296,3 +299,7 @@ private:
 
 #endif // AUTONOMOUS_FEATURE_ENGINE_H
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/main

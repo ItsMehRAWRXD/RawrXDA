@@ -1,3 +1,4 @@
+<<<<<<< HEAD:Full Source/runoff/docs_txt_ps1/part_0001/build_out2.txt
 [0/1] Re-running CMake...
 -- [SDK Fix] INCLUDE = C:/VS2022Enterprise/VC/Tools/MSVC/14.50.35717/include;C:/Program Files (x86)/Windows Kits/10/Include/10.0.22621.0/ucrt;C:/Program Files (x86)/Windows Kits/10/Include/10.0.22621.0/shared;C:/Program Files (x86)/Windows Kits/10/Include/10.0.22621.0/um
 -- [SDK Fix] LIB     = C:/VS2022Enterprise/VC/Tools/MSVC/14.50.35717/lib/x64;C:/VS2022Enterprise/VC/Tools/MSVC/14.50.35717/lib/onecore/x64;C:/Program Files (x86)/Windows Kits/10/Lib/10.0.22621.0/ucrt/x64;C:/Program Files (x86)/Windows Kits/10/Lib/10.0.22621.0/um/x64
@@ -1043,3 +1044,584 @@ D:\rawrxd\src\core\ssot_handlers.cpp(2208): note: consider using '%Iu' in the fo
 D:\rawrxd\src\core\ssot_handlers.cpp(2208): note: consider using '%I64u' in the format string
 [10/12] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\multi_file_transaction.cpp.obj
 ninja: build stopped: cannot make progress due to previous errors.
+=======
+[1/1145] Building ASM_MASM object CMakeFiles\RawrXD_MultiWindow_Kernel.dir\src\asm\RawrXD_MultiWindow_Kernel.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_MultiWindow_Kernel.asm
+
+[2/1145] [MASM64] Assembling model-llm-harvester.asm (LLM weight generator)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/reverse_engineering/model_reverse/model-llm-harvester.asm
+
+[3/1145] [MASM64] Assembling RawrXD_OmegaDeobfuscator.asm (AVX-512 deobfuscation)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/reverse_engineering/deobfuscator/RawrXD_OmegaDeobfuscator.asm
+
+[4/1145] [MASM64] Assembling RawrXD_MetaReverse.asm (authenticity detection)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/reverse_engineering/deobfuscator/RawrXD_MetaReverse.asm
+
+[5/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\hot_patcher.cpp.obj
+[6/1145] Building CXX object CMakeFiles\RawrXD_MultiWindow_Kernel.dir\src\core\multiwindow_scheduler.cpp.obj
+[7/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\stubs.cpp.obj
+[8/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\compression_interface.cpp.obj
+[9/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\engine\inference_kernels.cpp.obj
+[10/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\engine\transformer.cpp.obj
+[11/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\utils\Diagnostics.cpp.obj
+[12/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\memory_core.cpp.obj
+[13/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\gguf_loader.cpp.obj
+[14/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\engine\gguf_core.cpp.obj
+[15/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\universal_model_router.cpp.obj
+[16/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\gguf_vocab_resolver.cpp.obj
+[17/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent_history.cpp.obj
+[18/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent_explainability.cpp.obj
+[19/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\codec\compression.cpp.obj
+[20/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\streaming_gguf_loader.cpp.obj
+[21/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\engine\sampler.cpp.obj
+[22/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\engine\sentencepiece_tokenizer.cpp.obj
+[23/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\engine\pyre_compute.cpp.obj
+[24/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\codec\brutal_gzip.cpp.obj
+[25/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\engine\rawr_engine.cpp.obj
+[26/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\cpu_inference_engine.cpp.obj
+[27/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\engine\bpe_tokenizer.cpp.obj
+[28/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\engine\sovereign_engines.cpp.obj
+[29/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent\project_context.cpp.obj
+[30/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent_policy.cpp.obj
+[31/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\main.cpp.obj
+[32/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\execution_scheduler.cpp.obj
+[33/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\subagent_core.cpp.obj
+[34/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\engine\core_generator.cpp.obj
+[35/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\cli\cli_headless_systems.cpp.obj
+[36/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\confidence_gate.cpp.obj
+[37/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\flash_attention.cpp.obj
+[38/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\multi_response_engine.cpp.obj
+[39/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\gpu_backend_bridge.cpp.obj
+[40/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\complete_server.cpp.obj
+[41/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\agent_safety_contract.cpp.obj
+[42/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\deterministic_replay.cpp.obj
+[43/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\execution_governor.cpp.obj
+[44/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\cli\cli_autonomy_loop.cpp.obj
+[45/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\streaming_engine_registry.cpp.obj
+[46/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\native_inference_pipeline.cpp.obj
+[47/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\context_deterioration_hotpatch.cpp.obj
+[48/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\proxy_hotpatcher.cpp.obj
+[49/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\native_speed_layer.cpp.obj
+[50/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\byte_level_hotpatcher.cpp.obj
+[51/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\layer_offload_manager.cpp.obj
+[52/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\local_ai_core.cpp.obj
+[53/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\cli\agentic_decision_tree.cpp.obj
+[54/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\server\gguf_server_hotpatch.cpp.obj
+[55/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent\agentic_hotpatch_orchestrator.cpp.obj
+[56/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\model_memory_hotpatch.cpp.obj
+[57/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\unified_hotpatch_manager.cpp.obj
+[58/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic_engine.cpp.obj
+[59/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\vision_kv_isolation.cpp.obj
+[60/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\shadow_page_detour.cpp.obj
+[61/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\vision_token_gate.cpp.obj
+[62/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\vision_embedding_cache.cpp.obj
+[63/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\sentinel_watchdog.cpp.obj
+[64/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\vision_quantized_encoder.cpp.obj
+[65/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\vision_gpu_staging.cpp.obj
+[66/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\model_bruteforce_engine.cpp.obj
+[67/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\agentic_task_graph.cpp.obj
+[68/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\vision_encoder.cpp.obj
+[69/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\auth\rbac_engine.cpp.obj
+[70/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent\agent_self_repair.cpp.obj
+[71/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic_loop_state.cpp.obj
+[72/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent\agent_self_healing_orchestrator.cpp.obj
+[73/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent\eval_framework.cpp.obj
+[74/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent\agentic_failure_detector.cpp.obj
+[75/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent\agentic_puppeteer.cpp.obj
+[76/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent\llm_http_client.cpp.obj
+[77/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent\autonomous_subagent.cpp.obj
+[78/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\embedding_engine.cpp.obj
+[79/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\marketplace\extension_marketplace.cpp.obj
+[80/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic\AgentOrchestrator.cpp.obj
+[81/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic\autonomous_recovery_orchestrator.cpp.obj
+[82/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent\planner.cpp.obj
+[83/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\auto_repair_orchestrator.cpp.obj
+[84/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent\local_reasoning_engine.cpp.obj
+[85/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent\model_invoker.cpp.obj
+[86/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic\DeterministicReplayEngine.cpp.obj
+[87/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\agent_memory_indexer.cpp.obj
+[88/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic\agentic_executor.cpp.obj
+[89/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic\RawrXD_AgentLoop.cpp.obj
+[90/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\production_release.cpp.obj
+[91/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\pdb_gsi_hash.cpp.obj
+[92/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic\ToolRegistry.cpp.obj
+[93/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic\RawrXD_ToolRegistry.cpp.obj
+[94/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\pdb_reference_provider.cpp.obj
+[95/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\swarm_decision_bridge.cpp.obj
+[96/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\pdb_native.cpp.obj
+[97/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\enterprise_license_stubs.cpp.obj
+[98/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic\OrchestratorBridge.cpp.obj
+[99/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic\AgentToolHandlers.cpp.obj
+[100/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\arm64_gpu_accelerator.cpp.obj
+[101/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\sandbox_integration.cpp.obj
+[102/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\webrtc_signaling.cpp.obj
+[103/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\gpu_kernel_autotuner.cpp.obj
+[104/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\enterprise_devunlock_bridge.cpp.obj
+[105/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\universal_model_hotpatcher.cpp.obj
+[106/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent\DiskRecoveryAgent.cpp.obj
+[107/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\intel_gpu_accelerator.cpp.obj
+[108/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\amd_gpu_accelerator.cpp.obj
+[109/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\accelerator_router.cpp.obj
+[110/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\swarm_network_stubs.cpp.obj
+[111/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\enterprise_license.cpp.obj
+[112/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\enterprise_license_panel.cpp.obj
+[113/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\feature_flags_runtime.cpp.obj
+[114/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\cerebras_wse_accelerator.cpp.obj
+[115/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\analyzer_distiller_stubs.cpp.obj
+[116/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\multi_gpu.cpp.obj
+[117/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\streaming_orchestrator_stubs.cpp.obj
+[118/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\enterprise_feature_manager.cpp.obj
+[119/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\tool_registry.cpp.obj
+[120/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\feature_registry.cpp.obj
+[121/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\license_enforcement.cpp.obj
+[122/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\camellia256_bridge.cpp.obj
+[123/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\support_tier.cpp.obj
+[124/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\menu_auditor.cpp.obj
+[125/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\feature_registration.cpp.obj
+[126/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\pt_driver_contract.cpp.obj
+[127/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic\AgenticNavigator.cpp.obj
+[128/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\watchdog_service.cpp.obj
+[129/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\swarm_worker.cpp.obj
+[130/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\dml_streaming_integration.cpp.obj
+[131/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\shortcut_manager.cpp.obj
+[132/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\gguf_dml_bridge.cpp.obj
+[133/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\cli\swarm_orchestrator.cpp.obj
+[134/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\dml_inference_engine.cpp.obj
+[135/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\backup_manager.cpp.obj
+[136/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\checkpoint_manager.cpp.obj
+[137/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\intent_engine.cpp.obj
+[138/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\voice_chat.cpp.obj
+[139/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\voice_automation.cpp.obj
+[140/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\directml_compute.cpp.obj
+[141/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\swarm_coordinator.cpp.obj
+[142/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\ssot_handlers.cpp.obj
+[143/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\ssot_handlers_ext.cpp.obj
+[144/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\ssot_validation.cpp.obj
+[145/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\alert_system.cpp.obj
+[146/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\unified_command_dispatch.cpp.obj
+[147/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\rawrxd_state_mmf.cpp.obj
+[148/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\live_binary_patcher.cpp.obj
+[149/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\project_context.cpp.obj
+[150/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\reasoning_cot_bridge.cpp.obj
+[151/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\model_training_pipeline.cpp.obj
+[152/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\layer_contribution_scorer.cpp.obj
+[153/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\chain_of_thought_engine.cpp.obj
+[154/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\vulkan_compute.cpp.obj
+[155/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\traversal_strategy.cpp.obj
+[156/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\reasoning_profile.cpp.obj
+[157/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\convergence_controller.cpp.obj
+[158/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\cross_run_tensor_cache.cpp.obj
+[159/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\semantic_delta_tracker.cpp.obj
+[160/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\feature_handlers.cpp.obj
+[161/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\iterative_tensor_traversal.cpp.obj
+[162/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\reasoning_pipeline_orchestrator.cpp.obj
+[163/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\crash_containment.cpp.obj
+[164/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\patch_rollback_ledger.cpp.obj
+[165/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\quant_hysteresis.cpp.obj
+[166/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\sqlite_wrapper.cpp.obj
+[167/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\missing_handler_stubs.cpp.obj
+[168/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\memory_pressure_handler.cpp.obj
+[169/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\masm_stress_harness.cpp.obj
+[170/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\thread_pool.cpp.obj
+[171/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\jsonrpc_parser.cpp.obj
+[172/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\ui\chat_panel.cpp.obj
+[173/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\convergence_stress_harness.cpp.obj
+[174/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\transaction_journal.cpp.obj
+[175/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\ui\tool_action_status.cpp.obj
+[176/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic\model_cascade.cpp.obj
+[177/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\perf_telemetry.cpp.obj
+[178/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic\agentic_transaction.cpp.obj
+[179/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\gpu\gpu_backend.cpp.obj
+[180/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic\context_assembler.cpp.obj
+[181/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\ui\chat_message_renderer.cpp.obj
+[182/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic\multi_file_transaction.cpp.obj
+[183/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\vector_index.cpp.obj
+[184/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\gpu\kv_cache_optimizer.cpp.obj
+[185/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\telemetry\hotpatch_telemetry_safety.cpp.obj
+[186/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\telemetry\replay_telemetry_fusion.cpp.obj
+[187/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\gpu\speculative_decoder.cpp.obj
+[188/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\lsp\diagnostic_consumer.cpp.obj
+[189/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\gpu\speculative_decoder_v2.cpp.obj
+[190/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\prompt_template_engine.cpp.obj
+[191/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\telemetry\completion_feedback.cpp.obj
+[192/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\git\git_context.cpp.obj
+[193/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic_controller.cpp.obj
+[194/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\telemetry\UnifiedTelemetryCore.cpp.obj
+[195/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\ui\phase2_integration_example.cpp.obj
+[196/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\production_config_manager.cpp.obj
+[197/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\reasoning_schema_versioning.cpp.obj
+[198/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic_agent_coordinator.cpp.obj
+[199/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\workspace_reasoning_profiles.cpp.obj
+[200/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\autonomous_workflow_engine.cpp.obj
+[201/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\cot_fallback_system.cpp.obj
+[202/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\test_harness\replay_mock_inference.cpp.obj
+[203/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\deterministic_swarm.cpp.obj
+[204/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\test_harness\replay_reporter.cpp.obj
+[205/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\cursor_github_parity_bridge.cpp.obj
+[206/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\input_guard_slicer.cpp.obj
+[207/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\safe_refactor_engine.cpp.obj
+[208/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\update_signature.cpp.obj
+[209/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\enterprise_stress_tests.cpp.obj
+[210/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\local_parity_bridge.cpp.obj
+[211/1145] Building C object CMakeFiles\RawrXD_Gold.dir\src\core\sqlite3.c.obj
+[212/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\test_harness\replay_harness.cpp.obj
+[213/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\distributed_pipeline_orchestrator.cpp.obj
+[214/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\test_harness\replay_fixture.cpp.obj
+[215/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\quickjs_sandbox.cpp.obj
+[216/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\test_harness\replay_oracle.cpp.obj
+[217/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\swarm_reconciliation.cpp.obj
+[218/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\auto_update_system.cpp.obj
+[219/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\plugin_signature.cpp.obj
+[220/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\instructions_provider.cpp.obj
+[221/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\enterprise_telemetry_compliance.cpp.obj
+[222/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\semantic_code_intelligence.cpp.obj
+[223/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\code_linter.cpp.obj
+[224/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\knowledge_graph_core.cpp.obj
+[225/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\static_analysis_engine.cpp.obj
+[226/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\autonomous_debugger.cpp.obj
+[227/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\swarm_conflict_resolver.cpp.obj
+[228/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic\agentic_composer_ux.cpp.obj
+[229/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic\autonomous_communicator.cpp.obj
+[230/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic\autonomous_verification_loop.cpp.obj
+[231/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic\autonomous_background_daemon.cpp.obj
+[232/1145] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\FlashAttention_AVX512.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\FlashAttention_AVX512.asm
+
+[233/1145] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\inference_core.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\inference_core.asm
+
+[234/1145] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\quant_avx2.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\quant_avx2.asm
+
+[235/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\omega_orchestrator.cpp.obj
+[236/1145] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\memory_patch.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\memory_patch.asm
+
+[237/1145] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\byte_search.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\byte_search.asm
+
+[238/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\neural_bridge.cpp.obj
+[239/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\hotpatch_control_plane.cpp.obj
+[240/1145] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\RawrXD_KQuant_Dequant.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_KQuant_Dequant.asm
+
+[241/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\hardware_synthesizer.cpp.obj
+[242/1145] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\request_patch.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\request_patch.asm
+
+[243/1145] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\inference_kernels.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\inference_kernels.asm
+
+[244/1145] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\model_bridge_x64.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\model_bridge_x64.asm
+
+[245/1145] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\RawrXD_DualAgent_Orchestrator.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_DualAgent_Orchestrator.asm
+
+[246/1145] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\disk_recovery_scsi.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\disk_recovery_scsi.asm
+
+[247/1145] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\RawrXD_Prometheus_Exporter.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_Prometheus_Exporter.asm
+
+[248/1145] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\RawrXD_SelfPatch_Agent.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_SelfPatch_Agent.asm
+
+[249/1145] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\RawrXD_SourceEdit_Kernel.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_SourceEdit_Kernel.asm
+
+[250/1145] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\RawrXD_DiskRecoveryAgent.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_DiskRecoveryAgent.asm
+
+[251/1145] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\RawrXD-AnalyzerDistiller.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD-AnalyzerDistiller.asm
+
+[252/1145] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\gui_dispatch_bridge.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\gui_dispatch_bridge.asm
+
+[253/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\telemetry\telemetry_export.cpp.obj
+[254/1145] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\RawrXD_CopilotGapCloser.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_CopilotGapCloser.asm
+
+[255/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\transcendence_coordinator.cpp.obj
+[256/1145] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\native_speed_kernels.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\native_speed_kernels.asm
+
+[257/1145] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\feature_dispatch_bridge.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\feature_dispatch_bridge.asm
+
+[258/1145] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\RawrXD_Snapshot.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_Snapshot.asm
+
+[259/1145] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\RawrXD_Pyre_Compute.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_Pyre_Compute.asm
+
+[260/1145] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\RawrXD_Telemetry_Kernel.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_Telemetry_Kernel.asm
+
+[261/1145] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\vision_projection_kernel.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\vision_projection_kernel.asm
+
+[262/1145] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\RawrXD_Hotpatch_Kernel.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_Hotpatch_Kernel.asm
+
+[263/1145] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\RawrXD_License_Shield.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_License_Shield.asm
+
+[264/1145] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\RawrXD_EnterpriseLicense.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_EnterpriseLicense.asm
+
+[265/1145] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\DirectML_Bridge.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\DirectML_Bridge.asm
+
+[266/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\speciator_engine.cpp.obj
+[267/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\context\context_mention_parser.cpp.obj
+[268/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\mesh_brain.cpp.obj
+[269/1145] Building CXX object CMakeFiles\RawrXD-LicenseUnified.dir\src\core\enterprise_devunlock_bridge.cpp.obj
+cl : Command line warning D9025 : overriding '/DRAWR_HAS_MASM=1' with '/URAWR_HAS_MASM'
+[270/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\multimodal_engine\vision_encoder.cpp.obj
+[271/1145] Building CXX object CMakeFiles\RawrXD-LicenseUnified.dir\src\core\enterprise_license_stubs.cpp.obj
+cl : Command line warning D9025 : overriding '/DRAWR_HAS_MASM=1' with '/URAWR_HAS_MASM'
+D:\rawrxd\src\core\enterprise_license_stubs.cpp(218): warning C4100: 'signature': unreferenced parameter
+D:\rawrxd\src\core\enterprise_license_stubs.cpp(473): warning C4189: 'flags': local variable is initialized but not referenced
+[272/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\self_host_engine.cpp.obj
+[273/1145] Building CXX object CMakeFiles\RawrXD_KeyGen.dir\src\tools\RawrXD_KeyGen.cpp.obj
+FAILED: CMakeFiles/RawrXD_KeyGen.dir/src/tools/RawrXD_KeyGen.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /W4 /showIncludes /FoCMakeFiles\RawrXD_KeyGen.dir\src\tools\RawrXD_KeyGen.cpp.obj /FdCMakeFiles\RawrXD_KeyGen.dir\ /FS -c D:\rawrxd\src\tools\RawrXD_KeyGen.cpp
+D:\rawrxd\src\tools\RawrXD_KeyGen.cpp(20): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\tools\RawrXD_KeyGen.cpp(20): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+D:\rawrxd\src\tools\RawrXD_KeyGen.cpp(21): warning C4005: 'NOMINMAX': macro redefinition
+D:\rawrxd\src\tools\RawrXD_KeyGen.cpp(21): note: 'NOMINMAX' previously declared on the command line
+D:\rawrxd\src\tools\RawrXD_KeyGen.cpp(75): error C2338: static assertion failed: 'LicenseHeader must be 64 bytes'
+D:\rawrxd\src\tools\RawrXD_KeyGen.cpp(287): error C4576: a parenthesized type followed by an initializer list is a non-standard explicit type conversion syntax
+D:\rawrxd\src\tools\RawrXD_KeyGen.cpp(287): error C2102: '&' requires l-value
+D:\rawrxd\src\tools\RawrXD_KeyGen.cpp(502): error C3861: '__cpuid': identifier not found
+D:\rawrxd\src\tools\RawrXD_KeyGen.cpp(508): error C3861: '__cpuid': identifier not found
+[274/1145] Building CXX object CMakeFiles\RawrXD-LicenseUnified.dir\src\enterprise_license.cpp.obj
+cl : Command line warning D9025 : overriding '/DRAWR_HAS_MASM=1' with '/URAWR_HAS_MASM'
+[275/1145] Building CXX object CMakeFiles\RawrXD-LicenseUnified.dir\src\core\enterprise_license.cpp.obj
+cl : Command line warning D9025 : overriding '/DRAWR_HAS_MASM=1' with '/URAWR_HAS_MASM'
+[276/1145] Building CXX object CMakeFiles\RawrXD-LicenseCreatorV2.dir\src\enterprise_license.cpp.obj
+[277/1145] Building CXX object CMakeFiles\RawrXD-LicenseCreatorV2.dir\src\license_creator.cpp.obj
+[278/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\ide\refactoring_plugin.cpp.obj
+[279/1145] Building CXX object CMakeFiles\RawrXD-LicenseUnified.dir\src\core\enterprise_license_panel.cpp.obj
+cl : Command line warning D9025 : overriding '/DRAWR_HAS_MASM=1' with '/URAWR_HAS_MASM'
+[280/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\ide\resource_generator.cpp.obj
+[281/1145] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\RawrXD-StreamingOrchestrator.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD-StreamingOrchestrator.asm
+
+[282/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\context\semantic_index.cpp.obj
+[283/1145] Building CXX object CMakeFiles\RawrXD-LicenseUnified.dir\src\tools\enterprise_license_unified_creator.cpp.obj
+cl : Command line warning D9025 : overriding '/DRAWR_HAS_MASM=1' with '/URAWR_HAS_MASM'
+[284/1145] Building CXX object CMakeFiles\RawrXD-LicenseUnified.dir\src\license_enforcement.cpp.obj
+cl : Command line warning D9025 : overriding '/DRAWR_HAS_MASM=1' with '/URAWR_HAS_MASM'
+[285/1145] Building CXX object CMakeFiles\RawrXD-LicenseUnified.dir\src\core\menu_auditor.cpp.obj
+cl : Command line warning D9025 : overriding '/DRAWR_HAS_MASM=1' with '/URAWR_HAS_MASM'
+[286/1145] Building CXX object CMakeFiles\RawrXD-LicenseUnified.dir\src\core\enterprise_feature_manager.cpp.obj
+cl : Command line warning D9025 : overriding '/DRAWR_HAS_MASM=1' with '/URAWR_HAS_MASM'
+D:\rawrxd\src\core\enterprise_feature_manager.cpp(34): warning C4189: 'mgr': local variable is initialized but not referenced
+[287/1145] Building CXX object CMakeFiles\RawrXD-LicenseUnified.dir\src\core\feature_registry.cpp.obj
+cl : Command line warning D9025 : overriding '/DRAWR_HAS_MASM=1' with '/URAWR_HAS_MASM'
+[288/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic\AgentOllamaClient.cpp.obj
+[289/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\ide\language_plugin.cpp.obj
+[290/1145] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\native_debugger_engine.cpp.obj
+ninja: build stopped: subcommand failed.
+>>>>>>> origin/main:build_out2.txt

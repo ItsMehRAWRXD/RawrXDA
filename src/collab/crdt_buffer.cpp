@@ -1,4 +1,5 @@
 #include "crdt_buffer.h"
+<<<<<<< HEAD
 #include <sstream>
 #include <iomanip>
 #include <chrono>
@@ -99,6 +100,20 @@ void CRDTBuffer::applyOperation(const CRDTOperation& op) {
             m_text.erase(op.position, deleteLength);
         }
     }
+=======
+
+CRDTBuffer::CRDTBuffer()
+    
+{
+}
+
+void CRDTBuffer::applyRemoteOperation(const std::string &operation)
+{
+    // In a real implementation, this would parse the operation and apply it to the text
+    // For now, we'll just print a message
+    // textChanged signal if the text was actually changed
+    // textChanged(m_text);
+>>>>>>> origin/main
 }
 
 std::string CRDTBuffer::getText() const
@@ -108,6 +123,7 @@ std::string CRDTBuffer::getText() const
 
 void CRDTBuffer::insertText(int position, const std::string &text)
 {
+<<<<<<< HEAD
     if (position < 0 || position > (int)m_text.length() || text.empty()) {
         return;
     }
@@ -128,10 +144,20 @@ void CRDTBuffer::insertText(int position, const std::string &text)
 
     // Emit operation for replication
     operationGenerated(oss.str());
+=======
+    if (position < 0 || position > m_text.length()) {
+        return;
+    }
+    m_text.insert(position, text);
+    textChanged(m_text);
+    // In a real implementation, this would generate an operation and operationGenerated
+    // operationGenerated(operation);
+>>>>>>> origin/main
 }
 
 void CRDTBuffer::deleteText(int position, int length)
 {
+<<<<<<< HEAD
     if (position < 0 || position >= (int)m_text.length() || length <= 0) {
         return;
     }
@@ -154,5 +180,14 @@ void CRDTBuffer::deleteText(int position, int length)
 
     // Emit operation for replication
     operationGenerated(oss.str());
+=======
+    if (position < 0 || position >= m_text.length() || length <= 0) {
+        return;
+    }
+    m_text.remove(position, length);
+    textChanged(m_text);
+    // In a real implementation, this would generate an operation and operationGenerated
+    // operationGenerated(operation);
+>>>>>>> origin/main
 }
 

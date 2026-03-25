@@ -43,6 +43,15 @@
 
 #ifdef _WIN32
 #include <windows.h>
+<<<<<<< HEAD
+=======
+
+// SCAFFOLD_333: LSP hotpatch bridge revert error
+
+
+// SCAFFOLD_145: LSP hotpatch bridge
+
+>>>>>>> origin/main
 #endif
 
 using json = nlohmann::json;
@@ -541,7 +550,11 @@ void LSPHotpatchBridge::handleHotpatchRevert(int /*id*/, const json& params) {
     std::string name     = params["name"].get<std::string>();
     HotpatchLayer layer  = layerFromString(layerStr);
 
+<<<<<<< HEAD
     ::PatchResult pr = ::PatchResult::error("Revert supported for Memory, Byte, Server layers only");
+=======
+    PatchResult pr = PatchResult::error("Revert supported for Memory, Byte, Server layers only");
+>>>>>>> origin/main
 
     if (layer == HotpatchLayer::Memory) {
         // Memory revert: construct a MemoryPatchEntry from the client-provided

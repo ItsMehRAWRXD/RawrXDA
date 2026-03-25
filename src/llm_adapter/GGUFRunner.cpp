@@ -3,7 +3,11 @@
 #include "../logging/Logger.h"
 #include "QuantBackend.h"
 #include "brutal_gzip.h"
+<<<<<<< HEAD
 #include "gguf_k_quants.hpp"
+=======
+
+>>>>>>> origin/main
 
 #include <algorithm>
 #include <chrono>
@@ -26,7 +30,11 @@
 #define GGUF_USE_AVX2 1
 #endif
 
+<<<<<<< HEAD
 #if defined(__unix__) || defined(__APPLE__)
+=======
+#ifdef 
+>>>>>>> origin/main
 #include <sys/mman.h>
 #include <unistd.h>
 #define USE_MMAP 1
@@ -60,6 +68,7 @@ struct GGUFHeader
     uint64_t kvCount{0};
 };
 
+<<<<<<< HEAD
 void skipGgufValue(RawrXD::BinaryStream& ds, uint32_t type)
 {
     switch (type)
@@ -126,6 +135,28 @@ void skipGgufValue(RawrXD::BinaryStream& ds, uint32_t type)
             uint64_t len;
             ds >> len;
             for (uint64_t i = 0; i < len; ++i)
+=======
+void skipGgufValue(QDataStream& ds, uint32_t type) {
+    // Skip GGUF value based on type
+    switch (type) {
+        case 0: { uint8_t v; ds >> v; break; }  // UINT8
+        case 1: { int8_t v; ds >> v; break; }   // INT8
+        case 2: { quint16 v; ds >> v; break; } // UINT16
+        case 3: { qint16 v; ds >> v; break; }  // INT16
+        case 4: { uint32_t v; ds >> v; break; } // UINT32
+        case 5: { int32_t v; ds >> v; break; }  // INT32
+        case 6: { float v; ds >> v; break; }   // FLOAT32
+        case 7: { bool v; ds >> v; break; }    // BOOL
+        case 8: { // STRING
+            uint64_t len; ds >> len;
+            ds.skipRawData(static_cast<int>(len));
+            break;
+        }
+        case 9: { // ARRAY
+            uint32_t elemType; ds >> elemType;
+            uint64_t len; ds >> len;
+            for (uint64_t i = 0; i < len; ++i) {
+>>>>>>> origin/main
                 skipGgufValue(ds, elemType);
             break;
         }
@@ -135,6 +166,7 @@ void skipGgufValue(RawrXD::BinaryStream& ds, uint32_t type)
     }
 }
 
+<<<<<<< HEAD
 std::string readGgufStr(RawrXD::BinaryStream& ds)
 {
     uint64_t len;
@@ -155,6 +187,23 @@ float f16ToF32(uint16_t h)
     {
         if (mant == 0)
             return sign ? -0.0f : 0.0f;
+=======
+std::string readGgufStr(QDataStream& ds) {
+    uint64_t len; ds >> len;
+    std::vector<uint8_t> ba(static_cast<int>(len), '\0');
+    ds.readRawData(ba.data(), static_cast<int>(len));
+    return std::string::fromUtf8(ba);
+}
+
+// F16 to F32 conversion
+float f16ToF32(quint16 h) {
+    uint32_t sign = (h >> 15) & 1;
+    uint32_t exp  = (h >> 10) & 0x1F;
+    uint32_t mant = h & 0x3FF;
+    
+    if (exp == 0) {
+        if (mant == 0) return sign ? -0.0f : 0.0f;
+>>>>>>> origin/main
         // Denormal
         while ((mant & 0x400) == 0)
         {
@@ -214,7 +263,11 @@ void dequantizeRowQ8_0_scalar(const void* src, float* dst, size_t n)
 
 }  // namespace
 
+<<<<<<< HEAD
 bool GGUFRunner::parseGgufTensorTable(RawrXD::NativeFile& file)
+=======
+bool GGUFRunner::parseGgufTensorTable(std::fstream& file)
+>>>>>>> origin/main
 {
     file.seek(0);
     RawrXD::BinaryStream ds(file.getStream());
@@ -228,6 +281,7 @@ bool GGUFRunner::parseGgufTensorTable(RawrXD::NativeFile& file)
     if (version < 2)
         return false;
 
+<<<<<<< HEAD
     for (uint64_t i = 0; i < kvCount; ++i)
     {
         uint64_t keyLen;
@@ -245,6 +299,35 @@ bool GGUFRunner::parseGgufTensorTable(RawrXD::NativeFile& file)
         skipGgufValue(ds, valueType);
         if (ds.status() != RawrXD::StreamStatus::Ok)
             return false;
+=======
+    // Consume KV section to reach tensor table
+    for (uint64_t i = 0; i < kvCount; ++i) {
+        uint64_t keyLen; ds >> keyLen;
+        if (ds.status() != QDataStream::Ok) return false;
+        if (keyLen > 0) { file.read(static_cast<int64_t>(keyLen)); }
+        uint32_t valueType; ds >> valueType;
+        if (ds.status() != QDataStream::Ok) return false;
+        skipGgufValue(ds, valueType);
+        if (ds.status() != QDataStream::Ok) return false;
+    }
+
+    // Tensor table
+    context_.tensorTable.clear();
+    for (uint64_t i = 0; i < tensorCount; ++i) {
+        ModelContext::TensorDesc desc;
+        uint64_t nameLen; ds >> nameLen;
+        std::vector<uint8_t> nameBa = file.read(static_cast<int64_t>(nameLen));
+        desc.name = std::string::fromUtf8(nameBa);
+        uint32_t nDims; ds >> nDims;
+        desc.dims.resize(nDims);
+        for (uint32_t d = 0; d < nDims; ++d) {
+            uint64_t dim; ds >> dim; desc.dims[d] = static_cast<uint32_t>(dim);
+        }
+        uint32_t typeRaw; ds >> typeRaw;
+        desc.type = static_cast<GgmlType>(typeRaw);
+        uint64_t offset; ds >> offset; desc.offset = offset;
+        context_.tensorTable.insert(desc.name, desc);
+>>>>>>> origin/main
     }
 
     context_.tensorTable.clear();
@@ -328,10 +411,18 @@ bool GGUFRunner::parseGgufTensorTable(RawrXD::NativeFile& file)
     return true;
 }
 
+<<<<<<< HEAD
 bool GGUFRunner::hasModelFileBacking() const
 {
     return context_.mappedData != nullptr || context_.usesUnifiedFileBacking;
 }
+=======
+GGUFRunner::GGUFRunner(void* parent)
+    : void(parent)
+{
+    checkCpuFeatures();
+    loadGGUFModel(std::string::fromLatin1(kDefaultModelPath));
+>>>>>>> origin/main
 
 void GGUFRunner::releaseWeightFileBacking()
 {
@@ -390,18 +481,38 @@ GGUFRunner::GGUFRunner(void* parent)
         context_.logits.resize(context_.vocabSize);
     }
 
+<<<<<<< HEAD
     if (hasModelFileBacking() && !context_.modelPath.empty())
     {
         RawrXD::Runtime::ModelRuntimeGate::instance().notifyModelResident(
             context_.modelPath, static_cast<std::uint64_t>(context_.modelFileSize));
     }
+=======
+             << "| Dims:" << context_.embedDim << "x" << context_.vocabSize
+             << "| CPU: AVX2=" << context_.hasAVX2 << "AVX512=" << context_.hasAVX512 << "FMA=" << context_.hasFMA
+             << "| Gen: temp=" << context_.temperature << "top_p=" << context_.topP << "max_tokens=" << context_.maxTokens;
+>>>>>>> origin/main
 }
 
 GGUFRunner::~GGUFRunner()
 {
+<<<<<<< HEAD
     if (!context_.modelPath.empty())
     {
         RawrXD::Runtime::ModelRuntimeGate::instance().notifyModelUnloaded(context_.modelPath);
+=======
+#ifdef USE_MMAP
+    if (context_.mappedData && context_.usesMmap) {
+        if (::munmap(static_cast<void*>(context_.mappedData), static_cast<size_t>(context_.modelFileSize)) != 0) {
+        }
+        context_.mappedData = nullptr;
+    }
+#endif
+
+    if (context_.mappedData) {
+        delete[] context_.mappedData;
+        context_.mappedData = nullptr;
+>>>>>>> origin/main
     }
     releaseWeightFileBacking();
 
@@ -409,6 +520,7 @@ GGUFRunner::~GGUFRunner()
     context_.vocabulary.clear();
 }
 
+<<<<<<< HEAD
 bool GGUFRunner::inferenceWeightsReady() const
 {
     if (!hasModelFileBacking())
@@ -692,10 +804,16 @@ bool GGUFRunner::runInference(const std::string& prompt, float* outputBuffer)
 {
     if (!hasModelFileBacking())
     {
+=======
+bool GGUFRunner::runInference(const std::string& prompt, float* outputBuffer)
+{
+    if (!context_.mappedData) {
+>>>>>>> origin/main
         inferenceComplete(false);
         return false;
     }
 
+<<<<<<< HEAD
     if (!inferenceWeightsReady())
     {
         RawrXD::Logging::Logger::instance().error(
@@ -710,13 +828,20 @@ bool GGUFRunner::runInference(const std::string& prompt, float* outputBuffer)
 
     if (!outputBuffer)
     {
+=======
+    if (!outputBuffer) {
+>>>>>>> origin/main
         inferenceComplete(false);
         return false;
     }
 
     std::vector<float> embeddings;
+<<<<<<< HEAD
     if (!prepareLLMInput(prompt, embeddings))
     {
+=======
+    if (!prepareLLMInput(prompt, embeddings)) {
+>>>>>>> origin/main
         inferenceComplete(false);
         return false;
     }
@@ -726,12 +851,17 @@ bool GGUFRunner::runInference(const std::string& prompt, float* outputBuffer)
     const int K = static_cast<int>(context_.vocabSize);
 
     float* layerWeightMatrix = getLayerWeights();
+<<<<<<< HEAD
     if (!layerWeightMatrix)
     {
+=======
+    if (!layerWeightMatrix) {
+>>>>>>> origin/main
         inferenceComplete(false);
         return false;
     }
 
+<<<<<<< HEAD
     RawrXD::Runtime::LaneGuard execLane(RawrXD::Runtime::SubsystemLane::Execute);
     if (!execLane.allowed())
     {
@@ -742,6 +872,10 @@ bool GGUFRunner::runInference(const std::string& prompt, float* outputBuffer)
 
     auto totalTimerStart = std::chrono::steady_clock::now();
     (void)totalTimerStart;
+=======
+    std::chrono::steady_clock totalTimer;
+    totalTimer.start();
+>>>>>>> origin/main
 
     const int maxTokens = std::max(1, context_.maxTokens > 0 ? context_.maxTokens : 64);
     size_t lastTokenId = 0;
@@ -865,10 +999,13 @@ bool GGUFRunner::runInference(const std::string& prompt, float* outputBuffer)
         context_.kvLen = std::min<size_t>(context_.kvLen + 1, static_cast<size_t>(context_.maxTokens - 1));
     }
 
+<<<<<<< HEAD
     RawrXD::Logging::Logger::instance().info(std::string("[GGUFRunner] decode loop finished lastDecodeSteps=") +
                                                  std::to_string(context_.lastDecodeSteps),
                                              "GGUFRunner");
 
+=======
+>>>>>>> origin/main
     inferenceComplete(true);
     return true;
 }
@@ -908,7 +1045,12 @@ void GGUFRunner::checkCpuFeatures()
     }
 #endif
 
+<<<<<<< HEAD
     // CPU features detected (AVX512, FMA)
+=======
+             << "AVX512=" << context_.hasAVX512 
+             << "FMA=" << context_.hasFMA;
+>>>>>>> origin/main
 }
 
 void GGUFRunner::loadGGUFModel(const std::string& filePath)
@@ -947,6 +1089,7 @@ void GGUFRunner::loadGGUFModel(const std::string& filePath)
     context_.modelName.clear();
     context_.usesMmap = false;
 
+<<<<<<< HEAD
     RawrXD::NativeFile file(filePath);
     // Missing file: do not allocate new float[0] (was non-null on MSVC and looked "loaded").
     if (!file.exists())
@@ -955,12 +1098,24 @@ void GGUFRunner::loadGGUFModel(const std::string& filePath)
     }
     if (!file.open())
     {
+=======
+    std::fstream file(filePath);
+    if (!file.exists()) {
+        context_.modelFileSize = static_cast<int64_t>(context_.embedDim * context_.vocabSize * sizeof(float));
+        context_.mappedData = new float[context_.embedDim * context_.vocabSize]{};
+        loadVocabulary(filePath + ".vocab");
+        return;
+    }
+
+    if (!file.open(QIODevice::ReadOnly)) {
+>>>>>>> origin/main
         return;
     }
 
     context_.modelFileSize = file.size();
     if (context_.modelFileSize < 16)
     {
+<<<<<<< HEAD
         return;
     }
 
@@ -1013,6 +1168,99 @@ void GGUFRunner::loadGGUFModel(const std::string& filePath)
                     " B); using standard file backing. Unset RAWRXD_GGUF_USE_UNIFIED_MEMORY or use a smaller GGUF.",
                 "GGUFRunner");
         }
+=======
+        QDataStream ds(&file);
+        ds.setByteOrder(QDataStream::LittleEndian);
+        GGUFHeader h{};
+        ds >> h.magic >> h.version >> h.tensorCount >> h.kvCount;
+        
+        if (h.magic == 0x46554747) {  // 'GGUF'
+            context_.ggufVersion = h.version;
+        }
+        
+        file.seek(0);
+        std::vector<uint8_t> head = file.read(qMin<int64_t>(context_.modelFileSize, 8 * 1024 * 1024));  // Read 8MB for metadata
+        
+        auto findInt = [&](const char* key, int defVal) {
+            int idx = head.indexOf(key);
+            if (idx < 0) return defVal;
+            int nl = head.indexOf('\n', idx);
+            std::vector<uint8_t> line = head.mid(idx, (nl > idx ? nl - idx : 128));
+            std::vector<std::vector<uint8_t>> parts = line.split('=');
+            if (parts.size() >= 2) { 
+                bool ok=false; 
+                int v = parts.last().trimmed().toInt(&ok); 
+                if (ok) return v; 
+            }
+            return defVal;
+        };
+        
+        auto findString = [&](const char* key) -> std::string {
+            int idx = head.indexOf(key);
+            if (idx < 0) return std::string();
+            int nl = head.indexOf('\n', idx);
+            std::vector<uint8_t> line = head.mid(idx, (nl > idx ? nl - idx : 128));
+            std::vector<std::vector<uint8_t>> parts = line.split('=');
+            if (parts.size() >= 2) {
+                return std::string::fromUtf8(parts.last().trimmed());
+            }
+            return std::string();
+        };
+        
+        context_.embedDim = findInt("ggml.embedding_length", 4096);
+        context_.vocabSize = findInt("ggml.vocab_size", 32000);
+        context_.nLayers = findInt("llama.block_count", 32);
+        context_.nHeads = findInt("llama.attention.head_count", 32);
+        context_.nKVHeads = findInt("llama.attention.head_count_kv", context_.nHeads);
+        
+        context_.modelName = findString("general.name");
+        context_.architecture = findString("general.architecture");
+        std::string quantStr = findString("general.file_type");
+        
+        // Detect quantization type
+        if (quantStr.contains("q4_0", //CaseInsensitive) || filePath.contains("q4_0", //CaseInsensitive)) {
+            context_.quantType = QuantType::Q4_0;
+        } else if (quantStr.contains("q4_1", //CaseInsensitive)) {
+            context_.quantType = QuantType::Q4_1;
+        } else if (quantStr.contains("q8_0", //CaseInsensitive)) {
+            context_.quantType = QuantType::Q8_0;
+        } else if (quantStr.contains("f16", //CaseInsensitive)) {
+            context_.quantType = QuantType::F16;
+        }
+        
+        if (context_.embedDim <= 0) context_.embedDim = 4096;
+        if (context_.vocabSize <= 0) context_.vocabSize = 32000;
+        
+        // Multi-head attention parameters
+        context_.headDim = (context_.nHeads > 0) ? (context_.embedDim / context_.nHeads) : 128;
+        context_.ropeBase = 10000.0f;  // RoPE frequency base (standard LLaMA default)
+        
+        // Precompute inverse frequencies for RoPE (once per model)
+        if (context_.headDim > 0) {
+            context_.invFreq.resize(context_.headDim / 2);
+            for (int i = 0; i < context_.headDim / 2; ++i) {
+                context_.invFreq[i] = 1.0f / std::pow(context_.ropeBase, 2.0f * i / static_cast<float>(context_.headDim));
+            }
+        }
+        
+                 << "Layers:" << context_.nLayers << "Heads:" << context_.nHeads
+                 << "KVHeads:" << context_.nKVHeads << "HeadDim:" << context_.headDim;
+        
+        file.seek(0);
+    }
+
+#ifdef USE_MMAP
+    void* mapped = ::mmap(nullptr,
+                          static_cast<size_t>(context_.modelFileSize),
+                          PROT_READ,
+                          MAP_PRIVATE,
+                          file.handle(),
+                          0);
+    if (mapped == MAP_FAILED) {
+    } else {
+        context_.mappedData = static_cast<float*>(mapped);
+        context_.usesMmap = true;
+>>>>>>> origin/main
     }
 #endif
 
@@ -1257,6 +1505,7 @@ void GGUFRunner::loadGGUFModel(const std::string& filePath)
         }
         const size_t floatCount = static_cast<size_t>(context_.modelFileSize / sizeof(float));
         context_.mappedData = new float[floatCount];
+<<<<<<< HEAD
         size_t totalRead = 0;
         const size_t chunk = 64 * 1024 * 1024;  // 64MB
         while (totalRead < static_cast<size_t>(context_.modelFileSize))
@@ -1291,6 +1540,15 @@ void GGUFRunner::loadGGUFModel(const std::string& filePath)
                     "runInference will refuse (weights_incomplete) until loads succeed.",
                 "GGUFRunner");
         }
+=======
+        const int64_t bytesRead = file.read(reinterpret_cast<char*>(context_.mappedData), context_.modelFileSize);
+        if (bytesRead != context_.modelFileSize) {
+        }
+    }
+
+    // Build tensor directory and read essential weights
+    if (!parseGgufTensorTable(file) || !parseGgufTensors(file)) {
+>>>>>>> origin/main
     }
 
     // Allocate KV-cache for multi-head GQA: [nLayers, nKVHeads, maxTokens, headDim]
@@ -1301,6 +1559,7 @@ void GGUFRunner::loadGGUFModel(const std::string& filePath)
         context_.keyCache.resize(cacheSize, 0.0f);
         context_.valueCache.resize(cacheSize, 0.0f);
         context_.kvLen = 0;
+<<<<<<< HEAD
     }
 
     // NativeFile closes on destruction
@@ -1311,6 +1570,18 @@ void GGUFRunner::loadGGUFModel(const std::string& filePath)
         for (size_t i = 0; i < static_cast<size_t>(context_.vocabSize); ++i)
         {
             context_.vocabulary.push_back("<%1>");
+=======
+                 << "(nLayers=" << context_.nLayers << "nKVHeads=" << context_.nKVHeads 
+                 << "maxTokens=" << context_.maxTokens << "headDim=" << context_.headDim << ")";
+    }
+
+    file.close();
+    loadVocabulary(filePath + ".vocab");
+    if (context_.vocabulary.empty()) {
+        context_.vocabulary.reserve(static_cast<int>(context_.vocabSize));
+        for (qsizetype i = 0; i < context_.vocabSize; ++i) {
+            context_.vocabulary.append("<%1>");
+>>>>>>> origin/main
         }
     }
 }
@@ -1319,6 +1590,7 @@ void GGUFRunner::loadVocabulary(const std::string& vocabPath)
 {
     context_.vocabulary.clear();
 
+<<<<<<< HEAD
     RawrXD::NativeFile vocabFile(vocabPath);
     if (!vocabFile.exists())
     {
@@ -1327,6 +1599,14 @@ void GGUFRunner::loadVocabulary(const std::string& vocabPath)
 
     if (!vocabFile.open())
     {
+=======
+    std::fstream vocabFile(vocabPath);
+    if (!vocabFile.exists()) {
+        return;
+    }
+
+    if (!vocabFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+>>>>>>> origin/main
         return;
     }
 
@@ -1344,6 +1624,10 @@ void GGUFRunner::loadVocabulary(const std::string& vocabPath)
         context_.vocabulary.push_back(all.substr(pos, nl - pos));
         pos = nl + 1;
     }
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/main
 }
 
 float* GGUFRunner::getLayerWeights()
@@ -1361,14 +1645,22 @@ float* GGUFRunner::getLayerWeights()
 
 bool GGUFRunner::prepareLLMInput(const std::string& prompt, std::vector<float>& embeddings)
 {
+<<<<<<< HEAD
     if (context_.embedDim <= 0)
     {
+=======
+    if (context_.embedDim <= 0) {
+>>>>>>> origin/main
         return false;
     }
 
     embeddings.assign(static_cast<size_t>(context_.embedDim), 0.0f);
 
+<<<<<<< HEAD
     const std::vector<uint8_t> utf8(prompt.begin(), prompt.end());
+=======
+    const std::vector<uint8_t> utf8 = prompt.toUtf8();
+>>>>>>> origin/main
     const int limit = std::min<int>(utf8.size(), static_cast<int>(context_.embedDim));
     for (int i = 0; i < limit; ++i)
     {
@@ -1438,12 +1730,20 @@ size_t GGUFRunner::sampleNextToken(float* buffer)
 
 std::string GGUFRunner::decodeToken(size_t tokenId) const
 {
+<<<<<<< HEAD
     if (!context_.vocabulary.empty() && tokenId < static_cast<size_t>(context_.vocabulary.size()))
     {
         return context_.vocabulary[static_cast<size_t>(tokenId)];
     }
 
     return "<token_" + std::to_string(tokenId) + ">";
+=======
+    if (!context_.vocabulary.empty() && tokenId < static_cast<size_t>(context_.vocabulary.size())) {
+        return context_.vocabulary[static_cast<qsizetype>(tokenId)];
+    }
+
+    return "<token_%1>");
+>>>>>>> origin/main
 }
 
 void GGUFRunner::applyTemperature(float* buffer, float temperature)
@@ -1732,10 +2032,14 @@ void GGUFRunner::fallback_matrix_multiply(float* A, float* B, float* C, int N, i
 bool GGUFRunner::loadModel(const std::string& filePath)
 {
     loadGGUFModel(filePath);
+<<<<<<< HEAD
     if (hasModelFileBacking())
     {
         RawrXD::Runtime::ModelRuntimeGate::instance().notifyModelResident(
             filePath, static_cast<std::uint64_t>(context_.modelFileSize));
+=======
+    if (context_.mappedData) {
+>>>>>>> origin/main
         modelLoaded(filePath, context_.modelFileSize);
         return true;
     }
@@ -1761,6 +2065,7 @@ size_t GGUFRunner::ggmlTypeSize(GgmlType type)
     }
 }
 
+<<<<<<< HEAD
 std::vector<uint8_t> GGUFRunner::readTensorData(RawrXD::NativeFile& file, uint64_t offset, uint64_t numBytes)
 {
 #if defined(_WIN32)
@@ -1809,6 +2114,17 @@ bool GGUFRunner::loadTensor(RawrXD::NativeFile& file, const std::string& name, s
 {
     if (context_.tensorTable.find(name) == context_.tensorTable.end())
     {
+=======
+std::vector<uint8_t> GGUFRunner::readTensorData(std::fstream& file, uint64_t offset, uint64_t numBytes)
+{
+    if (!file.seek(static_cast<int64_t>(offset))) return std::vector<uint8_t>();
+    return file.read(static_cast<int64_t>(numBytes));
+}
+
+bool GGUFRunner::loadTensor(std::fstream& file, const std::string& name, std::vector<float>& weights)
+{
+    if (!context_.tensorTable.contains(name)) {
+>>>>>>> origin/main
         return false;
     }
     const auto& desc = context_.tensorTable[name];
@@ -1819,6 +2135,7 @@ bool GGUFRunner::loadTensor(RawrXD::NativeFile& file, const std::string& name, s
     }
 
     size_t numBytes = 0;
+<<<<<<< HEAD
     const uint32_t typeU = static_cast<uint32_t>(desc.type);
     if (!RawrXD::GgufTensorBytes::payloadBytes(typeU, totalElements, numBytes))
     {
@@ -1846,10 +2163,52 @@ bool GGUFRunner::loadTensor(RawrXD::NativeFile& file, const std::string& name, s
     if (name == "output.weight" && desc.type == GgmlType::Q4_0)
     {
         context_.raw_q4_output.assign(rawData.data(), rawData.data() + rawData.size());
+=======
+    if (desc.type == GgmlType::F32) {
+        numBytes = totalElements * 4;
+    } else if (desc.type == GgmlType::Q4_0) {
+        numBytes = (totalElements / 32) * 18;
+    } else if (desc.type == GgmlType::Q8_0) {
+        numBytes = (totalElements / 32) * 34;
+    }
+
+    std::vector<uint8_t> rawData = readTensorData(file, desc.offset, numBytes);
+    if (rawData.empty()) return false;
+
+    weights.resize(totalElements);
+    if (desc.type == GgmlType::F32) {
+        const float* ptr = reinterpret_cast<const float*>(rawData.constData());
+        std::copy(ptr, ptr + totalElements, weights.begin());
+    } else if (desc.type == GgmlType::Q4_0) {
+        // Keep raw bytes for output.weight to enable runtime-dispatched GEMM
+        if (name == "output.weight") {
+            context_.raw_q4_output.assign(reinterpret_cast<const uint8_t*>(rawData.constData()),
+                                          reinterpret_cast<const uint8_t*>(rawData.constData()) + rawData.size());
+        }
+        dequantizeRowQ4_0_scalar(rawData.constData(), weights.data(), totalElements);
+    } else if (desc.type == GgmlType::Q8_0) {
+        dequantizeRowQ8_0_scalar(rawData.constData(), weights.data(), totalElements);
     }
     return true;
 }
 
+bool GGUFRunner::parseGgufTensors(std::fstream& file)
+{
+    // Load essential tensors using table-driven approach
+    if (!loadTensor(file, "token_embd.weight", context_.tok_embeddings)) {
+        return false;
+    }
+    
+    // Load output norm and output weights
+    if (!loadTensor(file, "output_norm.weight", context_.output_norm_w)) {
+    }
+    if (!loadTensor(file, "output.weight", context_.output_w)) {
+>>>>>>> origin/main
+    }
+    return true;
+}
+
+<<<<<<< HEAD
 bool GGUFRunner::parseGgufTensors(RawrXD::NativeFile& file)
 {
     // Load essential tensors using table-driven approach
@@ -2115,11 +2474,25 @@ bool GGUFRunner::readTensorFloat32(RawrXD::NativeFile& file, int64_t offset, int
     }
     if (!desc)
     {
+=======
+bool GGUFRunner::readTensorFloat32(std::fstream& file, int64_t offset, int64_t count, std::vector<float>& out)
+{
+    // 1. Look up the tensor that owns this byte range (exact offset match)
+    const ModelContext::TensorDesc* desc = nullptr;
+    for (const auto& d : context_.tensorTable) {
+        if (d.offset == static_cast<uint64_t>(offset)) {
+            desc = &d;
+            break;
+        }
+    }
+    if (!desc) {
+>>>>>>> origin/main
         return false;
     }
 
     // 2. Compute element count from shape
     uint64_t expect = 1;
+<<<<<<< HEAD
     for (uint64_t dim : desc->dims)
         expect *= dim;
     if (expect != static_cast<uint64_t>(count))
@@ -2144,6 +2517,51 @@ bool GGUFRunner::readTensorFloat32(RawrXD::NativeFile& file, int64_t offset, int
     if (!RawrXD::GgufTensorBytes::dequantizeToFloat(static_cast<uint32_t>(desc->type), raw.data(),
                                                     static_cast<size_t>(expect), out.data()))
     {
+=======
+    for (uint64_t dim : desc->dims) expect *= dim;
+    if (expect != static_cast<uint64_t>(count)) {
+                   << "expected" << expect << "got" << count;
+        return false;
+    }
+
+    // 3. Compute byte size on disk
+    uint64_t typeSize = ggmlTypeSize(desc->type);
+    uint64_t byteSize = 0;
+    if (desc->type == GgmlType::F32 || desc->type == GgmlType::F16) {
+        byteSize = expect * typeSize;
+    } else if (desc->type == GgmlType::Q4_0 || desc->type == GgmlType::Q8_0) {
+        byteSize = (expect / 32) * typeSize;  // typeSize is bytes per block
+    }
+
+    // 4. Read raw bytes
+    if (!file.seek(offset)) return false;
+    std::vector<uint8_t> raw = file.read(static_cast<int64_t>(byteSize));
+    if (raw.size() != static_cast<qsizetype>(byteSize)) {
+        return false;
+    }
+
+    // 5. Convert to float32 (scalar path only)
+    out.resize(count);
+    const char* src = raw.constData();
+    switch (desc->type) {
+    case GgmlType::F32:
+        std::memcpy(out.data(), src, byteSize);
+        break;
+
+    case GgmlType::F16: {
+        const quint16* h = reinterpret_cast<const quint16*>(src);
+        for (uint64_t i = 0; i < expect; ++i)
+            out[i] = f16ToF32(h[i]);
+        break;
+    }
+    case GgmlType::Q4_0:
+        dequantizeRowQ4_0_scalar(src, out.data(), expect);
+        break;
+    case GgmlType::Q8_0:
+        dequantizeRowQ8_0_scalar(src, out.data(), expect);
+        break;
+    default:
+>>>>>>> origin/main
         return false;
     }
     return true;
@@ -2165,6 +2583,7 @@ std::vector<uint8_t> GGUFRunner::compressBrutal(const void* data, size_t len)
     return std::vector<uint8_t>();
 #endif
 
+<<<<<<< HEAD
     if (!out_ptr)
         return std::vector<uint8_t>();
 
@@ -2174,6 +2593,15 @@ std::vector<uint8_t> GGUFRunner::compressBrutal(const void* data, size_t len)
     // custom deleter. Given the speed, a memcpy here is negligible compared to qCompress.
     std::vector<uint8_t> result(reinterpret_cast<const uint8_t*>(out_ptr),
                                 reinterpret_cast<const uint8_t*>(out_ptr) + out_len);
+=======
+    if (!out_ptr) return std::vector<uint8_t>();
+
+    // Take ownership of the malloc-ed buffer into std::vector<uint8_t>
+    // std::vector<uint8_t> makes a copy by default, so we copy and free.
+    // To avoid copy, we would need to wrap it, but std::vector<uint8_t> doesn't easily take malloc ownership without custom deleter.
+    // Given the speed, a memcpy here is negligible compared to qCompress.
+    std::vector<uint8_t> result(reinterpret_cast<const char*>(out_ptr), static_cast<int>(out_len));
+>>>>>>> origin/main
     free(out_ptr);
     return result;
 }
@@ -2185,12 +2613,21 @@ std::vector<uint8_t> GGUFRunner::compressBrutal(const void* data, size_t len)
 bool GGUFRunner::setQuantizationMode(QuantMode mode)
 {
     bool success = QuantBackend::instance().setMode(mode);
+<<<<<<< HEAD
     if (success)
     {
         // Quantization mode set successfully
     }
     else
     {
+=======
+    if (success) {
+                 << (mode == QuantMode::Q4_0 ? "Q4_0 (4-bit)" :
+                     mode == QuantMode::Q8_0 ? "Q8_0 (8-bit)" :
+                     mode == QuantMode::F32 ? "F32 (full precision)" : "FALLBACK");
+                 << std::string::number(QuantBackend::instance().getCompressionRatio(), 'f', 1) << "x";
+    } else {
+>>>>>>> origin/main
     }
     return success;
 }
@@ -2204,3 +2641,9 @@ float GGUFRunner::getCompressionRatio() const
 {
     return QuantBackend::instance().getCompressionRatio();
 }
+<<<<<<< HEAD
+=======
+
+
+
+>>>>>>> origin/main

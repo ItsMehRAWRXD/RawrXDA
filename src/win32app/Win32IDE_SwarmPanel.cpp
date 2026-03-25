@@ -259,9 +259,13 @@ void Win32IDE::cmdSwarmStatus() {
                                 << stats.parallelSpeedup << "x\n"
         << "  Packets TX/RX:  " << stats.totalPacketsSent << "/"
                                 << stats.totalPacketsRecv << "\n"
+<<<<<<< HEAD
         << "  Network MB:     " << std::fixed << std::setprecision(2) << txMB << "/" << rxMB << "\n"
         << "  Cache Hits:     " << stats.objectCacheHits << "\n"
         << "  Cache Hit Rate: " << std::fixed << std::setprecision(1) << cacheHitRate << "%\n";
+=======
+        << "  Cache Hits:     " << stats.objectCacheHits << "\n";
+>>>>>>> origin/main
     if (!coord.isRunning() && !worker.isRunning()) {
         oss << "  ── Next step: use Swarm Start (Leader / Worker / Hybrid) to begin.\n";
     }

@@ -35,11 +35,16 @@ PUBLIC Swarm_DispatchCompute
 PUBLIC Swarm_P2PCopy
 PUBLIC Swarm_Shutdown
 PUBLIC Swarm_GetDeviceCount
+<<<<<<< HEAD
 PUBLIC Swarm_StealShardWork
 PUBLIC g_swarmDeviceCount
 PUBLIC g_swarmReady
 PUBLIC g_shardDescs
 PUBLIC g_shardCount
+=======
+PUBLIC g_swarmDeviceCount
+PUBLIC g_swarmReady
+>>>>>>> origin/main
 
 ; ── Constants ────────────────────────────────────────────────────
 MAX_GPUS               equ 8
@@ -528,7 +533,11 @@ Swarm_AllocShard ENDP
 
 
 ; ════════════════════════════════════════════════════════════════════
+<<<<<<< HEAD
 ; Swarm_DispatchCompute — Dispatch real shard compute work
+=======
+; Swarm_DispatchCompute — Mark a shard as computing (stub)
+>>>>>>> origin/main
 ;   ECX = shardIdx
 ;   Returns EAX = 0 on success, -1 on failure
 ;   FRAME: 1 push (rbp) + 28h alloc
@@ -543,6 +552,7 @@ Swarm_DispatchCompute PROC FRAME
     .allocstack 30h
     .endprolog
 
+<<<<<<< HEAD
     mov     dword ptr [rbp-4], ecx          ; preserve shard index
 
     ; Validate shard index
@@ -619,6 +629,27 @@ Swarm_DispatchCompute PROC FRAME
     ; Signal compute dispatch via beacon
 @dispatch_success:
     mov     r8d, dword ptr [rbp-4]
+=======
+    ; Validate shard index
+    cmp     ecx, MAX_SHARDS
+    jge     @dispatch_fail
+    cmp     ecx, 0
+    jl      @dispatch_fail
+
+    ; Check shard is allocated (status=1)
+    lea     r10, g_shardDescs
+    imul    eax, ecx, SHARD_DESC_SIZE
+    cdqe
+    mov     r11d, dword ptr [r10 + rax + 28]
+    cmp     r11d, 1
+    jne     @dispatch_fail
+
+    ; Set status = 2 (computing)
+    mov     dword ptr [r10 + rax + 28], 2
+
+    ; Signal compute dispatch via beacon
+    mov     r8d, ecx                   ; save shard index
+>>>>>>> origin/main
     mov     ecx, SWARM_BEACON_SLOT
     mov     edx, SWARM_EVT_COMPUTE_DONE
     call    BeaconSend
@@ -637,7 +668,11 @@ Swarm_DispatchCompute ENDP
 
 
 ; ════════════════════════════════════════════════════════════════════
+<<<<<<< HEAD
 ; Swarm_P2PCopy — Perform real staged P2P buffer transfer between shards
+=======
+; Swarm_P2PCopy — Stage a P2P buffer transfer between shards
+>>>>>>> origin/main
 ;   ECX = srcShardIdx
 ;   EDX = dstShardIdx
 ;   R8  = size (bytes to transfer)
@@ -656,6 +691,7 @@ Swarm_P2PCopy PROC FRAME
     .allocstack 28h
     .endprolog
 
+<<<<<<< HEAD
     mov     dword ptr [rbp-4], ecx           ; src shard
     mov     dword ptr [rbp-8], edx           ; dst shard
     mov     qword ptr [rbp-16], r8           ; requested bytes
@@ -665,6 +701,9 @@ Swarm_P2PCopy PROC FRAME
     jl      @p2p_fail
     cmp     edx, 0
     jl      @p2p_fail
+=======
+    ; Validate both shard indices
+>>>>>>> origin/main
     cmp     ecx, MAX_SHARDS
     jge     @p2p_fail
     cmp     edx, MAX_SHARDS
@@ -674,6 +713,7 @@ Swarm_P2PCopy PROC FRAME
     lea     r10, g_shardDescs
     imul    eax, ecx, SHARD_DESC_SIZE
     cdqe
+<<<<<<< HEAD
     lea     r11, [r10 + rax]                 ; src descriptor
     mov     qword ptr [rbp-20], r11
     mov     r9d, dword ptr [r11 + 28]
@@ -783,6 +823,24 @@ Swarm_P2PCopy PROC FRAME
     mov     ecx, SWARM_BEACON_SLOT
     mov     edx, SWARM_EVT_COMPUTE_DONE
     call    BeaconSend
+=======
+    mov     r11d, dword ptr [r10 + rax + 28]
+    cmp     r11d, 1
+    jb      @p2p_fail
+
+    imul    eax, edx, SHARD_DESC_SIZE
+    cdqe
+    mov     r11d, dword ptr [r10 + rax + 28]
+    cmp     r11d, 1
+    jb      @p2p_fail
+
+    ; P2P copy stub — in full Vulkan path this would:
+    ;   1. Map source staging buffer
+    ;   2. vkCmdCopyBuffer from src device memory
+    ;   3. Transfer to dst device staging buffer
+    ;   4. vkQueueSubmit on dst queue
+    ; For now, mark both as having active P2P transfer
+>>>>>>> origin/main
 
     xor     eax, eax                   ; success
     jmp     @p2p_done
@@ -872,6 +930,7 @@ Swarm_Shutdown PROC FRAME
     mov     g_vkDll, 0
 
 @shutdown_done:
+<<<<<<< HEAD
     ; Release shard buffers allocated through HeapAlloc
     mov     rsi, g_hHeap
     test    rsi, rsi
@@ -902,6 +961,8 @@ Swarm_Shutdown PROC FRAME
     jmp     @free_shard_loop
 
 @skip_shard_buffer_free:
+=======
+>>>>>>> origin/main
     mov     g_swarmReady, 0
     mov     g_swarmDeviceCount, 0
     mov     g_shardCount, 0
@@ -919,6 +980,7 @@ Swarm_Shutdown PROC FRAME
     ret
 Swarm_Shutdown ENDP
 
+<<<<<<< HEAD
 ; ────────────────────────────────────────────────────────────────
 ; Swarm_StealShardWork — Phase 14: Autonomous Shard Migration
 ;   RCX = targetDeviceIdx (GPU that is idle)
@@ -1001,4 +1063,6 @@ Swarm_StealShardWork PROC FRAME
     ret
 Swarm_StealShardWork ENDP
 
+=======
+>>>>>>> origin/main
 END

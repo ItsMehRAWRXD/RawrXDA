@@ -9,7 +9,17 @@
     - Runs RawrXD-Win32IDE --selftest and fails on non-zero exit
 #>
 
+<<<<<<< HEAD
 $ErrorActionPreference = "Stop"
+=======
+$ProjectRoot = "d:\lazy init ide"
+$TestResults = @{
+    Passed = 0
+    Failed = 0
+    Total = 0
+    Details = @()
+}
+>>>>>>> origin/main
 
 function Resolve-ProjectRoot {
     if ($PSCommandPath) {

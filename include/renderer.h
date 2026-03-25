@@ -2,10 +2,14 @@
 
 #include <vector>
 #include <string>
+<<<<<<< HEAD
 #include <Windows.h>
+=======
+>>>>>>> origin/main
 
 namespace RawrXD {
 
+<<<<<<< HEAD
     // Forward declaration if needed, or define shared structs
     #ifndef RAWRXD_RENDER_COMMAND_DEFINED
     #define RAWRXD_RENDER_COMMAND_DEFINED
@@ -37,3 +41,7 @@ namespace RawrXD {
     #endif
 
 }
+=======
+// Optional Vulkan backend factory (implemented when ENABLE_VULKAN is ON)
+IRenderer* CreateVulkanRenderer();
+>>>>>>> origin/main

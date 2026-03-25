@@ -7,6 +7,7 @@
 #include <vector>
 #include <memory>
 #include <functional>
+<<<<<<< HEAD
 #include <chrono>
 #include <unordered_map>
 #include <unordered_set>
@@ -47,10 +48,21 @@ struct PlanningTask {
     bool canRollback = false;
     std::string rollbackFilePath;   // backup path if FileEdit
     std::string rollbackContent;    // original content
+=======
+#include "action_executor.h"
+
+struct PlanningTask {
+    std::string id;
+    std::string title;
+    std::string status; // "pending", "in-progress", "completed", "failed"
+    int priority;
+    Action associatedAction;
+>>>>>>> origin/main
 };
 
 class AgenticEngine; // Forward decl
 
+<<<<<<< HEAD
 // ============================================================================
 // PlanProgressCallback — fired per-task status change
 // ============================================================================
@@ -61,10 +73,13 @@ using PlanProgressCallback = std::function<void(int taskIndex, int totalTasks,
 // ============================================================================
 // PlanningAgent — Full production planner: DAG, retry, rollback, parallel
 // ============================================================================
+=======
+>>>>>>> origin/main
 class PlanningAgent {
 public:
     explicit PlanningAgent();
     ~PlanningAgent();
+<<<<<<< HEAD
 
     void initialize();
     void setAgenticEngine(AgenticEngine* engine);
@@ -106,12 +121,30 @@ public:
     // ---- Callbacks ----
     void setProgressCallback(PlanProgressCallback cb) { m_progressCallback = std::move(cb); }
     void setMaxRetries(int n) { m_maxRetries = n; }
+=======
+    
+    void initialize();
+    void setAgenticEngine(AgenticEngine* engine);
+    
+    // High level operations
+    void createPlan(const std::string& goal);
+    void executePlan();
+    
+    // Task management
+    void addTask(const PlanningTask& task);
+    std::vector<PlanningTask> getTasks() const;
+    
+    // Status
+    bool isComplete() const;
+    std::string generateSummary() const;
+>>>>>>> origin/main
 
 private:
     std::string generateUUID();
     std::vector<PlanningTask> m_tasks;
     std::unique_ptr<ActionExecutor> m_executor;
     AgenticEngine* m_engine = nullptr;
+<<<<<<< HEAD
 
     // Config
     PlanProgressCallback m_progressCallback;
@@ -136,4 +169,11 @@ private:
     std::vector<std::string> getReadyTaskIds() const;  // tasks whose deps are all completed
     bool hasCyclicDeps() const;
     void createRollbackPoint(PlanningTask& task);
+=======
+    
+    // Internal logic for plan generation (template based for now)
+    void generateCodePlan(const std::string& goal);
+    void generateDebugPlan(const std::string& goal);
+    void generateGenericPlan(const std::string& goal);
+>>>>>>> origin/main
 };

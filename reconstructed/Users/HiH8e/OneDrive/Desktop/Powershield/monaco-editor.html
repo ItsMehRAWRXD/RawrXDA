@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden; }
+        #container { width: 100%; height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="container"></div>
+    
+    <!-- Load Monaco from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+    <script>
+        require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' }});
+        
+        let editor;
+        
+        require(['vs/editor/editor.main'], function() {
+            editor = monaco.editor.create(document.getElementById('container'), {
+                value: '',
+                language: 'powershell',
+                theme: 'vs-dark',
+                fontSize: 14,
+                automaticLayout: true,
+                minimap: { enabled: true },
+                scrollBeyondLastLine: false,
+                wordWrap: 'on',
+                lineNumbers: 'on',
+                folding: true,
+                renderWhitespace: 'selection',
+                cursorStyle: 'line',
+                fontFamily: 'Consolas, "Courier New", monospace'
+            });
+            
+            // Expose editor to external JavaScript
+            window.monacoEditor = editor;
+            
+            // Notify PowerShell that editor is ready
+            window.chrome.webview.postMessage({ type: 'ready' });
+            
+            // Listen for content changes
+            editor.onDidChangeModelContent(() => {
+                window.chrome.webview.postMessage({
+                    type: 'textChanged',
+                    content: editor.getValue()
+                });
+            });
+        });
+        
+        // Functions exposed to PowerShell
+        function getText() {
+            return editor ? editor.getValue() : '';
+        }
+        
+        function setText(text) {
+            if (editor) {
+                editor.setValue(text || '');
+            }
+        }
+        
+        function setLanguage(lang) {
+            if (editor) {
+                monaco.editor.setModelLanguage(editor.getModel(), lang);
+            }
+        }
+        
+        function setTheme(theme) {
+            if (editor) {
+                monaco.editor.setTheme(theme);
+            }
+        }
+        
+        function insertText(text) {
+            if (editor) {
+                const selection = editor.getSelection();
+                editor.executeEdits('', [{
+                    range: selection,
+                    text: text
+                }]);
+            }
+        }
+        
+        function getSelectedText() {
+            if (editor) {
+                return editor.getModel().getValueInRange(editor.getSelection());
+            }
+            return '';
+        }
+    </script>
+</body>
+</html>

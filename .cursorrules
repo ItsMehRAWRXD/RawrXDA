@@ -5,7 +5,11 @@
 ## 🎯 PROJECT OVERVIEW
 
 **Project**: RawrXD IDE - Custom C++ IDE with AI Integration  
+<<<<<<< HEAD
 **Architecture**: Win32/C++20, native UI only. Use `Ship/StdReplacements.hpp`, `Ship/RawrCompatIo.hpp` when you need UTF-16/binary helpers, and Win32 API. PowerShell bridge, SQLite via Win32/native.  
+=======
+**Architecture**: Win32/C++20, zero Qt. Use Ship/StdReplacements.hpp and Win32 API. PowerShell bridge, SQLite via Win32/native.  
+>>>>>>> origin/main
 **Goal**: Build a high-performance IDE that integrates Cursor features and Codex reverse engineering
 
 ### **Canonical repository root (Windows)**
@@ -73,10 +77,16 @@ std::cout << "Processing file: " << filename << std::endl;
 OutputDebugStringW(L"Error occurred"); // still avoid for production — use Logger
 ```
 
+<<<<<<< HEAD
 ### **Win32 + StdReplacements only (no cross-platform UI framework)**
 - **NEVER** add headers from a cross-platform UI framework (vendor string classes, core GUI headers, etc.). RawrXD stays on Win32 + STL.
 - **Dropping a UI framework does NOT mean dropping features.** Keep behavior; implement with Win32 + `Ship/StdReplacements.hpp` (menus, Git, View, panels, dialogs). Build it.
 - Use `Ship/StdReplacements.hpp`: `WideString`, `WideStringList`, `Variant`, `StdMap`, `StdFile`, `StdDir`, `JsonDoc`, etc. Use `Ship/RawrCompatIo.hpp` for `Utf16String`, `ByteBuffer`, `Win32File`, and little-endian binary readers when needed.
+=======
+### **No Qt — Win32 + StdReplacements only**
+- **NEVER** add `#include <QString>`, `<QtCore>`, or any Qt header. RawrXD is Qt-free.
+- Use `Ship/StdReplacements.hpp`: `WideString`, `WideStringList`, `Variant`, `StdMap`, `StdFile`, `StdDir`, `JsonDoc`, etc.
+>>>>>>> origin/main
 - Use `std::string` for core logic; `WideString` (or `std::wstring`) for UI/Win32 when needed.
 - Use Win32 APIs for process (CreateProcess), HTTP (winhttp), SQLite (native/sqlite3), UI (HWND, GDI/Direct2D).
 
@@ -89,9 +99,15 @@ WideString displayResult = WideString::fromStdString(result.value());
 
 **Incorrect**:
 ```cpp
+<<<<<<< HEAD
 // ❌ Never do this — no vendor UI toolkit types in core code
 #include <SomeVendor/String.h>
 std::vector<SomeVendor::String> mixedContainer;
+=======
+// ❌ Never do this — no Qt
+#include <QString>
+std::vector<QString> mixedContainer;
+>>>>>>> origin/main
 ```
 
 ### **Memory Management**
@@ -226,7 +242,11 @@ VS Code Extension → HTTP server (Win32/native) → Business Logic → CreatePr
 1. **Check for `std::cout`**: Replace with `Logger::info()`
 2. **Check for exceptions**: Replace with `std::expected`
 3. **Check for raw pointers**: Replace with smart pointers
+<<<<<<< HEAD
 4. **Check for disallowed UI framework headers**: use StdReplacements / RawrCompatIo and Win32 only
+=======
+4. **Check for Qt**: No Qt; use StdReplacements and Win32 only
+>>>>>>> origin/main
 5. **Check for sync I/O**: Make it async with callbacks
 
 ### **Code Generation Prompts**
@@ -242,7 +262,11 @@ Return std::expected<Result, Error>.
 ```
 Create Win32 controls (HWND) or use existing Win32 IDE helpers.
 Use WideString / std::wstring for UI strings (Ship/StdReplacements.hpp).
+<<<<<<< HEAD
 Keep business logic separate; no cross-platform UI framework.
+=======
+Keep business logic separate; no Qt.
+>>>>>>> origin/main
 ```
 
 **For PowerShell Bridge**:
@@ -382,7 +406,11 @@ delete logger;
 auto logger = std::make_unique<Logger>();
 ```
 
+<<<<<<< HEAD
 ### **❌ Mistake 4: Pulling in a cross-platform UI toolkit**
+=======
+### **❌ Mistake 4: Using Qt**
+>>>>>>> origin/main
 ```cpp
 // Wrong — vendor UI types in RawrXD core
 #include <VendorUi/String.h>

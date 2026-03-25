@@ -449,11 +449,24 @@ void Win32IDE::cmdGameEngineBuild()
             PostMessageA(m_hwndMain, WM_APP + 200, 0, 0);  // signal UI refresh
             appendToOutput(msg);
 
+<<<<<<< HEAD
             if (result.success && !result.outputPath.empty())
             {
                 // Integrate with Reverse Engineering: set built binary for codex analysis on main thread
                 std::string* pathCopy = new std::string(result.outputPath);
                 PostMessageA(m_hwndMain, WM_APP + 202, 0, reinterpret_cast<LPARAM>(pathCopy));
+=======
+        if (result.success && !result.outputPath.empty()) {
+            // Integrate with Reverse Engineering: set built binary for codex analysis on main thread
+            std::string* pathCopy = new std::string(result.outputPath);
+            PostMessageA(m_hwndMain, WM_APP + 202, 0, reinterpret_cast<LPARAM>(pathCopy));
+        }
+
+        if (!result.errors.empty()) {
+            appendToOutput("[GameEngine] Errors:\n");
+            for (const auto& err : result.errors) {
+                appendToOutput("  " + err + "\n");
+>>>>>>> origin/main
             }
 
             if (!result.errors.empty())

@@ -13,7 +13,10 @@
 #include "intel_gpu_accelerator.h"
 #include "arm64_gpu_accelerator.h"
 #include "cerebras_wse_accelerator.h"
+<<<<<<< HEAD
 #include "flash_attention.h"
+=======
+>>>>>>> origin/main
 #include "../../include/enterprise_license.h"
 
 #include <iostream>

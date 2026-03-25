@@ -2,13 +2,17 @@
 #include <cmath>
 #include <immintrin.h> // For AVX intrinsics if available, else standard
 #include <cstdint>
+<<<<<<< HEAD
 #include <cstring>
+=======
+>>>>>>> origin/main
 
 // C++ Implementation of RawrXD Math Kernels
 // Used when MASM is not available (e.g. MinGW)
 
 extern "C" {
 
+<<<<<<< HEAD
 static inline float HalfBitsToFloat(uint16_t h) {
     // IEEE 754 half -> float32
     const uint32_t sign = (uint32_t)(h & 0x8000u) << 16;
@@ -71,6 +75,8 @@ static inline uint16_t FloatToHalfBits(float f) {
     return (uint16_t)(sign | ((uint32_t)exp << 10) | (mant >> 13));
 }
 
+=======
+>>>>>>> origin/main
 void MatMul_F16_AVX512(float* y, const float* x, const float* w, int n, int d) {
     // Naive implementation for compatibility
     // y[d] = x[n] * w[d*n]
@@ -131,6 +137,7 @@ void KVCache_Retrieve_AVX512(float* out, const float* cache, int pos, int head_d
 }
 
 void Dequantize_AVX512(float* out, const void* in, int n) {
+<<<<<<< HEAD
     // Fallback implementation: treat input as F32 and copy.
     // Callers that need quant support should call the explicit block dequant kernels.
     if (!out || n <= 0) return;
@@ -138,6 +145,12 @@ void Dequantize_AVX512(float* out, const void* in, int n) {
         std::memset(out, 0, (size_t)n * sizeof(float));
         return;
     }
+=======
+    // Stub for dequantization - assuming input is actually float for this stub
+    // In real world, 'in' is block_q4_0 etc.
+    // For this "Real" logic on MinGW without full ggml, we assume F32 weights for simplicity
+    // or zero it out to prevent crash.
+>>>>>>> origin/main
     const float* f_in = (const float*)in;
     for(int i=0; i<n; ++i) out[i] = f_in[i];
 }
@@ -148,6 +161,7 @@ struct Q4_0_Block {
 };
 
 extern "C" void DequantQ4_0_AVX512(void* src, uint16_t* dst, size_t blocks) {
+<<<<<<< HEAD
     // Real baseline dequant for Q4_0: each block produces 32 values:
     // value = d * (q - 8), where q is signed 4-bit stored as 0..15.
     if (!src || !dst || blocks == 0) return;
@@ -169,6 +183,17 @@ extern "C" void DequantQ4_0_AVX512(void* src, uint16_t* dst, size_t blocks) {
 
 extern "C" void DequantQ4_0_AVX2(void* src, uint16_t* dst, size_t blocks) {
     // Baseline fallback (no AVX2 required here).
+=======
+    // Stub implementation to satisfy linker. 
+    // Real implementation requires F16 conversion logic.
+    // Since we are running on CPU as fallback (or preparing for GPU upload), this might be critical.
+    // But for now, we leave it as no-op or simple fill.
+    // memset(dst, 0, blocks * 32 * sizeof(uint16_t));
+}
+
+extern "C" void DequantQ4_0_AVX2(void* src, uint16_t* dst, size_t blocks) {
+    // Stub
+>>>>>>> origin/main
     DequantQ4_0_AVX512(src, dst, blocks);
 }
 

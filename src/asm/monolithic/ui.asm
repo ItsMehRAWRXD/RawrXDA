@@ -5,7 +5,10 @@
 ; ═══════════════════════════════════════════════════════════════════
 
 EXTERN g_hInstance:QWORD
+<<<<<<< HEAD
 EXTERN GetModuleHandleW:PROC
+=======
+>>>>>>> origin/main
 EXTERN RegisterClassExW:PROC
 EXTERN CreateWindowExW:PROC
 EXTERN GetMessageW:PROC
@@ -22,6 +25,7 @@ EXTERN TextOutW:PROC
 EXTERN SetTextColor:PROC
 EXTERN SetBkColor:PROC
 EXTERN SetBkMode:PROC
+<<<<<<< HEAD
 
 ; Phase 16: Multi-Node Visualizer Imports
 EXTERN g_swarmDeviceCount:DWORD
@@ -51,6 +55,8 @@ g_NeuralFocus     dq 0                  ; 87: Eye-Tracking / Focus Heatmap
 g_SubFrameDelta   dq 0                  ; 88: Sub-60Hz Interpolation
 g_HoloBuffer      dq 0                  ; 89: 1M Context Viewport
 
+=======
+>>>>>>> origin/main
 EXTERN CreateFontIndirectW:PROC
 EXTERN SelectObject:PROC
 EXTERN DeleteObject:PROC
@@ -63,8 +69,11 @@ EXTERN DestroyCaret:PROC
 EXTERN HideCaret:PROC
 EXTERN SetScrollInfo:PROC
 EXTERN GetScrollInfo:PROC
+<<<<<<< HEAD
 EXTERN SetTimer:PROC
 EXTERN KillTimer:PROC
+=======
+>>>>>>> origin/main
 
 ; Clipboard
 EXTERN OpenClipboard:PROC
@@ -84,6 +93,7 @@ EXTERN InsertMenuW:PROC
 EXTERN TrackPopupMenu:PROC
 EXTERN DestroyMenu:PROC
 EXTERN GetCursorPos:PROC
+<<<<<<< HEAD
 EXTERN ScreenToClient:PROC
 EXTERN LoadCursorW:PROC
 EXTERN SetCursor:PROC
@@ -104,15 +114,22 @@ EXTERN GetSaveFileNameW:PROC
 EXTERN GetOpenFileNameW:PROC
 EXTERN CreateSolidBrush:PROC
 EXTERN SavePEToDisk:PROC
+=======
+EXTERN LoadCursorW:PROC
+EXTERN SetCursor:PROC
+>>>>>>> origin/main
 
 PUBLIC UIMainLoop
 PUBLIC CreateEditorPane
 PUBLIC hMainWnd
+<<<<<<< HEAD
 PUBLIC g_ghostActive
 PUBLIC g_ghostTextBuffer
 PUBLIC g_ghostTextLen
 PUBLIC g_ghostLineCount
 PUBLIC g_inferencePending
+=======
+>>>>>>> origin/main
 
 CS_HREDRAW         equ 2
 CS_VREDRAW         equ 1
@@ -137,6 +154,7 @@ WM_CHAR            equ 102h
 WM_MOUSEWHEEL      equ 20Ah
 WM_VSCROLL         equ 114h
 WM_ERASEBKGND      equ 14h
+<<<<<<< HEAD
 WM_USER            equ 400h
 WM_USER_SUGGESTION_REQ equ (400h + 100h) ; 0x410
 WM_TIMER           equ 113h
@@ -144,6 +162,8 @@ WM_TIMER           equ 113h
 ; Timer IDs for debounced inference
 TIMER_GHOST_DEBOUNCE equ 1001       ; Idle timer for ghost text trigger
 GHOST_DEBOUNCE_MS    equ 350        ; ms of idle before firing inference
+=======
+>>>>>>> origin/main
 
 VK_LEFT            equ 25h
 VK_UP              equ 26h
@@ -154,15 +174,23 @@ VK_END             equ 23h
 VK_DELETE          equ 2Eh
 VK_PRIOR           equ 21h
 VK_NEXT            equ 22h
+<<<<<<< HEAD
 VK_ESCAPE          equ 1Bh
 VK_TAB             equ 09h
 VK_BACK            equ 8
 VK_SPACE           equ 20h
 VK_CONTROL         equ 11h
+=======
+VK_BACK            equ 8
+>>>>>>> origin/main
 
 WM_COMMAND         equ 111h
 WM_RBUTTONUP       equ 205h
 WM_LBUTTONDOWN     equ 201h
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/main
 WM_SETCURSOR       equ 20h
 
 TPM_LEFTALIGN      equ 0
@@ -178,9 +206,12 @@ IDM_COPY           equ 2
 IDM_PASTE          equ 3
 IDM_SELECTALL      equ 4
 IDM_DELETE         equ 5
+<<<<<<< HEAD
 IDM_GENERATE_PE    equ 1001h
 IDM_SAVE_PE        equ 1002h
 IDM_GENERATE_FEATURE equ 1003h
+=======
+>>>>>>> origin/main
 
 SB_VERT            equ 1
 SIF_ALL            equ 17h
@@ -205,6 +236,7 @@ CHAR_WIDTH         equ 8
 LINE_HEIGHT        equ 18
 TEXT_BUF_SIZE      equ 10000h
 MAX_LINES          equ 4000
+<<<<<<< HEAD
 MAX_GHOST_LEN      equ 1024          ; Increased for multi-line
 MAX_GHOST_LINES    equ 16            ; Max lines per suggestion
 GHOST_TEXT_COLOR   equ 00808080h ; Grey RGB
@@ -239,6 +271,8 @@ IMAGE_SCN_MEM_WRITE         EQU   080000000h
 IMAGE_DIRECTORY_ENTRY_IMPORT  EQU 1
 FILE_ALIGNMENT            EQU     512            ; 0x200
 SECTION_ALIGNMENT         EQU     4096           ; 0x1000
+=======
+>>>>>>> origin/main
 
 WNDCLASSEXW STRUCT
     cbSize          dd ?
@@ -302,6 +336,7 @@ SCROLLINFO STRUCT
     nTrackPos dd ?
 SCROLLINFO ENDS
 
+<<<<<<< HEAD
 PUBLIC g_textBuf
 PUBLIC g_totalChars
 PUBLIC hMainWnd
@@ -310,14 +345,21 @@ PUBLIC g_lineOff
 PUBLIC g_cursorLine
 PUBLIC g_cursorCol
 
+=======
+>>>>>>> origin/main
 .data
 align 8
 hMainWnd      dq 0
 hEditorFont   dq 0
+<<<<<<< HEAD
 g_hFont       dq 0
 g_cursorLine  dd 0
 g_cursorCol   dd 0
 g_caretX      dd 0
+=======
+g_cursorLine  dd 0
+g_cursorCol   dd 0
+>>>>>>> origin/main
 g_scrollY     dd 0
 g_clientW     dd 960
 g_clientH     dd 600
@@ -326,6 +368,7 @@ g_lineCount   dd 1
 g_selStart    dd -1          ; selection anchor (char index), -1 = none
 g_selEnd      dd -1          ; selection end (char index)
 g_hasFocus    dd 0
+<<<<<<< HEAD
 g_ghostTimerActive dd 0      ; 1 = debounce timer is running
 align 8
 g_lineOff     dd MAX_LINES dup(0)
@@ -651,12 +694,19 @@ g_kw_tbl:
 .data?
 
 g_taskPromptBuf db 2048 dup (?)
+=======
+align 8
+g_lineOff     dd MAX_LINES dup(0)
+
+.data?
+>>>>>>> origin/main
 align 8
 g_textBuf     dw TEXT_BUF_SIZE dup(?)
 g_numBuf      dw 16 dup(?)
 
 .const
 szClass        dw 'R','a','w','r','X','D','_','M','a','i','n',0
+<<<<<<< HEAD
 szGenerateFeature dw 'G','e','n','e','r','a','t','e',' ','F','e','a','t','u','r','e',' ','(','A','I',')',0
 szTaskPromptTitle dw 'T','a','s','k',' ','I','n','p','u','t',0
 szTaskPromptMessage dw 'D','e','s','c','r','i','b','e',' ','t','h','e',' ','f','e','a','t','u','r','e',' ','y','o','u',' ','w','a','n','t',' ','t','o',' ','b','u','i','l','d',':',0
@@ -668,14 +718,22 @@ szQTGDefaultPrompt db 'Generate feature from current context',0
 szQTGDefaultFile   db 'main.asm',0
 szQTGSuccess   dw 'F','e','a','t','u','r','e',' ','g','e','n','e','r','a','t','e','d',' ','s','u','c','c','e','s','s','f','u','l','l','y','!',0
 szQTGFailed    dw 'F','e','a','t','u','r','e',' ','g','e','n','e','r','a','t','i','o','n',' ','f','a','i','l','e','d','.',0
+=======
+szTitle        dw 'R','a','w','r','X','D',' ','A','g','e','n','t','i','c',' ','I','D','E',0
+szFontName     dw 'C','o','n','s','o','l','a','s',0
+
+>>>>>>> origin/main
 ; Context menu strings
 szCut          dw 'C','u','t',9,'C','t','r','l','+','X',0
 szCopy         dw 'C','o','p','y',9,'C','t','r','l','+','C',0
 szPaste        dw 'P','a','s','t','e',9,'C','t','r','l','+','V',0
 szSelectAll    dw 'S','e','l','e','c','t',' ','A','l','l',9,'C','t','r','l','+','A',0
 szDelete       dw 'D','e','l','e','t','e',0
+<<<<<<< HEAD
 szGeneratePE   dw 'G','e','n','e','r','a','t','e',' ','P','E',0
 szSavePE       dw 'S','a','v','e',' ','P','E',' ','t','o',' ','D','i','s','k',0
+=======
+>>>>>>> origin/main
 
 ; Welcome text seeded into the editor on WM_CREATE
 szWelcome      dw ';',' ','R','a','w','r','X','D',' ','A','g','e','n','t','i','c'
@@ -689,8 +747,11 @@ szWelcome      dw ';',' ','R','a','w','r','X','D',' ','A','g','e','n','t','i','c
 
 .code
 
+<<<<<<< HEAD
 WndProc PROTO
 
+=======
+>>>>>>> origin/main
 UIMainLoop PROC FRAME
     push    rbp
     .pushreg rbp
@@ -699,10 +760,13 @@ UIMainLoop PROC FRAME
     sub     rsp, 0F0h
     .allocstack 0F0h
     .endprolog
+<<<<<<< HEAD
     ; Self-initialize g_hInstance (no CRT, /ENTRY:UIMainLoop)
     xor     ecx, ecx
     call    GetModuleHandleW
     mov     g_hInstance, rax
+=======
+>>>>>>> origin/main
     wndClass equ rbp-50h
     mov     dword ptr [wndClass], 80
     mov     dword ptr [wndClass+4], CS_HREDRAW or CS_VREDRAW
@@ -818,10 +882,13 @@ WndProc PROC FRAME
     je      @wm_lbuttondown
     cmp     edx, WM_SETCURSOR
     je      @wm_setcursor
+<<<<<<< HEAD
     cmp     edx, WM_USER_SUGGESTION_REQ
     je      @wm_user_suggestion_req
     cmp     edx, WM_TIMER
     je      @wm_timer
+=======
+>>>>>>> origin/main
     mov     rcx, qword ptr [rbp-8]
     mov     edx, dword ptr [rbp-0Ch]
     mov     r8, qword ptr [rbp-18h]
@@ -849,6 +916,7 @@ WndProc PROC FRAME
     lea     rcx, [rbp-0C0h]
     call    CreateFontIndirectW
     mov     hEditorFont, rax
+<<<<<<< HEAD
     mov     g_hFont, rax                 ; Also store as g_hFont for paint
 
     ; ── Create italic ghost font ──────────────────────────────
@@ -871,6 +939,8 @@ WndProc PROC FRAME
     call    CreateFontIndirectW
     mov     g_hGhostFont, rax                 ; Store italic ghost font
 
+=======
+>>>>>>> origin/main
     mov     g_totalChars, 0
     mov     g_lineCount, 1
     mov     g_cursorLine, 0
@@ -932,7 +1002,10 @@ WndProc PROC FRAME
     jmp     @ret_zero
 
 @wm_erasebkgnd:
+<<<<<<< HEAD
     ; Suppress default erase — WM_PAINT handles full background fill
+=======
+>>>>>>> origin/main
     mov     eax, 1
     jmp     @wp_ret
 
@@ -943,14 +1016,20 @@ WndProc PROC FRAME
     je      @ctrl_a
     cmp     eax, 3                     ; Ctrl+C = Copy
     je      @ctrl_c
+<<<<<<< HEAD
     cmp     eax, 13h                   ; Ctrl+S = Save File
     je      @ctrl_s
+=======
+>>>>>>> origin/main
     cmp     eax, 16h                   ; Ctrl+V = Paste
     je      @ctrl_v
     cmp     eax, 18h                   ; Ctrl+X = Cut
     je      @ctrl_x
+<<<<<<< HEAD
     cmp     eax, 1Ah                   ; Ctrl+Z = Undo
     je      @ctrl_z
+=======
+>>>>>>> origin/main
     cmp     eax, 8
     je      @char_bs
     cmp     eax, 0Dh
@@ -961,7 +1040,11 @@ WndProc PROC FRAME
     jb      @ret_zero
     ; ── If selection active, delete it first, then insert ──
     call    DeleteSelection
+<<<<<<< HEAD
     ; mov     ebx, eax ; REMOVED REDUNDANT/WRONG MIX
+=======
+    mov     ebx, eax
+>>>>>>> origin/main
     mov     ecx, g_totalChars
     cmp     ecx, TEXT_BUF_SIZE - 2
     jge     @ret_zero
@@ -971,6 +1054,7 @@ WndProc PROC FRAME
     add     esi, g_cursorCol
     lea     rdi, g_textBuf
     mov     ecx, g_totalChars
+<<<<<<< HEAD
     mov     ax, word ptr [rbp-18h] ; Restore char to AX for shift/write
 @@ins_shift:
     cmp     ecx, esi
@@ -987,10 +1071,22 @@ WndProc PROC FRAME
     mov     r8d, 1                      ; charCount = 1
     xor     r9d, r9d                    ; no deleted text
     call    UndoPush
+=======
+@@ins_shift:
+    cmp     ecx, esi
+    jle     @@ins_write
+    mov     ax, word ptr [rdi + rcx*2 - 2]
+    mov     word ptr [rdi + rcx*2], ax
+    dec     ecx
+    jmp     @@ins_shift
+@@ins_write:
+    mov     word ptr [rdi + rsi*2], bx
+>>>>>>> origin/main
     inc     g_totalChars
     mov     ecx, g_totalChars
     mov     word ptr [rdi + rcx*2], 0
     inc     g_cursorCol
+<<<<<<< HEAD
     
     ; ── Abort pending inference on new keystroke ──
     cmp     byte ptr [g_inferencePending], 0
@@ -1010,6 +1106,8 @@ WndProc PROC FRAME
     ; Clear any existing ghost (will refresh with new suggestion)
     mov     byte ptr [g_ghostActive], 0
 
+=======
+>>>>>>> origin/main
     call    RebuildLineTable
     call    EnsureCursorVisible
     call    PositionCaret
@@ -1019,6 +1117,7 @@ WndProc PROC FRAME
     call    InvalidateRect
     jmp     @ret_zero
 
+<<<<<<< HEAD
 @char_tab:
     ; Check if ghost text is active
     cmp     byte ptr [g_ghostActive], 0
@@ -1232,6 +1331,8 @@ WndProc PROC FRAME
     call    InvalidateRect
     jmp     @ret_zero
 
+=======
+>>>>>>> origin/main
 @char_enter:
     call    DeleteSelection
     mov     ecx, g_totalChars
@@ -1252,12 +1353,15 @@ WndProc PROC FRAME
     jmp     @@ent_shift
 @@ent_write:
     mov     word ptr [rdi + rsi*2], 0Ah
+<<<<<<< HEAD
     ; Record undo for enter/newline insert
     xor     ecx, ecx                    ; type = 0 (insert)
     mov     edx, esi                    ; charOffset
     mov     r8d, 1                      ; charCount = 1
     xor     r9d, r9d                    ; no deleted text
     call    UndoPush
+=======
+>>>>>>> origin/main
     inc     g_totalChars
     mov     ecx, g_totalChars
     mov     word ptr [rdi + rcx*2], 0
@@ -1326,6 +1430,7 @@ WndProc PROC FRAME
     dec     g_cursorCol
 @bs_shift:
     lea     rdi, g_textBuf
+<<<<<<< HEAD
     ; Record undo for backspace delete
     lea     r9, [rdi + rsi*2]           ; ptr to char being deleted
     mov     ecx, 1                      ; type = 1 (delete)
@@ -1333,6 +1438,8 @@ WndProc PROC FRAME
     mov     r8d, 1                      ; charCount = 1
     call    UndoPush
     ; rdi/rsi preserved by UndoPush
+=======
+>>>>>>> origin/main
     mov     ecx, esi
     inc     ecx
 @@bs_loop:
@@ -1357,6 +1464,7 @@ WndProc PROC FRAME
     call    InvalidateRect
     jmp     @ret_zero
 
+<<<<<<< HEAD
 ; (Removed dead @char_tab_secondary — unreachable duplicate)
 @ctrl_a:
     ; Select All — same as IDM_SELECTALL
@@ -1486,6 +1594,37 @@ WndProc PROC FRAME
 @cz_done:
     call    RebuildLineTable
     call    UpdateScrollBar
+=======
+@char_tab:
+    mov     ebx, 4
+@tab_loop:
+    mov     ecx, g_totalChars
+    cmp     ecx, TEXT_BUF_SIZE - 2
+    jge     @tab_done
+    mov     ecx, g_cursorLine
+    lea     rsi, g_lineOff
+    mov     esi, dword ptr [rsi + rcx*4]
+    add     esi, g_cursorCol
+    lea     rdi, g_textBuf
+    mov     ecx, g_totalChars
+@@tab_shift:
+    cmp     ecx, esi
+    jle     @@tab_write
+    mov     ax, word ptr [rdi + rcx*2 - 2]
+    mov     word ptr [rdi + rcx*2], ax
+    dec     ecx
+    jmp     @@tab_shift
+@@tab_write:
+    mov     word ptr [rdi + rsi*2], 20h
+    inc     g_totalChars
+    mov     ecx, g_totalChars
+    mov     word ptr [rdi + rcx*2], 0
+    inc     g_cursorCol
+    call    RebuildLineTable
+    dec     ebx
+    jnz     @tab_loop
+@tab_done:
+>>>>>>> origin/main
     call    EnsureCursorVisible
     call    PositionCaret
     mov     rcx, qword ptr [rbp-8]
@@ -1494,6 +1633,7 @@ WndProc PROC FRAME
     call    InvalidateRect
     jmp     @ret_zero
 
+<<<<<<< HEAD
 ; ── Ctrl+S: Save file to disk ──────────────────────────────────
 @ctrl_s:
     ; If we have a file path, save directly; otherwise show Save dialog
@@ -1734,6 +1874,10 @@ WndProc PROC FRAME
     je      @char_tab
     cmp     eax, VK_ESCAPE
     je      @char_esc
+=======
+@wm_keydown:
+    mov     eax, dword ptr [rbp-18h]
+>>>>>>> origin/main
     cmp     eax, VK_LEFT
     je      @k_left
     cmp     eax, VK_RIGHT
@@ -1818,6 +1962,7 @@ WndProc PROC FRAME
     jmp     @k_move
 
 @k_del:
+<<<<<<< HEAD
     ; If selection active, delete selection instead of single char
     mov     eax, g_selStart
     cmp     eax, -1
@@ -1832,6 +1977,8 @@ WndProc PROC FRAME
     call    InvalidateRect
     jmp     @ret_zero
 @k_del_single:
+=======
+>>>>>>> origin/main
     mov     ecx, g_cursorLine
     lea     rsi, g_lineOff
     mov     esi, dword ptr [rsi + rcx*4]
@@ -1839,6 +1986,7 @@ WndProc PROC FRAME
     cmp     esi, g_totalChars
     jge     @ret_zero
     lea     rdi, g_textBuf
+<<<<<<< HEAD
     ; Record undo for delete key
     lea     r9, [rdi + rsi*2]           ; ptr to char being deleted
     mov     ecx, 1                      ; type = 1 (delete)
@@ -1846,6 +1994,8 @@ WndProc PROC FRAME
     mov     r8d, 1                      ; charCount = 1
     call    UndoPush
     ; rdi/rsi preserved by UndoPush
+=======
+>>>>>>> origin/main
     mov     ecx, esi
     inc     ecx
 @@del_loop:
@@ -2018,6 +2168,7 @@ WndProc PROC FRAME
     call    InvalidateRect
     jmp     @ret_zero
 
+<<<<<<< HEAD
 ; ── WM_TIMER: debounced ghost text trigger ───────────────────────
 @wm_timer:
     ; wParam = timer ID
@@ -2630,10 +2781,13 @@ WndProc PROC FRAME
 ; WM_PAINT - Native Rendering + Multi-line Ghost Text Pass
 ;============================================================================  
 
+=======
+>>>>>>> origin/main
 @wm_paint:
     mov     rcx, qword ptr [rbp-8]
     lea     rdx, [rbp-60h]
     call    BeginPaint
+<<<<<<< HEAD
     mov     rbx, rax                     ; rbx = hdc
 
     ; ── Fill entire client rect with dark background ──
@@ -2897,10 +3051,42 @@ WndProc PROC FRAME
     cmp     eax, ecx
     jl      @p_ghost_next_line           ; Above viewport
     mov     dword ptr [rbp-0E0h], eax    ; Save line index
+=======
+    mov     rbx, rax
+    mov     rcx, rbx
+    mov     rdx, hEditorFont
+    test    rdx, rdx
+    jz      @p_nofont
+    call    SelectObject
+@p_nofont:
+    mov     rcx, rbx
+    mov     edx, OPAQUE
+    call    SetBkMode
+    mov     dword ptr [rbp-0F0h], 0
+    mov     dword ptr [rbp-0ECh], 0
+    mov     eax, g_clientW
+    mov     dword ptr [rbp-0E8h], eax
+    mov     eax, g_clientH
+    mov     dword ptr [rbp-0E4h], eax
+    mov     rcx, rbx
+    lea     rdx, [rbp-0F0h]
+    mov     r8d, COLOR_WINDOW + 1
+    call    FillRect
+    mov     dword ptr [rbp-0F0h], 0
+    mov     dword ptr [rbp-0ECh], 0
+    mov     dword ptr [rbp-0E8h], GUTTER_WIDTH
+    mov     eax, g_clientH
+    mov     dword ptr [rbp-0E4h], eax
+    mov     rcx, rbx
+    lea     rdx, [rbp-0F0h]
+    mov     r8d, 16
+    call    FillRect
+>>>>>>> origin/main
     mov     eax, g_clientH
     xor     edx, edx
     mov     ecx, LINE_HEIGHT
     div     ecx
+<<<<<<< HEAD
     mov     ecx, eax                     ; ecx = max visible rows
     mov     eax, dword ptr [rbp-0E0h]    ; Restore line index
     mov     edx, eax
@@ -2963,6 +3149,78 @@ WndProc PROC FRAME
     call    SelectObject
 
     jmp     @p_done                      ; Fall through to EndPaint
+=======
+    inc     eax
+
+    mov     edi, eax
+    mov     esi, g_scrollY
+@p_line:
+    test    edi, edi
+    jz      @p_done
+    cmp     esi, g_lineCount
+    jge     @p_done
+    mov     rcx, rbx
+    mov     edx, 00808080h
+    call    SetTextColor
+    mov     rcx, rbx
+    mov     edx, 00F0F0F0h
+    call    SetBkColor
+    lea     rdi, g_numBuf
+    mov     eax, esi
+    inc     eax
+    call    FormatLineNum
+    mov     rcx, rbx
+    mov     edx, 4
+    mov     r8d, esi
+    sub     r8d, g_scrollY
+    imul    r8d, LINE_HEIGHT
+    lea     r9, g_numBuf
+    mov     dword ptr [rsp+20h], 5
+    call    TextOutW
+    mov     rcx, rbx
+    xor     edx, edx
+    call    SetTextColor
+    mov     rcx, rbx
+    mov     edx, 00FFFFFFh
+    call    SetBkColor
+    lea     rax, g_lineOff
+    mov     ecx, dword ptr [rax + rsi*4]
+    mov     edx, esi
+    inc     edx
+    cmp     edx, g_lineCount
+    jge     @p_lastln
+    mov     edx, dword ptr [rax + rdx*4]
+    sub     edx, ecx
+    dec     edx
+    jmp     @p_text
+@p_lastln:
+    mov     edx, g_totalChars
+    sub     edx, ecx
+@p_text:
+    test    edx, edx
+    jle     @p_next
+    cmp     edx, 200
+    jle     @p_lenok
+    mov     edx, 200
+@p_lenok:
+    mov     dword ptr [rbp-0D0h], ecx
+    mov     dword ptr [rbp-0D4h], edx
+    mov     rcx, rbx
+    mov     edx, GUTTER_WIDTH + 4
+    mov     r8d, esi
+    sub     r8d, g_scrollY
+    imul    r8d, LINE_HEIGHT
+    mov     eax, dword ptr [rbp-0D0h]
+    lea     r9, g_textBuf
+    lea     r9, [r9 + rax*2]
+    mov     eax, dword ptr [rbp-0D4h]
+    mov     dword ptr [rsp+20h], eax
+    call    TextOutW
+@p_next:
+    inc     esi
+    dec     edi
+    jmp     @p_line
+>>>>>>> origin/main
 @p_done:
     mov     rcx, qword ptr [rbp-8]
     lea     rdx, [rbp-60h]
@@ -2974,6 +3232,511 @@ WndProc PROC FRAME
     call    PostQuitMessage
     jmp     @ret_zero
 
+<<<<<<< HEAD
+=======
+; ═══════════════════════════════════════════════════════════════════
+; WM_LBUTTONDOWN — Convert mouse pixel coords to cursor line/col
+; lParam: low word = X, high word = Y
+; ═══════════════════════════════════════════════════════════════════
+@wm_lbuttondown:
+    ; Extract Y from high word of lParam
+    mov     eax, dword ptr [rbp-20h]       ; lParam
+    shr     eax, 16                         ; Y pixel
+    xor     edx, edx
+    mov     ecx, LINE_HEIGHT
+    div     ecx                             ; eax = visible line index
+    add     eax, g_scrollY                  ; eax = absolute line
+
+    ; Clamp to valid line range [0, lineCount-1]
+    mov     ecx, g_lineCount
+    dec     ecx
+    test    ecx, ecx
+    jns     @lb_clamp_max
+    xor     ecx, ecx
+@lb_clamp_max:
+    cmp     eax, ecx
+    jle     @lb_line_ok
+    mov     eax, ecx
+@lb_line_ok:
+    test    eax, eax
+    jns     @lb_line_set
+    xor     eax, eax
+@lb_line_set:
+    mov     g_cursorLine, eax
+
+    ; Extract X from low word of lParam
+    mov     eax, dword ptr [rbp-20h]       ; lParam
+    and     eax, 0FFFFh                     ; X pixel
+    sub     eax, GUTTER_WIDTH + 4           ; subtract gutter
+    test    eax, eax
+    jns     @lb_x_pos
+    xor     eax, eax
+@lb_x_pos:
+    xor     edx, edx
+    mov     ecx, CHAR_WIDTH
+    div     ecx                             ; eax = column
+
+    ; Clamp col to current line length
+    push    rax
+    call    GetCurLineLen
+    mov     ecx, eax
+    pop     rax
+    cmp     eax, ecx
+    jle     @lb_col_ok
+    mov     eax, ecx
+@lb_col_ok:
+    mov     g_cursorCol, eax
+
+    ; Clear selection
+    mov     g_selStart, -1
+    mov     g_selEnd, -1
+
+    ; Update caret and repaint
+    call    EnsureCursorVisible
+    call    PositionCaret
+    call    UpdateScrollBar
+    mov     rcx, qword ptr [rbp-8]
+    xor     edx, edx
+    mov     r8d, 1
+    call    InvalidateRect
+
+    ; Set keyboard focus to this window
+    mov     rcx, qword ptr [rbp-8]
+    call    SetFocus
+    jmp     @ret_zero
+
+; ═══════════════════════════════════════════════════════════════════
+; WM_SETCURSOR — Set I-beam cursor over editor area
+; ═══════════════════════════════════════════════════════════════════
+@wm_setcursor:
+    xor     ecx, ecx
+    mov     edx, IDC_IBEAM
+    call    LoadCursorW
+    mov     rcx, rax
+    call    SetCursor
+    mov     eax, 1
+    jmp     @wp_ret
+
+; ═══════════════════════════════════════════════════════════════════
+; WM_RBUTTONUP — Right-click context menu
+; ═══════════════════════════════════════════════════════════════════
+@wm_rbuttonup:
+    sub     rsp, 10h               ; space for POINT (8 bytes, aligned)
+    call    CreatePopupMenu
+    test    rax, rax
+    jz      @rb_done
+    mov     rbx, rax               ; rbx = hMenu
+
+    ; Cut
+    mov     rcx, rbx
+    xor     edx, edx               ; uFlags = MF_STRING
+    mov     r8d, IDM_CUT
+    xor     r9, r9
+    lea     rax, szCut
+    mov     qword ptr [rsp+20h], rax
+    call    InsertMenuW
+
+    ; Copy
+    mov     rcx, rbx
+    xor     edx, edx
+    mov     r8d, IDM_COPY
+    xor     r9, r9
+    lea     rax, szCopy
+    mov     qword ptr [rsp+20h], rax
+    call    InsertMenuW
+
+    ; Paste
+    mov     rcx, rbx
+    xor     edx, edx
+    mov     r8d, IDM_PASTE
+    xor     r9, r9
+    lea     rax, szPaste
+    mov     qword ptr [rsp+20h], rax
+    call    InsertMenuW
+
+    ; Separator
+    mov     rcx, rbx
+    mov     edx, MF_SEPARATOR
+    xor     r8d, r8d
+    xor     r9, r9
+    mov     qword ptr [rsp+20h], 0
+    call    InsertMenuW
+
+    ; Select All
+    mov     rcx, rbx
+    xor     edx, edx
+    mov     r8d, IDM_SELECTALL
+    xor     r9, r9
+    lea     rax, szSelectAll
+    mov     qword ptr [rsp+20h], rax
+    call    InsertMenuW
+
+    ; Delete
+    mov     rcx, rbx
+    xor     edx, edx
+    mov     r8d, IDM_DELETE
+    xor     r9, r9
+    lea     rax, szDelete
+    mov     qword ptr [rsp+20h], rax
+    call    InsertMenuW
+
+    ; Get cursor position for popup
+    lea     rcx, [rsp]
+    call    GetCursorPos
+
+    ; TrackPopupMenu(hMenu, TPM_LEFTALIGN|TPM_RETURNCMD, x, y, 0, hwnd, 0)
+    mov     rcx, rbx
+    mov     edx, TPM_LEFTALIGN or TPM_RETURNCMD
+    mov     r8d, dword ptr [rsp]       ; pt.x
+    mov     r9d, dword ptr [rsp+4]     ; pt.y
+    mov     dword ptr [rsp+20h], 0     ; nReserved
+    mov     rax, qword ptr [rbp-8]
+    mov     qword ptr [rsp+28h], rax   ; hwnd
+    mov     qword ptr [rsp+30h], 0     ; lpRect
+    call    TrackPopupMenu
+    mov     edi, eax                   ; save command ID
+
+    ; Destroy the menu
+    mov     rcx, rbx
+    call    DestroyMenu
+
+    ; Dispatch selected command
+    cmp     edi, IDM_CUT
+    je      @ctrl_x
+    cmp     edi, IDM_COPY
+    je      @ctrl_c
+    cmp     edi, IDM_PASTE
+    je      @ctrl_v
+    cmp     edi, IDM_SELECTALL
+    je      @ctrl_a
+    cmp     edi, IDM_DELETE
+    je      @k_del
+@rb_done:
+    add     rsp, 10h
+    jmp     @ret_zero
+
+; ═══════════════════════════════════════════════════════════════════
+; WM_COMMAND — Handle menu/accelerator commands
+; ═══════════════════════════════════════════════════════════════════
+@wm_command:
+    mov     eax, dword ptr [rbp-18h]       ; wParam
+    and     eax, 0FFFFh                     ; LOWORD = command ID
+    cmp     eax, IDM_CUT
+    je      @ctrl_x
+    cmp     eax, IDM_COPY
+    je      @ctrl_c
+    cmp     eax, IDM_PASTE
+    je      @ctrl_v
+    cmp     eax, IDM_SELECTALL
+    je      @ctrl_a
+    cmp     eax, IDM_DELETE
+    je      @k_del
+    jmp     @ret_zero
+
+; ═══════════════════════════════════════════════════════════════════
+; Ctrl+A — Select All
+; ═══════════════════════════════════════════════════════════════════
+@ctrl_a:
+    mov     g_selStart, 0
+    mov     eax, g_totalChars
+    mov     g_selEnd, eax
+    mov     rcx, qword ptr [rbp-8]
+    xor     edx, edx
+    mov     r8d, 1
+    call    InvalidateRect
+    jmp     @ret_zero
+
+; ═══════════════════════════════════════════════════════════════════
+; Ctrl+C — Copy selection to clipboard
+; ═══════════════════════════════════════════════════════════════════
+@ctrl_c:
+    mov     eax, g_selStart
+    cmp     eax, -1
+    je      @ret_zero
+    mov     esi, g_selStart
+    mov     edi, g_selEnd
+    ; Ensure esi <= edi
+    cmp     esi, edi
+    jle     @cc_ordered
+    xchg    esi, edi
+@cc_ordered:
+    mov     ebx, edi
+    sub     ebx, esi                       ; ebx = char count
+    test    ebx, ebx
+    jle     @ret_zero
+
+    ; Allocate global memory: (count+1)*2 bytes for wide chars
+    mov     ecx, GMEM_MOVEABLE
+    lea     edx, [ebx+1]
+    shl     edx, 1                         ; bytes
+    call    GlobalAlloc
+    test    rax, rax
+    jz      @ret_zero
+    mov     r12, rax                       ; r12 = hGlobal
+
+    mov     rcx, rax
+    call    GlobalLock
+    test    rax, rax
+    jz      @cc_free
+    mov     rdi, rax                       ; rdi = dest ptr
+
+    ; Copy chars
+    lea     rax, g_textBuf
+    lea     rsi, [rax + rsi*2]             ; rsi was sel start index, now ptr
+    ; need the count in ecx — ebx has it but we used esi as index already
+    ; recalculate: rsi is now pointing to textBuf + old_esi*2
+    mov     ecx, ebx
+@@cc_copy:
+    mov     ax, word ptr [rsi]
+    mov     word ptr [rdi], ax
+    add     rsi, 2
+    add     rdi, 2
+    dec     ecx
+    jnz     @@cc_copy
+    mov     word ptr [rdi], 0              ; null term
+
+    mov     rcx, r12
+    call    GlobalUnlock
+
+    ; Open clipboard, set data
+    mov     rcx, qword ptr [rbp-8]
+    call    OpenClipboard
+    test    eax, eax
+    jz      @cc_free
+    call    EmptyClipboard
+    mov     ecx, CF_UNICODETEXT
+    mov     rdx, r12
+    call    SetClipboardData
+    call    CloseClipboard
+    jmp     @ret_zero
+@cc_free:
+    mov     rcx, r12
+    call    GlobalFree
+    jmp     @ret_zero
+
+; ═══════════════════════════════════════════════════════════════════
+; Ctrl+X — Cut (copy + delete selection)
+; ═══════════════════════════════════════════════════════════════════
+@ctrl_x:
+    mov     eax, g_selStart
+    cmp     eax, -1
+    je      @ret_zero
+    ; Copy first (reuse ctrl_c logic inline)
+    mov     esi, g_selStart
+    mov     edi, g_selEnd
+    cmp     esi, edi
+    jle     @cx_ordered
+    xchg    esi, edi
+@cx_ordered:
+    mov     ebx, edi
+    sub     ebx, esi
+    test    ebx, ebx
+    jle     @ret_zero
+
+    mov     ecx, GMEM_MOVEABLE
+    lea     edx, [ebx+1]
+    shl     edx, 1
+    call    GlobalAlloc
+    test    rax, rax
+    jz      @cx_del
+    mov     r12, rax
+
+    mov     rcx, rax
+    call    GlobalLock
+    test    rax, rax
+    jz      @cx_free
+    mov     rdi, rax
+
+    mov     eax, g_selStart
+    mov     ecx, g_selEnd
+    cmp     eax, ecx
+    jle     @cx_cp_ordered
+    xchg    eax, ecx
+@cx_cp_ordered:
+    lea     rsi, g_textBuf
+    lea     rsi, [rsi + rax*2]
+    mov     ecx, ebx
+@@cx_copy:
+    mov     ax, word ptr [rsi]
+    mov     word ptr [rdi], ax
+    add     rsi, 2
+    add     rdi, 2
+    dec     ecx
+    jnz     @@cx_copy
+    mov     word ptr [rdi], 0
+
+    mov     rcx, r12
+    call    GlobalUnlock
+
+    mov     rcx, qword ptr [rbp-8]
+    call    OpenClipboard
+    test    eax, eax
+    jz      @cx_free
+    call    EmptyClipboard
+    mov     ecx, CF_UNICODETEXT
+    mov     rdx, r12
+    call    SetClipboardData
+    call    CloseClipboard
+    jmp     @cx_del
+@cx_free:
+    mov     rcx, r12
+    call    GlobalFree
+@cx_del:
+    ; Now delete selection
+    call    DeleteSelection
+    call    RebuildLineTable
+    call    UpdateScrollBar
+    call    EnsureCursorVisible
+    call    PositionCaret
+    mov     rcx, qword ptr [rbp-8]
+    xor     edx, edx
+    mov     r8d, 1
+    call    InvalidateRect
+    jmp     @ret_zero
+
+; ═══════════════════════════════════════════════════════════════════
+; Ctrl+V — Paste from clipboard
+; ═══════════════════════════════════════════════════════════════════
+@ctrl_v:
+    ; Delete any existing selection first
+    call    DeleteSelection
+
+    ; Open clipboard
+    mov     rcx, qword ptr [rbp-8]
+    call    OpenClipboard
+    test    eax, eax
+    jz      @ret_zero
+
+    ; Get clipboard data
+    mov     ecx, CF_UNICODETEXT
+    call    GetClipboardData
+    test    rax, rax
+    jz      @cv_close
+
+    mov     rcx, rax
+    call    GlobalLock
+    test    rax, rax
+    jz      @cv_close
+    mov     r12, rax                       ; r12 = clipboard text pointer
+
+    ; Count chars to paste
+    mov     rsi, r12
+    xor     ecx, ecx
+@@cv_count:
+    cmp     word ptr [rsi + rcx*2], 0
+    je      @@cv_counted
+    inc     ecx
+    jmp     @@cv_count
+@@cv_counted:
+    mov     ebx, ecx                       ; ebx = paste length
+
+    ; Check if fits
+    mov     eax, g_totalChars
+    add     eax, ebx
+    cmp     eax, TEXT_BUF_SIZE - 2
+    jge     @cv_unlock
+
+    ; Calculate insert position
+    mov     ecx, g_cursorLine
+    lea     rax, g_lineOff
+    mov     eax, dword ptr [rax + rcx*4]
+    add     eax, g_cursorCol
+    mov     edi, eax                       ; edi = insert pos
+
+    ; Shift existing text right by ebx
+    lea     rsi, g_textBuf
+    mov     ecx, g_totalChars
+    dec     ecx
+@@cv_shift:
+    cmp     ecx, edi
+    jl      @@cv_insert
+    mov     ax, word ptr [rsi + rcx*2]
+    mov     r9d, ecx
+    add     r9d, ebx
+    mov     word ptr [rsi + r9*2], ax
+    dec     ecx
+    jmp     @@cv_shift
+
+@@cv_insert:
+    ; Copy clipboard chars into buffer at insert position
+    ; edi = insert pos, ebx = count, r12 = clipboard ptr
+    lea     r8, g_textBuf
+    mov     rsi, r12
+    xor     edx, edx                       ; edx = chars actually pasted
+@@cv_ins:
+    cmp     edx, ebx
+    jge     @@cv_ins_done
+    mov     ax, word ptr [rsi]
+    test    ax, ax
+    jz      @@cv_ins_done
+    ; Skip CR (handle CRLF → LF)
+    cmp     ax, 0Dh
+    je      @@cv_skip_cr
+    ; Store char at textBuf[insertPos + edx]
+    mov     ecx, edi
+    add     ecx, edx
+    mov     word ptr [r8 + rcx*2], ax
+    inc     edx
+    add     rsi, 2
+    jmp     @@cv_ins
+@@cv_skip_cr:
+    ; Skip this CR, reduce ebx since we shifted but won't use this slot
+    dec     ebx
+    ; Shift the rest of the right-side text left by 1 too
+    ; Actually simpler: just don't count it, advance source only
+    add     rsi, 2
+    jmp     @@cv_ins
+@@cv_ins_done:
+
+    add     g_totalChars, ebx
+    mov     ecx, g_totalChars
+    lea     rax, g_textBuf
+    mov     word ptr [rax + rcx*2], 0
+
+    ; Advance cursor by paste length
+    ; Need to count newlines to update cursorLine/cursorCol properly
+    ; Simplification: just advance cursorCol by paste len, then rebuild
+    add     g_cursorCol, ebx
+    call    RebuildLineTable
+    ; Fix cursor line/col from absolute position
+    mov     eax, edi                       ; old insert pos
+    add     eax, ebx                       ; now points after paste
+    ; Walk lines to find which line this falls on
+    lea     rsi, g_lineOff
+    xor     ecx, ecx
+@@cv_findln:
+    inc     ecx
+    cmp     ecx, g_lineCount
+    jge     @@cv_lastln
+    cmp     eax, dword ptr [rsi + rcx*4]
+    jge     @@cv_findln
+    dec     ecx
+    mov     g_cursorLine, ecx
+    sub     eax, dword ptr [rsi + rcx*4]
+    mov     g_cursorCol, eax
+    jmp     @cv_finish
+@@cv_lastln:
+    dec     ecx
+    mov     g_cursorLine, ecx
+    sub     eax, dword ptr [rsi + rcx*4]
+    mov     g_cursorCol, eax
+@cv_finish:
+    call    UpdateScrollBar
+    call    EnsureCursorVisible
+    call    PositionCaret
+    mov     rcx, qword ptr [rbp-8]
+    xor     edx, edx
+    mov     r8d, 1
+    call    InvalidateRect
+
+@cv_unlock:
+    mov     rcx, r12
+    call    GlobalUnlock
+@cv_close:
+    call    CloseClipboard
+    jmp     @ret_zero
+
+>>>>>>> origin/main
 @ret_zero:
     xor     eax, eax
 @wp_ret:
@@ -2985,6 +3748,99 @@ WndProc PROC FRAME
     ret
 WndProc ENDP
 
+<<<<<<< HEAD
+=======
+; ═══════════════════════════════════════════════════════════════════
+; DeleteSelection — Remove selected text from buffer
+; If g_selStart == -1, does nothing. Returns chars deleted in EAX.
+; Updates g_cursorLine/g_cursorCol to selection start.
+; Caller must RebuildLineTable after.
+; ═══════════════════════════════════════════════════════════════════
+DeleteSelection PROC
+    mov     eax, g_selStart
+    cmp     eax, -1
+    je      @ds_none
+
+    mov     esi, g_selStart
+    mov     edi, g_selEnd
+    ; Ensure esi <= edi
+    cmp     esi, edi
+    jle     @ds_ordered
+    xchg    esi, edi
+@ds_ordered:
+    mov     ebx, edi
+    sub     ebx, esi                       ; ebx = num chars to delete
+    test    ebx, ebx
+    jle     @ds_none
+
+    ; Shift text left: copy [edi..totalChars) to [esi..)
+    lea     r8, g_textBuf
+    mov     ecx, edi
+@ds_shift:
+    cmp     ecx, g_totalChars
+    jge     @ds_shifted
+    mov     ax, word ptr [r8 + rcx*2]
+    mov     word ptr [r8 + rsi*2], ax
+    inc     ecx
+    inc     esi
+    jmp     @ds_shift
+@ds_shifted:
+    sub     g_totalChars, ebx
+    mov     ecx, g_totalChars
+    lea     r8, g_textBuf
+    mov     word ptr [r8 + rcx*2], 0
+
+    ; Set cursor to start of deleted region
+    ; Find which line/col esi (the smaller index) maps to
+    mov     esi, g_selStart
+    mov     edi, g_selEnd
+    cmp     esi, edi
+    jle     @ds_pos_ok
+    xchg    esi, edi
+@ds_pos_ok:
+    ; esi = absolute char position for cursor
+    ; Must rebuild line table first to find line/col
+    push    rsi
+    call    RebuildLineTable
+    pop     rsi
+
+    ; Walk line offsets to find cursor line
+    lea     rax, g_lineOff
+    xor     ecx, ecx
+@ds_findln:
+    mov     edx, ecx
+    inc     edx
+    cmp     edx, g_lineCount
+    jge     @ds_lastln
+    cmp     esi, dword ptr [rax + rdx*4]
+    jl      @ds_foundln
+    inc     ecx
+    jmp     @ds_findln
+@ds_foundln:
+    mov     g_cursorLine, ecx
+    sub     esi, dword ptr [rax + rcx*4]
+    mov     g_cursorCol, esi
+    jmp     @ds_clear
+@ds_lastln:
+    mov     g_cursorLine, ecx
+    sub     esi, dword ptr [rax + rcx*4]
+    mov     g_cursorCol, esi
+
+@ds_clear:
+    ; Clear selection
+    mov     g_selStart, -1
+    mov     g_selEnd, -1
+    mov     eax, ebx                       ; return chars deleted
+    ret
+
+@ds_none:
+    xor     eax, eax
+    mov     g_selStart, -1
+    mov     g_selEnd, -1
+    ret
+DeleteSelection ENDP
+
+>>>>>>> origin/main
 RebuildLineTable PROC
     lea     rdi, g_textBuf
     lea     rdx, g_lineOff
@@ -3033,7 +3889,10 @@ PositionCaret PROC FRAME
     .endprolog
     mov     eax, g_cursorCol
     imul    eax, CHAR_WIDTH
+<<<<<<< HEAD
     mov     g_caretX, eax ; Update globally for Ghost Text
+=======
+>>>>>>> origin/main
     add     eax, GUTTER_WIDTH + 4
     mov     ecx, eax
     mov     edx, g_cursorLine
@@ -3131,6 +3990,7 @@ FormatLineNum PROC
     ret
 FormatLineNum ENDP
 
+<<<<<<< HEAD
 ;=============================================================================
 ; Bridge_OnSuggestionReady (called from C++ via function pointer)
 ; extern "C" void Bridge_OnSuggestionReady(const WCHAR* text, int len);
@@ -3661,10 +4521,13 @@ PruneCandidates ENDP
 
 PUBLIC PruneCandidates
 
+=======
+>>>>>>> origin/main
 CreateEditorPane PROC FRAME
     sub     rsp, 28h
     .allocstack 28h
     .endprolog
+<<<<<<< HEAD
 
     ; The sovereign editor uses hMainWnd as the editor surface directly.
     ; No child control is created — GDI rendering is done in WndProc/WM_PAINT.
@@ -3681,10 +4544,14 @@ CreateEditorPane PROC FRAME
     call    RebuildLineTable
 
     mov     rax, hMainWnd                ; return the editor HWND
+=======
+    mov     rax, hMainWnd
+>>>>>>> origin/main
     add     rsp, 28h
     ret
 CreateEditorPane ENDP
 
+<<<<<<< HEAD
 ; ── DeleteSelection: removes selected text, updates cursor ───────
 ; Returns: eax = number of chars deleted (0 if no selection)
 ; Side effects: updates g_totalChars, g_cursorLine, g_cursorCol,
@@ -4163,3 +5030,6 @@ SwarmV27_UI_Absolute_Lock_Status ENDP
 
 END
 
+=======
+END
+>>>>>>> origin/main

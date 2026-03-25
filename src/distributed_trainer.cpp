@@ -1,6 +1,9 @@
 #include "distributed_trainer.h"
 #include <iostream>
+<<<<<<< HEAD
 #include <fstream>
+=======
+>>>>>>> origin/main
 #include <thread>
 #include <cmath>
 #include <cstring>
@@ -215,13 +218,18 @@ bool DistributedTrainer::setupProcessGroup() {
 bool DistributedTrainer::synchronizeGradients() {
     if (m_config.pgConfig.worldSize > 1) {
         // In a real distributed run, these would use NCCL/MPI
+<<<<<<< HEAD
         statusChanged("Distributed gradient sync not supported yet (worldSize > 1).");
         return false;
+=======
+        return false; // Not implemented for multi-node
+>>>>>>> origin/main
     }
     // Single node: Gradients are already local
     return true; 
 }
 bool DistributedTrainer::allReduceGradients() { return true; }
+<<<<<<< HEAD
 
 void DistributedTrainer::compressGradients() {
     // Top-K gradient sparsification for bandwidth reduction
@@ -317,3 +325,23 @@ void DistributedTrainer::updateMetrics(float stepTimeMs) {
                       " | Throughput: " + std::to_string(throughput) + " samples/s");
     }
 }
+=======
+void DistributedTrainer::compressGradients() {}
+void DistributedTrainer::decompressGradients() {}
+
+// Maintenance
+void DistributedTrainer::cleanupProcessGroup() {}
+void DistributedTrainer::initializeLoadBalancer() {}
+void DistributedTrainer::initializeFaultTolerance() {}
+void DistributedTrainer::Checkpoint(const std::string& path) {
+    statusChanged("Checkpointing not fully implemented for CPU backend.");
+}
+
+// Additional Helpers
+void DistributedTrainer::cleanupBackend() {}
+void DistributedTrainer::redistributeWork() {}
+void DistributedTrainer::updateDeviceLoads() {}
+void DistributedTrainer::detectCUDADevices() {}
+void DistributedTrainer::detectRealGPUs() {}
+void DistributedTrainer::updateMetrics(float stepTimeMs) {}
+>>>>>>> origin/main

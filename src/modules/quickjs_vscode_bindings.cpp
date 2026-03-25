@@ -197,7 +197,11 @@ static void jsCommandTrampoline(void* ctx) {
     ref.extensionId = binding->extensionId;
     ref.disposed = false;
 
+<<<<<<< HEAD
     host.dispatchCallback(binding->extensionId.c_str(), ref, args);
+=======
+    host.dispatchCallback(binding->extensionId, ref, args);
+>>>>>>> origin/main
 }
 
 static JSValue js_commands_registerCommand(JSContext* ctx, JSValueConst this_val,

@@ -100,6 +100,7 @@ public:
     // Inference
     std::string routeQuery(const std::string& model_name, const std::string& prompt, float temperature = 0.7f);
     void routeStreamQuery(const std::string& model_name, const std::string& prompt, StreamCallback callback, float temperature = 0.7f);
+<<<<<<< HEAD
     
     // Additional features
     std::vector<std::string> getAvailableBackends() const;
@@ -123,6 +124,16 @@ private:
     std::function<void(const std::string&, ModelBackend)> m_onModelRegistered;
     std::function<void(const std::string&)> m_onModelUnregistered;
     std::function<void(int)> m_onConfigLoaded;
+=======
+
+private:
+    std::map<std::string, ModelConfig> model_registry;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> local_engine;
+    std::unique_ptr<RawrXD::PipeClient> titan_client;
+    std::unique_ptr<CloudApiClient> cloud_client; // Default deleter ok
+    bool local_engine_ready;
+    bool cloud_client_ready;
+>>>>>>> origin/main
 };
 
 } // namespace RawrXD

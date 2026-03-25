@@ -1,6 +1,9 @@
 #pragma once
 
+<<<<<<< HEAD
 #include <cstdint>
+=======
+>>>>>>> origin/main
 #include <string>
 #include <vector>
 

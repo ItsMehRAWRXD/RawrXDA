@@ -9,12 +9,18 @@ EXTERN RegisterAgent:PROC
 EXTERN HotSwapModel:PROC
 EXTERN g_hHeap:QWORD
 EXTERN HeapAlloc:PROC
+<<<<<<< HEAD
 EXTERN GetTickCount64:PROC
+=======
+>>>>>>> origin/main
 
 PUBLIC AgentCoreInit
 PUBLIC SpawnTask
 PUBLIC ProcessOneAgentMessage
+<<<<<<< HEAD
 PUBLIC DefaultDispatchHandler
+=======
+>>>>>>> origin/main
 
 ; Match beacon.asm
 MODEL_HOTSWAP_REQUEST   equ 1001h
@@ -22,6 +28,7 @@ MODEL_HOTSWAP_COMPLETE  equ 1002h
 
 .data?
 align 8
+<<<<<<< HEAD
 g_agentState        dd ?
 g_agentLastError    dd ?
 g_taskQueue         dq ?
@@ -44,11 +51,16 @@ g_agentRetryQueue     dq ?
 g_agentRetryWritePos  dd ?
 g_agentRetryReadPos   dd ?
 g_agentRetryCount     dd ?
+=======
+g_agentState  dd ?
+g_taskQueue   dq ?
+>>>>>>> origin/main
 
 .data
 align 4
 g_completionMsg dd MODEL_HOTSWAP_COMPLETE, 0   ; type, result (updated on hotswap)
 
+<<<<<<< HEAD
 ; Priority dispatch table — 8 entries x 16 bytes
 ; Layout per entry: dd msgType, dd priority, dq handlerPtr
 align 16
@@ -450,6 +462,38 @@ SpawnTask PROC FRAME
     pop     rdi
     pop     rsi
     pop     rbx
+=======
+.const
+AGENT_ID      equ 0A1h
+
+.code
+AgentCoreInit PROC FRAME
+    sub     rsp, 28h
+    .allocstack 28h
+    .endprolog
+
+    mov     ecx, AGENT_ID
+    mov     edx, 1
+    call    RegisterAgent
+
+    mov     rcx, qword ptr g_hHeap
+    xor     edx, edx
+    mov     r8, 10000h
+    call    HeapAlloc
+    mov     g_taskQueue, rax
+
+    add     rsp, 28h
+    xor     eax, eax
+    ret
+AgentCoreInit ENDP
+
+SpawnTask PROC
+    ; ECX=taskType, RDX=pContext
+    mov     r8d, ecx
+    mov     ecx, 1
+    ; BeaconSend(beaconID, pData, dataLen)
+    call    BeaconSend
+>>>>>>> origin/main
     ret
 SpawnTask ENDP
 

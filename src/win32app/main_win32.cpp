@@ -1,4 +1,11 @@
+<<<<<<< HEAD
 #include "../../include/collab/websocket_hub.h"
+=======
+#include "Win32IDE.h"
+#include "HeadlessIDE.h"
+#include "../../include/rawrxd_version.h"
+#include "../../include/final_gauntlet.h"
+>>>>>>> origin/main
 #include "../../include/crash_containment.h"
 #include "../../include/enterprise_feature_manager.hpp"
 #include "../../include/enterprise_stress_tests.h"
@@ -32,7 +39,10 @@
 #include <commctrl.h>
 #include <dbghelp.h>
 #include <shellscalingapi.h>
+<<<<<<< HEAD
 #include <winhttp.h>
+=======
+>>>>>>> origin/main
 #if defined(_MSC_VER) && defined(_WIN32)
 #include <delayimp.h>
 #endif
@@ -52,6 +62,11 @@
 #include <mutex>
 #include <sstream>
 #include <string>
+<<<<<<< HEAD
+=======
+#include <vector>
+#include <chrono>
+>>>>>>> origin/main
 #include <thread>
 #include <unordered_map>
 #include <vector>
@@ -1815,10 +1830,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
         crashCfg.enablePatchQuarantine = true;
         crashCfg.showMessageBox = true;
         crashCfg.terminateAfterDump = true;
+<<<<<<< HEAD
         crashCfg.onCrashCallback = [](const RawrXD::Crash::CrashReport* r, void*)
         {
             if (r && r->logPath[0])
                 spawnRecoveryLauncher(r->logPath, r->dumpPath);
+=======
+        crashCfg.onCrashCallback = [](const RawrXD::Crash::CrashReport* r, void*) {
+            if (r && r->logPath[0]) spawnRecoveryLauncher(r->logPath, r->dumpPath);
+>>>>>>> origin/main
         };
         crashCfg.callbackUserData = nullptr;
         RawrXD::Crash::Install(crashCfg);
@@ -1836,6 +1856,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
     // If --headless is present, skip all GUI initialization and run the
     // HeadlessIDE surface with console I/O + HTTP server.
     // ========================================================================
+<<<<<<< HEAD
     if (hasHeadlessFlag(lpCmdLine))
     {
         if (s_startupLog)
@@ -1845,6 +1866,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
             delete s_startupLog;
             s_startupLog = nullptr;
         }
+=======
+    if (hasHeadlessFlag(lpCmdLine)) {
+        if (s_startupLog) { startupTrace("headless_mode"); s_startupLog->close(); delete s_startupLog; s_startupLog = nullptr; }
+>>>>>>> origin/main
         // Allocate a console for stdout/stderr (WinMain doesn't have one)
         AllocConsole();
         freopen("CONOUT$", "w", stdout);
@@ -1878,6 +1903,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
         return exitCode;
     }
 
+<<<<<<< HEAD
     if (hasSelfTestFlag(lpCmdLine))
     {
         if (s_startupLog)
@@ -1886,6 +1912,55 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
             s_startupLog->close();
             delete s_startupLog;
             s_startupLog = nullptr;
+=======
+    // ========================================================================
+    // GUI MODE — original Win32IDE path (unchanged)
+    // ========================================================================
+    // Initialize common controls (toolbar, status bar, tab, tree, list, etc.)
+    INITCOMMONCONTROLSEX icex = { sizeof(INITCOMMONCONTROLSEX),
+        ICC_WIN95_CLASSES | ICC_BAR_CLASSES | ICC_TAB_CLASSES |
+        ICC_TREEVIEW_CLASSES | ICC_LISTVIEW_CLASSES | ICC_STANDARD_CLASSES };
+    InitCommonControlsEx(&icex);
+    startupTrace("init_common_controls");
+    
+    startupTrace("first_run_gauntlet_start");
+    // ========================================================================
+    // FIRST-RUN GAUNTLET GATE (Phase 33: Gold Master)
+    // On very first launch we used to run the full gauntlet and show N/10;
+    // that could lead to silent exit after OK (crash in later init). So we
+    // skip the gauntlet at startup and create the flag so the IDE always starts.
+    // Run "Gauntlet: Run All Tests" from the menu (Tools / Gauntlet) if needed.
+    // Set RAWRXD_RUN_FIRST_RUN_GAUNTLET=1 to run gauntlet on first launch again.
+    // ========================================================================
+    {
+        const char* gauntletFlag = "config\\first_run.flag";
+        DWORD attrs = GetFileAttributesA(gauntletFlag);
+        if (attrs == INVALID_FILE_ATTRIBUTES) {
+            char envBuf[32];
+            const bool runGauntlet = (GetEnvironmentVariableA("RAWRXD_RUN_FIRST_RUN_GAUNTLET", envBuf, (DWORD)sizeof(envBuf)) != 0 && envBuf[0] == '1');
+            if (runGauntlet) {
+                GauntletSummary summary = runFinalGauntlet();
+                if (!summary.allPassed) {
+                    char msg[512];
+                    snprintf(msg, sizeof(msg),
+                        "System validation: %d/%d tests passed.\n"
+                        "Check the Audit Dashboard (Ctrl+Shift+A) for details.\n\n"
+                        "The IDE will continue to start normally.",
+                        summary.passed, summary.totalTests);
+                    MessageBoxA(nullptr, msg,
+                        "RawrXD \xe2\x80\x94 First Run Check", MB_OK | MB_ICONWARNING);
+                }
+            }
+            CreateDirectoryA("config", nullptr);
+            HANDLE hFlag = CreateFileA(gauntletFlag, GENERIC_WRITE, 0, nullptr,
+                                       CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+            if (hFlag != INVALID_HANDLE_VALUE) {
+                const char* stamp = RAWRXD_VERSION_STR " " __DATE__ " " __TIME__ "\n";
+                DWORD written = 0;
+                WriteFile(hFlag, stamp, (DWORD)strlen(stamp), &written, nullptr);
+                CloseHandle(hFlag);
+            }
+>>>>>>> origin/main
         }
         AllocConsole();
         freopen("CONOUT$", "w", stdout);
@@ -1896,6 +1971,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
         FreeConsole();
         return rc;
     }
+<<<<<<< HEAD
 
     // ========================================================================
     // GUI MODE — startup sequence from config/startup_phases.txt (dynamic, lazy)
@@ -1908,6 +1984,37 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
             delete s_startupLog;
             s_startupLog = nullptr;
         }
+=======
+    startupTrace("first_run_gauntlet_done");
+
+    // Command registration is automatic via static AutoRegistrar in
+    // unified_command_dispatch.cpp — reads COMMAND_TABLE at startup.
+
+    // Initialize managers
+    VSIXLoader::GetInstance().Initialize("plugins");
+    startupTrace("vsix_loader");
+
+    // ========================================================================
+    // PLUGIN SIGNATURE ENFORCEMENT — Phase 50: Authenticode + RawrXD Authority
+    // Must init before VSIX loading so marketplace installs are gated.
+    // ========================================================================
+    {
+        auto& sigVerifier = RawrXD::Plugin::PluginSignatureVerifier::instance();
+        if (sigVerifier.initialize()) {
+            OutputDebugStringA("[main_win32] Plugin Signature Verifier initialized (standard policy)\n");
+        } else {
+            OutputDebugStringA("[main_win32] Plugin Signature Verifier: init failed (non-fatal)\n");
+        }
+    }
+    
+    startupTrace("plugin_signature");
+
+    // ========================================================================
+    // VSIX AGENTIC TEST — load all .vsix in plugins/, write result JSON, exit
+    // ========================================================================
+    if (hasVsixTestFlag(lpCmdLine)) {
+        if (s_startupLog) { s_startupLog->close(); delete s_startupLog; s_startupLog = nullptr; }
+>>>>>>> origin/main
         return runVsixTestAndExit();
     }
     if (hasSafeModeFlag(lpCmdLine))
@@ -1928,8 +2035,32 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
     const std::vector<std::string> quickPhases = {"init_common_controls", "first_run_gauntlet",    "vsix_loader",
                                                   "plugin_signature",     "creating_ide_instance", "createWindow"};
 
+<<<<<<< HEAD
     // Run quick phases before window show
     for (const std::string& name : quickPhases)
+=======
+    // Initialize engine manager (safe — LoadEngine may fail for missing DLLs)
+    // 800B dual-engine load gated by enterprise unlock (g_800B_Unlocked)
+    auto* engine_mgr = new EngineManager();
+    if (RawrXD::g_800B_Unlocked) {
+        try { engine_mgr->LoadEngine("engines/800b-5drive/800b_engine.dll", "800b-5drive"); } catch (...) {}
+    }
+    try { engine_mgr->LoadEngine("engines/codex-ultimate/codex.dll", "codex-ultimate"); } catch (...) {}
+    try { engine_mgr->LoadEngine("engines/rawrxd-compiler/compiler.dll", "rawrxd-compiler"); } catch (...) {}
+    
+    // Initialize Codex Ultimate
+    auto* codex = new CodexUltimate();
+    
+    ide.setEngineManager(engine_mgr);
+    ide.setCodexUltimate(codex);
+    pumpMessages();
+
+    // ========================================================================
+    // CROSS-PROCESS STATE SYNC — Phase 36: MMF Initialization
+    // Register this Win32IDE process in the shared memory region so that
+    // React, CLI, and HTML frontends see our patch/config/model state.
+    // ========================================================================
+>>>>>>> origin/main
     {
         startupTrace(name.c_str(), "phase_start");
         if (!runPhase(name, ide, hInstance, lpCmdLine))
@@ -1946,6 +2077,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
         startupTrace(name.c_str(), "phase_done");
     }
 
+<<<<<<< HEAD
     // CRITICAL: Show window NOW before any heavy initialization
     startupTrace("showWindow");
     ide.showWindow();
@@ -1997,6 +2129,106 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
         return code;
     }
 
+=======
+    // ========================================================================
+    // JS EXTENSION HOST — Phase 37: QuickJS VSIX Runtime Bootstrap
+    // Initialize the embedded JavaScript engine so that .vsix extensions
+    // can be loaded and activated from the VSIX panel or drag-and-drop.
+    // ========================================================================
+    {
+        auto& jsHost = JSExtensionHost::instance();
+        if (!jsHost.isInitialized()) {
+            PatchResult jsResult = jsHost.initialize();
+            if (jsResult.success) {
+                OutputDebugStringA("[main_win32] JS Extension Host initialized (QuickJS + PolyfillEngine)\n");
+            } else {
+                char err[256];
+                snprintf(err, sizeof(err),
+                         "[main_win32] JS Extension Host init warning: %s (non-fatal)\n",
+                         jsResult.detail ? jsResult.detail : "unknown");
+                OutputDebugStringA(err);
+            }
+        }
+    }
+
+    // ========================================================================
+    // PLUGIN TRUST BOUNDARY — Phase 50: QuickJS Sandbox Enforcement
+    // Limits memory, CPU, file-system, network, native calls per security tier.
+    // Must init after JS Extension Host so sandbox policies can be applied.
+    // ========================================================================
+    {
+        auto& sandbox = RawrXD::Sandbox::PluginSandbox::instance();
+        if (!sandbox.isInitialized()) {
+            RawrXD::Sandbox::SandboxResult sbResult = sandbox.initialize();
+            if (sbResult.success) {
+                OutputDebugStringA("[main_win32] Plugin Sandbox (QuickJS trust boundary) initialized\n");
+            } else {
+                char err[256];
+                snprintf(err, sizeof(err),
+                         "[main_win32] Plugin Sandbox init warning: %s (non-fatal)\n",
+                         sbResult.detail ? sbResult.detail : "unknown");
+                OutputDebugStringA(err);
+            }
+        }
+    }
+
+    // Show window and force layout
+    startupTrace("showWindow");
+    ide.showWindow();
+    pumpMessages();
+
+    // ========================================================================
+    // CAMELLIA-256 — run in background so main thread reaches message loop
+    // even if init or encryptWorkspace blocks.
+    // ========================================================================
+    startupTrace("camellia_skipped");
+    pumpMessages();
+
+    // ========================================================================
+    // MASM + RE KERNEL — skipped on startup to avoid AV in Vulkan/GGUF path
+    // killing process. Re-enable from menu or WM_APP+150 when needed.
+    // ========================================================================
+    startupTrace("masm_init_skipped");
+
+    startupTrace("swarm_skipped");
+
+    // ========================================================================
+    // AUTO-UPDATE CHECK — Phase 50: Background manifest fetch + sig verify
+    // Non-blocking async check so we don't delay window show.
+    // ========================================================================
+    {
+        auto& updater = RawrXD::Update::AutoUpdateSystem::instance();
+        updater.setCurrentVersion(RAWRXD_VERSION_MAJOR, RAWRXD_VERSION_MINOR, RAWRXD_VERSION_PATCH, 0);
+        updater.setRepository("RawrXD", "RawrXD-ModelLoader");
+        updater.checkForUpdatesAsync([](const RawrXD::Update::UpdateCheckResult* result, void*) {
+            if (result && result->updateAvailable) {
+                char msg[256];
+                snprintf(msg, sizeof(msg),
+                         "[main_win32] Update available: v%u.%u.%u\n",
+                         result->latestVersion.major,
+                         result->latestVersion.minor,
+                         result->latestVersion.patch);
+                OutputDebugStringA(msg);
+            } else {
+                OutputDebugStringA("[main_win32] Auto-update check: up to date\n");
+            }
+        }, nullptr);
+        OutputDebugStringA("[main_win32] Auto-update check initiated (async)\n");
+    }
+    startupTrace("auto_update_done");
+
+    startupTrace("layout_start");
+    {
+        HWND hwnd = ide.getMainWindow();
+        if (hwnd) {
+            RECT rc;
+            GetClientRect(hwnd, &rc);
+            PostMessage(hwnd, WM_SIZE, SIZE_RESTORED, MAKELPARAM(rc.right, rc.bottom));
+            InvalidateRect(hwnd, nullptr, TRUE);
+        }
+    }
+    startupTrace("layout_done");
+>>>>>>> origin/main
     startupTrace("message_loop_entered");
     OutputDebugStringA("[main_win32] ⭐ MESSAGE LOOP STARTING ⭐\n");
 
@@ -2010,6 +2242,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
             SetFocus(editor);
     }
 
+<<<<<<< HEAD
     // Run message loop with exception safety
     int exitCode = 0;
     try
@@ -2031,6 +2264,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
         startupTrace("message_loop_exception_unknown");
         exitCode = 3;
     }
+=======
+    // Run message loop
+    int exitCode = ide.runMessageLoop();
+>>>>>>> origin/main
 
     // ========================================================================
     // CLEANUP — Null out IDE's raw pointers BEFORE deleting external objects.
@@ -2184,6 +2421,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
     exportCommandArtifacts("runtime-exit");
 
     return exitCode;
+<<<<<<< HEAD
 }
 
 // ============================================================================
@@ -2431,4 +2669,6 @@ int runSelftest(HWND hwnd)
                     "RawrXD Self-test", code == 0 ? (MB_OK | MB_ICONINFORMATION) : (MB_OK | MB_ICONERROR));
     }
     return code;
+=======
+>>>>>>> origin/main
 }

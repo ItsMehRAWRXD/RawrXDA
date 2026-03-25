@@ -7,6 +7,7 @@
 #include <thread>
 #include <windows.h>
 
+<<<<<<< HEAD
 // Shared engine for IDE commands, completion, and routing (set by bridge Initialize).
 static AgenticEngine* s_ideCommandEngine = nullptr;
 void SetIDEAgenticEngineForCommands(AgenticEngine* engine) { s_ideCommandEngine = engine; }
@@ -56,6 +57,20 @@ class AgenticController
 };
 
 
+=======
+// SCAFFOLD_131: RawrXD_ModelRouter
+
+
+// SCAFFOLD_129: RawrXD_AICompletion
+
+
+// SCAFFOLD_128: RawrXD_InferenceEngine_Win32
+
+
+// SCAFFOLD_089: RawrXD_AgenticEngine and AgenticController
+
+
+>>>>>>> origin/main
 namespace fs = std::filesystem;
 using json = nlohmann::json;
 

@@ -90,7 +90,10 @@ std::future<SwarmResult> SwarmOrchestrator::submitTaskAsync(const std::string& t
     return future;
 }
 
+<<<<<<< HEAD
 #if defined(__cpp_lib_expected) || (defined(_MSVC_LANG) && _MSVC_LANG >= 202302L)
+=======
+>>>>>>> origin/main
 std::expected<SwarmResult, int> SwarmOrchestrator::executeTask(const std::string& task, const std::string& context) {
     auto fut = submitTaskAsync(task, context);
     if (fut.wait_for(std::chrono::seconds(5)) == std::future_status::timeout) {
@@ -98,6 +101,7 @@ std::expected<SwarmResult, int> SwarmOrchestrator::executeTask(const std::string
     }
     return fut.get();
 }
+<<<<<<< HEAD
 #else
 RawrXD::Expected<SwarmResult, int> SwarmOrchestrator::executeTask(const std::string& task, const std::string& context) {
     auto fut = submitTaskAsync(task, context);
@@ -107,6 +111,8 @@ RawrXD::Expected<SwarmResult, int> SwarmOrchestrator::executeTask(const std::str
     return fut.get();
 }
 #endif
+=======
+>>>>>>> origin/main
 
 bool SwarmOrchestrator::stealWork(int thiefId, OrchestratorTask& stolenTask) {
     // randomized stealing

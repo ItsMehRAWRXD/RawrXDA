@@ -85,10 +85,17 @@ void CompilerEngine::compileAsync(const CompileOptions& options)
     
     compilationStarted(options);
     
+<<<<<<< HEAD
     // Start worker (Qt-free: invokeMethod stub; actual work done in worker thread)
     QMetaObject::invokeMethod(m_worker, "compile", QueuedConnection,
                               Q_ARG(CompileOptions, options),
                               Q_ARG(std::string, source));
+=======
+    // Start worker
+    QMetaObject::invokeMethod(m_worker, "compile", QueuedConnection,
+                              (CompileOptions, options),
+                              (std::string, source));
+>>>>>>> origin/main
 }
 
 void CompilerEngine::cancelCompilation()

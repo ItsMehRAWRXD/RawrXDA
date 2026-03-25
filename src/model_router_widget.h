@@ -22,7 +22,11 @@ class ModelRouterAdapter;
  * Connects to ModelRouterAdapter for all operations.
  * Emits user intent signals for IDE integration.
  */
+<<<<<<< HEAD
 class ModelRouterWidget {
+=======
+class ModelRouterWidget : public void {
+>>>>>>> origin/main
 
 public:
     explicit ModelRouterWidget(ModelRouterAdapter *adapter, void *parent = nullptr);
@@ -136,7 +140,11 @@ private:
     void onModelChanged(const std::string& model);
     void onStatusChanged(const std::string& status);
     void onCostUpdated(double total_cost);
+<<<<<<< HEAD
     void onStatisticsUpdated(const void* stats);
+=======
+    void onStatisticsUpdated(const void*& stats);
+>>>>>>> origin/main
 
     // Button clicks
     void onGenerateButtonClicked();
@@ -155,6 +163,7 @@ private:
     void updateMetricsDisplay();
     void resetUI();
     void showTemporaryStatus(const std::string& message, int duration_ms = 3000);
+<<<<<<< HEAD
 
     // Metadata display methods
     void setFamilyDisplay(const std::string& family);
@@ -163,6 +172,8 @@ private:
     void setCapabilitiesDisplay(const std::string& caps);
     void setAgentBadge(bool isAgent);
     void updateModelMetadata();  // pulls from hotpatch buffer
+=======
+>>>>>>> origin/main
 
     // Members
     ModelRouterAdapter *m_adapter;

@@ -10,7 +10,10 @@
 
 ; ── Win32 API imports ────────────────────────────────────────────
 EXTERN CreateProcessA:PROC
+<<<<<<< HEAD
 EXTERN CreateProcessW:PROC
+=======
+>>>>>>> origin/main
 EXTERN CreatePipe:PROC
 EXTERN ReadFile:PROC
 EXTERN CloseHandle:PROC
@@ -23,6 +26,7 @@ EXTERN HeapFree:PROC
 EXTERN lstrcpyA:PROC
 EXTERN lstrcatA:PROC
 EXTERN lstrcmpA:PROC
+<<<<<<< HEAD
 EXTERN lstrlenA:PROC
 
 ; ── Win32 API for built-in smoke tests ───────────────────────────
@@ -31,6 +35,11 @@ EXTERN GetClassNameA:PROC
 EXTERN GetWindowTextA:PROC
 EXTERN GetTickCount64:PROC
 
+=======
+EXTERN lstrcmpA:PROC
+EXTERN lstrlenA:PROC
+
+>>>>>>> origin/main
 ; ── Cross-module imports ─────────────────────────────────────────
 EXTERN BeaconSend:PROC
 EXTERN g_hHeap:QWORD
@@ -40,7 +49,10 @@ PUBLIC Test_Init
 PUBLIC Test_Discover
 PUBLIC Test_Run
 PUBLIC Test_GetResults
+<<<<<<< HEAD
 PUBLIC RawrXD_RunExternalTestsW
+=======
+>>>>>>> origin/main
 
 ; ── Constants ────────────────────────────────────────────────────
 HEAP_ZERO_MEMORY        equ 8
@@ -136,6 +148,7 @@ g_failCount         dd 0               ; Tests failed in current run
 g_totalRun          dd 0               ; Total tests executed
 g_bRunning          dd 0               ; 1 if a test run is active
 
+<<<<<<< HEAD
 .data
 align 16
 ; Line parse buffer (4KB) — moved from .data? to .data for ml64 symbol visibility
@@ -145,6 +158,15 @@ g_lineBuf           db 1024 dup(0)
 g_lineLen           dd 0
 ; External discovery line buffer (256 bytes)
 g_discLineBuf       db 256 dup(0)
+=======
+.data?
+align 16
+; Line parse buffer (4KB)
+g_pipeBuf           db PIPE_BUF_SIZE dup(?)
+; Line accumulator (1KB) for partial reads
+g_lineBuf           db 1024 dup(?)
+g_lineLen           dd ?
+>>>>>>> origin/main
 
 .const
 szRootSuite     db "All Tests",0
@@ -361,6 +383,7 @@ Test_Discover PROC FRAME
     mov     rax, qword ptr [rsp+58h]
     mov     g_hWritePipe, rax
 
+<<<<<<< HEAD
     ; ── Full external test discovery: CreateProcessA + pipe redirect ──
     ; Build STARTUPINFOA at [rsp+60h] (104 bytes on x64)
     ; Zero the struct first
@@ -543,6 +566,19 @@ Test_Discover PROC FRAME
 @disc_external_done:
     ; External test discovery completed successfully
     jmp     @disc_finish
+=======
+    ; TODO: CreateProcessA with STARTF_USESTDHANDLES, redirect stdout to hWritePipe
+    ; Read lines from hReadPipe, each line = test name → Test_AddNode
+    ; For now, fall through to builtin discovery
+
+    ; Close write end (parent doesn't write)
+    mov     rcx, g_hWritePipe
+    call    CloseHandle
+
+    ; Close read end
+    mov     rcx, g_hReadPipe
+    call    CloseHandle
+>>>>>>> origin/main
 
 @disc_builtin:
     ; ── Built-in discovery: register known test suites ──
@@ -603,6 +639,7 @@ Test_Discover PROC FRAME
     mov     r8d, TEST_EVT_DISCOVERY_DONE
     call    BeaconSend
 
+<<<<<<< HEAD
 @disc_finish:
     ; Notify UI: discovery complete
     xor     ecx, ecx
@@ -610,6 +647,8 @@ Test_Discover PROC FRAME
     mov     r8d, TEST_EVT_DISCOVERY_DONE
     call    BeaconSend
 
+=======
+>>>>>>> origin/main
     mov     eax, g_testCount
     dec     eax                         ; exclude root node
     add     rsp, 0C8h
@@ -761,6 +800,7 @@ Test_Run PROC FRAME
     ret
 
 @run_builtin:
+<<<<<<< HEAD
     ; ── Real built-in smoke test execution ──
     ; Each test is validated against actual Win32 state.
     ; Test results mapped to discovered test nodes by name.
@@ -874,6 +914,33 @@ Test_Run PROC FRAME
     sub     rax, [rsp + 38h]       ; duration = end - start
     pop     rax
 
+=======
+    ; Built-in: run the smoke test script via powershell
+    ; For now, mark all discovered tests as PASSED (stub)
+    mov     ecx, g_testCount
+    test    ecx, ecx
+    jz      @run_bi_done
+    mov     rax, g_pTestTree
+    mov     edx, 0
+@run_bi_loop:
+    cmp     edx, ecx
+    jge     @run_bi_done
+    ; Skip root (index 0)
+    test    edx, edx
+    jz      @run_bi_next
+    push    rdx
+    push    rcx
+    movsxd  r8, edx
+    imul    r8, TEST_NODE_SIZE
+    add     r8, rax
+    mov     dword ptr [r8+40], TEST_PASSED
+    pop     rcx
+    pop     rdx
+@run_bi_next:
+    inc     edx
+    jmp     @run_bi_loop
+@run_bi_done:
+>>>>>>> origin/main
     mov     g_bRunning, 0
 
     ; Notify UI
@@ -888,6 +955,7 @@ Test_Run PROC FRAME
     pop     rbx
     ret
 
+<<<<<<< HEAD
 ; ── Internal helpers for setting test node status ──
 @bi_set_pass:
     ; ECX = node index (1-based in discovered tree)
@@ -918,6 +986,8 @@ Test_Run PROC FRAME
 @bi_sf_ret:
     ret
 
+=======
+>>>>>>> origin/main
 @run_busy:
     xor     eax, eax
     add     rsp, 108h
@@ -927,6 +997,7 @@ Test_Run PROC FRAME
 Test_Run ENDP
 
 ; ────────────────────────────────────────────────────────────────
+<<<<<<< HEAD
 ; Test_ParseOutput — Parse test runner output into results array
 ;   RCX = pText       (ptr to null-terminated ASCII output)
 ;   RDX = pResults    (ptr to 32-byte result entries:
@@ -947,12 +1018,22 @@ Test_Run ENDP
 ;   8+48+56 = 112 → 112 mod 16 = 0 ✓
 ; Locals: [rsp+20h] pass_cnt, [rsp+24h] fail_cnt, [rsp+28h] skip_cnt
 ;         [rsp+2Ch] saved_status, [rsp+30h] hash_temp (QWORD)
+=======
+; Test_ParseOutput — Background thread: read pipe, parse results
+;   RCX = hPipe (passed as lpParameter from CreateThread)
+;   Parses TAP-like format: "ok <N> - <name>" / "not ok <N> - <name>"
+;   Or simple: lines starting with "PASS" or "FAIL"
+;
+; Stack: 2 pushes (rbx, rsi) + 48h (72)
+;   8+16+72 = 96 → 96 mod 16 = 0 ✓
+>>>>>>> origin/main
 ; ────────────────────────────────────────────────────────────────
 Test_ParseOutput PROC FRAME
     push    rbx
     .pushreg rbx
     push    rsi
     .pushreg rsi
+<<<<<<< HEAD
     push    rdi
     .pushreg rdi
     push    r12
@@ -1303,6 +1384,185 @@ Test_ParseOutput PROC FRAME
     pop     rdi
     pop     rsi
     pop     rbx
+=======
+    sub     rsp, 48h
+    .allocstack 48h
+    .endprolog
+
+    mov     rbx, rcx                    ; rbx = hPipe
+    mov     g_lineLen, 0
+
+@parse_read:
+    ; ReadFile(hPipe, buffer, bufSize, &bytesRead, NULL)
+    mov     rcx, rbx                    ; hFile
+    lea     rdx, g_pipeBuf              ; lpBuffer
+    mov     r8d, PIPE_BUF_SIZE - 1      ; nNumberOfBytesToRead
+    lea     r9, [rsp+30h]               ; lpNumberOfBytesRead
+    mov     qword ptr [rsp+20h], 0      ; lpOverlapped = NULL
+    call    ReadFile
+    test    eax, eax
+    jz      @parse_done                 ; pipe closed or error
+
+    mov     esi, dword ptr [rsp+30h]    ; bytesRead
+    test    esi, esi
+    jz      @parse_done
+
+    ; Null-terminate
+    lea     rax, g_pipeBuf
+    mov     byte ptr [rax + rsi], 0
+
+    ; Scan for newlines, extract complete lines
+    xor     ecx, ecx                    ; offset in pipeBuf
+@parse_scan:
+    cmp     ecx, esi
+    jge     @parse_read                 ; done with this chunk
+
+    lea     rax, g_pipeBuf
+    movzx   edx, byte ptr [rax + rcx]
+    cmp     dl, 0Ah                     ; newline?
+    je      @parse_newline
+    cmp     dl, 0Dh                     ; carriage return?
+    je      @parse_skip_cr
+
+    ; Accumulate into line buffer
+    mov     eax, g_lineLen
+    cmp     eax, 1022                   ; prevent overflow
+    jge     @parse_skip_char
+    lea     rdx, g_lineBuf
+    lea     r10, g_pipeBuf
+    mov     r8b, byte ptr [r10 + rcx]
+    mov     byte ptr [rdx + rax], r8b
+    inc     g_lineLen
+@parse_skip_char:
+    inc     ecx
+    jmp     @parse_scan
+
+@parse_skip_cr:
+    inc     ecx
+    jmp     @parse_scan
+
+@parse_newline:
+    ; Complete line in g_lineBuf[0..g_lineLen-1]
+    push    rcx
+    push    rsi
+
+    ; Null-terminate line
+    mov     eax, g_lineLen
+    lea     rdx, g_lineBuf
+    mov     byte ptr [rdx + rax], 0
+
+    ; Check for "PASS" or "ok" prefix → mark test passed
+    ; Check for "FAIL" or "not ok" prefix → mark test failed
+    lea     rcx, g_lineBuf
+    movzx   eax, byte ptr [rcx]
+
+    cmp     al, 'P'
+    je      @parse_check_pass
+    cmp     al, 'F'
+    je      @parse_check_fail
+    cmp     al, 'o'
+    je      @parse_check_ok
+    cmp     al, 'n'
+    je      @parse_check_notok
+    jmp     @parse_line_done
+
+@parse_check_pass:
+    ; Compare first 4 bytes with "PASS"
+    mov     eax, dword ptr [rcx]
+    cmp     eax, 053534150h             ; "PASS" in little-endian
+    jne     @parse_line_done
+    inc     g_passCount
+    inc     g_totalRun
+
+    ; Send PASS event
+    xor     ecx, ecx
+    lea     rdx, g_lineBuf
+    mov     r8d, TEST_EVT_TEST_PASSED
+    call    BeaconSend
+    jmp     @parse_line_done
+
+@parse_check_fail:
+    mov     eax, dword ptr [rcx]
+    cmp     eax, 04C494146h             ; "FAIL" in little-endian
+    jne     @parse_line_done
+    inc     g_failCount
+    inc     g_totalRun
+
+    xor     ecx, ecx
+    lea     rdx, g_lineBuf
+    mov     r8d, TEST_EVT_TEST_FAILED
+    call    BeaconSend
+    jmp     @parse_line_done
+
+@parse_check_ok:
+    ; TAP: "ok <N>" → pass
+    movzx   eax, byte ptr [rcx+1]
+    cmp     al, 'k'
+    jne     @parse_line_done
+    inc     g_passCount
+    inc     g_totalRun
+
+    xor     ecx, ecx
+    lea     rdx, g_lineBuf
+    mov     r8d, TEST_EVT_TEST_PASSED
+    call    BeaconSend
+    jmp     @parse_line_done
+
+@parse_check_notok:
+    ; TAP: "not ok <N>" → fail
+    movzx   eax, byte ptr [rcx+1]
+    cmp     al, 'o'
+    jne     @parse_line_done
+    movzx   eax, byte ptr [rcx+2]
+    cmp     al, 't'
+    jne     @parse_line_done
+    inc     g_failCount
+    inc     g_totalRun
+
+    xor     ecx, ecx
+    lea     rdx, g_lineBuf
+    mov     r8d, TEST_EVT_TEST_FAILED
+    call    BeaconSend
+
+@parse_line_done:
+    mov     g_lineLen, 0                ; reset line accumulator
+    pop     rsi
+    pop     rcx
+    inc     ecx
+    jmp     @parse_scan
+
+@parse_done:
+    ; Pipe closed → test run complete
+    mov     g_bRunning, 0
+
+    ; Close pipe handle
+    mov     rcx, rbx
+    call    CloseHandle
+
+    ; Wait for process to exit (if still alive)
+    mov     rcx, g_hTestProcess
+    test    rcx, rcx
+    jz      @parse_notify
+    mov     edx, INFINITE_WAIT
+    call    WaitForSingleObject
+
+    ; Close process handle
+    mov     rcx, g_hTestProcess
+    call    CloseHandle
+    mov     g_hTestProcess, 0
+
+@parse_notify:
+    ; Send completion event
+    xor     ecx, ecx
+    lea     rdx, szTestComplete
+    mov     r8d, TEST_EVT_RUN_COMPLETE
+    call    BeaconSend
+
+    add     rsp, 48h
+    pop     rsi
+    pop     rbx
+    xor     eax, eax
+>>>>>>> origin/main
     ret
 Test_ParseOutput ENDP
 
@@ -1342,6 +1602,7 @@ szTest_CharInput    db "Character Input",0
 szTest_SpecialKeys  db "Special Keys",0
 szTest_Entropy      db "Entropy Audit",0
 szTest_NoBackups    db "No Backup Files",0
+<<<<<<< HEAD
 szExpectedClass     db "RawrXDClass",0
 
 .code
@@ -1541,5 +1802,7 @@ RawrXD_RunExternalTestsW PROC FRAME
     pop     rbp
     ret
 RawrXD_RunExternalTestsW ENDP
+=======
+>>>>>>> origin/main
 
 END

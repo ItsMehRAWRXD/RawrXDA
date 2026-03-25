@@ -1,10 +1,14 @@
 ; RawrXD_CLI_Main.asm - Console Entry Point for Titan Unified
+<<<<<<< HEAD
 ; SOVEREIGN EDITION - Zero Dependencies, PEB API Resolution
+=======
+>>>>>>> origin/main
 OPTION CASEMAP:NONE
 
 ; ─── Cross-module symbol resolution ───
 INCLUDE rawrxd_master.inc
 
+<<<<<<< HEAD
 ;==============================================================================
 ; SOVEREIGN API RESOLUTION (Zero Import Table)
 ;==============================================================================
@@ -189,6 +193,24 @@ Pipe_RunServer PROC
     mov rax, 1  ; Return success for now
     ret
 Pipe_RunServer ENDP
+=======
+
+; External symbols from Titan Unified
+EXTERNDEF Titan_LoadModel : PROC
+EXTERNDEF Titan_RunInferenceStep : PROC
+EXTERNDEF Titan_InferenceThread : PROC
+EXTERNDEF Math_InitTables : PROC
+
+; Import Kernel32 (Standard)
+EXTERNDEF ExitProcess : PROC
+EXTERNDEF GetStdHandle : PROC
+EXTERNDEF WriteFile : PROC
+EXTERNDEF Sleep : PROC
+EXTERNDEF CreateThread : PROC
+
+EXTERNDEF StartPipeServer : PROC
+EXTERNDEF Pipe_RunServer : PROC
+>>>>>>> origin/main
 
 .data
 szModelPath BYTE "models/model.gguf", 0
@@ -202,9 +224,12 @@ TitanContext_Instance BYTE 4096 DUP(0) ; Allocate 4KB for context
 
 .code
 
+<<<<<<< HEAD
 ; Initialize sovereign APIs on module load
 call Initialize_Sovereign_APIs
 
+=======
+>>>>>>> origin/main
 ; ============================================================================
 ; Entry Point: mainCRTStartup (Console default)
 ; ============================================================================
@@ -267,17 +292,29 @@ RunCLLoop:
     lea rcx, szFail
     call PrintString
     mov ecx, 1
+<<<<<<< HEAD
     call pExitProcess
+=======
+    call ExitProcess
+>>>>>>> origin/main
 
 @@pipe_fail:
     lea rcx, szPipeFail
     call PrintString
     mov ecx, 2
+<<<<<<< HEAD
     call pExitProcess
 
 @@exit:
     mov ecx, 0
     call pExitProcess
+=======
+    call ExitProcess
+
+@@exit:
+    mov ecx, 0
+    call ExitProcess
+>>>>>>> origin/main
     ret
 
 mainCRTStartup ENDP
@@ -299,14 +336,22 @@ PrintString PROC
 @@print:
     ; Get StdOut
     mov rcx, -11                    ; STD_OUTPUT_HANDLE
+<<<<<<< HEAD
     call pGetStdHandle
+=======
+    call GetStdHandle
+>>>>>>> origin/main
     
     mov rcx, rax                    ; Handle
     mov rdx, rbx                    ; Buffer
     mov r8, r10                     ; Len
     lea r9, [rsp+50h]               ; BytesWritten ptr (shadow space + offset)
     mov qword ptr [rsp+20h], 0     ; Overlapped
+<<<<<<< HEAD
     call pWriteFile
+=======
+    call WriteFile
+>>>>>>> origin/main
     
     add rsp, 40h
     pop rbx

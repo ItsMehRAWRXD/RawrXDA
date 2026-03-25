@@ -10,6 +10,7 @@
 #include <sstream>
 #include <iomanip>
 #include <string>
+<<<<<<< HEAD
 #include <algorithm>
 #include <cmath>
 #include <vector>
@@ -17,6 +18,8 @@
 #include <array>
 #include <cctype>
 #include <cstdlib>
+=======
+>>>>>>> origin/main
 #include <commdlg.h>
 
 namespace {

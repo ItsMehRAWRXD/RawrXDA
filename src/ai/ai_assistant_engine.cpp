@@ -1313,6 +1313,7 @@ bool OllamaBackend::Initialize(const ModelConfig& config) {
     }
 
     std::string tags = WinHttpRequest(tags_url, L"GET", "", {L"Accept: application/json"});
+<<<<<<< HEAD
     if (tags.empty()) {
         LogBackendSelection("ollama", false, "local endpoint not reachable at startup");
         m_ready = false;
@@ -1326,6 +1327,11 @@ bool OllamaBackend::Initialize(const ModelConfig& config) {
     }
 
     LogBackendSelection("ollama", true, "local endpoint verified");
+=======
+    // Enhanced readiness: mark as ready if we have a model name, even if server tag check fails.
+    // This allows custom names or SHAs to bypass strict initial check and fail later if actually invalid.
+    m_ready = !m_model_name.empty(); 
+>>>>>>> origin/main
     return m_ready;
 }
 

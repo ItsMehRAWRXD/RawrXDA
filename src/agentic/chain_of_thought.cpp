@@ -120,6 +120,7 @@ std::expected<ThoughtStep, ChainError> ChainOfThought::generateNextStep(
     const std::vector<ThoughtStep>& previousSteps
 ) {
     if (!m_inferenceEngine) return std::unexpected(ChainError::StepGenerationFailed);
+<<<<<<< HEAD
 
     AgenticEngine* engine = static_cast<AgenticEngine*>(m_inferenceEngine);
 
@@ -196,6 +197,11 @@ std::expected<ThoughtStep, ChainError> ChainOfThought::generateNextStep(
     }
 
     return step;
+=======
+    
+    // Future: Iterative step generation
+    return ThoughtStep(); 
+>>>>>>> origin/main
 }
 
 std::expected<std::string, ChainError> ChainOfThought::generateExplanation(
@@ -210,3 +216,8 @@ std::expected<std::string, ChainError> ChainOfThought::generateExplanation(
 }
 
 } // namespace RawrXD
+<<<<<<< HEAD
+=======
+
+} // namespace RawrXD
+>>>>>>> origin/main

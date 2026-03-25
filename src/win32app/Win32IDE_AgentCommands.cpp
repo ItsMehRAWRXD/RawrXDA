@@ -10,12 +10,20 @@
 #include "RawrXD_AutonomousAgenticPipeline.h"
 #include "Win32IDE.h"
 #include "Win32IDE_AgenticBridge.h"
+<<<<<<< HEAD
 #include "Win32SwarmBridge.h"
+=======
+#include "ModelConnection.h"
+#include "IDELogger.h"
+#include "../core/enterprise_license.h"
+#include <sstream>
+>>>>>>> origin/main
 #include <algorithm>
 #include <cctype>
 #include <fstream>
 #include <sstream>
 
+<<<<<<< HEAD
 // Local IDM constants used in switch-case dispatch (defined via #define in Commands.cpp/Win32IDE.cpp)
 // IDM_AGENT_AUTONOMOUS_COMMUNICATOR: free slot in 4163–4199 range
 #ifndef IDM_AGENT_AUTONOMOUS_COMMUNICATOR
@@ -25,11 +33,15 @@
 #ifndef IDM_TELEMETRY_UNIFIED_CORE
 #define IDM_TELEMETRY_UNIFIED_CORE 4164
 #endif
+=======
+// SCAFFOLD_040: SubAgent chain/swarm/todo handlers
+>>>>>>> origin/main
 
 // Forward declarations for free-function handlers defined in their own .cpp files
 void HandleAutonomousCommunicator(void* idePtr);
 void HandleUnifiedTelemetry(void* idePtr);
 
+<<<<<<< HEAD
 // ============================================================================
 // SUBAGENT CHAIN / SWARM / TODO HANDLERS (Phase 19B)
 // ============================================================================
@@ -40,6 +52,54 @@ void HandleUnifiedTelemetry(void* idePtr);
 // - Bounded agent loop UI: Win32IDE_AgentPanel.cpp
 void Win32IDE::onSubAgentChain() {
     LOG_INFO("onSubAgentChain called");
+=======
+// SCAFFOLD_039: Agent commands menu dispatch
+
+
+// SCAFFOLD_017: AI mode toggles (Max, Deep Think, etc.)
+
+
+// Initialize the Agentic Bridge
+void Win32IDE::initializeAgenticBridge() {
+    LOG_INFO("Initializing Agentic Bridge");
+    
+    if (!m_agenticBridge) {
+        m_agenticBridge = std::make_unique<AgenticBridge>(this);
+        
+        // Set output callback to send agent responses to Copilot Chat
+        m_agenticBridge->SetOutputCallback([this](const std::string& title, const std::string& content) {
+            appendToOutput(title + ":\n" + content + "\n", "Output", OutputSeverity::Info);
+            
+            // Also send to Copilot Chat if available
+            if (m_hwndCopilotChatOutput) {
+                std::string formatted = "🤖 " + title + "\n" + content + "\n\n";
+                SendMessageA(m_hwndCopilotChatOutput, EM_SETSEL, -1, -1);
+                SendMessageA(m_hwndCopilotChatOutput, EM_REPLACESEL, FALSE, (LPARAM)formatted.c_str());
+            }
+        });
+        
+        // Initialize with default framework path
+        if (m_agenticBridge->Initialize("", "bigdaddyg-personalized-agentic:latest")) {
+            LOG_INFO("Agentic Bridge initialized successfully");
+            appendToOutput("✅ Agentic Framework initialized\n", "Output", OutputSeverity::Info);
+            
+            // Initialize Autonomy Manager
+            m_autonomyManager = std::make_unique<AutonomyManager>(m_agenticBridge.get());
+        } else {
+            LOG_ERROR("Failed to initialize Agentic Bridge");
+            appendToOutput("❌ Failed to initialize Agentic Framework\n", "Errors", OutputSeverity::Error);
+            MessageBoxA(m_hwndMain, 
+                "Failed to initialize Agentic Framework.\nMake sure Agentic-Framework.ps1 is in the Powershield folder.", 
+                "Agent Error", MB_OK | MB_ICONERROR);
+        }
+    }
+}
+
+// Start Agent Loop - multi-turn agentic conversation
+void Win32IDE::onAgentStartLoop() {
+    LOG_INFO("onAgentStartLoop called");
+    
+>>>>>>> origin/main
     if (!m_agenticBridge) {
         initializeAgenticBridge();
     }
@@ -78,11 +138,28 @@ void Win32IDE::onSubAgentChain() {
     
     appendToOutput("🔗 SubAgent Chain initiated: " + std::string(taskDesc) + "\n", "Output", OutputSeverity::Info);
     
+<<<<<<< HEAD
     // Execute chain in background
     std::thread([this, taskStr = std::string(taskDesc)]() {
         DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
         if (_guard.cancelled) return;
         m_agenticBridge->ExecuteSubAgentChain(taskStr);
+=======
+    // Enrich the user prompt with language context
+    promptStr = buildLanguageAwarePrompt(promptStr);
+    
+    // Start agent loop in background thread
+    appendToOutput("🚀 Starting Agent Loop: " + promptStr + "\n", "Output", OutputSeverity::Info);
+    
+    std::thread([this, promptStr]() {
+        DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+        if (_guard.cancelled) return;
+        if (m_agenticBridge->StartAgentLoop(promptStr, 10)) {
+            LOG_INFO("Agent loop completed successfully");
+        } else {
+            LOG_ERROR("Agent loop failed");
+        }
+>>>>>>> origin/main
     }).detach();
 }
 
@@ -947,6 +1024,15 @@ void Win32IDE::onAgentExecuteCommand()
 
         std::string command(input);
         appendToOutput("⚡ Executing Agent Command: " + command + "\n", "Output", OutputSeverity::Info);
+<<<<<<< HEAD
+=======
+        
+        // Execute in background
+        std::thread([this, command]() {
+            DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+            if (_guard.cancelled) return;
+            AgentResponse response = m_agenticBridge->ExecuteAgentCommand(command);
+>>>>>>> origin/main
 
         // Execute in background
         std::thread(
@@ -968,6 +1054,7 @@ void Win32IDE::onAgentExecuteCommand()
                         response = retryResponse;
                     }
                 }
+<<<<<<< HEAD
 
                 std::string output = "Agent Response:\n";
                 output += "Type: " + std::to_string((int)response.type) + "\n";
@@ -983,6 +1070,22 @@ void Win32IDE::onAgentExecuteCommand()
             })
             .detach();
 
+=======
+            }
+            
+            std::string output = "Agent Response:\n";
+            output += "Type: " + std::to_string((int)response.type) + "\n";
+            output += "Content: " + response.content + "\n";
+            
+            if (!response.toolName.empty()) {
+                output += "Tool: " + response.toolName + "\n";
+                output += "Args: " + response.toolArgs + "\n";
+            }
+            
+            appendToOutput(output, "Output", OutputSeverity::Info);
+        }).detach();
+        
+>>>>>>> origin/main
         // Clear input
         SetWindowTextA(m_hwndCopilotChatInput, "");
     }
@@ -2295,8 +2398,12 @@ void Win32IDE::onAgenticModeAgent()
     setAgenticMode(RawrXD::AgenticMode::Agent);
 }
 
+<<<<<<< HEAD
 void Win32IDE::onAIContextSize(int sizeEnum)
 {
+=======
+void Win32IDE::onAIContextSize(int sizeEnum) {
+>>>>>>> origin/main
     LOG_INFO("onAIContextSize: " + std::to_string(sizeEnum));
 
     // Map enum value to token count
@@ -2432,4 +2539,8 @@ void Win32IDE::loadMemoryPlugin(const std::string& path)
         delete rawPlugin;
         FreeLibrary(hPlugin);
     }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> origin/main

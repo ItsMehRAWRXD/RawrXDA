@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "dgSpecHash": "eY5PV67WpM8=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\HiH8e\\OneDrive\\Desktop\\Powershield\\RawrXD.Ollama\\RawrXD.Ollama.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\HiH8e\\.nuget\\packages\\llamasharp\\0.13.0\\llamasharp.0.13.0.nupkg.sha512",
+    "C:\\Users\\HiH8e\\.nuget\\packages\\llamasharp.backend.opencl\\0.13.0\\llamasharp.backend.opencl.0.13.0.nupkg.sha512",
+    "C:\\Users\\HiH8e\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\8.0.1\\microsoft.extensions.dependencyinjection.abstractions.8.0.1.nupkg.sha512",
+    "C:\\Users\\HiH8e\\.nuget\\packages\\microsoft.extensions.logging.abstractions\\8.0.1\\microsoft.extensions.logging.abstractions.8.0.1.nupkg.sha512"
+  ],
+  "logs": []
+}

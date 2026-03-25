@@ -2,6 +2,7 @@
 // Implements VS Code-style Activity Bar and Sidebar with 5 views:
 // Explorer, Search, Source Control, Run & Debug, Extensions
 
+<<<<<<< HEAD
 #include "../../include/quickjs_extension_host.h"
 #include "../core/enterprise_license.h"
 #include "VSIXInstaller.hpp"
@@ -10,6 +11,18 @@
 #include <commctrl.h>
 #include <commdlg.h>
 #include <richedit.h>
+=======
+#include "Win32IDE.h"
+#include "Win32IDE_IELabels.h"
+#include "../core/enterprise_license.h"
+#include "VSIXInstaller.hpp"
+#include "../../include/quickjs_extension_host.h"
+#include <commctrl.h>
+#include <commdlg.h>
+#include <shellapi.h>
+#include <shlwapi.h>
+#include <regex>
+>>>>>>> origin/main
 #include <filesystem>
 #include <fstream>
 #include <regex>
@@ -34,8 +47,12 @@
 
 namespace fs = std::filesystem;
 
+<<<<<<< HEAD
 namespace
 {
+=======
+namespace {
+>>>>>>> origin/main
 // UTF-8 to UTF-16 for Unicode Win32 APIs (C++20, no Qt)
 static std::wstring utf8ToWide(const std::string& utf8)
 {
@@ -124,6 +141,7 @@ void Win32IDE::createActivityBar(HWND hwndParent)
 
     // Create activity buttons (icon buttons for each view)
     int y = 10;
+<<<<<<< HEAD
     const struct
     {
         int id;
@@ -132,6 +150,17 @@ void Win32IDE::createActivityBar(HWND hwndParent)
                    {IDC_ACTIVITY_SCM, "Source"},      {IDC_ACTIVITY_DEBUG, "Debug"},
                    {IDC_ACTIVITY_EXTENSIONS, "Exts"}, {IDC_ACTIVITY_RECOVERY, "Recov"},
                    {IDC_ACTIVITY_CHAT, "Chat"}};
+=======
+    const struct { int id; const char* text; } buttons[] = {
+        {IDC_ACTIVITY_EXPLORER, "Files"},
+        {IDC_ACTIVITY_SEARCH, "Search"},
+        {IDC_ACTIVITY_SCM, "Source"},
+        {IDC_ACTIVITY_DEBUG, "Debug"},
+        {IDC_ACTIVITY_EXTENSIONS, "Exts"},
+        {IDC_ACTIVITY_RECOVERY, "Recov"},
+        {IDC_ACTIVITY_CHAT, "Chat"}
+    };
+>>>>>>> origin/main
 
     for (const auto& btn : buttons)
     {
@@ -140,14 +169,19 @@ void Win32IDE::createActivityBar(HWND hwndParent)
         y += 48;
     }
 
+<<<<<<< HEAD
     appendToOutput("Activity Bar created with 7 views (Files, Search, Source, Debug, Exts, Recov, Chat)\n", "Output",
                    OutputSeverity::Info);
+=======
+    appendToOutput("Activity Bar created with 7 views (Files, Search, Source, Debug, Exts, Recov, Chat)\n", "Output", OutputSeverity::Info);
+>>>>>>> origin/main
 }
 
 LRESULT CALLBACK Win32IDE::ActivityBarProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     Win32IDE* pThis = (Win32IDE*)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
 
+<<<<<<< HEAD
     switch (uMsg)
     {
         case WM_COMMAND:
@@ -190,9 +224,44 @@ LRESULT CALLBACK Win32IDE::ActivityBarProc(HWND hwnd, UINT uMsg, WPARAM wParam, 
                         pThis->toggleSecondarySidebar();
                         break;
                 }
+=======
+    switch (uMsg) {
+    case WM_COMMAND:
+        if (pThis) {
+            int id = LOWORD(wParam);
+            switch (id) {
+            case IDC_ACTIVITY_EXPLORER:
+                pThis->setSidebarView(SidebarView::Explorer);
+                if (!pThis->m_sidebarVisible) pThis->toggleSidebar();
+                break;
+            case IDC_ACTIVITY_SEARCH:
+                pThis->setSidebarView(SidebarView::Search);
+                if (!pThis->m_sidebarVisible) pThis->toggleSidebar();
+                break;
+            case IDC_ACTIVITY_SCM:
+                pThis->setSidebarView(SidebarView::SourceControl);
+                if (!pThis->m_sidebarVisible) pThis->toggleSidebar();
+                break;
+            case IDC_ACTIVITY_DEBUG:
+                pThis->setSidebarView(SidebarView::RunDebug);
+                if (!pThis->m_sidebarVisible) pThis->toggleSidebar();
+                break;
+            case IDC_ACTIVITY_EXTENSIONS:
+                pThis->setSidebarView(SidebarView::Extensions);
+                if (!pThis->m_sidebarVisible) pThis->toggleSidebar();
+                break;
+            case IDC_ACTIVITY_RECOVERY:
+                pThis->setSidebarView(SidebarView::DiskRecovery);
+                if (!pThis->m_sidebarVisible) pThis->toggleSidebar();
+                break;
+            case IDC_ACTIVITY_CHAT:
+                pThis->toggleSecondarySidebar();
+                break;
+>>>>>>> origin/main
             }
             return 0;
 
+<<<<<<< HEAD
         case WM_DRAWITEM:
         {
             // Draw activity bar buttons with visible labels (fixes empty square boxes)
@@ -218,6 +287,39 @@ LRESULT CALLBACK Win32IDE::ActivityBarProc(HWND hwnd, UINT uMsg, WPARAM wParam, 
                     (id == IDC_ACTIVITY_EXTENSIONS && pThis->m_currentSidebarView == SidebarView::Extensions) ||
                     (id == IDC_ACTIVITY_RECOVERY && pThis->m_currentSidebarView == SidebarView::DiskRecovery))
                     bgColor = RGB(0, 122, 204);
+=======
+    case WM_DRAWITEM: {
+        // Draw activity bar buttons with visible labels (fixes empty square boxes)
+        DRAWITEMSTRUCT* dis = (DRAWITEMSTRUCT*)lParam;
+        if (!dis || dis->CtlType != ODT_BUTTON) break;
+        HDC hdc = dis->hDC;
+        RECT rc = dis->rcItem;
+        UINT state = dis->itemState;
+        int id = dis->CtlID;
+        HWND hBtn = dis->hwndItem;
+        COLORREF bgColor = RGB(51, 51, 51);
+        if (state & ODS_SELECTED) bgColor = RGB(70, 70, 70);
+        else if (state & ODS_HOTLIGHT) bgColor = RGB(62, 62, 62);
+        if (pThis && pThis->m_currentSidebarView != SidebarView::None) {
+            if ((id == IDC_ACTIVITY_EXPLORER && pThis->m_currentSidebarView == SidebarView::Explorer) ||
+                (id == IDC_ACTIVITY_SEARCH && pThis->m_currentSidebarView == SidebarView::Search) ||
+                (id == IDC_ACTIVITY_SCM && pThis->m_currentSidebarView == SidebarView::SourceControl) ||
+                (id == IDC_ACTIVITY_DEBUG && pThis->m_currentSidebarView == SidebarView::RunDebug) ||
+                (id == IDC_ACTIVITY_EXTENSIONS && pThis->m_currentSidebarView == SidebarView::Extensions) ||
+                (id == IDC_ACTIVITY_RECOVERY && pThis->m_currentSidebarView == SidebarView::DiskRecovery))
+                bgColor = RGB(0, 122, 204);
+        }
+        HBRUSH hBrush = CreateSolidBrush(bgColor);
+        FillRect(hdc, &rc, hBrush);
+        DeleteObject(hBrush);
+        if (pThis && (id == IDC_ACTIVITY_EXPLORER || id == IDC_ACTIVITY_SEARCH || id == IDC_ACTIVITY_SCM ||
+                      id == IDC_ACTIVITY_DEBUG || id == IDC_ACTIVITY_EXTENSIONS || id == IDC_ACTIVITY_RECOVERY || id == IDC_ACTIVITY_CHAT)) {
+            RECT indR = { rc.left, rc.top, rc.left + 3, rc.bottom };
+            if (bgColor == RGB(0, 122, 204)) {
+                HBRUSH hInd = CreateSolidBrush(RGB(255, 255, 255));
+                FillRect(hdc, &indR, hInd);
+                DeleteObject(hInd);
+>>>>>>> origin/main
             }
             HBRUSH hBrush = CreateSolidBrush(bgColor);
             FillRect(hdc, &rc, hBrush);
@@ -244,6 +346,7 @@ LRESULT CALLBACK Win32IDE::ActivityBarProc(HWND hwnd, UINT uMsg, WPARAM wParam, 
             return TRUE;
         }
 
+<<<<<<< HEAD
         case WM_PAINT:
         {
             PAINTSTRUCT ps;
@@ -259,6 +362,22 @@ LRESULT CALLBACK Win32IDE::ActivityBarProc(HWND hwnd, UINT uMsg, WPARAM wParam, 
             EndPaint(hwnd, &ps);
             return 0;
         }
+=======
+    case WM_PAINT: {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hwnd, &ps);
+        RECT rc;
+        GetClientRect(hwnd, &rc);
+        
+        // Dark background for activity bar
+        HBRUSH hBrush = CreateSolidBrush(RGB(51, 51, 51));
+        FillRect(hdc, &rc, hBrush);
+        DeleteObject(hBrush);
+        
+        EndPaint(hwnd, &ps);
+        return 0;
+    }
+>>>>>>> origin/main
     }
 
     return DefWindowProcA(hwnd, uMsg, wParam, lParam);
@@ -272,9 +391,18 @@ constexpr int SIDEBAR_TITLE_HEIGHT = 28;
 
 void Win32IDE::createPrimarySidebar(HWND hwndParent)
 {
+<<<<<<< HEAD
     m_hwndSidebar =
         CreateWindowExA(0, "STATIC", RAWRXD_IDE_LABEL_SIDEBAR, WS_CHILD | WS_VISIBLE | WS_BORDER, ACTIVITY_BAR_WIDTH, 0,
                         SIDEBAR_DEFAULT_WIDTH, 600, hwndParent, nullptr, m_hInstance, nullptr);
+=======
+    m_hwndSidebar = CreateWindowExA(
+        0, "STATIC", RAWRXD_IDE_LABEL_SIDEBAR,
+        WS_CHILD | WS_VISIBLE | WS_BORDER,
+        ACTIVITY_BAR_WIDTH, 0, SIDEBAR_DEFAULT_WIDTH, 600,
+        hwndParent, nullptr, m_hInstance, nullptr
+    );
+>>>>>>> origin/main
 
     // Visible title bar so the pane is clearly named (e.g. "File Explorer", "Search")
     m_hwndSidebarTitle =
@@ -293,8 +421,12 @@ void Win32IDE::createPrimarySidebar(HWND hwndParent)
         CreateWindowExA(0, "STATIC", "", WS_CHILD | WS_VISIBLE, 0, SIDEBAR_TITLE_HEIGHT, SIDEBAR_DEFAULT_WIDTH,
                         600 - SIDEBAR_TITLE_HEIGHT, m_hwndSidebar, nullptr, m_hInstance, nullptr);
     SetWindowLongPtrA(m_hwndSidebarContent, GWLP_USERDATA, (LONG_PTR)this);
+<<<<<<< HEAD
     s_sidebarContentOldProc =
         (WNDPROC)SetWindowLongPtrA(m_hwndSidebarContent, GWLP_WNDPROC, (LONG_PTR)Win32IDE::SidebarContentProc);
+=======
+    s_sidebarContentOldProc = (WNDPROC)SetWindowLongPtrA(m_hwndSidebarContent, GWLP_WNDPROC, (LONG_PTR)Win32IDE::SidebarContentProc);
+>>>>>>> origin/main
 
     SetWindowLongPtrA(m_hwndSidebar, GWLP_USERDATA, (LONG_PTR)this);
     SetWindowLongPtrA(m_hwndSidebar, GWLP_WNDPROC, (LONG_PTR)SidebarProc);
@@ -322,10 +454,15 @@ void Win32IDE::createPrimarySidebar(HWND hwndParent)
         ShowWindow(m_hwndExplorerToolbar, SW_SHOW);
 
     appendToOutput("Primary Sidebar initialized\n", "Output", OutputSeverity::Info);
+<<<<<<< HEAD
     appendToOutput("[System] File Explorer: View > File Explorer (Ctrl+Shift+E) or Activity Bar > Files\n", "Output",
                    OutputSeverity::Info);
     appendToOutput("[System] Agent Chat: View > AI Chat (Ctrl+Alt+B) or View > Agent Chat or Activity Bar > Chat\n",
                    "Output", OutputSeverity::Info);
+=======
+    appendToOutput("[System] File Explorer: View > File Explorer (Ctrl+Shift+E) or Activity Bar > Files\n", "Output", OutputSeverity::Info);
+    appendToOutput("[System] Agent Chat: View > AI Chat (Ctrl+Alt+B) or View > Agent Chat or Activity Bar > Chat\n", "Output", OutputSeverity::Info);
+>>>>>>> origin/main
     {
         bool unlocked = RawrXD::EnterpriseLicense::is800BUnlocked();
         const char* ed = RawrXD::EnterpriseLicense::Instance().GetEditionName();
@@ -334,15 +471,20 @@ void Win32IDE::createPrimarySidebar(HWND hwndParent)
                           " | Tools > License Creator | Tools > Feature Registry for V2 manifest\n";
         appendToOutput(lic, "Output", OutputSeverity::Info);
     }
+<<<<<<< HEAD
     appendToOutput("[UX] View > File Explorer (Ctrl+Shift+E) | View > AI Chat (Ctrl+Shift+C) | Tools > License Creator "
                    "| Tools > Feature Registry\n",
                    "Output", OutputSeverity::Info);
+=======
+    appendToOutput("[UX] View > File Explorer (Ctrl+Shift+E) | View > AI Chat (Ctrl+Shift+C) | Tools > License Creator | Tools > Feature Registry\n", "Output", OutputSeverity::Info);
+>>>>>>> origin/main
 }
 
 LRESULT CALLBACK Win32IDE::SidebarProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     Win32IDE* pThis = (Win32IDE*)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
 
+<<<<<<< HEAD
     switch (uMsg)
     {
         case WM_CTLCOLORSTATIC:
@@ -357,6 +499,53 @@ LRESULT CALLBACK Win32IDE::SidebarProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPAR
                 if (!s_titleBrush)
                     s_titleBrush = CreateSolidBrush(RGB(45, 45, 48));
                 return (LRESULT)s_titleBrush;
+=======
+    switch (uMsg) {
+    case WM_CTLCOLORSTATIC: {
+        // Make sidebar title bar readable: dark background, light text
+        if (pThis && (HWND)lParam == pThis->m_hwndSidebarTitle) {
+            HDC hdc = (HDC)wParam;
+            SetTextColor(hdc, RGB(230, 230, 230));
+            SetBkColor(hdc, RGB(45, 45, 48));
+            static HBRUSH s_titleBrush = nullptr;
+            if (!s_titleBrush) s_titleBrush = CreateSolidBrush(RGB(45, 45, 48));
+            return (LRESULT)s_titleBrush;
+        }
+        break;
+    }
+    case WM_PAINT: {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hwnd, &ps);
+        RECT rc;
+        GetClientRect(hwnd, &rc);
+        
+        // Light gray background
+        HBRUSH hBrush = CreateSolidBrush(RGB(37, 37, 38));
+        FillRect(hdc, &rc, hBrush);
+        DeleteObject(hBrush);
+        
+        EndPaint(hwnd, &ps);
+        return 0;
+    }
+
+    case WM_SIZE: {
+        if (pThis) {
+            int width = LOWORD(lParam);
+            int height = HIWORD(lParam);
+            pThis->resizeSidebar(width, height);
+        }
+        return 0;
+    }
+
+    case WM_NOTIFY: {
+        if (pThis) {
+            NMHDR* pnmh = (NMHDR*)lParam;
+            if (pnmh->code == TVN_DELETEITEM && pnmh->idFrom == IDC_FILE_EXPLORER) {
+                NMTREEVIEWA* pnmtv = (NMTREEVIEWA*)lParam;
+                if (pnmtv->itemOld.lParam)
+                    delete[] reinterpret_cast<char*>(pnmtv->itemOld.lParam);
+                return 0;
+>>>>>>> origin/main
             }
             break;
         }
@@ -402,6 +591,11 @@ LRESULT CALLBACK Win32IDE::SidebarProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPAR
             }
             break;
         }
+<<<<<<< HEAD
+=======
+        break;
+    }
+>>>>>>> origin/main
     }
 
     return DefWindowProcA(hwnd, uMsg, wParam, lParam);
@@ -567,6 +761,7 @@ void Win32IDE::setSidebarView(SidebarView view)
     ShowWindow(m_hwndExtensionsList, SW_HIDE);
     ShowWindow(m_hwndExtensionSearch, SW_HIDE);
     // Recovery view controls
+<<<<<<< HEAD
     if (m_hwndRecoveryTitle)
         ShowWindow(m_hwndRecoveryTitle, SW_HIDE);
     if (m_hwndRecoveryDriveList)
@@ -579,10 +774,19 @@ void Win32IDE::setSidebarView(SidebarView view)
         ShowWindow(m_hwndRecoveryProgress, SW_HIDE);
     if (m_hwndRecoveryLog)
         ShowWindow(m_hwndRecoveryLog, SW_HIDE);
+=======
+    if (m_hwndRecoveryTitle)     ShowWindow(m_hwndRecoveryTitle, SW_HIDE);
+    if (m_hwndRecoveryDriveList) ShowWindow(m_hwndRecoveryDriveList, SW_HIDE);
+    if (m_hwndRecoveryOutPath)   ShowWindow(m_hwndRecoveryOutPath, SW_HIDE);
+    if (m_hwndRecoveryStatus)    ShowWindow(m_hwndRecoveryStatus, SW_HIDE);
+    if (m_hwndRecoveryProgress)  ShowWindow(m_hwndRecoveryProgress, SW_HIDE);
+    if (m_hwndRecoveryLog)       ShowWindow(m_hwndRecoveryLog, SW_HIDE);
+>>>>>>> origin/main
     // Also hide Extensions view Install button (IDC_EXT_INSTALL_VSIX)
     if (HWND hInstall = GetDlgItem(m_hwndSidebarContent, IDC_EXT_INSTALL_VSIX))
         ShowWindow(hInstall, SW_HIDE);
     // Hide Disk Recovery buttons
+<<<<<<< HEAD
     EnumChildWindows(
         m_hwndSidebarContent,
         [](HWND hwnd, LPARAM) -> BOOL
@@ -593,6 +797,13 @@ void Win32IDE::setSidebarView(SidebarView view)
             return TRUE;
         },
         0);
+=======
+    EnumChildWindows(m_hwndSidebarContent, [](HWND hwnd, LPARAM) -> BOOL {
+        int id = GetDlgCtrlID(hwnd);
+        if (id >= 10301 && id <= 10312) ShowWindow(hwnd, SW_HIDE);
+        return TRUE;
+    }, 0);
+>>>>>>> origin/main
 
     m_currentSidebarView = view;
 
@@ -633,6 +844,7 @@ void Win32IDE::setSidebarView(SidebarView view)
     if (m_hwndActivityBar)
         InvalidateRect(m_hwndActivityBar, nullptr, TRUE);
 
+<<<<<<< HEAD
     // Status + telemetry wiring (dashboard + backend)
     std::string featureName = std::string("sidebar.view.") + viewName;
     telemetryTrack(featureName.c_str(), 1.0);
@@ -644,6 +856,8 @@ void Win32IDE::setSidebarView(SidebarView view)
         SendMessageW(m_hwndStatusBar, SB_SETTEXTW, 1, (LPARAM)status.c_str());
     }
 
+=======
+>>>>>>> origin/main
     // Show selected view
     switch (view)
     {
@@ -676,6 +890,7 @@ void Win32IDE::setSidebarView(SidebarView view)
             appendToOutput("Run and Debug view activated\n", "Output", OutputSeverity::Info);
             break;
 
+<<<<<<< HEAD
         case SidebarView::Extensions:
             ShowWindow(m_hwndExtensionsList, SW_SHOW);
             ShowWindow(m_hwndExtensionSearch, SW_SHOW);
@@ -714,6 +929,34 @@ void Win32IDE::setSidebarView(SidebarView view)
 
         default:
             break;
+=======
+    case SidebarView::Extensions:
+        ShowWindow(m_hwndExtensionsList, SW_SHOW);
+        ShowWindow(m_hwndExtensionSearch, SW_SHOW);
+        if (HWND hInstall = GetDlgItem(m_hwndSidebarContent, IDC_EXT_INSTALL_VSIX)) ShowWindow(hInstall, SW_SHOW);
+        loadInstalledExtensions();
+        appendToOutput("Extensions view activated\n", "Output", OutputSeverity::Info);
+        break;
+
+    case SidebarView::DiskRecovery:
+        if (m_hwndRecoveryTitle)     ShowWindow(m_hwndRecoveryTitle, SW_SHOW);
+        if (m_hwndRecoveryDriveList) ShowWindow(m_hwndRecoveryDriveList, SW_SHOW);
+        if (m_hwndRecoveryOutPath)   ShowWindow(m_hwndRecoveryOutPath, SW_SHOW);
+        if (m_hwndRecoveryStatus)    ShowWindow(m_hwndRecoveryStatus, SW_SHOW);
+        if (m_hwndRecoveryProgress)  ShowWindow(m_hwndRecoveryProgress, SW_SHOW);
+        if (m_hwndRecoveryLog)       ShowWindow(m_hwndRecoveryLog, SW_SHOW);
+        // Show all recovery buttons/controls
+        EnumChildWindows(m_hwndSidebarContent, [](HWND hwnd, LPARAM) -> BOOL {
+            int id = GetDlgCtrlID(hwnd);
+            if (id >= 10301 && id <= 10312) ShowWindow(hwnd, SW_SHOW);
+            return TRUE;
+        }, 0);
+        appendToOutput("Disk Recovery view activated\n", "Output", OutputSeverity::Info);
+        break;
+
+    default:
+        break;
+>>>>>>> origin/main
     }
 
     updateSidebarContent();
@@ -722,6 +965,7 @@ void Win32IDE::setSidebarView(SidebarView view)
 void Win32IDE::updateSidebarContent()
 {
     // Refresh current view's content
+<<<<<<< HEAD
     switch (m_currentSidebarView)
     {
         case SidebarView::Explorer:
@@ -744,6 +988,29 @@ void Win32IDE::updateSidebarContent()
             break;
         default:
             break;
+=======
+    switch (m_currentSidebarView) {
+    case SidebarView::Explorer:
+        refreshFileTree();
+        break;
+    case SidebarView::Search:
+        // Search results are updated on demand
+        break;
+    case SidebarView::SourceControl:
+        refreshSourceControlView();
+        break;
+    case SidebarView::RunDebug:
+        updateDebugVariables();
+        break;
+    case SidebarView::Extensions:
+        loadInstalledExtensions();
+        break;
+    case SidebarView::DiskRecovery:
+        // Recovery panel is self-updating via timer
+        break;
+    default:
+        break;
+>>>>>>> origin/main
     }
 }
 
@@ -827,12 +1094,22 @@ void Win32IDE::createExplorerView(HWND hwndParent)
 
     // ESP:m_hwndExplorerTree — File Explorer TreeView (IDC_EXPLORER_TREE 6010)
     appendToOutput("Creating Explorer TreeView control\n", "Output", OutputSeverity::Debug);
+<<<<<<< HEAD
     m_hwndExplorerTree =
         CreateWindowExA(WS_EX_CLIENTEDGE, WC_TREEVIEWA, RAWRXD_IDE_LABEL_FILE_EXPLORER,
                         WS_CHILD | TVS_HASLINES | TVS_HASBUTTONS | TVS_LINESATROOT | TVS_SHOWSELALWAYS, 0, 30,
                         SIDEBAR_DEFAULT_WIDTH, 570, hwndParent, (HMENU)IDC_EXPLORER_TREE, m_hInstance, nullptr);
     if (!m_hwndExplorerTree)
     {
+=======
+    m_hwndExplorerTree = CreateWindowExA(
+        WS_EX_CLIENTEDGE, WC_TREEVIEWA, RAWRXD_IDE_LABEL_FILE_EXPLORER,
+        WS_CHILD | TVS_HASLINES | TVS_HASBUTTONS | TVS_LINESATROOT | TVS_SHOWSELALWAYS,
+        0, 30, SIDEBAR_DEFAULT_WIDTH, 570,
+        hwndParent, (HMENU)IDC_EXPLORER_TREE, m_hInstance, nullptr
+    );
+    if (!m_hwndExplorerTree) {
+>>>>>>> origin/main
         appendToOutput("Failed to create Explorer TreeView\n", "Output", OutputSeverity::Error);
         return;
     }
@@ -985,11 +1262,17 @@ void Win32IDE::expandFolder(const std::string& path)
         }
     }
 
+<<<<<<< HEAD
     if (!alreadyLoaded)
     {
         // Remove any "Loading..." dummy children before populating
         while (hChild)
         {
+=======
+    if (!alreadyLoaded) {
+        // Remove any "Loading..." dummy children before populating
+        while (hChild) {
+>>>>>>> origin/main
             HTREEITEM hNext = TreeView_GetNextSibling(m_hwndExplorerTree, hChild);
             TreeView_DeleteItem(m_hwndExplorerTree, hChild);
             hChild = hNext;
@@ -1021,10 +1304,15 @@ void Win32IDE::expandFolder(const std::string& path)
                     if (hNew)
                     {
                         m_treeItemPaths[hNew] = entry.path().string();
+<<<<<<< HEAD
                         // Add dummy child for subdirectories so expand arrow shows (intentional UX: "Loading..." until
                         // expanded)
                         if (entry.is_directory())
                         {
+=======
+                        // Add dummy child for subdirectories so expand arrow shows (intentional UX: "Loading..." until expanded)
+                        if (entry.is_directory()) {
+>>>>>>> origin/main
                             TVINSERTSTRUCTA dummy = {};
                             dummy.hParent = hNew;
                             dummy.hInsertAfter = TVI_FIRST;
@@ -1072,12 +1360,15 @@ void Win32IDE::newFileInExplorer()
         LOG_INFO("New file created from Explorer");
         appendToOutput("New file created from Explorer\n", "Explorer", OutputSeverity::Info);
     }
+<<<<<<< HEAD
     catch (const std::exception& e)
     {
         LOG_CRITICAL(std::string("Exception during new file creation: ") + e.what());
         MessageBoxA(m_hwndMain, "An unexpected error occurred while creating the file.", "System Error",
                     MB_ICONERROR | MB_OK);
     }
+=======
+>>>>>>> origin/main
 }
 
 void Win32IDE::newFolderInExplorer()
@@ -1143,11 +1434,17 @@ void Win32IDE::deleteItemInExplorer(const std::string& path)
 void Win32IDE::deleteItemInExplorer()
 {
     HTREEITEM hSelected = TreeView_GetSelection(m_hwndExplorerTree);
+<<<<<<< HEAD
     if (!hSelected)
         return;
     std::string fullPath = getTreeItemPath(hSelected);
     if (!fullPath.empty())
         deleteItemInExplorer(fullPath);
+=======
+    if (!hSelected) return;
+    std::string fullPath = getTreeItemPath(hSelected);
+    if (!fullPath.empty()) deleteItemInExplorer(fullPath);
+>>>>>>> origin/main
 }
 
 void Win32IDE::renameItemInExplorer(const std::string& oldPath)
@@ -1169,10 +1466,15 @@ void Win32IDE::renameItemInExplorer(const std::string& oldPath)
         try
         {
             std::filesystem::rename(oldPath, newPath);
+<<<<<<< HEAD
             if (m_hwndExplorerTree)
                 refreshFileTree();
             if (m_hwndFileExplorer)
                 refreshFileExplorer();
+=======
+            if (m_hwndExplorerTree) refreshFileTree();
+            if (m_hwndFileExplorer) refreshFileExplorer();
+>>>>>>> origin/main
             appendToOutput("Renamed: " + oldPath + " -> " + newPath + "\n", "Output", OutputSeverity::Info);
         }
         catch (const std::exception& e)
@@ -1232,6 +1534,7 @@ void Win32IDE::handleExplorerContextMenu(POINT pt)
     AppendMenuA(hMenu, MF_STRING, IDC_CTX_RENAME, "Rename");
     int cmd = (int)TrackPopupMenu(hMenu, TPM_RIGHTBUTTON | TPM_RETURNCMD, pt.x, pt.y, 0, m_hwndMain, nullptr);
     DestroyMenu(hMenu);
+<<<<<<< HEAD
     if (cmd == IDC_CTX_DELETE)
         deleteItemInExplorer();
     else if (cmd == IDC_CTX_RENAME)
@@ -1240,6 +1543,12 @@ void Win32IDE::handleExplorerContextMenu(POINT pt)
         newFileInExplorer();
     else if (cmd == IDC_EXPLORER_NEW_FOLDER)
         newFolderInExplorer();
+=======
+    if (cmd == IDC_CTX_DELETE) deleteItemInExplorer();
+    else if (cmd == IDC_CTX_RENAME) renameItemInExplorer();
+    else if (cmd == IDC_EXPLORER_NEW_FILE) newFileInExplorer();
+    else if (cmd == IDC_EXPLORER_NEW_FOLDER) newFolderInExplorer();
+>>>>>>> origin/main
 }
 
 LRESULT CALLBACK Win32IDE::ExplorerTreeProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -1259,6 +1568,7 @@ LRESULT CALLBACK Win32IDE::ExplorerTreeProc(HWND hwnd, UINT uMsg, WPARAM wParam,
             return 0;
         }
 
+<<<<<<< HEAD
         case WM_LBUTTONDBLCLK:
         {
             if (pThis)
@@ -1323,6 +1633,46 @@ LRESULT CALLBACK Win32IDE::ExplorerTreeProc(HWND hwnd, UINT uMsg, WPARAM wParam,
                             {
                                 pThis->appendToOutput("File not found: " + filePath + "\n", "Output",
                                                       OutputSeverity::Warning);
+=======
+    case WM_LBUTTONDBLCLK: {
+        if (pThis) {
+            HTREEITEM hItem = TreeView_GetSelection(hwnd);
+            if (hItem) {
+                TVITEMA item = {};
+                char text[260];
+                item.mask = TVIF_TEXT | TVIF_PARAM;
+                item.pszText = text;
+                item.cchTextMax = 260;
+                item.hItem = hItem;
+                
+                if (TreeView_GetItem(hwnd, &item)) {
+                    if (item.lParam == 0) { // File, not folder
+                        // Phase 37: Use m_treeItemPaths for correct full path
+                        // (handles nested directories properly)
+                        std::string filePath;
+                        auto pathIt = pThis->m_treeItemPaths.find(hItem);
+                        if (pathIt != pThis->m_treeItemPaths.end()) {
+                            filePath = pathIt->second;
+                        } else {
+                            // Fallback: build path by walking tree parents
+                            std::string fullPath;
+                            HTREEITEM hCurrent = hItem;
+                            while (hCurrent) {
+                                TVITEMA parentItem = {};
+                                char parentText[260] = {};
+                                parentItem.mask = TVIF_TEXT;
+                                parentItem.pszText = parentText;
+                                parentItem.cchTextMax = 260;
+                                parentItem.hItem = hCurrent;
+                                if (TreeView_GetItem(hwnd, &parentItem)) {
+                                    if (fullPath.empty()) {
+                                        fullPath = parentText;
+                                    } else {
+                                        fullPath = std::string(parentText) + "\\" + fullPath;
+                                    }
+                                }
+                                hCurrent = TreeView_GetParent(hwnd, hCurrent);
+>>>>>>> origin/main
                             }
                         }
                         else
@@ -1330,6 +1680,12 @@ LRESULT CALLBACK Win32IDE::ExplorerTreeProc(HWND hwnd, UINT uMsg, WPARAM wParam,
                             // Folder: toggle expand/collapse
                             TreeView_Expand(hwnd, hItem, TVE_TOGGLE);
                         }
+<<<<<<< HEAD
+=======
+                    } else {
+                        // Folder: toggle expand/collapse
+                        TreeView_Expand(hwnd, hItem, TVE_TOGGLE);
+>>>>>>> origin/main
                     }
                 }
             }
@@ -1416,12 +1772,19 @@ void Win32IDE::performWorkspaceSearch(const std::string& query, bool useRegex, b
             while (std::getline(file, line))
             {
                 lineNum++;
+<<<<<<< HEAD
                 if (useRegex)
                 {
                     if (std::regex_search(line, pattern))
                     {
                         std::string result =
                             entry.path().filename().string() + " (" + std::to_string(lineNum) + "): " + line;
+=======
+                if (useRegex) {
+                    if (std::regex_search(line, pattern)) {
+                        std::string result = entry.path().filename().string() +
+                                             " (" + std::to_string(lineNum) + "): " + line;
+>>>>>>> origin/main
                         m_searchResults.push_back(result);
                         if (m_hwndSearchResults)
                             SendMessageA(m_hwndSearchResults, LB_ADDSTRING, 0, (LPARAM)result.c_str());
@@ -1450,8 +1813,13 @@ void Win32IDE::performWorkspaceSearch(const std::string& query, bool useRegex, b
     }
 
     m_searchInProgress = false;
+<<<<<<< HEAD
     appendToOutput("Search complete: " + std::to_string(m_searchResults.size()) + " results\n", "Output",
                    OutputSeverity::Info);
+=======
+    appendToOutput("Search complete: " + std::to_string(m_searchResults.size()) + " results\n",
+                   "Output", OutputSeverity::Info);
+>>>>>>> origin/main
 }
 
 void Win32IDE::updateSearchResults(const std::vector<std::string>& results)
@@ -1552,8 +1920,13 @@ void Win32IDE::applySearchFilters(const std::string& includePattern, const std::
     m_searchResults = filtered;
     updateSearchResults(filtered);
 
+<<<<<<< HEAD
     appendToOutput("Search filtered: " + std::to_string(filtered.size()) + " results (include: " + includePattern +
                        ", exclude: " + excludePattern + ")\n",
+=======
+    appendToOutput("Search filtered: " + std::to_string(filtered.size()) + " results (include: " +
+                   includePattern + ", exclude: " + excludePattern + ")\n",
+>>>>>>> origin/main
                    "Output", OutputSeverity::Info);
 }
 
@@ -1568,8 +1941,12 @@ void Win32IDE::searchInFiles(const std::string& query)
     performWorkspaceSearch(query, useRegex, caseSensitive, wholeWord);
 }
 
+<<<<<<< HEAD
 void Win32IDE::runWorkspaceSearchFromDialog(const std::string& query)
 {
+=======
+void Win32IDE::runWorkspaceSearchFromDialog(const std::string& query) {
+>>>>>>> origin/main
     performWorkspaceSearch(query, false, false, false);
 }
 
@@ -1578,9 +1955,13 @@ void Win32IDE::replaceInFiles(const std::string& searchText, const std::string& 
     if (searchText.empty())
         return;
 
+<<<<<<< HEAD
     if (MessageBoxW(m_hwndMain, L"Replace occurrences across workspace?", L"Confirm Replace",
                     MB_YESNO | MB_ICONQUESTION) != IDYES)
         return;
+=======
+    if (MessageBoxW(m_hwndMain, L"Replace occurrences across workspace?", L"Confirm Replace", MB_YESNO | MB_ICONQUESTION) != IDYES) return;
+>>>>>>> origin/main
 
     size_t totalReplacements = 0;
     try
@@ -2179,8 +2560,12 @@ std::string Win32IDE::debugConsoleHistoryNext()
 
 void Win32IDE::updateDebugVariables()
 {
+<<<<<<< HEAD
     if (!m_debuggingActive || !m_hwndDebugVariables)
         return;
+=======
+    if (!m_debuggingActive || !m_hwndDebugVariables) return;
+>>>>>>> origin/main
     LOG_FUNCTION();
 
     ListView_DeleteAllItems(m_hwndDebugVariables);
@@ -2273,9 +2658,18 @@ void Win32IDE::createExtensionsView(HWND hwndParent)
                     (HMENU)IDC_EXT_DETAILS, m_hInstance, nullptr);
 
     // Extensions list (shifted down to make room for buttons)
+<<<<<<< HEAD
     m_hwndExtensionsList =
         CreateWindowExA(WS_EX_CLIENTEDGE, WC_LISTVIEWA, "", WS_CHILD | LVS_REPORT | LVS_SINGLESEL | WS_VSCROLL, 5, 68,
                         SIDEBAR_DEFAULT_WIDTH - 10, 527, hwndParent, (HMENU)IDC_EXT_LIST, m_hInstance, nullptr);
+=======
+    m_hwndExtensionsList = CreateWindowExA(
+        WS_EX_CLIENTEDGE, WC_LISTVIEWA, "",
+        WS_CHILD | LVS_REPORT | LVS_SINGLESEL | WS_VSCROLL,
+        5, 68, SIDEBAR_DEFAULT_WIDTH - 10, 527,
+        hwndParent, (HMENU)IDC_EXT_LIST, m_hInstance, nullptr
+    );
+>>>>>>> origin/main
 
     // Setup columns
     LVCOLUMNA col = {};
@@ -2359,8 +2753,12 @@ void Win32IDE::searchExtensions(const std::string& query)
             if (alreadyLoaded)
                 continue;
 
+<<<<<<< HEAD
             if (lowerQuery.empty() || lowerDir.find(lowerQuery) != std::string::npos)
             {
+=======
+            if (lowerQuery.empty() || lowerDir.find(lowerQuery) != std::string::npos) {
+>>>>>>> origin/main
                 s_extensionDisplayIds.push_back(dirName);
                 item.iItem = idx;
                 item.iSubItem = 0;
@@ -2376,8 +2774,13 @@ void Win32IDE::searchExtensions(const std::string& query)
         }
     }
 
+<<<<<<< HEAD
     appendToOutput("Extension search '" + query + "': " + std::to_string(idx) + " results\n", "Output",
                    OutputSeverity::Info);
+=======
+    appendToOutput("Extension search '" + query + "': " + std::to_string(idx) + " results\n",
+                   "Output", OutputSeverity::Info);
+>>>>>>> origin/main
 }
 
 void Win32IDE::installExtension(const std::string& extensionId)
@@ -2504,6 +2907,7 @@ void Win32IDE::installFromVSIXFile()
         }
         MessageBoxW(m_hwndMain, L"Extension installed successfully.", L"VSIX Install", MB_OK | MB_ICONINFORMATION);
     }
+<<<<<<< HEAD
     else
     {
         appendToOutput("Failed to install VSIX: " + utf8Path + "\n", "Output", OutputSeverity::Error);
@@ -2512,6 +2916,8 @@ void Win32IDE::installFromVSIXFile()
             L"Installation failed. Set RAWRXD_ALLOW_UNSIGNED_EXTENSIONS=1 for unsigned extensions. See Output panel.",
             L"VSIX Install", MB_OK | MB_ICONWARNING);
     }
+=======
+>>>>>>> origin/main
 }
 
 void Win32IDE::uninstallExtension(const std::string& extensionId)
@@ -2752,8 +3158,12 @@ void Win32IDE::loadInstalledExtensions()
                     dirName = entry.path().stem().string();
                 }
             }
+<<<<<<< HEAD
             if (!entry.is_directory() && !isVsix)
                 continue;
+=======
+            if (!entry.is_directory() && !isVsix) continue;
+>>>>>>> origin/main
 
             // Skip if already in the list
             bool found = false;
@@ -3061,8 +3471,12 @@ void Win32IDE::updateTimelineView()
 
 void Win32IDE::loadGitHistory()
 {
+<<<<<<< HEAD
     if (m_currentFile.empty() || !isGitRepository())
     {
+=======
+    if (m_currentFile.empty() || !isGitRepository()) {
+>>>>>>> origin/main
         // Fallback timeline entry when not in a Git repo or no file open
         TimelineEntry entry;
         entry.message = "File opened";

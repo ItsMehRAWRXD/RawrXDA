@@ -97,6 +97,7 @@ std::vector<std::string> AutonomyManager::getMemorySnapshot()
     return m_memory;
 }
 
+<<<<<<< HEAD
 // E1: workspace root injected into initial prompt
 // E2: TASK_COMPLETE detection stops loop cleanly without NOOP spin
 // E3: observation ring-buffer capped at 512 (was 2048) to reduce memory
@@ -106,6 +107,9 @@ std::vector<std::string> AutonomyManager::getMemorySnapshot()
 // E7: rateLimitAllow uses per-minute sliding window (was fixed 60s reset)
 void AutonomyManager::tick()
 {
+=======
+void AutonomyManager::tick() {
+>>>>>>> origin/main
     SCOPED_METRIC("autonomy.tick");
     if (!m_running.load())
         return;
@@ -144,11 +148,18 @@ void AutonomyManager::loop()
 std::string AutonomyManager::planNextAction()
 {
     std::lock_guard<std::mutex> lock(m_mutex);
+<<<<<<< HEAD
     if (m_goal.empty())
     {
         return "NOOP";
     }
 
+=======
+    if (m_goal.empty()) {
+        return "NOOP";
+    }
+    
+>>>>>>> origin/main
     // Use last observation to drive the loop
     if (m_memory.empty())
     {
@@ -219,14 +230,22 @@ std::string AutonomyManager::planNextAction()
 void AutonomyManager::executeAction(const std::string& action)
 {
     SCOPED_METRIC("autonomy.execute_action");
+<<<<<<< HEAD
     if (action == "NOOP")
     {
+=======
+    if (action == "NOOP") {
+>>>>>>> origin/main
         LOG_DEBUG("Planner produced NOOP");
         return;
     }
     METRICS.increment("autonomy.actions_executed");
+<<<<<<< HEAD
     if (!m_bridge || !m_bridge->IsInitialized())
     {
+=======
+    if (!m_bridge || !m_bridge->IsInitialized()) {
+>>>>>>> origin/main
         LOG_WARNING("Bridge not initialized; cannot execute action: " + action);
         // m_onOutput is always callable (initialised to no-op in ctor; replaced by
         // setOutputCallback so the message reaches the IDE output panel).
@@ -275,9 +294,13 @@ void AutonomyManager::executeAction(const std::string& action)
         {
             addObservation("ANSWER:" + resp.content);
         }
+<<<<<<< HEAD
     }
     else
     {
+=======
+    } else {
+>>>>>>> origin/main
         auto resp = m_bridge->ExecuteAgentCommand(action);
         addObservation("RAW:" + resp.content);
     }

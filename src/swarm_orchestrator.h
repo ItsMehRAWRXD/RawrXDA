@@ -57,11 +57,15 @@ public:
     void shutdown();
 
     // Matching .cpp implementation
+<<<<<<< HEAD
 #if defined(__cpp_lib_expected) || (defined(_MSVC_LANG) && _MSVC_LANG >= 202202L)
     std::expected<SwarmResult, int> executeTask(const std::string& task, const std::string& context);
 #else
     RawrXD::Expected<SwarmResult, int> executeTask(const std::string& task, const std::string& context);
 #endif
+=======
+    std::expected<SwarmResult, int> executeTask(const std::string& task, const std::string& context);
+>>>>>>> origin/main
     std::future<SwarmResult> submitTaskAsync(const std::string& taskDesc, const std::string& context); // .cpp name
     // Also provide alias for submitTask which might be used by others
     std::future<SwarmResult> submitTask(const std::string& desc, const std::string& ctx) {

@@ -39,6 +39,12 @@
 #include <fcntl.h>
 #else
 #include <unistd.h>
+<<<<<<< HEAD
+=======
+
+// SCAFFOLD_143: LSP server RawrXD (if present)
+
+>>>>>>> origin/main
 #endif
 
 using json = nlohmann::json;

@@ -103,6 +103,7 @@ private:
     void *m_active_model_label;
 
     // Charts
+<<<<<<< HEAD
 // Native: cost chart (Win32: GDI/Direct2D)
     QChart *m_cost_chart;
     QPieSeries *m_cost_pie_series;
@@ -112,6 +113,17 @@ private:
     QBarSeries *m_latency_bar_series;
 
 // Native: success-rate chart (Win32: GDI/Direct2D)
+=======
+// REMOVED_QT:     QChartView *m_cost_chart_view;
+    QChart *m_cost_chart;
+    QPieSeries *m_cost_pie_series;
+
+// REMOVED_QT:     QChartView *m_latency_chart_view;
+    QChart *m_latency_chart;
+    QBarSeries *m_latency_bar_series;
+
+// REMOVED_QT:     QChartView *m_success_rate_chart_view;
+>>>>>>> origin/main
     QChart *m_success_rate_chart;
     QLineSeries *m_success_rate_line_series;
 

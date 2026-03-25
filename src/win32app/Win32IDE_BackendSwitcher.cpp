@@ -14,6 +14,7 @@
 //   - No auto-routing (explicit user selection only)
 // ============================================================================
 
+<<<<<<< HEAD
 #include "../agent/local_reasoning_integration.hpp"
 #include "../agentic/AgentOllamaClient.h"
 #include "../modules/vsix_loader.h"
@@ -26,6 +27,17 @@
 #include <fstream>
 #include <sstream>
 #include <winhttp.h>
+=======
+#include "Win32IDE.h"
+#include "../modules/vsix_loader.h"
+#include <winhttp.h>
+#include <fstream>
+#include <sstream>
+#include <filesystem>
+#include <chrono>
+#include <algorithm>
+#include "../agent/local_reasoning_integration.hpp"
+>>>>>>> origin/main
 
 // nlohmann/json already included via Win32IDE.h
 
@@ -612,9 +624,14 @@ bool Win32IDE::probeBackendHealth(AIBackendType type)
                 error = "No API key configured";
             break;
         }
+<<<<<<< HEAD
         case AIBackendType::ReasoningEngine:
         {
             healthy = true;  // Local static reasoning engine always available
+=======
+        case AIBackendType::ReasoningEngine: {
+            healthy = true; // Local static reasoning engine always available
+>>>>>>> origin/main
             break;
         }
         case AIBackendType::GitHubCopilot:
@@ -983,8 +1000,12 @@ std::string Win32IDE::routeToGemini(const std::string& prompt)
     }
 }
 
+<<<<<<< HEAD
 std::string Win32IDE::routeToReasoningEngine(const std::string& prompt)
 {
+=======
+std::string Win32IDE::routeToReasoningEngine(const std::string& prompt) {
+>>>>>>> origin/main
     // Phase 14B: Direct Integration of converted LocalReasoningEngine
     // This uses the pure C++20 engine to analyze the context of the prompt.
 

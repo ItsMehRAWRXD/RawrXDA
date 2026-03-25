@@ -590,13 +590,21 @@ public:
                 // Try NASM first
                 std::string asmCmd = "nasm -f " + asmFormat + " \"" + asmFile + "\" -o \"" + objFile + "\"";
                 if (options.verbose) std::cout << "[ASM] " << asmCmd << "\n";
+<<<<<<< HEAD
                 if (runBuildTool(asmCmd) == 0) {
+=======
+                if (std::system(asmCmd.c_str()) == 0) {
+>>>>>>> origin/main
                     assembled = true;
                 } else {
                     // Try MASM (ml64) on Windows
                     asmCmd = "ml64 /nologo /c /Fo\"" + objFile + "\" \"" + asmFile + "\"";
                     if (options.verbose) std::cout << "[ASM] " << asmCmd << "\n";
+<<<<<<< HEAD
                     if (runBuildTool(asmCmd) == 0) {
+=======
+                    if (std::system(asmCmd.c_str()) == 0) {
+>>>>>>> origin/main
                         assembled = true;
                     }
                 }
@@ -638,7 +646,11 @@ public:
                     }
                     
                     if (options.verbose) std::cout << "[LINK] " << linkCmd << "\n";
+<<<<<<< HEAD
                     if (runBuildTool(linkCmd) == 0) {
+=======
+                    if (std::system(linkCmd.c_str()) == 0) {
+>>>>>>> origin/main
                         linked = true;
                     } else {
                         // Try GCC linker as fallback
@@ -652,7 +664,11 @@ public:
                         for (const auto& lib : options.libraries) gccLink += " -l\"" + lib + "\"";
                         
                         if (options.verbose) std::cout << "[LINK] " << gccLink << "\n";
+<<<<<<< HEAD
                         if (runBuildTool(gccLink) == 0) {
+=======
+                        if (std::system(gccLink.c_str()) == 0) {
+>>>>>>> origin/main
                             linked = true;
                         } else {
                             Diagnostic diag;
@@ -914,7 +930,11 @@ private:
         }
 
         if (options.verbose) std::cout << "[System] " << cmd << "\n";
+<<<<<<< HEAD
         return (runCmd(cmd) == 0);
+=======
+        return (std::system(cmd.c_str()) == 0);
+>>>>>>> origin/main
     }
 
     bool tokenize(const std::string& source, CompileResult& result) {
