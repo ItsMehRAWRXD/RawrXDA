@@ -398,7 +398,7 @@ static FeatureEntry g_featureManifest[] = {
 
     // ========================== VISION ENCODER ==========================
     {"vision.load", "Load Vision Model", "Load CLIP/LLaVA vision model for image analysis",
-     FeatureCategory::AIMode, 0, "", "Win32IDE_VisionEncoder.cpp",
+    FeatureCategory::AIMode, 11530, "", "Win32IDE_VisionEncoder.cpp",
         FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},  // IDM_VISION_LOAD_FILE=11530
     
     {"vision.encode", "Encode Image", "Convert image to vision embeddings",

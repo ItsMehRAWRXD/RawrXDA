@@ -1973,8 +1973,23 @@ void bgInitBody(void* self);
 
 namespace {
 
+bool initializeEnterpriseSubsystems(Win32IDE* ide);
+
 #ifdef _WIN32
-thread_local DWORD g_enterpriseInitSehCode = 0;
+int initializeEnterpriseSubsystemsSehThunk(Win32IDE* ide, DWORD* sehCode)
+{
+    __try
+    {
+        initializeEnterpriseSubsystems(ide);
+        if (sehCode)
+            *sehCode = 0;
+        return 1;
+    }
+    __except ((sehCode ? (*sehCode = GetExceptionCode()) : 0), EXCEPTION_EXECUTE_HANDLER)
+    {
+        return 0;
+    }
+}
 #endif
 
 bool initializeEnterpriseSubsystems(Win32IDE* ide)
@@ -2000,22 +2015,21 @@ bool initializeEnterpriseSubsystems(Win32IDE* ide)
 #ifdef _WIN32
 bool initializeEnterpriseSubsystemsSafe(Win32IDE* ide)
 {
-    __try
+    DWORD sehCode = 0;
+    if (initializeEnterpriseSubsystemsSehThunk(ide, &sehCode) != 0)
     {
-        return initializeEnterpriseSubsystems(ide);
+        return true;
     }
-    __except ((g_enterpriseInitSehCode = GetExceptionCode()), EXCEPTION_EXECUTE_HANDLER)
-    {
-        char sehMsg[192] = {};
-        sprintf_s(sehMsg,
-                  "ERROR: Enterprise license SEH faulted (code=0x%08lX); continuing in community mode\n",
-                  static_cast<unsigned long>(g_enterpriseInitSehCode));
-        LOG_ERROR(sehMsg);
-        OutputDebugStringA(sehMsg);
-        OutputDebugStringA("ERROR: Enterprise license SEH faulted; continuing in community mode\n");
-        PostMessage(ide->getMainWindow(), WM_USER + 200, 0, reinterpret_cast<LPARAM>(_strdup("[Community]")));
-        return false;
-    }
+
+    char sehMsg[192] = {};
+    sprintf_s(sehMsg,
+              "ERROR: Enterprise license SEH faulted (code=0x%08lX); continuing in community mode",
+              static_cast<unsigned long>(sehCode));
+    LOG_ERROR(sehMsg);
+    OutputDebugStringA(sehMsg);
+    OutputDebugStringA("\n");
+    PostMessage(ide->getMainWindow(), WM_USER + 200, 0, reinterpret_cast<LPARAM>(_strdup("[Community]")));
+    return false;
 }
 #else
 bool initializeEnterpriseSubsystemsSafe(Win32IDE* ide)
