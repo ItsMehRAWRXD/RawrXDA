@@ -1875,12 +1875,14 @@ extern "C"
         g_soState.metrics.bytes_streamed += static_cast<uint64_t>(g_quadbufState.tokenStream.size() * sizeof(uint32_t));
         return static_cast<int>(g_quadbufState.tokenStream.size());
     }
+    #ifndef RAWRXD_DISABLE_DUPLICATE_SHIMS
     int asm_quadbuf_shutdown()
     {
         std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
         g_quadbufState = {};
         return 0;
     }
+    #endif
     int asm_gguf_loader_lookup(const char* symbolName)
     {
         if (!symbolName || symbolName[0] == '\0')
@@ -2005,12 +2007,14 @@ extern "C"
         g_ggufLoaderState = {};
         return 0;
     }
+    #ifndef RAWRXD_DISABLE_DUPLICATE_SHIMS
     int asm_spengine_shutdown()
     {
         std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
         g_spengineState = {};
         return 0;
     }
+    #endif
     int asm_lsp_bridge_get_stats(void* outStats)
     {
         if (!outStats)
@@ -3049,6 +3053,7 @@ extern "C"
         out[12] = g_neuralState.sampleRateHz;
         return 0;
     }
+    #ifndef RAWRXD_DISABLE_DUPLICATE_SHIMS
     int asm_omega_implement_generate(const void* requirementBlob, void* outArtifact)
     {
         if (!requirementBlob || !outArtifact)
@@ -3326,6 +3331,8 @@ extern "C"
         out[1] = crc;
         return 0;
     }
+    #endif
+
     int asm_perf_get_slot_count_v2()
     {
         return asm_perf_get_slot_count();
@@ -3335,6 +3342,7 @@ extern "C"
 }
 
 // VS Code extension bridge stubs
+#ifndef RAWRXD_DISABLE_DUPLICATE_SHIMS
 struct _TREEITEM;
 class Win32IDE
 {
@@ -3428,101 +3436,10 @@ void Win32IDE::onInferenceComplete(const std::string& result)
     state.outputLines.emplace_back("Inference complete: " + result);
 }
 
-// Robust Ollama parser stub
-namespace RawrXD::Agentic
-{
-std::vector<RobustOllamaParser::ModelEntry> RobustOllamaParser::parse_tags_response()
-{
-    std::vector<ModelEntry> entries;
-    if (m_input.empty())
-    {
-        return entries;
-    }
-
-    auto parseStringField = [&](std::string_view fieldName, size_t startPos) -> std::pair<std::string, size_t>
-    {
-        const std::string key = std::string("\"") + std::string(fieldName) + "\"";
-        const size_t keyPos = m_input.find(key, startPos);
-        if (keyPos == std::string_view::npos)
-        {
-            return {"", std::string_view::npos};
-        }
-        const size_t colonPos = m_input.find(':', keyPos + key.size());
-        if (colonPos == std::string_view::npos)
-        {
-            return {"", std::string_view::npos};
-        }
-        const size_t quoteStart = m_input.find('"', colonPos + 1);
-        if (quoteStart == std::string_view::npos)
-        {
-            return {"", std::string_view::npos};
-        }
-        const size_t quoteEnd = m_input.find('"', quoteStart + 1);
-        if (quoteEnd == std::string_view::npos)
-        {
-            return {"", std::string_view::npos};
-        }
-        return {std::string(m_input.substr(quoteStart + 1, quoteEnd - quoteStart - 1)), quoteEnd + 1};
-    };
-
-    size_t cursor = 0;
-    while (true)
-    {
-        auto [name, nextPos] = parseStringField("name", cursor);
-        if (nextPos == std::string_view::npos)
-        {
-            break;
-        }
-        ModelEntry entry{};
-        entry.name = name;
-        entry.model_id = name;
-        entry.parameter_size = 0;
-
-        auto [quant, quantPos] = parseStringField("quantization", cursor);
-        if (quantPos != std::string_view::npos)
-        {
-            entry.quantization = quant;
-        }
-        auto [family, familyPos] = parseStringField("family", cursor);
-        if (familyPos != std::string_view::npos)
-        {
-            entry.family = family;
-        }
-
-        const size_t paramKey = m_input.find("\"parameter_size\"", cursor);
-        if (paramKey != std::string_view::npos)
-        {
-            const size_t colonPos = m_input.find(':', paramKey);
-            if (colonPos != std::string_view::npos)
-            {
-                const char* begin = m_input.data() + colonPos + 1;
-                char* end = nullptr;
-                const unsigned long long parsed = std::strtoull(begin, &end, 10);
-                entry.parameter_size = static_cast<size_t>(parsed);
-            }
-        }
-
-        entries.push_back(std::move(entry));
-        cursor = nextPos;
-    }
-
-    if (entries.empty())
-    {
-        ModelEntry fallback{};
-        fallback.name = "unknown";
-        fallback.model_id = "unknown";
-        fallback.parameter_size = 0;
-        fallback.quantization = "unknown";
-        fallback.family = "unknown";
-        entries.push_back(std::move(fallback));
-    }
-    return entries;
-}
-}  // namespace RawrXD::Agentic
-
 // Batch 27: entry point fallback
 int main()
 {
     const int slots = asm_perf_get_slot_count_v2();
     return slots > 0 ? 0 : 1;
 }
+#endif

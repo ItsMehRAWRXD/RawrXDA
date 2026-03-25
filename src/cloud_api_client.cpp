@@ -5,10 +5,20 @@
 #include <winhttp.h>
 #include <thread>
 #include <mutex>
+#include <algorithm>
+#include <cctype>
 
 #pragma comment(lib, "winhttp.lib")
 
 namespace RawrXD {
+
+// Hotpatch: trim whitespace from both ends of a string
+static std::string trimWhitespace(const std::string& s) {
+    auto first = s.find_first_not_of(" \t\n\r\f\v");
+    if (first == std::string::npos) return {};
+    auto last = s.find_last_not_of(" \t\n\r\f\v");
+    return s.substr(first, last - first + 1);
+}
 
 std::wstring s2ws(const std::string& s) {
     if (s.empty()) return L"";
@@ -160,13 +170,23 @@ ApiResponse CloudApiClient::performRequest(const std::string& url_str, const nlo
 }
 
 std::string CloudApiClient::generate(const std::string& prompt, const CloudModelConfig& config) {
-    auto body = buildRequestBody(prompt, config);
+    // Hotpatch: reject empty/whitespace-only prompts — Anthropic returns 400 otherwise
+    const std::string trimmed = trimWhitespace(prompt);
+    if (trimmed.empty()) {
+        return "Error: Request Failed: prompt must contain non-whitespace text";
+    }
+    auto body = buildRequestBody(trimmed, config);
     ApiResponse resp = performRequest(config.endpoint, body, config);
     if (resp.success) return resp.content;
-    return "Error: " + resp.error_message;
+    return "Error: Request Failed: " + std::to_string(resp.status_code) + " " + resp.error_message + (resp.raw_body.empty() ? "" : " " + resp.raw_body);
 }
 
 void CloudApiClient::generateAsync(const std::string& prompt, const CloudModelConfig& config, std::function<void(std::string)> callback) {
+    // Hotpatch: validate before spinning a thread
+    if (trimWhitespace(prompt).empty()) {
+        if (callback) callback("Error: Request Failed: prompt must contain non-whitespace text");
+        return;
+    }
     std::thread([this, prompt, config, callback]() {
         std::string result = this->generate(prompt, config);
         if (callback) callback(result);
@@ -174,8 +194,14 @@ void CloudApiClient::generateAsync(const std::string& prompt, const CloudModelCo
 }
 
 void CloudApiClient::generateStream(const std::string& prompt, const CloudModelConfig& config, std::function<void(const std::string&)> token_callback, std::function<void(const std::string&)> complete_callback) {
+    // Hotpatch: reject empty/whitespace-only prompts before streaming starts
+    if (trimWhitespace(prompt).empty()) {
+        if (complete_callback) complete_callback("Error: Request Failed: prompt must contain non-whitespace text");
+        return;
+    }
     std::thread([this, prompt, config, token_callback, complete_callback]() {
-        auto body = buildRequestBody(prompt, config);
+        const std::string trimmed = trimWhitespace(prompt);
+        auto body = buildRequestBody(trimmed, config);
         body["stream"] = true;
         
         auto streamProcessor = [token_callback](const std::string& chunk) {
@@ -211,19 +237,22 @@ void CloudApiClient::listModelsAsync(const CloudModelConfig& config, std::functi
 }
 
 nlohmann::json CloudApiClient::buildRequestBody(const std::string& prompt, const CloudModelConfig& config) {
+    // Hotpatch: always use a trimmed, non-empty content value
+    const std::string safePrompt = trimWhitespace(prompt);
+    const std::string content = safePrompt.empty() ? " " : safePrompt;
     nlohmann::json body;
     if (config.provider == "openai" || config.provider == "azure") {
         body["model"] = config.model;
-        body["messages"] = nlohmann::json::array({ nlohmann::json::object({{"role", "user"}, {"content", prompt}}) });
+        body["messages"] = nlohmann::json::array({ nlohmann::json::object({{"role", "user"}, {"content", content}}) });
         body["temperature"] = config.temperature;
         body["max_tokens"] = config.maxTokens;
     } else if (config.provider == "anthropic") {
         body["model"] = config.model;
-        body["messages"] = nlohmann::json::array({ nlohmann::json::object({{"role", "user"}, {"content", prompt}}) });
+        body["messages"] = nlohmann::json::array({ nlohmann::json::object({{"role", "user"}, {"content", content}}) });
         body["max_tokens"] = config.maxTokens;
     } else {
         body["model"] = config.model;
-        body["prompt"] = prompt;
+        body["prompt"] = content;
         body["stream"] = false;
     }
     return body;

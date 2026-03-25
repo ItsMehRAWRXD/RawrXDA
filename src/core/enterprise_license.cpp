@@ -49,6 +49,25 @@ namespace
 {
 constexpr uint64_t kTrialDurationUs = 30ULL * 24ULL * 60ULL * 60ULL * 1000000ULL;
 
+#ifdef _WIN32
+__declspec(noinline) int32_t callShieldInitializeDefenseSafe() noexcept
+{
+    __try
+    {
+        return Shield_InitializeDefense();
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER)
+    {
+        return 0;
+    }
+}
+#else
+int32_t callShieldInitializeDefenseSafe() noexcept
+{
+    return Shield_InitializeDefense();
+}
+#endif
+
 uint64_t nowUs()
 {
     using namespace std::chrono;
@@ -254,7 +273,11 @@ bool EnterpriseLicense::Initialize()
     LOG_INFO("[EnterpriseLicense] v2 — Initializing defense shield...");
 
     // ---- Phase 1: Shield Defense (5-layer anti-tamper) ----
-    int32_t shieldResult = Shield_InitializeDefense();
+    int32_t shieldResult = callShieldInitializeDefenseSafe();
+    if (shieldResult == 0)
+    {
+        LOG_WARNING("[EnterpriseLicense] Shield initialization failed/crashed — entering tampered community mode");
+    }
     if (shieldResult == 0)
     {
         LOG_ERROR("[EnterpriseLicense] SHIELD TAMPER DETECTED — defense layers failed");

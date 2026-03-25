@@ -426,7 +426,7 @@ void AdvancedAgentCoordinator::handleAgentFailure(const std::string& agentId, co
     FailureRecovery recovery;
     recovery.failedAgentId = agentId;
     recovery.failureTime = std::chrono::steady_clock::now();
-    recovery.failureInProgress = true;
+    recovery.recoveryInProgress = true;
 
     // Find orphaned tasks (simplified - in practice, track task-to-agent mapping)
     // recovery.orphanedTasks = getTasksForAgent(agentId);

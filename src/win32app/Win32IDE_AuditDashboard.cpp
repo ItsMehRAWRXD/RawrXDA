@@ -1159,13 +1159,14 @@ void Win32IDE::cmdAuditDetectStubs() {
     }
     appendToOutput(oss.str(), "Audit", Win32IDE::OutputSeverity::Info);
 
-    wchar_t msg[256];
-    _snwprintf_s(msg, 255,
-                  L"Stub Detection Complete\n\n"
-                  L"Total Features: %zu\n"
-                  L"Stubs Found: %zu",
-                  total, stubs);
-    MessageBoxW(m_hwndMain, msg, L"Stub Detection", MB_OK | MB_ICONINFORMATION);
+    // Output a non-blocking summary line — the full per-stub details are already
+    // in the block emitted above, so a modal dialog adds no extra information.
+    std::ostringstream summary;
+    summary << "[Audit] Stub detection complete — total: " << total
+            << ", stubs: " << stubs << ". See 'Audit' tab for details.\n";
+    appendToOutput(summary.str(), "Audit",
+                   stubs > 0 ? Win32IDE::OutputSeverity::Warning
+                             : Win32IDE::OutputSeverity::Info);
 }
 
 void Win32IDE::cmdAuditCheckMenus() {

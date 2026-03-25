@@ -224,6 +224,14 @@ void Win32IDE::showModelStatus(const std::string& text, int durationMs) {
     }
 }
 
+void Win32IDE::showModelLoadError(const std::string& detail) {
+    const std::string msg = "Model load failed: " + detail;
+    if (m_hwndStatusBar) {
+        SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)msg.c_str());
+    }
+    appendToOutput(msg + "\n", "Errors", OutputSeverity::Error);
+}
+
 // ============================================================================
 // PROGRESS WINDOW PROC — handles painting for the progress container
 // ============================================================================

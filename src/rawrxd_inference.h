@@ -49,6 +49,7 @@ class RawrXDInference {
     bool m_initialized = false;
     uint32_t m_contextLimit = 0;
     std::vector<float> m_lastLogits;
+    std::string m_lastLoadErrorMessage;
     
     // Helpers
     VkInstance CreateVulkanInstance() {
@@ -144,9 +145,16 @@ class RawrXDInference {
     }
 
 public:
+    const std::string& GetLastLoadErrorMessage() const { return m_lastLoadErrorMessage; }
+
     bool Initialize(const wchar_t* modelPath, 
                    const char* vocabPath,
                    const char* mergesPath) {
+        m_lastLoadErrorMessage.clear();
+        loader.SetLoadErrorCallback(
+            [this](const std::string& stage, const std::string& message) {
+                m_lastLoadErrorMessage = stage + ": " + message;
+            });
 #ifdef RAWR_ENABLE_VULKAN
         VkInstance instance = CreateVulkanInstance();
         if(!instance) return false;
@@ -164,6 +172,9 @@ public:
 #endif
         
         if (!loader.Load(modelPath, device, physDevice)) {
+            if (m_lastLoadErrorMessage.empty()) {
+                m_lastLoadErrorMessage = loader.GetLastLoadErrorMessage();
+            }
             printf("[RawrXD] Failed to load model\n");
             return false;
         }

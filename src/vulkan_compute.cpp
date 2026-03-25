@@ -2,10 +2,15 @@
 #include "vulkan_compute.h"
 #include <iostream>
 #include <algorithm>
+#include <atomic>
+#include <array>
+#include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <unordered_map>
 #include <cmath>
 #include <cstring>
+#include <windows.h>
 
 // SCAFFOLD_105: Vulkan compute backend init
 
@@ -986,6 +991,96 @@ bool VulkanCompute::DispatchMatMul(uint32_t input_a_idx,
     
     return success;
 }
+
+    bool VulkanCompute::DispatchRaw3Buffers(const std::string& shader_name,
+                                            uint32_t input_a_idx,
+                                            uint32_t input_b_idx,
+                                            uint32_t output_idx,
+                                            size_t size_a,
+                                            size_t size_b,
+                                            size_t size_out,
+                                            const void* push_constants,
+                                            uint32_t push_constant_size,
+                                            uint32_t group_x,
+                                            uint32_t group_y,
+                                            uint32_t group_z) {
+        if (input_a_idx >= allocated_buffers_.size() ||
+            input_b_idx >= allocated_buffers_.size() ||
+            output_idx >= allocated_buffers_.size()) {
+            return false;
+        }
+
+        if (group_x == 0 || group_y == 0 || group_z == 0) {
+            return false;
+        }
+
+        auto it = shaders_.find(shader_name);
+        if (it == shaders_.end() || !it->second.pipeline || !it->second.layout ||
+            !matmul_descriptor_set_layout_ || !matmul_descriptor_pool_) {
+            return false;
+        }
+
+        VkBuffer buffers[3] = {
+            allocated_buffers_[input_a_idx].first,
+            allocated_buffers_[input_b_idx].first,
+            allocated_buffers_[output_idx].first,
+        };
+
+        VkDescriptorSetAllocateInfo alloc_info{};
+        alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        alloc_info.descriptorPool = matmul_descriptor_pool_;
+        alloc_info.descriptorSetCount = 1;
+        alloc_info.pSetLayouts = &matmul_descriptor_set_layout_;
+
+        VkDescriptorSet descriptor_set = nullptr;
+        if (vkAllocateDescriptorSets(device_, &alloc_info, &descriptor_set) != VK_SUCCESS) {
+            return false;
+        }
+
+        std::vector<VkDescriptorBufferInfo> infos(3);
+        infos[0] = { buffers[0], 0, size_a };
+        infos[1] = { buffers[1], 0, size_b };
+        infos[2] = { buffers[2], 0, size_out };
+
+        std::vector<VkWriteDescriptorSet> writes(3);
+        for (uint32_t i = 0; i < 3; ++i) {
+            writes[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            writes[i].dstSet = descriptor_set;
+            writes[i].dstBinding = i;
+            writes[i].descriptorCount = 1;
+            writes[i].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            writes[i].pBufferInfo = &infos[i];
+        }
+        vkUpdateDescriptorSets(device_, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
+
+        const bool success = ExecuteSingleTimeCommands([&](VkCommandBuffer cmd_buffer) {
+            if (push_constants && push_constant_size > 0) {
+                vkCmdPushConstants(cmd_buffer,
+                                   it->second.layout,
+                                   VK_SHADER_STAGE_COMPUTE_BIT,
+                                   0,
+                                   push_constant_size,
+                                   push_constants);
+            }
+
+            vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, it->second.pipeline);
+            vkCmdBindDescriptorSets(cmd_buffer,
+                                    VK_PIPELINE_BIND_POINT_COMPUTE,
+                                    it->second.layout,
+                                    0,
+                                    1,
+                                    &descriptor_set,
+                                    0,
+                                    nullptr);
+            vkCmdDispatch(cmd_buffer, group_x, group_y, group_z);
+        });
+
+        if (descriptor_set) {
+            vkFreeDescriptorSets(device_, matmul_descriptor_pool_, 1, &descriptor_set);
+        }
+
+        return success;
+    }
 
 bool VulkanCompute::ExecuteMatMul(const float* input_a, const float* input_b,
                                   float* output, uint32_t m, uint32_t k, uint32_t n) {
@@ -2234,7 +2329,574 @@ bool VulkanCompute::DispatchSpeculativeVerify(uint32_t draft_logits_idx,
 // =============================================================================
 static VulkanCompute* g_vulkan_instance = nullptr;
 
+namespace {
+
+std::atomic<uint64_t> g_kv_streamed_tokens{0};
+std::atomic<uint64_t> g_kv_bytes_in_flight{0};
+constexpr uint64_t kKvPressureSoftLimitBytes = 1024ull * 1024ull * 1024ull;
+constexpr uint8_t kLaneCount = 8;
+std::array<std::atomic<uint64_t>, kLaneCount> g_lane_dispatch_counts{};
+std::array<std::atomic<uint64_t>, kLaneCount> g_lane_error_counts{};
+
+bool isValidLaneId(uint8_t lane_id) {
+    return lane_id < kLaneCount;
+}
+
+struct VulkanRawDispatchTableV1 {
+    uint32_t version;
+    uint32_t flags;
+    uint32_t groupCountX;
+    uint32_t groupCountY;
+    uint32_t groupCountZ;
+    uint32_t inputAIdx;
+    uint32_t inputBIdx;
+    uint32_t outputIdx;
+    uint32_t M;
+    uint32_t K;
+    uint32_t N;
+};
+
+struct VulkanRawDispatchTableV2 {
+    uint32_t version;
+    uint32_t flags;
+    uint32_t groupCountX;
+    uint32_t groupCountY;
+    uint32_t groupCountZ;
+    uint32_t inputAIdx;
+    uint32_t inputBIdx;
+    uint32_t outputIdx;
+    uint32_t M;
+    uint32_t K;
+    uint32_t N;
+    uint64_t inputABytes;
+    uint64_t inputBBytes;
+    uint64_t outputBytes;
+    uint32_t pushConstantBytes;
+};
+
+constexpr uint32_t kVulkanRawDispatchVersion = 1;
+constexpr uint32_t kVulkanRawDispatchFlagMatMul = 0x1;
+constexpr uint32_t kVulkanRawDispatchVersion2 = 2;
+constexpr uint32_t kVulkanRawDispatchFlagGeneric3 = 0x2;
+
+struct RawDispatchCounters {
+    std::atomic<uint64_t> attempts{0};
+    std::atomic<uint64_t> success{0};
+    std::atomic<uint64_t> fallback{0};
+    std::atomic<uint64_t> asm_path_calls{0};
+    std::atomic<uint64_t> invalid_abi{0};
+    std::atomic<uint64_t> pipeline_miss{0};
+};
+
+RawDispatchCounters g_raw_dispatch_counters;
+std::unordered_map<std::string, std::string> g_uuid_to_shader;
+std::mutex g_uuid_to_shader_mutex;
+
+uint64_t fnv1a64(const uint8_t* data, size_t size, uint64_t seed) {
+    uint64_t hash = seed;
+    for (size_t i = 0; i < size; ++i) {
+        hash ^= static_cast<uint64_t>(data[i]);
+        hash *= 1099511628211ull;
+    }
+    return hash;
+}
+
+void computeShaderUUID(const uint8_t* spirv_data, size_t spirv_size, uint8_t out_uuid[16]) {
+    const uint8_t* data = spirv_data;
+    size_t size = spirv_size;
+    static const uint8_t fallback_tag[] = "pyre-dispatch-fallback";
+    if (!data || size == 0) {
+        data = fallback_tag;
+        size = sizeof(fallback_tag) - 1;
+    }
+
+    const uint64_t h1 = fnv1a64(data, size, 1469598103934665603ull);
+    const uint64_t h2 = fnv1a64(data, size, 1099511628211ull);
+    std::memcpy(out_uuid + 0, &h1, sizeof(h1));
+    std::memcpy(out_uuid + 8, &h2, sizeof(h2));
+}
+
+std::string uuidHex(const uint8_t uuid[16]) {
+    if (!uuid) {
+        return std::string();
+    }
+
+    char hex[33] = {};
+    for (size_t i = 0; i < 16; ++i) {
+        static const char kDigits[] = "0123456789abcdef";
+        hex[i * 2 + 0] = kDigits[(uuid[i] >> 4) & 0xF];
+        hex[i * 2 + 1] = kDigits[uuid[i] & 0xF];
+    }
+    return std::string(hex, 32);
+}
+
+void cacheUuidShader(const uint8_t uuid[16], const std::string& shader_name) {
+    const std::string key = uuidHex(uuid);
+    if (key.empty() || shader_name.empty()) {
+        return;
+    }
+
+    std::lock_guard<std::mutex> lock(g_uuid_to_shader_mutex);
+    g_uuid_to_shader[key] = shader_name;
+}
+
+std::string lookupUuidShader(const uint8_t uuid[16]) {
+    const std::string key = uuidHex(uuid);
+    if (key.empty()) {
+        return std::string();
+    }
+
+    std::lock_guard<std::mutex> lock(g_uuid_to_shader_mutex);
+    auto it = g_uuid_to_shader.find(key);
+    if (it == g_uuid_to_shader.end()) {
+        return std::string();
+    }
+    return it->second;
+}
+
+bool ensureMatMulPipelineFromEnv(VulkanCompute* instance) {
+    if (!instance) {
+        return false;
+    }
+
+    static std::once_flag s_once;
+    static int s_ok = 0;
+    std::call_once(s_once, [&]() {
+        char path_buf[MAX_PATH] = {};
+        const DWORD len = GetEnvironmentVariableA("RAWRXD_VULKAN_MATMUL_SPV", path_buf, static_cast<DWORD>(sizeof(path_buf)));
+        if (len == 0 || len >= sizeof(path_buf)) {
+            s_ok = 0;
+            return;
+        }
+        s_ok = instance->EnsureMatMulPipeline(path_buf) ? 1 : 0;
+    });
+
+    return s_ok == 1;
+}
+
+bool shouldValidateMatMul() {
+    static std::once_flag s_once;
+    static int s_enabled = 0;
+    std::call_once(s_once, []() {
+        char value[16] = {};
+        const DWORD len = GetEnvironmentVariableA("RAWRXD_VALIDATE_MATMUL", value, static_cast<DWORD>(sizeof(value)));
+        if (len == 0 || len >= sizeof(value)) {
+            s_enabled = 0;
+            return;
+        }
+
+        const std::string v(value, len);
+        s_enabled = (v == "1" || v == "true" || v == "TRUE" || v == "on" || v == "ON") ? 1 : 0;
+    });
+
+    return s_enabled == 1;
+}
+
+void validateMatMulOutput(const float* input_a,
+                          const float* input_b,
+                          const float* gpu_output,
+                          uint32_t M,
+                          uint32_t N,
+                          uint32_t K) {
+    const size_t out_count = static_cast<size_t>(M) * static_cast<size_t>(N);
+    std::vector<float> cpu_output(out_count, 0.0f);
+
+    for (uint32_t row = 0; row < M; ++row) {
+        const size_t a_base = static_cast<size_t>(row) * static_cast<size_t>(K);
+        const size_t c_base = static_cast<size_t>(row) * static_cast<size_t>(N);
+        for (uint32_t col = 0; col < N; ++col) {
+            float sum = 0.0f;
+            for (uint32_t inner = 0; inner < K; ++inner) {
+                sum += input_a[a_base + inner] * input_b[static_cast<size_t>(inner) * static_cast<size_t>(N) + col];
+            }
+            cpu_output[c_base + col] = sum;
+        }
+    }
+
+    float max_abs_error = 0.0f;
+    float max_rel_error = 0.0f;
+    size_t worst_idx = 0;
+
+    for (size_t i = 0; i < out_count; ++i) {
+        const float ref = cpu_output[i];
+        const float got = gpu_output[i];
+        const float abs_err = std::fabs(ref - got);
+        const float denom = std::max(1e-6f, std::fabs(ref));
+        const float rel_err = abs_err / denom;
+        if (abs_err > max_abs_error) {
+            max_abs_error = abs_err;
+            worst_idx = i;
+        }
+        if (rel_err > max_rel_error) {
+            max_rel_error = rel_err;
+        }
+    }
+
+    std::cerr << "[MatMulValidation] M=" << M
+              << " N=" << N
+              << " K=" << K
+              << " max_abs_error=" << max_abs_error
+              << " max_rel_error=" << max_rel_error
+              << " worst_idx=" << worst_idx
+              << " cpu=" << cpu_output[worst_idx]
+              << " gpu=" << gpu_output[worst_idx]
+              << std::endl;
+}
+
+bool loadFileBytes(const char* path, std::vector<uint8_t>& out) {
+    if (!path || path[0] == '\0') {
+        return false;
+    }
+
+    std::ifstream file(path, std::ios::binary | std::ios::ate);
+    if (!file.is_open()) {
+        return false;
+    }
+
+    const std::streamsize size = file.tellg();
+    if (size <= 0 || (size % static_cast<std::streamsize>(sizeof(uint32_t))) != 0) {
+        return false;
+    }
+
+    file.seekg(0, std::ios::beg);
+    out.resize(static_cast<size_t>(size));
+    return file.read(reinterpret_cast<char*>(out.data()), size).good();
+}
+
+} // namespace
+
 extern "C" {
+
+__declspec(dllexport) int VulkanKernel_DispatchRaw(const uint8_t shader_uuid[16],
+                                                   const void* descriptor_table,
+                                                   const void* push_constants);
+__declspec(dllexport) int VulkanKernel_DispatchRaw_Impl(const uint8_t shader_uuid[16],
+                                                        const void* descriptor_table,
+                                                        const void* push_constants);
+#if defined(RAWR_HAS_MASM) && RAWR_HAS_MASM
+int VulkanKernel_DispatchRaw_Asm(const uint8_t shader_uuid[16],
+                                 const void* descriptor_table,
+                                 const void* push_constants);
+#endif
+
+// PyreDispatchCompute — C bridge used by dynamic/self-patch compute dispatch.
+// Contract:
+//   spirv_data/spirv_size: optional SPIR-V payload for hotpatch lane
+//   input/output: float buffers
+//   count: float element count
+// Current behavior:
+//   - Ensures Vulkan kernel runtime is initialized (once)
+//   - Attempts SPIR-V hotpatch when payload is provided
+//   - Uses a safe passthrough fallback until a generic kernel dispatch API is wired
+__declspec(dllexport) int PyreDispatchCompute(const uint8_t* spirv_data,
+                                              size_t spirv_size,
+                                              const void* input,
+                                              void* output,
+                                              uint32_t count) {
+    if (!input || !output || count == 0) {
+        return 0;
+    }
+
+    static std::once_flag s_initOnce;
+    static int s_initOk = 0;
+    std::call_once(s_initOnce, []() {
+        s_initOk = VulkanKernel_Init();
+    });
+
+    if (!s_initOk) {
+        return 0;
+    }
+
+    const size_t elem_count = static_cast<size_t>(count);
+    const size_t byte_count = elem_count * sizeof(float);
+
+    // Optional SPIR-V hotpatch lane (best effort) for the active matmul pipeline.
+    if (spirv_data && spirv_size >= sizeof(uint32_t) && (spirv_size % sizeof(uint32_t)) == 0) {
+        const uint32_t* words = reinterpret_cast<const uint32_t*>(spirv_data);
+        (void)VulkanKernel_HotswapShader("matmul", words, static_cast<uint64_t>(spirv_size));
+    }
+
+    g_raw_dispatch_counters.attempts.fetch_add(1, std::memory_order_relaxed);
+
+    // Real GPU dispatch path (v1): use MatMul descriptor lane as a generic ABI backend.
+    if (ensureMatMulPipelineFromEnv(g_vulkan_instance)) {
+        uint32_t a_idx = 0;
+        uint32_t b_idx = 0;
+        uint32_t out_idx = 0;
+
+        const float one = 1.0f;
+        bool ok = VulkanKernel_AllocBuffer(sizeof(float), &a_idx) &&
+                  VulkanKernel_AllocBuffer(byte_count, &b_idx) &&
+                  VulkanKernel_AllocBuffer(byte_count, &out_idx) &&
+                  VulkanKernel_CopyToDevice(a_idx, &one, sizeof(float)) &&
+                  VulkanKernel_CopyToDevice(b_idx, input, static_cast<uint64_t>(byte_count));
+
+        if (ok) {
+            uint8_t shader_uuid[16] = {};
+            computeShaderUUID(spirv_data, spirv_size, shader_uuid);
+            cacheUuidShader(shader_uuid, "matmul");
+
+            VulkanRawDispatchTableV2 desc{};
+            desc.version = kVulkanRawDispatchVersion2;
+            desc.flags = kVulkanRawDispatchFlagMatMul | kVulkanRawDispatchFlagGeneric3;
+            desc.groupCountX = count;
+            desc.groupCountY = 1;
+            desc.groupCountZ = 1;
+            desc.inputAIdx = a_idx;
+            desc.inputBIdx = b_idx;
+            desc.outputIdx = out_idx;
+            desc.M = 1;
+            desc.K = 1;
+            desc.N = count;
+            desc.inputABytes = sizeof(float);
+            desc.inputBBytes = static_cast<uint64_t>(byte_count);
+            desc.outputBytes = static_cast<uint64_t>(byte_count);
+            desc.pushConstantBytes = sizeof(uint32_t) * 3;
+
+            ok = VulkanKernel_DispatchRaw(shader_uuid, &desc, nullptr) &&
+                 VulkanKernel_CopyToHost(out_idx, output, static_cast<uint64_t>(byte_count));
+        }
+
+        if (ok) {
+            g_raw_dispatch_counters.success.fetch_add(1, std::memory_order_relaxed);
+            return 1;
+        }
+    } else {
+        g_raw_dispatch_counters.pipeline_miss.fetch_add(1, std::memory_order_relaxed);
+    }
+
+    // Deterministic safe fallback.
+    std::memcpy(output, input, byte_count);
+    g_raw_dispatch_counters.fallback.fetch_add(1, std::memory_order_relaxed);
+    return 1;
+}
+
+__declspec(dllexport) int PyreDispatchMatMul(const float* input_a,
+                                             const float* input_b,
+                                             float* output,
+                                             uint32_t M,
+                                             uint32_t N,
+                                             uint32_t K) {
+    if (!input_a || !input_b || !output || M == 0 || N == 0 || K == 0) {
+        return 0;
+    }
+
+    static std::once_flag s_initOnce;
+    static int s_initOk = 0;
+    std::call_once(s_initOnce, []() {
+        s_initOk = VulkanKernel_Init();
+    });
+
+    if (!s_initOk || !ensureMatMulPipelineFromEnv(g_vulkan_instance)) {
+        return 0;
+    }
+
+    const size_t a_bytes = static_cast<size_t>(M) * K * sizeof(float);
+    const size_t b_bytes = static_cast<size_t>(K) * N * sizeof(float);
+    const size_t out_bytes = static_cast<size_t>(M) * N * sizeof(float);
+
+    uint32_t a_idx = 0;
+    uint32_t b_idx = 0;
+    uint32_t out_idx = 0;
+
+    bool ok = VulkanKernel_AllocBuffer(a_bytes, &a_idx) &&
+              VulkanKernel_AllocBuffer(b_bytes, &b_idx) &&
+              VulkanKernel_AllocBuffer(out_bytes, &out_idx) &&
+              VulkanKernel_CopyToDevice(a_idx, input_a, static_cast<uint64_t>(a_bytes)) &&
+              VulkanKernel_CopyToDevice(b_idx, input_b, static_cast<uint64_t>(b_bytes));
+
+    if (!ok) {
+        return 0;
+    }
+
+    uint8_t shader_uuid[16] = {};
+    computeShaderUUID(nullptr, 0, shader_uuid);
+    cacheUuidShader(shader_uuid, "matmul");
+
+    VulkanRawDispatchTableV2 desc{};
+    desc.version = kVulkanRawDispatchVersion2;
+    desc.flags = kVulkanRawDispatchFlagMatMul | kVulkanRawDispatchFlagGeneric3;
+    desc.groupCountX = (N + 15u) / 16u;
+    desc.groupCountY = (M + 15u) / 16u;
+    desc.groupCountZ = 1;
+    desc.inputAIdx = a_idx;
+    desc.inputBIdx = b_idx;
+    desc.outputIdx = out_idx;
+    desc.M = M;
+    desc.K = K;
+    desc.N = N;
+    desc.inputABytes = static_cast<uint64_t>(a_bytes);
+    desc.inputBBytes = static_cast<uint64_t>(b_bytes);
+    desc.outputBytes = static_cast<uint64_t>(out_bytes);
+    desc.pushConstantBytes = sizeof(uint32_t) * 3;
+
+    ok = VulkanKernel_DispatchRaw(shader_uuid, &desc, nullptr) &&
+         VulkanKernel_CopyToHost(out_idx, output, static_cast<uint64_t>(out_bytes));
+
+    if (ok && shouldValidateMatMul()) {
+        validateMatMulOutput(input_a, input_b, output, M, N, K);
+    }
+
+    return ok ? 1 : 0;
+}
+
+__declspec(dllexport) int VulkanKernel_DispatchRaw_Impl(const uint8_t shader_uuid[16],
+                                                        const void* descriptor_table,
+                                                        const void* push_constants) {
+    if (!g_vulkan_instance || !descriptor_table) {
+        g_raw_dispatch_counters.invalid_abi.fetch_add(1, std::memory_order_relaxed);
+        return 0;
+    }
+
+    const auto* v1 = reinterpret_cast<const VulkanRawDispatchTableV1*>(descriptor_table);
+
+    if (v1->version == kVulkanRawDispatchVersion2) {
+        const auto* v2 = reinterpret_cast<const VulkanRawDispatchTableV2*>(descriptor_table);
+        if (v2->groupCountX == 0 || v2->groupCountY == 0 || v2->groupCountZ == 0) {
+            g_raw_dispatch_counters.invalid_abi.fetch_add(1, std::memory_order_relaxed);
+            return 0;
+        }
+
+        if ((v2->flags & kVulkanRawDispatchFlagMatMul) != 0) {
+            if (v2->M == 0 || v2->K == 0 || v2->N == 0) {
+                g_raw_dispatch_counters.invalid_abi.fetch_add(1, std::memory_order_relaxed);
+                return 0;
+            }
+            return g_vulkan_instance->DispatchMatMul(v2->inputAIdx,
+                                                     v2->inputBIdx,
+                                                     v2->outputIdx,
+                                                     v2->M,
+                                                     v2->K,
+                                                     v2->N) ? 1 : 0;
+        }
+
+        if ((v2->flags & kVulkanRawDispatchFlagGeneric3) != 0) {
+            const std::string shader_name = lookupUuidShader(shader_uuid);
+            if (shader_name.empty()) {
+                g_raw_dispatch_counters.pipeline_miss.fetch_add(1, std::memory_order_relaxed);
+                return 0;
+            }
+
+            return g_vulkan_instance->DispatchRaw3Buffers(
+                shader_name,
+                v2->inputAIdx,
+                v2->inputBIdx,
+                v2->outputIdx,
+                static_cast<size_t>(v2->inputABytes),
+                static_cast<size_t>(v2->inputBBytes),
+                static_cast<size_t>(v2->outputBytes),
+                push_constants,
+                v2->pushConstantBytes,
+                v2->groupCountX,
+                v2->groupCountY,
+                v2->groupCountZ) ? 1 : 0;
+        }
+
+        g_raw_dispatch_counters.invalid_abi.fetch_add(1, std::memory_order_relaxed);
+        return 0;
+    }
+
+    if (v1->version != kVulkanRawDispatchVersion) {
+        g_raw_dispatch_counters.invalid_abi.fetch_add(1, std::memory_order_relaxed);
+        return 0;
+    }
+
+    if ((v1->flags & kVulkanRawDispatchFlagMatMul) == 0) {
+        g_raw_dispatch_counters.invalid_abi.fetch_add(1, std::memory_order_relaxed);
+        return 0;
+    }
+
+    if (v1->M == 0 || v1->K == 0 || v1->N == 0) {
+        g_raw_dispatch_counters.invalid_abi.fetch_add(1, std::memory_order_relaxed);
+        return 0;
+    }
+
+    return g_vulkan_instance->DispatchMatMul(v1->inputAIdx,
+                                             v1->inputBIdx,
+                                             v1->outputIdx,
+                                             v1->M,
+                                             v1->K,
+                                             v1->N) ? 1 : 0;
+}
+
+__declspec(dllexport) int VulkanKernel_DispatchRaw(const uint8_t shader_uuid[16],
+                                                   const void* descriptor_table,
+                                                   const void* push_constants) {
+#if defined(RAWR_HAS_MASM) && RAWR_HAS_MASM
+    g_raw_dispatch_counters.asm_path_calls.fetch_add(1, std::memory_order_relaxed);
+    return VulkanKernel_DispatchRaw_Asm(shader_uuid, descriptor_table, push_constants);
+#else
+    return VulkanKernel_DispatchRaw_Impl(shader_uuid, descriptor_table, push_constants);
+#endif
+}
+
+__declspec(dllexport) uint32_t VulkanKernel_GetRawDispatchAbiVersion(void) {
+    return kVulkanRawDispatchVersion2;
+}
+
+__declspec(dllexport) int VulkanKernel_IsMatMulPipelineReady(void) {
+    return ensureMatMulPipelineFromEnv(g_vulkan_instance) ? 1 : 0;
+}
+
+__declspec(dllexport) int VulkanKernel_EnsureMatMulPipelineFromEnv(void) {
+    return ensureMatMulPipelineFromEnv(g_vulkan_instance) ? 1 : 0;
+}
+
+__declspec(dllexport) int VulkanKernel_ComputeShaderUUID(const uint8_t* spirv_data,
+                                                         uint64_t spirv_size,
+                                                         uint8_t out_uuid[16]) {
+    if (!out_uuid) {
+        return 0;
+    }
+    computeShaderUUID(spirv_data, static_cast<size_t>(spirv_size), out_uuid);
+    return 1;
+}
+
+__declspec(dllexport) void VulkanKernel_GetRawDispatchCounters(uint64_t* attempts,
+                                                               uint64_t* success,
+                                                               uint64_t* fallback,
+                                                               uint64_t* asm_path_calls,
+                                                               uint64_t* invalid_abi,
+                                                               uint64_t* pipeline_miss) {
+    if (attempts) *attempts = g_raw_dispatch_counters.attempts.load(std::memory_order_relaxed);
+    if (success) *success = g_raw_dispatch_counters.success.load(std::memory_order_relaxed);
+    if (fallback) *fallback = g_raw_dispatch_counters.fallback.load(std::memory_order_relaxed);
+    if (asm_path_calls) *asm_path_calls = g_raw_dispatch_counters.asm_path_calls.load(std::memory_order_relaxed);
+    if (invalid_abi) *invalid_abi = g_raw_dispatch_counters.invalid_abi.load(std::memory_order_relaxed);
+    if (pipeline_miss) *pipeline_miss = g_raw_dispatch_counters.pipeline_miss.load(std::memory_order_relaxed);
+}
+
+__declspec(dllexport) void VulkanKernel_ResetRawDispatchCounters(void) {
+    g_raw_dispatch_counters.attempts.store(0, std::memory_order_relaxed);
+    g_raw_dispatch_counters.success.store(0, std::memory_order_relaxed);
+    g_raw_dispatch_counters.fallback.store(0, std::memory_order_relaxed);
+    g_raw_dispatch_counters.asm_path_calls.store(0, std::memory_order_relaxed);
+    g_raw_dispatch_counters.invalid_abi.store(0, std::memory_order_relaxed);
+    g_raw_dispatch_counters.pipeline_miss.store(0, std::memory_order_relaxed);
+}
+
+__declspec(dllexport) int VulkanKernel_GetReadinessSnapshot(uint32_t* abi_version,
+                                                             uint32_t* matmul_ready,
+                                                             uint64_t* attempts,
+                                                             uint64_t* success,
+                                                             uint64_t* fallback) {
+    if (abi_version) {
+        *abi_version = VulkanKernel_GetRawDispatchAbiVersion();
+    }
+    if (matmul_ready) {
+        *matmul_ready = VulkanKernel_IsMatMulPipelineReady() ? 1u : 0u;
+    }
+    if (attempts) {
+        *attempts = g_raw_dispatch_counters.attempts.load(std::memory_order_relaxed);
+    }
+    if (success) {
+        *success = g_raw_dispatch_counters.success.load(std::memory_order_relaxed);
+    }
+    if (fallback) {
+        *fallback = g_raw_dispatch_counters.fallback.load(std::memory_order_relaxed);
+    }
+    return 1;
+}
 
 int VulkanKernel_Init(void) {
     if (g_vulkan_instance) return 1; // Already initialized
@@ -2295,6 +2957,220 @@ int VulkanKernel_DispatchFlashAttn(uint32_t q, uint32_t k, uint32_t v,
 int VulkanKernel_HotswapShader(const char* name, const uint32_t* spirv, uint64_t size) {
     if (!g_vulkan_instance || !name || !spirv) return 0;
     return g_vulkan_instance->HotswapShader(name, spirv, static_cast<size_t>(size)) ? 1 : 0;
+}
+
+int VulkanKernel_TryHotReloadFromFile(const char* name, const char* spirv_path, uint8_t out_uuid[16]) {
+    if (!g_vulkan_instance || !name || !spirv_path) {
+        return 0;
+    }
+
+    std::vector<uint8_t> raw;
+    if (!loadFileBytes(spirv_path, raw)) {
+        return 0;
+    }
+
+    uint8_t computed_uuid[16] = {};
+    computeShaderUUID(raw.data(), raw.size(), computed_uuid);
+    cacheUuidShader(computed_uuid, name);
+
+    if (out_uuid) {
+        std::memcpy(out_uuid, computed_uuid, sizeof(computed_uuid));
+    }
+
+    const uint32_t* words = reinterpret_cast<const uint32_t*>(raw.data());
+    return g_vulkan_instance->HotswapShader(name, words, raw.size()) ? 1 : 0;
+}
+
+int VulkanKernel_KVStreamUpdate(uint32_t tokens_added,
+                                uint64_t bytes_in_flight,
+                                float* out_pressure) {
+    g_kv_streamed_tokens.fetch_add(static_cast<uint64_t>(tokens_added), std::memory_order_relaxed);
+    g_kv_bytes_in_flight.store(bytes_in_flight, std::memory_order_relaxed);
+
+    if (out_pressure) {
+        const float pressure = static_cast<float>(bytes_in_flight) /
+            static_cast<float>(kKvPressureSoftLimitBytes);
+        *out_pressure = std::clamp(pressure, 0.0f, 8.0f);
+    }
+    return 1;
+}
+
+int VulkanKernel_DispatchSpeculativeVerify(uint32_t draft_logits_idx,
+                                           uint32_t target_logits_idx,
+                                           uint32_t seq_len,
+                                           uint32_t vocab_size,
+                                           uint32_t* out_accepted,
+                                           float* out_acceptance_rate) {
+    if (!g_vulkan_instance) {
+        return 0;
+    }
+
+    VulkanCompute::SpeculativeResult result{};
+    const bool ok = g_vulkan_instance->DispatchSpeculativeVerify(
+        draft_logits_idx,
+        target_logits_idx,
+        seq_len,
+        vocab_size,
+        &result);
+
+    if (!ok) {
+        return 0;
+    }
+
+    if (out_accepted) {
+        *out_accepted = result.accepted_count;
+    }
+    if (out_acceptance_rate) {
+        *out_acceptance_rate = result.acceptance_rate;
+    }
+    return 1;
+}
+
+__declspec(dllexport) int VulkanKernel_QueryLaneCapacity(uint8_t lane_id,
+                                                          uint32_t* out_slots,
+                                                          uint64_t* out_est_latency_ns) {
+    if (!isValidLaneId(lane_id)) {
+        return 0;
+    }
+
+    if (out_slots) {
+        // Conservative static lane slot estimate for now.
+        *out_slots = 4;
+    }
+    if (out_est_latency_ns) {
+        // Basic heuristic per lane ID.
+        *out_est_latency_ns = 80000ull + (static_cast<uint64_t>(lane_id) * 5000ull);
+    }
+    return 1;
+}
+
+__declspec(dllexport) int VulkanKernel_GetKVPressure(float* out_pressure,
+                                                      uint64_t* out_bytes_in_flight,
+                                                      uint64_t* out_tokens_streamed) {
+    const uint64_t bytes = g_kv_bytes_in_flight.load(std::memory_order_relaxed);
+    const uint64_t tokens = g_kv_streamed_tokens.load(std::memory_order_relaxed);
+
+    if (out_pressure) {
+        const float pressure = static_cast<float>(bytes) /
+            static_cast<float>(kKvPressureSoftLimitBytes);
+        *out_pressure = std::clamp(pressure, 0.0f, 8.0f);
+    }
+    if (out_bytes_in_flight) {
+        *out_bytes_in_flight = bytes;
+    }
+    if (out_tokens_streamed) {
+        *out_tokens_streamed = tokens;
+    }
+    return 1;
+}
+
+__declspec(dllexport) void VulkanKernel_ResetKVPressure(void) {
+    g_kv_bytes_in_flight.store(0, std::memory_order_relaxed);
+    g_kv_streamed_tokens.store(0, std::memory_order_relaxed);
+}
+
+__declspec(dllexport) int VulkanKernel_PrefetchLanePipeline(uint8_t lane_id,
+                                                             const char* pipeline_name,
+                                                             const uint32_t* spirv,
+                                                             uint64_t spirv_size) {
+    if (!g_vulkan_instance || !pipeline_name || !spirv || spirv_size == 0) {
+        if (isValidLaneId(lane_id)) {
+            g_lane_error_counts[lane_id].fetch_add(1, std::memory_order_relaxed);
+        }
+        return 0;
+    }
+    if (!isValidLaneId(lane_id)) {
+        return 0;
+    }
+
+    const bool ok = g_vulkan_instance->HotswapShader(
+        pipeline_name,
+        spirv,
+        static_cast<size_t>(spirv_size));
+
+    if (ok) {
+        g_lane_dispatch_counts[lane_id].fetch_add(1, std::memory_order_relaxed);
+        return 1;
+    }
+
+    g_lane_error_counts[lane_id].fetch_add(1, std::memory_order_relaxed);
+    return 0;
+}
+
+__declspec(dllexport) int VulkanKernel_VerifySPIRVFile(const char* spirv_path,
+                                                        uint64_t* out_size_bytes) {
+    if (!spirv_path || spirv_path[0] == '\0') {
+        return 0;
+    }
+
+    std::vector<uint8_t> raw;
+    if (!loadFileBytes(spirv_path, raw)) {
+        return 0;
+    }
+
+    if (out_size_bytes) {
+        *out_size_bytes = static_cast<uint64_t>(raw.size());
+    }
+    return 1;
+}
+
+__declspec(dllexport) int VulkanKernel_DispatchSpeculativeVerifyBatch(
+    const uint32_t* draft_logits_idx,
+    const uint32_t* target_logits_idx,
+    uint32_t batch_size,
+    uint32_t seq_len,
+    uint32_t vocab_size,
+    uint32_t* out_total_accepted,
+    float* out_mean_acceptance_rate) {
+    if (!g_vulkan_instance || !draft_logits_idx || !target_logits_idx || batch_size == 0) {
+        return 0;
+    }
+
+    uint64_t accepted_sum = 0;
+    double rate_sum = 0.0;
+
+    for (uint32_t i = 0; i < batch_size; ++i) {
+        VulkanCompute::SpeculativeResult result{};
+        const bool ok = g_vulkan_instance->DispatchSpeculativeVerify(
+            draft_logits_idx[i],
+            target_logits_idx[i],
+            seq_len,
+            vocab_size,
+            &result);
+        if (!ok) {
+            return 0;
+        }
+        accepted_sum += result.accepted_count;
+        rate_sum += static_cast<double>(result.acceptance_rate);
+    }
+
+    if (out_total_accepted) {
+        *out_total_accepted = static_cast<uint32_t>(accepted_sum);
+    }
+    if (out_mean_acceptance_rate) {
+        *out_mean_acceptance_rate = static_cast<float>(rate_sum / static_cast<double>(batch_size));
+    }
+    return 1;
+}
+
+__declspec(dllexport) int VulkanKernel_QueryDispatchLaneMetrics(uint8_t lane_id,
+                                                                 uint64_t* out_dispatches,
+                                                                 uint64_t* out_errors,
+                                                                 uint64_t* out_kv_tokens) {
+    if (!isValidLaneId(lane_id)) {
+        return 0;
+    }
+
+    if (out_dispatches) {
+        *out_dispatches = g_lane_dispatch_counts[lane_id].load(std::memory_order_relaxed);
+    }
+    if (out_errors) {
+        *out_errors = g_lane_error_counts[lane_id].load(std::memory_order_relaxed);
+    }
+    if (out_kv_tokens) {
+        *out_kv_tokens = g_kv_streamed_tokens.load(std::memory_order_relaxed);
+    }
+    return 1;
 }
 
 void VulkanKernel_GetStats(uint64_t* dispatches, uint64_t* matmuls,

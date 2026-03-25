@@ -79,6 +79,133 @@ static void startupTrace(const char* step, const char* detail = nullptr)
     s_startupLog->flush();
 }
 
+static bool isHeapWalkEnabled()
+{
+    char buf[8] = {};
+    const DWORD n = GetEnvironmentVariableA("RAWRXD_HEAP_WALK_ON_OPEN", buf, (DWORD)sizeof(buf));
+    if (n == 0)
+        return true; // Default ON so startup heap state is visible in debugger.
+    return !(buf[0] == '0' || buf[0] == 'n' || buf[0] == 'N');
+}
+
+static bool isTruthyEnvVar(const char* name)
+{
+    if (!name || !name[0])
+        return false;
+    const char* value = std::getenv(name);
+    if (!value || !value[0])
+        return false;
+    return !(value[0] == '0' || value[0] == 'n' || value[0] == 'N' || value[0] == 'f' || value[0] == 'F');
+}
+
+static void bootIntegratedRuntimeSafely()
+{
+#if defined(_MSC_VER) && defined(_WIN32)
+    __try
+    {
+        RawrXD::IntegratedRuntime::boot();
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER)
+    {
+        DWORD code = GetExceptionCode();
+        char msg[256];
+        snprintf(msg, sizeof(msg),
+                 "[main_win32] Integrated runtime crashed with SEH 0x%08lX (non-fatal, continuing)\n", code);
+        OutputDebugStringA(msg);
+        startupTrace("integrated_runtime_seh", msg);
+    }
+#else
+    try
+    {
+        RawrXD::IntegratedRuntime::boot();
+    }
+    catch (...)
+    {
+        OutputDebugStringA("[main_win32] Integrated runtime threw C++ exception (non-fatal, continuing)\n");
+        startupTrace("integrated_runtime_cpp_exception");
+    }
+#endif
+}
+
+static void emitStartupHeapSnapshot(const char* stage)
+{
+    if (!stage)
+        stage = "unknown";
+
+    HANDLE heap = GetProcessHeap();
+    BOOL heapValid = FALSE;
+    if (heap)
+        heapValid = HeapValidate(heap, 0, nullptr);
+
+    char header[256];
+    snprintf(header, sizeof(header),
+             "[main_win32][heap] stage=%s processHeap=%p heapValid=%d pid=%lu\n",
+             stage, heap, heapValid ? 1 : 0, (unsigned long)GetCurrentProcessId());
+    OutputDebugStringA(header);
+    startupTrace("heap_snapshot", header);
+
+    if (!heap || !isHeapWalkEnabled())
+        return;
+
+    PROCESS_HEAP_ENTRY entry{};
+    DWORD busyBlocks = 0;
+    SIZE_T busyBytes = 0;
+    DWORD regionCount = 0;
+    DWORD uncommittedRanges = 0;
+    DWORD loggedBusy = 0;
+
+    if (!HeapLock(heap))
+    {
+        const DWORD lockErr = GetLastError();
+        char msg[128];
+        snprintf(msg, sizeof(msg), "[main_win32][heap] stage=%s HeapLock failed err=%lu\n", stage,
+                 (unsigned long)lockErr);
+        OutputDebugStringA(msg);
+        startupTrace("heap_walk_lock_failed", msg);
+        return;
+    }
+
+    while (HeapWalk(heap, &entry))
+    {
+        if ((entry.wFlags & PROCESS_HEAP_ENTRY_BUSY) != 0)
+        {
+            ++busyBlocks;
+            busyBytes += entry.cbData;
+            if (loggedBusy < 8)
+            {
+                char line[196];
+                snprintf(line, sizeof(line),
+                         "[main_win32][heap] stage=%s busy[%lu] addr=%p size=%zu overhead=%u\n",
+                         stage, (unsigned long)loggedBusy, entry.lpData,
+                         (size_t)entry.cbData, (unsigned)entry.cbOverhead);
+                OutputDebugStringA(line);
+                startupTrace("heap_walk_busy", line);
+                ++loggedBusy;
+            }
+        }
+        else if ((entry.wFlags & PROCESS_HEAP_REGION) != 0)
+        {
+            ++regionCount;
+        }
+        else if ((entry.wFlags & PROCESS_HEAP_UNCOMMITTED_RANGE) != 0)
+        {
+            ++uncommittedRanges;
+        }
+    }
+
+    const DWORD walkErr = GetLastError();
+    HeapUnlock(heap);
+
+    char summary[256];
+    snprintf(summary, sizeof(summary),
+             "[main_win32][heap] stage=%s walkDone busyBlocks=%lu busyBytes=%zu regions=%lu uncommitted=%lu walkErr=%lu\n",
+             stage, (unsigned long)busyBlocks, (size_t)busyBytes,
+             (unsigned long)regionCount, (unsigned long)uncommittedRanges,
+             (unsigned long)walkErr);
+    OutputDebugStringA(summary);
+    startupTrace("heap_walk_summary", summary);
+}
+
 static LONG WINAPI RawrXDUnhandledExceptionFilter(PEXCEPTION_POINTERS exc)
 {
     if (!exc || !exc->ExceptionRecord)
@@ -989,9 +1116,19 @@ static bool runPhase(const std::string& name, Win32IDE& ide, HINSTANCE, LPSTR lp
     }
     if (name == "integrated_runtime")
     {
+        // Keep startup stable by default; opt in only when explicitly requested.
+        const bool enableIntegratedRuntime = isTruthyEnvVar("RAWRXD_ENABLE_INTEGRATED_RUNTIME");
+        if (!enableIntegratedRuntime)
+        {
+            startupTrace("integrated_runtime_deferred");
+            OutputDebugStringA(
+                "[main_win32] Integrated runtime deferred (set RAWRXD_ENABLE_INTEGRATED_RUNTIME=1 to enable at startup)\n");
+            return true;
+        }
+
         startupTrace("integrated_runtime_start");
-        OutputDebugStringA("[main_win32] Integrated runtime: booting Transcendence (E→Ω)...\n");
-        RawrXD::IntegratedRuntime::boot();
+        OutputDebugStringA("[main_win32] Integrated runtime: booting Transcendence (E->Omega)...\n");
+        bootIntegratedRuntimeSafely();
         startupTrace("integrated_runtime_done");
         return true;
     }
@@ -1558,6 +1695,8 @@ static int runFeatureProbeCLI(HINSTANCE hInstance, LPSTR lpCmdLine)
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow)
 {
+    emitStartupHeapSnapshot("winmain.entry");
+
     // ========================================================================
     // CWD FIX — Set working directory to exe's folder (before any relative paths)
     // Required for crash_dumps, config, plugins, engines when launched from
@@ -1619,6 +1758,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
             s_startupLog = nullptr;
         }
     }
+    emitStartupHeapSnapshot("startup_log_initialized");
 
 #ifdef _DEBUG
     // Optional: enable CRT debug heap checking via environment variable.
@@ -1685,6 +1825,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
         OutputDebugStringA("[main_win32] Cathedral crash containment boundary installed\n");
     }
     startupTrace("crash_containment_installed");
+    emitStartupHeapSnapshot("crash_containment_installed");
 
     // DPI awareness — before any GUI (Win32 GUI fix)
     ensureDpiAwareness();
@@ -1778,6 +1919,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
     RawrXD::Startup::registerLazyPhase("masm_init", []()
                                        { OutputDebugStringA("[main_win32] MASM init (lazy) — run on first use\n"); });
     Win32IDE ide(hInstance);
+    emitStartupHeapSnapshot("ide_constructed");
 
     // ========================================================================
     // SPLIT STARTUP: Quick phases first (show window), then heavy async phases
@@ -1807,6 +1949,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
     // CRITICAL: Show window NOW before any heavy initialization
     startupTrace("showWindow");
     ide.showWindow();
+    emitStartupHeapSnapshot("after_show_window");
     ensureMainWindowVisible(ide.getMainWindow());
     Win32IDE_AgenticBrowser_NotifyMainWindow(ide.getMainWindow());
     if (const char* ab = std::getenv("RAWRXD_AGENTIC_BROWSER"))

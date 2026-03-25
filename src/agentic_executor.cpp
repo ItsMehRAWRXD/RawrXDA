@@ -103,20 +103,50 @@ void AgenticExecutor::initialize(AgenticEngine* engine, InferenceEngine* inferen
 
 // ========== NATIVE TITAN KERNEL HANDOFF (x64 MASM) ==========
 #ifdef _WIN32
-extern "C" void* Titan_EntryPoint();
-extern "C" uint64_t Titan_ExecuteTask(const char* task_json, uint64_t length);
+using TitanExecuteTaskFn = uint64_t (*)(const char* task_json, uint64_t length);
+
+static uint64_t TitanExecuteTaskFallback(const char*, uint64_t)
+{
+    return 0xFFFFFFFFULL;
+}
+
+static TitanExecuteTaskFn ResolveTitanExecuteTask()
+{
+    const HMODULE self = ::GetModuleHandleW(nullptr);
+    if (!self)
+    {
+        return &TitanExecuteTaskFallback;
+    }
+
+    const FARPROC proc = ::GetProcAddress(self, "Titan_ExecuteTask");
+    if (!proc)
+    {
+        return &TitanExecuteTaskFallback;
+    }
+
+    return reinterpret_cast<TitanExecuteTaskFn>(proc);
+}
 #else
-// Stubs for non-MSVC builds
-extern "C" inline void* Titan_EntryPoint() { return nullptr; }
-extern "C" inline uint64_t Titan_ExecuteTask(const char*, uint64_t) { return 0xFFFFFFFF; }
+using TitanExecuteTaskFn = uint64_t (*)(const char* task_json, uint64_t length);
+
+static uint64_t TitanExecuteTaskFallback(const char*, uint64_t)
+{
+    return 0xFFFFFFFFULL;
+}
+
+static TitanExecuteTaskFn ResolveTitanExecuteTask()
+{
+    return &TitanExecuteTaskFallback;
+}
 #endif
 
 json AgenticExecutor::executeUserRequest(const std::string& request)
 {
     logMessage("Routing to TITAN x64 Kernel: " + request);
 
-    // Prepare Task for MASM Kernel
-    uint64_t status = Titan_ExecuteTask(request.c_str(), request.length());
+    // Prepare task for Titan kernel when present; otherwise use fallback.
+    const TitanExecuteTaskFn titanExecute = ResolveTitanExecuteTask();
+    uint64_t status = titanExecute(request.c_str(), request.length());
 
     json result;
     result["request"] = request;

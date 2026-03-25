@@ -21,12 +21,55 @@
 #include "rawrxd/ide/inference_facade.hpp"
 #include <algorithm>
 #include <chrono>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <winhttp.h>
 
 // nlohmann/json already included via Win32IDE.h
+
+namespace {
+bool isTruthyEnv(const char* value)
+{
+    if (!value || !*value)
+        return false;
+    std::string v(value);
+    std::transform(v.begin(), v.end(), v.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+    return v == "1" || v == "true" || v == "yes" || v == "on";
+}
+
+bool isSwarmTelemetryEnabled()
+{
+    static int cached = -1;
+    if (cached < 0)
+    {
+        cached = isTruthyEnv(std::getenv("RAWRXD_SWARM_STATUS")) ? 1 : 0;
+    }
+    return cached == 1;
+}
+
+std::string compactSwarmSummary(const std::string& summary)
+{
+    if (summary.empty())
+        return {};
+
+    const std::string key = "Swarms:";
+    const size_t pos = summary.find(key);
+    if (pos == std::string::npos)
+    {
+        const size_t newline = summary.find('\n');
+        return summary.substr(0, newline);
+    }
+
+    size_t end = summary.find(',', pos);
+    if (end == std::string::npos)
+        end = summary.find('\n', pos);
+    if (end == std::string::npos)
+        end = summary.size();
+    return summary.substr(pos, end - pos);
+}
+}  // namespace
 
 // ============================================================================
 // INITIALIZATION & LIFECYCLE
@@ -1283,14 +1326,38 @@ void Win32IDE::showBackendConfigDialog(AIBackendType type)
 
 void Win32IDE::updateStatusBarBackend()
 {
-    // Update the status bar to show active backend
-    if (m_hwndStatusBar)
+    if (!m_hwndStatusBar)
+        return;
+
+    std::string label = getActiveBackendName();
+
+    // Append live GPU dispatch counters when the Vulkan compute layer is linked
+#if defined(RAWRXD_VULKAN_COMPUTE_LINKED)
     {
-        std::string label = "[" + getActiveBackendName() + "]";
-        // Use m_statusBarInfo.copilotActive area or a dedicated section
-        m_statusBarInfo.copilotActive = true;
-        updateEnhancedStatusBar();
+        uint64_t attempts = 0, success = 0, fallback = 0,
+                 asm_calls = 0, invalid_abi = 0, pipeline_miss = 0;
+        VulkanKernel_GetRawDispatchCounters(&attempts, &success, &fallback,
+                                            &asm_calls, &invalid_abi, &pipeline_miss);
+        if (attempts > 0) {
+            label += " | " + std::to_string(success) + "d";
+            if (fallback > 0)
+                label += " (" + std::to_string(fallback) + " fb)";
+        }
     }
+#endif
+
+    if (isSwarmTelemetryEnabled() && m_agenticBridge)
+    {
+        if (auto* mgr = m_agenticBridge->GetSubAgentManager())
+        {
+            const std::string swarm = compactSwarmSummary(mgr->getStatusSummary());
+            if (!swarm.empty())
+                label += " | " + swarm;
+        }
+    }
+
+    // Part 11 is the rightmost status bar segment — backend + GPU info
+    SendMessageA(m_hwndStatusBar, SB_SETTEXTA, 11, (LPARAM)label.c_str());
 }
 
 std::string Win32IDE::backendTypeString(AIBackendType type) const

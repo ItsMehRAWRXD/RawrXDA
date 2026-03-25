@@ -198,6 +198,20 @@ public:
                                   uint32_t head_dim, uint32_t num_heads,
                                   float scale = 0.0f);
 
+    // ---- Generic Raw Dispatch (3 storage buffers + optional push constants) ----
+    bool DispatchRaw3Buffers(const std::string& shader_name,
+                             uint32_t input_a_idx,
+                             uint32_t input_b_idx,
+                             uint32_t output_idx,
+                             size_t size_a,
+                             size_t size_b,
+                             size_t size_out,
+                             const void* push_constants,
+                             uint32_t push_constant_size,
+                             uint32_t group_x,
+                             uint32_t group_y,
+                             uint32_t group_z);
+
     // ---- Speculative Decoding Support ----
     struct SpeculativeResult {
         std::vector<uint32_t> accepted_tokens;
@@ -324,21 +338,92 @@ private:
 // These allow the MASM Vulkan kernel to call into the C++ compute engine
 // without C++ name mangling.
 // =============================================================================
+#if defined(_WIN32)
+#define RAWRXD_VK_API __declspec(dllexport)
+#else
+#define RAWRXD_VK_API
+#endif
+
 extern "C" {
-    int  VulkanKernel_Init(void);
-    int  VulkanKernel_LoadShader(const char* name, const char* spirv_path);
-    int  VulkanKernel_CreatePipeline(const char* shader_name);
-    int  VulkanKernel_AllocBuffer(uint64_t size, uint32_t* out_idx);
-    int  VulkanKernel_CopyToDevice(uint32_t buf_idx, const void* data, uint64_t size);
-    int  VulkanKernel_CopyToHost(uint32_t buf_idx, void* data, uint64_t size);
-    int  VulkanKernel_DispatchMatMul(uint32_t a, uint32_t b, uint32_t out,
-                                     uint32_t M, uint32_t K, uint32_t N);
-    int  VulkanKernel_DispatchFlashAttn(uint32_t q, uint32_t k, uint32_t v,
-                                        uint32_t out, uint32_t seq_len,
-                                        uint32_t head_dim, uint32_t num_heads);
-    int  VulkanKernel_HotswapShader(const char* name,
-                                     const uint32_t* spirv, uint64_t size);
-    void VulkanKernel_GetStats(uint64_t* dispatches, uint64_t* matmuls,
-                               uint64_t* attentions, uint64_t* errors);
-    void VulkanKernel_Cleanup(void);
+    RAWRXD_VK_API int  VulkanKernel_Init(void);
+    RAWRXD_VK_API int  VulkanKernel_LoadShader(const char* name, const char* spirv_path);
+    RAWRXD_VK_API int  VulkanKernel_CreatePipeline(const char* shader_name);
+    RAWRXD_VK_API int  VulkanKernel_AllocBuffer(uint64_t size, uint32_t* out_idx);
+    RAWRXD_VK_API int  VulkanKernel_CopyToDevice(uint32_t buf_idx, const void* data, uint64_t size);
+    RAWRXD_VK_API int  VulkanKernel_CopyToHost(uint32_t buf_idx, void* data, uint64_t size);
+    RAWRXD_VK_API int  VulkanKernel_DispatchMatMul(uint32_t a, uint32_t b, uint32_t out,
+                                                   uint32_t M, uint32_t K, uint32_t N);
+    RAWRXD_VK_API int  VulkanKernel_DispatchFlashAttn(uint32_t q, uint32_t k, uint32_t v,
+                                                      uint32_t out, uint32_t seq_len,
+                                                      uint32_t head_dim, uint32_t num_heads);
+    RAWRXD_VK_API int  VulkanKernel_HotswapShader(const char* name,
+                                                   const uint32_t* spirv, uint64_t size);
+    RAWRXD_VK_API int  VulkanKernel_DispatchRaw(const uint8_t shader_uuid[16],
+                                                const void* descriptor_table,
+                                                const void* push_constants);
+    RAWRXD_VK_API int  VulkanKernel_DispatchRaw_Impl(const uint8_t shader_uuid[16],
+                                                     const void* descriptor_table,
+                                                     const void* push_constants);
+    RAWRXD_VK_API int  PyreDispatchCompute(const uint8_t* spirv_data,
+                                           size_t spirv_size,
+                                           const void* input,
+                                           void* output,
+                                           uint32_t count);
+    RAWRXD_VK_API int  PyreDispatchMatMul(const float* input_a,
+                                          const float* input_b,
+                                          float* output,
+                                          uint32_t M,
+                                          uint32_t N,
+                                          uint32_t K);
+    RAWRXD_VK_API uint32_t VulkanKernel_GetRawDispatchAbiVersion(void);
+    RAWRXD_VK_API int  VulkanKernel_IsMatMulPipelineReady(void);
+    RAWRXD_VK_API int  VulkanKernel_EnsureMatMulPipelineFromEnv(void);
+    RAWRXD_VK_API int  VulkanKernel_ComputeShaderUUID(const uint8_t* spirv_data,
+                                                      uint64_t spirv_size,
+                                                      uint8_t out_uuid[16]);
+    RAWRXD_VK_API void VulkanKernel_GetRawDispatchCounters(uint64_t* attempts,
+                                                           uint64_t* success,
+                                                           uint64_t* fallback,
+                                                           uint64_t* asm_path_calls,
+                                                           uint64_t* invalid_abi,
+                                                           uint64_t* pipeline_miss);
+    RAWRXD_VK_API void VulkanKernel_ResetRawDispatchCounters(void);
+    RAWRXD_VK_API int  VulkanKernel_GetReadinessSnapshot(uint32_t* abi_version,
+                                                         uint32_t* matmul_ready,
+                                                         uint64_t* attempts,
+                                                         uint64_t* success,
+                                                         uint64_t* fallback);
+    RAWRXD_VK_API int  VulkanKernel_TryHotReloadFromFile(const char* name, const char* spirv_path, uint8_t out_uuid[16]);
+    RAWRXD_VK_API int  VulkanKernel_KVStreamUpdate(uint32_t tokens_added, uint64_t bytes_in_flight, float* out_pressure);
+    RAWRXD_VK_API int  VulkanKernel_DispatchSpeculativeVerify(uint32_t draft_logits_idx,
+                                                              uint32_t target_logits_idx,
+                                                              uint32_t seq_len,
+                                                              uint32_t vocab_size,
+                                                              uint32_t* out_accepted,
+                                                              float* out_acceptance_rate);
+
+    // +7 lane enhancements (symbol-stable C exports)
+    RAWRXD_VK_API int  VulkanKernel_QueryLaneCapacity(uint8_t lane_id, uint32_t* out_slots, uint64_t* out_est_latency_ns);
+    RAWRXD_VK_API int  VulkanKernel_GetKVPressure(float* out_pressure, uint64_t* out_bytes_in_flight, uint64_t* out_tokens_streamed);
+    RAWRXD_VK_API void VulkanKernel_ResetKVPressure(void);
+    RAWRXD_VK_API int  VulkanKernel_PrefetchLanePipeline(uint8_t lane_id, const char* pipeline_name,
+                                                         const uint32_t* spirv, uint64_t spirv_size);
+    RAWRXD_VK_API int  VulkanKernel_VerifySPIRVFile(const char* spirv_path, uint64_t* out_size_bytes);
+    RAWRXD_VK_API int  VulkanKernel_DispatchSpeculativeVerifyBatch(const uint32_t* draft_logits_idx,
+                                                                   const uint32_t* target_logits_idx,
+                                                                   uint32_t batch_size,
+                                                                   uint32_t seq_len,
+                                                                   uint32_t vocab_size,
+                                                                   uint32_t* out_total_accepted,
+                                                                   float* out_mean_acceptance_rate);
+    RAWRXD_VK_API int  VulkanKernel_QueryDispatchLaneMetrics(uint8_t lane_id,
+                                                             uint64_t* out_dispatches,
+                                                             uint64_t* out_errors,
+                                                             uint64_t* out_kv_tokens);
+
+    RAWRXD_VK_API void VulkanKernel_GetStats(uint64_t* dispatches, uint64_t* matmuls,
+                                             uint64_t* attentions, uint64_t* errors);
+    RAWRXD_VK_API void VulkanKernel_Cleanup(void);
 }
+
+#undef RAWRXD_VK_API

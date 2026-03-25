@@ -1,7 +1,12 @@
 #include "webview2_bridge.hpp"
+#include <atomic>
 #include <algorithm>
+#include <cstdarg>
+#include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <mutex>
+#include <string>
 #include <WebView2.h>
 #include "debugger_core.hpp"
 
@@ -56,6 +61,24 @@ using CreateCoreWebView2EnvironmentWithOptionsFunc =
     HRESULT(STDAPICALLTYPE *)(PCWSTR, PCWSTR, void*,
                               ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler*);
 
+constexpr UINT kRawrxdWebViewDeferredNavigateMessage = WM_APP + 613;
+
+struct WebViewProbeState {
+    std::atomic<unsigned int> postAttempts{0};
+    std::atomic<unsigned int> postFailures{0};
+    std::atomic<unsigned int> deferredDispatches{0};
+    std::atomic<unsigned int> deferredIgnored{0};
+    std::atomic<unsigned int> navigateAttempts{0};
+    std::atomic<unsigned int> navigateDashboard{0};
+    std::atomic<unsigned int> navigateAboutBlank{0};
+    std::atomic<unsigned int> navigateDataString{0};
+    std::atomic<unsigned int> firstNavigateCompleted{0};
+    std::atomic<unsigned int> deferredPending{0};
+};
+
+WebViewProbeState g_probeState;
+std::mutex g_probeTraceLock;
+
 std::string bytesToHex(const uint8_t* data, size_t len) {
     static constexpr char kHex[] = "0123456789ABCDEF";
     std::string out;
@@ -78,10 +101,113 @@ bool tryParseHexAddress(const std::string& text, uint64_t& addressOut) {
         return false;
     }
 }
+
+bool bridgeEnvEnabled(const char* name) {
+    const char* v = std::getenv(name);
+    return v != nullptr && v[0] != '\0' && v[0] != '0';
+}
+
+int bridgeEnvInt(const char* name, int fallback, int minValue, int maxValue) {
+    const char* v = std::getenv(name);
+    if (!v || !v[0]) {
+        return fallback;
+    }
+    char* end = nullptr;
+    const long parsed = std::strtol(v, &end, 10);
+    if (end == v) {
+        return fallback;
+    }
+    int out = static_cast<int>(parsed);
+    if (out < minValue) out = minValue;
+    if (out > maxValue) out = maxValue;
+    return out;
+}
+
+const char* bridgeEnvString(const char* name, const char* fallback) {
+    const char* v = std::getenv(name);
+    return (v && v[0]) ? v : fallback;
+}
+
+void bridgeTrace(const char* fmt, ...) {
+    char userMsg[1024] = {};
+    va_list args;
+    va_start(args, fmt);
+    _vsnprintf_s(userMsg, _countof(userMsg), _TRUNCATE, fmt, args);
+    va_end(args);
+
+    char line[1280] = {};
+    const unsigned long tid = GetCurrentThreadId();
+    const unsigned long long t = static_cast<unsigned long long>(GetTickCount64());
+    _snprintf_s(line, _countof(line), _TRUNCATE, "[WebView2Bridge][t=%llu][tid=%lu] %s", t, tid, userMsg);
+
+    OutputDebugStringA(line);
+    OutputDebugStringA("\n");
+
+    if (bridgeEnvEnabled("RAWRXD_WEBVIEW_PROBE_TRACE_FILE")) {
+        const char* path = bridgeEnvString("RAWRXD_WEBVIEW_PROBE_TRACE_FILE_PATH", "D:/rawrxd_webview_probe_trace.log");
+        std::lock_guard<std::mutex> lock(g_probeTraceLock);
+        FILE* f = nullptr;
+        if (fopen_s(&f, path, "ab") == 0 && f) {
+            fputs(line, f);
+            fputs("\r\n", f);
+            fclose(f);
+        }
+    }
+}
+
+bool bridgeSingleShotDeferredEnabled() {
+    return bridgeEnvInt("RAWRXD_WEBVIEW_PROBE_SINGLE_SHOT", 1, 0, 1) != 0;
+}
+
+void traceProbeCounters(const char* stage) {
+    bridgeTrace("probe counters stage=%s postAttempts=%u postFailures=%u deferredDispatches=%u deferredIgnored=%u navigateAttempts=%u navDashboard=%u navBlank=%u navData=%u firstNavDone=%u",
+        stage,
+        g_probeState.postAttempts.load(std::memory_order_relaxed),
+        g_probeState.postFailures.load(std::memory_order_relaxed),
+        g_probeState.deferredDispatches.load(std::memory_order_relaxed),
+        g_probeState.deferredIgnored.load(std::memory_order_relaxed),
+        g_probeState.navigateAttempts.load(std::memory_order_relaxed),
+        g_probeState.navigateDashboard.load(std::memory_order_relaxed),
+        g_probeState.navigateAboutBlank.load(std::memory_order_relaxed),
+        g_probeState.navigateDataString.load(std::memory_order_relaxed),
+        g_probeState.firstNavigateCompleted.load(std::memory_order_relaxed));
+}
+
+void navigateInitialProbeContent(ICoreWebView2* webview) {
+    if (!webview) {
+        bridgeTrace("navigate skipped: null webview");
+        return;
+    }
+
+    g_probeState.navigateAttempts.fetch_add(1, std::memory_order_relaxed);
+
+    const char* navMode = bridgeEnvString("RAWRXD_WEBVIEW_PROBE_NAV_MODE", "dashboard");
+    if (_stricmp(navMode, "data") == 0) {
+        g_probeState.navigateDataString.fetch_add(1, std::memory_order_relaxed);
+        bridgeTrace("probe navigate data:string mode");
+        webview->NavigateToString(L"<html><head><meta charset='utf-8'/><title>RawrXD Probe</title></head><body><h1>RawrXD WebView Probe</h1><p>deferred navigation reached content stage</p></body></html>");
+        g_probeState.firstNavigateCompleted.store(1, std::memory_order_relaxed);
+        return;
+    }
+
+    if (bridgeEnvEnabled("RAWRXD_WEBVIEW_PROBE_ABOUT_BLANK") || _stricmp(navMode, "blank") == 0 || _stricmp(navMode, "about:blank") == 0) {
+        g_probeState.navigateAboutBlank.fetch_add(1, std::memory_order_relaxed);
+        bridgeTrace("probe navigate about:blank");
+        webview->Navigate(L"about:blank");
+        g_probeState.firstNavigateCompleted.store(1, std::memory_order_relaxed);
+        return;
+    }
+
+    g_probeState.navigateDashboard.fetch_add(1, std::memory_order_relaxed);
+    bridgeTrace("navigate dashboard url");
+    webview->Navigate(L"https://rawrxd.internal/dashboard");
+    g_probeState.firstNavigateCompleted.store(1, std::memory_order_relaxed);
+}
 } // namespace
 
 bool WebView2Bridge::initialize(HWND hwnd) {
     m_hwnd = hwnd;
+    bridgeTrace("initialize enter hwnd=0x%p", hwnd);
     std::cout << "[WebView2Bridge] Initializing WebView2 for HWND: " << hwnd << std::endl;
 
     if (!m_webview2Loader) {
@@ -89,6 +215,7 @@ bool WebView2Bridge::initialize(HWND hwnd) {
     }
     if (!m_webview2Loader) {
         std::cerr << "[WebView2Bridge] WebView2Loader.dll not found" << std::endl;
+        bridgeTrace("loader missing");
         return false;
     }
 
@@ -96,6 +223,7 @@ bool WebView2Bridge::initialize(HWND hwnd) {
         GetProcAddress(m_webview2Loader, "CreateCoreWebView2EnvironmentWithOptions"));
     if (!createEnv) {
         std::cerr << "[WebView2Bridge] CreateCoreWebView2EnvironmentWithOptions export missing" << std::endl;
+        bridgeTrace("createEnv export missing");
         return false;
     }
 
@@ -104,19 +232,23 @@ bool WebView2Bridge::initialize(HWND hwnd) {
             if (FAILED(result) || !env) {
                 std::cerr << "[WebView2Bridge] Environment creation failed: 0x"
                           << std::hex << result << std::dec << std::endl;
+                bridgeTrace("environment failed hr=0x%08X", static_cast<unsigned int>(result));
                 initGdiFallback(hwnd);
                 return result;
             }
+            bridgeTrace("environment ready");
 
             auto conHandler = new WebView2Callback<ICoreWebView2CreateCoreWebView2ControllerCompletedHandler, ICoreWebView2Controller>(
                 [this](HRESULT result, ICoreWebView2Controller* controller) -> HRESULT {
                     if (FAILED(result) || !controller) {
                         std::cerr << "[WebView2Bridge] Controller creation failed: 0x"
                                   << std::hex << result << std::dec << std::endl;
+                        bridgeTrace("controller failed hr=0x%08X", static_cast<unsigned int>(result));
                         m_webview2Ready = false;
                         initGdiFallback(m_hwnd);
                         return result ? result : E_POINTER;
                     }
+                    bridgeTrace("controller ready");
 
                     m_controller = controller;
                     m_controller->AddRef();
@@ -125,6 +257,7 @@ bool WebView2Bridge::initialize(HWND hwnd) {
                     if (FAILED(getCoreHr) || !m_webview) {
                         std::cerr << "[WebView2Bridge] get_CoreWebView2 failed: 0x"
                                   << std::hex << getCoreHr << std::dec << std::endl;
+                        bridgeTrace("corewebview failed hr=0x%08X", static_cast<unsigned int>(getCoreHr));
                         m_controller->Release();
                         m_controller = nullptr;
                         m_webview2Ready = false;
@@ -132,18 +265,45 @@ bool WebView2Bridge::initialize(HWND hwnd) {
                         return getCoreHr ? getCoreHr : E_POINTER;
                     }
                     m_webview->AddRef();
+                    bridgeTrace("corewebview ready");
 
                     RECT bounds = {};
                     GetClientRect(m_hwnd, &bounds);
                     m_controller->put_Bounds(bounds);
 
-                    m_webview->Navigate(L"https://rawrxd.internal/dashboard");
                     m_webview2Ready = true;
+                    g_probeState.firstNavigateCompleted.store(0, std::memory_order_relaxed);
+                    g_probeState.deferredPending.store(0, std::memory_order_relaxed);
+
+                    if (bridgeEnvEnabled("RAWRXD_WEBVIEW_PROBE_SKIP_NAVIGATE")) {
+                        bridgeTrace("probe skip navigate enabled");
+                    } else if (bridgeEnvEnabled("RAWRXD_WEBVIEW_PROBE_DEFER_NAVIGATE")) {
+                        g_probeState.postAttempts.fetch_add(1, std::memory_order_relaxed);
+                        unsigned int expected = 0;
+                        bool posted = false;
+                        if (g_probeState.deferredPending.compare_exchange_strong(expected, 1, std::memory_order_relaxed)) {
+                            bridgeTrace("probe defer navigate post message wm=0x%X", kRawrxdWebViewDeferredNavigateMessage);
+                            posted = !!PostMessageW(m_hwnd, kRawrxdWebViewDeferredNavigateMessage, 0, 0);
+                        } else {
+                            bridgeTrace("probe defer post suppressed: pending navigate already queued");
+                        }
+                        if (!posted) {
+                            g_probeState.postFailures.fetch_add(1, std::memory_order_relaxed);
+                            g_probeState.deferredPending.store(0, std::memory_order_relaxed);
+                            bridgeTrace("deferred navigate post failed; falling back inline");
+                            navigateInitialProbeContent(m_webview);
+                        }
+                    } else {
+                        navigateInitialProbeContent(m_webview);
+                    }
+                    traceProbeCounters("initialize.complete");
+                    bridgeTrace("initialize complete");
                     return S_OK;
                 });
 
             const HRESULT createHr = env->CreateCoreWebView2Controller(hwnd, conHandler);
             if (FAILED(createHr)) {
+                bridgeTrace("CreateCoreWebView2Controller failed hr=0x%08X", static_cast<unsigned int>(createHr));
                 conHandler->Release();
                 initGdiFallback(hwnd);
                 return createHr;
@@ -153,25 +313,65 @@ bool WebView2Bridge::initialize(HWND hwnd) {
 
     const HRESULT hr = createEnv(nullptr, nullptr, nullptr, envHandler);
     if (FAILED(hr)) {
+        bridgeTrace("CreateCoreWebView2EnvironmentWithOptions failed hr=0x%08X", static_cast<unsigned int>(hr));
         envHandler->Release();
     }
     return SUCCEEDED(hr);
 }
 
 void WebView2Bridge::shutdown() {
+    bridgeTrace("shutdown begin");
     if (m_webview) {
+        bridgeTrace("release webview");
         m_webview->Release();
         m_webview = nullptr;
     }
     if (m_controller) {
+        bridgeTrace("close/release controller");
         m_controller->Close();
         m_controller->Release();
         m_controller = nullptr;
     }
     if (m_webview2Loader) {
+        bridgeTrace("free loader");
         FreeLibrary(m_webview2Loader);
         m_webview2Loader = nullptr;
     }
+    traceProbeCounters("shutdown");
+    bridgeTrace("shutdown end");
+}
+
+void WebView2Bridge::handleDeferredNavigate() {
+    g_probeState.deferredDispatches.fetch_add(1, std::memory_order_relaxed);
+
+    if (!m_webview2Ready || !m_webview) {
+        g_probeState.deferredIgnored.fetch_add(1, std::memory_order_relaxed);
+        g_probeState.deferredPending.store(0, std::memory_order_relaxed);
+        bridgeTrace("deferred navigate ignored: webview not ready");
+        traceProbeCounters("deferred.ignored");
+        return;
+    }
+
+    if (bridgeSingleShotDeferredEnabled() && g_probeState.firstNavigateCompleted.load(std::memory_order_relaxed) != 0) {
+        g_probeState.deferredPending.store(0, std::memory_order_relaxed);
+        bridgeTrace("deferred navigate skipped: single-shot already completed");
+        traceProbeCounters("deferred.single_shot_skip");
+        return;
+    }
+
+    bridgeTrace("deferred navigate dispatch begin");
+    navigateInitialProbeContent(m_webview);
+    g_probeState.deferredPending.store(0, std::memory_order_relaxed);
+    bridgeTrace("deferred navigate dispatch end");
+    traceProbeCounters("deferred.complete");
+}
+
+extern "C" int rawrxd_webview2_handle_deferred_navigate(HWND hwnd) {
+    auto& bridge = WebView2Bridge::getInstance();
+    bridgeTrace("dispatcher callback deferred navigate hwnd=0x%p", hwnd);
+    bridge.handleDeferredNavigate();
+    bridgeTrace("dispatcher callback deferred navigate return hwndNonNull=%d", hwnd != nullptr ? 1 : 0);
+    return hwnd != nullptr ? 1 : 0;
 }
 
 void WebView2Bridge::postMessage(const std::string& message) {

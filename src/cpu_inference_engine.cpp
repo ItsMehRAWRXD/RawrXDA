@@ -45,7 +45,11 @@ CPUInferenceEngine::~CPUInferenceEngine() {
 // Model Loading — delegates to RawrXDInference::Initialize
 // ============================================================================
 bool CPUInferenceEngine::LoadModel(const std::string& model_path) {
-    if (model_path.empty()) return false;
+    m_lastLoadErrorMessage.clear();
+    if (model_path.empty()) {
+        m_lastLoadErrorMessage = "empty model path";
+        return false;
+    }
 
     // UTF-8 → wchar_t for the loader
     std::wstring wpath;
@@ -70,6 +74,7 @@ bool CPUInferenceEngine::LoadModel(const std::string& model_path) {
 
     if (s_inferenceBackend.Initialize(wpath.c_str(), vocabPath.c_str(), mergesPath.c_str())) {
         m_modelLoaded = true;
+        m_lastLoadErrorMessage.clear();
 
         // Propagate metadata from backend to facade members
         int bvs = s_inferenceBackend.getVocabSize();
@@ -104,6 +109,10 @@ bool CPUInferenceEngine::LoadModel(const std::string& model_path) {
         return true;
     }
 
+    m_lastLoadErrorMessage = s_inferenceBackend.GetLastLoadErrorMessage();
+    if (m_lastLoadErrorMessage.empty()) {
+        m_lastLoadErrorMessage = "RawrXDInference::Initialize returned false without detail";
+    }
     printf("[CPUInferenceEngine] Failed to load model\n");
     return false;
 }

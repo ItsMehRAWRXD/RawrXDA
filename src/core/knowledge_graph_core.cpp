@@ -671,6 +671,62 @@ std::vector<ChangeArcheology> KnowledgeGraphCore::getFunctionHistory(const char*
     return result;
 }
 
+std::vector<ChangeArcheology> KnowledgeGraphCore::searchHistory(const char* query, int maxCount) const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    std::vector<ChangeArcheology> result;
+    if (query == nullptr || query[0] == '\0' || maxCount <= 0) {
+        return result;
+    }
+
+    for (auto it = m_archeology.rbegin(); it != m_archeology.rend() && static_cast<int>(result.size()) < maxCount; ++it) {
+        const bool hitFile = std::strstr(it->file, query) != nullptr;
+        const bool hitFn = std::strstr(it->functionName, query) != nullptr;
+        const bool hitOld = std::strstr(it->oldBehavior, query) != nullptr;
+        const bool hitNew = std::strstr(it->newBehavior, query) != nullptr;
+        const bool hitReason = std::strstr(it->reason, query) != nullptr;
+        if (hitFile || hitFn || hitOld || hitNew || hitReason) {
+            result.push_back(*it);
+        }
+    }
+    return result;
+}
+
+std::vector<CodeRelationship> KnowledgeGraphCore::getRelationshipsByType(RelationType type, int maxCount) const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    std::vector<CodeRelationship> result;
+    if (maxCount <= 0) {
+        return result;
+    }
+
+    for (auto it = m_relationships.rbegin(); it != m_relationships.rend() && static_cast<int>(result.size()) < maxCount; ++it) {
+        if (it->relation == type) {
+            result.push_back(*it);
+        }
+    }
+    return result;
+}
+
+KnowledgeResult KnowledgeGraphCore::exportToJson(const char* path) const {
+    if (path == nullptr || path[0] == '\0') {
+        return KnowledgeResult::error("Invalid export path");
+    }
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    std::FILE* f = std::fopen(path, "wb");
+    if (f == nullptr) {
+        return KnowledgeResult::error("Failed to open export file");
+    }
+
+    std::string json = statsToJson();
+    const size_t wrote = std::fwrite(json.data(), 1, json.size(), f);
+    std::fclose(f);
+
+    if (wrote != json.size()) {
+        return KnowledgeResult::error("Failed to write export payload");
+    }
+    return KnowledgeResult::ok("Exported");
+}
+
 // =============================================================================
 // Persistence
 // =============================================================================

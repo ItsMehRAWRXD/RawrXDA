@@ -122,10 +122,11 @@ void Win32IDE::onAIBackendVerified(bool success)
     // Update status bar
     if (m_hwndStatusBar && IsWindow(m_hwndStatusBar))
     {
-        const char* text = success
-            ? "AI: Connected (Ollama)"
-            : "AI: Offline (start `ollama serve`)";
-        SendMessageA(m_hwndStatusBar, SB_SETTEXT, (WPARAM)0, (LPARAM)text);
+        std::string backendName = getActiveBackendName();
+        const std::string msg = success
+            ? "AI: Connected (" + backendName + ")"
+            : "AI: Offline (" + backendName + " unavailable)";
+        SendMessageA(m_hwndStatusBar, SB_SETTEXT, (WPARAM)0, (LPARAM)msg.c_str());
     }
 
     // Enable/disable AI-related menu items

@@ -1,6 +1,7 @@
 // BackendOrchestrator.cpp — Implementation
 #include "BackendOrchestrator.h"
 #include "InferenceProfiler.h"
+#include "gguf_loader.h"
 
 #include <sstream>
 #include <iostream>
@@ -11,6 +12,9 @@
 #include <functional>
 #include <iomanip>
 #include <numeric>
+#include <filesystem>
+#include <regex>
+#include <unordered_set>
 
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -99,6 +103,199 @@ bool RunNativeInferenceSync(const std::string& prompt,
     }
 }
 
+std::string zeroPadInt(int value, int width) {
+    std::ostringstream oss;
+    oss << std::setw(width) << std::setfill('0') << value;
+    return oss.str();
+}
+
+bool discoverModelShards(const std::string& model_path,
+                         std::vector<std::string>& shards,
+                         std::string& reason) {
+    namespace fs = std::filesystem;
+
+    shards.clear();
+    reason.clear();
+
+    std::error_code ec;
+    fs::path model(model_path);
+    if (!fs::exists(model, ec) || ec) {
+        reason = "model path does not exist";
+        return false;
+    }
+
+    const std::string filename = model.filename().string();
+    std::smatch match;
+    const std::regex shard_pattern(R"(^(.+)-(\d+)-of-(\d+)\.gguf$)", std::regex::icase);
+
+    if (!std::regex_match(filename, match, shard_pattern)) {
+        shards.push_back(model.string());
+        return true;
+    }
+
+    const std::string base_name = match[1].str();
+    const int idx_width = static_cast<int>(match[2].str().size());
+    const int total_width = static_cast<int>(match[3].str().size());
+    const int total = std::max(0, std::atoi(match[3].str().c_str()));
+    if (total <= 0) {
+        reason = "invalid shard count in filename";
+        return false;
+    }
+
+    const fs::path dir = model.parent_path();
+    shards.reserve(static_cast<size_t>(total));
+    for (int i = 1; i <= total; ++i) {
+        const std::string expected_name =
+            base_name + "-" + zeroPadInt(i, idx_width) + "-of-" + zeroPadInt(total, total_width) + ".gguf";
+        const fs::path candidate = dir / expected_name;
+        if (!fs::exists(candidate, ec) || ec) {
+            reason = "missing shard file: " + candidate.string();
+            return false;
+        }
+        shards.push_back(candidate.string());
+    }
+
+    return true;
+}
+
+int discoverLayerCountFromGguf(const std::string& model_path) {
+    GGUFLoader loader;
+    if (!loader.Open(model_path)) {
+        return 0;
+    }
+    if (!loader.ParseMetadata()) {
+        loader.Close();
+        return 0;
+    }
+
+    const auto metadata = loader.GetMetadata();
+    loader.Close();
+
+    if (metadata.layer_count > 0) {
+        return static_cast<int>(metadata.layer_count);
+    }
+
+    auto it = metadata.kv_pairs.find("llama.block_count");
+    if (it != metadata.kv_pairs.end()) {
+        const int parsed = std::atoi(it->second.c_str());
+        if (parsed > 0) {
+            return parsed;
+        }
+    }
+    return 0;
+}
+
+struct MappedShardFile {
+    std::string path;
+    int device_index = -1;
+    HANDLE hFile = INVALID_HANDLE_VALUE;
+    HANDLE hMapping = nullptr;
+    void* view = nullptr;
+    uint64_t size_bytes = 0;
+};
+
+std::mutex g_mapped_shards_mutex;
+std::unordered_map<std::string, std::vector<MappedShardFile>> g_mapped_shards_by_tag;
+
+void closeMappedShardFile(MappedShardFile& m) {
+    if (m.view) {
+        UnmapViewOfFile(m.view);
+        m.view = nullptr;
+    }
+    if (m.hMapping) {
+        CloseHandle(m.hMapping);
+        m.hMapping = nullptr;
+    }
+    if (m.hFile != INVALID_HANDLE_VALUE) {
+        CloseHandle(m.hFile);
+        m.hFile = INVALID_HANDLE_VALUE;
+    }
+}
+
+void clearTagMappedShardsLocked(const std::string& tag) {
+    auto it = g_mapped_shards_by_tag.find(tag);
+    if (it == g_mapped_shards_by_tag.end()) {
+        return;
+    }
+    for (auto& mapped : it->second) {
+        closeMappedShardFile(mapped);
+    }
+    g_mapped_shards_by_tag.erase(it);
+}
+
+bool mapShardFileReadOnly(const std::string& path, int device_index, MappedShardFile& out, std::string& reason) {
+    out = {};
+    out.path = path;
+    out.device_index = device_index;
+
+    out.hFile = CreateFileA(path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (out.hFile == INVALID_HANDLE_VALUE) {
+        reason = "CreateFileA failed for: " + path;
+        return false;
+    }
+
+    LARGE_INTEGER size = {};
+    if (!GetFileSizeEx(out.hFile, &size) || size.QuadPart <= 0) {
+        reason = "GetFileSizeEx failed or empty file: " + path;
+        closeMappedShardFile(out);
+        return false;
+    }
+    out.size_bytes = static_cast<uint64_t>(size.QuadPart);
+
+    out.hMapping = CreateFileMappingA(out.hFile, nullptr, PAGE_READONLY, 0, 0, nullptr);
+    if (!out.hMapping) {
+        reason = "CreateFileMappingA failed for: " + path;
+        closeMappedShardFile(out);
+        return false;
+    }
+
+    out.view = MapViewOfFile(out.hMapping, FILE_MAP_READ, 0, 0, 0);
+    if (!out.view) {
+        reason = "MapViewOfFile failed for: " + path;
+        closeMappedShardFile(out);
+        return false;
+    }
+
+    return true;
+}
+
+bool mapShardsForTag(const std::string& tag, const std::vector<ModelShard>& shards, std::string& reason) {
+    std::lock_guard<std::mutex> lock(g_mapped_shards_mutex);
+    clearTagMappedShardsLocked(tag);
+
+    std::vector<MappedShardFile> mapped;
+    for (const auto& shard : shards) {
+        for (const auto& shard_file : shard.shard_files) {
+            MappedShardFile one;
+            if (!mapShardFileReadOnly(shard_file, shard.device_index, one, reason)) {
+                for (auto& m : mapped) {
+                    closeMappedShardFile(m);
+                }
+                return false;
+            }
+            mapped.push_back(std::move(one));
+        }
+    }
+
+    g_mapped_shards_by_tag[tag] = std::move(mapped);
+    return true;
+}
+
+void clearTagMappedShards(const std::string& tag) {
+    std::lock_guard<std::mutex> lock(g_mapped_shards_mutex);
+    clearTagMappedShardsLocked(tag);
+}
+
+void clearAllMappedShards() {
+    std::lock_guard<std::mutex> lock(g_mapped_shards_mutex);
+    for (auto& kv : g_mapped_shards_by_tag) {
+        for (auto& mapped : kv.second) {
+            closeMappedShardFile(mapped);
+        }
+    }
+    g_mapped_shards_by_tag.clear();
+}
+
 } // namespace
 
 // ─── Singleton ────────────────────────────────────────────────────────────────
@@ -158,6 +355,9 @@ void BackendOrchestrator::Shutdown() {
 
     // Stop metrics thread
     DisableMetricsExport();
+
+    // Release model shard file mappings.
+    clearAllMappedShards();
 }
 
 // ─── Enhancement 1: Dynamic backend selection ─────────────────────────────────
@@ -205,23 +405,105 @@ bool BackendOrchestrator::ShardModel(const std::string& model_path,
 
     if (device_indices.empty()) return false;
 
-    // Discover total layer count from GGUF (placeholder: use 32 layers for 7B-class)
-    int total_layers = 32;
+    std::vector<std::string> shard_files;
+    std::string shard_reason;
+    if (!discoverModelShards(model_path, shard_files, shard_reason)) {
+        std::cerr << "[BackendOrchestrator] ShardModel failed: " << shard_reason << "\n";
+        return false;
+    }
+
+    uint64_t total_model_bytes = 0;
+    std::vector<uint64_t> shard_sizes;
+    shard_sizes.reserve(shard_files.size());
+    for (const auto& shard : shard_files) {
+        std::error_code ec;
+        const auto shard_size = std::filesystem::file_size(shard, ec);
+        if (ec) {
+            std::cerr << "[BackendOrchestrator] Failed to stat shard: " << shard << "\n";
+            return false;
+        }
+        const uint64_t sz = static_cast<uint64_t>(shard_size);
+        total_model_bytes += sz;
+        shard_sizes.push_back(sz);
+    }
+
+    int total_layers = discoverLayerCountFromGguf(shard_files.front());
+    if (total_layers <= 0) {
+        total_layers = 32; // Fallback for incomplete metadata models.
+    }
+
     int n_dev        = (int)device_indices.size();
-    int layers_each  = total_layers / n_dev;
+    int base_layers  = total_layers / n_dev;
+    int extra_layers = total_layers % n_dev;
+
+    // Deterministic size-aware balancing: assign largest files first to the least-loaded device.
+    std::vector<size_t> shard_order(shard_files.size());
+    std::iota(shard_order.begin(), shard_order.end(), 0);
+    std::stable_sort(shard_order.begin(), shard_order.end(), [&](size_t a, size_t b) {
+        if (shard_sizes[a] == shard_sizes[b]) {
+            return a < b;
+        }
+        return shard_sizes[a] > shard_sizes[b];
+    });
+
+    std::vector<std::vector<size_t>> files_per_device(static_cast<size_t>(n_dev));
+    std::vector<uint64_t> bytes_per_device(static_cast<size_t>(n_dev), 0);
+    for (size_t shard_idx : shard_order) {
+        size_t best_device = 0;
+        for (size_t d = 1; d < bytes_per_device.size(); ++d) {
+            if (bytes_per_device[d] < bytes_per_device[best_device]) {
+                best_device = d;
+            } else if (bytes_per_device[d] == bytes_per_device[best_device] &&
+                       files_per_device[d].size() < files_per_device[best_device].size()) {
+                best_device = d;
+            }
+        }
+        files_per_device[best_device].push_back(shard_idx);
+        bytes_per_device[best_device] += shard_sizes[shard_idx];
+    }
+
+    // Keep per-device shard list in natural shard order for easier debugging and replay.
+    for (auto& v : files_per_device) {
+        std::sort(v.begin(), v.end());
+    }
+
+    int layer_cursor = 0;
 
     for (int d = 0; d < n_dev; ++d) {
         ModelShard shard;
         shard.device_index = device_indices[d];
-        shard.layer_start  = d * layers_each;
-        shard.layer_end    = (d == n_dev - 1) ? total_layers - 1 : shard.layer_start + layers_each - 1;
-        shard.vram_bytes   = 0;  // populated on actual load
+        const int layer_count = base_layers + (d < extra_layers ? 1 : 0);
+        if (layer_count > 0) {
+            shard.layer_start = layer_cursor;
+            shard.layer_end = layer_cursor + layer_count - 1;
+            layer_cursor += layer_count;
+        } else {
+            shard.layer_start = -1;
+            shard.layer_end = -1;
+        }
+        shard.assigned_file_bytes = 0;
+        shard.shard_files.clear();
+        for (size_t shard_idx : files_per_device[static_cast<size_t>(d)]) {
+            shard.shard_files.push_back(shard_files[shard_idx]);
+            shard.assigned_file_bytes += static_cast<size_t>(shard_sizes[shard_idx]);
+        }
+
+        // Current heuristic: vram budget follows actual assigned shard bytes.
+        shard.vram_bytes = shard.assigned_file_bytes;
         shard.loaded       = false;
         m_shards.push_back(shard);
     }
 
     std::cout << "[BackendOrchestrator] Model sharded across "
-              << n_dev << " device(s)\n";
+              << n_dev << " device(s), layers=" << total_layers
+              << ", files=" << shard_files.size()
+              << ", bytes=" << total_model_bytes << "\n";
+    for (const auto& s : m_shards) {
+        std::cout << "  device=" << s.device_index
+                  << " layers=" << s.layer_start << "-" << s.layer_end
+                  << " files=" << s.shard_files.size()
+                  << " assigned_bytes=" << s.assigned_file_bytes << "\n";
+    }
     return true;
 }
 
@@ -268,11 +550,42 @@ double BackendOrchestrator::GetSpecDecodingAcceptRate() const {
 
 // ─── Enhancement 5: Model hot-swapping ───────────────────────────────────────
 bool BackendOrchestrator::LoadModel(const std::string& path, const std::string& tag) {
+    std::vector<int> device_indices;
+    {
+        std::lock_guard<std::mutex> shard_lk(m_shard_mtx);
+        std::unordered_set<int> unique_devices;
+        for (const auto& s : m_shards) {
+            if (unique_devices.insert(s.device_index).second) {
+                device_indices.push_back(s.device_index);
+            }
+        }
+    }
+    if (device_indices.empty()) {
+        device_indices.push_back(0);
+    }
+
+    if (!ShardModel(path, device_indices)) {
+        std::cerr << "[BackendOrchestrator] LoadModel failed: ShardModel failed for path=" << path << "\n";
+        return false;
+    }
+
+    std::vector<ModelShard> plan;
+    {
+        std::lock_guard<std::mutex> shard_lk(m_shard_mtx);
+        plan = m_shards;
+    }
+
+    std::string map_reason;
+    if (!mapShardsForTag(tag, plan, map_reason)) {
+        std::cerr << "[BackendOrchestrator] LoadModel failed: " << map_reason << "\n";
+        return false;
+    }
+
     std::lock_guard<std::mutex> lk(m_model_mtx);
     m_model_paths[tag] = path;
-    // The actual GGUF load delegates to the active backend's LoadModel
+    // The actual inference engine load remains delegated to active backend.
     std::cout << "[BackendOrchestrator] Registered model tag='" << tag
-              << "' path=" << path << "\n";
+              << "' path=" << path << " with " << plan.size() << " shard plan entries\n";
     return true;
 }
 
@@ -292,6 +605,7 @@ bool BackendOrchestrator::UnloadModel(const std::string& tag) {
     std::lock_guard<std::mutex> lk(m_model_mtx);
     m_model_paths.erase(tag);
     if (m_active_model_tag == tag) m_active_model_tag.clear();
+    clearTagMappedShards(tag);
     return true;
 }
 

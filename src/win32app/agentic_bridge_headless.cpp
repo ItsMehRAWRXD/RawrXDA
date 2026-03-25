@@ -350,8 +350,14 @@ void AgenticBridge::SetContextSize(const std::string& sizeName)
 
 bool AgenticBridge::LoadModel(const std::string& path)
 {
+    m_lastModelLoadError.clear();
     if (path.empty())
     {
+        m_lastModelLoadError = "empty model path";
+        if (m_modelLoadErrorCallback)
+        {
+            m_modelLoadErrorCallback(m_lastModelLoadError);
+        }
         return false;
     }
 
@@ -368,6 +374,31 @@ bool AgenticBridge::LoadModel(const std::string& path)
     if (HeadlessIsFile(path))
     {
         loaded = m_nativeEngine->LoadModel(path);
+        if (!loaded)
+        {
+            m_lastModelLoadError = m_nativeEngine->GetLastLoadErrorMessage();
+            if (m_lastModelLoadError.empty())
+            {
+                m_lastModelLoadError = "native engine load failed without detailed error";
+            }
+            if (m_modelLoadErrorCallback)
+            {
+                m_modelLoadErrorCallback(m_lastModelLoadError);
+            }
+            if (m_errorCallback)
+            {
+                m_errorCallback("Model load failed: " + m_lastModelLoadError);
+            }
+        }
+    }
+    else
+    {
+        m_lastModelLoadError = "path not found or not a file: " + path;
+        loaded = false;
+        if (m_modelLoadErrorCallback)
+        {
+            m_modelLoadErrorCallback(m_lastModelLoadError);
+        }
     }
 
     if (loaded)
@@ -376,6 +407,16 @@ bool AgenticBridge::LoadModel(const std::string& path)
         m_initialized = true;
     }
     return loaded;
+}
+
+void AgenticBridge::SetModelLoadErrorCallback(ModelLoadErrorCallback cb)
+{
+    m_modelLoadErrorCallback = std::move(cb);
+}
+
+const std::string& AgenticBridge::GetLastModelLoadError() const
+{
+    return m_lastModelLoadError;
 }
 
 void AgenticBridge::SetWorkspaceRoot(const std::string& workspaceRoot)

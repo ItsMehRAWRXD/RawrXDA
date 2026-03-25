@@ -47,6 +47,9 @@ public:
     void tick();              // single planning + execution step
     void setMaxActionsPerMinute(int v) { m_maxActionsPerMinute = v; }
 
+    // Output callback: surfaces bridge failures and action events to the calling UI.
+    void setOutputCallback(std::function<void(const std::string&)> cb) { m_onOutput = std::move(cb); }
+
     // Hook for external status surface
     std::string getStatus() const;
     std::string GetStatus() const { return getStatus(); }
@@ -68,6 +71,7 @@ private:
     bool rateLimitAllow();
 
     AgenticBridge* m_bridge;
+    std::function<void(const std::string&)> m_onOutput;  // optional UI output path
     std::atomic<bool> m_running;
     std::atomic<bool> m_autoLoop;
 

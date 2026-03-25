@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <cstdint>
 #include <string>
+#include <functional>
 #ifdef RAWR_ENABLE_VULKAN
 #include <vulkan/vulkan.h>
 #else
@@ -47,8 +48,12 @@ struct Q4_0_Block {
 
 class RawrXDModelLoader {
 public:
+    using ModelLoadErrorCallback = std::function<void(const std::string& stage, const std::string& message)>;
+
     bool Load(const wchar_t* path, VkDevice device, VkPhysicalDevice physDevice);
     float* GetTensor(const std::string& name);
+    void SetLoadErrorCallback(ModelLoadErrorCallback callback);
+    const std::string& GetLastLoadErrorMessage() const;
     
 private:
     VkDevice device;
@@ -67,7 +72,11 @@ private:
     int n_ffn = 0;  // feed_forward_length (0 = infer from dim*4)
     std::string metadataArchitecture;
     std::string metadataTokenizerModel;
+    uint32_t metadataFileType = 0xFFFFFFFFu;  // GGUF file_type identifier
     bool m_gpuUploadEnabled = true;
+    std::string m_lastLoadErrorStage;
+    std::string m_lastLoadErrorMessage;
+    ModelLoadErrorCallback m_loadErrorCallback;
 
 public:
     int getDim() const { return n_embd; }
@@ -92,4 +101,8 @@ public:
     void UploadViaStaging(void* data, size_t size, VkBuffer dstBuffer);
     uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
     int64_t CalculateVRAMUsage();
+    
+    // Backend mode and file type validation
+    bool IsSupportedFileType(uint32_t fileType) const;
+    bool ResolveBackendModeAndPreflight(const wchar_t* path, uint64_t modelBytes, std::string& lane, std::string& reason);
 };

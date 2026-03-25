@@ -138,9 +138,10 @@ void Win32IDE::initTier5Cosmetics() {
     initColorPicker();
     initEmojiSupport();
     initCrashReporter();
+    initIRCBridge();
 
     OutputDebugStringA("[Tier5] All cosmetic features initialized.\n");
-    appendToOutput("[Tier5] Cosmetic gaps #40-#50 loaded.\n");
+    appendToOutput("[Tier5] Cosmetic gaps #40-#51 loaded.\n");
 }
 
 // ============================================================================
@@ -191,6 +192,10 @@ bool Win32IDE::handleTier5Command(int commandId) {
     // Crash Reporter (11600-11609)
     if (commandId >= IDM_CRASH_SHOW && commandId <= IDM_CRASH_STATS)
         return handleCrashReporterCommand(commandId);
+
+    // Phase 51: mIRC Control Bridge (11610-11614)
+    if (commandId >= IDM_IRC_CONNECT && commandId <= IDM_IRC_SEND)
+        return handleIRCBridgeCommand(commandId);
 
     return false;
 }

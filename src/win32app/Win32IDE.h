@@ -21,6 +21,11 @@
 #include <sal.h>
 #include <windows.h>
 
+// Custom window messages
+#ifndef WM_AI_BACKEND_STATUS
+#define WM_AI_BACKEND_STATUS (WM_USER + 0x500)  // wParam: 1=connected 0=offline
+#endif
+
 #ifndef _Return_type_success_
 #define _Return_type_success_(expr)
 #endif
@@ -547,6 +552,7 @@ class Win32IDE
     void cancelModelOperation();
     bool isModelOperationInProgress() const;
     void showModelStatus(const std::string& text, int durationMs = 5000);
+    void showModelLoadError(const std::string& detail);
     static LRESULT CALLBACK ModelProgressProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
     // SubAgent / Swarm UX — progress, status display
@@ -1663,6 +1669,7 @@ class Win32IDE
 
     HWND m_hwndCommandInput;
     HWND m_hwndStatusBar;
+    bool m_aiAvailable = false; // Set by onAIBackendVerified()
     HWND m_hwndOutputTabs;
     HWND m_hwndMinimap;
     HWND m_hwndHelp;
@@ -2016,6 +2023,7 @@ class Win32IDE
     int m_secondarySidebarWidth;
     int m_currentMaxTokens;
     std::vector<std::string> m_availableModels;
+    std::vector<std::string> m_userModelDirectories;
     std::vector<std::pair<std::string, std::string>> m_chatHistory;  // role, message
     // Tool action status per chat message (keyed by m_chatHistory index)
     std::map<size_t, std::vector<RawrXD::UI::ToolActionStatus>> m_chatToolActions;
@@ -2238,6 +2246,9 @@ class Win32IDE
     void HandleCopilotClear();
     void HandleCopilotStreamUpdate(const char* token, size_t length = 0);
     void populateModelSelector();
+    std::vector<std::string> getModelsFromDirectory(const std::string& directory);
+    std::string makeHttpRequest(const std::string& url, const std::string& method, const std::string& body, const std::string& contentType);
+    void handleModelBrowse();
     std::vector<std::string> getConfiguredModelDirectories() const;
     std::vector<std::string> collectFilesystemModelNames(const std::vector<std::string>& modelDirs,
                                                          size_t maxCount = 2048) const;
@@ -2719,6 +2730,9 @@ class Win32IDE
     void showBackendSwitcherDialog();
     void showBackendConfigDialog(AIBackendType type);
     void updateStatusBarBackend();
+    void onAIBackendVerified(bool success);
+    void updateToolsMenu();
+    void initializeAIBackend();
     std::string backendTypeString(AIBackendType type) const;
     AIBackendType backendTypeFromString(const std::string& name) const;
     std::string getBackendConfigFilePath() const;

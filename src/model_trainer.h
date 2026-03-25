@@ -16,7 +16,7 @@
 #include <nlohmann/json.hpp>
 
 class GGUFLoader;
-namespace RawrXD { class CPUInferenceEngine; using InferenceEngine = CPUInferenceEngine; }
+namespace RawrXD { class InferenceEngine; class CPUInferenceEngine; }
 
 /**
  * @class ModelTrainer

@@ -8,13 +8,252 @@
 
 #include <algorithm>
 #include <cstdarg>
+#include <cctype>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+extern "C" {
+int VulkanKernel_Init(void);
+int VulkanKernel_LoadShader(const char* name, const char* spirv_path);
+int VulkanKernel_CreatePipeline(const char* shader_name);
+int VulkanKernel_AllocBuffer(uint64_t size, uint32_t* out_idx);
+int VulkanKernel_CopyToDevice(uint32_t buf_idx, const void* data, uint64_t size);
+int VulkanKernel_CopyToHost(uint32_t buf_idx, void* data, uint64_t size);
+int VulkanKernel_DispatchMatMul(uint32_t a, uint32_t b, uint32_t out,
+                                uint32_t M, uint32_t K, uint32_t N);
+int VulkanKernel_QueryLaneCapacity(uint8_t lane_id,
+                                   uint32_t* out_slots,
+                                   uint64_t* out_est_latency_ns);
+int VulkanKernel_VerifySPIRVFile(const char* spirv_path, uint64_t* out_size_bytes);
+void VulkanKernel_ResetKVPressure(void);
+int VulkanKernel_TryHotReloadFromFile(const char* name, const char* spirv_path, uint8_t out_uuid[16]);
+void VulkanKernel_Cleanup(void);
+
+uint64_t RawrXD_AVX512_DequantFusion(const uint8_t* src_q,
+                                     const float* scales,
+                                     float* dst_f32,
+                                     uint64_t count);
+uint64_t RawrXD_MASM_BPETokenize(const char* text,
+                                 uint64_t text_len,
+                                 uint32_t* out_token_ids,
+                                 uint64_t max_tokens);
+}
+
+static bool EnvTruthy(const char* name) {
+    char value[32] = {};
+    DWORD len = GetEnvironmentVariableA(name, value, static_cast<DWORD>(sizeof(value)));
+    if (len == 0 || len >= sizeof(value)) {
+        return false;
+    }
+
+    for (DWORD i = 0; i < len; ++i) {
+        if (value[i] >= 'A' && value[i] <= 'Z') {
+            value[i] = static_cast<char>(value[i] - 'A' + 'a');
+        }
+    }
+
+    return std::strcmp(value, "1") == 0 ||
+           std::strcmp(value, "true") == 0 ||
+           std::strcmp(value, "yes") == 0 ||
+           std::strcmp(value, "on") == 0;
+}
+
+static std::string EnvString(const char* name) {
+    char value[MAX_PATH] = {};
+    DWORD len = GetEnvironmentVariableA(name, value, static_cast<DWORD>(sizeof(value)));
+    if (len == 0 || len >= sizeof(value)) {
+        return std::string();
+    }
+    return std::string(value, value + len);
+}
+
+static bool RunVulkanTruthPreflight() {
+    std::string backend = EnvString("RAWRXD_INFERENCE_BACKEND");
+    for (char& c : backend) {
+        if (c >= 'A' && c <= 'Z') {
+            c = static_cast<char>(c - 'A' + 'a');
+        }
+    }
+
+    const bool backend_vulkan = backend == "vulkan";
+    const bool preflight_requested = backend_vulkan ||
+                                     EnvTruthy("RAWRXD_VULKAN_PREFLIGHT") ||
+                                     EnvTruthy("RAWRXD_REQUIRE_VULKAN_PREFLIGHT");
+    const bool preflight_required = backend_vulkan || EnvTruthy("RAWRXD_REQUIRE_VULKAN_PREFLIGHT");
+    const bool dispatch_required = preflight_required || EnvTruthy("RAWRXD_REQUIRE_VULKAN_DISPATCH_PREFLIGHT");
+
+    if (!preflight_requested) {
+        return true;
+    }
+
+    bool ok = true;
+    bool cleanup_needed = false;
+
+    if (!VulkanKernel_Init()) {
+        LogError("[VulkanPreflight] VulkanKernel_Init failed");
+        ok = false;
+        goto done;
+    }
+    cleanup_needed = true;
+
+    {
+        uint32_t lane_slots = 0;
+        uint64_t lane_latency_ns = 0;
+        if (VulkanKernel_QueryLaneCapacity(0, &lane_slots, &lane_latency_ns)) {
+            LogInfo("[VulkanPreflight] Lane0 capacity: slots=%u est_latency_ns=%llu",
+                    lane_slots,
+                    static_cast<unsigned long long>(lane_latency_ns));
+        } else {
+            LogInfo("[VulkanPreflight] Lane0 capacity query unavailable");
+        }
+        VulkanKernel_ResetKVPressure();
+    }
+
+    {
+        uint32_t roundtrip_idx = 0;
+        const float upload[4] = {1.25f, -2.0f, 3.5f, 42.0f};
+        float download[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+
+        if (!VulkanKernel_AllocBuffer(sizeof(upload), &roundtrip_idx) ||
+            !VulkanKernel_CopyToDevice(roundtrip_idx, upload, sizeof(upload)) ||
+            !VulkanKernel_CopyToHost(roundtrip_idx, download, sizeof(download))) {
+            LogError("[VulkanPreflight] GPU roundtrip buffer test failed");
+            ok = false;
+            goto done;
+        }
+
+        for (int i = 0; i < 4; ++i) {
+            if (std::fabs(download[i] - upload[i]) > 1e-6f) {
+                LogError("[VulkanPreflight] GPU roundtrip mismatch at %d: got=%f expected=%f", i, download[i], upload[i]);
+                ok = false;
+                goto done;
+            }
+        }
+    }
+
+    {
+        const std::string spv_path = EnvString("RAWRXD_VULKAN_MATMUL_SPV");
+        if (!spv_path.empty()) {
+            if (!std::filesystem::exists(spv_path)) {
+                LogError("[VulkanPreflight] MatMul SPIR-V not found: %s", spv_path.c_str());
+                ok = false;
+                goto done;
+            }
+
+            {
+                uint64_t verified_size = 0;
+                if (!VulkanKernel_VerifySPIRVFile(spv_path.c_str(), &verified_size)) {
+                    LogError("[VulkanPreflight] SPIR-V verification failed for %s", spv_path.c_str());
+                    ok = false;
+                    goto done;
+                }
+            }
+
+            const uintmax_t spv_size = std::filesystem::file_size(spv_path);
+            if (spv_size == 0 || (spv_size % sizeof(uint32_t)) != 0) {
+                LogError("[VulkanPreflight] Invalid SPIR-V size for %s (size=%llu)",
+                         spv_path.c_str(),
+                         static_cast<unsigned long long>(spv_size));
+                ok = false;
+                goto done;
+            }
+
+            uint8_t shader_uuid[16] = {};
+            if (!VulkanKernel_TryHotReloadFromFile("matmul", spv_path.c_str(), shader_uuid)) {
+                LogError("[VulkanPreflight] Hot-reload validation failed for %s", spv_path.c_str());
+                ok = false;
+                goto done;
+            }
+
+            if (!VulkanKernel_LoadShader("matmul", spv_path.c_str()) ||
+                !VulkanKernel_CreatePipeline("matmul")) {
+                LogError("[VulkanPreflight] Failed to load/create MatMul pipeline from: %s", spv_path.c_str());
+                ok = false;
+                goto done;
+            }
+
+            constexpr uint32_t M = 8;
+            constexpr uint32_t K = 8;
+            constexpr uint32_t N = 8;
+
+            std::vector<float> a(static_cast<size_t>(M) * K);
+            std::vector<float> b(static_cast<size_t>(K) * N);
+            std::vector<float> gpu_out(static_cast<size_t>(M) * N, 0.0f);
+            std::vector<float> cpu_out(static_cast<size_t>(M) * N, 0.0f);
+
+            for (size_t i = 0; i < a.size(); ++i) {
+                a[i] = static_cast<float>((static_cast<int>(i % 7) - 3) * 0.25f);
+            }
+            for (size_t i = 0; i < b.size(); ++i) {
+                b[i] = static_cast<float>((static_cast<int>(i % 5) - 2) * 0.5f);
+            }
+
+            for (uint32_t m = 0; m < M; ++m) {
+                for (uint32_t n = 0; n < N; ++n) {
+                    float acc = 0.0f;
+                    for (uint32_t k = 0; k < K; ++k) {
+                        acc += a[static_cast<size_t>(m) * K + k] * b[static_cast<size_t>(k) * N + n];
+                    }
+                    cpu_out[static_cast<size_t>(m) * N + n] = acc;
+                }
+            }
+
+            uint32_t a_idx = 0, b_idx = 0, out_idx = 0;
+            if (!VulkanKernel_AllocBuffer(static_cast<uint64_t>(a.size() * sizeof(float)), &a_idx) ||
+                !VulkanKernel_AllocBuffer(static_cast<uint64_t>(b.size() * sizeof(float)), &b_idx) ||
+                !VulkanKernel_AllocBuffer(static_cast<uint64_t>(gpu_out.size() * sizeof(float)), &out_idx) ||
+                !VulkanKernel_CopyToDevice(a_idx, a.data(), static_cast<uint64_t>(a.size() * sizeof(float))) ||
+                !VulkanKernel_CopyToDevice(b_idx, b.data(), static_cast<uint64_t>(b.size() * sizeof(float))) ||
+                !VulkanKernel_DispatchMatMul(a_idx, b_idx, out_idx, M, K, N) ||
+                !VulkanKernel_CopyToHost(out_idx, gpu_out.data(), static_cast<uint64_t>(gpu_out.size() * sizeof(float)))) {
+                LogError("[VulkanPreflight] MatMul dispatch preflight failed");
+                ok = false;
+                goto done;
+            }
+
+            float max_error = 0.0f;
+            for (size_t i = 0; i < gpu_out.size(); ++i) {
+                max_error = std::max(max_error, std::fabs(gpu_out[i] - cpu_out[i]));
+            }
+
+            LogInfo("[VulkanPreflight] MatMul validation: M=%u K=%u N=%u max_error=%e",
+                    M, K, N, static_cast<double>(max_error));
+
+            if (max_error > 1e-2f) {
+                LogError("[VulkanPreflight] MatMul validation failed: max_error=%e (threshold=%e)",
+                         static_cast<double>(max_error), 1e-2);
+                ok = false;
+                goto done;
+            }
+
+            LogInfo("[VulkanPreflight] MatMul pipeline dispatch validated");
+        } else if (dispatch_required) {
+            LogError("[VulkanPreflight] Dispatch required but RAWRXD_VULKAN_MATMUL_SPV is unset");
+            ok = false;
+            goto done;
+        } else {
+            LogInfo("[VulkanPreflight] Dispatch preflight skipped (set RAWRXD_VULKAN_MATMUL_SPV to enable)");
+        }
+    }
+
+done:
+    if (cleanup_needed) {
+        VulkanKernel_Cleanup();
+    }
+
+    if (!ok && !preflight_required) {
+        LogInfo("[VulkanPreflight] Optional preflight failed; continuing with CPU GGML backend");
+        return true;
+    }
+
+    return ok;
+}
 
 // Basic structured logging for this module
 static void LogError(const char* fmt, ...) {
@@ -87,6 +326,23 @@ struct Tokenizer {
 
     // Greedy longest-match tokenization against the vocabulary
     std::vector<int32_t> tokenize(const std::string& text) {
+        if (!text.empty()) {
+            std::vector<uint32_t> masm_ids(text.size());
+            const uint64_t n = RawrXD_MASM_BPETokenize(
+                text.c_str(),
+                static_cast<uint64_t>(text.size()),
+                masm_ids.data(),
+                static_cast<uint64_t>(masm_ids.size()));
+            if (n > 0) {
+                std::vector<int32_t> out;
+                out.reserve(static_cast<size_t>(n));
+                for (uint64_t i = 0; i < n; ++i) {
+                    out.push_back(static_cast<int32_t>(masm_ids[static_cast<size_t>(i)]));
+                }
+                return out;
+            }
+        }
+
         std::vector<int32_t> tokens;
         size_t pos = 0;
         while (pos < text.size()) {
@@ -131,6 +387,11 @@ static Tokenizer g_tokenizer;
 
 // Initialize model from GGUF file
 bool LoadModelReal(const char* path) {
+    if (!RunVulkanTruthPreflight()) {
+        LogError("Vulkan preflight failed and inference is gated");
+        return false;
+    }
+
     gguf_init_params params = {};
     params.no_alloc = false;
     params.ctx = nullptr;

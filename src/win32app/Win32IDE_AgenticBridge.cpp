@@ -8,14 +8,14 @@
 #include "../advanced_agent_features.hpp"
 #include "../agent/agentic_hotpatch_orchestrator.hpp"
 #include "../agent/agentic_puppeteer.hpp"
+#include "../agentic/OrchestratorBridge.h"
 #include "../agentic_engine.h"
 #include "../cpu_inference_engine.h"
-#include "../modules/native_memory.hpp"
-#include "../vsix_native_converter.hpp"
-#include "../agentic/OrchestratorBridge.h"
-#include "../security/InputSanitizer.h"
 #include "../inference/PerformanceMonitor.h"
 #include "../logging/Logger.h"
+#include "../modules/native_memory.hpp"
+#include "../security/InputSanitizer.h"
+#include "../vsix_native_converter.hpp"
 #include "IDEConfig.h"
 #include "IDELogger.h"
 #include "Win32IDE.h"
@@ -25,6 +25,20 @@
 #include <fstream>
 #include <memory>
 #include <sstream>
+
+namespace
+{
+
+bool envDisablesCapabilityHotpatch(const char* varName)
+{
+    if (!varName)
+        return false;
+    char buf[12] = {};
+    const DWORD n = GetEnvironmentVariableA(varName, buf, static_cast<DWORD>(sizeof(buf)));
+    return n > 0 && (buf[0] == '1' || buf[0] == 't' || buf[0] == 'T' || buf[0] == 'y' || buf[0] == 'Y');
+}
+
+}  // namespace
 
 // SCAFFOLD_054: AgenticBridge DispatchModelToolCalls
 
@@ -126,15 +140,18 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt)
     auto& perf = RawrXD::Inference::PerformanceMonitor::instance();
     perf.startOperation("agentic.bridge.execute");
     bool perfClosed = false;
-    auto closePerf = [&]() {
-        if (!perfClosed) {
+    auto closePerf = [&]()
+    {
+        if (!perfClosed)
+        {
             perf.endOperation("agentic.bridge.execute");
             perfClosed = true;
         }
     };
     auto& sanitizer = RawrXD::Security::InputSanitizer::instance();
     auto promptSan = sanitizer.sanitizePrompt(prompt);
-    if (promptSan.wasModified) {
+    if (promptSan.wasModified)
+    {
         LOG_WARNING("Prompt sanitized before agent dispatch");
     }
     // E1: propagate workspace root to engine immediately
@@ -143,12 +160,17 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt)
 
     // E2: sync OrchestratorBridge model + workdir before routing
     auto& orch = RawrXD::Agent::OrchestratorBridge::Instance();
-    if (!m_modelName.empty()) { orch.SetModel(m_modelName); orch.SetFIMModel(m_modelName); }
-    if (!m_workspaceRoot.empty()) orch.SetWorkingDirectory(m_workspaceRoot);
+    if (!m_modelName.empty())
+    {
+        orch.SetModel(m_modelName);
+        orch.SetFIMModel(m_modelName);
+    }
+    if (!m_workspaceRoot.empty())
+        orch.SetWorkingDirectory(m_workspaceRoot);
 
     // E7: track consecutive failures for LLM router
     bool routeSuccess = false;
-    auto markSuccess = [&]{ routeSuccess = true; };
+    auto markSuccess = [&] { routeSuccess = true; };
     (void)markSuccess;
 
     // Lazy-init: ensure engine exists so chat and agentic work with any loaded model (local definitions vary)
@@ -197,7 +219,8 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt)
     {
         std::string path = prompt.substr(11);
         auto pathSan = sanitizer.sanitizePath(path);
-        if (pathSan.wasModified) {
+        if (pathSan.wasModified)
+        {
             LOG_WARNING("Bugreport path sanitized");
         }
         path = pathSan.sanitized;
@@ -220,7 +243,8 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt)
     {
         std::string path = prompt.substr(9);
         auto pathSan = sanitizer.sanitizePath(path);
-        if (pathSan.wasModified) {
+        if (pathSan.wasModified)
+        {
             LOG_WARNING("Suggest path sanitized");
         }
         path = pathSan.sanitized;
@@ -243,7 +267,8 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt)
     {
         std::string path = prompt.substr(7);
         auto pathSan = sanitizer.sanitizePath(path);
-        if (pathSan.wasModified) {
+        if (pathSan.wasModified)
+        {
             LOG_WARNING("Patch path sanitized");
         }
         path = pathSan.sanitized;
@@ -270,6 +295,8 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt)
     {
         refinedPrompt = "[Workspace root: " + m_workspaceRoot + "]\n\n" + refinedPrompt;
     }
+
+    applyAgentCapabilityHotpatches(refinedPrompt);
 
     // When no local model is loaded, route through active backend (Ollama/cloud) so agentic
     // work can use the same backend as chat (see docs/AGENTIC_AND_MODEL_LOADING_AUDIT.md).
@@ -389,6 +416,45 @@ void AgenticBridge::SetAutoCorrect(bool enabled)
     LOG_INFO(std::string("Auto Correct ") + (enabled ? "Enabled" : "Disabled"));
 }
 
+void AgenticBridge::SetHotpatchSubAgentToolProtocol(bool enabled)
+{
+    m_hotpatchSubAgentToolProtocol = enabled;
+    LOG_INFO(std::string("SubAgent tool-protocol hotpatch ") + (enabled ? "enabled" : "disabled"));
+}
+
+void AgenticBridge::SetHotpatchThoughtProtocol(bool enabled)
+{
+    m_hotpatchThoughtProtocol = enabled;
+    LOG_INFO(std::string("Thought-protocol hotpatch ") + (enabled ? "enabled" : "disabled"));
+}
+
+void AgenticBridge::applyAgentCapabilityHotpatches(std::string& refinedPrompt)
+{
+    std::string prefix;
+    if (m_hotpatchSubAgentToolProtocol && !envDisablesCapabilityHotpatch("RAWRXD_DISABLE_SUBAGENT_HOTPATCH"))
+    {
+        prefix += "[RawrXD hotpatch — SubAgent/tools]\n"
+                  "The model stack may not expose native function-calling. To delegate a subtask, emit ONE line:\n"
+                  "  TOOL:runSubagent:{\"description\":\"short label\",\"prompt\":\"instructions for the sub-agent\"}\n"
+                  "Workspace tools (one line each): tool:list_dir path=.\n"
+                  "  tool:read_file path=<path>\n"
+                  "  tool:write_file path=<path> content=<text>\n"
+                  "Parallel work: TOOL:hexmag_swarm:{\"prompts\":[\"task1\",\"task2\"],\"strategy\":\"concatenate\","
+                  "\"maxParallel\":4}\n"
+                  "Sequential pipeline: TOOL:chain:{\"steps\":[\"step1\",\"step2\"],\"input\":\"...\"}\n"
+                  "RawrXD dispatches these patterns from plain text even without server-side tool schemas.\n\n";
+    }
+    if (m_deepThinking && m_hotpatchThoughtProtocol &&
+        !envDisablesCapabilityHotpatch("RAWRXD_DISABLE_THOUGHT_HOTPATCH"))
+    {
+        prefix += "[RawrXD hotpatch — Thought]\n"
+                  "Even without native chain-of-thought in the backend, first write a concise private reasoning block "
+                  "inside <thought>...</thought>, then give the user-facing answer after </thought>.\n\n";
+    }
+    if (!prefix.empty())
+        refinedPrompt.insert(0, prefix);
+}
+
 void AgenticBridge::SetLanguageContext(const std::string& language, const std::string& filePath)
 {
     m_languageContext = language;
@@ -505,10 +571,10 @@ void AgenticBridge::StopAgentLoop()
 
 std::vector<std::string> AgenticBridge::GetAvailableTools()
 {
-    return {"shell",           "powershell",       "run_in_terminal", "read_file",      "write_file",
-            "list_dir",        "list_directory",   "grep_files",      "search_files",   "reference_symbol",
-            "load_model",      "model_status",     "web_search",      "git_status",     "task_orchestrator",
-            "runSubagent",     "manage_todo_list", "chain",           "hexmag_swarm"};
+    return {"shell",       "powershell",       "run_in_terminal", "read_file",    "write_file",
+            "list_dir",    "list_directory",   "grep_files",      "search_files", "reference_symbol",
+            "load_model",  "model_status",     "web_search",      "git_status",   "task_orchestrator",
+            "runSubagent", "manage_todo_list", "chain",           "hexmag_swarm"};
 }
 
 std::string AgenticBridge::GetAgentStatus()
@@ -689,7 +755,8 @@ bool AgenticBridge::ReadProcessOutput(std::string& output, DWORD timeoutMs)
         {
             if (ReadFile(m_hStdoutRead, buffer, kMaxChunk, &bytesRead, NULL) && bytesRead > 0)
             {
-                const size_t safeBytes = (bytesRead <= kMaxChunk) ? static_cast<size_t>(bytesRead) : static_cast<size_t>(kMaxChunk);
+                const size_t safeBytes =
+                    (bytesRead <= kMaxChunk) ? static_cast<size_t>(bytesRead) : static_cast<size_t>(kMaxChunk);
                 buffer[safeBytes] = '\0';
                 output.append(buffer, safeBytes);
             }
@@ -712,7 +779,8 @@ bool AgenticBridge::ReadProcessOutput(std::string& output, DWORD timeoutMs)
             {
                 if (ReadFile(m_hStdoutRead, buffer, kMaxChunk, &bytesRead, NULL) && bytesRead > 0)
                 {
-                    const size_t safeBytes = (bytesRead <= kMaxChunk) ? static_cast<size_t>(bytesRead) : static_cast<size_t>(kMaxChunk);
+                    const size_t safeBytes =
+                        (bytesRead <= kMaxChunk) ? static_cast<size_t>(bytesRead) : static_cast<size_t>(kMaxChunk);
                     buffer[safeBytes] = '\0';
                     output.append(buffer, safeBytes);
                 }
@@ -1063,10 +1131,31 @@ bool AgenticBridge::LoadModel(const std::string& path)
         if (success)
         {
             m_modelName = g_agentEngine->currentModelPath();
+            m_lastModelLoadError.clear();
             LOG_INFO("Model loaded in bridge: " + m_modelName);
             SetIDEAgenticEngineForCommands(g_agentEngine ? g_agentEngine.get() : nullptr);
         }
+        else
+        {
+            if (g_cpuEngine)
+            {
+                m_lastModelLoadError = g_cpuEngine->GetLastLoadErrorMessage();
+            }
+            if (m_lastModelLoadError.empty())
+            {
+                m_lastModelLoadError = "Model load failed in AgenticBridge";
+            }
+            if (m_modelLoadErrorCallback)
+            {
+                m_modelLoadErrorCallback(m_lastModelLoadError);
+            }
+        }
         return success;
+    }
+    m_lastModelLoadError = "Model load failed: agent engine not initialized";
+    if (m_modelLoadErrorCallback)
+    {
+        m_modelLoadErrorCallback(m_lastModelLoadError);
     }
     return false;
 }

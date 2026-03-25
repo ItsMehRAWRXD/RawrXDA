@@ -7,44 +7,46 @@
 #include "../../include/interpretability_panel.h"
 #include "../../include/model_registry.h"
 #include "../../include/multi_file_search.h"
-#include "../core/command_registry.hpp"
-#include "../core/omega_orchestrator.hpp"
 #include "../agentic/agentic_planning_orchestrator.hpp"
-#include "../agentic/failure_intelligence_orchestrator.hpp"
 #include "../agentic/change_impact_analyzer.hpp"
+#include "../agentic/failure_intelligence_orchestrator.hpp"
+#include "../core/command_registry.hpp"
 #include "../core/knowledge_graph_core.hpp"
+#include "../core/omega_orchestrator.hpp"
 #include "IDEConfig.h"
 #include "Win32IDE.h"
 #include "win32_feature_adapter.h"
+
 
 #ifndef IDM_BUILD_PROJECT
 #define IDM_BUILD_PROJECT 2801
 #endif
 #include "../../include/enterprise_license.h"
+#include "../asm/monolithic/rtp_protocol.h"
 #include "../core/enterprise_license.h"
 #include "../core/instructions_provider.hpp"
 #include "../core/proxy_hotpatcher.hpp"
 #include "../core/unified_hotpatch_manager.hpp"
-#include "../asm/monolithic/rtp_protocol.h"
 #include "../hybrid_cloud_manager.h"
-#include "lsp/RawrXD_LSPServer.h"
 #include "../thermal/RAWRXD_ThermalDashboard.hpp"
 #include "../ui/monaco_settings_dialog.h"
+#include "lsp/RawrXD_LSPServer.h"
 #include <algorithm>
 #include <cctype>
 #include <chrono>
 #include <commctrl.h>
 #include <commdlg.h>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <functional>
 #include <map>
 #include <memory>
-#include <cstring>
 #include <nlohmann/json.hpp>
 #include <richedit.h>
 #include <set>
 #include <sstream>
+
 
 // Command registry and dispatch
 
@@ -118,19 +120,21 @@ nlohmann::json g_lastMcpRequest;
 std::string g_lastMcpRequestLabel;
 
 // MCP tool-call history ring buffer for 5928
-struct MCPToolCallEntry {
+struct MCPToolCallEntry
+{
     std::string toolName;
     std::string argsJson;
     std::string responseSnippet;
-    int64_t     timestampMs;
+    int64_t timestampMs;
 };
 static std::vector<MCPToolCallEntry> g_mcpToolHistory;
 static constexpr size_t MAX_MCP_HISTORY = 64;
 
 // Staged refactor state for 5925
-struct StagedRefactorEdit {
+struct StagedRefactorEdit
+{
     std::string file;
-    int         line;
+    int line;
     std::string oldText;
     std::string newText;
 };
@@ -138,8 +142,9 @@ static std::vector<StagedRefactorEdit> g_stagedRefactorEdits;
 static std::string g_stagedRefactorSymbol;
 
 // Agent checkpoint ring for 5927
-struct AgentCheckpointEntry {
-    int64_t     timestampMs;
+struct AgentCheckpointEntry
+{
+    int64_t timestampMs;
     std::string instruction;
     std::string agentResponse;
     std::string activeFile;
@@ -196,7 +201,8 @@ static constexpr size_t MAX_AGENT_CHECKPOINTS = 32;
 #define IDM_FILE_EXIT 2005
 #endif
 
-// Enterprise/Professional feature entry points (menu wiring) — use non-UI ID range to avoid collisions with View (3030+)
+// Enterprise/Professional feature entry points (menu wiring) — use non-UI ID range to avoid collisions with View
+// (3030+)
 #ifndef IDM_ENT_MODEL_COMPARE
 #define IDM_ENT_MODEL_COMPARE 12330
 #endif
@@ -439,6 +445,25 @@ bool Win32IDE::routeCommand(int commandId)
         handleModulesCommand(commandId);
         return true;
     }
+    else if (commandId >= 7001 && commandId <= 7006)
+    {
+        // resource.h Build menu IDs (7001-7006) were shadowed by the 7000-8000 help catch-all.
+        // Remap to IDM_BUILD_* range (10400+):
+        //   7001=Compile, 7002=Build  -> IDM_BUILD_SOLUTION (10400)
+        //   7003=Rebuild              -> IDM_BUILD_REBUILD  (10402)
+        //   7004=Clean                -> IDM_BUILD_CLEAN    (10401)
+        //   7005=Run                  -> IDM_BUILD_SOLUTION (10400)
+        //   7006=Debug                -> IDM_BUILD_REBUILD  (10402)
+        static const int kBuildIdRemap[] = {0, 10400, 10400, 10402, 10401, 10400, 10402};
+        handleBuildCommand(kBuildIdRemap[commandId - 7000]);
+        return true;
+    }
+    else if (commandId >= 7050 && commandId <= 7057)
+    {
+        // Unified Problems Panel + Agent Panel (IDM_VIEW_PROBLEMS=7056, IDM_VIEW_AGENT_PANEL=7057)
+        handleProblemsCommand(commandId);
+        return true;
+    }
     else if (commandId >= 7000 && commandId < 8000)
     {
         handleHelpCommand(commandId);
@@ -453,6 +478,10 @@ bool Win32IDE::routeCommand(int commandId)
     {
         handleMonacoCommand(commandId);
         return true;
+    }
+    else if (commandId >= IDM_LSP_SERVER_START && commandId <= IDM_LSP_SERVER_LAUNCH_STDIO)
+    {
+        return handleLSPServerCommand(commandId);
     }
     else if (commandId >= 9500 && commandId < 9600)
     {
@@ -574,20 +603,6 @@ bool Win32IDE::routeCommand(int commandId)
         handleStaticAnalysisCommand(commandId);
         return true;
     }
-    else if (commandId >= 7050 && commandId <= 7056)
-    {
-        // P0: Unified Problems Panel
-        handleProblemsCommand(commandId);
-        return true;
-    }
-    else if (commandId == IDM_VIEW_PROBLEMS)
-    {
-        initProblemsPanel();
-        if (m_hwndProblemsPanel)
-            ShowWindow(m_hwndProblemsPanel, SW_SHOW);
-        refreshProblemsView();
-        return true;
-    }
     else if (commandId >= 11300 && commandId < 11400)
     {
         // Phase 16: Semantic Code Intelligence
@@ -604,6 +619,11 @@ bool Win32IDE::routeCommand(int commandId)
     {
         // Feature modules (refactor, language, vision, etc.)
         return handleFeaturesCommand(commandId);
+    }
+    else if (commandId >= 11600 && commandId < 11615)
+    {
+        // Tier 5 and Phase 51: Crash Reporter + IRC Bridge
+        return handleTier5Command(commandId);
     }
     else if (commandId >= 9400 && commandId < 9500)
     {
@@ -623,6 +643,11 @@ bool Win32IDE::routeCommand(int commandId)
     {
         // Tier 3: Cosmetics (#20–#30, e.g. bracket pairs, zen, fold, lightbulb)
         return handleTier3CosmeticsCommand(commandId);
+    }
+    else if (commandId >= IDM_ENT_MODEL_COMPARE && commandId <= IDM_ENT_CUSTOM_QUANT)
+    {
+        handleViewCommand(commandId);
+        return true;
     }
     else if (commandId >= 12400 && commandId < 12500)
     {
@@ -1327,8 +1352,7 @@ void Win32IDE::handleViewCommand(int commandId)
                 break;
             }
             handleToolsCommand(IDM_REPLAY_EXPORT_SESSION);
-            appendToOutput("[Enterprise] Session export executed via replay lane.", "General",
-                           OutputSeverity::Info);
+            appendToOutput("[Enterprise] Session export executed via replay lane.", "General", OutputSeverity::Info);
             if (m_hwndStatusBar)
                 SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Export/Import Sessions");
             break;
@@ -1564,13 +1588,13 @@ void Win32IDE::handleTerminalCommand(int commandId)
             SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Terminal cleared");
             break;
         case IDM_TERMINAL_CLEAR:  // 4010
+        {
+            TerminalPane* activePane = getActiveTerminalPane();
+            if (activePane && activePane->hwnd)
             {
-                TerminalPane* activePane = getActiveTerminalPane();
-                if (activePane && activePane->hwnd)
-                {
-                    SetWindowTextA(activePane->hwnd, "");
-                }
+                SetWindowTextA(activePane->hwnd, "");
             }
+        }
             SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Terminal cleared");
             break;
 
@@ -1748,26 +1772,34 @@ void Win32IDE::handleToolsCommand(int commandId)
             if (testPrompt.empty())
             {
                 char promptBuf[2048] = {};
-                if (DialogBoxParamA(m_hInstance, "AGENT_PROMPT_DLG", m_hwndMain,
-                    [](HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) -> INT_PTR {
-                        switch (msg) {
-                        case WM_INITDIALOG:
-                            SetWindowTextA(hwnd, "Failure Intelligence");
-                            SetWindowTextA(GetDlgItem(hwnd, 101), "Enter prompt to execute with failure intelligence:");
-                            return TRUE;
-                        case WM_COMMAND:
-                            if (LOWORD(wp) == IDOK) {
-                                GetDlgItemTextA(hwnd, 102, (char*)lp, 2048);
-                                EndDialog(hwnd, IDOK);
-                                return TRUE;
-                            } else if (LOWORD(wp) == IDCANCEL) {
-                                EndDialog(hwnd, IDCANCEL);
-                                return TRUE;
+                if (DialogBoxParamA(
+                        m_hInstance, "AGENT_PROMPT_DLG", m_hwndMain,
+                        [](HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) -> INT_PTR
+                        {
+                            switch (msg)
+                            {
+                                case WM_INITDIALOG:
+                                    SetWindowTextA(hwnd, "Failure Intelligence");
+                                    SetWindowTextA(GetDlgItem(hwnd, 101),
+                                                   "Enter prompt to execute with failure intelligence:");
+                                    return TRUE;
+                                case WM_COMMAND:
+                                    if (LOWORD(wp) == IDOK)
+                                    {
+                                        GetDlgItemTextA(hwnd, 102, (char*)lp, 2048);
+                                        EndDialog(hwnd, IDOK);
+                                        return TRUE;
+                                    }
+                                    else if (LOWORD(wp) == IDCANCEL)
+                                    {
+                                        EndDialog(hwnd, IDCANCEL);
+                                        return TRUE;
+                                    }
+                                    break;
                             }
-                            break;
-                        }
-                        return FALSE;
-                    }, (LPARAM)promptBuf) == IDOK)
+                            return FALSE;
+                        },
+                        (LPARAM)promptBuf) == IDOK)
                 {
                     testPrompt = promptBuf;
                 }
@@ -1781,8 +1813,7 @@ void Win32IDE::handleToolsCommand(int commandId)
             }
             else
             {
-                appendToOutput("[FailureIntelligence] No prompt provided", "General",
-                               OutputSeverity::Warning);
+                appendToOutput("[FailureIntelligence] No prompt provided", "General", OutputSeverity::Warning);
             }
         }
         break;
@@ -2083,26 +2114,33 @@ void Win32IDE::handleToolsCommand(int commandId)
                 if (key.empty())
                 {
                     char keyBuf[1024] = {};
-                    if (DialogBoxParamA(m_hInstance, "AGENT_PROMPT_DLG", m_hwndMain,
-                        [](HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) -> INT_PTR {
-                            switch (msg) {
-                            case WM_INITDIALOG:
-                                SetWindowTextA(hwnd, "Set Backend API Key");
-                                SetWindowTextA(GetDlgItem(hwnd, 101), "Enter API key for active backend:");
-                                return TRUE;
-                            case WM_COMMAND:
-                                if (LOWORD(wp) == IDOK) {
-                                    GetDlgItemTextA(hwnd, 102, (char*)lp, 1024);
-                                    EndDialog(hwnd, IDOK);
-                                    return TRUE;
-                                } else if (LOWORD(wp) == IDCANCEL) {
-                                    EndDialog(hwnd, IDCANCEL);
-                                    return TRUE;
+                    if (DialogBoxParamA(
+                            m_hInstance, "AGENT_PROMPT_DLG", m_hwndMain,
+                            [](HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) -> INT_PTR
+                            {
+                                switch (msg)
+                                {
+                                    case WM_INITDIALOG:
+                                        SetWindowTextA(hwnd, "Set Backend API Key");
+                                        SetWindowTextA(GetDlgItem(hwnd, 101), "Enter API key for active backend:");
+                                        return TRUE;
+                                    case WM_COMMAND:
+                                        if (LOWORD(wp) == IDOK)
+                                        {
+                                            GetDlgItemTextA(hwnd, 102, (char*)lp, 1024);
+                                            EndDialog(hwnd, IDOK);
+                                            return TRUE;
+                                        }
+                                        else if (LOWORD(wp) == IDCANCEL)
+                                        {
+                                            EndDialog(hwnd, IDCANCEL);
+                                            return TRUE;
+                                        }
+                                        break;
                                 }
-                                break;
-                            }
-                            return FALSE;
-                        }, (LPARAM)keyBuf) == IDOK)
+                                return FALSE;
+                            },
+                            (LPARAM)keyBuf) == IDOK)
                     {
                         key = keyBuf;
                     }
@@ -2118,8 +2156,8 @@ void Win32IDE::handleToolsCommand(int commandId)
                 }
                 else
                 {
-                    appendToOutput("[BackendSwitcher] API key entry cancelled or empty.",
-                                   "General", OutputSeverity::Warning);
+                    appendToOutput("[BackendSwitcher] API key entry cancelled or empty.", "General",
+                                   OutputSeverity::Warning);
                 }
             }
             break;
@@ -2191,26 +2229,33 @@ void Win32IDE::handleToolsCommand(int commandId)
             if (testPrompt.empty())
             {
                 char promptBuf[2048] = {};
-                if (DialogBoxParamA(m_hInstance, "AGENT_PROMPT_DLG", m_hwndMain,
-                    [](HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) -> INT_PTR {
-                        switch (msg) {
-                        case WM_INITDIALOG:
-                            SetWindowTextA(hwnd, "LLM Router Dry-Run");
-                            SetWindowTextA(GetDlgItem(hwnd, 101), "Enter prompt to route:");
-                            return TRUE;
-                        case WM_COMMAND:
-                            if (LOWORD(wp) == IDOK) {
-                                GetDlgItemTextA(hwnd, 102, (char*)lp, 2048);
-                                EndDialog(hwnd, IDOK);
-                                return TRUE;
-                            } else if (LOWORD(wp) == IDCANCEL) {
-                                EndDialog(hwnd, IDCANCEL);
-                                return TRUE;
+                if (DialogBoxParamA(
+                        m_hInstance, "AGENT_PROMPT_DLG", m_hwndMain,
+                        [](HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) -> INT_PTR
+                        {
+                            switch (msg)
+                            {
+                                case WM_INITDIALOG:
+                                    SetWindowTextA(hwnd, "LLM Router Dry-Run");
+                                    SetWindowTextA(GetDlgItem(hwnd, 101), "Enter prompt to route:");
+                                    return TRUE;
+                                case WM_COMMAND:
+                                    if (LOWORD(wp) == IDOK)
+                                    {
+                                        GetDlgItemTextA(hwnd, 102, (char*)lp, 2048);
+                                        EndDialog(hwnd, IDOK);
+                                        return TRUE;
+                                    }
+                                    else if (LOWORD(wp) == IDCANCEL)
+                                    {
+                                        EndDialog(hwnd, IDCANCEL);
+                                        return TRUE;
+                                    }
+                                    break;
                             }
-                            break;
-                        }
-                        return FALSE;
-                    }, (LPARAM)promptBuf) == IDOK)
+                            return FALSE;
+                        },
+                        (LPARAM)promptBuf) == IDOK)
                 {
                     testPrompt = promptBuf;
                 }
@@ -2225,8 +2270,7 @@ void Win32IDE::handleToolsCommand(int commandId)
             }
             else
             {
-                appendToOutput("[LLMRouter] Dry-run cancelled or empty prompt.",
-                               "General", OutputSeverity::Warning);
+                appendToOutput("[LLMRouter] Dry-run cancelled or empty prompt.", "General", OutputSeverity::Warning);
             }
         }
         break;
@@ -2831,7 +2875,8 @@ void Win32IDE::handleToolsCommand(int commandId)
 
         case 5902:  // Semantic Symbol Search
         {
-            auto trimInPlace = [](std::string& s) {
+            auto trimInPlace = [](std::string& s)
+            {
                 auto isWs = [](unsigned char c) { return std::isspace(c) != 0; };
                 while (!s.empty() && isWs((unsigned char)s.front()))
                     s.erase(s.begin());
@@ -2840,10 +2885,12 @@ void Win32IDE::handleToolsCommand(int commandId)
             };
 
             std::string query;
-            if (m_hwndEditor) {
+            if (m_hwndEditor)
+            {
                 CHARRANGE sel = {};
                 SendMessageA(m_hwndEditor, EM_EXGETSEL, 0, (LPARAM)&sel);
-                if (sel.cpMax > sel.cpMin) {
+                if (sel.cpMax > sel.cpMin)
+                {
                     TEXTRANGEA tr = {};
                     tr.chrg = sel;
                     std::vector<char> buf((size_t)(sel.cpMax - sel.cpMin) + 1, 0);
@@ -2856,15 +2903,17 @@ void Win32IDE::handleToolsCommand(int commandId)
                 query = getWindowText(m_hwndCopilotChatInput);
             trimInPlace(query);
 
-            if (query.empty()) {
-                appendToOutput("[SemanticSearch] Select a symbol or type a query in chat input first.",
-                               "General", OutputSeverity::Warning);
+            if (query.empty())
+            {
+                appendToOutput("[SemanticSearch] Select a symbol or type a query in chat input first.", "General",
+                               OutputSeverity::Warning);
                 break;
             }
 
             if (!m_lspServer)
                 initLSPServer();
-            if (!m_lspServer || !m_lspServer->isRunning()) {
+            if (!m_lspServer || !m_lspServer->isRunning())
+            {
                 appendToOutput("[SemanticSearch] LSP server is not running.", "General", OutputSeverity::Warning);
                 break;
             }
@@ -2877,19 +2926,22 @@ void Win32IDE::handleToolsCommand(int commandId)
             m_lspServer->injectMessage(req.dump());
 
             std::string response;
-            for (int i = 0; i < 40; ++i) {
+            for (int i = 0; i < 40; ++i)
+            {
                 response = m_lspServer->pollOutgoing();
                 if (!response.empty())
                     break;
                 Sleep(25);
             }
-            if (response.empty()) {
+            if (response.empty())
+            {
                 appendToOutput("[SemanticSearch] No response from symbol index.", "General", OutputSeverity::Warning);
                 break;
             }
 
             nlohmann::json j = nlohmann::json::parse(response, nullptr, false);
-            if (j.is_discarded() || !j.contains("result") || !j["result"].is_array()) {
+            if (j.is_discarded() || !j.contains("result") || !j["result"].is_array())
+            {
                 appendToOutput("[SemanticSearch] Invalid symbol response.", "General", OutputSeverity::Warning);
                 break;
             }
@@ -2899,14 +2951,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             out << "[SemanticSearch] Query: " << query << "\n";
             out << "Matches: " << result.size() << "\n";
             const size_t limit = (std::min)(result.size(), (size_t)25);
-            for (size_t i = 0; i < limit; ++i) {
+            for (size_t i = 0; i < limit; ++i)
+            {
                 const auto& item = result[i];
                 std::string name = item.value("name", "<unnamed>");
                 std::string container = item.value("containerName", "");
                 std::string uri = item.contains("location") ? item["location"].value("uri", "") : "";
                 int line = 0;
                 if (item.contains("location") && item["location"].contains("range") &&
-                    item["location"]["range"].contains("start")) {
+                    item["location"]["range"].contains("start"))
+                {
                     line = item["location"]["range"]["start"].value("line", 0) + 1;
                 }
                 std::string path = uri.empty() ? "<unknown>" : uriToFilePath(uri);
@@ -2939,12 +2993,13 @@ void Win32IDE::handleToolsCommand(int commandId)
                 totalDiags += (int)p.second.size();
             j["diagnosticFileCount"] = (int)allDiags.size();
             j["diagnosticCount"] = totalDiags;
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             std::ofstream out(snapshotPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[WorkspaceSnapshot] Failed to write snapshot file.", "General", OutputSeverity::Error);
                 break;
             }
@@ -2958,16 +3013,19 @@ void Win32IDE::handleToolsCommand(int commandId)
 
         case 5904:  // Repo-Wide Refactor Preview
         {
-            auto isIdent = [](char c) {
+            auto isIdent = [](char c)
+            {
                 unsigned char u = (unsigned char)c;
                 return std::isalnum(u) || c == '_';
             };
 
             std::string needle;
-            if (m_hwndEditor) {
+            if (m_hwndEditor)
+            {
                 CHARRANGE sel = {};
                 SendMessageA(m_hwndEditor, EM_EXGETSEL, 0, (LPARAM)&sel);
-                if (sel.cpMax > sel.cpMin) {
+                if (sel.cpMax > sel.cpMin)
+                {
                     TEXTRANGEA tr = {};
                     tr.chrg = sel;
                     std::vector<char> buf((size_t)(sel.cpMax - sel.cpMin) + 1, 0);
@@ -2983,9 +3041,10 @@ void Win32IDE::handleToolsCommand(int commandId)
             while (!needle.empty() && std::isspace((unsigned char)needle.front()))
                 needle.erase(needle.begin());
 
-            if (needle.empty()) {
-                appendToOutput("[RefactorPreview] Select a symbol or put it in chat input first.",
-                               "General", OutputSeverity::Warning);
+            if (needle.empty())
+            {
+                appendToOutput("[RefactorPreview] Select a symbol or put it in chat input first.", "General",
+                               OutputSeverity::Warning);
                 break;
             }
 
@@ -2994,11 +3053,12 @@ void Win32IDE::handleToolsCommand(int commandId)
             std::map<std::string, int> perFileHits;
             int totalHits = 0;
             int scannedFiles = 0;
-            const std::set<std::string> exts = {".c", ".cc", ".cpp", ".cxx", ".h", ".hpp", ".hh",
-                                                ".asm", ".inc", ".ps1", ".py", ".js", ".ts"};
+            const std::set<std::string> exts = {".c",   ".cc",  ".cpp", ".cxx", ".h",  ".hpp", ".hh",
+                                                ".asm", ".inc", ".ps1", ".py",  ".js", ".ts"};
 
             for (auto it = fs::recursive_directory_iterator(root, fs::directory_options::skip_permission_denied);
-                 it != fs::recursive_directory_iterator(); ++it) {
+                 it != fs::recursive_directory_iterator(); ++it)
+            {
                 if (!it->is_regular_file())
                     continue;
                 const std::string ext = it->path().extension().string();
@@ -3015,29 +3075,31 @@ void Win32IDE::handleToolsCommand(int commandId)
 
                 int hits = 0;
                 size_t pos = 0;
-                while ((pos = content.find(needle, pos)) != std::string::npos) {
+                while ((pos = content.find(needle, pos)) != std::string::npos)
+                {
                     char left = (pos == 0) ? '\0' : content[pos - 1];
                     char right = (pos + needle.size() < content.size()) ? content[pos + needle.size()] : '\0';
                     if (!isIdent(left) && !isIdent(right))
                         ++hits;
                     pos += needle.size();
                 }
-                if (hits > 0) {
+                if (hits > 0)
+                {
                     perFileHits[it->path().string()] = hits;
                     totalHits += hits;
                 }
             }
 
             std::vector<std::pair<std::string, int>> ranked(perFileHits.begin(), perFileHits.end());
-            std::sort(ranked.begin(), ranked.end(),
-                      [](const auto& a, const auto& b) { return a.second > b.second; });
+            std::sort(ranked.begin(), ranked.end(), [](const auto& a, const auto& b) { return a.second > b.second; });
 
             std::ostringstream out;
             out << "[RefactorPreview] Symbol: " << needle << "\n";
             out << "Scanned files: " << scannedFiles << ", files with hits: " << ranked.size()
                 << ", total hits: " << totalHits << "\n";
             const size_t limit = (std::min)(ranked.size(), (size_t)20);
-            for (size_t i = 0; i < limit; ++i) {
+            for (size_t i = 0; i < limit; ++i)
+            {
                 out << "  - " << ranked[i].first << " (" << ranked[i].second << ")\n";
             }
             appendToOutput(out.str(), "General", OutputSeverity::Info);
@@ -3046,14 +3108,16 @@ void Win32IDE::handleToolsCommand(int commandId)
 
         case 5905:  // LLM-Guided Edit Apply
         {
-            if (!m_hwndEditor || !m_agenticBridge) {
+            if (!m_hwndEditor || !m_agenticBridge)
+            {
                 appendToOutput("[LLMEdit] Editor/bridge not ready.", "General", OutputSeverity::Warning);
                 break;
             }
 
             CHARRANGE sel = {};
             SendMessageA(m_hwndEditor, EM_EXGETSEL, 0, (LPARAM)&sel);
-            if (sel.cpMax <= sel.cpMin) {
+            if (sel.cpMax <= sel.cpMin)
+            {
                 appendToOutput("[LLMEdit] Select code to rewrite first.", "General", OutputSeverity::Warning);
                 break;
             }
@@ -3069,14 +3133,17 @@ void Win32IDE::handleToolsCommand(int commandId)
             if (goal.empty())
                 goal = "Improve correctness and readability while preserving behavior.";
 
-            std::string prompt =
-                "Rewrite the following code according to this goal.\n"
-                "Goal: " + goal + "\n"
-                "Return ONLY replacement code without markdown fences.\n\n" + selected;
+            std::string prompt = "Rewrite the following code according to this goal.\n"
+                                 "Goal: " +
+                                 goal +
+                                 "\n"
+                                 "Return ONLY replacement code without markdown fences.\n\n" +
+                                 selected;
 
             AgentResponse resp = m_agenticBridge->ExecuteAgentCommand(prompt);
             std::string replacement = resp.content;
-            if (replacement.rfind("```", 0) == 0) {
+            if (replacement.rfind("```", 0) == 0)
+            {
                 size_t firstNl = replacement.find('\n');
                 if (firstNl != std::string::npos)
                     replacement = replacement.substr(firstNl + 1);
@@ -3093,8 +3160,12 @@ void Win32IDE::handleToolsCommand(int commandId)
 
         case 5906:  // Agent Workflow (One Shot)
         {
-            if (!m_agenticBridge) {
-                appendToOutput("[AgentWorkflow] Agent bridge not initialized.", "General", OutputSeverity::Warning);
+            if (!m_agenticBridge)
+                initializeAgenticBridge();
+            if (!m_agenticBridge)
+            {
+                appendToOutput("[AgentWorkflow] Bridge unavailable — load a model first (File > Load Model).",
+                               "General", OutputSeverity::Warning);
                 break;
             }
 
@@ -3105,7 +3176,8 @@ void Win32IDE::handleToolsCommand(int commandId)
 
             if (m_hwndCopilotChatInput)
                 setWindowText(m_hwndCopilotChatInput, goal);
-            if (m_autonomyManager) {
+            if (m_autonomyManager)
+            {
                 m_autonomyManager->setGoal(goal);
                 m_autonomyManager->tick();
             }
@@ -3118,28 +3190,32 @@ void Win32IDE::handleToolsCommand(int commandId)
         {
             if (!m_mcpInitialized)
                 initMCP();
-            if (!m_mcpServer) {
+            if (!m_mcpServer)
+            {
                 appendToOutput("[MCP] MCP server unavailable.", "General", OutputSeverity::Warning);
                 break;
             }
 
             std::string raw = m_hwndCopilotChatInput ? getWindowText(m_hwndCopilotChatInput) : "";
-            if (raw.empty()) {
-                appendToOutput("[MCP] Usage: <toolName> <jsonArgs> (type in chat input).",
-                               "General", OutputSeverity::Warning);
+            if (raw.empty())
+            {
+                appendToOutput("[MCP] Usage: <toolName> <jsonArgs> (type in chat input).", "General",
+                               OutputSeverity::Warning);
                 break;
             }
 
             size_t sp = raw.find(' ');
             std::string toolName = (sp == std::string::npos) ? raw : raw.substr(0, sp);
             std::string argText = (sp == std::string::npos) ? "{}" : raw.substr(sp + 1);
-            if (toolName.empty()) {
+            if (toolName.empty())
+            {
                 appendToOutput("[MCP] Missing tool name.", "General", OutputSeverity::Warning);
                 break;
             }
 
             nlohmann::json args = nlohmann::json::parse(argText, nullptr, false);
-            if (args.is_discarded()) {
+            if (args.is_discarded())
+            {
                 args = nlohmann::json::object();
                 args["input"] = argText;
             }
@@ -3173,27 +3249,40 @@ void Win32IDE::handleToolsCommand(int commandId)
             std::map<std::string, int> bySource;
             int errors = 0, warnings = 0, infos = 0, hints = 0;
             int total = 0;
-            for (const auto& [uri, diags] : allDiags) {
+            for (const auto& [uri, diags] : allDiags)
+            {
                 (void)uri;
-                for (const auto& d : diags) {
+                for (const auto& d : diags)
+                {
                     ++total;
                     bySource[d.source.empty() ? "<unknown>" : d.source]++;
-                    switch (d.severity) {
-                        case 1: ++errors; break;
-                        case 2: ++warnings; break;
-                        case 3: ++infos; break;
-                        default: ++hints; break;
+                    switch (d.severity)
+                    {
+                        case 1:
+                            ++errors;
+                            break;
+                        case 2:
+                            ++warnings;
+                            break;
+                        case 3:
+                            ++infos;
+                            break;
+                        default:
+                            ++hints;
+                            break;
                     }
                 }
             }
 
             std::ostringstream out;
-            out << "[DiagnosticsIntel] Files: " << allDiags.size() << ", Total: " << total
-                << " (E:" << errors << " W:" << warnings << " I:" << infos << " H:" << hints << ")\n";
-            for (const auto& kv : bySource) {
+            out << "[DiagnosticsIntel] Files: " << allDiags.size() << ", Total: " << total << " (E:" << errors
+                << " W:" << warnings << " I:" << infos << " H:" << hints << ")\n";
+            for (const auto& kv : bySource)
+            {
                 out << "  - " << kv.first << ": " << kv.second << "\n";
             }
-            if (total == 0) {
+            if (total == 0)
+            {
                 out << "No diagnostics available. Trigger build/LSP analysis first.\n";
             }
             appendToOutput(out.str(), "General", OutputSeverity::Info);
@@ -3203,10 +3292,12 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5910:  // References For Current Symbol
         {
             std::string symbol;
-            if (m_hwndEditor) {
+            if (m_hwndEditor)
+            {
                 CHARRANGE sel = {};
                 SendMessageA(m_hwndEditor, EM_EXGETSEL, 0, (LPARAM)&sel);
-                if (sel.cpMax > sel.cpMin) {
+                if (sel.cpMax > sel.cpMin)
+                {
                     TEXTRANGEA tr = {};
                     tr.chrg = sel;
                     std::vector<char> buf((size_t)(sel.cpMax - sel.cpMin) + 1, 0);
@@ -3222,9 +3313,10 @@ void Win32IDE::handleToolsCommand(int commandId)
             while (!symbol.empty() && std::isspace((unsigned char)symbol.back()))
                 symbol.pop_back();
 
-            if (symbol.empty()) {
-                appendToOutput("[References] Select symbol text or type symbol in chat input first.",
-                               "General", OutputSeverity::Warning);
+            if (symbol.empty())
+            {
+                appendToOutput("[References] Select symbol text or type symbol in chat input first.", "General",
+                               OutputSeverity::Warning);
                 break;
             }
             cmdFindAllReferences(symbol);
@@ -3245,32 +3337,40 @@ void Win32IDE::handleToolsCommand(int commandId)
             pack << "- Active file: " << m_currentFile << "\n\n";
 
             pack << "## Recent Files\n";
-            for (const auto& f : m_recentFiles) {
+            for (const auto& f : m_recentFiles)
+            {
                 pack << "- " << f << "\n";
             }
             pack << "\n";
 
             auto allDiags = getAllDiagnostics();
             pack << "## Diagnostics\n";
-            for (const auto& [uri, diags] : allDiags) {
-                if (diags.empty()) continue;
+            for (const auto& [uri, diags] : allDiags)
+            {
+                if (diags.empty())
+                    continue;
                 pack << "- " << uriToFilePath(uri) << " (" << diags.size() << ")\n";
             }
-            if (allDiags.empty()) pack << "- none\n";
+            if (allDiags.empty())
+                pack << "- none\n";
             pack << "\n";
 
-            if (!m_currentFile.empty()) {
+            if (!m_currentFile.empty())
+            {
                 std::ifstream f(m_currentFile, std::ios::binary);
-                if (f.is_open()) {
+                if (f.is_open())
+                {
                     std::string content((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
-                    if (content.size() > 12000) content.resize(12000);
+                    if (content.size() > 12000)
+                        content.resize(12000);
                     pack << "## Active File Snippet\n";
                     pack << "```text\n" << content << "\n```\n";
                 }
             }
 
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[ReasoningPack] Failed to write pack file.", "General", OutputSeverity::Error);
                 break;
             }
@@ -3285,7 +3385,8 @@ void Win32IDE::handleToolsCommand(int commandId)
         {
             if (!m_mcpInitialized)
                 initMCP();
-            if (!m_mcpServer) {
+            if (!m_mcpServer)
+            {
                 appendToOutput("[MCP] MCP server unavailable.", "General", OutputSeverity::Warning);
                 break;
             }
@@ -3297,11 +3398,14 @@ void Win32IDE::handleToolsCommand(int commandId)
             std::ostringstream out;
             out << "[MCP] Catalog\n";
             out << "Tools: " << tools.size() << "\n";
-            for (const auto& t : tools) out << "  - " << t.name << "\n";
+            for (const auto& t : tools)
+                out << "  - " << t.name << "\n";
             out << "Resources: " << resources.size() << "\n";
-            for (const auto& r : resources) out << "  - " << r.uri << "\n";
+            for (const auto& r : resources)
+                out << "  - " << r.uri << "\n";
             out << "Prompts: " << prompts.size() << "\n";
-            for (const auto& p : prompts) out << "  - " << p.name << "\n";
+            for (const auto& p : prompts)
+                out << "  - " << p.name << "\n";
             appendToOutput(out.str(), "General", OutputSeverity::Info);
         }
         break;
@@ -3310,19 +3414,22 @@ void Win32IDE::handleToolsCommand(int commandId)
         {
             if (!m_mcpInitialized)
                 initMCP();
-            if (!m_mcpServer) {
+            if (!m_mcpServer)
+            {
                 appendToOutput("[MCP] MCP server unavailable.", "General", OutputSeverity::Warning);
                 break;
             }
 
             std::string raw = m_hwndCopilotChatInput ? getWindowText(m_hwndCopilotChatInput) : "";
-            if (raw.empty()) raw = "code-review {\"language\":\"cpp\",\"code\":\"int add(int a,int b){return a+b;}\"}";
+            if (raw.empty())
+                raw = "code-review {\"language\":\"cpp\",\"code\":\"int add(int a,int b){return a+b;}\"}";
             size_t sp = raw.find(' ');
             std::string promptName = (sp == std::string::npos) ? raw : raw.substr(0, sp);
             std::string argText = (sp == std::string::npos) ? "{}" : raw.substr(sp + 1);
 
             nlohmann::json args = nlohmann::json::parse(argText, nullptr, false);
-            if (args.is_discarded()) args = nlohmann::json::object();
+            if (args.is_discarded())
+                args = nlohmann::json::object();
 
             nlohmann::json req;
             req["jsonrpc"] = "2.0";
@@ -3339,28 +3446,39 @@ void Win32IDE::handleToolsCommand(int commandId)
 
         case 5914:  // Agent Tool Chain (One Turn)
         {
-            if (!m_agenticBridge) {
-                appendToOutput("[AgentToolChain] Agent bridge not initialized.", "General", OutputSeverity::Warning);
+            if (!m_agenticBridge)
+                initializeAgenticBridge();
+            if (!m_agenticBridge)
+            {
+                appendToOutput("[AgentToolChain] Bridge unavailable — load a model first (File > Load Model).",
+                               "General", OutputSeverity::Warning);
                 break;
             }
             std::string instruction = m_hwndCopilotChatInput ? getWindowText(m_hwndCopilotChatInput) : "";
-            if (instruction.empty()) {
+            if (instruction.empty())
+            {
                 instruction = "List project TODO hotspots and propose next action.";
             }
             AgentResponse resp = m_agenticBridge->ExecuteAgentCommand(instruction);
             std::string toolResult;
             bool dispatched = m_agenticBridge->DispatchModelToolCalls(resp.content, toolResult);
-            if (dispatched) {
-                appendToOutput("[AgentToolChain] Tool call dispatched.\n" + toolResult, "General", OutputSeverity::Info);
-            } else {
-                appendToOutput("[AgentToolChain] No tool call emitted.\n" + resp.content, "General", OutputSeverity::Info);
+            if (dispatched)
+            {
+                appendToOutput("[AgentToolChain] Tool call dispatched.\n" + toolResult, "General",
+                               OutputSeverity::Info);
+            }
+            else
+            {
+                appendToOutput("[AgentToolChain] No tool call emitted.\n" + resp.content, "General",
+                               OutputSeverity::Info);
             }
         }
         break;
 
         case 5915:  // Go To Definition (Cursor)
         {
-            if (m_currentFile.empty() || !m_hwndEditor) {
+            if (m_currentFile.empty() || !m_hwndEditor)
+            {
                 appendToOutput("[Definition] Open a file first.", "General", OutputSeverity::Warning);
                 break;
             }
@@ -3373,7 +3491,8 @@ void Win32IDE::handleToolsCommand(int commandId)
 
             std::string uri = filePathToUri(m_currentFile);
             auto defs = lspGotoDefinition(uri, lineIndex, column);
-            if (defs.empty()) {
+            if (defs.empty())
+            {
                 appendToOutput("[Definition] No definition result at cursor.", "General", OutputSeverity::Warning);
                 break;
             }
@@ -3384,15 +3503,15 @@ void Win32IDE::handleToolsCommand(int commandId)
             navigateToFileLine(targetPath, targetLine);
 
             std::ostringstream out;
-            out << "[Definition] Jumped to " << targetPath << ":" << targetLine
-                << " (results: " << defs.size() << ")";
+            out << "[Definition] Jumped to " << targetPath << ":" << targetLine << " (results: " << defs.size() << ")";
             appendToOutput(out.str(), "General", OutputSeverity::Info);
         }
         break;
 
         case 5916:  // Apply Symbol Rename (Workspace Edit)
         {
-            if (m_currentFile.empty() || !m_hwndEditor) {
+            if (m_currentFile.empty() || !m_hwndEditor)
+            {
                 appendToOutput("[RenameApply] Open a file first.", "General", OutputSeverity::Warning);
                 break;
             }
@@ -3401,9 +3520,10 @@ void Win32IDE::handleToolsCommand(int commandId)
                 newName.erase(newName.begin());
             while (!newName.empty() && std::isspace((unsigned char)newName.back()))
                 newName.pop_back();
-            if (newName.empty()) {
-                appendToOutput("[RenameApply] Type target symbol name in chat input first.",
-                               "General", OutputSeverity::Warning);
+            if (newName.empty())
+            {
+                appendToOutput("[RenameApply] Type target symbol name in chat input first.", "General",
+                               OutputSeverity::Warning);
                 break;
             }
 
@@ -3415,9 +3535,9 @@ void Win32IDE::handleToolsCommand(int commandId)
 
             std::string uri = filePathToUri(m_currentFile);
             LSPWorkspaceEdit edit = lspRenameSymbol(uri, lineIndex, column, newName);
-            if (edit.changes.empty()) {
-                appendToOutput("[RenameApply] Rename returned no workspace edits.", "General",
-                               OutputSeverity::Warning);
+            if (edit.changes.empty())
+            {
+                appendToOutput("[RenameApply] Rename returned no workspace edits.", "General", OutputSeverity::Warning);
                 break;
             }
 
@@ -3428,33 +3548,36 @@ void Win32IDE::handleToolsCommand(int commandId)
 
             bool ok = applyWorkspaceEdit(edit);
             std::ostringstream out;
-            out << "[RenameApply] " << (ok ? "Applied" : "Failed applying")
-                << " workspace edit for '" << newName << "' (" << fileCount
-                << " files, " << editCount << " edits).";
+            out << "[RenameApply] " << (ok ? "Applied" : "Failed applying") << " workspace edit for '" << newName
+                << "' (" << fileCount << " files, " << editCount << " edits).";
             appendToOutput(out.str(), "General", ok ? OutputSeverity::Info : OutputSeverity::Error);
         }
         break;
 
         case 5917:  // Diagnostic Quick Actions (Current File)
         {
-            if (m_currentFile.empty()) {
+            if (m_currentFile.empty())
+            {
                 appendToOutput("[DiagActions] Open a file first.", "General", OutputSeverity::Warning);
                 break;
             }
 
             auto diags = aggregateDiagnostics(m_currentFile);
-            if (diags.empty()) {
+            if (diags.empty())
+            {
                 appendToOutput("[DiagActions] No diagnostics for current file.", "General", OutputSeverity::Info);
                 break;
             }
 
-            std::stable_sort(diags.begin(), diags.end(), [](const auto& a, const auto& b) {
-                if (a.severity != b.severity)
-                    return a.severity < b.severity;
-                if (a.line != b.line)
-                    return a.line < b.line;
-                return a.character < b.character;
-            });
+            std::stable_sort(diags.begin(), diags.end(),
+                             [](const auto& a, const auto& b)
+                             {
+                                 if (a.severity != b.severity)
+                                     return a.severity < b.severity;
+                                 if (a.line != b.line)
+                                     return a.line < b.line;
+                                 return a.character < b.character;
+                             });
 
             const auto& top = diags.front();
             navigateToFileLine(top.filePath.empty() ? m_currentFile : top.filePath,
@@ -3462,9 +3585,9 @@ void Win32IDE::handleToolsCommand(int commandId)
 
             std::ostringstream out;
             out << "[DiagActions] Prioritized " << diags.size() << " diagnostics.\n";
-            out << "Top issue: " << (top.filePath.empty() ? m_currentFile : top.filePath)
-                << ":" << top.line << ":" << top.character
-                << " sev=" << top.severity << " source=" << (top.source.empty() ? "unknown" : top.source) << "\n";
+            out << "Top issue: " << (top.filePath.empty() ? m_currentFile : top.filePath) << ":" << top.line << ":"
+                << top.character << " sev=" << top.severity
+                << " source=" << (top.source.empty() ? "unknown" : top.source) << "\n";
             out << "Message: " << top.message << "\n";
             if (!top.aiExplanation.empty())
                 out << "AI Hint: " << top.aiExplanation << "\n";
@@ -3488,7 +3611,8 @@ void Win32IDE::handleToolsCommand(int commandId)
 
             auto changed = getGitChangedFiles();
             nlohmann::json files = nlohmann::json::array();
-            for (const auto& f : changed) {
+            for (const auto& f : changed)
+            {
                 nlohmann::json fj;
                 fj["path"] = f.path;
                 fj["status"] = std::string(1, f.status);
@@ -3505,12 +3629,13 @@ void Win32IDE::handleToolsCommand(int commandId)
             if (executeGitCommand("git diff --cached --stat", stagedDiffStat))
                 j["stagedDiffStat"] = stagedDiffStat;
 
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[GitContext] Failed to write context file.", "General", OutputSeverity::Error);
                 break;
             }
@@ -3539,7 +3664,8 @@ void Win32IDE::handleToolsCommand(int commandId)
             nlohmann::json diagFiles = nlohmann::json::array();
             int totalDiags = 0;
             auto allDiags = getAllDiagnostics();
-            for (const auto& [uri, diags] : allDiags) {
+            for (const auto& [uri, diags] : allDiags)
+            {
                 nlohmann::json dj;
                 dj["file"] = uriToFilePath(uri);
                 dj["count"] = diags.size();
@@ -3549,9 +3675,11 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["diagnosticFiles"] = diagFiles;
             j["diagnosticCount"] = totalDiags;
 
-            if (!m_currentFile.empty()) {
+            if (!m_currentFile.empty())
+            {
                 std::ifstream f(m_currentFile, std::ios::binary);
-                if (f.is_open()) {
+                if (f.is_open())
+                {
                     std::string content((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
                     if (content.size() > 24000)
                         content.resize(24000);
@@ -3559,12 +3687,13 @@ void Win32IDE::handleToolsCommand(int commandId)
                 }
             }
 
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[ReasoningPackJSON] Failed to write pack file.", "General", OutputSeverity::Error);
                 break;
             }
@@ -3579,11 +3708,13 @@ void Win32IDE::handleToolsCommand(int commandId)
         {
             if (!m_mcpInitialized)
                 initMCP();
-            if (!m_mcpServer) {
+            if (!m_mcpServer)
+            {
                 appendToOutput("[MCP] MCP server unavailable.", "General", OutputSeverity::Warning);
                 break;
             }
-            if (g_lastMcpRequest.is_null() || g_lastMcpRequest.empty()) {
+            if (g_lastMcpRequest.is_null() || g_lastMcpRequest.empty())
+            {
                 appendToOutput("[MCP] No previous MCP request to replay.", "General", OutputSeverity::Warning);
                 break;
             }
@@ -3591,8 +3722,7 @@ void Win32IDE::handleToolsCommand(int commandId)
             nlohmann::json replay = g_lastMcpRequest;
             replay["id"] = 5920;
             const std::string resp = m_mcpServer->handleMessage(replay.dump());
-            appendToOutput("[MCP] Replayed " + g_lastMcpRequestLabel + "\n" + resp,
-                           "General", OutputSeverity::Info);
+            appendToOutput("[MCP] Replayed " + g_lastMcpRequestLabel + "\n" + resp, "General", OutputSeverity::Info);
         }
         break;
 
@@ -3601,9 +3731,9 @@ void Win32IDE::handleToolsCommand(int commandId)
             namespace fs = std::filesystem;
             fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
             fs::create_directories(outDir);
-            int64_t nowMs =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            int64_t nowMs = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                std::chrono::system_clock::now().time_since_epoch())
+                                .count();
             fs::path checkpointPath = outDir / ("agent_turn_checkpoint_" + std::to_string(nowMs) + ".json");
 
             std::string instruction = m_hwndCopilotChatInput ? getWindowText(m_hwndCopilotChatInput) : "";
@@ -3616,28 +3746,31 @@ void Win32IDE::handleToolsCommand(int commandId)
             checkpoint["activeFile"] = m_currentFile;
             checkpoint["workspaceRoot"] = m_currentDirectory;
 
-            if (m_agenticBridge) {
+            if (m_agenticBridge)
+            {
                 AgentResponse resp = m_agenticBridge->ExecuteAgentCommand(instruction);
                 std::string toolResult;
                 bool dispatched = m_agenticBridge->DispatchModelToolCalls(resp.content, toolResult);
                 checkpoint["agentResponse"] = resp.content;
                 checkpoint["toolDispatched"] = dispatched;
                 checkpoint["toolResult"] = toolResult;
-                appendToOutput("[AgentCheckpoint] Completed one turn with checkpoint artifact.",
-                               "General", OutputSeverity::Info);
-            } else {
+                appendToOutput("[AgentCheckpoint] Completed one turn with checkpoint artifact.", "General",
+                               OutputSeverity::Info);
+            }
+            else
+            {
                 checkpoint["agentResponse"] = "";
                 checkpoint["toolDispatched"] = false;
                 checkpoint["toolResult"] = "";
-                appendToOutput("[AgentCheckpoint] Agent bridge unavailable; checkpoint captured input only.",
-                               "General", OutputSeverity::Warning);
+                appendToOutput("[AgentCheckpoint] Agent bridge unavailable; checkpoint captured input only.", "General",
+                               OutputSeverity::Warning);
             }
 
             checkpoint["capturedAtUnixMs"] = nowMs;
             std::ofstream out(checkpointPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
-                appendToOutput("[AgentCheckpoint] Failed to write checkpoint file.",
-                               "General", OutputSeverity::Error);
+            if (!out.is_open())
+            {
+                appendToOutput("[AgentCheckpoint] Failed to write checkpoint file.", "General", OutputSeverity::Error);
                 break;
             }
             std::string blob = checkpoint.dump(2);
@@ -3676,8 +3809,7 @@ void Win32IDE::handleToolsCommand(int commandId)
             out << "LSP: " << ((m_lspServer && m_lspServer->isRunning()) ? "running" : "not-running") << "\n";
             out << "MCP: " << (m_mcpServer ? "ready" : "not-ready") << "\n";
             out << "HybridBridge: " << (m_hybridBridgeInitialized ? "ready" : "not-ready") << "\n";
-            out << "AgentBridge: "
-                << (m_agenticBridge ? "ready" : "not-ready");
+            out << "AgentBridge: " << (m_agenticBridge ? "ready" : "not-ready");
             appendToOutput(out.str(), "General", OutputSeverity::Info);
         }
         break;
@@ -3706,12 +3838,13 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["agentBridgeReady"] = (m_agenticBridge != nullptr);
             j["gitBranch"] = getCurrentGitBranch();
             j["gitChangedFileCount"] = getGitChangedFiles().size();
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[ParityReadiness] Failed to write JSON report.", "General", OutputSeverity::Error);
                 break;
             }
@@ -3725,7 +3858,8 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5924:  // Canonical Build Lane Audit
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path wrapperPath = root / "Build-AgenticIDE.ps1";
             fs::path ideBuildPath = root / "BUILD_IDE_PRODUCTION.ps1";
             fs::path monoBuildPath = root / "src" / "asm" / "monolithic" / "Build-Monolithic.ps1";
@@ -3736,7 +3870,8 @@ void Win32IDE::handleToolsCommand(int commandId)
 
             bool wrapperHasWin32Lane = false;
             bool wrapperHasMonoLane = false;
-            if (wrapperExists) {
+            if (wrapperExists)
+            {
                 std::ifstream in(wrapperPath, std::ios::binary);
                 std::string content((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
                 wrapperHasWin32Lane = (content.find("win32ide") != std::string::npos);
@@ -3751,10 +3886,13 @@ void Win32IDE::handleToolsCommand(int commandId)
             out << "Build-Monolithic.ps1: " << (monoBuildExists ? "present" : "missing") << "\n";
             out << "Wrapper lanes: win32ide=" << (wrapperHasWin32Lane ? "yes" : "no")
                 << ", monolithic=" << (wrapperHasMonoLane ? "yes" : "no") << "\n";
-            if (!wrapperExists || !ideBuildExists || !monoBuildExists || !wrapperHasWin32Lane || !wrapperHasMonoLane) {
+            if (!wrapperExists || !ideBuildExists || !monoBuildExists || !wrapperHasWin32Lane || !wrapperHasMonoLane)
+            {
                 out << "Result: WARN - canonical lanes are not fully aligned.\n";
                 appendToOutput(out.str(), "General", OutputSeverity::Warning);
-            } else {
+            }
+            else
+            {
                 out << "Result: OK - canonical lane scripts aligned.\n";
                 appendToOutput(out.str(), "General", OutputSeverity::Info);
             }
@@ -3764,15 +3902,18 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5925:  // Build Win32IDE Lane (Canonical Wrapper)
         {
             namespace fs = std::filesystem;
-            fs::path working = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path working =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path wrapper = working / "Build-AgenticIDE.ps1";
-            if (!fs::exists(wrapper)) {
+            if (!fs::exists(wrapper))
+            {
                 appendToOutput("[BuildLane] Build-AgenticIDE.ps1 not found in workspace root.", "General",
                                OutputSeverity::Warning);
                 break;
             }
 
-            std::string cmd = "powershell -NoProfile -ExecutionPolicy Bypass -File .\\Build-AgenticIDE.ps1 -Lane win32ide -Config release";
+            std::string cmd = "powershell -NoProfile -ExecutionPolicy Bypass -File .\\Build-AgenticIDE.ps1 -Lane "
+                              "win32ide -Config release";
             runBuildInBackground(working.string(), cmd);
             appendToOutput("[BuildLane] Started canonical Win32IDE build via Build-AgenticIDE.ps1", "General",
                            OutputSeverity::Info);
@@ -3804,12 +3945,13 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["routerStatus"] = getRouterStatusString();
             j["routerStats"] = getRouterStatsString();
             j["responsePreview"] = response.substr(0, (std::min)(response.size(), (size_t)800));
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (out.is_open()) {
+            if (out.is_open())
+            {
                 const std::string blob = j.dump(2);
                 out.write(blob.data(), (std::streamsize)blob.size());
                 out.close();
@@ -3833,16 +3975,17 @@ void Win32IDE::handleToolsCommand(int commandId)
             prompt << "Current branch: " << getCurrentGitBranch() << "\n";
             prompt << "Changed files (" << changed.size() << "):\n";
             const size_t maxChanged = (std::min)(changed.size(), (size_t)12);
-            for (size_t i = 0; i < maxChanged; ++i) {
+            for (size_t i = 0; i < maxChanged; ++i)
+            {
                 prompt << "  - [" << changed[i].status << "] " << changed[i].path
                        << (changed[i].staged ? " (staged)" : " (unstaged)") << "\n";
             }
             prompt << "Diagnostics in active file (" << diags.size() << "):\n";
             const size_t maxDiags = (std::min)(diags.size(), (size_t)8);
-            for (size_t i = 0; i < maxDiags; ++i) {
+            for (size_t i = 0; i < maxDiags; ++i)
+            {
                 const auto& d = diags[i];
-                prompt << "  - L" << d.line << ":" << d.character << " sev=" << d.severity
-                       << " " << d.message << "\n";
+                prompt << "  - L" << d.line << ":" << d.character << " sev=" << d.severity << " " << d.message << "\n";
             }
             prompt << "Output format:\n";
             prompt << "1) Findings by severity\n2) File-level patch plan\n3) Minimal risk-first edit sequence";
@@ -3856,29 +3999,37 @@ void Win32IDE::handleToolsCommand(int commandId)
 
         case 5928:  // Auto-Fix Top Diagnostic (One Turn)
         {
-            if (m_currentFile.empty()) {
+            if (m_currentFile.empty())
+            {
                 appendToOutput("[AutoFixDiag] Open a file first.", "General", OutputSeverity::Warning);
                 break;
             }
-            if (!m_agenticBridge) {
-                appendToOutput("[AutoFixDiag] Agent bridge not initialized.", "General", OutputSeverity::Warning);
+            if (!m_agenticBridge)
+                initializeAgenticBridge();
+            if (!m_agenticBridge)
+            {
+                appendToOutput("[AutoFixDiag] Bridge unavailable — load a model first (File > Load Model).", "General",
+                               OutputSeverity::Warning);
                 break;
             }
 
             auto diags = aggregateDiagnostics(m_currentFile);
-            if (diags.empty()) {
+            if (diags.empty())
+            {
                 appendToOutput("[AutoFixDiag] No diagnostics available in active file.", "General",
                                OutputSeverity::Info);
                 break;
             }
 
-            std::stable_sort(diags.begin(), diags.end(), [](const auto& a, const auto& b) {
-                if (a.severity != b.severity)
-                    return a.severity < b.severity;
-                if (a.line != b.line)
-                    return a.line < b.line;
-                return a.character < b.character;
-            });
+            std::stable_sort(diags.begin(), diags.end(),
+                             [](const auto& a, const auto& b)
+                             {
+                                 if (a.severity != b.severity)
+                                     return a.severity < b.severity;
+                                 if (a.line != b.line)
+                                     return a.line < b.line;
+                                 return a.character < b.character;
+                             });
             const auto& top = diags.front();
 
             std::ostringstream instruction;
@@ -3903,18 +4054,21 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5929:  // Catalog VSCode Tasks
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path tasksPath = root / ".vscode" / "tasks.json";
-            if (!fs::exists(tasksPath)) {
-                appendToOutput("[VSCodeTasks] tasks.json not found at " + tasksPath.string(),
-                               "General", OutputSeverity::Warning);
+            if (!fs::exists(tasksPath))
+            {
+                appendToOutput("[VSCodeTasks] tasks.json not found at " + tasksPath.string(), "General",
+                               OutputSeverity::Warning);
                 break;
             }
 
             std::ifstream in(tasksPath, std::ios::binary);
             std::string raw((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
             nlohmann::json j = nlohmann::json::parse(raw, nullptr, false);
-            if (j.is_discarded() || !j.contains("tasks") || !j["tasks"].is_array()) {
+            if (j.is_discarded() || !j.contains("tasks") || !j["tasks"].is_array())
+            {
                 appendToOutput("[VSCodeTasks] Invalid tasks.json format.", "General", OutputSeverity::Warning);
                 break;
             }
@@ -3922,15 +4076,13 @@ void Win32IDE::handleToolsCommand(int commandId)
             std::ostringstream out;
             out << "[VSCodeTasks] " << tasksPath.string() << "\n";
             out << "Task count: " << j["tasks"].size() << "\n";
-            for (const auto& t : j["tasks"]) {
+            for (const auto& t : j["tasks"])
+            {
                 if (!t.is_object())
                     continue;
-                out << "  - " << t.value("label", "<unnamed>")
-                    << " | type=" << t.value("type", "shell")
-                    << " | cmd=" << t.value("command", "")
-                    << " | group=" << t.value("group", "")
-                    << " | matcher=" << t.value("problemMatcher", "")
-                    << "\n";
+                out << "  - " << t.value("label", "<unnamed>") << " | type=" << t.value("type", "shell")
+                    << " | cmd=" << t.value("command", "") << " | group=" << t.value("group", "")
+                    << " | matcher=" << t.value("problemMatcher", "") << "\n";
             }
             appendToOutput(out.str(), "General", OutputSeverity::Info);
         }
@@ -3939,37 +4091,45 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5930:  // Run VSCode Build Task (Best Effort)
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path tasksPath = root / ".vscode" / "tasks.json";
-            if (!fs::exists(tasksPath)) {
-                appendToOutput("[VSCodeTaskRun] tasks.json not found at " + tasksPath.string(),
-                               "General", OutputSeverity::Warning);
+            if (!fs::exists(tasksPath))
+            {
+                appendToOutput("[VSCodeTaskRun] tasks.json not found at " + tasksPath.string(), "General",
+                               OutputSeverity::Warning);
                 break;
             }
 
             std::ifstream in(tasksPath, std::ios::binary);
             std::string raw((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
             nlohmann::json j = nlohmann::json::parse(raw, nullptr, false);
-            if (j.is_discarded() || !j.contains("tasks") || !j["tasks"].is_array() || j["tasks"].empty()) {
+            if (j.is_discarded() || !j.contains("tasks") || !j["tasks"].is_array() || j["tasks"].empty())
+            {
                 appendToOutput("[VSCodeTaskRun] Invalid or empty tasks.json.", "General", OutputSeverity::Warning);
                 break;
             }
 
             nlohmann::json selected = j["tasks"][(size_t)0];
-            for (const auto& t : j["tasks"]) {
+            for (const auto& t : j["tasks"])
+            {
                 if (!t.is_object())
                     continue;
                 std::string group = t.value("group", "");
-                if (group == "build") {
+                if (group == "build")
+                {
                     selected = t;
                     break;
                 }
             }
 
-            auto resolveVar = [&](std::string s) {
-                auto replaceAll = [](std::string& target, const std::string& needle, const std::string& repl) {
+            auto resolveVar = [&](std::string s)
+            {
+                auto replaceAll = [](std::string& target, const std::string& needle, const std::string& repl)
+                {
                     size_t p = 0;
-                    while ((p = target.find(needle, p)) != std::string::npos) {
+                    while ((p = target.find(needle, p)) != std::string::npos)
+                    {
                         target.replace(p, needle.size(), repl);
                         p += repl.size();
                     }
@@ -3983,13 +4143,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             };
 
             std::string cmd = resolveVar(selected.value("command", ""));
-            if (cmd.empty()) {
+            if (cmd.empty())
+            {
                 appendToOutput("[VSCodeTaskRun] Selected task command is empty.", "General", OutputSeverity::Warning);
                 break;
             }
             std::string composed = cmd;
-            if (selected.contains("args") && selected["args"].is_array()) {
-                for (const auto& a : selected["args"]) {
+            if (selected.contains("args") && selected["args"].is_array())
+            {
+                for (const auto& a : selected["args"])
+                {
                     if (!a.is_string())
                         continue;
                     std::string arg = resolveVar(a.get<std::string>());
@@ -4008,18 +4171,21 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5931:  // Catalog VSCode Launch Configs
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path launchPath = root / ".vscode" / "launch.json";
-            if (!fs::exists(launchPath)) {
-                appendToOutput("[VSCodeLaunch] launch.json not found at " + launchPath.string(),
-                               "General", OutputSeverity::Warning);
+            if (!fs::exists(launchPath))
+            {
+                appendToOutput("[VSCodeLaunch] launch.json not found at " + launchPath.string(), "General",
+                               OutputSeverity::Warning);
                 break;
             }
 
             std::ifstream in(launchPath, std::ios::binary);
             std::string raw((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
             nlohmann::json j = nlohmann::json::parse(raw, nullptr, false);
-            if (j.is_discarded() || !j.contains("configurations") || !j["configurations"].is_array()) {
+            if (j.is_discarded() || !j.contains("configurations") || !j["configurations"].is_array())
+            {
                 appendToOutput("[VSCodeLaunch] Invalid launch.json format.", "General", OutputSeverity::Warning);
                 break;
             }
@@ -4027,15 +4193,13 @@ void Win32IDE::handleToolsCommand(int commandId)
             std::ostringstream out;
             out << "[VSCodeLaunch] " << launchPath.string() << "\n";
             out << "Config count: " << j["configurations"].size() << "\n";
-            for (const auto& c : j["configurations"]) {
+            for (const auto& c : j["configurations"])
+            {
                 if (!c.is_object())
                     continue;
-                out << "  - " << c.value("name", "<unnamed>")
-                    << " | type=" << c.value("type", "")
-                    << " | request=" << c.value("request", "")
-                    << " | program=" << c.value("program", "")
-                    << " | processId=" << c.value("processId", 0)
-                    << "\n";
+                out << "  - " << c.value("name", "<unnamed>") << " | type=" << c.value("type", "")
+                    << " | request=" << c.value("request", "") << " | program=" << c.value("program", "")
+                    << " | processId=" << c.value("processId", 0) << "\n";
             }
             appendToOutput(out.str(), "General", OutputSeverity::Info);
         }
@@ -4044,11 +4208,13 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5932:  // Run VSCode Launch Config (Best Effort)
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path launchPath = root / ".vscode" / "launch.json";
-            if (!fs::exists(launchPath)) {
-                appendToOutput("[VSCodeLaunchRun] launch.json not found at " + launchPath.string(),
-                               "General", OutputSeverity::Warning);
+            if (!fs::exists(launchPath))
+            {
+                appendToOutput("[VSCodeLaunchRun] launch.json not found at " + launchPath.string(), "General",
+                               OutputSeverity::Warning);
                 break;
             }
 
@@ -4056,26 +4222,33 @@ void Win32IDE::handleToolsCommand(int commandId)
             std::string raw((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
             nlohmann::json j = nlohmann::json::parse(raw, nullptr, false);
             if (j.is_discarded() || !j.contains("configurations") || !j["configurations"].is_array() ||
-                j["configurations"].empty()) {
+                j["configurations"].empty())
+            {
                 appendToOutput("[VSCodeLaunchRun] Invalid or empty launch.json.", "General", OutputSeverity::Warning);
                 break;
             }
 
             nlohmann::json selected = j["configurations"][(size_t)0];
             std::string targetName = m_hwndCopilotChatInput ? getWindowText(m_hwndCopilotChatInput) : "";
-            if (!targetName.empty()) {
-                for (const auto& c : j["configurations"]) {
-                    if (c.is_object() && c.value("name", "") == targetName) {
+            if (!targetName.empty())
+            {
+                for (const auto& c : j["configurations"])
+                {
+                    if (c.is_object() && c.value("name", "") == targetName)
+                    {
                         selected = c;
                         break;
                     }
                 }
             }
 
-            auto resolveVar = [&](std::string s) {
-                auto replaceAll = [](std::string& target, const std::string& needle, const std::string& repl) {
+            auto resolveVar = [&](std::string s)
+            {
+                auto replaceAll = [](std::string& target, const std::string& needle, const std::string& repl)
+                {
                     size_t p = 0;
-                    while ((p = target.find(needle, p)) != std::string::npos) {
+                    while ((p = target.find(needle, p)) != std::string::npos)
+                    {
                         target.replace(p, needle.size(), repl);
                         p += repl.size();
                     }
@@ -4089,7 +4262,8 @@ void Win32IDE::handleToolsCommand(int commandId)
             };
 
             std::string request = selected.value("request", "launch");
-            if (request == "attach") {
+            if (request == "attach")
+            {
                 std::ostringstream out;
                 out << "[VSCodeLaunchRun] Attach request detected.\n";
                 out << "Config: " << selected.value("name", "<unnamed>") << "\n";
@@ -4100,13 +4274,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             }
 
             std::string program = resolveVar(selected.value("program", ""));
-            if (program.empty()) {
+            if (program.empty())
+            {
                 appendToOutput("[VSCodeLaunchRun] Launch config program is empty.", "General", OutputSeverity::Warning);
                 break;
             }
             std::string cmd = "\"" + program + "\"";
-            if (selected.contains("args") && selected["args"].is_array()) {
-                for (const auto& a : selected["args"]) {
+            if (selected.contains("args") && selected["args"].is_array())
+            {
+                for (const auto& a : selected["args"])
+                {
                     if (!a.is_string())
                         continue;
                     std::string arg = resolveVar(a.get<std::string>());
@@ -4115,8 +4292,7 @@ void Win32IDE::handleToolsCommand(int commandId)
             }
 
             runBuildInBackground(root.string(), "cmd /c " + cmd);
-            appendToOutput("[VSCodeLaunchRun] Started: " + selected.value("name", "<unnamed>") +
-                               "\nCommand: " + cmd,
+            appendToOutput("[VSCodeLaunchRun] Started: " + selected.value("name", "<unnamed>") + "\nCommand: " + cmd,
                            "General", OutputSeverity::Info);
         }
         break;
@@ -4141,12 +4317,13 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["ghostTextVisible"] = m_ghostTextVisible;
             j["ghostTextPending"] = m_ghostTextPending;
             j["signatureVisible"] = m_signatureVisible;
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[CompletionLSP] Failed to write readiness artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -4159,7 +4336,8 @@ void Win32IDE::handleToolsCommand(int commandId)
 
         case 5934:  // Snapshot Semantic Tokens (Active File)
         {
-            if (m_currentFile.empty()) {
+            if (m_currentFile.empty())
+            {
                 appendToOutput("[SemanticTokens] Open a file first.", "General", OutputSeverity::Warning);
                 break;
             }
@@ -4172,7 +4350,8 @@ void Win32IDE::handleToolsCommand(int commandId)
             fs::path outPath = outDir / "semantic_tokens_snapshot.json";
 
             nlohmann::json arr = nlohmann::json::array();
-            for (const auto& t : tokens) {
+            for (const auto& t : tokens)
+            {
                 nlohmann::json tj;
                 tj["line"] = t.line;
                 tj["startChar"] = t.startChar;
@@ -4188,7 +4367,8 @@ void Win32IDE::handleToolsCommand(int commandId)
             outj["tokens"] = arr;
 
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[SemanticTokens] Failed to write snapshot.", "General", OutputSeverity::Error);
                 break;
             }
@@ -4201,7 +4381,8 @@ void Win32IDE::handleToolsCommand(int commandId)
 
         case 5935:  // Snapshot Signature Help (Cursor)
         {
-            if (m_currentFile.empty() || !m_hwndEditor) {
+            if (m_currentFile.empty() || !m_hwndEditor)
+            {
                 appendToOutput("[SignatureSnapshot] Open a file first.", "General", OutputSeverity::Warning);
                 break;
             }
@@ -4231,7 +4412,8 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["signatures"] = sig.signatures;
 
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[SignatureSnapshot] Failed to write snapshot.", "General", OutputSeverity::Error);
                 break;
             }
@@ -4242,22 +4424,27 @@ void Win32IDE::handleToolsCommand(int commandId)
         }
         break;
 
-        // ================================================================
-        // Parity Workflow Layer — Batch 5 (5936–5942)
-        // ================================================================
+            // ================================================================
+            // Parity Workflow Layer — Batch 5 (5936–5942)
+            // ================================================================
 
         case 5936:  // Semantic Code Search UI Panel Integration
         {
-            auto trimWs = [](std::string& s) {
-                while (!s.empty() && std::isspace((unsigned char)s.front())) s.erase(s.begin());
-                while (!s.empty() && std::isspace((unsigned char)s.back())) s.pop_back();
+            auto trimWs = [](std::string& s)
+            {
+                while (!s.empty() && std::isspace((unsigned char)s.front()))
+                    s.erase(s.begin());
+                while (!s.empty() && std::isspace((unsigned char)s.back()))
+                    s.pop_back();
             };
 
             std::string query;
-            if (m_hwndEditor) {
+            if (m_hwndEditor)
+            {
                 CHARRANGE sel = {};
                 SendMessageA(m_hwndEditor, EM_EXGETSEL, 0, (LPARAM)&sel);
-                if (sel.cpMax > sel.cpMin) {
+                if (sel.cpMax > sel.cpMin)
+                {
                     TEXTRANGEA tr = {};
                     tr.chrg = sel;
                     std::vector<char> buf((size_t)(sel.cpMax - sel.cpMin) + 1, 0);
@@ -4270,70 +4457,95 @@ void Win32IDE::handleToolsCommand(int commandId)
                 query = getWindowText(m_hwndCopilotChatInput);
             trimWs(query);
 
-            if (query.empty()) {
-                appendToOutput("[SemanticPanel] Select text or enter query in chat input.",
-                               "General", OutputSeverity::Warning);
+            if (query.empty())
+            {
+                appendToOutput("[SemanticPanel] Select text or enter query in chat input.", "General",
+                               OutputSeverity::Warning);
                 break;
             }
 
-            if (!m_lspServer) initLSPServer();
-            if (!m_lspServer || !m_lspServer->isRunning()) {
-                appendToOutput("[SemanticPanel] LSP server not running — starting...",
-                               "General", OutputSeverity::Warning);
-                if (m_lspServer) cmdLSPServerStart();
+            if (!m_lspServer)
+                initLSPServer();
+            if (!m_lspServer || !m_lspServer->isRunning())
+            {
+                appendToOutput("[SemanticPanel] LSP server not running — starting...", "General",
+                               OutputSeverity::Warning);
+                if (m_lspServer)
+                    cmdLSPServerStart();
             }
 
             // 1) Workspace symbol lookup via LSP
             nlohmann::json req;
-            req["jsonrpc"] = "2.0"; req["id"] = 5936;
+            req["jsonrpc"] = "2.0";
+            req["id"] = 5936;
             req["method"] = "workspace/symbol";
             req["params"]["query"] = query;
             m_lspServer->injectMessage(req.dump());
 
             std::string lspResp;
-            for (int i = 0; i < 50; ++i) {
+            for (int i = 0; i < 50; ++i)
+            {
                 lspResp = m_lspServer->pollOutgoing();
-                if (!lspResp.empty()) break;
+                if (!lspResp.empty())
+                    break;
                 Sleep(20);
             }
 
             // 2) Filesystem grep fallback
             namespace fs = std::filesystem;
             fs::path root = m_currentDirectory.empty() ? fs::path(".") : fs::path(m_currentDirectory);
-            const std::set<std::string> exts = {".c",".cpp",".h",".hpp",".asm",".inc",".py",".js",".ts"};
-            struct GrepHit { std::string file; int line; std::string text; };
+            const std::set<std::string> exts = {".c", ".cpp", ".h", ".hpp", ".asm", ".inc", ".py", ".js", ".ts"};
+            struct GrepHit
+            {
+                std::string file;
+                int line;
+                std::string text;
+            };
             std::vector<GrepHit> grepHits;
             int scanned = 0;
             for (auto it = fs::recursive_directory_iterator(root, fs::directory_options::skip_permission_denied);
-                 it != fs::recursive_directory_iterator(); ++it) {
-                if (!it->is_regular_file()) continue;
-                if (!exts.count(it->path().extension().string())) continue;
-                if (++scanned > 3000) break;
+                 it != fs::recursive_directory_iterator(); ++it)
+            {
+                if (!it->is_regular_file())
+                    continue;
+                if (!exts.count(it->path().extension().string()))
+                    continue;
+                if (++scanned > 3000)
+                    break;
                 std::ifstream f(it->path(), std::ios::binary);
-                if (!f.is_open()) continue;
+                if (!f.is_open())
+                    continue;
                 std::string content((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
-                size_t pos = 0; int lineNum = 1;
-                while (pos < content.size() && grepHits.size() < 50) {
+                size_t pos = 0;
+                int lineNum = 1;
+                while (pos < content.size() && grepHits.size() < 50)
+                {
                     size_t nl = content.find('\n', pos);
-                    if (nl == std::string::npos) nl = content.size();
+                    if (nl == std::string::npos)
+                        nl = content.size();
                     std::string line = content.substr(pos, nl - pos);
-                    if (line.find(query) != std::string::npos) {
+                    if (line.find(query) != std::string::npos)
+                    {
                         grepHits.push_back({it->path().string(), lineNum, line.substr(0, 120)});
                     }
-                    pos = nl + 1; ++lineNum;
+                    pos = nl + 1;
+                    ++lineNum;
                 }
             }
 
             // 3) Merge into search results panel (m_hwndSearchResults listbox)
-            if (m_hwndSearchResults) {
+            if (m_hwndSearchResults)
+            {
                 SendMessageA(m_hwndSearchResults, LB_RESETCONTENT, 0, 0);
             }
 
             // Parse LSP results
             std::vector<std::string> resultLines;
             nlohmann::json j = nlohmann::json::parse(lspResp, nullptr, false);
-            if (!j.is_discarded() && j.contains("result") && j["result"].is_array()) {
-                for (const auto& item : j["result"]) {
+            if (!j.is_discarded() && j.contains("result") && j["result"].is_array())
+            {
+                for (const auto& item : j["result"])
+                {
                     std::string name = item.value("name", "?");
                     std::string uri = item.contains("location") ? item["location"].value("uri", "") : "";
                     int line = 0;
@@ -4345,14 +4557,17 @@ void Win32IDE::handleToolsCommand(int commandId)
                     resultLines.push_back(entry);
                 }
             }
-            for (const auto& gh : grepHits) {
+            for (const auto& gh : grepHits)
+            {
                 std::string entry = "[Grep] " + gh.file + ":" + std::to_string(gh.line) + "  " + gh.text;
                 resultLines.push_back(entry);
             }
 
             // Populate panel
-            if (m_hwndSearchResults) {
-                for (const auto& rl : resultLines) {
+            if (m_hwndSearchResults)
+            {
+                for (const auto& rl : resultLines)
+                {
                     SendMessageA(m_hwndSearchResults, LB_ADDSTRING, 0, (LPARAM)rl.c_str());
                 }
             }
@@ -4386,16 +4601,20 @@ void Win32IDE::handleToolsCommand(int commandId)
 
             // Symbol graph snapshot
             nlohmann::json symbolGraph = nlohmann::json::array();
-            if (m_lspServer && m_lspServer->isRunning()) {
+            if (m_lspServer && m_lspServer->isRunning())
+            {
                 nlohmann::json req;
-                req["jsonrpc"] = "2.0"; req["id"] = 5937;
+                req["jsonrpc"] = "2.0";
+                req["id"] = 5937;
                 req["method"] = "workspace/symbol";
                 req["params"]["query"] = "";
                 m_lspServer->injectMessage(req.dump());
                 std::string resp;
-                for (int i = 0; i < 50; ++i) {
+                for (int i = 0; i < 50; ++i)
+                {
                     resp = m_lspServer->pollOutgoing();
-                    if (!resp.empty()) break;
+                    if (!resp.empty())
+                        break;
                     Sleep(20);
                 }
                 nlohmann::json j = nlohmann::json::parse(resp, nullptr, false);
@@ -4408,15 +4627,19 @@ void Win32IDE::handleToolsCommand(int commandId)
             auto allDiags = getAllDiagnostics();
             nlohmann::json diagSection = nlohmann::json::array();
             int totalDiags = 0;
-            for (const auto& [uri, diags] : allDiags) {
+            for (const auto& [uri, diags] : allDiags)
+            {
                 nlohmann::json dj;
                 dj["file"] = uriToFilePath(uri);
                 dj["count"] = (int)diags.size();
                 nlohmann::json dlist = nlohmann::json::array();
-                for (const auto& d : diags) {
+                for (const auto& d : diags)
+                {
                     nlohmann::json dd;
-                    dd["line"] = d.range.start.line; dd["col"] = d.range.start.character;
-                    dd["sev"] = d.severity; dd["source"] = d.source;
+                    dd["line"] = d.range.start.line;
+                    dd["col"] = d.range.start.character;
+                    dd["sev"] = d.severity;
+                    dd["source"] = d.source;
                     dd["message"] = d.message.substr(0, 200);
                     dlist.push_back(dd);
                 }
@@ -4428,48 +4651,57 @@ void Win32IDE::handleToolsCommand(int commandId)
             pack["diagnosticCount"] = totalDiags;
 
             // Active file snippet (first 16KB)
-            if (!m_currentFile.empty()) {
+            if (!m_currentFile.empty())
+            {
                 std::ifstream f(m_currentFile, std::ios::binary);
-                if (f.is_open()) {
+                if (f.is_open())
+                {
                     std::string content((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
-                    if (content.size() > 16000) content.resize(16000);
+                    if (content.size() > 16000)
+                        content.resize(16000);
                     pack["activeFileSnippet"] = content;
                 }
             }
 
             // Related files (files sharing diagnostics or recent)
             nlohmann::json relatedFiles = nlohmann::json::array();
-            for (const auto& rf : m_recentFiles) {
-                if (rf != m_currentFile) {
+            for (const auto& rf : m_recentFiles)
+            {
+                if (rf != m_currentFile)
+                {
                     std::ifstream f(rf, std::ios::binary);
-                    if (f.is_open()) {
+                    if (f.is_open())
+                    {
                         std::string content((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
-                        if (content.size() > 4000) content.resize(4000);
+                        if (content.size() > 4000)
+                            content.resize(4000);
                         nlohmann::json fj;
                         fj["path"] = rf;
                         fj["snippet"] = content;
                         relatedFiles.push_back(fj);
-                        if (relatedFiles.size() >= 5) break;
+                        if (relatedFiles.size() >= 5)
+                            break;
                     }
                 }
             }
             pack["relatedFiles"] = relatedFiles;
 
-            pack["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            pack["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                           std::chrono::system_clock::now().time_since_epoch())
+                                           .count();
 
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[ReasoningPackFull] Failed to write pack file.", "General", OutputSeverity::Error);
                 break;
             }
             const std::string blob = pack.dump(2);
             out.write(blob.data(), (std::streamsize)blob.size());
             out.close();
-            appendToOutput("[ReasoningPackFull] Built with " + std::to_string((int)symbolGraph.size())
-                           + " symbols, " + std::to_string(totalDiags) + " diagnostics: "
-                           + outPath.string(), "General", OutputSeverity::Info);
+            appendToOutput("[ReasoningPackFull] Built with " + std::to_string((int)symbolGraph.size()) + " symbols, " +
+                               std::to_string(totalDiags) + " diagnostics: " + outPath.string(),
+                           "General", OutputSeverity::Info);
         }
         break;
 
@@ -4481,35 +4713,48 @@ void Win32IDE::handleToolsCommand(int commandId)
             fs::create_directories(outDir);
             fs::path outPath = outDir / "workspace_embeddings.json";
 
-            const std::set<std::string> exts = {".c",".cpp",".h",".hpp",".asm",".inc",".py",".js",".ts"};
+            const std::set<std::string> exts = {".c", ".cpp", ".h", ".hpp", ".asm", ".inc", ".py", ".js", ".ts"};
 
             // Simple TF-IDF-style term extraction per file
-            auto extractTerms = [](const std::string& content) -> std::map<std::string, int> {
+            auto extractTerms = [](const std::string& content) -> std::map<std::string, int>
+            {
                 std::map<std::string, int> freqs;
                 std::string token;
-                for (char c : content) {
-                    if (std::isalnum((unsigned char)c) || c == '_') {
+                for (char c : content)
+                {
+                    if (std::isalnum((unsigned char)c) || c == '_')
+                    {
                         token += (char)std::tolower((unsigned char)c);
-                    } else {
-                        if (token.size() >= 3) freqs[token]++;
+                    }
+                    else
+                    {
+                        if (token.size() >= 3)
+                            freqs[token]++;
                         token.clear();
                     }
                 }
-                if (token.size() >= 3) freqs[token]++;
+                if (token.size() >= 3)
+                    freqs[token]++;
                 return freqs;
             };
 
             nlohmann::json embeddings = nlohmann::json::array();
             int fileCount = 0;
             for (auto it = fs::recursive_directory_iterator(root, fs::directory_options::skip_permission_denied);
-                 it != fs::recursive_directory_iterator(); ++it) {
-                if (!it->is_regular_file()) continue;
-                if (!exts.count(it->path().extension().string())) continue;
-                if (++fileCount > 2000) break;
+                 it != fs::recursive_directory_iterator(); ++it)
+            {
+                if (!it->is_regular_file())
+                    continue;
+                if (!exts.count(it->path().extension().string()))
+                    continue;
+                if (++fileCount > 2000)
+                    break;
                 std::ifstream f(it->path(), std::ios::binary);
-                if (!f.is_open()) continue;
+                if (!f.is_open())
+                    continue;
                 std::string content((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
-                if (content.size() > 50000) content.resize(50000);
+                if (content.size() > 50000)
+                    content.resize(50000);
 
                 auto terms = extractTerms(content);
                 // Top-30 terms as lightweight embedding vector
@@ -4517,7 +4762,8 @@ void Win32IDE::handleToolsCommand(int commandId)
                 std::sort(ranked.begin(), ranked.end(),
                           [](const auto& a, const auto& b) { return a.second > b.second; });
                 nlohmann::json topTerms = nlohmann::json::array();
-                for (size_t i = 0; i < (std::min)(ranked.size(), (size_t)30); ++i) {
+                for (size_t i = 0; i < (std::min)(ranked.size(), (size_t)30); ++i)
+                {
                     nlohmann::json t;
                     t["term"] = ranked[i].first;
                     t["freq"] = ranked[i].second;
@@ -4534,22 +4780,30 @@ void Win32IDE::handleToolsCommand(int commandId)
 
             // Retrieval scoring: if chat input has a query, score each file
             std::string query = m_hwndCopilotChatInput ? getWindowText(m_hwndCopilotChatInput) : "";
-            while (!query.empty() && std::isspace((unsigned char)query.front())) query.erase(query.begin());
-            while (!query.empty() && std::isspace((unsigned char)query.back())) query.pop_back();
+            while (!query.empty() && std::isspace((unsigned char)query.front()))
+                query.erase(query.begin());
+            while (!query.empty() && std::isspace((unsigned char)query.back()))
+                query.pop_back();
 
             nlohmann::json scored = nlohmann::json::array();
-            if (!query.empty()) {
+            if (!query.empty())
+            {
                 auto queryTerms = extractTerms(query);
-                for (auto& emb : embeddings) {
+                for (auto& emb : embeddings)
+                {
                     double score = 0.0;
-                    for (const auto& qt : queryTerms) {
-                        for (const auto& tv : emb["termVector"]) {
-                            if (tv["term"].get<std::string>() == qt.first) {
+                    for (const auto& qt : queryTerms)
+                    {
+                        for (const auto& tv : emb["termVector"])
+                        {
+                            if (tv["term"].get<std::string>() == qt.first)
+                            {
                                 score += (double)tv["freq"].get<int>() * qt.second;
                             }
                         }
                     }
-                    if (score > 0.0) {
+                    if (score > 0.0)
+                    {
                         nlohmann::json s;
                         s["path"] = emb["path"];
                         s["score"] = score;
@@ -4560,11 +4814,11 @@ void Win32IDE::handleToolsCommand(int commandId)
                 {
                     std::vector<size_t> indices(scored.size());
                     std::iota(indices.begin(), indices.end(), 0);
-                    std::sort(indices.begin(), indices.end(), [&scored](size_t a, size_t b) {
-                        return scored[a]["score"].get<double>() > scored[b]["score"].get<double>();
-                    });
+                    std::sort(indices.begin(), indices.end(), [&scored](size_t a, size_t b)
+                              { return scored[a]["score"].get<double>() > scored[b]["score"].get<double>(); });
                     nlohmann::json sorted = nlohmann::json::array();
-                    for (size_t idx : indices) sorted.push_back(scored[idx]);
+                    for (size_t idx : indices)
+                        sorted.push_back(scored[idx]);
                     scored = sorted;
                 }
             }
@@ -4574,12 +4828,13 @@ void Win32IDE::handleToolsCommand(int commandId)
             output["embeddings"] = embeddings;
             output["query"] = query;
             output["scoredResults"] = scored;
-            output["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            output["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                             std::chrono::system_clock::now().time_since_epoch())
+                                             .count();
 
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[Embeddings] Failed to write embeddings file.", "General", OutputSeverity::Error);
                 break;
             }
@@ -4589,7 +4844,8 @@ void Win32IDE::handleToolsCommand(int commandId)
 
             std::ostringstream report;
             report << "[Embeddings] Exported " << fileCount << " files to " << outPath.string() << "\n";
-            if (!query.empty()) {
+            if (!query.empty())
+            {
                 report << "Query: " << query << "\nTop retrieval results:\n";
                 for (size_t i = 0; i < (std::min)(scored.size(), (size_t)10); ++i)
                     report << "  - " << scored[i]["path"].get<std::string>()
@@ -4602,20 +4858,25 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5939:  // Refactor Execution Mode (Preview -> Staged Apply)
         {
             // If staged edits exist, apply them. Otherwise, stage a preview.
-            if (!g_stagedRefactorEdits.empty()) {
+            if (!g_stagedRefactorEdits.empty())
+            {
                 // Apply staged edits
                 int applied = 0;
-                for (const auto& edit : g_stagedRefactorEdits) {
+                for (const auto& edit : g_stagedRefactorEdits)
+                {
                     std::ifstream inf(edit.file, std::ios::binary);
-                    if (!inf.is_open()) continue;
+                    if (!inf.is_open())
+                        continue;
                     std::string content((std::istreambuf_iterator<char>(inf)), std::istreambuf_iterator<char>());
                     inf.close();
 
                     size_t pos = content.find(edit.oldText);
-                    if (pos != std::string::npos) {
+                    if (pos != std::string::npos)
+                    {
                         content.replace(pos, edit.oldText.size(), edit.newText);
                         std::ofstream outf(edit.file, std::ios::binary | std::ios::trunc);
-                        if (outf.is_open()) {
+                        if (outf.is_open())
+                        {
                             outf.write(content.data(), (std::streamsize)content.size());
                             outf.close();
                             ++applied;
@@ -4633,35 +4894,40 @@ void Win32IDE::handleToolsCommand(int commandId)
 
             // Stage preview: scan for symbol occurrences
             std::string oldSymbol;
-            if (m_hwndEditor) {
+            if (m_hwndEditor)
+            {
                 CHARRANGE sel = {};
                 SendMessageA(m_hwndEditor, EM_EXGETSEL, 0, (LPARAM)&sel);
-                if (sel.cpMax > sel.cpMin) {
-                    TEXTRANGEA tr = {}; tr.chrg = sel;
+                if (sel.cpMax > sel.cpMin)
+                {
+                    TEXTRANGEA tr = {};
+                    tr.chrg = sel;
                     std::vector<char> buf((size_t)(sel.cpMax - sel.cpMin) + 1, 0);
                     tr.lpstrText = buf.data();
                     SendMessageA(m_hwndEditor, EM_GETTEXTRANGE, 0, (LPARAM)&tr);
                     oldSymbol = buf.data();
                 }
             }
-            if (oldSymbol.empty()) {
-                appendToOutput("[Refactor] Select the symbol to rename first.",
-                               "General", OutputSeverity::Warning);
+            if (oldSymbol.empty())
+            {
+                appendToOutput("[Refactor] Select the symbol to rename first.", "General", OutputSeverity::Warning);
                 break;
             }
 
             std::string newSymbol = m_hwndCopilotChatInput ? getWindowText(m_hwndCopilotChatInput) : "";
-            while (!newSymbol.empty() && std::isspace((unsigned char)newSymbol.front())) newSymbol.erase(newSymbol.begin());
-            while (!newSymbol.empty() && std::isspace((unsigned char)newSymbol.back())) newSymbol.pop_back();
-            if (newSymbol.empty()) {
-                appendToOutput("[Refactor] Type new symbol name in chat input.",
-                               "General", OutputSeverity::Warning);
+            while (!newSymbol.empty() && std::isspace((unsigned char)newSymbol.front()))
+                newSymbol.erase(newSymbol.begin());
+            while (!newSymbol.empty() && std::isspace((unsigned char)newSymbol.back()))
+                newSymbol.pop_back();
+            if (newSymbol.empty())
+            {
+                appendToOutput("[Refactor] Type new symbol name in chat input.", "General", OutputSeverity::Warning);
                 break;
             }
 
             namespace fs = std::filesystem;
             fs::path root = m_currentDirectory.empty() ? fs::path(".") : fs::path(m_currentDirectory);
-            const std::set<std::string> exts = {".c",".cpp",".h",".hpp",".asm",".inc",".py",".js",".ts"};
+            const std::set<std::string> exts = {".c", ".cpp", ".h", ".hpp", ".asm", ".inc", ".py", ".js", ".ts"};
 
             auto isIdent = [](char c) { return std::isalnum((unsigned char)c) || c == '_'; };
             int filesScanned = 0;
@@ -4669,23 +4935,31 @@ void Win32IDE::handleToolsCommand(int commandId)
             g_stagedRefactorSymbol = oldSymbol;
 
             for (auto it = fs::recursive_directory_iterator(root, fs::directory_options::skip_permission_denied);
-                 it != fs::recursive_directory_iterator(); ++it) {
-                if (!it->is_regular_file()) continue;
-                if (!exts.count(it->path().extension().string())) continue;
-                if (++filesScanned > 4000) break;
+                 it != fs::recursive_directory_iterator(); ++it)
+            {
+                if (!it->is_regular_file())
+                    continue;
+                if (!exts.count(it->path().extension().string()))
+                    continue;
+                if (++filesScanned > 4000)
+                    break;
                 std::ifstream f(it->path(), std::ios::binary);
-                if (!f.is_open()) continue;
+                if (!f.is_open())
+                    continue;
                 std::string content((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
 
                 size_t pos = 0;
-                while ((pos = content.find(oldSymbol, pos)) != std::string::npos) {
+                while ((pos = content.find(oldSymbol, pos)) != std::string::npos)
+                {
                     char left = (pos == 0) ? '\0' : content[pos - 1];
                     char right = (pos + oldSymbol.size() < content.size()) ? content[pos + oldSymbol.size()] : '\0';
-                    if (!isIdent(left) && !isIdent(right)) {
+                    if (!isIdent(left) && !isIdent(right))
+                    {
                         // Count line number
                         int lineNum = 1;
                         for (size_t i = 0; i < pos; ++i)
-                            if (content[i] == '\n') ++lineNum;
+                            if (content[i] == '\n')
+                                ++lineNum;
 
                         StagedRefactorEdit e;
                         e.file = it->path().string();
@@ -4699,8 +4973,8 @@ void Win32IDE::handleToolsCommand(int commandId)
             }
 
             std::ostringstream out;
-            out << "[Refactor] Staged " << g_stagedRefactorEdits.size() << " edits: '"
-                << oldSymbol << "' -> '" << newSymbol << "' across " << filesScanned << " files.\n"
+            out << "[Refactor] Staged " << g_stagedRefactorEdits.size() << " edits: '" << oldSymbol << "' -> '"
+                << newSymbol << "' across " << filesScanned << " files.\n"
                 << "Run this command again to APPLY, or select a new symbol to re-stage.\n";
             const size_t limit = (std::min)(g_stagedRefactorEdits.size(), (size_t)15);
             for (size_t i = 0; i < limit; ++i)
@@ -4713,20 +4987,22 @@ void Win32IDE::handleToolsCommand(int commandId)
 
         case 5940:  // LLM-Guided Edit Diff Preview/Accept-Reject Flow
         {
-            if (!m_hwndEditor || !m_agenticBridge) {
+            if (!m_hwndEditor || !m_agenticBridge)
+            {
                 appendToOutput("[DiffPreview] Editor/bridge not ready.", "General", OutputSeverity::Warning);
                 break;
             }
 
             CHARRANGE sel = {};
             SendMessageA(m_hwndEditor, EM_EXGETSEL, 0, (LPARAM)&sel);
-            if (sel.cpMax <= sel.cpMin) {
-                appendToOutput("[DiffPreview] Select code to preview rewrite.",
-                               "General", OutputSeverity::Warning);
+            if (sel.cpMax <= sel.cpMin)
+            {
+                appendToOutput("[DiffPreview] Select code to preview rewrite.", "General", OutputSeverity::Warning);
                 break;
             }
 
-            TEXTRANGEA tr = {}; tr.chrg = sel;
+            TEXTRANGEA tr = {};
+            tr.chrg = sel;
             std::vector<char> buf((size_t)(sel.cpMax - sel.cpMin) + 1, 0);
             tr.lpstrText = buf.data();
             SendMessageA(m_hwndEditor, EM_GETTEXTRANGE, 0, (LPARAM)&tr);
@@ -4736,28 +5012,36 @@ void Win32IDE::handleToolsCommand(int commandId)
             if (goal.empty())
                 goal = "Improve correctness and readability while preserving behavior.";
 
-            std::string prompt =
-                "Rewrite the following code according to this goal.\n"
-                "Goal: " + goal + "\n"
-                "Return ONLY replacement code without markdown fences.\n\n" + original;
+            std::string prompt = "Rewrite the following code according to this goal.\n"
+                                 "Goal: " +
+                                 goal +
+                                 "\n"
+                                 "Return ONLY replacement code without markdown fences.\n\n" +
+                                 original;
 
             AgentResponse resp = m_agenticBridge->ExecuteAgentCommand(prompt);
             std::string rewritten = resp.content;
             // Strip markdown fences if present
-            if (rewritten.rfind("```", 0) == 0) {
+            if (rewritten.rfind("```", 0) == 0)
+            {
                 size_t firstNl = rewritten.find('\n');
-                if (firstNl != std::string::npos) rewritten = rewritten.substr(firstNl + 1);
+                if (firstNl != std::string::npos)
+                    rewritten = rewritten.substr(firstNl + 1);
                 size_t fence = rewritten.rfind("```");
-                if (fence != std::string::npos) rewritten = rewritten.substr(0, fence);
+                if (fence != std::string::npos)
+                    rewritten = rewritten.substr(0, fence);
             }
-            while (!rewritten.empty() && rewritten.back() == '\n') rewritten.pop_back();
+            while (!rewritten.empty() && rewritten.back() == '\n')
+                rewritten.pop_back();
 
             // Build unified diff preview
-            auto splitLines = [](const std::string& s) -> std::vector<std::string> {
+            auto splitLines = [](const std::string& s) -> std::vector<std::string>
+            {
                 std::vector<std::string> lines;
                 std::istringstream ss(s);
                 std::string line;
-                while (std::getline(ss, line)) lines.push_back(line);
+                while (std::getline(ss, line))
+                    lines.push_back(line);
                 return lines;
             };
 
@@ -4770,14 +5054,20 @@ void Win32IDE::handleToolsCommand(int commandId)
 
             // Simple line-by-line diff (highlight add/remove)
             size_t maxLines = (std::max)(origLines.size(), newLines.size());
-            for (size_t i = 0; i < maxLines; ++i) {
+            for (size_t i = 0; i < maxLines; ++i)
+            {
                 bool hasOrig = (i < origLines.size());
-                bool hasNew  = (i < newLines.size());
-                if (hasOrig && hasNew && origLines[i] == newLines[i]) {
+                bool hasNew = (i < newLines.size());
+                if (hasOrig && hasNew && origLines[i] == newLines[i])
+                {
                     diff << "  " << origLines[i] << "\n";
-                } else {
-                    if (hasOrig) diff << "- " << origLines[i] << "\n";
-                    if (hasNew)  diff << "+ " << newLines[i]  << "\n";
+                }
+                else
+                {
+                    if (hasOrig)
+                        diff << "- " << origLines[i] << "\n";
+                    if (hasNew)
+                        diff << "+ " << newLines[i] << "\n";
                 }
             }
             diff << "\n[DiffPreview] Type 'accept' in chat input and run LLM-Guided Edit Apply (5905) to apply,\n"
@@ -4795,37 +5085,46 @@ void Win32IDE::handleToolsCommand(int commandId)
 
             // Check if user wants rollback: chat input contains "rollback"
             std::string input = m_hwndCopilotChatInput ? getWindowText(m_hwndCopilotChatInput) : "";
-            while (!input.empty() && std::isspace((unsigned char)input.front())) input.erase(input.begin());
-            while (!input.empty() && std::isspace((unsigned char)input.back())) input.pop_back();
+            while (!input.empty() && std::isspace((unsigned char)input.front()))
+                input.erase(input.begin());
+            while (!input.empty() && std::isspace((unsigned char)input.back()))
+                input.pop_back();
 
             bool isRollback = false;
             {
                 std::string lower = input;
-                for (auto& c : lower) c = (char)std::tolower((unsigned char)c);
-                if (lower.find("rollback") != std::string::npos) isRollback = true;
+                for (auto& c : lower)
+                    c = (char)std::tolower((unsigned char)c);
+                if (lower.find("rollback") != std::string::npos)
+                    isRollback = true;
             }
 
-            if (isRollback && !g_agentCheckpoints.empty()) {
+            if (isRollback && !g_agentCheckpoints.empty())
+            {
                 // Rollback to most recent checkpoint
                 const auto& cp = g_agentCheckpoints.back();
 
                 // Restore the file that was active at checkpoint time
-                if (!cp.snapshotPath.empty() && fs::exists(cp.snapshotPath) && !cp.activeFile.empty()) {
+                if (!cp.snapshotPath.empty() && fs::exists(cp.snapshotPath) && !cp.activeFile.empty())
+                {
                     std::ifstream snapIn(cp.snapshotPath, std::ios::binary);
-                    if (snapIn.is_open()) {
-                        std::string content((std::istreambuf_iterator<char>(snapIn)),
-                                            std::istreambuf_iterator<char>());
+                    if (snapIn.is_open())
+                    {
+                        std::string content((std::istreambuf_iterator<char>(snapIn)), std::istreambuf_iterator<char>());
                         snapIn.close();
                         std::ofstream restoreOut(cp.activeFile, std::ios::binary | std::ios::trunc);
-                        if (restoreOut.is_open()) {
+                        if (restoreOut.is_open())
+                        {
                             restoreOut.write(content.data(), (std::streamsize)content.size());
                             restoreOut.close();
                         }
                     }
-                    appendToOutput("[AgentCPRollback] Restored " + cp.activeFile
-                                   + " from checkpoint " + std::to_string(cp.timestampMs),
+                    appendToOutput("[AgentCPRollback] Restored " + cp.activeFile + " from checkpoint " +
+                                       std::to_string(cp.timestampMs),
                                    "General", OutputSeverity::Info);
-                } else {
+                }
+                else
+                {
                     appendToOutput("[AgentCPRollback] No file snapshot available for most recent checkpoint.",
                                    "General", OutputSeverity::Warning);
                 }
@@ -4835,7 +5134,8 @@ void Win32IDE::handleToolsCommand(int commandId)
 
             // Otherwise, create a new checkpoint
             int64_t nowMs = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+                                std::chrono::system_clock::now().time_since_epoch())
+                                .count();
 
             AgentCheckpointEntry cp;
             cp.timestampMs = nowMs;
@@ -4843,15 +5143,17 @@ void Win32IDE::handleToolsCommand(int commandId)
             cp.activeFile = m_currentFile;
 
             // Snapshot current file
-            if (!m_currentFile.empty() && fs::exists(m_currentFile)) {
-                fs::path snapPath = outDir / ("cp_" + std::to_string(nowMs) + "_"
-                                               + fs::path(m_currentFile).filename().string());
+            if (!m_currentFile.empty() && fs::exists(m_currentFile))
+            {
+                fs::path snapPath =
+                    outDir / ("cp_" + std::to_string(nowMs) + "_" + fs::path(m_currentFile).filename().string());
                 fs::copy_file(m_currentFile, snapPath, fs::copy_options::overwrite_existing);
                 cp.snapshotPath = snapPath.string();
             }
 
             // Execute agent turn if bridge available
-            if (m_agenticBridge && !input.empty()) {
+            if (m_agenticBridge && !input.empty())
+            {
                 AgentResponse resp = m_agenticBridge->ExecuteAgentCommand(input);
                 cp.agentResponse = resp.content;
             }
@@ -4872,15 +5174,15 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["checkpointIndex"] = (int)g_agentCheckpoints.size() - 1;
             j["totalCheckpoints"] = (int)g_agentCheckpoints.size();
             std::ofstream cpOut(cpFile, std::ios::binary | std::ios::trunc);
-            if (cpOut.is_open()) {
+            if (cpOut.is_open())
+            {
                 std::string blob = j.dump(2);
                 cpOut.write(blob.data(), (std::streamsize)blob.size());
                 cpOut.close();
             }
 
             std::ostringstream report;
-            report << "[AgentCheckpoint] Created checkpoint #" << g_agentCheckpoints.size()
-                   << " at " << nowMs << "\n";
+            report << "[AgentCheckpoint] Created checkpoint #" << g_agentCheckpoints.size() << " at " << nowMs << "\n";
             if (!cp.snapshotPath.empty())
                 report << "  File snapshot: " << cp.snapshotPath << "\n";
             report << "  Type 'rollback' in chat input and re-run to restore.\n";
@@ -4892,58 +5194,76 @@ void Win32IDE::handleToolsCommand(int commandId)
 
         case 5942:  // MCP Tool-Call History and Replay
         {
-            if (!m_mcpInitialized) initMCP();
-            if (!m_mcpServer) {
+            if (!m_mcpInitialized)
+                initMCP();
+            if (!m_mcpServer)
+            {
                 appendToOutput("[MCPHistory] MCP server unavailable.", "General", OutputSeverity::Warning);
                 break;
             }
 
             std::string action = m_hwndCopilotChatInput ? getWindowText(m_hwndCopilotChatInput) : "";
-            while (!action.empty() && std::isspace((unsigned char)action.front())) action.erase(action.begin());
-            while (!action.empty() && std::isspace((unsigned char)action.back())) action.pop_back();
+            while (!action.empty() && std::isspace((unsigned char)action.front()))
+                action.erase(action.begin());
+            while (!action.empty() && std::isspace((unsigned char)action.back()))
+                action.pop_back();
 
             // If action starts with "replay", replay the Nth entry
             {
                 std::string lower = action;
-                for (auto& c : lower) c = (char)std::tolower((unsigned char)c);
-                if (lower.rfind("replay", 0) == 0) {
+                for (auto& c : lower)
+                    c = (char)std::tolower((unsigned char)c);
+                if (lower.rfind("replay", 0) == 0)
+                {
                     // Parse index after "replay "
                     std::string rest = action.substr(6);
-                    while (!rest.empty() && std::isspace((unsigned char)rest.front())) rest.erase(rest.begin());
+                    while (!rest.empty() && std::isspace((unsigned char)rest.front()))
+                        rest.erase(rest.begin());
                     int idx = rest.empty() ? -1 : std::atoi(rest.c_str());
-                    if (idx < 0) idx = (int)g_mcpToolHistory.size() - 1;
-                    if (idx < 0 || idx >= (int)g_mcpToolHistory.size()) {
+                    if (idx < 0)
+                        idx = (int)g_mcpToolHistory.size() - 1;
+                    if (idx < 0 || idx >= (int)g_mcpToolHistory.size())
+                    {
                         appendToOutput("[MCPHistory] Invalid replay index.", "General", OutputSeverity::Warning);
                         break;
                     }
                     const auto& entry = g_mcpToolHistory[idx];
 
                     nlohmann::json args = nlohmann::json::parse(entry.argsJson, nullptr, false);
-                    if (args.is_discarded()) args = nlohmann::json::object();
+                    if (args.is_discarded())
+                        args = nlohmann::json::object();
 
                     nlohmann::json req;
-                    req["jsonrpc"] = "2.0"; req["id"] = 5942;
+                    req["jsonrpc"] = "2.0";
+                    req["id"] = 5942;
                     req["method"] = "tools/call";
                     req["params"]["name"] = entry.toolName;
                     req["params"]["arguments"] = args;
                     const std::string resp = m_mcpServer->handleMessage(req.dump());
-                    appendToOutput("[MCPHistory] Replayed #" + std::to_string(idx) + " ("
-                                   + entry.toolName + ")\n" + resp, "General", OutputSeverity::Info);
+                    appendToOutput("[MCPHistory] Replayed #" + std::to_string(idx) + " (" + entry.toolName + ")\n" +
+                                       resp,
+                                   "General", OutputSeverity::Info);
                     break;
                 }
             }
 
             // If action starts with a tool name (not "replay"), execute and record
-            if (!action.empty() && action.rfind("replay", 0) != 0) {
+            if (!action.empty() && action.rfind("replay", 0) != 0)
+            {
                 size_t sp = action.find(' ');
                 std::string toolName = (sp == std::string::npos) ? action : action.substr(0, sp);
                 std::string argText = (sp == std::string::npos) ? "{}" : action.substr(sp + 1);
 
                 nlohmann::json args = nlohmann::json::parse(argText, nullptr, false);
-                if (args.is_discarded()) { args = nlohmann::json::object(); args["input"] = argText; }
+                if (args.is_discarded())
+                {
+                    args = nlohmann::json::object();
+                    args["input"] = argText;
+                }
 
                 nlohmann::json req;
-                req["jsonrpc"] = "2.0"; req["id"] = 5942;
+                req["jsonrpc"] = "2.0";
+                req["id"] = 5942;
                 req["method"] = "tools/call";
                 req["params"]["name"] = toolName;
                 req["params"]["arguments"] = args;
@@ -4955,7 +5275,8 @@ void Win32IDE::handleToolsCommand(int commandId)
                 entry.argsJson = args.dump();
                 entry.responseSnippet = resp.substr(0, 500);
                 entry.timestampMs = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                        std::chrono::system_clock::now().time_since_epoch()).count();
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
                 if (g_mcpToolHistory.size() >= MAX_MCP_HISTORY)
                     g_mcpToolHistory.erase(g_mcpToolHistory.begin());
                 g_mcpToolHistory.push_back(entry);
@@ -4964,8 +5285,8 @@ void Win32IDE::handleToolsCommand(int commandId)
                 g_lastMcpRequest = req;
                 g_lastMcpRequestLabel = toolName;
 
-                appendToOutput("[MCPHistory] Executed '" + toolName + "' (logged as #"
-                               + std::to_string((int)g_mcpToolHistory.size() - 1) + ")\n" + resp,
+                appendToOutput("[MCPHistory] Executed '" + toolName + "' (logged as #" +
+                                   std::to_string((int)g_mcpToolHistory.size() - 1) + ")\n" + resp,
                                "General", OutputSeverity::Info);
                 break;
             }
@@ -4973,10 +5294,11 @@ void Win32IDE::handleToolsCommand(int commandId)
             // Default: show history
             std::ostringstream out;
             out << "[MCPHistory] Tool-Call History (" << g_mcpToolHistory.size() << " entries)\n";
-            for (size_t i = 0; i < g_mcpToolHistory.size(); ++i) {
+            for (size_t i = 0; i < g_mcpToolHistory.size(); ++i)
+            {
                 const auto& e = g_mcpToolHistory[i];
-                out << "  #" << i << " [" << e.timestampMs << "] " << e.toolName
-                    << " -- " << e.responseSnippet.substr(0, 80) << "...\n";
+                out << "  #" << i << " [" << e.timestampMs << "] " << e.toolName << " -- "
+                    << e.responseSnippet.substr(0, 80) << "...\n";
             }
             if (g_mcpToolHistory.empty())
                 out << "  (empty -- execute an MCP tool call to populate history)\n";
@@ -4985,19 +5307,21 @@ void Win32IDE::handleToolsCommand(int commandId)
         }
         break;
 
-        // ================================================================
-        // Parity Workflow Layer — Batch 6 (5943–5949)
-        // ================================================================
+            // ================================================================
+            // Parity Workflow Layer — Batch 6 (5943–5949)
+            // ================================================================
 
         case 5943:  // Build Lane Matrix Report
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path wrapper = root / "Build-AgenticIDE.ps1";
             fs::path ideBuild = root / "BUILD_IDE_PRODUCTION.ps1";
             fs::path monoBuild = root / "src" / "asm" / "monolithic" / "Build-Monolithic.ps1";
 
-            auto readText = [](const fs::path& p) -> std::string {
+            auto readText = [](const fs::path& p) -> std::string
+            {
                 std::ifstream in(p, std::ios::binary);
                 if (!in.is_open())
                     return "";
@@ -5014,15 +5338,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["wrapperHasMonolithicLane"] = (wrapperText.find("monolithic") != std::string::npos);
             j["wrapperCallsIdeProduction"] = (wrapperText.find("BUILD_IDE_PRODUCTION.ps1") != std::string::npos);
             j["wrapperCallsMonolithicBuild"] = (wrapperText.find("Build-Monolithic.ps1") != std::string::npos);
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "build_lane_matrix_report.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[BuildLaneMatrix] Failed to write report.", "General", OutputSeverity::Error);
                 break;
             }
@@ -5036,21 +5361,25 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5944:  // Monolithic Completion Bridge Audit
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path bridgeAsm = root / "src" / "asm" / "monolithic" / "bridge.asm";
             fs::path routerAsm = root / "src" / "asm" / "monolithic" / "inference_router.asm";
             fs::path mainAsm = root / "src" / "asm" / "monolithic" / "main.asm";
 
-            auto readText = [](const fs::path& p) -> std::string {
+            auto readText = [](const fs::path& p) -> std::string
+            {
                 std::ifstream in(p, std::ios::binary);
                 if (!in.is_open())
                     return "";
                 return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
             };
-            auto countHits = [](const std::string& hay, const std::string& needle) -> int {
+            auto countHits = [](const std::string& hay, const std::string& needle) -> int
+            {
                 int c = 0;
                 size_t pos = 0;
-                while ((pos = hay.find(needle, pos)) != std::string::npos) {
+                while ((pos = hay.find(needle, pos)) != std::string::npos)
+                {
                     ++c;
                     pos += needle.size();
                 }
@@ -5060,8 +5389,10 @@ void Win32IDE::handleToolsCommand(int commandId)
             std::string bridgeText = readText(bridgeAsm);
             std::string routerText = readText(routerAsm);
             std::string mainText = readText(mainAsm);
-            if (bridgeText.empty() || routerText.empty() || mainText.empty()) {
-                appendToOutput("[MonolithicBridgeAudit] Missing monolithic asm files.", "General", OutputSeverity::Warning);
+            if (bridgeText.empty() || routerText.empty() || mainText.empty())
+            {
+                appendToOutput("[MonolithicBridgeAudit] Missing monolithic asm files.", "General",
+                               OutputSeverity::Warning);
                 break;
             }
 
@@ -5073,15 +5404,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["mainRouterInitCalls"] = countHits(mainText, "call    InferenceRouter_Init");
             j["routerReadyWrites"] = countHits(routerText, "mov     g_routerReady, 1");
             j["routerReadySymbolPresent"] = (routerText.find("PUBLIC g_routerReady") != std::string::npos);
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "monolithic_completion_bridge_audit.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[MonolithicBridgeAudit] Failed to write report.", "General", OutputSeverity::Error);
                 break;
             }
@@ -5095,45 +5427,64 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5945:  // VSCode Task/Launch Parity Score
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path tasksPath = root / ".vscode" / "tasks.json";
             fs::path launchPath = root / ".vscode" / "launch.json";
 
             int taskCount = 0, taskWithMatcher = 0, taskWithCwd = 0;
             int launchCount = 0, launchWithProgram = 0, launchAttach = 0;
 
-            if (fs::exists(tasksPath)) {
+            if (fs::exists(tasksPath))
+            {
                 std::ifstream in(tasksPath, std::ios::binary);
                 nlohmann::json t = nlohmann::json::parse(
-                    std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>()), nullptr, false);
-                if (!t.is_discarded() && t.contains("tasks") && t["tasks"].is_array()) {
-                    for (const auto& x : t["tasks"]) {
-                        if (!x.is_object()) continue;
+                    std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>()), nullptr,
+                    false);
+                if (!t.is_discarded() && t.contains("tasks") && t["tasks"].is_array())
+                {
+                    for (const auto& x : t["tasks"])
+                    {
+                        if (!x.is_object())
+                            continue;
                         ++taskCount;
-                        if (!x.value("problemMatcher", "").empty()) ++taskWithMatcher;
-                        if (!x.value("cwd", "").empty()) ++taskWithCwd;
+                        if (!x.value("problemMatcher", "").empty())
+                            ++taskWithMatcher;
+                        if (!x.value("cwd", "").empty())
+                            ++taskWithCwd;
                     }
                 }
             }
 
-            if (fs::exists(launchPath)) {
+            if (fs::exists(launchPath))
+            {
                 std::ifstream in(launchPath, std::ios::binary);
                 nlohmann::json l = nlohmann::json::parse(
-                    std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>()), nullptr, false);
-                if (!l.is_discarded() && l.contains("configurations") && l["configurations"].is_array()) {
-                    for (const auto& x : l["configurations"]) {
-                        if (!x.is_object()) continue;
+                    std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>()), nullptr,
+                    false);
+                if (!l.is_discarded() && l.contains("configurations") && l["configurations"].is_array())
+                {
+                    for (const auto& x : l["configurations"])
+                    {
+                        if (!x.is_object())
+                            continue;
                         ++launchCount;
-                        if (!x.value("program", "").empty()) ++launchWithProgram;
-                        if (x.value("request", "") == "attach") ++launchAttach;
+                        if (!x.value("program", "").empty())
+                            ++launchWithProgram;
+                        if (x.value("request", "") == "attach")
+                            ++launchAttach;
                     }
                 }
             }
 
-            double taskScore = (taskCount == 0) ? 0.0 : (50.0 * ((double)taskWithMatcher / taskCount) +
-                                                          50.0 * ((double)taskWithCwd / taskCount));
-            double launchScore = (launchCount == 0) ? 0.0 : (70.0 * ((double)launchWithProgram / launchCount) +
-                                                              30.0 * ((double)launchAttach / launchCount));
+            double taskScore =
+                (taskCount == 0)
+                    ? 0.0
+                    : (50.0 * ((double)taskWithMatcher / taskCount) + 50.0 * ((double)taskWithCwd / taskCount));
+            double launchScore =
+                (launchCount == 0)
+                    ? 0.0
+                    : (70.0 * ((double)launchWithProgram / launchCount) + 30.0 * ((double)launchAttach / launchCount));
             double parityScore = 0.5 * taskScore + 0.5 * launchScore;
 
             nlohmann::json j;
@@ -5146,15 +5497,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["taskScorePct"] = taskScore;
             j["launchScorePct"] = launchScore;
             j["parityScorePct"] = parityScore;
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "vscode_task_launch_parity_score.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[VSCodeParityScore] Failed to write score artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -5172,10 +5524,13 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5946:  // LSP Scaffold Marker Audit
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path lspClient = root / "src" / "win32app" / "Win32IDE_LSPClient.cpp";
-            if (!fs::exists(lspClient)) {
-                appendToOutput("[LSPScaffoldAudit] Win32IDE_LSPClient.cpp not found.", "General", OutputSeverity::Warning);
+            if (!fs::exists(lspClient))
+            {
+                appendToOutput("[LSPScaffoldAudit] Win32IDE_LSPClient.cpp not found.", "General",
+                               OutputSeverity::Warning);
                 break;
             }
 
@@ -5184,10 +5539,12 @@ void Win32IDE::handleToolsCommand(int commandId)
 
             std::vector<std::string> needles = {"SCAFFOLD", "TODO", "FIXME", "stub"};
             nlohmann::json counts;
-            for (const auto& n : needles) {
+            for (const auto& n : needles)
+            {
                 int c = 0;
                 size_t pos = 0;
-                while ((pos = text.find(n, pos)) != std::string::npos) {
+                while ((pos = text.find(n, pos)) != std::string::npos)
+                {
                     ++c;
                     pos += n.size();
                 }
@@ -5197,15 +5554,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             nlohmann::json outj;
             outj["file"] = lspClient.string();
             outj["markers"] = counts;
-            outj["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            outj["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                           std::chrono::system_clock::now().time_since_epoch())
+                                           .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "lsp_scaffold_audit.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[LSPScaffoldAudit] Failed writing audit artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -5214,10 +5572,8 @@ void Win32IDE::handleToolsCommand(int commandId)
             out.close();
 
             std::ostringstream msg;
-            msg << "[LSPScaffoldAudit] SCAFFOLD=" << (int)counts["SCAFFOLD"]
-                << " TODO=" << (int)counts["TODO"]
-                << " FIXME=" << (int)counts["FIXME"]
-                << " stub=" << (int)counts["stub"]
+            msg << "[LSPScaffoldAudit] SCAFFOLD=" << (int)counts["SCAFFOLD"] << " TODO=" << (int)counts["TODO"]
+                << " FIXME=" << (int)counts["FIXME"] << " stub=" << (int)counts["stub"]
                 << "\nArtifact: " << outPath.string();
             appendToOutput(msg.str(), "General", OutputSeverity::Info);
         }
@@ -5239,16 +5595,17 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["currentGhostLength"] = m_ghostTextContent.size();
             j["line"] = m_ghostTextLine;
             j["column"] = m_ghostTextColumn;
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             namespace fs = std::filesystem;
             fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "ghost_text_cache_snapshot.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[GhostCache] Failed writing snapshot artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -5266,13 +5623,9 @@ void Win32IDE::handleToolsCommand(int commandId)
             fs::create_directories(outDir);
 
             std::vector<fs::path> expected = {
-                outDir / "parity_readiness.json",
-                outDir / "completion_lsp_readiness.json",
-                outDir / "reasoning_pack.json",
-                outDir / "vscode_task_launch_parity_score.json",
-                outDir / "lsp_scaffold_audit.json",
-                outDir / "ghost_text_cache_snapshot.json"
-            };
+                outDir / "parity_readiness.json",   outDir / "completion_lsp_readiness.json",
+                outDir / "reasoning_pack.json",     outDir / "vscode_task_launch_parity_score.json",
+                outDir / "lsp_scaffold_audit.json", outDir / "ghost_text_cache_snapshot.json"};
             int present = 0;
             for (const auto& p : expected)
                 if (fs::exists(p))
@@ -5285,14 +5638,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["coveragePct"] = coverage;
             j["routerStatus"] = getRouterStatusString();
             j["hybridBridgeStatus"] = getHybridBridgeStatusString();
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outPath = outDir / "copilot_cursor_parity_dashboard.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
-                appendToOutput("[ParityDashboard] Failed writing dashboard artifact.", "General", OutputSeverity::Error);
+            if (!out.is_open())
+            {
+                appendToOutput("[ParityDashboard] Failed writing dashboard artifact.", "General",
+                               OutputSeverity::Error);
                 break;
             }
             std::string blob = j.dump(2);
@@ -5325,17 +5680,19 @@ void Win32IDE::handleToolsCommand(int commandId)
         }
         break;
 
-        // ================================================================
-        // Parity Workflow Layer — Batch 7 (5950–5956)
-        // ================================================================
+            // ================================================================
+            // Parity Workflow Layer — Batch 7 (5950–5956)
+            // ================================================================
 
         case 5950:  // Search Panel Capability Audit
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path filePath = root / "src" / "win32app" / "Win32IDE_SearchPanel.cpp";
             std::ifstream in(filePath, std::ios::binary);
-            if (!in.is_open()) {
+            if (!in.is_open())
+            {
                 appendToOutput("[SearchAudit] Win32IDE_SearchPanel.cpp not found.", "General", OutputSeverity::Warning);
                 break;
             }
@@ -5353,15 +5710,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["hasWordToggle"] = has("IDC_SEARCH_CHK_WORD");
             j["hasIncludeExclude"] = has("IDC_SEARCH_INCLUDE") && has("IDC_SEARCH_EXCLUDE");
             j["hasListViewResults"] = has("LVS_REPORT") && has("ListView_InsertColumn");
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "search_panel_capability_audit.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[SearchAudit] Failed writing audit artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -5375,11 +5733,14 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5951:  // Terminal Tabs Spawn Audit
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path filePath = root / "src" / "win32app" / "Win32IDE_TerminalTabs.cpp";
             std::ifstream in(filePath, std::ios::binary);
-            if (!in.is_open()) {
-                appendToOutput("[TerminalAudit] Win32IDE_TerminalTabs.cpp not found.", "General", OutputSeverity::Warning);
+            if (!in.is_open())
+            {
+                appendToOutput("[TerminalAudit] Win32IDE_TerminalTabs.cpp not found.", "General",
+                               OutputSeverity::Warning);
                 break;
             }
             std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
@@ -5394,15 +5755,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["hasReaderThread"] = has("std::thread") || has("CreateThread");
             j["hasInputEdit"] = has("EDIT") || has("ES_MULTILINE");
             j["hasProfilePicker"] = has("PROFILES");
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "terminal_tabs_spawn_audit.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[TerminalAudit] Failed writing audit artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -5416,11 +5778,14 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5952:  // Task Runner Pipe Capture Audit
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path filePath = root / "src" / "win32app" / "Win32IDE_TaskRunner.cpp";
             std::ifstream in(filePath, std::ios::binary);
-            if (!in.is_open()) {
-                appendToOutput("[TaskRunnerAudit] Win32IDE_TaskRunner.cpp not found.", "General", OutputSeverity::Warning);
+            if (!in.is_open())
+            {
+                appendToOutput("[TaskRunnerAudit] Win32IDE_TaskRunner.cpp not found.", "General",
+                               OutputSeverity::Warning);
                 break;
             }
             std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
@@ -5436,15 +5801,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["hasOutputStreaming"] = has("appendToOutput(output");
             j["hasExitCodeHandling"] = has("GetExitCodeProcess");
             j["hasTasksJsonLoad"] = has("tasks.json");
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "task_runner_pipe_audit.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[TaskRunnerAudit] Failed writing audit artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -5458,11 +5824,14 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5953:  // Extensions Panel GUI Audit
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path filePath = root / "src" / "win32app" / "Win32IDE_ExtensionsPanel.cpp";
             std::ifstream in(filePath, std::ios::binary);
-            if (!in.is_open()) {
-                appendToOutput("[ExtensionsAudit] Win32IDE_ExtensionsPanel.cpp not found.", "General", OutputSeverity::Warning);
+            if (!in.is_open())
+            {
+                appendToOutput("[ExtensionsAudit] Win32IDE_ExtensionsPanel.cpp not found.", "General",
+                               OutputSeverity::Warning);
                 break;
             }
             std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
@@ -5478,15 +5847,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["hasReload"] = has("IDM_EXT_RELOAD");
             j["hasStatePersistence"] = has("saveStateFile") && has("loadStateFile");
             j["hasCommandHandler"] = has("handleExtensionCommand(");
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "extensions_panel_gui_audit.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[ExtensionsAudit] Failed writing audit artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -5500,13 +5870,16 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5954:  // Canonical Build Verify (Wrapper)
         {
             namespace fs = std::filesystem;
-            fs::path working = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path working =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path wrapper = working / "Build-AgenticIDE.ps1";
-            if (!fs::exists(wrapper)) {
+            if (!fs::exists(wrapper))
+            {
                 appendToOutput("[BuildVerify] Build-AgenticIDE.ps1 not found.", "General", OutputSeverity::Warning);
                 break;
             }
-            std::string cmd = "powershell -NoProfile -ExecutionPolicy Bypass -File .\\Build-AgenticIDE.ps1 -Lane win32ide -Config release -Verify";
+            std::string cmd = "powershell -NoProfile -ExecutionPolicy Bypass -File .\\Build-AgenticIDE.ps1 -Lane "
+                              "win32ide -Config release -Verify";
             runBuildInBackground(working.string(), cmd);
             appendToOutput("[BuildVerify] Started canonical build with -Verify.", "General", OutputSeverity::Info);
         }
@@ -5515,13 +5888,16 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5955:  // Canonical Build Test (Wrapper)
         {
             namespace fs = std::filesystem;
-            fs::path working = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path working =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path wrapper = working / "Build-AgenticIDE.ps1";
-            if (!fs::exists(wrapper)) {
+            if (!fs::exists(wrapper))
+            {
                 appendToOutput("[BuildTest] Build-AgenticIDE.ps1 not found.", "General", OutputSeverity::Warning);
                 break;
             }
-            std::string cmd = "powershell -NoProfile -ExecutionPolicy Bypass -File .\\Build-AgenticIDE.ps1 -Lane win32ide -Config release -Test";
+            std::string cmd = "powershell -NoProfile -ExecutionPolicy Bypass -File .\\Build-AgenticIDE.ps1 -Lane "
+                              "win32ide -Config release -Test";
             runBuildInBackground(working.string(), cmd);
             appendToOutput("[BuildTest] Started canonical build with -Test.", "General", OutputSeverity::Info);
         }
@@ -5534,16 +5910,13 @@ void Win32IDE::handleToolsCommand(int commandId)
             fs::create_directories(outDir);
 
             std::vector<fs::path> artifacts = {
-                outDir / "search_panel_capability_audit.json",
-                outDir / "terminal_tabs_spawn_audit.json",
-                outDir / "task_runner_pipe_audit.json",
-                outDir / "extensions_panel_gui_audit.json",
-                outDir / "build_lane_matrix_report.json",
-                outDir / "copilot_cursor_parity_dashboard.json"
-            };
+                outDir / "search_panel_capability_audit.json", outDir / "terminal_tabs_spawn_audit.json",
+                outDir / "task_runner_pipe_audit.json",        outDir / "extensions_panel_gui_audit.json",
+                outDir / "build_lane_matrix_report.json",      outDir / "copilot_cursor_parity_dashboard.json"};
             int present = 0;
             for (const auto& p : artifacts)
-                if (fs::exists(p)) ++present;
+                if (fs::exists(p))
+                    ++present;
             double coverage = artifacts.empty() ? 0.0 : (100.0 * (double)present / artifacts.size());
 
             nlohmann::json j;
@@ -5553,14 +5926,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["coveragePct"] = coverage;
             j["routerStatus"] = getRouterStatusString();
             j["hybridBridgeStatus"] = getHybridBridgeStatusString();
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outPath = outDir / "batch7_parity_scorecard.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
-                appendToOutput("[Batch7Scorecard] Failed writing scorecard artifact.", "General", OutputSeverity::Error);
+            if (!out.is_open())
+            {
+                appendToOutput("[Batch7Scorecard] Failed writing scorecard artifact.", "General",
+                               OutputSeverity::Error);
                 break;
             }
             std::string blob = j.dump(2);
@@ -5574,18 +5949,20 @@ void Win32IDE::handleToolsCommand(int commandId)
         }
         break;
 
-        // ================================================================
-        // Parity Workflow Layer — Batch 8 (5957–5963)
-        // ================================================================
+            // ================================================================
+            // Parity Workflow Layer — Batch 8 (5957–5963)
+            // ================================================================
 
         case 5957:  // Open Extensions Surface + Refresh
         {
             setSidebarView(SidebarView::Extensions);
-            if (m_hwndSidebar) {
+            if (m_hwndSidebar)
+            {
                 createExtensionsView(m_hwndSidebar);
                 loadInstalledExtensions();
             }
-            appendToOutput("[ExtensionsSurface] Extensions view opened and refreshed.", "General", OutputSeverity::Info);
+            appendToOutput("[ExtensionsSurface] Extensions view opened and refreshed.", "General",
+                           OutputSeverity::Info);
         }
         break;
 
@@ -5599,16 +5976,23 @@ void Win32IDE::handleToolsCommand(int commandId)
 
             std::string action = m_hwndCopilotChatInput ? getWindowText(m_hwndCopilotChatInput) : "";
             std::string lower = action;
-            for (auto& c : lower) c = (char)std::tolower((unsigned char)c);
+            for (auto& c : lower)
+                c = (char)std::tolower((unsigned char)c);
 
             int cmd = 0;
-            if (lower.find("install") == 0) cmd = IDM_EXT_INSTALL_LOCAL;
-            else if (lower.find("enable") == 0) cmd = IDM_EXT_ENABLE_LOCAL;
-            else if (lower.find("disable") == 0) cmd = IDM_EXT_DISABLE_LOCAL;
-            else if (lower.find("remove") == 0 || lower.find("uninstall") == 0) cmd = IDM_EXT_UNINSTALL_LOCAL;
-            else if (lower.find("reload") == 0 || lower.find("refresh") == 0) cmd = IDM_EXT_RELOAD_LOCAL;
+            if (lower.find("install") == 0)
+                cmd = IDM_EXT_INSTALL_LOCAL;
+            else if (lower.find("enable") == 0)
+                cmd = IDM_EXT_ENABLE_LOCAL;
+            else if (lower.find("disable") == 0)
+                cmd = IDM_EXT_DISABLE_LOCAL;
+            else if (lower.find("remove") == 0 || lower.find("uninstall") == 0)
+                cmd = IDM_EXT_UNINSTALL_LOCAL;
+            else if (lower.find("reload") == 0 || lower.find("refresh") == 0)
+                cmd = IDM_EXT_RELOAD_LOCAL;
 
-            if (cmd == 0) {
+            if (cmd == 0)
+            {
                 appendToOutput("[ExtensionsQuick] Usage: install|enable|disable|remove|reload (type in chat input).",
                                "General", OutputSeverity::Warning);
                 break;
@@ -5631,21 +6015,23 @@ void Win32IDE::handleToolsCommand(int commandId)
             if (query.empty())
                 query = "TODO";
 
-            if (m_hwndSidebar) {
+            if (m_hwndSidebar)
+            {
                 HWND hSearch = GetDlgItem(m_hwndSidebar, IDC_SEARCH_INPUT_LOCAL);
                 if (hSearch)
                     SetWindowTextA(hSearch, query.c_str());
                 SendMessageA(m_hwndSidebar, WM_COMMAND, MAKEWPARAM(IDC_SEARCH_BTN_FIND_LOCAL, BN_CLICKED), 0);
             }
-            appendToOutput("[SearchTrigger] Search panel opened and find command fired for query: " + query,
-                           "General", OutputSeverity::Info);
+            appendToOutput("[SearchTrigger] Search panel opened and find command fired for query: " + query, "General",
+                           OutputSeverity::Info);
         }
         break;
 
         case 5960:  // Task Runner Workflow Audit
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path taskRunner = root / "src" / "win32app" / "Win32IDE_TaskRunner.cpp";
             fs::path tasksJson = root / ".vscode" / "tasks.json";
             fs::path launchJson = root / ".vscode" / "launch.json";
@@ -5657,29 +6043,34 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["tasksCount"] = 0;
             j["launchConfigCount"] = 0;
 
-            if (fs::exists(tasksJson)) {
+            if (fs::exists(tasksJson))
+            {
                 std::ifstream in(tasksJson, std::ios::binary);
                 nlohmann::json t = nlohmann::json::parse(
-                    std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>()), nullptr, false);
+                    std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>()), nullptr,
+                    false);
                 if (!t.is_discarded() && t.contains("tasks") && t["tasks"].is_array())
                     j["tasksCount"] = t["tasks"].size();
             }
-            if (fs::exists(launchJson)) {
+            if (fs::exists(launchJson))
+            {
                 std::ifstream in(launchJson, std::ios::binary);
                 nlohmann::json l = nlohmann::json::parse(
-                    std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>()), nullptr, false);
+                    std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>()), nullptr,
+                    false);
                 if (!l.is_discarded() && l.contains("configurations") && l["configurations"].is_array())
                     j["launchConfigCount"] = l["configurations"].size();
             }
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "task_runner_workflow_audit.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[TaskWorkflowAudit] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -5693,9 +6084,11 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5961:  // Run First VSCode Task Via Wrapper Command
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path tasksPath = root / ".vscode" / "tasks.json";
-            if (!fs::exists(tasksPath)) {
+            if (!fs::exists(tasksPath))
+            {
                 appendToOutput("[TaskRunQuick] .vscode/tasks.json not found.", "General", OutputSeverity::Warning);
                 break;
             }
@@ -5703,20 +6096,25 @@ void Win32IDE::handleToolsCommand(int commandId)
             std::ifstream in(tasksPath, std::ios::binary);
             nlohmann::json t = nlohmann::json::parse(
                 std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>()), nullptr, false);
-            if (t.is_discarded() || !t.contains("tasks") || !t["tasks"].is_array() || t["tasks"].empty()) {
+            if (t.is_discarded() || !t.contains("tasks") || !t["tasks"].is_array() || t["tasks"].empty())
+            {
                 appendToOutput("[TaskRunQuick] Invalid/empty tasks.json.", "General", OutputSeverity::Warning);
                 break;
             }
 
             nlohmann::json sel = t["tasks"][(size_t)0];
             std::string cmd = sel.value("command", "");
-            if (cmd.empty()) {
+            if (cmd.empty())
+            {
                 appendToOutput("[TaskRunQuick] First task has empty command.", "General", OutputSeverity::Warning);
                 break;
             }
-            if (sel.contains("args") && sel["args"].is_array()) {
-                for (const auto& a : sel["args"]) {
-                    if (!a.is_string()) continue;
+            if (sel.contains("args") && sel["args"].is_array())
+            {
+                for (const auto& a : sel["args"])
+                {
+                    if (!a.is_string())
+                        continue;
                     cmd += " \"" + a.get<std::string>() + "\"";
                 }
             }
@@ -5729,9 +6127,11 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5962:  // Canonical Verify+Test Pipeline
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path wrapper = root / "Build-AgenticIDE.ps1";
-            if (!fs::exists(wrapper)) {
+            if (!fs::exists(wrapper))
+            {
                 appendToOutput("[VerifyTestPipeline] Build-AgenticIDE.ps1 not found.", "General",
                                OutputSeverity::Warning);
                 break;
@@ -5752,16 +6152,13 @@ void Win32IDE::handleToolsCommand(int commandId)
             fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
             fs::create_directories(outDir);
             std::vector<fs::path> artifacts = {
-                outDir / "search_panel_capability_audit.json",
-                outDir / "terminal_tabs_spawn_audit.json",
-                outDir / "task_runner_pipe_audit.json",
-                outDir / "extensions_panel_gui_audit.json",
-                outDir / "task_runner_workflow_audit.json",
-                outDir / "batch7_parity_scorecard.json"
-            };
+                outDir / "search_panel_capability_audit.json", outDir / "terminal_tabs_spawn_audit.json",
+                outDir / "task_runner_pipe_audit.json",        outDir / "extensions_panel_gui_audit.json",
+                outDir / "task_runner_workflow_audit.json",    outDir / "batch7_parity_scorecard.json"};
             int present = 0;
             for (const auto& p : artifacts)
-                if (fs::exists(p)) ++present;
+                if (fs::exists(p))
+                    ++present;
             double coverage = artifacts.empty() ? 0.0 : (100.0 * (double)present / artifacts.size());
 
             nlohmann::json j;
@@ -5771,13 +6168,14 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["artifactsExpected"] = artifacts.size();
             j["routerStatus"] = getRouterStatusString();
             j["hybridBridgeStatus"] = getHybridBridgeStatusString();
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outPath = outDir / "batch8_integration_scorecard.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[Batch8Scorecard] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -5789,9 +6187,9 @@ void Win32IDE::handleToolsCommand(int commandId)
         }
         break;
 
-        // ================================================================
-        // Parity Workflow Layer — Batch 9 (5964–5970)
-        // ================================================================
+            // ================================================================
+            // Parity Workflow Layer — Batch 9 (5964–5970)
+            // ================================================================
 
         case 5964:  // Search Replace-All From Chat Input
         {
@@ -5800,24 +6198,31 @@ void Win32IDE::handleToolsCommand(int commandId)
 
             std::string spec = m_hwndCopilotChatInput ? getWindowText(m_hwndCopilotChatInput) : "";
             size_t arrow = spec.find("=>");
-            if (arrow == std::string::npos) {
-                appendToOutput("[SearchReplace] Usage: <find> => <replace> (type in chat input).",
-                               "General", OutputSeverity::Warning);
+            if (arrow == std::string::npos)
+            {
+                appendToOutput("[SearchReplace] Usage: <find> => <replace> (type in chat input).", "General",
+                               OutputSeverity::Warning);
                 break;
             }
             std::string findText = spec.substr(0, arrow);
             std::string replaceText = spec.substr(arrow + 2);
-            while (!findText.empty() && std::isspace((unsigned char)findText.front())) findText.erase(findText.begin());
-            while (!findText.empty() && std::isspace((unsigned char)findText.back())) findText.pop_back();
-            while (!replaceText.empty() && std::isspace((unsigned char)replaceText.front())) replaceText.erase(replaceText.begin());
-            while (!replaceText.empty() && std::isspace((unsigned char)replaceText.back())) replaceText.pop_back();
-            if (findText.empty()) {
+            while (!findText.empty() && std::isspace((unsigned char)findText.front()))
+                findText.erase(findText.begin());
+            while (!findText.empty() && std::isspace((unsigned char)findText.back()))
+                findText.pop_back();
+            while (!replaceText.empty() && std::isspace((unsigned char)replaceText.front()))
+                replaceText.erase(replaceText.begin());
+            while (!replaceText.empty() && std::isspace((unsigned char)replaceText.back()))
+                replaceText.pop_back();
+            if (findText.empty())
+            {
                 appendToOutput("[SearchReplace] Find text cannot be empty.", "General", OutputSeverity::Warning);
                 break;
             }
 
             setSidebarView(SidebarView::Search);
-            if (m_hwndSidebar) {
+            if (m_hwndSidebar)
+            {
                 if (HWND hFind = GetDlgItem(m_hwndSidebar, IDC_SEARCH_INPUT_LOCAL))
                     SetWindowTextA(hFind, findText.c_str());
                 if (HWND hRepl = GetDlgItem(m_hwndSidebar, IDC_SEARCH_REPLACE_LOCAL))
@@ -5834,8 +6239,10 @@ void Win32IDE::handleToolsCommand(int commandId)
         {
             std::string raw = m_hwndCopilotChatInput ? getWindowText(m_hwndCopilotChatInput) : "";
             int idx = raw.empty() ? 0 : std::atoi(raw.c_str());
-            if (idx < 0) idx = 0;
-            if (idx > 8) idx = 8;
+            if (idx < 0)
+                idx = 0;
+            if (idx > 8)
+                idx = 8;
 
             initTerminalTabs();
             addTerminalTab(idx);
@@ -5847,9 +6254,11 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5966:  // Run VSCode Task By Label
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path tasksPath = root / ".vscode" / "tasks.json";
-            if (!fs::exists(tasksPath)) {
+            if (!fs::exists(tasksPath))
+            {
                 appendToOutput("[TaskByLabel] .vscode/tasks.json not found.", "General", OutputSeverity::Warning);
                 break;
             }
@@ -5857,45 +6266,55 @@ void Win32IDE::handleToolsCommand(int commandId)
             std::ifstream in(tasksPath, std::ios::binary);
             nlohmann::json t = nlohmann::json::parse(
                 std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>()), nullptr, false);
-            if (t.is_discarded() || !t.contains("tasks") || !t["tasks"].is_array() || t["tasks"].empty()) {
+            if (t.is_discarded() || !t.contains("tasks") || !t["tasks"].is_array() || t["tasks"].empty())
+            {
                 appendToOutput("[TaskByLabel] Invalid/empty tasks.json.", "General", OutputSeverity::Warning);
                 break;
             }
 
             std::string label = m_hwndCopilotChatInput ? getWindowText(m_hwndCopilotChatInput) : "";
             nlohmann::json selected = t["tasks"][(size_t)0];
-            for (const auto& x : t["tasks"]) {
-                if (!x.is_object()) continue;
-                if (!label.empty() && x.value("label", "") == label) {
+            for (const auto& x : t["tasks"])
+            {
+                if (!x.is_object())
+                    continue;
+                if (!label.empty() && x.value("label", "") == label)
+                {
                     selected = x;
                     break;
                 }
             }
 
             std::string cmd = selected.value("command", "");
-            if (cmd.empty()) {
+            if (cmd.empty())
+            {
                 appendToOutput("[TaskByLabel] Selected task has empty command.", "General", OutputSeverity::Warning);
                 break;
             }
-            if (selected.contains("args") && selected["args"].is_array()) {
-                for (const auto& a : selected["args"]) {
-                    if (!a.is_string()) continue;
+            if (selected.contains("args") && selected["args"].is_array())
+            {
+                for (const auto& a : selected["args"])
+                {
+                    if (!a.is_string())
+                        continue;
                     cmd += " \"" + a.get<std::string>() + "\"";
                 }
             }
 
             runBuildInBackground(root.string(), "cmd /c " + cmd);
-            appendToOutput("[TaskByLabel] Started task: " + selected.value("label", "<unnamed>"),
-                           "General", OutputSeverity::Info);
+            appendToOutput("[TaskByLabel] Started task: " + selected.value("label", "<unnamed>"), "General",
+                           OutputSeverity::Info);
         }
         break;
 
         case 5967:  // Run VSCode Launch Config By Name
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path launchPath = root / ".vscode" / "launch.json";
-            if (!fs::exists(launchPath)) {
+            if (!fs::exists(launchPath))
+            {
                 appendToOutput("[LaunchByName] .vscode/launch.json not found.", "General", OutputSeverity::Warning);
                 break;
             }
@@ -5904,51 +6323,61 @@ void Win32IDE::handleToolsCommand(int commandId)
             nlohmann::json l = nlohmann::json::parse(
                 std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>()), nullptr, false);
             if (l.is_discarded() || !l.contains("configurations") || !l["configurations"].is_array() ||
-                l["configurations"].empty()) {
+                l["configurations"].empty())
+            {
                 appendToOutput("[LaunchByName] Invalid/empty launch.json.", "General", OutputSeverity::Warning);
                 break;
             }
 
             std::string name = m_hwndCopilotChatInput ? getWindowText(m_hwndCopilotChatInput) : "";
             nlohmann::json selected = l["configurations"][(size_t)0];
-            for (const auto& x : l["configurations"]) {
-                if (!x.is_object()) continue;
-                if (!name.empty() && x.value("name", "") == name) {
+            for (const auto& x : l["configurations"])
+            {
+                if (!x.is_object())
+                    continue;
+                if (!name.empty() && x.value("name", "") == name)
+                {
                     selected = x;
                     break;
                 }
             }
 
             std::string request = selected.value("request", "launch");
-            if (request == "attach") {
-                appendToOutput("[LaunchByName] Attach request selected; use debugger attach flow with PID.",
-                               "General", OutputSeverity::Info);
+            if (request == "attach")
+            {
+                appendToOutput("[LaunchByName] Attach request selected; use debugger attach flow with PID.", "General",
+                               OutputSeverity::Info);
                 break;
             }
 
             std::string program = selected.value("program", "");
-            if (program.empty()) {
+            if (program.empty())
+            {
                 appendToOutput("[LaunchByName] Selected config has empty program.", "General", OutputSeverity::Warning);
                 break;
             }
             std::string cmd = "\"" + program + "\"";
-            if (selected.contains("args") && selected["args"].is_array()) {
-                for (const auto& a : selected["args"]) {
-                    if (!a.is_string()) continue;
+            if (selected.contains("args") && selected["args"].is_array())
+            {
+                for (const auto& a : selected["args"])
+                {
+                    if (!a.is_string())
+                        continue;
                     cmd += " \"" + a.get<std::string>() + "\"";
                 }
             }
 
             runBuildInBackground(root.string(), "cmd /c " + cmd);
-            appendToOutput("[LaunchByName] Started config: " + selected.value("name", "<unnamed>"),
-                           "General", OutputSeverity::Info);
+            appendToOutput("[LaunchByName] Started config: " + selected.value("name", "<unnamed>"), "General",
+                           OutputSeverity::Info);
         }
         break;
 
         case 5968:  // Export Extension State Snapshot
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path stateFile = root / "extensions" / "extensions_state.txt";
             fs::path extDir = root / "extensions";
 
@@ -5957,13 +6386,17 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["stateFileExists"] = fs::exists(stateFile);
             j["entries"] = nlohmann::json::array();
 
-            if (fs::exists(stateFile)) {
+            if (fs::exists(stateFile))
+            {
                 std::ifstream in(stateFile, std::ios::binary);
                 std::string line;
-                while (std::getline(in, line)) {
-                    if (line.empty() || line[0] == '#') continue;
+                while (std::getline(in, line))
+                {
+                    if (line.empty() || line[0] == '#')
+                        continue;
                     size_t eq = line.find('=');
-                    if (eq == std::string::npos) continue;
+                    if (eq == std::string::npos)
+                        continue;
                     nlohmann::json e;
                     e["id"] = line.substr(0, eq);
                     std::string v = line.substr(eq + 1);
@@ -5971,15 +6404,16 @@ void Win32IDE::handleToolsCommand(int commandId)
                     j["entries"].push_back(e);
                 }
             }
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "extension_state_snapshot.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[ExtStateSnapshot] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -5993,19 +6427,20 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5969:  // Build Wrapper Matrix Runner
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path wrapper = root / "Build-AgenticIDE.ps1";
-            if (!fs::exists(wrapper)) {
+            if (!fs::exists(wrapper))
+            {
                 appendToOutput("[BuildMatrixRun] Build-AgenticIDE.ps1 not found.", "General", OutputSeverity::Warning);
                 break;
             }
-            std::string cmd =
-                "powershell -NoProfile -ExecutionPolicy Bypass -Command "
-                "\"& .\\Build-AgenticIDE.ps1 -Lane win32ide -Config release -Verify; "
-                "& .\\Build-AgenticIDE.ps1 -Lane monolithic -Config release -Verify\"";
+            std::string cmd = "powershell -NoProfile -ExecutionPolicy Bypass -Command "
+                              "\"& .\\Build-AgenticIDE.ps1 -Lane win32ide -Config release -Verify; "
+                              "& .\\Build-AgenticIDE.ps1 -Lane monolithic -Config release -Verify\"";
             runBuildInBackground(root.string(), cmd);
-            appendToOutput("[BuildMatrixRun] Started wrapper matrix verify run (win32ide + monolithic).",
-                           "General", OutputSeverity::Info);
+            appendToOutput("[BuildMatrixRun] Started wrapper matrix verify run (win32ide + monolithic).", "General",
+                           OutputSeverity::Info);
         }
         break;
 
@@ -6015,17 +6450,14 @@ void Win32IDE::handleToolsCommand(int commandId)
             fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
             fs::create_directories(outDir);
             std::vector<fs::path> artifacts = {
-                outDir / "search_panel_capability_audit.json",
-                outDir / "terminal_tabs_spawn_audit.json",
-                outDir / "task_runner_pipe_audit.json",
-                outDir / "extensions_panel_gui_audit.json",
-                outDir / "task_runner_workflow_audit.json",
-                outDir / "extension_state_snapshot.json",
-                outDir / "batch8_integration_scorecard.json"
-            };
+                outDir / "search_panel_capability_audit.json", outDir / "terminal_tabs_spawn_audit.json",
+                outDir / "task_runner_pipe_audit.json",        outDir / "extensions_panel_gui_audit.json",
+                outDir / "task_runner_workflow_audit.json",    outDir / "extension_state_snapshot.json",
+                outDir / "batch8_integration_scorecard.json"};
             int present = 0;
             for (const auto& p : artifacts)
-                if (fs::exists(p)) ++present;
+                if (fs::exists(p))
+                    ++present;
             double coverage = artifacts.empty() ? 0.0 : (100.0 * (double)present / artifacts.size());
 
             nlohmann::json j;
@@ -6035,13 +6467,14 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["coveragePct"] = coverage;
             j["routerStatus"] = getRouterStatusString();
             j["hybridBridgeStatus"] = getHybridBridgeStatusString();
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outPath = outDir / "batch9_integration_scorecard.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[Batch9Scorecard] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -6053,9 +6486,9 @@ void Win32IDE::handleToolsCommand(int commandId)
         }
         break;
 
-        // ================================================================
-        // Parity Workflow Layer — Batch 10 (5971–5977)
-        // ================================================================
+            // ================================================================
+            // Parity Workflow Layer — Batch 10 (5971–5977)
+            // ================================================================
 
         case 5971:  // Search Regex Sweep From Chat Input
         {
@@ -6068,7 +6501,8 @@ void Win32IDE::handleToolsCommand(int commandId)
                 query = "TODO|FIXME|HACK";
 
             setSidebarView(SidebarView::Search);
-            if (m_hwndSidebar) {
+            if (m_hwndSidebar)
+            {
                 if (HWND hFind = GetDlgItem(m_hwndSidebar, IDC_SEARCH_INPUT_LOCAL))
                     SetWindowTextA(hFind, query.c_str());
                 SendDlgItemMessageA(m_hwndSidebar, IDC_SEARCH_CHK_REGEX_LOCAL, BM_SETCHECK, BST_CHECKED, 0);
@@ -6088,20 +6522,23 @@ void Win32IDE::handleToolsCommand(int commandId)
             std::string include = "*.cpp,*.h,*.hpp";
             std::string exclude = "node_modules,.git,build,obj,bin";
             size_t sep = spec.find("||");
-            if (sep != std::string::npos) {
+            if (sep != std::string::npos)
+            {
                 include = spec.substr(0, sep);
                 exclude = spec.substr(sep + 2);
             }
 
             setSidebarView(SidebarView::Search);
-            if (m_hwndSidebar) {
+            if (m_hwndSidebar)
+            {
                 if (HWND hInc = GetDlgItem(m_hwndSidebar, IDC_SEARCH_INCLUDE_LOCAL))
                     SetWindowTextA(hInc, include.c_str());
                 if (HWND hExc = GetDlgItem(m_hwndSidebar, IDC_SEARCH_EXCLUDE_LOCAL))
                     SetWindowTextA(hExc, exclude.c_str());
                 SendMessageA(m_hwndSidebar, WM_COMMAND, MAKEWPARAM(IDC_SEARCH_BTN_FIND_LOCAL, BN_CLICKED), 0);
             }
-            appendToOutput("[SearchFilter] Applied include/exclude and executed search.", "General", OutputSeverity::Info);
+            appendToOutput("[SearchFilter] Applied include/exclude and executed search.", "General",
+                           OutputSeverity::Info);
         }
         break;
 
@@ -6110,18 +6547,20 @@ void Win32IDE::handleToolsCommand(int commandId)
             initTerminalTabs();
             for (int i = 0; i < 3; ++i)
                 addTerminalTab(i);
-            appendToOutput("[TerminalMatrix] Added 3 terminal tabs (profiles 0,1,2).", "General",
-                           OutputSeverity::Info);
+            appendToOutput("[TerminalMatrix] Added 3 terminal tabs (profiles 0,1,2).", "General", OutputSeverity::Info);
         }
         break;
 
         case 5974:  // Build Wrapper Flag Audit
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path wrapper = root / "Build-AgenticIDE.ps1";
-            if (!fs::exists(wrapper)) {
-                appendToOutput("[WrapperFlagAudit] Build-AgenticIDE.ps1 not found.", "General", OutputSeverity::Warning);
+            if (!fs::exists(wrapper))
+            {
+                appendToOutput("[WrapperFlagAudit] Build-AgenticIDE.ps1 not found.", "General",
+                               OutputSeverity::Warning);
                 break;
             }
             std::ifstream in(wrapper, std::ios::binary);
@@ -6136,15 +6575,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["usesVerifyFlag"] = has("-Verify");
             j["hasTestDiscovery"] = has("*test*.exe");
             j["hasArtifactValidation"] = has("artifact");
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "build_wrapper_flag_audit.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[WrapperFlagAudit] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -6158,9 +6598,11 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5975:  // Build Wrapper Dynamic Lane Command
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path wrapper = root / "Build-AgenticIDE.ps1";
-            if (!fs::exists(wrapper)) {
+            if (!fs::exists(wrapper))
+            {
                 appendToOutput("[WrapperDynamic] Build-AgenticIDE.ps1 not found.", "General", OutputSeverity::Warning);
                 break;
             }
@@ -6172,17 +6614,24 @@ void Win32IDE::handleToolsCommand(int commandId)
             bool runVerify = false;
             {
                 std::string lower = raw;
-                for (auto& c : lower) c = (char)std::tolower((unsigned char)c);
-                if (lower.find("monolithic") != std::string::npos) lane = "monolithic";
-                if (lower.find("debug") != std::string::npos) config = "debug";
-                if (lower.find("test") != std::string::npos) runTest = true;
-                if (lower.find("verify") != std::string::npos) runVerify = true;
+                for (auto& c : lower)
+                    c = (char)std::tolower((unsigned char)c);
+                if (lower.find("monolithic") != std::string::npos)
+                    lane = "monolithic";
+                if (lower.find("debug") != std::string::npos)
+                    config = "debug";
+                if (lower.find("test") != std::string::npos)
+                    runTest = true;
+                if (lower.find("verify") != std::string::npos)
+                    runVerify = true;
             }
 
             std::string cmd = "powershell -NoProfile -ExecutionPolicy Bypass -File .\\Build-AgenticIDE.ps1 -Lane " +
                               lane + " -Config " + config;
-            if (runVerify) cmd += " -Verify";
-            if (runTest) cmd += " -Test";
+            if (runVerify)
+                cmd += " -Verify";
+            if (runTest)
+                cmd += " -Test";
 
             runBuildInBackground(root.string(), cmd);
             appendToOutput("[WrapperDynamic] Started: " + cmd, "General", OutputSeverity::Info);
@@ -6197,20 +6646,20 @@ void Win32IDE::handleToolsCommand(int commandId)
             fs::path ledger = outDir / "parity_progress_ledger.md";
 
             std::ostringstream line;
-            int64_t nowMs =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
-            line << "- " << nowMs
-                 << " | router: " << getRouterStatusString()
-                 << " | hybrid: " << getHybridBridgeStatusString()
-                 << " | latest-batch: 5971-5977\n";
+            int64_t nowMs = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                std::chrono::system_clock::now().time_since_epoch())
+                                .count();
+            line << "- " << nowMs << " | router: " << getRouterStatusString()
+                 << " | hybrid: " << getHybridBridgeStatusString() << " | latest-batch: 5971-5977\n";
 
             std::ofstream out(ledger, std::ios::binary | std::ios::app);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[ParityLedger] Failed to append ledger.", "General", OutputSeverity::Error);
                 break;
             }
-            if (fs::file_size(ledger) == 0) {
+            if (fs::file_size(ledger) == 0)
+            {
                 std::string header = "# Parity Progress Ledger\n\n";
                 out.write(header.data(), (std::streamsize)header.size());
             }
@@ -6227,17 +6676,14 @@ void Win32IDE::handleToolsCommand(int commandId)
             fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
             fs::create_directories(outDir);
             std::vector<fs::path> artifacts = {
-                outDir / "search_panel_capability_audit.json",
-                outDir / "terminal_tabs_spawn_audit.json",
-                outDir / "task_runner_pipe_audit.json",
-                outDir / "extensions_panel_gui_audit.json",
-                outDir / "build_wrapper_flag_audit.json",
-                outDir / "batch9_integration_scorecard.json",
-                outDir / "parity_progress_ledger.md"
-            };
+                outDir / "search_panel_capability_audit.json", outDir / "terminal_tabs_spawn_audit.json",
+                outDir / "task_runner_pipe_audit.json",        outDir / "extensions_panel_gui_audit.json",
+                outDir / "build_wrapper_flag_audit.json",      outDir / "batch9_integration_scorecard.json",
+                outDir / "parity_progress_ledger.md"};
             int present = 0;
             for (const auto& p : artifacts)
-                if (fs::exists(p)) ++present;
+                if (fs::exists(p))
+                    ++present;
             double coverage = artifacts.empty() ? 0.0 : (100.0 * (double)present / artifacts.size());
 
             nlohmann::json j;
@@ -6247,13 +6693,14 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["coveragePct"] = coverage;
             j["routerStatus"] = getRouterStatusString();
             j["hybridBridgeStatus"] = getHybridBridgeStatusString();
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outPath = outDir / "batch10_integration_scorecard.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[Batch10Scorecard] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -6265,27 +6712,31 @@ void Win32IDE::handleToolsCommand(int commandId)
         }
         break;
 
-        // ================================================================
-        // Parity Workflow Layer — Batch 11 (5978–5984)
-        // ================================================================
+            // ================================================================
+            // Parity Workflow Layer — Batch 11 (5978–5984)
+            // ================================================================
 
         case 5978:  // Lane Alignment Snapshot
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path wrapper = root / "Build-AgenticIDE.ps1";
             fs::path mainAsm = root / "src" / "asm" / "monolithic" / "main.asm";
 
-            auto readText = [](const fs::path& p) -> std::string {
+            auto readText = [](const fs::path& p) -> std::string
+            {
                 std::ifstream in(p, std::ios::binary);
                 if (!in.is_open())
                     return "";
                 return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
             };
-            auto countHits = [](const std::string& hay, const std::string& needle) -> int {
+            auto countHits = [](const std::string& hay, const std::string& needle) -> int
+            {
                 int count = 0;
                 size_t pos = 0;
-                while ((pos = hay.find(needle, pos)) != std::string::npos) {
+                while ((pos = hay.find(needle, pos)) != std::string::npos)
+                {
                     ++count;
                     pos += needle.size();
                 }
@@ -6304,15 +6755,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["wrapperCallsMonolithicBuild"] = (wrapperText.find("Build-Monolithic.ps1") != std::string::npos);
             j["mainRouterInitCalls"] = countHits(mainText, "call    InferenceRouter_Init");
             j["mainLspInitCalls"] = countHits(mainText, "call    LSPBridgeInit");
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "lane_alignment_snapshot.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[LaneAlignment] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -6346,12 +6798,13 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["afterStatus"] = after;
             j["responseChars"] = response.size();
             j["responsePreview"] = response.substr(0, (std::min)(response.size(), (size_t)500));
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[RouterProbe] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -6365,29 +6818,33 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5980:  // Bridge ASM Event Map Export
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path bridgeAsm = root / "src" / "asm" / "monolithic" / "bridge.asm";
             std::ifstream in(bridgeAsm, std::ios::binary);
-            if (!in.is_open()) {
+            if (!in.is_open())
+            {
                 appendToOutput("[BridgeEventMap] bridge.asm not found.", "General", OutputSeverity::Warning);
                 break;
             }
             std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
 
-            std::vector<std::string> eventTokens = {
-                "BRIDGE_EVT_REQUEST", "BRIDGE_EVT_COMPLETE", "BRIDGE_EVT_CLEAR",
-                "BRIDGE_EVT_ACCEPT", "BRIDGE_EVT_ROUTER_FAIL"
-            };
+            std::vector<std::string> eventTokens = {"BRIDGE_EVT_REQUEST", "BRIDGE_EVT_COMPLETE", "BRIDGE_EVT_CLEAR",
+                                                    "BRIDGE_EVT_ACCEPT", "BRIDGE_EVT_ROUTER_FAIL"};
             nlohmann::json events = nlohmann::json::array();
-            for (const auto& tok : eventTokens) {
+            for (const auto& tok : eventTokens)
+            {
                 size_t pos = text.find(tok);
-                if (pos != std::string::npos) {
+                if (pos != std::string::npos)
+                {
                     nlohmann::json e;
                     e["name"] = tok;
                     e["present"] = true;
                     e["firstOffset"] = (int64_t)pos;
                     events.push_back(e);
-                } else {
+                }
+                else
+                {
                     nlohmann::json e;
                     e["name"] = tok;
                     e["present"] = false;
@@ -6402,12 +6859,13 @@ void Win32IDE::handleToolsCommand(int commandId)
             nlohmann::json j;
             j["bridgeAsm"] = bridgeAsm.string();
             j["events"] = events;
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[BridgeEventMap] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -6421,19 +6879,24 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5981:  // Cursor Parity Input Dialog Audit
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path parityCpp = root / "src" / "win32app" / "Win32IDE_CursorParity.cpp";
             std::ifstream in(parityCpp, std::ios::binary);
-            if (!in.is_open()) {
-                appendToOutput("[InputDialogAudit] Win32IDE_CursorParity.cpp not found.", "General", OutputSeverity::Warning);
+            if (!in.is_open())
+            {
+                appendToOutput("[InputDialogAudit] Win32IDE_CursorParity.cpp not found.", "General",
+                               OutputSeverity::Warning);
                 break;
             }
             std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
 
-            auto countHits = [&](const char* token) {
+            auto countHits = [&](const char* token)
+            {
                 int count = 0;
                 size_t pos = 0;
-                while ((pos = text.find(token, pos)) != std::string::npos) {
+                while ((pos = text.find(token, pos)) != std::string::npos)
+                {
                     ++count;
                     pos += strlen(token);
                 }
@@ -6446,15 +6909,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["dialogBoxIndirectParamCount"] = countHits("DialogBoxIndirectParam");
             j["returnEmptyCount"] = countHits("return \"\";");
             j["returnEmptyStringCount"] = countHits("std::string()");
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "cursor_input_dialog_audit.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[InputDialogAudit] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -6468,10 +6932,12 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5982:  // Git Panel Capability Audit
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path gitPanel = root / "src" / "win32app" / "Win32IDE_GitPanel.cpp";
             std::ifstream in(gitPanel, std::ios::binary);
-            if (!in.is_open()) {
+            if (!in.is_open())
+            {
                 appendToOutput("[GitPanelAudit] Win32IDE_GitPanel.cpp not found.", "General", OutputSeverity::Warning);
                 break;
             }
@@ -6487,15 +6953,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["hasPullRebase"] = has("git pull --rebase");
             j["hasStash"] = has("stash");
             j["hasCommitMessageInput"] = has("commit");
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "git_panel_capability_audit.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[GitPanelAudit] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -6508,7 +6975,8 @@ void Win32IDE::handleToolsCommand(int commandId)
 
         case 5983:  // Unified LSP Completion Probe
         {
-            if (m_currentFile.empty() || !m_hwndEditor) {
+            if (m_currentFile.empty() || !m_hwndEditor)
+            {
                 appendToOutput("[UnifiedLSPProbe] Open a file first.", "General", OutputSeverity::Warning);
                 break;
             }
@@ -6539,12 +7007,13 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["ghostTextEnabled"] = m_ghostTextEnabled;
             j["ghostTextVisible"] = m_ghostTextVisible;
             j["ghostTextPending"] = m_ghostTextPending;
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[UnifiedLSPProbe] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -6560,18 +7029,17 @@ void Win32IDE::handleToolsCommand(int commandId)
             namespace fs = std::filesystem;
             fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
             fs::create_directories(outDir);
-            std::vector<fs::path> artifacts = {
-                outDir / "lane_alignment_snapshot.json",
-                outDir / "router_readiness_transition_probe.json",
-                outDir / "bridge_event_map.json",
-                outDir / "cursor_input_dialog_audit.json",
-                outDir / "git_panel_capability_audit.json",
-                outDir / "unified_lsp_completion_probe.json",
-                outDir / "batch10_integration_scorecard.json"
-            };
+            std::vector<fs::path> artifacts = {outDir / "lane_alignment_snapshot.json",
+                                               outDir / "router_readiness_transition_probe.json",
+                                               outDir / "bridge_event_map.json",
+                                               outDir / "cursor_input_dialog_audit.json",
+                                               outDir / "git_panel_capability_audit.json",
+                                               outDir / "unified_lsp_completion_probe.json",
+                                               outDir / "batch10_integration_scorecard.json"};
             int present = 0;
             for (const auto& p : artifacts)
-                if (fs::exists(p)) ++present;
+                if (fs::exists(p))
+                    ++present;
             double coverage = artifacts.empty() ? 0.0 : (100.0 * (double)present / artifacts.size());
 
             nlohmann::json j;
@@ -6581,13 +7049,14 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["coveragePct"] = coverage;
             j["routerStatus"] = getRouterStatusString();
             j["hybridBridgeStatus"] = getHybridBridgeStatusString();
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outPath = outDir / "batch11_integration_scorecard.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[Batch11Scorecard] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -6599,19 +7068,21 @@ void Win32IDE::handleToolsCommand(int commandId)
         }
         break;
 
-        // ================================================================
-        // Parity Workflow Layer — Batch 12 (5985–5991)
-        // ================================================================
+            // ================================================================
+            // Parity Workflow Layer — Batch 12 (5985–5991)
+            // ================================================================
 
         case 5985:  // Canonical Lane Mismatch Detector
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path wrapper = root / "Build-AgenticIDE.ps1";
             fs::path ideBuild = root / "BUILD_IDE_PRODUCTION.ps1";
             fs::path monoBuild = root / "src" / "asm" / "monolithic" / "Build-Monolithic.ps1";
 
-            auto readText = [](const fs::path& p) -> std::string {
+            auto readText = [](const fs::path& p) -> std::string
+            {
                 std::ifstream in(p, std::ios::binary);
                 if (!in.is_open())
                     return "";
@@ -6633,15 +7104,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["hasIdeDispatch"] = hasIdeDispatch;
             j["hasMonolithicDispatch"] = hasMonoDispatch;
             j["mismatchDetected"] = !(hasWin32Lane && hasMonoLane && hasIdeDispatch && hasMonoDispatch);
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "canonical_lane_mismatch_detector.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[LaneMismatch] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -6656,18 +7128,22 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5986:  // Monolithic Init Path Audit
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path mainAsm = root / "src" / "asm" / "monolithic" / "main.asm";
             std::ifstream in(mainAsm, std::ios::binary);
-            if (!in.is_open()) {
+            if (!in.is_open())
+            {
                 appendToOutput("[MonolithicInitAudit] main.asm not found.", "General", OutputSeverity::Warning);
                 break;
             }
             std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-            auto countHits = [&](const char* token) {
+            auto countHits = [&](const char* token)
+            {
                 int count = 0;
                 size_t pos = 0;
-                while ((pos = text.find(token, pos)) != std::string::npos) {
+                while ((pos = text.find(token, pos)) != std::string::npos)
+                {
                     ++count;
                     pos += strlen(token);
                 }
@@ -6680,15 +7156,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["lspInitCalls"] = countHits("call    LSPBridgeInit");
             j["uiLoopMentions"] = countHits("UI loop");
             j["ghostMentions"] = countHits("ghost-text");
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "monolithic_init_path_audit.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[MonolithicInitAudit] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -6702,18 +7179,22 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5987:  // Bridge Router Fail Path Audit
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path bridgeAsm = root / "src" / "asm" / "monolithic" / "bridge.asm";
             std::ifstream in(bridgeAsm, std::ios::binary);
-            if (!in.is_open()) {
+            if (!in.is_open())
+            {
                 appendToOutput("[BridgeFailAudit] bridge.asm not found.", "General", OutputSeverity::Warning);
                 break;
             }
             std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-            auto countHits = [&](const char* token) {
+            auto countHits = [&](const char* token)
+            {
                 int count = 0;
                 size_t pos = 0;
-                while ((pos = text.find(token, pos)) != std::string::npos) {
+                while ((pos = text.find(token, pos)) != std::string::npos)
+                {
                     ++count;
                     pos += strlen(token);
                 }
@@ -6727,15 +7208,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["routerFailBeaconMentions"] = countHits("BRIDGE_EVT_ROUTER_FAIL");
             j["progressiveBackoffMentions"] = countHits("100ms") + countHits("200ms") + countHits("300ms");
             j["workerFailSentinelMentions"] = countHits("0FFh");
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "bridge_router_fail_path_audit.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[BridgeFailAudit] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -6749,18 +7231,23 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5988:  // Tasks/Launch Fallback Audit
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path tasksCpp = root / "src" / "win32app" / "Win32IDE_Tasks.cpp";
             std::ifstream in(tasksCpp, std::ios::binary);
-            if (!in.is_open()) {
-                appendToOutput("[TaskLaunchFallback] Win32IDE_Tasks.cpp not found.", "General", OutputSeverity::Warning);
+            if (!in.is_open())
+            {
+                appendToOutput("[TaskLaunchFallback] Win32IDE_Tasks.cpp not found.", "General",
+                               OutputSeverity::Warning);
                 break;
             }
             std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-            auto countHits = [&](const char* token) {
+            auto countHits = [&](const char* token)
+            {
                 int count = 0;
                 size_t pos = 0;
-                while ((pos = text.find(token, pos)) != std::string::npos) {
+                while ((pos = text.find(token, pos)) != std::string::npos)
+                {
                     ++count;
                     pos += strlen(token);
                 }
@@ -6776,15 +7263,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["debugAttachCount"] = countHits("DebugActiveProcess");
             j["fallbackMentions"] = countHits("fallback") + countHits("placeholder");
             j["problemMatcherMentions"] = countHits("problemMatcher");
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "tasks_launch_fallback_audit.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[TaskLaunchFallback] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -6798,18 +7286,23 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5989:  // LSP Scaffold Delta Audit
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path lspClient = root / "src" / "win32app" / "Win32IDE_LSPClient.cpp";
             std::ifstream in(lspClient, std::ios::binary);
-            if (!in.is_open()) {
-                appendToOutput("[LSPScaffoldDelta] Win32IDE_LSPClient.cpp not found.", "General", OutputSeverity::Warning);
+            if (!in.is_open())
+            {
+                appendToOutput("[LSPScaffoldDelta] Win32IDE_LSPClient.cpp not found.", "General",
+                               OutputSeverity::Warning);
                 break;
             }
             std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-            auto countHits = [&](const char* token) {
+            auto countHits = [&](const char* token)
+            {
                 int count = 0;
                 size_t pos = 0;
-                while ((pos = text.find(token, pos)) != std::string::npos) {
+                while ((pos = text.find(token, pos)) != std::string::npos)
+                {
                     ++count;
                     pos += strlen(token);
                 }
@@ -6824,15 +7317,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["completionMethodMentions"] = countHits("lspCompletion(");
             j["signatureMethodMentions"] = countHits("lspSignatureHelp(");
             j["semanticMethodMentions"] = countHits("lspSemanticTokensFull(");
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "lsp_scaffold_delta_audit.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[LSPScaffoldDelta] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -6846,10 +7340,12 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5990:  // Git Panel UX Depth Audit
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path gitPanel = root / "src" / "win32app" / "Win32IDE_GitPanel.cpp";
             std::ifstream in(gitPanel, std::ios::binary);
-            if (!in.is_open()) {
+            if (!in.is_open())
+            {
                 appendToOutput("[GitUxDepth] Win32IDE_GitPanel.cpp not found.", "General", OutputSeverity::Warning);
                 break;
             }
@@ -6866,15 +7362,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["hasBranchPicker"] = has("git branch -a");
             j["hasPullRebase"] = has("git pull --rebase");
             j["hasStash"] = has("stash");
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "git_panel_ux_depth_audit.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[GitUxDepth] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -6891,17 +7388,14 @@ void Win32IDE::handleToolsCommand(int commandId)
             fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
             fs::create_directories(outDir);
             std::vector<fs::path> artifacts = {
-                outDir / "canonical_lane_mismatch_detector.json",
-                outDir / "monolithic_init_path_audit.json",
-                outDir / "bridge_router_fail_path_audit.json",
-                outDir / "tasks_launch_fallback_audit.json",
-                outDir / "lsp_scaffold_delta_audit.json",
-                outDir / "git_panel_ux_depth_audit.json",
-                outDir / "batch11_integration_scorecard.json"
-            };
+                outDir / "canonical_lane_mismatch_detector.json", outDir / "monolithic_init_path_audit.json",
+                outDir / "bridge_router_fail_path_audit.json",    outDir / "tasks_launch_fallback_audit.json",
+                outDir / "lsp_scaffold_delta_audit.json",         outDir / "git_panel_ux_depth_audit.json",
+                outDir / "batch11_integration_scorecard.json"};
             int present = 0;
             for (const auto& p : artifacts)
-                if (fs::exists(p)) ++present;
+                if (fs::exists(p))
+                    ++present;
             double coverage = artifacts.empty() ? 0.0 : (100.0 * (double)present / artifacts.size());
 
             nlohmann::json j;
@@ -6911,13 +7405,14 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["coveragePct"] = coverage;
             j["routerStatus"] = getRouterStatusString();
             j["hybridBridgeStatus"] = getHybridBridgeStatusString();
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outPath = outDir / "batch12_integration_scorecard.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[Batch12Scorecard] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -6929,23 +7424,24 @@ void Win32IDE::handleToolsCommand(int commandId)
         }
         break;
 
-        // ================================================================
-        // Parity Workflow Layer — Batch 13 (5992–5998)
-        // ================================================================
+            // ================================================================
+            // Parity Workflow Layer — Batch 13 (5992–5998)
+            // ================================================================
 
         case 5992:  // Canonical Lane Parity Runner
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path wrapper = root / "Build-AgenticIDE.ps1";
-            if (!fs::exists(wrapper)) {
+            if (!fs::exists(wrapper))
+            {
                 appendToOutput("[LaneParityRun] Build-AgenticIDE.ps1 not found.", "General", OutputSeverity::Warning);
                 break;
             }
-            std::string cmd =
-                "powershell -NoProfile -ExecutionPolicy Bypass -Command "
-                "\"& .\\Build-AgenticIDE.ps1 -Lane win32ide -Config release -Verify; "
-                "& .\\Build-AgenticIDE.ps1 -Lane monolithic -Config release -Verify\"";
+            std::string cmd = "powershell -NoProfile -ExecutionPolicy Bypass -Command "
+                              "\"& .\\Build-AgenticIDE.ps1 -Lane win32ide -Config release -Verify; "
+                              "& .\\Build-AgenticIDE.ps1 -Lane monolithic -Config release -Verify\"";
             runBuildInBackground(root.string(), cmd);
             appendToOutput("[LaneParityRun] Started lane parity verify run (win32ide + monolithic).", "General",
                            OutputSeverity::Info);
@@ -6955,21 +7451,25 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5993:  // Monolithic Router/Bridge Cross-Link Audit
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path mainAsm = root / "src" / "asm" / "monolithic" / "main.asm";
             fs::path bridgeAsm = root / "src" / "asm" / "monolithic" / "bridge.asm";
             fs::path routerAsm = root / "src" / "asm" / "monolithic" / "inference_router.asm";
 
-            auto readText = [](const fs::path& p) -> std::string {
+            auto readText = [](const fs::path& p) -> std::string
+            {
                 std::ifstream in(p, std::ios::binary);
                 if (!in.is_open())
                     return "";
                 return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
             };
-            auto countHits = [](const std::string& hay, const std::string& needle) -> int {
+            auto countHits = [](const std::string& hay, const std::string& needle) -> int
+            {
                 int count = 0;
                 size_t pos = 0;
-                while ((pos = hay.find(needle, pos)) != std::string::npos) {
+                while ((pos = hay.find(needle, pos)) != std::string::npos)
+                {
                     ++count;
                     pos += needle.size();
                 }
@@ -6979,7 +7479,8 @@ void Win32IDE::handleToolsCommand(int commandId)
             std::string mainText = readText(mainAsm);
             std::string bridgeText = readText(bridgeAsm);
             std::string routerText = readText(routerAsm);
-            if (mainText.empty() || bridgeText.empty() || routerText.empty()) {
+            if (mainText.empty() || bridgeText.empty() || routerText.empty())
+            {
                 appendToOutput("[CrossLinkAudit] Required monolithic asm files not found.", "General",
                                OutputSeverity::Warning);
                 break;
@@ -6992,15 +7493,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["routerReadyWrites"] = countHits(routerText, "mov     g_routerReady, 1");
             j["bridgeRouterFailBeacon"] = countHits(bridgeText, "BRIDGE_EVT_ROUTER_FAIL");
             j["routerReadyPublicSymbol"] = (routerText.find("PUBLIC g_routerReady") != std::string::npos);
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "monolithic_router_bridge_crosslink_audit.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[CrossLinkAudit] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -7014,20 +7516,24 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5994:  // Input Dialog Runtime Readiness Audit
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path parityCpp = root / "src" / "win32app" / "Win32IDE_CursorParity.cpp";
             fs::path quantumCpp = root / "src" / "win32app" / "Win32IDE_Quantum.cpp";
 
-            auto readText = [](const fs::path& p) -> std::string {
+            auto readText = [](const fs::path& p) -> std::string
+            {
                 std::ifstream in(p, std::ios::binary);
                 if (!in.is_open())
                     return "";
                 return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
             };
-            auto countHits = [](const std::string& hay, const std::string& needle) -> int {
+            auto countHits = [](const std::string& hay, const std::string& needle) -> int
+            {
                 int count = 0;
                 size_t pos = 0;
-                while ((pos = hay.find(needle, pos)) != std::string::npos) {
+                while ((pos = hay.find(needle, pos)) != std::string::npos)
+                {
                     ++count;
                     pos += needle.size();
                 }
@@ -7044,15 +7550,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["dialogBoxIndirectParamMentions"] = countHits(parityText, "DialogBoxIndirectParam");
             j["emptyReturnMentions"] = countHits(parityText, "return \"\";") + countHits(parityText, "std::string()");
             j["dialogBoxWithInputMentions"] = countHits(quantumText, "DialogBoxWithInput");
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "input_dialog_runtime_readiness_audit.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[InputDialogRuntime] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -7066,7 +7573,8 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5995:  // Tasks/Launch Execution Plan Export
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path tasksPath = root / ".vscode" / "tasks.json";
             fs::path launchPath = root / ".vscode" / "launch.json";
 
@@ -7075,13 +7583,18 @@ void Win32IDE::handleToolsCommand(int commandId)
             plan["tasks"] = nlohmann::json::array();
             plan["launchConfigs"] = nlohmann::json::array();
 
-            if (fs::exists(tasksPath)) {
+            if (fs::exists(tasksPath))
+            {
                 std::ifstream in(tasksPath, std::ios::binary);
                 nlohmann::json t = nlohmann::json::parse(
-                    std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>()), nullptr, false);
-                if (!t.is_discarded() && t.contains("tasks") && t["tasks"].is_array()) {
-                    for (const auto& task : t["tasks"]) {
-                        if (!task.is_object()) continue;
+                    std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>()), nullptr,
+                    false);
+                if (!t.is_discarded() && t.contains("tasks") && t["tasks"].is_array())
+                {
+                    for (const auto& task : t["tasks"])
+                    {
+                        if (!task.is_object())
+                            continue;
                         nlohmann::json x;
                         x["label"] = task.value("label", "");
                         x["command"] = task.value("command", "");
@@ -7093,13 +7606,18 @@ void Win32IDE::handleToolsCommand(int commandId)
                 }
             }
 
-            if (fs::exists(launchPath)) {
+            if (fs::exists(launchPath))
+            {
                 std::ifstream in(launchPath, std::ios::binary);
                 nlohmann::json l = nlohmann::json::parse(
-                    std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>()), nullptr, false);
-                if (!l.is_discarded() && l.contains("configurations") && l["configurations"].is_array()) {
-                    for (const auto& cfg : l["configurations"]) {
-                        if (!cfg.is_object()) continue;
+                    std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>()), nullptr,
+                    false);
+                if (!l.is_discarded() && l.contains("configurations") && l["configurations"].is_array())
+                {
+                    for (const auto& cfg : l["configurations"])
+                    {
+                        if (!cfg.is_object())
+                            continue;
                         nlohmann::json x;
                         x["name"] = cfg.value("name", "");
                         x["request"] = cfg.value("request", "");
@@ -7111,15 +7629,16 @@ void Win32IDE::handleToolsCommand(int commandId)
                 }
             }
 
-            plan["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            plan["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                           std::chrono::system_clock::now().time_since_epoch())
+                                           .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "tasks_launch_execution_plan.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[TaskLaunchPlan] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -7134,7 +7653,8 @@ void Win32IDE::handleToolsCommand(int commandId)
         {
             std::string raw = m_hwndCopilotChatInput ? getWindowText(m_hwndCopilotChatInput) : "";
             std::string lower = raw;
-            for (auto& c : lower) c = (char)std::tolower((unsigned char)c);
+            for (auto& c : lower)
+                c = (char)std::tolower((unsigned char)c);
 
             std::string cmd = "git status --short --branch";
             if (lower.find("branches") != std::string::npos)
@@ -7157,7 +7677,8 @@ void Win32IDE::handleToolsCommand(int commandId)
 
         case 5997:  // LSP Ghost Unification Pack Export
         {
-            if (m_currentFile.empty() || !m_hwndEditor) {
+            if (m_currentFile.empty() || !m_hwndEditor)
+            {
                 appendToOutput("[LSPGhostPack] Open a file first.", "General", OutputSeverity::Warning);
                 break;
             }
@@ -7185,16 +7706,17 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["ghostVisible"] = m_ghostTextVisible;
             j["ghostPending"] = m_ghostTextPending;
             j["ghostContentLen"] = m_ghostTextContent.size();
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             namespace fs = std::filesystem;
             fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "lsp_ghost_unification_pack.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[LSPGhostPack] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -7211,18 +7733,14 @@ void Win32IDE::handleToolsCommand(int commandId)
             fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
             fs::create_directories(outDir);
             std::vector<fs::path> artifacts = {
-                outDir / "canonical_lane_mismatch_detector.json",
-                outDir / "monolithic_init_path_audit.json",
-                outDir / "bridge_router_fail_path_audit.json",
-                outDir / "tasks_launch_fallback_audit.json",
-                outDir / "lsp_scaffold_delta_audit.json",
-                outDir / "git_panel_ux_depth_audit.json",
-                outDir / "lsp_ghost_unification_pack.json",
-                outDir / "batch12_integration_scorecard.json"
-            };
+                outDir / "canonical_lane_mismatch_detector.json", outDir / "monolithic_init_path_audit.json",
+                outDir / "bridge_router_fail_path_audit.json",    outDir / "tasks_launch_fallback_audit.json",
+                outDir / "lsp_scaffold_delta_audit.json",         outDir / "git_panel_ux_depth_audit.json",
+                outDir / "lsp_ghost_unification_pack.json",       outDir / "batch12_integration_scorecard.json"};
             int present = 0;
             for (const auto& p : artifacts)
-                if (fs::exists(p)) ++present;
+                if (fs::exists(p))
+                    ++present;
             double coverage = artifacts.empty() ? 0.0 : (100.0 * (double)present / artifacts.size());
 
             nlohmann::json j;
@@ -7232,13 +7750,14 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["coveragePct"] = coverage;
             j["routerStatus"] = getRouterStatusString();
             j["hybridBridgeStatus"] = getHybridBridgeStatusString();
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outPath = outDir / "batch13_integration_scorecard.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[Batch13Scorecard] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -7250,17 +7769,19 @@ void Win32IDE::handleToolsCommand(int commandId)
         }
         break;
 
-        // ================================================================
-        // Parity Workflow Layer — Batch 14 (5894–5900)
-        // ================================================================
+            // ================================================================
+            // Parity Workflow Layer — Batch 14 (5894–5900)
+            // ================================================================
 
         case 5894:  // Wrapper Lane Dry-Run Analyzer
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path wrapper = root / "Build-AgenticIDE.ps1";
             std::ifstream in(wrapper, std::ios::binary);
-            if (!in.is_open()) {
+            if (!in.is_open())
+            {
                 appendToOutput("[WrapperDryRun] Build-AgenticIDE.ps1 not found.", "General", OutputSeverity::Warning);
                 break;
             }
@@ -7277,15 +7798,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["supportsTest"] = has("-Test");
             j["estimatedWin32ideCommand"] = "Build-AgenticIDE.ps1 -Lane win32ide -Config release -Verify";
             j["estimatedMonolithicCommand"] = "Build-AgenticIDE.ps1 -Lane monolithic -Config release -Verify";
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "wrapper_lane_dry_run_analyzer.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[WrapperDryRun] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -7299,24 +7821,33 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5895:  // Monolithic Init Callsite Report
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path mainAsm = root / "src" / "asm" / "monolithic" / "main.asm";
             fs::path bridgeAsm = root / "src" / "asm" / "monolithic" / "bridge.asm";
-            auto readText = [](const fs::path& p) -> std::string {
+            auto readText = [](const fs::path& p) -> std::string
+            {
                 std::ifstream in(p, std::ios::binary);
-                if (!in.is_open()) return "";
+                if (!in.is_open())
+                    return "";
                 return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
             };
             std::string mainText = readText(mainAsm);
             std::string bridgeText = readText(bridgeAsm);
-            if (mainText.empty() || bridgeText.empty()) {
+            if (mainText.empty() || bridgeText.empty())
+            {
                 appendToOutput("[InitCallsite] Required asm files missing.", "General", OutputSeverity::Warning);
                 break;
             }
-            auto countHits = [](const std::string& hay, const std::string& needle) {
+            auto countHits = [](const std::string& hay, const std::string& needle)
+            {
                 int c = 0;
                 size_t pos = 0;
-                while ((pos = hay.find(needle, pos)) != std::string::npos) { ++c; pos += needle.size(); }
+                while ((pos = hay.find(needle, pos)) != std::string::npos)
+                {
+                    ++c;
+                    pos += needle.size();
+                }
                 return c;
             };
 
@@ -7325,15 +7856,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["mainLspInitCalls"] = countHits(mainText, "call    LSPBridgeInit");
             j["bridgeRouterInitCalls"] = countHits(bridgeText, "call    InferenceRouter_Init");
             j["bridgeReadyChecks"] = countHits(bridgeText, "cmp     g_routerReady, 0");
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "monolithic_init_callsite_report.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[InitCallsite] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -7347,15 +7879,18 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5896:  // Bridge Handshake Timeline Export
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path bridgeAsm = root / "src" / "asm" / "monolithic" / "bridge.asm";
             std::ifstream in(bridgeAsm, std::ios::binary);
-            if (!in.is_open()) {
+            if (!in.is_open())
+            {
                 appendToOutput("[BridgeTimeline] bridge.asm not found.", "General", OutputSeverity::Warning);
                 break;
             }
             std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-            auto findPos = [&](const char* t) -> int64_t {
+            auto findPos = [&](const char* t) -> int64_t
+            {
                 size_t p = text.find(t);
                 return p == std::string::npos ? -1 : (int64_t)p;
             };
@@ -7368,15 +7903,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["routerFailEvtPos"] = findPos("BRIDGE_EVT_ROUTER_FAIL");
             j["readyCheckPos"] = findPos("cmp     g_routerReady, 0");
             j["routerInitCallPos"] = findPos("call    InferenceRouter_Init");
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "bridge_handshake_timeline.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[BridgeTimeline] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -7390,18 +7926,26 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5897:  // Input Dialog Blocker Detector
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path parity = root / "src" / "win32app" / "Win32IDE_CursorParity.cpp";
             std::ifstream in(parity, std::ios::binary);
-            if (!in.is_open()) {
-                appendToOutput("[InputBlocker] Win32IDE_CursorParity.cpp not found.", "General", OutputSeverity::Warning);
+            if (!in.is_open())
+            {
+                appendToOutput("[InputBlocker] Win32IDE_CursorParity.cpp not found.", "General",
+                               OutputSeverity::Warning);
                 break;
             }
             std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-            auto countHits = [&](const char* t) {
+            auto countHits = [&](const char* t)
+            {
                 int c = 0;
                 size_t pos = 0;
-                while ((pos = text.find(t, pos)) != std::string::npos) { ++c; pos += strlen(t); }
+                while ((pos = text.find(t, pos)) != std::string::npos)
+                {
+                    ++c;
+                    pos += strlen(t);
+                }
                 return c;
             };
 
@@ -7410,15 +7954,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["showInputDialogCount"] = countHits("showInputDialog");
             j["dialogTemplateCount"] = countHits("DLGTEMPLATE");
             j["dialogInvokeCount"] = countHits("DialogBoxIndirectParam");
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "input_dialog_blocker_detector.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[InputBlocker] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -7432,16 +7977,18 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5898:  // Task/Launch Executable Availability Audit
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path tasksPath = root / ".vscode" / "tasks.json";
             fs::path launchPath = root / ".vscode" / "launch.json";
 
             nlohmann::json j;
             j["commands"] = nlohmann::json::array();
 
-            auto addCmdProbe = [&](const std::string& cmd) {
+            auto addCmdProbe = [&](const std::string& cmd)
+            {
                 std::string out;
-                bool ok = executeGitCommand("where " + cmd, out); // reuse shell path runner
+                bool ok = executeGitCommand("where " + cmd, out);  // reuse shell path runner
                 nlohmann::json x;
                 x["command"] = cmd;
                 x["available"] = ok;
@@ -7455,15 +8002,16 @@ void Win32IDE::handleToolsCommand(int commandId)
 
             j["tasksJsonExists"] = fs::exists(tasksPath);
             j["launchJsonExists"] = fs::exists(launchPath);
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "task_launch_executable_availability_audit.json";
             std::ofstream outFile(outPath, std::ios::binary | std::ios::trunc);
-            if (!outFile.is_open()) {
+            if (!outFile.is_open())
+            {
                 appendToOutput("[ExecAvail] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -7480,18 +8028,13 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["branch"] = getCurrentGitBranch();
             auto changed = getGitChangedFiles();
             j["changedFileCount"] = changed.size();
-            j["actions"] = nlohmann::json::array({
-                "git status --short --branch",
-                "git add -A",
-                "git reset HEAD",
-                "git diff --stat",
-                "git pull --rebase",
-                "git stash",
-                "git stash pop"
-            });
+            j["actions"] =
+                nlohmann::json::array({"git status --short --branch", "git add -A", "git reset HEAD", "git diff --stat",
+                                       "git pull --rebase", "git stash", "git stash pop"});
 
             nlohmann::json files = nlohmann::json::array();
-            for (const auto& f : changed) {
+            for (const auto& f : changed)
+            {
                 nlohmann::json x;
                 x["path"] = f.path;
                 x["status"] = std::string(1, f.status);
@@ -7499,16 +8042,17 @@ void Win32IDE::handleToolsCommand(int commandId)
                 files.push_back(x);
             }
             j["changedFiles"] = files;
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             namespace fs = std::filesystem;
             fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "git_panel_action_plan.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[GitPlan] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -7524,18 +8068,17 @@ void Win32IDE::handleToolsCommand(int commandId)
             namespace fs = std::filesystem;
             fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
             fs::create_directories(outDir);
-            std::vector<fs::path> artifacts = {
-                outDir / "wrapper_lane_dry_run_analyzer.json",
-                outDir / "monolithic_init_callsite_report.json",
-                outDir / "bridge_handshake_timeline.json",
-                outDir / "input_dialog_blocker_detector.json",
-                outDir / "task_launch_executable_availability_audit.json",
-                outDir / "git_panel_action_plan.json",
-                outDir / "batch13_integration_scorecard.json"
-            };
+            std::vector<fs::path> artifacts = {outDir / "wrapper_lane_dry_run_analyzer.json",
+                                               outDir / "monolithic_init_callsite_report.json",
+                                               outDir / "bridge_handshake_timeline.json",
+                                               outDir / "input_dialog_blocker_detector.json",
+                                               outDir / "task_launch_executable_availability_audit.json",
+                                               outDir / "git_panel_action_plan.json",
+                                               outDir / "batch13_integration_scorecard.json"};
             int present = 0;
             for (const auto& p : artifacts)
-                if (fs::exists(p)) ++present;
+                if (fs::exists(p))
+                    ++present;
             double coverage = artifacts.empty() ? 0.0 : (100.0 * (double)present / artifacts.size());
 
             nlohmann::json j;
@@ -7545,13 +8088,14 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["coveragePct"] = coverage;
             j["routerStatus"] = getRouterStatusString();
             j["hybridBridgeStatus"] = getHybridBridgeStatusString();
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outPath = outDir / "batch14_integration_scorecard.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[Batch14Scorecard] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -7569,12 +8113,14 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5185:  // Canonical Wrapper + Lane Coherence Report
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path wrapper = root / "Build-AgenticIDE.ps1";
             fs::path ideBuild = root / "BUILD_IDE_PRODUCTION.ps1";
             fs::path monoBuild = root / "src" / "asm" / "monolithic" / "Build-Monolithic.ps1";
 
-            auto readText = [](const fs::path& p) -> std::string {
+            auto readText = [](const fs::path& p) -> std::string
+            {
                 std::ifstream in(p, std::ios::binary);
                 if (!in.is_open())
                     return "";
@@ -7586,20 +8132,21 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["wrapperExists"] = fs::exists(wrapper);
             j["ideBuildExists"] = fs::exists(ideBuild);
             j["monolithicBuildExists"] = fs::exists(monoBuild);
-            j["wrapperMentionsWin32IDE"] = (wrapperText.find("win32") != std::string::npos) ||
-                                            (wrapperText.find("Win32IDE") != std::string::npos);
+            j["wrapperMentionsWin32IDE"] =
+                (wrapperText.find("win32") != std::string::npos) || (wrapperText.find("Win32IDE") != std::string::npos);
             j["wrapperMentionsMonolithic"] = (wrapperText.find("monolithic") != std::string::npos);
             j["wrapperMentionsVerify"] = (wrapperText.find("-Verify") != std::string::npos);
             j["wrapperMentionsTest"] = (wrapperText.find("-Test") != std::string::npos);
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "batch15_lane_coherence_report.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[Batch15Lane] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -7613,21 +8160,25 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5186:  // Monolithic Router Boot Hook Audit
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path mainAsm = root / "src" / "asm" / "monolithic" / "main.asm";
             fs::path routerAsm = root / "src" / "asm" / "monolithic" / "inference_router.asm";
             fs::path bridgeAsm = root / "src" / "asm" / "monolithic" / "bridge.asm";
 
-            auto readText = [](const fs::path& p) -> std::string {
+            auto readText = [](const fs::path& p) -> std::string
+            {
                 std::ifstream in(p, std::ios::binary);
                 if (!in.is_open())
                     return "";
                 return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
             };
-            auto countHits = [](const std::string& s, const char* token) -> int {
+            auto countHits = [](const std::string& s, const char* token) -> int
+            {
                 int count = 0;
                 size_t pos = 0;
-                while ((pos = s.find(token, pos)) != std::string::npos) {
+                while ((pos = s.find(token, pos)) != std::string::npos)
+                {
                     ++count;
                     pos += strlen(token);
                 }
@@ -7647,22 +8198,24 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["mainRouterReadyMentions"] = countHits(mainText, "g_routerReady");
             j["routerSetReadyMentions"] = countHits(routerText, "g_routerReady");
             j["bridgeReadyCheckMentions"] = countHits(bridgeText, "g_routerReady");
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "batch15_router_boot_hook_audit.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[Batch15RouterBoot] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
             std::string blob = j.dump(2);
             out.write(blob.data(), (std::streamsize)blob.size());
             out.close();
-            OutputSeverity sev = (j["mainRouterInitCalls"].get<int>() > 0) ? OutputSeverity::Info : OutputSeverity::Warning;
+            OutputSeverity sev =
+                (j["mainRouterInitCalls"].get<int>() > 0) ? OutputSeverity::Info : OutputSeverity::Warning;
             appendToOutput("[Batch15RouterBoot] Exported: " + outPath.string(), "General", sev);
         }
         break;
@@ -7670,20 +8223,24 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5187:  // Bridge/Router Readiness Contract Export
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path bridgeAsm = root / "src" / "asm" / "monolithic" / "bridge.asm";
             fs::path routerAsm = root / "src" / "asm" / "monolithic" / "inference_router.asm";
 
-            auto readText = [](const fs::path& p) -> std::string {
+            auto readText = [](const fs::path& p) -> std::string
+            {
                 std::ifstream in(p, std::ios::binary);
                 if (!in.is_open())
                     return "";
                 return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
             };
-            auto countHits = [](const std::string& s, const char* token) -> int {
+            auto countHits = [](const std::string& s, const char* token) -> int
+            {
                 int count = 0;
                 size_t pos = 0;
-                while ((pos = s.find(token, pos)) != std::string::npos) {
+                while ((pos = s.find(token, pos)) != std::string::npos)
+                {
                     ++count;
                     pos += strlen(token);
                 }
@@ -7701,15 +8258,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["bridgeBackoffSleep"] = countHits(bridgeText, "call    Sleep");
             j["routerReadyMentions"] = countHits(routerText, "g_routerReady");
             j["routerInitProcMentions"] = countHits(routerText, "InferenceRouter_Init");
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "batch15_bridge_router_contract.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[Batch15BridgeRouter] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -7723,21 +8281,25 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5188:  // UI Surface Readiness Audit (Input/Tasks/Git)
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path parityCpp = root / "src" / "win32app" / "Win32IDE_CursorParity.cpp";
             fs::path tasksCpp = root / "src" / "win32app" / "Win32IDE_Tasks.cpp";
             fs::path gitCpp = root / "src" / "win32app" / "Win32IDE_GitPanel.cpp";
 
-            auto readText = [](const fs::path& p) -> std::string {
+            auto readText = [](const fs::path& p) -> std::string
+            {
                 std::ifstream in(p, std::ios::binary);
                 if (!in.is_open())
                     return "";
                 return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
             };
-            auto countHits = [](const std::string& s, const char* token) -> int {
+            auto countHits = [](const std::string& s, const char* token) -> int
+            {
                 int count = 0;
                 size_t pos = 0;
-                while ((pos = s.find(token, pos)) != std::string::npos) {
+                while ((pos = s.find(token, pos)) != std::string::npos)
+                {
                     ++count;
                     pos += strlen(token);
                 }
@@ -7759,15 +8321,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["gitStageMentions"] = countHits(gitText, "git add -A");
             j["gitUnstageMentions"] = countHits(gitText, "git reset HEAD");
             j["gitDiffMentions"] = countHits(gitText, "git diff");
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "batch15_ui_surface_readiness.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[Batch15UISurface] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -7781,21 +8344,25 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5189:  // LSP + Ghost Unification Runtime Audit
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path lspCpp = root / "src" / "win32app" / "Win32IDE_LSPClient.cpp";
             fs::path ghostCpp = root / "src" / "win32app" / "Win32IDE_GhostText.cpp";
             fs::path ideCpp = root / "src" / "win32app" / "Win32IDE.cpp";
 
-            auto readText = [](const fs::path& p) -> std::string {
+            auto readText = [](const fs::path& p) -> std::string
+            {
                 std::ifstream in(p, std::ios::binary);
                 if (!in.is_open())
                     return "";
                 return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
             };
-            auto countHits = [](const std::string& s, const char* token) -> int {
+            auto countHits = [](const std::string& s, const char* token) -> int
+            {
                 int count = 0;
                 size_t pos = 0;
-                while ((pos = s.find(token, pos)) != std::string::npos) {
+                while ((pos = s.find(token, pos)) != std::string::npos)
+                {
                     ++count;
                     pos += strlen(token);
                 }
@@ -7817,15 +8384,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["ghostEscMentions"] = countHits(ghostText, "VK_ESCAPE");
             j["ghostCacheMentions"] = countHits(ghostText, "cache");
             j["scaffoldMentionsIDE"] = countHits(ideText, "SCAFFOLD");
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "batch15_lsp_ghost_unification_runtime.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[Batch15LSPGhost] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -7839,15 +8407,18 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5190:  // Developer Tooling Capability Matrix Export
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path cmdFile = root / "src" / "win32app" / "Win32IDE_Commands.cpp";
             std::ifstream in(cmdFile, std::ios::binary);
-            if (!in.is_open()) {
+            if (!in.is_open())
+            {
                 appendToOutput("[Batch15Tooling] Win32IDE_Commands.cpp not found.", "General", OutputSeverity::Warning);
                 break;
             }
             std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-            auto hasCase = [&](int id) {
+            auto hasCase = [&](int id)
+            {
                 std::string token = "case " + std::to_string(id) + ":";
                 return text.find(token) != std::string::npos;
             };
@@ -7871,15 +8442,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["present"] = present;
             j["total"] = 8;
             j["coveragePct"] = (100.0 * (double)present / 8.0);
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "batch15_developer_tooling_matrix.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[Batch15Tooling] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -7895,18 +8467,15 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5191:  // Batch 15 Integration Scorecard
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             std::vector<fs::path> artifacts = {
-                outDir / "batch15_lane_coherence_report.json",
-                outDir / "batch15_router_boot_hook_audit.json",
-                outDir / "batch15_bridge_router_contract.json",
-                outDir / "batch15_ui_surface_readiness.json",
-                outDir / "batch15_lsp_ghost_unification_runtime.json",
-                outDir / "batch15_developer_tooling_matrix.json",
-                outDir / "batch14_integration_scorecard.json"
-            };
+                outDir / "batch15_lane_coherence_report.json",         outDir / "batch15_router_boot_hook_audit.json",
+                outDir / "batch15_bridge_router_contract.json",        outDir / "batch15_ui_surface_readiness.json",
+                outDir / "batch15_lsp_ghost_unification_runtime.json", outDir / "batch15_developer_tooling_matrix.json",
+                outDir / "batch14_integration_scorecard.json"};
             int present = 0;
             for (const auto& p : artifacts)
                 if (fs::exists(p))
@@ -7920,13 +8489,14 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["coveragePct"] = coverage;
             j["routerStatus"] = getRouterStatusString();
             j["hybridBridgeStatus"] = getHybridBridgeStatusString();
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outPath = outDir / "batch15_integration_scorecard.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[Batch15Scorecard] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -7944,11 +8514,13 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5192:  // Parity Blocker Manifest (Actionable)
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
 
-            struct BlockerItem {
+            struct BlockerItem
+            {
                 std::string id;
                 std::string blocker;
                 std::string artifact;
@@ -7959,14 +8531,14 @@ void Win32IDE::handleToolsCommand(int commandId)
                 {"bridge_contract", "Bridge/router readiness contract", "batch15_bridge_router_contract.json"},
                 {"ui_surface", "Input/tasks/git UI surface readiness", "batch15_ui_surface_readiness.json"},
                 {"lsp_ghost", "LSP + ghost text unification runtime", "batch15_lsp_ghost_unification_runtime.json"},
-                {"dev_tooling", "Developer tooling parity matrix", "batch15_developer_tooling_matrix.json"}
-            };
+                {"dev_tooling", "Developer tooling parity matrix", "batch15_developer_tooling_matrix.json"}};
 
             nlohmann::json j;
             j["batch"] = "5192";
             j["items"] = nlohmann::json::array();
             int resolved = 0;
-            for (const auto& b : blockers) {
+            for (const auto& b : blockers)
+            {
                 fs::path p = outDir / b.artifact;
                 bool exists = fs::exists(p);
                 if (exists)
@@ -7982,13 +8554,14 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["resolved"] = resolved;
             j["total"] = blockers.size();
             j["coveragePct"] = blockers.empty() ? 0.0 : (100.0 * (double)resolved / blockers.size());
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outPath = outDir / "batch16_parity_blocker_manifest.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[Batch16Manifest] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -8015,16 +8588,19 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5194:  // Canonical Wrapper Patch Preview Export
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path wrapper = root / "Build-AgenticIDE.ps1";
             std::ifstream in(wrapper, std::ios::binary);
-            if (!in.is_open()) {
+            if (!in.is_open())
+            {
                 appendToOutput("[Batch16WrapperPatch] Build-AgenticIDE.ps1 not found.", "General",
                                OutputSeverity::Warning);
                 break;
             }
             std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-            bool hasLaneParam = (text.find("-Lane") != std::string::npos) || (text.find("[ValidateSet(") != std::string::npos);
+            bool hasLaneParam =
+                (text.find("-Lane") != std::string::npos) || (text.find("[ValidateSet(") != std::string::npos);
             bool hasVerify = (text.find("-Verify") != std::string::npos);
             bool hasTest = (text.find("-Test") != std::string::npos);
             bool hasWin32 = (text.find("win32ide") != std::string::npos) || (text.find("win32") != std::string::npos);
@@ -8042,14 +8618,17 @@ void Win32IDE::handleToolsCommand(int commandId)
             if (!hasWin32 || !hasMonolithic)
                 preview << "# Ensure both lanes dispatch through canonical wrapper\n";
             preview << "# Suggested canonical commands:\n";
-            preview << "powershell -NoProfile -ExecutionPolicy Bypass -File .\\Build-AgenticIDE.ps1 -Lane win32ide -Config release -Verify\n";
-            preview << "powershell -NoProfile -ExecutionPolicy Bypass -File .\\Build-AgenticIDE.ps1 -Lane monolithic -Config release -Verify\n";
+            preview << "powershell -NoProfile -ExecutionPolicy Bypass -File .\\Build-AgenticIDE.ps1 -Lane win32ide "
+                       "-Config release -Verify\n";
+            preview << "powershell -NoProfile -ExecutionPolicy Bypass -File .\\Build-AgenticIDE.ps1 -Lane monolithic "
+                       "-Config release -Verify\n";
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "batch16_wrapper_patch_preview.ps1.txt";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[Batch16WrapperPatch] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -8063,10 +8642,12 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5195:  // Monolithic Init Path Patch Preview Export
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path mainAsm = root / "src" / "asm" / "monolithic" / "main.asm";
             std::ifstream in(mainAsm, std::ios::binary);
-            if (!in.is_open()) {
+            if (!in.is_open())
+            {
                 appendToOutput("[Batch16MonoPatch] main.asm not found.", "General", OutputSeverity::Warning);
                 break;
             }
@@ -8091,7 +8672,8 @@ void Win32IDE::handleToolsCommand(int commandId)
             fs::create_directories(outDir);
             fs::path outPath = outDir / "batch16_monolithic_init_patch_preview.asm.txt";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[Batch16MonoPatch] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -8105,10 +8687,12 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5196:  // Bridge Failure UX Beacon Compliance Audit
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path bridgeAsm = root / "src" / "asm" / "monolithic" / "bridge.asm";
             std::ifstream in(bridgeAsm, std::ios::binary);
-            if (!in.is_open()) {
+            if (!in.is_open())
+            {
                 appendToOutput("[Batch16BridgeUX] bridge.asm not found.", "General", OutputSeverity::Warning);
                 break;
             }
@@ -8123,15 +8707,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["hasWorkerFailSentinel"] = has("0FFh") || has("0xFF");
             j["compliant"] = j["hasRouterFailEvent"].get<bool>() && j["hasSleepCall"].get<bool>() &&
                              j["hasWorkerFailSentinel"].get<bool>();
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "batch16_bridge_failure_ux_compliance.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[Batch16BridgeUX] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -8146,7 +8731,8 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5197:  // IDE Runtime Parity Gate Checklist Export
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
 
@@ -8157,32 +8743,29 @@ void Win32IDE::handleToolsCommand(int commandId)
                 {"ui_surface", outDir / "batch15_ui_surface_readiness.json"},
                 {"lsp_ghost_runtime", outDir / "batch15_lsp_ghost_unification_runtime.json"},
                 {"dev_tooling_matrix", outDir / "batch15_developer_tooling_matrix.json"},
-                {"batch15_scorecard", outDir / "batch15_integration_scorecard.json"}
-            };
+                {"batch15_scorecard", outDir / "batch15_integration_scorecard.json"}};
 
             nlohmann::json j;
             j["gates"] = nlohmann::json::array();
             int passed = 0;
-            for (const auto& g : gates) {
+            for (const auto& g : gates)
+            {
                 bool ok = fs::exists(g.second);
                 if (ok)
                     ++passed;
-                j["gates"].push_back({
-                    {"gate", g.first},
-                    {"artifact", g.second.string()},
-                    {"passed", ok}
-                });
+                j["gates"].push_back({{"gate", g.first}, {"artifact", g.second.string()}, {"passed", ok}});
             }
             j["passed"] = passed;
             j["total"] = gates.size();
             j["coveragePct"] = gates.empty() ? 0.0 : (100.0 * (double)passed / gates.size());
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outPath = outDir / "batch16_runtime_parity_gate_checklist.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[Batch16GateChecklist] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -8198,18 +8781,17 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5198:  // Batch 16 Integration Scorecard
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
-            std::vector<fs::path> artifacts = {
-                outDir / "batch16_parity_blocker_manifest.json",
-                outDir / "batch16_wrapper_patch_preview.ps1.txt",
-                outDir / "batch16_monolithic_init_patch_preview.asm.txt",
-                outDir / "batch16_bridge_failure_ux_compliance.json",
-                outDir / "batch16_runtime_parity_gate_checklist.json",
-                outDir / "batch15_developer_tooling_matrix.json",
-                outDir / "batch15_integration_scorecard.json"
-            };
+            std::vector<fs::path> artifacts = {outDir / "batch16_parity_blocker_manifest.json",
+                                               outDir / "batch16_wrapper_patch_preview.ps1.txt",
+                                               outDir / "batch16_monolithic_init_patch_preview.asm.txt",
+                                               outDir / "batch16_bridge_failure_ux_compliance.json",
+                                               outDir / "batch16_runtime_parity_gate_checklist.json",
+                                               outDir / "batch15_developer_tooling_matrix.json",
+                                               outDir / "batch15_integration_scorecard.json"};
             int present = 0;
             for (const auto& p : artifacts)
                 if (fs::exists(p))
@@ -8223,13 +8805,14 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["coveragePct"] = coverage;
             j["routerStatus"] = getRouterStatusString();
             j["hybridBridgeStatus"] = getHybridBridgeStatusString();
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outPath = outDir / "batch16_integration_scorecard.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[Batch16Scorecard] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -8247,9 +8830,11 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5210:  // Canonical Lane Verify+Test Runner (Sequenced)
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path wrapper = root / "Build-AgenticIDE.ps1";
-            if (!fs::exists(wrapper)) {
+            if (!fs::exists(wrapper))
+            {
                 appendToOutput("[Batch17LaneRun] Build-AgenticIDE.ps1 not found.", "General", OutputSeverity::Warning);
                 break;
             }
@@ -8266,21 +8851,25 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5211:  // Monolithic Startup Contract Report
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path mainAsm = root / "src" / "asm" / "monolithic" / "main.asm";
             fs::path bridgeAsm = root / "src" / "asm" / "monolithic" / "bridge.asm";
             fs::path routerAsm = root / "src" / "asm" / "monolithic" / "inference_router.asm";
 
-            auto readText = [](const fs::path& p) -> std::string {
+            auto readText = [](const fs::path& p) -> std::string
+            {
                 std::ifstream in(p, std::ios::binary);
                 if (!in.is_open())
                     return "";
                 return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
             };
-            auto countHits = [](const std::string& s, const char* token) -> int {
+            auto countHits = [](const std::string& s, const char* token) -> int
+            {
                 int count = 0;
                 size_t pos = 0;
-                while ((pos = s.find(token, pos)) != std::string::npos) {
+                while ((pos = s.find(token, pos)) != std::string::npos)
+                {
                     ++count;
                     pos += strlen(token);
                 }
@@ -8298,15 +8887,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["mainHasBridgeInitCall"] = countHits(mainText, "V280_Bridge_Init") > 0;
             j["bridgeChecksRouterReady"] = countHits(bridgeText, "g_routerReady") > 0;
             j["routerDefinesReadyState"] = countHits(routerText, "g_routerReady") > 0;
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "batch17_monolithic_startup_contract.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[Batch17MonoContract] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -8323,12 +8913,14 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5212:  // Router Readiness Traceability Pack
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path bridgeAsm = root / "src" / "asm" / "monolithic" / "bridge.asm";
             fs::path routerAsm = root / "src" / "asm" / "monolithic" / "inference_router.asm";
             fs::path mainAsm = root / "src" / "asm" / "monolithic" / "main.asm";
 
-            auto readText = [](const fs::path& p) -> std::string {
+            auto readText = [](const fs::path& p) -> std::string
+            {
                 std::ifstream in(p, std::ios::binary);
                 if (!in.is_open())
                     return "";
@@ -8339,14 +8931,17 @@ void Win32IDE::handleToolsCommand(int commandId)
             std::string routerText = readText(routerAsm);
             std::string mainText = readText(mainAsm);
 
-            auto captureLines = [](const std::string& text, const std::string& token) {
+            auto captureLines = [](const std::string& text, const std::string& token)
+            {
                 nlohmann::json lines = nlohmann::json::array();
                 std::istringstream ss(text);
                 std::string line;
                 int ln = 0;
-                while (std::getline(ss, line)) {
+                while (std::getline(ss, line))
+                {
                     ++ln;
-                    if (line.find(token) != std::string::npos) {
+                    if (line.find(token) != std::string::npos)
+                    {
                         lines.push_back({{"line", ln}, {"text", line}});
                         if (lines.size() >= 12)
                             break;
@@ -8360,15 +8955,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["bridgeRouterInitCalls"] = captureLines(bridgeText, "InferenceRouter_Init");
             j["routerReadyStateLines"] = captureLines(routerText, "g_routerReady");
             j["mainInitCalls"] = captureLines(mainText, "call");
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "batch17_router_readiness_traceability.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[Batch17RouterTrace] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -8382,12 +8978,14 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5213:  // UI Runtime Surface Contract Pack
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path parity = root / "src" / "win32app" / "Win32IDE_CursorParity.cpp";
             fs::path tasks = root / "src" / "win32app" / "Win32IDE_Tasks.cpp";
             fs::path git = root / "src" / "win32app" / "Win32IDE_GitPanel.cpp";
 
-            auto readText = [](const fs::path& p) -> std::string {
+            auto readText = [](const fs::path& p) -> std::string
+            {
                 std::ifstream in(p, std::ios::binary);
                 if (!in.is_open())
                     return "";
@@ -8407,15 +9005,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["gitPanelStageAll"] = has(g, "git add -A");
             j["gitPanelUnstageAll"] = has(g, "git reset HEAD");
             j["gitPanelDiffView"] = has(g, "git diff");
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "batch17_ui_runtime_surface_contract.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[Batch17UIContract] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -8429,21 +9028,25 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5214:  // LSP Completion Cohesion Report
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path lsp = root / "src" / "win32app" / "Win32IDE_LSPClient.cpp";
             fs::path ghost = root / "src" / "win32app" / "Win32IDE_GhostText.cpp";
             fs::path bridgeAsm = root / "src" / "asm" / "monolithic" / "bridge.asm";
 
-            auto readText = [](const fs::path& p) -> std::string {
+            auto readText = [](const fs::path& p) -> std::string
+            {
                 std::ifstream in(p, std::ios::binary);
                 if (!in.is_open())
                     return "";
                 return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
             };
-            auto countHits = [](const std::string& s, const char* token) -> int {
+            auto countHits = [](const std::string& s, const char* token) -> int
+            {
                 int count = 0;
                 size_t pos = 0;
-                while ((pos = s.find(token, pos)) != std::string::npos) {
+                while ((pos = s.find(token, pos)) != std::string::npos)
+                {
                     ++count;
                     pos += strlen(token);
                 }
@@ -8462,15 +9065,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["ghostAcceptTab"] = countHits(gh, "VK_TAB");
             j["ghostDismissEsc"] = countHits(gh, "VK_ESCAPE");
             j["bridgeRouterReadyChecks"] = countHits(b, "g_routerReady");
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "batch17_lsp_completion_cohesion.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[Batch17LSPCohesion] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -8484,7 +9088,8 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5215:  // VSCode/Cursor/Copilot Capability Gap Delta Export
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path tooling = root / ".rawrxd" / "batch15_developer_tooling_matrix.json";
             nlohmann::json j;
             j["baseline"] = "VSCode+Copilot+Cursor parity matrix";
@@ -8493,11 +9098,13 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["covered"] = 0;
             j["total"] = 8;
 
-            if (fs::exists(tooling)) {
+            if (fs::exists(tooling))
+            {
                 std::ifstream in(tooling, std::ios::binary);
                 std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
                 nlohmann::json src = nlohmann::json::parse(text, nullptr, false);
-                if (!src.is_discarded() && src.contains("matrix") && src["matrix"].is_object()) {
+                if (!src.is_discarded() && src.contains("matrix") && src["matrix"].is_object())
+                {
                     j["capabilities"] = src["matrix"];
                     int covered = 0;
                     for (auto it = src["matrix"].begin(); it != src["matrix"].end(); ++it)
@@ -8508,15 +9115,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             }
             j["gap"] = (int)j["total"] - (int)j["covered"];
             j["coveragePct"] = (100.0 * (double)((int)j["covered"]) / (double)((int)j["total"]));
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "batch17_capability_gap_delta.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[Batch17GapDelta] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -8532,18 +9140,17 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5216:  // Batch 17 Integration Scorecard
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
-            std::vector<fs::path> artifacts = {
-                outDir / "batch17_monolithic_startup_contract.json",
-                outDir / "batch17_router_readiness_traceability.json",
-                outDir / "batch17_ui_runtime_surface_contract.json",
-                outDir / "batch17_lsp_completion_cohesion.json",
-                outDir / "batch17_capability_gap_delta.json",
-                outDir / "batch16_runtime_parity_gate_checklist.json",
-                outDir / "batch16_integration_scorecard.json"
-            };
+            std::vector<fs::path> artifacts = {outDir / "batch17_monolithic_startup_contract.json",
+                                               outDir / "batch17_router_readiness_traceability.json",
+                                               outDir / "batch17_ui_runtime_surface_contract.json",
+                                               outDir / "batch17_lsp_completion_cohesion.json",
+                                               outDir / "batch17_capability_gap_delta.json",
+                                               outDir / "batch16_runtime_parity_gate_checklist.json",
+                                               outDir / "batch16_integration_scorecard.json"};
             int present = 0;
             for (const auto& p : artifacts)
                 if (fs::exists(p))
@@ -8557,13 +9164,14 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["coveragePct"] = coverage;
             j["routerStatus"] = getRouterStatusString();
             j["hybridBridgeStatus"] = getHybridBridgeStatusString();
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outPath = outDir / "batch17_integration_scorecard.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[Batch17Scorecard] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -8581,7 +9189,8 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5217:  // Parity Fail-Fast Gate Evaluator
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
 
@@ -8592,13 +9201,13 @@ void Win32IDE::handleToolsCommand(int commandId)
                 {"ui_surface", outDir / "batch15_ui_surface_readiness.json"},
                 {"lsp_ghost", outDir / "batch15_lsp_ghost_unification_runtime.json"},
                 {"tooling_matrix", outDir / "batch15_developer_tooling_matrix.json"},
-                {"batch17_scorecard", outDir / "batch17_integration_scorecard.json"}
-            };
+                {"batch17_scorecard", outDir / "batch17_integration_scorecard.json"}};
 
             nlohmann::json j;
             j["gates"] = nlohmann::json::array();
             int missing = 0;
-            for (const auto& g : gates) {
+            for (const auto& g : gates)
+            {
                 bool ok = fs::exists(g.second);
                 if (!ok)
                     ++missing;
@@ -8607,13 +9216,14 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["missing"] = missing;
             j["total"] = gates.size();
             j["pass"] = (missing == 0);
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outPath = outDir / "batch18_fail_fast_gate_evaluator.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[Batch18FailFast] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -8629,26 +9239,26 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5218:  // Canonical Build Artifact Verifier (v280/v281)
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path objDir = root / "obj";
             fs::path buildDir = root / "build";
-            std::vector<fs::path> required = {
-                objDir / "v280_fabric.obj",
-                objDir / "v280_bpe.obj",
-                objDir / "v280_enh.obj",
-                objDir / "v280_server.obj",
-                objDir / "v280_ui.obj",
-                objDir / "v280_gate9_swarm_sharding.obj",
-                objDir / "v281_moe_routing.obj",
-                objDir / "v281_enhancements_278_284.obj",
-                objDir / "v281_expert_residency.obj",
-                objDir / "v281_moe_stress_test.obj"
-            };
+            std::vector<fs::path> required = {objDir / "v280_fabric.obj",
+                                              objDir / "v280_bpe.obj",
+                                              objDir / "v280_enh.obj",
+                                              objDir / "v280_server.obj",
+                                              objDir / "v280_ui.obj",
+                                              objDir / "v280_gate9_swarm_sharding.obj",
+                                              objDir / "v281_moe_routing.obj",
+                                              objDir / "v281_enhancements_278_284.obj",
+                                              objDir / "v281_expert_residency.obj",
+                                              objDir / "v281_moe_stress_test.obj"};
 
             nlohmann::json j;
             j["artifacts"] = nlohmann::json::array();
             int present = 0;
-            for (const auto& p : required) {
+            for (const auto& p : required)
+            {
                 bool ok = fs::exists(p);
                 if (ok)
                     ++present;
@@ -8662,15 +9272,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["present"] = present;
             j["expected"] = required.size();
             j["coveragePct"] = required.empty() ? 0.0 : (100.0 * (double)present / required.size());
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "batch18_canonical_artifact_verifier.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[Batch18Artifacts] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -8685,9 +9296,8 @@ void Win32IDE::handleToolsCommand(int commandId)
 
         case 5219:  // Full Parity Audit Sweep (Batches 15–18)
         {
-            std::vector<int> sequence = {5185, 5186, 5187, 5188, 5189, 5190, 5191,
-                                         5192, 5193, 5194, 5195, 5196, 5197, 5198,
-                                         5211, 5212, 5213, 5214, 5215, 5216, 5217, 5218};
+            std::vector<int> sequence = {5185, 5186, 5187, 5188, 5189, 5190, 5191, 5192, 5193, 5194, 5195,
+                                         5196, 5197, 5198, 5211, 5212, 5213, 5214, 5215, 5216, 5217, 5218};
             appendToOutput("[Batch18Sweep] Running parity audit sequence...", "General", OutputSeverity::Info);
             for (int id : sequence)
                 handleToolsCommand(id);
@@ -8698,7 +9308,8 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5220:  // Gap-to-Action Plan Export (Top 7)
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path failFast = outDir / "batch18_fail_fast_gate_evaluator.json";
@@ -8707,36 +9318,48 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["plan"] = nlohmann::json::array();
             j["inputs"] = {failFast.string()};
 
-            if (fs::exists(failFast)) {
+            if (fs::exists(failFast))
+            {
                 std::ifstream in(failFast, std::ios::binary);
                 std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
                 nlohmann::json ff = nlohmann::json::parse(text, nullptr, false);
-                if (!ff.is_discarded() && ff.contains("gates") && ff["gates"].is_array()) {
-                    for (const auto& gate : ff["gates"]) {
-                        if (gate.contains("ok") && gate["ok"].is_boolean() && !gate["ok"].get<bool>()) {
+                if (!ff.is_discarded() && ff.contains("gates") && ff["gates"].is_array())
+                {
+                    for (const auto& gate : ff["gates"])
+                    {
+                        if (gate.contains("ok") && gate["ok"].is_boolean() && !gate["ok"].get<bool>())
+                        {
                             std::string name = gate.value("gate", "unknown");
                             std::string action = "run_associated_audit_and_patch";
-                            if (name == "lane_coherence") action = "patch_wrapper_lane_dispatch";
-                            else if (name == "router_boot") action = "wire_monolithic_router_init";
-                            else if (name == "bridge_contract") action = "enforce_bridge_router_ready_contract";
-                            else if (name == "ui_surface") action = "close_input_tasks_git_ui_gaps";
-                            else if (name == "lsp_ghost") action = "unify_lsp_completion_ghost_path";
-                            else if (name == "tooling_matrix") action = "close_symbol_search_refactor_agent_gaps";
+                            if (name == "lane_coherence")
+                                action = "patch_wrapper_lane_dispatch";
+                            else if (name == "router_boot")
+                                action = "wire_monolithic_router_init";
+                            else if (name == "bridge_contract")
+                                action = "enforce_bridge_router_ready_contract";
+                            else if (name == "ui_surface")
+                                action = "close_input_tasks_git_ui_gaps";
+                            else if (name == "lsp_ghost")
+                                action = "unify_lsp_completion_ghost_path";
+                            else if (name == "tooling_matrix")
+                                action = "close_symbol_search_refactor_agent_gaps";
                             j["plan"].push_back({{"gate", name}, {"action", action}});
                         }
                     }
                 }
             }
-            if (j["plan"].empty()) {
+            if (j["plan"].empty())
+            {
                 j["plan"].push_back({{"gate", "all"}, {"action", "promote_current_state_to_release_candidate"}});
             }
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outPath = outDir / "batch18_gap_to_action_plan_top7.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[Batch18Plan] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -8750,18 +9373,21 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5221:  // Developer Tooling Readiness Gate
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path matrixPath = root / ".rawrxd" / "batch15_developer_tooling_matrix.json";
 
             nlohmann::json j;
             j["source"] = matrixPath.string();
             int present = 0;
             int total = 8;
-            if (fs::exists(matrixPath)) {
+            if (fs::exists(matrixPath))
+            {
                 std::ifstream in(matrixPath, std::ios::binary);
                 std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
                 nlohmann::json src = nlohmann::json::parse(text, nullptr, false);
-                if (!src.is_discarded() && src.contains("matrix") && src["matrix"].is_object()) {
+                if (!src.is_discarded() && src.contains("matrix") && src["matrix"].is_object())
+                {
                     j["matrix"] = src["matrix"];
                     for (auto it = src["matrix"].begin(); it != src["matrix"].end(); ++it)
                         if (it.value().is_boolean() && it.value().get<bool>())
@@ -8772,15 +9398,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["total"] = total;
             j["coveragePct"] = (100.0 * (double)present / (double)total);
             j["gatePass"] = (present == total);
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "batch18_developer_tooling_readiness_gate.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[Batch18ToolingGate] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -8796,36 +9423,37 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5222:  // Cursor/Copilot Parity Ledger Rollup
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             std::vector<fs::path> cards = {
-                outDir / "batch15_integration_scorecard.json",
-                outDir / "batch16_integration_scorecard.json",
-                outDir / "batch17_integration_scorecard.json",
-                outDir / "batch18_fail_fast_gate_evaluator.json",
-                outDir / "batch18_developer_tooling_readiness_gate.json"
-            };
+                outDir / "batch15_integration_scorecard.json", outDir / "batch16_integration_scorecard.json",
+                outDir / "batch17_integration_scorecard.json", outDir / "batch18_fail_fast_gate_evaluator.json",
+                outDir / "batch18_developer_tooling_readiness_gate.json"};
 
             nlohmann::json j;
             j["inputs"] = nlohmann::json::array();
             int present = 0;
-            for (const auto& p : cards) {
+            for (const auto& p : cards)
+            {
                 bool ok = fs::exists(p);
                 if (ok)
                     ++present;
                 j["inputs"].push_back({{"path", p.string()}, {"exists", ok}});
             }
             j["coveragePct"] = cards.empty() ? 0.0 : (100.0 * (double)present / cards.size());
-            j["parityBand"] = (j["coveragePct"].get<double>() >= 85.0) ? "high" :
-                              (j["coveragePct"].get<double>() >= 65.0) ? "medium" : "low";
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["parityBand"] = (j["coveragePct"].get<double>() >= 85.0)   ? "high"
+                              : (j["coveragePct"].get<double>() >= 65.0) ? "medium"
+                                                                         : "low";
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outPath = outDir / "batch18_cursor_copilot_parity_ledger_rollup.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[Batch18Ledger] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -8841,18 +9469,17 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5223:  // Batch 18 Integration Scorecard
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
-            std::vector<fs::path> artifacts = {
-                outDir / "batch18_fail_fast_gate_evaluator.json",
-                outDir / "batch18_canonical_artifact_verifier.json",
-                outDir / "batch18_gap_to_action_plan_top7.json",
-                outDir / "batch18_developer_tooling_readiness_gate.json",
-                outDir / "batch18_cursor_copilot_parity_ledger_rollup.json",
-                outDir / "batch17_integration_scorecard.json",
-                outDir / "batch16_integration_scorecard.json"
-            };
+            std::vector<fs::path> artifacts = {outDir / "batch18_fail_fast_gate_evaluator.json",
+                                               outDir / "batch18_canonical_artifact_verifier.json",
+                                               outDir / "batch18_gap_to_action_plan_top7.json",
+                                               outDir / "batch18_developer_tooling_readiness_gate.json",
+                                               outDir / "batch18_cursor_copilot_parity_ledger_rollup.json",
+                                               outDir / "batch17_integration_scorecard.json",
+                                               outDir / "batch16_integration_scorecard.json"};
             int present = 0;
             for (const auto& p : artifacts)
                 if (fs::exists(p))
@@ -8866,13 +9493,14 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["coveragePct"] = coverage;
             j["routerStatus"] = getRouterStatusString();
             j["hybridBridgeStatus"] = getHybridBridgeStatusString();
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outPath = outDir / "batch18_integration_scorecard.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[Batch18Scorecard] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -8887,7 +9515,8 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5224:  // RTP End-to-End Smoke + Telemetry Export
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
 
@@ -8898,9 +9527,9 @@ void Win32IDE::handleToolsCommand(int commandId)
             uint32_t contextSize = RTP_GetContextBlobSize();
 
             char agentOut[2048] = {};
-            int32_t agentRc = RTP_AgentLoop_Run(
-                "RTP smoke test: return a short readiness status. Use a tool call only if required.",
-                agentOut, (uint32_t)sizeof(agentOut), 1);
+            int32_t agentRc =
+                RTP_AgentLoop_Run("RTP smoke test: return a short readiness status. Use a tool call only if required.",
+                                  agentOut, (uint32_t)sizeof(agentOut), 1);
 
             const uint64_t* telemetry = static_cast<const uint64_t*>(RTP_GetTelemetrySnapshot());
             nlohmann::json j;
@@ -8909,23 +9538,24 @@ void Win32IDE::handleToolsCommand(int commandId)
                             {"blobPtrNonNull", contextPtr != nullptr},
                             {"blobSize", contextSize}};
             j["agentLoop"] = {{"runRc", agentRc}, {"response", std::string(agentOut)}};
-            if (telemetry) {
-                j["telemetry"] = {{"packetsValid", telemetry[0]},
-                                  {"dispatchOk", telemetry[1]},
-                                  {"dispatchErr", telemetry[2]},
-                                  {"aliasHits", telemetry[3]},
-                                  {"policyBlocks", telemetry[4]},
-                                  {"agentLoopRounds", telemetry[5]}};
-            } else {
+            if (telemetry)
+            {
+                j["telemetry"] = {{"packetsValid", telemetry[0]}, {"dispatchOk", telemetry[1]},
+                                  {"dispatchErr", telemetry[2]},  {"aliasHits", telemetry[3]},
+                                  {"policyBlocks", telemetry[4]}, {"agentLoopRounds", telemetry[5]}};
+            }
+            else
+            {
                 j["telemetry"] = {{"error", "snapshot pointer is null"}};
             }
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outPath = outDir / "rtp_smoke_batch19.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[RTPSmoke] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -8940,7 +9570,8 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5225:  // RTP Synthetic Packet Validate/Dispatch Smoke
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
 
@@ -8950,9 +9581,12 @@ void Win32IDE::handleToolsCommand(int commandId)
 
             nlohmann::json j;
             j["descriptorCount"] = count;
-            if (!table || count < 4) {
+            if (!table || count < 4)
+            {
                 j["error"] = "descriptor table unavailable";
-            } else {
+            }
+            else
+            {
                 uint8_t packet[512] = {};
                 RTPPacketHeader hdr{};
                 hdr.magic = RTP_PACKET_MAGIC;
@@ -8972,36 +9606,33 @@ void Win32IDE::handleToolsCommand(int commandId)
 
                 int32_t validateRc = RTP_ValidatePacket(packet, packetBytes);
                 char dispatchOut[2048] = {};
-                int32_t dispatchRc = RTP_DispatchPacket(packet, packetBytes, dispatchOut, (uint32_t)sizeof(dispatchOut));
+                int32_t dispatchRc =
+                    RTP_DispatchPacket(packet, packetBytes, dispatchOut, (uint32_t)sizeof(dispatchOut));
 
                 const uint64_t* telemetry = static_cast<const uint64_t*>(RTP_GetTelemetrySnapshot());
-                j["packet"] = {{"bytes", packetBytes},
-                               {"headerSize", (uint32_t)sizeof(hdr)},
-                               {"payloadSize", payloadSize},
-                               {"validateRc", validateRc},
-                               {"dispatchRc", dispatchRc},
-                               {"dispatchOut", std::string(dispatchOut)}};
+                j["packet"] = {{"bytes", packetBytes},       {"headerSize", (uint32_t)sizeof(hdr)},
+                               {"payloadSize", payloadSize}, {"validateRc", validateRc},
+                               {"dispatchRc", dispatchRc},   {"dispatchOut", std::string(dispatchOut)}};
                 j["descriptor0"] = {{"toolId", table[0].tool_id},
                                     {"legacyToolId", table[0].legacy_tool_id},
                                     {"name", table[0].name ? table[0].name : ""},
                                     {"description", table[0].description ? table[0].description : ""}};
-                if (telemetry) {
-                    j["telemetry"] = {{"packetsValid", telemetry[0]},
-                                      {"dispatchOk", telemetry[1]},
-                                      {"dispatchErr", telemetry[2]},
-                                      {"aliasHits", telemetry[3]},
-                                      {"policyBlocks", telemetry[4]},
-                                      {"agentLoopRounds", telemetry[5]}};
+                if (telemetry)
+                {
+                    j["telemetry"] = {{"packetsValid", telemetry[0]}, {"dispatchOk", telemetry[1]},
+                                      {"dispatchErr", telemetry[2]},  {"aliasHits", telemetry[3]},
+                                      {"policyBlocks", telemetry[4]}, {"agentLoopRounds", telemetry[5]}};
                 }
             }
 
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outPath = outDir / "rtp_packet_smoke_batch19.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[RTPPacketSmoke] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -9016,7 +9647,8 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5226:  // RTP Policy-Gate Negative Smoke (Blocked Payload)
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
 
@@ -9026,9 +9658,12 @@ void Win32IDE::handleToolsCommand(int commandId)
 
             nlohmann::json j;
             j["descriptorCount"] = count;
-            if (!table || count == 0) {
+            if (!table || count == 0)
+            {
                 j["error"] = "descriptor table unavailable";
-            } else {
+            }
+            else
+            {
                 uint8_t packet[512] = {};
                 RTPPacketHeader hdr{};
                 hdr.magic = RTP_PACKET_MAGIC;
@@ -9040,7 +9675,7 @@ void Win32IDE::handleToolsCommand(int commandId)
                 uint32_t payloadSize = (uint32_t)strlen(payload);
                 hdr.payload_size = payloadSize;
                 hdr.flags = 0;
-                memcpy(hdr.tool_uuid, table[3].tool_uuid, sizeof(hdr.tool_uuid)); // execute_command
+                memcpy(hdr.tool_uuid, table[3].tool_uuid, sizeof(hdr.tool_uuid));  // execute_command
 
                 memcpy(packet, &hdr, sizeof(hdr));
                 memcpy(packet + sizeof(hdr), payload, payloadSize);
@@ -9048,9 +9683,10 @@ void Win32IDE::handleToolsCommand(int commandId)
 
                 int32_t validateRc = RTP_ValidatePacket(packet, packetBytes);
                 char dispatchOut[2048] = {};
-                int32_t dispatchRc = RTP_DispatchPacket(packet, packetBytes, dispatchOut, (uint32_t)sizeof(dispatchOut));
+                int32_t dispatchRc =
+                    RTP_DispatchPacket(packet, packetBytes, dispatchOut, (uint32_t)sizeof(dispatchOut));
 
-                const int32_t expectedPolicyBlock = 23; // RTP_ERR_POLICY_BLOCK in rtp_protocol.asm
+                const int32_t expectedPolicyBlock = 23;  // RTP_ERR_POLICY_BLOCK in rtp_protocol.asm
                 bool blockedAsExpected = (dispatchRc == expectedPolicyBlock);
                 const uint64_t* telemetry = static_cast<const uint64_t*>(RTP_GetTelemetrySnapshot());
 
@@ -9065,23 +9701,22 @@ void Win32IDE::handleToolsCommand(int commandId)
                                    {"toolId", table[3].tool_id},
                                    {"legacyToolId", table[3].legacy_tool_id},
                                    {"name", table[3].name ? table[3].name : ""}};
-                if (telemetry) {
-                    j["telemetry"] = {{"packetsValid", telemetry[0]},
-                                      {"dispatchOk", telemetry[1]},
-                                      {"dispatchErr", telemetry[2]},
-                                      {"aliasHits", telemetry[3]},
-                                      {"policyBlocks", telemetry[4]},
-                                      {"agentLoopRounds", telemetry[5]}};
+                if (telemetry)
+                {
+                    j["telemetry"] = {{"packetsValid", telemetry[0]}, {"dispatchOk", telemetry[1]},
+                                      {"dispatchErr", telemetry[2]},  {"aliasHits", telemetry[3]},
+                                      {"policyBlocks", telemetry[4]}, {"agentLoopRounds", telemetry[5]}};
                 }
             }
 
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outPath = outDir / "rtp_policy_smoke_batch19.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[RTPPolicySmoke] Failed writing artifact.", "General", OutputSeverity::Error);
                 break;
             }
@@ -9096,7 +9731,8 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5227:  // RTP Consolidated Smoke Suite + Scorecard
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
 
@@ -9112,7 +9748,8 @@ void Win32IDE::handleToolsCommand(int commandId)
             nlohmann::json j;
             j["inputs"] = nlohmann::json::array();
 
-            auto loadJson = [&](const fs::path& p, nlohmann::json& out) -> bool {
+            auto loadJson = [&](const fs::path& p, nlohmann::json& out) -> bool
+            {
                 if (!fs::exists(p))
                     return false;
                 std::ifstream in(p, std::ios::binary);
@@ -9133,46 +9770,50 @@ void Win32IDE::handleToolsCommand(int commandId)
             j["inputs"].push_back({{"path", smokeC.string()}, {"loaded", okC}});
 
             bool gateA = false;
-            if (okA && a.contains("context") && a["context"].is_object()) {
+            if (okA && a.contains("context") && a["context"].is_object())
+            {
                 int rc = a["context"].value("buildRc", -9999);
                 gateA = (rc == 0);
             }
 
             bool gateB = false;
-            if (okB && b.contains("packet") && b["packet"].is_object()) {
+            if (okB && b.contains("packet") && b["packet"].is_object())
+            {
                 int vrc = b["packet"].value("validateRc", -9999);
                 int drc = b["packet"].value("dispatchRc", -9999);
                 gateB = (vrc == 0) && (drc == 0);
             }
 
             bool gateC = false;
-            if (okC && c.contains("expectation") && c["expectation"].is_object()) {
+            if (okC && c.contains("expectation") && c["expectation"].is_object())
+            {
                 gateC = c["expectation"].value("blockedAsExpected", false);
             }
 
             int passed = 0;
-            if (gateA) ++passed;
-            if (gateB) ++passed;
-            if (gateC) ++passed;
+            if (gateA)
+                ++passed;
+            if (gateB)
+                ++passed;
+            if (gateC)
+                ++passed;
             const int total = 3;
             double coverage = 100.0 * (double)passed / (double)total;
 
             j["gates"] = {
-                {"context_build", gateA},
-                {"packet_validate_dispatch", gateB},
-                {"policy_block_enforced", gateC}
-            };
+                {"context_build", gateA}, {"packet_validate_dispatch", gateB}, {"policy_block_enforced", gateC}};
             j["passed"] = passed;
             j["total"] = total;
             j["coveragePct"] = coverage;
             j["pass"] = (passed == total);
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             fs::path outPath = outDir / "rtp_suite_scorecard_batch19.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[RTPSuite] Failed writing scorecard.", "General", OutputSeverity::Error);
                 break;
             }
@@ -9180,8 +9821,8 @@ void Win32IDE::handleToolsCommand(int commandId)
             out.write(blob.data(), (std::streamsize)blob.size());
             out.close();
 
-            appendToOutput("[RTPSuite] " + std::string(j["pass"].get<bool>() ? "PASS" : "FAIL") + " Coverage=" +
-                               std::to_string(coverage) + "% -> " + outPath.string(),
+            appendToOutput("[RTPSuite] " + std::string(j["pass"].get<bool>() ? "PASS" : "FAIL") +
+                               " Coverage=" + std::to_string(coverage) + "% -> " + outPath.string(),
                            "General", j["pass"].get<bool>() ? OutputSeverity::Info : OutputSeverity::Warning);
         }
         break;
@@ -9189,7 +9830,8 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5228:  // RTP Suite Trend Ledger + Regression Detector
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
 
@@ -9202,45 +9844,53 @@ void Win32IDE::handleToolsCommand(int commandId)
             nlohmann::json scorecard;
             {
                 std::ifstream in(scorecardPath, std::ios::binary);
-                if (!in.is_open()) {
-                    appendToOutput("[RTPLedger] Missing scorecard: " + scorecardPath.string(), "General", OutputSeverity::Error);
+                if (!in.is_open())
+                {
+                    appendToOutput("[RTPLedger] Missing scorecard: " + scorecardPath.string(), "General",
+                                   OutputSeverity::Error);
                     break;
                 }
                 std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
                 scorecard = nlohmann::json::parse(text, nullptr, false);
-                if (scorecard.is_discarded()) {
+                if (scorecard.is_discarded())
+                {
                     appendToOutput("[RTPLedger] Scorecard JSON parse failed.", "General", OutputSeverity::Error);
                     break;
                 }
             }
 
             nlohmann::json ledger;
-            if (fs::exists(ledgerPath)) {
+            if (fs::exists(ledgerPath))
+            {
                 std::ifstream in(ledgerPath, std::ios::binary);
                 std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
                 ledger = nlohmann::json::parse(text, nullptr, false);
             }
-            if (ledger.is_discarded() || !ledger.is_object()) {
+            if (ledger.is_discarded() || !ledger.is_object())
+            {
                 ledger = nlohmann::json::object();
             }
-            if (!ledger.contains("history") || !ledger["history"].is_array()) {
+            if (!ledger.contains("history") || !ledger["history"].is_array())
+            {
                 ledger["history"] = nlohmann::json::array();
             }
 
             nlohmann::json entry;
-            entry["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            entry["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                            std::chrono::system_clock::now().time_since_epoch())
+                                            .count();
             entry["coveragePct"] = scorecard.value("coveragePct", 0.0);
             entry["pass"] = scorecard.value("pass", false);
             entry["gates"] = scorecard.contains("gates") ? scorecard["gates"] : nlohmann::json::object();
             ledger["history"].push_back(entry);
 
             const size_t maxEntries = 50;
-            if (ledger["history"].size() > maxEntries) {
+            if (ledger["history"].size() > maxEntries)
+            {
                 nlohmann::json trimmed = nlohmann::json::array();
                 size_t start = ledger["history"].size() - maxEntries;
-                for (size_t i = start; i < ledger["history"].size(); ++i) {
+                for (size_t i = start; i < ledger["history"].size(); ++i)
+                {
                     trimmed.push_back(ledger["history"][i]);
                 }
                 ledger["history"] = std::move(trimmed);
@@ -9248,34 +9898,38 @@ void Win32IDE::handleToolsCommand(int commandId)
 
             bool regression = false;
             std::string regressionReason = "none";
-            if (ledger["history"].size() >= 2) {
+            if (ledger["history"].size() >= 2)
+            {
                 const auto& prev = ledger["history"][ledger["history"].size() - 2];
                 const auto& curr = ledger["history"][ledger["history"].size() - 1];
                 double prevCov = prev.value("coveragePct", 0.0);
                 double currCov = curr.value("coveragePct", 0.0);
                 bool prevPass = prev.value("pass", false);
                 bool currPass = curr.value("pass", false);
-                if (currCov < prevCov) {
+                if (currCov < prevCov)
+                {
                     regression = true;
                     regressionReason = "coverage_dropped";
-                } else if (prevPass && !currPass) {
+                }
+                else if (prevPass && !currPass)
+                {
                     regression = true;
                     regressionReason = "pass_to_fail";
                 }
             }
 
-            ledger["summary"] = {
-                {"entries", ledger["history"].size()},
-                {"latestCoveragePct", entry["coveragePct"]},
-                {"latestPass", entry["pass"]},
-                {"regressionDetected", regression},
-                {"regressionReason", regressionReason}
-            };
+            ledger["summary"] = {{"entries", ledger["history"].size()},
+                                 {"latestCoveragePct", entry["coveragePct"]},
+                                 {"latestPass", entry["pass"]},
+                                 {"regressionDetected", regression},
+                                 {"regressionReason", regressionReason}};
             ledger["updatedAtUnixMs"] = entry["capturedAtUnixMs"];
 
             std::ofstream out(ledgerPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
-                appendToOutput("[RTPLedger] Failed writing ledger: " + ledgerPath.string(), "General", OutputSeverity::Error);
+            if (!out.is_open())
+            {
+                appendToOutput("[RTPLedger] Failed writing ledger: " + ledgerPath.string(), "General",
+                               OutputSeverity::Error);
                 break;
             }
             std::string blob = ledger.dump(2);
@@ -9291,7 +9945,8 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5229:  // RTP Parity Dashboard Export (Unified)
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
 
@@ -9303,7 +9958,8 @@ void Win32IDE::handleToolsCommand(int commandId)
             fs::path trendPath = outDir / "rtp_suite_trend_batch19.json";
             fs::path outPath = outDir / "rtp_parity_dashboard_batch19.json";
 
-            auto loadJson = [](const fs::path& p, nlohmann::json& out) -> bool {
+            auto loadJson = [](const fs::path& p, nlohmann::json& out) -> bool
+            {
                 if (!fs::exists(p))
                     return false;
                 std::ifstream in(p, std::ios::binary);
@@ -9322,61 +9978,64 @@ void Win32IDE::handleToolsCommand(int commandId)
             const uint64_t* telemetry = static_cast<const uint64_t*>(RTP_GetTelemetrySnapshot());
 
             nlohmann::json j;
-            j["inputs"] = {
-                {"scorecardPath", scorecardPath.string()},
-                {"scorecardLoaded", okScorecard},
-                {"trendPath", trendPath.string()},
-                {"trendLoaded", okTrend}
-            };
+            j["inputs"] = {{"scorecardPath", scorecardPath.string()},
+                           {"scorecardLoaded", okScorecard},
+                           {"trendPath", trendPath.string()},
+                           {"trendLoaded", okTrend}};
             j["scorecard"] = okScorecard ? scorecard : nlohmann::json::object();
             j["trendSummary"] = (okTrend && trend.contains("summary")) ? trend["summary"] : nlohmann::json::object();
-            if (telemetry) {
-                j["telemetry"] = {{"packetsValid", telemetry[0]},
-                                  {"dispatchOk", telemetry[1]},
-                                  {"dispatchErr", telemetry[2]},
-                                  {"aliasHits", telemetry[3]},
-                                  {"policyBlocks", telemetry[4]},
-                                  {"agentLoopRounds", telemetry[5]}};
-            } else {
+            if (telemetry)
+            {
+                j["telemetry"] = {{"packetsValid", telemetry[0]}, {"dispatchOk", telemetry[1]},
+                                  {"dispatchErr", telemetry[2]},  {"aliasHits", telemetry[3]},
+                                  {"policyBlocks", telemetry[4]}, {"agentLoopRounds", telemetry[5]}};
+            }
+            else
+            {
                 j["telemetry"] = {{"error", "snapshot pointer is null"}};
             }
 
             bool parityPass = false;
-            if (okScorecard && scorecard.contains("pass") && scorecard["pass"].is_boolean()) {
+            if (okScorecard && scorecard.contains("pass") && scorecard["pass"].is_boolean())
+            {
                 parityPass = scorecard["pass"].get<bool>();
             }
             bool regressionDetected = false;
-            if (okTrend && trend.contains("summary") && trend["summary"].is_object()) {
+            if (okTrend && trend.contains("summary") && trend["summary"].is_object())
+            {
                 regressionDetected = trend["summary"].value("regressionDetected", false);
             }
-            j["parityStatus"] = {
-                {"pass", parityPass},
-                {"regressionDetected", regressionDetected},
-                {"releaseReady", parityPass && !regressionDetected}
-            };
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["parityStatus"] = {{"pass", parityPass},
+                                 {"regressionDetected", regressionDetected},
+                                 {"releaseReady", parityPass && !regressionDetected}};
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
-                appendToOutput("[RTPDashboard] Failed writing dashboard: " + outPath.string(), "General", OutputSeverity::Error);
+            if (!out.is_open())
+            {
+                appendToOutput("[RTPDashboard] Failed writing dashboard: " + outPath.string(), "General",
+                               OutputSeverity::Error);
                 break;
             }
             std::string blob = j.dump(2);
             out.write(blob.data(), (std::streamsize)blob.size());
             out.close();
 
-            appendToOutput("[RTPDashboard] Exported: " + outPath.string() +
-                               " releaseReady=" + std::string(j["parityStatus"]["releaseReady"].get<bool>() ? "true" : "false"),
-                           "General", j["parityStatus"]["releaseReady"].get<bool>() ? OutputSeverity::Info : OutputSeverity::Warning);
+            appendToOutput(
+                "[RTPDashboard] Exported: " + outPath.string() +
+                    " releaseReady=" + std::string(j["parityStatus"]["releaseReady"].get<bool>() ? "true" : "false"),
+                "General",
+                j["parityStatus"]["releaseReady"].get<bool>() ? OutputSeverity::Info : OutputSeverity::Warning);
         }
         break;
 
         case 5230:  // RTP Release Gate (Strict) + Remediation Plan
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
 
@@ -9389,7 +10048,8 @@ void Win32IDE::handleToolsCommand(int commandId)
             fs::path policyPath = outDir / "rtp_policy_smoke_batch19.json";
             fs::path outPath = outDir / "rtp_release_gate_batch19.json";
 
-            auto loadJson = [](const fs::path& p, nlohmann::json& out) -> bool {
+            auto loadJson = [](const fs::path& p, nlohmann::json& out) -> bool
+            {
                 if (!fs::exists(p))
                     return false;
                 std::ifstream in(p, std::ios::binary);
@@ -9409,7 +10069,8 @@ void Win32IDE::handleToolsCommand(int commandId)
             bool okTrend = loadJson(trendPath, trend);
             bool okPolicy = loadJson(policyPath, policy);
 
-            struct GateEval {
+            struct GateEval
+            {
                 std::string id;
                 bool pass;
                 std::string remediation;
@@ -9423,8 +10084,7 @@ void Win32IDE::handleToolsCommand(int commandId)
             gates.push_back({"artifact_scorecard_present", okScorecard,
                              "Run tools command 5227 to regenerate consolidated scorecard.",
                              okScorecard ? "scorecard loaded" : "missing/invalid scorecard JSON"});
-            gates.push_back({"artifact_trend_present", okTrend,
-                             "Run tools command 5228 to rebuild trend ledger.",
+            gates.push_back({"artifact_trend_present", okTrend, "Run tools command 5228 to rebuild trend ledger.",
                              okTrend ? "trend loaded" : "missing/invalid trend JSON"});
             gates.push_back({"artifact_policy_present", okPolicy,
                              "Run tools command 5226 to regenerate policy smoke artifact.",
@@ -9450,36 +10110,34 @@ void Win32IDE::handleToolsCommand(int commandId)
             bool releaseReady = true;
             nlohmann::json failed = nlohmann::json::array();
             nlohmann::json gatesJson = nlohmann::json::array();
-            for (const auto& g : gates) {
-                gatesJson.push_back({{"id", g.id}, {"pass", g.pass}, {"detail", g.detail}, {"remediation", g.remediation}});
-                if (!g.pass) {
+            for (const auto& g : gates)
+            {
+                gatesJson.push_back(
+                    {{"id", g.id}, {"pass", g.pass}, {"detail", g.detail}, {"remediation", g.remediation}});
+                if (!g.pass)
+                {
                     releaseReady = false;
                     failed.push_back({{"id", g.id}, {"detail", g.detail}, {"remediation", g.remediation}});
                 }
             }
 
             nlohmann::json j;
-            j["inputs"] = {
-                {"dashboardPath", dashboardPath.string()},
-                {"dashboardLoaded", okDashboard},
-                {"scorecardPath", scorecardPath.string()},
-                {"scorecardLoaded", okScorecard},
-                {"trendPath", trendPath.string()},
-                {"trendLoaded", okTrend},
-                {"policyPath", policyPath.string()},
-                {"policyLoaded", okPolicy}
-            };
+            j["inputs"] = {{"dashboardPath", dashboardPath.string()}, {"dashboardLoaded", okDashboard},
+                           {"scorecardPath", scorecardPath.string()}, {"scorecardLoaded", okScorecard},
+                           {"trendPath", trendPath.string()},         {"trendLoaded", okTrend},
+                           {"policyPath", policyPath.string()},       {"policyLoaded", okPolicy}};
             j["gates"] = gatesJson;
             j["failedGates"] = failed;
             j["releaseReady"] = releaseReady;
             j["failedCount"] = failed.size();
             j["totalGates"] = gates.size();
-            j["capturedAtUnixMs"] =
-                (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count();
+            j["capturedAtUnixMs"] = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
 
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[RTPReleaseGate] Failed writing release gate: " + outPath.string(), "General",
                                OutputSeverity::Error);
                 break;
@@ -9488,8 +10146,8 @@ void Win32IDE::handleToolsCommand(int commandId)
             out.write(blob.data(), (std::streamsize)blob.size());
             out.close();
 
-            appendToOutput("[RTPReleaseGate] " + std::string(releaseReady ? "PASS" : "FAIL") + " failed=" +
-                               std::to_string((int)failed.size()) + " -> " + outPath.string(),
+            appendToOutput("[RTPReleaseGate] " + std::string(releaseReady ? "PASS" : "FAIL") +
+                               " failed=" + std::to_string((int)failed.size()) + " -> " + outPath.string(),
                            "General", releaseReady ? OutputSeverity::Info : OutputSeverity::Warning);
         }
         break;
@@ -9497,7 +10155,8 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5231:  // RTP Release Report (Markdown) from 5230
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
 
@@ -9509,14 +10168,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             nlohmann::json gate;
             {
                 std::ifstream in(gatePath, std::ios::binary);
-                if (!in.is_open()) {
+                if (!in.is_open())
+                {
                     appendToOutput("[RTPReleaseReport] Missing gate artifact: " + gatePath.string(), "General",
                                    OutputSeverity::Error);
                     break;
                 }
                 std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
                 gate = nlohmann::json::parse(text, nullptr, false);
-                if (gate.is_discarded()) {
+                if (gate.is_discarded())
+                {
                     appendToOutput("[RTPReleaseReport] Gate JSON parse failed.", "General", OutputSeverity::Error);
                     break;
                 }
@@ -9534,21 +10195,27 @@ void Win32IDE::handleToolsCommand(int commandId)
             md << "- Generated From: `rtp_release_gate_batch19.json`\n\n";
 
             md << "## Gate Results\n\n";
-            if (gate.contains("gates") && gate["gates"].is_array()) {
-                for (const auto& g : gate["gates"]) {
+            if (gate.contains("gates") && gate["gates"].is_array())
+            {
+                for (const auto& g : gate["gates"])
+                {
                     std::string id = g.value("id", "unknown");
                     bool pass = g.value("pass", false);
                     std::string detail = g.value("detail", "");
                     md << "- [" << (pass ? "x" : " ") << "] `" << id << "`: " << detail << "\n";
                 }
-            } else {
+            }
+            else
+            {
                 md << "- Gate list unavailable in source JSON.\n";
             }
 
             md << "\n## Remediation Actions\n\n";
-            if (gate.contains("failedGates") && gate["failedGates"].is_array() && !gate["failedGates"].empty()) {
+            if (gate.contains("failedGates") && gate["failedGates"].is_array() && !gate["failedGates"].empty())
+            {
                 int i = 1;
-                for (const auto& fg : gate["failedGates"]) {
+                for (const auto& fg : gate["failedGates"])
+                {
                     std::string id = fg.value("id", "unknown");
                     std::string remediation = fg.value("remediation", "No remediation specified.");
                     std::string detail = fg.value("detail", "");
@@ -9556,29 +10223,41 @@ void Win32IDE::handleToolsCommand(int commandId)
                     md << "   - Detail: " << detail << "\n";
                     md << "   - Action: " << remediation << "\n";
                 }
-            } else {
+            }
+            else
+            {
                 md << "No remediation actions required. Release gate is passing.\n";
             }
 
             md << "\n## Inputs\n\n";
-            if (gate.contains("inputs") && gate["inputs"].is_object()) {
-                for (auto it = gate["inputs"].begin(); it != gate["inputs"].end(); ++it) {
+            if (gate.contains("inputs") && gate["inputs"].is_object())
+            {
+                for (auto it = gate["inputs"].begin(); it != gate["inputs"].end(); ++it)
+                {
                     md << "- `" << it.key() << "`: ";
-                    if (it.value().is_boolean()) {
+                    if (it.value().is_boolean())
+                    {
                         md << (it.value().get<bool>() ? "true" : "false");
-                    } else if (it.value().is_string()) {
+                    }
+                    else if (it.value().is_string())
+                    {
                         md << it.value().get<std::string>();
-                    } else {
+                    }
+                    else
+                    {
                         md << it.value().dump();
                     }
                     md << "\n";
                 }
-            } else {
+            }
+            else
+            {
                 md << "- Inputs section unavailable.\n";
             }
 
             std::ofstream out(reportPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[RTPReleaseReport] Failed writing report: " + reportPath.string(), "General",
                                OutputSeverity::Error);
                 break;
@@ -9595,7 +10274,8 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5232:  // RTP Executive Summary (One-Page)
         {
             namespace fs = std::filesystem;
-            fs::path root = m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root =
+                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
 
@@ -9607,14 +10287,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             nlohmann::json gate;
             {
                 std::ifstream in(gatePath, std::ios::binary);
-                if (!in.is_open()) {
+                if (!in.is_open())
+                {
                     appendToOutput("[RTPExecSummary] Missing gate artifact: " + gatePath.string(), "General",
                                    OutputSeverity::Error);
                     break;
                 }
                 std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
                 gate = nlohmann::json::parse(text, nullptr, false);
-                if (gate.is_discarded()) {
+                if (gate.is_discarded())
+                {
                     appendToOutput("[RTPExecSummary] Gate JSON parse failed.", "General", OutputSeverity::Error);
                     break;
                 }
@@ -9625,8 +10307,10 @@ void Win32IDE::handleToolsCommand(int commandId)
             int totalGates = gate.value("totalGates", 0);
 
             std::vector<nlohmann::json> blockers;
-            if (gate.contains("failedGates") && gate["failedGates"].is_array()) {
-                for (const auto& fg : gate["failedGates"]) {
+            if (gate.contains("failedGates") && gate["failedGates"].is_array())
+            {
+                for (const auto& fg : gate["failedGates"])
+                {
                     blockers.push_back(fg);
                     if (blockers.size() >= 3)
                         break;
@@ -9641,36 +10325,45 @@ void Win32IDE::handleToolsCommand(int commandId)
             md << "- Source Artifacts: `rtp_release_gate_batch19.json`, `rtp_release_report_batch19.md`\n\n";
 
             md << "## Top 3 Blockers\n\n";
-            if (!blockers.empty()) {
+            if (!blockers.empty())
+            {
                 int idx = 1;
-                for (const auto& b : blockers) {
+                for (const auto& b : blockers)
+                {
                     md << idx++ << ". `" << b.value("id", "unknown") << "`\n";
                     md << "   - Detail: " << b.value("detail", "") << "\n";
                     md << "   - Impact: Release gate blocking\n";
                 }
-            } else {
+            }
+            else
+            {
                 md << "1. No active blockers.\n";
             }
 
             md << "\n## Next Actions\n\n";
-            if (!blockers.empty()) {
+            if (!blockers.empty())
+            {
                 int idx = 1;
-                for (const auto& b : blockers) {
-                    md << idx++ << ". " << b.value("remediation", "Run relevant RTP gate command and re-validate.") << "\n";
+                for (const auto& b : blockers)
+                {
+                    md << idx++ << ". " << b.value("remediation", "Run relevant RTP gate command and re-validate.")
+                       << "\n";
                 }
-            } else {
+            }
+            else
+            {
                 md << "1. Promote current RTP state to release candidate validation.\n";
                 md << "2. Re-run 5230 before final release tagging.\n";
             }
 
             md << "\n## Recommendation\n\n";
-            md << (releaseReady
-                       ? "Proceed with release candidate validation."
-                       : "Hold release. Resolve listed blockers, then re-run commands 5230 and 5231.");
+            md << (releaseReady ? "Proceed with release candidate validation."
+                                : "Hold release. Resolve listed blockers, then re-run commands 5230 and 5231.");
             md << "\n";
 
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) {
+            if (!out.is_open())
+            {
                 appendToOutput("[RTPExecSummary] Failed writing summary: " + outPath.string(), "General",
                                OutputSeverity::Error);
                 break;
@@ -9770,6 +10463,10 @@ void Win32IDE::handleModulesCommand(int commandId)
 
 void Win32IDE::handleHelpCommand(int commandId)
 {
+    // Command palette uses 7901–7907 so Help never collides with resource.h Build menu (7001–7006).
+    if (commandId >= 7901 && commandId <= 7907)
+        commandId = commandId - 7901 + 7001;
+
     switch (commandId)
     {
         case 7001:  // Command Reference
@@ -9947,7 +10644,7 @@ void Win32IDE::handleGitCommand(int commandId)
 void Win32IDE::buildCommandRegistry()
 {
     // Rebuild registry with stable storage to avoid pointer/index invalidation
-    constexpr size_t kRegistryReserve = 5000; // generous upper bound to avoid realloc during pushes
+    constexpr size_t kRegistryReserve = 5000;  // generous upper bound to avoid realloc during pushes
     m_commandRegistry.clear();
     m_filteredCommands.clear();
     m_fuzzyMatchPositions.clear();
@@ -10168,14 +10865,28 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({8004, "Git: Pull", "", "Git"});
     m_commandRegistry.push_back({8005, "Git: Stage All", "", "Git"});
 
-    // Help commands (IDs match handleHelpCommand: 7001–7007)
-    m_commandRegistry.push_back({7001, "Help: Command Reference", "", "Help"});
-    m_commandRegistry.push_back({7002, "Help: PowerShell Docs", "", "Help"});
-    m_commandRegistry.push_back({7003, "Help: Search Help", "", "Help"});
-    m_commandRegistry.push_back({7004, "Help: About", "", "Help"});
-    m_commandRegistry.push_back({7005, "Help: Keyboard Shortcuts", "", "Help"});
-    m_commandRegistry.push_back({7006, "Help: Export Prometheus Metrics", "", "Help"});
-    m_commandRegistry.push_back({7007, "Help: Enterprise License / Features", "", "Help"});
+    // Help commands — IDs 7901–7907 (see handleHelpCommand; avoids collision with Build 7001–7006)
+    m_commandRegistry.push_back({7901, "Help: Command Reference", "", "Help"});
+    m_commandRegistry.push_back({7902, "Help: PowerShell Docs", "", "Help"});
+    m_commandRegistry.push_back({7903, "Help: Search Help", "", "Help"});
+    m_commandRegistry.push_back({7904, "Help: About", "", "Help"});
+    m_commandRegistry.push_back({7905, "Help: Keyboard Shortcuts", "", "Help"});
+    m_commandRegistry.push_back({7906, "Help: Export Prometheus Metrics", "", "Help"});
+    m_commandRegistry.push_back({7907, "Help: Enterprise License / Features", "", "Help"});
+
+    // Build menu (resource.h 7001–7006 — palette parity with main Build menu)
+    m_commandRegistry.push_back({7001, "Build: Compile", "", "Build"});
+    m_commandRegistry.push_back({7002, "Build: Build", "", "Build"});
+    m_commandRegistry.push_back({7003, "Build: Rebuild", "", "Build"});
+    m_commandRegistry.push_back({7004, "Build: Clean", "", "Build"});
+    m_commandRegistry.push_back({7005, "Build: Run", "", "Build"});
+    m_commandRegistry.push_back({7006, "Build: Debug", "", "Build"});
+
+    // Game engine — COMMAND_TABLE / SSOT IDs (10619–10622; routeCommand → handleGameEngineCommand)
+    m_commandRegistry.push_back({10619, "Game Engine: Unreal Init", "!unreal_init", "GameEngine"});
+    m_commandRegistry.push_back({10620, "Game Engine: Unreal Attach", "!unreal_attach", "GameEngine"});
+    m_commandRegistry.push_back({10621, "Game Engine: Unity Init", "!unity_init", "GameEngine"});
+    m_commandRegistry.push_back({10622, "Game Engine: Unity Attach", "!unity_attach", "GameEngine"});
 
     // AI Mode Toggles
     m_commandRegistry.push_back({IDM_AI_MODE_MAX, "AI: Toggle Max Mode", "", "AI"});
@@ -11651,7 +12362,7 @@ void Win32IDE::showMonacoSettingsDialog()
 
 // ============================================================================
 // Tooling Smoke Test — CRITICAL FIX: Bounds Checking
-// 
+//
 // HIGH PRIORITY BUG FIX: This function prevents out-of-bounds access when
 // accessing tool descriptors without proper bounds checking.
 // ============================================================================
@@ -11668,16 +12379,17 @@ void Win32IDE::ExecuteToolingSmokeTest()
     //     // Use fallback for small tables
     //   else
     //     // Safe to access all indices
-    
+
     OutputDebugStringA("[SMOKE] Tooling Smoke Test Starting...\n");
-    
-    // Simulate tool table  
-    struct MockTool {
+
+    // Simulate tool table
+    struct MockTool
+    {
         const char* name;
         void* handler;
         uint32_t flags;
     };
-    
+
     // Create a test table
     std::vector<MockTool> mock_tools = {
         {"ReadFile", (void*)0x1000, 0x0001},
@@ -11685,60 +12397,70 @@ void Win32IDE::ExecuteToolingSmokeTest()
         {"ExecuteCommand", (void*)0x3000, 0x0004},
         {"CompleteCode", (void*)0x4000, 0x0008},
     };
-    
+
     const uint32_t count = static_cast<uint32_t>(mock_tools.size());
-    
+
     // ========================================================================
     // TEST 1: Small table (1-3 tools) - Fallback path
     // ========================================================================
     OutputDebugStringA("[SMOKE] TEST 1: Small tool table (3 tools)\n");
-    for (uint32_t i = 0; i < 3 && i < count; i++) {
-        if (i < mock_tools.size()) {
+    for (uint32_t i = 0; i < 3 && i < count; i++)
+    {
+        if (i < mock_tools.size())
+        {
             char buf[256];
-            snprintf(buf, sizeof(buf), "[SMOKE]   Tool[%u]: %s (handler=0x%p)\n",
-                i, mock_tools[i].name, mock_tools[i].handler);
+            snprintf(buf, sizeof(buf), "[SMOKE]   Tool[%u]: %s (handler=0x%p)\n", i, mock_tools[i].name,
+                     mock_tools[i].handler);
             OutputDebugStringA(buf);
         }
     }
     OutputDebugStringA("[SMOKE] PASS: Bounded iteration with small table\n");
-    
+
     // ========================================================================
     // TEST 2: Large table (4+ tools) - Full test path
     // ========================================================================
-    if (count >= 4) {
+    if (count >= 4)
+    {
         OutputDebugStringA("[SMOKE] TEST 2: Large tool table (4+ tools)\n");
-        
+
         // NOW it's safe to access all indices including table[3]
-        for (uint32_t i = 0; i < count; i++) {
+        for (uint32_t i = 0; i < count; i++)
+        {
             char buf[256];
-            snprintf(buf, sizeof(buf), 
-                "[SMOKE]   Tool[%u]: %s (handler=0x%p, flags=0x%X)\n",
-                i, mock_tools[i].name, mock_tools[i].handler, mock_tools[i].flags);
+            snprintf(buf, sizeof(buf), "[SMOKE]   Tool[%u]: %s (handler=0x%p, flags=0x%X)\n", i, mock_tools[i].name,
+                     mock_tools[i].handler, mock_tools[i].flags);
             OutputDebugStringA(buf);
         }
         OutputDebugStringA("[SMOKE] PASS: Full table validation (all indices safe)\n");
-    } else {
+    }
+    else
+    {
         OutputDebugStringA("[SMOKE] SKIP: TEST 2 requires count >= 4 (current: ");
         char buf[16];
         snprintf(buf, sizeof(buf), "%u)\n", count);
         OutputDebugStringA(buf);
     }
-    
+
     // ========================================================================
     // TEST 3: Boundary conditions
     // ========================================================================
     OutputDebugStringA("[SMOKE] TEST 3: Boundary conditions\n");
-    if (count == 0) {
+    if (count == 0)
+    {
         OutputDebugStringA("[SMOKE]   Empty table: OK (no access)\n");
-    } else if (count < 4) {
+    }
+    else if (count < 4)
+    {
         char buf[64];
         snprintf(buf, sizeof(buf), "[SMOKE]   Small table (%u): OK (fallback path)\n", count);
         OutputDebugStringA(buf);
-    } else {
+    }
+    else
+    {
         OutputDebugStringA("[SMOKE]   Large table: OK (full validation)\n");
     }
     OutputDebugStringA("[SMOKE] PASS: All boundary checks OK\n");
-    
+
     OutputDebugStringA("[SMOKE] Tooling Smoke Test Complete (All Checks Passed)\n");
 }
 
@@ -11760,66 +12482,121 @@ void Win32IDE::showThermalDashboard()
 // Covers: Refactoring (11540–11547), Language (11550–11553),
 //         Semantic Index (11560–11567), Resource Generator (11570–11574)
 // ============================================================================
-bool Win32IDE::handleFeaturesCommand(int commandId) {
+bool Win32IDE::handleFeaturesCommand(int commandId)
+{
     // ── Refactoring Plugin (11540–11547) ──────────────────────────────────
-    if (commandId >= IDM_REFACTOR_EXTRACT_METHOD &&
-        commandId <= IDM_REFACTOR_LOAD_PLUGIN) {
-        if (!m_refactoringManager) initRefactoringPlugin();
-        switch (commandId) {
-            case IDM_REFACTOR_EXTRACT_METHOD:    cmdRefactorExtractMethod();    break;
-            case IDM_REFACTOR_EXTRACT_VARIABLE:  cmdRefactorExtractVariable();  break;
-            case IDM_REFACTOR_RENAME_SYMBOL:     cmdRefactorRenameSymbol();     break;
-            case IDM_REFACTOR_ORGANIZE_INCLUDES: cmdRefactorOrganizeIncludes(); break;
-            case IDM_REFACTOR_CONVERT_AUTO:      cmdRefactorConvertToAuto();    break;
-            case IDM_REFACTOR_REMOVE_DEAD_CODE:  cmdRefactorRemoveDeadCode();   break;
-            case IDM_REFACTOR_SHOW_ALL:          cmdRefactorShowAll();          break;
-            case IDM_REFACTOR_LOAD_PLUGIN:       cmdRefactorLoadPlugin();       break;
-            default: break;
+    if (commandId >= IDM_REFACTOR_EXTRACT_METHOD && commandId <= IDM_REFACTOR_LOAD_PLUGIN)
+    {
+        if (!m_refactoringManager)
+            initRefactoringPlugin();
+        switch (commandId)
+        {
+            case IDM_REFACTOR_EXTRACT_METHOD:
+                cmdRefactorExtractMethod();
+                break;
+            case IDM_REFACTOR_EXTRACT_VARIABLE:
+                cmdRefactorExtractVariable();
+                break;
+            case IDM_REFACTOR_RENAME_SYMBOL:
+                cmdRefactorRenameSymbol();
+                break;
+            case IDM_REFACTOR_ORGANIZE_INCLUDES:
+                cmdRefactorOrganizeIncludes();
+                break;
+            case IDM_REFACTOR_CONVERT_AUTO:
+                cmdRefactorConvertToAuto();
+                break;
+            case IDM_REFACTOR_REMOVE_DEAD_CODE:
+                cmdRefactorRemoveDeadCode();
+                break;
+            case IDM_REFACTOR_SHOW_ALL:
+                cmdRefactorShowAll();
+                break;
+            case IDM_REFACTOR_LOAD_PLUGIN:
+                cmdRefactorLoadPlugin();
+                break;
+            default:
+                break;
         }
         return true;
     }
 
     // ── Language Plugin (11550–11553) ────────────────────────────────────
-    if (commandId >= IDM_LANG_DETECT && commandId <= IDM_LANG_SET_FOR_FILE) {
-        if (!m_languageManager) initLanguagePlugin();
-        switch (commandId) {
-            case IDM_LANG_DETECT:         cmdLanguageDetect();       break;
-            case IDM_LANG_LIST_ALL:       cmdLanguageListAll();      break;
-            case IDM_LANG_LOAD_PLUGIN:    cmdLanguageLoadPlugin();   break;
-            case IDM_LANG_SET_FOR_FILE:   cmdLanguageSetForFile();   break;
-            default: break;
+    if (commandId >= IDM_LANG_DETECT && commandId <= IDM_LANG_SET_FOR_FILE)
+    {
+        if (!m_languageManager)
+            initLanguagePlugin();
+        switch (commandId)
+        {
+            case IDM_LANG_DETECT:
+                cmdLanguageDetect();
+                break;
+            case IDM_LANG_LIST_ALL:
+                cmdLanguageListAll();
+                break;
+            case IDM_LANG_LOAD_PLUGIN:
+                cmdLanguageLoadPlugin();
+                break;
+            case IDM_LANG_SET_FOR_FILE:
+                cmdLanguageSetForFile();
+                break;
+            default:
+                break;
         }
         return true;
     }
 
     // ── Semantic Index (11560–11567) ─────────────────────────────────────
-    if (commandId >= IDM_SEMANTIC_BUILD_INDEX &&
-        commandId <= IDM_SEMANTIC_LOAD_PLUGIN) {
+    if (commandId >= IDM_SEMANTIC_BUILD_INDEX && commandId <= IDM_SEMANTIC_LOAD_PLUGIN)
+    {
         return handleSemanticIndexCommand(commandId);
     }
 
     // ── Resource Generator (11570–11574) ─────────────────────────────────
-    if (commandId >= IDM_RESOURCE_GENERATE && commandId <= IDM_RESOURCE_LOAD_PLUGIN) {
-        if (!m_resourceManager) initResourceGenerator();
-        switch (commandId) {
-            case IDM_RESOURCE_GENERATE:       cmdResourceGenerate();          break;
-            case IDM_RESOURCE_GEN_PROJECT:    cmdResourceGenerateProject();   break;
-            case IDM_RESOURCE_LIST_TEMPLATES: cmdResourceListTemplates();     break;
-            case IDM_RESOURCE_SEARCH:         cmdResourceSearchTemplates();   break;
-            case IDM_RESOURCE_LOAD_PLUGIN:    cmdResourceLoadPlugin();        break;
-            default: break;
+    if (commandId >= IDM_RESOURCE_GENERATE && commandId <= IDM_RESOURCE_LOAD_PLUGIN)
+    {
+        if (!m_resourceManager)
+            initResourceGenerator();
+        switch (commandId)
+        {
+            case IDM_RESOURCE_GENERATE:
+                cmdResourceGenerate();
+                break;
+            case IDM_RESOURCE_GEN_PROJECT:
+                cmdResourceGenerateProject();
+                break;
+            case IDM_RESOURCE_LIST_TEMPLATES:
+                cmdResourceListTemplates();
+                break;
+            case IDM_RESOURCE_SEARCH:
+                cmdResourceSearchTemplates();
+                break;
+            case IDM_RESOURCE_LOAD_PLUGIN:
+                cmdResourceLoadPlugin();
+                break;
+            default:
+                break;
         }
         return true;
     }
 
     // ── Enterprise Stress Tests (11575–11577) ────────────────────────────
-    if (commandId >= IDM_ENTERPRISE_STRESS_RUN && commandId <= IDM_ENTERPRISE_STRESS_SHOW) {
-        if (!m_enterpriseStressTester) initEnterpriseStressTests();
-        switch (commandId) {
-            case IDM_ENTERPRISE_STRESS_RUN:  executeEnterpriseStressTest(30, 4); break;
-            case IDM_ENTERPRISE_STRESS_STOP: /* stop flag set inside stresser */  break;
-            case IDM_ENTERPRISE_STRESS_SHOW: handleEnterpriseStressTestCommand();  break;
-            default: break;
+    if (commandId >= IDM_ENTERPRISE_STRESS_RUN && commandId <= IDM_ENTERPRISE_STRESS_SHOW)
+    {
+        if (!m_enterpriseStressTester)
+            initEnterpriseStressTests();
+        switch (commandId)
+        {
+            case IDM_ENTERPRISE_STRESS_RUN:
+                executeEnterpriseStressTest(30, 4);
+                break;
+            case IDM_ENTERPRISE_STRESS_STOP: /* stop flag set inside stresser */
+                break;
+            case IDM_ENTERPRISE_STRESS_SHOW:
+                handleEnterpriseStressTestCommand();
+                break;
+            default:
+                break;
         }
         return true;
     }
@@ -11830,7 +12607,7 @@ bool Win32IDE::handleFeaturesCommand(int commandId) {
 // ============================================================================
 // handleOmegaOrchestratorCommand — Phase Ω Autonomous SDLC Pipeline (12400–12450)
 // ============================================================================
-// Wires OmegaOrchestrator (the Omega Point: autonomous software development) 
+// Wires OmegaOrchestrator (the Omega Point: autonomous software development)
 // into the IDE command dispatch. Enables autonomous requirement ingestion,
 // planning, architecture selection, code generation, verification, deployment,
 // observation, and evolution — The Last Tool awakens.
@@ -11838,9 +12615,9 @@ bool Win32IDE::handleFeaturesCommand(int commandId) {
 bool Win32IDE::handleOmegaOrchestratorCommand(int commandId)
 {
     using namespace rawrxd;
-    
+
     auto& omega = OmegaOrchestrator::instance();
-    
+
     switch (commandId)
     {
         case IDM_OMEGA_START_AUTONOMOUS:
@@ -11874,25 +12651,26 @@ bool Win32IDE::handleOmegaOrchestratorCommand(int commandId)
                 char omegaBuf[2048] = {};
                 const INT_PTR dlgRc = DialogBoxParamA(
                     m_hInstance, "AGENT_PROMPT_DLG", m_hwndMain,
-                    [](HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) -> INT_PTR {
+                    [](HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) -> INT_PTR
+                    {
                         switch (msg)
                         {
-                        case WM_INITDIALOG:
-                            SetWindowTextA(GetDlgItem(hwnd, 101), "Phase Omega — autonomous requirement:");
-                            return TRUE;
-                        case WM_COMMAND:
-                            if (LOWORD(wp) == IDOK)
-                            {
-                                GetDlgItemTextA(hwnd, 102, (char*)lp, 2048);
-                                EndDialog(hwnd, IDOK);
+                            case WM_INITDIALOG:
+                                SetWindowTextA(GetDlgItem(hwnd, 101), "Phase Omega — autonomous requirement:");
                                 return TRUE;
-                            }
-                            if (LOWORD(wp) == IDCANCEL)
-                            {
-                                EndDialog(hwnd, IDCANCEL);
-                                return TRUE;
-                            }
-                            break;
+                            case WM_COMMAND:
+                                if (LOWORD(wp) == IDOK)
+                                {
+                                    GetDlgItemTextA(hwnd, 102, (char*)lp, 2048);
+                                    EndDialog(hwnd, IDOK);
+                                    return TRUE;
+                                }
+                                if (LOWORD(wp) == IDCANCEL)
+                                {
+                                    EndDialog(hwnd, IDCANCEL);
+                                    return TRUE;
+                                }
+                                break;
                         }
                         return FALSE;
                     },
@@ -11910,29 +12688,27 @@ bool Win32IDE::handleOmegaOrchestratorCommand(int commandId)
                 setWindowText(m_hwndCopilotChatInput, "");
             appendToOutput("[OmegaOrchestrator] PERCEIVE: " + requirement, "General", OutputSeverity::Info);
 
-            PipelineResult result = omega.runAutonomousCycle(requirement.c_str(),
-                                                             static_cast<uint32_t>(requirement.size()));
+            PipelineResult result =
+                omega.runAutonomousCycle(requirement.c_str(), static_cast<uint32_t>(requirement.size()));
             if (result.tasksCreated == 0 && result.tasksCompleted == 0 && !result.allPassed)
             {
-                appendToOutput("[OmegaOrchestrator] Autonomous cycle failed before execution.",
-                               "General", OutputSeverity::Error);
+                appendToOutput("[OmegaOrchestrator] Autonomous cycle failed before execution.", "General",
+                               OutputSeverity::Error);
                 return true;
             }
 
-            appendToOutput("[OmegaOrchestrator] Autonomous cycle complete", "General",
-                           OutputSeverity::Success);
-            appendToOutput("[OmegaOrchestrator] Tasks created: " + std::to_string(result.tasksCreated),
-                           "General", OutputSeverity::Info);
-            appendToOutput("[OmegaOrchestrator] Tasks completed: " + std::to_string(result.tasksCompleted),
-                           "General", OutputSeverity::Info);
-            appendToOutput("[OmegaOrchestrator] Tasks failed: " + std::to_string(result.tasksFailed),
-                           "General", OutputSeverity::Info);
-            appendToOutput("[OmegaOrchestrator] Average score (bp): " + std::to_string(result.avgScore),
-                           "General", OutputSeverity::Info);
+            appendToOutput("[OmegaOrchestrator] Autonomous cycle complete", "General", OutputSeverity::Success);
+            appendToOutput("[OmegaOrchestrator] Tasks created: " + std::to_string(result.tasksCreated), "General",
+                           OutputSeverity::Info);
+            appendToOutput("[OmegaOrchestrator] Tasks completed: " + std::to_string(result.tasksCompleted), "General",
+                           OutputSeverity::Info);
+            appendToOutput("[OmegaOrchestrator] Tasks failed: " + std::to_string(result.tasksFailed), "General",
+                           OutputSeverity::Info);
+            appendToOutput("[OmegaOrchestrator] Average score (bp): " + std::to_string(result.avgScore), "General",
+                           OutputSeverity::Info);
 
             if (m_hwndStatusBar)
-                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, 
-                           (LPARAM)"Phase Ω: Autonomous pipeline initialized");
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Phase Ω: Autonomous pipeline initialized");
             break;
         }
 
@@ -11944,47 +12720,52 @@ bool Win32IDE::handleOmegaOrchestratorCommand(int commandId)
                 auto initResult = omega.initialize();
                 if (!initResult.success)
                 {
-                    appendToOutput("[OmegaOrchestrator] Cannot set goal: Initialization failed",
-                                   "General", OutputSeverity::Error);
+                    appendToOutput("[OmegaOrchestrator] Cannot set goal: Initialization failed", "General",
+                                   OutputSeverity::Error);
                     return true;
                 }
             }
-            
+
             std::string goal = m_hwndCopilotChatInput ? getWindowText(m_hwndCopilotChatInput) : "";
             if (goal.empty())
             {
                 char goalBuf[2048] = {};
-                if (DialogBoxParamA(m_hInstance, "AGENT_PROMPT_DLG", m_hwndMain,
-                    [](HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) -> INT_PTR {
-                        switch (msg) {
-                        case WM_INITDIALOG:
-                            SetWindowTextA(hwnd, "Omega Goal");
-                            SetWindowTextA(GetDlgItem(hwnd, 101), "Enter autonomous development goal:");
-                            return TRUE;
-                        case WM_COMMAND:
-                            if (LOWORD(wp) == IDOK) {
-                                GetDlgItemTextA(hwnd, 102, (char*)lp, 2048);
-                                EndDialog(hwnd, IDOK);
-                                return TRUE;
-                            } else if (LOWORD(wp) == IDCANCEL) {
-                                EndDialog(hwnd, IDCANCEL);
-                                return TRUE;
+                if (DialogBoxParamA(
+                        m_hInstance, "AGENT_PROMPT_DLG", m_hwndMain,
+                        [](HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) -> INT_PTR
+                        {
+                            switch (msg)
+                            {
+                                case WM_INITDIALOG:
+                                    SetWindowTextA(hwnd, "Omega Goal");
+                                    SetWindowTextA(GetDlgItem(hwnd, 101), "Enter autonomous development goal:");
+                                    return TRUE;
+                                case WM_COMMAND:
+                                    if (LOWORD(wp) == IDOK)
+                                    {
+                                        GetDlgItemTextA(hwnd, 102, (char*)lp, 2048);
+                                        EndDialog(hwnd, IDOK);
+                                        return TRUE;
+                                    }
+                                    else if (LOWORD(wp) == IDCANCEL)
+                                    {
+                                        EndDialog(hwnd, IDCANCEL);
+                                        return TRUE;
+                                    }
+                                    break;
                             }
-                            break;
-                        }
-                        return FALSE;
-                    }, (LPARAM)goalBuf) != IDOK)
+                            return FALSE;
+                        },
+                        (LPARAM)goalBuf) != IDOK)
                 {
-                    appendToOutput("[OmegaOrchestrator] Goal input cancelled",
-                                   "General", OutputSeverity::Info);
+                    appendToOutput("[OmegaOrchestrator] Goal input cancelled", "General", OutputSeverity::Info);
                     return true;
                 }
 
                 goal = goalBuf;
                 if (goal.empty())
                 {
-                    appendToOutput("[OmegaOrchestrator] Goal is required",
-                                   "General", OutputSeverity::Warning);
+                    appendToOutput("[OmegaOrchestrator] Goal is required", "General", OutputSeverity::Warning);
                     return true;
                 }
             }
@@ -11995,7 +12776,7 @@ bool Win32IDE::handleOmegaOrchestratorCommand(int commandId)
             setWindowText(m_hwndCopilotChatInput, "");
 
             if (m_hwndStatusBar)
-                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Phase Ω: Goal set");
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Phase Ω: Goal set");
             break;
         }
 
@@ -12014,19 +12795,19 @@ bool Win32IDE::handleOmegaOrchestratorCommand(int commandId)
             appendToOutput("[OmegaOrchestrator] === OBSERVE PIPELINE STATE ===", "General", OutputSeverity::Info);
             appendToOutput("[Statistics] Ingested requirements: " + std::to_string(stats.requirementsIngested),
                            "General", OutputSeverity::Info);
-            appendToOutput("[Statistics] Tasks created: " + std::to_string(stats.tasksCreated),
-                           "General", OutputSeverity::Info);
-            appendToOutput("[Statistics] Code units generated: " + std::to_string(stats.codeGenerated),
-                           "General", OutputSeverity::Info);
-            appendToOutput("[WorldModel] Fitness score: " + std::to_string(worldModel.fitness),
-                           "General", OutputSeverity::Success);
-            appendToOutput("[WorldModel] Code units: " + std::to_string(worldModel.codeUnits),
-                           "General", OutputSeverity::Info);
-            appendToOutput("[WorldModel] Agents active: " + std::to_string(stats.agentsActive),
-                           "General", OutputSeverity::Info);
+            appendToOutput("[Statistics] Tasks created: " + std::to_string(stats.tasksCreated), "General",
+                           OutputSeverity::Info);
+            appendToOutput("[Statistics] Code units generated: " + std::to_string(stats.codeGenerated), "General",
+                           OutputSeverity::Info);
+            appendToOutput("[WorldModel] Fitness score: " + std::to_string(worldModel.fitness), "General",
+                           OutputSeverity::Success);
+            appendToOutput("[WorldModel] Code units: " + std::to_string(worldModel.codeUnits), "General",
+                           OutputSeverity::Info);
+            appendToOutput("[WorldModel] Agents active: " + std::to_string(stats.agentsActive), "General",
+                           OutputSeverity::Info);
 
             if (m_hwndStatusBar)
-                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Phase Ω: Pipeline state observed");
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Phase Ω: Pipeline state observed");
             break;
         }
 
@@ -12052,7 +12833,7 @@ bool Win32IDE::handleOmegaOrchestratorCommand(int commandId)
             }
 
             if (m_hwndStatusBar)
-                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Phase Ω: Autonomous task cancelled");
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Phase Ω: Autonomous task cancelled");
             break;
         }
 
@@ -12064,8 +12845,8 @@ bool Win32IDE::handleOmegaOrchestratorCommand(int commandId)
                 auto initResult = omega.initialize();
                 if (!initResult.success)
                 {
-                    appendToOutput("[OmegaOrchestrator] Cannot spawn agent: Initialization failed",
-                                   "General", OutputSeverity::Error);
+                    appendToOutput("[OmegaOrchestrator] Cannot spawn agent: Initialization failed", "General",
+                                   OutputSeverity::Error);
                     return true;
                 }
             }
@@ -12075,7 +12856,8 @@ bool Win32IDE::handleOmegaOrchestratorCommand(int commandId)
             if (agentId > 0)
             {
                 appendToOutput("[OmegaOrchestrator] Spawned autonomous agent (ID=" + std::to_string(agentId) +
-                               ") — Architecture role", "General", OutputSeverity::Success);
+                                   ") — Architecture role",
+                               "General", OutputSeverity::Success);
             }
             else
             {
@@ -12084,7 +12866,7 @@ bool Win32IDE::handleOmegaOrchestratorCommand(int commandId)
             }
 
             if (m_hwndStatusBar)
-                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Phase Ω: Autonomous agent spawned");
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Phase Ω: Autonomous agent spawned");
             break;
         }
 
@@ -12093,8 +12875,8 @@ bool Win32IDE::handleOmegaOrchestratorCommand(int commandId)
             // Display OmegaOrchestrator diagnostic and performance statistics
             if (!omega.isActive())
             {
-                appendToOutput("[OmegaOrchestrator] Pipeline not active — no statistics available",
-                               "General", OutputSeverity::Info);
+                appendToOutput("[OmegaOrchestrator] Pipeline not active — no statistics available", "General",
+                               OutputSeverity::Info);
                 return true;
             }
 
@@ -12102,16 +12884,16 @@ bool Win32IDE::handleOmegaOrchestratorCommand(int commandId)
             appendToOutput("[OmegaOrchestrator] === SYSTEM STATISTICS ===", "General", OutputSeverity::Info);
             appendToOutput(std::string("Requirements ingested:   ") + std::to_string(stats.requirementsIngested),
                            "General", OutputSeverity::Info);
-            appendToOutput(std::string("Tasks created:           ") + std::to_string(stats.tasksCreated),
-                           "General", OutputSeverity::Info);
-            appendToOutput(std::string("Code units generated:    ") + std::to_string(stats.codeGenerated),
-                           "General", OutputSeverity::Info);
-            appendToOutput(std::string("Agents active:           ") + std::to_string(stats.agentsActive),
-                           "General", OutputSeverity::Info);
+            appendToOutput(std::string("Tasks created:           ") + std::to_string(stats.tasksCreated), "General",
+                           OutputSeverity::Info);
+            appendToOutput(std::string("Code units generated:    ") + std::to_string(stats.codeGenerated), "General",
+                           OutputSeverity::Info);
+            appendToOutput(std::string("Agents active:           ") + std::to_string(stats.agentsActive), "General",
+                           OutputSeverity::Info);
             appendToOutput("[OmegaOrchestrator] === END STATISTICS ===", "General", OutputSeverity::Info);
 
             if (m_hwndStatusBar)
-                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Phase Ω: Statistics displayed");
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Phase Ω: Statistics displayed");
             break;
         }
 
@@ -12132,58 +12914,65 @@ bool Win32IDE::handleOmegaOrchestratorCommand(int commandId)
 bool Win32IDE::handleAgenticPlanningCommand(int commandId)
 {
     using namespace Agentic;
-    
+
     static std::unique_ptr<AgenticPlanningOrchestrator> s_planner;
     if (!s_planner)
     {
         s_planner = std::make_unique<AgenticPlanningOrchestrator>();
     }
-    
+
     switch (commandId)
     {
         case IDM_PLANNING_START:
         {
             // Generate a plan for a user task
-            appendToOutput("[AgenticPlanning] Starting plan generation workflow...", "General",
-                           OutputSeverity::Info);
-            
+            appendToOutput("[AgenticPlanning] Starting plan generation workflow...", "General", OutputSeverity::Info);
+
             char taskDesc[2048] = {};
             const INT_PTR dlgRc = DialogBoxParamA(
                 m_hInstance, "AGENT_PROMPT_DLG", m_hwndMain,
-                [](HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) -> INT_PTR {
-                    switch (msg) {
-                    case WM_INITDIALOG:
-                        SetWindowTextA(GetDlgItem(hwnd, 101), "Planning task description:");
-                        return TRUE;
-                    case WM_COMMAND:
-                        if (LOWORD(wp) == IDOK) {
-                            GetDlgItemTextA(hwnd, 102, (char*)lp, 2048);
-                            EndDialog(hwnd, IDOK);
+                [](HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) -> INT_PTR
+                {
+                    switch (msg)
+                    {
+                        case WM_INITDIALOG:
+                            SetWindowTextA(GetDlgItem(hwnd, 101), "Planning task description:");
                             return TRUE;
-                        }
-                        if (LOWORD(wp) == IDCANCEL) {
-                            EndDialog(hwnd, IDCANCEL);
-                            return TRUE;
-                        }
-                        break;
+                        case WM_COMMAND:
+                            if (LOWORD(wp) == IDOK)
+                            {
+                                GetDlgItemTextA(hwnd, 102, (char*)lp, 2048);
+                                EndDialog(hwnd, IDOK);
+                                return TRUE;
+                            }
+                            if (LOWORD(wp) == IDCANCEL)
+                            {
+                                EndDialog(hwnd, IDCANCEL);
+                                return TRUE;
+                            }
+                            break;
                     }
                     return FALSE;
                 },
                 (LPARAM)taskDesc);
 
-            if (dlgRc == IDOK) {
+            if (dlgRc == IDOK)
+            {
                 /* taskDesc filled by dialog */
-            } else if (dlgRc == static_cast<INT_PTR>(-1)) {
+            }
+            else if (dlgRc == static_cast<INT_PTR>(-1))
+            {
                 std::string fromChat = getWindowText(m_hwndCopilotChatInput);
-                while (!fromChat.empty() && (fromChat.back() == ' ' || fromChat.back() == '\t' || fromChat.back() == '\r' ||
-                                              fromChat.back() == '\n'))
+                while (!fromChat.empty() && (fromChat.back() == ' ' || fromChat.back() == '\t' ||
+                                             fromChat.back() == '\r' || fromChat.back() == '\n'))
                     fromChat.pop_back();
                 size_t lead = 0;
                 while (lead < fromChat.size() && (fromChat[lead] == ' ' || fromChat[lead] == '\t'))
                     ++lead;
                 if (lead > 0)
                     fromChat = fromChat.substr(lead);
-                if (fromChat.empty()) {
+                if (fromChat.empty())
+                {
                     appendToOutput(
                         "[AgenticPlanning] Prompt dialog resource missing or failed; chat input is empty. Enter a "
                         "task in the chat field and run Planning Start again.",
@@ -12195,12 +12984,15 @@ bool Win32IDE::handleAgenticPlanningCommand(int commandId)
                 const size_t n = std::min(fromChat.size(), sizeof(taskDesc) - 1u);
                 std::memcpy(taskDesc, fromChat.data(), n);
                 taskDesc[n] = '\0';
-            } else {
+            }
+            else
+            {
                 appendToOutput("[AgenticPlanning] Plan generation cancelled", "General", OutputSeverity::Info);
                 return true;
             }
 
-            if (taskDesc[0] == '\0') {
+            if (taskDesc[0] == '\0')
+            {
                 appendToOutput("[AgenticPlanning] Task description required", "General", OutputSeverity::Warning);
                 return true;
             }
@@ -12208,20 +13000,17 @@ bool Win32IDE::handleAgenticPlanningCommand(int commandId)
             ExecutionPlan* plan = s_planner->generatePlanForTask(taskDesc);
             if (!plan)
             {
-                appendToOutput("[AgenticPlanning] Failed to generate plan", "General",
-                               OutputSeverity::Error);
+                appendToOutput("[AgenticPlanning] Failed to generate plan", "General", OutputSeverity::Error);
                 return true;
             }
 
-            appendToOutput("[AgenticPlanning] Plan generated: " + plan->plan_id, "General",
-                           OutputSeverity::Success);
-            appendToOutput("[AgenticPlanning] Description: " + plan->description, "General",
-                           OutputSeverity::Info);
+            appendToOutput("[AgenticPlanning] Plan generated: " + plan->plan_id, "General", OutputSeverity::Success);
+            appendToOutput("[AgenticPlanning] Description: " + plan->description, "General", OutputSeverity::Info);
             appendToOutput("[AgenticPlanning] Steps: " + std::to_string(plan->steps.size()), "General",
                            OutputSeverity::Info);
-            appendToOutput("[AgenticPlanning] Requires human review: " + 
-                           std::string(plan->requires_human_review ? "YES" : "NO"), "General",
-                           OutputSeverity::Info);
+            appendToOutput("[AgenticPlanning] Requires human review: " +
+                               std::string(plan->requires_human_review ? "YES" : "NO"),
+                           "General", OutputSeverity::Info);
 
             for (size_t i = 0; i < plan->steps.size(); ++i)
             {
@@ -12229,23 +13018,34 @@ bool Win32IDE::handleAgenticPlanningCommand(int commandId)
                 std::string riskStr = "UNKNOWN";
                 switch (step.risk_level)
                 {
-                    case StepRisk::VeryLow:  riskStr = "VERY_LOW";  break;
-                    case StepRisk::Low:      riskStr = "LOW";       break;
-                    case StepRisk::Medium:   riskStr = "MEDIUM";    break;
-                    case StepRisk::High:     riskStr = "HIGH";      break;
-                    case StepRisk::Critical: riskStr = "CRITICAL";  break;
+                    case StepRisk::VeryLow:
+                        riskStr = "VERY_LOW";
+                        break;
+                    case StepRisk::Low:
+                        riskStr = "LOW";
+                        break;
+                    case StepRisk::Medium:
+                        riskStr = "MEDIUM";
+                        break;
+                    case StepRisk::High:
+                        riskStr = "HIGH";
+                        break;
+                    case StepRisk::Critical:
+                        riskStr = "CRITICAL";
+                        break;
                 }
-                
-                appendToOutput("[Step " + std::to_string(i) + "] " + step.title + 
-                               " [Risk: " + riskStr + "] [AutoApprove: " +
-                               std::string(step.eligible_for_auto_approval ? "YES" : "NO") + "]",
+
+                appendToOutput("[Step " + std::to_string(i) + "] " + step.title + " [Risk: " + riskStr +
+                                   "] [AutoApprove: " + std::string(step.eligible_for_auto_approval ? "YES" : "NO") +
+                                   "]",
                                "General", OutputSeverity::Info);
             }
 
             if (m_hwndStatusBar)
                 SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
-                           (LPARAM)("Planning: " + std::to_string(plan->steps.size()) +
-                                   " steps, " + std::to_string(plan->pending_approvals) + " pending").c_str());
+                            (LPARAM)("Planning: " + std::to_string(plan->steps.size()) + " steps, " +
+                                     std::to_string(plan->pending_approvals) + " pending")
+                                .c_str());
             break;
         }
 
@@ -12256,13 +13056,12 @@ bool Win32IDE::handleAgenticPlanningCommand(int commandId)
             int pendingCount = s_planner->getPendingApprovalCount();
 
             appendToOutput("[AgenticPlanning] === APPROVAL QUEUE ===", "General", OutputSeverity::Info);
-            appendToOutput("[AgenticPlanning] Total pending approvals: " + std::to_string(pendingCount),
-                           "General", OutputSeverity::Info);
+            appendToOutput("[AgenticPlanning] Total pending approvals: " + std::to_string(pendingCount), "General",
+                           OutputSeverity::Info);
 
             if (pending.empty())
             {
-                appendToOutput("[AgenticPlanning] No pending approvals", "General",
-                               OutputSeverity::Success);
+                appendToOutput("[AgenticPlanning] No pending approvals", "General", OutputSeverity::Success);
             }
             else
             {
@@ -12273,8 +13072,8 @@ bool Win32IDE::handleAgenticPlanningCommand(int commandId)
                     {
                         const auto& step = plan_ptr->steps[step_idx];
                         appendToOutput("[" + std::to_string(i) + "] Step[" + std::to_string(step_idx) +
-                                       "]: " + step.title + " (Pending approval)", "General",
-                                       OutputSeverity::Warning);
+                                           "]: " + step.title + " (Pending approval)",
+                                       "General", OutputSeverity::Warning);
                     }
                 }
             }
@@ -12283,7 +13082,7 @@ bool Win32IDE::handleAgenticPlanningCommand(int commandId)
 
             if (m_hwndStatusBar)
                 SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
-                           (LPARAM)("Planning: " + std::to_string(pendingCount) + " pending approvals").c_str());
+                            (LPARAM)("Planning: " + std::to_string(pendingCount) + " pending approvals").c_str());
             break;
         }
 
@@ -12293,27 +13092,27 @@ bool Win32IDE::handleAgenticPlanningCommand(int commandId)
             auto pending = s_planner->getPendingApprovals();
             if (pending.empty())
             {
-                appendToOutput("[AgenticPlanning] No pending steps to approve", "General",
-                               OutputSeverity::Info);
+                appendToOutput("[AgenticPlanning] No pending steps to approve", "General", OutputSeverity::Info);
                 return true;
             }
 
             const auto& [plan_ptr, step_idx] = pending[0];
             if (!plan_ptr || step_idx >= static_cast<int>(plan_ptr->steps.size()))
             {
-                appendToOutput("[AgenticPlanning] Invalid plan/step reference", "General",
-                               OutputSeverity::Error);
+                appendToOutput("[AgenticPlanning] Invalid plan/step reference", "General", OutputSeverity::Error);
                 return true;
             }
 
             s_planner->approveStep(plan_ptr, step_idx, "IDE_USER", "Approved via IDE command");
-            appendToOutput("[AgenticPlanning] Step[" + std::to_string(step_idx) + "] APPROVED: " +
-                           plan_ptr->steps[step_idx].title, "General", OutputSeverity::Success);
+            appendToOutput("[AgenticPlanning] Step[" + std::to_string(step_idx) +
+                               "] APPROVED: " + plan_ptr->steps[step_idx].title,
+                           "General", OutputSeverity::Success);
 
             if (m_hwndStatusBar)
                 SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
-                           (LPARAM)("Planning: Step approved - Pending: " +
-                                   std::to_string(s_planner->getPendingApprovalCount())).c_str());
+                            (LPARAM)("Planning: Step approved - Pending: " +
+                                     std::to_string(s_planner->getPendingApprovalCount()))
+                                .c_str());
             break;
         }
 
@@ -12323,26 +13122,24 @@ bool Win32IDE::handleAgenticPlanningCommand(int commandId)
             auto pending = s_planner->getPendingApprovals();
             if (pending.empty())
             {
-                appendToOutput("[AgenticPlanning] No pending steps to reject", "General",
-                               OutputSeverity::Info);
+                appendToOutput("[AgenticPlanning] No pending steps to reject", "General", OutputSeverity::Info);
                 return true;
             }
 
             const auto& [plan_ptr, step_idx] = pending[0];
             if (!plan_ptr || step_idx >= static_cast<int>(plan_ptr->steps.size()))
             {
-                appendToOutput("[AgenticPlanning] Invalid plan/step reference", "General",
-                               OutputSeverity::Error);
+                appendToOutput("[AgenticPlanning] Invalid plan/step reference", "General", OutputSeverity::Error);
                 return true;
             }
 
             s_planner->rejectStep(plan_ptr, step_idx, "IDE_USER", "Rejected via IDE command");
-            appendToOutput("[AgenticPlanning] Step[" + std::to_string(step_idx) + "] REJECTED: " +
-                           plan_ptr->steps[step_idx].title, "General", OutputSeverity::Warning);
+            appendToOutput("[AgenticPlanning] Step[" + std::to_string(step_idx) +
+                               "] REJECTED: " + plan_ptr->steps[step_idx].title,
+                           "General", OutputSeverity::Warning);
 
             if (m_hwndStatusBar)
-                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
-                           (LPARAM)"Planning: Step rejected");
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Planning: Step rejected");
             break;
         }
 
@@ -12352,8 +13149,7 @@ bool Win32IDE::handleAgenticPlanningCommand(int commandId)
             auto activePlans = s_planner->getActivePlans();
             if (activePlans.empty())
             {
-                appendToOutput("[AgenticPlanning] No active plans to execute", "General",
-                               OutputSeverity::Info);
+                appendToOutput("[AgenticPlanning] No active plans to execute", "General", OutputSeverity::Info);
                 return true;
             }
 
@@ -12365,8 +13161,9 @@ bool Win32IDE::handleAgenticPlanningCommand(int commandId)
                 int stepIdx = plan->current_step_index;
                 if (stepIdx >= 0 && stepIdx < static_cast<int>(plan->steps.size()))
                 {
-                    appendToOutput("[AgenticPlanning] Executing Step[" + std::to_string(stepIdx) + "]: " +
-                                   plan->steps[stepIdx].title, "General", OutputSeverity::Success);
+                    appendToOutput("[AgenticPlanning] Executing Step[" + std::to_string(stepIdx) +
+                                       "]: " + plan->steps[stepIdx].title,
+                                   "General", OutputSeverity::Success);
                 }
             }
             else
@@ -12376,7 +13173,7 @@ bool Win32IDE::handleAgenticPlanningCommand(int commandId)
             }
 
             if (m_hwndStatusBar)
-                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Planning: Executing step");
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Planning: Executing step");
             break;
         }
 
@@ -12386,8 +13183,7 @@ bool Win32IDE::handleAgenticPlanningCommand(int commandId)
             auto activePlans = s_planner->getActivePlans();
             if (activePlans.empty())
             {
-                appendToOutput("[AgenticPlanning] No active plans to execute", "General",
-                               OutputSeverity::Info);
+                appendToOutput("[AgenticPlanning] No active plans to execute", "General", OutputSeverity::Info);
                 return true;
             }
 
@@ -12397,15 +13193,13 @@ bool Win32IDE::handleAgenticPlanningCommand(int commandId)
 
             s_planner->executeEntirePlan(plan);
 
-            appendToOutput("[AgenticPlanning] Plan execution initiated", "General",
-                           OutputSeverity::Success);
-            appendToOutput("[AgenticPlanning] Total steps: " + std::to_string(plan->steps.size()),
-                           "General", OutputSeverity::Info);
+            appendToOutput("[AgenticPlanning] Plan execution initiated", "General", OutputSeverity::Success);
+            appendToOutput("[AgenticPlanning] Total steps: " + std::to_string(plan->steps.size()), "General",
+                           OutputSeverity::Info);
 
             if (m_hwndStatusBar)
                 SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
-                           (LPARAM)("Planning: Executing " + std::to_string(plan->steps.size()) +
-                                   " steps").c_str());
+                            (LPARAM)("Planning: Executing " + std::to_string(plan->steps.size()) + " steps").c_str());
             break;
         }
 
@@ -12415,27 +13209,26 @@ bool Win32IDE::handleAgenticPlanningCommand(int commandId)
             auto activePlans = s_planner->getActivePlans();
             if (activePlans.empty())
             {
-                appendToOutput("[AgenticPlanning] No active plans to rollback", "General",
-                               OutputSeverity::Info);
+                appendToOutput("[AgenticPlanning] No active plans to rollback", "General", OutputSeverity::Info);
                 return true;
             }
 
             ExecutionPlan* plan = activePlans[0];
             if (plan->current_step_index < 0)
             {
-                appendToOutput("[AgenticPlanning] No steps have been executed yet", "General",
-                               OutputSeverity::Warning);
+                appendToOutput("[AgenticPlanning] No steps have been executed yet", "General", OutputSeverity::Warning);
                 return true;
             }
 
             int stepIdx = plan->current_step_index;
             s_planner->rollbackStep(plan, stepIdx);
 
-            appendToOutput("[AgenticPlanning] Step[" + std::to_string(stepIdx) + "] rolled back: " +
-                           plan->steps[stepIdx].title, "General", OutputSeverity::Success);
+            appendToOutput("[AgenticPlanning] Step[" + std::to_string(stepIdx) +
+                               "] rolled back: " + plan->steps[stepIdx].title,
+                           "General", OutputSeverity::Success);
 
             if (m_hwndStatusBar)
-                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Planning: Step rolled back");
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Planning: Step rolled back");
             break;
         }
 
@@ -12451,10 +13244,13 @@ bool Win32IDE::handleAgenticPlanningCommand(int commandId)
 
             ApprovalPolicy policy = ApprovalPolicy::Standard();
             std::string policyName = "STANDARD";
-            if (mode.find("conservative") != std::string::npos || mode == "c") {
+            if (mode.find("conservative") != std::string::npos || mode == "c")
+            {
                 policy = ApprovalPolicy::Conservative();
                 policyName = "CONSERVATIVE";
-            } else if (mode.find("aggressive") != std::string::npos || mode == "a") {
+            }
+            else if (mode.find("aggressive") != std::string::npos || mode == "a")
+            {
                 policy = ApprovalPolicy::Aggressive();
                 policyName = "AGGRESSIVE";
             }
@@ -12463,19 +13259,18 @@ bool Win32IDE::handleAgenticPlanningCommand(int commandId)
 
             appendToOutput("[AgenticPlanning] Approval policy set to " + policyName, "General",
                            OutputSeverity::Success);
-            appendToOutput("[AgenticPlanning] Auto-approve VeryLow: " + 
-                           std::string(policy.auto_approve_very_low_risk ? "YES" : "NO"), "General",
-                           OutputSeverity::Info);
-            appendToOutput("[AgenticPlanning] Require approval High: " + 
-                           std::string(policy.require_approval_high ? "YES" : "NO"), "General",
-                           OutputSeverity::Info);
-            appendToOutput("[AgenticPlanning] Approval timeout: " + 
-                           std::to_string(policy.approval_timeout_hours) + " hours", "General",
-                           OutputSeverity::Info);
+            appendToOutput("[AgenticPlanning] Auto-approve VeryLow: " +
+                               std::string(policy.auto_approve_very_low_risk ? "YES" : "NO"),
+                           "General", OutputSeverity::Info);
+            appendToOutput("[AgenticPlanning] Require approval High: " +
+                               std::string(policy.require_approval_high ? "YES" : "NO"),
+                           "General", OutputSeverity::Info);
+            appendToOutput("[AgenticPlanning] Approval timeout: " + std::to_string(policy.approval_timeout_hours) +
+                               " hours",
+                           "General", OutputSeverity::Info);
 
             if (m_hwndStatusBar)
-                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
-                           (LPARAM)("Planning: Policy set to " + policyName).c_str());
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)("Planning: Policy set to " + policyName).c_str());
             break;
         }
 
@@ -12485,18 +13280,17 @@ bool Win32IDE::handleAgenticPlanningCommand(int commandId)
             auto activePlans = s_planner->getActivePlans();
             if (activePlans.empty())
             {
-                appendToOutput("[AgenticPlanning] No active plans", "General",
-                               OutputSeverity::Info);
+                appendToOutput("[AgenticPlanning] No active plans", "General", OutputSeverity::Info);
                 return true;
             }
 
             ExecutionPlan* plan = activePlans[0];
-            appendToOutput("[AgenticPlanning] === EXECUTION STATUS ===", "General",
-                           OutputSeverity::Info);
+            appendToOutput("[AgenticPlanning] === EXECUTION STATUS ===", "General", OutputSeverity::Info);
             appendToOutput("[Plan ID] " + plan->plan_id, "General", OutputSeverity::Info);
             appendToOutput("[Description] " + plan->description, "General", OutputSeverity::Info);
             appendToOutput("[Current Step] " + std::to_string(plan->current_step_index + 1) + " / " +
-                           std::to_string(plan->steps.size()), "General", OutputSeverity::Info);
+                               std::to_string(plan->steps.size()),
+                           "General", OutputSeverity::Info);
             appendToOutput("[Approved Steps] " + std::to_string(plan->approved_steps), "General",
                            OutputSeverity::Success);
             appendToOutput("[Rejected Steps] " + std::to_string(plan->rejected_steps), "General",
@@ -12508,20 +13302,19 @@ bool Win32IDE::handleAgenticPlanningCommand(int commandId)
 
             if (m_hwndStatusBar)
                 SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
-                           (LPARAM)("Planning: " + std::to_string(plan->approved_steps) +
-                                   " approved, " + std::to_string(plan->pending_approvals) + " pending").c_str());
+                            (LPARAM)("Planning: " + std::to_string(plan->approved_steps) + " approved, " +
+                                     std::to_string(plan->pending_approvals) + " pending")
+                                .c_str());
             break;
         }
 
         case IDM_PLANNING_DIAGNOSTICS:
         {
             // Display comprehensive diagnostics
-            appendToOutput("[AgenticPlanning] === FULL DIAGNOSTICS ===", "General",
-                           OutputSeverity::Info);
+            appendToOutput("[AgenticPlanning] === FULL DIAGNOSTICS ===", "General", OutputSeverity::Info);
 
             auto activePlans = s_planner->getActivePlans();
-            appendToOutput("[Active Plans] " + std::to_string(activePlans.size()), "General",
-                           OutputSeverity::Info);
+            appendToOutput("[Active Plans] " + std::to_string(activePlans.size()), "General", OutputSeverity::Info);
 
             int totalPending = s_planner->getPendingApprovalCount();
             appendToOutput("[Total Pending Approvals] " + std::to_string(totalPending), "General",
@@ -12529,38 +13322,47 @@ bool Win32IDE::handleAgenticPlanningCommand(int commandId)
 
             ApprovalPolicy policy = s_planner->getApprovalPolicy();
             appendToOutput("[Policy] Auto-VeryLow: " + std::string(policy.auto_approve_very_low_risk ? "Y" : "N") +
-                           " | Auto-Low: " + std::string(policy.auto_approve_low_risk ? "Y" : "N") +
-                           " | Timeout: " + std::to_string(policy.approval_timeout_hours) + "h",
+                               " | Auto-Low: " + std::string(policy.auto_approve_low_risk ? "Y" : "N") +
+                               " | Timeout: " + std::to_string(policy.approval_timeout_hours) + "h",
                            "General", OutputSeverity::Info);
 
             if (!activePlans.empty())
             {
                 ExecutionPlan* plan = activePlans[0];
                 appendToOutput("[Current Plan] " + plan->plan_id, "General", OutputSeverity::Info);
-                
+
                 for (size_t i = 0; i < plan->steps.size(); ++i)
                 {
                     const auto& step = plan->steps[i];
                     std::string statusStr;
                     switch (step.approval_status)
                     {
-                        case ApprovalStatus::Pending:       statusStr = "PENDING"; break;
-                        case ApprovalStatus::Approved:      statusStr = "APPROVED"; break;
-                        case ApprovalStatus::ApprovedAuto:  statusStr = "AUTO-APPROVED"; break;
-                        case ApprovalStatus::Rejected:      statusStr = "REJECTED"; break;
-                        case ApprovalStatus::Expired:       statusStr = "EXPIRED"; break;
+                        case ApprovalStatus::Pending:
+                            statusStr = "PENDING";
+                            break;
+                        case ApprovalStatus::Approved:
+                            statusStr = "APPROVED";
+                            break;
+                        case ApprovalStatus::ApprovedAuto:
+                            statusStr = "AUTO-APPROVED";
+                            break;
+                        case ApprovalStatus::Rejected:
+                            statusStr = "REJECTED";
+                            break;
+                        case ApprovalStatus::Expired:
+                            statusStr = "EXPIRED";
+                            break;
                     }
-                    
-                    appendToOutput("[Step " + std::to_string(i) + "] " + step.title +
-                                   " -> " + statusStr, "General", OutputSeverity::Info);
+
+                    appendToOutput("[Step " + std::to_string(i) + "] " + step.title + " -> " + statusStr, "General",
+                                   OutputSeverity::Info);
                 }
             }
 
             appendToOutput("[AgenticPlanning] === END DIAGNOSTICS ===", "General", OutputSeverity::Info);
 
             if (m_hwndStatusBar)
-                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
-                           (LPARAM)("Planning: Diagnostics displayed"));
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)("Planning: Diagnostics displayed"));
             break;
         }
 
@@ -12591,8 +13393,7 @@ bool Win32IDE::handleKnowledgeGraphCommand(int commandId)
         {
             if (kg.isInitialized())
             {
-                appendToOutput("[KnowledgeGraph] Already initialized", "General",
-                               OutputSeverity::Info);
+                appendToOutput("[KnowledgeGraph] Already initialized", "General", OutputSeverity::Info);
                 return true;
             }
 
@@ -12600,20 +13401,19 @@ bool Win32IDE::handleKnowledgeGraphCommand(int commandId)
             auto result = kg.initialize(config);
             if (result.success)
             {
-                appendToOutput("[KnowledgeGraph] Initialized — SQLite-backed persistent learning active",
-                               "General", OutputSeverity::Success);
-                appendToOutput("[KnowledgeGraph] DB: " + std::string(config.dbPath), "General",
-                               OutputSeverity::Info);
+                appendToOutput("[KnowledgeGraph] Initialized — SQLite-backed persistent learning active", "General",
+                               OutputSeverity::Success);
+                appendToOutput("[KnowledgeGraph] DB: " + std::string(config.dbPath), "General", OutputSeverity::Info);
             }
             else
             {
-                appendToOutput("[KnowledgeGraph] Init failed: " + std::string(result.detail),
-                               "General", OutputSeverity::Error);
+                appendToOutput("[KnowledgeGraph] Init failed: " + std::string(result.detail), "General",
+                               OutputSeverity::Error);
             }
 
             if (m_hwndStatusBar)
                 SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
-                           (LPARAM)(result.success ? "Knowledge Graph: Active" : "Knowledge Graph: Failed"));
+                            (LPARAM)(result.success ? "Knowledge Graph: Active" : "Knowledge Graph: Failed"));
             break;
         }
 
@@ -12625,53 +13425,49 @@ bool Win32IDE::handleKnowledgeGraphCommand(int commandId)
             }
 
             // Record an architectural decision for the current session
-            auto result = kg.recordDecision(
-                DecisionType::ArchitecturalChoice,
-                "Wired KnowledgeGraphCore into IDE command dispatch",
-                "Enables cross-session learning, decision archaeology, and Bayesian preference tracking directly from IDE commands",
-                "Win32IDE_Commands.cpp",
-                0);
+            auto result = kg.recordDecision(DecisionType::ArchitecturalChoice,
+                                            "Wired KnowledgeGraphCore into IDE command dispatch",
+                                            "Enables cross-session learning, decision archaeology, and Bayesian "
+                                            "preference tracking directly from IDE commands",
+                                            "Win32IDE_Commands.cpp", 0);
 
             if (result.success)
             {
-                appendToOutput("[KnowledgeGraph] Decision recorded successfully", "General",
-                               OutputSeverity::Success);
+                appendToOutput("[KnowledgeGraph] Decision recorded successfully", "General", OutputSeverity::Success);
             }
             else
             {
-                appendToOutput("[KnowledgeGraph] Failed to record: " + std::string(result.detail),
-                               "General", OutputSeverity::Error);
+                appendToOutput("[KnowledgeGraph] Failed to record: " + std::string(result.detail), "General",
+                               OutputSeverity::Error);
             }
 
             if (m_hwndStatusBar)
-                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Knowledge: Decision recorded");
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Knowledge: Decision recorded");
             break;
         }
 
         case IDM_KNOWLEDGE_SEARCH:
         {
-            if (!kg.isInitialized()) kg.initialize();
+            if (!kg.isInitialized())
+                kg.initialize();
 
             auto matches = kg.searchByText("architecture decision", 10);
 
-            appendToOutput("[KnowledgeGraph] === SEMANTIC SEARCH RESULTS ===", "General",
-                           OutputSeverity::Info);
-            appendToOutput("[KnowledgeGraph] Query: 'architecture decision'", "General",
-                           OutputSeverity::Info);
+            appendToOutput("[KnowledgeGraph] === SEMANTIC SEARCH RESULTS ===", "General", OutputSeverity::Info);
+            appendToOutput("[KnowledgeGraph] Query: 'architecture decision'", "General", OutputSeverity::Info);
 
             if (matches.empty())
             {
-                appendToOutput("[KnowledgeGraph] No matching decisions found", "General",
-                               OutputSeverity::Info);
+                appendToOutput("[KnowledgeGraph] No matching decisions found", "General", OutputSeverity::Info);
             }
             else
             {
                 for (size_t i = 0; i < matches.size(); ++i)
                 {
                     const auto& m = matches[i];
-                    appendToOutput("[" + std::to_string(i) + "] (sim=" +
-                                   std::to_string(m.similarity).substr(0, 5) + ") " +
-                                   std::string(m.summary), "General", OutputSeverity::Info);
+                    appendToOutput("[" + std::to_string(i) + "] (sim=" + std::to_string(m.similarity).substr(0, 5) +
+                                       ") " + std::string(m.summary),
+                                   "General", OutputSeverity::Info);
                 }
             }
 
@@ -12679,23 +13475,22 @@ bool Win32IDE::handleKnowledgeGraphCommand(int commandId)
 
             if (m_hwndStatusBar)
                 SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
-                           (LPARAM)("Knowledge: " + std::to_string(matches.size()) + " results").c_str());
+                            (LPARAM)("Knowledge: " + std::to_string(matches.size()) + " results").c_str());
             break;
         }
 
         case IDM_KNOWLEDGE_DECISIONS:
         {
-            if (!kg.isInitialized()) kg.initialize();
+            if (!kg.isInitialized())
+                kg.initialize();
 
             auto decisions = kg.getDecisions(25);
 
-            appendToOutput("[KnowledgeGraph] === DECISION HISTORY (last 25) ===", "General",
-                           OutputSeverity::Info);
+            appendToOutput("[KnowledgeGraph] === DECISION HISTORY (last 25) ===", "General", OutputSeverity::Info);
 
             if (decisions.empty())
             {
-                appendToOutput("[KnowledgeGraph] No decisions recorded yet", "General",
-                               OutputSeverity::Info);
+                appendToOutput("[KnowledgeGraph] No decisions recorded yet", "General", OutputSeverity::Info);
             }
             else
             {
@@ -12705,25 +13500,43 @@ bool Win32IDE::handleKnowledgeGraphCommand(int commandId)
                     const char* typeStr = "Unknown";
                     switch (d.type)
                     {
-                        case DecisionType::ArchitecturalChoice:     typeStr = "ARCH"; break;
-                        case DecisionType::RefactorReason:          typeStr = "REFACTOR"; break;
-                        case DecisionType::BugFixRationale:         typeStr = "BUGFIX"; break;
-                        case DecisionType::PerformanceOptimization: typeStr = "PERF"; break;
-                        case DecisionType::SecurityDecision:        typeStr = "SECURITY"; break;
-                        case DecisionType::UserPreference:          typeStr = "PREF"; break;
-                        case DecisionType::ToolChoice:              typeStr = "TOOL"; break;
-                        case DecisionType::DependencyChoice:        typeStr = "DEP"; break;
-                        case DecisionType::ApiDesign:               typeStr = "API"; break;
-                        case DecisionType::TestStrategy:            typeStr = "TEST"; break;
+                        case DecisionType::ArchitecturalChoice:
+                            typeStr = "ARCH";
+                            break;
+                        case DecisionType::RefactorReason:
+                            typeStr = "REFACTOR";
+                            break;
+                        case DecisionType::BugFixRationale:
+                            typeStr = "BUGFIX";
+                            break;
+                        case DecisionType::PerformanceOptimization:
+                            typeStr = "PERF";
+                            break;
+                        case DecisionType::SecurityDecision:
+                            typeStr = "SECURITY";
+                            break;
+                        case DecisionType::UserPreference:
+                            typeStr = "PREF";
+                            break;
+                        case DecisionType::ToolChoice:
+                            typeStr = "TOOL";
+                            break;
+                        case DecisionType::DependencyChoice:
+                            typeStr = "DEP";
+                            break;
+                        case DecisionType::ApiDesign:
+                            typeStr = "API";
+                            break;
+                        case DecisionType::TestStrategy:
+                            typeStr = "TEST";
+                            break;
                     }
-                    appendToOutput("[" + std::to_string(i) + "] [" + typeStr + "] " +
-                                   std::string(d.summary) + " (confidence: " +
-                                   std::to_string(static_cast<int>(d.confidence * 100)) + "%)",
+                    appendToOutput("[" + std::to_string(i) + "] [" + typeStr + "] " + std::string(d.summary) +
+                                       " (confidence: " + std::to_string(static_cast<int>(d.confidence * 100)) + "%)",
                                    "General", OutputSeverity::Info);
                     if (strlen(d.rationale) > 0)
                     {
-                        appendToOutput("    WHY: " + std::string(d.rationale), "General",
-                                       OutputSeverity::Info);
+                        appendToOutput("    WHY: " + std::string(d.rationale), "General", OutputSeverity::Info);
                     }
                 }
             }
@@ -12734,16 +13547,16 @@ bool Win32IDE::handleKnowledgeGraphCommand(int commandId)
 
         case IDM_KNOWLEDGE_PREFERENCES:
         {
-            if (!kg.isInitialized()) kg.initialize();
+            if (!kg.isInitialized())
+                kg.initialize();
 
             auto learned = kg.getLearnedPreferences();
             auto all = kg.getAllPreferences();
 
-            appendToOutput("[KnowledgeGraph] === USER PREFERENCES ===", "General",
-                           OutputSeverity::Info);
-            appendToOutput("[KnowledgeGraph] Learned (above threshold): " +
-                           std::to_string(learned.size()) + " / Total: " +
-                           std::to_string(all.size()), "General", OutputSeverity::Info);
+            appendToOutput("[KnowledgeGraph] === USER PREFERENCES ===", "General", OutputSeverity::Info);
+            appendToOutput("[KnowledgeGraph] Learned (above threshold): " + std::to_string(learned.size()) +
+                               " / Total: " + std::to_string(all.size()),
+                           "General", OutputSeverity::Info);
 
             for (size_t i = 0; i < learned.size(); ++i)
             {
@@ -12751,21 +13564,41 @@ bool Win32IDE::handleKnowledgeGraphCommand(int commandId)
                 const char* catStr = "Unknown";
                 switch (p.category)
                 {
-                    case PreferenceCategory::LoopStyle:        catStr = "Loop"; break;
-                    case PreferenceCategory::NamingConvention: catStr = "Naming"; break;
-                    case PreferenceCategory::ErrorHandling:    catStr = "ErrHandling"; break;
-                    case PreferenceCategory::MemoryManagement: catStr = "Memory"; break;
-                    case PreferenceCategory::CodeOrganization: catStr = "CodeOrg"; break;
-                    case PreferenceCategory::TestingStyle:     catStr = "Testing"; break;
-                    case PreferenceCategory::CommentStyle:     catStr = "Comments"; break;
-                    case PreferenceCategory::IndentationStyle: catStr = "Indent"; break;
-                    case PreferenceCategory::BraceStyle:       catStr = "Braces"; break;
-                    case PreferenceCategory::TemplateUsage:    catStr = "Templates"; break;
+                    case PreferenceCategory::LoopStyle:
+                        catStr = "Loop";
+                        break;
+                    case PreferenceCategory::NamingConvention:
+                        catStr = "Naming";
+                        break;
+                    case PreferenceCategory::ErrorHandling:
+                        catStr = "ErrHandling";
+                        break;
+                    case PreferenceCategory::MemoryManagement:
+                        catStr = "Memory";
+                        break;
+                    case PreferenceCategory::CodeOrganization:
+                        catStr = "CodeOrg";
+                        break;
+                    case PreferenceCategory::TestingStyle:
+                        catStr = "Testing";
+                        break;
+                    case PreferenceCategory::CommentStyle:
+                        catStr = "Comments";
+                        break;
+                    case PreferenceCategory::IndentationStyle:
+                        catStr = "Indent";
+                        break;
+                    case PreferenceCategory::BraceStyle:
+                        catStr = "Braces";
+                        break;
+                    case PreferenceCategory::TemplateUsage:
+                        catStr = "Templates";
+                        break;
                 }
-                appendToOutput("[" + std::string(catStr) + "] " + std::string(p.key) +
-                               " -> " + std::string(p.preferredValue) +
-                               " (Bayesian: " + std::to_string(static_cast<int>(p.bayesianScore * 100)) +
-                               "%, obs: " + std::to_string(p.observationCount) + ")",
+                appendToOutput("[" + std::string(catStr) + "] " + std::string(p.key) + " -> " +
+                                   std::string(p.preferredValue) +
+                                   " (Bayesian: " + std::to_string(static_cast<int>(p.bayesianScore * 100)) +
+                                   "%, obs: " + std::to_string(p.observationCount) + ")",
                                "General", OutputSeverity::Success);
             }
 
@@ -12775,17 +13608,16 @@ bool Win32IDE::handleKnowledgeGraphCommand(int commandId)
 
         case IDM_KNOWLEDGE_ARCHAEOLOGY:
         {
-            if (!kg.isInitialized()) kg.initialize();
+            if (!kg.isInitialized())
+                kg.initialize();
 
             auto history = kg.searchHistory("*", 20);
 
-            appendToOutput("[KnowledgeGraph] === CODEBASE ARCHAEOLOGY ===", "General",
-                           OutputSeverity::Info);
+            appendToOutput("[KnowledgeGraph] === CODEBASE ARCHAEOLOGY ===", "General", OutputSeverity::Info);
 
             if (history.empty())
             {
-                appendToOutput("[KnowledgeGraph] No change archaeology recorded yet", "General",
-                               OutputSeverity::Info);
+                appendToOutput("[KnowledgeGraph] No change archaeology recorded yet", "General", OutputSeverity::Info);
             }
             else
             {
@@ -12793,14 +13625,11 @@ bool Win32IDE::handleKnowledgeGraphCommand(int commandId)
                 {
                     const auto& h = history[i];
                     appendToOutput("[" + std::to_string(i) + "] " + std::string(h.file) +
-                                   "::" + std::string(h.functionName), "General",
-                                   OutputSeverity::Info);
-                    appendToOutput("    WAS: " + std::string(h.oldBehavior), "General",
-                                   OutputSeverity::Warning);
-                    appendToOutput("    NOW: " + std::string(h.newBehavior), "General",
-                                   OutputSeverity::Success);
-                    appendToOutput("    WHY: " + std::string(h.reason), "General",
-                                   OutputSeverity::Info);
+                                       "::" + std::string(h.functionName),
+                                   "General", OutputSeverity::Info);
+                    appendToOutput("    WAS: " + std::string(h.oldBehavior), "General", OutputSeverity::Warning);
+                    appendToOutput("    NOW: " + std::string(h.newBehavior), "General", OutputSeverity::Success);
+                    appendToOutput("    WHY: " + std::string(h.reason), "General", OutputSeverity::Info);
                 }
             }
 
@@ -12810,23 +13639,21 @@ bool Win32IDE::handleKnowledgeGraphCommand(int commandId)
 
         case IDM_KNOWLEDGE_GRAPH:
         {
-            if (!kg.isInitialized()) kg.initialize();
+            if (!kg.isInitialized())
+                kg.initialize();
 
             auto stats = kg.getStats();
 
-            appendToOutput("[KnowledgeGraph] === CODE RELATIONSHIP GRAPH ===", "General",
-                           OutputSeverity::Info);
-            appendToOutput("[KnowledgeGraph] Total relationships: " +
-                           std::to_string(stats.totalRelationships), "General",
-                           OutputSeverity::Info);
+            appendToOutput("[KnowledgeGraph] === CODE RELATIONSHIP GRAPH ===", "General", OutputSeverity::Info);
+            appendToOutput("[KnowledgeGraph] Total relationships: " + std::to_string(stats.totalRelationships),
+                           "General", OutputSeverity::Info);
 
             auto rels = kg.getRelationshipsByType(RelationType::CallsFunction, 10);
             for (size_t i = 0; i < rels.size(); ++i)
             {
                 const auto& r = rels[i];
-                appendToOutput("  " + std::string(r.sourceSymbol) + " -> " +
-                               std::string(r.targetSymbol) + " (strength: " +
-                               std::to_string(static_cast<int>(r.strength * 100)) + "%)",
+                appendToOutput("  " + std::string(r.sourceSymbol) + " -> " + std::string(r.targetSymbol) +
+                                   " (strength: " + std::to_string(static_cast<int>(r.strength * 100)) + "%)",
                                "General", OutputSeverity::Info);
             }
 
@@ -12836,57 +13663,60 @@ bool Win32IDE::handleKnowledgeGraphCommand(int commandId)
 
         case IDM_KNOWLEDGE_EXPORT:
         {
-            if (!kg.isInitialized()) kg.initialize();
+            if (!kg.isInitialized())
+                kg.initialize();
 
             const char* exportPath = "rawrxd_knowledge_export.json";
             auto result = kg.exportToJson(exportPath);
 
             if (result.success)
             {
-                appendToOutput("[KnowledgeGraph] Exported to: " + std::string(exportPath),
-                               "General", OutputSeverity::Success);
+                appendToOutput("[KnowledgeGraph] Exported to: " + std::string(exportPath), "General",
+                               OutputSeverity::Success);
             }
             else
             {
-                appendToOutput("[KnowledgeGraph] Export failed: " + std::string(result.detail),
-                               "General", OutputSeverity::Error);
+                appendToOutput("[KnowledgeGraph] Export failed: " + std::string(result.detail), "General",
+                               OutputSeverity::Error);
             }
 
             if (m_hwndStatusBar)
                 SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
-                           (LPARAM)(result.success ? "Knowledge: Exported" : "Knowledge: Export failed"));
+                            (LPARAM)(result.success ? "Knowledge: Exported" : "Knowledge: Export failed"));
             break;
         }
 
         case IDM_KNOWLEDGE_STATS:
         {
-            if (!kg.isInitialized()) kg.initialize();
+            if (!kg.isInitialized())
+                kg.initialize();
 
             auto stats = kg.getStats();
 
             appendToOutput("[KnowledgeGraph] === STATISTICS ===", "General", OutputSeverity::Info);
-            appendToOutput("Decisions recorded:    " + std::to_string(stats.totalDecisions),
-                           "General", OutputSeverity::Info);
-            appendToOutput("Code relationships:    " + std::to_string(stats.totalRelationships),
-                           "General", OutputSeverity::Info);
-            appendToOutput("User preferences:      " + std::to_string(stats.totalPreferences),
-                           "General", OutputSeverity::Info);
-            appendToOutput("Archaeology entries:   " + std::to_string(stats.totalArcheology),
-                           "General", OutputSeverity::Info);
-            appendToOutput("Semantic queries:      " + std::to_string(stats.semanticQueries),
-                           "General", OutputSeverity::Info);
-            appendToOutput("Preference updates:    " + std::to_string(stats.preferenceUpdates),
-                           "General", OutputSeverity::Info);
-            appendToOutput("Avg query time:        " + std::to_string(stats.avgQueryTimeMs) + " ms",
-                           "General", OutputSeverity::Info);
-            appendToOutput("DB size:               " + std::to_string(stats.dbSizeBytes / 1024) + " KB",
-                           "General", OutputSeverity::Info);
+            appendToOutput("Decisions recorded:    " + std::to_string(stats.totalDecisions), "General",
+                           OutputSeverity::Info);
+            appendToOutput("Code relationships:    " + std::to_string(stats.totalRelationships), "General",
+                           OutputSeverity::Info);
+            appendToOutput("User preferences:      " + std::to_string(stats.totalPreferences), "General",
+                           OutputSeverity::Info);
+            appendToOutput("Archaeology entries:   " + std::to_string(stats.totalArcheology), "General",
+                           OutputSeverity::Info);
+            appendToOutput("Semantic queries:      " + std::to_string(stats.semanticQueries), "General",
+                           OutputSeverity::Info);
+            appendToOutput("Preference updates:    " + std::to_string(stats.preferenceUpdates), "General",
+                           OutputSeverity::Info);
+            appendToOutput("Avg query time:        " + std::to_string(stats.avgQueryTimeMs) + " ms", "General",
+                           OutputSeverity::Info);
+            appendToOutput("DB size:               " + std::to_string(stats.dbSizeBytes / 1024) + " KB", "General",
+                           OutputSeverity::Info);
             appendToOutput("[KnowledgeGraph] === END STATS ===", "General", OutputSeverity::Info);
 
             if (m_hwndStatusBar)
                 SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
-                           (LPARAM)("Knowledge: " + std::to_string(stats.totalDecisions) +
-                                   " decisions, " + std::to_string(stats.totalRelationships) + " rels").c_str());
+                            (LPARAM)("Knowledge: " + std::to_string(stats.totalDecisions) + " decisions, " +
+                                     std::to_string(stats.totalRelationships) + " rels")
+                                .c_str());
             break;
         }
 
@@ -12907,12 +13737,12 @@ bool Win32IDE::handleKnowledgeGraphCommand(int commandId)
             }
             else
             {
-                appendToOutput("[KnowledgeGraph] Flush failed: " + std::string(result.detail),
-                               "General", OutputSeverity::Error);
+                appendToOutput("[KnowledgeGraph] Flush failed: " + std::string(result.detail), "General",
+                               OutputSeverity::Error);
             }
 
             if (m_hwndStatusBar)
-                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Knowledge: Flushed to disk");
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Knowledge: Flushed to disk");
             break;
         }
 
@@ -12935,52 +13765,59 @@ bool Win32IDE::handleKnowledgeGraphCommand(int commandId)
 static std::unique_ptr<Agentic::FailureIntelligenceOrchestrator> g_failureIntelligence;
 
 // Helper: Ensure FailureIntelligence is initialized
-static void ensureFailureIntelligenceInitialized(Win32IDE* ide) {
-    if (!g_failureIntelligence) {
+static void ensureFailureIntelligenceInitialized(Win32IDE* ide)
+{
+    if (!g_failureIntelligence)
+    {
         g_failureIntelligence = std::make_unique<Agentic::FailureIntelligenceOrchestrator>();
 
         // Wire output callback
-        g_failureIntelligence->setAnalysisLogFn([ide](const std::string& log_entry) {
-            if (ide) {
-                ide->appendToOutput("[FailureIntelligence] " + log_entry + "\n",
-                                  "Output", Win32IDE::OutputSeverity::Info);
-            }
-        });
+        g_failureIntelligence->setAnalysisLogFn(
+            [ide](const std::string& log_entry)
+            {
+                if (ide)
+                {
+                    ide->appendToOutput("[FailureIntelligence] " + log_entry + "\n", "Output",
+                                        Win32IDE::OutputSeverity::Info);
+                }
+            });
 
         // Wire failure detection callback
         g_failureIntelligence->setFailureDetectedCallback(
-            [ide](const Agentic::FailureSignal& signal) {
-                if (ide) {
+            [ide](const Agentic::FailureSignal& signal)
+            {
+                if (ide)
+                {
                     std::ostringstream ss;
-                    ss << "🔴 Failure detected in " << signal.source_component
-                       << " (step: " << signal.step_id << ") - "
+                    ss << "🔴 Failure detected in " << signal.source_component << " (step: " << signal.step_id << ") - "
                        << signal.error_message;
-                    ide->appendToOutput(ss.str() + "\n", "Output",
-                                      Win32IDE::OutputSeverity::Warning);
+                    ide->appendToOutput(ss.str() + "\n", "Output", Win32IDE::OutputSeverity::Warning);
                 }
             });
 
         // Wire recovery initiation callback
         g_failureIntelligence->setRecoveryInitiatedCallback(
-            [ide](const Agentic::RecoveryPlan& plan) {
-                if (ide) {
+            [ide](const Agentic::RecoveryPlan& plan)
+            {
+                if (ide)
+                {
                     std::ostringstream ss;
                     ss << "🔧 Recovery initiated: " << plan.strategy_description;
-                    ide->appendToOutput(ss.str() + "\n", "Output",
-                                      Win32IDE::OutputSeverity::Info);
+                    ide->appendToOutput(ss.str() + "\n", "Output", Win32IDE::OutputSeverity::Info);
                 }
             });
 
         // Wire recovery completion callback
         g_failureIntelligence->setRecoveryCompletedCallback(
-            [ide](const Agentic::RecoveryPlan& plan, bool success) {
-                if (ide) {
+            [ide](const Agentic::RecoveryPlan& plan, bool success)
+            {
+                if (ide)
+                {
                     std::ostringstream ss;
-                    ss << (success ? "✅" : "❌") << " Recovery " 
-                       << (success ? "succeeded" : "failed") << ": " << plan.recovery_id;
+                    ss << (success ? "✅" : "❌") << " Recovery " << (success ? "succeeded" : "failed") << ": "
+                       << plan.recovery_id;
                     ide->appendToOutput(ss.str() + "\n", "Output",
-                                      success ? Win32IDE::OutputSeverity::Info : 
-                                              Win32IDE::OutputSeverity::Error);
+                                        success ? Win32IDE::OutputSeverity::Info : Win32IDE::OutputSeverity::Error);
                 }
             });
     }
@@ -12989,308 +13826,325 @@ static void ensureFailureIntelligenceInitialized(Win32IDE* ide) {
 bool Win32IDE::handleFailureIntelligenceCommand(int commandId)
 {
     LOG_INFO("handleFailureIntelligenceCommand: " + std::to_string(commandId));
-    
+
     ensureFailureIntelligenceInitialized(this);
-    if (!g_failureIntelligence) {
-        appendToOutput("❌ FailureIntelligence not initialized\n", "Output",
-                      OutputSeverity::Error);
+    if (!g_failureIntelligence)
+    {
+        appendToOutput("❌ FailureIntelligence not initialized\n", "Output", OutputSeverity::Error);
         return false;
     }
 
-    switch (commandId) {
-    case IDM_FAILURE_DETECT:
+    switch (commandId)
     {
-        // Report a failure (typically called from subprocess/tool exit handler)
-        char failureDesc[1024] = {0};
-        if (DialogBoxParamA(m_hInstance, "AGENT_PROMPT_DLG", m_hwndMain,
-            [](HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) -> INT_PTR {
-                switch (msg) {
-                case WM_INITDIALOG:
-                    SetWindowTextA(GetDlgItem(hwnd, 101), "Report failure: error message");
-                    return TRUE;
-                case WM_COMMAND:
-                    if (LOWORD(wp) == IDOK) {
-                        GetDlgItemTextA(hwnd, 102, (char*)lp, 1024);
-                        EndDialog(hwnd, IDOK);
-                        return TRUE;
-                    } else if (LOWORD(wp) == IDCANCEL) {
-                        EndDialog(hwnd, IDCANCEL);
-                        return TRUE;
-                    }
-                    break;
-                }
-                return FALSE;
-            }, (LPARAM)failureDesc) == IDOK && strlen(failureDesc) > 0) {
+        case IDM_FAILURE_DETECT:
+        {
+            // Report a failure (typically called from subprocess/tool exit handler)
+            char failureDesc[1024] = {0};
+            if (DialogBoxParamA(
+                    m_hInstance, "AGENT_PROMPT_DLG", m_hwndMain,
+                    [](HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) -> INT_PTR
+                    {
+                        switch (msg)
+                        {
+                            case WM_INITDIALOG:
+                                SetWindowTextA(GetDlgItem(hwnd, 101), "Report failure: error message");
+                                return TRUE;
+                            case WM_COMMAND:
+                                if (LOWORD(wp) == IDOK)
+                                {
+                                    GetDlgItemTextA(hwnd, 102, (char*)lp, 1024);
+                                    EndDialog(hwnd, IDOK);
+                                    return TRUE;
+                                }
+                                else if (LOWORD(wp) == IDCANCEL)
+                                {
+                                    EndDialog(hwnd, IDCANCEL);
+                                    return TRUE;
+                                }
+                                break;
+                        }
+                        return FALSE;
+                    },
+                    (LPARAM)failureDesc) == IDOK &&
+                strlen(failureDesc) > 0)
+            {
 
-            Agentic::FailureSignal signal;
-            signal.error_message = failureDesc;
-            signal.source_component = "manual_report";
-            signal.severity = Agentic::SeverityLevel::Warning;
-            g_failureIntelligence->reportFailure(signal);
-            appendToOutput("Failure reported: " + std::string(failureDesc) + "\n",
-                          "Output", OutputSeverity::Info);
-        }
-        return true;
-    }
-
-    case IDM_FAILURE_ANALYZE:
-    {
-        // Analyze most recent failure
-        auto recent = g_failureIntelligence->getRecentFailures(1);
-        if (recent.empty()) {
-            appendToOutput("No recent failures to analyze\n", "Output",
-                          OutputSeverity::Warning);
-            return true;
-        }
-
-        auto rca = g_failureIntelligence->analyzeFailure(*recent[0]);
-        if (rca) {
-            appendToOutput("=== Root Cause Analysis ===\n"
-                          "Category: " + std::to_string(static_cast<int>(rca->primary_category)) + "\n" +
-                          "Confidence: " + std::to_string(static_cast<int>(rca->analysis_confidence * 100)) + "%\n" +
-                          "Root Cause: " + rca->root_cause_description + "\n",
-                          "Output", OutputSeverity::Info);
-        }
-        return true;
-    }
-
-    case IDM_FAILURE_SHOW_QUEUE:
-    {
-        // Display pending failures
-        auto failures = g_failureIntelligence->getRecentFailures(10);
-        if (failures.empty()) {
-            appendToOutput("No failures in queue\n", "Output", OutputSeverity::Info);
-            return true;
-        }
-
-        appendToOutput("=== Recent Failures ===\n", "Output", OutputSeverity::Info);
-        for (size_t i = 0; i < failures.size(); ++i) {
-            appendToOutput(std::to_string(i + 1) + ". " + failures[i]->signal_id +
-                          " - " + failures[i]->error_message.substr(0, 50) + "...\n",
-                          "Output", OutputSeverity::Info);
-        }
-        return true;
-    }
-
-    case IDM_FAILURE_SHOW_HISTORY:
-    {
-        // Export failure history
-        auto json = g_failureIntelligence->getFailureQueueJson();
-        appendToOutput("=== Failure History ===\n" + json.dump(2) + "\n",
-                      "Output", OutputSeverity::Info);
-        return true;
-    }
-
-    case IDM_FAILURE_GENERATE_RECOVERY:
-    {
-        // Generate recovery plan for recent failure
-        auto recent = g_failureIntelligence->getRecentFailures(1);
-        if (recent.empty()) {
-            appendToOutput("No recent failures\n", "Output", OutputSeverity::Warning);
-            return true;
-        }
-
-        auto plan = g_failureIntelligence->generateRecoveryPlan(*recent[0]);
-        if (plan) {
-            appendToOutput("=== Recovery Plan ===\n"
-                          "ID: " + plan->recovery_id + "\n" +
-                          "Strategy: " + plan->strategy_description + "\n" +
-                          "Steps: " + std::to_string(plan->recovery_steps.size()) + "\n",
-                          "Output", OutputSeverity::Info);
-        }
-        return true;
-    }
-
-    case IDM_FAILURE_EXECUTE_RECOVERY:
-    {
-        // Execute recovery plan
-        auto pending = g_failureIntelligence->getPendingRecoveries();
-        if (pending.empty()) {
-            appendToOutput("No pending recovery plans\n", "Output", OutputSeverity::Warning);
-            return true;
-        }
-
-        std::string output;
-        g_failureIntelligence->executeRecovery(pending[0], output);
-        appendToOutput("Recovery executed\n" + output + "\n", "Output", OutputSeverity::Info);
-        return true;
-    }
-
-    case IDM_FAILURE_AUTONOMOUS_HEAL:
-    {
-        // Full autonomous recovery: detect → analyze → plan → execute
-        auto recent = g_failureIntelligence->getRecentFailures(1);
-        if (recent.empty()) {
-            appendToOutput("No failures to heal\n", "Output", OutputSeverity::Warning);
-            return true;
-        }
-
-        appendToOutput("🔄 Starting autonomous recovery...\n", "Output",
-                      OutputSeverity::Info);
-
-        std::string output;
-        bool success = g_failureIntelligence->autonomousRecover(*recent[0], output);
-
-        if (success) {
-            appendToOutput("✅ Autonomous recovery SUCCEEDED\n" + output + "\n",
-                          "Output", OutputSeverity::Info);
-        } else {
-            appendToOutput("⚠️ Autonomous recovery requires escalation\n" + output + "\n",
-                          "Output", OutputSeverity::Warning);
-        }
-        return true;
-    }
-
-    case IDM_FAILURE_VIEW_PATTERNS:
-    {
-        // Show learned failure patterns
-        auto stats = g_failureIntelligence->getFailureStatistics();
-        appendToOutput("=== Failure Patterns ===\n"
-                      "Total failures: " + std::to_string(stats.total_failures_seen) + "\n" +
-                      "Categories: " + std::to_string(stats.category_counts.size()) + "\n",
-                      "Output", OutputSeverity::Info);
-        return true;
-    }
-
-    case IDM_FAILURE_LEARN_PATTERN:
-    {
-        // Learn from actual categorized failure (for model improvement)
-        auto recent = g_failureIntelligence->getRecentFailures(1);
-        if (recent.empty()) {
-            appendToOutput("No recent failures to learn from\n", "Output",
-                          OutputSeverity::Warning);
-            return true;
-        }
-
-        // For demo: mark as Transient
-        g_failureIntelligence->learnFromFailure(*recent[0], 
-                                               Agentic::FailureCategory::Transient);
-        appendToOutput("Pattern learned\n", "Output", OutputSeverity::Info);
-        return true;
-    }
-
-    case IDM_FAILURE_STATS:
-    {
-        // Display comprehensive statistics
-        auto stats = g_failureIntelligence->getStatisticsJson();
-        appendToOutput("=== FailureIntelligence Statistics ===\n" + stats.dump(2) + "\n",
-                      "Output", OutputSeverity::Info);
-        return true;
-    }
-
-    case IDM_FAILURE_SET_POLICY:
-    {
-        // Configure recovery policies
-        char policyOpt[64] = {0};
-        if (DialogBoxParamA(m_hInstance, "AGENT_PROMPT_DLG", m_hwndMain,
-            [](HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) -> INT_PTR {
-                switch (msg) {
-                case WM_INITDIALOG:
-                    SetWindowTextA(GetDlgItem(hwnd, 101),
-                                 "Policy (1=Conservative, 2=Standard, 3=Aggressive):");
-                    return TRUE;
-                case WM_COMMAND:
-                    if (LOWORD(wp) == IDOK) {
-                        GetDlgItemTextA(hwnd, 102, (char*)lp, 64);
-                        EndDialog(hwnd, IDOK);
-                        return TRUE;
-                    }
-                    break;
-                }
-                return FALSE;
-            }, (LPARAM)policyOpt) == IDOK && strlen(policyOpt) > 0) {
-            
-            int choice = std::stoi(policyOpt);
-            switch (choice) {
-            case 1:
-                g_failureIntelligence->setAutoRetryThreshold(
-                    Agentic::SeverityLevel::Warning);
-                appendToOutput("Policy set to Conservative\n", "Output",
-                              OutputSeverity::Info);
-                break;
-            case 2:
-                g_failureIntelligence->setAutoRetryThreshold(
-                    Agentic::SeverityLevel::Error);
-                appendToOutput("Policy set to Standard\n", "Output",
-                              OutputSeverity::Info);
-                break;
-            case 3:
-                g_failureIntelligence->setAutoRetryThreshold(
-                    Agentic::SeverityLevel::Critical);
-                appendToOutput("Policy set to Aggressive\n", "Output",
-                              OutputSeverity::Info);
-                break;
+                Agentic::FailureSignal signal;
+                signal.error_message = failureDesc;
+                signal.source_component = "manual_report";
+                signal.severity = Agentic::SeverityLevel::Warning;
+                g_failureIntelligence->reportFailure(signal);
+                appendToOutput("Failure reported: " + std::string(failureDesc) + "\n", "Output", OutputSeverity::Info);
             }
-        }
-        return true;
-    }
-
-    case IDM_FAILURE_SHOW_HEALTH:
-    {
-        // Display system health assessment
-        auto health = g_failureIntelligence->getSystemHealthJson();
-        appendToOutput("=== System Health ===\n" + health.dump(2) + "\n",
-                      "Output", OutputSeverity::Info);
-        return true;
-    }
-
-    case IDM_FAILURE_EXPORT_ANALYSIS:
-    {
-        // Export full analysis to JSON file
-        std::string exportPath = m_currentDirectory.empty() ? "." : m_currentDirectory;
-        exportPath += "\\failure_analysis_export.json";
-
-        auto json = g_failureIntelligence->getFailureQueueJson();
-        std::ofstream out(exportPath);
-        if (out.is_open()) {
-            out << json.dump(2);
-            out.close();
-            appendToOutput("✅ Analysis exported to: " + exportPath + "\n",
-                          "Output", OutputSeverity::Info);
-        } else {
-            appendToOutput("❌ Failed to export analysis\n", "Output",
-                          OutputSeverity::Error);
-        }
-        return true;
-    }
-
-    case IDM_FAILURE_CLEAR_HISTORY:
-    {
-        // Clear failure history (with confirmation)
-        if (MessageBoxA(m_hwndMain, "Clear all failure history?", "Confirm",
-                       MB_YESNO | MB_ICONQUESTION) == IDYES) {
-            // Create new instance (fresh start)
-            g_failureIntelligence = std::make_unique<
-                Agentic::FailureIntelligenceOrchestrator>();
-            appendToOutput("🗑️ Failure history cleared\n", "Output",
-                          OutputSeverity::Info);
-        }
-        return true;
-    }
-
-    case IDM_FAILURE_DIAGNOSTICS:
-    {
-        // Full system diagnostics
-        std::ostringstream diag;
-        diag << "=== FailureIntelligence Diagnostics ===\n";
-        diag << "System initialized: " << (g_failureIntelligence ? "✅" : "❌") << "\n";
-        
-        auto stats = g_failureIntelligence->getFailureStatistics();
-        diag << "Total failures: " << stats.total_failures_seen << "\n";
-        diag << "Recovery attempts: " << stats.total_recoveries_attempted << "\n";
-        diag << "Recovery successes: " << stats.total_recoveries_succeeded << "\n";
-        
-        if (stats.total_recoveries_attempted > 0) {
-            diag << "Success rate: " 
-                 << static_cast<int>(stats.overall_recovery_success_rate * 100) << "%\n";
+            return true;
         }
 
-        appendToOutput(diag.str(), "Output", OutputSeverity::Info);
-        return true;
-    }
+        case IDM_FAILURE_ANALYZE:
+        {
+            // Analyze most recent failure
+            auto recent = g_failureIntelligence->getRecentFailures(1);
+            if (recent.empty())
+            {
+                appendToOutput("No recent failures to analyze\n", "Output", OutputSeverity::Warning);
+                return true;
+            }
 
-    default:
-        return false;
+            auto rca = g_failureIntelligence->analyzeFailure(*recent[0]);
+            if (rca)
+            {
+                appendToOutput("=== Root Cause Analysis ===\n"
+                               "Category: " +
+                                   std::to_string(static_cast<int>(rca->primary_category)) + "\n" +
+                                   "Confidence: " + std::to_string(static_cast<int>(rca->analysis_confidence * 100)) +
+                                   "%\n" + "Root Cause: " + rca->root_cause_description + "\n",
+                               "Output", OutputSeverity::Info);
+            }
+            return true;
+        }
+
+        case IDM_FAILURE_SHOW_QUEUE:
+        {
+            // Display pending failures
+            auto failures = g_failureIntelligence->getRecentFailures(10);
+            if (failures.empty())
+            {
+                appendToOutput("No failures in queue\n", "Output", OutputSeverity::Info);
+                return true;
+            }
+
+            appendToOutput("=== Recent Failures ===\n", "Output", OutputSeverity::Info);
+            for (size_t i = 0; i < failures.size(); ++i)
+            {
+                appendToOutput(std::to_string(i + 1) + ". " + failures[i]->signal_id + " - " +
+                                   failures[i]->error_message.substr(0, 50) + "...\n",
+                               "Output", OutputSeverity::Info);
+            }
+            return true;
+        }
+
+        case IDM_FAILURE_SHOW_HISTORY:
+        {
+            // Export failure history
+            auto json = g_failureIntelligence->getFailureQueueJson();
+            appendToOutput("=== Failure History ===\n" + json.dump(2) + "\n", "Output", OutputSeverity::Info);
+            return true;
+        }
+
+        case IDM_FAILURE_GENERATE_RECOVERY:
+        {
+            // Generate recovery plan for recent failure
+            auto recent = g_failureIntelligence->getRecentFailures(1);
+            if (recent.empty())
+            {
+                appendToOutput("No recent failures\n", "Output", OutputSeverity::Warning);
+                return true;
+            }
+
+            auto plan = g_failureIntelligence->generateRecoveryPlan(*recent[0]);
+            if (plan)
+            {
+                appendToOutput("=== Recovery Plan ===\n"
+                               "ID: " +
+                                   plan->recovery_id + "\n" + "Strategy: " + plan->strategy_description + "\n" +
+                                   "Steps: " + std::to_string(plan->recovery_steps.size()) + "\n",
+                               "Output", OutputSeverity::Info);
+            }
+            return true;
+        }
+
+        case IDM_FAILURE_EXECUTE_RECOVERY:
+        {
+            // Execute recovery plan
+            auto pending = g_failureIntelligence->getPendingRecoveries();
+            if (pending.empty())
+            {
+                appendToOutput("No pending recovery plans\n", "Output", OutputSeverity::Warning);
+                return true;
+            }
+
+            std::string output;
+            g_failureIntelligence->executeRecovery(pending[0], output);
+            appendToOutput("Recovery executed\n" + output + "\n", "Output", OutputSeverity::Info);
+            return true;
+        }
+
+        case IDM_FAILURE_AUTONOMOUS_HEAL:
+        {
+            // Full autonomous recovery: detect → analyze → plan → execute
+            auto recent = g_failureIntelligence->getRecentFailures(1);
+            if (recent.empty())
+            {
+                appendToOutput("No failures to heal\n", "Output", OutputSeverity::Warning);
+                return true;
+            }
+
+            appendToOutput("🔄 Starting autonomous recovery...\n", "Output", OutputSeverity::Info);
+
+            std::string output;
+            bool success = g_failureIntelligence->autonomousRecover(*recent[0], output);
+
+            if (success)
+            {
+                appendToOutput("✅ Autonomous recovery SUCCEEDED\n" + output + "\n", "Output", OutputSeverity::Info);
+            }
+            else
+            {
+                appendToOutput("⚠️ Autonomous recovery requires escalation\n" + output + "\n", "Output",
+                               OutputSeverity::Warning);
+            }
+            return true;
+        }
+
+        case IDM_FAILURE_VIEW_PATTERNS:
+        {
+            // Show learned failure patterns
+            auto stats = g_failureIntelligence->getFailureStatistics();
+            appendToOutput("=== Failure Patterns ===\n"
+                           "Total failures: " +
+                               std::to_string(stats.total_failures_seen) + "\n" +
+                               "Categories: " + std::to_string(stats.category_counts.size()) + "\n",
+                           "Output", OutputSeverity::Info);
+            return true;
+        }
+
+        case IDM_FAILURE_LEARN_PATTERN:
+        {
+            // Learn from actual categorized failure (for model improvement)
+            auto recent = g_failureIntelligence->getRecentFailures(1);
+            if (recent.empty())
+            {
+                appendToOutput("No recent failures to learn from\n", "Output", OutputSeverity::Warning);
+                return true;
+            }
+
+            // For demo: mark as Transient
+            g_failureIntelligence->learnFromFailure(*recent[0], Agentic::FailureCategory::Transient);
+            appendToOutput("Pattern learned\n", "Output", OutputSeverity::Info);
+            return true;
+        }
+
+        case IDM_FAILURE_STATS:
+        {
+            // Display comprehensive statistics
+            auto stats = g_failureIntelligence->getStatisticsJson();
+            appendToOutput("=== FailureIntelligence Statistics ===\n" + stats.dump(2) + "\n", "Output",
+                           OutputSeverity::Info);
+            return true;
+        }
+
+        case IDM_FAILURE_SET_POLICY:
+        {
+            // Configure recovery policies
+            char policyOpt[64] = {0};
+            if (DialogBoxParamA(
+                    m_hInstance, "AGENT_PROMPT_DLG", m_hwndMain,
+                    [](HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) -> INT_PTR
+                    {
+                        switch (msg)
+                        {
+                            case WM_INITDIALOG:
+                                SetWindowTextA(GetDlgItem(hwnd, 101),
+                                               "Policy (1=Conservative, 2=Standard, 3=Aggressive):");
+                                return TRUE;
+                            case WM_COMMAND:
+                                if (LOWORD(wp) == IDOK)
+                                {
+                                    GetDlgItemTextA(hwnd, 102, (char*)lp, 64);
+                                    EndDialog(hwnd, IDOK);
+                                    return TRUE;
+                                }
+                                break;
+                        }
+                        return FALSE;
+                    },
+                    (LPARAM)policyOpt) == IDOK &&
+                strlen(policyOpt) > 0)
+            {
+
+                int choice = std::stoi(policyOpt);
+                switch (choice)
+                {
+                    case 1:
+                        g_failureIntelligence->setAutoRetryThreshold(Agentic::SeverityLevel::Warning);
+                        appendToOutput("Policy set to Conservative\n", "Output", OutputSeverity::Info);
+                        break;
+                    case 2:
+                        g_failureIntelligence->setAutoRetryThreshold(Agentic::SeverityLevel::Error);
+                        appendToOutput("Policy set to Standard\n", "Output", OutputSeverity::Info);
+                        break;
+                    case 3:
+                        g_failureIntelligence->setAutoRetryThreshold(Agentic::SeverityLevel::Critical);
+                        appendToOutput("Policy set to Aggressive\n", "Output", OutputSeverity::Info);
+                        break;
+                }
+            }
+            return true;
+        }
+
+        case IDM_FAILURE_SHOW_HEALTH:
+        {
+            // Display system health assessment
+            auto health = g_failureIntelligence->getSystemHealthJson();
+            appendToOutput("=== System Health ===\n" + health.dump(2) + "\n", "Output", OutputSeverity::Info);
+            return true;
+        }
+
+        case IDM_FAILURE_EXPORT_ANALYSIS:
+        {
+            // Export full analysis to JSON file
+            std::string exportPath = m_currentDirectory.empty() ? "." : m_currentDirectory;
+            exportPath += "\\failure_analysis_export.json";
+
+            auto json = g_failureIntelligence->getFailureQueueJson();
+            std::ofstream out(exportPath);
+            if (out.is_open())
+            {
+                out << json.dump(2);
+                out.close();
+                appendToOutput("✅ Analysis exported to: " + exportPath + "\n", "Output", OutputSeverity::Info);
+            }
+            else
+            {
+                appendToOutput("❌ Failed to export analysis\n", "Output", OutputSeverity::Error);
+            }
+            return true;
+        }
+
+        case IDM_FAILURE_CLEAR_HISTORY:
+        {
+            // Clear failure history (with confirmation)
+            if (MessageBoxA(m_hwndMain, "Clear all failure history?", "Confirm", MB_YESNO | MB_ICONQUESTION) == IDYES)
+            {
+                // Create new instance (fresh start)
+                g_failureIntelligence = std::make_unique<Agentic::FailureIntelligenceOrchestrator>();
+                appendToOutput("🗑️ Failure history cleared\n", "Output", OutputSeverity::Info);
+            }
+            return true;
+        }
+
+        case IDM_FAILURE_DIAGNOSTICS:
+        {
+            // Full system diagnostics
+            std::ostringstream diag;
+            diag << "=== FailureIntelligence Diagnostics ===\n";
+            diag << "System initialized: " << (g_failureIntelligence ? "✅" : "❌") << "\n";
+
+            auto stats = g_failureIntelligence->getFailureStatistics();
+            diag << "Total failures: " << stats.total_failures_seen << "\n";
+            diag << "Recovery attempts: " << stats.total_recoveries_attempted << "\n";
+            diag << "Recovery successes: " << stats.total_recoveries_succeeded << "\n";
+
+            if (stats.total_recoveries_attempted > 0)
+            {
+                diag << "Success rate: " << static_cast<int>(stats.overall_recovery_success_rate * 100) << "%\n";
+            }
+
+            appendToOutput(diag.str(), "Output", OutputSeverity::Info);
+            return true;
+        }
+
+        default:
+            return false;
     }
 }
 
@@ -13315,9 +14169,7 @@ bool Win32IDE::handleChangeImpactCommand(int commandId)
         s_analyzer->setWorkspaceRoot(".");
     }
 
-    static const char* severity_names[] = {
-        "None", "Trivial", "Minor", "Moderate", "Major", "CRITICAL"
-    };
+    static const char* severity_names[] = {"None", "Trivial", "Minor", "Moderate", "Major", "CRITICAL"};
 
     switch (commandId)
     {
@@ -13326,72 +14178,63 @@ bool Win32IDE::handleChangeImpactCommand(int commandId)
         // ================================================================
         case IDM_IMPACT_ANALYZE_STAGED:
         {
-            appendToOutput("[ChangeImpact] Analyzing staged changes (git diff --cached)...",
-                           "General", OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Analyzing staged changes (git diff --cached)...", "General",
+                           OutputSeverity::Info);
 
             ImpactReport report = s_analyzer->analyzeStagedChanges();
 
             if (report.changed_files.empty())
             {
-                appendToOutput("[ChangeImpact] No staged changes detected",
-                               "General", OutputSeverity::Info);
+                appendToOutput("[ChangeImpact] No staged changes detected", "General", OutputSeverity::Info);
                 return true;
             }
 
             // Report summary
-            appendToOutput("[ChangeImpact] Report: " + report.report_id,
+            appendToOutput("[ChangeImpact] Report: " + report.report_id, "General", OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Changed files: " + std::to_string(report.changed_files.size()), "General",
+                           OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Total affected: " + std::to_string(report.total_files_affected) + " files",
                            "General", OutputSeverity::Info);
-            appendToOutput("[ChangeImpact] Changed files: " +
-                           std::to_string(report.changed_files.size()),
-                           "General", OutputSeverity::Info);
-            appendToOutput("[ChangeImpact] Total affected: " +
-                           std::to_string(report.total_files_affected) + " files",
-                           "General", OutputSeverity::Info);
-            appendToOutput("[ChangeImpact] Risk score: " +
-                           std::to_string(static_cast<int>(report.risk_score * 100)) + "%",
-                           "General",
-                           report.risk_score > 0.6f ? OutputSeverity::Warning : OutputSeverity::Info);
-            appendToOutput("[ChangeImpact] Severity: " +
-                           std::string(severity_names[static_cast<int>(report.overall_severity)]),
-                           "General",
-                           report.overall_severity >= ImpactSeverity::Major
-                               ? OutputSeverity::Error : OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Risk score: " + std::to_string(static_cast<int>(report.risk_score * 100)) +
+                               "%",
+                           "General", report.risk_score > 0.6f ? OutputSeverity::Warning : OutputSeverity::Info);
+            appendToOutput(
+                "[ChangeImpact] Severity: " + std::string(severity_names[static_cast<int>(report.overall_severity)]),
+                "General",
+                report.overall_severity >= ImpactSeverity::Major ? OutputSeverity::Error : OutputSeverity::Info);
 
             // Show warnings
             for (const auto& w : report.warnings)
             {
-                appendToOutput("[ChangeImpact] WARNING: " + w,
-                               "General", OutputSeverity::Warning);
+                appendToOutput("[ChangeImpact] WARNING: " + w, "General", OutputSeverity::Warning);
             }
 
             // Show suggestions
             for (const auto& s : report.suggestions)
             {
-                appendToOutput("[ChangeImpact] SUGGEST: " + s,
-                               "General", OutputSeverity::Info);
+                appendToOutput("[ChangeImpact] SUGGEST: " + s, "General", OutputSeverity::Info);
             }
 
             // Commit blocking
             if (report.should_block_commit)
             {
-                appendToOutput("[ChangeImpact] *** COMMIT BLOCKED: " + report.block_reason + " ***",
-                               "General", OutputSeverity::Error);
+                appendToOutput("[ChangeImpact] *** COMMIT BLOCKED: " + report.block_reason + " ***", "General",
+                               OutputSeverity::Error);
             }
             else
             {
-                appendToOutput("[ChangeImpact] Commit OK — risk within acceptable threshold",
-                               "General", OutputSeverity::Success);
+                appendToOutput("[ChangeImpact] Commit OK — risk within acceptable threshold", "General",
+                               OutputSeverity::Success);
             }
 
             // Status bar
             if (m_hwndStatusBar)
             {
-                std::string status = "Impact: " +
-                    std::string(severity_names[static_cast<int>(report.overall_severity)]) +
-                    " (" + std::to_string(report.total_files_affected) + " affected, " +
+                std::string status =
+                    "Impact: " + std::string(severity_names[static_cast<int>(report.overall_severity)]) + " (" +
+                    std::to_string(report.total_files_affected) + " affected, " +
                     std::to_string(static_cast<int>(report.risk_score * 100)) + "% risk)";
-                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
-                           reinterpret_cast<LPARAM>(status.c_str()));
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, reinterpret_cast<LPARAM>(status.c_str()));
             }
             break;
         }
@@ -13401,43 +14244,35 @@ bool Win32IDE::handleChangeImpactCommand(int commandId)
         // ================================================================
         case IDM_IMPACT_ANALYZE_UNSTAGED:
         {
-            appendToOutput("[ChangeImpact] Analyzing unstaged changes (git diff)...",
-                           "General", OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Analyzing unstaged changes (git diff)...", "General", OutputSeverity::Info);
 
             ImpactReport report = s_analyzer->analyzeUnstagedChanges();
 
             if (report.changed_files.empty())
             {
-                appendToOutput("[ChangeImpact] No unstaged changes detected",
-                               "General", OutputSeverity::Info);
+                appendToOutput("[ChangeImpact] No unstaged changes detected", "General", OutputSeverity::Info);
                 return true;
             }
 
-            appendToOutput("[ChangeImpact] Unstaged report: " + report.report_id,
+            appendToOutput("[ChangeImpact] Unstaged report: " + report.report_id, "General", OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Files changed: " + std::to_string(report.changed_files.size()) +
+                               " | Affected: " + std::to_string(report.total_files_affected),
                            "General", OutputSeverity::Info);
-            appendToOutput("[ChangeImpact] Files changed: " +
-                           std::to_string(report.changed_files.size()) +
-                           " | Affected: " + std::to_string(report.total_files_affected),
+            appendToOutput("[ChangeImpact] Lines: +" + std::to_string(report.total_lines_added) + " / -" +
+                               std::to_string(report.total_lines_removed),
                            "General", OutputSeverity::Info);
-            appendToOutput("[ChangeImpact] Lines: +" +
-                           std::to_string(report.total_lines_added) +
-                           " / -" + std::to_string(report.total_lines_removed),
-                           "General", OutputSeverity::Info);
-            appendToOutput("[ChangeImpact] Risk: " +
-                           std::to_string(static_cast<int>(report.risk_score * 100)) +
-                           "% | Severity: " +
-                           severity_names[static_cast<int>(report.overall_severity)],
-                           "General",
-                           report.risk_score > 0.5f ? OutputSeverity::Warning : OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Risk: " + std::to_string(static_cast<int>(report.risk_score * 100)) +
+                               "% | Severity: " + severity_names[static_cast<int>(report.overall_severity)],
+                           "General", report.risk_score > 0.5f ? OutputSeverity::Warning : OutputSeverity::Info);
 
             for (const auto& w : report.warnings)
                 appendToOutput("[ChangeImpact] ! " + w, "General", OutputSeverity::Warning);
 
             if (m_hwndStatusBar)
-                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
-                           reinterpret_cast<LPARAM>(
-                               ("Impact(unstaged): " +
-                                std::to_string(report.total_files_affected) + " affected").c_str()));
+                SendMessage(
+                    m_hwndStatusBar, SB_SETTEXT, 0,
+                    reinterpret_cast<LPARAM>(
+                        ("Impact(unstaged): " + std::to_string(report.total_files_affected) + " affected").c_str()));
             break;
         }
 
@@ -13450,59 +14285,49 @@ bool Win32IDE::handleChangeImpactCommand(int commandId)
             std::string activeFile = m_currentFile;
             if (activeFile.empty())
             {
-                appendToOutput("[ChangeImpact] No active file to analyze",
-                               "General", OutputSeverity::Warning);
+                appendToOutput("[ChangeImpact] No active file to analyze", "General", OutputSeverity::Warning);
                 return true;
             }
 
-            appendToOutput("[ChangeImpact] Analyzing impact of: " + activeFile,
-                           "General", OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Analyzing impact of: " + activeFile, "General", OutputSeverity::Info);
 
             ImpactZone zone = s_analyzer->analyzeFileImpact(activeFile);
 
-            appendToOutput("[ChangeImpact] Direct dependents: " +
-                           std::to_string(zone.direct_count()),
+            appendToOutput("[ChangeImpact] Direct dependents: " + std::to_string(zone.direct_count()), "General",
+                           OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Transitive dependents: " + std::to_string(zone.transitive_count()),
                            "General", OutputSeverity::Info);
-            appendToOutput("[ChangeImpact] Transitive dependents: " +
-                           std::to_string(zone.transitive_count()),
-                           "General", OutputSeverity::Info);
-            appendToOutput("[ChangeImpact] Total blast radius: " +
-                           std::to_string(zone.total_affected()) + " files",
-                           "General",
-                           zone.total_affected() > 20
-                               ? OutputSeverity::Warning : OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Total blast radius: " + std::to_string(zone.total_affected()) + " files",
+                           "General", zone.total_affected() > 20 ? OutputSeverity::Warning : OutputSeverity::Info);
 
             // List directly affected files
             for (size_t i = 0; i < zone.directly_affected.size() && i < 15; ++i)
             {
-                appendToOutput("[ChangeImpact]   -> " + zone.directly_affected[i],
-                               "General", OutputSeverity::Info);
+                appendToOutput("[ChangeImpact]   -> " + zone.directly_affected[i], "General", OutputSeverity::Info);
             }
             if (zone.directly_affected.size() > 15)
             {
-                appendToOutput("[ChangeImpact]   (+" +
-                               std::to_string(zone.directly_affected.size() - 15) + " more)",
+                appendToOutput("[ChangeImpact]   (+" + std::to_string(zone.directly_affected.size() - 15) + " more)",
                                "General", OutputSeverity::Info);
             }
 
             // Test coverage
             if (!zone.test_files_relevant.empty())
             {
-                appendToOutput("[ChangeImpact] Relevant tests: " +
-                               std::to_string(zone.test_files_relevant.size()),
+                appendToOutput("[ChangeImpact] Relevant tests: " + std::to_string(zone.test_files_relevant.size()),
                                "General", OutputSeverity::Success);
             }
             else
             {
-                appendToOutput("[ChangeImpact] No test files found for this impact zone",
-                               "General", OutputSeverity::Warning);
+                appendToOutput("[ChangeImpact] No test files found for this impact zone", "General",
+                               OutputSeverity::Warning);
             }
 
             if (m_hwndStatusBar)
-                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
-                           reinterpret_cast<LPARAM>(
-                               ("Impact: " + activeFile + " -> " +
-                                std::to_string(zone.total_affected()) + " files").c_str()));
+                SendMessage(
+                    m_hwndStatusBar, SB_SETTEXT, 0,
+                    reinterpret_cast<LPARAM>(
+                        ("Impact: " + activeFile + " -> " + std::to_string(zone.total_affected()) + " files").c_str()));
             break;
         }
 
@@ -13514,8 +14339,8 @@ bool Win32IDE::handleChangeImpactCommand(int commandId)
             auto reports = s_analyzer->getRecentReports(1);
             if (reports.empty())
             {
-                appendToOutput("[ChangeImpact] No analysis reports available. Run analysis first.",
-                               "General", OutputSeverity::Info);
+                appendToOutput("[ChangeImpact] No analysis reports available. Run analysis first.", "General",
+                               OutputSeverity::Info);
                 return true;
             }
 
@@ -13528,11 +14353,9 @@ bool Win32IDE::handleChangeImpactCommand(int commandId)
             while (std::getline(stream, line))
             {
                 OutputSeverity sev = OutputSeverity::Info;
-                if (line.find("CRITICAL") != std::string::npos ||
-                    line.find("BLOCKED") != std::string::npos)
+                if (line.find("CRITICAL") != std::string::npos || line.find("BLOCKED") != std::string::npos)
                     sev = OutputSeverity::Error;
-                else if (line.find("WARNING") != std::string::npos ||
-                         line.find("!") == 2)
+                else if (line.find("WARNING") != std::string::npos || line.find("!") == 2)
                     sev = OutputSeverity::Warning;
                 else if (line.find("===") != std::string::npos)
                     sev = OutputSeverity::Success;
@@ -13550,26 +14373,24 @@ bool Win32IDE::handleChangeImpactCommand(int commandId)
             auto reports = s_analyzer->getRecentReports(1);
             if (reports.empty())
             {
-                appendToOutput("[ChangeImpact] No impact zones available. Run analysis first.",
-                               "General", OutputSeverity::Info);
+                appendToOutput("[ChangeImpact] No impact zones available. Run analysis first.", "General",
+                               OutputSeverity::Info);
                 return true;
             }
 
             const ImpactReport* latest = reports.back();
-            appendToOutput("[ChangeImpact] === IMPACT ZONES (" +
-                           std::to_string(latest->impact_zones.size()) + " zones) ===",
+            appendToOutput("[ChangeImpact] === IMPACT ZONES (" + std::to_string(latest->impact_zones.size()) +
+                               " zones) ===",
                            "General", OutputSeverity::Info);
 
             for (size_t i = 0; i < latest->impact_zones.size(); ++i)
             {
                 const auto& zone = latest->impact_zones[i];
                 appendToOutput("[Zone " + std::to_string(i) + "] " + zone.source_file +
-                               " | Direct: " + std::to_string(zone.direct_count()) +
-                               " | Transitive: " + std::to_string(zone.transitive_count()) +
-                               " | Tests: " + std::to_string(zone.test_files_relevant.size()),
-                               "General",
-                               zone.total_affected() > 20
-                                   ? OutputSeverity::Warning : OutputSeverity::Info);
+                                   " | Direct: " + std::to_string(zone.direct_count()) +
+                                   " | Transitive: " + std::to_string(zone.transitive_count()) +
+                                   " | Tests: " + std::to_string(zone.test_files_relevant.size()),
+                               "General", zone.total_affected() > 20 ? OutputSeverity::Warning : OutputSeverity::Info);
             }
             break;
         }
@@ -13582,42 +14403,28 @@ bool Win32IDE::handleChangeImpactCommand(int commandId)
             auto reports = s_analyzer->getRecentReports(1);
             if (reports.empty())
             {
-                appendToOutput("[ChangeImpact] No risk data. Run analysis first.",
-                               "General", OutputSeverity::Info);
+                appendToOutput("[ChangeImpact] No risk data. Run analysis first.", "General", OutputSeverity::Info);
                 return true;
             }
 
             const ImpactReport* r = reports.back();
-            appendToOutput("[ChangeImpact] === RISK BREAKDOWN ===",
-                           "General", OutputSeverity::Info);
-            appendToOutput("[ChangeImpact] Overall Score: " +
-                           std::to_string(static_cast<int>(r->risk_score * 100)) + "%",
-                           "General",
-                           r->risk_score > 0.7f ? OutputSeverity::Error : OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] === RISK BREAKDOWN ===", "General", OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Overall Score: " + std::to_string(static_cast<int>(r->risk_score * 100)) +
+                               "%",
+                           "General", r->risk_score > 0.7f ? OutputSeverity::Error : OutputSeverity::Info);
             appendToOutput("[ChangeImpact] Severity: " +
-                           std::string(severity_names[static_cast<int>(r->overall_severity)]),
+                               std::string(severity_names[static_cast<int>(r->overall_severity)]),
                            "General", OutputSeverity::Info);
-            appendToOutput("[ChangeImpact] Files affected: " +
-                           std::to_string(r->total_files_affected),
-                           "General", OutputSeverity::Info);
-            appendToOutput("[ChangeImpact] Critical files: " +
-                           std::to_string(r->critical_files_affected),
-                           "General",
-                           r->critical_files_affected > 0
-                               ? OutputSeverity::Warning : OutputSeverity::Info);
-            appendToOutput("[ChangeImpact] API breaks: " +
-                           std::to_string(r->api_breaking_changes),
-                           "General",
-                           r->api_breaking_changes > 0
-                               ? OutputSeverity::Error : OutputSeverity::Info);
-            appendToOutput("[ChangeImpact] Untested changes: " +
-                           std::to_string(r->untested_changes),
-                           "General",
-                           r->untested_changes > 0
-                               ? OutputSeverity::Warning : OutputSeverity::Info);
-            appendToOutput("[ChangeImpact] Est. rebuild: " +
-                           std::to_string(r->estimated_rebuild_time_sec) + "s" +
-                           (r->requires_full_rebuild ? " (FULL REBUILD)" : ""),
+            appendToOutput("[ChangeImpact] Files affected: " + std::to_string(r->total_files_affected), "General",
+                           OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Critical files: " + std::to_string(r->critical_files_affected), "General",
+                           r->critical_files_affected > 0 ? OutputSeverity::Warning : OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] API breaks: " + std::to_string(r->api_breaking_changes), "General",
+                           r->api_breaking_changes > 0 ? OutputSeverity::Error : OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Untested changes: " + std::to_string(r->untested_changes), "General",
+                           r->untested_changes > 0 ? OutputSeverity::Warning : OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Est. rebuild: " + std::to_string(r->estimated_rebuild_time_sec) + "s" +
+                               (r->requires_full_rebuild ? " (FULL REBUILD)" : ""),
                            "General", OutputSeverity::Info);
             break;
         }
@@ -13627,51 +14434,43 @@ bool Win32IDE::handleChangeImpactCommand(int commandId)
         // ================================================================
         case IDM_IMPACT_CHECK_COMMIT:
         {
-            appendToOutput("[ChangeImpact] Running pre-commit impact check...",
-                           "General", OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Running pre-commit impact check...", "General", OutputSeverity::Info);
 
             ImpactReport report = s_analyzer->analyzeStagedChanges();
 
             if (report.changed_files.empty())
             {
-                appendToOutput("[ChangeImpact] Nothing staged — commit gate: PASS (trivial)",
-                               "General", OutputSeverity::Success);
+                appendToOutput("[ChangeImpact] Nothing staged — commit gate: PASS (trivial)", "General",
+                               OutputSeverity::Success);
                 return true;
             }
 
             if (report.should_block_commit)
             {
-                appendToOutput("[ChangeImpact] COMMIT GATE: BLOCKED",
-                               "General", OutputSeverity::Error);
-                appendToOutput("[ChangeImpact] Reason: " + report.block_reason,
-                               "General", OutputSeverity::Error);
+                appendToOutput("[ChangeImpact] COMMIT GATE: BLOCKED", "General", OutputSeverity::Error);
+                appendToOutput("[ChangeImpact] Reason: " + report.block_reason, "General", OutputSeverity::Error);
                 for (const auto& w : report.warnings)
-                    appendToOutput("[ChangeImpact]   ! " + w,
-                                   "General", OutputSeverity::Warning);
+                    appendToOutput("[ChangeImpact]   ! " + w, "General", OutputSeverity::Warning);
                 appendToOutput("[ChangeImpact] Action: Fix issues above or use "
                                "IDM_IMPACT_SET_CONFIG to adjust thresholds",
                                "General", OutputSeverity::Info);
             }
             else
             {
-                appendToOutput("[ChangeImpact] COMMIT GATE: PASS",
-                               "General", OutputSeverity::Success);
-                appendToOutput("[ChangeImpact] Risk: " +
-                               std::to_string(static_cast<int>(report.risk_score * 100)) +
-                               "% | Affected: " + std::to_string(report.total_files_affected) +
-                               " files | Severity: " +
-                               severity_names[static_cast<int>(report.overall_severity)],
+                appendToOutput("[ChangeImpact] COMMIT GATE: PASS", "General", OutputSeverity::Success);
+                appendToOutput("[ChangeImpact] Risk: " + std::to_string(static_cast<int>(report.risk_score * 100)) +
+                                   "% | Affected: " + std::to_string(report.total_files_affected) +
+                                   " files | Severity: " + severity_names[static_cast<int>(report.overall_severity)],
                                "General", OutputSeverity::Info);
             }
 
             if (m_hwndStatusBar)
             {
-                std::string status = report.should_block_commit
-                    ? "Commit: BLOCKED (" + report.block_reason + ")"
-                    : "Commit: OK (" + std::to_string(static_cast<int>(report.risk_score * 100)) +
-                      "% risk)";
-                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
-                           reinterpret_cast<LPARAM>(status.c_str()));
+                std::string status =
+                    report.should_block_commit
+                        ? "Commit: BLOCKED (" + report.block_reason + ")"
+                        : "Commit: OK (" + std::to_string(static_cast<int>(report.risk_score * 100)) + "% risk)";
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, reinterpret_cast<LPARAM>(status.c_str()));
             }
             break;
         }
@@ -13683,7 +14482,7 @@ bool Win32IDE::handleChangeImpactCommand(int commandId)
         {
             // Cycle through presets: Default → Strict → Permissive → Default
             auto currentConfig = s_analyzer->getConfig();
-            
+
             std::string newPreset;
             if (currentConfig.block_commit_threshold >= 0.90f)
             {
@@ -13705,25 +14504,20 @@ bool Win32IDE::handleChangeImpactCommand(int commandId)
             }
 
             auto cfg = s_analyzer->getConfig();
-            appendToOutput("[ChangeImpact] Policy set to: " + newPreset,
-                           "General", OutputSeverity::Success);
+            appendToOutput("[ChangeImpact] Policy set to: " + newPreset, "General", OutputSeverity::Success);
             appendToOutput("[ChangeImpact]   Block threshold: " +
-                           std::to_string(static_cast<int>(cfg.block_commit_threshold * 100)) + "%",
+                               std::to_string(static_cast<int>(cfg.block_commit_threshold * 100)) + "%",
                            "General", OutputSeverity::Info);
-            appendToOutput("[ChangeImpact]   Critical file limit: " +
-                           std::to_string(cfg.critical_file_limit),
+            appendToOutput("[ChangeImpact]   Critical file limit: " + std::to_string(cfg.critical_file_limit),
                            "General", OutputSeverity::Info);
-            appendToOutput("[ChangeImpact]   API break limit: " +
-                           std::to_string(cfg.api_break_limit),
-                           "General", OutputSeverity::Info);
-            appendToOutput("[ChangeImpact]   Max transitive depth: " +
-                           std::to_string(cfg.max_transitive_depth),
+            appendToOutput("[ChangeImpact]   API break limit: " + std::to_string(cfg.api_break_limit), "General",
+                           OutputSeverity::Info);
+            appendToOutput("[ChangeImpact]   Max transitive depth: " + std::to_string(cfg.max_transitive_depth),
                            "General", OutputSeverity::Info);
 
             if (m_hwndStatusBar)
                 SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
-                           reinterpret_cast<LPARAM>(
-                               ("Impact config: " + newPreset).c_str()));
+                            reinterpret_cast<LPARAM>(("Impact config: " + newPreset).c_str()));
             break;
         }
 
@@ -13734,27 +14528,23 @@ bool Win32IDE::handleChangeImpactCommand(int commandId)
         {
             auto reports = s_analyzer->getRecentReports(10);
 
-            appendToOutput("[ChangeImpact] === ANALYSIS HISTORY (" +
-                           std::to_string(reports.size()) + " reports) ===",
+            appendToOutput("[ChangeImpact] === ANALYSIS HISTORY (" + std::to_string(reports.size()) + " reports) ===",
                            "General", OutputSeverity::Info);
 
             if (reports.empty())
             {
-                appendToOutput("[ChangeImpact] No analysis history available",
-                               "General", OutputSeverity::Info);
+                appendToOutput("[ChangeImpact] No analysis history available", "General", OutputSeverity::Info);
                 return true;
             }
 
             for (const auto* r : reports)
             {
-                appendToOutput("[ChangeImpact] " + r->report_id +
-                               " | " + severity_names[static_cast<int>(r->overall_severity)] +
-                               " | Risk: " + std::to_string(static_cast<int>(r->risk_score * 100)) +
-                               "% | Files: " + std::to_string(r->total_files_affected) +
-                               " | " + (r->should_block_commit ? "BLOCKED" : "OK"),
-                               "General",
-                               r->should_block_commit
-                                   ? OutputSeverity::Error : OutputSeverity::Info);
+                appendToOutput("[ChangeImpact] " + r->report_id + " | " +
+                                   severity_names[static_cast<int>(r->overall_severity)] +
+                                   " | Risk: " + std::to_string(static_cast<int>(r->risk_score * 100)) +
+                                   "% | Files: " + std::to_string(r->total_files_affected) + " | " +
+                                   (r->should_block_commit ? "BLOCKED" : "OK"),
+                               "General", r->should_block_commit ? OutputSeverity::Error : OutputSeverity::Info);
             }
             break;
         }
@@ -13764,45 +14554,41 @@ bool Win32IDE::handleChangeImpactCommand(int commandId)
         // ================================================================
         case IDM_IMPACT_DIAGNOSTICS:
         {
-            appendToOutput("[ChangeImpact] === DIAGNOSTICS ===",
-                           "General", OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] === DIAGNOSTICS ===", "General", OutputSeverity::Info);
 
             auto cfg = s_analyzer->getConfig();
             auto reports = s_analyzer->getRecentReports(50);
 
             appendToOutput("[ChangeImpact] Workspace: " +
-                           std::string(cfg.block_commit_threshold > 0 ? "configured" : "not set"),
+                               std::string(cfg.block_commit_threshold > 0 ? "configured" : "not set"),
                            "General", OutputSeverity::Info);
             appendToOutput("[ChangeImpact] Block threshold: " +
-                           std::to_string(static_cast<int>(cfg.block_commit_threshold * 100)) + "%",
+                               std::to_string(static_cast<int>(cfg.block_commit_threshold * 100)) + "%",
                            "General", OutputSeverity::Info);
-            appendToOutput("[ChangeImpact] Reports in history: " +
-                           std::to_string(reports.size()) + " / 50",
-                           "General", OutputSeverity::Info);
-            appendToOutput("[ChangeImpact] Transitive depth: " +
-                           std::to_string(cfg.max_transitive_depth),
-                           "General", OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Reports in history: " + std::to_string(reports.size()) + " / 50", "General",
+                           OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] Transitive depth: " + std::to_string(cfg.max_transitive_depth), "General",
+                           OutputSeverity::Info);
             appendToOutput("[ChangeImpact] Test impact: " +
-                           std::string(cfg.include_test_impact ? "enabled" : "disabled"),
+                               std::string(cfg.include_test_impact ? "enabled" : "disabled"),
                            "General", OutputSeverity::Info);
             appendToOutput("[ChangeImpact] Build targets: " +
-                           std::string(cfg.include_build_targets ? "enabled" : "disabled"),
+                               std::string(cfg.include_build_targets ? "enabled" : "disabled"),
                            "General", OutputSeverity::Info);
             appendToOutput("[ChangeImpact] Auto rollback plan: " +
-                           std::string(cfg.auto_generate_rollback_plan ? "enabled" : "disabled"),
+                               std::string(cfg.auto_generate_rollback_plan ? "enabled" : "disabled"),
                            "General", OutputSeverity::Info);
             appendToOutput("[ChangeImpact] Approval gates: " +
-                           std::string(cfg.integrate_with_approval_gates ? "enabled" : "disabled"),
+                               std::string(cfg.integrate_with_approval_gates ? "enabled" : "disabled"),
                            "General", OutputSeverity::Info);
 
             // Latest report summary
             if (!reports.empty())
             {
                 const auto* latest = reports.back();
-                appendToOutput("[ChangeImpact] Latest: " + latest->report_id +
-                               " | " + severity_names[static_cast<int>(latest->overall_severity)] +
-                               " | Risk " +
-                               std::to_string(static_cast<int>(latest->risk_score * 100)) + "%",
+                appendToOutput("[ChangeImpact] Latest: " + latest->report_id + " | " +
+                                   severity_names[static_cast<int>(latest->overall_severity)] + " | Risk " +
+                                   std::to_string(static_cast<int>(latest->risk_score * 100)) + "%",
                                "General", OutputSeverity::Info);
             }
             break;
@@ -13816,17 +14602,16 @@ bool Win32IDE::handleChangeImpactCommand(int commandId)
             auto reports = s_analyzer->getRecentReports(1);
             if (reports.empty())
             {
-                appendToOutput("[ChangeImpact] No report to export. Run analysis first.",
-                               "General", OutputSeverity::Info);
+                appendToOutput("[ChangeImpact] No report to export. Run analysis first.", "General",
+                               OutputSeverity::Info);
                 return true;
             }
 
             nlohmann::json j = reports.back()->toJson();
             std::string json_str = j.dump(2);
 
-            appendToOutput("[ChangeImpact] JSON Export (" +
-                           std::to_string(json_str.size()) + " bytes):",
-                           "General", OutputSeverity::Info);
+            appendToOutput("[ChangeImpact] JSON Export (" + std::to_string(json_str.size()) + " bytes):", "General",
+                           OutputSeverity::Info);
 
             // Stream JSON to output panel (truncated for readability)
             std::istringstream js(json_str);
@@ -13839,8 +14624,7 @@ bool Win32IDE::handleChangeImpactCommand(int commandId)
             }
             if (lineCount >= 60)
             {
-                appendToOutput("... (truncated, full JSON available via API)",
-                               "General", OutputSeverity::Info);
+                appendToOutput("... (truncated, full JSON available via API)", "General", OutputSeverity::Info);
             }
 
             appendToOutput("[ChangeImpact] Full JSON also available via "

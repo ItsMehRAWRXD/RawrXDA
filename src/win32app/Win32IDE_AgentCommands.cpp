@@ -136,11 +136,13 @@ void Win32IDE::onSubAgentSwarm() {
 
 void Win32IDE::onSubAgentTodoList() {
     LOG_INFO("onSubAgentTodoList called");
+    if (!m_agenticBridge)
+        initializeAgenticBridge();
     if (!m_agenticBridge) {
-        appendToOutput("Agentic Bridge not initialized\n", "Output", OutputSeverity::Warning);
+        appendToOutput("[SubAgent] Bridge unavailable — load a model first (File > Load Model).\n", "Output", OutputSeverity::Warning);
         return;
     }
-    
+
     std::vector<std::string> todoItems = m_agenticBridge->GetSubAgentTodoList();
     
     std::stringstream todoOutput;
@@ -158,11 +160,13 @@ void Win32IDE::onSubAgentTodoList() {
 
 void Win32IDE::onSubAgentTodoClear() {
     LOG_INFO("onSubAgentTodoClear called");
+    if (!m_agenticBridge)
+        initializeAgenticBridge();
     if (!m_agenticBridge) {
-        appendToOutput("Agentic Bridge not initialized\n", "Output", OutputSeverity::Warning);
+        appendToOutput("[SubAgent] Bridge unavailable — load a model first (File > Load Model).\n", "Output", OutputSeverity::Warning);
         return;
     }
-    
+
     if (MessageBoxA(m_hwndMain, "Clear all SubAgent todo items?", "Confirm", MB_YESNO | MB_ICONQUESTION) == IDYES) {
         m_agenticBridge->ClearSubAgentTodoList();
         appendToOutput("🗑️ SubAgent Todo List cleared\n", "Output", OutputSeverity::Info);
@@ -171,11 +175,13 @@ void Win32IDE::onSubAgentTodoClear() {
 
 void Win32IDE::onSubAgentStatus() {
     LOG_INFO("onSubAgentStatus called");
+    if (!m_agenticBridge)
+        initializeAgenticBridge();
     if (!m_agenticBridge) {
-        appendToOutput("Agentic Bridge not initialized\n", "Output", OutputSeverity::Warning);
+        appendToOutput("[SubAgent] Bridge unavailable — load a model first (File > Load Model).\n", "Output", OutputSeverity::Warning);
         return;
     }
-    
+
     std::string status = m_agenticBridge->GetSubAgentStatus();
     appendToOutput("=== SubAgent Status ===\n" + status + "\n", "Output", OutputSeverity::Info);
 }
@@ -303,8 +309,13 @@ void Win32IDE::onAutonomyStop() {
 
 void Win32IDE::onAutonomySetGoal() {
     LOG_INFO("onAutonomySetGoal called");
+    if (!m_agenticBridge)
+        initializeAgenticBridge();
+    if (!m_autonomyManager)
+        initializeAutonomy();
     if (!m_autonomyManager) {
-        appendToOutput("Autonomy Manager not initialized\n", "Output", OutputSeverity::Warning);
+        appendToOutput("Autonomy unavailable: load a model first (File → Load Model).\n", "Output",
+                       OutputSeverity::Warning);
         return;
     }
     
@@ -335,8 +346,13 @@ void Win32IDE::onAutonomySetGoal() {
 
 void Win32IDE::onAutonomyViewStatus() {
     LOG_INFO("onAutonomyViewStatus called");
+    if (!m_agenticBridge)
+        initializeAgenticBridge();
+    if (!m_autonomyManager)
+        initializeAutonomy();
     if (!m_autonomyManager) {
-        appendToOutput("Autonomy Manager not initialized\n", "Output", OutputSeverity::Warning);
+        appendToOutput("Autonomy unavailable: load a model first (File → Load Model).\n", "Output",
+                       OutputSeverity::Warning);
         return;
     }
     
@@ -346,8 +362,13 @@ void Win32IDE::onAutonomyViewStatus() {
 
 void Win32IDE::onAutonomyViewMemory() {
     LOG_INFO("onAutonomyViewMemory called");
+    if (!m_agenticBridge)
+        initializeAgenticBridge();
+    if (!m_autonomyManager)
+        initializeAutonomy();
     if (!m_autonomyManager) {
-        appendToOutput("Autonomy Manager not initialized\n", "Output", OutputSeverity::Warning);
+        appendToOutput("Autonomy unavailable: load a model first (File → Load Model).\n", "Output",
+                       OutputSeverity::Warning);
         return;
     }
     
@@ -616,6 +637,15 @@ void Win32IDE::initializeAgenticBridge()
                     LOG_ERROR("Full Agentic IDE init: getBridge() returned null");
                     return;
                 }
+
+                m_agenticBridge->SetModelLoadErrorCallback(
+                    [this](const std::string& detail)
+                    {
+                        if (!detail.empty())
+                        {
+                            showModelLoadError(detail);
+                        }
+                    });
 
                 // Load agent configuration from file if exists
                 std::string configPath = m_currentDirectory;
@@ -1339,9 +1369,12 @@ void Win32IDE::onAgentViewStatus()
     LOG_INFO("onAgentViewStatus called");
 
     if (!m_agenticBridge)
+        initializeAgenticBridge();
+    if (!m_agenticBridge)
     {
-        appendToOutput("Agentic Bridge not initialized\n", "Output", OutputSeverity::Warning);
-        MessageBoxA(m_hwndMain, "Agentic Framework not initialized.\nUse Agent > Start Loop to initialize.",
+        appendToOutput("[Agent] Bridge unavailable — load a model first (File > Load Model).\n", "Output",
+                       OutputSeverity::Warning);
+        MessageBoxA(m_hwndMain, "Agentic Framework not initialized.\nLoad a GGUF model (File > Load Model) then retry.",
                     "Agent Status", MB_OK | MB_ICONINFORMATION);
         return;
     }
@@ -1619,8 +1652,8 @@ void Win32IDE::handleAgentCommand(int commandId)
             const bool requestedEnable = !m_useTitanKernel;
             m_useTitanKernel = requestedEnable;
             CheckMenuItem(m_hMenu, IDM_AI_TITAN_TOGGLE, m_useTitanKernel ? MF_CHECKED : MF_UNCHECKED);
-            appendToOutput(std::string("Titan Kernel ") + (m_useTitanKernel ? "ENABLED" : "DISABLED") + "\n",
-                           "Output", OutputSeverity::Info);
+            appendToOutput(std::string("Titan Kernel ") + (m_useTitanKernel ? "ENABLED" : "DISABLED") + "\n", "Output",
+                           OutputSeverity::Info);
             if (m_useTitanKernel)
             {
                 appendToOutput("Titan hotpatch route applied (context/capability independent).\n", "Output",
@@ -2322,14 +2355,20 @@ void Win32IDE::initializeAutonomy()
     LOG_INFO("Initializing Autonomy Manager");
 
     if (!m_agenticBridge)
+        initializeAgenticBridge();
+    if (!m_agenticBridge)
     {
-        appendToOutput("⚠️ Cannot initialize autonomy: Agentic Bridge not ready\n", "Output", OutputSeverity::Warning);
+        appendToOutput(
+            "Cannot initialize autonomy: agentic bridge unavailable. Load a model first (File → Load Model).\n",
+            "Output", OutputSeverity::Warning);
         return;
     }
 
     if (!m_autonomyManager)
     {
         m_autonomyManager = std::make_unique<AutonomyManager>(m_agenticBridge);
+        m_autonomyManager->setOutputCallback([this](const std::string& msg)
+                                             { appendToOutput(msg, "Output", OutputSeverity::Warning); });
     }
 
     appendToOutput("✅ Autonomy Manager initialized\n", "Output", OutputSeverity::Info);

@@ -333,6 +333,7 @@ if(RAWR_HAS_MASM)
         src/asm/FlashAttention_AVX512.asm
         src/asm/quant_avx2.asm
         src/asm/RawrXD_KQuant_Dequant.asm
+        src/asm/RawrXD_AVX512_Dequant_BPE.asm
         src/asm/RawrXD_PDBKernel_v3.asm
         src/asm/RawrXD_ModuleEngine.asm
         src/asm/request_patch.asm
@@ -349,6 +350,7 @@ if(RAWR_HAS_MASM)
         src/asm/RawrXD_SourceEdit_Kernel.asm
         src/asm/feature_dispatch_bridge.asm
         src/asm/gui_dispatch_bridge.asm
+        src/asm/VulkanKernel_DispatchRaw.asm
         # src/asm/RawrXD_CopilotGapCloser.asm   # excluded: scaffold/invalid ml64 syntax (__real@*, missing .ENDPROLOG)
         # src/asm/native_speed_kernels.asm      # excluded: scaffold/invalid ml64 syntax (__real@*, missing .ENDPROLOG)
         # src/asm/DirectML_Bridge.asm           # excluded: scaffold/invalid ml64 syntax (__real@*, missing .ENDPROLOG)
@@ -383,6 +385,41 @@ if(RAWR_HAS_MASM)
 else()
     set(ASM_KERNEL_SOURCES "")
 endif()
+
+# Manual validation target: compile a tiny compute shader to SPIR-V for raw dispatch ABI testing.
+set(RAWRXD_TEST_SHADER_SRC "${CMAKE_SOURCE_DIR}/src/shaders/test_vec_add.comp")
+set(RAWRXD_TEST_SHADER_DIR "${CMAKE_BINARY_DIR}/shaders")
+set(RAWRXD_TEST_SHADER_SPV "${RAWRXD_TEST_SHADER_DIR}/test_vec_add.spv")
+
+add_custom_command(
+    OUTPUT ${RAWRXD_TEST_SHADER_SPV}
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${RAWRXD_TEST_SHADER_DIR}
+    COMMAND glslc -fshader-stage=compute --target-env=vulkan1.2 -O
+            ${RAWRXD_TEST_SHADER_SRC}
+            -o ${RAWRXD_TEST_SHADER_SPV}
+    DEPENDS ${RAWRXD_TEST_SHADER_SRC}
+    COMMENT "Generating test SPIR-V shader: test_vec_add.spv"
+    VERBATIM
+)
+
+add_custom_target(rawrxd-test-spv DEPENDS ${RAWRXD_TEST_SHADER_SPV})
+
+# MatMul benchmark target: compile production GEMM compute shader to SPIR-V.
+set(RAWRXD_MATMUL_SHADER_SRC "${CMAKE_SOURCE_DIR}/src/gpu/shader_matmul.comp")
+set(RAWRXD_MATMUL_SHADER_SPV "${RAWRXD_TEST_SHADER_DIR}/shader_matmul.spv")
+
+add_custom_command(
+    OUTPUT ${RAWRXD_MATMUL_SHADER_SPV}
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${RAWRXD_TEST_SHADER_DIR}
+    COMMAND glslc -fshader-stage=compute --target-env=vulkan1.2 -O
+            ${RAWRXD_MATMUL_SHADER_SRC}
+            -o ${RAWRXD_MATMUL_SHADER_SPV}
+    DEPENDS ${RAWRXD_MATMUL_SHADER_SRC}
+    COMMENT "Generating MatMul SPIR-V shader: shader_matmul.spv"
+    VERBATIM
+)
+
+add_custom_target(rawrxd-matmul-spv DEPENDS ${RAWRXD_MATMUL_SHADER_SPV})
 
 set(_RAWR_ASM_FEATURE_DEFINITIONS
     RAWR_HAS_MASM=$<IF:$<BOOL:${RAWR_HAS_MASM}>,1,0>
@@ -2646,6 +2683,7 @@ if(WIN32)
         src/win32app/Win32IDE_Settings.cpp
         src/win32app/Win32IDE_LocalServer.cpp
         src/win32app/Win32IDE_BackendSwitcher.cpp
+        src/win32app/Win32IDE_AIBackend.cpp
         src/win32app/Win32IDE_LLMRouter.cpp
         src/win32app/Win32IDE_LSPClient.cpp
         src/win32app/Win32IDE_PeekOverlay.cpp
@@ -2963,9 +3001,20 @@ if(WIN32)
         # auto_feature_registry excluded for Win32 IDE — use ssot_handlers (lightweight stubs)
         src/core/intent_engine.cpp
         src/core/model_training_pipeline.cpp
+        src/model_trainer.cpp
         src/agentic/AgentOllamaClient.cpp
+        src/agentic/hotpatch/Engine.cpp
+        src/agentic/observability/Logger.cpp
+        src/agentic/AdvancedAgentCoordinator.cpp
+        src/modules/autonomous_agentic_orchestrator.cpp
+        src/core/native_gguf_loader_link_stub.cpp
+        src/codec/compression.cpp
+        src/codec/brutal_gzip.cpp
+        src/codec/gzip_brutal_inflate.cpp
         src/core/ssot_handlers.cpp
         src/core/ssot_handlers_ext_isolated.cpp
+        src/core/beacon_link_stub.cpp
+        src/win32app/v280_link_bridge.cpp
         src/core/ssot_validation.cpp
 
         # Unified Command Dispatch — Zero-drift SSOT dispatch (replaces manual registration)
@@ -3405,6 +3454,7 @@ if(WIN32)
     target_compile_definitions(RawrEngine PRIVATE
         RAWRXD_HAS_MW_KERNEL=${RAWRXD_HAS_MW_KERNEL_FLAG}
         RAWRXD_HAS_PROMPT_ENGINE=${RAWRXD_HAS_PROMPT_ENGINE_FLAG}
+        RAWRXD_DISABLE_DUPLICATE_SHIMS=1
     )
     target_compile_definitions(RawrXD_Gold PRIVATE
         RAWRXD_HAS_MW_KERNEL=${RAWRXD_HAS_MW_KERNEL_FLAG}
@@ -3423,12 +3473,19 @@ if(WIN32)
         list(REMOVE_ITEM WIN32IDE_SOURCES
             src/core/ssot_handlers.cpp
             src/core/ssot_handlers_ext_isolated.cpp
+            src/core/ssot_auto_missing_handlers.cpp
+            src/core/ssot_linker_gap_handlers.cpp
+            src/core/win32ide_missing_handlers.cpp
         )
         list(APPEND WIN32IDE_SOURCES
             src/core/ssot_missing_handlers_provider.cpp
         )
         message(STATUS "[SSOT] Win32IDE: STUBS lane enabled (excluding ssot_handlers.cpp + ssot_handlers_ext_isolated.cpp; adding ssot_missing_handlers_provider.cpp)")
     else()
+        list(REMOVE_ITEM WIN32IDE_SOURCES
+            src/core/ssot_auto_missing_handlers.cpp
+            src/core/ssot_linker_gap_handlers.cpp
+        )
         # Real lane - keep isolated handlers and runtime menu/command handlers.
         # DO NOT remove ssot_handlers_ext_isolated.cpp - it has working VSCEXT handlers 10000-10009
         # DO NOT add ssot_handlers_ext.cpp - it has unresolved symbols we haven't fixed
@@ -3436,6 +3493,13 @@ if(WIN32)
         # only in explicit non-strict MSVC compatibility lanes.
         message(STATUS "Win32IDE: Real lane - using isolated handlers + runtime handlers")
     endif()
+
+    # AgenticExecutor real implementation now provides these members.
+    # Keep the link stub out of Win32IDE to avoid duplicate definitions.
+    list(REMOVE_ITEM WIN32IDE_SOURCES
+        src/core/agentic_executor_link_stub.cpp
+        src/core/beacon_link_stub.cpp
+    )
 
     if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
         list(REMOVE_ITEM WIN32IDE_SOURCES
@@ -3482,15 +3546,12 @@ if(WIN32)
             # Link closure: rawr_engine_link_shims.cpp + fallbacks (Win32IDE removes rawr_engine.cpp — shims satisfy externals).
             set(_RAWRXD_WIN32IDE_FALLBACK_UNITS
                 src/core/rawr_engine_link_shims.cpp
-                src/core/win32ide_asm_fallback.cpp
                 src/core/cot_fallback_system.cpp
-                src/core/subsystem_mode_fallbacks.cpp
                 src/core/model_loader_fallbacks.cpp
                 src/core/rawrxd_native_log_fallback.cpp
                 src/llm_adapter/ggufrunner_link_fallbacks.cpp
                 src/inference/gpu_dispatch_gate_win32ide_fallback.cpp
                 src/inference/gguf_d3d12_bridge_link_fallback.cpp
-                src/win32app/v280_link_fallbacks.cpp
                 src/win32app/collab_cursor_fallbacks.cpp
                 src/win32app/rtp_protocol_fallback.cpp
                 src/modules/quickjs_node_shims.cpp
@@ -3522,8 +3583,6 @@ if(WIN32)
         set(WIN32IDE_EXTRA_ASM
             src/asm/RawrXD_PE_Importer.asm
             src/asm/RawrXD_PE_Exporter.asm
-            src/asm/memory_patch.asm
-            src/asm/byte_search.asm
             src/asm/ghost_text_ranker.asm
             src/asm/diff_engine.asm
         )
@@ -3786,7 +3845,6 @@ if(WIN32)
     # Batch 6: BackendOrchestrator — dynamic switching, sharding, semantic cache
     list(APPEND WIN32IDE_SOURCES
         src/memory/UnifiedMemoryPool.cpp
-        src/ExecutionScheduler.cpp
         src/InferenceProfiler.cpp
         src/BackendOrchestrator.cpp
     )
@@ -3858,8 +3916,10 @@ if(WIN32)
         set(_IDE_MAP_AUDIT_PATH "${CMAKE_BINARY_DIR}/RawrXD-Win32IDE.map")
         target_link_options(RawrXD-Win32IDE PRIVATE
             /LARGEADDRESSAWARE:NO
+            /DEBUG:FULL
             "/MAP:${_IDE_MAP_PATH}"
             /MAPINFO:EXPORTS
+            /MANIFEST:NO
         )
         # Mirror the map at the build root for audit tools that scan ${CMAKE_BINARY_DIR}.
         add_custom_command(TARGET RawrXD-Win32IDE POST_BUILD
@@ -3881,6 +3941,7 @@ if(WIN32)
         RAWRXD_USE_DEDICATED_INLAY=1
         RAWRXD_USE_DEDICATED_HOVER=1
         RAWRXD_USE_DEDICATED_MINIMAP=1
+        RAWRXD_DISABLE_DUPLICATE_SHIMS=1
     )
     if(RAWR_HAS_MASM)
         target_compile_definitions(RawrXD-Win32IDE PRIVATE HAS_BRUTAL_GZIP_MASM=1)
@@ -4127,7 +4188,7 @@ if(WIN32)
 
     if(MSVC)
         target_compile_options(RawrXD-Win32IDE PRIVATE
-            $<$<COMPILE_LANGUAGE:CXX>:/EHsc /W0 /arch:AVX2>
+            $<$<COMPILE_LANGUAGE:CXX>:/EHsc /W0 /arch:AVX2 /Zi>
             # Avoid /RTC1 + /O2 conflict in Debug (CMake injects /RTC1 for Debug by default).
             $<$<AND:$<COMPILE_LANGUAGE:CXX>,$<NOT:$<CONFIG:Debug>>>:/O2>
         )
@@ -4138,6 +4199,10 @@ if(WIN32)
     set_target_properties(RawrXD-Win32IDE PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY bin
         OUTPUT_NAME RawrXD-Win32IDE
+        PDB_NAME RawrXD-Win32IDE
+        PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+        COMPILE_PDB_NAME RawrXD-Win32IDE
+        COMPILE_PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
         CXX_STANDARD 23
         CXX_STANDARD_REQUIRED ON
         MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
@@ -4593,6 +4658,25 @@ else()
     message(STATUS "SwarmSmokeTest skipped in strict production strip mode (uses swarm_smoke_stubs.cpp)")
 endif()
 
+# BackendOrchestrator model sharding smoke test (manual)
+add_executable(BackendOrchestratorShardSmoke EXCLUDE_FROM_ALL
+    src/tests/backend_orchestrator_shard_smoke.cpp
+    src/tests/backend_orchestrator_shard_smoke_stubs.cpp
+    src/BackendOrchestrator.cpp
+    src/InferenceProfiler.cpp
+    src/gguf_loader.cpp
+    src/gguf_vocab_resolver.cpp
+)
+target_include_directories(BackendOrchestratorShardSmoke PRIVATE
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/include
+)
+if(WIN32)
+    target_link_libraries(BackendOrchestratorShardSmoke PRIVATE kernel32 psapi)
+endif()
+message(STATUS "[BackendOrchestrator] Smoke test target: BackendOrchestratorShardSmoke")
+
 # ============================================================================
 # Agentic Planning Orchestrator Smoke Tests
 # ============================================================================
@@ -4623,6 +4707,91 @@ else()
 endif()
 
 message(STATUS "[AgenticOrchestrator] Smoke test target: agentic_orchestrator_smoke_test (build with: cmake --build . --target agentic_orchestrator_smoke_test)")
+
+# ============================================================================
+# Native Address Resolver Utility (deterministic, no PowerShell dependency)
+# ============================================================================
+option(RAWRXD_BUILD_ADDRESS_RESOLVER_NATIVE "Build native crash address resolver utility" ON)
+if(RAWRXD_BUILD_ADDRESS_RESOLVER_NATIVE AND EXISTS "${CMAKE_SOURCE_DIR}/tools/address_resolver_native.cpp")
+    add_executable(address_resolver_native EXCLUDE_FROM_ALL
+        tools/address_resolver_native.cpp
+    )
+    target_compile_features(address_resolver_native PRIVATE cxx_std_20)
+    target_include_directories(address_resolver_native PRIVATE
+        ${CMAKE_SOURCE_DIR}
+        ${CMAKE_SOURCE_DIR}/include
+    )
+    if(MSVC)
+        target_compile_options(address_resolver_native PRIVATE /W3 /EHsc)
+        target_link_libraries(address_resolver_native PRIVATE dbghelp)
+    else()
+        target_compile_options(address_resolver_native PRIVATE -Wall -Wextra)
+    endif()
+    set_target_properties(address_resolver_native PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tools
+        OUTPUT_NAME address_resolver_native
+    )
+
+    add_custom_target(address_resolver_native_smoke
+        COMMAND ${CMAKE_COMMAND}
+            -DRESOLVER_EXE=${CMAKE_BINARY_DIR}/tools/address_resolver_native.exe
+            -DMODULE_EXE=${CMAKE_BINARY_DIR}/bin/RawrXD-Win32IDE.exe
+            -DMAP_FILE=${CMAKE_BINARY_DIR}/bin/RawrXD-Win32IDE.map
+            -DALLOW_MISSING_ARTIFACTS=OFF
+            -P ${CMAKE_SOURCE_DIR}/tools/address_resolver_native_smoke.cmake
+        DEPENDS address_resolver_native
+        COMMENT "Running native address resolver smoke check"
+        VERBATIM
+    )
+
+    add_custom_target(address_resolver_native_smoke_soft
+        COMMAND ${CMAKE_COMMAND}
+            -DRESOLVER_EXE=${CMAKE_BINARY_DIR}/tools/address_resolver_native.exe
+            -DMODULE_EXE=${CMAKE_BINARY_DIR}/bin/RawrXD-Win32IDE.exe
+            -DMAP_FILE=${CMAKE_BINARY_DIR}/bin/RawrXD-Win32IDE.map
+            -DALLOW_MISSING_ARTIFACTS=ON
+            -P ${CMAKE_SOURCE_DIR}/tools/address_resolver_native_smoke.cmake
+        DEPENDS address_resolver_native
+        COMMENT "Running native address resolver smoke check (soft mode)"
+        VERBATIM
+    )
+
+    add_custom_target(address_resolver_native_smoke_minimal
+        COMMAND ${CMAKE_COMMAND}
+            -DRESOLVER_EXE=${CMAKE_BINARY_DIR}/tools/address_resolver_native.exe
+            -DMODULE_EXE=${CMAKE_BINARY_DIR}/bin/RawrXD-Win32IDE.exe
+            -DMAP_FILE=${CMAKE_BINARY_DIR}/bin/RawrXD-Win32IDE.map
+            -DFORCE_HELP_PROBE=ON
+            -P ${CMAKE_SOURCE_DIR}/tools/address_resolver_native_smoke.cmake
+        DEPENDS address_resolver_native
+        COMMENT "Running native address resolver smoke check (minimal help probe)"
+        VERBATIM
+    )
+
+    if(BUILD_TESTING)
+        add_test(
+            NAME address_resolver_native_smoke
+            COMMAND ${CMAKE_COMMAND}
+                -DRESOLVER_EXE=${CMAKE_BINARY_DIR}/tools/address_resolver_native.exe
+                -DMODULE_EXE=${CMAKE_BINARY_DIR}/bin/RawrXD-Win32IDE.exe
+                -DMAP_FILE=${CMAKE_BINARY_DIR}/bin/RawrXD-Win32IDE.map
+                -DALLOW_MISSING_ARTIFACTS=ON
+                -P ${CMAKE_SOURCE_DIR}/tools/address_resolver_native_smoke.cmake
+        )
+
+        add_test(
+            NAME address_resolver_native_smoke_minimal
+            COMMAND ${CMAKE_COMMAND}
+                -DRESOLVER_EXE=${CMAKE_BINARY_DIR}/tools/address_resolver_native.exe
+                -DMODULE_EXE=${CMAKE_BINARY_DIR}/bin/RawrXD-Win32IDE.exe
+                -DMAP_FILE=${CMAKE_BINARY_DIR}/bin/RawrXD-Win32IDE.map
+                -DFORCE_HELP_PROBE=ON
+                -P ${CMAKE_SOURCE_DIR}/tools/address_resolver_native_smoke.cmake
+        )
+    endif()
+
+    message(STATUS "[Tools] Native address resolver target enabled: address_resolver_native (smoke targets: address_resolver_native_smoke, address_resolver_native_smoke_soft, address_resolver_native_smoke_minimal)")
+endif()
 
 if(EXISTS "${CMAKE_SOURCE_DIR}/tests/CMakeLists.txt")
     enable_testing()

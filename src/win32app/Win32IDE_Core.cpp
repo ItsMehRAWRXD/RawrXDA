@@ -174,6 +174,7 @@ static void runWindowVisibilityWatchdog(HWND hwnd);
 static void drawLayoutDebugOverlay(HWND hwnd, HDC hdc);
 
 static constexpr UINT_PTR IDT_VISIBILITY_WATCHDOG = 0x7D11;
+static constexpr UINT_PTR IDT_GPU_TELEMETRY        = 0x7D12; // 2-second backend/GPU status refresh
 
 static bool isLayoutDebugOverlayEnabled()
 {
@@ -734,6 +735,10 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
             break;
 
         case WM_TIMER:
+            if (m_ircBridge)
+            {
+                m_ircBridge->tick();
+            }
             if (wParam == SYNTAX_COLOR_TIMER_ID)
             {
                 // Handled by SyntaxColorTimerProc callback — this is a fallback
@@ -789,6 +794,11 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
             if (wParam == IDT_VISIBILITY_WATCHDOG)
             {
                 runWindowVisibilityWatchdog(m_hwndMain ? m_hwndMain : hwnd);
+                return 0;
+            }
+            if (wParam == IDT_GPU_TELEMETRY)
+            {
+                updateStatusBarBackend();
                 return 0;
             }
             if (wParam == 42)
@@ -948,6 +958,12 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
                 updateMenuEnableStates();
                 InvalidateRect(hwnd, nullptr, TRUE);
                 UpdateWindow(hwnd);
+                return 0;
+            }
+            // AI backend verification result from background probe thread
+            if (uMsg == WM_AI_BACKEND_STATUS)
+            {
+                onAIBackendVerified(wParam != 0);
                 return 0;
             }
             // Tier 3 (Feature 35): File changed externally → show reload toast
@@ -1249,6 +1265,7 @@ void Win32IDE::showWindow()
     SetActiveWindow(m_hwndMain);
     forceWindowToForeground(m_hwndMain);
     SetTimer(m_hwndMain, IDT_VISIBILITY_WATCHDOG, 1000, nullptr);
+        SetTimer(m_hwndMain, IDT_GPU_TELEMETRY, 2000, nullptr);
     FLASHWINFO fwi = {sizeof(FLASHWINFO), m_hwndMain, FLASHW_ALL | FLASHW_TIMERNOFG, 3, 0};
     FlashWindowEx(&fwi);
 }
@@ -1954,6 +1971,61 @@ void Win32IDE::onCreate(HWND hwnd)
 // Declared as friend in Win32IDE class (external linkage) to access private members.
 void bgInitBody(void* self);
 
+namespace {
+
+#ifdef _WIN32
+thread_local DWORD g_enterpriseInitSehCode = 0;
+#endif
+
+bool initializeEnterpriseSubsystems(Win32IDE* ide)
+{
+    auto& license = RawrXD::EnterpriseLicense::Instance();
+    license.Initialize();
+
+    auto& featureMgr = EnterpriseFeatureManager::Instance();
+    featureMgr.Initialize();
+
+    auto& licV2 = RawrXD::License::EnterpriseLicenseV2::Instance();
+    licV2.initialize();
+    RawrXD::Flags::FeatureFlagsRuntime::Instance().refreshFromLicense();
+    RawrXD::Enforce::LicenseEnforcer::Instance().initialize();
+
+    OutputDebugStringA("[deferredHeavyInit] Enterprise license initialized\n");
+
+    std::string tierBadge = std::string("[") + license.GetEditionName() + "]";
+    PostMessage(ide->getMainWindow(), WM_USER + 200, 0, reinterpret_cast<LPARAM>(_strdup(tierBadge.c_str())));
+    return true;
+}
+
+#ifdef _WIN32
+bool initializeEnterpriseSubsystemsSafe(Win32IDE* ide)
+{
+    __try
+    {
+        return initializeEnterpriseSubsystems(ide);
+    }
+    __except ((g_enterpriseInitSehCode = GetExceptionCode()), EXCEPTION_EXECUTE_HANDLER)
+    {
+        char sehMsg[192] = {};
+        sprintf_s(sehMsg,
+                  "ERROR: Enterprise license SEH faulted (code=0x%08lX); continuing in community mode\n",
+                  static_cast<unsigned long>(g_enterpriseInitSehCode));
+        LOG_ERROR(sehMsg);
+        OutputDebugStringA(sehMsg);
+        OutputDebugStringA("ERROR: Enterprise license SEH faulted; continuing in community mode\n");
+        PostMessage(ide->getMainWindow(), WM_USER + 200, 0, reinterpret_cast<LPARAM>(_strdup("[Community]")));
+        return false;
+    }
+}
+#else
+bool initializeEnterpriseSubsystemsSafe(Win32IDE* ide)
+{
+    return initializeEnterpriseSubsystems(ide);
+}
+#endif
+
+} // namespace
+
 // 4 MB stack for deferred init thread to avoid 0xC00000FD (STATUS_STACK_OVERFLOW)
 static const DWORD kDeferredInitStackSize = 4 * 1024 * 1024;
 
@@ -2010,23 +2082,7 @@ void Win32IDE::deferredHeavyInitBody()
     // ================================================================
     try
     {
-        auto& license = RawrXD::EnterpriseLicense::Instance();
-        license.Initialize();
-
-        auto& featureMgr = EnterpriseFeatureManager::Instance();
-        featureMgr.Initialize();
-
-        // V2 license system (61-feature manifest) + runtime enforcement
-        auto& licV2 = RawrXD::License::EnterpriseLicenseV2::Instance();
-        licV2.initialize();
-        RawrXD::Flags::FeatureFlagsRuntime::Instance().refreshFromLicense();
-        RawrXD::Enforce::LicenseEnforcer::Instance().initialize();
-
-        OutputDebugStringA("[deferredHeavyInit] Enterprise license initialized\n");
-
-        // Update status bar with license tier badge
-        std::string tierBadge = std::string("[") + license.GetEditionName() + "]";
-        PostMessage(m_hwndMain, WM_USER + 200, 0, reinterpret_cast<LPARAM>(_strdup(tierBadge.c_str())));
+        initializeEnterpriseSubsystemsSafe(this);
     }
     catch (...)
     {
@@ -2482,6 +2538,20 @@ void Win32IDE::deferredHeavyInitBody()
 
     OutputDebugStringA("deferredHeavyInit complete (background thread)\n");
 
+    // Initialize AI backend probe (background thread, posts WM_AI_BACKEND_STATUS on result)
+    if (!isShuttingDown())
+    {
+        try
+        {
+            initializeAIBackend();
+        }
+        catch (...)
+        {
+            OutputDebugStringA("ERROR: initializeAIBackend failed\n");
+        }
+    }
+
+
     // Notify UI thread to refresh
     if (m_hwndMain && !isShuttingDown())
     {
@@ -2853,6 +2923,11 @@ void Win32IDE::onCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
     if (id == 1208)
     {
         setAgenticMode(RawrXD::AgenticMode::Ask);
+        return;
+    }
+    if (id == 1209)  // IDC_MODEL_BROWSE_BTN
+    {
+        handleModelBrowse();
         return;
     }
 

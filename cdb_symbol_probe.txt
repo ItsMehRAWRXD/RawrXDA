@@ -1,0 +1,485 @@
+
+************* Preparing the environment for Debugger Extensions Gallery repositories **************
+   ExtensionRepository : Implicit
+   UseExperimentalFeatureForNugetShare : true
+   AllowNugetExeUpdate : true
+   NonInteractiveNuget : true
+   AllowNugetMSCredentialProviderInstall : true
+   AllowParallelInitializationOfLocalRepositories : true
+
+   EnableRedirectToV8JsProvider : false
+
+   -- Configuring repositories
+      ----> Repository : LocalInstalled, Enabled: true
+      ----> Repository : UserExtensions, Enabled: true
+
+>>>>>>>>>>>>> Preparing the environment for Debugger Extensions Gallery repositories completed, duration 0.000 seconds
+
+************* Waiting for Debugger Extensions Gallery to Initialize **************
+
+>>>>>>>>>>>>> Waiting for Debugger Extensions Gallery to Initialize completed, duration 0.016 seconds
+   ----> Repository : UserExtensions, Enabled: true, Packages count: 0
+   ----> Repository : LocalInstalled, Enabled: true, Packages count: 29
+
+Microsoft (R) Windows Debugger Version 10.0.26100.4188 AMD64
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+CommandLine: D:\rawrxd\build\bin\RawrXD-Win32IDE-run.exe
+
+************* Path validation summary **************
+Response                         Time (ms)     Location
+Deferred                                       srv*
+Symbol search path is: srv*
+Executable search path is: 
+
++------------------------------------------------------------------------+
+| This target supports Hardware-enforced Stack Protection. A HW based    |
+| "Shadow Stack" may be available to assist in debugging and analysis.   |
+| See aka.ms/userhsp for more info.                                      |
+|                                                                        |
+| dps @ssp                                                               |
+|                                                                        |
++------------------------------------------------------------------------+
+
+ModLoad: 00000000`00c00000 00000000`02960000   RawrXD-Win32IDE.exe
+ModLoad: 00007ffd`6a900000 00007ffd`6ab67000   ntdll.dll
+ModLoad: 00000000`02d30000 00000000`02df9000   C:\WINDOWS\System32\KERNEL32.DLL
+ModLoad: 00000000`02f50000 00000000`03341000   C:\WINDOWS\System32\KERNELBASE.dll
+ModLoad: 00000000`03630000 00000000`0371e000   C:\WINDOWS\System32\COMDLG32.dll
+ModLoad: 00000000`03730000 00000000`039c3000   C:\WINDOWS\WinSxS\amd64_microsoft.windows.common-controls_6595b64144ccf1df_6.0.26100.8037_none_3e092faae333b53b\COMCTL32.dll
+ModLoad: 00000000`03b80000 00000000`042df000   C:\WINDOWS\System32\SHELL32.dll
+ModLoad: 00000000`039d0000 00000000`03b7a000   C:\WINDOWS\SYSTEM32\vulkan-1.dll
+ModLoad: 00000000`03630000 00000000`037c5000   C:\WINDOWS\System32\ole32.dll
+ModLoad: 00000000`03630000 00000000`03697000   C:\WINDOWS\System32\SHLWAPI.dll
+ModLoad: 00000000`03630000 00000000`036a4000   C:\WINDOWS\System32\WS2_32.dll
+ModLoad: 00000000`03630000 00000000`03872000   C:\WINDOWS\SYSTEM32\dbghelp.dll
+ModLoad: 00000000`03880000 00000000`039a7000   C:\WINDOWS\SYSTEM32\WINHTTP.dll
+ModLoad: 00000000`02e10000 00000000`02e3b000   C:\WINDOWS\System32\GDI32.dll
+ModLoad: 00000000`02e10000 00000000`02e45000   C:\WINDOWS\SYSTEM32\WINMM.dll
+ModLoad: 00000000`03630000 00000000`037f5000   C:\WINDOWS\System32\USER32.dll
+ModLoad: 00000000`03630000 00000000`036eb000   C:\WINDOWS\System32\ADVAPI32.dll
+ModLoad: 00000000`036f0000 00000000`03953000   C:\WINDOWS\SYSTEM32\d3d11.dll
+ModLoad: 00000000`03ab0000 00000000`040ea000   C:\WINDOWS\SYSTEM32\d2d1.dll
+ModLoad: 00000000`040f0000 00000000`04357000   C:\WINDOWS\SYSTEM32\DWrite.dll
+ModLoad: 00000000`04360000 00000000`044d7000   C:\WINDOWS\System32\CRYPT32.dll
+ModLoad: 00000000`03630000 00000000`036b1000   C:\WINDOWS\System32\WINTRUST.dll
+ModLoad: 00000000`02e10000 00000000`02e3e000   C:\WINDOWS\SYSTEM32\dwmapi.dll
+ModLoad: 00000000`03ab0000 00000000`03f2f000   C:\WINDOWS\SYSTEM32\D3DCOMPILER_47.dll
+ModLoad: 00000000`036c0000 00000000`038e0000   C:\WINDOWS\SYSTEM32\dcomp.dll
+ModLoad: 00000000`03630000 00000000`0376e000   C:\WINDOWS\SYSTEM32\dxgi.dll
+ModLoad: 00000000`03780000 00000000`037d6000   C:\WINDOWS\SYSTEM32\pdh.dll
+ModLoad: 00000000`02e10000 00000000`02e3a000   C:\WINDOWS\SYSTEM32\bcrypt.dll
+ModLoad: 00000000`03ab0000 00000000`03c88000   C:\WINDOWS\WinSxS\amd64_microsoft.windows.gdiplus_6595b64144ccf1df_1.1.26100.8036_none_6ef439583dc61568\gdiplus.dll
+ModLoad: 00000000`02e10000 00000000`02e43000   C:\WINDOWS\SYSTEM32\IPHLPAPI.DLL
+ModLoad: 00000000`03630000 00000000`0371e000   C:\WINDOWS\System32\COMDLG32.dll
+ModLoad: 00000000`03730000 00000000`037d3000   C:\WINDOWS\System32\msvcp_win.dll
+ModLoad: 00000000`03730000 00000000`0387b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`03730000 00000000`0387b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`03730000 00000000`0387b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`03ab0000 00000000`03e32000   C:\WINDOWS\System32\combase.dll
+ModLoad: 00000000`03ab0000 00000000`03e32000   C:\WINDOWS\System32\combase.dll
+ModLoad: 00000000`03730000 00000000`03848000   C:\WINDOWS\System32\RPCRT4.dll
+ModLoad: 00000000`03ab0000 00000000`03e32000   C:\WINDOWS\System32\combase.dll
+ModLoad: 00000000`03ab0000 00000000`03e32000   C:\WINDOWS\System32\combase.dll
+ModLoad: 00000000`03ab0000 00000000`03e32000   C:\WINDOWS\System32\combase.dll
+ModLoad: 00000000`03ab0000 00000000`03e32000   C:\WINDOWS\System32\combase.dll
+ModLoad: 00000000`03730000 00000000`03827000   C:\WINDOWS\System32\shcore.dll
+ModLoad: 00000000`03730000 00000000`038f5000   C:\WINDOWS\System32\USER32.dll
+ModLoad: 00000000`03730000 00000000`03827000   C:\WINDOWS\System32\shcore.dll
+ModLoad: 00000000`03730000 00000000`03827000   C:\WINDOWS\System32\shcore.dll
+ModLoad: 00000000`03730000 00000000`03827000   C:\WINDOWS\System32\shcore.dll
+ModLoad: 00000000`03730000 00000000`03827000   C:\WINDOWS\System32\shcore.dll
+ModLoad: 00000000`03730000 00000000`03827000   C:\WINDOWS\System32\shcore.dll
+ModLoad: 00000000`03730000 00000000`03827000   C:\WINDOWS\System32\shcore.dll
+ModLoad: 00000000`03730000 00000000`03827000   C:\WINDOWS\System32\shcore.dll
+ModLoad: 00000000`03730000 00000000`03797000   C:\WINDOWS\System32\SHLWAPI.dll
+ModLoad: 00000000`02e10000 00000000`02e3b000   C:\WINDOWS\System32\GDI32.dll
+ModLoad: 00000000`03ab0000 00000000`0420f000   C:\WINDOWS\System32\SHELL32.dll
+ModLoad: 00000000`04220000 00000000`044b3000   C:\WINDOWS\WinSxS\amd64_microsoft.windows.common-controls_6595b64144ccf1df_6.0.26100.8037_none_3e092faae333b53b\COMCTL32.dll
+ModLoad: 00000000`03730000 00000000`037d9000   C:\WINDOWS\System32\msvcrt.dll
+ModLoad: 00000000`03ab0000 00000000`0420f000   C:\WINDOWS\System32\SHELL32.dll
+ModLoad: 00000000`02e10000 00000000`02e3b000   C:\WINDOWS\System32\GDI32.dll
+ModLoad: 00000000`03730000 00000000`037d3000   C:\WINDOWS\System32\msvcp_win.dll
+ModLoad: 00000000`03730000 00000000`0387b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`044c0000 00000000`04685000   C:\WINDOWS\System32\USER32.dll
+ModLoad: 00000000`03730000 00000000`0387b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`03730000 00000000`0387b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`03730000 00000000`038da000   C:\WINDOWS\SYSTEM32\vulkan-1.dll
+ModLoad: 00000000`044c0000 00000000`04685000   C:\WINDOWS\System32\USER32.dll
+ModLoad: 00000000`02e10000 00000000`02e3b000   C:\WINDOWS\System32\GDI32.dll
+ModLoad: 00000000`044c0000 00000000`0462a000   C:\WINDOWS\System32\wintypes.dll
+ModLoad: 00000000`044c0000 00000000`0460b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`038e0000 00000000`0399b000   C:\WINDOWS\System32\ADVAPI32.dll
+ModLoad: 00000000`044c0000 00000000`04655000   C:\WINDOWS\System32\ole32.dll
+ModLoad: 00000000`038e0000 00000000`03947000   C:\WINDOWS\System32\SHLWAPI.dll
+ModLoad: 00000000`04660000 00000000`046d4000   C:\WINDOWS\System32\WS2_32.dll
+ModLoad: 00000000`046e0000 00000000`04783000   C:\WINDOWS\System32\msvcp_win.dll
+ModLoad: 00000000`04790000 00000000`048db000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`048e0000 00000000`04a2b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`046e0000 00000000`0482b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`04830000 00000000`0497b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`04980000 00000000`04acb000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`046e0000 00000000`0482b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`04830000 00000000`0497b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`04980000 00000000`04acb000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`046e0000 00000000`04f44000   C:\WINDOWS\System32\Windows.Storage.dll
+ModLoad: 00000000`050a0000 00000000`051b8000   C:\WINDOWS\System32\RPCRT4.dll
+ModLoad: 00000000`04f50000 00000000`0509b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`02e20000 00000000`02e4b000   C:\WINDOWS\System32\GDI32.dll
+ModLoad: 00000000`046e0000 00000000`04922000   C:\WINDOWS\SYSTEM32\dbghelp.dll
+ModLoad: 00000000`04930000 00000000`04a57000   C:\WINDOWS\SYSTEM32\WINHTTP.dll
+ModLoad: 00000000`04a60000 00000000`04c25000   C:\WINDOWS\System32\USER32.dll
+ModLoad: 00000000`04df0000 00000000`04f3b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`04a60000 00000000`04de2000   C:\WINDOWS\System32\combase.dll
+ModLoad: 00000000`04f40000 00000000`0508b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`04a60000 00000000`04bab000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`04bb0000 00000000`04cfb000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`02e20000 00000000`02e4b000   C:\WINDOWS\System32\GDI32.dll
+ModLoad: 00000000`04a60000 00000000`04bab000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`04bb0000 00000000`04cfb000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`03950000 00000000`03977000   C:\WINDOWS\System32\win32u.dll
+ModLoad: 00000000`04a60000 00000000`04bab000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`04bb0000 00000000`04c57000   C:\WINDOWS\System32\sechost.dll
+ModLoad: 00000000`04c60000 00000000`04d8b000   C:\WINDOWS\System32\gdi32full.dll
+ModLoad: 00000000`04a60000 00000000`04bab000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`04bb0000 00000000`04c57000   C:\WINDOWS\System32\sechost.dll
+ModLoad: 00000000`04a60000 00000000`04de2000   C:\WINDOWS\System32\combase.dll
+ModLoad: 00000000`03950000 00000000`03985000   C:\WINDOWS\SYSTEM32\WINMM.dll
+ModLoad: 00000000`04df0000 00000000`04fb5000   C:\WINDOWS\System32\USER32.dll
+ModLoad: 00000000`04a60000 00000000`04b37000   C:\WINDOWS\System32\OLEAUT32.dll
+ModLoad: 00000000`04b40000 00000000`04c8b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`04a60000 00000000`04a87000   C:\WINDOWS\System32\win32u.dll
+ModLoad: 00000000`04a60000 00000000`04bab000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`04a60000 00000000`04b1b000   C:\WINDOWS\System32\ADVAPI32.dll
+ModLoad: 00000000`04fc0000 00000000`055fa000   C:\WINDOWS\SYSTEM32\d2d1.dll
+ModLoad: 00000000`04b20000 00000000`04c6b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`04b20000 00000000`04bc9000   C:\WINDOWS\System32\msvcrt.dll
+ModLoad: 00000000`04bd0000 00000000`04c79000   C:\WINDOWS\System32\msvcrt.dll
+ModLoad: 00000000`05600000 00000000`05863000   C:\WINDOWS\SYSTEM32\d3d11.dll
+ModLoad: 00000000`04b20000 00000000`04bc7000   C:\WINDOWS\System32\sechost.dll
+ModLoad: 00000000`04b20000 00000000`04d87000   C:\WINDOWS\SYSTEM32\DWrite.dll
+ModLoad: 00000000`05870000 00000000`05917000   C:\WINDOWS\System32\sechost.dll
+ModLoad: 00000000`05920000 00000000`059c3000   C:\WINDOWS\System32\msvcp_win.dll
+ModLoad: 00000000`059d0000 00000000`05b1b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`05870000 00000000`05917000   C:\WINDOWS\System32\sechost.dll
+ModLoad: 00000000`05b10000 00000000`05bb7000   C:\WINDOWS\System32\SECHOST.dll
+ModLoad: 00000000`059c0000 00000000`05b0b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`05870000 00000000`059bb000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`05870000 00000000`05917000   C:\WINDOWS\System32\sechost.dll
+ModLoad: 00000000`05920000 00000000`05a6b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`05a70000 00000000`05bbb000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`05870000 00000000`05917000   C:\WINDOWS\System32\sechost.dll
+ModLoad: 00000000`05920000 00000000`05a38000   C:\WINDOWS\System32\RPCRT4.dll
+ModLoad: 00000000`05a40000 00000000`05b8b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`05870000 00000000`05913000   C:\WINDOWS\System32\msvcp_win.dll
+ModLoad: 00000000`05920000 00000000`059c7000   C:\WINDOWS\System32\sechost.dll
+ModLoad: 00000000`04d90000 00000000`04db7000   C:\WINDOWS\System32\win32u.dll
+ModLoad: 00000000`05870000 00000000`05917000   C:\WINDOWS\System32\sechost.dll
+ModLoad: 00000000`05920000 00000000`05a97000   C:\WINDOWS\System32\CRYPT32.dll
+ModLoad: 00000000`05aa0000 00000000`05b21000   C:\WINDOWS\System32\WINTRUST.dll
+ModLoad: 00000000`05b30000 00000000`05d50000   C:\WINDOWS\SYSTEM32\dcomp.dll
+ModLoad: 00000000`05870000 00000000`05917000   C:\WINDOWS\System32\sechost.dll
+ModLoad: 00000000`05d60000 00000000`05eab000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`05eb0000 00000000`05f59000   C:\WINDOWS\System32\msvcrt.dll
+ModLoad: 00000000`05870000 00000000`05917000   C:\WINDOWS\System32\sechost.dll
+ModLoad: 00000000`05d60000 00000000`05eab000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`04d90000 00000000`04db7000   C:\WINDOWS\System32\win32u.dll
+ModLoad: 00000000`05eb0000 00000000`05fc8000   C:\WINDOWS\System32\RPCRT4.dll
+ModLoad: 00000000`05870000 00000000`05917000   C:\WINDOWS\System32\sechost.dll
+ModLoad: 00000000`05d60000 00000000`05eab000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`05fd0000 00000000`06073000   C:\WINDOWS\System32\msvcp_win.dll
+ModLoad: 00000000`05870000 00000000`05917000   C:\WINDOWS\System32\sechost.dll
+ModLoad: 00000000`05d60000 00000000`05eab000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`04d90000 00000000`04dbe000   C:\WINDOWS\SYSTEM32\dwmapi.dll
+ModLoad: 00000000`05870000 00000000`05917000   C:\WINDOWS\System32\sechost.dll
+ModLoad: 00000000`05eb0000 00000000`0632f000   C:\WINDOWS\SYSTEM32\D3DCOMPILER_47.dll
+ModLoad: 00000000`05870000 00000000`05917000   C:\WINDOWS\System32\sechost.dll
+ModLoad: 00000000`05d60000 00000000`05eab000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`06490000 00000000`065db000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`06340000 00000000`0648b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`06340000 00000000`06458000   C:\WINDOWS\System32\RPCRT4.dll
+ModLoad: 00000000`05d60000 00000000`05eab000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`065b0000 00000000`066fb000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`06460000 00000000`065ab000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`05d60000 00000000`05eab000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`05870000 00000000`05917000   C:\WINDOWS\System32\sechost.dll
+ModLoad: 00000000`06490000 00000000`065db000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`06340000 00000000`0648b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`05870000 00000000`05917000   C:\WINDOWS\System32\sechost.dll
+ModLoad: 00000000`06340000 00000000`066c2000   C:\WINDOWS\System32\combase.dll
+ModLoad: 00000000`05d60000 00000000`05eab000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`066d0000 00000000`066f7000   C:\WINDOWS\System32\win32u.dll
+ModLoad: 00000000`06340000 00000000`066c2000   C:\WINDOWS\System32\combase.dll
+ModLoad: 00000000`05d60000 00000000`05e78000   C:\WINDOWS\System32\RPCRT4.dll
+ModLoad: 00000000`066d0000 00000000`06a52000   C:\WINDOWS\System32\combase.dll
+ModLoad: 00000000`05870000 00000000`058c6000   C:\WINDOWS\SYSTEM32\pdh.dll
+ModLoad: 00000000`06340000 00000000`066c2000   C:\WINDOWS\System32\combase.dll
+ModLoad: 00000000`05d60000 00000000`05e03000   C:\WINDOWS\System32\msvcp_win.dll
+ModLoad: 00000000`066d0000 00000000`0681b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`05d60000 00000000`05e9e000   C:\WINDOWS\SYSTEM32\dxgi.dll
+ModLoad: 00000000`06340000 00000000`0648b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`06490000 00000000`06812000   C:\WINDOWS\System32\combase.dll
+ModLoad: 00000000`06820000 00000000`0696b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`06340000 00000000`063e3000   C:\WINDOWS\System32\msvcp_win.dll
+ModLoad: 00000000`063f0000 00000000`06772000   C:\WINDOWS\System32\combase.dll
+ModLoad: 00000000`06340000 00000000`066c2000   C:\WINDOWS\System32\combase.dll
+ModLoad: 00000000`066d0000 00000000`0681b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`058d0000 00000000`058fa000   C:\WINDOWS\SYSTEM32\bcrypt.dll
+ModLoad: 00000000`06820000 00000000`0696b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`06340000 00000000`0648b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`06490000 00000000`065a8000   C:\WINDOWS\System32\RPCRT4.dll
+ModLoad: 00000000`065b0000 00000000`06657000   C:\WINDOWS\System32\sechost.dll
+ModLoad: 00000000`06660000 00000000`067ab000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`06340000 00000000`06518000   C:\WINDOWS\WinSxS\amd64_microsoft.windows.gdiplus_6595b64144ccf1df_1.1.26100.8036_none_6ef439583dc61568\gdiplus.dll
+ModLoad: 00000000`06520000 00000000`065c7000   C:\WINDOWS\System32\sechost.dll
+ModLoad: 00000000`06670000 00000000`066a3000   C:\WINDOWS\SYSTEM32\IPHLPAPI.DLL
+ModLoad: 00000000`06520000 00000000`0666b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`06800000 00000000`068a7000   C:\WINDOWS\System32\sechost.dll
+ModLoad: 00000000`066b0000 00000000`067fb000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`06520000 00000000`06547000   C:\WINDOWS\System32\win32u.dll
+ModLoad: 00000000`066b0000 00000000`067fb000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`06800000 00000000`0694b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`06520000 00000000`0666b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`06800000 00000000`0694b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`066b0000 00000000`067fb000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`06520000 00000000`06577000   C:\WINDOWS\SYSTEM32\CFGMGR32.dll
+ModLoad: 00000000`066b0000 00000000`067fb000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`06800000 00000000`06b82000   C:\WINDOWS\System32\combase.dll
+ModLoad: 00000000`06520000 00000000`0666b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`066b0000 00000000`067fb000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`03990000 00000000`039ab000   C:\WINDOWS\SYSTEM32\cryptsp.dll
+ModLoad: 00000000`04dd0000 00000000`04deb000   C:\WINDOWS\SYSTEM32\kernel.appcore.dll
+ModLoad: 00000000`066b0000 00000000`06a32000   C:\WINDOWS\System32\combase.dll
+ModLoad: 00000000`03990000 00000000`039a9000   C:\WINDOWS\SYSTEM32\Microsoft.Internal.WarpPal.dll
+ModLoad: 00000000`06520000 00000000`0657e000   C:\WINDOWS\SYSTEM32\powrprof.dll
+ModLoad: 00000000`06520000 00000000`065c3000   C:\WINDOWS\System32\msvcp_win.dll
+ModLoad: 00000000`066b0000 00000000`067fb000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`066b0000 00000000`067fb000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`066b0000 00000000`067fb000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`066b0000 00000000`067fb000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`066b0000 00000000`067fb000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`066b0000 00000000`067fb000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00000000`06800000 00000000`06b82000   C:\WINDOWS\System32\combase.dll
+ModLoad: 00000000`06b90000 00000000`06f12000   C:\WINDOWS\System32\combase.dll
+ModLoad: 00000000`06f20000 00000000`07038000   C:\WINDOWS\System32\RPCRT4.dll
+ModLoad: 00000000`07040000 00000000`07158000   C:\WINDOWS\System32\RPCRT4.dll
+ModLoad: 00000000`06f20000 00000000`07017000   C:\WINDOWS\System32\shcore.dll
+ModLoad: 00000000`07160000 00000000`07257000   C:\WINDOWS\System32\shcore.dll
+ModLoad: 00000000`07260000 00000000`07357000   C:\WINDOWS\System32\shcore.dll
+ModLoad: 00000000`07360000 00000000`07409000   C:\WINDOWS\System32\msvcrt.dll
+ModLoad: 00000000`07410000 00000000`0757a000   C:\WINDOWS\System32\wintypes.dll
+ModLoad: 00000000`07580000 00000000`07de4000   C:\WINDOWS\System32\Windows.Storage.dll
+ModLoad: 00000000`065d0000 00000000`065f7000   C:\WINDOWS\System32\win32u.dll
+ModLoad: 00000000`07df0000 00000000`07f1b000   C:\WINDOWS\System32\gdi32full.dll
+ModLoad: 00000000`07f20000 00000000`07fc7000   C:\WINDOWS\System32\sechost.dll
+ModLoad: 00000000`08080000 00000000`08157000   C:\WINDOWS\System32\OLEAUT32.dll
+ModLoad: 00000000`07fd0000 00000000`08077000   C:\WINDOWS\System32\sechost.dll
+ModLoad: 00000000`06600000 00000000`06657000   C:\WINDOWS\SYSTEM32\CFGMGR32.dll
+ModLoad: 00000000`04dd0000 00000000`04de9000   C:\WINDOWS\SYSTEM32\Microsoft.Internal.WarpPal.dll
+ModLoad: 00000000`03990000 00000000`039ab000   C:\WINDOWS\SYSTEM32\cryptsp.dll
+ModLoad: 00000000`05900000 00000000`0591b000   C:\WINDOWS\SYSTEM32\kernel.appcore.dll
+ModLoad: 00000000`08160000 00000000`081be000   C:\WINDOWS\SYSTEM32\powrprof.dll
+ModLoad: 00000000`06b90000 00000000`06bc1000   C:\WINDOWS\System32\IMM32.DLL
+ModLoad: 00000000`06b90000 00000000`06bc1000   C:\WINDOWS\System32\IMM32.DLL
+ModLoad: 00000000`06c20000 00000000`06cc5000   C:\WINDOWS\System32\bcryptPrimitives.dll
+ModLoad: 00000000`06c20000 00000000`06cc5000   C:\WINDOWS\System32\bcryptPrimitives.dll
+ModLoad: 00000000`06bf0000 00000000`06c04000   C:\WINDOWS\SYSTEM32\UMPDC.dll
+ModLoad: 00000000`06bf0000 00000000`06c04000   C:\WINDOWS\SYSTEM32\UMPDC.dll
+ModLoad: 00000000`06ee0000 00000000`06ef3000   C:\WINDOWS\SYSTEM32\MSASN1.dll
+ModLoad: 00000000`06ee0000 00000000`06ef3000   C:\WINDOWS\SYSTEM32\MSASN1.dll
+ModLoad: 00000000`06bd0000 00000000`06bdc000   C:\WINDOWS\SYSTEM32\CRYPTBASE.DLL
+ModLoad: 00000000`06bd0000 00000000`06bdc000   C:\WINDOWS\SYSTEM32\CRYPTBASE.DLL
+[SSOT AUDIT] WARNING: Registry integrity issue detected!
+  Total: 532  GUI: 506  CLI: 518
+  Null handlers: 0  Duplicate IDs: 3  Duplicate aliases: 0
+ModLoad: 00000000`072f0000 00000000`0735b000   C:\WINDOWS\system32\mswsock.dll
+ModLoad: 00000000`072f0000 00000000`0735b000   C:\WINDOWS\system32\mswsock.dll
+[Prometheus] Listening on port 9090 for /metrics...
+[Prometheus] Listening on port 9090 for /metrics...
+ModLoad: 00000000`07fd0000 00000000`08013000   C:\WINDOWS\SYSTEM32\dxcore.dll
+ModLoad: 00000000`07fd0000 00000000`08013000   C:\WINDOWS\SYSTEM32\dxcore.dll
+ModLoad: 00000000`06f00000 00000000`06f14000   C:\WINDOWS\SYSTEM32\resourcepolicyclient.dll
+ModLoad: 00000000`06f00000 00000000`06f14000   C:\WINDOWS\SYSTEM32\resourcepolicyclient.dll
+ModLoad: 00000000`096e0000 00000000`09740000   C:\WINDOWS\SYSTEM32\directxdatabasehelper.dll
+ModLoad: 00000000`096e0000 00000000`09740000   C:\WINDOWS\SYSTEM32\directxdatabasehelper.dll
+[main_win32] boot_preflight gpu=1 avx512=1 lockable=1 stone=1
+2026-03-22 18:00:49 [INFO] [RuntimeSurface] [RuntimeSurface] bootstrap begin (no startup scan/index)
+2026-03-22 18:00:49 [INFO] [RuntimeSurface] [RawrXD::Quant] Layout Legend: Q4S (Signed 4-bit): UI '-4bit', Wire: val+8, Range [-8,7]. Q6S (Signed 6-bit): UI '-6bit', Wire: val+32, Range [-32,31]. Q4U/Q6U: Standard Unsigned Mapping.
+2026-03-22 18:00:49 [INFO] [RuntimeSurface] [CompressedPoolBudget] budget_bytes=0
+2026-03-22 18:00:49 [INFO] [RuntimeSurface] [ModularModelLoader] resident layer budget=0
+2026-03-22 18:00:49 [INFO] [RuntimeSurface] [RuntimeSurface] llama.cpp/exllamaV2 parity register entries=12
+2026-03-22 18:00:49 [INFO] [RuntimeSurface] [RuntimeSurface] four-lane gate ready (max 4 of 5 lanes unless explicit module)
+2026-03-22 18:00:49 [INFO] [RuntimeSurface] [RuntimeSurface] bootstrap complete
+[RawrXD] Crash containment boundary installed
+[main_win32] Cathedral crash containment boundary installed
+[PluginSignature] Initialized
+[main_win32] Plugin Signature Verifier initialized (standard policy)
+[IDEConfig] Config file not found: rawrxd.config.json — using defaults.
+[IDEConfig] Config file not found: D:\rawrxd\build\bin\rawrxd.config.json — using defaults.
+ModLoad: 00000000`09a90000 00000000`09b45000   C:\WINDOWS\SYSTEM32\riched20.dll
+ModLoad: 00000000`09a90000 00000000`09b45000   C:\WINDOWS\SYSTEM32\riched20.dll
+ModLoad: 00000000`07020000 00000000`07039000   C:\WINDOWS\SYSTEM32\USP10.dll
+ModLoad: 00000000`09b50000 00000000`09b95000   C:\WINDOWS\SYSTEM32\msls31.dll
+ModLoad: 00000000`07020000 00000000`07039000   C:\WINDOWS\SYSTEM32\USP10.dll
+ModLoad: 00000000`09b50000 00000000`09b95000   C:\WINDOWS\SYSTEM32\msls31.dll
+ModLoad: 00000000`09ba0000 00000000`09ec7000   C:\WINDOWS\SYSTEM32\msftedit.dll
+ModLoad: 00000000`09ba0000 00000000`09ec7000   C:\WINDOWS\SYSTEM32\msftedit.dll
+ModLoad: 00000000`09ed0000 00000000`09f7a000   C:\WINDOWS\system32\uxtheme.dll
+ModLoad: 00000000`09ed0000 00000000`09f7a000   C:\WINDOWS\system32\uxtheme.dll
+ModLoad: 00000000`09fa0000 00000000`0a0fd000   C:\WINDOWS\System32\MSCTF.dll
+ModLoad: 00000000`09fa0000 00000000`0a0fd000   C:\WINDOWS\System32\MSCTF.dll
+[onCreate] createMenuBar...
+ModLoad: 00000000`0d610000 00000000`0d6c3000   C:\WINDOWS\SYSTEM32\TextShaping.dll
+ModLoad: 00000000`0d610000 00000000`0d6c3000   C:\WINDOWS\SYSTEM32\TextShaping.dll
+[onCreate] createToolbar...
+[onCreate] createActivityBar...
+[onCreate] createPrimarySidebar...
+[onCreate] createTabBar...
+[onCreate] createBreadcrumbBar...
+2026-03-22 18:00:49 [INFO] [Win32IDE_Breadcrumbs] Breadcrumb bar created
+[onCreate] createLineNumberGutter...
+[onCreate] createEditor...
+ModLoad: 00000000`0dae0000 00000000`0db8e000   C:\WINDOWS\System32\clbcatq.dll
+ModLoad: 00000000`0dae0000 00000000`0db8e000   C:\WINDOWS\System32\clbcatq.dll
+ModLoad: 00000000`0dbb0000 00000000`0dc0a000   C:\WINDOWS\system32\dataexchange.dll
+ModLoad: 00000000`0dbb0000 00000000`0dc0a000   C:\WINDOWS\system32\dataexchange.dll
+ModLoad: 00000000`0dc10000 00000000`0de54000   C:\WINDOWS\system32\twinapi.appcore.dll
+ModLoad: 00000000`0dc10000 00000000`0de54000   C:\WINDOWS\system32\twinapi.appcore.dll
+[onCreate] createTerminal...
+ModLoad: 00000000`0de80000 00000000`0dfc8000   C:\WINDOWS\SYSTEM32\textinputframework.dll
+ModLoad: 00000000`0de80000 00000000`0dfc8000   C:\WINDOWS\SYSTEM32\textinputframework.dll
+ModLoad: 00000000`0dfd0000 00000000`0e0f7000   C:\WINDOWS\SYSTEM32\CoreMessaging.dll
+ModLoad: 00000000`0dfd0000 00000000`0e0f7000   C:\WINDOWS\SYSTEM32\CoreMessaging.dll
+ModLoad: 00000000`0e900000 00000000`0ebe2000   C:\WINDOWS\SYSTEM32\CoreUIComponents.dll
+ModLoad: 00000000`0e900000 00000000`0ebe2000   C:\WINDOWS\SYSTEM32\CoreUIComponents.dll
+[onCreate] createEnhancedStatusBar...
+[onCreate] createOutputTabs...
+[onCreate] createPowerShellPanel...
+[onCreate] createChatPanel...
+ModLoad: 00000000`0edf0000 00000000`0edfe000   C:\WINDOWS\SYSTEM32\WINNSI.DLL
+ModLoad: 00000000`0edf0000 00000000`0edfe000   C:\WINDOWS\SYSTEM32\WINNSI.DLL
+ModLoad: 00000000`0ee10000 00000000`0ee1a000   C:\WINDOWS\System32\NSI.dll
+ModLoad: 00000000`0ee10000 00000000`0ee1a000   C:\WINDOWS\System32\NSI.dll
+ModLoad: 00000000`0ee20000 00000000`0ee3d000   C:\WINDOWS\SYSTEM32\dhcpcsvc6.DLL
+ModLoad: 00000000`0ee20000 00000000`0ee3d000   C:\WINDOWS\SYSTEM32\dhcpcsvc6.DLL
+ModLoad: 00000000`0ee40000 00000000`0ee63000   C:\WINDOWS\SYSTEM32\dhcpcsvc.DLL
+ModLoad: 00000000`0ee40000 00000000`0ee63000   C:\WINDOWS\SYSTEM32\dhcpcsvc.DLL
+ModLoad: 00000000`0ee80000 00000000`0ef4a000   C:\WINDOWS\SYSTEM32\webio.dll
+ModLoad: 00000000`0ee80000 00000000`0ef4a000   C:\WINDOWS\SYSTEM32\webio.dll
+ModLoad: 00000000`0ef80000 00000000`0efc9000   C:\WINDOWS\SYSTEM32\SspiCli.dll
+ModLoad: 00000000`0ef80000 00000000`0efc9000   C:\WINDOWS\SYSTEM32\SspiCli.dll
+[onCreate] all panels created OK
+[onCreate] initSyntaxColorizer...
+[onCreate] initGhostText...
+[onCreate] restoreSession...
+[2026-03-22 18:00:49] [SYSTEM] === RawrXD IDE Logging Initialized ===
+[2026-03-22 18:00:49] [SYSTEM] Log file: logs\RawrXD_IDE_20260322_180049.log
+[2026-03-22 18:00:49] [FUNC] >>> initBackendManager
+[2026-03-22 18:00:49] [INFO] [BackendSwitcher] No saved config at C:\Users\HiH8e\AppData\Roaming\RawrXD\backends.json — using defaultModLoad: 00000000`0f1e0000 00000000`0fba9000   C:\WINDOWS\SYSTEM32\DirectML.dll
+ModLoad: 00000000`0f1e0000 00000000`0fba9000   C:\WINDOWS\SYSTEM32\DirectML.dll
+ModLoad: 00000000`0ed00000 00000000`0ed23000   C:\WINDOWS\SYSTEM32\d3d12.dll
+ModLoad: 00000000`0ed00000 00000000`0ed23000   C:\WINDOWS\SYSTEM32\d3d12.dll
+[2026-03-22 18:00:49] [INFO] [BackendSwitcher] Initialized — active backend: Local GGU[2026-03-22 18:00:49] [FUNC] >>> initLLMRouter
+[2026-03-22 18:00:49] [INFO] [LLMRouter] No saved config at C:\Users\HiH8e\AppData\Roaming\RawrXD\router.json — using default[2026-03-22 18:00:49] [INFO] [LLMRouter] Initialized — router DISABLE[Win32IDE] first_paint
+[Win32IDE] unhandled custom message: 0xC0E1
+[main_win32] background_boot disabled by default (set RAWRXD_ENABLE_BACKGROUND_BOOT=1 to enable)
+(4ce4.5808): C++ EH exception - code e06d7363 (first chance)
+ERROR: Logger init failed
+(4ce4.5808): C++ EH exception - code e06d7363 (first chance)
+ERROR: Enterprise license init failed
+[ExtensionLoader] No DLL found for native extension: GitHub.copilot
+[ExtensionLoader] No DLL found for native extension: amazonwebservices.amazon-q-vscode
+[main_win32] ==> WINDOW NOW VISIBLE <== Entering message loop
+[main_win32] Integrated runtime: booting Transcendence (E→Ω).(4ce4.645c): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+ntdll!RtlDosApplyFileIsolationRedirection_Ustr+0x192:
+00007ffd`6a941922 0f29b42420020000 movaps  xmmword ptr [rsp+220h],xmm6 ss:00000000`02cf92d8=00000000000000000000000002cf9578
+0:000> cdb: Reading initial command 'sxn ibp;sxn ld;sxn ud;sxe av;g;kb 20;u 00000000014d9f80 L40;ln 00000000014d9fc5;q'
+(4ce4.645c): Access violation - code c0000005 (!!! second chance !!!)
+RetAddr               : Args to Child                                                           : Call Site
+00007ffd`6a9410be     : 00000000`02cf97f8 00000000`00000000 00000000`00000000 00000000`02a12000 : ntdll!RtlDosApplyFileIsolationRedirection_Ustr+0x192
+00007ffd`6a915250     : 00000000`02cf97f8 00000000`02cf97f8 00000000`00000000 00000000`02cf943c : ntdll!LdrpPreprocessDllName+0x57e
+00007ffd`6a915607     : 00007ffd`6aa79450 0000000b`0000090b 00000000`00000000 00000000`02cf98f3 : ntdll!LdrpFindLoadedDll+0xa0
+00000000`0302399b     : 00000000`00000000 00000000`00000018 00000000`7a040001 00000000`00000018 : ntdll!LdrGetDllHandle+0xd7
+*** WARNING: Unable to verify checksum for RawrXD-Win32IDE.exe
+00000000`014d9fc5     : 00000000`00000000 00000000`00000000 00000000`02cfa6e0 00000000`00000000 : KERNELBASE!GetModuleHandleA+0x9b
+00000000`00000000     : 00000000`00000000 00000000`02cfa6e0 00000000`00000000 00000000`00000000 : RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x20fea5
+RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x20fe60:
+00000000`014d9f80 f4              hlt
+00000000`014d9f81 1a01            sbb     al,byte ptr [rcx]
+00000000`014d9f83 33c0            xor     eax,eax
+00000000`014d9f85 48890580f31a01  mov     qword ptr [RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x13bf1ec (00000000`0268930c)],rax
+00000000`014d9f8c 48890581f31a01  mov     qword ptr [RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x13bf1f4 (00000000`02689314)],rax
+00000000`014d9f93 48890582f31a01  mov     qword ptr [RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x13bf1fc (00000000`0268931c)],rax
+00000000`014d9f9a 48890593f31a01  mov     qword ptr [RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x13bf214 (00000000`02689334)],rax
+00000000`014d9fa1 c70555f31a0100000000 mov dword ptr [RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x13bf1e0 (00000000`02689300)],0
+00000000`014d9fab 33c0            xor     eax,eax
+00000000`014d9fad 4883c420        add     rsp,20h
+00000000`014d9fb1 5b              pop     rbx
+00000000`014d9fb2 c3              ret
+00000000`014d9fb3 53              push    rbx
+00000000`014d9fb4 56              push    rsi
+00000000`014d9fb5 4883ec28        sub     rsp,28h
+00000000`014d9fb9 488d0df0f31a01  lea     rcx,[RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x13bf290 (00000000`026893b0)]
+00000000`014d9fc0 e88deb0b00      call    RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x2cea32 (00000000`01598b52)
+00000000`014d9fc5 4885c0          test    rax,rax
+00000000`014d9fc8 0f84cd000000    je      RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x20ff7b (00000000`014da09b)
+00000000`014d9fce 488bd8          mov     rbx,rax
+00000000`014d9fd1 488bcb          mov     rcx,rbx
+00000000`014d9fd4 488d15e2f31a01  lea     rdx,[RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x13bf29d (00000000`026893bd)]
+00000000`014d9fdb e8dcea0b00      call    RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x2ce99c (00000000`01598abc)
+00000000`014d9fe0 48890559f41a01  mov     qword ptr [RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x13bf320 (00000000`02689440)],rax
+00000000`014d9fe7 488bcb          mov     rcx,rbx
+00000000`014d9fea 488d15d9f31a01  lea     rdx,[RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x13bf2aa (00000000`026893ca)]
+00000000`014d9ff1 e8c6ea0b00      call    RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x2ce99c (00000000`01598abc)
+00000000`014d9ff6 4889054bf41a01  mov     qword ptr [RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x13bf328 (00000000`02689448)],rax
+00000000`014d9ffd 488bcb          mov     rcx,rbx
+00000000`014da000 488d15cff31a01  lea     rdx,[RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x13bf2b6 (00000000`026893d6)]
+00000000`014da007 e8b0ea0b00      call    RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x2ce99c (00000000`01598abc)
+00000000`014da00c 4889053df41a01  mov     qword ptr [RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x13bf330 (00000000`02689450)],rax
+00000000`014da013 488bcb          mov     rcx,rbx
+00000000`014da016 488d15c8f31a01  lea     rdx,[RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x13bf2c5 (00000000`026893e5)]
+00000000`014da01d e89aea0b00      call    RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x2ce99c (00000000`01598abc)
+00000000`014da022 4889052ff41a01  mov     qword ptr [RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x13bf338 (00000000`02689458)],rax
+00000000`014da029 488bcb          mov     rcx,rbx
+00000000`014da02c 488d15bef31a01  lea     rdx,[RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x13bf2d1 (00000000`026893f1)]
+00000000`014da033 e884ea0b00      call    RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x2ce99c (00000000`01598abc)
+00000000`014da038 48890521f41a01  mov     qword ptr [RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x13bf340 (00000000`02689460)],rax
+00000000`014da03f 488bcb          mov     rcx,rbx
+00000000`014da042 488d15b1f31a01  lea     rdx,[RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x13bf2da (00000000`026893fa)]
+00000000`014da049 e86eea0b00      call    RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x2ce99c (00000000`01598abc)
+00000000`014da04e 48890513f41a01  mov     qword ptr [RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x13bf348 (00000000`02689468)],rax
+00000000`014da055 488bcb          mov     rcx,rbx
+00000000`014da058 488d15a5f31a01  lea     rdx,[RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x13bf2e4 (00000000`02689404)]
+00000000`014da05f e858ea0b00      call    RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x2ce99c (00000000`01598abc)
+00000000`014da064 48890505f41a01  mov     qword ptr [RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x13bf350 (00000000`02689470)],rax
+00000000`014da06b 488bcb          mov     rcx,rbx
+00000000`014da06e 488d159bf31a01  lea     rdx,[RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x13bf2f0 (00000000`02689410)]
+00000000`014da075 e842ea0b00      call    RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x2ce99c (00000000`01598abc)
+00000000`014da07a 488905f7f31a01  mov     qword ptr [RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x13bf358 (00000000`02689478)],rax
+00000000`014da081 488bcb          mov     rcx,rbx
+00000000`014da084 488d1593f31a01  lea     rdx,[RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x13bf2fe (00000000`0268941e)]
+00000000`014da08b e82cea0b00      call    RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x2ce99c (00000000`01598abc)
+00000000`014da090 488905e9f31a01  mov     qword ptr [RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x13bf360 (00000000`02689480)],rax
+00000000`014da097 33c0            xor     eax,eax
+00000000`014da099 eb05            jmp     RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x20ff80 (00000000`014da0a0)
+00000000`014da09b b801000000      mov     eax,1
+00000000`014da0a0 4883c428        add     rsp,28h
+00000000`014da0a4 5e              pop     rsi
+00000000`014da0a5 5b              pop     rbx
+00000000`014da0a6 c3              ret
+00000000`014da0a7 53              push    rbx
+(00000000`012ca120)   RawrXD_Win32IDE!AgentPanel_FinalizeStream+0x20fea5   |  (00000000`012ca120)   RawrXD_Win32IDE!AgentPanel_FinalizeStream
+quit:
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\atlmfc.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\ObjectiveC.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\concurrency.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\cpp_rest.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\stl.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Data.Json.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Devices.Geolocation.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Devices.Sensors.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Media.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\windows.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\winrt.natvis'

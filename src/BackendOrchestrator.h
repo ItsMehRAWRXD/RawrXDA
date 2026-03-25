@@ -108,6 +108,8 @@ struct ModelShard {
     int           layer_start;
     int           layer_end;       // inclusive
     size_t        vram_bytes;
+    std::vector<std::string> shard_files; // GGUF files assigned to this device
+    size_t        assigned_file_bytes = 0;
     bool          loaded = false;
 };
 

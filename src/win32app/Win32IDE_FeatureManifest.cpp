@@ -11,6 +11,7 @@
  */
 
 #include "Win32IDE.h"
+#include "../core/command_registry.hpp"
 #include <fstream>
 #include <sstream>
 #include <algorithm>
@@ -172,14 +173,27 @@ struct FeatureEntry {
 static bool testCommandRoutes(void* idePtr) {
     auto* ide = static_cast<Win32IDE*>(idePtr);
     if (!ide) return false;
-    
-    // Verify routeCommand can handle all command ranges
-    // (We don't actually execute, just verify the routing infrastructure)
-    bool allRangesHandled = true;
-    // File range (1000-1999), Edit range (2000-2999), View range (3000-3999),
-    // Terminal (4000-4099), Agent (4100-4399), Tools (5000-5999),
-    // Modules (6000-6999), Help (7000-7999), Git (8000-8999), Hotpatch (9000-9999)
-    return allRangesHandled;
+
+    // Verify the unified command table still exposes the UI/infrastructure
+    // commands that bypass legacy routeCommand() range dispatch.
+    constexpr int kRequiredCommands[] = {
+        44014, 44015, 44016, 44017, 44018, 44019, 44020,
+    };
+
+    for (int requiredId : kRequiredCommands) {
+        bool found = false;
+        for (size_t i = 0; i < g_commandRegistrySize; ++i) {
+            if (g_commandRegistry[i].id == requiredId) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 // Test that editor HWND exists and can receive messages
@@ -385,31 +399,31 @@ static FeatureEntry g_featureManifest[] = {
     // ========================== VISION ENCODER ==========================
     {"vision.load", "Load Vision Model", "Load CLIP/LLaVA vision model for image analysis",
      FeatureCategory::AIMode, 0, "", "Win32IDE_VisionEncoder.cpp",
-     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+        FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},  // IDM_VISION_LOAD_FILE=11530
     
     {"vision.encode", "Encode Image", "Convert image to vision embeddings",
-     FeatureCategory::AIMode, 0, "", "Win32IDE_VisionEncoder.cpp",
+    FeatureCategory::AIMode, 11533, "", "Win32IDE_VisionEncoder.cpp",
      FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
     
     {"vision.describe", "Describe Image", "Generate text description of image",
-     FeatureCategory::AIMode, 0, "", "Win32IDE_VisionEncoder.cpp",
+    FeatureCategory::AIMode, 3031, "", "Win32IDE_VisionEncoder.cpp",
      FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
     
     {"vision.extractCode", "Extract Code from Screenshot", "OCR-like code extraction from images",
-     FeatureCategory::AIMode, 0, "", "Win32IDE_VisionEncoder.cpp",
+    FeatureCategory::AIMode, 11532, "", "Win32IDE_VisionEncoder.cpp",
      FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
     
     {"vision.analyzeDiagram", "Analyze Diagram", "Extract structure from flowcharts/UML",
-     FeatureCategory::AIMode, 0, "", "Win32IDE_VisionEncoder.cpp",
+    FeatureCategory::AIMode, 3031, "", "Win32IDE_VisionEncoder.cpp",
      FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
 
     // ========================== SEMANTIC INDEX ==========================
     {"semantic.index", "Index File", "Build semantic index for current file",
-     FeatureCategory::CodeIntelligence, 0, "", "Win32IDE_SemanticIndex.cpp",
+    FeatureCategory::CodeIntelligence, 11560, "", "Win32IDE_SemanticIndex.cpp",
      FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
 
     {"semantic.search", "Search Symbols", "Search for symbols by name",
-     FeatureCategory::CodeIntelligence, 0, "", "Win32IDE_SemanticIndex.cpp",
+    FeatureCategory::CodeIntelligence, 11561, "", "Win32IDE_SemanticIndex.cpp",
      FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
 
     {"semantic.goto", "Go to Definition", "Navigate to symbol definition",
@@ -417,11 +431,11 @@ static FeatureEntry g_featureManifest[] = {
      FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
 
     {"semantic.references", "Find References", "Find all references to symbol",
-     FeatureCategory::CodeIntelligence, 0, "Shift+F12", "Win32IDE_SemanticIndex.cpp",
+    FeatureCategory::CodeIntelligence, 11562, "Shift+F12", "Win32IDE_SemanticIndex.cpp",
      FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
 
     {"semantic.hierarchy", "Type Hierarchy", "Show inheritance hierarchy",
-     FeatureCategory::CodeIntelligence, 0, "", "Win32IDE_SemanticIndex.cpp",
+    FeatureCategory::CodeIntelligence, 11564, "", "Win32IDE_SemanticIndex.cpp",
      FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
 
     // ========================== TERMINAL ==========================
@@ -946,31 +960,31 @@ static FeatureEntry g_featureManifest[] = {
     // ========================================================================
     {"agent.autonomous", "Autonomous Agent", "Core agentic functionality with autonomous decision making",
      FeatureCategory::Agent, 44014, "", "Win32IDE_AutonomousAgent.cpp",
-     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+        FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, testCommandRoutes},
 
     {"ui.chatRenderer", "Chat Message Renderer", "Advanced message display system with syntax highlighting",
      FeatureCategory::AIMode, 44015, "", "Win32IDE_ChatMessageRenderer.cpp",
-     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+        FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, testCommandRoutes},
 
     {"ui.toolStatus", "Tool Action Status", "Real-time tool execution status and progress UI",
      FeatureCategory::Tools, 44016, "", "Win32IDE_ToolActionStatus.cpp",
-     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+        FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, testCommandRoutes},
 
     {"ui.chatPanel", "Chat Panel", "Main chat interface with conversation management",
      FeatureCategory::AIMode, 44017, "", "Win32IDE_ChatPanel.cpp",
-     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+        FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, testCommandRoutes},
 
     {"telemetry.perf", "Performance Telemetry", "Real-time performance monitoring and metrics collection",
      FeatureCategory::Telemetry, 44018, "", "Win32IDE_PerfTelemetry.cpp",
-     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+        FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, testCommandRoutes},
 
     {"security.updateSig", "Update Signature", "Cryptographic signing and verification for updates",
      FeatureCategory::Security, 44019, "", "Win32IDE_UpdateSignature.cpp",
-     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+        FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, testCommandRoutes},
 
     {"security.pluginSig", "Plugin Signature", "Plugin verification and integrity checking",
      FeatureCategory::Security, 44020, "", "Win32IDE_PluginSignature.cpp",
-     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+        FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, testCommandRoutes},
 
     // Sentinel
     {nullptr, nullptr, nullptr, FeatureCategory::FileOps, 0, nullptr, nullptr,

@@ -1,0 +1,10 @@
+Module      : D:\rxdn\bin\RawrXD-Win32IDE.exe
+Image Base  : 0x0000000000400000
+Image End   : 0x00000000040A9FFF
+Image Size  : 0x3CAA000
+Symbol Path : D:\rxdn\bin;D:\
+Map File    : D:\rxdn\bin\RawrXD-Win32IDE.map
+PDB Status  : symbol engine initialized
+
+Address     : 0x0000000000DDFD00
+Result      : inside the module image (RVA 0x9DFD00)

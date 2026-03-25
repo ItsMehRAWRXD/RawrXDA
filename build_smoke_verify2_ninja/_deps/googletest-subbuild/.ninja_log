@@ -1,0 +1,21 @@
+# ninja log v6
+1171	1212	7960118197515833	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-build	13f52109d376d80d
+1212	1252	7960118197931171	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-install	468c4b5ec218dc3f
+1171	1212	7960118197515833	D:/rawrxd/build_smoke_verify2_ninja/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-build	13f52109d376d80d
+1132	1171	7960118197122478	D:/rawrxd/build_smoke_verify2_ninja/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-configure	baf037f885c85da9
+1132	1171	7960118197122478	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-configure	baf037f885c85da9
+2	46	7960118185851055	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-mkdir	620995f0f24ff8ff
+1091	1132	7960118196718853	D:/rawrxd/build_smoke_verify2_ninja/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-patch	f9278ce7c4ff36
+1294	1349	7960118198893147	D:/rawrxd/build_smoke_verify2_ninja/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-done	fb90acd51b3959b8
+1294	1349	7960118198893147	CMakeFiles/googletest-populate-complete	fb90acd51b3959b8
+1294	1349	7960118198893147	D:/rawrxd/build_smoke_verify2_ninja/_deps/googletest-subbuild/CMakeFiles/googletest-populate-complete	fb90acd51b3959b8
+1252	1294	7960118198343249	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-test	2502037c5efc40a4
+1212	1252	7960118197931171	D:/rawrxd/build_smoke_verify2_ninja/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-install	468c4b5ec218dc3f
+2	46	7960118185851055	D:/rawrxd/build_smoke_verify2_ninja/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-mkdir	620995f0f24ff8ff
+1252	1294	7960118198343249	D:/rawrxd/build_smoke_verify2_ninja/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-test	2502037c5efc40a4
+1294	1349	7960118198893147	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-done	fb90acd51b3959b8
+46	1049	7960118195905502	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-download	37137ffd6aac859d
+1049	1091	7960118196323502	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-update	5f8f73bf8113846f
+1049	1091	7960118196323502	D:/rawrxd/build_smoke_verify2_ninja/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-update	5f8f73bf8113846f
+46	1049	7960118195905502	D:/rawrxd/build_smoke_verify2_ninja/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-download	37137ffd6aac859d
+1091	1132	7960118196718853	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-patch	f9278ce7c4ff36

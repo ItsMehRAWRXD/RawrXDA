@@ -72,6 +72,14 @@ class AgenticBridge
     bool GetNoRefusal() const { return m_noRefusal; }
     void SetAutoCorrect(bool enabled);
     bool GetAutoCorrect() const { return m_autoCorrect; }
+
+    /// Prompt-layer hotpatch: inject SubAgent/tool syntax so local or tool-naive models still emit dispatchable lines.
+    void SetHotpatchSubAgentToolProtocol(bool enabled);
+    bool GetHotpatchSubAgentToolProtocol() const { return m_hotpatchSubAgentToolProtocol; }
+    /// Prompt-layer hotpatch: require <thought>...</thought> when Deep Thinking is on (models without native CoT).
+    void SetHotpatchThoughtProtocol(bool enabled);
+    bool GetHotpatchThoughtProtocol() const { return m_hotpatchThoughtProtocol; }
+
     void SetContextSize(const std::string& sizeName);
     bool LoadModel(const std::string& path);
     std::string GetCurrentModel() const { return m_modelName; }
@@ -92,8 +100,11 @@ class AgenticBridge
     // Compatibility callbacks used by Win32IDE_AgentCommands.cpp
     using ErrorCallback = std::function<void(const std::string&)>;
     using ProgressCallback = std::function<void(const std::string&)>;
+    using ModelLoadErrorCallback = std::function<void(const std::string&)>;
     void SetErrorCallback(ErrorCallback cb) { m_errorCallback = std::move(cb); }
     void SetProgressCallback(ProgressCallback cb) { m_progressCallback = std::move(cb); }
+    void SetModelLoadErrorCallback(ModelLoadErrorCallback cb) { m_modelLoadErrorCallback = std::move(cb); }
+    const std::string& GetLastModelLoadError() const { return m_lastModelLoadError; }
 
     // RE Tools Access
     std::string RunDumpbin(const std::string& path, const std::string& mode);
@@ -158,6 +169,9 @@ class AgenticBridge
     std::string ResolveFrameworkPath();
     std::string ResolveToolsModulePath();
 
+    /// Pre-inference prompt augmentation (SubAgent + thought protocols).
+    void applyAgentCapabilityHotpatches(std::string& refinedPrompt);
+
     Win32IDE* m_ide;
     bool m_initialized;
     bool m_agentLoopRunning;
@@ -180,6 +194,10 @@ class AgenticBridge
     bool m_deepResearch = true;
     bool m_noRefusal = true;
     bool m_autoCorrect = false;
+    /// Default ON: inject tool/subagent line format for models without native function-calling.
+    bool m_hotpatchSubAgentToolProtocol = true;
+    /// Default ON: inject <thought> scaffolding when Deep Thinking is enabled.
+    bool m_hotpatchThoughtProtocol = true;
     std::string m_languageContext;  // Current language (e.g. "C/C++")
     std::string m_fileContext;      // Current file path
     std::string m_workspaceRoot;    // Project/workspace folder for agent context
@@ -188,5 +206,7 @@ class AgenticBridge
     OutputCallback m_outputCallback;
     ErrorCallback m_errorCallback;
     ProgressCallback m_progressCallback;
+    ModelLoadErrorCallback m_modelLoadErrorCallback;
+    std::string m_lastModelLoadError;
     bool m_multiAgentEnabled = false;
 };

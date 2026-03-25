@@ -41,6 +41,9 @@ public:
     // Snapshot current modules via PEB and stream to UI
     void snapshotModules();
 
+    // Dispatcher callback target for deferred initial navigation.
+    void handleDeferredNavigate();
+
 private:
     WebView2Bridge() = default;
     ~WebView2Bridge() = default;

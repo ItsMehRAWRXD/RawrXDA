@@ -108,6 +108,10 @@ public:
     
     bool ParseMetadata() override; 
     RawrXD::GGUFMetadata GetMetadata() const override { return metadata_; }
+
+    // Lane E: lightweight integrity checks and trivial repair path.
+    bool VerifyIntegrity(std::string* reason = nullptr);
+    bool RepairTrivialIssues(std::string* report = nullptr);
     
     std::vector<RawrXD::TensorInfo> GetTensorInfo() const override { return tensors_; }
     bool LoadTensorRange(size_t start_idx, size_t count, std::vector<uint8_t>& data) override;

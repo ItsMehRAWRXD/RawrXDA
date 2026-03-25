@@ -383,11 +383,6 @@ Shield_AES_DecryptShim ENDP
 ; Returns: EAX = 1 if .text section is clean, 0 if tampered
 ; =============================================================================
 Shield_VerifyIntegrity PROC FRAME
-    LOCAL   moduleBase:QWORD
-    LOCAL   textRVA:DWORD
-    LOCAL   textSize:DWORD
-    LOCAL   oldProtect:DWORD
-
     push    rbx
     .pushreg rbx
     push    rsi
@@ -402,21 +397,41 @@ Shield_VerifyIntegrity PROC FRAME
     call    GetModuleHandleA
     test    rax, rax
     jz      @@fail
-    mov     moduleBase, rax
+    mov     r10, rax                        ; r10 = module base
 
-    ; Parse PE: DOS Header → NT Header
-    mov     rsi, rax
-    mov     eax, dword ptr [rsi + 3Ch]      ; IMAGE_DOS_HEADER.e_lfanew
-    add     rsi, rax                         ; RSI → IMAGE_NT_HEADERS64
+    ; Basic PE sanity checks before parsing headers
+    cmp     word ptr [r10], 5A4Dh           ; 'MZ'
+    jne     @@fail
+
+    mov     eax, dword ptr [r10 + 3Ch]      ; IMAGE_DOS_HEADER.e_lfanew
+    cmp     eax, 40h
+    jb      @@fail
+    cmp     eax, 2000h                      ; guard against corrupt offsets
+    ja      @@fail
+    lea     r11, [r10 + rax]                ; r11 = IMAGE_NT_HEADERS64
+
+    cmp     dword ptr [r11], 00004550h      ; 'PE\0\0'
+    jne     @@fail
+
+    ; Get number of sections
+    movzx   ecx, word ptr [r11 + 6]         ; FileHeader.NumberOfSections
+    test    ecx, ecx
+    jz      @@fail
+    cmp     ecx, 96                         ; defensive upper bound
+    ja      @@fail
 
     ; Skip to first section header
     ; NT Headers: Signature(4) + FileHeader(20) + Optional Header (SizeOfOptionalHeader)
-    movzx   ecx, word ptr [rsi + 14h]       ; FileHeader.SizeOfOptionalHeader
-    lea     rdi, [rsi + 18h]                 ; Start of OptionalHeader
-    add     rdi, rcx                         ; RDI → first IMAGE_SECTION_HEADER
+    movzx   eax, word ptr [r11 + 14h]       ; FileHeader.SizeOfOptionalHeader
+    test    eax, eax
+    jz      @@fail
+    cmp     eax, 400h                       ; defensive upper bound
+    ja      @@fail
+    lea     rdi, [r11 + 18h]                ; Start of OptionalHeader
+    add     rdi, rax                        ; RDI → first IMAGE_SECTION_HEADER
 
-    ; Get number of sections
-    movzx   ecx, word ptr [rsi + 6]          ; FileHeader.NumberOfSections
+    ; Refresh section count for search loop
+    movzx   ecx, word ptr [r11 + 6]         ; FileHeader.NumberOfSections
 
 @@find_text:
     ; Compare section name to ".text" (2E 74 65 78 74 00 00 00)
@@ -432,16 +447,14 @@ Shield_VerifyIntegrity PROC FRAME
     jmp     @@fail                           ; .text not found (suspicious)
 
 @@found_text:
-    mov     eax, dword ptr [rdi + 0Ch]       ; VirtualAddress
-    mov     textRVA, eax
-    mov     eax, dword ptr [rdi + 08h]       ; Misc.VirtualSize
-    mov     textSize, eax
+    mov     edx, dword ptr [rdi + 0Ch]      ; VirtualAddress
+    mov     ecx, dword ptr [rdi + 08h]      ; Misc.VirtualSize
+    test    ecx, ecx
+    jz      @@fail
 
     ; Calculate rolling XOR+ROL hash of .text
-    mov     rsi, moduleBase
-    mov     eax, textRVA
-    add     rsi, rax                         ; RSI → .text start
-    mov     ecx, textSize
+    mov     rsi, r10
+    add     rsi, rdx                        ; RSI → .text start
 
     xor     rbx, rbx                         ; Hash accumulator
 

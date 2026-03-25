@@ -99,6 +99,16 @@ struct GGUFFileHeader {
 };
 
 bool RawrXDModelLoader::Load(const wchar_t* path, VkDevice vkDevice, VkPhysicalDevice physDevice) {
+    m_lastLoadErrorStage.clear();
+    m_lastLoadErrorMessage.clear();
+    const auto setLoadError = [this](const std::string& stage, const std::string& message) {
+        m_lastLoadErrorStage = stage;
+        m_lastLoadErrorMessage = message;
+        if (m_loadErrorCallback) {
+            m_loadErrorCallback(stage, message);
+        }
+    };
+
     device = vkDevice;
 
     const std::string modelPathUtf8 = WideToUtf8(path);
@@ -106,7 +116,9 @@ bool RawrXDModelLoader::Load(const wchar_t* path, VkDevice vkDevice, VkPhysicalD
 
     // Gate 1: enforce GGUF extension before any heavy work.
     if (!endsWith(modelPathLower, ".gguf")) {
-        printf("[RawrXD][GATE-1] Model format rejected: only valid GGUF files accepted\n");
+        const std::string msg = "[RawrXD][GATE-1] Model format rejected: only valid GGUF files accepted";
+        printf("%s\n", msg.c_str());
+        setLoadError("gate_extension", msg);
         return false;
     }
 
@@ -126,7 +138,9 @@ bool RawrXDModelLoader::Load(const wchar_t* path, VkDevice vkDevice, VkPhysicalD
                        OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
     if (hFile == INVALID_HANDLE_VALUE) {
         // Gate 5: explicit permission/access failure for runtime user.
-        printf("[RawrXD][GATE-5] permission denied for runtime user: %ls\n", path);
+        const std::string msg = std::string("[RawrXD][GATE-5] permission denied for runtime user: ") + modelPathUtf8;
+        printf("%s\n", msg.c_str());
+        setLoadError("gate_file_access", msg);
         return false;
     }
     
@@ -139,6 +153,7 @@ bool RawrXDModelLoader::Load(const wchar_t* path, VkDevice vkDevice, VkPhysicalD
         if (!ResolveBackendModeAndPreflight(path, static_cast<uint64_t>(fileSize), resolvedLane, laneReason)) {
          printf("[RawrXD][BACKEND] backend=%s result=fail reason=%s\n",
              resolvedLane.c_str(), laneReason.c_str());
+         setLoadError("backend_preflight", std::string("[RawrXD][BACKEND] backend=") + resolvedLane + " result=fail reason=" + laneReason);
          CloseHandle(hFile);
          hFile = INVALID_HANDLE_VALUE;
          return false;
@@ -149,7 +164,9 @@ bool RawrXDModelLoader::Load(const wchar_t* path, VkDevice vkDevice, VkPhysicalD
     hMapping = CreateFileMapping(hFile, nullptr, PAGE_READONLY, 0, 0, nullptr);
     mappedView = MapViewOfFile(hMapping, FILE_MAP_READ, 0, 0, 0);
     if (!mappedView) {
-        printf("[RawrXD] Memory mapping failed\n");
+        const std::string msg = "[RawrXD] Memory mapping failed";
+        printf("%s\n", msg.c_str());
+        setLoadError("map_view", msg);
         CloseHandle(hFile);
         return false;
     }
@@ -160,7 +177,11 @@ bool RawrXDModelLoader::Load(const wchar_t* path, VkDevice vkDevice, VkPhysicalD
     
     GGUFFileHeader* hdr = (GGUFFileHeader*)ptr;
     if (hdr->magic != 0x46554747) { // "GGUF" LE
-        printf("[RawrXD][GATE-1] Model format rejected: invalid GGUF header magic (%08x)\n", hdr->magic);
+        char buf[256] = {0};
+        snprintf(buf, sizeof(buf), "[RawrXD][GATE-1] Model format rejected: invalid GGUF header magic (%08x)",
+                 hdr->magic);
+        printf("%s\n", buf);
+        setLoadError("gate_magic", buf);
         return false;
     }
     
@@ -171,13 +192,20 @@ bool RawrXDModelLoader::Load(const wchar_t* path, VkDevice vkDevice, VkPhysicalD
 
     // Gate 3: quantization allowlist based on GGUF file_type metadata.
     if (!IsSupportedFileType(metadataFileType)) {
-        printf("[RawrXD][GATE-3] unsupported quant: rejected at model load (file_type=%u)\n", metadataFileType);
+        char buf[256] = {0};
+        snprintf(buf, sizeof(buf), "[RawrXD][GATE-3] unsupported quant: rejected at model load (file_type=%u)",
+                 metadataFileType);
+        printf("%s\n", buf);
+        setLoadError("gate_quant", buf);
         return false;
     }
 
     // Gate 6: strict tokenizer/config pairing via required embedded metadata fields.
     if (metadataArchitecture.empty() || metadataTokenizerModel.empty()) {
-        printf("[RawrXD][GATE-6] tokenizer/config mismatch: GGUF metadata missing architecture/tokenizer pairing\n");
+        const std::string msg =
+            "[RawrXD][GATE-6] tokenizer/config mismatch: GGUF metadata missing architecture/tokenizer pairing";
+        printf("%s\n", msg.c_str());
+        setLoadError("gate_metadata_pairing", msg);
         return false;
     }
     
@@ -247,7 +275,17 @@ bool RawrXDModelLoader::Load(const wchar_t* path, VkDevice vkDevice, VkPhysicalD
         printf("%s\n", kv.first.c_str());
         if (tc > 15) { printf("  ... (%zu more)\n", tensors.size() - tc); break; }
     }
+    m_lastLoadErrorStage.clear();
+    m_lastLoadErrorMessage.clear();
     return true;
+}
+
+void RawrXDModelLoader::SetLoadErrorCallback(ModelLoadErrorCallback callback) {
+    m_loadErrorCallback = std::move(callback);
+}
+
+const std::string& RawrXDModelLoader::GetLastLoadErrorMessage() const {
+    return m_lastLoadErrorMessage;
 }
 
 // Simple metadata skipper / scraper

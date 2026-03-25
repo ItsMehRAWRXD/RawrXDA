@@ -1,6 +1,7 @@
 #if !defined(_MSC_VER)
 
 #include <cstdint>
+#include <cstring>
 
 namespace {
 
@@ -92,6 +93,54 @@ extern "C" uint64_t KQuant_DequantizeF16(const uint16_t* src, float* dst, uint64
 
 extern "C" uint64_t asm_kquant_cpuid_check(void) {
     return 0;
+}
+
+extern "C" uint64_t RawrXD_AVX512_DequantFusion(const uint8_t* src_q,
+                                                 const float* scales,
+                                                 float* dst_f32,
+                                                 uint64_t count) {
+    if (!src_q || !dst_f32 || count == 0) {
+        return 0;
+    }
+
+    const float s = scales ? scales[0] : 1.0f;
+    for (uint64_t i = 0; i < count; ++i) {
+        dst_f32[i] = static_cast<float>(src_q[i]) * s;
+    }
+    return count;
+}
+
+extern "C" uint64_t RawrXD_MASM_BPETokenize(const char* text,
+                                             uint64_t text_len,
+                                             uint32_t* out_token_ids,
+                                             uint64_t max_tokens) {
+    if (!text || !out_token_ids || text_len == 0 || max_tokens == 0) {
+        return 0;
+    }
+
+    uint64_t written = 0;
+    for (uint64_t i = 0; i < text_len && written < max_tokens; ++i) {
+        const unsigned char ch = static_cast<unsigned char>(text[i]);
+        if (ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n') {
+            continue;
+        }
+        out_token_ids[written++] = static_cast<uint32_t>(ch);
+    }
+    return written;
+}
+
+extern "C" uint64_t RawrXD_ASMToolDispatchFastPath(uint32_t opcode,
+                                                    const void* in_payload,
+                                                    void* out_payload,
+                                                    uint64_t payload_bytes) {
+    (void)opcode;
+    if (!out_payload || !in_payload) {
+        return 0;
+    }
+    if (payload_bytes > 0) {
+        std::memcpy(out_payload, in_payload, static_cast<size_t>(payload_bytes));
+    }
+    return 1;
 }
 
 #endif  // !defined(_MSC_VER)

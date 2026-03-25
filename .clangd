@@ -1,0 +1,17 @@
+# Clang-based tools (clangd) need the UCRT tree when MSVC's STL pulls <crtdbg.h>
+# from headers like <atomic> / <mutex> under _DEBUG. If compile_commands.json is
+# missing or incomplete, these -isystem lines keep pp_file_not_found away.
+#
+# Prefer a fresh CMake configure so compile_commands.json lands in your build dir,
+# then point CompilationDatabase at that directory (uncomment and adjust if needed):
+# CompilationDatabase: build_ninja3
+
+CompileFlags:
+  CompilationDatabase: build_verify
+  Add:
+    - -std=c++20
+    - --target=x86_64-pc-windows-msvc
+    - -isystem
+    - 'D:/Program Files (x86)/Windows Kits/10/Include/10.0.22621.0/ucrt'
+    - -isystem
+    - 'C:/Program Files (x86)/Windows Kits/10/Include/10.0.22621.0/ucrt'

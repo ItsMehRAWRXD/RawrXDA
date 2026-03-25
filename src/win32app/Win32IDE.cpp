@@ -276,6 +276,8 @@ static std::string wideToUtf8(const wchar_t* wide)
 #define IDC_COPILOT_CLEAR_BTN 1205
 #define IDC_AI_CONTEXT_SLIDER 1206
 #define IDC_AI_CONTEXT_LABEL 1207
+#define IDC_MODEL_SELECTOR 1208
+#define IDC_MODEL_BROWSE_BTN 1209
 
 // Panel (Bottom) - Terminal, Output, Problems, Debug Console
 #define IDC_PANEL_CONTAINER 1300
@@ -665,6 +667,16 @@ void Win32IDE::createMenuBar(HWND hwnd)
     AppendMenuW(hVoiceAutoMenu, MF_STRING, IDM_VOICE_AUTO_RATE_DOWN, L"Decrease Speech Rate\tCtrl+Shift+-");
     AppendMenuW(hToolsMenu, MF_POPUP, (UINT_PTR)hVoiceAutoMenu, L"Voice &Automation");
 
+    // Phase 51: mIRC Control Bridge
+    HMENU hIRCMenu = CreatePopupMenu();
+    AppendMenuW(hIRCMenu, MF_STRING, IDM_IRC_CONNECT, L"&Connect");
+    AppendMenuW(hIRCMenu, MF_STRING, IDM_IRC_DISCONNECT, L"&Disconnect");
+    AppendMenuW(hIRCMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hIRCMenu, MF_STRING, IDM_IRC_STATUS, L"Show &Status");
+    AppendMenuW(hIRCMenu, MF_STRING, IDM_IRC_CONFIG, L"&Config...");
+    AppendMenuW(hIRCMenu, MF_STRING, IDM_IRC_SEND, L"&Send Test Message");
+    AppendMenuW(hToolsMenu, MF_POPUP, (UINT_PTR)hIRCMenu, L"&IRC Bridge");
+
     // Backup submenu
     HMENU hBackupMenu = CreatePopupMenu();
     AppendMenuW(hBackupMenu, MF_STRING, IDM_QW_BACKUP_CREATE, L"&Create Backup Now\tCtrl+Shift+B");
@@ -911,6 +923,40 @@ void Win32IDE::createMenuBar(HWND hwnd)
 
     // Commands menu from COMMAND_TABLE (single source of truth — no menu-only drift)
     buildCommandsMenuFromCommandTable(m_hMenu);
+
+        // Enterprise / Professional feature menu
+        // Professional tier (12330–12341) routed by routeCommand's IDM_ENT_MODEL_COMPARE..IDM_ENT_CUSTOM_QUANT branch.
+        // GPU/Performance tier (3042–3047) routed via the 3000–3999 → handleViewCommand path.
+        {
+            HMENU hEntMenu = CreatePopupMenu();
+
+            // Professional: inference quality & session features (IDM_ENT_MODEL_COMPARE…IDM_ENT_CUSTOM_QUANT)
+            HMENU hEntProfMenu = CreatePopupMenu();
+            AppendMenuW(hEntProfMenu, MF_STRING, 12330, L"&Model Comparison");           // IDM_ENT_MODEL_COMPARE
+            AppendMenuW(hEntProfMenu, MF_STRING, 12331, L"&Batch Processing");            // IDM_ENT_BATCH_PROCESS
+            AppendMenuW(hEntProfMenu, MF_STRING, 12332, L"Custom &Stop Sequences");       // IDM_ENT_CUSTOM_STOP_SEQ
+            AppendMenuW(hEntProfMenu, MF_STRING, 12333, L"&Grammar Constraints");          // IDM_ENT_GRAMMAR_CONSTRAINTS
+            AppendMenuW(hEntProfMenu, MF_STRING, 12334, L"&LoRA Adapter");                // IDM_ENT_LORA_ADAPTER
+            AppendMenuW(hEntProfMenu, MF_STRING, 12335, L"&Response Cache");              // IDM_ENT_RESPONSE_CACHE
+            AppendMenuW(hEntProfMenu, MF_STRING, 12336, L"Prompt &Library");              // IDM_ENT_PROMPT_LIBRARY
+            AppendMenuW(hEntProfMenu, MF_STRING, 12337, L"Session &Export/Import");       // IDM_ENT_SESSION_EXPORT_IMPORT
+            AppendMenuW(hEntProfMenu, MF_STRING, 12338, L"Model &Sharding");              // IDM_ENT_MODEL_SHARDING
+            AppendMenuW(hEntProfMenu, MF_STRING, 12339, L"&Tensor Parallelism");          // IDM_ENT_TENSOR_PARALLEL
+            AppendMenuW(hEntProfMenu, MF_STRING, 12340, L"&Pipeline Parallelism");        // IDM_ENT_PIPELINE_PARALLEL
+            AppendMenuW(hEntProfMenu, MF_STRING, 12341, L"Custom &Quantization Schemes"); // IDM_ENT_CUSTOM_QUANT
+            AppendMenuW(hEntMenu, MF_POPUP, (UINT_PTR)hEntProfMenu, L"&Professional");
+
+            // GPU / Performance tier (IDM_ENT_MULTI_GPU_BALANCE…IDM_ENT_DUAL_ENGINE = 3042–3047)
+            AppendMenuW(hEntMenu, MF_SEPARATOR, 0, nullptr);
+            AppendMenuW(hEntMenu, MF_STRING, 3042, L"Multi-&GPU Load Balance");  // IDM_ENT_MULTI_GPU_BALANCE
+            AppendMenuW(hEntMenu, MF_STRING, 3043, L"&Dynamic Batch Sizing");    // IDM_ENT_DYNAMIC_BATCH
+            AppendMenuW(hEntMenu, MF_STRING, 3044, L"&API Key Management");      // IDM_ENT_API_KEY_MGMT
+            AppendMenuW(hEntMenu, MF_STRING, 3045, L"&Audit Logs");              // IDM_ENT_AUDIT_LOGS
+            AppendMenuW(hEntMenu, MF_STRING, 3046, L"&RawrTuner IDE");           // IDM_ENT_RAWR_TUNER
+            AppendMenuW(hEntMenu, MF_STRING, 3047, L"800B &Dual-Engine");        // IDM_ENT_DUAL_ENGINE
+
+            AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hEntMenu, L"&Enterprise");
+        }
 
     SetMenu(hwnd, m_hMenu);
 }
@@ -5706,7 +5752,21 @@ bool Win32IDE::loadModelForInference(const std::string& filepath)
 
     METRICS.increment("model.load_failures");
     METRICS.gauge("model.loaded", 0.0);
-    appendToOutput("Failed to load model: " + filepath + "\n", "System", OutputSeverity::Error);
+    std::string detail;
+    if (m_agenticBridge)
+    {
+        detail = m_agenticBridge->GetLastModelLoadError();
+    }
+    if (!detail.empty())
+    {
+        showModelLoadError(detail);
+        appendToOutput("Failed to load model: " + filepath + "\nReason: " + detail + "\n", "System",
+                       OutputSeverity::Error);
+    }
+    else
+    {
+        appendToOutput("Failed to load model: " + filepath + "\n", "System", OutputSeverity::Error);
+    }
     return false;
 }
 
@@ -6370,13 +6430,24 @@ void Win32IDE::createChatPanel()
                     nullptr, m_hInstance, nullptr);
 
     m_hwndModelSelector =
-        CreateWindowExW(0, L"COMBOBOX", L"", WS_CHILD | WS_VISIBLE | CBS_DROPDOWN | CBS_AUTOHSCROLL, 60, 35, 235, 200,
-                        m_hwndSecondarySidebar, (HMENU)IDC_COPILOT_SEND_BTN, m_hInstance, nullptr);
+        CreateWindowExW(0, L"COMBOBOX", L"", WS_CHILD | WS_VISIBLE | CBS_DROPDOWN | CBS_AUTOHSCROLL, 60, 35, 200, 200,
+                        m_hwndSecondarySidebar, (HMENU)IDC_MODEL_SELECTOR, m_hInstance, nullptr);
+
+    // Add browse button next to model selector
+    CreateWindowExW(0, L"BUTTON", L"Browse...", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 265, 35, 70, 23,
+                    m_hwndSecondarySidebar, (HMENU)IDC_MODEL_BROWSE_BTN, m_hInstance, nullptr);
 
     if (m_hwndModelSelector)
     {
         SendMessage(m_hwndModelSelector, WM_SETFONT, (WPARAM)hFont, TRUE);
         populateModelSelector();
+    }
+
+    // Set font for browse button
+    HWND hwndBrowseBtn = GetDlgItem(m_hwndSecondarySidebar, IDC_MODEL_BROWSE_BTN);
+    if (hwndBrowseBtn)
+    {
+        SendMessage(hwndBrowseBtn, WM_SETFONT, (WPARAM)hFont, TRUE);
     }
 
     CreateWindowExW(0, L"STATIC", L"Max Tokens:", WS_CHILD | WS_VISIBLE | SS_LEFT, 5, 60, 80, 18,
@@ -6528,95 +6599,27 @@ void Win32IDE::populateModelSelector()
 
     m_availableModels.clear();
 
-    std::set<std::string> uniqueModels;
-    auto addModel = [&](const std::string& model) {
-        if (model.empty()) return;
-        if (uniqueModels.insert(model).second) {
+    // Only populate if user has selected model directories
+    if (m_userModelDirectories.empty())
+    {
+        // No directories selected - list remains empty
+        return;
+    }
+
+    // Use backend directory listing for each user-selected directory
+    for (const auto& dir : m_userModelDirectories)
+    {
+        std::vector<std::string> modelsFromDir = getModelsFromDirectory(dir);
+        for (const auto& model : modelsFromDir)
+        {
             m_availableModels.push_back(model);
         }
-    };
-
-    // 1) Primary source: live Ollama model list
-    bool ollamaConnected = false;
-    int ollamaModelCount = 0;
-    try
-    {
-        ModelConnection conn("http://127.0.0.1:11434");
-        ollamaConnected = conn.checkConnection();
-        if (ollamaConnected)
-        {
-            auto ollamaModels = conn.getAvailableModels();
-            for (const auto& model : ollamaModels)
-            {
-                addModel(model);
-            }
-            ollamaModelCount = (int)ollamaModels.size();
-        }
-    }
-    catch (...) {}
-
-    // 2) Local model roots (status/discovery for GGUF inventory + fallback names)
-    std::vector<std::string> roots;
-    auto addRoot = [&](const std::string& root) {
-        if (!root.empty() && std::find(roots.begin(), roots.end(), root) == roots.end()) {
-            roots.push_back(root);
-        }
-    };
-
-    if (const char* envPath = std::getenv("RAWRXD_OLLAMA_PATH"); envPath && envPath[0]) addRoot(envPath);
-    if (const char* envPath = std::getenv("OLLAMA_MODELS"); envPath && envPath[0]) addRoot(envPath);
-    addRoot(PathResolver::getModelsPath());
-    addRoot("D:\\OllamaModels");
-
-    int localGgufCount = 0;
-    int localDirModelCount = 0;
-    for (const auto& root : roots)
-    {
-        std::error_code ec;
-        std::filesystem::path p(root);
-        if (!std::filesystem::exists(p, ec) || !std::filesystem::is_directory(p, ec))
-            continue;
-
-        for (const auto& entry : std::filesystem::directory_iterator(p, ec))
-        {
-            if (ec) break;
-
-            if (entry.is_regular_file(ec))
-            {
-                std::string ext = entry.path().extension().string();
-                std::transform(ext.begin(), ext.end(), ext.begin(),
-                               [](unsigned char c) { return (char)std::tolower(c); });
-                if (ext == ".gguf")
-                {
-                    ++localGgufCount;
-                }
-            }
-            else if (entry.is_directory(ec))
-            {
-                // Keep legacy behavior as fallback source when Ollama API is unavailable
-                if (!ollamaConnected)
-                {
-                    auto name = entry.path().filename().string();
-                    if (!name.empty() && name != "." && name != "..")
-                    {
-                        addModel(name);
-                        ++localDirModelCount;
-                    }
-                }
-            }
-        }
     }
 
-    // 3) Hard fallback defaults
-    if (m_availableModels.empty())
-    {
-        addModel("llama2");
-        addModel("mistral");
-        addModel("neural-chat");
-        addModel("dolphin-mixtral");
-    }
-
+    // Remove duplicates
     std::sort(m_availableModels.begin(), m_availableModels.end());
+    auto last = std::unique(m_availableModels.begin(), m_availableModels.end());
+    m_availableModels.erase(last, m_availableModels.end());
 
     // Populate combobox
     for (const auto& model : m_availableModels)
@@ -6644,17 +6647,162 @@ void Win32IDE::populateModelSelector()
         if (selectedIdx < 0) selectedIdx = 0;
         SendMessage(m_hwndModelSelector, CB_SETCURSEL, selectedIdx, 0);
     }
+}
 
-    // Status wiring for local-model visibility and telemetry-friendly diagnostics
-    if (m_hwndStatusBar)
+std::vector<std::string> Win32IDE::getModelsFromDirectory(const std::string& directory)
+{
+    std::vector<std::string> models;
+
+    // Check if local server is running
+    if (!m_localServerRunning.load())
     {
-        std::ostringstream status;
-        status << "Models: " << m_availableModels.size()
-               << " (Ollama " << (ollamaConnected ? "ON" : "OFF")
-               << ", API=" << ollamaModelCount
-               << ", GGUF=" << localGgufCount << ")";
-        SendMessageW(m_hwndStatusBar, SB_SETTEXT, 2, (LPARAM)utf8ToWide(status.str()).c_str());
+        // Local server not running yet - return empty list
+        // Models will be populated when directories are selected and server is running
+        return models;
     }
+
+    // Make HTTP request to /api/list-directory
+    std::string url = "http://localhost:" + std::to_string(m_settings.localServerPort) + "/api/list-directory";
+    std::string requestBody = "{\"path\":\"" + directory + "\",\"depth\":1,\"maxEntries\":10000}";
+
+    std::string response = makeHttpRequest(url, "POST", requestBody, "application/json");
+    if (response.empty())
+    {
+        LOG_WARNING("Failed to get directory listing for: " + directory);
+        return models;
+    }
+
+    // Parse JSON response using nlohmann/json
+    try
+    {
+        auto jsonResponse = nlohmann::json::parse(response);
+        if (jsonResponse.contains("entries") && jsonResponse["entries"].is_array())
+        {
+            for (const auto& entry : jsonResponse["entries"])
+            {
+                if (entry.contains("name") && entry.contains("type"))
+                {
+                    std::string name = entry["name"];
+                    std::string type = entry["type"];
+
+                    // Check if it's a file and has GGUF extension
+                    if (type == "file" && !name.empty())
+                    {
+                        std::string ext = name.substr(name.find_last_of('.') + 1);
+                        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+                        if (ext == "gguf" || ext == "bin" || ext == "ggml")
+                        {
+                            // Remove extension for display
+                            size_t dotPos = name.find_last_of('.');
+                            if (dotPos != std::string::npos)
+                            {
+                                std::string displayName = name.substr(0, dotPos);
+                                models.push_back(displayName);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    catch (const std::exception& e)
+    {
+        LOG_ERROR("Error parsing directory listing response: " + std::string(e.what()));
+    }
+
+    return models;
+}
+
+std::string Win32IDE::makeHttpRequest(const std::string& url, const std::string& method, const std::string& body, const std::string& contentType)
+{
+    // Parse URL
+    std::string host = "localhost";
+    int port = m_settings.localServerPort;
+    std::string path = "/";
+
+    // Simple URL parsing for localhost:port/path
+    size_t colonPos = url.find(':');
+    size_t slashPos = url.find('/', colonPos + 3); // after ://
+
+    if (colonPos != std::string::npos)
+    {
+        size_t portStart = colonPos + 1;
+        while (portStart < url.size() && url[portStart] == '/') portStart++;
+        size_t portEnd = url.find('/', portStart);
+        if (portEnd != std::string::npos)
+        {
+            std::string portStr = url.substr(portStart, portEnd - portStart);
+            port = atoi(portStr.c_str());
+            path = url.substr(portEnd);
+        }
+        else
+        {
+            std::string portStr = url.substr(portStart);
+            port = atoi(portStr.c_str());
+        }
+    }
+
+    std::wstring whost(host.begin(), host.end());
+    HINTERNET hSession = WinHttpOpen(L"RawrXDIDE/1.0", WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, NULL, NULL, 0);
+    if (!hSession)
+        return "";
+
+    HINTERNET hConnect = WinHttpConnect(hSession, whost.c_str(), (INTERNET_PORT)port, 0);
+    if (!hConnect)
+    {
+        WinHttpCloseHandle(hSession);
+        return "";
+    }
+
+    std::wstring wMethod(method.begin(), method.end());
+    std::wstring wPath(path.begin(), path.end());
+    HINTERNET hRequest = WinHttpOpenRequest(hConnect, wMethod.c_str(), wPath.c_str(), NULL,
+                                           WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, 0);
+    if (!hRequest)
+    {
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+        return "";
+    }
+
+    // Set headers
+    std::wstring wHeaders = L"Content-Type: " + std::wstring(contentType.begin(), contentType.end());
+    BOOL bResults = WinHttpSendRequest(hRequest, wHeaders.c_str(), (DWORD)-1L,
+                                      (LPVOID)body.c_str(), (DWORD)body.size(), (DWORD)body.size(), 0);
+    if (!bResults)
+    {
+        WinHttpCloseHandle(hRequest);
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+        return "";
+    }
+
+    bResults = WinHttpReceiveResponse(hRequest, NULL);
+    std::string response;
+    if (bResults)
+    {
+        DWORD dwSize = 0;
+        do
+        {
+            if (!WinHttpQueryDataAvailable(hRequest, &dwSize))
+                break;
+            if (!dwSize)
+                break;
+            std::string chunk;
+            chunk.resize(dwSize);
+            DWORD dwRead = 0;
+            if (!WinHttpReadData(hRequest, chunk.data(), dwSize, &dwRead))
+                break;
+            if (dwRead)
+                response.append(chunk.data(), dwRead);
+        } while (dwSize > 0);
+    }
+
+    WinHttpCloseHandle(hRequest);
+    WinHttpCloseHandle(hConnect);
+    WinHttpCloseHandle(hSession);
+
+    return response;
 }
 
 void Win32IDE::HandleCopilotSend()
@@ -6768,6 +6916,49 @@ void Win32IDE::onMaxTokensChanged(int newValue)
     if (m_hwndMaxTokensLabel)
     {
         SetWindowTextW(m_hwndMaxTokensLabel, utf8ToWide(std::to_string(newValue)).c_str());
+    }
+}
+
+void Win32IDE::handleModelBrowse()
+{
+    BROWSEINFOW bi = { 0 };
+    bi.hwndOwner = m_hwndMain;
+    bi.lpszTitle = L"Select Model Directory";
+    bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
+
+    LPITEMIDLIST pidl = SHBrowseForFolderW(&bi);
+    if (pidl)
+    {
+        WCHAR path[MAX_PATH] = {0};
+        if (SHGetPathFromIDListW(pidl, path))
+        {
+            std::string selectedPath = wideToUtf8(path);
+            
+            // Check if this directory is already in the list
+            bool alreadyExists = false;
+            for (const auto& dir : m_userModelDirectories)
+            {
+                if (dir == selectedPath)
+                {
+                    alreadyExists = true;
+                    break;
+                }
+            }
+            
+            if (!alreadyExists)
+            {
+                m_userModelDirectories.push_back(selectedPath);
+                appendToOutput("Added model directory: " + selectedPath + "\n", "Output", OutputSeverity::Info);
+                
+                // Refresh the model selector to include models from the new directory
+                populateModelSelector();
+            }
+            else
+            {
+                appendToOutput("Directory already added: " + selectedPath + "\n", "Output", OutputSeverity::Warning);
+            }
+        }
+        CoTaskMemFree(pidl);
     }
 }
 

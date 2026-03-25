@@ -800,11 +800,13 @@ void Win32IDE::updateEnhancedStatusBar()
     SendMessageA(m_hwndStatusBar, SB_SETTEXTA, 10, (LPARAM)m_statusBarInfo.languageMode.c_str());
     
     // Part 11: Copilot status
-    std::string copilotText = m_statusBarInfo.copilotActive ? "Copilot" : "Copilot (off)";
-    if (m_statusBarInfo.copilotSuggestions > 0) {
-        copilotText += " ▼";  // Indicates suggestions available
+    // Part 11: Backend / AI status — initial render (IDT_GPU_TELEMETRY refreshes live counters)
+    {
+        std::string backendText = getActiveBackendName();
+        if (!m_statusBarInfo.copilotActive)
+            backendText += " (off)";
+        SendMessageA(m_hwndStatusBar, SB_SETTEXTA, 11, (LPARAM)backendText.c_str());
     }
-    SendMessageA(m_hwndStatusBar, SB_SETTEXTA, 11, (LPARAM)copilotText.c_str());
 }
 
 void Win32IDE::updateCursorPosition()

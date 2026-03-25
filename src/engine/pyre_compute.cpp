@@ -25,6 +25,23 @@
 
 // SCAFFOLD_138: Pyre compute and wiring
 
+namespace {
+using PyreDispatchMatMulFn = int (*)(const float*, const float*, float*, uint32_t, uint32_t, uint32_t);
+
+PyreDispatchMatMulFn resolvePyreDispatchMatMul() {
+    static PyreDispatchMatMulFn fn = nullptr;
+    static bool resolved = false;
+    if (!resolved) {
+        resolved = true;
+        HMODULE module = GetModuleHandleA(nullptr);
+        if (module) {
+            fn = reinterpret_cast<PyreDispatchMatMulFn>(GetProcAddress(module, "PyreDispatchMatMul"));
+        }
+    }
+    return fn;
+}
+} // namespace
+
 
 // ---------------------------------------------------------------------------
 //                        PyreTensor Static Methods
@@ -570,6 +587,16 @@ PatchResult PyreGraph::execMatMul(PyreTensor& out, const PyreTensor& A, const Py
     uint32_t N = static_cast<uint32_t>(B.dims[1]);
 
     uint64_t t0 = __rdtsc();
+
+#if defined(RAWR_HAS_VULKAN) && (RAWR_HAS_VULKAN == 1)
+    if (PyreDispatchMatMulFn dispatch = resolvePyreDispatchMatMul();
+        dispatch && dispatch(A.fp32(), B.fp32(), out.fp32(), M, N, K) != 0) {
+        uint64_t elapsed = __rdtsc() - t0;
+        m_stats.totalGemmCycles += elapsed;
+        m_stats.totalOpsExecuted++;
+        return PatchResult::ok("MatMul completed (Vulkan dispatch)");
+    }
+#endif
 
 #ifdef RAWR_HAS_MASM
     int rc = asm_pyre_gemm_fp32(A.fp32(), B.fp32(), out.fp32(), M, N, K);

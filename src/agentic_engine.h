@@ -109,6 +109,7 @@ public:
     void updateConfig(const GenerationConfig& config);
     // CLI/Native compat
     std::string chat(const std::string& message);
+    std::string processQuery(const std::string& message) { return chat(message); }
 
     // SubAgent / Chaining / Swarm — thin wrappers for use from the engine
     // The full implementation lives in SubAgentManager; these are convenience

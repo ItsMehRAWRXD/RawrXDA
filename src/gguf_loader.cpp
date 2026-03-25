@@ -60,12 +60,93 @@ bool GGUFLoader::Open(const std::string& filepath) {
             Close();
             return false;
         }
+
+        std::string integrity_reason;
+        if (!VerifyIntegrity(&integrity_reason)) {
+            Close();
+            throw std::runtime_error("GGUF integrity check failed: " + integrity_reason);
+        }
     } catch (const std::exception& e) {
         Close();
         throw;  // Re-throw after cleanup
     }
     
     return true;
+}
+
+bool GGUFLoader::VerifyIntegrity(std::string* reason) {
+    if (!file_.is_open()) {
+        if (reason) *reason = "file not open";
+        return false;
+    }
+
+    if (header_.magic != 0x46554747) {
+        if (reason) *reason = "invalid GGUF magic";
+        return false;
+    }
+
+    if (header_.version != 3) {
+        if (reason) *reason = "unsupported GGUF version";
+        return false;
+    }
+
+    file_.seekg(0, std::ios::end);
+    const std::streamoff size = file_.tellg();
+    if (size < 24) {
+        if (reason) *reason = "file too small";
+        return false;
+    }
+
+    if (header_.metadata_kv_count > 10000000ULL) {
+        if (reason) *reason = "metadata KV count is implausibly large";
+        return false;
+    }
+
+    if (header_.tensor_count > 10000000ULL) {
+        if (reason) *reason = "tensor count is implausibly large";
+        return false;
+    }
+
+    if (reason) *reason = "ok";
+    return true;
+}
+
+bool GGUFLoader::RepairTrivialIssues(std::string* report) {
+    if (filepath_.empty()) {
+        if (report) *report = "no file path available";
+        return false;
+    }
+
+    std::fstream file(filepath_, std::ios::in | std::ios::out | std::ios::binary);
+    if (!file.is_open()) {
+        if (report) *report = "unable to open file for repair";
+        return false;
+    }
+
+    uint32_t magic = 0;
+    file.read(reinterpret_cast<char*>(&magic), sizeof(magic));
+    if (!file.good()) {
+        if (report) *report = "failed reading magic";
+        return false;
+    }
+
+    if (magic == 0x46554747) {
+        if (report) *report = "no repair needed";
+        return true;
+    }
+
+    // Trivial repair supported: endian-swapped magic marker.
+    if (magic == 0x47475546) {
+        const uint32_t fixed = 0x46554747;
+        file.seekp(0, std::ios::beg);
+        file.write(reinterpret_cast<const char*>(&fixed), sizeof(fixed));
+        file.flush();
+        if (report) *report = "repaired swapped GGUF magic";
+        return file.good();
+    }
+
+    if (report) *report = "unsupported corruption pattern";
+    return false;
 }
 
 

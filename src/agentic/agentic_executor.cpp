@@ -189,6 +189,36 @@ std::string AgenticExecutor::callTool(const std::string& toolName, const std::st
     return "{\"success\":false,\"error\":\"Unsupported tool\",\"tool\":\"" + toolName + "\"}";
 }
 
+std::string AgenticExecutor::readFile(const std::string& path) {
+    namespace fs = std::filesystem;
+    fs::path p = path.empty() ? fs::path(".") : fs::path(path);
+    std::ifstream in(p, std::ios::in | std::ios::binary);
+    if (!in) {
+        return "";
+    }
+    std::ostringstream ss;
+    ss << in.rdbuf();
+    return ss.str();
+}
+
+std::vector<std::string> AgenticExecutor::listDirectory(const std::string& path) {
+    namespace fs = std::filesystem;
+    fs::path p = path.empty() ? fs::path(".") : fs::path(path);
+    std::vector<std::string> out;
+    std::error_code ec;
+    if (!fs::exists(p, ec) || ec || !fs::is_directory(p, ec)) {
+        return out;
+    }
+    for (const auto& entry : fs::directory_iterator(p, ec)) {
+        if (ec) {
+            break;
+        }
+        out.push_back(entry.path().filename().string());
+    }
+    std::sort(out.begin(), out.end());
+    return out;
+}
+
 std::string AgenticExecutor::trainModel(const std::string& datasetPath, const std::string& modelPath, const std::string& configJson) {
     namespace fs = std::filesystem;
     if (datasetPath.empty() || !fs::exists(datasetPath)) {

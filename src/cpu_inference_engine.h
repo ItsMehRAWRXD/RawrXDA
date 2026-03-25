@@ -89,6 +89,7 @@ public:
     bool LoadModel(const std::string& model_path);
     bool LoadWeights(const std::unordered_map<std::string, Tensor>& tensors);
     bool IsModelLoaded() const { return m_modelLoaded; }
+    const std::string& GetLastLoadErrorMessage() const { return m_lastLoadErrorMessage; }
     
     // Inference
     // Explicit declarations for missing methods
@@ -199,6 +200,7 @@ private:
     
     // Model state
     bool m_modelLoaded = false;
+    std::string m_lastLoadErrorMessage;
     int m_vocabSize = 0;
     int m_embeddingDim = 0;
     int m_numLayers = 0;

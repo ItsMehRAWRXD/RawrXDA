@@ -1,47 +1,44 @@
 #version 450
-#extension GL_KHR_shader_subgroup_basic : enable
 
-layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+// 16x16 tile mapping, matching host dispatch group calculation.
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
-layout(binding = 0) readonly buffer Weights {
-    float W[];
+// A: [M x K], row-major
+layout(binding = 0, std430) readonly buffer MatrixA {
+    float a[];
 };
 
-layout(binding = 1) readonly buffer Input {
-    float X[];
+// B: [K x N], row-major
+layout(binding = 1, std430) readonly buffer MatrixB {
+    float b[];
 };
 
-layout(binding = 2) writeonly buffer Output {
-    float Y[];
+// C: [M x N], row-major
+layout(binding = 2, std430) writeonly buffer MatrixC {
+    float c[];
 };
 
-// Push constants for matrix dimensions
-layout(push_constant) uniform Constants {
+// Must match host push order in VulkanCompute::DispatchMatMul: {M, K, N}
+layout(push_constant) uniform MatMulConstants {
     uint M;
-    uint N;
     uint K;
-} u_const;
+    uint N;
+} pc;
 
-// RawrXD High Performance Matrix Mult Kernel
-// Y = W * X + b (implicitly simplified here)
-// Optimized for LLaMA FFN layers
 void main() {
-    uint globalId = gl_GlobalInvocationID.x;
-    if (globalId >= u_const.M) return;
+    uint col = gl_GlobalInvocationID.x;
+    uint row = gl_GlobalInvocationID.y;
 
-    float sum = 0.0;
-    
-    // In a real implementation we would use subgroup operations and tiled memory loading
-    // for maximum throughput.
-    
-    for (uint k = 0; k < u_const.K; ++k) {
-        sum += W[globalId * u_const.K + k] * X[k];
+    if (row >= pc.M || col >= pc.N) {
+        return;
     }
-    
-    // Activation function (SwiGLU component 1)
-    // val * sigmoid(val)
-    float sigmoid = 1.0 / (1.0 + exp(-sum));
-    float silu = sum * sigmoid;
 
-    Y[globalId] = silu;
+    float acc = 0.0;
+    uint aBase = row * pc.K;
+
+    for (uint k = 0; k < pc.K; ++k) {
+        acc += a[aBase + k] * b[k * pc.N + col];
+    }
+
+    c[row * pc.N + col] = acc;
 }

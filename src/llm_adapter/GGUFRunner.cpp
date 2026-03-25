@@ -1834,6 +1834,13 @@ bool GGUFRunner::loadTensor(RawrXD::NativeFile& file, const std::string& name, s
     weights.resize(totalElements);
     if (!RawrXD::GgufTensorBytes::dequantizeToFloat(typeU, rawData.data(), totalElements, weights.data()))
     {
+        // FAIL LOUD: Unsupported GGUF tensor family - provide clear error message
+        RawrXD::Logging::Logger::instance().error(
+            std::string("[GGUFRunner] FAIL LOUD: Unsupported GGUF tensor type ") + std::to_string(typeU) +
+            " for tensor '" + name + "'. This quantization format is not supported by RawrXD. " +
+            "Supported formats: Q4_0, Q4_1, Q5_0, Q5_1, Q8_0, Q2_K, Q3_K, Q4_K, Q5_K, Q6_K, F16, F32. " +
+            "Please convert your model to a supported quantization format.",
+            "GGUFRunner");
         return false;
     }
     if (name == "output.weight" && desc.type == GgmlType::Q4_0)
@@ -1848,15 +1855,34 @@ bool GGUFRunner::parseGgufTensors(RawrXD::NativeFile& file)
     // Load essential tensors using table-driven approach
     if (!loadTensor(file, "token_embd.weight", context_.tok_embeddings))
     {
+        RawrXD::Logging::Logger::instance().error(
+            std::string("[GGUFRunner] FAIL LOUD: Failed to load critical tensor 'token_embd.weight'. ") +
+            "This usually indicates an unsupported quantization format or corrupted model file. " +
+            "Check that your model uses supported GGUF tensor types.",
+            "GGUFRunner");
         return false;
     }
 
     // Load output norm and output weights
     if (!loadTensor(file, "output_norm.weight", context_.output_norm_w))
     {
+        RawrXD::Logging::Logger::instance().error(
+            std::string("[GGUFRunner] FAIL LOUD: Failed to load critical tensor 'output_norm.weight'. ") +
+            "This usually indicates an unsupported quantization format or corrupted model file. " +
+            "Check that your model uses supported GGUF tensor types.",
+            "GGUFRunner");
+        context_.layers.clear();
+        return false;
     }
     if (!loadTensor(file, "output.weight", context_.output_w))
     {
+        RawrXD::Logging::Logger::instance().error(
+            std::string("[GGUFRunner] FAIL LOUD: Failed to load critical tensor 'output.weight'. ") +
+            "This usually indicates an unsupported quantization format or corrupted model file. " +
+            "Check that your model uses supported GGUF tensor types.",
+            "GGUFRunner");
+        context_.layers.clear();
+        return false;
     }
 
     return true;
@@ -1972,40 +1998,95 @@ bool GGUFRunner::parseGgufLayerWeights(RawrXD::NativeFile& file)
         ModelContext::Layer& L = context_.layers[li];
 
         (void)loadTensor(file, pre + "attn_norm.weight", L.ln_1_g);
+        if (!L.ln_1_g.size())
+        {
+            RawrXD::Logging::Logger::instance().error(
+                std::string("[GGUFRunner] FAIL LOUD: Failed to load critical tensor '") + pre + "attn_norm.weight" +
+                "' for layer " + std::to_string(li) + ". This usually indicates an unsupported quantization format " +
+                "or corrupted model file. Check that your model uses supported GGUF tensor types.",
+                "GGUFRunner");
+            context_.layers.clear();
+            return false;
+        }
         (void)loadTensor(file, pre + "ffn_norm.weight", L.ln_2_g);
+        if (!L.ln_2_g.size())
+        {
+            RawrXD::Logging::Logger::instance().error(
+                std::string("[GGUFRunner] FAIL LOUD: Failed to load critical tensor '") + pre + "ffn_norm.weight" +
+                "' for layer " + std::to_string(li) + ". This usually indicates an unsupported quantization format " +
+                "or corrupted model file. Check that your model uses supported GGUF tensor types.",
+                "GGUFRunner");
+            context_.layers.clear();
+            return false;
+        }
 
         if (!loadTensor(file, pre + "attn_q.weight", L.attn_q_w))
         {
+            RawrXD::Logging::Logger::instance().error(
+                std::string("[GGUFRunner] FAIL LOUD: Failed to load critical tensor '") + pre + "attn_q.weight" +
+                "' for layer " + std::to_string(li) + ". This usually indicates an unsupported quantization format " +
+                "or corrupted model file. Check that your model uses supported GGUF tensor types.",
+                "GGUFRunner");
             context_.layers.clear();
             return false;
         }
         if (!loadTensor(file, pre + "attn_k.weight", L.attn_k_w))
         {
+            RawrXD::Logging::Logger::instance().error(
+                std::string("[GGUFRunner] FAIL LOUD: Failed to load critical tensor '") + pre + "attn_k.weight" +
+                "' for layer " + std::to_string(li) + ". This usually indicates an unsupported quantization format " +
+                "or corrupted model file. Check that your model uses supported GGUF tensor types.",
+                "GGUFRunner");
             context_.layers.clear();
             return false;
         }
         if (!loadTensor(file, pre + "attn_v.weight", L.attn_v_w))
         {
+            RawrXD::Logging::Logger::instance().error(
+                std::string("[GGUFRunner] FAIL LOUD: Failed to load critical tensor '") + pre + "attn_v.weight" +
+                "' for layer " + std::to_string(li) + ". This usually indicates an unsupported quantization format " +
+                "or corrupted model file. Check that your model uses supported GGUF tensor types.",
+                "GGUFRunner");
             context_.layers.clear();
             return false;
         }
         if (!loadTensor(file, pre + "attn_output.weight", L.attn_o_w))
         {
+            RawrXD::Logging::Logger::instance().error(
+                std::string("[GGUFRunner] FAIL LOUD: Failed to load critical tensor '") + pre + "attn_output.weight" +
+                "' for layer " + std::to_string(li) + ". This usually indicates an unsupported quantization format " +
+                "or corrupted model file. Check that your model uses supported GGUF tensor types.",
+                "GGUFRunner");
             context_.layers.clear();
             return false;
         }
         if (!loadTensor(file, pre + "ffn_gate.weight", L.mlp_gate_w))
         {
+            RawrXD::Logging::Logger::instance().error(
+                std::string("[GGUFRunner] FAIL LOUD: Failed to load critical tensor '") + pre + "ffn_gate.weight" +
+                "' for layer " + std::to_string(li) + ". This usually indicates an unsupported quantization format " +
+                "or corrupted model file. Check that your model uses supported GGUF tensor types.",
+                "GGUFRunner");
             context_.layers.clear();
             return false;
         }
         if (!loadTensor(file, pre + "ffn_up.weight", L.mlp_up_w))
         {
+            RawrXD::Logging::Logger::instance().error(
+                std::string("[GGUFRunner] FAIL LOUD: Failed to load critical tensor '") + pre + "ffn_up.weight" +
+                "' for layer " + std::to_string(li) + ". This usually indicates an unsupported quantization format " +
+                "or corrupted model file. Check that your model uses supported GGUF tensor types.",
+                "GGUFRunner");
             context_.layers.clear();
             return false;
         }
         if (!loadTensor(file, pre + "ffn_down.weight", L.mlp_down_w))
         {
+            RawrXD::Logging::Logger::instance().error(
+                std::string("[GGUFRunner] FAIL LOUD: Failed to load critical tensor '") + pre + "ffn_down.weight" +
+                "' for layer " + std::to_string(li) + ". This usually indicates an unsupported quantization format " +
+                "or corrupted model file. Check that your model uses supported GGUF tensor types.",
+                "GGUFRunner");
             context_.layers.clear();
             return false;
         }

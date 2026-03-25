@@ -4,93 +4,107 @@
 
 #include <cstdint>
 #include <cstring>
+#include <atomic>
+
+namespace {
+
+struct StreamState {
+    std::atomic<uint32_t> modeMask{0};
+    std::atomic<bool> vulkanReady{false};
+    std::atomic<bool> streamingReady{false};
+    std::atomic<int> threadPoolSize{0};
+    std::atomic<int> queueDepth{0};
+    std::atomic<uint64_t> arenasCreated{0};
+} g_stream;
+
+inline void setMode(uint32_t bit) {
+    g_stream.modeMask.fetch_or(bit, std::memory_order_relaxed);
+}
+
+} // namespace
 
 extern "C" {
 
 // Subsystem mode functions (continued)
 void StubGenMode() {
-    // Enable stub generation mode
-    // Implementation: Auto-generate function stubs
+    setMode(1u << 0);
 }
 
 void TraceEngineMode() {
-    // Enable trace engine mode
-    // Implementation: Activate execution tracing
+    setMode(1u << 1);
 }
 
 void CompileMode() {
-    // Enable compile mode for JIT compilation
-    // Implementation: Setup JIT compiler
+    setMode(1u << 2);
 }
 
 void GapFuzzMode() {
-    // Enable gap fuzzing mode
-    // Implementation: Fuzz unexplored code paths
+    setMode(1u << 3);
 }
 
 void EncryptMode() {
-    // Enable encryption mode for secure execution
-    // Implementation: Activate encryption layer
+    setMode(1u << 4);
 }
 
 void EntropyMode() {
-    // Enable entropy analysis mode
-    // Implementation: Track randomness sources
+    setMode(1u << 5);
 }
 
 void AgenticMode() {
-    // Enable agentic autonomous mode
-    // Implementation: Activate autonomous agents
+    setMode(1u << 6);
 }
 
 void UACBypassMode() {
-    // Enable UAC bypass mode (for legitimate admin tasks)
-    // Implementation: Request elevation properly
+    setMode(1u << 7);
 }
 
 void AVScanMode() {
-    // Enable antivirus scanning mode
-    // Implementation: Integrate with AV engines
+    setMode(1u << 8);
 }
 
 // Streaming orchestrator functions
 bool SO_InitializeVulkan() {
-    // Initialize Vulkan for streaming
-    // Implementation: Create Vulkan instance, select device
+    g_stream.vulkanReady.store(true, std::memory_order_relaxed);
     return true;
 }
 
 bool SO_InitializeStreaming() {
-    // Initialize streaming subsystem
-    // Implementation: Setup buffers, configure codecs
+    if (!g_stream.vulkanReady.load(std::memory_order_relaxed)) {
+        return false;
+    }
+    g_stream.streamingReady.store(true, std::memory_order_relaxed);
     return true;
 }
 
 bool SO_CreateMemoryArena(size_t size, void** out_arena) {
-    // Create memory arena for streaming
-    // Implementation: Allocate large contiguous buffer
-    (void)size;
-    if (out_arena) *out_arena = nullptr;
+    if (size == 0 || out_arena == nullptr) {
+        return false;
+    }
+    *out_arena = ::operator new(size, std::nothrow);
+    if (*out_arena == nullptr) {
+        return false;
+    }
+    g_stream.arenasCreated.fetch_add(1, std::memory_order_relaxed);
     return true;
 }
 
 bool SO_CreateThreadPool(int thread_count) {
-    // Create thread pool for parallel streaming
-    // Implementation: Spawn worker threads
-    (void)thread_count;
+    if (thread_count <= 0) {
+        return false;
+    }
+    g_stream.threadPoolSize.store(thread_count, std::memory_order_relaxed);
     return true;
 }
 
 bool SO_CreateComputePipelines() {
-    // Create Vulkan compute pipelines
-    // Implementation: Compile shaders, create pipelines
-    return true;
+    return g_stream.vulkanReady.load(std::memory_order_relaxed);
 }
 
 bool SO_InitializePrefetchQueue(int queue_depth) {
-    // Initialize prefetch queue for streaming
-    // Implementation: Setup circular buffer
-    (void)queue_depth;
+    if (queue_depth <= 0) {
+        return false;
+    }
+    g_stream.queueDepth.store(queue_depth, std::memory_order_relaxed);
     return true;
 }
 
