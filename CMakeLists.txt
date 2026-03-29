@@ -576,7 +576,9 @@ set(SOURCES
     src/dae/replay_engine.cpp
 
     # ── ZCCF: Zero-Copy Context Fusion ───────────────────────────────────────
-    # (P0 includes headers + wire-up points; runtime cpp lands in P1.3)
+    src/zccf/file_cache.cpp
+    src/zccf/ast_arena.cpp
+    src/zccf/symbol_table.cpp
 
 
     # T4: Autonomous Recovery Orchestrator (FailureClass → recovery → verify → commit)

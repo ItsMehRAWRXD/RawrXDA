@@ -40,6 +40,7 @@
 #include <optional>
 #include <expected>
 #include <atomic>
+#include <cstddef>
 
 namespace RawrXD {
 namespace ZCCF {

@@ -38,6 +38,7 @@
 #include <optional>
 #include <expected>
 #include <atomic>
+#include <memory>
 
 namespace RawrXD {
 namespace ZCCF {
