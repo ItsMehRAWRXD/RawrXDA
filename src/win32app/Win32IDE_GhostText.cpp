@@ -315,7 +315,6 @@ std::string Win32IDE::requestGhostTextCompletion(const std::string& context,
         return expectedSeq != 0 && expectedSeq != m_ghostTextRequestSeq.load();
     };
 
-<<<<<<< HEAD
     enum class GhostProviderKind {
         Local,
         Snippet,
@@ -326,17 +325,6 @@ std::string Win32IDE::requestGhostTextCompletion(const std::string& context,
         GhostProviderKind::Snippet,
         GhostProviderKind::Lsp
     };
-=======
-        PredictionConfig cfg;
-        cfg.model       = getResolvedOllamaModel().empty() ? "qwen2.5-coder:14b" : getResolvedOllamaModel();
-        cfg.temperature = 0.2f;
-        cfg.maxTokens   = 256;
-        cfg.maxLines    = GHOST_TEXT_MAX_LINES;
-        cfg.useFIM      = true;
-        cfg.stopSequences = "<|endoftext|>,<|fim_pad|>,\n\n\n";
-        m_predictionProvider->Configure(cfg);
-    }
->>>>>>> origin/main
 
     for (GhostProviderKind provider : precedence) {
         if (isStale()) return "";

@@ -90,11 +90,7 @@ private:
     void* m_tabWidget;
     
     // Resource usage tab
-<<<<<<< HEAD
 // Native: chart view (Win32: use GDI/Direct2D or embedded control)
-=======
-// REMOVED_QT:     QChartView* m_resourceChartView;
->>>>>>> origin/main
     QChart* m_resourceChart;
     QLineSeries* m_cpuSeries;
     QLineSeries* m_memorySeries;
@@ -103,11 +99,7 @@ private:
     QValueAxis* m_resourceAxisY;
 
     // Throughput tab
-<<<<<<< HEAD
 // Native: throughput chart (Win32: GDI/Direct2D)
-=======
-// REMOVED_QT:     QChartView* m_throughputChartView;
->>>>>>> origin/main
     QChart* m_throughputChart;
     QLineSeries* m_samplesPerSecSeries;
     QLineSeries* m_tokensPerSecSeries;
@@ -115,11 +107,7 @@ private:
     QValueAxis* m_throughputAxisY;
 
     // Latency tab
-<<<<<<< HEAD
 // Native: latency chart (Win32: GDI/Direct2D)
-=======
-// REMOVED_QT:     QChartView* m_latencyChartView;
->>>>>>> origin/main
     QChart* m_latencyChart;
     QLineSeries* m_batchLatencySeries;
     QLineSeries* m_p95LatencySeries;

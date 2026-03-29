@@ -27,6 +27,7 @@
 #include <algorithm>
 #include <cctype>
 #include <chrono>
+#include <cstdio>
 #include <filesystem>
 #include <regex>
 #include <unordered_set>
@@ -1964,8 +1965,107 @@ std::string Win32IDE::asmSymbolKindString(AsmSymbolKind kind) const {
 // COMMAND HANDLERS
 // ============================================================================
 
+void Win32IDE::cmdAsmLintCurrentFile() {
+    if (m_currentFile.empty() || !asmIsAsmFile(m_currentFile)) {
+        appendToOutput("[MASM Lint] Open a .asm/.inc file to lint.\n", "General", OutputSeverity::Warning);
+        return;
+    }
+
+    // Prefer the known VS2022 MASM path, then fall back to PATH lookup.
+    std::vector<std::string> ml64Candidates = {
+        "C:\\VS2022Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\bin\\Hostx64\\x64\\ml64.exe",
+        "ml64.exe"
+    };
+
+    bool ranCompiler = false;
+    bool foundTool = false;
+    int problemCount = 0;
+    std::vector<std::string> compilerOutput;
+
+    clearProblems();
+
+    std::regex diagRegex(
+        R"(^\s*(.+)\((\d+)\)\s*:\s*(fatal error|error|warning)\s+([A-Za-z0-9]+)\s*:\s*(.*)\s*$)",
+        std::regex::icase);
+
+    for (const auto& ml64Path : ml64Candidates) {
+        const bool isAbsolute = ml64Path.find(':') != std::string::npos || ml64Path.find("\\") != std::string::npos;
+        if (isAbsolute && !std::filesystem::exists(ml64Path)) {
+            continue;
+        }
+
+        foundTool = true;
+
+        std::string cmd = "\"" + ml64Path + "\" /nologo /c \"" + m_currentFile + "\" 2>&1";
+        FILE* pipe = _popen(cmd.c_str(), "r");
+        if (!pipe) {
+            continue;
+        }
+
+        ranCompiler = true;
+        char lineBuf[4096] = {};
+        while (fgets(lineBuf, sizeof(lineBuf), pipe)) {
+            std::string line(lineBuf);
+            while (!line.empty() && (line.back() == '\n' || line.back() == '\r'))
+                line.pop_back();
+            if (!line.empty())
+                compilerOutput.push_back(line);
+
+            std::smatch m;
+            if (std::regex_match(line, m, diagRegex)) {
+                const std::string filePath = m[1].str();
+                const int lineNum = std::max(1, std::atoi(m[2].str().c_str()));
+                std::string sev = m[3].str();
+                std::transform(sev.begin(), sev.end(), sev.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+                const std::string code = m[4].str();
+                const std::string msg = m[5].str();
+
+                int severity = 2; // info
+                if (sev.find("warning") != std::string::npos)
+                    severity = 1;
+                else if (sev.find("error") != std::string::npos)
+                    severity = 0;
+
+                addProblem(filePath, lineNum, 1, "[" + code + "] " + msg, severity);
+                ++problemCount;
+            }
+        }
+
+        _pclose(pipe);
+
+        // If we successfully launched a compiler once, don't retry with other candidates.
+        break;
+    }
+
+    if (!foundTool) {
+        appendToOutput("[MASM Lint] ml64.exe not found. Install VS Build Tools with MASM x64.\n", "Errors",
+                       OutputSeverity::Error);
+        return;
+    }
+
+    if (!ranCompiler) {
+        appendToOutput("[MASM Lint] Failed to execute ml64.exe.\n", "Errors", OutputSeverity::Error);
+        return;
+    }
+
+    if (problemCount > 0) {
+        appendToOutput("[MASM Lint] Found " + std::to_string(problemCount) + " issue(s) in " + m_currentFile + "\n",
+                       "General", OutputSeverity::Warning);
+        switchPanelTab(PanelTab::Problems);
+        updateProblemsPanel();
+    } else {
+        appendToOutput("[MASM Lint] No issues found in " + m_currentFile + "\n", "General", OutputSeverity::Info);
+        for (const auto& line : compilerOutput) {
+            appendToOutput("[MASM Lint] " + line + "\n", "Debug", OutputSeverity::Debug);
+        }
+    }
+}
+
 void Win32IDE::cmdAsmParseSymbols() {
     if (!m_asmSemanticInitialized) initAsmSemantic();
+
+    // Native linter pass first: compile-only with ml64 and push diagnostics to Problems pane.
+    cmdAsmLintCurrentFile();
 
     // Parse ASM files in the workspace
     if (!m_currentFile.empty() && asmIsAsmFile(m_currentFile)) {

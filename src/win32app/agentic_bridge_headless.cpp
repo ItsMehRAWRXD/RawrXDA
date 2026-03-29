@@ -140,13 +140,13 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt)
 {
     if (!m_initialized && !Initialize(m_frameworkPath, m_modelName))
     {
-        return {AgentResponseType::AGENT_ERROR, "Failed to initialize headless bridge"};
+        return {AgentResponseType::AGENT_ERROR, "Failed to initialize headless bridge", "", "", "", "HeadlessBridge"};
     }
 
     const std::string trimmed = TrimCopy(prompt);
     if (trimmed.empty())
     {
-        return {AgentResponseType::AGENT_ERROR, "Empty prompt"};
+        return {AgentResponseType::AGENT_ERROR, "Empty prompt", "", "", "", "HeadlessBridge"};
     }
 
     std::string toolResult;
@@ -157,6 +157,7 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt)
         response.content = toolResult;
         response.toolName = "subagent_tool";
         response.rawOutput = toolResult;
+        response.executorLabel = "SubAgentToolDispatch";
         return response;
     }
 
@@ -164,21 +165,21 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt)
     {
         const std::string arg = TrimCopy(trimmed.substr(8));
         const std::string out = RunDumpbin(arg, "/headers");
-        return {AgentResponseType::TOOL_CALL, out, "dumpbin", arg, out};
+        return {AgentResponseType::TOOL_CALL, out, "dumpbin", arg, out, "DumpbinTool"};
     }
 
     if (StartsWith(trimmed, "compile "))
     {
         const std::string arg = TrimCopy(trimmed.substr(8));
         const std::string out = RunCompiler(arg);
-        return {AgentResponseType::TOOL_CALL, out, "compile", arg, out};
+        return {AgentResponseType::TOOL_CALL, out, "compile", arg, out, "CompilerTool"};
     }
 
     if (StartsWith(trimmed, "codex "))
     {
         const std::string arg = TrimCopy(trimmed.substr(6));
         const std::string out = RunCodex(arg);
-        return {AgentResponseType::TOOL_CALL, out, "codex", arg, out};
+        return {AgentResponseType::TOOL_CALL, out, "codex", arg, out, "CodexTool"};
     }
 
     if (StartsWith(trimmed, "!"))
@@ -189,18 +190,81 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt)
         {
             shellOutput = "Command failed with no output.";
         }
-        return {ok ? AgentResponseType::ANSWER : AgentResponseType::AGENT_ERROR, shellOutput};
+        AgentResponse r{};
+        r.type = ok ? AgentResponseType::ANSWER : AgentResponseType::AGENT_ERROR;
+        r.content = shellOutput;
+        r.executorLabel = "ShellExecutor";
+        return r;
+    }
+
+    if (m_workflowExecutorEnabled)
+    {
+        static const char* kRoles[] = {"Planner", "Implementer", "Verifier", "Reviewer", "Debugger", "Synthesizer"};
+        const int agentCount = std::clamp(m_workflowExecutorAgentCount, 1, 32);
+        std::vector<std::string> prompts;
+        std::vector<std::string> roleNames;
+        prompts.reserve(static_cast<size_t>(agentCount));
+        roleNames.reserve(static_cast<size_t>(agentCount));
+        for (int index = 0; index < agentCount; ++index)
+        {
+            const char* role = kRoles[index % 6];
+            roleNames.push_back(role);
+            std::ostringstream rolePrompt;
+            rolePrompt << "[Headless Workflow Executor Agent " << (index + 1) << "/" << agentCount << "]\n"
+                       << "Role: " << role << "\n\n"
+                       << trimmed;
+            prompts.push_back(rolePrompt.str());
+        }
+
+        // Execute swarm and collect per-agent results
+        SubAgentManager* manager = GetSubAgentManager();
+        SwarmConfig swarmCfg{};
+        swarmCfg.maxParallel = std::max(1, agentCount);
+        swarmCfg.mergeStrategy = agentCount > 1 ? "summarize" : "concatenate";
+        std::string swarmId;
+        std::string swarmOut;
+        if (manager)
+        {
+            // Run swarm directly so we can capture the swarm ID for per-agent results
+            swarmOut = manager->executeSwarm("headless", prompts, swarmCfg);
+        }
+        else
+        {
+            swarmOut = ExecuteSwarm(prompts, swarmCfg.mergeStrategy, agentCount);
+        }
+
+        if (!swarmOut.empty() && swarmOut.rfind("[Error]", 0) != 0)
+        {
+            AgentResponse r{};
+            r.type = AgentResponseType::ANSWER;
+            r.content = swarmOut;
+            r.executorLabel = "WorkflowExecutor(" + std::to_string(agentCount) + " agents)";
+            // Populate per-agent telemetry from the last swarm state
+            if (manager)
+            {
+                auto allAgents = manager->getAllSubAgents();
+                // Take the last agentCount agents spawned (these are the swarm tasks)
+                int startIdx = std::max(0, (int)allAgents.size() - agentCount);
+                for (int i = startIdx; i < (int)allAgents.size(); ++i)
+                {
+                    int roleIdx = i - startIdx;
+                    std::string roleName = (roleIdx < (int)roleNames.size()) ? roleNames[roleIdx] : "Agent";
+                    r.agentResults.emplace_back(roleName, allAgents[i].result);
+                }
+            }
+            return r;
+        }
     }
 
     if (m_nativeAgent && m_nativeEngine && m_nativeEngine->IsModelLoaded())
     {
         const std::string response = m_nativeAgent->Execute(trimmed);
-        return {AgentResponseType::ANSWER, response};
+        return {AgentResponseType::ANSWER, response, "", "", "", "NativeAgent"};
     }
 
     std::ostringstream oss;
     oss << "Headless agent ready. Prefix OS commands with '!'. Prompt received: " << trimmed;
-    return {AgentResponseType::ANSWER, oss.str()};
+    return {AgentResponseType::ANSWER, oss.str(), "", "", "", "HeadlessBridge"};
 }
 
 bool AgenticBridge::StartAgentLoop(const std::string& initialPrompt, int maxIterations)
@@ -253,7 +317,9 @@ std::string AgenticBridge::GetAgentStatus()
         << "\"initialized\":" << (m_initialized ? "true" : "false") << ","
         << "\"agent_loop_running\":" << (m_agentLoopRunning ? "true" : "false") << ","
         << "\"model\":\"" << m_modelName << "\","
-        << "\"framework\":\"" << m_frameworkPath << "\""
+        << "\"framework\":\"" << m_frameworkPath << "\","
+        << "\"workflow_executor\":" << (m_workflowExecutorEnabled ? "true" : "false") << ","
+        << "\"workflow_agents\":" << m_workflowExecutorAgentCount
         << "}";
     return oss.str();
 }
@@ -302,6 +368,17 @@ void AgenticBridge::SetNoRefusal(bool enabled)
     {
         m_nativeAgent->SetNoRefusal(enabled);
     }
+}
+
+void AgenticBridge::SetWorkflowExecutorEnabled(bool enabled)
+{
+    m_workflowExecutorEnabled = enabled;
+    m_multiAgentEnabled = enabled;
+}
+
+void AgenticBridge::SetWorkflowExecutorAgentCount(int agentCount)
+{
+    m_workflowExecutorAgentCount = std::clamp(agentCount, 1, 32);
 }
 
 void AgenticBridge::SetAutoCorrect(bool enabled)
@@ -407,16 +484,6 @@ bool AgenticBridge::LoadModel(const std::string& path)
         m_initialized = true;
     }
     return loaded;
-}
-
-void AgenticBridge::SetModelLoadErrorCallback(ModelLoadErrorCallback cb)
-{
-    m_modelLoadErrorCallback = std::move(cb);
-}
-
-const std::string& AgenticBridge::GetLastModelLoadError() const
-{
-    return m_lastModelLoadError;
 }
 
 void AgenticBridge::SetWorkspaceRoot(const std::string& workspaceRoot)

@@ -9,15 +9,6 @@
 #include <windows.h>
 #endif
 
-<<<<<<< HEAD
-=======
-// SCAFFOLD_255: engine_manager and compiler registration
-
-
-// SCAFFOLD_125: engine_manager and compiler registration
-
-
->>>>>>> origin/main
 std::unique_ptr<EngineManager> g_engine_manager;
 EngineManager::EngineManager() {
     // Initialize with default engines
@@ -222,18 +213,12 @@ EngineInfo* EngineManager::GetEngineMut(const std::string& engine_id) {
 }
 
 bool EngineManager::Load800BModel(const std::string& model_name) {
-<<<<<<< HEAD
     {
         std::lock_guard<std::mutex> lock(mutex_);
         if (current_engine_id_ != "800b-5drive") {
             std::cerr << "Error: Current engine doesn't support 800B models" << std::endl;
             return false;
         }
-=======
-    if (current_engine_id_ != "800b-5drive") {
-        std::cerr << "Error: Current engine doesn't support 800B models" << std::endl;
-        return false;
->>>>>>> origin/main
     }
 
     for (char c : model_name) {

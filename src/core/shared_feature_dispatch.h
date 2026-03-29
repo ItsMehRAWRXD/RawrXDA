@@ -544,19 +544,21 @@ int rawrxd_get_feature_count(void);
 #endif
 
 // ============================================================================
-// REGISTRATION MACRO — Simplifies static feature registration
+// Feature registration — use SharedFeatureRegistry::instance().registerFeature()
+// directly or auto_discovery for static registration.
 // ============================================================================
-
-#define REGISTER_FEATURE(id, name, desc, group, cmdId, cliCmd, shortcut, handler, gui, cli, asm) \
-    static bool s_reg_##__COUNTER__ = []() { \
-        FeatureDescriptor fd{}; \
-        fd.id = id; fd.name = name; fd.description = desc; \
-        fd.group = group; fd.commandId = cmdId; \
-        fd.cliCommand = cliCmd; fd.shortcut = shortcut; \
-        fd.handler = handler; fd.guiSupported = gui; \
-        fd.cliSupported = cli; fd.asmHotPath = asm; \
-        SharedFeatureRegistry::instance().registerFeature(fd); \
-        return true; \
-    }()
+inline bool registerFeatureExplicit(const char* id, const char* name, const char* desc,
+                                     FeatureGroup group, uint32_t cmdId, const char* cliCmd,
+                                     const char* shortcut, FeatureHandler handler,
+                                     bool gui, bool cli, bool asmPath) {
+    FeatureDescriptor fd{};
+    fd.id = id; fd.name = name; fd.description = desc;
+    fd.group = group; fd.commandId = cmdId;
+    fd.cliCommand = cliCmd; fd.shortcut = shortcut;
+    fd.handler = handler; fd.guiSupported = gui;
+    fd.cliSupported = cli; fd.asmHotPath = asmPath;
+    SharedFeatureRegistry::instance().registerFeature(fd);
+    return true;
+}
 
 #endif // RAWRXD_SHARED_FEATURE_DISPATCH_H

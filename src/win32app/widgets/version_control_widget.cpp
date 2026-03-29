@@ -992,22 +992,194 @@ void VersionControlWidget::discardChanges(const QString& file)
 }
 
 // Stub implementations for remaining methods
-void VersionControlWidget::rebaseBranch(const QString& branch) { Q_UNUSED(branch); }
-void VersionControlWidget::cherryPick(const QString& commitHash) { Q_UNUSED(commitHash); }
-void VersionControlWidget::revert(const QString& commitHash) { Q_UNUSED(commitHash); }
-void VersionControlWidget::reset(const QString& commitHash, const QString& mode) { Q_UNUSED(commitHash); Q_UNUSED(mode); }
-void VersionControlWidget::stashApply(int index) { Q_UNUSED(index); }
-void VersionControlWidget::stashDrop(int index) { Q_UNUSED(index); }
+void VersionControlWidget::rebaseBranch(const QString& branch) {
+    bool success = false;
+    QString output = runGitCommand({"rebase", branch}, &success);
+    if (success) {
+        refreshStatus();
+        logVcsEvent("rebase_completed", QJsonObject{{"branch", branch}});
+        emit operationCompleted("rebase", true);
+    } else {
+        emit operationFailed("rebase", output);
+    }
+}
+
+void VersionControlWidget::cherryPick(const QString& commitHash) {
+    bool success = false;
+    QString output = runGitCommand({"cherry-pick", commitHash}, &success);
+    if (success) {
+        refreshStatus();
+        updateCommitHistory();
+        logVcsEvent("cherry_pick", QJsonObject{{"commit", commitHash}});
+        emit operationCompleted("cherry-pick", true);
+    } else {
+        emit operationFailed("cherry-pick", output);
+    }
+}
+
+void VersionControlWidget::revert(const QString& commitHash) {
+    bool success = false;
+    QString output = runGitCommand({"revert", "--no-edit", commitHash}, &success);
+    if (success) {
+        refreshStatus();
+        updateCommitHistory();
+        logVcsEvent("revert", QJsonObject{{"commit", commitHash}});
+        emit operationCompleted("revert", true);
+    } else {
+        emit operationFailed("revert", output);
+    }
+}
+
+void VersionControlWidget::reset(const QString& commitHash, const QString& mode) {
+    QString resetMode = mode.isEmpty() ? "--mixed" : ("--" + mode);
+    bool success = false;
+    QString output = runGitCommand({"reset", resetMode, commitHash}, &success);
+    if (success) {
+        refreshStatus();
+        updateCommitHistory();
+        logVcsEvent("reset", QJsonObject{{"commit", commitHash}, {"mode", mode}});
+        emit operationCompleted("reset", true);
+    } else {
+        emit operationFailed("reset", output);
+    }
+}
+
+void VersionControlWidget::stashApply(int index) {
+    QString stashRef = "stash@{" + QString::number(index) + "}";
+    bool success = false;
+    QString output = runGitCommand({"stash", "apply", stashRef}, &success);
+    if (success) {
+        refreshStatus();
+        logVcsEvent("stash_applied", QJsonObject{{"index", index}});
+        emit operationCompleted("stash apply", true);
+    } else {
+        emit operationFailed("stash apply", output);
+    }
+}
+
+void VersionControlWidget::stashDrop(int index) {
+    QString stashRef = "stash@{" + QString::number(index) + "}";
+    bool success = false;
+    QString output = runGitCommand({"stash", "drop", stashRef}, &success);
+    if (success) {
+        updateStashList();
+        logVcsEvent("stash_dropped", QJsonObject{{"index", index}});
+        emit operationCompleted("stash drop", true);
+    } else {
+        emit operationFailed("stash drop", output);
+    }
+}
+
 void VersionControlWidget::showLog(int maxCount) { Q_UNUSED(maxCount); updateCommitHistory(); }
-void VersionControlWidget::showFileHistory(const QString& file) { Q_UNUSED(file); }
-void VersionControlWidget::showBlame(const QString& file) { Q_UNUSED(file); }
+
+void VersionControlWidget::showFileHistory(const QString& file) {
+    bool success = false;
+    QStringList log = runGitCommandList({"log", "--oneline", "--max-count=50", "--follow", "--", file}, &success);
+    if (success && m_commitHistory) {
+        m_commitHistory->clear();
+        for (const QString& entry : log) {
+            int spaceIdx = entry.indexOf(' ');
+            if (spaceIdx > 0) {
+                auto* item = new QTreeWidgetItem(m_commitHistory);
+                item->setText(0, entry.left(spaceIdx));
+                item->setText(1, entry.mid(spaceIdx + 1));
+            }
+        }
+        logVcsEvent("file_history_shown", QJsonObject{{"file", file}, {"entries", (int)log.size()}});
+    }
+}
+
+void VersionControlWidget::showBlame(const QString& file) {
+    bool success = false;
+    QString output = runGitCommand({"blame", "--porcelain", file}, &success);
+    if (success && m_diffView) {
+        m_diffView->setPlainText(output);
+        logVcsEvent("blame_shown", QJsonObject{{"file", file}});
+    }
+}
+
 void VersionControlWidget::addRemote(const QString& name, const QString& url) { runGitCommand({"remote", "add", name, url}); listRemotes(); }
 void VersionControlWidget::removeRemote(const QString& name) { runGitCommand({"remote", "remove", name}); listRemotes(); }
 void VersionControlWidget::listRemotes() { m_remotes = runGitCommandList({"remote", "-v"}); m_remoteList->clear(); m_remoteList->addItems(m_remotes); m_stats.totalRemotes = m_remotes.size(); }
-void VersionControlWidget::createTag(const QString& name, const QString& commitHash, const QString& message) { Q_UNUSED(name); Q_UNUSED(commitHash); Q_UNUSED(message); }
-void VersionControlWidget::deleteTag(const QString& name) { Q_UNUSED(name); }
+
+void VersionControlWidget::createTag(const QString& name, const QString& commitHash, const QString& message) {
+    QStringList args = {"tag"};
+    if (!message.isEmpty()) {
+        args << "-a" << name << "-m" << message;
+    } else {
+        args << name;
+    }
+    if (!commitHash.isEmpty()) args << commitHash;
+    bool success = false;
+    runGitCommand(args, &success);
+    if (success) {
+        logVcsEvent("tag_created", QJsonObject{{"name", name}});
+        emit operationCompleted("create tag", true);
+    }
+}
+
+void VersionControlWidget::deleteTag(const QString& name) {
+    bool success = false;
+    runGitCommand({"tag", "-d", name}, &success);
+    if (success) {
+        logVcsEvent("tag_deleted", QJsonObject{{"name", name}});
+        emit operationCompleted("delete tag", true);
+    }
+}
+
 void VersionControlWidget::pushTags() { runGitCommand({"push", "--tags"}); }
-bool VersionControlWidget::hasConflicts() { return false; }
-void VersionControlWidget::updateRepositoryInfo() {}
-void VersionControlWidget::showCommitDialog() {}
-void VersionControlWidget::updateStashList() {}
+
+bool VersionControlWidget::hasConflicts() {
+    bool success = false;
+    QString status = runGitCommand({"status", "--porcelain"}, &success);
+    if (!success) return false;
+    // Lines starting with "UU", "AA", "DD", "UA", "AU", "UD", "DU" indicate conflicts
+    const QStringList lines = status.split('\n', Qt::SkipEmptyParts);
+    for (const QString& line : lines) {
+        if (line.length() >= 2) {
+            QChar x = line[0], y = line[1];
+            if (x == 'U' || y == 'U' || (x == 'A' && y == 'A') || (x == 'D' && y == 'D')) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+void VersionControlWidget::updateRepositoryInfo() {
+    bool success = false;
+    // Count commits
+    QString countStr = runGitCommand({"rev-list", "--count", "HEAD"}, &success);
+    if (success) m_stats.totalCommits = countStr.trimmed().toInt();
+    // Count branches
+    QStringList branches = runGitCommandList({"branch", "--list"}, &success);
+    if (success) m_stats.totalBranches = branches.size();
+    // Count tags
+    QStringList tags = runGitCommandList({"tag", "--list"}, &success);
+    if (success) m_stats.totalTags = tags.size();
+    // Update label
+    if (m_repoStatusLabel) {
+        m_repoStatusLabel->setText(
+            QString("Commits: %1 | Branches: %2 | Tags: %3")
+                .arg(m_stats.totalCommits)
+                .arg(m_stats.totalBranches)
+                .arg(m_stats.totalTags));
+    }
+}
+
+void VersionControlWidget::showCommitDialog() {
+    if (m_commitMessageEdit && m_commitBtn) {
+        m_commitMessageEdit->setFocus();
+        m_commitMessageEdit->selectAll();
+    }
+}
+
+void VersionControlWidget::updateStashList() {
+    if (!m_stashList) return;
+    m_stashList->clear();
+    bool success = false;
+    QStringList stashes = runGitCommandList({"stash", "list"}, &success);
+    if (success) {
+        m_stashList->addItems(stashes);
+    }
+}

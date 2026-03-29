@@ -1,6 +1,6 @@
 {
-  "generated": "2026-02-11T07:10:24.671634",
-  "totalAutoRegistered": 432,
+  "generated": "2026-03-26T14:19:15.803794",
+  "totalAutoRegistered": 710,
   "totalManualRegistered": 0,
   "entries": [
     {
@@ -15,7 +15,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "file.close_folder",
@@ -29,7 +29,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "file.open_folder",
@@ -43,7 +43,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "file.new_window",
@@ -57,7 +57,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "file.close_tab",
@@ -71,7 +71,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "edit.selectall",
@@ -85,7 +85,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "edit.multicursor_add",
@@ -99,7 +99,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "edit.multicursor_remove",
@@ -113,7 +113,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "edit.goto_line",
@@ -127,7 +127,21 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "edit.toggle_comment",
+      "name": "Edit Toggle Comment",
+      "description": "Toggle comment (edit system)",
+      "group": "FeatureGroup::Editing",
+      "commandId": 212,
+      "idmDefine": "IDM_EDIT_TOGGLE_COMMENT",
+      "cliCommand": "!edit_toggle_comment",
+      "handler": "handleEditToggleComment",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "view.toggle_sidebar",
@@ -141,7 +155,21 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "sel.all",
+      "name": "Sel All",
+      "description": "All (sel system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 301,
+      "idmDefine": "IDM_SEL_ALL",
+      "cliCommand": "!sel_all",
+      "handler": "handleSelAll",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "view.toggle_terminal",
@@ -155,7 +183,21 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "sel.expand",
+      "name": "Sel Expand",
+      "description": "Expand (sel system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 302,
+      "idmDefine": "IDM_SEL_EXPAND",
+      "cliCommand": "!sel_expand",
+      "handler": "handleSelExpand",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "view.toggle_output",
@@ -169,7 +211,21 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "sel.shrink",
+      "name": "Sel Shrink",
+      "description": "Shrink (sel system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 303,
+      "idmDefine": "IDM_SEL_SHRINK",
+      "cliCommand": "!sel_shrink",
+      "handler": "handleSelShrink",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "view.toggle_fullscreen",
@@ -183,7 +239,21 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "sel.column_mode",
+      "name": "Sel Column Mode",
+      "description": "Column mode (sel system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 304,
+      "idmDefine": "IDM_SEL_COLUMN_MODE",
+      "cliCommand": "!sel_column_mode",
+      "handler": "handleSelColumnMode",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "view.zoom_in",
@@ -197,7 +267,21 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "sel.add_cursor_above",
+      "name": "Sel Add Cursor Above",
+      "description": "Add cursor above (sel system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 305,
+      "idmDefine": "IDM_SEL_ADD_CURSOR_ABOVE",
+      "cliCommand": "!sel_add_cursor_above",
+      "handler": "handleSelAddCursorAbove",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "view.zoom_out",
@@ -211,7 +295,21 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "sel.add_cursor_below",
+      "name": "Sel Add Cursor Below",
+      "description": "Add cursor below (sel system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 306,
+      "idmDefine": "IDM_SEL_ADD_CURSOR_BELOW",
+      "cliCommand": "!sel_add_cursor_below",
+      "handler": "handleSelAddCursorBelow",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "view.zoom_reset",
@@ -225,7 +323,35 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "sel.add_next_occurrence",
+      "name": "Sel Add Next Occurrence",
+      "description": "Add next occurrence (sel system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 307,
+      "idmDefine": "IDM_SEL_ADD_NEXT_OCCURRENCE",
+      "cliCommand": "!sel_add_next_occurrence",
+      "handler": "handleSelAddNextOccurrence",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "sel.select_all_occurrences",
+      "name": "Sel Select All Occurrences",
+      "description": "Select all occurrences (sel system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 308,
+      "idmDefine": "IDM_SEL_SELECT_ALL_OCCURRENCES",
+      "cliCommand": "!sel_select_all_occurrences",
+      "handler": "handleSelSelectAllOccurrences",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "ai.inline_complete",
@@ -239,7 +365,21 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "view.activity_bar",
+      "name": "View Activity Bar",
+      "description": "Activity bar (view system)",
+      "group": "FeatureGroup::View",
+      "commandId": 401,
+      "idmDefine": "IDM_VIEW_ACTIVITY_BAR",
+      "cliCommand": "!view_activity_bar",
+      "handler": "handleViewActivityBar",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "ai.chat_mode",
@@ -253,7 +393,21 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "view.primary_sidebar",
+      "name": "View Primary Sidebar",
+      "description": "Primary sidebar (view system)",
+      "group": "FeatureGroup::View",
+      "commandId": 402,
+      "idmDefine": "IDM_VIEW_PRIMARY_SIDEBAR",
+      "cliCommand": "!view_primary_sidebar",
+      "handler": "handleViewPrimarySidebar",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "ai.explain_code",
@@ -267,7 +421,21 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "view.secondary_sidebar",
+      "name": "View Secondary Sidebar",
+      "description": "Secondary sidebar (view system)",
+      "group": "FeatureGroup::View",
+      "commandId": 403,
+      "idmDefine": "IDM_VIEW_SECONDARY_SIDEBAR",
+      "cliCommand": "!view_secondary_sidebar",
+      "handler": "handleViewSecondarySidebar",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "ai.refactor",
@@ -281,7 +449,21 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "view.panel",
+      "name": "View Panel",
+      "description": "Panel (view system)",
+      "group": "FeatureGroup::View",
+      "commandId": 404,
+      "idmDefine": "IDM_VIEW_PANEL",
+      "cliCommand": "!view_panel",
+      "handler": "handleViewPanel",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "ai.generate_tests",
@@ -295,7 +477,21 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "view.status_bar",
+      "name": "View Status Bar",
+      "description": "Status bar (view system)",
+      "group": "FeatureGroup::View",
+      "commandId": 405,
+      "idmDefine": "IDM_VIEW_STATUS_BAR",
+      "cliCommand": "!view_status_bar",
+      "handler": "handleViewStatusBar",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "ai.generate_docs",
@@ -309,7 +505,21 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "view.zen_mode",
+      "name": "View Zen Mode",
+      "description": "Zen mode (view system)",
+      "group": "FeatureGroup::View",
+      "commandId": 406,
+      "idmDefine": "IDM_VIEW_ZEN_MODE",
+      "cliCommand": "!view_zen_mode",
+      "handler": "handleViewZenMode",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "ai.fix_errors",
@@ -323,7 +533,21 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "view.command_palette",
+      "name": "View Command Palette",
+      "description": "Command palette (view system)",
+      "group": "FeatureGroup::View",
+      "commandId": 407,
+      "idmDefine": "IDM_VIEW_COMMAND_PALETTE",
+      "cliCommand": "!view_command_palette",
+      "handler": "handleViewCommandPalette",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "ai.optimize_code",
@@ -337,7 +561,21 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "view.explorer",
+      "name": "View Explorer",
+      "description": "Explorer (view system)",
+      "group": "FeatureGroup::View",
+      "commandId": 408,
+      "idmDefine": "IDM_VIEW_EXPLORER",
+      "cliCommand": "!view_explorer",
+      "handler": "handleViewExplorer",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "ai.model_select",
@@ -351,7 +589,91 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "view.search",
+      "name": "View Search",
+      "description": "Search (view system)",
+      "group": "FeatureGroup::View",
+      "commandId": 409,
+      "idmDefine": "IDM_VIEW_SEARCH",
+      "cliCommand": "!view_search",
+      "handler": "handleViewSearch",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "view.source_control",
+      "name": "View Source Control",
+      "description": "Source control (view system)",
+      "group": "FeatureGroup::View",
+      "commandId": 410,
+      "idmDefine": "IDM_VIEW_SOURCE_CONTROL",
+      "cliCommand": "!view_source_control",
+      "handler": "handleViewSourceControl",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "view.extensions",
+      "name": "View Extensions",
+      "description": "Extensions (view system)",
+      "group": "FeatureGroup::View",
+      "commandId": 411,
+      "idmDefine": "IDM_VIEW_EXTENSIONS",
+      "cliCommand": "!view_extensions",
+      "handler": "handleViewExtensions",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "view.problems",
+      "name": "View Problems",
+      "description": "Problems (view system)",
+      "group": "FeatureGroup::View",
+      "commandId": 412,
+      "idmDefine": "IDM_VIEW_PROBLEMS",
+      "cliCommand": "!view_problems",
+      "handler": "handleViewProblems",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "view.word_wrap",
+      "name": "View Word Wrap",
+      "description": "Word wrap (view system)",
+      "group": "FeatureGroup::View",
+      "commandId": 416,
+      "idmDefine": "IDM_VIEW_WORD_WRAP",
+      "cliCommand": "!view_word_wrap",
+      "handler": "handleViewWordWrap",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "view.line_numbers",
+      "name": "View Line Numbers",
+      "description": "Line numbers (view system)",
+      "group": "FeatureGroup::View",
+      "commandId": 417,
+      "idmDefine": "IDM_VIEW_LINE_NUMBERS",
+      "cliCommand": "!view_line_numbers",
+      "handler": "handleViewLineNumbers",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "tools.command_palette",
@@ -365,7 +687,21 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "run.start_debug",
+      "name": "Run Start Debug",
+      "description": "Start debug (run system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 501,
+      "idmDefine": "IDM_RUN_START_DEBUG",
+      "cliCommand": "!run_start_debug",
+      "handler": "handleRunStartDebug",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "tools.settings",
@@ -379,7 +715,21 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "run.without_debug",
+      "name": "Run Without Debug",
+      "description": "Without debug (run system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 502,
+      "idmDefine": "IDM_RUN_WITHOUT_DEBUG",
+      "cliCommand": "!run_without_debug",
+      "handler": "handleRunWithoutDebug",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "tools.extensions",
@@ -393,7 +743,21 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "run.stop",
+      "name": "Run Stop",
+      "description": "Stop (run system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 503,
+      "idmDefine": "IDM_RUN_STOP",
+      "cliCommand": "!run_stop",
+      "handler": "handleRunStop",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "tools.terminal",
@@ -407,7 +771,21 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "run.restart",
+      "name": "Run Restart",
+      "description": "Restart (run system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 504,
+      "idmDefine": "IDM_RUN_RESTART",
+      "cliCommand": "!run_restart",
+      "handler": "handleRunRestart",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "tools.build",
@@ -421,7 +799,21 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "run.step_over",
+      "name": "Run Step Over",
+      "description": "Step over (run system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 505,
+      "idmDefine": "IDM_RUN_STEP_OVER",
+      "cliCommand": "!run_step_over",
+      "handler": "handleRunStepOver",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "tools.debug",
@@ -435,7 +827,77 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "run.step_into",
+      "name": "Run Step Into",
+      "description": "Step into (run system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 506,
+      "idmDefine": "IDM_RUN_STEP_INTO",
+      "cliCommand": "!run_step_into",
+      "handler": "handleRunStepInto",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "run.step_out",
+      "name": "Run Step Out",
+      "description": "Step out (run system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 507,
+      "idmDefine": "IDM_RUN_STEP_OUT",
+      "cliCommand": "!run_step_out",
+      "handler": "handleRunStepOut",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "run.continue",
+      "name": "Run Continue",
+      "description": "Continue (run system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 508,
+      "idmDefine": "IDM_RUN_CONTINUE",
+      "cliCommand": "!run_continue",
+      "handler": "handleRunContinue",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "run.toggle_breakpoint",
+      "name": "Run Toggle Breakpoint",
+      "description": "Toggle breakpoint (run system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 509,
+      "idmDefine": "IDM_RUN_TOGGLE_BREAKPOINT",
+      "cliCommand": "!run_toggle_breakpoint",
+      "handler": "handleRunToggleBreakpoint",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "run.clear_breakpoints",
+      "name": "Run Clear Breakpoints",
+      "description": "Clear breakpoints (run system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 510,
+      "idmDefine": "IDM_RUN_CLEAR_BREAKPOINTS",
+      "cliCommand": "!run_clear_breakpoints",
+      "handler": "handleRunClearBreakpoints",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "help.docs",
@@ -446,6 +908,34 @@
       "idmDefine": "IDM_HELP_DOCS",
       "cliCommand": "!help_docs",
       "handler": "handleHelpDocs",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "term.new",
+      "name": "Term New",
+      "description": "New (term system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 601,
+      "idmDefine": "IDM_TERM_NEW",
+      "cliCommand": "!term_new",
+      "handler": "handleTermNew",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "term.split",
+      "name": "Term Split",
+      "description": "Split (term system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 602,
+      "idmDefine": "IDM_TERM_SPLIT",
+      "cliCommand": "!term_split",
+      "handler": "handleTermSplit",
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
@@ -466,6 +956,244 @@
       "hasRealHandler": true
     },
     {
+      "featureId": "term.run_task",
+      "name": "Term Run Task",
+      "description": "Run task (term system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 603,
+      "idmDefine": "IDM_TERM_RUN_TASK",
+      "cliCommand": "!term_run_task",
+      "handler": "handleTermRunTask",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "term.clear",
+      "name": "Term Clear",
+      "description": "Clear (term system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 604,
+      "idmDefine": "IDM_TERM_CLEAR",
+      "cliCommand": "!term_clear",
+      "handler": "handleTermClear",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "term.kill",
+      "name": "Term Kill",
+      "description": "Kill (term system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 605,
+      "idmDefine": "IDM_TERM_KILL",
+      "cliCommand": "!term_kill",
+      "handler": "handleTermKill",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "term.pwsh",
+      "name": "Term Pwsh",
+      "description": "Pwsh (term system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 606,
+      "idmDefine": "IDM_TERM_PWSH",
+      "cliCommand": "!term_pwsh",
+      "handler": "handleTermPwsh",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "term.cmd",
+      "name": "Term Cmd",
+      "description": "Cmd (term system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 607,
+      "idmDefine": "IDM_TERM_CMD",
+      "cliCommand": "!term_cmd",
+      "handler": "handleTermCmd",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "term.gitbash",
+      "name": "Term Gitbash",
+      "description": "Gitbash (term system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 608,
+      "idmDefine": "IDM_TERM_GITBASH",
+      "cliCommand": "!term_gitbash",
+      "handler": "handleTermGitbash",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "term.run_file",
+      "name": "Term Run File",
+      "description": "Run file (term system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 609,
+      "idmDefine": "IDM_TERM_RUN_FILE",
+      "cliCommand": "!term_run_file",
+      "handler": "handleTermRunFile",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "help.welcome",
+      "name": "Help Welcome",
+      "description": "Welcome (help system)",
+      "group": "FeatureGroup::Help",
+      "commandId": 701,
+      "idmDefine": "IDM_HELP_WELCOME",
+      "cliCommand": "!help_welcome",
+      "handler": "handleHelpWelcome",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "help.release_notes",
+      "name": "Help Release Notes",
+      "description": "Release notes (help system)",
+      "group": "FeatureGroup::Help",
+      "commandId": 704,
+      "idmDefine": "IDM_HELP_RELEASE_NOTES",
+      "cliCommand": "!help_release_notes",
+      "handler": "handleHelpReleaseNotes",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "help.check_updates",
+      "name": "Help Check Updates",
+      "description": "Check updates (help system)",
+      "group": "FeatureGroup::Help",
+      "commandId": 705,
+      "idmDefine": "IDM_HELP_CHECK_UPDATES",
+      "cliCommand": "!help_check_updates",
+      "handler": "handleHelpCheckUpdates",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "help.report_issue",
+      "name": "Help Report Issue",
+      "description": "Report issue (help system)",
+      "group": "FeatureGroup::Help",
+      "commandId": 707,
+      "idmDefine": "IDM_HELP_REPORT_ISSUE",
+      "cliCommand": "!help_report_issue",
+      "handler": "handleHelpReportIssue",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "help.tips_tricks",
+      "name": "Help Tips Tricks",
+      "description": "Tips tricks (help system)",
+      "group": "FeatureGroup::Help",
+      "commandId": 708,
+      "idmDefine": "IDM_HELP_TIPS_TRICKS",
+      "cliCommand": "!help_tips_tricks",
+      "handler": "handleHelpTipsTricks",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "model.load",
+      "name": "Model Load",
+      "description": "Load (model system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 801,
+      "idmDefine": "IDM_MODEL_LOAD",
+      "cliCommand": "!model_load",
+      "handler": "handleModelLoad",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "model.unload",
+      "name": "Model Unload",
+      "description": "Unload (model system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 802,
+      "idmDefine": "IDM_MODEL_UNLOAD",
+      "cliCommand": "!model_unload",
+      "handler": "handleModelUnload",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "model.info",
+      "name": "Model Info",
+      "description": "Info (model system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 803,
+      "idmDefine": "IDM_MODEL_INFO",
+      "cliCommand": "!model_info",
+      "handler": "handleModelInfo",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "model.reload",
+      "name": "Model Reload",
+      "description": "Reload (model system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 804,
+      "idmDefine": "IDM_MODEL_RELOAD",
+      "cliCommand": "!model_reload",
+      "handler": "handleModelReload",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "model.settings",
+      "name": "Model Settings",
+      "description": "Settings (model system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 805,
+      "idmDefine": "IDM_MODEL_SETTINGS",
+      "cliCommand": "!model_settings",
+      "handler": "handleModelSettings",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
       "featureId": "file.saveall",
       "name": "File Saveall",
       "description": "Saveall (file system)",
@@ -477,7 +1205,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "file.close",
@@ -505,7 +1233,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "file.load_model",
@@ -533,7 +1261,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "file.model_from_ollama",
@@ -561,7 +1289,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "file.model_unified",
@@ -575,7 +1303,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "file.model_quick_load",
@@ -589,7 +1317,21 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "sourcefile.open_picker",
+      "name": "Sourcefile Open Picker",
+      "description": "Open picker (sourcefile system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 1040,
+      "idmDefine": "IDM_SOURCEFILE_OPEN_PICKER",
+      "cliCommand": "!sourcefile_open_picker",
+      "handler": "handleSourcefileOpenPicker",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "file.new",
@@ -645,7 +1387,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "file.exit",
@@ -659,7 +1401,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "edit.select_all",
@@ -757,7 +1499,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "edit.copy_format",
@@ -771,7 +1513,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "edit.paste_plain",
@@ -785,7 +1527,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "edit.clipboard_history",
@@ -799,7 +1541,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "edit.find",
@@ -841,7 +1583,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "edit.find_prev",
@@ -855,7 +1597,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "view.minimap",
@@ -869,7 +1611,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "view.output_tabs",
@@ -883,7 +1625,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "view.module_browser",
@@ -897,7 +1639,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "view.theme_editor",
@@ -911,7 +1653,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "view.floating_panel",
@@ -925,7 +1667,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "view.output_panel",
@@ -939,7 +1681,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "view.use_streaming_loader",
@@ -953,7 +1695,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "view.use_vulkan_renderer",
@@ -967,7 +1709,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "view.sidebar",
@@ -981,7 +1723,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "view.terminal",
@@ -995,63 +1737,343 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
-      "featureId": "terminal.powershell",
-      "name": "Terminal Powershell",
-      "description": "Powershell (terminal system)",
-      "group": "FeatureGroup::Terminal",
+      "featureId": "view.file_explorer",
+      "name": "View File Explorer",
+      "description": "File explorer (view system)",
+      "group": "FeatureGroup::View",
+      "commandId": 2030,
+      "idmDefine": "IDM_VIEW_FILE_EXPLORER",
+      "cliCommand": "!view_file_explorer",
+      "handler": "handleViewFileExplorer",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "view.ollama_service",
+      "name": "View Ollama Service",
+      "description": "Ollama service (view system)",
+      "group": "FeatureGroup::View",
+      "commandId": 2032,
+      "idmDefine": "IDM_VIEW_OLLAMA_SERVICE",
+      "cliCommand": "!view_ollama_service",
+      "handler": "handleViewOllamaService",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "edit.goto",
+      "name": "Edit Goto",
+      "description": "Goto (edit system)",
+      "group": "FeatureGroup::Editing",
+      "commandId": 2109,
+      "idmDefine": "IDM_EDIT_GOTO",
+      "cliCommand": "!edit_goto",
+      "handler": "handleEditGoto",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "build.build",
+      "name": "Build Build",
+      "description": "Build (build system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 2201,
+      "idmDefine": "IDM_BUILD_BUILD",
+      "cliCommand": "!build_build",
+      "handler": "handleBuildBuild",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "build.run",
+      "name": "Build Run",
+      "description": "Run (build system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 2203,
+      "idmDefine": "IDM_BUILD_RUN",
+      "cliCommand": "!build_run",
+      "handler": "handleBuildRun",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "build.stop",
+      "name": "Build Stop",
+      "description": "Stop (build system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 2205,
+      "idmDefine": "IDM_BUILD_STOP",
+      "cliCommand": "!build_stop",
+      "handler": "handleBuildStop",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "tools.pe_inspector",
+      "name": "Tools Pe Inspector",
+      "description": "Pe inspector (tools system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 2301,
+      "idmDefine": "IDM_TOOLS_PE_INSPECTOR",
+      "cliCommand": "!tools_pe_inspector",
+      "handler": "handleToolsPeInspector",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "tools.instr_encoder",
+      "name": "Tools Instr Encoder",
+      "description": "Instr encoder (tools system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 2302,
+      "idmDefine": "IDM_TOOLS_INSTR_ENCODER",
+      "cliCommand": "!tools_instr_encoder",
+      "handler": "handleToolsInstrEncoder",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "tools.ext_manager",
+      "name": "Tools Ext Manager",
+      "description": "Ext manager (tools system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 2303,
+      "idmDefine": "IDM_TOOLS_EXT_MANAGER",
+      "cliCommand": "!tools_ext_manager",
+      "handler": "handleToolsExtManager",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "tools.options",
+      "name": "Tools Options",
+      "description": "Options (tools system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 2304,
+      "idmDefine": "IDM_TOOLS_OPTIONS",
+      "cliCommand": "!tools_options",
+      "handler": "handleToolsOptions",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "view.filebrowser",
+      "name": "View Filebrowser",
+      "description": "Filebrowser (view system)",
+      "group": "FeatureGroup::View",
+      "commandId": 2401,
+      "idmDefine": "IDM_VIEW_FILEBROWSER",
+      "cliCommand": "!view_filebrowser",
+      "handler": "handleViewFilebrowser",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "view.output",
+      "name": "View Output",
+      "description": "Output (view system)",
+      "group": "FeatureGroup::View",
+      "commandId": 2402,
+      "idmDefine": "IDM_VIEW_OUTPUT",
+      "cliCommand": "!view_output",
+      "handler": "handleViewOutput",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "view.widget",
+      "name": "View Widget",
+      "description": "Widget (view system)",
+      "group": "FeatureGroup::View",
+      "commandId": 2403,
+      "idmDefine": "IDM_VIEW_WIDGET",
+      "cliCommand": "!view_widget",
+      "handler": "handleViewWidget",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "view.fullscreen",
+      "name": "View Fullscreen",
+      "description": "Fullscreen (view system)",
+      "group": "FeatureGroup::View",
+      "commandId": 2404,
+      "idmDefine": "IDM_VIEW_FULLSCREEN",
+      "cliCommand": "!view_fullscreen",
+      "handler": "handleViewFullscreen",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "view.dark_theme",
+      "name": "View Dark Theme",
+      "description": "Dark theme (view system)",
+      "group": "FeatureGroup::View",
+      "commandId": 2405,
+      "idmDefine": "IDM_VIEW_DARK_THEME",
+      "cliCommand": "!view_dark_theme",
+      "handler": "handleViewDarkTheme",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "view.light_theme",
+      "name": "View Light Theme",
+      "description": "Light theme (view system)",
+      "group": "FeatureGroup::View",
+      "commandId": 2406,
+      "idmDefine": "IDM_VIEW_LIGHT_THEME",
+      "cliCommand": "!view_light_theme",
+      "handler": "handleViewLightTheme",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "build.project",
+      "name": "Build Project",
+      "description": "Project (build system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 2801,
+      "idmDefine": "IDM_BUILD_PROJECT",
+      "cliCommand": "!build_project",
+      "handler": "handleBuildProject",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "build.config_debug",
+      "name": "Build Config Debug",
+      "description": "Config debug (build system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 2806,
+      "idmDefine": "IDM_BUILD_CONFIG_DEBUG",
+      "cliCommand": "!build_config_debug",
+      "handler": "handleBuildConfigDebug",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "build.config_release",
+      "name": "Build Config Release",
+      "description": "Config release (build system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 2807,
+      "idmDefine": "IDM_BUILD_CONFIG_RELEASE",
+      "cliCommand": "!build_config_release",
+      "handler": "handleBuildConfigRelease",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "build.asm_current",
+      "name": "Build Asm Current",
+      "description": "Asm current (build system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 2808,
+      "idmDefine": "IDM_BUILD_ASM_CURRENT",
+      "cliCommand": "!build_asm_current",
+      "handler": "handleBuildAsmCurrent",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "build.set_target",
+      "name": "Build Set Target",
+      "description": "Set target (build system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 2809,
+      "idmDefine": "IDM_BUILD_SET_TARGET",
+      "cliCommand": "!build_set_target",
+      "handler": "handleBuildSetTarget",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "build.show_log",
+      "name": "Build Show Log",
+      "description": "Show log (build system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 2810,
+      "idmDefine": "IDM_BUILD_SHOW_LOG",
+      "cliCommand": "!build_show_log",
+      "handler": "handleBuildShowLog",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "debug.start",
+      "name": "Debug Start",
+      "description": "Start (debug system)",
+      "group": "FeatureGroup::Debug",
       "commandId": 3001,
-      "idmDefine": "IDM_TERMINAL_POWERSHELL",
-      "cliCommand": "!terminal_powershell",
-      "handler": "handleTerminalPowershell",
+      "idmDefine": "IDM_DEBUG_START",
+      "cliCommand": "!debug_start",
+      "handler": "handleDebugStart",
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
-      "featureId": "terminal.cmd",
-      "name": "Terminal Cmd",
-      "description": "Cmd (terminal system)",
-      "group": "FeatureGroup::Terminal",
+      "featureId": "debug.stop",
+      "name": "Debug Stop",
+      "description": "Stop (debug system)",
+      "group": "FeatureGroup::Debug",
       "commandId": 3002,
-      "idmDefine": "IDM_TERMINAL_CMD",
-      "cliCommand": "!terminal_cmd",
-      "handler": "handleTerminalCmd",
+      "idmDefine": "IDM_DEBUG_STOP",
+      "cliCommand": "!debug_stop",
+      "handler": "handleDebugStop",
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
-    },
-    {
-      "featureId": "terminal.stop",
-      "name": "Terminal Stop",
-      "description": "Stop (terminal system)",
-      "group": "FeatureGroup::Terminal",
-      "commandId": 3003,
-      "idmDefine": "IDM_TERMINAL_STOP",
-      "cliCommand": "!terminal_stop",
-      "handler": "handleTerminalStop",
-      "guiSupported": true,
-      "cliSupported": true,
-      "asmHotPath": false,
-      "hasRealHandler": false
-    },
-    {
-      "featureId": "terminal.clear_all",
-      "name": "Terminal Clear All",
-      "description": "Clear all (terminal system)",
-      "group": "FeatureGroup::Terminal",
-      "commandId": 3006,
-      "idmDefine": "IDM_TERMINAL_CLEAR_ALL",
-      "cliCommand": "!terminal_clear_all",
-      "handler": "handleTerminalClearAll",
-      "guiSupported": true,
-      "cliSupported": true,
-      "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "tools.profile_start",
@@ -1065,7 +2087,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "tools.profile_stop",
@@ -1079,7 +2101,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "tools.profile_results",
@@ -1093,7 +2115,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "tools.analyze_script",
@@ -1107,7 +2129,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "git.status",
@@ -1177,7 +2199,91 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ent.multi_gpu_balance",
+      "name": "Ent Multi Gpu Balance",
+      "description": "Multi gpu balance (ent system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 3042,
+      "idmDefine": "IDM_ENT_MULTI_GPU_BALANCE",
+      "cliCommand": "!ent_multi_gpu_balance",
+      "handler": "handleEntMultiGpuBalance",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ent.dynamic_batch",
+      "name": "Ent Dynamic Batch",
+      "description": "Dynamic batch (ent system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 3043,
+      "idmDefine": "IDM_ENT_DYNAMIC_BATCH",
+      "cliCommand": "!ent_dynamic_batch",
+      "handler": "handleEntDynamicBatch",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ent.api_key_mgmt",
+      "name": "Ent Api Key Mgmt",
+      "description": "Api key mgmt (ent system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 3044,
+      "idmDefine": "IDM_ENT_API_KEY_MGMT",
+      "cliCommand": "!ent_api_key_mgmt",
+      "handler": "handleEntApiKeyMgmt",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ent.audit_logs",
+      "name": "Ent Audit Logs",
+      "description": "Audit logs (ent system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 3045,
+      "idmDefine": "IDM_ENT_AUDIT_LOGS",
+      "cliCommand": "!ent_audit_logs",
+      "handler": "handleEntAuditLogs",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ent.rawr_tuner",
+      "name": "Ent Rawr Tuner",
+      "description": "Rawr tuner (ent system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 3046,
+      "idmDefine": "IDM_ENT_RAWR_TUNER",
+      "cliCommand": "!ent_rawr_tuner",
+      "handler": "handleEntRawrTuner",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ent.dual_engine",
+      "name": "Ent Dual Engine",
+      "description": "Dual engine (ent system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 3047,
+      "idmDefine": "IDM_ENT_DUAL_ENGINE",
+      "cliCommand": "!ent_dual_engine",
+      "handler": "handleEntDualEngine",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "modules.refresh",
@@ -1191,7 +2297,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "modules.import",
@@ -1205,7 +2311,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "modules.export",
@@ -1219,7 +2325,21 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "view.collaboration",
+      "name": "View Collaboration",
+      "description": "Collaboration (view system)",
+      "group": "FeatureGroup::View",
+      "commandId": 3060,
+      "idmDefine": "IDM_VIEW_COLLABORATION",
+      "cliCommand": "!view_collaboration",
+      "handler": "handleViewCollaboration",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "theme.dark_plus",
@@ -1233,7 +2353,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "theme.light_plus",
@@ -1247,7 +2367,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "theme.monokai",
@@ -1261,7 +2381,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "theme.dracula",
@@ -1275,7 +2395,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "theme.nord",
@@ -1289,7 +2409,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "theme.solarized_dark",
@@ -1303,7 +2423,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "theme.solarized_light",
@@ -1317,7 +2437,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "theme.cyberpunk_neon",
@@ -1331,7 +2451,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "theme.gruvbox_dark",
@@ -1345,7 +2465,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "theme.catppuccin_mocha",
@@ -1359,7 +2479,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "theme.tokyo_night",
@@ -1373,7 +2493,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "theme.rawrxd_crimson",
@@ -1387,7 +2507,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "theme.high_contrast",
@@ -1401,7 +2521,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "theme.one_dark_pro",
@@ -1415,7 +2535,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "theme.synthwave84",
@@ -1429,7 +2549,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "theme.abyss",
@@ -1443,7 +2563,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "transparency.100",
@@ -1457,7 +2577,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "transparency.90",
@@ -1471,7 +2591,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "transparency.80",
@@ -1485,7 +2605,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "transparency.70",
@@ -1499,7 +2619,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "transparency.60",
@@ -1513,7 +2633,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "transparency.50",
@@ -1527,7 +2647,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "transparency.40",
@@ -1541,7 +2661,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "transparency.custom",
@@ -1555,7 +2675,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "transparency.toggle",
@@ -1569,7 +2689,35 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "terminal.toggle",
+      "name": "Terminal Toggle",
+      "description": "Toggle (terminal system)",
+      "group": "FeatureGroup::Terminal",
+      "commandId": 4000,
+      "idmDefine": "IDM_TERMINAL_TOGGLE",
+      "cliCommand": "!terminal_toggle",
+      "handler": "handleTerminalToggle",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "terminal.powershell",
+      "name": "Terminal Powershell",
+      "description": "Powershell (terminal system)",
+      "group": "FeatureGroup::Terminal",
+      "commandId": 4001,
+      "idmDefine": "IDM_TERMINAL_POWERSHELL",
+      "cliCommand": "!terminal_powershell",
+      "handler": "handleTerminalPowershell",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "help.about",
@@ -1580,6 +2728,20 @@
       "idmDefine": "IDM_HELP_ABOUT",
       "cliCommand": "!help_about",
       "handler": "handleHelpAbout",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "terminal.cmd",
+      "name": "Terminal Cmd",
+      "description": "Cmd (terminal system)",
+      "group": "FeatureGroup::Terminal",
+      "commandId": 4002,
+      "idmDefine": "IDM_TERMINAL_CMD",
+      "cliCommand": "!terminal_cmd",
+      "handler": "handleTerminalCmd",
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
@@ -1597,7 +2759,21 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "terminal.stop",
+      "name": "Terminal Stop",
+      "description": "Stop (terminal system)",
+      "group": "FeatureGroup::Terminal",
+      "commandId": 4003,
+      "idmDefine": "IDM_TERMINAL_STOP",
+      "cliCommand": "!terminal_stop",
+      "handler": "handleTerminalStop",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "help.psdocs",
@@ -1611,7 +2787,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "help.search",
@@ -1625,7 +2801,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "terminal.kill",
@@ -1681,7 +2857,35 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "terminal.clear_all",
+      "name": "Terminal Clear All",
+      "description": "Clear all (terminal system)",
+      "group": "FeatureGroup::Terminal",
+      "commandId": 4010,
+      "idmDefine": "IDM_TERMINAL_CLEAR_ALL",
+      "cliCommand": "!terminal_clear_all",
+      "handler": "handleTerminalClearAll",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "terminal.clear",
+      "name": "Terminal Clear",
+      "description": "Clear (terminal system)",
+      "group": "FeatureGroup::Terminal",
+      "commandId": 4010,
+      "idmDefine": "IDM_TERMINAL_CLEAR",
+      "cliCommand": "!terminal_clear",
+      "handler": "handleTerminalClear",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "agent.start_loop",
@@ -1695,7 +2899,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "agent.execute_cmd",
@@ -1709,7 +2913,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "agent.configure_model",
@@ -1723,7 +2927,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "agent.view_tools",
@@ -1835,7 +3039,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "subagent.swarm",
@@ -1849,7 +3053,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "subagent.todo_list",
@@ -1863,7 +3067,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "subagent.todo_clear",
@@ -1877,7 +3081,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "subagent.status",
@@ -1891,7 +3095,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "agent.bounded_loop",
@@ -1961,7 +3165,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "autonomy.status",
@@ -1975,7 +3179,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "autonomy.memory",
@@ -1989,7 +3193,175 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "pipeline.run",
+      "name": "Pipeline Run",
+      "description": "Run (pipeline system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4160,
+      "idmDefine": "IDM_PIPELINE_RUN",
+      "cliCommand": "!pipeline_run",
+      "handler": "handlePipelineRun",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "pipeline.autonomy_start",
+      "name": "Pipeline Autonomy Start",
+      "description": "Autonomy start (pipeline system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4161,
+      "idmDefine": "IDM_PIPELINE_AUTONOMY_START",
+      "cliCommand": "!pipeline_autonomy_start",
+      "handler": "handlePipelineAutonomyStart",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "pipeline.autonomy_stop",
+      "name": "Pipeline Autonomy Stop",
+      "description": "Autonomy stop (pipeline system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4162,
+      "idmDefine": "IDM_PIPELINE_AUTONOMY_STOP",
+      "cliCommand": "!pipeline_autonomy_stop",
+      "handler": "handlePipelineAutonomyStop",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "agent.autonomous_communicator",
+      "name": "Agent Autonomous Communicator",
+      "description": "Autonomous communicator (agent system)",
+      "group": "FeatureGroup::Agent",
+      "commandId": 4163,
+      "idmDefine": "IDM_AGENT_AUTONOMOUS_COMMUNICATOR",
+      "cliCommand": "!agent_autonomous_communicator",
+      "handler": "handleAgentAutonomousCommunicator",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "telemetry.unified_core",
+      "name": "Telemetry Unified Core",
+      "description": "Unified core (telemetry system)",
+      "group": "FeatureGroup::Performance",
+      "commandId": 4164,
+      "idmDefine": "IDM_TELEMETRY_UNIFIED_CORE",
+      "cliCommand": "!telemetry_unified_core",
+      "handler": "handleTelemetryUnifiedCore",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "agent.compact_conversation",
+      "name": "Agent Compact Conversation",
+      "description": "Compact conversation (agent system)",
+      "group": "FeatureGroup::Agent",
+      "commandId": 4165,
+      "idmDefine": "IDM_AGENT_COMPACT_CONVERSATION",
+      "cliCommand": "!agent_compact_conversation",
+      "handler": "handleAgentCompactConversation",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "agent.optimize_tool_selection",
+      "name": "Agent Optimize Tool Selection",
+      "description": "Optimize tool selection (agent system)",
+      "group": "FeatureGroup::Agent",
+      "commandId": 4166,
+      "idmDefine": "IDM_AGENT_OPTIMIZE_TOOL_SELECTION",
+      "cliCommand": "!agent_optimize_tool_selection",
+      "handler": "handleAgentOptimizeToolSelection",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "agent.resolving_status",
+      "name": "Agent Resolving Status",
+      "description": "Resolving status (agent system)",
+      "group": "FeatureGroup::Agent",
+      "commandId": 4167,
+      "idmDefine": "IDM_AGENT_RESOLVING_STATUS",
+      "cliCommand": "!agent_resolving_status",
+      "handler": "handleAgentResolvingStatus",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "agent.read_lines",
+      "name": "Agent Read Lines",
+      "description": "Read lines (agent system)",
+      "group": "FeatureGroup::Agent",
+      "commandId": 4168,
+      "idmDefine": "IDM_AGENT_READ_LINES",
+      "cliCommand": "!agent_read_lines",
+      "handler": "handleAgentReadLines",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "agent.planning_exploration",
+      "name": "Agent Planning Exploration",
+      "description": "Planning exploration (agent system)",
+      "group": "FeatureGroup::Agent",
+      "commandId": 4169,
+      "idmDefine": "IDM_AGENT_PLANNING_EXPLORATION",
+      "cliCommand": "!agent_planning_exploration",
+      "handler": "handleAgentPlanningExploration",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "agent.search_files",
+      "name": "Agent Search Files",
+      "description": "Search files (agent system)",
+      "group": "FeatureGroup::Agent",
+      "commandId": 4170,
+      "idmDefine": "IDM_AGENT_SEARCH_FILES",
+      "cliCommand": "!agent_search_files",
+      "handler": "handleAgentSearchFiles",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "agent.evaluate_integration",
+      "name": "Agent Evaluate Integration",
+      "description": "Evaluate integration (agent system)",
+      "group": "FeatureGroup::Agent",
+      "commandId": 4171,
+      "idmDefine": "IDM_AGENT_EVALUATE_INTEGRATION",
+      "cliCommand": "!agent_evaluate_integration",
+      "handler": "handleAgentEvaluateIntegration",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "ai.mode_max",
@@ -2003,7 +3375,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "ai.mode_deep_think",
@@ -2017,7 +3389,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "ai.mode_deep_research",
@@ -2031,7 +3403,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "ai.mode_no_refusal",
@@ -2045,7 +3417,21 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ai.mode_workflow_executor",
+      "name": "Ai Mode Workflow Executor",
+      "description": "Mode workflow executor (ai system)",
+      "group": "FeatureGroup::AIMode",
+      "commandId": 4204,
+      "idmDefine": "IDM_AI_MODE_WORKFLOW_EXECUTOR",
+      "cliCommand": "!ai_mode_workflow_executor",
+      "handler": "handleAiModeWorkflowExecutor",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "ai.context_4k",
@@ -2059,7 +3445,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "ai.context_32k",
@@ -2073,7 +3459,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "ai.context_64k",
@@ -2087,7 +3473,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "ai.context_128k",
@@ -2101,7 +3487,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "ai.context_256k",
@@ -2115,7 +3501,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "ai.context_512k",
@@ -2129,7 +3515,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "ai.context_1m",
@@ -2143,7 +3529,833 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ai.agent_cycles_set",
+      "name": "Ai Agent Cycles Set",
+      "description": "Agent cycles set (ai system)",
+      "group": "FeatureGroup::AIMode",
+      "commandId": 4217,
+      "idmDefine": "IDM_AI_AGENT_CYCLES_SET",
+      "cliCommand": "!ai_agent_cycles_set",
+      "handler": "handleAiAgentCyclesSet",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ai.agent_multi_enable",
+      "name": "Ai Agent Multi Enable",
+      "description": "Agent multi enable (ai system)",
+      "group": "FeatureGroup::AIMode",
+      "commandId": 4218,
+      "idmDefine": "IDM_AI_AGENT_MULTI_ENABLE",
+      "cliCommand": "!ai_agent_multi_enable",
+      "handler": "handleAiAgentMultiEnable",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ai.agent_multi_disable",
+      "name": "Ai Agent Multi Disable",
+      "description": "Agent multi disable (ai system)",
+      "group": "FeatureGroup::AIMode",
+      "commandId": 4219,
+      "idmDefine": "IDM_AI_AGENT_MULTI_DISABLE",
+      "cliCommand": "!ai_agent_multi_disable",
+      "handler": "handleAiAgentMultiDisable",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "engine.unlock_800b",
+      "name": "Engine Unlock 800b",
+      "description": "Unlock 800b (engine system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4220,
+      "idmDefine": "IDM_ENGINE_UNLOCK_800B",
+      "cliCommand": "!engine_unlock_800b",
+      "handler": "handleEngineUnlock800b",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "engine.load_800b",
+      "name": "Engine Load 800b",
+      "description": "Load 800b (engine system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4221,
+      "idmDefine": "IDM_ENGINE_LOAD_800B",
+      "cliCommand": "!engine_load_800b",
+      "handler": "handleEngineLoad800b",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "titan.toggle",
+      "name": "Titan Toggle",
+      "description": "Toggle (titan system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4230,
+      "idmDefine": "IDM_TITAN_TOGGLE",
+      "cliCommand": "!titan_toggle",
+      "handler": "handleTitanToggle",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ai.agent_multi_status",
+      "name": "Ai Agent Multi Status",
+      "description": "Agent multi status (ai system)",
+      "group": "FeatureGroup::AIMode",
+      "commandId": 4240,
+      "idmDefine": "IDM_AI_AGENT_MULTI_STATUS",
+      "cliCommand": "!ai_agent_multi_status",
+      "handler": "handleAiAgentMultiStatus",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ai.titan_toggle",
+      "name": "Ai Titan Toggle",
+      "description": "Titan toggle (ai system)",
+      "group": "FeatureGroup::AIMode",
+      "commandId": 4241,
+      "idmDefine": "IDM_AI_TITAN_TOGGLE",
+      "cliCommand": "!ai_titan_toggle",
+      "handler": "handleAiTitanToggle",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ai.800b_status",
+      "name": "Ai 800b Status",
+      "description": "800b status (ai system)",
+      "group": "FeatureGroup::AIMode",
+      "commandId": 4242,
+      "idmDefine": "IDM_AI_800B_STATUS",
+      "cliCommand": "!ai_800b_status",
+      "handler": "handleAi800bStatus",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "omega.start",
+      "name": "Omega Start",
+      "description": "Start (omega system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4243,
+      "idmDefine": "IDM_OMEGA_START",
+      "cliCommand": "!omega_start",
+      "handler": "handleOmegaStart",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "omega.stop",
+      "name": "Omega Stop",
+      "description": "Stop (omega system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4244,
+      "idmDefine": "IDM_OMEGA_STOP",
+      "cliCommand": "!omega_stop",
+      "handler": "handleOmegaStop",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "omega.submit_task",
+      "name": "Omega Submit Task",
+      "description": "Submit task (omega system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4245,
+      "idmDefine": "IDM_OMEGA_SUBMIT_TASK",
+      "cliCommand": "!omega_submit_task",
+      "handler": "handleOmegaSubmitTask",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "omega.run_cycle",
+      "name": "Omega Run Cycle",
+      "description": "Run cycle (omega system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4246,
+      "idmDefine": "IDM_OMEGA_RUN_CYCLE",
+      "cliCommand": "!omega_run_cycle",
+      "handler": "handleOmegaRunCycle",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "omega.show_status",
+      "name": "Omega Show Status",
+      "description": "Show status (omega system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4247,
+      "idmDefine": "IDM_OMEGA_SHOW_STATUS",
+      "cliCommand": "!omega_show_status",
+      "handler": "handleOmegaShowStatus",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "omega.view_pipeline",
+      "name": "Omega View Pipeline",
+      "description": "View pipeline (omega system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4248,
+      "idmDefine": "IDM_OMEGA_VIEW_PIPELINE",
+      "cliCommand": "!omega_view_pipeline",
+      "handler": "handleOmegaViewPipeline",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "omega.set_quality_auto",
+      "name": "Omega Set Quality Auto",
+      "description": "Set quality auto (omega system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4250,
+      "idmDefine": "IDM_OMEGA_SET_QUALITY_AUTO",
+      "cliCommand": "!omega_set_quality_auto",
+      "handler": "handleOmegaSetQualityAuto",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "omega.set_quality_balance",
+      "name": "Omega Set Quality Balance",
+      "description": "Set quality balance (omega system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4251,
+      "idmDefine": "IDM_OMEGA_SET_QUALITY_BALANCE",
+      "cliCommand": "!omega_set_quality_balance",
+      "handler": "handleOmegaSetQualityBalance",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "omega.world_model",
+      "name": "Omega World Model",
+      "description": "World model (omega system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4254,
+      "idmDefine": "IDM_OMEGA_WORLD_MODEL",
+      "cliCommand": "!omega_world_model",
+      "handler": "handleOmegaWorldModel",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "omega.export_stats",
+      "name": "Omega Export Stats",
+      "description": "Export stats (omega system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4255,
+      "idmDefine": "IDM_OMEGA_EXPORT_STATS",
+      "cliCommand": "!omega_export_stats",
+      "handler": "handleOmegaExportStats",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "omega.diagnostics",
+      "name": "Omega Diagnostics",
+      "description": "Diagnostics (omega system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4256,
+      "idmDefine": "IDM_OMEGA_DIAGNOSTICS",
+      "cliCommand": "!omega_diagnostics",
+      "handler": "handleOmegaDiagnostics",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "omega.version",
+      "name": "Omega Version",
+      "description": "Version (omega system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4257,
+      "idmDefine": "IDM_OMEGA_VERSION",
+      "cliCommand": "!omega_version",
+      "handler": "handleOmegaVersion",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "omega.help",
+      "name": "Omega Help",
+      "description": "Help (omega system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4258,
+      "idmDefine": "IDM_OMEGA_HELP",
+      "cliCommand": "!omega_help",
+      "handler": "handleOmegaHelp",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "omega.advanced_settings",
+      "name": "Omega Advanced Settings",
+      "description": "Advanced settings (omega system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4259,
+      "idmDefine": "IDM_OMEGA_ADVANCED_SETTINGS",
+      "cliCommand": "!omega_advanced_settings",
+      "handler": "handleOmegaAdvancedSettings",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "omega.shell_integration",
+      "name": "Omega Shell Integration",
+      "description": "Shell integration (omega system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4260,
+      "idmDefine": "IDM_OMEGA_SHELL_INTEGRATION",
+      "cliCommand": "!omega_shell_integration",
+      "handler": "handleOmegaShellIntegration",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "planning.start",
+      "name": "Planning Start",
+      "description": "Start (planning system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4261,
+      "idmDefine": "IDM_PLANNING_START",
+      "cliCommand": "!planning_start",
+      "handler": "handlePlanningStart",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "planning.show_queue",
+      "name": "Planning Show Queue",
+      "description": "Show queue (planning system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4262,
+      "idmDefine": "IDM_PLANNING_SHOW_QUEUE",
+      "cliCommand": "!planning_show_queue",
+      "handler": "handlePlanningShowQueue",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "planning.approve_step",
+      "name": "Planning Approve Step",
+      "description": "Approve step (planning system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4263,
+      "idmDefine": "IDM_PLANNING_APPROVE_STEP",
+      "cliCommand": "!planning_approve_step",
+      "handler": "handlePlanningApproveStep",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "planning.reject_step",
+      "name": "Planning Reject Step",
+      "description": "Reject step (planning system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4264,
+      "idmDefine": "IDM_PLANNING_REJECT_STEP",
+      "cliCommand": "!planning_reject_step",
+      "handler": "handlePlanningRejectStep",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "planning.execute_step",
+      "name": "Planning Execute Step",
+      "description": "Execute step (planning system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4265,
+      "idmDefine": "IDM_PLANNING_EXECUTE_STEP",
+      "cliCommand": "!planning_execute_step",
+      "handler": "handlePlanningExecuteStep",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "planning.execute_all",
+      "name": "Planning Execute All",
+      "description": "Execute all (planning system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4266,
+      "idmDefine": "IDM_PLANNING_EXECUTE_ALL",
+      "cliCommand": "!planning_execute_all",
+      "handler": "handlePlanningExecuteAll",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "planning.rollback",
+      "name": "Planning Rollback",
+      "description": "Rollback (planning system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4267,
+      "idmDefine": "IDM_PLANNING_ROLLBACK",
+      "cliCommand": "!planning_rollback",
+      "handler": "handlePlanningRollback",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "planning.set_policy",
+      "name": "Planning Set Policy",
+      "description": "Set policy (planning system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4268,
+      "idmDefine": "IDM_PLANNING_SET_POLICY",
+      "cliCommand": "!planning_set_policy",
+      "handler": "handlePlanningSetPolicy",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "planning.view_status",
+      "name": "Planning View Status",
+      "description": "View status (planning system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4269,
+      "idmDefine": "IDM_PLANNING_VIEW_STATUS",
+      "cliCommand": "!planning_view_status",
+      "handler": "handlePlanningViewStatus",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "planning.diagnostics",
+      "name": "Planning Diagnostics",
+      "description": "Diagnostics (planning system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4270,
+      "idmDefine": "IDM_PLANNING_DIAGNOSTICS",
+      "cliCommand": "!planning_diagnostics",
+      "handler": "handlePlanningDiagnostics",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "knowledge.init",
+      "name": "Knowledge Init",
+      "description": "Init (knowledge system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4271,
+      "idmDefine": "IDM_KNOWLEDGE_INIT",
+      "cliCommand": "!knowledge_init",
+      "handler": "handleKnowledgeInit",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "knowledge.record",
+      "name": "Knowledge Record",
+      "description": "Record (knowledge system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4272,
+      "idmDefine": "IDM_KNOWLEDGE_RECORD",
+      "cliCommand": "!knowledge_record",
+      "handler": "handleKnowledgeRecord",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "knowledge.search",
+      "name": "Knowledge Search",
+      "description": "Search (knowledge system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4273,
+      "idmDefine": "IDM_KNOWLEDGE_SEARCH",
+      "cliCommand": "!knowledge_search",
+      "handler": "handleKnowledgeSearch",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "knowledge.decisions",
+      "name": "Knowledge Decisions",
+      "description": "Decisions (knowledge system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4274,
+      "idmDefine": "IDM_KNOWLEDGE_DECISIONS",
+      "cliCommand": "!knowledge_decisions",
+      "handler": "handleKnowledgeDecisions",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "knowledge.preferences",
+      "name": "Knowledge Preferences",
+      "description": "Preferences (knowledge system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4275,
+      "idmDefine": "IDM_KNOWLEDGE_PREFERENCES",
+      "cliCommand": "!knowledge_preferences",
+      "handler": "handleKnowledgePreferences",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "knowledge.archaeology",
+      "name": "Knowledge Archaeology",
+      "description": "Archaeology (knowledge system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4276,
+      "idmDefine": "IDM_KNOWLEDGE_ARCHAEOLOGY",
+      "cliCommand": "!knowledge_archaeology",
+      "handler": "handleKnowledgeArchaeology",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "knowledge.graph",
+      "name": "Knowledge Graph",
+      "description": "Graph (knowledge system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4277,
+      "idmDefine": "IDM_KNOWLEDGE_GRAPH",
+      "cliCommand": "!knowledge_graph",
+      "handler": "handleKnowledgeGraph",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "knowledge.export",
+      "name": "Knowledge Export",
+      "description": "Export (knowledge system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4278,
+      "idmDefine": "IDM_KNOWLEDGE_EXPORT",
+      "cliCommand": "!knowledge_export",
+      "handler": "handleKnowledgeExport",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "knowledge.stats",
+      "name": "Knowledge Stats",
+      "description": "Stats (knowledge system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4279,
+      "idmDefine": "IDM_KNOWLEDGE_STATS",
+      "cliCommand": "!knowledge_stats",
+      "handler": "handleKnowledgeStats",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "knowledge.flush",
+      "name": "Knowledge Flush",
+      "description": "Flush (knowledge system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4280,
+      "idmDefine": "IDM_KNOWLEDGE_FLUSH",
+      "cliCommand": "!knowledge_flush",
+      "handler": "handleKnowledgeFlush",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "failure.detect",
+      "name": "Failure Detect",
+      "description": "Detect (failure system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4281,
+      "idmDefine": "IDM_FAILURE_DETECT",
+      "cliCommand": "!failure_detect",
+      "handler": "handleFailureDetect",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "failure.analyze",
+      "name": "Failure Analyze",
+      "description": "Analyze (failure system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4282,
+      "idmDefine": "IDM_FAILURE_ANALYZE",
+      "cliCommand": "!failure_analyze",
+      "handler": "handleFailureAnalyze",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "failure.show_queue",
+      "name": "Failure Show Queue",
+      "description": "Show queue (failure system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4283,
+      "idmDefine": "IDM_FAILURE_SHOW_QUEUE",
+      "cliCommand": "!failure_show_queue",
+      "handler": "handleFailureShowQueue",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "failure.show_history",
+      "name": "Failure Show History",
+      "description": "Show history (failure system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4284,
+      "idmDefine": "IDM_FAILURE_SHOW_HISTORY",
+      "cliCommand": "!failure_show_history",
+      "handler": "handleFailureShowHistory",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "failure.generate_recovery",
+      "name": "Failure Generate Recovery",
+      "description": "Generate recovery (failure system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4285,
+      "idmDefine": "IDM_FAILURE_GENERATE_RECOVERY",
+      "cliCommand": "!failure_generate_recovery",
+      "handler": "handleFailureGenerateRecovery",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "failure.execute_recovery",
+      "name": "Failure Execute Recovery",
+      "description": "Execute recovery (failure system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4286,
+      "idmDefine": "IDM_FAILURE_EXECUTE_RECOVERY",
+      "cliCommand": "!failure_execute_recovery",
+      "handler": "handleFailureExecuteRecovery",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "failure.autonomous_heal",
+      "name": "Failure Autonomous Heal",
+      "description": "Autonomous heal (failure system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4287,
+      "idmDefine": "IDM_FAILURE_AUTONOMOUS_HEAL",
+      "cliCommand": "!failure_autonomous_heal",
+      "handler": "handleFailureAutonomousHeal",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "failure.view_patterns",
+      "name": "Failure View Patterns",
+      "description": "View patterns (failure system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4288,
+      "idmDefine": "IDM_FAILURE_VIEW_PATTERNS",
+      "cliCommand": "!failure_view_patterns",
+      "handler": "handleFailureViewPatterns",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "failure.learn_pattern",
+      "name": "Failure Learn Pattern",
+      "description": "Learn pattern (failure system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4289,
+      "idmDefine": "IDM_FAILURE_LEARN_PATTERN",
+      "cliCommand": "!failure_learn_pattern",
+      "handler": "handleFailureLearnPattern",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "failure.stats",
+      "name": "Failure Stats",
+      "description": "Stats (failure system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4290,
+      "idmDefine": "IDM_FAILURE_STATS",
+      "cliCommand": "!failure_stats",
+      "handler": "handleFailureStats",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "failure.set_policy",
+      "name": "Failure Set Policy",
+      "description": "Set policy (failure system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4291,
+      "idmDefine": "IDM_FAILURE_SET_POLICY",
+      "cliCommand": "!failure_set_policy",
+      "handler": "handleFailureSetPolicy",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "failure.show_health",
+      "name": "Failure Show Health",
+      "description": "Show health (failure system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4292,
+      "idmDefine": "IDM_FAILURE_SHOW_HEALTH",
+      "cliCommand": "!failure_show_health",
+      "handler": "handleFailureShowHealth",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "failure.export_analysis",
+      "name": "Failure Export Analysis",
+      "description": "Export analysis (failure system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4293,
+      "idmDefine": "IDM_FAILURE_EXPORT_ANALYSIS",
+      "cliCommand": "!failure_export_analysis",
+      "handler": "handleFailureExportAnalysis",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "failure.clear_history",
+      "name": "Failure Clear History",
+      "description": "Clear history (failure system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4294,
+      "idmDefine": "IDM_FAILURE_CLEAR_HISTORY",
+      "cliCommand": "!failure_clear_history",
+      "handler": "handleFailureClearHistory",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "failure.diagnostics",
+      "name": "Failure Diagnostics",
+      "description": "Diagnostics (failure system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4295,
+      "idmDefine": "IDM_FAILURE_DIAGNOSTICS",
+      "cliCommand": "!failure_diagnostics",
+      "handler": "handleFailureDiagnostics",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "reveng.analyze",
@@ -2157,7 +4369,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "reveng.disasm",
@@ -2171,7 +4383,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "reveng.dumpbin",
@@ -2185,7 +4397,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "reveng.compile",
@@ -2199,7 +4411,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "reveng.compare",
@@ -2213,7 +4425,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "reveng.detect_vulns",
@@ -2227,7 +4439,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "reveng.export_ida",
@@ -2241,7 +4453,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "reveng.export_ghidra",
@@ -2255,7 +4467,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "reveng.cfg",
@@ -2269,7 +4481,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "reveng.functions",
@@ -2283,7 +4495,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "reveng.demangle",
@@ -2297,7 +4509,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "reveng.ssa",
@@ -2311,7 +4523,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "reveng.recursive_disasm",
@@ -2325,7 +4537,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "reveng.type_recovery",
@@ -2339,7 +4551,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "reveng.data_flow",
@@ -2353,7 +4565,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "reveng.license_info",
@@ -2367,7 +4579,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "reveng.decompiler_view",
@@ -2381,7 +4593,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "reveng.decomp_rename",
@@ -2395,7 +4607,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "reveng.decomp_sync",
@@ -2409,7 +4621,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "reveng.decomp_close",
@@ -2423,7 +4635,217 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "reveng.set_binary_from_active",
+      "name": "Reveng Set Binary From Active",
+      "description": "Set binary from active (reveng system)",
+      "group": "FeatureGroup::ReverseEng",
+      "commandId": 4320,
+      "idmDefine": "IDM_REVENG_SET_BINARY_FROM_ACTIVE",
+      "cliCommand": "!reveng_set_binary_from_active",
+      "handler": "handleRevengSetBinaryFromActive",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": true,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "reveng.set_binary_from_debug_target",
+      "name": "Reveng Set Binary From Debug Target",
+      "description": "Set binary from debug target (reveng system)",
+      "group": "FeatureGroup::ReverseEng",
+      "commandId": 4321,
+      "idmDefine": "IDM_REVENG_SET_BINARY_FROM_DEBUG_TARGET",
+      "cliCommand": "!reveng_set_binary_from_debug_target",
+      "handler": "handleRevengSetBinaryFromDebugTarget",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": true,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "reveng.set_binary_from_build_output",
+      "name": "Reveng Set Binary From Build Output",
+      "description": "Set binary from build output (reveng system)",
+      "group": "FeatureGroup::ReverseEng",
+      "commandId": 4322,
+      "idmDefine": "IDM_REVENG_SET_BINARY_FROM_BUILD_OUTPUT",
+      "cliCommand": "!reveng_set_binary_from_build_output",
+      "handler": "handleRevengSetBinaryFromBuildOutput",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": true,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "reveng.disasm_at_rip",
+      "name": "Reveng Disasm At Rip",
+      "description": "Disasm at rip (reveng system)",
+      "group": "FeatureGroup::ReverseEng",
+      "commandId": 4323,
+      "idmDefine": "IDM_REVENG_DISASM_AT_RIP",
+      "cliCommand": "!reveng_disasm_at_rip",
+      "handler": "handleRevengDisasmAtRip",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": true,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "impact.analyze_staged",
+      "name": "Impact Analyze Staged",
+      "description": "Analyze staged (impact system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4350,
+      "idmDefine": "IDM_IMPACT_ANALYZE_STAGED",
+      "cliCommand": "!impact_analyze_staged",
+      "handler": "handleImpactAnalyzeStaged",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "impact.analyze_unstaged",
+      "name": "Impact Analyze Unstaged",
+      "description": "Analyze unstaged (impact system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4351,
+      "idmDefine": "IDM_IMPACT_ANALYZE_UNSTAGED",
+      "cliCommand": "!impact_analyze_unstaged",
+      "handler": "handleImpactAnalyzeUnstaged",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "impact.analyze_file",
+      "name": "Impact Analyze File",
+      "description": "Analyze file (impact system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4352,
+      "idmDefine": "IDM_IMPACT_ANALYZE_FILE",
+      "cliCommand": "!impact_analyze_file",
+      "handler": "handleImpactAnalyzeFile",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "impact.show_report",
+      "name": "Impact Show Report",
+      "description": "Show report (impact system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4353,
+      "idmDefine": "IDM_IMPACT_SHOW_REPORT",
+      "cliCommand": "!impact_show_report",
+      "handler": "handleImpactShowReport",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "impact.show_zones",
+      "name": "Impact Show Zones",
+      "description": "Show zones (impact system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4354,
+      "idmDefine": "IDM_IMPACT_SHOW_ZONES",
+      "cliCommand": "!impact_show_zones",
+      "handler": "handleImpactShowZones",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "impact.risk_score",
+      "name": "Impact Risk Score",
+      "description": "Risk score (impact system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4355,
+      "idmDefine": "IDM_IMPACT_RISK_SCORE",
+      "cliCommand": "!impact_risk_score",
+      "handler": "handleImpactRiskScore",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "impact.check_commit",
+      "name": "Impact Check Commit",
+      "description": "Check commit (impact system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4356,
+      "idmDefine": "IDM_IMPACT_CHECK_COMMIT",
+      "cliCommand": "!impact_check_commit",
+      "handler": "handleImpactCheckCommit",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "impact.set_config",
+      "name": "Impact Set Config",
+      "description": "Set config (impact system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4357,
+      "idmDefine": "IDM_IMPACT_SET_CONFIG",
+      "cliCommand": "!impact_set_config",
+      "handler": "handleImpactSetConfig",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "impact.history",
+      "name": "Impact History",
+      "description": "History (impact system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4358,
+      "idmDefine": "IDM_IMPACT_HISTORY",
+      "cliCommand": "!impact_history",
+      "handler": "handleImpactHistory",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "impact.diagnostics",
+      "name": "Impact Diagnostics",
+      "description": "Diagnostics (impact system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4359,
+      "idmDefine": "IDM_IMPACT_DIAGNOSTICS",
+      "cliCommand": "!impact_diagnostics",
+      "handler": "handleImpactDiagnostics",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "impact.export_json",
+      "name": "Impact Export Json",
+      "description": "Export json (impact system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 4360,
+      "idmDefine": "IDM_IMPACT_EXPORT_JSON",
+      "cliCommand": "!impact_export_json",
+      "handler": "handleImpactExportJson",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "backend.switch_local",
@@ -2465,7 +4887,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "backend.switch_claude",
@@ -2619,7 +5041,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "router.show_decision",
@@ -2633,7 +5055,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "router.set_policy",
@@ -2661,7 +5083,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "router.show_fallbacks",
@@ -2675,7 +5097,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "router.save_config",
@@ -2759,7 +5181,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "lsp.goto_definition",
@@ -2773,7 +5195,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "lsp.find_references",
@@ -2787,7 +5209,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "lsp.rename_symbol",
@@ -2801,7 +5223,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "lsp.hover_info",
@@ -2815,7 +5237,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "lsp.show_diagnostics",
@@ -2829,7 +5251,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "lsp.restart_server",
@@ -2843,7 +5265,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "lsp.clear_diagnostics",
@@ -2857,7 +5279,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "lsp.show_symbol_info",
@@ -2871,7 +5293,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "lsp.configure",
@@ -2902,6 +5324,20 @@
       "hasRealHandler": true
     },
     {
+      "featureId": "peek.definition",
+      "name": "Peek Definition",
+      "description": "Definition (peek system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 5071,
+      "idmDefine": "IDM_PEEK_DEFINITION",
+      "cliCommand": "!peek_definition",
+      "handler": "handlePeekDefinition",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
       "featureId": "router.why_backend",
       "name": "Router Why Backend",
       "description": "Why backend (router system)",
@@ -2910,6 +5346,20 @@
       "idmDefine": "IDM_ROUTER_WHY_BACKEND",
       "cliCommand": "!router_why_backend",
       "handler": "handleRouterWhyBackend",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "peek.references",
+      "name": "Peek References",
+      "description": "References (peek system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 5072,
+      "idmDefine": "IDM_PEEK_REFERENCES",
+      "cliCommand": "!peek_references",
+      "handler": "handlePeekReferences",
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
@@ -2930,6 +5380,20 @@
       "hasRealHandler": true
     },
     {
+      "featureId": "peek.close",
+      "name": "Peek Close",
+      "description": "Close (peek system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 5073,
+      "idmDefine": "IDM_PEEK_CLOSE",
+      "cliCommand": "!peek_close",
+      "handler": "handlePeekClose",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
       "featureId": "router.unpin_task",
       "name": "Router Unpin Task",
       "description": "Unpin task (router system)",
@@ -2938,6 +5402,20 @@
       "idmDefine": "IDM_ROUTER_UNPIN_TASK",
       "cliCommand": "!router_unpin_task",
       "handler": "handleRouterUnpinTask",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "peek.navigate",
+      "name": "Peek Navigate",
+      "description": "Navigate (peek system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 5074,
+      "idmDefine": "IDM_PEEK_NAVIGATE",
+      "cliCommand": "!peek_navigate",
+      "handler": "handlePeekNavigate",
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
@@ -3053,7 +5531,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "asm.goto_label",
@@ -3067,7 +5545,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "asm.find_label_refs",
@@ -3081,7 +5559,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "asm.show_symbol_table",
@@ -3095,7 +5573,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "asm.instruction_info",
@@ -3151,7 +5629,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "asm.show_data_flow",
@@ -3165,7 +5643,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "asm.detect_convention",
@@ -3193,7 +5671,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "asm.clear_symbols",
@@ -3725,7 +6203,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "swarm.start_worker",
@@ -3739,7 +6217,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "swarm.start_hybrid",
@@ -3753,7 +6231,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "swarm.stop",
@@ -3767,7 +6245,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "swarm.list_nodes",
@@ -3781,7 +6259,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "swarm.add_node",
@@ -3795,7 +6273,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "swarm.remove_node",
@@ -3809,7 +6287,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "swarm.blacklist_node",
@@ -3823,7 +6301,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "swarm.build_sources",
@@ -3837,7 +6315,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "swarm.build_cmake",
@@ -3851,7 +6329,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "swarm.start_build",
@@ -3865,7 +6343,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "swarm.cancel_build",
@@ -3879,7 +6357,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "swarm.cache_status",
@@ -3893,7 +6371,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "swarm.cache_clear",
@@ -3907,7 +6385,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "swarm.show_config",
@@ -3921,7 +6399,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "swarm.toggle_discovery",
@@ -3935,7 +6413,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "swarm.show_task_graph",
@@ -3949,7 +6427,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "swarm.show_events",
@@ -3963,7 +6441,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "swarm.show_stats",
@@ -3977,7 +6455,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "swarm.reset_stats",
@@ -3991,7 +6469,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "swarm.worker_status",
@@ -4005,7 +6483,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "swarm.worker_connect",
@@ -4019,7 +6497,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "swarm.worker_disconnect",
@@ -4033,7 +6511,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "swarm.fitness_test",
@@ -4047,7 +6525,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "dbg.launch",
@@ -4442,6 +6920,20 @@
       "hasRealHandler": true
     },
     {
+      "featureId": "debug.test_ai",
+      "name": "Debug Test Ai",
+      "description": "Test ai (debug system)",
+      "group": "FeatureGroup::Debug",
+      "commandId": 5190,
+      "idmDefine": "IDM_DEBUG_TEST_AI",
+      "cliCommand": "!debug_test_ai",
+      "handler": "handleDebugTestAi",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
       "featureId": "plugin.show_panel",
       "name": "Plugin Show Panel",
       "description": "Show panel (plugin system)",
@@ -4568,6 +7060,188 @@
       "hasRealHandler": true
     },
     {
+      "featureId": "ai.model_registry",
+      "name": "Ai Model Registry",
+      "description": "Model registry (ai system)",
+      "group": "FeatureGroup::AIMode",
+      "commandId": 5300,
+      "idmDefine": "IDM_AI_MODEL_REGISTRY",
+      "cliCommand": "!ai_model_registry",
+      "handler": "handleAiModelRegistry",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ai.checkpoint_mgr",
+      "name": "Ai Checkpoint Mgr",
+      "description": "Checkpoint mgr (ai system)",
+      "group": "FeatureGroup::AIMode",
+      "commandId": 5301,
+      "idmDefine": "IDM_AI_CHECKPOINT_MGR",
+      "cliCommand": "!ai_checkpoint_mgr",
+      "handler": "handleAiCheckpointMgr",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ai.interpret_panel",
+      "name": "Ai Interpret Panel",
+      "description": "Interpret panel (ai system)",
+      "group": "FeatureGroup::AIMode",
+      "commandId": 5302,
+      "idmDefine": "IDM_AI_INTERPRET_PANEL",
+      "cliCommand": "!ai_interpret_panel",
+      "handler": "handleAiInterpretPanel",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ai.cicd_settings",
+      "name": "Ai Cicd Settings",
+      "description": "Cicd settings (ai system)",
+      "group": "FeatureGroup::AIMode",
+      "commandId": 5303,
+      "idmDefine": "IDM_AI_CICD_SETTINGS",
+      "cliCommand": "!ai_cicd_settings",
+      "handler": "handleAiCicdSettings",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ai.multi_file_search",
+      "name": "Ai Multi File Search",
+      "description": "Multi file search (ai system)",
+      "group": "FeatureGroup::AIMode",
+      "commandId": 5304,
+      "idmDefine": "IDM_AI_MULTI_FILE_SEARCH",
+      "cliCommand": "!ai_multi_file_search",
+      "handler": "handleAiMultiFileSearch",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ai.benchmark_menu",
+      "name": "Ai Benchmark Menu",
+      "description": "Benchmark menu (ai system)",
+      "group": "FeatureGroup::AIMode",
+      "commandId": 5305,
+      "idmDefine": "IDM_AI_BENCHMARK_MENU",
+      "cliCommand": "!ai_benchmark_menu",
+      "handler": "handleAiBenchmarkMenu",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "view.monaco_settings",
+      "name": "View Monaco Settings",
+      "description": "Monaco settings (view system)",
+      "group": "FeatureGroup::View",
+      "commandId": 5310,
+      "idmDefine": "IDM_VIEW_MONACO_SETTINGS",
+      "cliCommand": "!view_monaco_settings",
+      "handler": "handleViewMonacoSettings",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "view.thermal_dashboard",
+      "name": "View Thermal Dashboard",
+      "description": "Thermal dashboard (view system)",
+      "group": "FeatureGroup::View",
+      "commandId": 5311,
+      "idmDefine": "IDM_VIEW_THERMAL_DASHBOARD",
+      "cliCommand": "!view_thermal_dashboard",
+      "handler": "handleViewThermalDashboard",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "agent.smoke_test",
+      "name": "Agent Smoke Test",
+      "description": "Smoke test (agent system)",
+      "group": "FeatureGroup::Agent",
+      "commandId": 5320,
+      "idmDefine": "IDM_AGENT_SMOKE_TEST",
+      "cliCommand": "!agent_smoke_test",
+      "handler": "handleAgentSmokeTest",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "agent.set_cycle_agent_counter",
+      "name": "Agent Set Cycle Agent Counter",
+      "description": "Set cycle agent counter (agent system)",
+      "group": "FeatureGroup::Agent",
+      "commandId": 5321,
+      "idmDefine": "IDM_AGENT_SET_CYCLE_AGENT_COUNTER",
+      "cliCommand": "!agent_set_cycle_agent_counter",
+      "handler": "handleAgentSetCycleAgentCounter",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "inference.debugger_panel",
+      "name": "Inference Debugger Panel",
+      "description": "Debugger panel (inference system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 5322,
+      "idmDefine": "IDM_INFERENCE_DEBUGGER_PANEL",
+      "cliCommand": "!inference_debugger_panel",
+      "handler": "handleInferenceDebuggerPanel",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "asm.lint_current_file",
+      "name": "Asm Lint Current File",
+      "description": "Lint current file (asm system)",
+      "group": "FeatureGroup::ReverseEng",
+      "commandId": 5999,
+      "idmDefine": "IDM_ASM_LINT_CURRENT_FILE",
+      "cliCommand": "!asm_lint_current_file",
+      "handler": "handleAsmLintCurrentFile",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": true,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "view.agent_panel",
+      "name": "View Agent Panel",
+      "description": "Agent panel (view system)",
+      "group": "FeatureGroup::View",
+      "commandId": 7057,
+      "idmDefine": "IDM_VIEW_AGENT_PANEL",
+      "cliCommand": "!view_agent_panel",
+      "handler": "handleViewAgentPanel",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
       "featureId": "decomp.rename_var",
       "name": "Decomp Rename Var",
       "description": "Rename var (decomp system)",
@@ -4579,7 +7253,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "decomp.goto_def",
@@ -4593,7 +7267,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "decomp.find_refs",
@@ -4607,7 +7281,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "decomp.copy_line",
@@ -4621,7 +7295,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "decomp.copy_all",
@@ -4635,7 +7309,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "decomp.goto_addr",
@@ -4649,7 +7323,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "hotpatch.show_status",
@@ -4663,7 +7337,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "hotpatch.memory_apply",
@@ -4677,7 +7351,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "hotpatch.memory_revert",
@@ -4691,7 +7365,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "hotpatch.byte_apply",
@@ -4705,7 +7379,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "hotpatch.byte_search",
@@ -4719,7 +7393,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "hotpatch.server_add",
@@ -4733,7 +7407,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "hotpatch.server_remove",
@@ -4747,7 +7421,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "hotpatch.proxy_bias",
@@ -4761,7 +7435,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "hotpatch.proxy_rewrite",
@@ -4775,7 +7449,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "hotpatch.proxy_terminate",
@@ -4789,7 +7463,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "hotpatch.proxy_validate",
@@ -4803,7 +7477,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "hotpatch.preset_save",
@@ -4817,7 +7491,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "hotpatch.preset_load",
@@ -4831,7 +7505,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "hotpatch.show_event_log",
@@ -4845,7 +7519,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "hotpatch.reset_stats",
@@ -4859,7 +7533,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "hotpatch.toggle_all",
@@ -4873,7 +7547,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "hotpatch.show_proxy_stats",
@@ -4887,7 +7561,133 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": true,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "hotpatch.set_target_tps",
+      "name": "Hotpatch Set Target Tps",
+      "description": "Set target tps (hotpatch system)",
+      "group": "FeatureGroup::Hotpatch",
+      "commandId": 9018,
+      "idmDefine": "IDM_HOTPATCH_SET_TARGET_TPS",
+      "cliCommand": "!hotpatch_set_target_tps",
+      "handler": "handleHotpatchSetTargetTps",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": true,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "hotpatch.compact_conversation",
+      "name": "Hotpatch Compact Conversation",
+      "description": "Compact conversation (hotpatch system)",
+      "group": "FeatureGroup::Hotpatch",
+      "commandId": 9019,
+      "idmDefine": "IDM_HOTPATCH_COMPACT_CONVERSATION",
+      "cliCommand": "!hotpatch_compact_conversation",
+      "handler": "handleHotpatchCompactConversation",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": true,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "hotpatch.optimize_tool_selection",
+      "name": "Hotpatch Optimize Tool Selection",
+      "description": "Optimize tool selection (hotpatch system)",
+      "group": "FeatureGroup::Hotpatch",
+      "commandId": 9020,
+      "idmDefine": "IDM_HOTPATCH_OPTIMIZE_TOOL_SELECTION",
+      "cliCommand": "!hotpatch_optimize_tool_selection",
+      "handler": "handleHotpatchOptimizeToolSelection",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": true,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "hotpatch.resolving",
+      "name": "Hotpatch Resolving",
+      "description": "Resolving (hotpatch system)",
+      "group": "FeatureGroup::Hotpatch",
+      "commandId": 9021,
+      "idmDefine": "IDM_HOTPATCH_RESOLVING",
+      "cliCommand": "!hotpatch_resolving",
+      "handler": "handleHotpatchResolving",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": true,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "hotpatch.read_lines",
+      "name": "Hotpatch Read Lines",
+      "description": "Read lines (hotpatch system)",
+      "group": "FeatureGroup::Hotpatch",
+      "commandId": 9022,
+      "idmDefine": "IDM_HOTPATCH_READ_LINES",
+      "cliCommand": "!hotpatch_read_lines",
+      "handler": "handleHotpatchReadLines",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": true,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "hotpatch.planning_exploration",
+      "name": "Hotpatch Planning Exploration",
+      "description": "Planning exploration (hotpatch system)",
+      "group": "FeatureGroup::Hotpatch",
+      "commandId": 9023,
+      "idmDefine": "IDM_HOTPATCH_PLANNING_EXPLORATION",
+      "cliCommand": "!hotpatch_planning_exploration",
+      "handler": "handleHotpatchPlanningExploration",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": true,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "hotpatch.search_files",
+      "name": "Hotpatch Search Files",
+      "description": "Search files (hotpatch system)",
+      "group": "FeatureGroup::Hotpatch",
+      "commandId": 9024,
+      "idmDefine": "IDM_HOTPATCH_SEARCH_FILES",
+      "cliCommand": "!hotpatch_search_files",
+      "handler": "handleHotpatchSearchFiles",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": true,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "hotpatch.evaluate_integration",
+      "name": "Hotpatch Evaluate Integration",
+      "description": "Evaluate integration (hotpatch system)",
+      "group": "FeatureGroup::Hotpatch",
+      "commandId": 9025,
+      "idmDefine": "IDM_HOTPATCH_EVALUATE_INTEGRATION",
+      "cliCommand": "!hotpatch_evaluate_integration",
+      "handler": "handleHotpatchEvaluateIntegration",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": true,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "hotpatch.restore_checkpoint",
+      "name": "Hotpatch Restore Checkpoint",
+      "description": "Restore checkpoint (hotpatch system)",
+      "group": "FeatureGroup::Hotpatch",
+      "commandId": 9026,
+      "idmDefine": "IDM_HOTPATCH_RESTORE_CHECKPOINT",
+      "cliCommand": "!hotpatch_restore_checkpoint",
+      "handler": "handleHotpatchRestoreCheckpoint",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": true,
+      "hasRealHandler": true
     },
     {
       "featureId": "view.toggle_monaco",
@@ -4901,7 +7701,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "view.monaco_devtools",
@@ -4915,7 +7715,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "view.monaco_reload",
@@ -4929,7 +7729,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "view.monaco_zoom_in",
@@ -4943,7 +7743,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "view.monaco_zoom_out",
@@ -4957,7 +7757,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "view.monaco_sync_theme",
@@ -4971,7 +7771,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "lsp.server_start",
@@ -4985,7 +7785,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "lsp.server_stop",
@@ -4999,7 +7799,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "lsp.server_status",
@@ -5013,7 +7813,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "lsp.server_reindex",
@@ -5027,7 +7827,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "lsp.server_stats",
@@ -5041,7 +7841,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "lsp.server_publish_diag",
@@ -5055,7 +7855,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "lsp.server_config",
@@ -5069,7 +7869,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "lsp.server_export_symbols",
@@ -5083,7 +7883,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "lsp.server_launch_stdio",
@@ -5097,7 +7897,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "editor.engine_richedit_cmd",
@@ -5111,7 +7911,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "editor.engine_webview2_cmd",
@@ -5125,7 +7925,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "editor.engine_monacocore_cmd",
@@ -5139,7 +7939,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "editor.engine_cycle_cmd",
@@ -5153,7 +7953,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "editor.engine_status_cmd",
@@ -5167,7 +7967,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "pdb.load",
@@ -5181,7 +7981,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "pdb.fetch",
@@ -5195,7 +7995,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "pdb.status",
@@ -5209,7 +8009,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "pdb.cache_clear",
@@ -5223,7 +8023,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "pdb.enable",
@@ -5237,7 +8037,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "pdb.resolve",
@@ -5251,7 +8051,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "pdb.imports",
@@ -5265,7 +8065,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "pdb.exports",
@@ -5279,7 +8079,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "pdb.iat_status",
@@ -5293,7 +8093,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "audit.show_dashboard",
@@ -5307,7 +8107,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "audit.run_full",
@@ -5321,7 +8121,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "audit.detect_stubs",
@@ -5335,7 +8135,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "audit.check_menus",
@@ -5349,7 +8149,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "audit.run_tests",
@@ -5363,7 +8163,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "audit.export_report",
@@ -5377,7 +8177,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "audit.quick_stats",
@@ -5391,7 +8191,77 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "security.scan_secrets",
+      "name": "Security Scan Secrets",
+      "description": "Scan secrets (security system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 9550,
+      "idmDefine": "IDM_SECURITY_SCAN_SECRETS",
+      "cliCommand": "!security_scan_secrets",
+      "handler": "handleSecurityScanSecrets",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "security.scan_sast",
+      "name": "Security Scan Sast",
+      "description": "Scan sast (security system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 9551,
+      "idmDefine": "IDM_SECURITY_SCAN_SAST",
+      "cliCommand": "!security_scan_sast",
+      "handler": "handleSecurityScanSast",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "security.scan_dependencies",
+      "name": "Security Scan Dependencies",
+      "description": "Scan dependencies (security system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 9552,
+      "idmDefine": "IDM_SECURITY_SCAN_DEPENDENCIES",
+      "cliCommand": "!security_scan_dependencies",
+      "handler": "handleSecurityScanDependencies",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "security.dashboard",
+      "name": "Security Dashboard",
+      "description": "Dashboard (security system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 9553,
+      "idmDefine": "IDM_SECURITY_DASHBOARD",
+      "cliCommand": "!security_dashboard",
+      "handler": "handleSecurityDashboard",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "security.export_sbom",
+      "name": "Security Export Sbom",
+      "description": "Export sbom (security system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 9554,
+      "idmDefine": "IDM_SECURITY_EXPORT_SBOM",
+      "cliCommand": "!security_export_sbom",
+      "handler": "handleSecurityExportSbom",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "gauntlet.run",
@@ -5405,7 +8275,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "gauntlet.export",
@@ -5419,7 +8289,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "voice.record",
@@ -5447,7 +8317,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "voice.speak",
@@ -5475,7 +8345,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "voice.show_devices",
@@ -5489,7 +8359,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "voice.metrics",
@@ -5517,7 +8387,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "voice.mode_ptt",
@@ -5531,7 +8401,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "voice.mode_continuous",
@@ -5545,7 +8415,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "voice.mode_disabled",
@@ -5559,7 +8429,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "qw.shortcut_editor",
@@ -5573,7 +8443,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "qw.shortcut_reset",
@@ -5587,7 +8457,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "qw.backup_create",
@@ -5601,7 +8471,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "qw.backup_restore",
@@ -5615,7 +8485,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "qw.backup_auto_toggle",
@@ -5629,7 +8499,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "qw.backup_list",
@@ -5643,7 +8513,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "qw.backup_prune",
@@ -5657,7 +8527,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "qw.alert_toggle_monitor",
@@ -5671,7 +8541,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "qw.alert_show_history",
@@ -5685,7 +8555,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "qw.alert_dismiss_all",
@@ -5699,7 +8569,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "qw.alert_resource_status",
@@ -5713,7 +8583,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "qw.slo_dashboard",
@@ -5727,7 +8597,133 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "git.stage_all",
+      "name": "Git Stage All",
+      "description": "Stage all (git system)",
+      "group": "FeatureGroup::Git",
+      "commandId": 9850,
+      "idmDefine": "IDM_GIT_STAGE_ALL",
+      "cliCommand": "!git_stage_all",
+      "handler": "handleGitStageAll",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "git.unstage_all",
+      "name": "Git Unstage All",
+      "description": "Unstage all (git system)",
+      "group": "FeatureGroup::Git",
+      "commandId": 9851,
+      "idmDefine": "IDM_GIT_UNSTAGE_ALL",
+      "cliCommand": "!git_unstage_all",
+      "handler": "handleGitUnstageAll",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "git.diff",
+      "name": "Git Diff",
+      "description": "Diff (git system)",
+      "group": "FeatureGroup::Git",
+      "commandId": 9852,
+      "idmDefine": "IDM_GIT_DIFF",
+      "cliCommand": "!git_diff",
+      "handler": "handleGitDiff",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "git.branch_picker",
+      "name": "Git Branch Picker",
+      "description": "Branch picker (git system)",
+      "group": "FeatureGroup::Git",
+      "commandId": 9853,
+      "idmDefine": "IDM_GIT_BRANCH_PICKER",
+      "cliCommand": "!git_branch_picker",
+      "handler": "handleGitBranchPicker",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "git.stash",
+      "name": "Git Stash",
+      "description": "Stash (git system)",
+      "group": "FeatureGroup::Git",
+      "commandId": 9854,
+      "idmDefine": "IDM_GIT_STASH",
+      "cliCommand": "!git_stash",
+      "handler": "handleGitStash",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "git.stash_pop",
+      "name": "Git Stash Pop",
+      "description": "Stash pop (git system)",
+      "group": "FeatureGroup::Git",
+      "commandId": 9855,
+      "idmDefine": "IDM_GIT_STASH_POP",
+      "cliCommand": "!git_stash_pop",
+      "handler": "handleGitStashPop",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "git.stage_file",
+      "name": "Git Stage File",
+      "description": "Stage file (git system)",
+      "group": "FeatureGroup::Git",
+      "commandId": 9860,
+      "idmDefine": "IDM_GIT_STAGE_FILE",
+      "cliCommand": "!git_stage_file",
+      "handler": "handleGitStageFile",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "git.unstage_file",
+      "name": "Git Unstage File",
+      "description": "Unstage file (git system)",
+      "group": "FeatureGroup::Git",
+      "commandId": 9861,
+      "idmDefine": "IDM_GIT_UNSTAGE_FILE",
+      "cliCommand": "!git_unstage_file",
+      "handler": "handleGitUnstageFile",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "git.log",
+      "name": "Git Log",
+      "description": "Log (git system)",
+      "group": "FeatureGroup::Git",
+      "commandId": 9862,
+      "idmDefine": "IDM_GIT_LOG",
+      "cliCommand": "!git_log",
+      "handler": "handleGitLog",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "telemetry.toggle",
@@ -5741,7 +8737,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "telemetry.export_json",
@@ -5755,7 +8751,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "telemetry.export_csv",
@@ -5769,7 +8765,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "telemetry.show_dashboard",
@@ -5783,7 +8779,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "telemetry.clear",
@@ -5797,7 +8793,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "telemetry.snapshot",
@@ -5811,7 +8807,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "vscext.api_status",
@@ -5825,7 +8821,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "vscext.api_reload",
@@ -5839,7 +8835,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "vscext.api_list_commands",
@@ -5853,7 +8849,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "vscext.api_list_providers",
@@ -5867,7 +8863,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "vscext.api_diagnostics",
@@ -5881,7 +8877,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "vscext.api_extensions",
@@ -5895,7 +8891,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "vscext.api_stats",
@@ -5909,7 +8905,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "vscext.api_load_native",
@@ -5923,7 +8919,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "vscext.api_deactivate_all",
@@ -5937,7 +8933,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "vscext.api_export_config",
@@ -5951,7 +8947,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "voice.auto_toggle",
@@ -5965,7 +8961,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "voice.auto_settings",
@@ -5979,7 +8975,21 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "voice.auto_next",
+      "name": "Voice Auto Next",
+      "description": "Auto next (voice system)",
+      "group": "FeatureGroup::Voice",
+      "commandId": 10202,
+      "idmDefine": "IDM_VOICE_AUTO_NEXT",
+      "cliCommand": "!voice_auto_next",
+      "handler": "handleVoiceAutoNext",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "voice.auto_next_voice",
@@ -5993,7 +9003,21 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "voice.auto_prev",
+      "name": "Voice Auto Prev",
+      "description": "Auto prev (voice system)",
+      "group": "FeatureGroup::Voice",
+      "commandId": 10203,
+      "idmDefine": "IDM_VOICE_AUTO_PREV",
+      "cliCommand": "!voice_auto_prev",
+      "handler": "handleVoiceAutoPrev",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     },
     {
       "featureId": "voice.auto_prev_voice",
@@ -6007,7 +9031,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "voice.auto_rate_up",
@@ -6021,7 +9045,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "voice.auto_rate_down",
@@ -6035,7 +9059,7 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
     },
     {
       "featureId": "voice.auto_stop",
@@ -6049,7 +9073,875 @@
       "guiSupported": true,
       "cliSupported": true,
       "asmHotPath": false,
-      "hasRealHandler": false
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "voice.toggle_listening",
+      "name": "Voice Toggle Listening",
+      "description": "Toggle listening (voice system)",
+      "group": "FeatureGroup::Voice",
+      "commandId": 10300,
+      "idmDefine": "IDM_VOICE_TOGGLE_LISTENING",
+      "cliCommand": "!voice_toggle_listening",
+      "handler": "handleVoiceToggleListening",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "voice.toggle_tts",
+      "name": "Voice Toggle Tts",
+      "description": "Toggle tts (voice system)",
+      "group": "FeatureGroup::Voice",
+      "commandId": 10301,
+      "idmDefine": "IDM_VOICE_TOGGLE_TTS",
+      "cliCommand": "!voice_toggle_tts",
+      "handler": "handleVoiceToggleTts",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "voice.settings",
+      "name": "Voice Settings",
+      "description": "Settings (voice system)",
+      "group": "FeatureGroup::Voice",
+      "commandId": 10302,
+      "idmDefine": "IDM_VOICE_SETTINGS",
+      "cliCommand": "!voice_settings",
+      "handler": "handleVoiceSettings",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "voice.tts_test",
+      "name": "Voice Tts Test",
+      "description": "Tts test (voice system)",
+      "group": "FeatureGroup::Voice",
+      "commandId": 10303,
+      "idmDefine": "IDM_VOICE_TTS_TEST",
+      "cliCommand": "!voice_tts_test",
+      "handler": "handleVoiceTtsTest",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "build.solution",
+      "name": "Build Solution",
+      "description": "Solution (build system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 10400,
+      "idmDefine": "IDM_BUILD_SOLUTION",
+      "cliCommand": "!build_solution",
+      "handler": "handleBuildSolution",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "build.clean",
+      "name": "Build Clean",
+      "description": "Clean (build system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 10401,
+      "idmDefine": "IDM_BUILD_CLEAN",
+      "cliCommand": "!build_clean",
+      "handler": "handleBuildClean",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "build.rebuild",
+      "name": "Build Rebuild",
+      "description": "Rebuild (build system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 10402,
+      "idmDefine": "IDM_BUILD_REBUILD",
+      "cliCommand": "!build_rebuild",
+      "handler": "handleBuildRebuild",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ext.install",
+      "name": "Ext Install",
+      "description": "Install (ext system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 11810,
+      "idmDefine": "IDM_EXT_INSTALL",
+      "cliCommand": "!ext_install",
+      "handler": "handleExtInstall",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ext.enable",
+      "name": "Ext Enable",
+      "description": "Enable (ext system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 11811,
+      "idmDefine": "IDM_EXT_ENABLE",
+      "cliCommand": "!ext_enable",
+      "handler": "handleExtEnable",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ext.disable",
+      "name": "Ext Disable",
+      "description": "Disable (ext system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 11812,
+      "idmDefine": "IDM_EXT_DISABLE",
+      "cliCommand": "!ext_disable",
+      "handler": "handleExtDisable",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ext.uninstall",
+      "name": "Ext Uninstall",
+      "description": "Uninstall (ext system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 11813,
+      "idmDefine": "IDM_EXT_UNINSTALL",
+      "cliCommand": "!ext_uninstall",
+      "handler": "handleExtUninstall",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ext.reload",
+      "name": "Ext Reload",
+      "description": "Reload (ext system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 11814,
+      "idmDefine": "IDM_EXT_RELOAD",
+      "cliCommand": "!ext_reload",
+      "handler": "handleExtReload",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "t1.smooth_scroll_toggle",
+      "name": "T1 Smooth Scroll Toggle",
+      "description": "Smooth scroll toggle (t1 system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12000,
+      "idmDefine": "IDM_T1_SMOOTH_SCROLL_TOGGLE",
+      "cliCommand": "!t1_smooth_scroll_toggle",
+      "handler": "handleT1SmoothScrollToggle",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "t1.smooth_scroll_speed",
+      "name": "T1 Smooth Scroll Speed",
+      "description": "Smooth scroll speed (t1 system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12001,
+      "idmDefine": "IDM_T1_SMOOTH_SCROLL_SPEED",
+      "cliCommand": "!t1_smooth_scroll_speed",
+      "handler": "handleT1SmoothScrollSpeed",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "t1.minimap_toggle",
+      "name": "T1 Minimap Toggle",
+      "description": "Minimap toggle (t1 system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12010,
+      "idmDefine": "IDM_T1_MINIMAP_TOGGLE",
+      "cliCommand": "!t1_minimap_toggle",
+      "handler": "handleT1MinimapToggle",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "t1.minimap_highlight",
+      "name": "T1 Minimap Highlight",
+      "description": "Minimap highlight (t1 system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12011,
+      "idmDefine": "IDM_T1_MINIMAP_HIGHLIGHT",
+      "cliCommand": "!t1_minimap_highlight",
+      "handler": "handleT1MinimapHighlight",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "t1.minimap_slider",
+      "name": "T1 Minimap Slider",
+      "description": "Minimap slider (t1 system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12012,
+      "idmDefine": "IDM_T1_MINIMAP_SLIDER",
+      "cliCommand": "!t1_minimap_slider",
+      "handler": "handleT1MinimapSlider",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "t1.breadcrumbs_toggle",
+      "name": "T1 Breadcrumbs Toggle",
+      "description": "Breadcrumbs toggle (t1 system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12020,
+      "idmDefine": "IDM_T1_BREADCRUMBS_TOGGLE",
+      "cliCommand": "!t1_breadcrumbs_toggle",
+      "handler": "handleT1BreadcrumbsToggle",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "t1.breadcrumbs_click",
+      "name": "T1 Breadcrumbs Click",
+      "description": "Breadcrumbs click (t1 system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12021,
+      "idmDefine": "IDM_T1_BREADCRUMBS_CLICK",
+      "cliCommand": "!t1_breadcrumbs_click",
+      "handler": "handleT1BreadcrumbsClick",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "t1.fuzzy_palette",
+      "name": "T1 Fuzzy Palette",
+      "description": "Fuzzy palette (t1 system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12030,
+      "idmDefine": "IDM_T1_FUZZY_PALETTE",
+      "cliCommand": "!t1_fuzzy_palette",
+      "handler": "handleT1FuzzyPalette",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "t1.fuzzy_files",
+      "name": "T1 Fuzzy Files",
+      "description": "Fuzzy files (t1 system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12031,
+      "idmDefine": "IDM_T1_FUZZY_FILES",
+      "cliCommand": "!t1_fuzzy_files",
+      "handler": "handleT1FuzzyFiles",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "t1.fuzzy_symbols",
+      "name": "T1 Fuzzy Symbols",
+      "description": "Fuzzy symbols (t1 system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12032,
+      "idmDefine": "IDM_T1_FUZZY_SYMBOLS",
+      "cliCommand": "!t1_fuzzy_symbols",
+      "handler": "handleT1FuzzySymbols",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "t1.settings_gui",
+      "name": "T1 Settings Gui",
+      "description": "Settings gui (t1 system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12040,
+      "idmDefine": "IDM_T1_SETTINGS_GUI",
+      "cliCommand": "!t1_settings_gui",
+      "handler": "handleT1SettingsGui",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "t1.settings_search",
+      "name": "T1 Settings Search",
+      "description": "Settings search (t1 system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12041,
+      "idmDefine": "IDM_T1_SETTINGS_SEARCH",
+      "cliCommand": "!t1_settings_search",
+      "handler": "handleT1SettingsSearch",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "t1.settings_reset",
+      "name": "T1 Settings Reset",
+      "description": "Settings reset (t1 system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12042,
+      "idmDefine": "IDM_T1_SETTINGS_RESET",
+      "cliCommand": "!t1_settings_reset",
+      "handler": "handleT1SettingsReset",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "t1.welcome_show",
+      "name": "T1 Welcome Show",
+      "description": "Welcome show (t1 system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12050,
+      "idmDefine": "IDM_T1_WELCOME_SHOW",
+      "cliCommand": "!t1_welcome_show",
+      "handler": "handleT1WelcomeShow",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "t1.welcome_clone",
+      "name": "T1 Welcome Clone",
+      "description": "Welcome clone (t1 system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12051,
+      "idmDefine": "IDM_T1_WELCOME_CLONE",
+      "cliCommand": "!t1_welcome_clone",
+      "handler": "handleT1WelcomeClone",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "t1.welcome_open_folder",
+      "name": "T1 Welcome Open Folder",
+      "description": "Welcome open folder (t1 system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12052,
+      "idmDefine": "IDM_T1_WELCOME_OPEN_FOLDER",
+      "cliCommand": "!t1_welcome_open_folder",
+      "handler": "handleT1WelcomeOpenFolder",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "t1.welcome_new_file",
+      "name": "T1 Welcome New File",
+      "description": "Welcome new file (t1 system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12053,
+      "idmDefine": "IDM_T1_WELCOME_NEW_FILE",
+      "cliCommand": "!t1_welcome_new_file",
+      "handler": "handleT1WelcomeNewFile",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "t1.icon_theme_set",
+      "name": "T1 Icon Theme Set",
+      "description": "Icon theme set (t1 system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12060,
+      "idmDefine": "IDM_T1_ICON_THEME_SET",
+      "cliCommand": "!t1_icon_theme_set",
+      "handler": "handleT1IconThemeSet",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "t1.icon_theme_seti",
+      "name": "T1 Icon Theme Seti",
+      "description": "Icon theme seti (t1 system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12061,
+      "idmDefine": "IDM_T1_ICON_THEME_SETI",
+      "cliCommand": "!t1_icon_theme_seti",
+      "handler": "handleT1IconThemeSeti",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "t1.icon_theme_material",
+      "name": "T1 Icon Theme Material",
+      "description": "Icon theme material (t1 system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12062,
+      "idmDefine": "IDM_T1_ICON_THEME_MATERIAL",
+      "cliCommand": "!t1_icon_theme_material",
+      "handler": "handleT1IconThemeMaterial",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "t1.tab_drag_enable",
+      "name": "T1 Tab Drag Enable",
+      "description": "Tab drag enable (t1 system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12070,
+      "idmDefine": "IDM_T1_TAB_DRAG_ENABLE",
+      "cliCommand": "!t1_tab_drag_enable",
+      "handler": "handleT1TabDragEnable",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "t1.tab_tearoff",
+      "name": "T1 Tab Tearoff",
+      "description": "Tab tearoff (t1 system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12071,
+      "idmDefine": "IDM_T1_TAB_TEAROFF",
+      "cliCommand": "!t1_tab_tearoff",
+      "handler": "handleT1TabTearoff",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "t1.tab_merge",
+      "name": "T1 Tab Merge",
+      "description": "Tab merge (t1 system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12072,
+      "idmDefine": "IDM_T1_TAB_MERGE",
+      "cliCommand": "!t1_tab_merge",
+      "handler": "handleT1TabMerge",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "t1.split_vertical",
+      "name": "T1 Split Vertical",
+      "description": "Split vertical (t1 system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12080,
+      "idmDefine": "IDM_T1_SPLIT_VERTICAL",
+      "cliCommand": "!t1_split_vertical",
+      "handler": "handleT1SplitVertical",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "t1.split_horizontal",
+      "name": "T1 Split Horizontal",
+      "description": "Split horizontal (t1 system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12081,
+      "idmDefine": "IDM_T1_SPLIT_HORIZONTAL",
+      "cliCommand": "!t1_split_horizontal",
+      "handler": "handleT1SplitHorizontal",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "t1.split_grid_2x2",
+      "name": "T1 Split Grid 2x2",
+      "description": "Split grid 2x2 (t1 system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12082,
+      "idmDefine": "IDM_T1_SPLIT_GRID_2X2",
+      "cliCommand": "!t1_split_grid_2x2",
+      "handler": "handleT1SplitGrid2x2",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "t1.split_close",
+      "name": "T1 Split Close",
+      "description": "Split close (t1 system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12083,
+      "idmDefine": "IDM_T1_SPLIT_CLOSE",
+      "cliCommand": "!t1_split_close",
+      "handler": "handleT1SplitClose",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "t1.split_focus_next",
+      "name": "T1 Split Focus Next",
+      "description": "Split focus next (t1 system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12084,
+      "idmDefine": "IDM_T1_SPLIT_FOCUS_NEXT",
+      "cliCommand": "!t1_split_focus_next",
+      "handler": "handleT1SplitFocusNext",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "t1.update_check",
+      "name": "T1 Update Check",
+      "description": "Update check (t1 system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12090,
+      "idmDefine": "IDM_T1_UPDATE_CHECK",
+      "cliCommand": "!t1_update_check",
+      "handler": "handleT1UpdateCheck",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "t1.update_install",
+      "name": "T1 Update Install",
+      "description": "Update install (t1 system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12091,
+      "idmDefine": "IDM_T1_UPDATE_INSTALL",
+      "cliCommand": "!t1_update_install",
+      "handler": "handleT1UpdateInstall",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "t1.update_dismiss",
+      "name": "T1 Update Dismiss",
+      "description": "Update dismiss (t1 system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12092,
+      "idmDefine": "IDM_T1_UPDATE_DISMISS",
+      "cliCommand": "!t1_update_dismiss",
+      "handler": "handleT1UpdateDismiss",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "t1.update_release_notes",
+      "name": "T1 Update Release Notes",
+      "description": "Update release notes (t1 system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12093,
+      "idmDefine": "IDM_T1_UPDATE_RELEASE_NOTES",
+      "cliCommand": "!t1_update_release_notes",
+      "handler": "handleT1UpdateReleaseNotes",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ent.model_compare",
+      "name": "Ent Model Compare",
+      "description": "Model compare (ent system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12330,
+      "idmDefine": "IDM_ENT_MODEL_COMPARE",
+      "cliCommand": "!ent_model_compare",
+      "handler": "handleEntModelCompare",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ent.batch_process",
+      "name": "Ent Batch Process",
+      "description": "Batch process (ent system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12331,
+      "idmDefine": "IDM_ENT_BATCH_PROCESS",
+      "cliCommand": "!ent_batch_process",
+      "handler": "handleEntBatchProcess",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ent.custom_stop_seq",
+      "name": "Ent Custom Stop Seq",
+      "description": "Custom stop seq (ent system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12332,
+      "idmDefine": "IDM_ENT_CUSTOM_STOP_SEQ",
+      "cliCommand": "!ent_custom_stop_seq",
+      "handler": "handleEntCustomStopSeq",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ent.grammar_constraints",
+      "name": "Ent Grammar Constraints",
+      "description": "Grammar constraints (ent system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12333,
+      "idmDefine": "IDM_ENT_GRAMMAR_CONSTRAINTS",
+      "cliCommand": "!ent_grammar_constraints",
+      "handler": "handleEntGrammarConstraints",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ent.lora_adapter",
+      "name": "Ent Lora Adapter",
+      "description": "Lora adapter (ent system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12334,
+      "idmDefine": "IDM_ENT_LORA_ADAPTER",
+      "cliCommand": "!ent_lora_adapter",
+      "handler": "handleEntLoraAdapter",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ent.response_cache",
+      "name": "Ent Response Cache",
+      "description": "Response cache (ent system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12335,
+      "idmDefine": "IDM_ENT_RESPONSE_CACHE",
+      "cliCommand": "!ent_response_cache",
+      "handler": "handleEntResponseCache",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ent.prompt_library",
+      "name": "Ent Prompt Library",
+      "description": "Prompt library (ent system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12336,
+      "idmDefine": "IDM_ENT_PROMPT_LIBRARY",
+      "cliCommand": "!ent_prompt_library",
+      "handler": "handleEntPromptLibrary",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ent.session_export_import",
+      "name": "Ent Session Export Import",
+      "description": "Session export import (ent system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12337,
+      "idmDefine": "IDM_ENT_SESSION_EXPORT_IMPORT",
+      "cliCommand": "!ent_session_export_import",
+      "handler": "handleEntSessionExportImport",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ent.model_sharding",
+      "name": "Ent Model Sharding",
+      "description": "Model sharding (ent system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12338,
+      "idmDefine": "IDM_ENT_MODEL_SHARDING",
+      "cliCommand": "!ent_model_sharding",
+      "handler": "handleEntModelSharding",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ent.tensor_parallel",
+      "name": "Ent Tensor Parallel",
+      "description": "Tensor parallel (ent system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12339,
+      "idmDefine": "IDM_ENT_TENSOR_PARALLEL",
+      "cliCommand": "!ent_tensor_parallel",
+      "handler": "handleEntTensorParallel",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ent.pipeline_parallel",
+      "name": "Ent Pipeline Parallel",
+      "description": "Pipeline parallel (ent system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12340,
+      "idmDefine": "IDM_ENT_PIPELINE_PARALLEL",
+      "cliCommand": "!ent_pipeline_parallel",
+      "handler": "handleEntPipelineParallel",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "ent.custom_quant",
+      "name": "Ent Custom Quant",
+      "description": "Custom quant (ent system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12341,
+      "idmDefine": "IDM_ENT_CUSTOM_QUANT",
+      "cliCommand": "!ent_custom_quant",
+      "handler": "handleEntCustomQuant",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "omega.start_autonomous",
+      "name": "Omega Start Autonomous",
+      "description": "Start autonomous (omega system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12400,
+      "idmDefine": "IDM_OMEGA_START_AUTONOMOUS",
+      "cliCommand": "!omega_start_autonomous",
+      "handler": "handleOmegaStartAutonomous",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "omega.set_goal",
+      "name": "Omega Set Goal",
+      "description": "Set goal (omega system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12401,
+      "idmDefine": "IDM_OMEGA_SET_GOAL",
+      "cliCommand": "!omega_set_goal",
+      "handler": "handleOmegaSetGoal",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "omega.observe_pipeline",
+      "name": "Omega Observe Pipeline",
+      "description": "Observe pipeline (omega system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12402,
+      "idmDefine": "IDM_OMEGA_OBSERVE_PIPELINE",
+      "cliCommand": "!omega_observe_pipeline",
+      "handler": "handleOmegaObservePipeline",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "omega.cancel_task",
+      "name": "Omega Cancel Task",
+      "description": "Cancel task (omega system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12403,
+      "idmDefine": "IDM_OMEGA_CANCEL_TASK",
+      "cliCommand": "!omega_cancel_task",
+      "handler": "handleOmegaCancelTask",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "omega.spawn_agent",
+      "name": "Omega Spawn Agent",
+      "description": "Spawn agent (omega system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12404,
+      "idmDefine": "IDM_OMEGA_SPAWN_AGENT",
+      "cliCommand": "!omega_spawn_agent",
+      "handler": "handleOmegaSpawnAgent",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
+    },
+    {
+      "featureId": "omega.get_stats",
+      "name": "Omega Get Stats",
+      "description": "Get stats (omega system)",
+      "group": "FeatureGroup::Tools",
+      "commandId": 12405,
+      "idmDefine": "IDM_OMEGA_GET_STATS",
+      "cliCommand": "!omega_get_stats",
+      "handler": "handleOmegaGetStats",
+      "guiSupported": true,
+      "cliSupported": true,
+      "asmHotPath": false,
+      "hasRealHandler": true
     }
   ]
 }

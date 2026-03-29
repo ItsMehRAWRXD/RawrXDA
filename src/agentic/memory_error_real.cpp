@@ -604,20 +604,28 @@ private:
 };
 
 // ============================================================
-// CONVENIENCE MACROS FOR REGISTRATION
+// INLINE REGISTRATION HELPERS (replace macro wrappers)
 // ============================================================
 
-#define TITAN_REGISTER_VIRTUALALLOC(ptr, size) \
-    CleanupRegistry::Instance().Register(ptr, ResourceType::VirtualMemory, \
-        [](void* p) { VirtualFree(p, 0, MEM_RELEASE); }, 100, #ptr)
+inline void TitanRegisterVirtualAlloc(void* ptr, size_t size, const char* name) {
+    CleanupRegistry::Instance().Register(ptr, ResourceType::VirtualMemory,
+        [](void* p) { VirtualFree(p, 0, MEM_RELEASE); }, 100, name);
+}
 
-#define TITAN_REGISTER_HANDLE(handle) \
-    CleanupRegistry::Instance().Register((void*)(uintptr_t)handle, ResourceType::FileHandle, \
-        [](void* h) { CloseHandle((HANDLE)(uintptr_t)h); }, 50, #handle)
+inline void TitanRegisterHandle(HANDLE handle, const char* name) {
+    CleanupRegistry::Instance().Register((void*)(uintptr_t)handle, ResourceType::FileHandle,
+        [](void* h) { CloseHandle((HANDLE)(uintptr_t)h); }, 50, name);
+}
 
-#define TITAN_REGISTER_GGML(ctx) \
-    CleanupRegistry::Instance().Register(ctx, ResourceType::GGMLContext, \
-        [](void* c) { ggml_free((ggml_context*)c); }, 200, #ctx)
+inline void TitanRegisterGGML(void* ctx, const char* name) {
+    CleanupRegistry::Instance().Register(ctx, ResourceType::GGMLContext,
+        [](void* c) { ggml_free((ggml_context*)c); }, 200, name);
+}
+
+// Backward compat macros → delegate to inline functions
+#define TITAN_REGISTER_VIRTUALALLOC(ptr, size) TitanRegisterVirtualAlloc(ptr, size, #ptr)
+#define TITAN_REGISTER_HANDLE(handle) TitanRegisterHandle((HANDLE)(uintptr_t)(handle), #handle)
+#define TITAN_REGISTER_GGML(ctx) TitanRegisterGGML(ctx, #ctx)
 
 // ============================================================
 // ERROR CHECKING HELPERS

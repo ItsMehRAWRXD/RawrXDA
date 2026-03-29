@@ -63,20 +63,34 @@
 // ============================================================================
 // Debug Logging
 // ============================================================================
+inline void VoiceLogA(const char* fmt, ...) {
+    char buf[1024];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, args);
+    va_end(args);
+    char out[1040];
+    snprintf(out, sizeof(out), "[VoiceAutomation] %s\n", buf);
+    OutputDebugStringA(out);
+}
+
+inline void VoiceLogW(const wchar_t* fmt, ...) {
+    wchar_t buf[1024];
+    va_list args;
+    va_start(args, fmt);
+    vswprintf(buf, sizeof(buf)/sizeof(wchar_t), fmt, args);
+    va_end(args);
+    wchar_t out[1040];
+    swprintf(out, sizeof(out)/sizeof(wchar_t), L"[VoiceAutomation] %s\n", buf);
+    OutputDebugStringW(out);
+}
+
 #ifndef VOICE_LOG
-#define VOICE_LOG(fmt, ...) do { \
-    char _buf[1024]; \
-    snprintf(_buf, sizeof(_buf), "[VoiceAutomation] " fmt "\n", ##__VA_ARGS__); \
-    OutputDebugStringA(_buf); \
-} while(0)
+#define VOICE_LOG(fmt, ...) VoiceLogA(fmt, ##__VA_ARGS__)
 #endif
 
 #ifndef VOICE_LOG_W
-#define VOICE_LOG_W(fmt, ...) do { \
-    wchar_t _buf[1024]; \
-    swprintf(_buf, sizeof(_buf)/sizeof(wchar_t), L"[VoiceAutomation] " fmt L"\n", ##__VA_ARGS__); \
-    OutputDebugStringW(_buf); \
-} while(0)
+#define VOICE_LOG_W(fmt, ...) VoiceLogW(fmt, ##__VA_ARGS__)
 #endif
 
 // ============================================================================

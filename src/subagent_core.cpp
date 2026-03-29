@@ -12,12 +12,317 @@
 #include "agentic_autonomous_config.h"
 #include "native_agent.hpp"
 #include "agent/autonomous_subagent.hpp"
+#include <nlohmann/json.hpp>
 #include <random>
 #include <iomanip>
 #include <algorithm>
 #include <regex>
 #include <condition_variable>
 #include <cctype>
+
+namespace {
+
+using json = nlohmann::json;
+
+std::string toLowerAscii(std::string s) {
+    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+    });
+    return s;
+}
+
+std::string trimCopy(const std::string& s) {
+    size_t start = 0;
+    while (start < s.size() && std::isspace(static_cast<unsigned char>(s[start]))) {
+        ++start;
+    }
+    size_t end = s.size();
+    while (end > start && std::isspace(static_cast<unsigned char>(s[end - 1]))) {
+        --end;
+    }
+    return s.substr(start, end - start);
+}
+
+bool tryParseJsonText(const std::string& candidate, json& out) {
+    try {
+        out = json::parse(candidate);
+        return out.is_object() || out.is_array();
+    } catch (...) {
+        return false;
+    }
+}
+
+bool extractBalancedObject(const std::string& text, size_t start, std::string& objectText) {
+    if (start >= text.size() || text[start] != '{') {
+        return false;
+    }
+
+    int depth = 0;
+    bool inString = false;
+    bool escaped = false;
+    for (size_t i = start; i < text.size(); ++i) {
+        const char c = text[i];
+        if (inString) {
+            if (escaped) {
+                escaped = false;
+                continue;
+            }
+            if (c == '\\') {
+                escaped = true;
+                continue;
+            }
+            if (c == '"') {
+                inString = false;
+            }
+            continue;
+        }
+
+        if (c == '"') {
+            inString = true;
+            continue;
+        }
+        if (c == '{') {
+            ++depth;
+        } else if (c == '}') {
+            --depth;
+            if (depth == 0) {
+                objectText = text.substr(start, i - start + 1);
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool parseEmbeddedJson(const std::string& text, json& out) {
+    const std::string trimmed = trimCopy(text);
+    if (trimmed.empty()) {
+        return false;
+    }
+
+    if (tryParseJsonText(trimmed, out)) {
+        return true;
+    }
+
+    size_t fence = trimmed.find("```json");
+    if (fence != std::string::npos) {
+        size_t contentStart = trimmed.find('\n', fence);
+        if (contentStart != std::string::npos) {
+            ++contentStart;
+            size_t fenceEnd = trimmed.find("```", contentStart);
+            if (fenceEnd != std::string::npos) {
+                if (tryParseJsonText(trimmed.substr(contentStart, fenceEnd - contentStart), out)) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    for (size_t i = 0; i < text.size(); ++i) {
+        if (text[i] != '{') {
+            continue;
+        }
+        std::string candidate;
+        if (!extractBalancedObject(text, i, candidate)) {
+            continue;
+        }
+        if (tryParseJsonText(candidate, out)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+json normalizeArgs(const json& rawArgs) {
+    if (rawArgs.is_object()) {
+        return rawArgs;
+    }
+    if (rawArgs.is_string()) {
+        json parsed;
+        if (tryParseJsonText(rawArgs.get<std::string>(), parsed) && parsed.is_object()) {
+            return parsed;
+        }
+        return json{{"value", rawArgs.get<std::string>()}};
+    }
+    return json::object();
+}
+
+bool extractToolCallEnvelope(const json& root, std::string& toolName, json& args) {
+    if (!root.is_object()) {
+        return false;
+    }
+
+    if (root.contains("tool_call") && root["tool_call"].is_object()) {
+        const auto& tc = root["tool_call"];
+        if (tc.contains("name") && tc["name"].is_string()) {
+            toolName = tc["name"].get<std::string>();
+            if (tc.contains("arguments")) {
+                args = normalizeArgs(tc["arguments"]);
+            } else if (tc.contains("params")) {
+                args = normalizeArgs(tc["params"]);
+            } else {
+                args = json::object();
+            }
+            return true;
+        }
+    }
+
+    if (root.contains("function") && root["function"].is_object()) {
+        const auto& fn = root["function"];
+        if (fn.contains("name") && fn["name"].is_string()) {
+            toolName = fn["name"].get<std::string>();
+            if (fn.contains("arguments")) {
+                args = normalizeArgs(fn["arguments"]);
+            } else {
+                args = json::object();
+            }
+            return true;
+        }
+    }
+
+    if (root.contains("tool_calls")) {
+        const auto& toolCalls = root["tool_calls"];
+        if (toolCalls.is_array() && !toolCalls.empty()) {
+            const auto& firstCall = *toolCalls.begin();
+            if (firstCall.is_object() && extractToolCallEnvelope(firstCall, toolName, args)) {
+                return true;
+            }
+        }
+    }
+
+    if (root.contains("recipient_name") && root["recipient_name"].is_string()) {
+        toolName = root["recipient_name"].get<std::string>();
+        if (root.contains("parameters")) {
+            args = normalizeArgs(root["parameters"]);
+        } else {
+            args = json::object();
+        }
+        return true;
+    }
+
+    if (root.contains("name") && root["name"].is_string()) {
+        toolName = root["name"].get<std::string>();
+        if (root.contains("arguments")) {
+            args = normalizeArgs(root["arguments"]);
+        } else if (root.contains("params")) {
+            args = normalizeArgs(root["params"]);
+        } else if (root.contains("input")) {
+            args = normalizeArgs(root["input"]);
+        } else if (root.contains("parameters")) {
+            args = normalizeArgs(root["parameters"]);
+        } else {
+            args = json::object();
+        }
+        return true;
+    }
+
+    if (root.contains("tool") && root["tool"].is_string()) {
+        toolName = root["tool"].get<std::string>();
+        if (root.contains("args")) {
+            args = normalizeArgs(root["args"]);
+        } else {
+            args = json::object();
+        }
+        return true;
+    }
+
+    return false;
+}
+
+bool parseToolCall(const std::string& text, std::string& toolName, json& args) {
+    json root;
+    if (!parseEmbeddedJson(text, root)) {
+        return false;
+    }
+    return extractToolCallEnvelope(root, toolName, args);
+}
+
+std::string getStringArg(const json& args, std::initializer_list<const char*> keys) {
+    for (const auto* key : keys) {
+        if (args.contains(key) && args[key].is_string()) {
+            return args[key].get<std::string>();
+        }
+    }
+    return "";
+}
+
+int getIntArg(const json& args, std::initializer_list<const char*> keys, int fallback) {
+    for (const auto* key : keys) {
+        if (!args.contains(key)) {
+            continue;
+        }
+        const auto& v = args[key];
+        if (v.is_number_integer()) {
+            return v.get<int>();
+        }
+        if (v.is_string()) {
+            try {
+                return std::stoi(v.get<std::string>());
+            } catch (...) {
+            }
+        }
+    }
+    return fallback;
+}
+
+bool getBoolArg(const json& args, std::initializer_list<const char*> keys, bool fallback) {
+    for (const auto* key : keys) {
+        if (!args.contains(key)) {
+            continue;
+        }
+        const auto& v = args[key];
+        if (v.is_boolean()) {
+            return v.get<bool>();
+        }
+        if (v.is_number_integer()) {
+            return v.get<int>() != 0;
+        }
+        if (v.is_string()) {
+            const std::string s = toLowerAscii(v.get<std::string>());
+            if (s == "true" || s == "1" || s == "yes") {
+                return true;
+            }
+            if (s == "false" || s == "0" || s == "no") {
+                return false;
+            }
+        }
+    }
+    return fallback;
+}
+
+std::vector<std::string> getStringListArg(const json& args, std::initializer_list<const char*> keys) {
+    for (const auto* key : keys) {
+        if (!args.contains(key) || !args[key].is_array()) {
+            continue;
+        }
+        std::vector<std::string> out;
+        for (const auto& v : args[key]) {
+            if (v.is_string()) {
+                out.push_back(v.get<std::string>());
+            } else if (v.is_object()) {
+                std::string p = getStringArg(v, {"prompt", "path", "value", "text"});
+                if (!p.empty()) {
+                    out.push_back(p);
+                }
+            }
+        }
+        if (!out.empty()) {
+            return out;
+        }
+    }
+    return {};
+}
+
+std::string normalizeToolName(std::string name) {
+    name = toLowerAscii(name);
+    size_t dotPos = name.find_last_of('.');
+    if (dotPos != std::string::npos) {
+        name = name.substr(dotPos + 1);
+    }
+    return name;
+}
+
+} // namespace
 
 // ============================================================================
 // UUID Generator
@@ -1000,6 +1305,19 @@ bool SubAgentManager::dispatchToolCall(
 bool SubAgentManager::parseRunSubagent(const std::string& text,
                                         std::string& description,
                                         std::string& prompt) const {
+    {
+        std::string tool;
+        json args;
+        if (parseToolCall(text, tool, args)) {
+            const std::string name = normalizeToolName(tool);
+            if (name == "runsubagent" || name == "run_subagent" || name == "runsubagent") {
+                description = getStringArg(args, {"description", "task", "title"});
+                prompt = getStringArg(args, {"prompt", "query", "input", "instructions"});
+                return !prompt.empty();
+            }
+        }
+    }
+
     size_t pos = text.find("runSubagent");
     if (pos == std::string::npos) pos = text.find("run_subagent");
     if (pos == std::string::npos) pos = text.find("runSubAgent");
@@ -1071,6 +1389,49 @@ bool SubAgentManager::parseRunSubagent(const std::string& text,
 
 bool SubAgentManager::parseTodoList(const std::string& text,
                                      std::vector<TodoItem>& items) const {
+    {
+        std::string tool;
+        json args;
+        if (parseToolCall(text, tool, args)) {
+            const std::string name = normalizeToolName(tool);
+            if (name == "manage_todo_list" || name == "managetodolist") {
+                json arr;
+                if (args.contains("todoList") && args["todoList"].is_array()) {
+                    arr = args["todoList"];
+                } else if (args.contains("items") && args["items"].is_array()) {
+                    arr = args["items"];
+                }
+                if (arr.is_array()) {
+                    for (const auto& obj : arr) {
+                        if (!obj.is_object()) {
+                            continue;
+                        }
+                        TodoItem item;
+                        item.id = getIntArg(obj, {"id"}, -1);
+                        item.title = getStringArg(obj, {"title", "name"});
+                        item.description = getStringArg(obj, {"description", "detail"});
+                        const std::string statusStr = toLowerAscii(getStringArg(obj, {"status", "state"}));
+                        if (statusStr == "in-progress" || statusStr == "in_progress") {
+                            item.status = TodoItem::Status::InProgress;
+                        } else if (statusStr == "completed") {
+                            item.status = TodoItem::Status::Completed;
+                        } else if (statusStr == "failed") {
+                            item.status = TodoItem::Status::Failed;
+                        } else {
+                            item.status = TodoItem::Status::NotStarted;
+                        }
+                        if (item.id >= 0 && !item.title.empty()) {
+                            items.push_back(item);
+                        }
+                    }
+                    if (!items.empty()) {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+
     size_t pos = text.find("manage_todo_list");
     if (pos == std::string::npos) pos = text.find("manageTodoList");
     if (pos == std::string::npos) return false;
@@ -1149,6 +1510,21 @@ bool SubAgentManager::parseTodoList(const std::string& text,
 bool SubAgentManager::parseChainCall(const std::string& text,
                                       std::vector<std::string>& steps,
                                       std::string& initialInput) const {
+    {
+        std::string tool;
+        json args;
+        if (parseToolCall(text, tool, args)) {
+            const std::string name = normalizeToolName(tool);
+            if (name == "chain" || name == "executechain") {
+                steps = getStringListArg(args, {"steps", "prompts"});
+                initialInput = getStringArg(args, {"input", "initialInput", "initial_input"});
+                if (!steps.empty()) {
+                    return true;
+                }
+            }
+        }
+    }
+
     size_t pos = text.find("TOOL:chain");
     if (pos == std::string::npos) pos = text.find("tool:chain");
     if (pos == std::string::npos) pos = text.find("executeChain");
@@ -1200,6 +1576,28 @@ bool SubAgentManager::parseChainCall(const std::string& text,
 bool SubAgentManager::parseSwarmCall(const std::string& text,
                                       std::vector<std::string>& prompts,
                                       SwarmConfig& config) const {
+    {
+        std::string tool;
+        json args;
+        if (parseToolCall(text, tool, args)) {
+            const std::string name = normalizeToolName(tool);
+            if (name == "hexmag_swarm" || name == "hexmagswarm" || name == "swarm" || name == "executeswarm") {
+                prompts = getStringListArg(args, {"prompts", "tasks", "steps"});
+                config.maxParallel = getIntArg(args, {"maxParallel", "max_parallel"}, 4);
+                config.timeoutMs = getIntArg(args, {"timeoutMs", "timeout_ms"}, 60000);
+                config.mergeStrategy = getStringArg(args, {"strategy", "mergeStrategy", "merge_strategy"});
+                if (config.mergeStrategy.empty()) {
+                    config.mergeStrategy = "concatenate";
+                }
+                config.mergePrompt = getStringArg(args, {"mergePrompt", "merge_prompt"});
+                config.failFast = getBoolArg(args, {"failFast", "fail_fast"}, false);
+                if (!prompts.empty()) {
+                    return true;
+                }
+            }
+        }
+    }
+
     size_t pos = text.find("hexmag_swarm");
     if (pos == std::string::npos) pos = text.find("TOOL:swarm");
     if (pos == std::string::npos) pos = text.find("tool:swarm");
@@ -1412,6 +1810,22 @@ bool SubAgentManager::parseBulkFixCall(
     std::vector<std::string>& targetPaths,
     std::string& context) const
 {
+    {
+        std::string tool;
+        json args;
+        if (parseToolCall(text, tool, args)) {
+            const std::string name = normalizeToolName(tool);
+            if (name == "bulk_fix" || name == "bulkfix" || name == "bulk_autonomous_fix" || name == "autonomous_bulk") {
+                strategyName = getStringArg(args, {"strategy", "type"});
+                context = getStringArg(args, {"context", "description"});
+                targetPaths = getStringListArg(args, {"targets", "files", "paths"});
+                if (!strategyName.empty() && !targetPaths.empty()) {
+                    return true;
+                }
+            }
+        }
+    }
+
     size_t pos = text.find("bulk_fix");
     if (pos == std::string::npos) pos = text.find("bulkFix");
     if (pos == std::string::npos) pos = text.find("TOOL:bulk_fix");
@@ -1498,6 +1912,34 @@ bool SubAgentManager::parseBulkFixCall(
 }
 
 bool SubAgentManager::parseShellCall(const std::string& text, std::string& cmd, bool& isPowerShell) const {
+    {
+        std::string tool;
+        json args;
+        if (parseToolCall(text, tool, args)) {
+            const std::string name = normalizeToolName(tool);
+            if (name == "shell" || name == "powershell" || name == "run_in_terminal" || name == "execute_command") {
+                isPowerShell = (name == "powershell") || getBoolArg(args, {"isPowerShell", "is_powershell"}, false);
+                cmd = getStringArg(args, {"cmd", "command"});
+                if (cmd.empty() && args.contains("args") && args["args"].is_array()) {
+                    std::ostringstream joined;
+                    for (const auto& a : args["args"]) {
+                        if (!a.is_string()) {
+                            continue;
+                        }
+                        if (joined.tellp() > 0) {
+                            joined << ' ';
+                        }
+                        joined << a.get<std::string>();
+                    }
+                    cmd = joined.str();
+                }
+                if (!cmd.empty()) {
+                    return true;
+                }
+            }
+        }
+    }
+
     size_t pos = text.find("TOOL:shell");
     if (pos == std::string::npos) pos = text.find("tool:shell");
     if (pos == std::string::npos) pos = text.find("TOOL:run_in_terminal");
@@ -1534,6 +1976,31 @@ bool SubAgentManager::parseShellCall(const std::string& text, std::string& cmd, 
 }
 
 bool SubAgentManager::parseFileCall(const std::string& text, std::string& type, std::string& path, std::string& content) const {
+    {
+        std::string tool;
+        json args;
+        if (parseToolCall(text, tool, args)) {
+            const std::string name = normalizeToolName(tool);
+            if (name == "read_file") {
+                type = "read";
+            } else if (name == "write_file") {
+                type = "write";
+            } else if (name == "list_dir" || name == "list_directory") {
+                type = "list";
+            }
+
+            if (!type.empty()) {
+                path = getStringArg(args, {"path", "filePath", "dirPath"});
+                if (type == "write") {
+                    content = getStringArg(args, {"content", "newText", "fileContent"});
+                }
+                if (!path.empty() || type == "list") {
+                    return true;
+                }
+            }
+        }
+    }
+
     size_t pos = text.find("TOOL:read_file");
     if (pos == std::string::npos) pos = text.find("tool:read_file");
     if (pos != std::string::npos) type = "read";

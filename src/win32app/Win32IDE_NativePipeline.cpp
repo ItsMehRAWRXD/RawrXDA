@@ -12,41 +12,13 @@
 // ============================================================================
 
 #include "Win32IDE.h"
-<<<<<<< HEAD
+#include "Win32IDE_SovereignBridge.h"
 #include "IDELogger.h"
-=======
->>>>>>> origin/main
 #include "../core/context_deterioration_hotpatch.hpp"
 #include "../../include/feature_flags_runtime.h"
 #include <cstdio>
 #include <sstream>
 
-<<<<<<< HEAD
-=======
-// Win32-native debug logging
-#ifndef RAWRXD_LOG_INFO
-#define RAWRXD_LOG_INFO(msg) do { \
-    std::ostringstream _oss; _oss << "[INFO] " << msg << "\n"; \
-    OutputDebugStringA(_oss.str().c_str()); \
-    std::cout << _oss.str(); \
-} while(0)
-#endif
-#ifndef RAWRXD_LOG_WARNING
-#define RAWRXD_LOG_WARNING(msg) do { \
-    std::ostringstream _oss; _oss << "[WARN] " << msg << "\n"; \
-    OutputDebugStringA(_oss.str().c_str()); \
-    std::cerr << _oss.str(); \
-} while(0)
-#endif
-#ifndef RAWRXD_LOG_ERROR
-#define RAWRXD_LOG_ERROR(msg) do { \
-    std::ostringstream _oss; _oss << "[ERROR] " << msg << "\n"; \
-    OutputDebugStringA(_oss.str().c_str()); \
-    std::cerr << _oss.str(); \
-} while(0)
-#endif
-
->>>>>>> origin/main
 // ============================================================================
 // initNativePipeline — Create and initialize the zero-dependency pipeline
 // ============================================================================
@@ -255,6 +227,13 @@ void Win32IDE::onNativeAIToken(WPARAM wParam, LPARAM lParam) {
     // Append the token text to the active chat response
     std::string tokenText(entry->text, entry->textLen);
 
+    if (tokenText.find("BEACON:intervention=refusal_redirect") != std::string::npos) {
+        if (!m_sovereignStreamingGlow.load(std::memory_order_acquire)) {
+            RawrXD::postSovereignStreamStart();
+        }
+        RawrXD::postSovereignStreamToken(tokenText.c_str(), tokenText.size());
+    }
+
     // Update the copilot chat output with the streaming token
     if (m_hwndCopilotChatOutput && !tokenText.empty()) {
         // Append to the edit control
@@ -290,6 +269,10 @@ void Win32IDE::onNativeAIComplete(WPARAM wParam, LPARAM lParam) {
 
     RAWRXD_LOG_INFO("Win32IDE_NativePipeline")
         << "Inference complete: " << outputLen << " chars, " << tokensPerSec << " tok/s";
+
+    if (m_sovereignStreamingGlow.load(std::memory_order_acquire)) {
+        RawrXD::postSovereignStreamSuccess(tokensPerSec, static_cast<int>(outputLen), "LOCAL_INFERENCE");
+    }
 
     // Append completion marker to chat
     if (m_hwndCopilotChatOutput) {

@@ -93,6 +93,7 @@ const char* PipelineStageName(PipelineStage stage)
 struct AutonomousAgenticPipelineCoordinator::Impl
 {
     AutonomousAgenticPipelineCoordinator::Config config;
+    int contextWindowTokens = 4096;
     BuildPromptFn buildPrompt;
     RouteLLMFn routeLLM;
     RouteLLMStreamingFn routeLLMStreaming;
@@ -241,6 +242,14 @@ PipelineResult<std::string> AutonomousAgenticPipelineCoordinator::Impl::runPipel
         return PipelineResult<std::string>::Fail(PipelineStage::PromptBuilder, "Empty prompt");
     }
 
+    // Enforce approximate context window budget using a conservative char-to-token heuristic.
+    const int tokenBudget = (contextWindowTokens > 256) ? contextWindowTokens : 256;
+    const size_t maxPromptChars = static_cast<size_t>(tokenBudget) * 4;
+    if (prompt.size() > maxPromptChars)
+    {
+        prompt = prompt.substr(prompt.size() - maxPromptChars);
+    }
+
     std::string fullResponse;
     // Task 3: prefer streaming path when set
     if (routeLLMStreaming && onToken)
@@ -311,6 +320,24 @@ PipelineResult<std::string> AutonomousAgenticPipelineCoordinator::Impl::runPipel
         totalPipelineTimeMs += std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     }
     return PipelineResult<std::string>::Ok(fullResponse);
+}
+
+void AutonomousAgenticPipelineCoordinator::setContextWindow(int tokens)
+{
+    if (tokens < 256)
+    {
+        tokens = 256;
+    }
+    if (tokens > 1024 * 1024)
+    {
+        tokens = 1024 * 1024;
+    }
+    m_impl->contextWindowTokens = tokens;
+}
+
+int AutonomousAgenticPipelineCoordinator::getContextWindow() const
+{
+    return m_impl->contextWindowTokens;
 }
 
 void AutonomousAgenticPipelineCoordinator::startAutonomousLoop()

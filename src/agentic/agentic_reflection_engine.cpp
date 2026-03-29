@@ -3,6 +3,7 @@
 
 #include "agentic_reflection_engine.hpp"
 #include "agentic_planning_orchestrator.hpp"
+#include "agentic_tool_executor.hpp"
 #include "observability/Logger.hpp"
 #include <sstream>
 #include <ctime>
@@ -171,25 +172,37 @@ VerificationResult ReflectionEngine::verifyCompilation(const PlanStep& step, con
         return result;
     }
     
-    // For now, simulate with success
-    // In production: invoke actual compiler via m_compileFn
     auto start = std::chrono::high_resolution_clock::now();
     
+    std::string output;
+    bool success = false;
+
     if (m_compileFn) {
-        std::string output;
-        if (m_compileFn("cmake --build . --config Release", output)) {
-            result.status = VerificationStatus::Passed;
-            result.description = "Compilation successful";
-            result.log_output = output;
-        } else {
-            result.status = VerificationStatus::Failed;
-            result.description = "Compilation failed";
-            result.error_message = output;
-        }
+        success = m_compileFn("cmake --build . --config Release", output);
     } else {
-        // Stub: assume success
+        ToolExecutor executor;
+        if (m_logFn) m_logFn("[ReflectionEngine] Running compilation via ToolExecutor");
+        ExecutionRequest req;
+        req.tool_name = "cmake";
+        req.args = {"--build", ".", "--config", "Release"};
+        req.working_dir = workspace_root;
+        auto execRes = executor.execute(req);
+        output = execRes.stdout_text;
+        if (!execRes.stderr_text.empty()) {
+            if (!output.empty()) output += "\n";
+            output += execRes.stderr_text;
+        }
+        success = execRes.success;
+    }
+
+    if (success) {
         result.status = VerificationStatus::Passed;
-        result.description = "Compilation successful (simulated)";
+        result.description = "Compilation successful";
+        result.log_output = output;
+    } else {
+        result.status = VerificationStatus::Failed;
+        result.description = "Compilation failed";
+        result.error_message = output;
     }
     
     auto end = std::chrono::high_resolution_clock::now();
@@ -219,24 +232,37 @@ VerificationResult ReflectionEngine::verifyTests(const PlanStep& step, const std
         }
     }
     
+    std::string output;
+    bool success = false;
+
     if (m_testFn) {
-        std::string output;
-        if (m_testFn(test_targets, output)) {
-            result.status = VerificationStatus::Passed;
-            result.description = "All tests passed";
-            result.log_output = output;
-            result.tests_passed = test_targets.size();
-        } else {
-            result.status = VerificationStatus::Failed;
-            result.description = "Some tests failed";
-            result.error_message = output;
-            result.tests_failed = 1;
-        }
+        success = m_testFn(test_targets, output);
     } else {
-        // Stub: assume pass
+        ToolExecutor executor;
+        if (m_logFn) m_logFn("[ReflectionEngine] Running tests via ToolExecutor");
+        ExecutionRequest req;
+        req.tool_name = "ctest";
+        req.args = {"--output-on-failure"};
+        req.working_dir = workspace_root;
+        auto execRes = executor.execute(req);
+        output = execRes.stdout_text;
+        if (!execRes.stderr_text.empty()) {
+            if (!output.empty()) output += "\n";
+            output += execRes.stderr_text;
+        }
+        success = execRes.success;
+    }
+
+    if (success) {
         result.status = VerificationStatus::Passed;
-        result.description = "Tests passed (simulated)";
-        result.tests_passed = test_targets.size();
+        result.description = "All tests passed";
+        result.log_output = output;
+        result.tests_passed = static_cast<int>(test_targets.size());
+    } else {
+        result.status = VerificationStatus::Failed;
+        result.description = "Some tests failed";
+        result.error_message = output;
+        result.tests_failed = static_cast<int>(test_targets.empty() ? 1 : test_targets.size());
     }
     
     auto end = std::chrono::high_resolution_clock::now();
@@ -256,22 +282,39 @@ VerificationResult ReflectionEngine::verifyCodeQuality(const PlanStep& step, con
         return result;
     }
     
-    // Run configured linters
+    // Run configured linters or fallback to default linter command
     for (const auto& linter : m_config.quality.linters) {
+        std::string output;
+        bool success = false;
         if (m_linterFn) {
-            std::string output;
-            if (!m_linterFn(linter, output)) {
-                result.status = VerificationStatus::Failed;
-                result.description = "Linter " + linter + " failed";
-                result.error_message = output;
-                return result;
+            success = m_linterFn(linter, output);
+        } else {
+            ToolExecutor executor;
+            if (m_logFn) m_logFn("[ReflectionEngine] Running linter " + linter);
+            ExecutionRequest req;
+            req.tool_name = linter;
+            req.working_dir = workspace_root;
+            auto execRes = executor.execute(req);
+            output = execRes.stdout_text;
+            if (!execRes.stderr_text.empty()) {
+                if (!output.empty()) output += "\n";
+                output += execRes.stderr_text;
             }
+            success = execRes.success;
+        }
+
+        if (!success) {
+            result.status = VerificationStatus::Failed;
+            result.description = "Linter " + linter + " failed";
+            result.error_message = output;
+            return result;
         }
     }
-    
+
     result.status = VerificationStatus::Passed;
     result.description = "Code quality checks passed";
-    
+    result.log_output = "Linters executed successfully";
+
     return result;
 }
 
@@ -283,11 +326,33 @@ VerificationResult ReflectionEngine::verifyPerformance(const PlanStep& step, con
     if (!m_config.performance.enabled) {
         return result;
     }
-    
-    // Stub implementation
-    result.status = VerificationStatus::Passed;
-    result.description = "Performance checks passed (simulated)";
-    
+
+    std::string output;
+    bool success = false;
+    ToolExecutor executor;
+    if (m_logFn) m_logFn("[ReflectionEngine] Running performance checks via ToolExecutor");
+    ExecutionRequest req;
+    req.tool_name = "ctest";
+    req.args = {"-L", "performance", "--output-on-failure"};
+    req.working_dir = workspace_root;
+    auto execRes = executor.execute(req);
+    output = execRes.stdout_text;
+    if (!execRes.stderr_text.empty()) {
+        if (!output.empty()) output += "\n";
+        output += execRes.stderr_text;
+    }
+    success = execRes.success;
+
+    if (success) {
+        result.status = VerificationStatus::Passed;
+        result.description = "Performance benchmarks passed";
+        result.log_output = output;
+    } else {
+        result.status = VerificationStatus::Failed;
+        result.description = "Performance benchmarks failed";
+        result.error_message = output;
+    }
+
     return result;
 }
 

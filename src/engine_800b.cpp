@@ -26,7 +26,7 @@ class Engine800B : public Engine {
 
 public:
     bool load_model(const std::string& path) override {
-        ENFORCE_FEATURE_BOOL(DualEngine800B);
+        if (!enforceFeatureCheck(RawrXD::License::FeatureID::DualEngine800B, __FUNCTION__)) return false;
         // path = directory
         std::vector<std::string> shard_paths = {
             path + "\\shard0.gguf",

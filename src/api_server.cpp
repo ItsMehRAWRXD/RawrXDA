@@ -1745,8 +1745,4 @@ bool APIServer::ProxyToCotEngine(const std::string& request_body, std::string& r
     
     LogApiOperation("DEBUG", "COT_PROXY", "Response received: " + std::to_string(response.size()) + " bytes");
     return !response.empty();
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> origin/main

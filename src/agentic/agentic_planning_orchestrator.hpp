@@ -231,6 +231,7 @@ class AgenticPlanningOrchestrator
     // Execution
     bool executeNextApprovedStep(ExecutionPlan* plan);
     void rollbackStep(ExecutionPlan* plan, int step_index);
+    void repairPlanAfterFailure(ExecutionPlan* plan);
     void executeEntirePlan(ExecutionPlan* plan);
 
     // Approval queue management

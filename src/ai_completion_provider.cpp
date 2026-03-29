@@ -31,7 +31,6 @@ static std::wstring s2ws(const std::string& str) {
     return wstrTo;
 }
 
-<<<<<<< HEAD
 static std::string toLowerCopy(std::string value) {
     std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) {
         return static_cast<char>(std::tolower(c));
@@ -79,11 +78,6 @@ AICompletionProvider::AICompletionProvider(void* parent)
     if (allowRemote != nullptr) {
         m_allowRemoteEndpoint = isTruthy(allowRemote);
     }
-=======
-AICompletionProvider::AICompletionProvider(void* parent)
-{
-    // Parent ignored in pure C++ version
->>>>>>> origin/main
 }
 
 AICompletionProvider::~AICompletionProvider()
@@ -92,7 +86,6 @@ AICompletionProvider::~AICompletionProvider()
 }
 
 void AICompletionProvider::setModelEndpoint(const std::string& endpoint) {
-<<<<<<< HEAD
     if (!m_allowRemoteEndpoint && !isLocalEndpoint(endpoint)) {
         if (m_errorCallback) {
             m_errorCallback("Remote endpoint blocked for local jobs");
@@ -106,11 +99,6 @@ void AICompletionProvider::setAllowRemoteEndpoint(bool enabled) {
     m_allowRemoteEndpoint = enabled;
 }
 
-=======
-    m_modelEndpoint = endpoint;
-}
-
->>>>>>> origin/main
 void AICompletionProvider::setModel(const std::string& modelName) {
     m_modelName = modelName;
 }

@@ -9,17 +9,7 @@
     - Runs RawrXD-Win32IDE --selftest and fails on non-zero exit
 #>
 
-<<<<<<< HEAD
 $ErrorActionPreference = "Stop"
-=======
-$ProjectRoot = "d:\lazy init ide"
-$TestResults = @{
-    Passed = 0
-    Failed = 0
-    Total = 0
-    Details = @()
-}
->>>>>>> origin/main
 
 function Resolve-ProjectRoot {
     if ($PSCommandPath) {
@@ -109,6 +99,10 @@ try {
     if (!(Test-Path $mapOut)) {
         throw "Command map output missing: $mapOut"
     }
+
+    Write-Host "Running agent parity validation..." -ForegroundColor Yellow
+    & python (Join-Path $ProjectRoot "scripts\check_agent_parity.py") --repo-root $ProjectRoot
+    if ($LASTEXITCODE -ne 0) { throw "Agent parity validation failed." }
 
     Write-Host "VALIDATION PASS" -ForegroundColor Green
     exit 0

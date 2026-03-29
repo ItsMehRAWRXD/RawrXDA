@@ -12,14 +12,8 @@
 #include "Win32IDE_SubAgent.h"
 #include <functional>
 #include <memory>
-<<<<<<< HEAD
 #include <string>
 #include <vector>
-=======
-#include "../native_agent.hpp"
-#include "../cpu_inference_engine.h"
-#include "Win32IDE_SubAgent.h"
->>>>>>> origin/main
 
 // Forward declaration
 class Win32IDE;
@@ -31,7 +25,8 @@ enum class AgentResponseType
     ANSWER,
     AGENT_ERROR,
     THINKING
-};  // Agent response structure
+};
+// Agent response structure
 struct AgentResponse
 {
     AgentResponseType type;
@@ -39,6 +34,8 @@ struct AgentResponse
     std::string toolName;
     std::string toolArgs;
     std::string rawOutput;
+    std::string executorLabel;                        // Which executor handled this request
+    std::vector<std::pair<std::string,std::string>> agentResults;  // Per-agent telemetry: {role, result}
 };
 
 // Agentic Framework Bridge for Win32IDE
@@ -76,8 +73,28 @@ class AgenticBridge
     bool GetDeepResearch() const { return m_deepResearch; }
     void SetNoRefusal(bool enabled);
     bool GetNoRefusal() const { return m_noRefusal; }
+    void SetWorkflowExecutorEnabled(bool enabled);
+    bool GetWorkflowExecutorEnabled() const { return m_workflowExecutorEnabled; }
+    void SetWorkflowExecutorAgentCount(int agentCount);
+    int GetWorkflowExecutorAgentCount() const { return m_workflowExecutorAgentCount; }
     void SetAutoCorrect(bool enabled);
     bool GetAutoCorrect() const { return m_autoCorrect; }
+
+    // Timeout configuration for agent operations
+    void SetExecuteCommandTimeoutMs(int timeoutMs);
+    int GetExecuteCommandTimeoutMs() const;
+    void SetOrchestratorTimeoutMs(int timeoutMs);
+    int GetOrchestratorTimeoutMs() const;
+    void SetToolExecutionTimeoutMs(int timeoutMs);
+    int GetToolExecutionTimeoutMs() const;
+      void SetMaxResponseBufferBytes(int bufferBytes) { m_maxResponseBufferBytes = std::max(65536, bufferBytes); }
+      int GetMaxResponseBufferBytes() const { return m_maxResponseBufferBytes; }
+      void SetResponseChunkSizeBytes(int chunkBytes) { m_responseChunkSizeBytes = std::max(4096, chunkBytes); }
+      int GetResponseChunkSizeBytes() const { return m_responseChunkSizeBytes; }
+        void SetSubAgentMaxRetries(int retries) { m_subAgentMaxRetries = std::max(0, std::min(retries, 5)); }
+        int GetSubAgentMaxRetries() const { return m_subAgentMaxRetries; }
+        void SetSubAgentHealthCheckIntervalMs(int intervalMs) { m_subAgentHealthCheckIntervalMs = std::max(100, intervalMs); }
+        int GetSubAgentHealthCheckIntervalMs() const { return m_subAgentHealthCheckIntervalMs; }
 
     /// Prompt-layer hotpatch: inject SubAgent/tool syntax so local or tool-naive models still emit dispatchable lines.
     void SetHotpatchSubAgentToolProtocol(bool enabled);
@@ -94,20 +111,15 @@ class AgenticBridge
     void SetLanguageContext(const std::string& language, const std::string& filePath);
     std::string GetLanguageContext() const { return m_languageContext; }
     std::string GetFileContext() const { return m_fileContext; }
-<<<<<<< HEAD
 
     // Workspace root for agent context (project folder / drive)
     void SetWorkspaceRoot(const std::string& workspaceRoot);
     std::string GetWorkspaceRoot() const { return m_workspaceRoot; }
 
-=======
-    
->>>>>>> origin/main
     // Output callback
     using OutputCallback = std::function<void(const std::string&, const std::string&)>;
     void SetOutputCallback(OutputCallback callback);
 
-<<<<<<< HEAD
     // Compatibility callbacks used by Win32IDE_AgentCommands.cpp
     using ErrorCallback = std::function<void(const std::string&)>;
     using ProgressCallback = std::function<void(const std::string&)>;
@@ -117,8 +129,6 @@ class AgenticBridge
     void SetModelLoadErrorCallback(ModelLoadErrorCallback cb) { m_modelLoadErrorCallback = std::move(cb); }
     const std::string& GetLastModelLoadError() const { return m_lastModelLoadError; }
 
-=======
->>>>>>> origin/main
     // RE Tools Access
     std::string RunDumpbin(const std::string& path, const std::string& mode);
     std::string RunCodex(const std::string& path);
@@ -182,7 +192,7 @@ class AgenticBridge
     std::string ResolveFrameworkPath();
     std::string ResolveToolsModulePath();
 
-    /// Pre-inference prompt augmentation (SubAgent + thought protocols).
+    void ApplyAgentCapabilityHotpatches(std::string& refinedPrompt);
     void applyAgentCapabilityHotpatches(std::string& refinedPrompt);
 
     Win32IDE* m_ide;
@@ -199,22 +209,28 @@ class AgenticBridge
     HANDLE m_hStdoutWrite;
     HANDLE m_hStdinRead;
     HANDLE m_hStdinWrite;
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> origin/main
     // Config Cache
     // Default ON: agent chat panel should ship with full reasoning modes enabled (user can toggle off).
     bool m_maxMode = true;
     bool m_deepThinking = true;
     bool m_deepResearch = true;
     bool m_noRefusal = true;
+    bool m_workflowExecutorEnabled = false;
+    int m_workflowExecutorAgentCount = 4;
     bool m_autoCorrect = false;
     /// Default ON: inject tool/subagent line format for models without native function-calling.
     bool m_hotpatchSubAgentToolProtocol = true;
     /// Default ON: inject <thought> scaffolding when Deep Thinking is enabled.
     bool m_hotpatchThoughtProtocol = true;
+    // Timeout configuration (in milliseconds)
+    int m_executeCommandTimeoutMs = 60000;  // 60 seconds default for full ExecuteAgentCommand
+    int m_orchestratorTimeoutMs = 30000;    // 30 seconds default for orchestrator.RunAgent()
+    int m_toolExecutionTimeoutMs = 30000;     // 30 seconds default for individual tool calls
+      int m_maxResponseBufferBytes = 256 * 1024;  // 256KB default max response size
+      int m_responseChunkSizeBytes = 64 * 1024;   // 64KB default chunk size for streaming
+        int m_subAgentMaxRetries = 2;               // Up to 2 retry attempts for failed sub-agents
+        int m_subAgentHealthCheckIntervalMs = 500;  // Check sub-agent health every 500ms
     std::string m_languageContext;  // Current language (e.g. "C/C++")
     std::string m_fileContext;      // Current file path
     std::string m_workspaceRoot;    // Project/workspace folder for agent context

@@ -1,9 +1,5 @@
 #pragma once
 
-<<<<<<< HEAD
-=======
-// C++20 Qt-free data structs. For Qt widget implementation, include Qt headers and GhostTextRenderer class.
->>>>>>> origin/main
 #include <string>
 #include <utility>
 #include <vector>
@@ -36,13 +32,6 @@ struct DiffDecoration {
     std::string type = "modify";
 };
 
-<<<<<<< HEAD
-=======
-#ifndef RAWR_USE_QT
-/**
- * \brief Stub for Win32 build (no Qt). Ghost text uses inline state in Win32IDE.
- */
->>>>>>> origin/main
 class GhostTextRenderer {
 public:
     GhostTextRenderer() = default;
@@ -53,7 +42,6 @@ public:
     HWND editorHwnd() const { return m_editorHwnd; }
 
     void initialize() {}
-<<<<<<< HEAD
 
     void showGhostText(const std::string& text, const std::string& type = "completion") {
         m_currentGhostText = text;
@@ -89,34 +77,6 @@ public:
         else if (newText.empty()) diff.type = "remove";
         m_diffDecorations.push_back(std::move(diff));
     }
-=======
-    void setEditorHwnd(void* /*hwnd*/) {}
-};
-#else
-#include <QWidget>
-#include <QTextEdit>
-#include <QPlainTextEdit>
-#include <QPainter>
-#include <QTextCursor>
-#include <QString>
-#include <QTimer>
-#include <QMap>
-
-/**
- * \brief Ghost text renderer overlay for QPlainTextEdit
- * 
- * Features:
- * - Cursor-style inline ghost text
- * - Real-time streaming completions
- * - Multi-line ghost text with proper indentation
- * - Diff preview (green additions, red deletions)
- * - Fade-in/fade-out animations
- * - Tab to accept, Esc to dismiss
- */
-class GhostTextRenderer : public QWidget
-{
-    Q_OBJECT
->>>>>>> origin/main
 
     void clearGhostText() {
         m_currentGhostText.clear();
@@ -147,9 +107,4 @@ private:
     std::vector<DiffDecoration> m_diffDecorations;
 };
 
-<<<<<<< HEAD
-=======
-#endif // RAWR_USE_QT (Qt GhostTextRenderer class)
-
->>>>>>> origin/main
 } // namespace RawrXD

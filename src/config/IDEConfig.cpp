@@ -156,20 +156,11 @@ bool IDEConfig::loadFromFile(const std::string& configPath)
         };
 
         flatten("", json);
-<<<<<<< HEAD
         LOG_INFO(std::string("[IDEConfig] Loaded ") + std::to_string(m_values.size()) + " config keys from: " + configPath);
         return true;
 
     } catch (const std::exception& e) {
         LOG_ERROR(std::string("[IDEConfig] Error parsing config: ") + e.what());
-=======
-        std::cout << "[IDEConfig] Loaded " << m_values.size() << " config keys from: "
-                  << configPath << std::endl;
-        return true;
-
-    } catch (const std::exception& e) {
-        std::cerr << "[IDEConfig] Error parsing config: " << e.what() << std::endl;
->>>>>>> origin/main
         return false;
     }
 }
@@ -358,12 +349,7 @@ void IDEConfig::applyEnvironmentOverrides()
         DWORD len = GetEnvironmentVariableA(mapping.envVar, buf, sizeof(buf));
         if (len > 0 && len < sizeof(buf)) {
             m_values[mapping.configKey] = std::string(buf, len);
-<<<<<<< HEAD
             LOG_INFO(std::string("[IDEConfig] Env override: ") + mapping.envVar + " -> " + mapping.configKey + " = " + buf);
-=======
-            std::cout << "[IDEConfig] Env override: " << mapping.envVar
-                      << " -> " << mapping.configKey << " = " << buf << std::endl;
->>>>>>> origin/main
         }
     }
 }

@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <set>
 #include <fstream>
 #include <cstdint>
 #include <variant>
@@ -116,17 +117,86 @@ public:
     std::vector<RawrXD::TensorInfo> GetTensorInfo() const override { return tensors_; }
     bool LoadTensorRange(size_t start_idx, size_t count, std::vector<uint8_t>& data) override;
 
-    // Implementation of new methods to avoid abstract class issues
+    // Implementation of new methods — delegating to member data
     size_t GetTensorByteSize(const RawrXD::TensorInfo& tensor) const override { return tensor.size; }
-    std::string GetTypeString(RawrXD::GGMLType type) const override { return "f32"; }
-    bool BuildTensorIndex() override { return true; }
-    bool LoadZone(const std::string& zone_name, uint64_t max_memory_mb = 512) override { return true; }
-    bool UnloadZone(const std::string& zone_name) override { return true; }
+
+    std::string GetTypeString(RawrXD::GGMLType type) const override {
+        switch (type) {
+            case RawrXD::GGMLType::F32:     return "f32";
+            case RawrXD::GGMLType::F16:     return "f16";
+            case RawrXD::GGMLType::Q4_0:    return "q4_0";
+            case RawrXD::GGMLType::Q4_1:    return "q4_1";
+            case RawrXD::GGMLType::Q5_0:    return "q5_0";
+            case RawrXD::GGMLType::Q5_1:    return "q5_1";
+            case RawrXD::GGMLType::Q8_0:    return "q8_0";
+            case RawrXD::GGMLType::Q8_1:    return "q8_1";
+            case RawrXD::GGMLType::Q2_K:    return "q2_k";
+            case RawrXD::GGMLType::Q3_K:    return "q3_k";
+            case RawrXD::GGMLType::Q4_K:    return "q4_k";
+            case RawrXD::GGMLType::Q5_K:    return "q5_k";
+            case RawrXD::GGMLType::Q6_K:    return "q6_k";
+            case RawrXD::GGMLType::Q8_K:    return "q8_k";
+            case RawrXD::GGMLType::I8:      return "i8";
+            case RawrXD::GGMLType::I16:     return "i16";
+            case RawrXD::GGMLType::I32:     return "i32";
+            case RawrXD::GGMLType::I64:     return "i64";
+            case RawrXD::GGMLType::F64:     return "f64";
+            case RawrXD::GGMLType::F16_HALF:return "f16_half";
+            case RawrXD::GGMLType::IQ2_XXS: return "iq2_xxs";
+            case RawrXD::GGMLType::IQ2_XS:  return "iq2_xs";
+            case RawrXD::GGMLType::IQ3_XXS: return "iq3_xxs";
+            case RawrXD::GGMLType::IQ1_S:   return "iq1_s";
+            case RawrXD::GGMLType::IQ4_NL:  return "iq4_nl";
+            case RawrXD::GGMLType::IQ3_S:   return "iq3_s";
+            case RawrXD::GGMLType::IQ2_S:   return "iq2_s";
+            case RawrXD::GGMLType::IQ4_XS:  return "iq4_xs";
+            case RawrXD::GGMLType::IQ1_M:   return "iq1_m";
+            default: return "unknown";
+        }
+    }
+
+    bool BuildTensorIndex() override {
+        std::lock_guard<std::mutex> lock(tensorMutex);
+        tensor_index_map_.clear();
+        for (auto& t : tensors_) {
+            tensor_index_map_[t.name] = &t;
+        }
+        return !tensors_.empty();
+    }
+
+    bool LoadZone(const std::string& zone_name, uint64_t max_memory_mb = 512) override {
+        std::lock_guard<std::mutex> lock(tensorMutex);
+        if (!is_open_ || !mappedView) return false;
+        loaded_zones_.insert(zone_name);
+        return true;
+    }
+
+    bool UnloadZone(const std::string& zone_name) override {
+        std::lock_guard<std::mutex> lock(tensorMutex);
+        return loaded_zones_.erase(zone_name) > 0;
+    }
     bool LoadTensorZone(const std::string& tensor_name, std::vector<uint8_t>& data) override;
     uint64_t GetFileSize() const override;
-    uint64_t GetCurrentMemoryUsage() const override { return 0; }
-    std::vector<std::string> GetLoadedZones() const override { return {}; }
-    std::vector<std::string> GetAllZones() const override { return {}; }
+    uint64_t GetCurrentMemoryUsage() const override {
+        size_t usage = 0;
+        for (const auto& t : tensors_) usage += t.size;
+        return static_cast<uint64_t>(usage);
+    }
+
+    std::vector<std::string> GetLoadedZones() const override {
+        return {loaded_zones_.begin(), loaded_zones_.end()};
+    }
+
+    std::vector<std::string> GetAllZones() const override {
+        // Each tensor group prefix is a zone
+        std::set<std::string> zones;
+        for (const auto& t : tensors_) {
+            auto dot = t.name.find('.');
+            if (dot != std::string::npos) zones.insert(t.name.substr(0, dot));
+            else zones.insert(t.name);
+        }
+        return {zones.begin(), zones.end()};
+    }
     std::vector<RawrXD::TensorInfo> GetAllTensorInfo() const override { return tensors_; }
 
     virtual bool Load(VkDevice vkDevice, VkPhysicalDevice vkPhysDevice);
@@ -180,6 +250,7 @@ protected:
     RawrXD::GGUFMetadata metadata_;
     std::vector<RawrXD::TensorInfo> tensors_;
     std::vector<std::string> unsupported_types_;
+    std::set<std::string> loaded_zones_;
 
     void* mappedView = nullptr;
 

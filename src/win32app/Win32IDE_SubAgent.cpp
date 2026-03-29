@@ -25,18 +25,6 @@
 #include <algorithm>
 #include <cassert>
 
-<<<<<<< HEAD
-=======
-// SCAFFOLD_059: SubAgentManager todo list sync
-
-
-// SCAFFOLD_058: SubAgentManager swarm execution
-
-
-// SCAFFOLD_057: SubAgentManager chain execution
-
-
->>>>>>> origin/main
 // ============================================================================
 // Factory: create a SubAgentManager with IDELogger + METRICS callbacks
 // ============================================================================

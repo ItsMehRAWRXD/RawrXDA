@@ -11,10 +11,7 @@
 #include <cmath>
 #include <iomanip>
 #include <fstream>
-<<<<<<< HEAD
 #include <filesystem>
-=======
->>>>>>> origin/main
 
 using namespace RawrXD;
 
@@ -140,7 +137,6 @@ std::vector<PerformanceOptimization> AutonomousFeatureEngine::suggestOptimizatio
              size_t nextLine = res.response.find('\n', rPos);
              opt.reasoning = res.response.substr(rPos + 10, nextLine - (rPos + 10));
         }
-<<<<<<< HEAD
         // Estimate expected speedup from heuristic keywords.
         if (res.response.find("O(1)") != std::string::npos || res.response.find("cache") != std::string::npos || res.response.find("allocation") != std::string::npos) {
              opt.expectedSpeedup = 2.0;
@@ -150,16 +146,6 @@ std::vector<PerformanceOptimization> AutonomousFeatureEngine::suggestOptimizatio
              opt.expectedSpeedup = 1.1;
         }
         opt.confidence = 0.7;
-=======
-        // Parse impact analysis or infer from keywords
-        if (res.response.find("O(1)") != std::string::npos || res.response.find("cache") != std::string::npos || res.response.find("allocation") != std::string::npos) {
-             opt.impact = "High";
-        } else if (res.response.find("O(n)") != std::string::npos || res.response.find("loop") != std::string::npos) {
-             opt.impact = "Medium";
-        } else {
-             opt.impact = "Low";
-        }
->>>>>>> origin/main
 
         opts.push_back(opt);
     }
@@ -223,21 +209,13 @@ std::vector<AutonomousSuggestion> AutonomousFeatureEngine::getSuggestionsForCode
     CodeQualityMetrics q = assessCodeQuality(code, language);
     
     // 2. Complexity Reduction Suggestion
-<<<<<<< HEAD
     const double cyclomatic = q.details.value("cyclomatic_complexity", 0.0);
     if (cyclomatic > 15.0) {
-=======
-    if (q.details["cyclomatic_complexity"] > 15) {
->>>>>>> origin/main
         AutonomousSuggestion s;
         s.suggestionId = GenerateUUID();
         s.type = "refactoring";
         s.filePath = "buffer";
-<<<<<<< HEAD
         s.explanation = "High cyclomatic complexity (" + std::to_string(static_cast<int>(cyclomatic)) + "). Consider breaking down function.";
-=======
-        s.explanation = "High cyclomatic complexity (" + std::to_string(int(q.details["cyclomatic_complexity"])) + "). Consider breaking down function.";
->>>>>>> origin/main
         s.confidence = 0.85;
         suggestions.push_back(s);
     }
@@ -358,7 +336,6 @@ std::vector<AutonomousSuggestion> AutonomousFeatureEngine::getActiveSuggestions(
     return activeSuggestions;
 }
 
-<<<<<<< HEAD
 void AutonomousFeatureEngine::acceptSuggestion(const std::string& id) {
     auto it = std::find_if(activeSuggestions.begin(), activeSuggestions.end(),
                            [&](const AutonomousSuggestion& s){ return s.suggestionId == id; });
@@ -390,17 +367,6 @@ std::vector<GeneratedTest> AutonomousFeatureEngine::generateTestSuite(const std:
     
     auto symbols = codebaseEngine->getSymbolsInFile(filePath);
     
-=======
-void AutonomousFeatureEngine::acceptSuggestion(const std::string& id) {}
-void AutonomousFeatureEngine::rejectSuggestion(const std::string& id) {}
-void AutonomousFeatureEngine::dismissSuggestion(const std::string& id) {}
-std::vector<GeneratedTest> AutonomousFeatureEngine::generateTestSuite(const std::string& filePath) {
-    std::vector<GeneratedTest> tests;
-    if (!codebaseEngine) return tests;
-    
-    auto symbols = codebaseEngine->getSymbolsInFile(filePath);
-    
->>>>>>> origin/main
     // Call Model Instead
     for (const auto& sym : symbols) {
         if (sym.type == "function") {
@@ -720,11 +686,7 @@ void AutonomousFeatureEngine::updateLearningModel(const std::string& c, const st
            << "}" << std::endl;
     }
 }
-<<<<<<< HEAD
 std::vector<std::string> AutonomousFeatureEngine::predictNextAction(const std::string& codeContext) {
-=======
-std::vector<std::string> AutonomousFeatureEngine::getRecommendedActions(const std::string& codeContext) {
->>>>>>> origin/main
     std::vector<std::string> actions;
     
     // Heuristic: If code has 'TODO', suggest 'Implement TODO'
@@ -743,7 +705,6 @@ std::vector<std::string> AutonomousFeatureEngine::getRecommendedActions(const st
     }
     
     // Use Cloud for intelligent prediction if available
-<<<<<<< HEAD
     if (hybridCloudManager) {
         ExecutionRequest req;
         req.requestId = "pred-" + GenerateUUID();
@@ -754,16 +715,6 @@ std::vector<std::string> AutonomousFeatureEngine::getRecommendedActions(const st
         if (res.success && res.response.length() < 50) {
              actions.insert(actions.begin(), res.response);
         }
-=======
-    ExecutionRequest req;
-    req.requestId = "pred-" + GenerateUUID();
-    req.taskType = "prediction";
-    req.prompt = "Predict the next mostly likely developer action for this code:\n" + codeContext.substr(0, 1000); // Limit context
-    
-    ExecutionResult res = hybridCloudManager->execute(req);
-    if (res.success && res.response.length() < 50) {
-         actions.insert(actions.begin(), res.response);
->>>>>>> origin/main
     }
     
     if (actions.empty()) actions.push_back("Refactor");
@@ -918,7 +869,6 @@ AutonomousSuggestion AutonomousFeatureEngine::generateTestSuggestion(const std::
     return s;
 }
 
-<<<<<<< HEAD
 // ============================================================================
 // Additional Helper Implementations
 // ============================================================================
@@ -1264,6 +1214,3 @@ std::vector<std::string> AutonomousFeatureEngine::detectPatterns(
     
     return patterns;
 }
-=======
-
->>>>>>> origin/main

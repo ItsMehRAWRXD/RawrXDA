@@ -775,3 +775,60 @@ void AgentHistoryRecorder::clear() {
     m_events.clear();
     logInfo("[History] Event log cleared");
 }
+
+size_t AgentHistoryRecorder::compact(size_t keepLast) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (keepLast == 0) {
+        size_t removed = m_events.size();
+        m_events.clear();
+        logInfo("[History] Compaction removed all events (keepLast=0)");
+        return removed;
+    }
+    if (m_events.size() <= keepLast) {
+        return 0;
+    }
+    size_t removed = m_events.size() - keepLast;
+    m_events.erase(m_events.begin(), m_events.begin() + static_cast<std::ptrdiff_t>(removed));
+    logInfo("[History] Compaction removed " + std::to_string(removed) + " events (keepLast=" +
+            std::to_string(keepLast) + ")");
+    return removed;
+}
+
+bool AgentHistoryRecorder::loadFromLogFile(const std::string& logFilePath) {
+    if (logFilePath.empty()) return false;
+    if (!fs::exists(logFilePath)) {
+        logError("[History] Log file not found: " + logFilePath);
+        return false;
+    }
+
+    std::ifstream f(logFilePath);
+    if (!f.is_open()) {
+        logError("[History] Failed to open log file: " + logFilePath);
+        return false;
+    }
+
+    std::vector<AgentEvent> loaded;
+    std::string line;
+    int loadedCount = 0;
+    int64_t maxId = 0;
+    while (std::getline(f, line)) {
+        if (line.empty()) continue;
+        try {
+            AgentEvent e = AgentEvent::fromJSON(line);
+            if (e.id > maxId) maxId = e.id;
+            loaded.push_back(std::move(e));
+            loadedCount++;
+        } catch (...) {
+            logError("[History] Failed to parse event line: " + line.substr(0, 80));
+        }
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_events = std::move(loaded);
+        m_nextId.store(maxId + 1);
+    }
+
+    logInfo("[History] Loaded " + std::to_string(loadedCount) + " events from " + logFilePath);
+    return true;
+}

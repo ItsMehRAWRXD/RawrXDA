@@ -1,32 +1,10 @@
 #pragma once
 
-<<<<<<< HEAD
 #include <cstdint>
 #include <string>
 #include <vector>
 
 class CheckpointManager {
-=======
-#include <string>
-#include <vector>
-#include <map>
-#include <functional>
-#include <cstdint>
-
-/**
- * @class CheckpointManager
- * @brief Save, manage, and restore training checkpoints (Win32/Qt-free)
- *
- * Features:
- * - Save model state, optimizer state, training state
- * - Checkpoint versioning and history
- * - Automatic checkpointing (interval-based)
- * - Best model tracking (based on validation metric)
- * - Checkpoint validation and rollback
- */
-class CheckpointManager
-{
->>>>>>> origin/main
 public:
     enum class CompressionLevel {
         None,
@@ -73,14 +51,6 @@ public:
     explicit CheckpointManager(void* parent = nullptr);
     ~CheckpointManager();
 
-<<<<<<< HEAD
-=======
-    static CheckpointManager& instance() {
-        static CheckpointManager inst;
-        return inst;
-    }
-
->>>>>>> origin/main
     bool initialize(const std::string& checkpointDir, int maxCheckpoints = 10);
     std::vector<CheckpointIndex> listCheckpoints() const;
 
@@ -92,15 +62,4 @@ private:
     int m_maxCheckpoints = 10;
     ShowCallback m_showCb = nullptr;
     void* m_showCtx = nullptr;
-<<<<<<< HEAD
-=======
-
-    std::string generateCheckpointId();
-    std::vector<uint8_t> compressState(const std::vector<uint8_t>& data, CompressionLevel level);
-    std::vector<uint8_t> decompressState(const std::vector<uint8_t>& data);
-    bool writeCheckpointToDisk(const std::string& checkpointId,
-                               const CheckpointState& state,
-                               CompressionLevel compress);
-    bool readCheckpointFromDisk(const std::string& checkpointId, CheckpointState& state);
->>>>>>> origin/main
 };

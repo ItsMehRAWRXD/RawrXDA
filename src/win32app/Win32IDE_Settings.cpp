@@ -16,6 +16,7 @@
 #include "IDELogger.h"
 #include "../../include/local_parity_kernel.h"
 #include "../core/amd_gpu_accelerator.h"
+#include "../core/configuration_service.hpp"
 #include <richedit.h>
 #include <fstream>
 #include <sstream>
@@ -41,76 +42,91 @@ std::string Win32IDE::getSettingsFilePath() const {
 // ============================================================================
 
 void Win32IDE::loadSettings() {
+    using RawrXD::ConfigurationScope;
+    using RawrXD::ConfigurationService;
+
     std::string path = getSettingsFilePath();
-    std::ifstream f(path);
-    if (!f) {
-        LOG_INFO("No settings file found, using defaults: " + path);
+    auto& config = ConfigurationService::instance();
+    config.setStoragePath(ConfigurationScope::User, path);
+
+    if (!config.load(ConfigurationScope::User)) {
+        LOG_INFO("No valid settings file found, using defaults: " + path);
         applyDefaultSettings();
         return;
     }
 
+    // Minimal notification hook for now. Consumers can subscribe to respond
+    // to key-level changes as we expand Settings Service scope.
+    static bool s_subscribedToConfigChanges = false;
+    if (!s_subscribedToConfigChanges) {
+        config.subscribe([](const std::string& key, ConfigurationScope scope) {
+            if (scope == ConfigurationScope::User) {
+                LOG_DEBUG("Configuration changed (user): " + key);
+            }
+        });
+        s_subscribedToConfigChanges = true;
+    }
+
     try {
-        std::string content((std::istreambuf_iterator<char>(f)),
-                             std::istreambuf_iterator<char>());
-        f.close();
-
-        nlohmann::json j = nlohmann::json::parse(content);
-
         // General
-        m_settings.autoSaveEnabled   = j.value("autoSave", (int)m_settings.autoSaveEnabled) != 0;
-        m_settings.lineNumbersVisible = j.value("lineNumbers", (int)m_settings.lineNumbersVisible) != 0;
-        m_settings.wordWrapEnabled   = j.value("wordWrap", (int)m_settings.wordWrapEnabled) != 0;
-        m_settings.fontSize          = j.value("fontSize", m_settings.fontSize);
-        m_settings.fontName          = j.value("fontName", m_settings.fontName);
-        m_settings.workingDirectory  = j.value("workingDirectory", m_settings.workingDirectory);
-        m_settings.autoSaveIntervalSec = j.value("autoSaveInterval", m_settings.autoSaveIntervalSec);
+        m_settings.autoSaveEnabled   = config.getBool("autoSave", m_settings.autoSaveEnabled, ConfigurationScope::User);
+        m_settings.lineNumbersVisible = config.getBool("lineNumbers", m_settings.lineNumbersVisible, ConfigurationScope::User);
+        m_settings.wordWrapEnabled   = config.getBool("wordWrap", m_settings.wordWrapEnabled, ConfigurationScope::User);
+        m_settings.fontSize          = config.getInt("fontSize", m_settings.fontSize, ConfigurationScope::User);
+        m_settings.fontName          = config.getString("fontName", m_settings.fontName, ConfigurationScope::User);
+        m_settings.workingDirectory  = config.getString("workingDirectory", m_settings.workingDirectory, ConfigurationScope::User);
+        m_settings.autoSaveIntervalSec = config.getInt("autoSaveInterval", m_settings.autoSaveIntervalSec, ConfigurationScope::User);
 
         // AI/Model
-        m_settings.aiTemperature     = j.value("aiTemperature", (int)(m_settings.aiTemperature * 100)) / 100.0f;
-        m_settings.aiTopP            = j.value("aiTopP", (int)(m_settings.aiTopP * 100)) / 100.0f;
-        m_settings.aiTopK            = j.value("aiTopK", m_settings.aiTopK);
-        m_settings.aiMaxTokens       = j.value("aiMaxTokens", m_settings.aiMaxTokens);
-        m_settings.aiContextWindow   = j.value("aiContextWindow", m_settings.aiContextWindow);
-        m_settings.aiModelPath       = j.value("aiModelPath", m_settings.aiModelPath);
-        m_settings.aiOllamaUrl       = j.value("aiOllamaUrl", m_settings.aiOllamaUrl);
-        m_settings.ghostTextEnabled  = j.value("ghostText", (int)m_settings.ghostTextEnabled) != 0;
-        m_settings.failureDetectorEnabled = j.value("failureDetector", (int)m_settings.failureDetectorEnabled) != 0;
-        m_settings.failureMaxRetries = j.value("failureMaxRetries", m_settings.failureMaxRetries);
-        m_settings.amdUnifiedMemoryEnabled = j.value("amdUnifiedMemoryEnabled", (int)m_settings.amdUnifiedMemoryEnabled) != 0;
+        m_settings.aiTemperature     = static_cast<float>(config.getFloat("aiTemperature", m_settings.aiTemperature, ConfigurationScope::User));
+        m_settings.aiTopP            = static_cast<float>(config.getFloat("aiTopP", m_settings.aiTopP, ConfigurationScope::User));
+        m_settings.aiTopK            = config.getInt("aiTopK", m_settings.aiTopK, ConfigurationScope::User);
+        m_settings.aiMaxTokens       = config.getInt("aiMaxTokens", m_settings.aiMaxTokens, ConfigurationScope::User);
+        m_settings.aiContextWindow   = config.getInt("aiContextWindow", m_settings.aiContextWindow, ConfigurationScope::User);
+        m_settings.aiModelPath       = config.getString("aiModelPath", m_settings.aiModelPath, ConfigurationScope::User);
+        m_settings.aiOllamaUrl       = config.getString("aiOllamaUrl", m_settings.aiOllamaUrl, ConfigurationScope::User);
+        m_settings.ghostTextEnabled  = config.getBool("ghostText", m_settings.ghostTextEnabled, ConfigurationScope::User);
+        m_settings.failureDetectorEnabled = config.getBool("failureDetector", m_settings.failureDetectorEnabled, ConfigurationScope::User);
+        m_settings.failureMaxRetries = config.getInt("failureMaxRetries", m_settings.failureMaxRetries, ConfigurationScope::User);
+        m_settings.amdUnifiedMemoryEnabled = config.getBool("amdUnifiedMemoryEnabled", m_settings.amdUnifiedMemoryEnabled, ConfigurationScope::User);
 
         // Display Scaling
-        m_settings.uiScalePercent    = j.value("uiScalePercent", m_settings.uiScalePercent);
+        m_settings.uiScalePercent    = config.getInt("uiScalePercent", m_settings.uiScalePercent, ConfigurationScope::User);
 
         // Editor
-        m_settings.tabSize           = j.value("tabSize", m_settings.tabSize);
-        m_settings.useSpaces         = j.value("useSpaces", (int)m_settings.useSpaces) != 0;
-        m_settings.encoding          = j.value("encoding", m_settings.encoding);
-        m_settings.eolStyle          = j.value("eolStyle", m_settings.eolStyle);
-        m_settings.syntaxColoringEnabled = j.value("syntaxColoring", (int)m_settings.syntaxColoringEnabled) != 0;
-        m_settings.minimapEnabled    = j.value("minimap", (int)m_settings.minimapEnabled) != 0;
+        m_settings.tabSize           = config.getInt("tabSize", m_settings.tabSize, ConfigurationScope::User);
+        m_settings.useSpaces         = config.getBool("useSpaces", m_settings.useSpaces, ConfigurationScope::User);
+        m_settings.encoding          = config.getString("encoding", m_settings.encoding, ConfigurationScope::User);
+        m_settings.eolStyle          = config.getString("eolStyle", m_settings.eolStyle, ConfigurationScope::User);
+        m_settings.syntaxColoringEnabled = config.getBool("syntaxColoring", m_settings.syntaxColoringEnabled, ConfigurationScope::User);
+        m_settings.minimapEnabled    = config.getBool("minimap", m_settings.minimapEnabled, ConfigurationScope::User);
 
         // Theme
-        m_settings.themeId           = j.value("themeId", m_settings.themeId);
-        m_settings.windowAlpha       = j.value("windowAlpha", (int)m_settings.windowAlpha);
+        m_settings.themeId           = config.getInt("themeId", m_settings.themeId, ConfigurationScope::User);
+        m_settings.windowAlpha       = static_cast<BYTE>(config.getInt("windowAlpha", static_cast<int>(m_settings.windowAlpha), ConfigurationScope::User));
 
         // Server
-        m_settings.localServerEnabled = j.value("localServer", (int)m_settings.localServerEnabled) != 0;
-        m_settings.localServerPort    = j.value("localServerPort", m_settings.localServerPort);
+        m_settings.localServerEnabled = config.getBool("localServer", m_settings.localServerEnabled, ConfigurationScope::User);
+        m_settings.localServerPort    = config.getInt("localServerPort", m_settings.localServerPort, ConfigurationScope::User);
 
         // Display / UX toggles
-        m_settings.breadcrumbsEnabled  = j.value("breadcrumbs", (int)m_settings.breadcrumbsEnabled) != 0;
-        m_settings.smoothScrollEnabled  = j.value("smoothScroll", (int)m_settings.smoothScrollEnabled) != 0;
+        m_settings.breadcrumbsEnabled  = config.getBool("breadcrumbs", m_settings.breadcrumbsEnabled, ConfigurationScope::User);
+        m_settings.smoothScrollEnabled  = config.getBool("smoothScroll", m_settings.smoothScrollEnabled, ConfigurationScope::User);
 
         // Local Parity (no API key)
-        m_settings.localParityEnabled   = j.value("localParityEnabled", (int)m_settings.localParityEnabled) != 0;
-        m_settings.localParityModelPath = j.value("localParityModelPath", m_settings.localParityModelPath);
-        m_settings.updateManifestUrl    = j.value("updateManifestUrl", m_settings.updateManifestUrl);
+        m_settings.localParityEnabled   = config.getBool("localParityEnabled", m_settings.localParityEnabled, ConfigurationScope::User);
+        m_settings.localParityModelPath = config.getString("localParityModelPath", m_settings.localParityModelPath, ConfigurationScope::User);
+        m_settings.updateManifestUrl    = config.getString("updateManifestUrl", m_settings.updateManifestUrl, ConfigurationScope::User);
 
-        m_settings.agentTerminalIsolated = j.value("agentTerminalIsolated", (int)m_settings.agentTerminalIsolated) != 0;
+        m_settings.agentTerminalIsolated = config.getBool("agentTerminalIsolated", m_settings.agentTerminalIsolated, ConfigurationScope::User);
+
+        // Workflow Executor
+        m_settings.workflowExecutorEnabled    = config.getBool("workflowExecutorEnabled", m_settings.workflowExecutorEnabled, ConfigurationScope::User);
+        m_settings.workflowExecutorAgentCount = config.getInt("workflowExecutorAgentCount", m_settings.workflowExecutorAgentCount, ConfigurationScope::User);
 
         LOG_INFO("Settings loaded from " + path);
     } catch (const std::exception& e) {
-        LOG_WARNING("Failed to parse settings: " + std::string(e.what()));
+        LOG_WARNING("Failed to load settings from ConfigurationService: " + std::string(e.what()));
         applyDefaultSettings();
     }
 }
@@ -120,69 +136,74 @@ void Win32IDE::loadSettings() {
 // ============================================================================
 
 void Win32IDE::saveSettings() {
-    nlohmann::json j;
+    using RawrXD::ConfigurationScope;
+    using RawrXD::ConfigurationService;
+
+    auto& config = ConfigurationService::instance();
+    config.setStoragePath(ConfigurationScope::User, getSettingsFilePath());
 
     // General
-    j["autoSave"]           = m_settings.autoSaveEnabled ? 1 : 0;
-    j["lineNumbers"]        = m_settings.lineNumbersVisible ? 1 : 0;
-    j["wordWrap"]           = m_settings.wordWrapEnabled ? 1 : 0;
-    j["fontSize"]           = m_settings.fontSize;
-    j["fontName"]           = m_settings.fontName;
-    j["workingDirectory"]   = m_settings.workingDirectory;
-    j["autoSaveInterval"]   = m_settings.autoSaveIntervalSec;
+    config.setBool("autoSave", m_settings.autoSaveEnabled, ConfigurationScope::User);
+    config.setBool("lineNumbers", m_settings.lineNumbersVisible, ConfigurationScope::User);
+    config.setBool("wordWrap", m_settings.wordWrapEnabled, ConfigurationScope::User);
+    config.setInt("fontSize", m_settings.fontSize, ConfigurationScope::User);
+    config.setString("fontName", m_settings.fontName, ConfigurationScope::User);
+    config.setString("workingDirectory", m_settings.workingDirectory, ConfigurationScope::User);
+    config.setInt("autoSaveInterval", m_settings.autoSaveIntervalSec, ConfigurationScope::User);
 
     // AI/Model
-    j["aiTemperature"]      = (int)(m_settings.aiTemperature * 100);
-    j["aiTopP"]             = (int)(m_settings.aiTopP * 100);
-    j["aiTopK"]             = m_settings.aiTopK;
-    j["aiMaxTokens"]        = m_settings.aiMaxTokens;
-    j["aiContextWindow"]    = m_settings.aiContextWindow;
-    j["aiModelPath"]        = m_settings.aiModelPath;
-    j["aiOllamaUrl"]        = m_settings.aiOllamaUrl;
-    j["ghostText"]          = m_settings.ghostTextEnabled ? 1 : 0;
-    j["failureDetector"]    = m_settings.failureDetectorEnabled ? 1 : 0;
-    j["failureMaxRetries"]  = m_settings.failureMaxRetries;
-    j["amdUnifiedMemoryEnabled"] = m_settings.amdUnifiedMemoryEnabled ? 1 : 0;
+    config.setFloat("aiTemperature", m_settings.aiTemperature, ConfigurationScope::User);
+    config.setFloat("aiTopP", m_settings.aiTopP, ConfigurationScope::User);
+    config.setInt("aiTopK", m_settings.aiTopK, ConfigurationScope::User);
+    config.setInt("aiMaxTokens", m_settings.aiMaxTokens, ConfigurationScope::User);
+    config.setInt("aiContextWindow", m_settings.aiContextWindow, ConfigurationScope::User);
+    config.setString("aiModelPath", m_settings.aiModelPath, ConfigurationScope::User);
+    config.setString("aiOllamaUrl", m_settings.aiOllamaUrl, ConfigurationScope::User);
+    config.setBool("ghostText", m_settings.ghostTextEnabled, ConfigurationScope::User);
+    config.setBool("failureDetector", m_settings.failureDetectorEnabled, ConfigurationScope::User);
+    config.setInt("failureMaxRetries", m_settings.failureMaxRetries, ConfigurationScope::User);
+    config.setBool("amdUnifiedMemoryEnabled", m_settings.amdUnifiedMemoryEnabled, ConfigurationScope::User);
 
     // Display Scaling
-    j["uiScalePercent"]     = m_settings.uiScalePercent;
+    config.setInt("uiScalePercent", m_settings.uiScalePercent, ConfigurationScope::User);
 
     // Editor
-    j["tabSize"]            = m_settings.tabSize;
-    j["useSpaces"]          = m_settings.useSpaces ? 1 : 0;
-    j["encoding"]           = m_settings.encoding;
-    j["eolStyle"]           = m_settings.eolStyle;
-    j["syntaxColoring"]     = m_settings.syntaxColoringEnabled ? 1 : 0;
-    j["minimap"]            = m_settings.minimapEnabled ? 1 : 0;
+    config.setInt("tabSize", m_settings.tabSize, ConfigurationScope::User);
+    config.setBool("useSpaces", m_settings.useSpaces, ConfigurationScope::User);
+    config.setString("encoding", m_settings.encoding, ConfigurationScope::User);
+    config.setString("eolStyle", m_settings.eolStyle, ConfigurationScope::User);
+    config.setBool("syntaxColoring", m_settings.syntaxColoringEnabled, ConfigurationScope::User);
+    config.setBool("minimap", m_settings.minimapEnabled, ConfigurationScope::User);
 
     // Theme
-    j["themeId"]            = m_settings.themeId;
-    j["windowAlpha"]        = (int)m_settings.windowAlpha;
+    config.setInt("themeId", m_settings.themeId, ConfigurationScope::User);
+    config.setInt("windowAlpha", (int)m_settings.windowAlpha, ConfigurationScope::User);
 
     // Server
-    j["localServer"]        = m_settings.localServerEnabled ? 1 : 0;
-    j["localServerPort"]    = m_settings.localServerPort;
+    config.setBool("localServer", m_settings.localServerEnabled, ConfigurationScope::User);
+    config.setInt("localServerPort", m_settings.localServerPort, ConfigurationScope::User);
 
     // Display / UX toggles
-    j["breadcrumbs"]        = m_settings.breadcrumbsEnabled ? 1 : 0;
-    j["smoothScroll"]       = m_settings.smoothScrollEnabled ? 1 : 0;
+    config.setBool("breadcrumbs", m_settings.breadcrumbsEnabled, ConfigurationScope::User);
+    config.setBool("smoothScroll", m_settings.smoothScrollEnabled, ConfigurationScope::User);
 
     // Local Parity (no API key)
-    j["localParityEnabled"]   = m_settings.localParityEnabled ? 1 : 0;
-    j["localParityModelPath"] = m_settings.localParityModelPath;
-    j["updateManifestUrl"]    = m_settings.updateManifestUrl;
+    config.setBool("localParityEnabled", m_settings.localParityEnabled, ConfigurationScope::User);
+    config.setString("localParityModelPath", m_settings.localParityModelPath, ConfigurationScope::User);
+    config.setString("updateManifestUrl", m_settings.updateManifestUrl, ConfigurationScope::User);
 
     // Agent terminal isolation (Top-001)
-    j["agentTerminalIsolated"] = m_settings.agentTerminalIsolated ? 1 : 0;
+    config.setBool("agentTerminalIsolated", m_settings.agentTerminalIsolated, ConfigurationScope::User);
+
+    // Workflow Executor
+    config.setBool("workflowExecutorEnabled", m_settings.workflowExecutorEnabled, ConfigurationScope::User);
+    config.setInt("workflowExecutorAgentCount", m_settings.workflowExecutorAgentCount, ConfigurationScope::User);
 
     std::string path = getSettingsFilePath();
-    std::ofstream f(path);
-    if (f) {
-        f << j.dump(2);
-        f.close();
-        LOG_INFO("Settings saved to " + path);
+    if (config.save(ConfigurationScope::User)) {
+        LOG_INFO("Settings saved via ConfigurationService to " + path);
     } else {
-        LOG_ERROR("Failed to write settings: " + path);
+        LOG_ERROR("Failed to write settings via ConfigurationService: " + path);
     }
 }
 
@@ -231,6 +252,9 @@ void Win32IDE::applyDefaultSettings() {
     m_settings.localParityModelPath = "";
     m_settings.updateManifestUrl    = "";
     m_settings.agentTerminalIsolated = true;  // Default: isolate agent to avoid interrupting user
+
+    m_settings.workflowExecutorEnabled    = false;
+    m_settings.workflowExecutorAgentCount = 4;
 
     m_settings.uiScalePercent      = 0;   // 0 = auto (follow system DPI)
 }
@@ -308,6 +332,13 @@ void Win32IDE::applySettings() {
             LOG_WARNING(std::string("AMD unified memory disable failed: ") + (um.detail ? um.detail : ""));
         }
     }
+
+    // Workflow Executor — propagate persisted state to bridge and UI
+    if (m_agenticBridge) {
+        m_agenticBridge->SetWorkflowExecutorEnabled(m_settings.workflowExecutorEnabled);
+        m_agenticBridge->SetWorkflowExecutorAgentCount(m_settings.workflowExecutorAgentCount);
+    }
+    syncAgentModeUiFromBridge();
 
     LOG_INFO("Settings applied");
 }

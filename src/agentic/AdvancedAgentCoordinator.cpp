@@ -204,7 +204,14 @@ bool AdvancedAgentCoordinator::addTaskDependency(const std::string& taskId,
 }
 
 bool AdvancedAgentCoordinator::arePrerequisitesMet(const std::string& taskId) const {
-    (void)taskId;
+    auto it = m_taskDependencies.find(taskId);
+    if (it == m_taskDependencies.end()) return true; // No dependency entry = no prereqs
+
+    for (const auto& prereq : it->second.prerequisites) {
+        auto pit = m_taskDependencies.find(prereq);
+        if (pit == m_taskDependencies.end() || !pit->second.completed)
+            return false;
+    }
     return true;
 }
 

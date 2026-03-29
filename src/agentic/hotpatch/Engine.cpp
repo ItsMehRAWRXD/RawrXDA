@@ -3,12 +3,43 @@
 #include <algorithm>
 #include <memory>
 #include <cstdint>
+#include <limits>
 
 namespace {
 double Clamp01(double v) {
     if (v < 0.0) return 0.0;
     if (v > 1.0) return 1.0;
     return v;
+}
+
+void* AllocateExecutableNear(void* target, size_t size) {
+    const uintptr_t targetAddr = reinterpret_cast<uintptr_t>(target);
+    const uintptr_t window = 0x7fff0000ULL; // ~2GB range for rel32
+
+    uintptr_t minAddr = (targetAddr > window) ? (targetAddr - window) : 0;
+    uintptr_t maxAddr = (targetAddr < (std::numeric_limits<uintptr_t>::max() - window))
+        ? (targetAddr + window)
+        : std::numeric_limits<uintptr_t>::max();
+
+    SYSTEM_INFO si{};
+    GetSystemInfo(&si);
+    const uintptr_t gran = static_cast<uintptr_t>(si.dwAllocationGranularity);
+
+    if (gran == 0) {
+        return nullptr;
+    }
+
+    minAddr = (minAddr + gran - 1) & ~(gran - 1);
+
+    for (uintptr_t addr = minAddr; addr < maxAddr; addr += gran) {
+        void* mem = VirtualAlloc(reinterpret_cast<void*>(addr), size,
+                                 MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+        if (mem) {
+            return mem;
+        }
+    }
+
+    return VirtualAlloc(nullptr, size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 }
 }
 
@@ -123,13 +154,14 @@ bool Detour::remove() {
     }
     
     memcpy(target_, originalCode_.data(), originalCode_.size());
+    FlushInstructionCache(GetCurrentProcess(), target_, originalCode_.size());
     installed_ = false;
     return true;
 }
 
 bool Detour::createTrampoline() {
-    // Allocate trampoline memory
-    trampoline_ = VirtualAlloc(nullptr, 64, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+    // Allocate trampoline close to target to keep rel32 return jump valid.
+    trampoline_ = AllocateExecutableNear(target_, 64);
     if (!trampoline_) {
         return false;
     }
@@ -157,8 +189,15 @@ bool Detour::writeJump(void* from, void* to) {
     // Write jmp instruction
     uint8_t* code = static_cast<uint8_t*>(from);
     code[0] = 0xE9; // jmp
-    int32_t relative = static_cast<char*>(to) - static_cast<char*>(from) - 5;
+    const auto relative64 = static_cast<int64_t>(
+        reinterpret_cast<char*>(to) - reinterpret_cast<char*>(from) - 5);
+    if (relative64 < static_cast<int64_t>(std::numeric_limits<int32_t>::min()) ||
+        relative64 > static_cast<int64_t>(std::numeric_limits<int32_t>::max())) {
+        return false;
+    }
+    int32_t relative = static_cast<int32_t>(relative64);
     memcpy(&code[1], &relative, 4);
+    FlushInstructionCache(GetCurrentProcess(), from, 5);
     
     return true;
 }
@@ -474,6 +513,7 @@ bool Engine::applyHook(HookConfig& config) {
             // Apply the patch data over the target memory
             memcpy(config.target, config.patchData.data(),
                    std::min(config.patchSize, static_cast<size_t>(config.patchData.size())));
+            FlushInstructionCache(GetCurrentProcess(), config.target, config.patchSize);
             break;
         }
         default:
@@ -517,6 +557,7 @@ bool Engine::removeHook(HookConfig& config) {
                 return false;
             }
             memcpy(config.target, config.originalCode.data(), config.patchSize);
+            FlushInstructionCache(GetCurrentProcess(), config.target, config.patchSize);
             break;
         }
         default:

@@ -1,58 +1,80 @@
-<<<<<<< HEAD
 #include "rawrxd_model_loader.h"
-#include <cstdio>
-#include <cmath>
 #include <algorithm>
-#include <thread>
-#include <windows.h>
-#include <iostream>
+#include <cmath>
 #include <cstdint>
-#include <cstring>
-#include <limits>
+#include <cstdio>
 #include <cstdlib>
+#include <cstring>
+#include <iostream>
+#include <limits>
 #include <set>
 #include <string>
+#include <thread>
+#include <windows.h>
+
 
 extern "C" void Dequant_Q4_0(void* src, float* dst);
 extern "C" void Dequant_Q4_K(void* src, float* dst);
 extern "C" void Dequant_Q8_0(void* src, float* dst);
 extern "C" void Dequant_F16(void* src, float* dst, size_t count);
 
+// Returns true if user opted out of software RAM preflight (does not fix OS mmap failures).
+static bool RawrxdBypassRamGatesFromEnv()
+{
+    const char* a = std::getenv("RAWRXD_BYPASS_RAM_GATES");
+    if (a && (a[0] == '1' || a[0] == 'y' || a[0] == 'Y'))
+        return true;
+    const char* b = std::getenv("RAWRXD_SKIP_RAM_PREFLIGHT");
+    return b && (b[0] == '1' || b[0] == 'y' || b[0] == 'Y');
+}
+
 // GGUF Q8_0 block structure
-struct Q8_0_Block {
-    uint16_t d; // float16 scale
-    int8_t qs[32]; // 32 bytes
+struct Q8_0_Block
+{
+    uint16_t d;     // float16 scale
+    int8_t qs[32];  // 32 bytes
 };
 
 // GGUF Q4_K block structure
-struct Q4_K_Block {
+struct Q4_K_Block
+{
     uint16_t d;     // super-block scale
     uint16_t dmin;  // super-block min
-    uint8_t scales[12]; 
+    uint8_t scales[12];
     uint8_t qs[128];
 };
 
-static float f16_to_f32(uint16_t h) {
+static float f16_to_f32(uint16_t h)
+{
     const uint32_t sign = (uint32_t)(h & 0x8000u) << 16;
     uint32_t exp = (h >> 10) & 0x1Fu;
     uint32_t frac = h & 0x03FFu;
 
     uint32_t out;
-    if (exp == 0) {
-        if (frac == 0) {
+    if (exp == 0)
+    {
+        if (frac == 0)
+        {
             out = sign;
-        } else {
+        }
+        else
+        {
             exp = 1;
-            while ((frac & 0x0400u) == 0) {
+            while ((frac & 0x0400u) == 0)
+            {
                 frac <<= 1;
                 --exp;
             }
             frac &= 0x03FFu;
             out = sign | ((exp + 112u) << 23) | (frac << 13);
         }
-    } else if (exp == 0x1Fu) {
+    }
+    else if (exp == 0x1Fu)
+    {
         out = sign | 0x7F800000u | (frac << 13);
-    } else {
+    }
+    else
+    {
         out = sign | ((exp + 112u) << 23) | (frac << 13);
     }
 
@@ -61,51 +83,62 @@ static float f16_to_f32(uint16_t h) {
     return f;
 }
 
-static std::string toLowerAscii(std::string s) {
-    for (char& c : s) {
-        if (c >= 'A' && c <= 'Z') {
+static std::string toLowerAscii(std::string s)
+{
+    for (char& c : s)
+    {
+        if (c >= 'A' && c <= 'Z')
+        {
             c = static_cast<char>(c - 'A' + 'a');
         }
     }
     return s;
 }
 
-static bool endsWith(const std::string& s, const std::string& suffix) {
-    return s.size() >= suffix.size() &&
-        s.compare(s.size() - suffix.size(), suffix.size(), suffix) == 0;
+static bool endsWith(const std::string& s, const std::string& suffix)
+{
+    return s.size() >= suffix.size() && s.compare(s.size() - suffix.size(), suffix.size(), suffix) == 0;
 }
 
-static std::string WideToUtf8(const wchar_t* ws) {
-    if (!ws) {
+static std::string WideToUtf8(const wchar_t* ws)
+{
+    if (!ws)
+    {
         return std::string();
     }
     const int n = WideCharToMultiByte(CP_UTF8, 0, ws, -1, nullptr, 0, nullptr, nullptr);
-    if (n <= 1) {
+    if (n <= 1)
+    {
         return std::string();
     }
     std::string out(static_cast<size_t>(n), '\0');
     WideCharToMultiByte(CP_UTF8, 0, ws, -1, out.data(), n, nullptr, nullptr);
-    if (!out.empty() && out.back() == '\0') {
+    if (!out.empty() && out.back() == '\0')
+    {
         out.pop_back();
     }
     return out;
 }
 
 // Raw GGUF file header — matches binary layout exactly
-struct GGUFFileHeader {
-    uint32_t magic;        // 0x46554747 = "GGUF" LE
+struct GGUFFileHeader
+{
+    uint32_t magic;  // 0x46554747 = "GGUF" LE
     uint32_t version;
     uint64_t tensor_count;
-    uint64_t kv_count;     // metadata_kv_count
+    uint64_t kv_count;  // metadata_kv_count
 };
 
-bool RawrXDModelLoader::Load(const wchar_t* path, VkDevice vkDevice, VkPhysicalDevice physDevice) {
+bool RawrXDModelLoader::Load(const wchar_t* path, VkDevice vkDevice, VkPhysicalDevice physDevice)
+{
     m_lastLoadErrorStage.clear();
     m_lastLoadErrorMessage.clear();
-    const auto setLoadError = [this](const std::string& stage, const std::string& message) {
+    const auto setLoadError = [this](const std::string& stage, const std::string& message)
+    {
         m_lastLoadErrorStage = stage;
         m_lastLoadErrorMessage = message;
-        if (m_loadErrorCallback) {
+        if (m_loadErrorCallback)
+        {
             m_loadErrorCallback(stage, message);
         }
     };
@@ -116,7 +149,8 @@ bool RawrXDModelLoader::Load(const wchar_t* path, VkDevice vkDevice, VkPhysicalD
     const std::string modelPathLower = toLowerAscii(modelPathUtf8);
 
     // Gate 1: enforce GGUF extension before any heavy work.
-    if (!endsWith(modelPathLower, ".gguf")) {
+    if (!endsWith(modelPathLower, ".gguf"))
+    {
         const std::string msg = "[RawrXD][GATE-1] Model format rejected: only valid GGUF files accepted";
         printf("%s\n", msg.c_str());
         setLoadError("gate_extension", msg);
@@ -133,51 +167,86 @@ bool RawrXDModelLoader::Load(const wchar_t* path, VkDevice vkDevice, VkPhysicalD
     (void)physDevice;
     memset(&memProps, 0, sizeof(memProps));
 #endif
-    
+
     // 1. Memory-mapped file (zero copy from disk)
-    hFile = CreateFileW(path, GENERIC_READ, FILE_SHARE_READ, nullptr, 
-                       OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
-    if (hFile == INVALID_HANDLE_VALUE) {
+    hFile =
+        CreateFileW(path, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
+    if (hFile == INVALID_HANDLE_VALUE)
+    {
         // Gate 5: explicit permission/access failure for runtime user.
         const std::string msg = std::string("[RawrXD][GATE-5] permission denied for runtime user: ") + modelPathUtf8;
         printf("%s\n", msg.c_str());
         setLoadError("gate_file_access", msg);
         return false;
     }
-    
+
     LARGE_INTEGER size;
     GetFileSizeEx(hFile, &size);
     fileSize = size.QuadPart;
 
-        std::string laneReason;
-        std::string resolvedLane;
-        if (!ResolveBackendModeAndPreflight(path, static_cast<uint64_t>(fileSize), resolvedLane, laneReason)) {
-         printf("[RawrXD][BACKEND] backend=%s result=fail reason=%s\n",
-             resolvedLane.c_str(), laneReason.c_str());
-         setLoadError("backend_preflight", std::string("[RawrXD][BACKEND] backend=") + resolvedLane + " result=fail reason=" + laneReason);
-         CloseHandle(hFile);
-         hFile = INVALID_HANDLE_VALUE;
-         return false;
-        }
-        printf("[RawrXD][BACKEND] backend=%s result=ok reason=%s\n",
-            resolvedLane.c_str(), laneReason.c_str());
-    
-    hMapping = CreateFileMapping(hFile, nullptr, PAGE_READONLY, 0, 0, nullptr);
-    mappedView = MapViewOfFile(hMapping, FILE_MAP_READ, 0, 0, 0);
-    if (!mappedView) {
-        const std::string msg = "[RawrXD] Memory mapping failed";
-        printf("%s\n", msg.c_str());
-        setLoadError("map_view", msg);
+    std::string laneReason;
+    std::string resolvedLane;
+    if (!ResolveBackendModeAndPreflight(path, static_cast<uint64_t>(fileSize), resolvedLane, laneReason))
+    {
+        printf("[RawrXD][BACKEND] backend=%s result=fail reason=%s\n", resolvedLane.c_str(), laneReason.c_str());
+        setLoadError("backend_preflight",
+                     std::string("[RawrXD][BACKEND] backend=") + resolvedLane + " result=fail reason=" + laneReason);
         CloseHandle(hFile);
+        hFile = INVALID_HANDLE_VALUE;
         return false;
     }
-    
+    printf("[RawrXD][BACKEND] backend=%s result=ok reason=%s\n", resolvedLane.c_str(), laneReason.c_str());
+
+    hMapping = CreateFileMappingW(hFile, nullptr, PAGE_READONLY, 0, 0, nullptr);
+    if (!hMapping)
+    {
+        const DWORD err = GetLastError();
+        char detail[320]{};
+        snprintf(detail, sizeof(detail), "[RawrXD] CreateFileMapping failed GetLastError=%lu",
+                 static_cast<unsigned long>(err));
+        if (err == 8u /* ERROR_NOT_ENOUGH_MEMORY */ || err == 1453u /* ERROR_COMMITMENT_LIMIT */)
+        {
+            strncat(detail, " (OS memory/commit limit; RAWRXD_BYPASS_RAM_GATES only skips software preflight.)",
+                    sizeof(detail) - std::strlen(detail) - 1);
+        }
+        printf("%s\n", detail);
+        setLoadError("map_view", detail);
+        CloseHandle(hFile);
+        hFile = INVALID_HANDLE_VALUE;
+        return false;
+    }
+    // Note: mmap does not pull the whole file into RAM; failures here are OS commit/VA limits,
+    // not the same as our software preflight. RAWRXD_BYPASS_RAM_GATES only skips preflight.
+    mappedView = MapViewOfFile(hMapping, FILE_MAP_READ, 0, 0, 0);
+    if (!mappedView)
+    {
+        const DWORD err = GetLastError();
+        char detail[320]{};
+        snprintf(detail, sizeof(detail), "[RawrXD] MapViewOfFile failed GetLastError=%lu",
+                 static_cast<unsigned long>(err));
+        if (err == 8u /* ERROR_NOT_ENOUGH_MEMORY */ || err == 1453u /* ERROR_COMMITMENT_LIMIT */)
+        {
+            strncat(detail,
+                    " (OS memory/commit limit; close other apps or use a smaller model. "
+                    "RAWRXD_BYPASS_RAM_GATES only skips software gates.)",
+                    sizeof(detail) - std::strlen(detail) - 1);
+        }
+        printf("%s\n", detail);
+        setLoadError("map_view", detail);
+        CloseHandle(hMapping);
+        hMapping = nullptr;
+        CloseHandle(hFile);
+        hFile = INVALID_HANDLE_VALUE;
+        return false;
+    }
+
     // 2. Parse GGUF structure
     uint8_t* ptr = (uint8_t*)mappedView;
     uint8_t* start = ptr;
-    
+
     GGUFFileHeader* hdr = (GGUFFileHeader*)ptr;
-    if (hdr->magic != 0x46554747) { // "GGUF" LE
+    if (hdr->magic != 0x46554747)
+    {  // "GGUF" LE
         char buf[256] = {0};
         snprintf(buf, sizeof(buf), "[RawrXD][GATE-1] Model format rejected: invalid GGUF header magic (%08x)",
                  hdr->magic);
@@ -185,14 +254,15 @@ bool RawrXDModelLoader::Load(const wchar_t* path, VkDevice vkDevice, VkPhysicalD
         setLoadError("gate_magic", buf);
         return false;
     }
-    
+
     ptr += sizeof(GGUFFileHeader);
-    
+
     // Skip metadata (simple parser to just skip it)
     ptr = ParseMetadata(ptr, hdr->kv_count);
 
     // Gate 3: quantization allowlist based on GGUF file_type metadata.
-    if (!IsSupportedFileType(metadataFileType)) {
+    if (!IsSupportedFileType(metadataFileType))
+    {
         char buf[256] = {0};
         snprintf(buf, sizeof(buf), "[RawrXD][GATE-3] unsupported quant: rejected at model load (file_type=%u)",
                  metadataFileType);
@@ -202,19 +272,21 @@ bool RawrXDModelLoader::Load(const wchar_t* path, VkDevice vkDevice, VkPhysicalD
     }
 
     // Gate 6: strict tokenizer/config pairing via required embedded metadata fields.
-    if (metadataArchitecture.empty() || metadataTokenizerModel.empty()) {
+    if (metadataArchitecture.empty() || metadataTokenizerModel.empty())
+    {
         const std::string msg =
             "[RawrXD][GATE-6] tokenizer/config mismatch: GGUF metadata missing architecture/tokenizer pairing";
         printf("%s\n", msg.c_str());
         setLoadError("gate_metadata_pairing", msg);
         return false;
     }
-    
+
     // 3. Tensor info array
     std::vector<Tensor> tensorInfos;
     tensorInfos.reserve(hdr->tensor_count);
-    
-    for (uint64_t i = 0; i < hdr->tensor_count; i++) {
+
+    for (uint64_t i = 0; i < hdr->tensor_count; i++)
+    {
         Tensor t;
         // Read tensor info (name, dims, type, offset)
         ptr = ParseTensorInfo(ptr, t);
@@ -226,11 +298,11 @@ bool RawrXDModelLoader::Load(const wchar_t* path, VkDevice vkDevice, VkPhysicalD
         // Usually, `tensorDataOffset` is calculated after headers.
         tensorInfos.push_back(t);
     }
-    
+
     // 4. Align to 32 bytes for tensor data start
     uint64_t headerBytes = (uint64_t)(ptr - start);
     uint64_t dataStart = (headerBytes + 31) & ~31;
-    
+
     // 5. Parallel async load + dequantize to GPU
     printf("[RawrXD] Loading %zu tensors from GGUF...\n", tensorInfos.size());
     printf("[RawrXD] Data starts at offset %llu\n", dataStart);
@@ -238,122 +310,170 @@ bool RawrXDModelLoader::Load(const wchar_t* path, VkDevice vkDevice, VkPhysicalD
     SYSTEM_INFO sysInfo;
     GetSystemInfo(&sysInfo);
     size_t numThreads = sysInfo.dwNumberOfProcessors;
-    if (numThreads > 32) numThreads = 32; // basic clamp
-    
+    if (numThreads > 32)
+        numThreads = 32;  // basic clamp
+
     std::vector<std::vector<Tensor*>> chunks(numThreads);
-    for (size_t i = 0; i < tensorInfos.size(); i++) {
+    for (size_t i = 0; i < tensorInfos.size(); i++)
+    {
         // Fix up offset to be absolute pointer
         tensorInfos[i].data = start + dataStart + tensorInfos[i].offset;
         chunks[i % numThreads].push_back(&tensorInfos[i]);
     }
-    
+
     std::vector<std::thread> workers;
-    for (auto& chunk : chunks) {
-        if (chunk.empty()) continue;
-        workers.emplace_back([this, chunk]() {
-             for (auto* t : chunk) {
-                 this->LoadTensorAsync(*t);
-             }
-        });
+    for (auto& chunk : chunks)
+    {
+        if (chunk.empty())
+            continue;
+        workers.emplace_back(
+            [this, chunk]()
+            {
+                for (auto* t : chunk)
+                {
+                    this->LoadTensorAsync(*t);
+                }
+            });
     }
-    
-    for (auto& w : workers) w.join();
-    
+
+    for (auto& w : workers)
+        w.join();
+
     // 6. Build tensor lookup map
-    for (auto& t : tensorInfos) {
+    for (auto& t : tensorInfos)
+    {
         tensors[t.name] = std::move(t);
     }
-    
-    printf("[RawrXD] Model loaded successfully. VRAM used: %.2f GB\n", 
-           CalculateVRAMUsage() / 1e9);
-    printf("[RawrXD] Config: dim=%d, layers=%d, heads=%d, kv_heads=%d, vocab=%d, ctx=%d\n",
-           n_embd, n_layers, n_heads, n_heads_kv, vocab_size, n_ctx);
+
+    printf("[RawrXD] Model loaded successfully. VRAM used: %.2f GB\n", CalculateVRAMUsage() / 1e9);
+    printf("[RawrXD] Config: dim=%d, layers=%d, heads=%d, kv_heads=%d, vocab=%d, ctx=%d\n", n_embd, n_layers, n_heads,
+           n_heads_kv, vocab_size, n_ctx);
     printf("[RawrXD] Tensor names in model (%zu total):\n", tensors.size());
     int tc = 0;
-    for (auto& kv : tensors) {
+    for (auto& kv : tensors)
+    {
         printf("  [%3d] type=%d dims=", tc++, kv.second.type);
-        for (auto d : kv.second.dims) printf("%llu ", (unsigned long long)d);
+        for (auto d : kv.second.dims)
+            printf("%llu ", (unsigned long long)d);
         printf("%s\n", kv.first.c_str());
-        if (tc > 15) { printf("  ... (%zu more)\n", tensors.size() - tc); break; }
+        if (tc > 15)
+        {
+            printf("  ... (%zu more)\n", tensors.size() - tc);
+            break;
+        }
     }
     m_lastLoadErrorStage.clear();
     m_lastLoadErrorMessage.clear();
     return true;
 }
 
-void RawrXDModelLoader::SetLoadErrorCallback(ModelLoadErrorCallback callback) {
+void RawrXDModelLoader::SetLoadErrorCallback(ModelLoadErrorCallback callback)
+{
     m_loadErrorCallback = std::move(callback);
 }
 
-const std::string& RawrXDModelLoader::GetLastLoadErrorMessage() const {
+const std::string& RawrXDModelLoader::GetLastLoadErrorMessage() const
+{
     return m_lastLoadErrorMessage;
 }
 
 // Simple metadata skipper / scraper
-uint8_t* RawrXDModelLoader::ParseMetadata(uint8_t* ptr, uint64_t count) {
-    for (uint64_t i = 0; i < count; i++) {
+uint8_t* RawrXDModelLoader::ParseMetadata(uint8_t* ptr, uint64_t count)
+{
+    for (uint64_t i = 0; i < count; i++)
+    {
         // Read Key
-        uint64_t len = *(uint64_t*)ptr; ptr += 8;
-        std::string key((char*)ptr, len); ptr += len;
-        
+        uint64_t len = *(uint64_t*)ptr;
+        ptr += 8;
+        std::string key((char*)ptr, len);
+        ptr += len;
+
         // Read Type
-        uint32_t type = *(uint32_t*)ptr; ptr += 4;
-        
+        uint32_t type = *(uint32_t*)ptr;
+        ptr += 4;
+
         // Read/Skip Value
-        switch (type) {
-            case 8: // String
+        switch (type)
+        {
+            case 8:  // String
             {
-                uint64_t vlen = *(uint64_t*)ptr; ptr += 8;
+                uint64_t vlen = *(uint64_t*)ptr;
+                ptr += 8;
                 // Capture useful string metadata if needed
-                if (key == "general.architecture") {
+                if (key == "general.architecture")
+                {
                     metadataArchitecture.assign((char*)ptr, static_cast<size_t>(vlen));
-                } else if (key == "tokenizer.ggml.model") {
+                }
+                else if (key == "tokenizer.ggml.model")
+                {
                     metadataTokenizerModel.assign((char*)ptr, static_cast<size_t>(vlen));
                 }
                 ptr += vlen;
                 break;
             }
-            case 9: // Array
+            case 9:  // Array
             {
-                uint32_t atype = *(uint32_t*)ptr; ptr += 4;
-                uint64_t Alen = *(uint64_t*)ptr; ptr += 8;
+                uint32_t atype = *(uint32_t*)ptr;
+                ptr += 4;
+                uint64_t Alen = *(uint64_t*)ptr;
+                ptr += 8;
 
-                if (key == "tokenizer.ggml.tokens") {
+                if (key == "tokenizer.ggml.tokens")
+                {
                     vocab_size = (int)Alen;
                 }
 
                 // Skip array content
-                for(uint64_t j=0; j<Alen; j++) {
-                    if (atype == 8) { // Array of strings
-                         uint64_t slen = *(uint64_t*)ptr; ptr += 8 + slen;
-                    } else { // Fixed width (assume max 8 bytes for simplicity in skipper)
+                for (uint64_t j = 0; j < Alen; j++)
+                {
+                    if (atype == 8)
+                    {  // Array of strings
+                        uint64_t slen = *(uint64_t*)ptr;
+                        ptr += 8 + slen;
+                    }
+                    else
+                    {  // Fixed width (assume max 8 bytes for simplicity in skipper)
                         // This is hacky, real GGUF needs sizeof(atype)
                         // Most arrays are small ints/floats (4 bytes)
-                        ptr += 4; // TODO: Fix for 64-bit arrays
+                        ptr += 4;  // TODO: Fix for 64-bit arrays
                     }
                 }
                 break;
             }
-            default: // Scalars
+            default:  // Scalars
                 // Basic types 4(u32), 5(i32), 6(f32), 7(bool) -> 4 bytes?
                 // 10(u64), 11(i64), 12(f64) -> 8 bytes
                 // Capture specific keys
-                if (key == "llm_load_print_meta") { /* no op */ }
-                
-                if (type >= 4 && type <= 7) {
+                if (key == "llm_load_print_meta")
+                { /* no op */
+                }
+
+                if (type >= 4 && type <= 7)
+                {
                     uint32_t val = *(uint32_t*)ptr;
-                    if (key == "general.file_type") metadataFileType = val;
-                    if (key == "llama.embedding_length" || key == "general.embedding_length") n_embd = val;
-                    if (key == "llama.block_count" || key == "general.block_count") n_layers = val;
-                    if (key == "llama.attention.head_count" || key == "general.attention.head_count") n_heads = val;
-                    if (key == "llama.attention.head_count_kv" || key == "general.attention.head_count_kv") n_heads_kv = val;
-                    if (key == "llama.context_length" || key == "general.context_length") n_ctx = val;
-                    if (key == "llama.feed_forward_length" || key == "general.feed_forward_length") n_ffn = val;
+                    if (key == "general.file_type")
+                        metadataFileType = val;
+                    if (key == "llama.embedding_length" || key == "general.embedding_length")
+                        n_embd = val;
+                    if (key == "llama.block_count" || key == "general.block_count")
+                        n_layers = val;
+                    if (key == "llama.attention.head_count" || key == "general.attention.head_count")
+                        n_heads = val;
+                    if (key == "llama.attention.head_count_kv" || key == "general.attention.head_count_kv")
+                        n_heads_kv = val;
+                    if (key == "llama.context_length" || key == "general.context_length")
+                        n_ctx = val;
+                    if (key == "llama.feed_forward_length" || key == "general.feed_forward_length")
+                        n_ffn = val;
                     ptr += 4;
-                } else if (type >= 10 && type <= 12) {
-                     ptr += 8;
-                } else {
-                    ptr += 4; // Fallback
+                }
+                else if (type >= 10 && type <= 12)
+                {
+                    ptr += 8;
+                }
+                else
+                {
+                    ptr += 4;  // Fallback
                 }
                 break;
         }
@@ -361,100 +481,129 @@ uint8_t* RawrXDModelLoader::ParseMetadata(uint8_t* ptr, uint64_t count) {
     return ptr;
 }
 
-uint8_t* RawrXDModelLoader::ParseTensorInfo(uint8_t* ptr, Tensor& t) {
-    uint64_t len = *(uint64_t*)ptr; ptr += 8;
-    t.name = std::string((char*)ptr, len); ptr += len;
-    
-    uint32_t n_dims = *(uint32_t*)ptr; ptr += 4;
+uint8_t* RawrXDModelLoader::ParseTensorInfo(uint8_t* ptr, Tensor& t)
+{
+    uint64_t len = *(uint64_t*)ptr;
+    ptr += 8;
+    t.name = std::string((char*)ptr, len);
+    ptr += len;
+
+    uint32_t n_dims = *(uint32_t*)ptr;
+    ptr += 4;
     t.dims.resize(n_dims);
-    for (uint32_t i = 0; i < n_dims; i++) {
-        t.dims[i] = *(uint64_t*)ptr; ptr += 8;
+    for (uint32_t i = 0; i < n_dims; i++)
+    {
+        t.dims[i] = *(uint64_t*)ptr;
+        ptr += 8;
     }
-    
-    t.type = *(uint32_t*)ptr; ptr += 4;
-    t.offset = *(uint64_t*)ptr; ptr += 8;
+
+    t.type = *(uint32_t*)ptr;
+    ptr += 4;
+    t.offset = *(uint64_t*)ptr;
+    ptr += 8;
     return ptr;
 }
 
-void RawrXDModelLoader::LoadTensorAsync(Tensor& t) {
+void RawrXDModelLoader::LoadTensorAsync(Tensor& t)
+{
     // Determine size
     size_t ne = 1;
-    for (auto d : t.dims) ne *= d;
-    
+    for (auto d : t.dims)
+        ne *= d;
+
     // If its a weight we need on GPU (blocks, output, norm), upload it.
     // If its small metadata, maybe keep on CPU? For now upload everything used in forward pass.
-    
+
     // Simple filter: Only load layers and norms. Token embeddings usually large, sometimes CPU?
     // Lets load everything to GPU for now.
-    
-    if (t.type == 2) { // Q4_0
+
+    if (t.type == 2)
+    {  // Q4_0
         DequantAndUploadQ4_0(t, t.data, ne);
-    } else if (t.type == 3) { // Q4_1
-        // Dequant_Q4_1 is in QuantKernels_Full.asm as well
-    } else if (t.type == 8) { // Q8_0
+    }
+    else if (t.type == 3)
+    {  // Q4_1
+       // Dequant_Q4_1 is in QuantKernels_Full.asm as well
+    }
+    else if (t.type == 8)
+    {  // Q8_0
         DequantAndUploadQ8_0(t, t.data, ne);
-    } else if (t.type == 12) { // Q4_K
+    }
+    else if (t.type == 12)
+    {  // Q4_K
         DequantAndUploadQ4_K(t, t.data, ne);
-    } else if (t.type == 0) { // F32
+    }
+    else if (t.type == 0)
+    {  // F32
         UploadF32(t, t.data, ne);
-    } else {
-         // Placeholder for other types
-         // printf("Skipping unsupported type %d for %s\n", t.type, t.name.c_str());
+    }
+    else
+    {
+        // Placeholder for other types
+        // printf("Skipping unsupported type %d for %s\n", t.type, t.name.c_str());
     }
 }
 
-void RawrXDModelLoader::DequantAndUploadQ8_0(Tensor& t, void* blocks, size_t N) {
+void RawrXDModelLoader::DequantAndUploadQ8_0(Tensor& t, void* blocks, size_t N)
+{
     size_t numBlocks = N / 32;
     t.cpuFloatData.resize(N);
-    
+
     uint8_t* ptr = (uint8_t*)blocks;
-    for (size_t b = 0; b < numBlocks; b++) {
+    for (size_t b = 0; b < numBlocks; b++)
+    {
 #ifdef RAWR_ENABLE_ASM_KERNELS
         Dequant_Q8_0(ptr, &t.cpuFloatData[b * 32]);
 #else
         // Manual implementation if ASM not linked
         Q8_0_Block* blk = (Q8_0_Block*)ptr;
         float d = f16_to_f32(blk->d);
-        for(int i=0; i<32; i++) t.cpuFloatData[b*32 + i] = (float)blk->qs[i] * d;
+        for (int i = 0; i < 32; i++)
+            t.cpuFloatData[b * 32 + i] = (float)blk->qs[i] * d;
 #endif
-        ptr += 34; // BS_Q8_0
+        ptr += 34;  // BS_Q8_0
     }
 }
 
-void RawrXDModelLoader::DequantAndUploadQ4_K(Tensor& t, void* blocks, size_t N) {
+void RawrXDModelLoader::DequantAndUploadQ4_K(Tensor& t, void* blocks, size_t N)
+{
     size_t numSuperBlocks = N / 256;
     t.cpuFloatData.resize(N);
-    
+
     uint8_t* ptr = (uint8_t*)blocks;
-    for (size_t b = 0; b < numSuperBlocks; b++) {
+    for (size_t b = 0; b < numSuperBlocks; b++)
+    {
 #ifdef RAWR_ENABLE_ASM_KERNELS
         Dequant_Q4_K(ptr, &t.cpuFloatData[b * 256]);
 #else
         // Q4_K complex logic skipped here
 #endif
-        ptr += 144; // BS_Q4_K
+        ptr += 144;  // BS_Q4_K
     }
 }
 
-void RawrXDModelLoader::DequantAndUploadQ4_0(Tensor& t, void* blocks, size_t N) {
+void RawrXDModelLoader::DequantAndUploadQ4_0(Tensor& t, void* blocks, size_t N)
+{
     size_t numBlocks = N / 32;
     t.cpuFloatData.resize(N);
-    
+
     uint8_t* ptr = (uint8_t*)blocks;
-    for (size_t b = 0; b < numBlocks; b++) {
+    for (size_t b = 0; b < numBlocks; b++)
+    {
 #ifdef RAWR_ENABLE_ASM_KERNELS
         Dequant_Q4_0(ptr, &t.cpuFloatData[b * 32]);
 #else
         Q4_0_Block* blk = (Q4_0_Block*)ptr;
         float d = f16_to_f32(blk->d);
-        for (int i = 0; i < 16; i++) {
+        for (int i = 0; i < 16; i++)
+        {
             int8_t b0 = (blk->qs[i] & 0x0F) - 8;
             int8_t b1 = (blk->qs[i] >> 4) - 8;
-            t.cpuFloatData[b * 32 + i]      = (float)b0 * d;
+            t.cpuFloatData[b * 32 + i] = (float)b0 * d;
             t.cpuFloatData[b * 32 + i + 16] = (float)b1 * d;
         }
 #endif
-        ptr += 18; // BS_Q4_0
+        ptr += 18;  // BS_Q4_0
     }
 
 #ifdef RAWR_ENABLE_VULKAN
@@ -462,13 +611,16 @@ void RawrXDModelLoader::DequantAndUploadQ4_0(Tensor& t, void* blocks, size_t N) 
 #endif
 }
 
-void RawrXDModelLoader::UploadF32(Tensor& t, void* data, size_t N) {
+void RawrXDModelLoader::UploadF32(Tensor& t, void* data, size_t N)
+{
     // CPU path: copy F32 data directly
     t.cpuFloatData.resize(N);
-    if (data) memcpy(t.cpuFloatData.data(), data, N * sizeof(float));
+    if (data)
+        memcpy(t.cpuFloatData.data(), data, N * sizeof(float));
 
 #ifdef RAWR_ENABLE_VULKAN
-    if (!m_gpuUploadEnabled) {
+    if (!m_gpuUploadEnabled)
+    {
         return;
     }
     size_t dstSize = N * sizeof(uint16_t);
@@ -480,9 +632,11 @@ void RawrXDModelLoader::UploadF32(Tensor& t, void* data, size_t N) {
 #endif
 }
 
-void RawrXDModelLoader::CreateGPUBuffer(Tensor& t, void* data, size_t size) {
+void RawrXDModelLoader::CreateGPUBuffer(Tensor& t, void* data, size_t size)
+{
 #ifdef RAWR_ENABLE_VULKAN
-    if (!m_gpuUploadEnabled) {
+    if (!m_gpuUploadEnabled)
+    {
         return;
     }
     VkBufferCreateInfo bufferInfo{};
@@ -491,7 +645,8 @@ void RawrXDModelLoader::CreateGPUBuffer(Tensor& t, void* data, size_t size) {
     bufferInfo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    if (vkCreateBuffer(device, &bufferInfo, nullptr, &t.gpuBuffer) != VK_SUCCESS) {
+    if (vkCreateBuffer(device, &bufferInfo, nullptr, &t.gpuBuffer) != VK_SUCCESS)
+    {
         printf("failed to create buffer for %s\n", t.name.c_str());
         return;
     }
@@ -504,41 +659,49 @@ void RawrXDModelLoader::CreateGPUBuffer(Tensor& t, void* data, size_t size) {
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-    if (vkAllocateMemory(device, &allocInfo, nullptr, &t.gpuMemory) != VK_SUCCESS) {
+    if (vkAllocateMemory(device, &allocInfo, nullptr, &t.gpuMemory) != VK_SUCCESS)
+    {
         printf("failed to allocate memory for %s\n", t.name.c_str());
         return;
     }
 
     vkBindBufferMemory(device, t.gpuBuffer, t.gpuMemory, 0);
-    
-    if (data) {
+
+    if (data)
+    {
         UploadViaStaging(data, size, t.gpuBuffer);
     }
 #else
     // CPU-only mode: no GPU buffers
-    (void)t; (void)data; (void)size;
+    (void)t;
+    (void)data;
+    (void)size;
 #endif
 }
 
-bool RawrXDModelLoader::IsSupportedFileType(uint32_t fileType) const {
+bool RawrXDModelLoader::IsSupportedFileType(uint32_t fileType) const
+{
     static const std::set<uint32_t> allowlisted = {
-        0u, 1u,        // F32, F16
-        2u, 3u,        // Q4_0, Q4_1
-        7u, 8u, 9u,    // Q8_0, Q5_0, Q5_1
-        10u,           // Q2_K
-        11u, 12u, 13u, // Q3_K_S/M/L
-        14u, 15u,      // Q4_K_S/M
-        16u, 17u,      // Q5_K_S/M
-        18u            // Q6_K
+        0u,  1u,        // F32, F16
+        2u,  3u,        // Q4_0, Q4_1
+        7u,  8u,  9u,   // Q8_0, Q5_0, Q5_1
+        10u,            // Q2_K
+        11u, 12u, 13u,  // Q3_K_S/M/L
+        14u, 15u,       // Q4_K_S/M
+        16u, 17u,       // Q5_K_S/M
+        18u             // Q6_K
     };
     return allowlisted.count(fileType) > 0;
 }
 
-bool RawrXDModelLoader::ResolveBackendModeAndPreflight(const wchar_t* path, uint64_t modelBytes, std::string& lane, std::string& reason) {
+bool RawrXDModelLoader::ResolveBackendModeAndPreflight(const wchar_t* path, uint64_t modelBytes, std::string& lane,
+                                                       std::string& reason)
+{
     const char* modeEnv = std::getenv("RAWRXD_LOCAL_BACKEND_MODE");
     std::string mode = modeEnv ? toLowerAscii(std::string(modeEnv)) : "auto-with-verified-fallback";
 
-    if (mode != "cpu-only" && mode != "gpu-only" && mode != "auto-with-verified-fallback") {
+    if (mode != "cpu-only" && mode != "gpu-only" && mode != "auto-with-verified-fallback")
+    {
         lane = "invalid";
         reason = "invalid backend mode (expected cpu-only|gpu-only|auto-with-verified-fallback)";
         return false;
@@ -546,34 +709,76 @@ bool RawrXDModelLoader::ResolveBackendModeAndPreflight(const wchar_t* path, uint
 
     MEMORYSTATUSEX mem = {};
     mem.dwLength = sizeof(mem);
-    if (!GlobalMemoryStatusEx(&mem)) {
+    if (!GlobalMemoryStatusEx(&mem))
+    {
         lane = "unknown";
         reason = "unable to query system memory";
         return false;
     }
 
-    const uint64_t availRam = mem.ullAvailPhys;
-    const uint64_t ramLimit = static_cast<uint64_t>(static_cast<double>(availRam) * 0.80);
-    if (modelBytes > ramLimit) {
-        lane = mode;
-        reason = "insufficient RAM headroom (20% reserve)";
-        return false;
+    // Preflight: compare model file size to a fraction of RAM. Using *available* RAM was too
+    // strict (mmap does not require the full file in physical RAM). Default: 80% of *total*
+    // physical RAM minus optional reserve. Set RAWRXD_RAM_PREFLIGHT_USE_AVAIL=1 to restore
+    // the old avail-RAM behavior. RAWRXD_RAM_PREFLIGHT_RESERVE_FRAC=0.0..0.95 (default 0.20).
+    const char* useAvailEnv = std::getenv("RAWRXD_RAM_PREFLIGHT_USE_AVAIL");
+    const bool useAvail = useAvailEnv && (useAvailEnv[0] == '1' || useAvailEnv[0] == 'y' || useAvailEnv[0] == 'Y');
+    double reserveFrac = 0.20;
+    if (const char* rf = std::getenv("RAWRXD_RAM_PREFLIGHT_RESERVE_FRAC"))
+    {
+        char* end = nullptr;
+        const double v = std::strtod(rf, &end);
+        if (end != rf && v >= 0.0 && v <= 0.95)
+            reserveFrac = v;
+    }
+    const uint64_t baseRam = useAvail ? mem.ullAvailPhys : mem.ullTotalPhys;
+    const uint64_t ramLimit = static_cast<uint64_t>(static_cast<double>(baseRam) * (1.0 - reserveFrac));
+    
+    // Auto-bypass logic: For 800B+ streaming with mmap, automatically bypass preflight if:
+    // 1. Model would fail the standard preflight check
+    // 2. Using total RAM mode (mmap-friendly, not available RAM)
+    // 3. Model is still within reasonable bounds (< 90% of total physical RAM)
+    // This allows the streaming loader to handle large models as designed.
+    bool autoBypass = false;
+    if (!RawrxdBypassRamGatesFromEnv() && modelBytes > ramLimit)
+    {
+        const uint64_t safeLimit = static_cast<uint64_t>(static_cast<double>(mem.ullTotalPhys) * 0.90);
+        if (!useAvail && modelBytes <= safeLimit)
+        {
+            autoBypass = true;
+            printf("[RawrXD][AUTO-BYPASS] Model size %.2f GB exceeds %.0f%% limit but within safe mmap range (%.2f GB < 90%% of %.2f GB total RAM)\n",
+                   modelBytes / (1024.0 * 1024.0 * 1024.0),
+                   (1.0 - reserveFrac) * 100.0,
+                   modelBytes / (1024.0 * 1024.0 * 1024.0),
+                   mem.ullTotalPhys / (1024.0 * 1024.0 * 1024.0));
+            printf("[RawrXD][AUTO-BYPASS] Enabling bypass for mmap-based streaming (800B loader optimized for large models)\n");
+        }
+        else if (!autoBypass)
+        {
+            lane = mode;
+            reason = useAvail ? "insufficient RAM headroom (reserve vs available physical)"
+                              : "insufficient RAM headroom (reserve vs total physical; mmap-friendly)";
+            return false;
+        }
     }
 
     bool gpuUsable = false;
 #ifdef RAWR_ENABLE_VULKAN
     uint64_t maxVram = 0;
-    for (uint32_t i = 0; i < memProps.memoryTypeCount; ++i) {
+    for (uint32_t i = 0; i < memProps.memoryTypeCount; ++i)
+    {
         // memory heaps are not directly indexed by memoryTypeCount in this fallback map,
         // so we keep a conservative path and rely on provided physical-device props where available.
         (void)i;
     }
     IDXGIFactory1* factory = nullptr;
-    if (SUCCEEDED(CreateDXGIFactory1(__uuidof(IDXGIFactory1), reinterpret_cast<void**>(&factory)))) {
+    if (SUCCEEDED(CreateDXGIFactory1(__uuidof(IDXGIFactory1), reinterpret_cast<void**>(&factory))))
+    {
         IDXGIAdapter1* adapter = nullptr;
-        if (SUCCEEDED(factory->EnumAdapters1(0, &adapter))) {
+        if (SUCCEEDED(factory->EnumAdapters1(0, &adapter)))
+        {
             DXGI_ADAPTER_DESC1 desc = {};
-            if (SUCCEEDED(adapter->GetDesc1(&desc)) && desc.DedicatedVideoMemory > 0) {
+            if (SUCCEEDED(adapter->GetDesc1(&desc)) && desc.DedicatedVideoMemory > 0)
+            {
                 maxVram = static_cast<uint64_t>(desc.DedicatedVideoMemory);
             }
             adapter->Release();
@@ -586,8 +791,10 @@ bool RawrXDModelLoader::ResolveBackendModeAndPreflight(const wchar_t* path, uint
     gpuUsable = false;
 #endif
 
-    if (mode == "gpu-only") {
-        if (!gpuUsable) {
+    if (mode == "gpu-only")
+    {
+        if (!gpuUsable)
+        {
             lane = "gpu-only";
             reason = "gpu-only requested but VRAM preflight failed or GPU backend unavailable";
             return false;
@@ -598,7 +805,8 @@ bool RawrXDModelLoader::ResolveBackendModeAndPreflight(const wchar_t* path, uint
         return true;
     }
 
-    if (mode == "cpu-only") {
+    if (mode == "cpu-only")
+    {
         lane = "cpu-only";
         reason = "cpu-only pinned by configuration";
         m_gpuUploadEnabled = false;
@@ -613,130 +821,149 @@ bool RawrXDModelLoader::ResolveBackendModeAndPreflight(const wchar_t* path, uint
 }
 
 #ifdef RAWR_ENABLE_VULKAN
-void RawrXDModelLoader::UploadViaStaging(void* data, size_t size, VkBuffer dstBuffer) {
+void RawrXDModelLoader::UploadViaStaging(void* data, size_t size, VkBuffer dstBuffer)
+{
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
-    
+
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     bufferInfo.size = size;
     bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-    
+
     vkCreateBuffer(device, &bufferInfo, nullptr, &stagingBuffer);
-    
+
     VkMemoryRequirements memRequirements;
     vkGetBufferMemoryRequirements(device, stagingBuffer, &memRequirements);
-    
+
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    
+    allocInfo.memoryTypeIndex = FindMemoryType(
+        memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
     vkAllocateMemory(device, &allocInfo, nullptr, &stagingBufferMemory);
     vkBindBufferMemory(device, stagingBuffer, stagingBufferMemory, 0);
-    
+
     void* mappedData;
     vkMapMemory(device, stagingBufferMemory, 0, size, 0, &mappedData);
     memcpy(mappedData, data, size);
     vkUnmapMemory(device, stagingBufferMemory);
-    
+
     // Real One-Shot Command Submission
     // ---------------------------------------------------------
     // We assume Queue Family 0 is available for Transfer/Graphics.
     // In a production engine, we would pass the queue/pool from the engine context.
-    
+
     uint32_t queueFamilyIndex = 0;
     VkQueue queue;
     vkGetDeviceQueue(device, queueFamilyIndex, 0, &queue);
-    
+
     VkCommandPool commandPool;
     VkCommandPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     poolInfo.queueFamilyIndex = queueFamilyIndex;
-    poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT; 
-    
-    if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
+    poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+
+    if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS)
+    {
         printf("[RawrXD] Failed to create transient command pool for upload\n");
         // Fallback or fatal error
-    } else {
+    }
+    else
+    {
         VkCommandBufferAllocateInfo cmdAllocInfo{};
         cmdAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         cmdAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         cmdAllocInfo.commandPool = commandPool;
         cmdAllocInfo.commandBufferCount = 1;
-        
+
         VkCommandBuffer commandBuffer;
         vkAllocateCommandBuffers(device, &cmdAllocInfo, &commandBuffer);
-        
+
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        
+
         vkBeginCommandBuffer(commandBuffer, &beginInfo);
-        
+
         VkBufferCopy copyRegion{};
         copyRegion.srcOffset = 0;
         copyRegion.dstOffset = 0;
         copyRegion.size = size;
         vkCmdCopyBuffer(commandBuffer, stagingBuffer, dstBuffer, 1, &copyRegion);
-        
+
         vkEndCommandBuffer(commandBuffer);
-        
+
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &commandBuffer;
-        
+
         vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
         vkQueueWaitIdle(queue);
-        
+
         vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
         vkDestroyCommandPool(device, commandPool, nullptr);
     }
-    
+
     vkDestroyBuffer(device, stagingBuffer, nullptr);
     vkFreeMemory(device, stagingBufferMemory, nullptr);
 }
 
-uint32_t RawrXDModelLoader::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+uint32_t RawrXDModelLoader::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
+{
 #ifdef RAWR_ENABLE_VULKAN
-    for (uint32_t i = 0; i < memProps.memoryTypeCount; i++) {
-        if ((typeFilter & (1 << i)) && (memProps.memoryTypes[i].propertyFlags & properties) == properties) {
+    for (uint32_t i = 0; i < memProps.memoryTypeCount; i++)
+    {
+        if ((typeFilter & (1 << i)) && (memProps.memoryTypes[i].propertyFlags & properties) == properties)
+        {
             return i;
         }
     }
 #else
-    (void)typeFilter; (void)properties;
+    (void)typeFilter;
+    (void)properties;
 #endif
     return 0;
 }
-#endif // RAWR_ENABLE_VULKAN (closes UploadViaStaging + FindMemoryType block)
+#endif  // RAWR_ENABLE_VULKAN (closes UploadViaStaging + FindMemoryType block)
 
-int64_t RawrXDModelLoader::CalculateVRAMUsage() {
+int64_t RawrXDModelLoader::CalculateVRAMUsage()
+{
     uint64_t total_bytes = 0;
 
-    for (const auto& entry : tensors) {
+    for (const auto& entry : tensors)
+    {
         const Tensor& tensor = entry.second;
-        if (!tensor.onGPU) {
+        if (!tensor.onGPU)
+        {
             continue;
         }
 
         uint64_t tensor_bytes = 0;
-        if (!tensor.cpuFloatData.empty()) {
+        if (!tensor.cpuFloatData.empty())
+        {
             const uint64_t float_bytes = static_cast<uint64_t>(tensor.cpuFloatData.size()) * sizeof(float);
             tensor_bytes = float_bytes;
-        } else {
+        }
+        else
+        {
             uint64_t elements = 1;
-            for (uint64_t d : tensor.dims) {
-                if (d == 0 || elements > (std::numeric_limits<uint64_t>::max() / d)) {
+            for (uint64_t d : tensor.dims)
+            {
+                if (d == 0 || elements > (std::numeric_limits<uint64_t>::max() / d))
+                {
                     elements = 0;
                     break;
                 }
                 elements *= d;
             }
 
-            if (elements != 0) {
-                switch (tensor.type) {
+            if (elements != 0)
+            {
+                switch (tensor.type)
+                {
                     case 0:  // F32
                         tensor_bytes = elements * sizeof(float);
                         break;
@@ -750,8 +977,8 @@ int64_t RawrXDModelLoader::CalculateVRAMUsage() {
                     case 8:  // Q8_0
                         tensor_bytes = (elements / 32) * 34;
                         break;
-                    case 12: // Q4_K
-                    case 16: // Q4_K variant
+                    case 12:  // Q4_K
+                    case 16:  // Q4_K variant
                         tensor_bytes = (elements / 256) * 144;
                         break;
                     default:
@@ -761,449 +988,44 @@ int64_t RawrXDModelLoader::CalculateVRAMUsage() {
             }
         }
 
-        if (total_bytes > std::numeric_limits<uint64_t>::max() - tensor_bytes) {
+        if (total_bytes > std::numeric_limits<uint64_t>::max() - tensor_bytes)
+        {
             total_bytes = std::numeric_limits<uint64_t>::max();
             break;
         }
         total_bytes += tensor_bytes;
     }
 
-    if (total_bytes > static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) {
+    if (total_bytes > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()))
+    {
         return std::numeric_limits<int64_t>::max();
     }
     return static_cast<int64_t>(total_bytes);
 }
 
-float* RawrXDModelLoader::GetTensor(const std::string& name) {
-    if (tensors.find(name) == tensors.end()) return nullptr;
+float* RawrXDModelLoader::GetTensor(const std::string& name)
+{
+    if (tensors.find(name) == tensors.end())
+        return nullptr;
     Tensor& t = tensors[name];
-    if (!t.cpuFloatData.empty()) return t.cpuFloatData.data();
-    
-    size_t ne = 1; 
-    for(auto d : t.dims) ne *= d;
-    t.cpuFloatData.resize(ne);
-    
-    if (t.type == 0) { // F32
-         if (t.data) memcpy(t.cpuFloatData.data(), t.data, ne * sizeof(float));
-    } else {
-         // Weights already dequantized during LoadTensorAsync if RAWR_BATCH_LOAD is on.
-         // If we reach here, it's a lazy load request.
-         this->LoadTensorAsync(t); 
-    }
-    return t.cpuFloatData.data();
-}
-=======
-#include "rawrxd_model_loader.h"
-#include <cstdio>
-#include <cmath>
-#include <algorithm>
-#include <thread>
-#include <windows.h>
-#include <iostream>
-#include <intrin.h>
-#include <cstdint>
+    if (!t.cpuFloatData.empty())
+        return t.cpuFloatData.data();
 
-// MASM64 kernel declarations - these link to rawrxd_kernels.asm
-// Since rawrxd_kernels.asm was confirmed present, we can link these.
-extern "C" void DequantQ4_0_AVX512(void* src, uint16_t* dst, size_t blocks);
-extern "C" void DequantQ4_0_AVX2(void* src, uint16_t* dst, size_t blocks);
-
-// Helper for CPUID
-static bool hasAVX512() {
-    int cpuInfo[4];
-    __cpuid(cpuInfo, 7);
-    return (cpuInfo[1] & (1 << 16)) != 0;
-}
-
-bool RawrXDModelLoader::Load(const wchar_t* path, VkDevice vkDevice, VkPhysicalDevice physDevice) {
-    device = vkDevice;
-    vkGetPhysicalDeviceMemoryProperties(physDevice, &memProps);
-    
-    // 1. Memory-mapped file (zero copy from disk)
-    hFile = CreateFileW(path, GENERIC_READ, FILE_SHARE_READ, nullptr, 
-                       OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
-    if (hFile == INVALID_HANDLE_VALUE) {
-        printf("[RawrXD] Could not open model file: %ls\n", path);
-        return false;
-    }
-    
-    LARGE_INTEGER size;
-    GetFileSizeEx(hFile, &size);
-    fileSize = size.QuadPart;
-    
-    hMapping = CreateFileMapping(hFile, nullptr, PAGE_READONLY, 0, 0, nullptr);
-    mappedView = MapViewOfFile(hMapping, FILE_MAP_READ, 0, 0, 0);
-    if (!mappedView) {
-        printf("[RawrXD] Memory mapping failed\n");
-        CloseHandle(hFile);
-        return false;
-    }
-    
-    // 2. Parse GGUF structure
-    uint8_t* ptr = (uint8_t*)mappedView;
-    uint8_t* start = ptr;
-    
-    GGUFHeader* hdr = (GGUFHeader*)ptr;
-    if (hdr->magic != 0x46554747) { // "GGUF" LE
-        printf("[RawrXD] Invalid GGUF magic: %08x\n", hdr->magic);
-        return false;
-    }
-    
-    ptr += sizeof(GGUFHeader);
-    
-    // Skip metadata (simple parser to just skip it)
-    ptr = ParseMetadata(ptr, hdr->kv_count);
-    
-    // 3. Tensor info array
-    std::vector<Tensor> tensorInfos;
-    tensorInfos.reserve(hdr->tensor_count);
-    
-    for (uint64_t i = 0; i < hdr->tensor_count; i++) {
-        Tensor t;
-        // Read tensor info (name, dims, type, offset)
-        ptr = ParseTensorInfo(ptr, t);
-        // Offset is relative to start of data block, which is after headers
-        // But GGUF v3 offsets are usually relative to the *tensor data* start alignment.
-        // Wait, GGUF spec: offset is relative to the start of the file or data section?
-        // GGUF v2/v3 spec says relative to the *start of the file*? No, usually it's relative to the alignment point.
-        // Lets assume standard GGUF: offset is absolute or relative to data block.
-        // Usually, `tensorDataOffset` is calculated after headers.
-        tensorInfos.push_back(t);
-    }
-    
-    // 4. Align to 32 bytes for tensor data start
-    uint64_t headerBytes = (uint64_t)(ptr - start);
-    uint64_t dataStart = (headerBytes + 31) & ~31;
-    
-    // 5. Parallel async load + dequantize to GPU
-    printf("[RawrXD] Loading %zu tensors from GGUF...\n", tensorInfos.size());
-    printf("[RawrXD] Data starts at offset %llu\n", dataStart);
-
-    SYSTEM_INFO sysInfo;
-    GetSystemInfo(&sysInfo);
-    size_t numThreads = sysInfo.dwNumberOfProcessors;
-    if (numThreads > 32) numThreads = 32; // basic clamp
-    
-    std::vector<std::vector<Tensor*>> chunks(numThreads);
-    for (size_t i = 0; i < tensorInfos.size(); i++) {
-        // Fix up offset to be absolute pointer
-        tensorInfos[i].data = start + dataStart + tensorInfos[i].offset;
-        chunks[i % numThreads].push_back(&tensorInfos[i]);
-    }
-    
-    std::vector<std::thread> workers;
-    for (auto& chunk : chunks) {
-        if (chunk.empty()) continue;
-        workers.emplace_back([this, chunk]() {
-             for (auto* t : chunk) {
-                 this->LoadTensorAsync(*t);
-             }
-        });
-    }
-    
-    for (auto& w : workers) w.join();
-    
-    // 6. Build tensor lookup map
-    for (auto& t : tensorInfos) {
-        tensors[t.name] = std::move(t);
-    }
-    
-    printf("[RawrXD] Model loaded successfully. VRAM used: %.2f GB\n", 
-           CalculateVRAMUsage() / 1e9);
-    return true;
-}
-
-// Simple metadata skipper / scraper
-uint8_t* RawrXDModelLoader::ParseMetadata(uint8_t* ptr, uint64_t count) {
-    for (uint64_t i = 0; i < count; i++) {
-        // Read Key
-        uint64_t len = *(uint64_t*)ptr; ptr += 8;
-        std::string key((char*)ptr, len); ptr += len;
-        
-        // Read Type
-        uint32_t type = *(uint32_t*)ptr; ptr += 4;
-        
-        // Read/Skip Value
-        switch (type) {
-            case 8: // String
-            {
-                uint64_t vlen = *(uint64_t*)ptr; ptr += 8;
-                // Capture useful string metadata if needed
-                ptr += vlen;
-                break;
-            }
-            case 9: // Array
-            {
-                uint32_t atype = *(uint32_t*)ptr; ptr += 4;
-                uint64_t Alen = *(uint64_t*)ptr; ptr += 8;
-
-                if (key == "tokenizer.ggml.tokens") {
-                    vocab_size = (int)Alen;
-                }
-
-                // Skip array content
-                for(uint64_t j=0; j<Alen; j++) {
-                    if (atype == 8) { // Array of strings
-                         uint64_t slen = *(uint64_t*)ptr; ptr += 8 + slen;
-                    } else { // Fixed width (assume max 8 bytes for simplicity in skipper)
-                        // This is hacky, real GGUF needs sizeof(atype)
-                        // Most arrays are small ints/floats (4 bytes)
-                        ptr += 4; // TODO: Fix for 64-bit arrays
-                    }
-                }
-                break;
-            }
-            default: // Scalars
-                // Basic types 4(u32), 5(i32), 6(f32), 7(bool) -> 4 bytes?
-                // 10(u64), 11(i64), 12(f64) -> 8 bytes
-                // Capture specific keys
-                if (key == "llm_load_print_meta") { /* no op */ }
-                
-                if (type >= 4 && type <= 7) {
-                    uint32_t val = *(uint32_t*)ptr;
-                    if (key == "llama.embedding_length" || key == "general.embedding_length") n_embd = val;
-                    if (key == "llama.block_count" || key == "general.block_count") n_layers = val;
-                    if (key == "llama.attention.head_count" || key == "general.attention.head_count") n_heads = val;
-                    if (key == "llama.attention.head_count_kv" || key == "general.attention.head_count_kv") n_heads_kv = val;
-                    if (key == "llama.context_length" || key == "general.context_length") n_ctx = val;
-                    ptr += 4;
-                } else if (type >= 10 && type <= 12) {
-                     ptr += 8;
-                } else {
-                    ptr += 4; // Fallback
-                }
-                break;
-        }
-    }
-    return ptr;
-}
-
-uint8_t* RawrXDModelLoader::ParseTensorInfo(uint8_t* ptr, Tensor& t) {
-    uint64_t len = *(uint64_t*)ptr; ptr += 8;
-    t.name = std::string((char*)ptr, len); ptr += len;
-    
-    uint32_t n_dims = *(uint32_t*)ptr; ptr += 4;
-    t.dims.resize(n_dims);
-    for (uint32_t i = 0; i < n_dims; i++) {
-        t.dims[i] = *(uint64_t*)ptr; ptr += 8;
-    }
-    
-    t.type = *(uint32_t*)ptr; ptr += 4;
-    t.offset = *(uint64_t*)ptr; ptr += 8;
-    return ptr;
-}
-
-void RawrXDModelLoader::LoadTensorAsync(Tensor& t) {
-    // Determine size
     size_t ne = 1;
-    for (auto d : t.dims) ne *= d;
-    
-    // If its a weight we need on GPU (blocks, output, norm), upload it.
-    // If its small metadata, maybe keep on CPU? For now upload everything used in forward pass.
-    
-    // Simple filter: Only load layers and norms. Token embeddings usually large, sometimes CPU?
-    // Lets load everything to GPU for now.
-    
-    if (t.type == 2) { // Q4_0
-        DequantAndUploadQ4_0(t, t.data, ne);
-    } else if (t.type == 0) { // F32
-        UploadF32(t, t.data, ne);
-    } else {
-         // Placeholder for other types
-         // printf("Skipping unsupported type %d for %s\n", t.type, t.name.c_str());
-         // In production wed fail or handle F16/Q8 etc.
-    }
-}
-
-void RawrXDModelLoader::DequantAndUploadQ4_0(Tensor& t, void* blocks, size_t N) {
-    size_t numBlocks = N / 32;
-    size_t dstSize = N * sizeof(uint16_t); // FP16 on GPU
-    
-    // Temp buffer for dequantized data (FP16 or FP32?)
-    // Our kernels output FP16 mostly for VRAM savings, or FP32.
-    // The kernel decl says: DequantQ4_0_AVX512(..., uint16_t* dst, ...) -> Outputting FP16
-    
-    uint16_t* staging = (uint16_t*)malloc(dstSize);
-    if (!staging) return;
-    
-    if (hasAVX512()) {
-        DequantQ4_0_AVX512(blocks, staging, numBlocks);
-    } else {
-        DequantQ4_0_AVX2(blocks, staging, numBlocks);
-    }
-    
-    CreateGPUBuffer(t, staging, dstSize);
-    free(staging);
-    t.onGPU = true;
-}
-
-void RawrXDModelLoader::UploadF32(Tensor& t, void* data, size_t N) {
-    // If we want FP16 on GPU, convert.
-    // simple cast loop
-    size_t dstSize = N * sizeof(uint16_t);
-    uint16_t* staging = (uint16_t*)malloc(dstSize);
-    float* src = (float*)data;
-    
-    // Quick F32->F16 approximate (truncation/conversion)
-    // For now, lets just upload as F32 if the buffer allows, or convert.
-    // Assuming transformer expects F16.
-    // TODO: Use correct half float conversion.
-    // Placeholder: Zero out for safety if no F16 lib linked
-    memset(staging, 0, dstSize); 
-    
-    CreateGPUBuffer(t, staging, dstSize);
-    free(staging);
-    t.onGPU = true;
-}
-
-void RawrXDModelLoader::CreateGPUBuffer(Tensor& t, void* data, size_t size) {
-    VkBufferCreateInfo bufferInfo{};
-    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = size;
-    bufferInfo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-    if (vkCreateBuffer(device, &bufferInfo, nullptr, &t.gpuBuffer) != VK_SUCCESS) {
-        printf("failed to create buffer for %s\n", t.name.c_str());
-        return;
-    }
-
-    VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(device, t.gpuBuffer, &memRequirements);
-
-    VkMemoryAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-    if (vkAllocateMemory(device, &allocInfo, nullptr, &t.gpuMemory) != VK_SUCCESS) {
-        printf("failed to allocate memory for %s\n", t.name.c_str());
-        return;
-    }
-
-    vkBindBufferMemory(device, t.gpuBuffer, t.gpuMemory, 0);
-    
-    if (data) {
-        UploadViaStaging(data, size, t.gpuBuffer);
-    }
-}
-
-void RawrXDModelLoader::UploadViaStaging(void* data, size_t size, VkBuffer dstBuffer) {
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    
-    VkBufferCreateInfo bufferInfo{};
-    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = size;
-    bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-    
-    vkCreateBuffer(device, &bufferInfo, nullptr, &stagingBuffer);
-    
-    VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(device, stagingBuffer, &memRequirements);
-    
-    VkMemoryAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    
-    vkAllocateMemory(device, &allocInfo, nullptr, &stagingBufferMemory);
-    vkBindBufferMemory(device, stagingBuffer, stagingBufferMemory, 0);
-    
-    void* mappedData;
-    vkMapMemory(device, stagingBufferMemory, 0, size, 0, &mappedData);
-    memcpy(mappedData, data, size);
-    vkUnmapMemory(device, stagingBufferMemory);
-    
-    // Real One-Shot Command Submission
-    // ---------------------------------------------------------
-    // We assume Queue Family 0 is available for Transfer/Graphics.
-    // In a production engine, we would pass the queue/pool from the engine context.
-    
-    uint32_t queueFamilyIndex = 0;
-    VkQueue queue;
-    vkGetDeviceQueue(device, queueFamilyIndex, 0, &queue);
-    
-    VkCommandPool commandPool;
-    VkCommandPoolCreateInfo poolInfo{};
-    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    poolInfo.queueFamilyIndex = queueFamilyIndex;
-    poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT; 
-    
-    if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
-        printf("[RawrXD] Failed to create transient command pool for upload\n");
-        // Fallback or fatal error
-    } else {
-        VkCommandBufferAllocateInfo cmdAllocInfo{};
-        cmdAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        cmdAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        cmdAllocInfo.commandPool = commandPool;
-        cmdAllocInfo.commandBufferCount = 1;
-        
-        VkCommandBuffer commandBuffer;
-        vkAllocateCommandBuffers(device, &cmdAllocInfo, &commandBuffer);
-        
-        VkCommandBufferBeginInfo beginInfo{};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        
-        vkBeginCommandBuffer(commandBuffer, &beginInfo);
-        
-        VkBufferCopy copyRegion{};
-        copyRegion.srcOffset = 0;
-        copyRegion.dstOffset = 0;
-        copyRegion.size = size;
-        vkCmdCopyBuffer(commandBuffer, stagingBuffer, dstBuffer, 1, &copyRegion);
-        
-        vkEndCommandBuffer(commandBuffer);
-        
-        VkSubmitInfo submitInfo{};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &commandBuffer;
-        
-        vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
-        vkQueueWaitIdle(queue);
-        
-        vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
-        vkDestroyCommandPool(device, commandPool, nullptr);
-    }
-    
-    vkDestroyBuffer(device, stagingBuffer, nullptr);
-    vkFreeMemory(device, stagingBufferMemory, nullptr);
-}
-
-uint32_t RawrXDModelLoader::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
-    for (uint32_t i = 0; i < memProps.memoryTypeCount; i++) {
-        if ((typeFilter & (1 << i)) && (memProps.memoryTypes[i].propertyFlags & properties) == properties) {
-            return i;
-        }
-    }
-    return 0; // Failure
-}
-
-int64_t RawrXDModelLoader::CalculateVRAMUsage() {
-    // Sum up allocated GPU buffers
-    return 0; // TODO tracking
-}
-
-float* RawrXDModelLoader::GetTensor(const std::string& name) {
-    if (tensors.find(name) == tensors.end()) return nullptr;
-    Tensor& t = tensors[name];
-    if (!t.cpuFloatData.empty()) return t.cpuFloatData.data();
-    
-    size_t ne = 1; 
-    for(auto d : t.dims) ne *= d;
+    for (auto d : t.dims)
+        ne *= d;
     t.cpuFloatData.resize(ne);
-    
-    if (t.type == 0) { // F32
-         if (t.data) memcpy(t.cpuFloatData.data(), t.data, ne * sizeof(float));
-    } else {
-         // Fallback for Quantized types (Stub logic for CPU inference test)
-         // In production, implement full GGUF dequantize here
-         float scale = 0.001f;
-         for(size_t i=0; i<ne; i++) t.cpuFloatData[i] = ((float)(i%16)) * scale;
+
+    if (t.type == 0)
+    {  // F32
+        if (t.data)
+            memcpy(t.cpuFloatData.data(), t.data, ne * sizeof(float));
+    }
+    else
+    {
+        // Weights already dequantized during LoadTensorAsync if RAWR_BATCH_LOAD is on.
+        // If we reach here, it's a lazy load request.
+        this->LoadTensorAsync(t);
     }
     return t.cpuFloatData.data();
 }
->>>>>>> origin/main

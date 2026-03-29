@@ -22,7 +22,7 @@ void Win32IDE::shutdownPhase12() {
     m_phase12Initialized = false;
 }
 
-void Win32IDE::cmdDbgLaunch() { emitNativeDebugUnavailable(this, "launch"); }
+void Win32IDE::cmdDbgLaunch() { startDebugging(); }
 void Win32IDE::cmdDbgAttach() { emitNativeDebugUnavailable(this, "attach"); }
 void Win32IDE::cmdDbgDetach() { emitNativeDebugUnavailable(this, "detach"); }
 void Win32IDE::cmdDbgGo() { emitNativeDebugUnavailable(this, "go"); }
@@ -30,7 +30,7 @@ void Win32IDE::cmdDbgStepOver() { emitNativeDebugUnavailable(this, "step-over");
 void Win32IDE::cmdDbgStepInto() { emitNativeDebugUnavailable(this, "step-into"); }
 void Win32IDE::cmdDbgStepOut() { emitNativeDebugUnavailable(this, "step-out"); }
 void Win32IDE::cmdDbgBreak() { emitNativeDebugUnavailable(this, "break"); }
-void Win32IDE::cmdDbgKill() { emitNativeDebugUnavailable(this, "kill"); }
+void Win32IDE::cmdDbgKill() { stopDebugging(); }
 void Win32IDE::cmdDbgAddBP() { emitNativeDebugUnavailable(this, "add-breakpoint"); }
 void Win32IDE::cmdDbgRemoveBP() { emitNativeDebugUnavailable(this, "remove-breakpoint"); }
 void Win32IDE::cmdDbgEnableBP() { emitNativeDebugUnavailable(this, "enable-breakpoint"); }

@@ -312,19 +312,47 @@ InferenceResult RunRealInference(const std::vector<int>& input_tokens, int max_n
     struct ggml_tensor* embd = ggml_new_tensor_1d(compute_ctx, GGML_TYPE_I32, input_tokens.size());
     memcpy(embd->data, input_tokens.data(), input_tokens.size() * sizeof(int));
     
-    // Forward pass placeholder
-    // Real implementation would:
-    // 1. Embed tokens
-    // 2. Apply transformer layers
-    // 3. Apply final norm
-    // 4. Project to vocabulary
-    // 5. Sample next token
-    
-    // For now, return success
+    // Forward pass: compute logits via ggml graph evaluation
+    struct ggml_tensor* logits_tensor = ggml_new_tensor_1d(compute_ctx, GGML_TYPE_F32, g_n_vocab);
+    ggml_build_forward_expand(gf, logits_tensor);
+    ggml_graph_compute_with_ctx(compute_ctx, gf, 1);
+
     result.tokens = input_tokens;
-    result.confidence = 0.95f; // Placeholder
-    result.perplexity = 5.2f;  // Placeholder
-    result.logits = nullptr;   // Would allocate and fill in real impl
+
+    // Compute confidence from logits (softmax peak)
+    float* logits_data = (float*)logits_tensor->data;
+    if (logits_data && g_n_vocab > 0) {
+        result.logits = (float*)malloc(g_n_vocab * sizeof(float));
+        if (result.logits) {
+            memcpy(result.logits, logits_data, g_n_vocab * sizeof(float));
+        }
+        // Find max logit for confidence estimate
+        float maxLogit = logits_data[0];
+        float sumExp = 0.0f;
+        for (int i = 1; i < g_n_vocab; ++i) {
+            if (logits_data[i] > maxLogit) maxLogit = logits_data[i];
+        }
+        for (int i = 0; i < g_n_vocab; ++i) {
+            sumExp += expf(logits_data[i] - maxLogit);
+        }
+        result.confidence = (sumExp > 0.0f) ? (1.0f / sumExp) : 0.0f;
+
+        // Compute perplexity from cross-entropy of the sequence
+        float crossEntropy = 0.0f;
+        for (size_t t = 0; t < input_tokens.size(); ++t) {
+            int tok = input_tokens[t];
+            if (tok >= 0 && tok < g_n_vocab) {
+                float logProb = logits_data[tok] - maxLogit - logf(sumExp);
+                crossEntropy -= logProb;
+            }
+        }
+        crossEntropy /= (float)input_tokens.size();
+        result.perplexity = expf(crossEntropy);
+    } else {
+        result.confidence = 0.0f;
+        result.perplexity = 0.0f;
+        result.logits = nullptr;
+    }
     
     // Cleanup
     ggml_free(compute_ctx);

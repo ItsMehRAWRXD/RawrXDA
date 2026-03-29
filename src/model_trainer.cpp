@@ -3,11 +3,7 @@
 #include "model_trainer.h"
 #include "cpu_inference_engine.h" // Given we have this
 #include "gguf_loader.h"
-<<<<<<< HEAD
 #include <nlohmann/json.hpp>
-=======
-#include "nlohmann/json.hpp"
->>>>>>> origin/main
 
 #include <cmath>
 #include <random>

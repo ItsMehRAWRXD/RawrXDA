@@ -1762,6 +1762,23 @@ namespace vscode {
         std::mutex& getTerminalMutex() { return m_terminalMutex; }
         uint64_t allocTerminalId() { return m_nextTerminalId++; }
 
+        // ---- Extension enumeration helpers ----
+        void getLoadedExtensions(VSCodeExtensionManifest* out, size_t max, size_t* count) const {
+            std::lock_guard<std::mutex> lock(m_extensionsMutex);
+            size_t i = 0;
+            for (const auto& [id, ext] : m_extensions) {
+                if (i >= max) break;
+                out[i++] = ext->manifest;
+            }
+            if (count) *count = i;
+        }
+        VSCodeExtensionManifest* findExtensionManifest(const char* id) {
+            std::lock_guard<std::mutex> lock(m_extensionsMutex);
+            auto it = m_extensions.find(id);
+            if (it != m_extensions.end()) return &it->second->manifest;
+            return nullptr;
+        }
+
     private:
         VSCodeExtensionAPI();
         ~VSCodeExtensionAPI();

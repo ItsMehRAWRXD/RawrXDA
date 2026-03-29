@@ -1,20 +1,15 @@
-<<<<<<< HEAD
 // ExtensionLoader.hpp — Extension discovery, native DLL load/unload
 //
 // Uses %APPDATA%\RawrXD\extensions\ so installs work without runtime changes.
 // Each subdirectory is an extension. If it contains native_manifest.json the
 // extension is treated as native and the first .dll found is loaded after
 // Authenticode / plugin-signature verification.
-=======
-// SCAFFOLD_241: ExtensionLoader load and unload
->>>>>>> origin/main
 
 #pragma once
 
 #include <windows.h>
 #include <shlobj.h>
 
-<<<<<<< HEAD
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -25,10 +20,6 @@
 
 #include "../../include/plugin_signature.h"
 
-=======
-// Extension Loader Logic (VSIX -> Native)
-// Uses %APPDATA%\RawrXD\extensions (same as VSIXInstaller) so installs work without runtime changes.
->>>>>>> origin/main
 namespace RawrXD {
 
 struct ExtensionInfo {
@@ -59,7 +50,6 @@ private:
     std::map<std::string, ExtensionInfo> m_extensions;
     std::string m_extensionsDir;
 
-<<<<<<< HEAD
     // Shared helper: call ExtensionShutdown then FreeLibrary on a single ext.
     // Returns true if FreeLibrary succeeded (or module was already null).
     static bool ShutdownAndFree(ExtensionInfo& ext, const char* context) {
@@ -186,8 +176,6 @@ private:
         return true;
     }
 
-=======
->>>>>>> origin/main
 public:
     ExtensionLoader() : m_extensionsDir(GetExtensionsRoot()) {
         if (!std::filesystem::exists(m_extensionsDir)) {

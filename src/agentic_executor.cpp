@@ -6,7 +6,6 @@
 #include <filesystem>
 #include <iostream>
 #include <sstream>
-<<<<<<< HEAD
 #include <chrono>
 #include <algorithm>
 #include <mutex>
@@ -16,10 +15,6 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #endif
-=======
-#include <regex>
-#include <chrono>
->>>>>>> origin/main
 
 #include "agentic_executor.h"
 #include "agentic_engine.h"
@@ -28,7 +23,6 @@
 
 using json = nlohmann::json;
 
-<<<<<<< HEAD
 // ========== PATH / SHELL SAFETY ==========
 
 bool AgenticExecutor::isPathSafe(const std::filesystem::path& p) const {
@@ -88,8 +82,6 @@ void AgenticExecutor::errorOccurred(const std::string& msg) {
     m_memory["last_error"] = msg;
 }
 
-=======
->>>>>>> origin/main
 AgenticExecutor::AgenticExecutor(void* parent)
     : m_currentWorkingDirectory(std::filesystem::current_path().string())
 {
@@ -113,7 +105,6 @@ void AgenticExecutor::initialize(AgenticEngine* engine, InferenceEngine* inferen
 #ifdef _WIN32
 using TitanExecuteTaskFn = uint64_t (*)(const char* task_json, uint64_t length);
 
-<<<<<<< HEAD
 static uint64_t TitanExecuteTaskFallback(const char*, uint64_t)
 {
     return 0xFFFFFFFFULL;
@@ -172,73 +163,6 @@ json AgenticExecutor::executeUserRequest(const std::string& request)
         errorOccurred("TITAN Kernel Reported Error: " + std::to_string(status));
         result["overall_success"] = false;
         result["error_code"] = status;
-=======
-json AgenticExecutor::executeUserRequest(const std::string& request)
-{
-    logMessage("Starting execution: " + request);
-
-    json result;
-    result["request"] = request;
-    
-    auto now = std::chrono::system_clock::now();
-    result["timestamp"] = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
-
-    try {
-        // Step 1: Decompose the task using the model
-        json steps = decomposeTask(request);
-        result["steps"] = steps;
-        result["total_steps"] = steps.size();
-
-        // Step 2: Execute each step
-        json executionResults = json::array();
-        int successCount = 0;
-
-        for (size_t i = 0; i < steps.size(); ++i) {
-            json step = steps[i];
-            
-            std::string desc = step.value("description", "Step " + std::to_string(i+1));
-            stepStarted(desc);
-            taskProgress(i + 1, steps.size());
-
-            bool success = executeStep(step);
-            
-            json stepResult;
-            stepResult["step_number"] = i + 1;
-            stepResult["description"] = desc;
-            stepResult["success"] = success;
-            stepResult["timestamp"] = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-
-            executionResults.push_back(stepResult);
-
-            if (success) {
-                successCount++;
-                stepCompleted(desc, true);
-            } else {
-                stepCompleted(desc, false);
-                
-                // Try to recover from failure
-                if (m_currentRetryCount < m_maxRetries) {
-                    json retryResult = retryWithCorrection(step);
-                    if (retryResult.value("success", false)) {
-                        successCount++;
-                        stepResult["recovered"] = true;
-                    }
-                }
-            }
-        }
-
-        result["execution_results"] = executionResults;
-        result["success_count"] = successCount;
-        result["success_rate"] = steps.empty() ? 0.0 : (successCount * 100.0) / steps.size();
-        result["overall_success"] = steps.empty() ? false : (successCount == steps.size());
-
-        executionComplete(result);
-        return result;
-    } catch (const std::exception& e) {
-        errorOccurred(e.what());
-        result["error"] = e.what();
-        return result;
->>>>>>> origin/main
     }
 
     return result;
@@ -246,37 +170,11 @@ json AgenticExecutor::executeUserRequest(const std::string& request)
 
 json AgenticExecutor::decomposeTask(const std::string& goal)
 {
-<<<<<<< HEAD
     // Use json::dump() to safely serialize — prevents injection via goal string
     json payload;
     payload["action"] = "DECOMPOSE";
     payload["goal"] = goal;
     return executeUserRequest(payload.dump());
-=======
-    if (!m_agenticEngine) {
-        return json::array();
-    }
-    
-    std::string fullPrompt = "You are an autonomous AI agent. Decompose this task into actionable JSON steps: " + goal + 
-                           "\nReturn ONLY a JSON array of objects with keys: action, description, params.";
-                           
-    std::string response = m_agenticEngine ? m_agenticEngine->processQuery(fullPrompt) : "[]";
-    
-    // Attempt to parse JSON response
-    try {
-        // Attempt to find JSON array in response
-        size_t start = response.find('[');
-        size_t end = response.rfind(']');
-        if (start != std::string::npos && end != std::string::npos && end > start) {
-            std::string jsonStr = response.substr(start, end - start + 1);
-            return json::parse(jsonStr);
-        }
-        return json::array();
-    } catch (...) {
-        logMessage("Failed to parse decomposition plan: " + response);
-        return json::array();
-    }
->>>>>>> origin/main
 }
 // ========== STEP EXECUTION ==========
 
@@ -287,29 +185,13 @@ bool AgenticExecutor::executeStep(const json& step)
     std::string action = step["action"];
     std::string description = step.contains("description") ? step["description"].get<std::string>() : action;
 
-<<<<<<< HEAD
     // Normalize action to lowercase for case-insensitive matching
     std::string actionLower = action;
     std::transform(actionLower.begin(), actionLower.end(), actionLower.begin(), ::tolower);
-=======
-    if (action == "CREATE_FILE") {
-        // Special handling for file creation to include content generation
-        std::string path = step["params"]["path"];
-        std::string content = step["params"].contains("content") ? step["params"]["content"] : "";
-        
-        // If content not provided, generate it
-        if (content.empty() && step["params"].contains("specification")) {
-            content = generateCode(step["params"]["specification"]);
-        }
-        
-        return createFile(path, content);
-    }
->>>>>>> origin/main
 
     logMessage("Step: " + description);
 
     try {
-<<<<<<< HEAD
         if (actionLower == "create_file") {
             std::string path = step["params"]["path"];
             std::string content = "";
@@ -319,30 +201,9 @@ bool AgenticExecutor::executeStep(const json& step)
                 json codeGen = generateCode(step["params"]["specification"]);
                 if (codeGen.contains("code"))
                     content = codeGen["code"];
-=======
-        if (action == "create_directory") {
-            std::string path = step["params"]["path"];
-            return createDirectory(path);
-        }
-        else if (action == "create_file") {
-            std::string path = step["params"]["path"];
-            std::string content = "";
-            
-            if (step["params"].contains("content")) {
-                content = step["params"]["content"];
-            }
-            
-            // If content not in params, generate it
-            if (content.empty() && step["params"].contains("specification")) {
-                json codeGen = generateCode(step["params"]["specification"]);
-                if (codeGen.contains("code")) {
-                    content = codeGen["code"];
-                }
->>>>>>> origin/main
             }
             return createFile(path, content);
         }
-<<<<<<< HEAD
         else if (actionLower == "create_directory") {
             std::string path = step["params"]["path"];
             return createDirectory(path);
@@ -363,24 +224,6 @@ bool AgenticExecutor::executeStep(const json& step)
             return runResult.contains("success") && runResult["success"].get<bool>();
         }
         else if (actionLower == "generate_code") {
-=======
-        else if (action == "compile") {
-            std::string projectPath = step["params"]["project_path"];
-            std::string compiler = step["params"].contains("compiler") ? step["params"]["compiler"].get<std::string>() : "g++";
-            json compileResult = compileProject(projectPath, compiler);
-            return compileResult.contains("success") && compileResult["success"].get<bool>();
-        }
-        else if (action == "run") {
-            std::string executable = step["params"]["executable"];
-            std::vector<std::string> args;
-            if (step["params"].contains("args") && step["params"]["args"].is_array()) {
-                args = step["params"]["args"].get<std::vector<std::string>>();
-            }
-            json runResult = runExecutable(executable, args);
-            return runResult.contains("success") && runResult["success"].get<bool>();
-        }
-        else if (action == "generate_code") {
->>>>>>> origin/main
             std::string spec = step["params"]["specification"];
             std::string outputPath = step["params"]["output_path"];
             json codeGen = generateCode(spec);
@@ -389,21 +232,14 @@ bool AgenticExecutor::executeStep(const json& step)
             }
             return false;
         }
-<<<<<<< HEAD
         else if (actionLower == "tool_call") {
-=======
-        else if (action == "tool_call") {
->>>>>>> origin/main
             std::string toolName = step["params"]["tool_name"];
             json toolParams = step["params"]["tool_params"];
             json toolResult = callTool(toolName, toolParams);
             return toolResult.contains("success") && toolResult["success"].get<bool>();
         }
         else {
-<<<<<<< HEAD
             logMessage("Unknown action: " + action);
-=======
->>>>>>> origin/main
             return false;
         }
 
@@ -438,7 +274,6 @@ bool AgenticExecutor::verifyStepCompletion(const json& step, const std::string& 
 
 bool AgenticExecutor::createDirectory(const std::string& path)
 {
-<<<<<<< HEAD
     auto safe = safePath(path);
     if (!isPathSafe(safe)) {
         errorOccurred("Path traversal blocked: " + path);
@@ -451,12 +286,6 @@ bool AgenticExecutor::createDirectory(const std::string& path)
             std::lock_guard<std::mutex> lock(m_memoryMutex);
             m_memory["last_created_dir"] = safe.string();
         }
-=======
-    try {
-        std::filesystem::create_directories(path);
-        logMessage("Created directory: " + path);
-        addToMemory("last_created_dir", path);
->>>>>>> origin/main
         return true;
     } catch (const std::exception& e) {
         logMessage("Failed to create directory: " + std::string(e.what()));
@@ -472,7 +301,6 @@ bool AgenticExecutor::createFile(const std::string& path, const std::string& con
         return false;
     }
     // Ensure parent directory exists
-<<<<<<< HEAD
     if (safe.has_parent_path() && !std::filesystem::exists(safe.parent_path())) {
          try {
             std::filesystem::create_directories(safe.parent_path());
@@ -480,16 +308,6 @@ bool AgenticExecutor::createFile(const std::string& path, const std::string& con
     }
 
     std::ofstream file(safe);
-=======
-    std::filesystem::path fp(path);
-    if (fp.has_parent_path() && !std::filesystem::exists(fp.parent_path())) {
-         try {
-            std::filesystem::create_directories(fp.parent_path());
-         } catch(...) { return false; }
-    }
-
-    std::ofstream file(path);
->>>>>>> origin/main
     if (!file.is_open()) {
         return false;
     }
@@ -497,11 +315,7 @@ bool AgenticExecutor::createFile(const std::string& path, const std::string& con
     file << content;
     file.close();
 
-<<<<<<< HEAD
     logMessage("Created file: " + safe.string());
-=======
-    logMessage("Created file: " + path);
->>>>>>> origin/main
     return true;
 }
 
@@ -512,16 +326,12 @@ bool AgenticExecutor::writeFile(const std::string& path, const std::string& cont
 
 std::string AgenticExecutor::readFile(const std::string& path)
 {
-<<<<<<< HEAD
     auto safe = safePath(path);
     if (!isPathSafe(safe)) {
         errorOccurred("Path traversal blocked: " + path);
         return "";
     }
     std::ifstream file(safe);
-=======
-    std::ifstream file(path);
->>>>>>> origin/main
     if (!file.is_open()) {
         return "";
     }
@@ -533,7 +343,6 @@ std::string AgenticExecutor::readFile(const std::string& path)
 
 bool AgenticExecutor::deleteFile(const std::string& path)
 {
-<<<<<<< HEAD
     auto safe = safePath(path);
     if (!isPathSafe(safe)) {
         errorOccurred("Path traversal blocked: " + path);
@@ -541,25 +350,11 @@ bool AgenticExecutor::deleteFile(const std::string& path)
     }
     try {
         return std::filesystem::remove(safe);
-=======
-    try {
-        return std::filesystem::remove(path);
     } catch (...) {
         return false;
     }
 }
 
-bool AgenticExecutor::deleteDirectory(const std::string& path)
-{
-    try {
-        return std::filesystem::remove_all(path) > 0;
->>>>>>> origin/main
-    } catch (...) {
-        return false;
-    }
-}
-
-<<<<<<< HEAD
 bool AgenticExecutor::deleteDirectory(const std::string& path)
 {
     auto safe = safePath(path);
@@ -585,14 +380,6 @@ std::vector<std::string> AgenticExecutor::listDirectory(const std::string& path)
     try {
         if (std::filesystem::exists(safe) && std::filesystem::is_directory(safe)) {
             for (const auto& entry : std::filesystem::directory_iterator(safe)) {
-=======
-std::vector<std::string> AgenticExecutor::listDirectory(const std::string& path)
-{
-    std::vector<std::string> entries;
-    try {
-        if (std::filesystem::exists(path) && std::filesystem::is_directory(path)) {
-            for (const auto& entry : std::filesystem::directory_iterator(path)) {
->>>>>>> origin/main
                 entries.push_back(entry.path().filename().string());
             }
         }
@@ -602,7 +389,6 @@ std::vector<std::string> AgenticExecutor::listDirectory(const std::string& path)
     return entries;
 }
 
-<<<<<<< HEAD
 // Safe shell execution via CreateProcessA with piped stdout.
 static std::pair<std::string, int> runShellCommand(const std::string& cmd, const std::string& directory = "") {
 #ifdef _WIN32
@@ -675,27 +461,6 @@ static std::pair<std::string, int> runShellCommand(const std::string& cmd, const
     int result = pclose(pipe);
     return {output, result};
 #endif
-=======
-// Helper function for shell execution
-static std::pair<std::string, int> runShellCommand(const std::string& cmd, const std::string& directory = "") {
-    std::string command = cmd;
-    if (!directory.empty()) {
-        command = "cd /d \"" + directory + "\" && " + cmd;
-    }
-    command += " 2>&1";
-    
-    std::string output;
-    FILE* pipe = _popen(command.c_str(), "r");
-    if (!pipe) return {"Failed to spawn shell", 1};
-    
-    char buffer[128];
-    while (fgets(buffer, sizeof(buffer), pipe) != NULL) {
-        output += buffer;
-    }
-    
-    int result = _pclose(pipe);
-    return {output, result};
->>>>>>> origin/main
 }
 
 // ========== COMPILER INTEGRATION (REAL) ==========
@@ -706,7 +471,6 @@ json AgenticExecutor::compileProject(const std::string& projectPath, const std::
     result["compiler"] = compiler;
     result["project_path"] = projectPath;
 
-<<<<<<< HEAD
     // Compiler whitelist check
     if (!isCompilerAllowed(compiler)) {
         result["success"] = false;
@@ -723,8 +487,6 @@ json AgenticExecutor::compileProject(const std::string& projectPath, const std::
         return result;
     }
 
-=======
->>>>>>> origin/main
     logMessage("Compiling with " + compiler + "...");
 
     // Detect build system and compile
@@ -800,7 +562,6 @@ json AgenticExecutor::runExecutable(const std::string& executablePath, const std
     result["executable"] = executablePath;
     result["arguments"] = args;
 
-<<<<<<< HEAD
     // Validate inputs for shell injection
     if (hasShellMetachars(executablePath)) {
         result["success"] = false;
@@ -813,26 +574,6 @@ json AgenticExecutor::runExecutable(const std::string& executablePath, const std
             result["error"] = "Invalid characters in argument";
             return result;
         }
-=======
-    logMessage("Running: " + executablePath);
-
-    std::string cmd = "\"" + executablePath + "\"";
-    for(const auto& arg : args) {
-        cmd += " \"" + arg + "\"";
-    }
-
-    std::filesystem::path exePath(executablePath);
-    std::string cwd = exePath.has_parent_path() ? exePath.parent_path().string() : "";
-
-    auto runRes = runShellCommand(cmd, cwd);
-
-    result["stdout"] = runRes.first;
-    result["exit_code"] = runRes.second;
-    result["success"] = (runRes.second == 0);
-
-    if (result["success"].get<bool>()) {
-        logMessage("Execution completed");
->>>>>>> origin/main
     }
 
     logMessage("Running: " + executablePath);
@@ -893,7 +634,6 @@ json AgenticExecutor::generateCode(const std::string& specification)
 }
 
 std::string AgenticExecutor::extractCodeFromResponse(const std::string& response) {
-<<<<<<< HEAD
     // Manual find-based parse — avoids std::regex stack overflow on large inputs
     const std::string fenceStart = "```";
     auto pos = response.find(fenceStart);
@@ -908,14 +648,6 @@ std::string AgenticExecutor::extractCodeFromResponse(const std::string& response
     if (fenceEnd == std::string::npos) return response;
 
     return response.substr(codeStart, fenceEnd - codeStart);
-=======
-    std::regex codeBlockRegex("```(?:cpp|c\\+\\+)?\\s*\\n([\\s\\S]*?)```");
-    std::smatch match;
-    if (std::regex_search(response, match, codeBlockRegex) && match.size() > 1) {
-        return match[1].str();
-    }
-    return response;
->>>>>>> origin/main
 }
 
 // ========== FUNCTION CALLING / TOOL USE ==========
@@ -937,6 +669,9 @@ json AgenticExecutor::getAvailableTools()
     // Model tools
     tools.push_back({{"name", "train_model"}, {"description", "Fine-tune a GGUF model with dataset"}});
     tools.push_back({{"name", "is_training"}, {"description", "Check if model training is in progress"}});
+    tools.push_back({{"name", "set_iteration_status"}, {"description", "Set progress for long-running agent/model iterations"}});
+    tools.push_back({{"name", "get_iteration_status"}, {"description", "Get progress for long-running agent/model iterations"}});
+    tools.push_back({{"name", "reset_iteration_status"}, {"description", "Reset long-running agent/model iteration progress"}});
     
     return tools;
 }
@@ -985,6 +720,46 @@ json AgenticExecutor::callTool(const std::string& toolName, const json& params)
         result["success"] = true;
         result["is_training"] = isTrainingModel();
     }
+    else if (toolName == "set_iteration_status") {
+        if (params.contains("busy") && params["busy"].is_boolean()) {
+            addToMemory("iteration_busy", params["busy"].get<bool>() ? "true" : "false");
+        }
+        if (params.contains("current") && params["current"].is_number_integer()) {
+            addToMemory("iteration_current", std::to_string(std::max(0, params["current"].get<int>())));
+        }
+        if (params.contains("total") && params["total"].is_number_integer()) {
+            addToMemory("iteration_total", std::to_string(std::max(0, params["total"].get<int>())));
+        }
+        if (params.contains("phase") && params["phase"].is_string()) {
+            addToMemory("iteration_phase", params["phase"].get<std::string>());
+        }
+        if (params.contains("message") && params["message"].is_string()) {
+            addToMemory("iteration_message", params["message"].get<std::string>());
+        }
+
+        result["success"] = true;
+        result["busy"] = getFromMemory("iteration_busy");
+        result["current"] = getFromMemory("iteration_current");
+        result["total"] = getFromMemory("iteration_total");
+        result["phase"] = getFromMemory("iteration_phase");
+        result["message"] = getFromMemory("iteration_message");
+    }
+    else if (toolName == "get_iteration_status") {
+        result["success"] = true;
+        result["busy"] = getFromMemory("iteration_busy");
+        result["current"] = getFromMemory("iteration_current");
+        result["total"] = getFromMemory("iteration_total");
+        result["phase"] = getFromMemory("iteration_phase");
+        result["message"] = getFromMemory("iteration_message");
+    }
+    else if (toolName == "reset_iteration_status") {
+        removeMemoryItem("iteration_busy");
+        removeMemoryItem("iteration_current");
+        removeMemoryItem("iteration_total");
+        removeMemoryItem("iteration_phase");
+        removeMemoryItem("iteration_message");
+        result["success"] = true;
+    }
     else {
         result["success"] = false;
         result["error"] = "Unknown tool: " + toolName;
@@ -995,30 +770,18 @@ json AgenticExecutor::callTool(const std::string& toolName, const json& params)
 
 // ========== MEMORY & CONTEXT ==========
 
-<<<<<<< HEAD
 void AgenticExecutor::addToMemory(const std::string& key, const std::string& value)
-=======
-void AgenticExecutor::addToMemory(const std::string& key, const std::any& value)
->>>>>>> origin/main
 {
     std::lock_guard<std::mutex> lock(m_memoryMutex);
     m_memory[key] = value;
 }
 
-<<<<<<< HEAD
 std::string AgenticExecutor::getFromMemory(const std::string& key)
 {
     std::lock_guard<std::mutex> lock(m_memoryMutex);
     auto it = m_memory.find(key);
     if (it != m_memory.end()) return it->second;
     return "";
-=======
-std::any AgenticExecutor::getFromMemory(const std::string& key)
-{
-    auto it = m_memory.find(key);
-    if (it != m_memory.end()) return it->second;
-    return std::any();
->>>>>>> origin/main
 }
 
 void AgenticExecutor::clearMemory()
@@ -1028,7 +791,6 @@ void AgenticExecutor::clearMemory()
     m_executionHistory = json::array();
 }
 
-<<<<<<< HEAD
 void AgenticExecutor::removeMemoryItem(const std::string& key)
 {
     std::lock_guard<std::mutex> lock(m_memoryMutex);
@@ -1038,10 +800,6 @@ void AgenticExecutor::removeMemoryItem(const std::string& key)
 std::string AgenticExecutor::getFullContext()
 {
     std::lock_guard<std::mutex> lock(m_memoryMutex);
-=======
-std::string AgenticExecutor::getFullContext()
-{
->>>>>>> origin/main
     std::ostringstream context;
     context << "=== EXECUTION CONTEXT ===\n";
     context << "Working Directory: " << m_currentWorkingDirectory << "\n";
@@ -1050,11 +808,7 @@ std::string AgenticExecutor::getFullContext()
     context << "\n=== MEMORY ===\n";
     
     for (const auto& kv : m_memory) {
-<<<<<<< HEAD
         context << kv.first << ": " << kv.second << "\n";
-=======
-        context << kv.first << ": [Stored Value]\n";
->>>>>>> origin/main
     }
     
     return context.str();
@@ -1064,7 +818,6 @@ std::string AgenticExecutor::getFullContext()
 
 bool AgenticExecutor::detectFailure(const std::string& output)
 {
-<<<<<<< HEAD
     // Pattern + exclusion pairs to prevent false positives
     struct Indicator {
         const char* pattern;
@@ -1089,18 +842,6 @@ bool AgenticExecutor::detectFailure(const std::string& output)
             // Check exclusion — if present and found, skip this indicator
             if (ind.exclude && lower.find(ind.exclude) != std::string::npos)
                 continue;
-=======
-    std::vector<std::string> failureIndicators = {
-        "error", "failed", "exception", "cannot", "unable",
-        "undefined reference", "segmentation fault", "compilation terminated"
-    };
-    
-    std::string lowerOutput = output;
-    std::transform(lowerOutput.begin(), lowerOutput.end(), lowerOutput.begin(), ::tolower);
-    
-    for (const std::string& indicator : failureIndicators) {
-        if (lowerOutput.find(indicator) != std::string::npos) {
->>>>>>> origin/main
             return true;
         }
     }
@@ -1126,15 +867,9 @@ std::string AgenticExecutor::generateCorrectionPlan(const std::string& failureRe
 
 json AgenticExecutor::retryWithCorrection(const json& failedStep)
 {
-<<<<<<< HEAD
-=======
-    m_currentRetryCount++;
-    
->>>>>>> origin/main
     json result;
     result["original_step"] = failedStep;
 
-<<<<<<< HEAD
     for (int attempt = 1; attempt <= m_maxRetries; ++attempt) {
         result["retry_attempt"] = attempt;
 
@@ -1152,31 +887,6 @@ json AgenticExecutor::retryWithCorrection(const json& failedStep)
     }
 
     result["success"] = false;
-=======
-    std::string failureContext = "Unknown Error";
-    try {
-        auto anyVal = getFromMemory("last_error");
-        if(anyVal.has_value()) {
-             try { failureContext = std::any_cast<std::string>(anyVal); } catch(...) {}
-        }
-    } catch(...) {}
-
-    std::string correctionPlan = generateCorrectionPlan(failureContext);
-    
-    logMessage("Attempting correction: " + correctionPlan);
-
-    // Naive retry
-    bool success = executeStep(failedStep);
-    
-    result["success"] = success;
-    result["correction_plan"] = correctionPlan;
-    
-    if (!success && m_currentRetryCount < m_maxRetries) {
-        return retryWithCorrection(failedStep);
-    }
-    
-    m_currentRetryCount = 0;
->>>>>>> origin/main
     return result;
 }
 

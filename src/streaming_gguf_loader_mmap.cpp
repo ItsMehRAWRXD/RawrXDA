@@ -10,8 +10,26 @@
 #endif
 #include <algorithm>
 #include <iostream>
+#include <windows.h>
 
 namespace RawrXD {
+
+// =============================================================================
+// UTF8 to Wide String Conversion (Unicode Support)
+// =============================================================================
+
+static std::wstring utf8ToWide(const std::string& utf8)
+{
+    if (utf8.empty())
+        return {};
+    const int len = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), static_cast<int>(utf8.size()), nullptr, 0);
+    if (len <= 0)
+        return {};
+    std::wstring out(static_cast<size_t>(len), L'\0');
+    if (MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), static_cast<int>(utf8.size()), out.data(), len) == 0)
+        return {};
+    return out;
+}
 
 StreamingGGUFLoaderMMap::StreamingGGUFLoaderMMap()
     : file_handle_(INVALID_HANDLE_VALUE)
@@ -52,11 +70,19 @@ bool StreamingGGUFLoaderMMap::loadModelStreaming(
 
     filepath_ = filepath;
     
-    // Phase 1: Open file and create memory mapping
+    // Phase 1: Open file and create memory mapping (with Unicode support)
     if (progress) progress(0, 100, "Opening file");
     
-    file_handle_ = CreateFileA(
-        filepath.c_str(),
+    // Convert UTF-8 filepath to wide string for Unicode support
+    std::wstring wideFilepath = utf8ToWide(filepath);
+    if (wideFilepath.empty() && !filepath.empty()) {
+        std::cerr << "❌ Failed to convert filepath to Unicode: " << filepath << std::endl;
+        loading_.store(false);
+        return false;
+    }
+    
+    file_handle_ = CreateFileW(
+        wideFilepath.empty() ? std::wstring(filepath.begin(), filepath.end()).c_str() : wideFilepath.c_str(),
         GENERIC_READ,
         FILE_SHARE_READ,
         nullptr,
@@ -66,7 +92,17 @@ bool StreamingGGUFLoaderMMap::loadModelStreaming(
     );
     
     if (file_handle_ == INVALID_HANDLE_VALUE) {
-        std::cerr << "❌ Failed to open file: " << filepath << " (Error: " << GetLastError() << ")" << std::endl;
+        DWORD error = GetLastError();
+        std::cerr << "❌ Failed to open file: " << filepath << " (Error code: " << error << ")" << std::endl;
+        std::cerr << "   Error details: ";
+        switch(error) {
+            case ERROR_FILE_NOT_FOUND: std::cerr << "File not found"; break;
+            case ERROR_PATH_NOT_FOUND: std::cerr << "Path not found"; break;
+            case ERROR_ACCESS_DENIED: std::cerr << "Access denied"; break;
+            case ERROR_SHARING_VIOLATION: std::cerr << "File already in use"; break;
+            default: std::cerr << "Unknown error"; break;
+        }
+        std::cerr << std::endl;
         loading_.store(false);
         return false;
     }
@@ -87,7 +123,7 @@ bool StreamingGGUFLoaderMMap::loadModelStreaming(
     if (progress) progress(10, 100, "Creating memory mapping");
     
     // Create file mapping
-    mapping_handle_ = CreateFileMappingA(
+    mapping_handle_ = CreateFileMapping(
         file_handle_,
         nullptr,
         PAGE_READONLY,
@@ -97,10 +133,13 @@ bool StreamingGGUFLoaderMMap::loadModelStreaming(
     );
     
     if (!mapping_handle_) {
-        std::cerr << "❌ Failed to create file mapping (Error: " << GetLastError() << ")" << std::endl;
+        DWORD error = GetLastError();
+        std::cerr << "❌ Failed to create file mapping (Error code: " << error << ")" << std::endl;
+        std::cerr << "   Note: Large files or system memory constraints may require fallback to standard I/O" << std::endl;
         CloseHandle(file_handle_);
         file_handle_ = INVALID_HANDLE_VALUE;
         loading_.store(false);
+        // TODO: Implement fallback to streaming_gguf_loader.cpp (standard file I/O) here
         return false;
     }
     
@@ -114,12 +153,16 @@ bool StreamingGGUFLoaderMMap::loadModelStreaming(
     ));
     
     if (!mapped_base_) {
-        std::cerr << "❌ Failed to map view of file (Error: " << GetLastError() << ")" << std::endl;
+        DWORD error = GetLastError();
+        std::cerr << "❌ Failed to map view of file (Error code: " << error << ")" << std::endl;
+        std::cerr << "   File size: " << mapped_size_ << " bytes" << std::endl;
+        std::cerr << "   Note: This may indicate insufficient virtual address space" << std::endl;
         CloseHandle(mapping_handle_);
         CloseHandle(file_handle_);
         mapping_handle_ = nullptr;
         file_handle_ = INVALID_HANDLE_VALUE;
         loading_.store(false);
+        // TODO: Implement fallback to streaming_gguf_loader.cpp (standard file I/O) here
         return false;
     }
     

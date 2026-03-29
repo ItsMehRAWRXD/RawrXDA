@@ -10,30 +10,37 @@
 // ============================================================================
 
 #include "AgentToolHandlers.h"
+#include "../agent_history.h"
+#include "agentic_workspace_analyzer.hpp"
+#include "DiskRecoveryAgent.h"
+#include "../core/rawrxd_subsystem_api.hpp"
+#include "../core/unified_hotpatch_manager.hpp"
 
-#include <fstream>
-#include <sstream>
-#include <filesystem>
 #include <algorithm>
-#include <regex>
+#include <cctype>
 #include <chrono>
+#include <cmath>
+#include <filesystem>
+#include <fstream>
+#include <mutex>
+#include <regex>
+#include <sstream>
 #include <unordered_map>
 #include <unordered_set>
-#include <cmath>
-#include <cctype>
 #include <windows.h>
 
 using RawrXD::Agent::AgentToolHandlers;
 using RawrXD::Agent::ToolCallResult;
-using RawrXD::Agent::ToolOutcome;
 using RawrXD::Agent::ToolGuardrails;
 using json = nlohmann::json;
 
-static std::string ToLowerCopy(const std::string& s) {
+extern "C" int AgentWorkflow_Resume(const char* checkpointPath);
+
+static std::string ToLowerCopy(const std::string& s)
+{
     std::string out = s;
-    std::transform(out.begin(), out.end(), out.begin(), [](unsigned char c) {
-        return static_cast<char>(std::tolower(c));
-    });
+    std::transform(out.begin(), out.end(), out.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
     return out;
 }
 namespace fs = std::filesystem;
@@ -42,88 +49,234 @@ namespace fs = std::filesystem;
 // Static state
 // ============================================================================
 ToolGuardrails AgentToolHandlers::s_guardrails;
+static AgentHistoryRecorder* s_historyRecorder = nullptr;
 
-namespace {
+namespace
+{
 
-std::wstring ToWide(const std::string& s) {
-    if (s.empty()) return L"";
+std::wstring ToWide(const std::string& s)
+{
+    if (s.empty())
+        return L"";
     int len = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, nullptr, 0);
     std::wstring out(len, L'\0');
     MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, out.data(), len);
-    if (!out.empty() && out.back() == L'\0') out.pop_back();
+    if (!out.empty() && out.back() == L'\0')
+        out.pop_back();
     return out;
 }
 
-std::string ToUtf8(const std::wstring& s) {
-    if (s.empty()) return "";
+std::string ToUtf8(const std::wstring& s)
+{
+    if (s.empty())
+        return "";
     int len = WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, nullptr, 0, nullptr, nullptr);
     std::string out(len, '\0');
     WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, out.data(), len, nullptr, nullptr);
-    if (!out.empty() && out.back() == '\0') out.pop_back();
+    if (!out.empty() && out.back() == '\0')
+        out.pop_back();
     return out;
 }
 
-int CountLines(const std::string& text) {
+int CountLines(const std::string& text)
+{
     int count = 0;
-    for (char c : text) {
-        if (c == '\n') ++count;
+    for (char c : text)
+    {
+        if (c == '\n')
+            ++count;
     }
     return count + (text.empty() ? 0 : 1);
 }
 
+bool WriteFileAtomic(const std::string& path, const std::string& content, std::string& error)
+{
+    std::string tempPath =
+        path + ".tmp." +
+        std::to_string(std::hash<std::string>{}(
+            path + std::to_string(std::chrono::high_resolution_clock::now().time_since_epoch().count())));
+    std::ofstream tmp(tempPath, std::ios::binary | std::ios::trunc);
+    if (!tmp.is_open())
+    {
+        error = "Failed to open temporary file " + tempPath;
+        return false;
+    }
+    tmp.write(content.data(), content.size());
+    tmp.close();
+    if (!tmp.good())
+    {
+        error = "Failed to write temporary file " + tempPath;
+        fs::remove(tempPath);
+        return false;
+    }
+    std::error_code ec;
+    fs::rename(tempPath, path, ec);
+    if (ec)
+    {
+        error = "Failed to rename tmp file " + tempPath + " to " + path + ": " + ec.message();
+        fs::remove(tempPath);
+        return false;
+    }
+    return true;
+}
+
+struct PatchJournalEntry
+{
+    std::string path;
+    std::string before;
+    std::string after;
+    bool applied{false};
+};
+
+class PatchJournal
+{
+  public:
+    void record(const std::string& path, const std::string& before, const std::string& after)
+    {
+        entries.emplace_back(PatchJournalEntry{path, before, after, false});
+    }
+    bool rollback()
+    {
+        bool allOk = true;
+        for (auto it = entries.rbegin(); it != entries.rend(); ++it)
+        {
+            std::error_code ec;
+            if (it->before.empty())
+            {
+                fs::remove(it->path, ec);
+                if (ec)
+                {
+                    allOk = false;
+                }
+            }
+            else
+            {
+                std::ofstream file(it->path, std::ios::binary | std::ios::trunc);
+                if (!file.is_open())
+                {
+                    allOk = false;
+                    continue;
+                }
+                file.write(it->before.data(), it->before.size());
+                file.close();
+                it->applied = !file.fail();
+                if (file.fail())
+                    allOk = false;
+            }
+        }
+        entries.clear();
+        return allOk;
+    }
+    nlohmann::json toJson() const
+    {
+        nlohmann::json arr = nlohmann::json::array();
+        for (const auto& e : entries)
+        {
+            nlohmann::json item;
+            item["path"] = e.path;
+            item["applied"] = e.applied;
+            item["before_len"] = e.before.size();
+            item["after_len"] = e.after.size();
+            arr.push_back(item);
+        }
+        return arr;
+    }
+
+  private:
+    std::vector<PatchJournalEntry> entries;
+};
+
+static PatchJournal s_patchJournal;
+
+struct SemanticSearchCacheEntry
+{
+    std::string body;
+    nlohmann::json metadata;
+    std::chrono::steady_clock::time_point timestamp;
+};
+static std::unordered_map<std::string, SemanticSearchCacheEntry> s_semanticSearchCache;
+static std::mutex s_semanticSearchCacheMutex;
+
+// Shared iteration progress state for long-running model/agent work.
+static std::mutex s_iterationStatusMutex;
+static bool s_iterationBusy = false;
+static int s_iterationCurrent = 0;
+static int s_iterationTotal = 0;
+static std::string s_iterationPhase = "idle";
+static std::string s_iterationMessage;
+
 // Very small semantic index: TF cosine over tokenized files
-struct IndexedFile {
+struct IndexedFile
+{
     std::string path;
     std::unordered_map<std::string, double> tf;
     double norm = 0.0;
 };
 
-bool IsLikelyBinary(const std::string& content) {
-    if (content.empty()) return false;
+bool IsLikelyBinary(const std::string& content)
+{
+    if (content.empty())
+        return false;
     size_t nonPrintable = 0;
     size_t sample = std::min<size_t>(content.size(), 4096);
-    for (size_t i = 0; i < sample; ++i) {
+    for (size_t i = 0; i < sample; ++i)
+    {
         unsigned char c = static_cast<unsigned char>(content[i]);
-        if (c == 0) return true;
-        if (c < 9 || (c > 13 && c < 32)) ++nonPrintable;
+        if (c == 0)
+            return true;
+        if (c < 9 || (c > 13 && c < 32))
+            ++nonPrintable;
     }
     // Consider binary if more than 5% of sampled bytes are non-printable
     return (nonPrintable * 20) > sample;
 }
 
-std::vector<std::string> Tokenize(const std::string& text) {
+std::vector<std::string> Tokenize(const std::string& text)
+{
     std::vector<std::string> tokens;
     std::string cur;
-    for (char c : text) {
-        if (std::isalnum(static_cast<unsigned char>(c)) || c == '_') {
+    for (char c : text)
+    {
+        if (std::isalnum(static_cast<unsigned char>(c)) || c == '_')
+        {
             cur.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
-        } else if (!cur.empty()) {
+        }
+        else if (!cur.empty())
+        {
             tokens.push_back(cur);
             cur.clear();
         }
     }
-    if (!cur.empty()) tokens.push_back(cur);
+    if (!cur.empty())
+        tokens.push_back(cur);
     return tokens;
 }
 
-IndexedFile BuildIndexForFile(const std::string& path, size_t maxBytes) {
+IndexedFile BuildIndexForFile(const std::string& path, size_t maxBytes)
+{
     IndexedFile f;
     f.path = path;
     std::ifstream in(path, std::ios::binary);
-    if (!in.is_open()) return f;
+    if (!in.is_open())
+        return f;
     std::ostringstream ss;
     ss << in.rdbuf();
     std::string content = ss.str();
-    if (content.size() > maxBytes && maxBytes > 0) {
+    if (content.size() > maxBytes && maxBytes > 0)
+    {
         content = content.substr(0, maxBytes);
     }
-    if (IsLikelyBinary(content)) return f;
+    if (IsLikelyBinary(content))
+        return f;
     auto tokens = Tokenize(content);
-    if (tokens.empty()) return f;
-    for (const auto& t : tokens) {
+    if (tokens.empty())
+        return f;
+    for (const auto& t : tokens)
+    {
         f.tf[t] += 1.0;
     }
-    for (auto& kv : f.tf) {
+    for (auto& kv : f.tf)
+    {
         kv.second = kv.second / static_cast<double>(tokens.size());
         f.norm += kv.second * kv.second;
     }
@@ -131,53 +284,142 @@ IndexedFile BuildIndexForFile(const std::string& path, size_t maxBytes) {
     return f;
 }
 
-double CosineScore(const IndexedFile& f, const std::unordered_map<std::string, double>& qtf, double qnorm) {
-    if (f.norm == 0.0 || qnorm == 0.0) return 0.0;
+double CosineScore(const IndexedFile& f, const std::unordered_map<std::string, double>& qtf, double qnorm)
+{
+    if (f.norm == 0.0 || qnorm == 0.0)
+        return 0.0;
     double dot = 0.0;
-    for (const auto& kv : qtf) {
+    for (const auto& kv : qtf)
+    {
         auto it = f.tf.find(kv.first);
-        if (it != f.tf.end()) dot += kv.second * it->second;
+        if (it != f.tf.end())
+            dot += kv.second * it->second;
     }
     return dot / (f.norm * qnorm);
 }
 
-} // anonymous namespace
+std::string EscapeRegex(const std::string& s)
+{
+    std::string out;
+    out.reserve(s.size() * 2);
+    for (char c : s)
+    {
+        switch (c)
+        {
+            case '.':
+            case '^':
+            case '$':
+            case '|':
+            case '(':
+            case ')':
+            case '[':
+            case ']':
+            case '{':
+            case '}':
+            case '*':
+            case '+':
+            case '?':
+            case '\\':
+                out.push_back('\\');
+                out.push_back(c);
+                break;
+            default:
+                out.push_back(c);
+                break;
+        }
+    }
+    return out;
+}
+
+std::regex GlobToRegex(const std::string& glob, bool caseSensitive, std::string& error)
+{
+    std::string rx;
+    rx.reserve(glob.size() * 2);
+    rx.push_back('^');
+    for (size_t i = 0; i < glob.size(); ++i)
+    {
+        char c = glob[i];
+        if (c == '*')
+        {
+            rx.append(".*");
+        }
+        else if (c == '?')
+        {
+            rx.push_back('.');
+        }
+        else
+        {
+            rx.append(EscapeRegex(std::string(1, c)));
+        }
+    }
+    rx.push_back('$');
+    try
+    {
+        std::regex::flag_type flags = std::regex::ECMAScript;
+        if (!caseSensitive)
+            flags |= std::regex::icase;
+        return std::regex(rx, flags);
+    }
+    catch (const std::exception& ex)
+    {
+        error = ex.what();
+        return std::regex();
+    }
+}
+
+}  // anonymous namespace
 
 // ============================================================================
 // Guardrails
 // ============================================================================
 
-void AgentToolHandlers::SetGuardrails(const ToolGuardrails& guards) {
+void AgentToolHandlers::SetGuardrails(const ToolGuardrails& guards)
+{
     s_guardrails = guards;
 }
 
-const ToolGuardrails& AgentToolHandlers::GetGuardrails() {
+const ToolGuardrails& AgentToolHandlers::GetGuardrails()
+{
     return s_guardrails;
+}
+
+void AgentToolHandlers::SetHistoryRecorder(AgentHistoryRecorder* recorder)
+{
+    s_historyRecorder = recorder;
 }
 
 // ============================================================================
 // Path validation
 // ============================================================================
 
-std::string AgentToolHandlers::NormalizePath(const std::string& path) {
-    try {
+std::string AgentToolHandlers::NormalizePath(const std::string& path)
+{
+    try
+    {
         return fs::weakly_canonical(path).string();
-    } catch (...) {
+    }
+    catch (...)
+    {
         return path;
     }
 }
 
-bool AgentToolHandlers::IsPathAllowed(const std::string& path) {
+bool AgentToolHandlers::IsPathAllowed(const std::string& path)
+{
     std::string normalized = NormalizePath(path);
 
     // Must be under at least one allowed root
-    if (s_guardrails.allowedRoots.empty()) return true; // No restrictions configured
+    if (s_guardrails.allowedRoots.empty())
+        return true;  // No restrictions configured
 
-    for (const auto& root : s_guardrails.allowedRoots) {
+    for (const auto& root : s_guardrails.allowedRoots)
+    {
         std::string normRoot = NormalizePath(root);
-        if (normalized.find(normRoot) == 0) {
+        if (normalized.find(normRoot) == 0)
+        {
             // Check deny patterns
-            if (!MatchesDenyPattern(normalized)) {
+            if (!MatchesDenyPattern(normalized))
+            {
                 return true;
             }
         }
@@ -185,13 +427,16 @@ bool AgentToolHandlers::IsPathAllowed(const std::string& path) {
     return false;
 }
 
-bool AgentToolHandlers::MatchesDenyPattern(const std::string& path) {
-    for (const auto& pattern : s_guardrails.denyPatterns) {
+bool AgentToolHandlers::MatchesDenyPattern(const std::string& path)
+{
+    for (const auto& pattern : s_guardrails.denyPatterns)
+    {
         // Simple suffix matching for deny patterns like "*.exe"
-        if (pattern.size() > 1 && pattern[0] == '*') {
+        if (pattern.size() > 1 && pattern[0] == '*')
+        {
             std::string suffix = pattern.substr(1);
-            if (path.size() >= suffix.size() &&
-                path.compare(path.size() - suffix.size(), suffix.size(), suffix) == 0) {
+            if (path.size() >= suffix.size() && path.compare(path.size() - suffix.size(), suffix.size(), suffix) == 0)
+            {
                 return true;
             }
         }
@@ -199,11 +444,15 @@ bool AgentToolHandlers::MatchesDenyPattern(const std::string& path) {
     return false;
 }
 
-std::string AgentToolHandlers::CreateBackup(const std::string& path) {
+std::string AgentToolHandlers::CreateBackup(const std::string& path)
+{
     std::string backupPath = path + ".agent_bak";
-    try {
+    try
+    {
         fs::copy_file(path, backupPath, fs::copy_options::overwrite_existing);
-    } catch (const std::exception& ex) {
+    }
+    catch (const std::exception& ex)
+    {
         return std::string("Backup failed: ") + ex.what();
     }
     return "";
@@ -213,28 +462,34 @@ std::string AgentToolHandlers::CreateBackup(const std::string& path) {
 // read_file — Read file contents
 // ============================================================================
 
-ToolCallResult AgentToolHandlers::ToolReadFile(const json& args) {
-    if (!args.contains("path") || !args["path"].is_string()) {
+ToolCallResult AgentToolHandlers::ToolReadFile(const json& args)
+{
+    if (!args.contains("path") || !args["path"].is_string())
+    {
         return ToolCallResult::Validation("read_file requires 'path' (string)");
     }
 
     std::string path = NormalizePath(args["path"].get<std::string>());
-    if (!IsPathAllowed(path)) {
+    if (!IsPathAllowed(path))
+    {
         return ToolCallResult::Sandbox("Path not in workspace allowlist: " + path);
     }
 
-    if (!fs::exists(path)) {
+    if (!fs::exists(path))
+    {
         return ToolCallResult::Error("File not found: " + path);
     }
 
     auto fileSize = fs::file_size(path);
-    if (fileSize > s_guardrails.maxFileSizeBytes) {
-        return ToolCallResult::Error("File too large: " + std::to_string(fileSize) +
-                                     " bytes (max " + std::to_string(s_guardrails.maxFileSizeBytes) + ")");
+    if (fileSize > s_guardrails.maxFileSizeBytes)
+    {
+        return ToolCallResult::Error("File too large: " + std::to_string(fileSize) + " bytes (max " +
+                                     std::to_string(s_guardrails.maxFileSizeBytes) + ")");
     }
 
     std::ifstream file(path, std::ios::binary);
-    if (!file.is_open()) {
+    if (!file.is_open())
+    {
         return ToolCallResult::Error("Cannot open file: " + path);
     }
 
@@ -257,61 +512,84 @@ ToolCallResult AgentToolHandlers::ToolReadFile(const json& args) {
 // write_file — Create or overwrite file
 // ============================================================================
 
-ToolCallResult AgentToolHandlers::WriteFile(const json& args) {
-    if (!args.contains("path") || !args["path"].is_string()) {
+ToolCallResult AgentToolHandlers::WriteFile(const json& args)
+{
+    if (!args.contains("path") || !args["path"].is_string())
+    {
         return ToolCallResult::Validation("write_file requires 'path' (string)");
     }
-    if (!args.contains("content") || !args["content"].is_string()) {
+    if (!args.contains("content") || !args["content"].is_string())
+    {
         return ToolCallResult::Validation("write_file requires 'content' (string)");
     }
 
     std::string path = NormalizePath(args["path"].get<std::string>());
     std::string content = args["content"].get<std::string>();
 
-    if (!IsPathAllowed(path)) {
+    if (!IsPathAllowed(path))
+    {
         return ToolCallResult::Sandbox("Path not in workspace allowlist: " + path);
     }
 
-    if (content.size() > s_guardrails.maxFileSizeBytes) {
+    if (content.size() > s_guardrails.maxFileSizeBytes)
+    {
         return ToolCallResult::Error("Content too large: " + std::to_string(content.size()) + " bytes");
     }
 
     // Create backup if file exists and guardrails require it
     bool existed = fs::exists(path);
-    if (existed && s_guardrails.requireBackupOnWrite) {
-        std::string backupError = CreateBackup(path);
-        if (!backupError.empty()) {
-            return ToolCallResult::Error(backupError);
+    std::string beforeContent;
+    if (existed)
+    {
+        std::ifstream read(path, std::ios::binary);
+        if (read.is_open())
+        {
+            std::ostringstream ss;
+            ss << read.rdbuf();
+            beforeContent = ss.str();
+        }
+        if (s_guardrails.requireBackupOnWrite)
+        {
+            std::string backupError = CreateBackup(path);
+            if (!backupError.empty())
+            {
+                return ToolCallResult::Error(backupError);
+            }
         }
     }
 
     // Ensure parent directories exist
-    try {
+    try
+    {
         fs::path parentDir = fs::path(path).parent_path();
-        if (!parentDir.empty() && !fs::exists(parentDir)) {
+        if (!parentDir.empty() && !fs::exists(parentDir))
+        {
             fs::create_directories(parentDir);
         }
-    } catch (const std::exception& ex) {
+    }
+    catch (const std::exception& ex)
+    {
         return ToolCallResult::Error(std::string("Cannot create directories: ") + ex.what());
     }
 
-    // Write file
-    std::ofstream file(path, std::ios::trunc | std::ios::binary);
-    if (!file.is_open()) {
-        return ToolCallResult::Error("Cannot open file for writing: " + path);
+    // Record patch journal before applying
+    s_patchJournal.record(path, beforeContent, content);
+
+    // Write atomically with rollback support
+    std::string writeErr;
+    if (!WriteFileAtomic(path, content, writeErr))
+    {
+        s_patchJournal.rollback();
+        return ToolCallResult::Error(writeErr);
     }
-    file.write(content.data(), content.size());
-    file.close();
 
     nlohmann::json res_metadata = nlohmann::json::object();
     res_metadata["lines"] = CountLines(content);
     res_metadata["size_bytes"] = content.size();
     res_metadata["created"] = !existed;
 
-    ToolCallResult result = ToolCallResult::Ok(
-        existed ? "File overwritten successfully" : "File created successfully",
-        res_metadata
-    );
+    ToolCallResult result =
+        ToolCallResult::Ok(existed ? "File overwritten successfully" : "File created successfully", res_metadata);
     result.filePath = path;
     result.bytesWritten = content.size();
     result.linesAffected = CountLines(content);
@@ -322,14 +600,18 @@ ToolCallResult AgentToolHandlers::WriteFile(const json& args) {
 // replace_in_file — Search+replace text block
 // ============================================================================
 
-ToolCallResult AgentToolHandlers::ReplaceInFile(const json& args) {
-    if (!args.contains("path") || !args["path"].is_string()) {
+ToolCallResult AgentToolHandlers::ReplaceInFile(const json& args)
+{
+    if (!args.contains("path") || !args["path"].is_string())
+    {
         return ToolCallResult::Validation("replace_in_file requires 'path' (string)");
     }
-    if (!args.contains("old_string") || !args["old_string"].is_string()) {
+    if (!args.contains("old_string") || !args["old_string"].is_string())
+    {
         return ToolCallResult::Validation("replace_in_file requires 'old_string' (string)");
     }
-    if (!args.contains("new_string") || !args["new_string"].is_string()) {
+    if (!args.contains("new_string") || !args["new_string"].is_string())
+    {
         return ToolCallResult::Validation("replace_in_file requires 'new_string' (string)");
     }
 
@@ -337,16 +619,19 @@ ToolCallResult AgentToolHandlers::ReplaceInFile(const json& args) {
     std::string oldStr = args["old_string"].get<std::string>();
     std::string newStr = args["new_string"].get<std::string>();
 
-    if (!IsPathAllowed(path)) {
+    if (!IsPathAllowed(path))
+    {
         return ToolCallResult::Sandbox("Path not in workspace allowlist: " + path);
     }
-    if (!fs::exists(path)) {
+    if (!fs::exists(path))
+    {
         return ToolCallResult::Error("File not found: " + path);
     }
 
     // Read file
     std::ifstream inFile(path, std::ios::binary);
-    if (!inFile.is_open()) {
+    if (!inFile.is_open())
+    {
         return ToolCallResult::Error("Cannot open file: " + path);
     }
     std::ostringstream ss;
@@ -356,7 +641,8 @@ ToolCallResult AgentToolHandlers::ReplaceInFile(const json& args) {
 
     // Find the old string
     size_t pos = content.find(oldStr);
-    if (pos == std::string::npos) {
+    if (pos == std::string::npos)
+    {
         return ToolCallResult::Error("old_string not found in file. "
                                      "Ensure you're using the exact text including whitespace.");
     }
@@ -366,9 +652,11 @@ ToolCallResult AgentToolHandlers::ReplaceInFile(const json& args) {
     bool multipleMatches = (secondMatch != std::string::npos);
 
     // Create backup
-    if (s_guardrails.requireBackupOnWrite) {
+    if (s_guardrails.requireBackupOnWrite)
+    {
         std::string backupError = CreateBackup(path);
-        if (!backupError.empty()) {
+        if (!backupError.empty())
+        {
             return ToolCallResult::Error(backupError);
         }
     }
@@ -376,18 +664,22 @@ ToolCallResult AgentToolHandlers::ReplaceInFile(const json& args) {
     // Perform replacement
     std::string newContent = content.substr(0, pos) + newStr + content.substr(pos + oldStr.size());
 
-    // Write back
-    std::ofstream outFile(path, std::ios::trunc | std::ios::binary);
-    if (!outFile.is_open()) {
-        return ToolCallResult::Error("Cannot write file: " + path);
+    // Record patch journal before applying
+    s_patchJournal.record(path, content, newContent);
+
+    // Write back atomically
+    std::string writeErr;
+    if (!WriteFileAtomic(path, newContent, writeErr))
+    {
+        s_patchJournal.rollback();
+        return ToolCallResult::Error(writeErr);
     }
-    outFile.write(newContent.data(), newContent.size());
-    outFile.close();
 
     int linesChanged = CountLines(newStr) - CountLines(oldStr);
-    std::string msg = "Replaced " + std::to_string(oldStr.size()) + " bytes with " +
-                      std::to_string(newStr.size()) + " bytes";
-    if (multipleMatches) {
+    std::string msg =
+        "Replaced " + std::to_string(oldStr.size()) + " bytes with " + std::to_string(newStr.size()) + " bytes";
+    if (multipleMatches)
+    {
         msg += " (WARNING: multiple matches found, only first replaced)";
     }
 
@@ -409,35 +701,46 @@ ToolCallResult AgentToolHandlers::ReplaceInFile(const json& args) {
 // list_dir — List directory contents
 // ============================================================================
 
-ToolCallResult AgentToolHandlers::ListDir(const json& args) {
-    if (!args.contains("path") || !args["path"].is_string()) {
+ToolCallResult AgentToolHandlers::ListDir(const json& args)
+{
+    if (!args.contains("path") || !args["path"].is_string())
+    {
         return ToolCallResult::Validation("list_dir requires 'path' (string)");
     }
 
     std::string path = NormalizePath(args["path"].get<std::string>());
-    if (!IsPathAllowed(path)) {
+    if (!IsPathAllowed(path))
+    {
         return ToolCallResult::Sandbox("Path not in workspace allowlist: " + path);
     }
-    if (!fs::exists(path) || !fs::is_directory(path)) {
+    if (!fs::exists(path) || !fs::is_directory(path))
+    {
         return ToolCallResult::Error("Directory not found: " + path);
     }
 
     std::ostringstream listing;
     int fileCount = 0, dirCount = 0;
 
-    try {
-        for (const auto& entry : fs::directory_iterator(path)) {
+    try
+    {
+        for (const auto& entry : fs::directory_iterator(path))
+        {
             std::string name = entry.path().filename().string();
-            if (entry.is_directory()) {
+            if (entry.is_directory())
+            {
                 listing << name << "/\n";
                 ++dirCount;
-            } else {
+            }
+            else
+            {
                 auto size = entry.file_size();
                 listing << name << " (" << size << " bytes)\n";
                 ++fileCount;
             }
         }
-    } catch (const std::exception& ex) {
+    }
+    catch (const std::exception& ex)
+    {
         return ToolCallResult::Error(std::string("Directory listing failed: ") + ex.what());
     }
 
@@ -450,17 +753,239 @@ ToolCallResult AgentToolHandlers::ListDir(const json& args) {
 }
 
 // ============================================================================
+// delete_file — Remove a file from workspace
+// ============================================================================
+ToolCallResult AgentToolHandlers::DeleteFile(const json& args)
+{
+    if (!args.contains("path") || !args["path"].is_string())
+    {
+        return ToolCallResult::Validation("delete_file requires 'path' (string)");
+    }
+
+    std::string path = NormalizePath(args["path"].get<std::string>());
+    if (!IsPathAllowed(path))
+    {
+        return ToolCallResult::Sandbox("Path not in workspace allowlist: " + path);
+    }
+    if (!fs::exists(path))
+    {
+        return ToolCallResult::Error("Path not found: " + path);
+    }
+    if (!fs::is_regular_file(path))
+    {
+        return ToolCallResult::Validation("delete_file only supports regular files");
+    }
+
+    std::error_code ec;
+    const bool removed = fs::remove(path, ec);
+    if (!removed || ec)
+    {
+        return ToolCallResult::Error("delete_file failed: " + (ec ? ec.message() : std::string("unknown error")));
+    }
+
+    nlohmann::json meta = nlohmann::json::object();
+    meta["path"] = path;
+    meta["deleted"] = true;
+    return ToolCallResult::Ok("File deleted", meta);
+}
+
+// ============================================================================
+// rename_file / move_file — Move or rename a file
+// ============================================================================
+ToolCallResult AgentToolHandlers::RenameFile(const json& args)
+{
+    std::string source;
+    std::string destination;
+    if (args.contains("source") && args["source"].is_string())
+        source = args["source"].get<std::string>();
+    if (args.contains("path") && args["path"].is_string() && source.empty())
+        source = args["path"].get<std::string>();
+    if (args.contains("destination") && args["destination"].is_string())
+        destination = args["destination"].get<std::string>();
+
+    if (source.empty() || destination.empty())
+    {
+        return ToolCallResult::Validation("rename_file requires 'source'/'path' and 'destination'");
+    }
+
+    source = NormalizePath(source);
+    destination = NormalizePath(destination);
+    if (!IsPathAllowed(source) || !IsPathAllowed(destination))
+    {
+        return ToolCallResult::Sandbox("Source or destination is not in workspace allowlist");
+    }
+    if (!fs::exists(source))
+    {
+        return ToolCallResult::Error("Source path not found: " + source);
+    }
+
+    std::error_code ec;
+    fs::rename(source, destination, ec);
+    if (ec)
+    {
+        return ToolCallResult::Error("rename_file failed: " + ec.message());
+    }
+
+    nlohmann::json meta = nlohmann::json::object();
+    meta["source"] = source;
+    meta["destination"] = destination;
+    meta["moved"] = true;
+    return ToolCallResult::Ok("File moved", meta);
+}
+
+// ============================================================================
+// copy_file — Copy file to destination
+// ============================================================================
+ToolCallResult AgentToolHandlers::CopyFile(const json& args)
+{
+    std::string source;
+    std::string destination;
+    if (args.contains("source") && args["source"].is_string())
+        source = args["source"].get<std::string>();
+    if (args.contains("path") && args["path"].is_string() && source.empty())
+        source = args["path"].get<std::string>();
+    if (args.contains("destination") && args["destination"].is_string())
+        destination = args["destination"].get<std::string>();
+    const bool overwrite = args.value("overwrite", true);
+
+    if (source.empty() || destination.empty())
+    {
+        return ToolCallResult::Validation("copy_file requires 'source'/'path' and 'destination'");
+    }
+
+    source = NormalizePath(source);
+    destination = NormalizePath(destination);
+    if (!IsPathAllowed(source) || !IsPathAllowed(destination))
+    {
+        return ToolCallResult::Sandbox("Source or destination is not in workspace allowlist");
+    }
+    if (!fs::exists(source) || !fs::is_regular_file(source))
+    {
+        return ToolCallResult::Error("Source file not found: " + source);
+    }
+
+    std::error_code ec;
+    fs::copy_file(source, destination, overwrite ? fs::copy_options::overwrite_existing : fs::copy_options::none, ec);
+    if (ec)
+    {
+        return ToolCallResult::Error("copy_file failed: " + ec.message());
+    }
+
+    nlohmann::json meta = nlohmann::json::object();
+    meta["source"] = source;
+    meta["destination"] = destination;
+    meta["overwrite"] = overwrite;
+    return ToolCallResult::Ok("File copied", meta);
+}
+
+// ============================================================================
+// mkdir / create_directory — Create directory tree
+// ============================================================================
+ToolCallResult AgentToolHandlers::MakeDirectory(const json& args)
+{
+    if (!args.contains("path") || !args["path"].is_string())
+    {
+        return ToolCallResult::Validation("mkdir requires 'path' (string)");
+    }
+    std::string path = NormalizePath(args["path"].get<std::string>());
+    if (!IsPathAllowed(path))
+    {
+        return ToolCallResult::Sandbox("Path not in workspace allowlist: " + path);
+    }
+
+    std::error_code ec;
+    const bool created = fs::create_directories(path, ec);
+    if (ec)
+    {
+        return ToolCallResult::Error("mkdir failed: " + ec.message());
+    }
+
+    nlohmann::json meta = nlohmann::json::object();
+    meta["path"] = path;
+    meta["created"] = created;
+    meta["already_exists"] = fs::exists(path);
+    return ToolCallResult::Ok(created ? "Directory created" : "Directory already exists", meta);
+}
+
+// ============================================================================
+// stat_file / get_file_info — Return basic metadata
+// ============================================================================
+ToolCallResult AgentToolHandlers::StatFile(const json& args)
+{
+    if (!args.contains("path") || !args["path"].is_string())
+    {
+        return ToolCallResult::Validation("stat_file requires 'path' (string)");
+    }
+    std::string path = NormalizePath(args["path"].get<std::string>());
+    if (!IsPathAllowed(path))
+    {
+        return ToolCallResult::Sandbox("Path not in workspace allowlist: " + path);
+    }
+
+    std::error_code ec;
+    const fs::file_status st = fs::status(path, ec);
+    if (ec || !fs::exists(st))
+    {
+        return ToolCallResult::Error("Path not found: " + path);
+    }
+
+    nlohmann::json meta = nlohmann::json::object();
+    meta["path"] = path;
+    meta["exists"] = true;
+    meta["is_file"] = fs::is_regular_file(st);
+    meta["is_directory"] = fs::is_directory(st);
+    if (fs::is_regular_file(st))
+    {
+        meta["size_bytes"] = fs::file_size(path, ec);
+    }
+    return ToolCallResult::Ok(meta.dump(2), meta);
+}
+
+// ============================================================================
+// git_status — Run git status in workspace root
+// ============================================================================
+ToolCallResult AgentToolHandlers::GitStatus(const json& args)
+{
+    std::string root;
+    if (args.contains("root") && args["root"].is_string())
+    {
+        root = NormalizePath(args["root"].get<std::string>());
+    }
+    else if (!s_guardrails.allowedRoots.empty())
+    {
+        root = NormalizePath(s_guardrails.allowedRoots.front());
+    }
+    else
+    {
+        return ToolCallResult::Error("No workspace root configured for git_status");
+    }
+
+    if (!IsPathAllowed(root))
+    {
+        return ToolCallResult::Sandbox("Root not in workspace allowlist: " + root);
+    }
+
+    nlohmann::json cmdArgs = nlohmann::json::object();
+    cmdArgs["command"] = "cd /d \"" + root + "\" && git status --short --branch";
+    if (args.contains("timeout"))
+        cmdArgs["timeout"] = args["timeout"];
+    return ExecuteCommand(cmdArgs);
+}
+
+// ============================================================================
 // execute_command — Run terminal command (sandboxed)
 // ============================================================================
 
-bool AgentToolHandlers::RunProcess(const std::wstring& cmdLine, uint32_t timeoutMs,
-                                    std::string& output, uint32_t& exitCode) {
+bool AgentToolHandlers::RunProcess(const std::wstring& cmdLine, uint32_t timeoutMs, std::string& output,
+                                   uint32_t& exitCode)
+{
     SECURITY_ATTRIBUTES sa{};
     sa.nLength = sizeof(sa);
     sa.bInheritHandle = TRUE;
 
     HANDLE hRead = nullptr, hWrite = nullptr;
-    if (!CreatePipe(&hRead, &hWrite, &sa, 0)) {
+    if (!CreatePipe(&hRead, &hWrite, &sa, 0))
+    {
         output = "Failed to create output pipe";
         return false;
     }
@@ -475,11 +1000,12 @@ bool AgentToolHandlers::RunProcess(const std::wstring& cmdLine, uint32_t timeout
 
     PROCESS_INFORMATION pi{};
     std::wstring cmd = cmdLine;
-    BOOL created = CreateProcessW(nullptr, cmd.data(), nullptr, nullptr, TRUE,
-                                   CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi);
+    BOOL created =
+        CreateProcessW(nullptr, cmd.data(), nullptr, nullptr, TRUE, CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi);
     CloseHandle(hWrite);
 
-    if (!created) {
+    if (!created)
+    {
         CloseHandle(hRead);
         output = "Failed to create process";
         return false;
@@ -489,15 +1015,19 @@ bool AgentToolHandlers::RunProcess(const std::wstring& cmdLine, uint32_t timeout
     buffer.reserve(4096);
     DWORD startTick = GetTickCount();
 
-    while (true) {
+    while (true)
+    {
         DWORD available = 0;
-        if (PeekNamedPipe(hRead, nullptr, 0, nullptr, &available, nullptr) && available > 0) {
+        if (PeekNamedPipe(hRead, nullptr, 0, nullptr, &available, nullptr) && available > 0)
+        {
             char temp[4096];
             DWORD bytesRead = 0;
-            if (::ReadFile(hRead, temp, sizeof(temp) - 1, &bytesRead, nullptr) && bytesRead > 0) {
+            if (::ReadFile(hRead, temp, sizeof(temp) - 1, &bytesRead, nullptr) && bytesRead > 0)
+            {
                 temp[bytesRead] = '\0';
                 buffer.append(temp, bytesRead);
-                if (buffer.size() > s_guardrails.maxOutputCaptureBytes) {
+                if (buffer.size() > s_guardrails.maxOutputCaptureBytes)
+                {
                     buffer.resize(s_guardrails.maxOutputCaptureBytes);
                     buffer += "\n[OUTPUT TRUNCATED]";
                     break;
@@ -506,22 +1036,29 @@ bool AgentToolHandlers::RunProcess(const std::wstring& cmdLine, uint32_t timeout
         }
 
         DWORD waitResult = WaitForSingleObject(pi.hProcess, 100);
-        if (waitResult == WAIT_OBJECT_0) {
+        if (waitResult == WAIT_OBJECT_0)
+        {
             // Read remaining output
-            while (true) {
+            while (true)
+            {
                 DWORD avail2 = 0;
-                if (!PeekNamedPipe(hRead, nullptr, 0, nullptr, &avail2, nullptr) || avail2 == 0) break;
+                if (!PeekNamedPipe(hRead, nullptr, 0, nullptr, &avail2, nullptr) || avail2 == 0)
+                    break;
                 char temp[4096];
                 DWORD bytesRead = 0;
-                if (::ReadFile(hRead, temp, sizeof(temp) - 1, &bytesRead, nullptr) && bytesRead > 0) {
+                if (::ReadFile(hRead, temp, sizeof(temp) - 1, &bytesRead, nullptr) && bytesRead > 0)
+                {
                     temp[bytesRead] = '\0';
                     buffer.append(temp, bytesRead);
-                } else break;
+                }
+                else
+                    break;
             }
             break;
         }
 
-        if (GetTickCount() - startTick > timeoutMs) {
+        if (GetTickCount() - startTick > timeoutMs)
+        {
             TerminateProcess(pi.hProcess, 1);
             CloseHandle(pi.hProcess);
             CloseHandle(pi.hThread);
@@ -542,17 +1079,21 @@ bool AgentToolHandlers::RunProcess(const std::wstring& cmdLine, uint32_t timeout
     return true;
 }
 
-ToolCallResult AgentToolHandlers::ExecuteCommand(const json& args) {
-    if (!args.contains("command") || !args["command"].is_string()) {
+ToolCallResult AgentToolHandlers::ExecuteCommand(const json& args)
+{
+    if (!args.contains("command") || !args["command"].is_string())
+    {
         return ToolCallResult::Validation("execute_command requires 'command' (string)");
     }
 
     std::string command = args["command"].get<std::string>();
     uint32_t timeout = s_guardrails.commandTimeoutMs;
-    if (args.contains("timeout") && args["timeout"].is_number()) {
+    if (args.contains("timeout") && args["timeout"].is_number())
+    {
         timeout = static_cast<uint32_t>(args["timeout"].get<int>());
         // Cap timeout at 5 minutes
-        if (timeout > 300000) timeout = 300000;
+        if (timeout > 300000)
+            timeout = 300000;
     }
 
     // Build command line via cmd.exe
@@ -563,10 +1104,11 @@ ToolCallResult AgentToolHandlers::ExecuteCommand(const json& args) {
 
     auto startTime = std::chrono::steady_clock::now();
     bool success = RunProcess(cmdLine, timeout, output, exitCode);
-    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now() - startTime).count();
+    auto elapsed =
+        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count();
 
-    if (!success && exitCode == WAIT_TIMEOUT) {
+    if (!success && exitCode == WAIT_TIMEOUT)
+    {
         ToolCallResult result = ToolCallResult::TimedOut(output);
         nlohmann::json res_metadata = nlohmann::json::object();
         res_metadata["exit_code"] = exitCode;
@@ -580,7 +1122,8 @@ ToolCallResult AgentToolHandlers::ExecuteCommand(const json& args) {
     const size_t kMaxOutput = std::max<size_t>(1024, s_guardrails.maxOutputCaptureBytes);
     bool truncated = false;
     size_t originalSize = output.size();
-    if (output.size() > kMaxOutput) {
+    if (output.size() > kMaxOutput)
+    {
         output = output.substr(0, kMaxOutput) + "\n[truncated output]";
         truncated = true;
     }
@@ -593,13 +1136,14 @@ ToolCallResult AgentToolHandlers::ExecuteCommand(const json& args) {
     res_metadata["original_bytes"] = originalSize;
     res_metadata["command"] = command;
 
-    ToolCallResult result = (exitCode == 0)
-        ? ToolCallResult::Ok(output, res_metadata)
-        : ToolCallResult::Error("Command exited with code " + std::to_string(exitCode) +
-                                "\n" + output, ToolOutcome::ExecutionError);
-    if (exitCode != 0) {
+    ToolCallResult result =
+        (exitCode == 0) ? ToolCallResult::Ok(output, res_metadata)
+                        : ToolCallResult::Error("Command exited with code " + std::to_string(exitCode) + "\n" + output,
+                                                ToolOutcome::ExecutionError);
+    if (exitCode != 0)
+    {
         result.metadata = res_metadata;
-        result.output = output; // Include output even on error
+        result.output = output;  // Include output even on error
     }
     return result;
 }
@@ -608,32 +1152,39 @@ ToolCallResult AgentToolHandlers::ExecuteCommand(const json& args) {
 // search_code — Recursive file search
 // ============================================================================
 
-ToolCallResult AgentToolHandlers::SearchCode(const json& args) {
-    if (!args.contains("query") || !args["query"].is_string()) {
+ToolCallResult AgentToolHandlers::SearchCode(const json& args)
+{
+    if (!args.contains("query") || !args["query"].is_string())
+    {
         return ToolCallResult::Validation("search_code requires 'query' (string)");
     }
 
     std::string query = args["query"].get<std::string>();
-    if (query.empty()) {
+    if (query.empty())
+    {
         return ToolCallResult::Validation("search_code query cannot be empty");
     }
     std::string filePattern = args.value("file_pattern", "*.*");
     bool caseSensitive = args.value("case_sensitive", true);
     bool useRegex = args.value("regex", false);
     int maxResults = s_guardrails.maxSearchResults;
-    if (args.contains("max_results") && args["max_results"].is_number()) {
+    if (args.contains("max_results") && args["max_results"].is_number())
+    {
         maxResults = std::clamp(args["max_results"].get<int>(), 1, 1000);
     }
     size_t contextBytes = static_cast<size_t>(std::max<int>(args.value("context_bytes", 200), 40));
 
-    if (s_guardrails.allowedRoots.empty()) {
+    if (s_guardrails.allowedRoots.empty())
+    {
         return ToolCallResult::Error("No workspace root configured for search");
     }
 
-    std::string searchRoot = s_guardrails.allowedRoots[0]; // Primary workspace
-    if (args.contains("root") && args["root"].is_string()) {
+    std::string searchRoot = s_guardrails.allowedRoots[0];  // Primary workspace
+    if (args.contains("root") && args["root"].is_string())
+    {
         std::string candidate = NormalizePath(args["root"].get<std::string>());
-        if (!IsPathAllowed(candidate)) {
+        if (!IsPathAllowed(candidate))
+        {
             return ToolCallResult::Sandbox("Search root not allowed: " + candidate);
         }
         searchRoot = candidate;
@@ -645,68 +1196,89 @@ ToolCallResult AgentToolHandlers::SearchCode(const json& args) {
 
     std::ostringstream results;
 
-    try {
-        for (auto it = fs::recursive_directory_iterator(searchRoot,
-                 fs::directory_options::skip_permission_denied);
-             it != fs::recursive_directory_iterator(); ++it) {
+    try
+    {
+        for (auto it = fs::recursive_directory_iterator(searchRoot, fs::directory_options::skip_permission_denied);
+             it != fs::recursive_directory_iterator(); ++it)
+        {
 
-            if (hitCount >= maxResults) break;
-            if (!it->is_regular_file()) continue;
-            if (!IsPathAllowed(it->path().string())) continue;
+            if (hitCount >= maxResults)
+                break;
+            if (!it->is_regular_file())
+                continue;
+            if (!IsPathAllowed(it->path().string()))
+                continue;
 
             std::string filename = it->path().filename().string();
 
             // Simple pattern matching for file_pattern
-            if (filePattern != "*.*" && filePattern != "*") {
+            if (filePattern != "*.*" && filePattern != "*")
+            {
                 // Check extension
                 std::string ext = it->path().extension().string();
-                if (filePattern[0] == '*' && filePattern.size() > 1) {
+                if (filePattern[0] == '*' && filePattern.size() > 1)
+                {
                     std::string reqExt = filePattern.substr(1);
-                    if (ext != reqExt) continue;
+                    if (ext != reqExt)
+                        continue;
                 }
             }
 
             // Skip binary/large files
             auto fsize = it->file_size();
-            if (fsize == 0 || fsize > maxFileSize) continue;
+            if (fsize == 0 || fsize > maxFileSize)
+                continue;
             scannedFiles++;
 
             // Read and search
             std::ifstream file(it->path(), std::ios::binary);
-            if (!file.is_open()) continue;
+            if (!file.is_open())
+                continue;
 
-            std::string content((std::istreambuf_iterator<char>(file)),
-                                std::istreambuf_iterator<char>());
+            std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
             file.close();
-            if (IsLikelyBinary(content)) { skippedBinary++; continue; }
+            if (IsLikelyBinary(content))
+            {
+                skippedBinary++;
+                continue;
+            }
 
-            if (useRegex) {
+            if (useRegex)
+            {
                 std::regex::flag_type flags = std::regex::ECMAScript;
-                if (!caseSensitive) flags |= std::regex::icase;
+                if (!caseSensitive)
+                    flags |= std::regex::icase;
                 std::regex re;
-                try {
+                try
+                {
                     re = std::regex(query, flags);
-                } catch (const std::exception& ex) {
+                }
+                catch (const std::exception& ex)
+                {
                     return ToolCallResult::Validation(std::string("Invalid regex: ") + ex.what());
                 }
 
                 int lineNum = 1;
                 size_t lineStart = 0;
                 for (auto itMatch = std::sregex_iterator(content.begin(), content.end(), re);
-                     itMatch != std::sregex_iterator() && hitCount < maxResults; ++itMatch) {
+                     itMatch != std::sregex_iterator() && hitCount < maxResults; ++itMatch)
+                {
                     size_t found = static_cast<size_t>(itMatch->position());
                     // Count lines to found position
-                    for (size_t i = lineStart; i < found; ++i) {
-                        if (content[i] == '\n') ++lineNum;
+                    for (size_t i = lineStart; i < found; ++i)
+                    {
+                        if (content[i] == '\n')
+                            ++lineNum;
                     }
                     lineStart = found;
                     size_t contextStart = content.rfind('\n', found);
                     contextStart = (contextStart == std::string::npos) ? 0 : contextStart + 1;
                     size_t contextEnd = content.find('\n', found);
-                    if (contextEnd == std::string::npos) contextEnd = content.size();
+                    if (contextEnd == std::string::npos)
+                        contextEnd = content.size();
 
-                    std::string lineText = content.substr(contextStart,
-                        std::min(contextEnd - contextStart, contextBytes));
+                    std::string lineText =
+                        content.substr(contextStart, std::min(contextEnd - contextStart, contextBytes));
 
                     std::string relPath = fs::relative(it->path(), searchRoot).string();
                     results << relPath << ":" << lineNum << ": " << lineText << "\n";
@@ -718,31 +1290,40 @@ ToolCallResult AgentToolHandlers::SearchCode(const json& args) {
 
             std::string lowerContent;
             std::string lowerQuery;
-            if (!caseSensitive) {
+            if (!caseSensitive)
+            {
                 lowerContent = content;
                 lowerQuery = query;
-                std::transform(lowerContent.begin(), lowerContent.end(), lowerContent.begin(), [](unsigned char c){ return static_cast<char>(std::tolower(c)); });
-                std::transform(lowerQuery.begin(), lowerQuery.end(), lowerQuery.begin(), [](unsigned char c){ return static_cast<char>(std::tolower(c)); });
+                std::transform(lowerContent.begin(), lowerContent.end(), lowerContent.begin(),
+                               [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+                std::transform(lowerQuery.begin(), lowerQuery.end(), lowerQuery.begin(),
+                               [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
             }
 
             size_t pos = 0;
             int lineNum = 1;
             size_t lineStart = 0;
 
-            while (pos < content.size() && hitCount < maxResults) {
+            while (pos < content.size() && hitCount < maxResults)
+            {
                 // Track line numbers
-                while (lineStart < pos) {
-                    if (content[lineStart] == '\n') ++lineNum;
+                while (lineStart < pos)
+                {
+                    if (content[lineStart] == '\n')
+                        ++lineNum;
                     ++lineStart;
                 }
 
                 size_t found;
                 found = caseSensitive ? content.find(query, pos) : lowerContent.find(lowerQuery, pos);
-                if (found == std::string::npos) break;
+                if (found == std::string::npos)
+                    break;
 
                 // Count lines to found position
-                for (size_t i = lineStart; i < found; ++i) {
-                    if (content[i] == '\n') ++lineNum;
+                for (size_t i = lineStart; i < found; ++i)
+                {
+                    if (content[i] == '\n')
+                        ++lineNum;
                 }
                 lineStart = found;
 
@@ -750,10 +1331,10 @@ ToolCallResult AgentToolHandlers::SearchCode(const json& args) {
                 size_t contextStart = content.rfind('\n', found);
                 contextStart = (contextStart == std::string::npos) ? 0 : contextStart + 1;
                 size_t contextEnd = content.find('\n', found);
-                if (contextEnd == std::string::npos) contextEnd = content.size();
+                if (contextEnd == std::string::npos)
+                    contextEnd = content.size();
 
-                std::string lineText = content.substr(contextStart,
-                    std::min(contextEnd - contextStart, contextBytes));
+                std::string lineText = content.substr(contextStart, std::min(contextEnd - contextStart, contextBytes));
 
                 // Relative path from search root
                 std::string relPath = fs::relative(it->path(), searchRoot).string();
@@ -763,21 +1344,26 @@ ToolCallResult AgentToolHandlers::SearchCode(const json& args) {
                 pos = found + query.size();
             }
         }
-    } catch (const std::exception& ex) {
-        if (hitCount == 0) {
+    }
+    catch (const std::exception& ex)
+    {
+        if (hitCount == 0)
+        {
             return ToolCallResult::Error(std::string("Search failed: ") + ex.what());
         }
         // Partial results are still useful
     }
 
-    if (hitCount == 0) {
+    if (hitCount == 0)
+    {
         nlohmann::json zero_matches = nlohmann::json::object();
         zero_matches["matches"] = 0;
         return ToolCallResult::Ok("No matches found for: " + query, zero_matches);
     }
 
     std::string truncMsg;
-    if (hitCount >= maxResults) {
+    if (hitCount >= maxResults)
+    {
         truncMsg = "\n[Results truncated at " + std::to_string(maxResults) + " matches]";
     }
 
@@ -797,8 +1383,10 @@ ToolCallResult AgentToolHandlers::SearchCode(const json& args) {
 // get_diagnostics — Return compiler/LSP errors
 // ============================================================================
 
-ToolCallResult AgentToolHandlers::GetDiagnostics(const json& args) {
-    if (!args.contains("file") || !args["file"].is_string()) {
+ToolCallResult AgentToolHandlers::GetDiagnostics(const json& args)
+{
+    if (!args.contains("file") || !args["file"].is_string())
+    {
         return ToolCallResult::Validation("get_diagnostics requires 'file' (string)");
     }
 
@@ -806,7 +1394,8 @@ ToolCallResult AgentToolHandlers::GetDiagnostics(const json& args) {
 
     // Run cl.exe /Zs (syntax check only) for C++ files
     std::string ext = fs::path(file).extension().string();
-    if (ext == ".cpp" || ext == ".c" || ext == ".h" || ext == ".hpp") {
+    if (ext == ".cpp" || ext == ".c" || ext == ".h" || ext == ".hpp")
+    {
         std::wstring cmdLine = L"cl.exe /Zs /EHsc /std:c++20 /W4 /nologo \"" + ToWide(file) + L"\"";
 
         std::string output;
@@ -829,22 +1418,37 @@ ToolCallResult AgentToolHandlers::GetDiagnostics(const json& args) {
 // ============================================================================
 // run_shell — Guarded alias of execute_command with allowlist enforcement
 // ============================================================================
-ToolCallResult AgentToolHandlers::RunShell(const json& args) {
-    if (!args.contains("command") || !args["command"].is_string()) {
+ToolCallResult AgentToolHandlers::RunShell(const json& args)
+{
+    if (!args.contains("command") || !args["command"].is_string())
+    {
         return ToolCallResult::Validation("run_shell requires 'command' (string)");
     }
     std::string command = args["command"].get<std::string>();
 
-    // Enforce allowlist if configured
-    if (!s_guardrails.allowedCommands.empty()) {
+    if (s_guardrails.sandboxTier == ToolGuardrails::CommandSandboxTier::Blocked)
+    {
+        ToolCallResult res = ToolCallResult::Sandbox("run_shell is blocked by sandbox tier policy");
+        res.metadata = {{"command", command}, {"sandbox_tier", "blocked"}};
+        return res;
+    }
+
+    if (s_guardrails.sandboxTier == ToolGuardrails::CommandSandboxTier::Safe)
+    {
         std::istringstream iss(command);
         std::string first;
         iss >> first;
         bool allowed = false;
-        for (const auto& ac : s_guardrails.allowedCommands) {
-            if (first == ac) { allowed = true; break; }
+        for (const auto& ac : s_guardrails.allowedCommands)
+        {
+            if (first == ac)
+            {
+                allowed = true;
+                break;
+            }
         }
-        if (!allowed) {
+        if (!allowed)
+        {
             nlohmann::json meta = nlohmann::json::object();
             meta["command"] = command;
             meta["first_token"] = first;
@@ -854,47 +1458,86 @@ ToolCallResult AgentToolHandlers::RunShell(const json& args) {
             return res;
         }
     }
+
+    // Elevated tier allows all commands within allowedRoots/dynamic checks
     return ExecuteCommand(args);
 }
 
 // ============================================================================
 // semantic_search — Lightweight TF cosine search across workspace files
 // ============================================================================
-ToolCallResult AgentToolHandlers::SemanticSearch(const json& args) {
-    if (!args.contains("query") || !args["query"].is_string()) {
+ToolCallResult AgentToolHandlers::SemanticSearch(const json& args)
+{
+    if (!args.contains("query") || !args["query"].is_string())
+    {
         return ToolCallResult::Validation("semantic_search requires 'query' (string)");
     }
-    if (s_guardrails.allowedRoots.empty()) {
+    if (s_guardrails.allowedRoots.empty())
+    {
         return ToolCallResult::Error("No workspace root configured for semantic search");
     }
     std::string query = args["query"].get<std::string>();
     std::string root = s_guardrails.allowedRoots[0];
-    if (args.contains("root") && args["root"].is_string()) {
+    if (args.contains("root") && args["root"].is_string())
+    {
         root = NormalizePath(args["root"].get<std::string>());
-        if (!IsPathAllowed(root)) {
+        if (!IsPathAllowed(root))
+        {
             return ToolCallResult::Sandbox("Root not in allowlist: " + root);
         }
     }
     int topK = args.value("top_k", 5);
-    if (topK <= 0) topK = 5;
-    if (topK > 25) topK = 25;
+    if (topK <= 0)
+        topK = 5;
+    if (topK > 25)
+        topK = 25;
     int maxFiles = s_guardrails.maxIndexFiles;
-    bool includeNonCode = args.value("include_non_code", false);
+
+    bool include_non_code = false;
+    if (args.contains("include_non_code"))
+    {
+        const auto& inc = args["include_non_code"];
+        if (inc.is_boolean())
+        {
+            include_non_code = inc.get<bool>();
+        }
+        else if (inc.is_number_integer())
+        {
+            include_non_code = inc.get<int>() != 0;
+        }
+    }
+
+    std::string cacheKey = root + "|" + query + "|" + std::to_string(topK) + "|" + (include_non_code ? "1" : "0");
+    {
+        std::lock_guard<std::mutex> lock(s_semanticSearchCacheMutex);
+        auto it = s_semanticSearchCache.find(cacheKey);
+        if (it != s_semanticSearchCache.end())
+        {
+            auto age = std::chrono::steady_clock::now() - it->second.timestamp;
+            if (age < std::chrono::seconds(120))
+            {
+                ToolCallResult cached(ToolCallResult::Ok(it->second.body, it->second.metadata));
+                return cached;
+            }
+            s_semanticSearchCache.erase(it);
+        }
+    }
     static const std::unordered_set<std::string> kCodeExt = {
-        ".cpp",".c",".cc",".cxx",".h",".hpp",".hh",".hxx",
-        ".cs",".java",".kt",".rs",".go",".ts",".tsx",".js",".jsx",
-        ".py",".rb",".swift",".m",".mm",".scala",".sql",".json",
-        ".yaml",".yml",".toml",".ini",".cfg",".cmake",".sh",".ps1"
-    };
+        ".cpp",   ".c",   ".cc",   ".cxx",  ".h",   ".hpp",  ".hh",  ".hxx", ".cs",    ".java", ".kt",
+        ".rs",    ".go",  ".ts",   ".tsx",  ".js",  ".jsx",  ".py",  ".rb",  ".swift", ".m",    ".mm",
+        ".scala", ".sql", ".json", ".yaml", ".yml", ".toml", ".ini", ".cfg", ".cmake", ".sh",   ".ps1"};
 
     auto qTokens = Tokenize(query);
-    if (qTokens.empty()) {
+    if (qTokens.empty())
+    {
         return ToolCallResult::Validation("semantic_search query produced no tokens");
     }
     std::unordered_map<std::string, double> qtf;
-    for (const auto& t : qTokens) qtf[t] += 1.0;
+    for (const auto& t : qTokens)
+        qtf[t] += 1.0;
     double qnorm = 0.0;
-    for (auto& kv : qtf) {
+    for (auto& kv : qtf)
+    {
         kv.second = kv.second / static_cast<double>(qTokens.size());
         qnorm += kv.second * kv.second;
     }
@@ -903,74 +1546,105 @@ ToolCallResult AgentToolHandlers::SemanticSearch(const json& args) {
     std::vector<IndexedFile> indexed;
     int scanned = 0;
     int skippedBinary = 0;
-    try {
-        for (auto it = fs::recursive_directory_iterator(root,
-                 fs::directory_options::skip_permission_denied);
-             it != fs::recursive_directory_iterator(); ++it) {
-            if (scanned >= maxFiles) break;
-            if (!it->is_regular_file()) continue;
+    try
+    {
+        for (auto it = fs::recursive_directory_iterator(root, fs::directory_options::skip_permission_denied);
+             it != fs::recursive_directory_iterator(); ++it)
+        {
+            if (scanned >= maxFiles)
+                break;
+            if (!it->is_regular_file())
+                continue;
             auto fsize = it->file_size();
-            if (fsize == 0 || fsize > s_guardrails.maxFileSizeBytes) continue;
+            if (fsize == 0 || fsize > s_guardrails.maxFileSizeBytes)
+                continue;
             std::string p = it->path().string();
             std::string ext = ToLowerCopy(it->path().extension().string());
-            if (!includeNonCode && !ext.empty() && kCodeExt.find(ext) == kCodeExt.end()) continue;
-            if (!IsPathAllowed(p)) continue;
+            if (!include_non_code && !ext.empty() && kCodeExt.find(ext) == kCodeExt.end())
+                continue;
+            if (!IsPathAllowed(p))
+                continue;
             // Quick binary sniff to avoid heavy tokenization
             bool binaryFlag = false;
-            try {
+            try
+            {
                 std::ifstream sniff(p, std::ios::binary);
-                if (sniff.is_open()) {
+                if (sniff.is_open())
+                {
                     std::string head(512, '\0');
                     sniff.read(head.data(), static_cast<std::streamsize>(head.size()));
                     head.resize(static_cast<size_t>(sniff.gcount()));
                     binaryFlag = IsLikelyBinary(head);
                 }
-            } catch (...) { /* ignore */ }
-            if (binaryFlag) { skippedBinary++; continue; }
+            }
+            catch (...)
+            { /* ignore */
+            }
+            if (binaryFlag)
+            {
+                skippedBinary++;
+                continue;
+            }
             auto idx = BuildIndexForFile(p, s_guardrails.maxFileSizeBytes);
-            if (!idx.tf.empty()) {
+            if (!idx.tf.empty())
+            {
                 indexed.push_back(std::move(idx));
                 ++scanned;
             }
         }
-    } catch (...) {
+    }
+    catch (...)
+    {
         // tolerate partial scan
     }
 
-    if (indexed.empty()) {
+    if (indexed.empty())
+    {
         return ToolCallResult::Error("No indexable files found under " + root);
     }
 
-    struct Scored { std::string path; double score; };
+    struct Scored
+    {
+        std::string path;
+        double score;
+    };
     std::vector<Scored> scores;
-    for (const auto& f : indexed) {
+    for (const auto& f : indexed)
+    {
         double s = CosineScore(f, qtf, qnorm);
-        if (s > 0.0) scores.push_back({f.path, s});
+        if (s > 0.0)
+            scores.push_back({f.path, s});
     }
-    std::sort(scores.begin(), scores.end(), [](const Scored& a, const Scored& b) {
-        return a.score > b.score;
-    });
-    if ((int)scores.size() > topK) scores.resize(topK);
+    std::sort(scores.begin(), scores.end(), [](const Scored& a, const Scored& b) { return a.score > b.score; });
+    if ((int)scores.size() > topK)
+        scores.resize(topK);
 
     nlohmann::json res = nlohmann::json::array();
     double scoreSum = 0.0;
-    for (const auto& s : scores) {
+    for (const auto& s : scores)
+    {
         nlohmann::json row;
         row["path"] = fs::relative(s.path, root).string();
         row["score"] = s.score;
         scoreSum += s.score;
         // Optional snippet preview (first 240 chars)
         std::string snippet;
-        try {
+        try
+        {
             std::ifstream preview(s.path, std::ios::binary);
-            if (preview.is_open()) {
+            if (preview.is_open())
+            {
                 std::string buf(240, '\0');
                 preview.read(buf.data(), static_cast<std::streamsize>(buf.size()));
                 buf.resize(static_cast<size_t>(preview.gcount()));
                 snippet = buf;
             }
-        } catch (...) { /* ignore */ }
-        if (!snippet.empty()) {
+        }
+        catch (...)
+        { /* ignore */
+        }
+        if (!snippet.empty())
+        {
             row["preview"] = snippet;
         }
         res.push_back(row);
@@ -982,7 +1656,8 @@ ToolCallResult AgentToolHandlers::SemanticSearch(const json& args) {
     meta["root"] = root;
     meta["top_k"] = topK;
     meta["skipped_binary"] = skippedBinary;
-    if (!scores.empty()) {
+    if (!scores.empty())
+    {
         meta["avg_score"] = scoreSum / static_cast<double>(scores.size());
     }
     return ToolCallResult::Ok(res.dump(2), meta);
@@ -991,24 +1666,30 @@ ToolCallResult AgentToolHandlers::SemanticSearch(const json& args) {
 // ============================================================================
 // mention_lookup — Symbol-aware alias over semantic_search
 // ============================================================================
-ToolCallResult AgentToolHandlers::MentionLookup(const json& args) {
+ToolCallResult AgentToolHandlers::MentionLookup(const json& args)
+{
     json copy = args;
-    if (!copy.contains("query") && copy.contains("symbol")) {
+    if (!copy.contains("query") && copy.contains("symbol"))
+    {
         copy["query"] = copy["symbol"];
     }
-    if (!copy.contains("top_k")) {
+    if (!copy.contains("top_k"))
+    {
         copy["top_k"] = 3;
     }
     // Clamp to avoid huge responses
-    if (copy.contains("top_k") && copy["top_k"].is_number()) {
+    if (copy.contains("top_k") && copy["top_k"].is_number())
+    {
         int tk = std::clamp(copy["top_k"].get<int>(), 1, 10);
         copy["top_k"] = tk;
     }
     // Favor current workspace root when not provided
-    if (!copy.contains("root") && !s_guardrails.allowedRoots.empty()) {
+    if (!copy.contains("root") && !s_guardrails.allowedRoots.empty())
+    {
         copy["root"] = s_guardrails.allowedRoots[0];
     }
-    if (args.contains("include_non_code")) {
+    if (args.contains("include_non_code"))
+    {
         copy["include_non_code"] = args["include_non_code"];
     }
     return SemanticSearch(copy);
@@ -1017,26 +1698,34 @@ ToolCallResult AgentToolHandlers::MentionLookup(const json& args) {
 // ============================================================================
 // next_edit_hint — Heuristic “next edit” suggestion from context
 // ============================================================================
-ToolCallResult AgentToolHandlers::NextEditHint(const json& args) {
-    if (!args.contains("context") || !args["context"].is_string()) {
+ToolCallResult AgentToolHandlers::NextEditHint(const json& args)
+{
+    if (!args.contains("context") || !args["context"].is_string())
+    {
         return ToolCallResult::Validation("next_edit_hint requires 'context' (string)");
     }
     std::string ctx = args["context"].get<std::string>();
     std::vector<std::string> hints;
     std::unordered_set<std::string> seen;
-    auto addHint = [&](const std::string& h) {
-        if (seen.insert(h).second && hints.size() < 3) hints.push_back(h);
+    auto addHint = [&](const std::string& h)
+    {
+        if (seen.insert(h).second && hints.size() < 3)
+            hints.push_back(h);
     };
-    if (ctx.find("TODO") != std::string::npos) {
+    if (ctx.find("TODO") != std::string::npos)
+    {
         addHint("Address the TODO with a small, testable change and add a unit test.");
     }
-    if (ctx.find("function") != std::string::npos || ctx.find("def ") != std::string::npos) {
+    if (ctx.find("function") != std::string::npos || ctx.find("def ") != std::string::npos)
+    {
         addHint("Add docstring/comments and edge-case handling (empty input, null pointers).");
     }
-    if (ctx.find("class") != std::string::npos || ctx.find("struct") != std::string::npos) {
+    if (ctx.find("class") != std::string::npos || ctx.find("struct") != std::string::npos)
+    {
         addHint("Ensure constructors initialize all fields and add default move/clone semantics if needed.");
     }
-    if (hints.empty()) {
+    if (hints.empty())
+    {
         addHint("Extract helper functions to simplify logic and add assertions for invariants.");
     }
     nlohmann::json meta = nlohmann::json::object();
@@ -1048,25 +1737,41 @@ ToolCallResult AgentToolHandlers::NextEditHint(const json& args) {
 // ============================================================================
 // propose_multifile_edits — Generate a structured plan for multiple files
 // ============================================================================
-ToolCallResult AgentToolHandlers::ProposeMultiFileEdits(const json& args) {
-    if (!args.contains("files") || !args["files"].is_array()) {
+ToolCallResult AgentToolHandlers::ProposeMultiFileEdits(const json& args)
+{
+    if (!args.contains("files") || !args["files"].is_array())
+    {
         return ToolCallResult::Validation("propose_multifile_edits requires 'files' (array)");
     }
     std::string instruction = args.value("instruction", "Apply requested change across files.");
     nlohmann::json plans = nlohmann::json::array();
     size_t capped = 0;
     size_t skipped = 0;
-    for (const auto& f : args["files"]) {
-        if (!f.is_string()) { skipped++; continue; }
+    for (const auto& f : args["files"])
+    {
+        if (!f.is_string())
+        {
+            skipped++;
+            continue;
+        }
         std::string path = NormalizePath(f.get<std::string>());
-        if (!IsPathAllowed(path) || !fs::exists(path)) { skipped++; continue; }
-        if (plans.size() >= 20) { capped++; continue; }
+        if (!IsPathAllowed(path) || !fs::exists(path))
+        {
+            skipped++;
+            continue;
+        }
+        if (plans.size() >= 20)
+        {
+            capped++;
+            continue;
+        }
         nlohmann::json step = nlohmann::json::object();
         step["file"] = path;
         step["plan"] = instruction + " (review, edit, validate)";
         plans.push_back(step);
     }
-    if (plans.empty()) {
+    if (plans.empty())
+    {
         return ToolCallResult::Error("No valid files to plan edits for.");
     }
     nlohmann::json meta = nlohmann::json::object();
@@ -1079,56 +1784,76 @@ ToolCallResult AgentToolHandlers::ProposeMultiFileEdits(const json& args) {
 // ============================================================================
 // load_rules — Parse a .rawrrules file to seed system instructions
 // ============================================================================
-ToolCallResult AgentToolHandlers::LoadRules(const json& args) {
+ToolCallResult AgentToolHandlers::LoadRules(const json& args)
+{
     std::string path;
     bool hasInline = args.contains("content") && args["content"].is_string();
-    if (args.contains("path") && args["path"].is_string()) {
+    if (args.contains("path") && args["path"].is_string())
+    {
         path = NormalizePath(args["path"].get<std::string>());
-    } else if (!s_guardrails.allowedRoots.empty()) {
+    }
+    else if (!s_guardrails.allowedRoots.empty())
+    {
         path = NormalizePath(s_guardrails.allowedRoots[0] + "/.rawrrules");
-    } else {
+    }
+    else
+    {
         return ToolCallResult::Error("No workspace root configured to locate .rawrrules");
     }
-    if (!IsPathAllowed(path)) {
+    if (!IsPathAllowed(path))
+    {
         return ToolCallResult::Sandbox("Rules file not in allowlist: " + path);
     }
-    if (!hasInline && !fs::exists(path)) {
+    if (!hasInline && !fs::exists(path))
+    {
         return ToolCallResult::Error("Rules file not found: " + path);
     }
-    if (!path.empty()) {
+    if (!path.empty())
+    {
         std::string ext = ToLowerCopy(fs::path(path).extension().string());
-        if (!ext.empty() && ext != ".rawrrules" && ext != ".rules" && ext != ".txt") {
+        if (!ext.empty() && ext != ".rawrrules" && ext != ".rules" && ext != ".txt")
+        {
             return ToolCallResult::Validation("Rules path must be .rawrrules/.rules/.txt");
         }
     }
 
     nlohmann::json rules = nlohmann::json::object();
-    auto parseLine = [&](const std::string& line) {
-        if (line.empty() || line[0] == '#') return;
+    auto parseLine = [&](const std::string& line)
+    {
+        if (line.empty() || line[0] == '#')
+            return;
         auto pos = line.find(':');
-        if (pos == std::string::npos) return;
+        if (pos == std::string::npos)
+            return;
         std::string key = line.substr(0, pos);
         std::string val = line.substr(pos + 1);
-        if (!key.empty()) rules[key] = val;
+        if (!key.empty())
+            rules[key] = val;
     };
 
     size_t lineCount = 0;
     std::string concat;
-    if (hasInline) {
+    if (hasInline)
+    {
         std::istringstream ss(args["content"].get<std::string>());
         std::string line;
-        while (std::getline(ss, line)) {
+        while (std::getline(ss, line))
+        {
             parseLine(line);
             concat += line;
             ++lineCount;
         }
-    } else {
+    }
+    else
+    {
         std::ifstream in(path);
-        if (!in.is_open()) {
+        if (!in.is_open())
+        {
             return ToolCallResult::Error("Failed to open rules file: " + path);
         }
         std::string line;
-        while (std::getline(in, line)) {
+        while (std::getline(in, line))
+        {
             parseLine(line);
             concat += line;
             ++lineCount;
@@ -1140,7 +1865,8 @@ ToolCallResult AgentToolHandlers::LoadRules(const json& args) {
     meta["source"] = hasInline ? "inline" : path;
     meta["lines"] = lineCount;
     meta["fingerprint"] = std::hash<std::string>{}(concat);
-    if (rules.empty()) {
+    if (rules.empty())
+    {
         ToolCallResult res = ToolCallResult::Validation("Rules parsed but no entries found");
         res.metadata = meta;
         return res;
@@ -1151,8 +1877,10 @@ ToolCallResult AgentToolHandlers::LoadRules(const json& args) {
 // ============================================================================
 // plan_tasks — Lightweight deterministic plan generator
 // ============================================================================
-ToolCallResult AgentToolHandlers::PlanTasks(const json& args) {
-    if (!args.contains("goal") || !args["goal"].is_string()) {
+ToolCallResult AgentToolHandlers::PlanTasks(const json& args)
+{
+    if (!args.contains("goal") || !args["goal"].is_string())
+    {
         return ToolCallResult::Validation("plan_tasks requires 'goal' (string)");
     }
     std::string goal = args["goal"].get<std::string>();
@@ -1163,15 +1891,19 @@ ToolCallResult AgentToolHandlers::PlanTasks(const json& args) {
     plan.push_back("Understand goal: " + goal);
     plan.push_back("Search and gather context (files, rules, diagnostics).");
     plan.push_back("Apply changes incrementally with tests/diagnostics.");
-    if (plan.size() < static_cast<size_t>(maxSteps)) {
+    if (plan.size() < static_cast<size_t>(maxSteps))
+    {
         plan.push_back("Validate with unit/smoke tests and capture artifacts.");
     }
-    if (plan.size() < static_cast<size_t>(maxSteps)) {
+    if (plan.size() < static_cast<size_t>(maxSteps))
+    {
         plan.push_back("Summarize changes, risks, and follow-ups.");
     }
-    if (plan.is_array() && static_cast<int>(plan.size()) > maxSteps) {
+    if (plan.is_array() && static_cast<int>(plan.size()) > maxSteps)
+    {
         json trimmed = json::array();
-        for (int i = 0; i < maxSteps && i < static_cast<int>(plan.size()); ++i) {
+        for (int i = 0; i < maxSteps && i < static_cast<int>(plan.size()); ++i)
+        {
             trimmed.push_back(plan[i]);
         }
         plan = std::move(trimmed);
@@ -1180,22 +1912,720 @@ ToolCallResult AgentToolHandlers::PlanTasks(const json& args) {
     meta["steps"] = plan.size();
     meta["goal_length"] = goal.size();
     meta["max_steps"] = maxSteps;
-    if (!deadline.empty()) meta["deadline"] = deadline;
-    if (!owner.empty()) meta["owner"] = owner;
+    if (!deadline.empty())
+        meta["deadline"] = deadline;
+    if (!owner.empty())
+        meta["owner"] = owner;
     return ToolCallResult::Ok(plan.dump(2), meta);
+}
+
+// ============================================================================
+// set/get/reset_iteration_status — Long-running model/agent progress state
+// ============================================================================
+ToolCallResult AgentToolHandlers::SetIterationStatus(const json& args)
+{
+    std::lock_guard<std::mutex> lock(s_iterationStatusMutex);
+
+    if (args.contains("busy") && args["busy"].is_boolean())
+    {
+        s_iterationBusy = args["busy"].get<bool>();
+    }
+    if (args.contains("current") && args["current"].is_number_integer())
+    {
+        s_iterationCurrent = std::max(0, args["current"].get<int>());
+    }
+    if (args.contains("total") && args["total"].is_number_integer())
+    {
+        s_iterationTotal = std::max(0, args["total"].get<int>());
+    }
+    if (args.contains("phase") && args["phase"].is_string())
+    {
+        s_iterationPhase = args["phase"].get<std::string>();
+    }
+    if (args.contains("message") && args["message"].is_string())
+    {
+        s_iterationMessage = args["message"].get<std::string>();
+    }
+
+    if (!args.contains("busy") && s_iterationTotal > 0)
+    {
+        s_iterationBusy = s_iterationCurrent < s_iterationTotal;
+    }
+
+    json out = json::object();
+    out["busy"] = s_iterationBusy;
+    out["current"] = s_iterationCurrent;
+    out["total"] = s_iterationTotal;
+    out["phase"] = s_iterationPhase;
+    out["message"] = s_iterationMessage;
+    return ToolCallResult::Ok(out.dump(2));
+}
+
+ToolCallResult AgentToolHandlers::GetIterationStatus(const json& /*args*/)
+{
+    std::lock_guard<std::mutex> lock(s_iterationStatusMutex);
+    json out = json::object();
+    out["busy"] = s_iterationBusy;
+    out["current"] = s_iterationCurrent;
+    out["total"] = s_iterationTotal;
+    out["phase"] = s_iterationPhase;
+    out["message"] = s_iterationMessage;
+    return ToolCallResult::Ok(out.dump(2));
+}
+
+ToolCallResult AgentToolHandlers::ResetIterationStatus(const json& /*args*/)
+{
+    std::lock_guard<std::mutex> lock(s_iterationStatusMutex);
+    s_iterationBusy = false;
+    s_iterationCurrent = 0;
+    s_iterationTotal = 0;
+    s_iterationPhase = "idle";
+    s_iterationMessage.clear();
+
+    json out = json::object();
+    out["busy"] = s_iterationBusy;
+    out["current"] = s_iterationCurrent;
+    out["total"] = s_iterationTotal;
+    out["phase"] = s_iterationPhase;
+    out["message"] = s_iterationMessage;
+    return ToolCallResult::Ok(out.dump(2));
+}
+
+// ============================================================================
+// compact_conversation — Compact agent history to last N events
+// ============================================================================
+ToolCallResult AgentToolHandlers::CompactConversation(const json& args)
+{
+    if (!s_historyRecorder)
+    {
+        // Recorder not wired yet — return a structured no-op result instead of an error
+        // so callers can distinguish "no history to compact" from a real failure.
+        size_t keepLast = static_cast<size_t>(std::max(0, args.value("keep_last", 200)));
+        nlohmann::json meta = nlohmann::json::object();
+        meta["keep_last"] = keepLast;
+        meta["retention_days"] = args.value("retention_days", -1);
+        meta["removed"] = 0;
+        meta["flushed"] = false;
+        meta["recorder_available"] = false;
+        return ToolCallResult::Ok("No history recorder configured; nothing to compact", meta);
+    }
+    size_t keepLast = static_cast<size_t>(std::max(0, args.value("keep_last", 200)));
+    int retentionDays = args.value("retention_days", -1);
+    bool flush = args.value("flush", true);
+
+    if (retentionDays > 0)
+    {
+        s_historyRecorder->setRetentionDays(retentionDays);
+        s_historyRecorder->purgeExpired();
+    }
+
+    size_t removed = s_historyRecorder->compact(keepLast);
+    if (flush)
+    {
+        s_historyRecorder->flush();
+    }
+
+    nlohmann::json meta = nlohmann::json::object();
+    meta["keep_last"] = keepLast;
+    meta["retention_days"] = retentionDays;
+    meta["removed"] = removed;
+    meta["flushed"] = flush;
+    return ToolCallResult::Ok("Conversation history compacted", meta);
+}
+
+// ============================================================================
+// optimize_tool_selection — Recommend tool set for a task
+// ============================================================================
+ToolCallResult AgentToolHandlers::OptimizeToolSelection(const json& args)
+{
+    if (!args.contains("task") || !args["task"].is_string())
+    {
+        return ToolCallResult::Validation("optimize_tool_selection requires 'task' (string)");
+    }
+    std::string task = ToLowerCopy(args["task"].get<std::string>());
+    std::vector<std::string> tools = {"read_file",      "search_code", "search_files",          "semantic_search",
+                                      "resolve_symbol", "plan_tasks",  "plan_code_exploration", "read_lines",
+                                      "get_diagnostics"};
+    std::unordered_map<std::string, int> scores;
+    for (const auto& t : tools)
+        scores[t] = 0;
+
+    auto bump = [&](const std::vector<std::string>& keys, const std::vector<std::string>& adds)
+    {
+        for (const auto& k : keys)
+        {
+            if (task.find(k) != std::string::npos)
+            {
+                for (const auto& a : adds)
+                    scores[a] += 3;
+            }
+        }
+    };
+
+    bump({"search", "find", "locate"}, {"search_code", "search_files", "semantic_search"});
+    bump({"read", "inspect", "snippet"}, {"read_file", "read_lines"});
+    bump({"plan", "explore", "audit"}, {"plan_tasks", "plan_code_exploration"});
+    bump({"symbol", "resolve", "definition"}, {"resolve_symbol"});
+    bump({"error", "diagnostic", "build"}, {"get_diagnostics"});
+
+    std::vector<std::pair<std::string, int>> ranked(scores.begin(), scores.end());
+    std::sort(ranked.begin(), ranked.end(), [](const auto& a, const auto& b) { return a.second > b.second; });
+
+    int topN = std::clamp(args.value("max_tools", 6), 1, 10);
+    nlohmann::json out = nlohmann::json::array();
+    for (int i = 0; i < topN && i < static_cast<int>(ranked.size()); ++i)
+    {
+        nlohmann::json row;
+        row["tool"] = ranked[i].first;
+        row["score"] = ranked[i].second;
+        out.push_back(row);
+    }
+    nlohmann::json meta = nlohmann::json::object();
+    meta["task"] = args["task"];
+    meta["recommended"] = out.size();
+    return ToolCallResult::Ok(out.dump(2), meta);
+}
+
+// ============================================================================
+// resolve_symbol — Search codebase for symbol occurrences
+// ============================================================================
+ToolCallResult AgentToolHandlers::ResolveSymbol(const json& args)
+{
+    if (!args.contains("symbol") || !args["symbol"].is_string())
+    {
+        return ToolCallResult::Validation("resolve_symbol requires 'symbol' (string)");
+    }
+    std::string symbol = args["symbol"].get<std::string>();
+    if (symbol.empty())
+    {
+        return ToolCallResult::Validation("resolve_symbol requires non-empty 'symbol'");
+    }
+    json searchArgs = json::object();
+    searchArgs["query"] = "\\b" + EscapeRegex(symbol) + "\\b";
+    searchArgs["regex"] = true;
+    searchArgs["case_sensitive"] = true;
+    searchArgs["file_pattern"] = args.value("file_pattern", "*.*");
+    if (args.contains("root"))
+        searchArgs["root"] = args["root"];
+    if (args.contains("max_results"))
+        searchArgs["max_results"] = args["max_results"];
+    return SearchCode(searchArgs);
+}
+
+// ============================================================================
+// read_lines — Read a specific line range from a file
+// ============================================================================
+ToolCallResult AgentToolHandlers::ReadLines(const json& args)
+{
+    if (!args.contains("path") || !args["path"].is_string())
+    {
+        return ToolCallResult::Validation("read_lines requires 'path' (string)");
+    }
+    std::string path = NormalizePath(args["path"].get<std::string>());
+    if (!IsPathAllowed(path))
+    {
+        return ToolCallResult::Sandbox("Path not in workspace allowlist: " + path);
+    }
+    if (!fs::exists(path))
+    {
+        return ToolCallResult::Error("File not found: " + path);
+    }
+
+    int startLine = args.value("start_line", 1);
+    int endLine = args.value("end_line", startLine);
+    if (args.contains("range") && args["range"].is_string())
+    {
+        std::string range = args["range"].get<std::string>();
+        auto dash = range.find('-');
+        if (dash != std::string::npos)
+        {
+            try
+            {
+                startLine = std::stoi(range.substr(0, dash));
+                endLine = std::stoi(range.substr(dash + 1));
+            }
+            catch (...)
+            {
+                return ToolCallResult::Validation("read_lines invalid range format; use 'start-end'");
+            }
+        }
+    }
+    if (startLine < 1 || endLine < startLine)
+    {
+        return ToolCallResult::Validation("read_lines requires start_line <= end_line and both >= 1");
+    }
+
+    std::ifstream file(path, std::ios::binary);
+    if (!file.is_open())
+    {
+        return ToolCallResult::Error("Cannot open file: " + path);
+    }
+
+    std::ostringstream out;
+    std::string line;
+    int current = 0;
+    int returned = 0;
+    while (std::getline(file, line))
+    {
+        current++;
+        if (current < startLine)
+            continue;
+        if (current > endLine)
+            break;
+        out << line << "\n";
+        returned++;
+    }
+
+    nlohmann::json meta = nlohmann::json::object();
+    meta["start_line"] = startLine;
+    meta["end_line"] = endLine;
+    meta["returned"] = returned;
+    meta["file"] = path;
+    ToolCallResult result = ToolCallResult::Ok(out.str(), meta);
+    result.filePath = path;
+    return result;
+}
+
+// ============================================================================
+// plan_code_exploration — Analyze workspace and emit exploration plan
+// ============================================================================
+ToolCallResult AgentToolHandlers::PlanCodeExploration(const json& args)
+{
+    if (!args.contains("goal") || !args["goal"].is_string())
+    {
+        return ToolCallResult::Validation("plan_code_exploration requires 'goal' (string)");
+    }
+    if (s_guardrails.allowedRoots.empty())
+    {
+        return ToolCallResult::Error("No workspace root configured for planning");
+    }
+    std::string root = s_guardrails.allowedRoots[0];
+    if (args.contains("root") && args["root"].is_string())
+    {
+        root = NormalizePath(args["root"].get<std::string>());
+    }
+    if (!IsPathAllowed(root))
+    {
+        return ToolCallResult::Sandbox("Root not in allowlist: " + root);
+    }
+
+    ::Agentic::WorkspaceAnalyzer analyzer(root);
+    bool ok = analyzer.analyze();
+
+    nlohmann::json result = nlohmann::json::object();
+    result["goal"] = args["goal"].get<std::string>();
+    result["workspace"] = root;
+    if (ok)
+    {
+        result["analysis"] = analyzer.getAnalysis().toJson();
+    }
+    else
+    {
+        result["analysis_error"] = "Workspace analysis failed";
+    }
+
+    json planArgs = json::object();
+    planArgs["goal"] = args["goal"].get<std::string>();
+    planArgs["max_steps"] = args.value("max_steps", 6);
+    ToolCallResult plan = PlanTasks(planArgs);
+    result["plan"] = plan.output;
+
+    nlohmann::json meta = nlohmann::json::object();
+    meta["analyzed"] = ok;
+    return ToolCallResult::Ok(result.dump(2), meta);
+}
+
+// ============================================================================
+// search_files — Find files matching glob or regex patterns
+// ============================================================================
+ToolCallResult AgentToolHandlers::SearchFiles(const json& args)
+{
+    if (!args.contains("pattern") || !args["pattern"].is_string())
+    {
+        return ToolCallResult::Validation("search_files requires 'pattern' (string)");
+    }
+    if (s_guardrails.allowedRoots.empty())
+    {
+        return ToolCallResult::Error("No workspace root configured for search_files");
+    }
+    std::string pattern = args["pattern"].get<std::string>();
+    bool useRegex = args.value("regex", false);
+    bool caseSensitive = args.value("case_sensitive", true);
+    int maxResults = std::clamp(args.value("max_results", 200), 1, 2000);
+
+    std::string root = s_guardrails.allowedRoots[0];
+    if (args.contains("root") && args["root"].is_string())
+    {
+        root = NormalizePath(args["root"].get<std::string>());
+    }
+    if (!IsPathAllowed(root))
+    {
+        return ToolCallResult::Sandbox("Root not in allowlist: " + root);
+    }
+
+    std::regex re;
+    if (useRegex)
+    {
+        try
+        {
+            std::regex::flag_type flags = std::regex::ECMAScript;
+            if (!caseSensitive)
+                flags |= std::regex::icase;
+            re = std::regex(pattern, flags);
+        }
+        catch (const std::exception& ex)
+        {
+            return ToolCallResult::Validation(std::string("Invalid regex: ") + ex.what());
+        }
+    }
+    else
+    {
+        std::string err;
+        re = GlobToRegex(pattern, caseSensitive, err);
+        if (!err.empty())
+        {
+            return ToolCallResult::Validation(std::string("Invalid glob: ") + err);
+        }
+    }
+
+    nlohmann::json matches = nlohmann::json::array();
+    int found = 0;
+    try
+    {
+        for (auto it = fs::recursive_directory_iterator(root, fs::directory_options::skip_permission_denied);
+             it != fs::recursive_directory_iterator(); ++it)
+        {
+            if (found >= maxResults)
+                break;
+            if (!it->is_regular_file())
+                continue;
+            std::string full = it->path().string();
+            if (!IsPathAllowed(full))
+                continue;
+            std::string rel = fs::relative(it->path(), root).string();
+            if (std::regex_match(rel, re))
+            {
+                matches.push_back(rel);
+                found++;
+            }
+        }
+    }
+    catch (const std::exception& ex)
+    {
+        return ToolCallResult::Error(std::string("search_files failed: ") + ex.what());
+    }
+
+    nlohmann::json meta = nlohmann::json::object();
+    meta["matches"] = found;
+    meta["root"] = root;
+    meta["pattern"] = pattern;
+    meta["truncated"] = (found >= maxResults);
+    return ToolCallResult::Ok(matches.dump(2), meta);
+}
+
+// ============================================================================
+// restore_checkpoint — Resume workflow and reload history snapshot
+// ============================================================================
+ToolCallResult AgentToolHandlers::RestoreCheckpoint(const json& args)
+{
+    if (!args.contains("checkpoint_path") || !args["checkpoint_path"].is_string())
+    {
+        return ToolCallResult::Validation("restore_checkpoint requires 'checkpoint_path' (string)");
+    }
+    std::string checkpoint = args["checkpoint_path"].get<std::string>();
+    if (checkpoint.empty())
+    {
+        return ToolCallResult::Validation("restore_checkpoint requires non-empty checkpoint_path");
+    }
+
+    int ok = AgentWorkflow_Resume(checkpoint.c_str());
+    if (ok != 0)
+    {
+        return ToolCallResult::Error("Failed to resume workflow from checkpoint: " + checkpoint +
+                                     " (exit code: " + std::to_string(ok) + ")");
+    }
+
+    bool historyLoaded = false;
+    if (s_historyRecorder && args.contains("history_log_path") && args["history_log_path"].is_string())
+    {
+        historyLoaded = s_historyRecorder->loadFromLogFile(args["history_log_path"].get<std::string>());
+    }
+
+    nlohmann::json meta = nlohmann::json::object();
+    meta["checkpoint_path"] = checkpoint;
+    meta["workflow_resumed"] = (ok == 1);
+    meta["history_loaded"] = historyLoaded;
+    if (ok != 1)
+    {
+        return ToolCallResult::Error("Failed to resume workflow from checkpoint", ToolOutcome::ExecutionError);
+    }
+    return ToolCallResult::Ok("Checkpoint restored", meta);
+}
+
+// ============================================================================
+// evaluate_integration_audit_feasibility — Workspace readiness for audit
+// ============================================================================
+ToolCallResult AgentToolHandlers::EvaluateIntegrationAuditFeasibility(const json& args)
+{
+    if (s_guardrails.allowedRoots.empty())
+    {
+        return ToolCallResult::Error("No workspace root configured for feasibility evaluation");
+    }
+    std::string root = s_guardrails.allowedRoots[0];
+    if (args.contains("root") && args["root"].is_string())
+    {
+        root = NormalizePath(args["root"].get<std::string>());
+    }
+    if (!IsPathAllowed(root))
+    {
+        return ToolCallResult::Sandbox("Root not in allowlist: " + root);
+    }
+
+    ::Agentic::WorkspaceAnalyzer analyzer(root);
+    bool ok = analyzer.analyze();
+    nlohmann::json meta = nlohmann::json::object();
+    meta["workspace"] = root;
+    if (!ok)
+    {
+        return ToolCallResult::Error("Workspace analysis failed", ToolOutcome::ExecutionError);
+    }
+    auto analysis = analyzer.getAnalysis();
+    bool feasible = analysis.total_source_files <= 5000 && analysis.total_lines_of_code <= 5000000;
+    meta["total_source_files"] = analysis.total_source_files;
+    meta["total_lines"] = analysis.total_lines_of_code;
+    meta["feasible"] = feasible;
+    return ToolCallResult::Ok(analysis.toJson().dump(2), meta);
+}
+
+// ============================================================================
+// GetCoverage — BBCov / DiffCov coverage retrieval
+// ============================================================================
+ToolCallResult AgentToolHandlers::GetCoverage(const json& args)
+{
+    std::string file = args.value("file", "");
+    std::string func = args.value("function_name", "");
+    std::string mode = args.value("mode", "diffcov");
+
+    auto& registry = SubsystemRegistry::instance();
+
+    SubsystemId targetMode = (mode == "bbcov")
+        ? SubsystemId::BBCov
+        : SubsystemId::DiffCov;
+
+    if (!registry.isAvailable(targetMode))
+    {
+        return ToolCallResult::Error(mode + " subsystem not available");
+    }
+
+    SubsystemParams params{};
+    params.id = targetMode;
+    SubsystemResult result = registry.invoke(params);
+
+    if (!result.success)
+    {
+        return ToolCallResult::Error(
+            std::string(mode) + " failed: " +
+            (result.detail ? result.detail : "unknown error"));
+    }
+
+    std::ostringstream oss;
+    oss << mode << " analysis complete";
+    if (result.artifactPath) oss << " — artifact: " << result.artifactPath;
+    oss << " (" << result.latencyMs << "ms)";
+    if (!file.empty()) oss << " [filter: " << file << "]";
+    if (!func.empty()) oss << " [function: " << func << "]";
+    return ToolCallResult::Ok(oss.str());
+}
+
+// ============================================================================
+// RunBuild — CMake build trigger
+// ============================================================================
+ToolCallResult AgentToolHandlers::RunBuild(const json& args)
+{
+    std::string target = args.value("target", "all");
+    std::string config = args.value("config", "Release");
+
+    std::string cmd = "cmake --build . --config " + config;
+    if (target != "all") cmd += " --target " + target;
+
+    json execArgs;
+    execArgs["command"] = cmd;
+    execArgs["timeout"] = 120000;
+    return ExecuteCommand(execArgs);
+}
+
+// ============================================================================
+// ApplyHotpatch — Runtime hotpatch via unified manager
+// ============================================================================
+ToolCallResult AgentToolHandlers::ApplyHotpatch(const json& args)
+{
+    std::string layer = args.value("layer", "");
+    std::string target = args.value("target", "");
+    std::string data = args.value("data", "");
+    if (layer.empty() || target.empty())
+        return ToolCallResult::Validation("Missing required parameters: layer, target");
+
+    auto& manager = UnifiedHotpatchManager::instance();
+    UnifiedResult ur;
+
+    if (layer == "memory")
+    {
+        uintptr_t addr = 0;
+        sscanf(target.c_str(), "%llx", &addr);
+        if (addr == 0)
+            return ToolCallResult::Error("Invalid memory address: " + target);
+
+        std::vector<uint8_t> bytes;
+        for (size_t i = 0; i + 1 < data.size(); i += 2)
+        {
+            uint8_t byte = 0;
+            sscanf(data.c_str() + i, "%2hhx", &byte);
+            bytes.push_back(byte);
+        }
+        if (bytes.empty())
+            return ToolCallResult::Error("No patch data provided");
+
+        ur = manager.apply_memory_patch(reinterpret_cast<void*>(addr),
+                                         bytes.size(), bytes.data());
+    }
+    else if (layer == "byte")
+    {
+        auto colonPos = data.find(':');
+        if (colonPos == std::string::npos)
+            return ToolCallResult::Validation("byte layer data must be PATTERN_HEX:REPLACEMENT_HEX");
+
+        std::string patternHex = data.substr(0, colonPos);
+        std::string replaceHex = data.substr(colonPos + 1);
+        std::vector<uint8_t> pattern, replacement;
+
+        for (size_t i = 0; i + 1 < patternHex.size(); i += 2)
+        {
+            uint8_t b; sscanf(patternHex.c_str() + i, "%2hhx", &b);
+            pattern.push_back(b);
+        }
+        for (size_t i = 0; i + 1 < replaceHex.size(); i += 2)
+        {
+            uint8_t b; sscanf(replaceHex.c_str() + i, "%2hhx", &b);
+            replacement.push_back(b);
+        }
+
+        ur = manager.apply_byte_search_patch(target.c_str(), pattern, replacement);
+    }
+    else if (layer == "server")
+    {
+        if (data == "remove")
+        {
+            ur = manager.remove_server_patch(target.c_str());
+        }
+        else
+        {
+            return ToolCallResult::Error(
+                "Server patches must be registered programmatically. "
+                "Use target=name, data=remove to remove.");
+        }
+    }
+    else
+    {
+        return ToolCallResult::Error("Unknown layer: " + layer +
+                                     ". Valid: memory, byte, server");
+    }
+
+    if (!ur.result.success)
+    {
+        const char* detail = ur.result.detail.empty() ? "unknown error" : ur.result.detail.c_str();
+        return ToolCallResult::Error(
+            std::string(layer) + " layer failed: " + detail);
+    }
+
+    std::ostringstream oss;
+    oss << layer << " layer applied successfully"
+        << " | target=" << target
+        << " | seq=" << ur.sequenceId;
+    return ToolCallResult::Ok(oss.str());
+}
+
+// ============================================================================
+// DiskRecovery — WD My Book USB bridge recovery agent
+// ============================================================================
+ToolCallResult AgentToolHandlers::DiskRecovery(const json& args)
+{
+    std::string action = args.value("action", "");
+    if (action.empty())
+        return ToolCallResult::Validation("Missing required parameter: action");
+
+    static RawrXD::Recovery::DiskRecoveryAsmAgent agent;
+
+    if (action == "scan" || action == "find")
+    {
+        int driveNum = agent.FindDrive();
+        if (driveNum < 0)
+            return ToolCallResult::Error("No dying WD device found on PhysicalDrive0-15");
+        return ToolCallResult::Ok("Found candidate: PhysicalDrive" + std::to_string(driveNum));
+    }
+    else if (action == "init" || action == "initialize")
+    {
+        int driveNum = args.value("drive", -1);
+        if (driveNum < 0)
+            return ToolCallResult::Error("Missing parameter: drive (0-15)");
+        auto r = agent.Initialize(driveNum);
+        if (!r.success) return ToolCallResult::Error(r.detail);
+        return ToolCallResult::Ok(r.detail);
+    }
+    else if (action == "extract_key" || action == "key")
+    {
+        auto r = agent.ExtractEncryptionKey();
+        if (!r.success) return ToolCallResult::Error(r.detail);
+        return ToolCallResult::Ok(r.detail);
+    }
+    else if (action == "run" || action == "recover")
+    {
+        auto r = agent.RunRecovery();
+        if (!r.success) return ToolCallResult::Error(r.detail);
+        return ToolCallResult::Ok(r.detail);
+    }
+    else if (action == "abort" || action == "stop")
+    {
+        agent.Abort();
+        return ToolCallResult::Ok("Abort signal sent to recovery worker");
+    }
+    else if (action == "stats" || action == "status")
+    {
+        auto stats = agent.GetStats();
+        json j;
+        j["good_sectors"] = stats.goodSectors;
+        j["bad_sectors"] = stats.badSectors;
+        j["current_lba"] = stats.currentLBA;
+        j["total_sectors"] = stats.totalSectors;
+        j["progress_percent"] = stats.ProgressPercent();
+        return ToolCallResult::Ok(j.dump(2));
+    }
+    else if (action == "reset")
+    {
+        agent = RawrXD::Recovery::DiskRecoveryAsmAgent();
+        return ToolCallResult::Ok("Disk recovery agent reset");
+    }
+    else
+    {
+        return ToolCallResult::Error(
+            "Unknown action: " + action +
+            ". Valid: scan, init, extract_key, run, abort, stats, reset");
+    }
 }
 
 // ============================================================================
 // Schema generation — OpenAI function-calling format
 // ============================================================================
 
-json AgentToolHandlers::GetAllSchemas() {
+json AgentToolHandlers::GetAllSchemas()
+{
     json tools = json::array();
 
     // Helper: build a JSON array of strings (avoids json::array() initializer issues)
-    auto jstrArr = [](std::initializer_list<const char*> items) -> json {
+    auto jstrArr = [](std::initializer_list<const char*> items) -> json
+    {
         json arr = json::array();
-        for (auto s : items) arr.push_back(s);
+        for (auto s : items)
+            arr.push_back(s);
         return arr;
     };
 
@@ -1253,7 +2683,8 @@ json AgentToolHandlers::GetAllSchemas() {
     rif["type"] = "function";
     json rif_f = json::object();
     rif_f["name"] = "replace_in_file";
-    rif_f["description"] = "Search and replace a block of text in a file. Include 3+ lines of context in old_string for uniqueness.";
+    rif_f["description"] =
+        "Search and replace a block of text in a file. Include 3+ lines of context in old_string for uniqueness.";
     json rif_p = json::object();
     rif_p["type"] = "object";
     json rif_prop = json::object();
@@ -1529,6 +2960,246 @@ json AgentToolHandlers::GetAllSchemas() {
     pt["function"] = pt_f;
     tools.push_back(pt);
 
+    // set_iteration_status
+    {
+        json t = json::object(); t["type"] = "function";
+        json f = json::object();
+        f["name"] = "set_iteration_status";
+        f["description"] = "Set long-running model/agent iteration progress status.";
+        json p = json::object(); p["type"] = "object";
+        json pr = json::object();
+        json pbusy = json::object(); pbusy["type"] = "boolean"; pbusy["description"] = "Whether the model/agent is currently busy";
+        json pcur = json::object(); pcur["type"] = "integer"; pcur["description"] = "Current iteration index";
+        json ptotal = json::object(); ptotal["type"] = "integer"; ptotal["description"] = "Total iterations expected";
+        json pphase = json::object(); pphase["type"] = "string"; pphase["description"] = "Current phase label";
+        json pmsg = json::object(); pmsg["type"] = "string"; pmsg["description"] = "Optional human-readable status";
+        pr["busy"] = pbusy; pr["current"] = pcur; pr["total"] = ptotal; pr["phase"] = pphase; pr["message"] = pmsg;
+        p["properties"] = pr;
+        f["parameters"] = p; t["function"] = f; tools.push_back(t);
+    }
+
+    // get_iteration_status
+    {
+        json t = json::object(); t["type"] = "function";
+        json f = json::object();
+        f["name"] = "get_iteration_status";
+        f["description"] = "Get current long-running model/agent iteration progress status.";
+        json p = json::object(); p["type"] = "object";
+        json pr = json::object();
+        p["properties"] = pr;
+        f["parameters"] = p; t["function"] = f; tools.push_back(t);
+    }
+
+    // reset_iteration_status
+    {
+        json t = json::object(); t["type"] = "function";
+        json f = json::object();
+        f["name"] = "reset_iteration_status";
+        f["description"] = "Reset long-running model/agent iteration progress status to idle.";
+        json p = json::object(); p["type"] = "object";
+        json pr = json::object();
+        p["properties"] = pr;
+        f["parameters"] = p; t["function"] = f; tools.push_back(t);
+    }
+
+    // compact_conversation
+    json cc = json::object();
+    cc["type"] = "function";
+    json cc_f = json::object();
+    cc_f["name"] = "compact_conversation";
+    cc_f["description"] = "Compact agent conversation/history to the last N events.";
+    json cc_p = json::object();
+    cc_p["type"] = "object";
+    json cc_prop = json::object();
+    json cc_keep = json::object();
+    cc_keep["type"] = "integer";
+    cc_keep["description"] = "Number of most recent events to keep";
+    json cc_ret = json::object();
+    cc_ret["type"] = "integer";
+    cc_ret["description"] = "Retention days for history purge (optional)";
+    json cc_flush = json::object();
+    cc_flush["type"] = "boolean";
+    cc_flush["description"] = "Flush to disk after compaction";
+    cc_prop["keep_last"] = cc_keep;
+    cc_prop["retention_days"] = cc_ret;
+    cc_prop["flush"] = cc_flush;
+    cc_p["properties"] = cc_prop;
+    cc_f["parameters"] = cc_p;
+    cc["function"] = cc_f;
+    tools.push_back(cc);
+
+    // optimize_tool_selection
+    json ots = json::object();
+    ots["type"] = "function";
+    json ots_f = json::object();
+    ots_f["name"] = "optimize_tool_selection";
+    ots_f["description"] = "Recommend a tool shortlist based on task intent.";
+    json ots_p = json::object();
+    ots_p["type"] = "object";
+    json ots_prop = json::object();
+    json ots_task = json::object();
+    ots_task["type"] = "string";
+    ots_task["description"] = "Task description to optimize tool selection";
+    json ots_max = json::object();
+    ots_max["type"] = "integer";
+    ots_max["description"] = "Max tools to return";
+    ots_prop["task"] = ots_task;
+    ots_prop["max_tools"] = ots_max;
+    ots_p["properties"] = ots_prop;
+    ots_p["required"] = jstrArr({"task"});
+    ots_f["parameters"] = ots_p;
+    ots["function"] = ots_f;
+    tools.push_back(ots);
+
+    // resolve_symbol
+    json rsym = json::object();
+    rsym["type"] = "function";
+    json rsym_f = json::object();
+    rsym_f["name"] = "resolve_symbol";
+    rsym_f["description"] = "Find symbol occurrences/definitions in the codebase.";
+    json rsym_p = json::object();
+    rsym_p["type"] = "object";
+    json rsym_prop = json::object();
+    json rsym_sym = json::object();
+    rsym_sym["type"] = "string";
+    rsym_sym["description"] = "Symbol name to resolve";
+    json rsym_root = json::object();
+    rsym_root["type"] = "string";
+    rsym_root["description"] = "Optional root path";
+    rsym_prop["symbol"] = rsym_sym;
+    rsym_prop["root"] = rsym_root;
+    rsym_p["properties"] = rsym_prop;
+    rsym_p["required"] = jstrArr({"symbol"});
+    rsym_f["parameters"] = rsym_p;
+    rsym["function"] = rsym_f;
+    tools.push_back(rsym);
+
+    // read_lines
+    json rl = json::object();
+    rl["type"] = "function";
+    json rl_f = json::object();
+    rl_f["name"] = "read_lines";
+    rl_f["description"] = "Read a specific line range from a file.";
+    json rl_p = json::object();
+    rl_p["type"] = "object";
+    json rl_prop = json::object();
+    json rl_path = json::object();
+    rl_path["type"] = "string";
+    rl_path["description"] = "Absolute path to the file";
+    json rl_start = json::object();
+    rl_start["type"] = "integer";
+    rl_start["description"] = "Start line (1-based)";
+    json rl_end = json::object();
+    rl_end["type"] = "integer";
+    rl_end["description"] = "End line (1-based)";
+    json rl_range = json::object();
+    rl_range["type"] = "string";
+    rl_range["description"] = "Line range string 'start-end'";
+    rl_prop["path"] = rl_path;
+    rl_prop["start_line"] = rl_start;
+    rl_prop["end_line"] = rl_end;
+    rl_prop["range"] = rl_range;
+    rl_p["properties"] = rl_prop;
+    rl_p["required"] = jstrArr({"path"});
+    rl_f["parameters"] = rl_p;
+    rl["function"] = rl_f;
+    tools.push_back(rl);
+
+    // plan_code_exploration
+    json pce = json::object();
+    pce["type"] = "function";
+    json pce_f = json::object();
+    pce_f["name"] = "plan_code_exploration";
+    pce_f["description"] = "Analyze workspace and generate a targeted exploration plan.";
+    json pce_p = json::object();
+    pce_p["type"] = "object";
+    json pce_prop = json::object();
+    json pce_goal = json::object();
+    pce_goal["type"] = "string";
+    pce_goal["description"] = "Exploration goal";
+    json pce_root = json::object();
+    pce_root["type"] = "string";
+    pce_root["description"] = "Optional workspace root";
+    pce_prop["goal"] = pce_goal;
+    pce_prop["root"] = pce_root;
+    pce_p["properties"] = pce_prop;
+    pce_p["required"] = jstrArr({"goal"});
+    pce_f["parameters"] = pce_p;
+    pce["function"] = pce_f;
+    tools.push_back(pce);
+
+    // search_files
+    json sf = json::object();
+    sf["type"] = "function";
+    json sf_f = json::object();
+    sf_f["name"] = "search_files";
+    sf_f["description"] = "Search for files by glob or regex pattern.";
+    json sf_p = json::object();
+    sf_p["type"] = "object";
+    json sf_prop = json::object();
+    json sf_pat = json::object();
+    sf_pat["type"] = "string";
+    sf_pat["description"] = "Glob or regex pattern";
+    json sf_root = json::object();
+    sf_root["type"] = "string";
+    sf_root["description"] = "Optional search root";
+    json sf_rx = json::object();
+    sf_rx["type"] = "boolean";
+    sf_rx["description"] = "Treat pattern as regex";
+    json sf_max = json::object();
+    sf_max["type"] = "integer";
+    sf_max["description"] = "Maximum results";
+    sf_prop["pattern"] = sf_pat;
+    sf_prop["root"] = sf_root;
+    sf_prop["regex"] = sf_rx;
+    sf_prop["max_results"] = sf_max;
+    sf_p["properties"] = sf_prop;
+    sf_p["required"] = jstrArr({"pattern"});
+    sf_f["parameters"] = sf_p;
+    sf["function"] = sf_f;
+    tools.push_back(sf);
+
+    // restore_checkpoint
+    json rc = json::object();
+    rc["type"] = "function";
+    json rc_f = json::object();
+    rc_f["name"] = "restore_checkpoint";
+    rc_f["description"] = "Restore workflow and optionally reload history log.";
+    json rc_p = json::object();
+    rc_p["type"] = "object";
+    json rc_prop = json::object();
+    json rc_path = json::object();
+    rc_path["type"] = "string";
+    rc_path["description"] = "Workflow checkpoint path";
+    json rc_hist = json::object();
+    rc_hist["type"] = "string";
+    rc_hist["description"] = "Optional history log path";
+    rc_prop["checkpoint_path"] = rc_path;
+    rc_prop["history_log_path"] = rc_hist;
+    rc_p["properties"] = rc_prop;
+    rc_p["required"] = jstrArr({"checkpoint_path"});
+    rc_f["parameters"] = rc_p;
+    rc["function"] = rc_f;
+    tools.push_back(rc);
+
+    // evaluate_integration_audit_feasibility
+    json eia = json::object();
+    eia["type"] = "function";
+    json eia_f = json::object();
+    eia_f["name"] = "evaluate_integration_audit_feasibility";
+    eia_f["description"] = "Assess workspace size/complexity for integration audit feasibility.";
+    json eia_p = json::object();
+    eia_p["type"] = "object";
+    json eia_prop = json::object();
+    json eia_root = json::object();
+    eia_root["type"] = "string";
+    eia_root["description"] = "Optional workspace root";
+    eia_prop["root"] = eia_root;
+    eia_p["properties"] = eia_prop;
+    eia_f["parameters"] = eia_p;
+    eia["function"] = eia_f;
+    tools.push_back(eia);
+
     // run_shell
     json rs = json::object();
     rs["type"] = "function";
@@ -1575,13 +3246,185 @@ json AgentToolHandlers::GetAllSchemas() {
     gd["function"] = gd_f;
     tools.push_back(gd);
 
+    // list_directory
+    {
+        json t = json::object(); t["type"] = "function";
+        json f = json::object();
+        f["name"] = "list_directory";
+        f["description"] = "List the contents of a directory.";
+        json p = json::object(); p["type"] = "object";
+        json pr = json::object();
+        json pp = json::object(); pp["type"] = "string"; pp["description"] = "Absolute path to directory";
+        pr["path"] = pp;
+        p["properties"] = pr;
+        p["required"] = jstrArr({"path"});
+        f["parameters"] = p; t["function"] = f; tools.push_back(t);
+    }
+
+    // delete_file
+    {
+        json t = json::object(); t["type"] = "function";
+        json f = json::object();
+        f["name"] = "delete_file";
+        f["description"] = "Delete a file at the given path.";
+        json p = json::object(); p["type"] = "object";
+        json pr = json::object();
+        json pp = json::object(); pp["type"] = "string"; pp["description"] = "Absolute path to the file to delete";
+        pr["path"] = pp;
+        p["properties"] = pr;
+        p["required"] = jstrArr({"path"});
+        f["parameters"] = p; t["function"] = f; tools.push_back(t);
+    }
+
+    // rename_file
+    {
+        json t = json::object(); t["type"] = "function";
+        json f = json::object();
+        f["name"] = "rename_file";
+        f["description"] = "Move or rename a file.";
+        json p = json::object(); p["type"] = "object";
+        json pr = json::object();
+        json ps = json::object(); ps["type"] = "string"; ps["description"] = "Source file path";
+        json pd = json::object(); pd["type"] = "string"; pd["description"] = "Destination file path";
+        pr["source"] = ps; pr["destination"] = pd;
+        p["properties"] = pr;
+        p["required"] = jstrArr({"source", "destination"});
+        f["parameters"] = p; t["function"] = f; tools.push_back(t);
+    }
+
+    // copy_file
+    {
+        json t = json::object(); t["type"] = "function";
+        json f = json::object();
+        f["name"] = "copy_file";
+        f["description"] = "Copy a file to a new location.";
+        json p = json::object(); p["type"] = "object";
+        json pr = json::object();
+        json ps = json::object(); ps["type"] = "string"; ps["description"] = "Source file path";
+        json pd = json::object(); pd["type"] = "string"; pd["description"] = "Destination file path";
+        json po = json::object(); po["type"] = "boolean"; po["description"] = "Overwrite if exists (default true)";
+        pr["source"] = ps; pr["destination"] = pd; pr["overwrite"] = po;
+        p["properties"] = pr;
+        p["required"] = jstrArr({"source", "destination"});
+        f["parameters"] = p; t["function"] = f; tools.push_back(t);
+    }
+
+    // make_directory
+    {
+        json t = json::object(); t["type"] = "function";
+        json f = json::object();
+        f["name"] = "make_directory";
+        f["description"] = "Create a directory (and parent directories).";
+        json p = json::object(); p["type"] = "object";
+        json pr = json::object();
+        json pp = json::object(); pp["type"] = "string"; pp["description"] = "Absolute path to create";
+        pr["path"] = pp;
+        p["properties"] = pr;
+        p["required"] = jstrArr({"path"});
+        f["parameters"] = p; t["function"] = f; tools.push_back(t);
+    }
+
+    // stat_file
+    {
+        json t = json::object(); t["type"] = "function";
+        json f = json::object();
+        f["name"] = "stat_file";
+        f["description"] = "Get file metadata (size, type, existence).";
+        json p = json::object(); p["type"] = "object";
+        json pr = json::object();
+        json pp = json::object(); pp["type"] = "string"; pp["description"] = "Absolute path to file or directory";
+        pr["path"] = pp;
+        p["properties"] = pr;
+        p["required"] = jstrArr({"path"});
+        f["parameters"] = p; t["function"] = f; tools.push_back(t);
+    }
+
+    // git_status
+    {
+        json t = json::object(); t["type"] = "function";
+        json f = json::object();
+        f["name"] = "git_status";
+        f["description"] = "Run git status in the workspace root.";
+        json p = json::object(); p["type"] = "object";
+        json pr = json::object();
+        json pp = json::object(); pp["type"] = "string"; pp["description"] = "Optional workspace root path";
+        pr["root"] = pp;
+        p["properties"] = pr;
+        f["parameters"] = p; t["function"] = f; tools.push_back(t);
+    }
+
+    // get_coverage
+    {
+        json t = json::object(); t["type"] = "function";
+        json f = json::object();
+        f["name"] = "get_coverage";
+        f["description"] = "Run code coverage analysis (BBCov or DiffCov).";
+        json p = json::object(); p["type"] = "object";
+        json pr = json::object();
+        json pf = json::object(); pf["type"] = "string"; pf["description"] = "Optional file filter";
+        json pfn = json::object(); pfn["type"] = "string"; pfn["description"] = "Optional function name filter";
+        json pm = json::object(); pm["type"] = "string"; pm["description"] = "Coverage mode: bbcov or diffcov (default diffcov)";
+        pr["file"] = pf; pr["function_name"] = pfn; pr["mode"] = pm;
+        p["properties"] = pr;
+        f["parameters"] = p; t["function"] = f; tools.push_back(t);
+    }
+
+    // run_build
+    {
+        json t = json::object(); t["type"] = "function";
+        json f = json::object();
+        f["name"] = "run_build";
+        f["description"] = "Trigger a CMake build with optional target and configuration.";
+        json p = json::object(); p["type"] = "object";
+        json pr = json::object();
+        json pt = json::object(); pt["type"] = "string"; pt["description"] = "Build target (default 'all')";
+        json pc = json::object(); pc["type"] = "string"; pc["description"] = "Build config (default 'Release')";
+        pr["target"] = pt; pr["config"] = pc;
+        p["properties"] = pr;
+        f["parameters"] = p; t["function"] = f; tools.push_back(t);
+    }
+
+    // apply_hotpatch
+    {
+        json t = json::object(); t["type"] = "function";
+        json f = json::object();
+        f["name"] = "apply_hotpatch";
+        f["description"] = "Apply a runtime hotpatch via memory, byte-search, or server layer.";
+        json p = json::object(); p["type"] = "object";
+        json pr = json::object();
+        json pl = json::object(); pl["type"] = "string"; pl["description"] = "Patch layer: memory, byte, or server";
+        json ptgt = json::object(); ptgt["type"] = "string"; ptgt["description"] = "Target address (memory), module name (byte), or patch name (server)";
+        json pd = json::object(); pd["type"] = "string"; pd["description"] = "Hex data (memory), PATTERN:REPLACEMENT hex (byte), or 'remove' (server)";
+        pr["layer"] = pl; pr["target"] = ptgt; pr["data"] = pd;
+        p["properties"] = pr;
+        p["required"] = jstrArr({"layer", "target"});
+        f["parameters"] = p; t["function"] = f; tools.push_back(t);
+    }
+
+    // disk_recovery
+    {
+        json t = json::object(); t["type"] = "function";
+        json f = json::object();
+        f["name"] = "disk_recovery";
+        f["description"] = "WD My Book USB bridge recovery agent. Actions: scan, init, extract_key, run, abort, stats, reset.";
+        json p = json::object(); p["type"] = "object";
+        json pr = json::object();
+        json pa = json::object(); pa["type"] = "string"; pa["description"] = "Action: scan, init, extract_key, run, abort, stats, reset";
+        json pd = json::object(); pd["type"] = "integer"; pd["description"] = "Drive number 0-15 (required for init)";
+        pr["action"] = pa; pr["drive"] = pd;
+        p["properties"] = pr;
+        p["required"] = jstrArr({"action"});
+        f["parameters"] = p; t["function"] = f; tools.push_back(t);
+    }
+
     return tools;
 }
 
-std::string AgentToolHandlers::GetSystemPrompt(const std::string& cwd,
-                                                const std::vector<std::string>& openFiles) {
+std::string AgentToolHandlers::GetSystemPrompt(const std::string& cwd, const std::vector<std::string>& openFiles)
+{
     std::string filesStr;
-    for (const auto& f : openFiles) {
+    for (const auto& f : openFiles)
+    {
         filesStr += "- " + f + "\n";
     }
 
@@ -1589,7 +3432,8 @@ std::string AgentToolHandlers::GetSystemPrompt(const std::string& cwd,
     ss << "You are RawrXD Agent, a local high-performance autonomous coding assistant.\n"
        << "You have direct access to the filesystem and terminal.\n\n"
        << "Current Directory: " << cwd << "\n"
-       << "Open Files:\n" << (filesStr.empty() ? "  (none)\n" : filesStr) << "\n"
+       << "Open Files:\n"
+       << (filesStr.empty() ? "  (none)\n" : filesStr) << "\n"
        << "Available Tools:\n"
        << GetAllSchemas().dump(2) << "\n\n"
        << "Rules:\n"
@@ -1608,39 +3452,148 @@ std::string AgentToolHandlers::GetSystemPrompt(const std::string& cwd,
 // Generic dispatch — Instance / HasTool / Execute
 // Used by DeterministicReplayEngine for transcript replay.
 // ============================================================================
-AgentToolHandlers& AgentToolHandlers::Instance() {
+AgentToolHandlers& AgentToolHandlers::Instance()
+{
     static AgentToolHandlers instance;
     return instance;
 }
 
-bool AgentToolHandlers::HasTool(const std::string& name) const {
-    static const char* const tools[] = {
-        "read_file", "write_file", "replace_in_file",
-        "list_dir", "list_directory", "execute_command", "run_shell", "search_code", "semantic_search",
-        "mention_lookup", "next_edit_hint", "propose_multifile_edits",
-        "load_rules", "plan_tasks", "get_diagnostics"
-    };
-    for (const auto* t : tools) {
-        if (name == t) return true;
+bool AgentToolHandlers::HasTool(const std::string& name) const
+{
+    static const char* const tools[] = {"read_file",
+                                        "write_file",
+                                        "replace_in_file",
+                                        "list_dir",
+                                        "list_directory",
+                                        "delete_file",
+                                        "rename_file",
+                                        "move_file",
+                                        "copy_file",
+                                        "mkdir",
+                                        "create_directory",
+                                        "stat_file",
+                                        "get_file_info",
+                                        "git_status",
+                                        "execute_command",
+                                        "run_shell",
+                                        "search_code",
+                                        "semantic_search",
+                                        "mention_lookup",
+                                        "next_edit_hint",
+                                        "propose_multifile_edits",
+                                        "load_rules",
+                                        "plan_tasks",
+                                        "set_iteration_status",
+                                        "get_iteration_status",
+                                        "reset_iteration_status",
+                                        "get_diagnostics",
+                                        "compact_conversation",
+                                        "compacted_conversation",
+                                        "optimize_tool_selection",
+                                        "resolve_symbol",
+                                        "read_lines",
+                                        "plan_code_exploration",
+                                        "search_files",
+                                        "restore_checkpoint",
+                                        "evaluate_integration_audit_feasibility",
+                                        "get_coverage",
+                                        "run_build",
+                                        "apply_hotpatch",
+                                        "disk_recovery",
+                                        "make_directory"};
+    for (const auto* t : tools)
+    {
+        if (name == t)
+            return true;
     }
     return false;
 }
 
-ToolCallResult AgentToolHandlers::Execute(const std::string& name,
-                                           const nlohmann::json& args) {
-    if (name == "read_file")        return ToolReadFile(args);
-    if (name == "write_file")       return WriteFile(args);
-    if (name == "replace_in_file")  return ReplaceInFile(args);
-    if (name == "list_dir" || name == "list_directory") return ListDir(args);
-    if (name == "execute_command")  return ExecuteCommand(args);
-    if (name == "run_shell")        return RunShell(args);
-    if (name == "search_code")      return SearchCode(args);
-    if (name == "semantic_search")  return SemanticSearch(args);
-    if (name == "mention_lookup")   return MentionLookup(args);
-    if (name == "next_edit_hint")   return NextEditHint(args);
-    if (name == "propose_multifile_edits") return ProposeMultiFileEdits(args);
-    if (name == "load_rules")       return LoadRules(args);
-    if (name == "plan_tasks")       return PlanTasks(args);
-    if (name == "get_diagnostics")  return GetDiagnostics(args);
+ToolCallResult AgentToolHandlers::Execute(const std::string& name, const nlohmann::json& args)
+{
+    // Strict schema enforcement for function calls
+    if (name.empty())
+    {
+        return ToolCallResult::Validation("Tool name required");
+    }
+    if (!args.is_object())
+    {
+        return ToolCallResult::Validation("Tool args must be a JSON object");
+    }
+    if (!HasTool(name))
+    {
+        return ToolCallResult::NotFound(name);
+    }
+
+    if (name == "read_file")
+        return ToolReadFile(args);
+    if (name == "write_file")
+        return WriteFile(args);
+    if (name == "replace_in_file")
+        return ReplaceInFile(args);
+    if (name == "list_dir" || name == "list_directory")
+        return ListDir(args);
+    if (name == "delete_file")
+        return DeleteFile(args);
+    if (name == "rename_file" || name == "move_file")
+        return RenameFile(args);
+    if (name == "copy_file")
+        return CopyFile(args);
+    if (name == "mkdir" || name == "create_directory" || name == "make_directory")
+        return MakeDirectory(args);
+    if (name == "stat_file" || name == "get_file_info")
+        return StatFile(args);
+    if (name == "git_status")
+        return GitStatus(args);
+    if (name == "execute_command")
+        return ExecuteCommand(args);
+    if (name == "run_shell")
+        return RunShell(args);
+    if (name == "search_code")
+        return SearchCode(args);
+    if (name == "semantic_search")
+        return SemanticSearch(args);
+    if (name == "mention_lookup")
+        return MentionLookup(args);
+    if (name == "next_edit_hint")
+        return NextEditHint(args);
+    if (name == "propose_multifile_edits")
+        return ProposeMultiFileEdits(args);
+    if (name == "load_rules")
+        return LoadRules(args);
+    if (name == "plan_tasks")
+        return PlanTasks(args);
+    if (name == "set_iteration_status")
+        return SetIterationStatus(args);
+    if (name == "get_iteration_status")
+        return GetIterationStatus(args);
+    if (name == "reset_iteration_status")
+        return ResetIterationStatus(args);
+    if (name == "get_diagnostics")
+        return GetDiagnostics(args);
+    if (name == "compact_conversation" || name == "compacted_conversation")
+        return CompactConversation(args);
+    if (name == "optimize_tool_selection")
+        return OptimizeToolSelection(args);
+    if (name == "resolve_symbol")
+        return ResolveSymbol(args);
+    if (name == "read_lines")
+        return ReadLines(args);
+    if (name == "plan_code_exploration")
+        return PlanCodeExploration(args);
+    if (name == "search_files")
+        return SearchFiles(args);
+    if (name == "restore_checkpoint")
+        return RestoreCheckpoint(args);
+    if (name == "evaluate_integration_audit_feasibility")
+        return EvaluateIntegrationAuditFeasibility(args);
+    if (name == "get_coverage")
+        return GetCoverage(args);
+    if (name == "run_build")
+        return RunBuild(args);
+    if (name == "apply_hotpatch")
+        return ApplyHotpatch(args);
+    if (name == "disk_recovery")
+        return DiskRecovery(args);
     return ToolCallResult::NotFound(name);
 }

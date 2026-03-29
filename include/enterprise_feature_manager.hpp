@@ -216,16 +216,22 @@ private:
 };
 
 // ============================================================================
-// Convenience macros for feature gating in source files
+// Inline enterprise-gate functions — production entry points
 // ============================================================================
+
+inline bool EnterpriseGateCheck(uint64_t mask, const char* caller) {
+    return EnterpriseFeatureManager::Instance().Gate(mask, caller);
+}
+
+// Backward-compatible macro aliases (pass __FUNCTION__ to inline gate)
 #define ENTERPRISE_GATE(mask) \
-    if (!EnterpriseFeatureManager::Instance().Gate(mask, __FUNCTION__)) return
+    if (!EnterpriseGateCheck(mask, __FUNCTION__)) return
 
 #define ENTERPRISE_GATE_BOOL(mask) \
-    if (!EnterpriseFeatureManager::Instance().Gate(mask, __FUNCTION__)) return false
+    if (!EnterpriseGateCheck(mask, __FUNCTION__)) return false
 
 #define ENTERPRISE_GATE_NULL(mask) \
-    if (!EnterpriseFeatureManager::Instance().Gate(mask, __FUNCTION__)) return nullptr
+    if (!EnterpriseGateCheck(mask, __FUNCTION__)) return nullptr
 
 #define ENTERPRISE_GATE_STR(mask) \
-    if (!EnterpriseFeatureManager::Instance().Gate(mask, __FUNCTION__)) return std::string("[Enterprise] Feature requires upgrade")
+    if (!EnterpriseGateCheck(mask, __FUNCTION__)) return std::string("[Enterprise] Feature requires upgrade")

@@ -47,8 +47,8 @@ public:
         // Trigger MASM kernel if RE task
         if (task.find("DMA") != std::string::npos) {
              std::cout << "[Agent:" << agentId << "] Offloading to Titan DMA Core..." << std::endl;
-             // Placeholder for real context
-             Titan_PerformDMA(nullptr, nullptr, 0); 
+             // DMA type 0 = CPU fallback; null request/event = no-op probe (validates kernel linkage)
+             Titan_PerformDMA(0, nullptr, 0); 
         }
         
         currentState = State::Completed;

@@ -18,10 +18,6 @@
 // Rule:         NO SOURCE FILE IS TO BE SIMPLIFIED
 // ============================================================================
 
-<<<<<<< HEAD
-=======
-#include "Win32IDE.h"
->>>>>>> origin/main
 #include "../../include/model_registry.h"
 #include "../core/command_registry.hpp"
 #include "Win32IDE.h"
@@ -167,11 +163,7 @@ bool Win32IDE::handleTier1Command(int commandId)
         RECT rc;
         GetClientRect(m_hwndMain, &rc);
         onSize(rc.right, rc.bottom);
-<<<<<<< HEAD
         updateMenuEnableStates();  // sync View > Breadcrumbs check mark
-=======
-        updateMenuEnableStates(); // sync View > Breadcrumbs check mark
->>>>>>> origin/main
         return true;
     }
 
@@ -1239,22 +1231,12 @@ LRESULT CALLBACK Tier1LegacySettingsGUIProc(HWND hwnd, UINT msg, WPARAM wParam, 
                 SendMessage(chk, BM_SETCHECK, BST_CHECKED, 0);
             y += 28;
 
-<<<<<<< HEAD
             chk = CreateWindowExA(0, "BUTTON", "Smooth Scroll", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX, 220, y, 200,
                                   22, hwnd, (HMENU)SC_SMOOTHSCROLL, nullptr, nullptr);
             SendMessage(chk, WM_SETFONT, (WPARAM)labelFont, TRUE);
             if (s_ide->m_settings.smoothScrollEnabled)
                 SendMessage(chk, BM_SETCHECK, BST_CHECKED, 0);
             y += 28;
-=======
-        chk = CreateWindowExA(0, "BUTTON", "Smooth Scroll",
-            WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
-            220, y, 200, 22, hwnd, (HMENU)SC_SMOOTHSCROLL, nullptr, nullptr);
-        SendMessage(chk, WM_SETFONT, (WPARAM)labelFont, TRUE);
-        if (s_ide->m_settings.smoothScrollEnabled)
-            SendMessage(chk, BM_SETCHECK, BST_CHECKED, 0);
-        y += 28;
->>>>>>> origin/main
 
             chk = CreateWindowExA(0, "BUTTON", "Failure Detector", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX, 220, y, 200,
                                   22, hwnd, (HMENU)SC_FAILUREDETECTOR, nullptr, nullptr);
@@ -1396,111 +1378,102 @@ LRESULT CALLBACK Tier1LegacySettingsGUIProc(HWND hwnd, UINT msg, WPARAM wParam, 
             SendMessage(browseBtn, WM_SETFONT, (WPARAM)labelFont, TRUE);
             y += 32;
 
-            // Model dropdown populated from F:\OllamaModels
+            // Model dropdown populated from D:\OllamaModels (including blobs)
             CreateWindowExA(0, "STATIC", "Available models:", WS_CHILD | WS_VISIBLE | SS_RIGHT, 10, y + 4, 200, 20,
                             hwnd, nullptr, nullptr, nullptr);
             HWND modelCombo = CreateWindowExA(0, "COMBOBOX", "", WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL,
                                               220, y, 250, 200, hwnd, (HMENU)13071, nullptr, nullptr);
             SendMessage(modelCombo, WM_SETFONT, (WPARAM)labelFont, TRUE);
 
-            // Scan F:\OllamaModels for .gguf files
+            // Scan D:\OllamaModels recursively and include all regular files
             namespace fs = std::filesystem;
-            const std::string modelsDir = "F:\\OllamaModels";
+            const std::string modelsDir = "D:\\OllamaModels";
             int selectedIdx = -1;
-            int idx = 0;
+            std::vector<std::pair<std::string, std::string>> modelEntries;
 
             try
             {
                 if (fs::exists(modelsDir) && fs::is_directory(modelsDir))
                 {
-                    for (const auto& entry : fs::directory_iterator(modelsDir))
+                    std::error_code ec;
+                    for (const auto& entry : fs::recursive_directory_iterator(modelsDir, fs::directory_options::skip_permission_denied, ec))
                     {
-                        if (entry.is_regular_file())
+                        if (ec)
+                        {
+                            continue;
+                        }
+
+                        if (entry.is_regular_file(ec))
                         {
                             std::string path = entry.path().string();
-                            if (path.ends_with(".gguf"))
-                            {
-                                std::string filename = entry.path().filename().string();
-                                int itemIdx = (int)SendMessageA(modelCombo, CB_ADDSTRING, 0, (LPARAM)filename.c_str());
-                                SendMessageA(modelCombo, CB_SETITEMDATA, itemIdx, (LPARAM)_strdup(path.c_str()));
-
-<<<<<<< HEAD
-                                if (path == s_ide->m_settings.localParityModelPath)
-                                {
-                                    selectedIdx = itemIdx;
-                                }
-                                idx++;
-                            }
+                            std::string label;
+                            std::error_code relEc;
+                            fs::path rel = fs::relative(entry.path(), fs::path(modelsDir), relEc);
+                            label = relEc ? entry.path().filename().string() : rel.string();
+                            modelEntries.emplace_back(label, path);
                         }
+                    }
+                }
+
+                auto normalizeForSort = [](std::string value)
+                {
+                    std::replace(value.begin(), value.end(), '/', '\\');
+                    std::transform(value.begin(), value.end(), value.begin(),
+                                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+                    return value;
+                };
+
+                std::sort(modelEntries.begin(), modelEntries.end(),
+                          [&normalizeForSort](const auto& lhs, const auto& rhs)
+                          {
+                              const auto isBlob = [&normalizeForSort](const std::string& value)
+                              {
+                                  return normalizeForSort(value).find("\\blobs\\") != std::string::npos;
+                              };
+
+                              const bool lhsBlob = isBlob(lhs.second);
+                              const bool rhsBlob = isBlob(rhs.second);
+                              if (lhsBlob != rhsBlob)
+                              {
+                                  return !lhsBlob;
+                              }
+
+                              const std::string lhsName = normalizeForSort(std::filesystem::path(lhs.first).filename().string());
+                              const std::string rhsName = normalizeForSort(std::filesystem::path(rhs.first).filename().string());
+                              if (lhsName != rhsName)
+                              {
+                                  return lhsName < rhsName;
+                              }
+
+                              return normalizeForSort(lhs.second) < normalizeForSort(rhs.second);
+                          });
+
+                modelEntries.erase(std::unique(modelEntries.begin(), modelEntries.end(),
+                                               [](const auto& lhs, const auto& rhs)
+                                               {
+                                                   return lhs.second == rhs.second;
+                                               }),
+                                   modelEntries.end());
+
+                for (const auto& [label, path] : modelEntries)
+                {
+                    int itemIdx = (int)SendMessageA(modelCombo, CB_ADDSTRING, 0, (LPARAM)label.c_str());
+                    SendMessageA(modelCombo, CB_SETITEMDATA, itemIdx, (LPARAM)_strdup(path.c_str()));
+
+                    if (path == s_ide->m_settings.localParityModelPath)
+                    {
+                        selectedIdx = itemIdx;
                     }
                 }
             }
             catch (...)
             {
                 SendMessageA(modelCombo, CB_ADDSTRING, 0, (LPARAM) "[Error scanning directory]");
-=======
-        return 0;
-    }
-
-    case WM_COMMAND: {
-        if (!s_ide) break;
-        int cmd = LOWORD(wParam);
-
-        if (cmd == SC_SAVE_BTN) {
-            // Read all controls back into settings
-            s_ide->m_settings.autoSaveEnabled = (SendMessage(GetDlgItem(hwnd, SC_AUTOSAVE), BM_GETCHECK, 0, 0) == BST_CHECKED);
-            s_ide->m_settings.lineNumbersVisible = (SendMessage(GetDlgItem(hwnd, SC_LINENUMBERS), BM_GETCHECK, 0, 0) == BST_CHECKED);
-            s_ide->m_settings.wordWrapEnabled = (SendMessage(GetDlgItem(hwnd, SC_WORDWRAP), BM_GETCHECK, 0, 0) == BST_CHECKED);
-            s_ide->m_settings.minimapEnabled = (SendMessage(GetDlgItem(hwnd, SC_MINIMAP), BM_GETCHECK, 0, 0) == BST_CHECKED);
-            s_ide->m_settings.syntaxColoringEnabled = (SendMessage(GetDlgItem(hwnd, SC_SYNTAXCOLORING), BM_GETCHECK, 0, 0) == BST_CHECKED);
-            s_ide->m_settings.ghostTextEnabled = (SendMessage(GetDlgItem(hwnd, SC_GHOSTTEXT), BM_GETCHECK, 0, 0) == BST_CHECKED);
-            s_ide->m_settings.breadcrumbsEnabled = (SendMessage(GetDlgItem(hwnd, SC_BREADCRUMBS), BM_GETCHECK, 0, 0) == BST_CHECKED);
-            s_ide->m_settings.smoothScrollEnabled = (SendMessage(GetDlgItem(hwnd, SC_SMOOTHSCROLL), BM_GETCHECK, 0, 0) == BST_CHECKED);
-            s_ide->m_smoothScroll.enabled = s_ide->m_settings.smoothScrollEnabled;
-            s_ide->m_settings.failureDetectorEnabled = (SendMessage(GetDlgItem(hwnd, SC_FAILUREDETECTOR), BM_GETCHECK, 0, 0) == BST_CHECKED);
-            s_ide->m_settings.useSpaces = (SendMessage(GetDlgItem(hwnd, SC_USESPACES), BM_GETCHECK, 0, 0) == BST_CHECKED);
-
-            char buf[256];
-            GetWindowTextA(GetDlgItem(hwnd, SC_FONTSIZE), buf, sizeof(buf));
-            s_ide->m_settings.fontSize = atoi(buf);
-            if (s_ide->m_settings.fontSize < 6) s_ide->m_settings.fontSize = 6;
-            if (s_ide->m_settings.fontSize > 72) s_ide->m_settings.fontSize = 72;
-
-            GetWindowTextA(GetDlgItem(hwnd, SC_FONTNAME), buf, sizeof(buf));
-            s_ide->m_settings.fontName = buf;
-
-            GetWindowTextA(GetDlgItem(hwnd, SC_TABSIZE), buf, sizeof(buf));
-            s_ide->m_settings.tabSize = atoi(buf);
-
-            GetWindowTextA(GetDlgItem(hwnd, SC_TEMPERATURE), buf, sizeof(buf));
-            s_ide->m_settings.aiTemperature = (float)atof(buf);
-
-            GetWindowTextA(GetDlgItem(hwnd, SC_TOPP), buf, sizeof(buf));
-            s_ide->m_settings.aiTopP = (float)atof(buf);
-
-            GetWindowTextA(GetDlgItem(hwnd, SC_MAXTOKENS), buf, sizeof(buf));
-            s_ide->m_settings.aiMaxTokens = atoi(buf);
-
-            GetWindowTextA(GetDlgItem(hwnd, SC_OLLAMAURL), buf, sizeof(buf));
-            s_ide->m_settings.aiOllamaUrl = buf;
-
-            s_ide->m_settings.localParityEnabled = (SendMessage(GetDlgItem(hwnd, SC_LOCALPARITY_ENABLED), BM_GETCHECK, 0, 0) == BST_CHECKED);
-            GetWindowTextA(GetDlgItem(hwnd, SC_LOCALPARITY_MODELPATH), buf, sizeof(buf));
-            s_ide->m_settings.localParityModelPath = buf;
-            GetWindowTextA(GetDlgItem(hwnd, SC_UPDATEMANIFEST_URL), buf, sizeof(buf));
-            s_ide->m_settings.updateManifestUrl = buf;
-
-            int encSel = (int)SendMessage(GetDlgItem(hwnd, SC_ENCODING), CB_GETCURSEL, 0, 0);
-            if (encSel != CB_ERR) {
-                char encBuf[64];
-                SendMessageA(GetDlgItem(hwnd, SC_ENCODING), CB_GETLBTEXT, encSel, (LPARAM)encBuf);
-                s_ide->m_settings.encoding = encBuf;
->>>>>>> origin/main
             }
 
-            if (idx == 0)
+            if (modelEntries.empty())
             {
-                SendMessageA(modelCombo, CB_ADDSTRING, 0, (LPARAM) "[No models found in F:\\OllamaModels]");
+                SendMessageA(modelCombo, CB_ADDSTRING, 0, (LPARAM) "[No files found in D:\\OllamaModels]");
             }
             else if (selectedIdx >= 0)
             {
@@ -2118,49 +2091,12 @@ LRESULT CALLBACK Win32IDE::TabBarDragProc(HWND hwnd, UINT msg, WPARAM wParam, LP
     if (!ide || !ide->m_tabDragEnabled)
         return CallWindowProcA(ide ? ide->m_originalTabBarProc : DefWindowProcA, hwnd, msg, wParam, lParam);
 
-<<<<<<< HEAD
     switch (msg)
     {
         case WM_LBUTTONDOWN:
         {
             int x = GET_X_LPARAM(lParam);
             int y = GET_Y_LPARAM(lParam);
-=======
-    switch (msg) {
-    case WM_LBUTTONDOWN: {
-        int x = GET_X_LPARAM(lParam);
-        int y = GET_Y_LPARAM(lParam);
-        TCHITTESTINFO hti = {};
-        hti.pt = { x, y };
-        int tabIndex = TabCtrl_HitTest(hwnd, &hti);
-        if (tabIndex >= 0) {
-            ide->m_dragTabIndex = tabIndex;
-            ide->m_dragStartX = x;
-            ide->m_dragStartY = y;
-            ide->m_tabDragging = false; // Drag activates after 5px threshold in WM_MOUSEMOVE
-            SetCapture(hwnd);
-        }
-        break;
-    }
-    case WM_MOUSEMOVE: {
-        if (ide->m_dragTabIndex < 0) break;
-
-        int x = GET_X_LPARAM(lParam);
-        int y = GET_Y_LPARAM(lParam);
-
-        // Start drag after threshold (5 pixels)
-        if (!ide->m_tabDragging) {
-            int dx = x - ide->m_dragStartX;
-            int dy = y - ide->m_dragStartY;
-            if (dx * dx + dy * dy > 25) {
-                ide->m_tabDragging = true;
-                SetCursor(LoadCursor(nullptr, IDC_SIZEALL));
-            }
-        }
-
-        if (ide->m_tabDragging) {
-            // Determine insertion position
->>>>>>> origin/main
             TCHITTESTINFO hti = {};
             hti.pt = {x, y};
             int tabIndex = TabCtrl_HitTest(hwnd, &hti);
@@ -2303,12 +2239,8 @@ void Win32IDE::reorderTab(int fromIndex, int toIndex)
     appendToOutput("[Tier1] Tab reordered\n");
 }
 
-<<<<<<< HEAD
 void Win32IDE::onTabDragTick()
 {
-=======
-void Win32IDE::onTabDragTick() {
->>>>>>> origin/main
     // Tab reorder uses immediate TabCtrl_DeleteItem/InsertItem; no animation.
     // Timer tick keeps drag state consistent; optional: InvalidateRect(m_hwndTabBar, nullptr, FALSE);
 }

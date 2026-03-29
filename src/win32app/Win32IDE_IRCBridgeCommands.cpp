@@ -208,10 +208,10 @@ void Win32IDE::dispatchIRCCommand(const std::string& nick,
 #define IDM_BUILD_PROJECT 2801
 #endif
 #ifndef IDM_DEBUG_START
-#define IDM_DEBUG_START 3001
+#define IDM_DEBUG_START IDM_DBG_LAUNCH
 #endif
 #ifndef IDM_DEBUG_STOP
-#define IDM_DEBUG_STOP 3002
+#define IDM_DEBUG_STOP IDM_DBG_KILL
 #endif
 
     // Map IRC command → IDE WM_COMMAND id (marshalled to UI thread).

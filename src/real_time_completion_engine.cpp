@@ -1,10 +1,7 @@
 #include "real_time_completion_engine.h"
 #include <algorithm>
 #include <chrono>
-<<<<<<< HEAD
 #include <cstddef>
-=======
->>>>>>> origin/main
 #include <sstream>
 #include <thread>
 
@@ -65,11 +62,7 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::getCompletions(
         return completions;
 
     } catch (const std::exception& e) {
-<<<<<<< HEAD
         m_errorCount++;
-=======
-
->>>>>>> origin/main
         m_metrics->incrementCounter("completion_errors");
         return {};
     }
@@ -197,11 +190,7 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::generateCompletionsWithMod
             return {};
         }
 
-<<<<<<< HEAD
         if (!m_inferenceEngine->IsModelLoaded()) {
-=======
-        if (!m_inferenceEngine->isModelLoaded()) {
->>>>>>> origin/main
 
             m_metrics->incrementCounter("model_not_loaded_errors");
             return {};
@@ -210,11 +199,7 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::generateCompletionsWithMod
 
         // STEP 2: Tokenize Prompt with Context Window Enforcement
         // ========================================================
-<<<<<<< HEAD
         std::vector<int32_t> inputTokens = m_inferenceEngine->Tokenize(prompt);
-=======
-        std::vector<int32_t> inputTokens = m_inferenceEngine->tokenize(std::string::fromStdString(prompt));
->>>>>>> origin/main
 
 
         // Enforce context window limit (typical: 512-2048 tokens)
@@ -222,11 +207,6 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::generateCompletionsWithMod
         const size_t CONTEXT_WINDOW = 512;
 
         if (inputTokens.size() > CONTEXT_WINDOW) {
-<<<<<<< HEAD
-=======
-
-                           inputTokens.size(), CONTEXT_WINDOW);
->>>>>>> origin/main
             // Keep the most recent tokens (sliding window)
             if (inputTokens.size() > CONTEXT_WINDOW) {
                 inputTokens.erase(inputTokens.begin(),
@@ -246,20 +226,8 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::generateCompletionsWithMod
                 generatedTokens.begin() + static_cast<std::ptrdiff_t>(inputTokens.size()),
                 generatedTokens.end());
             generatedCompletion = m_inferenceEngine->Detokenize(completionSegment);
-<<<<<<< HEAD
         }
 
-=======
-        } else {
-
-        }
-
-                      generatedCompletion.length(),
-                      generatedTokens.size() > inputTokens.size()
-                          ? static_cast<int>(generatedTokens.size() - inputTokens.size())
-                          : 0);
-
->>>>>>> origin/main
         // STEP 4: Parse Completions from Generated Text
         // =============================================
         if (!generatedCompletion.empty()) {
@@ -301,13 +269,8 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::generateCompletionsWithMod
 
         return completions;
 
-<<<<<<< HEAD
     } catch (const std::exception&) {
         m_errorCount++;
-=======
-    } catch (const std::exception& e) {
-
->>>>>>> origin/main
         m_metrics->incrementCounter("completion_generation_errors");
         return {};
     }
@@ -428,7 +391,6 @@ std::string RealTimeCompletionEngine::generateCacheKey(
     return prefix + "|" + suffix;
 }
 
-<<<<<<< HEAD
 // ============================================================================
 // Asynchronous API Implementations
 // ============================================================================
@@ -473,5 +435,3 @@ std::future<std::vector<CodeCompletion>> RealTimeCompletionEngine::getContextual
         return getContextualCompletions(filePath, line, column, scope);
     });
 }
-=======
->>>>>>> origin/main

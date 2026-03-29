@@ -6,6 +6,7 @@
 #include <vector>
 #include <map>
 #include <cstdint>
+#include <atomic>
 
 class AgenticEngine;
 class InferenceEngine;
@@ -118,4 +119,5 @@ private:
     TrainingProgressFn  m_onTrainingProgress  = nullptr;
     TrainingCompletedFn m_onTrainingCompleted = nullptr;
     void*               m_callbackContext     = nullptr;
+    std::atomic<bool>   m_isTraining{false};
 };

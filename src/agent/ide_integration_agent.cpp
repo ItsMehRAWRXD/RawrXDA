@@ -3,6 +3,12 @@
 #include <sstream>
 #include <algorithm>
 #include <iostream>
+#include <fstream>
+#include <filesystem>
+#include <cstdlib>
+#include <array>
+
+namespace fs = std::filesystem;
 
 namespace rawrxd::agent {
 
@@ -69,8 +75,14 @@ bool IDEIntegrationAgent::autonomouslyInstallExtension(const std::string& extens
         m_onOutput("Installing extension: " + extensionId);
     }
 
-    // This would call into the VsixLoader from the IDE window
-    // For now, simulated success
+    // Execute VS Code CLI to install the extension
+    std::string cmd = "code --install-extension " + extensionId + " --force 2>&1";
+    CommandResult result = autonomouslyRunCommand(cmd);
+    if (!result.success || result.exitCode != 0) {
+        if (m_onError) m_onError("Extension install failed: " + result.errorMessage);
+        return false;
+    }
+    if (m_onOutput) m_onOutput("Extension installed: " + extensionId);
     return true;
 }
 
@@ -79,9 +91,13 @@ bool IDEIntegrationAgent::autonomouslySwitchProvider(const std::string& provider
         m_onOutput("Switching AI provider to: " + provider);
     }
 
-    // This would call into the ChatPanelIntegration from the IDE window
-    // For now, simulated success
-    return true;
+    // Notify the registered provider-switch callback if wired
+    if (m_onProviderSwitch) {
+        return m_onProviderSwitch(provider);
+    }
+    // Fallback: write to settings file for the IDE to pick up on next poll
+    if (m_onError) m_onError("No provider switch handler wired — update settings manually");
+    return false;
 }
 
 bool IDEIntegrationAgent::autonomouslyAnalyzeFile(const std::string& filePath) {
@@ -89,9 +105,34 @@ bool IDEIntegrationAgent::autonomouslyAnalyzeFile(const std::string& filePath) {
         m_onOutput("Analyzing file: " + filePath);
     }
 
-    // Read file and send to AI for analysis
-    // Send to chat panel's AI provider
-    // Return analysis results
+    // Read file contents
+    if (!fs::exists(filePath)) {
+        if (m_onError) m_onError("File not found: " + filePath);
+        return false;
+    }
+    std::ifstream ifs(filePath);
+    if (!ifs.is_open()) {
+        if (m_onError) m_onError("Cannot open file: " + filePath);
+        return false;
+    }
+    std::string content((std::istreambuf_iterator<char>(ifs)),
+                         std::istreambuf_iterator<char>());
+    ifs.close();
+
+    // Delegate to AI analysis callback if wired
+    if (m_onAnalyzeRequest) {
+        std::string analysis = m_onAnalyzeRequest(filePath, content);
+        if (m_onOutput) m_onOutput("Analysis result:\n" + analysis);
+        return true;
+    }
+    // Fallback: basic metrics
+    size_t lines = std::count(content.begin(), content.end(), '\n') + 1;
+    size_t bytes = content.size();
+    std::ostringstream report;
+    report << "File: " << filePath << "\n"
+           << "Lines: " << lines << "\n"
+           << "Size: " << bytes << " bytes";
+    if (m_onOutput) m_onOutput(report.str());
     return true;
 }
 
@@ -101,9 +142,38 @@ bool IDEIntegrationAgent::autonomouslyCreateFile(const std::string& fileName,
         m_onOutput("Creating file: " + fileName + " - " + description);
     }
 
-    // Use AI to generate file content based on description
-    // Save to disk
-    // Open in editor
+    // Generate content via AI callback if available
+    std::string content;
+    if (m_onGenerateContent) {
+        content = m_onGenerateContent(fileName, description);
+    } else {
+        // Minimal template based on extension
+        fs::path p(fileName);
+        std::string ext = p.extension().string();
+        if (ext == ".cpp" || ext == ".c") {
+            content = "// " + p.filename().string() + " — " + description + "\n\n";
+            content += "#include <iostream>\n\nint main() {\n    return 0;\n}\n";
+        } else if (ext == ".h" || ext == ".hpp") {
+            std::string guard = p.stem().string();
+            std::transform(guard.begin(), guard.end(), guard.begin(), ::toupper);
+            guard += "_H";
+            content = "#pragma once\n// " + description + "\n\n";
+        } else if (ext == ".py") {
+            content = "# " + p.filename().string() + " — " + description + "\n\n";
+        } else {
+            content = "// " + description + "\n";
+        }
+    }
+
+    // Write to disk
+    std::ofstream ofs(fileName);
+    if (!ofs.is_open()) {
+        if (m_onError) m_onError("Cannot create file: " + fileName);
+        return false;
+    }
+    ofs << content;
+    ofs.close();
+    if (m_onOutput) m_onOutput("File created: " + fileName + " (" + std::to_string(content.size()) + " bytes)");
     return true;
 }
 
@@ -113,13 +183,27 @@ CommandResult IDEIntegrationAgent::autonomouslyRunCommand(const std::string& com
     }
 
     CommandResult result;
-    result.exitCode = 0;
+    result.exitCode = -1;
+    result.success = false;
 
-    // Execute in terminal
-    // Capture output
-    result.output = "[Command output would appear here]";
-    result.success = true;
-
+    // Execute via _popen and capture output
+    std::array<char, 4096> buffer;
+    std::ostringstream captured;
+    FILE* pipe = _popen(command.c_str(), "r");
+    if (!pipe) {
+        result.errorMessage = "Failed to launch command";
+        return result;
+    }
+    while (fgets(buffer.data(), static_cast<int>(buffer.size()), pipe) != nullptr) {
+        captured << buffer.data();
+    }
+    int rc = _pclose(pipe);
+    result.exitCode = rc;
+    result.output = captured.str();
+    result.success = (rc == 0);
+    if (rc != 0) {
+        result.errorMessage = "Command exited with code " + std::to_string(rc);
+    }
     return result;
 }
 
@@ -129,10 +213,35 @@ bool IDEIntegrationAgent::autonomouslyRefactorCode(const std::string& filePath,
         m_onOutput("Refactoring " + filePath + " - type: " + refactoringType);
     }
 
-    // Send file to AI with refactoring request
-    // Apply changes
-    // Save file
-    return true;
+    // Read the file
+    if (!fs::exists(filePath)) {
+        if (m_onError) m_onError("File not found: " + filePath);
+        return false;
+    }
+    std::ifstream ifs(filePath);
+    if (!ifs.is_open()) {
+        if (m_onError) m_onError("Cannot open file: " + filePath);
+        return false;
+    }
+    std::string content((std::istreambuf_iterator<char>(ifs)),
+                         std::istreambuf_iterator<char>());
+    ifs.close();
+
+    // Delegate to AI refactoring callback if wired
+    if (m_onRefactorRequest) {
+        std::string refactored = m_onRefactorRequest(filePath, content, refactoringType);
+        if (refactored.empty()) {
+            if (m_onError) m_onError("Refactoring returned empty result");
+            return false;
+        }
+        std::ofstream ofs(filePath);
+        ofs << refactored;
+        ofs.close();
+        if (m_onOutput) m_onOutput("Refactoring applied to: " + filePath);
+        return true;
+    }
+    if (m_onError) m_onError("No refactoring handler wired");
+    return false;
 }
 
 bool IDEIntegrationAgent::autonomouslyGenerateTests(const std::string& filePath) {
@@ -140,10 +249,36 @@ bool IDEIntegrationAgent::autonomouslyGenerateTests(const std::string& filePath)
         m_onOutput("Generating tests for: " + filePath);
     }
 
-    // Send file to AI
-    // Generate test code
-    // Create test file
-    return true;
+    if (!fs::exists(filePath)) {
+        if (m_onError) m_onError("File not found: " + filePath);
+        return false;
+    }
+    std::ifstream ifs(filePath);
+    if (!ifs.is_open()) {
+        if (m_onError) m_onError("Cannot open file: " + filePath);
+        return false;
+    }
+    std::string content((std::istreambuf_iterator<char>(ifs)),
+                         std::istreambuf_iterator<char>());
+    ifs.close();
+
+    // Delegate to AI test generation callback
+    if (m_onGenerateTests) {
+        std::string testCode = m_onGenerateTests(filePath, content);
+        if (testCode.empty()) {
+            if (m_onError) m_onError("Test generation returned empty result");
+            return false;
+        }
+        // Write test file adjacent to source
+        fs::path testPath = fs::path(filePath).parent_path() / ("test_" + fs::path(filePath).stem().string() + fs::path(filePath).extension().string());
+        std::ofstream ofs(testPath);
+        ofs << testCode;
+        ofs.close();
+        if (m_onOutput) m_onOutput("Tests written to: " + testPath.string());
+        return true;
+    }
+    if (m_onError) m_onError("No test generation handler wired");
+    return false;
 }
 
 void IDEIntegrationAgent::changeState(AgentState newState) {

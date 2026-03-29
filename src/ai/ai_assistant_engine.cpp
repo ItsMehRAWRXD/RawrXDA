@@ -1233,11 +1233,13 @@ bool GGUFBackend::Initialize(const ModelConfig& config) {
         return false;
     }
 
-    const uint64_t ramHeadroom = static_cast<uint64_t>(static_cast<long double>(mem.ullTotalPhys) * 0.20L);
-    const uint64_t workingSetEstimate = static_cast<uint64_t>(static_cast<long double>(modelBytes) * 1.25L);
-    const uint64_t required = workingSetEstimate + ramHeadroom;
-    if (mem.ullAvailPhys < required) {
-        LogBackendSelection("local_gguf", false, "memory preflight failed: insufficient RAM headroom");
+    // mmap-friendly: check against total physical RAM (not available). The model is
+    // memory-mapped so the OS pages data in on demand; requiring huge free-RAM headroom
+    // causes spurious rejections when background processes consume RAM.
+    const uint64_t ramLimit =
+        static_cast<uint64_t>(static_cast<long double>(mem.ullTotalPhys) * 0.80L);
+    if (modelBytes > ramLimit) {
+        LogBackendSelection("local_gguf", false, "memory preflight failed: model exceeds 80% of total physical RAM");
         return false;
     }
 
@@ -1313,7 +1315,6 @@ bool OllamaBackend::Initialize(const ModelConfig& config) {
     }
 
     std::string tags = WinHttpRequest(tags_url, L"GET", "", {L"Accept: application/json"});
-<<<<<<< HEAD
     if (tags.empty()) {
         LogBackendSelection("ollama", false, "local endpoint not reachable at startup");
         m_ready = false;
@@ -1327,11 +1328,6 @@ bool OllamaBackend::Initialize(const ModelConfig& config) {
     }
 
     LogBackendSelection("ollama", true, "local endpoint verified");
-=======
-    // Enhanced readiness: mark as ready if we have a model name, even if server tag check fails.
-    // This allows custom names or SHAs to bypass strict initial check and fail later if actually invalid.
-    m_ready = !m_model_name.empty(); 
->>>>>>> origin/main
     return m_ready;
 }
 

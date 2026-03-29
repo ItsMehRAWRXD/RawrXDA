@@ -108,6 +108,8 @@ public:
     void setOnToken(OnTokenFn fn);
     void setAppendRenderer(AppendRenderFn fn);
     void setDequeueTaskFn(DequeueTaskFn fn);
+    void setContextWindow(int tokens);
+    int getContextWindow() const;
 
     // Run one full pipeline cycle: userMessage -> prompt -> LLM -> token stream -> renderer
     PipelineResult<std::string> runPipeline(const std::string& userMessage);

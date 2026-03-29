@@ -18,6 +18,68 @@
 #include "../modules/vscode_extension_api.h"
 #include "../win32app/Win32IDE.h"
 
+#include <cctype>
+
+namespace {
+
+bool isSubPathOf(const std::filesystem::path& candidate,
+                 const std::filesystem::path& root) {
+    std::error_code ec;
+    const auto canonicalCandidate = std::filesystem::weakly_canonical(candidate, ec);
+    if (ec) {
+        return false;
+    }
+
+    const auto canonicalRoot = std::filesystem::weakly_canonical(root, ec);
+    if (ec) {
+        return false;
+    }
+
+    const auto rel = std::filesystem::relative(canonicalCandidate, canonicalRoot, ec);
+    if (ec) {
+        return false;
+    }
+
+    const std::string relStr = rel.generic_string();
+    if (relStr.empty() || relStr == ".") {
+        return true;
+    }
+    if (relStr.rfind("..", 0) == 0) {
+        return false;
+    }
+    return true;
+}
+
+std::string sanitizeStem(const std::string& stem) {
+    std::string out;
+    out.reserve(stem.size());
+    for (unsigned char ch : stem) {
+        if (std::isalnum(ch) || ch == '-' || ch == '_' || ch == '.') {
+            out.push_back(static_cast<char>(ch));
+        } else {
+            out.push_back('_');
+        }
+    }
+    if (out.empty()) {
+        out = "extension";
+    }
+    return out;
+}
+
+std::string escapePowerShellSingleQuoted(const std::string& s) {
+    std::string out;
+    out.reserve(s.size() + 8);
+    for (char c : s) {
+        out.push_back(c);
+        if (c == '\'') {
+            out.push_back('\'');
+        }
+    }
+    return out;
+}
+
+} // namespace
+
 #ifdef RAWR_QUICKJS_STUB
 
 // ============================================================================
@@ -446,6 +508,9 @@ VSCodeAPIResult QuickJSExtensionHost::loadPreInstalledExtension(const char* exte
     if (!std::filesystem::is_directory(extDir)) {
         return VSCodeAPIResult::error("loadPreInstalledExtension: not a directory");
     }
+    if (!isSubPathOf(extDir, m_extensionsDir)) {
+        return VSCodeAPIResult::error("loadPreInstalledExtension: extension path outside managed extension root");
+    }
 
     // Parse package.json
     VSCodeExtensionManifest manifest;
@@ -478,13 +543,17 @@ bool QuickJSExtensionHost::unpackVSIX(const std::string& vsixPath,
     // shell32 API. For production, integrate minizip or libzip.
 
     std::filesystem::path srcPath(vsixPath);
-    if (!std::filesystem::exists(srcPath)) {
+    if (!std::filesystem::exists(srcPath) || !std::filesystem::is_regular_file(srcPath)) {
         logError("[QuickJS Host] VSIX file not found: %s", vsixPath.c_str());
+        return false;
+    }
+    if (srcPath.extension() != ".vsix") {
+        logError("[QuickJS Host] Rejected non-VSIX package: %s", vsixPath.c_str());
         return false;
     }
 
     // Generate extraction directory from VSIX filename
-    std::string stem = srcPath.stem().string();
+    std::string stem = sanitizeStem(srcPath.stem().string());
     outExtDir = m_extensionsDir / stem;
 
     std::error_code ec;
@@ -497,10 +566,10 @@ bool QuickJSExtensionHost::unpackVSIX(const std::string& vsixPath,
     // Use PowerShell Expand-Archive for VSIX extraction
     // VSIX is a standard ZIP format
     std::string cmd = "powershell -NoProfile -ExecutionPolicy Bypass -Command "
-                      "\"Expand-Archive -Path '";
-    cmd += vsixPath;
+                      "\"Expand-Archive -LiteralPath '";
+    cmd += escapePowerShellSingleQuoted(std::filesystem::absolute(srcPath).string());
     cmd += "' -DestinationPath '";
-    cmd += outExtDir.string();
+    cmd += escapePowerShellSingleQuoted(std::filesystem::absolute(outExtDir).string());
     cmd += "' -Force\"";
 
     STARTUPINFOA si = {};
@@ -676,9 +745,17 @@ VSCodeAPIResult QuickJSExtensionHost::loadJSExtension(
         }
     }
 
+    std::filesystem::path extensionRoot(extensionPath);
+    if (!std::filesystem::is_directory(extensionRoot)) {
+        return VSCodeAPIResult::error("loadJSExtension: extension path is not a directory");
+    }
+    if (!isSubPathOf(extensionRoot, m_extensionsDir)) {
+        return VSCodeAPIResult::error("loadJSExtension: extension path outside managed extension root");
+    }
+
     // Configure sandbox with extension-specific paths
     QuickJSSandboxConfig sandbox = m_defaultSandbox;
-    sandbox.allowedReadPaths.push_back(std::filesystem::path(extensionPath));
+    sandbox.allowedReadPaths.push_back(extensionRoot);
     sandbox.allowedWritePaths.push_back(
         std::filesystem::current_path() / "globalStorage" / extensionId);
 
@@ -688,14 +765,33 @@ VSCodeAPIResult QuickJSExtensionHost::loadJSExtension(
         return VSCodeAPIResult::error("loadJSExtension: failed to create QuickJS runtime");
     }
 
-    rt->extensionPath = extensionPath;
+    rt->extensionPath = std::filesystem::weakly_canonical(extensionRoot).string();
     rt->manifest = const_cast<VSCodeExtensionManifest*>(manifest);
 
     // Resolve main script path
-    std::filesystem::path mainPath = std::filesystem::path(extensionPath) / manifest->main;
+    std::filesystem::path manifestMain = std::filesystem::path(manifest->main);
+    if (manifestMain.has_root_path()) {
+        logError("[QuickJS Host] Rejected absolute manifest main path for '%s': %s",
+                 extensionId, manifest->main.c_str());
+        destroyRuntime(rt);
+        std::lock_guard<std::mutex> lock(m_runtimesMutex);
+        m_runtimes.erase(extensionId);
+        return VSCodeAPIResult::error("loadJSExtension: manifest main must be relative");
+    }
+
+    std::filesystem::path mainPath = extensionRoot / manifestMain;
     // Add .js extension if not present
     if (mainPath.extension().empty()) {
         mainPath += ".js";
+    }
+
+    if (!isSubPathOf(mainPath, extensionRoot)) {
+        logError("[QuickJS Host] Rejected out-of-root main path for '%s': %s",
+                 extensionId, mainPath.string().c_str());
+        destroyRuntime(rt);
+        std::lock_guard<std::mutex> lock(m_runtimesMutex);
+        m_runtimes.erase(extensionId);
+        return VSCodeAPIResult::error("loadJSExtension: main script escapes extension root");
     }
 
     if (!std::filesystem::exists(mainPath)) {

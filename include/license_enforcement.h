@@ -188,19 +188,16 @@ private:
 };
 
 // ============================================================================
-// Convenience Macros — subsystem-level enforcement
+// Inline enforcement helpers — type-safe replacements for macro wrappers
 // ============================================================================
-#define ENFORCE_FEATURE(feature) \
-    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow( \
-        RawrXD::License::FeatureID::feature, __FUNCTION__)) return
+inline bool enforceFeatureCheck(RawrXD::License::FeatureID id, const char* caller) {
+    return RawrXD::Enforce::LicenseEnforcer::Instance().allow(id, caller);
+}
 
-#define ENFORCE_FEATURE_BOOL(feature) \
-    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow( \
-        RawrXD::License::FeatureID::feature, __FUNCTION__)) return false
-
-#define ENFORCE_FEATURE_NULL(feature) \
-    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow( \
-        RawrXD::License::FeatureID::feature, __FUNCTION__)) return nullptr
+// Use enforceFeatureCheck() directly instead of macro wrappers:
+//   if (!enforceFeatureCheck(RawrXD::License::FeatureID::MyFeature, __FUNCTION__)) return;
+//   if (!enforceFeatureCheck(RawrXD::License::FeatureID::MyFeature, __FUNCTION__)) return false;
+//   if (!enforceFeatureCheck(RawrXD::License::FeatureID::MyFeature, __FUNCTION__)) return nullptr;
 
 // ============================================================================
 // Backing implementation check — 21 enterprise features are license-gated but

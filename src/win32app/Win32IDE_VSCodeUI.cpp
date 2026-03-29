@@ -7,10 +7,6 @@
 #include <richedit.h>
 #include <sstream>
 #include <iomanip>
-<<<<<<< HEAD
-=======
-#include <iostream>
->>>>>>> origin/main
 #include <fstream>
 #include <map>
 
@@ -29,25 +25,6 @@
 // SCAFFOLD_002: Activity bar and primary sidebar layout
 
 
-<<<<<<< HEAD
-=======
-// Win32-native debug logging (replaces Qt qInfo/qDebug/qWarning)
-#ifndef RAWRXD_LOG_INFO
-#define RAWRXD_LOG_INFO(msg) do { \
-    std::ostringstream _oss; _oss << "[INFO] " << msg << "\n"; \
-    OutputDebugStringA(_oss.str().c_str()); \
-    std::cout << _oss.str(); \
-} while(0)
-#endif
-#ifndef RAWRXD_LOG_WARNING
-#define RAWRXD_LOG_WARNING(msg) do { \
-    std::ostringstream _oss; _oss << "[WARN] " << msg << "\n"; \
-    OutputDebugStringA(_oss.str().c_str()); \
-    std::cerr << _oss.str(); \
-} while(0)
-#endif
-
->>>>>>> origin/main
 // Define GET_X_LPARAM and GET_Y_LPARAM if not available
 #ifndef GET_X_LPARAM
 #define GET_X_LPARAM(lp) ((int)(short)LOWORD(lp))
@@ -80,6 +57,8 @@
 #define IDC_COPILOT_CHAT_OUTPUT 1203
 #define IDC_COPILOT_SEND_BTN 1204
 #define IDC_COPILOT_CLEAR_BTN 1205
+#define IDC_MODEL_SELECTOR 1208
+#define IDC_MODEL_BROWSE_BTN 1209
 
 // Panel IDs
 #define IDC_PANEL_CONTAINER 1300
@@ -253,6 +232,15 @@ LRESULT CALLBACK Win32IDE::ActivityBarButtonProc(HWND hwnd, UINT uMsg, WPARAM wP
 
 void Win32IDE::createSecondarySidebar(HWND hwndParent)
 {
+    // NOTE: The authoritative chat panel is created by createChatPanel() (Win32IDE.cpp),
+    // called from Win32IDE_Core.cpp::onCreate().  This function is retained for
+    // source compatibility only and is NOT called in the active build path.
+    // All chat control layout, SidebarProcImpl installation, and model selector
+    // population live in createChatPanel() — edit that function, not this one.
+    (void)hwndParent;
+    return;
+
+#if 0  // Dead path — kept for reference only
     m_secondarySidebarVisible = true;
     m_secondarySidebarWidth = 320;
     
@@ -262,6 +250,12 @@ void Win32IDE::createSecondarySidebar(HWND hwndParent)
         WS_CHILD | WS_VISIBLE,
         0, 0, m_secondarySidebarWidth, 600,
         hwndParent, (HMENU)IDC_SECONDARY_SIDEBAR, m_hInstance, nullptr);
+
+    if (m_hwndSecondarySidebar)
+    {
+        SetWindowLongPtrA(m_hwndSecondarySidebar, GWLP_USERDATA, (LONG_PTR)this);
+        m_oldSidebarProc = (WNDPROC)SetWindowLongPtrA(m_hwndSecondarySidebar, GWLP_WNDPROC, (LONG_PTR)SidebarProc);
+    }
     
     // Header label
     m_hwndSecondarySidebarHeader = CreateWindowExA(
@@ -269,12 +263,45 @@ void Win32IDE::createSecondarySidebar(HWND hwndParent)
         WS_CHILD | WS_VISIBLE | SS_LEFT | SS_CENTERIMAGE,
         0, 0, m_secondarySidebarWidth, 28,
         m_hwndSecondarySidebar, (HMENU)IDC_SECONDARY_SIDEBAR_HEADER, m_hInstance, nullptr);
+
+    HWND hModelLabel = CreateWindowExA(
+        0, "STATIC", "Model:",
+        WS_CHILD | WS_VISIBLE | SS_LEFT | SS_CENTERIMAGE,
+        5, 32, 50, 20,
+        m_hwndSecondarySidebar, nullptr, m_hInstance, nullptr);
+
+    m_hwndModelSelector = CreateWindowExA(
+        0, "COMBOBOX", "",
+        WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL,
+        60, 32, m_secondarySidebarWidth - 145, 280,
+        m_hwndSecondarySidebar, (HMENU)IDC_MODEL_SELECTOR, m_hInstance, nullptr);
+
+    HWND hBrowseBtn = CreateWindowExA(
+        0, "BUTTON", "Browse...",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        m_secondarySidebarWidth - 80, 32, 75, 22,
+        m_hwndSecondarySidebar, (HMENU)IDC_MODEL_BROWSE_BTN, m_hInstance, nullptr);
+
+    if (m_hFontUI)
+    {
+        if (hModelLabel)
+            SendMessage(hModelLabel, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
+        if (m_hwndModelSelector)
+            SendMessage(m_hwndModelSelector, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
+        if (hBrowseBtn)
+            SendMessage(hBrowseBtn, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
+    }
+
+    if (m_hwndModelSelector)
+    {
+        populateModelSelector();
+    }
     
     // Chat output area (read-only rich edit for formatted messages)
     m_hwndCopilotChatOutput = CreateWindowExA(
         WS_EX_CLIENTEDGE, "EDIT", "",
         WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL,
-        5, 32, m_secondarySidebarWidth - 10, 450,
+        5, 60, m_secondarySidebarWidth - 10, 422,
         m_hwndSecondarySidebar, (HMENU)IDC_COPILOT_CHAT_OUTPUT, m_hInstance, nullptr);
     
     // Chat input area
@@ -311,12 +338,18 @@ void Win32IDE::createSecondarySidebar(HWND hwndParent)
 
     // If the full chat panel added mode toggles elsewhere, this path has none — safe no-op when null.
     syncAgentModeUiFromBridge();
+#endif  // Dead path end
 }
 
 // Implemented in src/win32app/Win32IDE_Sidebar.cpp (avoid duplicate definition / LNK2005).
 
 void Win32IDE::updateSecondarySidebarContent()
 {
+    // If history is empty the welcome banner (set by clearCopilotChat) is already
+    // in the output control — leave it untouched so it doesn't get overwritten
+    // by an empty render pass.
+    if (m_chatHistory.empty()) return;
+
     // Update chat display with history + tool action status + working bubbles
     std::string chatText;
     for (size_t i = 0; i < m_chatHistory.size(); ++i) {
@@ -349,82 +382,6 @@ void Win32IDE::updateSecondarySidebarContent()
     SendMessage(m_hwndCopilotChatOutput, EM_SCROLLCARET, 0, 0);
 }
 
-void Win32IDE::sendCopilotMessage(const std::string& message)
-{
-    if (message.empty()) return;
-    
-<<<<<<< HEAD
-    RAWRXD_LOG_INFO("Win32IDE_VSCodeUI") << "=== SEND MESSAGE CLICKED ===";
-    RAWRXD_LOG_INFO("Win32IDE_VSCodeUI") << "[sendCopilotMessage] Message: " << message;
-=======
-    RAWRXD_LOG_INFO("=== SEND MESSAGE CLICKED ===");
-    RAWRXD_LOG_INFO("[sendCopilotMessage] Message: " << message);
->>>>>>> origin/main
-    
-    // Add user message to history
-    m_chatHistory.push_back({"user", message});
-    
-    // Generate response using the AI inference system
-    std::string response;
-    
-    if (isModelLoaded()) {
-<<<<<<< HEAD
-        RAWRXD_LOG_INFO("Win32IDE_VSCodeUI") << "[sendCopilotMessage] Model is loaded, calling generateResponse...";
-        // Use the loaded GGUF model for inference
-        response = generateResponse(message);
-        RAWRXD_LOG_INFO("Win32IDE_VSCodeUI") << "[sendCopilotMessage] Inference response: " << response;
-    } else {
-        // No model loaded - prompt user to load one
-        RAWRXD_LOG_WARNING("Win32IDE_VSCodeUI") << "[sendCopilotMessage] No model loaded!";
-=======
-        RAWRXD_LOG_INFO("[sendCopilotMessage] Model is loaded, calling generateResponse...");
-        // Use the loaded GGUF model for inference
-        response = generateResponse(message);
-        RAWRXD_LOG_INFO("[sendCopilotMessage] Inference response: " << response);
-    } else {
-        // No model loaded - prompt user to load one
-        RAWRXD_LOG_WARNING("[sendCopilotMessage] No model loaded!");
->>>>>>> origin/main
-        response = "⚠️ No AI model loaded.\r\n\r\n"
-                   "To use AI assistance, please load a GGUF model:\r\n"
-                   "1. Open the File Explorer (Activity Bar → Explorer icon)\r\n"
-                   "2. Navigate to a folder containing .gguf files\r\n"
-                   "3. Double-click a model file to load it\r\n\r\n"
-                   "Supported models: LLaMA, Mistral, Phi, Qwen, and other GGUF-compatible models.\r\n\r\n"
-                   "Once loaded, I can help with:\r\n"
-                   "• Code explanation and analysis\r\n"
-                   "• Bug fixing suggestions\r\n"
-                   "• Code generation\r\n"
-                   "• Programming questions";
-    }
-    
-    m_chatHistory.push_back({"assistant", response});
-
-    // Store accumulated tool actions for this response
-    if (m_currentToolActions.totalActions() > 0) {
-        size_t msgIdx = m_chatHistory.size() - 1;
-        m_chatToolActions[msgIdx] = m_currentToolActions.actions();
-        // Add "Finished" summary action
-        m_chatToolActions[msgIdx].push_back(
-            RawrXD::UI::ToolActionStatus::FinishedAction(m_currentToolActions.totalActions()));
-        m_currentToolActions.clear();
-    }
-
-<<<<<<< HEAD
-    RAWRXD_LOG_INFO("Win32IDE_VSCodeUI") << "[sendCopilotMessage] Added response to history, updating UI...";
-    RAWRXD_LOG_INFO("Win32IDE_VSCodeUI") << "=== SEND MESSAGE END ===";
-=======
-    RAWRXD_LOG_INFO("[sendCopilotMessage] Added response to history, updating UI...");
-    RAWRXD_LOG_INFO("=== SEND MESSAGE END ===");
->>>>>>> origin/main
-    
-    // Update display
-    updateSecondarySidebarContent();
-    
-    // Clear input
-    SetWindowTextA(m_hwndCopilotChatInput, "");
-}
-
 void Win32IDE::clearCopilotChat()
 {
     m_chatHistory.clear();
@@ -440,134 +397,42 @@ void Win32IDE::appendCopilotResponse(const std::string& response)
     updateSecondarySidebarContent();
 }
 
-LRESULT CALLBACK Win32IDE::SecondarySidebarProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-    Win32IDE* pThis = (Win32IDE*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
-    
-    switch (uMsg) {
-    case WM_CTLCOLORSTATIC:
-    case WM_CTLCOLOREDIT:
-        {
-            HDC hdc = (HDC)wParam;
-            SetBkColor(hdc, VSCODE_SIDEBAR_BG);
-            SetTextColor(hdc, RGB(204, 204, 204));
-            static HBRUSH hBrush = CreateSolidBrush(VSCODE_SIDEBAR_BG);
-            return (LRESULT)hBrush;
-        }
-    }
-    
-    return DefWindowProc(hwnd, uMsg, wParam, lParam);
-}
+// WM_APP+550 — posted from background inference thread once a chat response is ready.
+// lParam = heap-allocated std::string* (owned by message; receiver must delete).
+#define WM_CHAT_RESPONSE (WM_APP + 550)
 
-// ============================================================================
-// Panel (Bottom) - Terminal, Output, Problems, Debug Console
-// ============================================================================
-
-void Win32IDE::createPanel(HWND hwndParent)
+void Win32IDE::sendCopilotMessage(const std::string& message)
 {
-    m_panelVisible = true;
-    m_panelMaximized = false;
-    m_panelHeight = 250;
-    m_activePanelTab = PanelTab::Terminal;
-    m_errorCount = 0;
-    m_warningCount = 0;
-    
-    // Create panel container
-    m_hwndPanelContainer = CreateWindowExA(
-        0, "STATIC", "",
-        WS_CHILD | WS_VISIBLE,
-        0, 0, 800, m_panelHeight,
-        hwndParent, (HMENU)IDC_PANEL_CONTAINER, m_hInstance, nullptr);
-    
-    // Create tab control for panel views
-    m_hwndPanelTabs = CreateWindowExA(
-        0, WC_TABCONTROLA, "",
-        WS_CHILD | WS_VISIBLE | TCS_TABS | TCS_FOCUSNEVER,
-        0, 0, 400, 24,
-        m_hwndPanelContainer, (HMENU)IDC_PANEL_TABS, m_hInstance, nullptr);
-    
-    // Add tabs: Terminal, Output, Problems, Debug Console
-    TCITEMA tie = { TCIF_TEXT };
-    tie.pszText = const_cast<char*>("TERMINAL");
-    TabCtrl_InsertItem(m_hwndPanelTabs, 0, &tie);
-    tie.pszText = const_cast<char*>("OUTPUT");
-    TabCtrl_InsertItem(m_hwndPanelTabs, 1, &tie);
-    tie.pszText = const_cast<char*>("PROBLEMS");
-    TabCtrl_InsertItem(m_hwndPanelTabs, 2, &tie);
-    tie.pszText = const_cast<char*>("DEBUG CONSOLE");
-    TabCtrl_InsertItem(m_hwndPanelTabs, 3, &tie);
-    
-    // Create panel toolbar (right side)
-    m_hwndPanelToolbar = CreateWindowExA(
-        0, "STATIC", "",
-        WS_CHILD | WS_VISIBLE,
-        400, 0, 200, 24,
-        m_hwndPanelContainer, (HMENU)IDC_PANEL_TOOLBAR, m_hInstance, nullptr);
-    
-    // Toolbar buttons
-    m_hwndPanelNewTerminalBtn = CreateWindowExA(
-        0, "BUTTON", "+",
-        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        0, 0, 24, 22,
-        m_hwndPanelToolbar, (HMENU)IDC_PANEL_BTN_NEW_TERMINAL, m_hInstance, nullptr);
-    
-    m_hwndPanelSplitTerminalBtn = CreateWindowExA(
-        0, "BUTTON", "||",
-        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        26, 0, 24, 22,
-        m_hwndPanelToolbar, (HMENU)IDC_PANEL_BTN_SPLIT_TERMINAL, m_hInstance, nullptr);
-    
-    m_hwndPanelKillTerminalBtn = CreateWindowExA(
-        0, "BUTTON", "X",
-        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        52, 0, 24, 22,
-        m_hwndPanelToolbar, (HMENU)IDC_PANEL_BTN_KILL_TERMINAL, m_hInstance, nullptr);
-    
-    m_hwndPanelMaximizeBtn = CreateWindowExA(
-        0, "BUTTON", "^",
-        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        130, 0, 24, 22,
-        m_hwndPanelToolbar, (HMENU)IDC_PANEL_BTN_MAXIMIZE, m_hInstance, nullptr);
-    
-    m_hwndPanelCloseBtn = CreateWindowExA(
-        0, "BUTTON", "x",
-        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        156, 0, 24, 22,
-        m_hwndPanelToolbar, (HMENU)IDC_PANEL_BTN_CLOSE, m_hInstance, nullptr);
-    
-    // Create Problems list view
-    m_hwndProblemsListView = CreateWindowExA(
-        WS_EX_CLIENTEDGE, WC_LISTVIEWA, "",
-        WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS,
-        0, 26, 800, m_panelHeight - 26,
-        m_hwndPanelContainer, (HMENU)IDC_PANEL_PROBLEMS_LIST, m_hInstance, nullptr);
-    
-    // Add columns to Problems list
-    LVCOLUMNA lvc = { 0 };
-    lvc.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;
-    
-    lvc.pszText = const_cast<char*>("Severity");
-    lvc.cx = 70;
-    lvc.iSubItem = 0;
-    ListView_InsertColumn(m_hwndProblemsListView, 0, &lvc);
-    
-    lvc.pszText = const_cast<char*>("Message");
-    lvc.cx = 400;
-    lvc.iSubItem = 1;
-    ListView_InsertColumn(m_hwndProblemsListView, 1, &lvc);
-    
-    lvc.pszText = const_cast<char*>("File");
-    lvc.cx = 200;
-    lvc.iSubItem = 2;
-    ListView_InsertColumn(m_hwndProblemsListView, 2, &lvc);
-    
-    lvc.pszText = const_cast<char*>("Line");
-    lvc.cx = 60;
-    lvc.iSubItem = 3;
-    ListView_InsertColumn(m_hwndProblemsListView, 3, &lvc);
-    
-    // Initially show terminal, hide problems list
-    ShowWindow(m_hwndProblemsListView, SW_HIDE);
+    if (message.empty()) return;
+
+    RAWRXD_LOG_INFO("Win32IDE_VSCodeUI") << "=== SEND MESSAGE ===";
+
+    // Show user turn and a "Thinking…" placeholder immediately so the UI reacts at click time.
+    m_chatHistory.push_back({"user", message});
+    m_chatHistory.push_back({"assistant", "\u23F3 Thinking\u2026"});
+    updateSecondarySidebarContent();
+
+    // Clear the input field immediately so the user can start composing a follow-up.
+    SetWindowTextA(m_hwndCopilotChatInput, "");
+
+    // Run inference on a background thread to keep the UI responsive.
+    // When done, post WM_CHAT_RESPONSE to the sidebar so SidebarProcImpl
+    // replaces the placeholder on the UI thread.
+    HWND hSidebar = m_hwndSecondarySidebar;
+    std::thread([this, hSidebar, message]() {
+        AgentResponse ar = sendMessageToModel(message);
+        std::string response = ar.content;
+        if (response.empty())
+            response = "\u26A0\uFE0F No response generated by the current backend.";
+
+        // Prepend executor label so the UI shows which backend handled the request
+        if (!ar.executorLabel.empty())
+            response = "[Executor: " + ar.executorLabel + "]\n" + response;
+
+        RAWRXD_LOG_INFO("Win32IDE_VSCodeUI") << "[sendCopilotMessage] response ready, length=" << response.size();
+        // Ownership of the heap string transfers to the message recipient.
+        PostMessage(hSidebar, WM_CHAT_RESPONSE, 0, (LPARAM)(new std::string(response)));
+    }).detach();
 }
 
 void Win32IDE::togglePanel()
@@ -843,11 +708,14 @@ void Win32IDE::updateEnhancedStatusBar()
     SendMessageA(m_hwndStatusBar, SB_SETTEXTA, 10, (LPARAM)m_statusBarInfo.languageMode.c_str());
     
     // Part 11: Copilot status
-    // Part 11: Backend / AI status — initial render (IDT_GPU_TELEMETRY refreshes live counters)
+    // Part 11: Backend / AI status + readiness beacon
     {
         std::string backendText = getActiveBackendName();
         if (!m_statusBarInfo.copilotActive)
             backendText += " (off)";
+        bool modelReady = isModelLoaded();
+        bool agentReady = static_cast<bool>(m_agenticBridge);
+        backendText += std::string(" | Beacon:") + ((modelReady && agentReady) ? "READY" : "DEGRADED");
         SendMessageA(m_hwndStatusBar, SB_SETTEXTA, 11, (LPARAM)backendText.c_str());
     }
 }

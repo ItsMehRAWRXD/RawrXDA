@@ -60,11 +60,7 @@ std::string Win32IDE::executePowerShellCommand(const std::string& command, bool 
     cmdBuf.push_back('\0');
 
     PROCESS_INFORMATION pi = {};
-<<<<<<< HEAD
     if (CreateProcessA(NULL, cmdBuf.data(), NULL, NULL, TRUE, 
-=======
-    if (CreateProcessA(NULL, const_cast<char*>(fullCmd.c_str()), NULL, NULL, TRUE, 
->>>>>>> origin/main
                        CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
         CloseHandle(hStdOutWrite);
         

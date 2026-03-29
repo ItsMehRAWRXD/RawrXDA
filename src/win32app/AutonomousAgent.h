@@ -198,6 +198,9 @@ public:
     bool IsHealthy() const;
     DWORD GetActiveDigestionTaskId() const { return m_activeDigestionTask; }
     
+    // State Recording
+    void RecordLastKnownGoodState(BeaconType type);
+    
     // Utility
     static std::string BeaconTypeToString(BeaconType type);
     static std::string AgentStateToString(AgentState state);
@@ -220,7 +223,6 @@ private:
     
     // State Management
     void TransitionToState(AgentState newState);
-    void RecordLastKnownGoodState(BeaconType type);
     bool CanAttemptRecovery() const;
     
     // IDE Process Monitoring
@@ -347,13 +349,30 @@ namespace AgentUtils {
     void OutputAgentLog(const std::string& message);
 }
 
-// Global Helper Macros
-#define AGENT_BEACON(type) AutonomousAgent::Instance()->EmitBeacon(type)
-#define AGENT_BEACON_MSG(type, msg) AutonomousAgent::Instance()->EmitBeacon(type, S_OK, msg)
-#define AGENT_BEACON_ERR(type, hr, msg) AutonomousAgent::Instance()->EmitBeacon(type, hr, msg)
-#define AGENT_CHECKPOINT() AutonomousAgent::Instance()->RecordLastKnownGoodState(__FUNCTION__)
+// Inline helper functions
+inline void AgentBeacon(BeaconType type) {
+    AutonomousAgent::Instance()->EmitBeacon(type);
+}
+inline void AgentBeaconMsg(BeaconType type, const std::string& msg) {
+    AutonomousAgent::Instance()->EmitBeacon(type, S_OK, msg);
+}
+inline void AgentBeaconErr(BeaconType type, HRESULT hr, const std::string& msg) {
+    AutonomousAgent::Instance()->EmitBeacon(type, hr, msg);
+}
+inline void AgentCheckpointImpl() {
+    AutonomousAgent::Instance()->EmitBeacon(BeaconType::MONITORING, S_OK, "checkpoint");
+}
+inline bool AgentValidateHealth() {
+    return AutonomousAgent::Instance()->IsHealthy();
+}
 
-// Error Recovery Macros
+// Backward-compat macro aliases
+#define AGENT_BEACON(type) AgentBeacon(type)
+#define AGENT_BEACON_MSG(type, msg) AgentBeaconMsg(type, msg)
+#define AGENT_BEACON_ERR(type, hr, msg) AgentBeaconErr(type, hr, msg)
+#define AGENT_CHECKPOINT() AgentCheckpointImpl()
+
+// Error Recovery Macros — AGENT_TRY must remain a macro (uses #expr stringification)
 #define AGENT_TRY(expr) do { \
     HRESULT _hr = (expr); \
     if (FAILED(_hr)) { \
@@ -364,8 +383,8 @@ namespace AgentUtils {
     } \
 } while(0)
 
-// Health Check Macros
-#define AGENT_VALIDATE_HEALTH() AutonomousAgent::Instance()->IsHealthy()
-#define AGENT_ENSURE_HEALTH() if (!AGENT_VALIDATE_HEALTH()) { \
+// Health Check — inline function + macro alias
+#define AGENT_VALIDATE_HEALTH() AgentValidateHealth()
+#define AGENT_ENSURE_HEALTH() if (!AgentValidateHealth()) { \
     AutonomousAgent::Instance()->EnterDiagnosticMode(); \
 }

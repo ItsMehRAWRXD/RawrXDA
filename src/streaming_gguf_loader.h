@@ -58,6 +58,9 @@ public:
     std::vector<std::string> GetAllZones() const;
     std::vector<TensorInfo> GetAllTensorInfo() const override;
     uint64_t GetCurrentMemoryUsage() const override;
+    GGUFLoadState GetLoadState() const override;
+    uint64_t GetMappedMemoryBytes() const override;
+    bool IsMetadataOnly() const override;
     
     // Internal access for debugging
     TensorZoneInfo GetZoneInfo(const std::string& zone_name) const;

@@ -58,8 +58,54 @@ bool AgenticConfiguration::loadFromEnv(const std::string& filePath)
 
 bool AgenticConfiguration::loadFromYaml(const std::string& filePath)
 {
-    std::cerr << "[AgenticConfiguration] YAML loading not implemented" << std::endl;
-    return false;
+    try {
+        std::ifstream file(filePath);
+        if (!file.is_open()) {
+            std::cerr << "[AgenticConfiguration] Cannot open YAML file: " << filePath << std::endl;
+            return false;
+        }
+        std::string line;
+        std::string currentSection;
+        while (std::getline(file, line)) {
+            // Skip empty lines and comments
+            if (line.empty() || line[0] == '#') continue;
+
+            // Trim trailing whitespace
+            size_t end = line.find_last_not_of(" \t\r\n");
+            if (end != std::string::npos) line = line.substr(0, end + 1);
+
+            // Detect indentation level (2-space indent = nested key)
+            size_t indent = 0;
+            while (indent < line.size() && line[indent] == ' ') indent++;
+            std::string trimmed = line.substr(indent);
+
+            // Find colon separator
+            size_t colonIdx = trimmed.find(':');
+            if (colonIdx == std::string::npos) continue;
+
+            std::string key = trimmed.substr(0, colonIdx);
+            std::string value = (colonIdx + 1 < trimmed.size()) ? trimmed.substr(colonIdx + 1) : "";
+
+            // Trim leading whitespace from value
+            size_t valStart = value.find_first_not_of(" \t");
+            if (valStart != std::string::npos) value = value.substr(valStart);
+            else value.clear();
+
+            if (indent == 0 && value.empty()) {
+                // Section header (e.g. "agentic:")
+                currentSection = key;
+                continue;
+            }
+
+            // Build full key with section prefix
+            std::string fullKey = currentSection.empty() ? key : (currentSection + "." + key);
+            m_config[fullKey] = ConfigValue{ConfigType::String, value, false, "", std::string(""), false, {}};
+        }
+        return true;
+    } catch (...) {
+        std::cerr << "[AgenticConfiguration] Exception during YAML loading" << std::endl;
+        return false;
+    }
 }
 
 void AgenticConfiguration::loadDefaults()

@@ -125,6 +125,8 @@ static void appendCrashManifest(const char* dir, const CrashReport* report) {
 // ============================================================================
 
 static bool writeMiniDump(const char* path, EXCEPTION_POINTERS* ep, DWORD dumpType) {
+    if (!path || !path[0]) return false;
+
     HMODULE hDbgHelp = LoadLibraryA("dbghelp.dll");
     if (!hDbgHelp) return false;
 
@@ -141,13 +143,22 @@ static bool writeMiniDump(const char* path, EXCEPTION_POINTERS* ep, DWORD dumpTy
         return false;
     }
 
-    MINIDUMP_EXCEPTION_INFO_MANUAL mei;
-    mei.ThreadId = GetCurrentThreadId();
-    mei.ExceptionPointers = ep;
-    mei.ClientPointers = FALSE;
+    MINIDUMP_EXCEPTION_INFO_MANUAL mei{};
+    MINIDUMP_EXCEPTION_INFO_MANUAL* meiPtr = nullptr;
+    if (ep && ep->ExceptionRecord && ep->ContextRecord) {
+        mei.ThreadId = GetCurrentThreadId();
+        mei.ExceptionPointers = ep;
+        mei.ClientPointers = FALSE;
+        meiPtr = &mei;
+    }
 
-    BOOL ok = pWriteDump(GetCurrentProcess(), GetCurrentProcessId(),
-                         hFile, (DWORD)dumpType, &mei, nullptr, nullptr);
+    BOOL ok = FALSE;
+    __try {
+        ok = pWriteDump(GetCurrentProcess(), GetCurrentProcessId(),
+                        hFile, (DWORD)dumpType, meiPtr, nullptr, nullptr);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        ok = FALSE;
+    }
 
     CloseHandle(hFile);
     FreeLibrary(hDbgHelp);
@@ -271,34 +282,36 @@ static LONG WINAPI CathedralCrashFilter(EXCEPTION_POINTERS* ep) {
     CrashReport& report = g_lastReport;
     memset(&report, 0, sizeof(report));
 
-    report.exceptionCode = ep->ExceptionRecord->ExceptionCode;
-    report.exceptionAddress = ep->ExceptionRecord->ExceptionAddress;
-    report.rip = ep->ContextRecord->Rip;
-    report.rsp = ep->ContextRecord->Rsp;
-    report.rbp = ep->ContextRecord->Rbp;
+    report.exceptionCode = (ep && ep->ExceptionRecord) ? ep->ExceptionRecord->ExceptionCode : 0xE0000001u;
+    report.exceptionAddress = (ep && ep->ExceptionRecord) ? ep->ExceptionRecord->ExceptionAddress : nullptr;
+    if (ep && ep->ContextRecord) {
+        report.rip = ep->ContextRecord->Rip;
+        report.rsp = ep->ContextRecord->Rsp;
+        report.rbp = ep->ContextRecord->Rbp;
+
+        // Save all 16 GP registers
+        report.registers[0]  = ep->ContextRecord->Rax;
+        report.registers[1]  = ep->ContextRecord->Rbx;
+        report.registers[2]  = ep->ContextRecord->Rcx;
+        report.registers[3]  = ep->ContextRecord->Rdx;
+        report.registers[4]  = ep->ContextRecord->Rsi;
+        report.registers[5]  = ep->ContextRecord->Rdi;
+        report.registers[6]  = ep->ContextRecord->R8;
+        report.registers[7]  = ep->ContextRecord->R9;
+        report.registers[8]  = ep->ContextRecord->R10;
+        report.registers[9]  = ep->ContextRecord->R11;
+        report.registers[10] = ep->ContextRecord->R12;
+        report.registers[11] = ep->ContextRecord->R13;
+        report.registers[12] = ep->ContextRecord->R14;
+        report.registers[13] = ep->ContextRecord->R15;
+    }
     report.threadId = GetCurrentThreadId();
     report.processId = GetCurrentProcessId();
     report.timestampMs = getCurrentTimestampMs();
-
-    // Save all 16 GP registers
-    report.registers[0]  = ep->ContextRecord->Rax;
-    report.registers[1]  = ep->ContextRecord->Rbx;
-    report.registers[2]  = ep->ContextRecord->Rcx;
-    report.registers[3]  = ep->ContextRecord->Rdx;
-    report.registers[4]  = ep->ContextRecord->Rsi;
-    report.registers[5]  = ep->ContextRecord->Rdi;
-    report.registers[6]  = ep->ContextRecord->R8;
-    report.registers[7]  = ep->ContextRecord->R9;
-    report.registers[8]  = ep->ContextRecord->R10;
-    report.registers[9]  = ep->ContextRecord->R11;
-    report.registers[10] = ep->ContextRecord->R12;
-    report.registers[11] = ep->ContextRecord->R13;
-    report.registers[12] = ep->ContextRecord->R14;
-    report.registers[13] = ep->ContextRecord->R15;
     // Remaining slots reserved
 
     // Faulting module
-    findFaultingModule(ep->ExceptionRecord->ExceptionAddress,
+    findFaultingModule(report.exceptionAddress ? report.exceptionAddress : (void*)&CathedralCrashFilter,
                        report.moduleName, sizeof(report.moduleName));
 
     // Patch state
@@ -328,7 +341,9 @@ static LONG WINAPI CathedralCrashFilter(EXCEPTION_POINTERS* ep) {
             case DumpType::Full:   dumpType = MINIDUMP_WITH_FULL_MEM; break;
         }
 
-        writeMiniDump(report.dumpPath, ep, dumpType);
+        if (!writeMiniDump(report.dumpPath, ep, dumpType)) {
+            report.dumpPath[0] = '\0';
+        }
     }
 
     // 3. Write crash log

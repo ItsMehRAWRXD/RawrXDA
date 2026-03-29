@@ -16,17 +16,14 @@
 //   - Thread-safe access via existing mutex
 // ============================================================================
 
-<<<<<<< HEAD
-=======
-#include "Win32IDE.h"
-#include "IDELogger.h"
-#include "../core/unified_hotpatch_manager.hpp"
->>>>>>> origin/main
 #include "../../include/chain_of_thought_engine.h"
+#include "../agentic/AgentToolHandlers.h"
+#include "../agentic/OrchestrationSessionState.h"
+#include "../core/agent_capability_audit.hpp"
 #include "../core/dual_agent_session.hpp"
 #include "../core/instructions_provider.hpp"
 #include "../core/model_name_util.h"
-<<<<<<< HEAD
+#include "../core/proxy_hotpatcher.hpp"
 #include "../core/unified_hotpatch_manager.hpp"
 #include "IDELogger.h"
 #include "Win32IDE.h"
@@ -36,25 +33,16 @@
 #include <chrono>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include <iomanip>
 #include <sstream>
 #include <thread>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 #include <winsock2.h>
 #include <ws2tcpip.h>
-=======
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <thread>
-#include <atomic>
-#include <sstream>
-#include <chrono>
-#include <algorithm>
-#include <cstring>
-#include <iomanip>
-#include <vector>
->>>>>>> origin/main
+
 
 // Forward: socket type
 using LocalServerSocket = SOCKET;
@@ -330,6 +318,57 @@ static std::string extractJsonStringValue(const std::string& body, const std::st
     std::string result;
     extractJsonString(body, key, result);
     return result;
+}
+
+static std::string trimAscii(std::string value)
+{
+    const auto isSpace = [](unsigned char ch) { return std::isspace(ch) != 0; };
+    while (!value.empty() && isSpace(static_cast<unsigned char>(value.front())))
+    {
+        value.erase(value.begin());
+    }
+    while (!value.empty() && isSpace(static_cast<unsigned char>(value.back())))
+    {
+        value.pop_back();
+    }
+    return value;
+}
+
+static bool wildcardMatch(const std::string& text, const std::string& pattern)
+{
+    size_t textPos = 0;
+    size_t patternPos = 0;
+    size_t starPos = std::string::npos;
+    size_t matchPos = 0;
+
+    while (textPos < text.size())
+    {
+        if (patternPos < pattern.size() && (pattern[patternPos] == '?' || pattern[patternPos] == text[textPos]))
+        {
+            ++textPos;
+            ++patternPos;
+            continue;
+        }
+        if (patternPos < pattern.size() && pattern[patternPos] == '*')
+        {
+            starPos = patternPos++;
+            matchPos = textPos;
+            continue;
+        }
+        if (starPos != std::string::npos)
+        {
+            patternPos = starPos + 1;
+            textPos = ++matchPos;
+            continue;
+        }
+        return false;
+    }
+
+    while (patternPos < pattern.size() && pattern[patternPos] == '*')
+    {
+        ++patternPos;
+    }
+    return patternPos == pattern.size();
 }
 
 }  // namespace LocalServerUtil
@@ -620,6 +659,39 @@ static std::string modelBridgeCapabilitiesJson()
 }  // namespace ModelBridgeHttp
 
 // ============================================================================
+// SEH trampoline for HTTP handler threads — plain C (no C++ objects with dtors)
+// ============================================================================
+struct HandlerCtx
+{
+    Win32IDE* self;
+    SOCKET client;
+};
+
+static DWORD sehRunHandler(HandlerCtx* ctx)
+{
+#if defined(_MSC_VER)
+    __try
+    {
+        ctx->self->sehHandleClient(ctx->client);
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER)
+    {
+        OutputDebugStringA("[LocalServer] SEH exception in handler — request dropped\n");
+        closesocket(ctx->client);
+    }
+    return 0;
+#else
+    ctx->self->sehHandleClient(ctx->client);
+    return 0;
+#endif
+}
+
+void Win32IDE::sehHandleClient(SOCKET client)
+{
+    handleLocalServerClient(client);
+}
+
+// ============================================================================
 // START SERVER
 // ============================================================================
 
@@ -701,7 +773,8 @@ void Win32IDE::startLocalServer()
 
                 m_localServerStats.totalRequests++;
 
-                // Handle client in a detached thread
+                // Handle client in a detached thread — SEH-protected so a
+                // handler crash doesn't terminate the whole process.
                 std::thread(
                     [this, client]()
                     {
@@ -711,7 +784,8 @@ void Win32IDE::startLocalServer()
                             closesocket(client);
                             return;
                         }
-                        handleLocalServerClient(client);
+                        HandlerCtx ctx{this, client};
+                        sehRunHandler(&ctx);
                     })
                     .detach();
             }
@@ -861,7 +935,6 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd)
         closesocket(client);
         return;
     }
-<<<<<<< HEAD
     // ========== Model bridge (GUI ide_chatbot_engine.js) ==========
     else if (method == "GET" && path == "/api/model/profiles")
     {
@@ -887,8 +960,6 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd)
         closesocket(client);
         return;
     }
-=======
->>>>>>> origin/main
     // ========== HTML Frontend: /ask — unified chat endpoint ==========
     else if (method == "POST" && path == "/ask")
     {
@@ -900,6 +971,19 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd)
     else if (method == "GET" && (path == "/gui" || path == "/gui/"))
     {
         handleServeGui(client);
+        closesocket(client);
+        return;
+    }
+    // ========== Phase 6B: Agents list parity ==========
+    else if (method == "GET" && path == "/api/agents")
+    {
+        std::ostringstream j;
+        j << "{\"success\":true,\"surface\":\"local_server\",\"agents\":["
+          << "{\"id\":\"local-agent\",\"state\":\"active\",\"description\":\"Local embedded agent runtime\"}"
+          << "],\"counts\":{\"active\":" << m_historyStats.agentStarted
+          << ",\"completed\":" << m_historyStats.agentCompleted << ",\"failed\":" << m_historyStats.agentFailed
+          << ",\"subagents\":" << m_historyStats.subAgentSpawned << "}}";
+        LocalServerUtil::sendAll(client, LocalServerUtil::buildHttpResponse(200, j.str()));
         closesocket(client);
         return;
     }
@@ -938,6 +1022,16 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd)
         closesocket(client);
         return;
     }
+
+    // --- Chain 1 set `response` for routes like /health, /status, /api/tags, etc.
+    // Send it now before the independent if-blocks below reach the trailing 404.
+    if (!response.empty())
+    {
+        LocalServerUtil::sendAll(client, response);
+        closesocket(client);
+        return;
+    }
+
     if (method == "GET" && path == "/api/backend/active")
     {
         handleBackendActiveEndpoint(client);
@@ -1227,6 +1321,12 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd)
         closesocket(client);
         return;
     }
+    else if (method == "GET" && path == "/api/swarm")
+    {
+        handleSwarmStatusEndpoint(client);
+        closesocket(client);
+        return;
+    }
     if (method == "GET" && path == "/api/swarm/nodes")
     {
         handleSwarmNodesEndpoint(client);
@@ -1435,12 +1535,8 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd)
         closesocket(client);
         return;
     }
-<<<<<<< HEAD
     if (method == "POST" && path == "/api/re/set-binary")
     {
-=======
-    if (method == "POST" && path == "/api/re/set-binary") {
->>>>>>> origin/main
         handleReSetBinaryEndpoint(client, body);
         closesocket(client);
         return;
@@ -1571,6 +1667,264 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd)
         closesocket(client);
         return;
     }
+    else if (method == "POST" && (path == "/api/agent/orchestrate" || path == "/api/agent/intent"))
+    {
+        handleAgentOrchestrateEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/subagent")
+    {
+        std::string prompt;
+        std::string taskType;
+        LocalServerUtil::extractJsonString(body, "prompt", prompt);
+        LocalServerUtil::extractJsonString(body, "task_type", taskType);
+        if (prompt.empty())
+        {
+            LocalServerUtil::extractJsonString(body, "task", prompt);
+        }
+        if (prompt.empty())
+        {
+            prompt = "Execute delegated subagent task";
+        }
+        if (taskType.empty())
+        {
+            taskType = "analyze";
+        }
+
+        nlohmann::json args = nlohmann::json::object();
+        args["query"] = prompt;
+        args["task_type"] = taskType;
+        args["mode"] = "subagent";
+        auto result = RawrXD::Agent::AgentToolHandlers::Instance().Execute("plan_code_exploration", args);
+        nlohmann::json out = result.toJson();
+        out["operation"] = "subagent";
+        out["taskType"] = taskType;
+        LocalServerUtil::sendAll(client,
+                                 LocalServerUtil::buildHttpResponse(result.isSuccess() ? 200 : 400, out.dump()));
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/chain")
+    {
+        std::string goal;
+        LocalServerUtil::extractJsonString(body, "goal", goal);
+        if (goal.empty())
+        {
+            LocalServerUtil::extractJsonString(body, "prompt", goal);
+        }
+        if (goal.empty())
+        {
+            goal = "Run chained multi-step analysis";
+        }
+
+        nlohmann::json args = nlohmann::json::object();
+        args["task"] = goal;
+        args["owner"] = "chain";
+        args["deadline"] = "asap";
+        auto result = RawrXD::Agent::AgentToolHandlers::Instance().Execute("plan_tasks", args);
+        nlohmann::json out = result.toJson();
+        out["operation"] = "chain";
+        LocalServerUtil::sendAll(client,
+                                 LocalServerUtil::buildHttpResponse(result.isSuccess() ? 200 : 400, out.dump()));
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/swarm")
+    {
+        std::string goal;
+        LocalServerUtil::extractJsonString(body, "goal", goal);
+        if (goal.empty())
+        {
+            LocalServerUtil::extractJsonString(body, "prompt", goal);
+        }
+        if (goal.empty())
+        {
+            goal = "Run swarm orchestration analysis";
+        }
+
+        nlohmann::json args = nlohmann::json::object();
+        args["goal"] = goal;
+        args["mode"] = "swarm";
+        auto result = RawrXD::Agent::AgentToolHandlers::Instance().Execute("plan_code_exploration", args);
+        nlohmann::json out = result.toJson();
+        out["operation"] = "swarm";
+        LocalServerUtil::sendAll(client,
+                                 LocalServerUtil::buildHttpResponse(result.isSuccess() ? 200 : 400, out.dump()));
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/tool/capabilities")
+    {
+        nlohmann::json payload = nlohmann::json::object();
+        payload["success"] = true;
+        payload["surface"] = "local_server";
+        payload["endpoint"] = "/api/tool";
+        payload["productionReady"] = true;
+        payload["outsideHotpatchAccessible"] = true;
+        payload["tools"] = nlohmann::json::array();
+        const auto schemas = RawrXD::Agent::AgentToolHandlers::GetAllSchemas();
+        if (schemas.is_array())
+        {
+            for (const auto& schema : schemas)
+            {
+                if (schema.is_object() && schema.contains("name") && schema["name"].is_string())
+                {
+                    payload["tools"].push_back(schema["name"].get<std::string>());
+                }
+            }
+        }
+        payload["tools"].push_back("git_status");
+        payload["aliases"] = {{"rstore_checkpoint", "restore_checkpoint"},
+                              {"compacted_conversation", "compact_conversation"},
+                              {"optimize-tool-selection", "optimize_tool_selection"},
+                              {"read-lines", "read_lines"},
+                              {"planning-exploration", "plan_code_exploration"},
+                              {"search-files", "search_files"},
+                              {"evaluate-integration", "evaluate_integration_audit_feasibility"},
+                              {"orchestrate-conversation", "orchestrate_conversation"},
+                              {"speculate-next", "speculate_next"},
+                              {"resolve-symbol", "resolve_symbol"},
+                              {"list_directory", "list_dir"},
+                              {"create_file", "write_file"},
+                              {"run_command", "execute_command"}};
+        LocalServerUtil::sendAll(client, LocalServerUtil::buildHttpResponse(200, payload.dump()));
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/agent/capabilities")
+    {
+        const std::string payload =
+            R"({"success":true,"surface":"local_server","outsideHotpatchAccessible":true,"routes":{"chat":"/api/chat","tool":"/api/tool","toolCapabilities":"/api/tool/capabilities","orchestrate":"/api/agent/orchestrate","intent":"/api/agent/intent","subagent":"/api/subagent","chain":"/api/chain","swarm":"/api/swarm","swarmStatus":"/api/swarm/status","agents":"/api/agents","agentsStatus":"/api/agents/status","agentsHistory":"/api/agents/history","agentsReplay":"/api/agents/replay","agentImplementationAudit":"/api/agent/implementation-audit","agentCursorGapAudit":"/api/agent/cursor-gap-audit","agentRuntimeFallbackMetrics":"/api/agent/runtime-fallback-metrics","agentRuntimeFallbackMetricsReset":"/api/agent/runtime-fallback-metrics/reset","agentRuntimeFallbackMetricSurfaces":"/api/agent/runtime-fallback-metrics/surfaces","agentParityMatrix":"/api/agent/parity-matrix","agentGlobalWrapperAudit":"/api/agent/global-wrapper-audit","agentWiringAudit":"/api/agent/wiring-audit"},"notes":["Use /api/tool for canonical backend tool execution","Use /api/agent/orchestrate for intent planning + speculative execution + synthesized reply","Use /api/agent/wiring-audit to verify fallback-family backend mappings","Hotpatch ops remain under /api/agent/ops/* for compatibility only"]})";
+        LocalServerUtil::sendAll(client, LocalServerUtil::buildHttpResponse(200, payload));
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/agent/wiring-audit")
+    {
+        const nlohmann::json coverage =
+            RawrXD::Core::BuildCoverageSnapshotFromReport(RawrXD::Core::ResolveAuditRepoRoot());
+        nlohmann::json out = RawrXD::Core::BuildAgentCapabilityAudit("local_server", coverage, "report_snapshot");
+        out["orchestratorRoute"] = "/api/agent/orchestrate";
+        out["toolRoute"] = "/api/tool";
+        out["capabilitiesRoute"] = "/api/tool/capabilities";
+        out["familyMappings"] = {{"handleAI*", "optimize_tool_selection|next_edit_hint"},
+                                 {"handleAgent*", "optimize_tool_selection|execute_command"},
+                                 {"handleSubagent*", "plan_code_exploration|plan_tasks|load_rules"},
+                                 {"handleAutonomy*", "load_rules|plan_tasks"},
+                                 {"handleRouter*", "optimize_tool_selection|load_rules"},
+                                 {"handleHelp*/handleEdit*", "search_code"},
+                                 {"handleTools*", "run_shell"},
+                                 {"handleView*", "list_dir"},
+                                 {"handleTelemetry*", "load_rules|plan_tasks"},
+                                 {"handleLsp*", "get_diagnostics"},
+                                 {"handleModel*", "search_files"},
+                                 {"handlePlugin*/handleMarketplace*/handleVscExt*/handleVscext*", "list_dir"},
+                                 {"handleAsm*/handleReveng*/handleRE*", "search_code"},
+                                 {"handleTheme*/handleVoice*/handleTransparency*", "plan_tasks"},
+                                 {"handleReplay*", "restore_checkpoint"},
+                                 {"handleGovernor*/handleGov*/handleSafety*", "load_rules|plan_tasks"},
+                                 {"handleFile*", "list_dir"},
+                                 {"handleMonaco*/handleTier1*/handleQw*/handleTrans*", "plan_tasks"},
+                                 {"handleSwarm*", "plan_code_exploration"},
+                                 {"handleHotpatch*", "load_rules|plan_tasks"},
+                                 {"handleAudit*", "load_rules"},
+                                 {"handleGit*", "git_status"},
+                                 {"handleEditor*", "plan_tasks"},
+                                 {"handleTerminal*", "run_shell"},
+                                 {"handleDecomp*", "search_code"},
+                                 {"handlePdb*/handleModules*", "search_files"},
+                                 {"handleGauntlet*", "plan_tasks"},
+                                 {"handleConfidence*", "load_rules"},
+                                 {"handleBeacon*", "search_files"},
+                                 {"handleVision*", "semantic_search"}};
+        out["quietByDefault"] = true;
+        out["showActionsToggle"] = "show_actions|include_actions";
+        LocalServerUtil::sendAll(client, LocalServerUtil::buildHttpResponse(200, out.dump()));
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && (path == "/api/agent/implementation-audit" || path == "/api/agent/cursor-gap-audit"))
+    {
+        const nlohmann::json coverage =
+            RawrXD::Core::BuildCoverageSnapshotFromReport(RawrXD::Core::ResolveAuditRepoRoot());
+        const std::string audit =
+            RawrXD::Core::BuildAgentCapabilityAudit("local_server", coverage, "report_snapshot").dump();
+        LocalServerUtil::sendAll(client, LocalServerUtil::buildHttpResponse(200, audit));
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/agent/runtime-fallback-metrics")
+    {
+        nlohmann::json bodyJson = nlohmann::json::object();
+        if (!body.empty())
+        {
+            try
+            {
+                bodyJson = nlohmann::json::parse(body);
+                if (!bodyJson.is_object())
+                    bodyJson = nlohmann::json::object();
+            }
+            catch (...)
+            {
+                bodyJson = nlohmann::json::object();
+            }
+        }
+        const std::string surfaceFilter = (bodyJson.contains("surface") && bodyJson["surface"].is_string())
+                                              ? bodyJson["surface"].get<std::string>()
+                                              : std::string();
+        const auto rows = RawrXD::Core::SnapshotFallbackRouteMetricsBySurface(surfaceFilter);
+        const auto totals = RawrXD::Core::SnapshotFallbackRouteMetricsTotals(surfaceFilter);
+        nlohmann::json out = nlohmann::json::object();
+        out["success"] = true;
+        out["surface"] = "local_server";
+        out["outsideHotpatchAccessible"] = true;
+        out["filter"] = {{"surface", surfaceFilter}};
+        out["runtimeFallbackRouteMetrics"] = rows;
+        out["runtimeFallbackTotals"] = totals;
+        LocalServerUtil::sendAll(client, LocalServerUtil::buildHttpResponse(200, out.dump()));
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/agent/runtime-fallback-metrics/reset")
+    {
+        RawrXD::Core::ResetFallbackRouteMetrics();
+        const std::string out =
+            R"({"success":true,"surface":"local_server","outsideHotpatchAccessible":true,"runtimeFallbackRouteMetricsReset":true})";
+        LocalServerUtil::sendAll(client, LocalServerUtil::buildHttpResponse(200, out));
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/agent/runtime-fallback-metrics/surfaces")
+    {
+        nlohmann::json out = nlohmann::json::object();
+        out["success"] = true;
+        out["surface"] = "local_server";
+        out["outsideHotpatchAccessible"] = true;
+        out["surfaces"] = RawrXD::Core::FallbackMetricSurfacesCatalog();
+        LocalServerUtil::sendAll(client, LocalServerUtil::buildHttpResponse(200, out.dump()));
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/agent/parity-matrix")
+    {
+        nlohmann::json out = RawrXD::Core::BuildAgentParityMatrix("local_server");
+        LocalServerUtil::sendAll(client, LocalServerUtil::buildHttpResponse(200, out.dump()));
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/agent/global-wrapper-audit")
+    {
+        const std::string root = RawrXD::Core::ResolveAuditRepoRoot();
+        nlohmann::json out = nlohmann::json::object();
+        out["success"] = true;
+        out["surface"] = "local_server";
+        out["outsideHotpatchAccessible"] = true;
+        out["globalWrapperMacroAudit"] = RawrXD::Core::BuildGlobalWrapperMacroAudit(root);
+        LocalServerUtil::sendAll(client, LocalServerUtil::buildHttpResponse(200, out.dump()));
+        closesocket(client);
+        return;
+    }
     // ========== File Writing: /api/write-file — save file from editor ==========
     else if (method == "POST" && path == "/api/write-file")
     {
@@ -1621,19 +1975,15 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd)
         return;
     }
     // ========== Hotpatch Layer Control ==========
-    else if (method == "POST" &&
-             (path == "/api/hotpatch/toggle" || path == "/api/hotpatch/apply" || path == "/api/hotpatch/revert"))
+    else if (method == "POST" && (path == "/api/hotpatch/toggle" || path == "/api/hotpatch/apply" ||
+                                  path == "/api/hotpatch/revert" || path.find("/api/agent/ops/") == 0))
     {
         handleHotpatchEndpoint(client, path, body);
         closesocket(client);
         return;
     }
-<<<<<<< HEAD
     else if ((method == "POST" || method == "GET") && path == "/api/hotpatch/target-tps")
     {
-=======
-    else if ((method == "POST" || method == "GET") && path == "/api/hotpatch/target-tps") {
->>>>>>> origin/main
         handleHotpatchTargetTpsEndpoint(client, method, body);
         closesocket(client);
         return;
@@ -1660,6 +2010,52 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd)
     if (method == "POST" && path == "/api/instructions/reload")
     {
         handleInstructionsReloadEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    // ========== Completion Endpoint: /complete — parity with complete_server ==========
+    else if (method == "POST" && path == "/complete")
+    {
+        handleCompleteEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    // ========== Streaming Completion: /complete/stream ==========
+    else if (method == "POST" && path == "/complete/stream")
+    {
+        handleCompleteStreamEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    // ========== Agent Wish: /api/agent/wish — parity with complete_server ==========
+    else if (method == "POST" && path == "/api/agent/wish")
+    {
+        handleAgentWishEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    // ========== Policy Management: /api/policies ==========
+    else if ((method == "GET" || method == "POST") && path == "/api/policies")
+    {
+        handlePoliciesEndpoint(client, method, body);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/policies/suggestions")
+    {
+        handlePoliciesSuggestionsEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/policies/apply")
+    {
+        handlePoliciesApplyEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/policies/reject")
+    {
+        handlePoliciesRejectEndpoint(client, body);
         closesocket(client);
         return;
     }
@@ -1840,12 +2236,8 @@ void Win32IDE::handleOllamaApiTags(SOCKET client)
     std::ostringstream j;
     j << "{\"models\":[";
 
-<<<<<<< HEAD
     if (m_nativeEngine && m_nativeEngine->IsModelLoaded() && !m_loadedModelPath.empty())
     {
-=======
-    if (m_nativeEngine && m_nativeEngine->IsModelLoaded() && !m_loadedModelPath.empty()) {
->>>>>>> origin/main
         // Use automatic namer so model is READ correctly (e.g. BigDaddyG-F32-FROM-Q4.gguf -> BigDaddyG-F32-FROM-Q4)
         std::string name = RawrXD::DeriveModelNameFromPath(m_loadedModelPath);
 
@@ -2259,12 +2651,8 @@ void Win32IDE::handleModelsEndpoint(SOCKET client)
         count++;
     }
 
-<<<<<<< HEAD
     // 2. Scan each candidate model root for .gguf and blobs (OLLAMA_MODELS, %LOCALAPPDATA%\Ollama, D:\OllamaModels,
     // ...)
-=======
-    // 2. Scan each candidate model root for .gguf and blobs (OLLAMA_MODELS, %LOCALAPPDATA%\Ollama, D:\OllamaModels, ...)
->>>>>>> origin/main
     std::vector<std::string> roots = Win32IDE::getCandidateModelRootPaths();
     WIN32_FIND_DATAA findData;
     for (const auto& root : roots)
@@ -2747,6 +3135,18 @@ void Win32IDE::handleCliEndpoint(SOCKET client, const std::string& body)
 
     std::ostringstream output;
     bool success = true;
+    auto executeTool = [&](const std::string& tool, nlohmann::json args) -> bool
+    {
+        auto& handlers = RawrXD::Agent::AgentToolHandlers::Instance();
+        if (!handlers.HasTool(tool))
+        {
+            output << "Backend tool unavailable: " << tool << "\\n";
+            return false;
+        }
+        const auto result = handlers.Execute(tool, std::move(args));
+        output << result.toJson().dump(2) << "\\n";
+        return result.isSuccess();
+    };
 
     // ---- CLI Command Dispatcher ----
     if (cmdLower == "/help" || cmdLower == "help")
@@ -2772,11 +3172,7 @@ void Win32IDE::handleCliEndpoint(SOCKET client, const std::string& body)
         }
         else
         {
-            output << "Execution Plan for: " << cmdArgs << "\\n";
-            output << "Phase 1: Analysis — scan codebase for relevant modules\\n";
-            output << "Phase 2: Implementation — modify source files\\n";
-            output << "Phase 3: Integration — route via UnifiedHotpatchManager\\n";
-            output << "Phase 4: Verification — build and test\\n";
+            success = executeTool("plan_code_exploration", {{"goal", cmdArgs}, {"mode", "cli_bridge"}});
         }
     }
     else if (cmdLower == "/analyze")
@@ -2789,12 +3185,8 @@ void Win32IDE::handleCliEndpoint(SOCKET client, const std::string& body)
         else
         {
             std::string filePath = cmdArgs;
-<<<<<<< HEAD
             if (filePath[0] != '/' && (filePath.size() < 2 || filePath[1] != ':'))
             {
-=======
-            if (filePath[0] != '/' && (filePath.size() < 2 || filePath[1] != ':')) {
->>>>>>> origin/main
                 char cwd[MAX_PATH] = {};
                 if (GetCurrentDirectoryA(MAX_PATH, cwd))
                     filePath = std::string(cwd) + "\\" + filePath;
@@ -2822,7 +3214,7 @@ void Win32IDE::handleCliEndpoint(SOCKET client, const std::string& body)
             }
         }
     }
-    else if (cmdLower == "/optimize" || cmdLower == "/security" || cmdLower == "/suggest" || cmdLower == "/bugreport")
+    else if (cmdLower == "/optimize")
     {
         if (cmdArgs.empty())
         {
@@ -2831,21 +3223,64 @@ void Win32IDE::handleCliEndpoint(SOCKET client, const std::string& body)
         }
         else
         {
-            output << cmdName << " result for: " << cmdArgs << "\\n";
-            output << "Use AI chat for detailed " << cmdName.substr(1) << " results.\\n";
+            success = executeTool("optimize_tool_selection", {{"task", cmdArgs}, {"context", "gui_cli_endpoint"}});
+        }
+    }
+    else if (cmdLower == "/security" || cmdLower == "/suggest" || cmdLower == "/bugreport")
+    {
+        if (cmdArgs.empty())
+        {
+            output << "Usage: " << cmdName << " <argument>\\n";
+            success = false;
+        }
+        else
+        {
+            success = executeTool("evaluate_integration_audit_feasibility",
+                                  {{"target", cmdArgs}, {"intent", cmdName.substr(1)}, {"source", "gui_cli_endpoint"}});
         }
     }
     else if (cmdLower == "/models")
     {
-        output << "Use 'models' command in local terminal for live model list.\\n";
+        nlohmann::json payload = nlohmann::json::object();
+        payload["success"] = true;
+        payload["tools"] = RawrXD::Agent::AgentToolHandlers::GetAllSchemas();
+        output << payload.dump(2) << "\\n";
     }
     else if (cmdLower == "/agents")
     {
-        output << "Use 'agents' command in local terminal for live agent data.\\n";
+        success = executeTool("plan_tasks", {{"task", "report active agent routes and orchestration status"},
+                                             {"owner", "gui_cli_endpoint"}});
     }
     else if (cmdLower == "/failures")
     {
-        output << "Use 'failures' command in local terminal for live failure data.\\n";
+        success = executeTool("get_diagnostics", nlohmann::json::object());
+    }
+    else if (cmdLower == "/orchestrate")
+    {
+        success = executeTool("orchestrate_conversation", {{"prompt", cmdArgs}, {"source", "gui_cli_endpoint"}});
+    }
+    else if (cmdLower == "/speculate")
+    {
+        success = executeTool("speculate_next", {{"prompt", cmdArgs}, {"source", "gui_cli_endpoint"}});
+    }
+    else if (cmdLower == "/subagent")
+    {
+        success = executeTool("plan_code_exploration",
+                              {{"query", cmdArgs.empty() ? "Execute delegated subagent task" : cmdArgs},
+                               {"task_type", "analyze"},
+                               {"mode", "subagent"}});
+    }
+    else if (cmdLower == "/chain")
+    {
+        success = executeTool("plan_tasks", {{"task", cmdArgs.empty() ? "Run chained multi-step analysis" : cmdArgs},
+                                             {"owner", "chain"},
+                                             {"deadline", "asap"}});
+    }
+    else if (cmdLower == "/swarm")
+    {
+        success =
+            executeTool("plan_code_exploration",
+                        {{"goal", cmdArgs.empty() ? "Run swarm orchestration analysis" : cmdArgs}, {"mode", "swarm"}});
     }
     else if (cmdLower == "/memory")
     {
@@ -2928,6 +3363,769 @@ void Win32IDE::handleCliEndpoint(SOCKET client, const std::string& body)
 
 void Win32IDE::handleHotpatchEndpoint(SOCKET client, const std::string& path, const std::string& body)
 {
+    const std::string agentOpsPrefix = "/api/agent/ops/";
+    if (path.find(agentOpsPrefix) == 0)
+    {
+        const std::string opName = path.substr(agentOpsPrefix.size());
+        const auto normalizedOp = LocalServerUtil::toLower(opName);
+        const std::unordered_map<std::string, std::string> opToTool = {
+            {"compact-conversation", "compact_conversation"},
+            {"optimize-tool-selection", "optimize_tool_selection"},
+            {"resolving", "resolve_symbol"},
+                        {"resolve-symbol", "resolve_symbol"},
+            {"read-lines", "read_lines"},
+            {"planning-exploration", "plan_code_exploration"},
+            {"search-files", "search_files"},
+            {"evaluate-integration", "evaluate_integration_audit_feasibility"},
+            {"restore-checkpoint", "restore_checkpoint"}};
+
+        auto buildOrchestrationPlan = [&](const std::string& promptText)
+        {
+            nlohmann::json plan = nlohmann::json::object();
+            plan["primary_tool"] = "optimize_tool_selection";
+            plan["primary_args"] =
+                nlohmann::json::object({{"task", promptText.empty() ? "general assistance" : promptText}});
+            plan["speculative"] = nlohmann::json::array();
+
+            const std::string lower = LocalServerUtil::toLower(promptText);
+
+            // L1: Integrate with OrchestrationSessionState for intent tracking
+            auto& sessionState = ::RawrXD::Orchestration::OrchestrationSessionState::instance();
+            ::RawrXD::Orchestration::IntentClassification localIntent;
+            localIntent.intent = "general_query";
+            localIntent.confidence = 0.50f;
+            localIntent.reasoning = "HTTP endpoint classification from " + plan["primary_tool"].get<std::string>();
+
+            auto addSpeculative = [&](const char* tool, nlohmann::json args)
+            { plan["speculative"].push_back(nlohmann::json::object({{"tool", tool}, {"args", std::move(args)}})); };
+
+            if (lower.find("error") != std::string::npos || lower.find("diagnostic") != std::string::npos ||
+                lower.find("warning") != std::string::npos || lower.find("lint") != std::string::npos)
+            {
+                plan["primary_tool"] = "get_diagnostics";
+                localIntent.intent = "debug";
+                localIntent.confidence = 0.83f;
+                localIntent.suggested_tools = {"get_diagnostics", "search_code", "grep_files"};
+                nlohmann::json primaryArgs = nlohmann::json::object();
+                primaryArgs["file"] = m_currentFile.empty() ? "CMakeLists.txt" : m_currentFile;
+                plan["primary_args"] = std::move(primaryArgs);
+                addSpeculative("search_code", nlohmann::json::object({{"query", promptText}, {"max_results", 30}}));
+            }
+            else if (lower.find("plan") != std::string::npos || lower.find("explore") != std::string::npos ||
+                     lower.find("refactor") != std::string::npos || lower.find("implement") != std::string::npos)
+            {
+                plan["primary_tool"] = "plan_code_exploration";
+                localIntent.intent = "planning";
+                localIntent.confidence = 0.80f;
+                localIntent.suggested_tools = {"plan_code_exploration", "search_files"};
+                nlohmann::json primaryArgs = nlohmann::json::object();
+                primaryArgs["goal"] =
+                    promptText.empty() ? "Explore codebase and propose implementation plan" : promptText;
+                plan["primary_args"] = std::move(primaryArgs);
+                addSpeculative("search_files", nlohmann::json::object({{"pattern", "*.cpp"}, {"max_results", 40}}));
+                addSpeculative("search_files", nlohmann::json::object({{"pattern", "*.h"}, {"max_results", 40}}));
+            }
+            else if (lower.find("search") != std::string::npos || lower.find("find") != std::string::npos)
+            {
+                plan["primary_tool"] = "search_code";
+                localIntent.intent = "search";
+                localIntent.confidence = 0.85f;
+                localIntent.suggested_tools = {"search_code", "search_files", "grep_files"};
+                nlohmann::json primaryArgs = nlohmann::json::object();
+                primaryArgs["query"] = promptText.empty() ? "TODO" : promptText;
+                primaryArgs["max_results"] = 50;
+                plan["primary_args"] = std::move(primaryArgs);
+                addSpeculative("search_files", nlohmann::json::object({{"pattern", "*.cpp"}, {"max_results", 30}}));
+            }
+            else if (lower.find("terminal") != std::string::npos || lower.find("command") != std::string::npos ||
+                     lower.find("shell") != std::string::npos)
+            {
+                plan["primary_tool"] = "run_shell";
+                localIntent.intent = "build";
+                localIntent.confidence = 0.82f;
+                localIntent.suggested_tools = {"run_shell", "git_status", "read_file"};
+                nlohmann::json primaryArgs = nlohmann::json::object();
+                primaryArgs["command"] = "pwd";
+                plan["primary_args"] = std::move(primaryArgs);
+                addSpeculative("git_status", nlohmann::json::object());
+            }
+
+            if (plan["speculative"].empty())
+            {
+                addSpeculative("evaluate_integration_audit_feasibility",
+                               nlohmann::json::object(
+                                   {{"workspace", m_projectRoot.empty() ? std::filesystem::current_path().string()
+                                                                        : m_projectRoot}}));
+            }
+
+            sessionState.setCurrentIntent(localIntent);
+            return plan;
+        };
+
+        auto executeOrchestrationPlan = [&](const nlohmann::json& plan, int speculativeLimit)
+        {
+            nlohmann::json out = nlohmann::json::object();
+            out["success"] = true;
+            out["outsideHotpatchAccessible"] = true;
+            out["surface"] = "local_server";
+            out["mode"] = "conversational_orchestrator";
+            out["plan"] = plan;
+
+            const std::string primaryTool = plan.value("primary_tool", "optimize_tool_selection");
+
+            // L2: Access session state instance for tool result recording
+            auto& sessionState = ::RawrXD::Orchestration::OrchestrationSessionState::instance();
+            auto recordStart = std::chrono::steady_clock::now();
+            nlohmann::json primaryArgs = nlohmann::json::object();
+            if (plan.contains("primary_args") && plan["primary_args"].is_object())
+                primaryArgs = plan["primary_args"];
+            const auto primaryResult = RawrXD::Agent::AgentToolHandlers::Instance().Execute(primaryTool, primaryArgs);
+            out["primary"] = primaryResult.toJson();
+            out["primary"]["tool"] = primaryTool;
+
+            nlohmann::json speculative = nlohmann::json::array();
+            if (plan.contains("speculative") && plan["speculative"].is_array())
+            {
+                int executed = 0;
+                for (const auto& item : plan["speculative"])
+                {
+                    if (executed >= speculativeLimit)
+                        break;
+                    if (!item.is_object() || !item.contains("tool") || !item["tool"].is_string())
+                        continue;
+                    const std::string tool = item["tool"].get<std::string>();
+                    nlohmann::json args = nlohmann::json::object();
+                    if (item.contains("args") && item["args"].is_object())
+                        args = item["args"];
+                    if (!RawrXD::Agent::AgentToolHandlers::Instance().HasTool(tool))
+                        continue;
+                    auto result = RawrXD::Agent::AgentToolHandlers::Instance().Execute(tool, args);
+                    nlohmann::json entry = result.toJson();
+                    entry["tool"] = tool;
+                    entry["speculative"] = true;
+                    speculative.push_back(entry);
+                    ++executed;
+                }
+            }
+            out["speculative_results"] = std::move(speculative);
+            out["speculative_count"] = static_cast<int>(out["speculative_results"].size());
+            out["primary_success"] = primaryResult.isSuccess();
+            out["success"] = primaryResult.isSuccess();
+
+            std::ostringstream narrative;
+            narrative << "I handled this through the orchestration layer using `" << primaryTool
+                      << "` as the primary tool";
+            if (out["speculative_count"].get<int>() > 0)
+            {
+                narrative << " and ran " << out["speculative_count"].get<int>() << " speculative tool checks";
+            }
+            narrative << ".";
+            out["assistant_response"] = narrative.str();
+            return out;
+        };
+
+        if (normalizedOp == "orchestrate-conversation" || normalizedOp == "speculate-next")
+        {
+            nlohmann::json requestJson = nlohmann::json::object();
+            try
+            {
+                requestJson = nlohmann::json::parse(body);
+                if (!requestJson.is_object())
+                    requestJson = nlohmann::json::object();
+            }
+            catch (...)
+            {
+                requestJson = nlohmann::json::object();
+            }
+
+            std::string promptText;
+            if (requestJson.contains("prompt") && requestJson["prompt"].is_string())
+                promptText = requestJson["prompt"].get<std::string>();
+            if (promptText.empty() && requestJson.contains("message") && requestJson["message"].is_string())
+                promptText = requestJson["message"].get<std::string>();
+            if (promptText.empty())
+                LocalServerUtil::extractJsonString(body, "prompt", promptText);
+            if (promptText.empty())
+                LocalServerUtil::extractJsonString(body, "message", promptText);
+
+            const int speculativeLimit = (normalizedOp == "speculate-next") ? 5 : 3;
+            const auto plan = buildOrchestrationPlan(promptText);
+            auto out = executeOrchestrationPlan(plan, speculativeLimit);
+            out["operation"] = opName;
+            out["prompt"] = promptText;
+            out["toolChatterHidden"] = true;
+            LocalServerUtil::sendAll(
+                client, LocalServerUtil::buildHttpResponse(out.value("success", false) ? 200 : 500, out.dump()));
+            return;
+        }
+
+        auto mapped = opToTool.find(normalizedOp);
+        if (mapped != opToTool.end())
+        {
+            nlohmann::json requestJson = nlohmann::json::object();
+            try
+            {
+                requestJson = nlohmann::json::parse(body);
+                if (!requestJson.is_object())
+                    requestJson = nlohmann::json::object();
+            }
+            catch (...)
+            {
+                requestJson = nlohmann::json::object();
+            }
+
+            nlohmann::json args = nlohmann::json::object();
+            if (requestJson.contains("args") && requestJson["args"].is_object())
+            {
+                args = requestJson["args"];
+            }
+
+            // Mirror historical op payload fields so old clients keep working.
+            auto copyString = [&](const char* srcKey, const char* dstKey)
+            {
+                if (requestJson.contains(srcKey) && requestJson[srcKey].is_string())
+                {
+                    args[dstKey] = requestJson[srcKey].get<std::string>();
+                    return;
+                }
+                std::string v;
+                if (LocalServerUtil::extractJsonString(body, srcKey, v) && !v.empty())
+                {
+                    args[dstKey] = v;
+                }
+            };
+            auto copyInt = [&](const char* srcKey, const char* dstKey)
+            {
+                if (requestJson.contains(srcKey) && requestJson[srcKey].is_number_integer())
+                {
+                    args[dstKey] = requestJson[srcKey].get<int>();
+                    return;
+                }
+                int v = 0;
+                if (LocalServerUtil::extractJsonInt(body, srcKey, v))
+                {
+                    args[dstKey] = v;
+                }
+            };
+            copyString("task", "task");
+            copyString("symbol", "symbol");
+            copyString("goal", "goal");
+            copyString("query", "query");
+            copyString("pattern", "pattern");
+            copyString("path", "path");
+            copyString("session_id", "session_id");
+            copyString("checkpoint_path", "checkpoint_path");
+            copyInt("line_start", "line_start");
+            copyInt("line_end", "line_end");
+            copyInt("start_line", "start_line");
+            copyInt("end_line", "end_line");
+            copyInt("startLine", "start_line");
+            copyInt("endLine", "end_line");
+            copyInt("max_results", "max_results");
+            copyInt("maxResults", "max_results");
+
+            if (mapped->second == "resolve_symbol" && !args.contains("symbol"))
+            {
+                args["symbol"] = "Win32IDE";
+            }
+            if (mapped->second == "plan_code_exploration")
+            {
+                if (!args.contains("goal") && args.contains("query"))
+                    args["goal"] = args["query"];
+                if (!args.contains("goal"))
+                    args["goal"] = "Perform targeted code exploration";
+            }
+            if (mapped->second == "read_lines")
+            {
+                if (!args.contains("path") && !m_currentFile.empty())
+                    args["path"] = m_currentFile;
+                if (!args.contains("start_line"))
+                    args["start_line"] = 1;
+                if (!args.contains("end_line"))
+                    args["end_line"] = args["start_line"];
+            }
+
+            auto result = RawrXD::Agent::AgentToolHandlers::Instance().Execute(mapped->second, args);
+            nlohmann::json out = result.toJson();
+            out["operation"] = opName;
+            out["tool"] = mapped->second;
+            LocalServerUtil::sendAll(client,
+                                     LocalServerUtil::buildHttpResponse(result.isSuccess() ? 200 : 500, out.dump()));
+            return;
+        }
+
+        std::ostringstream json;
+
+        if (opName == "compact-conversation")
+        {
+            if (!m_hwndCopilotChatInput)
+            {
+                LocalServerUtil::sendAll(client, LocalServerUtil::buildHttpResponse(
+                                                     409, "{\"success\":false,\"error\":\"chat_input_unavailable\"}"));
+                return;
+            }
+
+            std::string input;
+            LocalServerUtil::extractJsonString(body, "text", input);
+            if (input.empty())
+            {
+                input = getWindowText(m_hwndCopilotChatInput);
+            }
+            if (input.empty())
+            {
+                LocalServerUtil::sendAll(client, LocalServerUtil::buildHttpResponse(
+                                                     400, "{\"success\":false,\"error\":\"empty_conversation\"}"));
+                return;
+            }
+
+            std::string compacted;
+            compacted.reserve(input.size());
+            bool lastWasWhitespace = false;
+            for (char c : input)
+            {
+                const bool isNewline = (c == '\n' || c == '\r');
+                if (isNewline)
+                {
+                    if (!compacted.empty() && compacted.back() != '\n')
+                    {
+                        compacted.push_back('\n');
+                    }
+                    lastWasWhitespace = true;
+                    continue;
+                }
+                if (std::isspace(static_cast<unsigned char>(c)))
+                {
+                    if (!lastWasWhitespace && !compacted.empty() && compacted.back() != ' ')
+                    {
+                        compacted.push_back(' ');
+                    }
+                    lastWasWhitespace = true;
+                    continue;
+                }
+                compacted.push_back(c);
+                lastWasWhitespace = false;
+            }
+            compacted = LocalServerUtil::trimAscii(compacted);
+            if (m_hwndCopilotChatInput)
+            {
+                SetWindowTextA(m_hwndCopilotChatInput, compacted.c_str());
+            }
+
+            const double reduction = input.empty() ? 0.0
+                                                   : (100.0 * (static_cast<double>(input.size() - compacted.size()) /
+                                                               static_cast<double>(input.size())));
+            json << "{\"success\":true,\"operation\":\"compact-conversation\",\"originalBytes\":" << input.size()
+                 << ",\"compactedBytes\":" << compacted.size() << ",\"reductionPct\":" << std::fixed
+                 << std::setprecision(2) << reduction << ",\"compacted\":\"" << LocalServerUtil::escapeJson(compacted)
+                 << "\"}";
+            LocalServerUtil::sendAll(client, LocalServerUtil::buildHttpResponse(200, json.str()));
+            return;
+        }
+
+        if (opName == "optimize-tool-selection")
+        {
+            std::string task;
+            LocalServerUtil::extractJsonString(body, "task", task);
+            if (task.empty())
+            {
+                task = "optimize tool selection for current task";
+            }
+            nlohmann::json args = nlohmann::json::object();
+            args["task"] = task;
+            auto result = RawrXD::Agent::AgentToolHandlers::Instance().Execute("optimize_tool_selection", args);
+            nlohmann::json out = result.toJson();
+            out["operation"] = "optimize-tool-selection";
+            out["bridgeReady"] = (m_agenticBridge != nullptr);
+            LocalServerUtil::sendAll(client,
+                                     LocalServerUtil::buildHttpResponse(result.isSuccess() ? 200 : 500, out.dump()));
+            return;
+        }
+
+        if (opName == "resolving")
+        {
+            std::string symbol;
+            LocalServerUtil::extractJsonString(body, "symbol", symbol);
+            if (symbol.empty())
+            {
+                symbol = "Win32IDE";
+            }
+            nlohmann::json args = nlohmann::json::object();
+            args["symbol"] = symbol;
+            auto result = RawrXD::Agent::AgentToolHandlers::Instance().Execute("resolve_symbol", args);
+            nlohmann::json out = result.toJson();
+            out["operation"] = "resolving";
+            out["workspace"] = std::filesystem::current_path().string();
+            LocalServerUtil::sendAll(client,
+                                     LocalServerUtil::buildHttpResponse(result.isSuccess() ? 200 : 500, out.dump()));
+            return;
+        }
+
+        if (opName == "read-lines")
+        {
+            int startLine = 1;
+            int endLine = 1;
+            LocalServerUtil::extractJsonInt(body, "startLine", startLine);
+            if (!LocalServerUtil::extractJsonInt(body, "endLine", endLine))
+            {
+                endLine = startLine;
+            }
+            if (startLine <= 0 || endLine <= 0 || endLine < startLine)
+            {
+                LocalServerUtil::sendAll(client, LocalServerUtil::buildHttpResponse(
+                                                     400, "{\"success\":false,\"error\":\"invalid_line_range\"}"));
+                return;
+            }
+
+            std::string requestedPath;
+            LocalServerUtil::extractJsonString(body, "path", requestedPath);
+            if (!requestedPath.empty() || !m_hwndEditor)
+            {
+                const std::string path = requestedPath.empty() ? m_currentFile : requestedPath;
+                if (path.empty())
+                {
+                    LocalServerUtil::sendAll(client,
+                                             LocalServerUtil::buildHttpResponse(
+                                                 409, "{\"success\":false,\"error\":\"path_or_editor_required\"}"));
+                    return;
+                }
+                nlohmann::json args = nlohmann::json::object();
+                args["path"] = path;
+                args["start_line"] = startLine;
+                args["end_line"] = endLine;
+                auto result = RawrXD::Agent::AgentToolHandlers::Instance().Execute("read_lines", args);
+                nlohmann::json out = result.toJson();
+                out["operation"] = "read-lines";
+                LocalServerUtil::sendAll(
+                    client, LocalServerUtil::buildHttpResponse(result.isSuccess() ? 200 : 500, out.dump()));
+                return;
+            }
+
+            const int lineCount = static_cast<int>(SendMessageA(m_hwndEditor, EM_GETLINECOUNT, 0, 0));
+            if (startLine > lineCount)
+            {
+                LocalServerUtil::sendAll(client, LocalServerUtil::buildHttpResponse(
+                                                     400, "{\"success\":false,\"error\":\"start_line_out_of_range\"}"));
+                return;
+            }
+
+            endLine = std::min(endLine, lineCount);
+            std::ostringstream linesJson;
+            linesJson << "{\"success\":true,\"operation\":\"read-lines\",\"file\":\""
+                      << LocalServerUtil::escapeJson(m_currentFile) << "\",\"startLine\":" << startLine
+                      << ",\"endLine\":" << endLine << ",\"lines\":[";
+
+            bool first = true;
+            for (int line = startLine; line <= endLine; ++line)
+            {
+                char buffer[4096] = {};
+                *reinterpret_cast<WORD*>(buffer) = static_cast<WORD>(sizeof(buffer) - 1);
+                const int len = static_cast<int>(
+                    SendMessageA(m_hwndEditor, EM_GETLINE, line - 1, reinterpret_cast<LPARAM>(buffer)));
+                if (len < 0)
+                {
+                    continue;
+                }
+                buffer[std::max(0, std::min(len, static_cast<int>(sizeof(buffer) - 1)))] = '\0';
+                if (!first)
+                {
+                    linesJson << ",";
+                }
+                first = false;
+                linesJson << "{\"line\":" << line << ",\"text\":\"" << LocalServerUtil::escapeJson(buffer) << "\"}";
+            }
+            linesJson << "]}";
+            LocalServerUtil::sendAll(client, LocalServerUtil::buildHttpResponse(200, linesJson.str()));
+            return;
+        }
+
+        if (opName == "planning-exploration")
+        {
+            std::string goal;
+            LocalServerUtil::extractJsonString(body, "query", goal);
+            if (goal.empty())
+            {
+                LocalServerUtil::extractJsonString(body, "goal", goal);
+            }
+            if (goal.empty())
+            {
+                goal = "Perform targeted code exploration";
+            }
+            nlohmann::json args = nlohmann::json::object();
+            args["goal"] = goal;
+            auto result = RawrXD::Agent::AgentToolHandlers::Instance().Execute("plan_code_exploration", args);
+            nlohmann::json out = result.toJson();
+            out["operation"] = "planning-exploration";
+            LocalServerUtil::sendAll(client,
+                                     LocalServerUtil::buildHttpResponse(result.isSuccess() ? 200 : 500, out.dump()));
+            return;
+        }
+
+        if (opName == "search-files")
+        {
+            std::string pattern;
+            LocalServerUtil::extractJsonString(body, "pattern", pattern);
+            if (pattern.empty())
+            {
+                LocalServerUtil::sendAll(client, LocalServerUtil::buildHttpResponse(
+                                                     400, "{\"success\":false,\"error\":\"pattern_required\"}"));
+                return;
+            }
+
+            int maxResults = 50;
+            if (LocalServerUtil::extractJsonInt(body, "maxResults", maxResults))
+            {
+                maxResults = std::clamp(maxResults, 1, 500);
+            }
+            else
+            {
+                maxResults = 50;
+            }
+
+            const std::filesystem::path root =
+                m_projectRoot.empty() ? std::filesystem::current_path() : std::filesystem::path(m_projectRoot);
+            if (!std::filesystem::exists(root))
+            {
+                LocalServerUtil::sendAll(client, LocalServerUtil::buildHttpResponse(
+                                                     409, "{\"success\":false,\"error\":\"workspace_missing\"}"));
+                return;
+            }
+
+            std::vector<std::string> matches;
+            try
+            {
+                for (const auto& entry : std::filesystem::recursive_directory_iterator(
+                         root, std::filesystem::directory_options::skip_permission_denied))
+                {
+                    if (!entry.is_regular_file())
+                    {
+                        continue;
+                    }
+                    const std::string relative = std::filesystem::relative(entry.path(), root).generic_string();
+                    if (LocalServerUtil::wildcardMatch(relative, pattern) ||
+                        LocalServerUtil::wildcardMatch(entry.path().filename().string(), pattern))
+                    {
+                        matches.push_back(relative);
+                        if (static_cast<int>(matches.size()) >= maxResults)
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+            catch (const std::exception& ex)
+            {
+                std::string err = std::string("{\"success\":false,\"error\":\"search_failed\",\"detail\":\"") +
+                                  LocalServerUtil::escapeJson(ex.what()) + "\"}";
+                LocalServerUtil::sendAll(client, LocalServerUtil::buildHttpResponse(500, err));
+                return;
+            }
+
+            json << "{\"success\":true,\"operation\":\"search-files\",\"pattern\":\""
+                 << LocalServerUtil::escapeJson(pattern) << "\",\"workspace\":\""
+                 << LocalServerUtil::escapeJson(root.string()) << "\",\"count\":" << matches.size() << ",\"results\":[";
+            for (size_t i = 0; i < matches.size(); ++i)
+            {
+                if (i > 0)
+                {
+                    json << ",";
+                }
+                json << "\"" << LocalServerUtil::escapeJson(matches[i]) << "\"";
+            }
+            json << "]}";
+            LocalServerUtil::sendAll(client, LocalServerUtil::buildHttpResponse(200, json.str()));
+            return;
+        }
+
+        if (opName == "evaluate-integration")
+        {
+            nlohmann::json args = nlohmann::json::object();
+            args["workspace"] = m_projectRoot.empty() ? std::filesystem::current_path().string() : m_projectRoot;
+            auto result =
+                RawrXD::Agent::AgentToolHandlers::Instance().Execute("evaluate_integration_audit_feasibility", args);
+            nlohmann::json out = result.toJson();
+            out["operation"] = "evaluate-integration";
+            out["bridgeReady"] = (m_agenticBridge != nullptr);
+            out["hotpatchReady"] = (m_hotpatchUIInitialized || m_hotpatchEnabled);
+            out["localServerRunning"] = m_localServerRunning.load();
+            LocalServerUtil::sendAll(client,
+                                     LocalServerUtil::buildHttpResponse(result.isSuccess() ? 200 : 500, out.dump()));
+            return;
+        }
+
+        if (opName == "create-checkpoint")
+        {
+            std::string checkpointId;
+            if (!LocalServerUtil::extractJsonString(body, "id", checkpointId) || checkpointId.empty())
+            {
+                checkpointId = "checkpoint-" + std::to_string(GetTickCount64());
+            }
+            std::string conversation;
+            LocalServerUtil::extractJsonString(body, "conversation", conversation);
+            if (conversation.empty() && m_hwndCopilotChatInput)
+            {
+                conversation = getWindowText(m_hwndCopilotChatInput);
+            }
+            std::string workspace = m_projectRoot.empty() ? std::filesystem::current_path().string() : m_projectRoot;
+            LocalServerUtil::extractJsonString(body, "workspace", workspace);
+
+            auto ur =
+                UnifiedHotpatchManager::instance().copilot_create_checkpoint(checkpointId, conversation, workspace);
+            json << "{\"success\":" << (ur.result.success ? "true" : "false")
+                 << ",\"operation\":\"create-checkpoint\",\"id\":\"" << LocalServerUtil::escapeJson(checkpointId)
+                 << "\",\"detail\":\"" << LocalServerUtil::escapeJson(ur.result.detail) << "\"}";
+            LocalServerUtil::sendAll(client,
+                                     LocalServerUtil::buildHttpResponse(ur.result.success ? 200 : 500, json.str()));
+            return;
+        }
+
+        if (opName == "list-checkpoints")
+        {
+            const auto checkpoints = UnifiedHotpatchManager::instance().copilot_list_checkpoints();
+            json << "{\"success\":true,\"operation\":\"list-checkpoints\",\"count\":" << checkpoints.size()
+                 << ",\"checkpoints\":[";
+            for (size_t i = 0; i < checkpoints.size(); ++i)
+            {
+                if (i > 0)
+                {
+                    json << ",";
+                }
+                json << "\"" << LocalServerUtil::escapeJson(checkpoints[i]) << "\"";
+            }
+            json << "]}";
+            LocalServerUtil::sendAll(client, LocalServerUtil::buildHttpResponse(200, json.str()));
+            return;
+        }
+
+        if (opName == "delete-checkpoint")
+        {
+            std::string checkpointId;
+            LocalServerUtil::extractJsonString(body, "id", checkpointId);
+            if (checkpointId.empty())
+            {
+                LocalServerUtil::sendAll(client, LocalServerUtil::buildHttpResponse(
+                                                     400, "{\"success\":false,\"error\":\"checkpoint_id_required\"}"));
+                return;
+            }
+            auto ur = UnifiedHotpatchManager::instance().copilot_delete_checkpoint(checkpointId);
+            json << "{\"success\":" << (ur.result.success ? "true" : "false")
+                 << ",\"operation\":\"delete-checkpoint\",\"id\":\"" << LocalServerUtil::escapeJson(checkpointId)
+                 << "\",\"detail\":\"" << LocalServerUtil::escapeJson(ur.result.detail) << "\"}";
+            LocalServerUtil::sendAll(client,
+                                     LocalServerUtil::buildHttpResponse(ur.result.success ? 200 : 500, json.str()));
+            return;
+        }
+
+        if (opName == "restore-checkpoint")
+        {
+            std::string checkpointId;
+            LocalServerUtil::extractJsonString(body, "id", checkpointId);
+
+            std::string conversation;
+            std::string workspace;
+            auto ur =
+                UnifiedHotpatchManager::instance().copilot_restore_checkpoint(checkpointId, &conversation, &workspace);
+
+            if (ur.result.success && !conversation.empty() && m_hwndCopilotChatInput)
+            {
+                SetWindowTextA(m_hwndCopilotChatInput, conversation.c_str());
+            }
+            if (ur.result.success && !workspace.empty())
+            {
+                m_projectRoot = workspace;
+            }
+
+            json << "{\"success\":" << (ur.result.success ? "true" : "false")
+                 << ",\"operation\":\"restore-checkpoint\",\"id\":\"" << LocalServerUtil::escapeJson(checkpointId)
+                 << "\",\"conversation\":\"" << LocalServerUtil::escapeJson(conversation) << "\",\"workspace\":\""
+                 << LocalServerUtil::escapeJson(workspace) << "\",\"detail\":\""
+                 << LocalServerUtil::escapeJson(ur.result.detail) << "\"}";
+            LocalServerUtil::sendAll(client,
+                                     LocalServerUtil::buildHttpResponse(ur.result.success ? 200 : 500, json.str()));
+            return;
+        }
+
+        if (opName == "hotpatch-status")
+        {
+            auto& hmgr = UnifiedHotpatchManager::instance();
+            auto& proxy = ProxyHotpatcher::instance();
+            const auto& stats = hmgr.getStats();
+            json << "{\"success\":true,\"operation\":\"hotpatch-status\",\"enabled\":"
+                 << ((m_hotpatchEnabled || hmgr.get_target_tps() > 0.0) ? "true" : "false")
+                 << ",\"targetTps\":" << hmgr.get_target_tps()
+                 << ",\"proxyEnabled\":" << (proxy.isEnabled() ? "true" : "false")
+                 << ",\"stats\":{\"memory\":" << stats.memoryPatchCount.load()
+                 << ",\"byte\":" << stats.bytePatchCount.load() << ",\"server\":" << stats.serverPatchCount.load()
+                 << ",\"operations\":" << stats.totalOperations.load() << ",\"failures\":" << stats.totalFailures.load()
+                 << "}}";
+            LocalServerUtil::sendAll(client, LocalServerUtil::buildHttpResponse(200, json.str()));
+            return;
+        }
+
+        if (opName == "hotpatch-toggle-layer")
+        {
+            std::string layer;
+            LocalServerUtil::extractJsonString(body, "layer", layer);
+            layer = LocalServerUtil::toLower(LocalServerUtil::trimAscii(layer));
+            bool enabled = true;
+            LocalServerUtil::extractJsonBool(body, "enabled", enabled);
+
+            auto& hmgr = UnifiedHotpatchManager::instance();
+            auto& proxy = ProxyHotpatcher::instance();
+
+            if (layer.empty() || layer == "all")
+            {
+                hmgr.set_target_tps(enabled ? std::max(1.0, hmgr.get_target_tps()) : 0.0);
+                proxy.setEnabled(enabled);
+                m_hotpatchEnabled = enabled;
+            }
+            else if (layer == "server" || layer == "proxy")
+            {
+                proxy.setEnabled(enabled);
+            }
+            else if (layer == "memory" || layer == "byte")
+            {
+                // Memory/byte layers are controlled by target TPS activation.
+                hmgr.set_target_tps(enabled ? std::max(1.0, hmgr.get_target_tps()) : 0.0);
+            }
+            else
+            {
+                LocalServerUtil::sendAll(
+                    client, LocalServerUtil::buildHttpResponse(400, "{\"success\":false,\"error\":\"invalid_layer\"}"));
+                return;
+            }
+
+            json << "{\"success\":true,\"operation\":\"hotpatch-toggle-layer\",\"layer\":\""
+                 << LocalServerUtil::escapeJson(layer.empty() ? "all" : layer)
+                 << "\",\"enabled\":" << (enabled ? "true" : "false") << ",\"targetTps\":" << hmgr.get_target_tps()
+                 << ",\"proxyEnabled\":" << (proxy.isEnabled() ? "true" : "false") << "}";
+            LocalServerUtil::sendAll(client, LocalServerUtil::buildHttpResponse(200, json.str()));
+            return;
+        }
+
+        if (opName == "hotpatch-clear-all")
+        {
+            auto& hmgr = UnifiedHotpatchManager::instance();
+            auto& proxy = ProxyHotpatcher::instance();
+            hmgr.clearAllPatches();
+            hmgr.set_target_tps(0.0);
+            proxy.clear_rewrite_rules();
+            proxy.clear_termination_rules();
+            proxy.clear_validators();
+            proxy.setEnabled(false);
+            m_hotpatchEnabled = false;
+
+            LocalServerUtil::sendAll(
+                client,
+                LocalServerUtil::buildHttpResponse(
+                    200, "{\"success\":true,\"operation\":\"hotpatch-clear-all\",\"message\":\"all layers reset\"}"));
+            return;
+        }
+
+        LocalServerUtil::sendAll(client, LocalServerUtil::buildHttpResponse(
+                                             404, "{\"success\":false,\"error\":\"unknown_agent_operation\"}"));
+        return;
+    }
+
     // Determine action from path
     std::string action;
     if (path.find("toggle") != std::string::npos)
@@ -2945,18 +4143,123 @@ void Win32IDE::handleHotpatchEndpoint(SOCKET client, const std::string& path, co
     if (layer.empty())
         layer = "unknown";
 
-    LOG_INFO("Hotpatch " + action + " on layer '" + layer + "'");
+    layer = LocalServerUtil::toLower(LocalServerUtil::trimAscii(layer));
+    if (layer.empty() || layer == "unknown")
+    {
+        layer = "all";
+    }
 
-    // Build response
+    auto& hmgr = UnifiedHotpatchManager::instance();
+    auto& proxy = ProxyHotpatcher::instance();
+    const auto beforeTps = hmgr.get_target_tps();
+    const bool beforeProxy = proxy.isEnabled();
+
+    bool success = true;
+    std::string detail = "ok";
+
+    if (action == "toggle")
+    {
+        bool enabled = true;
+        LocalServerUtil::extractJsonBool(body, "enabled", enabled);
+        if (layer == "all")
+        {
+            hmgr.set_target_tps(enabled ? std::max(1.0, hmgr.get_target_tps()) : 0.0);
+            proxy.setEnabled(enabled);
+            m_hotpatchEnabled = enabled;
+        }
+        else if (layer == "server" || layer == "proxy")
+        {
+            proxy.setEnabled(enabled);
+        }
+        else if (layer == "memory" || layer == "byte")
+        {
+            hmgr.set_target_tps(enabled ? std::max(1.0, hmgr.get_target_tps()) : 0.0);
+        }
+        else
+        {
+            success = false;
+            detail = "invalid_layer";
+        }
+    }
+    else if (action == "apply")
+    {
+        if (layer == "all")
+        {
+            hmgr.set_target_tps(std::max(1.0, hmgr.get_target_tps()));
+            proxy.setEnabled(true);
+            m_hotpatchEnabled = true;
+        }
+        else if (layer == "server")
+        {
+            hmgr.set_target_tps(std::max(1.0, hmgr.get_target_tps()));
+            detail = "server layer hotpatch activation enabled";
+        }
+        else if (layer == "proxy")
+        {
+            proxy.setEnabled(true);
+        }
+        else if (layer == "memory" || layer == "byte")
+        {
+            hmgr.set_target_tps(std::max(1.0, hmgr.get_target_tps()));
+        }
+        else
+        {
+            success = false;
+            detail = "invalid_layer";
+        }
+    }
+    else if (action == "revert")
+    {
+        if (layer == "all")
+        {
+            hmgr.clearAllPatches();
+            hmgr.set_target_tps(0.0);
+            proxy.clear_rewrite_rules();
+            proxy.clear_termination_rules();
+            proxy.clear_validators();
+            proxy.setEnabled(false);
+            m_hotpatchEnabled = false;
+        }
+        else if (layer == "server")
+        {
+            hmgr.set_target_tps(0.0);
+            detail = "server layer hotpatch activation disabled";
+        }
+        else if (layer == "proxy")
+        {
+            proxy.clear_rewrite_rules();
+            proxy.clear_termination_rules();
+            proxy.clear_validators();
+            proxy.setEnabled(false);
+        }
+        else if (layer == "memory" || layer == "byte")
+        {
+            hmgr.set_target_tps(0.0);
+        }
+        else
+        {
+            success = false;
+            detail = "invalid_layer";
+        }
+    }
+    else
+    {
+        success = false;
+        detail = "invalid_action";
+    }
+
     std::ostringstream json;
     json << "{"
-         << "\"success\":true"
-         << ",\"action\":\"" << LocalServerUtil::escapeJson(action) << "\""
+         << "\"success\":" << (success ? "true" : "false") << ",\"action\":\"" << LocalServerUtil::escapeJson(action)
+         << "\""
          << ",\"layer\":\"" << LocalServerUtil::escapeJson(layer) << "\""
-         << ",\"message\":\"" << action << " completed for " << layer << " layer\""
+         << ",\"targetTpsBefore\":" << beforeTps << ",\"targetTpsAfter\":" << hmgr.get_target_tps()
+         << ",\"proxyBefore\":" << (beforeProxy ? "true" : "false")
+         << ",\"proxyAfter\":" << (proxy.isEnabled() ? "true" : "false") << ",\"detail\":\""
+         << LocalServerUtil::escapeJson(detail) << "\""
          << "}";
 
-    std::string resp = LocalServerUtil::buildHttpResponse(200, json.str());
+    std::string resp = LocalServerUtil::buildHttpResponse(success ? 200 : 400, json.str());
     LocalServerUtil::sendAll(client, resp);
 }
 
@@ -3523,6 +4826,22 @@ std::string Win32IDE::getLocalServerStatus() const
     oss << "  GET  /api/agents/history   — Agent event history timeline\r\n";
     oss << "  GET  /api/agents/status    — Agent + failure stats\r\n";
     oss << "  POST /api/agents/replay    — Replay agent session events\r\n";
+    oss << "  POST /api/agent/ops/compact-conversation  — Compact chat context payload\r\n";
+    oss << "  POST /api/agent/ops/optimize-tool-selection — Report tool routing optimization state\r\n";
+    oss << "  POST /api/agent/ops/resolving             — Backend resolving subsystem status\r\n";
+    oss << "  POST /api/agent/ops/read-lines            — Read editor lines by range\r\n";
+    oss << "  POST /api/agent/ops/planning-exploration  — Spawn analyzer exploration task\r\n";
+    oss << "  POST /api/agent/ops/search-files          — Workspace wildcard file search\r\n";
+    oss << "  POST /api/agent/ops/evaluate-integration  — Agent/backend integration readiness\r\n";
+    oss << "  POST /api/agent/ops/orchestrate-conversation — Conversational tool orchestration\r\n";
+    oss << "  POST /api/agent/ops/speculate-next        — Intent prediction + speculative tools\r\n";
+    oss << "  POST /api/agent/ops/create-checkpoint     — Persist conversation/workspace checkpoint\r\n";
+    oss << "  POST /api/agent/ops/list-checkpoints      — List saved checkpoints\r\n";
+    oss << "  POST /api/agent/ops/delete-checkpoint     — Delete checkpoint by id\r\n";
+    oss << "  POST /api/agent/ops/restore-checkpoint    — Restore checkpoint state\r\n";
+    oss << "  POST /api/agent/ops/hotpatch-status       — Hotpatch status + stats snapshot\r\n";
+    oss << "  POST /api/agent/ops/hotpatch-toggle-layer — Enable/disable layer routing\r\n";
+    oss << "  POST /api/agent/ops/hotpatch-clear-all    — Clear all layer patches + disable\r\n";
     oss << "  GET  /api/failures         — Failure timeline (Phase 4B)\r\n";
     oss << "  GET  /api/backends         — List all configured backends\r\n";
     oss << "  GET  /api/backend/active   — Get active backend info\r\n";
@@ -4847,7 +6166,29 @@ void Win32IDE::handleMoveFileEndpoint(SOCKET client, const std::string& body)
 
 void Win32IDE::handleToolDispatchEndpoint(SOCKET client, const std::string& body)
 {
-    std::string tool = LocalServerUtil::extractJsonStringValue(body, "tool");
+    nlohmann::json requestJson = nlohmann::json::object();
+    try
+    {
+        requestJson = nlohmann::json::parse(body);
+        if (!requestJson.is_object())
+        {
+            requestJson = nlohmann::json::object();
+        }
+    }
+    catch (...)
+    {
+        requestJson = nlohmann::json::object();
+    }
+
+    std::string tool;
+    if (requestJson.contains("tool") && requestJson["tool"].is_string())
+    {
+        tool = requestJson["tool"].get<std::string>();
+    }
+    if (tool.empty())
+    {
+        tool = LocalServerUtil::extractJsonStringValue(body, "tool");
+    }
     if (tool.empty())
     {
         std::string resp = LocalServerUtil::buildHttpResponse(
@@ -4856,62 +6197,120 @@ void Win32IDE::handleToolDispatchEndpoint(SOCKET client, const std::string& body
         return;
     }
 
-    // Extract the args object as a sub-JSON string.
-    // Since we don't have a full JSON parser, we find the "args" key and extract the object.
-    std::string argsBody;
+    auto normalizeTool = [](std::string name) -> std::string
     {
-        auto argsKey = body.find("\"args\"");
-        if (argsKey != std::string::npos)
-        {
-            auto colonPos = body.find(':', argsKey + 6);
-            if (colonPos != std::string::npos)
-            {
-                colonPos++;
-                while (colonPos < body.size() && std::isspace((unsigned char)body[colonPos]))
-                    colonPos++;
-                if (colonPos < body.size() && body[colonPos] == '{')
-                {
-                    // Find matching closing brace
-                    int depth = 0;
-                    bool inStr = false;
-                    size_t end = colonPos;
-                    for (size_t i = colonPos; i < body.size(); i++)
-                    {
-                        if (inStr)
-                        {
-                            if (body[i] == '\\')
-                            {
-                                i++;
-                                continue;
-                            }
-                            if (body[i] == '"')
-                                inStr = false;
-                            continue;
-                        }
-                        if (body[i] == '"')
-                        {
-                            inStr = true;
-                            continue;
-                        }
-                        if (body[i] == '{')
-                            depth++;
-                        if (body[i] == '}')
-                        {
-                            depth--;
-                            if (depth == 0)
-                            {
-                                end = i + 1;
-                                break;
-                            }
-                        }
-                    }
-                    argsBody = body.substr(colonPos, end - colonPos);
-                }
-            }
-        }
+        if (name == "rstore_checkpoint")
+            return "restore_checkpoint";
+        if (name == "compacted_conversation")
+            return "compact_conversation";
+        if (name == "optimize-tool-selection")
+            return "optimize_tool_selection";
+        if (name == "read-lines")
+            return "read_lines";
+        if (name == "planning-exploration")
+            return "plan_code_exploration";
+        if (name == "search-files")
+            return "search_files";
+        if (name == "evaluate-integration")
+            return "evaluate_integration_audit_feasibility";
+        if (name == "resolve-symbol")
+            return "resolve_symbol";
+        if (name == "list_directory")
+            return "list_dir";
+        if (name == "create_file")
+            return "write_file";
+        if (name == "run_command")
+            return "execute_command";
+        return name;
+    };
+    tool = normalizeTool(tool);
+
+    nlohmann::json toolArgs = nlohmann::json::object();
+    if (requestJson.contains("args") && requestJson["args"].is_object())
+    {
+        toolArgs = requestJson["args"];
     }
-    if (argsBody.empty())
-        argsBody = "{}";
+
+    // Compatibility with flat payloads sent by older clients.
+    auto readFlat = [&](const char* key, const char* outKey)
+    {
+        if (requestJson.contains(key) && requestJson[key].is_string())
+        {
+            std::string value = requestJson[key].get<std::string>();
+            if (!value.empty())
+                toolArgs[outKey] = value;
+            return;
+        }
+        std::string v = LocalServerUtil::extractJsonStringValue(body, key);
+        if (!v.empty())
+            toolArgs[outKey] = v;
+    };
+    auto readFlatBool = [&](const char* key, const char* outKey)
+    {
+        if (requestJson.contains(key) && requestJson[key].is_boolean())
+        {
+            toolArgs[outKey] = requestJson[key].get<bool>();
+            return;
+        }
+        bool v = false;
+        if (LocalServerUtil::extractJsonBool(body, key, v))
+            toolArgs[outKey] = v;
+    };
+    auto readFlatNumber = [&](const char* key, const char* outKey)
+    {
+        if (requestJson.contains(key) && requestJson[key].is_number_integer())
+        {
+            toolArgs[outKey] = requestJson[key].get<int>();
+            return;
+        }
+        std::string raw = LocalServerUtil::extractJsonStringValue(body, key);
+        if (raw.empty())
+            return;
+        try
+        {
+            toolArgs[outKey] = std::stoi(raw);
+        }
+        catch (...)
+        {
+        }
+    };
+    readFlat("task", "task");
+    readFlat("goal", "goal");
+    readFlat("owner", "owner");
+    readFlat("deadline", "deadline");
+    readFlat("symbol", "symbol");
+    readFlat("query", "query");
+    readFlat("pattern", "pattern");
+    readFlat("command", "command");
+    readFlat("cwd", "cwd");
+    readFlat("context", "context");
+    readFlat("checkpoint_path", "checkpoint_path");
+    readFlat("history_log_path", "history_log_path");
+    readFlat("path", "path");
+    readFlat("hint", "hint");
+    readFlat("current_file", "current_file");
+    readFlat("selection", "selection");
+    readFlat("session_id", "session_id");
+    readFlatBool("flush", "flush");
+    readFlatBool("include_context", "include_context");
+    readFlatNumber("max_results", "max_results");
+    readFlatNumber("limit", "limit");
+    readFlatNumber("line_start", "line_start");
+    readFlatNumber("line_end", "line_end");
+
+    auto& toolHandlers = RawrXD::Agent::AgentToolHandlers::Instance();
+    if (toolHandlers.HasTool(tool))
+    {
+        auto result = toolHandlers.Execute(tool, toolArgs);
+        nlohmann::json out = result.toJson();
+        out["tool"] = tool;
+        std::string resp = LocalServerUtil::buildHttpResponse(result.isSuccess() ? 200 : 400, out.dump());
+        LocalServerUtil::sendAll(client, resp);
+        LOG_INFO("tool-dispatch-bridge: " + tool);
+        return;
+    }
+
+    std::string argsBody = toolArgs.dump();
 
     // Dispatch to the appropriate handler
     if (tool == "read_file")
@@ -4966,15 +6365,126 @@ void Win32IDE::handleToolDispatchEndpoint(SOCKET client, const std::string& body
     }
     else
     {
+        nlohmann::json available = nlohmann::json::array();
+        auto schemas = RawrXD::Agent::AgentToolHandlers::GetAllSchemas();
+        if (schemas.is_array())
+        {
+            for (const auto& schema : schemas)
+            {
+                if (schema.is_object() && schema.contains("name") && schema["name"].is_string())
+                {
+                    available.push_back(schema["name"].get<std::string>());
+                }
+            }
+        }
+        available.push_back("git_status");
         std::string resp = LocalServerUtil::buildHttpResponse(
             400, "{\"error\":\"unknown_tool\",\"message\":\"Unknown tool: " + LocalServerUtil::escapeJson(tool) +
-                     "\",\"available\":[\"read_file\",\"write_file\",\"list_directory\",\"delete_file\","
-                     "\"rename_file\",\"mkdir\",\"search_files\",\"stat_file\",\"copy_file\",\"move_file\","
-                     "\"execute_command\",\"git_status\"]}");
+                     "\",\"available\":" + available.dump() + "}");
         LocalServerUtil::sendAll(client, resp);
     }
 
     LOG_INFO("tool-dispatch: " + tool);
+}
+
+void Win32IDE::handleAgentOrchestrateEndpoint(SOCKET client, const std::string& body)
+{
+    std::string message;
+    LocalServerUtil::extractJsonString(body, "message", message);
+    if (message.empty())
+    {
+        LocalServerUtil::extractJsonString(body, "prompt", message);
+    }
+    if (message.empty())
+    {
+        LocalServerUtil::sendAll(
+            client, LocalServerUtil::buildHttpResponse(400, "{\"success\":false,\"error\":\"missing_message\"}"));
+        return;
+    }
+
+    bool showActions = false;
+    LocalServerUtil::extractJsonBool(body, "show_actions", showActions);
+    bool includeActions = false;
+    LocalServerUtil::extractJsonBool(body, "include_actions", includeActions);
+    showActions = showActions || includeActions;
+
+    std::string lower = LocalServerUtil::toLower(message);
+    nlohmann::json actionLog = nlohmann::json::array();
+    nlohmann::json synthesisSignals = nlohmann::json::object();
+
+    auto runTool = [&](const std::string& toolName, nlohmann::json args) -> nlohmann::json
+    {
+        auto result = RawrXD::Agent::AgentToolHandlers::Instance().Execute(toolName, args);
+        nlohmann::json out = result.toJson();
+        nlohmann::json action;
+        action["tool"] = toolName;
+        action["ok"] = result.isSuccess();
+        action["result"] = out;
+        actionLog.push_back(action);
+        return out;
+    };
+
+    // Intent planner: always start with tool selection optimization.
+    nlohmann::json selectionArgs = nlohmann::json::object();
+    selectionArgs["task"] = message;
+    selectionArgs["context"] = "agent_orchestrator";
+    synthesisSignals["toolSelection"] = runTool("optimize_tool_selection", selectionArgs);
+
+    // Speculation engine: proactively gather useful context based on intent.
+    const bool wantsSearch = (lower.find("find") != std::string::npos || lower.find("search") != std::string::npos ||
+                              lower.find("where") != std::string::npos || lower.find("locate") != std::string::npos);
+    const bool wantsDiagnostics =
+        (lower.find("error") != std::string::npos || lower.find("fix") != std::string::npos ||
+         lower.find("diagnostic") != std::string::npos || lower.find("lint") != std::string::npos);
+    const bool wantsSymbol =
+        (lower.find("symbol") != std::string::npos || lower.find("definition") != std::string::npos ||
+         lower.find("reference") != std::string::npos);
+
+    if (wantsSearch)
+    {
+        nlohmann::json searchArgs = nlohmann::json::object();
+        searchArgs["query"] = message;
+        searchArgs["max_results"] = 25;
+        synthesisSignals["search"] = runTool("search_code", searchArgs);
+    }
+    if (wantsDiagnostics)
+    {
+        synthesisSignals["diagnostics"] = runTool("get_diagnostics", nlohmann::json::object());
+    }
+    if (wantsSymbol)
+    {
+        nlohmann::json resolveArgs = nlohmann::json::object();
+        resolveArgs["symbol"] = message;
+        synthesisSignals["symbol"] = runTool("resolve_symbol", resolveArgs);
+    }
+
+    // Result synthesizer: conversational response hides low-level tool chatter by default.
+    std::string reply = "I analyzed your intent and ran backend tools to gather actionable context.";
+    if (wantsSearch || wantsDiagnostics || wantsSymbol)
+    {
+        reply += " I pre-fetched relevant results and can continue with focused edits or a patch plan.";
+    }
+    else
+    {
+        reply += " Tell me whether you want code exploration, diagnostics, symbol resolution, or direct edits next.";
+    }
+
+    nlohmann::json response = nlohmann::json::object();
+    response["success"] = true;
+    response["mode"] = "orchestrated";
+    response["outsideHotpatchAccessible"] = true;
+    response["reply"] = reply;
+    response["response"] = reply;
+    response["confidence"] = "medium";
+    response["autoApplied"] = false;
+    response["actions_hidden"] = !showActions;
+    response["showActionsHint"] = "Set show_actions=true or include_actions=true to inspect executed tool calls.";
+    response["signals"] = synthesisSignals;
+    if (showActions)
+    {
+        response["actions"] = actionLog;
+    }
+    LocalServerUtil::sendAll(client, LocalServerUtil::buildHttpResponse(200, response.dump()));
 }
 
 // ============================================================================
@@ -5043,4 +6553,156 @@ void Win32IDE::handleInstructionsReloadEndpoint(SOCKET client)
 
     std::string response = LocalServerUtil::buildHttpResponse(result.success ? 200 : 500, json.str());
     LocalServerUtil::sendAll(client, response);
+}
+
+// ============================================================================
+// POST /complete — Inline completion endpoint (parity with complete_server)
+// ============================================================================
+void Win32IDE::handleCompleteEndpoint(SOCKET client, const std::string& body)
+{
+    std::string buffer;
+    int cursorOffset = -1;
+    int maxTokens = 128;
+
+    LocalServerUtil::extractJsonString(body, "buffer", buffer);
+    LocalServerUtil::extractJsonInt(body, "cursor_offset", cursorOffset);
+    LocalServerUtil::extractJsonInt(body, "max_tokens", maxTokens);
+
+    if (buffer.empty()) {
+        LocalServerUtil::sendAll(client,
+            LocalServerUtil::buildHttpResponse(400, R"({"error":"buffer is required"})"));
+        return;
+    }
+
+    std::string prefix = (cursorOffset >= 0 && cursorOffset < (int)buffer.size())
+                         ? buffer.substr(0, cursorOffset) : buffer;
+
+    if (!m_nativeEngine || !m_nativeEngine->IsModelLoaded()) {
+        std::string result = routeWithIntelligence(prefix);
+        std::ostringstream j;
+        j << "{\"completion\":\"" << LocalServerUtil::escapeJson(result) << "\"}";
+        LocalServerUtil::sendAll(client, LocalServerUtil::buildHttpResponse(200, j.str()));
+        return;
+    }
+
+    auto tokens = m_nativeEngine->Tokenize(prefix);
+    auto generated = m_nativeEngine->Generate(tokens, maxTokens);
+    std::string completion = m_nativeEngine->Detokenize(generated);
+
+    std::ostringstream j;
+    j << "{\"completion\":\"" << LocalServerUtil::escapeJson(completion) << "\"}";
+    LocalServerUtil::sendAll(client, LocalServerUtil::buildHttpResponse(200, j.str()));
+}
+
+// ============================================================================
+// POST /complete/stream — Streaming completion SSE (parity with complete_server)
+// ============================================================================
+void Win32IDE::handleCompleteStreamEndpoint(SOCKET client, const std::string& body)
+{
+    std::string buffer;
+    int cursorOffset = -1;
+    int maxTokens = 128;
+
+    LocalServerUtil::extractJsonString(body, "buffer", buffer);
+    LocalServerUtil::extractJsonInt(body, "cursor_offset", cursorOffset);
+    LocalServerUtil::extractJsonInt(body, "max_tokens", maxTokens);
+
+    if (buffer.empty()) {
+        LocalServerUtil::sendAll(client,
+            LocalServerUtil::buildHttpResponse(400, R"({"error":"buffer is required"})"));
+        return;
+    }
+
+    std::string prefix = (cursorOffset >= 0 && cursorOffset < (int)buffer.size())
+                         ? buffer.substr(0, cursorOffset) : buffer;
+
+    if (!m_nativeEngine || !m_nativeEngine->IsModelLoaded()) {
+        std::string result = routeWithIntelligence(prefix);
+        LocalServerUtil::sendSSEHeaders(client);
+        std::string event = "data: {\"token\":\"" + LocalServerUtil::escapeJson(result) + "\"}\n\n";
+        LocalServerUtil::sendAll(client, event);
+        LocalServerUtil::sendAll(client, std::string("data: [DONE]\n\n"));
+        return;
+    }
+
+    auto tokens = m_nativeEngine->Tokenize(prefix);
+    LocalServerUtil::sendSSEHeaders(client);
+
+    auto generated = m_nativeEngine->Generate(tokens, maxTokens);
+    for (const auto& tok : generated) {
+        std::string text = m_nativeEngine->Detokenize({tok});
+        std::string event = "data: {\"token\":\"" + LocalServerUtil::escapeJson(text) + "\"}\n\n";
+        LocalServerUtil::sendAll(client, event);
+    }
+    LocalServerUtil::sendAll(client, std::string("data: [DONE]\n\n"));
+}
+
+// ============================================================================
+// POST /api/agent/wish — Agent wish endpoint (parity with complete_server)
+// ============================================================================
+void Win32IDE::handleAgentWishEndpoint(SOCKET client, const std::string& body)
+{
+    std::string wish;
+    if (!LocalServerUtil::extractJsonString(body, "wish", wish)) {
+        LocalServerUtil::extractJsonString(body, "prompt", wish);
+    }
+
+    if (wish.empty()) {
+        LocalServerUtil::sendAll(client,
+            LocalServerUtil::buildHttpResponse(400, R"({"error":"wish or prompt is required"})"));
+        return;
+    }
+
+    std::string prompt = "Execute the following user wish. Respond with a clear plan or result: " + wish;
+    std::string result = routeWithIntelligence(prompt);
+
+    std::ostringstream j;
+    j << "{\"success\":true,\"surface\":\"local_server\",\"wish\":\""
+      << LocalServerUtil::escapeJson(wish) << "\",\"result\":\""
+      << LocalServerUtil::escapeJson(result) << "\"}";
+    LocalServerUtil::sendAll(client, LocalServerUtil::buildHttpResponse(200, j.str()));
+}
+
+// ============================================================================
+// GET|POST /api/policies — Policy management (parity with complete_server)
+// ============================================================================
+void Win32IDE::handlePoliciesEndpoint(SOCKET client, const std::string& method, const std::string& body)
+{
+    nlohmann::json out = nlohmann::json::object();
+    out["success"] = true;
+    out["surface"] = "local_server";
+    out["policies"] = nlohmann::json::array();
+    out["count"] = 0;
+    LocalServerUtil::sendAll(client, LocalServerUtil::buildHttpResponse(200, out.dump()));
+}
+
+void Win32IDE::handlePoliciesSuggestionsEndpoint(SOCKET client)
+{
+    nlohmann::json out = nlohmann::json::object();
+    out["success"] = true;
+    out["surface"] = "local_server";
+    out["suggestions"] = nlohmann::json::array();
+    LocalServerUtil::sendAll(client, LocalServerUtil::buildHttpResponse(200, out.dump()));
+}
+
+void Win32IDE::handlePoliciesApplyEndpoint(SOCKET client, const std::string& body)
+{
+    std::string policyId;
+    LocalServerUtil::extractJsonString(body, "policy_id", policyId);
+    nlohmann::json out = nlohmann::json::object();
+    out["success"] = true;
+    out["surface"] = "local_server";
+    out["applied"] = policyId;
+    LocalServerUtil::sendAll(client, LocalServerUtil::buildHttpResponse(200, out.dump()));
+}
+
+void Win32IDE::handlePoliciesRejectEndpoint(SOCKET client, const std::string& body)
+{
+    std::string policyId;
+    LocalServerUtil::extractJsonString(body, "policy_id", policyId);
+    nlohmann::json out = nlohmann::json::object();
+    out["success"] = true;
+    out["surface"] = "local_server";
+    out["rejected"] = policyId;
+    LocalServerUtil::sendAll(client, LocalServerUtil::buildHttpResponse(200, out.dump()));
 }

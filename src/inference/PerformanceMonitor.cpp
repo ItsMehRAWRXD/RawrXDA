@@ -56,6 +56,24 @@ void PerformanceMonitor::endOperation(const std::string& operation) {
     }
 }
 
+void PerformanceMonitor::recordLatency(const std::string& operation, int64_t microseconds) {
+    if (microseconds < 0)
+        microseconds = 0;
+    std::lock_guard<std::mutex> lock(mutex_);
+    auto& data = operations_[operation];
+    data.metrics.totalTime += std::chrono::microseconds(microseconds);
+    data.metrics.operationCount++;
+    data.metrics.averageLatencyMs = static_cast<double>(data.metrics.totalTime.count()) /
+                                    (data.metrics.operationCount * 1000.0);
+    const auto totalSeconds =
+        std::chrono::duration_cast<std::chrono::seconds>(data.metrics.totalTime).count();
+    if (totalSeconds > 0)
+        data.metrics.throughputOpsPerSec =
+            static_cast<double>(data.metrics.operationCount) / static_cast<double>(totalSeconds);
+    if (detailedLogging_)
+        std::cout << "[Performance] Latency: " << operation << " = " << microseconds << "us\n";
+}
+
 void PerformanceMonitor::recordError(const std::string& operation) {
     std::lock_guard<std::mutex> lock(mutex_);
     operations_[operation].metrics.errorCount++;

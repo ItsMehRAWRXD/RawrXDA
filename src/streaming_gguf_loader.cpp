@@ -5,6 +5,7 @@
 #include <cstring>
 #include <stdexcept>
 #include <iostream>
+#include <filesystem>
 
 // SCAFFOLD_102: Streaming GGUF loader
 
@@ -22,7 +23,12 @@ StreamingGGUFLoader::~StreamingGGUFLoader() {
 
 bool StreamingGGUFLoader::Open(const std::string& filepath) {
     filepath_ = filepath;
+    // On Windows, use std::filesystem::u8path for UTF-8 encoded filepaths
+#ifdef _WIN32
+    file_.open(std::filesystem::u8path(filepath), std::ios::binary);
+#else
     file_.open(filepath, std::ios::binary);
+#endif
     if (!file_.is_open()) {
         std::cerr << "❌ Failed to open GGUF file: " << filepath << std::endl;
         return false;
@@ -674,6 +680,45 @@ uint64_t StreamingGGUFLoader::GetCurrentMemoryUsage() const {
     }
     
     return usage;
+}
+
+uint64_t StreamingGGUFLoader::GetMappedMemoryBytes() const {
+    uint64_t mapped = 0;
+    for (const auto& [zone_name, zone_info] : zones_) {
+        if (zone_info.is_loaded) {
+            mapped += static_cast<uint64_t>(zone_info.data.size());
+        }
+    }
+    return mapped;
+}
+
+GGUFLoadState StreamingGGUFLoader::GetLoadState() const {
+    if (!is_open_ || tensor_index_.empty()) {
+        return GGUFLoadState::Uninitialized;
+    }
+
+    const uint64_t mapped = GetMappedMemoryBytes();
+    if (mapped == 0) {
+        return GGUFLoadState::MetadataOnly;
+    }
+
+    if (!zones_.empty()) {
+        size_t loadedCount = 0;
+        for (const auto& [zone_name, zone_info] : zones_) {
+            if (zone_info.is_loaded) {
+                ++loadedCount;
+            }
+        }
+        if (loadedCount >= zones_.size()) {
+            return GGUFLoadState::Complete;
+        }
+    }
+
+    return GGUFLoadState::Partial;
+}
+
+bool StreamingGGUFLoader::IsMetadataOnly() const {
+    return GetLoadState() == GGUFLoadState::MetadataOnly;
 }
 
 std::vector<std::string> StreamingGGUFLoader::GetLoadedZones() const {

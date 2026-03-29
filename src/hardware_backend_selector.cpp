@@ -271,31 +271,52 @@ void HardwareBackendSelector::detectAvailableBackends()
 
 bool HardwareBackendSelector::detectCuda()
 {
-    // Check if CUDA is available on the system
-    // This would normally use CUDA runtime API calls
-    // For now, we return false as CUDA detection requires CUDA toolkit
+    // Probe for NVIDIA CUDA driver DLL
+    HMODULE hLib = LoadLibraryA("nvcuda.dll");
+    if (hLib) {
+        FreeLibrary(hLib);
+        return true;
+    }
     return false;
 }
 
 bool HardwareBackendSelector::detectVulkan()
 {
-    // Try to create Vulkan instance
-    // This is a simplified check
-    return true; // Assume available on Windows for now
+    // Probe for Vulkan loader DLL
+    HMODULE hLib = LoadLibraryA("vulkan-1.dll");
+    if (hLib) {
+        FreeLibrary(hLib);
+        return true;
+    }
+    return false;
 }
 
 bool HardwareBackendSelector::detectRocm()
 {
-    // Check for AMD HIP runtime
-    // Would use HIP API to detect
-    return false; // Not detected by default
+    // Probe for AMD HIP runtime DLL
+    HMODULE hLib = LoadLibraryA("amdhip64.dll");
+    if (hLib) {
+        FreeLibrary(hLib);
+        return true;
+    }
+    // Also check hiprt64.dll (older naming)
+    hLib = LoadLibraryA("hiprt64.dll");
+    if (hLib) {
+        FreeLibrary(hLib);
+        return true;
+    }
+    return false;
 }
 
 bool HardwareBackendSelector::detectOneAPI()
 {
-    // Check for Intel oneAPI runtime
-    // Would use oneAPI API to detect
-    return false; // Not detected by default
+    // Probe for Intel oneAPI Level Zero loader
+    HMODULE hLib = LoadLibraryA("ze_loader.dll");
+    if (hLib) {
+        FreeLibrary(hLib);
+        return true;
+    }
+    return false;
 }
 
 bool HardwareBackendSelector::detectMetal()

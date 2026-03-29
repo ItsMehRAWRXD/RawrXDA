@@ -160,11 +160,75 @@ std::string AgenticPuppeteer::applyRefusalBypass(const std::string& response) {
 }
 
 std::string AgenticPuppeteer::correctHallucination(const std::string& response) {
-    return response; // Placeholder for real logic
+    // Detect common hallucination patterns and strip them
+    std::string corrected = response;
+
+    // Remove fabricated file paths (paths containing common hallucination markers)
+    const std::vector<std::string> hallucinationMarkers = {
+        "/nonexistent/", "PLACEHOLDER_", "TODO_IMPLEMENT",
+        "example.com/fake", "SIMULATED_OUTPUT"
+    };
+    for (const auto& marker : hallucinationMarkers) {
+        size_t pos;
+        while ((pos = corrected.find(marker)) != std::string::npos) {
+            // Find line boundaries and remove the hallucinated line
+            size_t lineStart = corrected.rfind('\n', pos);
+            size_t lineEnd   = corrected.find('\n', pos);
+            lineStart = (lineStart == std::string::npos) ? 0 : lineStart;
+            lineEnd   = (lineEnd == std::string::npos) ? corrected.size() : lineEnd;
+            corrected.erase(lineStart, lineEnd - lineStart);
+        }
+    }
+
+    // Strip repeated consecutive lines (loop degeneration)
+    std::istringstream stream(corrected);
+    std::ostringstream deduped;
+    std::string line, prevLine;
+    int repeatCount = 0;
+    while (std::getline(stream, line)) {
+        if (line == prevLine) {
+            ++repeatCount;
+            if (repeatCount >= 3) continue; // Skip after 3+ repeats
+        } else {
+            repeatCount = 0;
+        }
+        deduped << line << '\n';
+        prevLine = line;
+    }
+    return deduped.str();
 }
 
 std::string AgenticPuppeteer::enforceFormat(const std::string& response) {
-    return response; // Placeholder for real logic
+    // Enforce structured output format: trim, ensure JSON validity if JSON-like
+    std::string formatted = response;
+
+    // Trim leading/trailing whitespace
+    size_t start = formatted.find_first_not_of(" \t\n\r");
+    size_t end   = formatted.find_last_not_of(" \t\n\r");
+    if (start != std::string::npos && end != std::string::npos) {
+        formatted = formatted.substr(start, end - start + 1);
+    }
+
+    // If response looks like JSON, validate basic structure
+    if (!formatted.empty() && (formatted.front() == '{' || formatted.front() == '[')) {
+        int braces = 0, brackets = 0;
+        bool inString = false, escaped = false;
+        for (char c : formatted) {
+            if (escaped) { escaped = false; continue; }
+            if (c == '\\') { escaped = true; continue; }
+            if (c == '"') { inString = !inString; continue; }
+            if (inString) continue;
+            if (c == '{') ++braces;
+            if (c == '}') --braces;
+            if (c == '[') ++brackets;
+            if (c == ']') --brackets;
+        }
+        // Close unclosed brackets/braces
+        while (brackets > 0) { formatted += ']'; --brackets; }
+        while (braces > 0)   { formatted += '}'; --braces; }
+    }
+
+    return formatted;
 }
 
 std::string AgenticPuppeteer::handleInfiniteLoop(const std::string& response) {

@@ -21,17 +21,7 @@
 // ============================================================================
 
 #include "enterprise_license.h"
-<<<<<<< HEAD
 #include "../win32app/IDELogger.h"
-=======
-#include <iostream>
-#include <cstring>
-#include <vector>
-#include <algorithm>
-#include <chrono>
-#include <fstream>
-#include "nlohmann/json.hpp"
->>>>>>> origin/main
 #include "enterprise_telemetry_compliance.hpp"
 #include <algorithm>
 #include <chrono>
@@ -52,17 +42,11 @@
 #include <windows.h>
 #endif
 
-<<<<<<< HEAD
 namespace RawrXD
 {
 
 namespace
 {
-=======
-namespace RawrXD {
-
-namespace {
->>>>>>> origin/main
 constexpr uint64_t kTrialDurationUs = 30ULL * 24ULL * 60ULL * 60ULL * 1000000ULL;
 
 #ifdef _WIN32
@@ -285,7 +269,6 @@ bool EnterpriseLicense::Initialize()
     {
         return true;  // Already initialized
     }
-<<<<<<< HEAD
 
     LOG_INFO("[EnterpriseLicense] v2 — Initializing defense shield...");
 
@@ -298,16 +281,6 @@ bool EnterpriseLicense::Initialize()
     if (shieldResult == 0)
     {
         LOG_ERROR("[EnterpriseLicense] SHIELD TAMPER DETECTED — defense layers failed");
-=======
-    
-    std::cout << "[EnterpriseLicense] v2 — Initializing defense shield..." << std::endl;
-
-    // ---- Phase 1: Shield Defense (5-layer anti-tamper) ----
-    int32_t shieldResult = Shield_InitializeDefense();
-    if (shieldResult == 0) {
-        std::cerr << "[EnterpriseLicense] SHIELD TAMPER DETECTED — defense layers failed"
-                  << std::endl;
->>>>>>> origin/main
         // Don't abort — set tampered state but continue (silent degradation)
         m_initialized = true;
         LicenseState oldState = m_lastState;
@@ -316,7 +289,6 @@ bool EnterpriseLicense::Initialize()
         return true;  // "Initialized" but tampered — community mode, degraded
     }
 
-<<<<<<< HEAD
     LOG_INFO("[EnterpriseLicense] Shield defense: ALL LAYERS PASSED");
 
     // ---- Phase 2: License System Init ----
@@ -330,20 +302,6 @@ bool EnterpriseLicense::Initialize()
         oss << "[EnterpriseLicense] License init failed with status: 0x" << std::hex << result << std::dec;
         LOG_ERROR(oss.str());
         LOG_WARNING("[EnterpriseLicense] Continuing in Community mode (non-fatal)");
-=======
-    std::cout << "[EnterpriseLicense] Shield defense: ALL LAYERS PASSED" << std::endl;
-
-    // ---- Phase 2: License System Init ----
-    std::cout << "[EnterpriseLicense] Initializing license subsystem..." << std::endl;
-    
-    int64_t result = Enterprise_InitLicenseSystem();
-    
-    if (result != 0) {
-        std::cerr << "[EnterpriseLicense] License init failed with status: 0x"
-                  << std::hex << result << std::dec << std::endl;
-        std::cerr << "[EnterpriseLicense] Continuing in Community mode (non-fatal)" 
-                  << std::endl;
->>>>>>> origin/main
         // Non-fatal: community mode still works
     }
 
@@ -357,13 +315,9 @@ bool EnterpriseLicense::Initialize()
     if (oldState != newState)
     {
         notifyStateChange(oldState, newState);
-<<<<<<< HEAD
     }
     else
     {
-=======
-    } else {
->>>>>>> origin/main
         updateTelemetry(newState, "init");
     }
 
@@ -406,7 +360,6 @@ bool EnterpriseLicense::Initialize()
     switch (newState)
     {
         case LicenseState::ValidEnterprise:
-<<<<<<< HEAD
         {
             std::ostringstream oss;
             oss << "[EnterpriseLicense] Enterprise license ACTIVE — Features: 0x" << std::hex << GetFeatureMask()
@@ -418,21 +371,9 @@ bool EnterpriseLicense::Initialize()
             oss2 << "[EnterpriseLicense] Max Model: " << GetMaxModelSizeGB()
                  << "GB | Max Context: " << GetMaxContextLength() << " tokens";
             LOG_INFO(oss2.str());
-=======
-            std::cout << "[EnterpriseLicense] Enterprise license ACTIVE"
-                      << " — Features: 0x" << std::hex << GetFeatureMask() 
-                      << std::dec << std::endl;
-            std::cout << "[EnterpriseLicense] 800B Dual-Engine: "
-                      << (HasFeatureMask(LicenseFeature::DualEngine800B) ? "UNLOCKED" : "locked")
-                      << std::endl;
-            std::cout << "[EnterpriseLicense] Max Model: " << GetMaxModelSizeGB() 
-                      << "GB | Max Context: " << GetMaxContextLength() << " tokens"
-                      << std::endl;
->>>>>>> origin/main
             break;
         }
         case LicenseState::ValidTrial:
-<<<<<<< HEAD
             LOG_INFO("[EnterpriseLicense] Trial license active (limited features)");
             break;
         case LicenseState::Expired:
@@ -450,27 +391,6 @@ bool EnterpriseLicense::Initialize()
             oss << "[EnterpriseLicense] No valid license — Community mode (models limited to " << GetMaxModelSizeGB()
                 << "GB)";
             LOG_INFO(oss.str());
-=======
-            std::cout << "[EnterpriseLicense] Trial license active (limited features)"
-                      << std::endl;
-            break;
-        case LicenseState::Expired:
-            std::cout << "[EnterpriseLicense] License EXPIRED — running Community mode"
-                      << std::endl;
-            break;
-        case LicenseState::HardwareMismatch:
-            std::cout << "[EnterpriseLicense] Hardware mismatch — running Community mode"
-                      << std::endl;
-            break;
-        case LicenseState::Tampered:
-            std::cout << "[EnterpriseLicense] TAMPER DETECTED — degraded Community mode"
-                      << std::endl;
-            break;
-        default:
-            std::cout << "[EnterpriseLicense] No valid license — Community mode"
-                      << " (models limited to " << GetMaxModelSizeGB() << "GB)" 
-                      << std::endl;
->>>>>>> origin/main
             break;
         }
     }
@@ -504,13 +424,8 @@ void EnterpriseLicense::Shutdown()
     {
         notifyStateChange(oldState, LicenseState::Invalid);
     }
-<<<<<<< HEAD
 
     LOG_INFO("[EnterpriseLicense] License subsystem shut down");
-=======
-    
-    std::cout << "[EnterpriseLicense] License subsystem shut down" << std::endl;
->>>>>>> origin/main
 }
 
 // ============================================================================
@@ -601,15 +516,10 @@ const char* EnterpriseLicense::GetEditionName() const
     }
 }
 
-<<<<<<< HEAD
 uint64_t EnterpriseLicense::GetTrialRemainingSeconds() const
 {
     if (GetState() != LicenseState::ValidTrial || m_trialStartUs == 0)
         return 0;
-=======
-uint64_t EnterpriseLicense::GetTrialRemainingSeconds() const {
-    if (GetState() != LicenseState::ValidTrial || m_trialStartUs == 0) return 0;
->>>>>>> origin/main
     uint64_t now = nowUs();
     uint64_t expiry = m_trialStartUs + kTrialDurationUs;
     if (now >= expiry)
@@ -690,7 +600,6 @@ uint32_t EnterpriseLicense::GetShieldState() const
 // ============================================================================
 // License Installation
 // ============================================================================
-<<<<<<< HEAD
 bool EnterpriseLicense::InstallLicense(const void* licenseBlob, size_t blobSize, const void* signature)
 {
     if (!m_initialized)
@@ -702,24 +611,10 @@ bool EnterpriseLicense::InstallLicense(const void* licenseBlob, size_t blobSize,
     if (!licenseBlob || blobSize == 0 || !signature)
     {
         LOG_ERROR("[EnterpriseLicense] Invalid license data (null or zero-size)");
-=======
-bool EnterpriseLicense::InstallLicense(const void* licenseBlob, size_t blobSize,
-                                        const void* signature) {
-    if (!m_initialized) {
-        std::cerr << "[EnterpriseLicense] Cannot install — system not initialized" 
-                  << std::endl;
-        return false;
-    }
-    
-    if (!licenseBlob || blobSize == 0 || !signature) {
-        std::cerr << "[EnterpriseLicense] Invalid license data (null or zero-size)" 
-                  << std::endl;
->>>>>>> origin/main
         return false;
     }
 
     LicenseState oldState = GetState();
-<<<<<<< HEAD
 
     std::ostringstream oss;
     oss << "[EnterpriseLicense] Installing license (" << blobSize << " bytes)...";
@@ -732,25 +627,11 @@ bool EnterpriseLicense::InstallLicense(const void* licenseBlob, size_t blobSize,
         std::ostringstream err;
         err << "[EnterpriseLicense] License installation failed: 0x" << std::hex << result << std::dec;
         LOG_ERROR(err.str());
-=======
-    
-    std::cout << "[EnterpriseLicense] Installing license (" << blobSize 
-              << " bytes)..." << std::endl;
-    
-    int64_t result = Enterprise_InstallLicense(licenseBlob, 
-                                                static_cast<uint64_t>(blobSize),
-                                                signature);
-    
-    if (result != 0) {
-        std::cerr << "[EnterpriseLicense] License installation failed: 0x"
-                  << std::hex << result << std::dec << std::endl;
->>>>>>> origin/main
         return false;
     }
 
     LicenseState newState = GetState();
     m_lastState = newState;
-<<<<<<< HEAD
 
     LOG_INFO("[EnterpriseLicense] License installed successfully!");
     LOG_INFO(std::string("[EnterpriseLicense] Edition: ") + GetEditionName());
@@ -762,25 +643,11 @@ bool EnterpriseLicense::InstallLicense(const void* licenseBlob, size_t blobSize,
 
     if (oldState != newState)
     {
-=======
-    
-    std::cout << "[EnterpriseLicense] License installed successfully!" << std::endl;
-    std::cout << "[EnterpriseLicense] Edition: " << GetEditionName() << std::endl;
-    std::cout << "[EnterpriseLicense] Features: " << GetFeatureString() << std::endl;
-    std::cout << "[EnterpriseLicense] Max Model: " << GetMaxModelSizeGB() 
-              << "GB | Max Context: " << GetMaxContextLength() << " tokens" << std::endl;
-    
-    if (oldState != newState) {
->>>>>>> origin/main
         notifyStateChange(oldState, newState);
     }
 
     updateTelemetry(newState, "install");
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> origin/main
     return true;
 }
 
@@ -792,30 +659,19 @@ bool EnterpriseLicense::InstallLicenseFromFile(const std::wstring& path)
     // Convert wstring to narrow string for MinGW ifstream compatibility
     std::string narrowPath = WStringToString(path);
     std::ifstream file(narrowPath.c_str(), std::ios::binary | std::ios::ate);
-<<<<<<< HEAD
     if (!file.is_open())
     {
         LOG_ERROR("[EnterpriseLicense] Cannot open license file");
-=======
-    if (!file.is_open()) {
-        std::cerr << "[EnterpriseLicense] Cannot open license file" << std::endl;
->>>>>>> origin/main
         return false;
     }
 
     auto fileSize = static_cast<size_t>(file.tellg());
-<<<<<<< HEAD
     if (fileSize <= RSA_SIG_SIZE)
     {
         std::ostringstream oss;
         oss << "[EnterpriseLicense] License file too small (need > " << RSA_SIG_SIZE << " bytes, got " << fileSize
             << ")";
         LOG_ERROR(oss.str());
-=======
-    if (fileSize <= RSA_SIG_SIZE) {
-        std::cerr << "[EnterpriseLicense] License file too small (need > "
-                  << RSA_SIG_SIZE << " bytes, got " << fileSize << ")" << std::endl;
->>>>>>> origin/main
         return false;
     }
 
@@ -828,16 +684,10 @@ bool EnterpriseLicense::InstallLicenseFromFile(const std::wstring& path)
     const void* blob = data.data();
     const void* sig = data.data() + blobSize;
 
-<<<<<<< HEAD
     std::ostringstream oss;
     oss << "[EnterpriseLicense] Loading license from file (" << blobSize << " byte blob + " << RSA_SIG_SIZE
         << " byte signature)";
     LOG_INFO(oss.str());
-=======
-    std::cout << "[EnterpriseLicense] Loading license from file (" 
-              << blobSize << " byte blob + " << RSA_SIG_SIZE << " byte signature)"
-              << std::endl;
->>>>>>> origin/main
 
     bool ok = InstallLicense(blob, blobSize, sig);
 #ifdef _WIN32
@@ -874,11 +724,7 @@ bool EnterpriseLicense::Revalidate()
     }
 
     updateTelemetry(newState, "revalidate");
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> origin/main
     return result == 0;
 }
 
@@ -1012,33 +858,20 @@ LicenseGuard::LicenseGuard(EnterpriseFeature required) : m_granted(false), m_req
 extern "C"
 {
 
-<<<<<<< HEAD
     void EnterpriseLog(const char* message)
     {
         if (message)
         {
             LOG_INFO(std::string("[EnterpriseLicense:ASM] ") + message);
         }
-=======
-void EnterpriseLog(const char* message) {
-    if (message) {
-        std::cout << "[EnterpriseLicense:ASM] " << message << std::endl;
->>>>>>> origin/main
     }
 
-<<<<<<< HEAD
     void EnterpriseStateChanged(uint32_t oldState, uint32_t newState)
     {
         std::ostringstream oss;
         oss << "[EnterpriseLicense] State transition: " << oldState << " -> " << newState;
         LOG_INFO(oss.str());
     }
-=======
-void EnterpriseStateChanged(uint32_t oldState, uint32_t newState) {
-    std::cout << "[EnterpriseLicense] State transition: "
-              << oldState << " -> " << newState << std::endl;
-}
->>>>>>> origin/main
 
 }  // extern "C"
 

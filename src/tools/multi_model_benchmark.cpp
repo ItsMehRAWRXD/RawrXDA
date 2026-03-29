@@ -4,11 +4,7 @@
 #include <chrono>
 #include <fstream>
 #include <cstring>
-<<<<<<< HEAD
 #include <nlohmann/json.hpp>
-=======
-#include "../nlohmann/json.hpp"
->>>>>>> origin/main
 #include "cpu_inference_engine.h"
 
 // Alias for legacy benchmark code

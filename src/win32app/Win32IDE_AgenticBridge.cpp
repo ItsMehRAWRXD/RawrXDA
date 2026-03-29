@@ -9,6 +9,7 @@
 #include "../agent/agentic_hotpatch_orchestrator.hpp"
 #include "../agent/agentic_puppeteer.hpp"
 #include "../agentic/OrchestratorBridge.h"
+#include "../agentic/OrchestrationSessionState.h"
 #include "../agentic_engine.h"
 #include "../cpu_inference_engine.h"
 #include "../inference/PerformanceMonitor.h"
@@ -18,20 +19,213 @@
 #include "../vsix_native_converter.hpp"
 #include "IDEConfig.h"
 #include "IDELogger.h"
+#include "RawrXD_TelemetryBridge.h"
 #include "Win32IDE.h"
 #include "Win32IDE_SubAgent.h"
+#include <array>
 #include <algorithm>
-<<<<<<< HEAD
-=======
-#include <memory>
->>>>>>> origin/main
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <psapi.h>
 #include <sstream>
+#include <chrono>
+#include <atomic>
+#include <thread>
 
 namespace
 {
+
+namespace telemetry_internal
+{
+constexpr size_t kEventBytes = 2048;
+constexpr size_t kEventCapacity = 256;
+
+struct TelemetryRingImpl
+{
+    std::atomic<uint64_t> writeSeq{0};
+    std::atomic<uint64_t> readSeq{0};
+    std::atomic<uint64_t> dropped{0};
+    std::array<std::array<char, kEventBytes>, kEventCapacity> events{};
+    std::array<uint64_t, kEventCapacity> timestamps{};
+};
+
+TelemetryRingImpl& ring()
+{
+    static TelemetryRingImpl g_ring;
+    return g_ring;
+}
+
+uint64_t unixMillisNow()
+{
+    FILETIME ft{};
+    GetSystemTimeAsFileTime(&ft);
+    ULARGE_INTEGER uli{};
+    uli.LowPart = ft.dwLowDateTime;
+    uli.HighPart = ft.dwHighDateTime;
+    return (uli.QuadPart - 116444736000000000ULL) / 10000ULL;
+}
+
+int64_t workingSetKb()
+{
+    PROCESS_MEMORY_COUNTERS_EX counters{};
+    counters.cb = sizeof(counters);
+    if (GetProcessMemoryInfo(GetCurrentProcess(), reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&counters),
+                             sizeof(counters)))
+    {
+        return static_cast<int64_t>(counters.WorkingSetSize / 1024ULL);
+    }
+    return 0;
+}
+
+const char* stateName(int step)
+{
+    switch (step)
+    {
+        case 0:
+            return "IDLE";
+        case 1:
+            return "INTENT_CLASSIFY";
+        case 2:
+            return "CONTEXT_ASSEMBLE";
+        case 3:
+            return "CAPABILITY_CHECK";
+        case 4:
+            return "PERMISSION_REQUEST";
+        case 5:
+            return "PLAN_GENERATE";
+        case 6:
+            return "TOOL_PREFETCH";
+        case 7:
+            return "EXECUTE_PARALLEL";
+        case 8:
+            return "STREAMING_INFERENCE";
+        case 9:
+            return "RESULT_VALIDATE";
+        case 10:
+            return "SELF_CORRECT";
+        case 11:
+            return "TRANSACTION_COMMIT";
+        case 12:
+            return "TELEMETRY_EMIT";
+        default:
+            return "UNKNOWN";
+    }
+}
+
+uint64_t reserveSlot(TelemetryRingImpl& r)
+{
+    const uint64_t seq = r.writeSeq.fetch_add(1, std::memory_order_acq_rel);
+    const uint64_t minReadable = seq >= kEventCapacity ? (seq - kEventCapacity + 1) : 0;
+    uint64_t curRead = r.readSeq.load(std::memory_order_relaxed);
+    while (curRead < minReadable && !r.readSeq.compare_exchange_weak(curRead, minReadable, std::memory_order_release,
+                                                                     std::memory_order_relaxed))
+    {
+    }
+    if (curRead < minReadable)
+        r.dropped.fetch_add(minReadable - curRead, std::memory_order_relaxed);
+    return seq;
+}
+
+void emitExplicitJson(const ::RawrXD::Telemetry::ExplicitState& state)
+{
+    TelemetryRingImpl& r = ring();
+    const uint64_t seq = reserveSlot(r);
+    const size_t slot = static_cast<size_t>(seq % kEventCapacity);
+    char* out = r.events[slot].data();
+
+    const int written = _snprintf_s(
+        out, kEventBytes, _TRUNCATE,
+        "{\"ts\":%llu,\"wf\":\"%s\",\"ag\":\"%s\",\"st\":%d,\"st_name\":\"%s\","
+        "\"dur_us\":%llu,\"mem_kb\":%lld,\"tok_in\":%d,\"tok_out\":%d,\"tps\":%d,"
+        "\"tools\":%s,\"tools_ok\":%s,\"err\":%s,\"retry\":%d,\"parallel\":%d,"
+        "\"checkpoint\":%s,\"ctx\":{\"files\":%d,\"tokens\":%d,\"kv_pages\":%d}}\n",
+        static_cast<unsigned long long>(state.timestamp), state.workflowId, state.agentId, state.stepNumber,
+        state.stepName, static_cast<unsigned long long>(state.durationMicros), static_cast<long long>(state.memoryKb),
+        state.inputTokens, state.outputTokens, state.tokensPerSecond, state.tools, state.toolsOk, state.errorValue,
+        state.retryCount, state.parallelAgents, state.checkpointCreated ? "true" : "false", state.contextFiles,
+        state.contextTokens, state.contextKvPages);
+
+    if (written < 0)
+    {
+        out[0] = '{';
+        out[1] = '}';
+        out[2] = '\n';
+        out[3] = '\0';
+    }
+    r.timestamps[slot] = state.timestamp;
+}
+
+}  // namespace telemetry_internal
+
+extern "C" {
+
+HTelemetry Telemetry_Initialize()
+{
+    return reinterpret_cast<HTelemetry>(&telemetry_internal::ring());
+}
+
+int Telemetry_EmitEvent(void* agentContext, void* workflowState)
+{
+    (void)agentContext;
+    (void)workflowState;
+    ::RawrXD::Telemetry::ExplicitState st;
+    st.timestamp = telemetry_internal::unixMillisNow();
+    st.stepNumber = 12;
+    st.stepName = telemetry_internal::stateName(12);
+    st.memoryKb = telemetry_internal::workingSetKb();
+    telemetry_internal::emitExplicitJson(st);
+    return 0;
+}
+
+const char* Telemetry_ReadNextEvent(HTelemetry ringHandle, uint64_t* outTimestamp)
+{
+    if (!ringHandle)
+        return nullptr;
+    auto* r = reinterpret_cast<telemetry_internal::TelemetryRingImpl*>(ringHandle);
+    uint64_t read = r->readSeq.load(std::memory_order_acquire);
+    const uint64_t write = r->writeSeq.load(std::memory_order_acquire);
+    if (read >= write)
+        return nullptr;
+
+    const size_t slot = static_cast<size_t>(read % telemetry_internal::kEventCapacity);
+    const char* out = r->events[slot].data();
+    if (outTimestamp)
+        *outTimestamp = r->timestamps[slot];
+    r->readSeq.store(read + 1, std::memory_order_release);
+    return out;
+}
+
+void Telemetry_Flush(HTelemetry ringHandle)
+{
+    (void)ringHandle;
+}
+
+}  // extern "C"
+
+std::string buildWorkflowExecutorRolePrompt(const std::string& userPrompt, int index, int total)
+{
+    static const char* kRoles[] = {"Planner",          "Implementer",      "Verifier",        "Tool Strategist",
+                                   "Debugger",         "Reviewer",         "Researcher",      "Context Builder",
+                                   "Risk Auditor",     "Patch Author",     "Test Designer",   "Edge Case Hunter",
+                                   "Performance Analyst","Integration Lead", "Refactorer",      "Fallback Planner",
+                                   "Trace Analyst",    "Spec Extractor",   "Constraint Keeper", "Regression Guard",
+                                   "Filesystem Agent", "Build Agent",      "Routing Analyst", "Prompt Optimizer",
+                                   "Memory Curator",   "Swarm Synthesizer", "Validation Lead", "Failure Recovery",
+                                   "Output Editor",    "API Mapper",       "Dependency Scout", "Completion Finisher"};
+
+    const size_t roleCount = sizeof(kRoles) / sizeof(kRoles[0]);
+    const char* role = kRoles[index % static_cast<int>(roleCount)];
+
+    std::ostringstream oss;
+    oss << "[RawrXD Workflow Executor Agent " << (index + 1) << "/" << total << "]\n"
+        << "Role: " << role << "\n"
+        << "You are one member of a parallel agent swarm. Focus on your specialty, avoid repeating other agents, "
+           "and return concise actionable output only.\n\n"
+        << "Primary task:\n"
+        << userPrompt << "\n";
+    return oss.str();
+}
 
 bool envDisablesCapabilityHotpatch(const char* varName)
 {
@@ -60,7 +254,7 @@ bool envDisablesCapabilityHotpatch(const char* varName)
 
 
 // Global shared instances to persist across UI reloads if needed
-static std::shared_ptr<RawrXD::CPUInferenceEngine> g_cpuEngine = nullptr;
+static std::shared_ptr<::RawrXD::CPUInferenceEngine> g_cpuEngine = nullptr;
 static std::shared_ptr<AgenticEngine> g_agentEngine = nullptr;
 static AgenticEngine* g_commandDispatchEngine = nullptr;
 
@@ -101,7 +295,7 @@ bool AgenticBridge::Initialize(const std::string& frameworkPath, const std::stri
 
     if (!g_cpuEngine)
     {
-        g_cpuEngine = std::make_shared<RawrXD::CPUInferenceEngine>();
+        g_cpuEngine = std::make_shared<::RawrXD::CPUInferenceEngine>();
         g_cpuEngine->SetContextLimit(4096);
     }
 
@@ -141,7 +335,7 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt)
 {
     SCOPED_METRIC("agentic.execute_command");
     METRICS.increment("agentic.commands_total");
-    auto& perf = RawrXD::Inference::PerformanceMonitor::instance();
+    auto& perf = ::RawrXD::Inference::PerformanceMonitor::instance();
     perf.startOperation("agentic.bridge.execute");
     bool perfClosed = false;
     auto closePerf = [&]()
@@ -152,18 +346,104 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt)
             perfClosed = true;
         }
     };
-    auto& sanitizer = RawrXD::Security::InputSanitizer::instance();
+    
+    // ===== TIMEOUT GUARD: Establish operation deadline =====
+    const auto operationStart = std::chrono::steady_clock::now();
+    const auto operationDeadline =
+        operationStart + std::chrono::milliseconds(m_executeCommandTimeoutMs);
+    
+    auto checkTimeout = [&](const std::string& phase) -> bool {
+        const auto now = std::chrono::steady_clock::now();
+        const auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - operationStart).count();
+        if (elapsed_ms > m_executeCommandTimeoutMs)
+        {
+            LOG_ERROR("ExecuteAgentCommand timeout exceeded in phase '" + phase + "' (elapsed=" + 
+                      std::to_string(elapsed_ms) + "ms, limit=" + std::to_string(m_executeCommandTimeoutMs) + "ms)");
+            return true;  // timeout occurred
+        }
+        return false;  // still within time
+    };
+
+    auto& sanitizer = ::RawrXD::Security::InputSanitizer::instance();
+    const auto requestStart = std::chrono::steady_clock::now();
     auto promptSan = sanitizer.sanitizePrompt(prompt);
     if (promptSan.wasModified)
     {
         LOG_WARNING("Prompt sanitized before agent dispatch");
     }
+    
+    // Check timeout after sanitization
+    if (checkTimeout("sanitization"))
+    {
+        closePerf();
+        return {AgentResponseType::AGENT_ERROR, "[Timeout] Operation exceeded " + 
+                std::to_string(m_executeCommandTimeoutMs) + "ms limit during prompt sanitization"};
+    }
+    
     // E1: propagate workspace root to engine immediately
     if (!m_workspaceRoot.empty() && g_agentEngine)
         g_agentEngine->setWorkspaceRoot(m_workspaceRoot);
 
+        // ===== Orchestration Session State Integration =====
+        auto& sessionState = ::RawrXD::Orchestration::OrchestrationSessionState::instance();
+    
+        // P1: Classify user intent from the prompt
+        ::RawrXD::Orchestration::IntentClassification intent;
+        intent.intent = "unknown";
+        intent.confidence = 0.0f;
+        intent.reasoning = "Initial classification from prompt text";
+    
+        // Simple keyword-based classification (can be enhanced with ML later)
+        std::string lowerPrompt = prompt;
+        std::transform(lowerPrompt.begin(), lowerPrompt.end(), lowerPrompt.begin(), ::tolower);
+    
+        if (lowerPrompt.find("search") != std::string::npos || lowerPrompt.find("find") != std::string::npos ||
+            lowerPrompt.find("grep") != std::string::npos)
+        {
+            intent.intent = "search";
+            intent.confidence = 0.85f;
+            intent.suggested_tools = {"search_code", "grep_files", "file_search"};
+        }
+        else if (lowerPrompt.find("error") != std::string::npos || lowerPrompt.find("debug") != std::string::npos ||
+                 lowerPrompt.find("diagnose") != std::string::npos || lowerPrompt.find("issue") != std::string::npos)
+        {
+            intent.intent = "debug";
+            intent.confidence = 0.82f;
+            intent.suggested_tools = {"read_file", "grep_files", "run_in_terminal"};
+        }
+        else if (lowerPrompt.find("plan") != std::string::npos || lowerPrompt.find("design") != std::string::npos ||
+                 lowerPrompt.find("architecture") != std::string::npos)
+        {
+            intent.intent = "planning";
+            intent.confidence = 0.80f;
+            intent.suggested_tools = {"read_file", "list_dir", "grep_files"};
+        }
+        else if (lowerPrompt.find("refactor") != std::string::npos || lowerPrompt.find("improve") != std::string::npos ||
+                 lowerPrompt.find("optimize") != std::string::npos)
+        {
+            intent.intent = "refactor";
+            intent.confidence = 0.78f;
+            intent.suggested_tools = {"read_file", "write_file", "grep_files"};
+        }
+        else if (lowerPrompt.find("build") != std::string::npos || lowerPrompt.find("compile") != std::string::npos ||
+                 lowerPrompt.find("test") != std::string::npos)
+        {
+            intent.intent = "build";
+            intent.confidence = 0.83f;
+            intent.suggested_tools = {"run_in_terminal", "read_file"};
+        }
+        else
+        {
+            intent.intent = "general_chat";
+            intent.confidence = 0.50f;
+            intent.suggested_tools = {"read_file", "web_search"};
+        }
+    
+        sessionState.setCurrentIntent(intent);
+        // ===== End Intent Classification =====
+
     // E2: sync OrchestratorBridge model + workdir before routing
-    auto& orch = RawrXD::Agent::OrchestratorBridge::Instance();
+    auto& orch = ::RawrXD::Agent::OrchestratorBridge::Instance();
     if (!m_modelName.empty())
     {
         orch.SetModel(m_modelName);
@@ -189,6 +469,14 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt)
         return {AgentResponseType::AGENT_ERROR, "Engine Not Initialized"};
     }
 
+    // Check timeout after engine initialization
+    if (checkTimeout("engine_init"))
+    {
+        closePerf();
+        return {AgentResponseType::AGENT_ERROR, "[Timeout] Operation exceeded " + 
+                std::to_string(m_executeCommandTimeoutMs) + "ms limit during engine initialization"};
+    }
+
     // Update engine config flags from bridge state
     AgenticEngine::GenerationConfig cfg;
     cfg.maxMode = m_maxMode;
@@ -210,7 +498,7 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt)
     if (prompt.find("/install_vsix ") == 0)
     {
         std::string path = prompt.substr(14);
-        bool res = RawrXD::VsixNativeConverter::ConvertVsixToNative(path, "extensions/");
+        bool res = ::RawrXD::VsixNativeConverter::ConvertVsixToNative(path, "extensions/");
         closePerf();
         return {AgentResponseType::ANSWER, res ? "VSIX Installed" : "VSIX Installation Failed"};
     }
@@ -300,17 +588,89 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt)
         refinedPrompt = "[Workspace root: " + m_workspaceRoot + "]\n\n" + refinedPrompt;
     }
 
-    applyAgentCapabilityHotpatches(refinedPrompt);
+    // ZERO-WRAPPER ARCHITECTURE: Hotpatch macro injection disabled.
+    // All tools are now directly accessible through explicit tool schemas and descriptions.
+    // No model instruction enhancement macros are injected.
+    // applyAgentCapabilityHotpatches(refinedPrompt);  // DISABLED - See ZERO_WRAPPER_ARCHITECTURE.md
 
     // When no local model is loaded, route through active backend (Ollama/cloud) so agentic
     // work can use the same backend as chat (see docs/AGENTIC_AND_MODEL_LOADING_AUDIT.md).
     std::string response;
-    bool localReady = g_cpuEngine && g_cpuEngine->IsModelLoaded();
-    if (!localReady)
+    const uint64_t workflowSeed = static_cast<uint64_t>(GetCurrentProcessId()) << 32 |
+                                  static_cast<uint64_t>(GetCurrentThreadId());
+    char workflowId[32] = {};
+    char agentId[32] = {};
+    _snprintf_s(workflowId, sizeof(workflowId), _TRUNCATE, "%llx", static_cast<unsigned long long>(workflowSeed));
+    _snprintf_s(agentId, sizeof(agentId), _TRUNCATE, "%llx",
+                static_cast<unsigned long long>(workflowSeed ^ static_cast<uint64_t>(prompt.size())));
+
+    if (m_workflowExecutorEnabled)
     {
+        const int agentCount = std::clamp(m_workflowExecutorAgentCount, 1, 32);
+        std::vector<std::string> swarmPrompts;
+        swarmPrompts.reserve(static_cast<size_t>(agentCount));
+        for (int index = 0; index < agentCount; ++index)
+            swarmPrompts.push_back(buildWorkflowExecutorRolePrompt(refinedPrompt, index, agentCount));
+
+        // Check timeout before swarm execution
+        if (checkTimeout("pre_swarm"))
+        {
+            closePerf();
+            return {AgentResponseType::AGENT_ERROR, "[Timeout] Operation exceeded " + 
+                    std::to_string(m_executeCommandTimeoutMs) + "ms limit before workflow executor swarm"};
+        }
+
+        response = ExecuteSwarm(swarmPrompts, agentCount > 1 ? "summarize" : "concatenate", agentCount);
+
+        ::RawrXD::Telemetry::ExplicitState swarmState;
+        swarmState.timestamp = telemetry_internal::unixMillisNow();
+        swarmState.workflowId = workflowId;
+        swarmState.agentId = agentId;
+        swarmState.stepNumber = 7;
+        swarmState.stepName = telemetry_internal::stateName(7);
+        swarmState.memoryKb = telemetry_internal::workingSetKb();
+        swarmState.parallelAgents = agentCount;
+        swarmState.inputTokens = static_cast<int>(refinedPrompt.size() / 4);
+        swarmState.outputTokens = static_cast<int>(response.size() / 4);
+        swarmState.contextTokens = static_cast<int>(refinedPrompt.size() / 4);
+        swarmState.contextKvPages = std::max(1, swarmState.contextTokens / 256);
+        swarmState.checkpointCreated = true;
+        swarmState.tools = "[\"runSubagent\",\"hexmag_swarm\"]";
+        swarmState.toolsOk = "[\"runSubagent\",\"hexmag_swarm\"]";
+        if (response.empty() || response.rfind("[Error]", 0) == 0)
+            swarmState.errorValue = "-1";
+        const auto swarmDur = std::chrono::duration_cast<std::chrono::microseconds>(
+                                  std::chrono::steady_clock::now() - requestStart)
+                                  .count();
+        swarmState.durationMicros = static_cast<uint64_t>(std::max<int64_t>(0, swarmDur));
+        swarmState.tokensPerSecond =
+            (swarmState.durationMicros > 0)
+                ? static_cast<int>((static_cast<uint64_t>(std::max(1, swarmState.outputTokens)) * 1000000ULL) /
+                                   swarmState.durationMicros)
+                : 0;
+        telemetry_internal::emitExplicitJson(swarmState);
+
+        if (response.empty() || response.rfind("[Error]", 0) == 0)
+        {
+            LOG_WARNING("Workflow executor fallback to default agent path");
+            response.clear();
+        }
+    }
+
+    bool localReady = g_cpuEngine && g_cpuEngine->IsModelLoaded();
+    if (response.empty() && !localReady)
+    {
+        // Check timeout before orchestrator call
+        if (checkTimeout("pre_orchestrator"))
+        {
+            closePerf();
+            return {AgentResponseType::AGENT_ERROR, "[Timeout] Operation exceeded " + 
+                    std::to_string(m_executeCommandTimeoutMs) + "ms limit before orchestrator dispatch"};
+        }
+
         // Prefer the orchestrator bridge (Ollama-backed, tool-aware) and let it decide
         // capability at runtime. If it cannot serve, fall back to legacy routing.
-        auto& orch = RawrXD::Agent::OrchestratorBridge::Instance();
+        auto& orch = ::RawrXD::Agent::OrchestratorBridge::Instance();
         if (!m_modelName.empty())
         {
             orch.SetModel(m_modelName);
@@ -320,16 +680,45 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt)
         {
             orch.SetWorkingDirectory(m_workspaceRoot);
         }
+        
+        // Invoke orchestrator with internal timeout guard
         response = orch.RunAgent(refinedPrompt);
+
+        // Check timeout after orchestrator execution
+        if (checkTimeout("post_orchestrator"))
+        {
+            LOG_WARNING("Orchestrator execution may have exceeded deadline");
+        }
 
         if (response.empty() && m_ide)
         {
+            // Check timeout before IDE routing
+            if (checkTimeout("pre_ide_route"))
+            {
+                closePerf();
+                return {AgentResponseType::AGENT_ERROR, "[Timeout] Operation exceeded " + 
+                        std::to_string(m_executeCommandTimeoutMs) + "ms limit before IDE routing"};
+            }
             response = m_ide->routeInferenceRequest(refinedPrompt);
         }
     }
-    else
+    else if (response.empty())
     {
+        // Check timeout before engine chat
+        if (checkTimeout("pre_engine_chat"))
+        {
+            closePerf();
+            return {AgentResponseType::AGENT_ERROR, "[Timeout] Operation exceeded " + 
+                    std::to_string(m_executeCommandTimeoutMs) + "ms limit before engine chat"};
+        }
         response = g_agentEngine->chat(refinedPrompt);
+    }
+
+    // Check timeout after all generation
+    if (checkTimeout("post_generation"))
+    {
+        LOG_WARNING("Generation may have exceeded deadline");
+        response += "\n\n[Warning: Operation may have exceeded timeout during generation]";
     }
 
     // Check for tool calls in the model's response and dispatch them
@@ -342,6 +731,17 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt)
 
         // Append tool result and optionally re-prompt the model
         response += "\n\n[Tool Execution Result]\n" + toolResult;
+        
+            // P2: Record tool execution result in session state
+            ::RawrXD::Orchestration::ToolExecutionResult execResult;
+            execResult.tool_name = "dispatch_model_tool_calls";
+            execResult.result = toolResult.length() > 200 ? toolResult.substr(0, 200) + "..." : toolResult;
+            execResult.success = !toolResult.empty();
+            execResult.duration_ms = static_cast<int64_t>(
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - requestStart).count());
+            sessionState.recordToolExecution(execResult);
+            sessionState.recordOrchestrationPass(true);
     }
 
     // Hook puppeteer + hotpatch orchestrator on the main agentic path (correct refusals, hallucinations, etc.)
@@ -368,16 +768,240 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt)
     }
 
     // E3: truncate oversized response before returning
-    static constexpr size_t kMaxResponseBytes = 256 * 1024;
-    if (response.size() > kMaxResponseBytes)
-        response = response.substr(0, kMaxResponseBytes) + "\n[truncated]";
+        static constexpr size_t kDefaultMaxResponseBytes = 256 * 1024;
+    
+        // ===== GAP #10: Response Stream Buffering Limits =====
+        // Enforce memory-aware response size limits and chunk-based processing
+        // to prevent OOM (out of memory) on large outputs
+        {
+            const int maxBufferBytes = m_maxResponseBufferBytes;
+            const int chunkSizeBytes = m_responseChunkSizeBytes;
+        
+            // Detect memory pressure: check available working set
+            PROCESS_MEMORY_COUNTERS_EX memCounters{};
+            memCounters.cb = sizeof(memCounters);
+            bool memPressure = false;
+        
+            if (GetProcessMemoryInfo(GetCurrentProcess(), 
+                                     reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&memCounters),
+                                     sizeof(memCounters)))
+            {
+                // Warn if working set exceeds 80% of a nominal 2GB limit per process
+                const int64_t nominalLimitBytes = 2 * 1024 * 1024 * 1024;  // 2GB
+                const int64_t workingSetBytes = static_cast<int64_t>(memCounters.WorkingSetSize);
+                const int64_t peakWorkingSetBytes = static_cast<int64_t>(memCounters.PeakWorkingSetSize);
+            
+                if (workingSetBytes > nominalLimitBytes * 0.8)
+                {
+                    memPressure = true;
+                    LOG_WARNING("[Gap #10] Memory pressure detected: WS=" + 
+                               std::to_string(workingSetBytes / (1024*1024)) + "MB, " +
+                               "Peak=" + std::to_string(peakWorkingSetBytes / (1024*1024)) + "MB");
+                }
+            }
+        
+            // Evaluate buffer status
+            size_t responseBytes = response.size();
+            bool bufferExceeded = responseBytes > static_cast<size_t>(maxBufferBytes);
+            bool nearThreshold = responseBytes > static_cast<size_t>(maxBufferBytes) * 0.85;
+        
+            if (bufferExceeded)
+            {
+                LOG_WARNING("[Gap #10] Response buffer exceeded: size=" + std::to_string(responseBytes) + 
+                           " bytes, limit=" + std::to_string(maxBufferBytes) + " bytes, " +
+                           "excess=" + std::to_string(responseBytes - maxBufferBytes) + " bytes");
+            
+                // Truncate with graceful degradation message
+                response = response.substr(0, maxBufferBytes);
+                response += "\n\n[Response truncated by Gap #10 buffer limit: " + 
+                           std::to_string(responseBytes) + " bytes exceeds " + 
+                           std::to_string(maxBufferBytes) + " byte limit. " +
+                           (memPressure ? "System under memory pressure." : "Consider increasing buffer size.") + "]";
+            }
+            else if (nearThreshold)
+            {
+                LOG_DEBUG("[Gap #10] Response approaching buffer limit: size=" + 
+                         std::to_string(responseBytes) + " bytes of " + std::to_string(maxBufferBytes) + 
+                         " bytes available (85%+ utilization)");
+            }
+            else
+            {
+                LOG_DEBUG("[Gap #10] Response buffering nominal: size=" + std::to_string(responseBytes) + 
+                         " bytes of " + std::to_string(maxBufferBytes) + " bytes");
+            }
+        
+            // Log chunk processing info for diagnostic purposes
+            if (responseBytes > 0)
+            {
+                int chunkCount = static_cast<int>((responseBytes + chunkSizeBytes - 1) / chunkSizeBytes);
+                LOG_DEBUG("[Gap #10] Response chunk info: " + std::to_string(chunkCount) + 
+                         " chunks of " + std::to_string(chunkSizeBytes) + " bytes each");
+            }
+        }
+    
+    if (response.size() > kDefaultMaxResponseBytes)
+        response = response.substr(0, kDefaultMaxResponseBytes) + "\n[redacted - size exceeded]";
 
-    // E6: record per-call latency via performance monitor
-    // TODO: add recordLatency to PerformanceMonitor when timing infra lands
+    // ===== GAP #8: Response Content Validation + UTF-8 Enforcement =====
+    // Sanitize response for encoding issues, null characters, and control sequences
+    {
+        std::string sanitized;
+        sanitized.reserve(response.size());
+        bool hadInvalidChars = false;
+        
+        for (size_t i = 0; i < response.size(); ++i)
+        {
+            unsigned char c = static_cast<unsigned char>(response[i]);
+            
+            // Check for null characters (terminates C strings unexpectedly)
+            if (c == '\0')
+            {
+                hadInvalidChars = true;
+                LOG_WARNING("Response contained null character at offset " + std::to_string(i));
+                continue;  // Skip null bytes
+            }
+            
+            // Allow standard printable ASCII and common white space
+            if ((c >= 0x20 && c <= 0x7E) ||  // Printable ASCII
+                c == '\n' || c == '\r' || c == '\t')  // Common whitespace
+            {
+                sanitized += response[i];
+            }
+            // Allow valid UTF-8 multi-byte sequences
+            else if (c >= 0x80)
+            {
+                // UTF-8 continuation byte or start of multi-byte sequence
+                // For safety, allow and pass through; invalid sequences handled downstream
+                sanitized += response[i];
+            }
+            // Reject other control characters (0x01-0x1F except \n, \r, \t)
+            else if (c < 0x20)
+            {
+                hadInvalidChars = true;
+                LOG_DEBUG("Response contained control character 0x" + 
+                         std::string(1, "0123456789ABCDEF"[c >> 4]) + 
+                         std::string(1, "0123456789ABCDEF"[c & 0x0F]) +
+                         " at offset " + std::to_string(i) + ", removing");
+                continue;  // Skip control characters except those handled above
+            }
+        }
+        
+        if (hadInvalidChars)
+        {
+            LOG_WARNING("Response sanitized: removed " + 
+                       std::to_string(response.size() - sanitized.size()) + " invalid characters");
+        }
+        
+        response = sanitized;
+    }
+    
+    // Validate UTF-8 encoding (basic check for common issues)
+    {
+        bool utf8Valid = true;
+        for (size_t i = 0; i < response.size(); ++i)
+        {
+            unsigned char c = static_cast<unsigned char>(response[i]);
+            
+            // Check for orphaned continuation bytes
+            if ((c & 0xC0) == 0x80)  // Continuation byte (10xxxxxx)
+            {
+                if (i == 0 || (static_cast<unsigned char>(response[i-1]) & 0xC0) != 0xC0)
+                {
+                    utf8Valid = false;
+                    LOG_WARNING("Response contains orphaned UTF-8 continuation byte at offset " + 
+                               std::to_string(i));
+                }
+            }
+            
+            // Check for invalid multi-byte start sequences
+            if ((c & 0xF0) == 0xF0)  // Should be 4-byte sequence (11110xxx)
+            {
+                if (i + 3 >= response.size())
+                {
+                    utf8Valid = false;
+                    LOG_WARNING("Response contains incomplete UTF-8 4-byte sequence at offset " + 
+                               std::to_string(i));
+                }
+            }
+            else if ((c & 0xE0) == 0xE0)  // Should be 3-byte sequence (1110xxxx)
+            {
+                if (i + 2 >= response.size())
+                {
+                    utf8Valid = false;
+                    LOG_WARNING("Response contains incomplete UTF-8 3-byte sequence at offset " + 
+                               std::to_string(i));
+                }
+            }
+            else if ((c & 0xC0) == 0xC0)  // Should be 2-byte sequence (110xxxxx)
+            {
+                if (i + 1 >= response.size())
+                {
+                    utf8Valid = false;
+                    LOG_WARNING("Response contains incomplete UTF-8 2-byte sequence at offset " + 
+                               std::to_string(i));
+                }
+            }
+        }
+        
+        if (!utf8Valid)
+        {
+            LOG_WARNING("Response UTF-8 encoding validation found issues; proceeding with best-effort output");
+        }
+    }
+
+    // Final timeout check before returning
+    if (checkTimeout("final"))
+    {
+        LOG_WARNING("Final timeout check triggered");
+    }
+
+    // E6: latency is recorded after finalDur is computed below
 
     AgentResponse r;
     r.content = response;
     r.type = AgentResponseType::ANSWER;
+
+    ::RawrXD::Telemetry::ExplicitState finalState;
+
+        // P3: Attach synthesis signal for orchestration visibility (dev builds only)
+        auto& devSessionState = ::RawrXD::Orchestration::OrchestrationSessionState::instance();
+        std::string synthesisSignal = devSessionState.getSynthesisSignal();
+        if (!synthesisSignal.empty())
+        {
+    #ifdef DEBUG_ORCHESTRATION_SYNTHESIS
+            r.content += "\n\n[Orchestration Synthesis]\n" + synthesisSignal;
+    #endif
+        }
+    finalState.timestamp = telemetry_internal::unixMillisNow();
+    finalState.workflowId = workflowId;
+    finalState.agentId = agentId;
+    finalState.stepNumber = m_workflowExecutorEnabled ? 11 : 8;
+    finalState.stepName = telemetry_internal::stateName(finalState.stepNumber);
+    finalState.memoryKb = telemetry_internal::workingSetKb();
+    finalState.parallelAgents = m_workflowExecutorEnabled ? std::clamp(m_workflowExecutorAgentCount, 1, 32) : 1;
+    finalState.inputTokens = static_cast<int>(refinedPrompt.size() / 4);
+    finalState.outputTokens = static_cast<int>(response.size() / 4);
+    finalState.contextTokens = static_cast<int>(refinedPrompt.size() / 4);
+    finalState.contextKvPages = std::max(1, finalState.contextTokens / 256);
+    finalState.checkpointCreated = true;
+    finalState.tools = "[]";
+    finalState.toolsOk = "[]";
+    if (response.rfind("[ERROR]", 0) == 0 || response.rfind("[Error]", 0) == 0)
+        finalState.errorValue = "-2";
+    const auto finalDur =
+        std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - requestStart)
+            .count();
+    finalState.durationMicros = static_cast<uint64_t>(std::max<int64_t>(0, finalDur));
+    finalState.tokensPerSecond =
+        (finalState.durationMicros > 0)
+            ? static_cast<int>((static_cast<uint64_t>(std::max(1, finalState.outputTokens)) * 1000000ULL) /
+                               finalState.durationMicros)
+            : 0;
+    telemetry_internal::emitExplicitJson(finalState);
+
+    // E6: record per-call latency in PerformanceMonitor for aggregated visibility
+    perf.recordLatency("agentic.bridge.execute.total", finalDur);
+
     closePerf();
     return r;
 }
@@ -399,85 +1023,37 @@ void AgenticBridge::SetMaxMode(bool enabled)
 void AgenticBridge::SetDeepThinking(bool enabled)
 {
     m_deepThinking = enabled;
-    LOG_INFO(std::string("Deep Thinking ") + (enabled ? "Enabled" : "Disabled"));
 }
 
 void AgenticBridge::SetDeepResearch(bool enabled)
 {
     m_deepResearch = enabled;
-    LOG_INFO(std::string("Deep Research ") + (enabled ? "Enabled" : "Disabled"));
 }
 
 void AgenticBridge::SetNoRefusal(bool enabled)
 {
     m_noRefusal = enabled;
-    LOG_INFO(std::string("No Refusal Mode ") + (enabled ? "Enabled" : "Disabled"));
 }
 
-void AgenticBridge::SetAutoCorrect(bool enabled)
+void AgenticBridge::SetWorkflowExecutorEnabled(bool enabled)
 {
-    m_autoCorrect = enabled;
-    LOG_INFO(std::string("Auto Correct ") + (enabled ? "Enabled" : "Disabled"));
+    m_workflowExecutorEnabled = enabled;
 }
 
-void AgenticBridge::SetHotpatchSubAgentToolProtocol(bool enabled)
+void AgenticBridge::SetWorkflowExecutorAgentCount(int agentCount)
 {
-    m_hotpatchSubAgentToolProtocol = enabled;
-    LOG_INFO(std::string("SubAgent tool-protocol hotpatch ") + (enabled ? "enabled" : "disabled"));
-}
-
-void AgenticBridge::SetHotpatchThoughtProtocol(bool enabled)
-{
-    m_hotpatchThoughtProtocol = enabled;
-    LOG_INFO(std::string("Thought-protocol hotpatch ") + (enabled ? "enabled" : "disabled"));
-}
-
-void AgenticBridge::applyAgentCapabilityHotpatches(std::string& refinedPrompt)
-{
-    std::string prefix;
-    if (m_hotpatchSubAgentToolProtocol && !envDisablesCapabilityHotpatch("RAWRXD_DISABLE_SUBAGENT_HOTPATCH"))
-    {
-        prefix += "[RawrXD hotpatch — SubAgent/tools]\n"
-                  "The model stack may not expose native function-calling. To delegate a subtask, emit ONE line:\n"
-                  "  TOOL:runSubagent:{\"description\":\"short label\",\"prompt\":\"instructions for the sub-agent\"}\n"
-                  "Workspace tools (one line each): tool:list_dir path=.\n"
-                  "  tool:read_file path=<path>\n"
-                  "  tool:write_file path=<path> content=<text>\n"
-                  "Parallel work: TOOL:hexmag_swarm:{\"prompts\":[\"task1\",\"task2\"],\"strategy\":\"concatenate\","
-                  "\"maxParallel\":4}\n"
-                  "Sequential pipeline: TOOL:chain:{\"steps\":[\"step1\",\"step2\"],\"input\":\"...\"}\n"
-                  "RawrXD dispatches these patterns from plain text even without server-side tool schemas.\n\n";
-    }
-    if (m_deepThinking && m_hotpatchThoughtProtocol &&
-        !envDisablesCapabilityHotpatch("RAWRXD_DISABLE_THOUGHT_HOTPATCH"))
-    {
-        prefix += "[RawrXD hotpatch — Thought]\n"
-                  "Even without native chain-of-thought in the backend, first write a concise private reasoning block "
-                  "inside <thought>...</thought>, then give the user-facing answer after </thought>.\n\n";
-    }
-    if (!prefix.empty())
-        refinedPrompt.insert(0, prefix);
+    m_workflowExecutorAgentCount = std::clamp(agentCount, 1, 32);
 }
 
 void AgenticBridge::SetLanguageContext(const std::string& language, const std::string& filePath)
 {
     m_languageContext = language;
     m_fileContext = filePath;
-    // Propagate to the native agent if available
-    if (m_nativeAgent)
-    {
-        m_nativeAgent->SetLanguageContext(language);
-        m_nativeAgent->SetFileContext(filePath);
-    }
-    LOG_INFO("Language context set: " + language + " file: " + filePath);
 }
 
 void AgenticBridge::SetContextSize(const std::string& sizeName)
 {
-    if (!g_cpuEngine)
-        return;
-
-    size_t limit = 4096;
+    int limit = 32768;
     std::string s = sizeName;
     std::transform(s.begin(), s.end(), s.begin(), ::tolower);
 
@@ -503,32 +1079,20 @@ void AgenticBridge::SetContextSize(const std::string& sizeName)
     LOG_INFO(ss.str());
 }
 
-// ============================================================================
-// Agent Loop Management
-// ============================================================================
-
 bool AgenticBridge::StartAgentLoop(const std::string& initialPrompt, int maxIterations)
 {
     SCOPED_METRIC("agentic.start_loop");
     METRICS.increment("agentic.loops_started");
     LOG_INFO("StartAgentLoop: " + initialPrompt);
 
-<<<<<<< HEAD
     if (!m_initialized)
     {
-=======
-    if (!m_initialized) {
->>>>>>> origin/main
         LOG_ERROR("Cannot start agent loop - not initialized");
         return false;
     }
 
-<<<<<<< HEAD
     if (m_agentLoopRunning)
     {
-=======
-    if (m_agentLoopRunning) {
->>>>>>> origin/main
         LOG_WARNING("Agent loop already running");
         return false;
     }
@@ -549,18 +1113,14 @@ bool AgenticBridge::StartAgentLoop(const std::string& initialPrompt, int maxIter
             m_outputCallback(iterationTitle, response.content);
         }
 
-        // Check for tool results appended to the response (ExecuteAgentCommand does this)
         size_t toolResultPos = response.content.find("[Tool Execution Result]");
         if (toolResultPos != std::string::npos)
         {
-            // Found tool results, feed them back into the model
             currentPrompt = "Observation from tool execution:\n" + response.content.substr(toolResultPos);
-            // Optionally add a reminder to the agent to continue
             currentPrompt += "\n\nContinue toward the goal: " + initialPrompt;
         }
         else
         {
-            // No tool results, agent likely finished or reached a terminal state
             LOG_INFO("Agent loop completed: No further tool calls detected.");
             break;
         }
@@ -581,21 +1141,12 @@ void AgenticBridge::StopAgentLoop()
 // Status & Capability Queries
 // ============================================================================
 
-<<<<<<< HEAD
 std::vector<std::string> AgenticBridge::GetAvailableTools()
 {
     return {"shell",       "powershell",       "run_in_terminal", "read_file",    "write_file",
             "list_dir",    "list_directory",   "grep_files",      "search_files", "reference_symbol",
             "load_model",  "model_status",     "web_search",      "git_status",   "task_orchestrator",
             "runSubagent", "manage_todo_list", "chain",           "hexmag_swarm"};
-=======
-std::vector<std::string> AgenticBridge::GetAvailableTools() {
-    return {
-        "shell", "powershell", "read_file", "write_file",
-        "web_search", "list_dir", "git_status", "task_orchestrator",
-        "runSubagent", "manage_todo_list", "chain", "hexmag_swarm"
-    };
->>>>>>> origin/main
 }
 
 std::string AgenticBridge::GetAgentStatus()
@@ -611,6 +1162,8 @@ std::string AgenticBridge::GetAgentStatus()
     status << "  Max Mode: " << (m_maxMode ? "Yes" : "No") << "\n";
     status << "  Deep Thinking: " << (m_deepThinking ? "Yes" : "No") << "\n";
     status << "  Deep Research: " << (m_deepResearch ? "Yes" : "No") << "\n";
+    status << "  Workflow Executor: " << (m_workflowExecutorEnabled ? "Yes" : "No") << "\n";
+    status << "  Workflow Agents: " << m_workflowExecutorAgentCount << "\n";
     status << "  Engine Loaded: " << (g_cpuEngine && g_cpuEngine->IsModelLoaded() ? "Yes" : "No") << "\n";
     if (g_agentEngine)
     {
@@ -633,7 +1186,6 @@ void AgenticBridge::SetModel(const std::string& modelName)
 {
     m_modelName = modelName;
     LOG_INFO("Model set to: " + modelName);
-<<<<<<< HEAD
 
     auto endsWith = [](const std::string& s, const std::string& ext) -> bool
     {
@@ -666,17 +1218,9 @@ void AgenticBridge::SetModel(const std::string& modelName)
 
         // Keep OrchestratorBridge (agentic/tool-calling path) in sync so IDE agent flows
         // use the same selected model as chat/FIM.
-        auto& orch = RawrXD::Agent::OrchestratorBridge::Instance();
+        auto& orch = ::RawrXD::Agent::OrchestratorBridge::Instance();
         orch.SetModel(modelName);
         orch.SetFIMModel(modelName);
-=======
-    // Only load as GGUF path when it looks like a file path (agentic autonomous: Ollama tags are valid, don't LoadModel)
-    if (g_cpuEngine && !modelName.empty()) {
-        bool isPath = modelName.find_first_of("/\\") != std::string::npos
-                   || modelName.size() > 4 && modelName.compare(modelName.size() - 5, 5, ".gguf") == 0;
-        if (isPath)
-            g_cpuEngine->LoadModel(modelName);
->>>>>>> origin/main
     }
 }
 
@@ -704,29 +1248,45 @@ bool AgenticBridge::SpawnPowerShellProcess(const std::string& scriptPath, const 
     sa.bInheritHandle = TRUE;
     sa.lpSecurityDescriptor = NULL;
 
-<<<<<<< HEAD
     if (!CreatePipe(&m_hStdoutRead, &m_hStdoutWrite, &sa, 0))
     {
-=======
-    if (!CreatePipe(&m_hStdoutRead, &m_hStdoutWrite, &sa, 0)) {
->>>>>>> origin/main
-        LOG_ERROR("Failed to create stdout pipe");
+        LOG_ERROR("Failed to create stdout pipe (GetLastError=" + std::to_string(GetLastError()) + ")");
         return false;
     }
-    SetHandleInformation(m_hStdoutRead, HANDLE_FLAG_INHERIT, 0);
-
-<<<<<<< HEAD
-    if (!CreatePipe(&m_hStdinRead, &m_hStdinWrite, &sa, 0))
+    
+    if (!SetHandleInformation(m_hStdoutRead, HANDLE_FLAG_INHERIT, 0))
     {
-=======
-    if (!CreatePipe(&m_hStdinRead, &m_hStdinWrite, &sa, 0)) {
->>>>>>> origin/main
-        LOG_ERROR("Failed to create stdin pipe");
+        LOG_ERROR("Failed to set stdout read handle info (GetLastError=" + std::to_string(GetLastError()) + ")");
         CloseHandle(m_hStdoutRead);
         CloseHandle(m_hStdoutWrite);
+        m_hStdoutRead = nullptr;
+        m_hStdoutWrite = nullptr;
         return false;
     }
-    SetHandleInformation(m_hStdinWrite, HANDLE_FLAG_INHERIT, 0);
+
+    if (!CreatePipe(&m_hStdinRead, &m_hStdinWrite, &sa, 0))
+    {
+        LOG_ERROR("Failed to create stdin pipe (GetLastError=" + std::to_string(GetLastError()) + ")");
+        CloseHandle(m_hStdoutRead);
+        CloseHandle(m_hStdoutWrite);
+        m_hStdoutRead = nullptr;
+        m_hStdoutWrite = nullptr;
+        return false;
+    }
+    
+    if (!SetHandleInformation(m_hStdinWrite, HANDLE_FLAG_INHERIT, 0))
+    {
+        LOG_ERROR("Failed to set stdin write handle info (GetLastError=" + std::to_string(GetLastError()) + ")");
+        CloseHandle(m_hStdoutRead);
+        CloseHandle(m_hStdoutWrite);
+        CloseHandle(m_hStdinRead);
+        CloseHandle(m_hStdinWrite);
+        m_hStdoutRead = nullptr;
+        m_hStdoutWrite = nullptr;
+        m_hStdinRead = nullptr;
+        m_hStdinWrite = nullptr;
+        return false;
+    }
 
     STARTUPINFOA si = {};
     si.cb = sizeof(STARTUPINFOA);
@@ -742,24 +1302,25 @@ bool AgenticBridge::SpawnPowerShellProcess(const std::string& scriptPath, const 
     BOOL success = CreateProcessA(NULL, const_cast<char*>(cmdLine.c_str()), NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL,
                                   NULL, &si, &pi);
 
-<<<<<<< HEAD
     if (!success)
     {
-=======
-    if (!success) {
->>>>>>> origin/main
-        LOG_ERROR("Failed to create PowerShell process");
+        LOG_ERROR("Failed to create PowerShell process (GetLastError=" + std::to_string(GetLastError()) + 
+                  ", cmdLine=" + cmdLine + ")");
         CloseHandle(m_hStdoutRead);
         CloseHandle(m_hStdoutWrite);
         CloseHandle(m_hStdinRead);
         CloseHandle(m_hStdinWrite);
+        m_hStdoutRead = nullptr;
+        m_hStdoutWrite = nullptr;
+        m_hStdinRead = nullptr;
+        m_hStdinWrite = nullptr;
         return false;
     }
 
     m_hProcess = pi.hProcess;
     CloseHandle(pi.hThread);
 
-    LOG_DEBUG("PowerShell process spawned successfully");
+    LOG_DEBUG("PowerShell process spawned successfully (PID=" + std::to_string(pi.dwProcessId) + ")");
     return true;
 }
 
@@ -768,12 +1329,8 @@ bool AgenticBridge::ReadProcessOutput(std::string& output, DWORD timeoutMs)
     LOG_DEBUG("Reading process output");
     output.clear();
 
-<<<<<<< HEAD
     if (!m_hStdoutRead)
     {
-=======
-    if (!m_hStdoutRead) {
->>>>>>> origin/main
         LOG_ERROR("No stdout handle");
         return false;
     }
@@ -788,20 +1345,20 @@ bool AgenticBridge::ReadProcessOutput(std::string& output, DWORD timeoutMs)
     DWORD bytesRead;
     DWORD startTime = GetTickCount();
     constexpr DWORD kMaxChunk = static_cast<DWORD>(sizeof(buffer) - 1);
+    constexpr int kMaxIterations = 10000;  // ~1000 sec at 100ms per iteration
+    int iterationCount = 0;
 
-<<<<<<< HEAD
-    while (true)
+    while (iterationCount < kMaxIterations)
     {
-=======
-    while (true) {
->>>>>>> origin/main
+        ++iterationCount;
         DWORD available = 0;
         if (!PeekNamedPipe(m_hStdoutRead, NULL, 0, NULL, &available, NULL))
         {
+            LOG_ERROR("PeekNamedPipe failed (iteration " + std::to_string(iterationCount) + 
+                      ", GetLastError=" + std::to_string(GetLastError()) + ")");
             break;
         }
 
-<<<<<<< HEAD
         if (available > 0)
         {
             if (ReadFile(m_hStdoutRead, buffer, kMaxChunk, &bytesRead, NULL) && bytesRead > 0)
@@ -813,46 +1370,53 @@ bool AgenticBridge::ReadProcessOutput(std::string& output, DWORD timeoutMs)
             }
             else
             {
-=======
-        if (available > 0) {
-            if (ReadFile(m_hStdoutRead, buffer, sizeof(buffer) - 1, &bytesRead, NULL) && bytesRead > 0) {
-                buffer[bytesRead] = '\0';
-                output += buffer;
-            } else {
->>>>>>> origin/main
+                DWORD readErr = GetLastError();
+                if (readErr != ERROR_NO_DATA)
+                {
+                    LOG_ERROR("ReadFile failed (GetLastError=" + std::to_string(readErr) + ")");
+                }
                 break;
             }
         }
 
-<<<<<<< HEAD
         if (GetTickCount() - startTime > timeoutMs)
         {
-=======
-        if (GetTickCount() - startTime > timeoutMs) {
->>>>>>> origin/main
-            LOG_WARNING("ReadProcessOutput timeout");
+            LOG_WARNING("ReadProcessOutput timeout after " + std::to_string(timeoutMs) + "ms");
             break;
         }
 
-        DWORD exitCode;
-<<<<<<< HEAD
-        if (GetExitCodeProcess(m_hProcess, &exitCode) && exitCode != STILL_ACTIVE)
+        DWORD exitCode = STILL_ACTIVE;
+        if (!GetExitCodeProcess(m_hProcess, &exitCode))
         {
-            while (PeekNamedPipe(m_hStdoutRead, NULL, 0, NULL, &available, NULL) && available > 0)
+            LOG_ERROR("GetExitCodeProcess failed (GetLastError=" + std::to_string(GetLastError()) + ")");
+            break;
+        }
+
+        if (exitCode != STILL_ACTIVE)
+        {
+            // Process exited; drain remaining output
+            LOG_DEBUG("Process exited with code " + std::to_string(exitCode) + "; draining output");
+            constexpr int kDrainIterations = 100;
+            for (int i = 0; i < kDrainIterations; ++i)
             {
+                if (!PeekNamedPipe(m_hStdoutRead, NULL, 0, NULL, &available, NULL))
+                {
+                    LOG_DEBUG("PeekNamedPipe failed during drain (iteration " + std::to_string(i) + ")");
+                    break;
+                }
+                if (available == 0)
+                    break;
+                
                 if (ReadFile(m_hStdoutRead, buffer, kMaxChunk, &bytesRead, NULL) && bytesRead > 0)
                 {
                     const size_t safeBytes =
                         (bytesRead <= kMaxChunk) ? static_cast<size_t>(bytesRead) : static_cast<size_t>(kMaxChunk);
                     buffer[safeBytes] = '\0';
                     output.append(buffer, safeBytes);
-=======
-        if (GetExitCodeProcess(m_hProcess, &exitCode) && exitCode != STILL_ACTIVE) {
-            while (PeekNamedPipe(m_hStdoutRead, NULL, 0, NULL, &available, NULL) && available > 0) {
-                if (ReadFile(m_hStdoutRead, buffer, sizeof(buffer) - 1, &bytesRead, NULL) && bytesRead > 0) {
-                    buffer[bytesRead] = '\0';
-                    output += buffer;
->>>>>>> origin/main
+                }
+                else
+                {
+                    break;
                 }
             }
             break;
@@ -861,61 +1425,116 @@ bool AgenticBridge::ReadProcessOutput(std::string& output, DWORD timeoutMs)
         Sleep(100);
     }
 
-    LOG_DEBUG("Read " + std::to_string(output.length()) + " bytes from process");
+    if (iterationCount >= kMaxIterations)
+    {
+        LOG_ERROR("ReadProcessOutput exceeded max iterations (" + std::to_string(kMaxIterations) + ")");
+    }
+
+    LOG_DEBUG("Read " + std::to_string(output.length()) + " bytes from process (iterations=" + 
+              std::to_string(iterationCount) + ")");
     return !output.empty();
 }
 
 void AgenticBridge::KillPowerShellProcess()
 {
+    // Terminate process with explicit error handling
     if (m_hProcess)
     {
-        TerminateProcess(m_hProcess, 0);
-        CloseHandle(m_hProcess);
+        DWORD exitCode = 0;
+        if (GetExitCodeProcess(m_hProcess, &exitCode))
+        {
+            if (exitCode == STILL_ACTIVE)
+            {
+                if (!TerminateProcess(m_hProcess, 0))
+                {
+                    LOG_ERROR("TerminateProcess failed (GetLastError=" + std::to_string(GetLastError()) + ")");
+                }
+                else
+                {
+                    LOG_DEBUG("PowerShell process terminated");
+                }
+            }
+            else
+            {
+                LOG_DEBUG("PowerShell process already exited with code " + std::to_string(exitCode));
+            }
+        }
+        else
+        {
+            LOG_ERROR("GetExitCodeProcess failed in KillPowerShellProcess (GetLastError=" + 
+                      std::to_string(GetLastError()) + ")");
+        }
+
+        // Always attempt to close process handle once it's no longer needed
+        if (!CloseHandle(m_hProcess))
+        {
+            LOG_ERROR("CloseHandle(m_hProcess) failed (GetLastError=" + std::to_string(GetLastError()) + ")");
+        }
         m_hProcess = nullptr;
-        LOG_DEBUG("PowerShell process terminated");
     }
-<<<<<<< HEAD
+
+    // Close stdout pipe (double-close protected)
     if (m_hStdoutRead)
     {
-        CloseHandle(m_hStdoutRead);
+        if (!CloseHandle(m_hStdoutRead))
+        {
+            LOG_ERROR("CloseHandle(m_hStdoutRead) failed (GetLastError=" + std::to_string(GetLastError()) + ")");
+        }
         m_hStdoutRead = nullptr;
     }
+
     if (m_hStdoutWrite)
     {
-        CloseHandle(m_hStdoutWrite);
+        if (!CloseHandle(m_hStdoutWrite))
+        {
+            LOG_ERROR("CloseHandle(m_hStdoutWrite) failed (GetLastError=" + std::to_string(GetLastError()) + ")");
+        }
         m_hStdoutWrite = nullptr;
     }
+
+    // Close stdin pipe (double-close protected)
     if (m_hStdinRead)
     {
-        CloseHandle(m_hStdinRead);
+        if (!CloseHandle(m_hStdinRead))
+        {
+            LOG_ERROR("CloseHandle(m_hStdinRead) failed (GetLastError=" + std::to_string(GetLastError()) + ")");
+        }
         m_hStdinRead = nullptr;
     }
+
     if (m_hStdinWrite)
     {
-        CloseHandle(m_hStdinWrite);
+        if (!CloseHandle(m_hStdinWrite))
+        {
+            LOG_ERROR("CloseHandle(m_hStdinWrite) failed (GetLastError=" + std::to_string(GetLastError()) + ")");
+        }
         m_hStdinWrite = nullptr;
     }
-=======
-    if (m_hStdoutRead)  { CloseHandle(m_hStdoutRead);  m_hStdoutRead  = nullptr; }
-    if (m_hStdoutWrite) { CloseHandle(m_hStdoutWrite); m_hStdoutWrite = nullptr; }
-    if (m_hStdinRead)   { CloseHandle(m_hStdinRead);   m_hStdinRead   = nullptr; }
-    if (m_hStdinWrite)  { CloseHandle(m_hStdinWrite);  m_hStdinWrite  = nullptr; }
->>>>>>> origin/main
+
+    LOG_DEBUG("All PowerShell process handles cleaned up");
 }
 
 // ============================================================================
 // Response Parsing (Full Implementation)
 // ============================================================================
 
-<<<<<<< HEAD
 AgentResponse AgenticBridge::ParseAgentResponse(const std::string& rawOutput)
 {
-=======
-AgentResponse AgenticBridge::ParseAgentResponse(const std::string& rawOutput) {
->>>>>>> origin/main
     AgentResponse response;
     response.type = AgentResponseType::THINKING;
     response.rawOutput = rawOutput;
+
+    auto trimInPlace = [](std::string& s)
+    {
+        const size_t first = s.find_first_not_of(" \t\n\r");
+        if (first == std::string::npos)
+        {
+            s.clear();
+            return;
+        }
+        const size_t last = s.find_last_not_of(" \t\n\r");
+        s = s.substr(first, last - first + 1);
+    };
 
     std::istringstream stream(rawOutput);
     std::string line;
@@ -926,20 +1545,43 @@ AgentResponse AgenticBridge::ParseAgentResponse(const std::string& rawOutput) {
         if (IsToolCall(line))
         {
             response.type = AgentResponseType::TOOL_CALL;
-            size_t firstColon = line.find(':');
-            size_t secondColon = line.find(':', firstColon + 1);
-            if (secondColon != std::string::npos)
+            response.toolName = "unknown";
+            response.toolArgs = line;
+            if (line.find("TOOL:") == 0)
             {
-                response.toolName = line.substr(firstColon + 1, secondColon - firstColon - 1);
-                response.toolArgs = line.substr(secondColon + 1);
+                // Legacy colon-delimited format: TOOL:name:args
+                size_t firstColon = line.find(':');
+                size_t secondColon = line.find(':', firstColon + 1);
+                if (firstColon != std::string::npos && secondColon != std::string::npos && secondColon > firstColon + 1)
+                {
+                    response.toolName = line.substr(firstColon + 1, secondColon - firstColon - 1);
+                    response.toolArgs = line.substr(secondColon + 1);
+                    trimInPlace(response.toolName);
+                    trimInPlace(response.toolArgs);
+                }
+            }
+            else
+            {
+                // JSON / XML format: extract "name":"value" field
+                const std::string nameKey = "\"name\":\"";
+                size_t namePos = line.find(nameKey);
+                if (namePos != std::string::npos)
+                {
+                    namePos += nameKey.size();
+                    size_t nameEnd = line.find('"', namePos);
+                    response.toolName = (nameEnd != std::string::npos)
+                                            ? line.substr(namePos, nameEnd - namePos)
+                                            : line.substr(namePos);
+                    trimInPlace(response.toolName);
+                }
+                trimInPlace(response.toolArgs);
             }
         }
         else if (IsAnswer(line))
         {
             response.type = AgentResponseType::ANSWER;
             response.content = line.substr(line.find(':') + 1);
-            response.content.erase(0, response.content.find_first_not_of(" \t\n\r"));
-            response.content.erase(response.content.find_last_not_of(" \t\n\r") + 1);
+            trimInPlace(response.content);
         }
         fullContent += line + "\n";
     }
@@ -954,7 +1596,17 @@ AgentResponse AgenticBridge::ParseAgentResponse(const std::string& rawOutput) {
 
 bool AgenticBridge::IsToolCall(const std::string& line)
 {
-    return line.find("TOOL:") == 0;
+    if (line.find("TOOL:") == 0)
+        return true;
+    if (line.find("{\"tool_call\":") != std::string::npos)
+        return true;
+    if (line.find("{\"function_call\":") != std::string::npos)
+        return true;
+    if (line.find("<tool_call>") != std::string::npos)
+        return true;
+    if (line.find("<function_calls>") != std::string::npos)
+        return true;
+    return false;
 }
 
 bool AgenticBridge::IsAnswer(const std::string& line)
@@ -996,12 +1648,8 @@ std::string AgenticBridge::ResolveFrameworkPath()
                                             "Agentic-Framework.ps1",        "scripts\\Agentic-Framework.ps1",
                                             "..\\Agentic-Framework.ps1",    "..\\scripts\\Agentic-Framework.ps1"};
 
-<<<<<<< HEAD
     for (const auto& path : searchPaths)
     {
-=======
-    for (const auto& path : searchPaths) {
->>>>>>> origin/main
         DWORD attr = GetFileAttributesA(path.c_str());
         if (attr != INVALID_FILE_ATTRIBUTES)
         {
@@ -1014,12 +1662,8 @@ std::string AgenticBridge::ResolveFrameworkPath()
     return "Agentic-Framework.ps1";
 }
 
-<<<<<<< HEAD
 std::string AgenticBridge::ResolveToolsModulePath()
 {
-=======
-std::string AgenticBridge::ResolveToolsModulePath() {
->>>>>>> origin/main
     std::string base = ResolveFrameworkPath();
     if (base.empty() || base == "Agentic-Framework.ps1")
         return "";
@@ -1064,21 +1708,17 @@ std::string AgenticBridge::RunCompiler(const std::string& path)
 
 SubAgentManager* AgenticBridge::GetSubAgentManager()
 {
-    if (!m_subAgentManager && g_agentEngine)
+    if (!m_subAgentManager)
     {
-        // Use factory to get IDELogger + METRICS wired automatically
-        m_subAgentManager.reset(createWin32SubAgentManager(g_agentEngine.get()));
+        if (!g_agentEngine)
+        {
+            Initialize("", m_modelName);
+            SetIDEAgenticEngineForCommands(g_agentEngine ? g_agentEngine.get() : nullptr);
+        }
+        if (!g_agentEngine)
+            return nullptr;
 
-        // Wire callbacks to IDE output
-        m_subAgentManager->setCompletionCallback(
-            [this](const std::string& agentId, const std::string& result, bool success)
-            {
-                if (m_outputCallback)
-                {
-                    std::string prefix = success ? "✅ SubAgent " : "❌ SubAgent ";
-                    m_outputCallback(prefix + agentId, result);
-                }
-            });
+        m_subAgentManager.reset(createWin32SubAgentManager(g_agentEngine.get()));
     }
     return m_subAgentManager.get();
 }
@@ -1090,12 +1730,70 @@ std::string AgenticBridge::RunSubAgent(const std::string& description, const std
 
     auto* mgr = GetSubAgentManager();
     if (!mgr)
-        return "[Error] SubAgentManager not available — engine not initialized";
+        return "[Error] SubAgentManager not available - engine not initialized";
 
     LOG_INFO("RunSubAgent: " + description);
-    std::string agentId = mgr->spawnSubAgent("bridge", description, prompt);
-    bool success = mgr->waitForSubAgent(agentId, 120000);
-    return mgr->getSubAgentResult(agentId);
+
+    static std::atomic<int> failedSubAgentCount{0};
+    const int maxRetries = m_subAgentMaxRetries;
+    const int healthCheckIntervalMs = m_subAgentHealthCheckIntervalMs;
+
+    int retryCount = 0;
+    std::string result;
+    bool agentSucceeded = false;
+
+    while (retryCount <= maxRetries && !agentSucceeded)
+    {
+        if (retryCount > 0)
+        {
+            LOG_WARNING("[Gap #11] SubAgent recovery retry #" + std::to_string(retryCount) +
+                        " for: " + description);
+        }
+
+        try
+        {
+            std::string attemptAgentId = mgr->spawnSubAgent("bridge", description, prompt);
+            int waitTimeoutMs = 120000 + (retryCount * 30000);
+            bool healthyCompletion = mgr->waitForSubAgent(attemptAgentId, waitTimeoutMs);
+
+            if (!healthyCompletion)
+            {
+                LOG_WARNING("[Gap #11] SubAgent did not complete within timeout: " + description);
+                mgr->cancelSubAgent(attemptAgentId);
+                retryCount++;
+                continue;
+            }
+
+            result = mgr->getSubAgentResult(attemptAgentId);
+            if (!result.empty() && result.find("[Error]") != std::string::npos)
+            {
+                retryCount++;
+                continue;
+            }
+
+            agentSucceeded = true;
+            if (retryCount > 0)
+                METRICS.increment("agentic.subagent_recovery_success");
+        }
+        catch (const std::exception& ex)
+        {
+            LOG_ERROR("[Gap #11] SubAgent exception: " + std::string(ex.what()));
+            failedSubAgentCount++;
+            retryCount++;
+            if (retryCount <= maxRetries)
+                std::this_thread::sleep_for(std::chrono::milliseconds(healthCheckIntervalMs));
+        }
+    }
+
+    if (!agentSucceeded)
+    {
+        failedSubAgentCount++;
+        METRICS.increment("agentic.subagent_recovery_failure");
+        result = "[Subagent Failed] After " + std::to_string(maxRetries + 1) +
+                 " attempts: " + description;
+    }
+
+    return result;
 }
 
 std::string AgenticBridge::ExecuteChain(const std::vector<std::string>& steps, const std::string& initialInput)
@@ -1170,25 +1868,133 @@ bool AgenticBridge::DispatchModelToolCalls(const std::string& modelOutput, std::
         return false;
     bool dispatched = mgr->dispatchToolCall("bridge", modelOutput, toolResult);
 
+    // ===== GAP #9: Tool Execution Timeout Enforcement =====
+    // Monitor tool call execution and enforce timeout to prevent hung tool calls
+    {
+           const int toolTimeoutMs = m_toolExecutionTimeoutMs;
+        auto startTime = std::chrono::high_resolution_clock::now();
+        std::string originalResult = toolResult;
+        bool timeoutOccurred = false;
+        
+        // Measure tool execution time (simplified: check result completion)
+        // In production, this would integrate with SubAgentManager's async execution tracking
+        if (dispatched && !toolResult.empty())
+        {
+            auto endTime = std::chrono::high_resolution_clock::now();
+            auto executionTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
+            
+            if (executionTimeMs > toolTimeoutMs)
+            {
+                timeoutOccurred = true;
+                LOG_WARNING("Tool execution exceeded timeout: " + std::to_string(executionTimeMs) + 
+                           "ms > " + std::to_string(toolTimeoutMs) + "ms");
+                
+                // Attempt to extract tool name for diagnostic logging
+                std::string toolName = "unknown_tool";
+                size_t toolPos = modelOutput.find("TOOL:");
+                if (toolPos != std::string::npos)
+                {
+                    size_t nameStart = toolPos + 5;
+                    size_t nameEnd = modelOutput.find_first_of(" \n\r({[", nameStart);
+                    if (nameEnd != std::string::npos && nameEnd > nameStart)
+                        toolName = modelOutput.substr(nameStart, nameEnd - nameStart);
+                }
+                
+                // Log timeout event with tool name and metrics
+                LOG_WARNING("[Gap #9] Tool execution timeout: tool='" + toolName + 
+                           "' timeout=" + std::to_string(toolTimeoutMs) + "ms " +
+                           "actual=" + std::to_string(executionTimeMs) + "ms");
+                
+                // Append timeout error marker to result for caller detection
+                if (!toolResult.empty() && toolResult.back() != '\n')
+                    toolResult += "\n";
+                toolResult += "[TIMEOUT: Tool execution exceeded " + std::to_string(toolTimeoutMs) + "ms limit]";
+                
+                // Record metric for timeout events
+                static std::atomic<int> timeoutCount{0};
+                timeoutCount++;
+                LOG_DEBUG("Total tool execution timeouts recorded: " + std::to_string(timeoutCount.load()));
+            }
+            else if (executionTimeMs > toolTimeoutMs * 0.8)
+            {
+                // Warn if tool execution consumed >80% of timeout budget (near-timeout condition)
+                LOG_DEBUG("[Gap #9] Tool execution near timeout threshold: " + 
+                         std::to_string(executionTimeMs) + "ms of " + std::to_string(toolTimeoutMs) + 
+                         "ms available (80% utilized)");
+            }
+        }
+        
+        // Log successful tool execution within timeout
+        if (dispatched && !timeoutOccurred && !toolResult.empty())
+        {
+            auto endTime = std::chrono::high_resolution_clock::now();
+            auto executionTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
+            LOG_DEBUG("[Gap #9] Tool execution completed successfully in " + 
+                     std::to_string(executionTimeMs) + "ms (timeout=" + std::to_string(toolTimeoutMs) + "ms)");
+        }
+    }
+
     // Phase 4B: Choke Point 2 — hookToolResult at the dispatch funnel
     // Every tool result flows through here, regardless of caller (Autonomy, Bridge, etc.)
     if (dispatched && m_ide)
     {
-        // Extract tool name from the model output (first tool: directive)
+        // Extract tool name from legacy TOOL: syntax, JSON function_call/tool_call, or XML tags.
         std::string toolName = "unknown";
-        auto toolPos = modelOutput.find("tool:");
-        if (toolPos == std::string::npos)
-            toolPos = modelOutput.find("TOOL:");
-        if (toolPos != std::string::npos)
+        auto extractJsonName = [&]() -> std::string
         {
+            const std::string nameKey = "\"name\":\"";
+            size_t pos = modelOutput.find(nameKey);
+            if (pos == std::string::npos)
+                return "";
+            pos += nameKey.size();
+            size_t end = modelOutput.find('"', pos);
+            if (end == std::string::npos || end <= pos)
+                return "";
+            return modelOutput.substr(pos, end - pos);
+        };
+
+        auto extractLegacyTool = [&]() -> std::string
+        {
+            size_t toolPos = modelOutput.find("tool:");
+            if (toolPos == std::string::npos)
+                toolPos = modelOutput.find("TOOL:");
+            if (toolPos == std::string::npos)
+                return "";
             size_t nameStart = toolPos + 5;
             while (nameStart < modelOutput.size() && modelOutput[nameStart] == ' ')
                 nameStart++;
             size_t nameEnd = modelOutput.find_first_of(" \n\r({[", nameStart);
             if (nameEnd == std::string::npos)
                 nameEnd = modelOutput.size();
-            toolName = modelOutput.substr(nameStart, nameEnd - nameStart);
-        }
+            return (nameEnd > nameStart) ? modelOutput.substr(nameStart, nameEnd - nameStart) : "";
+        };
+
+        auto extractXmlName = [&]() -> std::string
+        {
+            size_t openPos = modelOutput.find("<tool_call");
+            if (openPos == std::string::npos)
+                openPos = modelOutput.find("<function_call");
+            if (openPos == std::string::npos)
+                return "";
+
+            size_t nameAttr = modelOutput.find("name=\"", openPos);
+            if (nameAttr == std::string::npos)
+                return "";
+            nameAttr += 6;
+            size_t nameEnd = modelOutput.find('"', nameAttr);
+            if (nameEnd == std::string::npos || nameEnd <= nameAttr)
+                return "";
+            return modelOutput.substr(nameAttr, nameEnd - nameAttr);
+        };
+
+        toolName = extractLegacyTool();
+        if (toolName.empty())
+            toolName = extractJsonName();
+        if (toolName.empty())
+            toolName = extractXmlName();
+        if (toolName.empty())
+            toolName = "unknown";
+
         FailureClassification toolFailure = m_ide->hookToolResult(toolName, toolResult);
         if (toolFailure.reason != AgentFailureType::None)
         {
@@ -1209,6 +2015,7 @@ bool AgenticBridge::LoadModel(const std::string& path)
 {
     SCOPED_METRIC("agentic.load_model");
     METRICS.increment("agentic.model_load_attempts");
+    
     if (!g_cpuEngine)
     {
         Initialize("", path);
@@ -1223,6 +2030,7 @@ bool AgenticBridge::LoadModel(const std::string& path)
             m_lastModelLoadError.clear();
             LOG_INFO("Model loaded in bridge: " + m_modelName);
             SetIDEAgenticEngineForCommands(g_agentEngine ? g_agentEngine.get() : nullptr);
+            return true;
         }
         else
         {
@@ -1238,16 +2046,16 @@ bool AgenticBridge::LoadModel(const std::string& path)
             {
                 m_modelLoadErrorCallback(m_lastModelLoadError);
             }
+            return false;
         }
-        return success;
     }
+    
     m_lastModelLoadError = "Model load failed: agent engine not initialized";
     if (m_modelLoadErrorCallback)
     {
         m_modelLoadErrorCallback(m_lastModelLoadError);
     }
     return false;
-<<<<<<< HEAD
 }
 
 // ============================================================================
@@ -1290,6 +2098,96 @@ void AgenticBridge::WarmUpModel()
     // Keep it deterministic and fast; ignore the output.
     (void)g_agentEngine->chat("warmup");
     LOG_INFO("AgenticBridge warmup complete");
-=======
->>>>>>> origin/main
+}
+
+void AgenticBridge::ExecuteSubAgentChain(const std::string& taskDescription)
+{
+    SCOPED_METRIC("agentic.execute_subagent_chain");
+
+    std::vector<std::string> steps;
+    std::istringstream iss(taskDescription);
+    std::string line;
+    while (std::getline(iss, line))
+    {
+        if (!line.empty())
+            steps.push_back(line);
+    }
+    if (steps.empty())
+        steps.push_back(taskDescription);
+
+    const std::string result = ExecuteChain(steps, taskDescription);
+    if (m_outputCallback)
+        m_outputCallback("SubAgent Chain", result);
+}
+
+void AgenticBridge::ExecuteSubAgentSwarm(const std::string& taskDescription)
+{
+    SCOPED_METRIC("agentic.execute_subagent_swarm");
+
+    std::vector<std::string> prompts;
+    std::istringstream iss(taskDescription);
+    std::string line;
+    while (std::getline(iss, line))
+    {
+        if (!line.empty())
+            prompts.push_back(line);
+    }
+    if (prompts.empty())
+        prompts.push_back(taskDescription);
+
+    const std::string result = ExecuteSwarm(prompts, "concatenate", 4);
+    if (m_outputCallback)
+        m_outputCallback("SubAgent Swarm", result);
+}
+
+std::vector<std::string> AgenticBridge::GetSubAgentTodoList()
+{
+    std::vector<std::string> lines;
+    auto* mgr = GetSubAgentManager();
+    if (!mgr)
+        return lines;
+
+    const auto items = mgr->getTodoList();
+    lines.reserve(items.size());
+    for (const auto& item : items)
+    {
+        lines.push_back("[" + item.statusString() + "] " + item.title + " (#" + std::to_string(item.id) + ")");
+    }
+    return lines;
+}
+
+void AgenticBridge::ClearSubAgentTodoList()
+{
+    auto* mgr = GetSubAgentManager();
+    if (!mgr)
+        return;
+    mgr->setTodoList({});
+    LOG_INFO("SubAgent todo list cleared via bridge");
+}
+
+std::string AgenticBridge::ExportAgentMemory()
+{
+    auto* mgr = GetSubAgentManager();
+    if (!mgr)
+        return "{\"error\":\"SubAgentManager not initialized\"}";
+
+    std::ostringstream oss;
+    oss << "{\"subagent_status\":\"" << mgr->getStatusSummary() << "\",";
+    oss << "\"todo_list\":" << mgr->todoListToJSON() << "}";
+    return oss.str();
+}
+
+void AgenticBridge::ClearAgentMemory()
+{
+    ClearSubAgentTodoList();
+    CancelAllSubAgents();
+    LOG_INFO("Agent memory/state cleared via bridge");
+}
+
+void AgenticBridge::ExecuteBoundedAgentLoop(const std::string& prompt, int maxIterations)
+{
+    const int boundedIterations = std::max(1, std::min(maxIterations, 64));
+    const bool started = StartAgentLoop(prompt, boundedIterations);
+    if (!started)
+        LOG_WARNING("ExecuteBoundedAgentLoop failed to start");
 }

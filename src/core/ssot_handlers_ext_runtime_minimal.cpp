@@ -86,7 +86,15 @@ void outputf(const CommandContext& ctx, const char* fmt, ...) {
 }  // namespace
 
 CommandResult handleFileAutoSave(const CommandContext& ctx) {
-    return delegateToGui(ctx, 105, "file.autoSave");
+    static bool autoSaveEnabled = false;
+    autoSaveEnabled = !autoSaveEnabled;
+    if (ctx.isGui && ctx.idePtr) {
+        HWND hwnd = reinterpret_cast<HWND>(ctx.hwnd);
+        if (!hwnd) hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
+        if (hwnd) PostMessageA(hwnd, WM_COMMAND, 105, 0);
+    }
+    outputf(ctx, "[File] Auto-save %s\n", autoSaveEnabled ? "enabled" : "disabled");
+    return CommandResult::ok("file.autoSave");
 }
 
 CommandResult handleAIInlineComplete(const CommandContext& ctx) {

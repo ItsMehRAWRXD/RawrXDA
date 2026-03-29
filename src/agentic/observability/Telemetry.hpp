@@ -155,19 +155,34 @@ private:
     bool initialized_ = false;
 };
 
-// Convenience macros
+// Inline convenience functions
+inline void TelemetryLogDebug(const std::string& category, const std::string& message) {
+    Telemetry::instance().logDebug(category, message);
+}
+inline void TelemetryLogInfo(const std::string& category, const std::string& message) {
+    Telemetry::instance().logInfo(category, message);
+}
+inline void TelemetryLogError(const std::string& category, const std::string& message) {
+    Telemetry::instance().logError(category, message);
+}
+inline void TelemetryMetric(const std::string& name, double value) {
+    Telemetry::instance().metric(name, value);
+}
+
+// Backward-compat macro aliases
 #define TELEMETRY_LOG_DEBUG(category, message) \
-    RawrXD::Agentic::Observability::Telemetry::instance().logDebug(category, message)
+    RawrXD::Agentic::Observability::TelemetryLogDebug(category, message)
 
 #define TELEMETRY_LOG_INFO(category, message) \
-    RawrXD::Agentic::Observability::Telemetry::instance().logInfo(category, message)
+    RawrXD::Agentic::Observability::TelemetryLogInfo(category, message)
 
 #define TELEMETRY_LOG_ERROR(category, message) \
-    RawrXD::Agentic::Observability::Telemetry::instance().logError(category, message)
+    RawrXD::Agentic::Observability::TelemetryLogError(category, message)
 
 #define TELEMETRY_METRIC(name, value) \
-    RawrXD::Agentic::Observability::Telemetry::instance().metric(name, value)
+    RawrXD::Agentic::Observability::TelemetryMetric(name, value)
 
+// TELEMETRY_TRACE must remain a macro — assigns to auto variable at call site
 #define TELEMETRY_TRACE(name) \
     auto span = RawrXD::Agentic::Observability::Telemetry::instance().trace(name)
 

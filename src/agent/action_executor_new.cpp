@@ -473,8 +473,38 @@ bool ActionExecutor::handleInvokeCommand(Action& action)
  */
 bool ActionExecutor::handleRecursiveAgent(Action& action)
 {
-    // Placeholder for recursive agent call
-    action.result = "Recursive agent invocation not yet implemented";
+    std::string subWish = action.params.value("wish").toString("");
+    if (subWish.empty()) {
+        subWish = action.params.value("query").toString("");
+    }
+    if (subWish.empty()) {
+        subWish = action.params.value("goal").toString("");
+    }
+    if (subWish.empty()) {
+        action.result = "No 'wish', 'query', or 'goal' provided for recursive agent";
+        return false;
+    }
+
+    int maxDepth = action.params.value("maxDepth").toInt(3);
+    int currentDepth = action.params.value("currentDepth").toInt(0);
+    if (currentDepth >= maxDepth) {
+        action.result = "Recursive agent depth limit reached (" + std::to_string(maxDepth) + ")";
+        return false;
+    }
+
+    JsonValue subParams;
+    subParams["wish"] = subWish;
+    subParams["currentDepth"] = currentDepth + 1;
+    subParams["maxDepth"] = maxDepth;
+    subParams["parentAction"] = action.id;
+
+    if (m_context.modelInvokeFunc) {
+        JsonValue invokeResult = m_context.modelInvokeFunc(subWish, subParams, m_context.modelInvokeUserData);
+        action.result = invokeResult.toJsonString();
+        return invokeResult.value("success").toBool(false);
+    }
+
+    action.result = "ModelInvoker not available for recursive agent call";
     return false;
 }
 

@@ -34,14 +34,18 @@
 // ============================================================================
 // Safe COM Release (vtable[2] = IUnknown::Release)
 // ============================================================================
+template<typename T>
+inline void safeRelease(T*& p) {
+    if (p) {
+        typedef ULONG (STDMETHODCALLTYPE *RelFn)(void*);
+        auto vtbl = *reinterpret_cast<void***>(p);
+        auto rel = reinterpret_cast<RelFn>(vtbl[2]);
+        rel(p);
+        p = nullptr;
+    }
+}
 #ifndef SAFE_RELEASE
-#define SAFE_RELEASE(p) do { if (p) { \
-    typedef ULONG (STDMETHODCALLTYPE *_RelFn)(void*); \
-    auto _vtbl = *reinterpret_cast<void***>(p); \
-    auto _rel = reinterpret_cast<_RelFn>(_vtbl[2]); \
-    _rel(p); \
-    (p) = nullptr; \
-} } while(0)
+#define SAFE_RELEASE(p) safeRelease(p)
 #endif
 
 // ============================================================================

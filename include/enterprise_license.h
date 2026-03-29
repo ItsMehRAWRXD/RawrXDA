@@ -433,23 +433,25 @@ private:
 };
 
 // ============================================================================
-// Convenience Macros — gate code paths by feature
+// Inline license-gate functions — production entry points
 // ============================================================================
+
+inline bool LicenseGateCheck(RawrXD::License::FeatureID feature, const char* caller) {
+    return RawrXD::License::EnterpriseLicenseV2::Instance().gate(feature, caller);
+}
+
+// Backward-compatible macro aliases (pass __FUNCTION__ to inline gate)
 #define LICENSE_GATE(feature) \
-    if (!RawrXD::License::EnterpriseLicenseV2::Instance().gate( \
-        RawrXD::License::FeatureID::feature, __FUNCTION__)) return
+    if (!LicenseGateCheck(RawrXD::License::FeatureID::feature, __FUNCTION__)) return
 
 #define LICENSE_GATE_BOOL(feature) \
-    if (!RawrXD::License::EnterpriseLicenseV2::Instance().gate( \
-        RawrXD::License::FeatureID::feature, __FUNCTION__)) return false
+    if (!LicenseGateCheck(RawrXD::License::FeatureID::feature, __FUNCTION__)) return false
 
 #define LICENSE_GATE_NULL(feature) \
-    if (!RawrXD::License::EnterpriseLicenseV2::Instance().gate( \
-        RawrXD::License::FeatureID::feature, __FUNCTION__)) return nullptr
+    if (!LicenseGateCheck(RawrXD::License::FeatureID::feature, __FUNCTION__)) return nullptr
 
 #define LICENSE_GATE_STR(feature) \
-    if (!RawrXD::License::EnterpriseLicenseV2::Instance().gate( \
-        RawrXD::License::FeatureID::feature, __FUNCTION__)) \
+    if (!LicenseGateCheck(RawrXD::License::FeatureID::feature, __FUNCTION__)) \
         return std::string("[License] Feature requires upgrade")
 
 } // namespace RawrXD::License

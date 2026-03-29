@@ -7,7 +7,11 @@
 #include <chrono>
 #include <iostream>
 
-#define FIRE(cb, ...) do { if (cb) cb(__VA_ARGS__); } while(0)
+template<typename Callable, typename... Args>
+inline void fireCallback(Callable&& cb, Args&&... args) {
+    if (cb) cb(std::forward<Args>(args)...);
+}
+#define FIRE(cb, ...) fireCallback(cb, __VA_ARGS__)
 
 ModelLoader::ModelLoader()
     : m_engine(nullptr)

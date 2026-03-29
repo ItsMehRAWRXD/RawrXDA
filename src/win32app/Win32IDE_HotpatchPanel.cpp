@@ -3,37 +3,46 @@
 // and menu bar. Handles all IDM_HOTPATCH_* commands (9001–9030).
 //
 // Rule: NO SOURCE FILE IS TO BE SIMPLIFIED
-#include "Win32IDE.h"
-#include "../core/unified_hotpatch_manager.hpp"
+#include "../agentic/agent_operations.h"
+#include "../agentic_agent_coordinator.h"
 #include "../core/byte_level_hotpatcher.hpp"
 #include "../core/proxy_hotpatcher.hpp"
-#include <sstream>
-#include <iomanip>
-#include <string>
-<<<<<<< HEAD
+#include "../core/unified_hotpatch_manager.hpp"
+#include "Win32IDE.h"
+#include "Win32IDE_AgentOperationsBridge.h"
 #include <algorithm>
-#include <cmath>
-#include <vector>
-#include <deque>
 #include <array>
 #include <cctype>
-#include <cstdlib>
-=======
->>>>>>> origin/main
+#include <cmath>
 #include <commdlg.h>
+#include <cstdlib>
+#include <deque>
+#include <iomanip>
+#include <nlohmann/json.hpp>
+#include <sstream>
+#include <string>
+#include <vector>
 
-namespace {
 
-std::string ReadClipboardText(HWND owner) {
+using json = nlohmann::json;
+
+namespace
+{
+
+std::string ReadClipboardText(HWND owner)
+{
     std::string out;
-    if (!OpenClipboard(owner)) {
+    if (!OpenClipboard(owner))
+    {
         return out;
     }
 
     HANDLE h = GetClipboardData(CF_TEXT);
-    if (h) {
+    if (h)
+    {
         const char* p = static_cast<const char*>(GlobalLock(h));
-        if (p) {
+        if (p)
+        {
             out = p;
             GlobalUnlock(h);
         }
@@ -43,22 +52,27 @@ std::string ReadClipboardText(HWND owner) {
     return out;
 }
 
-bool ParseHexBytes(const std::string& input, std::vector<uint8_t>& out) {
+bool ParseHexBytes(const std::string& input, std::vector<uint8_t>& out)
+{
     std::string filtered;
     filtered.reserve(input.size());
-    for (char c : input) {
-        if (std::isxdigit(static_cast<unsigned char>(c))) {
+    for (char c : input)
+    {
+        if (std::isxdigit(static_cast<unsigned char>(c)))
+        {
             filtered.push_back(c);
         }
     }
 
-    if (filtered.empty() || (filtered.size() % 2) != 0) {
+    if (filtered.empty() || (filtered.size() % 2) != 0)
+    {
         return false;
     }
 
     out.clear();
     out.reserve(filtered.size() / 2);
-    for (size_t i = 0; i + 1 < filtered.size(); i += 2) {
+    for (size_t i = 0; i + 1 < filtered.size(); i += 2)
+    {
         const std::string byteStr = filtered.substr(i, 2);
         out.push_back(static_cast<uint8_t>(std::strtoul(byteStr.c_str(), nullptr, 16)));
     }
@@ -69,7 +83,8 @@ std::deque<std::string> g_serverPatchNames;
 std::deque<ServerHotpatch> g_serverPatches;
 std::string g_lastServerPatchName;
 
-struct TrackedMemoryPatch {
+struct TrackedMemoryPatch
+{
     MemoryPatchEntry entry{};
     std::vector<uint8_t> bytes;
 };
@@ -86,13 +101,16 @@ std::deque<std::string> g_proxyTerminationStops;
 std::string g_lastProxyTerminationName;
 
 std::deque<std::string> g_proxyValidatorNames;
-std::array<std::string, 3> g_knownValidators = { "length_check", "json_syntax", "safety_filter" };
+std::array<std::string, 3> g_knownValidators = {"length_check", "json_syntax", "safety_filter"};
 
-std::vector<std::string> SplitByPipe(const std::string& input) {
+std::vector<std::string> SplitByPipe(const std::string& input)
+{
     std::vector<std::string> out;
     std::string current;
-    for (char c : input) {
-        if (c == '|') {
+    for (char c : input)
+    {
+        if (c == '|')
+        {
             out.push_back(current);
             current.clear();
             continue;
@@ -103,61 +121,79 @@ std::vector<std::string> SplitByPipe(const std::string& input) {
     return out;
 }
 
-std::string TrimAscii(std::string value) {
+std::string TrimAscii(std::string value)
+{
     auto isSpace = [](unsigned char c) { return std::isspace(c) != 0; };
-    while (!value.empty() && isSpace(static_cast<unsigned char>(value.front()))) {
+    while (!value.empty() && isSpace(static_cast<unsigned char>(value.front())))
+    {
         value.erase(value.begin());
     }
-    while (!value.empty() && isSpace(static_cast<unsigned char>(value.back()))) {
+    while (!value.empty() && isSpace(static_cast<unsigned char>(value.back())))
+    {
         value.pop_back();
     }
     return value;
 }
 
-std::string ToLowerAscii(std::string value) {
+std::string ToLowerAscii(std::string value)
+{
     std::transform(value.begin(), value.end(), value.begin(),
-        [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
     return value;
 }
 
-bool ValidatorLengthCheck(const char* output, size_t outputLen, void*) {
+bool ValidatorLengthCheck(const char* output, size_t outputLen, void*)
+{
     (void)output;
     return outputLen <= 16384;
 }
 
-bool ValidatorJsonSyntax(const char* output, size_t outputLen, void*) {
-    if (!output || outputLen == 0) return true;
+bool ValidatorJsonSyntax(const char* output, size_t outputLen, void*)
+{
+    if (!output || outputLen == 0)
+        return true;
     int braceDepth = 0;
     int bracketDepth = 0;
     bool inString = false;
     bool escaped = false;
 
-    for (size_t i = 0; i < outputLen; ++i) {
+    for (size_t i = 0; i < outputLen; ++i)
+    {
         const char ch = output[i];
-        if (inString) {
-            if (escaped) {
+        if (inString)
+        {
+            if (escaped)
+            {
                 escaped = false;
                 continue;
             }
-            if (ch == '\\') {
+            if (ch == '\\')
+            {
                 escaped = true;
                 continue;
             }
-            if (ch == '"') {
+            if (ch == '"')
+            {
                 inString = false;
             }
             continue;
         }
 
-        if (ch == '"') {
+        if (ch == '"')
+        {
             inString = true;
             continue;
         }
-        if (ch == '{') ++braceDepth;
-        if (ch == '}') --braceDepth;
-        if (ch == '[') ++bracketDepth;
-        if (ch == ']') --bracketDepth;
-        if (braceDepth < 0 || bracketDepth < 0) {
+        if (ch == '{')
+            ++braceDepth;
+        if (ch == '}')
+            --braceDepth;
+        if (ch == '[')
+            ++bracketDepth;
+        if (ch == ']')
+            --bracketDepth;
+        if (braceDepth < 0 || bracketDepth < 0)
+        {
             return false;
         }
     }
@@ -165,35 +201,43 @@ bool ValidatorJsonSyntax(const char* output, size_t outputLen, void*) {
     return !inString && braceDepth == 0 && bracketDepth == 0;
 }
 
-bool ValidatorSafetyFilter(const char* output, size_t outputLen, void*) {
-    if (!output || outputLen == 0) return true;
+bool ValidatorSafetyFilter(const char* output, size_t outputLen, void*)
+{
+    if (!output || outputLen == 0)
+        return true;
     std::string text(output, outputLen);
     const std::string lowered = ToLowerAscii(text);
-    return lowered.find("malware") == std::string::npos &&
-           lowered.find("ransomware") == std::string::npos &&
+    return lowered.find("malware") == std::string::npos && lowered.find("ransomware") == std::string::npos &&
            lowered.find("exploit") == std::string::npos;
 }
 
-ProxyValidatorFn ResolveBuiltInValidator(const std::string& name) {
-    if (name == "length_check") return &ValidatorLengthCheck;
-    if (name == "json_syntax") return &ValidatorJsonSyntax;
-    if (name == "safety_filter") return &ValidatorSafetyFilter;
+ProxyValidatorFn ResolveBuiltInValidator(const std::string& name)
+{
+    if (name == "length_check")
+        return &ValidatorLengthCheck;
+    if (name == "json_syntax")
+        return &ValidatorJsonSyntax;
+    if (name == "safety_filter")
+        return &ValidatorSafetyFilter;
     return nullptr;
 }
 
-double ComputeTemperatureLinkedTargetTps(float temperature) {
+double ComputeTemperatureLinkedTargetTps(float temperature)
+{
     const float clampedTemp = std::clamp(temperature, 0.0f, 2.0f);
     return 8.0 + (static_cast<double>(clampedTemp) * 96.0);
 }
 
-} // namespace
+}  // namespace
 
 // ============================================================================
 // Initialization
 // ============================================================================
 
-void Win32IDE::initHotpatchUI() {
-    if (m_hotpatchUIInitialized) return;
+void Win32IDE::initHotpatchUI()
+{
+    if (m_hotpatchUIInitialized)
+        return;
     m_hotpatchEnabled = true;
     m_hotpatchSavedTargetTps = ComputeTemperatureLinkedTargetTps(m_inferenceConfig.temperature);
     UnifiedHotpatchManager::instance().set_target_tps(m_hotpatchSavedTargetTps);
@@ -206,49 +250,116 @@ void Win32IDE::initHotpatchUI() {
 // Command Router
 // ============================================================================
 
-void Win32IDE::handleHotpatchCommand(int commandId) {
+void Win32IDE::handleHotpatchCommand(int commandId)
+{
     // Lazy-init the hotpatch subsystem on first command
-    if (!m_hotpatchUIInitialized) {
+    if (!m_hotpatchUIInitialized)
+    {
         initHotpatchUI();
     }
 
     // Temperature-driven hotpatch intensity:
     // colder model => gentler intervention, hotter model => more aggressive patch throughput.
-    if (m_hotpatchEnabled) {
+    if (m_hotpatchEnabled)
+    {
         const double targetTps = ComputeTemperatureLinkedTargetTps(m_inferenceConfig.temperature);
         UnifiedHotpatchManager::instance().set_target_tps(targetTps);
         m_hotpatchSavedTargetTps = targetTps;
 
         static double s_lastAnnouncedTps = -1.0;
-        if (std::fabs(targetTps - s_lastAnnouncedTps) > 0.1) {
+        if (std::fabs(targetTps - s_lastAnnouncedTps) > 0.1)
+        {
             s_lastAnnouncedTps = targetTps;
             std::ostringstream tune;
             tune << "[Hotpatch] Temp-linked tuning active: temp="
-                 << std::clamp(m_inferenceConfig.temperature, 0.0f, 2.0f)
-                 << " => target_tps=" << targetTps << "\n";
+                 << std::clamp(m_inferenceConfig.temperature, 0.0f, 2.0f) << " => target_tps=" << targetTps << "\n";
             appendToOutput(tune.str());
         }
     }
 
-    switch (commandId) {
-        case IDM_HOTPATCH_SHOW_STATUS:      cmdHotpatchShowStatus();      break;
-        case IDM_HOTPATCH_TOGGLE_ALL:        cmdHotpatchToggleAll();       break;
-        case IDM_HOTPATCH_SHOW_EVENT_LOG:   cmdHotpatchShowEventLog();    break;
-        case IDM_HOTPATCH_RESET_STATS:      cmdHotpatchResetStats();      break;
-        case IDM_HOTPATCH_MEMORY_APPLY:     cmdHotpatchMemoryApply();     break;
-        case IDM_HOTPATCH_MEMORY_REVERT:    cmdHotpatchMemoryRevert();    break;
-        case IDM_HOTPATCH_BYTE_APPLY:       cmdHotpatchByteApply();       break;
-        case IDM_HOTPATCH_BYTE_SEARCH:      cmdHotpatchByteSearch();      break;
-        case IDM_HOTPATCH_SERVER_ADD:       cmdHotpatchServerAdd();       break;
-        case IDM_HOTPATCH_SERVER_REMOVE:    cmdHotpatchServerRemove();    break;
-        case IDM_HOTPATCH_PROXY_BIAS:       cmdHotpatchProxyBias();       break;
-        case IDM_HOTPATCH_PROXY_REWRITE:    cmdHotpatchProxyRewrite();    break;
-        case IDM_HOTPATCH_PROXY_TERMINATE:  cmdHotpatchProxyTerminate();  break;
-        case IDM_HOTPATCH_PROXY_VALIDATE:   cmdHotpatchProxyValidate();   break;
-        case IDM_HOTPATCH_SHOW_PROXY_STATS: cmdHotpatchShowProxyStats();  break;
-        case IDM_HOTPATCH_SET_TARGET_TPS:  cmdHotpatchSetTargetTps();     break;
-        case IDM_HOTPATCH_PRESET_SAVE:      cmdHotpatchPresetSave();      break;
-        case IDM_HOTPATCH_PRESET_LOAD:      cmdHotpatchPresetLoad();      break;
+    switch (commandId)
+    {
+        case IDM_HOTPATCH_SHOW_STATUS:
+            cmdHotpatchShowStatus();
+            break;
+        case IDM_HOTPATCH_TOGGLE_ALL:
+            cmdHotpatchToggleAll();
+            break;
+        case IDM_HOTPATCH_SHOW_EVENT_LOG:
+            cmdHotpatchShowEventLog();
+            break;
+        case IDM_HOTPATCH_RESET_STATS:
+            cmdHotpatchResetStats();
+            break;
+        case IDM_HOTPATCH_MEMORY_APPLY:
+            cmdHotpatchMemoryApply();
+            break;
+        case IDM_HOTPATCH_MEMORY_REVERT:
+            cmdHotpatchMemoryRevert();
+            break;
+        case IDM_HOTPATCH_BYTE_APPLY:
+            cmdHotpatchByteApply();
+            break;
+        case IDM_HOTPATCH_BYTE_SEARCH:
+            cmdHotpatchByteSearch();
+            break;
+        case IDM_HOTPATCH_SERVER_ADD:
+            cmdHotpatchServerAdd();
+            break;
+        case IDM_HOTPATCH_SERVER_REMOVE:
+            cmdHotpatchServerRemove();
+            break;
+        case IDM_HOTPATCH_PROXY_BIAS:
+            cmdHotpatchProxyBias();
+            break;
+        case IDM_HOTPATCH_PROXY_REWRITE:
+            cmdHotpatchProxyRewrite();
+            break;
+        case IDM_HOTPATCH_PROXY_TERMINATE:
+            cmdHotpatchProxyTerminate();
+            break;
+        case IDM_HOTPATCH_PROXY_VALIDATE:
+            cmdHotpatchProxyValidate();
+            break;
+        case IDM_HOTPATCH_SHOW_PROXY_STATS:
+            cmdHotpatchShowProxyStats();
+            break;
+        case IDM_HOTPATCH_SET_TARGET_TPS:
+            cmdHotpatchSetTargetTps();
+            break;
+        case IDM_HOTPATCH_PRESET_SAVE:
+            cmdHotpatchPresetSave();
+            break;
+        case IDM_HOTPATCH_PRESET_LOAD:
+            cmdHotpatchPresetLoad();
+            break;
+
+        // Agent Operations
+        case IDM_HOTPATCH_COMPACT_CONVERSATION:
+            cmdHotpatchCompactConversation();
+            break;
+        case IDM_HOTPATCH_OPTIMIZE_TOOL_SELECTION:
+            cmdHotpatchOptimizeToolSelection();
+            break;
+        case IDM_HOTPATCH_RESOLVING:
+            cmdHotpatchResolving();
+            break;
+        case IDM_HOTPATCH_READ_LINES:
+            cmdHotpatchReadLines();
+            break;
+        case IDM_HOTPATCH_PLANNING_EXPLORATION:
+            cmdHotpatchPlanningExploration();
+            break;
+        case IDM_HOTPATCH_SEARCH_FILES:
+            cmdHotpatchSearchFiles();
+            break;
+        case IDM_HOTPATCH_EVALUATE_INTEGRATION:
+            cmdHotpatchEvaluateIntegration();
+            break;
+        case IDM_HOTPATCH_RESTORE_CHECKPOINT:
+            cmdHotpatchRestoreCheckpoint();
+            break;
+
         default:
             appendToOutput("[Hotpatch] Unknown hotpatch command: " + std::to_string(commandId) + "\n");
             break;
@@ -259,7 +370,8 @@ void Win32IDE::handleHotpatchCommand(int commandId) {
 // Status & Toggle
 // ============================================================================
 
-void Win32IDE::cmdHotpatchShowStatus() {
+void Win32IDE::cmdHotpatchShowStatus()
+{
     auto& mgr = UnifiedHotpatchManager::instance();
     const auto& stats = mgr.getStats();
 
@@ -272,23 +384,24 @@ void Win32IDE::cmdHotpatchShowStatus() {
     ss << "=== RawrXD Hotpatch System Status ===\n";
     ss << "  System Enabled:    " << (m_hotpatchEnabled ? "YES" : "NO") << "\n";
     double targetTps = mgr.get_target_tps();
-    ss << "  Target TPS:        " << (targetTps > 0.0 ? std::to_string(targetTps) + " (force hotpatching)" : "off (run normally)") << "\n";
+    ss << "  Target TPS:        "
+       << (targetTps > 0.0 ? std::to_string(targetTps) + " (force hotpatching)" : "off (run normally)") << "\n";
     ss << "\n--- Unified Manager ---\n";
-    ss << "  Memory Patches:    " << stats.memoryPatchCount.load()  << "\n";
-    ss << "  Byte Patches:      " << stats.bytePatchCount.load()    << "\n";
-    ss << "  Server Patches:    " << stats.serverPatchCount.load()  << "\n";
-    ss << "  Total Operations:  " << stats.totalOperations.load()   << "\n";
-    ss << "  Total Failures:    " << stats.totalFailures.load()     << "\n";
+    ss << "  Memory Patches:    " << stats.memoryPatchCount.load() << "\n";
+    ss << "  Byte Patches:      " << stats.bytePatchCount.load() << "\n";
+    ss << "  Server Patches:    " << stats.serverPatchCount.load() << "\n";
+    ss << "  Total Operations:  " << stats.totalOperations.load() << "\n";
+    ss << "  Total Failures:    " << stats.totalFailures.load() << "\n";
     ss << "\n--- Memory Layer (Layer 1) ---\n";
-    ss << "  Applied:           " << memStats.totalApplied.load()   << "\n";
-    ss << "  Reverted:          " << memStats.totalReverted.load()  << "\n";
-    ss << "  Failed:            " << memStats.totalFailed.load()    << "\n";
+    ss << "  Applied:           " << memStats.totalApplied.load() << "\n";
+    ss << "  Reverted:          " << memStats.totalReverted.load() << "\n";
+    ss << "  Failed:            " << memStats.totalFailed.load() << "\n";
     ss << "  Protect Changes:   " << memStats.protectionChanges.load() << "\n";
     ss << "\n--- Proxy Hotpatcher ---\n";
-    ss << "  Tokens Processed:  " << pstats.tokensProcessed.load()  << "\n";
-    ss << "  Biases Applied:    " << pstats.biasesApplied.load()    << "\n";
+    ss << "  Tokens Processed:  " << pstats.tokensProcessed.load() << "\n";
+    ss << "  Biases Applied:    " << pstats.biasesApplied.load() << "\n";
     ss << "  Streams Terminated:" << pstats.streamsTerminated.load() << "\n";
-    ss << "  Rewrites Applied:  " << pstats.rewritesApplied.load()  << "\n";
+    ss << "  Rewrites Applied:  " << pstats.rewritesApplied.load() << "\n";
     ss << "  Valid. Passed:     " << pstats.validationsPassed.load() << "\n";
     ss << "  Valid. Failed:     " << pstats.validationsFailed.load() << "\n";
     ss << "=====================================\n";
@@ -297,14 +410,18 @@ void Win32IDE::cmdHotpatchShowStatus() {
     MessageBoxA(m_hwndMain, ss.str().c_str(), "Hotpatch System Status", MB_OK | MB_ICONINFORMATION);
 }
 
-void Win32IDE::cmdHotpatchSetTargetTps() {
+void Win32IDE::cmdHotpatchSetTargetTps()
+{
     auto& mgr = UnifiedHotpatchManager::instance();
     char buf[64] = {};
-    if (OpenClipboard(m_hwndMain)) {
+    if (OpenClipboard(m_hwndMain))
+    {
         HANDLE h = GetClipboardData(CF_TEXT);
-        if (h) {
+        if (h)
+        {
             const char* p = static_cast<const char*>(GlobalLock(h));
-            if (p) {
+            if (p)
+            {
                 strncpy(buf, p, sizeof(buf) - 1);
                 GlobalUnlock(h);
             }
@@ -312,33 +429,50 @@ void Win32IDE::cmdHotpatchSetTargetTps() {
         CloseClipboard();
     }
     double value = 0.0;
-    if (buf[0]) {
-        try { value = std::stod(buf); } catch (...) {}
-        if (value < 0.0) value = 0.0;
+    if (buf[0])
+    {
+        try
+        {
+            value = std::stod(buf);
+        }
+        catch (...)
+        {
+        }
+        if (value < 0.0)
+            value = 0.0;
     }
     mgr.set_target_tps(value);
     std::ostringstream ss;
-    if (value > 0.0) {
-        ss << "[Hotpatch] Target TPS set to " << value << " (force hotpatching). Clear clipboard and run again to set 0 (run normally).\n";
-    } else {
-        ss << "[Hotpatch] Target TPS cleared — run normally. To set: copy a number (e.g. 50) to clipboard and run Hotpatch > Set target TPS again.\n";
+    if (value > 0.0)
+    {
+        ss << "[Hotpatch] Target TPS set to " << value
+           << " (force hotpatching). Clear clipboard and run again to set 0 (run normally).\n";
+    }
+    else
+    {
+        ss << "[Hotpatch] Target TPS cleared — run normally. To set: copy a number (e.g. 50) to clipboard and run "
+              "Hotpatch > Set target TPS again.\n";
     }
     appendToOutput(ss.str());
     MessageBoxA(m_hwndMain, ss.str().c_str(), "Target TPS", MB_OK | MB_ICONINFORMATION);
 }
 
-void Win32IDE::cmdHotpatchToggleAll() {
+void Win32IDE::cmdHotpatchToggleAll()
+{
     auto& unified = UnifiedHotpatchManager::instance();
     auto& proxy = ProxyHotpatcher::instance();
 
     m_hotpatchEnabled = !m_hotpatchEnabled;
-    if (m_hotpatchEnabled) {
+    if (m_hotpatchEnabled)
+    {
         const double restoredTps = (m_hotpatchSavedTargetTps > 0.0)
-            ? m_hotpatchSavedTargetTps
-            : ComputeTemperatureLinkedTargetTps(m_inferenceConfig.temperature);
+                                       ? m_hotpatchSavedTargetTps
+                                       : ComputeTemperatureLinkedTargetTps(m_inferenceConfig.temperature);
         unified.set_target_tps(restoredTps);
         proxy.setEnabled(true);
-    } else {
+    }
+    else
+    {
         m_hotpatchSavedTargetTps = unified.get_target_tps();
         unified.set_target_tps(0.0);
         proxy.setEnabled(false);
@@ -346,19 +480,20 @@ void Win32IDE::cmdHotpatchToggleAll() {
 
     std::ostringstream ss;
     ss << "[Hotpatch] System " << (m_hotpatchEnabled ? "ENABLED" : "DISABLED")
-       << ": target_tps=" << unified.get_target_tps()
-       << " proxy=" << (proxy.isEnabled() ? "on" : "off") << "\n";
+       << ": target_tps=" << unified.get_target_tps() << " proxy=" << (proxy.isEnabled() ? "on" : "off") << "\n";
     const std::string msg = ss.str();
     appendToOutput(msg);
 
     // Update status bar
-    if (m_hwndStatusBar) {
+    if (m_hwndStatusBar)
+    {
         std::string sbText = std::string("Hotpatch: ") + (m_hotpatchEnabled ? "ON" : "OFF");
         SendMessageA(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)sbText.c_str());
     }
 }
 
-void Win32IDE::cmdHotpatchResetStats() {
+void Win32IDE::cmdHotpatchResetStats()
+{
     UnifiedHotpatchManager::instance().resetStats();
     ProxyHotpatcher::instance().resetStats();
     reset_memory_patch_stats();
@@ -369,28 +504,29 @@ void Win32IDE::cmdHotpatchResetStats() {
 // Event Log
 // ============================================================================
 
-void Win32IDE::cmdHotpatchShowEventLog() {
+void Win32IDE::cmdHotpatchShowEventLog()
+{
     auto& mgr = UnifiedHotpatchManager::instance();
     std::ostringstream ss;
     ss << "=== Hotpatch Event Log ===\n";
 
     HotpatchEvent evt;
     int count = 0;
-    while (mgr.poll_event(&evt) && count < 64) {
-        static const char* typeNames[] = {
-            "MemPatchApplied", "MemPatchReverted", "BytePatchApplied",
-            "BytePatchFailed", "ServerPatchAdded", "ServerPatchRemoved",
-            "PresetLoaded", "PresetSaved"
-        };
+    while (mgr.poll_event(&evt) && count < 64)
+    {
+        static const char* typeNames[] = {"MemPatchApplied", "MemPatchReverted", "BytePatchApplied",
+                                          "BytePatchFailed", "ServerPatchAdded", "ServerPatchRemoved",
+                                          "PresetLoaded",    "PresetSaved"};
         const char* tname = (evt.type < 8) ? typeNames[evt.type] : "Unknown";
-        ss << "  [" << evt.sequenceId << "] " << tname
-           << " @ tick " << evt.timestamp;
-        if (evt.detail) ss << " — " << evt.detail;
+        ss << "  [" << evt.sequenceId << "] " << tname << " @ tick " << evt.timestamp;
+        if (evt.detail)
+            ss << " — " << evt.detail;
         ss << "\n";
         ++count;
     }
 
-    if (count == 0) {
+    if (count == 0)
+    {
         ss << "  (No events in ring buffer)\n";
     }
     ss << "==========================\n";
@@ -402,14 +538,17 @@ void Win32IDE::cmdHotpatchShowEventLog() {
 // Memory Layer (Layer 1)
 // ============================================================================
 
-void Win32IDE::cmdHotpatchMemoryApply() {
+void Win32IDE::cmdHotpatchMemoryApply()
+{
     // Input contract: <address_hex> <hex_bytes>
     // Example: 0x7FFE1234 909090
     std::string input = ReadClipboardText(m_hwndMain);
-    if (input.empty() && m_hwndCopilotChatInput) {
+    if (input.empty() && m_hwndCopilotChatInput)
+    {
         input = getWindowText(m_hwndCopilotChatInput);
     }
-    if (input.empty()) {
+    if (input.empty())
+    {
         appendToOutput("[Hotpatch] Memory apply requires input: <address_hex> <hex_bytes> (clipboard or chat input)\n");
         return;
     }
@@ -418,21 +557,26 @@ void Win32IDE::cmdHotpatchMemoryApply() {
     std::string addrStr;
     std::string hexData;
     iss >> addrStr >> hexData;
-    if (addrStr.empty() || hexData.empty()) {
+    if (addrStr.empty() || hexData.empty())
+    {
         appendToOutput("[Hotpatch] Invalid input format. Expected: <address_hex> <hex_bytes>\n");
         return;
     }
 
     uintptr_t addr = 0;
-    try {
+    try
+    {
         addr = static_cast<uintptr_t>(std::stoull(addrStr, nullptr, 0));
-    } catch (...) {
+    }
+    catch (...)
+    {
         appendToOutput("[Hotpatch] Invalid address in clipboard.\n");
         return;
     }
 
     std::vector<uint8_t> data;
-    if (!ParseHexBytes(hexData, data)) {
+    if (!ParseHexBytes(hexData, data))
+    {
         appendToOutput("[Hotpatch] Invalid hex bytes in clipboard.\n");
         return;
     }
@@ -448,23 +592,26 @@ void Win32IDE::cmdHotpatchMemoryApply() {
     auto ur = UnifiedHotpatchManager::instance().apply_memory_patch_tracked(&tracked.entry);
 
     std::ostringstream ss;
-    ss << "[Hotpatch] Memory patch @0x" << std::hex << addr << std::dec
-       << " size=" << data.size() << " => "
+    ss << "[Hotpatch] Memory patch @0x" << std::hex << addr << std::dec << " size=" << data.size() << " => "
        << (ur.result.success ? "OK" : "FAILED") << " (" << ur.result.detail << ")\n";
     appendToOutput(ss.str());
 
-    if (ur.result.success) {
+    if (ur.result.success)
+    {
         g_trackedMemoryPatches.push_back(std::move(tracked));
     }
 }
 
-void Win32IDE::cmdHotpatchMemoryRevert() {
-    if (!m_hotpatchEnabled) {
+void Win32IDE::cmdHotpatchMemoryRevert()
+{
+    if (!m_hotpatchEnabled)
+    {
         appendToOutput("[Hotpatch] System is disabled. Toggle on first.\n");
         return;
     }
     auto& mgr = UnifiedHotpatchManager::instance();
-    if (g_trackedMemoryPatches.empty()) {
+    if (g_trackedMemoryPatches.empty())
+    {
         appendToOutput("[Hotpatch] No tracked memory patches to revert.\n");
         return;
     }
@@ -473,15 +620,15 @@ void Win32IDE::cmdHotpatchMemoryRevert() {
     g_trackedMemoryPatches.pop_back();
 
     auto ur = mgr.revert_memory_patch(&tracked.entry);
-    if (!ur.result.success) {
+    if (!ur.result.success)
+    {
         g_trackedMemoryPatches.push_back(std::move(tracked));
     }
 
     std::ostringstream ss;
-    ss << "[Hotpatch] Revert last tracked memory patch @0x" << std::hex
-       << tracked.entry.targetAddr << std::dec << " size=" << tracked.entry.patchSize
-       << " => " << (ur.result.success ? "OK" : "FAILED")
-       << " (" << ur.result.detail << ")\n";
+    ss << "[Hotpatch] Revert last tracked memory patch @0x" << std::hex << tracked.entry.targetAddr << std::dec
+       << " size=" << tracked.entry.patchSize << " => " << (ur.result.success ? "OK" : "FAILED") << " ("
+       << ur.result.detail << ")\n";
     appendToOutput(ss.str());
 }
 
@@ -489,8 +636,10 @@ void Win32IDE::cmdHotpatchMemoryRevert() {
 // Byte Layer (Layer 2)
 // ============================================================================
 
-void Win32IDE::cmdHotpatchByteApply() {
-    if (!m_hotpatchEnabled) {
+void Win32IDE::cmdHotpatchByteApply()
+{
+    if (!m_hotpatchEnabled)
+    {
         appendToOutput("[Hotpatch] System is disabled. Toggle on first.\n");
         return;
     }
@@ -506,7 +655,8 @@ void Win32IDE::cmdHotpatchByteApply() {
     ofn.lpstrTitle = "Select GGUF File for Byte Patching";
     ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
 
-    if (GetOpenFileNameA(&ofn)) {
+    if (GetOpenFileNameA(&ofn))
+    {
         appendToOutput(std::string("[Hotpatch] Byte-level target: ") + filename + "\n");
 
         // Open a second dialog for the .hotpatch patch definition file
@@ -520,47 +670,62 @@ void Win32IDE::cmdHotpatchByteApply() {
         ofnPatch.lpstrTitle = "Select Byte Patch Definition";
         ofnPatch.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
 
-        if (GetOpenFileNameA(&ofnPatch)) {
+        if (GetOpenFileNameA(&ofnPatch))
+        {
             // Parse the .hotpatch file: each line is OFFSET:HEX_BYTES
             FILE* fp = fopen(patchFile, "r");
-            if (!fp) {
+            if (!fp)
+            {
                 appendToOutput("[Hotpatch] ERROR: Cannot open patch file.\n");
                 return;
             }
             auto& mgr = UnifiedHotpatchManager::instance();
             int applied = 0, failed = 0;
             char line[512];
-            while (fgets(line, sizeof(line), fp)) {
+            while (fgets(line, sizeof(line), fp))
+            {
                 // Skip comments and blank lines
-                if (line[0] == '#' || line[0] == '\n' || line[0] == '\r') continue;
+                if (line[0] == '#' || line[0] == '\n' || line[0] == '\r')
+                    continue;
                 // Parse OFFSET:HEX_BYTES
                 char* colon = strchr(line, ':');
-                if (!colon) continue;
+                if (!colon)
+                    continue;
                 *colon = '\0';
                 uint64_t offset = strtoull(line, nullptr, 16);
                 std::vector<uint8_t> bytes;
                 char* hex = colon + 1;
-                while (*hex) {
-                    while (*hex == ' ' || *hex == '\t') hex++;
-                    if (*hex == '\n' || *hex == '\r' || *hex == '\0') break;
-                    char byteStr[3] = { hex[0], hex[1], '\0' };
+                while (*hex)
+                {
+                    while (*hex == ' ' || *hex == '\t')
+                        hex++;
+                    if (*hex == '\n' || *hex == '\r' || *hex == '\0')
+                        break;
+                    char byteStr[3] = {hex[0], hex[1], '\0'};
                     bytes.push_back((uint8_t)strtoul(byteStr, nullptr, 16));
                     hex += 2;
                 }
-                if (!bytes.empty()) {
+                if (!bytes.empty())
+                {
                     BytePatch bp;
                     bp.offset = offset;
                     bp.data = bytes;
                     auto ur = mgr.apply_byte_patch(filename, bp);
-                    if (ur.result.success) applied++; else failed++;
+                    if (ur.result.success)
+                        applied++;
+                    else
+                        failed++;
                 }
             }
             fclose(fp);
             appendToOutput("[Hotpatch] Byte patches applied: " + std::to_string(applied) +
                            ", failed: " + std::to_string(failed) + "\n");
-        } else {
+        }
+        else
+        {
             const std::string clip = ReadClipboardText(m_hwndMain);
-            if (clip.empty()) {
+            if (clip.empty())
+            {
                 appendToOutput("[Hotpatch] Patch definition selection canceled. No byte patches applied.\n");
                 return;
             }
@@ -571,35 +736,43 @@ void Win32IDE::cmdHotpatchByteApply() {
             int applied = 0;
             int failed = 0;
 
-            while (std::getline(clipStream, patchLine)) {
+            while (std::getline(clipStream, patchLine))
+            {
                 patchLine = TrimAscii(patchLine);
-                if (patchLine.empty() || patchLine[0] == '#') {
+                if (patchLine.empty() || patchLine[0] == '#')
+                {
                     continue;
                 }
 
                 const size_t colonPos = patchLine.find(':');
-                if (colonPos == std::string::npos) {
+                if (colonPos == std::string::npos)
+                {
                     ++failed;
                     continue;
                 }
 
                 const std::string offText = TrimAscii(patchLine.substr(0, colonPos));
                 const std::string hexText = TrimAscii(patchLine.substr(colonPos + 1));
-                if (offText.empty() || hexText.empty()) {
+                if (offText.empty() || hexText.empty())
+                {
                     ++failed;
                     continue;
                 }
 
                 uint64_t offset = 0;
-                try {
+                try
+                {
                     offset = std::stoull(offText, nullptr, 16);
-                } catch (...) {
+                }
+                catch (...)
+                {
                     ++failed;
                     continue;
                 }
 
                 std::vector<uint8_t> bytes;
-                if (!ParseHexBytes(hexText, bytes)) {
+                if (!ParseHexBytes(hexText, bytes))
+                {
                     ++failed;
                     continue;
                 }
@@ -608,9 +781,12 @@ void Win32IDE::cmdHotpatchByteApply() {
                 bp.offset = offset;
                 bp.data = bytes;
                 auto ur = mgr.apply_byte_patch(filename, bp);
-                if (ur.result.success) {
+                if (ur.result.success)
+                {
                     ++applied;
-                } else {
+                }
+                else
+                {
                     ++failed;
                 }
             }
@@ -621,7 +797,8 @@ void Win32IDE::cmdHotpatchByteApply() {
     }
 }
 
-void Win32IDE::cmdHotpatchByteSearch() {
+void Win32IDE::cmdHotpatchByteSearch()
+{
     char filename[MAX_PATH] = {};
     OPENFILENAMEA ofn = {};
     ofn.lStructSize = sizeof(ofn);
@@ -632,16 +809,20 @@ void Win32IDE::cmdHotpatchByteSearch() {
     ofn.lpstrTitle = "Select File for Pattern Search & Replace";
     ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
 
-    if (GetOpenFileNameA(&ofn)) {
+    if (GetOpenFileNameA(&ofn))
+    {
         appendToOutput(std::string("[Hotpatch] Search target: ") + filename + "\n");
 
         // Input contract: <hex_pattern> [hex_replacement]
         std::string input = ReadClipboardText(m_hwndMain);
-        if (input.empty() && m_hwndCopilotChatInput) {
+        if (input.empty() && m_hwndCopilotChatInput)
+        {
             input = getWindowText(m_hwndCopilotChatInput);
         }
-        if (input.empty()) {
-            appendToOutput("[Hotpatch] Byte search requires input: <hex_pattern> [hex_replacement] (clipboard or chat input)\n");
+        if (input.empty())
+        {
+            appendToOutput(
+                "[Hotpatch] Byte search requires input: <hex_pattern> [hex_replacement] (clipboard or chat input)\n");
             return;
         }
 
@@ -651,13 +832,15 @@ void Win32IDE::cmdHotpatchByteSearch() {
         iss >> patternHex >> replaceHex;
 
         std::vector<uint8_t> pattern;
-        if (!ParseHexBytes(patternHex, pattern)) {
+        if (!ParseHexBytes(patternHex, pattern))
+        {
             appendToOutput("[Hotpatch] Invalid search pattern hex.\n");
             return;
         }
 
         auto result = direct_search(filename, pattern.data(), pattern.size());
-        if (!result.found) {
+        if (!result.found)
+        {
             appendToOutput("[Hotpatch] Pattern not found in target file.\n");
             return;
         }
@@ -667,16 +850,18 @@ void Win32IDE::cmdHotpatchByteSearch() {
                  << " length=" << result.length << "\n";
         appendToOutput(foundMsg.str());
 
-        if (!replaceHex.empty()) {
+        if (!replaceHex.empty())
+        {
             std::vector<uint8_t> replacement;
-            if (!ParseHexBytes(replaceHex, replacement)) {
+            if (!ParseHexBytes(replaceHex, replacement))
+            {
                 appendToOutput("[Hotpatch] Invalid replacement hex; search completed without replace.\n");
                 return;
             }
 
             auto ur = UnifiedHotpatchManager::instance().apply_byte_search_patch(filename, pattern, replacement);
-            appendToOutput(std::string("[Hotpatch] Byte search/replace => ") +
-                           (ur.result.success ? "OK" : "FAILED") + " (" + ur.result.detail + ")\n");
+            appendToOutput(std::string("[Hotpatch] Byte search/replace => ") + (ur.result.success ? "OK" : "FAILED") +
+                           " (" + ur.result.detail + ")\n");
         }
     }
 }
@@ -685,7 +870,8 @@ void Win32IDE::cmdHotpatchByteSearch() {
 // Server Layer (Layer 3)
 // ============================================================================
 
-void Win32IDE::cmdHotpatchServerAdd() {
+void Win32IDE::cmdHotpatchServerAdd()
+{
     auto& mgr = UnifiedHotpatchManager::instance();
 
     g_serverPatchNames.emplace_back("ide_menu_patch_" + std::to_string(GetTickCount64()));
@@ -694,33 +880,39 @@ void Win32IDE::cmdHotpatchServerAdd() {
     ServerHotpatch& patch = g_serverPatches.back();
     patch.name = g_serverPatchNames.back().c_str();
     patch.hit_count = 0;
-    patch.transform = [](Request* req, Response*) -> bool {
+    patch.transform = [](Request* req, Response*) -> bool
+    {
         // Keep pass-through semantics while guaranteeing a stable temperature field.
-        if (req && req->params.find("temperature") == req->params.end()) {
+        if (req && req->params.find("temperature") == req->params.end())
+        {
             req->params["temperature"] = 0.7f;
         }
         return true;
     };
 
     auto ur = mgr.add_server_patch(&patch);
-    appendToOutput(std::string("[Hotpatch] Server patch add => ") +
-                   (ur.result.success ? "OK" : "FAILED") + " (" + ur.result.detail + ")\n");
-    if (ur.result.success) {
+    appendToOutput(std::string("[Hotpatch] Server patch add => ") + (ur.result.success ? "OK" : "FAILED") + " (" +
+                   ur.result.detail + ")\n");
+    if (ur.result.success)
+    {
         g_lastServerPatchName = patch.name;
         appendToOutput(std::string("[Hotpatch] Added patch: ") + patch.name + "\n");
     }
 }
 
-void Win32IDE::cmdHotpatchServerRemove() {
-    if (g_lastServerPatchName.empty()) {
+void Win32IDE::cmdHotpatchServerRemove()
+{
+    if (g_lastServerPatchName.empty())
+    {
         appendToOutput("[Hotpatch] No menu-added server patch to remove.\n");
         return;
     }
 
     auto ur = UnifiedHotpatchManager::instance().remove_server_patch(g_lastServerPatchName.c_str());
-    appendToOutput(std::string("[Hotpatch] Server patch remove => ") +
-                   (ur.result.success ? "OK" : "FAILED") + " (" + ur.result.detail + ")\n");
-    if (ur.result.success) {
+    appendToOutput(std::string("[Hotpatch] Server patch remove => ") + (ur.result.success ? "OK" : "FAILED") + " (" +
+                   ur.result.detail + ")\n");
+    if (ur.result.success)
+    {
         g_lastServerPatchName.clear();
     }
 }
@@ -729,7 +921,8 @@ void Win32IDE::cmdHotpatchServerRemove() {
 // Proxy Hotpatcher
 // ============================================================================
 
-void Win32IDE::cmdHotpatchProxyBias() {
+void Win32IDE::cmdHotpatchProxyBias()
+{
     auto& proxy = ProxyHotpatcher::instance();
     const auto& ps = proxy.getStats();
 
@@ -741,7 +934,7 @@ void Win32IDE::cmdHotpatchProxyBias() {
 
     // Apply a deterministic temperature-linked bias profile immediately.
     const float clampedTemp = std::clamp(m_inferenceConfig.temperature, 0.0f, 2.0f);
-    const float biasValue = -6.0f + (clampedTemp * 6.0f); // colder => stronger suppression.
+    const float biasValue = -6.0f + (clampedTemp * 6.0f);  // colder => stronger suppression.
 
     TokenBias bias{};
     bias.tokenId = 0;
@@ -750,15 +943,16 @@ void Win32IDE::cmdHotpatchProxyBias() {
     proxy.add_token_bias(bias);
 
     std::ostringstream ss;
-    ss << "[Hotpatch] Applied temp-linked proxy bias: token=0 bias=" << biasValue
-       << " temp=" << clampedTemp << "\n"
-       << "[Hotpatch] Proxy Stats: tokens=" << ps.tokensProcessed.load()
-       << " biases=" << ps.biasesApplied.load() << "\n";
+    ss << "[Hotpatch] Applied temp-linked proxy bias: token=0 bias=" << biasValue << " temp=" << clampedTemp << "\n"
+       << "[Hotpatch] Proxy Stats: tokens=" << ps.tokensProcessed.load() << " biases=" << ps.biasesApplied.load()
+       << "\n";
     appendToOutput(ss.str());
 }
 
-void Win32IDE::cmdHotpatchProxyRewrite() {
-    if (!m_hotpatchEnabled) {
+void Win32IDE::cmdHotpatchProxyRewrite()
+{
+    if (!m_hotpatchEnabled)
+    {
         appendToOutput("[Hotpatch] System is disabled. Toggle on first.\n");
         return;
     }
@@ -769,7 +963,8 @@ void Win32IDE::cmdHotpatchProxyRewrite() {
     const std::string clipRaw = TrimAscii(ReadClipboardText(m_hwndMain));
     const std::string clipLower = ToLowerAscii(clipRaw);
 
-    if (clipLower == "clear") {
+    if (clipLower == "clear")
+    {
         PatchResult clearResult = proxy.clear_rewrite_rules();
         g_proxyRewriteNames.clear();
         g_proxyRewritePatterns.clear();
@@ -784,22 +979,27 @@ void Win32IDE::cmdHotpatchProxyRewrite() {
     std::string pattern;
     std::string replacement;
 
-    if (!clipRaw.empty()) {
+    if (!clipRaw.empty())
+    {
         const std::vector<std::string> parts = SplitByPipe(clipRaw);
-        if (parts.size() >= 3) {
+        if (parts.size() >= 3)
+        {
             name = TrimAscii(parts[0]);
             pattern = parts[1];
             replacement = parts[2];
         }
     }
 
-    if (name.empty()) {
+    if (name.empty())
+    {
         name = "ide_rewrite_" + std::to_string(GetTickCount64());
     }
-    if (pattern.empty()) {
+    if (pattern.empty())
+    {
         pattern = "I cannot";
     }
-    if (replacement.empty()) {
+    if (replacement.empty())
+    {
         const float clampedTemp = std::clamp(m_inferenceConfig.temperature, 0.0f, 2.0f);
         replacement = (clampedTemp >= 1.0f) ? "I can" : "I can try";
     }
@@ -815,26 +1015,28 @@ void Win32IDE::cmdHotpatchProxyRewrite() {
     rule.hitCount = 0;
     rule.enabled = true;
 
-    if (!g_lastProxyRewriteName.empty()) {
+    if (!g_lastProxyRewriteName.empty())
+    {
         proxy.remove_rewrite_rule(g_lastProxyRewriteName.c_str());
     }
 
     PatchResult addResult = proxy.add_rewrite_rule(rule);
-    if (addResult.success) {
+    if (addResult.success)
+    {
         g_lastProxyRewriteName = name;
     }
 
     std::ostringstream ss;
-    ss << "[Hotpatch] Proxy rewrite => " << (addResult.success ? "OK" : "FAILED")
-       << " (" << addResult.detail << ")\n"
-       << "[Hotpatch] rule=" << name << " pattern='" << pattern
-       << "' replacement='" << replacement << "'\n"
+    ss << "[Hotpatch] Proxy rewrite => " << (addResult.success ? "OK" : "FAILED") << " (" << addResult.detail << ")\n"
+       << "[Hotpatch] rule=" << name << " pattern='" << pattern << "' replacement='" << replacement << "'\n"
        << "[Hotpatch] rewrites_applied=" << ps.rewritesApplied.load() << "\n";
     appendToOutput(ss.str());
 }
 
-void Win32IDE::cmdHotpatchProxyTerminate() {
-    if (!m_hotpatchEnabled) {
+void Win32IDE::cmdHotpatchProxyTerminate()
+{
+    if (!m_hotpatchEnabled)
+    {
         appendToOutput("[Hotpatch] System is disabled. Toggle on first.\n");
         return;
     }
@@ -844,7 +1046,8 @@ void Win32IDE::cmdHotpatchProxyTerminate() {
 
     const std::string clipRaw = TrimAscii(ReadClipboardText(m_hwndMain));
     const std::string clipLower = ToLowerAscii(clipRaw);
-    if (clipLower == "clear") {
+    if (clipLower == "clear")
+    {
         PatchResult clearResult = proxy.clear_termination_rules();
         g_proxyTerminationNames.clear();
         g_proxyTerminationStops.clear();
@@ -857,28 +1060,37 @@ void Win32IDE::cmdHotpatchProxyTerminate() {
     std::string name;
     std::string stopSequence;
     size_t maxTokens = 0;
-    if (!clipRaw.empty()) {
+    if (!clipRaw.empty())
+    {
         const std::vector<std::string> parts = SplitByPipe(clipRaw);
-        if (parts.size() >= 2) {
+        if (parts.size() >= 2)
+        {
             name = TrimAscii(parts[0]);
             stopSequence = parts[1];
-            if (parts.size() >= 3) {
-                try {
+            if (parts.size() >= 3)
+            {
+                try
+                {
                     maxTokens = static_cast<size_t>(std::stoull(TrimAscii(parts[2])));
-                } catch (...) {
+                }
+                catch (...)
+                {
                     maxTokens = 0;
                 }
             }
         }
     }
 
-    if (name.empty()) {
+    if (name.empty())
+    {
         name = "ide_terminate_" + std::to_string(GetTickCount64());
     }
-    if (stopSequence.empty()) {
+    if (stopSequence.empty())
+    {
         stopSequence = "\n\nUser:";
     }
-    if (maxTokens == 0) {
+    if (maxTokens == 0)
+    {
         const float clampedTemp = std::clamp(m_inferenceConfig.temperature, 0.0f, 2.0f);
         maxTokens = static_cast<size_t>(64 + clampedTemp * 256.0f);
     }
@@ -892,26 +1104,29 @@ void Win32IDE::cmdHotpatchProxyTerminate() {
     rule.maxTokens = maxTokens;
     rule.enabled = true;
 
-    if (!g_lastProxyTerminationName.empty()) {
+    if (!g_lastProxyTerminationName.empty())
+    {
         proxy.remove_termination_rule(g_lastProxyTerminationName.c_str());
     }
 
     PatchResult addResult = proxy.add_termination_rule(rule);
-    if (addResult.success) {
+    if (addResult.success)
+    {
         g_lastProxyTerminationName = name;
     }
 
     std::ostringstream ss;
-    ss << "[Hotpatch] Proxy termination => " << (addResult.success ? "OK" : "FAILED")
-       << " (" << addResult.detail << ")\n"
-       << "[Hotpatch] rule=" << name << " stop='" << stopSequence
-       << "' max_tokens=" << maxTokens << "\n"
+    ss << "[Hotpatch] Proxy termination => " << (addResult.success ? "OK" : "FAILED") << " (" << addResult.detail
+       << ")\n"
+       << "[Hotpatch] rule=" << name << " stop='" << stopSequence << "' max_tokens=" << maxTokens << "\n"
        << "[Hotpatch] streams_terminated=" << ps.streamsTerminated.load() << "\n";
     appendToOutput(ss.str());
 }
 
-void Win32IDE::cmdHotpatchProxyValidate() {
-    if (!m_hotpatchEnabled) {
+void Win32IDE::cmdHotpatchProxyValidate()
+{
+    if (!m_hotpatchEnabled)
+    {
         appendToOutput("[Hotpatch] System is disabled. Toggle on first.\n");
         return;
     }
@@ -923,7 +1138,8 @@ void Win32IDE::cmdHotpatchProxyValidate() {
     const std::string clipRaw = TrimAscii(ReadClipboardText(m_hwndMain));
     const std::string clipLower = ToLowerAscii(clipRaw);
 
-    if (clipLower == "clear") {
+    if (clipLower == "clear")
+    {
         PatchResult clearResult = proxy.clear_validators();
         g_proxyValidatorNames.clear();
         appendToOutput("[Hotpatch] Proxy validators clear => " + std::string(clearResult.success ? "OK" : "FAILED") +
@@ -933,25 +1149,30 @@ void Win32IDE::cmdHotpatchProxyValidate() {
 
     std::string validatorName = "length_check";
     bool enable = true;
-    if (!clipRaw.empty()) {
+    if (!clipRaw.empty())
+    {
         const std::vector<std::string> parts = SplitByPipe(clipRaw);
-        if (!parts.empty()) {
+        if (!parts.empty())
+        {
             validatorName = ToLowerAscii(TrimAscii(parts[0]));
         }
-        if (parts.size() >= 2) {
+        if (parts.size() >= 2)
+        {
             const std::string mode = ToLowerAscii(TrimAscii(parts[1]));
             enable = !(mode == "off" || mode == "disable" || mode == "remove" || mode == "0");
         }
     }
 
     ProxyValidatorFn validatorFn = ResolveBuiltInValidator(validatorName);
-    if (!validatorFn) {
+    if (!validatorFn)
+    {
         appendToOutput("[Hotpatch] Unknown validator name. Use: length_check|json_syntax|safety_filter\n");
         return;
     }
 
     PatchResult result = PatchResult::ok("no-op");
-    if (enable) {
+    if (enable)
+    {
         g_proxyValidatorNames.push_back(validatorName);
         ProxyValidator v{};
         v.name = g_proxyValidatorNames.back().c_str();
@@ -959,30 +1180,32 @@ void Win32IDE::cmdHotpatchProxyValidate() {
         v.userData = nullptr;
         v.enabled = true;
         result = proxy.add_validator(v);
-    } else {
+    }
+    else
+    {
         result = proxy.remove_validator(validatorName.c_str());
     }
 
     std::ostringstream ss;
-    ss << "[Hotpatch] Proxy validator " << (enable ? "enable" : "disable")
-       << " => " << (result.success ? "OK" : "FAILED")
-       << " (" << result.detail << ")\n"
+    ss << "[Hotpatch] Proxy validator " << (enable ? "enable" : "disable") << " => "
+       << (result.success ? "OK" : "FAILED") << " (" << result.detail << ")\n"
        << "[Hotpatch] validator=" << validatorName << "\n"
        << "[Hotpatch] validations_passed=" << ps.validationsPassed.load()
        << " validations_failed=" << ps.validationsFailed.load() << "\n";
     appendToOutput(ss.str());
 }
 
-void Win32IDE::cmdHotpatchShowProxyStats() {
+void Win32IDE::cmdHotpatchShowProxyStats()
+{
     auto& proxy = ProxyHotpatcher::instance();
     const auto& ps = proxy.getStats();
 
     std::ostringstream ss;
     ss << "=== Proxy Hotpatcher Statistics ===\n";
-    ss << "  Tokens Processed:     " << ps.tokensProcessed.load()  << "\n";
-    ss << "  Biases Applied:       " << ps.biasesApplied.load()    << "\n";
+    ss << "  Tokens Processed:     " << ps.tokensProcessed.load() << "\n";
+    ss << "  Biases Applied:       " << ps.biasesApplied.load() << "\n";
     ss << "  Streams Terminated:   " << ps.streamsTerminated.load() << "\n";
-    ss << "  Rewrites Applied:     " << ps.rewritesApplied.load()  << "\n";
+    ss << "  Rewrites Applied:     " << ps.rewritesApplied.load() << "\n";
     ss << "  Validations Passed:   " << ps.validationsPassed.load() << "\n";
     ss << "  Validations Failed:   " << ps.validationsFailed.load() << "\n";
     ss << "===================================\n";
@@ -994,8 +1217,10 @@ void Win32IDE::cmdHotpatchShowProxyStats() {
 // Presets
 // ============================================================================
 
-void Win32IDE::cmdHotpatchPresetSave() {
-    if (!m_hotpatchEnabled) {
+void Win32IDE::cmdHotpatchPresetSave()
+{
+    if (!m_hotpatchEnabled)
+    {
         appendToOutput("[Hotpatch] System is disabled. Toggle on first.\n");
         return;
     }
@@ -1011,21 +1236,27 @@ void Win32IDE::cmdHotpatchPresetSave() {
     ofn.Flags = OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST;
     ofn.lpstrDefExt = "json";
 
-    if (GetSaveFileNameA(&ofn)) {
+    if (GetSaveFileNameA(&ofn))
+    {
         HotpatchPreset preset = {};
         strncpy(preset.name, "IDE Preset", sizeof(preset.name) - 1);
 
         PatchResult r = UnifiedHotpatchManager::instance().save_preset(filename, preset);
-        if (r.success) {
+        if (r.success)
+        {
             appendToOutput(std::string("[Hotpatch] Preset saved: ") + filename + "\n");
-        } else {
+        }
+        else
+        {
             appendToOutput(std::string("[Hotpatch] Save failed: ") + r.detail + "\n");
         }
     }
 }
 
-void Win32IDE::cmdHotpatchPresetLoad() {
-    if (!m_hotpatchEnabled) {
+void Win32IDE::cmdHotpatchPresetLoad()
+{
+    if (!m_hotpatchEnabled)
+    {
         appendToOutput("[Hotpatch] System is disabled. Toggle on first.\n");
         return;
     }
@@ -1040,14 +1271,281 @@ void Win32IDE::cmdHotpatchPresetLoad() {
     ofn.lpstrTitle = "Load Hotpatch Preset";
     ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
 
-    if (GetOpenFileNameA(&ofn)) {
+    if (GetOpenFileNameA(&ofn))
+    {
         HotpatchPreset preset = {};
         PatchResult r = UnifiedHotpatchManager::instance().load_preset(filename, &preset);
-        if (r.success) {
+        if (r.success)
+        {
             appendToOutput(std::string("[Hotpatch] Preset loaded: ") + filename + "\n");
             appendToOutput(std::string("[Hotpatch] Preset name: ") + preset.name + "\n");
-        } else {
+        }
+        else
+        {
             appendToOutput(std::string("[Hotpatch] Load failed: ") + r.detail + "\n");
         }
+    }
+}
+
+// ============================================================================
+// Agent Operations — Advanced IDE operations accessible via hotpatch
+// ============================================================================
+
+void Win32IDE::cmdHotpatchCompactConversation()
+{
+    if (!m_hwndCopilotChatInput)
+    {
+        appendToOutput("[Hotpatch] Compact Conversation: Chat pane not available.\n");
+        return;
+    }
+
+    std::string conversationText = getWindowText(m_hwndCopilotChatInput);
+    if (conversationText.empty())
+    {
+        appendToOutput("[Hotpatch] Compact Conversation: No conversation to compact.\n");
+        return;
+    }
+
+    RawrXD::Win32IDE::AgentOperationsBridge::Initialize();
+    std::string result = RawrXD::Win32IDE::AgentOperationsBridge::ExecuteCompactConversation(
+        conversationText, 2048);
+    appendToOutput(result);
+
+    // Parse compacted text from result and update chat input
+    try {
+        auto parsed = json::parse(result.substr(result.find('{'), result.rfind('}') - result.find('{') + 1));
+        if (parsed.contains("compacted_text") && parsed["compacted_text"].is_string()) {
+            SetWindowTextA(m_hwndCopilotChatInput, parsed["compacted_text"].get<std::string>().c_str());
+        }
+    } catch (...) {
+        // Best-effort: backend result displayed regardless
+    }
+}
+
+void Win32IDE::cmdHotpatchOptimizeToolSelection()
+{
+    RawrXD::Win32IDE::AgentOperationsBridge::Initialize();
+    std::vector<std::string> tools = {
+        "read_file", "write_file", "replace_in_file", "list_dir",
+        "execute_command", "search_code", "get_diagnostics",
+        "plan_code_exploration", "resolve_symbol", "search_files"
+    };
+    std::string intent = "optimize tool selection for current IDE task";
+    std::string result = RawrXD::Win32IDE::AgentOperationsBridge::ExecuteOptimizeToolSelection(intent, tools);
+    appendToOutput(result);
+
+    if (m_hwndStatusBar)
+    {
+        SendMessageA(m_hwndStatusBar, SB_SETTEXT, 1, (LPARAM) "Tool Opt: ON");
+    }
+}
+
+void Win32IDE::cmdHotpatchResolving()
+{
+    RawrXD::Win32IDE::AgentOperationsBridge::Initialize();
+    std::string symbolName = "Win32IDE";
+
+    // Use current file's directory as search path if available
+    std::vector<std::string> searchPaths;
+    if (!m_currentFile.empty()) {
+        auto parent = std::filesystem::path(m_currentFile).parent_path();
+        if (!parent.empty()) searchPaths.push_back(parent.string());
+    }
+    if (searchPaths.empty()) {
+        searchPaths.push_back(std::filesystem::current_path().string());
+    }
+
+    std::string result = RawrXD::Win32IDE::AgentOperationsBridge::ExecuteResolveSymbol(symbolName, searchPaths);
+    appendToOutput(result);
+}
+
+void Win32IDE::cmdHotpatchReadLines()
+{
+    std::string input = ReadClipboardText(m_hwndMain);
+    if (input.empty() && m_hwndCopilotChatInput)
+    {
+        input = getWindowText(m_hwndCopilotChatInput);
+    }
+
+    if (input.empty())
+    {
+        appendToOutput("[Hotpatch] Read Lines: Provide line range in clipboard (e.g., '100-150' or '42')\n");
+        return;
+    }
+
+    int startLine = 0, endLine = 0;
+    size_t dashPos = input.find('-');
+
+    try
+    {
+        if (dashPos != std::string::npos)
+        {
+            startLine = std::stoi(input.substr(0, dashPos));
+            endLine = std::stoi(input.substr(dashPos + 1));
+        }
+        else
+        {
+            startLine = endLine = std::stoi(input);
+        }
+    }
+    catch (...)
+    {
+        appendToOutput("[Hotpatch] Read Lines: Invalid line range format\n");
+        return;
+    }
+
+    if (startLine <= 0 || endLine <= 0 || endLine < startLine)
+    {
+        appendToOutput("[Hotpatch] Read Lines: Invalid line range\n");
+        return;
+    }
+
+    // Use AgentOperationsBridge for file-based reads
+    if (!m_currentFile.empty())
+    {
+        RawrXD::Win32IDE::AgentOperationsBridge::Initialize();
+        std::string result = RawrXD::Win32IDE::AgentOperationsBridge::ExecuteReadFileLines(
+            m_currentFile, static_cast<size_t>(startLine), static_cast<size_t>(endLine));
+        appendToOutput(result);
+        return;
+    }
+
+    // Fallback: extract from editor control if no file path
+    if (m_hwndEditor)
+    {
+        int lineCount = (int)SendMessageA(m_hwndEditor, EM_GETLINECOUNT, 0, 0);
+        if (startLine > 0 && startLine <= lineCount)
+        {
+            std::ostringstream ss;
+            ss << "[Hotpatch] Read Lines: " << startLine << "-" << endLine << " (editor)\n";
+            for (int line = startLine; line <= std::min(endLine, lineCount); ++line)
+            {
+                char buffer[4096] = {};
+                *(WORD*)buffer = sizeof(buffer);
+                int len = (int)SendMessageA(m_hwndEditor, EM_GETLINE, line - 1, (LPARAM)buffer);
+                if (len > 0)
+                {
+                    buffer[len] = 0;
+                    ss << "  " << line << ": " << buffer << "\n";
+                }
+            }
+            appendToOutput(ss.str());
+        }
+    }
+    else
+    {
+        appendToOutput("[Hotpatch] Read Lines: No file or editor available\n");
+    }
+}
+
+void Win32IDE::cmdHotpatchPlanningExploration()
+{
+    RawrXD::Win32IDE::AgentOperationsBridge::Initialize();
+    std::string rootPath = m_projectRoot.empty()
+        ? std::filesystem::current_path().string()
+        : m_projectRoot;
+    std::string query = "Map entry points, extract call graphs, identify hotspots";
+    std::string result = RawrXD::Win32IDE::AgentOperationsBridge::ExecutePlanCodeExploration(rootPath, query);
+    appendToOutput(result);
+}
+
+void Win32IDE::cmdHotpatchSearchFiles()
+{
+    std::string pattern = ReadClipboardText(m_hwndMain);
+    if (pattern.empty() && m_hwndCopilotChatInput)
+    {
+        pattern = getWindowText(m_hwndCopilotChatInput);
+    }
+
+    if (pattern.empty())
+    {
+        appendToOutput(
+            "[Hotpatch] Search Files: Provide search pattern in clipboard (e.g., '*.cpp', 'backend/**/inference*')\n");
+        return;
+    }
+
+    RawrXD::Win32IDE::AgentOperationsBridge::Initialize();
+    std::vector<std::string> searchPaths;
+    if (!m_projectRoot.empty()) {
+        searchPaths.push_back(m_projectRoot);
+    } else if (!m_currentFile.empty()) {
+        auto parent = std::filesystem::path(m_currentFile).parent_path();
+        if (!parent.empty()) searchPaths.push_back(parent.string());
+    }
+    if (searchPaths.empty()) {
+        searchPaths.push_back(std::filesystem::current_path().string());
+    }
+
+    std::string result = RawrXD::Win32IDE::AgentOperationsBridge::ExecuteSearchFiles(pattern, searchPaths);
+    appendToOutput(result);
+}
+
+void Win32IDE::cmdHotpatchEvaluateIntegration()
+{
+    RawrXD::Win32IDE::AgentOperationsBridge::Initialize();
+
+    // Run real integration feasibility analysis via agent operations
+    json params;
+    params["workspace"] = m_projectRoot.empty()
+        ? std::filesystem::current_path().string()
+        : m_projectRoot;
+    auto opResult = RawrXD::Agentic::AgentOperations::executeOperation(
+        "evaluate_integration", params.dump());
+
+    std::ostringstream ss;
+    ss << "[Agent Operation] Integration Audit Feasibility Analysis\n";
+    ss << "═══════════════════════════════════════════════════════\n\n";
+    try {
+        auto parsed = json::parse(opResult.output);
+        ss << parsed.dump(2);
+    } catch (...) {
+        ss << opResult.output;
+    }
+    ss << "\n\n";
+    ss << "  Bridge Ready: " << (m_agenticBridge != nullptr ? "YES" : "NO") << "\n";
+    ss << "  Hotpatch Ready: " << (m_hotpatchUIInitialized ? "YES" : "NO") << "\n";
+    ss << "  Local Server: " << (m_localServerRunning.load() ? "RUNNING" : "STOPPED") << "\n";
+    ss << "═══════════════════════════════════════════════════════\n";
+    appendToOutput(ss.str());
+}
+
+void Win32IDE::cmdHotpatchRestoreCheckpoint()
+{
+    RawrXD::Win32IDE::AgentOperationsBridge::Initialize();
+
+    // Attempt restore via real checkpoint backend
+    std::string checkpointId = "latest";
+    std::string rootPath = m_projectRoot.empty()
+        ? std::filesystem::current_path().string()
+        : m_projectRoot;
+    std::string result = RawrXD::Win32IDE::AgentOperationsBridge::ExecuteCheckpointManager(
+        "restore", checkpointId, rootPath);
+
+    bool success = (result.find("\"success\":true") != std::string::npos ||
+                    result.find("Restored") != std::string::npos);
+
+    appendToOutput(result);
+
+    // Also attempt restore via UnifiedHotpatchManager for conversation/workspace state
+    if (m_hwndCopilotChatInput) {
+        std::string conversation, workspace;
+        auto ur = UnifiedHotpatchManager::instance().copilot_restore_checkpoint(
+            checkpointId, &conversation, &workspace);
+        if (ur.result.success) {
+            success = true;
+            if (!conversation.empty()) {
+                SetWindowTextA(m_hwndCopilotChatInput, conversation.c_str());
+            }
+            if (!workspace.empty()) {
+                m_projectRoot = workspace;
+            }
+            appendToOutput("[Hotpatch] Checkpoint conversation/workspace restored via UnifiedHotpatchManager\n");
+        }
+    }
+
+    if (m_hwndStatusBar)
+    {
+        std::string status = success ? "Checkpoint: Restored" : "Checkpoint: No Data";
+        SendMessageA(m_hwndStatusBar, SB_SETTEXT, 2, (LPARAM)status.c_str());
     }
 }

@@ -45,18 +45,12 @@ AgenticObservability::AgenticObservability()
     : m_systemStartTime(std::chrono::system_clock::now())
 {
     fprintf(stderr, "[AgenticObservability] Initialized - Ready for comprehensive observability\n");
-<<<<<<< HEAD
     startHeartbeatLoop();
-=======
->>>>>>> origin/main
 }
 
 AgenticObservability::~AgenticObservability()
 {
-<<<<<<< HEAD
     stopHeartbeatLoop();
-=======
->>>>>>> origin/main
     fprintf(stderr, "[AgenticObservability] Destroyed - Logged %d entries and %d metrics\n",
             m_totalLogsWritten, m_totalMetricsRecorded);
 }
@@ -712,7 +706,6 @@ std::string AgenticObservability::exportLogsAsJson() const
     }
 
     return logs.dump(2);
-<<<<<<< HEAD
 }
 
 std::string AgenticObservability::exportMetricsAsPrometheus() const
@@ -819,8 +812,6 @@ void AgenticObservability::heartbeatWorker()
 
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
-=======
->>>>>>> origin/main
 }
 
 // ===== PRIVATE HELPERS =====

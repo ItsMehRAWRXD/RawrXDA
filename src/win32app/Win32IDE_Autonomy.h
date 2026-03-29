@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <deque>
 #include <atomic>
 #include <thread>
 #include <mutex>
@@ -85,4 +86,12 @@ private:
     int m_maxActionsPerMinute;
     int m_actionsThisWindow;
     std::chrono::steady_clock::time_point m_windowStart;
+    std::deque<std::chrono::steady_clock::time_point> m_actionTimes;
+
+    // Health / backoff state
+    int m_consecutiveErrors = 0;
+    std::chrono::steady_clock::time_point m_nextAllowedAction;
+    std::string m_lastAction;
+    std::string m_lastError;
+    std::chrono::steady_clock::time_point m_lastActionAt;
 };

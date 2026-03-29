@@ -1084,17 +1084,56 @@ bool VulkanCompute::DispatchMatMul(uint32_t input_a_idx,
 
 bool VulkanCompute::ExecuteMatMul(const float* input_a, const float* input_b,
                                   float* output, uint32_t m, uint32_t k, uint32_t n) {
-    // Naive CPU fallback (O(m*k*n)) for benchmarking correctness.
-    // If a Vulkan shader/pipeline is loaded named "matmul" we would dispatch it instead.
-    // Clear output
+    // --- GPU path: allocate device buffers, upload, dispatch, download ---
+    const size_t bytes_a = (size_t)m * k * sizeof(float);
+    const size_t bytes_b = (size_t)k * n * sizeof(float);
+    const size_t bytes_c = (size_t)m * n * sizeof(float);
+
+    uint32_t idx_a, idx_b, idx_c;
+    size_t dummy;
+    if (!AllocateBuffer(bytes_a, idx_a, dummy) ||
+        !AllocateBuffer(bytes_b, idx_b, dummy) ||
+        !AllocateBuffer(bytes_c, idx_c, dummy)) {
+        goto cpu_fallback;
+    }
+
+    if (!CopyHostToBuffer(const_cast<float*>(input_a), idx_a, bytes_a) ||
+        !CopyHostToBuffer(const_cast<float*>(input_b), idx_b, bytes_b)) {
+        goto cpu_fallback;
+    }
+
+    if (!DispatchMatMul(idx_a, idx_b, idx_c, m, k, n)) {
+        goto cpu_fallback;
+    }
+
+    if (!CopyBufferToHost(idx_c, output, bytes_c)) {
+        goto cpu_fallback;
+    }
+
+    // Release temporary device buffers
+    {
+        auto freeIdx = [&](uint32_t idx) {
+            if (idx < allocated_buffers_.size()) {
+                vkDestroyBuffer(device_, allocated_buffers_[idx].first, nullptr);
+                vkFreeMemory(device_, allocated_buffers_[idx].second, nullptr);
+                allocated_buffers_[idx] = {VK_NULL_HANDLE, VK_NULL_HANDLE};
+            }
+        };
+        freeIdx(idx_a);
+        freeIdx(idx_b);
+        freeIdx(idx_c);
+    }
+    return true;
+
+cpu_fallback:
+    // GPU path unavailable — fall back to CPU so callers always get a result
     std::fill(output, output + (size_t)m * n, 0.0f);
     for (uint32_t row = 0; row < m; ++row) {
         const float* arow = input_a + (size_t)row * k;
         for (uint32_t col = 0; col < n; ++col) {
             float sum = 0.0f;
-            for (uint32_t inner = 0; inner < k; ++inner) {
+            for (uint32_t inner = 0; inner < k; ++inner)
                 sum += arow[inner] * input_b[(size_t)inner * n + col];
-            }
             output[(size_t)row * n + col] = sum;
         }
     }

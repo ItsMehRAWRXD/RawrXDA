@@ -25,10 +25,10 @@
 // Rule:         NO SOURCE FILE IS TO BE SIMPLIFIED
 // ============================================================================
 
-#include "Win32IDE.h"
 #include "../core/camellia256_bridge.hpp"
-#include <sstream>
+#include "Win32IDE.h"
 #include <fstream>
+#include <sstream>
 #include <vector>
 #include <wincrypt.h>
 
@@ -38,20 +38,23 @@
 // If manifest is absent, creates it on first run (bootstrap mode).
 // ============================================================================
 
-static std::string computeFileSha256(const char* filePath) {
-    HANDLE hFile = CreateFileA(filePath, GENERIC_READ, FILE_SHARE_READ,
-                                nullptr, OPEN_EXISTING, 0, nullptr);
-    if (hFile == INVALID_HANDLE_VALUE) return "<file-error>";
+static std::string computeFileSha256(const char* filePath)
+{
+    HANDLE hFile = CreateFileA(filePath, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, nullptr);
+    if (hFile == INVALID_HANDLE_VALUE)
+        return "<file-error>";
 
     HCRYPTPROV hProv = 0;
     HCRYPTHASH hHash = 0;
     std::string result;
 
-    if (!CryptAcquireContextW(&hProv, nullptr, nullptr, PROV_RSA_AES, CRYPT_VERIFYCONTEXT)) {
+    if (!CryptAcquireContextW(&hProv, nullptr, nullptr, PROV_RSA_AES, CRYPT_VERIFYCONTEXT))
+    {
         CloseHandle(hFile);
         return "<crypto-error>";
     }
-    if (!CryptCreateHash(hProv, CALG_SHA_256, 0, 0, &hHash)) {
+    if (!CryptCreateHash(hProv, CALG_SHA_256, 0, 0, &hHash))
+    {
         CryptReleaseContext(hProv, 0);
         CloseHandle(hFile);
         return "<hash-error>";
@@ -59,7 +62,8 @@ static std::string computeFileSha256(const char* filePath) {
 
     BYTE buffer[65536];
     DWORD bytesRead = 0;
-    while (ReadFile(hFile, buffer, sizeof(buffer), &bytesRead, nullptr) && bytesRead > 0) {
+    while (ReadFile(hFile, buffer, sizeof(buffer), &bytesRead, nullptr) && bytesRead > 0)
+    {
         CryptHashData(hHash, buffer, bytesRead, 0);
     }
     CloseHandle(hFile);
@@ -78,20 +82,24 @@ static std::string computeFileSha256(const char* filePath) {
 }
 
 // Constant-time comparison for tamper check
-static bool tamperSecureCompare(const std::string& a, const std::string& b) {
-    if (a.size() != b.size()) return false;
+static bool tamperSecureCompare(const std::string& a, const std::string& b)
+{
+    if (a.size() != b.size())
+        return false;
     volatile unsigned char diff = 0;
     for (size_t i = 0; i < a.size(); ++i)
         diff |= static_cast<unsigned char>(a[i]) ^ static_cast<unsigned char>(b[i]);
     return diff == 0;
 }
 
-static bool verifyExeIntegrity(std::string& outReport) {
+static bool verifyExeIntegrity(std::string& outReport)
+{
     char exePath[MAX_PATH] = {};
     GetModuleFileNameA(nullptr, exePath, MAX_PATH);
 
     std::string exeHash = computeFileSha256(exePath);
-    if (exeHash.find("error") != std::string::npos) {
+    if (exeHash.find("error") != std::string::npos)
+    {
         outReport = "[Tamper] WARNING: Could not hash running binary: " + exeHash;
         return false;
     }
@@ -100,36 +108,50 @@ static bool verifyExeIntegrity(std::string& outReport) {
     std::string manifestPath = std::string(exePath) + ".sha256";
 
     std::ifstream manifestFile(manifestPath);
-    if (manifestFile.is_open()) {
+    if (manifestFile.is_open())
+    {
         std::string storedHash;
         std::getline(manifestFile, storedHash);
         manifestFile.close();
 
         // Trim whitespace
-        while (!storedHash.empty() && (storedHash.back() == '\r' || storedHash.back() == '\n' || storedHash.back() == ' '))
+        while (!storedHash.empty() &&
+               (storedHash.back() == '\r' || storedHash.back() == '\n' || storedHash.back() == ' '))
             storedHash.pop_back();
 
-        if (tamperSecureCompare(exeHash, storedHash)) {
+        if (tamperSecureCompare(exeHash, storedHash))
+        {
             outReport = "[Tamper] EXE integrity VERIFIED: " + exeHash.substr(0, 16) + "...";
             return true;
-        } else {
+        }
+        else
+        {
             outReport = "[Tamper] ALERT: EXE hash MISMATCH!\n"
-                        "  Expected: " + storedHash.substr(0, 16) + "...\n"
-                        "  Actual:   " + exeHash.substr(0, 16) + "...\n"
+                        "  Expected: " +
+                        storedHash.substr(0, 16) +
+                        "...\n"
+                        "  Actual:   " +
+                        exeHash.substr(0, 16) +
+                        "...\n"
                         "  Binary may have been tampered with!";
             return false;
         }
-    } else {
+    }
+    else
+    {
         // Bootstrap mode: first run — create manifest
         std::ofstream manifestOut(manifestPath);
-        if (manifestOut.is_open()) {
+        if (manifestOut.is_open())
+        {
             manifestOut << exeHash << "\n";
             manifestOut.close();
             outReport = "[Tamper] Bootstrap: Created integrity manifest (" + exeHash.substr(0, 16) + "...)";
-        } else {
+        }
+        else
+        {
             outReport = "[Tamper] WARNING: Cannot write integrity manifest to " + manifestPath;
         }
-        return true; // First run is trusted
+        return true;  // First run is trusted
     }
 }
 
@@ -137,7 +159,8 @@ static bool verifyExeIntegrity(std::string& outReport) {
 // Initialization — lazy-init all three flagship pillars
 // ============================================================================
 
-void Win32IDE::initFlagshipFeatures() {
+void Win32IDE::initFlagshipFeatures()
+{
     // ── EXE Tamper Detection ──
     // Hash the running binary and verify against signed manifest
     std::string tamperReport;
@@ -157,14 +180,10 @@ void Win32IDE::initFlagshipFeatures() {
     oss << tamperReport << "\n";
 
     oss << "[Flagship] Product pillars active:\n"
-        << "  1. Provable AI Coding Agent   — "
-        << (m_provableAgentInitialized ? "READY" : "FAILED") << "\n"
-        << "  2. AI-Native Reverse Eng IDE  — "
-        << (m_aiReverseEngInitialized ? "READY" : "FAILED") << "\n"
-        << "  3. Airgapped Enterprise Env   — "
-        << (m_airgappedEnterpriseInitialized ? "READY" : "FAILED") << "\n"
-        << "  Integrity Check:              — "
-        << (tamperOk ? "VERIFIED" : "ALERT: MISMATCH") << "\n";
+        << "  1. Provable AI Coding Agent   — " << (m_provableAgentInitialized ? "READY" : "FAILED") << "\n"
+        << "  2. AI-Native Reverse Eng IDE  — " << (m_aiReverseEngInitialized ? "READY" : "FAILED") << "\n"
+        << "  3. Airgapped Enterprise Env   — " << (m_airgappedEnterpriseInitialized ? "READY" : "FAILED") << "\n"
+        << "  Integrity Check:              — " << (tamperOk ? "VERIFIED" : "ALERT: MISMATCH") << "\n";
     appendToOutput(oss.str());
 }
 
@@ -172,22 +191,27 @@ void Win32IDE::initFlagshipFeatures() {
 // Command Router — dispatches IDM 13000–13059 to correct subsystem
 // ============================================================================
 
-bool Win32IDE::handleFlagshipCommand(int commandId) {
+bool Win32IDE::handleFlagshipCommand(int commandId)
+{
     // Range check: all flagship commands are 13000–13059
-    if (commandId < 13000 || commandId > 13059) return false;
+    if (commandId < 13000 || commandId > 13059)
+        return false;
 
     // ── Provable AI Coding Agent (13000–13019) ──
-    if (commandId >= IDM_PROVABLE_SHOW && commandId <= IDM_PROVABLE_STATS) {
+    if (commandId >= IDM_PROVABLE_SHOW && commandId <= IDM_PROVABLE_STATS)
+    {
         return handleProvableAgentCommand(commandId);
     }
 
     // ── AI-Native Reverse Engineering IDE (13020–13039) ──
-    if (commandId >= IDM_AIRE_SHOW && commandId <= IDM_AIRE_STATS) {
+    if (commandId >= IDM_AIRE_SHOW && commandId <= IDM_AIRE_STATS)
+    {
         return handleAIReverseEngCommand(commandId);
     }
 
     // ── Airgapped Enterprise Environment (13040–13059) ──
-    if (commandId >= IDM_AIRGAP_SHOW && commandId <= IDM_AIRGAP_STATS) {
+    if (commandId >= IDM_AIRGAP_SHOW && commandId <= IDM_AIRGAP_SNEAKER_UNPACK)
+    {
         return handleAirgappedCommand(commandId);
     }
 
@@ -198,19 +222,25 @@ bool Win32IDE::handleFlagshipCommand(int commandId) {
 // Shutdown — teardown all flagship subsystems
 // ============================================================================
 
-void Win32IDE::shutdownFlagshipFeatures() {
+void Win32IDE::shutdownFlagshipFeatures()
+{
     // ── Secure Camellia-256 engine shutdown (zero all keying material) ──
     // The MASM engine holds expanded subkeys in BSS — this wipes them.
     int camResult = asm_camellia256_shutdown();
-    if (camResult == 0) {
+    if (camResult == 0)
+    {
         OutputDebugStringA("[Flagship] Camellia-256 engine securely shutdown — keys zeroed.\n");
-    } else {
+    }
+    else
+    {
         OutputDebugStringA("[Flagship] WARNING: Camellia-256 shutdown returned non-zero.\n");
     }
 
     // ── Destroy flagship panel windows if still alive ──
-    auto destroyPanel = [](HWND& hwnd) {
-        if (hwnd && IsWindow(hwnd)) {
+    auto destroyPanel = [](HWND& hwnd)
+    {
+        if (hwnd && IsWindow(hwnd))
+        {
             DestroyWindow(hwnd);
             hwnd = nullptr;
         }

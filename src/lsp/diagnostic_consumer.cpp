@@ -17,18 +17,6 @@
 #include <cstring>
 #include <cctype>
 
-<<<<<<< HEAD
-=======
-// SCAFFOLD_144: Diagnostic severity and quick-fix
-
-
-// SCAFFOLD_142: Diagnostic consumer and aggregation
-
-
-// SCAFFOLD_097: diagnostic_consumer agentic auto-fix
-
-
->>>>>>> origin/main
 namespace RawrXD {
 namespace LSP {
 

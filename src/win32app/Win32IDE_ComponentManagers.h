@@ -98,8 +98,11 @@ public:
                                                            const std::string& code,
                                                            int position);
     std::vector<IDEPlugin::Diagnostic> getDiagnostics(const std::string& file,
-                                                        const std::string& code);
+                                                           const std::string& code);
 };
+
+// ── OllamaServiceManager ─────────────────────────────────────────────────────
+class OllamaServiceManager;
 
 // ── ResourceGeneratorManager ─────────────────────────────────────────────────
 class ResourceGeneratorManager {

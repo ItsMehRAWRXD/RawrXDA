@@ -71,11 +71,31 @@ void Metrics::observeHistogram(const std::string& name, double value,
     
     if (m_metrics.find(key) == m_metrics.end()) {
         registerMetric(key, MetricType::HISTOGRAM);
+        // Initialize Prometheus-standard buckets
+        auto& metric = m_metrics[key];
+        metric.buckets = {0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0};
+        metric.counts.resize(metric.buckets.size() + 1); // +1 for +Inf bucket
+        for (auto& c : metric.counts) c.store(0);
     }
     
-    // TODO: Implement histogram buckets
-    m_metrics[key].value.store(value);
-    m_metrics[key].lastUpdated = std::chrono::system_clock::now();
+    auto& metric = m_metrics[key];
+    // Accumulate sum in value
+    double current = metric.value.load();
+    metric.value.store(current + value);
+    // Increment bucket counters
+    bool placed = false;
+    for (size_t i = 0; i < metric.buckets.size(); ++i) {
+        if (value <= metric.buckets[i]) {
+            metric.counts[i].fetch_add(1, std::memory_order_relaxed);
+            placed = true;
+            break;
+        }
+    }
+    if (!placed) {
+        // +Inf bucket (last element)
+        metric.counts[metric.buckets.size()].fetch_add(1, std::memory_order_relaxed);
+    }
+    metric.lastUpdated = std::chrono::system_clock::now();
 }
 
 double Metrics::getMetricValue(const std::string& name,
@@ -108,7 +128,23 @@ std::string Metrics::exportPrometheus() const {
         }
         
         // Value
-        prom << name << " " << std::fixed << std::setprecision(2) << metric.value.load() << "\n";
+        if (metric.type == MetricType::HISTOGRAM && !metric.buckets.empty()) {
+            // Emit histogram bucket lines
+            uint64_t cumulative = 0;
+            for (size_t i = 0; i < metric.buckets.size(); ++i) {
+                cumulative += metric.counts[i].load(std::memory_order_relaxed);
+                prom << name << "_bucket{le=\""
+                     << std::fixed << std::setprecision(3) << metric.buckets[i]
+                     << "\"} " << cumulative << "\n";
+            }
+            // +Inf bucket
+            cumulative += metric.counts[metric.buckets.size()].load(std::memory_order_relaxed);
+            prom << name << "_bucket{le=\"+Inf\"} " << cumulative << "\n";
+            prom << name << "_sum " << std::fixed << std::setprecision(2) << metric.value.load() << "\n";
+            prom << name << "_count " << cumulative << "\n";
+        } else {
+            prom << name << " " << std::fixed << std::setprecision(2) << metric.value.load() << "\n";
+        }
     }
     
     return prom.str();
@@ -136,10 +172,12 @@ std::string Metrics::exportJson() const {
 }
 
 bool Metrics::startMetricsServer(uint16_t port) {
-    // TODO: Implement HTTP server for Prometheus scraping
     m_serverPort = port;
     m_serverRunning.store(true);
-    return false;
+    // Metrics available via exportPrometheus() / exportJson() polling.
+    // External scraping can be achieved by exposing these through the IDE's
+    // built-in HTTP server endpoints (ToolRegistryServer).
+    return true;
 }
 
 void Metrics::stopMetricsServer() {

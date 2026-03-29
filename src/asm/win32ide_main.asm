@@ -124,6 +124,8 @@ EXTERN InitCommonControlsEx:PROC
 EXTERN GetProcAddress:PROC
 EXTERN ExitProcess:PROC
 EXTERN SendMessageA:PROC
+EXTERN MessageBoxA:PROC
+EXTERN OutputDebugStringA:PROC
 
 ; =============================================================================
 ;                         DATA
@@ -135,6 +137,12 @@ szClassName     DB "RawrXD_Win32IDE_Class", 0
 szWindowTitle   DB "RawrXD Win32 IDE v14.2.0", 0
 szUser32        DB "user32.dll", 0
 szSetDpiCtx     DB "SetProcessDpiAwarenessContext", 0
+
+; Error-reporting strings for fatal startup failures
+szErrTitle      DB "RawrXD Fatal Error", 0
+szErrRegFail    DB "RegisterClassExA failed — cannot start IDE.", 0
+szErrWndFail    DB "CreateWindowExA failed — cannot create main window.", 0
+szErrCopyData   DB "WM_COPYDATA: null COPYDATASTRUCT pointer.", 0
 
 g_hInstance     DQ 0
 g_hWndMain      DQ 0
@@ -187,16 +195,34 @@ Win32IDE_WndProc PROC FRAME
     jmp     @@done
 
 @@on_copydata:
-    ; RCX=hwnd, R9=lParam -> COPYDATASTRUCT
-    ; ExtensionHost sends commands via WM_COPYDATA
-    mov     rax, 1          ; Acknowledge receipt
+    ; RCX=hwnd, R9=lParam -> COPYDATASTRUCT pointer
+    ; Guard: R9 must be non-null before accessing COPYDATASTRUCT fields
+    test    r9, r9
+    jz      @@copydata_reject
+    ; Valid pointer — acknowledge receipt to sender
+    mov     rax, 1
+    jmp     @@done
+@@copydata_reject:
+    ; Null COPYDATASTRUCT — log via OutputDebugStringA and return FALSE
+    sub     rsp, 32
+    lea     rcx, szErrCopyData
+    call    OutputDebugStringA
+    add     rsp, 32
+    xor     eax, eax
     jmp     @@done
 
 @@on_command:
-    ; R8 = wParam (LOWORD = command ID)
-    movzx   eax, r8w
-    ; Dispatch handled by agent/extension host bridge
-    xor     eax, eax
+    ; R8 = wParam: LOWORD = command ID, HIWORD = notification code
+    ; Commands with a HIWORD notification (e.g., CBN_SELCHANGE from controls)
+    ; must be forwarded to DefWindowProcA; pure menu/accel commands are ours.
+    movzx   eax, r8w                            ; low word = command ID
+    test    eax, eax
+    jz      @@cmd_default                       ; zero → not a real command
+    ; Known IDE commands are dispatched by the C++ layer via WM_COMMAND
+    ; posted back to this procedure.  Unrecognised commands fall through to
+    ; DefWindowProcA so standard menu/child-notification routing still works.
+@@cmd_default:
+    call    DefWindowProcA
     jmp     @@done
 
 @@done:
@@ -241,10 +267,18 @@ EnsureDpiAwareness ENDP
 ; -----------------------------------------------------------------------------
 ; WinMain — IDE entry point
 ; RCX = hInstance, RDX = hPrevInstance, R8 = lpCmdLine, R9 = nCmdShow
+;
+; Frame tracking: r12 and rdi are non-volatile (callee-saved) and are used
+; below.  They must be saved in the prolog with .pushreg so the SEH unwinder
+; can reconstruct the register state if an exception propagates through here.
 ; -----------------------------------------------------------------------------
 WinMain PROC FRAME
     push    rbp
     .pushreg rbp
+    push    r12
+    .pushreg r12
+    push    rdi
+    .pushreg rdi
     mov     rbp, rsp
     .setframe rbp, 0
     sub     rsp, 200h
@@ -252,7 +286,7 @@ WinMain PROC FRAME
     .endprolog
 
     mov     [g_hInstance], rcx
-    mov     r12, r9                             ; save nCmdShow
+    mov     r12, r9                             ; save nCmdShow (r9 volatile, r12 safe)
 
     ; --- DPI Awareness ---
     call    EnsureDpiAwareness
@@ -295,7 +329,7 @@ WinMain PROC FRAME
     lea     rcx, [rbp - 80h]
     call    RegisterClassExA
     test    eax, eax
-    jz      @@fail
+    jz      @@fail_reg
 
     ; --- Create Main Window ---
     xor     ecx, ecx                                        ; dwExStyle = 0
@@ -318,7 +352,7 @@ WinMain PROC FRAME
     add     rsp, 60h
     
     test    rax, rax
-    jz      @@fail
+    jz      @@fail_wnd
     mov     [g_hWndMain], rax
 
     ; --- Show Window ---
@@ -351,13 +385,32 @@ WinMain PROC FRAME
     lea     rcx, [rbp - 100h]
     mov     eax, DWORD PTR [rcx + 10h]                     ; MSG.wParam (low 32)
     add     rsp, 200h
+    pop     rdi                                             ; restore callee-saved rdi
+    pop     r12                                             ; restore callee-saved r12
     pop     rbp
     ret
 
-@@fail:
+@@fail_reg:
+    ; RegisterClassExA failure — show error then terminate
+    xor     ecx, ecx                                        ; hWnd = NULL
+    lea     rdx, [szErrRegFail]
+    lea     r8, [szErrTitle]
+    mov     r9d, 010010h                                    ; MB_ICONERROR | MB_OK
+    call    MessageBoxA
     mov     ecx, 1
     call    ExitProcess
-    ; never returns
+    ; ExitProcess never returns
+
+@@fail_wnd:
+    ; CreateWindowExA failure — show error then terminate
+    xor     ecx, ecx
+    lea     rdx, [szErrWndFail]
+    lea     r8, [szErrTitle]
+    mov     r9d, 010010h                                    ; MB_ICONERROR | MB_OK
+    call    MessageBoxA
+    mov     ecx, 1
+    call    ExitProcess
+    ; ExitProcess never returns
 WinMain ENDP
 
 ; =============================================================================

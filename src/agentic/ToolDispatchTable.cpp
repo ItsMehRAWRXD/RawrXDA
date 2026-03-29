@@ -1,6 +1,6 @@
 // ToolDispatchTable.cpp — Per-Tool Dispatch Handlers (47-Tool Registry)
 // HIGH PRIORITY FIX #3: Eliminate legacy ID 3 aliasing
-// 
+//
 // PROBLEM: 44 tools aliased to hardcoded ID 3, causing semantic loss in dispatch tree
 // SOLUTION: Create unique handlers per tool with proper ID isolation
 //
@@ -8,119 +8,133 @@
 // previously aliased to ID 3 in a flattened legacy dispatch system.
 // ============================================================================
 
+#include "AgentToolHandlers.h"
 #include "ToolRegistry.h"
+
+
 #include <cstring>
-#include <unordered_map>
+#include <nlohmann/json.hpp>
 
-namespace RawrXD::Agentic {
-
-// ============================================================================
-// Tool Handler Function Signatures
-// ============================================================================
-struct ToolHandler {
-    uint32_t tool_id;
-    const char* name;
-    int (*execute)(const char* args, char* output, size_t outlen);
-};
-
-// ============================================================================
-// Individual Tool Implementations (47 tools, IDs 0-46)
-// ============================================================================
-
-// Tool 0: ReadFile
-static int Tool_ReadFile_Execute(const char* args, char* output, size_t outlen) {
-    if (!output || outlen < 32) return -1;
-    strcpy_s(output, outlen, "ReadFile: OK");
-    return 0;
-}
-
-// Tool 1: WriteFile
-static int Tool_WriteFile_Execute(const char* args, char* output, size_t outlen) {
-    if (!output || outlen < 32) return -1;
-    strcpy_s(output, outlen, "WriteFile: OK");
-    return 0;
-}
-
-// Tool 2: ExecuteCommand
-static int Tool_ExecuteCommand_Execute(const char* args, char* output, size_t outlen) {
-    if (!output || outlen < 32) return -1;
-    strcpy_s(output, outlen, "ExecuteCommand: OK");
-    return 0;
-}
-
-// Tool 3: CompleteCode
-static int Tool_CompleteCode_Execute(const char* args, char* output, size_t outlen) {
-    if (!output || outlen < 64) return -1;
-    strcpy_s(output, outlen, "CompleteCode: generated snippet from context");
-    return 0;
-}
-
-// Tool 4: AnalyzeCode
-static int Tool_AnalyzeCode_Execute(const char* args, char* output, size_t outlen) {
-    if (!output || outlen < 64) return -1;
-    strcpy_s(output, outlen, "AnalyzeCode: Semantic analysis complete");
-    return 0;
-}
-
-// Tool 5: RefactorCode
-static int Tool_RefactorCode_Execute(const char* args, char* output, size_t outlen) {
-    if (!output || outlen < 64) return -1;
-    strcpy_s(output, outlen, "RefactorCode: Refactoring suggestions applied");
-    return 0;
-}
-
-// Tools 6-46: Generic stubs (each with unique identity)
-static int Tool_Generic_Execute(uint32_t tool_id, const char* args, char* output, size_t outlen) {
-    if (!output || outlen < 48) return -1;
-    char buf[256];
-    snprintf(buf, sizeof(buf), "Tool[%u]: Execution OK", tool_id);
-    strcpy_s(output, outlen, buf);
-    return 0;
-}
-
-// ============================================================================
-// Dispatch Table with Unique Handler per Tool
-// ============================================================================
-
-// Per-tool handler lookup (replaces legacy ID 3 aliasing)
-static int DispatchPerTool(uint32_t tool_id, const char* args, char* output, size_t outlen) {
-    switch (tool_id) {
-        case 0:  return Tool_ReadFile_Execute(args, output, outlen);
-        case 1:  return Tool_WriteFile_Execute(args, output, outlen);
-        case 2:  return Tool_ExecuteCommand_Execute(args, output, outlen);
-        case 3:  return Tool_CompleteCode_Execute(args, output, outlen);
-        case 4:  return Tool_AnalyzeCode_Execute(args, output, outlen);
-        case 5:  return Tool_RefactorCode_Execute(args, output, outlen);
-        
-        // Tools 6-46: Generic handlers with tool_id isolation
+namespace RawrXD::Agentic
+{
+namespace
+{
+const char* toolNameFromId(uint32_t tool_id)
+{
+    switch (tool_id)
+    {
+        case 0:
+            return "read_file";
+        case 1:
+            return "write_file";
+        case 2:
+            return "execute_command";
+        case 3:
+            return "search_code";
+        case 4:
+            return "semantic_search";
+        case 5:
+            return "replace_in_file";
+        case 6:
+            return "list_dir";
+        case 7:
+            return "delete_file";
+        case 8:
+            return "rename_file";
+        case 9:
+            return "copy_file";
+        case 10:
+            return "mkdir";
+        case 11:
+            return "stat_file";
+        case 12:
+            return "run_shell";
+        case 13:
+            return "get_diagnostics";
+        case 14:
+            return "resolve_symbol";
+        case 15:
+            return "read_lines";
+        case 16:
+            return "plan_tasks";
+        case 17:
+            return "plan_code_exploration";
+        case 18:
+            return "search_files";
+        case 19:
+            return "mention_lookup";
+        case 20:
+            return "next_edit_hint";
+        case 21:
+            return "propose_multifile_edits";
+        case 22:
+            return "load_rules";
+        case 23:
+            return "compact_conversation";
+        case 24:
+            return "optimize_tool_selection";
+        case 25:
+            return "restore_checkpoint";
+        case 26:
+            return "evaluate_integration_audit_feasibility";
+        case 27:
+            return "git_status";
         default:
-            if (tool_id >= 6 && tool_id < 47) {
-                return Tool_Generic_Execute(tool_id, args, output, outlen);
-            }
-            return -1;  // Invalid tool ID
+            return nullptr;
     }
 }
+}  // namespace
 
-// ============================================================================
-// Public API: Per-Tool Dispatch (FIX #3)
-// ============================================================================
+int ExecuteToolByID(uint32_t tool_id, const char* args, char* output, size_t outlen)
+{
+    if (!output || outlen == 0)
+    {
+        return -1;
+    }
 
-int ExecuteToolByID(uint32_t tool_id, const char* args, char* output, size_t outlen) {
-    // CRITICAL FIX: Each tool has unique handler (no ID 3 aliasing)
-    return DispatchPerTool(tool_id, args, output, outlen);
+    const char* toolName = toolNameFromId(tool_id);
+    if (!toolName)
+    {
+        strcpy_s(output, outlen, "Unknown tool id");
+        return -1;
+    }
+
+    nlohmann::json toolArgs = nlohmann::json::object();
+    if (args && *args)
+    {
+        try
+        {
+            toolArgs = nlohmann::json::parse(args);
+            if (!toolArgs.is_object())
+            {
+                toolArgs = nlohmann::json::object();
+            }
+        }
+        catch (...)
+        {
+            toolArgs = nlohmann::json::object();
+        }
+    }
+
+    auto result = RawrXD::Agent::AgentToolHandlers::Instance().Execute(toolName, toolArgs);
+    const std::string payload = result.toJson().dump();
+    if (payload.size() + 1 > outlen)
+    {
+        std::strncpy(output, payload.c_str(), outlen - 1);
+        output[outlen - 1] = '\0';
+        return -2;
+    }
+
+    strcpy_s(output, outlen, payload.c_str());
+    return result.isSuccess() ? 0 : -2;
 }
 
-// ============================================================================
-// Validation: Verify 47 tools have unique handlers
-// ============================================================================
-
-bool ValidateToolDispatchTable() {
-    // Verify: All 47 tools (0-46) have valid handlers
-    for (uint32_t i = 0; i < 47; i++) {
-        char testbuf[256] = {};
-        int result = DispatchPerTool(i, "{}", testbuf, sizeof(testbuf));
-        if (result != 0 && i < 6) {
-            // Tools 0-5 should always succeed
+bool ValidateToolDispatchTable()
+{
+    for (uint32_t i = 0; i <= 27; ++i)
+    {
+        if (!toolNameFromId(i))
+        {
             return false;
         }
     }

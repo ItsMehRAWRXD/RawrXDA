@@ -7,11 +7,7 @@
 #include <atomic>
 #include <thread>
 #include <future>
-<<<<<<< HEAD
 #include <nlohmann/json.hpp>
-=======
-#include "nlohmann/json.hpp"
->>>>>>> origin/main
 
 namespace RawrXD {
 

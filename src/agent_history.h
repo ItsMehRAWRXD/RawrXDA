@@ -216,6 +216,12 @@ public:
     /// Clear all in-memory events
     void clear();
 
+    /// Compact event log to keep last N events (returns number removed)
+    size_t compact(size_t keepLast);
+
+    /// Load events from a specific JSONL log file (replaces in-memory events)
+    bool loadFromLogFile(const std::string& logFilePath);
+
 private:
     void logInfo(const std::string& msg) const  { if (m_logCb) m_logCb(1, msg); }
     void logError(const std::string& msg) const { if (m_logCb) m_logCb(3, msg); }

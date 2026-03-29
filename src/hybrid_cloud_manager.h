@@ -6,6 +6,7 @@
 #include <nlohmann/json.hpp>
 #include <chrono> 
 #include <memory>
+#include <string>
 #include <unordered_map>
 // Forward decl
 namespace RawrXD { class UniversalModelRouter; }

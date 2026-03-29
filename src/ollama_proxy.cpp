@@ -1,6 +1,5 @@
 #include "ollama_proxy.h"
 
-<<<<<<< HEAD
 #include "backend/ollama_client.h"
 
 #include <algorithm>
@@ -159,29 +158,6 @@ void OllamaProxy::generateResponse(const std::string& prompt, float temperature,
     if (m_onGenerationComplete) {
         m_onGenerationComplete();
     }
-=======
-OllamaProxy::OllamaProxy(void* parent) : m_isRunning(false) {}
-OllamaProxy::~OllamaProxy() {}
-
-void OllamaProxy::setModel(const String& modelName) {
-    m_modelName = modelName;
-}
-
-bool OllamaProxy::isOllamaAvailable() {
-    return false; // Stub
-}
-
-bool OllamaProxy::isModelAvailable(const String& modelName) {
-    return false; // Stub
-}
-
-void OllamaProxy::generateResponse(const String& prompt, float temperature, int maxTokens) {
-    // Stub
-}
-
-void OllamaProxy::stopGeneration() {
-    m_isRunning = false;
->>>>>>> origin/main
 }
 
 void OllamaProxy::stopGeneration() {

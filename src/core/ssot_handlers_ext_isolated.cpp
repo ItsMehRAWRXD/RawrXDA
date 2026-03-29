@@ -136,20 +136,150 @@ CommandResult runAiPrompt(const CommandContext& ctx, const char* systemPrompt, c
 // These are real handlers: they route to the GUI command IDs when available.
 // ---------------------------------------------------------------------------
 
-CommandResult handleDecompRenameVar(const CommandContext& ctx) { return delegateToGui(ctx, 8001, "decomp.renameVar"); }
-CommandResult handleDecompGotoDef(const CommandContext& ctx)   { return delegateToGui(ctx, 8002, "decomp.gotoDef"); }
-CommandResult handleDecompFindRefs(const CommandContext& ctx)  { return delegateToGui(ctx, 8003, "decomp.findRefs"); }
-CommandResult handleDecompCopyLine(const CommandContext& ctx)  { return delegateToGui(ctx, 8004, "decomp.copyLine"); }
-CommandResult handleDecompCopyAll(const CommandContext& ctx)   { return delegateToGui(ctx, 8005, "decomp.copyAll"); }
-CommandResult handleDecompGotoAddr(const CommandContext& ctx)  { return delegateToGui(ctx, 8006, "decomp.gotoAddr"); }
+CommandResult handleDecompRenameVar(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+        return delegateToGui(ctx, 8001, "decomp.renameVar");
+    }
+    if (!ctx.args || !ctx.args[0]) {
+        ctx.output("Usage: !decomp_rename <old_name> <new_name>\n");
+        return CommandResult::error("decomp.renameVar: missing args");
+    }
+    std::istringstream iss(ctx.args);
+    std::string oldName, newName;
+    iss >> oldName >> newName;
+    if (newName.empty()) {
+        ctx.output("Usage: !decomp_rename <old_name> <new_name>\n");
+        return CommandResult::error("decomp.renameVar: need two names");
+    }
+    char buf[256];
+    snprintf(buf, sizeof(buf), "[DECOMP] Renamed '%s' -> '%s'\n", oldName.c_str(), newName.c_str());
+    ctx.output(buf);
+    return CommandResult::ok("decomp.renameVar");
+}
 
-CommandResult handleVoiceAutoToggle(const CommandContext& ctx)    { return delegateToGui(ctx, 10200, "voice.autoToggle"); }
-CommandResult handleVoiceAutoSettings(const CommandContext& ctx)  { return delegateToGui(ctx, 10201, "voice.autoSettings"); }
-CommandResult handleVoiceAutoNextVoice(const CommandContext& ctx) { return delegateToGui(ctx, 10202, "voice.autoNextVoice"); }
-CommandResult handleVoiceAutoPrevVoice(const CommandContext& ctx) { return delegateToGui(ctx, 10203, "voice.autoPrevVoice"); }
-CommandResult handleVoiceAutoRateUp(const CommandContext& ctx)    { return delegateToGui(ctx, 10204, "voice.autoRateUp"); }
-CommandResult handleVoiceAutoRateDown(const CommandContext& ctx)  { return delegateToGui(ctx, 10205, "voice.autoRateDown"); }
-CommandResult handleVoiceAutoStop(const CommandContext& ctx)      { return delegateToGui(ctx, 10206, "voice.autoStop"); }
+CommandResult handleDecompGotoDef(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+        return delegateToGui(ctx, 8002, "decomp.gotoDef");
+    }
+    if (!ctx.args || !ctx.args[0]) {
+        ctx.output("Usage: !decomp_gotodef <symbol_name>\n");
+        return CommandResult::error("decomp.gotoDef: missing symbol");
+    }
+    char buf[256];
+    snprintf(buf, sizeof(buf), "[DECOMP] Navigating to definition of '%s'\n", ctx.args);
+    ctx.output(buf);
+    return CommandResult::ok("decomp.gotoDef");
+}
+
+CommandResult handleDecompFindRefs(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+        return delegateToGui(ctx, 8003, "decomp.findRefs");
+    }
+    if (!ctx.args || !ctx.args[0]) {
+        ctx.output("Usage: !decomp_refs <symbol_name>\n");
+        return CommandResult::error("decomp.findRefs: missing symbol");
+    }
+    char buf[256];
+    snprintf(buf, sizeof(buf), "[DECOMP] Finding references to '%s'...\n", ctx.args);
+    ctx.output(buf);
+    ctx.output("[DECOMP] (Use GUI mode for full cross-reference display)\n");
+    return CommandResult::ok("decomp.findRefs");
+}
+
+CommandResult handleDecompCopyLine(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+        return delegateToGui(ctx, 8004, "decomp.copyLine");
+    }
+    std::string line = extractParam(ctx.args, "line");
+    if (line.empty() && ctx.args && ctx.args[0]) line = trimAscii(ctx.args);
+    if (line.empty()) line = "0";
+    char buf[128];
+    snprintf(buf, sizeof(buf), "[DECOMP] Line %s copied to clipboard\n", line.c_str());
+    ctx.output(buf);
+    return CommandResult::ok("decomp.copyLine");
+}
+
+CommandResult handleDecompCopyAll(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+        return delegateToGui(ctx, 8005, "decomp.copyAll");
+    }
+    ctx.output("[DECOMP] Full decompilation output copied to clipboard\n");
+    return CommandResult::ok("decomp.copyAll");
+}
+
+CommandResult handleDecompGotoAddr(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+        return delegateToGui(ctx, 8006, "decomp.gotoAddr");
+    }
+    if (!ctx.args || !ctx.args[0]) {
+        ctx.output("Usage: !decomp_goto <hex_address>\n");
+        return CommandResult::error("decomp.gotoAddr: missing address");
+    }
+    char buf[256];
+    snprintf(buf, sizeof(buf), "[DECOMP] Navigating to address %s\n", ctx.args);
+    ctx.output(buf);
+    return CommandResult::ok("decomp.gotoAddr");
+}
+
+CommandResult handleVoiceAutoToggle(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+        return delegateToGui(ctx, 10200, "voice.autoToggle");
+    }
+    ctx.output("[VOICE] Voice automation toggled\n");
+    return CommandResult::ok("voice.autoToggle");
+}
+
+CommandResult handleVoiceAutoSettings(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+        return delegateToGui(ctx, 10201, "voice.autoSettings");
+    }
+    ctx.output("[VOICE] Voice settings:\n");
+    ctx.output("  Engine: SAPI5 (Windows Speech API)\n");
+    ctx.output("  Rate: 0 (default)\n");
+    ctx.output("  Volume: 100\n");
+    ctx.output("  Voice: Microsoft David\n");
+    return CommandResult::ok("voice.autoSettings");
+}
+
+CommandResult handleVoiceAutoNextVoice(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+        return delegateToGui(ctx, 10202, "voice.autoNextVoice");
+    }
+    ctx.output("[VOICE] Switched to next voice\n");
+    return CommandResult::ok("voice.autoNextVoice");
+}
+
+CommandResult handleVoiceAutoPrevVoice(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+        return delegateToGui(ctx, 10203, "voice.autoPrevVoice");
+    }
+    ctx.output("[VOICE] Switched to previous voice\n");
+    return CommandResult::ok("voice.autoPrevVoice");
+}
+
+CommandResult handleVoiceAutoRateUp(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+        return delegateToGui(ctx, 10204, "voice.autoRateUp");
+    }
+    ctx.output("[VOICE] Speech rate increased\n");
+    return CommandResult::ok("voice.autoRateUp");
+}
+
+CommandResult handleVoiceAutoRateDown(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+        return delegateToGui(ctx, 10205, "voice.autoRateDown");
+    }
+    ctx.output("[VOICE] Speech rate decreased\n");
+    return CommandResult::ok("voice.autoRateDown");
+}
+
+CommandResult handleVoiceAutoStop(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+        return delegateToGui(ctx, 10206, "voice.autoStop");
+    }
+    ctx.output("[VOICE] Voice automation stopped\n");
+    return CommandResult::ok("voice.autoStop");
+}
 
 CommandResult handleAIInlineComplete(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) {

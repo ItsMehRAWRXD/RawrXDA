@@ -38,6 +38,13 @@ private:
     std::vector<std::string> command_history_;
     size_t history_index_;
     std::string current_input_;
+    mutable std::string current_goal_;       // persisted via /agent goal
+    mutable std::string active_engine_id_;   // tracks /engine switch selection
+    mutable bool iteration_busy_ = false;
+    mutable int iteration_current_ = 0;
+    mutable int iteration_total_ = 0;
+    mutable std::string iteration_phase_ = "idle";
+    mutable std::string iteration_message_;
     
 public:
     InteractiveShell(const ShellConfig& config = {});
@@ -86,6 +93,19 @@ private:
     void ProcessMemoryCommand(const std::string& cmd);
     void ProcessEngineCommand(const std::string& cmd);
     void ProcessSystemCommand(const std::string& input);
+    void ProcessRevEngCommand(const std::string& input);
+    void ProcessDiskCommand(const std::string& input);
+    void ProcessGovernorCommand(const std::string& input);
+    void ProcessLspCommand(const std::string& input);
+    void ProcessDebuggerCommand(const std::string& input);
+    void ProcessSwarmCommand(const std::string& input);
+    void ProcessHotpatchCommand(const std::string& input);
+    void ProcessBuildCommand(const std::string& input);
+    void ProcessViewCommand(const std::string& input);
+    void ProcessVoiceCommand(const std::string& input);
+    void ProcessTelemetryCommand(const std::string& input);
+    void ProcessBackendCommand(const std::string& input);
+    void ProcessGitCommand(const std::string& input);
     
     // Utility
     std::vector<std::string> TokenizeCommand(const std::string& input) const;

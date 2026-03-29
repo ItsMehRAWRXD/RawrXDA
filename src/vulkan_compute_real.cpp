@@ -9,12 +9,8 @@
 #include <vector>
 #include <cstdio>
 
-// Function pointers for extensions
-#define VK_FUNC(name) PFN_##name name = nullptr
-VK_FUNC(vkCreateDebugUtilsMessengerEXT);
-VK_FUNC(vkDestroyDebugUtilsMessengerEXT);
-VK_FUNC(vkCmdPushDescriptorSetKHR);
-#undef VK_FUNC
+// Function pointers for extensions - stored in VulkanState to avoid header conflicts
+// These are loaded dynamically via vkGetInstanceProcAddr
 
 // Global state
 struct VulkanState {
@@ -30,6 +26,11 @@ struct VulkanState {
 
     // Memory management
     VkPhysicalDeviceMemoryProperties mem_props{};
+
+    // Extension function pointers
+    PFN_vkCreateDebugUtilsMessengerEXT createDebugMessenger = nullptr;
+    PFN_vkDestroyDebugUtilsMessengerEXT destroyDebugMessenger = nullptr;
+    PFN_vkCmdPushDescriptorSetKHR cmdPushDescriptor = nullptr;
 
     // Extensions
     bool push_descriptor_supported = false;
@@ -108,13 +109,13 @@ VkResult Titan_Vulkan_Init_Real() {
     }
 
     // Load instance functions
-    vkCreateDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)
+    g_vk.createDebugMessenger = (PFN_vkCreateDebugUtilsMessengerEXT)
         vkGetInstanceProcAddr(g_vk.instance, "vkCreateDebugUtilsMessengerEXT");
-    vkDestroyDebugUtilsMessengerEXT = (PFN_vkDestroyDebugUtilsMessengerEXT)
+    g_vk.destroyDebugMessenger = (PFN_vkDestroyDebugUtilsMessengerEXT)
         vkGetInstanceProcAddr(g_vk.instance, "vkDestroyDebugUtilsMessengerEXT");
 
     // Setup debug messenger
-    if (vkCreateDebugUtilsMessengerEXT) {
+    if (g_vk.createDebugMessenger) {
         VkDebugUtilsMessengerCreateInfoEXT debug_info{};
         debug_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
         debug_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
@@ -125,7 +126,7 @@ VkResult Titan_Vulkan_Init_Real() {
                                  VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
         debug_info.pfnUserCallback = DebugCallback;
 
-        vkCreateDebugUtilsMessengerEXT(g_vk.instance, &debug_info, nullptr, &g_vk.debug_messenger);
+        g_vk.createDebugMessenger(g_vk.instance, &debug_info, nullptr, &g_vk.debug_messenger);
     }
 
     // Enumerate physical devices
@@ -357,8 +358,8 @@ void Titan_Vulkan_Cleanup_Real() {
     if (g_vk.descriptor_pool) vkDestroyDescriptorPool(g_vk.device, g_vk.descriptor_pool, nullptr);
     if (g_vk.command_pool) vkDestroyCommandPool(g_vk.device, g_vk.command_pool, nullptr);
     if (g_vk.device) vkDestroyDevice(g_vk.device, nullptr);
-    if (g_vk.debug_messenger && vkDestroyDebugUtilsMessengerEXT) {
-        vkDestroyDebugUtilsMessengerEXT(g_vk.instance, g_vk.debug_messenger, nullptr);
+    if (g_vk.debug_messenger && g_vk.destroyDebugMessenger) {
+        g_vk.destroyDebugMessenger(g_vk.instance, g_vk.debug_messenger, nullptr);
     }
     if (g_vk.instance) vkDestroyInstance(g_vk.instance, nullptr);
     if (g_vulkan_dll) FreeLibrary(g_vulkan_dll);

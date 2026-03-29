@@ -1,16 +1,9 @@
-<<<<<<< HEAD
 // AgenticAgentCoordinator implementation - C++20
 #include "agentic_agent_coordinator.h"
 
 #include "agentic_iterative_reasoning.h"
 #include "agentic_loop_state.h"
 
-=======
-// AgenticAgentCoordinator Implementation - Pure C++20
-#include "agentic_agent_coordinator.h"
-#include "agentic_iterative_reasoning.h"  // Always include — ensures complete type for unique_ptr
-#include "agentic_loop_state.h"
->>>>>>> origin/main
 #include <algorithm>
 #include <ctime>
 #include <iomanip>
@@ -18,12 +11,8 @@
 #include <sstream>
 #include <utility>
 
-<<<<<<< HEAD
 namespace {
 std::string generateId() {
-=======
-static std::string generateUUID() {
->>>>>>> origin/main
     static std::random_device rd;
     static std::mt19937_64 gen(rd());
     static std::uniform_int_distribution<uint64_t> dis;
@@ -53,7 +42,6 @@ std::string toIsoLike(std::chrono::system_clock::time_point tp) {
 }  // namespace
 
 AgenticAgentCoordinator::AgenticAgentCoordinator()
-<<<<<<< HEAD
     : m_coordinationStartTime(std::chrono::system_clock::now()),
       m_lastCheckpointTime(m_coordinationStartTime) {}
 
@@ -67,33 +55,6 @@ void AgenticAgentCoordinator::initialize(AgenticEngine* engine, CPUInference::CP
 
 std::string AgenticAgentCoordinator::createAgent(AgentRole role) {
     const std::string agentId = generateId();
-=======
-    : m_coordinationStartTime(std::chrono::system_clock::now())
-{
-    std::cout << "[AgenticAgentCoordinator] Initialized - Ready for multi-agent coordination" << std::endl;
-}
-
-AgenticAgentCoordinator::~AgenticAgentCoordinator()
-{
-    std::cout << "[AgenticAgentCoordinator] Destroyed - Managed "
-              << m_agents.size() << " agents and "
-              << m_assignments.size() << " task assignments" << std::endl;
-}
-
-void AgenticAgentCoordinator::initialize(AgenticEngine* engine, CPUInference::CPUInferenceEngine* inference)
-{
-    m_engine = engine;
-    m_inference = inference;
-
-    std::cout << "[AgenticAgentCoordinator] Initialized with AgenticEngine and InferenceEngine" << std::endl;
-}
-
-// ===== AGENT MANAGEMENT =====
-
-std::string AgenticAgentCoordinator::createAgent(AgentRole role)
-{
-    std::string agentId = generateUUID();
->>>>>>> origin/main
 
     auto agent = std::make_unique<AgentInstance>();
     agent->agentId = agentId;
@@ -112,37 +73,16 @@ std::string AgenticAgentCoordinator::createAgent(AgentRole role)
     }
 
     m_agents[agentId] = std::move(agent);
-<<<<<<< HEAD
     return agentId;
 }
 
 void AgenticAgentCoordinator::removeAgent(const std::string& agentId) {
     m_agents.erase(agentId);
-=======
-
-    std::cout << "[AgenticAgentCoordinator] Created agent: " << agentId << " with role: " << static_cast<int>(role) << std::endl;
-
-    return agentId;
-}
-
-void AgenticAgentCoordinator::removeAgent(const std::string& agentId)
-{
-    m_agents.erase(agentId);
-
-    std::cout << "[AgenticAgentCoordinator] Removed agent: " << agentId << std::endl;
->>>>>>> origin/main
 }
 
 AgenticAgentCoordinator::AgentInstance* AgenticAgentCoordinator::getAgent(const std::string& agentId) {
     auto it = m_agents.find(agentId);
-<<<<<<< HEAD
     return it != m_agents.end() ? it->second.get() : nullptr;
-=======
-    if (it != m_agents.end()) {
-        return it->second.get();
-    }
-    return nullptr;
->>>>>>> origin/main
 }
 
 std::vector<AgenticAgentCoordinator::AgentInstance*> AgenticAgentCoordinator::getAvailableAgents(AgentRole role) {
@@ -155,24 +95,15 @@ std::vector<AgenticAgentCoordinator::AgentInstance*> AgenticAgentCoordinator::ge
     return out;
 }
 
-<<<<<<< HEAD
 std::vector<std::string> AgenticAgentCoordinator::getAllAgentIds() {
     std::vector<std::string> ids;
     ids.reserve(m_agents.size());
     for (const auto& kv : m_agents) {
         ids.push_back(kv.first);
-=======
-std::vector<std::string> AgenticAgentCoordinator::getAllAgentIds() const
-{
-    std::vector<std::string> ids;
-    for (const auto& pair : m_agents) {
-        ids.push_back(pair.first);
->>>>>>> origin/main
     }
     return ids;
 }
 
-<<<<<<< HEAD
 AgentStatus AgenticAgentCoordinator::getAgentStatus(const std::string& agentId) {
     AgentStatus st{};
     auto* agent = getAgent(agentId);
@@ -184,30 +115,6 @@ AgentStatus AgenticAgentCoordinator::getAgentStatus(const std::string& agentId) 
         st.tasks_completed = 0;
         st.last_active = "";
         return st;
-=======
-json AgenticAgentCoordinator::getAgentStatus(const std::string& agentId)
-{
-    json status;
-
-    auto agent = getAgent(agentId);
-    if (!agent) return status;
-
-    status["agent_id"] = agentId;
-    status["role"] = static_cast<int>(agent->role);
-    status["available"] = agent->isAvailable;
-    status["utilization"] = agent->utilization;
-    status["tasks_completed"] = agent->tasksCompleted;
-
-    return status;
-}
-
-json AgenticAgentCoordinator::getAllAgentStatuses()
-{
-    json statuses = json::array();
-
-    for (const auto& pair : m_agents) {
-        statuses.push_back(getAgentStatus(pair.first));
->>>>>>> origin/main
     }
 
     st.agent_id = agent->agentId;
@@ -228,11 +135,6 @@ std::vector<AgentStatus> AgenticAgentCoordinator::getAllAgentStatuses() {
     return statuses;
 }
 
-<<<<<<< HEAD
-=======
-// ===== TASK ASSIGNMENT =====
-
->>>>>>> origin/main
 std::string AgenticAgentCoordinator::assignTask(
     const std::string& taskDescription,
     const std::map<std::string, std::string>& parameters,
@@ -245,14 +147,8 @@ std::string AgenticAgentCoordinator::assignTask(
         if (!best || a->utilization < best->utilization) best = a;
     }
 
-<<<<<<< HEAD
     if (!best) {
         return {};
-=======
-    if (agentId.empty()) {
-        std::cerr << "[AgenticAgentCoordinator] No available agent for task" << std::endl;
-        return "";
->>>>>>> origin/main
     }
 
     auto assignment = std::make_unique<TaskAssignment>();
@@ -276,7 +172,6 @@ std::string AgenticAgentCoordinator::assignTask(
         m_taskAssignedCallback(taskId, best->agentId);
     }
 
-<<<<<<< HEAD
     return taskId;
 }
 
@@ -608,85 +503,4 @@ void AgenticAgentCoordinator::updateAgentMetrics(const std::string& agentId) {
     } else {
         a->utilization = std::min(1.0f, a->utilization + 0.1f);
     }
-=======
-    std::cout << "[AgenticAgentCoordinator] Assigned task: " << taskId << " to agent: " << agentId << std::endl;
-
-    return taskId;
-}
-
-void AgenticAgentCoordinator::updateTaskStatus(const std::string& taskId, const std::string& status, const json& result)
-{
-    auto it = m_assignments.find(taskId);
-    if (it != m_assignments.end()) {
-        it->second->status = status;
-        if (!result.is_null()) {
-            it->second->result = result;
-        }
-        it->second->completionTime = std::chrono::system_clock::now();
-    }
-}
-
-json AgenticAgentCoordinator::getTaskResult(const std::string& taskId)
-{
-    auto it = m_assignments.find(taskId);
-    if (it != m_assignments.end()) {
-        return it->second->result;
-    }
-    return json();
-}
-
-// ===== COORDINATION MECHANISMS =====
-
-void AgenticAgentCoordinator::resolveConflicts()
-{
-    std::cout << "[AgenticAgentCoordinator] Resolving conflicts" << std::endl;
-}
-
-void AgenticAgentCoordinator::synchronizeState()
-{
-    for (auto& pair : m_agents) {
-        if (pair.second && pair.second->state) {
-            // Synchronize agent state
-        }
-    }
-    std::cout << "[AgenticAgentCoordinator] Synchronized all agent states" << std::endl;
-}
-
-json AgenticAgentCoordinator::performJointInference(const std::vector<std::string>& agentIds, const std::string& prompt)
-{
-    json results = json::array();
-    
-    for (const auto& agentId : agentIds) {
-        auto agent = getAgent(agentId);
-        if (agent && agent->reasoner) {
-            // Perform inference with agent
-            results.push_back({{"agent_id", agentId}, {"response", "inference_result"}});
-        }
-    }
-    
-    return results;
-}
-
-// ===== PRIVATE HELPERS =====
-
-std::string AgenticAgentCoordinator::selectBestAgentForTask(const std::string& taskDescription)
-{
-    // Find least utilized agent
-    AgentInstance* bestAgent = nullptr;
-    float minUtilization = 2.0f;
-
-    for (auto& pair : m_agents) {
-        if (pair.second->isAvailable && pair.second->utilization < minUtilization) {
-            minUtilization = pair.second->utilization;
-            bestAgent = pair.second.get();
-        }
-    }
-
-    return bestAgent ? bestAgent->agentId : std::string();
-}
-
-void AgenticAgentCoordinator::logCoordination(const std::string& message)
-{
-    std::cout << "[AgenticAgentCoordinator] " << message << std::endl;
->>>>>>> origin/main
 }

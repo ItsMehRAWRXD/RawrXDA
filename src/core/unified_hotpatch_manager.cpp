@@ -1019,6 +1019,596 @@ std::string UnifiedHotpatchManager::getFullStatsJSON() const {
 }
 
 // ===========================================================================
+// VS Code Copilot Integration (Layer 4 — AI-Enhanced Development)
+// ===========================================================================
+
+PatchResult UnifiedHotpatchManager::copilot_initialize() {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::UnifiedHotpatchManager, __FUNCTION__)) {
+        return PatchResult::error("[LICENSE] VS Code Copilot hotpatching requires Professional license", -1);
+    }
+    
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (m_copilotInit.load(std::memory_order_relaxed)) {
+        return PatchResult::ok("VS Code Copilot hotpatcher already initialized");
+    }
+    
+    // Initialize the VS Code Copilot hotpatcher instance
+    auto& hotpatcher = VSCodeCopilotHotpatcher::instance();
+    
+    m_copilotInit.store(true, std::memory_order_relaxed);
+    emit_event(HotpatchEvent::CopilotInterceptorApplied, "copilot_layer_initialized");
+    
+    return PatchResult::ok("VS Code Copilot Layer 4 hotpatching initialized");
+}
+
+PatchResult UnifiedHotpatchManager::copilot_shutdown() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (!m_copilotInit.load(std::memory_order_relaxed)) {
+        return PatchResult::ok("VS Code Copilot hotpatcher not initialized");
+    }
+    
+    // Clear all interceptors and reset
+    auto& hotpatcher = VSCodeCopilotHotpatcher::instance();
+    hotpatcher.clearStatusInterceptors();
+    hotpatcher.resetStats();
+    
+    m_copilotInit.store(false, std::memory_order_relaxed);
+    emit_event(HotpatchEvent::CopilotOperationEnhanced, "copilot_layer_shutdown");
+    
+    return PatchResult::ok("VS Code Copilot hotpatcher shut down");
+}
+
+// ---- VS Code Copilot Operations ----
+
+UnifiedResult UnifiedHotpatchManager::copilot_process_operation(const char* message, size_t messageLen,
+                                                               CopilotOperationEnhanced* operation) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::UnifiedHotpatchManager, __FUNCTION__)) {
+        return UnifiedResult::from(
+            PatchResult::error("[LICENSE] VS Code Copilot hotpatching requires Professional license", -1),
+            "copilot", next_sequence());
+    }
+    
+    uint64_t seq = next_sequence();
+    
+    // Auto-initialize if needed
+    if (!m_copilotInit.load(std::memory_order_relaxed)) {
+        PatchResult initR = copilot_initialize();
+        if (!initR.success) {
+            return UnifiedResult::from(initR, "copilot", seq);
+        }
+    }
+    
+    auto& hotpatcher = VSCodeCopilotHotpatcher::instance();
+    CopilotOperationEnhanced localOp = {};
+    
+    size_t intercepted = hotpatcher.applyStatusInterceptors(message, messageLen, &localOp);
+    
+    if (operation) {
+        *operation = localOp;
+    }
+    
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (intercepted > 0) {
+        m_stats.copilotOperationCount.fetch_add(1, std::memory_order_relaxed);
+        emit_event(HotpatchEvent::CopilotInterceptorApplied, localOp.originalMessage.c_str());
+        return UnifiedResult::from(PatchResult::ok("Copilot operation processed"), "copilot", seq);
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+        return UnifiedResult::from(PatchResult::error("No interceptors applied", 1), "copilot", seq);
+    }
+}
+
+UnifiedResult UnifiedHotpatchManager::copilot_add_status_interceptor(const CopilotStatusInterceptor& interceptor) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::UnifiedHotpatchManager, __FUNCTION__)) {
+        return UnifiedResult::from(
+            PatchResult::error("[LICENSE] VS Code Copilot hotpatching requires Professional license", -1),
+            "copilot", next_sequence());
+    }
+    
+    uint64_t seq = next_sequence();
+    
+    if (!m_copilotInit.load(std::memory_order_relaxed)) {
+        PatchResult initR = copilot_initialize();
+        if (!initR.success) {
+            return UnifiedResult::from(initR, "copilot", seq);
+        }
+    }
+    
+    auto& hotpatcher = VSCodeCopilotHotpatcher::instance();
+    PatchResult r = hotpatcher.addStatusInterceptor(interceptor);
+    
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        emit_event(HotpatchEvent::CopilotInterceptorApplied, interceptor.name);
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    
+    return UnifiedResult::from(r, "copilot", seq);
+}
+
+UnifiedResult UnifiedHotpatchManager::copilot_remove_status_interceptor(const char* name) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::UnifiedHotpatchManager, __FUNCTION__)) {
+        return UnifiedResult::from(
+            PatchResult::error("[LICENSE] VS Code Copilot hotpatching requires Professional license", -1),
+            "copilot", next_sequence());
+    }
+    
+    uint64_t seq = next_sequence();
+    
+    if (!m_copilotInit.load(std::memory_order_relaxed)) {
+        return UnifiedResult::from(PatchResult::error("VS Code Copilot hotpatcher not initialized", 1), "copilot", seq);
+    }
+    
+    auto& hotpatcher = VSCodeCopilotHotpatcher::instance();
+    PatchResult r = hotpatcher.removeStatusInterceptor(name);
+    
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        emit_event(HotpatchEvent::CopilotInterceptorApplied, name);
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    
+    return UnifiedResult::from(r, "copilot", seq);
+}
+
+UnifiedResult UnifiedHotpatchManager::copilot_add_enhancement_rule(const CopilotEnhancementRule& rule) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::UnifiedHotpatchManager, __FUNCTION__)) {
+        return UnifiedResult::from(
+            PatchResult::error("[LICENSE] VS Code Copilot hotpatching requires Professional license", -1),
+            "copilot", next_sequence());
+    }
+    
+    uint64_t seq = next_sequence();
+    
+    if (!m_copilotInit.load(std::memory_order_relaxed)) {
+        PatchResult initR = copilot_initialize();
+        if (!initR.success) {
+            return UnifiedResult::from(initR, "copilot", seq);
+        }
+    }
+    
+    auto& hotpatcher = VSCodeCopilotHotpatcher::instance();
+    PatchResult r = hotpatcher.addEnhancementRule(rule);
+    
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        emit_event(HotpatchEvent::CopilotOperationEnhanced, rule.name);
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    
+    return UnifiedResult::from(r, "copilot", seq);
+}
+
+UnifiedResult UnifiedHotpatchManager::copilot_remove_enhancement_rule(const char* name) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::UnifiedHotpatchManager, __FUNCTION__)) {
+        return UnifiedResult::from(
+            PatchResult::error("[LICENSE] VS Code Copilot hotpatching requires Professional license", -1),
+            "copilot", next_sequence());
+    }
+    
+    uint64_t seq = next_sequence();
+    
+    if (!m_copilotInit.load(std::memory_order_relaxed)) {
+        return UnifiedResult::from(PatchResult::error("VS Code Copilot hotpatcher not initialized", 1), "copilot", seq);
+    }
+    
+    auto& hotpatcher = VSCodeCopilotHotpatcher::instance();
+    PatchResult r = hotpatcher.removeEnhancementRule(name);
+    
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        emit_event(HotpatchEvent::CopilotOperationEnhanced, name);
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    
+    return UnifiedResult::from(r, "copilot", seq);
+}
+
+// ---- Feature-Specific Operations ----
+
+UnifiedResult UnifiedHotpatchManager::copilot_compact_conversation(const std::string& conversation,
+                                                                 std::string* result) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::UnifiedHotpatchManager, __FUNCTION__)) {
+        return UnifiedResult::from(
+            PatchResult::error("[LICENSE] VS Code Copilot hotpatching requires Professional license", -1),
+            "copilot", next_sequence());
+    }
+    
+    uint64_t seq = next_sequence();
+    
+    if (!m_copilotInit.load(std::memory_order_relaxed)) {
+        PatchResult initR = copilot_initialize();
+        if (!initR.success) {
+            return UnifiedResult::from(initR, "copilot", seq);
+        }
+    }
+    
+    auto& hotpatcher = VSCodeCopilotHotpatcher::instance();
+    PatchResult r = hotpatcher.processCompactedConversation(conversation, result);
+    
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        m_stats.copilotOperationCount.fetch_add(1, std::memory_order_relaxed);
+        emit_event(HotpatchEvent::CopilotFeatureProcessed, "compact_conversation");
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    
+    return UnifiedResult::from(r, "copilot", seq);
+}
+
+UnifiedResult UnifiedHotpatchManager::copilot_optimize_tool_selection(const std::vector<std::string>& tools,
+                                                                     std::vector<std::string>* result) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::UnifiedHotpatchManager, __FUNCTION__)) {
+        return UnifiedResult::from(
+            PatchResult::error("[LICENSE] VS Code Copilot hotpatching requires Professional license", -1),
+            "copilot", next_sequence());
+    }
+    
+    uint64_t seq = next_sequence();
+    
+    if (!m_copilotInit.load(std::memory_order_relaxed)) {
+        PatchResult initR = copilot_initialize();
+        if (!initR.success) {
+            return UnifiedResult::from(initR, "copilot", seq);
+        }
+    }
+    
+    auto& hotpatcher = VSCodeCopilotHotpatcher::instance();
+    PatchResult r = hotpatcher.optimizeToolSelection(tools, result);
+    
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        m_stats.copilotOperationCount.fetch_add(1, std::memory_order_relaxed);
+        emit_event(HotpatchEvent::CopilotFeatureProcessed, "optimize_tool_selection");
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    
+    return UnifiedResult::from(r, "copilot", seq);
+}
+
+UnifiedResult UnifiedHotpatchManager::copilot_enhance_resolution(const std::string& context,
+                                                               std::string* result) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::UnifiedHotpatchManager, __FUNCTION__)) {
+        return UnifiedResult::from(
+            PatchResult::error("[LICENSE] VS Code Copilot hotpatching requires Professional license", -1),
+            "copilot", next_sequence());
+    }
+    
+    uint64_t seq = next_sequence();
+    
+    if (!m_copilotInit.load(std::memory_order_relaxed)) {
+        PatchResult initR = copilot_initialize();
+        if (!initR.success) {
+            return UnifiedResult::from(initR, "copilot", seq);
+        }
+    }
+    
+    auto& hotpatcher = VSCodeCopilotHotpatcher::instance();
+    PatchResult r = hotpatcher.enhanceResolutionPhase(context, result);
+    
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        m_stats.copilotOperationCount.fetch_add(1, std::memory_order_relaxed);
+        emit_event(HotpatchEvent::CopilotFeatureProcessed, "enhance_resolution");
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    
+    return UnifiedResult::from(r, "copilot", seq);
+}
+
+UnifiedResult UnifiedHotpatchManager::copilot_process_read_lines(const std::string& content, size_t start, size_t end,
+                                                               std::string* result) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::UnifiedHotpatchManager, __FUNCTION__)) {
+        return UnifiedResult::from(
+            PatchResult::error("[LICENSE] VS Code Copilot hotpatching requires Professional license", -1),
+            "copilot", next_sequence());
+    }
+    
+    uint64_t seq = next_sequence();
+    
+    if (!m_copilotInit.load(std::memory_order_relaxed)) {
+        PatchResult initR = copilot_initialize();
+        if (!initR.success) {
+            return UnifiedResult::from(initR, "copilot", seq);
+        }
+    }
+    
+    auto& hotpatcher = VSCodeCopilotHotpatcher::instance();
+    PatchResult r = hotpatcher.processReadLines(content, start, end, result);
+    
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        m_stats.copilotOperationCount.fetch_add(1, std::memory_order_relaxed);
+        emit_event(HotpatchEvent::CopilotFeatureProcessed, "process_read_lines");
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    
+    return UnifiedResult::from(r, "copilot", seq);
+}
+
+UnifiedResult UnifiedHotpatchManager::copilot_plan_exploration(const std::string& codebase,
+                                                             std::vector<std::string>* result) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::UnifiedHotpatchManager, __FUNCTION__)) {
+        return UnifiedResult::from(
+            PatchResult::error("[LICENSE] VS Code Copilot hotpatching requires Professional license", -1),
+            "copilot", next_sequence());
+    }
+    
+    uint64_t seq = next_sequence();
+    
+    if (!m_copilotInit.load(std::memory_order_relaxed)) {
+        PatchResult initR = copilot_initialize();
+        if (!initR.success) {
+            return UnifiedResult::from(initR, "copilot", seq);
+        }
+    }
+    
+    auto& hotpatcher = VSCodeCopilotHotpatcher::instance();
+    PatchResult r = hotpatcher.planTargetedExploration(codebase, result);
+    
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        m_stats.copilotOperationCount.fetch_add(1, std::memory_order_relaxed);
+        emit_event(HotpatchEvent::CopilotFeatureProcessed, "plan_exploration");
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    
+    return UnifiedResult::from(r, "copilot", seq);
+}
+
+UnifiedResult UnifiedHotpatchManager::copilot_enhance_file_search(const std::string& query,
+                                                                 const std::vector<std::string>& results,
+                                                                 std::string* result) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::UnifiedHotpatchManager, __FUNCTION__)) {
+        return UnifiedResult::from(
+            PatchResult::error("[LICENSE] VS Code Copilot hotpatching requires Professional license", -1),
+            "copilot", next_sequence());
+    }
+    
+    uint64_t seq = next_sequence();
+    
+    if (!m_copilotInit.load(std::memory_order_relaxed)) {
+        PatchResult initR = copilot_initialize();
+        if (!initR.success) {
+            return UnifiedResult::from(initR, "copilot", seq);
+        }
+    }
+    
+    auto& hotpatcher = VSCodeCopilotHotpatcher::instance();
+    PatchResult r = hotpatcher.processFileSearch(query, results, result);
+    
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        m_stats.copilotOperationCount.fetch_add(1, std::memory_order_relaxed);
+        emit_event(HotpatchEvent::CopilotFeatureProcessed, "enhance_file_search");
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    
+    return UnifiedResult::from(r, "copilot", seq);
+}
+
+UnifiedResult UnifiedHotpatchManager::copilot_evaluate_audit(const std::string& context,
+                                                           std::string* result) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::UnifiedHotpatchManager, __FUNCTION__)) {
+        return UnifiedResult::from(
+            PatchResult::error("[LICENSE] VS Code Copilot hotpatching requires Professional license", -1),
+            "copilot", next_sequence());
+    }
+    
+    uint64_t seq = next_sequence();
+    
+    if (!m_copilotInit.load(std::memory_order_relaxed)) {
+        PatchResult initR = copilot_initialize();
+        if (!initR.success) {
+            return UnifiedResult::from(initR, "copilot", seq);
+        }
+    }
+    
+    auto& hotpatcher = VSCodeCopilotHotpatcher::instance();
+    PatchResult r = hotpatcher.evaluateIntegrationAudit(context, result);
+    
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        m_stats.copilotOperationCount.fetch_add(1, std::memory_order_relaxed);
+        emit_event(HotpatchEvent::CopilotFeatureProcessed, "evaluate_audit");
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    
+    return UnifiedResult::from(r, "copilot", seq);
+}
+
+// ---- Checkpoint Management ----
+
+UnifiedResult UnifiedHotpatchManager::copilot_create_checkpoint(const std::string& id,
+                                                               const std::string& conversation,
+                                                               const std::string& workspace) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::UnifiedHotpatchManager, __FUNCTION__)) {
+        return UnifiedResult::from(
+            PatchResult::error("[LICENSE] VS Code Copilot hotpatching requires Professional license", -1),
+            "copilot", next_sequence());
+    }
+    
+    uint64_t seq = next_sequence();
+    
+    if (!m_copilotInit.load(std::memory_order_relaxed)) {
+        PatchResult initR = copilot_initialize();
+        if (!initR.success) {
+            return UnifiedResult::from(initR, "copilot", seq);
+        }
+    }
+    
+    auto& hotpatcher = VSCodeCopilotHotpatcher::instance();
+    PatchResult r = hotpatcher.createCheckpoint(id, conversation, workspace);
+    
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        m_stats.copilotOperationCount.fetch_add(1, std::memory_order_relaxed);
+        emit_event(HotpatchEvent::CopilotCheckpointCreated, id.c_str());
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    
+    return UnifiedResult::from(r, "copilot", seq);
+}
+
+UnifiedResult UnifiedHotpatchManager::copilot_restore_checkpoint(const std::string& id,
+                                                               std::string* conversation,
+                                                               std::string* workspace) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::UnifiedHotpatchManager, __FUNCTION__)) {
+        return UnifiedResult::from(
+            PatchResult::error("[LICENSE] VS Code Copilot hotpatching requires Professional license", -1),
+            "copilot", next_sequence());
+    }
+    
+    uint64_t seq = next_sequence();
+    
+    if (!m_copilotInit.load(std::memory_order_relaxed)) {
+        return UnifiedResult::from(PatchResult::error("VS Code Copilot hotpatcher not initialized", 1), "copilot", seq);
+    }
+    
+    auto& hotpatcher = VSCodeCopilotHotpatcher::instance();
+    PatchResult r = hotpatcher.restoreCheckpoint(id, conversation, workspace);
+    
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        m_stats.copilotOperationCount.fetch_add(1, std::memory_order_relaxed);
+        emit_event(HotpatchEvent::CopilotCheckpointRestored, id.c_str());
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    
+    return UnifiedResult::from(r, "copilot", seq);
+}
+
+UnifiedResult UnifiedHotpatchManager::copilot_delete_checkpoint(const std::string& id) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::UnifiedHotpatchManager, __FUNCTION__)) {
+        return UnifiedResult::from(
+            PatchResult::error("[LICENSE] VS Code Copilot hotpatching requires Professional license", -1),
+            "copilot", next_sequence());
+    }
+    
+    uint64_t seq = next_sequence();
+    
+    if (!m_copilotInit.load(std::memory_order_relaxed)) {
+        return UnifiedResult::from(PatchResult::error("VS Code Copilot hotpatcher not initialized", 1), "copilot", seq);
+    }
+    
+    auto& hotpatcher = VSCodeCopilotHotpatcher::instance();
+    PatchResult r = hotpatcher.deleteCheckpoint(id);
+    
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        emit_event(HotpatchEvent::CopilotCheckpointCreated, ("deleted:" + id).c_str());
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    
+    return UnifiedResult::from(r, "copilot", seq);
+}
+
+std::vector<std::string> UnifiedHotpatchManager::copilot_list_checkpoints() const {
+    if (!m_copilotInit.load(std::memory_order_relaxed)) {
+        return {};
+    }
+    
+    auto& hotpatcher = const_cast<VSCodeCopilotHotpatcher&>(VSCodeCopilotHotpatcher::instance());
+    return hotpatcher.listCheckpoints();
+}
+
+// ---- Configuration ----
+
+void UnifiedHotpatchManager::copilot_set_auto_optimize(bool enable) {
+    if (m_copilotInit.load(std::memory_order_relaxed)) {
+        auto& hotpatcher = VSCodeCopilotHotpatcher::instance();
+        hotpatcher.setAutoOptimizeToolSelection(enable);
+    }
+}
+
+void UnifiedHotpatchManager::copilot_set_conversation_compaction(bool enable) {
+    if (m_copilotInit.load(std::memory_order_relaxed)) {
+        auto& hotpatcher = VSCodeCopilotHotpatcher::instance();
+        hotpatcher.setEnableConversationCompaction(enable);
+    }
+}
+
+void UnifiedHotpatchManager::copilot_set_checkpoint_restore(bool enable) {
+    if (m_copilotInit.load(std::memory_order_relaxed)) {
+        auto& hotpatcher = VSCodeCopilotHotpatcher::instance();
+        hotpatcher.setEnableCheckpointRestore(enable);
+    }
+}
+
+void UnifiedHotpatchManager::copilot_set_operation_caching(bool enable) {
+    if (m_copilotInit.load(std::memory_order_relaxed)) {
+        auto& hotpatcher = VSCodeCopilotHotpatcher::instance();
+        hotpatcher.setCacheEnhancedOperations(enable);
+    }
+}
+
+// ---- Statistics ----
+
+CopilotHotpatchStats UnifiedHotpatchManager::copilot_get_stats() const {
+    if (!m_copilotInit.load(std::memory_order_relaxed)) {
+        return {};
+    }
+    
+    auto& hotpatcher = const_cast<VSCodeCopilotHotpatcher&>(VSCodeCopilotHotpatcher::instance());
+    return hotpatcher.getStats();
+}
+
+void UnifiedHotpatchManager::copilot_reset_stats() {
+    if (m_copilotInit.load(std::memory_order_relaxed)) {
+        auto& hotpatcher = VSCodeCopilotHotpatcher::instance();
+        hotpatcher.resetStats();
+        
+        std::lock_guard<std::mutex> lock(const_cast<std::mutex&>(m_mutex));
+        m_stats.copilotOperationCount.store(0, std::memory_order_relaxed);
+    }
+}
+
+// ===========================================================================
 // Shadow-Page Detour + Sentinel Watchdog (Layer 6)
 // ===========================================================================
 

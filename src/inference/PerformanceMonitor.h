@@ -23,6 +23,7 @@ public:
 
     void startOperation(const std::string& operation);
     void endOperation(const std::string& operation);
+    void recordLatency(const std::string& operation, int64_t microseconds);
     void recordError(const std::string& operation);
     void recordMemoryUsage(const std::string& operation, size_t bytes);
 

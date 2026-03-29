@@ -156,6 +156,10 @@ std::vector<ToolSchema> AgenticToolExecutor::getToolSchemas() const {
     // Safety toggle tools
     add("toggle_block_delete", "Enable/disable blocking of destructive delete commands", {{"enabled","true/false"}}, {"enabled"});
     add("get_block_delete", "Get current status of delete command blocking", {}, {});
+    // Iteration tracking tools (for long-running model/agent loops)
+    add("set_iteration_status", "Set model/agent iteration progress status", {{"busy","true/false"},{"current","Current iteration index"},{"total","Total iterations"},{"phase","Current phase label"},{"message","Optional human-readable status"}}, {});
+    add("get_iteration_status", "Get current model/agent iteration progress status", {}, {});
+    add("reset_iteration_status", "Reset model/agent iteration progress to idle", {}, {});
 	return v;
 }
 
@@ -203,6 +207,66 @@ ToolResult AgenticToolExecutor::executeTool(const std::string& tool_name, const 
 
     if (tool_name == "get_block_delete") {
         return ToolResult::Ok("get_block_delete", std::string(m_block_delete_commands ? "true" : "false"));
+    }
+
+    if (tool_name == "set_iteration_status") {
+        try {
+            auto parsed = json::parse(params_json.empty() ? "{}" : params_json);
+            if (parsed.contains("busy") && parsed["busy"].is_boolean()) {
+                m_iteration_busy = parsed["busy"].get<bool>();
+            }
+            if (parsed.contains("current") && parsed["current"].is_number_integer()) {
+                m_iteration_current = std::max(0, parsed["current"].get<int>());
+            }
+            if (parsed.contains("total") && parsed["total"].is_number_integer()) {
+                m_iteration_total = std::max(0, parsed["total"].get<int>());
+            }
+            if (parsed.contains("phase") && parsed["phase"].is_string()) {
+                m_iteration_phase = parsed["phase"].get<std::string>();
+            }
+            if (parsed.contains("message") && parsed["message"].is_string()) {
+                m_iteration_message = parsed["message"].get<std::string>();
+            }
+            if (!parsed.contains("busy") && m_iteration_total > 0) {
+                m_iteration_busy = m_iteration_current < m_iteration_total;
+            }
+
+            json out;
+            out["busy"] = m_iteration_busy;
+            out["current"] = m_iteration_current;
+            out["total"] = m_iteration_total;
+            out["phase"] = m_iteration_phase;
+            out["message"] = m_iteration_message;
+            return ToolResult::Ok("set_iteration_status", out.dump());
+        } catch (const std::exception& e) {
+            return ToolResult::Fail("set_iteration_status", e.what());
+        }
+    }
+
+    if (tool_name == "get_iteration_status") {
+        json out;
+        out["busy"] = m_iteration_busy;
+        out["current"] = m_iteration_current;
+        out["total"] = m_iteration_total;
+        out["phase"] = m_iteration_phase;
+        out["message"] = m_iteration_message;
+        return ToolResult::Ok("get_iteration_status", out.dump());
+    }
+
+    if (tool_name == "reset_iteration_status") {
+        m_iteration_busy = false;
+        m_iteration_current = 0;
+        m_iteration_total = 0;
+        m_iteration_phase = "idle";
+        m_iteration_message.clear();
+
+        json out;
+        out["busy"] = m_iteration_busy;
+        out["current"] = m_iteration_current;
+        out["total"] = m_iteration_total;
+        out["phase"] = m_iteration_phase;
+        out["message"] = m_iteration_message;
+        return ToolResult::Ok("reset_iteration_status", out.dump());
     }
 
     return executeTool(stringToTool(tool_name), params_json);

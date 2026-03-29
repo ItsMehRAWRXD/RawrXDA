@@ -8,6 +8,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <atomic>
@@ -564,6 +565,8 @@ private:
     std::vector<UnrealModuleInfo> m_modules;
     std::vector<UnrealCppError> m_compileErrors;
     std::vector<UnrealDebugBreakpoint> m_breakpoints;
+    std::vector<UnrealDebugStackFrame> m_callStack;
+    std::map<int, std::vector<UnrealDebugVariable>> m_frameLocals;
     std::vector<UnrealProfilerSnapshot> m_profilerHistory;
     std::vector<std::string> m_installedVersions;
 

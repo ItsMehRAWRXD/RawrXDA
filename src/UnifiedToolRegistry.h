@@ -62,4 +62,4 @@ private:
     UnifiedToolRegistry& operator=(const UnifiedToolRegistry&) = delete;
 };
 
-#define REGISTER_TOOL(name, func) UnifiedToolRegistry::Instance().Register(name, func)
+// Use UnifiedToolRegistry::Instance().Register(name, func) directly instead.

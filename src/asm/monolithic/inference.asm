@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 ; ═══════════════════════════════════════════════════════════════════
 ; RawrXD Inference Engine — Monolithic Module
 ; Phase 4: KV-Cache Pruning + Neural Scorer
@@ -12,16 +11,11 @@
 ;              KVPage_Shrink, KVPage_PinWorkingSet
 ;   Globals:   g_modelbase, g_kv_len
 ; ═══════════════════════════════════════════════════════════════════
-=======
-; RawrXD Inference Engine — Monolithic Module
-; Exports: InferenceEngineInit, RunInference, TokenGenerate
->>>>>>> origin/main
 
 PUBLIC InferenceEngineInit
 PUBLIC RunInference
 PUBLIC TokenGenerate
 PUBLIC ClearKVCache
-<<<<<<< HEAD
 PUBLIC PruneKVCache
 PUBLIC UpdateImportanceScores
 PUBLIC GetTopKIndices
@@ -135,21 +129,10 @@ g_scratchA     dq ?                     ; Scratch buffer A (4KB, for RMSNorm/FFN
 g_scratchB     dq ?                     ; Scratch buffer B (4KB, for attention scores)
 g_scratchQ     dq ?                     ; Query projection buffer (head_dim floats)
 g_scratchFFN   dq ?                     ; FFN intermediate (4 * dim floats)
-=======
-PUBLIC g_modelbase
-
-.data?
-align 16
-; KV cache: use 64KB placeholder here; runtime can VirtualAlloc 2GB if needed
-g_kvcache     db 10000h dup(?)
-g_modelbase   dq ?
-g_quantscale  dd ?
->>>>>>> origin/main
 
 .data
 align 8
 g_hasAVX      dd 0
-<<<<<<< HEAD
 g_hasAVX512   dd 0                      ; Added for Phase 4A implementation
 g_decay_factor dd 0.95                  ; Score decay per inference step
 g_kvPageReady dd 0                      ; Phase 7: 1 = KV paging initialized
@@ -169,8 +152,6 @@ MEM_RESERVE_IA equ 2000h
 MEM_RELEASE_IA equ 8000h
 PAGE_RW_IA    equ 4
 SCRATCH_SIZE  equ 40000h               ; 256KB scratch area
-=======
->>>>>>> origin/main
 
 .const
 GGUF_MAGIC    dd 046554747h
@@ -178,11 +159,7 @@ Q4_0_ID      equ 2
 
 .code
 ; ────────────────────────────────────────────────────────────────
-<<<<<<< HEAD
 ; InferenceEngineInit — AVX/AVX-512 detection, KV cache init
-=======
-; InferenceEngineInit — AVX detection, KV cache init
->>>>>>> origin/main
 ;   cpuid clobbers EAX/EBX/ECX/EDX — rbx is non-volatile, must save.
 ; ────────────────────────────────────────────────────────────────
 InferenceEngineInit PROC FRAME
@@ -197,7 +174,6 @@ InferenceEngineInit PROC FRAME
     cpuid
     test    ecx, 10000000h
     jz      @no_avx
-<<<<<<< HEAD
     mov     g_hasAVX, 1
 
     ; Detect AVX-512 (CPUID.07H:EBX bit 16 for AVX512F)
@@ -313,17 +289,10 @@ InferenceEngineInit PROC FRAME
     mov     g_kvHeadStride, eax
     mov     g_tokenPos, 0
 
-=======
-
-    mov     g_hasAVX, 1
-    lea     rax, g_kvcache
-    mov     g_modelbase, rax
->>>>>>> origin/main
     xor     eax, eax
     jmp     @done
 
 @no_avx:
-<<<<<<< HEAD
     ; AVX not required — still dynamically allocate KV cache
     ; Compute element size
     mov     eax, g_modelHeads
@@ -360,10 +329,6 @@ InferenceEngineInit PROC FRAME
     call    VirtualAlloc
     mov     g_kvcache_ptr, rax
     mov     g_kvcache_size, 1000000h
-=======
-    ; AVX not required for stub — still init KV cache base
-    lea     rax, g_kvcache
->>>>>>> origin/main
     mov     g_modelbase, rax
     xor     eax, eax
 
@@ -374,7 +339,6 @@ InferenceEngineInit PROC FRAME
 InferenceEngineInit ENDP
 
 ; ────────────────────────────────────────────────────────────────
-<<<<<<< HEAD
 ; RunInference — Full transformer forward pass + autoregressive generation
 ;   RCX = pInputTokens  (DWORD array of input token IDs)
 ;   EDX = inputCount     (number of input tokens, valid 1..2048)
@@ -392,10 +356,6 @@ InferenceEngineInit ENDP
 ;     [rsp+68h] ffn_dim
 ;     [rsp+70h] kv_element_size
 ;     [rsp+78h] (reserved)
-=======
-; RunInference — generate N tokens into output buffer
-;   RCX = pContext, EDX = tokenCount, R8 = pOutputBuf
->>>>>>> origin/main
 ; ────────────────────────────────────────────────────────────────
 RunInference PROC FRAME
     push    rbx
@@ -404,7 +364,6 @@ RunInference PROC FRAME
     .pushreg rsi
     push    rdi
     .pushreg rdi
-<<<<<<< HEAD
     push    r12
     .pushreg r12
     push    r13
@@ -717,37 +676,10 @@ RunInference PROC FRAME
     pop     rdi
     pop     rsi
     pop     rbx
-=======
-    sub     rsp, 20h
-    .allocstack 20h
-    .endprolog
-
-    mov     rsi, rcx
-    mov     edi, edx
-    mov     rbx, r8
-
-    test    edi, edi
-    jz      @run_done
-
-@token_loop:
-    call    TokenGenerate
-    mov     dword ptr [rbx], eax
-    add     rbx, 4
-    dec     edi
-    jnz     @token_loop
-
-@run_done:
-    add     rsp, 20h
-    pop     rdi
-    pop     rsi
-    pop     rbx
-    xor     eax, eax
->>>>>>> origin/main
     ret
 RunInference ENDP
 
 ; ────────────────────────────────────────────────────────────────
-<<<<<<< HEAD
 ; TokenGenerate — Forward final hidden state through output projection,
 ;                 then argmax over logits to select next token ID.
 ;   No args (reads from g_scratchA as final hidden state).
@@ -839,19 +771,6 @@ TokenGenerate PROC FRAME
     pop     rdi
     pop     rsi
     pop     rbx
-=======
-; TokenGenerate — read next token from model base (stub)
-;   Returns token ID in EAX; 1 (BOS) when model unavailable (e.g. during hotswap)
-; ────────────────────────────────────────────────────────────────
-TokenGenerate PROC
-    mov     rax, g_modelbase
-    test    rax, rax
-    jz      @model_unavailable
-    mov     eax, dword ptr [rax]
-    ret
-@model_unavailable:
-    mov     eax, 1                      ; BOS token as stall (thread-safe during swap)
->>>>>>> origin/main
     ret
 TokenGenerate ENDP
 
@@ -862,7 +781,6 @@ ClearKVCache PROC FRAME
     sub     rsp, 20h
     .allocstack 20h
     .endprolog
-<<<<<<< HEAD
     mov     rdi, g_kvcache_ptr
     test    rdi, rdi
     jz      @clr_skip                    ; No cache allocated
@@ -872,18 +790,11 @@ ClearKVCache PROC FRAME
     rep stosq
 @clr_skip:
     mov     g_kv_len, 0
-=======
-    lea     rdi, g_kvcache
-    mov     rcx, 10000h / 8
-    xor     eax, eax
-    rep stosq
->>>>>>> origin/main
     add     rsp, 20h
     pop     rdi
     ret
 ClearKVCache ENDP
 
-<<<<<<< HEAD
 ; ─── X+4: Prune KV Cache (Simple Sink/Compress) ───────────────────────────
 ;   RCX = keepCount (Number of tokens to keep from the start or end)
 ;   EDX = flags (0 = keep head, 1 = keep tail)
@@ -1884,6 +1795,4 @@ KVHM_GetHeadPtr PROC
     ret
 KVHM_GetHeadPtr ENDP
 
-=======
->>>>>>> origin/main
 END

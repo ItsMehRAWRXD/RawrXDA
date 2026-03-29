@@ -149,11 +149,7 @@ AssembledBuffer AgenticAssembler::Compile(const std::string& masmSource) {
     if (!created) {
         snprintf(s_lastError, sizeof(s_lastError),
                  "AgenticAssembler: Failed to launch ml64.exe (err=%lu)",
-<<<<<<< HEAD
                  (unsigned long)::GetLastError());
-=======
-                 (unsigned long)GetLastError());
->>>>>>> origin/main
         DeleteFileA(asmPath);
         return result;
     }

@@ -1,2 +1,3 @@
+// agentic/autonomous_subagent.hpp — redirect to canonical header
 #pragma once
-// Stub for autonomous_subagent.hpp
+#include "../agent/autonomous_subagent.hpp"

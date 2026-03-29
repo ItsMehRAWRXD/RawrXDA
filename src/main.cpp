@@ -1,32 +1,19 @@
-<<<<<<< HEAD
 #include <chrono>
-=======
-#include <iostream>
-#include <string>
->>>>>>> origin/main
+#include <atomic>
 #include <csignal>
+#include <cstdlib>
+#include <filesystem>
 #include <iostream>
+#include <limits>
 #include <string>
 #include <thread>
-<<<<<<< HEAD
 #include <vector>
-=======
-#include <chrono>
->>>>>>> origin/main
 #ifdef _WIN32
 #include <direct.h>
 #else
 #include <unistd.h>
 #endif
-<<<<<<< HEAD
 #include "agent_explainability.h"
-=======
-#include "memory_core.h"
-#include "cpu_inference_engine.h"
-#include "complete_server.h"
-#include "agentic_engine.h"
-#include "subagent_core.h"
->>>>>>> origin/main
 #include "agent_history.h"
 #include "agent_policy.h"
 #include "agentic_engine.h"
@@ -34,11 +21,8 @@
 #include "complete_server.h"
 #include "cpu_inference_engine.h"
 #include "dml_inference_engine.h"
-<<<<<<< HEAD
 #include "memory_core.h"
 #include "subagent_core.h"
-=======
->>>>>>> origin/main
 
 // Phase 20-25: New subsystem headers
 #include "amd_gpu_accelerator.h"
@@ -55,11 +39,7 @@
 // Phase 20: CLI headless systems (for ! commands dispatch)
 #include "cli_headless_systems.h"
 
-<<<<<<< HEAD
 // Phase 19: CLI Autonomy Loop — headless autonomous agentic loop (same command set as Win32 IDE)
-=======
-// Phase 19: CLI Autonomy Loop — headless autonomous agentic loop (parity with Win32 IDE)
->>>>>>> origin/main
 #include "cli/cli_autonomy_loop.h"
 #include "cli/deep_iteration_engine.h"
 
@@ -71,8 +51,9 @@
 #include "security/RawrXD_Universal_Dorker.h"
 
 // Phase 33: Voice Chat Engine
-#include "core/voice_chat.hpp"
 #include "core/shared_feature_dispatch.h"
+#include "core/voice_chat.hpp"
+
 
 // Enterprise License & Feature Manager
 #include "core/enterprise_license.h"
@@ -83,14 +64,79 @@
 // Agentic Autonomous: Operation mode + Model selection + parallel cap
 #include "agentic_autonomous_config.h"
 
-<<<<<<< HEAD
+namespace
+{
+std::atomic<bool> g_shutdownRequested{false};
+
+bool tryParseIntInRange(const std::string& text, int minValue, int maxValue, int& outValue)
+{
+    try
+    {
+        size_t idx = 0;
+        int parsed = std::stoi(text, &idx);
+        if (idx != text.size())
+            return false;
+        if (parsed < minValue || parsed > maxValue)
+            return false;
+        outValue = parsed;
+        return true;
+    }
+    catch (...)
+    {
+        return false;
+    }
+}
+
+void parseHostPort(const std::string& input, std::string& hostOut, int& portOut)
+{
+    if (input.empty())
+        return;
+    std::string endpoint = input;
+    size_t schemePos = endpoint.find("://");
+    if (schemePos != std::string::npos)
+        endpoint = endpoint.substr(schemePos + 3);
+
+    size_t slashPos = endpoint.find('/');
+    if (slashPos != std::string::npos)
+        endpoint = endpoint.substr(0, slashPos);
+
+    size_t colonPos = endpoint.rfind(':');
+    if (colonPos != std::string::npos && colonPos + 1 < endpoint.size())
+    {
+        int parsedPort = portOut;
+        if (tryParseIntInRange(endpoint.substr(colonPos + 1), 1, 65535, parsedPort))
+        {
+            hostOut = endpoint.substr(0, colonPos);
+            portOut = parsedPort;
+            return;
+        }
+    }
+    hostOut = endpoint;
+}
+
+bool ensureDirectoryExists(const std::string& path, const char* label)
+{
+    std::error_code ec;
+    std::filesystem::create_directories(path, ec);
+    if (ec)
+    {
+        std::cerr << "[SYSTEM] Failed to create " << label << " directory: " << path << " (" << ec.message() << ")\n";
+        return false;
+    }
+    if (!std::filesystem::exists(path, ec) || ec)
+    {
+        std::cerr << "[SYSTEM] " << label << " directory is not accessible: " << path << "\n";
+        return false;
+    }
+    return true;
+}
+}  // namespace
+
 void SignalHandler(int signal)
 {
-=======
-void SignalHandler(int signal) {
->>>>>>> origin/main
+    (void)signal;
+    g_shutdownRequested.store(true);
     std::cout << "\n[ENGINE] Exiting...\n";
-    exit(0);
 }
 
 static void cliRegistryOutput(const char* text, void* userData)
@@ -110,9 +156,12 @@ static bool dispatchProfileBangCommand(const std::string& input)
     std::string args = (split == std::string::npos) ? "" : input.substr(split + 1);
 
     // Accept both canonical profile commands and tool-prefixed aliases.
-    if (cmd == "!tools_profile_start") cmd = "!profile_start";
-    else if (cmd == "!tools_profile_stop") cmd = "!profile_stop";
-    else if (cmd == "!tools_profile_results") cmd = "!profile_results";
+    if (cmd == "!tools_profile_start")
+        cmd = "!profile_start";
+    else if (cmd == "!tools_profile_stop")
+        cmd = "!profile_stop";
+    else if (cmd == "!tools_profile_results")
+        cmd = "!profile_results";
 
     if (!(cmd == "!profile_start" || cmd == "!profile_stop" || cmd == "!profile_results"))
         return false;
@@ -141,7 +190,18 @@ static bool dispatchProfileBangCommand(const std::string& input)
 // Build guard: compile this entry point only for the CLI target.
 // Default Win32 IDE uses win32app/Win32IDE_Main.cpp.
 #ifdef RAWRXD_STANDALONE_MAIN
-int main(int argc, char** argv)
+// Match cli_shell.cpp: feed model (output, prompt) to CLIAutonomyLoop when /autonomy start is active.
+void rawrxdStandaloneMaybeEnqueueAutonomy(const std::string& userLine, const std::string& modelOutput)
+{
+    if (modelOutput.empty())
+        return;
+    auto& loop = CLIAutonomyLoop::instance();
+    if (loop.getState() == AutonomyLoopState::Running)
+        loop.enqueueOutput(modelOutput, userLine);
+}
+}  // namespace
+
+int MainNoCRuntime(int argc, char** argv)
 {
     std::signal(SIGINT, SignalHandler);
 #ifdef RAWRXD_PURE_CLI
@@ -177,44 +237,34 @@ int main(int argc, char** argv)
     bool enable_repl = true;
     std::string history_dir = "./history";
     std::string policy_dir = "./policies";
-<<<<<<< HEAD
     std::string engine_type = "cpu";  // "cpu" or "dml"
     bool list_models_only = false;
     std::string work_dir;
 
     for (int i = 1; i < argc; ++i)
     {
-=======
-    std::string engine_type = "cpu";   // "cpu" or "dml"
-    bool list_models_only = false;
-    std::string work_dir;
-
-    for (int i = 1; i < argc; ++i) {
->>>>>>> origin/main
         std::string arg = argv[i];
         if (arg == "--model" && i + 1 < argc)
         {
             model_path = argv[++i];
-<<<<<<< HEAD
         }
         else if (arg == "--list" || arg == "-l")
         {
-=======
-        } else if (arg == "--list" || arg == "-l") {
->>>>>>> origin/main
             list_models_only = true;
         }
         else if (arg == "--dir" && i + 1 < argc)
         {
             work_dir = argv[++i];
-<<<<<<< HEAD
         }
         else if (arg == "--port" && i + 1 < argc)
         {
-=======
-        } else if (arg == "--port" && i + 1 < argc) {
->>>>>>> origin/main
-            port = static_cast<uint16_t>(std::stoi(argv[++i]));
+            int parsedPort = 0;
+            if (!tryParseIntInRange(argv[++i], 1, 65535, parsedPort))
+            {
+                std::cerr << "[ERROR] Invalid --port value. Expected 1-65535.\n";
+                return 2;
+            }
+            port = static_cast<uint16_t>(parsedPort);
         }
         else if (arg == "--engine" && i + 1 < argc)
         {
@@ -235,13 +285,9 @@ int main(int argc, char** argv)
         else if (arg == "--policy-dir" && i + 1 < argc)
         {
             policy_dir = argv[++i];
-<<<<<<< HEAD
         }
         else if (arg == "--help")
         {
-=======
-        } else if (arg == "--help") {
->>>>>>> origin/main
             std::cout << R"HELP(
 Usage: RawrEngine [options]  (or RawrXD_CLI for pure CLI build)
   --model <path>    Path to GGUF model file
@@ -306,15 +352,9 @@ REPL Commands (chat + agentic — same as Win32 IDE):
   /chain <step1> | <step2>  Run a prompt chain
   /swarm <p1> | <p2> ...    Run a HexMag swarm
   /agents                   List active agents
-<<<<<<< HEAD
   /tools                    List available agent tools (same as GUI)
   /run-tool <name> [json]   Execute tool by name (e.g. /run-tool list_dir {})
   /smoke                    Run agentic smoke test (same as GUI)
-=======
-  /tools                    List available agent tools (Win32 parity)
-  /run-tool <name> [json]   Execute tool by name (e.g. /run-tool list_dir {})
-  /smoke                    Run agentic smoke test (Win32 parity)
->>>>>>> origin/main
   /status                   Show system status
   /history [agent_id]       Show event history (Phase 5)
   /replay <agent_id>        Replay an agent run (Phase 5)
@@ -354,35 +394,29 @@ REPL Commands (chat + agentic — same as Win32 IDE):
 )HELP" << std::endl;
             return 0;
         }
+        else
+        {
+            std::cerr << "[ERROR] Unknown argument: " << arg << "\n";
+            std::cerr << "Use --help to see available options.\n";
+            return 2;
+        }
     }
 
-<<<<<<< HEAD
+    if (!(engine_type == "cpu" || engine_type == "dml" || engine_type == "directml" || engine_type == "gpu"))
+    {
+        std::cerr << "[ERROR] Invalid --engine value: " << engine_type << ". Use cpu|dml|directml|gpu.\n";
+        return 2;
+    }
+
     // --list: list Ollama models and exit (production CLI)
     if (list_models_only)
     {
-=======
-    // --list: list Ollama models and exit (production CLI parity)
-    if (list_models_only) {
->>>>>>> origin/main
         std::string host = "localhost";
         int ollama_port = 11434;
         const char* e = std::getenv("OLLAMA_HOST");
         if (e && e[0])
         {
-            std::string u = e;
-            size_t p = u.find("://");
-            if (p != std::string::npos)
-                u = u.substr(p + 3);
-            size_t c = u.rfind(':');
-            if (c != std::string::npos && c + 1 < u.size())
-            {
-                host = u.substr(0, c);
-                ollama_port = std::stoi(u.substr(c + 1));
-            }
-            else
-            {
-                host = u;
-            }
+            parseHostPort(e, host, ollama_port);
         }
         std::vector<std::string> names;
         if (OllamaListModelsSync(host, ollama_port, names))
@@ -426,6 +460,11 @@ REPL Commands (chat + agentic — same as Win32 IDE):
 #endif
     }
 
+    if (!ensureDirectoryExists(history_dir, "history") || !ensureDirectoryExists(policy_dir, "policy"))
+    {
+        return 2;
+    }
+
     // ═══════════════════════════════════════════════════════════════════
     // Enterprise License System — initialize FIRST (gates engine registration)
     // ═══════════════════════════════════════════════════════════════════
@@ -448,7 +487,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
     RawrXD::DMLInferenceEngine dmlEngine;
     RawrXD::InferenceEngine* engine = nullptr;
 
-<<<<<<< HEAD
     if (engine_type == "dml" || engine_type == "directml" || engine_type == "gpu")
     {
         std::cout << "[SYSTEM] Using DirectML GPU inference engine (AMD RX 7800 XT)\n";
@@ -456,23 +494,70 @@ REPL Commands (chat + agentic — same as Win32 IDE):
     }
     else
     {
-=======
-    if (engine_type == "dml" || engine_type == "directml" || engine_type == "gpu") {
-        std::cout << "[SYSTEM] Using DirectML GPU inference engine (AMD RX 7800 XT)\n";
-        engine = &dmlEngine;
-    } else {
->>>>>>> origin/main
         std::cout << "[SYSTEM] Using CPU inference engine\n";
         engine = &cpuEngine;
     }
 
-<<<<<<< HEAD
+    // Initialize AI backend manager early for auto-downgrade support
+    AIBackendManager backendMgr;
+    backendMgr.setLogCallback(
+        [](int level, const std::string& msg)
+        {
+            const char* prefix[] = {"[DEBUG]", "[INFO]", "[WARN]", "[ERROR]"};
+            if (level >= 0 && level <= 3)
+            {
+                std::cout << prefix[level] << " " << msg << "\n";
+            }
+        });
+
+    // Pre-register Ollama as a common second backend for auto-fallback
+    {
+        AIBackendConfig ollama;
+        ollama.id = "ollama";
+        ollama.displayName = "Ollama";
+        ollama.type = AIBackendType::Ollama;
+        ollama.endpoint = "http://localhost:11434";
+        ollama.model = "llama3";
+        ollama.enabled = true;
+        backendMgr.addBackend(ollama);
+    }
+
     if (!model_path.empty())
     {
         std::cout << "[SYSTEM] Loading model: " << model_path << "\n";
+
+        // Track the model path for auto-downgrade functionality
+        backendMgr.setLoadedModelPath(model_path);
+
         if (!engine->LoadModel(model_path))
         {
-            std::cout << "[SYSTEM] Model load failed. /complete will return empty results.\n";
+            std::cout << "[SYSTEM] Initial model load failed. Attempting auto-downgrade...\n";
+
+            // Attempt auto-downgrade to smaller quantized siblings
+            std::string downgradedPath;
+            std::string downgradeFailure;
+            bool downgraded = backendMgr.tryAutoDowngradeLocalModel(
+                [engine](const std::string& candidatePath) -> bool
+                {
+                    std::cout << "[SYSTEM] Trying candidate: " << candidatePath << "\n";
+                    return engine->LoadModel(candidatePath);
+                },
+                &downgradedPath, &downgradeFailure);
+
+            if (downgraded)
+            {
+                std::cout << "[SYSTEM] Auto-downgrade succeeded: " << downgradedPath << "\n";
+                std::cout << "[SYSTEM] Model loaded via " << engine->GetEngineName() << " engine (downgraded).\n";
+            }
+            else
+            {
+                std::cout << "[SYSTEM] Model load failed and auto-downgrade failed: " << downgradeFailure << "\n";
+                std::cout << "[SYSTEM] /complete will return empty results or fallback to Ollama if available.\n";
+
+                // Set metadata-only blocking state for potential Ollama fallback
+                std::string blockReason = "Model loading failed. " + downgradeFailure;
+                backendMgr.setLocalMetadataOnlyBlocked(blockReason);
+            }
         }
         else
         {
@@ -481,16 +566,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
     }
     else
     {
-=======
-    if (!model_path.empty()) {
-        std::cout << "[SYSTEM] Loading model: " << model_path << "\n";
-        if (!engine->LoadModel(model_path)) {
-            std::cout << "[SYSTEM] Model load failed. /complete will return empty results.\n";
-        } else {
-            std::cout << "[SYSTEM] Model loaded via " << engine->GetEngineName() << " engine.\n";
-        }
-    } else {
->>>>>>> origin/main
         std::cout << "[SYSTEM] No model specified. Use --model <path> to load a GGUF.\n";
     }
 
@@ -500,7 +575,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
 
     // Initialize sub-agent manager with console logging
     SubAgentManager subAgentMgr(&agentEngine);
-<<<<<<< HEAD
     subAgentMgr.setLogCallback(
         [](int level, const std::string& msg)
         {
@@ -540,45 +614,11 @@ REPL Commands (chat + agentic — same as Win32 IDE):
     subAgentMgr.setPolicyEngine(&policyEngine);
     std::cout << "[SYSTEM] Policy engine: " << policyEngine.policyCount() << " policies loaded from " << policy_dir
               << "\n";
-=======
-    subAgentMgr.setLogCallback([](int level, const std::string& msg) {
-        const char* prefix[] = {"[DEBUG]", "[INFO]", "[WARN]", "[ERROR]"};
-        if (level >= 0 && level <= 3) {
-            std::cout << prefix[level] << " " << msg << "\n";
-        }
-    });
-
-    // Initialize event history recorder (Phase 5)
-    AgentHistoryRecorder historyRecorder(history_dir);
-    historyRecorder.setLogCallback([](int level, const std::string& msg) {
-        const char* prefix[] = {"[DEBUG]", "[INFO]", "[WARN]", "[ERROR]"};
-        if (level >= 0 && level <= 3) {
-            std::cout << prefix[level] << " " << msg << "\n";
-        }
-    });
-    subAgentMgr.setHistoryRecorder(&historyRecorder);
-    std::cout << "[SYSTEM] Event history: session=" << historyRecorder.sessionId()
-              << " dir=" << history_dir << "\n";
-
-    // Initialize policy engine (Phase 7)
-    PolicyEngine policyEngine(policy_dir);
-    policyEngine.setLogCallback([](int level, const std::string& msg) {
-        const char* prefix[] = {"[DEBUG]", "[INFO]", "[WARN]", "[ERROR]"};
-        if (level >= 0 && level <= 3) {
-            std::cout << prefix[level] << " " << msg << "\n";
-        }
-    });
-    policyEngine.setHistoryRecorder(&historyRecorder);
-    subAgentMgr.setPolicyEngine(&policyEngine);
-    std::cout << "[SYSTEM] Policy engine: " << policyEngine.policyCount()
-              << " policies loaded from " << policy_dir << "\n";
->>>>>>> origin/main
 
     // Initialize explainability engine (Phase 8A — read-only)
     ExplainabilityEngine explainEngine;
     explainEngine.setHistoryRecorder(&historyRecorder);
     explainEngine.setPolicyEngine(&policyEngine);
-<<<<<<< HEAD
     explainEngine.setLogCallback(
         [](int level, const std::string& msg)
         {
@@ -588,14 +628,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                 std::cout << prefix[level] << " " << msg << "\n";
             }
         });
-=======
-    explainEngine.setLogCallback([](int level, const std::string& msg) {
-        const char* prefix[] = {"[DEBUG]", "[INFO]", "[WARN]", "[ERROR]"};
-        if (level >= 0 && level <= 3) {
-            std::cout << prefix[level] << " " << msg << "\n";
-        }
-    });
->>>>>>> origin/main
     std::cout << "[SYSTEM] Explainability engine: ready (Phase 8A)\n";
 
     // Initialize headless CLI subsystems (safety, confidence, replay, governor, multi-response)
@@ -622,37 +654,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
         std::cout << "[SYSTEM] Deep Iteration: ready (use /deep-iterate <path> [max] for audit→code cycles)\n";
     }
 
-    // Initialize AI backend manager (Phase 8B)
-    AIBackendManager backendMgr;
-<<<<<<< HEAD
-    backendMgr.setLogCallback(
-        [](int level, const std::string& msg)
-        {
-            const char* prefix[] = {"[DEBUG]", "[INFO]", "[WARN]", "[ERROR]"};
-            if (level >= 0 && level <= 3)
-            {
-                std::cout << prefix[level] << " " << msg << "\n";
-            }
-        });
-=======
-    backendMgr.setLogCallback([](int level, const std::string& msg) {
-        const char* prefix[] = {"[DEBUG]", "[INFO]", "[WARN]", "[ERROR]"};
-        if (level >= 0 && level <= 3) {
-            std::cout << prefix[level] << " " << msg << "\n";
-        }
-    });
->>>>>>> origin/main
-    // Pre-register Ollama as a common second backend
-    {
-        AIBackendConfig ollama;
-        ollama.id = "ollama";
-        ollama.displayName = "Ollama";
-        ollama.type = AIBackendType::Ollama;
-        ollama.endpoint = "http://localhost:11434";
-        ollama.model = "llama3";
-        ollama.enabled = true;
-        backendMgr.addBackend(ollama);
-    }
     std::cout << "[SYSTEM] Backend manager: " << backendMgr.backendCount()
               << " backends, active=" << backendMgr.getActiveBackendName() << " (Phase 8B)\n";
 
@@ -662,12 +663,7 @@ REPL Commands (chat + agentic — same as Win32 IDE):
     auto& gpuAccel = AMDGPUAccelerator::instance();
     {
         auto r = gpuAccel.initialize(GPUBackend::Auto);
-<<<<<<< HEAD
         std::cout << "[SYSTEM] AMD GPU Accelerator: " << r.detail << " GPU=" << (gpuAccel.isGPUEnabled() ? "ON" : "OFF")
-=======
-        std::cout << "[SYSTEM] AMD GPU Accelerator: " << r.detail
-                  << " GPU=" << (gpuAccel.isGPUEnabled() ? "ON" : "OFF")
->>>>>>> origin/main
                   << " backend=" << gpuAccel.getBackendName() << "\n";
     }
 
@@ -677,13 +673,8 @@ REPL Commands (chat + agentic — same as Win32 IDE):
     auto& kernelTuner = GPUKernelAutoTuner::instance();
     {
         auto r = kernelTuner.initialize();
-<<<<<<< HEAD
         std::cout << "[SYSTEM] GPU Kernel Auto-Tuner: " << r.detail << " cache=" << kernelTuner.getCacheSize()
                   << " entries\n";
-=======
-        std::cout << "[SYSTEM] GPU Kernel Auto-Tuner: " << r.detail
-                  << " cache=" << kernelTuner.getCacheSize() << " entries\n";
->>>>>>> origin/main
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -719,13 +710,8 @@ REPL Commands (chat + agentic — same as Win32 IDE):
     auto& webrtc = WebRTCSignaling::instance();
     {
         auto r = webrtc.initialize("wss://signal.rawrxd.local:8443");
-<<<<<<< HEAD
         std::cout << "[SYSTEM] WebRTC P2P Signaling: " << r.detail << " peers=" << webrtc.getConnectedPeerCount()
                   << "\n";
-=======
-        std::cout << "[SYSTEM] WebRTC P2P Signaling: " << r.detail
-                  << " peers=" << webrtc.getConnectedPeerCount() << "\n";
->>>>>>> origin/main
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -740,11 +726,7 @@ REPL Commands (chat + agentic — same as Win32 IDE):
     // ═══════════════════════════════════════════════════════════════════
     // Phase 21: Distributed Swarm Inference Orchestrator
     // ═══════════════════════════════════════════════════════════════════
-<<<<<<< HEAD
     RawrXD::SwarmOrchestrator swarmOrchestrator;
-=======
-    auto& swarmOrchestrator = RawrXD::Swarm::SwarmOrchestrator::instance();
->>>>>>> origin/main
     std::cout << "[SYSTEM] Swarm Orchestrator: ready (use !swarm_join to start)\n";
 
     // ═══════════════════════════════════════════════════════════════════
@@ -753,7 +735,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
     // ═══════════════════════════════════════════════════════════════════
 #ifdef RAWRXD_LINK_REVERSE_ENGINEERED_ASM
     {
-<<<<<<< HEAD
         auto reResult =
             RawrXD::ReverseEngineered::InitializeAllSubsystems(0,   // workerCount: auto-detect from CPU cores
                                                                0,   // heartbeatPort: 0 = disabled for single-node CLI
@@ -761,28 +742,13 @@ REPL Commands (chat + agentic — same as Win32 IDE):
             );
         std::cout << "[SYSTEM] ReverseEngineered Kernel: " << reResult.detail
                   << " (scheduler=" << (reResult.success ? "ON" : "OFF") << ", deadlock_detect=ON, GPU_DMA=ready)\n";
-=======
-        auto reResult = RawrXD::ReverseEngineered::InitializeAllSubsystems(
-            0,      // workerCount: auto-detect from CPU cores
-            0,      // heartbeatPort: 0 = disabled for single-node CLI
-            256     // maxResources for conflict detection
-        );
-        std::cout << "[SYSTEM] ReverseEngineered Kernel: " << reResult.detail
-                  << " (scheduler=" << (reResult.success ? "ON" : "OFF")
-                  << ", deadlock_detect=ON, GPU_DMA=ready)\n";
->>>>>>> origin/main
 
         if (reResult.success)
         {
             // Report high-res tick capability
             uint64_t tick = GetHighResTick();
             uint64_t us = TicksToMicroseconds(1);
-<<<<<<< HEAD
             std::cout << "[SYSTEM]   Timer resolution: " << (us > 0 ? "sub-microsecond" : "millisecond") << "\n";
-=======
-            std::cout << "[SYSTEM]   Timer resolution: "
-                      << (us > 0 ? "sub-microsecond" : "millisecond") << "\n";
->>>>>>> origin/main
         }
     }
 #else
@@ -802,7 +768,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
         server.Start(port, engine, model_path);
     }
 
-<<<<<<< HEAD
     if (enable_repl)
     {
         std::cout << "[SYSTEM] Interactive REPL ready. Type 'exit' to quit, /help for commands.\n\n";
@@ -932,129 +897,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
             }
             else if (input.substr(0, 5) == "/chat" || (input[0] != '/' && !input.empty()))
             {
-=======
-    if (enable_repl) {
-        std::cout << "[SYSTEM] Interactive REPL ready. Type 'exit' to quit, /help for commands.\n\n";
-        std::string input;
-        while (true) {
-            std::cout << "RawrXD> ";
-            std::getline(std::cin, input);
-            if (input == "exit" || input == "/exit") break;
-            if (input.empty()) continue;
-
-            if (input == "/help") {
-                std::cout << "Commands (full parity with Win32 IDE — chat + agentic autonomous):\n"
-                          << "  /chat <message>         Chat (GGUF or Ollama if no model loaded)\n"
-                          << "  /chat /model:<name> <m> Chat using Ollama model <name>\n"
-                          << "  /wish <natural lang>    Execute user wish (same as API /api/agent/wish)\n"
-                          << "  /agent <prompt> [N]     Agentic loop: chat + tools until done (max N cycles, default 10)\n"
-                          << "  /subagent <prompt>      Spawn a sub-agent\n"
-                          << "  /chain <s1> | <s2> ...  Run a sequential chain\n"
-                          << "  /swarm <p1> | <p2> ...  Run a HexMag swarm\n"
-                          << "  /agents                 List all sub-agents\n"
-                          << "  /tools                  List available agent tools (Win32 parity)\n"
-                          << "  /run-tool <name> [json]  Execute tool by name (e.g. /run-tool list_dir {})\n"
-                          << "  /smoke                  Run agentic smoke test (Win32 parity)\n"
-                          << "  /status                 System status\n"
-                          << "  /todo                   Show todo list\n"
-                          << "  /history [agent_id]     Event history (Phase 5)\n"
-                          << "  /replay <agent_id>      Replay an agent run (Phase 5)\n"
-                          << "  /stats                  History statistics (Phase 5)\n"
-                          << "  /policies               List active policies (Phase 7)\n"
-                          << "  /suggest                Generate policy suggestions (Phase 7)\n"
-                          << "  /policy accept <id>     Accept a suggestion (Phase 7)\n"
-                          << "  /policy reject <id>     Reject a suggestion (Phase 7)\n"
-                          << "  /policy export <file>   Export policies to file (Phase 7)\n"
-                          << "  /policy import <file>   Import policies from file (Phase 7)\n"
-                          << "  /heuristics             Compute & show heuristics (Phase 7)\n"
-                          << "  /explain <agent_id>     Explain agent decision (Phase 8A)\n"
-                          << "  /explain last           Explain most recent agent (Phase 8A)\n"
-                          << "  /explain session        Explain full session (Phase 8A)\n"
-                          << "  /explain snapshot <f>   Export snapshot to file (Phase 8A)\n"
-                          << "  /backend list           List all backends (Phase 8B)\n"
-                          << "  /backend use <id>       Switch active backend (Phase 8B)\n"
-                          << "  /backend status         Show active backend status (Phase 8B)\n"
-                          << "  /gpu                    GPU acceleration status (Phase 25)\n"
-                          << "  /gpu on                 Enable GPU acceleration (Phase 25)\n"
-                          << "  /gpu off                Disable GPU acceleration (Phase 25)\n"
-                          << "  /gpu toggle             Toggle GPU on/off (Phase 25)\n"
-                          << "  /gpu features           Show AMD GPU features (Phase 25)\n"
-                          << "  /gpu memory             Show GPU memory usage (Phase 25)\n"
-                          << "  /tune                   Run GPU kernel auto-tuner (Phase 23)\n"
-                          << "  /tune cache             Show tuning cache (Phase 23)\n"
-                          << "  /swarm bridge           Swarm decision bridge status (Phase 21)\n"
-                          << "  /hotpatch status        Universal model hotpatcher (Phase 21)\n"
-                          << "  /webrtc                 WebRTC signaling status (Phase 20)\n"
-                          << "  /sandbox list           List active sandboxes (Phase 24)\n"
-                          << "  /sandbox create         Create a new sandbox (Phase 24)\n"
-                          << "  /release                 Production release status (Phase 22)\n"
-                          << "  /security                Security dashboard (Phase 51)\n"
-                          << "  /dork status             Dork scanner + Universal Dorker status (Phase 51)\n"
-                          << "\n  Autonomy (background agentic loop — parity with Win32 IDE):\n"
-                          << "  /autonomy start          Start autonomous loop (poll→detect→decide→act→verify)\n"
-                          << "  /autonomy stop           Stop autonomous loop\n"
-                          << "  /autonomy pause          Pause autonomy loop\n"
-                          << "  /autonomy resume         Resume paused autonomy loop\n"
-                          << "  /autonomy status         Show autonomy loop state and stats\n"
-                          << "\n  Deep Iteration (audit→code cycles, beyond Copilot/Cursor):\n"
-                          << "  /deep-iterate <path> [max] [--write]  Run audit→code cycles; --write saves result to file\n"
-                          << "  /deep-status                Show deep iteration stats\n"
-                          << "  /deep-config [key=value]    Get/set: max_iterations, convergence_window, min_complexity, max_tokens\n"
-                          << "\n  Agentic Autonomous:\n"
-                          << "  /agentic                 Show operation + model config\n"
-                          << "  /agentic mode <Agent|Plan|Debug|Ask>  Set operation mode\n"
-                          << "  /models                  Show model selection + cap + cycle\n"
-                          << "  /models mode <Auto|MAX|multiple>  Set model selection mode\n"
-                          << "  /models per-model <1-4>  Instances per model (when multiple)\n"
-                          << "  /models cap <1-40>       Max models in parallel (cap 40)\n"
-                          << "  /models cycle <1-4>      Cycle agent counter (1x-4x)\n"
-                          << "\n  Enterprise License:\n"
-                          << "  /license                 License dashboard (edition + features)\n"
-                          << "  /license audit           Full enterprise feature audit\n"
-                          << "  /license unlock          Dev unlock (RAWRXD_ENTERPRISE_DEV=1)\n"
-                          << "  /license hwid            Show hardware ID\n"
-                          << "  /license install <file>  Install .rawrlic license file\n"
-                          << "  /license features        List all 8 enterprise features\n"
-                          << "\n  Phase 20 — Model Surgery:\n"
-                          << "  !model_load <path>       Analyze GGUF model (Phase 20)\n"
-                          << "  !model_plan              Compute optimal quant plan (Phase 20)\n"
-                          << "  !model_surgery           Apply streaming requantization (Phase 20)\n"
-                          << "  !pressure_auto           Enable auto VRAM pressure response (Phase 20)\n"
-                          << "  !model_status            Show model hotpatcher status (Phase 20)\n"
-                          << "  !model_layers            List loaded model layers (Phase 20)\n"
-                          << "\n  Phase 21 — Distributed Swarm Inference:\n"
-                          << "  !swarm_join [ip]         Join swarm or become coordinator (Phase 21)\n"
-                          << "  !swarm_status            Show swarm topology (Phase 21)\n"
-                          << "  !swarm_distribute <m> <n> Distribute model layers (Phase 21)\n"
-                          << "  !swarm_rebalance         Rebalance by VRAM pressure (Phase 21)\n"
-                          << "  !swarm_nodes             List swarm nodes (Phase 21)\n"
-                          << "  !swarm_shards            List layer shards (Phase 21)\n"
-                          << "  !swarm_leave             Leave the swarm (Phase 21)\n"
-                          << "  !swarm_stats             Show swarm network stats (Phase 21)\n"
-                          << "\n  Phase 33 — Voice Chat:\n"
-                          << "  /voice record            Start/stop audio recording (Phase 33)\n"
-                          << "  /voice play              Play last recording (Phase 33)\n"
-                          << "  /voice transcribe        Transcribe last recording (Phase 33)\n"
-                          << "  /voice speak <text>      Text-to-speech (Phase 33)\n"
-                          << "  /voice devices           List audio devices (Phase 33)\n"
-                          << "  /voice mode <ptt|vad|off> Set voice mode (Phase 33)\n"
-                          << "  /voice room <name>       Join/leave voice room (Phase 33)\n"
-                          << "  /voice status            Voice chat status (Phase 33)\n"
-                          << "  /voice metrics           Voice chat metrics (Phase 33)\n"
-                          << "\n  Phase 26 — ReverseEngineered Kernel:\n"
-                          << "  /scheduler status       Work-stealing scheduler status\n"
-                          << "  /scheduler submit       Submit a test task\n"
-                          << "  /conflict status        Conflict detector / deadlock stats\n"
-                          << "  /heartbeat status       Heartbeat monitor node health\n"
-                          << "  /heartbeat add <ip> <p> Add heartbeat peer node\n"
-                          << "  /gpu dma status         GPU DMA transfer status\n"
-                          << "  /tensor bench           Run quantized matmul benchmark\n"
-                          << "  /timer                  High-res timer test\n"
-                          << "  /crc32 <text>           CRC32 of arbitrary text\n"
-                          << "  exit                    Quit\n\n";
-            }
-            else if (input.substr(0, 5) == "/chat" || (input[0] != '/' && !input.empty())) {
->>>>>>> origin/main
                 std::string raw = (input.substr(0, 5) == "/chat") ? input.substr(5) : input;
                 while (!raw.empty() && (raw[0] == ' ' || raw[0] == '\t'))
                     raw.erase(0, 1);
@@ -1095,34 +937,12 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                             const char* envHost = std::getenv("OLLAMA_HOST");
                             if (envHost && envHost[0])
                             {
-                                std::string u = envHost;
-                                size_t p = u.find("://");
-                                if (p != std::string::npos)
-                                    u = u.substr(p + 3);
-                                size_t c = u.rfind(':');
-                                if (c != std::string::npos && c + 1 < u.size())
-                                {
-                                    host = u.substr(0, c);
-                                    port = std::stoi(u.substr(c + 1));
-                                }
-                                else
-                                {
-                                    host = u;
-                                }
+                                parseHostPort(envHost, host, port);
                             }
                             else if (backendMgr.getActiveId() == "ollama")
                             {
                                 auto cfg = backendMgr.getActiveBackend();
-                                std::string ep = cfg.endpoint;
-                                size_t p = ep.find("://");
-                                if (p != std::string::npos)
-                                    ep = ep.substr(p + 3);
-                                size_t c = ep.rfind(':');
-                                if (c != std::string::npos && c + 1 < ep.size())
-                                {
-                                    host = ep.substr(0, c);
-                                    port = std::stoi(ep.substr(c + 1));
-                                }
+                                parseHostPort(cfg.endpoint, host, port);
                             }
                             std::string ollamaModel =
                                 modelOverride.empty() ? backendMgr.getActiveBackend().model : modelOverride;
@@ -1156,6 +976,7 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                     else
                     {
                         std::cout << response << "\n";
+                        rawrxdStandaloneMaybeEnqueueAutonomy(input, response);
                         auto operationMode = RawrXD::AgenticAutonomousConfig::instance().getOperationMode();
                         bool allowTools = (operationMode != RawrXD::AgenticOperationMode::Ask &&
                                            operationMode != RawrXD::AgenticOperationMode::Plan);
@@ -1174,21 +995,17 @@ REPL Commands (chat + agentic — same as Win32 IDE):
             {
                 std::string wish = input.substr(6);
                 std::string msg = "Execute the following user wish. Respond with a clear plan or result: " + wish;
-<<<<<<< HEAD
                 if (agentEngine.isModelLoaded())
                 {
-=======
-                if (agentEngine.isModelLoaded()) {
->>>>>>> origin/main
                     historyRecorder.recordChatRequest(msg);
                     auto chatStart = std::chrono::steady_clock::now();
                     std::string response = agentEngine.chat(msg);
                     auto chatEnd = std::chrono::steady_clock::now();
-<<<<<<< HEAD
                     historyRecorder.recordChatResponse(
                         response,
                         (int)std::chrono::duration_cast<std::chrono::milliseconds>(chatEnd - chatStart).count());
                     std::cout << response << "\n";
+                    rawrxdStandaloneMaybeEnqueueAutonomy(input, response);
                     std::string toolResult;
                     if (subAgentMgr.dispatchToolCall("repl", response, toolResult))
                     {
@@ -1197,50 +1014,19 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                 }
                 else
                 {
-=======
-                    historyRecorder.recordChatResponse(response, (int)std::chrono::duration_cast<std::chrono::milliseconds>(chatEnd - chatStart).count());
-                    std::cout << response << "\n";
-                    std::string toolResult;
-                    if (subAgentMgr.dispatchToolCall("repl", response, toolResult)) {
-                        std::cout << "\n[Tool Result]\n" << toolResult << "\n";
-                    }
-                } else {
->>>>>>> origin/main
                     std::string host = "localhost";
                     int port = 11434;
                     const char* envHost = std::getenv("OLLAMA_HOST");
                     if (envHost && envHost[0])
                     {
-                        std::string u = envHost;
-                        size_t p = u.find("://");
-                        if (p != std::string::npos)
-                            u = u.substr(p + 3);
-                        size_t c = u.rfind(':');
-                        if (c != std::string::npos && c + 1 < u.size())
-                        {
-                            host = u.substr(0, c);
-                            port = std::stoi(u.substr(c + 1));
-                        }
-                        else
-                        {
-                            host = u;
-                        }
+                        parseHostPort(envHost, host, port);
                     }
                     else
                     {
                         auto cfg = backendMgr.getActiveBackend();
                         if (cfg.type == AIBackendType::Ollama && !cfg.endpoint.empty())
                         {
-                            std::string ep = cfg.endpoint;
-                            size_t p = ep.find("://");
-                            if (p != std::string::npos)
-                                ep = ep.substr(p + 3);
-                            size_t c = ep.rfind(':');
-                            if (c != std::string::npos && c + 1 < ep.size())
-                            {
-                                host = ep.substr(0, c);
-                                port = std::stoi(ep.substr(c + 1));
-                            }
+                            parseHostPort(cfg.endpoint, host, port);
                         }
                     }
                     std::string model = backendMgr.getActiveBackend().model;
@@ -1250,6 +1036,7 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                     if (OllamaGenerateSync(host, port, model, msg, response))
                     {
                         std::cout << response << "\n";
+                        rawrxdStandaloneMaybeEnqueueAutonomy(input, response);
                     }
                     else
                     {
@@ -1309,36 +1096,14 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                             const char* e = std::getenv("OLLAMA_HOST");
                             if (e && e[0])
                             {
-                                std::string u = e;
-                                size_t p = u.find("://");
-                                if (p != std::string::npos)
-                                    u = u.substr(p + 3);
-                                size_t c = u.rfind(':');
-                                if (c != std::string::npos && c + 1 < u.size())
-                                {
-                                    host = u.substr(0, c);
-                                    port = std::stoi(u.substr(c + 1));
-                                }
-                                else
-                                {
-                                    host = u;
-                                }
+                                parseHostPort(e, host, port);
                             }
                             else
                             {
                                 auto cfg = backendMgr.getActiveBackend();
                                 if (cfg.type == AIBackendType::Ollama && !cfg.endpoint.empty())
                                 {
-                                    std::string ep = cfg.endpoint;
-                                    size_t p = ep.find("://");
-                                    if (p != std::string::npos)
-                                        ep = ep.substr(p + 3);
-                                    size_t c = ep.rfind(':');
-                                    if (c != std::string::npos && c + 1 < ep.size())
-                                    {
-                                        host = ep.substr(0, c);
-                                        port = std::stoi(ep.substr(c + 1));
-                                    }
+                                    parseHostPort(cfg.endpoint, host, port);
                                 }
                             }
                             std::string model = backendMgr.getActiveBackend().model;
@@ -1348,6 +1113,7 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                                 response = "[Ollama error]";
                         }
                         std::cout << "\n[Cycle " << (i + 1) << "]\n" << response << "\n";
+                        rawrxdStandaloneMaybeEnqueueAutonomy(currentPrompt, response);
                         if (!allowTools)
                             break;
                         std::string toolResult;
@@ -1410,14 +1176,9 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                 std::string result = subAgentMgr.executeSwarm("repl", prompts);
                 std::cout << "[Swarm Result]\n" << result << "\n";
             }
-<<<<<<< HEAD
             else if (input == "/tools")
             {
                 std::cout << "Available Agent Tools (same as GUI):\n\n";
-=======
-            else if (input == "/tools") {
-                std::cout << "Available Agent Tools (101% Win32 parity):\n\n";
->>>>>>> origin/main
                 std::cout << "  • shell, powershell     — Run terminal commands\n";
                 std::cout << "  • read_file, write_file, list_dir — File operations\n";
                 std::cout << "  • runSubagent           — Spawn sub-agent\n";
@@ -1487,36 +1248,14 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                         const char* e = std::getenv("OLLAMA_HOST");
                         if (e && e[0])
                         {
-                            std::string u = e;
-                            size_t p = u.find("://");
-                            if (p != std::string::npos)
-                                u = u.substr(p + 3);
-                            size_t c = u.rfind(':');
-                            if (c != std::string::npos && c + 1 < u.size())
-                            {
-                                host = u.substr(0, c);
-                                port = std::stoi(u.substr(c + 1));
-                            }
-                            else
-                            {
-                                host = u;
-                            }
+                            parseHostPort(e, host, port);
                         }
                         else
                         {
                             auto cfg = backendMgr.getActiveBackend();
                             if (cfg.type == AIBackendType::Ollama && !cfg.endpoint.empty())
                             {
-                                std::string ep = cfg.endpoint;
-                                size_t p = ep.find("://");
-                                if (p != std::string::npos)
-                                    ep = ep.substr(p + 3);
-                                size_t c = ep.rfind(':');
-                                if (c != std::string::npos && c + 1 < ep.size())
-                                {
-                                    host = ep.substr(0, c);
-                                    port = std::stoi(ep.substr(c + 1));
-                                }
+                                parseHostPort(cfg.endpoint, host, port);
                             }
                         }
                         std::string model = backendMgr.getActiveBackend().model;
@@ -1526,6 +1265,7 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                             response = "[Ollama error: start ollama serve]";
                     }
                     std::cout << "\n[Cycle " << (i + 1) << "]\n" << response << "\n";
+                    rawrxdStandaloneMaybeEnqueueAutonomy(currentPrompt, response);
                     if (!allowTools)
                         break;
                     std::string toolResult;
@@ -1537,7 +1277,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                 }
                 std::cout << "[Smoke] Done. Check agent_smoke_test.txt for verification.\n\n";
             }
-<<<<<<< HEAD
             else if (input == "/agents")
             {
                 auto agents = subAgentMgr.getAllSubAgents();
@@ -1562,25 +1301,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
             // ── Autonomy Loop (same as Win32 IDE: Start/Stop) ──
             else if (input == "/autonomy start")
             {
-=======
-            else if (input == "/agents") {
-                auto agents = subAgentMgr.getAllSubAgents();
-                if (agents.empty()) {
-                    std::cout << "No sub-agents.\n";
-                } else {
-                    for (const auto& a : agents) {
-                        std::cout << "  " << a.id << " [" << a.stateString() << "] "
-                                  << a.description << " (" << a.elapsedMs() << "ms)\n";
-                    }
-                }
-            }
-            else if (input == "/status") {
-                std::cout << "Model loaded: " << (agentEngine.isModelLoaded() ? "yes" : "no") << "\n";
-                std::cout << subAgentMgr.getStatusSummary() << "\n";
-            }
-            // ── Autonomy Loop (parity with Win32 IDE Autonomy: Start/Stop) ──
-            else if (input == "/autonomy start") {
->>>>>>> origin/main
                 CLIAutonomyLoop::instance().start();
             }
             else if (input == "/autonomy stop")
@@ -1674,18 +1394,30 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                             key.pop_back();
                         while (!val.empty() && (val[0] == ' ' || val[0] == '\t'))
                             val.erase(0, 1);
-                        if (key == "max_iterations")
-                            cfg.maxIterations = std::max(1, std::min(50, std::stoi(val)));
-                        else if (key == "convergence_window")
-                            cfg.convergenceWindow = std::max(1, std::min(20, std::stoi(val)));
-                        else if (key == "min_complexity")
-                            cfg.minComplexityPreservation = std::max(0.0f, std::min(1.0f, std::stof(val)));
-                        else if (key == "max_tokens")
-                            cfg.maxTokensPerPhase = std::max(256, std::min(32768, std::stoi(val)));
-                        else if (key == "write_result")
-                            cfg.writeResultToFile = (val == "1" || val == "true" || val == "yes");
-                        DeepIterationEngine::instance().setConfig(cfg);
-                        std::cout << "[Deep Config] Set " << key << " = " << val << "\n";
+                        try
+                        {
+                            if (key == "max_iterations")
+                                cfg.maxIterations = std::max(1, std::min(50, std::stoi(val)));
+                            else if (key == "convergence_window")
+                                cfg.convergenceWindow = std::max(1, std::min(20, std::stoi(val)));
+                            else if (key == "min_complexity")
+                                cfg.minComplexityPreservation = std::max(0.0f, std::min(1.0f, std::stof(val)));
+                            else if (key == "max_tokens")
+                                cfg.maxTokensPerPhase = std::max(256, std::min(32768, std::stoi(val)));
+                            else if (key == "write_result")
+                                cfg.writeResultToFile = (val == "1" || val == "true" || val == "yes");
+                            else
+                            {
+                                std::cout << "[ERROR] Unknown deep-config key: " << key << "\n";
+                                continue;
+                            }
+                            DeepIterationEngine::instance().setConfig(cfg);
+                            std::cout << "[Deep Config] Set " << key << " = " << val << "\n";
+                        }
+                        catch (...)
+                        {
+                            std::cout << "[ERROR] Invalid value for key '" << key << "': " << val << "\n";
+                        }
                     }
                     else
                     {
@@ -1693,7 +1425,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                     }
                 }
             }
-<<<<<<< HEAD
             else if (input == "/todo")
             {
                 auto todos = subAgentMgr.getTodoList();
@@ -1712,18 +1443,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                             icon = "✅";
                         else if (t.status == TodoItem::Status::Failed)
                             icon = "❌";
-=======
-            else if (input == "/todo") {
-                auto todos = subAgentMgr.getTodoList();
-                if (todos.empty()) {
-                    std::cout << "Todo list empty.\n";
-                } else {
-                    for (const auto& t : todos) {
-                        std::string icon = "⬜";
-                        if (t.status == TodoItem::Status::InProgress) icon = "🔄";
-                        else if (t.status == TodoItem::Status::Completed) icon = "✅";
-                        else if (t.status == TodoItem::Status::Failed) icon = "❌";
->>>>>>> origin/main
                         std::cout << "  " << icon << " [" << t.id << "] " << t.title << "\n";
                     }
                 }
@@ -1740,20 +1459,15 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                 {
                     events = historyRecorder.getAgentTimeline(agentFilter);
                     std::cout << "[History] Events for agent " << agentFilter << ":\n";
-<<<<<<< HEAD
                 }
                 else
                 {
-=======
-                } else {
->>>>>>> origin/main
                     HistoryQuery q;
                     q.limit = 25;
                     events = historyRecorder.query(q);
                     std::cout << "[History] Last " << events.size() << " events (session "
                               << historyRecorder.sessionId() << "):\n";
                 }
-<<<<<<< HEAD
 
                 if (events.empty())
                 {
@@ -1770,19 +1484,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                         std::cout << " " << e.description;
                         if (e.durationMs > 0)
                             std::cout << " (" << e.durationMs << "ms)";
-=======
-                
-                if (events.empty()) {
-                    std::cout << "  (no events)\n";
-                } else {
-                    for (const auto& e : events) {
-                        std::string icon = e.success ? "✅" : "❌";
-                        std::cout << "  " << icon << " #" << e.id
-                                  << " [" << e.eventType << "]";
-                        if (!e.agentId.empty()) std::cout << " agent=" << e.agentId;
-                        std::cout << " " << e.description;
-                        if (e.durationMs > 0) std::cout << " (" << e.durationMs << "ms)";
->>>>>>> origin/main
                         std::cout << "\n";
                     }
                 }
@@ -1791,17 +1492,12 @@ REPL Commands (chat + agentic — same as Win32 IDE):
             {
                 std::string agentId = input.substr(8);
                 std::cout << "[Replay] Replaying agent " << agentId << "...\n";
-<<<<<<< HEAD
 
-=======
-                
->>>>>>> origin/main
                 ReplayRequest req;
                 req.originalAgentId = agentId;
                 req.dryRun = false;
 
                 ReplayResult result = historyRecorder.replay(req, &subAgentMgr);
-<<<<<<< HEAD
                 if (result.success)
                 {
                     std::cout << "[Replay ✅] " << result.eventsReplayed << " events replayed in " << result.durationMs
@@ -1819,20 +1515,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
             }
             else if (input == "/stats")
             {
-=======
-                if (result.success) {
-                    std::cout << "[Replay ✅] " << result.eventsReplayed << " events replayed in "
-                              << result.durationMs << "ms\n";
-                    std::cout << "[Replay Result]\n" << result.result << "\n";
-                    if (!result.originalResult.empty()) {
-                        std::cout << "[Original Result]\n" << result.originalResult << "\n";
-                    }
-                } else {
-                    std::cout << "[Replay ❌] " << result.result << "\n";
-                }
-            }
-            else if (input == "/stats") {
->>>>>>> origin/main
                 std::cout << "[History Stats] " << historyRecorder.getStatsSummary() << "\n";
                 std::cout << "Total events: " << historyRecorder.eventCount() << "\n";
             }
@@ -1840,7 +1522,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
             else if (input == "/policies")
             {
                 auto policies = policyEngine.getAllPolicies();
-<<<<<<< HEAD
                 if (policies.empty())
                 {
                     std::cout << "[Policies] No policies defined.\n";
@@ -1855,24 +1536,11 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                                   << p.version << " applied=" << p.appliedCount << ")\n";
                         if (!p.description.empty())
                         {
-=======
-                if (policies.empty()) {
-                    std::cout << "[Policies] No policies defined.\n";
-                } else {
-                    std::cout << "[Policies] " << policies.size() << " policies:\n";
-                    for (const auto& p : policies) {
-                        std::string icon = p.enabled ? "🟢" : "⚪";
-                        std::cout << "  " << icon << " [" << p.id << "] " << p.name
-                                  << " (pri=" << p.priority << " v" << p.version
-                                  << " applied=" << p.appliedCount << ")\n";
-                        if (!p.description.empty()) {
->>>>>>> origin/main
                             std::cout << "      " << p.description << "\n";
                         }
                     }
                 }
             }
-<<<<<<< HEAD
             else if (input == "/suggest")
             {
                 std::cout << "[Policy] Analyzing history and generating suggestions...\n";
@@ -1892,23 +1560,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                         std::cout << "     Policy: " << s.proposedPolicy.name << "\n";
                         std::cout << "     Rationale: " << s.rationale << "\n";
                         std::cout << "     Estimated improvement: " << (int)(s.estimatedImprovement * 100.0f) << "%\n";
-=======
-            else if (input == "/suggest") {
-                std::cout << "[Policy] Analyzing history and generating suggestions...\n";
-                auto suggestions = policyEngine.generateSuggestions();
-                auto pending = policyEngine.getPendingSuggestions();
-                
-                if (pending.empty()) {
-                    std::cout << "[Policy] No suggestions at this time. Need more history data.\n";
-                } else {
-                    std::cout << "[Policy] " << pending.size() << " pending suggestions:\n";
-                    for (const auto& s : pending) {
-                        std::cout << "\n  📋 Suggestion [" << s.id << "]\n";
-                        std::cout << "     Policy: " << s.proposedPolicy.name << "\n";
-                        std::cout << "     Rationale: " << s.rationale << "\n";
-                        std::cout << "     Estimated improvement: "
-                                  << (int)(s.estimatedImprovement * 100.0f) << "%\n";
->>>>>>> origin/main
                         std::cout << "     Supporting events: " << s.supportingEvents << "\n";
                         std::cout << "     → /policy accept " << s.id << "\n";
                         std::cout << "     → /policy reject " << s.id << "\n";
@@ -1918,7 +1569,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
             else if (input.substr(0, 15) == "/policy accept ")
             {
                 std::string id = input.substr(15);
-<<<<<<< HEAD
                 if (policyEngine.acceptSuggestion(id))
                 {
                     std::cout << "[Policy ✅] Suggestion accepted and policy activated.\n";
@@ -1926,19 +1576,12 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                 }
                 else
                 {
-=======
-                if (policyEngine.acceptSuggestion(id)) {
-                    std::cout << "[Policy ✅] Suggestion accepted and policy activated.\n";
-                    policyEngine.save();
-                } else {
->>>>>>> origin/main
                     std::cout << "[Policy ❌] Suggestion not found or already decided.\n";
                 }
             }
             else if (input.substr(0, 15) == "/policy reject ")
             {
                 std::string id = input.substr(15);
-<<<<<<< HEAD
                 if (policyEngine.rejectSuggestion(id))
                 {
                     std::cout << "[Policy ✅] Suggestion rejected.\n";
@@ -1946,30 +1589,18 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                 }
                 else
                 {
-=======
-                if (policyEngine.rejectSuggestion(id)) {
-                    std::cout << "[Policy ✅] Suggestion rejected.\n";
-                    policyEngine.save();
-                } else {
->>>>>>> origin/main
                     std::cout << "[Policy ❌] Suggestion not found or already decided.\n";
                 }
             }
             else if (input.substr(0, 15) == "/policy export ")
             {
                 std::string filePath = input.substr(15);
-<<<<<<< HEAD
                 if (policyEngine.exportToFile(filePath))
                 {
                     std::cout << "[Policy ✅] Policies exported to " << filePath << "\n";
                 }
                 else
                 {
-=======
-                if (policyEngine.exportToFile(filePath)) {
-                    std::cout << "[Policy ✅] Policies exported to " << filePath << "\n";
-                } else {
->>>>>>> origin/main
                     std::cout << "[Policy ❌] Export failed.\n";
                 }
             }
@@ -1978,7 +1609,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                 std::string filePath = input.substr(15);
                 int count = policyEngine.importFromFile(filePath);
                 std::cout << "[Policy] Imported " << count << " policies from " << filePath << "\n";
-<<<<<<< HEAD
                 if (count > 0)
                     policyEngine.save();
             }
@@ -2002,35 +1632,12 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                                   << " fail=" << h.failCount;
                         if (h.avgDurationMs > 0)
                         {
-=======
-                if (count > 0) policyEngine.save();
-            }
-            else if (input == "/heuristics") {
-                std::cout << "[Policy] Computing heuristics from event history...\n";
-                policyEngine.computeHeuristics();
-                auto heuristics = policyEngine.getAllHeuristics();
-                
-                if (heuristics.empty()) {
-                    std::cout << "[Policy] No heuristics computed. Need event history.\n";
-                } else {
-                    std::cout << "[Policy] " << heuristics.size() << " heuristics:\n";
-                    for (const auto& h : heuristics) {
-                        std::cout << "  📊 " << h.key
-                                  << " — events=" << h.totalEvents
-                                  << " success=" << (int)(h.successRate * 100.0f) << "%"
-                                  << " fail=" << h.failCount;
-                        if (h.avgDurationMs > 0) {
->>>>>>> origin/main
                             std::cout << " avg=" << (int)h.avgDurationMs << "ms"
                                       << " p95=" << (int)h.p95DurationMs << "ms";
                         }
                         std::cout << "\n";
-<<<<<<< HEAD
                         for (const auto& reason : h.topFailureReasons)
                         {
-=======
-                        for (const auto& reason : h.topFailureReasons) {
->>>>>>> origin/main
                             std::cout << "      ⚠ " << reason << "\n";
                         }
                     }
@@ -2043,18 +1650,12 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                 HistoryQuery lastQ;
                 lastQ.limit = 1;
                 auto recent = historyRecorder.query(lastQ);
-<<<<<<< HEAD
                 if (recent.empty())
                 {
                     std::cout << "[Explain] No events recorded yet.\n";
                 }
                 else
                 {
-=======
-                if (recent.empty()) {
-                    std::cout << "[Explain] No events recorded yet.\n";
-                } else {
->>>>>>> origin/main
                     // Walk backwards to find last agent
                     auto all = historyRecorder.allEvents();
                     std::string lastAgent;
@@ -2066,7 +1667,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                             break;
                         }
                     }
-<<<<<<< HEAD
                     if (lastAgent.empty())
                     {
                         std::cout << "[Explain] No agent events found.\n";
@@ -2079,17 +1679,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                         {
                             std::string icon = node.success ? "✅" : "❌";
                             std::cout << "  " << icon << " #" << node.eventId << " [" << node.eventType << "] "
-=======
-                    if (lastAgent.empty()) {
-                        std::cout << "[Explain] No agent events found.\n";
-                    } else {
-                        auto trace = explainEngine.traceAuto(lastAgent);
-                        std::cout << "[Explain] " << trace.summary << "\n";
-                        for (const auto& node : trace.nodes) {
-                            std::string icon = node.success ? "✅" : "❌";
-                            std::cout << "  " << icon << " #" << node.eventId
-                                      << " [" << node.eventType << "] "
->>>>>>> origin/main
                                       << node.trigger;
                             if (!node.policyId.empty())
                                 std::cout << " 🛡️ " << node.policyName << ": " << node.policyEffect;
@@ -2105,20 +1694,12 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                 auto session = explainEngine.explainSession();
                 std::cout << "[Explain] Session narrative:\n" << session.narrative << "\n\n";
 
-<<<<<<< HEAD
                 if (!session.failureAttributions.empty())
                 {
                     std::cout << "Failure attributions:\n";
                     for (const auto& fa : session.failureAttributions)
                     {
                         std::cout << "  ❌ " << fa.agentId << " [" << fa.failureType << "]: " << fa.errorMessage;
-=======
-                if (!session.failureAttributions.empty()) {
-                    std::cout << "Failure attributions:\n";
-                    for (const auto& fa : session.failureAttributions) {
-                        std::cout << "  ❌ " << fa.agentId << " [" << fa.failureType << "]: "
-                                  << fa.errorMessage;
->>>>>>> origin/main
                         if (fa.wasRetried)
                             std::cout << " → retried (" << (fa.retrySucceeded ? "success" : "failed") << ")";
                         if (!fa.policyId.empty())
@@ -2127,7 +1708,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                     }
                 }
 
-<<<<<<< HEAD
                 if (!session.policyAttributions.empty())
                 {
                     std::cout << "\nPolicy attributions:\n";
@@ -2135,31 +1715,18 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                     {
                         std::cout << "  🛡️ " << pa.policyName << " (applied " << pa.policyAppliedCount
                                   << "x): " << pa.effectDescription << "\n";
-=======
-                if (!session.policyAttributions.empty()) {
-                    std::cout << "\nPolicy attributions:\n";
-                    for (const auto& pa : session.policyAttributions) {
-                        std::cout << "  🛡️ " << pa.policyName << " (applied "
-                                  << pa.policyAppliedCount << "x): " << pa.effectDescription << "\n";
->>>>>>> origin/main
                     }
                 }
             }
             else if (input.substr(0, 18) == "/explain snapshot ")
             {
                 std::string filePath = input.substr(18);
-<<<<<<< HEAD
                 if (explainEngine.exportSnapshot(filePath))
                 {
                     std::cout << "[Explain ✅] Snapshot exported to " << filePath << "\n";
                 }
                 else
                 {
-=======
-                if (explainEngine.exportSnapshot(filePath)) {
-                    std::cout << "[Explain ✅] Snapshot exported to " << filePath << "\n";
-                } else {
->>>>>>> origin/main
                     std::cout << "[Explain ❌] Failed to export snapshot.\n";
                 }
             }
@@ -2168,30 +1735,18 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                 std::string agentId = input.substr(9);
                 auto trace = explainEngine.traceAuto(agentId);
                 std::cout << "[Explain] " << trace.summary << "\n";
-<<<<<<< HEAD
                 for (const auto& node : trace.nodes)
                 {
                     std::string icon = node.success ? "✅" : "❌";
                     std::cout << "  " << icon << " #" << node.eventId << " [" << node.eventType << "] " << node.trigger;
-=======
-                for (const auto& node : trace.nodes) {
-                    std::string icon = node.success ? "✅" : "❌";
-                    std::cout << "  " << icon << " #" << node.eventId
-                              << " [" << node.eventType << "] "
-                              << node.trigger;
->>>>>>> origin/main
                     if (!node.policyId.empty())
                         std::cout << " 🛡️ " << node.policyName << ": " << node.policyEffect;
                     if (node.durationMs > 0)
                         std::cout << " (" << node.durationMs << "ms)";
                     std::cout << "\n";
                 }
-<<<<<<< HEAD
                 if (trace.failureCount > 0)
                 {
-=======
-                if (trace.failureCount > 0) {
->>>>>>> origin/main
                     std::cout << "\n" << explainEngine.summarizeFailures();
                 }
             }
@@ -2201,7 +1756,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                 auto backends = backendMgr.listBackends();
                 std::string activeId = backendMgr.getActiveId();
                 std::cout << "[Backends] " << backends.size() << " configured:\n";
-<<<<<<< HEAD
                 for (const auto& b : backends)
                 {
                     std::string icon = (b.id == activeId) ? "🟢" : "⚪";
@@ -2213,23 +1767,12 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                         std::cout << " → " << b.endpoint;
                     if (!b.model.empty())
                         std::cout << " model=" << b.model;
-=======
-                for (const auto& b : backends) {
-                    std::string icon = (b.id == activeId) ? "🟢" : "⚪";
-                    if (!b.enabled) icon = "⛔";
-                    std::cout << "  " << icon << " [" << b.id << "] "
-                              << b.displayName
-                              << " (" << aiBackendTypeName(b.type) << ")";
-                    if (!b.endpoint.empty()) std::cout << " → " << b.endpoint;
-                    if (!b.model.empty()) std::cout << " model=" << b.model;
->>>>>>> origin/main
                     std::cout << "\n";
                 }
             }
             else if (input.substr(0, 13) == "/backend use ")
             {
                 std::string id = input.substr(13);
-<<<<<<< HEAD
                 if (backendMgr.setActiveBackend(id))
                 {
                     std::cout << "[Backend ✅] Active backend → " << id << " (" << backendMgr.getActiveBackendName()
@@ -2245,40 +1788,16 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                 std::cout << "[Backend Status] " << backendMgr.getStatsJSON() << "\n";
                 auto active = backendMgr.getActiveBackend();
                 std::cout << "  Active: " << active.displayName << " (" << aiBackendTypeName(active.type) << ")\n";
-=======
-                if (backendMgr.setActiveBackend(id)) {
-                    std::cout << "[Backend ✅] Active backend → " << id
-                              << " (" << backendMgr.getActiveBackendName() << ")\n";
-                } else {
-                    std::cout << "[Backend ❌] Backend '" << id
-                              << "' not found or disabled. Use /backend list.\n";
-                }
-            }
-            else if (input == "/backend status") {
-                std::cout << "[Backend Status] " << backendMgr.getStatsJSON() << "\n";
-                auto active = backendMgr.getActiveBackend();
-                std::cout << "  Active: " << active.displayName
-                          << " (" << aiBackendTypeName(active.type) << ")\n";
->>>>>>> origin/main
                 if (!active.endpoint.empty())
                     std::cout << "  Endpoint: " << active.endpoint << "\n";
                 if (!active.model.empty())
                     std::cout << "  Model: " << active.model << "\n";
-<<<<<<< HEAD
                 std::cout << "  MaxTokens: " << active.maxTokens << "  Temperature: " << active.temperature
                           << "  Timeout: " << active.timeoutMs << "ms\n";
             }
             // ── Phase 25: AMD GPU Acceleration Commands ──
             else if (input == "/gpu")
             {
-=======
-                std::cout << "  MaxTokens: " << active.maxTokens
-                          << "  Temperature: " << active.temperature
-                          << "  Timeout: " << active.timeoutMs << "ms\n";
-            }
-            // ── Phase 25: AMD GPU Acceleration Commands ──
-            else if (input == "/gpu") {
->>>>>>> origin/main
                 std::cout << "[GPU] " << gpuAccel.toJson() << "\n";
             }
             else if (input == "/gpu on")
@@ -2294,7 +1813,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
             else if (input == "/gpu toggle")
             {
                 auto r = gpuAccel.toggleGPU();
-<<<<<<< HEAD
                 std::cout << "[GPU] " << r.detail << " — now " << (gpuAccel.isGPUEnabled() ? "ENABLED" : "DISABLED")
                           << "\n";
             }
@@ -2309,25 +1827,11 @@ REPL Commands (chat + agentic — same as Win32 IDE):
             // ── Phase 23: GPU Kernel Auto-Tuner Commands ──
             else if (input == "/tune")
             {
-=======
-                std::cout << "[GPU] " << r.detail << " — now "
-                          << (gpuAccel.isGPUEnabled() ? "ENABLED" : "DISABLED") << "\n";
-            }
-            else if (input == "/gpu features") {
-                std::cout << "[GPU Features] " << gpuAccel.featuresToJson() << "\n";
-            }
-            else if (input == "/gpu memory") {
-                std::cout << "[GPU Memory] " << gpuAccel.memoryToJson() << "\n";
-            }
-            // ── Phase 23: GPU Kernel Auto-Tuner Commands ──
-            else if (input == "/tune") {
->>>>>>> origin/main
                 std::cout << "[Tuner] Running kernel auto-tuner...\n";
                 auto r = kernelTuner.tuneAllKernels();
                 std::cout << "[Tuner] " << r.detail << " configs=" << r.configsTested << "\n";
                 std::cout << "[Tuner] " << kernelTuner.toJson() << "\n";
             }
-<<<<<<< HEAD
             else if (input == "/tune cache")
             {
                 std::cout << "[Tuner Cache] " << kernelTuner.tuneCacheToJson() << "\n";
@@ -2345,21 +1849,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
             // ── Phase 20: WebRTC Commands ──
             else if (input == "/webrtc")
             {
-=======
-            else if (input == "/tune cache") {
-                std::cout << "[Tuner Cache] " << kernelTuner.tuneCacheToJson() << "\n";
-            }
-            // ── Phase 21: Swarm Decision Bridge Commands ──
-            else if (input == "/swarm bridge") {
-                std::cout << "[Swarm Bridge] " << swarmBridge.toJson() << "\n";
-            }
-            // ── Phase 21: Universal Model Hotpatcher Commands ──
-            else if (input == "/hotpatch status") {
-                std::cout << "[Model Hotpatcher] " << modelHotpatcher.toJson() << "\n";
-            }
-            // ── Phase 20: WebRTC Commands ──
-            else if (input == "/webrtc") {
->>>>>>> origin/main
                 std::cout << "[WebRTC] " << webrtc.toJson() << "\n";
                 std::cout << "[WebRTC Peers] " << webrtc.peersToJson() << "\n";
             }
@@ -2367,7 +1856,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
             else if (input == "/sandbox list")
             {
                 auto sandboxes = sandboxMgr.listSandboxes();
-<<<<<<< HEAD
                 if (sandboxes.empty())
                 {
                     std::cout << "[Sandbox] No active sandboxes.\n";
@@ -2376,12 +1864,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                 {
                     for (const auto& id : sandboxes)
                     {
-=======
-                if (sandboxes.empty()) {
-                    std::cout << "[Sandbox] No active sandboxes.\n";
-                } else {
-                    for (const auto& id : sandboxes) {
->>>>>>> origin/main
                         std::cout << "  " << sandboxMgr.sandboxToJson(id) << "\n";
                     }
                 }
@@ -2395,12 +1877,8 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                 std::cout << "[Sandbox] " << r.detail << " id=" << id << "\n";
             }
             // ── Phase 22: Production Release Commands ──
-<<<<<<< HEAD
             else if (input == "/release")
             {
-=======
-            else if (input == "/release") {
->>>>>>> origin/main
                 std::cout << "[Release] " << releaseEngine.toJson() << "\n";
             }
             // ── Phase 51: Security (Dork Scanner + Universal Dorker) ──
@@ -2510,13 +1988,10 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                     std::cout << "[Models] Usage: /models cycle <1-4>\n";
                 }
             }
-<<<<<<< HEAD
             else if (dispatchProfileBangCommand(input))
             {
                 // Profile command handled via shared feature dispatcher hotpatch path.
             }
-=======
->>>>>>> origin/main
             // ── Phase 20: Model Hotpatcher ! Commands ──
             else if (input.substr(0, 12) == "!model_load ")
             {
@@ -2599,17 +2074,11 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                 if (cliVoiceChat.isRecording())
                 {
                     auto r = cliVoiceChat.stopRecording();
-<<<<<<< HEAD
                     std::cout << "[Voice] Recording stopped: " << r.detail << " ("
                               << cliVoiceChat.getRecordedSampleCount() << " samples)\n";
                 }
                 else
                 {
-=======
-                    std::cout << "[Voice] Recording stopped: " << r.detail
-                              << " (" << cliVoiceChat.getRecordedSampleCount() << " samples)\n";
-                } else {
->>>>>>> origin/main
                     auto r = cliVoiceChat.startRecording();
                     std::cout << "[Voice] " << r.detail << "\n";
                     std::cout << "[Voice] Type '/voice record' again to stop.\n";
@@ -2619,18 +2088,12 @@ REPL Commands (chat + agentic — same as Win32 IDE):
             {
                 static VoiceChat cliVoiceChat;
                 auto& rec = cliVoiceChat.getLastRecording();
-<<<<<<< HEAD
                 if (rec.empty())
                 {
                     std::cout << "[Voice] No recording to play. Use '/voice record' first.\n";
                 }
                 else
                 {
-=======
-                if (rec.empty()) {
-                    std::cout << "[Voice] No recording to play. Use '/voice record' first.\n";
-                } else {
->>>>>>> origin/main
                     std::cout << "[Voice] Playing " << rec.size() << " samples...\n";
                     auto r = cliVoiceChat.playAudio(rec);
                     std::cout << "[Voice] " << r.detail << "\n";
@@ -2641,18 +2104,12 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                 static VoiceChat cliVoiceChat;
                 std::string transcript;
                 auto r = cliVoiceChat.transcribeLastRecording(transcript);
-<<<<<<< HEAD
                 if (r.success)
                 {
                     std::cout << "[Voice STT] " << transcript << "\n";
                 }
                 else
                 {
-=======
-                if (r.success) {
-                    std::cout << "[Voice STT] " << transcript << "\n";
-                } else {
->>>>>>> origin/main
                     std::cout << "[Voice] Transcription failed: " << r.detail << "\n";
                 }
             }
@@ -2668,7 +2125,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                 auto inputs = VoiceChat::enumerateInputDevices();
                 auto outputs = VoiceChat::enumerateOutputDevices();
                 std::cout << "=== Input Devices ===\n";
-<<<<<<< HEAD
                 for (auto& d : inputs)
                 {
                     std::cout << "  [" << d.id << "] " << d.name;
@@ -2682,17 +2138,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                     std::cout << "  [" << d.id << "] " << d.name;
                     if (d.isDefault)
                         std::cout << " (default)";
-=======
-                for (auto& d : inputs) {
-                    std::cout << "  [" << d.id << "] " << d.name;
-                    if (d.isDefault) std::cout << " (default)";
-                    std::cout << "\n";
-                }
-                std::cout << "=== Output Devices ===\n";
-                for (auto& d : outputs) {
-                    std::cout << "  [" << d.id << "] " << d.name;
-                    if (d.isDefault) std::cout << " (default)";
->>>>>>> origin/main
                     std::cout << "\n";
                 }
             }
@@ -2750,7 +2195,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                 bool initialized = state.schedulerInit.load();
                 std::cout << "[Scheduler] Work-stealing scheduler: "
                           << (initialized ? "INITIALIZED" : "NOT INITIALIZED") << "\n";
-<<<<<<< HEAD
                 if (initialized)
                 {
                     // Live probe: submit a real task and verify worker execution
@@ -2758,16 +2202,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                     bool probeOk = RawrXD::ReverseEngineered::ProbeScheduler(&probeUs);
                     std::cout << "  Probe task: " << (probeOk ? "OK" : "FAILED") << " (" << probeUs << " us)\n";
                     std::cout << "  Workers: " << state.workerCount.load() << "  NUMA: enabled\n"
-=======
-                if (initialized) {
-                    // Live probe: submit a real task and verify worker execution
-                    uint64_t probeUs = 0;
-                    bool probeOk = RawrXD::ReverseEngineered::ProbeScheduler(&probeUs);
-                    std::cout << "  Probe task: " << (probeOk ? "OK" : "FAILED")
-                              << " (" << probeUs << " us)\n";
-                    std::cout << "  Workers: " << state.workerCount.load()
-                              << "  NUMA: enabled\n"
->>>>>>> origin/main
                               << "  Tasks submitted: " << state.tasksSubmitted.load()
                               << "  completed: " << state.tasksCompleted.load() << "\n";
                 }
@@ -2786,17 +2220,12 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                 int64_t taskId = Scheduler_SubmitTask(reinterpret_cast<void*>(+testFn),
                                                       const_cast<uint64_t*>(&sentinel), 0, 0, nullptr);
                 state.tasksSubmitted.fetch_add(1);
-<<<<<<< HEAD
                 if (taskId >= 0)
                 {
-=======
-                if (taskId >= 0) {
->>>>>>> origin/main
                     std::cout << "[Scheduler] Task submitted: id=" << taskId << "\n";
                     void* result = Scheduler_WaitForTask(taskId, 5000);
                     uint64_t elapsedUs = TicksToMicroseconds(GetHighResTick() - t0);
                     bool workerRan = (sentinel == 0xDEADC0DEULL);
-<<<<<<< HEAD
                     if (workerRan)
                         state.tasksCompleted.fetch_add(1);
                     std::cout << "[Scheduler] Worker executed: " << (workerRan ? "YES" : "NO")
@@ -2805,14 +2234,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                 }
                 else
                 {
-=======
-                    if (workerRan) state.tasksCompleted.fetch_add(1);
-                    std::cout << "[Scheduler] Worker executed: "
-                              << (workerRan ? "YES" : "NO")
-                              << "  Wait result: " << (result ? "OK" : "timeout")
-                              << "  Latency: " << elapsedUs << " us\n";
-                } else {
->>>>>>> origin/main
                     std::cout << "[Scheduler] Task submit failed: " << taskId << "\n";
                 }
             }
@@ -2822,17 +2243,12 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                 bool initialized = state.conflictDetectorInit.load();
                 std::cout << "[ConflictDetector] Deadlock detection: "
                           << (initialized ? "INITIALIZED" : "NOT INITIALIZED") << "\n";
-<<<<<<< HEAD
                 if (initialized)
                 {
-=======
-                if (initialized) {
->>>>>>> origin/main
                     // Live probe: register + lock + unlock a test resource
                     uint64_t probeUs = 0;
                     int probeRc = RawrXD::ReverseEngineered::ProbeConflictDetector(&probeUs);
                     const char* probeMsg = "error";
-<<<<<<< HEAD
                     if (probeRc == 0)
                         probeMsg = "OK";
                     else if (probeRc == 1)
@@ -2840,13 +2256,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                     else if (probeRc == -2)
                         probeMsg = "TABLE_FULL";
                     std::cout << "  Probe: " << probeMsg << " (" << probeUs << " us)\n";
-=======
-                    if (probeRc == 0) probeMsg = "OK";
-                    else if (probeRc == 1) probeMsg = "DEADLOCK_DETECTED";
-                    else if (probeRc == -2) probeMsg = "TABLE_FULL";
-                    std::cout << "  Probe: " << probeMsg
-                              << " (" << probeUs << " us)\n";
->>>>>>> origin/main
                     std::cout << "  Max resources: " << state.maxResources.load()
                               << "  Scan interval: " << state.conflictScanIntervalMs.load() << "ms\n"
                               << "  Lock ops: " << state.conflictLocks.load()
@@ -2857,7 +2266,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
             {
                 auto& state = RawrXD::ReverseEngineered::GetState();
                 bool initialized = state.heartbeatInit.load();
-<<<<<<< HEAD
                 std::cout << "[Heartbeat] UDP gossip monitor: " << (initialized ? "ACTIVE" : "DISABLED") << "\n";
                 if (initialized)
                 {
@@ -2867,15 +2275,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                 }
                 else
                 {
-=======
-                std::cout << "[Heartbeat] UDP gossip monitor: "
-                          << (initialized ? "ACTIVE" : "DISABLED") << "\n";
-                if (initialized) {
-                    std::cout << "  Listen port: " << state.heartbeatPort.load()
-                              << "  Interval: " << state.heartbeatIntervalMs.load() << "ms\n"
-                              << "  Nodes added: " << state.heartbeatNodesAdded.load() << "\n";
-                } else {
->>>>>>> origin/main
                     std::cout << "  Port not configured (heartbeatPort=0 at init)\n"
                               << "  Use /heartbeat add <ip> <port> to register nodes\n";
                 }
@@ -2887,24 +2286,24 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                 if (sp != std::string::npos)
                 {
                     std::string ip = args.substr(0, sp);
-                    uint16_t hp = static_cast<uint16_t>(std::stoul(args.substr(sp + 1)));
+                    int parsedHp = 0;
+                    if (!tryParseIntInRange(args.substr(sp + 1), 1, 65535, parsedHp))
+                    {
+                        std::cout << "[Heartbeat] Invalid port. Usage: /heartbeat add <ip> <port>\n";
+                        continue;
+                    }
+                    uint16_t hp = static_cast<uint16_t>(parsedHp);
                     static uint32_t nextNodeId = 1;
                     int rc = Heartbeat_AddNode(nextNodeId++, ip.c_str(), hp);
                     if (rc == 0)
                     {
                         RawrXD::ReverseEngineered::GetState().heartbeatNodesAdded.fetch_add(1);
                     }
-<<<<<<< HEAD
                     std::cout << "[Heartbeat] Add node " << ip << ":" << hp << " -> " << (rc == 0 ? "OK" : "FAILED")
                               << "\n";
                 }
                 else
                 {
-=======
-                    std::cout << "[Heartbeat] Add node " << ip << ":" << hp
-                              << " -> " << (rc == 0 ? "OK" : "FAILED") << "\n";
-                } else {
->>>>>>> origin/main
                     std::cout << "[Heartbeat] Usage: /heartbeat add <ip> <port>\n";
                 }
             }
@@ -2917,12 +2316,7 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                 RawrXD::ReverseEngineered::ProbeDMA(&probeUs, &allocOk, &transferOk, &verifyOk);
                 std::cout << "  Alloc: " << (allocOk ? "OK" : "FAILED")
                           << "  Transfer: " << (transferOk ? "OK" : "FAILED")
-<<<<<<< HEAD
                           << "  Verify: " << (verifyOk ? "OK" : "MISMATCH") << " (" << probeUs << " us)\n";
-=======
-                          << "  Verify: " << (verifyOk ? "OK" : "MISMATCH")
-                          << " (" << probeUs << " us)\n";
->>>>>>> origin/main
                 std::cout << "  Total DMA transfers: " << state.dmaTransfers.load() << "\n";
             }
             else if (input == "/tensor bench")
@@ -2948,7 +2342,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                     }
                     std::cout << "[Tensor] 64x64 Q8_0 matmul: " << elapsed << " us"
                               << "  (" << gflops << " GFLOPS)\n"
-<<<<<<< HEAD
                               << "  C[0,0]=" << C[0] << " C[63,63]=" << C[63 * 64 + 63] << "\n"
                               << "  Total tensor ops: " << RawrXD::ReverseEngineered::GetState().tensorOps.load()
                               << "\n";
@@ -2958,14 +2351,6 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                 }
                 else
                 {
-=======
-                              << "  C[0,0]=" << C[0] << " C[63,63]=" << C[63*64+63] << "\n"
-                              << "  Total tensor ops: " << RawrXD::ReverseEngineered::GetState().tensorOps.load() << "\n";
-                    VirtualFree(A, 0, MEM_RELEASE);
-                    VirtualFree(B, 0, MEM_RELEASE);
-                    VirtualFree(C, 0, MEM_RELEASE);
-                } else {
->>>>>>> origin/main
                     std::cout << "[Tensor] DMA buffer allocation failed\n";
                 }
             }
@@ -2980,28 +2365,17 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                 // CRC test
                 const char* testData = "RawrXD-ReverseEngineered-Kernel";
                 uint32_t crc = CalculateCRC32(testData, strlen(testData));
-<<<<<<< HEAD
                 std::cout << "[CRC32] \"" << testData << "\" -> 0x" << std::hex << crc << std::dec << "\n";
-=======
-                std::cout << "[CRC32] \"" << testData << "\" -> 0x"
-                          << std::hex << crc << std::dec << "\n";
->>>>>>> origin/main
             }
             else if (input.rfind("/crc32 ", 0) == 0)
             {
                 std::string payload = input.substr(7);
-<<<<<<< HEAD
                 if (payload.empty())
                 {
                     std::cout << "[CRC32] Usage: /crc32 <text>\n";
                 }
                 else
                 {
-=======
-                if (payload.empty()) {
-                    std::cout << "[CRC32] Usage: /crc32 <text>\n";
-                } else {
->>>>>>> origin/main
                     auto& st = RawrXD::ReverseEngineered::GetState();
                     uint64_t t0 = GetHighResTick();
                     uint32_t crc = CalculateCRC32(payload.c_str(), static_cast<uint32_t>(payload.size()));
@@ -3174,12 +2548,8 @@ REPL Commands (chat + agentic — same as Win32 IDE):
                     std::cout << mgr.GenerateTopologyReport();
                 }
             }
-<<<<<<< HEAD
             else
             {
-=======
-            else {
->>>>>>> origin/main
                 std::cout << "Unknown command. Type /help for commands.\n";
             }
         }
@@ -3188,6 +2558,8 @@ REPL Commands (chat + agentic — same as Win32 IDE):
     {
         while (true)
         {
+            if (g_shutdownRequested.load())
+                break;
             std::this_thread::sleep_for(std::chrono::seconds(1));
         }
     }
@@ -3216,4 +2588,4 @@ REPL Commands (chat + agentic — same as Win32 IDE):
     server.Stop();
     return 0;
 }
-#endif // RAWRXD_STANDALONE_MAIN
+#endif  // RAWRXD_STANDALONE_MAIN

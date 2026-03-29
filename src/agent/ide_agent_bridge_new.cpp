@@ -114,24 +114,41 @@ void IDEAgentBridge::approveExecution()
     
     std::cout << "[IDEAgentBridge] Approving execution..." << std::endl;
     
-    // Convert string plan back to json or pass to executor
+    // Convert string plan back to json
     json plan = json::parse(m_lastPlanJson);
     
-    // Execute async
-    // Assuming executor has helper or we run in thread
-    std::thread([this, plan]() {
-         // Mock progress
-         if (onProgressUpdated) onProgressUpdated(0, (int)plan.size(), "Starting execution...");
-         
-         // In real impl, iterate tasks and call executor
-         // bool result = m_executor->executeBatch(plan); 
-         // For now, assume success
-         
-         bool success = true; 
-         // m_executor->process(plan, ...);
-         
-         handleExecutionResult(success, "Plan executed successfully (mock)");
-    }).detach();
+    // Build execution context
+    ExecutionContext ctx;
+    ctx.projectRoot = m_projectRoot;
+    
+    m_executor->setContext(ctx);
+    
+    // Register progress callback for this execution
+    m_executor->registerProgressUpdatedCallback(
+        [](int current, int total, const char* desc, void* userData) {
+            auto* self = static_cast<IDEAgentBridge*>(userData);
+            if (self->onProgressUpdated)
+                self->onProgressUpdated(current, total, desc ? desc : "");
+        }, this);
+    
+    m_executor->registerPlanCompletedCallback(
+        [](bool success, const char* summary, void* userData) {
+            auto* self = static_cast<IDEAgentBridge*>(userData);
+            self->handleExecutionResult(success, summary ? summary : "Execution completed");
+        }, this);
+    
+    // Convert plan JSON to JsonValue actions array for executor
+    JsonValue actions = JsonValue::createArray();
+    for (const auto& step : plan) {
+        JsonValue action = JsonValue::createObject();
+        if (step.contains("action")) action["type"] = step["action"].get<std::string>();
+        if (step.contains("description")) action["description"] = step["description"].get<std::string>();
+        if (step.contains("params")) action["params"] = step["params"].dump();
+        actions.push(action);
+    }
+    
+    // Launch async plan execution via the real executor
+    m_executor->executePlan(actions, true /* stopOnError */);
 }
 
 void IDEAgentBridge::rejectExecution()

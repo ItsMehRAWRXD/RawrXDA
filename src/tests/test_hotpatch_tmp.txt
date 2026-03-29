@@ -1,0 +1,3 @@
+line0
+line1_NEW_DATA
+line2

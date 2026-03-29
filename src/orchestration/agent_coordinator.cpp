@@ -206,11 +206,7 @@ std::string AgentCoordinator::submitPlan(const std::vector<AgentTask>& tasks,
     if (!validateTasks(tasks, validationError)) {
         logCoordinatorEvent("submitPlan() failed",
                           std::string("Validation error: %1"), true);
-<<<<<<< HEAD
         return std::string();
-=======
-        return std::string();  // Return empty string to indicate failure
->>>>>>> origin/main
     }
 
     // Phase 2: Build plan state OUTSIDE lock to reduce contention
@@ -232,25 +228,10 @@ std::string AgentCoordinator::submitPlan(const std::vector<AgentTask>& tasks,
     {
         QWriteLocker locker(&m_lock);
         m_plans.insert(plan.id, plan);
-<<<<<<< HEAD
     }
 
     // Phase 4: Emit signals OUTSIDE lock to prevent deadlocks
     planSubmitted(plan.id);
-=======
-        logCoordinatorEvent("submitPlan() success",
-                          std::string("plan=%1 | tasks=%2 | initialReady=%3")
-                              
-                              )
-                              ));
-    }  // Release lock before signals
-
-    // Phase 4: signals OUTSIDE lock (Qt event loop interaction)
-    // This prevents potential deadlocks from event handler re-entrancy
-    planSubmitted(plan.id);
-    
-    // Notify agents about immediately-ready tasks
->>>>>>> origin/main
     for (const auto& task : readyToEmit) {
         taskReady(plan.id, task);
     }
@@ -699,11 +680,7 @@ bool AgentCoordinator::detectCycle(const std::vector<AgentTask>& tasks) const
         // Back edge detected: node is in current path = cycle found
         if (nodeColor == 1) {
             logCoordinatorEvent("detectCycle() found cycle",
-<<<<<<< HEAD
                               std::string("Back edge at node %1").arg(node), true);
-=======
-                              std::string("Back edge at node %1"), true);
->>>>>>> origin/main
             return true;
         }
         
@@ -716,7 +693,6 @@ bool AgentCoordinator::detectCycle(const std::vector<AgentTask>& tasks) const
         color[node] = 1;
         
         // Traverse all direct dependencies
-<<<<<<< HEAD
         if (graph.count(node)) {
             const std::vector<std::string>& deps = graph.at(node);
             for (const auto& dep : deps) {
@@ -725,18 +701,6 @@ bool AgentCoordinator::detectCycle(const std::vector<AgentTask>& tasks) const
                         return true;
                     }
                 }
-=======
-        const std::vector<std::string> deps = graph.value(node);
-        for (const auto& dep : deps) {
-            // Skip dependencies not in our task graph (orphaned references already caught)
-            if (!graph.contains(dep)) {
-                continue;
-            }
-            
-            // Recursively check subtree for cycles
-            if (dfs(dep)) {
-                return true;  // Cycle found in dependency chain
->>>>>>> origin/main
             }
         }
         

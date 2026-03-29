@@ -113,13 +113,22 @@ private:
     std::set<void*> m_allocations;
 };
 
-#define MEMORY_TRACK_ALLOC(ptr, type) \
-    RawrXD::Memory::OwnershipTracker::instance().track_allocation(ptr, #type, __FUNCTION__)
+// Inline memory tracking functions — production entry points
+inline void MemoryTrackAlloc(void* ptr, const char* type, const char* caller) {
+    RawrXD::Memory::OwnershipTracker::instance().track_allocation(ptr, type, caller);
+}
+inline void MemoryTrackFree(void* ptr, const char* caller) {
+    RawrXD::Memory::OwnershipTracker::instance().track_deallocation(ptr, caller);
+}
 
-#define MEMORY_TRACK_FREE(ptr) \
-    RawrXD::Memory::OwnershipTracker::instance().track_deallocation(ptr, __FUNCTION__)
+// Backward-compatible macro aliases (pass stringized type and __FUNCTION__)
+#define MEMORY_TRACK_ALLOC(ptr, type) MemoryTrackAlloc(ptr, #type, __FUNCTION__)
+#define MEMORY_TRACK_FREE(ptr)        MemoryTrackFree(ptr, __FUNCTION__)
 
 #else
+
+inline void MemoryTrackAlloc(void*, const char*, const char*) {}
+inline void MemoryTrackFree(void*, const char*) {}
 
 #define MEMORY_TRACK_ALLOC(ptr, type)
 #define MEMORY_TRACK_FREE(ptr)

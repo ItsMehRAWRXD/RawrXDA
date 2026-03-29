@@ -16,18 +16,12 @@
 #include <random>
 #include <sstream>
 
-<<<<<<< HEAD
 // SCAFFOLD_061: AgentOrchestrator task dispatch implementation
 // Reverse-engineered from IDE integration patterns:
 // 1. Task Queue Management
 // 2. Priority-based Thread Pooling
 // 3. Native-to-Agent Bridging for complex IDE operations (LSP, Build, Debug)
 
-=======
-// SCAFFOLD_061: AgentOrchestrator task dispatch
-
-
->>>>>>> origin/main
 // Shared observability instance for structured logging, metrics, tracing
 static AgenticObservability& GetObservability()
 {

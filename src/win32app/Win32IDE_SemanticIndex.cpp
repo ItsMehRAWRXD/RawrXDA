@@ -294,12 +294,16 @@ private:
         SendMessage(hwndTypeHierarchy_, WM_SETFONT, (WPARAM)hFont, TRUE);
     }
 
-    void initSemanticIndex() {
-        // Get current file from parent IDE
-        // This would need to be passed from the main IDE
-        currentFile_ = "current_file.cpp"; // Placeholder
+    void setCurrentFile(const std::string& filePath) {
+        currentFile_ = filePath;
+        if (hwnd_) updateSymbolList();
+    }
 
-        // Update symbol list
+    void initSemanticIndex() {
+        // currentFile_ is set via setCurrentFile() from parent IDE
+        // Do not hardcode any file — wait for real data
+
+        // Update symbol list (will be empty until a file is set)
         updateSymbolList();
 
         SetWindowTextA(hwndResults_, "Semantic Code Intelligence initialized.\n\n"

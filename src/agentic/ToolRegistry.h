@@ -24,32 +24,50 @@ namespace RawrXD {
 namespace Agent {
 
 // ---------------------------------------------------------------------------
-// X-Macro: AGENT_TOOLS_X(M)
-// M(internal_name, description)
-//
+// Tool ID enum — explicit registration (no X-Macro)
+// Each entry maps 1:1 to an OpenAI function-calling tool definition.
 // Parameter schemas are defined programmatically in InitDescriptors().
-// Each tool maps 1:1 to an OpenAI function-calling tool definition.
-// ---------------------------------------------------------------------------
-#define AGENT_TOOLS_X(M) \
-    M(read_file,        "Read the content of a file at a specific path. Returns UTF-8 text.") \
-    M(write_file,       "Create a new file or overwrite an existing one with the provided content.") \
-    M(replace_in_file,  "Search and replace a block of text within a file. Uses exact string matching.") \
-    M(execute_command,  "Run a shell command in the terminal. Returns stdout, stderr, and exit code.") \
-    M(search_code,      "Fast regex/literal search across the codebase. Uses AVX-512 SIMD accelerator when available.") \
-    M(get_diagnostics,  "Retrieve current compiler/LSP errors and warnings for a specific file or all files.") \
-    M(list_directory,   "List files and subdirectories at a given path.") \
-    M(get_coverage,     "Retrieve BBCov/DiffCov coverage data for a file or function to verify logic path changes.") \
-    M(run_build,        "Trigger a CMake build with specified target and configuration.") \
-    M(apply_hotpatch,   "Apply a runtime hotpatch through the unified hotpatch manager (memory, byte-level, or server layer).") \
-    M(disk_recovery,    "Control the hardware disk recovery agent for dying WD My Book USB bridges (scan, init, extract key, run, abort, stats).")
-
-// ---------------------------------------------------------------------------
-// Tool ID enum — auto-generated from X-Macro
 // ---------------------------------------------------------------------------
 enum class ToolId : uint32_t {
-    #define ENUM_ENTRY(tool_name_, tool_desc_) tool_name_,
-    AGENT_TOOLS_X(ENUM_ENTRY)
-    #undef ENUM_ENTRY
+    // Core file/build tools
+    read_file,
+    write_file,
+    replace_in_file,
+    execute_command,
+    search_code,
+    get_diagnostics,
+    list_directory,
+    get_coverage,
+    run_build,
+    apply_hotpatch,
+    disk_recovery,
+    // Extended file/system tools (CLI/GUI parity)
+    delete_file,
+    rename_file,
+    copy_file,
+    make_directory,
+    stat_file,
+    git_status,
+    run_shell,
+    // AI-specific tools
+    semantic_search,
+    mention_lookup,
+    next_edit_hint,
+    propose_multifile_edits,
+    load_rules,
+    plan_tasks,
+    set_iteration_status,
+    get_iteration_status,
+    reset_iteration_status,
+    // Agent operation tools (outside-hotpatch accessible)
+    compact_conversation,
+    optimize_tool_selection,
+    resolve_symbol,
+    read_lines,
+    plan_code_exploration,
+    search_files,
+    restore_checkpoint,
+    evaluate_integration,
     _COUNT
 };
 

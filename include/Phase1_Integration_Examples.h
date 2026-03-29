@@ -26,9 +26,9 @@ public:
         }
         
         // Cache CPU capabilities for optimization decisions
-        m_has_avx512 = PHASE1_HAS_AVX512();
-        m_has_avx2 = PHASE1_HAS_AVX2();
-        m_physical_cores = PHASE1_CORES();
+        m_has_avx512 = Phase1HasAVX512();
+        m_has_avx2 = Phase1HasAVX2();
+        m_physical_cores = Phase1Cores();
     }
     
     // Load model from disk
@@ -43,7 +43,7 @@ public:
     
     Model* LoadModel(const char* model_path) {
         // Allocate model metadata
-        Model* model = (Model*)PHASE1_MALLOC(sizeof(Model));
+        Model* model = (Model*)Phase1Malloc(sizeof(Model));
         
         // Determine optimal kernel
         model->uses_avx512 = m_has_avx512;
@@ -53,10 +53,10 @@ public:
         
         // Allocate weights on NUMA node 0 for now
         // (Phase 5 orchestrator will do smarter NUMA placement)
-        model->weights = (float*)PHASE1_NUMA_MALLOC(0, weights_size, 64);
+        model->weights = (float*)Phase1NUMAMalloc(0, weights_size, 64);
         if (!model->weights) {
             // Fallback to system arena
-            model->weights = (float*)PHASE1_MALLOC(weights_size);
+            model->weights = (float*)Phase1Malloc(weights_size);
         }
         
         // Read weights from disk
@@ -64,7 +64,7 @@ public:
         
         // Allocate biases
         uint64_t bias_size = GetModelBiasSize(model_path);
-        model->biases = (float*)PHASE1_MALLOC(bias_size);
+        model->biases = (float*)Phase1Malloc(bias_size);
         ReadBiasesFromDisk(model_path, model->biases, bias_size);
         
         model->weight_size = weights_size;
@@ -76,13 +76,13 @@ public:
     // Query Phase 1 for resource availability
     void PrintSystemInfo() {
         printf("=== Phase 1 System Information ===\n");
-        printf("CPU: %s\n", PHASE1().GetCPUCapabilities().brand_string);
-        printf("Physical Cores: %d\n", PHASE1_CORES());
-        printf("Logical Threads: %d\n", PHASE1_THREADS());
-        printf("NUMA Nodes: %d\n", PHASE1().GetNUMANodeCount());
-        printf("AVX-512: %s\n", PHASE1_HAS_AVX512() ? "Yes" : "No");
-        printf("AVX2: %s\n", PHASE1_HAS_AVX2() ? "Yes" : "No");
-        printf("TSC Frequency: %llu Hz\n", PHASE1().GetTSCFrequency());
+        printf("CPU: %s\n", Phase1Instance().GetCPUCapabilities().brand_string);
+        printf("Physical Cores: %d\n", Phase1Cores());
+        printf("Logical Threads: %d\n", Phase1Threads());
+        printf("NUMA Nodes: %d\n", Phase1Instance().GetNUMANodeCount());
+        printf("AVX-512: %s\n", Phase1HasAVX512() ? "Yes" : "No");
+        printf("AVX2: %s\n", Phase1HasAVX2() ? "Yes" : "No");
+        printf("TSC Frequency: %llu Hz\n", Phase1Instance().GetTSCFrequency());
     }
     
 private:
@@ -116,8 +116,8 @@ public:
     
     AgentKernel() {
         m_phase1 = Phase1::Foundation::Initialize();
-        m_thread_count = PHASE1_THREADS();
-        m_agent_states = (AgentState*)PHASE1_MALLOC(
+        m_thread_count = Phase1Threads();
+        m_agent_states = (AgentState*)Phase1Malloc(
             sizeof(AgentState) * m_thread_count
         );
         
@@ -125,7 +125,7 @@ public:
         for (uint32_t i = 0; i < m_thread_count; i++) {
             m_agent_states[i].id = i;
             m_agent_states[i].context_size = 1024;
-            m_agent_states[i].context_vector = (float*)PHASE1_MALLOC(
+            m_agent_states[i].context_vector = (float*)Phase1Malloc(
                 sizeof(float) * m_agent_states[i].context_size
             );
             m_agent_states[i].reasoning_cycles = 0;
@@ -138,15 +138,15 @@ public:
         AgentState& state = m_agent_states[agent_id];
         
         // Timing for adaptive scheduling
-        uint64_t reasoning_start = PHASE1_CYCLES();
-        uint64_t time_start_us = PHASE1_MICROS();
+        uint64_t reasoning_start = Phase1Cycles();
+        uint64_t time_start_us = Phase1Micros();
         
         // Perform reasoning
         std::vector<float> decision = PerformReasoning(state.context_vector);
         
         // Record timing for load balancing
-        state.reasoning_cycles = PHASE1_CYCLES() - reasoning_start;
-        state.decision_time_us = PHASE1_MICROS() - time_start_us;
+        state.reasoning_cycles = Phase1Cycles() - reasoning_start;
+        state.decision_time_us = Phase1Micros() - time_start_us;
         
         // Phase 4 will use this timing for load balancing
         ReportAgentTiming(agent_id, state.decision_time_us);
@@ -154,13 +154,13 @@ public:
     
     // Batch reasoning with timing
     void BatchReasoningStep(uint32_t batch_size) {
-        uint64_t batch_start_us = PHASE1_MICROS();
+        uint64_t batch_start_us = Phase1Micros();
         
         for (uint32_t i = 0; i < batch_size; i++) {
             ReasoningStep(i);
         }
         
-        uint64_t batch_elapsed_us = PHASE1_MICROS() - batch_start_us;
+        uint64_t batch_elapsed_us = Phase1Micros() - batch_start_us;
         printf("Batch reasoning: %.2f ms\n", batch_elapsed_us / 1000.0);
     }
     
@@ -203,14 +203,14 @@ public:
     SwarmInferenceEngine(uint32_t num_models) {
         m_phase1 = Phase1::Foundation::Initialize();
         m_num_models = num_models;
-        m_numa_nodes = PHASE1().GetNUMANodeCount();
-        m_physical_cores = PHASE1_CORES();
+        m_numa_nodes = Phase1Instance().GetNUMANodeCount();
+        m_physical_cores = Phase1Cores();
         
         // Allocate models
-        m_models = (ModelInstance*)PHASE1_MALLOC(sizeof(ModelInstance) * num_models);
+        m_models = (ModelInstance*)Phase1Malloc(sizeof(ModelInstance) * num_models);
         
         // Allocate inference queues per NUMA node
-        m_inference_queues = (InferenceQueue*)PHASE1_MALLOC(
+        m_inference_queues = (InferenceQueue*)Phase1Malloc(
             sizeof(InferenceQueue) * m_numa_nodes
         );
         
@@ -226,10 +226,10 @@ public:
         
         // Allocate weights on target NUMA node
         uint64_t weight_size = 100 * 1024 * 1024;  // 100MB example
-        model.weights = (float*)PHASE1_NUMA_MALLOC(model.numa_node, weight_size);
+        model.weights = (float*)Phase1NUMAMalloc(model.numa_node, weight_size);
         if (!model.weights) {
             printf("[WARNING] Failed to allocate NUMA memory, using system arena\n");
-            model.weights = (float*)PHASE1_MALLOC(weight_size);
+            model.weights = (float*)Phase1Malloc(weight_size);
         }
         
         model.weight_size = weight_size;
@@ -245,7 +245,7 @@ public:
         ModelInstance& model = m_models[model_id];
         
         // Measure inference time for load balancing
-        uint64_t infer_start_us = PHASE1_MICROS();
+        uint64_t infer_start_us = Phase1Micros();
         
         // Execute inference
         InferenceResult result = ExecuteInference(
@@ -255,7 +255,7 @@ public:
         );
         
         // Record timing
-        uint64_t infer_time_us = PHASE1_MICROS() - infer_start_us;
+        uint64_t infer_time_us = Phase1Micros() - infer_start_us;
         model.last_inference_time_us = infer_time_us;
         model.inference_count++;
         
@@ -341,11 +341,11 @@ public:
     
     SwarmOrchestrator() {
         m_phase1 = Phase1::Foundation::Initialize();
-        m_total_capacity = PHASE1_THREADS() * 100;  // 100 tasks per thread max
+        m_total_capacity = Phase1Threads() * 100;  // 100 tasks per thread max
         m_current_load = 0;
         
         // Allocate task metrics buffer
-        m_task_metrics = (TaskMetrics*)PHASE1_MALLOC(
+        m_task_metrics = (TaskMetrics*)Phase1Malloc(
             sizeof(TaskMetrics) * 10000  // Track last 10000 tasks
         );
         m_metrics_index = 0;
@@ -355,7 +355,7 @@ public:
     
     // Main orchestration loop
     void OrchestrationFrame() {
-        uint64_t frame_start_us = PHASE1_MICROS();
+        uint64_t frame_start_us = Phase1Micros();
         
         // Get pending tasks
         std::vector<Task> pending_tasks = GetPendingTasks();
@@ -374,7 +374,7 @@ public:
         ProcessExecutingTasks();
         
         // Record frame metrics
-        uint64_t frame_elapsed_us = PHASE1_MICROS() - frame_start_us;
+        uint64_t frame_elapsed_us = Phase1Micros() - frame_start_us;
         double frame_time_ms = frame_elapsed_us / 1000.0;
         
         printf("Frame: %.2f ms, Load: %d/%d, Throughput: %.0f tasks/sec\n",
@@ -386,7 +386,7 @@ public:
     
     // Dynamic load balancing using Phase 1 timing data
     uint32_t SelectOptimalNUMANode(const Task& task) {
-        uint32_t numa_nodes = PHASE1().GetNUMANodeCount();
+        uint32_t numa_nodes = Phase1Instance().GetNUMANodeCount();
         
         // For now, round-robin
         static uint32_t next_node = 0;

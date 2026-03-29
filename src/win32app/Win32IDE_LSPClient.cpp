@@ -39,16 +39,12 @@
 #include <sstream>
 #include <thread>
 
-<<<<<<< HEAD
 // ============================================================================
 // SEMANTIC TOKENS — Full delta-capable implementation
 //   Requests textDocument/semanticTokens/full from the LSP server,
 //   parses the encoded integer array per LSP 3.16 spec, and maps
 //   token types to editor highlight ranges.
 // ============================================================================
-=======
-// SCAFFOLD_150: Semantic tokens (if used)
->>>>>>> origin/main
 
 // Standard LSP semantic token types (index order per spec)
 static const char* s_semanticTokenTypes[] = {
@@ -78,15 +74,6 @@ static const char* s_semanticTokenTypes[] = {
 };
 static constexpr int s_numSemanticTokenTypes = sizeof(s_semanticTokenTypes) / sizeof(s_semanticTokenTypes[0]);
 
-<<<<<<< HEAD
-=======
-// SCAFFOLD_149: Hover and document link
-
-
-// SCAFFOLD_148: Completion and signature help
-
-
->>>>>>> origin/main
 // nlohmann/json already included via Win32IDE.h
 
 // ============================================================================

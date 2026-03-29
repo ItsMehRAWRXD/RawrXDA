@@ -169,9 +169,9 @@ void Win32IDE::createAcceleratorTable() {
         { FVIRTKEY,                    VK_F7,   IDM_BUILD_PROJECT },       // F7 = Build Project
         { FCONTROL | FSHIFT | FVIRTKEY, 'B',    IDM_BUILD_REBUILD },       // Ctrl+Shift+B = Rebuild All
         { FCONTROL | FVIRTKEY,         VK_F7,   IDM_BUILD_ASM_CURRENT },   // Ctrl+F7 = Assemble Current
-        { FVIRTKEY,                    VK_F5,   IDM_BUILD_RUN },           // F5 = Run
+        { FVIRTKEY,                    VK_F5,   IDM_DBG_LAUNCH },          // F5 = Start Debugging
         { FCONTROL | FVIRTKEY,         VK_F5,   4250 },                    // Ctrl+F5 = CMD_INFERENCE_RUN (Inference Run)
-        { FSHIFT | FVIRTKEY,           VK_F5,   IDM_BUILD_STOP },          // Shift+F5 = Stop
+        { FSHIFT | FVIRTKEY,           VK_F5,   IDM_DBG_KILL },            // Shift+F5 = Stop Debugging
         // Edit menu
         { FCONTROL | FVIRTKEY,         'Z',     IDM_EDIT_UNDO },           // Ctrl+Z = Undo
         { FCONTROL | FVIRTKEY,         'Y',     IDM_EDIT_REDO },           // Ctrl+Y = Redo

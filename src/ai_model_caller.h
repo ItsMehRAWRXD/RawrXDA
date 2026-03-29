@@ -5,7 +5,6 @@
 #include <memory> 
 #include <functional>
 #include <chrono>
-<<<<<<< HEAD
 #include <nlohmann/json.hpp>
 
 namespace RawrXD {
@@ -22,11 +21,6 @@ struct Diagnostic {
     std::string source;        // e.g., "ai-linter"
 };
 
-=======
-
-namespace RawrXD {
-
->>>>>>> origin/main
 class ModelCaller {
 public:
     enum class ModelType {
@@ -52,7 +46,6 @@ public:
         std::string description;
     };
 
-<<<<<<< HEAD
     /**
      * @brief Initialize the model caller with a specific model
      * @param modelPath Path to GGUF file or Ollama model name
@@ -73,8 +66,6 @@ public:
     /**
      * @brief Generate completions for code
      */
-=======
->>>>>>> origin/main
     static std::vector<Completion> generateCompletion(
         const std::string& prefix,
         const std::string& suffix,
@@ -82,29 +73,22 @@ public:
         const std::string& context,
         int numCompletions = 3);
 
-<<<<<<< HEAD
     /**
      * @brief Generate code from natural language instruction
      */
-=======
->>>>>>> origin/main
     static std::string generateCode(
         const std::string& instruction,
         const std::string& fileType,
         const std::string& context);
 
-<<<<<<< HEAD
     /**
      * @brief Rewrite/refactor code based on instruction
      */
-=======
->>>>>>> origin/main
     static std::string generateRewrite(
         const std::string& code,
         const std::string& instruction,
         const std::string& context);
 
-<<<<<<< HEAD
     /**
      * @brief Generate code diagnostics
      */
@@ -147,16 +131,6 @@ public:
 
 private:
     static std::string buildCompletionPrompt(
-=======
-    // Internal Implementation helpers (exposed for simplicity in this refactor step, but usually private)
-    static std::string callModel(const std::string& prompt, const GenerationParams& params);
-
-    using StreamCallback = std::function<bool(const std::string&)>; // Returns false to cancel
-    static bool streamModel(const std::string& prompt, const GenerationParams& params, StreamCallback callback, std::chrono::milliseconds delay = std::chrono::milliseconds(0));
-
-private:
-   static std::string buildCompletionPrompt(
->>>>>>> origin/main
         const std::string& prefix,
         const std::string& suffix,
         const std::string& fileType,

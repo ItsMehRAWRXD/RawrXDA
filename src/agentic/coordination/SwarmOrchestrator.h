@@ -311,7 +311,7 @@ private:
     );
     
     void swarmLoop();
-    void taskProcessorLoop() { /* Implemented as part of main loop in sample, but split here if needed */ }
+    void taskProcessorLoop() { /* Task processing merged into swarmLoop() main loop */ }
     
     // Real quality metrics
     float calculateResultQuality(

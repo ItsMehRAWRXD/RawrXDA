@@ -14,6 +14,7 @@
 #include "live_binary_patcher.hpp"
 #include "shadow_page_detour.hpp"
 #include "sentinel_watchdog.hpp"
+#include "vscode_copilot_hotpatch.hpp"
 
 // Forward declarations — platform subsystems
 class AutonomousWorkflowEngine;
@@ -30,6 +31,9 @@ namespace RawrXD { namespace Embeddings { class EmbeddingEngine; } }
 namespace RawrXD { namespace Vision { class VisionEncoder; } }
 namespace RawrXD { namespace Extensions { class ExtensionMarketplace; } }
 namespace RawrXD { namespace Auth { class RBACEngine; } }
+
+// Forward declaration — VS Code Copilot Integration (Layer 4)
+class VSCodeCopilotHotpatcher;
 #include <cstdint>
 #include <cstddef>
 #include <mutex>
@@ -94,6 +98,12 @@ struct HotpatchEvent {
         SentinelDeactivated      = 26,
         SentinelViolation        = 27,
         SentinelLockdown         = 28,
+        // VS Code Copilot (Layer 4) events
+        CopilotInterceptorApplied = 29,
+        CopilotOperationEnhanced  = 30,
+        CopilotCheckpointCreated  = 31,
+        CopilotCheckpointRestored = 32,
+        CopilotFeatureProcessed   = 33,
     };
 
     Type        type;
@@ -201,6 +211,54 @@ public:
     PatchResult   shadow_initialize();
     PatchResult   shadow_shutdown();
 
+    // ---- VS Code Copilot Integration (Layer 4 — AI-Enhanced Development) ----
+    UnifiedResult copilot_process_operation(const char* message, size_t messageLen,
+                                           CopilotOperationEnhanced* operation = nullptr);
+    UnifiedResult copilot_add_status_interceptor(const CopilotStatusInterceptor& interceptor);
+    UnifiedResult copilot_remove_status_interceptor(const char* name);
+    UnifiedResult copilot_add_enhancement_rule(const CopilotEnhancementRule& rule);
+    UnifiedResult copilot_remove_enhancement_rule(const char* name);
+    
+    // Feature-specific operations
+    UnifiedResult copilot_compact_conversation(const std::string& conversation,
+                                             std::string* result = nullptr);
+    UnifiedResult copilot_optimize_tool_selection(const std::vector<std::string>& tools,
+                                                 std::vector<std::string>* result = nullptr);
+    UnifiedResult copilot_enhance_resolution(const std::string& context,
+                                            std::string* result = nullptr);
+    UnifiedResult copilot_process_read_lines(const std::string& content, size_t start, size_t end,
+                                            std::string* result = nullptr);
+    UnifiedResult copilot_plan_exploration(const std::string& codebase,
+                                          std::vector<std::string>* result = nullptr);
+    UnifiedResult copilot_enhance_file_search(const std::string& query,
+                                             const std::vector<std::string>& results,
+                                             std::string* result = nullptr);
+    UnifiedResult copilot_evaluate_audit(const std::string& context,
+                                        std::string* result = nullptr);
+    
+    // Checkpoint management
+    UnifiedResult copilot_create_checkpoint(const std::string& id,
+                                           const std::string& conversation,
+                                           const std::string& workspace);
+    UnifiedResult copilot_restore_checkpoint(const std::string& id,
+                                            std::string* conversation = nullptr,
+                                            std::string* workspace = nullptr);
+    UnifiedResult copilot_delete_checkpoint(const std::string& id);
+    std::vector<std::string> copilot_list_checkpoints() const;
+    
+    // Configuration
+    void          copilot_set_auto_optimize(bool enable);
+    void          copilot_set_conversation_compaction(bool enable);
+    void          copilot_set_checkpoint_restore(bool enable);
+    void          copilot_set_operation_caching(bool enable);
+    
+    // Statistics
+    CopilotHotpatchStats copilot_get_stats() const;
+    void                 copilot_reset_stats();
+    
+    PatchResult   copilot_initialize();
+    PatchResult   copilot_shutdown();
+
     // ---- Sentinel Watchdog (Layer 6 — .text Integrity Monitor) ----
     PatchResult   sentinel_activate();
     PatchResult   sentinel_deactivate();
@@ -299,6 +357,7 @@ public:
         std::atomic<uint64_t> liveBinaryCount{0};
         std::atomic<uint64_t> shadowDetourCount{0};
         std::atomic<uint64_t> sentinelEventCount{0};
+        std::atomic<uint64_t> copilotOperationCount{0};  // VS Code Copilot operations
         std::atomic<uint64_t> totalOperations{0};
         std::atomic<uint64_t> totalFailures{0};
     };
@@ -357,6 +416,9 @@ private:
     // Layer 6: Shadow-Page Detour + Sentinel Watchdog
     std::atomic<bool>                       m_shadowInit{false};
     std::atomic<bool>                       m_sentinelInit{false};
+
+    // Layer 4: VS Code Copilot Integration
+    std::atomic<bool>                       m_copilotInit{false};
 
     // Force TPS: 0 = disabled; >0 = target tokens per second (throttle token delivery)
     std::atomic<double>                     m_targetTPS{0.0};

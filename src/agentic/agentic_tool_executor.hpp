@@ -37,6 +37,7 @@ struct ToolPolicy {
     
     std::vector<std::string> allowed_args;   // Whitelist of allowed arguments
     bool allow_any_args{false};              // If true, ignore allowed_args
+    std::vector<std::string> fallback_tools; // Ordered fallback chain (e.g. ninja, make)
     
     int timeout_seconds{300};
     size_t max_output_bytes{100 * 1024 * 1024};  // 100MB
@@ -116,7 +117,21 @@ public:
     // Policy management
     const ToolPolicy* getPolicy(const std::string& tool) const;
     void setAllToolsReadOnly(bool readonly);
-    
+
+    // Tool call validation and retries
+    enum class ToolFailureType : uint8_t {
+        None = 0,
+        Transient,
+        Permanent,
+        Timeout,
+        PermissionDenied,
+        Unknown
+    };
+
+    bool validateToolCallSchema(const ExecutionRequest& request, std::string& error) const;
+    ToolFailureType classifyFailure(const ExecutionResult& result) const;
+    ExecutionResult executeWithRetry(const ExecutionRequest& request, int maxRetries = 3);
+
 private:
     // Safety & validation
     bool validateRequest(const ExecutionRequest& request);
@@ -126,10 +141,11 @@ private:
     // Execution
     ExecutionResult executeInternal(const ExecutionRequest& request);
     ExecutionResult spawnProcess(const std::string& exe, const std::vector<std::string>& args,
-                                 const std::string& cwd, int timeout_seconds);
+                                 const std::string& cwd, int timeout_seconds, size_t max_output_bytes);
     
     // Process monitoring
-    bool monitorProcess(void* process_handle, int timeout_ms, std::string& stdout, std::string& stderr);
+    bool monitorProcess(void* process_handle, int timeout_ms, std::string& stdout, std::string& stderr,
+                        size_t max_output_bytes, size_t* peak_memory_bytes);
     
     std::map<std::string, ToolPolicy> m_policies;
     

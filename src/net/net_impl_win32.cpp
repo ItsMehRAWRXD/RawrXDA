@@ -1254,9 +1254,37 @@ json NetworkManager::getNetworkStatus() const {
     };
 }
 
-size_t ConnectionPool::getActiveConnections() const { return 0; } // TODO
-size_t ConnectionPool::getIdleConnections() const { return 0; } // TODO
-json ConnectionPool::getStatus() const { return {{"active", 0}}; } // TODO
+size_t ConnectionPool::getActiveConnections() const {
+    std::lock_guard lock(m_mutex);
+    size_t count = 0;
+    for (const auto& conn : m_connections) {
+        if (conn && conn->isInUse.load() && conn->isValid.load())
+            ++count;
+    }
+    return count;
+}
+
+size_t ConnectionPool::getIdleConnections() const {
+    std::lock_guard lock(m_mutex);
+    size_t count = 0;
+    for (const auto& conn : m_connections) {
+        if (conn && !conn->isInUse.load() && conn->isValid.load())
+            ++count;
+    }
+    return count;
+}
+
+json ConnectionPool::getStatus() const {
+    std::lock_guard lock(m_mutex);
+    size_t active = 0, idle = 0, total = 0;
+    for (const auto& conn : m_connections) {
+        if (!conn || !conn->isValid.load()) continue;
+        ++total;
+        if (conn->isInUse.load()) ++active;
+        else ++idle;
+    }
+    return {{"active", active}, {"idle", idle}, {"total", total}};
+}
 RawrXD::Expected<void, NetError> WebSocketClient::ping() { return {}; }
 RawrXD::Expected<void, NetError> WebSocketClient::pong() { return {}; }
 void WebSocketClient::setMessageHandler(std::function<void(const WebSocketFrame&)> handler) {

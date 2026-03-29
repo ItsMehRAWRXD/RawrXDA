@@ -195,7 +195,7 @@ bool WorkspaceAnalyzer::scanDirectory(const std::string& dir, std::shared_ptr<Di
         
         return true;
     } catch (const std::exception& e) {
-        LOG_WARN("WorkspaceAnalyzer", "Error scanning " + dir + ": " + e.what());
+        LOG_WARNING("WorkspaceAnalyzer", "Error scanning " + dir + ": " + e.what());
         return false;
     }
 }
@@ -222,7 +222,7 @@ bool WorkspaceAnalyzer::analyzeSourceFile(const std::string& path, SourceFile& f
         ifs.close();
         return true;
     } catch (const std::exception& e) {
-        LOG_WARN("WorkspaceAnalyzer", "Error analyzing " + path + ": " + e.what());
+        LOG_WARNING("WorkspaceAnalyzer", "Error analyzing " + path + ": " + e.what());
         return false;
     }
 }

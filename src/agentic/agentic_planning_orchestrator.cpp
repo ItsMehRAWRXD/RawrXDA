@@ -749,6 +749,46 @@ void AgenticPlanningOrchestrator::rollbackStep(ExecutionPlan* plan, int step_ind
     LOG_INFO("AgenticPlanning", "Step rolled back: " + step.id);
 }
 
+void AgenticPlanningOrchestrator::repairPlanAfterFailure(ExecutionPlan* plan)
+{
+    if (!plan) return;
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    std::vector<int> failedIndices;
+    for (int i = 0; i < (int)plan->steps.size(); ++i) {
+        if (plan->steps[i].status == ExecutionStatus::Failed) {
+            failedIndices.push_back(i);
+        }
+    }
+
+    if (failedIndices.empty()) return;
+
+    if (m_execLogFn) {
+        m_execLogFn("Repair: failed steps detected, attempting dependency-aware recovery");
+    }
+
+    // Find steps that depend on failed ones and reset them to pending
+    for (int idx : failedIndices) {
+        const auto& failed = plan->steps[idx];
+        for (auto& step : plan->steps) {
+            for (const auto& dep : step.dependencies) {
+                if (dep == failed.id) {
+                    step.status = ExecutionStatus::Waiting;
+                    step.error_message = "Reset after dependency failure: " + failed.id;
+                }
+            }
+        }
+
+        // Reset failed step if auto-retry path available
+        plan->steps[idx].status = ExecutionStatus::Waiting;
+        plan->steps[idx].error_message.clear();
+    }
+
+    // Reset plan state so execution can continue from repaired steps
+    plan->is_executing.store(false);
+    plan->current_step_index.store(-1);
+}
+
 void AgenticPlanningOrchestrator::executeEntirePlan(ExecutionPlan* plan)
 {
     if (!plan)
@@ -790,6 +830,7 @@ void AgenticPlanningOrchestrator::executeEntirePlan(ExecutionPlan* plan)
                         rollbackStep(plan, i);
                     }
                 }
+                repairPlanAfterFailure(plan);
             }
 
             plan->is_executing.store(false);

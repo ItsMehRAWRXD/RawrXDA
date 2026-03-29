@@ -31,6 +31,8 @@
 
 #include "ToolCallResult.h"
 
+class AgentHistoryRecorder;
+
 namespace RawrXD {
 namespace Agent {
 
@@ -41,6 +43,14 @@ struct ToolGuardrails {
     std::vector<std::string> allowedRoots;       // Workspace roots (absolute paths)
     std::vector<std::string> denyPatterns;        // Glob patterns to block (e.g. "*.exe")
     std::vector<std::string> allowedCommands;     // Whitelisted shell commands (execute/run_shell)
+
+    enum class CommandSandboxTier : uint8_t {
+        Safe = 1,
+        Elevated = 2,
+        Blocked = 3
+    };
+    CommandSandboxTier sandboxTier = CommandSandboxTier::Safe;
+
     size_t maxFileSizeBytes       = 10 * 1024 * 1024;  // 10 MB max file read/write
     size_t maxOutputCaptureBytes  = 4 * 1024 * 1024;   // 4 MB max command output
     uint32_t commandTimeoutMs     = 30000;              // 30 second default timeout
@@ -57,12 +67,19 @@ public:
     // ---- Initialization ----
     static void SetGuardrails(const ToolGuardrails& guards);
     static const ToolGuardrails& GetGuardrails();
+    static void SetHistoryRecorder(AgentHistoryRecorder* recorder);
 
     // ---- Tool implementations ----
     static ToolCallResult ToolReadFile(const nlohmann::json& args);
     static ToolCallResult WriteFile(const nlohmann::json& args);
     static ToolCallResult ReplaceInFile(const nlohmann::json& args);
     static ToolCallResult ListDir(const nlohmann::json& args);
+    static ToolCallResult DeleteFile(const nlohmann::json& args);
+    static ToolCallResult RenameFile(const nlohmann::json& args);
+    static ToolCallResult CopyFile(const nlohmann::json& args);
+    static ToolCallResult MakeDirectory(const nlohmann::json& args);
+    static ToolCallResult StatFile(const nlohmann::json& args);
+    static ToolCallResult GitStatus(const nlohmann::json& args);
     static ToolCallResult ExecuteCommand(const nlohmann::json& args);
     static ToolCallResult RunShell(const nlohmann::json& args);
     static ToolCallResult SearchCode(const nlohmann::json& args);
@@ -73,6 +90,21 @@ public:
     static ToolCallResult ProposeMultiFileEdits(const nlohmann::json& args);
     static ToolCallResult LoadRules(const nlohmann::json& args);
     static ToolCallResult PlanTasks(const nlohmann::json& args);
+    static ToolCallResult SetIterationStatus(const nlohmann::json& args);
+    static ToolCallResult GetIterationStatus(const nlohmann::json& args);
+    static ToolCallResult ResetIterationStatus(const nlohmann::json& args);
+    static ToolCallResult CompactConversation(const nlohmann::json& args);
+    static ToolCallResult OptimizeToolSelection(const nlohmann::json& args);
+    static ToolCallResult ResolveSymbol(const nlohmann::json& args);
+    static ToolCallResult ReadLines(const nlohmann::json& args);
+    static ToolCallResult PlanCodeExploration(const nlohmann::json& args);
+    static ToolCallResult SearchFiles(const nlohmann::json& args);
+    static ToolCallResult RestoreCheckpoint(const nlohmann::json& args);
+    static ToolCallResult EvaluateIntegrationAuditFeasibility(const nlohmann::json& args);
+    static ToolCallResult GetCoverage(const nlohmann::json& args);
+    static ToolCallResult RunBuild(const nlohmann::json& args);
+    static ToolCallResult ApplyHotpatch(const nlohmann::json& args);
+    static ToolCallResult DiskRecovery(const nlohmann::json& args);
 
     // ---- Schema generation (OpenAI function-calling format) ----
     static nlohmann::json GetAllSchemas();

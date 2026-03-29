@@ -22,10 +22,7 @@
 #include <windows.h>
 #include <winhttp.h>
 #include <random>
-<<<<<<< HEAD
 #include <nlohmann/json.hpp>
-=======
->>>>>>> origin/main
 
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "winhttp.lib")
@@ -429,7 +426,6 @@ int main(int argc, char* argv[]) {
     std::cout << "  ✓ 16GB VRAM available\n";
     std::cout << "  ✓ GPU context initialized\n\n";
     
-<<<<<<< HEAD
     std::cout << "[3/4] Preparing model endpoint...\n";
     std::cout << "  ✓ Model path: " << model_path << "\n";
     std::cout << "  ✓ Quantization: Q4_K_M\n";
@@ -442,23 +438,6 @@ int main(int argc, char* argv[]) {
         std::cout << "  ✓ Ready for inference requests\n\n";
     } catch (const std::exception& e) {
         std::cerr << "  ✗ Error preparing endpoint: " << e.what() << "\n";
-=======
-    std::cout << "[3/4] Loading GGUF model into VRAM...\n";
-    std::cout << "  ✓ Model path: " << model_path << "\n";
-    std::cout << "  ✓ Quantization: Q4_K_M\n";
-    std::cout << "  ⏳ Loading model into GPU VRAM (this may take a minute)...\n";
-    
-    try {
-        g_engine = std::make_unique<InferenceEngine>();
-        if (!g_engine->loadModel(model_path)) {
-            std::cerr << "  ✗ Failed to load model\n";
-            return 1;
-        }
-        std::cout << "  ✓ Model loaded successfully into GPU VRAM\n";
-        std::cout << "  ✓ Ready for inference requests\n\n";
-    } catch (const std::exception& e) {
-        std::cerr << "  ✗ Error loading model: " << e.what() << "\n";
->>>>>>> origin/main
         return 1;
     }
     

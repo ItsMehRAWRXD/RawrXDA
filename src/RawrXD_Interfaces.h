@@ -154,6 +154,13 @@ namespace RawrXD {
         std::vector<uint32_t> token_types_u32; // Added for GGUFLoader compatibility
     };
 
+    enum class GGUFLoadState : uint8_t {
+        Uninitialized = 0,
+        MetadataOnly = 1,
+        Partial = 2,
+        Complete = 3
+    };
+
     class IGGUFLoader {
     public:
         virtual ~IGGUFLoader() = default;
@@ -180,6 +187,27 @@ namespace RawrXD {
         virtual std::vector<std::string> GetLoadedZones() const = 0;
         virtual std::vector<std::string> GetAllZones() const = 0;
         virtual std::vector<TensorInfo> GetAllTensorInfo() const = 0;
+        // Explicit loader state query surface (defaults preserve compatibility for existing loaders).
+        virtual GGUFLoadState GetLoadState() const {
+            if (GetAllTensorInfo().empty()) {
+                return GGUFLoadState::Uninitialized;
+            }
+            if (GetCurrentMemoryUsage() == 0) {
+                return GGUFLoadState::MetadataOnly;
+            }
+            const auto allZones = GetAllZones();
+            const auto loadedZones = GetLoadedZones();
+            if (!allZones.empty() && loadedZones.size() >= allZones.size()) {
+                return GGUFLoadState::Complete;
+            }
+            return GGUFLoadState::Partial;
+        }
+        virtual uint64_t GetMappedMemoryBytes() const {
+            return GetCurrentMemoryUsage();
+        }
+        virtual bool IsMetadataOnly() const {
+            return GetLoadState() == GGUFLoadState::MetadataOnly;
+        }
     };
 
 } // namespace RawrXD

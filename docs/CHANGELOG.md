@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Fixed
+#### Debugger Reliability
+- **Debugger error status regression coverage:** Added `tests/unit/test_debugger_error_status.cpp` to validate callback-derived error text status formatting, including bounded 256-character truncation behavior for the debugger status bar path.
+- **Debugger error telemetry counter:** Added `debugger_error_events_total` increment in `Win32IDE_Debugger.cpp` when debugger error callbacks are emitted, enabling field monitoring of debugger error event volume.
+- **Debugger status text formatting:** Centralized status-text truncation in `src/win32app/debugger_status_text.h` and reused it in `Win32IDE::updateDebuggerErrorStatus` to keep callback-driven status rendering deterministic.
+
 - **Electron AI providers:** `localhost` → **`127.0.0.1`** in `config/providers.json`, `preferIpv4Loopback()` on every request, and **`http.Agent({ family: 4 })`** for axios so Node cannot prefer **`::1`** when Ollama is IPv4-only; `providers.json` cache cleared on load. Clearer **`ECONNREFUSED`** text (`docs/AUTONOMOUS_AGENT_ELECTRON.md`).
 - **Electron IRC bridge:** `electron/irc_protocol.js` — repaired invalid **`split(/\n')`** typo that broke module load; protocol helpers + **`irc-bridge-selfcheck.js`** validate chunking and parsers without opening sockets.
 - **Win32 IDE launch:** Register **`__pfnDliFailureHook2`** → **`DelayLoadFailureHook`** so missing **delay-loaded** DLLs (e.g. **`vulkan-1.dll`**, **`D3DCOMPILER_47.dll`**) show a **message box** instead of an immediate exit with **no window**. See **`docs/WIN32_IDE_WONT_LAUNCH.md`**.

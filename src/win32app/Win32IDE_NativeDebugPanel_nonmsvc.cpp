@@ -106,7 +106,7 @@ void Win32IDE::cmdDbgBreak() {
 }
 
 void Win32IDE::cmdDbgLaunch() {
-    logDebugUnavailable("cmdDbgLaunch");
+    startDebugging();
 }
 
 void Win32IDE::cmdDbgAttach() {
@@ -158,7 +158,7 @@ void Win32IDE::cmdDbgEvaluate() {
 }
 
 void Win32IDE::cmdDbgKill() {
-    logDebugUnavailable("cmdDbgKill");
+    stopDebugging();
 }
 
 void Win32IDE::cmdDbgRegisters() {

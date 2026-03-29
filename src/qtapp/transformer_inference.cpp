@@ -3,6 +3,7 @@
 #include <ggml.h>
 #include <ggml-backend.h>
 #include <ggml-cpu.h>
+#include <llama.h>
 #include <QDebug>
 #include <cstring>
 #include <cmath>
@@ -10,10 +11,12 @@
 #include <algorithm>
 
 TransformerInference::TransformerInference() {
+    initSampler();
 }
 
 TransformerInference::~TransformerInference() {
     freeContext();
+    freeSampler();
 }
 
 void TransformerInference::freeContext() {
@@ -410,7 +413,7 @@ struct ggml_tensor* TransformerInference::createTensorFromCache(
 }
 
 std::vector<int32_t> TransformerInference::generate(const std::vector<int32_t>& prompt,
-                                                     int maxTokens, float temperature) {
+                                                     int maxTokens) {
     if (!m_ready) {
         qWarning() << "Model not ready for generation";
         return {};
@@ -424,8 +427,8 @@ std::vector<int32_t> TransformerInference::generate(const std::vector<int32_t>& 
         std::vector<float> logits = forward(tokens);
         if (logits.empty()) break;
         
-        // Sample next token
-        int32_t nextToken = sampleToken(logits, temperature);
+        // Sample next token using llama sampler
+        int32_t nextToken = sampleToken(logits);
         tokens.push_back(nextToken);
         
         // Stop on EOS (assuming token 2 is EOS)
@@ -601,30 +604,85 @@ ggml_tensor* TransformerInference::buildGraph(ggml_context* ctx, const std::vect
     return cur;
 }
 
-int TransformerInference::sampleToken(const std::vector<float>& logits, float temperature) {
-    if (temperature <= 0.0f) {
-        // Greedy sampling
+int TransformerInference::sampleToken(const std::vector<float>& logits) {
+    if (!m_sampler) {
+        // Fallback to greedy sampling if no sampler
         return std::max_element(logits.begin(), logits.end()) - logits.begin();
     }
     
-    // Temperature sampling
-    std::vector<float> probs = logits;
-    for (float& p : probs) p = expf(p / temperature);
+    // Create llama_token_data_array from logits
+    std::vector<llama_token_data> candidates;
+    candidates.reserve(logits.size());
     
-    float sum = 0.0f;
-    for (float p : probs) sum += p;
-    for (float& p : probs) p /= sum;
-    
-    // Sample from distribution
-    static std::mt19937 rng(std::random_device{}());
-    std::uniform_real_distribution<float> dist(0.0f, 1.0f);
-    float r = dist(rng);
-    
-    float cumulative = 0.0f;
-    for (size_t i = 0; i < probs.size(); ++i) {
-        cumulative += probs[i];
-        if (r < cumulative) return i;
+    for (size_t i = 0; i < logits.size(); ++i) {
+        candidates.push_back({static_cast<llama_token>(i), logits[i], 0.0f});
     }
     
-    return probs.size() - 1;
+    llama_token_data_array candidate_array = {
+        candidates.data(),
+        candidates.size(),
+        false  // not sorted
+    };
+    
+    // Apply sampling using llama sampler
+    llama_sampler_apply(m_sampler, &candidate_array);
+    
+    // Sample the token
+    llama_token sampled_token = llama_sampler_sample(m_sampler, nullptr, -1);
+    
+    return static_cast<int32_t>(sampled_token);
+}
+
+void TransformerInference::setSamplingParams(float temperature, int32_t top_k, 
+                                           float top_p, uint32_t seed) {
+    m_temperature = temperature;
+    m_top_k = top_k;
+    m_top_p = top_p;
+    m_seed = seed;
+    
+    // Reinitialize sampler with new parameters
+    freeSampler();
+    initSampler();
+}
+
+void TransformerInference::initSampler() {
+    if (m_sampler) return;  // Already initialized
+    
+    // Create sampler chain with configured parameters
+    struct llama_sampler_chain_params params = llama_sampler_chain_default_params();
+    m_sampler = llama_sampler_chain_init(params);
+    
+    if (!m_sampler) {
+        qWarning() << "Failed to initialize llama sampler";
+        return;
+    }
+    
+    // Add samplers to the chain
+    if (m_temperature > 0.0f) {
+        // Temperature sampling
+        llama_sampler_chain_add(m_sampler, llama_sampler_init_temp(m_temperature));
+    } else {
+        // Greedy sampling
+        llama_sampler_chain_add(m_sampler, llama_sampler_init_greedy());
+    }
+    
+    // Top-k sampling
+    if (m_top_k > 0) {
+        llama_sampler_chain_add(m_sampler, llama_sampler_init_top_k(m_top_k));
+    }
+    
+    // Top-p sampling
+    if (m_top_p < 1.0f) {
+        llama_sampler_chain_add(m_sampler, llama_sampler_init_top_p(m_top_p, 1));
+    }
+    
+    // Random seed for reproducibility
+    llama_sampler_chain_add(m_sampler, llama_sampler_init_dist(m_seed));
+}
+
+void TransformerInference::freeSampler() {
+    if (m_sampler) {
+        llama_sampler_free(m_sampler);
+        m_sampler = nullptr;
+    }
 }

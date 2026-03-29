@@ -6,6 +6,9 @@
 #include <vector>
 #include <cstdint>
 
+// Include llama for advanced sampling
+#include <llama.h>
+
 // Forward declarations for ggml
 struct ggml_context;
 struct ggml_tensor;
@@ -62,11 +65,10 @@ public:
      * @brief Generate tokens autoregressively
      * @param prompt Input token IDs
      * @param maxTokens Maximum tokens to generate
-     * @param temperature Sampling temperature (0.0 = greedy)
      * @return Generated token IDs
      */
     std::vector<int32_t> generate(const std::vector<int32_t>& prompt,
-                                   int maxTokens, float temperature = 0.7f);
+                                   int maxTokens);
     
     /**
      * @brief Run a single forward pass
@@ -89,6 +91,16 @@ public:
         m_ready = true; 
         m_ggufDirectMode = true;
     }
+    
+    /**
+     * @brief Configure sampling parameters
+     * @param temperature Sampling temperature (0.0 = greedy)
+     * @param top_k Top-k sampling parameter
+     * @param top_p Top-p (nucleus) sampling parameter
+     * @param seed Random seed for reproducible sampling
+     */
+    void setSamplingParams(float temperature = 0.7f, int32_t top_k = 40, 
+                          float top_p = 0.9f, uint32_t seed = 0);
     
 private:
     // Model hyperparameters
@@ -135,6 +147,15 @@ private:
     std::vector<ggml_tensor*> m_kCache;
     std::vector<ggml_tensor*> m_vCache;
     
+    // Llama sampler for advanced sampling strategies
+    struct llama_sampler* m_sampler{nullptr};
+    
+    // Sampling parameters
+    float m_temperature{0.7f};
+    int32_t m_top_k{40};
+    float m_top_p{0.9f};
+    uint32_t m_seed{0};
+    
     bool m_ready{false};
     
     // Helper methods
@@ -148,7 +169,9 @@ private:
                                        const std::vector<qint64>& dimensions);
     
     ggml_tensor* buildGraph(ggml_context* ctx, const std::vector<int32_t>& tokens);
-    int sampleToken(const std::vector<float>& logits, float temperature);
+    int sampleToken(const std::vector<float>& logits);
     void initKVCache();
+    void initSampler();
+    void freeSampler();
     void freeContext();
 };

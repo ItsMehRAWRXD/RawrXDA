@@ -41,6 +41,12 @@ public:
     void setRiskAnalyzer(RiskAnalyzerFn fn) { m_riskAnalyzer = fn; }
     void setRollbackExecutor(RollbackExecutorFn fn) { m_rollbackExecutor = fn; }
     
+    // Context window tuning
+    void setContextWindow(size_t tokens);
+    size_t getContextWindow() const;
+    void enableAdaptiveContextBudgeting(bool enable = true);
+    bool isAdaptiveContextBudgetingEnabled() const;
+
     // Status queries
     int getPendingApprovalCount() const;
     std::vector<std::pair<ExecutionPlan*, int>> getPendingApprovals() const;
@@ -57,6 +63,9 @@ private:
     ToolExecutorFn m_toolExecutor;
     RiskAnalyzerFn m_riskAnalyzer;
     RollbackExecutorFn m_rollbackExecutor;
+
+    size_t m_contextWindowTokens = 32768;
+    bool m_adaptiveContextBudgeting = false;
     
     // Internal callbacks
     void onPlanGeneration(const std::string& task, ExecutionPlan& plan);
@@ -67,14 +76,19 @@ private:
 } // namespace Agentic
 
 // ============================================================================
-// Convenience Macros for IDE Code
+// Inline functions — production entry points (replace raw macro wrappers)
 // ============================================================================
 
-#define AGENTIC_PLAN_TASK(task_desc) \
-    Agentic::OrchestratorIntegration::instance().planAndApproveTask(task_desc)
+inline Agentic::ExecutionPlan* AgenticPlanTask(const std::string& task_desc) {
+    return Agentic::OrchestratorIntegration::instance().planAndApproveTask(task_desc);
+}
 
-#define AGENTIC_GET_PENDING_COUNT() \
-    Agentic::OrchestratorIntegration::instance().getPendingApprovalCount()
+inline int AgenticGetPendingCount() {
+    return Agentic::OrchestratorIntegration::instance().getPendingApprovalCount();
+}
 
-#define AGENTIC_GET_ORCHESTRATOR() \
-    Agentic::OrchestratorIntegration::instance().getOrchestrator()
+inline Agentic::AgenticPlanningOrchestrator* AgenticGetOrchestrator() {
+    return Agentic::OrchestratorIntegration::instance().getOrchestrator();
+}
+
+// Macro aliases removed — use AgenticPlanTask(), AgenticGetPendingCount(), AgenticGetOrchestrator() directly

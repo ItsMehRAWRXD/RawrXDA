@@ -2,7 +2,6 @@
 // OrchestratorBridge.cpp — Minimal Wiring Layer for CLI
 // =============================================================================
 #include "OrchestratorBridge.h"
-<<<<<<< HEAD
 #include "ToolCallResult.h"
 #include "../logging/Logger.h"
 #include "../security/InputSanitizer.h"
@@ -18,15 +17,6 @@
 #include <thread>
 #include <stdexcept>
 #include <unordered_set>
-=======
-#include "DiskRecoveryToolHandler.h"
-#include "../config/IDEConfig.h"
-#include <chrono>
-#include <algorithm>
-
-// SCAFFOLD_062: OrchestratorBridge and native bridge
-
->>>>>>> origin/main
 
 using RawrXD::Agent::OrchestratorBridge;
 using RawrXD::Agent::InferenceResult;
@@ -187,148 +177,9 @@ bool OrchestratorBridge::Initialize(const std::string& workingDir,
     for (const auto& warn : validation.warnings) {
         logger.warning("OrchestratorBridge", warn);
     }
-<<<<<<< HEAD
     if (!validation.valid) {
         for (const auto& err : validation.errors) {
             logger.error("OrchestratorBridge", err);
-=======
-
-    // Wire tool handlers
-    WireToolHandlers();
-
-    // Wire tool schemas
-    WireToolSchemas();
-
-    // Configure BoundedAgentLoop (cycle count from config)
-    AgentLoopConfig loopConfig;
-    loopConfig.maxSteps = std::clamp(IDEConfig::getInstance().getInt("agent.cycleCount", 10), 1, 50);
-    loopConfig.maxTokensPerRequest = 8192;
-    loopConfig.model = m_ollamaConfig.chat_model;
-    loopConfig.ollamaBaseUrl = ollamaUrl.empty() ? "http://localhost:11434" : ollamaUrl;
-    loopConfig.workingDirectory = workingDir;
-    loopConfig.autoVerify = true;
-    m_agentLoop.Configure(loopConfig);
-
-    // Wire LLM backend adapter into BoundedAgentLoop
-    m_agentLoop.SetLLMBackend(BuildLLMAdapter());
-
-    // Configure orchestrator
-    OrchestratorConfig orchConfig;
-    orchConfig.max_tool_rounds = 15;
-    orchConfig.working_directory = workingDir;
-    orchConfig.auto_build_after_edit = true;
-    orchConfig.auto_diagnostics = true;
-    m_orchestrator.SetConfig(orchConfig);
-    m_orchestrator.SetOllamaConfig(m_ollamaConfig);
-
-    // Configure FIM builder
-    m_fimBuilder.SetFormat(FIMFormat::Qwen);
-    m_fimBuilder.SetMaxContextTokens(4096);
-    m_fimBuilder.SetPrefixRatio(0.75f);
-
-    // Set guardrails for tool handlers
-    ToolGuardrails guards;
-    guards.allowedRoots.push_back(workingDir);
-    guards.commandTimeoutMs = 30000;
-    guards.requireBackupOnWrite = true;
-    AgentToolHandlers::SetGuardrails(guards);
-
-    m_initialized = true;
-    return true;
-}
-
-// ---------------------------------------------------------------------------
-// LLM Backend Adapter
-// ---------------------------------------------------------------------------
-// Adapts AgentOllamaClient (WinHTTP streaming) into the LLMChatFunction
-// signature expected by BoundedAgentLoop.
-
-LLMChatFunction OrchestratorBridge::BuildLLMAdapter() {
-    // Capture the client pointer — safe because OrchestratorBridge is a singleton
-    // and outlives the agent loop.
-    auto* client = m_ollamaClient.get();
-    auto& registry = m_xMacroRegistry;
-
-    return [client, &registry](const LLMChatRequest& request) -> LLMChatResponse {
-        LLMChatResponse response;
-
-        // Convert LLMChatRequest messages to ChatMessage format
-        std::vector<ChatMessage> messages;
-        messages.reserve(request.messages.size());
-
-        for (const auto& msgJson : request.messages) {
-            ChatMessage msg;
-            msg.role = msgJson.value("role", "user");
-            msg.content = msgJson.value("content", "");
-            if (msgJson.contains("tool_call_id")) {
-                msg.tool_call_id = msgJson["tool_call_id"].get<std::string>();
-            }
-            if (msgJson.contains("tool_calls")) {
-                msg.tool_calls = msgJson["tool_calls"];
-            }
-            messages.push_back(std::move(msg));
-        }
-
-        // Use X-Macro registry schemas for tool definitions
-        nlohmann::json tools = request.tools.empty() ? registry.GetToolSchemas() : request.tools;
-
-        // Call Ollama via the new client
-        auto start = std::chrono::high_resolution_clock::now();
-        InferenceResult result = client->ChatSync(messages, tools);
-        auto end = std::chrono::high_resolution_clock::now();
-
-        if (!result.success) {
-            response.success = false;
-            response.error = result.error_message;
-            return response;
-        }
-
-        response.success = true;
-        response.content = result.response;
-        response.promptTokens = static_cast<int>(result.prompt_tokens);
-        response.completionTokens = static_cast<int>(result.completion_tokens);
-
-        // Map tool calls
-        if (result.has_tool_calls && !result.tool_calls.empty()) {
-            response.hasToolCall = true;
-            // BoundedAgentLoop processes one tool call at a time
-            auto& [name, args] = result.tool_calls[0];
-            response.toolName = name;
-            response.toolArgs = args;
-            response.toolCallId = "call_0";
-        }
-
-        return response;
-    };
-}
-
-// ---------------------------------------------------------------------------
-// Tool Schema Wiring
-// ---------------------------------------------------------------------------
-// Generates OpenAI function-calling schemas from the X-Macro registry
-// and feeds them into the BoundedAgentLoop's tool schema slot.
-
-void OrchestratorBridge::WireToolSchemas() {
-    // The X-Macro AgentToolRegistry is the source of truth for tool schemas.
-    // Inject X-Macro schemas into the BoundedAgentLoop's tool schema slot
-    // so both systems use identical definitions.
-    json xMacroSchemas = m_xMacroRegistry.GetToolSchemas();
-
-    // Merge AgentToolHandlers schemas (which include detailed param schemas)
-    // with X-Macro schemas. X-Macro definitions take priority for names/descriptions.
-    json handlerSchemas = AgentToolHandlers::GetAllSchemas();
-
-    // Build unified tool list: start with X-Macro, overlay any handler-specific
-    // parameter refinements (e.g., more detailed descriptions, enum constraints).
-    json unifiedTools = json::array();
-    std::unordered_map<std::string, json> handlerMap;
-
-    // Index handler schemas by name (array iteration via index)
-    for (size_t i = 0; i < handlerSchemas.size(); ++i) {
-        const auto& tool = handlerSchemas[i];
-        if (tool.contains("function") && tool["function"].contains("name")) {
-            handlerMap[tool["function"]["name"].get<std::string>()] = tool;
->>>>>>> origin/main
         }
     }
 

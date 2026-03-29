@@ -153,7 +153,15 @@ json AgenticCopilotBridge::transformCode(const std::string& code, const std::str
     
     std::cout << "[AgenticCopilotBridge] Transforming code with: " << transformation << std::endl;
     
-    std::string transformed = code;  // Placeholder
+    // Route through engine to apply transformation via LLM
+    std::string prompt = "Apply the following transformation to this code.\n"
+                         "Transformation: " + transformation + "\n\n"
+                         "Code:\n```\n" + code + "\n```\n\n"
+                         "Return ONLY the transformed code, no explanation.";
+    std::string transformed = m_engine->chat(prompt);
+    if (transformed.empty()) {
+        transformed = code; // Fallback: return original on engine failure
+    }
     
     result["success"] = true;
     result["original_code"] = code;
@@ -169,10 +177,15 @@ std::string AgenticCopilotBridge::explainCode(const std::string& code)
     
     if (!m_engine) return "Engine not initialized";
     
-    std::string explanation = "Code explanation:\n";
-    explanation += "1. Overall purpose: Analyze the logic flow\n";
-    explanation += "2. Key operations: Process data transformations\n";
-    explanation += "3. Edge cases: Handle boundary conditions";
+    std::string prompt = "Explain the following code concisely. Cover:\n"
+                         "1. Overall purpose\n"
+                         "2. Key operations\n"
+                         "3. Edge cases and potential issues\n\n"
+                         "Code:\n```\n" + code + "\n```";
+    std::string explanation = m_engine->chat(prompt);
+    if (explanation.empty()) {
+        explanation = "Code explanation unavailable — engine returned empty response.";
+    }
     
     return explanation;
 }
@@ -183,10 +196,15 @@ std::string AgenticCopilotBridge::findBugs(const std::string& code)
     
     if (!m_engine) return "Engine not initialized";
     
-    std::string analysis = "Bug analysis:\n";
-    analysis += "- Check for null pointer dereferences\n";
-    analysis += "- Verify bounds checking\n";
-    analysis += "- Ensure proper resource cleanup";
+    std::string prompt = "Analyze the following code for bugs and vulnerabilities. List each issue with:\n"
+                         "- Line/location if possible\n"
+                         "- Severity (critical/high/medium/low)\n"
+                         "- Description and fix suggestion\n\n"
+                         "Code:\n```\n" + code + "\n```";
+    std::string analysis = m_engine->chat(prompt);
+    if (analysis.empty()) {
+        analysis = "Bug analysis unavailable — engine returned empty response.";
+    }
     
     return analysis;
 }

@@ -52,7 +52,8 @@ public:
             file.close();
         }
     }
-    \npublic:\n    void pipelineStarted();
+    
+\npublic:\n    void pipelineStarted();
     void pipelineProgress(int current, int total);
     void pipelineFinished(const void*& report);
     void errorOccurred(const std::string& error);
@@ -66,8 +67,19 @@ private:
     void* m_lastReport;
 };
 
-// Convenience macros
-#define DIGESTION_SYSTEM DigestionSystemIntegration::instance()->system()
-#define DIGESTION_INIT(dir) DigestionSystemIntegration::instance()->initializeForDirectory(dir)
-#define DIGESTION_PIPELINE() DigestionSystemIntegration::instance()->runFullPipeline()
+// Inline convenience functions
+inline DigestionReverseEngineeringSystem* DigestionSystem() {
+    return DigestionSystemIntegration::instance()->system();
+}
+inline bool DigestionInit(const std::string& dir) {
+    return DigestionSystemIntegration::instance()->initializeForDirectory(dir);
+}
+inline bool DigestionPipeline() {
+    return DigestionSystemIntegration::instance()->runFullPipeline();
+}
+
+// Backward-compat macro aliases
+#define DIGESTION_SYSTEM DigestionSystem()
+#define DIGESTION_INIT(dir) DigestionInit(dir)
+#define DIGESTION_PIPELINE() DigestionPipeline()
 

@@ -112,26 +112,8 @@ void Win32IDE::shutdownPhase12() {
 // =============================================================================
 
 void Win32IDE::cmdDbgLaunch() {
-    char exePath[MAX_PATH] = {};
-    OPENFILENAMEA ofn = {};
-    ofn.lStructSize = sizeof(ofn);
-    ofn.hwndOwner   = m_hwndMain;
-    ofn.lpstrFilter  = "Executables\0*.exe\0All Files\0*.*\0";
-    ofn.lpstrFile    = exePath;
-    ofn.nMaxFile     = MAX_PATH;
-    ofn.Flags        = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
-    ofn.lpstrTitle   = "Select Executable to Debug";
-
-    if (!GetOpenFileNameA(&ofn)) return;
-
-    DebugResult r = NativeDebuggerEngine::Instance().launchProcess(exePath);
-    if (r.success) {
-        setCurrentBinaryForReverseEngineering(exePath);
-        appendToOutput("[Debug] Launched: " + std::string(exePath) + "\n");
-        appendToOutput("[RE] Binary set for analysis (Reverse Engineering menu: Disassemble, DumpBin, CFG, etc.)\n", "Output", OutputSeverity::Info);
-    } else {
-        appendToOutput("[Debug] Launch failed: " + std::string(r.detail) + "\n");
-    }
+    // Route launch through the unified IDE debugger path (DAP launch.json + fallback).
+    startDebugging();
 }
 
 void Win32IDE::cmdDbgAttach() {
@@ -212,8 +194,7 @@ void Win32IDE::cmdDbgBreak() {
 }
 
 void Win32IDE::cmdDbgKill() {
-    DebugResult r = NativeDebuggerEngine::Instance().terminateTarget();
-    appendToOutput("[Debug] " + std::string(r.detail) + "\n");
+    stopDebugging();
 }
 
 // =============================================================================

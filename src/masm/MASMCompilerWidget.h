@@ -11,6 +11,16 @@
 #include <map>
 #include <memory>
 #include <unordered_map>
+#include <unordered_set>
+#include <regex>
+#include <cstdint>
+
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#endif
 
 typedef std::vector<std::string> stringList;
 
@@ -156,6 +166,7 @@ private:
     std::vector<MASMError> m_errors;
     std::unordered_set<int> m_breakpoints;
     std::unordered_set<int> m_foldedBlocks;
+    stringList m_completions;
     
     void paintLineNumberArea(void* event);
     void paintErrorMarkers(void* event);
@@ -212,6 +223,7 @@ class MASMProjectExplorer {public:
 private:
     std::unique_ptr<void> m_treeWidget;
     MASMProjectSettings m_project;
+    std::vector<std::string> m_files;
     
     void populateTree();
     void addContextMenuActions(void* menu, void* item);
@@ -260,6 +272,7 @@ private:
     std::unique_ptr<void> m_treeWidget;
     std::unique_ptr<void> m_filterEdit; // voidEdit typo fixed to void
     std::vector<MASMSymbol> m_symbols;
+    std::vector<MASMSymbol> m_filtered;
     
     void populateTree();
 };
@@ -297,6 +310,10 @@ private:
     
     std::unordered_set<int> m_breakpoints;
     bool m_isDebugging;
+
+#ifdef _WIN32
+    PROCESS_INFORMATION m_processInfo = {};
+#endif
     
     void updateRegisters();
     void updateStack();

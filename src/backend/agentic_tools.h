@@ -127,6 +127,13 @@ private:
     bool m_allow_outside_workspace = false;
     bool m_block_delete_commands = false;
 
+    // Tracks long-running agent/model iteration progress.
+    bool m_iteration_busy = false;
+    int m_iteration_current = 0;
+    int m_iteration_total = 0;
+    std::string m_iteration_phase = "idle";
+    std::string m_iteration_message;
+
     std::unique_ptr<Tools::GitClient> m_git_client;
     std::unique_ptr<OllamaClient> m_ollama_client;
 

@@ -15,11 +15,7 @@
 
 #include "modules/react_generator.h"
 
-<<<<<<< HEAD
 // Forward declarations: MemoryPlugins::init in memory_plugins.cpp.
-=======
-// Forward declarations: MemoryPlugins::init in memory_plugins.cpp; register_rawr_inference in tool_registry_init.cpp or inference_engine.cpp or rawr_engine.cpp (per-target).
->>>>>>> origin/main
 namespace MemoryPlugins { void init(size_t); }
 #ifndef RAWR_HAS_RAWR_INFERENCE
 #define RAWR_HAS_RAWR_INFERENCE 1
@@ -30,13 +26,10 @@ namespace MemoryPlugins { void init(size_t); }
 
 #if RAWR_HAS_RAWR_INFERENCE
 void register_rawr_inference();
-<<<<<<< HEAD
 #endif
 #if RAWR_HAS_SOVEREIGN_ENGINES
 #include "engine/sovereign_engines.h"
 #endif
-=======
->>>>>>> origin/main
 
 static std::atomic<bool> running = true;
 

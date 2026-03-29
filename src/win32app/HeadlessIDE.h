@@ -64,13 +64,10 @@ class MultiResponseEngine;
 class SubAgentManager;
 class AgentHistoryRecorder;
 class AgenticEngine;
-<<<<<<< HEAD
 struct AgentHistoryDeleter {
     void operator()(AgentHistoryRecorder* ptr) const;
 };
 struct AgentHistoryDeleter;
-=======
->>>>>>> origin/main
 
 // ============================================================================
 // Headless initialization result

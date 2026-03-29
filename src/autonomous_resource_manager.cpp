@@ -271,14 +271,81 @@ uint32_t AutonomousResourceManager::getCpuUsage() const
 
 void AutonomousResourceManager::getGpuInfo(uint32_t& usage, bool& available, QString& name) const
 {
-    // Simplified GPU detection - in production, use NVML, ADL, or WMI
-    // For now, check for common GPU vendors via WMI
     available = false;
     usage = 0;
     name = "Unknown";
-    
-    // TODO: Implement proper GPU detection using WMI or vendor APIs
-    // This is a placeholder
+
+    // Query GPU via DXGI adapter enumeration
+    HMODULE hDXGI = LoadLibraryA("dxgi.dll");
+    if (!hDXGI) return;
+
+    using PFN_CreateDXGIFactory1 = HRESULT (WINAPI*)(REFIID, void**);
+    auto fnCreate = reinterpret_cast<PFN_CreateDXGIFactory1>(
+        GetProcAddress(hDXGI, "CreateDXGIFactory1"));
+    if (!fnCreate) { FreeLibrary(hDXGI); return; }
+
+    static const GUID iidFactory = { 0x1bc6ea02, 0xef36, 0x464f,
+        { 0xbf, 0x0c, 0x21, 0xca, 0x39, 0xe5, 0x16, 0x8a } };
+    void* pFactory = nullptr;
+    if (FAILED(fnCreate(iidFactory, &pFactory)) || !pFactory) {
+        FreeLibrary(hDXGI);
+        return;
+    }
+
+    auto factoryVtbl = *reinterpret_cast<void***>(pFactory);
+    using PFN_EnumAdapters = HRESULT (STDMETHODCALLTYPE*)(void*, UINT, void**);
+    auto fnEnum = reinterpret_cast<PFN_EnumAdapters>(factoryVtbl[7]);
+    void* pAdapter = nullptr;
+    if (SUCCEEDED(fnEnum(pFactory, 0, &pAdapter)) && pAdapter) {
+        available = true;
+
+        // IDXGIAdapter::GetDesc is vtable[8]
+        auto adapterVtbl = *reinterpret_cast<void***>(pAdapter);
+        struct DXGI_ADAPTER_DESC {
+            WCHAR Description[128];
+            UINT VendorId;
+            UINT DeviceId;
+            UINT SubSysId;
+            UINT Revision;
+            SIZE_T DedicatedVideoMemory;
+            SIZE_T DedicatedSystemMemory;
+            SIZE_T SharedSystemMemory;
+            LUID AdapterLuid;
+        };
+        using PFN_GetDesc = HRESULT (STDMETHODCALLTYPE*)(void*, DXGI_ADAPTER_DESC*);
+        auto fnGetDesc = reinterpret_cast<PFN_GetDesc>(adapterVtbl[8]);
+        DXGI_ADAPTER_DESC desc{};
+        if (SUCCEEDED(fnGetDesc(pAdapter, &desc))) {
+            // Convert wide description to QString
+            char narrowName[256] = {};
+            WideCharToMultiByte(CP_UTF8, 0, desc.Description, -1, narrowName, sizeof(narrowName), nullptr, nullptr);
+            name = QString::fromUtf8(narrowName);
+        }
+
+        // QueryVideoMemoryInfo for usage
+        struct DXGI_QUERY_VIDEO_MEMORY_INFO {
+            UINT64 Budget;
+            UINT64 CurrentUsage;
+            UINT64 AvailableForReservation;
+            UINT64 CurrentReservation;
+        };
+        using PFN_QueryVidMem = HRESULT (STDMETHODCALLTYPE*)(void*, UINT, int, DXGI_QUERY_VIDEO_MEMORY_INFO*);
+        auto fnQuery = reinterpret_cast<PFN_QueryVidMem>(adapterVtbl[14]);
+        DXGI_QUERY_VIDEO_MEMORY_INFO vidMemInfo{};
+        if (SUCCEEDED(fnQuery(pAdapter, 0, 0, &vidMemInfo)) && vidMemInfo.Budget > 0) {
+            usage = static_cast<uint32_t>(
+                (vidMemInfo.CurrentUsage * 100) / vidMemInfo.Budget);
+        }
+
+        // Release adapter
+        using PFN_Release = ULONG (STDMETHODCALLTYPE*)(void*);
+        reinterpret_cast<PFN_Release>(adapterVtbl[2])(pAdapter);
+    }
+
+    // Release factory
+    using PFN_Release = ULONG (STDMETHODCALLTYPE*)(void*);
+    reinterpret_cast<PFN_Release>(factoryVtbl[2])(pFactory);
+    FreeLibrary(hDXGI);
 }
 #else
 uint64_t AutonomousResourceManager::getAvailableMemory() const

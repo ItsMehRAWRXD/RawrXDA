@@ -513,9 +513,7 @@ void AgenticLoopState::addConstraint(const std::string& key, const std::string& 
 
 void AgenticLoopState::removeConstraint(const std::string& key)
 {
-    // The current minimal json.hpp stub lacks erase().
-    // TODO: Implement erase in json.hpp or replace with std::map for constraints.
-    // m_constraints.erase(key);
+    m_constraints.erase(key);
 }
 
 bool AgenticLoopState::validateAgainstConstraints(const nlohmann::json& action) const
@@ -610,11 +608,7 @@ std::string AgenticLoopState::getStateAsSummary() const
 
 std::string AgenticLoopState::serializeState() const
 {
-<<<<<<< HEAD
     nlohmann::json state = nlohmann::json::object();
-=======
-    nlohmann::json state;
->>>>>>> origin/main
     state["phase"] = phaseToString(m_currentPhase);
     state["status"] = statusToString(m_currentStatus);
     state["goal"] = m_currentGoal;
@@ -622,11 +616,7 @@ std::string AgenticLoopState::serializeState() const
     state["memory"] = getAllMemory();
     state["constraints"] = m_constraints;
 
-<<<<<<< HEAD
     return state.dump();
-=======
-    return state.dump(2);
->>>>>>> origin/main
 }
 
 bool AgenticLoopState::deserializeState(const std::string& jsonStr)

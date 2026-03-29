@@ -102,6 +102,7 @@ private:
 #define IDM_EDIT_TOGGLE_COMMENT 209
 #define IDM_EDIT_MULTICURSOR_ADD 210
 #define IDM_EDIT_MULTICURSOR_REMOVE 211
+#define IDM_EDIT_PREFERENCES 212
 
 #define IDM_SEL_ALL 300
 #define IDM_SEL_EXPAND 301
@@ -166,6 +167,55 @@ private:
 #define IDM_HELP_CHECK_UPDATES 806
 #define IDM_HELP_ABOUT 807
 
+// ========== AGENT COMMANDS (CLI parity: /agent) ==========
+#define IDM_AGENT_EXECUTE 900
+#define IDM_AGENT_LOOP 901
+#define IDM_AGENT_GOAL 902
+#define IDM_AGENT_MEMORY 903
+#define IDM_AGENT_STATUS 904
+
+// ========== PLUGIN COMMANDS (CLI parity: /plugin) ==========
+#define IDM_PLUGIN_LIST 910
+#define IDM_PLUGIN_INSTALL 911
+#define IDM_PLUGIN_ENABLE 912
+#define IDM_PLUGIN_DISABLE 913
+
+// ========== MEMORY COMMANDS (CLI parity: /memory) ==========
+#define IDM_MEMORY_STATUS 920
+#define IDM_MEMORY_CLEAR 921
+#define IDM_MEMORY_OBSERVE 922
+#define IDM_MEMORY_CAPACITY 923
+
+// ========== ENGINE COMMANDS (CLI parity: /engine) ==========
+#define IDM_ENGINE_LIST 930
+#define IDM_ENGINE_SWITCH 931
+#define IDM_ENGINE_LOAD 932
+#define IDM_ENGINE_UNLOAD 933
+
+// ========== REVERSE ENGINEERING (CLI parity: /reveng) ==========
+#define IDM_REVENG_DISASSEMBLE 940
+#define IDM_REVENG_DECOMPILE 941
+#define IDM_REVENG_VULNS 942
+
+// ========== DISK (CLI parity: /disk) ==========
+#define IDM_DISK_LIST_DRIVES 950
+#define IDM_DISK_SCAN_PARTITIONS 951
+
+// ========== GOVERNOR (CLI parity: /governor) ==========
+#define IDM_GOVERNOR_STATUS 960
+#define IDM_GOVERNOR_SET_POWER 961
+
+// ========== LSP (CLI parity: /lsp) ==========
+#define IDM_LSP_STATUS 970
+#define IDM_LSP_START 971
+#define IDM_LSP_STOP 972
+
+// ========== INFERENCE (CLI parity: /infer) ==========
+#define IDM_INFER_PROMPT 980
+#define IDM_STATUS_SHOW 981
+#define IDM_HISTORY_SHOW 982
+#define IDM_HISTORY_CLEAR 983
+
 #define WM_CHAT_COMPLETE (WM_USER + 100)
 #define WM_CUT 0x0300
 #define WM_COPY 0x0301
@@ -201,6 +251,9 @@ private:
     void refreshTabBar();
     void selectLanguageForFile(const std::string& filename);
     void updateStatusBar();
+    void ensureMinimapWindow();
+    void refreshMinimapView();
+    void layoutMinimapWindow();
     void initializeFileBrowser();
     void onFileBrowserDblClick();
     void initChat();

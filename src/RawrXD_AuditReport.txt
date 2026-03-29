@@ -1,0 +1,816 @@
+╔══════════════════════════════════════════════════════════════════╗
+║         RawrXD-Shell — Production Readiness Report              ║
+╚══════════════════════════════════════════════════════════════════╝
+
+Generated: 2026-03-25 10:15:26
+
+── Summary ─────────────────────────────────────────────────────
+  Total Features:     774
+  Complete:           0
+  Partial:            1
+  Stub:               0
+  Untested:           773
+  Broken:             0
+  Deprecated:         0
+  Menu Wired:         773 / 774
+  Stubs Detected:     0
+  Runtime Tests OK:   0
+
+  Completion: [░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 0.0%
+
+── By Category ──────────────────────────────────────────────────
+  Core            0/485 complete
+  AI              0/100 complete
+  Editor          0/23 complete
+  Debugger        0/51 complete
+  Network         0/22 complete
+  Security        0/15 complete
+  Hotpatch        0/18 complete
+  UI              0/26 complete
+  PDB             0/9 complete
+  Swarm           0/25 complete
+
+── Feature Details ──────────────────────────────────────────────
+Feature                         Category      Status      Phase     Menu   Stub   Test   
+-----------------------------------------------------------------------------------------
+Theme: Dark+                    UI            Untested    —       YES    OK     —    
+Theme: Light+                   UI            Untested    —       YES    OK     —    
+Theme: Monokai                  UI            Untested    —       YES    OK     —    
+Theme: Dracula                  UI            Untested    —       YES    OK     —    
+Theme: Nord                     UI            Untested    —       YES    OK     —    
+Theme: Solarized Dark           UI            Untested    —       YES    OK     —    
+Theme: Solarized Light          UI            Untested    —       YES    OK     —    
+Theme: Cyberpunk Neon           UI            Untested    —       YES    OK     —    
+Theme: Gruvbox Dark             UI            Untested    —       YES    OK     —    
+Theme: Catppuccin Mocha         UI            Untested    —       YES    OK     —    
+Theme: Tokyo Night              UI            Untested    —       YES    OK     —    
+Theme: RawrXD Crimson           UI            Untested    —       YES    OK     —    
+Theme: High Contrast            UI            Untested    —       YES    OK     —    
+Theme: One Dark Pro             UI            Untested    —       YES    OK     —    
+Theme: Synthwave 84             UI            Untested    —       YES    OK     —    
+Theme: Abyss                    UI            Untested    —       YES    OK     —    
+Transparency: 100%              UI            Untested    —       YES    OK     —    
+Transparency: 90%               UI            Untested    —       YES    OK     —    
+Transparency: 80%               UI            Untested    —       YES    OK     —    
+Transparency: 70%               UI            Untested    —       YES    OK     —    
+Transparency: 60%               UI            Untested    —       YES    OK     —    
+Transparency: 50%               UI            Untested    —       YES    OK     —    
+Transparency: 40%               UI            Untested    —       YES    OK     —    
+Transparency: Custom            UI            Untested    —       YES    OK     —    
+Transparency: Toggle            UI            Untested    —       YES    OK     —    
+Terminal: Kill                  Core          Untested    —       YES    OK     —    
+Terminal: Split Horizontal      Core          Untested    —       YES    OK     —    
+Terminal: Split Vertical        Core          Untested    —       YES    OK     —    
+Terminal: Split Code            Core          Untested    —       YES    OK     —    
+Agent: Start Loop               AI            Untested    —       YES    OK     —    
+Agent: Execute Command          AI            Untested    —       YES    OK     —    
+Agent: Configure Model          AI            Untested    —       YES    OK     —    
+Agent: View Tools               AI            Untested    —       YES    OK     —    
+Agent: View Status              AI            Untested    —       YES    OK     —    
+Agent: Stop                     AI            Untested    —       YES    OK     —    
+Agent: Memory                   AI            Untested    —       YES    OK     —    
+Agent: Memory View              AI            Untested    —       YES    OK     —    
+Agent: Memory Clear             AI            Untested    —       YES    OK     —    
+Agent: Memory Export            AI            Untested    —       YES    OK     —    
+SubAgent: Chain                 AI            Untested    —       YES    OK     —    
+SubAgent: Swarm                 AI            Untested    —       YES    OK     —    
+SubAgent: TODO List             AI            Untested    —       YES    OK     —    
+SubAgent: TODO Clear            AI            Untested    —       YES    OK     —    
+SubAgent: Status                AI            Partial     —       NO     OK     —    
+Autonomy: Toggle                AI            Untested    —       YES    OK     —    
+Autonomy: Start                 AI            Untested    —       YES    OK     —    
+Autonomy: Stop                  AI            Untested    —       YES    OK     —    
+Autonomy: Set Goal              AI            Untested    —       YES    OK     —    
+Autonomy: Status                AI            Untested    —       YES    OK     —    
+Autonomy: Memory                AI            Untested    —       YES    OK     —    
+AI Mode: Max                    AI            Untested    —       YES    OK     —    
+AI Mode: Deep Think             AI            Untested    —       YES    OK     —    
+AI Mode: Deep Research          AI            Untested    —       YES    OK     —    
+AI Mode: No Refusal             AI            Untested    —       YES    OK     —    
+Context: 4K                     AI            Untested    —       YES    OK     —    
+Context: 32K                    AI            Untested    —       YES    OK     —    
+Context: 64K                    AI            Untested    —       YES    OK     —    
+Context: 128K                   AI            Untested    —       YES    OK     —    
+Context: 256K                   AI            Untested    —       YES    OK     —    
+Context: 512K                   AI            Untested    —       YES    OK     —    
+Context: 1M                     AI            Untested    —       YES    OK     —    
+RevEng: Analyze                 Debugger      Untested    —       YES    OK     —    
+RevEng: Disassemble             Debugger      Untested    —       YES    OK     —    
+RevEng: DumpBin                 Debugger      Untested    —       YES    OK     —    
+RevEng: Compile                 Debugger      Untested    —       YES    OK     —    
+RevEng: Compare                 Debugger      Untested    —       YES    OK     —    
+RevEng: Detect Vulns            Security      Untested    —       YES    OK     —    
+RevEng: Export IDA              Debugger      Untested    —       YES    OK     —    
+RevEng: Export Ghidra           Debugger      Untested    —       YES    OK     —    
+RevEng: CFG                     Debugger      Untested    —       YES    OK     —    
+RevEng: Functions               Debugger      Untested    —       YES    OK     —    
+RevEng: Demangle                Debugger      Untested    —       YES    OK     —    
+RevEng: SSA                     Debugger      Untested    —       YES    OK     —    
+RevEng: Recursive Disasm        Debugger      Untested    —       YES    OK     —    
+RevEng: Type Recovery           Debugger      Untested    —       YES    OK     —    
+RevEng: Data Flow               Debugger      Untested    —       YES    OK     —    
+RevEng: License Info            Debugger      Untested    —       YES    OK     —    
+RevEng: Decompiler View         Debugger      Untested    —       YES    OK     —    
+RevEng: Decomp Rename           Debugger      Untested    —       YES    OK     —    
+RevEng: Decomp Sync             Debugger      Untested    —       YES    OK     —    
+RevEng: Decomp Close            Debugger      Untested    —       YES    OK     —    
+Backend: Switch Local           AI            Untested    —       YES    OK     —    
+Backend: Switch Ollama          AI            Untested    —       YES    OK     —    
+Backend: Switch OpenAI          AI            Untested    —       YES    OK     —    
+Backend: Switch Claude          AI            Untested    —       YES    OK     —    
+Backend: Switch Gemini          AI            Untested    —       YES    OK     —    
+Backend: Show Status            AI            Untested    —       YES    OK     —    
+Backend: Show Switcher          AI            Untested    —       YES    OK     —    
+Backend: Configure              AI            Untested    —       YES    OK     —    
+Backend: Health Check           AI            Untested    —       YES    OK     —    
+Backend: Set API Key            AI            Untested    —       YES    OK     —    
+Backend: Save Configs           AI            Untested    —       YES    OK     —    
+Router: Enable                  AI            Untested    —       YES    OK     —    
+Router: Disable                 AI            Untested    —       YES    OK     —    
+Router: Show Status             AI            Untested    —       YES    OK     —    
+Router: Show Decision           AI            Untested    —       YES    OK     —    
+Router: Set Policy              AI            Untested    —       YES    OK     —    
+Router: Capabilities            AI            Untested    —       YES    OK     —    
+Router: Fallbacks               AI            Untested    —       YES    OK     —    
+Router: Save Config             AI            Untested    —       YES    OK     —    
+Router: Route Prompt            AI            Untested    —       YES    OK     —    
+Router: Reset Stats             AI            Untested    —       YES    OK     —    
+LSP: Start All                  Network       Untested    —       YES    OK     —    
+LSP: Stop All                   Network       Untested    —       YES    OK     —    
+LSP: Show Status                Network       Untested    —       YES    OK     —    
+LSP: Goto Definition            Network       Untested    —       YES    OK     —    
+LSP: Find References            Network       Untested    —       YES    OK     —    
+LSP: Rename Symbol              Network       Untested    —       YES    OK     —    
+LSP: Hover Info                 Network       Untested    —       YES    OK     —    
+LSP: Show Diagnostics           Network       Untested    —       YES    OK     —    
+LSP: Restart Server             Network       Untested    —       YES    OK     —    
+LSP: Clear Diagnostics          Network       Untested    —       YES    OK     —    
+LSP: Show Symbol Info           Network       Untested    —       YES    OK     —    
+LSP: Configure                  Network       Untested    —       YES    OK     —    
+LSP: Save Config                Network       Untested    —       YES    OK     —    
+Router: Why Backend             AI            Untested    —       YES    OK     —    
+Router: Pin Task                AI            Untested    —       YES    OK     —    
+Router: Unpin Task              AI            Untested    —       YES    OK     —    
+Router: Show Pins               AI            Untested    —       YES    OK     —    
+Router: Show Heatmap            AI            Untested    —       YES    OK     —    
+Router: Ensemble Enable         AI            Untested    —       YES    OK     —    
+Router: Ensemble Disable        AI            Untested    —       YES    OK     —    
+Router: Ensemble Status         AI            Untested    —       YES    OK     —    
+Router: Simulate                AI            Untested    —       YES    OK     —    
+Router: Simulate Last           AI            Untested    —       YES    OK     —    
+Router: Cost Stats              AI            Untested    —       YES    OK     —    
+ASM: Parse Symbols              Editor        Untested    —       YES    OK     —    
+ASM: Goto Label                 Editor        Untested    —       YES    OK     —    
+ASM: Find Label Refs            Editor        Untested    —       YES    OK     —    
+ASM: Show Symbol Table          Editor        Untested    —       YES    OK     —    
+ASM: Instruction Info           Editor        Untested    —       YES    OK     —    
+ASM: Register Info              Editor        Untested    —       YES    OK     —    
+ASM: Analyze Block              Editor        Untested    —       YES    OK     —    
+ASM: Show Call Graph            Editor        Untested    —       YES    OK     —    
+ASM: Show Data Flow             Editor        Untested    —       YES    OK     —    
+ASM: Detect Convention          Editor        Untested    —       YES    OK     —    
+ASM: Show Sections              Editor        Untested    —       YES    OK     —    
+ASM: Clear Symbols              Editor        Untested    —       YES    OK     —    
+Hybrid: Complete                AI            Untested    —       YES    OK     —    
+Hybrid: Diagnostics             AI            Untested    —       YES    OK     —    
+Hybrid: Smart Rename            AI            Untested    —       YES    OK     —    
+Hybrid: Analyze File            AI            Untested    —       YES    OK     —    
+Hybrid: Auto Profile            AI            Untested    —       YES    OK     —    
+Hybrid: Status                  AI            Untested    —       YES    OK     —    
+Hybrid: Symbol Usage            AI            Untested    —       YES    OK     —    
+Hybrid: Explain Symbol          AI            Untested    —       YES    OK     —    
+Hybrid: Annotate Diag           AI            Untested    —       YES    OK     —    
+Hybrid: Stream Analyze          AI            Untested    —       YES    OK     —    
+Hybrid: Semantic Prefetch       AI            Untested    —       YES    OK     —    
+Hybrid: Correction Loop         AI            Untested    —       YES    OK     —    
+MultiResp: Generate             AI            Untested    —       YES    OK     —    
+MultiResp: Set Max              AI            Untested    —       YES    OK     —    
+MultiResp: Select Preferred     AI            Untested    —       YES    OK     —    
+MultiResp: Compare              AI            Untested    —       YES    OK     —    
+MultiResp: Show Stats           AI            Untested    —       YES    OK     —    
+MultiResp: Show Templates       AI            Untested    —       YES    OK     —    
+MultiResp: Toggle Template      AI            Untested    —       YES    OK     —    
+MultiResp: Show Prefs           AI            Untested    —       YES    OK     —    
+MultiResp: Show Latest          AI            Untested    —       YES    OK     —    
+MultiResp: Show Status          AI            Untested    —       YES    OK     —    
+MultiResp: Clear History        AI            Untested    —       YES    OK     —    
+MultiResp: Apply Preferred      AI            Untested    —       YES    OK     —    
+Governance: Status              Security      Untested    —       YES    OK     —    
+Governance: Submit Command      Security      Untested    —       YES    OK     —    
+Governance: Kill All            Security      Untested    —       YES    OK     —    
+Governance: Task List           Security      Untested    —       YES    OK     —    
+Safety: Status                  Security      Untested    —       YES    OK     —    
+Safety: Reset Budget            Security      Untested    —       YES    OK     —    
+Safety: Rollback Last           Security      Untested    —       YES    OK     —    
+Safety: Show Violations         Security      Untested    —       YES    OK     —    
+Replay: Status                  Security      Untested    —       YES    OK     —    
+Replay: Show Last               Security      Untested    —       YES    OK     —    
+Replay: Export Session          Security      Untested    —       YES    OK     —    
+Replay: Checkpoint              Security      Untested    —       YES    OK     —    
+Confidence: Status              Security      Untested    —       YES    OK     —    
+Confidence: Set Policy          Security      Untested    —       YES    OK     —    
+Swarm: Status                   Swarm         Untested    —       YES    OK     —    
+Swarm: Start Leader             Swarm         Untested    —       YES    OK     —    
+Swarm: Start Worker             Swarm         Untested    —       YES    OK     —    
+Swarm: Start Hybrid             Swarm         Untested    —       YES    OK     —    
+Swarm: Stop                     Swarm         Untested    —       YES    OK     —    
+Swarm: List Nodes               Swarm         Untested    —       YES    OK     —    
+Swarm: Add Node                 Swarm         Untested    —       YES    OK     —    
+Swarm: Remove Node              Swarm         Untested    —       YES    OK     —    
+Swarm: Blacklist Node           Swarm         Untested    —       YES    OK     —    
+Swarm: Build Sources            Swarm         Untested    —       YES    OK     —    
+Swarm: Build CMake              Swarm         Untested    —       YES    OK     —    
+Swarm: Start Build              Swarm         Untested    —       YES    OK     —    
+Swarm: Cancel Build             Swarm         Untested    —       YES    OK     —    
+Swarm: Cache Status             Swarm         Untested    —       YES    OK     —    
+Swarm: Cache Clear              Swarm         Untested    —       YES    OK     —    
+Swarm: Show Config              Swarm         Untested    —       YES    OK     —    
+Swarm: Toggle Discovery         Swarm         Untested    —       YES    OK     —    
+Swarm: Show Task Graph          Swarm         Untested    —       YES    OK     —    
+Swarm: Show Events              Swarm         Untested    —       YES    OK     —    
+Swarm: Show Stats               Swarm         Untested    —       YES    OK     —    
+Swarm: Reset Stats              Swarm         Untested    —       YES    OK     —    
+Swarm: Worker Status            Swarm         Untested    —       YES    OK     —    
+Swarm: Worker Connect           Swarm         Untested    —       YES    OK     —    
+Swarm: Worker Disconnect        Swarm         Untested    —       YES    OK     —    
+Swarm: Fitness Test             Swarm         Untested    —       YES    OK     —    
+Debugger: Launch                Debugger      Untested    —       YES    OK     —    
+Debugger: Attach                Debugger      Untested    —       YES    OK     —    
+Debugger: Detach                Debugger      Untested    —       YES    OK     —    
+Debugger: Go                    Debugger      Untested    —       YES    OK     —    
+Debugger: Step Over             Debugger      Untested    —       YES    OK     —    
+Debugger: Step Into             Debugger      Untested    —       YES    OK     —    
+Debugger: Step Out              Debugger      Untested    —       YES    OK     —    
+Debugger: Break                 Debugger      Untested    —       YES    OK     —    
+Debugger: Kill                  Debugger      Untested    —       YES    OK     —    
+Debugger: Add Breakpoint        Debugger      Untested    —       YES    OK     —    
+Debugger: Remove BP             Debugger      Untested    —       YES    OK     —    
+Debugger: Enable BP             Debugger      Untested    —       YES    OK     —    
+Debugger: Clear All BPs         Debugger      Untested    —       YES    OK     —    
+Debugger: List BPs              Debugger      Untested    —       YES    OK     —    
+Debugger: Add Watch             Debugger      Untested    —       YES    OK     —    
+Debugger: Remove Watch          Debugger      Untested    —       YES    OK     —    
+Debugger: Registers             Debugger      Untested    —       YES    OK     —    
+Debugger: Stack                 Debugger      Untested    —       YES    OK     —    
+Debugger: Memory                Debugger      Untested    —       YES    OK     —    
+Debugger: Disassembly           Debugger      Untested    —       YES    OK     —    
+Debugger: Modules               Debugger      Untested    —       YES    OK     —    
+Debugger: Threads               Debugger      Untested    —       YES    OK     —    
+Debugger: Switch Thread         Debugger      Untested    —       YES    OK     —    
+Debugger: Evaluate              Debugger      Untested    —       YES    OK     —    
+Debugger: Set Register          Debugger      Untested    —       YES    OK     —    
+Debugger: Search Memory         Debugger      Untested    —       YES    OK     —    
+Debugger: Symbol Path           Debugger      Untested    —       YES    OK     —    
+Debugger: Status                Debugger      Untested    —       YES    OK     —    
+Hotpatch: Show Status           Hotpatch      Untested    —       YES    OK     —    
+Hotpatch: Memory Apply          Hotpatch      Untested    —       YES    OK     —    
+Hotpatch: Memory Revert         Hotpatch      Untested    —       YES    OK     —    
+Hotpatch: Byte Apply            Hotpatch      Untested    —       YES    OK     —    
+Hotpatch: Byte Search           Hotpatch      Untested    —       YES    OK     —    
+Hotpatch: Server Add            Hotpatch      Untested    —       YES    OK     —    
+Hotpatch: Server Remove         Hotpatch      Untested    —       YES    OK     —    
+Hotpatch: Proxy Bias            Hotpatch      Untested    —       YES    OK     —    
+Hotpatch: Proxy Rewrite         Hotpatch      Untested    —       YES    OK     —    
+Hotpatch: Proxy Terminate       Hotpatch      Untested    —       YES    OK     —    
+Hotpatch: Proxy Validate        Hotpatch      Untested    —       YES    OK     —    
+Hotpatch: Preset Save           Hotpatch      Untested    —       YES    OK     —    
+Hotpatch: Preset Load           Hotpatch      Untested    —       YES    OK     —    
+Hotpatch: Event Log             Hotpatch      Untested    —       YES    OK     —    
+Hotpatch: Reset Stats           Hotpatch      Untested    —       YES    OK     —    
+Hotpatch: Toggle All            Hotpatch      Untested    —       YES    OK     —    
+Hotpatch: Proxy Stats           Hotpatch      Untested    —       YES    OK     —    
+Monaco: Toggle View             Editor        Untested    Phase 28  YES    OK     —    
+Monaco: DevTools                Editor        Untested    Phase 28  YES    OK     —    
+Monaco: Reload                  Editor        Untested    Phase 28  YES    OK     —    
+Monaco: Zoom In                 Editor        Untested    Phase 28  YES    OK     —    
+Monaco: Zoom Out                Editor        Untested    Phase 28  YES    OK     —    
+Monaco: Sync Theme              Editor        Untested    Phase 28  YES    OK     —    
+LSP Server: Start               Network       Untested    Phase 27  YES    OK     —    
+LSP Server: Stop                Network       Untested    Phase 27  YES    OK     —    
+LSP Server: Status              Network       Untested    Phase 27  YES    OK     —    
+LSP Server: Reindex             Network       Untested    Phase 27  YES    OK     —    
+LSP Server: Stats               Network       Untested    Phase 27  YES    OK     —    
+LSP Server: Publish Diag        Network       Untested    Phase 27  YES    OK     —    
+LSP Server: Config              Network       Untested    Phase 27  YES    OK     —    
+LSP Server: Export Symbols      Network       Untested    Phase 27  YES    OK     —    
+LSP Server: Launch STDIO        Network       Untested    Phase 27  YES    OK     —    
+EditorEngine: RichEdit          Editor        Untested    Phase 28  YES    OK     —    
+EditorEngine: WebView2          Editor        Untested    Phase 28  YES    OK     —    
+EditorEngine: MonacoCore        Editor        Untested    Phase 28  YES    OK     —    
+EditorEngine: Cycle             Editor        Untested    Phase 28  YES    OK     —    
+EditorEngine: Status            Editor        Untested    Phase 28  YES    OK     —    
+PDB: Load Symbols               PDB           Untested    Phase 29  YES    OK     —    
+PDB: Fetch from Server          PDB           Untested    Phase 29  YES    OK     —    
+PDB: Status                     PDB           Untested    Phase 29  YES    OK     —    
+PDB: Cache Clear                PDB           Untested    Phase 29  YES    OK     —    
+PDB: Enable/Disable             PDB           Untested    Phase 29  YES    OK     —    
+PDB: Resolve Address            PDB           Untested    Phase 29  YES    OK     —    
+Audit: Show Dashboard           Core          Untested    Phase 31  YES    OK     —    
+Audit: Run Full Scan            Core          Untested    Phase 31  YES    OK     —    
+Audit: Detect Stubs             Core          Untested    Phase 31  YES    OK     —    
+Audit: Check Menus              Core          Untested    Phase 31  YES    OK     —    
+Audit: Run Tests                Core          Untested    Phase 31  YES    OK     —    
+Audit: Export Report            Core          Untested    Phase 31  YES    OK     —    
+Audit: Quick Stats              Core          Untested    Phase 31  YES    OK     —    
+Menu Item IDM=1847660261        Core          Untested    —       YES    OK     —    
+Menu Item IDM=2001              Core          Untested    —       YES    OK     —    
+Menu Item IDM=2002              Core          Untested    —       YES    OK     —    
+Menu Item IDM=2003              Core          Untested    —       YES    OK     —    
+Menu Item IDM=2004              Core          Untested    —       YES    OK     —    
+Menu Item IDM=1030              Core          Untested    —       YES    OK     —    
+Menu Item IDM=2005              Core          Untested    —       YES    OK     —    
+Menu Item IDM=394137279         Core          Untested    —       YES    OK     —    
+Menu Item IDM=10400             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10401             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10402             Core          Untested    —       YES    OK     —    
+Menu Item IDM=1417547639        Core          Untested    —       YES    OK     —    
+Menu Item IDM=2016              Core          Untested    —       YES    OK     —    
+Menu Item IDM=2017              Core          Untested    —       YES    OK     —    
+Menu Item IDM=2018              Core          Untested    —       YES    OK     —    
+Menu Item IDM=2019              Core          Untested    —       YES    OK     —    
+Menu Item IDM=2012              Core          Untested    —       YES    OK     —    
+Menu Item IDM=2013              Core          Untested    —       YES    OK     —    
+Menu Item IDM=2014              Core          Untested    —       YES    OK     —    
+Menu Item IDM=2015              Core          Untested    —       YES    OK     —    
+Menu Item IDM=533860095         Core          Untested    —       YES    OK     —    
+Menu Item IDM=2020              Core          Untested    —       YES    OK     —    
+Menu Item IDM=12020             Core          Untested    —       YES    OK     —    
+Menu Item IDM=2021              Core          Untested    —       YES    OK     —    
+Menu Item IDM=2025              Core          Untested    —       YES    OK     —    
+Menu Item IDM=2022              Core          Untested    —       YES    OK     —    
+Menu Item IDM=2024              Core          Untested    —       YES    OK     —    
+Menu Item IDM=808258949         Core          Untested    —       YES    OK     —    
+Menu Item IDM=872353773         Core          Untested    —       YES    OK     —    
+Menu Item IDM=2023              Core          Untested    —       YES    OK     —    
+Menu Item IDM=3030              Core          Untested    —       YES    OK     —    
+Menu Item IDM=3031              Core          Untested    —       YES    OK     —    
+Menu Item IDM=3032              Core          Untested    —       YES    OK     —    
+Menu Item IDM=2026              Core          Untested    —       YES    OK     —    
+Menu Item IDM=2027              Core          Untested    —       YES    OK     —    
+Menu Item IDM=7057              Core          Untested    —       YES    OK     —    
+Menu Item IDM=11550             Core          Untested    —       YES    OK     —    
+Menu Item IDM=3060              Core          Untested    —       YES    OK     —    
+Menu Item IDM=11568             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11590             Core          Untested    —       YES    OK     —    
+Menu Item IDM=847318293         Core          Untested    —       YES    OK     —    
+Menu Item IDM=4001              Core          Untested    —       YES    OK     —    
+Menu Item IDM=4002              Core          Untested    —       YES    OK     —    
+Menu Item IDM=4003              Core          Untested    —       YES    OK     —    
+Menu Item IDM=4010              Core          Untested    —       YES    OK     —    
+Menu Item IDM=180750887         Core          Untested    —       YES    OK     —    
+Menu Item IDM=3010              Core          Untested    —       YES    OK     —    
+Menu Item IDM=3011              Core          Untested    —       YES    OK     —    
+Menu Item IDM=3012              Core          Untested    —       YES    OK     —    
+Menu Item IDM=3013              Core          Untested    —       YES    OK     —    
+Menu Item IDM=618663641         Core          Untested    —       YES    OK     —    
+Menu Item IDM=9706              Core          Untested    —       YES    OK     —    
+Menu Item IDM=9700              Core          Untested    —       YES    OK     —    
+Menu Item IDM=9701              Core          Untested    —       YES    OK     —    
+Menu Item IDM=9702              Core          Untested    —       YES    OK     —    
+Menu Item IDM=9703              Core          Untested    —       YES    OK     —    
+Menu Item IDM=9704              Core          Untested    —       YES    OK     —    
+Menu Item IDM=9705              Core          Untested    —       YES    OK     —    
+Menu Item IDM=742526447         Core          Untested    —       YES    OK     —    
+Menu Item IDM=10200             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10206             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10202             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10203             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10204             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10205             Core          Untested    —       YES    OK     —    
+Menu Item IDM=500502253         Core          Untested    —       YES    OK     —    
+Menu Item IDM=11610             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11611             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11612             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11613             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11614             Core          Untested    —       YES    OK     —    
+Menu Item IDM=409275639         Core          Untested    —       YES    OK     —    
+Menu Item IDM=9810              Core          Untested    —       YES    OK     —    
+Menu Item IDM=9811              Core          Untested    —       YES    OK     —    
+Menu Item IDM=9812              Core          Untested    —       YES    OK     —    
+Menu Item IDM=9813              Core          Untested    —       YES    OK     —    
+Menu Item IDM=9814              Core          Untested    —       YES    OK     —    
+Menu Item IDM=796919371         Core          Untested    —       YES    OK     —    
+Menu Item IDM=9820              Core          Untested    —       YES    OK     —    
+Menu Item IDM=9823              Core          Untested    —       YES    OK     —    
+Menu Item IDM=9821              Core          Untested    —       YES    OK     —    
+Menu Item IDM=9822              Core          Untested    —       YES    OK     —    
+Menu Item IDM=9800              Core          Untested    —       YES    OK     —    
+Menu Item IDM=11570             Core          Untested    —       YES    OK     —    
+Menu Item IDM=9830              Core          Untested    —       YES    OK     —    
+Menu Item IDM=467406227         Core          Untested    —       YES    OK     —    
+Menu Item IDM=9550              Core          Untested    —       YES    OK     —    
+Menu Item IDM=9551              Core          Untested    —       YES    OK     —    
+Menu Item IDM=9552              Core          Untested    —       YES    OK     —    
+Menu Item IDM=494735175         Core          Untested    —       YES    OK     —    
+Menu Item IDM=3050              Core          Untested    —       YES    OK     —    
+Menu Item IDM=3051              Core          Untested    —       YES    OK     —    
+Menu Item IDM=3052              Core          Untested    —       YES    OK     —    
+Menu Item IDM=801967905         Core          Untested    —       YES    OK     —    
+Menu Item IDM=4004              Core          Untested    —       YES    OK     —    
+Menu Item IDM=681905633         Core          Untested    —       YES    OK     —    
+Menu Item IDM=561057553         Core          Untested    —       YES    OK     —    
+Menu Item IDM=3020              Core          Untested    —       YES    OK     —    
+Menu Item IDM=3021              Core          Untested    —       YES    OK     —    
+Menu Item IDM=3022              Core          Untested    —       YES    OK     —    
+Menu Item IDM=3023              Core          Untested    —       YES    OK     —    
+Menu Item IDM=3024              Core          Untested    —       YES    OK     —    
+Menu Item IDM=413470507         Core          Untested    —       YES    OK     —    
+Menu Item IDM=1184040861        Core          Untested    —       YES    OK     —    
+Menu Item IDM=457051831         Core          Untested    —       YES    OK     —    
+Menu Item IDM=4241              AI            Untested    —       YES    OK     —    
+Menu Item IDM=4242              AI            Untested    —       YES    OK     —    
+Menu Item IDM=4218              AI            Untested    —       YES    OK     —    
+Menu Item IDM=4219              AI            Untested    —       YES    OK     —    
+Menu Item IDM=4240              AI            Untested    —       YES    OK     —    
+Menu Item IDM=4120              AI            Untested    —       YES    OK     —    
+Menu Item IDM=372772309         Core          Untested    —       YES    OK     —    
+Menu Item IDM=4110              AI            Untested    —       YES    OK     —    
+Menu Item IDM=368512733         Core          Untested    —       YES    OK     —    
+Menu Item IDM=4163              AI            Untested    —       YES    OK     —    
+Menu Item IDM=489754265         Core          Untested    —       YES    OK     —    
+Menu Item IDM=4164              AI            Untested    —       YES    OK     —    
+Menu Item IDM=650251849         Core          Untested    —       YES    OK     —    
+Menu Item IDM=1005588275        Core          Untested    —       YES    OK     —    
+Menu Item IDM=539757921         Core          Untested    —       YES    OK     —    
+Menu Item IDM=487657273         Core          Untested    —       YES    OK     —    
+Menu Item IDM=639306803         Core          Untested    —       YES    OK     —    
+Menu Item IDM=9018              Hotpatch      Untested    —       YES    OK     —    
+Menu Item IDM=1163267887        Core          Untested    —       YES    OK     —    
+Menu Item IDM=4160              AI            Untested    —       YES    OK     —    
+Menu Item IDM=4161              AI            Untested    —       YES    OK     —    
+Menu Item IDM=4162              AI            Untested    —       YES    OK     —    
+Menu Item IDM=344461011         Core          Untested    —       YES    OK     —    
+Menu Item IDM=4320              Debugger      Untested    —       YES    OK     —    
+Menu Item IDM=4321              Debugger      Untested    —       YES    OK     —    
+Menu Item IDM=4322              Debugger      Untested    —       YES    OK     —    
+Menu Item IDM=4323              Debugger      Untested    —       YES    OK     —    
+Menu Item IDM=794693815         Core          Untested    —       YES    OK     —    
+Menu Item IDM=488443493         Core          Untested    —       YES    OK     —    
+Menu Item IDM=10600             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10601             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10602             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10603             Core          Untested    —       YES    OK     —    
+Menu Item IDM=465310437         Core          Untested    —       YES    OK     —    
+Menu Item IDM=10604             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10608             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10673             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10674             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10675             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10676             Core          Untested    —       YES    OK     —    
+Menu Item IDM=1454247435        Core          Untested    —       YES    OK     —    
+Menu Item IDM=10605             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10606             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10607             Core          Untested    —       YES    OK     —    
+Menu Item IDM=372510599         Core          Untested    —       YES    OK     —    
+Menu Item IDM=10612             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10613             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10614             Core          Untested    —       YES    OK     —    
+Menu Item IDM=282267257         Core          Untested    —       YES    OK     —    
+Menu Item IDM=10609             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10610             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10611             Core          Untested    —       YES    OK     —    
+Menu Item IDM=337055365         Core          Untested    —       YES    OK     —    
+Menu Item IDM=10650             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10651             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10652             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10653             Core          Untested    —       YES    OK     —    
+Menu Item IDM=1137315445        Core          Untested    —       YES    OK     —    
+Menu Item IDM=10670             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10671             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10672             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10677             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10678             Core          Untested    —       YES    OK     —    
+Menu Item IDM=347671947         Core          Untested    —       YES    OK     —    
+Menu Item IDM=10615             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10616             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10617             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10618             Core          Untested    —       YES    OK     —    
+Menu Item IDM=639110285         Core          Untested    —       YES    OK     —    
+Menu Item IDM=698879333         Core          Untested    —       YES    OK     —    
+Menu Item IDM=10700             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10701             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10702             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10703             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10704             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10705             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10706             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10707             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10708             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10709             Core          Untested    —       YES    OK     —    
+Menu Item IDM=366546483         Core          Untested    —       YES    OK     —    
+Menu Item IDM=10800             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10801             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10802             Core          Untested    —       YES    OK     —    
+Menu Item IDM=688655737         Core          Untested    —       YES    OK     —    
+Menu Item IDM=10810             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10811             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10812             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10813             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10814             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10815             Core          Untested    —       YES    OK     —    
+Menu Item IDM=2009205273        Core          Untested    —       YES    OK     —    
+Menu Item IDM=10820             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10821             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10822             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10823             Core          Untested    —       YES    OK     —    
+Menu Item IDM=1328352987        Core          Untested    —       YES    OK     —    
+Menu Item IDM=10830             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10831             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10832             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10833             Core          Untested    —       YES    OK     —    
+Menu Item IDM=467537335         Core          Untested    —       YES    OK     —    
+Menu Item IDM=10840             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10841             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10803             Core          Untested    —       YES    OK     —    
+Menu Item IDM=764809315         Core          Untested    —       YES    OK     —    
+Menu Item IDM=735251781         Core          Untested    —       YES    OK     —    
+Menu Item IDM=11500             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11501             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11502             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11503             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11504             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11505             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11506             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11507             Core          Untested    —       YES    OK     —    
+Menu Item IDM=332009139         Core          Untested    —       YES    OK     —    
+Menu Item IDM=11510             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11511             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11512             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11513             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11514             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11515             Core          Untested    —       YES    OK     —    
+Menu Item IDM=621350083         Core          Untested    —       YES    OK     —    
+Menu Item IDM=11520             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11521             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11522             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11523             Core          Untested    —       YES    OK     —    
+Menu Item IDM=1402998027        Core          Untested    —       YES    OK     —    
+Menu Item IDM=11530             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11531             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11532             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11533             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11534             Core          Untested    —       YES    OK     —    
+Menu Item IDM=636095727         Core          Untested    —       YES    OK     —    
+Menu Item IDM=11540             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11541             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11542             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11543             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11544             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11545             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11546             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11547             Core          Untested    —       YES    OK     —    
+Menu Item IDM=1060506625        Core          Untested    —       YES    OK     —    
+Menu Item IDM=11551             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11552             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11553             Core          Untested    —       YES    OK     —    
+Menu Item IDM=985009961         Core          Untested    —       YES    OK     —    
+Menu Item IDM=11560             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11561             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11562             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11563             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11564             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11565             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11566             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11567             Core          Untested    —       YES    OK     —    
+Menu Item IDM=477892237         Core          Untested    —       YES    OK     —    
+Menu Item IDM=11571             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11572             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11573             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11574             Core          Untested    —       YES    OK     —    
+Menu Item IDM=586681675         Core          Untested    —       YES    OK     —    
+Menu Item IDM=660474995         Core          Untested    —       YES    OK     —    
+Menu Item IDM=478285387         Core          Untested    —       YES    OK     —    
+Menu Item IDM=401               Core          Untested    —       YES    OK     —    
+Menu Item IDM=402               Core          Untested    —       YES    OK     —    
+Menu Item IDM=403               Core          Untested    —       YES    OK     —    
+Menu Item IDM=404               Core          Untested    —       YES    OK     —    
+Menu Item IDM=405               Core          Untested    —       YES    OK     —    
+Menu Item IDM=406               Core          Untested    —       YES    OK     —    
+Menu Item IDM=407               Core          Untested    —       YES    OK     —    
+Menu Item IDM=408               Core          Untested    —       YES    OK     —    
+Menu Item IDM=409               Core          Untested    —       YES    OK     —    
+Menu Item IDM=432213771         Core          Untested    —       YES    OK     —    
+Menu Item IDM=968558225         Core          Untested    —       YES    OK     —    
+Menu Item IDM=44014             Core          Untested    —       YES    OK     —    
+Menu Item IDM=700386217         Core          Untested    —       YES    OK     —    
+Menu Item IDM=644025789         Core          Untested    —       YES    OK     —    
+Menu Item IDM=585042315         Core          Untested    —       YES    OK     —    
+Menu Item IDM=1471613487        Core          Untested    —       YES    OK     —    
+Menu Item IDM=545000761         Core          Untested    —       YES    OK     —    
+Menu Item IDM=12000             Core          Untested    —       YES    OK     —    
+Menu Item IDM=12001             Core          Untested    —       YES    OK     —    
+Menu Item IDM=12030             Core          Untested    —       YES    OK     —    
+Menu Item IDM=12040             Core          Untested    —       YES    OK     —    
+Menu Item IDM=12050             Core          Untested    —       YES    OK     —    
+Menu Item IDM=12060             Core          Untested    —       YES    OK     —    
+Menu Item IDM=12070             Core          Untested    —       YES    OK     —    
+Menu Item IDM=12080             Core          Untested    —       YES    OK     —    
+Menu Item IDM=12081             Core          Untested    —       YES    OK     —    
+Menu Item IDM=12082             Core          Untested    —       YES    OK     —    
+Menu Item IDM=12083             Core          Untested    —       YES    OK     —    
+Menu Item IDM=12084             Core          Untested    —       YES    OK     —    
+Menu Item IDM=12090             Core          Untested    —       YES    OK     —    
+Menu Item IDM=12091             Core          Untested    —       YES    OK     —    
+Menu Item IDM=583208371         Core          Untested    —       YES    OK     —    
+Menu Item IDM=1485769609        Core          Untested    —       YES    OK     —    
+Menu Item IDM=11100             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11101             Core          Untested    —       YES    OK     —    
+Menu Item IDM=1291586117        Core          Untested    —       YES    OK     —    
+Menu Item IDM=2006              Core          Untested    —       YES    OK     —    
+Menu Item IDM=2007              Core          Untested    —       YES    OK     —    
+Menu Item IDM=2008              Core          Untested    —       YES    OK     —    
+Menu Item IDM=2009              Core          Untested    —       YES    OK     —    
+Menu Item IDM=2010              Core          Untested    —       YES    OK     —    
+Menu Item IDM=2011              Core          Untested    —       YES    OK     —    
+Menu Item IDM=208               Core          Untested    —       YES    OK     —    
+Menu Item IDM=209               Core          Untested    —       YES    OK     —    
+Menu Item IDM=210               Core          Untested    —       YES    OK     —    
+Menu Item IDM=211               Core          Untested    —       YES    OK     —    
+Menu Item IDM=1153764173        Core          Untested    —       YES    OK     —    
+Menu Item IDM=650186127         Core          Untested    —       YES    OK     —    
+Menu Item IDM=11400             Core          Untested    —       YES    OK     —    
+Menu Item IDM=540872545         Core          Untested    —       YES    OK     —    
+Menu Item IDM=1001              Core          Untested    —       YES    OK     —    
+Menu Item IDM=1002              Core          Untested    —       YES    OK     —    
+Menu Item IDM=1003              Core          Untested    —       YES    OK     —    
+Menu Item IDM=1004              Core          Untested    —       YES    OK     —    
+Menu Item IDM=1005              Core          Untested    —       YES    OK     —    
+Menu Item IDM=1006              Core          Untested    —       YES    OK     —    
+Menu Item IDM=1010              Core          Untested    —       YES    OK     —    
+Menu Item IDM=1020              Core          Untested    —       YES    OK     —    
+Menu Item IDM=1031              Core          Untested    —       YES    OK     —    
+Menu Item IDM=1032              Core          Untested    —       YES    OK     —    
+Menu Item IDM=1033              Core          Untested    —       YES    OK     —    
+Menu Item IDM=1034              Core          Untested    —       YES    OK     —    
+Menu Item IDM=1035              Core          Untested    —       YES    OK     —    
+Menu Item IDM=1099              Core          Untested    —       YES    OK     —    
+Menu Item IDM=105               Core          Untested    —       YES    OK     —    
+Menu Item IDM=106               Core          Untested    —       YES    OK     —    
+Menu Item IDM=108               Core          Untested    —       YES    OK     —    
+Menu Item IDM=109               Core          Untested    —       YES    OK     —    
+Menu Item IDM=110               Core          Untested    —       YES    OK     —    
+Menu Item IDM=1406798611        Core          Untested    —       YES    OK     —    
+Menu Item IDM=10619             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10620             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10621             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10622             Core          Untested    —       YES    OK     —    
+Menu Item IDM=911805545         Core          Untested    —       YES    OK     —    
+Menu Item IDM=9600              Core          Untested    —       YES    OK     —    
+Menu Item IDM=9601              Core          Untested    —       YES    OK     —    
+Menu Item IDM=402461537         Core          Untested    —       YES    OK     —    
+Menu Item IDM=27265785          Core          Untested    —       YES    OK     —    
+Menu Item IDM=11200             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11201             Core          Untested    —       YES    OK     —    
+Menu Item IDM=639110631         Core          Untested    —       YES    OK     —    
+Menu Item IDM=601               Core          Untested    —       YES    OK     —    
+Menu Item IDM=603               Core          Untested    —       YES    OK     —    
+Menu Item IDM=902892789         Core          Untested    —       YES    OK     —    
+Menu Item IDM=598543277         Core          Untested    —       YES    OK     —    
+Menu Item IDM=672730609         Core          Untested    —       YES    OK     —    
+Menu Item IDM=330501599         Core          Untested    —       YES    OK     —    
+Menu Item IDM=1258031357        Core          Untested    —       YES    OK     —    
+Menu Item IDM=11300             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11301             Core          Untested    —       YES    OK     —    
+Menu Item IDM=655822433         Core          Untested    —       YES    OK     —    
+Menu Item IDM=11001             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11002             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11003             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11004             Core          Untested    —       YES    OK     —    
+Menu Item IDM=11005             Core          Untested    —       YES    OK     —    
+Menu Item IDM=788401171         Core          Untested    —       YES    OK     —    
+Menu Item IDM=1794443989        Core          Untested    —       YES    OK     —    
+Menu Item IDM=625478539         Core          Untested    —       YES    OK     —    
+Menu Item IDM=1015810631        Core          Untested    —       YES    OK     —    
+Menu Item IDM=9410              PDB           Untested    —       YES    OK     —    
+Menu Item IDM=9411              PDB           Untested    —       YES    OK     —    
+Menu Item IDM=9412              PDB           Untested    —       YES    OK     —    
+Menu Item IDM=1096813411        Core          Untested    —       YES    OK     —    
+Menu Item IDM=1535314605        Core          Untested    —       YES    OK     —    
+Menu Item IDM=5200              Core          Untested    —       YES    OK     —    
+Menu Item IDM=5201              Core          Untested    —       YES    OK     —    
+Menu Item IDM=5202              Core          Untested    —       YES    OK     —    
+Menu Item IDM=5203              Core          Untested    —       YES    OK     —    
+Menu Item IDM=5204              Core          Untested    —       YES    OK     —    
+Menu Item IDM=5205              Core          Untested    —       YES    OK     —    
+Menu Item IDM=5206              Core          Untested    —       YES    OK     —    
+Menu Item IDM=5207              Core          Untested    —       YES    OK     —    
+Menu Item IDM=5208              Core          Untested    —       YES    OK     —    
+Menu Item IDM=10000             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10001             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10002             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10003             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10004             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10005             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10006             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10007             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10008             Core          Untested    —       YES    OK     —    
+Menu Item IDM=10009             Core          Untested    —       YES    OK     —    
+Menu Item IDM=1436224311        Core          Untested    —       YES    OK     —    
+Menu Item IDM=11600             Core          Untested    —       YES    OK     —    
+Menu Item IDM=634784827         Core          Untested    —       YES    OK     —    
+Menu Item IDM=9801              Core          Untested    —       YES    OK     —    
+Menu Item IDM=1370820099        Core          Untested    —       YES    OK     —    
+Menu Item IDM=695471221         Core          Untested    —       YES    OK     —    
+Menu Item IDM=8001              Core          Untested    —       YES    OK     —    
+Menu Item IDM=8002              Core          Untested    —       YES    OK     —    
+Menu Item IDM=8003              Core          Untested    —       YES    OK     —    
+Menu Item IDM=8004              Core          Untested    —       YES    OK     —    
+Menu Item IDM=8005              Core          Untested    —       YES    OK     —    
+Menu Item IDM=8006              Core          Untested    —       YES    OK     —    
+Menu Item IDM=8100              Core          Untested    —       YES    OK     —    
+Menu Item IDM=8101              Core          Untested    —       YES    OK     —    
+Menu Item IDM=8102              Core          Untested    —       YES    OK     —    
+Menu Item IDM=1854147231        Core          Untested    —       YES    OK     —    
+Menu Item IDM=390335613         Core          Untested    —       YES    OK     —    
+Menu Item IDM=759499703         Core          Untested    —       YES    OK     —    
+Menu Item IDM=44019             Core          Untested    —       YES    OK     —    
+Menu Item IDM=44020             Core          Untested    —       YES    OK     —    
+Menu Item IDM=1227689431        Core          Untested    —       YES    OK     —    
+Menu Item IDM=766707953         Core          Untested    —       YES    OK     —    
+Menu Item IDM=473304455         Core          Untested    —       YES    OK     —    
+Menu Item IDM=9900              Core          Untested    —       YES    OK     —    
+Menu Item IDM=9901              Core          Untested    —       YES    OK     —    
+Menu Item IDM=9902              Core          Untested    —       YES    OK     —    
+Menu Item IDM=9903              Core          Untested    —       YES    OK     —    
+Menu Item IDM=9904              Core          Untested    —       YES    OK     —    
+Menu Item IDM=9905              Core          Untested    —       YES    OK     —    
+Menu Item IDM=44018             Core          Untested    —       YES    OK     —    
+Menu Item IDM=1503726367        Core          Untested    —       YES    OK     —    
+Menu Item IDM=3001              Core          Untested    —       YES    OK     —    
+Menu Item IDM=3002              Core          Untested    —       YES    OK     —    
+Menu Item IDM=3003              Core          Untested    —       YES    OK     —    
+Menu Item IDM=3004              Core          Untested    —       YES    OK     —    
+Menu Item IDM=3005              Core          Untested    —       YES    OK     —    
+Menu Item IDM=3006              Core          Untested    —       YES    OK     —    
+Menu Item IDM=1242958699        Core          Untested    —       YES    OK     —    
+Menu Item IDM=3100              UI            Untested    —       YES    OK     —    
+Menu Item IDM=655822355         Core          Untested    —       YES    OK     —    
+Menu Item IDM=501               Core          Untested    —       YES    OK     —    
+Menu Item IDM=502               Core          Untested    —       YES    OK     —    
+Menu Item IDM=503               Core          Untested    —       YES    OK     —    
+Menu Item IDM=504               Core          Untested    —       YES    OK     —    
+Menu Item IDM=505               Core          Untested    —       YES    OK     —    
+Menu Item IDM=506               Core          Untested    —       YES    OK     —    
+Menu Item IDM=44016             Core          Untested    —       YES    OK     —    
+Menu Item IDM=650447783         Core          Untested    —       YES    OK     —    
+Menu Item IDM=43000             Core          Untested    —       YES    OK     —    
+Menu Item IDM=43001             Core          Untested    —       YES    OK     —    
+Menu Item IDM=43002             Core          Untested    —       YES    OK     —    
+Menu Item IDM=43003             Core          Untested    —       YES    OK     —    
+Menu Item IDM=43004             Core          Untested    —       YES    OK     —    
+Menu Item IDM=43005             Core          Untested    —       YES    OK     —    
+Menu Item IDM=43006             Core          Untested    —       YES    OK     —    
+Menu Item IDM=43007             Core          Untested    —       YES    OK     —    
+Menu Item IDM=43008             Core          Untested    —       YES    OK     —    
+Menu Item IDM=43009             Core          Untested    —       YES    OK     —    
+Menu Item IDM=43010             Core          Untested    —       YES    OK     —    
+Menu Item IDM=43011             Core          Untested    —       YES    OK     —    
+Menu Item IDM=43012             Core          Untested    —       YES    OK     —    
+Menu Item IDM=43013             Core          Untested    —       YES    OK     —    
+Menu Item IDM=357633957         Core          Untested    —       YES    OK     —    
+Menu Item IDM=1419446771        Core          Untested    —       YES    OK     —    
+Menu Item IDM=44015             Core          Untested    —       YES    OK     —    
+Menu Item IDM=44017             Core          Untested    —       YES    OK     —    
+Menu Item IDM=1596655645        Core          Untested    —       YES    OK     —    
+Menu Item IDM=2028              Core          Untested    —       YES    OK     —    
+Menu Item IDM=2029              Core          Untested    —       YES    OK     —    
+Menu Item IDM=301               Core          Untested    —       YES    OK     —    
+Menu Item IDM=302               Core          Untested    —       YES    OK     —    
+Menu Item IDM=303               Core          Untested    —       YES    OK     —    
+Menu Item IDM=304               Core          Untested    —       YES    OK     —    
+Menu Item IDM=305               Core          Untested    —       YES    OK     —    
+Menu Item IDM=306               Core          Untested    —       YES    OK     —    
+Menu Item IDM=307               Core          Untested    —       YES    OK     —    
+Menu Item IDM=1096223367        Core          Untested    —       YES    OK     —    
+Menu Item IDM=1252264561        Core          Untested    —       YES    OK     —    
+Menu Item IDM=9707              Core          Untested    —       YES    OK     —    
+Menu Item IDM=9708              Core          Untested    —       YES    OK     —    
+Menu Item IDM=9709              Core          Untested    —       YES    OK     —    
+Menu Item IDM=10201             Core          Untested    —       YES    OK     —    
+Menu Item IDM=1296763675        Core          Untested    —       YES    OK     —    
+Menu Item IDM=1160514537        Core          Untested    —       YES    OK     —    
+Menu Item IDM=12330             Core          Untested    —       YES    OK     —    
+Menu Item IDM=12331             Core          Untested    —       YES    OK     —    
+Menu Item IDM=12332             Core          Untested    —       YES    OK     —    
+Menu Item IDM=12333             Core          Untested    —       YES    OK     —    
+Menu Item IDM=12334             Core          Untested    —       YES    OK     —    
+Menu Item IDM=12335             Core          Untested    —       YES    OK     —    
+Menu Item IDM=12336             Core          Untested    —       YES    OK     —    
+Menu Item IDM=12337             Core          Untested    —       YES    OK     —    
+Menu Item IDM=12338             Core          Untested    —       YES    OK     —    
+Menu Item IDM=12339             Core          Untested    —       YES    OK     —    
+Menu Item IDM=12340             Core          Untested    —       YES    OK     —    
+Menu Item IDM=12341             Core          Untested    —       YES    OK     —    
+Menu Item IDM=3042              Core          Untested    —       YES    OK     —    
+Menu Item IDM=3043              Core          Untested    —       YES    OK     —    
+Menu Item IDM=3044              Core          Untested    —       YES    OK     —    
+Menu Item IDM=3045              Core          Untested    —       YES    OK     —    
+Menu Item IDM=3046              Core          Untested    —       YES    OK     —    
+Menu Item IDM=3047              Core          Untested    —       YES    OK     —    
+
+── Warnings ─────────────────────────────────────────────────────
+  (none)
+
+╔══════════════════════════════════════════════════════════════════╗
+║                      End of Report                              ║
+╚══════════════════════════════════════════════════════════════════╝

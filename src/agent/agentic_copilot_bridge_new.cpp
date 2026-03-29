@@ -46,8 +46,18 @@ std::string AgenticCopilotBridge::executeWithFailureRecovery(const std::string& 
         // Step 2: Invoke primary agentic engine
         if (!m_agenticEngine) return "Error: Engine offline";
         
-        // Mocking engine call for now
-        response = "Primary response for: " + prompt;
+        // Route through the production engine's chat pipeline
+        if (m_agenticEngine->isModelLoaded()) {
+            response = m_agenticEngine->chat(prompt);
+        } else {
+            // No model loaded — attempt direct inference engine fallback
+            auto* inf = m_agenticEngine->inferenceEngine();
+            if (inf && inf->IsModelLoaded()) {
+                response = m_agenticEngine->chat(prompt);
+            } else {
+                response = "Error: No model loaded. Load a model first via /api/model/load.";
+            }
+        }
 
         // Step 3: Hotpatch and validate response
         JsonValue ctx = JsonValue::createObject();

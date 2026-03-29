@@ -1,10 +1,11 @@
 #include "backend_selector.h"
 #include "cpu_inference_engine.h"
-// #include "vulkan_inference_engine.h" // TODO: Implement when available
-// #include "hip_inference_engine.h"     // TODO: Implement when available
-// #include "cuda_inference_engine.h"    // TODO: Implement when available
-// #include "titan_inference_engine.h"   // TODO: Implement when available
 
+#include "backend/vulkan_inference_engine.h"
+#include "backend/hip_inference_engine.h"
+#include "backend/cuda_inference_engine.h"
+#include "backend/dml_inference_engine.h"
+#include "backend/titan_inference_engine.h"
 #include <algorithm>
 #include <chrono>
 #include <iostream>
@@ -240,48 +241,87 @@ bool BackendSelector::detectCUDA() {
 }
 
 bool BackendSelector::detectTitan() {
-    // Check if Titan assembly is available (simplified check)
-    return true; // Assume available for now
+    // Titan uses MASM x64 AVX-512 GEMM hotpath — require AVX-512F support.
+    // Use __cpuidex(leaf=7, subleaf=0) to check CPUID EBX bit 16 (AVX-512F).
+#if defined(_MSC_VER) || defined(__GNUC__)
+    int cpuInfo[4] = {0};
+  #if defined(_MSC_VER)
+    __cpuidex(cpuInfo, 7, 0);
+  #elif defined(__GNUC__)
+    __asm__ __volatile__(
+        "cpuid" : "=a"(cpuInfo[0]), "=b"(cpuInfo[1]), "=c"(cpuInfo[2]), "=d"(cpuInfo[3])
+        : "a"(7), "c"(0));
+  #endif
+    const bool avx512f = (cpuInfo[1] & (1 << 16)) != 0;
+    if (!avx512f) {
+        std::cerr << "[BackendSelector] Titan unavailable: CPU lacks AVX-512F\n";
+        return false;
+    }
+    return true;
+#else
+    return false; // Unsupported compiler — cannot probe CPUID
+#endif
 }
 
 std::unique_ptr<InferenceEngine> BackendSelector::createCPUEngine() {
     return std::make_unique<CPUInferenceEngine>();
 }
 
+
 std::unique_ptr<InferenceEngine> BackendSelector::createDMLEngine() {
-    // DMLInferenceEngine is not yet part of the shared InferenceEngine link lane
-    // used by tools, so keep behavior deterministic by falling back to CPU here.
-    std::cerr << "DirectML backend not wired in this build lane yet, using CPU" << std::endl;
-    return createCPUEngine();
+    try {
+        auto engine = std::make_unique<DMLInferenceEngine>();
+        std::cerr << "[BackendSelector] Created DirectML inference engine" << std::endl;
+        return engine;
+    } catch (const std::exception& e) {
+        std::cerr << "[BackendSelector] DML creation failed: " << e.what() << ", falling back to CPU" << std::endl;
+        return createCPUEngine();
+    }
 }
 
 std::unique_ptr<InferenceEngine> BackendSelector::createVulkanEngine() {
-    // TODO: Implement VulkanInferenceEngine
-    // For now, fall back to CPU
-    std::cerr << "Vulkan backend not implemented yet, using CPU" << std::endl;
-    return createCPUEngine();
+    try {
+        auto engine = std::make_unique<VulkanInferenceEngine>();
+        std::cerr << "[BackendSelector] Created Vulkan inference engine" << std::endl;
+        return engine;
+    } catch (const std::exception& e) {
+        std::cerr << "[BackendSelector] Vulkan creation failed: " << e.what() << ", falling back to CPU" << std::endl;
+        return createCPUEngine();
+    }
 }
 
 std::unique_ptr<InferenceEngine> BackendSelector::createHIPEngine() {
-    // TODO: Implement HIPInferenceEngine
-    std::cerr << "HIP backend not implemented yet, using CPU" << std::endl;
-    return createCPUEngine();
+    try {
+        auto engine = std::make_unique<HIPInferenceEngine>();
+        std::cerr << "[BackendSelector] Created HIP (AMD) inference engine" << std::endl;
+        return engine;
+    } catch (const std::exception& e) {
+        std::cerr << "[BackendSelector] HIP creation failed: " << e.what() << ", falling back to CPU" << std::endl;
+        return createCPUEngine();
+    }
 }
 
 std::unique_ptr<InferenceEngine> BackendSelector::createCUDAEngine() {
-    // TODO: Implement CUDAInferenceEngine
-    std::cerr << "CUDA backend not implemented yet, using CPU" << std::endl;
-    return createCPUEngine();
+    try {
+        auto engine = std::make_unique<CUDAInferenceEngine>();
+        std::cerr << "[BackendSelector] Created CUDA (NVIDIA) inference engine" << std::endl;
+        return engine;
+    } catch (const std::exception& e) {
+        std::cerr << "[BackendSelector] CUDA creation failed: " << e.what() << ", falling back to CPU" << std::endl;
+        return createCPUEngine();
+    }
 }
 
 std::unique_ptr<InferenceEngine> BackendSelector::createTitanEngine() {
-    // TODO: Implement TitanInferenceEngine
-    // For now, use CPU with Titan flag enabled
-    auto engine = std::make_unique<CPUInferenceEngine>();
-    // engine->SetUseTitanAssembly(true); // Would need to add this method
-    return engine;
+    try {
+        auto engine = std::make_unique<TitanInferenceEngine>();
+        std::cerr << "[BackendSelector] Created Titan x64 assembly optimization engine" << std::endl;
+        return engine;
+    } catch (const std::exception& e) {
+        std::cerr << "[BackendSelector] Titan creation failed: " << e.what() << ", falling back to CPU" << std::endl;
+        return createCPUEngine();
+    }
 }
-
 double BackendSelector::scoreBackend(const BackendInfo& info, const std::string& modelPath) {
     double score = info.performanceScore;
 

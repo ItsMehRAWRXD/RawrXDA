@@ -7,7 +7,6 @@
 #include <thread>
 #include <windows.h>
 
-<<<<<<< HEAD
 // Shared engine for IDE commands, completion, and routing (set by bridge Initialize).
 static AgenticEngine* s_ideCommandEngine = nullptr;
 void SetIDEAgenticEngineForCommands(AgenticEngine* engine) { s_ideCommandEngine = engine; }
@@ -57,20 +56,6 @@ class AgenticController
 };
 
 
-=======
-// SCAFFOLD_131: RawrXD_ModelRouter
-
-
-// SCAFFOLD_129: RawrXD_AICompletion
-
-
-// SCAFFOLD_128: RawrXD_InferenceEngine_Win32
-
-
-// SCAFFOLD_089: RawrXD_AgenticEngine and AgenticController
-
-
->>>>>>> origin/main
 namespace fs = std::filesystem;
 using json = nlohmann::json;
 
@@ -675,28 +660,57 @@ bool ActionExecutor::handleRecursiveAgent(Action& action)
     std::string goal = action.params.value("goal", "");
     if (goal.empty())
     {
+        goal = action.params.value("wish", "");
+    }
+    if (goal.empty())
+    {
+        goal = action.params.value("query", "");
+    }
+    if (goal.empty())
+    {
+        goal = action.params.value("prompt", "");
+    }
+    if (goal.empty())
+    {
         action.error = "Recursive agent goal is empty.";
         return false;
     }
 
-    // Spawn a new planning session or sub-task
-    // For this implementation, we'll ask the engine to decompose and plan,
-    // simulating a sub-agent execution by returning the plan.
+    const bool planOnly = action.params.value("plan_only", false);
+    std::string description = action.params.value("description", "recursive-agent-task");
 
-    json plan = m_agenticEngine->planTask(goal);
-    action.result = plan.dump();
+    if (planOnly)
+    {
+        json plan = m_agenticEngine->planTask(goal);
+        action.result = json({{"mode", "plan"}, {"description", description}, {"result", plan}}).dump();
+        return true;
+    }
+
+    std::string output = m_agenticEngine->runSubAgent(description, goal);
+    if (output.empty())
+    {
+        action.error = "Recursive sub-agent execution returned empty output.";
+        return false;
+    }
+
+    action.result = json({{"mode", "subagent"}, {"description", description}, {"result", output}}).dump();
     return true;
 }
 
 bool ActionExecutor::handleQueryUser(Action& action)
 {
+    std::string prompt = action.params.value("prompt", action.params.value("query", "Confirm?"));
+    std::vector<std::string> options = action.params.value("options", std::vector<std::string>{"Yes", "No"});
+
     if (onUserInputNeeded)
     {
-        std::string prompt = action.params.value("prompt", "Confirm?");
-        std::vector<std::string> options = action.params.value("options", std::vector<std::string>{"Yes", "No"});
-
         onUserInputNeeded(prompt, options);
     }
-    action.result = json({{"user_input", "simulated_ack"}}).dump();
+
+    action.result = json({
+        {"status", "awaiting_user_input"},
+        {"prompt", prompt},
+        {"options", options},
+    }).dump();
     return true;
 }

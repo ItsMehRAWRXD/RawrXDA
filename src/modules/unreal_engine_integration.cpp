@@ -1239,9 +1239,30 @@ bool UnrealEngineIntegration::debugStepOver()   { return m_debugSessionActive.lo
 bool UnrealEngineIntegration::debugStepInto()   { return m_debugSessionActive.load(); }
 bool UnrealEngineIntegration::debugStepOut()    { return m_debugSessionActive.load(); }
 
-std::vector<UnrealDebugStackFrame> UnrealEngineIntegration::getCallStack() const { return {}; }
-std::vector<UnrealDebugVariable> UnrealEngineIntegration::getLocals(int frameId) const { return {}; }
-std::string UnrealEngineIntegration::evaluateExpression(const std::string& expr, int frameId) const { return ""; }
+std::vector<UnrealDebugStackFrame> UnrealEngineIntegration::getCallStack() const {
+    if (!m_debugSessionActive.load()) return {};
+    std::lock_guard<std::mutex> lock(m_debugMutex);
+    return m_callStack;
+}
+
+std::vector<UnrealDebugVariable> UnrealEngineIntegration::getLocals(int frameId) const {
+    if (!m_debugSessionActive.load()) return {};
+    std::lock_guard<std::mutex> lock(m_debugMutex);
+    auto it = m_frameLocals.find(frameId);
+    if (it != m_frameLocals.end()) return it->second;
+    return {};
+}
+
+std::string UnrealEngineIntegration::evaluateExpression(const std::string& expr, int frameId) const {
+    if (!m_debugSessionActive.load()) return "";
+    if (expr.empty()) return "";
+    // Attempt expression evaluation through console command pipe
+    if (m_logCallback) {
+        std::string msg = "UE EvalExpr[frame=" + std::to_string(frameId) + "]: " + expr;
+        m_logCallback(msg.c_str(), 0);
+    }
+    return "";  // Requires live editor connection for actual eval
+}
 bool UnrealEngineIntegration::isDebugSessionActive() const { return m_debugSessionActive.load(); }
 
 // ============================================================================
@@ -1362,12 +1383,73 @@ std::string UnrealEngineIntegration::getPluginDescriptor(const std::string& plug
 // ============================================================================
 // Source Control
 // ============================================================================
-bool UnrealEngineIntegration::isSourceControlEnabled() const { return false; }
-std::string UnrealEngineIntegration::getSourceControlProvider() const { return "None"; }
-bool UnrealEngineIntegration::checkOutFile(const std::string& filePath) { return true; }
-bool UnrealEngineIntegration::markForAdd(const std::string& filePath) { return true; }
-bool UnrealEngineIntegration::markForDelete(const std::string& filePath) { return true; }
-bool UnrealEngineIntegration::revertFile(const std::string& filePath) { return true; }
+bool UnrealEngineIntegration::isSourceControlEnabled() const {
+    if (!m_initialized.load()) return false;
+    // Detect git or Perforce in project directory
+    std::string gitDir = m_projectInfo.projectPath + "/.git";
+    if (fs::exists(gitDir)) return true;
+    // Check for Perforce workspace via P4CONFIG or .p4config
+    std::string p4config = m_projectInfo.projectPath + "/.p4config";
+    if (fs::exists(p4config)) return true;
+    return false;
+}
+
+std::string UnrealEngineIntegration::getSourceControlProvider() const {
+    if (!m_initialized.load()) return "None";
+    std::string gitDir = m_projectInfo.projectPath + "/.git";
+    if (fs::exists(gitDir)) return "Git";
+    std::string p4config = m_projectInfo.projectPath + "/.p4config";
+    if (fs::exists(p4config)) return "Perforce";
+    return "None";
+}
+
+bool UnrealEngineIntegration::checkOutFile(const std::string& filePath) {
+    if (!isSourceControlEnabled()) return true; // No-op if no VCS
+    std::string provider = getSourceControlProvider();
+    if (provider == "Perforce") {
+        std::string output;
+        std::string cmd = "p4 edit \"" + filePath + "\"";
+        return launchEditorCmd(cmd, output, 15000);
+    }
+    // Git doesn't require explicit checkout — files are always writable
+    return true;
+}
+
+bool UnrealEngineIntegration::markForAdd(const std::string& filePath) {
+    if (!isSourceControlEnabled()) return true;
+    std::string provider = getSourceControlProvider();
+    std::string output;
+    if (provider == "Perforce") {
+        return launchEditorCmd("p4 add \"" + filePath + "\"", output, 15000);
+    } else if (provider == "Git") {
+        return launchEditorCmd("git -C \"" + m_projectInfo.projectPath + "\" add \"" + filePath + "\"", output, 15000);
+    }
+    return true;
+}
+
+bool UnrealEngineIntegration::markForDelete(const std::string& filePath) {
+    if (!isSourceControlEnabled()) return true;
+    std::string provider = getSourceControlProvider();
+    std::string output;
+    if (provider == "Perforce") {
+        return launchEditorCmd("p4 delete \"" + filePath + "\"", output, 15000);
+    } else if (provider == "Git") {
+        return launchEditorCmd("git -C \"" + m_projectInfo.projectPath + "\" rm \"" + filePath + "\"", output, 15000);
+    }
+    return true;
+}
+
+bool UnrealEngineIntegration::revertFile(const std::string& filePath) {
+    if (!isSourceControlEnabled()) return true;
+    std::string provider = getSourceControlProvider();
+    std::string output;
+    if (provider == "Perforce") {
+        return launchEditorCmd("p4 revert \"" + filePath + "\"", output, 15000);
+    } else if (provider == "Git") {
+        return launchEditorCmd("git -C \"" + m_projectInfo.projectPath + "\" checkout -- \"" + filePath + "\"", output, 15000);
+    }
+    return true;
+}
 
 // ============================================================================
 // Automation / Testing

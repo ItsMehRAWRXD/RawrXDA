@@ -1,13 +1,9 @@
 # Tools - Command-line utilities for benchmarking and testing
 
-<<<<<<< HEAD
 set(_RAWRXD_OPTIONAL_GGML_LINK_LIBS)
 if(TARGET ggml)
     list(APPEND _RAWRXD_OPTIONAL_GGML_LINK_LIBS ggml)
 endif()
-
-=======
->>>>>>> origin/main
 # RawrXD KeyGen — RSA-4096 Key Authority & License Signer (unlock 800B kernel / enterprise)
 # Build: standalone Win32 CLI; no Qt/engine deps. Use for --genkey, --hwid, --issue, --sign.
 add_executable(RawrXD_KeyGen WIN32
@@ -24,53 +20,30 @@ if(TARGET InferenceEngine)
       simple_gpu_test.cpp
   )
 
-<<<<<<< HEAD
   # Qt-free: pure C++ with STL
   target_link_libraries(simple_gpu_test PRIVATE
       InferenceEngine
       ${_RAWRXD_OPTIONAL_GGML_LINK_LIBS}
   )
-=======
-# Qt-free: pure C++ with STL
-target_link_libraries(simple_gpu_test PRIVATE
-    InferenceEngine
-    ggml
-)
->>>>>>> origin/main
 
   # Real Multi-Model Benchmark - For comprehensive model testing
   add_executable(real_multi_model_benchmark
       real_multi_model_benchmark.cpp
   )
 
-<<<<<<< HEAD
   target_link_libraries(real_multi_model_benchmark PRIVATE
       InferenceEngine
       ${_RAWRXD_OPTIONAL_GGML_LINK_LIBS}
   )
-=======
-target_link_libraries(real_multi_model_benchmark PRIVATE
-    InferenceEngine
-    ggml
-)
->>>>>>> origin/main
 
   add_executable(bench_cpu
       bench_cpu.cpp
   )
 
-<<<<<<< HEAD
   target_include_directories(bench_cpu PRIVATE
       ${CMAKE_SOURCE_DIR}/src
       ${CMAKE_SOURCE_DIR}/include
   )
-=======
-target_link_libraries(gguf_api_server PRIVATE
-    InferenceEngine
-    ggml
-    ws2_32
-)
->>>>>>> origin/main
 
   target_link_libraries(bench_cpu PRIVATE
       InferenceEngine
@@ -113,7 +86,6 @@ else()
 endif()
 
 # Install targets (RawrXD_KeyGen ships with IDE for License Creator > Launch KeyGen)
-<<<<<<< HEAD
 set(_RAWRXD_TOOL_INSTALL_TARGETS RawrXD_KeyGen)
 
 foreach(_rawrxd_tool_target simple_gpu_test real_multi_model_benchmark bench_cpu comprehensive_benchmark gguf_api_server)
@@ -124,9 +96,5 @@ endforeach()
 
 install(TARGETS ${_RAWRXD_TOOL_INSTALL_TARGETS}
         RUNTIME DESTINATION bin
-=======
-install(TARGETS RawrXD_KeyGen simple_gpu_test real_multi_model_benchmark gguf_api_server
-    RUNTIME DESTINATION bin
->>>>>>> origin/main
 )
 

@@ -13,10 +13,12 @@
 #include <windows.h>
 #include <commctrl.h>
 
+
 #include <cstdint>
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -33,7 +35,8 @@
 // Basic IDE / editor structures
 // =============================================================================
 
-struct CodeSnippet {
+struct CodeSnippet
+{
     std::string name;
     std::string description;
     std::string code;
@@ -41,7 +44,8 @@ struct CodeSnippet {
     std::vector<std::string> placeholders;
 };
 
-struct ModuleInfo {
+struct ModuleInfo
+{
     std::string name;
     std::string version;
     std::string description;
@@ -49,7 +53,8 @@ struct ModuleInfo {
     bool loaded;
 };
 
-struct TerminalPane {
+struct TerminalPane
+{
     int id;
     HWND hwnd;
     std::unique_ptr<Win32TerminalManager> manager;
@@ -63,7 +68,8 @@ struct TerminalPane {
 // Git / VCS structures
 // =============================================================================
 
-struct GitStatus {
+struct GitStatus
+{
     std::string branch;
     int ahead;
     int behind;
@@ -76,9 +82,10 @@ struct GitStatus {
     std::string lastCommitMessage;
 };
 
-struct GitFile {
+struct GitFile
+{
     std::string path;
-    char status;    // M=modified, A=added, D=deleted, ?=untracked
+    char status;  // M=modified, A=added, D=deleted, ?=untracked
     bool staged;
 };
 
@@ -86,7 +93,8 @@ struct GitFile {
 // File explorer
 // =============================================================================
 
-struct FileExplorerItem {
+struct FileExplorerItem
+{
     std::string name;
     std::string fullPath;
     bool isDirectory;
@@ -100,12 +108,14 @@ struct FileExplorerItem {
 // Peek overlay types
 // =============================================================================
 
-enum class PeekItemType {
+enum class PeekItemType
+{
     Definition,
     Reference
 };
 
-struct PeekItem {
+struct PeekItem
+{
     std::string title;
     std::string content;
     std::string file;
@@ -118,30 +128,40 @@ struct PeekItem {
 // Debugger types
 // =============================================================================
 
-struct Breakpoint {
+struct Breakpoint
+{
     std::string file;
     int line;
     bool enabled;
     std::string condition;
     int hitCount;
+    /// After DAP setBreakpoints: nullopt = not bound this session; false = adapter reported unverified
+    std::optional<bool> dapVerified;
+    /// Adapter message (e.g. breakpoint could not be set)
+    std::string dapStatus;
 };
 
-struct StackFrame {
+struct StackFrame
+{
     std::string function;
     std::string file;
     int line;
+    int dapFrameId = 0;  // DAP frame ID; 0 for native engine frames
     std::map<std::string, std::string> locals;
 };
 
-struct Variable {
+struct Variable
+{
     std::string name;
     std::string value;
     std::string type;
-    bool expanded;
+    bool expanded = false;
+    int variablesReference = 0;  // DAP variablesReference; >0 means this var has children
     std::vector<Variable> children;
 };
 
-struct WatchItem {
+struct WatchItem
+{
     std::string expression;
     std::string value;
     std::string type;
@@ -152,138 +172,163 @@ struct WatchItem {
 // Failure intelligence — Phase 4B / 6
 // =============================================================================
 
-struct FailureClassification {
-    AgentFailureType reason     = AgentFailureType::None;
-    float            confidence = 0.0f;   // 0.0–1.0
-    std::string      evidence;            // Bounded to 256 chars
+struct FailureClassification
+{
+    AgentFailureType reason = AgentFailureType::None;
+    float confidence = 0.0f;  // 0.0–1.0
+    std::string evidence;     // Bounded to 256 chars
 
-    static FailureClassification ok() {
-        return { AgentFailureType::None, 1.0f, "" };
-    }
-    static FailureClassification make(AgentFailureType r, float c, const std::string& e) {
+    static FailureClassification ok() { return {AgentFailureType::None, 1.0f, ""}; }
+    static FailureClassification make(AgentFailureType r, float c, const std::string& e)
+    {
         FailureClassification fc;
-        fc.reason     = r;
+        fc.reason = r;
         fc.confidence = c;
-        fc.evidence   = e.size() > 256 ? e.substr(0, 256) : e;
+        fc.evidence = e.size() > 256 ? e.substr(0, 256) : e;
         return fc;
     }
 };
 
-struct FailureStats {
-    int totalRequests           = 0;
-    int totalFailures           = 0;
-    int totalRetries            = 0;
-    int successAfterRetry       = 0;
-    int refusalCount            = 0;
-    int hallucinationCount      = 0;
-    int formatViolationCount    = 0;
-    int infiniteLoopCount       = 0;
+struct FailureStats
+{
+    int totalRequests = 0;
+    int totalFailures = 0;
+    int totalRetries = 0;
+    int successAfterRetry = 0;
+    int refusalCount = 0;
+    int hallucinationCount = 0;
+    int formatViolationCount = 0;
+    int infiniteLoopCount = 0;
     int qualityDegradationCount = 0;
-    int emptyResponseCount      = 0;
-    int timeoutCount            = 0;
-    int toolErrorCount          = 0;
-    int invalidOutputCount      = 0;
-    int lowConfidenceCount      = 0;
-    int safetyViolationCount    = 0;
-    int userAbortCount          = 0;
-    int retriesDeclined         = 0;
+    int emptyResponseCount = 0;
+    int timeoutCount = 0;
+    int toolErrorCount = 0;
+    int invalidOutputCount = 0;
+    int lowConfidenceCount = 0;
+    int safetyViolationCount = 0;
+    int userAbortCount = 0;
+    int retriesDeclined = 0;
 };
 
 // Granular failure sub-reason (finer than AgentFailureType)
-enum class FailureReason {
-    Unknown             = 0,
+enum class FailureReason
+{
+    Unknown = 0,
     // Refusal
-    PolicyRefusal       = 1,
-    TaskRefusal         = 2,
-    CapabilityRefusal   = 3,
+    PolicyRefusal = 1,
+    TaskRefusal = 2,
+    CapabilityRefusal = 3,
     // Hallucination
-    FabricatedAPI       = 10,
-    FabricatedFact      = 11,
-    SelfContradiction   = 12,
+    FabricatedAPI = 10,
+    FabricatedFact = 11,
+    SelfContradiction = 12,
     // Format
-    WrongFormat         = 20,
-    MissingStructure    = 21,
-    ExcessiveVerbosity  = 22,
+    WrongFormat = 20,
+    MissingStructure = 21,
+    ExcessiveVerbosity = 22,
     // Loop
-    TokenRepetition     = 30,
-    BlockRepetition     = 31,
+    TokenRepetition = 30,
+    BlockRepetition = 31,
     // Quality
-    LowDensity          = 40,
-    FillerDominant      = 41,
-    TooShort            = 42,
+    LowDensity = 40,
+    FillerDominant = 41,
+    TooShort = 42,
     // System
-    EmptyOutput         = 50,
-    Timeout             = 51,
-    ToolError           = 52,
-    ContextOverflow     = 53
+    EmptyOutput = 50,
+    Timeout = 51,
+    ToolError = 52,
+    ContextOverflow = 53
 };
 
-enum class RetryStrategyType {
-    None              = 0,
-    Rephrase          = 1,
-    AddContext        = 2,
-    ForceFormat       = 3,
-    ReduceScope       = 4,
+enum class RetryStrategyType
+{
+    None = 0,
+    Rephrase = 1,
+    AddContext = 2,
+    ForceFormat = 3,
+    ReduceScope = 4,
     AdjustTemperature = 5,
-    SplitTask         = 6,
-    RetryVerbatim     = 7,
-    ToolRetry         = 8
+    SplitTask = 6,
+    RetryVerbatim = 7,
+    ToolRetry = 8
 };
 
-struct RetryStrategy {
-    RetryStrategyType type            = RetryStrategyType::None;
-    int               maxAttempts     = 1;
-    float             temperatureOverride = -1.0f;  // -1 = no override
-    std::string       promptPrefix;
-    std::string       promptSuffix;
-    std::string       description;
+struct RetryStrategy
+{
+    RetryStrategyType type = RetryStrategyType::None;
+    int maxAttempts = 1;
+    float temperatureOverride = -1.0f;  // -1 = no override
+    std::string promptPrefix;
+    std::string promptSuffix;
+    std::string description;
 
     std::string typeString() const;
 };
 
-struct FailureIntelligenceRecord {
-    uint64_t         timestampMs     = 0;
-    std::string      promptHash;
-    std::string      promptSnippet;  // First 256 chars
-    AgentFailureType failureType     = AgentFailureType::EmptyResponse;
-    FailureReason    reason          = FailureReason::Unknown;
-    RetryStrategyType strategyUsed   = RetryStrategyType::None;
-    int              attemptNumber   = 0;
-    bool             retrySucceeded  = false;
-    std::string      failureDetail;
-    std::string      sessionId;
+struct FailureIntelligenceRecord
+{
+    uint64_t timestampMs = 0;
+    std::string promptHash;
+    std::string promptSnippet;  // First 256 chars
+    AgentFailureType failureType = AgentFailureType::EmptyResponse;
+    FailureReason reason = FailureReason::Unknown;
+    RetryStrategyType strategyUsed = RetryStrategyType::None;
+    int attemptNumber = 0;
+    bool retrySucceeded = false;
+    std::string failureDetail;
+    std::string sessionId;
 
     std::string toMetadataJSON() const;
 };
 
-struct FailureReasonStats {
-    int               occurrences     = 0;
-    int               retriesAttempted = 0;
-    int               retriesSucceeded = 0;
-    float             avgRetryAttempts = 0.0f;
-    RetryStrategyType bestStrategy    = RetryStrategyType::None;
+struct FailureReasonStats
+{
+    int occurrences = 0;
+    int retriesAttempted = 0;
+    int retriesSucceeded = 0;
+    float avgRetryAttempts = 0.0f;
+    RetryStrategyType bestStrategy = RetryStrategyType::None;
 };
 
 // =============================================================================
 // Plan Executor types
 // =============================================================================
 
-enum class PlanStepType {
-    CodeEdit, FileCreate, FileDelete, ShellCommand,
-    Analysis, Verification, General
+enum class PlanStepType
+{
+    CodeEdit,
+    FileCreate,
+    FileDelete,
+    ShellCommand,
+    Analysis,
+    Verification,
+    General
 };
 
-enum class PlanStepStatus {
-    Pending, Running, Completed, Failed, Skipped
+enum class PlanStepStatus
+{
+    Pending,
+    Running,
+    Completed,
+    Failed,
+    Skipped
 };
 
-enum class PlanStatus {
-    None, Generating, AwaitingApproval, Approved, Rejected,
-    Executing, Completed, Failed
+enum class PlanStatus
+{
+    None,
+    Generating,
+    AwaitingApproval,
+    Approved,
+    Rejected,
+    Executing,
+    Completed,
+    Failed
 };
 
 /** Normalized risk tier (agent string + step-type heuristics). */
-enum class PlanRiskTier : std::uint8_t {
+enum class PlanRiskTier : std::uint8_t
+{
     Unknown = 0,
     Low,
     Medium,
@@ -295,130 +340,141 @@ enum class PlanRiskTier : std::uint8_t {
  * Mutation / execution gate for human-in-the-loop + auto-low-risk policy.
  * Queued steps stay AwaitingHuman until the plan dialog approves (full or low-only).
  */
-enum class PlanMutationGate : std::uint8_t {
+enum class PlanMutationGate : std::uint8_t
+{
     PendingClassification,
-    AutoApproved,       // Policy: low-risk read-only steps — no extra click per step
-    AwaitingHuman,      // Needs plan-level approval in UI
-    HumanApproved,      // User approved this step for execution
+    AutoApproved,   // Policy: low-risk read-only steps — no extra click per step
+    AwaitingHuman,  // Needs plan-level approval in UI
+    HumanApproved,  // User approved this step for execution
     HumanRejected,
-    SafetyBlocked,      // Path / shell policy denied
-    SkippedByPolicy     // User chose "low-risk only" and this step was excluded
+    SafetyBlocked,   // Path / shell policy denied
+    SkippedByPolicy  // User chose "low-risk only" and this step was excluded
 };
 
 /** How executePlan() filters steps after approval. */
-enum class PlanExecutionPolicy : std::uint8_t {
+enum class PlanExecutionPolicy : std::uint8_t
+{
     None,
-    FullApproval,    // Run all human-approved / auto-approved (non-blocked)
-    SafeStepsOnly    // Run only Low-tier steps (medium/high skipped by policy)
+    FullApproval,  // Run all human-approved / auto-approved (non-blocked)
+    SafeStepsOnly  // Run only Low-tier steps (medium/high skipped by policy)
 };
 
-struct PlanStep {
-    int            id               = 0;
-    std::string    title;
-    std::string    description;
-    PlanStepType   type             = PlanStepType::General;
-    std::string    targetFile;
-    int            estimatedMinutes = 0;
-    float          confidence       = 0.5f;
-    std::string    risk;
-    PlanStepStatus status           = PlanStepStatus::Pending;
-    std::string    output;
+struct PlanStep
+{
+    int id = 0;
+    std::string title;
+    std::string description;
+    PlanStepType type = PlanStepType::General;
+    std::string targetFile;
+    int estimatedMinutes = 0;
+    float confidence = 0.5f;
+    std::string risk;
+    PlanStepStatus status = PlanStepStatus::Pending;
+    std::string output;
     // Enhancement 3: dependency graph (step IDs this step depends on)
     std::vector<int> dependsOn;
     // Enhancement 6: per-step token budget (tokens allocated from plan total)
-    int            tokenBudget      = 0;
+    int tokenBudget = 0;
     // AgenticPlanningOrchestrator: tier + gate + audit text
-    PlanRiskTier     riskTier       = PlanRiskTier::Unknown;
-    PlanMutationGate mutationGate   = PlanMutationGate::PendingClassification;
-    std::string      gateDetail;    // Why auto / blocked / needs review
+    PlanRiskTier riskTier = PlanRiskTier::Unknown;
+    PlanMutationGate mutationGate = PlanMutationGate::PendingClassification;
+    std::string gateDetail;  // Why auto / blocked / needs review
 };
 
-struct AgentPlan {
-    std::string           goal;
+struct AgentPlan
+{
+    std::string goal;
     std::vector<PlanStep> steps;
-    PlanStatus            status            = PlanStatus::None;
-    int                   currentStepIndex  = -1;
-    float                 overallConfidence = 0.0f;
-    PlanExecutionPolicy   executionPolicy   = PlanExecutionPolicy::None;
+    PlanStatus status = PlanStatus::None;
+    int currentStepIndex = -1;
+    float overallConfidence = 0.0f;
+    PlanExecutionPolicy executionPolicy = PlanExecutionPolicy::None;
 };
 
 // =============================================================================
 // IDE settings (persisted to JSON)
 // =============================================================================
 
-struct IDESettings {
+struct IDESettings
+{
     // General
-    bool        autoSaveEnabled     = false;
-    bool        lineNumbersVisible  = true;
-    bool        wordWrapEnabled     = false;
-    int         fontSize            = 14;
-    std::string fontName            = "Consolas";
+    bool autoSaveEnabled = false;
+    bool lineNumbersVisible = true;
+    bool wordWrapEnabled = false;
+    int fontSize = 14;
+    std::string fontName = "Consolas";
     std::string workingDirectory;
-    int         autoSaveIntervalSec = 60;
+    int autoSaveIntervalSec = 60;
 
     // AI / Model
-    float       aiTemperature       = 0.7f;
-    float       aiTopP              = 0.9f;
-    int         aiTopK              = 40;
-    int         aiMaxTokens         = 512;
-    int         aiContextWindow     = 4096;
+    float aiTemperature = 0.7f;
+    float aiTopP = 0.9f;
+    int aiTopK = 40;
+    int aiMaxTokens = 512;
+    int aiContextWindow = 4096;
     std::string aiModelPath;
-    std::string aiOllamaUrl         = "http://localhost:11434";
-    bool        ghostTextEnabled    = true;
-    bool        failureDetectorEnabled = true;
-    int         failureMaxRetries   = 3;
+    std::string aiOllamaUrl = "http://localhost:11434";
+    bool ghostTextEnabled = true;
+    bool failureDetectorEnabled = true;
+    int failureMaxRetries = 3;
 
     /** AMD Smart Access Memory-style unified memory executor (BAR map or host-backed fallback). */
-    bool        amdUnifiedMemoryEnabled = false;
+    bool amdUnifiedMemoryEnabled = false;
 
     // Editor
-    int         tabSize             = 4;
-    bool        useSpaces           = true;
-    std::string encoding            = "UTF-8";
-    std::string eolStyle            = "LF";
-    bool        syntaxColoringEnabled = true;
-    bool        minimapEnabled      = true;
-    bool        breadcrumbsEnabled  = true;
-    bool        smoothScrollEnabled = true;
+    int tabSize = 4;
+    bool useSpaces = true;
+    std::string encoding = "UTF-8";
+    std::string eolStyle = "LF";
+    bool syntaxColoringEnabled = true;
+    bool minimapEnabled = true;
+    bool breadcrumbsEnabled = true;
+    bool smoothScrollEnabled = true;
 
     // Theme (IDM_THEME_DARK_PLUS = 3101)
-    int         themeId             = 3101;
-    BYTE        windowAlpha         = 255;
+    int themeId = 3101;
+    BYTE windowAlpha = 255;
 
     // Display scaling (0 = auto/system DPI; 100/125/150 = explicit %)
-    int         uiScalePercent      = 0;
+    int uiScalePercent = 0;
 
     // Local server
-    bool        localServerEnabled  = false;
-    int         localServerPort     = 11435;
+    bool localServerEnabled = false;
+    int localServerPort = 11435;
 
     // Local parity mode (full feature set via local GGUF, no API key)
-    bool        localParityEnabled  = false;
+    bool localParityEnabled = false;
     std::string localParityModelPath;
     std::string updateManifestUrl;
 
     // Agent terminal isolation — when true, agent commands use a
     // dedicated terminal so user sessions are never interrupted.
-    bool        agentTerminalIsolated = true;
+    bool agentTerminalIsolated = true;
+
+    // Workflow Executor — multi-agent parallel execution mode
+    bool workflowExecutorEnabled = false;
+    int workflowExecutorAgentCount = 4;
 
     // Settings GUI fields
-    bool        caretAnimationEnabled  = true;
-    bool        autoUpdateCheckEnabled = true;
-    bool        showWelcomeOnStartup   = true;
-    std::string fileIconTheme          = "seti";
-    std::string updateChannel          = "stable";
+    bool caretAnimationEnabled = true;
+    bool autoUpdateCheckEnabled = true;
+    bool showWelcomeOnStartup = true;
+    std::string fileIconTheme = "seti";
+    std::string updateChannel = "stable";
 };
 
-struct LocalServerStats {
+struct LocalServerStats
+{
     int totalRequests = 0;
-    int totalTokens   = 0;
+    int totalTokens = 0;
 };
 
 // =============================================================================
 // Agent History — persisted JSONL event log
 // =============================================================================
 
-enum class AgentEventType {
+enum class AgentEventType
+{
     AgentStarted,
     AgentCompleted,
     AgentFailed,
@@ -443,34 +499,36 @@ enum class AgentEventType {
     SessionEvent
 };
 
-struct AgentEvent {
+struct AgentEvent
+{
     AgentEventType type;
-    uint64_t       timestampMs;   // Epoch ms
-    std::string    sessionId;
-    std::string    parentId;
-    std::string    agentId;
-    std::string    prompt;        // May be truncated
-    std::string    result;        // May be truncated
-    std::string    metadata;      // JSON blob
-    int            durationMs;
-    bool           success;
+    uint64_t timestampMs;  // Epoch ms
+    std::string sessionId;
+    std::string parentId;
+    std::string agentId;
+    std::string prompt;    // May be truncated
+    std::string result;    // May be truncated
+    std::string metadata;  // JSON blob
+    int durationMs;
+    bool success;
 
     std::string typeString() const;
     std::string toJSONL() const;
     static AgentEvent fromJSONL(const std::string& line);
 };
 
-struct AgentHistoryStats {
-    int totalEvents         = 0;
-    int agentStarted        = 0;
-    int agentCompleted      = 0;
-    int agentFailed         = 0;
-    int subAgentSpawned     = 0;
-    int chainSteps          = 0;
-    int swarmTasks          = 0;
-    int toolInvocations     = 0;
-    int failuresDetected    = 0;
-    int failuresCorrected   = 0;
-    int ghostTextAccepted   = 0;
-    int totalDurationMs     = 0;
+struct AgentHistoryStats
+{
+    int totalEvents = 0;
+    int agentStarted = 0;
+    int agentCompleted = 0;
+    int agentFailed = 0;
+    int subAgentSpawned = 0;
+    int chainSteps = 0;
+    int swarmTasks = 0;
+    int toolInvocations = 0;
+    int failuresDetected = 0;
+    int failuresCorrected = 0;
+    int ghostTextAccepted = 0;
+    int totalDurationMs = 0;
 };

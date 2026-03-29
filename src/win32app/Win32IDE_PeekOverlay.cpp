@@ -67,12 +67,11 @@ void PeekOverlayWindowDeleter::operator()(PeekOverlayWindow* p) noexcept
     delete p;
 }
 
-PeekOverlayWindow::PeekOverlayWindow(HWND hwndParent, Win32IDE* ide, const std::vector<PeekItem>& items,
-                                     int triggerLine, int triggerCol)
+PeekOverlayWindow::PeekOverlayWindow(HWND hwndParent, Win32IDE* ide, const std::vector<PeekItem>& items, int triggerLine,
+                                     int triggerCol)
     : m_hwnd(nullptr), m_hwndParent(hwndParent), m_ide(ide), m_items(items), m_currentIndex(0),
       m_triggerLine(triggerLine), m_triggerCol(triggerCol)
 {
-
     if (items.empty())
         return;
 

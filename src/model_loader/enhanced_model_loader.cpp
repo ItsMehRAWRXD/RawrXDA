@@ -23,7 +23,11 @@
 #endif
 
 // Helper: fire callback if set
-#define FIRE(cb, ...) do { if (cb) cb(__VA_ARGS__); } while(0)
+template<typename Callable, typename... Args>
+inline void fireCallback(Callable&& cb, Args&&... args) {
+    if (cb) cb(std::forward<Args>(args)...);
+}
+#define FIRE(cb, ...) fireCallback(cb, __VA_ARGS__)
 
 // ---------------------------------------------------------------------------
 // Win32: Get app data cache directory (replaces QStandardPaths)

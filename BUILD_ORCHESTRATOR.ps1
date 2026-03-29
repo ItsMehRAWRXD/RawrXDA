@@ -140,6 +140,11 @@ switch ($Mode) {
             $ide = Get-ChildItem 'build' -Recurse -Filter '*.exe' -ErrorAction SilentlyContinue | Where-Object { $_.Name -in 'RawrXD-Win32IDE.exe','rawrxd.exe' } | Select-Object -First 1
             Write-Host "  Found IDE: $($ide.FullName)" -ForegroundColor Green
             Write-Host "  To launch: & '$($ide.FullName)'" -ForegroundColor Cyan
+            Write-Host "  Running agent parity gate..." -ForegroundColor Yellow
+            & python .\scripts\check_agent_parity.py --repo-root $ProjectRoot
+            if ($LASTEXITCODE -ne 0) {
+                throw "Agent parity check failed."
+            }
         } else {
             Write-Host "  IDE not built yet. Run 'quick' or 'dev' mode first." -ForegroundColor Yellow
         }
@@ -161,6 +166,14 @@ switch ($Mode) {
         Write-Host "`n▶ IDE BUILD - IDE only (assumes compilers exist)" -ForegroundColor Cyan
         Write-Host "  Time estimate: 10-15 minutes`n" -ForegroundColor Gray
         & .\BUILD_IDE_FAST.ps1 -What ide -Test
+    }
+}
+
+if ($Mode -in @('quick', 'dev', 'production', 'ide')) {
+    Write-Host "`n[INFO] Running agent parity gate..." -ForegroundColor Cyan
+    & python .\scripts\check_agent_parity.py --repo-root $ProjectRoot
+    if ($LASTEXITCODE -ne 0) {
+        throw "Agent parity check failed."
     }
 }
 

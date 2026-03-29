@@ -15,7 +15,6 @@
 #include <cstdio>
 #include <algorithm>
 
-<<<<<<< HEAD
 namespace {
 
 float clampf(float v, float lo, float hi) {
@@ -24,8 +23,6 @@ float clampf(float v, float lo, float hi) {
 
 }
 
-=======
->>>>>>> origin/main
 // SCAFFOLD_069: agentic_hotpatch_orchestrator
 
 

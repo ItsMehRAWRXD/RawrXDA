@@ -21,9 +21,15 @@ extern "C" {
 #endif
 
 /* Ring buffer configuration */
+#ifdef __cplusplus
+inline constexpr uint32_t TITAN_RING_BUFFER_SIZE   = 64u * 1024u * 1024u;
+inline constexpr uint32_t TITAN_RING_SEGMENT_SIZE  = 4u  * 1024u * 1024u;
+inline constexpr uint32_t TITAN_RING_SEGMENT_COUNT = TITAN_RING_BUFFER_SIZE / TITAN_RING_SEGMENT_SIZE;
+#else
 #define TITAN_RING_BUFFER_SIZE        (64u * 1024u * 1024u)
 #define TITAN_RING_SEGMENT_SIZE       (4u  * 1024u * 1024u)
 #define TITAN_RING_SEGMENT_COUNT      (TITAN_RING_BUFFER_SIZE / TITAN_RING_SEGMENT_SIZE)
+#endif
 
 /* Engine types */
 typedef enum TitanEngineType {

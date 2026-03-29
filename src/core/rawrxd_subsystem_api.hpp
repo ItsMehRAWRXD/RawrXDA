@@ -284,14 +284,26 @@ private:
 };
 
 // ============================================================
-// Convenience macros for agent integration
+// Convenience inline functions + macro aliases for agent integration
 // ============================================================
 
-// Quick-invoke a mode by ID (returns SubsystemResult)
-#define RAWRXD_INVOKE(mode_id)  \
-    SubsystemRegistry::instance().invoke(SubsystemParams{SubsystemId::mode_id})
+// Quick-invoke a mode by SubsystemId enum value (returns SubsystemResult)
+inline SubsystemResult RawrXDInvoke(SubsystemId id) {
+    return SubsystemRegistry::instance().invoke(SubsystemParams{id});
+}
 
-// Quick-invoke with parameters
+// Quick-invoke with parameters — uses lambda to fill SubsystemParams
+template<typename ParamFiller>
+inline SubsystemResult RawrXDInvokeWith(SubsystemId id, ParamFiller&& filler) {
+    SubsystemParams p{};
+    p.id = id;
+    filler(p);
+    return SubsystemRegistry::instance().invoke(p);
+}
+
+// Backward-compat macro aliases (RAWRXD_INVOKE_WITH requires macro for the param_block syntax)
+#define RAWRXD_INVOKE(mode_id) RawrXDInvoke(SubsystemId::mode_id)
+
 #define RAWRXD_INVOKE_WITH(mode_id, param_block) \
     ([&]() -> SubsystemResult { \
         SubsystemParams p{}; \

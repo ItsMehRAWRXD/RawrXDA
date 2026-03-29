@@ -5,9 +5,9 @@
 #include <string>
 #include <thread>
 #include <vector>
-#include "inference_engine.h"
 
-// Forward declarations
+namespace RawrXD { class InferenceEngine; }
+// Forward declarations (global)
 class AgenticEngine;
 class SubAgentManager;
 class AgentHistoryRecorder;
@@ -15,25 +15,27 @@ class PolicyEngine;
 class ExplainabilityEngine;
 class AIBackendManager;
 
-namespace RawrXD {
+namespace RawrXD
+{
 
-class CompletionServer {
-public:
+class CompletionServer
+{
+  public:
     CompletionServer();
     ~CompletionServer();
 
-    bool Start(uint16_t port, InferenceEngine* engine, std::string model_path);
+    bool Start(uint16_t port, RawrXD::InferenceEngine* engine, std::string model_path);
     void Stop();
 
     // Agentic integration — set before Start() or anytime
-    void SetAgenticEngine(AgenticEngine* engine) { agentic_engine_ = engine; }
-    void SetSubAgentManager(SubAgentManager* mgr) { subagent_mgr_ = mgr; }
-    void SetHistoryRecorder(AgentHistoryRecorder* rec) { history_recorder_ = rec; }
-    void SetPolicyEngine(PolicyEngine* engine)         { policy_engine_ = engine; }
-    void SetExplainabilityEngine(ExplainabilityEngine* engine) { explain_engine_ = engine; }
-    void SetBackendManager(AIBackendManager* mgr)              { backend_mgr_ = mgr; }
+    void SetAgenticEngine(::AgenticEngine* engine) { agentic_engine_ = engine; }
+    void SetSubAgentManager(::SubAgentManager* mgr) { subagent_mgr_ = mgr; }
+    void SetHistoryRecorder(::AgentHistoryRecorder* rec) { history_recorder_ = rec; }
+    void SetPolicyEngine(::PolicyEngine* engine) { policy_engine_ = engine; }
+    void SetExplainabilityEngine(::ExplainabilityEngine* engine) { explain_engine_ = engine; }
+    void SetBackendManager(::AIBackendManager* mgr) { backend_mgr_ = mgr; }
 
-private:
+  private:
     void Run(uint16_t port);
     void HandleClient(int client_fd);
     std::string HandleCompleteRequest(const std::string& body);
@@ -42,6 +44,7 @@ private:
     // Agentic API handlers
     std::string HandleChatRequest(const std::string& body);
     std::string HandleAgentWishRequest(const std::string& body);
+    std::string HandleAgentOrchestrateRequest(const std::string& body);
     std::string HandleToolRequest(const std::string& body);  // POST /api/tool — Win32 IDE Run Tool parity
     std::string HandleSubAgentRequest(const std::string& body);
     std::string HandleChainRequest(const std::string& body);
@@ -174,28 +177,37 @@ private:
     // Agentic Autonomous config (operation mode, model selection, cap 99, cycle 1x-99x)
     std::string HandleAgenticConfigGetRequest();
     std::string HandleAgenticConfigPostRequest(const std::string& body);
+    std::string HandleAgenticProfileRequest(const std::string& path);
     // Production audit estimate (GET /api/agentic/audit-estimate?codebase=full&topN=20)
     std::string HandleAgenticAuditEstimateRequest(const std::string& path);
+    std::string HandleParityStatusRequest();
 
     // Models list for Cursor Settings > Models (GET /v1/models, GET /api/models)
     std::string HandleModelsListRequest();
+    // GGUF diagnostics endpoints
+    std::string HandleGGUFDiagnosticsRequest();
+    std::string HandleGGUFDiagnosticsJsonRequest();
 
     std::atomic<bool> running_;
+    std::atomic<int> active_clients_{0};
     std::thread server_thread_;
-    InferenceEngine* engine_;
+    RawrXD::InferenceEngine* engine_;
     std::string model_path_;
-    AgenticEngine* agentic_engine_ = nullptr;
-    SubAgentManager* subagent_mgr_ = nullptr;
-    AgentHistoryRecorder* history_recorder_ = nullptr;
-    PolicyEngine* policy_engine_ = nullptr;
-    ExplainabilityEngine* explain_engine_ = nullptr;
-    AIBackendManager* backend_mgr_ = nullptr;
+    ::AgenticEngine* agentic_engine_ = nullptr;
+    ::SubAgentManager* subagent_mgr_ = nullptr;
+    ::AgentHistoryRecorder* history_recorder_ = nullptr;
+    ::PolicyEngine* policy_engine_ = nullptr;
+    ::ExplainabilityEngine* explain_engine_ = nullptr;
+    ::AIBackendManager* backend_mgr_ = nullptr;
 };
 
-} // namespace RawrXD
+}  // namespace RawrXD
 
 // Shared with CLI (main.cpp) for full parity: chat via Ollama when no GGUF loaded
-bool OllamaGenerateSync(const std::string& host, int port, const std::string& model,
-                        const std::string& prompt, std::string& outResponse);
+bool OllamaGenerateSync(const std::string& host, int port, const std::string& model, const std::string& prompt,
+                        std::string& outResponse);
 // List Ollama models (for CLI --list). Returns true if request succeeded; outNames may be empty if none.
 bool OllamaListModelsSync(const std::string& host, int port, std::vector<std::string>& outNames);
+// Route generation through local HTTP loading/agentic engine (/api/chat).
+bool AgenticHttpChatGenerateSync(const std::string& host, int port, const std::string& model, const std::string& prompt,
+                                 std::string& outResponse);

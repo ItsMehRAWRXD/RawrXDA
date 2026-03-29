@@ -17,12 +17,10 @@
 
 import re
 import os
-import sys
 import json
 import hashlib
 from datetime import datetime
-from pathlib import Path
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict, List, Set, Optional, Tuple
 
 # =============================================================================
@@ -261,21 +259,39 @@ def scan_idm_defines(src_root: str) -> Dict[str, IDMDefine]:
 # =============================================================================
 
 def scan_handler_declarations(src_root: str) -> Dict[str, HandlerDecl]:
-    """Scan feature_handlers.h for handler function declarations."""
-    handlers = {}
-    pattern = re.compile(r'^CommandResult\s+(handle\w+)\s*\(', re.MULTILINE)
-    
+    """Scan headers and source files for handler declarations/definitions."""
+    handlers: Dict[str, HandlerDecl] = {}
+    # Match both declarations and definitions:
+    #   CommandResult handleFoo(...);
+    #   CommandResult handleFoo(...) { ... }
+    pattern = re.compile(r'\bCommandResult\s+(handle\w+)\s*\(')
+
+    scan_files: List[str] = []
+
+    # Keep explicit scan files first for stable source attribution.
     for rel_path in HANDLER_SCAN_FILES:
         full_path = os.path.join(src_root, rel_path)
-        if not os.path.exists(full_path):
-            continue
+        if os.path.exists(full_path):
+            scan_files.append(full_path)
+
+    # Also scan the whole source tree for real handler definitions.
+    for root, _, files in os.walk(src_root):
+        for filename in files:
+            if not (filename.endswith(".cpp") or filename.endswith(".h") or filename.endswith(".hpp")):
+                continue
+            full_path = os.path.join(root, filename)
+            if full_path not in scan_files:
+                scan_files.append(full_path)
+
+    for full_path in scan_files:
+        rel_path = os.path.relpath(full_path, src_root).replace("\\", "/")
         with open(full_path, 'r', encoding='utf-8', errors='replace') as f:
             content = f.read()
         for match in pattern.finditer(content):
             name = match.group(1)
             line = content[:match.start()].count('\n') + 1
             handlers[name] = HandlerDecl(name=name, file=rel_path, line=line)
-    
+
     return handlers
 
 # =============================================================================
@@ -383,7 +399,8 @@ def generate_registrations(
         category = idm_def.category
         group = CATEGORY_TO_GROUP.get(category, "FeatureGroup::Tools")
         
-        # Check if handler already declared
+        # Prefer explicit handler symbols when available; missing ones are emitted
+        # through the generated stub path in auto_feature_registry.
         has_handler = handler_name in all_handlers
         
         # Check for MASM hot-path
@@ -413,9 +430,11 @@ def generate_registrations(
 # =============================================================================
 
 def generate_header(registrations: List[AutoRegistration], all_handlers: Dict[str, HandlerDecl]) -> str:
-    """Generate auto_feature_registry.hpp with stub handler declarations."""
-    
-    # Collect handlers that need stub declarations (not already in feature_handlers.h)
+    """Generate auto_feature_registry.hpp with handler declarations."""
+
+    # Declare every handler referenced by generated registration code so the
+    # translation unit compiles even when declarations live outside feature_handlers.h.
+    all_declared_handlers = sorted(set(reg.handler for reg in registrations))
     new_handlers = set()
     for reg in registrations:
         if not reg.has_existing_handler:
@@ -468,15 +487,15 @@ const char* getRegistryVersionHash();
 
 """
     
-    if new_handlers:
+    if all_declared_handlers:
         header += "// ============================================================================\n"
-        header += f"// STUB HANDLER DECLARATIONS — {len(new_handlers)} new handlers\n"
+        header += f"// HANDLER DECLARATIONS — {len(all_declared_handlers)} referenced handlers\n"
         header += "// ============================================================================\n"
-        header += "// These are generic stubs that report the command name.\n"
-        header += "// Replace with real implementations as features are built.\n"
+        header += "// Declarations are emitted here so generated registration code can reference\n"
+        header += "// handlers regardless of where their definitions are implemented.\n"
         header += "// ============================================================================\n\n"
-        
-        for handler in sorted(new_handlers):
+
+        for handler in all_declared_handlers:
             header += f"CommandResult {handler}(const CommandContext& ctx);\n"
         header += "\n"
     

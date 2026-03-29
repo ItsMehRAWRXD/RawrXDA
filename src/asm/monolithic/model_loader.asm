@@ -18,13 +18,10 @@ EXTERN BeaconSend:PROC
 EXTERN g_modelbase:QWORD
 EXTERN ClearKVCache:PROC
 
-<<<<<<< HEAD
 ; Phase 5 Tier 2: SlotRing integration for hot-swap
 EXTERN SlotRing_EvictAll:PROC
 EXTERN SlotRing_Init:PROC
 
-=======
->>>>>>> origin/main
 PUBLIC LoadModel
 PUBLIC GetTensor
 PUBLIC UnloadModel
@@ -61,7 +58,6 @@ g_curTensorCount   dq ?         ; tensor count from current model
 g_curMetaKVCount   dq ?         ; metadata KV pair count
 g_curAlignment     dq ?         ; data section alignment
 
-<<<<<<< HEAD
 ; ── Tensor Registry Hash Table (1024 buckets × 16 bytes) ──
 ; Bucket: [name_hash:QWORD | offset:DWORD | size:WORD | type:WORD]
 align 16
@@ -101,8 +97,6 @@ g_supportMaxVocab  dd ?
 ; ── Model Loader Ready Flag ──
 g_modelLoaderReady dd ?
 
-=======
->>>>>>> origin/main
 .const
 GENERIC_READ     equ 80000000h
 FILE_SHARE_READ  equ 1
@@ -111,7 +105,6 @@ PAGE_READONLY    equ 2
 FILE_MAP_READ    equ 4
 GGUF_MAGIC       equ 046554747h
 
-<<<<<<< HEAD
 ; ── Tensor registry constants ──
 TENSOR_BUCKETS     equ 1024
 TENSOR_BUCKET_MASK equ 03FFh
@@ -243,23 +236,6 @@ ModelLoaderInit PROC FRAME
     pop     rsi
     pop     rbx
     xor     eax, eax                    ; 0 = success
-=======
-.code
-; ────────────────────────────────────────────────────────────────
-; ModelLoaderInit — initialize the SRWLOCK for thread-safe hot-swap
-;   Called once during bootstrap (after InferenceEngineInit).
-; ────────────────────────────────────────────────────────────────
-ModelLoaderInit PROC FRAME
-    sub     rsp, 28h
-    .allocstack 28h
-    .endprolog
-
-    lea     rcx, g_modelLock
-    call    InitializeSRWLock
-
-    add     rsp, 28h
-    xor     eax, eax
->>>>>>> origin/main
     ret
 ModelLoaderInit ENDP
 
@@ -343,7 +319,6 @@ LoadModel PROC FRAME
 LoadModel ENDP
 
 ; ────────────────────────────────────────────────────────────────
-<<<<<<< HEAD
 ; GetTensor — tensor lookup by name via FNV-1a hash + linear probe
 ;   RCX = pointer to tensor name string (ASCII, null-terminated)
 ;   Returns: RAX = pointer to tensor data (g_modelbase + offset)
@@ -489,20 +464,6 @@ GetTensor PROC FRAME
     pop     rdi
     pop     rsi
     pop     rbx
-=======
-; GetTensor — return base + header skip (GGUF tensors start past metadata)
-;   RCX = tensor name (currently unused; sequential access)
-;   Returns: RAX = pointer into mapped region, or 0 if unmapped
-; ────────────────────────────────────────────────────────────────
-GetTensor PROC
-    mov     rax, pBase
-    test    rax, rax
-    jz      @tensor_null
-    add     rax, 100h
-    ret
-@tensor_null:
-    xor     eax, eax
->>>>>>> origin/main
     ret
 GetTensor ENDP
 
@@ -574,12 +535,9 @@ HotSwapModel PROC FRAME
     lea     rcx, g_modelLock
     call    AcquireSRWLockExclusive
 
-<<<<<<< HEAD
     ; Phase 5: Flush all paged tensor slots before unmapping
     call    SlotRing_EvictAll
 
-=======
->>>>>>> origin/main
     ; Unmap old model (clears pBase, hMapping, hFile)
     call    UnloadModel
 
@@ -624,12 +582,9 @@ HotSwapModel PROC FRAME
     call    ClearKVCache
 
 @swap_ok:
-<<<<<<< HEAD
     ; Phase 5: Re-initialize SlotRing with default 4GB budget for new model
     mov     rcx, 100000000h             ; 4GB
     call    SlotRing_Init
-=======
->>>>>>> origin/main
     ; Timestamp for cache validation
     call    GetTickCount64
     mov     g_loadTimestamp, rax
@@ -692,7 +647,6 @@ GetModelLoadTimestamp PROC
 GetModelLoadTimestamp ENDP
 
 ; ────────────────────────────────────────────────────────────────
-<<<<<<< HEAD
 ; ValidateModelCompat — full GGUF model compatibility validation
 ;   RCX = pointer to model base (mapped GGUF file)
 ;   Returns: EAX = compatibility flags bitfield
@@ -1035,42 +989,6 @@ ValidateModelCompat PROC FRAME
     pop     rdi
     pop     rsi
     pop     rbx
-=======
-; ValidateModelCompat — check if a candidate GGUF is compatible
-;   with the currently loaded model (for KV cache preservation)
-;   RCX = pCandidateBase (mapped GGUF region)
-;   Returns: EAX = 1 (compatible), 0 (incompatible)
-;
-;   Checks:
-;     1. GGUF magic matches
-;     2. GGUF version matches current
-;     3. Tensor count matches current
-; ────────────────────────────────────────────────────────────────
-ValidateModelCompat PROC
-    test    rcx, rcx
-    jz      @compat_no
-
-    ; 1. Magic check
-    mov     eax, dword ptr [rcx]
-    cmp     eax, GGUF_MAGIC
-    jne     @compat_no
-
-    ; 2. Version match
-    mov     eax, dword ptr [rcx+4]
-    cmp     eax, g_curGgufVersion
-    jne     @compat_no
-
-    ; 3. Tensor count match
-    mov     rax, [rcx+8]
-    cmp     rax, g_curTensorCount
-    jne     @compat_no
-
-    mov     eax, 1
-    ret
-
-@compat_no:
-    xor     eax, eax
->>>>>>> origin/main
     ret
 ValidateModelCompat ENDP
 

@@ -1,8 +1,4 @@
 #pragma once
-<<<<<<< HEAD
-=======
-
->>>>>>> origin/main
 
 #include "BinaryStream.hpp"
 #include "QuantBackend.h"
@@ -13,20 +9,11 @@
 #include <unordered_map>
 #include <vector>
 
-<<<<<<< HEAD
 // GGML tensor types (numeric values match llama.cpp / ggml_type)
 enum class GgmlType : uint32_t
 {
     F32 = 0,
     F16 = 1,
-=======
-  // Quantization backend switcher
-
-// GGML tensor types
-enum class GgmlType : uint32_t {
-    F32  = 0,
-    F16  = 1,
->>>>>>> origin/main
     Q4_0 = 2,
     Q4_1 = 3,
     Q5_0 = 6,
@@ -42,19 +29,13 @@ enum class GgmlType : uint32_t {
 };
 
 // Q4_0 block: 32 weights in 16 bytes + 1 float16 delta
-<<<<<<< HEAD
 struct BlockQ4_0
 {
     uint16_t d;      // delta (float16)
-=======
-struct BlockQ4_0 {
-    quint16 d;      // delta (float16)
->>>>>>> origin/main
     uint8_t qs[16];  // 32 nibbles (2 per byte)
 };
 
 // Q8_0 block: 32 weights in 32 bytes + 1 float16 delta
-<<<<<<< HEAD
 struct BlockQ8_0
 {
     uint16_t d;     // delta (float16)
@@ -71,33 +52,6 @@ class GGUFRunner
     bool runInference(const std::string& prompt, float* outputBuffer);
     bool loadModel(const std::string& filePath);
 
-=======
-struct BlockQ8_0 {
-    quint16 d;      // delta (float16)
-    int8_t qs[32];   // 32 signed bytes
-};
-
-/**
- * @brief GGUFRunner manages the high-performance execution of GGUF language models.
- */
-class GGUFRunner : public void {
-
-public:
-    explicit GGUFRunner(void* parent = nullptr);
-    ~GGUFRunner();
-
-    /**
-     * @brief Executes a full inference pass using the raw text prompt.
-     * @param prompt Raw UTF-8 prompt that will be tokenized and embedded internally.
-     * @param outputBuffer Buffer that will receive the logits (size must match vocab).
-     */
-    bool runInference(const std::string& prompt, float* outputBuffer);
-    
-    // Model loading
-    bool loadModel(const std::string& filePath);
-    
-    // Generation parameter setters
->>>>>>> origin/main
     void setMaxTokens(int max) { context_.maxTokens = max; }
     void setTemperature(float temp) { context_.temperature = std::max(0.0f, temp); }
     void setTopP(float p) { context_.topP = std::clamp(p, 0.0f, 1.0f); }
@@ -106,7 +60,6 @@ public:
     bool setQuantizationMode(QuantMode mode);
     QuantMode currentQuantMode() const;
     float getCompressionRatio() const;
-<<<<<<< HEAD
 
     std::string modelPath() const { return context_.modelPath; }
     std::string modelName() const { return context_.modelName; }
@@ -123,16 +76,6 @@ public:
 
     /// Decoder steps completed in the last successful `runInference` (each forward/token; EOS early exit counts).
     int lastDecodeSteps() const { return context_.lastDecodeSteps; }
-=======
-    
-    // Model info getters
-    std::string modelPath() const { return context_.modelPath; }
-    std::string modelName() const { return context_.modelName; }
-    std::string architecture() const { return context_.architecture; }
-    qsizetype vocabularySize() const { return context_.vocabSize; }
-    qsizetype embeddingDim() const { return context_.embedDim; }
-    bool isLoaded() const { return context_.mappedData != nullptr; }
->>>>>>> origin/main
 
     /**
      * @brief Compresses a raw buffer using the "Brutal" stored-block algorithm.
@@ -172,7 +115,6 @@ public:
         // Memory management
         float* mappedData{nullptr};
         bool usesMmap{false};
-<<<<<<< HEAD
 #if defined(_WIN32)
         /// Win32 file map (not heap); UnmapViewOfFile + CloseHandle — never delete[] mappedData when set.
         void* win32MapView{nullptr};
@@ -197,27 +139,11 @@ public:
         std::vector<float> invFreq;  // Precomputed inverse frequencies for RoPE [headDim/2]
         int64_t modelFileSize{0};
 
-=======
-        qsizetype embedDim{0};
-        qsizetype vocabSize{0};
-        qsizetype nLayers{0};
-        qsizetype nHeads{0};
-        qsizetype nKVHeads{0};
-        qsizetype headDim{0};       // embedDim / nHeads
-        float ropeBase{10000.0f};   // RoPE frequency base
-        std::vector<float> invFreq; // Precomputed inverse frequencies for RoPE [headDim/2]
-        int64_t modelFileSize{0};
-        
->>>>>>> origin/main
         // Inference state
         std::vector<float> logits;
         std::vector<std::string> vocabulary;
         std::string modelPath;
-<<<<<<< HEAD
 
-=======
-        
->>>>>>> origin/main
         // Generation parameters
         int maxTokens{64};
         int lastDecodeSteps{0};
@@ -273,7 +199,6 @@ public:
         uint32_t ggufTensorAlignment{32};
 
         // Tensor directory
-<<<<<<< HEAD
         struct TensorDesc
         {
             std::string name;
@@ -282,9 +207,6 @@ public:
             /// After `parseGgufTensorTable`: **absolute** file offset for `seek` / IO.
             uint64_t offset{};
         };
-=======
-        struct TensorDesc { std::string name; std::vector<uint32_t> dims; GgmlType type; uint64_t offset; };
->>>>>>> origin/main
         std::unordered_map<std::string, TensorDesc> tensorTable;
     };
 
@@ -302,7 +224,6 @@ public:
     void fallback_matrix_multiply(float* A, float* B, float* C, int N, int M, int K);
     void detectExtendedCpuFeatures();
 
-<<<<<<< HEAD
     bool parseGgufTensors(RawrXD::NativeFile& file);
     /// Load `blk.N.*` llama-architecture tensors into `context_.layers` (float32 mirror). Respects
     /// `RAWRXD_GGUF_MAX_LAYER_FLOAT_RAM_GB` to avoid OOM on multi-hundred-GB dequant.
@@ -312,15 +233,6 @@ public:
     bool loadTensor(RawrXD::NativeFile& file, const std::string& name, std::vector<float>& weights);
     size_t ggmlTypeSize(GgmlType type);
     std::vector<uint8_t> readTensorData(RawrXD::NativeFile& file, uint64_t offset, uint64_t numBytes);
-=======
-    // GGUF tensor parsing
-    bool parseGgufTensors(class std::fstream& file);
-    bool parseGgufTensorTable(class std::fstream& file);
-    bool readTensorFloat32(class std::fstream& file, int64_t offset, int64_t count, std::vector<float>& out);
-    bool loadTensor(class std::fstream& file, const std::string& name, std::vector<float>& weights);
-    size_t ggmlTypeSize(GgmlType type);
-    std::vector<uint8_t> readTensorData(class std::fstream& file, uint64_t offset, uint64_t numBytes);
->>>>>>> origin/main
 
     // Transformer forward (scalar)
   private:

@@ -1,7 +1,8 @@
 // =============================================================================
-// ToolRegistry.cpp — X-Macro Tool Registry Implementation
+// ToolRegistry.cpp — Explicit Tool Registry Implementation (no X-Macro)
 // =============================================================================
 #include "ToolRegistry.h"
+#include "AgentToolHandlers.h"
 #include <sstream>
 #include <chrono>
 #include <filesystem>
@@ -81,6 +82,22 @@ std::string NormalizeToolName(const std::string& raw) {
     if (normalized == "build" || normalized == "runbuild") return "run_build";
     if (normalized == "hotpatch" || normalized == "applyhotpatch") return "apply_hotpatch";
     if (normalized == "diskrecovery" || normalized == "recoverdisk") return "disk_recovery";
+    if (normalized == "deletefile" || normalized == "removefile") return "delete_file";
+    if (normalized == "renamefile" || normalized == "movefile") return "rename_file";
+    if (normalized == "copyfile") return "copy_file";
+    if (normalized == "mkdir" || normalized == "makedirectory" || normalized == "createdirectory") return "make_directory";
+    if (normalized == "statfile" || normalized == "getfileinfo") return "stat_file";
+    if (normalized == "gitstatus") return "git_status";
+    if (normalized == "runshell") return "run_shell";
+    if (normalized == "semanticsearch") return "semantic_search";
+    if (normalized == "mentionlookup") return "mention_lookup";
+    if (normalized == "nextedithint") return "next_edit_hint";
+    if (normalized == "proposemultifileedits" || normalized == "multifileedits") return "propose_multifile_edits";
+    if (normalized == "loadrules") return "load_rules";
+    if (normalized == "plantasks") return "plan_tasks";
+    if (normalized == "setiterationstatus") return "set_iteration_status";
+    if (normalized == "getiterationstatus") return "get_iteration_status";
+    if (normalized == "resetiterationstatus") return "reset_iteration_status";
 
     return normalized;
 }
@@ -644,6 +661,108 @@ ToolExecResult HandleDiskRecovery(const json& args) {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Agent operation handler proxies — delegate to AgentToolHandlers
+// Converts ToolCallResult → ToolExecResult for ToolRegistry dispatch
+// ---------------------------------------------------------------------------
+namespace {
+
+ToolExecResult toExecResult(const RawrXD::Agent::ToolCallResult& r) {
+    if (r.isSuccess()) {
+        return ToolExecResult::ok(r.output, static_cast<double>(r.durationMs));
+    }
+    return ToolExecResult::error(r.error.empty() ? r.output : r.error);
+}
+
+ToolExecResult HandleCompactConversation(const json& args) {
+    return toExecResult(AgentToolHandlers::CompactConversation(args));
+}
+
+ToolExecResult HandleOptimizeToolSelection(const json& args) {
+    return toExecResult(AgentToolHandlers::OptimizeToolSelection(args));
+}
+
+ToolExecResult HandleResolveSymbol(const json& args) {
+    return toExecResult(AgentToolHandlers::ResolveSymbol(args));
+}
+
+ToolExecResult HandleReadLines(const json& args) {
+    return toExecResult(AgentToolHandlers::ReadLines(args));
+}
+
+ToolExecResult HandlePlanCodeExploration(const json& args) {
+    return toExecResult(AgentToolHandlers::PlanCodeExploration(args));
+}
+
+ToolExecResult HandleSearchFiles(const json& args) {
+    return toExecResult(AgentToolHandlers::SearchFiles(args));
+}
+
+ToolExecResult HandleRestoreCheckpoint(const json& args) {
+    return toExecResult(AgentToolHandlers::RestoreCheckpoint(args));
+}
+
+ToolExecResult HandleEvaluateIntegration(const json& args) {
+    return toExecResult(AgentToolHandlers::EvaluateIntegrationAuditFeasibility(args));
+}
+
+// Extended file/system tool proxies
+ToolExecResult HandleDeleteFile(const json& args) {
+    return toExecResult(AgentToolHandlers::DeleteFile(args));
+}
+ToolExecResult HandleRenameFile(const json& args) {
+    return toExecResult(AgentToolHandlers::RenameFile(args));
+}
+ToolExecResult HandleCopyFile(const json& args) {
+    return toExecResult(AgentToolHandlers::CopyFile(args));
+}
+ToolExecResult HandleMakeDirectory(const json& args) {
+    return toExecResult(AgentToolHandlers::MakeDirectory(args));
+}
+ToolExecResult HandleStatFile(const json& args) {
+    return toExecResult(AgentToolHandlers::StatFile(args));
+}
+ToolExecResult HandleGitStatus(const json& args) {
+    return toExecResult(AgentToolHandlers::GitStatus(args));
+}
+ToolExecResult HandleRunShell(const json& args) {
+    return toExecResult(AgentToolHandlers::RunShell(args));
+}
+
+// AI-specific tool proxies
+ToolExecResult HandleSemanticSearch(const json& args) {
+    return toExecResult(AgentToolHandlers::SemanticSearch(args));
+}
+ToolExecResult HandleMentionLookup(const json& args) {
+    return toExecResult(AgentToolHandlers::MentionLookup(args));
+}
+ToolExecResult HandleNextEditHint(const json& args) {
+    return toExecResult(AgentToolHandlers::NextEditHint(args));
+}
+ToolExecResult HandleProposeMultiFileEdits(const json& args) {
+    return toExecResult(AgentToolHandlers::ProposeMultiFileEdits(args));
+}
+ToolExecResult HandleLoadRules(const json& args) {
+    return toExecResult(AgentToolHandlers::LoadRules(args));
+}
+ToolExecResult HandlePlanTasks(const json& args) {
+    return toExecResult(AgentToolHandlers::PlanTasks(args));
+}
+
+ToolExecResult HandleSetIterationStatus(const json& args) {
+    return toExecResult(AgentToolHandlers::SetIterationStatus(args));
+}
+
+ToolExecResult HandleGetIterationStatus(const json& args) {
+    return toExecResult(AgentToolHandlers::GetIterationStatus(args));
+}
+
+ToolExecResult HandleResetIterationStatus(const json& args) {
+    return toExecResult(AgentToolHandlers::ResetIterationStatus(args));
+}
+
+} // proxy namespace
+
 } // anonymous namespace
 
 // ---------------------------------------------------------------------------
@@ -660,20 +779,59 @@ AgentToolRegistry::AgentToolRegistry() {
 }
 
 void AgentToolRegistry::InitDescriptors() {
-    // Use X-Macro to populate basic name/description
-    #define INIT_DESCRIPTOR(tool_name_, tool_desc_) \
-    { \
-        ToolDescriptor td; \
-        td.name = #tool_name_; \
-        td.description = tool_desc_; \
-        td.params_schema = json::object(); \
-        td.handler = nullptr; \
-        m_tools.push_back(std::move(td)); \
-        m_nameIndex[#tool_name_] = m_tools.size() - 1; \
-    }
+    // Explicit tool registration — no X-Macro
+    auto addTool = [this](const char* name, const char* description) {
+        ToolDescriptor td;
+        td.name = name;
+        td.description = description;
+        td.params_schema = json::object();
+        td.handler = nullptr;
+        m_tools.push_back(std::move(td));
+        m_nameIndex[name] = m_tools.size() - 1;
+    };
 
-    AGENT_TOOLS_X(INIT_DESCRIPTOR)
-    #undef INIT_DESCRIPTOR
+    // Core file/build tools
+    addTool("read_file",        "Read the content of a file at a specific path. Returns UTF-8 text.");
+    addTool("write_file",       "Create a new file or overwrite an existing one with the provided content.");
+    addTool("replace_in_file",  "Search and replace a block of text within a file. Uses exact string matching.");
+    addTool("execute_command",  "Run a shell command in the terminal. Returns stdout, stderr, and exit code.");
+    addTool("search_code",      "Fast regex/literal search across the codebase. Uses AVX-512 SIMD accelerator when available.");
+    addTool("get_diagnostics",  "Retrieve current compiler/LSP errors and warnings for a specific file or all files.");
+    addTool("list_directory",   "List files and subdirectories at a given path.");
+    addTool("get_coverage",     "Retrieve BBCov/DiffCov coverage data for a file or function to verify logic path changes.");
+    addTool("run_build",        "Trigger a CMake build with specified target and configuration.");
+    addTool("apply_hotpatch",   "Apply a runtime hotpatch through the unified hotpatch manager (memory, byte-level, or server layer).");
+    addTool("disk_recovery",    "Control the hardware disk recovery agent for dying WD My Book USB bridges (scan, init, extract key, run, abort, stats).");
+
+    // Extended file/system tools (CLI/GUI parity)
+    addTool("delete_file",       "Delete a regular file at the given path. Only supports files (not directories).");
+    addTool("rename_file",       "Rename or move a file from source to destination path.");
+    addTool("copy_file",         "Copy a file to a destination path, optionally overwriting.");
+    addTool("make_directory",    "Create a directory (and parent directories) at the given path.");
+    addTool("stat_file",         "Return file metadata: existence, type, size.");
+    addTool("git_status",        "Run git status in the workspace root and return short branch output.");
+    addTool("run_shell",         "Run a shell command with sandbox policy enforcement. Delegates to execute_command after validation.");
+
+    // AI-specific tools
+    addTool("semantic_search",        "Search workspace files using TF-IDF cosine similarity. Returns top-K matching file snippets.");
+    addTool("mention_lookup",         "Find references to a symbol across the workspace. Wraps semantic search with mention-focused defaults.");
+    addTool("next_edit_hint",         "Heuristically suggest the next code edit based on provided context.");
+    addTool("propose_multifile_edits","Generate a structured plan for edits across multiple files.");
+    addTool("load_rules",             "Parse a .rawrrules file to seed system instructions and constraints.");
+    addTool("plan_tasks",             "Generate a lightweight deterministic task plan from a goal description.");
+    addTool("set_iteration_status",   "Set long-running model/agent iteration status (busy/current/total/phase/message).");
+    addTool("get_iteration_status",   "Get current long-running model/agent iteration status.");
+    addTool("reset_iteration_status", "Reset long-running model/agent iteration status to idle.");
+
+    // Agent operation tools (accessible outside hotpatch panel via /api/tool)
+    addTool("compact_conversation",     "Compact a conversation to reduce token count while preserving meaning. Returns compacted text.");
+    addTool("optimize_tool_selection",  "Analyze task intent and rank available tools by relevance. Returns prioritized tool list.");
+    addTool("resolve_symbol",           "Resolve a symbol name to its definition location across the workspace. Returns file paths and line numbers.");
+    addTool("read_lines",              "Read specific line ranges from a file. Returns the requested lines with line numbers.");
+    addTool("plan_code_exploration",    "Plan a structured code exploration strategy for a codebase. Returns exploration plan with entry points.");
+    addTool("search_files",            "Search for files matching a glob pattern across the workspace. Returns matching file paths.");
+    addTool("restore_checkpoint",      "Restore a previously saved checkpoint (conversation state, workspace, or both).");
+    addTool("evaluate_integration_audit_feasibility", "Evaluate integration audit feasibility for the current workspace. Returns readiness matrix.");
 
     // -----------------------------------------------------------------------
     // Wire parameter schemas programmatically (avoids preprocessor comma issue)
@@ -748,7 +906,116 @@ void AgentToolRegistry::InitDescriptors() {
     setParamWithDefault("disk_recovery", "drive", "number",
                          "Physical drive number (0-15) for init action", -1);
 
-    // Wire default handlers
+    // delete_file
+    setParam("delete_file", "path", "string", "Absolute or project-relative path to the file to delete");
+
+    // rename_file
+    setParam("rename_file", "source", "string", "Source file path (or 'path')");
+    setParam("rename_file", "destination", "string", "Destination file path");
+
+    // copy_file
+    setParam("copy_file", "source", "string", "Source file path (or 'path')");
+    setParam("copy_file", "destination", "string", "Destination file path");
+    setParamWithDefault("copy_file", "overwrite", "boolean", "Overwrite if destination exists (default true)", true);
+
+    // make_directory
+    setParam("make_directory", "path", "string", "Directory path to create (parents auto-created)");
+
+    // stat_file
+    setParam("stat_file", "path", "string", "File or directory path to stat");
+
+    // git_status
+    setParamWithDefault("git_status", "root", "string", "Git repository root (defaults to workspace)", "");
+    setParamWithDefault("git_status", "timeout", "number", "Timeout in milliseconds", 10000);
+
+    // run_shell
+    setParam("run_shell", "command", "string", "Shell command to execute (subject to sandbox policy)");
+    setParamWithDefault("run_shell", "timeout", "number", "Timeout in milliseconds (default 30000)", 30000);
+
+    // semantic_search
+    setParam("semantic_search", "query", "string", "Natural language search query");
+    setParamWithDefault("semantic_search", "root", "string", "Root directory to search (defaults to workspace)", ".");
+    setParamWithDefault("semantic_search", "top_k", "number", "Number of top results to return", 5);
+
+    // mention_lookup
+    setParam("mention_lookup", "symbol", "string", "Symbol name to look up mentions for");
+    setParamWithDefault("mention_lookup", "top_k", "number", "Number of results (clamped 1-10)", 3);
+    setParamWithDefault("mention_lookup", "include_non_code", "boolean", "Include non-code files in search", false);
+
+    // next_edit_hint
+    setParam("next_edit_hint", "context", "string", "Code context to analyze for next edit suggestions");
+
+    // propose_multifile_edits
+    setParam("propose_multifile_edits", "files", "array", "Array of file paths to plan edits for");
+    setParamWithDefault("propose_multifile_edits", "instruction", "string",
+                         "Edit instruction to apply across files", "Apply requested change across files.");
+
+    // load_rules
+    setParamWithDefault("load_rules", "path", "string", "Path to .rawrrules file", "");
+    setParamWithDefault("load_rules", "content", "string", "Inline rules content (overrides path)", "");
+
+    // plan_tasks
+    setParam("plan_tasks", "goal", "string", "High-level goal to generate a task plan for");
+    setParamWithDefault("plan_tasks", "max_steps", "number", "Maximum plan steps (3-10)", 6);
+    setParamWithDefault("plan_tasks", "deadline", "string", "Optional deadline string", "");
+    setParamWithDefault("plan_tasks", "owner", "string", "Optional task owner", "");
+
+    // set_iteration_status
+    setParamWithDefault("set_iteration_status", "busy", "boolean", "Whether the model/agent is currently busy", false);
+    setParamWithDefault("set_iteration_status", "current", "number", "Current iteration index", 0);
+    setParamWithDefault("set_iteration_status", "total", "number", "Total iterations expected", 0);
+    setParamWithDefault("set_iteration_status", "phase", "string", "Current phase label", "idle");
+    setParamWithDefault("set_iteration_status", "message", "string", "Optional human-readable status", "");
+
+    // compact_conversation
+    setParamWithDefault("compact_conversation", "keep_last", "number",
+                         "Number of recent entries to keep (default 200)", 200);
+    setParamWithDefault("compact_conversation", "retention_days", "number",
+                         "Purge entries older than N days (-1 = disabled)", -1);
+    setParamWithDefault("compact_conversation", "flush", "boolean",
+                         "Flush to disk after compaction", true);
+
+    // optimize_tool_selection
+    setParam("optimize_tool_selection", "task", "string",
+             "Description of the task to optimize tool selection for");
+    setParamWithDefault("optimize_tool_selection", "max_tools", "number",
+                         "Maximum number of tools to recommend (1-10)", 6);
+
+    // resolve_symbol
+    setParam("resolve_symbol", "symbol", "string",
+             "Symbol name to resolve across the workspace");
+    setParamWithDefault("resolve_symbol", "file_pattern", "string",
+                         "Glob filter for files to search (default: *.*)", "*.*");
+
+    // read_lines
+    setParam("read_lines", "path", "string",
+             "Absolute or project-relative path to the file");
+    setParamWithDefault("read_lines", "start_line", "number",
+                         "First line to read (1-based)", 1);
+    setParamWithDefault("read_lines", "end_line", "number",
+                         "Last line to read (1-based)", 1);
+
+    // plan_code_exploration
+    setParam("plan_code_exploration", "goal", "string",
+             "High-level exploration goal (e.g., 'Map all entry points')");
+    setParamWithDefault("plan_code_exploration", "root", "string",
+                         "Root directory to explore (default: cwd)", ".");
+
+    // search_files
+    setParam("search_files", "pattern", "string",
+             "Glob pattern to match files (e.g., '*.cpp', 'src/**/*.h')");
+    setParamWithDefault("search_files", "max_results", "number",
+                         "Maximum number of matching files to return", 200);
+
+    // restore_checkpoint
+    setParamWithDefault("restore_checkpoint", "checkpoint_path", "string",
+                         "Path to checkpoint file or 'latest'", "latest");
+
+    // evaluate_integration_audit_feasibility
+    setParamWithDefault("evaluate_integration_audit_feasibility", "workspace", "string",
+                         "Workspace root to evaluate", ".");
+
+    // Wire default handlers — core tools
     RegisterHandler("read_file",       HandleReadFile);
     RegisterHandler("write_file",      HandleWriteFile);
     RegisterHandler("replace_in_file", HandleReplaceInFile);
@@ -760,6 +1027,36 @@ void AgentToolRegistry::InitDescriptors() {
     RegisterHandler("run_build",       HandleRunBuild);
     RegisterHandler("apply_hotpatch",  HandleApplyHotpatch);
     RegisterHandler("disk_recovery",   HandleDiskRecovery);
+
+    // Wire agent operation handlers — proxy to AgentToolHandlers
+    RegisterHandler("compact_conversation",     HandleCompactConversation);
+    RegisterHandler("optimize_tool_selection",  HandleOptimizeToolSelection);
+    RegisterHandler("resolve_symbol",           HandleResolveSymbol);
+    RegisterHandler("read_lines",              HandleReadLines);
+    RegisterHandler("plan_code_exploration",    HandlePlanCodeExploration);
+    RegisterHandler("search_files",            HandleSearchFiles);
+    RegisterHandler("restore_checkpoint",      HandleRestoreCheckpoint);
+    RegisterHandler("evaluate_integration_audit_feasibility", HandleEvaluateIntegration);
+
+    // Wire extended file/system handlers — proxy to AgentToolHandlers
+    RegisterHandler("delete_file",           HandleDeleteFile);
+    RegisterHandler("rename_file",           HandleRenameFile);
+    RegisterHandler("copy_file",             HandleCopyFile);
+    RegisterHandler("make_directory",        HandleMakeDirectory);
+    RegisterHandler("stat_file",             HandleStatFile);
+    RegisterHandler("git_status",            HandleGitStatus);
+    RegisterHandler("run_shell",             HandleRunShell);
+
+    // Wire AI-specific handlers — proxy to AgentToolHandlers
+    RegisterHandler("semantic_search",        HandleSemanticSearch);
+    RegisterHandler("mention_lookup",         HandleMentionLookup);
+    RegisterHandler("next_edit_hint",         HandleNextEditHint);
+    RegisterHandler("propose_multifile_edits",HandleProposeMultiFileEdits);
+    RegisterHandler("load_rules",             HandleLoadRules);
+    RegisterHandler("plan_tasks",             HandlePlanTasks);
+    RegisterHandler("set_iteration_status",   HandleSetIterationStatus);
+    RegisterHandler("get_iteration_status",   HandleGetIterationStatus);
+    RegisterHandler("reset_iteration_status", HandleResetIterationStatus);
 }
 
 json AgentToolRegistry::GetToolSchemas() const {

@@ -352,14 +352,178 @@ void CPUInferenceEngine::SiLU(float* data, int size) {
 void CPUInferenceEngine::GELU(float* data, int size) {
     SiLU(data, size); 
 }
+// ============================================================================
+// FeedForward — SwiGLU feed-forward: output = W2 @ (SiLU(W1 @ x) * (W3 @ x))
+// ============================================================================
 void CPUInferenceEngine::FeedForward(const float* input, float* output, int layer_idx) {
+    if (layer_idx < 0 || layer_idx >= (int)m_transformerLayers.size()) return;
+    auto& layer = m_transformerLayers[layer_idx];
+    if (!layer || !layer->w1 || !layer->w2 || !layer->w3) return;
+
+    const int dim = m_embeddingDim;
+    const int hidden = layer->hidden_dim;
+    const float* w1 = reinterpret_cast<const float*>(layer->w1);
+    const float* w2 = reinterpret_cast<const float*>(layer->w2);
+    const float* w3 = reinterpret_cast<const float*>(layer->w3);
+
+    // gate = W1 @ input
+    std::vector<float> gate(hidden);
+    for (int i = 0; i < hidden; i++) {
+        float sum = 0.0f;
+        for (int j = 0; j < dim; j++) sum += w1[i * dim + j] * input[j];
+        gate[i] = sum;
+    }
+
+    // up = W3 @ input
+    std::vector<float> up(hidden);
+    for (int i = 0; i < hidden; i++) {
+        float sum = 0.0f;
+        for (int j = 0; j < dim; j++) sum += w3[i * dim + j] * input[j];
+        up[i] = sum;
+    }
+
+    // SiLU(gate) * up  (fused SwiGLU activation)
+    InferenceKernels::fused_silu_mul_avx2(gate.data(), up.data(), hidden);
+
+    // output = W2 @ gate
+    for (int i = 0; i < dim; i++) {
+        float sum = 0.0f;
+        for (int j = 0; j < hidden; j++) sum += w2[i * hidden + j] * gate[j];
+        output[i] = sum;
+    }
 }
-void CPUInferenceEngine::MultiHeadAttention(const float* Q, const float* K, const float* V, float* output, int seq_len, int head_dim, int num_heads, int layer_idx) {
+
+// ============================================================================
+// MultiHeadAttention — Scaled dot-product multi-head attention
+// ============================================================================
+void CPUInferenceEngine::MultiHeadAttention(const float* Q, const float* K, const float* V,
+                                            float* output, int seq_len, int head_dim,
+                                            int num_heads, int layer_idx) {
+    if (seq_len <= 0 || head_dim <= 0 || num_heads <= 0) return;
+
+    const float scale = 1.0f / std::sqrt(static_cast<float>(head_dim));
+    const int total_dim = num_heads * head_dim;
+
+    // Process each head independently
+    for (int h = 0; h < num_heads; h++) {
+        const float* q_h = Q + h * head_dim;
+        const float* k_h = K + h * head_dim;
+        const float* v_h = V + h * head_dim;
+        float* out_h = output + h * head_dim;
+
+        // Compute attention scores: score[s] = Q_h · K_h[s] * scale
+        std::vector<float> scores(seq_len);
+        for (int s = 0; s < seq_len; s++) {
+            float dot = 0.0f;
+            const float* k_s = k_h + s * total_dim;
+            for (int d = 0; d < head_dim; d++) dot += q_h[d] * k_s[d];
+            scores[s] = dot * scale;
+        }
+
+        // Softmax over scores
+        Softmax(scores.data(), seq_len);
+
+        // Weighted sum of values: out_h = sum(score[s] * V_h[s])
+        std::memset(out_h, 0, head_dim * sizeof(float));
+        for (int s = 0; s < seq_len; s++) {
+            const float* v_s = v_h + s * total_dim;
+            const float w = scores[s];
+            for (int d = 0; d < head_dim; d++) out_h[d] += w * v_s[d];
+        }
+    }
 }
-bool CPUInferenceEngine::LoadWeights(const std::unordered_map<std::string, Tensor>& tensors) { return true; }
-void CPUInferenceEngine::UpdateWeights(const std::vector<std::vector<float>>& gradients, float lr) {}
-void CPUInferenceEngine::UpdateOutputWeights(const std::vector<float>& gradients, float lr) {}
-void CPUInferenceEngine::TransformerLayerMain(const float* input, float* output, int layer_idx, int seq_len) {}
+
+// ============================================================================
+// LoadWeights — Load pre-parsed tensor map into engine weight store
+// ============================================================================
+bool CPUInferenceEngine::LoadWeights(const std::unordered_map<std::string, Tensor>& tensors) {
+    m_weights = tensors;
+    m_modelLoaded = !m_weights.empty();
+    return m_modelLoaded;
+}
+
+// ============================================================================
+// UpdateWeights — SGD weight update per layer: W -= lr * grad
+// ============================================================================
+void CPUInferenceEngine::UpdateWeights(const std::vector<std::vector<float>>& gradients, float lr) {
+    for (size_t layer = 0; layer < gradients.size() && layer < m_transformerLayers.size(); layer++) {
+        auto& tl = m_transformerLayers[layer];
+        if (!tl || !tl->wq) continue;
+
+        float* wq = reinterpret_cast<float*>(tl->wq);
+        const auto& grad = gradients[layer];
+        const int count = std::min(static_cast<int>(grad.size()),
+                                   tl->dim * tl->dim);
+        for (int i = 0; i < count; i++) {
+            wq[i] -= lr * grad[i];
+        }
+    }
+}
+
+// ============================================================================
+// UpdateOutputWeights — SGD on the language-model head: W -= lr * grad
+// ============================================================================
+void CPUInferenceEngine::UpdateOutputWeights(const std::vector<float>& gradients, float lr) {
+    if (!m_output_weight_ptr) return;
+    float* w = reinterpret_cast<float*>(m_output_weight_ptr);
+    const int count = std::min(static_cast<int>(gradients.size()),
+                               m_vocabSize * m_embeddingDim);
+    for (int i = 0; i < count; i++) {
+        w[i] -= lr * gradients[i];
+    }
+}
+
+// ============================================================================
+// TransformerLayerMain — Full transformer block:
+//   x = x + Attention(RMSNorm(x))
+//   x = x + FeedForward(RMSNorm(x))
+// ============================================================================
+void CPUInferenceEngine::TransformerLayerMain(const float* input, float* output, int layer_idx, int seq_len) {
+    if (layer_idx < 0 || layer_idx >= (int)m_transformerLayers.size()) return;
+    auto& layer = m_transformerLayers[layer_idx];
+    if (!layer) return;
+
+    const int dim = m_embeddingDim;
+    const int head_dim = dim / m_numHeads;
+
+    // Copy input → output (we accumulate residuals in-place)
+    std::memcpy(output, input, dim * sizeof(float));
+
+    // --- Attention sub-block ---
+    std::vector<float> normed(dim);
+    std::memcpy(normed.data(), output, dim * sizeof(float));
+    if (layer->attn_norm)
+        InferenceKernels::rmsnorm_avx512(normed.data(), normed.data(), layer->attn_norm, dim);
+
+    // Q = Wq @ normed, K = Wk @ normed, V = Wv @ normed
+    std::vector<float> q_buf(dim), k_buf(dim), v_buf(dim);
+    if (layer->wq) MatMul(reinterpret_cast<float*>(layer->wq), normed.data(), q_buf.data(), dim, 1, dim);
+    if (layer->wk) MatMul(reinterpret_cast<float*>(layer->wk), normed.data(), k_buf.data(), dim, 1, dim);
+    if (layer->wv) MatMul(reinterpret_cast<float*>(layer->wv), normed.data(), v_buf.data(), dim, 1, dim);
+
+    // Attention
+    std::vector<float> attn_out(dim, 0.0f);
+    MultiHeadAttention(q_buf.data(), k_buf.data(), v_buf.data(),
+                       attn_out.data(), seq_len, head_dim, m_numHeads, layer_idx);
+
+    // Output projection + residual
+    if (layer->wo) {
+        std::vector<float> proj(dim);
+        MatMul(reinterpret_cast<float*>(layer->wo), attn_out.data(), proj.data(), dim, 1, dim);
+        for (int i = 0; i < dim; i++) output[i] += proj[i];
+    }
+
+    // --- FFN sub-block ---
+    std::memcpy(normed.data(), output, dim * sizeof(float));
+    if (layer->ffn_norm)
+        InferenceKernels::rmsnorm_avx512(normed.data(), normed.data(), layer->ffn_norm, dim);
+
+    std::vector<float> ffn_out(dim, 0.0f);
+    FeedForward(normed.data(), ffn_out.data(), layer_idx);
+
+    // Residual
+    for (int i = 0; i < dim; i++) output[i] += ffn_out[i];
+}
 void CPUInferenceEngine::ClearCache() { InitKVCache(); }
 float* CPUInferenceEngine::AllocateTensor(size_t size) { return new float[size]; }
 void CPUInferenceEngine::DeallocateTensor(float* ptr) { delete[] ptr; }

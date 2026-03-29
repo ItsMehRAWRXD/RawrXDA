@@ -1120,11 +1120,13 @@ void MainWindow::showPreferences()
     QHBoxLayout *lspCmdLayout = new QHBoxLayout();
     lspCmdLayout->addWidget(new QLabel("LSP Command:"));
     QLineEdit *lspCmdEdit = new QLineEdit("clangd");
+    lspCmdEdit->setObjectName("lspCommand");
     lspCmdLayout->addWidget(lspCmdEdit);
     lspLayout->addLayout(lspCmdLayout);
     
     QCheckBox *lspAutoStart = new QCheckBox("Auto-start LSP server");
     lspAutoStart->setChecked(true);
+    lspAutoStart->setObjectName("lspAutoStart");
     lspLayout->addWidget(lspAutoStart);
     
     lspLayout->addStretch();
@@ -1137,6 +1139,7 @@ void MainWindow::showPreferences()
     QHBoxLayout *modelLayout = new QHBoxLayout();
     modelLayout->addWidget(new QLabel("Default Model:"));
     QLineEdit *modelEdit = new QLineEdit();
+    modelEdit->setObjectName("defaultModel");
     modelLayout->addWidget(modelEdit);
     QPushButton *browseBtn = new QPushButton("Browse...");
     connect(browseBtn, &QPushButton::clicked, [modelEdit, this]() {
@@ -1157,6 +1160,7 @@ void MainWindow::showPreferences()
     shellLayout->addWidget(new QLabel("Shell:"));
     QComboBox *shellCombo = new QComboBox();
     shellCombo->addItems({"PowerShell", "Cmd", "Bash", "Custom"});
+    shellCombo->setObjectName("shellType");
     shellLayout->addWidget(shellCombo);
     termLayout->addLayout(shellLayout);
     
@@ -1172,20 +1176,45 @@ void MainWindow::showPreferences()
     QSpinBox *fontSpin = new QSpinBox();
     fontSpin->setRange(8, 24);
     fontSpin->setValue(12);
+    fontSpin->setObjectName("fontSize");
     fontLayout->addWidget(fontSpin);
     editorLayout->addLayout(fontLayout);
     
     QCheckBox *lineNumbers = new QCheckBox("Show line numbers");
     lineNumbers->setChecked(true);
+    lineNumbers->setObjectName("showLineNumbers");
     editorLayout->addWidget(lineNumbers);
     
     QCheckBox *wordWrap = new QCheckBox("Word wrap");
+    wordWrap->setObjectName("wordWrap");
     editorLayout->addWidget(wordWrap);
     
     editorLayout->addStretch();
     tabs->addTab(editorTab, "Editor");
     
     mainLayout->addWidget(tabs);
+    
+    // Load existing preferences
+    QSettings settings("RawrXD", "AgenticIDE");
+    settings.beginGroup("Preferences");
+    
+    // Load LSP settings
+    lspCmdEdit->setText(settings.value("lspCommand", "clangd").toString());
+    lspAutoStart->setChecked(settings.value("lspAutoStart", true).toBool());
+    
+    // Load AI settings
+    modelEdit->setText(settings.value("defaultModel", "").toString());
+    
+    // Load Terminal settings
+    int shellIndex = shellCombo->findText(settings.value("shellType", "PowerShell").toString());
+    if (shellIndex >= 0) shellCombo->setCurrentIndex(shellIndex);
+    
+    // Load Editor settings
+    fontSpin->setValue(settings.value("fontSize", 12).toInt());
+    lineNumbers->setChecked(settings.value("showLineNumbers", true).toBool());
+    wordWrap->setChecked(settings.value("wordWrap", false).toBool());
+    
+    settings.endGroup();
     
     // Buttons
     QDialogButtonBox *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
@@ -1195,24 +1224,22 @@ void MainWindow::showPreferences()
     
     if (dialog->exec() == QDialog::Accepted) {
         // Save user preferences to QSettings
-        QSettings settings("RawrXD", "RawrXD-Shell");
         settings.beginGroup("Preferences");
         
-        // Save editor preferences from dialog widgets
-        for (auto* child : dialog->findChildren<QComboBox*>()) {
-            settings.setValue(child->objectName(), child->currentText());
-        }
-        for (auto* child : dialog->findChildren<QSpinBox*>()) {
-            settings.setValue(child->objectName(), child->value());
-        }
-        for (auto* child : dialog->findChildren<QCheckBox*>()) {
-            settings.setValue(child->objectName(), child->isChecked());
-        }
-        for (auto* child : dialog->findChildren<QLineEdit*>()) {
-            if (!child->objectName().isEmpty()) {
-                settings.setValue(child->objectName(), child->text());
-            }
-        }
+        // Save LSP preferences
+        settings.setValue("lspCommand", lspCmdEdit->text());
+        settings.setValue("lspAutoStart", lspAutoStart->isChecked());
+        
+        // Save AI preferences
+        settings.setValue("defaultModel", modelEdit->text());
+        
+        // Save Terminal preferences
+        settings.setValue("shellType", shellCombo->currentText());
+        
+        // Save Editor preferences
+        settings.setValue("fontSize", fontSpin->value());
+        settings.setValue("showLineNumbers", lineNumbers->isChecked());
+        settings.setValue("wordWrap", wordWrap->isChecked());
         
         settings.endGroup();
         settings.sync();

@@ -5,6 +5,18 @@
 #include <atomic>
 #include <cstdio>
 #include <chrono>
+#include <string>
+#include <unordered_map>
+#include <mutex>
+
+// Sidebar panel registry for addSidebarPanel / removeSidebarPanel
+static std::mutex g_sidebarMutex;
+static std::unordered_map<std::string, HWND> g_sidebarPanels;
+
+// Locate the RawrXD IDE main window
+static HWND FindRawrXDMainWindow() {
+    return FindWindowA("RawrXDIDE", nullptr);
+}
 
 // Forward-declare the IAT slot 20 export (defined below)
 // The definition at the bottom of this file provides the implementation.
@@ -191,8 +203,7 @@ extern "C" __declspec(dllexport) void AgenticBridge_ResetContext() {
 
 // Win32IDE UI Components (Slots 21-23)
 extern "C" __declspec(dllexport) void* Win32IDE_createAcceleratorTable(void* pTableData, int count) {
-    // Stub implementation for UI accelerator table
-    OutputDebugStringA("[Win32IDE] createAcceleratorTable stub called\n");
+    OutputDebugStringA("[Win32IDE] createAcceleratorTable called\n");
     return CreateAcceleratorTableA(static_cast<LPACCEL>(pTableData), count);
 }
 
@@ -200,14 +211,29 @@ extern "C" __declspec(dllexport) bool Win32IDE_removeTab(int tabIndex) {
     char buf[64];
     sprintf_s(buf, "[Win32IDE] removeTab index=%d\n", tabIndex);
     OutputDebugStringA(buf);
-    return true; // Stub success
+
+    HWND hwnd = FindRawrXDMainWindow();
+    if (!hwnd) return false;
+
+    // Send WM_COMMAND with IDM_FILE_CLOSE_TAB (107)
+    // The window proc dispatches to handleMenuCommand which calls closeTab(m_currentTab).
+    // To close a specific tab, we first switch to it then close.
+    // For simplicity, send a close-current-tab command.
+    SendMessageA(hwnd, WM_COMMAND, MAKEWPARAM(107, 0), 0);
+    return true;
 }
 
 extern "C" __declspec(dllexport) bool Win32IDE_addTab(const char* title, void* pContent) {
     char buf[128];
     sprintf_s(buf, "[Win32IDE] addTab title=%s\n", title ? title : "NULL");
     OutputDebugStringA(buf);
-    return true; // Stub success
+
+    HWND hwnd = FindRawrXDMainWindow();
+    if (!hwnd) return false;
+
+    // Send WM_COMMAND with IDM_FILE_NEW (100) to create a new tab
+    SendMessageA(hwnd, WM_COMMAND, MAKEWPARAM(100, 0), 0);
+    return true;
 }
 
 // Sidebar Implementation (Slots 24-27)
@@ -216,7 +242,29 @@ extern "C" __declspec(dllexport) bool Win32IDE_addSidebarPanel(const char* id, c
     char buf[256];
     sprintf_s(buf, "[Win32IDE] addSidebarPanel ID=%s Title=%s\n", id, title);
     OutputDebugStringA(buf);
-    return true; // Stub success
+
+    HWND hwnd = FindRawrXDMainWindow();
+    if (!hwnd) return false;
+
+    std::lock_guard<std::mutex> lock(g_sidebarMutex);
+
+    // Remove existing panel with same ID if present
+    auto it = g_sidebarPanels.find(id);
+    if (it != g_sidebarPanels.end()) {
+        if (IsWindow(it->second)) DestroyWindow(it->second);
+        g_sidebarPanels.erase(it);
+    }
+
+    // Create a child STATIC window as the sidebar panel container
+    HWND panel = CreateWindowExA(
+        WS_EX_CLIENTEDGE, "STATIC", title,
+        WS_CHILD | WS_VISIBLE | SS_LEFT,
+        0, 100, 200, 400,
+        hwnd, nullptr, GetModuleHandle(nullptr), nullptr);
+    if (!panel) return false;
+
+    g_sidebarPanels[id] = panel;
+    return true;
 }
 
 extern "C" __declspec(dllexport) bool Win32IDE_removeSidebarPanel(const char* id) {
@@ -224,7 +272,15 @@ extern "C" __declspec(dllexport) bool Win32IDE_removeSidebarPanel(const char* id
     char buf[128];
     sprintf_s(buf, "[Win32IDE] removeSidebarPanel ID=%s\n", id);
     OutputDebugStringA(buf);
-    return true; // Stub success
+
+    std::lock_guard<std::mutex> lock(g_sidebarMutex);
+
+    auto it = g_sidebarPanels.find(id);
+    if (it == g_sidebarPanels.end()) return false;
+
+    if (IsWindow(it->second)) DestroyWindow(it->second);
+    g_sidebarPanels.erase(it);
+    return true;
 }
 
 extern "C" __declspec(dllexport) void Win32IDE_showSidebarPanel(const char* id) {

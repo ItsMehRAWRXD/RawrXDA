@@ -1,0 +1,30 @@
+Write-Host : Cannot bind parameter 
+'ForegroundColor'. Cannot convert value 
+"Color" to type "System.ConsoleColor". Error: 
+"Unable to match the identifier name Color to 
+a valid enumerator name. Specify one of the 
+following enumerator names and try again:
+Black, DarkBlue, DarkGreen, DarkCyan, 
+DarkRed, DarkMagenta, DarkYellow, Gray, 
+DarkGray, Blue, Green, Cyan, Red, Magenta, 
+Yellow, White"
+At line:2 char:59
++ Write-Host "=== Pattern 1: Lines 954-961 
+===" -Foreground Color Green
++                                             
+              ~~~~~
+    + CategoryInfo          : InvalidArgument 
+   : (:) [Write-Host], ParameterBindingExcep  
+  tion
+    + FullyQualifiedErrorId : CannotConvertAr 
+   gumentNoMessage,Microsoft.PowerShell.Comm  
+  ands.WriteHostCommand
+ 
+954:                             std::string response;
+955:                             if (AgenticHttpChatGenerateSync("127.0.0.1", localApiPort, ollamaModel, message,
+956:                                                             response) ||
+957:                                 OllamaGenerateSync(host, port, ollamaModel, message, response))
+958:                             {
+959:                                 return response;
+960:                             }
+961:                             return "[Ollama error: start Ollama or check OLLAMA_HOST / backend]";

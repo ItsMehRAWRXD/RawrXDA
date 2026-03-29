@@ -14,7 +14,6 @@
 //   - No auto-routing (explicit user selection only)
 // ============================================================================
 
-<<<<<<< HEAD
 #include "../agent/local_reasoning_integration.hpp"
 #include "../agentic/AgentOllamaClient.h"
 #include "../modules/vsix_loader.h"
@@ -26,18 +25,8 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <unordered_set>
 #include <winhttp.h>
-=======
-#include "Win32IDE.h"
-#include "../modules/vsix_loader.h"
-#include <winhttp.h>
-#include <fstream>
-#include <sstream>
-#include <filesystem>
-#include <chrono>
-#include <algorithm>
-#include "../agent/local_reasoning_integration.hpp"
->>>>>>> origin/main
 
 // nlohmann/json already included via Win32IDE.h
 
@@ -80,6 +69,21 @@ std::string compactSwarmSummary(const std::string& summary)
     if (end == std::string::npos)
         end = summary.size();
     return summary.substr(pos, end - pos);
+}
+
+bool endsWithCaseInsensitive(const std::string& value, const std::string& suffix)
+{
+    if (suffix.size() > value.size())
+        return false;
+    const size_t off = value.size() - suffix.size();
+    for (size_t i = 0; i < suffix.size(); ++i)
+    {
+        const char a = (char)std::tolower((unsigned char)value[off + i]);
+        const char b = (char)std::tolower((unsigned char)suffix[i]);
+        if (a != b)
+            return false;
+    }
+    return true;
 }
 }  // namespace
 
@@ -624,14 +628,9 @@ bool Win32IDE::probeBackendHealth(AIBackendType type)
                 error = "No API key configured";
             break;
         }
-<<<<<<< HEAD
         case AIBackendType::ReasoningEngine:
         {
             healthy = true;  // Local static reasoning engine always available
-=======
-        case AIBackendType::ReasoningEngine: {
-            healthy = true; // Local static reasoning engine always available
->>>>>>> origin/main
             break;
         }
         case AIBackendType::GitHubCopilot:
@@ -735,8 +734,61 @@ std::string Win32IDE::routeInferenceRequest(const std::string& prompt)
     switch (active)
     {
         case AIBackendType::LocalGGUF:
+        {
             result = routeToLocalGGUF(prompt);
+            bool localGGUFSuccess = !result.empty() && result.find("failed to generate") == std::string::npos;
+
+            if (!localGGUFSuccess)
+            {
+                logWarning("routeInferenceRequest", "LocalGGUF failed. Attempting fallback to Ollama.");
+                const auto& ollamaCfg = m_backendConfigs[(size_t)AIBackendType::Ollama];
+                if (ollamaCfg.enabled)
+                {
+                    std::string fallbackResult = routeToOllama(prompt);
+                    bool fallbackOk = !fallbackResult.empty() && fallbackResult.find("[BackendSwitcher] Error") == std::string::npos;
+                    if (fallbackOk)
+                    {
+                        result = "[BackendSwitcher] Auto-fallback: Local GGUF engine failed to generate a response. Switched this request to Ollama backend.\n\n" + fallbackResult;
+                        logInfo("Successfully fell back to Ollama.");
+                    }
+                    else
+                    {
+                        logError("routeInferenceRequest", "Ollama fallback also failed.");
+                        // Keep the original error message from LocalGGUF
+                    }
+                }
+                else
+                {
+                    logWarning("routeInferenceRequest", "Ollama backend is disabled, cannot fallback.");
+                }
+            }
+            else
+            {
+                std::string localBlockReason;
+                const bool metadataBlocked = isLocalMetadataOnlyBlocked(&localBlockReason);
+                if (metadataBlocked)
+                {
+                    const auto& ollamaCfg = m_backendConfigs[(size_t)AIBackendType::Ollama];
+                    if (ollamaCfg.enabled && !ollamaCfg.endpoint.empty() && !ollamaCfg.model.empty())
+                    {
+                        std::string fallback = routeToOllama(prompt);
+                        const bool fallbackOk =
+                            !fallback.empty() && fallback.find("[BackendSwitcher] Error") == std::string::npos;
+                        if (fallbackOk)
+                        {
+                            if (localBlockReason.empty())
+                            {
+                                localBlockReason =
+                                    "Local GGUF is blocked in metadata-only mode due to memory commit limits.";
+                            }
+                            result = "[BackendSwitcher] Auto-fallback: " + localBlockReason +
+                                     "\n\nSwitched this request to Ollama backend.\n\n" + fallback;
+                        }
+                    }
+                }
+            }
             break;
+        }
         case AIBackendType::Ollama:
             result = routeToOllama(prompt);
             break;
@@ -810,15 +862,277 @@ void Win32IDE::routeInferenceRequestAsync(const std::string& prompt,
 // PER-BACKEND ROUTING IMPLEMENTATIONS
 // ============================================================================
 
+std::vector<std::string> Win32IDE::buildQuantizationDowngradeCandidates(const std::string& modelPath) const
+{
+    std::vector<std::string> candidates;
+    std::unordered_set<std::string> seen;
+    if (modelPath.empty())
+        return candidates;
+
+    std::filesystem::path p(modelPath);
+    const std::string filename = p.filename().string();
+    std::string filenameLower = filename;
+    std::transform(filenameLower.begin(), filenameLower.end(), filenameLower.begin(),
+                   [](unsigned char c) { return (char)std::tolower(c); });
+
+    struct QuantToken
+    {
+        const char* token;
+        int tier;  // lower is smaller
+    };
+
+    // Ordered by token length to prefer specific matches first.
+    const std::vector<QuantToken> knownTokens = {
+        {"q8_0", 8}, {"q6_k", 6}, {"q5_k_m", 5}, {"q5_k_s", 5}, {"q5_1", 5}, {"q5_0", 5},
+        {"q4_k_m", 4}, {"q4_k_s", 4}, {"q4_1", 4}, {"q4_0", 4}, {"q4_k", 4},
+        {"q3_k_l", 3}, {"q3_k_m", 3}, {"q3_k_s", 3}, {"q3_k", 3},
+        {"q2_k", 2}, {"q2", 2}};
+
+    size_t tokenPos = std::string::npos;
+    size_t tokenLen = 0;
+    int sourceTier = 0;
+    for (const auto& qt : knownTokens)
+    {
+        size_t pos = filenameLower.find(qt.token);
+        if (pos != std::string::npos)
+        {
+            tokenPos = pos;
+            tokenLen = strlen(qt.token);
+            sourceTier = qt.tier;
+            break;
+        }
+    }
+
+    if (tokenPos == std::string::npos)
+        return candidates;
+
+    std::vector<const char*> targetTokens;
+    if (sourceTier >= 4)
+    {
+        targetTokens = {"q3_k_m", "q3_k_s", "q3_k_l", "q2_k", "q2"};
+    }
+    else if (sourceTier == 3)
+    {
+        targetTokens = {"q2_k", "q2"};
+    }
+
+    for (const char* target : targetTokens)
+    {
+        std::string downgradedName = filename;
+        downgradedName.replace(tokenPos, tokenLen, target);
+        std::filesystem::path candidatePath = p.parent_path() / downgradedName;
+        std::error_code ec;
+        if (std::filesystem::exists(candidatePath, ec) && !ec)
+        {
+            const std::string k = candidatePath.string();
+            if (seen.insert(k).second)
+                candidates.push_back(k);
+        }
+    }
+
+    // Directory scan fallback for naming variants not captured by direct token replacement.
+    const std::string prefix = filenameLower.substr(0, tokenPos);
+    const std::string suffix = filenameLower.substr(tokenPos + tokenLen);
+    std::error_code dirEc;
+    for (const auto& ent : std::filesystem::directory_iterator(p.parent_path(), dirEc))
+    {
+        if (dirEc)
+            break;
+        if (!ent.is_regular_file())
+            continue;
+
+        const std::string name = ent.path().filename().string();
+        std::string nameLower = name;
+        std::transform(nameLower.begin(), nameLower.end(), nameLower.begin(),
+                       [](unsigned char c) { return (char)std::tolower(c); });
+
+        if (!endsWithCaseInsensitive(nameLower, ".gguf"))
+            continue;
+        if (nameLower.rfind(prefix, 0) != 0)
+            continue;
+        if (!suffix.empty() && !endsWithCaseInsensitive(nameLower, suffix))
+            continue;
+
+        for (const char* target : targetTokens)
+        {
+            if (nameLower.find(target) == std::string::npos)
+                continue;
+
+            const std::string k = ent.path().string();
+            if (seen.insert(k).second)
+                candidates.push_back(k);
+            break;
+        }
+    }
+
+    return candidates;
+}
+
+bool Win32IDE::tryAutoDowngradeLocalModel(std::string* loadedCandidate, std::string* failureReason)
+{
+    const char* gate = std::getenv("RAWRXD_ENABLE_AUTO_QUANT_DOWNGRADE");
+    if (gate && !isTruthyEnv(gate))
+    {
+        if (failureReason)
+            *failureReason = "Auto-downgrade is disabled by RAWRXD_ENABLE_AUTO_QUANT_DOWNGRADE.";
+        return false;
+    }
+
+    const std::string sourcePath = m_loadedModelPath;
+    if (sourcePath.empty())
+    {
+        if (failureReason)
+            *failureReason = "No source model path loaded.";
+        return false;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(m_autoDowngradeMutex);
+        if (!m_autoDowngradeLoadedPath.empty() && m_autoDowngradeLoadedPath == sourcePath)
+        {
+            if (failureReason)
+                *failureReason = "Current model already reflects the last downgrade result.";
+            return false;
+        }
+        if (m_autoDowngradeAttemptedSourcePath == sourcePath)
+        {
+            if (failureReason)
+                *failureReason = "Auto-downgrade already attempted for this model.";
+            return false;
+        }
+        m_autoDowngradeAttemptedSourcePath = sourcePath;
+    }
+
+    auto candidates = buildQuantizationDowngradeCandidates(sourcePath);
+    if (candidates.empty())
+    {
+        if (failureReason)
+            *failureReason = "No lower quantized sibling GGUF candidates were found.";
+        return false;
+    }
+
+    for (const auto& candidate : candidates)
+    {
+        appendToOutput("[BackendSwitcher] Auto-downgrade attempt: " + candidate + "\n", "Output",
+                       OutputSeverity::Warning);
+        const bool ggufOk = loadGGUFModel(candidate);
+        const bool bridgeOk = loadModelForInference(candidate);
+        if (ggufOk || bridgeOk)
+        {
+            {
+                std::lock_guard<std::mutex> lock(m_autoDowngradeMutex);
+                m_autoDowngradeLoadedPath = candidate;
+            }
+            clearLocalMetadataOnlyBlocked();
+            initializeInference();
+            if (loadedCandidate)
+                *loadedCandidate = candidate;
+            return true;
+        }
+    }
+
+    if (failureReason)
+        *failureReason = "All lower-quantized candidates failed to load.";
+    return false;
+}
+
 std::string Win32IDE::routeToLocalGGUF(const std::string& prompt)
 {
-    // Use the existing native engine path
-    if (!m_nativeEngine || !m_nativeEngine->IsModelLoaded())
+    // Use the existing native engine path, or the modern agentic bridge/streaming loader path
+    bool hasNative = m_nativeEngine && m_nativeEngine->IsModelLoaded();
+    bool hasBridge = m_agenticBridge && !m_agenticBridge->GetCurrentModel().empty();
+    bool hasStreaming = m_ggufLoader && !m_loadedModelPath.empty();
+
+    if (m_ggufLoader && m_ggufLoader->IsMetadataOnly())
+    {
+        setLocalMetadataOnlyBlocked(
+            "The loaded model is in metadata-only mode due to memory commit limits. "
+            "Local inference is blocked to prevent repeated MapViewOfFile failures. "
+            "Load a smaller quantized model or increase pagefile/RAM.");
+    }
+
+    std::string localBlockReason;
+    if (isLocalMetadataOnlyBlocked(&localBlockReason))
+    {
+        std::string downgradedPath;
+        std::string downgradeFailure;
+        const bool downgraded = tryAutoDowngradeLocalModel(&downgradedPath, &downgradeFailure);
+        if (!downgraded)
+        {
+            if (localBlockReason.empty())
+            {
+                localBlockReason =
+                    "The loaded model is in metadata-only mode due to memory commit limits. "
+                    "Local inference is blocked to prevent repeated MapViewOfFile failures. "
+                    "Load a smaller quantized model or increase pagefile/RAM.";
+            }
+            if (!downgradeFailure.empty())
+            {
+                localBlockReason += " Auto-downgrade unavailable: " + downgradeFailure;
+            }
+            return localBlockReason;
+        }
+
+        appendToOutput("[BackendSwitcher] Auto-downgrade succeeded, retrying local GGUF inference with: " +
+                           downgradedPath + "\n",
+                       "Output", OutputSeverity::Warning);
+    }
+
+    if (!hasNative && !hasBridge && !hasStreaming)
     {
         return "[BackendSwitcher] Error: No local GGUF model loaded. Use File > Load Model first.";
     }
-    // Delegate to existing generateResponse (which uses m_nativeEngine)
-    return generateResponse(prompt);
+    
+    // Ensure agentic bridge has current model so chat and agentic work regardless of which path loaded it
+    if (!m_loadedModelPath.empty())
+        ensureAgenticBridgeHasModel(m_loadedModelPath);
+
+    // Agentic Bridge / Streaming Loader takes precedence
+    if (m_agenticBridge && m_agenticBridge->IsInitialized())
+    {
+        AgentResponse r = m_agenticBridge->ExecuteAgentCommand(prompt);
+        if (r.type != AgentResponseType::AGENT_ERROR)
+        {
+            if (r.content.find("MapViewOfFile failed") != std::string::npos)
+            {
+                setLocalMetadataOnlyBlocked(
+                    "The loaded model is in metadata-only mode due to memory commit limits. "
+                    "Local inference is blocked to prevent repeated MapViewOfFile failures. "
+                    "Load a smaller quantized model or increase pagefile/RAM.");
+                return "The loaded model is too large for your system's memory commit limits (MapViewOfFile failed). "
+                       "It is currently loaded in metadata inspection mode only via the streaming loader. "
+                       "You cannot chat with this model locally unless you provision more pagefile/RAM "
+                       "or load a smaller quantized version.";
+            }
+            if (r.content.find("Native inference API unavailable") != std::string::npos)
+            {
+                // Continue to fallback native engine path below instead of returning a terminal error.
+            }
+            else
+            {
+                return r.content;
+            }
+        }
+    }
+
+    // Fallback: Native CPU Inference Engine
+    if (m_nativeEngine && m_nativeEngineLoaded)
+    {
+        RawrXD::CPUInferenceEngine* engine = static_cast<RawrXD::CPUInferenceEngine*>(m_nativeEngine.get());
+        if (!engine->IsModelLoaded() && !m_loadedModelPath.empty())
+        {
+            engine->LoadModel(m_loadedModelPath);
+        }
+
+        if (engine->IsModelLoaded())
+        {
+            std::vector<int32_t> tokens = engine->Tokenize(prompt);
+            std::vector<int32_t> output = engine->Generate(tokens, 100);
+            return engine->Detokenize(output);
+        }
+    }
+
+    return "[BackendSwitcher] Error: Local GGUF engine failed to generate a response.";
 }
 
 std::string Win32IDE::routeToOllama(const std::string& prompt)
@@ -1000,12 +1314,8 @@ std::string Win32IDE::routeToGemini(const std::string& prompt)
     }
 }
 
-<<<<<<< HEAD
 std::string Win32IDE::routeToReasoningEngine(const std::string& prompt)
 {
-=======
-std::string Win32IDE::routeToReasoningEngine(const std::string& prompt) {
->>>>>>> origin/main
     // Phase 14B: Direct Integration of converted LocalReasoningEngine
     // This uses the pure C++20 engine to analyze the context of the prompt.
 

@@ -134,10 +134,20 @@ public:
     using StateChangeCallback = std::function<void(AgentState oldState, AgentState newState)>;
     using OutputCallback = std::function<void(const std::string& message)>;
     using ErrorCallback = std::function<void(const std::string& error)>;
+    using ProviderSwitchCallback = std::function<bool(const std::string& provider)>;
+    using AnalyzeCallback = std::function<std::string(const std::string& path, const std::string& content)>;
+    using GenerateContentCallback = std::function<std::string(const std::string& fileName, const std::string& description)>;
+    using RefactorCallback = std::function<std::string(const std::string& path, const std::string& content, const std::string& type)>;
+    using GenerateTestsCallback = std::function<std::string(const std::string& path, const std::string& content)>;
 
     void setOnStateChange(StateChangeCallback cb) { m_onStateChange = cb; }
     void setOnOutput(OutputCallback cb) { m_onOutput = cb; }
     void setOnError(ErrorCallback cb) { m_onError = cb; }
+    void setOnProviderSwitch(ProviderSwitchCallback cb) { m_onProviderSwitch = cb; }
+    void setOnAnalyzeRequest(AnalyzeCallback cb) { m_onAnalyzeRequest = cb; }
+    void setOnGenerateContent(GenerateContentCallback cb) { m_onGenerateContent = cb; }
+    void setOnRefactorRequest(RefactorCallback cb) { m_onRefactorRequest = cb; }
+    void setOnGenerateTests(GenerateTestsCallback cb) { m_onGenerateTests = cb; }
 
 private:
     AgentState m_state = AgentState::Idle;
@@ -147,6 +157,11 @@ private:
     StateChangeCallback m_onStateChange;
     OutputCallback m_onOutput;
     ErrorCallback m_onError;
+    ProviderSwitchCallback m_onProviderSwitch;
+    AnalyzeCallback m_onAnalyzeRequest;
+    GenerateContentCallback m_onGenerateContent;
+    RefactorCallback m_onRefactorRequest;
+    GenerateTestsCallback m_onGenerateTests;
 
     // Internal methods
     void changeState(AgentState newState);

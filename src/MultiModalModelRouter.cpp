@@ -7,10 +7,6 @@
 
 // SCAFFOLD_087: Model router and tier hopping
 
-<<<<<<< HEAD
-=======
-
->>>>>>> origin/main
 namespace RawrXD {
 namespace IDE {
 

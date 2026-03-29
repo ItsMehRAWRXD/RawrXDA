@@ -646,7 +646,6 @@ std::expected<std::string, CLIError> EnhancedCLI::cmdOptimize(const std::vector<
 
 std::expected<std::string, CLIError> EnhancedCLI::cmdTest(const std::vector<std::string>& args, IDEOrchestrator* ide) {
     if (args.empty()) return "Usage: test <files...>";
-<<<<<<< HEAD
 
     // Minimal deterministic test runner hook:
     // - Validate that paths exist.
@@ -666,10 +665,6 @@ std::expected<std::string, CLIError> EnhancedCLI::cmdTest(const std::vector<std:
         for (const auto& m : missing) oss << " " << m;
     }
     return oss.str();
-=======
-    // Placeholder for triggering test runner
-    return "Running tests for: " + args[0];
->>>>>>> origin/main
 }
 
 std::expected<std::string, CLIError> EnhancedCLI::cmdDocs(const std::vector<std::string>& args, IDEOrchestrator* ide) {

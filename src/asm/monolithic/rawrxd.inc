@@ -80,7 +80,6 @@ EXTERN InferenceEngineInit:PROC
 EXTERN RunInference:PROC
 EXTERN TokenGenerate:PROC
 EXTERN ClearKVCache:PROC
-<<<<<<< HEAD
 EXTERN PruneKVCache:PROC
 EXTERN UpdateImportanceScores:PROC
 EXTERN GetTopKIndices:PROC
@@ -105,9 +104,6 @@ EXTERN KVBlock_ReuseBlock:PROC
 ; inference.asm — Phase 8C: Head-Major KV Layout
 EXTERN KVHM_WriteToken:PROC
 EXTERN KVHM_GetHeadPtr:PROC
-=======
-EXTERN g_modelbase:QWORD
->>>>>>> origin/main
 
 ; ui.asm
 EXTERN UIMainLoop:PROC
@@ -180,7 +176,6 @@ EXTERN SwarmCoord_Shutdown:PROC
 EXTERN g_coordReady:DWORD
 EXTERN g_workerCount:DWORD
 
-<<<<<<< HEAD
 ; swarm_network.asm (X+5 Sovereign Expansion → Phase 14 Cross-Node)
 EXTERN SwarmNet_Init:PROC
 EXTERN SwarmNet_Listen:PROC
@@ -224,8 +219,6 @@ EXTERN g_totalMigrations:QWORD
 EXTERN g_stealFailures:QWORD
 EXTERN g_crossNodeSteals:QWORD
 
-=======
->>>>>>> origin/main
 ; stream_loader.asm — Tier 1: demand-paged GGUF VMM
 EXTERN StreamLoaderInit:PROC
 EXTERN StreamMapModel:PROC
@@ -245,7 +238,6 @@ EXTERN SlotRing_SetBudget:PROC
 EXTERN SlotRing_GetSlotStats:PROC
 EXTERN SlotRing_EvictAll:PROC
 
-<<<<<<< HEAD
 ; slot_ring.asm — Phase 6: Prefetch + Pin + Tiered Eviction
 EXTERN SlotRing_Pin:PROC
 EXTERN SlotRing_Unpin:PROC
@@ -254,8 +246,6 @@ EXTERN SlotRing_BatchEvict:PROC
 EXTERN SlotRing_PredictivePrefetch:PROC
 EXTERN SlotRing_ClockEvict:PROC
 
-=======
->>>>>>> origin/main
 ; webview2_shell.asm (P1 — WebView2 Monaco embedding)
 EXTERN WebView2Init:PROC
 EXTERN WebView2Navigate:PROC
@@ -280,7 +270,6 @@ EXTERN g_benchMode:DWORD
 EXTERN g_pModelPath:QWORD
 EXTERN g_pPrompt:QWORD
 
-<<<<<<< HEAD
 EXTERN SlotRing_GetSlotStats:PROC
 EXTERN SlotRing_EvictAll:PROC
 
@@ -333,8 +322,6 @@ EXTERN Bridge_ClearSuggestion:PROC
 EXTERN Bridge_RequestSuggestion:PROC
 EXTERN Bridge_AbortInference:PROC
 
-=======
->>>>>>> origin/main
 ; ── Win32 Constants ──────────────────────────────────────────────
 ; Window Styles
 WS_OVERLAPPEDWINDOW equ 0CF0000h

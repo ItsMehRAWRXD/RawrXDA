@@ -117,7 +117,6 @@ Fixed_Reverse_Engineered/
 Consolidated_Modules_*/
 *.exe.WebView2/
 build_universal/
-<<<<<<< HEAD
 
 # ═══════════════════════════════════════════════════════════════
 # Bloat Prevention (March 2026 cleanup)
@@ -148,11 +147,27 @@ RefactorSuggestions.json
 build_smoke_verify/
 build_ninja3/
 build_smoke_verify2/
+build_smoke_verify2_ninja/
+build_smoke_agent7/
+build_smoke_auto/
+build_heartless_smoke/
+build_freeze_fix/
+build_exe/
+build_exe_crt/
+build_fresh_linktest/
+build_fresh_minus1/
+build_tests/
+output/
 *.map
-
+*.dmp
 
 # Large scan/report files (>100MB)
 **/todo-scan-*.json
 **/Powershield_Audit_Report.json
-=======
->>>>>>> origin/main
+
+# Large external directories
+bigdaddyg-ide/
+Full Source/
+history/
+reconstructed/
+artifacts-backup-*.zip

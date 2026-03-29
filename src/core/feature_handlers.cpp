@@ -22,10 +22,7 @@
 #include "subsystem_agent_bridge.hpp"
 #include "native_debugger_engine.h"
 #include "execution_governor.h"
-<<<<<<< HEAD
 #include "gpu_backend_bridge.h"
-=======
->>>>>>> origin/main
 #include "../agentic/AgentOllamaClient.h"
 #include <windows.h>
 #include <shellapi.h>

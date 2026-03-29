@@ -131,9 +131,11 @@ bool ContextWindowManager::useMemoryMappedFile(bool enable) {
 }
 
 float ContextWindowManager::getUtilization() const {
-    if (m_bytesAllocated == 0) return 0.0f;
-    // This would need actual usage tracking from the inference engine
-    return 0.0f; // Placeholder
+    if (m_bytesAllocated == 0 || m_contextSize == 0) return 0.0f;
+    // Utilization = allocated bytes / (contextSize * sizeof(float) * 2 for KV)
+    size_t capacity = static_cast<size_t>(m_contextSize) * sizeof(float) * 2;
+    if (capacity == 0) return 0.0f;
+    return static_cast<float>(m_bytesAllocated) / static_cast<float>(capacity);
 }
 
 // ============================================================================

@@ -137,22 +137,110 @@ static CommandResult delegateToGui(const CommandContext& ctx, uint32_t cmdId, co
 }
 
 // ============================================================================
-// FILE ? IDE Core (ide_constants.h 105-110)
+// FILE → IDE Core (ide_constants.h 105-110)
 // ============================================================================
 
-CommandResult handleViewToggleSidebar(const CommandContext& ctx)   { return delegateToGui(ctx, 301, "view.toggleSidebar"); }
+// Global view state for CLI parity
+namespace {
+    struct ViewState {
+        bool sidebarVisible = true;
+        bool terminalVisible = false;
+        bool outputVisible = false;
+        bool fullscreen = false;
+        int zoomLevel = 100; // percentage
+        std::mutex mtx;
+    };
+    ViewState g_viewState;
+}
 
-CommandResult handleViewToggleTerminal(const CommandContext& ctx)  { return delegateToGui(ctx, 302, "view.toggleTerminal"); }
+CommandResult handleViewToggleSidebar(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+        HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
+        PostMessageA(hwnd, WM_COMMAND, 301, 0);
+    }
+    std::lock_guard<std::mutex> lock(g_viewState.mtx);
+    g_viewState.sidebarVisible = !g_viewState.sidebarVisible;
+    char buf[128];
+    snprintf(buf, sizeof(buf), "[VIEW] Sidebar %s\n", g_viewState.sidebarVisible ? "shown" : "hidden");
+    ctx.output(buf);
+    return CommandResult::ok("view.toggleSidebar");
+}
 
-CommandResult handleViewToggleOutput(const CommandContext& ctx)    { return delegateToGui(ctx, 303, "view.toggleOutput"); }
+CommandResult handleViewToggleTerminal(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+        HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
+        PostMessageA(hwnd, WM_COMMAND, 302, 0);
+    }
+    std::lock_guard<std::mutex> lock(g_viewState.mtx);
+    g_viewState.terminalVisible = !g_viewState.terminalVisible;
+    char buf[128];
+    snprintf(buf, sizeof(buf), "[VIEW] Terminal panel %s\n", g_viewState.terminalVisible ? "shown" : "hidden");
+    ctx.output(buf);
+    return CommandResult::ok("view.toggleTerminal");
+}
 
-CommandResult handleViewToggleFullscreen(const CommandContext& ctx){ return delegateToGui(ctx, 304, "view.toggleFullscreen"); }
+CommandResult handleViewToggleOutput(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+        HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
+        PostMessageA(hwnd, WM_COMMAND, 303, 0);
+    }
+    std::lock_guard<std::mutex> lock(g_viewState.mtx);
+    g_viewState.outputVisible = !g_viewState.outputVisible;
+    char buf[128];
+    snprintf(buf, sizeof(buf), "[VIEW] Output panel %s\n", g_viewState.outputVisible ? "shown" : "hidden");
+    ctx.output(buf);
+    return CommandResult::ok("view.toggleOutput");
+}
 
-CommandResult handleViewZoomIn(const CommandContext& ctx)          { return delegateToGui(ctx, 305, "view.zoomIn"); }
+CommandResult handleViewToggleFullscreen(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+        HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
+        PostMessageA(hwnd, WM_COMMAND, 304, 0);
+    }
+    std::lock_guard<std::mutex> lock(g_viewState.mtx);
+    g_viewState.fullscreen = !g_viewState.fullscreen;
+    char buf[128];
+    snprintf(buf, sizeof(buf), "[VIEW] Fullscreen %s\n", g_viewState.fullscreen ? "enabled" : "disabled");
+    ctx.output(buf);
+    return CommandResult::ok("view.toggleFullscreen");
+}
 
-CommandResult handleViewZoomOut(const CommandContext& ctx)         { return delegateToGui(ctx, 306, "view.zoomOut"); }
+CommandResult handleViewZoomIn(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+        HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
+        PostMessageA(hwnd, WM_COMMAND, 305, 0);
+    }
+    std::lock_guard<std::mutex> lock(g_viewState.mtx);
+    g_viewState.zoomLevel = (std::min)(g_viewState.zoomLevel + 10, 500);
+    char buf[128];
+    snprintf(buf, sizeof(buf), "[VIEW] Zoom in: %d%%\n", g_viewState.zoomLevel);
+    ctx.output(buf);
+    return CommandResult::ok("view.zoomIn");
+}
 
-CommandResult handleViewZoomReset(const CommandContext& ctx)       { return delegateToGui(ctx, 307, "view.zoomReset"); }
+CommandResult handleViewZoomOut(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+        HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
+        PostMessageA(hwnd, WM_COMMAND, 306, 0);
+    }
+    std::lock_guard<std::mutex> lock(g_viewState.mtx);
+    g_viewState.zoomLevel = (std::max)(g_viewState.zoomLevel - 10, 25);
+    char buf[128];
+    snprintf(buf, sizeof(buf), "[VIEW] Zoom out: %d%%\n", g_viewState.zoomLevel);
+    ctx.output(buf);
+    return CommandResult::ok("view.zoomOut");
+}
+
+CommandResult handleViewZoomReset(const CommandContext& ctx) {
+    if (ctx.isGui && ctx.idePtr) {
+        HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
+        PostMessageA(hwnd, WM_COMMAND, 307, 0);
+    }
+    std::lock_guard<std::mutex> lock(g_viewState.mtx);
+    g_viewState.zoomLevel = 100;
+    ctx.output("[VIEW] Zoom reset to 100%\n");
+    return CommandResult::ok("view.zoomReset");
+}
 
 
 CommandResult handleAIInlineComplete(const CommandContext& ctx) {

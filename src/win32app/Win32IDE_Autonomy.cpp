@@ -1,6 +1,20 @@
 #include "Win32IDE_Autonomy.h"
 #include "IDEConfig.h"
 #include <sstream>
+#include <cctype>
+
+namespace {
+std::string trimCopy(const std::string& s)
+{
+    size_t start = 0;
+    while (start < s.size() && std::isspace(static_cast<unsigned char>(s[start])))
+        ++start;
+    size_t end = s.size();
+    while (end > start && std::isspace(static_cast<unsigned char>(s[end - 1])))
+        --end;
+    return s.substr(start, end - start);
+}
+}  // namespace
 
 // SCAFFOLD_056: AutonomyManager executeAction
 
@@ -55,6 +69,10 @@ void AutonomyManager::enableAutoLoop(bool enable)
     {
         if (!m_running.load())
             start();
+        if (m_loopThread.joinable())
+        {
+            m_loopThread.join();
+        }
         m_autoLoop.store(true);
         m_loopThread = std::thread([this] { loop(); });
         LOG_INFO("Autonomy auto loop enabled");
@@ -62,6 +80,10 @@ void AutonomyManager::enableAutoLoop(bool enable)
     else if (!enable && m_autoLoop.load())
     {
         m_autoLoop.store(false);
+        if (m_loopThread.joinable())
+        {
+            m_loopThread.join();
+        }
         LOG_INFO("Autonomy auto loop disabled");
     }
 }
@@ -69,8 +91,17 @@ void AutonomyManager::enableAutoLoop(bool enable)
 void AutonomyManager::setGoal(const std::string& goal)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
-    m_goal = goal;
-    LOG_INFO("Goal set: " + goal);
+    std::string normalized = trimCopy(goal);
+    if (normalized.size() > 512)
+    {
+        normalized.resize(512);
+    }
+    if (normalized == m_goal)
+    {
+        return;
+    }
+    m_goal = normalized;
+    LOG_INFO("Goal set: " + m_goal);
 }
 
 std::string AutonomyManager::getGoal() const
@@ -82,7 +113,17 @@ std::string AutonomyManager::getGoal() const
 void AutonomyManager::addObservation(const std::string& obs)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
-    m_memory.push_back(obs);
+    std::string bounded = obs;
+    if (bounded.size() > 4096)
+    {
+        bounded.resize(4096);
+        bounded += "...[truncated]";
+    }
+    if (!m_memory.empty() && m_memory.back() == bounded)
+    {
+        return;
+    }
+    m_memory.push_back(bounded);
     // E3: cap at 512 entries
     if (m_memory.size() > 512)
     {
@@ -97,7 +138,6 @@ std::vector<std::string> AutonomyManager::getMemorySnapshot()
     return m_memory;
 }
 
-<<<<<<< HEAD
 // E1: workspace root injected into initial prompt
 // E2: TASK_COMPLETE detection stops loop cleanly without NOOP spin
 // E3: observation ring-buffer capped at 512 (was 2048) to reduce memory
@@ -107,12 +147,14 @@ std::vector<std::string> AutonomyManager::getMemorySnapshot()
 // E7: rateLimitAllow uses per-minute sliding window (was fixed 60s reset)
 void AutonomyManager::tick()
 {
-=======
-void AutonomyManager::tick() {
->>>>>>> origin/main
     SCOPED_METRIC("autonomy.tick");
     if (!m_running.load())
         return;
+    if (std::chrono::steady_clock::now() < m_nextAllowedAction)
+    {
+        METRICS.increment("autonomy.cooldown_skip");
+        return;
+    }
     if (!rateLimitAllow())
     {
         METRICS.increment("autonomy.rate_limited");
@@ -128,9 +170,15 @@ std::string AutonomyManager::getStatus() const
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     std::ostringstream oss;
+    const auto now = std::chrono::steady_clock::now();
+    const auto cooldownMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+        m_nextAllowedAction > now ? (m_nextAllowedAction - now) : std::chrono::steady_clock::duration::zero())
+                                .count();
     oss << "running=" << (m_running.load() ? "true" : "false") << " autoLoop=" << (m_autoLoop.load() ? "true" : "false")
         << " goal='" << m_goal << "' memoryItems=" << m_memory.size() << " actionsWindow=" << m_actionsThisWindow << "/"
-        << m_maxActionsPerMinute;
+        << m_maxActionsPerMinute << " consecutiveErrors=" << m_consecutiveErrors
+        << " cooldownMs=" << cooldownMs
+        << " lastAction='" << m_lastAction << "'";
     return oss.str();
 }
 
@@ -148,18 +196,11 @@ void AutonomyManager::loop()
 std::string AutonomyManager::planNextAction()
 {
     std::lock_guard<std::mutex> lock(m_mutex);
-<<<<<<< HEAD
     if (m_goal.empty())
     {
         return "NOOP";
     }
 
-=======
-    if (m_goal.empty()) {
-        return "NOOP";
-    }
-    
->>>>>>> origin/main
     // Use last observation to drive the loop
     if (m_memory.empty())
     {
@@ -230,29 +271,38 @@ std::string AutonomyManager::planNextAction()
 void AutonomyManager::executeAction(const std::string& action)
 {
     SCOPED_METRIC("autonomy.execute_action");
-<<<<<<< HEAD
     if (action == "NOOP")
     {
-=======
-    if (action == "NOOP") {
->>>>>>> origin/main
         LOG_DEBUG("Planner produced NOOP");
         return;
     }
     METRICS.increment("autonomy.actions_executed");
-<<<<<<< HEAD
     if (!m_bridge || !m_bridge->IsInitialized())
     {
-=======
-    if (!m_bridge || !m_bridge->IsInitialized()) {
->>>>>>> origin/main
         LOG_WARNING("Bridge not initialized; cannot execute action: " + action);
         // m_onOutput is always callable (initialised to no-op in ctor; replaced by
         // setOutputCallback so the message reaches the IDE output panel).
         m_onOutput("[Autonomy] Agentic bridge not ready — load a model (File → Load Model). Deferred: " + action +
                    "\n");
+        m_consecutiveErrors = std::min(8, m_consecutiveErrors + 1);
+        m_lastError = "bridge_not_initialized";
+        m_nextAllowedAction = std::chrono::steady_clock::now() + std::chrono::seconds(m_consecutiveErrors);
         return;
     }
+    m_lastAction = action;
+    m_lastActionAt = std::chrono::steady_clock::now();
+
+    auto appendResponse = [this](const std::string& prefix, const std::string& content)
+    {
+        std::string bounded = content;
+        if (bounded.size() > 8192)
+        {
+            bounded.resize(8192);
+            bounded += "...[truncated]";
+        }
+        addObservation(prefix + bounded);
+    };
+
     // Differentiate tool vs prompt
     if (action.rfind("tool:", 0) == 0)
     {
@@ -262,8 +312,9 @@ void AutonomyManager::executeAction(const std::string& action)
         std::string toolResult;
         if (m_bridge->DispatchModelToolCalls(toolCall, toolResult))
         {
-            addObservation("TOOL_DISPATCH:" + toolCall + " => " + toolResult);
+            appendResponse("TOOL_DISPATCH:" + toolCall + " => ", toolResult);
             LOG_INFO("Autonomy dispatched subagent tool: " + toolCall);
+            m_consecutiveErrors = 0;
             return;
         }
 
@@ -272,11 +323,21 @@ void AutonomyManager::executeAction(const std::string& action)
         // Also check the response for embedded tool calls
         if (m_bridge->DispatchModelToolCalls(resp.content, toolResult))
         {
-            addObservation("TOOL:" + toolCall + " => " + resp.content + "\n[Tool Result] " + toolResult);
+            appendResponse("TOOL:" + toolCall + " => ", resp.content + "\n[Tool Result] " + toolResult);
         }
         else
         {
-            addObservation("TOOL:" + toolCall + " => " + resp.content);
+            appendResponse("TOOL:" + toolCall + " => ", resp.content);
+        }
+        if (resp.type == AgentResponseType::AGENT_ERROR)
+        {
+            m_consecutiveErrors = std::min(8, m_consecutiveErrors + 1);
+            m_lastError = resp.content;
+            m_nextAllowedAction = std::chrono::steady_clock::now() + std::chrono::seconds(m_consecutiveErrors);
+        }
+        else
+        {
+            m_consecutiveErrors = 0;
         }
     }
     else if (action.rfind("prompt:", 0) == 0)
@@ -288,21 +349,43 @@ void AutonomyManager::executeAction(const std::string& action)
         std::string toolResult;
         if (m_bridge->DispatchModelToolCalls(resp.content, toolResult))
         {
-            addObservation("ANSWER:" + resp.content + "\n[Tool Result] " + toolResult);
+            appendResponse("ANSWER:", resp.content + "\n[Tool Result] " + toolResult);
         }
         else
         {
-            addObservation("ANSWER:" + resp.content);
+            appendResponse("ANSWER:", resp.content);
         }
-<<<<<<< HEAD
+        if (resp.content.find("TASK_COMPLETE") != std::string::npos)
+        {
+            m_autoLoop.store(false);
+            m_running.store(false);
+            m_onOutput("[Autonomy] Task marked complete by model.\n");
+        }
+        if (resp.type == AgentResponseType::AGENT_ERROR)
+        {
+            m_consecutiveErrors = std::min(8, m_consecutiveErrors + 1);
+            m_lastError = resp.content;
+            m_nextAllowedAction = std::chrono::steady_clock::now() + std::chrono::seconds(m_consecutiveErrors);
+        }
+        else
+        {
+            m_consecutiveErrors = 0;
+        }
     }
     else
     {
-=======
-    } else {
->>>>>>> origin/main
         auto resp = m_bridge->ExecuteAgentCommand(action);
-        addObservation("RAW:" + resp.content);
+        appendResponse("RAW:", resp.content);
+        if (resp.type == AgentResponseType::AGENT_ERROR)
+        {
+            m_consecutiveErrors = std::min(8, m_consecutiveErrors + 1);
+            m_lastError = resp.content;
+            m_nextAllowedAction = std::chrono::steady_clock::now() + std::chrono::seconds(m_consecutiveErrors);
+        }
+        else
+        {
+            m_consecutiveErrors = 0;
+        }
     }
     LOG_INFO("Executed autonomy action: " + action);
 }
@@ -310,16 +393,18 @@ void AutonomyManager::executeAction(const std::string& action)
 bool AutonomyManager::rateLimitAllow()
 {
     auto now = std::chrono::steady_clock::now();
-    auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - m_windowStart).count();
-    if (elapsed >= 60)
+    while (!m_actionTimes.empty() &&
+           std::chrono::duration_cast<std::chrono::seconds>(now - m_actionTimes.front()).count() >= 60)
     {
-        m_windowStart = now;
-        m_actionsThisWindow = 0;
+        m_actionTimes.pop_front();
     }
+    m_actionsThisWindow = static_cast<int>(m_actionTimes.size());
     if (m_actionsThisWindow >= m_maxActionsPerMinute)
     {
         return false;
     }
+    m_actionTimes.push_back(now);
     ++m_actionsThisWindow;
+    m_windowStart = now;
     return true;
 }

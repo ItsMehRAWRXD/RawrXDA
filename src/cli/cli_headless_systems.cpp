@@ -891,35 +891,16 @@ void cmd_multi_response(const std::string& args) {
         std::cout << "\n📝 Response Templates:\n";
         for (const auto& t : templates) {
             std::cout << "  [" << static_cast<int>(t.id) << "] " << t.name
-                      << " (" << t.shortLabel << ") "
-                      << (t.enabled ? "✅" : "❌")
-                      << " temp=" << t.temperature
-                      << " max=" << t.maxTokens << "\n";
-            if (t.description[0] != '\0') {
-                std::cout << "      " << t.description << "\n";
-            }
+                      << " " << (t.enabled ? "✅" : "❌") << "\n";
         }
         std::cout << "\n";
 
     } else if (sub == "stats") {
         auto stats = g_multiResponse->getStats();
         std::cout << "\n📊 Multi-Response Stats:\n";
-        std::cout << "  Total sessions:     " << stats.totalSessions << "\n";
-        std::cout << "  Responses generated: " << stats.totalResponsesGenerated << "\n";
-        std::cout << "  Preferences recorded:" << stats.totalPreferencesRecorded << "\n";
-        std::cout << "  Errors:             " << stats.errorCount << "\n";
-        std::cout << "  Preference counts:  ";
-        const char* names[] = { "Strategic", "Grounded", "Creative", "Concise" };
-        for (int i = 0; i < 4; i++) {
-            std::cout << names[i] << "=" << stats.preferenceCount[i];
-            if (i < 3) std::cout << ", ";
-        }
-        std::cout << "\n  Avg latency:        ";
-        for (int i = 0; i < 4; i++) {
-            std::cout << names[i] << "=" << formatDuration(stats.avgLatencyMs[i]);
-            if (i < 3) std::cout << ", ";
-        }
-        std::cout << "\n\n";
+        std::cout << "  Total sessions:      " << stats.totalSessions << "\n";
+        std::cout << "  Total responses:     " << stats.totalResponses << "\n";
+        std::cout << "  Preference selections:" << stats.preferenceSelections << "\n\n";
 
     } else if (sub == "toggle") {
         if (rest.empty()) {
@@ -932,8 +913,8 @@ void cmd_multi_response(const std::string& args) {
             std::cout << "❌ Invalid template ID (0-3)\n";
             return;
         }
-        auto tmpl = g_multiResponse->getTemplate(static_cast<ResponseTemplateId>(id));
-        g_multiResponse->setTemplateEnabled(static_cast<ResponseTemplateId>(id), !tmpl.enabled);
+        auto tmpl = g_multiResponse->getTemplate(static_cast<uint32_t>(id));
+        g_multiResponse->setTemplateEnabled(static_cast<uint32_t>(id), !tmpl.enabled);
         std::cout << "✅ " << tmpl.name << " → "
                   << (!tmpl.enabled ? "enabled" : "disabled") << "\n";
 
@@ -953,7 +934,7 @@ void cmd_multi_response(const std::string& args) {
             std::cout << "❌ No multi-response session available. Run !multi <prompt> first.\n";
             return;
         }
-        auto result = g_multiResponse->setPreference(session->sessionId, idx, reason);
+        auto result = g_multiResponse->setPreference(session->sessionId, idx);
         std::cout << (result.success ? "✅" : "❌") << " " << result.detail << "\n";
 
     } else if (sub == "recommend") {
@@ -970,12 +951,12 @@ void cmd_multi_response(const std::string& args) {
         std::cout << "Multi-Response Comparison — Prompt: \"" 
                   << session->prompt.substr(0, 60) << "\"\n";
         std::cout << std::string(80, '=') << "\n";
-        for (const auto& resp : session->responses) {
-            if (!resp.complete && !resp.error) continue;
-            std::cout << "\n── [" << resp.index << "] " << resp.templateName
-                      << " (" << resp.tokenCount << " tokens, "
-                      << formatDuration(resp.latencyMs) << ") ";
-            if (resp.error) std::cout << "❌ ERROR: " << resp.errorDetail;
+        for (size_t i = 0; i < session->responses.size(); ++i) {
+            const auto& resp = session->responses[i];
+            const auto& tmpl = g_multiResponse->getTemplate(resp.templateId);
+            std::cout << "\n── [" << i << "] " << tmpl.name
+                      << " (" << formatDuration(resp.latencyMs) << ") ";
+            if (!resp.success) std::cout << "❌ ERROR";
             std::cout << " ──\n";
             if (!resp.content.empty()) {
                 // Truncate for display
@@ -988,8 +969,9 @@ void cmd_multi_response(const std::string& args) {
         }
         std::cout << std::string(80, '=') << "\n";
         if (session->preferredIndex >= 0) {
-            std::cout << "✅ Preferred: [" << session->preferredIndex << "] "
-                      << session->responses[session->preferredIndex].templateName << "\n";
+            const auto& preferred = session->responses[session->preferredIndex];
+            const auto& tmpl = g_multiResponse->getTemplate(preferred.templateId);
+            std::cout << "✅ Preferred: [" << session->preferredIndex << "] " << tmpl.name << "\n";
         }
         std::cout << "\n";
 
@@ -1009,17 +991,7 @@ void cmd_multi_response(const std::string& args) {
 
         auto sessionId = g_multiResponse->startSession(prompt, maxResp);
 
-        // Per-response callback for live display
-        auto perCb = [](const GeneratedResponse& resp, void* /*userData*/) {
-            std::cout << "  [" << resp.index << "] " << resp.templateName << ": "
-                      << resp.tokenCount << " tokens, "
-                      << static_cast<int>(resp.latencyMs) << "ms";
-            if (resp.error) std::cout << " ❌ " << resp.errorDetail;
-            else std::cout << " ✅";
-            std::cout << "\n";
-        };
-
-        auto result = g_multiResponse->generateAll(sessionId, perCb, nullptr);
+        auto result = g_multiResponse->generateAll(sessionId);
 
         if (!result.success) {
             std::cout << "❌ Generation failed: " << result.detail << "\n";
@@ -1670,145 +1642,57 @@ void cmd_swarm_orchestrator(const std::string& args) {
     auto& swarm = RawrXD::Swarm::SwarmOrchestrator::instance();
     auto [sub, rest] = splitFirst(args);
 
-    if (sub == "join" || sub == "swarm_join") {
-        // Gate check — joining a swarm is a network operation
-        if (!cli_gate_check(static_cast<int>(ActionClass::NetworkRequest),
-                           static_cast<int>(SafetyRiskTier::Medium),
-                           0.90f, "Join distributed swarm" + (rest.empty() ? " (as coordinator)" : ": " + rest))) {
+    if (sub == "status" || sub.empty()) {
+        if (!swarm.isRunning()) {
+            std::cout << "[Swarm] Not initialized. Use !swarm join [coordinator_ip] first.\n";
+            return;
+        }
+        std::cout << "\n🌐 Swarm Topology:\n" << swarm.topologyToJson() << "\n";
+        return;
+    }
+
+    if (sub == "join") {
+        if (!cli_gate_check(static_cast<int>(ActionClass::NetworkRequest), static_cast<int>(SafetyRiskTier::Medium), 0.90f,
+                            "Join distributed swarm" + (rest.empty() ? " (as coordinator)" : ": " + rest))) {
             return;
         }
 
-        // Initialize if not already running
         if (!swarm.isRunning()) {
-            auto role = rest.empty() ? RawrXD::Swarm::NodeRole::Coordinator
-                                     : RawrXD::Swarm::NodeRole::Worker;
-            auto r = swarm.initialize(role, "0.0.0.0");
-            if (!r.success) {
-                std::cout << "❌ Failed to initialize swarm: " << r.detail << "\n";
+            auto role = rest.empty() ? RawrXD::Swarm::NodeRole::Coordinator : RawrXD::Swarm::NodeRole::Worker;
+            auto init = swarm.initialize(role, "0.0.0.0");
+            if (!init.success) {
+                std::cout << "❌ Failed to initialize swarm: " << init.detail << "\n";
                 return;
             }
         }
 
         auto r = swarm.joinSwarm(rest);
         std::cout << (r.success ? "✅ " : "❌ ") << r.detail << "\n";
+        return;
+    }
 
-        cli_record_action(
-            static_cast<int>(ReplayActionType::AgentToolCall),
-            "swarm", "join", rest,
-            r.detail, r.success ? 0 : 1, 0.9f, 0.0);
-
-    } else if (sub == "status" || sub == "swarm_status" || sub.empty()) {
-        if (!swarm.isRunning()) {
-            std::cout << "[Swarm] Not initialized. Use !swarm_join to start.\n";
-            return;
-        }
-        std::cout << "\n🌐 Swarm Topology:\n" << swarm.topologyToJson() << "\n";
-
-    } else if (sub == "distribute" || sub == "swarm_distribute") {
-        if (!swarm.isRunning()) {
-            std::cout << "❌ Swarm not initialized. Use !swarm_join first.\n";
-            return;
-        }
-        auto [modelPath, layerStr] = splitFirst(rest);
-        if (modelPath.empty()) {
-            std::cout << "Usage: !swarm_distribute <model_path> <total_layers>\n";
-            return;
-        }
-
-        // Gate check — distributing a model is a critical operation
-        if (!cli_gate_check(static_cast<int>(ActionClass::ModifyModel),
-                           static_cast<int>(SafetyRiskTier::High),
-                           0.85f, "Distribute model across swarm: " + modelPath)) {
-            return;
-        }
-
-        uint32_t totalLayers = static_cast<uint32_t>(parseInt(layerStr, 128));
-        std::cout << "[Swarm] Distributing " << totalLayers << " layers from " << modelPath << "...\n";
-        auto r = swarm.distributeModel(modelPath, totalLayers);
-        std::cout << (r.success ? "✅ " : "❌ ") << r.detail << "\n";
-
-        cli_record_action(
-            static_cast<int>(ReplayActionType::AgentToolCall),
-            "swarm", "distribute", modelPath + " " + std::to_string(totalLayers),
-            r.detail, r.success ? 0 : 1, 0.85f, 0.0);
-
-    } else if (sub == "rebalance" || sub == "swarm_rebalance") {
-        if (!swarm.isRunning()) {
-            std::cout << "❌ Swarm not initialized.\n";
-            return;
-        }
-
-        // Gate check
-        if (!cli_gate_check(static_cast<int>(ActionClass::ModifyModel),
-                           static_cast<int>(SafetyRiskTier::Medium),
-                           0.90f, "Rebalance swarm layer shards")) {
-            return;
-        }
-
-        std::cout << "[Swarm] Rebalancing...\n";
-        auto r = swarm.rebalance();
-        std::cout << (r.success ? "✅ " : "❌ ") << r.detail << "\n";
-
-    } else if (sub == "nodes" || sub == "swarm_nodes") {
+    if (sub == "stats") {
         if (!swarm.isRunning()) {
             std::cout << "[Swarm] Not initialized.\n";
             return;
         }
-        auto nodes = swarm.getNodeList();
-        std::cout << "\n🖥  Swarm Nodes (" << nodes.size() << "):\n";
-        for (const auto& n : nodes) {
-            const char* stateStr = "Unknown";
-            switch (n.state) {
-                case RawrXD::Swarm::NodeState::Offline:    stateStr = "OFFLINE";    break;
-                case RawrXD::Swarm::NodeState::Joining:    stateStr = "JOINING";    break;
-                case RawrXD::Swarm::NodeState::Active:     stateStr = "ACTIVE";     break;
-                case RawrXD::Swarm::NodeState::Overloaded: stateStr = "OVERLOADED"; break;
-                case RawrXD::Swarm::NodeState::Failed:     stateStr = "FAILED";     break;
-            }
-            std::cout << "  " << (n.state == RawrXD::Swarm::NodeState::Active ? "🟢" : "🔴")
-                      << " " << n.nodeId << " [" << stateStr << "]"
-                      << " VRAM=" << (n.freeVRAM / (1024ULL*1024ULL)) << "/"
-                      << (n.totalVRAM / (1024ULL*1024ULL)) << "MB"
-                      << " GPU=" << (n.gpuAccel ? "YES" : "NO")
-                      << " layers=" << n.hostedLayers.size() << "\n";
-        }
+        std::cout << "\n📊 Swarm Statistics:\n" << swarm.statsToJson() << "\n";
+        return;
+    }
 
-    } else if (sub == "shards" || sub == "swarm_shards") {
-        if (!swarm.isRunning()) {
-            std::cout << "[Swarm] Not initialized.\n";
-            return;
-        }
-        auto shards = swarm.getShardList();
-        std::cout << "\n📦 Layer Shards (" << shards.size() << "):\n";
-        for (const auto& s : shards) {
-            std::cout << "  " << (s.resident ? "🟢" : "⚪")
-                      << " Layers " << s.layerStart << "-" << s.layerEnd
-                      << " → " << s.nodeId
-                      << " Q" << static_cast<int>(s.quant)
-                      << " " << (s.sizeBytes / (1024ULL * 1024ULL)) << "MB"
-                      << " refs=" << s.refCount << "\n";
-        }
-
-    } else if (sub == "leave" || sub == "swarm_leave") {
+    if (sub == "leave") {
         if (!swarm.isRunning()) {
             std::cout << "[Swarm] Not initialized.\n";
             return;
         }
         swarm.leaveSwarm();
         std::cout << "✅ Left the swarm\n";
-
-    } else if (sub == "stats" || sub == "swarm_stats") {
-        std::cout << "\n📊 Swarm Statistics:\n" << swarm.statsToJson() << "\n";
-
-    } else {
-        std::cout << "Usage: !swarm <join|status|distribute|rebalance|nodes|shards|leave|stats>\n"
-                  << "  !swarm_join [ip]                — Join swarm or become coordinator\n"
-                  << "  !swarm_status                   — Show topology\n"
-                  << "  !swarm_distribute <model> <n>   — Distribute model layers\n"
-                  << "  !swarm_rebalance                — Rebalance by VRAM pressure\n"
-                  << "  !swarm nodes                    — List swarm nodes\n"
-                  << "  !swarm shards                   — List layer shards\n"
-                  << "  !swarm leave                    — Leave swarm\n"
-                  << "  !swarm stats                    — Show network stats\n";
+        return;
     }
+
+    std::cout << "Usage:\n"
+              << "  !swarm status\n"
+              << "  !swarm join [coordinator_ip]\n"
+              << "  !swarm stats\n"
+              << "  !swarm leave\n";
 }

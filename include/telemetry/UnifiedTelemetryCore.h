@@ -349,14 +349,20 @@ private:
 };
 
 // ============================================================================
-// Convenience macros
+// Convenience macros / inline functions
 // ============================================================================
+inline void TelemetryEmit(TelemetrySource source, TelemetryLevel level,
+                          const char* category, const char* message) {
+    UnifiedTelemetryCore::Instance().Emit(source, level, category, message);
+}
+
+// TELEMETRY_SPAN must remain a macro — uses __LINE__ for unique variable naming
 #define TELEMETRY_SPAN(source, category, message) \
     RawrXD::Telemetry::TelemetrySpan _tspan##__LINE__( \
         RawrXD::Telemetry::TelemetrySource::source, category, message)
 
 #define TELEMETRY_EMIT(source, level, category, message) \
-    RawrXD::Telemetry::UnifiedTelemetryCore::Instance().Emit( \
+    RawrXD::Telemetry::TelemetryEmit( \
         RawrXD::Telemetry::TelemetrySource::source, \
         RawrXD::Telemetry::TelemetryLevel::level, \
         category, message)

@@ -149,9 +149,55 @@ void GovernorThrottling::monitoringThread() {
             m_memoryUsage = 1.0f - static_cast<float>(memInfo.ullAvailPhys) / static_cast<float>(memInfo.ullTotalPhys);
         }
 
-        // Update GPU usage (placeholder - in real implementation, use DXGI or NVAPI)
-        // For now, estimate based on CPU
-        m_gpuUsage = std::min(1.0f, m_cpuUsage * 1.2f); // Slightly higher than CPU
+        // Update GPU usage via DXGI adapter query
+        {
+            float gpuUsage = 0.0f;
+            HMODULE hDXGI = LoadLibraryA("dxgi.dll");
+            if (hDXGI) {
+                using PFN_CreateDXGIFactory1 = HRESULT (WINAPI*)(REFIID, void**);
+                auto fnCreate = reinterpret_cast<PFN_CreateDXGIFactory1>(
+                    GetProcAddress(hDXGI, "CreateDXGIFactory1"));
+                if (fnCreate) {
+                    // IID_IDXGIFactory4
+                    static const GUID iidFactory = { 0x1bc6ea02, 0xef36, 0x464f,
+                        { 0xbf, 0x0c, 0x21, 0xca, 0x39, 0xe5, 0x16, 0x8a } };
+                    void* pFactory = nullptr;
+                    if (SUCCEEDED(fnCreate(iidFactory, &pFactory)) && pFactory) {
+                        // IDXGIFactory4::EnumAdapters is vtable[7]
+                        auto vtbl = *reinterpret_cast<void***>(pFactory);
+                        using PFN_EnumAdapters = HRESULT (STDMETHODCALLTYPE*)(void*, UINT, void**);
+                        auto fnEnum = reinterpret_cast<PFN_EnumAdapters>(vtbl[7]);
+                        void* pAdapter = nullptr;
+                        if (SUCCEEDED(fnEnum(pFactory, 0, &pAdapter)) && pAdapter) {
+                            // IDXGIAdapter3::QueryVideoMemoryInfo is vtable[14]
+                            auto adapterVtbl = *reinterpret_cast<void***>(pAdapter);
+                            struct DXGI_QUERY_VIDEO_MEMORY_INFO {
+                                UINT64 Budget;
+                                UINT64 CurrentUsage;
+                                UINT64 AvailableForReservation;
+                                UINT64 CurrentReservation;
+                            };
+                            using PFN_QueryVidMem = HRESULT (STDMETHODCALLTYPE*)(void*, UINT, int, DXGI_QUERY_VIDEO_MEMORY_INFO*);
+                            auto fnQuery = reinterpret_cast<PFN_QueryVidMem>(adapterVtbl[14]);
+                            DXGI_QUERY_VIDEO_MEMORY_INFO vidMemInfo{};
+                            if (SUCCEEDED(fnQuery(pAdapter, 0, 0, &vidMemInfo)) && vidMemInfo.Budget > 0) {
+                                gpuUsage = static_cast<float>(vidMemInfo.CurrentUsage) /
+                                           static_cast<float>(vidMemInfo.Budget);
+                            }
+                            // Release adapter
+                            using PFN_Release = ULONG (STDMETHODCALLTYPE*)(void*);
+                            reinterpret_cast<PFN_Release>(adapterVtbl[2])(pAdapter);
+                        }
+                        // Release factory
+                        using PFN_Release = ULONG (STDMETHODCALLTYPE*)(void*);
+                        auto factoryVtbl = *reinterpret_cast<void***>(pFactory);
+                        reinterpret_cast<PFN_Release>(factoryVtbl[2])(pFactory);
+                    }
+                }
+                FreeLibrary(hDXGI);
+            }
+            m_gpuUsage = gpuUsage;
+        }
 
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }

@@ -1,13 +1,13 @@
 // =============================================================================
-// AgentOllamaClient.h — Native streaming client for Agentic + FIM inference
+// AgentOllamaClient.h — HTTP streaming client for Ollama Agentic + FIM inference
 // =============================================================================
-// Wraps the native BackendOrchestrator with:
+// Wraps Ollama HTTP APIs with:
 //   1. Tool-calling dispatch (function calling via structured output)
 //   2. FIM (Fill-in-Middle) streaming for Ghost Text completions
 //   3. Conversation history management
 //   4. Token streaming with callback interface
 //
-// Native BackendOrchestrator integration only.
+// Ollama HTTP integration only (/api/chat, /api/generate, /api/tags).
 // No exceptions — all errors via AgentResult pattern.
 // =============================================================================
 #pragma once
@@ -115,7 +115,7 @@ struct OllamaHealth {
 };
 
 // ---------------------------------------------------------------------------
-// AgentOllamaClient — native streaming interface for agentic + FIM
+// AgentOllamaClient — HTTP streaming interface for agentic + FIM
 // ---------------------------------------------------------------------------
 class AgentOllamaClient {
 public:
