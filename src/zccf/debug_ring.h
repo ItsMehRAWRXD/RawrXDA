@@ -38,6 +38,9 @@
 #include <atomic>
 #include <expected>
 
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
 namespace RawrXD {
 namespace ZCCF {
 
@@ -157,6 +160,96 @@ private:
     std::atomic<uint64_t>      m_seq  { 0 };   // monotonic seq counter
     mutable uint32_t           m_lock_word { 0 }; // simple spinlock word
 };
+
+// ============================================================================
+// Inline implementation (kept here to avoid target-link drift across trees)
+// ============================================================================
+
+namespace detail {
+struct DebugRingSpinGuard {
+    uint32_t* word;
+    explicit DebugRingSpinGuard(uint32_t* w) : word(w) {
+        while (InterlockedCompareExchange(reinterpret_cast<volatile long*>(word), 1L, 0L) != 0L) {
+            YieldProcessor();
+        }
+    }
+    ~DebugRingSpinGuard() {
+        InterlockedExchange(reinterpret_cast<volatile long*>(word), 0L);
+    }
+};
+} // namespace detail
+
+inline DebugRing::DebugRing(uint32_t capacity)
+    : m_capacity(capacity == 0 ? kDefaultCapacity : capacity),
+      m_slots(m_capacity) {}
+
+inline DebugRing::~DebugRing() = default;
+
+inline void DebugRing::Push(DebuggerFramePayload payload) noexcept {
+    detail::DebugRingSpinGuard g(&m_lock_word);
+    uint64_t seq = m_seq.fetch_add(1) + 1;
+    payload.seq = seq;
+    uint64_t head = m_head.load();
+    m_slots[head % m_capacity] = payload;
+    m_head.store(head + 1);
+}
+
+inline std::optional<DebuggerFramePayload> DebugRing::Latest() const noexcept {
+    detail::DebugRingSpinGuard g(&m_lock_word);
+    uint64_t head = m_head.load();
+    if (head == 0) return std::nullopt;
+    return m_slots[(head - 1) % m_capacity];
+}
+
+inline std::vector<DebuggerFramePayload> DebugRing::LatestN(uint32_t count) const {
+    detail::DebugRingSpinGuard g(&m_lock_word);
+    std::vector<DebuggerFramePayload> out;
+    uint64_t head = m_head.load();
+    if (head == 0 || count == 0) return out;
+
+    uint64_t avail = (head < m_capacity) ? head : m_capacity;
+    uint64_t take = (count < avail) ? count : avail;
+    out.reserve(static_cast<size_t>(take));
+    for (uint64_t i = 0; i < take; ++i) {
+        out.push_back(m_slots[(head - 1 - i) % m_capacity]);
+    }
+    return out;
+}
+
+inline std::vector<DebuggerFramePayload> DebugRing::Since(uint64_t afterSeq) const {
+    detail::DebugRingSpinGuard g(&m_lock_word);
+    std::vector<DebuggerFramePayload> out;
+    uint64_t head = m_head.load();
+    if (head == 0) return out;
+
+    uint64_t avail = (head < m_capacity) ? head : m_capacity;
+    uint64_t start = head - avail;
+    for (uint64_t i = 0; i < avail; ++i) {
+        const auto& p = m_slots[(start + i) % m_capacity];
+        if (p.seq > afterSeq) out.push_back(p);
+    }
+    return out;
+}
+
+inline uint32_t DebugRing::Capacity() const noexcept {
+    return m_capacity;
+}
+
+inline uint32_t DebugRing::Count() const noexcept {
+    uint64_t head = m_head.load();
+    return static_cast<uint32_t>((head < m_capacity) ? head : m_capacity);
+}
+
+inline uint64_t DebugRing::LastSeq() const noexcept {
+    return m_seq.load();
+}
+
+inline void DebugRing::Clear() noexcept {
+    detail::DebugRingSpinGuard g(&m_lock_word);
+    m_head.store(0);
+    m_seq.store(0);
+    for (auto& s : m_slots) s = DebuggerFramePayload{};
+}
 
 } // namespace ZCCF
 } // namespace RawrXD

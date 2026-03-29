@@ -10,6 +10,7 @@
 #include <mutex>
 #include <functional>
 #include "../core/native_debugger_types.h"
+#include "../zccf/debug_ring.h"
 #include "debugger_error_handler.h"
 
 using RawrXD::Debugger::NativeStackFrame;
@@ -297,6 +298,16 @@ public:
      * @brief Get full diagnostic report for entire stack
      */
     std::string getDiagnosticsReport() const noexcept;
+
+    // =========================================================================
+    // ZCCF Debug Ring Integration (P1.2)
+    // =========================================================================
+
+    /// Latest structured debugger payload for agent consumers.
+    std::optional<RawrXD::ZCCF::DebuggerFramePayload> latestDebugPayload() const noexcept;
+
+    /// Structured debugger payloads since sequence (exclusive).
+    std::vector<RawrXD::ZCCF::DebuggerFramePayload> debugPayloadsSince(uint64_t afterSeq) const;
     
     /**
      * @brief Clear all frame data
@@ -333,8 +344,12 @@ private:
     EnhancedStackFrame convertFromNativeFrame(const NativeStackFrame& nf) noexcept;
     bool validateFrame(EnhancedStackFrame& frame) noexcept;
     void updateDisplayIndices() noexcept;
+    void emitPayloadFromFrame(const EnhancedStackFrame& frame,
+                              RawrXD::ZCCF::CaptureMode mode) noexcept;
 
     ErrorReportCallback errorReportCallback_;
+    RawrXD::ZCCF::DebugRing debugRing_;
+    std::chrono::steady_clock::time_point ringStartTime_;
 };
 
 // =============================================================================

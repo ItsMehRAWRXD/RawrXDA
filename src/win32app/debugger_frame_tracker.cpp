@@ -138,8 +138,10 @@ size_t FrameHistory::size() const noexcept {
 // =============================================================================
 
 DebuggerFrameTracker::DebuggerFrameTracker()
-    : currentFrameIndex_(0), isValid_(false), validationErrorCount_(0), droppedFrameCount_(0) {
+        : currentFrameIndex_(0), isValid_(false), validationErrorCount_(0), droppedFrameCount_(0),
+            debugRing_(RawrXD::ZCCF::DebugRing::kDefaultCapacity) {
     lastUpdateTime_ = std::chrono::steady_clock::now();
+        ringStartTime_ = lastUpdateTime_;
 }
 
 namespace {
@@ -243,6 +245,10 @@ size_t DebuggerFrameTracker::updateFromNativeFrames(
         lastUpdateTime_ = std::chrono::steady_clock::now();
         recomputeValidationState();
 
+        if (const auto* cur = getCurrentFrame()) {
+            emitPayloadFromFrame(*cur, RawrXD::ZCCF::CaptureMode::Stopped);
+        }
+
         if (validFrameCount == 0 && !frames_.empty()) {
             reportTrackerError(
                 DebuggerErrorType::FrameDataCorrupted,
@@ -345,6 +351,10 @@ size_t DebuggerFrameTracker::updateFromDapFrames(
         updateDisplayIndices();
         lastUpdateTime_ = std::chrono::steady_clock::now();
         recomputeValidationState();
+
+        if (const auto* cur = getCurrentFrame()) {
+            emitPayloadFromFrame(*cur, RawrXD::ZCCF::CaptureMode::SoftSample);
+        }
 
         if (validFrameCount == 0 && !frames_.empty()) {
             reportTrackerError(
@@ -538,6 +548,8 @@ bool DebuggerFrameTracker::selectFrameInternal(size_t index, bool recordHistory)
             // Swallow callback exceptions
         }
     }
+
+    emitPayloadFromFrame(frames_[index], RawrXD::ZCCF::CaptureMode::Breakpoint);
     
     return true;
 }
@@ -899,6 +911,16 @@ std::string DebuggerFrameTracker::getDiagnosticsReport() const noexcept {
     }
 }
 
+std::optional<RawrXD::ZCCF::DebuggerFramePayload>
+DebuggerFrameTracker::latestDebugPayload() const noexcept {
+    return debugRing_.Latest();
+}
+
+std::vector<RawrXD::ZCCF::DebuggerFramePayload>
+DebuggerFrameTracker::debugPayloadsSince(uint64_t afterSeq) const {
+    return debugRing_.Since(afterSeq);
+}
+
 void DebuggerFrameTracker::clear() noexcept {
     try {
         frames_.clear();
@@ -1042,6 +1064,32 @@ void DebuggerFrameTracker::updateDisplayIndices() noexcept {
         }
     } catch (...) {
         // Best effort only; preserve noexcept contract.
+    }
+}
+
+void DebuggerFrameTracker::emitPayloadFromFrame(
+    const EnhancedStackFrame& frame,
+    RawrXD::ZCCF::CaptureMode mode) noexcept {
+    try {
+        RawrXD::ZCCF::DebuggerFramePayload p{};
+        p.rip = frame.instructionPtr;
+        p.rsp = frame.stackPtr;
+        p.rbp = frame.framePtr;
+        p.returnIps[0] = frame.instructionPtr;
+        p.stackPeekBytes = 0;
+        p.moduleHandle = 0;
+        p.symbolHandle = 0;
+        p.confidence = (frame.state == FrameState::Valid) ? 1.0f : 0.35f;
+        p.captureMode = mode;
+        p.timestampUs = static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::steady_clock::now() - ringStartTime_).count());
+        p.threadId = static_cast<uint32_t>(frame.threadId);
+        p.processId = ::GetCurrentProcessId();
+
+        debugRing_.Push(std::move(p));
+    } catch (...) {
+        // Best effort only; frame tracker remains non-throwing.
     }
 }
 
