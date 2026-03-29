@@ -16,6 +16,7 @@
 #include <chrono>
 #include <cstdio>
 #include <fstream>
+#include <expected>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -237,6 +238,39 @@ static std::vector<std::string> splitLines(const std::string& text) {
         lines.push_back(line);
     }
     return lines;
+}
+
+static size_t computeOffsetFromLineCol(std::string_view text,
+                                       int cursorLine,
+                                       int cursorColumn) {
+    if (cursorLine <= 1) {
+        return static_cast<size_t>(std::max(0, cursorColumn));
+    }
+
+    int line = 1;
+    size_t pos = 0;
+    while (pos < text.size() && line < cursorLine) {
+        if (text[pos] == '\n') {
+            ++line;
+        }
+        ++pos;
+    }
+
+    size_t lineStart = pos;
+    size_t lineEnd = text.find('\n', lineStart);
+    if (lineEnd == std::string_view::npos) {
+        lineEnd = text.size();
+    }
+
+    size_t lineLen = lineEnd - lineStart;
+    size_t col = 0;
+    if (cursorColumn > 0) {
+        col = static_cast<size_t>(cursorColumn);
+        if (col > lineLen) {
+            col = lineLen;
+        }
+    }
+    return lineStart + col;
 }
 
 // ============================================================================
@@ -515,6 +549,68 @@ ContextResult ContextAssembler::assembleWithHierarchy(const std::string& fileCon
     int totalTokens = estimateTokens(assembled);
 
     return ContextResult::ok(std::move(assembled), totalTokens);
+}
+
+std::expected<ContextHandlePacket, const char*> ContextAssembler::buildHandlePacket(
+    const std::filesystem::path& filePath,
+    int cursorLine,
+    int cursorColumn,
+    const std::string& language) {
+    auto mapped = m_fileCache.Map(filePath.string());
+    if (!mapped.has_value()) {
+        return std::unexpected("file_cache_map_failed");
+    }
+
+    auto view = m_fileCache.View(*mapped);
+    if (!view.has_value()) {
+        m_fileCache.Release(*mapped);
+        return std::unexpected("file_cache_view_failed");
+    }
+
+    std::string_view bytes = view->AsStringView();
+    size_t offset = computeOffsetFromLineCol(bytes, cursorLine, cursorColumn);
+    if (offset > bytes.size()) {
+        offset = bytes.size();
+    }
+
+    ContextHandlePacket packet;
+    packet.fileHandle = *mapped;
+    packet.filePath = filePath.string();
+    packet.languageHint = language;
+    packet.cursorLine = cursorLine;
+    packet.cursorColumn = cursorColumn;
+
+    size_t prefixStart = 0;
+    if (offset > 16384) {
+        prefixStart = offset - 16384;
+    }
+    packet.prefix.assign(bytes.substr(prefixStart, offset - prefixStart));
+
+    size_t suffixLen = std::min<size_t>(8192, bytes.size() - offset);
+    packet.suffix.assign(bytes.substr(offset, suffixLen));
+
+    return packet;
+}
+
+std::expected<std::string, const char*> ContextAssembler::buildFIMPromptFromFilePath(
+    const std::filesystem::path& filePath,
+    int cursorLine,
+    int cursorColumn,
+    const std::string& language,
+    const std::string& context) {
+    auto packet = buildHandlePacket(filePath, cursorLine, cursorColumn, language);
+    if (!packet.has_value()) {
+        return std::unexpected(packet.error());
+    }
+
+    std::string prompt = buildFIMPrompt(packet->prefix, packet->suffix, context);
+    m_fileCache.Release(packet->fileHandle);
+    packet->fileHandle = RawrXD::ZCCF::FileHandle::Null();
+    return prompt;
+}
+
+void ContextAssembler::releaseHandle(RawrXD::ZCCF::FileHandle handle) noexcept {
+    m_fileCache.Release(handle);
 }
 
 std::string ContextAssembler::buildFIMPrompt(const std::string& prefix,

@@ -18,6 +18,9 @@
 #include <deque>
 #include <mutex>
 #include <filesystem>
+#include <expected>
+
+#include "../zccf/file_cache.h"
 
 namespace RawrXD {
 namespace Context {
@@ -80,6 +83,22 @@ struct ContextResult {
     static ContextResult error(const char* msg) {
         return {false, msg, "", 0, 0};
     }
+};
+
+// ============================================================================
+// Context Handle Packet — handle-first context for zero-copy prompt paths
+// ============================================================================
+
+struct ContextHandlePacket {
+    RawrXD::ZCCF::FileHandle fileHandle;
+    std::string prefix;
+    std::string suffix;
+    std::string languageHint;
+    std::string filePath;
+    int cursorLine = 0;
+    int cursorColumn = 0;
+
+    bool valid() const noexcept { return !fileHandle.IsNull(); }
 };
 
 // ============================================================================
@@ -154,6 +173,24 @@ public:
                                          const std::string& language,
                                          const ContextHierarchy& additionalCtx);
 
+    // Zero-copy path: map file through ZCCF FileCache and build handle packet.
+    std::expected<ContextHandlePacket, const char*> buildHandlePacket(
+        const std::filesystem::path& filePath,
+        int cursorLine,
+        int cursorColumn,
+        const std::string& language);
+
+    // Convenience: build a FIM prompt directly from a mapped file.
+    std::expected<std::string, const char*> buildFIMPromptFromFilePath(
+        const std::filesystem::path& filePath,
+        int cursorLine,
+        int cursorColumn,
+        const std::string& language,
+        const std::string& context = "");
+
+    // Release a previously issued file handle.
+    void releaseHandle(RawrXD::ZCCF::FileHandle handle) noexcept;
+
     // ---- Context Extraction ----
     std::string extractCurrentFunction(const std::string& fileContent,
                                         int cursorLine) const;
@@ -190,6 +227,7 @@ private:
     int m_maxTokens = 8192;
     std::filesystem::path m_repoRoot;
     RecentEditBuffer m_editBuffer;
+    RawrXD::ZCCF::FileCache m_fileCache;
 
     // Truncate text to approximately maxTokens
     static std::string truncateToTokens(const std::string& text, int maxTokens);
