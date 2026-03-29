@@ -2722,6 +2722,8 @@ if(WIN32)
         src/win32app/Win32IDE_Breadcrumbs.cpp
         src/win32app/Win32IDE_PlanExecutor.cpp
         src/agentic/agentic_planning_orchestrator.cpp
+        src/agentic/context_assembler.cpp
+        src/zccf/file_cache.cpp
         src/agentic/failure_intelligence_orchestrator.cpp
         src/agentic/agentic_orchestrator_integration.cpp
         src/agentic/agentic_audit_sink.cpp

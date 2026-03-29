@@ -9,10 +9,12 @@
 #include "../inference/PerformanceMonitor.h"
 #include "ErrorRecoveryManager.h"
 #include "../agent/agentic_hotpatch_orchestrator.hpp"
+#include "context_assembler.h"
 #include <algorithm>
 #include <cctype>
 #include <chrono>
 #include <cstring>
+#include <filesystem>
 #include <sstream>
 #include <thread>
 #include <stdexcept>
@@ -63,6 +65,42 @@ std::string BuildToolMessageContent(const ToolCallResult& result) {
 
 RawrXD::Logging::Logger& GetLogger() {
     return RawrXD::Logging::Logger::instance();
+}
+
+struct EffectiveFIMContext {
+    std::string prefix;
+    std::string suffix;
+};
+
+EffectiveFIMContext BuildEffectiveFIMContext(const Prediction::PredictionContext& ctx) {
+    EffectiveFIMContext effective{ctx.prefix, ctx.suffix};
+
+    if (ctx.isBufferDirty || ctx.filePath.empty() || ctx.cursorLine < 0 || ctx.cursorColumn < 0) {
+        return effective;
+    }
+
+    std::error_code existsErr;
+    const std::filesystem::path filePath(ctx.filePath);
+    if (!std::filesystem::exists(filePath, existsErr) || existsErr) {
+        return effective;
+    }
+
+    RawrXD::Context::ContextAssembler contextAssembler;
+    const int lineForAssembler = ctx.cursorLine + 1;
+    auto packetResult = contextAssembler.buildHandlePacket(
+        filePath,
+        lineForAssembler,
+        ctx.cursorColumn,
+        ctx.language);
+
+    if (!packetResult.has_value() || !packetResult->valid()) {
+        return effective;
+    }
+
+    effective.prefix = packetResult->prefix;
+    effective.suffix = packetResult->suffix;
+    contextAssembler.releaseHandle(packetResult->fileHandle);
+    return effective;
 }
 
 void EnsureValidationRules() {
@@ -322,11 +360,12 @@ Prediction::PredictionResult OrchestratorBridge::RequestGhostText(
     recoveryCfg.maxRetries = 2;
     recoveryCfg.baseDelay = std::chrono::milliseconds(300);
     recoveryCfg.maxDelay = std::chrono::milliseconds(2500);
+    const EffectiveFIMContext effective = BuildEffectiveFIMContext(ctx);
 
     perf.startOperation("ollama.fim");
     try {
         InferenceResult result = recovery.executeWithRecovery([&]() {
-            InferenceResult r = m_ollamaClient->FIMSync(ctx.prefix, ctx.suffix, ctx.filePath);
+            InferenceResult r = m_ollamaClient->FIMSync(effective.prefix, effective.suffix, ctx.filePath);
             if (!r.success) {
                 throw std::runtime_error(r.error_message);
             }
@@ -350,6 +389,7 @@ void OrchestratorBridge::RequestGhostTextStream(
     Prediction::StreamTokenCallback onToken)
 {
     (void)EnsureClientReady();
+    const EffectiveFIMContext effective = BuildEffectiveFIMContext(ctx);
 
     if (!m_ollamaClient) {
         if (onToken) {
@@ -359,8 +399,8 @@ void OrchestratorBridge::RequestGhostTextStream(
     }
 
     m_ollamaClient->FIMStream(
-        ctx.prefix,
-        ctx.suffix,
+        effective.prefix,
+        effective.suffix,
         ctx.filePath,
         [onToken](const std::string& token) {
             if (onToken) {
@@ -575,6 +615,10 @@ extern "C" __declspec(dllexport) int RawrXD_AgentDispatchSync(unsigned int op,
             ctx.prefix = request.value("prefix", "");
             ctx.suffix = request.value("suffix", "");
             ctx.filePath = request.value("file_path", "");
+            ctx.language = request.value("language", "");
+            ctx.cursorLine = request.value("cursor_line", 0);
+            ctx.cursorColumn = request.value("cursor_column", 0);
+            ctx.isBufferDirty = request.value("is_buffer_dirty", false);
 
             RawrXD::Prediction::PredictionResult result =
                 RawrXD::Agent::OrchestratorBridge::Instance().RequestGhostText(ctx);

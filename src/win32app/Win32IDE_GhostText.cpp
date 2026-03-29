@@ -22,6 +22,7 @@
 #include "IDELogger.h"
 #include <richedit.h>
 #include <algorithm>
+#include <filesystem>
 #include <thread>
 #include <atomic>
 #include <mutex>
@@ -32,6 +33,7 @@
 
 #include "../agentic/OllamaProvider.h"
 #include "../agentic/OrchestratorBridge.h"
+#include "../agentic/context_assembler.h"
 
 // ============================================================================
 // CONSTANTS
@@ -326,6 +328,27 @@ std::string Win32IDE::requestGhostTextCompletion(const std::string& context,
         GhostProviderKind::Lsp
     };
 
+    std::string effectivePrefix = context;
+    std::string effectiveSuffix = suffix;
+    const bool canUseMappedFileContext =
+        !m_fileModified &&
+        !filePath.empty() &&
+        std::filesystem::exists(filePath);
+
+    if (canUseMappedFileContext) {
+        RawrXD::Context::ContextAssembler contextAssembler;
+        auto packetResult = contextAssembler.buildHandlePacket(
+            std::filesystem::path(filePath),
+            cursorLine + 1,
+            cursorCol,
+            language);
+        if (packetResult.has_value() && packetResult->valid()) {
+            effectivePrefix = packetResult->prefix;
+            effectiveSuffix = packetResult->suffix;
+            contextAssembler.releaseHandle(packetResult->fileHandle);
+        }
+    }
+
     for (GhostProviderKind provider : precedence) {
         if (isStale()) return "";
 
@@ -334,12 +357,13 @@ std::string Win32IDE::requestGhostTextCompletion(const std::string& context,
             {
                 auto& orchBridge = RawrXD::Agent::OrchestratorBridge::Instance();
                 RawrXD::Prediction::PredictionContext bCtx;
-                bCtx.prefix       = context;
-                bCtx.suffix       = suffix;
+                bCtx.prefix       = effectivePrefix;
+                bCtx.suffix       = effectiveSuffix;
                 bCtx.language     = language;
                 bCtx.filePath     = filePath;
                 bCtx.cursorLine   = cursorLine;
                 bCtx.cursorColumn = cursorCol;
+                bCtx.isBufferDirty = m_fileModified;
 
                 auto bResult = orchBridge.RequestGhostText(bCtx);
                 if (bResult.success && !bResult.completion.empty()) {
@@ -368,12 +392,13 @@ std::string Win32IDE::requestGhostTextCompletion(const std::string& context,
 
             if (m_predictionProvider->IsAvailable()) {
                 PredictionContext ctx;
-                ctx.prefix       = context;
-                ctx.suffix       = suffix;
+                ctx.prefix       = effectivePrefix;
+                ctx.suffix       = effectiveSuffix;
                 ctx.language     = language;
                 ctx.filePath     = filePath;
                 ctx.cursorLine   = cursorLine;
                 ctx.cursorColumn = cursorCol;
+                ctx.isBufferDirty = m_fileModified;
 
                 PredictionResult result = m_predictionProvider->Predict(ctx);
                 if (result.success && !result.completion.empty()) {

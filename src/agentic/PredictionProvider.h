@@ -62,6 +62,7 @@ struct PredictionContext {
     std::string filePath;        // Current file path (for context)
     int cursorLine      = 0;
     int cursorColumn    = 0;
+    bool isBufferDirty  = false; // True when editor buffer differs from on-disk file
 };
 
 // ============================================================================
