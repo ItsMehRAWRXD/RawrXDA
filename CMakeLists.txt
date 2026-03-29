@@ -387,7 +387,11 @@ if(RAWR_HAS_MASM)
         # src/RawrXD_Complete_ReverseEngineered.asm  # excluded: fragment missing struct defs/includes
     )
     list(REMOVE_DUPLICATES ASM_KERNEL_SOURCES)
-    # Mark ASM files with MASM language property
+    # DAE + ZCCF hotpath assembly
+    list(APPEND ASM_KERNEL_SOURCES
+        src/asm/dae_validator.asm
+        src/asm/zccf_upload.asm
+    )
     set_source_files_properties(${ASM_KERNEL_SOURCES} PROPERTIES LANGUAGE ASM_MASM)
 else()
     set(ASM_KERNEL_SOURCES "")
@@ -563,6 +567,13 @@ set(SOURCES
     # T3-D: Deterministic Replay Engine (DivergenceEvent + TelemetrySnapshot)
     src/agentic/DeterministicReplayEngine.cpp
     src/agentic/AgentToolHandlers.cpp
+
+        # ── DAE: Deterministic Agentic Execution ─────────────────────────────────
+        src/dae/shadow_fs.cpp
+
+        # ── ZCCF: Zero-Copy Context Fusion ───────────────────────────────────────
+        # (header-only for P0; .cpp implementations added in P1)
+
 
     # T4: Autonomous Recovery Orchestrator (FailureClass → recovery → verify → commit)
     src/agentic/autonomous_recovery_orchestrator.cpp
@@ -4209,11 +4220,7 @@ if(WIN32)
         ${MASM_OBJECTS}
         ${_WIN32IDE_LINKED_MONOLITHIC_OBJS}
     )
-
-    if(NOT MSVC)
-        target_link_libraries(RawrXD-Win32IDE PRIVATE gomp)
-    endif()
-
+                # SDMA Phase 2: Migrated to C++ implementations (sdma_scheduler.cpp, sdma_ring_allocator.cpp)
     # Ensure MASM kernels build before Win32IDE
     if(TARGET masm_kernels)
         add_dependencies(RawrXD-Win32IDE masm_kernels)
