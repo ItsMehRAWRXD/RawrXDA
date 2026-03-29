@@ -30,6 +30,7 @@
 #include <vector>
 #include <expected>
 #include <functional>
+#include <memory>
 
 #include "shadow_fs.h"   // ContentHash
 

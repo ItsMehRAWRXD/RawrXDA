@@ -26,6 +26,7 @@
 #include <functional>
 #include <expected>
 #include <chrono>
+#include <memory>
 
 namespace RawrXD {
 namespace DAE {

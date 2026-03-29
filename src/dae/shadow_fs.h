@@ -46,6 +46,8 @@
 #include <optional>
 #include <functional>
 #include <expected>
+#include <memory>
+#include <cstring>
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -80,7 +82,7 @@ struct ContentHash {
     uint8_t bytes[32] = {};
 
     bool operator==(const ContentHash& o) const noexcept {
-        return __builtin_memcmp(bytes, o.bytes, 32) == 0;
+        return std::memcmp(bytes, o.bytes, 32) == 0;
     }
     bool operator!=(const ContentHash& o) const noexcept { return !(*this == o); }
 

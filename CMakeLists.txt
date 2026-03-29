@@ -568,11 +568,15 @@ set(SOURCES
     src/agentic/DeterministicReplayEngine.cpp
     src/agentic/AgentToolHandlers.cpp
 
-        # ── DAE: Deterministic Agentic Execution ─────────────────────────────────
-        src/dae/shadow_fs.cpp
+    # ── DAE: Deterministic Agentic Execution ─────────────────────────────────
+    src/dae/shadow_fs.cpp
+    src/dae/intent_ir.cpp
+    src/dae/tool_abi.cpp
+    src/dae/trace_log.cpp
+    src/dae/replay_engine.cpp
 
-        # ── ZCCF: Zero-Copy Context Fusion ───────────────────────────────────────
-        # (header-only for P0; .cpp implementations added in P1)
+    # ── ZCCF: Zero-Copy Context Fusion ───────────────────────────────────────
+    # (P0 includes headers + wire-up points; runtime cpp lands in P1.3)
 
 
     # T4: Autonomous Recovery Orchestrator (FailureClass → recovery → verify → commit)
