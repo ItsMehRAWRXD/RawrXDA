@@ -15,8 +15,12 @@
 #include "DiskRecoveryAgent.h"
 #include "../core/rawrxd_subsystem_api.hpp"
 #include "../core/unified_hotpatch_manager.hpp"
+#include "../dae/tool_abi.h"
+#include "../dae/trace_log.h"
+#include "../dae/shadow_fs.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cctype>
 #include <chrono>
 #include <cmath>
@@ -3448,6 +3452,383 @@ std::string AgentToolHandlers::GetSystemPrompt(const std::string& cwd, const std
     return ss.str();
 }
 
+namespace
+{
+
+struct DaeTraceState
+{
+    std::mutex mu;
+    std::ofstream stream;
+    bool initialized = false;
+    bool enabled = false;
+    uint64_t nextSeq = 1;
+    RawrXD::DAE::ContentHash lastEventHash = RawrXD::DAE::ContentHash::zero();
+    std::chrono::steady_clock::time_point sessionStart = std::chrono::steady_clock::now();
+};
+
+DaeTraceState& GetDaeTraceState()
+{
+    static DaeTraceState s;
+    return s;
+}
+
+std::string BuildDaeTracePath()
+{
+    std::error_code ec;
+    fs::path tempRoot = fs::temp_directory_path(ec);
+    if (ec || tempRoot.empty())
+    {
+        return "rawrxd_dae_tool_loop.trace";
+    }
+
+    fs::path fileName =
+        fs::path("rawrxd_dae_tool_loop_" + std::to_string(::GetCurrentProcessId()) + ".trace");
+    return (tempRoot / fileName).string();
+}
+
+std::string HashToHex(const RawrXD::DAE::ContentHash& h)
+{
+    static const char* kHex = "0123456789abcdef";
+    std::string out;
+    out.resize(64);
+    for (int i = 0; i < 32; ++i)
+    {
+        out[2 * i] = kHex[(h.bytes[i] >> 4) & 0xF];
+        out[2 * i + 1] = kHex[h.bytes[i] & 0xF];
+    }
+    return out;
+}
+
+RawrXD::DAE::ContentHash EventHash(const RawrXD::DAE::TraceEvent& e)
+{
+    std::ostringstream os;
+    os << e.seq << '|' << e.timestampUs << '|' << e.opTypeName << '|' << e.targetPath << '|'
+       << HashToHex(e.stateBeforeHash) << '|' << HashToHex(e.actionDigest) << '|'
+       << HashToHex(e.stateAfterHash) << '|' << HashToHex(e.prevEventHash) << '|'
+       << (e.succeeded ? 1 : 0);
+    return RawrXD::DAE::ShadowFilesystem::ComputeHash(os.str());
+}
+
+RawrXD::Agent::ToolOutcome OutcomeFromString(const std::string& outcome)
+{
+    const std::string lower = ToLowerCopy(outcome);
+    if (lower == "success")
+        return RawrXD::Agent::ToolOutcome::Success;
+    if (lower == "partial_success")
+        return RawrXD::Agent::ToolOutcome::PartialSuccess;
+    if (lower == "validation_failed")
+        return RawrXD::Agent::ToolOutcome::ValidationFailed;
+    if (lower == "sandbox_blocked")
+        return RawrXD::Agent::ToolOutcome::SandboxBlocked;
+    if (lower == "timeout")
+        return RawrXD::Agent::ToolOutcome::Timeout;
+    if (lower == "cancelled")
+        return RawrXD::Agent::ToolOutcome::Cancelled;
+    if (lower == "not_found")
+        return RawrXD::Agent::ToolOutcome::NotFound;
+    if (lower == "rate_limited")
+        return RawrXD::Agent::ToolOutcome::RateLimited;
+    return RawrXD::Agent::ToolOutcome::ExecutionError;
+}
+
+RawrXD::Agent::ToolOutcome OutcomeFromDaeError(RawrXD::DAE::ToolError err)
+{
+    using RawrXD::Agent::ToolOutcome;
+    switch (err)
+    {
+    case RawrXD::DAE::ToolError::None:
+        return ToolOutcome::Success;
+    case RawrXD::DAE::ToolError::NotFound:
+        return ToolOutcome::NotFound;
+    case RawrXD::DAE::ToolError::InvalidArgs:
+        return ToolOutcome::ValidationFailed;
+    case RawrXD::DAE::ToolError::Timeout:
+        return ToolOutcome::Timeout;
+    case RawrXD::DAE::ToolError::SideEffectDenied:
+    case RawrXD::DAE::ToolError::PolicyViolation:
+        return ToolOutcome::SandboxBlocked;
+    case RawrXD::DAE::ToolError::IdempotencyViolation:
+    case RawrXD::DAE::ToolError::ExecutionFailed:
+    default:
+        return ToolOutcome::ExecutionError;
+    }
+}
+
+RawrXD::DAE::ToolError DaeErrorFromOutcome(RawrXD::Agent::ToolOutcome outcome)
+{
+    switch (outcome)
+    {
+    case RawrXD::Agent::ToolOutcome::Success:
+    case RawrXD::Agent::ToolOutcome::PartialSuccess:
+        return RawrXD::DAE::ToolError::None;
+    case RawrXD::Agent::ToolOutcome::ValidationFailed:
+        return RawrXD::DAE::ToolError::InvalidArgs;
+    case RawrXD::Agent::ToolOutcome::SandboxBlocked:
+        return RawrXD::DAE::ToolError::SideEffectDenied;
+    case RawrXD::Agent::ToolOutcome::Timeout:
+        return RawrXD::DAE::ToolError::Timeout;
+    case RawrXD::Agent::ToolOutcome::NotFound:
+        return RawrXD::DAE::ToolError::NotFound;
+    case RawrXD::Agent::ToolOutcome::Cancelled:
+    case RawrXD::Agent::ToolOutcome::RateLimited:
+        return RawrXD::DAE::ToolError::PolicyViolation;
+    case RawrXD::Agent::ToolOutcome::ExecutionError:
+    default:
+        return RawrXD::DAE::ToolError::ExecutionFailed;
+    }
+}
+
+bool ShouldUseDaeAbi(const std::string& name)
+{
+    return name == "read_file" || name == "search_code" || name == "replace_in_file";
+}
+
+std::string DeriveTraceTarget(const std::string& toolName, const json& args)
+{
+    static const char* const keys[] = {"path", "file", "filePath", "directory", "dir", "target", "query"};
+    for (const char* key : keys)
+    {
+        if (args.contains(key) && args[key].is_string())
+            return args[key].get<std::string>();
+    }
+    return toolName;
+}
+
+std::string BuildDaeIdempotencyKey(const std::string& name, const json& args)
+{
+    static std::atomic<uint64_t> s_seq{0};
+    const uint64_t localSeq = ++s_seq;
+    const auto hash = RawrXD::DAE::ShadowFilesystem::ComputeHash(args.dump());
+    return name + ":" + std::to_string(localSeq) + ":" + std::to_string(hash.bytes[0]);
+}
+
+void EnsureDaeTraceReadyLocked(DaeTraceState& state)
+{
+    if (state.initialized)
+        return;
+
+    state.initialized = true;
+    state.sessionStart = std::chrono::steady_clock::now();
+    state.stream.open(BuildDaeTracePath(), std::ios::out | std::ios::trunc);
+    state.enabled = state.stream.is_open();
+}
+
+void AppendDaeTraceEvent(const std::string& toolName,
+                         const json& args,
+                         const RawrXD::Agent::ToolCallResult& result)
+{
+    DaeTraceState& state = GetDaeTraceState();
+    std::lock_guard<std::mutex> lock(state.mu);
+    EnsureDaeTraceReadyLocked(state);
+    if (!state.enabled)
+        return;
+
+    RawrXD::DAE::TraceEvent ev;
+    ev.seq = state.nextSeq++;
+    ev.timestampUs = static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::steady_clock::now() - state.sessionStart)
+            .count());
+    ev.opTypeName = toolName;
+    ev.targetPath = DeriveTraceTarget(toolName, args);
+    ev.prevEventHash = state.lastEventHash;
+    ev.stateBeforeHash = RawrXD::DAE::ShadowFilesystem::ComputeHash(toolName + "|" + args.dump());
+    ev.actionDigest =
+        RawrXD::DAE::ShadowFilesystem::ComputeHash(toolName + "|" + args.dump() + "|" + result.outcomeString());
+    ev.stateAfterHash = RawrXD::DAE::ShadowFilesystem::ComputeHash(result.toJson().dump());
+    ev.succeeded = result.isSuccess();
+
+    state.stream << ev.seq << '\t' << ev.timestampUs << '\t' << ev.opTypeName << '\t' << ev.targetPath << '\t'
+                 << HashToHex(ev.stateBeforeHash) << '\t' << HashToHex(ev.actionDigest) << '\t'
+                 << HashToHex(ev.stateAfterHash) << '\t' << HashToHex(ev.prevEventHash) << '\t'
+                 << (ev.succeeded ? 1 : 0) << '\n';
+
+    if (!state.stream.good())
+    {
+        state.enabled = false;
+        return;
+    }
+
+    state.lastEventHash = EventHash(ev);
+}
+
+ToolCallResult DispatchToolDirect(const std::string& name, const json& args)
+{
+    if (name == "read_file")
+        return AgentToolHandlers::ToolReadFile(args);
+    if (name == "write_file")
+        return AgentToolHandlers::WriteFile(args);
+    if (name == "replace_in_file")
+        return AgentToolHandlers::ReplaceInFile(args);
+    if (name == "list_dir" || name == "list_directory")
+        return AgentToolHandlers::ListDir(args);
+    if (name == "delete_file")
+        return AgentToolHandlers::DeleteFile(args);
+    if (name == "rename_file" || name == "move_file")
+        return AgentToolHandlers::RenameFile(args);
+    if (name == "copy_file")
+        return AgentToolHandlers::CopyFile(args);
+    if (name == "mkdir" || name == "create_directory" || name == "make_directory")
+        return AgentToolHandlers::MakeDirectory(args);
+    if (name == "stat_file" || name == "get_file_info")
+        return AgentToolHandlers::StatFile(args);
+    if (name == "git_status")
+        return AgentToolHandlers::GitStatus(args);
+    if (name == "execute_command")
+        return AgentToolHandlers::ExecuteCommand(args);
+    if (name == "run_shell")
+        return AgentToolHandlers::RunShell(args);
+    if (name == "search_code")
+        return AgentToolHandlers::SearchCode(args);
+    if (name == "semantic_search")
+        return AgentToolHandlers::SemanticSearch(args);
+    if (name == "mention_lookup")
+        return AgentToolHandlers::MentionLookup(args);
+    if (name == "next_edit_hint")
+        return AgentToolHandlers::NextEditHint(args);
+    if (name == "propose_multifile_edits")
+        return AgentToolHandlers::ProposeMultiFileEdits(args);
+    if (name == "load_rules")
+        return AgentToolHandlers::LoadRules(args);
+    if (name == "plan_tasks")
+        return AgentToolHandlers::PlanTasks(args);
+    if (name == "set_iteration_status")
+        return AgentToolHandlers::SetIterationStatus(args);
+    if (name == "get_iteration_status")
+        return AgentToolHandlers::GetIterationStatus(args);
+    if (name == "reset_iteration_status")
+        return AgentToolHandlers::ResetIterationStatus(args);
+    if (name == "get_diagnostics")
+        return AgentToolHandlers::GetDiagnostics(args);
+    if (name == "compact_conversation" || name == "compacted_conversation")
+        return AgentToolHandlers::CompactConversation(args);
+    if (name == "optimize_tool_selection")
+        return AgentToolHandlers::OptimizeToolSelection(args);
+    if (name == "resolve_symbol")
+        return AgentToolHandlers::ResolveSymbol(args);
+    if (name == "read_lines")
+        return AgentToolHandlers::ReadLines(args);
+    if (name == "plan_code_exploration")
+        return AgentToolHandlers::PlanCodeExploration(args);
+    if (name == "search_files")
+        return AgentToolHandlers::SearchFiles(args);
+    if (name == "restore_checkpoint")
+        return AgentToolHandlers::RestoreCheckpoint(args);
+    if (name == "evaluate_integration_audit_feasibility")
+        return AgentToolHandlers::EvaluateIntegrationAuditFeasibility(args);
+    if (name == "get_coverage")
+        return AgentToolHandlers::GetCoverage(args);
+    if (name == "run_build")
+        return AgentToolHandlers::RunBuild(args);
+    if (name == "apply_hotpatch")
+        return AgentToolHandlers::ApplyHotpatch(args);
+    if (name == "disk_recovery")
+        return AgentToolHandlers::DiskRecovery(args);
+    return ToolCallResult::NotFound(name);
+}
+
+void EnsureDaeBridgeToolsRegistered()
+{
+    static std::once_flag s_once;
+    std::call_once(s_once, []() {
+        auto& registry = RawrXD::DAE::ToolRegistry::Instance();
+        const struct
+        {
+            const char* name;
+            RawrXD::DAE::SideEffectClass sideEffects;
+        } defs[] = {{"read_file", RawrXD::DAE::SideEffectClass::ReadOnly},
+                    {"search_code", RawrXD::DAE::SideEffectClass::ReadOnly},
+                    {"replace_in_file", RawrXD::DAE::SideEffectClass::WriteReal}};
+
+        for (const auto& def : defs)
+        {
+            if (registry.Find(def.name) != nullptr)
+                continue;
+
+            registry.Register(RawrXD::DAE::ToolDescriptor{
+                def.name,
+                std::string("Bridge dispatch for ") + def.name,
+                def.sideEffects,
+                [toolName = std::string(def.name)](const RawrXD::DAE::ToolInvocation& inv)
+                    -> RawrXD::DAE::ToolResult_v {
+                    json parsed = json::parse(inv.argsJson, nullptr, false);
+                    if (parsed.is_discarded() || !parsed.is_object())
+                    {
+                        return std::unexpected(RawrXD::DAE::ToolError::InvalidArgs);
+                    }
+
+                    ToolCallResult inner = DispatchToolDirect(toolName, parsed);
+                    RawrXD::DAE::ToolResponse response;
+                    response.status = DaeErrorFromOutcome(inner.outcome);
+                    response.resultJson = inner.toJson().dump();
+                    response.diagnostics = inner.error;
+                    return response;
+                }});
+        }
+    });
+}
+
+ToolCallResult DeserializeDaeResponse(const std::string& toolName,
+                                      const json& args,
+                                      const RawrXD::DAE::ToolResponse& response)
+{
+    ToolCallResult result;
+    result.toolName = toolName;
+    result.argsUsed = args;
+    result.durationMs = static_cast<int64_t>(response.elapsed.count() / 1000);
+
+    json payload = json::parse(response.resultJson, nullptr, false);
+    if (!payload.is_discarded() && payload.is_object())
+    {
+        if (payload.contains("outcome") && payload["outcome"].is_string())
+            result.outcome = OutcomeFromString(payload["outcome"].get<std::string>());
+        else
+            result.outcome = OutcomeFromDaeError(response.status);
+
+        if (payload.contains("output") && payload["output"].is_string())
+            result.output = payload["output"].get<std::string>();
+        if (payload.contains("error") && payload["error"].is_string())
+            result.error = payload["error"].get<std::string>();
+        if (payload.contains("metadata") && payload["metadata"].is_object())
+            result.metadata = payload["metadata"];
+        if (payload.contains("file") && payload["file"].is_string())
+            result.filePath = payload["file"].get<std::string>();
+        if (payload.contains("bytes_read") && payload["bytes_read"].is_number())
+            result.bytesRead = payload["bytes_read"].get<size_t>();
+        if (payload.contains("bytes_written") && payload["bytes_written"].is_number())
+            result.bytesWritten = payload["bytes_written"].get<size_t>();
+        if (payload.contains("lines_affected") && payload["lines_affected"].is_number_integer())
+            result.linesAffected = payload["lines_affected"].get<int>();
+    }
+    else
+    {
+        result.outcome = OutcomeFromDaeError(response.status);
+        if (response.status == RawrXD::DAE::ToolError::None)
+            result.output = response.resultJson;
+        else
+            result.error = response.diagnostics.empty() ? "DAE invocation failed" : response.diagnostics;
+    }
+
+    if (!response.diagnostics.empty() && result.error.empty() && !result.isSuccess())
+    {
+        result.error = response.diagnostics;
+    }
+
+    return result;
+}
+
+ToolCallResult BuildDaeInvokeError(const std::string& toolName,
+                                   const json& args,
+                                   RawrXD::DAE::ToolError error)
+{
+    ToolCallResult failed = ToolCallResult::Error("DAE invoke failed", OutcomeFromDaeError(error));
+    failed.toolName = toolName;
+    failed.argsUsed = args;
+    return failed;
+}
+
+} // namespace
+
 // ============================================================================
 // Generic dispatch — Instance / HasTool / Execute
 // Used by DeterministicReplayEngine for transcript replay.
@@ -3525,75 +3906,34 @@ ToolCallResult AgentToolHandlers::Execute(const std::string& name, const nlohman
         return ToolCallResult::NotFound(name);
     }
 
-    if (name == "read_file")
-        return ToolReadFile(args);
-    if (name == "write_file")
-        return WriteFile(args);
-    if (name == "replace_in_file")
-        return ReplaceInFile(args);
-    if (name == "list_dir" || name == "list_directory")
-        return ListDir(args);
-    if (name == "delete_file")
-        return DeleteFile(args);
-    if (name == "rename_file" || name == "move_file")
-        return RenameFile(args);
-    if (name == "copy_file")
-        return CopyFile(args);
-    if (name == "mkdir" || name == "create_directory" || name == "make_directory")
-        return MakeDirectory(args);
-    if (name == "stat_file" || name == "get_file_info")
-        return StatFile(args);
-    if (name == "git_status")
-        return GitStatus(args);
-    if (name == "execute_command")
-        return ExecuteCommand(args);
-    if (name == "run_shell")
-        return RunShell(args);
-    if (name == "search_code")
-        return SearchCode(args);
-    if (name == "semantic_search")
-        return SemanticSearch(args);
-    if (name == "mention_lookup")
-        return MentionLookup(args);
-    if (name == "next_edit_hint")
-        return NextEditHint(args);
-    if (name == "propose_multifile_edits")
-        return ProposeMultiFileEdits(args);
-    if (name == "load_rules")
-        return LoadRules(args);
-    if (name == "plan_tasks")
-        return PlanTasks(args);
-    if (name == "set_iteration_status")
-        return SetIterationStatus(args);
-    if (name == "get_iteration_status")
-        return GetIterationStatus(args);
-    if (name == "reset_iteration_status")
-        return ResetIterationStatus(args);
-    if (name == "get_diagnostics")
-        return GetDiagnostics(args);
-    if (name == "compact_conversation" || name == "compacted_conversation")
-        return CompactConversation(args);
-    if (name == "optimize_tool_selection")
-        return OptimizeToolSelection(args);
-    if (name == "resolve_symbol")
-        return ResolveSymbol(args);
-    if (name == "read_lines")
-        return ReadLines(args);
-    if (name == "plan_code_exploration")
-        return PlanCodeExploration(args);
-    if (name == "search_files")
-        return SearchFiles(args);
-    if (name == "restore_checkpoint")
-        return RestoreCheckpoint(args);
-    if (name == "evaluate_integration_audit_feasibility")
-        return EvaluateIntegrationAuditFeasibility(args);
-    if (name == "get_coverage")
-        return GetCoverage(args);
-    if (name == "run_build")
-        return RunBuild(args);
-    if (name == "apply_hotpatch")
-        return ApplyHotpatch(args);
-    if (name == "disk_recovery")
-        return DiskRecovery(args);
-    return ToolCallResult::NotFound(name);
+    if (ShouldUseDaeAbi(name))
+    {
+        EnsureDaeBridgeToolsRegistered();
+
+        RawrXD::DAE::ToolInvocation inv;
+        inv.toolName = name;
+        inv.idempotencyKey = BuildDaeIdempotencyKey(name, args);
+        inv.argsJson = args.dump();
+        inv.dryRun = false;
+
+        RawrXD::DAE::ToolPolicy policy;
+        policy.timeoutMs = s_guardrails.commandTimeoutMs;
+        policy.allowNetwork = true;
+        policy.allowProcess = true;
+        policy.allowRealWrite = true;
+
+        auto daeResult = RawrXD::DAE::ToolRegistry::Instance().Invoke(inv, policy);
+        if (!daeResult.has_value())
+        {
+            ToolCallResult failed = BuildDaeInvokeError(name, args, daeResult.error());
+            AppendDaeTraceEvent(name, args, failed);
+            return failed;
+        }
+
+        ToolCallResult routed = DeserializeDaeResponse(name, args, *daeResult);
+        AppendDaeTraceEvent(name, args, routed);
+        return routed;
+    }
+
+    return DispatchToolDirect(name, args);
 }

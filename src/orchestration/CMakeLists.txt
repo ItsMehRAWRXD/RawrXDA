@@ -19,6 +19,8 @@ add_library(RawrXDOrchestration STATIC
     agent_coordinator.cpp
     voice_processor.hpp
     voice_processor.cpp
+    InferencePacer.cpp
+    MetricsThread.cpp
 )
 
 target_link_libraries(RawrXDOrchestration
@@ -32,6 +34,7 @@ target_include_directories(RawrXDOrchestration
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_CURRENT_SOURCE_DIR}/..
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include
 )
 
 # Enable warnings

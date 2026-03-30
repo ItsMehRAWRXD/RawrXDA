@@ -943,6 +943,7 @@ void Win32IDE::saveRouterConfig() {
 
 void Win32IDE::handleRouterStatusEndpoint(SOCKET client) {
     nlohmann::json j;
+    j["success"]     = true;
     j["enabled"]     = m_routerEnabled;
     j["initialized"] = m_routerInitialized;
 
@@ -984,6 +985,7 @@ void Win32IDE::handleRouterDecisionEndpoint(SOCKET client) {
     RoutingDecision last = getLastRoutingDecision();
 
     nlohmann::json j;
+    j["success"]           = true;
     j["classifiedTask"]    = taskTypeString(last.classifiedTask);
     j["selectedBackend"]   = backendTypeString(last.selectedBackend);
     j["fallbackBackend"]   = (last.fallbackBackend == AIBackendType::Count)
@@ -1003,7 +1005,7 @@ void Win32IDE::handleRouterDecisionEndpoint(SOCKET client) {
 }
 
 void Win32IDE::handleRouterCapabilitiesEndpoint(SOCKET client) {
-    nlohmann::json j = nlohmann::json::array();
+    nlohmann::json capabilities = nlohmann::json::array();
     for (size_t i = 0; i < (size_t)AIBackendType::Count; ++i) {
         const auto& cap = m_backendCapabilities[i];
         nlohmann::json cj;
@@ -1016,8 +1018,12 @@ void Win32IDE::handleRouterCapabilitiesEndpoint(SOCKET client) {
         cj["costTier"]                = cap.costTier;
         cj["qualityScore"]            = cap.qualityScore;
         cj["notes"]                   = cap.notes;
-        j.push_back(cj);
+        capabilities.push_back(cj);
     }
+
+    nlohmann::json j;
+    j["success"] = true;
+    j["capabilities"] = capabilities;
 
     std::string body = j.dump(2);
     std::string resp = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n"

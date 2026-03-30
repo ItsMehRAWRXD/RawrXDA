@@ -1,15 +1,38 @@
 #include "real_time_completion_engine.h"
+#ifndef RAWRXD_NO_DEFAULT_EXECUTION_STATE_PROVIDER
+#include "debug/execution_state_provider_debugger_core.hpp"
+#endif
 #include <algorithm>
 #include <chrono>
 #include <cstddef>
 #include <sstream>
 #include <thread>
 
+namespace {
+#ifndef RAWRXD_NO_DEFAULT_EXECUTION_STATE_PROVIDER
+std::shared_ptr<IExecutionStateProvider> makeDefaultExecutionStateProvider() {
+    return std::make_shared<DebuggerCoreExecutionStateProvider>(&rawrxd::debug::DebuggerCore::getInstance());
+}
+#endif
+}
+
 RealTimeCompletionEngine::RealTimeCompletionEngine(
     std::shared_ptr<Logger> logger,
     std::shared_ptr<Metrics> metrics)
-    : m_logger(logger), m_metrics(metrics), m_inferenceEngine(nullptr) {
-
+    : m_logger(logger),
+      m_metrics(metrics),
+      m_inferenceEngine(nullptr),
+    #ifndef RAWRXD_NO_DEFAULT_EXECUTION_STATE_PROVIDER
+      m_executionStateProvider(makeDefaultExecutionStateProvider()) {
+    #else
+          m_executionStateProvider(nullptr) {
+    #endif
+    if (m_logger) {
+        m_logger->log("RealTimeCompletionEngine initialized");
+    #ifndef RAWRXD_NO_DEFAULT_EXECUTION_STATE_PROVIDER
+        m_logger->log("Default execution state provider attached");
+    #endif
+    }
 }
 
 std::vector<CodeCompletion> RealTimeCompletionEngine::getCompletions(
@@ -285,9 +308,19 @@ std::string RealTimeCompletionEngine::buildCompletionPrompt(
     // <PRE> prefix <SUF> suffix <MID>
     
     // 1. Inject Context if available (simplified RAG)
-    std::string fullContext = "";
+    std::string fullContext;
+    if (m_executionStateProvider) {
+        ExecutionStateSnapshot snapshot;
+        if (m_executionStateProvider->getLatestSnapshot(snapshot)) {
+            const std::string execSection = buildExecutionStateSection(snapshot);
+            if (!execSection.empty()) {
+                fullContext += execSection + "\n\n";
+            }
+        }
+    }
+
     if (!context.empty()) {
-        fullContext = "// Context:\n" + context + "\n\n";
+        fullContext += "// Context:\n" + context + "\n\n";
     }
 
     // 2. Construct FIM prompt
@@ -297,6 +330,95 @@ std::string RealTimeCompletionEngine::buildCompletionPrompt(
     ss << "<PRE> " << fullContext << prefix << " <SUF> " << suffix << " <MID>";
     
     return ss.str();
+}
+
+std::string RealTimeCompletionEngine::buildExecutionStateSection(const ExecutionStateSnapshot& snapshot) const {
+    if (!snapshot.valid) {
+        return {};
+    }
+
+    int64_t ageMs = -1;
+    if (snapshot.capturedAtUnixMs > 0) {
+        const auto nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()).count();
+        ageMs = nowMs - snapshot.capturedAtUnixMs;
+        if (ageMs < 0 || ageMs > m_executionStateMaxAgeMs) {
+            return {};
+        }
+    }
+
+    std::ostringstream out;
+    out << "[Execution State]\n";
+    if (snapshot.capturedAtUnixMs > 0) {
+        const auto nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()).count();
+        out << "age_ms=" << (nowMs - snapshot.capturedAtUnixMs);
+        if (!snapshot.threadId.empty()) {
+            out << ", thread=" << snapshot.threadId;
+        }
+        out << "\n";
+    }
+
+    const std::string currentReality = buildCurrentRealityBlock(snapshot, ageMs);
+    if (!currentReality.empty()) {
+        out << currentReality;
+    }
+
+    const size_t stackLimit = std::min(snapshot.stackFrames.size(), static_cast<size_t>(std::max(0, m_maxExecutionStackFrames)));
+    if (stackLimit > 0) {
+        out << "stack_frames:\n";
+        for (size_t i = 0; i < stackLimit; ++i) {
+            out << "  #" << i << " " << snapshot.stackFrames[i] << "\n";
+        }
+    }
+
+    const size_t regLimit = std::min(snapshot.registers.size(), static_cast<size_t>(std::max(0, m_maxExecutionRegisters)));
+    if (regLimit > 0) {
+        out << "registers:\n";
+        for (size_t i = 0; i < regLimit; ++i) {
+            out << "  " << snapshot.registers[i].first << "=" << snapshot.registers[i].second << "\n";
+        }
+    }
+
+    if (!snapshot.notes.empty()) {
+        std::string boundedNotes = snapshot.notes;
+        if (m_maxExecutionNotesChars > 0 && boundedNotes.size() > static_cast<size_t>(m_maxExecutionNotesChars)) {
+            boundedNotes.resize(static_cast<size_t>(m_maxExecutionNotesChars));
+            boundedNotes += "...";
+        }
+        out << "notes: " << boundedNotes << "\n";
+    }
+
+    return out.str();
+}
+
+std::string RealTimeCompletionEngine::buildCurrentRealityBlock(const ExecutionStateSnapshot& snapshot, int64_t ageMs) const {
+    std::ostringstream out;
+    out << "current_reality:\n";
+
+    if (!snapshot.threadId.empty()) {
+        out << "- thread: " << snapshot.threadId << "\n";
+    }
+    if (ageMs >= 0) {
+        out << "- freshness_ms: " << ageMs << "\n";
+    }
+
+    std::string ripValue;
+    for (const auto& reg : snapshot.registers) {
+        if (reg.first == "rip" || reg.first == "RIP") {
+            ripValue = reg.second;
+            break;
+        }
+    }
+    if (!ripValue.empty()) {
+        out << "- instruction_pointer: " << ripValue << "\n";
+    }
+
+    if (!snapshot.stackFrames.empty()) {
+        out << "- top_frame: " << snapshot.stackFrames.front() << "\n";
+    }
+
+    return out.str();
 }
 
 std::vector<CodeCompletion> RealTimeCompletionEngine::postProcessCompletions(

@@ -26,6 +26,7 @@
 #include "ModelConnection.h"
 #include "RawrXD_AgentCoordinator.h"
 #include "RawrXD_AutonomousAgenticPipeline.h"
+#include "../swarm_orchestrator.h"
 #include "Win32IDE.h"
 #include "Win32IDE_AgenticBrowser.h"
 #include "Win32IDE_ComponentManagers.h"  // Complete types for unique_ptr<T> dtor
@@ -38,6 +39,7 @@
 #include "win32_feature_adapter.h"  // Unified Feature Dispatch adapter
 #include <commctrl.h>
 #include <richedit.h>
+#include <windowsx.h>
 
 #ifndef WM_DPICHANGED
 #define WM_DPICHANGED 0x02E0
@@ -279,6 +281,8 @@ Win32IDE::~Win32IDE()
         DeleteObject(m_editorFont);
         m_editorFont = nullptr;
     }
+
+    clearAttributionTracking();
 }
 
 // ============================================================================
@@ -740,27 +744,12 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
                     NMMOUSE* pNMMouse = reinterpret_cast<NMMOUSE*>(lParam);
                     handleStatusBarClick(static_cast<int>(pNMMouse->dwItemSpec));
                 }
-                // Output panel tab switch (Output / Errors / Debug / Find Results)
+                // Output panel tab switch (Output / Errors / Debug / Find Results / Hotpatch Diagnostics)
                 if (pNMHDR->code == TCN_SELCHANGE && pNMHDR->hwndFrom == m_hwndOutputTabs)
                 {
                     int idx = (int)TabCtrl_GetCurSel(m_hwndOutputTabs);
-                    static const char* outputTabKeys[] = {"Output", "Errors", "Debug", "Find Results"};
-                    if (idx >= 0 && idx < 4)
-                    {
-                        m_activeOutputTab = outputTabKeys[idx];
-                        m_selectedOutputTab = idx;
-                        for (auto& kv : m_outputWindows)
-                        {
-                            ShowWindow(kv.second,
-                                       (kv.first == m_activeOutputTab && m_outputPanelVisible) ? SW_SHOW : SW_HIDE);
-                        }
-                    }
-                }
-                // Output panel tab switch (Output / Errors / Debug / Find Results / Problems)
-                if (pNMHDR->code == TCN_SELCHANGE && pNMHDR->hwndFrom == m_hwndOutputTabs)
-                {
-                    int idx = (int)TabCtrl_GetCurSel(m_hwndOutputTabs);
-                    static const char* outputTabKeys[] = {"Output", "Errors", "Debug", "Find Results", "Problems"};
+                    static const char* outputTabKeys[] = {"Output", "Errors", "Debug", "Find Results",
+                                                          "Hotpatch Diagnostics"};
                     if (idx >= 0 && idx < 5)
                     {
                         m_activeOutputTab = outputTabKeys[idx];
@@ -770,9 +759,44 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
                             ShowWindow(kv.second,
                                        (kv.first == m_activeOutputTab && m_outputPanelVisible) ? SW_SHOW : SW_HIDE);
                         }
+                        const bool showRagControls = (m_activeOutputTab == "Hotpatch Diagnostics") && m_outputPanelVisible;
+                        if (m_hwndRAGIntensityLabel)
+                            ShowWindow(m_hwndRAGIntensityLabel, showRagControls ? SW_SHOW : SW_HIDE);
+                        if (m_hwndRAGIntensitySlider)
+                            ShowWindow(m_hwndRAGIntensitySlider, showRagControls ? SW_SHOW : SW_HIDE);
+                        if (m_hwndHybridWeightLabel)
+                            ShowWindow(m_hwndHybridWeightLabel, showRagControls ? SW_SHOW : SW_HIDE);
+                        if (m_hwndHybridWeightSlider)
+                            ShowWindow(m_hwndHybridWeightSlider, showRagControls ? SW_SHOW : SW_HIDE);
+                    }
+                }
+                // Output panel tab switch (legacy pass kept for compatibility)
+                if (pNMHDR->code == TCN_SELCHANGE && pNMHDR->hwndFrom == m_hwndOutputTabs)
+                {
+                    int idx = (int)TabCtrl_GetCurSel(m_hwndOutputTabs);
+                    static const char* outputTabKeys[] = {"Output", "Errors", "Debug", "Find Results",
+                                                          "Hotpatch Diagnostics"};
+                    if (idx >= 0 && idx < 5)
+                    {
+                        m_activeOutputTab = outputTabKeys[idx];
+                        m_selectedOutputTab = idx;
+                        for (auto& kv : m_outputWindows)
+                        {
+                            ShowWindow(kv.second,
+                                       (kv.first == m_activeOutputTab && m_outputPanelVisible) ? SW_SHOW : SW_HIDE);
+                        }
+                        const bool showRagControls = (m_activeOutputTab == "Hotpatch Diagnostics") && m_outputPanelVisible;
+                        if (m_hwndRAGIntensityLabel)
+                            ShowWindow(m_hwndRAGIntensityLabel, showRagControls ? SW_SHOW : SW_HIDE);
+                        if (m_hwndRAGIntensitySlider)
+                            ShowWindow(m_hwndRAGIntensitySlider, showRagControls ? SW_SHOW : SW_HIDE);
+                        if (m_hwndHybridWeightLabel)
+                            ShowWindow(m_hwndHybridWeightLabel, showRagControls ? SW_SHOW : SW_HIDE);
+                        if (m_hwndHybridWeightSlider)
+                            ShowWindow(m_hwndHybridWeightSlider, showRagControls ? SW_SHOW : SW_HIDE);
                         if (m_hwndProblemsListView)
                         {
-                            ShowWindow(m_hwndProblemsListView, (idx == 4 && m_outputPanelVisible) ? SW_SHOW : SW_HIDE);
+                            ShowWindow(m_hwndProblemsListView, SW_HIDE);
                         }
                     }
                 }
@@ -872,6 +896,24 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
                         }
                     }
                 }
+                // Phase 4.3.1: Handle Copilot chat RichEdit mouse events for attribution tooltip hit-testing
+                if (pNMHDR->hwndFrom == m_hwndCopilotChatOutput && pNMHDR->code == EN_MSGFILTER)
+                {
+                    MSGFILTER* msgFilter = reinterpret_cast<MSGFILTER*>(lParam);
+                    if (msgFilter && msgFilter->msg == WM_MOUSEMOVE)
+                    {
+                        // Extract mouse coordinates from lParam
+                        int x = GET_X_LPARAM(msgFilter->lParam);
+                        int y = GET_Y_LPARAM(msgFilter->lParam);
+                        POINT pt = {x, y};
+                        
+                        // Perform hit-test and show/hide tooltip as needed
+                        handleChatMouseMove(pt);
+                        
+                        // Return 0 to allow RichEdit to process the message
+                        return 0;
+                    }
+                }
             }
             return 0;
         }
@@ -883,6 +925,16 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
                 // Phase 44: VoiceAutomation slider routing
                 if (uMsg == WM_HSCROLL)
                 {
+                    if (reinterpret_cast<HWND>(lParam) == m_hwndRAGIntensitySlider)
+                    {
+                        applyRAGIntensityFromSlider();
+                        return 0;
+                    }
+                    if (reinterpret_cast<HWND>(lParam) == m_hwndHybridWeightSlider)
+                    {
+                        applyHybridWeightFromSlider();
+                        return 0;
+                    }
                     extern bool Win32IDE_HandleVoiceAutomationScroll(HWND, LPARAM);
                     if (Win32IDE_HandleVoiceAutomationScroll(hwnd, lParam))
                     {
@@ -978,6 +1030,11 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
             if (wParam == IDT_GPU_TELEMETRY)
             {
                 updateStatusBarBackend();
+                return 0;
+            }
+            if (wParam == HOTPATCH_DIAGNOSTICS_TIMER_ID)
+            {
+                refreshHotpatchDiagnosticsView();
                 return 0;
             }
             if (wParam == 42)
@@ -1887,10 +1944,35 @@ void Win32IDE::onSize(int width, int height)
     int panelTop = contentTop + editorAreaHeight;
     if (panelHeight > 0)
     {
+        const bool showRagControls = (m_activeOutputTab == "Hotpatch Diagnostics") && m_outputPanelVisible;
         // Output tabs
         if (m_hwndOutputTabs)
         {
             MoveWindow(m_hwndOutputTabs, editorLeft, panelTop, editorWidth, panelHeight, TRUE);
+        }
+        if (m_hwndHybridWeightLabel)
+        {
+            MoveWindow(m_hwndHybridWeightLabel, editorLeft + editorWidth - 590, panelTop + 5, 100, 18, TRUE);
+            ShowWindow(m_hwndHybridWeightLabel, showRagControls ? SW_SHOW : SW_HIDE);
+        }
+        if (m_hwndHybridWeightSlider)
+        {
+            MoveWindow(m_hwndHybridWeightSlider, editorLeft + editorWidth - 490, panelTop + 2, 105, 20, TRUE);
+            ShowWindow(m_hwndHybridWeightSlider, showRagControls ? SW_SHOW : SW_HIDE);
+        }
+        if (m_hwndRAGIntensityLabel)
+        {
+            MoveWindow(m_hwndRAGIntensityLabel, editorLeft + editorWidth - 365, panelTop + 5, 110, 18, TRUE);
+            ShowWindow(m_hwndRAGIntensityLabel, showRagControls ? SW_SHOW : SW_HIDE);
+        }
+        if (m_hwndRAGIntensitySlider)
+        {
+            MoveWindow(m_hwndRAGIntensitySlider, editorLeft + editorWidth - 255, panelTop + 2, 105, 20, TRUE);
+            ShowWindow(m_hwndRAGIntensitySlider, showRagControls ? SW_SHOW : SW_HIDE);
+        }
+        if (m_hwndSeverityFilter)
+        {
+            MoveWindow(m_hwndSeverityFilter, editorLeft + editorWidth - 145, panelTop + 2, 140, 100, TRUE);
         }
         int termTop = contentTop + editorAreaHeight;
         int tabBarH = 24;
@@ -1909,6 +1991,17 @@ void Win32IDE::onSize(int width, int height)
             MoveWindow(m_hwndProblemsListView, editorLeft, termTop + tabBarH, editorWidth, termHeight - tabBarH, TRUE);
         }
         panelTop += panelHeight;
+    }
+    else
+    {
+        if (m_hwndRAGIntensityLabel)
+            ShowWindow(m_hwndRAGIntensityLabel, SW_HIDE);
+        if (m_hwndRAGIntensitySlider)
+            ShowWindow(m_hwndRAGIntensitySlider, SW_HIDE);
+        if (m_hwndHybridWeightLabel)
+            ShowWindow(m_hwndHybridWeightLabel, SW_HIDE);
+        if (m_hwndHybridWeightSlider)
+            ShowWindow(m_hwndHybridWeightSlider, SW_HIDE);
     }
 
     // Terminal panes — layout within the output panel area so they're visible
@@ -3427,6 +3520,9 @@ void Win32IDE::onCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
         }
         case 9000:  // Legacy alias used by VSCodeExtAPI bridge for hotpatch status
             handleHotpatchCommand(IDM_HOTPATCH_SHOW_STATUS);
+            return;
+        case IDM_HOTPATCH_REVERT_ALL_CONFIRMED:
+            handleHotpatchCommand(IDM_HOTPATCH_REVERT_ALL_CONFIRMED);
             return;
         case 1300:  // IDC_PANEL_CONTAINER
             if (!m_panelVisible)

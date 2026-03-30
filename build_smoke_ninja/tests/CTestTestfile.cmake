@@ -1,0 +1,36 @@
+# CMake generated Testfile for 
+# Source directory: D:/rawrxd/tests
+# Build directory: D:/rawrxd/build_smoke_ninja/tests
+# 
+# This file includes the relevant testing commands required for 
+# testing this directory and lists subdirectories to be tested as well.
+add_test([=[test_ai_completions]=] "D:/rawrxd/build_smoke_ninja/tests/test_ai_completions.exe")
+set_tests_properties([=[test_ai_completions]=] PROPERTIES  _BACKTRACE_TRIPLES "D:/rawrxd/tests/CMakeLists.txt;85;add_test;D:/rawrxd/tests/CMakeLists.txt;0;")
+add_test([=[test_llm_connectivity]=] "D:/rawrxd/build_smoke_ninja/tests/test_llm_connectivity.exe")
+set_tests_properties([=[test_llm_connectivity]=] PROPERTIES  _BACKTRACE_TRIPLES "D:/rawrxd/tests/CMakeLists.txt;97;add_test;D:/rawrxd/tests/CMakeLists.txt;0;")
+add_test([=[test_tool_registry]=] "D:/rawrxd/build_smoke_ninja/tests/test_tool_registry.exe")
+set_tests_properties([=[test_tool_registry]=] PROPERTIES  _BACKTRACE_TRIPLES "D:/rawrxd/tests/CMakeLists.txt;106;add_test;D:/rawrxd/tests/CMakeLists.txt;0;")
+add_test([=[test_voice_processor]=] "D:/rawrxd/build_smoke_ninja/tests/test_voice_processor.exe")
+set_tests_properties([=[test_voice_processor]=] PROPERTIES  _BACKTRACE_TRIPLES "D:/rawrxd/tests/CMakeLists.txt;115;add_test;D:/rawrxd/tests/CMakeLists.txt;0;")
+add_test([=[test_zero_retention_manager]=] "D:/rawrxd/build_smoke_ninja/tests/test_zero_retention_manager.exe")
+set_tests_properties([=[test_zero_retention_manager]=] PROPERTIES  _BACKTRACE_TRIPLES "D:/rawrxd/tests/CMakeLists.txt;124;add_test;D:/rawrxd/tests/CMakeLists.txt;0;")
+add_test([=[test_semantic_diff_analyzer]=] "D:/rawrxd/build_smoke_ninja/tests/test_semantic_diff_analyzer.exe")
+set_tests_properties([=[test_semantic_diff_analyzer]=] PROPERTIES  _BACKTRACE_TRIPLES "D:/rawrxd/tests/CMakeLists.txt;133;add_test;D:/rawrxd/tests/CMakeLists.txt;0;")
+add_test([=[test_ai_merge_resolver]=] "D:/rawrxd/build_smoke_ninja/tests/test_ai_merge_resolver.exe")
+set_tests_properties([=[test_ai_merge_resolver]=] PROPERTIES  _BACKTRACE_TRIPLES "D:/rawrxd/tests/CMakeLists.txt;145;add_test;D:/rawrxd/tests/CMakeLists.txt;0;")
+add_test([=[test_sandboxed_terminal]=] "D:/rawrxd/build_smoke_ninja/tests/test_sandboxed_terminal.exe")
+set_tests_properties([=[test_sandboxed_terminal]=] PROPERTIES  _BACKTRACE_TRIPLES "D:/rawrxd/tests/CMakeLists.txt;154;add_test;D:/rawrxd/tests/CMakeLists.txt;0;")
+add_test([=[test_agentic_file_operations]=] "D:/rawrxd/build_smoke_ninja/tests/test_agentic_file_operations.exe")
+set_tests_properties([=[test_agentic_file_operations]=] PROPERTIES  _BACKTRACE_TRIPLES "D:/rawrxd/tests/CMakeLists.txt;163;add_test;D:/rawrxd/tests/CMakeLists.txt;0;")
+add_test([=[model_registry_test]=] "D:/rawrxd/build_smoke_ninja/tests/model_registry_test.exe")
+set_tests_properties([=[model_registry_test]=] PROPERTIES  _BACKTRACE_TRIPLES "D:/rawrxd/tests/CMakeLists.txt;172;add_test;D:/rawrxd/tests/CMakeLists.txt;0;")
+add_test([=[test_gguf_integration]=] "D:/rawrxd/build_smoke_ninja/tests/test_gguf_integration.exe")
+set_tests_properties([=[test_gguf_integration]=] PROPERTIES  _BACKTRACE_TRIPLES "D:/rawrxd/tests/CMakeLists.txt;181;add_test;D:/rawrxd/tests/CMakeLists.txt;0;")
+add_test([=[test_basic_profiler]=] "D:/rawrxd/build_smoke_ninja/tests/test_basic_profiler.exe")
+set_tests_properties([=[test_basic_profiler]=] PROPERTIES  _BACKTRACE_TRIPLES "D:/rawrxd/tests/CMakeLists.txt;193;add_test;D:/rawrxd/tests/CMakeLists.txt;0;")
+add_test([=[test_batch3_profiler_smoke]=] "D:/rawrxd/build_smoke_ninja/tests/test_batch3_profiler_smoke.exe")
+set_tests_properties([=[test_batch3_profiler_smoke]=] PROPERTIES  _BACKTRACE_TRIPLES "D:/rawrxd/tests/CMakeLists.txt;205;add_test;D:/rawrxd/tests/CMakeLists.txt;0;")
+add_test([=[test_production_regression]=] "D:/rawrxd/build_smoke_ninja/tests/test_production_regression.exe")
+set_tests_properties([=[test_production_regression]=] PROPERTIES  _BACKTRACE_TRIPLES "D:/rawrxd/tests/CMakeLists.txt;232;add_test;D:/rawrxd/tests/CMakeLists.txt;0;")
+add_test([=[test_instructions_provider]=] "D:/rawrxd/build_smoke_ninja/tests/test_instructions_provider.exe")
+set_tests_properties([=[test_instructions_provider]=] PROPERTIES  _BACKTRACE_TRIPLES "D:/rawrxd/tests/CMakeLists.txt;253;add_test;D:/rawrxd/tests/CMakeLists.txt;0;")

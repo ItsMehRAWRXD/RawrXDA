@@ -14633,6 +14633,48 @@
         var decoder = new TextDecoder('utf-8');
         var buffer = '';
 
+        var _coerceText = function (v) {
+          if (typeof v === 'string') return v;
+          if (Array.isArray(v)) {
+            var out = '';
+            for (var i = 0; i < v.length; i++) {
+              var p = v[i];
+              if (typeof p === 'string') out += p;
+              else if (p && typeof p.text === 'string') out += p.text;
+              else if (p && typeof p.content === 'string') out += p.content;
+            }
+            return out;
+          }
+          if (v && typeof v.text === 'string') return v.text;
+          if (v && typeof v.content === 'string') return v.content;
+          return '';
+        };
+
+        var parseGenerateLine = function (line) {
+          if (!line) return null;
+          try {
+            var msg = JSON.parse(line);
+            var text = '';
+
+            if (typeof msg.response === 'string') text = msg.response;
+            else if (typeof msg.answer === 'string') text = msg.answer;
+            else if (typeof msg.output === 'string') text = msg.output;
+            else if (msg.message && typeof msg.message.content !== 'undefined') text = _coerceText(msg.message.content);
+            else if (msg.message && typeof msg.message.reasoning_content !== 'undefined') text = _coerceText(msg.message.reasoning_content);
+            else if (typeof msg.message === 'string') text = msg.message;
+            else if (msg.choices && msg.choices[0] && msg.choices[0].message) {
+              text = _coerceText(msg.choices[0].message.content);
+            }
+
+            return {
+              text: (typeof text === 'string' ? text : ''),
+              done: !!msg.done,
+            };
+          } catch (_) {
+            return null;
+          }
+        };
+
         while (true) {
           var result = await reader.read();
           if (result.done) break;
@@ -14647,18 +14689,31 @@
 
             if (!line) continue;
 
-            try {
-              var msg = JSON.parse(line);
-              if (msg.response) {
-                this.tokenCount++;
-                this.lastTokenTime = performance.now();
-                yield msg.response;
-              }
-              if (msg.done) return;
-            } catch (e) {
+            var parsed = parseGenerateLine(line);
+            if (!parsed) {
               // Skip malformed JSON lines
               logDebug('[RawrXDStream] Parse error: ' + line.substring(0, 80), 'warn');
+              continue;
             }
+
+            if (parsed.text) {
+              this.tokenCount++;
+              this.lastTokenTime = performance.now();
+              yield parsed.text;
+            }
+            if (parsed.done) return;
+          }
+        }
+
+        // Flush trailing buffer for non-NDJSON/single-JSON responses with no final newline.
+        buffer += decoder.decode();
+        var tail = buffer.trim();
+        if (tail) {
+          var parsedTail = parseGenerateLine(tail);
+          if (parsedTail && parsedTail.text) {
+            this.tokenCount++;
+            this.lastTokenTime = performance.now();
+            yield parsedTail.text;
           }
         }
       }
@@ -14689,6 +14744,86 @@
         var decoder = new TextDecoder('utf-8');
         var buffer = '';
 
+        var _coerceText = function (v) {
+          if (typeof v === 'string') return v;
+          if (Array.isArray(v)) {
+            var out = '';
+            for (var i = 0; i < v.length; i++) {
+              var p = v[i];
+              if (typeof p === 'string') out += p;
+              else if (p && typeof p.text === 'string') out += p.text;
+              else if (p && typeof p.content === 'string') out += p.content;
+            }
+            return out;
+          }
+          if (v && typeof v.text === 'string') return v.text;
+          if (v && typeof v.content === 'string') return v.content;
+          return '';
+        };
+
+        var parseCompletionsLine = function (rawLine) {
+          var line = (rawLine || '').trim();
+          if (!line) return null;
+
+          // Strip SSE "data: " prefix
+          if (line.startsWith('data: ')) line = line.slice(6);
+          if (line === '[DONE]') return { done: true };
+
+          try {
+            var obj = JSON.parse(line);
+
+            // OpenAI SSE format: choices[0].delta.content
+            var delta = '';
+            var toolCalls = null;
+            var finishReason = null;
+            if (obj.choices && obj.choices[0]) {
+              var choice = obj.choices[0];
+              if (choice.delta) {
+                delta =
+                  _coerceText(choice.delta.content) ||
+                  _coerceText(choice.delta.reasoning_content) ||
+                  _coerceText(choice.delta.reasoning) ||
+                  '';
+                // OpenAI tool_calls in delta (agentic streaming)
+                if (choice.delta.tool_calls) {
+                  toolCalls = choice.delta.tool_calls;
+                }
+              } else if (choice.message && typeof choice.message.content === 'string') {
+                // Non-streaming OpenAI-compatible payload in a single JSON object
+                delta = choice.message.content;
+              } else if (choice.message && typeof choice.message.content !== 'undefined') {
+                delta = _coerceText(choice.message.content);
+              } else if (choice.message && typeof choice.message.reasoning_content !== 'undefined') {
+                delta = _coerceText(choice.message.reasoning_content);
+              } else if (choice.message && typeof choice.message.reasoning !== 'undefined') {
+                delta = _coerceText(choice.message.reasoning);
+              }
+              if (choice.finish_reason) {
+                finishReason = choice.finish_reason;
+              }
+            } else if (obj.response) {
+              // Ollama NDJSON fallback within same parser
+              delta = obj.response;
+            } else if (obj.message && typeof obj.message.content !== 'undefined') {
+              delta = _coerceText(obj.message.content);
+            } else if (obj.message && typeof obj.message.reasoning_content !== 'undefined') {
+              delta = _coerceText(obj.message.reasoning_content);
+            } else if (obj.answer || obj.message || obj.output) {
+              delta = obj.answer || obj.message || obj.output || '';
+            }
+
+            return {
+              delta: (typeof delta === 'string' ? delta : ''),
+              toolCalls: toolCalls,
+              finishReason: finishReason,
+              done: !!obj.done,
+            };
+          } catch (_) {
+            // Skip non-JSON lines (SSE comments, empty lines)
+            return null;
+          }
+        };
+
         while (true) {
           var result = await reader.read();
           if (result.done) break;
@@ -14698,58 +14833,49 @@
           // Cross-chunk safe SSE + NDJSON parsing
           var newline;
           while ((newline = buffer.indexOf('\n')) !== -1) {
-            var line = buffer.slice(0, newline).trim();
+            var line = buffer.slice(0, newline);
             buffer = buffer.slice(newline + 1);
 
-            if (!line) continue;
+            var parsed = parseCompletionsLine(line);
+            if (!parsed) continue;
+            if (parsed.done) return;
 
-            // Strip SSE "data: " prefix
-            if (line.startsWith('data: ')) line = line.slice(6);
-            if (line === '[DONE]') return;
+            // Yield tool_calls as special tagged objects
+            if (parsed.toolCalls) {
+              yield { __type: 'tool_calls', tool_calls: parsed.toolCalls };
+            }
 
-            try {
-              var obj = JSON.parse(line);
+            if (parsed.delta) {
+              this.tokenCount++;
+              this.lastTokenTime = performance.now();
+              yield parsed.delta;
+            }
 
-              // OpenAI SSE format: choices[0].delta.content
-              var delta = '';
-              var toolCalls = null;
-              var finishReason = null;
-              if (obj.choices && obj.choices[0]) {
-                var choice = obj.choices[0];
-                if (choice.delta) {
-                  delta = choice.delta.content || '';
-                  // OpenAI tool_calls in delta (agentic streaming)
-                  if (choice.delta.tool_calls) {
-                    toolCalls = choice.delta.tool_calls;
-                  }
-                }
-                if (choice.finish_reason) {
-                  finishReason = choice.finish_reason;
-                }
-              } else if (obj.response) {
-                // Ollama NDJSON fallback within same parser
-                delta = obj.response;
-              }
+            // Yield finish_reason when it indicates tool usage
+            if (parsed.finishReason === 'tool_calls' || parsed.finishReason === 'function_call') {
+              yield { __type: 'finish_reason', reason: parsed.finishReason };
+            }
 
-              // Yield tool_calls as special tagged objects
-              if (toolCalls) {
-                yield { __type: 'tool_calls', tool_calls: toolCalls };
-              }
+            if (parsed.done) return;
+          }
+        }
 
-              if (delta) {
-                this.tokenCount++;
-                this.lastTokenTime = performance.now();
-                yield delta;
-              }
-
-              // Yield finish_reason when it indicates tool usage
-              if (finishReason === 'tool_calls' || finishReason === 'function_call') {
-                yield { __type: 'finish_reason', reason: finishReason };
-              }
-
-              if (obj.done) return;
-            } catch (e) {
-              // Skip non-JSON lines (SSE comments, empty lines)
+        // Flush trailing buffer for JSON bodies that are not newline-delimited.
+        buffer += decoder.decode();
+        var tail = buffer.trim();
+        if (tail) {
+          var parsedTail = parseCompletionsLine(tail);
+          if (parsedTail) {
+            if (parsedTail.toolCalls) {
+              yield { __type: 'tool_calls', tool_calls: parsedTail.toolCalls };
+            }
+            if (parsedTail.delta) {
+              this.tokenCount++;
+              this.lastTokenTime = performance.now();
+              yield parsedTail.delta;
+            }
+            if (parsedTail.finishReason === 'tool_calls' || parsedTail.finishReason === 'function_call') {
+              yield { __type: 'finish_reason', reason: parsedTail.finishReason };
             }
           }
         }
@@ -14892,6 +15018,64 @@
     // CHAT — SEND TO BACKEND
     // ======================================================================
 
+    function _coerceAssistantTextValue(v) {
+      if (typeof v === 'string') return v;
+      if (Array.isArray(v)) {
+        var out = '';
+        for (var i = 0; i < v.length; i++) {
+          var p = v[i];
+          if (typeof p === 'string') out += p;
+          else if (p && typeof p.text === 'string') out += p.text;
+          else if (p && typeof p.content === 'string') out += p.content;
+        }
+        return out;
+      }
+      if (v && typeof v.text === 'string') return v.text;
+      if (v && typeof v.content === 'string') return v.content;
+      return '';
+    }
+
+    function extractAssistantText(data) {
+      if (!data || typeof data !== 'object') return '';
+
+      if (data.choices && data.choices[0]) {
+        var c0 = data.choices[0];
+        if (c0.message) {
+          return (
+            _coerceAssistantTextValue(c0.message.content) ||
+            _coerceAssistantTextValue(c0.message.reasoning_content) ||
+            _coerceAssistantTextValue(c0.message.reasoning) ||
+            ''
+          );
+        }
+        if (c0.delta) {
+          return (
+            _coerceAssistantTextValue(c0.delta.content) ||
+            _coerceAssistantTextValue(c0.delta.reasoning_content) ||
+            _coerceAssistantTextValue(c0.delta.reasoning) ||
+            ''
+          );
+        }
+      }
+
+      if (data.message) {
+        if (typeof data.message === 'string') return data.message;
+        return (
+          _coerceAssistantTextValue(data.message.content) ||
+          _coerceAssistantTextValue(data.message.reasoning_content) ||
+          _coerceAssistantTextValue(data.message.reasoning) ||
+          ''
+        );
+      }
+
+      return (
+        _coerceAssistantTextValue(data.response) ||
+        _coerceAssistantTextValue(data.answer) ||
+        _coerceAssistantTextValue(data.output) ||
+        ''
+      );
+    }
+
     async function sendToBackend(query) {
       var model = State.model.current;
       var t0 = performance.now();
@@ -14967,7 +15151,7 @@
         var answer = '';
         var toolCallActions = [];
         if (data.choices && data.choices[0] && data.choices[0].message) {
-          answer = data.choices[0].message.content || '';
+          answer = extractAssistantText(data);
           // Handle non-streaming tool_calls in response
           if (data.choices[0].message.tool_calls) {
             var tcs = data.choices[0].message.tool_calls;
@@ -14982,8 +15166,10 @@
             }
           }
         } else {
-          answer = data.answer || data.response || '[No response]';
+          answer = extractAssistantText(data) || '[No response]';
         }
+
+        if (!answer || !answer.trim()) answer = '[No response]';
 
         // Parse embedded tool action blocks from response text
         var parsed = ToolActionRenderer.parseToolActionsFromText(answer);
@@ -15278,6 +15464,11 @@
 
         textEl.classList.remove('streaming-cursor');
 
+        // If stream ended without visible text, force fallback path.
+        if (!fullText || !fullText.trim()) {
+          throw new Error('Empty streamed response');
+        }
+
         // Parse tool action blocks from markdown text (```tool-action ... ```)
         var parsed = ToolActionRenderer.parseToolActionsFromText(fullText);
         if (parsed.actions.length > 0) {
@@ -15395,6 +15586,11 @@
         }
 
         textEl.classList.remove('streaming-cursor');
+
+        // If stream ended without visible text, force fallback to non-streaming endpoint.
+        if (!fullText || !fullText.trim()) {
+          throw new Error('Empty streamed response');
+        }
         textEl.innerHTML = formatMessage(fullText);
 
         // Record to conversation memory
@@ -15476,7 +15672,8 @@
           }
 
           var data = await res.json();
-          var answer = data.response || '[No response]';
+          var answer = extractAssistantText(data) || '[No response]';
+          if (!answer || !answer.trim()) answer = '[No response]';
 
           Conversation.addMessage('assistant', answer);
           addMessage('assistant', answer, { latency: latency, model: model, skipMemory: true });
@@ -15512,7 +15709,8 @@
         }
 
         var data = await res.json();
-        var answer = data.answer || data.response || '[No response]';
+        var answer = extractAssistantText(data) || '[No response]';
+        if (!answer || !answer.trim()) answer = '[No response]';
 
         Conversation.addMessage('assistant', answer);
         addMessage('assistant', answer, { latency: latency, model: model, skipMemory: true });
@@ -28363,8 +28561,17 @@
 
       function getBackendUrl() {
         try {
-          // Prefer proxy URL (11435) which routes to all backends (GGUF, Ollama, blob, cloud)
-          if (window.State && window.State.backend && window.State.backend.url) return window.State.backend.url;
+          // Prefer the same active URL resolver used by the main chat path.
+          if (typeof getActiveUrl === 'function') {
+            var active = getActiveUrl();
+            if (active) return active;
+          }
+          if (window.State && window.State.backend) {
+            if (window.State.backend.directMode && window.State.backend.ollamaDirectUrl) {
+              return window.State.backend.ollamaDirectUrl;
+            }
+            if (window.State.backend.url) return window.State.backend.url;
+          }
           if (typeof _ideServerUrl !== 'undefined' && _ideServerUrl) return _ideServerUrl;
           return 'http://localhost:11435';
         } catch (e) { return 'http://localhost:11435'; }
@@ -28922,6 +29129,37 @@
         msgs.push({ role: 'user', content: query });
         if (ws) ws.messages = msgs;
 
+        function extractLineDelta(j) {
+          if (!j) return '';
+          if (j.choices && j.choices[0] && j.choices[0].delta && j.choices[0].delta.content) return j.choices[0].delta.content;
+          if (j.choices && j.choices[0] && j.choices[0].message && typeof j.choices[0].message.content === 'string') return j.choices[0].message.content;
+          if (j.message && j.message.content) return j.message.content;
+          if (j.response) return j.response;
+          if (j.answer) return j.answer;
+          return '';
+        }
+
+        function applyAssistantText(assistantMsg, fullText) {
+          if (!assistantMsg) return;
+          if (typeof DOMPurify !== 'undefined') {
+            assistantMsg.innerHTML = DOMPurify.sanitize(formatMd(fullText));
+          } else {
+            assistantMsg.textContent = fullText;
+          }
+        }
+
+        function toLegacyPrompt(messages, latestQuery) {
+          var out = '';
+          for (var mi = 0; mi < messages.length; mi++) {
+            var m = messages[mi];
+            if (!m || !m.role) continue;
+            var role = m.role === 'assistant' ? 'Assistant' : (m.role === 'system' ? 'System' : 'User');
+            out += role + ': ' + (m.content || '') + '\n\n';
+          }
+          if (latestQuery) out += 'User: ' + latestQuery + '\n\nAssistant:';
+          return out;
+        }
+
         // Try OpenAI-compat endpoint first
         var startTime = performance.now();
         var tokenCount = 0;
@@ -28965,29 +29203,11 @@
                 if (line.startsWith('data: ')) line = line.slice(6);
                 try {
                   var j = JSON.parse(line);
-                  var delta = '';
-                  // OpenAI format
-                  if (j.choices && j.choices[0] && j.choices[0].delta && j.choices[0].delta.content) {
-                    delta = j.choices[0].delta.content;
-                  }
-                  // Ollama format
-                  else if (j.message && j.message.content) {
-                    delta = j.message.content;
-                  }
-                  // Raw text
-                  else if (j.response) {
-                    delta = j.response;
-                  }
+                  var delta = extractLineDelta(j);
                   if (delta) {
                     fullText += delta;
                     tokenCount++;
-                    if (assistantMsg) {
-                      if (typeof DOMPurify !== 'undefined') {
-                        assistantMsg.innerHTML = DOMPurify.sanitize(formatMd(fullText));
-                      } else {
-                        assistantMsg.textContent = fullText;
-                      }
-                    }
+                    applyAssistantText(assistantMsg, fullText);
                     var c = document.getElementById(id + '-msgs');
                     if (c) c.scrollTop = c.scrollHeight;
                   }
@@ -29008,6 +29228,7 @@
               stream: true
             })
           }).then(function (resp) {
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
             if (!resp.ok) {
               appendChatMsg(id, 'system', 'Error: Backend not reachable (' + resp.status + ')');
               setWindowStatus(id, 'error', 'Error');
@@ -29039,17 +29260,11 @@
                   if (!line) continue;
                   try {
                     var j = JSON.parse(line);
-                    var delta = (j.message && j.message.content) || j.response || '';
+                    var delta = extractLineDelta(j);
                     if (delta) {
                       fullText += delta;
                       tokenCount++;
-                      if (assistantMsg) {
-                        if (typeof DOMPurify !== 'undefined') {
-                          assistantMsg.innerHTML = DOMPurify.sanitize(formatMd(fullText));
-                        } else {
-                          assistantMsg.textContent = fullText;
-                        }
-                      }
+                      applyAssistantText(assistantMsg, fullText);
                       var c = document.getElementById(id + '-msgs');
                       if (c) c.scrollTop = c.scrollHeight;
                     }
@@ -29060,10 +29275,36 @@
             }
             return pump2();
           }).catch(function (e2) {
-            appendChatMsg(id, 'system', 'Error: ' + e2.message);
-            setWindowStatus(id, 'error', 'Disconnected');
-            taskCount--;
-            updateKernelStatus();
+            // Last fallback: non-streaming /api/generate
+            fetch(url + '/api/generate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                model: model,
+                prompt: toLegacyPrompt(msgs, query),
+                stream: false,
+                options: {
+                  num_ctx: (window.State && window.State.gen && window.State.gen.context) || 4096,
+                  num_predict: (window.State && window.State.gen && window.State.gen.maxTokens) || 2048,
+                  temperature: (window.State && window.State.gen && window.State.gen.temperature) || 0.7,
+                }
+              })
+            }).then(function (resp3) {
+              if (!resp3.ok) throw new Error('HTTP ' + resp3.status);
+              return resp3.json();
+            }).then(function (j3) {
+              var txt = extractLineDelta(j3) || '[No response]';
+              appendChatMsg(id, 'assistant', txt);
+              if (ws) ws.messages.push({ role: 'assistant', content: txt });
+              setWindowStatus(id, 'idle', 'Done');
+              taskCount--;
+              updateKernelStatus();
+            }).catch(function (e3) {
+              appendChatMsg(id, 'system', 'Error: ' + (e2.message || 'Failed to fetch') + ' | Fallback failed: ' + e3.message);
+              setWindowStatus(id, 'error', 'Disconnected');
+              taskCount--;
+              updateKernelStatus();
+            });
           });
         });
       }
@@ -29590,7 +29831,8 @@
         fetch(url + '/v1/chat/completions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(genParams)
+          body: JSON.stringify(genParams),
+          signal: AbortSignal.timeout(45000),
         }).then(function (resp) {
           if (!resp.ok) throw new Error('HTTP ' + resp.status);
           return _streamRead(resp);
@@ -29599,12 +29841,43 @@
           fetch(url + '/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model: model, messages: msgs, stream: true })
+            body: JSON.stringify({ model: model, messages: msgs, stream: true }),
+            signal: AbortSignal.timeout(45000),
           }).then(function (resp) {
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
             return _streamRead(resp);
-          }).catch(function (e) {
-            el.textContent += '\nError: ' + e.message;
-            if (onDone) onDone();
+          }).catch(function () {
+            // Last fallback: non-streaming /api/generate
+            fetch(url + '/api/generate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              signal: AbortSignal.timeout(45000),
+              body: JSON.stringify({
+                model: model,
+                prompt: prompt_text,
+                stream: false,
+                options: {
+                  num_ctx: (window.State && window.State.gen && window.State.gen.context) || 4096,
+                  num_predict: (window.State && window.State.gen && window.State.gen.maxTokens) || 2048,
+                  temperature: (window.State && window.State.gen && window.State.gen.temperature) || 0.7,
+                }
+              })
+            }).then(function (resp3) {
+              if (!resp3.ok) throw new Error('HTTP ' + resp3.status);
+              return resp3.json();
+            }).then(function (j3) {
+              var out =
+                (j3 && j3.response) ||
+                (j3 && j3.answer) ||
+                (j3 && j3.message && j3.message.content) ||
+                '[No response]';
+              el.textContent += out;
+              el.scrollTop = el.scrollHeight;
+              if (onDone) onDone();
+            }).catch(function (e3) {
+              el.textContent += '\nError: ' + e3.message;
+              if (onDone) onDone();
+            });
           });
         });
       }
@@ -29641,7 +29914,8 @@
         fetch(url + '/v1/chat/completions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(genParams)
+          body: JSON.stringify(genParams),
+          signal: AbortSignal.timeout(45000),
         }).then(function (resp) {
           if (!resp.ok) throw new Error('HTTP ' + resp.status);
           return _streamRead(resp);
@@ -29650,12 +29924,48 @@
           fetch(url + '/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model: model, messages: msgs, stream: true })
+            body: JSON.stringify({ model: model, messages: msgs, stream: true }),
+            signal: AbortSignal.timeout(45000),
           }).then(function (resp) {
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
             return _streamRead(resp);
-          }).catch(function (e) {
-            div.textContent += '\nError: ' + e.message;
-            if (onDone) onDone(text);
+          }).catch(function () {
+            // Last fallback: non-streaming /api/generate
+            var latest = '';
+            if (msgs && msgs.length > 0) {
+              var last = msgs[msgs.length - 1];
+              latest = (last && last.content) || '';
+            }
+            fetch(url + '/api/generate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              signal: AbortSignal.timeout(45000),
+              body: JSON.stringify({
+                model: model,
+                prompt: latest,
+                stream: false,
+                options: {
+                  num_ctx: (window.State && window.State.gen && window.State.gen.context) || 4096,
+                  num_predict: (window.State && window.State.gen && window.State.gen.maxTokens) || 2048,
+                  temperature: (window.State && window.State.gen && window.State.gen.temperature) || 0.7,
+                }
+              })
+            }).then(function (resp3) {
+              if (!resp3.ok) throw new Error('HTTP ' + resp3.status);
+              return resp3.json();
+            }).then(function (j3) {
+              var out =
+                (j3 && j3.response) ||
+                (j3 && j3.answer) ||
+                (j3 && j3.message && j3.message.content) ||
+                '[No response]';
+              text += out;
+              div.textContent = text;
+              if (onDone) onDone(text);
+            }).catch(function (e3) {
+              div.textContent += '\nError: ' + e3.message;
+              if (onDone) onDone(text);
+            });
           });
         });
       }

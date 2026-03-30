@@ -51,7 +51,7 @@ ContentHash ActionDigest(const IntentNode& node) {
 
 std::vector<TraceEvent> LoadReferenceTrace(std::string_view path) {
     std::vector<TraceEvent> out;
-    std::ifstream in(std::string(path));
+    std::ifstream in{std::string(path)};
     if (!in.is_open()) return out;
 
     std::string line;

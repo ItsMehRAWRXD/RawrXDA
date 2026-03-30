@@ -26,6 +26,22 @@
 namespace LocalServerUtil {
 static std::string buildHttpResponse(int status, const std::string& body,
                                       const std::string& contentType = "application/json") {
+    std::string finalBody = body;
+    auto first = finalBody.find_first_not_of(" \t\r\n");
+    if (first != std::string::npos && finalBody[first] == '{') {
+        if (finalBody.find("\"success\"") == std::string::npos) {
+            const bool okStatus = (status >= 200 && status < 300);
+            auto second = finalBody.find_first_not_of(" \t\r\n", first + 1);
+            const bool emptyObject = (second != std::string::npos && finalBody[second] == '}');
+            std::string inject = std::string("\"success\":") + (okStatus ? "true" : "false");
+            if (!emptyObject) inject += ",";
+            finalBody.insert(first + 1, inject);
+        }
+    } else if (first != std::string::npos && finalBody[first] == '[') {
+        const bool okStatus = (status >= 200 && status < 300);
+        finalBody = std::string("{\"success\":") + (okStatus ? "true" : "false") + ",\"data\":" + finalBody + "}";
+    }
+
     std::ostringstream oss;
     switch (status) {
         case 200: oss << "HTTP/1.1 200 OK\r\n"; break;
@@ -37,12 +53,12 @@ static std::string buildHttpResponse(int status, const std::string& body,
         default:  oss << "HTTP/1.1 500 Internal Server Error\r\n"; break;
     }
     oss << "Content-Type: " << contentType << "\r\n";
-    oss << "Content-Length: " << body.size() << "\r\n";
+    oss << "Content-Length: " << finalBody.size() << "\r\n";
     oss << "Access-Control-Allow-Origin: *\r\n";
     oss << "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n";
     oss << "Access-Control-Allow-Headers: Content-Type, Authorization\r\n";
     oss << "Connection: close\r\n\r\n";
-    oss << body;
+    oss << finalBody;
     return oss.str();
 }
 

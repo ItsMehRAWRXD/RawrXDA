@@ -6,13 +6,16 @@
 #include "../agentic/agent_operations.h"
 #include "../agentic_agent_coordinator.h"
 #include "../core/byte_level_hotpatcher.hpp"
+#include "../core/address_hotpatcher.hpp"
 #include "../core/proxy_hotpatcher.hpp"
 #include "../core/unified_hotpatch_manager.hpp"
+#include "../swarm_orchestrator.h"
 #include "Win32IDE.h"
 #include "Win32IDE_AgentOperationsBridge.h"
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <chrono>
 #include <cmath>
 #include <commdlg.h>
 #include <cstdlib>
@@ -77,6 +80,164 @@ bool ParseHexBytes(const std::string& input, std::vector<uint8_t>& out)
         out.push_back(static_cast<uint8_t>(std::strtoul(byteStr.c_str(), nullptr, 16)));
     }
     return !out.empty();
+}
+
+bool containsCaseInsensitive(std::string_view haystack, std::string_view needle)
+{
+    if (needle.empty() || haystack.size() < needle.size())
+    {
+        return false;
+    }
+
+    for (size_t i = 0; i + needle.size() <= haystack.size(); ++i)
+    {
+        size_t matched = 0;
+        while (matched < needle.size())
+        {
+            const unsigned char a = static_cast<unsigned char>(haystack[i + matched]);
+            const unsigned char b = static_cast<unsigned char>(needle[matched]);
+            if (std::tolower(a) != std::tolower(b))
+            {
+                break;
+            }
+            ++matched;
+        }
+        if (matched == needle.size())
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool isActionableHotpatchFailure(const AddressPatchDiagnostics& diag, std::string_view dump)
+{
+    if (diag.failed > 0)
+    {
+        return true;
+    }
+
+    return containsCaseInsensitive(dump, "ProtectFail") ||
+           containsCaseInsensitive(dump, "InvalidAddress") ||
+           containsCaseInsensitive(dump, "already_active") ||
+           containsCaseInsensitive(dump, "already active") ||
+           containsCaseInsensitive(dump, "protect failed") ||
+           containsCaseInsensitive(dump, "dump error");
+}
+
+struct AdvisoryEscalationSnapshot
+{
+    bool shouldTrigger = false;
+    int failuresInWindow = 0;
+    int consecutiveFailureSignals = 0;
+};
+
+AdvisoryEscalationSnapshot updateAdvisoryEscalationMonitor(bool failureSignal, std::uint64_t failedCounter)
+{
+    using Clock = std::chrono::steady_clock;
+    static constexpr auto kWindow = std::chrono::seconds(60);
+    static std::deque<Clock::time_point> s_failureEvents;
+    static int s_consecutiveFailureSignals = 0;
+    static std::uint64_t s_lastFailedCounter = 0;
+
+    const auto now = Clock::now();
+
+    if (failureSignal)
+    {
+        ++s_consecutiveFailureSignals;
+    }
+    else
+    {
+        s_consecutiveFailureSignals = 0;
+    }
+
+    if (failedCounter > s_lastFailedCounter)
+    {
+        std::uint64_t delta = failedCounter - s_lastFailedCounter;
+        if (delta > 32)
+        {
+            delta = 32;
+        }
+        for (std::uint64_t i = 0; i < delta; ++i)
+        {
+            s_failureEvents.push_back(now);
+        }
+    }
+    s_lastFailedCounter = failedCounter;
+
+    while (!s_failureEvents.empty() && (now - s_failureEvents.front()) > kWindow)
+    {
+        s_failureEvents.pop_front();
+    }
+
+    AdvisoryEscalationSnapshot snapshot;
+    snapshot.failuresInWindow = static_cast<int>(s_failureEvents.size());
+    snapshot.consecutiveFailureSignals = s_consecutiveFailureSignals;
+    snapshot.shouldTrigger = (snapshot.failuresInWindow >= 3) && (snapshot.consecutiveFailureSignals >= 3);
+    return snapshot;
+}
+
+std::string buildAdvisoryAutoFixPayload(const AddressPatchDiagnostics& diag,
+                                        std::string_view dump,
+                                        const AdvisoryEscalationSnapshot& snapshot)
+{
+    const bool protectFail = containsCaseInsensitive(dump, "ProtectFail") || containsCaseInsensitive(dump, "protect failed");
+    const bool alreadyActive = containsCaseInsensitive(dump, "already_active") || containsCaseInsensitive(dump, "already active");
+    const bool invalidAddress = containsCaseInsensitive(dump, "InvalidAddress");
+
+    std::string reason = "Repeated hotpatch failures detected in 60s window";
+    if (protectFail)
+    {
+        reason = "VirtualProtect collision detected";
+    }
+    else if (alreadyActive)
+    {
+        reason = "Patch slot collision (already active) detected";
+    }
+    else if (invalidAddress)
+    {
+        reason = "Invalid patch target address detected";
+    }
+
+    const std::string primaryAction = (protectFail || alreadyActive) ? "REVERT_ALL" : "RETRY_COOLDOWN";
+
+    json payload;
+    payload["type"] = "SYSTEM_ADVISORY";
+    payload["schema"] = "rawrxd.hotpatch.advisory.v1";
+    payload["severity"] = "high";
+    payload["priority"] = "system";
+    payload["source"] = "Win32IDE.HotpatchDiagnostics";
+    payload["window_seconds"] = 60;
+    payload["failures_in_window"] = snapshot.failuresInWindow;
+    payload["consecutive_failure_signals"] = snapshot.consecutiveFailureSignals;
+    payload["diagnostics"] = {
+        {"failed", diag.failed},
+        {"active", diag.active},
+        {"applied", diag.applied},
+        {"reverted", diag.reverted}
+    };
+    payload["reason"] = reason;
+    payload["operator_confirmation_required"] = true;
+    payload["action_candidates"] = json::array({
+        {
+            {"action", primaryAction},
+            {"verb", (primaryAction == "REVERT_ALL") ? "rawrxd_addr_patch_revert_all" : "retry_after_cooldown"},
+            {"confidence", (primaryAction == "REVERT_ALL") ? 0.88 : 0.72},
+            {"cooldown_ms", (primaryAction == "RETRY_COOLDOWN") ? 1500 : 0}
+        },
+        {
+            {"action", "RETRY_COOLDOWN"},
+            {"verb", "retry_after_cooldown"},
+            {"confidence", 0.61},
+            {"cooldown_ms", 1500}
+        }
+    });
+
+    // Keep advisory payload bounded so it does not flood Librarian context.
+    std::string excerpt(dump.substr(0, 768));
+    payload["dump_excerpt"] = excerpt;
+
+    return payload.dump();
 }
 
 std::deque<std::string> g_serverPatchNames;
@@ -243,7 +404,70 @@ void Win32IDE::initHotpatchUI()
     UnifiedHotpatchManager::instance().set_target_tps(m_hotpatchSavedTargetTps);
     ProxyHotpatcher::instance().setEnabled(true);
     m_hotpatchUIInitialized = true;
+    if (m_hwndMain)
+    {
+        SetTimer(m_hwndMain, HOTPATCH_DIAGNOSTICS_TIMER_ID, HOTPATCH_DIAGNOSTICS_INTERVAL_MS, nullptr);
+    }
+    refreshHotpatchDiagnosticsView();
     appendToOutput("[Hotpatch] Three-layer hotpatch system initialized.\n");
+}
+
+void Win32IDE::refreshHotpatchDiagnosticsView()
+{
+    if (!m_hotpatchUIInitialized)
+    {
+        return;
+    }
+
+    auto& hotpatcher = AddressHotpatcher::instance();
+    const AddressPatchDiagnostics diag = hotpatcher.getDiagnostics();
+    const std::string dump = hotpatcher.debugDump();
+    const bool failureSignal = isActionableHotpatchFailure(diag, dump);
+    const AdvisoryEscalationSnapshot escalation =
+        updateAdvisoryEscalationMonitor(failureSignal, static_cast<std::uint64_t>(diag.failed));
+
+    // Phase 6: Feed actionable patch failures to Librarian as a one-shot diagnostics hint.
+    if (failureSignal)
+    {
+        std::ostringstream hint;
+        hint << "Hotpatch failure diagnostics\n";
+        hint << "failed=" << diag.failed << " active=" << diag.active << "\n";
+        hint << dump.substr(0, 1536);
+        RawrXD::SwarmOrchestrator::PublishHotpatchDiagnosticsHint(hint.str());
+
+        // Phase 6.1: Escalate repeated failures into a structured advisory payload.
+        if (escalation.shouldTrigger)
+        {
+            static std::uint64_t s_lastAdvisoryFailedCounter = 0;
+            if (static_cast<std::uint64_t>(diag.failed) > s_lastAdvisoryFailedCounter)
+            {
+                s_lastAdvisoryFailedCounter = static_cast<std::uint64_t>(diag.failed);
+                RawrXD::SwarmOrchestrator::PublishHotpatchDiagnosticsHint(
+                    buildAdvisoryAutoFixPayload(diag, dump, escalation));
+            }
+        }
+    }
+
+    std::ostringstream out;
+    out << "=== Address Hotpatch Diagnostics ===\n";
+    out << "Applied=" << diag.applied << " Reverted=" << diag.reverted << " Failed=" << diag.failed
+        << " Active=" << diag.active << "\n";
+    out << "------------------------------------\n";
+    out << dump;
+    if (dump.empty() || dump.back() != '\n')
+    {
+        out << "\n";
+    }
+
+    const std::string rendered = out.str();
+    if (rendered == m_lastHotpatchDiagnosticsDump)
+    {
+        return;
+    }
+    m_lastHotpatchDiagnosticsDump = rendered;
+
+    clearOutput("Hotpatch Diagnostics");
+    appendToOutput(rendered, "Hotpatch Diagnostics", OutputSeverity::Info);
 }
 
 // ============================================================================
@@ -326,6 +550,9 @@ void Win32IDE::handleHotpatchCommand(int commandId)
             break;
         case IDM_HOTPATCH_SET_TARGET_TPS:
             cmdHotpatchSetTargetTps();
+            break;
+        case IDM_HOTPATCH_REVERT_ALL_CONFIRMED:
+            cmdHotpatchConfirmRevertAll();
             break;
         case IDM_HOTPATCH_PRESET_SAVE:
             cmdHotpatchPresetSave();
@@ -470,12 +697,21 @@ void Win32IDE::cmdHotpatchToggleAll()
                                        : ComputeTemperatureLinkedTargetTps(m_inferenceConfig.temperature);
         unified.set_target_tps(restoredTps);
         proxy.setEnabled(true);
+        if (m_hwndMain)
+        {
+            SetTimer(m_hwndMain, HOTPATCH_DIAGNOSTICS_TIMER_ID, HOTPATCH_DIAGNOSTICS_INTERVAL_MS, nullptr);
+        }
+        refreshHotpatchDiagnosticsView();
     }
     else
     {
         m_hotpatchSavedTargetTps = unified.get_target_tps();
         unified.set_target_tps(0.0);
         proxy.setEnabled(false);
+        if (m_hwndMain)
+        {
+            KillTimer(m_hwndMain, HOTPATCH_DIAGNOSTICS_TIMER_ID);
+        }
     }
 
     std::ostringstream ss;
@@ -630,6 +866,40 @@ void Win32IDE::cmdHotpatchMemoryRevert()
        << " size=" << tracked.entry.patchSize << " => " << (ur.result.success ? "OK" : "FAILED") << " ("
        << ur.result.detail << ")\n";
     appendToOutput(ss.str());
+}
+
+void Win32IDE::cmdHotpatchConfirmRevertAll()
+{
+    if (!m_hotpatchEnabled)
+    {
+        appendToOutput("[Hotpatch] System is disabled. Toggle on first.\n");
+        return;
+    }
+
+    auto& hotpatcher = AddressHotpatcher::instance();
+    const PatchResult result = hotpatcher.revertAll();
+    refreshHotpatchDiagnosticsView();
+
+    json recovery;
+    recovery["type"] = "SYSTEM_RECOVERY";
+    recovery["schema"] = "rawrxd.hotpatch.recovery.v1";
+    recovery["source"] = "Win32IDE.WM_COMMAND";
+    recovery["operator_confirmed"] = true;
+    recovery["action"] = "REVERT_ALL";
+    recovery["success"] = result.success;
+    recovery["detail"] = result.detail;
+    recovery["error_code"] = result.errorCode;
+
+    if (result.success)
+    {
+        appendToOutput("[Hotpatch] Advisory action confirmed: reverted all active address patches.\n");
+    }
+    else
+    {
+        appendToOutput("[Hotpatch] Advisory action failed: " + result.detail + "\n", "Output", OutputSeverity::Error);
+    }
+
+    RawrXD::SwarmOrchestrator::PublishHotpatchDiagnosticsHint(recovery.dump());
 }
 
 // ============================================================================

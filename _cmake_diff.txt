@@ -1,0 +1,157 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 23a3349c3..f531da619 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -333,6 +333,7 @@ if(RAWR_HAS_MASM)
+         src/asm/inference_core.asm
+         src/asm/FlashAttention_AVX512.asm
+         src/asm/quant_avx2.asm
++        src/asm/RawrXD_SemanticSearch_Kernels.asm
+         src/asm/RawrXD_KQuant_Dequant.asm
+         src/asm/RawrXD_AVX512_Dequant_BPE.asm
+         src/asm/RawrXD_PDBKernel_v3.asm
+@@ -593,6 +594,10 @@ set(SOURCES
+     src/agentic/RawrXD_AgentLoop.cpp
+     src/agentic/agentic_executor.cpp
+ 
++    # Layer 1: State Machine + Layer 2: Execution State Capture (NEW)
++    src/agentic/agentic_executor_state.cpp
++    src/agentic/agentic_executor_masm_bridge.cpp
++
+     # T6: Autonomous Repair Orchestrator + Agent Memory Indexer
+     src/core/auto_repair_orchestrator.cpp
+     src/core/agent_memory_indexer.cpp
+@@ -835,6 +840,8 @@ set(SOURCES
+ 
+     # GAP 2: HNSW Vector Index
+     src/core/vector_index.cpp
++    src/core/semantic_search_bridge.cpp
++    src/core/zero_copy_index.cpp
+ 
+     # GAP 3: Model Cascade Router (Thompson Sampling)
+     src/agentic/model_cascade.cpp
+@@ -1326,6 +1333,11 @@ endif()
+ # =============================================================================
+ add_subdirectory(src/reverse_engineering)
+ 
++# =============================================================================
++# AVX-512 Semantic Search Kernels (Layer 3 - MASM Assembly)
++# =============================================================================
++add_subdirectory(src/kernels)
++
+ add_executable(RawrEngine ${RAWR_ENGINE_SOURCES} ${ASM_KERNEL_SOURCES})
+ 
+ if(WIN32)
+@@ -2734,6 +2746,7 @@ if(WIN32)
+         src/win32app/Win32IDE_FailureIntelligence.cpp
+         src/win32app/Win32IDE_Settings.cpp
+         src/win32app/Win32IDE_LocalServer.cpp
++        src/win32app/Win32IDE_SearchFilesIndex.cpp
+         src/win32app/Win32IDE_BackendSwitcher.cpp
+         src/win32app/Win32IDE_AIBackend.cpp
+         src/win32app/OllamaManager.cpp
+@@ -2785,6 +2798,13 @@ if(WIN32)
+         # T3-D: Deterministic Replay Engine (DivergenceEvent + TelemetrySnapshot)
+         src/agentic/DeterministicReplayEngine.cpp
+ 
++        # DAE: Deterministic Agentic Execution (required by AgentToolHandlers DAE bridge)
++        src/dae/shadow_fs.cpp
++        src/dae/intent_ir.cpp
++        src/dae/tool_abi.cpp
++        src/dae/trace_log.cpp
++        src/dae/replay_engine.cpp
++
+         # T4: Autonomous Recovery Orchestrator (FailureClass → recovery → verify → commit)
+         src/agentic/autonomous_recovery_orchestrator.cpp
+ 
+@@ -3132,6 +3152,8 @@ if(WIN32)
+         src/core/agentic_task_graph.cpp
+         src/core/embedding_engine.cpp
+         src/core/vector_index.cpp
++        src/core/semantic_search_bridge.cpp
++        src/core/zero_copy_index.cpp
+         src/core/vision_encoder.cpp
+ 
+         # Vision Pipeline Extensions (Token Gating, Embedding Cache, KV Isolation, Quantized Encoder, GPU Staging)
+@@ -3342,6 +3364,7 @@ if(WIN32)
+         src/ui/interpretability_panel.cpp
+         # Advanced feature modules (src scope)
+         src/real_time_completion_engine.cpp
++        src/debug/execution_state_provider_debugger_core.cpp
+         src/LanguageServerIntegration.cpp
+         src/interpretability_panel_enhanced.cpp
+         src/feature_registry_panel.cpp
+@@ -3414,6 +3437,8 @@ if(WIN32)
+             src/vulkan_compute.cpp
+             src/core/embedding_engine.cpp
+             src/core/vector_index.cpp
++            src/core/semantic_search_bridge.cpp
++            src/core/zero_copy_index.cpp
+             src/core/agentic_task_graph.cpp
+             src/core/vision_encoder.cpp
+             src/core/masm_stress_harness.cpp
+@@ -3635,6 +3660,8 @@ if(WIN32)
+     list(APPEND WIN32IDE_SOURCES
+         src/win32app/ai_workers_queue.cpp
+         src/core/dap_client_service.cpp
++        src/agentic/agentic_executor_state.cpp
++        src/agentic/agentic_executor_masm_bridge.cpp
+         # v14.7.0 Native Track B Modules
+         src/ui/ImportBridge.cpp
+         src/ui/ExportBridge.cpp
+@@ -4245,6 +4272,20 @@ if(WIN32)
+     #     target_link_libraries(RawrXD-Win32IDE PRIVATE ${RE_MODEL_OBJECTS})
+     # endif()
+     
++    # =========================================================================
++    # Link AVX-512 Semantic Search Kernels (Layer 3)
++    # =========================================================================
++    if(AVX512_KERNELS_FOUND)
++        add_dependencies(RawrXD-Win32IDE AVX512_Kernels)
++        target_link_libraries(RawrXD-Win32IDE PRIVATE ${AVX512_KERNEL_OBJECT})
++        target_link_libraries(RawrXD-Win32IDE INTERFACE AVX512_Semantic_Bridge)
++        target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWRXD_HAS_AVX512_KERNELS=1)
++        message(STATUS "[Kernels] AVX-512 semantic search kernels linked to RawrXD-Win32IDE")
++    else()
++        target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWRXD_HAS_AVX512_KERNELS=0)
++        message(STATUS "[Kernels] AVX-512 kernels not available; using C++ fallbacks")
++    endif()
++    
+     target_include_directories(RawrXD-Win32IDE PRIVATE
+         ${CMAKE_CURRENT_SOURCE_DIR}/src
+         ${CMAKE_CURRENT_SOURCE_DIR}/src/engine
+diff --git a/tests/CMakeLists.txt b/tests/CMakeLists.txt
+index ec5d26b22..c02adea92 100644
+--- a/tests/CMakeLists.txt
++++ b/tests/CMakeLists.txt
+@@ -75,13 +75,29 @@ endif()
+ 
+ # AI Completions Test
+ if(NOT TARGET test_ai_completions AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_ai_completions.cpp")
+-    add_executable(test_ai_completions test_ai_completions.cpp)
++    add_executable(test_ai_completions
++        test_ai_completions.cpp
++        ${CMAKE_SOURCE_DIR}/src/real_time_completion_engine.cpp
++    )
+     target_include_directories(test_ai_completions PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
++    target_compile_definitions(test_ai_completions PRIVATE RAWRXD_NO_DEFAULT_EXECUTION_STATE_PROVIDER=1)
+     set_target_properties(test_ai_completions PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+     add_test(NAME test_ai_completions COMMAND test_ai_completions)
+     message(STATUS "  ✓ Added test_ai_completions")
+ endif()
+ 
++if(NOT TARGET test_execution_state_prompt AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_execution_state_prompt.cpp")
++    add_executable(test_execution_state_prompt
++        test_execution_state_prompt.cpp
++        ${CMAKE_SOURCE_DIR}/src/real_time_completion_engine.cpp
++    )
++    target_include_directories(test_execution_state_prompt PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
++    target_compile_definitions(test_execution_state_prompt PRIVATE RAWRXD_NO_DEFAULT_EXECUTION_STATE_PROVIDER=1)
++    set_target_properties(test_execution_state_prompt PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
++    add_test(NAME test_execution_state_prompt COMMAND test_execution_state_prompt)
++    message(STATUS "  ✓ Added test_execution_state_prompt")
++endif()
++
+ # LLM Connectivity Test
+ if(NOT TARGET test_llm_connectivity AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_llm_connectivity.cpp")
+     add_executable(test_llm_connectivity test_llm_connectivity.cpp)

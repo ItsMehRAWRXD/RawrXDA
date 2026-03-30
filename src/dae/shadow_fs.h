@@ -108,6 +108,9 @@ struct FileEntry {
 
 class ShadowFilesystem {
 public:
+    ShadowFilesystem();
+    ~ShadowFilesystem();
+
     // -------------------------------------------------------------------------
     // Lifecycle
     // -------------------------------------------------------------------------

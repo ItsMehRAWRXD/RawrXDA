@@ -75,11 +75,88 @@ endif()
 
 # AI Completions Test
 if(NOT TARGET test_ai_completions AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_ai_completions.cpp")
-    add_executable(test_ai_completions test_ai_completions.cpp)
+    add_executable(test_ai_completions
+        test_ai_completions.cpp
+        ${CMAKE_SOURCE_DIR}/src/real_time_completion_engine.cpp
+    )
     target_include_directories(test_ai_completions PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    target_compile_definitions(test_ai_completions PRIVATE RAWRXD_NO_DEFAULT_EXECUTION_STATE_PROVIDER=1)
     set_target_properties(test_ai_completions PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
     add_test(NAME test_ai_completions COMMAND test_ai_completions)
     message(STATUS "  ✓ Added test_ai_completions")
+endif()
+
+if(NOT TARGET test_execution_state_prompt AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_execution_state_prompt.cpp")
+    add_executable(test_execution_state_prompt
+        test_execution_state_prompt.cpp
+        ${CMAKE_SOURCE_DIR}/src/real_time_completion_engine.cpp
+    )
+    target_include_directories(test_execution_state_prompt PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    target_compile_definitions(test_execution_state_prompt PRIVATE RAWRXD_NO_DEFAULT_EXECUTION_STATE_PROVIDER=1)
+    set_target_properties(test_execution_state_prompt PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    add_test(NAME test_execution_state_prompt COMMAND test_execution_state_prompt)
+    message(STATUS "  ✓ Added test_execution_state_prompt")
+endif()
+
+if(NOT TARGET test_agentic_kernel_bench AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_agentic_kernel_bench.cpp")
+    add_executable(test_agentic_kernel_bench
+        test_agentic_kernel_bench.cpp
+        ${CMAKE_SOURCE_DIR}/src/agentic/agentic_executor_avx512.cpp
+    )
+    target_include_directories(test_agentic_kernel_bench PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    if(MSVC)
+        target_sources(test_agentic_kernel_bench PRIVATE ${CMAKE_SOURCE_DIR}/src/asm/rawrxd_agentic_kernel.asm)
+        set_source_files_properties(${CMAKE_SOURCE_DIR}/src/asm/rawrxd_agentic_kernel.asm PROPERTIES LANGUAGE ASM_MASM)
+        target_compile_definitions(test_agentic_kernel_bench PRIVATE RAWRXD_AGENTIC_KERNEL_LINKED=1)
+    endif()
+    set_target_properties(test_agentic_kernel_bench PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    add_test(NAME test_agentic_kernel_bench COMMAND test_agentic_kernel_bench)
+    message(STATUS "  ✓ Added test_agentic_kernel_bench")
+endif()
+
+if(NOT TARGET test_agentic_kernel_bench_fallback AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_agentic_kernel_bench.cpp")
+    add_executable(test_agentic_kernel_bench_fallback
+        test_agentic_kernel_bench.cpp
+        ${CMAKE_SOURCE_DIR}/src/agentic/agentic_executor_avx512.cpp
+    )
+    target_include_directories(test_agentic_kernel_bench_fallback PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    # Intentionally omit ASM source + RAWRXD_AGENTIC_KERNEL_LINKED define to force fallback path.
+    set_target_properties(test_agentic_kernel_bench_fallback PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    add_test(NAME test_agentic_kernel_bench_fallback COMMAND test_agentic_kernel_bench_fallback)
+    message(STATUS "  ✓ Added test_agentic_kernel_bench_fallback")
+endif()
+
+if(NOT TARGET test_context_search_bench AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_context_search_bench.cpp")
+    add_executable(test_context_search_bench
+        test_context_search_bench.cpp
+        ${CMAKE_SOURCE_DIR}/src/agentic/context_search_avx512.cpp
+        ${CMAKE_SOURCE_DIR}/src/core/zero_copy_index.cpp
+    )
+    target_include_directories(test_context_search_bench PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    if(MSVC)
+        target_sources(test_context_search_bench PRIVATE ${CMAKE_SOURCE_DIR}/src/asm/rawrxd_context_search.asm)
+        set_source_files_properties(${CMAKE_SOURCE_DIR}/src/asm/rawrxd_context_search.asm PROPERTIES LANGUAGE ASM_MASM)
+        target_compile_definitions(test_context_search_bench PRIVATE RAWRXD_CONTEXT_SEARCH_KERNEL_LINKED=1)
+    endif()
+    set_target_properties(test_context_search_bench PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    add_test(NAME test_context_search_bench COMMAND test_context_search_bench)
+    message(STATUS "  ✓ Added test_context_search_bench")
+endif()
+
+if(NOT TARGET test_json_escape_bench AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_json_escape_bench.cpp")
+    add_executable(test_json_escape_bench
+        test_json_escape_bench.cpp
+        ${CMAKE_SOURCE_DIR}/src/agentic/json_pulse.cpp
+    )
+    target_include_directories(test_json_escape_bench PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    if(MSVC)
+        target_sources(test_json_escape_bench PRIVATE ${CMAKE_SOURCE_DIR}/src/asm/rawrxd_json_escape.asm)
+        set_source_files_properties(${CMAKE_SOURCE_DIR}/src/asm/rawrxd_json_escape.asm PROPERTIES LANGUAGE ASM_MASM)
+        target_compile_definitions(test_json_escape_bench PRIVATE RAWRXD_JSON_PULSE_KERNEL_LINKED=1)
+    endif()
+    set_target_properties(test_json_escape_bench PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    add_test(NAME test_json_escape_bench COMMAND test_json_escape_bench)
+    message(STATUS "  ✓ Added test_json_escape_bench")
 endif()
 
 # LLM Connectivity Test

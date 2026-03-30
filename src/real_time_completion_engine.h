@@ -3,14 +3,31 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <cstdint>
 #include <mutex>
 #include <unordered_map>
 #include <map>
 #include <future>
 #include <thread>
+#include <utility>
 #include "metrics.h"
 #include "logger.h"
 #include "cpu_inference_engine.h"
+
+struct ExecutionStateSnapshot {
+    bool valid = false;
+    int64_t capturedAtUnixMs = 0;
+    std::string threadId;
+    std::string notes;
+    std::vector<std::string> stackFrames;
+    std::vector<std::pair<std::string, std::string>> registers;
+};
+
+class IExecutionStateProvider {
+public:
+    virtual ~IExecutionStateProvider() = default;
+    virtual bool getLatestSnapshot(ExecutionStateSnapshot& outSnapshot) = 0;
+};
 
 // Structs
 struct CodeCompletion {
@@ -81,6 +98,9 @@ public:
 
     // Dependency Injection
     void setInferenceEngine(RawrXD::InferenceEngine* engine) { m_inferenceEngine = engine; }
+    void setExecutionStateProvider(std::shared_ptr<IExecutionStateProvider> provider) {
+        m_executionStateProvider = std::move(provider);
+    }
 
 private:
     std::string generateCacheKey(const std::string& prefix, const std::string& suffix);
@@ -88,6 +108,8 @@ private:
     void updateCache(const std::string& key, const std::vector<CodeCompletion>& completions);
 
     std::string buildCompletionPrompt(const std::string& prefix, const std::string& suffix, const std::string& context);
+    std::string buildExecutionStateSection(const ExecutionStateSnapshot& snapshot) const;
+    std::string buildCurrentRealityBlock(const ExecutionStateSnapshot& snapshot, int64_t ageMs) const;
     std::vector<CodeCompletion> generateCompletionsWithModel(const std::string& prompt, int maxTokens);
     std::vector<CodeCompletion> postProcessCompletions(const std::string& modelOutput, const std::string& prefix);
     double calculateConfidence(const std::string& completion, const std::string& prompt);
@@ -96,6 +118,12 @@ private:
     std::shared_ptr<Logger> m_logger;
     std::shared_ptr<Metrics> m_metrics;
     RawrXD::InferenceEngine* m_inferenceEngine;
+    std::shared_ptr<IExecutionStateProvider> m_executionStateProvider;
+
+    int m_maxExecutionStackFrames = 12;
+    int m_maxExecutionRegisters = 16;
+    int64_t m_executionStateMaxAgeMs = 250;
+    int m_maxExecutionNotesChars = 240;
 
     std::mutex m_cacheMutex;
     std::unordered_map<std::string, std::vector<CodeCompletion>> m_completionCache;

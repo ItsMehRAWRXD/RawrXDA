@@ -14,10 +14,11 @@
 #include <iostream>
 #include <memory>
 #include <string>
+
+#include "logger.h"
+#include "metrics.h"
 #include "real_time_completion_engine.h"
-#include "inference_engine.h"
-#include "logging/logger.h"
-#include "metrics/metrics.h"
+#include "test_completion_support.hpp"
 
 int main() {
     std::cout << "\n=== Testing AI Code Completion Chain ===\n\n";
@@ -26,25 +27,23 @@ int main() {
         // 1. Initialize logging and metrics
         auto logger = std::make_shared<Logger>();
         auto metrics = std::make_shared<Metrics>();
-        logger->setLevel(LogLevel::DEBUG);
-        logger->info("Test initialized");
+        logger->log("Test initialized");
 
         // 2. Create InferenceEngine
-        std::cout << "[1/5] Creating InferenceEngine...\n";
-        InferenceEngine engine(nullptr);
+        std::cout << "[1/5] Creating fake inference engine...\n";
+        TestInferenceEngine engine("sum + 1");
 
-        // 3. Load a GGUF model
-        std::cout << "[2/5] Loading GGUF model...\n";
-        std::string modelPath = "models/ministral-3b-instruct-v0.3-Q4_K_M.gguf";
-        bool loaded = engine.Initialize(modelPath);
+        // 3. Load a deterministic fake model
+        std::cout << "[2/5] Loading fake model...\n";
+        std::string modelPath = "fake://unit-test-model";
+        bool loaded = engine.LoadModel(modelPath);
 
         if (!loaded) {
             std::cerr << "✗ Failed to load model: " << modelPath << "\n";
-            std::cerr << "  Tip: Place a GGUF model in the models/ directory\n";
             return 1;
         }
 
-        std::cout << "✓ Model loaded successfully\n";
+        std::cout << "✓ Fake model loaded successfully\n";
         std::cout << "  Vocab size: " << engine.GetVocabSize() << "\n";
         std::cout << "  Embedding dim: " << engine.GetEmbeddingDim() << "\n\n";
 

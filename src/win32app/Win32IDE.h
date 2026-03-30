@@ -81,6 +81,7 @@
 #include "Win32TerminalManager.h"
 #include <array>
 #include <atomic>
+#include <chrono>
 #include <filesystem>
 #include <functional>
 #include <map>
@@ -1127,6 +1128,23 @@ class Win32IDE
     void formatOutput(const std::string& text, COLORREF color, const std::string& tabName = "");
 
   private:
+        void updateRAGIntensityUI();
+        void applyRAGIntensityFromSlider();
+        void updateHybridWeightUI();
+        void applyHybridWeightFromSlider();
+        // Phase 4.3: Attribution tooltip for RAG-highlighted text
+        std::string buildAttributionTooltip(const void* metadata) const;  // Takes opaque SourceMetadata*
+        void showAttributionTooltip(const std::string& text, int x, int y);
+        void ensureActiveAttributionForResponse();
+        void applyAttributionHighlight(HWND hwnd, LONG startChar, LONG endChar) const;
+        void clearAttributionTracking();
+        void finishAttributionResponse() noexcept;
+        // Phase 4.3.1: Tooltip tracking (TTM_TRACKACTIVATE for instant hover display)
+        void initializeAttributionTooltip();
+        void hideAttributionTooltip() noexcept;
+        void handleChatMouseMove(POINT pt);
+        bool isIndexInAttributionRange(LONG charIndex) const noexcept;
+
     // Enhanced clipboard
     void copyWithFormatting();
     void pasteWithoutFormatting();
@@ -1197,6 +1215,8 @@ class Win32IDE
     // Syntax coloring state
     static const UINT_PTR SYNTAX_COLOR_TIMER_ID = 7777;
     static const UINT SYNTAX_COLOR_DELAY_MS = 80;
+    static const UINT_PTR HOTPATCH_DIAGNOSTICS_TIMER_ID = 0x7C20;
+    static const UINT HOTPATCH_DIAGNOSTICS_INTERVAL_MS = 1000;
     bool m_syntaxColoringEnabled;
     bool m_syntaxDirty;
     SyntaxLanguage m_syntaxLanguage;
@@ -1896,7 +1916,20 @@ class Win32IDE
     int m_outputTabHeight;
     int m_selectedOutputTab;
     HWND m_hwndSeverityFilter;
+    HWND m_hwndRAGIntensityLabel;
+    HWND m_hwndRAGIntensitySlider;
+    float m_ragSimilarityThreshold;
+    HWND m_hwndHybridWeightLabel;
+    HWND m_hwndHybridWeightSlider;
+    float m_hybridBM25Weight;
     int m_severityFilterLevel;  // 0=All, 1=Info+, 2=Warn+, 3=Error only
+    // Phase 4.3: Attribution tooltip state
+    HWND m_hwndAttributionTooltip;
+    void* m_lastHoveredMetadata;  // Opaque pointer to RawrXD::SourceMetadata (avoids include issues)
+    std::chrono::steady_clock::time_point m_lastTooltipShowTime;
+    bool m_responseAttributionActive;
+    LONG m_lastAttributedRangeStart;
+    LONG m_lastAttributedRangeEnd;
 
     // Session Persistence
     bool m_sessionRestored;
@@ -2229,6 +2262,9 @@ class Win32IDE
         std::string languageMode;  // e.g., "C++", "Python"
         bool copilotActive;
         int copilotSuggestions;  // number of available suggestions
+        bool swarmVerificationActive;
+        double swarmLastSigma;
+        std::uint32_t swarmLastTokenIndex;
     };
     StatusBarInfo m_statusBarInfo;
     HWND m_statusBarParts[12];  // Individual status bar items for custom drawing
@@ -2255,6 +2291,9 @@ class Win32IDE
     void clearProblems();
     void goToProblem(int index);
     void sendCopilotMessage(const std::string& message);
+    void signalSwarmInterrupt(double sigma, std::uint32_t tokenIndex);
+    void signalSwarmRollback(std::uint32_t targetTokenIndex);
+    void handleRollback(std::uint32_t targetTokenIndex);
     void clearCopilotChat();
     void appendCopilotResponse(const std::string& response);
     void updateCursorPosition();
@@ -2265,6 +2304,17 @@ class Win32IDE
     void createFileExplorer();
     void populateFileTree();
     void refreshFileExplorer();
+
+    struct SwarmInterruptPayload
+    {
+        std::uint32_t tokenIndex;
+        double sigma;
+    };
+
+    struct SwarmRollbackPayload
+    {
+        std::uint32_t targetTokenIndex;
+    };
     void expandTreeNode(HTREEITEM hItem);
     void onFileExplorerDoubleClick();
     void onFileExplorerRightClick();
@@ -2480,6 +2530,8 @@ class Win32IDE
 #define WM_DEBUGGER_REATTACH_SAFE (WM_APP + 104)
 // Posted from debugger/frame-tracker error callbacks to marshal status updates onto UI thread.
 #define WM_DEBUGGER_ERROR_STATUS (WM_APP + 105)
+    #define WM_SWARM_INTERRUPT (WM_APP + 551)
+#define WM_SWARM_ROLLBACK (WM_APP + 552)
     void onAgentOutput(const char* text);
     void postAgentOutputSafe(const std::string& text);
 
@@ -4365,6 +4417,7 @@ class Win32IDE
 #define IDM_HOTPATCH_TOGGLE_ALL 9016
 #define IDM_HOTPATCH_SHOW_PROXY_STATS 9017
 #define IDM_HOTPATCH_SET_TARGET_TPS 9018
+#define IDM_HOTPATCH_REVERT_ALL_CONFIRMED 9031
 
 // ---- Agent Operations Hotpatch (9019–9030) -------------------------------
 // Advanced agent operations accessible through hotpatch and standalone tools
@@ -4516,6 +4569,8 @@ class Win32IDE
     void cmdHotpatchToggleAll();
     void cmdHotpatchShowProxyStats();
     void cmdHotpatchSetTargetTps();
+    void cmdHotpatchConfirmRevertAll();
+    void refreshHotpatchDiagnosticsView();
 
     // ---- Agent Operations Hotpatch Handlers ----
     void cmdHotpatchCompactConversation();
@@ -4531,6 +4586,7 @@ class Win32IDE
     bool m_hotpatchEnabled = false;
     bool m_hotpatchUIInitialized = false;
     double m_hotpatchSavedTargetTps = 0.0;
+    std::string m_lastHotpatchDiagnosticsDump;
 
     // ========================================================================
     // PDB SYMBOL SERVER — Phase 29: Native PDB Symbol Server

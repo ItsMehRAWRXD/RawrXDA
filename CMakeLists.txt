@@ -333,6 +333,7 @@ if(RAWR_HAS_MASM)
         src/asm/inference_core.asm
         src/asm/FlashAttention_AVX512.asm
         src/asm/quant_avx2.asm
+        src/asm/RawrXD_SemanticSearch_Kernels.asm
         src/asm/RawrXD_KQuant_Dequant.asm
         src/asm/RawrXD_AVX512_Dequant_BPE.asm
         src/asm/RawrXD_PDBKernel_v3.asm
@@ -519,6 +520,7 @@ set(SOURCES
     src/core/byte_level_hotpatcher.cpp
     src/core/unified_hotpatch_manager.cpp
     src/core/proxy_hotpatcher.cpp
+    src/core/address_hotpatcher.cpp
     src/core/model_bruteforce_engine.cpp
     src/server/gguf_server_hotpatch.cpp
     src/agent/agentic_hotpatch_orchestrator.cpp
@@ -592,6 +594,13 @@ set(SOURCES
     src/agentic/ToolRegistry.cpp
     src/agentic/RawrXD_AgentLoop.cpp
     src/agentic/agentic_executor.cpp
+    src/agentic/agentic_executor_avx512.cpp
+    src/agentic/context_search_avx512.cpp
+    src/agentic/json_pulse.cpp
+
+    # Layer 1: State Machine + Layer 2: Execution State Capture (NEW)
+    src/agentic/agentic_executor_state.cpp
+    src/agentic/agentic_executor_masm_bridge.cpp
 
     # T6: Autonomous Repair Orchestrator + Agent Memory Indexer
     src/core/auto_repair_orchestrator.cpp
@@ -744,6 +753,9 @@ set(SOURCES
     src/cli/swarm_orchestrator.cpp
     src/swarm_orchestrator.cpp
 
+    # Phase 4.2.1: LocalVectorDB — Semantic code search via HNSW + TinyBERT
+    src/local_vector_db.cpp
+
     # Phase 33: Voice Chat Engine
     src/core/voice_chat.cpp
 
@@ -835,6 +847,8 @@ set(SOURCES
 
     # GAP 2: HNSW Vector Index
     src/core/vector_index.cpp
+    src/core/semantic_search_bridge.cpp
+    src/core/zero_copy_index.cpp
 
     # GAP 3: Model Cascade Router (Thompson Sampling)
     src/agentic/model_cascade.cpp
@@ -1325,6 +1339,11 @@ endif()
 # Reverse Engineering Suite (sub-module)
 # =============================================================================
 add_subdirectory(src/reverse_engineering)
+
+# =============================================================================
+# AVX-512 Semantic Search Kernels (Layer 3 - MASM Assembly)
+# =============================================================================
+add_subdirectory(src/kernels)
 
 add_executable(RawrEngine ${RAWR_ENGINE_SOURCES} ${ASM_KERNEL_SOURCES})
 
@@ -2734,6 +2753,7 @@ if(WIN32)
         src/win32app/Win32IDE_FailureIntelligence.cpp
         src/win32app/Win32IDE_Settings.cpp
         src/win32app/Win32IDE_LocalServer.cpp
+        src/win32app/Win32IDE_SearchFilesIndex.cpp
         src/win32app/Win32IDE_BackendSwitcher.cpp
         src/win32app/Win32IDE_AIBackend.cpp
         src/win32app/OllamaManager.cpp
@@ -2785,6 +2805,13 @@ if(WIN32)
         # T3-D: Deterministic Replay Engine (DivergenceEvent + TelemetrySnapshot)
         src/agentic/DeterministicReplayEngine.cpp
 
+        # DAE: Deterministic Agentic Execution (required by AgentToolHandlers DAE bridge)
+        src/dae/shadow_fs.cpp
+        src/dae/intent_ir.cpp
+        src/dae/tool_abi.cpp
+        src/dae/trace_log.cpp
+        src/dae/replay_engine.cpp
+
         # T4: Autonomous Recovery Orchestrator (FailureClass → recovery → verify → commit)
         src/agentic/autonomous_recovery_orchestrator.cpp
 
@@ -2795,6 +2822,11 @@ if(WIN32)
         src/agentic/ToolRegistry.cpp
         src/agentic/RawrXD_AgentLoop.cpp
         src/agentic/agentic_executor.cpp
+        src/orchestration/InferencePacer.cpp
+        src/orchestration/MetricsThread.cpp
+        src/agentic/agentic_executor_avx512.cpp
+        src/agentic/context_search_avx512.cpp
+        src/agentic/json_pulse.cpp
         src/agentic/agent_operations.cpp
         src/agentic/OrchestrationSessionState.cpp
         src/agentic/agentic_workspace_analyzer.cpp
@@ -2917,6 +2949,7 @@ if(WIN32)
         # Three-Layer Hotpatch System (Phase 14.2)
         src/core/model_memory_hotpatch.cpp
         src/core/byte_level_hotpatcher.cpp
+        src/core/address_hotpatcher.cpp
         src/core/unified_hotpatch_manager.cpp
         src/core/vscode_copilot_hotpatch_link_stub.cpp
         src/core/proxy_hotpatcher.cpp
@@ -3132,6 +3165,8 @@ if(WIN32)
         src/core/agentic_task_graph.cpp
         src/core/embedding_engine.cpp
         src/core/vector_index.cpp
+        src/core/semantic_search_bridge.cpp
+        src/core/zero_copy_index.cpp
         src/core/vision_encoder.cpp
 
         # Vision Pipeline Extensions (Token Gating, Embedding Cache, KV Isolation, Quantized Encoder, GPU Staging)
@@ -3342,6 +3377,7 @@ if(WIN32)
         src/ui/interpretability_panel.cpp
         # Advanced feature modules (src scope)
         src/real_time_completion_engine.cpp
+        src/debug/execution_state_provider_debugger_core.cpp
         src/LanguageServerIntegration.cpp
         src/interpretability_panel_enhanced.cpp
         src/feature_registry_panel.cpp
@@ -3414,6 +3450,8 @@ if(WIN32)
             src/vulkan_compute.cpp
             src/core/embedding_engine.cpp
             src/core/vector_index.cpp
+            src/core/semantic_search_bridge.cpp
+            src/core/zero_copy_index.cpp
             src/core/agentic_task_graph.cpp
             src/core/vision_encoder.cpp
             src/core/masm_stress_harness.cpp
@@ -3635,6 +3673,8 @@ if(WIN32)
     list(APPEND WIN32IDE_SOURCES
         src/win32app/ai_workers_queue.cpp
         src/core/dap_client_service.cpp
+        src/agentic/agentic_executor_state.cpp
+        src/agentic/agentic_executor_masm_bridge.cpp
         # v14.7.0 Native Track B Modules
         src/ui/ImportBridge.cpp
         src/ui/ExportBridge.cpp
@@ -3649,6 +3689,10 @@ if(WIN32)
             src/asm/ghost_text_ranker.asm
             src/asm/diff_engine.asm
             src/asm/RawrXD_Heretic_Hotpatch.asm
+            src/asm/rawrxd_agentic_kernel.asm
+            src/asm/rawrxd_context_search.asm
+            src/asm/rawrxd_json_escape.asm
+            src/asm/address_hotpatch_kernel_masm64.asm
         )
         set_source_files_properties(${WIN32IDE_EXTRA_ASM} PROPERTIES LANGUAGE ASM_MASM)
     endif()
@@ -3933,6 +3977,16 @@ if(WIN32)
     )
 
     add_executable(RawrXD-Win32IDE WIN32 ${WIN32IDE_SOURCES} ${ASM_KERNEL_SOURCES} ${WIN32IDE_EXTRA_ASM})
+    # Keep AddressHotpatcher bridge explicitly on Win32IDE even when upstream
+    # source-list filtering mutates WIN32IDE_SOURCES.
+    target_sources(RawrXD-Win32IDE PRIVATE
+        src/core/address_hotpatcher.cpp
+    )
+    if(RAWR_HAS_MASM)
+        target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWRXD_AGENTIC_KERNEL_LINKED=1)
+        target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWRXD_CONTEXT_SEARCH_KERNEL_LINKED=1)
+        target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWRXD_JSON_PULSE_KERNEL_LINKED=1)
+    endif()
     if(RAWRXD_ENABLE_MINUS_ONE_DEPS)
         target_sources(RawrXD-Win32IDE PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/crt_free_entry.cpp")
     endif()
@@ -4244,6 +4298,20 @@ if(WIN32)
     #     add_dependencies(RawrXD-Win32IDE re_model_reverse)
     #     target_link_libraries(RawrXD-Win32IDE PRIVATE ${RE_MODEL_OBJECTS})
     # endif()
+    
+    # =========================================================================
+    # Link AVX-512 Semantic Search Kernels (Layer 3)
+    # =========================================================================
+    if(AVX512_KERNELS_FOUND)
+        add_dependencies(RawrXD-Win32IDE AVX512_Kernels)
+        target_link_libraries(RawrXD-Win32IDE PRIVATE ${AVX512_KERNEL_OBJECT})
+        target_link_libraries(RawrXD-Win32IDE INTERFACE AVX512_Semantic_Bridge)
+        target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWRXD_HAS_AVX512_KERNELS=1)
+        message(STATUS "[Kernels] AVX-512 semantic search kernels linked to RawrXD-Win32IDE")
+    else()
+        target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWRXD_HAS_AVX512_KERNELS=0)
+        message(STATUS "[Kernels] AVX-512 kernels not available; using C++ fallbacks")
+    endif()
     
     target_include_directories(RawrXD-Win32IDE PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -4914,6 +4982,38 @@ else()
 endif()
 
 message(STATUS "[AgenticHotpatchOrchestrator] Smoke test target: agentic_hotpatch_orchestrator_smoke_test (build with: cmake --build . --target agentic_hotpatch_orchestrator_smoke_test)")
+
+# ============================================================================
+# Swarm Saturation Test (Tri-Lane Orchestration Verification)
+# ============================================================================
+add_executable(swarm_saturation_test EXCLUDE_FROM_ALL
+    src/test_harness/saturation_test_driver.cpp
+    src/test_harness/swarm_saturation_test.cpp
+    src/test_harness/swarm_saturation_test_stubs.cpp
+    src/swarm_orchestrator.cpp
+    src/local_vector_db.cpp
+    src/ai/token_generator.cpp
+    src/orchestration/InferencePacer.cpp
+    src/orchestration/MetricsThread.cpp
+)
+
+target_include_directories(swarm_saturation_test PRIVATE
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/test_harness
+    ${CMAKE_SOURCE_DIR}/include
+)
+
+target_compile_definitions(swarm_saturation_test PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
+target_compile_features(swarm_saturation_test PRIVATE cxx_std_17)
+
+if(WIN32)
+    target_link_libraries(swarm_saturation_test PRIVATE Threads::Threads kernel32 user32)
+else()
+    target_link_libraries(swarm_saturation_test PRIVATE Threads::Threads)
+endif()
+
+message(STATUS "[SwarmSaturation] Test target: swarm_saturation_test (build with: cmake --build . --target swarm_saturation_test)")
 
 if(EXISTS "${CMAKE_SOURCE_DIR}/tests/CMakeLists.txt")
     enable_testing()

@@ -18,6 +18,7 @@
 #include "lsp/RawrXD_LSPServer.h"
 #include "multi_response_engine.h"
 #include "resource.h"
+#include "../swarm_orchestrator.h"
 #include <commdlg.h>
 #include <nlohmann/json.hpp>
 #include <richedit.h>
@@ -38,6 +39,7 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <iomanip>
 #include <regex>
 #include <set>
 #include <shellapi.h>
@@ -296,6 +298,11 @@ static std::string wideToUtf8(const wchar_t* wide)
 #define IDC_OUTPUT_EDIT_ERRORS 1013
 #define IDC_OUTPUT_EDIT_DEBUG 1014
 #define IDC_OUTPUT_EDIT_FIND 1015
+#define IDC_OUTPUT_EDIT_HOTPATCH 1027
+#define IDC_RAG_INTENSITY_LABEL 1028
+#define IDC_RAG_INTENSITY_SLIDER 1029
+#define IDC_HYBRID_WEIGHT_LABEL 1030
+#define IDC_HYBRID_WEIGHT_SLIDER 1031
 #define IDC_SPLITTER 1016
 #define IDC_SEVERITY_FILTER 1017
 #define IDC_TITLE_TEXT 1018
@@ -485,6 +492,10 @@ Win32IDE::Win32IDE(HINSTANCE hInstance)
       m_activeTerminalId(-1), m_ggufLoader(nullptr), m_loadedModelPath(""), m_terminalSplitHorizontal(true),
       m_hwndGitPanel(nullptr), m_hwndGitStatusText(nullptr), m_hwndGitFileList(nullptr), m_gitAutoRefresh(true),
       m_outputPanelVisible(true), m_selectedOutputTab(0), m_hwndSeverityFilter(nullptr), m_severityFilterLevel(0),
+    m_hwndRAGIntensityLabel(nullptr), m_hwndRAGIntensitySlider(nullptr), m_ragSimilarityThreshold(0.65f),
+        m_hwndHybridWeightLabel(nullptr), m_hwndHybridWeightSlider(nullptr), m_hybridBM25Weight(0.6f),
+        m_hwndAttributionTooltip(nullptr), m_lastHoveredMetadata(nullptr), m_lastTooltipShowTime{},
+            m_responseAttributionActive(false), m_lastAttributedRangeStart(-1), m_lastAttributedRangeEnd(-1),
       m_editorRect{0, 0, 0, 0}, m_gpuTextEnabled(true), m_editorHooksInstalled(false), m_hwndSplitter(nullptr),
       m_splitterDragging(false), m_splitterY(0), m_renderer(nullptr), m_rendererReady(false), m_lastSearchText(),
       m_lastReplaceText(), m_searchCaseSensitive(false), m_searchWholeWord(false), m_searchUseRegex(false),
@@ -569,6 +580,9 @@ Win32IDE::Win32IDE(HINSTANCE hInstance)
 
     // Initialize Governor/Throttling
     m_governorThrottling = std::make_unique<RawrXD::GovernorThrottling>();
+
+    // Phase 4.3: Initialize tooltip timestamp
+    m_lastTooltipShowTime = std::chrono::steady_clock::now();
 }
 
 // Build a "Commands" submenu from COMMAND_TABLE so every GUI-exposed command has a menu entry (avoids menu-only drift).
@@ -932,6 +946,7 @@ void Win32IDE::createMenuBar(HWND hwnd)
         AppendMenuW(hHotpatchMenu, MF_STRING, IDM_HOTPATCH_TOGGLE_ALL, L"&Toggle Hotpatch System");
         AppendMenuW(hHotpatchMenu, MF_STRING, IDM_HOTPATCH_SHOW_EVENT_LOG, L"Show &Event Log");
         AppendMenuW(hHotpatchMenu, MF_STRING, IDM_HOTPATCH_RESET_STATS, L"&Reset Statistics");
+        AppendMenuW(hHotpatchMenu, MF_STRING, IDM_HOTPATCH_REVERT_ALL_CONFIRMED, L"Confirm Advisory Revert &All");
         AppendMenuW(hHotpatchMenu, MF_SEPARATOR, 0, nullptr);
 
         HMENU hMemLayerMenu = CreatePopupMenu();
@@ -2586,6 +2601,53 @@ void Win32IDE::createOutputTabs()
     SendMessageW(m_hwndSeverityFilter, CB_ADDSTRING, 0, (LPARAM)L"Errors Only");
     SendMessage(m_hwndSeverityFilter, CB_SETCURSEL, m_severityFilterLevel, 0);
 
+    m_hwndRAGIntensityLabel =
+        CreateWindowExW(0, L"STATIC", L"RAG Intensity: 0.65", WS_CHILD | WS_VISIBLE | SS_CENTERIMAGE,
+                        client.right - 365, 5, 110, 18, m_hwndMain, (HMENU)IDC_RAG_INTENSITY_LABEL, m_hInstance,
+                        nullptr);
+
+    m_hwndRAGIntensitySlider =
+        CreateWindowExW(0, TRACKBAR_CLASSW, L"", WS_CHILD | WS_VISIBLE | TBS_AUTOTICKS,
+                        client.right - 255, 2, 105, 20, m_hwndMain, (HMENU)IDC_RAG_INTENSITY_SLIDER, m_hInstance,
+                        nullptr);
+
+    if (m_hwndRAGIntensitySlider)
+    {
+        SendMessageW(m_hwndRAGIntensitySlider, TBM_SETRANGEMIN, FALSE, 40);
+        SendMessageW(m_hwndRAGIntensitySlider, TBM_SETRANGEMAX, FALSE, 95);
+        SendMessageW(m_hwndRAGIntensitySlider, TBM_SETTICFREQ, 5, 0);
+        SendMessageW(m_hwndRAGIntensitySlider, TBM_SETPAGESIZE, 0, 2);
+        SendMessageW(m_hwndRAGIntensitySlider, TBM_SETLINESIZE, 0, 1);
+        const int initialPos = static_cast<int>(RawrXD::SwarmOrchestrator::GetGlobalLibrarianSimilarityThreshold() * 100.0f);
+        SendMessageW(m_hwndRAGIntensitySlider, TBM_SETPOS, TRUE, initialPos);
+    }
+    updateRAGIntensityUI();
+
+    // Phase 4.2.2: Weight Tuner slider — Semantic (Cosine) vs. Lexical (BM25) balance.
+    // Visible only on "Hotpatch Diagnostics" tab, just to the left of the RAG Intensity group.
+    // Range 0–100 (maps to wBM25 0.00–1.00).  Default: 60 (0.60, BM25-heavy).
+    m_hwndHybridWeightLabel =
+        CreateWindowExW(0, L"STATIC", L"Lex/Sem: 0.60", WS_CHILD | SS_CENTERIMAGE,
+                        client.right - 590, 5, 100, 18, m_hwndMain, (HMENU)IDC_HYBRID_WEIGHT_LABEL, m_hInstance,
+                        nullptr);
+
+    m_hwndHybridWeightSlider =
+        CreateWindowExW(0, TRACKBAR_CLASSW, L"", WS_CHILD | TBS_AUTOTICKS,
+                        client.right - 490, 2, 105, 20, m_hwndMain, (HMENU)IDC_HYBRID_WEIGHT_SLIDER, m_hInstance,
+                        nullptr);
+
+    if (m_hwndHybridWeightSlider)
+    {
+        SendMessageW(m_hwndHybridWeightSlider, TBM_SETRANGEMIN, FALSE, 0);
+        SendMessageW(m_hwndHybridWeightSlider, TBM_SETRANGEMAX, FALSE, 100);
+        SendMessageW(m_hwndHybridWeightSlider, TBM_SETTICFREQ, 10, 0);
+        SendMessageW(m_hwndHybridWeightSlider, TBM_SETPAGESIZE, 0, 5);
+        SendMessageW(m_hwndHybridWeightSlider, TBM_SETLINESIZE, 0, 1);
+        const int initialHybrid = static_cast<int>(RawrXD::SwarmOrchestrator::GetGlobalHybridBM25Weight() * 100.0f);
+        SendMessageW(m_hwndHybridWeightSlider, TBM_SETPOS, TRUE, initialHybrid);
+    }
+    updateHybridWeightUI();
+
     static const struct
     {
         const wchar_t* text;
@@ -2594,9 +2656,10 @@ void Win32IDE::createOutputTabs()
     } defs[] = {{L"Output", IDC_OUTPUT_EDIT_GENERAL, "Output"},
                 {L"Errors", IDC_OUTPUT_EDIT_ERRORS, "Errors"},
                 {L"Debug", IDC_OUTPUT_EDIT_DEBUG, "Debug"},
-                {L"Find Results", IDC_OUTPUT_EDIT_FIND, "Find Results"}};
+                {L"Find Results", IDC_OUTPUT_EDIT_FIND, "Find Results"},
+                {L"Hotpatch Diagnostics", IDC_OUTPUT_EDIT_HOTPATCH, "Hotpatch Diagnostics"}};
 
-    for (int i = 0; i < 4; ++i)
+    for (int i = 0; i < 5; ++i)
     {
         TCITEMW tie{};
         tie.mask = TCIF_TEXT;
@@ -2612,9 +2675,9 @@ void Win32IDE::createOutputTabs()
     m_activeOutputTab = "Output";
 
     // Restore persisted tab selection
-    if (m_selectedOutputTab >= 0 && m_selectedOutputTab < 4)
+    if (m_selectedOutputTab >= 0 && m_selectedOutputTab < 5)
     {
-        const char* keys[] = {"Output", "Errors", "Debug", "Find Results"};
+        const char* keys[] = {"Output", "Errors", "Debug", "Find Results", "Hotpatch Diagnostics"};
         m_activeOutputTab = keys[m_selectedOutputTab];
         TabCtrl_SetCurSel(m_hwndOutputTabs, m_selectedOutputTab);
     }
@@ -2625,11 +2688,340 @@ void Win32IDE::createOutputTabs()
         ShowWindow(kv.second, (kv.first == m_activeOutputTab && m_outputPanelVisible) ? SW_SHOW : SW_HIDE);
     }
     ShowWindow(m_hwndOutputTabs, m_outputPanelVisible ? SW_SHOW : SW_HIDE);
+    const bool showRagControls = (m_activeOutputTab == "Hotpatch Diagnostics") && m_outputPanelVisible;
     if (m_hwndSeverityFilter)
         ShowWindow(m_hwndSeverityFilter, m_outputPanelVisible ? SW_SHOW : SW_HIDE);
+    if (m_hwndRAGIntensityLabel)
+        ShowWindow(m_hwndRAGIntensityLabel, showRagControls ? SW_SHOW : SW_HIDE);
+    if (m_hwndRAGIntensitySlider)
+        ShowWindow(m_hwndRAGIntensitySlider, showRagControls ? SW_SHOW : SW_HIDE);
+    if (m_hwndHybridWeightLabel)
+        ShowWindow(m_hwndHybridWeightLabel, showRagControls ? SW_SHOW : SW_HIDE);
+    if (m_hwndHybridWeightSlider)
+        ShowWindow(m_hwndHybridWeightSlider, showRagControls ? SW_SHOW : SW_HIDE);
     if (m_hwndSplitter)
         ShowWindow(m_hwndSplitter, m_outputPanelVisible ? SW_SHOW : SW_HIDE);
 }
+
+void Win32IDE::updateRAGIntensityUI()
+{
+    if (!m_hwndRAGIntensitySlider)
+        return;
+
+    const int sliderPos = static_cast<int>(SendMessageW(m_hwndRAGIntensitySlider, TBM_GETPOS, 0, 0));
+    m_ragSimilarityThreshold = static_cast<float>(sliderPos) / 100.0f;
+
+    if (m_hwndRAGIntensityLabel)
+    {
+        wchar_t label[64];
+        swprintf_s(label, L"RAG Intensity: %.2f", m_ragSimilarityThreshold);
+        SetWindowTextW(m_hwndRAGIntensityLabel, label);
+    }
+}
+
+void Win32IDE::applyRAGIntensityFromSlider()
+{
+    updateRAGIntensityUI();
+    RawrXD::SwarmOrchestrator::SetGlobalLibrarianSimilarityThreshold(m_ragSimilarityThreshold);
+}
+
+void Win32IDE::updateHybridWeightUI()
+{
+    if (!m_hwndHybridWeightSlider)
+        return;
+
+    const int sliderPos = static_cast<int>(SendMessageW(m_hwndHybridWeightSlider, TBM_GETPOS, 0, 0));
+    m_hybridBM25Weight = static_cast<float>(sliderPos) / 100.0f;
+
+    if (m_hwndHybridWeightLabel)
+    {
+        wchar_t label[64];
+        // "Lex" = BM25 (lexical), "Sem" = cosine (semantic).
+        // Display shows the BM25 weight; higher = more lexical.
+        swprintf_s(label, L"Lex/Sem: %.2f", m_hybridBM25Weight);
+        SetWindowTextW(m_hwndHybridWeightLabel, label);
+    }
+}
+
+void Win32IDE::applyHybridWeightFromSlider()
+{
+    updateHybridWeightUI();
+    RawrXD::SwarmOrchestrator::SetGlobalHybridBM25Weight(m_hybridBM25Weight);
+}
+
+std::string Win32IDE::buildAttributionTooltip(const void* metadata) const
+{
+    // Phase 4.3.1: Build attribution tooltip with RAG source metadata and inline code snippet
+    if (!metadata) {
+        return "[Tooltip Unavailable]";
+    }
+    
+    const RawrXD::SourceMetadata* meta = static_cast<const RawrXD::SourceMetadata*>(metadata);
+    
+    std::string tooltip;
+    tooltip.reserve(512);
+    
+    tooltip += "RAG Source\n";
+    tooltip += "───────────\n";
+    
+    // Extract just the filename from the full path for readability
+    std::string filename = meta->sourceFile;
+    const size_t lastSlash = filename.find_last_of("/\\");
+    if (lastSlash != std::string::npos) {
+        filename = filename.substr(lastSlash + 1);
+    }
+    
+    tooltip += filename;
+    if (meta->lineNumber > 0) {
+        tooltip += ":";
+        tooltip += std::to_string(meta->lineNumber);
+    }
+    tooltip += "\n";
+    
+    // Score breakdown (only show if fromLibrarian is true)
+    if (meta->fromLibrarian) {
+        tooltip += "\nScores:\n";
+        char buf[64];
+        
+        // Semantic (cosine) score
+        snprintf(buf, sizeof(buf), "Semantic: %.2f\n", meta->semanticScore);
+        tooltip += buf;
+        
+        // Lexical (BM25) score
+        snprintf(buf, sizeof(buf), "Lexical:  %.2f\n", meta->lexicalScore);
+        tooltip += buf;
+        
+        // Hybrid (final) score
+        snprintf(buf, sizeof(buf), "Hybrid:   %.2f\n", meta->hybridScore);
+        tooltip += buf;
+    }
+    
+    // Phase 4.3.1: Read and display source code snippet from the RAG source file
+    // This transforms the tooltip into a mini-explorer for provenance
+    std::ifstream sourceFile(meta->sourceFile, std::ios::in | std::ios::binary);
+    if (sourceFile.is_open() && meta->lineNumber > 0)
+    {
+        tooltip += "\n─── Snippet ───\n";
+        
+        // Calculate context window: center line +/- 1 line
+        const int contextStart = std::max(1, static_cast<int>(meta->lineNumber) - 1);
+        const int contextEnd = static_cast<int>(meta->lineNumber) + 1;
+        
+        std::string line;
+        int currentLineNum = 0;
+        
+        while (std::getline(sourceFile, line) && currentLineNum <= contextEnd)
+        {
+            ++currentLineNum;
+            
+            if (currentLineNum >= contextStart && currentLineNum <= contextEnd)
+            {
+                // Trim excessive whitespace for tooltip display (max 80 chars per line)
+                if (line.length() > 80)
+                    line = line.substr(0, 77) + "...";
+                
+                // Mark target line with > indicator
+                if (currentLineNum == meta->lineNumber)
+                    tooltip += "> " + line + "\n";
+                else
+                    tooltip += "  " + line + "\n";
+            }
+        }
+        
+        sourceFile.close();
+    }
+    
+    return tooltip;
+}
+
+void Win32IDE::ensureActiveAttributionForResponse()
+{
+    if (m_responseAttributionActive) {
+        return;
+    }
+
+    RawrXD::SourceMetadata snapshot;
+    if (!RawrXD::SwarmOrchestrator::ConsumeLatestSourceAttribution(snapshot)) {
+        return;
+    }
+
+    clearAttributionTracking();
+    m_lastHoveredMetadata = new RawrXD::SourceMetadata(std::move(snapshot));
+    m_responseAttributionActive = true;
+}
+
+void Win32IDE::applyAttributionHighlight(HWND hwnd, LONG startChar, LONG endChar) const
+{
+    if (!hwnd || startChar < 0 || endChar <= startChar) {
+        return;
+    }
+
+    CHARRANGE highlightRange{};
+    highlightRange.cpMin = startChar;
+    highlightRange.cpMax = endChar;
+    SendMessage(hwnd, EM_EXSETSEL, 0, (LPARAM)&highlightRange);
+
+    CHARFORMAT2W format{};
+    format.cbSize = sizeof(format);
+    format.dwMask = CFM_BACKCOLOR;
+    format.crBackColor = RGB(229, 240, 216);
+    SendMessageW(hwnd, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&format);
+}
+
+void Win32IDE::clearAttributionTracking()
+{
+    // Phase 4.3.1: Hide tooltip and clean up resources
+    hideAttributionTooltip();
+    
+    // Destroy tooltip window if it exists
+    if (m_hwndAttributionTooltip)
+    {
+        DestroyWindow(m_hwndAttributionTooltip);
+        m_hwndAttributionTooltip = nullptr;
+    }
+
+    if (m_lastHoveredMetadata) {
+        delete static_cast<RawrXD::SourceMetadata*>(m_lastHoveredMetadata);
+        m_lastHoveredMetadata = nullptr;
+    }
+
+    m_responseAttributionActive = false;
+    m_lastAttributedRangeStart = -1;
+    m_lastAttributedRangeEnd = -1;
+}
+
+void Win32IDE::finishAttributionResponse() noexcept
+{
+    m_responseAttributionActive = false;
+}
+
+void Win32IDE::initializeAttributionTooltip()
+{
+    // Phase 4.3.1: Initialize TTM_TRACKACTIVATE tooltip for instant zero-latency display
+    if (m_hwndAttributionTooltip)
+        return;  // Already initialized
+
+    // Create tooltip window with TTS_ALWAYSTIP (no hover delay) + TTS_NOPREFIX (no & interpretation)
+    m_hwndAttributionTooltip = CreateWindowExW(
+        WS_EX_TOPMOST,
+        TOOLTIPS_CLASSW,
+        nullptr,
+        WS_POPUP | TTS_ALWAYSTIP | TTS_NOPREFIX,
+        0, 0, 0, 0,
+        m_hwndMain,
+        nullptr,
+        m_hInstance,
+        nullptr);
+
+    if (!m_hwndAttributionTooltip)
+    {
+        OutputDebugStringA("[RAG] Failed to create attribution tooltip control\n");
+        return;
+    }
+
+    // Set tooltip to track mode (absolute positioning, no hover delay)
+    SendMessageW(m_hwndAttributionTooltip, TTM_SETDELAYTIME, TTDT_AUTOMATIC, 0);
+
+    // Add tool with TTF_TRACK | TTF_ABSOLUTE for tracking mode
+    TOOLINFOW ti{};
+    ti.cbSize = sizeof(ti);
+    ti.uFlags = TTF_TRACK | TTF_ABSOLUTE;
+    ti.hwnd = m_hwndCopilotChatOutput;
+    ti.uId = 1;
+    ti.lpszText = const_cast<wchar_t*>(L"");  // Empty initially, will be updated via TTM_UPDATETIPTEXT
+    
+    SendMessageW(m_hwndAttributionTooltip, TTM_ADDTOOLW, 0, (LPARAM)&ti);
+}
+
+void Win32IDE::hideAttributionTooltip() noexcept
+{
+    // Phase 4.3.1: Hide tracking tooltip immediately
+    if (!m_hwndAttributionTooltip)
+        return;
+
+    SendMessageW(m_hwndAttributionTooltip, TTM_TRACKACTIVATE, FALSE, 0);
+}
+
+bool Win32IDE::isIndexInAttributionRange(LONG charIndex) const noexcept
+{
+    // Phase 4.3.1: Check if a character index falls within the RAG-attributed range
+    if (!m_responseAttributionActive)
+        return false;
+
+    if (m_lastAttributedRangeStart < 0 || m_lastAttributedRangeEnd < 0)
+        return false;
+
+    return charIndex >= m_lastAttributedRangeStart && charIndex <= m_lastAttributedRangeEnd;
+}
+
+void Win32IDE::handleChatMouseMove(POINT pt)
+{
+    // Phase 4.3.1: Hit-test RichEdit character range against mouse coordinates
+    // Convert screen coordinates to RichEdit client coordinates
+    POINT ptClient = pt;
+    ScreenToClient(m_hwndCopilotChatOutput, &ptClient);
+
+    // Use EM_CHARFROMPOS to convert pixel coordinates to character index
+    POINTL ptl{};
+    ptl.x = ptClient.x;
+    ptl.y = ptClient.y;
+
+    LRESULT charIndex = SendMessage(m_hwndCopilotChatOutput, EM_CHARFROMPOS, 0, (LPARAM)&ptl);
+    if (charIndex < 0)
+        charIndex = 0;
+
+    const LONG charPos = static_cast<LONG>(charIndex);
+
+    // Check if cursor is within the attributed range using the boundary-check helper
+    if (isIndexInAttributionRange(charPos))
+    {
+        // Cursor is over RAG-highlighted text → show tooltip with inline source preview
+        std::string attributionText = buildAttributionTooltip(m_lastHoveredMetadata);
+        
+        // Ensure tooltip is initialized
+        if (!m_hwndAttributionTooltip)
+            initializeAttributionTooltip();
+
+        // Update tooltip text (now includes source code snippet from Phase 4.3.1)
+        std::wstring wideText = utf8ToWide(attributionText);
+        TOOLINFOW ti{};
+        ti.cbSize = sizeof(ti);
+        ti.hwnd = m_hwndCopilotChatOutput;
+        ti.uId = 1;
+        ti.lpszText = const_cast<wchar_t*>(wideText.c_str());
+        SendMessageW(m_hwndAttributionTooltip, TTM_UPDATETIPTEXTW, 0, (LPARAM)&ti);
+
+        // Position tooltip at cursor + small offset, then activate for zero-latency tracking
+        SendMessageW(m_hwndAttributionTooltip, TTM_TRACKPOSITION, 0, MAKELPARAM(pt.x + 10, pt.y + 10));
+        SendMessageW(m_hwndAttributionTooltip, TTM_TRACKACTIVATE, TRUE, (LPARAM)&ti);
+    }
+    else
+    {
+        // Cursor is NOT over RAG-highlighted text → hide tooltip
+        hideAttributionTooltip();
+    }
+}
+
+void Win32IDE::showAttributionTooltip(const std::string& text, int x, int y)
+{
+    // Phase 4.3.1: Wrapper for displaying attribution tooltip at specific coordinates
+    // (Called from external event handlers if needed; primary path is handleChatMouseMove for WM_NOTIFY)
+    if (!m_hwndAttributionTooltip)
+        initializeAttributionTooltip();
+
+    std::wstring wideText = utf8ToWide(text);
+    TOOLINFOW ti{};
+    ti.cbSize = sizeof(ti);
+    ti.hwnd = m_hwndCopilotChatOutput;
+    ti.uId = 1;
+    ti.lpszText = const_cast<wchar_t*>(wideText.c_str());
+    SendMessageW(m_hwndAttributionTooltip, TTM_UPDATETIPTEXTW, 0, (LPARAM)&ti);
+
+    // Position at specified coordinates
+    SendMessageW(m_hwndAttributionTooltip, TTM_TRACKPOSITION, 0, MAKELPARAM(x, y));
+    SendMessageW(m_hwndAttributionTooltip, TTM_TRACKACTIVATE, TRUE, (LPARAM)&ti);
+}
+
 
 void Win32IDE::addOutputTab(const std::string& name)
 {
@@ -5755,21 +6147,31 @@ void Win32IDE::refreshFileExplorer()
 
 bool Win32IDE::isModelLoaded() const
 {
-    // Model is loaded if we have a path and either streaming loader or agentic bridge has it (local models usable
-    // regardless of agentic detection)
+    // Model readiness must reflect an actually loaded local model state.
+    // Agentic bridge initialization is process-wide and does not imply that
+    // a usable model/backend is configured for chat.
     if (m_loadedModelPath.empty())
         return false;
     if (m_ggufLoader && !m_modelTensors.empty())
-        return true;
-    if (m_agenticBridge && m_agenticBridge->IsInitialized())
         return true;
     return false;
 }
 
 AgentResponse Win32IDE::sendMessageToModel(const std::string& message)
 {
-    // Allow chat when agentic bridge is initialized (local model or Ollama/cloud via routeInferenceRequest)
-    bool canChat = isModelLoaded() || (m_agenticBridge && m_agenticBridge->IsInitialized());
+    try
+    {
+    // Allow chat only when a concrete model or backend is available.
+    // Bridge initialization alone is NOT sufficient — it starts at app launch regardless of model state.
+    bool hasBackendForChat = false;
+    if (m_backendManagerInitialized)
+    {
+        const AIBackendConfig activeCfg = getActiveBackendConfig();
+        const AIBackendType activeBackend = getActiveBackendType();
+        if (activeCfg.enabled)
+            hasBackendForChat = (activeBackend == AIBackendType::LocalGGUF) ? isModelLoaded() : !activeCfg.model.empty();
+    }
+    bool canChat = isModelLoaded() || !m_ollamaModelOverride.empty() || hasBackendForChat;
     if (!canChat)
     {
         return {AgentResponseType::AGENT_ERROR,
@@ -5867,6 +6269,27 @@ AgentResponse Win32IDE::sendMessageToModel(const std::string& message)
             "",
             "",
             "None"};
+    }
+    catch (const std::exception& ex)
+    {
+        LOG_ERROR("sendMessageToModel exception: " + std::string(ex.what()));
+        return {AgentResponseType::AGENT_ERROR,
+                "Error: Runtime exception while processing request.",
+                "",
+                "",
+                "",
+                "ExceptionGuard"};
+    }
+    catch (...)
+    {
+        LOG_ERROR("sendMessageToModel unknown exception");
+        return {AgentResponseType::AGENT_ERROR,
+                "Error: Unknown runtime exception while processing request.",
+                "",
+                "",
+                "",
+                "ExceptionGuard"};
+    }
 }
 
 void Win32IDE::toggleChatMode()
@@ -6963,6 +7386,7 @@ void Win32IDE::onInferenceComplete(const std::string& fullResponse)
 {
     m_inferenceRunning = false;
     m_currentInferenceResponse = fullResponse;
+    finishAttributionResponse();
 
     // Final context window update
     m_contextUsage.toolResultTokens = static_cast<int>(fullResponse.length()) / 4;
@@ -7338,6 +7762,9 @@ void Win32IDE::createChatPanel()
         // Subclass chat input to intercept ENTER key for sending messages
         m_oldCopilotInputProc =
             (WNDPROC)SetWindowLongPtr(m_hwndCopilotChatInput, GWLP_WNDPROC, (LONG_PTR)CopilotChatInputProc);
+        // Store the original edit proc on the control itself so the subclass
+        // can forward safely without relying on object pointer lifetime.
+        SetPropW(m_hwndCopilotChatInput, L"RawrXD.ChatInput.OldProc", (HANDLE)m_oldCopilotInputProc);
         SetWindowLongPtr(m_hwndCopilotChatInput, GWLP_USERDATA, (LONG_PTR)this);
     }
 
@@ -7950,9 +8377,27 @@ void Win32IDE::HandleCopilotStreamUpdate(const char* token, size_t length)
     if (chunk.empty())
         return;
 
+    ensureActiveAttributionForResponse();
+
+    CHARRANGE previousSelection{};
+    SendMessage(m_hwndCopilotChatOutput, EM_EXGETSEL, 0, (LPARAM)&previousSelection);
+
     int currentLen = GetWindowTextLengthW(m_hwndCopilotChatOutput);
+    std::wstring wideChunk = utf8ToWide(chunk);
     SendMessage(m_hwndCopilotChatOutput, EM_SETSEL, currentLen, currentLen);
-    SendMessageW(m_hwndCopilotChatOutput, EM_REPLACESEL, FALSE, (LPARAM)utf8ToWide(chunk).c_str());
+    SendMessageW(m_hwndCopilotChatOutput, EM_REPLACESEL, FALSE, (LPARAM)wideChunk.c_str());
+
+    if (m_responseAttributionActive && m_lastHoveredMetadata) {
+        const LONG startChar = static_cast<LONG>(currentLen);
+        const LONG endChar = startChar + static_cast<LONG>(wideChunk.size());
+        applyAttributionHighlight(m_hwndCopilotChatOutput, startChar, endChar);
+        if (m_lastAttributedRangeStart < 0) {
+            m_lastAttributedRangeStart = startChar;
+        }
+        m_lastAttributedRangeEnd = endChar;
+    }
+
+    SendMessage(m_hwndCopilotChatOutput, EM_EXSETSEL, 0, (LPARAM)&previousSelection);
     SendMessage(m_hwndCopilotChatOutput, WM_VSCROLL, SB_BOTTOM, 0);
 }
 
@@ -9486,37 +9931,47 @@ LRESULT CALLBACK Win32IDE::EditorSubclassProc(HWND hwnd, UINT uMsg, WPARAM wPara
 // ============================================================================
 LRESULT CALLBACK Win32IDE::CopilotChatInputProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-    Win32IDE* pThis = (Win32IDE*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    auto oldProc = (WNDPROC)GetPropW(hwnd, L"RawrXD.ChatInput.OldProc");
 
-    if (pThis)
+    switch (uMsg)
     {
-        switch (uMsg)
+        case WM_KEYDOWN:
         {
-            case WM_KEYDOWN:
+            // Check if ENTER was pressed
+            if (wParam == VK_RETURN)
             {
-                // Check if ENTER was pressed
-                if (wParam == VK_RETURN)
-                {
-                    // Check if Shift is held (for multiline input)
-                    bool shiftPressed = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+                // Check if Shift is held (for multiline input)
+                bool shiftPressed = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
 
-                    if (!shiftPressed)
+                if (!shiftPressed)
+                {
+                    // Plain ENTER - route through sidebar WM_COMMAND exactly
+                    // like button-click paths to keep control flow unified.
+                    HWND hParent = GetParent(hwnd);
+                    if (hParent)
                     {
-                        // Plain ENTER - send message
-                        pThis->HandleCopilotSend();
-                        return 0;  // Don't add newline
+                        HWND hSend = GetDlgItem(hParent, IDC_COPILOT_SEND_BTN);
+                        PostMessage(hParent, WM_COMMAND, MAKEWPARAM(IDC_COPILOT_SEND_BTN, BN_CLICKED),
+                                    (LPARAM)hSend);
                     }
-                    // Shift+ENTER falls through to default handler (adds newline)
+                    return 0;  // Don't add newline
                 }
-                break;
+                // Shift+ENTER falls through to default handler (adds newline)
             }
+            break;
+        }
+
+        case WM_NCDESTROY:
+        {
+            RemovePropW(hwnd, L"RawrXD.ChatInput.OldProc");
+            break;
         }
     }
 
     // Forward to original chat input procedure
-    if (pThis && pThis->m_oldCopilotInputProc)
+    if (oldProc)
     {
-        return CallWindowProc(pThis->m_oldCopilotInputProc, hwnd, uMsg, wParam, lParam);
+        return CallWindowProc(oldProc, hwnd, uMsg, wParam, lParam);
     }
     return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 }
@@ -9710,6 +10165,8 @@ LRESULT CALLBACK Win32IDE::SidebarProcImpl(HWND hwnd, UINT uMsg, WPARAM wParam, 
                 auto* resp = reinterpret_cast<std::string*>(lParam);
                 if (pThis && resp)
                 {
+                    pThis->m_statusBarInfo.swarmVerificationActive = false;
+
                     // Replace the ⏳ "Thinking…" placeholder if it is the last assistant entry.
                     const std::string kThinking = "\xe2\x8f\xb3";  // UTF-8 ⏳
                     if (!pThis->m_chatHistory.empty() && pThis->m_chatHistory.back().first == "assistant" &&
@@ -9730,8 +10187,52 @@ LRESULT CALLBACK Win32IDE::SidebarProcImpl(HWND hwnd, UINT uMsg, WPARAM wParam, 
                         pThis->m_currentToolActions.clear();
                     }
                     pThis->updateSecondarySidebarContent();
+                    pThis->updateEnhancedStatusBar();
                 }
                 delete resp;
+                return 0;
+            }
+
+            if (uMsg == WM_SWARM_INTERRUPT)
+            {
+                auto* payload = reinterpret_cast<Win32IDE::SwarmInterruptPayload*>(lParam);
+                if (pThis && payload)
+                {
+                    pThis->m_statusBarInfo.swarmVerificationActive = true;
+                    pThis->m_statusBarInfo.swarmLastSigma = payload->sigma;
+                    pThis->m_statusBarInfo.swarmLastTokenIndex = payload->tokenIndex;
+
+                    if (!pThis->m_chatHistory.empty() && pThis->m_chatHistory.back().first == "assistant")
+                    {
+                        const std::string kThinking = "\xe2\x8f\xb3";  // UTF-8 ⏳
+                        const std::string kVerify = "\xe2\x9c\x85";    // UTF-8 ✅
+                        if (pThis->m_chatHistory.back().second.compare(0, kThinking.size(), kThinking) == 0)
+                        {
+                            std::ostringstream oss;
+                            oss << kVerify << " Verifying\xe2\x80\xa6 (sigma=" << std::fixed
+                                << std::setprecision(2) << payload->sigma << ", t=" << payload->tokenIndex << ")";
+                            pThis->m_chatHistory.back().second = oss.str();
+                            pThis->updateSecondarySidebarContent();
+                        }
+                    }
+
+                    pThis->updateEnhancedStatusBar();
+                }
+                delete payload;
+                return 0;
+            }
+
+            if (uMsg == WM_SWARM_ROLLBACK)
+            {
+                auto* payload = reinterpret_cast<Win32IDE::SwarmRollbackPayload*>(lParam);
+                if (pThis && payload)
+                {
+                    pThis->m_statusBarInfo.swarmVerificationActive = true;
+                    pThis->m_statusBarInfo.swarmLastTokenIndex = payload->targetTokenIndex;
+                    pThis->handleRollback(payload->targetTokenIndex);
+                    pThis->updateEnhancedStatusBar();
+                }
+                delete payload;
                 return 0;
             }
             break;

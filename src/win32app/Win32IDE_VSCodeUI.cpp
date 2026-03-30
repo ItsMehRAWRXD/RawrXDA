@@ -297,12 +297,19 @@ void Win32IDE::createSecondarySidebar(HWND hwndParent)
         populateModelSelector();
     }
     
-    // Chat output area (read-only rich edit for formatted messages)
+    // Chat output area (RichEdit control for formatted messages and RAG attribution)
     m_hwndCopilotChatOutput = CreateWindowExA(
-        WS_EX_CLIENTEDGE, "EDIT", "",
+        WS_EX_CLIENTEDGE, RICHEDIT_CLASS, "",
         WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL,
         5, 60, m_secondarySidebarWidth - 10, 422,
         m_hwndSecondarySidebar, (HMENU)IDC_COPILOT_CHAT_OUTPUT, m_hInstance, nullptr);
+    
+    // Enable mouse events for RAG attribution tooltip hit-testing (Phase 4.3.1)
+    if (m_hwndCopilotChatOutput)
+    {
+        LRESULT eventMask = SendMessage(m_hwndCopilotChatOutput, EM_GETEVENTMASK, 0, 0);
+        SendMessage(m_hwndCopilotChatOutput, EM_SETEVENTMASK, 0, eventMask | ENM_MOUSEEVENTS);
+    }
     
     // Chat input area
     m_hwndCopilotChatInput = CreateWindowExA(
@@ -385,6 +392,7 @@ void Win32IDE::updateSecondarySidebarContent()
 void Win32IDE::clearCopilotChat()
 {
     m_chatHistory.clear();
+    clearAttributionTracking();
     SetWindowTextA(m_hwndCopilotChatOutput, 
         "GitHub Copilot Chat\r\n"
         "==================\r\n\r\n"
@@ -401,6 +409,38 @@ void Win32IDE::appendCopilotResponse(const std::string& response)
 // lParam = heap-allocated std::string* (owned by message; receiver must delete).
 #define WM_CHAT_RESPONSE (WM_APP + 550)
 
+namespace {
+std::string truncateToTokenBoundary(const std::string& text, std::uint32_t targetTokenIndex)
+{
+    if (targetTokenIndex == 0 || text.empty())
+        return {};
+
+    std::size_t pos = 0;
+    std::uint32_t seen = 0;
+    const std::size_t n = text.size();
+
+    while (pos < n)
+    {
+        while (pos < n && std::isspace(static_cast<unsigned char>(text[pos])))
+            ++pos;
+        if (pos >= n)
+            break;
+
+        std::size_t tokenEnd = pos;
+        while (tokenEnd < n && !std::isspace(static_cast<unsigned char>(text[tokenEnd])))
+            ++tokenEnd;
+
+        ++seen;
+        if (seen == targetTokenIndex)
+            return text.substr(0, tokenEnd);
+
+        pos = tokenEnd;
+    }
+
+    return text;
+}
+} // namespace
+
 void Win32IDE::sendCopilotMessage(const std::string& message)
 {
     if (message.empty()) return;
@@ -412,27 +452,168 @@ void Win32IDE::sendCopilotMessage(const std::string& message)
     m_chatHistory.push_back({"assistant", "\u23F3 Thinking\u2026"});
     updateSecondarySidebarContent();
 
+    // No-model safety path: respond synchronously and avoid background model execution.
+    // This prevents no-model route crashes while preserving normal async behavior when a backend is ready.
+    const bool hasLocalModel = isModelLoaded();
+    // Legacy explicit override path (typed/selected alias in chat model selector).
+    const bool hasExplicitBackendRoute = !m_ollamaModelOverride.empty();
+    // Backend Switcher may hold the selected model in backend configs instead of
+    // m_ollamaModelOverride, so include active backend readiness here.
+    bool hasConfiguredBackendRoute = false;
+    if (m_backendManagerInitialized)
+    {
+        const AIBackendType activeBackend = getActiveBackendType();
+        const AIBackendConfig activeCfg = getActiveBackendConfig();
+        if (activeCfg.enabled)
+        {
+            if (activeBackend == AIBackendType::LocalGGUF)
+            {
+                hasConfiguredBackendRoute = hasLocalModel;
+            }
+            else
+            {
+                hasConfiguredBackendRoute = !activeCfg.model.empty();
+            }
+        }
+    }
+    const bool canChat = hasLocalModel || hasExplicitBackendRoute || hasConfiguredBackendRoute;
+    if (!canChat)
+    {
+        const std::string noModelMsg =
+            "Error: No model loaded. Load a GGUF model or configure a backend in Backend Switcher.";
+        if (!m_chatHistory.empty() && m_chatHistory.back().first == "assistant")
+        {
+            m_chatHistory.back().second = noModelMsg;
+        }
+        else
+        {
+            m_chatHistory.push_back({"assistant", noModelMsg});
+        }
+        updateSecondarySidebarContent();
+        if (m_hwndCopilotChatInput && IsWindow(m_hwndCopilotChatInput))
+        {
+            SetWindowTextA(m_hwndCopilotChatInput, "");
+        }
+        return;
+    }
+
     // Clear the input field immediately so the user can start composing a follow-up.
-    SetWindowTextA(m_hwndCopilotChatInput, "");
+    if (m_hwndCopilotChatInput && IsWindow(m_hwndCopilotChatInput))
+    {
+        SetWindowTextA(m_hwndCopilotChatInput, "");
+    }
 
     // Run inference on a background thread to keep the UI responsive.
     // When done, post WM_CHAT_RESPONSE to the sidebar so SidebarProcImpl
     // replaces the placeholder on the UI thread.
     HWND hSidebar = m_hwndSecondarySidebar;
     std::thread([this, hSidebar, message]() {
-        AgentResponse ar = sendMessageToModel(message);
-        std::string response = ar.content;
-        if (response.empty())
-            response = "\u26A0\uFE0F No response generated by the current backend.";
+        std::string response;
+        try
+        {
+            AgentResponse ar = sendMessageToModel(message);
+            response = ar.content;
+            if (response.empty())
+                response = "\u26A0\uFE0F No response generated by the current backend.";
 
-        // Prepend executor label so the UI shows which backend handled the request
-        if (!ar.executorLabel.empty())
-            response = "[Executor: " + ar.executorLabel + "]\n" + response;
+            // Prepend executor label so the UI shows which backend handled the request
+            if (!ar.executorLabel.empty())
+                response = "[Executor: " + ar.executorLabel + "]\n" + response;
+        }
+        catch (const std::exception& ex)
+        {
+            RAWRXD_LOG_ERROR("Win32IDE_VSCodeUI")
+                << "[sendCopilotMessage] exception: " << ex.what();
+            response = "\u26A0\uFE0F Runtime exception while generating response.";
+        }
+        catch (...)
+        {
+            RAWRXD_LOG_ERROR("Win32IDE_VSCodeUI")
+                << "[sendCopilotMessage] unknown exception";
+            response = "\u26A0\uFE0F Unknown runtime exception while generating response.";
+        }
 
         RAWRXD_LOG_INFO("Win32IDE_VSCodeUI") << "[sendCopilotMessage] response ready, length=" << response.size();
-        // Ownership of the heap string transfers to the message recipient.
-        PostMessage(hSidebar, WM_CHAT_RESPONSE, 0, (LPARAM)(new std::string(response)));
+        std::string* payload = new std::string(response);
+        if (!payload)
+            return;
+
+        // Ownership of the heap string transfers to the message recipient on successful post.
+        if (!hSidebar || !IsWindow(hSidebar) || !PostMessage(hSidebar, WM_CHAT_RESPONSE, 0, (LPARAM)payload))
+        {
+            delete payload;
+        }
     }).detach();
+}
+
+void Win32IDE::signalSwarmInterrupt(double sigma, std::uint32_t tokenIndex)
+{
+    if (!m_hwndSecondarySidebar || !IsWindow(m_hwndSecondarySidebar))
+        return;
+
+    auto* payload = new SwarmInterruptPayload{tokenIndex, sigma};
+    if (!payload)
+        return;
+
+    if (!PostMessage(m_hwndSecondarySidebar, WM_SWARM_INTERRUPT, 0, reinterpret_cast<LPARAM>(payload)))
+    {
+        delete payload;
+        return;
+    }
+
+    // Keep UI text state synchronized with orchestrator invalidation boundary.
+    signalSwarmRollback(tokenIndex);
+}
+
+void Win32IDE::signalSwarmRollback(std::uint32_t targetTokenIndex)
+{
+    if (!m_hwndSecondarySidebar || !IsWindow(m_hwndSecondarySidebar))
+        return;
+
+    auto* payload = new SwarmRollbackPayload{targetTokenIndex};
+    if (!payload)
+        return;
+
+    if (!PostMessage(m_hwndSecondarySidebar, WM_SWARM_ROLLBACK, 0, reinterpret_cast<LPARAM>(payload)))
+    {
+        delete payload;
+    }
+}
+
+void Win32IDE::handleRollback(std::uint32_t targetTokenIndex)
+{
+    if (targetTokenIndex == 0 || m_chatHistory.empty())
+        return;
+
+    auto& tail = m_chatHistory.back();
+    if (tail.first != "assistant")
+        return;
+
+    const std::string oldMsg = tail.second;
+    const std::string newMsg = truncateToTokenBoundary(oldMsg, targetTokenIndex);
+    if (newMsg.size() >= oldMsg.size())
+        return;
+
+    tail.second = newMsg;
+
+    const int removeCount = static_cast<int>(oldMsg.size() - newMsg.size());
+    if (m_hwndCopilotChatOutput && IsWindow(m_hwndCopilotChatOutput) && removeCount > 0)
+    {
+        const int totalLen = GetWindowTextLengthA(m_hwndCopilotChatOutput);
+        const int tailSuffix = 4;  // "\r\n\r\n"
+        if (totalLen > (removeCount + tailSuffix))
+        {
+            const int start = totalLen - tailSuffix - removeCount;
+            const int end = totalLen - tailSuffix;
+            SendMessageA(m_hwndCopilotChatOutput, EM_SETSEL, start, end);
+            SendMessageA(m_hwndCopilotChatOutput, EM_REPLACESEL, FALSE, reinterpret_cast<LPARAM>(""));
+            SendMessage(m_hwndCopilotChatOutput, EM_SCROLLCARET, 0, 0);
+            return;
+        }
+    }
+
+    // Fallback when direct suffix truncation is not structurally safe.
+    updateSecondarySidebarContent();
 }
 
 void Win32IDE::togglePanel()
@@ -635,6 +816,9 @@ void Win32IDE::createEnhancedStatusBar(HWND hwndParent)
     m_statusBarInfo.languageMode = "Plain Text";
     m_statusBarInfo.copilotActive = true;
     m_statusBarInfo.copilotSuggestions = 0;
+    m_statusBarInfo.swarmVerificationActive = false;
+    m_statusBarInfo.swarmLastSigma = 0.0;
+    m_statusBarInfo.swarmLastTokenIndex = 0;
     
     // Create status bar with multiple parts
     m_hwndStatusBar = CreateWindowExA(
@@ -716,6 +900,13 @@ void Win32IDE::updateEnhancedStatusBar()
         bool modelReady = isModelLoaded();
         bool agentReady = static_cast<bool>(m_agenticBridge);
         backendText += std::string(" | Beacon:") + ((modelReady && agentReady) ? "READY" : "DEGRADED");
+        if (m_statusBarInfo.swarmVerificationActive)
+        {
+            std::ostringstream verifyOss;
+            verifyOss << " | Verifying sigma=" << std::fixed << std::setprecision(2) << m_statusBarInfo.swarmLastSigma
+                      << " t=" << m_statusBarInfo.swarmLastTokenIndex;
+            backendText += verifyOss.str();
+        }
         SendMessageA(m_hwndStatusBar, SB_SETTEXTA, 11, (LPARAM)backendText.c_str());
     }
 }

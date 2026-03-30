@@ -6,6 +6,10 @@
 #include <vector>
 #include <map>
 #include <cstdint>
+#include <atomic>
+#include <memory>
+
+#include "agentic_executor_state.h"
 
 class AgenticEngine;
 class InferenceEngine;
@@ -79,11 +83,39 @@ public:
     std::string generateCorrectionPlan(const std::string& failureReason);
     std::string retryWithCorrection(const std::string& failedStepJson);
 
+    // ========== STATE MACHINE (NEW) ==========
+    /** Get current execution state */
+    AgentExecutionState getExecutionState() const { return m_executionState; }
+    
+    /** Force state transition (for testing/recovery) */
+    void setExecutionState(AgentExecutionState newState);
+    
+    /** Get full execution context (for LLM planning) */
+    AgentExecutionContext getExecutionContext() const;
+    
+    /** Capture runtime execution state (stack, PID, modified files, etc.) */
+    ExecutionStateSnapshot captureExecutionState();
+    
+    /** Enhanced step execution with state tracking */
+    bool executeStepTyped(const AgentStep& step);
+    
+    /** Deterministic replay: execute a step with input validation */
+    bool replayStep(const AgentStep& step, const std::string& expected_output_hash);
+    
+    /** DAE loop with explicit state transitions */
+    std::string runLoop(int maxIterations = 64);  // Returns JSON result
+
 private:
     std::string planNextAction(const std::string& currentState, const std::string& goal);
     std::string generateCode(const std::string& specification);
     std::string analyzeError(const std::string& errorOutput);
     std::string improveCode(const std::string& code, const std::string& issue);
+
+    // ========== NEW: State machine private methods ==========
+    void transitionState(AgentExecutionState newState);
+    std::string planNextActionTyped(const AgentExecutionContext& context);
+    std::string stateToString(AgentExecutionState state) const;
+    bool validateStepTransition(AgentExecutionState from, AgentExecutionState to) const;
 
     void loadMemorySettings();
     void loadMemoryFromDisk();
@@ -108,6 +140,14 @@ private:
     int m_maxRetries = 3;
     int m_currentRetryCount = 0;
 
+    // ========== NEW: State Machine Members ==========
+    AgentExecutionState m_executionState = AgentExecutionState::IDLE;
+    AgentExecutionContext m_executionContext;
+    ExecutionStateCapture m_stateCapture;
+    std::vector<AgentStep> m_executedSteps;  // History of all steps
+    std::unique_ptr<AgentStep> m_currentStep;  // Currently executing step
+    std::map<std::string, uint64_t> m_stepStartTimes;  // For timeout detection
+
     StepStartedFn      m_onStepStarted      = nullptr;
     StepCompletedFn    m_onStepCompleted    = nullptr;
     TaskProgressFn     m_onTaskProgress     = nullptr;
@@ -117,4 +157,5 @@ private:
     TrainingProgressFn m_onTrainingProgress = nullptr;
     TrainingCompletedFn m_onTrainingCompleted = nullptr;
     void*              m_callbackContext    = nullptr;
+    std::atomic<bool>  m_isTraining{false};
 };

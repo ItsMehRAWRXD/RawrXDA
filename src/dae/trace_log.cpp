@@ -194,7 +194,7 @@ bool TraceLog::MatchesFingerprint(const ContentHash& fp) const noexcept {
 }
 
 TraceResult<void> TraceIndex::LoadTrace(std::string_view logPath) {
-    std::ifstream in(std::string(logPath));
+    std::ifstream in{std::string(logPath)};
     if (!in.is_open()) {
         return std::unexpected(TraceError::IoError);
     }
