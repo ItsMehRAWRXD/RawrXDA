@@ -1,0 +1,29 @@
+{
+    "/api/backend/status":  {
+                                "error":  "Unable to connect to the remote server"
+                            },
+    "/api/quantum/status":  {
+                                "error":  "Unable to connect to the remote server"
+                            },
+    "/api/hotpatch/status":  {
+                                 "error":  "Unable to connect to the remote server"
+                             },
+    "/api/governor/status":  {
+                                 "error":  "Unable to connect to the remote server"
+                             },
+    "/api/hybrid/status":  {
+                               "error":  "Unable to connect to the remote server"
+                           },
+    "/api/debug/status":  {
+                              "error":  "Unable to connect to the remote server"
+                          },
+    "/api/swarm/status":  {
+                              "error":  "Unable to connect to the remote server"
+                          },
+    "/api/status":  {
+                        "error":  "Unable to connect to the remote server"
+                    },
+    "/api/router/status":  {
+                               "error":  "Unable to connect to the remote server"
+                           }
+}
