@@ -409,16 +409,6 @@ bool AgenticBridge::LoadModel(const std::string& path)
     return loaded;
 }
 
-void AgenticBridge::SetModelLoadErrorCallback(ModelLoadErrorCallback cb)
-{
-    m_modelLoadErrorCallback = std::move(cb);
-}
-
-const std::string& AgenticBridge::GetLastModelLoadError() const
-{
-    return m_lastModelLoadError;
-}
-
 void AgenticBridge::SetWorkspaceRoot(const std::string& workspaceRoot)
 {
     m_workspaceRoot = workspaceRoot;

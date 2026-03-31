@@ -4630,7 +4630,7 @@ CommandResult handleSwarmStartBuild(const CommandContext& ctx) {
     auto& dse = DeterministicSwarmEngine::instance();
     dse.beginTrace("swarm_build", "distributed_compile");
     bool started = sc.startBuild();
-    dse.recordStep(0, "coordinator", "start_build", started ? "initiated" : "failed", 0, 1.0f, 0);
+    dse.recordStep("0", "coordinator", "start_build", started ? "initiated" : "failed", 0, 1.0f, 0);
     char buf[256];
     snprintf(buf, sizeof(buf), "[Swarm] Distributed build %s (nodes=%u, trace recording active)\n",
              started ? "STARTED" : "FAILED", sc.getOnlineNodeCount());
@@ -4650,7 +4650,7 @@ CommandResult handleSwarmStartHybrid(const CommandContext& ctx) {
     dse.beginTrace("hybrid_mode", "hybrid_build");
     bool started = sc.start(config);
     sc.enableDiscovery(true);
-    dse.recordStep(0, "coordinator", "hybrid_start", started ? "local+remote" : "failed", 0, 1.0f, 0);
+    dse.recordStep("0", "coordinator", "hybrid_start", started ? "local+remote" : "failed", 0, 1.0f, 0);
     TelemetryCollector::instance()->trackFeatureUsage("swarm.startHybrid");
     char buf[256];
     snprintf(buf, sizeof(buf), "[Swarm] Hybrid mode %s (nodes=%u, discovery=%s, trace active)\n",
@@ -4668,7 +4668,7 @@ CommandResult handleSwarmStartLeader(const CommandContext& ctx) {
     dse.setMasterSeed(config.masterSeed);
     bool started = sc.start(config);
     dse.beginTrace("leader_session", "leader");
-    dse.recordStep(0, "leader", "start", started ? "listening" : "failed", 0, 1.0f, 0);
+    dse.recordStep("0", "leader", "start", started ? "listening" : "failed", 0, 1.0f, 0);
     char buf[128];
     snprintf(buf, sizeof(buf), "[Swarm] Leader %s (seed=%llu, nodes=%u)\n",
              started ? "STARTED" : "FAILED",
@@ -4685,7 +4685,7 @@ CommandResult handleSwarmStartWorker(const CommandContext& ctx) {
         config.masterSeed = dse.getMasterSeed();
         sc.start(config);
     }
-    dse.recordStep(0, "worker", "start", "ready", 0, 1.0f, 0);
+    dse.recordStep("0", "worker", "start", "ready", 0, 1.0f, 0);
     TelemetryCollector::instance()->trackFeatureUsage("swarm.startWorker");
     char buf[128];
     snprintf(buf, sizeof(buf), "[Swarm] Worker started, awaiting tasks (nodes=%u)\n",
@@ -4712,7 +4712,7 @@ CommandResult handleSwarmToggleDiscovery(const CommandContext& ctx) {
     bool wasEnabled = sc.isDiscoveryEnabled();
     sc.enableDiscovery(!wasEnabled);
     auto& dse = DeterministicSwarmEngine::instance();
-    dse.recordStep(0, "discovery", "toggle", wasEnabled ? "disabled" : "enabled", 0, 1.0f, 0);
+    dse.recordStep("0", "discovery", "toggle", wasEnabled ? "disabled" : "enabled", 0, 1.0f, 0);
     char buf[128];
     snprintf(buf, sizeof(buf), "[Swarm] Discovery %s\n", wasEnabled ? "DISABLED" : "ENABLED");
     ctx.output(buf);
@@ -4731,7 +4731,7 @@ CommandResult handleSwarmWorkerConnect(const CommandContext& ctx) {
     uint16_t port = 9090;
     sscanf(ctx.args, "%255[^:]:%hu", host, &port);
     bool connected = sc.addNodeManual(host, port);
-    dse.recordStep(0, "worker", ctx.args, connected ? "connected" : "failed", 0, connected ? 1.0f : 0.0f, 0);
+    dse.recordStep("0", "worker", ctx.args, connected ? "connected" : "failed", 0, connected ? 1.0f : 0.0f, 0);
     TelemetryCollector::instance()->trackFeatureUsage("swarm.workerConnect");
     char buf[256];
     snprintf(buf, sizeof(buf), "[Swarm] Worker %s leader at '%s:%u' (online=%u)\n",
@@ -4750,7 +4750,7 @@ CommandResult handleSwarmWorkerDisconnect(const CommandContext& ctx) {
     for (auto slot : slots) {
         if (sc.removeNode(slot)) removed++;
     }
-    dse.recordStep(0, "worker", "disconnect", "completed", 0, 1.0f, 0);
+    dse.recordStep("0", "worker", "disconnect", "completed", 0, 1.0f, 0);
     TelemetryCollector::instance()->trackFeatureUsage("swarm.workerDisconnect");
     char buf[128];
     snprintf(buf, sizeof(buf), "[Swarm] Worker disconnected — %u nodes removed.\n", removed);
