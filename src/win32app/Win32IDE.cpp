@@ -7079,7 +7079,7 @@ void Win32IDE::createTabBar(HWND hwndParent)
         return;
 
     m_hwndTabBar =
-        CreateWindowExW(0, WC_TABCONTROLW, L"", WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | TCS_HOTTRACK | TCS_TOOLTIPS,
+        CreateWindowExW(0, WC_TABCONTROLW, L"", WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | TCS_HOTTRACK | TCS_TOOLTIPS | TCS_OWNERDRAWFIXED,
                         0, 0, 800, 28, hwndParent, nullptr, m_hInstance, nullptr);
 
     if (m_hwndTabBar)
@@ -7089,6 +7089,10 @@ void Win32IDE::createTabBar(HWND hwndParent)
         {
             SendMessage(m_hwndTabBar, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
         }
+
+        // Subclass for custom drawing and close button handling
+        SetWindowLongPtrW(m_hwndTabBar, GWLP_USERDATA, (LONG_PTR)this);
+        m_oldTabBarProc = (WNDPROC)SetWindowLongPtrW(m_hwndTabBar, GWLP_WNDPROC, (LONG_PTR)TabBarProc);
     }
 }
 

@@ -76,6 +76,23 @@ void PowerShellLanguagePlugin::lex(std::string_view text, std::vector<SyntaxToke
     }
 }
 
+std::vector<std::pair<size_t, size_t>> CppLanguagePlugin::findFoldRegions(std::string_view text) {
+    std::vector<std::pair<size_t, size_t>> folds;
+    std::vector<size_t> stack;
+    for (size_t i = 0; i < text.size(); ++i) {
+        if (text[i] == '{') {
+            stack.push_back(i);
+        } else if (text[i] == '}') {
+            if (!stack.empty()) {
+                size_t start = stack.back();
+                stack.pop_back();
+                folds.emplace_back(start, i);
+            }
+        }
+    }
+    return folds;
+}
+
 SyntaxEngine::SyntaxEngine() : m_lang(&m_fallback) {}
 
 void SyntaxEngine::setLanguage(LanguagePluginBase* lang) { m_lang = lang ? lang : &m_fallback; }
