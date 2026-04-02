@@ -55,8 +55,14 @@ bool envDisablesCapabilityHotpatch(const char* varName)
 // SCAFFOLD_020: Agentic bridge initialization
 
 
-// Global shared instances to persist across UI reloads if needed
-static std::shared_ptr<RawrXD::CPUInferenceEngine> g_cpuEngine = nullptr;
+namespace
+{
+[[nodiscard]] inline std::shared_ptr<RawrXD::CPUInferenceEngine> SharedCpuEngine()
+{
+    return RawrXD::CPUInferenceEngine::GetSharedInstance();
+}
+}  // namespace
+
 static std::shared_ptr<AgenticEngine> g_agentEngine = nullptr;
 static AgenticEngine* g_commandDispatchEngine = nullptr;
 
@@ -95,16 +101,12 @@ bool AgenticBridge::Initialize(const std::string& frameworkPath, const std::stri
 
     m_frameworkPath = frameworkPath.empty() ? ResolveFrameworkPath() : frameworkPath;
 
-    if (!g_cpuEngine)
-    {
-        g_cpuEngine = std::make_shared<RawrXD::CPUInferenceEngine>();
-        g_cpuEngine->SetContextLimit(4096);
-    }
+    const auto cpu = SharedCpuEngine();
 
     if (!g_agentEngine)
     {
         g_agentEngine = std::make_shared<AgenticEngine>();
-        g_agentEngine->setInferenceEngine(g_cpuEngine.get());
+        g_agentEngine->setInferenceEngine(cpu.get());
     }
     if (!m_workspaceRoot.empty())
     {
@@ -120,6 +122,16 @@ bool AgenticBridge::Initialize(const std::string& frameworkPath, const std::stri
     m_initialized = true;
     LOG_INFO("Native Inference Stack initialized successfully.");
     return true;
+}
+
+void AgenticBridge::SetCpuEngineLayerProgressCallback(std::function<void(const std::string&)> cb)
+{
+    SharedCpuEngine()->SetLayerProgressCallback(std::move(cb));
+}
+
+void AgenticBridge::SetCpuEngineSwarmTelemetryOutputCallback(std::function<void(const std::string&)> cb)
+{
+    SharedCpuEngine()->SetSwarmTelemetryOutputCallback(std::move(cb));
 }
 
 // ============================================================================
@@ -301,7 +313,7 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt)
     // When no local model is loaded, route through active backend (Ollama/cloud) so agentic
     // work can use the same backend as chat (see docs/AGENTIC_AND_MODEL_LOADING_AUDIT.md).
     std::string response;
-    bool localReady = g_cpuEngine && g_cpuEngine->IsModelLoaded();
+    bool localReady = SharedCpuEngine()->IsModelLoaded();
     if (!localReady)
     {
         // Prefer the orchestrator bridge (Ollama-backed, tool-aware) and let it decide
@@ -386,9 +398,11 @@ void AgenticBridge::SetMaxMode(bool enabled)
 {
     m_maxMode = enabled;
     LOG_INFO(std::string("Max Mode ") + (enabled ? "Enabled" : "Disabled"));
-    if (enabled && g_cpuEngine && g_cpuEngine->GetContextLimit() < 32768)
+    if (enabled)
     {
-        g_cpuEngine->SetContextLimit(32768);
+        const auto eng = SharedCpuEngine();
+        if (eng->GetContextLimit() < 32768)
+            eng->SetContextLimit(32768);
     }
 }
 
@@ -408,6 +422,22 @@ void AgenticBridge::SetNoRefusal(bool enabled)
 {
     m_noRefusal = enabled;
     LOG_INFO(std::string("No Refusal Mode ") + (enabled ? "Enabled" : "Disabled"));
+}
+
+void AgenticBridge::SetSwarmMode(bool enabled)
+{
+    m_swarmMode = enabled;
+    SharedCpuEngine()->SetSwarmMode(enabled);
+    LOG_INFO(std::string("Swarm Mode ") + (enabled ? "Enabled" : "Disabled"));
+}
+
+bool AgenticBridge::LoadSwarmFromDirectory(const std::string& directoryPath, int maxModels)
+{
+    const auto eng = SharedCpuEngine();
+    bool success = eng->LoadSwarmFromDirectory(directoryPath, maxModels);
+    if (!success)
+        m_lastModelLoadError = eng->GetLastLoadErrorMessage();
+    return success;
 }
 
 void AgenticBridge::SetAutoCorrect(bool enabled)
@@ -470,9 +500,6 @@ void AgenticBridge::SetLanguageContext(const std::string& language, const std::s
 
 void AgenticBridge::SetContextSize(const std::string& sizeName)
 {
-    if (!g_cpuEngine)
-        return;
-
     size_t limit = 4096;
     std::string s = sizeName;
     std::transform(s.begin(), s.end(), s.begin(), ::tolower);
@@ -491,11 +518,14 @@ void AgenticBridge::SetContextSize(const std::string& sizeName)
         limit = 524288;
     else if (s == "1m")
         limit = 1048576;
+    else if (s == "unlimited" || s == "bypass")
+        limit = 10485760;  // Memory-gate bypass: 10M tokens (reasonable unlimited)
 
-    g_cpuEngine->SetContextLimit(limit);
+    SharedCpuEngine()->SetContextLimit(limit);
 
     std::stringstream ss;
-    ss << "Context Window resized to: " << sizeName << " (" << limit << " tokens)";
+    ss << "Context Window resized to: " << sizeName << " (" << (limit >= 10485760 ? "unlimited" : std::to_string(limit))
+       << " tokens)";
     LOG_INFO(ss.str());
 }
 
@@ -590,7 +620,7 @@ std::string AgenticBridge::GetAgentStatus()
     status << "  Max Mode: " << (m_maxMode ? "Yes" : "No") << "\n";
     status << "  Deep Thinking: " << (m_deepThinking ? "Yes" : "No") << "\n";
     status << "  Deep Research: " << (m_deepResearch ? "Yes" : "No") << "\n";
-    status << "  Engine Loaded: " << (g_cpuEngine && g_cpuEngine->IsModelLoaded() ? "Yes" : "No") << "\n";
+    status << "  Engine Loaded: " << (SharedCpuEngine()->IsModelLoaded() ? "Yes" : "No") << "\n";
     if (g_agentEngine)
     {
         status << "  Model Status: " << g_agentEngine->getModelStatus() << "\n";
@@ -1120,10 +1150,8 @@ bool AgenticBridge::LoadModel(const std::string& path)
 {
     SCOPED_METRIC("agentic.load_model");
     METRICS.increment("agentic.model_load_attempts");
-    if (!g_cpuEngine)
-    {
+    if (!m_initialized)
         Initialize("", path);
-    }
 
     if (g_agentEngine)
     {
@@ -1137,10 +1165,7 @@ bool AgenticBridge::LoadModel(const std::string& path)
         }
         else
         {
-            if (g_cpuEngine)
-            {
-                m_lastModelLoadError = g_cpuEngine->GetLastLoadErrorMessage();
-            }
+            m_lastModelLoadError = SharedCpuEngine()->GetLastLoadErrorMessage();
             if (m_lastModelLoadError.empty())
             {
                 m_lastModelLoadError = "Model load failed in AgenticBridge";

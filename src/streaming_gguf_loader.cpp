@@ -423,6 +423,7 @@ bool StreamingGGUFLoader::BuildTensorIndex() {
         
         ref.size = CalculateTensorSize(ref.shape, ref.type);
         ref.zone_name = "";  // Will be assigned later
+        ref.index = i;       // Set tensor index
         
         tensor_index_[ref.name] = ref;
     }

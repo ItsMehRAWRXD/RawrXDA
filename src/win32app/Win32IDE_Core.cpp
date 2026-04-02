@@ -174,7 +174,7 @@ static void runWindowVisibilityWatchdog(HWND hwnd);
 static void drawLayoutDebugOverlay(HWND hwnd, HDC hdc);
 
 static constexpr UINT_PTR IDT_VISIBILITY_WATCHDOG = 0x7D11;
-static constexpr UINT_PTR IDT_GPU_TELEMETRY        = 0x7D12; // 2-second backend/GPU status refresh
+static constexpr UINT_PTR IDT_GPU_TELEMETRY = 0x7D12;  // 2-second backend/GPU status refresh
 
 static bool isLayoutDebugOverlayEnabled()
 {
@@ -1017,6 +1017,21 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
                 }
                 return 0;
             }
+            if (uMsg == WM_IDE_OUTPUT_APPEND_SAFE)
+            {
+                const char* text = reinterpret_cast<const char*>(lParam);
+                if (text)
+                {
+                    appendToOutput(std::string(text), "Output", OutputSeverity::Info);
+                    free(const_cast<char*>(text));
+                }
+                return 0;
+            }
+            if (uMsg == WM_IDE_MOE_PACK_STATUS_REFRESH)
+            {
+                refreshMoEPackHudStatusBarPart();
+                return 0;
+            }
             // Handle Ghost Text completion delivery from background thread
             if (uMsg == WM_GHOST_TEXT_READY)
             {
@@ -1265,7 +1280,7 @@ void Win32IDE::showWindow()
     SetActiveWindow(m_hwndMain);
     forceWindowToForeground(m_hwndMain);
     SetTimer(m_hwndMain, IDT_VISIBILITY_WATCHDOG, 1000, nullptr);
-        SetTimer(m_hwndMain, IDT_GPU_TELEMETRY, 2000, nullptr);
+    SetTimer(m_hwndMain, IDT_GPU_TELEMETRY, 2000, nullptr);
     FLASHWINFO fwi = {sizeof(FLASHWINFO), m_hwndMain, FLASHW_ALL | FLASHW_TIMERNOFG, 3, 0};
     FlashWindowEx(&fwi);
 }
@@ -1971,7 +1986,8 @@ void Win32IDE::onCreate(HWND hwnd)
 // Declared as friend in Win32IDE class (external linkage) to access private members.
 void bgInitBody(void* self);
 
-namespace {
+namespace
+{
 
 bool initializeEnterpriseSubsystems(Win32IDE* ide);
 
@@ -2022,8 +2038,7 @@ bool initializeEnterpriseSubsystemsSafe(Win32IDE* ide)
     }
 
     char sehMsg[192] = {};
-    sprintf_s(sehMsg,
-              "ERROR: Enterprise license SEH faulted (code=0x%08lX); continuing in community mode",
+    sprintf_s(sehMsg, "ERROR: Enterprise license SEH faulted (code=0x%08lX); continuing in community mode",
               static_cast<unsigned long>(sehCode));
     LOG_ERROR(sehMsg);
     OutputDebugStringA(sehMsg);
@@ -2038,7 +2053,7 @@ bool initializeEnterpriseSubsystemsSafe(Win32IDE* ide)
 }
 #endif
 
-} // namespace
+}  // namespace
 
 // 4 MB stack for deferred init thread to avoid 0xC00000FD (STATUS_STACK_OVERFLOW)
 static const DWORD kDeferredInitStackSize = 4 * 1024 * 1024;
@@ -2108,10 +2123,11 @@ void Win32IDE::deferredHeavyInitBody()
     // Initialize Native CPU Inference Engine
     try
     {
-        m_nativeEngine = std::make_unique<RawrXD::CPUInferenceEngine>();
+        m_nativeEngine = RawrXD::CPUInferenceEngine::GetSharedInstance();
         auto memPlugin = std::make_shared<RawrXD::Modules::NativeMemoryModule>();
         m_nativeEngine->RegisterMemoryPlugin(memPlugin);
         m_nativeEngineLoaded = true;
+        wireLayerProgressToOutputPanel();
     }
     catch (...)
     {
@@ -2530,6 +2546,21 @@ void Win32IDE::deferredHeavyInitBody()
         try
         {
             initAllFeatureModules();
+
+            std::string featureRouteReport;
+            if (!verifyFeatureRoutingCoverageAtStartup(&featureRouteReport))
+            {
+                OutputDebugStringA(featureRouteReport.c_str());
+                MessageBoxA(m_hwndMain,
+                            "Feature command routing verification failed at startup. "
+                            "See debugger output/logs for details.",
+                            "RawrXD Startup Verification Error", MB_OK | MB_ICONERROR);
+                if (m_hwndMain)
+                {
+                    PostMessage(m_hwndMain, WM_CLOSE, 0, 0);
+                }
+                return;
+            }
         }
         catch (...)
         {
@@ -2579,6 +2610,8 @@ void Win32IDE::deferredHeavyInitBody()
 void Win32IDE::onDestroy()
 {
     LOG_INFO("Win32IDE::onDestroy - shutting down");
+
+    clearInferenceLayerProgressCallback();
 
     // Signal ALL detached threads to stop touching 'this'
     m_shuttingDown.store(true, std::memory_order_release);
@@ -3256,8 +3289,9 @@ void Win32IDE::onCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
             appendToOutput(std::string("Vulkan renderer ") + (m_useVulkanRenderer ? "ON" : "OFF") + "\n", "Output",
                            OutputSeverity::Info);
             persistPerformanceVulkanRendererToConfig();
-            appendToOutput("[Vulkan] Saved preference performance.vulkanRenderer to rawrxd.config.json (cwd or exe dir).\n",
-                           "Output", OutputSeverity::Info);
+            appendToOutput(
+                "[Vulkan] Saved preference performance.vulkanRenderer to rawrxd.config.json (cwd or exe dir).\n",
+                "Output", OutputSeverity::Info);
             return;
         case 502:   // Tools > Settings (IDM_TOOLS_SETTINGS)
         case 1024:  // Title bar gear (IDC_BTN_SETTINGS)

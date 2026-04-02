@@ -178,6 +178,63 @@ if(NOT TARGET test_gguf_integration AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test
     message(STATUS "  ✓ Added test_gguf_integration")
 endif()
 
+if(NOT TARGET test_swarm_scheduler_pin AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_swarm_scheduler_pin.cpp")
+    add_executable(test_swarm_scheduler_pin
+        test_swarm_scheduler_pin.cpp
+        swarm_scheduler_rawr_loader_link_stub.cpp
+        ${CMAKE_SOURCE_DIR}/src/core/swarm_scheduler.cpp
+        ${CMAKE_SOURCE_DIR}/src/logging/Logger.cpp
+    )
+    target_include_directories(test_swarm_scheduler_pin PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_swarm_scheduler_pin PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 23)
+    add_test(NAME test_swarm_scheduler_pin COMMAND test_swarm_scheduler_pin)
+    message(STATUS "  ✓ Added test_swarm_scheduler_pin")
+endif()
+
+if(NOT TARGET test_swarm_expert_heatmap_stress AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_swarm_expert_heatmap_stress.cpp")
+    add_executable(test_swarm_expert_heatmap_stress
+        test_swarm_expert_heatmap_stress.cpp
+        swarm_scheduler_rawr_loader_link_stub.cpp
+        ${CMAKE_SOURCE_DIR}/src/core/swarm_scheduler.cpp
+        ${CMAKE_SOURCE_DIR}/src/logging/Logger.cpp
+    )
+    target_include_directories(test_swarm_expert_heatmap_stress PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_swarm_expert_heatmap_stress PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 23)
+    add_test(NAME test_swarm_expert_heatmap_stress COMMAND test_swarm_expert_heatmap_stress)
+    message(STATUS "  ✓ Added test_swarm_expert_heatmap_stress")
+endif()
+
+if(NOT TARGET test_moe_mixture_reference AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_moe_mixture_reference.cpp")
+    add_executable(test_moe_mixture_reference test_moe_mixture_reference.cpp)
+    target_include_directories(test_moe_mixture_reference PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_moe_mixture_reference PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    add_test(NAME test_moe_mixture_reference COMMAND test_moe_mixture_reference)
+    message(STATUS "  ✓ Added test_moe_mixture_reference")
+endif()
+
+if(NOT TARGET test_moe_down_project_policy AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_moe_down_project_policy.cpp")
+    add_executable(test_moe_down_project_policy test_moe_down_project_policy.cpp)
+    target_include_directories(test_moe_down_project_policy PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_moe_down_project_policy PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    add_test(NAME test_moe_down_project_policy COMMAND test_moe_down_project_policy)
+    message(STATUS "  ✓ Added test_moe_down_project_policy")
+endif()
+
+if(NOT TARGET test_moe_plan_row_mixture_pack_cache AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_moe_plan_row_mixture_pack_cache.cpp")
+    add_executable(test_moe_plan_row_mixture_pack_cache test_moe_plan_row_mixture_pack_cache.cpp)
+    target_include_directories(test_moe_plan_row_mixture_pack_cache PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_moe_plan_row_mixture_pack_cache PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    add_test(NAME test_moe_plan_row_mixture_pack_cache COMMAND test_moe_plan_row_mixture_pack_cache)
+    message(STATUS "  ✓ Added test_moe_plan_row_mixture_pack_cache")
+endif()
+
+if(NOT TARGET moe_grouped_gemm_bench AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/moe_grouped_gemm_bench.cpp")
+    add_executable(moe_grouped_gemm_bench moe_grouped_gemm_bench.cpp)
+    target_include_directories(moe_grouped_gemm_bench PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(moe_grouped_gemm_bench PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    message(STATUS "  ✓ Added moe_grouped_gemm_bench (manual / CI microbench; not registered in CTest)")
+endif()
+
 if(NOT TARGET test_basic_profiler AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/performance/test_basic_profiler.cpp")
     add_executable(test_basic_profiler
         performance/test_basic_profiler.cpp
@@ -255,3 +312,26 @@ message(STATUS "Test Suite Registration Complete")
 message(STATUS "Run tests: ctest --output-on-failure -C Release")
 message(STATUS "Run specific: ctest -R <name> -V -C Release")
 message(STATUS "========================================")
+
+# Model loader/streamer smoke test (no external model required)
+if(NOT TARGET test_model_loader_streamer_smoke AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_model_loader_streamer_smoke.cpp")
+    add_executable(test_model_loader_streamer_smoke
+        test_model_loader_streamer_smoke.cpp
+        gguf_link_stubs.cpp
+        ${CMAKE_SOURCE_DIR}/src/gguf_loader.cpp
+        ${CMAKE_SOURCE_DIR}/src/gguf_vocab_resolver.cpp
+        ${CMAKE_SOURCE_DIR}/src/streaming_gguf_loader.cpp
+        ${CMAKE_SOURCE_DIR}/src/utils/Diagnostics.cpp
+    )
+    target_include_directories(test_model_loader_streamer_smoke PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/3rdparty
+    )
+    set_target_properties(test_model_loader_streamer_smoke PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        CXX_STANDARD 20
+    )
+    add_test(NAME test_model_loader_streamer_smoke COMMAND test_model_loader_streamer_smoke)
+    message(STATUS "  ✓ Added test_model_loader_streamer_smoke")
+endif()

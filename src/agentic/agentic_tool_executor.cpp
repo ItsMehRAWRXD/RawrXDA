@@ -5,6 +5,8 @@
 #include "observability/Logger.hpp"
 #include <chrono>
 #include <algorithm>
+#include <filesystem>
+#include <fstream>
 #include <sstream>
 
 #ifdef _WIN32
@@ -17,6 +19,41 @@
 #endif
 
 namespace Agentic {
+
+namespace {
+
+std::string quoteCommandArg(const std::string& value) {
+    if (value.empty()) {
+        return "\"\"";
+    }
+
+    bool needs_quotes = false;
+    for (char ch : value) {
+        if (ch == ' ' || ch == '\t' || ch == '"') {
+            needs_quotes = true;
+            break;
+        }
+    }
+
+    if (!needs_quotes) {
+        return value;
+    }
+
+    std::string quoted;
+    quoted.reserve(value.size() + 8);
+    quoted.push_back('"');
+    for (char ch : value) {
+        if (ch == '"') {
+            quoted += "\\\"";
+        } else {
+            quoted.push_back(ch);
+        }
+    }
+    quoted.push_back('"');
+    return quoted;
+}
+
+} // namespace
 
 // ============================================================================
 // ToolExecutor Implementation
@@ -224,66 +261,77 @@ ExecutionResult ToolExecutor::executeGit(const std::string& command, const std::
 ExecutionResult ToolExecutor::copyFiles(const std::vector<std::pair<std::string, std::string>>& src_dst) {
     ExecutionResult batch_result;
     batch_result.success = true;
-    
+
     for (const auto& [src, dst] : src_dst) {
-        ExecutionRequest req;
-#ifdef _WIN32
-        req.tool_name = "copy";
-#else
-        req.tool_name = "cp";
-#endif
-        req.args = {src, dst};
-        req.description = "Copy " + src + " to " + dst;
-        
-        auto result = execute(req);
-        if (!result.success) {
+        std::error_code ec;
+        std::filesystem::path src_path(src);
+        std::filesystem::path dst_path(dst);
+
+        if (std::filesystem::is_directory(src_path, ec)) {
+            ec.clear();
+            std::filesystem::copy(src_path,
+                                  dst_path,
+                                  std::filesystem::copy_options::recursive |
+                                      std::filesystem::copy_options::overwrite_existing,
+                                  ec);
+        } else {
+            std::filesystem::create_directories(dst_path.parent_path(), ec);
+            ec.clear();
+            std::filesystem::copy_file(src_path,
+                                       dst_path,
+                                       std::filesystem::copy_options::overwrite_existing,
+                                       ec);
+        }
+
+        if (ec) {
             batch_result.success = false;
-            batch_result.stderr_text += result.stderr_text + "\n";
+            batch_result.stderr_text += "Copy failed: " + src + " -> " + dst + ": " + ec.message() + "\n";
         } else {
             batch_result.generated_files.push_back(dst);
+            batch_result.stdout_text += "Copied " + src + " -> " + dst + "\n";
         }
     }
-    
+
     return batch_result;
 }
 
 ExecutionResult ToolExecutor::deleteFiles(const std::vector<std::string>& files) {
     ExecutionResult batch_result;
     batch_result.success = true;
-    
+
     for (const auto& file : files) {
-        ExecutionRequest req;
-#ifdef _WIN32
-        req.tool_name = "del";
-#else
-        req.tool_name = "rm";
-#endif
-        req.args = {file};
-        req.description = "Delete " + file;
-        
-        auto result = execute(req);
-        if (!result.success) {
+        std::error_code ec;
+        const auto removed = std::filesystem::remove_all(std::filesystem::path(file), ec);
+        if (ec) {
             batch_result.success = false;
-            batch_result.stderr_text += result.stderr_text + "\n";
+            batch_result.stderr_text += "Delete failed: " + file + ": " + ec.message() + "\n";
         } else {
             batch_result.deleted_files.push_back(file);
+            batch_result.stdout_text += "Deleted " + file + " (" + std::to_string(removed) + " entries)\n";
         }
     }
-    
+
     return batch_result;
 }
 
 ExecutionResult ToolExecutor::renameFile(const std::string& old_name, const std::string& new_name) {
-    ExecutionRequest req;
-#ifdef _WIN32
-    req.tool_name = "ren";
-#else
-    req.tool_name = "mv";
-#endif
-    req.args = {old_name, new_name};
-    req.description = "Rename " + old_name + " to " + new_name;
-    
-    return execute(req);
+    ExecutionResult result;
+    std::error_code ec;
+    std::filesystem::path new_path(new_name);
+    std::filesystem::create_directories(new_path.parent_path(), ec);
+    ec.clear();
+    std::filesystem::rename(std::filesystem::path(old_name), new_path, ec);
+
+    result.success = !ec;
+    result.exit_code = result.success ? 0 : -1;
+    if (result.success) {
+        result.modified_files.push_back(new_name);
+        result.deleted_files.push_back(old_name);
+        result.stdout_text = "Renamed " + old_name + " -> " + new_name;
+    } else {
+        result.stderr_text = "Rename failed: " + ec.message();
+    }
+    return result;
 }
 
 bool ToolExecutor::validateRequest(const ExecutionRequest& request) {
@@ -375,31 +423,134 @@ ExecutionResult ToolExecutor::executeInternal(const ExecutionRequest& request) {
 ExecutionResult ToolExecutor::spawnProcess(const std::string& exe, const std::vector<std::string>& args,
                                            const std::string& cwd, int timeout_seconds) {
     ExecutionResult result;
-    
-    // Build command line
-    std::string cmd_line = exe;
+
+#ifdef _WIN32
+    SECURITY_ATTRIBUTES sa{};
+    sa.nLength = sizeof(sa);
+    sa.bInheritHandle = TRUE;
+
+    HANDLE stdout_read = nullptr;
+    HANDLE stdout_write = nullptr;
+    HANDLE stderr_read = nullptr;
+    HANDLE stderr_write = nullptr;
+
+    if (!CreatePipe(&stdout_read, &stdout_write, &sa, 0) ||
+        !CreatePipe(&stderr_read, &stderr_write, &sa, 0)) {
+        result.stderr_text = "CreatePipe failed";
+        return result;
+    }
+
+    SetHandleInformation(stdout_read, HANDLE_FLAG_INHERIT, 0);
+    SetHandleInformation(stderr_read, HANDLE_FLAG_INHERIT, 0);
+
+    STARTUPINFOA si{};
+    si.cb = sizeof(si);
+    si.dwFlags = STARTF_USESTDHANDLES;
+    si.hStdOutput = stdout_write;
+    si.hStdError = stderr_write;
+    si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+
+    PROCESS_INFORMATION pi{};
+
+    std::string cmd_line = quoteCommandArg(exe);
     for (const auto& arg : args) {
-        cmd_line += " \"" + arg + "\"";
+        cmd_line += " ";
+        cmd_line += quoteCommandArg(arg);
     }
-    
-    // For now, return success stub
-    // In production: use CreateProcess (Win32) or fork/exec (Unix)
-    result.success = true;
-    result.exit_code = 0;
-    result.stdout_text = "[Simulated output from " + exe + "]";
-    result.duration_ms = 100;
-    
+
+    std::vector<char> cmd_buffer(cmd_line.begin(), cmd_line.end());
+    cmd_buffer.push_back('\0');
+
+    const char* cwd_ptr = cwd.empty() ? nullptr : cwd.c_str();
+    const BOOL created = CreateProcessA(
+        nullptr,
+        cmd_buffer.data(),
+        nullptr,
+        nullptr,
+        TRUE,
+        CREATE_NO_WINDOW,
+        nullptr,
+        cwd_ptr,
+        &si,
+        &pi);
+
+    CloseHandle(stdout_write);
+    CloseHandle(stderr_write);
+
+    if (!created) {
+        result.stderr_text = "CreateProcess failed with error " + std::to_string(GetLastError());
+        CloseHandle(stdout_read);
+        CloseHandle(stderr_read);
+        return result;
+    }
+
+    const DWORD timeout_ms = timeout_seconds <= 0 ? INFINITE : static_cast<DWORD>(timeout_seconds * 1000);
+    const DWORD wait_result = WaitForSingleObject(pi.hProcess, timeout_ms);
+    if (wait_result == WAIT_TIMEOUT) {
+        TerminateProcess(pi.hProcess, 124);
+        result.exit_code = 124;
+        result.stderr_text = "Process timed out";
+    }
+
+    std::string stdout_text;
+    std::string stderr_text;
+    monitorProcess(stdout_read, timeout_seconds * 1000, stdout_text, stderr_text);
+    monitorProcess(stderr_read, timeout_seconds * 1000, stderr_text, stderr_text);
+
+    DWORD exit_code = 0;
+    if (result.exit_code != 124 && GetExitCodeProcess(pi.hProcess, &exit_code)) {
+        result.exit_code = static_cast<int>(exit_code);
+    }
+
+    CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
+    CloseHandle(stdout_read);
+    CloseHandle(stderr_read);
+
+    result.stdout_text = stdout_text;
+    result.stderr_text = stderr_text;
+    result.success = (result.exit_code == 0);
+
     if (m_outputFn) {
-        m_outputFn(result.stdout_text);
+        if (!result.stdout_text.empty()) {
+            m_outputFn(result.stdout_text);
+        }
+        if (!result.stderr_text.empty()) {
+            m_outputFn(result.stderr_text);
+        }
     }
-    
+
     return result;
+#else
+    result.stderr_text = "spawnProcess not implemented on this platform";
+    return result;
+#endif
 }
 
 bool ToolExecutor::monitorProcess(void* process_handle, int timeout_ms, std::string& stdout, std::string& stderr) {
-    // Stub implementation
-    // In production: implement actual process monitoring
+#ifdef _WIN32
+    (void)timeout_ms;
+    (void)stderr;
+
+    HANDLE handle = static_cast<HANDLE>(process_handle);
+    if (!handle) {
+        return false;
+    }
+
+    constexpr DWORD kBufferSize = 4096;
+    char buffer[kBufferSize];
+    DWORD bytes_read = 0;
+    while (ReadFile(handle, buffer, kBufferSize, &bytes_read, nullptr) && bytes_read > 0) {
+        stdout.append(buffer, buffer + bytes_read);
+    }
     return true;
+#else
+    (void)process_handle;
+    (void)timeout_ms;
+    (void)stdout;
+    (void)stderr;
+    return false;
+#endif
 }
 
 const ToolPolicy* ToolExecutor::getPolicy(const std::string& tool) const {

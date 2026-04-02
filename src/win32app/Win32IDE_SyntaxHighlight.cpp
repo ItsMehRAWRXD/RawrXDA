@@ -729,6 +729,15 @@ void Win32IDE::applySyntaxColoringForVisibleRange() {
 // Sets a timer; when it fires, actual coloring runs.
 // ============================================================================
 void Win32IDE::onEditorContentChanged() {
+    // Mark current tab as modified
+    if (m_activeTabIndex >= 0 && m_activeTabIndex < (int)m_editorTabs.size()) {
+        m_editorTabs[m_activeTabIndex].modified = true;
+        // Update tab display
+        if (m_hwndTabBar) {
+            InvalidateRect(m_hwndTabBar, nullptr, TRUE);
+        }
+    }
+
     // Trigger ghost text debounce on every content change
     if (m_ghostTextEnabled) {
         triggerGhostTextCompletion();

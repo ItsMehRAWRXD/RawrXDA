@@ -1,0 +1,78 @@
+{
+  "snapshotId": 42,
+  "planGeneration": 7,
+  "sampleTsMs": 60123456,
+  "stats": {
+    "prefetchPinSuccess": 1200,
+    "prefetchSkippedDuplicate": 80,
+    "prefetchSkippedComputeCovers": 15,
+    "prefetchEnqueueSkippedDuplicate": 12,
+    "evictions": 340,
+    "jitPinNonResident": 25,
+    "speculativeExpertPrefetchEnqueued": 200,
+    "evictionRejectedInUse": 2,
+    "evictStarvation": 1,
+    "pinBlockAttempts": 48,
+    "pinBlockTimeouts": 0,
+    "pinBlockLatencyMsTotal": 96,
+    "inUseSliceCount": 4
+  },
+  "cells": [
+    {
+      "row": 0,
+      "model": 0,
+      "layer": 0,
+      "layerEnd": 1,
+      "expert": 4294967295,
+      "span": 0,
+      "resident": true,
+      "pfInflight": false,
+      "hold": 1,
+      "bytes": 1048576,
+      "touchSeq": 9001,
+      "name": ""
+    },
+    {
+      "row": 16,
+      "model": 0,
+      "layer": 3,
+      "layerEnd": 4,
+      "expert": 0,
+      "span": 0,
+      "resident": true,
+      "pfInflight": true,
+      "hold": 0,
+      "bytes": 524288,
+      "touchSeq": 8990,
+      "name": ""
+    },
+    {
+      "row": 18,
+      "model": 0,
+      "layer": 3,
+      "layerEnd": 4,
+      "expert": 2,
+      "span": 0,
+      "resident": false,
+      "pfInflight": true,
+      "hold": 0,
+      "bytes": 0,
+      "touchSeq": 0,
+      "name": ""
+    },
+    {
+      "row": 20,
+      "model": 0,
+      "layer": 3,
+      "layerEnd": 4,
+      "expert": 5,
+      "span": 0,
+      "resident": true,
+      "pfInflight": false,
+      "hold": 2,
+      "bytes": 524288,
+      "touchSeq": 9005,
+      "name": ""
+    }
+  ]
+}

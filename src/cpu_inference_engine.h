@@ -1,66 +1,92 @@
 #pragma once
 
-#include <vector>
-#include <string>
-#include <memory>
-#include <unordered_map>
+#include "gguf_loader.h"
+#include <chrono>
 #include <cstdint>
 #include <functional>
-#include "gguf_loader.h" 
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
-#include "plugins/MemoryPlugin.hpp"
+
 #include "inference_engine.h"
+#include "plugins/MemoryPlugin.hpp"
+#include "rawrxd_inference.h"
 
-namespace RawrXD {
+
+namespace RawrXD
+{
 
 // Tensor data types — values match ggml_type from GGUF spec
-enum class TensorType {
-    F32  = 0,    // 32-bit float
-    F16  = 1,    // 16-bit float
-    Q4_0 = 2,    // 4-bit quantization (32 elements per block)
-    Q4_1 = 3,    // 4-bit with min (32 elements per block)
-    Q5_0 = 6,    // 5-bit quantization (32 elements per block)
-    Q5_1 = 7,    // 5-bit with min (32 elements per block)
-    Q8_0 = 8,    // 8-bit quantization (32 elements per block)
-    Q2_K = 14,   // 2-bit K-quant (256-element super-block)
-    Q3_K = 15,   // 3-bit K-quant (256-element super-block)
-    Q4_K = 16,   // 4-bit K-quant (256-element super-block)
-    Q5_K = 17,   // 5-bit K-quant (256-element super-block)
-    Q6_K = 18,   // 6-bit K-quant (256-element super-block)
+enum class TensorType
+{
+    F32 = 0,    // 32-bit float
+    F16 = 1,    // 16-bit float
+    Q4_0 = 2,   // 4-bit quantization (32 elements per block)
+    Q4_1 = 3,   // 4-bit with min (32 elements per block)
+    Q5_0 = 6,   // 5-bit quantization (32 elements per block)
+    Q5_1 = 7,   // 5-bit with min (32 elements per block)
+    Q8_0 = 8,   // 8-bit quantization (32 elements per block)
+    Q2_K = 14,  // 2-bit K-quant (256-element super-block)
+    Q3_K = 15,  // 3-bit K-quant (256-element super-block)
+    Q4_K = 16,  // 4-bit K-quant (256-element super-block)
+    Q5_K = 17,  // 5-bit K-quant (256-element super-block)
+    Q6_K = 18,  // 6-bit K-quant (256-element super-block)
 };
 
 // Tensor structure
-struct Tensor {
+struct Tensor
+{
     std::vector<int64_t> shape;
     std::vector<uint8_t> data;
     TensorType type;
     size_t element_size;
-    
+
     Tensor() : type(TensorType::F32), element_size(4) {}
-    Tensor(const std::vector<int64_t>& shape, TensorType type) 
-        : shape(shape), type(type), element_size(GetElementSize(type)) {}
-    
-    static size_t GetElementSize(TensorType type) {
-        switch(type) {
-            case TensorType::F32:  return 4;
-            case TensorType::F16:  return 2;
-            case TensorType::Q4_0: return 1; // ~0.5625 bytes/weight (18B / 32)
-            case TensorType::Q4_1: return 1; // ~0.625  bytes/weight (20B / 32)
-            case TensorType::Q5_0: return 1; // ~0.6875 bytes/weight (22B / 32)
-            case TensorType::Q5_1: return 1; // ~0.75   bytes/weight (24B / 32)
-            case TensorType::Q8_0: return 1; // ~1.0625 bytes/weight (34B / 32)
-            case TensorType::Q2_K: return 1; // ~0.328  bytes/weight (84B / 256)
-            case TensorType::Q3_K: return 1; // ~0.430  bytes/weight (110B / 256)
-            case TensorType::Q4_K: return 1; // ~0.5625 bytes/weight (144B / 256)
-            case TensorType::Q5_K: return 1; // ~0.6875 bytes/weight (176B / 256)
-            case TensorType::Q6_K: return 1; // ~0.8203 bytes/weight (210B / 256)
-            default: return 4;
+    Tensor(const std::vector<int64_t>& shape, TensorType type)
+        : shape(shape), type(type), element_size(GetElementSize(type))
+    {
+    }
+
+    static size_t GetElementSize(TensorType type)
+    {
+        switch (type)
+        {
+            case TensorType::F32:
+                return 4;
+            case TensorType::F16:
+                return 2;
+            case TensorType::Q4_0:
+                return 1;  // ~0.5625 bytes/weight (18B / 32)
+            case TensorType::Q4_1:
+                return 1;  // ~0.625  bytes/weight (20B / 32)
+            case TensorType::Q5_0:
+                return 1;  // ~0.6875 bytes/weight (22B / 32)
+            case TensorType::Q5_1:
+                return 1;  // ~0.75   bytes/weight (24B / 32)
+            case TensorType::Q8_0:
+                return 1;  // ~1.0625 bytes/weight (34B / 32)
+            case TensorType::Q2_K:
+                return 1;  // ~0.328  bytes/weight (84B / 256)
+            case TensorType::Q3_K:
+                return 1;  // ~0.430  bytes/weight (110B / 256)
+            case TensorType::Q4_K:
+                return 1;  // ~0.5625 bytes/weight (144B / 256)
+            case TensorType::Q5_K:
+                return 1;  // ~0.6875 bytes/weight (176B / 256)
+            case TensorType::Q6_K:
+                return 1;  // ~0.8203 bytes/weight (210B / 256)
+            default:
+                return 4;
         }
     }
-    
-    size_t GetTotalSize() const {
+
+    size_t GetTotalSize() const
+    {
         size_t total_elements = 1;
-        for (auto dim : shape) {
+        for (auto dim : shape)
+        {
             total_elements *= dim;
         }
         return total_elements * element_size;
@@ -68,64 +94,88 @@ struct Tensor {
 };
 
 // CPU inference engine class
-class CPUInferenceEngine : public InferenceEngine {
-public:
+class CPUInferenceEngine : public InferenceEngine
+{
+  public:
     CPUInferenceEngine();
-    ~CPUInferenceEngine();
+    ~CPUInferenceEngine() override;
 
-    // Singleton Pattern for Memory Manager
+    /// Process-wide shared engine (Win32IDE + AgenticBridge + headless). Same underlying `RawrXDInference` as all
+    /// instances.
+    [[nodiscard]] static std::shared_ptr<CPUInferenceEngine> GetSharedInstance();
+    /// @deprecated Prefer GetSharedInstance(); returns the same object as `.get()` on the shared pointer.
     static CPUInferenceEngine* getInstance();
-    
+
     // Context Management
     void SetContextLimit(size_t limit);
     size_t GetContextLimit() const { return m_contextLimit; }
     void RegisterMemoryPlugin(std::shared_ptr<RawrXD::IMemoryPlugin> plugin);
 
+    /** Layer forward heartbeat lines (e.g. "[STEP] …"). May be called from inference threads. */
+    void SetLayerProgressCallback(std::function<void(const std::string&)> cb);
+    /** Win32IDE / Output panel: throttled loader + swarm stats during GenerateStreaming (~250 ms). */
+    void SetSwarmTelemetryOutputCallback(std::function<void(const std::string&)> cb);
+
+    /** Single UTF-8 line for status bar / overlays: MoE pack + prepack counters (empty if no model). */
+    [[nodiscard]] std::string MoEPackHudStatusLineUtf8() const;
+
     // Tokenization
-    std::vector<int> Tokenize(const std::string& text);
-    std::string Detokenize(const std::vector<int>& tokens);
+    std::vector<int32_t> Tokenize(const std::string& text) override;
+    std::string Detokenize(const std::vector<int32_t>& tokens) override;
 
     // Model loading
-    bool LoadModel(const std::string& model_path);
+    bool LoadModel(const std::string& model_path) override;
     bool LoadWeights(const std::unordered_map<std::string, Tensor>& tensors);
-    bool IsModelLoaded() const { return m_modelLoaded; }
+    bool IsModelLoaded() const override { return m_modelLoaded; }
     const std::string& GetLastLoadErrorMessage() const { return m_lastLoadErrorMessage; }
-    
+
     // Inference
     // Explicit declarations for missing methods
-    std::vector<float> Eval(const std::vector<int32_t>& input_tokens);
+    std::vector<float> Eval(const std::vector<int32_t>& input_tokens) override;
     void UpdateWeights(const std::vector<std::vector<float>>& layer_gradients, float learning_rate);
     void UpdateOutputWeights(const std::vector<float>& gradients, float learningRate);
-    
-    void GenerateStreaming(const std::vector<int32_t>& input_tokens,
-                         int max_tokens,
-                         std::function<void(const std::string&)> token_callback,
-                         std::function<void()> complete_callback,
-                         std::function<void(int32_t)> token_id_callback = nullptr);
-    
+
+    void GenerateStreaming(const std::vector<int32_t>& input_tokens, int max_tokens,
+                           std::function<void(const std::string&)> token_callback,
+                           std::function<void()> complete_callback,
+                           std::function<void(int32_t)> token_id_callback = nullptr) override;
+
     // Matrix-vector operations for GPU dispatch gate
     bool MatVecQ4(const float* matrix, const float* vector, float* output, uint32_t rows, uint32_t cols);
-    
+
     // Tokenization
     // Functions declared in this section handle conversion between raw text and
     // integer token IDs used by the model. They are used by Eval and
     // GenerateStreaming to prepare input sequences and decode generated output.
-    
+
     // Model information
-    int GetVocabSize() const { return m_vocabSize; }
-    int GetEmbeddingDim() const { return m_embeddingDim; }
-    int GetNumLayers() const { return m_numLayers; }
-    int GetNumHeads() const { return m_numHeads; }
-    
+    int GetVocabSize() const override { return m_vocabSize; }
+    int GetEmbeddingDim() const override { return m_embeddingDim; }
+    int GetNumLayers() const override { return m_numLayers; }
+    int GetNumHeads() const override { return m_numHeads; }
+
     // AI Mode settings
-    void SetMaxMode(bool enabled);
-    void SetDeepThinking(bool enabled);
-    void SetDeepResearch(bool enabled);
-    
-    bool IsMaxMode() const { return m_maxMode; }
-    virtual bool IsDeepThinking() const override { return m_deepThinking; }
-    // Titan assembly engine (RawrXD_Interconnect / static ASM) — toggleable
-    bool IsDeepResearch() const { return m_deepResearch; }
+    void SetMaxMode(bool enabled) override;
+    void SetDeepThinking(bool enabled) override;
+    void SetDeepResearch(bool enabled) override;
+    bool IsMaxMode() const override { return m_maxMode; }
+    bool IsDeepThinking() const override { return m_deepThinking; }
+    bool IsDeepResearch() const override { return m_deepResearch; }
+
+    // Swarm Mode: Chain multiple models for enhanced reasoning
+    void SetSwarmMode(bool enabled, int chainDepth = 5);
+    bool IsSwarmMode() const { return m_swarmMode; }
+    void SetSwarmChainDepth(int depth) { m_swarmChainDepth = depth; }
+    int GetSwarmChainDepth() const { return m_swarmChainDepth; }
+
+    // Load multiple models for swarm from a directory
+    bool LoadSwarmFromDirectory(const std::string& directoryPath, int maxModels = 5);
+
+    // Swarm inference with model chaining
+    void GenerateSwarmStreaming(const std::vector<int32_t>& input_tokens, int max_tokens,
+                                std::function<void(const std::string&)> token_callback,
+                                std::function<void()> complete_callback,
+                                std::function<void(int32_t)> token_id_callback = nullptr);
 
     // Titan assembly engine (RawrXD_Interconnect / static ASM) — toggable
     void SetUseTitanAssembly(bool use) { m_useTitanAssembly = use; }
@@ -139,28 +189,27 @@ public:
     size_t GetContextSize() const { return m_contextLimit; }
 
     // Memory management
-    size_t GetMemoryUsage() const;
-    void ClearCache();
+    size_t GetMemoryUsage() const override;
+    void ClearCache() override;
 
     // Engine identification (InferenceEngine interface)
     const char* GetEngineName() const override { return "CPU"; }
-    
+
     // Implementation of InferenceEngine::Generate
-    std::vector<int32_t> Generate(const std::vector<int32_t>& inputTokens, int maxTokens) override {
+    std::vector<int32_t> Generate(const std::vector<int32_t>& inputTokens, int maxTokens) override
+    {
         std::vector<int32_t> result;
-        GenerateStreaming(inputTokens, maxTokens, 
-            [&](const std::string&) {}, 
-            [&]() {}, 
-            [&](int32_t tid) { result.push_back(tid); }
-        );
+        GenerateStreaming(
+            inputTokens, maxTokens, [&](const std::string&) {}, [&]() {}, [&](int32_t tid) { result.push_back(tid); });
         return result;
     }
 
     // Allow ExecutionScheduler to call private TransformerLayer
     friend class ExecutionScheduler;
-    
-private:
-    struct KVCacheLayer {
+
+  private:
+    struct KVCacheLayer
+    {
         std::vector<float> keys;
         std::vector<float> values;
     };
@@ -176,28 +225,29 @@ private:
     void GELU(float* data, int size);
     void RMSNorm(float* data, int size, float epsilon = 1e-5f);
     void RoPE(float* data, int dim, int pos, int rotary_dim);
-    
+
     // Attention mechanism
-    void MultiHeadAttention(const float* query, const float* key, const float* value,
-                           float* output, int seq_len, int embed_dim, int num_heads, int layer_idx = 0);
-    
+    void MultiHeadAttention(const float* query, const float* key, const float* value, float* output, int seq_len,
+                            int embed_dim, int num_heads, int layer_idx = 0);
+
     // Feed-forward network
     void FeedForward(const float* input, float* output, int dim);
-    
+
     // Transformer layer
     void TransformerLayer(const float* input, float* output, int layer_idx, int seq_len, uint32_t deviceId = 0);
-    
+
     // Apply Norm Helper
     void ApplyNorm(const std::string& name, float* data);
-    
+
     // KV Cache Init
     void InitKVCache();
     void DequantizeTensor(const std::vector<uint8_t>& src, float* dst, size_t size, TensorType type);
+    bool LoadSwarmModels(const std::vector<std::string>& modelPaths);
 
     // Memory management
     float* AllocateTensor(size_t size);
     void DeallocateTensor(float* ptr);
-    
+
     // Model state
     bool m_modelLoaded = false;
     std::string m_lastLoadErrorMessage;
@@ -206,31 +256,36 @@ private:
     int m_numLayers = 0;
     int m_numHeads = 0;
     int m_threadCount = 1;
-    
+
     size_t m_contextSize = 0;
-    
+
     // AI Flag State
     bool m_maxMode = false;
     bool m_deepThinking = false;
     bool m_deepResearch = false;
     bool m_useTitanAssembly = true;  // Use Titan ASM when available; toggle via SetUseTitanAssembly
 
+    // Swarm Mode
+    bool m_swarmMode = false;
+    int m_swarmChainDepth = 5;
+    std::vector<std::unique_ptr<RawrXDInference>> m_swarmModels;
+
     // Model weights and Data
     std::unordered_map<std::string, Tensor> m_weights;
     std::vector<std::string> m_vocab;
-    
+
     // Token embeddings
     Tensor m_tokenEmbeddings;
     Tensor m_outputWeights;
-    
+
     // Loader and execution state
-    std::unique_ptr<IGGUFLoader> m_loader; 
-    
+    std::unique_ptr<IGGUFLoader> m_loader;
+
     // Titan ASM Integration
     void* m_hTitanDLL = nullptr;
     void* m_pTitanContext = nullptr;
-    
-    using FTitan_Initialize = void (*)(void**); 
+
+    using FTitan_Initialize = void (*)(void**);
     using FTitan_LoadModel = bool (*)(void*, const char*);
     using FTitan_RunInferenceStep = void (*)(void*, float*, float*);
 
@@ -243,7 +298,8 @@ private:
     std::vector<float> m_lastState;
 
     // Layer weights
-    struct LayerWeights {
+    struct LayerWeights
+    {
         Tensor attention_query;
         Tensor attention_key;
         Tensor attention_value;
@@ -254,50 +310,59 @@ private:
         Tensor layer_norm2;
     };
     std::vector<LayerWeights> m_layers;
-    
+
     // Memory pool
     std::vector<std::unique_ptr<float[]>> m_memoryPool;
     size_t m_totalMemoryAllocated = 0;
-    
+
+    // Dynamic KV cache for memory-gate bypass
+    bool m_dynamicKVCache = false;
+
     // Performance tracking
     mutable size_t m_inferenceCount = 0;
     mutable double m_totalInferenceTime = 0.0;
+
+    std::function<void(const std::string&)> m_swarmTelemetryOutputCb;
+    std::chrono::steady_clock::time_point m_lastSwarmTelemetryPost{};
+
+    void emitSwarmTelemetryThrottled_(bool force);
 };
 
 // Utility functions
-namespace CPUOps {
-    // Optimized matrix multiplication
-    void MatMul(const float* A, const float* B, float* C, int m, int n, int k);
-    
-    // Vector operations
-    void VectorAdd(const float* a, const float* b, float* c, int size);
-    void VectorMul(const float* a, const float* b, float* c, int size);
-    void VectorScale(float* data, float scale, int size);
-    
-    // Activation functions
-    void Softmax(float* data, int size);
-    void GELU(float* data, int size);
-    void SiLU(float* data, int size);
-    
-    // Normalization
-    void LayerNorm(float* data, int size, float epsilon = 1e-5f);
-    void RMSNorm(float* data, int size, float epsilon = 1e-5f);
-    
-    // Quantization support — basic types
-    void DequantizeQ4_0(const uint8_t* quantized, float* output, int size);
-    void DequantizeQ8_0(const uint8_t* quantized, float* output, int size);
+namespace CPUOps
+{
+// Optimized matrix multiplication
+void MatMul(const float* A, const float* B, float* C, int m, int n, int k);
 
-    // Quantization support — K-quant super-blocks (256-element blocks)
-    void DequantizeQ4_K(const uint8_t* quantized, float* output, int num_elements);
-    void DequantizeQ5_K(const uint8_t* quantized, float* output, int num_elements);
-    void DequantizeQ6_K(const uint8_t* quantized, float* output, int num_elements);
-    void DequantizeQ2_K(const uint8_t* quantized, float* output, int num_elements);
-    void DequantizeQ3_K(const uint8_t* quantized, float* output, int num_elements);
-    void DequantizeF16 (const uint8_t* quantized, float* output, int num_elements);
+// Vector operations
+void VectorAdd(const float* a, const float* b, float* c, int size);
+void VectorMul(const float* a, const float* b, float* c, int size);
+void VectorScale(float* data, float scale, int size);
 
-    // Performance optimization flags
-    void EnableAVX2(bool enable);
-    void EnableMultiThreading(bool enable);
-}
+// Activation functions
+void Softmax(float* data, int size);
+void GELU(float* data, int size);
+void SiLU(float* data, int size);
 
-} // namespace RawrXD
+// Normalization
+void LayerNorm(float* data, int size, float epsilon = 1e-5f);
+void RMSNorm(float* data, int size, float epsilon = 1e-5f);
+
+// Quantization support — basic types
+void DequantizeQ4_0(const uint8_t* quantized, float* output, int size);
+void DequantizeQ8_0(const uint8_t* quantized, float* output, int size);
+
+// Quantization support — K-quant super-blocks (256-element blocks)
+void DequantizeQ4_K(const uint8_t* quantized, float* output, int num_elements);
+void DequantizeQ5_K(const uint8_t* quantized, float* output, int num_elements);
+void DequantizeQ6_K(const uint8_t* quantized, float* output, int num_elements);
+void DequantizeQ2_K(const uint8_t* quantized, float* output, int num_elements);
+void DequantizeQ3_K(const uint8_t* quantized, float* output, int num_elements);
+void DequantizeF16(const uint8_t* quantized, float* output, int num_elements);
+
+// Performance optimization flags
+void EnableAVX2(bool enable);
+void EnableMultiThreading(bool enable);
+}  // namespace CPUOps
+
+}  // namespace RawrXD

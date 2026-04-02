@@ -90,8 +90,9 @@ struct SandboxConfig {
     SandboxConfig()
         : type(SandboxType::JobObject)
         , policyFlags(static_cast<uint8_t>(SandboxPolicy::AllowGPU) |
-                      static_cast<uint8_t>(SandboxPolicy::AllowModelRead) |
                       static_cast<uint8_t>(SandboxPolicy::LimitMemory))
+        // AllowModelRead is intentionally NOT set by default.
+        // Callers must explicitly set it alongside a valid allowedReadPath.
         , memoryLimitBytes(8ULL * 1024 * 1024 * 1024) // 8 GB
         , cpuRateLimit(8000)    // 80%
         , timeoutMs(300000)     // 5 minutes
@@ -108,6 +109,7 @@ struct SandboxInstance {
     HANDLE hToken;
     DWORD processId;
     uint64_t createdAtMs;
+    uint64_t startedAtMs;
     uint64_t cpuTimeMs;
     uint64_t peakMemoryBytes;
     std::string lastError;
@@ -115,7 +117,7 @@ struct SandboxInstance {
     SandboxInstance()
         : state(SandboxState::Inactive)
         , hProcess(nullptr), hJob(nullptr), hToken(nullptr)
-        , processId(0), createdAtMs(0), cpuTimeMs(0), peakMemoryBytes(0)
+        , processId(0), createdAtMs(0), startedAtMs(0), cpuTimeMs(0), peakMemoryBytes(0)
     {}
 };
 

@@ -11,7 +11,71 @@
 #include <chrono>
 #include <cstring>
 #include <algorithm>
+#include <filesystem>
 #include <psapi.h>
+
+namespace {
+bool hasPolicy(uint8_t flags, SandboxPolicy policy) {
+    return (flags & static_cast<uint8_t>(policy)) != 0;
+}
+
+uint64_t nowMs() {
+    return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count());
+}
+
+bool applyLowIntegrityLabel(HANDLE token) {
+    SID_IDENTIFIER_AUTHORITY mandatoryLabelAuthority = SECURITY_MANDATORY_LABEL_AUTHORITY;
+    PSID lowIntegritySid = nullptr;
+    if (!AllocateAndInitializeSid(&mandatoryLabelAuthority,
+                                  1,
+                                  SECURITY_MANDATORY_LOW_RID,
+                                  0, 0, 0, 0, 0, 0, 0,
+                                  &lowIntegritySid)) {
+        return false;
+    }
+
+    TOKEN_MANDATORY_LABEL mandatoryLabel = {};
+    mandatoryLabel.Label.Attributes = SE_GROUP_INTEGRITY;
+    mandatoryLabel.Label.Sid = lowIntegritySid;
+
+    const DWORD labelSize = static_cast<DWORD>(sizeof(TOKEN_MANDATORY_LABEL) + GetLengthSid(lowIntegritySid));
+    const BOOL setOk = SetTokenInformation(token, TokenIntegrityLevel, &mandatoryLabel, labelSize);
+    FreeSid(lowIntegritySid);
+    return setOk == TRUE;
+}
+
+bool pathExists(const std::string& path) {
+    if (path.empty()) {
+        return false;
+    }
+    std::error_code ec;
+    return std::filesystem::exists(std::filesystem::u8path(path), ec) && !ec;
+}
+
+bool isPathWithin(const std::filesystem::path& candidate, const std::filesystem::path& base) {
+    std::error_code ec;
+    const auto normalizedCandidate = std::filesystem::weakly_canonical(candidate, ec);
+    if (ec) {
+        return false;
+    }
+
+    ec.clear();
+    const auto normalizedBase = std::filesystem::weakly_canonical(base, ec);
+    if (ec) {
+        return false;
+    }
+
+    auto candidateIt = normalizedCandidate.begin();
+    auto baseIt = normalizedBase.begin();
+    for (; baseIt != normalizedBase.end(); ++baseIt, ++candidateIt) {
+        if (candidateIt == normalizedCandidate.end() || *candidateIt != *baseIt) {
+            return false;
+        }
+    }
+    return true;
+}
+} // namespace
 
 // SCAFFOLD_209: Sandbox integration
 
@@ -108,8 +172,7 @@ SandboxResult SandboxManager::createSandbox(const SandboxConfig& config, std::st
     inst.sandboxId = id;
     inst.config = config;
     inst.state = SandboxState::Creating;
-    inst.createdAtMs = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count();
+    inst.createdAtMs = nowMs();
 
     // Create isolation primitives based on type
     SandboxResult r = SandboxResult::ok("Created");
@@ -141,6 +204,12 @@ SandboxResult SandboxManager::createSandbox(const SandboxConfig& config, std::st
 
     // Apply policies
     r = applyPolicies(inst);
+    if (!r.success) {
+        if (inst.hToken) { CloseHandle(inst.hToken); inst.hToken = nullptr; }
+        if (inst.hJob) { CloseHandle(inst.hJob); inst.hJob = nullptr; }
+        m_stats.sandboxesFailed.fetch_add(1, std::memory_order_relaxed);
+        return r;
+    }
 
     inst.state = SandboxState::Ready;
     m_sandboxes[id] = inst;
@@ -169,6 +238,10 @@ SandboxResult SandboxManager::destroySandbox(const std::string& sandboxId) {
     inst.state = SandboxState::Terminating;
 
     if (inst.hProcess) {
+        if (inst.startedAtMs != 0) {
+            m_stats.totalExecTimeMs.fetch_add(nowMs() - inst.startedAtMs, std::memory_order_relaxed);
+            inst.startedAtMs = 0;
+        }
         TerminateProcess(inst.hProcess, 0);
         WaitForSingleObject(inst.hProcess, 3000);
         CloseHandle(inst.hProcess);
@@ -280,6 +353,8 @@ SandboxResult SandboxManager::launchInSandbox(const std::string& sandboxId,
 
     inst.hProcess = pi.hProcess;
     inst.processId = pi.dwProcessId;
+    inst.startedAtMs = nowMs();
+    inst.peakMemoryBytes = 0;
     inst.state = SandboxState::Running;
 
     if (m_eventCb) {
@@ -343,6 +418,10 @@ SandboxResult SandboxManager::terminateSandbox(const std::string& sandboxId) {
 
     if (inst.hProcess) {
         WaitForSingleObject(inst.hProcess, 3000);
+        if (inst.startedAtMs != 0) {
+            m_stats.totalExecTimeMs.fetch_add(nowMs() - inst.startedAtMs, std::memory_order_relaxed);
+            inst.startedAtMs = 0;
+        }
         CloseHandle(inst.hProcess);
         inst.hProcess = nullptr;
     }
@@ -362,6 +441,23 @@ SandboxResult SandboxManager::terminateSandbox(const std::string& sandboxId) {
 
 SandboxResult SandboxManager::loadModelInSandbox(const std::string& sandboxId,
                                                    const std::string& modelPath) {
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        auto it = m_sandboxes.find(sandboxId);
+        if (it == m_sandboxes.end()) return SandboxResult::error("Sandbox not found");
+
+        const auto& config = it->second.config;
+        if (!hasPolicy(config.policyFlags, SandboxPolicy::AllowModelRead)) {
+            return SandboxResult::error("Sandbox policy denies model reads");
+        }
+        if (config.allowedReadPath.empty()) {
+            return SandboxResult::error("Sandbox missing allowed model path");
+        }
+        if (!isPathWithin(std::filesystem::u8path(modelPath), std::filesystem::u8path(config.allowedReadPath))) {
+            return SandboxResult::error("Model path is outside allowed sandbox root");
+        }
+    }
+
     // In production: launch RawrXD-Shell worker process inside sandbox
     // with --model argument pointing to read-only mounted model file
     std::string args = "--worker --model \"" + modelPath + "\" --sandbox";
@@ -385,16 +481,12 @@ SandboxResult SandboxManager::runInferenceInSandbox(const std::string& sandboxId
     if (it->second.state != SandboxState::Running) return SandboxResult::error("Sandbox not running");
 
     outResponse = "";
+    const DWORD waitTimeoutMs = it->second.config.timeoutMs > 0 ? it->second.config.timeoutMs : 30000;
     
     // Communicate with sandbox worker process via named pipe
     std::string pipeName = "\\\\.\\pipe\\rawrxd_sandbox_" + sandboxId;
-    HANDLE hPipe = CreateFileA(pipeName.c_str(), GENERIC_READ | GENERIC_WRITE,
-        0, NULL, OPEN_EXISTING, 0, NULL);
-    
-    if (hPipe == INVALID_HANDLE_VALUE) {
-        // Pipe not ready — sandbox worker may not have created it yet
-        // Retry with short delay
-        Sleep(100);
+    HANDLE hPipe = INVALID_HANDLE_VALUE;
+    if (WaitNamedPipeA(pipeName.c_str(), waitTimeoutMs)) {
         hPipe = CreateFileA(pipeName.c_str(), GENERIC_READ | GENERIC_WRITE,
             0, NULL, OPEN_EXISTING, 0, NULL);
     }
@@ -651,14 +743,9 @@ SandboxResult SandboxManager::createRestrictedToken(SandboxInstance& inst) {
 
     // Create restricted token with:
     // - Disable all privileges
-    // - Add restricting SIDs for deny-only
+    // - Drop integrity to low so writes outside low-integrity locations fail
     HANDLE hRestrictedToken = nullptr;
     DWORD flags = DISABLE_MAX_PRIVILEGE;
-
-    // Deny network if policy says so
-    if (!(inst.config.policyFlags & static_cast<uint8_t>(SandboxPolicy::AllowNetLAN))) {
-        flags |= SANDBOX_INERT;
-    }
 
     if (!CreateRestrictedToken(hCurrentToken, flags, 0, nullptr, 0, nullptr, 0, nullptr, &hRestrictedToken)) {
         CloseHandle(hCurrentToken);
@@ -666,6 +753,13 @@ SandboxResult SandboxManager::createRestrictedToken(SandboxInstance& inst) {
     }
 
     CloseHandle(hCurrentToken);
+
+    if (!applyLowIntegrityLabel(hRestrictedToken)) {
+        const DWORD error = GetLastError();
+        CloseHandle(hRestrictedToken);
+        return SandboxResult::error("Failed to lower sandbox token integrity", error);
+    }
+
     inst.hToken = hRestrictedToken;
 
     return SandboxResult::ok("Restricted token created");
@@ -731,15 +825,35 @@ SandboxResult SandboxManager::applyPolicies(SandboxInstance& inst) {
 
     uint8_t flags = inst.config.policyFlags;
 
-    if (flags & static_cast<uint8_t>(SandboxPolicy::AllowGPU)) {
+    if (hasPolicy(flags, SandboxPolicy::AllowModelRead) && !pathExists(inst.config.allowedReadPath)) {
+        return SandboxResult::error("Sandbox allowedReadPath is missing or inaccessible");
+    }
+
+    if (hasPolicy(flags, SandboxPolicy::AllowTempWrite)) {
+        if (inst.config.tempWritePath.empty()) {
+            return SandboxResult::error("Sandbox tempWritePath is required when temp writes are enabled");
+        }
+
+        std::error_code ec;
+        std::filesystem::create_directories(std::filesystem::u8path(inst.config.tempWritePath), ec);
+        if (ec) {
+            return SandboxResult::error("Sandbox tempWritePath could not be prepared", static_cast<int>(ec.value()));
+        }
+    }
+
+    if (hasPolicy(flags, SandboxPolicy::AllowGPU)) {
         // GPU access requires DX12/Vulkan device access
         // In AppContainer, this needs explicit capability grants
         std::cout << "[SANDBOX] GPU access allowed for '" << inst.sandboxId << "'\n";
     }
 
-    if (flags & static_cast<uint8_t>(SandboxPolicy::DenyRegistry)) {
+    if (hasPolicy(flags, SandboxPolicy::DenyRegistry)) {
         // Enforced via restricted token + AppContainer
         std::cout << "[SANDBOX] Registry access denied for '" << inst.sandboxId << "'\n";
+    }
+
+    if (!hasPolicy(flags, SandboxPolicy::AllowNetLocal) && !hasPolicy(flags, SandboxPolicy::AllowNetLAN)) {
+        std::cout << "[SANDBOX] Network access disabled for '" << inst.sandboxId << "'\n";
     }
 
     return SandboxResult::ok("Policies applied");
@@ -768,6 +882,12 @@ void SandboxManager::monitorThread() {
                 // Check if process is still alive
                 DWORD exitCode;
                 if (GetExitCodeProcess(inst.hProcess, &exitCode) && exitCode != STILL_ACTIVE) {
+                    if (inst.startedAtMs != 0) {
+                        const uint64_t elapsedMs = now - inst.startedAtMs;
+                        m_stats.totalExecTimeMs.fetch_add(elapsedMs, std::memory_order_relaxed);
+                        inst.cpuTimeMs = elapsedMs;
+                        inst.startedAtMs = 0;
+                    }
                     inst.state = SandboxState::Inactive;
                     if (m_eventCb) {
                         m_eventCb(id.c_str(), SandboxState::Inactive, m_eventData);
@@ -777,10 +897,13 @@ void SandboxManager::monitorThread() {
 
                 // Check timeout
                 if (inst.config.timeoutMs > 0) {
-                    uint64_t elapsed = now - inst.createdAtMs;
+                    const uint64_t startedAtMs = inst.startedAtMs != 0 ? inst.startedAtMs : inst.createdAtMs;
+                    const uint64_t elapsed = now - startedAtMs;
                     if (elapsed > inst.config.timeoutMs) {
                         std::cout << "[SANDBOX] Timeout kill: '" << id << "'\n";
                         TerminateProcess(inst.hProcess, 2);
+                        m_stats.totalExecTimeMs.fetch_add(elapsed, std::memory_order_relaxed);
+                        inst.startedAtMs = 0;
                         inst.state = SandboxState::Inactive;
                         m_stats.timeoutKills.fetch_add(1, std::memory_order_relaxed);
                         if (m_eventCb) {
@@ -798,9 +921,20 @@ void SandboxManager::monitorThread() {
                     }
                     if (inst.config.policyFlags & static_cast<uint8_t>(SandboxPolicy::LimitMemory)) {
                         if (pmc.WorkingSetSize > inst.config.memoryLimitBytes) {
+                            std::cout << "[SANDBOX] Memory limit kill: '" << id << "'\n";
                             m_stats.memoryLimitHits.fetch_add(1, std::memory_order_relaxed);
+                            m_stats.policyViolations.fetch_add(1, std::memory_order_relaxed);
                             if (m_violationCb) {
                                 m_violationCb(id.c_str(), "Memory limit exceeded", m_violationData);
+                            }
+                            TerminateProcess(inst.hProcess, 3);
+                            if (inst.startedAtMs != 0) {
+                                m_stats.totalExecTimeMs.fetch_add(now - inst.startedAtMs, std::memory_order_relaxed);
+                                inst.startedAtMs = 0;
+                            }
+                            inst.state = SandboxState::Inactive;
+                            if (m_eventCb) {
+                                m_eventCb(id.c_str(), SandboxState::Inactive, m_eventData);
                             }
                         }
                     }
@@ -839,10 +973,16 @@ void SandboxManager::resetStats() {
 
 std::string SandboxManager::toJson() const {
     std::lock_guard<std::mutex> lock(m_mutex);
+    uint32_t activeCount = 0;
+    for (const auto& [id, inst] : m_sandboxes) {
+        if (inst.state == SandboxState::Running || inst.state == SandboxState::Suspended) {
+            activeCount++;
+        }
+    }
     std::ostringstream oss;
     oss << "{\"initialized\":" << (m_initialized.load() ? "true" : "false")
         << ",\"sandboxes\":" << m_sandboxes.size()
-        << ",\"active\":" << getActiveSandboxCount()
+        << ",\"active\":" << activeCount
         << ",\"stats\":{\"created\":" << m_stats.sandboxesCreated.load()
         << ",\"destroyed\":" << m_stats.sandboxesDestroyed.load()
         << ",\"failed\":" << m_stats.sandboxesFailed.load()

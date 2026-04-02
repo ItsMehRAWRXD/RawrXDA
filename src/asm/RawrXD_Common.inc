@@ -43,6 +43,11 @@ HKEY_CURRENT_USER       EQU     80000001h
 ; Process info
 PROCESS_QUERY_INFORMATION EQU   0400h
 
+; Token privileges (for large pages / VirtualLock)
+TOKEN_QUERY              EQU     0008h
+TOKEN_ADJUST_PRIVILEGES  EQU     0020h
+SE_PRIVILEGE_ENABLED     EQU     00000002h
+
 ; Crypto API (CryptoAPI / CNG)
 CALG_SHA_256            EQU     0000800Ch
 CALG_SHA_512            EQU     0000800Eh
@@ -235,6 +240,12 @@ EXTERNDEF CryptDestroyHash:PROC
 EXTERNDEF NtQueryInformationProcess:PROC
 EXTERNDEF NtQuerySystemInformation:PROC
 
+; Security / token APIs (needed for SeLockMemoryPrivilege)
+EXTERNDEF GetCurrentProcess:PROC
+EXTERNDEF OpenProcessToken:PROC
+EXTERNDEF LookupPrivilegeValueW:PROC
+EXTERNDEF AdjustTokenPrivileges:PROC
+
 ; CRT
 EXTERNDEF memcpy:PROC
 EXTERNDEF memset:PROC
@@ -264,6 +275,24 @@ HW_PROFILE_INFOA STRUCT
     _pad0               DB ?
     szHwProfileName     DB 80 DUP(?)
 HW_PROFILE_INFOA ENDS
+
+; =============================================================================
+;                              LUID / TOKEN_PRIVILEGES
+; =============================================================================
+LUID STRUCT
+    LowPart     DD ?
+    HighPart    DD ?
+LUID ENDS
+
+LUID_AND_ATTRIBUTES STRUCT
+    Luid        LUID <>
+    Attributes  DD ?
+LUID_AND_ATTRIBUTES ENDS
+
+TOKEN_PRIVILEGES STRUCT
+    PrivilegeCount DD ?
+    Privileges     LUID_AND_ATTRIBUTES <>
+TOKEN_PRIVILEGES ENDS
 
 ; =============================================================================
 ;                       IMAGE_DOS_HEADER (subset)

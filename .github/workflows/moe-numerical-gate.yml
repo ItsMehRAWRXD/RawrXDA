@@ -1,0 +1,93 @@
+# MoE reference parity + grouped-GEMM microbench (no Qt). Uploads JSON/CSV artifacts.
+name: MoE numerical gate
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - "src/core/moe_expert_accumulation.hpp"
+      - "src/core/moe_expert_accumulation_cache.hpp"
+      - "tests/test_moe_mixture_reference.cpp"
+      - "tests/test_moe_down_project_policy.cpp"
+      - "tests/test_moe_plan_row_mixture_pack_cache.cpp"
+      - "src/core/moe_down_project_policy.hpp"
+      - "src/core/moe_plan_row_mixture_pack_cache.hpp"
+      - "tests/moe_grouped_gemm_bench.cpp"
+      - "src/rawrxd_transformer.cpp"
+      - "src/rawrxd_transformer.h"
+      - ".github/workflows/moe-numerical-gate.yml"
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - "src/core/moe_expert_accumulation.hpp"
+      - "src/core/moe_expert_accumulation_cache.hpp"
+      - "tests/test_moe_mixture_reference.cpp"
+      - "tests/test_moe_down_project_policy.cpp"
+      - "tests/test_moe_plan_row_mixture_pack_cache.cpp"
+      - "src/core/moe_down_project_policy.hpp"
+      - "src/core/moe_plan_row_mixture_pack_cache.hpp"
+      - "tests/moe_grouped_gemm_bench.cpp"
+      - "src/rawrxd_transformer.cpp"
+      - "src/rawrxd_transformer.h"
+      - ".github/workflows/moe-numerical-gate.yml"
+  workflow_dispatch:
+
+jobs:
+  moe-validate:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Ninja
+        run: choco install ninja -y
+
+      - name: Configure
+        shell: pwsh
+        run: |
+          cmake -B build-moe -G Ninja -DCMAKE_BUILD_TYPE=Release .
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: Build MoE tools
+        shell: pwsh
+        run: |
+          cmake --build build-moe --target test_moe_mixture_reference test_moe_down_project_policy test_moe_plan_row_mixture_pack_cache moe_grouped_gemm_bench -j 4
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: Mixture parity (JSON report)
+        shell: pwsh
+        run: |
+          & "build-moe/tests/test_moe_mixture_reference.exe" "build-moe/moe_mixture_report.json"
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: MoE down-project policy (unit)
+        shell: pwsh
+        run: |
+          & "build-moe/tests/test_moe_down_project_policy.exe"
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: MoE mixture plan pack cache (unit)
+        shell: pwsh
+        run: |
+          & "build-moe/tests/test_moe_plan_row_mixture_pack_cache.exe"
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: Grouped GEMM microbench (CSV)
+        shell: pwsh
+        run: |
+          & "build-moe/tests/moe_grouped_gemm_bench.exe" "build-moe/moe_grouped_gemm_bench.csv"
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: Upload reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: moe-numerical-reports
+          path: |
+            build-moe/moe_mixture_report.json
+            build-moe/moe_grouped_gemm_bench.csv

@@ -21,6 +21,7 @@ struct TensorRef {
     std::string zone_name;              // Which zone does this belong to?
     uint64_t offset;                    // Byte offset in file
     uint64_t size;                      // Size of this tensor
+    uint64_t index;                     // Index in tensor list
     GGMLType type;
     std::vector<uint64_t> shape;
 };

@@ -144,6 +144,8 @@
 #define IDM_AI_MODE_DEEP_THINK      4201
 #define IDM_AI_MODE_DEEP_RESEARCH   4202
 #define IDM_AI_MODE_NO_REFUSAL      4203
+#define IDM_AI_MODE_SWARM           4204
+#define IDM_AI_LOAD_SWARM_DIR       4205
 
 // ---- Context window / AI context IDs (4210–4219) ---------------------------
 #define IDM_AI_CONTEXT_4K           4210
@@ -153,6 +155,7 @@
 #define IDM_AI_CONTEXT_256K         4214
 #define IDM_AI_CONTEXT_512K         4215
 #define IDM_AI_CONTEXT_1M           4216
+#define IDM_AI_CONTEXT_UNLIMITED    4217
 #define IDM_AI_AGENT_CYCLES_SET     4217
 #define IDM_AI_AGENT_MULTI_ENABLE   4218
 #define IDM_AI_AGENT_MULTI_DISABLE  4219

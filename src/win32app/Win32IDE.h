@@ -16,10 +16,11 @@
 #define CALLBACK __stdcall
 #endif
 
-#include <winsock2.h>
-#include <ws2tcpip.h>
 #include <sal.h>
 #include <windows.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+
 
 // Custom window messages
 #ifndef WM_AI_BACKEND_STATUS
@@ -36,7 +37,6 @@
 
 // Keep common-control/dialog headers in implementation files to reduce
 // transitive WinSDK surface in this mega-header.
-
 
 
 // Undefine Windows macros that conflict with our code
@@ -61,6 +61,8 @@
 #include "Win32IDE_Autonomy.h"
 #include "Win32IDE_IRCBridge.h"
 #include "Win32IDE_SubAgent.h"
+#include "Win32IDE_TabManager.h"
+#include "Win32IDE_Types.h"
 #include "Win32IDE_WebView2.h"
 #include "Win32TerminalManager.h"
 #include <array>
@@ -70,6 +72,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <set>
 #include <shellapi.h>
 #include <shlobj.h>
 #include <string>
@@ -284,6 +287,7 @@ class Win32IDE
     HWND getActivityBar() const { return m_hwndActivityBar; }
     HWND getLineNumbers() const { return m_hwndLineNumbers; }
     HWND getTabBar() const { return m_hwndTabBar; }
+    WNDPROC getOldTabBarProc() const { return m_oldTabBarProc; }
 
     // Agentic Framework — Full Agentic IDE owns the bridge (single entry point: src/full_agentic_ide/)
     std::unique_ptr<full_agentic_ide::FullAgenticIDE> m_fullAgenticIDE;
@@ -463,6 +467,10 @@ class Win32IDE
         return createTerminalPane(type, name);
     }
     void sendToAllTerminalsPublic(const std::string& cmd) { sendToAllTerminals(cmd); }
+
+    // File Watcher Public Interface
+    void initFileWatcher();
+    void shutdownFileWatcher();
 
   private:
     EngineManager* m_engineManager = nullptr;
@@ -1119,16 +1127,27 @@ class Win32IDE
     static LRESULT CALLBACK LineNumberProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
     void paintLineNumbers(HDC hdc, RECT& rc);
 
+  public:
     // Editor Tab Bar
     void createTabBar(HWND hwndParent);
     void addTab(const std::string& filePath, const std::string& displayName);
     void removeTab(int index);
     void setActiveTab(int index);
     void onTabChanged();
+    void onTabClosing(int index);
+    void onTabActivated(int index);
+    void saveCurrentFile();
+    std::pair<int, int> getCursorPosition();
     int findTabByPath(const std::string& filePath) const;
+    static LRESULT CALLBACK TabBarProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+    void drawTabItem(DRAWITEMSTRUCT* dis);
+    void handleTabClick(POINT pt);
 
     // Session Persistence
     void saveSession();
+    void loadSession();
+    void saveTabsState();
+    void loadTabsState();
     void restoreSession();
     void saveSessionTabs(nlohmann::json& session);
     void restoreSessionTabs(const nlohmann::json& session);
@@ -1572,12 +1591,16 @@ class Win32IDE
     std::thread m_inferenceThread;
     std::mutex m_inferenceMutex;
     std::function<void(const std::string&, bool)> m_inferenceCallback;
+    void wireLayerProgressToOutputPanel();
+    void clearInferenceLayerProgressCallback();
+    /// Status bar part 3: MoE mixture pack + async prepack counters (UI thread).
+    void refreshMoEPackHudStatusBarPart();
 
     // (AI Backend state — Phase 8B: see full block near Settings section)
 
     // Native Agent Integration
     std::unique_ptr<RawrXD::NativeAgent> m_agent;
-    std::unique_ptr<RawrXD::CPUInferenceEngine> m_nativeEngine;
+    std::shared_ptr<RawrXD::CPUInferenceEngine> m_nativeEngine;
     bool m_nativeEngineLoaded = false;
     std::mutex m_outputMutex;
 
@@ -1648,28 +1671,20 @@ class Win32IDE
     HANDLE m_watchdogThread = nullptr;
     volatile LONG m_watchdogRunning = 0;  // 1 = active, 0 = stop requested
     HWND m_hwndEditor;
-    HWND m_hwndLineNumbers;  // Line number gutter
-    HWND m_hwndTabBar;       // Editor tab bar
+    HWND m_hwndLineNumbers;   // Line number gutter
+    HWND m_hwndTabBar;        // Editor tab bar
+    WNDPROC m_oldTabBarProc;  // For subclassing tab bar
     WNDPROC m_oldLineNumberProc;
     int m_lineNumberWidth;  // Width of the gutter in pixels
     int m_currentLine;      // Current cursor line (1-based)
 
     // Tab tracking
-    struct EditorTab
-    {
-        std::string filePath;
-        std::string displayName;
-        std::string content;
-        bool modified = false;
-        bool isPinned = false;   // Tier3C #26: Pinned tabs
-        bool isPreview = false;  // Tier3C #27: Preview tabs
-    };
     std::vector<EditorTab> m_editorTabs;
     int m_activeTabIndex;
 
     HWND m_hwndCommandInput;
     HWND m_hwndStatusBar;
-    bool m_aiAvailable = false; // Set by onAIBackendVerified()
+    bool m_aiAvailable = false;  // Set by onAIBackendVerified()
     HWND m_hwndOutputTabs;
     HWND m_hwndMinimap;
     HWND m_hwndHelp;
@@ -1696,6 +1711,9 @@ class Win32IDE
     int m_nextTerminalId;
     int m_activeTerminalId;
     bool m_terminalSplitHorizontal;
+
+    // Sovereign Tab Manager
+    Win32IDE_TabManager* m_tabManager;
 
     // Git integration
     GitStatus m_gitStatus;
@@ -2247,7 +2265,8 @@ class Win32IDE
     void HandleCopilotStreamUpdate(const char* token, size_t length = 0);
     void populateModelSelector();
     std::vector<std::string> getModelsFromDirectory(const std::string& directory);
-    std::string makeHttpRequest(const std::string& url, const std::string& method, const std::string& body, const std::string& contentType);
+    std::string makeHttpRequest(const std::string& url, const std::string& method, const std::string& body,
+                                const std::string& contentType);
     void handleModelBrowse();
     std::vector<std::string> getConfiguredModelDirectories() const;
     std::vector<std::string> collectFilesystemModelNames(const std::vector<std::string>& modelDirs,
@@ -2297,8 +2316,12 @@ class Win32IDE
     void clearDebuggerHighlight();
 #define WM_AGENT_OUTPUT (WM_APP + 101)
 #define WM_AGENT_OUTPUT_SAFE (WM_APP + 102)
+#define WM_IDE_OUTPUT_APPEND_SAFE (WM_APP + 103)
+#define WM_IDE_MOE_PACK_STATUS_REFRESH (WM_APP + 104)
     void onAgentOutput(const char* text);
     void postAgentOutputSafe(const std::string& text);
+    /** Thread-safe: appends to Output tab on the UI thread (inference may run on workers). */
+    void postOutputPanelSafe(const std::string& text);
 
     // ========================================================================
     // Ghost Text / Inline Completions (Win32IDE_GhostText.cpp)
@@ -2364,10 +2387,8 @@ class Win32IDE
     /** Show peek overlay without re-querying LSP (uses pre-built items). */
     void showPeekOverlayWithItems(const std::vector<PeekItem>& items, int triggerLine, int triggerCol);
     /** Build peek rows from LSP locations by reading source files on disk. */
-    std::vector<PeekItem> buildPeekItemsFromLspLocations(const std::vector<LSPLocation>& locations,
-                                                         PeekItemType type,
-                                                         int contextLinesBefore,
-                                                         int contextLinesAfter);
+    std::vector<PeekItem> buildPeekItemsFromLspLocations(const std::vector<LSPLocation>& locations, PeekItemType type,
+                                                         int contextLinesBefore, int contextLinesAfter);
     std::vector<PeekItem> findDefinitionsAt(int line, int col);
     std::vector<PeekItem> findReferencesAt(int line, int col);
     void handlePeekOverlayKey(UINT vk, bool ctrl, bool alt, bool shift);
@@ -5216,6 +5237,7 @@ class Win32IDE
     // ── Cursor/JB-Parity Menu Builder ──
     void createFeaturesMenu(HMENU parentMenu);
     bool handleFeaturesCommand(int commandId);
+    bool verifyFeatureRoutingCoverageAtStartup(std::string* report = nullptr);
     void initAllFeatureModules();
 
     // ════════════════════════════════════════════════════════════════════
@@ -5685,8 +5707,6 @@ class Win32IDE
     ThemeTransition m_themeTransition;
 
     // 35. File Watcher Indicators
-    void initFileWatcher();
-    void shutdownFileWatcher();
     void startWatchingFile(const std::string& filePath);
     void stopWatchingFile();
     void onExternalFileChange(const std::string& changedFile);
@@ -6360,11 +6380,8 @@ class Win32IDE
     void cmdIRCStatus();
     void cmdIRCConfig();
     void cmdIRCSend();
-    void dispatchIRCCommand(const std::string& nick,
-                            const std::string& cmd,
-                            const std::string& args,
-                            const std::string& replyTarget,
-                            bool isDirectMessage);
+    void dispatchIRCCommand(const std::string& nick, const std::string& cmd, const std::string& args,
+                            const std::string& replyTarget, bool isDirectMessage);
 
   public:
     // Tier 5 Command IDs (11500–11609)
@@ -6427,11 +6444,11 @@ class Win32IDE
     static constexpr int IDM_CRASH_STATS = 11609;
 
     // Phase 51: mIRC Control Bridge
-    static constexpr int IDM_IRC_CONNECT    = 11610;
+    static constexpr int IDM_IRC_CONNECT = 11610;
     static constexpr int IDM_IRC_DISCONNECT = 11611;
-    static constexpr int IDM_IRC_STATUS     = 11612;
-    static constexpr int IDM_IRC_CONFIG     = 11613;
-    static constexpr int IDM_IRC_SEND       = 11614;
+    static constexpr int IDM_IRC_STATUS = 11612;
+    static constexpr int IDM_IRC_CONFIG = 11613;
+    static constexpr int IDM_IRC_SEND = 11614;
 
     bool m_telemetryDashboardInitialized = false;
     bool m_crashReporterInitialized = false;

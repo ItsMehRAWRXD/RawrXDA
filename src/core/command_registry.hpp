@@ -176,6 +176,7 @@ enum CmdFlags : uint32_t
     X(4004, HELP_SEARCH, "help.search", "!help_search", BOTH, "Help", handleHelpSearch, CMD_NONE)                      \
                                                                                                                        \
     /* ═══════════════════ TERMINAL (4006-4010) ═══════════════════ */                                                 \
+    X(4005, TERMINAL_NEW, "terminal.new", "!terminal_new", BOTH, "Terminal", handleTerminalNew, CMD_NONE)            \
     X(4006, TERMINAL_KILL, "terminal.kill", "!terminal_kill", BOTH, "Terminal", handleTerminalKill, CMD_NONE)          \
     X(4007, TERMINAL_SPLIT_H, "terminal.splitH", "!terminal_split", BOTH, "Terminal", handleTerminalSplitH, CMD_NONE)  \
     X(4008, TERMINAL_SPLIT_V, "terminal.splitV", "!terminal_split_v", BOTH, "Terminal", handleTerminalSplitV,          \

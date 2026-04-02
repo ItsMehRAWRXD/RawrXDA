@@ -100,10 +100,7 @@ bool AgenticBridge::Initialize(const std::string& frameworkPath, const std::stri
         m_modelName = modelName;
     }
 
-    if (!m_nativeEngine)
-    {
-        m_nativeEngine = std::make_unique<RawrXD::CPUInferenceEngine>();
-    }
+    m_nativeEngine = RawrXD::CPUInferenceEngine::GetSharedInstance();
     if (!m_nativeAgent)
     {
         m_nativeAgent = std::make_unique<RawrXD::NativeAgent>(m_nativeEngine.get());
@@ -315,10 +312,7 @@ void AgenticBridge::SetAutoCorrect(bool enabled)
 
 void AgenticBridge::SetContextSize(const std::string& sizeName)
 {
-    if (!m_nativeEngine)
-    {
-        m_nativeEngine = std::make_unique<RawrXD::CPUInferenceEngine>();
-    }
+    m_nativeEngine = RawrXD::CPUInferenceEngine::GetSharedInstance();
 
     size_t limit = 2048;
     if (sizeName == "small")
@@ -361,10 +355,7 @@ bool AgenticBridge::LoadModel(const std::string& path)
         return false;
     }
 
-    if (!m_nativeEngine)
-    {
-        m_nativeEngine = std::make_unique<RawrXD::CPUInferenceEngine>();
-    }
+    m_nativeEngine = RawrXD::CPUInferenceEngine::GetSharedInstance();
     if (!m_nativeAgent)
     {
         m_nativeAgent = std::make_unique<RawrXD::NativeAgent>(m_nativeEngine.get());

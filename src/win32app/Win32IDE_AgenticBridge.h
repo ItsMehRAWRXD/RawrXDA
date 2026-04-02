@@ -70,6 +70,10 @@ class AgenticBridge
     bool GetDeepResearch() const { return m_deepResearch; }
     void SetNoRefusal(bool enabled);
     bool GetNoRefusal() const { return m_noRefusal; }
+    void SetSwarmMode(bool enabled);
+    bool GetSwarmMode() const { return m_swarmMode; }
+    bool LoadSwarmFromDirectory(const std::string& directoryPath, int maxModels = 5);
+    const std::string& GetLastLoadError() const { return m_lastModelLoadError; }
     void SetAutoCorrect(bool enabled);
     bool GetAutoCorrect() const { return m_autoCorrect; }
 
@@ -82,6 +86,9 @@ class AgenticBridge
 
     void SetContextSize(const std::string& sizeName);
     bool LoadModel(const std::string& path);
+    /** Forwards to CPUInferenceEngine::GetSharedInstance() (same object as Win32IDE::m_nativeEngine). */
+    void SetCpuEngineLayerProgressCallback(std::function<void(const std::string&)> cb);
+    void SetCpuEngineSwarmTelemetryOutputCallback(std::function<void(const std::string&)> cb);
     std::string GetCurrentModel() const { return m_modelName; }
 
     // Language-aware context propagation
@@ -149,7 +156,7 @@ class AgenticBridge
 
   private:
     // Native Integration
-    std::unique_ptr<RawrXD::CPUInferenceEngine> m_nativeEngine;
+    std::shared_ptr<RawrXD::CPUInferenceEngine> m_nativeEngine;
     std::unique_ptr<RawrXD::NativeAgent> m_nativeAgent;
 
     // SubAgent Manager (lazy-initialized)
@@ -209,4 +216,5 @@ class AgenticBridge
     ModelLoadErrorCallback m_modelLoadErrorCallback;
     std::string m_lastModelLoadError;
     bool m_multiAgentEnabled = false;
+    bool m_swarmMode = false;
 };

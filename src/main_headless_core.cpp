@@ -2,6 +2,7 @@
 // Goal: keep the 274TB streamer/loader core linkable without GUI/hotpatch/omega subsystems.
 
 #include "gguf_loader.h"
+#include "cpu_inference_engine.h"
 #include "rawrxd_model_loader.h"
 
 #include <psapi.h>
@@ -13,6 +14,9 @@
 #include <cstdlib>
 #include <cstring>
 #include <exception>
+#include <algorithm>
+#include <filesystem>
+#include <fstream>
 #include <limits>
 #include <string>
 #include <vector>
@@ -38,6 +42,323 @@ static std::wstring widenUtf8(const char* s)
     return out;
 }
 
+static void appendU32(std::vector<uint8_t>& out, uint32_t v)
+{
+    out.push_back(static_cast<uint8_t>(v & 0xFFu));
+    out.push_back(static_cast<uint8_t>((v >> 8) & 0xFFu));
+    out.push_back(static_cast<uint8_t>((v >> 16) & 0xFFu));
+    out.push_back(static_cast<uint8_t>((v >> 24) & 0xFFu));
+}
+
+static void appendU64(std::vector<uint8_t>& out, uint64_t v)
+{
+    for (int i = 0; i < 8; ++i)
+        out.push_back(static_cast<uint8_t>((v >> (8 * i)) & 0xFFu));
+}
+
+static void appendBytes(std::vector<uint8_t>& out, const void* data, size_t size)
+{
+    const auto* p = static_cast<const uint8_t*>(data);
+    out.insert(out.end(), p, p + size);
+}
+
+static void appendString(std::vector<uint8_t>& out, const std::string& s)
+{
+    appendU64(out, static_cast<uint64_t>(s.size()));
+    appendBytes(out, s.data(), s.size());
+}
+
+static uint64_t align32U64(uint64_t x)
+{
+    return (x + 31ULL) & ~31ULL;
+}
+
+static bool writeMinimalGgufV3(const std::filesystem::path& path)
+{
+    constexpr uint32_t kMagic = 0x46554747u;  // "GGUF" LE
+    constexpr uint32_t kVersion = 3u;
+    constexpr uint64_t kTensorCount = 1u;
+    constexpr uint64_t kKvCount = 4u;
+
+    const std::string kArchKey = "general.architecture";
+    const std::string kArchVal = "llama";
+    const std::string kTokModelKey = "tokenizer.ggml.model";
+    const std::string kTokModelVal = "gpt2";
+    const std::string kFileTypeKey = "general.file_type";
+    const uint32_t kFileTypeVal = 0u;  // F32
+    const std::string kTokTokensKey = "tokenizer.ggml.tokens";
+    const std::vector<std::string> kTokens = {"<unk>", "hello"};
+
+    const std::string kTensorName = "token_embd.weight";
+    const uint32_t kTensorNDims = 1u;
+    const uint64_t kTensorDim0 = 4u;
+    const uint32_t kTensorTypeF32 = 0u;  // GGMLType::F32
+    const float kTensorData[4] = {1.0f, 2.0f, 3.5f, -4.0f};
+
+    std::vector<uint8_t> buf;
+    buf.reserve(4096);
+
+    appendU32(buf, kMagic);
+    appendU32(buf, kVersion);
+    appendU64(buf, kTensorCount);
+    appendU64(buf, kKvCount);
+
+    appendString(buf, kArchKey);
+    appendU32(buf, 8u);  // string
+    appendString(buf, kArchVal);
+
+    appendString(buf, kTokModelKey);
+    appendU32(buf, 8u);  // string
+    appendString(buf, kTokModelVal);
+
+    appendString(buf, kFileTypeKey);
+    appendU32(buf, 4u);  // uint32
+    appendU32(buf, kFileTypeVal);
+
+    appendString(buf, kTokTokensKey);
+    appendU32(buf, 9u);  // array
+    appendU32(buf, 8u);  // element type = string
+    appendU64(buf, static_cast<uint64_t>(kTokens.size()));
+    for (const auto& t : kTokens)
+        appendString(buf, t);
+
+    appendString(buf, kTensorName);
+    appendU32(buf, kTensorNDims);
+    appendU64(buf, kTensorDim0);
+    appendU32(buf, kTensorTypeF32);
+
+    const uint64_t dataStart = align32U64(static_cast<uint64_t>(buf.size() + 8 /* offset field */));
+    appendU64(buf, dataStart);
+
+    if (buf.size() < dataStart)
+        buf.resize(static_cast<size_t>(dataStart), 0);
+
+    appendBytes(buf, kTensorData, sizeof(kTensorData));
+
+    // Ensure the file is large enough for legacy mapping paths that may request
+    // ~1MB+ windows while parsing/initializing. Padding is valid for GGUF.
+    constexpr size_t kMinFileBytes = 2u * 1024u * 1024u;
+    if (buf.size() < kMinFileBytes)
+        buf.resize(kMinFileBytes, 0);
+
+    std::ofstream out(path, std::ios::binary | std::ios::trunc);
+    if (!out)
+        return false;
+    out.write(reinterpret_cast<const char*>(buf.data()), static_cast<std::streamsize>(buf.size()));
+    out.flush();
+    return true;
+}
+
+static uint32_t lcgNext(uint32_t& state)
+{
+    state = state * 1664525u + 1013904223u;
+    return state;
+}
+
+template <typename T> static void shuffleLcg(std::vector<T>& v, uint32_t seed)
+{
+    if (v.size() <= 1)
+        return;
+    uint32_t s = seed ? seed : 0xC0FFEEu;
+    for (size_t i = v.size() - 1; i > 0; --i)
+    {
+        const uint32_t r = lcgNext(s);
+        const size_t j = static_cast<size_t>(r % (i + 1));
+        std::swap(v[i], v[j]);
+    }
+}
+
+static uint64_t alignUpU64(uint64_t x, uint64_t alignment)
+{
+    if (alignment == 0)
+        return x;
+    const uint64_t r = x % alignment;
+    return r ? (x + (alignment - r)) : x;
+}
+
+static bool writeFragmentedGgufV3(const std::filesystem::path& path, uint32_t numTensors, uint64_t strideBytes,
+                                  bool alignToStride, bool shuffleLayout, uint32_t shuffleSeed)
+{
+    constexpr uint32_t kMagic = 0x46554747u;  // "GGUF" LE
+    constexpr uint32_t kVersion = 3u;
+    constexpr uint32_t kTensorTypeF32 = 0u;  // GGMLType::F32
+
+    if (numTensors < 4u)
+        numTensors = 4u;
+    if (strideBytes == 0)
+        strideBytes = 2ull * 1024ull * 1024ull;
+
+    struct TensorSpec
+    {
+        std::string name;
+        float values[4];
+    };
+
+    std::vector<TensorSpec> specs;
+    specs.reserve(numTensors);
+
+    // Canonical tensors (zones/layers).
+    specs.push_back({"token_embd.weight", {11.0f, 12.0f, 13.0f, 14.0f}});
+    specs.push_back({"blk.0.attn.weight", {21.0f, 22.0f, 23.0f, 24.0f}});
+    specs.push_back({"blk.7.ffn.weight", {31.0f, 32.0f, 33.0f, 34.0f}});
+    specs.push_back({"blk.8.attn.weight", {41.0f, 42.0f, 43.0f, 44.0f}});
+
+    constexpr uint32_t kGeneratedLayerBase = 16u;
+    for (uint32_t i = 4u; i < numTensors; ++i)
+    {
+        const uint32_t layer = kGeneratedLayerBase + i;
+        const bool useAttn = (i % 2u) == 0u;
+        TensorSpec s;
+        s.name = "blk." + std::to_string(layer) + (useAttn ? ".attn.weight" : ".ffn.weight");
+        const float base = static_cast<float>(1000.0 + layer * 10.0);
+        s.values[0] = base + 1.0f;
+        s.values[1] = base + 2.0f;
+        s.values[2] = base + 3.0f;
+        s.values[3] = base + 4.0f;
+        specs.push_back(std::move(s));
+    }
+
+    if (shuffleLayout)
+        shuffleLcg(specs, shuffleSeed);
+
+    const uint64_t tensorCount = static_cast<uint64_t>(specs.size());
+    constexpr uint64_t kvCount = 4u;
+
+    const std::string kArchKey = "general.architecture";
+    const std::string kArchVal = "llama";
+    const std::string kTokModelKey = "tokenizer.ggml.model";
+    const std::string kTokModelVal = "gpt2";
+    const std::string kFileTypeKey = "general.file_type";
+    const uint32_t kFileTypeVal = 0u;  // F32
+    const std::string kTokTokensKey = "tokenizer.ggml.tokens";
+    const std::vector<std::string> kTokens = {"<unk>", "hello"};
+
+    // Build header+KV+tensor table first, then fill offsets.
+    std::vector<uint8_t> buf;
+    buf.reserve(static_cast<size_t>(tensorCount) * 128u + 4096u);
+
+    appendU32(buf, kMagic);
+    appendU32(buf, kVersion);
+    appendU64(buf, tensorCount);
+    appendU64(buf, kvCount);
+
+    appendString(buf, kArchKey);
+    appendU32(buf, 8u);
+    appendString(buf, kArchVal);
+
+    appendString(buf, kTokModelKey);
+    appendU32(buf, 8u);
+    appendString(buf, kTokModelVal);
+
+    appendString(buf, kFileTypeKey);
+    appendU32(buf, 4u);
+    appendU32(buf, kFileTypeVal);
+
+    appendString(buf, kTokTokensKey);
+    appendU32(buf, 9u);
+    appendU32(buf, 8u);
+    appendU64(buf, static_cast<uint64_t>(kTokens.size()));
+    for (const auto& t : kTokens)
+        appendString(buf, t);
+
+    struct OffsetPatch
+    {
+        size_t offsetFieldPos;
+        uint64_t absOffset;
+        float values[4];
+    };
+    std::vector<OffsetPatch> patches;
+    patches.reserve(static_cast<size_t>(tensorCount));
+
+    for (const auto& s : specs)
+    {
+        appendString(buf, s.name);
+        appendU32(buf, 1u);  // ndims
+        appendU64(buf, 4u);  // dim0
+        appendU32(buf, kTensorTypeF32);
+        const size_t offPos = buf.size();
+        appendU64(buf, 0);  // placeholder absolute offset
+        OffsetPatch p{};
+        p.offsetFieldPos = offPos;
+        p.absOffset = 0;
+        std::memcpy(p.values, s.values, sizeof(p.values));
+        patches.push_back(p);
+    }
+
+    // Data starts 32B aligned.
+    uint64_t cursor = align32U64(static_cast<uint64_t>(buf.size()));
+    for (size_t i = 0; i < patches.size(); ++i)
+    {
+        if (alignToStride)
+            cursor = alignUpU64(cursor, strideBytes);
+        patches[i].absOffset = cursor;
+        cursor += sizeof(patches[i].values);
+        cursor = alignUpU64(cursor, strideBytes);
+    }
+
+    // Patch offsets back into tensor table.
+    for (const auto& p : patches)
+    {
+        const uint64_t v = p.absOffset;
+        const size_t pos = p.offsetFieldPos;
+        for (int b = 0; b < 8; ++b)
+            buf[pos + static_cast<size_t>(b)] = static_cast<uint8_t>((v >> (8 * b)) & 0xFFu);
+    }
+
+    // Write a sparse file without allocating gigantic in-memory holes.
+    std::error_code ec;
+    std::filesystem::create_directories(path.parent_path(), ec);
+
+    const std::wstring wPath = path.wstring();
+    HANDLE hFile = CreateFileW(wPath.c_str(), GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS,
+                               FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (hFile == INVALID_HANDLE_VALUE)
+        return false;
+
+    DWORD written = 0;
+    if (!buf.empty())
+    {
+        if (!WriteFile(hFile, buf.data(), static_cast<DWORD>(buf.size()), &written, nullptr) || written != buf.size())
+        {
+            CloseHandle(hFile);
+            return false;
+        }
+    }
+
+    uint64_t maxEnd = 0;
+    for (const auto& p : patches)
+    {
+        LARGE_INTEGER li{};
+        li.QuadPart = static_cast<LONGLONG>(p.absOffset);
+        if (!SetFilePointerEx(hFile, li, nullptr, FILE_BEGIN))
+        {
+            CloseHandle(hFile);
+            return false;
+        }
+        DWORD w = 0;
+        if (!WriteFile(hFile, p.values, sizeof(p.values), &w, nullptr) || w != sizeof(p.values))
+        {
+            CloseHandle(hFile);
+            return false;
+        }
+        const uint64_t end = p.absOffset + static_cast<uint64_t>(sizeof(p.values));
+        maxEnd = (end > maxEnd) ? end : maxEnd;
+    }
+
+    // Pad to at least one stride beyond last payload to keep mapping stable.
+    const uint64_t finalBytes = alignUpU64(maxEnd, strideBytes);
+    LARGE_INTEGER endLi{};
+    endLi.QuadPart = static_cast<LONGLONG>(finalBytes);
+    if (!SetFilePointerEx(hFile, endLi, nullptr, FILE_BEGIN) || !SetEndOfFile(hFile))
+    {
+        CloseHandle(hFile);
+        return false;
+    }
+
+    CloseHandle(hFile);
+    return true;
+}
+
 static const char* getOptValue(const std::vector<std::string>& args, const char* opt)
 {
     for (size_t i = 0; i + 1 < args.size(); ++i)
@@ -56,7 +377,11 @@ static int printUsage()
         "Usage:\n"
         "  RawrEngine.exe --compile-only\n"
         "  RawrEngine.exe --gguf-header <path>\n"
+        "  RawrEngine.exe --gen-gguf <path>\n"
+        "  RawrEngine.exe --gen-gguf-frag <path> [--num-tensors <N>] [--stride-bytes <N>] [--align-to-stride 0|1] "
+        "[--shuffle-layout 0|1] [--seed <u32>]\n"
         "  RawrEngine.exe --load-model <path>\n"
+        "  RawrEngine.exe --infer <path> --prompt <text> [--max-tokens <N>]\n"
         "  RawrEngine.exe --streamer-smoke <path> [--offset <u64>] [--size <u64>] [--iterations <N>]\n"
         "  RawrEngine.exe --bench-streamer <path> [--max-mb <N>] [--iters <N>] [--largepages 0|1] [--prefetch 0|1]\n"
         "  RawrEngine.exe --offset-sweep <path> [--window-mb <N>] [--iters <N>] [--seed <u64>] [--largepages 0|1] "
@@ -854,6 +1179,119 @@ static int loadModel(const std::string& path)
     }
 }
 
+static int runInfer(const std::string& modelPath, const std::string& prompt, int maxTokens)
+{
+    try
+    {
+        {
+            char buf[256]{};
+            std::snprintf(buf, sizeof(buf), "infer: stage=begin prompt_bytes=%llu max_tokens=%d\n",
+                          static_cast<unsigned long long>(prompt.size()), maxTokens);
+            DWORD w = 0;
+            WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), buf, static_cast<DWORD>(std::strlen(buf)), &w, nullptr);
+        }
+
+        RawrXD::CPUInferenceEngine engine;
+        {
+            const char* msg = "infer: stage=load_model\n";
+            DWORD w = 0;
+            WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), msg, static_cast<DWORD>(std::strlen(msg)), &w, nullptr);
+        }
+        if (!engine.LoadModel(modelPath))
+        {
+            const std::string detail = engine.GetLastLoadErrorMessage();
+            const std::string msg = detail.empty() ? "infer: LoadModel failed\n" : ("infer: LoadModel failed: " + detail + "\n");
+            DWORD w = 0;
+            WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), msg.c_str(), static_cast<DWORD>(msg.size()), &w, nullptr);
+            const char* done = "infer: stage=done status=fail reason=load_model\nEXIT=1\n";
+            WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), done, static_cast<DWORD>(std::strlen(done)), &w, nullptr);
+            return 1;
+        }
+
+        {
+            const char* msg = "infer: stage=tokenize\n";
+            DWORD w = 0;
+            WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), msg, static_cast<DWORD>(std::strlen(msg)), &w, nullptr);
+        }
+        const std::vector<int32_t> inputTokens = engine.Tokenize(prompt);
+        if (inputTokens.empty())
+        {
+            const char* msg = "infer: Tokenize produced no tokens\n";
+            DWORD w = 0;
+            WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), msg, static_cast<DWORD>(std::strlen(msg)), &w, nullptr);
+            const char* done = "infer: stage=done status=fail reason=tokenize\nEXIT=1\n";
+            WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), done, static_cast<DWORD>(std::strlen(done)), &w, nullptr);
+            return 2;
+        }
+
+        const int boundedMaxTokens = std::max(1, std::min(maxTokens, 8192));
+        {
+            char buf[160]{};
+            std::snprintf(buf, sizeof(buf), "infer: stage=generate input_tokens=%llu bounded_max_tokens=%d\n",
+                          static_cast<unsigned long long>(inputTokens.size()), boundedMaxTokens);
+            DWORD w = 0;
+            WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), buf, static_cast<DWORD>(std::strlen(buf)), &w, nullptr);
+        }
+        const std::vector<int32_t> outputTokens = engine.Generate(inputTokens, boundedMaxTokens);
+        if (outputTokens.empty())
+        {
+            const char* msg = "infer: Generate produced no output tokens\n";
+            DWORD w = 0;
+            WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), msg, static_cast<DWORD>(std::strlen(msg)), &w, nullptr);
+            const char* done = "infer: stage=done status=fail reason=generate_empty\nEXIT=1\n";
+            WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), done, static_cast<DWORD>(std::strlen(done)), &w, nullptr);
+            return 2;
+        }
+
+        {
+            char buf[160]{};
+            std::snprintf(buf, sizeof(buf), "infer: stage=detokenize output_tokens=%llu\n",
+                          static_cast<unsigned long long>(outputTokens.size()));
+            DWORD w = 0;
+            WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), buf, static_cast<DWORD>(std::strlen(buf)), &w, nullptr);
+        }
+        const std::string text = engine.Detokenize(outputTokens);
+        char hdr[160]{};
+        std::snprintf(hdr, sizeof(hdr), "infer: ok  input_tokens=%llu  output_tokens=%llu\n",
+                      static_cast<unsigned long long>(inputTokens.size()),
+                      static_cast<unsigned long long>(outputTokens.size()));
+        DWORD w = 0;
+        WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), hdr, static_cast<DWORD>(std::strlen(hdr)), &w, nullptr);
+        {
+            char done[160]{};
+            std::snprintf(done, sizeof(done), "infer: stage=done tokens=%llu status=ok\n",
+                          static_cast<unsigned long long>(outputTokens.size()));
+            WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), done, static_cast<DWORD>(std::strlen(done)), &w, nullptr);
+        }
+        WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), text.c_str(), static_cast<DWORD>(text.size()), &w, nullptr);
+        WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), "\n", 1, &w, nullptr);
+        WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), "EXIT=0\n", 7, &w, nullptr);
+        return 0;
+    }
+    catch (const std::bad_alloc&)
+    {
+        const char* msg = "infer: OOM\ninfer: stage=done status=fail reason=oom\nEXIT=1\n";
+        DWORD w = 0;
+        WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), msg, static_cast<DWORD>(std::strlen(msg)), &w, nullptr);
+        return 3;
+    }
+    catch (const std::exception& e)
+    {
+        char buf[512]{};
+        std::snprintf(buf, sizeof(buf), "infer: exception: %s\ninfer: stage=done status=fail reason=exception\nEXIT=1\n", e.what());
+        DWORD w = 0;
+        WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), buf, static_cast<DWORD>(std::strlen(buf)), &w, nullptr);
+        return 2;
+    }
+    catch (...)
+    {
+        const char* msg = "infer: exception\ninfer: stage=done status=fail reason=exception_unknown\nEXIT=1\n";
+        DWORD w = 0;
+        WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), msg, static_cast<DWORD>(std::strlen(msg)), &w, nullptr);
+        return 2;
+    }
+}
+
 int main(int argc, char** argv)
 {
     if (argc < 2)
@@ -918,6 +1356,86 @@ int main(int argc, char** argv)
         if (args.size() < 3 || args[2].empty())
             return printUsage();
         return loadModel(args[2]);
+    }
+
+    // Minimal headless inference path:
+    // RawrEngine.exe --infer <path> --prompt <text> [--max-tokens <N>]
+    if (arg1 == "--infer")
+    {
+        if (args.size() < 3 || args[2].empty())
+            return printUsage();
+
+        const char* promptStr = getOptValue(args, "--prompt");
+        if (!promptStr || !promptStr[0])
+            return printUsage();
+
+        const char* maxTokStr = getOptValue(args, "--max-tokens");
+        const int maxTokens = maxTokStr ? static_cast<int>(std::strtol(maxTokStr, nullptr, 10)) : 128;
+        return runInfer(args[2], std::string(promptStr), maxTokens);
+    }
+
+    // Generate a tiny valid GGUF for local benchmarks:
+    // RawrEngine.exe --gen-gguf <path>
+    if (arg1 == "--gen-gguf")
+    {
+        if (args.size() < 3 || args[2].empty())
+            return printUsage();
+        try
+        {
+            const std::filesystem::path p = std::filesystem::path(widenUtf8(args[2].c_str()));
+            if (p.empty())
+                return 1;
+            if (!writeMinimalGgufV3(p))
+                return 1;
+            const char* msg = "gen-gguf: ok\n";
+            DWORD w = 0;
+            WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), msg, static_cast<DWORD>(std::strlen(msg)), &w, nullptr);
+            return 0;
+        }
+        catch (...)
+        {
+            return 1;
+        }
+    }
+
+    // Generate a fragmented+shuffled GGUF to defeat sequential read-ahead:
+    // RawrEngine.exe --gen-gguf-frag <path> [--num-tensors <N>] [--stride-bytes <N>] [--align-to-stride 0|1]
+    // [--shuffle-layout 0|1] [--seed <u32>]
+    if (arg1 == "--gen-gguf-frag")
+    {
+        if (args.size() < 3 || args[2].empty())
+            return printUsage();
+        try
+        {
+            const std::filesystem::path p = std::filesystem::path(widenUtf8(args[2].c_str()));
+            if (p.empty())
+                return 1;
+
+            const char* ntStr = getOptValue(args, "--num-tensors");
+            const char* strideStr = getOptValue(args, "--stride-bytes");
+            const char* atsStr = getOptValue(args, "--align-to-stride");
+            const char* shufStr = getOptValue(args, "--shuffle-layout");
+            const char* seedStr = getOptValue(args, "--seed");
+
+            uint32_t numTensors = ntStr ? static_cast<uint32_t>(std::strtoul(ntStr, nullptr, 10)) : 128u;
+            uint64_t strideBytes =
+                strideStr ? static_cast<uint64_t>(std::strtoull(strideStr, nullptr, 10)) : (2ull * 1024ull * 1024ull);
+            bool alignToStride = atsStr ? (std::strtoul(atsStr, nullptr, 10) != 0) : true;
+            bool shuffleLayout = shufStr ? (std::strtoul(shufStr, nullptr, 10) != 0) : true;
+            uint32_t seed = seedStr ? static_cast<uint32_t>(std::strtoul(seedStr, nullptr, 10)) : 0xC0FFEEu;
+
+            if (!writeFragmentedGgufV3(p, numTensors, strideBytes, alignToStride, shuffleLayout, seed))
+                return 1;
+
+            const char* msg = "gen-gguf-frag: ok\n";
+            DWORD w = 0;
+            WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), msg, static_cast<DWORD>(std::strlen(msg)), &w, nullptr);
+            return 0;
+        }
+        catch (...)
+        {
+            return 1;
+        }
     }
 
     // Minimal loader compilation coverage:

@@ -735,6 +735,29 @@ CommandResult handleAgentGoal(const CommandContext& ctx) {
 }
 
 CommandResult handleAgentMemory(const CommandContext& ctx) {
+    if (ctx.args && ctx.args[0]) {
+        const char* arg = ctx.args;
+        while (*arg == ' ' || *arg == '\t') ++arg;
+
+        if (_stricmp(arg, "show") == 0 || _stricmp(arg, "view") == 0) {
+            return handleAgentMemoryView(ctx);
+        }
+        if (_stricmp(arg, "clear") == 0) {
+            return handleAgentMemoryClear(ctx);
+        }
+        if (_stricmp(arg, "export") == 0) {
+            return handleAgentMemoryExport(ctx);
+        }
+
+        // Parity with legacy CLI: treat free-form text as a memory observation.
+        auto& orchestrator = AutoRepairOrchestrator::instance();
+        orchestrator.injectAnomaly(AnomalyType::Custom, arg);
+        std::ostringstream addMsg;
+        addMsg << "[Agent] Memory observation added: " << arg << "\n";
+        ctx.output(addMsg.str().c_str());
+        return CommandResult::ok("agent.memory");
+    }
+
     auto& orchestrator = AutoRepairOrchestrator::instance();
     auto stats = orchestrator.getStats();
     uint32_t anomalyCount = 0; orchestrator.getAnomalyLog(anomalyCount);
@@ -1143,6 +1166,17 @@ CommandResult handleTerminalNew(const CommandContext& ctx) {
 }
 
 CommandResult handleTerminalSplitH(const CommandContext& ctx) {
+    if (ctx.args && ctx.args[0]) {
+        const char* arg = ctx.args;
+        while (*arg == ' ' || *arg == '\t') ++arg;
+
+        if (_stricmp(arg, "v") == 0 ||
+            _stricmp(arg, "vert") == 0 ||
+            _stricmp(arg, "vertical") == 0) {
+            return handleTerminalSplitV(ctx);
+        }
+    }
+
     return launchTerminal(ctx, "terminal.splitH");
 }
 

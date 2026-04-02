@@ -298,15 +298,24 @@ AutotuneResult GPUKernelAutoTuner::tuneKernel(KernelType type, uint32_t M, uint3
 
     // Check cache first
     std::string key = makeCacheKey(type, M, N, K);
-    if (strategy == TuneStrategy::CacheLookup || m_tuneCache.count(key)) {
+    if (m_tuneCache.count(key)) {
         m_stats.cacheHits.fetch_add(1, std::memory_order_relaxed);
-        if (m_tuneCache.count(key)) {
-            AutotuneResult r = AutotuneResult::ok("Cache hit");
-            r.bestConfig = m_tuneCache[key].bestConfig;
-            r.bestThroughput = m_tuneCache[key].bestThroughput;
-            r.configsTested = 0;
-            return r;
-        }
+        AutotuneResult r = AutotuneResult::ok("Cache hit");
+        r.bestConfig = m_tuneCache[key].bestConfig;
+        r.bestThroughput = m_tuneCache[key].bestThroughput;
+        r.configsTested = 0;
+        return r;
+    }
+
+    // CacheLookup strategy returns the default config when there is no cache entry
+    // rather than falling through to a full exhaustive sweep.
+    if (strategy == TuneStrategy::CacheLookup) {
+        m_stats.cacheMisses.fetch_add(1, std::memory_order_relaxed);
+        AutotuneResult r = AutotuneResult::ok("Cache miss — default config used");
+        r.bestConfig = getDefaultConfig(type);
+        r.bestThroughput = 0;
+        r.configsTested = 0;
+        return r;
     }
     m_stats.cacheMisses.fetch_add(1, std::memory_order_relaxed);
 
@@ -396,10 +405,27 @@ AutotuneResult GPUKernelAutoTuner::tuneForModelLayer(const char* layerName,
     // Tune RMSNorm
     auto r4 = tuneKernel(KernelType::RMSNorm, 1, hiddenDim, 1, TuneStrategy::Heuristic);
 
-    std::cout << "[AUTOTUNER] Tuned layer '" << layerName << "': hidden=" << hiddenDim
-              << " heads=" << headCount << " kvHeads=" << kvHeadCount << "\n";
+    // Propagate the first failure rather than hiding it behind a blanket ok.
+    for (const auto& rr : { r1, r2, r3, r4 }) {
+        if (!rr.success) {
+            return rr;
+        }
+    }
 
-    return AutotuneResult::ok("Model layer tuning complete");
+    // Aggregate the best throughput across all sub-kernels.
+    AutotuneResult best = AutotuneResult::ok("Model layer tuning complete");
+    for (const auto& rr : { r1, r2, r3, r4 }) {
+        if (rr.bestThroughput > best.bestThroughput) {
+            best.bestThroughput = rr.bestThroughput;
+        }
+        best.configsTested += rr.configsTested;
+    }
+
+    std::cout << "[AUTOTUNER] Tuned layer '" << layerName << "': hidden=" << hiddenDim
+              << " heads=" << headCount << " kvHeads=" << kvHeadCount
+              << " bestThroughput=" << best.bestThroughput << " GFLOPS\n";
+
+    return best;
 }
 
 AutotuneResult GPUKernelAutoTuner::tuneAllKernels(TuneStrategy strategy) {
@@ -684,17 +710,34 @@ KernelBenchmark GPUKernelAutoTuner::benchmarkConfig(KernelType type, uint32_t M,
     }
 
     // Compute theoretical throughput given config parameters
-    double wavesNeeded = std::ceil((double)(M * N) / (config.tilesM * config.tilesN));
-    double wavesPerDispatch = (double)m_gpu.computeUnits * (config.occupancyTarget / 100.0) * m_gpu.maxWavesPerCU;
+    const double tilesArea = (config.tilesM > 0 && config.tilesN > 0)
+        ? static_cast<double>(config.tilesM) * config.tilesN
+        : 1.0;
+    double wavesNeeded = std::ceil((double)(M * N) / tilesArea);
 
-    double dispatches = std::ceil(wavesNeeded / wavesPerDispatch);
-    double clocksPerDispatch = (double)config.tilesK; // Simplified: K reduction iterations
+    // Clamp occupancy to a valid range so we don't divide by zero when
+    // the default config leaves occupancyTarget at 0.
+    const double occupancyFraction = (config.occupancyTarget > 0)
+        ? std::min(static_cast<double>(config.occupancyTarget) / 100.0, 1.0)
+        : 1.0; // assume full occupancy when unknown
+
+    const double wavesPerDispatch = (m_gpu.maxWavesPerCU > 0)
+        ? static_cast<double>(m_gpu.computeUnits) * occupancyFraction * m_gpu.maxWavesPerCU
+        : 1.0;
+
+    const double dispatches = (wavesPerDispatch > 0)
+        ? std::ceil(wavesNeeded / wavesPerDispatch)
+        : wavesNeeded;
+    double clocksPerDispatch = (config.tilesK > 0)
+        ? static_cast<double>(config.tilesK)
+        : 1.0; // Simplified: K reduction iterations
 
     double totalClocks = dispatches * clocksPerDispatch;
-    double timeS = totalClocks / (m_gpu.clockMHz * 1e6);
+    const double safeClock = (m_gpu.clockMHz > 0) ? static_cast<double>(m_gpu.clockMHz) * 1e6 : 1.0;
+    double timeS = totalClocks / safeClock;
 
     result.elapsedMs = timeS * 1000.0;
-    result.throughputGFLOPS = (result.elapsedMs > 0) ? (ops / (result.elapsedMs * 1e6)) : 0;
+    result.throughputGFLOPS = (result.elapsedMs > 1e-12) ? (ops / (result.elapsedMs * 1e6)) : 0;
 
     // Memory bandwidth estimation
     double memBytes = (double)(M * K + K * N + M * N) * 2; // FP16
@@ -709,7 +752,8 @@ KernelBenchmark GPUKernelAutoTuner::benchmarkConfig(KernelType type, uint32_t M,
     result.valid = true;
     if (config.sharedMemBytes > m_gpu.ldsPerCU) result.valid = false;
     if (config.workgroupSizeX * config.workgroupSizeY * config.workgroupSizeZ > 1024) result.valid = false;
-    if (config.workgroupSizeX % config.wavefrontSize != 0) result.valid = false;
+    // Guard against zero wavefront size (CPU fallback / unknown vendor)
+    if (config.wavefrontSize > 0 && config.workgroupSizeX % config.wavefrontSize != 0) result.valid = false;
 
     return result;
 }
@@ -881,7 +925,11 @@ bool GPUKernelAutoTuner::loadTuneCache(const char* path) {
                 >> entry.bestConfig.sharedMemBytes >> delim
                 >> entry.bestThroughput;
 
-            m_tuneCache[key] = entry;
+            // Only store the entry if all fields parsed successfully and
+            // the workgroup size is non-zero (indicates a complete record).
+            if (iss && entry.bestConfig.workgroupSizeX > 0) {
+                m_tuneCache[key] = entry;
+            }
         }
     }
 

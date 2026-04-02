@@ -1641,8 +1641,3 @@ void Win32IDE::initAllFeatureModules()
     RAWRXD_LOG_INFO("Win32IDE_CursorParity") << "All feature modules initialized";
 }
 
-namespace RawrXD::Parity {
-int verifyCursorParityWiring(void* win32IDEContext) {
-    return (win32IDEContext != nullptr) ? 0 : 1;
-}
-} // namespace RawrXD::Parity

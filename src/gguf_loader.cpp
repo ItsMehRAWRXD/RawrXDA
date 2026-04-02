@@ -19,6 +19,60 @@
 #define vkGetDeviceQueue(a,b,c,d) 
 #endif
 
+// Define MEM_RESERVE_PLACEHOLDER if not available
+#ifndef MEM_RESERVE_PLACEHOLDER
+#define MEM_RESERVE_PLACEHOLDER 0x00040000
+#endif
+
+// VirtualAlloc2 function pointer for dynamic loading
+typedef PVOID (WINAPI *VirtualAlloc2Func)(
+    HANDLE                 Process,
+    PVOID                  BaseAddress,
+    SIZE_T                 Size,
+    ULONG                  AllocationType,
+    ULONG                  PageProtection,
+    MEM_EXTENDED_PARAMETER *ExtendedParameters,
+    ULONG                  ParameterCount
+);
+
+// MapViewOfFile3 function pointer for dynamic loading  
+typedef PVOID (WINAPI *MapViewOfFile3Func)(
+    HANDLE                 FileMappingObjectHandle,
+    HANDLE                 Process,
+    PVOID                  BaseAddress,
+    ULONG64                Offset,
+    SIZE_T                 ViewSize,
+    ULONG                  AllocationType,
+    ULONG                  PageProtection,
+    MEM_EXTENDED_PARAMETER *ExtendedParameters,
+    ULONG                  ParameterCount
+);
+
+static VirtualAlloc2Func pVirtualAlloc2_gguf = nullptr;
+static MapViewOfFile3Func pMapViewOfFile3_gguf = nullptr;
+static bool g_placeholderInitialized_gguf = false;
+static PVOID g_placeholderBase_gguf = nullptr;
+
+// Initialize placeholder memory management APIs for GGUF loader
+static bool InitializePlaceholderAPIsGGUF() {
+    if (g_placeholderInitialized_gguf) return true;
+    
+    printf("[GGUF] Initializing sovereign placeholder APIs...\n");
+    
+    HMODULE hKernel32 = GetModuleHandleW(L"kernel32.dll");
+    if (!hKernel32) return false;
+    
+    pVirtualAlloc2_gguf = (VirtualAlloc2Func)GetProcAddress(hKernel32, "VirtualAlloc2");
+    pMapViewOfFile3_gguf = (MapViewOfFile3Func)GetProcAddress(hKernel32, "MapViewOfFile3");
+    
+    if (!pVirtualAlloc2_gguf) {
+        printf("[GGUF] VirtualAlloc2 not available, using legacy mapping\n");
+    }
+    
+    g_placeholderInitialized_gguf = true;
+    return pVirtualAlloc2_gguf && pMapViewOfFile3_gguf;
+}
+
 // Forward declarations for codec functions
 namespace codec {
     extern std::vector<uint8_t> deflate(const std::vector<uint8_t>& in, bool* ok);
@@ -806,6 +860,9 @@ bool GGUFLoader::Load(VkDevice vkDevice, VkPhysicalDevice vkPhysDevice) {
     device = vkDevice;
     physDevice = vkPhysDevice;
 
+    // Initialize placeholder APIs for sovereign bypass
+    InitializePlaceholderAPIsGGUF();
+
     std::wstring wpath(filepath_.begin(), filepath_.end());
     hFile = CreateFileW(wpath.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr,
                        OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
@@ -816,8 +873,41 @@ bool GGUFLoader::Load(VkDevice vkDevice, VkPhysicalDevice vkPhysDevice) {
     fileSize = size.QuadPart;
 
     hMapping = CreateFileMapping(hFile, nullptr, PAGE_READONLY, 0, 0, nullptr);
-    mappedView = MapViewOfFile(hMapping, FILE_MAP_READ, 0, 0, 0);
-    if (!mappedView) return false;
+    if (!hMapping) return false;
+    
+    // Try sovereign placeholder bypass first
+    mappedView = nullptr;
+    if (pVirtualAlloc2_gguf && pMapViewOfFile3_gguf) {
+        g_placeholderBase_gguf = pVirtualAlloc2_gguf(GetCurrentProcess(), NULL, static_cast<SIZE_T>(fileSize),
+            MEM_RESERVE | MEM_RESERVE_PLACEHOLDER, PAGE_NOACCESS, NULL, 0);
+        if (g_placeholderBase_gguf) {
+            // Use MapViewOfFile3 to replace a same-sized placeholder region.
+            mappedView = pMapViewOfFile3_gguf(hMapping, GetCurrentProcess(), g_placeholderBase_gguf,
+                0, static_cast<SIZE_T>(fileSize), MEM_REPLACE_PLACEHOLDER, PAGE_READONLY, NULL, 0);
+        }
+        if (mappedView) {
+            printf("[GGUF] Sovereign Placeholder Bypass: Mapped %llu MB at placeholder address %p\n", 
+                   fileSize / (1024*1024), mappedView);
+        } else if (g_placeholderBase_gguf) {
+            VirtualFree(g_placeholderBase_gguf, 0, MEM_RELEASE);
+            g_placeholderBase_gguf = nullptr;
+        }
+    }
+    
+    // Fallback to regular MapViewOfFile if placeholder mapping failed
+    if (!mappedView) {
+        mappedView = MapViewOfFile(hMapping, FILE_MAP_READ, 0, 0, 0);
+        if (mappedView) {
+            printf("[GGUF] Legacy mapping: Mapped %llu MB at address %p\n", 
+                   fileSize / (1024*1024), mappedView);
+        }
+    }
+    
+    if (!mappedView) {
+        DWORD error = GetLastError();
+        printf("[GGUF] MapViewOfFile failed (Error: %lu) - insufficient memory/commit limits\n", error);
+        return false;
+    }
     
     tensors.clear();
     for(auto& t : tensors_) {

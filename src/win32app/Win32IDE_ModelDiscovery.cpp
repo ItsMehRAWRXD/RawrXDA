@@ -36,6 +36,12 @@ void Win32IDE::initModelDiscovery() {
     m_availableModels.clear();
     m_modelPaths.clear();
 
+    // Check for custom models path from environment variable
+    const char* customModelsPath = std::getenv("RAWRXD_MODELS_PATH");
+    if (customModelsPath && strlen(customModelsPath) > 0) {
+        m_modelDiscoveryPaths.insert(m_modelDiscoveryPaths.begin(), customModelsPath);
+    }
+
     // Initial scan
     scanForModels();
 

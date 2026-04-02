@@ -3261,8 +3261,28 @@ std::string CompletionServer::HandleSandboxCreateRequest(const std::string& body
     SandboxConfig config;
     std::string tmp;
     if (ExtractJsonNumber(body, "memoryLimitBytes", tmp)) config.memoryLimitBytes = std::stoull(tmp);
-    if (ExtractJsonNumber(body, "timeoutMs", tmp)) config.timeoutMs = static_cast<uint32_t>(std::stoul(tmp));
-    if (ExtractJsonString(body, "sandboxName", tmp)) config.sandboxName = tmp;
+    if (ExtractJsonNumber(body, "timeoutMs", tmp))        config.timeoutMs = static_cast<uint32_t>(std::stoul(tmp));
+    if (ExtractJsonString(body, "sandboxName", tmp))      config.sandboxName = tmp;
+    if (ExtractJsonString(body, "allowedReadPath", tmp))  config.allowedReadPath = tmp;
+    if (ExtractJsonString(body, "tempWritePath", tmp))    config.tempWritePath = tmp;
+
+    // Opt allowedReadPath into AllowModelRead only when the caller provides a real path.
+    // If no path is given the flag stays off and model loading is not permitted.
+    if (!config.allowedReadPath.empty()) {
+        config.policyFlags |= static_cast<uint8_t>(SandboxPolicy::AllowModelRead);
+    }
+    if (!config.tempWritePath.empty()) {
+        config.policyFlags |= static_cast<uint8_t>(SandboxPolicy::AllowTempWrite);
+    }
+
+    // Optional: allow callers to override the sandbox type (0=None … 4=Full).
+    if (ExtractJsonNumber(body, "type", tmp)) {
+        const int t = std::stoi(tmp);
+        if (t >= 0 && t <= 4) {
+            config.type = static_cast<SandboxType>(t);
+        }
+    }
+
     std::string outId;
     SandboxResult r = SandboxManager::instance().createSandbox(config, outId);
     if (!r.success)

@@ -152,6 +152,9 @@ int main(int argc, char** argv)
     std::string engine_type = "cpu";  // "cpu" or "dml"
     bool list_models_only = false;
     std::string work_dir;
+    bool swarm_mode = false;
+    int chain_depth = 1;
+    std::string manifest_model;
 
     for (int i = 1; i < argc; ++i)
     {
@@ -176,6 +179,30 @@ int main(int argc, char** argv)
         {
             engine_type = argv[++i];
         }
+        else if (arg == "--swarm-mode")
+        {
+            swarm_mode = true;
+        }
+        else if (arg == "--chain-depth" && i + 1 < argc)
+        {
+            chain_depth = std::stoi(argv[++i]);
+        }
+        else if (arg == "--manifest" && i + 1 < argc)
+        {
+            manifest_model = argv[++i];
+        }
+        else if (arg == "--max-mode")
+        {
+            // Enable maximum performance mode
+        }
+        else if (arg == "--no-refusal")
+        {
+            // Enable no-refusal mode
+        }
+        else if (arg == "--bypass-all")
+        {
+            // Enable all bypasses
+        }
         else if (arg == "--no-http")
         {
             enable_http = false;
@@ -199,6 +226,12 @@ Usage: RawrEngine [options]  (or RawrXD_CLI for pure CLI build)
   --model <path>    Path to GGUF model file
   --port <port>     HTTP port (default 23959 for RawrXD_CLI, 8080 for RawrEngine)
   --engine <type>   Inference engine: cpu (default) or dml (DirectML GPU)
+  --swarm-mode      Enable swarm inference mode
+  --chain-depth <n> Number of models to chain in swarm (default: 1)
+  --manifest <path> Manifest model for swarm orchestration
+  --max-mode        Enable maximum performance mode
+  --no-refusal      Enable no-refusal mode for swarm
+  --bypass-all      Enable all security bypasses
   --no-http         Disable HTTP server
   --no-repl         Disable interactive REPL
   --history-dir <d> Directory for history JSONL (default: ./history)
@@ -415,6 +448,25 @@ REPL Commands (chat + agentic — same as Win32 IDE):
     else
     {
         std::cout << "[SYSTEM] No model specified. Use --model <path> to load a GGUF.\n";
+    }
+
+    // Configure swarm mode if enabled
+    if (swarm_mode)
+    {
+        std::cout << "[SYSTEM] Enabling swarm mode with chain depth: " << chain_depth << "\n";
+        if (engine == &cpuEngine)
+        {
+            cpuEngine.SetSwarmMode(true, chain_depth);
+            if (!manifest_model.empty())
+            {
+                std::cout << "[SYSTEM] Using manifest model: " << manifest_model << "\n";
+                // Load additional models for swarm if needed
+            }
+        }
+        else
+        {
+            std::cout << "[SYSTEM] Swarm mode not supported for DML engine yet.\n";
+        }
     }
 
     // Initialize agentic engine

@@ -1,3 +1,5 @@
+// Win32IDE.cpp - RawrXD Win32 IDE Implementation
+// Build timestamp: 2026-03-31
 #include "Win32IDE.h"
 #include "../../Ship/RawrXD_AutonomousAgenticPipeline.h"  // Full type for unique_ptr destructor
 #include "../../include/PathResolver.h"
@@ -7,20 +9,24 @@
 #include "../model_source_resolver.h"
 #include "../modules/ExtensionLoader.hpp"  // Added
 #include "../modules/native_memory.hpp"
+#include "../rawrxd_model_loader.h"
 #include "../streaming_gguf_loader.h"
 #include "../utils/ErrorReporter.hpp"
 #include "IDEConfig.h"
 #include "IDELogger.h"
+#include "ModelConnection.h"
 #include "VSIXInstaller.hpp"
 #include "Win32IDE_AgenticBridge.h"
-#include "ModelConnection.h"
+#include "Win32IDE_Settings.h"
 #include "feature_registry_panel.h"
 #include "lsp/RawrXD_LSPServer.h"
 #include "multi_response_engine.h"
 #include "resource.h"
 #include <commdlg.h>
 #include <nlohmann/json.hpp>
+#include <psapi.h>
 #include <richedit.h>
+
 
 #ifndef CP_UNICODE
 #define CP_UNICODE 1200  // Unicode code page for Richedit EM_GETTEXTLENGTHEX/EM_SETTEXTEX
@@ -36,6 +42,7 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <psapi.h>
 #include <regex>
 #include <set>
 #include <shellapi.h>
@@ -45,6 +52,7 @@
 #include <vector>
 #include <winhttp.h>
 
+
 // Complete type declarations for unique_ptr<T> component managers.
 // Must come after all other includes to avoid circularity.
 #include "Win32IDE_ComponentManagers.h"
@@ -52,6 +60,306 @@
 
 // Defined once here; declared as `extern` in Win32IDE.h.
 Win32IDE* g_pMainIDE = nullptr;
+
+static std::wstring utf8ToWide(const std::string& utf8);
+
+extern "C" unsigned __int64 RawrXD_EnableSeLockMemoryPrivilege();
+extern "C" void* RawrXD_MapModelView2MB(HANDLE hMap, uint64_t off, size_t sz, uint64_t* outBaseOrError);
+
+static uint64_t qpcNowU64()
+{
+    LARGE_INTEGER v{};
+    QueryPerformanceCounter(&v);
+    return static_cast<uint64_t>(v.QuadPart);
+}
+
+static double qpcDeltaToMs(uint64_t delta)
+{
+    LARGE_INTEGER f{};
+    QueryPerformanceFrequency(&f);
+    if (f.QuadPart <= 0)
+        return 0.0;
+    return (static_cast<double>(delta) * 1000.0) / static_cast<double>(f.QuadPart);
+}
+
+enum class VmmRibbonTier : uint8_t
+{
+    Green,
+    Yellow,
+    Gray,
+    Red,
+};
+
+static HICON getVmmLedIcon(VmmRibbonTier tier);
+
+static void appendStreamerPostLoadCheck(Win32IDE* ide, const std::string& ggufPath)
+{
+    if (!ide)
+        return;
+    if (ggufPath.empty())
+        return;
+
+    // Keep this fast: validate huge-page base alignment via RawrXDModelLoader (shared core path),
+    // and do a small prefetch warm-up to hide initial "first touch" stalls.
+    const std::wstring wPath = utf8ToWide(ggufPath);
+    if (wPath.empty())
+    {
+        ide->appendToOutput("Streamer self-check: invalid path encoding\n", "System",
+                            Win32IDE::OutputSeverity::Warning);
+        return;
+    }
+
+    const SovereignConfig& cfg = GetSovereignConfig();
+    RawrXDModelLoader loader;
+    loader.SetSilencePrivilegeWarnings(cfg.silence_privilege_warnings);
+    loader.SetPrefetchEnabled(cfg.model_prefetch_enabled);
+    loader.SetWorkingSetLockEnabled(cfg.model_workingset_lock_enabled);
+    if (!loader.Load(wPath.c_str(), VK_NULL_HANDLE, VK_NULL_HANDLE))
+    {
+        ide->appendToOutput("Streamer self-check: loader.Load failed\n", "System", Win32IDE::OutputSeverity::Warning);
+        return;
+    }
+
+    const uint64_t fileSize = loader.GetFileSizeBytes();
+    const size_t mapSize2mb = 2u * 1024u * 1024u;
+    const uint64_t off0 = 0;
+    const uint64_t off1 = (fileSize > (mapSize2mb + 4096ull)) ? (fileSize - mapSize2mb - 4096ull) : 0ull;
+
+    auto getPageFaultCount = []() -> uint64_t
+    {
+        PROCESS_MEMORY_COUNTERS pmc{};
+        pmc.cb = sizeof(pmc);
+        if (!GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc)))
+            return 0;
+        return static_cast<uint64_t>(pmc.PageFaultCount);
+    };
+
+    auto getIoCounters = []() -> IO_COUNTERS
+    {
+        IO_COUNTERS io{};
+        (void)GetProcessIoCounters(GetCurrentProcess(), &io);
+        return io;
+    };
+
+    auto oneMap = [&](uint64_t off, size_t sz, bool doHint, bool updateVmmRibbon) -> bool
+    {
+        const uint64_t pf0 = getPageFaultCount();
+        const IO_COUNTERS io0 = getIoCounters();
+
+        const uint64_t t0 = qpcNowU64();
+        void* p = loader.MapWindow(off, sz);
+        const uint64_t t1 = qpcNowU64();
+        if (!p)
+            return false;
+
+        bool aligned2mb = true;
+        if (loader.UsingLargePages())
+        {
+            const uintptr_t base = reinterpret_cast<uintptr_t>(loader.GetCurrentViewBase());
+            aligned2mb = ((base & 0x1FFFFFull) == 0);
+        }
+
+        bool hintOk = false;
+        if (doHint)
+            hintOk = loader.HintRange(off, sz);
+
+        // "Touch" a cache line to force any first-touch faults to materialize here.
+        const uint64_t u0 = qpcNowU64();
+        volatile uint64_t* v = reinterpret_cast<volatile uint64_t*>(p);
+        const uint64_t sink = v[0];
+        (void)sink;
+        const uint64_t u1 = qpcNowU64();
+
+        const uint64_t pf1 = getPageFaultCount();
+        const IO_COUNTERS io1 = getIoCounters();
+        const uint64_t pfDelta = (pf1 >= pf0) ? (pf1 - pf0) : 0;
+        const uint64_t ioReadOpsDelta =
+            (io1.ReadOperationCount >= io0.ReadOperationCount) ? (io1.ReadOperationCount - io0.ReadOperationCount) : 0;
+        const uint64_t ioReadBytesDelta =
+            (io1.ReadTransferCount >= io0.ReadTransferCount) ? (io1.ReadTransferCount - io0.ReadTransferCount) : 0;
+
+        if (updateVmmRibbon && ide->getStatusBar())
+        {
+            const bool pf = cfg.model_prefetch_enabled;
+            const bool lp = loader.UsingLargePages();
+            wchar_t buf[160]{};
+            wchar_t tip[256]{};
+            VmmRibbonTier tier = VmmRibbonTier::Red;
+            if (lp && pf)
+                tier = VmmRibbonTier::Green;
+            else if (!lp && pf)
+                tier = VmmRibbonTier::Yellow;
+            else if (lp && !pf)
+                tier = VmmRibbonTier::Gray;
+            else
+                tier = VmmRibbonTier::Red;
+            HICON ico = getVmmLedIcon(tier);
+
+            const wchar_t* gpuAsm =
+#if defined(RAWRXD_HAS_SOVEREIGN_GPU_ASM) && (RAWRXD_HAS_SOVEREIGN_GPU_ASM != 0)
+                L"ACTIVE";
+#else
+                L"STUB";
+#endif
+
+            // Permanent ribbon is "glanceable" tier text; deep-dive numbers go in tooltip.
+            const wchar_t* tierText = L"[Legacy]";
+            if (lp && pf)
+                tierText = L"[2MB + PF]";
+            else if (!lp && pf)
+                tierText = L"[4KB + PF]";
+            else if (lp && !pf)
+                tierText = L"[2MB]";
+            else
+                tierText = L"[Legacy]";
+
+            _snwprintf_s(buf, _countof(buf), _TRUNCATE, L"VMM: %s  GPU-ASM:%s", tierText, gpuAsm);
+            _snwprintf_s(tip, _countof(tip), _TRUNCATE,
+                         L"VMM diagnostics: pf\u0394=%llu, ioR=%llu ops / %llu bytes, touch=%.2f ms, map=%.2f ms",
+                         static_cast<unsigned long long>(pfDelta), static_cast<unsigned long long>(ioReadOpsDelta),
+                         static_cast<unsigned long long>(ioReadBytesDelta), qpcDeltaToMs(u1 - u0),
+                         qpcDeltaToMs(t1 - t0));
+            SendMessageW(ide->getStatusBar(), SB_SETTEXT, 2, (LPARAM)buf);
+            // Status bar tooltips (requires common controls v6; ignored if unsupported)
+            SendMessageW(ide->getStatusBar(), SB_SETTIPTEXTW, 2, (LPARAM)tip);
+            if (ico)
+                SendMessageW(ide->getStatusBar(), SB_SETICON, 2, (LPARAM)ico);
+        }
+
+        loader.UnmapWindow();
+
+        std::ostringstream ss;
+        ss << "Streamer self-check: off=" << off << " map_ms=" << qpcDeltaToMs(t1 - t0)
+           << " largePages=" << (loader.UsingLargePages() ? "1" : "0") << " aligned2mb=" << (aligned2mb ? "1" : "0")
+           << " hint=" << (hintOk ? "1" : "0") << "\n";
+        ide->appendToOutput(ss.str(), "System",
+                            (aligned2mb || !loader.UsingLargePages()) ? Win32IDE::OutputSeverity::Info
+                                                                      : Win32IDE::OutputSeverity::Warning);
+        return (!loader.UsingLargePages() || aligned2mb);
+    };
+
+    // Alignment + mapping sanity at start/end.
+    const bool okA = oneMap(off0, mapSize2mb, false, true);
+    const bool okB = oneMap(off1, mapSize2mb, false, true);
+
+    // Warm-up: map a small early window and issue a hint to prefetch within it.
+    (void)oneMap(off0, 64u * 1024u * 1024u, true, true);
+
+    if (okA && okB)
+        ide->appendToOutput("Streamer self-check: PASS\n", "System", Win32IDE::OutputSeverity::Info);
+    else
+        ide->appendToOutput("Streamer self-check: FAIL\n", "System", Win32IDE::OutputSeverity::Warning);
+
+    // Status bar part 2 is updated by the per-window ribbon path above.
+}
+
+static HICON createLedIcon(COLORREF rgb)
+{
+    // 16x16 ARGB DIB for status bar icon.
+    BITMAPV5HEADER bi{};
+    bi.bV5Size = sizeof(BITMAPV5HEADER);
+    bi.bV5Width = 16;
+    bi.bV5Height = -16;  // top-down
+    bi.bV5Planes = 1;
+    bi.bV5BitCount = 32;
+    bi.bV5Compression = BI_BITFIELDS;
+    bi.bV5RedMask = 0x00FF0000;
+    bi.bV5GreenMask = 0x0000FF00;
+    bi.bV5BlueMask = 0x000000FF;
+    bi.bV5AlphaMask = 0xFF000000;
+
+    void* bits = nullptr;
+    HDC hdc = GetDC(nullptr);
+    HBITMAP colorBmp = CreateDIBSection(hdc, reinterpret_cast<BITMAPINFO*>(&bi), DIB_RGB_COLORS, &bits, nullptr, 0);
+    ReleaseDC(nullptr, hdc);
+    if (!colorBmp || !bits)
+        return nullptr;
+
+    // Clear fully transparent.
+    std::memset(bits, 0, 16 * 16 * 4);
+
+    // Draw a filled circle with a tiny darker border.
+    const uint8_t r = GetRValue(rgb);
+    const uint8_t g = GetGValue(rgb);
+    const uint8_t b = GetBValue(rgb);
+    const uint8_t br = static_cast<uint8_t>(r / 2);
+    const uint8_t bg = static_cast<uint8_t>(g / 2);
+    const uint8_t bb = static_cast<uint8_t>(b / 2);
+
+    auto put = [&](int x, int y, uint8_t rr, uint8_t gg, uint8_t bb_, uint8_t aa)
+    {
+        uint32_t* p = reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(bits) + (y * 16 + x) * 4);
+        *p = (static_cast<uint32_t>(aa) << 24) | (static_cast<uint32_t>(rr) << 16) | (static_cast<uint32_t>(gg) << 8) |
+             static_cast<uint32_t>(bb_);
+    };
+
+    const int cx = 8;
+    const int cy = 8;
+    const int rOuter = 6;
+    const int rInner = 5;
+    for (int y = 0; y < 16; ++y)
+    {
+        for (int x = 0; x < 16; ++x)
+        {
+            const int dx = x - cx;
+            const int dy = y - cy;
+            const int d2 = dx * dx + dy * dy;
+            if (d2 <= rInner * rInner)
+                put(x, y, r, g, b, 0xFF);
+            else if (d2 <= rOuter * rOuter)
+                put(x, y, br, bg, bb, 0xFF);
+        }
+    }
+
+    HBITMAP maskBmp = CreateBitmap(16, 16, 1, 1, nullptr);
+    if (!maskBmp)
+    {
+        DeleteObject(colorBmp);
+        return nullptr;
+    }
+
+    ICONINFO ii{};
+    ii.fIcon = TRUE;
+    ii.xHotspot = 0;
+    ii.yHotspot = 0;
+    ii.hbmColor = colorBmp;
+    ii.hbmMask = maskBmp;
+    HICON icon = CreateIconIndirect(&ii);
+
+    DeleteObject(maskBmp);
+    DeleteObject(colorBmp);
+    return icon;
+}
+
+static HICON getVmmLedIcon(VmmRibbonTier tier)
+{
+    static HICON s_green = nullptr;
+    static HICON s_yellow = nullptr;
+    static HICON s_gray = nullptr;
+    static HICON s_red = nullptr;
+
+    if (!s_green)
+        s_green = createLedIcon(RGB(34, 139, 34));  // ForestGreen
+    if (!s_yellow)
+        s_yellow = createLedIcon(RGB(218, 165, 32));  // Goldenrod
+    if (!s_gray)
+        s_gray = createLedIcon(RGB(160, 160, 160));  // neutral
+    if (!s_red)
+        s_red = createLedIcon(RGB(178, 34, 34));  // FireBrick
+
+    switch (tier)
+    {
+        case VmmRibbonTier::Green:
+            return s_green;
+        case VmmRibbonTier::Yellow:
+            return s_yellow;
+        case VmmRibbonTier::Gray:
+            return s_gray;
+        case VmmRibbonTier::Red:
+        default:
+            return s_red;
+    }
+}
 
 // ============================================================================
 // FEATURE IMPLEMENTATION INDEX — RawrXD Win32 IDE
@@ -405,7 +713,7 @@ static std::string wideToUtf8(const wchar_t* wide)
 #define IDM_AGENT_VIEW_TOOLS 4103
 #define IDM_AGENT_VIEW_STATUS 4104
 #define IDM_AGENT_AUTONOMOUS_COMMUNICATOR 4163  // free slot; 4106=IDM_AGENT_MEMORY, 4110=IDM_SUBAGENT_CHAIN
-#define IDM_TELEMETRY_UNIFIED_CORE 4164  // free slot; 4300=IDM_REVENG_ANALYZE
+#define IDM_TELEMETRY_UNIFIED_CORE 4164         // free slot; 4300=IDM_REVENG_ANALYZE
 // Constants moved to Win32IDE.h
 // #define IDM_AGENT_STOP 4105
 // ...
@@ -417,7 +725,7 @@ static std::string wideToUtf8(const wchar_t* wide)
 
 Win32IDE::Win32IDE(HINSTANCE hInstance)
     : m_hInstance(hInstance), m_hwndMain(nullptr), m_hwndEditor(nullptr), m_hwndLineNumbers(nullptr),
-      m_hwndTabBar(nullptr), m_oldLineNumberProc(nullptr), m_lineNumberWidth(50), m_activeTabIndex(-1),
+      m_hwndTabBar(nullptr), m_oldLineNumberProc(nullptr), m_lineNumberWidth(70), m_activeTabIndex(-1),
       m_hwndCommandInput(nullptr), m_hwndStatusBar(nullptr), m_hwndMinimap(nullptr), m_hwndModuleBrowser(nullptr),
       m_hwndModuleList(nullptr), m_hwndModuleLoadButton(nullptr), m_hwndModuleUnloadButton(nullptr),
       m_hwndModuleRefreshButton(nullptr), m_moduleBrowserVisible(false), m_modulePanelProc(nullptr),
@@ -475,8 +783,7 @@ Win32IDE::Win32IDE(HINSTANCE hInstance)
       m_modelOperationActive(false), m_modelOperationCancelled(false), m_modelProgressPercent(0.0f),
       m_hwndModelProgressBar(nullptr), m_hwndModelProgressLabel(nullptr), m_hwndModelProgressContainer(nullptr),
       m_hwndModelCancelBtn(nullptr), m_sessionRestored(false), m_annotationsVisible(true), m_annotationFont(nullptr),
-      m_hwndAnnotationOverlay(nullptr),
-      m_nativePipelineReady(false)
+      m_hwndAnnotationOverlay(nullptr), m_nativePipelineReady(false), m_tabManager(nullptr)
 {
     // ============================================================
     // MINIMAL CONSTRUCTOR — all heavy init deferred to onCreate()
@@ -503,10 +810,10 @@ Win32IDE::Win32IDE(HINSTANCE hInstance)
     m_ollamaModelOverride = "";
 
     m_nativeEngineLoaded = false;
-    
+
     // Initialize 70B GGUF Hotpatch
     m_ggufHotpatch = std::make_unique<RawrXD::GGUFHotpatch>();
-    
+
     // Initialize Governor/Throttling
     m_governorThrottling = std::make_unique<RawrXD::GovernorThrottling>();
 }
@@ -924,42 +1231,44 @@ void Win32IDE::createMenuBar(HWND hwnd)
     // Commands menu from COMMAND_TABLE (single source of truth — no menu-only drift)
     buildCommandsMenuFromCommandTable(m_hMenu);
 
-        // Enterprise / Professional feature menu
-        // Professional tier (12330–12341) routed by routeCommand's IDM_ENT_MODEL_COMPARE..IDM_ENT_CUSTOM_QUANT branch.
-        // GPU/Performance tier (3042–3047) routed via the 3000–3999 → handleViewCommand path.
-        {
-            HMENU hEntMenu = CreatePopupMenu();
+    // Enterprise / Professional feature menu
+    // Professional tier (12330–12341) routed by routeCommand's IDM_ENT_MODEL_COMPARE..IDM_ENT_CUSTOM_QUANT branch.
+    // GPU/Performance tier (3042–3047) routed via the 3000–3999 → handleViewCommand path.
+    {
+        HMENU hEntMenu = CreatePopupMenu();
 
-            // Professional: inference quality & session features (IDM_ENT_MODEL_COMPARE…IDM_ENT_CUSTOM_QUANT)
-            HMENU hEntProfMenu = CreatePopupMenu();
-            AppendMenuW(hEntProfMenu, MF_STRING, 12330, L"&Model Comparison");           // IDM_ENT_MODEL_COMPARE
-            AppendMenuW(hEntProfMenu, MF_STRING, 12331, L"&Batch Processing");            // IDM_ENT_BATCH_PROCESS
-            AppendMenuW(hEntProfMenu, MF_STRING, 12332, L"Custom &Stop Sequences");       // IDM_ENT_CUSTOM_STOP_SEQ
-            AppendMenuW(hEntProfMenu, MF_STRING, 12333, L"&Grammar Constraints");          // IDM_ENT_GRAMMAR_CONSTRAINTS
-            AppendMenuW(hEntProfMenu, MF_STRING, 12334, L"&LoRA Adapter");                // IDM_ENT_LORA_ADAPTER
-            AppendMenuW(hEntProfMenu, MF_STRING, 12335, L"&Response Cache");              // IDM_ENT_RESPONSE_CACHE
-            AppendMenuW(hEntProfMenu, MF_STRING, 12336, L"Prompt &Library");              // IDM_ENT_PROMPT_LIBRARY
-            AppendMenuW(hEntProfMenu, MF_STRING, 12337, L"Session &Export/Import");       // IDM_ENT_SESSION_EXPORT_IMPORT
-            AppendMenuW(hEntProfMenu, MF_STRING, 12338, L"Model &Sharding");              // IDM_ENT_MODEL_SHARDING
-            AppendMenuW(hEntProfMenu, MF_STRING, 12339, L"&Tensor Parallelism");          // IDM_ENT_TENSOR_PARALLEL
-            AppendMenuW(hEntProfMenu, MF_STRING, 12340, L"&Pipeline Parallelism");        // IDM_ENT_PIPELINE_PARALLEL
-            AppendMenuW(hEntProfMenu, MF_STRING, 12341, L"Custom &Quantization Schemes"); // IDM_ENT_CUSTOM_QUANT
-            AppendMenuW(hEntMenu, MF_POPUP, (UINT_PTR)hEntProfMenu, L"&Professional");
+        // Professional: inference quality & session features (IDM_ENT_MODEL_COMPARE…IDM_ENT_CUSTOM_QUANT)
+        HMENU hEntProfMenu = CreatePopupMenu();
+        AppendMenuW(hEntProfMenu, MF_STRING, 12330, L"&Model Comparison");             // IDM_ENT_MODEL_COMPARE
+        AppendMenuW(hEntProfMenu, MF_STRING, 12331, L"&Batch Processing");             // IDM_ENT_BATCH_PROCESS
+        AppendMenuW(hEntProfMenu, MF_STRING, 12332, L"Custom &Stop Sequences");        // IDM_ENT_CUSTOM_STOP_SEQ
+        AppendMenuW(hEntProfMenu, MF_STRING, 12333, L"&Grammar Constraints");          // IDM_ENT_GRAMMAR_CONSTRAINTS
+        AppendMenuW(hEntProfMenu, MF_STRING, 12334, L"&LoRA Adapter");                 // IDM_ENT_LORA_ADAPTER
+        AppendMenuW(hEntProfMenu, MF_STRING, 12335, L"&Response Cache");               // IDM_ENT_RESPONSE_CACHE
+        AppendMenuW(hEntProfMenu, MF_STRING, 12336, L"Prompt &Library");               // IDM_ENT_PROMPT_LIBRARY
+        AppendMenuW(hEntProfMenu, MF_STRING, 12337, L"Session &Export/Import");        // IDM_ENT_SESSION_EXPORT_IMPORT
+        AppendMenuW(hEntProfMenu, MF_STRING, 12338, L"Model &Sharding");               // IDM_ENT_MODEL_SHARDING
+        AppendMenuW(hEntProfMenu, MF_STRING, 12339, L"&Tensor Parallelism");           // IDM_ENT_TENSOR_PARALLEL
+        AppendMenuW(hEntProfMenu, MF_STRING, 12340, L"&Pipeline Parallelism");         // IDM_ENT_PIPELINE_PARALLEL
+        AppendMenuW(hEntProfMenu, MF_STRING, 12341, L"Custom &Quantization Schemes");  // IDM_ENT_CUSTOM_QUANT
+        AppendMenuW(hEntMenu, MF_POPUP, (UINT_PTR)hEntProfMenu, L"&Professional");
 
-            // GPU / Performance tier (IDM_ENT_MULTI_GPU_BALANCE…IDM_ENT_DUAL_ENGINE = 3042–3047)
-            AppendMenuW(hEntMenu, MF_SEPARATOR, 0, nullptr);
-            AppendMenuW(hEntMenu, MF_STRING, 3042, L"Multi-&GPU Load Balance");  // IDM_ENT_MULTI_GPU_BALANCE
-            AppendMenuW(hEntMenu, MF_STRING, 3043, L"&Dynamic Batch Sizing");    // IDM_ENT_DYNAMIC_BATCH
-            AppendMenuW(hEntMenu, MF_STRING, 3044, L"&API Key Management");      // IDM_ENT_API_KEY_MGMT
-            AppendMenuW(hEntMenu, MF_STRING, 3045, L"&Audit Logs");              // IDM_ENT_AUDIT_LOGS
-            AppendMenuW(hEntMenu, MF_STRING, 3046, L"&RawrTuner IDE");           // IDM_ENT_RAWR_TUNER
-            AppendMenuW(hEntMenu, MF_STRING, 3047, L"800B &Dual-Engine");        // IDM_ENT_DUAL_ENGINE
+        // GPU / Performance tier (IDM_ENT_MULTI_GPU_BALANCE…IDM_ENT_DUAL_ENGINE = 3042–3047)
+        AppendMenuW(hEntMenu, MF_SEPARATOR, 0, nullptr);
+        AppendMenuW(hEntMenu, MF_STRING, 3042, L"Multi-&GPU Load Balance");  // IDM_ENT_MULTI_GPU_BALANCE
+        AppendMenuW(hEntMenu, MF_STRING, 3043, L"&Dynamic Batch Sizing");    // IDM_ENT_DYNAMIC_BATCH
+        AppendMenuW(hEntMenu, MF_STRING, 3044, L"&API Key Management");      // IDM_ENT_API_KEY_MGMT
+        AppendMenuW(hEntMenu, MF_STRING, 3045, L"&Audit Logs");              // IDM_ENT_AUDIT_LOGS
+        AppendMenuW(hEntMenu, MF_STRING, 3046, L"&RawrTuner IDE");           // IDM_ENT_RAWR_TUNER
+        AppendMenuW(hEntMenu, MF_STRING, 3047, L"800B &Dual-Engine");        // IDM_ENT_DUAL_ENGINE
 
-            AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hEntMenu, L"&Enterprise");
-        }
+        AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hEntMenu, L"&Enterprise");
+    }
 
     SetMenu(hwnd, m_hMenu);
 }
+
+// NOTE: Win32IDE destructor lives in `Win32IDE_Core.cpp`.
 
 void Win32IDE::createToolbar(HWND hwnd)
 {
@@ -1617,10 +1926,24 @@ void Win32IDE::createStatusBar(HWND hwnd)
         return;
     }
 
-    int parts[] = {200, 400, 600, -1};
-    SendMessage(m_hwndStatusBar, SB_SETPARTS, 4, (LPARAM)parts);
+    // 0: primary status, 1: mode, 2: VMM ribbon, 3: spare, 4: context usage
+    int parts[] = {200, 360, 540, 720, -1};
+    SendMessage(m_hwndStatusBar, SB_SETPARTS, 5, (LPARAM)parts);
     SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"Ready");
-    SendMessageW(m_hwndStatusBar, SB_SETTEXT, 3, (LPARAM)L"Ctx: 0/128K  0%");
+    // Initial ribbon (updated after model load self-check).
+#if defined(RAWRXD_HAS_SOVEREIGN_GPU_ASM) && (RAWRXD_HAS_SOVEREIGN_GPU_ASM != 0)
+    SendMessageW(m_hwndStatusBar, SB_SETTEXT, 2, (LPARAM)L"VMM: [Legacy]  GPU-ASM: ACTIVE");
+#else
+    SendMessageW(m_hwndStatusBar, SB_SETTEXT, 2, (LPARAM)L"VMM: [Legacy]  GPU-ASM: STUB");
+#endif
+    SendMessageW(m_hwndStatusBar, SB_SETTIPTEXTW, 2,
+                 (LPARAM)L"VMM diagnostics will appear here after model self-check.");
+    if (HICON ico = getVmmLedIcon(VmmRibbonTier::Red))
+        SendMessageW(m_hwndStatusBar, SB_SETICON, 2, (LPARAM)ico);
+    SendMessageW(m_hwndStatusBar, SB_SETTEXT, 4, (LPARAM)L"Ctx: 0/128K  0%");
+    SendMessageW(m_hwndStatusBar, SB_SETTEXT, 3, (LPARAM)L"MoE pack: —");
+    SendMessageW(m_hwndStatusBar, SB_SETTIPTEXTW, 3,
+                 (LPARAM)L"MoE grouped pack cache: hits/misses, async prepack queue, row-eviction invalidations.");
 }
 
 void Win32IDE::createSidebar(HWND hwnd)
@@ -1778,6 +2101,7 @@ void Win32IDE::openFile(const std::string& filePath)
             SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"File opened");
             updateMenuEnableStates();
             updateLineNumbers();
+            updateGitStatus();  // Update Git status for gutter indicators
             syncEditorToGpuSurface();
             appendToOutput("File opened successfully (" + std::to_string(content.size()) + " bytes)\n", "Output",
                            OutputSeverity::Info);
@@ -4438,6 +4762,8 @@ std::string Win32IDE::getTreeItemPath(HTREEITEM item) const
     return "";
 }
 
+// NOTE: File watcher implementation lives in `Win32IDE_Tier3Polish.cpp`.
+
 void Win32IDE::loadModelFromPath(const std::string& filepath)
 {
     if (filepath.empty())
@@ -5036,8 +5362,8 @@ void Win32IDE::showFileContextMenu(const std::string& filePath, bool isDirectory
 
     static constexpr int IDC_CTX_REFRESH = 50001, IDC_CTX_OPEN_EXPLORER = 50002, IDC_CTX_SET_ROOT = 50003;
     static constexpr int IDC_CTX_LOAD_MODEL = 50011, IDC_CTX_MODEL_INFO = 50012, IDC_CTX_OPEN_EDITOR = 50013,
-                         IDC_CTX_COPY_PATH = 50014, IDC_CTX_SHOW_EXPLORER = 50015,
-                         IDC_CTX_OPEN_TERMINAL_PS = 50016, IDC_CTX_OPEN_TERMINAL_CMD = 50017;
+                         IDC_CTX_COPY_PATH = 50014, IDC_CTX_SHOW_EXPLORER = 50015, IDC_CTX_OPEN_TERMINAL_PS = 50016,
+                         IDC_CTX_OPEN_TERMINAL_CMD = 50017;
     static constexpr int IDC_CTX_DELETE = 50020, IDC_CTX_RENAME = 50021;
     if (isDirectory)
     {
@@ -5102,7 +5428,8 @@ void Win32IDE::showFileContextMenu(const std::string& filePath, bool isDirectory
             {
                 std::error_code ec;
                 targetDir = std::filesystem::path(filePath).parent_path().string();
-                if (targetDir.empty()) targetDir = m_currentExplorerPath;
+                if (targetDir.empty())
+                    targetDir = m_currentExplorerPath;
             }
 
             if (targetDir.empty())
@@ -5379,6 +5706,7 @@ void Win32IDE::updateGitStatus()
     m_gitStatus.added = 0;
     m_gitStatus.deleted = 0;
     m_gitStatus.untracked = 0;
+    m_gitStatus.fileStatus.clear();
 
     std::istringstream iss(output);
     std::string line;
@@ -5389,6 +5717,16 @@ void Win32IDE::updateGitStatus()
 
         char status = line[0];
         char status2 = line[1];
+        std::string filePath = line.substr(3);
+
+        // Store per-file status (prefer index status over working tree)
+        char fileStatus = status;
+        if (fileStatus == ' ')
+        {
+            fileStatus = status2;
+        }
+
+        m_gitStatus.fileStatus[filePath] = fileStatus;
 
         if (status == 'M' || status2 == 'M')
             m_gitStatus.modified++;
@@ -5741,6 +6079,13 @@ bool Win32IDE::loadModelForInference(const std::string& filepath)
             METRICS.increment("model.load_success");
             appendToOutput("Model loaded successfully into Agentic Bridge.\n", "System", OutputSeverity::Info);
 
+            wireLayerProgressToOutputPanel();
+
+            // Lane A "Gold" integration: run a tiny post-load streamer self-check.
+            // This verifies (a) privilege attempt, (b) 2MB mapper alignment, (c) map/unmap sanity,
+            // without dragging Lane B CLI/bench harness into the UI.
+            appendStreamerPostLoadCheck(this, filepath);
+
             // Sync current UI state
             m_agenticBridge->SetContextSize("4K");
             if (m_hwndContextSlider)
@@ -5781,7 +6126,10 @@ bool Win32IDE::initializeInference()
     {
         try
         {
-            m_nativeEngine = std::make_unique<RawrXD::CPUInferenceEngine>();
+            m_nativeEngine = RawrXD::CPUInferenceEngine::GetSharedInstance();
+            // Match deferredHeavyInit (Win32IDE_Core): same memory plugin as headless-capable path.
+            auto memPlugin = std::make_shared<RawrXD::Modules::NativeMemoryModule>();
+            m_nativeEngine->RegisterMemoryPlugin(memPlugin);
             m_nativeEngineLoaded = false;
             appendToOutput("Initialized Native CPU Inference Engine.", "Output", OutputSeverity::Info);
         }
@@ -5837,6 +6185,7 @@ bool Win32IDE::initializeInference()
     }
 
     appendToOutput("✅ Inference initialized for model: " + m_loadedModelPath, "Output", OutputSeverity::Info);
+    wireLayerProgressToOutputPanel();
     return true;
 }
 
@@ -6644,7 +6993,8 @@ void Win32IDE::populateModelSelector()
     // Set selected item
     if (!m_availableModels.empty())
     {
-        if (selectedIdx < 0) selectedIdx = 0;
+        if (selectedIdx < 0)
+            selectedIdx = 0;
         SendMessage(m_hwndModelSelector, CB_SETCURSEL, selectedIdx, 0);
     }
 }
@@ -6713,7 +7063,8 @@ std::vector<std::string> Win32IDE::getModelsFromDirectory(const std::string& dir
     return models;
 }
 
-std::string Win32IDE::makeHttpRequest(const std::string& url, const std::string& method, const std::string& body, const std::string& contentType)
+std::string Win32IDE::makeHttpRequest(const std::string& url, const std::string& method, const std::string& body,
+                                      const std::string& contentType)
 {
     // Parse URL
     std::string host = "localhost";
@@ -6722,12 +7073,13 @@ std::string Win32IDE::makeHttpRequest(const std::string& url, const std::string&
 
     // Simple URL parsing for localhost:port/path
     size_t colonPos = url.find(':');
-    size_t slashPos = url.find('/', colonPos + 3); // after ://
+    size_t slashPos = url.find('/', colonPos + 3);  // after ://
 
     if (colonPos != std::string::npos)
     {
         size_t portStart = colonPos + 1;
-        while (portStart < url.size() && url[portStart] == '/') portStart++;
+        while (portStart < url.size() && url[portStart] == '/')
+            portStart++;
         size_t portEnd = url.find('/', portStart);
         if (portEnd != std::string::npos)
         {
@@ -6756,8 +7108,8 @@ std::string Win32IDE::makeHttpRequest(const std::string& url, const std::string&
 
     std::wstring wMethod(method.begin(), method.end());
     std::wstring wPath(path.begin(), path.end());
-    HINTERNET hRequest = WinHttpOpenRequest(hConnect, wMethod.c_str(), wPath.c_str(), NULL,
-                                           WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, 0);
+    HINTERNET hRequest = WinHttpOpenRequest(hConnect, wMethod.c_str(), wPath.c_str(), NULL, WINHTTP_NO_REFERER,
+                                            WINHTTP_DEFAULT_ACCEPT_TYPES, 0);
     if (!hRequest)
     {
         WinHttpCloseHandle(hConnect);
@@ -6767,8 +7119,8 @@ std::string Win32IDE::makeHttpRequest(const std::string& url, const std::string&
 
     // Set headers
     std::wstring wHeaders = L"Content-Type: " + std::wstring(contentType.begin(), contentType.end());
-    BOOL bResults = WinHttpSendRequest(hRequest, wHeaders.c_str(), (DWORD)-1L,
-                                      (LPVOID)body.c_str(), (DWORD)body.size(), (DWORD)body.size(), 0);
+    BOOL bResults = WinHttpSendRequest(hRequest, wHeaders.c_str(), (DWORD)-1L, (LPVOID)body.c_str(), (DWORD)body.size(),
+                                       (DWORD)body.size(), 0);
     if (!bResults)
     {
         WinHttpCloseHandle(hRequest);
@@ -6921,7 +7273,7 @@ void Win32IDE::onMaxTokensChanged(int newValue)
 
 void Win32IDE::handleModelBrowse()
 {
-    BROWSEINFOW bi = { 0 };
+    BROWSEINFOW bi = {0};
     bi.hwndOwner = m_hwndMain;
     bi.lpszTitle = L"Select Model Directory";
     bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
@@ -6933,7 +7285,7 @@ void Win32IDE::handleModelBrowse()
         if (SHGetPathFromIDListW(pidl, path))
         {
             std::string selectedPath = wideToUtf8(path);
-            
+
             // Check if this directory is already in the list
             bool alreadyExists = false;
             for (const auto& dir : m_userModelDirectories)
@@ -6944,12 +7296,12 @@ void Win32IDE::handleModelBrowse()
                     break;
                 }
             }
-            
+
             if (!alreadyExists)
             {
                 m_userModelDirectories.push_back(selectedPath);
                 appendToOutput("Added model directory: " + selectedPath + "\n", "Output", OutputSeverity::Info);
-                
+
                 // Refresh the model selector to include models from the new directory
                 populateModelSelector();
             }
@@ -6973,7 +7325,7 @@ void Win32IDE::createLineNumberGutter(HWND hwndParent)
     if (!hwndParent)
         return;
 
-    m_hwndLineNumbers = CreateWindowExW(0, L"STATIC", L"", WS_CHILD | WS_VISIBLE | SS_OWNERDRAW, 0, 0, 50, 100,
+    m_hwndLineNumbers = CreateWindowExW(0, L"STATIC", L"", WS_CHILD | WS_VISIBLE | SS_OWNERDRAW, 0, 0, 70, 100,
                                         hwndParent, nullptr, m_hInstance, nullptr);
 
     if (m_hwndLineNumbers)
@@ -7019,6 +7371,30 @@ void Win32IDE::paintLineNumbers(HDC hdc, RECT& rc)
 
     int visibleLines = (rc.bottom - rc.top) / lineHeight + 1;
 
+    // Get Git status for current file
+    char gitStatus = ' ';
+    if (!m_currentFile.empty())
+    {
+        // Convert to relative path for Git status lookup
+        std::string relPath = m_currentFile;
+        if (relPath.find(m_gitRepoPath) == 0)
+        {
+            relPath = relPath.substr(m_gitRepoPath.length());
+            if (!relPath.empty() && relPath[0] == '\\')
+            {
+                relPath = relPath.substr(1);
+            }
+            // Convert backslashes to forward slashes for Git
+            std::replace(relPath.begin(), relPath.end(), '\\', '/');
+
+            auto it = m_gitStatus.fileStatus.find(relPath);
+            if (it != m_gitStatus.fileStatus.end())
+            {
+                gitStatus = it->second;
+            }
+        }
+    }
+
     for (int i = 0; i < visibleLines && (firstVisibleLine + i) < lineCount; i++)
     {
         int lineNum = firstVisibleLine + i + 1;
@@ -7037,6 +7413,36 @@ void Win32IDE::paintLineNumbers(HDC hdc, RECT& rc)
         }
 
         DrawTextW(hdc, buf, -1, &lineRect, DT_RIGHT | DT_SINGLELINE | DT_VCENTER);
+
+        // Draw Git status indicator
+        if (gitStatus != ' ')
+        {
+            RECT indicatorRect = {rc.right - 16, i * lineHeight + 2, rc.right - 4, (i + 1) * lineHeight - 2};
+
+            COLORREF indicatorColor;
+            switch (gitStatus)
+            {
+                case 'M':
+                    indicatorColor = RGB(255, 193, 7);
+                    break;  // Yellow for modified
+                case 'A':
+                    indicatorColor = RGB(40, 167, 69);
+                    break;  // Green for added
+                case 'D':
+                    indicatorColor = RGB(220, 53, 69);
+                    break;  // Red for deleted
+                case '?':
+                    indicatorColor = RGB(108, 117, 125);
+                    break;  // Gray for untracked
+                default:
+                    indicatorColor = RGB(133, 133, 133);
+                    break;
+            }
+
+            HBRUSH indicatorBrush = CreateSolidBrush(indicatorColor);
+            FillRect(hdc, &indicatorRect, indicatorBrush);
+            DeleteObject(indicatorBrush);
+        }
     }
 
     SelectObject(hdc, hOldFont);
@@ -7072,24 +7478,57 @@ LRESULT CALLBACK Win32IDE::LineNumberProc(HWND hwnd, UINT uMsg, WPARAM wParam, L
     return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 }
 
+LRESULT CALLBACK Win32IDE::TabBarProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    Win32IDE* ide = (Win32IDE*)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
+
+    if (uMsg == WM_DRAWITEM)
+    {
+        DRAWITEMSTRUCT* dis = (DRAWITEMSTRUCT*)lParam;
+        if (dis->CtlType == ODT_TAB && ide)
+        {
+            ide->drawTabItem(dis);
+            return TRUE;
+        }
+    }
+    else if (uMsg == WM_LBUTTONDOWN)
+    {
+        if (ide)
+        {
+            POINT pt = {LOWORD(lParam), HIWORD(lParam)};
+            ide->handleTabClick(pt);
+        }
+    }
+
+    if (ide && ide->getOldTabBarProc())
+    {
+        return CallWindowProcW(ide->getOldTabBarProc(), hwnd, uMsg, wParam, lParam);
+    }
+    return DefWindowProcW(hwnd, uMsg, wParam, lParam);
+}
+
 // --- Editor Tab Bar ---
 void Win32IDE::createTabBar(HWND hwndParent)
 {
     if (!hwndParent)
         return;
 
-    m_hwndTabBar =
-        CreateWindowExW(0, WC_TABCONTROLW, L"", WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | TCS_HOTTRACK | TCS_TOOLTIPS | TCS_OWNERDRAWFIXED,
-                        0, 0, 800, 28, hwndParent, nullptr, m_hInstance, nullptr);
+    // Initialize sovereign TabManager
+    if (!m_tabManager)
+    {
+        m_tabManager = new Win32IDE_TabManager(this);
+        if (!m_tabManager->initialize(hwndParent))
+        {
+            delete m_tabManager;
+            m_tabManager = nullptr;
+            return;
+        }
+    }
 
+    // Get the tab bar handle from the manager
+    m_hwndTabBar = m_tabManager->getTabBarHandle();
     if (m_hwndTabBar)
     {
-        // Set dark theme font
-        if (m_hFontUI)
-        {
-            SendMessage(m_hwndTabBar, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
-        }
-
         // Subclass for custom drawing and close button handling
         SetWindowLongPtrW(m_hwndTabBar, GWLP_USERDATA, (LONG_PTR)this);
         m_oldTabBarProc = (WNDPROC)SetWindowLongPtrW(m_hwndTabBar, GWLP_WNDPROC, (LONG_PTR)TabBarProc);
@@ -7119,6 +7558,17 @@ void Win32IDE::addTab(const std::string& filePath, const std::string& displayNam
     }
 }
 
+std::pair<int, int> Win32IDE::getCursorPosition()
+{
+    CHARRANGE cr;
+    SendMessageW(m_hwndEditor, EM_GETSEL, (WPARAM)&cr.cpMin, (LPARAM)&cr.cpMax);
+    int charPos = cr.cpMin;
+    int line = (int)SendMessageW(m_hwndEditor, EM_LINEFROMCHAR, charPos, 0) + 1;
+    int lineStart = (int)SendMessageW(m_hwndEditor, EM_LINEINDEX, line - 1, 0);
+    int col = charPos - lineStart + 1;
+    return {line, col};
+}
+
 void Win32IDE::onTabChanged()
 {
     if (!m_hwndTabBar)
@@ -7127,10 +7577,14 @@ void Win32IDE::onTabChanged()
     int newIndex = (int)SendMessage(m_hwndTabBar, TCM_GETCURSEL, 0, 0);
     if (newIndex >= 0 && newIndex < (int)m_editorTabs.size() && newIndex != m_activeTabIndex)
     {
-        // Save current tab content
+        // Save current tab content and state
         if (m_activeTabIndex >= 0 && m_activeTabIndex < (int)m_editorTabs.size())
         {
             m_editorTabs[m_activeTabIndex].content = getWindowText(m_hwndEditor);
+            auto [line, col] = getCursorPosition();
+            m_editorTabs[m_activeTabIndex].cursorLine = line;
+            m_editorTabs[m_activeTabIndex].cursorCol = col;
+            // TODO: save scroll pos, multi-cursors, folds
         }
 
         // Stash annotations for the outgoing tab
@@ -7145,6 +7599,11 @@ void Win32IDE::onTabChanged()
 
         // Update current file path
         m_currentFile = tab.filePath;
+
+        // Restore cursor position
+        int lineIndex = (int)SendMessageW(m_hwndEditor, EM_LINEINDEX, tab.cursorLine - 1, 0);
+        int charPos = lineIndex + tab.cursorCol - 1;
+        SendMessageW(m_hwndEditor, EM_SETSEL, charPos, charPos);
 
         // Restore stashed annotations for the incoming tab
         restoreAnnotationsForTab();
@@ -7164,6 +7623,54 @@ void Win32IDE::onTabChanged()
     }
 }
 
+void Win32IDE::onTabClosing(int index)
+{
+    // Handle tab closing logic
+    if (index >= 0 && index < (int)m_editorTabs.size())
+    {
+        // Check if tab is modified and prompt to save
+        if (m_editorTabs[index].modified)
+        {
+            // TODO: Show save dialog
+        }
+        // Remove the tab
+        removeTab(index);
+    }
+}
+
+void Win32IDE::onTabActivated(int index)
+{
+    // Handle tab activation
+    if (index >= 0 && index < (int)m_editorTabs.size())
+    {
+        setActiveTab(index);
+    }
+}
+
+void Win32IDE::saveCurrentFile()
+{
+    // Save the current file
+    if (m_activeTabIndex >= 0 && m_activeTabIndex < (int)m_editorTabs.size())
+    {
+        const auto& tab = m_editorTabs[m_activeTabIndex];
+        if (!tab.filePath.empty())
+        {
+            std::ofstream file(tab.filePath, std::ios::binary);
+            if (file)
+            {
+                std::string content = getWindowText(m_hwndEditor);
+                file.write(content.c_str(), content.size());
+                m_editorTabs[m_activeTabIndex].modified = false;
+                // Update tab display to remove modified indicator
+                if (m_tabManager)
+                {
+                    m_tabManager->updateTabDisplay(m_activeTabIndex);
+                }
+            }
+        }
+    }
+}
+
 void Win32IDE::setActiveTab(int index)
 {
     if (!m_hwndTabBar)
@@ -7174,6 +7681,104 @@ void Win32IDE::setActiveTab(int index)
     // Use the tab control to select the tab, then trigger onTabChanged
     SendMessage(m_hwndTabBar, TCM_SETCURSEL, index, 0);
     onTabChanged();
+}
+
+void Win32IDE::saveTabsState()
+{
+    nlohmann::json j;
+    j["tabs"] = nlohmann::json::array();
+    for (const auto& tab : m_editorTabs)
+    {
+        nlohmann::json tabJson;
+        tabJson["filePath"] = tab.filePath;
+        tabJson["displayName"] = tab.displayName;
+        tabJson["content"] = tab.content;
+        tabJson["modified"] = tab.modified;
+        tabJson["isPinned"] = tab.isPinned;
+        tabJson["isPreview"] = tab.isPreview;
+        tabJson["cursorLine"] = tab.cursorLine;
+        tabJson["cursorCol"] = tab.cursorCol;
+        tabJson["scrollPos"] = tab.scrollPos;
+        j["tabs"].push_back(tabJson);
+    }
+    j["activeTabIndex"] = m_activeTabIndex;
+    std::ofstream file("tabs_state.json");
+    if (file)
+    {
+        file << j.dump(4);
+    }
+}
+
+void Win32IDE::loadTabsState()
+{
+    std::ifstream file("tabs_state.json");
+    if (!file)
+        return;
+    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    nlohmann::json j;
+    try
+    {
+        j = nlohmann::json::parse(content);
+    }
+    catch (...)
+    {
+        return;
+    }
+    if (j.contains("tabs") && j["tabs"].is_array())
+    {
+        m_editorTabs.clear();
+        for (const auto& tabJson : j["tabs"])
+        {
+            EditorTab tab;
+            tab.filePath = tabJson.value("filePath", "");
+            tab.displayName = tabJson.value("displayName", "");
+            tab.content = tabJson.value("content", "");
+            tab.modified = tabJson.value("modified", false);
+            tab.isPinned = tabJson.value("isPinned", false);
+            tab.isPreview = tabJson.value("isPreview", false);
+            tab.cursorLine = tabJson.value("cursorLine", 1);
+            tab.cursorCol = tabJson.value("cursorCol", 0);
+            tab.scrollPos = tabJson.value("scrollPos", 0);
+            m_editorTabs.push_back(tab);
+        }
+        if (j.contains("activeTabIndex"))
+        {
+            m_activeTabIndex = j["activeTabIndex"];
+        }
+        // Update tab bar if needed
+        if (m_hwndTabBar)
+        {
+            // Clear existing tabs
+            SendMessage(m_hwndTabBar, TCM_DELETEALLITEMS, 0, 0);
+            // Add loaded tabs
+            for (size_t i = 0; i < m_editorTabs.size(); ++i)
+            {
+                TCITEMW tci = {0};
+                tci.mask = TCIF_TEXT;
+                std::wstring wname = utf8ToWide(m_editorTabs[i].displayName);
+                tci.pszText = (LPWSTR)wname.c_str();
+                SendMessageW(m_hwndTabBar, TCM_INSERTITEMW, i, (LPARAM)&tci);
+            }
+            if (m_activeTabIndex >= 0 && m_activeTabIndex < (int)m_editorTabs.size())
+            {
+                SendMessage(m_hwndTabBar, TCM_SETCURSEL, m_activeTabIndex, 0);
+                // Load active tab content
+                const auto& tab = m_editorTabs[m_activeTabIndex];
+                setWindowText(m_hwndEditor, tab.content);
+                m_currentFile = tab.filePath;
+                // Set cursor
+                int lineIndex = (int)SendMessageW(m_hwndEditor, EM_LINEINDEX, tab.cursorLine - 1, 0);
+                int charPos = lineIndex + tab.cursorCol - 1;
+                SendMessageW(m_hwndEditor, EM_SETSEL, charPos, charPos);
+                // Update status bar
+                if (m_hwndStatusBar)
+                {
+                    SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)utf8ToWide(tab.displayName).c_str());
+                }
+                updateLineNumbers();
+            }
+        }
+    }
 }
 
 void Win32IDE::removeTab(int index)
@@ -7225,6 +7830,86 @@ int Win32IDE::findTabByPath(const std::string& filePath) const
             return i;
     }
     return -1;
+}
+
+void Win32IDE::drawTabItem(DRAWITEMSTRUCT* dis)
+{
+    HDC hdc = dis->hDC;
+    RECT rc = dis->rcItem;
+    int index = dis->itemID;
+
+    if (index < 0 || index >= (int)m_editorTabs.size())
+        return;
+
+    const EditorTab& tab = m_editorTabs[index];
+    bool isActive = (index == m_activeTabIndex);
+    bool isModified = tab.modified;
+
+    // Background
+    COLORREF bgColor = isActive ? RGB(45, 45, 45) : RGB(30, 30, 30);
+    HBRUSH hBrush = CreateSolidBrush(bgColor);
+    FillRect(hdc, &rc, hBrush);
+    DeleteObject(hBrush);
+
+    // Border
+    HPEN hPen = CreatePen(PS_SOLID, 1, RGB(60, 60, 60));
+    HPEN hOldPen = (HPEN)SelectObject(hdc, hPen);
+    MoveToEx(hdc, rc.left, rc.bottom - 1, nullptr);
+    LineTo(hdc, rc.right, rc.bottom - 1);
+    SelectObject(hdc, hOldPen);
+    DeleteObject(hPen);
+
+    // Text
+    SetBkMode(hdc, TRANSPARENT);
+    COLORREF textColor = isModified ? RGB(255, 200, 100) : RGB(200, 200, 200);
+    SetTextColor(hdc, textColor);
+
+    rc.left += 5;
+    rc.right -= 20;  // Space for close button
+
+    std::wstring displayW = utf8ToWide(tab.displayName);
+    DrawTextW(hdc, displayW.c_str(), -1, &rc, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+
+    // Close button
+    RECT closeRc = {rc.right + 5, rc.top + 2, rc.right + 15, rc.bottom - 2};
+    DrawTextW(hdc, L"×", 1, &closeRc, DT_CENTER | DT_VCENTER);
+}
+
+void Win32IDE::handleTabClick(POINT pt)
+{
+    TCHITTESTINFO hitTest = {};
+    hitTest.pt = pt;
+    int index = (int)SendMessage(m_hwndTabBar, TCM_HITTEST, 0, (LPARAM)&hitTest);
+
+    if (index >= 0 && index < (int)m_editorTabs.size())
+    {
+        // Check if close button was clicked
+        RECT rc;
+        SendMessage(m_hwndTabBar, TCM_GETITEMRECT, index, (LPARAM)&rc);
+
+        if (pt.x >= rc.right - 15 && pt.x <= rc.right - 5)
+        {
+            // Close button clicked
+            if (m_editorTabs[index].modified)
+            {
+                std::string msg = "Save changes to " + m_editorTabs[index].displayName + "?";
+                int result = MessageBoxW(m_hwndMain, utf8ToWide(msg).c_str(), L"Confirm Close",
+                                         MB_YESNOCANCEL | MB_ICONQUESTION);
+                if (result == IDCANCEL)
+                    return;
+                if (result == IDYES)
+                {
+                    setActiveTab(index);
+                    saveFile();
+                }
+            }
+            removeTab(index);
+            return;
+        }
+
+        // Tab clicked - switch to it
+        setActiveTab(index);
+    }
 }
 
 // --- Command Input Subclass Procedure ---
@@ -7308,6 +7993,77 @@ void Win32IDE::postAgentOutputSafe(const std::string& text)
     {
         PostMessage(m_hwndMain, WM_AGENT_OUTPUT_SAFE, 0, (LPARAM)copy);
     }
+}
+
+void Win32IDE::postOutputPanelSafe(const std::string& text)
+{
+    if (isShuttingDown())
+        return;
+    char* copy = _strdup(text.c_str());
+    if (copy && m_hwndMain)
+    {
+        PostMessage(m_hwndMain, WM_IDE_OUTPUT_APPEND_SAFE, 0, (LPARAM)copy);
+    }
+}
+
+void Win32IDE::wireLayerProgressToOutputPanel()
+{
+    auto cb = [this](const std::string& line)
+    {
+        postOutputPanelSafe(line);
+        if (m_hwndMain && line.find("[MOE_PACK]") != std::string::npos)
+            PostMessageW(m_hwndMain, WM_IDE_MOE_PACK_STATUS_REFRESH, 0, 0);
+    };
+    if (m_nativeEngine)
+    {
+        m_nativeEngine->SetLayerProgressCallback(cb);
+        m_nativeEngine->SetSwarmTelemetryOutputCallback(cb);
+    }
+    if (m_agenticBridge)
+    {
+        m_agenticBridge->SetCpuEngineLayerProgressCallback(cb);
+        m_agenticBridge->SetCpuEngineSwarmTelemetryOutputCallback(cb);
+    }
+}
+
+void Win32IDE::refreshMoEPackHudStatusBarPart()
+{
+    if (!m_hwndStatusBar)
+        return;
+    if (!m_nativeEngine || !m_nativeEngine->IsModelLoaded())
+    {
+        SendMessageW(m_hwndStatusBar, SB_SETTEXT, 3, (LPARAM)L"MoE pack: —");
+        return;
+    }
+    const std::string u8 = m_nativeEngine->MoEPackHudStatusLineUtf8();
+    if (u8.empty())
+    {
+        SendMessageW(m_hwndStatusBar, SB_SETTEXT, 3, (LPARAM)L"MoE pack: —");
+        return;
+    }
+    const int wlen = MultiByteToWideChar(CP_UTF8, 0, u8.c_str(), -1, nullptr, 0);
+    if (wlen <= 0)
+        return;
+    std::vector<wchar_t> w(static_cast<size_t>(wlen));
+    MultiByteToWideChar(CP_UTF8, 0, u8.c_str(), -1, w.data(), wlen);
+    SendMessageW(m_hwndStatusBar, SB_SETTEXT, 3, (LPARAM)w.data());
+    SendMessageW(m_hwndStatusBar, SB_SETTIPTEXTW, 3, (LPARAM)w.data());
+}
+
+void Win32IDE::clearInferenceLayerProgressCallback()
+{
+    if (m_nativeEngine)
+    {
+        m_nativeEngine->SetLayerProgressCallback({});
+        m_nativeEngine->SetSwarmTelemetryOutputCallback({});
+    }
+    if (m_agenticBridge)
+    {
+        m_agenticBridge->SetCpuEngineLayerProgressCallback({});
+        m_agenticBridge->SetCpuEngineSwarmTelemetryOutputCallback({});
+    }
+    if (m_hwndStatusBar)
+        SendMessageW(m_hwndStatusBar, SB_SETTEXT, 3, (LPARAM)L"MoE pack: —");
 }
 
 // --- Quick GGUF Model Loader (delegates to unified model dialog) ---

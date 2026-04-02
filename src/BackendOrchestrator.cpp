@@ -24,12 +24,80 @@
 #include <psapi.h>
 #pragma comment(lib, "psapi.lib")
 
+#ifndef MEM_RESERVE_PLACEHOLDER
+#define MEM_RESERVE_PLACEHOLDER 0x00040000
+#endif
+
+#ifndef MEM_REPLACE_PLACEHOLDER
+#define MEM_REPLACE_PLACEHOLDER 0x00004000
+#endif
+
+static constexpr SIZE_T kSlidingApertureSize = 2ULL * 1024ULL * 1024ULL * 1024ULL;
+
 namespace RawrXD {
 
 namespace {
 
+using PFN_VirtualAlloc2 = PVOID(WINAPI*)(
+    HANDLE,
+    PVOID,
+    SIZE_T,
+    ULONG,
+    ULONG,
+    MEM_EXTENDED_PARAMETER*,
+    ULONG);
+
+using PFN_MapViewOfFile3 = PVOID(WINAPI*)(
+    HANDLE,
+    HANDLE,
+    PVOID,
+    ULONG64,
+    SIZE_T,
+    ULONG,
+    ULONG,
+    MEM_EXTENDED_PARAMETER*,
+    ULONG);
+
+using PFN_UnmapViewOfFile2 = BOOL(WINAPI*)(
+    HANDLE,
+    PVOID,
+    ULONG);
+
 using PFN_SubmitInference = bool(__stdcall*)(const char*, uint64_t*);
 using PFN_GetResult = bool(__stdcall*)(uint64_t, char*, uint32_t);
+
+PFN_VirtualAlloc2 GetVirtualAlloc2Ptr() {
+    static PFN_VirtualAlloc2 fn = []() -> PFN_VirtualAlloc2 {
+        HMODULE kernel32 = GetModuleHandleW(L"kernel32.dll");
+        if (!kernel32) {
+            return nullptr;
+        }
+        return reinterpret_cast<PFN_VirtualAlloc2>(GetProcAddress(kernel32, "VirtualAlloc2"));
+    }();
+    return fn;
+}
+
+PFN_MapViewOfFile3 GetMapViewOfFile3Ptr() {
+    static PFN_MapViewOfFile3 fn = []() -> PFN_MapViewOfFile3 {
+        HMODULE kernel32 = GetModuleHandleW(L"kernel32.dll");
+        if (!kernel32) {
+            return nullptr;
+        }
+        return reinterpret_cast<PFN_MapViewOfFile3>(GetProcAddress(kernel32, "MapViewOfFile3"));
+    }();
+    return fn;
+}
+
+PFN_UnmapViewOfFile2 GetUnmapViewOfFile2Ptr() {
+    static PFN_UnmapViewOfFile2 fn = []() -> PFN_UnmapViewOfFile2 {
+        HMODULE kernel32 = GetModuleHandleW(L"kernel32.dll");
+        if (!kernel32) {
+            return nullptr;
+        }
+        return reinterpret_cast<PFN_UnmapViewOfFile2>(GetProcAddress(kernel32, "UnmapViewOfFile2"));
+    }();
+    return fn;
+}
 
 struct NativeInferenceApi {
     HMODULE module = nullptr;
@@ -199,7 +267,8 @@ std::unordered_map<std::string, std::vector<MappedShardFile>> g_mapped_shards_by
 
 void closeMappedShardFile(MappedShardFile& m) {
     if (m.view) {
-        UnmapViewOfFile(m.view);
+        // [HOTPATCH] For placeholder reservations, use VirtualFree instead of UnmapViewOfFile
+        VirtualFree(m.view, 0, MEM_RELEASE);
         m.view = nullptr;
     }
     if (m.hMapping) {
@@ -242,6 +311,24 @@ bool mapShardFileReadOnly(const std::string& path, int device_index, MappedShard
     }
     out.size_bytes = static_cast<uint64_t>(size.QuadPart);
 
+    // Reserve a fixed-size placeholder aperture so MapViewOfFile3 can atomically
+    // replace the full placeholder region without needing placeholder splitting.
+    PFN_VirtualAlloc2 virtualAlloc2 = GetVirtualAlloc2Ptr();
+    const SIZE_T aperture_size = static_cast<SIZE_T>(std::min<uint64_t>(out.size_bytes, kSlidingApertureSize));
+    if (virtualAlloc2) {
+        out.view = virtualAlloc2(GetCurrentProcess(), nullptr, aperture_size,
+            MEM_RESERVE | MEM_RESERVE_PLACEHOLDER, PAGE_NOACCESS, nullptr, 0);
+    }
+    if (!out.view) {
+        out.view = VirtualAlloc(nullptr, aperture_size, MEM_RESERVE, PAGE_NOACCESS);
+    }
+    if (!out.view) {
+        reason = "placeholder reservation failed for: " + path + " (error=" + std::to_string(GetLastError()) + ")";
+        closeMappedShardFile(out);
+        return false;
+    }
+
+    // Create file mapping for sliding window access
     out.hMapping = CreateFileMappingA(out.hFile, nullptr, PAGE_READONLY, 0, 0, nullptr);
     if (!out.hMapping) {
         reason = "CreateFileMappingA failed for: " + path;
@@ -249,12 +336,7 @@ bool mapShardFileReadOnly(const std::string& path, int device_index, MappedShard
         return false;
     }
 
-    out.view = MapViewOfFile(out.hMapping, FILE_MAP_READ, 0, 0, 0);
-    if (!out.view) {
-        reason = "MapViewOfFile failed for: " + path;
-        closeMappedShardFile(out);
-        return false;
-    }
+    // Note: We don't map the entire file here - we reuse a single sliding aperture.
 
     return true;
 }
@@ -294,6 +376,68 @@ void clearAllMappedShards() {
         }
     }
     g_mapped_shards_by_tag.clear();
+}
+
+// [HOTPATCH] Sliding Window Access: Map a 2GB window on demand
+bool mapSlidingWindow(const MappedShardFile& file, uint64_t offset, size_t window_size, void*& window_ptr, std::string& reason) {
+    // Ensure offset is aligned to allocation granularity (usually 64KB)
+    SYSTEM_INFO sysInfo;
+    GetSystemInfo(&sysInfo);
+    uint64_t aligned_offset = (offset / sysInfo.dwAllocationGranularity) * sysInfo.dwAllocationGranularity;
+
+    if (aligned_offset >= file.size_bytes) {
+        reason = "sliding window offset beyond file size";
+        return false;
+    }
+
+    // Calculate how much to map (up to window_size, but aligned)
+    const size_t map_size = std::min(window_size, static_cast<size_t>(file.size_bytes - aligned_offset));
+    void* base_address = file.view;
+
+    if (PFN_MapViewOfFile3 mapViewOfFile3 = GetMapViewOfFile3Ptr()) {
+        window_ptr = mapViewOfFile3(
+            file.hMapping,
+            GetCurrentProcess(),
+            base_address,
+            aligned_offset,
+            map_size,
+            MEM_REPLACE_PLACEHOLDER,
+            PAGE_READONLY,
+            nullptr,
+            0);
+        if (window_ptr) {
+            return true;
+        }
+    }
+
+    // Legacy fallback for systems without placeholder swap support.
+    if (aligned_offset == 0 && map_size <= kSlidingApertureSize) {
+        window_ptr = MapViewOfFileEx(file.hMapping, FILE_MAP_READ,
+            static_cast<DWORD>(aligned_offset >> 32), static_cast<DWORD>(aligned_offset),
+            map_size, base_address);
+    } else {
+        SetLastError(ERROR_NOT_SUPPORTED);
+        window_ptr = nullptr;
+    }
+
+    if (!window_ptr) {
+        reason = "sliding window map failed at offset " + std::to_string(aligned_offset) +
+            " (error=" + std::to_string(GetLastError()) + ")";
+        return false;
+    }
+
+    return true;
+}
+
+// [HOTPATCH] Unmap sliding window
+void unmapSlidingWindow(void* window_ptr) {
+    if (window_ptr) {
+        if (PFN_UnmapViewOfFile2 unmapViewOfFile2 = GetUnmapViewOfFile2Ptr()) {
+            unmapViewOfFile2(GetCurrentProcess(), window_ptr, MEM_PRESERVE_PLACEHOLDER);
+        } else {
+            UnmapViewOfFile(window_ptr);
+        }
+    }
 }
 
 } // namespace

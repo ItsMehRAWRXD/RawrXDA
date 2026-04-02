@@ -18,6 +18,7 @@ StreamingGGUFLoaderMMap::StreamingGGUFLoaderMMap()
     , mapping_handle_(nullptr)
     , mapped_base_(nullptr)
     , mapped_size_(0)
+    , lazy_pager_(nullptr)
     , loading_(false)
     , bytes_loaded_(0)
     , total_bytes_(0)
@@ -84,43 +85,62 @@ bool StreamingGGUFLoaderMMap::loadModelStreaming(
     mapped_size_ = file_size.QuadPart;
     total_bytes_.store(mapped_size_);
     
-    if (progress) progress(10, 100, "Creating memory mapping");
+    bool use_lazy = (file_size.QuadPart > 16LL * 1024 * 1024 * 1024); // 16GB
     
-    // Create file mapping
-    mapping_handle_ = CreateFileMappingA(
-        file_handle_,
-        nullptr,
-        PAGE_READONLY,
-        0,
-        0,
-        nullptr
-    );
+    if (progress) progress(10, 100, use_lazy ? "Reading metadata" : "Creating memory mapping");
     
-    if (!mapping_handle_) {
-        std::cerr << "❌ Failed to create file mapping (Error: " << GetLastError() << ")" << std::endl;
-        CloseHandle(file_handle_);
-        file_handle_ = INVALID_HANDLE_VALUE;
-        loading_.store(false);
-        return false;
-    }
-    
-    // Map view of file
-    mapped_base_ = static_cast<uint8_t*>(MapViewOfFile(
-        mapping_handle_,
-        FILE_MAP_READ,
-        0,
-        0,
-        0
-    ));
-    
-    if (!mapped_base_) {
-        std::cerr << "❌ Failed to map view of file (Error: " << GetLastError() << ")" << std::endl;
-        CloseHandle(mapping_handle_);
-        CloseHandle(file_handle_);
-        mapping_handle_ = nullptr;
-        file_handle_ = INVALID_HANDLE_VALUE;
-        loading_.store(false);
-        return false;
+    if (use_lazy) {
+        // Read metadata into buffer for large files
+        DWORD bytes_read;
+        const size_t metadata_size = 100 * 1024 * 1024; // 100MB
+        metadata_buffer_.resize(metadata_size);
+        if (!ReadFile(file_handle_, metadata_buffer_.data(), metadata_size, &bytes_read, nullptr)) {
+            std::cerr << "❌ Failed to read metadata (Error: " << GetLastError() << ")" << std::endl;
+            CloseHandle(file_handle_);
+            file_handle_ = INVALID_HANDLE_VALUE;
+            loading_.store(false);
+            return false;
+        }
+        metadata_buffer_.resize(bytes_read);
+        mapped_base_ = metadata_buffer_.data();
+        mapped_size_ = metadata_buffer_.size();
+    } else {
+        // Create file mapping for small files
+        mapping_handle_ = CreateFileMappingA(
+            file_handle_,
+            nullptr,
+            PAGE_READONLY,
+            0,
+            0,
+            nullptr
+        );
+        
+        if (!mapping_handle_) {
+            std::cerr << "❌ Failed to create file mapping (Error: " << GetLastError() << ")" << std::endl;
+            CloseHandle(file_handle_);
+            file_handle_ = INVALID_HANDLE_VALUE;
+            loading_.store(false);
+            return false;
+        }
+        
+        // Map view of file
+        mapped_base_ = static_cast<uint8_t*>(MapViewOfFile(
+            mapping_handle_,
+            FILE_MAP_READ,
+            0,
+            0,
+            0
+        ));
+        
+        if (!mapped_base_) {
+            std::cerr << "❌ Failed to map view of file (Error: " << GetLastError() << ")" << std::endl;
+            CloseHandle(mapping_handle_);
+            CloseHandle(file_handle_);
+            mapping_handle_ = nullptr;
+            file_handle_ = INVALID_HANDLE_VALUE;
+            loading_.store(false);
+            return false;
+        }
     }
     
     is_open_ = true;
@@ -133,6 +153,18 @@ bool StreamingGGUFLoaderMMap::loadModelStreaming(
         closeMemoryMapping();
         loading_.store(false);
         return false;
+    }
+    
+    // For large files, create lazy pager after header parsing
+    if (mapped_size_ < total_bytes_.load()) {
+        lazy_pager_ = LazyPager_Create(file_handle_, header_.tensor_count, DEFAULT_THERMAL_LIMIT);
+        if (!lazy_pager_) {
+            std::cerr << "❌ Failed to create lazy pager" << std::endl;
+            closeMemoryMapping();
+            loading_.store(false);
+            return false;
+        }
+        LazyPager_AttachModel(lazy_pager_, total_bytes_.load());
     }
     
     if (progress) progress(50, 100, "Parsing metadata");
@@ -182,7 +214,14 @@ bool StreamingGGUFLoaderMMap::createMemoryMapping() {
 }
 
 void StreamingGGUFLoaderMMap::closeMemoryMapping() {
-    if (mapped_base_) {
+    if (lazy_pager_) {
+        LazyPager_Destroy(lazy_pager_);
+        lazy_pager_ = nullptr;
+    }
+    if (mapped_base_ && !metadata_buffer_.empty()) {
+        // For lazy, mapped_base_ points to metadata_buffer_
+        mapped_base_ = nullptr;
+    } else if (mapped_base_) {
         UnmapViewOfFile(mapped_base_);
         mapped_base_ = nullptr;
     }
@@ -194,6 +233,7 @@ void StreamingGGUFLoaderMMap::closeMemoryMapping() {
         CloseHandle(file_handle_);
         file_handle_ = INVALID_HANDLE_VALUE;
     }
+    metadata_buffer_.clear();
     is_open_ = false;
     mapped_size_ = 0;
 }
@@ -278,21 +318,27 @@ const uint8_t* StreamingGGUFLoaderMMap::getTensorMappedPtr(
     
     const TensorRef& ref = it->second;
     
-    if (ref.offset >= mapped_size_) {
-        std::cerr << "❌ Tensor offset out of bounds" << std::endl;
-        return nullptr;
-    }
-    
-    if (ref.offset + ref.size > mapped_size_) {
-        std::cerr << "❌ Tensor size exceeds mapped region" << std::endl;
-        return nullptr;
-    }
-    
     if (out_size) {
         *out_size = ref.size;
     }
     
-    return mapped_base_ + ref.offset;
+    if (lazy_pager_) {
+        // Use lazy pager for large models
+        return static_cast<const uint8_t*>(LazyPager_MapLayer(lazy_pager_, ref.index, ref.offset, ref.size));
+    } else {
+        // Use mapped memory for small models
+        if (ref.offset >= mapped_size_) {
+            std::cerr << "❌ Tensor offset out of bounds" << std::endl;
+            return nullptr;
+        }
+        
+        if (ref.offset + ref.size > mapped_size_) {
+            std::cerr << "❌ Tensor size exceeds mapped region" << std::endl;
+            return nullptr;
+        }
+        
+        return mapped_base_ + ref.offset;
+    }
 }
 
 // =============================================================================

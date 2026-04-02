@@ -16,6 +16,7 @@
 #pragma once
 
 #include "../streaming_gguf_loader.h"
+#include "LazyPagerBridge.hpp"
 #include <windows.h>
 #include <future>
 #include <functional>
@@ -61,6 +62,10 @@ protected:
     HANDLE mapping_handle_;
     uint8_t* mapped_base_;
     uint64_t mapped_size_;
+    
+    // Lazy pager for large models
+    HLAZYPAGER lazy_pager_;
+    std::vector<uint8_t> metadata_buffer_;
     
     // Compression detection
     bool isTensorCompressed(const TensorRef& ref);

@@ -57,26 +57,13 @@ p_CreateFileMappingA        QWORD ?
 p_MapViewOfFile             QWORD ?
 p_UnmapViewOfFile           QWORD ?
 p_CloseHandle               QWORD ?
-p_GetCurrentProcess         QWORD ?
-p_SetPriorityClass          QWORD ?
+
 p_QueryPerformanceCounter   QWORD ?
 p_QueryPerformanceFrequency QWORD ?
 
 ; User32 Functions (Loaded after kernel32 boot)
 p_MessageBoxA               QWORD ?
 p_CreateWindowExA           QWORD ?
-p_RegisterClassExA          QWORD ?
-p_ShowWindow                QWORD ?
-p_UpdateWindow              QWORD ?
-p_GetMessageA               QWORD ?
-p_TranslateMessage          QWORD ?
-p_DispatchMessageA          QWORD ?
-p_DefWindowProcA            QWORD ?
-p_PostQuitMessage           QWORD ?
-p_SetTimer                  QWORD ?
-p_KillTimer                 QWORD ?
-p_SendMessageA              QWORD ?
-p_PostMessageA              QWORD ?
 
 ; ============================================================================
 ; CODE: PEB WALKING & API RESOLUTION (The "Linker Bypass")
@@ -92,8 +79,9 @@ PUBLIC BootstrapAPIs
 
 ; ----------------------------------------------------------------------------
 ; GetKernel32Base - Walk PEB InMemoryOrderModuleList to find kernel32.dll
-; Output: RAX = ImageBase of kernel32.dll (0 if not found)
-; Clobbers: RCX, RDX, R8, R9, R10, R11
+; Output:    RAX = ImageBase of kernel32.dll (0 if not found)
+; Preserves: RBX, RSI, RDI
+; Clobbers:  RCX, RDX, R8, R9, R10, R11
 ; ----------------------------------------------------------------------------
 GetKernel32Base PROC
     push rbx
@@ -110,8 +98,8 @@ GetKernel32Base PROC
     test rax, rax
     jz @@fail
     
-    ; [RAX+20h] = InMemoryOrderModuleList (LIST_ENTRY)
-    lea rbx, [rax + 20h]            ; RBX = ListHead (points to first blink/flink)
+    ; [RAX+10h] = InMemoryOrderModuleList (LIST_ENTRY)
+    lea rbx, [rax + 10h]            ; RBX = ListHead (points to first blink/flink)
     
     ; First entry is the EXE itself
     mov rax, [rbx]                  ; RAX = Flink (First entry)
@@ -137,19 +125,56 @@ GetKernel32Base PROC
     cmp ecx, 12
     jne @@next
     
-    ; Compare "kern" (first 4 wchars)
-    mov r8, QWORD PTR [rdx]
-    mov r9, 06E0072006500006Bh      ; "kern" in little-endian (approx)
-    ; Better: use loop for robust comparison
-    mov r8w, WORD PTR [rdx]
+    ; Full UTF-16 comparison: "kernel32.dll"
+    mov r8w, WORD PTR [rdx]         ; 'k'
     cmp r8w, 006Bh                  ; 'k' = 0x006B
     jne @@next
     
-    mov r8w, WORD PTR [rdx+2]
+    mov r8w, WORD PTR [rdx+2]       ; 'e'
     cmp r8w, 0065h                  ; 'e' = 0x0065
     jne @@next
     
-    ; If first two match, assume it's kernel32 (full comparison would be longer)
+    mov r8w, WORD PTR [rdx+4]       ; 'r'
+    cmp r8w, 0072h                  ; 'r' = 0x0072
+    jne @@next
+    
+    mov r8w, WORD PTR [rdx+6]       ; 'n'
+    cmp r8w, 006Eh                  ; 'n' = 0x006E
+    jne @@next
+    
+    mov r8w, WORD PTR [rdx+8]       ; 'e'
+    cmp r8w, 0065h                  ; 'e' = 0x0065
+    jne @@next
+    
+    mov r8w, WORD PTR [rdx+10]      ; 'l'
+    cmp r8w, 006Ch                  ; 'l' = 0x006C
+    jne @@next
+    
+    mov r8w, WORD PTR [rdx+12]      ; '3'
+    cmp r8w, 0033h                  ; '3' = 0x0033
+    jne @@next
+    
+    mov r8w, WORD PTR [rdx+14]      ; '2'
+    cmp r8w, 0032h                  ; '2' = 0x0032
+    jne @@next
+    
+    mov r8w, WORD PTR [rdx+16]      ; '.'
+    cmp r8w, 002Eh                  ; '.' = 0x002E
+    jne @@next
+    
+    mov r8w, WORD PTR [rdx+18]      ; 'd'
+    cmp r8w, 0064h                  ; 'd' = 0x0064
+    jne @@next
+    
+    mov r8w, WORD PTR [rdx+20]      ; 'l'
+    cmp r8w, 006Ch                  ; 'l' = 0x006C
+    jne @@next
+    
+    mov r8w, WORD PTR [rdx+22]      ; 'l'
+    cmp r8w, 006Ch                  ; 'l' = 0x006C
+    jne @@next
+    
+    ; All 12 characters matched: this is kernel32.dll
     ; Get DllBase at offset 30h
     mov rax, [rsi + 30h]
     jmp @@done
@@ -171,16 +196,16 @@ GetKernel32Base ENDP
 ; ----------------------------------------------------------------------------
 ; GetProcAddressByName - Manual Export Table parsing in mapped DLL
 ; RCX = DllBase, RDX = Function name (ASCII null-terminated)
-; Output: RAX = Function VA (0 if not found)
-; Clobbers: RBX, R8-R15
+; Preserves: RBX, R12, R13, R15
+; Clobbers: RAX, RCX, RDX, RSI, RDI, R8-R11, R14, RFLAGS
 ; ----------------------------------------------------------------------------
 GetProcAddressByName PROC
     push rbx
     push r12
     push r13
-    push r14
+
     push r15
-    sub rsp, 20h
+    sub rsp, 20h            ; Allocate 32 bytes of shadow space for potential Win64 function calls
     
     mov r15, rcx            ; R15 = DllBase
     mov r12, rdx            ; R12 = Function name
@@ -240,8 +265,9 @@ GetProcAddressByName PROC
     inc rsi
     inc rdi
     jmp @@strcmp_loop
-    
 @@found:
+    ; Get ordinal index from OrdinalsArray[Index] (USHORT array)
+    movzx ebx, WORD PTR [r9 + rcx*2] ; EBX = ordinal index into AddressOfFunctions
     ; Get Ordinal from OrdinalsArray[Index] (USHORT array)
     movzx ebx, WORD PTR [r9 + rcx*2] ; EBX = Ordinal Hint
     
@@ -263,8 +289,8 @@ GetProcAddressByName PROC
 @@done:
     add rsp, 20h
     pop r15
-    pop r14
-    pop r13
+
+    add rsp, 20h
     pop r12
     pop rbx
     ret
@@ -277,6 +303,18 @@ GetProcAddressByName ENDP
 ; ============================================================================
 BootstrapAPIs PROC
     push rbx
+
+    ; - At entry: RSP is 16-byte aligned *before* the CALL in the caller.
+    ;   The CALL pushes an 8-byte return address, so on entry we are misaligned by 8.
+    ; - push rbx / push rsi / push rdi: save 3 registers (3 * 8 = 24 bytes).
+    ;   After these pushes the total delta vs. caller's aligned RSP is 8 (retaddr)
+    ;   + 24 (saved regs) = 32 bytes, so RSP is 16-byte aligned again.
+    ; - sub rsp, 40h (64 bytes):
+    ;     * Reserves 20h (32 bytes) of outgoing "shadow space" for functions that
+    ;       BootstrapAPIs itself calls (per Win64 calling convention).
+    ;     * Provides an additional 20h (32 bytes) for local/scratch storage while
+    ;       keeping RSP 16-byte aligned at every CALL site.
+    ;   40h is a multiple of 10h, so alignment is preserved.
     push rsi
     push rdi
     sub rsp, 40h
@@ -299,56 +337,78 @@ BootstrapAPIs PROC
     mov rcx, rbx
     lea rdx, [szLoadLibraryA]
     call [p_GetProcAddress]
+    test rax, rax
+    jz @@fatal_error
     mov [p_LoadLibraryA], rax
     
     mov rcx, rbx
     lea rdx, [szVirtualAlloc]
     call [p_GetProcAddress]
+    test rax, rax
+    jz @@fatal_error
     mov [p_VirtualAlloc], rax
     
     mov rcx, rbx
     lea rdx, [szVirtualFree]
     call [p_GetProcAddress]
+    test rax, rax
+    jz @@fatal_error
     mov [p_VirtualFree], rax
     
     mov rcx, rbx
     lea rdx, [szExitProcess]
     call [p_GetProcAddress]
+    test rax, rax
+    jz @@fatal_error
     mov [p_ExitProcess], rax
     
     mov rcx, rbx
     lea rdx, [szCreateFileA]
     call [p_GetProcAddress]
+    test rax, rax
+    jz @@fatal_error
     mov [p_CreateFileA], rax
     
     mov rcx, rbx
     lea rdx, [szCreateFileMappingA]
     call [p_GetProcAddress]
+    test rax, rax
+    jz @@fatal_error
     mov [p_CreateFileMappingA], rax
     
     mov rcx, rbx
     lea rdx, [szMapViewOfFile]
     call [p_GetProcAddress]
+    test rax, rax
+    jz @@fatal_error
     mov [p_MapViewOfFile], rax
     
     mov rcx, rbx
     lea rdx, [szUnmapViewOfFile]
     call [p_GetProcAddress]
+    test rax, rax
+    jz @@fatal_error
     mov [p_UnmapViewOfFile], rax
     
     mov rcx, rbx
     lea rdx, [szCloseHandle]
     call [p_GetProcAddress]
+    test rax, rax
+    jz @@fatal_error
     mov [p_CloseHandle], rax
     
     mov rcx, rbx
     lea rdx, [szQueryPerformanceCounter]
     call [p_GetProcAddress]
+    test rax, rax
+    jz @@fatal_error
     mov [p_QueryPerformanceCounter], rax
     
     mov rcx, rbx
     lea rdx, [szQueryPerformanceFrequency]
     call [p_GetProcAddress]
+    test rax, rax
+    jz @@fatal_error
     mov [p_QueryPerformanceFrequency], rax
     
     ; Step 4: Load user32.dll and resolve GUI functions (optional)
@@ -410,7 +470,7 @@ szMessageBoxA               BYTE "MessageBoxA", 0
 PUBLIC PEBMain
 PEBMain PROC
     sub rsp, 40h                    ; Standard shadow space + alignment
-    
+
     ; Bootstrap all APIs without kernel32.lib
     call BootstrapAPIs
     test eax, eax

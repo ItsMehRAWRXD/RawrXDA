@@ -21,39 +21,38 @@
 // ============================================================================
 #pragma once
 
-#include <cstdint>
-#include <string>
-#include <vector>
-#include <mutex>
-#include <atomic>
-#include <unordered_map>
-#include <functional>
 #include "../core/model_memory_hotpatch.hpp"
+#include <atomic>
+#include <cstdint>
+#include <functional>
+#include <mutex>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 // ============================================================================
 // SwarmSeed — Reproducibility seed configuration
 // ============================================================================
-struct SwarmSeed {
-    uint64_t    masterSeed;             // Master RNG seed
-    uint64_t    samplerSeed;            // Seed for model temperature sampling
-    uint64_t    dispatchSeed;           // Seed for agent dispatch ordering
-    uint64_t    voteSeed;               // Seed for tie-breaking in vote modes
-    bool        enforceOrdering;        // Force deterministic task dispatch order
-    bool        disableParallelism;     // Force sequential execution for reproducibility
-    bool        fixedTimestamps;        // Use synthetic timestamps (not wall clock)
-    bool        isStrict = false;       // Compatibility: strict reproducibility mode
+struct SwarmSeed
+{
+    uint64_t masterSeed;      // Master RNG seed
+    uint64_t samplerSeed;     // Seed for model temperature sampling
+    uint64_t dispatchSeed;    // Seed for agent dispatch ordering
+    uint64_t voteSeed;        // Seed for tie-breaking in vote modes
+    bool enforceOrdering;     // Force deterministic task dispatch order
+    bool disableParallelism;  // Force sequential execution for reproducibility
+    bool fixedTimestamps;     // Use synthetic timestamps (not wall clock)
+    bool isStrict = false;    // Compatibility: strict reproducibility mode
 
     SwarmSeed()
-        : masterSeed(0),
-          samplerSeed(0),
-          dispatchSeed(0),
-          voteSeed(0),
-          enforceOrdering(true),
-          disableParallelism(false),
-          fixedTimestamps(false) {}
+        : masterSeed(0), samplerSeed(0), dispatchSeed(0), voteSeed(0), enforceOrdering(true), disableParallelism(false),
+          fixedTimestamps(false)
+    {
+    }
 
     /// Create a fully deterministic seed config from a single master seed
-    static SwarmSeed fromMaster(uint64_t master) {
+    static SwarmSeed fromMaster(uint64_t master)
+    {
         SwarmSeed s;
         s.masterSeed = master;
         // Derive sub-seeds via simple hash mixing
@@ -67,7 +66,8 @@ struct SwarmSeed {
     }
 
     /// Create a strict reproducibility mode (sequential, fixed timestamps)
-    static SwarmSeed strict(uint64_t master) {
+    static SwarmSeed strict(uint64_t master)
+    {
         SwarmSeed s = fromMaster(master);
         s.disableParallelism = true;
         s.fixedTimestamps = true;
@@ -78,36 +78,38 @@ struct SwarmSeed {
 // ============================================================================
 // SwarmTraceEntry — One step in a swarm execution trace
 // ============================================================================
-struct SwarmTraceEntry {
-    uint64_t    sequenceId;             // Monotonic sequence number
-    uint64_t    timestamp;              // Wall clock or synthetic timestamp
-    std::string agentId;                // Which agent produced this step
-    std::string roleName;               // Reasoning role (thinker, critic, etc.)
-    std::string input;                  // Input to the agent at this step
-    std::string output;                 // Output from the agent
-    uint64_t    inputHash;              // FNV-1a hash of input
-    uint64_t    outputHash;             // FNV-1a hash of output
-    double      durationMs;             // Execution time
-    float       confidence;             // Agent's confidence in output
-    int         depthUsed;              // Reasoning depth at this step
+struct SwarmTraceEntry
+{
+    uint64_t sequenceId;   // Monotonic sequence number
+    uint64_t timestamp;    // Wall clock or synthetic timestamp
+    std::string agentId;   // Which agent produced this step
+    std::string roleName;  // Reasoning role (thinker, critic, etc.)
+    std::string input;     // Input to the agent at this step
+    std::string output;    // Output from the agent
+    uint64_t inputHash;    // FNV-1a hash of input
+    uint64_t outputHash;   // FNV-1a hash of output
+    double durationMs;     // Execution time
+    float confidence;      // Agent's confidence in output
+    int depthUsed;         // Reasoning depth at this step
 };
 
 // ============================================================================
 // SwarmTrace — Complete execution trace for replay/verification
 // ============================================================================
-struct SwarmTrace {
-    std::string             traceId;
-    uint64_t                id = 0;             // Compatibility: hash of traceId for display
-    SwarmSeed               seed;
-    std::string             originalInput;
-    uint64_t                originalInputHash;
-    std::string             finalOutput;
-    uint64_t                finalOutputHash;
+struct SwarmTrace
+{
+    std::string traceId;
+    uint64_t id = 0;  // Compatibility: hash of traceId for display
+    SwarmSeed seed;
+    std::string originalInput;
+    uint64_t originalInputHash;
+    std::string finalOutput;
+    uint64_t finalOutputHash;
     std::vector<SwarmTraceEntry> entries;
-    std::vector<SwarmTraceEntry> steps;         // Compatibility: alias/sync with entries
-    double                  totalDurationMs;
-    int                     agentCount;
-    std::string             profileName;        // Reasoning profile used
+    std::vector<SwarmTraceEntry> steps;  // Compatibility: alias/sync with entries
+    double totalDurationMs;
+    int agentCount;
+    std::string profileName;  // Reasoning profile used
 
     /// Compute a combined hash of all entries for integrity check
     uint64_t computeTraceHash() const;
@@ -119,17 +121,19 @@ struct SwarmTrace {
 // ============================================================================
 // SwarmReplayResult — Outcome of a trace replay
 // ============================================================================
-struct SwarmReplayResult {
-    bool        reproducible;           // True if replay produced same output
-    bool        partialMatch;           // True if trace diverged mid-way
-    int         divergenceStep;         // Step index where divergence occurred (-1 if none)
+struct SwarmReplayResult
+{
+    bool reproducible;   // True if replay produced same output
+    bool partialMatch;   // True if trace diverged mid-way
+    int divergenceStep;  // Step index where divergence occurred (-1 if none)
     std::string originalOutput;
     std::string replayOutput;
-    uint64_t    originalHash;
-    uint64_t    replayHash;
+    uint64_t originalHash;
+    uint64_t replayHash;
     std::string detail;
 
-    static SwarmReplayResult match(const std::string& output, uint64_t hash) {
+    static SwarmReplayResult match(const std::string& output, uint64_t hash)
+    {
         SwarmReplayResult r;
         r.reproducible = true;
         r.partialMatch = false;
@@ -142,8 +146,8 @@ struct SwarmReplayResult {
         return r;
     }
 
-    static SwarmReplayResult mismatch(int step, const std::string& orig,
-                                       const std::string& replay) {
+    static SwarmReplayResult mismatch(int step, const std::string& orig, const std::string& replay)
+    {
         SwarmReplayResult r;
         r.reproducible = false;
         r.partialMatch = (step > 0);
@@ -158,8 +162,9 @@ struct SwarmReplayResult {
 // ============================================================================
 // DeterministicSwarmEngine — Singleton
 // ============================================================================
-class DeterministicSwarmEngine {
-public:
+class DeterministicSwarmEngine
+{
+  public:
     static DeterministicSwarmEngine& instance();
 
     // ---- Seed Management ----
@@ -182,9 +187,22 @@ public:
     /// Start recording a new trace
     void beginTrace(const std::string& input, const std::string& profileName);
     /// Record one execution step
-    void recordStep(const std::string& agentId, const std::string& roleName,
-                    const std::string& input, const std::string& output,
-                    double durationMs, float confidence, int depth);
+    void recordStep(const std::string& agentId, const std::string& roleName, const std::string& input,
+                    const std::string& output, double durationMs, float confidence, int depth);
+
+    // Compatibility overloads (legacy call sites pass numeric ids / C strings).
+    void recordStep(int agentId, const std::string& roleName, const std::string& input, const std::string& output,
+                    double durationMs, float confidence, int depth)
+    {
+        recordStep(std::to_string(agentId), roleName, input, output, durationMs, confidence, depth);
+    }
+    void recordStep(int agentId, const char* roleName, const char* input, const char* output, double durationMs,
+                    float confidence, int depth)
+    {
+        recordStep(std::to_string(agentId), roleName ? std::string(roleName) : std::string(),
+                   input ? std::string(input) : std::string(), output ? std::string(output) : std::string(), durationMs,
+                   confidence, depth);
+    }
     /// Finalize trace with final output
     SwarmTrace endTrace(const std::string& finalOutput);
 
@@ -207,7 +225,8 @@ public:
     void clearTraceLibrary();
 
     // ---- Statistics ----
-    struct Stats {
+    struct Stats
+    {
         std::atomic<uint64_t> totalTraces{0};
         std::atomic<uint64_t> totalReplays{0};
         std::atomic<uint64_t> reproducibleReplays{0};
@@ -216,36 +235,36 @@ public:
     const Stats& getStats() const { return m_stats; }
     void resetStats();
 
-private:
+  private:
     DeterministicSwarmEngine();
     ~DeterministicSwarmEngine() = default;
     DeterministicSwarmEngine(const DeterministicSwarmEngine&) = delete;
     DeterministicSwarmEngine& operator=(const DeterministicSwarmEngine&) = delete;
 
     // xorshift64* PRNG (deterministic, fast)
-    struct PRNG {
+    struct PRNG
+    {
         uint64_t state;
-        uint64_t next() {
+        uint64_t next()
+        {
             state ^= state >> 12;
             state ^= state << 25;
             state ^= state >> 27;
             return state * 0x2545F4914F6CDD1DULL;
         }
-        float nextFloat() {
-            return static_cast<float>(next() >> 40) / static_cast<float>(1ULL << 24);
-        }
+        float nextFloat() { return static_cast<float>(next() >> 40) / static_cast<float>(1ULL << 24); }
     };
 
     mutable std::mutex m_mutex;
-    SwarmSeed          m_seed;
-    PRNG               m_samplerPRNG;
-    PRNG               m_dispatchPRNG;
-    PRNG               m_votePRNG;
+    SwarmSeed m_seed;
+    PRNG m_samplerPRNG;
+    PRNG m_dispatchPRNG;
+    PRNG m_votePRNG;
     std::atomic<uint64_t> m_sequence{0};
 
     // Active trace being recorded
-    SwarmTrace         m_activeTrace;
-    bool               m_recording = false;
+    SwarmTrace m_activeTrace;
+    bool m_recording = false;
 
     // Trace library
     std::unordered_map<std::string, SwarmTrace> m_traceLibrary;

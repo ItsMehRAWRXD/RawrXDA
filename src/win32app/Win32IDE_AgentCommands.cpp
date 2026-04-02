@@ -686,7 +686,7 @@ void Win32IDE::initializeAgenticBridge()
                 {
                     try
                     {
-                        m_nativeEngine = std::make_unique<RawrXD::CPUInferenceEngine>();
+                        m_nativeEngine = RawrXD::CPUInferenceEngine::GetSharedInstance();
                         m_nativeEngineLoaded = false;
                         LOG_INFO("Native CPU Inference Engine created");
                         appendToOutput("✅ Native CPU Inference Engine created\n", "Output", OutputSeverity::Info);
@@ -1586,6 +1586,32 @@ void Win32IDE::handleAgentCommand(int commandId)
                            OutputSeverity::Info);
             break;
         }
+        case IDM_AI_MODE_SWARM:
+        {
+            bool current = (GetMenuState(m_hMenu, IDM_AI_MODE_SWARM, MF_BYCOMMAND) & MF_CHECKED);
+            CheckMenuItem(m_hMenu, IDM_AI_MODE_SWARM, current ? MF_UNCHECKED : MF_CHECKED);
+            if (m_agenticBridge)
+                m_agenticBridge->SetSwarmMode(!current);
+            appendToOutput(std::string("Swarm Mode ") + (!current ? "ENABLED" : "DISABLED") + "\n", "Output",
+                           OutputSeverity::Info);
+            break;
+        }
+        case IDM_AI_LOAD_SWARM_DIR:
+        {
+            // Load swarm models from F:\OllamaModels
+            if (m_agenticBridge)
+            {
+                bool success = m_agenticBridge->LoadSwarmFromDirectory("F:\\OllamaModels", 5);
+                appendToOutput(std::string("Swarm Directory Load ") + (success ? "SUCCESS" : "FAILED") + "\n", "Output",
+                               success ? OutputSeverity::Info : OutputSeverity::Error);
+                if (!success && m_agenticBridge->GetLastLoadError().length() > 0)
+                {
+                    appendToOutput("Error: " + m_agenticBridge->GetLastLoadError() + "\n", "Output",
+                                   OutputSeverity::Error);
+                }
+            }
+            break;
+        }
 
         // --- Context Window Size ---
         case IDM_AI_CONTEXT_4K:
@@ -1595,6 +1621,7 @@ void Win32IDE::handleAgentCommand(int commandId)
         case IDM_AI_CONTEXT_256K:
         case IDM_AI_CONTEXT_512K:
         case IDM_AI_CONTEXT_1M:
+        case IDM_AI_CONTEXT_UNLIMITED:
         {
             int size = 4096;
             if (commandId == IDM_AI_CONTEXT_32K)
@@ -1609,6 +1636,8 @@ void Win32IDE::handleAgentCommand(int commandId)
                 size = 524288;
             if (commandId == IDM_AI_CONTEXT_1M)
                 size = 1048576;
+            if (commandId == IDM_AI_CONTEXT_UNLIMITED)
+                size = 10485760;  // 10M tokens for unlimited
 
             m_inferenceConfig.contextWindow = size;
             if (m_agenticBridge)
@@ -1627,6 +1656,8 @@ void Win32IDE::handleAgentCommand(int commandId)
                     s = "512k";
                 if (commandId == IDM_AI_CONTEXT_1M)
                     s = "1m";
+                if (commandId == IDM_AI_CONTEXT_UNLIMITED)
+                    s = "unlimited";
                 m_agenticBridge->SetContextSize(s);
             }
             appendToOutput("Context window set to " + std::to_string(size) + " tokens\n", "Output",
@@ -1640,6 +1671,7 @@ void Win32IDE::handleAgentCommand(int commandId)
             CheckMenuItem(m_hMenu, IDM_AI_CONTEXT_256K, MF_UNCHECKED);
             CheckMenuItem(m_hMenu, IDM_AI_CONTEXT_512K, MF_UNCHECKED);
             CheckMenuItem(m_hMenu, IDM_AI_CONTEXT_1M, MF_UNCHECKED);
+            CheckMenuItem(m_hMenu, IDM_AI_CONTEXT_UNLIMITED, MF_UNCHECKED);
 
             // Check active item
             CheckMenuItem(m_hMenu, commandId, MF_CHECKED);

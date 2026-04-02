@@ -67,6 +67,9 @@ struct SovereignConfig
     uint32_t max_memory_mb = 4096;
     uint32_t target_fps = 60;
     bool enable_vector7_autogen = true;
+    bool model_prefetch_enabled = true;
+    bool model_workingset_lock_enabled = false;
+    bool silence_privilege_warnings = true;
     __m512i zmm_signature;
 };
 
@@ -94,7 +97,9 @@ __m512i GenerateZMMSignature(const SovereignConfig& config)
 
     // Hash theme and performance settings
     hash = (static_cast<uint64_t>(config.theme) << 32) | (config.max_memory_mb << 16) | (config.target_fps << 8) |
-           (config.enable_vector7_autogen ? 1 : 0);
+           (config.enable_vector7_autogen ? 1 : 0) | (config.model_prefetch_enabled ? (1ull << 1) : 0) |
+           (config.model_workingset_lock_enabled ? (1ull << 2) : 0) |
+           (config.silence_privilege_warnings ? (1ull << 3) : 0);
     signature = _mm512_xor_si512(signature, _mm512_set1_epi64(hash));
 
     // Add entropy from open tabs
@@ -149,7 +154,10 @@ void to_json(nlohmann::json& j, const SovereignConfig& config)
                        {"active_tab_index", config.active_tab_index},
                        {"max_memory_mb", config.max_memory_mb},
                        {"target_fps", config.target_fps},
-                       {"enable_vector7_autogen", config.enable_vector7_autogen}};
+                       {"enable_vector7_autogen", config.enable_vector7_autogen},
+                       {"model_prefetch_enabled", config.model_prefetch_enabled},
+                       {"model_workingset_lock_enabled", config.model_workingset_lock_enabled},
+                       {"silence_privilege_warnings", config.silence_privilege_warnings}};
 
     for (const auto& rf : config.recent_files)
     {
@@ -200,6 +208,14 @@ void from_json(const nlohmann::json& j, SovereignConfig& config)
     config.max_memory_mb = j.at("max_memory_mb").get<uint32_t>();
     config.target_fps = j.at("target_fps").get<uint32_t>();
     config.enable_vector7_autogen = j.at("enable_vector7_autogen").get<bool>();
+
+    // Optional keys (backward compatible)
+    if (j.contains("model_prefetch_enabled"))
+        config.model_prefetch_enabled = j.at("model_prefetch_enabled").get<bool>();
+    if (j.contains("model_workingset_lock_enabled"))
+        config.model_workingset_lock_enabled = j.at("model_workingset_lock_enabled").get<bool>();
+    if (j.contains("silence_privilege_warnings"))
+        config.silence_privilege_warnings = j.at("silence_privilege_warnings").get<bool>();
 }
 
 // Persistence with Sovereign Integrity
@@ -346,6 +362,9 @@ void Win32IDE::loadSettings()
     m_settings.themeId = static_cast<int>(config.theme);
     m_settings.max_memory_mb = config.max_memory_mb;
     m_settings.target_fps = config.target_fps;
+    m_settings.modelPrefetchEnabled = config.model_prefetch_enabled;
+    m_settings.modelWorkingSetLockEnabled = config.model_workingset_lock_enabled;
+    m_settings.silencePrivilegeWarnings = config.silence_privilege_warnings;
 
     // Set defaults for unmapped fields
     m_settings.autoSaveEnabled = false;
@@ -382,6 +401,9 @@ void Win32IDE::saveSettings()
 
     // Map IDESettings to SovereignConfig (partial)
     config.theme = static_cast<EditorTheme>(m_settings.themeId);
+    config.model_prefetch_enabled = m_settings.modelPrefetchEnabled;
+    config.model_workingset_lock_enabled = m_settings.modelWorkingSetLockEnabled;
+    config.silence_privilege_warnings = m_settings.silencePrivilegeWarnings;
 
     UpdateSovereignConfig(config);
 }

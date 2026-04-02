@@ -1,13 +1,14 @@
 #pragma once
 #include "RawrXD_Interfaces.h"
-#include <string>
-#include <vector>
-#include <map>
-#include <fstream>
 #include <cstdint>
-#include <variant>
-#include <unordered_map>
+#include <fstream>
+#include <map>
 #include <mutex>
+#include <string>
+#include <unordered_map>
+#include <variant>
+#include <vector>
+
 
 // We need windows.h for Handles in the Loader
 #ifndef WIN32_LEAN_AND_MEAN
@@ -30,8 +31,8 @@ typedef void* VkCommandBuffer;
 // Basic types for GGUF (defined in RawrXD_Interfaces.h)
 using RawrXD::GGMLType;
 using RawrXD::GGUFHeader;
-using RawrXD::TensorInfo;
 using RawrXD::GGUFMetadata;
+using RawrXD::TensorInfo;
 
 
 /*
@@ -42,13 +43,13 @@ public:
 
     bool Open(const std::string& filepath);
     void Close();
-    
+
     // Original API
     bool ParseHeader();
-    
+
     // New API from user request (adapted)
     bool Load(VkDevice vkDevice, VkPhysicalDevice vkPhysDevice);
-    
+
     // Helpers
     uint64_t GetMetadata(const std::string& key);
     TensorInfo& GetTensor(const std::string& name);
@@ -57,9 +58,9 @@ private:
     std::ifstream file_;
     std::string filepath_;
     bool is_open_;
-    
+
     GGUFHeader header_val; // Renamed to avoid collision with struct type
-    
+
     // Handles for Memory Mapping
     HANDLE hFile = INVALID_HANDLE_VALUE;
     HANDLE hMapping = nullptr;
@@ -75,14 +76,14 @@ private:
 
     std::mutex tensorMutex;
     std::unordered_map<std::string, TensorInfo> tensors;
-    
+
     // Internal loading methods
     void CreateVulkanResources();
     void LoadTensorAsync(TensorInfo& info);
     void UploadF32(TensorInfo& info, void* src, size_t count);
     void DequantAndUploadQ4_0(TensorInfo& info, void* src, size_t count);
     // ... Add others as needed, simplified for this integration
-    
+
     void BeginCommandBuffer();
     void EndCommandBuffer();
     uint32_t FindMemoryType(uint32_t typeFilter, uint32_t props);
@@ -95,24 +96,27 @@ private:
 // but directing everything to the RawrXD namespace versions.
 typedef RawrXD::IGGUFLoader IGGUFLoader;
 
-class GGUFLoader : public RawrXD::IGGUFLoader {
-public:
+class GGUFLoader : public RawrXD::IGGUFLoader
+{
+  public:
     GGUFLoader();
     virtual ~GGUFLoader();
-    
+
+    static uint64_t AlignTo32Bytes(uint64_t offset) { return (offset + 31ULL) & ~31ULL; }
+
     bool Open(const std::string& filepath) override;
     bool Close() override;
-    
+
     bool ParseHeader() override;
     RawrXD::GGUFHeader GetHeader() const override { return header_; }
-    
-    bool ParseMetadata() override; 
+
+    bool ParseMetadata() override;
     RawrXD::GGUFMetadata GetMetadata() const override { return metadata_; }
 
     // Lane E: lightweight integrity checks and trivial repair path.
     bool VerifyIntegrity(std::string* reason = nullptr);
     bool RepairTrivialIssues(std::string* report = nullptr);
-    
+
     std::vector<RawrXD::TensorInfo> GetTensorInfo() const override { return tensors_; }
     bool LoadTensorRange(size_t start_idx, size_t count, std::vector<uint8_t>& data) override;
 
@@ -132,7 +136,13 @@ public:
     virtual bool Load(VkDevice vkDevice, VkPhysicalDevice vkPhysDevice);
     virtual void CreateVulkanResources();
 
-    enum class CompressionType { NONE, BRUTAL_GZIP, ZLIB, DEFLATE };
+    enum class CompressionType
+    {
+        NONE,
+        BRUTAL_GZIP,
+        ZLIB,
+        DEFLATE
+    };
     virtual bool SetCompressionType(CompressionType type);
     virtual bool IsCompressed() const { return false; }
     virtual bool DecompressData(const std::vector<uint8_t>& in, std::vector<uint8_t>& out);
@@ -140,7 +150,8 @@ public:
 
     const void* GetBaseAddress() const { return mappedView; }
 
-    struct UnsupportedTypeInfo {
+    struct UnsupportedTypeInfo
+    {
         uint32_t type_value;
         std::string type_name;
         std::vector<std::string> tensor_names;
@@ -158,7 +169,7 @@ public:
     VkQueue transferQueue = nullptr;
     VkCommandPool cmdPool = nullptr;
     VkCommandBuffer cmdBuffer = nullptr;
-    
+
     // Windows Handles for MappedView
     HANDLE hFile = INVALID_HANDLE_VALUE;
     HANDLE hMapping = nullptr;
@@ -167,15 +178,15 @@ public:
     CompressionType compression_type_ = CompressionType::NONE;
     std::mutex tensorMutex;
 
-    template<typename T>
-    bool ReadValue(T& val);
+    template <typename T> bool ReadValue(T& val);
     bool ReadString(std::string& str);
     size_t CalculateTensorSize(const std::vector<uint64_t>& shape, RawrXD::GGMLType type) const;
-protected:
+
+  protected:
     std::string filepath_;
     std::ifstream file_;
     bool is_open_;
-    
+
     RawrXD::GGUFHeader header_;
     RawrXD::GGUFMetadata metadata_;
     std::vector<RawrXD::TensorInfo> tensors_;

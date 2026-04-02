@@ -12,6 +12,8 @@
 // This is the feature that builds agent trust — the user is always in control.
 // ============================================================================
 
+#include <windows.h>
+
 #include "../agentic/agentic_audit_sink.hpp"
 #include "../agentic/agentic_orchestrator_integration.hpp"
 #include "../full_agentic_ide/AgenticPlanningOrchestrator.h"

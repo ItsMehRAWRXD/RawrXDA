@@ -25,7 +25,7 @@ namespace RawrXD {
 namespace Parity {
 
 // ----------------------------------------------------------------------------
-// Cursor parity: 8 modules, 49 command IDs (11500–11574)
+// Cursor parity: 8 modules, 48 assigned command IDs (11500–11574)
 // ----------------------------------------------------------------------------
 constexpr int CURSOR_PARITY_FIRST_ID = 11500;
 constexpr int CURSOR_PARITY_LAST_ID  = 11574;
@@ -35,10 +35,10 @@ enum class CursorModule : uint8_t {
     TelemetryExport = 0,  // 8 commands
     AgenticComposer,      // 6 commands
     ContextMention,       // 4 commands
-    VisionEncoder,       // 4 commands
-    RefactoringEngine,   // 9 commands
+    VisionEncoder,        // 5 commands
+    RefactoringEngine,    // 8 commands
     LanguageRegistry,    // 4 commands
-    SemanticIndex,       // 9 commands
+    SemanticIndex,        // 8 commands
     ResourceGenerator,   // 5 commands
 };
 

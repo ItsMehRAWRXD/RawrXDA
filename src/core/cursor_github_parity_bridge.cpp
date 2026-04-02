@@ -10,6 +10,8 @@
 
 #include "../../include/cursor_github_parity_bridge.h"
 
+#include <array>
+
 namespace RawrXD
 {
 namespace Parity
@@ -19,11 +21,22 @@ static const int s_moduleCommandCounts[] = {
     8,  // TelemetryExport
     6,  // AgenticComposer
     4,  // ContextMention
-    4,  // VisionEncoder
-    9,  // RefactoringEngine
+    5,  // VisionEncoder
+    8,  // RefactoringEngine
     4,  // LanguageRegistry
-    9,  // SemanticIndex
+    8,  // SemanticIndex
     5,  // ResourceGenerator
+};
+
+static constexpr std::array<int, 48> kCursorParityCommandIds = {
+    11500, 11501, 11502, 11503, 11504, 11505, 11506, 11507,
+    11510, 11511, 11512, 11513, 11514, 11515,
+    11520, 11521, 11522, 11523,
+    11530, 11531, 11532, 11533, 11534,
+    11540, 11541, 11542, 11543, 11544, 11545, 11546, 11547,
+    11550, 11551, 11552, 11553,
+    11560, 11561, 11562, 11563, 11564, 11565, 11566, 11567,
+    11570, 11571, 11572, 11573, 11574,
 };
 
 int cursorModuleCommandCount(CursorModule m)
@@ -34,41 +47,43 @@ int cursorModuleCommandCount(CursorModule m)
     return s_moduleCommandCounts[idx];
 }
 
-bool isFeaturesCommand(int commandId)
+bool isCursorParityCommand(int commandId)
 {
     if (commandId < CURSOR_PARITY_FIRST_ID || commandId > CURSOR_PARITY_LAST_ID)
         return false;
-    // Ranges per module (must match Win32IDE.h IDs)
-    if (commandId >= 11500 && commandId <= 11507)
-        return true;  // Telemetry
-    if (commandId >= 11510 && commandId <= 11515)
-        return true;  // Composer
-    if (commandId >= 11520 && commandId <= 11523)
-        return true;  // Mention
-    if (commandId >= 11530 && commandId <= 11533)
-        return true;  // Vision
-    if (commandId >= 11540 && commandId <= 11547)
-        return true;  // Refactor
-    if (commandId >= 11550 && commandId <= 11553)
-        return true;  // Lang
-    if (commandId >= 11560 && commandId <= 11567)
-        return true;  // Semantic
-    if (commandId >= 11570 && commandId <= 11574)
-        return true;  // Resource
+    for (const int id : kCursorParityCommandIds) {
+        if (id == commandId)
+            return true;
+    }
     return false;
 }
 
-int verifyFeaturesWiring(void* /*win32IDEContext*/)
+int verifyCursorParityWiring(void* win32IDEContext)
 {
-    // Optional: if Win32IDE passes a context with function pointers or vtable,
-    // call each module init and return first failing index (1-based).
-    // For now, just verify module count and ID range.
-    constexpr int expectedCommands = 49;
+    if (win32IDEContext == nullptr)
+        return 1;
+
+    constexpr int expectedCommands = static_cast<int>(kCursorParityCommandIds.size());
     int total = 0;
     for (int i = 0; i < CURSOR_PARITY_MODULE_COUNT; ++i)
         total += cursorModuleCommandCount(static_cast<CursorModule>(i));
     if (total != expectedCommands)
-        return 1;  // module count mismatch
+        return 2;  // module count mismatch
+
+    // Check that all listed parity IDs stay inside the declared public range.
+    for (const int id : kCursorParityCommandIds) {
+        if (id < CURSOR_PARITY_FIRST_ID || id > CURSOR_PARITY_LAST_ID)
+            return 3;
+    }
+
+    // Ensure ID list has no duplicates (small fixed size, O(n^2) is fine).
+    for (size_t i = 0; i < kCursorParityCommandIds.size(); ++i) {
+        for (size_t j = i + 1; j < kCursorParityCommandIds.size(); ++j) {
+            if (kCursorParityCommandIds[i] == kCursorParityCommandIds[j])
+                return 4;
+        }
+    }
+
     return 0;
 }
 

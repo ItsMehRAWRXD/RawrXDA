@@ -15,6 +15,7 @@
 #include "../core/omega_orchestrator.hpp"
 #include "IDEConfig.h"
 #include "Win32IDE.h"
+#include "Win32IDE_Types.h"
 #include "win32_feature_adapter.h"
 
 
@@ -10902,6 +10903,7 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({IDM_AI_CONTEXT_256K, "AI: Set Context Window 256K", "", "AI"});
     m_commandRegistry.push_back({IDM_AI_CONTEXT_512K, "AI: Set Context Window 512K", "", "AI"});
     m_commandRegistry.push_back({IDM_AI_CONTEXT_1M, "AI: Set Context Window 1M", "", "AI"});
+    m_commandRegistry.push_back({IDM_AI_CONTEXT_UNLIMITED, "AI: Set Context Window Unlimited (Bypass)", "", "AI"});
 
     // Agent Execution
     m_commandRegistry.push_back({IDM_AGENT_START_LOOP, "Agent: Start Agent Loop", "", "Agent"});
@@ -12484,66 +12486,40 @@ void Win32IDE::showThermalDashboard()
 // ============================================================================
 bool Win32IDE::handleFeaturesCommand(int commandId)
 {
+    // ── Telemetry Export (11500–11507) ───────────────────────────────────
+    if (commandId >= IDM_TELEXPORT_JSON && commandId <= IDM_TELEXPORT_AUTO_STOP)
+    {
+        return handleTelemetryExportCommand(commandId);
+    }
+
+    // ── Agentic Composer UX (11510–11515) ─────────────────────────────────
+    if (commandId >= IDM_COMPOSER_NEW_SESSION && commandId <= IDM_COMPOSER_SHOW_METRICS)
+    {
+        return handleComposerUXCommand(commandId);
+    }
+
+    // ── Context Mention Parser (11520–11523) ─────────────────────────────
+    if (commandId >= IDM_MENTION_PARSE && commandId <= IDM_MENTION_REGISTER_CUSTOM)
+    {
+        return handleMentionParserCommand(commandId);
+    }
+
+    // ── Vision Encoder (11530–11534) ──────────────────────────────────────
+    if (commandId >= IDM_VISION_LOAD_FILE && commandId <= IDM_VISION_VIEW_GUI_HOTPATCH)
+    {
+        return handleVisionEncoderCommand(commandId);
+    }
+
     // ── Refactoring Plugin (11540–11547) ──────────────────────────────────
     if (commandId >= IDM_REFACTOR_EXTRACT_METHOD && commandId <= IDM_REFACTOR_LOAD_PLUGIN)
     {
-        if (!m_refactoringManager)
-            initRefactoringPlugin();
-        switch (commandId)
-        {
-            case IDM_REFACTOR_EXTRACT_METHOD:
-                cmdRefactorExtractMethod();
-                break;
-            case IDM_REFACTOR_EXTRACT_VARIABLE:
-                cmdRefactorExtractVariable();
-                break;
-            case IDM_REFACTOR_RENAME_SYMBOL:
-                cmdRefactorRenameSymbol();
-                break;
-            case IDM_REFACTOR_ORGANIZE_INCLUDES:
-                cmdRefactorOrganizeIncludes();
-                break;
-            case IDM_REFACTOR_CONVERT_AUTO:
-                cmdRefactorConvertToAuto();
-                break;
-            case IDM_REFACTOR_REMOVE_DEAD_CODE:
-                cmdRefactorRemoveDeadCode();
-                break;
-            case IDM_REFACTOR_SHOW_ALL:
-                cmdRefactorShowAll();
-                break;
-            case IDM_REFACTOR_LOAD_PLUGIN:
-                cmdRefactorLoadPlugin();
-                break;
-            default:
-                break;
-        }
-        return true;
+        return handleRefactoringCommand(commandId);
     }
 
     // ── Language Plugin (11550–11553) ────────────────────────────────────
     if (commandId >= IDM_LANG_DETECT && commandId <= IDM_LANG_SET_FOR_FILE)
     {
-        if (!m_languageManager)
-            initLanguagePlugin();
-        switch (commandId)
-        {
-            case IDM_LANG_DETECT:
-                cmdLanguageDetect();
-                break;
-            case IDM_LANG_LIST_ALL:
-                cmdLanguageListAll();
-                break;
-            case IDM_LANG_LOAD_PLUGIN:
-                cmdLanguageLoadPlugin();
-                break;
-            case IDM_LANG_SET_FOR_FILE:
-                cmdLanguageSetForFile();
-                break;
-            default:
-                break;
-        }
-        return true;
+        return handleLanguageCommand(commandId);
     }
 
     // ── Semantic Index (11560–11567) ─────────────────────────────────────
@@ -12555,29 +12531,7 @@ bool Win32IDE::handleFeaturesCommand(int commandId)
     // ── Resource Generator (11570–11574) ─────────────────────────────────
     if (commandId >= IDM_RESOURCE_GENERATE && commandId <= IDM_RESOURCE_LOAD_PLUGIN)
     {
-        if (!m_resourceManager)
-            initResourceGenerator();
-        switch (commandId)
-        {
-            case IDM_RESOURCE_GENERATE:
-                cmdResourceGenerate();
-                break;
-            case IDM_RESOURCE_GEN_PROJECT:
-                cmdResourceGenerateProject();
-                break;
-            case IDM_RESOURCE_LIST_TEMPLATES:
-                cmdResourceListTemplates();
-                break;
-            case IDM_RESOURCE_SEARCH:
-                cmdResourceSearchTemplates();
-                break;
-            case IDM_RESOURCE_LOAD_PLUGIN:
-                cmdResourceLoadPlugin();
-                break;
-            default:
-                break;
-        }
-        return true;
+        return handleResourceGenCommand(commandId);
     }
 
     // ── Enterprise Stress Tests (11575–11577) ────────────────────────────
@@ -12602,6 +12556,119 @@ bool Win32IDE::handleFeaturesCommand(int commandId)
     }
 
     return false;
+}
+
+bool Win32IDE::verifyFeatureRoutingCoverageAtStartup(std::string* report)
+{
+    static const int kExpected[] = {
+        IDM_TELEXPORT_JSON,
+        IDM_TELEXPORT_CSV,
+        IDM_TELEXPORT_PROMETHEUS,
+        IDM_TELEXPORT_OTLP,
+        IDM_TELEXPORT_AUDIT_LOG,
+        IDM_TELEXPORT_VERIFY_CHAIN,
+        IDM_TELEXPORT_AUTO_START,
+        IDM_TELEXPORT_AUTO_STOP,
+        IDM_COMPOSER_NEW_SESSION,
+        IDM_COMPOSER_END_SESSION,
+        IDM_COMPOSER_APPROVE_ALL,
+        IDM_COMPOSER_REJECT_ALL,
+        IDM_COMPOSER_SHOW_TRANSCRIPT,
+        IDM_COMPOSER_SHOW_METRICS,
+        IDM_MENTION_PARSE,
+        IDM_MENTION_SUGGEST,
+        IDM_MENTION_ASSEMBLE_CTX,
+        IDM_MENTION_REGISTER_CUSTOM,
+        IDM_VISION_LOAD_FILE,
+        IDM_VISION_PASTE_CLIPBOARD,
+        IDM_VISION_SCREENSHOT,
+        IDM_VISION_BUILD_PAYLOAD,
+        IDM_VISION_VIEW_GUI_HOTPATCH,
+        IDM_REFACTOR_EXTRACT_METHOD,
+        IDM_REFACTOR_EXTRACT_VARIABLE,
+        IDM_REFACTOR_RENAME_SYMBOL,
+        IDM_REFACTOR_ORGANIZE_INCLUDES,
+        IDM_REFACTOR_CONVERT_AUTO,
+        IDM_REFACTOR_REMOVE_DEAD_CODE,
+        IDM_REFACTOR_SHOW_ALL,
+        IDM_REFACTOR_LOAD_PLUGIN,
+        IDM_LANG_DETECT,
+        IDM_LANG_LIST_ALL,
+        IDM_LANG_LOAD_PLUGIN,
+        IDM_LANG_SET_FOR_FILE,
+        IDM_SEMANTIC_BUILD_INDEX,
+        IDM_SEMANTIC_FUZZY_SEARCH,
+        IDM_SEMANTIC_FIND_REFS,
+        IDM_SEMANTIC_SHOW_DEPS,
+        IDM_SEMANTIC_TYPE_HIERARCHY,
+        IDM_SEMANTIC_CALL_GRAPH,
+        IDM_SEMANTIC_FIND_CYCLES,
+        IDM_SEMANTIC_LOAD_PLUGIN,
+        IDM_RESOURCE_GENERATE,
+        IDM_RESOURCE_GEN_PROJECT,
+        IDM_RESOURCE_LIST_TEMPLATES,
+        IDM_RESOURCE_SEARCH,
+        IDM_RESOURCE_LOAD_PLUGIN,
+        IDM_ENTERPRISE_STRESS_RUN,
+        IDM_ENTERPRISE_STRESS_STOP,
+        IDM_ENTERPRISE_STRESS_SHOW,
+    };
+
+    auto isHandledByFeatureSubrouter = [](int id) {
+        if (id >= IDM_TELEXPORT_JSON && id <= IDM_TELEXPORT_AUTO_STOP)
+            return true;
+        if (id >= IDM_COMPOSER_NEW_SESSION && id <= IDM_COMPOSER_SHOW_METRICS)
+            return true;
+        if (id >= IDM_MENTION_PARSE && id <= IDM_MENTION_REGISTER_CUSTOM)
+            return true;
+        if (id >= IDM_VISION_LOAD_FILE && id <= IDM_VISION_VIEW_GUI_HOTPATCH)
+            return true;
+        if (id >= IDM_REFACTOR_EXTRACT_METHOD && id <= IDM_REFACTOR_LOAD_PLUGIN)
+            return true;
+        if (id >= IDM_LANG_DETECT && id <= IDM_LANG_SET_FOR_FILE)
+            return true;
+        if (id >= IDM_SEMANTIC_BUILD_INDEX && id <= IDM_SEMANTIC_LOAD_PLUGIN)
+            return true;
+        if (id >= IDM_RESOURCE_GENERATE && id <= IDM_RESOURCE_LOAD_PLUGIN)
+            return true;
+        if (id >= IDM_ENTERPRISE_STRESS_RUN && id <= IDM_ENTERPRISE_STRESS_SHOW)
+            return true;
+        return false;
+    };
+
+    std::ostringstream oss;
+    bool ok = true;
+    for (int id : kExpected)
+    {
+        if (!(id >= 11500 && id < 11600))
+        {
+            ok = false;
+            oss << "[FeatureRouteVerifier] Missing routeCommand coverage for ID " << id << "\n";
+            continue;
+        }
+        if (!isHandledByFeatureSubrouter(id))
+        {
+            ok = false;
+            oss << "[FeatureRouteVerifier] Missing handleFeaturesCommand coverage for ID " << id << "\n";
+        }
+    }
+
+    if (ok)
+    {
+        oss << "[FeatureRouteVerifier] PASS: routed+handled IDs="
+            << (sizeof(kExpected) / sizeof(kExpected[0])) << "\n";
+    }
+
+    const std::string summary = oss.str();
+    OutputDebugStringA(summary.c_str());
+    if (ok)
+        LOG_INFO(summary);
+    else
+        LOG_ERROR(summary);
+
+    if (report)
+        *report = summary;
+    return ok;
 }
 
 // ============================================================================

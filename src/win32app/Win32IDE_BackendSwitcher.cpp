@@ -1358,6 +1358,8 @@ void Win32IDE::updateStatusBarBackend()
 
     // Part 11 is the rightmost status bar segment — backend + GPU info
     SendMessageA(m_hwndStatusBar, SB_SETTEXTA, 11, (LPARAM)label.c_str());
+
+    refreshMoEPackHudStatusBarPart();
 }
 
 std::string Win32IDE::backendTypeString(AIBackendType type) const

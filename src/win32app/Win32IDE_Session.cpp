@@ -6,6 +6,7 @@
 //   - Editor cursor position and scroll offset
 //   - Panel visibility and height
 //   - Sidebar state and width
+//   - Loaded model path for inference/chat restore
 //   - Current working directory
 //
 // Session file: %APPDATA%\RawrXD\session.json
@@ -42,7 +43,7 @@ void Win32IDE::saveSession() {
     try {
         nlohmann::json session;
         session["version"] = 2;
-        session["schemaVersion"] = "2.1";     // Hardening: explicit schema version for forward compat
+        session["schemaVersion"] = "2.2";     // Hardening: explicit schema version for forward compat
         session["annotationFormat"] = 2;  // v2 = actions array; v1 = single actionType
         session["timestamp"] = std::to_string(GetTickCount64());
         
@@ -55,6 +56,11 @@ void Win32IDE::saveSession() {
         
         // Save current file
         session["currentFile"] = m_currentFile;
+
+        // Save active model so the next launch can restore inference/chat state.
+        if (!m_loadedModelPath.empty()) {
+            session["loadedModelPath"] = m_loadedModelPath;
+        }
         
         // Save working directory
         char cwd[MAX_PATH] = {0};
@@ -74,6 +80,13 @@ void Win32IDE::saveSession() {
     } catch (const std::exception& e) {
         LOG_ERROR("Session save error: " + std::string(e.what()));
     }
+}
+
+// ============================================================================
+// LOAD SESSION — compatibility/manual entry point
+// ============================================================================
+void Win32IDE::loadSession() {
+    restoreSession();
 }
 
 // ============================================================================
@@ -121,6 +134,34 @@ void Win32IDE::restoreSession() {
         std::string cwd = session.value("workingDirectory", "");
         if (!cwd.empty()) {
             SetCurrentDirectoryA(cwd.c_str());
+        }
+
+        // Restore loaded model after the working directory is set so relative paths resolve.
+        std::string savedModelPath = session.value("loadedModelPath", "");
+        if (!savedModelPath.empty()) {
+            bool restoredModel = false;
+            DWORD modelAttrs = GetFileAttributesA(savedModelPath.c_str());
+            if (modelAttrs != INVALID_FILE_ATTRIBUTES && !(modelAttrs & FILE_ATTRIBUTE_DIRECTORY)) {
+                LOG_INFO("Session: restoring model from path " + savedModelPath);
+                bool ggufOk = loadGGUFModel(savedModelPath);
+                if (ggufOk) {
+                    initializeInference();
+                    initBackendManager();
+                    initLLMRouter();
+                }
+                bool bridgeOk = loadModelForInference(savedModelPath);
+                restoredModel = ggufOk || bridgeOk;
+            } else {
+                LOG_INFO("Session: attempting logical model restore via bridge for " + savedModelPath);
+                restoredModel = ensureAgenticBridgeHasModel(savedModelPath);
+                if (!restoredModel) {
+                    LOG_WARNING("Session model missing or unavailable: " + savedModelPath);
+                }
+            }
+
+            if (!restoredModel) {
+                m_loadedModelPath.clear();
+            }
         }
         
         m_sessionRestored = true;

@@ -1,0 +1,82 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://rawrxd.local/schemas/expert_heatmap_snapshot.schema.json",
+  "title": "ExpertHeatmapSnapshot",
+  "type": "object",
+  "required": ["snapshotId", "planGeneration", "sampleTsMs", "stats", "cells"],
+  "additionalProperties": false,
+  "properties": {
+    "snapshotId": { "type": "integer", "minimum": 0 },
+    "planGeneration": { "type": "integer", "minimum": 0 },
+    "sampleTsMs": { "type": "integer", "minimum": 0 },
+    "stats": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "prefetchPinSuccess",
+        "prefetchSkippedDuplicate",
+        "prefetchSkippedComputeCovers",
+        "prefetchEnqueueSkippedDuplicate",
+        "evictions",
+        "jitPinNonResident",
+        "speculativeExpertPrefetchEnqueued",
+        "evictionRejectedInUse",
+        "evictStarvation",
+        "pinBlockAttempts",
+        "pinBlockTimeouts",
+        "pinBlockLatencyMsTotal",
+        "inUseSliceCount"
+      ],
+      "properties": {
+        "prefetchPinSuccess": { "type": "integer", "minimum": 0 },
+        "prefetchSkippedDuplicate": { "type": "integer", "minimum": 0 },
+        "prefetchSkippedComputeCovers": { "type": "integer", "minimum": 0 },
+        "prefetchEnqueueSkippedDuplicate": { "type": "integer", "minimum": 0 },
+        "evictions": { "type": "integer", "minimum": 0 },
+        "jitPinNonResident": { "type": "integer", "minimum": 0 },
+        "speculativeExpertPrefetchEnqueued": { "type": "integer", "minimum": 0 },
+        "evictionRejectedInUse": { "type": "integer", "minimum": 0 },
+        "evictStarvation": { "type": "integer", "minimum": 0 },
+        "pinBlockAttempts": { "type": "integer", "minimum": 0 },
+        "pinBlockTimeouts": { "type": "integer", "minimum": 0 },
+        "pinBlockLatencyMsTotal": { "type": "integer", "minimum": 0 },
+        "inUseSliceCount": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "cells": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "row",
+          "model",
+          "layer",
+          "layerEnd",
+          "expert",
+          "span",
+          "resident",
+          "pfInflight",
+          "hold",
+          "bytes",
+          "touchSeq",
+          "name"
+        ],
+        "properties": {
+          "row": { "type": "integer", "minimum": 0 },
+          "model": { "type": "integer", "minimum": 0 },
+          "layer": { "type": "integer", "minimum": 0 },
+          "layerEnd": { "type": "integer", "minimum": 0 },
+          "expert": { "type": "integer", "minimum": 0 },
+          "span": { "type": "integer", "minimum": 0 },
+          "resident": { "type": "boolean" },
+          "pfInflight": { "type": "boolean" },
+          "hold": { "type": "integer", "minimum": 0 },
+          "bytes": { "type": "integer", "minimum": 0 },
+          "touchSeq": { "type": "integer", "minimum": 0 },
+          "name": { "type": "string" }
+        }
+      }
+    }
+  }
+}

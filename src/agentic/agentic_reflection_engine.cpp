@@ -164,6 +164,8 @@ VerificationResult ReflectionEngine::verifyCompilation(const PlanStep& step, con
     VerificationResult result;
     result.level = VerificationLevel::BuildSuccess;
     result.status = VerificationStatus::NotRun;
+    (void)step;
+    (void)workspace_root;
     
     if (!m_config.compilation.enabled) {
         result.status = VerificationStatus::PartialPass;
@@ -171,8 +173,6 @@ VerificationResult ReflectionEngine::verifyCompilation(const PlanStep& step, con
         return result;
     }
     
-    // For now, simulate with success
-    // In production: invoke actual compiler via m_compileFn
     auto start = std::chrono::high_resolution_clock::now();
     
     if (m_compileFn) {
@@ -187,9 +187,9 @@ VerificationResult ReflectionEngine::verifyCompilation(const PlanStep& step, con
             result.error_message = output;
         }
     } else {
-        // Stub: assume success
-        result.status = VerificationStatus::Passed;
-        result.description = "Compilation successful (simulated)";
+        result.status = VerificationStatus::PartialPass;
+        result.description = "Compilation verifier unavailable";
+        result.error_message = "No compilation callback wired";
     }
     
     auto end = std::chrono::high_resolution_clock::now();
@@ -202,6 +202,7 @@ VerificationResult ReflectionEngine::verifyTests(const PlanStep& step, const std
     VerificationResult result;
     result.level = VerificationLevel::UnitTests;
     result.status = VerificationStatus::NotRun;
+    (void)workspace_root;
     
     if (!m_config.tests.enabled) {
         result.status = VerificationStatus::PartialPass;
@@ -232,11 +233,13 @@ VerificationResult ReflectionEngine::verifyTests(const PlanStep& step, const std
             result.error_message = output;
             result.tests_failed = 1;
         }
+    } else if (test_targets.empty()) {
+        result.status = VerificationStatus::PartialPass;
+        result.description = "No test targets detected for affected files";
     } else {
-        // Stub: assume pass
-        result.status = VerificationStatus::Passed;
-        result.description = "Tests passed (simulated)";
-        result.tests_passed = test_targets.size();
+        result.status = VerificationStatus::PartialPass;
+        result.description = "Test verifier unavailable";
+        result.error_message = "No test executor callback wired";
     }
     
     auto end = std::chrono::high_resolution_clock::now();
@@ -249,6 +252,8 @@ VerificationResult ReflectionEngine::verifyCodeQuality(const PlanStep& step, con
     VerificationResult result;
     result.level = VerificationLevel::Syntax;
     result.status = VerificationStatus::NotRun;
+    (void)step;
+    (void)workspace_root;
     
     if (!m_config.quality.enabled) {
         result.status = VerificationStatus::PartialPass;
@@ -256,6 +261,13 @@ VerificationResult ReflectionEngine::verifyCodeQuality(const PlanStep& step, con
         return result;
     }
     
+    if (!m_linterFn && !m_config.quality.linters.empty()) {
+        result.status = VerificationStatus::PartialPass;
+        result.description = "Code quality verifier unavailable";
+        result.error_message = "No linter callback wired";
+        return result;
+    }
+
     // Run configured linters
     for (const auto& linter : m_config.quality.linters) {
         if (m_linterFn) {
@@ -279,14 +291,16 @@ VerificationResult ReflectionEngine::verifyPerformance(const PlanStep& step, con
     VerificationResult result;
     result.level = VerificationLevel::Performance;
     result.status = VerificationStatus::NotRun;
+    (void)step;
+    (void)workspace_root;
     
     if (!m_config.performance.enabled) {
         return result;
     }
-    
-    // Stub implementation
-    result.status = VerificationStatus::Passed;
-    result.description = "Performance checks passed (simulated)";
+
+    result.status = VerificationStatus::PartialPass;
+    result.description = "Performance verifier unavailable";
+    result.error_message = "No performance verification backend implemented";
     
     return result;
 }

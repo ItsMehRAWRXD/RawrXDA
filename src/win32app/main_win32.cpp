@@ -991,6 +991,9 @@ static bool runPhase(const std::string& name, Win32IDE& ide, HINSTANCE, LPSTR lp
         ide.setCodexUltimate(s_codex);
         pumpMessages();
 
+        // Initialize file watcher for file explorer
+        ide.initFileWatcher();
+
         // High-risk bootstrap lane (engine + MMF + JS + sandbox).
         // Default OFF to avoid startup heap corruption; opt-in with:
         //   RAWRXD_ENABLE_BACKGROUND_BOOT=1
