@@ -238,6 +238,35 @@ bool RawrXDTokenizer::Load(const std::string& vocabPath) {
     return true;
 }
 
+bool RawrXDTokenizer::LoadFromGGUF(const std::string& ggufPath)
+{
+    GGUFLoader loader;
+    if (!loader.Open(ggufPath))
+    {
+        std::cerr << "[Tokenizer] Failed to open GGUF: " << ggufPath << std::endl;
+        return false;
+    }
+
+    const bool parsed = loader.ParseHeader() && loader.ParseMetadata();
+    if (!parsed)
+    {
+        std::cerr << "[Tokenizer] Failed to parse GGUF tokenizer metadata: " << ggufPath << std::endl;
+        loader.Close();
+        return false;
+    }
+
+    const RawrXD::GGUFMetadata metadata = loader.GetMetadata();
+    loader.Close();
+
+    if (metadata.tokens.empty())
+    {
+        std::cerr << "[Tokenizer] GGUF missing tokenizer.ggml.tokens: " << ggufPath << std::endl;
+        return false;
+    }
+
+    return LoadFromVocab(metadata.tokens);
+}
+
 std::vector<uint32_t> RawrXDTokenizer::Encode(const std::string& text) {
     std::vector<uint32_t> tokens;
     

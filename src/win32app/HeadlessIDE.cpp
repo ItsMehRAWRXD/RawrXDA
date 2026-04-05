@@ -2950,7 +2950,46 @@ std::string HeadlessIDE::routeInferenceRequest(const std::string& prompt) {
     }
 
     if (m_activeBackend == AIBackendType::LocalGGUF && m_modelLoaded && !m_orchestratorModelLoaded) {
-        return "[error] LocalGGUF backend active but native orchestrator inference is unavailable";
+        auto engine = RawrXD::CPUInferenceEngine::GetSharedInstance();
+        if (!engine) {
+            return "[error] LocalGGUF backend active but CPU fallback engine is unavailable";
+        }
+
+        if (!engine->IsModelLoaded()) {
+            m_outputSink->appendOutput("Native orchestrator unavailable; attempting CPU inference fallback",
+                                       OutputSeverity::Warning);
+            if (!engine->LoadModel(m_loadedModelPath)) {
+                const std::string error = std::string("[error] LocalGGUF CPU fallback failed to load model: ") +
+                                          engine->GetLastLoadErrorMessage();
+                m_outputSink->appendOutput(error.c_str(), OutputSeverity::Warning);
+                return error;
+            }
+        }
+
+        const std::vector<int32_t> inputTokens = engine->Tokenize(prompt);
+        std::string completion;
+        engine->GenerateStreaming(inputTokens,
+                                  (m_config.maxTokens > 0) ? m_config.maxTokens : 512,
+                                  [&](const std::string& piece) {
+                                      if (!piece.empty() && completion.size() < kMaxHeadlessInferenceResponseBytes) {
+                                          completion += piece;
+                                      }
+                                  },
+                                  []() {});
+
+        if (!completion.empty()) {
+            auto t1 = std::chrono::steady_clock::now();
+            double durationMs = std::chrono::duration<double, std::milli>(t1 - t0).count();
+            char perf[256];
+            snprintf(perf, sizeof(perf), "[inference/cpu-fallback] %.0f ms", durationMs);
+            m_outputSink->appendOutput(perf, OutputSeverity::Debug);
+            if (completion.size() > kMaxHeadlessInferenceResponseBytes) {
+                return completion.substr(0, kMaxHeadlessInferenceResponseBytes);
+            }
+            return completion;
+        }
+
+        return "[error] LocalGGUF backend active but CPU fallback produced no output";
     }
 
     // Secondary path: route through engine manager if available

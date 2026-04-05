@@ -323,7 +323,8 @@ class RawrXDInference
             return false;
         }
 
-        std::wstring wideModelPath(static_cast<size_t>(wideLength), L'\0');
+        const size_t wideCapacity = static_cast<size_t>(wideLength);
+        std::wstring wideModelPath(wideCapacity, L'\0');
         int converted = MultiByteToWideChar(CP_UTF8, 0, modelPath.c_str(), -1, wideModelPath.data(), wideLength);
         if (converted <= 0)
             converted = MultiByteToWideChar(CP_ACP, 0, modelPath.c_str(), -1, wideModelPath.data(), wideLength);
@@ -335,6 +336,18 @@ class RawrXDInference
 #endif
             return false;
         }
+
+        if (wideModelPath.empty() || wideModelPath[0] == L'\0')
+        {
+            m_lastLoadErrorMessage = "loader_load: model path conversion produced empty path";
+#ifdef RAWR_ENABLE_VULKAN
+            cleanupVulkanInit();
+#endif
+            return false;
+        }
+
+        if (converted > 0)
+            wideModelPath.resize(static_cast<size_t>(converted - 1));
 
         printf("[RawrXD] Loading model from: %ls\n", wideModelPath.c_str());
         if (!loader.Load(wideModelPath.c_str(), device, physDevice))
