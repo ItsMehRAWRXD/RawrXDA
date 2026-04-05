@@ -1091,6 +1091,34 @@ void Win32IDE::handleViewCommand(int commandId)
             toggleOutputPanel();
             SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Terminal");
             break;
+        case 2032:  // IDM_VIEW_EXPERT_HEATMAP
+            toggleExpertHeatmapPanel();
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Expert heatmap");
+            break;
+        case IDM_VIEW_SOVEREIGN_SNAP_COMPACT:
+            applySovereignSnapPreset(240, L"Compact");
+            break;
+        case IDM_VIEW_SOVEREIGN_SNAP_STANDARD:
+            applySovereignSnapPreset(360, L"Standard");
+            break;
+        case IDM_VIEW_SOVEREIGN_SNAP_WIDE:
+            applySovereignSnapPreset(480, L"Wide");
+            break;
+        case IDM_VIEW_LAYOUT_PROFILE_FOCUS:
+            applyBuiltInLayoutProfile("Focus");
+            break;
+        case IDM_VIEW_LAYOUT_PROFILE_CODING:
+            applyBuiltInLayoutProfile("Coding");
+            break;
+        case IDM_VIEW_LAYOUT_PROFILE_DEBUG:
+            applyBuiltInLayoutProfile("Debug");
+            break;
+        case IDM_VIEW_LAYOUT_PROFILE_APPLY:
+            promptAndApplySavedLayoutProfile();
+            break;
+        case IDM_VIEW_LAYOUT_PROFILE_SAVE:
+            promptAndSaveCurrentLayoutProfile();
+            break;
 
         case 3001:  // Toggle Minimap
             toggleMinimap();
@@ -1185,6 +1213,21 @@ void Win32IDE::handleViewCommand(int commandId)
             if (m_hwndStatusBar)
                 SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Analyze Script");
             break;
+        case IDM_INTERNAL_CAPTURE_PROFILE:
+        {
+            // Run capture asynchronously so UI remains responsive during the 30s telemetry window.
+            std::thread([this]() {
+                const std::string bundlePath = captureProfileBundleV1("baseline_a", 30);
+                if (bundlePath.empty()) {
+                    LOG_ERROR("Profile Bundle v1 capture failed");
+                } else {
+                    LOG_INFO("Profile Bundle v1 captured: " + bundlePath);
+                }
+            }).detach();
+            if (m_hwndStatusBar)
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Capturing Profile Bundle v1...");
+            break;
+        }
 
         case 3015:  // IDM_TOOLS_LICENSE_CREATOR — full License Creator dialog (Win32IDE_LicenseCreator.cpp)
             showLicenseCreatorDialog();
@@ -1824,6 +1867,8 @@ void Win32IDE::handleToolsCommand(int commandId)
         // ================================================================
         case 5027:  // List Active Policies
         {
+            if (!m_routerInitialized)
+                initLLMRouter();
             std::string routerStatus = getRouterStatusString();
             if (routerStatus.empty())
             {
@@ -1841,6 +1886,8 @@ void Win32IDE::handleToolsCommand(int commandId)
 
         case 5028:  // Generate Suggestions
         {
+            if (!m_routerInitialized)
+                initLLMRouter();
             std::string caps = getCapabilitiesString();
             if (caps.empty())
             {
@@ -1860,6 +1907,8 @@ void Win32IDE::handleToolsCommand(int commandId)
 
         case 5029:  // Show Heuristics
         {
+            if (!m_routerInitialized)
+                initLLMRouter();
             std::string stats = getRouterStatsString();
             if (stats.empty())
             {
@@ -10684,6 +10733,14 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({2029, "View: Terminal", "", "View"});
     m_commandRegistry.push_back({2030, "View: File Explorer", "Ctrl+Shift+E", "View"});
     m_commandRegistry.push_back({2031, "View: Extensions", "Ctrl+Shift+X", "View"});
+    m_commandRegistry.push_back({IDM_VIEW_SOVEREIGN_SNAP_COMPACT, "View: Sovereign Snap Compact", "", "View"});
+    m_commandRegistry.push_back({IDM_VIEW_SOVEREIGN_SNAP_STANDARD, "View: Sovereign Snap Standard", "", "View"});
+    m_commandRegistry.push_back({IDM_VIEW_SOVEREIGN_SNAP_WIDE, "View: Sovereign Snap Wide", "", "View"});
+    m_commandRegistry.push_back({IDM_VIEW_LAYOUT_PROFILE_FOCUS, "View: Layout Profile Focus", "", "View"});
+    m_commandRegistry.push_back({IDM_VIEW_LAYOUT_PROFILE_CODING, "View: Layout Profile Coding", "", "View"});
+    m_commandRegistry.push_back({IDM_VIEW_LAYOUT_PROFILE_DEBUG, "View: Layout Profile Debug", "", "View"});
+    m_commandRegistry.push_back({IDM_VIEW_LAYOUT_PROFILE_APPLY, "View: Apply Saved Layout Profile", "", "View"});
+    m_commandRegistry.push_back({IDM_VIEW_LAYOUT_PROFILE_SAVE, "View: Save Current Layout Profile", "", "View"});
     m_commandRegistry.push_back({3007, "View: AI Chat", "Ctrl+Alt+B", "View"});
     m_commandRegistry.push_back({3009, "View: Agent Chat (autonomous)", "", "View"});
     // Tier 1 cosmetics (12000–12099, handleTier1Command) — accessible from View/category
@@ -12614,7 +12671,8 @@ bool Win32IDE::verifyFeatureRoutingCoverageAtStartup(std::string* report)
         IDM_ENTERPRISE_STRESS_SHOW,
     };
 
-    auto isHandledByFeatureSubrouter = [](int id) {
+    auto isHandledByFeatureSubrouter = [](int id)
+    {
         if (id >= IDM_TELEXPORT_JSON && id <= IDM_TELEXPORT_AUTO_STOP)
             return true;
         if (id >= IDM_COMPOSER_NEW_SESSION && id <= IDM_COMPOSER_SHOW_METRICS)
@@ -12655,8 +12713,7 @@ bool Win32IDE::verifyFeatureRoutingCoverageAtStartup(std::string* report)
 
     if (ok)
     {
-        oss << "[FeatureRouteVerifier] PASS: routed+handled IDs="
-            << (sizeof(kExpected) / sizeof(kExpected[0])) << "\n";
+        oss << "[FeatureRouteVerifier] PASS: routed+handled IDs=" << (sizeof(kExpected) / sizeof(kExpected[0])) << "\n";
     }
 
     const std::string summary = oss.str();
@@ -12942,9 +12999,13 @@ bool Win32IDE::handleOmegaOrchestratorCommand(int commandId)
             // Display OmegaOrchestrator diagnostic and performance statistics
             if (!omega.isActive())
             {
-                appendToOutput("[OmegaOrchestrator] Pipeline not active — no statistics available", "General",
-                               OutputSeverity::Info);
-                return true;
+                auto initResult = omega.initialize();
+                if (!initResult.success || !omega.isActive())
+                {
+                    appendToOutput("[OmegaOrchestrator] Pipeline not active — no statistics available", "General",
+                                   OutputSeverity::Info);
+                    return true;
+                }
             }
 
             auto stats = omega.getStats();
@@ -13789,6 +13850,8 @@ bool Win32IDE::handleKnowledgeGraphCommand(int commandId)
 
         case IDM_KNOWLEDGE_FLUSH:
         {
+            if (!kg.isInitialized())
+                kg.initialize();
             if (!kg.isInitialized())
             {
                 appendToOutput("[KnowledgeGraph] Not initialized — nothing to flush", "General",

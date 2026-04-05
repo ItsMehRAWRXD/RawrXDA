@@ -1,0 +1,203 @@
+[SSOT AUDIT] WARNING: Registry integrity issue detected!
+  Total: 533  GUI: 507  CLI: 519
+  Null handlers: 0  Duplicate IDs: 3  Duplicate aliases: 0
+[Prometheus] bind() failed.
+[WARN] Command registry integrity: 0 null handlers, 3 duplicate IDs, 0 duplicate aliases
+2026-04-05 02:20:47 [INFO] [RuntimeSurface] [RuntimeSurface] bootstrap begin (no startup scan/index)
+2026-04-05 02:20:47 [INFO] [RuntimeSurface] [RawrXD::Quant] Layout Legend: Q4S (Signed 4-bit): UI '-4bit', Wire: val+8, Range [-8,7]. Q6S (Signed 6-bit): UI '-6bit', Wire: val+32, Range [-32,31]. Q4U/Q6U: Standard Unsigned Mapping.
+2026-04-05 02:20:47 [INFO] [RuntimeSurface] [CompressedPoolBudget] budget_bytes=0
+2026-04-05 02:20:47 [INFO] [RuntimeSurface] [ModularModelLoader] resident layer budget=0
+2026-04-05 02:20:47 [INFO] [RuntimeSurface] [RuntimeSurface] llama.cpp/exllamaV2 parity register entries=12
+2026-04-05 02:20:47 [INFO] [RuntimeSurface] [RuntimeSurface] four-lane gate ready (max 4 of 5 lanes unless explicit module)
+2026-04-05 02:20:47 [INFO] [RuntimeSurface] [RuntimeSurface] bootstrap complete
+[headless] before_console_attach
+[headless] after_console_attach
+[headless] before_help_gate
+[headless] after_help_gate
+[headless] headless_block_enter
+[headless] parse_cmdline_begin
+[headless] parse_cmdline_end
+[headless] launch | argc=12 cmdline="--headless --backend local --no-server --model d:/phi3mini.gguf --prompt hello --max-tokens 1 --trace-token-summary" cwd="D:\rawrxd\build\bin"
+[headless] initialize_begin
+RawrXD Headless IDE initializing...
+[MEM_STRATEGY] SYS_64KB_ONLY
+Headless minimal profile active (RAWRXD_HEADLESS_MINIMAL=1): skipping optional subsystem threads
+[BackendOrchestrator] AVX512 KV kernels enabled
+Loading model: d:/phi3mini.gguf
+[ModelSourceResolver] Resolving: d:/phi3mini.gguf
+[ModelSourceResolver] Detected source: Local File
+[ModelSourceResolver] ✅ Local file validated: d:/phi3mini.gguf
+
+📊 Zone Assignment Summary:
+   embedding: 1 tensors, 52 MB
+   layers_0: 40 tensors, 445 MB
+   layers_1: 40 tensors, 445 MB
+   layers_2: 40 tensors, 445 MB
+   layers_3: 40 tensors, 445 MB
+   misc: 2 tensors, 0 MB
+   output_head: 34 tensors, 232 MB
+
+✅ GGUF Model opened in streaming mode
+   File: d:/phi3mini.gguf
+   Tensors: 197
+   Zones: 7
+   Memory (header+index): ~0 MB
+[BackendOrchestrator] Model sharded across 1 device(s), layers=32, files=1, bytes=2176177120
+  device=0 layers=0-31 files=1 assigned_bytes=2176177120
+[BackendOrchestrator] LoadModel failed: placeholder reservation failed for: d:/phi3mini.gguf (error=203)
+[WARN]  BackendOrchestrator model registration failed; continuing with header-only load
+[headless] initialize_end | success=1 errorCode=0
+[headless] run_begin
+Model loaded: phi3mini.gguf
+  GGUF version: 3
+  Tensors: 197
+  Metadata KVs: 36
+  Layers: 0
+  Context length: 3452816845
+  Embedding dim: 0
+  Vocab size: 3452816845
+  File size: 2075 MB
+  Load latency: 8686 ms
+
+Headless IDE initialized successfully.
+[CPUInferenceEngine] Loading model: d:/phi3mini.gguf
+[CPUInferenceEngine] Stage: initialize backend
+[RawrXD] CPU-only mode (Vulkan disabled)
+[RawrXD] Stage: loader.Load
+[RawrXD] ⚡ INITIALIZING SOVEREIGN NEURAL HIVE-MIND SYSTEMS...
+[RawrXD] Policy bypass interceptor disabled: runtime binary patching is not permitted
+[RawrXD] ⚡ Speculative Swarm: Ready for 20x model chaining (600B+ aggregate)
+[RawrXD] ⚡ AVX-512 VPOPCNT: Ready for 0.8-bit weight reconstruction
+[RawrXD][BACKEND] backend=cpu-only result=ok reason=cpu fallback verified
+[RawrXD] Headless minimal: reducing window from 2048 MB to 256 MB
+[RawrXD] VirtualAlloc2 with MEM_RESERVE_PLACEHOLDER failed (Error: 8)
+[RawrXD] Reserved aperture attempt 256 MB failed (Error: 8)
+[RawrXD] Using legacy sliding window mapping (no reserved aperture) window=256 MB
+[VMM] SeLockMemoryPrivilege not held; Large Pages disabled (falling back).
+[RawrXD] Stage: parse_header_metadata
+[RawrXD] Legacy window retry succeeded at 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Stage: parse_tensor_index tensor_count=197
+[RawrXD] Stage: tensor_materialization mode=lazy tensor_count=197 indexed_storage=2.03 GB
+[RawrXD] Data starts at offset 738400
+[RawrXD] Stage: build_tensor_lookup_map
+[RawrXD] Model loaded successfully. VRAM used: 0.00 GB
+[RawrXD] Config: dim=3072, layers=32, heads=32, kv_heads=32, vocab=32064, ctx=131072, experts=0, experts_used=0
+[RawrXD] Tensor names in model (197 total):
+  [  0] type=2 dims=8192 3072 blk.0.ffn_down.weight
+  [  1] type=2 dims=3072 3072 blk.2.attn_output.weight
+  [  2] type=0 dims=3072 blk.2.ffn_norm.weight
+  [  3] type=2 dims=3072 9216 blk.16.attn_qkv.weight
+  [  4] type=0 dims=3072 blk.19.ffn_norm.weight
+  [  5] type=2 dims=3072 16384 blk.1.ffn_up.weight
+  [  6] type=2 dims=8192 3072 blk.22.ffn_down.weight
+  [  7] type=2 dims=3072 3072 blk.19.attn_output.weight
+  [  8] type=2 dims=3072 32064 token_embd.weight
+  [  9] type=2 dims=3072 3072 blk.9.attn_output.weight
+  [ 10] type=2 dims=3072 16384 blk.0.ffn_up.weight
+  [ 11] type=2 dims=3072 9216 blk.17.attn_qkv.weight
+  [ 12] type=2 dims=3072 3072 blk.12.attn_output.weight
+  [ 13] type=2 dims=3072 3072 blk.1.attn_output.weight
+  [ 14] type=0 dims=3072 blk.0.attn_norm.weight
+  [ 15] type=0 dims=3072 blk.22.ffn_norm.weight
+  ... (181 more)
+[RawrXD] Context override active via RAWRXD_INFERENCE_CTX=32
+[RawrXD] Config: dim=3072 layers=32 heads=32 kv_heads=32 vocab=32064 hidden=8192 ctx=32
+[RawrXD] Stage: tokenizer.Load
+[Tokenizer] Vocab file not found, using byte encoding fallback: tokenizer.json
+[RawrXD] Stage: transformer.Initialize
+[RawrXD] KV cache: 3145728 floats (12.6 MB per cache)
+[RawrXD] MEMSTATUS pre-probe: phys_avail=32533 MB, virt_avail=134215824 MB, commit_avail=54582 MB
+[RawrXD] HEAP PROBE OK: ctx=32 (2x 12 MB = 24 MB available)
+[RawrXD] KV cache final: ctx=32, 3145728 floats (12.6 MB per cache)
+[RawrXD] Transformer Initialized. AVX-512 Kernels Linked.
+[RawrXD] Swarm plan: GGUF coalesced (35 slices total=2.03 GiB max=113.61 MiB avg=59.28 MiB)
+[RawrXD] Inference engine READY
+[CPUInferenceEngine] Titan ASM engine loaded
+[CPUInferenceEngine] Model loaded successfully
+[CPUInferenceEngine] GenerateStreaming: input_tokens=6 max_tokens=1
+[Forward] GQA: dim=3072 heads=32 kv_heads=32 head_dim=96 kv_dim=3072 hidden=8192
+[MEM] Generation start: avail_phys=32502 MB, avail_virt=134215823 MB
+[MEM] KV footprint: k=12 MB, v=12 MB; tile_buf peak=16 MB
+[MEM] output.weight shard est: vocab=32064 * row_bytes(Q2_K)=1008 = 30 MB
+[STEP] Layer 1/32 (pos=0 token=1/6)
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+2026-04-05 02:20:57 [ERROR] [default] [Swarm] MapPrefetchWindow failed offset=119870560 size=63725568
+2026-04-05 02:20:57 [ERROR] [default] [Swarm] MapPrefetchWindow failed offset=820851808 size=63725568
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-1 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-1 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[STEP] Layer 6/32 (pos=0 token=1/6)
+[RawrXD] Legacy Window 1-1 GB: Mapped 16 MB
+[RawrXD] Legacy Window 1-1 GB: Mapped 16 MB
+[RawrXD] Legacy Window 1-1 GB: Mapped 16 MB
+[RawrXD] Legacy Window 1-1 GB: Mapped 16 MB
+[RawrXD] Legacy Window 1-1 GB: Mapped 16 MB
+[RawrXD] Legacy Window 1-1 GB: Mapped 16 MB
+[RawrXD] Legacy Window 1-1 GB: Mapped 16 MB
+[RawrXD] Legacy Window 1-1 GB: Mapped 16 MB
+[RawrXD] Legacy Window 1-1 GB: Mapped 16 MB
+[RawrXD] Legacy Window 1-1 GB: Mapped 16 MB
+[RawrXD] Legacy Window 1-1 GB: Mapped 16 MB
+[RawrXD] Legacy Window 1-1 GB: Mapped 16 MB
+[RawrXD] Legacy Window 1-1 GB: Mapped 16 MB
+[RawrXD] Legacy Window 1-1 GB: Mapped 16 MB
+[RawrXD] Legacy Window 1-1 GB: Mapped 16 MB
+[RawrXD] Legacy Window 1-1 GB: Mapped 16 MB
+[RawrXD] Legacy Window 1-1 GB: Mapped 16 MB
+[RawrXD] Legacy Window 1-1 GB: Mapped 16 MB
+[RawrXD] Legacy Window 1-1 GB: Mapped 16 MB
+[RawrXD] Legacy Window 1-1 GB: Mapped 16 MB
+[RawrXD] Legacy Window 1-1 GB: Mapped 16 MB
+[RawrXD] Legacy Window 1-1 GB: Mapped 16 MB
+[RawrXD] Legacy Window 1-1 GB: Mapped 16 MB
+[RawrXD] Legacy Window 1-1 GB: Mapped 16 MB
+[RawrXD] Legacy Window 1-1 GB: Mapped 16 MB
+[STEP] Layer 11/32 (pos=0 token=1/6)
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[RawrXD] Legacy Window 0-0 GB: Mapped 16 MB
+[STEP] Layer 16/32 (pos=0 token=1/6)

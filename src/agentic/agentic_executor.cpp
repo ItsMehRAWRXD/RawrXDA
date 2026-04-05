@@ -13,39 +13,63 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstdint>
+#include <cstdlib>
+#include <ctime>
 
 #ifdef _WIN32
 #include <vector>
 #include <windows.h>
 
-// SCAFFOLD_066: agentic_executor executeUserRequest implementation
-// Reverse-engineered from IDE coordination patterns:
-// 1. Request Normalization & Metadata (Task ID, Priority)
-// 2. Integration with Native Sharding & Swarm Handshaking
-// 3. Low-latency Handoff to Titan/RawrXD Core
+// Request execution path:
+// 1. Normalize request and classify command-like operations.
+// 2. Route deterministic command requests through command execution.
+// 3. Route conversational requests through model-backed response generation.
 
 std::string AgenticExecutor::executeUserRequest(const std::string& request) {
     if (m_onStepStarted) m_onStepStarted("executeUserRequest", m_callbackContext);
-    
-    // Internal task tracking reverse-engineered from AgenticController
-    uint64_t task_id = GetTickCount64();
-    
-    // Check if request involves massive sharding (800B Mesh)
-    if (request.find("800B") != std::string::npos || request.find("mesh") != std::string::npos) {
-        // Direct Native Call to Titan Master Loader
-        return "Task " + std::to_string(task_id) + " routed to Titan Sovereign Mesh MASM64.";
-    }
 
-    // Standard Agentic Loop
+    // Internal task tracking for observability and correlation.
+    uint64_t task_id = GetTickCount64();
+    std::string lowered = request;
+    std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+    });
+
     std::string result;
     if (m_agenticEngine) {
-        if (m_onLogMessage) m_onLogMessage("[AgenticExecutor] Delegating to agentic engine", m_callbackContext);
-        // Use understandIntent + generateNaturalResponse if processRequest is missing
-        result = m_agenticEngine->generateNaturalResponse(request, "");
+        if (m_onLogMessage) {
+            m_onLogMessage("[AgenticExecutor] Processing request with agentic engine", m_callbackContext);
+        }
+
+        // Route clear shell-style requests to command execution for deterministic behavior.
+        const bool looksLikeCommand = lowered.rfind("run ", 0) == 0 || lowered.rfind("cmd:", 0) == 0 ||
+                                      lowered.rfind("powershell:", 0) == 0;
+        if (looksLikeCommand) {
+            std::string command = request;
+            bool powershell = false;
+            if (lowered.rfind("run ", 0) == 0) {
+                command = request.substr(4);
+            } else if (lowered.rfind("cmd:", 0) == 0) {
+                command = request.substr(4);
+            } else if (lowered.rfind("powershell:", 0) == 0) {
+                command = request.substr(11);
+                powershell = true;
+            }
+            result = m_agenticEngine->executeCommand(command, powershell);
+        } else {
+            const std::string context = getFullContext();
+            result = m_agenticEngine->generateNaturalResponse(request, context);
+        }
     } else {
-        if (m_onLogMessage) m_onLogMessage("[AgenticExecutor] No agentic engine — request queued", m_callbackContext);
-        result = "{\"status\":\"ok\",\"message\":\"No agentic engine configured\"}";
+        if (m_onLogMessage) {
+            m_onLogMessage("[AgenticExecutor] No engine configured; returning explicit failure", m_callbackContext);
+        }
+        result = "{\"status\":\"error\",\"taskId\":" + std::to_string(task_id) +
+                 ",\"message\":\"Agentic engine is not configured\"}";
     }
+
+    addToMemory("last_request", request);
+    addToMemory("last_result", result);
     if (m_onExecutionComplete) m_onExecutionComplete(result.c_str(), m_callbackContext);
     return result;
 }
@@ -58,15 +82,61 @@ std::string AgenticExecutor::decomposeTask(const std::string& goal) {
 }
 
 bool AgenticExecutor::executeStep(const std::string& stepJson) {
-    (void)stepJson;
-    if (m_onStepCompleted) m_onStepCompleted("executeStep", true, m_callbackContext);
-    return true;
+    if (stepJson.empty()) {
+        if (m_onStepCompleted) m_onStepCompleted("executeStep", false, m_callbackContext);
+        return false;
+    }
+
+    std::string lowered = stepJson;
+    std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+    });
+
+    bool success = false;
+    if (m_agenticEngine) {
+        if (lowered.find("read_file") != std::string::npos || lowered.find("list_directory") != std::string::npos ||
+            lowered.find("grep") != std::string::npos || lowered.find("search") != std::string::npos) {
+            // Non-mutating step: rely on engine response quality and failure detection.
+            const std::string output = m_agenticEngine->processQuery("Execute tool step: " + stepJson);
+            success = !detectFailure(output);
+            addToMemory("last_step_output", output);
+        } else if (lowered.find("compile") != std::string::npos || lowered.find("build") != std::string::npos) {
+            const std::string output = m_agenticEngine->executeCommand(stepJson, false);
+            success = !detectFailure(output);
+            addToMemory("last_step_output", output);
+        } else {
+            const std::string output = m_agenticEngine->processQuery("Execute and report result for step: " + stepJson);
+            success = !detectFailure(output);
+            addToMemory("last_step_output", output);
+        }
+    }
+
+    if (m_onStepCompleted) m_onStepCompleted("executeStep", success, m_callbackContext);
+    return success;
 }
 
 bool AgenticExecutor::verifyStepCompletion(const std::string& stepJson, const std::string& result) {
-    (void)stepJson;
-    (void)result;
-    return true;
+    if (detectFailure(result)) {
+        return false;
+    }
+
+    if (stepJson.empty()) {
+        return !result.empty();
+    }
+
+    std::string loweredStep = stepJson;
+    std::transform(loweredStep.begin(), loweredStep.end(), loweredStep.begin(), [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+    });
+
+    // Deterministic checks for common intents.
+    if (loweredStep.find("compile") != std::string::npos || loweredStep.find("build") != std::string::npos) {
+        return result.find("error") == std::string::npos && result.find("failed") == std::string::npos;
+    }
+    if (loweredStep.find("create") != std::string::npos || loweredStep.find("write") != std::string::npos) {
+        return !result.empty() && result.find("false") == std::string::npos;
+    }
+    return !result.empty();
 }
 
 std::string AgenticExecutor::compileProject(const std::string& projectPath, const std::string& compiler) {
@@ -186,7 +256,82 @@ std::string AgenticExecutor::callTool(const std::string& toolName, const std::st
     if (toolName == "compileProject") {
         return compileProject(paramsJson);
     }
+    if (toolName == "createDirectory") {
+        const bool ok = createDirectory(paramsJson);
+        return std::string("{\"success\":") + (ok ? "true" : "false") + "}";
+    }
+    if (toolName == "createFile") {
+        const bool ok = createFile(paramsJson, "");
+        return std::string("{\"success\":") + (ok ? "true" : "false") + "}";
+    }
+    if (toolName == "writeFile") {
+        const bool ok = writeFile(paramsJson, "");
+        return std::string("{\"success\":") + (ok ? "true" : "false") + "}";
+    }
+    if (toolName == "deleteFile") {
+        const bool ok = deleteFile(paramsJson);
+        return std::string("{\"success\":") + (ok ? "true" : "false") + "}";
+    }
+    if (toolName == "deleteDirectory") {
+        const bool ok = deleteDirectory(paramsJson);
+        return std::string("{\"success\":") + (ok ? "true" : "false") + "}";
+    }
     return "{\"success\":false,\"error\":\"Unsupported tool\",\"tool\":\"" + toolName + "\"}";
+}
+
+bool AgenticExecutor::createDirectory(const std::string& path) {
+    namespace fs = std::filesystem;
+    std::error_code ec;
+    const fs::path p = path.empty() ? fs::path(".") : fs::path(path);
+    if (fs::exists(p, ec)) {
+        return fs::is_directory(p, ec);
+    }
+    return fs::create_directories(p, ec) && !ec;
+}
+
+bool AgenticExecutor::createFile(const std::string& path, const std::string& content) {
+    namespace fs = std::filesystem;
+    const fs::path p = path.empty() ? fs::path() : fs::path(path);
+    if (p.empty()) {
+        return false;
+    }
+    std::error_code ec;
+    if (p.has_parent_path()) {
+        fs::create_directories(p.parent_path(), ec);
+    }
+    std::ofstream out(p, std::ios::binary | std::ios::trunc);
+    if (!out) {
+        return false;
+    }
+    out << content;
+    return static_cast<bool>(out);
+}
+
+bool AgenticExecutor::writeFile(const std::string& path, const std::string& content) {
+    return createFile(path, content);
+}
+
+bool AgenticExecutor::deleteFile(const std::string& path) {
+    namespace fs = std::filesystem;
+    std::error_code ec;
+    const fs::path p = path.empty() ? fs::path() : fs::path(path);
+    if (p.empty()) {
+        return false;
+    }
+    return fs::remove(p, ec) && !ec;
+}
+
+bool AgenticExecutor::deleteDirectory(const std::string& path) {
+    namespace fs = std::filesystem;
+    std::error_code ec;
+    const fs::path p = path.empty() ? fs::path() : fs::path(path);
+    if (p.empty()) {
+        return false;
+    }
+    if (!fs::exists(p, ec) || !fs::is_directory(p, ec)) {
+        return false;
+    }
+    return fs::remove_all(p, ec) > 0 && !ec;
 }
 
 std::string AgenticExecutor::readFile(const std::string& path) {
@@ -224,8 +369,37 @@ std::string AgenticExecutor::trainModel(const std::string& datasetPath, const st
     if (datasetPath.empty() || !fs::exists(datasetPath)) {
         return "{\"success\":false,\"error\":\"dataset not found\"}";
     }
-    if (m_onLogMessage) m_onLogMessage("[AgenticExecutor] Training delegated (offline stub trainer)", m_callbackContext);
-    return "{\"success\":true,\"status\":\"queued\",\"dataset\":\"" + datasetPath + "\",\"outputModel\":\"" + modelPath + "\",\"config\":" + (configJson.empty() ? "{}" : configJson) + "}";
+    if (modelPath.empty()) {
+        return "{\"success\":false,\"error\":\"output model path is required\"}";
+    }
+
+    // Persist an executable training job manifest that can be picked by runtime trainer workers.
+    const std::string cwd = m_currentWorkingDirectory.empty() ? "." : m_currentWorkingDirectory;
+    const fs::path queueDir = fs::path(cwd) / ".agentic_training_queue";
+    std::error_code ec;
+    fs::create_directories(queueDir, ec);
+    if (ec) {
+        return "{\"success\":false,\"error\":\"failed to create training queue directory\"}";
+    }
+
+    const std::uint64_t ts = static_cast<std::uint64_t>(std::time(nullptr));
+    const fs::path jobPath = queueDir / ("train_" + std::to_string(ts) + ".json");
+
+    std::ofstream out(jobPath, std::ios::binary | std::ios::trunc);
+    if (!out) {
+        return "{\"success\":false,\"error\":\"failed to write training job\"}";
+    }
+
+    out << "{\"dataset\":\"" << datasetPath << "\","
+        << "\"outputModel\":\"" << modelPath << "\","
+        << "\"config\":" << (configJson.empty() ? "{}" : configJson) << "}";
+    out.close();
+
+    if (m_onLogMessage) {
+        const std::string msg = "[AgenticExecutor] Training job queued at " + jobPath.string();
+        m_onLogMessage(msg.c_str(), m_callbackContext);
+    }
+    return "{\"success\":true,\"status\":\"queued\",\"jobPath\":\"" + jobPath.string() + "\"}";
 }
 
 bool AgenticExecutor::isTrainingModel() const {
@@ -283,11 +457,30 @@ std::string AgenticExecutor::retryWithCorrection(const std::string& failedStepJs
 // -----------------------------------------------------------------------------
 
 std::string AgenticExecutor::planNextAction(const std::string& currentState, const std::string& goal) {
-    return "{\"nextAction\":\"analyze\",\"stateSummary\":\"" + currentState + "\",\"goal\":\"" + goal + "\"}";
+    if (m_agenticEngine) {
+        const std::string prompt = "Given current state: " + currentState + "\nGoal: " + goal +
+                                   "\nReturn the next best action as compact JSON.";
+        const std::string planned = m_agenticEngine->processQuery(prompt);
+        if (!planned.empty()) {
+            return planned;
+        }
+    }
+    return "{\"nextAction\":\"analyze\",\"goal\":\"" + goal + "\"}";
 }
 
 std::string AgenticExecutor::generateCode(const std::string& specification) {
-    return "// Generated scaffold\n// Specification: " + specification + "\n";
+    if (m_agenticEngine) {
+        const std::string generated = m_agenticEngine->generateCode(specification);
+        const std::string extracted = extractCodeFromResponse(generated);
+        if (validateGeneratedCode(extracted)) {
+            return extracted;
+        }
+        return extracted.empty() ? generated : extracted;
+    }
+    std::ostringstream os;
+    os << "// Unable to access model-backed generation path\n";
+    os << "// Requested specification: " << specification << "\n";
+    return os.str();
 }
 
 std::string AgenticExecutor::analyzeError(const std::string& errorOutput) {
@@ -342,17 +535,49 @@ void AgenticExecutor::enforceMemoryLimit() {
 }
 
 std::string AgenticExecutor::buildToolCallPrompt(const std::string& goal, const std::string& toolsJson) {
-    (void)goal;
-    (void)toolsJson;
-    return "";
+    std::ostringstream os;
+    os << "Goal:\n" << goal << "\n\n";
+    os << "Available tools (JSON):\n" << toolsJson << "\n\n";
+    os << "Return strictly one tool call as JSON with fields: "
+          "tool, arguments, expectedOutcome.";
+    return os.str();
 }
 
 std::string AgenticExecutor::extractCodeFromResponse(const std::string& response) {
-    (void)response;
-    return "";
+    const std::string fence = "```";
+    const auto begin = response.find(fence);
+    if (begin == std::string::npos) {
+        return response;
+    }
+    const auto firstLineEnd = response.find('\n', begin + fence.size());
+    if (firstLineEnd == std::string::npos) {
+        return response;
+    }
+    const auto end = response.find(fence, firstLineEnd + 1);
+    if (end == std::string::npos || end <= firstLineEnd + 1) {
+        return response;
+    }
+    return response.substr(firstLineEnd + 1, end - (firstLineEnd + 1));
 }
 
 bool AgenticExecutor::validateGeneratedCode(const std::string& code) {
-    (void)code;
-    return true;
+    if (code.empty()) {
+        return false;
+    }
+    int braceBalance = 0;
+    int parenBalance = 0;
+    for (char c : code) {
+        if (c == '{') ++braceBalance;
+        else if (c == '}') --braceBalance;
+        else if (c == '(') ++parenBalance;
+        else if (c == ')') --parenBalance;
+        if (braceBalance < 0 || parenBalance < 0) {
+            return false;
+        }
+    }
+    if (braceBalance != 0 || parenBalance != 0) {
+        return false;
+    }
+    return code.find("#include") != std::string::npos || code.find("int main") != std::string::npos ||
+           code.find("class ") != std::string::npos || code.find("struct ") != std::string::npos;
 }

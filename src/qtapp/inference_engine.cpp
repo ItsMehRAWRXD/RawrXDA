@@ -13,6 +13,7 @@
 #include <random>
 #include <numeric>
 #include <mutex>
+#include <chrono>
 #include <QtConcurrent/QtConcurrentRun>
 #include <cstdlib>
 #include <iostream>
@@ -917,39 +918,54 @@ std::vector<int32_t> InferenceEngine::generate(const std::vector<int32_t>& input
         
         qDebug() << "[generate] Transformer is ready, starting KV-cache prefill...";
         
-        // === FIXED: Process entire prompt to get proper starting context ===
-        // Phase 1: Context prefill - process the entire input prompt once
-        // The transformer builds the KV-cache (Key-Value cache) for efficient generation.
+        // === FORENSIC TIMING: Phase 1: Context Prefill ===
+        auto phase1_start = std::chrono::high_resolution_clock::now();
         qDebug() << "[generate] Pre-filling KV-cache with" << inputTokens.size() << "prompt tokens...";
         std::vector<float> contextLogits = m_transformer.forward(inputTokens);
+        auto phase1_end = std::chrono::high_resolution_clock::now();
+        auto phase1_ms = std::chrono::duration<double, std::milli>(phase1_end - phase1_start).count();
+        qInfo() << "[FORENSIC] Phase1_Prefill: " << phase1_ms << " ms";
         qDebug() << "[generate] KV-cache prefilled, got" << contextLogits.size() << "logits from last token";
         
         // Sample the FIRST generated token from the prompt's final logits
-        // This ensures the model's response is conditioned on the full prompt
+        auto sample1_start = std::chrono::high_resolution_clock::now();
         int32_t currentToken = sampleNextToken(contextLogits, m_temperature, m_topP);
+        auto sample1_end = std::chrono::high_resolution_clock::now();
+        auto sample1_ms = std::chrono::duration<double, std::milli>(sample1_end - sample1_start).count();
+        qInfo() << "[FORENSIC] Sample1: " << sample1_ms << " ms";
+        
         result.push_back(currentToken);
         qDebug() << "[generate] First generated token after prompt:" << currentToken;
         
-        // === Phase 2: Autoregressive Token Generation (Decoding) ===
+        // === FORENSIC TIMING: Phase 2: Autoregressive Token Generation (Decoding) ===
+        auto phase2_start = std::chrono::high_resolution_clock::now();
+        double total_forward_ms = 0.0;
+        double total_sample_ms = 0.0;
+        int iterations_completed = 0;
+        
         // Generate remaining tokens (we already have the first one from prompt context)
         for (int i = 1; i < maxTokens; ++i) {
             // Generate logits for the next token based ONLY on the current token
             // The Transformer uses the internal KV-cache for past context
-            qDebug() << "[generate] Iteration " << i << ": Calling transformer.forward(" << currentToken << ")...";
+            auto iter_forward_start = std::chrono::high_resolution_clock::now();
             std::vector<float> logits = m_transformer.forward(std::vector<int32_t>{currentToken});
+            auto iter_forward_end = std::chrono::high_resolution_clock::now();
+            auto iter_forward_ms = std::chrono::duration<double, std::milli>(iter_forward_end - iter_forward_start).count();
+            total_forward_ms += iter_forward_ms;
             
             if (logits.empty()) {
                 qWarning() << "[generate] Transformer forward pass returned no logits";
                 break;
             }
             
-            qDebug() << "[generate] Got " << logits.size() << " logits from transformer";
-            
             // === Elegant Sampling Logic using Top-P ===
-            // Delegate complex sampling to helper function
+            auto iter_sample_start = std::chrono::high_resolution_clock::now();
             currentToken = sampleNextToken(logits, m_temperature, m_topP);
+            auto iter_sample_end = std::chrono::high_resolution_clock::now();
+            auto iter_sample_ms = std::chrono::duration<double, std::milli>(iter_sample_end - iter_sample_start).count();
+            total_sample_ms += iter_sample_ms;
             
-            qDebug() << "[generate] Sampled token " << currentToken << " (temperature=" << m_temperature << ", top_p=" << m_topP << ")";
+            qDebug() << "[generate] Iteration " << i << ": forward=" << iter_forward_ms << "ms, sample=" << iter_sample_ms << "ms, token=" << currentToken;
             
             // Check for EOS token (2 is common EOS)
             if (currentToken == 2 || currentToken == 0) {
@@ -958,6 +974,17 @@ std::vector<int32_t> InferenceEngine::generate(const std::vector<int32_t>& input
             }
             
             result.push_back(currentToken);
+            iterations_completed++;
+        }
+        
+        auto phase2_end = std::chrono::high_resolution_clock::now();
+        auto phase2_ms = std::chrono::duration<double, std::milli>(phase2_end - phase2_start).count();
+        
+        qInfo() << "[FORENSIC] Phase2_TokenLoop: " << phase2_ms << " ms (iterations=" << iterations_completed 
+                << ", forward_total=" << total_forward_ms << "ms, sample_total=" << total_sample_ms << "ms)";
+        if (iterations_completed > 0) {
+            qInfo() << "[FORENSIC] Per-token average: forward=" << (total_forward_ms / iterations_completed) 
+                    << "ms, sample=" << (total_sample_ms / iterations_completed) << "ms";
         }
         
         // Update performance metrics based on this generation step
@@ -969,6 +996,7 @@ std::vector<int32_t> InferenceEngine::generate(const std::vector<int32_t>& input
         
         qInfo() << "[generate] Completed:" << tokensGenerated << "tokens in" << elapsed 
                 << "ms (" << QString::number(m_tokensPerSecond, 'f', 1) << " tok/s)";
+        qInfo() << "[FORENSIC] TOTAL: prefill=" << phase1_ms << "ms, loop=" << phase2_ms << "ms, total=" << (phase1_ms + phase2_ms) << "ms";
         qDebug() << "=== GENERATE END ===";
 
         telemetry.recordTiming(QStringLiteral("inference"), QStringLiteral("generate.complete"), timer.elapsedMs(), QStringLiteral("tokens_out=%1 tok_s=%2").arg(result.size()).arg(m_tokensPerSecond, 0, 'f', 1));

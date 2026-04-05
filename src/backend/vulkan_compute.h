@@ -6,6 +6,7 @@
 #include <expected>
 #include <mutex>
 #include <unordered_map>
+#include <array>
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
@@ -56,13 +57,15 @@ public:
         const VulkanBuffer& a,
         const VulkanBuffer& b,
         VulkanBuffer& result,
-        size_t dim
+        size_t dim,
+        bool waitForCompletion = true
     );
     
     std::expected<void, VulkanError> executeSoftmax(
         VulkanBuffer& logits,
         float temperature,
-        size_t vocabSize
+        size_t vocabSize,
+        bool waitForCompletion = true
     );
     
     std::expected<void, VulkanError> executeAttention(
@@ -88,6 +91,41 @@ private:
     VkQueue m_computeQueue = VK_NULL_HANDLE;
     VkCommandPool m_commandPool = VK_NULL_HANDLE;
     VkDescriptorPool m_descriptorPool = VK_NULL_HANDLE;
+    std::unordered_map<std::string, VkDescriptorSetLayout> m_descriptorSetLayouts;
+
+    static constexpr uint32_t kDispatchRingSize = 2;
+    static constexpr uint32_t kTokenPipelineDepth = 3;  // Multi-token lookahead slots
+
+    // Reused dispatch resources for hot kernels
+    std::array<VkCommandBuffer, kDispatchRingSize> m_matmulCmdBufs{};
+    std::array<VkFence, kDispatchRingSize> m_matmulFences{};
+    std::array<VkDescriptorSet, kDispatchRingSize> m_matmulDescriptorSets{};
+    uint32_t m_matmulSlotCursor = 0;
+    
+    // Per-slot persistent reuse tracking for matmul (dirty detection)
+    std::array<VkBuffer, kDispatchRingSize> m_matmulLastBufferA{};
+    std::array<VkBuffer, kDispatchRingSize> m_matmulLastBufferB{};
+    std::array<VkBuffer, kDispatchRingSize> m_matmulLastBufferOut{};
+    std::array<uint32_t, kDispatchRingSize> m_matmulLastDim{};
+    std::array<bool, kDispatchRingSize> m_matmulCmdRecorded{};
+
+    std::array<VkCommandBuffer, kDispatchRingSize> m_softmaxCmdBufs{};
+    std::array<VkFence, kDispatchRingSize> m_softmaxFences{};
+    std::array<VkDescriptorSet, kDispatchRingSize> m_softmaxDescriptorSets{};
+    uint32_t m_softmaxSlotCursor = 0;
+    
+    // Per-slot persistent reuse tracking for softmax (dirty detection)
+    std::array<VkBuffer, kDispatchRingSize> m_softmaxLastBufferLogits{};
+    std::array<uint32_t, kDispatchRingSize> m_softmaxLastVocabSize{};
+    std::array<bool, kDispatchRingSize> m_softmaxCmdRecorded{};
+    
+    // Token-level pipelining: multi-slot KV-cache buffers for concurrent token execution
+    std::array<VkBuffer, kTokenPipelineDepth> m_kvCacheBuffers{};
+    std::array<VkDeviceMemory, kTokenPipelineDepth> m_kvCacheMemory{};
+    std::array<VkCommandBuffer, kTokenPipelineDepth> m_tokenCmdBufs{};
+    std::array<VkFence, kTokenPipelineDepth> m_tokenFences{};
+    std::array<volatile long, kTokenPipelineDepth> m_tokenCompletionFences{};
+    uint32_t m_tokenSlotCursor = 0;
     
     // Real pipeline cache
     std::unordered_map<std::string, VkPipeline> m_pipelines;

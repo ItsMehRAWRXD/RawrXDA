@@ -33,6 +33,15 @@
 // Basic IDE / editor structures
 // =============================================================================
 
+enum class SnapState
+{
+    None = 0,
+    Compact = 1,
+    Standard = 2,
+    Wide = 3,
+    Custom = 4
+};
+
 struct EditorTab
 {
     std::string filePath;

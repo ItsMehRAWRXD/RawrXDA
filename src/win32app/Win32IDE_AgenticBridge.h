@@ -10,6 +10,7 @@
 #include "../cpu_inference_engine.h"
 #include "../native_agent.hpp"
 #include "Win32IDE_SubAgent.h"
+#include <atomic>
 #include <functional>
 #include <memory>
 #include <string>
@@ -40,12 +41,21 @@ struct AgentResponse
 class AgenticBridge
 {
   public:
+  enum class UILogSeverity : uint8_t
+  {
+    Info = 0,
+    Warning = 1,
+    Error = 2,
+  };
+
     AgenticBridge(Win32IDE* ide);
     ~AgenticBridge();
 
     // Core agent operations
     bool Initialize(const std::string& frameworkPath, const std::string& modelName = "");
     bool IsInitialized() const { return m_initialized; }
+    /// True when local weights are mapped or a remote/orchestrator path is configured (stricter than IsInitialized).
+    bool HasUsableBackend() const;
 
     // Execute single agent command
     AgentResponse ExecuteAgentCommand(const std::string& prompt);
@@ -100,6 +110,13 @@ class AgenticBridge
     void SetWorkspaceRoot(const std::string& workspaceRoot);
     std::string GetWorkspaceRoot() const { return m_workspaceRoot; }
 
+    // Ghost stream telemetry (monotonic sequence auditing)
+    void ObserveGhostStreamSeq(uint64_t seq);
+    uint64_t GetLastGhostSeq() const;
+    uint64_t GetGhostSeqBacktracks() const;
+    uint64_t GetGhostSeqGapEvents() const;
+    void ResetGhostSeqTelemetry();
+
     // Output callback
     using OutputCallback = std::function<void(const std::string&, const std::string&)>;
     void SetOutputCallback(OutputCallback callback);
@@ -112,6 +129,9 @@ class AgenticBridge
     void SetProgressCallback(ProgressCallback cb) { m_progressCallback = std::move(cb); }
     void SetModelLoadErrorCallback(ModelLoadErrorCallback cb) { m_modelLoadErrorCallback = std::move(cb); }
     const std::string& GetLastModelLoadError() const { return m_lastModelLoadError; }
+
+    // Output panel integration
+    void SetMainWindow(HWND hwnd);
 
     // RE Tools Access
     std::string RunDumpbin(const std::string& path, const std::string& mode);
@@ -171,13 +191,18 @@ class AgenticBridge
     AgentResponse ParseAgentResponse(const std::string& rawOutput);
     bool IsToolCall(const std::string& line);
     bool IsAnswer(const std::string& line);
+    std::string BuildOpenTabsPromptContext() const;
 
     // Path resolution
     std::string ResolveFrameworkPath();
     std::string ResolveToolsModulePath();
+    
+    // Tool implementation helpers
+    std::string RunCompilerImpl(const std::string& path, const std::string& arch);
 
     /// Pre-inference prompt augmentation (SubAgent + thought protocols).
     void applyAgentCapabilityHotpatches(std::string& refinedPrompt);
+    bool postLogToMainWindow(UILogSeverity severity, const std::string& message) const;
 
     Win32IDE* m_ide;
     bool m_initialized;
@@ -217,4 +242,8 @@ class AgenticBridge
     std::string m_lastModelLoadError;
     bool m_multiAgentEnabled = false;
     bool m_swarmMode = false;
+    std::atomic<uint64_t> m_lastGhostSeq{0};
+    std::atomic<uint64_t> m_ghostSeqBacktracks{0};
+    std::atomic<uint64_t> m_ghostSeqGapEvents{0};
+    HWND m_hwndMain = nullptr;
 };

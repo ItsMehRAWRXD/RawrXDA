@@ -46,6 +46,7 @@
 
 #include "../../include/editor_engine.h"
 #include "../../include/plugin_system/win32_plugin_loader.h"
+#include "../../include/RawrOllamaBridge.hpp"
 #include "../full_agentic_ide/FullAgenticIDE.h"
 #include "../gguf_loader.h"
 #include "../model_source_resolver.h"
@@ -65,6 +66,10 @@
 #include "Win32IDE_Types.h"
 #include "Win32IDE_WebView2.h"
 #include "Win32TerminalManager.h"
+
+class Win32IDE;
+void Win32IDE_HandleTitanGhostStreamMessage(Win32IDE* ide);
+
 #include <array>
 #include <atomic>
 #include <filesystem>
@@ -270,6 +275,7 @@ class Win32IDE
 
     bool createWindow();
     void showWindow();
+    void showMainWindowSafe();
     int runMessageLoop();
     // ── Parity-audit: Visibility Watchdog ──────────────────────────────────
     void startVisibilityWatchdog();
@@ -1128,6 +1134,8 @@ class Win32IDE
     void paintLineNumbers(HDC hdc, RECT& rc);
 
   public:
+        struct LayoutProfile;
+
     // Editor Tab Bar
     void createTabBar(HWND hwndParent);
     void addTab(const std::string& filePath, const std::string& displayName);
@@ -1136,6 +1144,7 @@ class Win32IDE
     void onTabChanged();
     void onTabClosing(int index);
     void onTabActivated(int index);
+    void syncAgentContextFromActiveTab();
     void saveCurrentFile();
     std::pair<int, int> getCursorPosition();
     int findTabByPath(const std::string& filePath) const;
@@ -1145,6 +1154,7 @@ class Win32IDE
 
     // Session Persistence
     void saveSession();
+    void saveSessionDebounced(UINT delayMs = 500);
     void loadSession();
     void saveTabsState();
     void loadTabsState();
@@ -1156,6 +1166,16 @@ class Win32IDE
     void saveSessionEditorState(nlohmann::json& session);
     void restoreSessionEditorState(const nlohmann::json& session);
     std::string getSessionFilePath() const;
+    std::string getLayoutProfilesDirectory() const;
+    LayoutProfile captureCurrentLayoutProfile(const std::string& name = "") const;
+    bool saveLayoutProfile(const LayoutProfile& profile) const;
+    bool loadLayoutProfile(const std::string& name, LayoutProfile& profile) const;
+    void applyLayoutProfile(const LayoutProfile& profile, bool persistSession = true);
+    void applyBuiltInLayoutProfile(const std::string& profileName);
+    bool applyStartupLayoutProfileFromEnv();
+    void promptAndSaveCurrentLayoutProfile();
+    void promptAndApplySavedLayoutProfile();
+    std::string captureProfileBundleV1(const std::string& baselineLabel = "baseline_a", int sampleSeconds = 30);
     /** Writes `performance.vulkanRenderer` to rawrxd.config.json (cwd, else exe dir). */
     void persistPerformanceVulkanRendererToConfig();
 
@@ -1354,6 +1374,20 @@ class Win32IDE
         DiskRecovery = 6
     };
 
+    struct LayoutProfile
+    {
+        std::string name;
+        SnapState snapState = SnapState::None;
+        int sidebarWidth96 = 240;
+        int secondarySidebarWidth96 = 320;
+        int bottomPanelHeight96 = 250;
+        SidebarView sidebarView = SidebarView::None;
+        std::string rightView = "none";
+        bool panelTerminal = false;
+        bool panelAgent = false;
+        bool panelProblems = false;
+    };
+
     void createActivityBar(HWND hwndParent);
     void createPrimarySidebar(HWND hwndParent);
     void toggleSidebar();
@@ -1472,6 +1506,8 @@ class Win32IDE
         std::string edition;
     };
     PowerShellState m_psState;
+    std::map<std::string, std::string> m_psFunctions;
+    std::map<std::string, std::string> m_psEventHandlers;
 
     // PowerShell Command Queue
     struct PSCommand
@@ -1508,14 +1544,6 @@ class Win32IDE
         std::vector<std::string> exportedFunctions;
     };
     std::map<std::string, PSModule> m_psModuleCache;
-
-    // PowerShell Function Registry
-    std::map<std::string, std::string> m_psFunctions;  // name -> body
-
-    // PowerShell Event Handlers
-    std::map<std::string, std::string> m_psEventHandlers;  // sourceId -> action
-
-    // RawrXD.ps1 Integration
     bool m_rawrXDModuleLoaded;
     std::string m_rawrXDModulePath;
     std::map<std::string, std::string> m_rawrXDFunctions;
@@ -1584,8 +1612,8 @@ class Win32IDE
 
     // AI Inference State
     InferenceConfig m_inferenceConfig;
-    bool m_inferenceRunning;
-    bool m_inferenceStopRequested;
+    std::atomic<bool> m_inferenceRunning{false};
+    std::atomic<bool> m_inferenceStopRequested{false};
     std::string m_currentInferencePrompt;
     std::string m_currentInferenceResponse;
     std::thread m_inferenceThread;
@@ -1595,6 +1623,8 @@ class Win32IDE
     void clearInferenceLayerProgressCallback();
     /// Status bar part 3: MoE mixture pack + async prepack counters (UI thread).
     void refreshMoEPackHudStatusBarPart();
+    /// Neural diagnostics: floating swarm expert heatmap + congestion HUD.
+    void toggleExpertHeatmapPanel();
 
     // (AI Backend state — Phase 8B: see full block near Settings section)
 
@@ -1617,10 +1647,15 @@ class Win32IDE
 
     // Window Procedures for Subclassing
     static LRESULT CALLBACK CommandInputProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+    static LRESULT CALLBACK CopilotChatInputProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+    static LRESULT CALLBACK CopilotButtonProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
     static LRESULT CALLBACK SidebarProcImpl(HWND hwnd, UINT uMsg, WPARAM wParam,
                                             LPARAM lParam);  // Renamed to avoid overload conflict
     WNDPROC m_oldCommandInputProc = nullptr;
     WNDPROC m_oldSidebarProc = nullptr;
+    WNDPROC m_oldCopilotInputProc = nullptr;
+    WNDPROC m_oldCopilotSendBtnProc = nullptr;
+    WNDPROC m_oldCopilotClearBtnProc = nullptr;
     WNDPROC m_oldFileExplorerContainerProc = nullptr;
 
     // Extension Loader
@@ -1690,6 +1725,7 @@ class Win32IDE
     HWND m_hwndHelp;
     HWND m_hwndFloatingPanel;
     HWND m_hwndFloatingContent;
+    HWND m_hwndExpertHeatmapPanel = nullptr;
 
     HMENU m_hMenu;
     HWND m_hwndToolbar;
@@ -1809,6 +1845,7 @@ class Win32IDE
     // Session Persistence
     bool m_sessionRestored;
     std::string m_sessionFilePath;
+    bool m_sessionSaveDebouncePending = false;
 
     // Agent Inline Annotations State
     std::vector<InlineAnnotation> m_annotations;
@@ -2039,6 +2076,7 @@ class Win32IDE
 
     bool m_secondarySidebarVisible;
     int m_secondarySidebarWidth;
+    SnapState m_activeSnapState = SnapState::None;
     int m_currentMaxTokens;
     std::vector<std::string> m_availableModels;
     std::vector<std::string> m_userModelDirectories;
@@ -2046,6 +2084,12 @@ class Win32IDE
     // Tool action status per chat message (keyed by m_chatHistory index)
     std::map<size_t, std::vector<RawrXD::UI::ToolActionStatus>> m_chatToolActions;
     RawrXD::UI::ToolActionAccumulator m_currentToolActions;  // accumulator for current response
+    std::unique_ptr<RawrXD::OllamaBridge> m_ollamaBridge;  // Ollama backend for streaming completions
+    bool m_ollamaBackendEnabled;  // Whether to use Ollama for chat
+    static const UINT WM_RAWR_STREAM_DATA = WM_APP + 1337;
+    static const uint32_t RAWR_STREAM_WPARAM_TAG = 0x52415752;  // 'RAWR'
+    HMODULE m_streamBridgeModule = nullptr;
+    bool m_streamBridgeConfigured = false;
     static LRESULT CALLBACK SecondarySidebarProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
     // Panel (Bottom) - Terminal, Output, Problems, Debug Console
@@ -2111,6 +2155,8 @@ class Win32IDE
     void updateProblemsPanel();
 
     void toggleSecondarySidebar();
+    void applySovereignSnapPreset(int basePixels, const wchar_t* presetName, bool persistSession = true);
+    void updateSovereignSnapMenuChecks();
     void togglePanel();
     void maximizePanel();
     void restorePanel();
@@ -2122,6 +2168,9 @@ class Win32IDE
     void sendCopilotMessage(const std::string& message);
     void clearCopilotChat();
     void appendCopilotResponse(const std::string& response);
+    void tryConfigureNativeStreamBridge();
+    void handleNativeStreamTick(WPARAM wParam, LPARAM lParam);
+    void performEmergencyWipeAndShutdown();
     void updateCursorPosition();
     void updateLanguageMode();
     void detectLanguageFromFile(const std::string& filePath);
@@ -2145,6 +2194,9 @@ class Win32IDE
     void toggleChatMode();
     void appendChatMessage(const std::string& user, const std::string& message);
     bool trySendToOllama(const std::string& prompt, std::string& outResponse);
+
+    // Output Panel Management
+    void LogToOutputPanel(const char* message, int type = 0);
 
     // Ollama config
     std::string m_ollamaBaseUrl;        // e.g., http://localhost:11434
@@ -2331,9 +2383,20 @@ class Win32IDE
     void triggerGhostTextCompletion();
     void onGhostTextTimer();
     std::string requestGhostTextCompletion(const std::string& context, const std::string& language);
+    std::string requestTitanGhostTextCompletion(const std::string& context, const std::string& language,
+                                                const std::string& suffix, const std::string& filePath,
+                                                int cursorLine, int cursorCol, uint64_t expectedSeq = 0);
     std::string requestGhostTextCompletion(const std::string& context, const std::string& language,
                                            const std::string& suffix, const std::string& filePath, int cursorLine,
                                            int cursorCol, uint64_t expectedSeq = 0);
+    bool startTitanAgentInferenceAsync(const std::string& prompt, uint32_t timeoutMs = 120000,
+                                       bool stageOnly = false);
+    void cancelTitanAgentInferenceAsync();
+    void startTitanPagingHeartbeat(uint32_t timeoutMs);
+    void onTitanPagingHeartbeatTimer();
+    void stopTitanPagingHeartbeat();
+    void onTitanAgentStreamMessage();
+    void onTitanAgentDone(int status);
     void onGhostTextReady(int requestedCursorPos, const char* completionText);
     void dismissGhostText();
     void acceptGhostText();
@@ -2361,6 +2424,7 @@ class Win32IDE
     };
 
     // Ghost Text state
+    friend void Win32IDE_HandleTitanGhostStreamMessage(Win32IDE* ide);
     RawrXD::GhostTextRenderer* m_ghostTextRendererOverlay = nullptr;
     bool m_ghostTextEnabled = false;
     bool m_ghostTextVisible = false;
@@ -2369,11 +2433,42 @@ class Win32IDE
     std::string m_ghostTextContent;
     int m_ghostTextLine = -1;
     int m_ghostTextColumn = -1;
+    int m_ghostTextRequestCursorPos = -1;
     HFONT m_ghostTextFont = nullptr;
     std::atomic<uint64_t> m_ghostTextRequestSeq{0};
     std::mutex m_ghostTextCacheMutex;
     std::unordered_map<std::string, GhostTextCacheEntry> m_ghostTextCache;
     GhostTextMetrics m_ghostTextMetrics = {};
+    std::mutex m_titanGhostMutex;
+    std::string m_titanGhostStreamText;
+    uint64_t m_titanGhostStreamSeq = 0;
+    uint64_t m_titanGhostSeqGaps = 0;
+    uint64_t m_titanGhostPackets = 0;
+    bool m_titanGhostStreamActive = false;
+    std::mutex m_titanAgentMutex;
+    std::string m_titanAgentStreamText;
+    uint64_t m_titanAgentStreamSeq = 0;
+    uint64_t m_titanAgentSeqGaps = 0;
+    uint64_t m_titanAgentPackets = 0;
+    size_t m_titanAgentPostedChars = 0;
+    int m_titanAgentGhostAnchorPos = -1;
+    bool m_titanAgentStageOnly = false;
+    std::string m_titanAgentStagedText;
+    int m_titanAgentStageSelStart = -1;
+    int m_titanAgentStageSelEnd = -1;
+    uint64_t m_titanAgentInferenceHandle = 0;
+    uint64_t m_titanAgentStreamHandle = 0;
+    bool m_titanAgentRunning = false;
+    uint64_t m_titanAgentHeartbeatStartMs = 0;
+    uint32_t m_titanAgentHeartbeatTimeoutMs = 0;
+    bool m_titanAgentHeartbeatActive = false;
+    uint64_t m_titanAgentStartMs = 0;
+    uint64_t m_titanAgentLastPacketMs = 0;
+
+    // Paging heartbeat state (Phase 15.2)
+    bool m_titanPagingHeartbeatActive = false;
+    uint64_t m_titanPagingHeartbeatStartTime = 0;
+    uint32_t m_titanPagingHeartbeatTimeoutMs = 0;
 
     // ========================================================================
     // Peek Overlay — Definition/References Overlay (Win32IDE_PeekOverlay.cpp)

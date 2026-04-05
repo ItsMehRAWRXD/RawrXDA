@@ -814,13 +814,24 @@ std::string Win32IDE::getRouterConfigFilePath() const {
 
 void Win32IDE::loadRouterConfig() {
     std::string path = getRouterConfigFilePath();
-    std::ifstream ifs(path);
+    std::ifstream ifs(path, std::ios::binary | std::ios::ate);
     if (!ifs.is_open()) {
         logInfo("[LLMRouter] No saved config at " + path + " — using defaults");
         return;
     }
 
     try {
+        const std::streampos endPos = ifs.tellg();
+        if (endPos <= 0) {
+            return;
+        }
+        const size_t fileSize = static_cast<size_t>(endPos);
+        static constexpr size_t kMaxRouterConfigBytes = 4u * 1024u * 1024u;
+        if (fileSize > kMaxRouterConfigBytes) {
+            logError("loadRouterConfig", "Config file too large: " + path);
+            return;
+        }
+        ifs.seekg(0);
         std::string fileContent((std::istreambuf_iterator<char>(ifs)),
                                  std::istreambuf_iterator<char>());
         nlohmann::json j = nlohmann::json::parse(fileContent);
@@ -1822,13 +1833,26 @@ void Win32IDE::handleRouterSimulateEndpoint(SOCKET client, const std::string& bo
     try {
         nlohmann::json reqJson = nlohmann::json::parse(body);
 
+        static constexpr int kMaxSimulationEvents = 10000;
+        static constexpr size_t kMaxSimulationPrompts = 1000;
+        static constexpr size_t kMaxSimulationPromptBytes = 65536;
+
         SimulationResult simResult;
 
         if (reqJson.contains("fromHistory") && reqJson["fromHistory"].get<bool>()) {
             int maxEvents = reqJson.value("maxEvents", 100);
+            if (maxEvents < 1) maxEvents = 100;
+            if (maxEvents > kMaxSimulationEvents) maxEvents = kMaxSimulationEvents;
             simResult = simulateFromHistory(maxEvents);
         } else if (reqJson.contains("prompts") && reqJson["prompts"].is_array()) {
             std::vector<SimulationInput> inputs;
+            if (reqJson["prompts"].size() > kMaxSimulationPrompts) {
+                std::string errBody = R"({"error":"Too many prompts for simulation"})";
+                std::string resp = "HTTP/1.1 400 Bad Request\r\nContent-Type: application/json\r\n"
+                                   "Content-Length: " + std::to_string(errBody.size()) + "\r\n\r\n" + errBody;
+                send(client, resp.c_str(), (int)resp.size(), 0);
+                return;
+            }
             for (size_t pi = 0; pi < reqJson["prompts"].size(); ++pi) {
                 const auto& pj = reqJson["prompts"][pi];
                 SimulationInput inp;
@@ -1838,6 +1862,9 @@ void Win32IDE::handleRouterSimulateEndpoint(SOCKET client, const std::string& bo
                     inp.prompt       = pj.value("prompt", "");
                     std::string expTask = pj.value("expectedTask", "General");
                     inp.expectedTask = taskTypeFromString(expTask);
+                }
+                if (inp.prompt.size() > kMaxSimulationPromptBytes) {
+                    inp.prompt.resize(kMaxSimulationPromptBytes);
                 }
                 if (!inp.prompt.empty()) inputs.push_back(inp);
             }

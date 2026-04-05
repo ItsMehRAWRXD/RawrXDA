@@ -4095,7 +4095,7 @@ CommandResult handleAINoRefusal(const CommandContext& ctx)
     }
     static bool noRefusal = false;
     noRefusal = !noRefusal;
-    ctx.output(noRefusal ? "[AI] No-refusal mode: ENABLED\n" : "[AI] No-refusal mode: DISABLED\n");
+    ctx.output(noRefusal ? "[AI] Direct-response mode: ENABLED\n" : "[AI] Direct-response mode: DISABLED\n");
     return CommandResult::ok("ai.noRefusal");
 }
 

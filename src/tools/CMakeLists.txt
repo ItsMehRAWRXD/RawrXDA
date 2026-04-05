@@ -15,6 +15,12 @@ if(MSVC)
   target_compile_options(RawrXD_KeyGen PRIVATE /W4)
 endif()
 
+# Titan GGML bridge probe - validates runtime handshake after Titan_Initialize.
+add_executable(rawrxd-titan-init-probe
+        titan_init_probe.cpp
+)
+target_link_libraries(rawrxd-titan-init-probe PRIVATE kernel32)
+
 # Simple GPU Test - For hotpatch testing framework
 if(TARGET InferenceEngine)
   add_executable(simple_gpu_test
@@ -87,7 +93,7 @@ else()
 endif()
 
 # Install targets (RawrXD_KeyGen ships with IDE for License Creator > Launch KeyGen)
-set(_RAWRXD_TOOL_INSTALL_TARGETS RawrXD_KeyGen)
+set(_RAWRXD_TOOL_INSTALL_TARGETS RawrXD_KeyGen rawrxd-titan-init-probe)
 
 foreach(_rawrxd_tool_target simple_gpu_test real_multi_model_benchmark bench_cpu comprehensive_benchmark gguf_api_server)
     if(TARGET ${_rawrxd_tool_target})

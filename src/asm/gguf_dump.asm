@@ -89,6 +89,10 @@ GGUF_TYPE_FLOAT64 EQU 12
     g_view_base     dq 0
     g_file_size     dq 0
     g_cursor        dq 0
+    g_argc          dq 0
+    g_argv          dq 0
+    g_tensor_count  dq 0
+    g_kv_count      dq 0
     
     ; Output handle
     g_stdout        dq 0
@@ -111,6 +115,10 @@ main PROC
     ; Check args
     cmp rcx, 2
     jb .show_usage
+
+    ; Preserve argc/argv across helper calls.
+    mov g_argc, rcx
+    mov g_argv, rdx
     
     ; Parse filename from argv[1]
     mov rsi, [rdx + 8]              ; argv[1]
@@ -129,11 +137,13 @@ main PROC
     call ParseGGUFHeader
     
     ; Parse based on flags
-    cmp rcx, 3
+    mov rax, g_argc
+    cmp rax, 3
     jb .default_dump
     
     ; Check for --ghost flag
-    mov rdi, [rdx + 16]             ; argv[2]
+    mov rax, g_argv
+    mov rdi, [rax + 16]             ; argv[2]
     lea rsi, szFlagGhost
     call StrCompare
     test rax, rax
@@ -313,6 +323,9 @@ ParseGGUFHeader PROC
     ; metadata_kv_count: uint64
     mov r13, [rbx]                  ; kv_count
     add rbx, 8
+
+    mov g_tensor_count, r12
+    mov g_kv_count, r13
     
     mov g_cursor, rbx
     
@@ -358,6 +371,7 @@ DumpTensors PROC
     call PrintString
     
     ; tensor_count in r12 from header parse
+    mov r15, g_tensor_count
     xor r12, r12                    ; Tensor index
     
 .tensor_loop:
@@ -428,6 +442,7 @@ OutputGhostMap PROC
     ; tensor_id|name_hash|offset|size|priority|stripe_hint
     
     mov rbx, g_cursor
+    mov r15, g_tensor_count
     xor r12, r12                    ; tensor_id
 
 .ghost_loop:
@@ -446,18 +461,55 @@ OutputGhostMap PROC
     
     add rbx, rdi                    ; Skip name
     
-    mov eax, [rbx]                  ; n_dims
+    mov r11d, [rbx]                 ; n_dims
     add rbx, 4
-    shl rax, 3                      ; *8 for uint64 dimensions
-    add rbx, rax                    ; Skip dimensions
-    
-    add rbx, 4                      ; Skip type
+
+    ; Compute element count from dimensions.
+    mov r10, 1
+    test r11d, r11d
+    jz .dims_done
+.dims_loop:
+    mov rax, [rbx]
+    test rax, rax
+    jnz .dim_mul
+    mov rax, 1
+.dim_mul:
+    imul r10, rax
+    add rbx, 8
+    dec r11d
+    jnz .dims_loop
+.dims_done:
+
+    ; Scale by element size derived from GGUF tensor type.
+    mov eax, [rbx]                  ; type
+    mov ecx, 1                      ; default bytes/element
+    cmp eax, GGUF_TYPE_UINT16
+    jb .type_done
+    cmp eax, GGUF_TYPE_INT16
+    ja .type_u32_check
+    mov ecx, 2
+    jmp .type_done
+.type_u32_check:
+    cmp eax, GGUF_TYPE_UINT32
+    jb .type_done
+    cmp eax, GGUF_TYPE_FLOAT32
+    ja .type_u64_check
+    mov ecx, 4
+    jmp .type_done
+.type_u64_check:
+    cmp eax, GGUF_TYPE_UINT64
+    jb .type_done
+    cmp eax, GGUF_TYPE_FLOAT64
+    ja .type_done
+    mov ecx, 8
+.type_done:
+    imul r10, rcx
+    add rbx, 4
     
     mov r14, [rbx]                  ; offset
     add rbx, 8
     
-    ; Calculate size from type and dimensions (simplified)
-    mov r15, 4096                   ; Placeholder: would compute actual size
+    ; Size now computed from dimensions and type in r15.
     
     ; Determine priority based on tensor name patterns
     mov ecx, r12d
@@ -466,7 +518,7 @@ OutputGhostMap PROC
     movzx r8d, al
     
     ; Determine stripe hint based on size
-    cmp r15, 134217728              ; 128MB
+    cmp r10, 134217728              ; 128MB
     ja .multi_stripe
     mov r9d, 0                      ; Single drive
     jmp .print_entry
@@ -478,7 +530,7 @@ OutputGhostMap PROC
     mov edx, r12d                   ; tensor_id
     mov r8d, r13d                   ; name_hash
     mov r9, r14                     ; offset
-    push r15                        ; size
+    push r10                        ; size
     push r8                         ; priority
     push r9                         ; stripe_hint
     sub rsp, 32
@@ -605,6 +657,27 @@ PrintFormatted ENDP
 StrCompare PROC
     ; rsi, rdi = strings to compare
     ; returns rax=1 if equal
+    push rbx
+
+.loop:
+    mov al, byte ptr [rsi]
+    mov bl, byte ptr [rdi]
+    cmp al, bl
+    jne .not_equal
+    test al, al
+    jz .equal
+    inc rsi
+    inc rdi
+    jmp .loop
+
+.not_equal:
+    xor eax, eax
+    pop rbx
+    ret
+
+.equal:
+    mov eax, 1
+    pop rbx
     ret
 StrCompare ENDP
 

@@ -26,7 +26,14 @@
 #include <random>
 #include <fstream>
 #include <sstream>
+#include <functional>
+#include <nlohmann/json.hpp>
 #include "core/dual_agent_session.hpp"
+#include "extension_manager.h"
+#include "audit/audit_subsystem.hpp"
+#include "backend/ollama_client.h"
+#include "runtime_core.h"
+#include "agent_modes.h"
 
 #pragma comment(lib, "winhttp.lib")
 #pragma comment(lib, "psapi.lib")
@@ -294,6 +301,20 @@ public:
 
         running_ = true;
         start_time_ = std::chrono::steady_clock::now();
+
+        std::error_code ec;
+        std::filesystem::create_directories("D:/rawrxd/logs/audit", ec);
+        rawrxd::audit::AuditOrchestrator::Config audit_cfg;
+        audit_cfg.output_path = "D:/rawrxd/logs/audit/tool_server_audit.log";
+        audit_cfg.enable_console = false;
+        audit_cfg.min_severity = rawrxd::audit::Severity::INFO;
+        audit_cfg.filter_mask = rawrxd::audit::Category::ALL;
+        const char* hmac_key = std::getenv("RAWRXD_AUDIT_HMAC_KEY");
+        if (hmac_key != nullptr) {
+            audit_cfg.hmac_key = hmac_key;
+        }
+        rawrxd::audit::AuditOrchestrator::instance().initialize(audit_cfg);
+
         server_thread_ = std::thread(&SimpleHTTPServer::ServerLoop, this);
 
 
@@ -305,6 +326,7 @@ public:
         if (server_thread_.joinable()) {
             server_thread_.join();
         }
+        rawrxd::audit::AuditOrchestrator::instance().shutdown();
         closesocket(listen_socket_);
         WSACleanup();
     }
@@ -316,6 +338,423 @@ private:
     std::thread server_thread_;
     std::chrono::steady_clock::time_point start_time_;
     std::atomic<uint64_t> request_count_{0};
+    std::mutex backend_state_mutex_;
+    std::string active_backend_{"ollama-local"};
+    std::mutex local_inference_mutex_;
+    bool local_runtime_initialized_{false};
+    std::string local_runtime_model_path_;
+    std::mutex swarm_state_mutex_;
+    bool swarm_active_{false};
+    uint32_t swarm_nodes_{0};
+    uint64_t swarm_transition_count_{0};
+    std::string swarm_mode_{"idle"};
+    std::string swarm_last_error_;
+
+    static rawrxd::audit::Actor BuildAuditActor() {
+        rawrxd::audit::Actor actor;
+        actor.user_id_hash = rawrxd::audit::hash_string("tool_server");
+        actor.session_id_hash = rawrxd::audit::hash_string("session_default");
+        actor.ip_address_hash = rawrxd::audit::hash_string("127.0.0.1");
+        actor.user_agent_hash = rawrxd::audit::hash_string("rawrxd-tool-server");
+        actor.process_id = std::to_string(GetCurrentProcessId());
+        actor.thread_id = std::to_string(GetCurrentThreadId());
+        return actor;
+    }
+
+    static void LogMutationNoop(
+        rawrxd::audit::Category category,
+        rawrxd::audit::Severity severity,
+        const std::string& endpoint,
+        const std::string& method,
+        const std::string& operation,
+        const std::string& reason,
+        const std::string& description,
+        const std::string& body,
+        const std::string& resource_type,
+        const std::string& resource_id) {
+
+        rawrxd::audit::AuditEvent event = rawrxd::audit::AuditEvent::builder()
+            .with_id(rawrxd::audit::generate_uuid_v4())
+            .with_timestamp(std::chrono::system_clock::now())
+            .with_severity(severity)
+            .with_category(category)
+            .with_actor(BuildAuditActor())
+            .with_action(rawrxd::audit::Action{
+                .type = operation,
+                .endpoint = endpoint,
+                .method = method,
+                .operation = operation,
+                .parameters = {"request"}
+            })
+            .with_resource(rawrxd::audit::Resource{
+                .type = resource_type,
+                .id = resource_id,
+                .container = "tool_server",
+                .region = "local"
+            })
+            .with_outcome(rawrxd::audit::Outcome{
+                .success = false,
+                .state_changed = false,
+                .reason = reason,
+                .description = description,
+                .error_code = 501
+            })
+            .with_context(rawrxd::audit::Context{
+                .request_body_hash = rawrxd::audit::hash_string(body),
+                .response_body_hash = "0",
+                .before_state_hash = "unchanged",
+                .after_state_hash = "null",
+                .duration_us = 0,
+                .memory_delta_kb = 0,
+                .metadata = {
+                    {"endpoint", endpoint},
+                    {"operation", operation}
+                }
+            })
+            .build();
+
+        rawrxd::audit::AuditOrchestrator::instance().log_event(event);
+    }
+
+    static void LogMutationResult(
+        rawrxd::audit::Category category,
+        rawrxd::audit::Severity severity,
+        const std::string& endpoint,
+        const std::string& method,
+        const std::string& operation,
+        bool success,
+        bool state_changed,
+        uint32_t error_code,
+        const std::string& reason,
+        const std::string& description,
+        const std::string& body,
+        const std::string& resource_type,
+        const std::string& resource_id,
+        const std::string& before_state,
+        const std::string& after_state) {
+
+        rawrxd::audit::AuditEvent event = rawrxd::audit::AuditEvent::builder()
+            .with_id(rawrxd::audit::generate_uuid_v4())
+            .with_timestamp(std::chrono::system_clock::now())
+            .with_severity(severity)
+            .with_category(category)
+            .with_actor(BuildAuditActor())
+            .with_action(rawrxd::audit::Action{
+                .type = operation,
+                .endpoint = endpoint,
+                .method = method,
+                .operation = operation,
+                .parameters = {"request"}
+            })
+            .with_resource(rawrxd::audit::Resource{
+                .type = resource_type,
+                .id = resource_id,
+                .container = "tool_server",
+                .region = "local"
+            })
+            .with_outcome(rawrxd::audit::Outcome{
+                .success = success,
+                .state_changed = state_changed,
+                .reason = reason,
+                .description = description,
+                .error_code = error_code
+            })
+            .with_context(rawrxd::audit::Context{
+                .request_body_hash = rawrxd::audit::hash_string(body),
+                .response_body_hash = "0",
+                .before_state_hash = rawrxd::audit::hash_string(before_state),
+                .after_state_hash = state_changed ? rawrxd::audit::hash_string(after_state) : "null",
+                .duration_us = 0,
+                .memory_delta_kb = 0,
+                .metadata = {
+                    {"endpoint", endpoint},
+                    {"operation", operation},
+                    {"before_backend", before_state},
+                    {"after_backend", after_state}
+                }
+            })
+            .build();
+
+        rawrxd::audit::AuditOrchestrator::instance().log_event(event);
+    }
+
+    bool ProbeBackendReady(const std::string& backend, std::string& detail) {
+        if (backend == "rawrxd-tool-server") {
+            detail = "self-backend-ready";
+            return true;
+        }
+
+        if (backend == "ollama-local") {
+            RawrXD::Backend::OllamaClient client("http://localhost:11434");
+            if (client.isRunning()) {
+                detail = "ollama-responding";
+                return true;
+            }
+            detail = "ollama-not-reachable";
+            return false;
+        }
+
+        detail = "unknown-backend";
+        return false;
+    }
+
+    std::string GetActiveBackendName() {
+        std::lock_guard<std::mutex> lock(backend_state_mutex_);
+        return active_backend_;
+    }
+
+    static std::string AgentModeToString(int mode) {
+        switch (mode) {
+        case PLAN:
+            return "plan";
+        case EDIT:
+            return "edit";
+        case BUGREPORT:
+            return "bugreport";
+        case CODESUGGEST:
+            return "codesuggest";
+        case ASK:
+        default:
+            return "ask";
+        }
+    }
+
+    static int ParseAgentMode(const nlohmann::json& req, int fallback_mode) {
+        if (!req.is_object() || !req.contains("mode")) {
+            return fallback_mode;
+        }
+
+        if (req["mode"].is_number_integer()) {
+            return req["mode"].get<int>();
+        }
+
+        if (req["mode"].is_string()) {
+            std::string mode = req["mode"].get<std::string>();
+            std::transform(mode.begin(), mode.end(), mode.begin(),
+                [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+            if (mode == "plan") return PLAN;
+            if (mode == "edit") return EDIT;
+            if (mode == "bugreport") return BUGREPORT;
+            if (mode == "codesuggest") return CODESUGGEST;
+            if (mode == "ask") return ASK;
+        }
+
+        return fallback_mode;
+    }
+
+    static size_t ExtractContextLimit(const nlohmann::json& req, size_t fallback_value = 4096) {
+        if (!req.is_object()) {
+            return fallback_value;
+        }
+
+        if (req.contains("context_limit") && req["context_limit"].is_number_integer()) {
+            int value = req["context_limit"].get<int>();
+            return value > 0 ? static_cast<size_t>(value) : fallback_value;
+        }
+
+        if (req.contains("num_ctx") && req["num_ctx"].is_number_integer()) {
+            int value = req["num_ctx"].get<int>();
+            return value > 0 ? static_cast<size_t>(value) : fallback_value;
+        }
+
+        if (req.contains("options") && req["options"].is_object() &&
+            req["options"].contains("num_ctx") && req["options"]["num_ctx"].is_number_integer()) {
+            int value = req["options"]["num_ctx"].get<int>();
+            return value > 0 ? static_cast<size_t>(value) : fallback_value;
+        }
+
+        return fallback_value;
+    }
+
+    bool EnsureLocalInferenceReadyLocked(std::string& detail) {
+        try {
+            if (!local_runtime_initialized_) {
+                init_runtime();
+                local_runtime_initialized_ = true;
+            }
+
+            std::string model_path = g_loaded_model;
+            if (model_path.empty() && g_engine && g_engine->isLoaded()) {
+                model_path = g_engine->modelPath();
+            }
+            if (model_path.empty()) {
+                model_path = ResolveDefaultModelPath();
+            }
+            if (model_path.empty()) {
+                detail = "No GGUF model path is available for local inference.";
+                return false;
+            }
+
+            if (local_runtime_model_path_ != model_path) {
+                runtime_load_model(model_path);
+                local_runtime_model_path_ = model_path;
+            }
+
+            detail = get_active_engine_name();
+            if (detail.empty() || detail == "None" || detail == "none") {
+                detail = "Runtime initialized, but no local engine is active.";
+                return false;
+            }
+
+            return true;
+        } catch (const std::exception& e) {
+            detail = e.what();
+            return false;
+        } catch (...) {
+            detail = "Unknown local inference initialization failure";
+            return false;
+        }
+    }
+
+    std::string RunLocalInference(const nlohmann::json& req, const std::string& prompt, int fallback_mode,
+                                  std::string& active_engine_name, std::string& error_detail) {
+        std::lock_guard<std::mutex> lock(local_inference_mutex_);
+
+        if (!EnsureLocalInferenceReadyLocked(active_engine_name)) {
+            error_detail = active_engine_name;
+            active_engine_name.clear();
+            return "";
+        }
+
+        set_mode(AgentModeToString(ParseAgentMode(req, fallback_mode)));
+        set_deep_thinking(req.value("deep_thinking", false));
+        set_deep_research(req.value("deep_research", false));
+        set_no_refusal(req.value("no_refusal", false));
+        set_context(ExtractContextLimit(req));
+
+        active_engine_name = get_active_engine_name();
+
+        try {
+            return process_prompt(prompt);
+        } catch (const std::exception& e) {
+            error_detail = e.what();
+            return "";
+        } catch (...) {
+            error_detail = "Unknown local inference execution failure";
+            return "";
+        }
+    }
+
+    std::string RunLocalInferenceStreaming(const nlohmann::json& req,
+                                           const std::string& prompt,
+                                           int fallback_mode,
+                                           const std::function<bool(const std::string&)>& on_chunk,
+                                           std::string& active_engine_name,
+                                           std::string& error_detail) {
+        std::lock_guard<std::mutex> lock(local_inference_mutex_);
+
+        if (!EnsureLocalInferenceReadyLocked(active_engine_name)) {
+            error_detail = active_engine_name;
+            active_engine_name.clear();
+            return "";
+        }
+
+        set_mode(AgentModeToString(ParseAgentMode(req, fallback_mode)));
+        set_deep_thinking(req.value("deep_thinking", false));
+        set_deep_research(req.value("deep_research", false));
+        set_no_refusal(req.value("no_refusal", false));
+        set_context(ExtractContextLimit(req));
+
+        active_engine_name = get_active_engine_name();
+
+        try {
+            return process_prompt_stream(prompt, on_chunk);
+        } catch (const std::exception& e) {
+            error_detail = e.what();
+            return "";
+        } catch (...) {
+            error_detail = "Unknown local inference execution failure";
+            return "";
+        }
+    }
+
+    std::string SwarmStateSnapshot() {
+        std::lock_guard<std::mutex> lock(swarm_state_mutex_);
+        std::ostringstream ss;
+        ss << "active=" << (swarm_active_ ? "1" : "0")
+           << ";nodes=" << swarm_nodes_
+           << ";mode=" << swarm_mode_
+           << ";transitions=" << swarm_transition_count_;
+        return ss.str();
+    }
+
+    bool StartSwarm(std::string& reason, std::string& detail, bool& state_changed) {
+        std::lock_guard<std::mutex> lock(swarm_state_mutex_);
+        if (swarm_active_) {
+            reason = "already_active";
+            detail = "Swarm is already running.";
+            state_changed = false;
+            return true;
+        }
+
+#ifdef RAWR_HAS_MASM
+        if (!g_masm_bridge_initialized) {
+            g_masm_bridge_initialized = (ModelBridge_Init() == 0);
+            if (!g_masm_bridge_initialized) {
+                reason = "bridge_init_failed";
+                detail = "Failed to initialize MASM model bridge.";
+                swarm_last_error_ = detail;
+                state_changed = false;
+                return false;
+            }
+        }
+
+        const uint64_t rc = Swarm_Init(20, 5);
+        if (rc != 0) {
+            reason = "swarm_init_failed";
+            detail = "Swarm_Init failed with code " + std::to_string(rc);
+            swarm_last_error_ = detail;
+            state_changed = false;
+            return false;
+        }
+        g_swarm_initialized = true;
+        swarm_mode_ = "masm-dual-agent";
+#else
+        g_swarm_initialized = true;
+        swarm_mode_ = "cpp-fallback";
+#endif
+
+        swarm_active_ = true;
+        swarm_nodes_ = 2;
+        ++swarm_transition_count_;
+        swarm_last_error_.clear();
+        reason = "started";
+        detail = "Swarm started successfully.";
+        state_changed = true;
+        return true;
+    }
+
+    bool StopSwarm(std::string& reason, std::string& detail, bool& state_changed) {
+        std::lock_guard<std::mutex> lock(swarm_state_mutex_);
+        if (!swarm_active_) {
+            reason = "already_stopped";
+            detail = "Swarm is not running.";
+            state_changed = false;
+            return true;
+        }
+
+#ifdef RAWR_HAS_MASM
+        const uint64_t rc = Swarm_Shutdown();
+        if (rc != 0) {
+            reason = "swarm_shutdown_failed";
+            detail = "Swarm_Shutdown failed with code " + std::to_string(rc);
+            swarm_last_error_ = detail;
+            state_changed = false;
+            return false;
+        }
+#endif
+
+        g_swarm_initialized = false;
+        swarm_active_ = false;
+        swarm_nodes_ = 0;
+        swarm_mode_ = "idle";
+        ++swarm_transition_count_;
+        swarm_last_error_.clear();
+        reason = "stopped";
+        detail = "Swarm stopped successfully.";
+        state_changed = true;
+        return true;
+    }
     
     void ServerLoop() {
         while (running_) {
@@ -377,6 +816,21 @@ private:
         return request.substr(body_start + 4);
     }
 
+    static bool SendAll(SOCKET client_socket, const std::string& payload) {
+        size_t sent_total = 0;
+        while (sent_total < payload.size()) {
+            const int sent = send(client_socket,
+                                  payload.c_str() + sent_total,
+                                  static_cast<int>(payload.size() - sent_total),
+                                  0);
+            if (sent == SOCKET_ERROR || sent <= 0) {
+                return false;
+            }
+            sent_total += static_cast<size_t>(sent);
+        }
+        return true;
+    }
+
     void HandleRequest(SOCKET client_socket, const std::string& request) {
         std::string response;
         
@@ -417,7 +871,8 @@ private:
             response = HandleStatusRequest();
         }
         else if (method == "POST" && path == "/api/generate") {
-            response = HandleGenerateRequest(ExtractBody(request));
+            response = HandleGenerateRequest(client_socket, ExtractBody(request));
+            if (response.empty()) return; // streaming handled inline
         }
         else if (method == "GET" && path == "/metrics") {
             response = HandleMetricsRequest();
@@ -513,35 +968,35 @@ private:
         else if (path.rfind("/api/router/", 0) == 0) {
             response = HandleRouterRequest(method, path, ExtractBody(request));
         }
+
         // Swarm
         else if (path.rfind("/api/swarm/", 0) == 0) {
             response = HandleSwarmRequest(method, path, ExtractBody(request));
         }
+
         // Multi-response
-        else if (path.rfind("/api/multi/", 0) == 0) {
+        else if (path.rfind("/api/multi/", 0) == 0 || path.rfind("/api/multi-response/", 0) == 0) {
             response = HandleMultiResponseRequest(method, path, ExtractBody(request));
         }
+
         // ASM Debug
-        else if (path.rfind("/api/asm-debug/", 0) == 0) {
+        else if (path.rfind("/api/asm-debug/", 0) == 0 || path.rfind("/api/debug/", 0) == 0) {
             response = HandleAsmDebugRequest(method, path, ExtractBody(request));
         }
         // Safety
         else if (path.rfind("/api/safety/", 0) == 0) {
             response = HandleSafetyRequest(method, path, ExtractBody(request));
         }
-        // Chain-of-Thought
+        // Chain-of-thought
         else if (path.rfind("/api/cot/", 0) == 0) {
             response = HandleCotRequest(method, path, ExtractBody(request));
         }
-        // LSP
         else if (path.rfind("/api/lsp/", 0) == 0) {
             response = HandleLspRequest(method, path, ExtractBody(request));
         }
-        // Hybrid Completion
         else if (path.rfind("/api/hybrid/", 0) == 0) {
             response = HandleHybridRequest(method, path, ExtractBody(request));
         }
-        // Governor
         else if (path.rfind("/api/governor/", 0) == 0) {
             response = HandleGovernorRequest(method, path, ExtractBody(request));
         }
@@ -659,9 +1114,360 @@ private:
 
         return response;
     }
+
+    std::string HandleGenerateRequestLocal(SOCKET client_socket, const std::string& body) {
+        auto start_time = std::chrono::high_resolution_clock::now();
+
+        nlohmann::json req = nlohmann::json::object();
+        try {
+            req = nlohmann::json::parse(body);
+        } catch (...) {
+            // Fall back to ExtractJsonValue for minimal compatibility.
+        }
+
+        std::string prompt = req.value("prompt", ExtractJsonValue(body, "prompt"));
+        if (prompt.empty()) {
+            return MakeErrorResponse(400, "Missing 'prompt' field in request body");
+        }
+
+        std::string requested_model = req.value("model", ExtractJsonValue(body, "model"));
+        const bool stream = req.value("stream", false);
+
+        if (stream) {
+            std::string active_engine_name;
+            std::string error_detail;
+
+            auto now = std::time(nullptr);
+            auto tm = *std::gmtime(&now);
+            char timestamp[30];
+            std::strftime(timestamp, sizeof(timestamp), "%Y-%m-%dT%H:%M:%SZ", &tm);
+
+            std::string ndjson_header = "HTTP/1.1 200 OK\r\n";
+            ndjson_header += "Content-Type: application/x-ndjson\r\n";
+            ndjson_header += "Cache-Control: no-cache\r\n";
+            ndjson_header += "Connection: keep-alive\r\n";
+            ndjson_header += "Access-Control-Allow-Origin: *\r\n";
+            ndjson_header += "Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With\r\n";
+            ndjson_header += "\r\n";
+            if (!SendAll(client_socket, ndjson_header)) {
+                return "";
+            }
+
+            int eval_count = 0;
+            auto on_chunk = [&](const std::string& token_chunk) {
+                eval_count += static_cast<int>(token_chunk.size());
+
+                nlohmann::json token_json;
+                token_json["model"] = requested_model.empty() ? active_engine_name : requested_model;
+                token_json["created_at"] = timestamp;
+                token_json["response"] = token_chunk;
+                token_json["done"] = false;
+                token_json["backend"] = "rawrxd-tool-server";
+                token_json["engine"] = active_engine_name;
+
+                return SendAll(client_socket, token_json.dump() + "\n");
+            };
+
+            RunLocalInferenceStreaming(req, prompt, ASK, on_chunk, active_engine_name, error_detail);
+
+            auto end_time = std::chrono::high_resolution_clock::now();
+            double latency_ms = std::chrono::duration<double, std::milli>(end_time - start_time).count();
+            double tokens_per_sec = latency_ms > 0.0 ? (eval_count * 1000.0 / latency_ms) : 0.0;
+
+            nlohmann::json final_json;
+            final_json["model"] = requested_model.empty() ? active_engine_name : requested_model;
+            final_json["created_at"] = timestamp;
+            final_json["response"] = "";
+            final_json["done"] = true;
+            final_json["eval_count"] = eval_count;
+            final_json["eval_duration_ms"] = static_cast<int>(latency_ms);
+            final_json["tokens_per_sec"] = static_cast<int>(tokens_per_sec);
+            final_json["backend"] = "rawrxd-tool-server";
+            final_json["engine"] = active_engine_name;
+            if (!error_detail.empty()) {
+                final_json["error"] = error_detail;
+            }
+
+            SendAll(client_socket, final_json.dump() + "\n");
+
+            std::printf("[Generate] Local streaming engine %s completed in %.0f ms (%d chars)\n",
+                        active_engine_name.c_str(), latency_ms, eval_count);
+            return "";
+        }
+
+        std::string active_engine_name;
+        std::string error_detail;
+        std::string response_text = RunLocalInference(req, prompt, ASK, active_engine_name, error_detail);
+        if (!error_detail.empty()) {
+            return MakeErrorResponse(503, "Local inference backend unavailable: " + error_detail);
+        }
+
+        auto end_time = std::chrono::high_resolution_clock::now();
+        double latency_ms = std::chrono::duration<double, std::milli>(end_time - start_time).count();
+        int eval_count = static_cast<int>(response_text.size());
+        double tokens_per_sec = latency_ms > 0.0 ? (eval_count * 1000.0 / latency_ms) : 0.0;
+
+        auto now = std::time(nullptr);
+        auto tm = *std::gmtime(&now);
+        char timestamp[30];
+        std::strftime(timestamp, sizeof(timestamp), "%Y-%m-%dT%H:%M:%SZ", &tm);
+
+        nlohmann::json response_json;
+        response_json["model"] = requested_model.empty() ? active_engine_name : requested_model;
+        response_json["response"] = response_text;
+        response_json["created_at"] = timestamp;
+        response_json["done"] = true;
+        response_json["eval_count"] = eval_count;
+        response_json["eval_duration_ms"] = static_cast<int>(latency_ms);
+        response_json["tokens_per_sec"] = static_cast<int>(tokens_per_sec);
+        response_json["backend"] = "rawrxd-tool-server";
+        response_json["engine"] = active_engine_name;
+
+        std::printf("[Generate] Local engine %s responded in %.0f ms (%d chars)\n",
+                    active_engine_name.c_str(), latency_ms, eval_count);
+
+        return JsonOk(response_json.dump());
+    }
+
+    std::string HandleChatCompletionsRequestLocal(SOCKET client_socket, const std::string& body) {
+        auto start_time = std::chrono::high_resolution_clock::now();
+
+        nlohmann::json req;
+        try {
+            req = nlohmann::json::parse(body);
+        } catch (const std::exception& e) {
+            return MakeErrorResponse(400, std::string("Invalid JSON: ") + e.what());
+        }
+
+        std::string model = req.value("model", "rawrxd");
+        bool stream = req.value("stream", false);
+        std::string prompt_text;
+
+        if (req.contains("messages") && req["messages"].is_array()) {
+            for (const auto& msg : req["messages"]) {
+                std::string role = msg.value("role", "user");
+                std::string content = msg.value("content", "");
+                if (role == "system") {
+                    prompt_text += "System: " + content + "\n\n";
+                } else if (role == "assistant") {
+                    prompt_text += "Assistant: " + content + "\n\n";
+                } else {
+                    prompt_text += "User: " + content + "\n\n";
+                }
+            }
+        }
+        prompt_text += "Assistant: ";
+
+        if (prompt_text == "Assistant: ") {
+            return MakeErrorResponse(400, "No messages provided");
+        }
+
+        int prompt_tokens = static_cast<int>(prompt_text.size());
+
+        if (stream) {
+            std::string active_engine_name;
+            std::string error_detail;
+
+            std::string sse_header = "HTTP/1.1 200 OK\r\n";
+            sse_header += "Content-Type: text/event-stream\r\n";
+            sse_header += "Cache-Control: no-cache\r\n";
+            sse_header += "Connection: keep-alive\r\n";
+            sse_header += "Access-Control-Allow-Origin: *\r\n";
+            sse_header += "Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With\r\n";
+            sse_header += "\r\n";
+            if (!SendAll(client_socket, sse_header)) {
+                return "";
+            }
+
+            std::string chat_id = "chatcmpl-rawrxd-" + std::to_string(std::chrono::system_clock::now().time_since_epoch().count());
+            nlohmann::json chunk;
+            chunk["id"] = chat_id;
+            chunk["object"] = "chat.completion.chunk";
+            chunk["created"] = std::chrono::duration_cast<std::chrono::seconds>(
+                std::chrono::system_clock::now().time_since_epoch()).count();
+            chunk["model"] = model;
+            chunk["backend"] = "rawrxd-tool-server";
+            chunk["engine"] = active_engine_name;
+
+            // Emit a role chunk first, then incremental content chunks.
+            nlohmann::json role_choice;
+            role_choice["index"] = 0;
+            role_choice["finish_reason"] = nullptr;
+            role_choice["delta"]["role"] = "assistant";
+            role_choice["delta"]["content"] = "";
+            chunk["choices"] = nlohmann::json::array({role_choice});
+            std::string role_sse_chunk = "data: " + chunk.dump() + "\n\n";
+            if (!SendAll(client_socket, role_sse_chunk)) {
+                return "";
+            }
+
+            int completion_tokens = 0;
+            auto on_chunk = [&](const std::string& token_chunk) {
+                completion_tokens += static_cast<int>(token_chunk.size());
+
+                nlohmann::json token_sse;
+                token_sse["id"] = chat_id;
+                token_sse["object"] = "chat.completion.chunk";
+                token_sse["created"] = chunk["created"];
+                token_sse["model"] = model;
+                token_sse["backend"] = "rawrxd-tool-server";
+                token_sse["engine"] = active_engine_name;
+
+                nlohmann::json token_choice;
+                token_choice["index"] = 0;
+                token_choice["finish_reason"] = nullptr;
+                token_choice["delta"]["content"] = token_chunk;
+                token_sse["choices"] = nlohmann::json::array({token_choice});
+
+                std::string token_line = "data: " + token_sse.dump() + "\n\n";
+                return SendAll(client_socket, token_line);
+            };
+
+            RunLocalInferenceStreaming(req, prompt_text, ASK, on_chunk, active_engine_name, error_detail);
+            if (!error_detail.empty()) {
+                nlohmann::json err_chunk;
+                err_chunk["id"] = chat_id;
+                err_chunk["object"] = "chat.completion.chunk";
+                err_chunk["created"] = chunk["created"];
+                err_chunk["model"] = model;
+                err_chunk["backend"] = "rawrxd-tool-server";
+                err_chunk["engine"] = active_engine_name;
+                err_chunk["error"] = error_detail;
+
+                nlohmann::json err_choice;
+                err_choice["index"] = 0;
+                err_choice["finish_reason"] = "stop";
+                err_choice["delta"] = nlohmann::json::object();
+                err_chunk["choices"] = nlohmann::json::array({err_choice});
+
+                SendAll(client_socket, "data: " + err_chunk.dump() + "\n\n");
+                SendAll(client_socket, "data: [DONE]\n\n");
+                return "";
+            }
+
+            nlohmann::json final_chunk;
+            final_chunk["id"] = chat_id;
+            final_chunk["object"] = "chat.completion.chunk";
+            final_chunk["created"] = chunk["created"];
+            final_chunk["model"] = model;
+            nlohmann::json final_choice;
+            final_choice["index"] = 0;
+            final_choice["finish_reason"] = "stop";
+            final_choice["delta"] = nlohmann::json::object();
+            final_chunk["choices"] = nlohmann::json::array({final_choice});
+            std::string final_sse_chunk = "data: " + final_chunk.dump() + "\n\n";
+            SendAll(client_socket, final_sse_chunk);
+
+            std::string done_line = "data: [DONE]\n\n";
+            SendAll(client_socket, done_line);
+
+            auto end_time = std::chrono::high_resolution_clock::now();
+            double latency_ms = std::chrono::duration<double, std::milli>(end_time - start_time).count();
+
+            std::printf("[ChatCompletions] Local streaming completed in %.0f ms (%d chars)\n",
+                        latency_ms, completion_tokens);
+            return "";
+        }
+
+        std::string active_engine_name;
+        std::string error_detail;
+        std::string answer_text = RunLocalInference(req, prompt_text, ASK, active_engine_name, error_detail);
+        if (!error_detail.empty()) {
+            return MakeErrorResponse(503, "Local inference backend unavailable: " + error_detail);
+        }
+
+        auto end_time = std::chrono::high_resolution_clock::now();
+        double latency_ms = std::chrono::duration<double, std::milli>(end_time - start_time).count();
+        int completion_tokens = static_cast<int>(answer_text.size());
+
+        nlohmann::json openai_resp;
+        openai_resp["id"] = "chatcmpl-rawrxd-" + std::to_string(std::chrono::system_clock::now().time_since_epoch().count());
+        openai_resp["object"] = "chat.completion";
+        openai_resp["created"] = std::chrono::duration_cast<std::chrono::seconds>(
+            std::chrono::system_clock::now().time_since_epoch()).count();
+        openai_resp["model"] = model;
+        openai_resp["backend"] = "rawrxd-tool-server";
+        openai_resp["engine"] = active_engine_name;
+
+        nlohmann::json choice;
+        choice["index"] = 0;
+        choice["message"]["role"] = "assistant";
+        choice["message"]["content"] = answer_text;
+        choice["finish_reason"] = "stop";
+        openai_resp["choices"] = nlohmann::json::array({choice});
+        openai_resp["usage"]["prompt_tokens"] = prompt_tokens;
+        openai_resp["usage"]["completion_tokens"] = completion_tokens;
+        openai_resp["usage"]["total_tokens"] = prompt_tokens + completion_tokens;
+
+        std::printf("[ChatCompletions] Local non-streaming completed in %.0f ms (%d chars)\n",
+                    latency_ms, completion_tokens);
+
+        return JsonOk(openai_resp.dump());
+    }
+
+    std::string HandleAskRequestLocal(const std::string& body) {
+        nlohmann::json req = nlohmann::json::object();
+        try {
+            req = nlohmann::json::parse(body);
+        } catch (...) {
+            // Fall back to ExtractJsonValue below.
+        }
+
+        std::string question = req.value("question", ExtractJsonValue(body, "question"));
+        std::string model = req.value("model", ExtractJsonValue(body, "model"));
+        if (model.empty()) {
+            model = "rawrxd";
+        }
+        if (question.empty()) {
+            return MakeErrorResponse(400, "Missing 'question' field");
+        }
+
+        std::string active_engine_name;
+        std::string error_detail;
+        std::string answer = RunLocalInference(req, question, ASK, active_engine_name, error_detail);
+        if (!error_detail.empty()) {
+            return MakeErrorResponse(503, "Local inference backend unavailable: " + error_detail);
+        }
+
+        nlohmann::json ask_resp;
+        ask_resp["answer"] = answer;
+        ask_resp["response"] = answer;
+        ask_resp["model"] = model;
+        ask_resp["backend"] = "rawrxd-tool-server";
+        ask_resp["engine"] = active_engine_name;
+        return JsonOk(ask_resp.dump());
+    }
     
     // Proxy /api/generate to Ollama backend via WinHTTP
-    std::string HandleGenerateRequest(const std::string& body) {
+    std::string HandleGenerateRequest(SOCKET client_socket, const std::string& body) {
+        if (GetActiveBackendName() == "rawrxd-tool-server") {
+            bool requested_stream = false;
+            try {
+                nlohmann::json req = nlohmann::json::parse(body);
+                requested_stream = req.value("stream", false);
+            } catch (...) {
+                requested_stream = false;
+            }
+
+            std::string local_response = HandleGenerateRequestLocal(client_socket, body);
+            if (local_response.empty()) {
+                return "";
+            }
+
+            // Safety guard: never cross-backend fallback for streaming requests.
+            if (requested_stream) {
+                return local_response;
+            }
+
+            std::string fallback_reason;
+            if (!ShouldFallbackToOllama(local_response, fallback_reason)) {
+                return local_response;
+            }
+
+            std::printf("[BackendFallback] /api/generate local failed, using ollama-local (%s)\n",
+                        fallback_reason.c_str());
+        }
+
         auto start_time = std::chrono::high_resolution_clock::now();
 
         // Resolve Ollama host/port from environment or defaults
@@ -785,6 +1591,53 @@ private:
         response += json;
         return response;
     }
+
+    static bool TryParseHttpStatusCode(const std::string& response, int& status_code) {
+        status_code = 0;
+        const std::string prefix = "HTTP/1.1 ";
+        if (response.rfind(prefix, 0) != 0 || response.size() < prefix.size() + 3) {
+            return false;
+        }
+
+        try {
+            status_code = std::stoi(response.substr(prefix.size(), 3));
+            return true;
+        } catch (...) {
+            return false;
+        }
+    }
+
+    static bool IsAutoFallbackEnabled() {
+        const char* env = std::getenv("RAWRXD_BACKEND_AUTO_FALLBACK");
+        if (env == nullptr) {
+            return true;
+        }
+
+        std::string value(env);
+        std::transform(value.begin(), value.end(), value.begin(),
+            [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+        return !(value == "0" || value == "false" || value == "off" || value == "no");
+    }
+
+    bool ShouldFallbackToOllama(const std::string& local_response, std::string& reason) {
+        if (!IsAutoFallbackEnabled()) {
+            return false;
+        }
+
+        int status_code = 0;
+        if (!TryParseHttpStatusCode(local_response, status_code) || status_code < 500) {
+            return false;
+        }
+
+        std::string probe_detail;
+        if (!ProbeBackendReady("ollama-local", probe_detail)) {
+            reason = "local_failed_and_ollama_unavailable";
+            return false;
+        }
+
+        reason = "local_failed_http_" + std::to_string(status_code);
+        return true;
+    }
     
     std::string HandleMetricsRequest() {
         // Metrics endpoint removed - instrumentation not required
@@ -885,27 +1738,41 @@ private:
         }
         else if (tool == "execute_command" || tool == "git_status") {
             std::string cmd = (tool == "git_status") ? "git status" : path;
-            // Whitelist: allow common file operations + git + dir + echo
-            bool allowed = false;
-            const char* whitelist[] = {
-                "git", "dir", "echo", "del", "move", "copy", "mkdir",
-                "rmdir", "findstr", "fc", "type", "ren", "xcopy",
-                "where", "attrib", "more", "sort", "find"
-            };
-            for (const auto& prefix : whitelist) {
-                if (cmd.find(prefix) == 0) { allowed = true; break; }
-            }
-            if (!allowed) {
-                result = ToolResult::Error("Command not allowed: " + cmd);
+            // Reject shell metacharacters that enable command chaining / injection
+            static constexpr char kShellMetachars[] = "&|;<>^`()%!\r\n";
+            if (cmd.find_first_of(kShellMetachars) != std::string::npos) {
+                result = ToolResult::Error("Command contains forbidden shell metacharacters");
             } else {
-                FILE* pipe = _popen(cmd.c_str(), "r");
-                if (!pipe) result = ToolResult::Error("Failed to execute");
-                else {
-                    char buf[128];
-                    std::string out;
-                    while (fgets(buf, sizeof(buf), pipe) != nullptr) out += buf;
-                    _pclose(pipe);
-                    result = ToolResult::Success(out);
+                // Strict first-token match (not just prefix) to prevent "findstr_evil.exe"
+                // from passing the "findstr" check.
+                const char* whitelist[] = {
+                    "git", "dir", "echo", "del", "move", "copy", "mkdir",
+                    "rmdir", "findstr", "fc", "type", "ren", "xcopy",
+                    "where", "attrib", "more", "sort", "find"
+                };
+                size_t firstSpace = cmd.find(' ');
+                std::string firstToken = (firstSpace != std::string::npos)
+                                             ? cmd.substr(0, firstSpace)
+                                             : cmd;
+                bool allowed = false;
+                for (const char* wl : whitelist) {
+                    if (firstToken == wl || firstToken == (std::string(wl) + ".exe")) {
+                        allowed = true;
+                        break;
+                    }
+                }
+                if (!allowed) {
+                    result = ToolResult::Error("Command not allowed: " + firstToken);
+                } else {
+                    FILE* pipe = _popen(cmd.c_str(), "r");
+                    if (!pipe) result = ToolResult::Error("Failed to execute");
+                    else {
+                        char buf[128];
+                        std::string out;
+                        while (fgets(buf, sizeof(buf), pipe) != nullptr) out += buf;
+                        _pclose(pipe);
+                        result = ToolResult::Success(out);
+                    }
                 }
             }
         }
@@ -1598,6 +2465,31 @@ private:
     // Translates OpenAI messages format to Ollama /api/generate, proxies request
     // Supports both streaming (SSE) and non-streaming modes
     std::string HandleChatCompletionsRequest(SOCKET client_socket, const std::string& body) {
+        if (GetActiveBackendName() == "rawrxd-tool-server") {
+            bool requested_stream = false;
+            try {
+                nlohmann::json req = nlohmann::json::parse(body);
+                requested_stream = req.value("stream", false);
+            } catch (...) {
+                requested_stream = false;
+            }
+
+            std::string local_response = HandleChatCompletionsRequestLocal(client_socket, body);
+
+            // Safety guard: never cross-backend fallback for streaming requests.
+            if (requested_stream) {
+                return local_response;
+            }
+
+            std::string fallback_reason;
+            if (!ShouldFallbackToOllama(local_response, fallback_reason)) {
+                return local_response;
+            }
+
+            std::printf("[BackendFallback] /v1/chat/completions local failed, using ollama-local (%s)\n",
+                        fallback_reason.c_str());
+        }
+
         auto start_time = std::chrono::high_resolution_clock::now();
 
         // Parse the OpenAI-format request
@@ -1860,6 +2752,17 @@ private:
     // POST /ask — Simple question/answer endpoint (legacy)
     // Proxies to Ollama /api/generate in non-streaming mode
     std::string HandleAskRequest(const std::string& body) {
+        if (GetActiveBackendName() == "rawrxd-tool-server") {
+            std::string local_response = HandleAskRequestLocal(body);
+            std::string fallback_reason;
+            if (!ShouldFallbackToOllama(local_response, fallback_reason)) {
+                return local_response;
+            }
+
+            std::printf("[BackendFallback] /ask local failed, using ollama-local (%s)\n",
+                        fallback_reason.c_str());
+        }
+
         std::string question = ExtractJsonValue(body, "question");
         std::string model = ExtractJsonValue(body, "model");
         if (model.empty()) model = "rawrxd";
@@ -2256,18 +3159,32 @@ private:
 
     // POST /api/agents/replay — Replay agent events
     std::string HandleAgentsReplayRequest(const std::string& body) {
-        (void)body;
-        nlohmann::json resp;
-        resp["success"] = true;
-        resp["message"] = "Replay acknowledged";
+        const std::string session_id = ExtractJsonValue(body, "session_id");
+        const std::string agent_id = ExtractJsonValue(body, "agent_id");
 
-        std::string json_body = resp.dump();
-        std::string response = "HTTP/1.1 200 OK\r\n";
-        response += "Content-Type: application/json\r\n";
-        response += "Content-Length: " + std::to_string(json_body.length()) + "\r\n";
-        response += "\r\n";
-        response += json_body;
-        return response;
+        LogMutationNoop(
+            rawrxd::audit::Category::AGENT_REPLAY,
+            rawrxd::audit::Severity::WARNING,
+            "/api/agents/replay",
+            "POST",
+            "agent_replay",
+            "replay_not_implemented",
+            "Agent replay endpoint is not implemented; no replay stream was created.",
+            body,
+            "agent_session",
+            session_id.empty() ? "unknown" : session_id);
+
+        nlohmann::json resp;
+        resp["success"] = false;
+        resp["implemented"] = false;
+        resp["reason"] = "endpoint_not_implemented";
+        resp["session_id"] = session_id;
+        resp["agent_id"] = agent_id;
+        resp["state_changed"] = false;
+        resp["warning"] = "NO_REPLAY_GENERATED";
+        resp["timestamp"] = rawrxd::audit::format_iso8601(std::chrono::system_clock::now());
+
+        return JsonWithStatus(501, resp.dump(), {{"X-RawrXD-Stub", "true"}, {"X-RawrXD-NoOp", "true"}});
     }
 
     // POST /api/hotpatch/* — Hotpatch layer control (toggle, apply, revert)
@@ -3061,6 +3978,25 @@ private:
         return response;
     }
 
+    std::string JsonWithStatus(int http_code, const std::string& json_body, const std::vector<std::pair<std::string, std::string>>& extra_headers = {}) {
+        std::string status = "Error";
+        if (http_code == 200) status = "OK";
+        else if (http_code == 400) status = "Bad Request";
+        else if (http_code == 404) status = "Not Found";
+        else if (http_code == 409) status = "Conflict";
+        else if (http_code == 501) status = "Not Implemented";
+
+        std::string response = "HTTP/1.1 " + std::to_string(http_code) + " " + status + "\r\n";
+        response += "Content-Type: application/json\r\n";
+        for (const auto& h : extra_headers) {
+            response += h.first + ": " + h.second + "\r\n";
+        }
+        response += "Content-Length: " + std::to_string(json_body.length()) + "\r\n";
+        response += "\r\n";
+        response += json_body;
+        return response;
+    }
+
     // ================================================================
     // Panel Subsystem Handlers
     // Each returns live data where available, sensible defaults otherwise.
@@ -3069,9 +4005,13 @@ private:
 
     // --- Router ---
     std::string HandleRouterRequest(const std::string& method, const std::string& path, const std::string& body) {
-        (void)method; (void)body;
+        (void)body;
+        if (method != "GET" && method != "POST") {
+            return JsonWithStatus(405, R"({"success":false,"error":"method_not_allowed"})");
+        }
         if (path == "/api/router/status") {
             nlohmann::json r;
+            r["success"] = true;
             r["active"] = true;
             r["strategy"] = "round-robin";
             r["backends"] = nlohmann::json::array();
@@ -3082,73 +4022,255 @@ private:
             return JsonOk(r.dump());
         }
         if (path == "/api/router/decision") {
-            return JsonOk(R"({"decisions":[],"total":0})");
+            return JsonOk(R"({"success":true,"decisions":[],"total":0})");
         }
         if (path == "/api/router/capabilities") {
-            return JsonOk(R"({"strategies":["round-robin","latency","random","failover"],"max_backends":8})");
+            return JsonOk(R"({"success":true,"capabilities":{"strategies":["round-robin","latency","random","failover"],"max_backends":8}})");
+        }
+        if (path == "/api/router/route") {
+            if (method != "POST") {
+                return JsonWithStatus(405, R"({"success":false,"error":"method_not_allowed"})");
+            }
+            return JsonOk(R"({"success":true,"backend":"ollama-local","reason":"round-robin"})");
         }
         if (path == "/api/router/heatmap") {
-            return JsonOk(R"({"heatmap":[],"interval_seconds":60})");
+            return JsonOk(R"({"success":true,"heatmap":[],"interval_seconds":60})");
         }
         if (path == "/api/router/pins" || path == "/api/router/pin") {
-            return JsonOk(R"({"pins":[]})");
+            return JsonOk(R"({"success":true,"pins":[]})");
         }
-        return JsonOk(R"({"status":"ok","subsystem":"router"})");
+        return JsonWithStatus(404, R"({"success":false,"error":"route_not_found","subsystem":"router"})");
     }
 
     // --- Swarm ---
     std::string HandleSwarmRequest(const std::string& method, const std::string& path, const std::string& body) {
-        (void)method; (void)body;
+        if (method != "GET" && method != "POST") {
+            return JsonWithStatus(405, R"({"success":false,"error":"method_not_allowed"})");
+        }
         if (path == "/api/swarm/status") {
+            bool active = false;
+            uint32_t nodes = 0;
+            uint64_t transitions = 0;
+            std::string mode;
+            std::string last_error;
+            {
+                std::lock_guard<std::mutex> lock(swarm_state_mutex_);
+                active = swarm_active_;
+                nodes = swarm_nodes_;
+                transitions = swarm_transition_count_;
+                mode = swarm_mode_;
+                last_error = swarm_last_error_;
+            }
             nlohmann::json r;
-            r["active"] = false;
+            r["success"] = true;
+            r["active"] = active;
             r["nodes"] = nlohmann::json::array();
+            for (uint32_t i = 0; i < nodes; ++i) {
+                r["nodes"].push_back({{"id", "node-" + std::to_string(i + 1)}, {"status", active ? "online" : "offline"}});
+            }
             r["tasks"] = nlohmann::json::array();
             r["events"] = nlohmann::json::array();
-            r["total_nodes"] = 0;
+            r["total_nodes"] = nodes;
             r["total_tasks"] = 0;
+            r["mode"] = mode;
+            r["transitions"] = transitions;
+            r["last_error"] = last_error;
+            r["bridge_initialized"] = g_swarm_initialized;
             return JsonOk(r.dump());
         }
-        if (path == "/api/swarm/start" || path == "/api/swarm/stop") {
-            return JsonOk(R"({"success":true,"message":"Swarm operation acknowledged"})");
+        if (path == "/api/swarm/nodes") {
+            if (method != "GET") {
+                return JsonWithStatus(405, R"({"success":false,"error":"method_not_allowed"})");
+            }
+            nlohmann::json r;
+            r["success"] = true;
+            r["nodes"] = nlohmann::json::array();
+            {
+                std::lock_guard<std::mutex> lock(swarm_state_mutex_);
+                for (uint32_t i = 0; i < swarm_nodes_; ++i) {
+                    r["nodes"].push_back({{"id", "node-" + std::to_string(i + 1)}, {"status", swarm_active_ ? "online" : "offline"}});
+                }
+            }
+            return JsonOk(r.dump());
         }
-        return JsonOk(R"({"status":"ok","subsystem":"swarm"})");
+        if (path == "/api/swarm/tasks") {
+            if (method != "GET") {
+                return JsonWithStatus(405, R"({"success":false,"error":"method_not_allowed"})");
+            }
+            return JsonOk(R"({"success":true,"tasks":[]})");
+        }
+        if (path == "/api/swarm/stats") {
+            if (method != "GET") {
+                return JsonWithStatus(405, R"({"success":false,"error":"method_not_allowed"})");
+            }
+            nlohmann::json r;
+            r["success"] = true;
+            {
+                std::lock_guard<std::mutex> lock(swarm_state_mutex_);
+                r["active"] = swarm_active_;
+                r["total_nodes"] = swarm_nodes_;
+                r["transitions"] = swarm_transition_count_;
+            }
+            return JsonOk(r.dump());
+        }
+        if (path == "/api/swarm/events") {
+            if (method != "GET") {
+                return JsonWithStatus(405, R"({"success":false,"error":"method_not_allowed"})");
+            }
+            return JsonOk(R"({"success":true,"events":[]})");
+        }
+        if (path == "/api/swarm/config") {
+            if (method != "GET") {
+                return JsonWithStatus(405, R"({"success":false,"error":"method_not_allowed"})");
+            }
+            nlohmann::json r;
+            r["success"] = true;
+            {
+                std::lock_guard<std::mutex> lock(swarm_state_mutex_);
+                r["mode"] = swarm_mode_;
+                r["bridge_initialized"] = g_swarm_initialized;
+            }
+            return JsonOk(r.dump());
+        }
+        if (path == "/api/swarm/worker") {
+            if (method != "GET") {
+                return JsonWithStatus(405, R"({"success":false,"error":"method_not_allowed"})");
+            }
+            return JsonOk(R"({"success":true,"workers":[]})");
+        }
+        if (path == "/api/swarm/start" || path == "/api/swarm/stop") {
+            if (method != "POST") {
+                return JsonWithStatus(405, R"({"success":false,"error":"method_not_allowed"})");
+            }
+            const bool is_start = path == "/api/swarm/start";
+
+            const std::string operation = is_start ? "swarm_start" : "swarm_stop";
+            const std::string before_state = SwarmStateSnapshot();
+            bool changed = false;
+            std::string reason;
+            std::string detail;
+            const auto start_ts = std::chrono::high_resolution_clock::now();
+            const bool ok = is_start
+                ? StartSwarm(reason, detail, changed)
+                : StopSwarm(reason, detail, changed);
+            const auto duration_us = std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::high_resolution_clock::now() - start_ts).count();
+            const std::string after_state = SwarmStateSnapshot();
+
+            LogMutationResult(
+                rawrxd::audit::Category::SWARM_OPERATION,
+                ok ? rawrxd::audit::Severity::INFO : rawrxd::audit::Severity::ERROR,
+                path,
+                method,
+                operation,
+                ok,
+                changed,
+                ok ? 200 : 500,
+                reason,
+                detail,
+                body,
+                "swarm_cluster",
+                "default",
+                before_state,
+                after_state);
+
+            bool active_after = false;
+            uint32_t nodes_after = 0;
+            uint64_t transitions_after = 0;
+            std::string mode_after;
+            std::string last_error_after;
+            {
+                std::lock_guard<std::mutex> lock(swarm_state_mutex_);
+                active_after = swarm_active_;
+                nodes_after = swarm_nodes_;
+                transitions_after = swarm_transition_count_;
+                mode_after = swarm_mode_;
+                last_error_after = swarm_last_error_;
+            }
+
+            nlohmann::json r;
+            r["success"] = ok;
+            r["implemented"] = true;
+            r["reason"] = reason;
+            r["endpoint"] = path;
+            r["state_changed"] = changed;
+            r["details"] = detail;
+            r["duration_us"] = duration_us;
+            r["active"] = active_after;
+            r["total_nodes"] = nodes_after;
+            r["mode"] = mode_after;
+            r["transitions"] = transitions_after;
+            r["bridge_initialized"] = g_swarm_initialized;
+            r["last_error"] = last_error_after;
+            r["timestamp"] = rawrxd::audit::format_iso8601(std::chrono::system_clock::now());
+            return ok ? JsonOk(r.dump()) : JsonWithStatus(500, r.dump());
+        }
+        return JsonWithStatus(404, R"({"success":false,"error":"route_not_found","subsystem":"swarm"})");
     }
 
     // --- Multi-Response ---
     std::string HandleMultiResponseRequest(const std::string& method, const std::string& path, const std::string& body) {
-        (void)method; (void)body;
-        if (path == "/api/multi/status") {
-            return JsonOk(R"({"active":true,"templates":[],"stats":{"total_requests":0,"avg_responses":0}})");
+        (void)body;
+        if (method != "GET" && method != "POST") {
+            return JsonWithStatus(405, R"({"success":false,"error":"method_not_allowed"})");
         }
-        return JsonOk(R"({"status":"ok","subsystem":"multi-response"})");
+        if (path == "/api/multi/status" || path == "/api/multi-response/status") {
+            return JsonOk(R"({"success":true,"active":true,"templates":[],"stats":{"total_requests":0,"avg_responses":0}})");
+        }
+        if (path == "/api/multi-response/generate") {
+            if (method != "POST") {
+                return JsonWithStatus(405, R"({"success":false,"error":"method_not_allowed"})");
+            }
+            return JsonOk(R"({"success":true,"responses":[{"id":"resp-1","text":"stub"}]})");
+        }
+        if (path == "/api/multi-response/templates") {
+            if (method != "GET") {
+                return JsonWithStatus(405, R"({"success":false,"error":"method_not_allowed"})");
+            }
+            return JsonOk(R"({"success":true,"templates":[]})");
+        }
+        if (path == "/api/multi-response/stats") {
+            if (method != "GET") {
+                return JsonWithStatus(405, R"({"success":false,"error":"method_not_allowed"})");
+            }
+            return JsonOk(R"({"success":true,"stats":{"total_requests":0,"avg_responses":0}})");
+        }
+        if (path == "/api/multi-response/preferences") {
+            if (method != "GET") {
+                return JsonWithStatus(405, R"({"success":false,"error":"method_not_allowed"})");
+            }
+            return JsonOk(R"({"success":true,"preferences":{}})");
+        }
+        return JsonWithStatus(404, R"({"success":false,"error":"route_not_found","subsystem":"multi-response"})");
     }
 
     // --- ASM Debug ---
     std::string HandleAsmDebugRequest(const std::string& method, const std::string& path, const std::string& body) {
         (void)method; (void)body;
-        if (path == "/api/asm-debug/status") {
-            nlohmann::json r;
-            r["active"] = true;
-            r["breakpoints"] = nlohmann::json::array();
-            r["registers"] = nlohmann::json::object();
-            r["registers"]["rax"] = "0x0000000000000000";
-            r["registers"]["rbx"] = "0x0000000000000000";
-            r["registers"]["rcx"] = "0x0000000000000000";
-            r["registers"]["rdx"] = "0x0000000000000000";
-            r["registers"]["rsp"] = "0x0000000000000000";
-            r["registers"]["rbp"] = "0x0000000000000000";
-            r["registers"]["rsi"] = "0x0000000000000000";
-            r["registers"]["rdi"] = "0x0000000000000000";
-            r["registers"]["rip"] = "0x0000000000000000";
-            r["registers"]["rflags"] = "0x0000000000000000";
-            r["stack"] = nlohmann::json::array();
-            r["threads"] = nlohmann::json::array();
-            r["threads"].push_back({{"id",0},{"name","main"},{"state","running"}});
-            r["events"] = nlohmann::json::array();
-            return JsonOk(r.dump());
+        if (method != "GET") {
+            return JsonWithStatus(405, R"({"success":false,"error":"method_not_allowed"})");
         }
-        return JsonOk(R"({"status":"ok","subsystem":"asm-debug"})");
+
+        if (path == "/api/asm-debug/status" || path == "/api/debug/status") {
+            return JsonOk(R"({"success":true,"active":true,"state":"running"})");
+        }
+        if (path == "/api/debug/breakpoints") {
+            return JsonOk(R"({"success":true,"breakpoints":[]})");
+        }
+        if (path == "/api/debug/registers") {
+            return JsonOk(R"({"success":true,"registers":{"rax":"0x0000000000000000","rbx":"0x0000000000000000","rcx":"0x0000000000000000","rdx":"0x0000000000000000","rsp":"0x0000000000000000","rbp":"0x0000000000000000","rsi":"0x0000000000000000","rdi":"0x0000000000000000","rip":"0x0000000000000000","rflags":"0x0000000000000000"}})");
+        }
+        if (path == "/api/debug/stack") {
+            return JsonOk(R"({"success":true,"stack":[]})");
+        }
+        if (path == "/api/debug/modules") {
+            return JsonOk(R"({"success":true,"modules":[]})");
+        }
+        if (path == "/api/debug/threads") {
+            return JsonOk(R"({"success":true,"threads":[{"id":0,"name":"main","state":"running"}]})");
+        }
+
+        return JsonWithStatus(404, R"({"success":false,"error":"route_not_found","subsystem":"debug"})");
     }
 
     // --- Safety ---
@@ -3161,7 +4283,28 @@ private:
             return JsonOk(R"({"safe":true,"violations":[],"score":1.0})");
         }
         if (path == "/api/safety/rollback") {
-            return JsonOk(R"({"success":true,"message":"Rollback acknowledged"})");
+            LogMutationNoop(
+                rawrxd::audit::Category::SAFETY_ROLLBACK,
+                rawrxd::audit::Severity::CRITICAL,
+                path,
+                method,
+                "safety_rollback",
+                "rollback_not_implemented",
+                "SAFETY CRITICAL: rollback endpoint is a stub and no rollback was performed.",
+                body,
+                "system_state",
+                "current");
+
+            nlohmann::json r;
+            r["success"] = false;
+            r["implemented"] = false;
+            r["reason"] = "endpoint_not_implemented";
+            r["endpoint"] = path;
+            r["state_changed"] = false;
+            r["severity"] = "CRITICAL";
+            r["warning"] = "NO_ROLLBACK_PERFORMED";
+            r["timestamp"] = rawrxd::audit::format_iso8601(std::chrono::system_clock::now());
+            return JsonWithStatus(501, r.dump(), {{"X-RawrXD-Stub", "true"}, {"X-RawrXD-Critical", "true"}, {"X-RawrXD-NoRollback", "true"}});
         }
         return JsonOk(R"({"status":"ok","subsystem":"safety"})");
     }
@@ -3191,12 +4334,24 @@ private:
     std::string HandleHybridRequest(const std::string& method, const std::string& path, const std::string& body) {
         (void)method; (void)body;
         if (path == "/api/hybrid/status") {
-            return JsonOk(R"({"active":true,"mode":"auto","completions":0,"analyses":0})");
+            if (method != "GET") {
+                return JsonWithStatus(405, R"({"success":false,"error":"method_not_allowed"})");
+            }
+            return JsonOk(R"({"success":true,"active":true,"mode":"auto","completions":0,"analyses":0})");
         }
         if (path == "/api/hybrid/complete") {
-            return JsonOk(R"({"completions":[],"source":"hybrid"})");
+            if (method != "POST") {
+                return JsonWithStatus(405, R"({"success":false,"error":"method_not_allowed"})");
+            }
+            return JsonOk(R"({"success":true,"completions":[],"source":"hybrid"})");
         }
-        return JsonOk(R"({"status":"ok","subsystem":"hybrid"})");
+        if (path == "/api/hybrid/diagnostics") {
+            if (method != "GET") {
+                return JsonWithStatus(405, R"({"success":false,"error":"method_not_allowed"})");
+            }
+            return JsonOk(R"({"success":true,"diagnostics":[]})");
+        }
+        return JsonWithStatus(404, R"({"success":false,"error":"route_not_found","subsystem":"hybrid"})");
     }
 
     // --- Governor ---
@@ -3240,17 +4395,250 @@ private:
 
     // --- Backend Switcher ---
     std::string HandleBackendSwitcherRequest(const std::string& method, const std::string& path, const std::string& body) {
-        (void)method; (void)body;
         if (path == "/api/backend/status") {
+            std::string active_backend;
+            {
+                std::lock_guard<std::mutex> lock(backend_state_mutex_);
+                active_backend = active_backend_;
+            }
             nlohmann::json r;
-            r["active_backend"] = "ollama-local";
+            r["active_backend"] = active_backend;
             r["backends"] = nlohmann::json::array();
-            r["backends"].push_back({{"name","ollama-local"},{"type","ollama"},{"url","http://localhost:11434"},{"status","online"}});
-            r["backends"].push_back({{"name","rawrxd-tool-server"},{"type","tool-server"},{"url","http://localhost:11435"},{"status","online"}});
+            r["backends"].push_back({{"name","ollama-local"},{"type","ollama"},{"url","http://localhost:11434"},{"status", active_backend == "ollama-local" ? "active" : "online"}});
+            r["backends"].push_back({{"name","rawrxd-tool-server"},{"type","tool-server"},{"url","http://localhost:11435"},{"status", active_backend == "rawrxd-tool-server" ? "active" : "online"}});
             return JsonOk(r.dump());
         }
         if (path == "/api/backend/switch") {
-            return JsonOk(R"({"success":true,"message":"Backend switch acknowledged"})");
+            std::string requested_backend = ExtractJsonValue(body, "backend");
+            if (requested_backend.empty()) {
+                requested_backend = ExtractJsonValue(body, "name");
+            }
+            if (requested_backend.empty()) {
+                nlohmann::json r;
+                r["success"] = false;
+                r["reason"] = "backend_required";
+                r["state_changed"] = false;
+                LogMutationResult(
+                    rawrxd::audit::Category::BACKEND_SWITCH,
+                    rawrxd::audit::Severity::ERROR,
+                    path,
+                    method,
+                    "backend_switch",
+                    false,
+                    false,
+                    400,
+                    "backend_required",
+                    "Missing backend name in request body.",
+                    body,
+                    "backend_config",
+                    "none",
+                    "none",
+                    "none");
+                return JsonWithStatus(400, r.dump());
+            }
+
+            std::string actual_backend;
+            {
+                std::lock_guard<std::mutex> lock(backend_state_mutex_);
+                actual_backend = active_backend_;
+            }
+
+            const bool known_backend = requested_backend == "ollama-local" || requested_backend == "rawrxd-tool-server";
+            if (!known_backend) {
+                nlohmann::json r;
+                r["success"] = false;
+                r["reason"] = "backend_not_found";
+                r["requested_backend"] = requested_backend;
+                r["actual_backend"] = actual_backend;
+                r["state_changed"] = false;
+                LogMutationResult(
+                    rawrxd::audit::Category::BACKEND_SWITCH,
+                    rawrxd::audit::Severity::ERROR,
+                    path,
+                    method,
+                    "backend_switch",
+                    false,
+                    false,
+                    404,
+                    "backend_not_found",
+                    "Requested backend is not registered.",
+                    body,
+                    "backend_config",
+                    actual_backend,
+                    actual_backend,
+                    actual_backend);
+                return JsonWithStatus(404, r.dump());
+            }
+
+            if (requested_backend == actual_backend) {
+                LogMutationResult(
+                    rawrxd::audit::Category::BACKEND_SWITCH,
+                    rawrxd::audit::Severity::NOTICE,
+                    path,
+                    method,
+                    "backend_switch",
+                    true,
+                    false,
+                    200,
+                    "already_active",
+                    "Requested backend is already active.",
+                    body,
+                    "backend_config",
+                    actual_backend,
+                    actual_backend,
+                    actual_backend);
+
+                nlohmann::json r;
+                r["success"] = true;
+                r["reason"] = "already_active";
+                r["requested_backend"] = requested_backend;
+                r["actual_backend"] = actual_backend;
+                r["state_changed"] = false;
+                r["timestamp"] = rawrxd::audit::format_iso8601(std::chrono::system_clock::now());
+                return JsonOk(r.dump());
+            }
+
+            // Transition checkpoint 1: preflight target backend readiness.
+            std::string preflight_detail;
+            if (!ProbeBackendReady(requested_backend, preflight_detail)) {
+                nlohmann::json r;
+                r["success"] = false;
+                r["reason"] = "target_unreachable";
+                r["requested_backend"] = requested_backend;
+                r["actual_backend"] = actual_backend;
+                r["state_changed"] = false;
+                r["checkpoint"] = "preflight";
+                r["details"] = preflight_detail;
+
+                LogMutationResult(
+                    rawrxd::audit::Category::BACKEND_SWITCH,
+                    rawrxd::audit::Severity::ERROR,
+                    path,
+                    method,
+                    "backend_switch",
+                    false,
+                    false,
+                    503,
+                    "target_unreachable",
+                    "Requested backend failed preflight health check.",
+                    body,
+                    "backend_config",
+                    actual_backend,
+                    actual_backend,
+                    actual_backend);
+
+                return JsonWithStatus(503, r.dump());
+            }
+
+            // Transition checkpoint 2: commit switch.
+            {
+                std::lock_guard<std::mutex> lock(backend_state_mutex_);
+                active_backend_ = requested_backend;
+            }
+
+            std::string committed_backend;
+            {
+                std::lock_guard<std::mutex> lock(backend_state_mutex_);
+                committed_backend = active_backend_;
+            }
+
+            if (committed_backend != requested_backend) {
+                std::lock_guard<std::mutex> lock(backend_state_mutex_);
+                active_backend_ = actual_backend;
+
+                nlohmann::json r;
+                r["success"] = false;
+                r["reason"] = "commit_mismatch";
+                r["requested_backend"] = requested_backend;
+                r["actual_backend"] = actual_backend;
+                r["state_changed"] = false;
+                r["rolled_back"] = true;
+
+                LogMutationResult(
+                    rawrxd::audit::Category::BACKEND_SWITCH,
+                    rawrxd::audit::Severity::ERROR,
+                    path,
+                    method,
+                    "backend_switch",
+                    false,
+                    false,
+                    500,
+                    "commit_mismatch",
+                    "Backend switch commit verification failed and rollback was applied.",
+                    body,
+                    "backend_config",
+                    actual_backend,
+                    actual_backend,
+                    actual_backend);
+
+                return JsonWithStatus(500, r.dump());
+            }
+
+            // Transition checkpoint 3: post-commit verify, rollback on failure.
+            std::string post_commit_detail;
+            if (!ProbeBackendReady(requested_backend, post_commit_detail)) {
+                {
+                    std::lock_guard<std::mutex> lock(backend_state_mutex_);
+                    active_backend_ = actual_backend;
+                }
+
+                nlohmann::json r;
+                r["success"] = false;
+                r["reason"] = "post_commit_unhealthy";
+                r["requested_backend"] = requested_backend;
+                r["actual_backend"] = actual_backend;
+                r["state_changed"] = false;
+                r["rolled_back"] = true;
+                r["checkpoint"] = "post_commit_verify";
+                r["details"] = post_commit_detail;
+
+                LogMutationResult(
+                    rawrxd::audit::Category::BACKEND_SWITCH,
+                    rawrxd::audit::Severity::ERROR,
+                    path,
+                    method,
+                    "backend_switch",
+                    false,
+                    false,
+                    503,
+                    "post_commit_unhealthy",
+                    "Post-commit health check failed and rollback was applied.",
+                    body,
+                    "backend_config",
+                    actual_backend,
+                    actual_backend,
+                    actual_backend);
+
+                return JsonWithStatus(503, r.dump());
+            }
+
+            LogMutationResult(
+                rawrxd::audit::Category::BACKEND_SWITCH,
+                rawrxd::audit::Severity::INFO,
+                path,
+                method,
+                "backend_switch",
+                true,
+                true,
+                200,
+                "switched",
+                "Inference backend switched successfully.",
+                body,
+                "backend_config",
+                requested_backend,
+                actual_backend,
+                requested_backend);
+
+            nlohmann::json r;
+            r["success"] = true;
+            r["implemented"] = true;
+            r["reason"] = "switched";
+            r["requested_backend"] = requested_backend;
+            r["actual_backend"] = requested_backend;
+            r["previous_backend"] = actual_backend;
+            r["state_changed"] = true;
+            r["timestamp"] = rawrxd::audit::format_iso8601(std::chrono::system_clock::now());
+            return JsonOk(r.dump());
         }
         return JsonOk(R"({"status":"ok","subsystem":"backend-switcher"})");
     }
@@ -3311,29 +4699,138 @@ private:
 
     // --- Extensions ---
     std::string HandleExtensionsRequest(const std::string& method, const std::string& path, const std::string& body) {
-        (void)body;
+        auto& extMgr = IDE::GetExtensionManager();
+
+        auto extensionToJson = [](const IDE::Extension& ext) {
+            nlohmann::json j;
+            j["name"] = ext.name;
+            j["type"] = ext.type;
+            j["path"] = ext.path;
+            j["installed"] = ext.installed;
+            j["enabled"] = ext.enabled;
+            j["created"] = ext.created;
+            return j;
+        };
+
+        auto parseBody = [&]() {
+            nlohmann::json j = nlohmann::json::object();
+            if (!body.empty()) {
+                try {
+                    j = nlohmann::json::parse(body);
+                } catch (...) {
+                    j = nlohmann::json::object();
+                }
+            }
+            return j;
+        };
+
         if (path == "/api/extensions" || path == "/api/extensions/list") {
             nlohmann::json r;
             r["extensions"] = nlohmann::json::array();
-            r["total"] = 0;
+            auto all = extMgr.listExtensions();
+            for (const auto& ext : all) {
+                r["extensions"].push_back(extensionToJson(ext));
+            }
+            r["total"] = static_cast<int>(all.size());
             return JsonOk(r.dump());
         }
         if (path == "/api/extensions/installed") {
-            return JsonOk(R"({"extensions":[],"total":0})");
+            nlohmann::json r;
+            r["extensions"] = nlohmann::json::array();
+            auto installed = extMgr.getInstalledExtensions();
+            for (const auto& ext : installed) {
+                r["extensions"].push_back(extensionToJson(ext));
+            }
+            r["total"] = static_cast<int>(installed.size());
+            return JsonOk(r.dump());
         }
         if (path == "/api/extensions/status" || path == "/api/extensions/host-status") {
-            return JsonOk(R"({"running":true,"host_pid":0,"extensions_loaded":0,"uptime_seconds":0})");
+            nlohmann::json r;
+            auto installed = extMgr.getInstalledExtensions();
+            auto enabled = extMgr.getEnabledExtensions();
+            r["running"] = true;
+            r["host_pid"] = 0;
+            r["extensions_loaded"] = static_cast<int>(enabled.size());
+            r["extensions_installed"] = static_cast<int>(installed.size());
+            r["uptime_seconds"] = 0;
+            return JsonOk(r.dump());
         }
         if (path == "/api/extensions/marketplace" || path == "/api/extensions/search") {
             return JsonOk(R"({"results":[],"total":0,"source":"marketplace"})");
         }
-        if (method == "POST" && (path == "/api/extensions/install" || path == "/api/extensions/uninstall" ||
-            path == "/api/extensions/enable" || path == "/api/extensions/disable" ||
-            path == "/api/extensions/activate" || path == "/api/extensions/deactivate")) {
-            return JsonOk(R"({"success":true,"message":"Extension operation acknowledged"})");
+
+        if (method == "POST" && path == "/api/extensions/install") {
+            auto j = parseBody();
+            std::string name = j.value("name", "");
+            if (name.empty()) {
+                return JsonOk(R"({"success":false,"error":"name required"})");
+            }
+            bool ok = extMgr.installExtension(name);
+            nlohmann::json r;
+            r["success"] = ok;
+            r["operation"] = "install";
+            r["name"] = name;
+            r["message"] = ok ? "Extension installed" : "Install failed";
+            return JsonOk(r.dump());
         }
+
+        if (method == "POST" && path == "/api/extensions/uninstall") {
+            auto j = parseBody();
+            std::string name = j.value("name", "");
+            if (name.empty()) {
+                return JsonOk(R"({"success":false,"error":"name required"})");
+            }
+            bool ok = extMgr.uninstallExtension(name);
+            nlohmann::json r;
+            r["success"] = ok;
+            r["operation"] = "uninstall";
+            r["name"] = name;
+            r["message"] = ok ? "Extension uninstalled" : "Uninstall failed";
+            return JsonOk(r.dump());
+        }
+
+        if (method == "POST" && (path == "/api/extensions/enable" || path == "/api/extensions/activate")) {
+            auto j = parseBody();
+            std::string name = j.value("name", "");
+            if (name.empty()) {
+                return JsonOk(R"({"success":false,"error":"name required"})");
+            }
+            bool ok = extMgr.enableExtension(name);
+            nlohmann::json r;
+            r["success"] = ok;
+            r["operation"] = "enable";
+            r["name"] = name;
+            r["message"] = ok ? "Extension enabled" : "Enable failed";
+            return JsonOk(r.dump());
+        }
+
+        if (method == "POST" && (path == "/api/extensions/disable" || path == "/api/extensions/deactivate")) {
+            auto j = parseBody();
+            std::string name = j.value("name", "");
+            if (name.empty()) {
+                return JsonOk(R"({"success":false,"error":"name required"})");
+            }
+            bool ok = extMgr.disableExtension(name);
+            nlohmann::json r;
+            r["success"] = ok;
+            r["operation"] = "disable";
+            r["name"] = name;
+            r["message"] = ok ? "Extension disabled" : "Disable failed";
+            return JsonOk(r.dump());
+        }
+
         if (path == "/api/extensions/load-vsix") {
-            return JsonOk(R"({"success":true,"message":"VSIX load acknowledged"})");
+            auto j = parseBody();
+            std::string name = j.value("name", "");
+            if (name.empty()) {
+                return JsonOk(R"({"success":false,"error":"name required"})");
+            }
+            bool ok = extMgr.installExtension(name);
+            nlohmann::json r;
+            r["success"] = ok;
+            r["message"] = ok ? "VSIX install dispatched" : "VSIX install failed";
+            r["name"] = name;
+            return JsonOk(r.dump());
         }
         if (path == "/api/extensions/host-logs") {
             return JsonOk(R"({"logs":[],"total":0})");

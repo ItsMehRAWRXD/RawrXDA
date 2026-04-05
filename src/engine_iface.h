@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <functional>
 
 struct AgentRequest {
     int mode;
@@ -14,6 +15,22 @@ class Engine {
 public:
     virtual bool load_model(const std::string& path) = 0;
     virtual std::string infer(const AgentRequest& req) = 0;
+    virtual void infer_stream(const AgentRequest& req,
+                              const std::function<bool(const std::string&)>& on_chunk) {
+        const std::string full = infer(req);
+        if (!on_chunk) {
+            return;
+        }
+
+        // Pseudo-token bridge: emit a minimal unit per callback so transport
+        // streaming behaves like token-time output even before engine-native
+        // token callbacks are implemented.
+        for (char ch : full) {
+            if (!on_chunk(std::string(1, ch))) {
+                break;
+            }
+        }
+    }
     virtual const char* name() = 0;
     virtual ~Engine() = default;
 };

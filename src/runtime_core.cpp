@@ -155,3 +155,34 @@ std::string process_prompt(const std::string& input) {
 
     return result;
 }
+
+std::string process_prompt_stream(const std::string& input,
+                                 const std::function<bool(const std::string&)>& on_chunk) {
+    if (!g_state.active_engine) {
+        return "Error: No engine loaded.";
+    }
+
+    AgentRequest req;
+    req.mode = g_state.current_mode;
+    req.prompt = input;
+    req.deep_thinking = g_state.deep_thinking;
+    req.deep_research = g_state.deep_research;
+    req.no_refusal = g_state.no_refusal;
+    req.context_limit = g_state.context_limit;
+
+    ToolRegistry::inject_tools(req);
+    g_memory_system.PushContext(input);
+
+    std::string result;
+    auto fanout = [&](const std::string& chunk) {
+        result += chunk;
+        if (on_chunk) {
+            return on_chunk(chunk);
+        }
+        return true;
+    };
+
+    g_state.active_engine->infer_stream(req, fanout);
+    g_memory_system.PushContext(result);
+    return result;
+}

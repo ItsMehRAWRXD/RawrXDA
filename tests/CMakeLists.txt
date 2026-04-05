@@ -96,7 +96,10 @@ endif()
 
 # Tool Registry Test
 if(NOT TARGET test_tool_registry AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_tool_registry.cpp")
-    add_executable(test_tool_registry test_tool_registry.cpp)
+    add_executable(test_tool_registry
+        test_tool_registry.cpp
+        tool_registry_full_impl.cpp
+    )
     target_include_directories(test_tool_registry PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
     set_target_properties(test_tool_registry PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
     add_test(NAME test_tool_registry COMMAND test_tool_registry)
@@ -226,6 +229,22 @@ if(NOT TARGET test_moe_plan_row_mixture_pack_cache AND EXISTS "${CMAKE_CURRENT_S
     set_target_properties(test_moe_plan_row_mixture_pack_cache PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
     add_test(NAME test_moe_plan_row_mixture_pack_cache COMMAND test_moe_plan_row_mixture_pack_cache)
     message(STATUS "  ✓ Added test_moe_plan_row_mixture_pack_cache")
+endif()
+
+if(NOT TARGET test_moe_batched_down_project AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_moe_batched_down_project.cpp")
+    add_executable(test_moe_batched_down_project test_moe_batched_down_project.cpp)
+    target_include_directories(test_moe_batched_down_project PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_moe_batched_down_project PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    add_test(NAME test_moe_batched_down_project COMMAND test_moe_batched_down_project)
+    message(STATUS "  ✓ Added test_moe_batched_down_project")
+endif()
+
+if(NOT TARGET test_moe_pack_hud_metrics AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_moe_pack_hud_metrics.cpp")
+    add_executable(test_moe_pack_hud_metrics test_moe_pack_hud_metrics.cpp)
+    target_include_directories(test_moe_pack_hud_metrics PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/src/core)
+    set_target_properties(test_moe_pack_hud_metrics PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 23)
+    add_test(NAME test_moe_pack_hud_metrics COMMAND test_moe_pack_hud_metrics)
+    message(STATUS "  ✓ Added test_moe_pack_hud_metrics")
 endif()
 
 if(NOT TARGET moe_grouped_gemm_bench AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/moe_grouped_gemm_bench.cpp")

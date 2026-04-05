@@ -287,9 +287,11 @@ HttpResponse StlHttpClient::platformSend(const HttpRequest& req) {
         WINHTTP_HEADER_NAME_BY_INDEX, &statusCode, &statusSize,
         WINHTTP_NO_HEADER_INDEX);
 
-    // Read body
+    // Read body — cap total read to prevent OOM from adversarial servers
+    static constexpr size_t kMaxResponseBodyBytes = 256ULL * 1024 * 1024; // 256 MB
     std::string responseBody;
     DWORD bytesAvail = 0;
+    size_t totalRead = 0;
     while (WinHttpQueryDataAvailable(hRequest, &bytesAvail) && bytesAvail > 0) {
         if (m_cancelled.load()) {
             WinHttpCloseHandle(hRequest);
@@ -299,11 +301,19 @@ HttpResponse StlHttpClient::platformSend(const HttpRequest& req) {
                 static_cast<int>(nowMs() - startT));
         }
 
+        if (totalRead + bytesAvail > kMaxResponseBodyBytes) {
+            bytesAvail = static_cast<DWORD>(kMaxResponseBodyBytes - totalRead);
+        }
+        if (bytesAvail == 0) break;
+
         size_t pos = responseBody.size();
         responseBody.resize(pos + bytesAvail);
         DWORD bytesRead = 0;
         WinHttpReadData(hRequest, responseBody.data() + pos, bytesAvail, &bytesRead);
         responseBody.resize(pos + bytesRead);
+        totalRead += bytesRead;
+
+        if (totalRead >= kMaxResponseBodyBytes) break;
     }
 
     int latency = static_cast<int>(nowMs() - startT);

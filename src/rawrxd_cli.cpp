@@ -335,7 +335,7 @@ Options:
   --max-mode              Enable max mode (32K+ context)
   --deep-thinking         Enable deep thinking mode
   --deep-research         Enable deep research mode
-  --no-refusal            Enable no refusal mode
+    --no-refusal            Enable direct-response mode
   --autocorrect           Enable auto-correction
   --context-size <size>   Set context size (4k/32k/64k/128k/256k/512k/1m)
   --governor              Enable overclock governor
@@ -374,7 +374,7 @@ MODE TOGGLES:
   /maxmode <on|off>       - Toggle max mode
   /deepthinking <on|off>  - Toggle deep thinking
   /deepresearch <on|off>  - Toggle deep research
-  /norefusal <on|off>     - Toggle no refusal
+    /norefusal <on|off>     - Toggle direct-response mode
   /autocorrect <on|off>   - Toggle auto-correction
 
 SHELL COMMANDS:

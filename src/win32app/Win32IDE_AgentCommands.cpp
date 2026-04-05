@@ -30,14 +30,29 @@
 void HandleAutonomousCommunicator(void* idePtr);
 void HandleUnifiedTelemetry(void* idePtr);
 
+namespace {
+
+Agentic::AgenticPlanningOrchestrator* getPlanningOrchestratorReady()
+{
+    auto& orch = Agentic::OrchestratorIntegration::instance();
+    if (!orch.getOrchestrator())
+    {
+        orch.initialize();
+    }
+    return orch.getOrchestrator();
+}
+
+} // namespace
+
 // ============================================================================
 // SUBAGENT CHAIN / SWARM / TODO HANDLERS (Phase 19B)
 // ============================================================================
-#if 0
 // Implemented elsewhere:
 // - SubAgent + agent memory UI: Win32IDE_SubAgent.cpp
 // - Autonomy UI: Win32IDE.cpp
 // - Bounded agent loop UI: Win32IDE_AgentPanel.cpp
+// Keep only one implementation per handler to avoid duplicate linker symbols.
+#if 0
 void Win32IDE::onSubAgentChain() {
     LOG_INFO("onSubAgentChain called");
     if (!m_agenticBridge) {
@@ -380,35 +395,8 @@ void Win32IDE::onAutonomyViewMemory() {
 // Autonomous Agentic Pipeline (Task 1: Wire + Build)
 // Init: create coordinator, wire buildChatPrompt / routeWithIntelligence / onInferenceToken / appendStreamingToken.
 // Trigger: Autonomy menu -> Pipeline: Run once | Start autonomous loop | Stop autonomous loop.
-// ----------------------------------------------------------------------------
-void Win32IDE::ensureAutonomousPipelineInitialized() {
-    if (m_autonomousPipeline)
-        return;
-    m_autonomousPipeline = std::make_unique<RawrXD::AutonomousAgenticPipelineCoordinator>();
-    m_autonomousPipeline->setBuildPrompt([this](const std::string& m) { return buildChatPrompt(m); });
-    m_autonomousPipeline->setRouteLLM([this](const std::string& p) { return routeWithIntelligence(p); });
-    m_autonomousPipeline->setOnToken([this](const std::string& t, bool) { onInferenceToken(t); });
-    m_autonomousPipeline->setAppendRenderer([this](const std::string& s) { appendStreamingToken(s); });
-    // Task 2: wire external AgentCoordinator so autonomous loop can pull tasks
-    if (!m_agentCoordinatorForPipeline) {
-        m_agentCoordinatorForPipeline = CreateAgentCoordinator();
-        if (m_agentCoordinatorForPipeline && AgentCoordinator_Initialize((AgentCoordinatorHandle)m_agentCoordinatorForPipeline)) {
-            m_autonomousPipeline->setExternalAgentCoordinator(m_agentCoordinatorForPipeline);
-            m_autonomousPipeline->setDequeueTaskFn([this](std::wstring* outDesc, int* outPriority) -> bool {
-                if (!m_agentCoordinatorForPipeline || !outDesc || !outPriority) return false;
-                wchar_t buf[4096];
-                if (!AgentCoordinator_TryDequeueTask(static_cast<AgentCoordinatorHandle>(m_agentCoordinatorForPipeline), buf, (int)4096, outPriority))
-                    return false;
-                *outDesc = buf;
-                return true;
-            });
-            LOG_INFO("Autonomous Pipeline wired to AgentCoordinator (dequeue tasks)");
-        }
-    }
-    LOG_INFO("Autonomous Agentic Pipeline initialized and wired");
-}
-
-// onPipelineRun / onPipelineAutonomyStart / onPipelineAutonomyStop defined after #endif below (outside #if 0)
+// Note: Implementation is below (after the old #if 0 block) to avoid duplicate definitions.
+// This comment block is intentionally left here for documentation
 
 void Win32IDE::onBoundedAgentLoop() {
     LOG_INFO("onBoundedAgentLoop called");
@@ -464,7 +452,7 @@ void Win32IDE::onBoundedAgentLoop() {
         task = "Execute bounded task";
     }
     
-    appendToOutput("⚙️ Bounded Agent Loop with max iterations (" + std::to_string(maxIterations) + "): " + task + "\n", "Output", OutputSeverity::Info);
+    appendToOutput("[Agent] Bounded Agent Loop with max iterations (" + std::to_string(maxIterations) + "): " + task + "\n", "Output", OutputSeverity::Info);
     
     // Execute with bounded retries in background
     std::thread([this, taskStr = task, maxIter = maxIterations]() {
@@ -474,7 +462,7 @@ void Win32IDE::onBoundedAgentLoop() {
     }).detach();
 }
 
-#endif  // 0
+#endif
 
 // ensureAutonomousPipelineInitialized + pipeline handlers (defined here so they are compiled)
 // E1: workspace-aware prompt injection  E2: loop telemetry  E3: shutdown guard
@@ -491,7 +479,7 @@ void Win32IDE::ensureAutonomousPipelineInitialized()
 
     m_autonomousPipeline = std::make_unique<RawrXD::AutonomousAgenticPipelineCoordinator>();
 
-    // E6: context window size — not yet exposed on pipeline coordinator
+    // E6: context window size is not yet exposed on pipeline coordinator
     // TODO: add setContextWindow() to AutonomousAgenticPipelineCoordinator
 
     // E1 + E5: workspace root + recent memory snapshot injected into every prompt
@@ -1992,10 +1980,11 @@ void Win32IDE::onAIModeNoRefusal()
 void Win32IDE::onPlanningStart()
 {
     LOG_INFO("onPlanningStart called");
-    auto& orch = Agentic::OrchestratorIntegration::instance();
-    if (!orch.getOrchestrator())
+    auto* orchestrator = getPlanningOrchestratorReady();
+    if (!orchestrator)
     {
-        orch.initialize();
+        appendToOutput("Planning orchestrator unavailable\n", "Output", OutputSeverity::Error);
+        return;
     }
 
     char taskDesc[1024] = {0};
@@ -2030,7 +2019,7 @@ void Win32IDE::onPlanningStart()
         return;
     }
 
-    auto* plan = orch.planAndApproveTask(std::string(taskDesc));
+    auto* plan = Agentic::OrchestratorIntegration::instance().planAndApproveTask(std::string(taskDesc));
     if (!plan)
     {
         appendToOutput("Failed to generate plan\n", "Errors", OutputSeverity::Error);
@@ -2045,7 +2034,7 @@ void Win32IDE::onPlanningStart()
 
 void Win32IDE::onPlanningShowQueue()
 {
-    auto* orc = AGENTIC_GET_ORCHESTRATOR();
+    auto* orc = getPlanningOrchestratorReady();
     if (!orc)
     {
         appendToOutput("Orchestrator not initialized\n", "Output", OutputSeverity::Warning);
@@ -2075,7 +2064,7 @@ void Win32IDE::onPlanningShowQueue()
 
 void Win32IDE::onPlanningApproveStep()
 {
-    auto* orc = AGENTIC_GET_ORCHESTRATOR();
+    auto* orc = getPlanningOrchestratorReady();
     if (!orc)
     {
         appendToOutput("Orchestrator not initialized\n", "Output", OutputSeverity::Warning);
@@ -2097,7 +2086,7 @@ void Win32IDE::onPlanningApproveStep()
 
 void Win32IDE::onPlanningRejectStep()
 {
-    auto* orc = AGENTIC_GET_ORCHESTRATOR();
+    auto* orc = getPlanningOrchestratorReady();
     if (!orc)
     {
         appendToOutput("Orchestrator not initialized\n", "Output", OutputSeverity::Warning);
@@ -2118,7 +2107,7 @@ void Win32IDE::onPlanningRejectStep()
 
 void Win32IDE::onPlanningExecuteStep()
 {
-    auto* orc = AGENTIC_GET_ORCHESTRATOR();
+    auto* orc = getPlanningOrchestratorReady();
     if (!orc)
     {
         appendToOutput("Orchestrator not initialized\n", "Output", OutputSeverity::Warning);
@@ -2145,7 +2134,7 @@ void Win32IDE::onPlanningExecuteStep()
 
 void Win32IDE::onPlanningExecuteAll()
 {
-    auto* orc = AGENTIC_GET_ORCHESTRATOR();
+    auto* orc = getPlanningOrchestratorReady();
     if (!orc)
     {
         appendToOutput("Orchestrator not initialized\n", "Output", OutputSeverity::Warning);
@@ -2176,7 +2165,7 @@ void Win32IDE::onPlanningExecuteAll()
 
 void Win32IDE::onPlanningRollback()
 {
-    auto* orc = AGENTIC_GET_ORCHESTRATOR();
+    auto* orc = getPlanningOrchestratorReady();
     if (!orc)
     {
         appendToOutput("Orchestrator not initialized\n", "Output", OutputSeverity::Warning);
@@ -2207,7 +2196,7 @@ void Win32IDE::onPlanningRollback()
 
 void Win32IDE::onPlanningSetPolicy()
 {
-    auto* orc = AGENTIC_GET_ORCHESTRATOR();
+    auto* orc = getPlanningOrchestratorReady();
     if (!orc)
     {
         appendToOutput("Orchestrator not initialized\n", "Output", OutputSeverity::Warning);
@@ -2240,7 +2229,7 @@ void Win32IDE::onPlanningSetPolicy()
 
 void Win32IDE::onPlanningViewStatus()
 {
-    auto* orc = AGENTIC_GET_ORCHESTRATOR();
+    auto* orc = getPlanningOrchestratorReady();
     if (!orc)
     {
         appendToOutput("Orchestrator not initialized\n", "Output", OutputSeverity::Warning);
@@ -2253,7 +2242,7 @@ void Win32IDE::onPlanningViewStatus()
 
 void Win32IDE::onPlanningDiagnostics()
 {
-    auto* orc = AGENTIC_GET_ORCHESTRATOR();
+    auto* orc = getPlanningOrchestratorReady();
     if (!orc)
     {
         appendToOutput("Orchestrator not initialized\n", "Output", OutputSeverity::Warning);

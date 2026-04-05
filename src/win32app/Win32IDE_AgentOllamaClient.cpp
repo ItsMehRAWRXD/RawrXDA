@@ -12,6 +12,8 @@
 #include <winhttp.h>
 #include <string>
 #include <sstream>
+#include <cerrno>
+#include <cstdlib>
 
 // ============================================================================
 // CONSTANTS
@@ -54,6 +56,14 @@ bool Win32IDE::testOllamaConnection() {
 
     // E3: use configured endpoint, not hardcoded localhost
     std::string endpoint = m_ollamaEndpoint.empty() ? DEFAULT_OLLAMA_ENDPOINT : m_ollamaEndpoint;
+    static constexpr size_t kMaxEndpointBytes = 2048;
+    static constexpr size_t kMaxHostBytes = 255;
+    static constexpr size_t kMaxResponseBytes = 16u * 1024u * 1024u;
+    if (endpoint.size() > kMaxEndpointBytes) {
+        m_ollamaStatus = "Invalid endpoint";
+        m_ollamaConnected = false;
+        return false;
+    }
     std::string host = "localhost";
     INTERNET_PORT port = 11434;
     // parse host:port from endpoint
@@ -66,11 +76,26 @@ bool Win32IDE::testOllamaConnection() {
             host = ep.substr(0, colon);
             auto slash = ep.find('/', colon);
             std::string portStr = ep.substr(colon + 1, slash == std::string::npos ? std::string::npos : slash - colon - 1);
-            if (!portStr.empty()) port = (INTERNET_PORT)std::stoi(portStr);
+            if (!portStr.empty()) {
+                char* endp = nullptr;
+                errno = 0;
+                unsigned long parsed = std::strtoul(portStr.c_str(), &endp, 10);
+                if (errno != 0 || !endp || *endp != '\0' || parsed == 0 || parsed > 65535) {
+                    m_ollamaStatus = "Invalid endpoint port";
+                    m_ollamaConnected = false;
+                    return false;
+                }
+                port = static_cast<INTERNET_PORT>(parsed);
+            }
         } else {
             auto slash = ep.find('/');
             host = ep.substr(0, slash);
         }
+    }
+    if (host.empty() || host.size() > kMaxHostBytes) {
+        m_ollamaStatus = "Invalid endpoint host";
+        m_ollamaConnected = false;
+        return false;
     }
 
     // E1: retry up to 2 times
@@ -109,11 +134,24 @@ bool Win32IDE::testOllamaConnection() {
                         success = true;
                         // E2: read body and cache model list
                         std::string body;
+                        body.reserve(4096);
                         DWORD avail = 0, read = 0;
                         while (WinHttpQueryDataAvailable(hRequest, &avail) && avail > 0) {
-                            std::vector<char> buf(avail + 1, 0);
+                            static constexpr DWORD kMaxReadChunk = 64u * 1024u;
+                            if (avail > kMaxReadChunk) avail = kMaxReadChunk;
+                            std::vector<char> buf(static_cast<size_t>(avail) + 1, 0);
                             WinHttpReadData(hRequest, buf.data(), avail, &read);
+                            if (read == 0) break;
+                            if (body.size() + static_cast<size_t>(read) > kMaxResponseBytes) {
+                                m_ollamaStatus = "Response too large";
+                                m_ollamaConnected = false;
+                                success = false;
+                                break;
+                            }
                             body.append(buf.data(), read);
+                        }
+                        if (!success) {
+                            continue;
                         }
                         // simple parse: find "name":"..."
                         m_availableModels.clear();

@@ -60,7 +60,16 @@ void QuantBackend::matmul(
                     struct ggml_tensor* ta = ggml_new_tensor_2d(ctx, GGML_TYPE_F32, K, N);
                     struct ggml_tensor* tb = ggml_new_tensor_2d(ctx, GGML_TYPE_Q4_0, K, M);
                     memcpy(ta->data, A, N * K * sizeof(float));
-                    memcpy(tb->data, m_quantizedWeights, m_quantizedWeightSize);
+                    // Verify quantized weights fit in tensor buffer before copying
+                    size_t tbCapacity = ggml_nbytes(tb);
+                    if (m_quantizedWeightSize <= tbCapacity) {
+                        memcpy(tb->data, m_quantizedWeights, m_quantizedWeightSize);
+                    } else {
+                        // Quantized weights too large; skip this kernel and use fallback
+                        ggml_free(ctx);
+                        fallbackMatmul(A, B, C, N, M, K);
+                        break;
+                    }
                     struct ggml_tensor* tc = ggml_mul_mat(ctx, tb, ta);
                     struct ggml_cgraph* gf = ggml_new_graph(ctx);
                     ggml_build_forward_expand(gf, tc);

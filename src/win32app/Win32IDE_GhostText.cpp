@@ -18,6 +18,7 @@
 // ============================================================================
 
 #include "Win32IDE.h"
+#include "../RawrXD_Exports.h"
 #include "../../include/ghost_text_renderer.h"
 #include "IDELogger.h"
 #include <richedit.h>
@@ -29,6 +30,7 @@
 #include <functional>
 #include <array>
 #include <cctype>
+#include <vector>
 
 #include "../agentic/OllamaProvider.h"
 #include "../agentic/OrchestratorBridge.h"
@@ -37,13 +39,456 @@
 // CONSTANTS
 // ============================================================================
 static const UINT_PTR GHOST_TEXT_TIMER_ID   = 8888;
-static const UINT      GHOST_TEXT_DELAY_MS  = 120;   // Debounce: 120ms after last keystroke
+static const UINT_PTR TITAN_PAGING_HEARTBEAT_TIMER_ID = 8889;
+static const UINT      GHOST_TEXT_DELAY_MS  = 77;    // Calibrated: Sprint TTFT p50=67ms + 10ms margin (Phase 14.2 A/B sweep)
 static const int       GHOST_TEXT_MAX_CHARS = 512;    // Max ghost text length
 static const int       GHOST_TEXT_MAX_LINES = 8;      // Max multi-line completions
 static const uint64_t  GHOST_TEXT_CACHE_TTL_MS = 5000;  // 5s for 70B inference latency
 static const size_t    GHOST_TEXT_CACHE_MAX_ITEMS = 256;
 
 namespace {
+struct TitanGhostExports {
+    HMODULE module = nullptr;
+    bool initialized = false;
+    RAWRXD_MODEL_HANDLE activeModel = 0;
+    std::string loadedModelPath;
+
+    decltype(&RawrXD_Initialize) initialize = nullptr;
+    decltype(&RawrXD_Shutdown) shutdown = nullptr;
+    decltype(&RawrXD_LoadModel) loadModel = nullptr;
+    decltype(&RawrXD_SelectModel) selectModel = nullptr;
+    decltype(&RawrXD_SetSamplingParams) setSamplingParams = nullptr;
+    decltype(&RawrXD_InferAsync) inferAsync = nullptr;
+    decltype(&RawrXD_WaitForInference) waitForInference = nullptr;
+    decltype(&RawrXD_CancelInference) cancelInference = nullptr;
+    decltype(&RawrXD_BeginStreaming) beginStreaming = nullptr;
+    decltype(&RawrXD_EndStreaming) endStreaming = nullptr;
+    decltype(&RawrXD_StreamConfigureWindow) streamConfigureWindow = nullptr;
+    decltype(&RawrXD_StreamPop) streamPop = nullptr;
+    decltype(&RawrXD_StreamReset) streamReset = nullptr;
+};
+
+TitanGhostExports g_titanGhost;
+
+bool resolveTitanGhostExports() {
+    if (g_titanGhost.module) {
+        return true;
+    }
+
+    static const std::array<const char*, 4> kTitanDllCandidates = {
+        "D:\\rawrxd\\build_smoke_verify2\\bin\\RawrXD_Titan.dll",
+        "D:\\rawrxd\\bin\\RawrXD_Titan.dll",
+        "RawrXD_Titan.dll",
+        "bin\\RawrXD_Titan.dll"
+    };
+
+    const char* loadedPath = nullptr;
+    for (const char* candidate : kTitanDllCandidates) {
+        g_titanGhost.module = LoadLibraryA(candidate);
+        if (g_titanGhost.module) {
+            loadedPath = candidate;
+            break;
+        }
+    }
+    if (!g_titanGhost.module) {
+        LOG_WARNING("Titan DLL load failed for all candidate paths");
+        return false;
+    }
+
+    if (loadedPath) {
+        LOG_INFO(std::string("Titan DLL loaded from: ") + loadedPath);
+    }
+
+    g_titanGhost.initialize = reinterpret_cast<decltype(g_titanGhost.initialize)>(
+        GetProcAddress(g_titanGhost.module, "RawrXD_Initialize"));
+    g_titanGhost.shutdown = reinterpret_cast<decltype(g_titanGhost.shutdown)>(
+        GetProcAddress(g_titanGhost.module, "RawrXD_Shutdown"));
+    g_titanGhost.loadModel = reinterpret_cast<decltype(g_titanGhost.loadModel)>(
+        GetProcAddress(g_titanGhost.module, "RawrXD_LoadModel"));
+    g_titanGhost.selectModel = reinterpret_cast<decltype(g_titanGhost.selectModel)>(
+        GetProcAddress(g_titanGhost.module, "RawrXD_SelectModel"));
+    g_titanGhost.setSamplingParams = reinterpret_cast<decltype(g_titanGhost.setSamplingParams)>(
+        GetProcAddress(g_titanGhost.module, "RawrXD_SetSamplingParams"));
+    g_titanGhost.inferAsync = reinterpret_cast<decltype(g_titanGhost.inferAsync)>(
+        GetProcAddress(g_titanGhost.module, "RawrXD_InferAsync"));
+    g_titanGhost.waitForInference = reinterpret_cast<decltype(g_titanGhost.waitForInference)>(
+        GetProcAddress(g_titanGhost.module, "RawrXD_WaitForInference"));
+    g_titanGhost.cancelInference = reinterpret_cast<decltype(g_titanGhost.cancelInference)>(
+        GetProcAddress(g_titanGhost.module, "RawrXD_CancelInference"));
+    g_titanGhost.beginStreaming = reinterpret_cast<decltype(g_titanGhost.beginStreaming)>(
+        GetProcAddress(g_titanGhost.module, "RawrXD_BeginStreaming"));
+    g_titanGhost.endStreaming = reinterpret_cast<decltype(g_titanGhost.endStreaming)>(
+        GetProcAddress(g_titanGhost.module, "RawrXD_EndStreaming"));
+    g_titanGhost.streamConfigureWindow = reinterpret_cast<decltype(g_titanGhost.streamConfigureWindow)>(
+        GetProcAddress(g_titanGhost.module, "RawrXD_StreamConfigureWindow"));
+    g_titanGhost.streamPop = reinterpret_cast<decltype(g_titanGhost.streamPop)>(
+        GetProcAddress(g_titanGhost.module, "RawrXD_StreamPop"));
+    g_titanGhost.streamReset = reinterpret_cast<decltype(g_titanGhost.streamReset)>(
+        GetProcAddress(g_titanGhost.module, "RawrXD_StreamReset"));
+
+    const bool hasCoreInference =
+        g_titanGhost.initialize && g_titanGhost.shutdown && g_titanGhost.loadModel &&
+        g_titanGhost.selectModel && g_titanGhost.setSamplingParams && g_titanGhost.inferAsync &&
+        g_titanGhost.waitForInference && g_titanGhost.beginStreaming && g_titanGhost.endStreaming;
+    const bool hasStreamBridge =
+        g_titanGhost.streamConfigureWindow && g_titanGhost.streamPop && g_titanGhost.streamReset;
+
+    if (hasCoreInference && !hasStreamBridge) {
+        LOG_INFO("Titan DLL loaded without stream bridge exports; ghost stream provider disabled for this lane");
+    }
+
+    return hasCoreInference && hasStreamBridge;
+}
+
+bool ensureTitanGhostReady(const std::string& modelPath) {
+    if (modelPath.empty() || !resolveTitanGhostExports()) {
+        return false;
+    }
+    if (!g_titanGhost.initialized) {
+        if (g_titanGhost.initialize() != RAWRXD_SUCCESS) {
+            return false;
+        }
+        g_titanGhost.initialized = true;
+    }
+    if (g_titanGhost.loadedModelPath == modelPath && g_titanGhost.activeModel != 0) {
+        return true;
+    }
+
+    RAWRXD_MODEL_HANDLE modelHandle = 0;
+    if (g_titanGhost.loadModel(modelPath.c_str(), &modelHandle) != RAWRXD_SUCCESS || modelHandle == 0) {
+        return false;
+    }
+    if (g_titanGhost.selectModel(modelHandle) != RAWRXD_SUCCESS) {
+        return false;
+    }
+
+    g_titanGhost.activeModel = modelHandle;
+    g_titanGhost.loadedModelPath = modelPath;
+    return true;
+}
+
+void drainTitanGhostPackets(std::string& out,
+                            uint64_t* inoutLastSeq,
+                            uint64_t* inoutGapCount,
+                            uint64_t* inoutPacketCount);
+
+} // namespace
+
+bool Win32IDE::startTitanAgentInferenceAsync(const std::string& prompt, uint32_t timeoutMs, bool stageOnly) {
+    if (prompt.empty() || !m_useTitanKernel || m_loadedModelPath.empty() || !m_hwndMain) {
+        return false;
+    }
+    if (!ensureTitanGhostReady(m_loadedModelPath)) {
+        postOutputPanelSafe("[Titan Agent] Titan backend unavailable\n");
+        return false;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(m_titanAgentMutex);
+        if (m_titanAgentRunning) {
+            postOutputPanelSafe("[Titan Agent] Inference already running\n");
+            return false;
+        }
+        m_titanAgentRunning = true;
+        m_titanAgentStreamText.clear();
+        m_titanAgentStreamSeq = 0;
+        m_titanAgentSeqGaps = 0;
+        m_titanAgentPackets = 0;
+        m_titanAgentPostedChars = 0;
+        m_titanAgentGhostAnchorPos = -1;
+        m_titanAgentStageOnly = stageOnly;
+        m_titanAgentStagedText.clear();
+        m_titanAgentStageSelStart = -1;
+        m_titanAgentStageSelEnd = -1;
+        m_titanAgentInferenceHandle = 0;
+        m_titanAgentStreamHandle = 0;
+        m_titanAgentStartMs = GetTickCount64();
+        m_titanAgentLastPacketMs = m_titanAgentStartMs;
+    }
+
+    if (m_hwndEditor) {
+        CHARRANGE sel{};
+        SendMessageA(m_hwndEditor, EM_EXGETSEL, 0, reinterpret_cast<LPARAM>(&sel));
+        std::lock_guard<std::mutex> lock(m_titanAgentMutex);
+        m_titanAgentGhostAnchorPos = sel.cpMin;
+        m_titanAgentStageSelStart = sel.cpMin;
+        m_titanAgentStageSelEnd = sel.cpMax;
+    }
+
+    RAWRXD_SAMPLING_PARAMS sampling{};
+    sampling.temperature = 0.25f;
+    sampling.top_p = 0.95f;
+    sampling.top_k = 48;
+    sampling.repetition_penalty = 1.05f;
+    sampling.max_tokens = 256;
+    if (g_titanGhost.setSamplingParams) {
+        g_titanGhost.setSamplingParams(&sampling);
+    }
+
+    RAWRXD_INFERENCE_HANDLE streamHandle = 0;
+    if (g_titanGhost.beginStreaming(&streamHandle) != RAWRXD_SUCCESS) {
+        std::lock_guard<std::mutex> lock(m_titanAgentMutex);
+        m_titanAgentRunning = false;
+        postOutputPanelSafe("[Titan Agent] beginStreaming failed\n");
+        return false;
+    }
+
+    if (g_titanGhost.streamReset) {
+        g_titanGhost.streamReset();
+    }
+    g_titanGhost.streamConfigureWindow(reinterpret_cast<uint64_t>(m_hwndMain), WM_TITAN_AGENT_STREAM, 0);
+
+    RAWRXD_INFERENCE_HANDLE inferenceHandle = 0;
+    if (g_titanGhost.inferAsync(prompt.c_str(), prompt.size(), &inferenceHandle) != RAWRXD_SUCCESS) {
+        g_titanGhost.endStreaming(streamHandle);
+        std::lock_guard<std::mutex> lock(m_titanAgentMutex);
+        m_titanAgentRunning = false;
+        postOutputPanelSafe("[Titan Agent] inferAsync failed\n");
+        return false;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(m_titanAgentMutex);
+        m_titanAgentInferenceHandle = inferenceHandle;
+        m_titanAgentStreamHandle = streamHandle;
+    }
+
+    postOutputPanelSafe(stageOnly
+                            ? "[Titan Agent] preview inference started (staging only)\n"
+                            : "[Titan Agent] async inference started\n");
+
+    if (m_hwndStatusBar && IsWindow(m_hwndStatusBar)) {
+        SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L" [Titan] Paging... 0%");
+    }
+
+    // Start the paging heartbeat (displays aperture utilization)
+    startTitanPagingHeartbeat(timeoutMs);
+
+    HWND mainHwnd = m_hwndMain;
+    std::thread([mainHwnd, inferenceHandle, timeoutMs]() {
+        RAWRXD_STATUS status = g_titanGhost.waitForInference(inferenceHandle, timeoutMs);
+        if (mainHwnd && IsWindow(mainHwnd)) {
+            PostMessageA(mainHwnd, WM_TITAN_AGENT_DONE, (WPARAM)status, 0);
+        }
+    }).detach();
+
+    return true;
+}
+
+void Win32IDE::cancelTitanAgentInferenceAsync() {
+    uint64_t handle = 0;
+    {
+        std::lock_guard<std::mutex> lock(m_titanAgentMutex);
+        handle = m_titanAgentInferenceHandle;
+    }
+    if (handle != 0 && g_titanGhost.cancelInference) {
+        g_titanGhost.cancelInference((RAWRXD_INFERENCE_HANDLE)handle);
+        if (m_hwndStatusBar && IsWindow(m_hwndStatusBar)) {
+            SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L" [Titan] cancel requested");
+        }
+    }
+}
+
+void Win32IDE::onTitanAgentStreamMessage() {
+    std::string combined;
+    size_t postedChars = 0;
+    int anchorPos = -1;
+    bool stageOnly = false;
+    {
+        std::lock_guard<std::mutex> lock(m_titanAgentMutex);
+        if (!m_titanAgentRunning) {
+            return;
+        }
+        drainTitanGhostPackets(m_titanAgentStreamText,
+                               &m_titanAgentStreamSeq,
+                               &m_titanAgentSeqGaps,
+                               &m_titanAgentPackets);
+        combined = m_titanAgentStreamText;
+        postedChars = m_titanAgentPostedChars;
+        anchorPos = m_titanAgentGhostAnchorPos;
+        stageOnly = m_titanAgentStageOnly;
+    }
+
+    if (combined.size() <= postedChars) {
+        return;
+    }
+
+    std::string delta = combined.substr(postedChars);
+    {
+        std::lock_guard<std::mutex> lock(m_titanAgentMutex);
+        m_titanAgentPostedChars = combined.size();
+    }
+
+    if (!delta.empty()) {
+        postOutputPanelSafe(delta);
+        uint64_t startMs = 0;
+        {
+            std::lock_guard<std::mutex> lock(m_titanAgentMutex);
+            m_titanAgentLastPacketMs = GetTickCount64();
+            startMs = m_titanAgentStartMs;
+        }
+        if (m_hwndStatusBar && IsWindow(m_hwndStatusBar) && startMs != 0) {
+            const int elapsedSec = (int)((GetTickCount64() - startMs) / 1000);
+            wchar_t sbuf[96] = {};
+            swprintf_s(sbuf, 96, L" [Titan] Paging shards... %ds", elapsedSec);
+            SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)sbuf);
+        }
+    }
+
+    if (stageOnly) {
+        std::lock_guard<std::mutex> lock(m_titanAgentMutex);
+        m_titanAgentStagedText = combined;
+        return;
+    }
+
+    if (!m_hwndEditor || anchorPos < 0) {
+        return;
+    }
+
+    CHARRANGE sel{};
+    SendMessageA(m_hwndEditor, EM_EXGETSEL, 0, reinterpret_cast<LPARAM>(&sel));
+    if (sel.cpMin != anchorPos) {
+        return;
+    }
+
+    m_ghostTextRequestCursorPos = anchorPos;
+    m_ghostTextContent = trimGhostText(combined);
+    if (m_ghostTextContent.empty()) {
+        m_ghostTextVisible = false;
+        return;
+    }
+    m_ghostTextVisible = true;
+    m_ghostTextAccepted = false;
+    InvalidateRect(m_hwndEditor, nullptr, FALSE);
+}
+
+void Win32IDE::onTitanAgentDone(int status) {
+    onTitanAgentStreamMessage();
+
+    uint64_t streamHandle = 0;
+    uint64_t lastSeq = 0;
+    uint64_t gapCount = 0;
+    uint64_t packetCount = 0;
+    bool stageOnly = false;
+    std::string stagedText;
+    int stageSelStart = -1;
+    int stageSelEnd = -1;
+    {
+        std::lock_guard<std::mutex> lock(m_titanAgentMutex);
+        streamHandle = m_titanAgentStreamHandle;
+        lastSeq = m_titanAgentStreamSeq;
+        gapCount = m_titanAgentSeqGaps;
+        packetCount = m_titanAgentPackets;
+        stageOnly = m_titanAgentStageOnly;
+        stagedText = m_titanAgentStagedText;
+        stageSelStart = m_titanAgentStageSelStart;
+        stageSelEnd = m_titanAgentStageSelEnd;
+        m_titanAgentInferenceHandle = 0;
+        m_titanAgentStreamHandle = 0;
+        m_titanAgentStageOnly = false;
+        m_titanAgentStagedText.clear();
+        m_titanAgentStageSelStart = -1;
+        m_titanAgentStageSelEnd = -1;
+        m_titanAgentRunning = false;
+        m_titanAgentStartMs = 0;
+        m_titanAgentLastPacketMs = 0;
+    }
+
+    if (m_hwndMain) {
+        KillTimer(m_hwndMain, TITAN_PAGING_HEARTBEAT_TIMER_ID);
+    }
+
+    // Stop the paging heartbeat
+    stopTitanPagingHeartbeat();
+
+    if (streamHandle != 0) {
+        g_titanGhost.endStreaming((RAWRXD_INFERENCE_HANDLE)streamHandle);
+    }
+
+    if (status == (int)RAWRXD_SUCCESS) {
+        postOutputPanelSafe("\n[Titan Agent] completed\n");
+        if (m_hwndStatusBar && IsWindow(m_hwndStatusBar)) {
+            SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"Ready");
+        }
+    } else {
+        postOutputPanelSafe("\n[Titan Agent] failed status=" + std::to_string((int)status) + "\n");
+        if (m_hwndStatusBar && IsWindow(m_hwndStatusBar)) {
+            SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L" [Titan] failed");
+        }
+    }
+
+    if (stageOnly && status == (int)RAWRXD_SUCCESS && m_hwndEditor) {
+        const std::string stagedTrimmed = trimGhostText(stagedText);
+        if (!stagedTrimmed.empty()) {
+            std::string preview = stagedTrimmed.substr(0, 900);
+            if (stagedTrimmed.size() > preview.size()) {
+                preview += "\n...[truncated]";
+            }
+
+            std::string prompt =
+                "Sovereign Diff Preview\n\n"
+                "Review staged Titan output before apply.\n"
+                "Press OK to apply to editor selection/cursor, or Cancel to discard.\n\n"
+                "--- Preview ---\n" +
+                preview;
+
+            const int choice = MessageBoxA(m_hwndMain ? m_hwndMain : m_hwndEditor,
+                                           prompt.c_str(),
+                                           "RawrXD Sovereign Diff",
+                                           MB_OKCANCEL | MB_ICONQUESTION);
+            if (choice == IDOK) {
+                CHARRANGE replaceSel{};
+                replaceSel.cpMin = (stageSelStart >= 0) ? stageSelStart : 0;
+                replaceSel.cpMax = (stageSelEnd >= 0) ? stageSelEnd : replaceSel.cpMin;
+                SendMessageA(m_hwndEditor, EM_EXSETSEL, 0, reinterpret_cast<LPARAM>(&replaceSel));
+                SendMessageA(m_hwndEditor, EM_REPLACESEL, TRUE, reinterpret_cast<LPARAM>(stagedTrimmed.c_str()));
+                markFileModified();
+                postOutputPanelSafe("[Titan Agent] staged preview applied\n");
+            } else {
+                postOutputPanelSafe("[Titan Agent] staged preview discarded\n");
+            }
+        }
+    }
+
+    if (gapCount > 0) {
+        postOutputPanelSafe("[Titan Agent] stream seq gaps=" + std::to_string(gapCount) +
+                            " packets=" + std::to_string(packetCount) +
+                            " last_seq=" + std::to_string(lastSeq) + "\n");
+    }
+}
+
+namespace {
+
+void drainTitanGhostPackets(std::string& out,
+                            uint64_t* inoutLastSeq,
+                            uint64_t* inoutGapCount,
+                            uint64_t* inoutPacketCount) {
+    if (!g_titanGhost.streamPop) {
+        return;
+    }
+
+    char buffer[513] = {};
+    uint32_t chunkLen = 0;
+    uint64_t seq = 0;
+    uint64_t lastSeq = inoutLastSeq ? *inoutLastSeq : 0;
+    uint64_t gapCount = inoutGapCount ? *inoutGapCount : 0;
+    uint64_t packetCount = inoutPacketCount ? *inoutPacketCount : 0;
+    while (g_titanGhost.streamPop(buffer, sizeof(buffer), &chunkLen, &seq) == RAWRXD_SUCCESS && chunkLen > 0) {
+        if (lastSeq != 0 && seq > lastSeq + 1) {
+            gapCount += (seq - (lastSeq + 1));
+        }
+        lastSeq = seq;
+        packetCount += 1;
+        out.append(buffer, buffer + chunkLen);
+        chunkLen = 0;
+        buffer[0] = '\0';
+    }
+
+    if (inoutLastSeq) *inoutLastSeq = lastSeq;
+    if (inoutGapCount) *inoutGapCount = gapCount;
+    if (inoutPacketCount) *inoutPacketCount = packetCount;
+}
+
 uint64_t nowMs() {
     return (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now().time_since_epoch()).count();
@@ -102,6 +547,37 @@ std::string buildSnippetCompletion(const std::string& context, const std::string
     }
     return "";
 }
+
+std::string wideToUtf8Local(const wchar_t* wide) {
+    if (!wide || !*wide) {
+        return "";
+    }
+
+    const int utf8Len = WideCharToMultiByte(CP_UTF8, 0, wide, -1, nullptr, 0, nullptr, nullptr);
+    if (utf8Len <= 1) {
+        return "";
+    }
+
+    std::string utf8(static_cast<size_t>(utf8Len - 1), '\0');
+    WideCharToMultiByte(CP_UTF8, 0, wide, -1, utf8.data(), utf8Len, nullptr, nullptr);
+    return utf8;
+}
+
+std::string getEditorRangeUtf8(HWND editor, LONG cpMin, LONG cpMax) {
+    if (!editor || cpMax <= cpMin) {
+        return "";
+    }
+
+    const LONG charLen = cpMax - cpMin;
+    std::vector<wchar_t> buffer(static_cast<size_t>(charLen) + 1, L'\0');
+    TEXTRANGEW tr{};
+    tr.chrg.cpMin = cpMin;
+    tr.chrg.cpMax = cpMax;
+    tr.lpstrText = buffer.data();
+    SendMessageW(editor, EM_GETTEXTRANGE, 0, (LPARAM)&tr);
+    buffer[static_cast<size_t>(charLen)] = L'\0';
+    return wideToUtf8Local(buffer.data());
+}
 } // namespace
 
 // ============================================================================
@@ -142,6 +618,11 @@ void Win32IDE::initGhostText() {
 }
 
 void Win32IDE::shutdownGhostText() {
+    {
+        std::lock_guard<std::mutex> lock(m_titanGhostMutex);
+        m_titanGhostStreamText.clear();
+        m_titanGhostStreamActive = false;
+    }
     dismissGhostText();
     if (m_ghostTextFont) {
         DeleteObject(m_ghostTextFont);
@@ -186,15 +667,7 @@ void Win32IDE::onGhostTextTimer() {
     int contextStart = (cursorPos > 4096) ? cursorPos - 4096 : 0;
     int contextLen = cursorPos - contextStart;
 
-    TEXTRANGEA tr;
-    tr.chrg.cpMin = contextStart;
-    tr.chrg.cpMax = cursorPos;
-
-    std::vector<char> buf(contextLen + 1, 0);
-    tr.lpstrText = buf.data();
-    SendMessageA(m_hwndEditor, EM_GETTEXTRANGE, 0, (LPARAM)&tr);
-
-    std::string context(buf.data());
+    std::string context = getEditorRangeUtf8(m_hwndEditor, contextStart, cursorPos);
     if (context.empty()) return;
 
     // Get current line/column for positioning
@@ -205,6 +678,7 @@ void Win32IDE::onGhostTextTimer() {
     // Store cursor position for ghost text rendering
     m_ghostTextLine   = lineIndex;
     m_ghostTextColumn = column;
+    m_ghostTextRequestCursorPos = cursorPos;
     m_ghostTextPending = true;
     const uint64_t requestSeq = m_ghostTextRequestSeq.load();
 
@@ -217,18 +691,12 @@ void Win32IDE::onGhostTextTimer() {
     std::string language = getSyntaxLanguageName();
 
     // Gather suffix context (text after cursor, up to 2KB) for FIM
-    int textLen = GetWindowTextLengthA(m_hwndEditor);
+    int textLen = GetWindowTextLengthW(m_hwndEditor);
     int suffixEnd = (cursorPos + 2048 < textLen) ? cursorPos + 2048 : textLen;
     int suffixLen = suffixEnd - cursorPos;
     std::string suffix;
     if (suffixLen > 0) {
-        TEXTRANGEA trSuffix;
-        trSuffix.chrg.cpMin = cursorPos;
-        trSuffix.chrg.cpMax = suffixEnd;
-        std::vector<char> suffBuf(suffixLen + 1, 0);
-        trSuffix.lpstrText = suffBuf.data();
-        SendMessageA(m_hwndEditor, EM_GETTEXTRANGE, 0, (LPARAM)&trSuffix);
-        suffix.assign(suffBuf.data());
+        suffix = getEditorRangeUtf8(m_hwndEditor, cursorPos, suffixEnd);
     }
 
     // Fire background thread for completion
@@ -316,11 +784,13 @@ std::string Win32IDE::requestGhostTextCompletion(const std::string& context,
     };
 
     enum class GhostProviderKind {
+        Titan,
         Local,
         Snippet,
         Lsp
     };
-    const std::array<GhostProviderKind, 3> precedence = {
+    const std::array<GhostProviderKind, 4> precedence = {
+        GhostProviderKind::Titan,
         GhostProviderKind::Local,
         GhostProviderKind::Snippet,
         GhostProviderKind::Lsp
@@ -328,6 +798,16 @@ std::string Win32IDE::requestGhostTextCompletion(const std::string& context,
 
     for (GhostProviderKind provider : precedence) {
         if (isStale()) return "";
+
+        if (provider == GhostProviderKind::Titan) {
+            std::string titanCompletion = requestTitanGhostTextCompletion(
+                context, language, suffix, filePath, cursorLine, cursorCol, expectedSeq);
+            if (!titanCompletion.empty()) {
+                std::lock_guard<std::mutex> lock(m_ghostTextCacheMutex);
+                m_ghostTextMetrics.localWins++;
+                return titanCompletion;
+            }
+        }
 
         if (provider == GhostProviderKind::Local) {
             // ---- Primary: OrchestratorBridge FIM (uses AgentOllamaClient + FIMPromptBuilder) ----
@@ -458,6 +938,173 @@ std::string Win32IDE::requestGhostTextCompletion(const std::string& context,
     return "";
 }
 
+std::string Win32IDE::requestTitanGhostTextCompletion(const std::string& context,
+                                                      const std::string& language,
+                                                      const std::string& suffix,
+                                                      const std::string& filePath,
+                                                      int cursorLine, int cursorCol,
+                                                      uint64_t expectedSeq) {
+    if (!m_useTitanKernel || m_loadedModelPath.empty() || !m_hwndMain || !m_hwndEditor) {
+        return "";
+    }
+    if (expectedSeq != 0 && expectedSeq != m_ghostTextRequestSeq.load()) {
+        return "";
+    }
+    if (!ensureTitanGhostReady(m_loadedModelPath)) {
+        return "";
+    }
+
+    RAWRXD_SAMPLING_PARAMS sampling{};
+    sampling.temperature = 0.2f;
+    sampling.top_p = 0.95f;
+    sampling.top_k = 48;
+    sampling.repetition_penalty = 1.05f;
+    sampling.max_tokens = 96;
+    if (g_titanGhost.setSamplingParams) {
+        g_titanGhost.setSamplingParams(&sampling);
+    }
+
+    std::string prompt =
+        "Complete the following " + language + " code at the cursor. "
+        "Return only the completion text with no explanation and no markdown.\n\n"
+        "[FILE]\n" + filePath +
+        "\n[LINE]\n" + std::to_string(cursorLine) +
+        "\n[COLUMN]\n" + std::to_string(cursorCol) +
+        "\n[PREFIX]\n" + context +
+        "\n[SUFFIX]\n" + suffix +
+        "\n[COMPLETION]\n";
+
+    {
+        std::lock_guard<std::mutex> lock(m_titanGhostMutex);
+        m_titanGhostStreamText.clear();
+        m_titanGhostStreamSeq = 0;
+        m_titanGhostSeqGaps = 0;
+        m_titanGhostPackets = 0;
+        m_titanGhostStreamActive = true;
+    }
+
+    if (m_agenticBridge) {
+        m_agenticBridge->ResetGhostSeqTelemetry();
+    }
+
+    if (g_titanGhost.streamReset) {
+        g_titanGhost.streamReset();
+    }
+
+    RAWRXD_INFERENCE_HANDLE streamHandle = 0;
+    if (g_titanGhost.beginStreaming(&streamHandle) != RAWRXD_SUCCESS) {
+        uint64_t lastGhostSeq = m_agenticBridge ? m_agenticBridge->GetLastGhostSeq() : 0;
+        LOG_INFO("Titan ghost beginStreaming failed; last_seq=" + std::to_string(lastGhostSeq));
+        std::lock_guard<std::mutex> lock(m_titanGhostMutex);
+        m_titanGhostStreamActive = false;
+        return "";
+    }
+
+    g_titanGhost.streamConfigureWindow(reinterpret_cast<uint64_t>(m_hwndMain), WM_TITAN_GHOST_STREAM, 0);
+
+    RAWRXD_INFERENCE_HANDLE inferenceHandle = 0;
+    if (g_titanGhost.inferAsync(prompt.c_str(), prompt.size(), &inferenceHandle) != RAWRXD_SUCCESS) {
+        uint64_t lastGhostSeq = m_agenticBridge ? m_agenticBridge->GetLastGhostSeq() : 0;
+        LOG_INFO("Titan ghost inferAsync failed; last_seq=" + std::to_string(lastGhostSeq));
+        g_titanGhost.endStreaming(streamHandle);
+        std::lock_guard<std::mutex> lock(m_titanGhostMutex);
+        m_titanGhostStreamActive = false;
+        return "";
+    }
+
+    const RAWRXD_STATUS waitStatus = g_titanGhost.waitForInference(inferenceHandle, 12000);
+    PostMessageA(m_hwndMain, WM_TITAN_GHOST_STREAM, 0, 0);
+    Sleep(25);
+
+    std::string completion;
+    {
+        std::lock_guard<std::mutex> lock(m_titanGhostMutex);
+        completion = m_titanGhostStreamText;
+    }
+    uint64_t lastSeq = 0;
+    uint64_t gapCount = 0;
+    uint64_t packetCount = 0;
+    drainTitanGhostPackets(completion, &lastSeq, &gapCount, &packetCount);
+
+    g_titanGhost.endStreaming(streamHandle);
+
+    {
+        std::lock_guard<std::mutex> lock(m_titanGhostMutex);
+        m_titanGhostStreamText = completion;
+        m_titanGhostStreamSeq = lastSeq;
+        m_titanGhostSeqGaps = gapCount;
+        m_titanGhostPackets = packetCount;
+        m_titanGhostStreamActive = false;
+    }
+
+    if (waitStatus != RAWRXD_SUCCESS) {
+        uint64_t lastBridgeSeq = m_agenticBridge ? m_agenticBridge->GetLastGhostSeq() : 0;
+        LOG_INFO("Titan ghost wait failed; status=" + std::to_string(static_cast<int>(waitStatus)) +
+                 " stream_last_seq=" + std::to_string(lastSeq) +
+                 " bridge_last_seq=" + std::to_string(lastBridgeSeq) +
+                 " gaps=" + std::to_string(gapCount) +
+                 " packets=" + std::to_string(packetCount));
+        return "";
+    }
+    return trimGhostText(completion);
+}
+
+void Win32IDE_HandleTitanGhostStreamMessage(Win32IDE* ide) {
+    if (!ide) {
+        return;
+    }
+
+    std::string combined;
+    bool streamActive = false;
+    uint64_t prevGapCount = 0;
+    uint64_t lastSeq = 0;
+    uint64_t gapCount = 0;
+    uint64_t packetCount = 0;
+
+    {
+        std::lock_guard<std::mutex> lock(ide->m_titanGhostMutex);
+        prevGapCount = ide->m_titanGhostSeqGaps;
+        lastSeq = ide->m_titanGhostStreamSeq;
+        gapCount = ide->m_titanGhostSeqGaps;
+        packetCount = ide->m_titanGhostPackets;
+        drainTitanGhostPackets(ide->m_titanGhostStreamText, &lastSeq, &gapCount, &packetCount);
+        ide->m_titanGhostStreamSeq = lastSeq;
+        ide->m_titanGhostSeqGaps = gapCount;
+        ide->m_titanGhostPackets = packetCount;
+        combined = ide->m_titanGhostStreamText;
+        streamActive = ide->m_titanGhostStreamActive;
+    }
+
+    if (gapCount > prevGapCount) {
+        LOG_INFO("Titan ghost stream sequence gap detected; last_seq=" + std::to_string(lastSeq) +
+                 " gaps=" + std::to_string(gapCount) +
+                 " packets=" + std::to_string(packetCount));
+    }
+
+    if (ide->m_agenticBridge) {
+        ide->m_agenticBridge->ObserveGhostStreamSeq(lastSeq);
+    }
+
+    if (!streamActive || combined.empty() || !ide->m_hwndEditor) {
+        return;
+    }
+
+    CHARRANGE sel{};
+    SendMessageA(ide->m_hwndEditor, EM_EXGETSEL, 0, reinterpret_cast<LPARAM>(&sel));
+    if (sel.cpMin != ide->m_ghostTextRequestCursorPos) {
+        return;
+    }
+
+    ide->m_ghostTextContent = ide->trimGhostText(combined);
+    if (ide->m_ghostTextContent.empty()) {
+        return;
+    }
+
+    ide->m_ghostTextVisible = true;
+    ide->m_ghostTextAccepted = false;
+    InvalidateRect(ide->m_hwndEditor, nullptr, FALSE);
+}
+
 // ============================================================================
 // GHOST TEXT DELIVERY — WM_GHOST_TEXT_READY handler (UI thread)
 // ============================================================================
@@ -505,6 +1152,7 @@ void Win32IDE::dismissGhostText() {
     m_ghostTextContent.clear();
     m_ghostTextLine     = -1;
     m_ghostTextColumn   = -1;
+    m_ghostTextRequestCursorPos = -1;
     m_ghostTextAccepted = false;
 
     if (m_hwndEditor) {
@@ -540,7 +1188,23 @@ void Win32IDE::acceptGhostText() {
 // ============================================================================
 
 void Win32IDE::renderGhostText(HDC hdc) {
-    if (!m_ghostTextVisible || m_ghostTextContent.empty() || !m_hwndEditor) return;
+    if (!m_hwndEditor) return;
+
+    bool showPagingStatus = false;
+    uint64_t elapsedMs = 0;
+    {
+        std::lock_guard<std::mutex> lock(m_titanAgentMutex);
+        if (m_titanAgentRunning) {
+            const uint64_t now = GetTickCount64();
+            const uint64_t startMs = m_titanAgentStartMs;
+            const uint64_t lastPacketMs = m_titanAgentLastPacketMs;
+            elapsedMs = (startMs > 0 && now >= startMs) ? (now - startMs) : 0;
+            const uint64_t sinceLastPacketMs = (lastPacketMs > 0 && now >= lastPacketMs) ? (now - lastPacketMs) : elapsedMs;
+            showPagingStatus = (m_titanAgentPostedChars == 0) || (sinceLastPacketMs >= 1200);
+        }
+    }
+
+    if ((!m_ghostTextVisible || m_ghostTextContent.empty()) && !showPagingStatus) return;
 
     // Get current cursor position to know where to draw
     CHARRANGE sel;
@@ -581,12 +1245,19 @@ void Win32IDE::renderGhostText(HDC hdc) {
 
     // Split ghost text into lines
     std::vector<std::string> lines;
-    std::istringstream stream(m_ghostTextContent);
-    std::string line;
-    int lineCount = 0;
-    while (std::getline(stream, line) && lineCount < GHOST_TEXT_MAX_LINES) {
-        lines.push_back(line);
-        lineCount++;
+    if (showPagingStatus) {
+        static const std::array<const char*, 4> kSpinner = {"|", "/", "-", "\\"};
+        const int phase = static_cast<int>((GetTickCount64() / 220ULL) % kSpinner.size());
+        const uint64_t elapsedSec = elapsedMs / 1000ULL;
+        lines.push_back("[Titan] Paging shards " + std::string(kSpinner[phase]) + "  t+" + std::to_string(elapsedSec) + "s");
+    } else {
+        std::istringstream stream(m_ghostTextContent);
+        std::string line;
+        int lineCount = 0;
+        while (std::getline(stream, line) && lineCount < GHOST_TEXT_MAX_LINES) {
+            lines.push_back(line);
+            lineCount++;
+        }
     }
 
     if (lines.empty()) {
@@ -633,10 +1304,34 @@ void Win32IDE::renderGhostText(HDC hdc) {
 // ============================================================================
 
 bool Win32IDE::handleGhostTextKey(UINT vk) {
+    if (vk == VK_ESCAPE) {
+        bool titanRunning = false;
+        {
+            std::lock_guard<std::mutex> lock(m_titanAgentMutex);
+            titanRunning = m_titanAgentRunning;
+        }
+        if (titanRunning) {
+            cancelTitanAgentInferenceAsync();
+            dismissGhostText();
+            postOutputPanelSafe("\n[Titan Agent] canceled by ESC\n");
+            return true;
+        }
+    }
+
     if (!m_ghostTextVisible) return false;
 
     if (vk == VK_TAB) {
+        bool titanRunning = false;
+        {
+            std::lock_guard<std::mutex> lock(m_titanAgentMutex);
+            titanRunning = m_titanAgentRunning;
+        }
         acceptGhostText();
+        if (titanRunning) {
+            // Promote currently streamed suggestion into concrete code and stop further streaming.
+            cancelTitanAgentInferenceAsync();
+            postOutputPanelSafe("\n[Titan Agent] committed current ghost text (TAB)\n");
+        }
         return true;  // Consumed
     }
 

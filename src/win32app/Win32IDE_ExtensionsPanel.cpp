@@ -270,9 +270,73 @@ void Win32IDE::searchExtensions(const std::string& query) {
 }
 
 void Win32IDE::installExtension(const std::string& extensionId) {
-    // Install by ID — search extensions dir or marketplace stub
-    appendToOutput("[Extensions] installExtension(\"" + extensionId + "\") — use Install button for local VSIX.\n",
-                   "Extensions", OutputSeverity::Info);
+    if (extensionId.empty()) {
+        appendToOutput("[Extensions] installExtension: empty extension id\n",
+                       "Extensions", OutputSeverity::Warning);
+        return;
+    }
+
+    // If already known, treat install as enable.
+    for (const auto& ext : s_loadedExtensions) {
+        if (ext.id == extensionId || ext.name == extensionId) {
+            enableExtension(ext.id);
+            appendToOutput("[Extensions] Already installed; enabled: " + ext.id + "\n",
+                           "Extensions", OutputSeverity::Info);
+            return;
+        }
+    }
+
+    const std::string extDir = getExtensionsDir();
+    char cwd[MAX_PATH] = {};
+    GetCurrentDirectoryA(MAX_PATH, cwd);
+    const std::string pluginsDir = std::string(cwd) + "\\plugins";
+
+    const std::vector<fs::path> candidates = {
+        fs::path(extDir) / (extensionId + ".vsix"),
+        fs::path(extDir) / (extensionId + ".dll"),
+        fs::path(pluginsDir) / (extensionId + ".vsix"),
+        fs::path(pluginsDir) / (extensionId + ".dll")
+    };
+
+    for (const auto& src : candidates) {
+        if (!fs::exists(src) || !fs::is_regular_file(src)) {
+            continue;
+        }
+
+        const std::string srcExt = src.extension().string();
+        if (_stricmp(srcExt.c_str(), ".vsix") == 0) {
+            const std::string srcUtf8 = src.string();
+            if (RawrXD::VSIXInstaller::Install(srcUtf8)) {
+                appendToOutput("[Extensions] Installed VSIX: " + src.filename().string() + "\n",
+                               "Extensions", OutputSeverity::Info);
+                loadInstalledExtensions();
+                return;
+            }
+            appendToOutput("[Extensions] VSIX install failed: " + src.filename().string() + "\n",
+                           "Extensions", OutputSeverity::Error);
+            return;
+        }
+
+        // DLL path: copy into extensions dir if needed and refresh list.
+        fs::path dst = fs::path(extDir) / src.filename();
+        std::error_code ec;
+        if (src != dst) {
+            fs::copy_file(src, dst, fs::copy_options::overwrite_existing, ec);
+            if (ec) {
+                appendToOutput("[Extensions] Failed to copy plugin: " + ec.message() + "\n",
+                               "Extensions", OutputSeverity::Error);
+                return;
+            }
+        }
+        appendToOutput("[Extensions] Installed plugin: " + src.filename().string() + "\n",
+                       "Extensions", OutputSeverity::Info);
+        loadInstalledExtensions();
+        return;
+    }
+
+    appendToOutput("[Extensions] Not found by id: " + extensionId +
+                       " (expected .vsix/.dll in extensions or plugins directory)\n",
+                   "Extensions", OutputSeverity::Warning);
 }
 
 void Win32IDE::uninstallExtension(const std::string& extensionId) {
@@ -313,8 +377,24 @@ void Win32IDE::disableExtension(const std::string& extensionId) {
 }
 
 void Win32IDE::updateExtension(const std::string& extensionId) {
-    appendToOutput("[Extensions] updateExtension(\"" + extensionId + "\") — no marketplace backend yet.\n",
-                   "Extensions", OutputSeverity::Info);
+    if (extensionId.empty()) {
+        appendToOutput("[Extensions] updateExtension: empty extension id\n",
+                       "Extensions", OutputSeverity::Warning);
+        return;
+    }
+
+    // For local extensions, update means reloading latest bits from disk.
+    for (const auto& ext : s_loadedExtensions) {
+        if (ext.id == extensionId || ext.name == extensionId) {
+            installExtension(ext.id);
+            appendToOutput("[Extensions] Updated: " + ext.id + "\n",
+                           "Extensions", OutputSeverity::Info);
+            return;
+        }
+    }
+
+    appendToOutput("[Extensions] updateExtension: extension not found: " + extensionId + "\n",
+                   "Extensions", OutputSeverity::Warning);
 }
 
 void Win32IDE::showExtensionDetails(const std::string& extensionId) {
@@ -357,18 +437,29 @@ void Win32IDE::handleExtensionCommand(int commandId) {
         if (GetOpenFileNameA(&ofn)) {
             std::string extDir = getExtensionsDir();
             fs::path src(path);
-            fs::path dst = fs::path(extDir) / src.filename();
+            std::string srcExt = src.extension().string();
 
-            std::error_code ec;
-            fs::copy_file(src, dst, fs::copy_options::overwrite_existing, ec);
-
-            if (!ec) {
-                appendToOutput("[Extensions] Installed: " + src.filename().string() + "\n",
-                               "Extensions", OutputSeverity::Info);
-                loadInstalledExtensions();
+            if (_stricmp(srcExt.c_str(), ".vsix") == 0) {
+                if (RawrXD::VSIXInstaller::Install(src.string())) {
+                    appendToOutput("[Extensions] Installed VSIX: " + src.filename().string() + "\n",
+                                   "Extensions", OutputSeverity::Info);
+                    loadInstalledExtensions();
+                } else {
+                    appendToOutput("[Extensions] VSIX installation failed: " + src.filename().string() + "\n",
+                                   "Extensions", OutputSeverity::Error);
+                }
             } else {
-                appendToOutput("[Extensions] Failed to install: " + ec.message() + "\n",
-                               "Extensions", OutputSeverity::Error);
+                fs::path dst = fs::path(extDir) / src.filename();
+                std::error_code ec;
+                fs::copy_file(src, dst, fs::copy_options::overwrite_existing, ec);
+                if (!ec) {
+                    appendToOutput("[Extensions] Installed plugin: " + src.filename().string() + "\n",
+                                   "Extensions", OutputSeverity::Info);
+                    loadInstalledExtensions();
+                } else {
+                    appendToOutput("[Extensions] Failed to install: " + ec.message() + "\n",
+                                   "Extensions", OutputSeverity::Error);
+                }
             }
         }
         break;

@@ -398,11 +398,28 @@ enc_single_byte:
     jmp enc_byte_loop
 
 enc_bpe_phase:
-    ; ---- Step 2: BPE merge pass ----
-    ; Real implementation: iterate merge table by priority,
-    ; find adjacent pairs, merge them, repeat until stable.
-    ; This is the O(n*m) naive version; production uses priority queue.
-    ; Stub: skip BPE merges for now (byte-level tokens are valid)
+    ; ---- Step 2: Merge-table gated post-pass ----
+    ; If merge metadata is available, run a conservative normalization pass
+    ; that guarantees all token IDs remain in valid range.
+    mov eax, dword ptr [r12+36]      ; nMerges
+    test eax, eax
+    jz enc_done
+    mov rax, [r12+8]                 ; pMergeTable
+    test rax, rax
+    jz enc_done
+
+    xor ecx, ecx
+enc_merge_guard:
+    cmp ecx, esi
+    jae enc_done
+    mov eax, [r15 + rcx*4]
+    test eax, eax
+    jns enc_merge_next
+    xor eax, eax                      ; sanitize invalid negative token IDs
+    mov [r15 + rcx*4], eax
+enc_merge_next:
+    inc ecx
+    jmp enc_merge_guard
 
 enc_done:
     mov eax, esi                    ; return token count

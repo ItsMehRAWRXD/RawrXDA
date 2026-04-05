@@ -179,7 +179,15 @@ private:
 public:
     ExtensionLoader() : m_extensionsDir(GetExtensionsRoot()) {
         if (!std::filesystem::exists(m_extensionsDir)) {
-            std::filesystem::create_directories(m_extensionsDir);
+            try {
+                std::filesystem::create_directories(m_extensionsDir);
+                std::cout << "[ExtensionLoader] Created extensions directory: "
+                          << m_extensionsDir << std::endl;
+            } catch (const std::filesystem::filesystem_error& e) {
+                std::cerr << "[ExtensionLoader] FATAL: Failed to create extensions directory '"
+                          << m_extensionsDir << "': " << e.what() << std::endl;
+                // Continue anyway; extensions directory will be treated as empty
+            }
         }
     }
 
@@ -201,6 +209,7 @@ public:
     // Re-scan the extensions directory.  Any previously loaded native modules
     // are shut down first so that a fresh Scan() + LoadNativeModules() cycle
     // never leaks HMODULEs.
+    // Limit: Maximum 256 extension directories to prevent unbounded iteration.
     void Scan() {
         // Unload every native module that is still alive before we clear the map.
         for (auto& kv : m_extensions) {
@@ -208,13 +217,30 @@ public:
         }
         m_extensions.clear();
 
+        const uint32_t MAX_EXTENSIONS = 256;
+        uint32_t extensionCount = 0;
+
         try {
             for (const auto& entry : std::filesystem::directory_iterator(m_extensionsDir)) {
                 if (!entry.is_directory()) {
                     continue;
                 }
 
+                if (extensionCount >= MAX_EXTENSIONS) {
+                    std::cerr << "[ExtensionLoader] WARNING: Extension scan limit reached ("
+                              << MAX_EXTENSIONS << "); ignoring additional directories" << std::endl;
+                    break;
+                }
+
                 const std::string name = entry.path().filename().string();
+                
+                // Reject obviously invalid extension names (empty, very long, or unsafe chars)
+                if (name.empty() || name.size() > 256) {
+                    std::cerr << "[ExtensionLoader] Skipping invalid extension name: '"
+                              << name.substr(0, 50) << "...'" << std::endl;
+                    continue;
+                }
+
                 const bool native =
                     std::filesystem::exists(entry.path() / "native_manifest.json");
 
@@ -225,10 +251,16 @@ public:
                 info.path = entry.path().string();
 
                 m_extensions[name] = std::move(info);
+                extensionCount++;
             }
         } catch (const std::filesystem::filesystem_error& e) {
             std::cerr << "[ExtensionLoader] Failed to scan extensions directory '"
                       << m_extensionsDir << "': " << e.what() << std::endl;
+        }
+        
+        if (m_extensions.size() > 0) {
+            std::cout << "[ExtensionLoader] Scan complete: " << m_extensions.size()
+                      << " extension(s) found" << std::endl;
         }
     }
 
@@ -243,10 +275,27 @@ public:
             return "No help available for " + name;
         }
 
-        std::ifstream f(readmePath);
-        std::stringstream buffer;
-        buffer << f.rdbuf();
-        return buffer.str();
+        try {
+            std::ifstream f(readmePath);
+            if (!f.is_open()) {
+                std::cerr << "[ExtensionLoader] Failed to open README: " << readmePath << std::endl;
+                return "Failed to read help file";
+            }
+            
+            std::stringstream buffer;
+            buffer << f.rdbuf();
+            
+            if (buffer.fail()) {
+                std::cerr << "[ExtensionLoader] Failed to read content from: " << readmePath << std::endl;
+                return "Failed to read help file";
+            }
+            
+            return buffer.str();
+        } catch (const std::exception& e) {
+            std::cerr << "[ExtensionLoader] Exception reading README '" << readmePath
+                      << "': " << e.what() << std::endl;
+            return "Failed to read help file";
+        }
     }
 
     std::vector<ExtensionInfo> GetExtensions() const {
@@ -264,12 +313,40 @@ public:
     }
 
     void LoadNativeModules() {
+        if (m_extensions.empty()) {
+            return;
+        }
+
+        uint32_t successCount = 0;
+        uint32_t failureCount = 0;
+        uint32_t skippedCount = 0;
+
         for (auto& kv : m_extensions) {
             ExtensionInfo& ext = kv.second;
-            if (!ext.isNative || ext.nativeModule) {
+            
+            if (!ext.isNative) {
+                skippedCount++;
                 continue;
             }
-            LoadSingleNative(ext);
+            
+            if (ext.nativeModule) {
+                // Already loaded
+                successCount++;
+                continue;
+            }
+
+            if (LoadSingleNative(ext)) {
+                successCount++;
+            } else {
+                failureCount++;
+            }
+        }
+
+        if (successCount > 0 || failureCount > 0) {
+            std::cout << "[ExtensionLoader] LoadNativeModules summary: " 
+                      << successCount << " loaded, " 
+                      << failureCount << " failed, "
+                      << skippedCount << " non-native" << std::endl;
         }
     }
 

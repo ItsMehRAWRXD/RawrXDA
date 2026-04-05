@@ -618,7 +618,7 @@ BPE_Encode PROC
     jl      @@single_byte
 
     ; Multi-byte: lookup as single token or fall back to bytes
-    ; For now, use byte fallback
+    ; Baseline uses byte fallback
     movzx   eax, byte ptr [rsi]
     add     eax, 256                    ; Byte tokens start at 256
     mov     [rdi + r13*4], eax
@@ -1297,7 +1297,7 @@ UTF8_Length PROC
 UTF8_Length ENDP
 
 ; -----------------------------------------------------------------------------
-; Helper stubs
+; Helper bridge routines
 ; -----------------------------------------------------------------------------
 
 BPE_Decode PROC
@@ -1428,7 +1428,83 @@ Tokenizer_TokenToStr ENDP
 Tokenizer_StrToToken PROC
     ; RCX = string, RDX = string length (or -1 for null-terminated)
     ; Returns: RAX = token_id or -1
-    mov     eax, -1                     ; Not implemented
+    push    rbx
+    push    rsi
+    push    rdi
+    push    r12
+    push    r13
+    push    r14
+
+    test    rcx, rcx
+    jz      @@no_match
+
+    mov     r10, rcx                     ; original input ptr
+    mov     r13, rdx                     ; input length
+
+    cmp     r13, -1
+    jne     @@len_ready
+    xor     r13d, r13d
+@@len_scan:
+    cmp     byte ptr [r10 + r13], 0
+    je      @@len_ready
+    inc     r13d
+    jmp     @@len_scan
+
+@@len_ready:
+    mov     ebx, [rel tokenizer_state + TSTATE_VOCAB_SIZE]
+    xor     edi, edi
+
+@@tok_loop:
+    cmp     edi, ebx
+    jae     @@no_match
+
+    imul    eax, edi, VOCAB_SIZEOF
+    lea     rsi, [rel vocab_table]
+    add     rsi, rax
+
+    mov     eax, [rsi + VOCAB_STRING_OFF]
+    movzx   edx, word ptr [rsi + VOCAB_STRING_LEN]
+    cmp     edx, r13d
+    jne     @@next_tok
+
+    lea     r12, [rel vocab_strings]
+    add     r12, rax
+    mov     r14, r10
+    mov     rcx, r13
+
+@@cmp_loop:
+    test    rcx, rcx
+    jz      @@found
+    mov     al, [r12]
+    cmp     al, [r14]
+    jne     @@next_tok
+    inc     r12
+    inc     r14
+    dec     rcx
+    jmp     @@cmp_loop
+
+@@found:
+    mov     eax, edi
+    pop     r14
+    pop     r13
+    pop     r12
+    pop     rdi
+    pop     rsi
+    pop     rbx
+    ret
+
+@@next_tok:
+    inc     edi
+    jmp     @@tok_loop
+
+@@no_match:
+    mov     eax, -1
+    pop     r14
+    pop     r13
+    pop     r12
+    pop     rdi
+    pop     rsi
+    pop     rbx
     ret
 Tokenizer_StrToToken ENDP
 

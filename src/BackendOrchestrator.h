@@ -35,6 +35,9 @@
 
 namespace RawrXD {
 
+// Returns the active sliding-aperture reservation policy label used by GGUF mapping.
+std::string GetApertureAlignmentStrategyLabel();
+
 // Forward declarations
 class InferenceProfiler;
 
@@ -121,6 +124,27 @@ struct ContextCompressionConfig {
     bool   enabled          = true;
 };
 
+// ─── Sovereign +8 scaling controls ───────────────────────────────────────────
+enum class KVPrecisionTier : uint8_t {
+    FP16 = 0,
+    Q6   = 1,
+    Q4   = 2,
+};
+
+struct SovereignScalingConfig {
+    bool enabled = true;
+    bool graph_aware_prefetch = true;
+    bool thermal_aware_scheduler = true;
+    bool async_token_overlap = true;
+    bool nvme_direct_streaming = true;
+    bool cross_layer_fusion = true;
+    int  aperture_stripes = 2;
+    int  prefetch_depth = 2;
+    int  fusion_width = 2;
+    int  kv_recent_tokens = 1024;
+    int  kv_mid_tokens = 4096;
+};
+
 // ─── Speculative decoding config ─────────────────────────────────────────────
 struct SpecDecodingConfig {
     std::string draft_model_path;   // small fast model for draft tokens
@@ -160,9 +184,11 @@ public:
     bool   EnableSpecDecoding(SpecDecodingConfig cfg);
     void   DisableSpecDecoding();
     double GetSpecDecodingAcceptRate() const;
+    bool   SupportsAVX512Kernels() const;
 
     // ---- Enhancement 5: Model hot-swapping ----
     bool   LoadModel(const std::string& path, const std::string& tag);
+    bool   ForensicMapProbe(const std::string& path, uint64_t offset, size_t window_size, std::string* out_reason = nullptr);
     bool   SwapToModel(const std::string& tag);
     bool   UnloadModel(const std::string& tag);
     std::vector<std::string> GetLoadedModelTags() const;
@@ -220,6 +246,15 @@ public:
     void   DisableMetricsExport();
     void   DumpMetricsNow() const;
 
+    // ---- Sovereign +8: Streaming/TPS scaling controls ----
+    void ConfigureSovereignScaling(SovereignScalingConfig cfg);
+    void ConfigureSovereignScalingFromEnv();
+    SovereignScalingConfig GetSovereignScalingConfig() const;
+    KVPrecisionTier GetKVPrecisionTierForAge(int token_age) const;
+    void UpdateThermalReadings(float cpu_temp_c, float nvme_temp_c);
+    int  GetRecommendedPrefetchDepth() const;
+    int  GetRecommendedFusionWidth() const;
+
 private:
     BackendOrchestrator();
     ~BackendOrchestrator();
@@ -253,6 +288,7 @@ private:
     // Spec decoding
     SpecDecodingConfig  m_spec_cfg;
     std::atomic<double> m_spec_accept_rate{0.0};
+    std::atomic<bool>   m_supports_avx512_kernels{false};
 
     // Model hot-swap registry
     mutable std::mutex m_model_mtx;
@@ -306,6 +342,12 @@ private:
     std::thread    m_metrics_thread;
     std::atomic<bool> m_metrics_running{false};
     void MetricsExportLoop(int interval_s);
+
+    // Sovereign +8 state
+    mutable std::mutex m_scaling_mtx;
+    SovereignScalingConfig m_scaling_cfg;
+    std::atomic<float> m_cpu_temp_c{0.0f};
+    std::atomic<float> m_nvme_temp_c{0.0f};
 };
 
 } // namespace RawrXD

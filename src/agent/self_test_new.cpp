@@ -174,6 +174,48 @@ bool SelfTest::runLint() {
 }
 
 bool SelfTest::runBenchmarkBaseline() {
-    // Placeholder - assume success if not implemented or external
+    log("Running benchmark baseline...");
+
+    const std::vector<std::string> benchmarkCandidates = {
+        "bench_flash_attn.exe",
+        "bench_quant_ladder.exe",
+        "bench_q8_0_end2end.exe",
+        "bench_deflate_50mb.exe"
+    };
+
+    fs::path testDir = fs::absolute("build/tests");
+    if (!fs::exists(testDir)) {
+        log("SKIP: benchmark directory missing");
+        return true;
+    }
+
+    bool ranAny = false;
+    for (const auto& exe : benchmarkCandidates) {
+        fs::path exePath = testDir / exe;
+        if (!fs::exists(exePath)) {
+            continue;
+        }
+
+        const auto start = std::chrono::high_resolution_clock::now();
+        const bool ok = runProcess(exePath.string(), {}, 120000);
+        const auto end = std::chrono::high_resolution_clock::now();
+        const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+
+        ranAny = true;
+        if (!ok) {
+            m_error = "Benchmark failed: " + exe;
+            log(m_error);
+            return false;
+        }
+
+        log("Benchmark passed: " + exe + " (" + std::to_string(ms) + " ms)");
+    }
+
+    if (!ranAny) {
+        log("SKIP: no benchmark executables found");
+        return true;
+    }
+
+    log("Benchmark baseline PASSED");
     return true;
 }

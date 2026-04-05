@@ -844,13 +844,29 @@ RawrXD::Expected<void, NetError> HttpClient::handleRedirects(
     
     std::string newUrl = response.headers["Location"];
     if (newUrl.empty()) return RawrXD::unexpected(NetError::InvalidResponse);
-    
-    return RawrXD::unexpected(NetError::Success); // Placeholder, actual redirection needs loop at call site or recursion
-    
-    // In a real implementation this would trigger a new request.
-    // For now we'll return Success and let caller handle refetch if needed or recursively call executeRequest
-    // but structure is split.
-    // Simplifying for this snippet: We assume manual handling or just return as is for now.
+
+    // Normalize relative redirects against scheme://host[:port] from original URL.
+    const bool absolute = (newUrl.rfind("http://", 0) == 0 || newUrl.rfind("https://", 0) == 0);
+    if (!absolute) {
+        const size_t schemePos = originalUrl.find("://");
+        if (schemePos != std::string::npos) {
+            const size_t authorityStart = schemePos + 3;
+            size_t authorityEnd = originalUrl.find('/', authorityStart);
+            if (authorityEnd == std::string::npos) {
+                authorityEnd = originalUrl.size();
+            }
+            const std::string base = originalUrl.substr(0, authorityEnd);
+            if (!newUrl.empty() && newUrl.front() == '/') {
+                newUrl = base + newUrl;
+            } else {
+                newUrl = base + "/" + newUrl;
+            }
+        }
+    }
+
+    response.headers["X-Redirect-Target"] = newUrl;
+    response.headers["X-Redirect-Count"] = std::to_string(redirectCount + 1);
+    return {};
 }
 
 std::string HttpClient::base64Encode(const std::string& input) {

@@ -10,6 +10,29 @@
 #include <ctime>
 #include <iomanip>
 
+namespace {
+constexpr size_t kMaxTodoStorageBytes = 2u * 1024u * 1024u;
+constexpr size_t kMaxTodoTextBytes = 4096;
+constexpr size_t kMaxTodoFieldBytes = 128;
+constexpr size_t kMaxTodoTags = 16;
+constexpr size_t kMaxTodoTagBytes = 64;
+constexpr size_t kMaxLoadedTodoItems = 512;
+
+std::string clampField(const std::string& value, size_t maxBytes) {
+    if (value.size() <= maxBytes) {
+        return value;
+    }
+    return value.substr(0, maxBytes);
+}
+
+int clampNonNegativeInt(int value, int maxValue) {
+    if (value < 0) {
+        return 0;
+    }
+    return std::min(value, maxValue);
+}
+}
+
 namespace RawrXD {
 namespace Todos {
 
@@ -62,19 +85,34 @@ TodoManager::~TodoManager() {
 }
 
 bool TodoManager::Load() {
-    std::ifstream file(storagePath_);
+    std::ifstream file(storagePath_, std::ios::binary | std::ios::ate);
     if (!file.is_open()) {
         return false;
     }
-    
+
     try {
-        std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+        const std::streamoff fileSize = file.tellg();
+        if (fileSize < 0 || static_cast<size_t>(fileSize) > kMaxTodoStorageBytes) {
+            return false;
+        }
+        file.seekg(0, std::ios::beg);
+        std::string content(static_cast<size_t>(fileSize), '\0');
+        if (!content.empty()) {
+            file.read(content.data(), static_cast<std::streamsize>(content.size()));
+            if (!file) {
+                return false;
+            }
+        }
         json data = json::parse(content);
         
         items_.clear();
         
-        if (data.contains("Items")) {
+        if (data.contains("Items") && data["Items"].is_array()) {
+            size_t loadedCount = 0;
             for (const auto& itemJson : data["Items"]) {
+                if (loadedCount++ >= kMaxLoadedTodoItems) {
+                    break;
+                }
                 items_.push_back(ParseTodoFromJson(itemJson));
             }
         }
@@ -140,14 +178,19 @@ bool TodoManager::AddTodo(const std::string& text, const std::string& priority, 
     if (!CanAdd()) {
         return false;
     }
+
+    if (text.empty() || text.size() > kMaxTodoTextBytes ||
+        priority.size() > kMaxTodoFieldBytes || source.size() > kMaxTodoFieldBytes) {
+        return false;
+    }
     
     TodoItem todo;
     todo.id = GetNextId();
-    todo.text = text;
-    todo.priority = priority;
+    todo.text = clampField(text, kMaxTodoTextBytes);
+    todo.priority = clampField(priority, kMaxTodoFieldBytes);
     todo.status = "pending";
     todo.category = "general";
-    todo.source = source;
+    todo.source = clampField(source, kMaxTodoFieldBytes);
     
     auto now = std::time(nullptr);
     std::tm tm;
@@ -200,16 +243,16 @@ bool TodoManager::UpdateTodo(int id, const json& updates) {
     }
     
     if (updates.contains("text") && updates["text"].is_string()) {
-        todo->text = updates["text"].get<std::string>();
+        todo->text = clampField(updates["text"].get<std::string>(), kMaxTodoTextBytes);
     }
     if (updates.contains("priority") && updates["priority"].is_string()) {
-        todo->priority = updates["priority"].get<std::string>();
+        todo->priority = clampField(updates["priority"].get<std::string>(), kMaxTodoFieldBytes);
     }
     if (updates.contains("status") && updates["status"].is_string()) {
-        todo->status = updates["status"].get<std::string>();
+        todo->status = clampField(updates["status"].get<std::string>(), kMaxTodoFieldBytes);
     }
     if (updates.contains("category") && updates["category"].is_string()) {
-        todo->category = updates["category"].get<std::string>();
+        todo->category = clampField(updates["category"].get<std::string>(), kMaxTodoFieldBytes);
     }
     
     auto now = std::time(nullptr);
@@ -360,20 +403,27 @@ int TodoManager::GetNextId() const {
 
 TodoItem TodoManager::ParseTodoFromJson(const json& j) {
     TodoItem todo;
-    todo.id = j.value("Id", 0);
-    todo.text = j.value("Text", "");
-    todo.priority = j.value("Priority", "Medium");
-    todo.status = j.value("Status", "pending");
-    todo.category = j.value("Category", "general");
-    todo.source = j.value("Source", "user");
-    todo.createdAt = j.value("CreatedAt", "");
-    todo.updatedAt = j.value("UpdatedAt", "");
-    todo.estimatedMinutes = j.value("EstimatedMinutes", 0);
-    todo.actualMinutes = j.value("ActualMinutes", 0);
+    todo.id = clampNonNegativeInt(j.value("Id", 0), 1000000000);
+    todo.text = clampField(j.value("Text", std::string("")), kMaxTodoTextBytes);
+    todo.priority = clampField(j.value("Priority", std::string("Medium")), kMaxTodoFieldBytes);
+    todo.status = clampField(j.value("Status", std::string("pending")), kMaxTodoFieldBytes);
+    todo.category = clampField(j.value("Category", std::string("general")), kMaxTodoFieldBytes);
+    todo.source = clampField(j.value("Source", std::string("user")), kMaxTodoFieldBytes);
+    todo.createdAt = clampField(j.value("CreatedAt", std::string("")), kMaxTodoFieldBytes);
+    todo.updatedAt = clampField(j.value("UpdatedAt", std::string("")), kMaxTodoFieldBytes);
+    todo.estimatedMinutes = clampNonNegativeInt(j.value("EstimatedMinutes", 0), 1000000);
+    todo.actualMinutes = clampNonNegativeInt(j.value("ActualMinutes", 0), 1000000);
     
     if (j.contains("Tags") && j["Tags"].is_array()) {
+        size_t tagCount = 0;
         for (const auto& tag : j["Tags"]) {
-            todo.tags.push_back(tag.get<std::string>());
+            if (!tag.is_string()) {
+                continue;
+            }
+            if (tagCount++ >= kMaxTodoTags) {
+                break;
+            }
+            todo.tags.push_back(clampField(tag.get<std::string>(), kMaxTodoTagBytes));
         }
     }
     
@@ -411,7 +461,10 @@ bool TodoManager::ExecutePowerShellCommand(const std::string& operation, const s
     STARTUPINFOA si = { sizeof(si) };
     PROCESS_INFORMATION pi = { 0 };
     
-    if (!CreateProcessA(NULL, const_cast<char*>(cmd.str().c_str()), NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
+    // CreateProcessA requires a writable buffer; create a copy to avoid const violations
+    std::string cmdStr = cmd.str();
+    
+    if (!CreateProcessA(NULL, cmdStr.data(), NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
         return false;
     }
     

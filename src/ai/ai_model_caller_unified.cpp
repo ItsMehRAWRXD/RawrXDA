@@ -17,6 +17,7 @@
 
 #include "ggml.h"
 #include "ggml-alloc.h"
+#include "ai_model_caller_internal.h"
 #include <windows.h>
 #include <cmath>
 #include <cstring>
@@ -56,17 +57,6 @@ struct KVCache {
 // ============================================================
 // GLOBAL STATE (from both implementations)
 // ============================================================
-// External GGUF loader tensors
-extern "C" {
-    extern void* g_ggml_ctx;
-    extern void* g_model_tensors;
-    extern int g_n_layers;
-    extern int g_n_embd;
-    extern int g_n_head;
-    extern int g_n_vocab;
-    extern int g_n_ctx;
-}
-
 static KVCache g_kv_cache = {};
 static bool g_initialized = false;
 

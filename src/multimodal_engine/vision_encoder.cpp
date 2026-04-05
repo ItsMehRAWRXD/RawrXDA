@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <chrono>
 #include <filesystem>
+#include <limits>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -181,6 +182,9 @@ VisionResult VisionEncoder::LoadFromFile(const std::string& filePath) {
     if (fileSize > m_config.maxFileSizeBytes) {
         return VisionResult::fail("File too large: " + std::to_string(fileSize) + " bytes");
     }
+    if (fileSize == 0 || fileSize > static_cast<uintmax_t>(std::numeric_limits<size_t>::max())) {
+        return VisionResult::fail("Invalid file size");
+    }
     
     // Read file
     std::ifstream file(filePath, std::ios::binary);
@@ -188,8 +192,11 @@ VisionResult VisionEncoder::LoadFromFile(const std::string& filePath) {
         return VisionResult::fail("Cannot open file: " + filePath);
     }
     
-    std::vector<uint8_t> data(fileSize);
-    file.read(reinterpret_cast<char*>(data.data()), fileSize);
+    std::vector<uint8_t> data(static_cast<size_t>(fileSize));
+    file.read(reinterpret_cast<char*>(data.data()), static_cast<std::streamsize>(data.size()));
+    if (file.gcount() != static_cast<std::streamsize>(data.size())) {
+        return VisionResult::fail("Failed to read complete file: " + filePath);
+    }
     
     auto result = LoadFromMemory(data.data(), data.size(), filePath);
     if (result.success) {
@@ -210,6 +217,9 @@ VisionResult VisionEncoder::LoadFromMemory(const uint8_t* data, size_t size,
                                             const std::string& hint) {
     if (!data || size == 0) {
         return VisionResult::fail("Empty image data");
+    }
+    if (size > m_config.maxFileSizeBytes) {
+        return VisionResult::fail("Image data exceeds max file size limit");
     }
     
     ImageData img;
@@ -756,7 +766,8 @@ VisionResult VisionEncoder::ConvertFormat(const ImageData& image, ImageFormat ta
 // ============================================================================
 bool VisionEncoder::parseBMPHeader(const uint8_t* data, size_t size,
                                     int& width, int& height, int& channels) {
-    if (size < 26) return false;
+    // Need at least 30 bytes to safely read all fields
+    if (size < 30) return false;
     
     // BITMAPINFOHEADER starts at offset 14
     int32_t w, h;
@@ -768,8 +779,8 @@ bool VisionEncoder::parseBMPHeader(const uint8_t* data, size_t size,
     uint16_t bpp;
     memcpy(&bpp, data + 28, 2);
     channels = bpp / 8;
-    
-    return true;
+
+    return width > 0 && height > 0 && channels > 0 && channels <= 4;
 }
 
 bool VisionEncoder::parsePNGHeader(const uint8_t* data, size_t size,
@@ -778,8 +789,14 @@ bool VisionEncoder::parsePNGHeader(const uint8_t* data, size_t size,
     
     // IHDR chunk starts at offset 8 (after signature)
     // Width at offset 16, height at offset 20 (big-endian)
-    width = (data[16] << 24) | (data[17] << 16) | (data[18] << 8) | data[19];
-    height = (data[20] << 24) | (data[21] << 16) | (data[22] << 8) | data[23];
+    width = static_cast<int>((static_cast<uint32_t>(data[16]) << 24) |
+                             (static_cast<uint32_t>(data[17]) << 16) |
+                             (static_cast<uint32_t>(data[18]) << 8) |
+                             static_cast<uint32_t>(data[19]));
+    height = static_cast<int>((static_cast<uint32_t>(data[20]) << 24) |
+                              (static_cast<uint32_t>(data[21]) << 16) |
+                              (static_cast<uint32_t>(data[22]) << 8) |
+                              static_cast<uint32_t>(data[23]));
     
     return width > 0 && height > 0;
 }
@@ -823,11 +840,12 @@ std::string VisionEncoder::base64Encode(const uint8_t* data, size_t length) {
 
 std::vector<uint8_t> VisionEncoder::base64Decode(const std::string& encoded) {
     std::vector<uint8_t> result;
+    if (encoded.empty()) return result;
     if (encoded.size() % 4 != 0) return result;
     
     size_t outLen = encoded.size() / 4 * 3;
     if (encoded[encoded.size() - 1] == '=') outLen--;
-    if (encoded[encoded.size() - 2] == '=') outLen--;
+    if (encoded.size() >= 2 && encoded[encoded.size() - 2] == '=') outLen--;
     
     result.resize(outLen);
     size_t j = 0;

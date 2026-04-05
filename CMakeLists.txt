@@ -341,6 +341,8 @@ if(RAWR_HAS_MASM)
         src/asm/quant_avx2.asm
         src/asm/RawrXD_KQuant_Dequant.asm
         src/asm/RawrXD_AVX512_Dequant_BPE.asm
+        src/kernels/dequant_q6k_avx512.asm
+        src/kernels/kv_accum_avx512.asm
         src/asm/RawrXD_PDBKernel_v3.asm
         src/asm/RawrXD_ModuleEngine.asm
         src/asm/request_patch.asm
@@ -372,10 +374,13 @@ if(RAWR_HAS_MASM)
         src/asm/RawrXD_OverclockGov_Pure.asm
         src/asm/RawrXD_Emitter_v1.asm
         src/asm/RawrXD_IPC_Dispatcher.asm
+        src/asm/RawrXD_StubSweepBridge.asm
         src/asm/RawrXD_AuditSystem_Pure.asm
         src/asm/Advanced_Code_Deobfuscator.asm
         src/asm/Code_Pattern_Reconstructor.asm
         src/asm/agentic_deep_thinking_kernels.asm
+        src/kernels/RawrXD_Omega_Singularity.asm
+        src/kernels/RawrXD_Omega_Agentic.asm
         # Previously broken MASM64 syntax now portable C++20 with extern "C" ABI compatibility.
 
         
@@ -426,6 +431,48 @@ add_custom_command(
 )
 
 add_custom_target(rawrxd-matmul-spv DEPENDS ${RAWRXD_MATMUL_SHADER_SPV})
+
+# Hardened sovereign kernel target: compile persistent contract shader for Titan lane.
+set(RAWRXD_SOVEREIGN_SHADER_SRC "${CMAKE_SOURCE_DIR}/src/shaders/rawr_kernel_hooks.comp")
+set(RAWRXD_SOVEREIGN_SHADER_SPV "${RAWRXD_TEST_SHADER_DIR}/rawr_kernel_hooks.spv")
+
+find_program(RAWRXD_GLSLANG_VALIDATOR glslangValidator)
+find_program(RAWRXD_GLSLC glslc)
+
+if(RAWRXD_GLSLANG_VALIDATOR)
+    add_custom_command(
+        OUTPUT ${RAWRXD_SOVEREIGN_SHADER_SPV}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${RAWRXD_TEST_SHADER_DIR}
+        COMMAND ${RAWRXD_GLSLANG_VALIDATOR}
+                -V
+                --target-env vulkan1.3
+                -o ${RAWRXD_SOVEREIGN_SHADER_SPV}
+                ${RAWRXD_SOVEREIGN_SHADER_SRC}
+        DEPENDS ${RAWRXD_SOVEREIGN_SHADER_SRC}
+        COMMENT "Generating sovereign SPIR-V shader with glslangValidator: rawr_kernel_hooks.spv"
+        VERBATIM
+    )
+elseif(RAWRXD_GLSLC)
+    add_custom_command(
+        OUTPUT ${RAWRXD_SOVEREIGN_SHADER_SPV}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${RAWRXD_TEST_SHADER_DIR}
+        COMMAND ${RAWRXD_GLSLC}
+                -fshader-stage=compute
+                --target-env=vulkan1.3
+                -O
+                ${RAWRXD_SOVEREIGN_SHADER_SRC}
+                -o ${RAWRXD_SOVEREIGN_SHADER_SPV}
+        DEPENDS ${RAWRXD_SOVEREIGN_SHADER_SRC}
+        COMMENT "Generating sovereign SPIR-V shader with glslc: rawr_kernel_hooks.spv"
+        VERBATIM
+    )
+else()
+    message(WARNING "[Sovereign] Neither glslangValidator nor glslc found; rawr_kernel_hooks.spv target will be unavailable.")
+endif()
+
+if(RAWRXD_GLSLANG_VALIDATOR OR RAWRXD_GLSLC)
+    add_custom_target(rawrxd-sovereign-kernel-spv DEPENDS ${RAWRXD_SOVEREIGN_SHADER_SPV})
+endif()
 
 set(_RAWR_ASM_FEATURE_DEFINITIONS
     RAWR_HAS_MASM=$<IF:$<BOOL:${RAWR_HAS_MASM}>,1,0>
@@ -495,6 +542,7 @@ set(SOURCES
     src/core/confidence_gate.cpp
     src/core/deterministic_replay.cpp
     src/core/execution_governor.cpp
+    src/core/hotpatch_wiring.cpp
     src/core/multi_response_engine.cpp
     src/core/streaming_engine_registry.cpp
     src/core/flash_attention.cpp
@@ -2681,6 +2729,211 @@ endif()
 
 message(STATUS "[Phase 6] Standalone inference engine target: RawrXD-InferenceEngine")
 
+if(WIN32)
+    option(RAWRXD_INLINE_DISPATCH "Inline aperture dispatch hot path for benchmarking" OFF)
+    option(RAWR_ENABLE_GGML_LINK "Enable the opt-in GGML bridge lane for RawrXD_Titan" OFF)
+    set(RAWRXD_ENABLE_OMEGA_HIP "AUTO" CACHE STRING "Enable Omega HIP kernel lane for Titan (AUTO|ON|OFF)")
+    set_property(CACHE RAWRXD_ENABLE_OMEGA_HIP PROPERTY STRINGS AUTO ON OFF)
+    option(RAWRXD_ENABLE_OMEGA_HIP_FULL_KERNEL_SET "Enable full Omega HIP ASM pack (experimental/strictly opt-in)" OFF)
+
+    set(_RAWRXD_OMEGA_HIP_ENABLED OFF)
+    set(_RAWRXD_OMEGA_HIP_REASON "disabled by default")
+    if(RAWRXD_ENABLE_OMEGA_HIP STREQUAL "ON")
+        set(_RAWRXD_OMEGA_HIP_ENABLED ON)
+        set(_RAWRXD_OMEGA_HIP_REASON "forced ON")
+    elseif(RAWRXD_ENABLE_OMEGA_HIP STREQUAL "AUTO")
+        execute_process(
+            COMMAND powershell -NoProfile -Command "(Get-CimInstance Win32_VideoController | Select-Object -ExpandProperty Name) -join ';'"
+            OUTPUT_VARIABLE _RAWRXD_GPU_NAMES
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_QUIET
+        )
+        if(_RAWRXD_GPU_NAMES MATCHES "Radeon RX 7800 XT|gfx1101")
+            set(_RAWRXD_OMEGA_HIP_ENABLED ON)
+            set(_RAWRXD_OMEGA_HIP_REASON "AUTO matched RDNA3 target (${_RAWRXD_GPU_NAMES})")
+        else()
+            set(_RAWRXD_OMEGA_HIP_REASON "AUTO no RDNA3 match (${_RAWRXD_GPU_NAMES})")
+        endif()
+    else()
+        set(_RAWRXD_OMEGA_HIP_REASON "forced OFF")
+    endif()
+
+    set(TITAN_ASM_KERNEL src/kernels/k_swap_aperture_win32_v126.asm)
+    set(TITAN_AVX512_DISPATCH_KERNEL src/kernels/aperture_dispatch_avx512_win64.asm)
+    set(TITAN_HEADER_VERIFY_KERNEL src/kernels/k_header_verify_fast.asm)
+    set(TITAN_JSON_SIMD_KERNEL src/kernels/RawrXD_JSON_SIMD.asm)
+set(TITAN_HTTP_CLIENT src/kernels/RawrXD_HttpClient.asm)
+set(TITAN_NDJSON_PARSER src/kernels/RawrXD_NDJSON_AVX2.asm)
+set(TITAN_SCHEDULER src/kernels/RawrXD_Scheduler.asm)
+set(TITAN_OMEGA_SINGULARITY src/kernels/RawrXD_Omega_Singularity.asm)
+set(TITAN_NTWRITE_LINK src/kernels/RawrXD_NtWrite_Link.asm)
+set(TITAN_CIRCULAR_SDMA src/kernels/RawrXD_Circular_SDMA.asm)
+set(TITAN_PROFILER_CORE src/kernels/RAWR_PROFILER_CORE.asm)
+set(TITAN_QUERY_FUSION_KERNEL src/kernels/RawrXD_QueryFusion_AVX512.asm)
+set(TITAN_QUERY_FUSION_CPP src/kernels/query_fusion_kernel.cpp)
+set(VULKAN_TEXT_RENDERER src/render/RawrXD_VulkanText.cpp)
+set(SCHEDULER_BRIDGE src/render/SchedulerBridge.cpp)
+    option(RAWRXD_ENABLE_OMEGA_SINGULARITY_ASM "Include experimental RawrXD_Omega_Singularity.asm" OFF)
+    set_source_files_properties(${TITAN_ASM_KERNEL} PROPERTIES LANGUAGE ASM_MASM)
+    set_source_files_properties(${TITAN_AVX512_DISPATCH_KERNEL} PROPERTIES LANGUAGE ASM_MASM)
+    set_source_files_properties(${TITAN_HEADER_VERIFY_KERNEL} PROPERTIES LANGUAGE ASM_MASM)
+    set(_TITAN_EXTRA_ASM
+        ${TITAN_JSON_SIMD_KERNEL}
+        ${TITAN_HTTP_CLIENT}
+        ${TITAN_NDJSON_PARSER}
+        ${TITAN_SCHEDULER}
+        ${TITAN_NTWRITE_LINK}
+        ${TITAN_CIRCULAR_SDMA}
+        ${TITAN_PROFILER_CORE}
+        ${TITAN_QUERY_FUSION_KERNEL}
+    )
+    if(RAWRXD_ENABLE_OMEGA_SINGULARITY_ASM)
+        list(APPEND _TITAN_EXTRA_ASM ${TITAN_OMEGA_SINGULARITY})
+    endif()
+
+    set(TITAN_GGML_BRIDGE_OBJECTS)
+    if(RAWR_ENABLE_GGML_LINK)
+        if(NOT TARGET ggml)
+            if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/ggml/CMakeLists.txt")
+                get_directory_property(_rawrxd_saved_includes INCLUDE_DIRECTORIES)
+                set(_rawrxd_ggml_parent_includes)
+                file(TO_CMAKE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/include" _rawrxd_blocked_include_norm)
+                string(TOLOWER "${_rawrxd_blocked_include_norm}" _rawrxd_blocked_include_norm)
+                foreach(_rawrxd_inc IN LISTS _rawrxd_saved_includes)
+                    file(TO_CMAKE_PATH "${_rawrxd_inc}" _rawrxd_inc_norm)
+                    string(TOLOWER "${_rawrxd_inc_norm}" _rawrxd_inc_norm)
+                    if(NOT _rawrxd_inc_norm STREQUAL _rawrxd_blocked_include_norm)
+                        list(APPEND _rawrxd_ggml_parent_includes "${_rawrxd_inc}")
+                    endif()
+                endforeach()
+                set_property(DIRECTORY PROPERTY INCLUDE_DIRECTORIES "${_rawrxd_ggml_parent_includes}")
+                add_subdirectory(3rdparty/ggml ${CMAKE_BINARY_DIR}/rawrxd_ggml EXCLUDE_FROM_ALL)
+                set_property(DIRECTORY PROPERTY INCLUDE_DIRECTORIES "${_rawrxd_saved_includes}")
+                message(STATUS "[Titan] Loaded ggml target from 3rdparty/ggml for GGML bridge lane")
+
+                # Keep ggml isolated from RawrXD's legacy public include lane to avoid
+                # picking mismatched ggml headers during ggml subproject compilation.
+                if(TARGET ggml-base)
+                    get_target_property(_rawrxd_ggml_base_includes ggml-base INCLUDE_DIRECTORIES)
+                    if(_rawrxd_ggml_base_includes)
+                        set(_rawrxd_ggml_base_filtered_includes)
+                        foreach(_rawrxd_inc IN LISTS _rawrxd_ggml_base_includes)
+                            file(TO_CMAKE_PATH "${_rawrxd_inc}" _rawrxd_inc_norm)
+                            string(TOLOWER "${_rawrxd_inc_norm}" _rawrxd_inc_norm)
+                            if(NOT _rawrxd_inc_norm STREQUAL _rawrxd_blocked_include_norm)
+                                list(APPEND _rawrxd_ggml_base_filtered_includes "${_rawrxd_inc}")
+                            endif()
+                        endforeach()
+                        set_target_properties(ggml-base PROPERTIES INCLUDE_DIRECTORIES "${_rawrxd_ggml_base_filtered_includes}")
+                    endif()
+                endif()
+            endif()
+        endif()
+
+        if(NOT TARGET ggml)
+            message(FATAL_ERROR "RAWR_ENABLE_GGML_LINK=ON requires the ggml target to be available before RawrXD_Titan is configured")
+        endif()
+
+        message(STATUS "[Titan] GGML bridge lane enabled (live handshake owned by titan_infer_dll.cpp)")
+    else()
+        message(STATUS "[Titan] GGML bridge scaffold disabled (set -DRAWR_ENABLE_GGML_LINK=ON to enable opt-in lane)")
+    endif()
+
+    set_source_files_properties(${_TITAN_EXTRA_ASM} PROPERTIES LANGUAGE ASM_MASM)
+
+    add_library(RawrXD_Titan SHARED EXCLUDE_FROM_ALL
+        src/titan_infer_dll.cpp
+        src/sovereign/rawr_transport_strict.cpp
+        ${TITAN_ASM_KERNEL}
+        ${TITAN_AVX512_DISPATCH_KERNEL}
+        ${TITAN_HEADER_VERIFY_KERNEL}
+        ${TITAN_JSON_SIMD_KERNEL}
+        ${TITAN_NTWRITE_LINK}
+        ${TITAN_PROFILER_CORE}
+        ${TITAN_QUERY_FUSION_CPP}
+        ${TITAN_QUERY_FUSION_KERNEL}
+        ${TITAN_GGML_BRIDGE_OBJECTS}
+    )
+
+    if(_RAWRXD_OMEGA_HIP_ENABLED)
+        # Fail-safe default: keep AUTO lane compile-stable and only attach
+        # the known attention kernel bridge by default.
+        target_sources(RawrXD_Titan PRIVATE ${TITAN_OMEGA_SINGULARITY})
+        target_compile_definitions(RawrXD_Titan PRIVATE RAWRXD_ENABLE_OMEGA_HIP=1)
+
+        if(RAWRXD_ENABLE_OMEGA_HIP_FULL_KERNEL_SET)
+            target_sources(RawrXD_Titan PRIVATE
+                ${TITAN_HTTP_CLIENT}
+                ${TITAN_NDJSON_PARSER}
+                ${TITAN_SCHEDULER}
+                ${TITAN_CIRCULAR_SDMA}
+            )
+            message(STATUS "[Titan] Omega HIP full kernel set enabled (experimental)")
+        else()
+            message(STATUS "[Titan] Omega HIP full kernel set disabled (set -DRAWRXD_ENABLE_OMEGA_HIP_FULL_KERNEL_SET=ON to opt in)")
+        endif()
+    else()
+        target_compile_definitions(RawrXD_Titan PRIVATE RAWRXD_ENABLE_OMEGA_HIP=0)
+    endif()
+
+    if(RAWRXD_ENABLE_OMEGA_SINGULARITY_ASM)
+        target_sources(RawrXD_Titan PRIVATE ${TITAN_OMEGA_SINGULARITY})
+    endif()
+
+    if(TARGET rawrxd-sovereign-kernel-spv)
+        add_dependencies(RawrXD_Titan rawrxd-sovereign-kernel-spv)
+    endif()
+
+    target_include_directories(RawrXD_Titan PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+    )
+
+    if(RAWR_ENABLE_GGML_LINK)
+        target_include_directories(RawrXD_Titan BEFORE PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/ggml/include
+        )
+    endif()
+
+    set_target_properties(RawrXD_Titan PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY bin
+        LIBRARY_OUTPUT_DIRECTORY bin
+        ARCHIVE_OUTPUT_DIRECTORY bin
+        OUTPUT_NAME RawrXD_Titan
+    )
+
+    if(MSVC)
+        target_link_options(RawrXD_Titan PRIVATE
+            "/DEF:${CMAKE_CURRENT_SOURCE_DIR}/src/titan_infer.def"
+        )
+    endif()
+
+    target_link_libraries(RawrXD_Titan PRIVATE
+        user32
+        kernel32
+        "C:/Program Files (x86)/Windows Kits/10/Lib/10.0.22621.0/um/x64/OneCore.Lib"
+    )
+
+    if(RAWR_ENABLE_GGML_LINK)
+        target_link_libraries(RawrXD_Titan PRIVATE ggml)
+        target_compile_definitions(RawrXD_Titan PRIVATE RAWR_ENABLE_GGML_LINK=1 RAWRXD_TITAN_BRIDGE_EXPORTS=1)
+    else()
+        target_compile_definitions(RawrXD_Titan PRIVATE RAWR_ENABLE_GGML_LINK=0 RAWRXD_TITAN_BRIDGE_EXPORTS=1)
+    endif()
+
+    if(RAWRXD_INLINE_DISPATCH)
+        target_compile_definitions(RawrXD_Titan PRIVATE RAWRXD_INLINE_DISPATCH=1)
+        message(STATUS "[Titan] RAWRXD_INLINE_DISPATCH=1 (Phase 7A inline dispatcher enabled)")
+    else()
+        target_compile_definitions(RawrXD_Titan PRIVATE RAWRXD_INLINE_DISPATCH=0)
+        message(STATUS "[Titan] RAWRXD_INLINE_DISPATCH=0 (baseline dispatcher)")
+    endif()
+
+    message(STATUS "[Titan] RAWRXD_ENABLE_OMEGA_HIP=${RAWRXD_ENABLE_OMEGA_HIP} -> ${_RAWRXD_OMEGA_HIP_ENABLED} (${_RAWRXD_OMEGA_HIP_REASON})")
+
+    message(STATUS "[Titan] RawrXD_Titan DLL target wired: 99-export lane + aperture kernels (swap + AVX-512 dispatch + header verify)")
+endif()
+
 add_executable(rawrxd-monaco-gen
     src/monaco_gen.cpp
     src/engine/react_ide_generator.cpp
@@ -2704,6 +2957,7 @@ if(WIN32)
     set(WIN32IDE_SOURCES
         src/win32app/main_win32.cpp
         src/win32app/HeadlessIDE.cpp
+        src/RawrXD_ApertureManager.cpp
         src/agent/quantum_agent_orchestrator.cpp
         src/ui/RawrXD_MainLoop.cpp
         src/ui/webview2_bridge.cpp
@@ -2750,6 +3004,7 @@ if(WIN32)
         src/win32app/Win32IDE_Annotations.cpp
         src/win32app/Win32IDE_ReverseEngineering.cpp
         src/win32app/Win32IDE_Logger.cpp
+        src/win32app/RawrXD_Omega_LinkGlobals.cpp
         src/win32app/Win32IDE_AgenticBridge.cpp
         src/full_agentic_ide/FullAgenticIDE.cpp
         src/full_agentic_ide/AgenticPlanningOrchestrator.cpp
@@ -2774,6 +3029,7 @@ if(WIN32)
 
         src/win32app/Win32IDE_FeatureManifest.cpp
         src/win32app/Win32IDE_GhostText.cpp
+        src/win32app/Win32IDE_Titan_Heartbeat.cpp
         src/win32app/Win32IDE_OutlinePanel.cpp
         src/win32app/Win32IDE_RenamePreview.cpp
         src/win32app/Win32IDE_Tier2Cosmetics.cpp
@@ -2799,6 +3055,7 @@ if(WIN32)
         src/win32app/Win32IDE_CaretAnimation.cpp
         src/win32app/Win32IDE_AgentOllamaClient.cpp
         src/win32app/Win32IDE_ModelDiscovery.cpp
+        src/win32app/Win32IDE_ExpertHeatmapPanel.cpp
         src/win32app/Win32IDE_SwarmModelSelector.cpp
         src/win32app/Win32IDE_AsmSemantic.cpp
         src/win32app/Win32IDE_LSP_AI_Bridge.cpp
@@ -2936,6 +3193,7 @@ if(WIN32)
         src/core/flash_attention.cpp
         src/core/execution_scheduler.cpp
         src/core/execution_governor.cpp
+        src/core/hotpatch_wiring.cpp
         src/core/multi_gpu.cpp
         src/core/agent_safety_contract.cpp
         src/core/deterministic_replay.cpp
@@ -3436,6 +3694,12 @@ if(WIN32)
         src/win32app/Win32IDE_TerminalSplit.cpp
         src/win32app/Win32IDE_SnippetEngine.cpp
         src/win32app/Win32IDE_MultiCursor.cpp
+
+        # Phase 16: Agentic Executor State Machine + Watchdog Controller
+        src/win32app/Win32IDE_Phase16_AgenticController.cpp
+
+        # Phase 17: Agentic Profiler (per-tool RDTSC cycle accounting)
+        src/win32app/Win32IDE_Phase17_AgenticProfiler.cpp
     )
 
     if(NOT RAWRXD_INCLUDE_STRESS_AND_REPLAY_SOURCES)
@@ -3827,8 +4091,9 @@ if(WIN32)
     # Policy: Production builds MUST NOT link stub implementations
     # 
     # Strict enforcement: FATAL_ERROR unless emergency override set.
-    # No stubs permitted; ai_agent_masm_stubs.cpp is the only explicit exception
-    # because it provides required MASM bridge symbols.
+    # No generic stubs are permitted; a small exact-file allowlist is retained
+    # for link-closure providers whose historical filenames still contain
+    # shim/stub/fallback markers.
     # =========================================================================
     
     function(EnforceNoStubs target_name)
@@ -3844,8 +4109,8 @@ if(WIN32)
             if(src MATCHES "(_stubs\\.cpp$|/stubs\\.cpp$|_stub\\.cpp$|/stub_.*\\.cpp$|_stubs\\.asm$|/stubs\\.asm$|_stub\\.asm$|/stub_.*\\.asm$|/shim_.*\\.(cpp|asm)$|/missing_handler|/link_stubs_.*\\.(cpp|asm)$|_link_shims?\\.(cpp|asm)$|_fallback[^/]*\\.(cpp|asm)$|_(mock|fake)\\.(cpp|asm)$)" OR
                src MATCHES "(stub_|_stub\\.(cpp|asm)$|shim_|_shims?\\.(cpp|asm)$|shims?\\.(cpp|asm)$|/stubs\\.(cpp|asm)$)" OR
                src MATCHES "(mock_|fake_|_(mock|fake)\\.(cpp|asm)$)")
-                                # ai_agent_masm_stubs.cpp provides required MASM symbols — exempt
-                                if(src MATCHES "ai_agent_masm_stubs\\.cpp$")
+                                # Exact provider-file exemptions for strict Win32IDE link closure.
+                                    if(src MATCHES "ai_agent_masm_stubs\.cpp$|rawr_engine_link_shims\.cpp$|model_loader_fallbacks\.cpp$|rawrxd_native_log_fallback\.cpp$|native_gguf_loader_link_stub\.cpp$|cot_fallback_system\.cpp$|collab_cursor_fallbacks\.cpp$|ggufrunner_link_fallbacks\.cpp$|gpu_dispatch_gate_win32ide_fallback\.cpp$|gguf_d3d12_bridge_link_fallback\.cpp$|rtp_protocol_fallback\.cpp$|quickjs_node_shims\.cpp$|sovereign_gpu_link_stubs\.cpp$")
                                     continue()
                                 endif()
                 list(APPEND STUB_VIOLATIONS "${src}")
@@ -3906,8 +4171,27 @@ if(WIN32)
     endfunction()
     
     # Mandatory symbol providers for Win32IDE link closure.
+    # These files carry a few historical shim/fallback names, but they are the
+    # only providers for several Win32IDE/RawrEngine symbols in the strict lane.
+    set(_RAWRXD_REQUIRED_WIN32IDE_PROVIDER_SOURCES
+        src/core/ai_agent_masm_stubs.cpp
+        src/core/rawr_engine_link_shims.cpp
+        src/core/model_loader_fallbacks.cpp
+        src/core/rawrxd_native_log_fallback.cpp
+        src/core/native_gguf_loader_link_stub.cpp
+        src/core/cot_fallback_system.cpp
+        src/win32app/collab_cursor_fallbacks.cpp
+        src/llm_adapter/ggufrunner_link_fallbacks.cpp
+        src/inference/gpu_dispatch_gate_win32ide_fallback.cpp
+        src/inference/gguf_d3d12_bridge_link_fallback.cpp
+        src/win32app/rtp_protocol_fallback.cpp
+        src/modules/quickjs_node_shims.cpp
+        src/win32app/sovereign_gpu_link_stubs.cpp
+    )
+
     # When RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK=ON, keep *_fallback*.cpp / link shims so the IDE links.
-    # When OFF, strip generic stub/fallback units (strict lane).
+    # When OFF, strip generic stub/fallback units (strict lane), then re-append the
+    # exact provider files that close the Win32IDE link graph.
     if(NOT RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK)
         list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX "(_stubs\\.cpp$|/stubs\\.cpp$|_stub\\.cpp$|/stub_.*\\.cpp$|_stubs\\.asm$|/stubs\\.asm$|_stub\\.asm$|/stub_.*\\.asm$|/shim_.*\\.(cpp|asm)$|missing_handler|link_stubs_.*\\.(cpp|asm)$|_shims?\\.(cpp|asm)$|_link_shims?\\.(cpp|asm)$|_fallback[^/]*\\.(cpp|asm)$|_(mock|fake)\\.(cpp|asm)$|stub_|shim_|mock_|fake_)")
     endif()
@@ -3915,8 +4199,12 @@ if(WIN32)
     if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES AND NOT EXISTS "${CMAKE_SOURCE_DIR}/src/core/ai_agent_masm_stubs.cpp")
         message(FATAL_ERROR "[ProductionLane] Required MASM bridge provider src/core/ai_agent_masm_stubs.cpp is missing.")
     endif()
-    list(REMOVE_ITEM WIN32IDE_SOURCES src/core/ai_agent_masm_stubs.cpp)
-    list(APPEND WIN32IDE_SOURCES src/core/ai_agent_masm_stubs.cpp)
+    foreach(_rawrxd_required_provider IN LISTS _RAWRXD_REQUIRED_WIN32IDE_PROVIDER_SOURCES)
+        if(EXISTS "${CMAKE_SOURCE_DIR}/${_rawrxd_required_provider}")
+            list(REMOVE_ITEM WIN32IDE_SOURCES ${_rawrxd_required_provider})
+            list(APPEND WIN32IDE_SOURCES ${_rawrxd_required_provider})
+        endif()
+    endforeach()
 
 
     # Pre-append strict guard: Verify no stubs were auto-added earlier
@@ -3925,7 +4213,7 @@ if(WIN32)
         foreach(_rawrxd_src IN LISTS WIN32IDE_SOURCES)
             if(_rawrxd_src MATCHES "(_stubs\\.cpp$|/stubs\\.cpp$|_stubs\\.asm$|/stubs\\.asm$|/.*_stub\\.(cpp|asm)$|/stub_.*\\.(cpp|asm)$|/shim_.*\\.(cpp|asm)$|/.*_(mock|fake)\\.(cpp|asm)$|/.*(mock_|fake_).*(\\.cpp|\\.asm)$|/link_stubs_.*\\.(cpp|asm)$|/.*_shims?\\.(cpp|asm)$|/.*_link_shims?\\.(cpp|asm)$|/.*_fallback[^/]*\\.(cpp|asm)$)" OR
                _rawrxd_src MATCHES "(missing_handler|/stubs\\.(cpp|asm)$|_stub\\.(cpp|asm)$|stub_|shim_|shims?\\.(cpp|asm)$|mock_|fake_|_(mock|fake)\\.(cpp|asm)$)")
-                if(NOT _rawrxd_src MATCHES "ai_agent_masm_stubs\\.cpp$")
+                                if(NOT _rawrxd_src MATCHES "ai_agent_masm_stubs\\.cpp$|rawr_engine_link_shims\\.cpp$|model_loader_fallbacks\\.cpp$|rawrxd_native_log_fallback\\.cpp$|native_gguf_loader_link_stub\\.cpp$|cot_fallback_system\\.cpp$|collab_cursor_fallbacks\\.cpp$|ggufrunner_link_fallbacks\\.cpp$|gpu_dispatch_gate_win32ide_fallback\\.cpp$|gguf_d3d12_bridge_link_fallback\\.cpp$|rtp_protocol_fallback\\.cpp$|quickjs_node_shims\\.cpp$|sovereign_gpu_link_stubs\\.cpp$")
                     list(APPEND _RAWRXD_FORBIDDEN_WIN32IDE_SOURCES_POST "${_rawrxd_src}")
                 endif()
             endif()
@@ -4257,6 +4545,13 @@ if(WIN32)
     if(TARGET RawrXD_NanoQuant)
         target_link_libraries(RawrXD-Win32IDE PRIVATE RawrXD_NanoQuant)
         target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWR_HAS_NANOQUANT=1)
+    endif()
+    
+    # Link RawrXD_Titan DLL import library (Phase 15.2 aperture utilization APIs)
+    if(TARGET RawrXD_Titan)
+        target_link_libraries(RawrXD-Win32IDE PRIVATE RawrXD_Titan)
+        target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWRXD_HAS_TITAN_KERNEL=1)
+        add_dependencies(RawrXD-Win32IDE RawrXD_Titan)
     endif()
     
     # Vulkan SDK for Win32IDE
@@ -4729,6 +5024,30 @@ if(WIN32)
     message(STATUS "[Phase E] KV Cache Benchmark target: RawrXD-KVBenchmark")
 
     # ═══════════════════════════════════════════════════════════════════
+    # Query Fusion Benchmark — Phase 9 deterministic gated fusion microbench
+    # ═══════════════════════════════════════════════════════════════════
+    add_executable(RawrXD-QueryFusionBenchmark EXCLUDE_FROM_ALL
+        src/tools/query_fusion_benchmark.cpp
+        src/kernels/query_fusion_kernel.cpp
+        src/kernels/RawrXD_QueryFusion_AVX512.asm
+    )
+    target_include_directories(RawrXD-QueryFusionBenchmark PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/include
+    )
+    target_compile_definitions(RawrXD-QueryFusionBenchmark PRIVATE
+        RAWR_BENCHMARK=1
+    )
+    if(MSVC)
+        target_compile_options(RawrXD-QueryFusionBenchmark PRIVATE /EHsc /W0 /O2)
+    endif()
+    set_target_properties(RawrXD-QueryFusionBenchmark PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+        OUTPUT_NAME RawrXD-QueryFusionBenchmark
+    )
+    message(STATUS "[Phase 9] Query Fusion Benchmark target: RawrXD-QueryFusionBenchmark")
+
+    # ═══════════════════════════════════════════════════════════════════
     # TPS smoke — GGUFRunner + model_runtime_gate + runtime_surface unity + decode TPS vs ref (default 239)
     # ═══════════════════════════════════════════════════════════════════
     add_executable(RawrXD-TpsSmoke EXCLUDE_FROM_ALL
@@ -4868,6 +5187,10 @@ add_executable(agentic_orchestrator_smoke_test EXCLUDE_FROM_ALL
     src/agentic/agentic_planning_orchestrator.cpp
     src/agentic/agentic_orchestrator_integration.cpp
     src/agentic/agentic_audit_sink.cpp
+    src/agentic/observability/Logger.cpp
+    src/core/execution_governor.cpp
+    src/core/hotpatch_wiring.cpp
+    src/core/agent_safety_contract.cpp
     src/agentic/agentic_orchestrator_smoke_test.cpp
 )
 

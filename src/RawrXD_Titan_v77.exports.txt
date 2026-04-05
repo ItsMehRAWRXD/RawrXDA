@@ -1,0 +1,108 @@
+Microsoft (R) COFF/PE Dumper Version 14.50.35723.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+Dump of file d:\rawrxd\src\RawrXD_Titan_v77.dll
+
+File Type: DLL
+
+  Section contains the following exports for RawrXD_Titan.dll
+
+    00000000 characteristics
+    FFFFFFFF time date stamp
+        0.00 version
+           1 ordinal base
+          81 number of functions
+          81 number of names
+
+    ordinal hint RVA      name
+
+          4    0 00003780 RawrXD_Abort
+         49    1 00004600 RawrXD_AllocateBuffer
+         37    2 00004240 RawrXD_ApertureInit
+         38    3 000042F0 RawrXD_ApertureShutdown
+         74    4 00004C70 RawrXD_ApplyHotpatch
+         77    5 00004CD0 RawrXD_BatchInferences
+         35    6 00004200 RawrXD_BeginStreaming
+         20    7 00003BE0 RawrXD_CacheModelMetadata
+         23    8 00003CC0 RawrXD_CancelInference
+         65    9 000049D0 RawrXD_ClearError
+         43    A 00004530 RawrXD_CompactAperture
+         32    B 00004010 RawrXD_DetokenizeOutput
+         67    C 00004A00 RawrXD_DisableDiagnostics
+         72    D 00004BC0 RawrXD_DumpHeapWalker
+         66    E 000049F0 RawrXD_EnableDiagnostics
+         73    F 00004C60 RawrXD_EnableHotpatch
+         76   10 00004CC0 RawrXD_EnableQuantization
+         36   11 00004230 RawrXD_EndStreaming
+         34   12 000040E0 RawrXD_EstimateTokens
+         50   13 00004660 RawrXD_FreeBuffer
+         70   14 00004AF0 RawrXD_GenerateAuditReport
+         14   15 00003A90 RawrXD_GetActiveModel
+         41   16 00004470 RawrXD_GetApertureBase
+         48   17 000045D0 RawrXD_GetAperturePolicy
+         42   18 000044A0 RawrXD_GetApertureUtilization
+         59   19 000047F0 RawrXD_GetCacheMissRate
+          7   1A 00003850 RawrXD_GetCapabilities
+         45   1B 00004550 RawrXD_GetChunkMappingLatency
+         17   1C 00003B20 RawrXD_GetChunkStatus
+         46   1D 00004580 RawrXD_GetChunkUnmapLatency
+         68   1E 00004A10 RawrXD_GetDiagnosticLog
+         64   1F 000048A0 RawrXD_GetErrorString
+         52   20 000046F0 RawrXD_GetHeapStats
+         60   21 00004820 RawrXD_GetInferenceLatency
+         25   22 00003D00 RawrXD_GetInferenceResult
+         26   23 00003D70 RawrXD_GetInferenceTokenCount
+         63   24 00004890 RawrXD_GetLastError
+         51   25 00004670 RawrXD_GetMemoryStats
+         11   26 00003940 RawrXD_GetModelInfo
+         19   27 00003B90 RawrXD_GetModelPath
+         56   28 00004770 RawrXD_GetPeakMemoryUsage
+         28   29 00003DB0 RawrXD_GetSamplingParams
+          5   2A 000037A0 RawrXD_GetStatus
+         30   2B 00003E70 RawrXD_GetSystemPrompt
+         61   2C 00004850 RawrXD_GetThroughputTokensPerSec
+         33   2D 00004080 RawrXD_GetTokenizerInfo
+         58   2E 000047C0 RawrXD_GetVAFragmentation
+          6   2F 00003800 RawrXD_GetVersion
+         55   30 00004740 RawrXD_GetWorkingSetLimit
+         21   31 00003BF0 RawrXD_InferAsync
+         22   32 00003C40 RawrXD_InferSync
+          1   33 000036C0 RawrXD_Initialize
+         12   34 00003A10 RawrXD_ListModels
+          9   35 00003890 RawrXD_LoadModel
+         39   36 00004310 RawrXD_MapChunk
+         53   37 00004710 RawrXD_MemoryGC
+         44   38 00004540 RawrXD_PreAllocateChunks
+         15   39 00003AE0 RawrXD_PreloadChunks
+         75   3A 00004C90 RawrXD_QueryHotpatchStatus
+         16   3B 00003B00 RawrXD_ReleaseChunks
+          3   3C 00003720 RawrXD_Reset
+         57   3D 000047A0 RawrXD_ResetMemoryStatistics
+         62   3E 00004880 RawrXD_ResetPerformanceCounters
+         13   3F 00003A60 RawrXD_SelectModel
+         47   40 000045B0 RawrXD_SetAperturePolicy
+         69   41 00004AB0 RawrXD_SetDiagnosticCallback
+          8   42 00003880 RawrXD_SetLogLevel
+         27   43 00003DA0 RawrXD_SetSamplingParams
+         29   44 00003E20 RawrXD_SetSystemPrompt
+         54   45 00004720 RawrXD_SetWorkingSetLimit
+          2   46 000036F0 RawrXD_Shutdown
+         31   47 00003EC0 RawrXD_TokenizeInput
+         10   48 00003910 RawrXD_UnloadModel
+         40   49 000043F0 RawrXD_UnmapChunk
+         71   4A 00004B90 RawrXD_ValidateInternalConsistency
+         18   4B 00003B60 RawrXD_ValidateModelIntegrity
+         24   4C 00003CE0 RawrXD_WaitForInference
+         78   4D 000034E0 Titan_Abort
+         79   4E 00003290 Titan_InferAsync
+         80   4F 00002EE0 Titan_Initialize
+         81   50 00003370 Titan_Shutdown
+
+  Summary
+
+       70000 .data
+        2000 .pdata
+        B000 .rdata
+        1000 .reloc
+       12000 .text

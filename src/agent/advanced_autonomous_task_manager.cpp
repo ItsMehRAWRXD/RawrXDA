@@ -14,6 +14,7 @@
 #include <regex>
 #include <sstream>
 #include <thread>
+#include <windows.h>
 #include <immintrin.h> // For SIMD optimization
 
 using namespace std::chrono_literals;
@@ -51,6 +52,125 @@ inline uint32_t calculate_quantum_priority(const QuantumTask& task) {
             task.deadline - std::chrono::system_clock::now()).count() / -60) * 50 : 0;
     
     return complexity_weight + priority_weight + urgency_weight;
+}
+
+struct PowerShellExecutionResult {
+    bool launched{false};
+    bool timedOut{false};
+    DWORD exitCode{static_cast<DWORD>(-1)};
+    std::string stdoutText;
+    std::string stderrText;
+    std::string error;
+};
+
+static std::wstring utf8ToWide(const std::string& input) {
+    if (input.empty()) return std::wstring();
+    int size = MultiByteToWideChar(CP_UTF8, 0, input.c_str(), -1, nullptr, 0);
+    if (size <= 0) {
+        size = MultiByteToWideChar(CP_ACP, 0, input.c_str(), -1, nullptr, 0);
+        if (size <= 0) return std::wstring(input.begin(), input.end());
+        std::wstring out(static_cast<size_t>(size - 1), L'\0');
+        MultiByteToWideChar(CP_ACP, 0, input.c_str(), -1, out.data(), size);
+        return out;
+    }
+    std::wstring out(static_cast<size_t>(size - 1), L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, input.c_str(), -1, out.data(), size);
+    return out;
+}
+
+static std::string readPipeToString(HANDLE handle) {
+    std::string output;
+    char buffer[4096];
+    DWORD bytesRead = 0;
+    while (ReadFile(handle, buffer, sizeof(buffer), &bytesRead, nullptr) && bytesRead > 0) {
+        output.append(buffer, bytesRead);
+    }
+    return output;
+}
+
+static PowerShellExecutionResult runPowerShellCommandInternal(
+    const std::string& command,
+    const std::string& workingDirectory,
+    std::chrono::milliseconds timeout) {
+
+    PowerShellExecutionResult result;
+
+    SECURITY_ATTRIBUTES sa{};
+    sa.nLength = sizeof(sa);
+    sa.bInheritHandle = TRUE;
+
+    HANDLE stdoutRead = nullptr;
+    HANDLE stdoutWrite = nullptr;
+    HANDLE stderrRead = nullptr;
+    HANDLE stderrWrite = nullptr;
+
+    if (!CreatePipe(&stdoutRead, &stdoutWrite, &sa, 0) ||
+        !CreatePipe(&stderrRead, &stderrWrite, &sa, 0)) {
+        result.error = "Failed to create PowerShell output pipes";
+        if (stdoutRead) CloseHandle(stdoutRead);
+        if (stdoutWrite) CloseHandle(stdoutWrite);
+        if (stderrRead) CloseHandle(stderrRead);
+        if (stderrWrite) CloseHandle(stderrWrite);
+        return result;
+    }
+
+    SetHandleInformation(stdoutRead, HANDLE_FLAG_INHERIT, 0);
+    SetHandleInformation(stderrRead, HANDLE_FLAG_INHERIT, 0);
+
+    STARTUPINFOW startupInfo{};
+    startupInfo.cb = sizeof(startupInfo);
+    startupInfo.dwFlags = STARTF_USESTDHANDLES;
+    startupInfo.hStdOutput = stdoutWrite;
+    startupInfo.hStdError = stderrWrite;
+    startupInfo.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+
+    PROCESS_INFORMATION processInfo{};
+    std::wstring commandLine =
+        L"powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"" +
+        utf8ToWide(command) + L"\"";
+    std::wstring workingDirWide = utf8ToWide(workingDirectory.empty() ? fs::current_path().string() : workingDirectory);
+
+    std::vector<wchar_t> mutableCommand(commandLine.begin(), commandLine.end());
+    mutableCommand.push_back(L'\0');
+
+    result.launched = CreateProcessW(
+        nullptr,
+        mutableCommand.data(),
+        nullptr,
+        nullptr,
+        TRUE,
+        CREATE_NO_WINDOW,
+        nullptr,
+        workingDirWide.empty() ? nullptr : workingDirWide.c_str(),
+        &startupInfo,
+        &processInfo) != FALSE;
+
+    CloseHandle(stdoutWrite);
+    CloseHandle(stderrWrite);
+
+    if (!result.launched) {
+        result.error = "Failed to launch PowerShell process";
+        CloseHandle(stdoutRead);
+        CloseHandle(stderrRead);
+        return result;
+    }
+
+    const DWORD waitResult = WaitForSingleObject(processInfo.hProcess, static_cast<DWORD>(timeout.count()));
+    if (waitResult == WAIT_TIMEOUT) {
+        result.timedOut = true;
+        TerminateProcess(processInfo.hProcess, 1);
+        result.error = "PowerShell command timed out";
+    }
+
+    GetExitCodeProcess(processInfo.hProcess, &result.exitCode);
+    result.stdoutText = readPipeToString(stdoutRead);
+    result.stderrText = readPipeToString(stderrRead);
+
+    CloseHandle(stdoutRead);
+    CloseHandle(stderrRead);
+    CloseHandle(processInfo.hThread);
+    CloseHandle(processInfo.hProcess);
+    return result;
 }
 
 // =====================================================================
@@ -457,38 +577,68 @@ std::string AdvancedAutonomousTaskManager::execute_powershell_command(
     auto start_time = std::chrono::high_resolution_clock::now();
     
     try {
-        // Create PowerShell process with dynamic timeout
-        std::string ps_script = "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"" + command + "\"";
-        
-        // Execute command (simplified implementation - in production would use proper process management)
         std::cout << "[PowerShell] " << command << std::endl;
-        
         powershell_stats_.total_commands++;
-        
-        auto end_time = std::chrono::high_resolution_clock::now();
-        auto execution_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
-        
-        // Update average execution time
+        powershell_stats_.current_timeout = timeout;
+
+        const PowerShellExecutionResult execResult = runPowerShellCommandInternal(
+            command,
+            powershell_config_.working_directory,
+            timeout);
+
+        const auto end_time = std::chrono::high_resolution_clock::now();
+        const auto execution_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+
         if (powershell_stats_.successful_commands > 0) {
             powershell_stats_.avg_execution_time = std::chrono::milliseconds(
-                (powershell_stats_.avg_execution_time.count() * (powershell_stats_.successful_commands) + 
-                 execution_time.count()) / (powershell_stats_.successful_commands + 1)
+                (powershell_stats_.avg_execution_time.count() * powershell_stats_.successful_commands + execution_time.count()) /
+                (powershell_stats_.successful_commands + 1)
             );
         } else {
             powershell_stats_.avg_execution_time = execution_time;
         }
-        
-        powershell_stats_.successful_commands++;
-        powershell_stats_.current_timeout = timeout;
-        
-        // Auto-adjust timeout for next execution
-        if (auto_adjust_timeout && execution_time > timeout * 0.8) {
-            powershell_config_.base_timeout = timeout * 1.2;
+
+        auto increaseTimeout = [&](double multiplier) {
+            powershell_config_.base_timeout = std::min(
+                powershell_config_.max_timeout,
+                std::chrono::milliseconds(static_cast<int64_t>(powershell_config_.base_timeout.count() * multiplier)));
             powershell_stats_.timeout_adjustments++;
+        };
+
+        if (!execResult.launched) {
+            powershell_stats_.failed_commands++;
+            if (auto_adjust_timeout) increaseTimeout(1.25);
+            return std::string("Error: ") + execResult.error;
         }
-        
+
+        if (execResult.timedOut) {
+            powershell_stats_.failed_commands++;
+            if (auto_adjust_timeout) increaseTimeout(1.5);
+            std::ostringstream out;
+            out << "Timeout after " << timeout.count() << "ms";
+            if (!execResult.stdoutText.empty()) out << "\nSTDOUT:\n" << execResult.stdoutText;
+            if (!execResult.stderrText.empty()) out << "\nSTDERR:\n" << execResult.stderrText;
+            return out.str();
+        }
+
+        if (execResult.exitCode != 0) {
+            powershell_stats_.failed_commands++;
+            std::ostringstream out;
+            out << "ExitCode=" << execResult.exitCode;
+            if (!execResult.stdoutText.empty()) out << "\nSTDOUT:\n" << execResult.stdoutText;
+            if (!execResult.stderrText.empty()) out << "\nSTDERR:\n" << execResult.stderrText;
+            return out.str();
+        }
+
+        powershell_stats_.successful_commands++;
+        if (auto_adjust_timeout && execution_time > timeout * 0.8) {
+            increaseTimeout(1.2);
+        }
+
+        if (!execResult.stdoutText.empty()) return execResult.stdoutText;
+        if (!execResult.stderrText.empty()) return execResult.stderrText;
         return "Command executed successfully";
-        
+
     } catch (const std::exception& e) {
         powershell_stats_.failed_commands++;
         std::cerr << "[PowerShell] Error: " << e.what() << std::endl;

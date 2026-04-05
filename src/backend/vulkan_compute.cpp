@@ -113,6 +113,21 @@ void VulkanCompute::shutdown()
     {
         vkDeviceWaitIdle(m_device);
 
+        for (uint32_t i = 0; i < kDispatchRingSize; ++i)
+        {
+            if (m_matmulFences[i] != VK_NULL_HANDLE)
+            {
+                vkDestroyFence(m_device, m_matmulFences[i], nullptr);
+                m_matmulFences[i] = VK_NULL_HANDLE;
+            }
+
+            if (m_softmaxFences[i] != VK_NULL_HANDLE)
+            {
+                vkDestroyFence(m_device, m_softmaxFences[i], nullptr);
+                m_softmaxFences[i] = VK_NULL_HANDLE;
+            }
+        }
+
         if (m_commandPool != VK_NULL_HANDLE)
         {
             vkDestroyCommandPool(m_device, m_commandPool, nullptr);
@@ -133,6 +148,11 @@ void VulkanCompute::shutdown()
             vkDestroyPipelineLayout(m_device, layout, nullptr);
         }
 
+        for (auto& [name, layout] : m_descriptorSetLayouts)
+        {
+            vkDestroyDescriptorSetLayout(m_device, layout, nullptr);
+        }
+
         vkDestroyDevice(m_device, nullptr);
     }
 
@@ -140,6 +160,8 @@ void VulkanCompute::shutdown()
     {
         vkDestroyInstance(m_instance, nullptr);
     }
+
+    m_descriptorSetLayouts.clear();
 }
 
 std::expected<void, VulkanError> VulkanCompute::initialize()
@@ -298,105 +320,163 @@ std::expected<void, VulkanError> VulkanCompute::initialize()
 
 std::expected<void, VulkanError> VulkanCompute::executeMatrixMultiplication(const VulkanBuffer& a,
                                                                             const VulkanBuffer& b, VulkanBuffer& result,
-                                                                            size_t dim)
+                                                                            size_t dim,
+                                                                            bool waitForCompletion)
 {
     std::lock_guard lock(m_mutex);
 
-    // Real command buffer recording
-    VkCommandBufferAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool = m_commandPool;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = 1;
-
-    VkCommandBuffer commandBuffer;
-    if (vkAllocateCommandBuffers(m_device, &allocInfo, &commandBuffer) != VK_SUCCESS)
+    if (m_pipelines.find("matmul") == m_pipelines.end() || m_pipelineLayouts.find("matmul") == m_pipelineLayouts.end() ||
+        m_descriptorSetLayouts.find("matmul") == m_descriptorSetLayouts.end())
     {
-        return std::unexpected(VulkanError::KernelExecutionFailed);
+        return std::unexpected(VulkanError::PipelineCreationFailed);
     }
 
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    const uint32_t slot = m_matmulSlotCursor;
+    m_matmulSlotCursor = (m_matmulSlotCursor + 1u) % kDispatchRingSize;
 
-    vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
-    // Bind pipeline
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_pipelines["matmul"]);
-
-    // Bind descriptors
-    VkDescriptorSet descriptorSet;
-    VkDescriptorSetAllocateInfo descriptorAllocInfo{};
-    descriptorAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    descriptorAllocInfo.descriptorPool = m_descriptorPool;
-    descriptorAllocInfo.descriptorSetCount = 1;
-    descriptorAllocInfo.pSetLayouts = &m_pipelineLayouts["matmul"];
-
-    vkAllocateDescriptorSets(m_device, &descriptorAllocInfo, &descriptorSet);
-
-    VkWriteDescriptorSet descriptorWrites[3];
-
-    // Input A
-    descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrites[0].dstSet = descriptorSet;
-    descriptorWrites[0].dstBinding = 0;
-    descriptorWrites[0].dstArrayElement = 0;
-    descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    descriptorWrites[0].descriptorCount = 1;
-    descriptorWrites[0].pBufferInfo = &a.buffer;
-
-    // Input B
-    descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrites[1].dstSet = descriptorSet;
-    descriptorWrites[1].dstBinding = 1;
-    descriptorWrites[1].dstArrayElement = 0;
-    descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    descriptorWrites[1].descriptorCount = 1;
-    descriptorWrites[1].pBufferInfo = &b.buffer;
-
-    // Output
-    descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrites[2].dstSet = descriptorSet;
-    descriptorWrites[2].dstBinding = 2;
-    descriptorWrites[2].dstArrayElement = 0;
-    descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    descriptorWrites[2].descriptorCount = 1;
-    descriptorWrites[2].pBufferInfo = &result.buffer;
-
-    vkUpdateDescriptorSets(m_device, 3, descriptorWrites, 0, nullptr);
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_pipelineLayouts["matmul"], 0, 1,
-                            &descriptorSet, 0, nullptr);
-
-    // Push constants
-    struct PushConstants
+    if (m_matmulCmdBufs[slot] == VK_NULL_HANDLE)
     {
-        uint32_t dim;
-    } pushConstants{static_cast<uint32_t>(dim)};
+        VkCommandBufferAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        allocInfo.commandPool = m_commandPool;
+        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocInfo.commandBufferCount = 1;
 
-    vkCmdPushConstants(commandBuffer, m_pipelineLayouts["matmul"], VK_SHADER_STAGE_COMPUTE_BIT, 0,
-                       sizeof(pushConstants), &pushConstants);
+        if (vkAllocateCommandBuffers(m_device, &allocInfo, &m_matmulCmdBufs[slot]) != VK_SUCCESS)
+        {
+            return std::unexpected(VulkanError::KernelExecutionFailed);
+        }
+    }
 
-    // Dispatch
-    vkCmdDispatch(commandBuffer, (uint32_t)(dim * dim + 255) / 256, 1, 1);
+    if (m_matmulFences[slot] == VK_NULL_HANDLE)
+    {
+        VkFenceCreateInfo fenceInfo{};
+        fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+        if (vkCreateFence(m_device, &fenceInfo, nullptr, &m_matmulFences[slot]) != VK_SUCCESS)
+        {
+            return std::unexpected(VulkanError::SynchronizationFailed);
+        }
+    }
 
-    vkEndCommandBuffer(commandBuffer);
+    if (m_matmulDescriptorSets[slot] == VK_NULL_HANDLE)
+    {
+        VkDescriptorSetAllocateInfo descriptorAllocInfo{};
+        descriptorAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        descriptorAllocInfo.descriptorPool = m_descriptorPool;
+        descriptorAllocInfo.descriptorSetCount = 1;
+        auto& layout = m_descriptorSetLayouts["matmul"];
+        descriptorAllocInfo.pSetLayouts = &layout;
+
+        if (vkAllocateDescriptorSets(m_device, &descriptorAllocInfo, &m_matmulDescriptorSets[slot]) != VK_SUCCESS)
+        {
+            return std::unexpected(VulkanError::KernelExecutionFailed);
+        }
+    }
+
+    if (vkWaitForFences(m_device, 1, &m_matmulFences[slot], VK_TRUE, UINT64_MAX) != VK_SUCCESS)
+    {
+        return std::unexpected(VulkanError::SynchronizationFailed);
+    }
+    vkResetFences(m_device, 1, &m_matmulFences[slot]);
+
+    // Dirty-tracking for conditional command buffer re-recording
+    const uint32_t dimU32 = static_cast<uint32_t>(dim);
+    const bool descriptorsDirty = (m_matmulLastBufferA[slot] != a.buffer ||
+                                  m_matmulLastBufferB[slot] != b.buffer ||
+                                  m_matmulLastBufferOut[slot] != result.buffer);
+    const bool pushConstantsDirty = (m_matmulLastDim[slot] != dimU32);
+    const bool needsRerecord = !m_matmulCmdRecorded[slot] || descriptorsDirty || pushConstantsDirty;
+
+    if (needsRerecord)
+    {
+        vkResetCommandBuffer(m_matmulCmdBufs[slot], 0);
+
+        // Update descriptors only if buffers changed
+        if (descriptorsDirty)
+        {
+            VkDescriptorBufferInfo inputAInfo = a.buffer;
+            VkDescriptorBufferInfo inputBInfo = b.buffer;
+            VkDescriptorBufferInfo outputInfo = result.buffer;
+
+            VkWriteDescriptorSet descriptorWrites[3]{};
+            descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[0].dstSet = m_matmulDescriptorSets[slot];
+            descriptorWrites[0].dstBinding = 0;
+            descriptorWrites[0].dstArrayElement = 0;
+            descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            descriptorWrites[0].descriptorCount = 1;
+            descriptorWrites[0].pBufferInfo = &inputAInfo;
+
+            descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[1].dstSet = m_matmulDescriptorSets[slot];
+            descriptorWrites[1].dstBinding = 1;
+            descriptorWrites[1].dstArrayElement = 0;
+            descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            descriptorWrites[1].descriptorCount = 1;
+            descriptorWrites[1].pBufferInfo = &inputBInfo;
+
+            descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[2].dstSet = m_matmulDescriptorSets[slot];
+            descriptorWrites[2].dstBinding = 2;
+            descriptorWrites[2].dstArrayElement = 0;
+            descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            descriptorWrites[2].descriptorCount = 1;
+            descriptorWrites[2].pBufferInfo = &outputInfo;
+
+            vkUpdateDescriptorSets(m_device, 3, descriptorWrites, 0, nullptr);
+            m_matmulLastBufferA[slot] = a.buffer;
+            m_matmulLastBufferB[slot] = b.buffer;
+            m_matmulLastBufferOut[slot] = result.buffer;
+        }
+
+        // Re-record command buffer
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        if (vkBeginCommandBuffer(m_matmulCmdBufs[slot], &beginInfo) != VK_SUCCESS)
+        {
+            return std::unexpected(VulkanError::KernelExecutionFailed);
+        }
+
+        vkCmdBindPipeline(m_matmulCmdBufs[slot], VK_PIPELINE_BIND_POINT_COMPUTE, m_pipelines["matmul"]);
+        vkCmdBindDescriptorSets(m_matmulCmdBufs[slot], VK_PIPELINE_BIND_POINT_COMPUTE, m_pipelineLayouts["matmul"], 0, 1,
+                                &m_matmulDescriptorSets[slot], 0, nullptr);
+
+        struct PushConstants
+        {
+            uint32_t dim;
+        } pushConstants{dimU32};
+
+        vkCmdPushConstants(m_matmulCmdBufs[slot], m_pipelineLayouts["matmul"], VK_SHADER_STAGE_COMPUTE_BIT, 0,
+                           sizeof(pushConstants), &pushConstants);
+
+        vkCmdDispatch(m_matmulCmdBufs[slot], (dimU32 * dimU32 + 255u) / 256u, 1, 1);
+
+        if (vkEndCommandBuffer(m_matmulCmdBufs[slot]) != VK_SUCCESS)
+        {
+            return std::unexpected(VulkanError::KernelExecutionFailed);
+        }
+
+        m_matmulCmdRecorded[slot] = true;
+        m_matmulLastDim[slot] = dimU32;
+    }
 
     // Submit
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &commandBuffer;
+    submitInfo.pCommandBuffers = &m_matmulCmdBufs[slot];
 
-    if (vkQueueSubmit(m_computeQueue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS)
+    if (vkQueueSubmit(m_computeQueue, 1, &submitInfo, m_matmulFences[slot]) != VK_SUCCESS)
     {
-        vkFreeCommandBuffers(m_device, m_commandPool, 1, &commandBuffer);
         return std::unexpected(VulkanError::KernelExecutionFailed);
     }
 
-    vkQueueWaitIdle(m_computeQueue);
-
-    // Cleanup
-    vkFreeCommandBuffers(m_device, m_commandPool, 1, &commandBuffer);
+    if (waitForCompletion && vkWaitForFences(m_device, 1, &m_matmulFences[slot], VK_TRUE, UINT64_MAX) != VK_SUCCESS)
+    {
+        return std::unexpected(VulkanError::SynchronizationFailed);
+    }
 
     return {};
 }
@@ -462,6 +542,7 @@ std::expected<void, VulkanError> VulkanCompute::createComputePipeline(
 
     if (vkCreatePipelineLayout(m_device, &pipelineLayoutInfo, nullptr, &m_pipelineLayouts[name]) != VK_SUCCESS)
     {
+        vkDestroyDescriptorSetLayout(m_device, descriptorSetLayout, nullptr);
         vkDestroyShaderModule(m_device, shaderModule, nullptr);
         return std::unexpected(VulkanError::PipelineCreationFailed);
     }
@@ -479,10 +560,14 @@ std::expected<void, VulkanError> VulkanCompute::createComputePipeline(
 
     if (vkCreateComputePipelines(m_device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipelines[name]) != VK_SUCCESS)
     {
+        vkDestroyPipelineLayout(m_device, m_pipelineLayouts[name], nullptr);
+        m_pipelineLayouts.erase(name);
+        vkDestroyDescriptorSetLayout(m_device, descriptorSetLayout, nullptr);
         vkDestroyShaderModule(m_device, shaderModule, nullptr);
         return std::unexpected(VulkanError::PipelineCreationFailed);
     }
 
+    m_descriptorSetLayouts[name] = descriptorSetLayout;
     vkDestroyShaderModule(m_device, shaderModule, nullptr);
     return {};
 }
@@ -576,53 +661,123 @@ void VulkanCompute::destroyBuffer(VulkanBuffer& buffer)
 }
 
 std::expected<void, VulkanError> VulkanCompute::executeSoftmax(VulkanBuffer& logits, float temperature,
-                                                               size_t vocabSize)
+                                                               size_t vocabSize,
+                                                               bool waitForCompletion)
 {
     std::lock_guard lock(m_mutex);
 
-    if (m_pipelines.find("softmax") == m_pipelines.end())
+    if (m_pipelines.find("softmax") == m_pipelines.end() || m_pipelineLayouts.find("softmax") == m_pipelineLayouts.end() ||
+        m_descriptorSetLayouts.find("softmax") == m_descriptorSetLayouts.end())
         return std::unexpected(VulkanError::PipelineCreationFailed);
 
-    VkCommandBufferAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool = m_commandPool;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = 1;
+    const uint32_t slot = m_softmaxSlotCursor;
+    m_softmaxSlotCursor = (m_softmaxSlotCursor + 1u) % kDispatchRingSize;
 
-    VkCommandBuffer cmdBuf;
-    if (vkAllocateCommandBuffers(m_device, &allocInfo, &cmdBuf) != VK_SUCCESS)
-        return std::unexpected(VulkanError::KernelExecutionFailed);
-
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    vkBeginCommandBuffer(cmdBuf, &beginInfo);
-
-    vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_COMPUTE, m_pipelines["softmax"]);
-
-    struct
+    if (m_softmaxCmdBufs[slot] == VK_NULL_HANDLE)
     {
-        float temperature;
-        uint32_t vocabSize;
-    } pc{temperature, static_cast<uint32_t>(vocabSize)};
-    vkCmdPushConstants(cmdBuf, m_pipelineLayouts["softmax"], VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(pc), &pc);
+        VkCommandBufferAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        allocInfo.commandPool = m_commandPool;
+        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocInfo.commandBufferCount = 1;
+        if (vkAllocateCommandBuffers(m_device, &allocInfo, &m_softmaxCmdBufs[slot]) != VK_SUCCESS)
+            return std::unexpected(VulkanError::KernelExecutionFailed);
+    }
 
-    vkCmdDispatch(cmdBuf, 1, 1, 1);  // Single workgroup — shader processes full vocab
-    vkEndCommandBuffer(cmdBuf);
+    if (m_softmaxFences[slot] == VK_NULL_HANDLE)
+    {
+        VkFenceCreateInfo fenceInfo{};
+        fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+        if (vkCreateFence(m_device, &fenceInfo, nullptr, &m_softmaxFences[slot]) != VK_SUCCESS)
+            return std::unexpected(VulkanError::SynchronizationFailed);
+    }
+
+    if (m_softmaxDescriptorSets[slot] == VK_NULL_HANDLE)
+    {
+        VkDescriptorSetAllocateInfo descriptorAllocInfo{};
+        descriptorAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        descriptorAllocInfo.descriptorPool = m_descriptorPool;
+        descriptorAllocInfo.descriptorSetCount = 1;
+        auto& layout = m_descriptorSetLayouts["softmax"];
+        descriptorAllocInfo.pSetLayouts = &layout;
+        if (vkAllocateDescriptorSets(m_device, &descriptorAllocInfo, &m_softmaxDescriptorSets[slot]) != VK_SUCCESS)
+            return std::unexpected(VulkanError::KernelExecutionFailed);
+    }
+
+    if (vkWaitForFences(m_device, 1, &m_softmaxFences[slot], VK_TRUE, UINT64_MAX) != VK_SUCCESS)
+        return std::unexpected(VulkanError::SynchronizationFailed);
+    vkResetFences(m_device, 1, &m_softmaxFences[slot]);
+
+    // Dirty-tracking for conditional command buffer re-recording
+    const uint32_t vocabSizeU32 = static_cast<uint32_t>(vocabSize);
+    const bool descriptorsDirty = (m_softmaxLastBufferLogits[slot] != logits.buffer);
+    const bool pushConstantsDirty = (m_softmaxLastVocabSize[slot] != vocabSizeU32);
+    const bool needsRerecord = !m_softmaxCmdRecorded[slot] || descriptorsDirty || pushConstantsDirty;
+
+    if (needsRerecord)
+    {
+        vkResetCommandBuffer(m_softmaxCmdBufs[slot], 0);
+
+        // Update descriptors only if logits buffer changed
+        if (descriptorsDirty)
+        {
+            VkDescriptorBufferInfo logitsInfo = logits.buffer;
+            VkWriteDescriptorSet descriptorWrites[2]{};
+            descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[0].dstSet = m_softmaxDescriptorSets[slot];
+            descriptorWrites[0].dstBinding = 0;
+            descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            descriptorWrites[0].descriptorCount = 1;
+            descriptorWrites[0].pBufferInfo = &logitsInfo;
+            descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[1].dstSet = m_softmaxDescriptorSets[slot];
+            descriptorWrites[1].dstBinding = 1;
+            descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            descriptorWrites[1].descriptorCount = 1;
+            descriptorWrites[1].pBufferInfo = &logitsInfo;
+            vkUpdateDescriptorSets(m_device, 2, descriptorWrites, 0, nullptr);
+            m_softmaxLastBufferLogits[slot] = logits.buffer;
+        }
+
+        // Re-record command buffer
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        if (vkBeginCommandBuffer(m_softmaxCmdBufs[slot], &beginInfo) != VK_SUCCESS)
+            return std::unexpected(VulkanError::KernelExecutionFailed);
+
+        vkCmdBindPipeline(m_softmaxCmdBufs[slot], VK_PIPELINE_BIND_POINT_COMPUTE, m_pipelines["softmax"]);
+        vkCmdBindDescriptorSets(m_softmaxCmdBufs[slot], VK_PIPELINE_BIND_POINT_COMPUTE, m_pipelineLayouts["softmax"], 0, 1,
+                                &m_softmaxDescriptorSets[slot], 0, nullptr);
+
+        struct
+        {
+            float temperature;
+            uint32_t vocabSize;
+        } pc{temperature, vocabSizeU32};
+        vkCmdPushConstants(m_softmaxCmdBufs[slot], m_pipelineLayouts["softmax"], VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(pc),
+                           &pc);
+
+        vkCmdDispatch(m_softmaxCmdBufs[slot], (vocabSizeU32 + 255u) / 256u, 1, 1);
+        if (vkEndCommandBuffer(m_softmaxCmdBufs[slot]) != VK_SUCCESS)
+            return std::unexpected(VulkanError::KernelExecutionFailed);
+
+        m_softmaxCmdRecorded[slot] = true;
+        m_softmaxLastVocabSize[slot] = vocabSizeU32;
+    }
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &cmdBuf;
+    submitInfo.pCommandBuffers = &m_softmaxCmdBufs[slot];
 
-    if (vkQueueSubmit(m_computeQueue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS)
-    {
-        vkFreeCommandBuffers(m_device, m_commandPool, 1, &cmdBuf);
+    if (vkQueueSubmit(m_computeQueue, 1, &submitInfo, m_softmaxFences[slot]) != VK_SUCCESS)
         return std::unexpected(VulkanError::KernelExecutionFailed);
-    }
 
-    vkQueueWaitIdle(m_computeQueue);
-    vkFreeCommandBuffers(m_device, m_commandPool, 1, &cmdBuf);
+    if (waitForCompletion && vkWaitForFences(m_device, 1, &m_softmaxFences[slot], VK_TRUE, UINT64_MAX) != VK_SUCCESS)
+        return std::unexpected(VulkanError::SynchronizationFailed);
+
     return {};
 }
 
@@ -630,8 +785,6 @@ std::expected<void, VulkanError> VulkanCompute::executeAttention(const VulkanBuf
                                                                  const VulkanBuffer& v, VulkanBuffer& output,
                                                                  size_t seqLen, size_t headDim)
 {
-    std::lock_guard lock(m_mutex);
-
     // Attention = softmax(Q·K^T / sqrt(d_k)) · V
     // Step 1: Q·K^T via matmul pipeline
     // Allocate temp buffer for QK scores
@@ -641,7 +794,7 @@ std::expected<void, VulkanError> VulkanCompute::executeAttention(const VulkanBuf
         return std::unexpected(scoresBuf.error());
 
     // QK^T matmul
-    auto mmResult = executeMatrixMultiplication(q, k, *scoresBuf, headDim);
+    auto mmResult = executeMatrixMultiplication(q, k, *scoresBuf, headDim, false);
     if (!mmResult)
     {
         destroyBuffer(*scoresBuf);
@@ -650,7 +803,7 @@ std::expected<void, VulkanError> VulkanCompute::executeAttention(const VulkanBuf
 
     // Step 2: Scale + softmax in-place
     float scale = 1.0f / sqrtf(static_cast<float>(headDim));
-    auto smResult = executeSoftmax(*scoresBuf, scale, seqLen);
+    auto smResult = executeSoftmax(*scoresBuf, scale, seqLen, false);
     if (!smResult)
     {
         destroyBuffer(*scoresBuf);
@@ -658,7 +811,7 @@ std::expected<void, VulkanError> VulkanCompute::executeAttention(const VulkanBuf
     }
 
     // Step 3: Scores · V
-    mmResult = executeMatrixMultiplication(*scoresBuf, v, output, seqLen);
+    mmResult = executeMatrixMultiplication(*scoresBuf, v, output, seqLen, true);
     destroyBuffer(*scoresBuf);
     if (!mmResult)
         return std::unexpected(mmResult.error());

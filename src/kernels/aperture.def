@@ -1,0 +1,5 @@
+LIBRARY RawrXD_Singularity_Test_v126a
+EXPORTS
+  k_swap_aperture_init
+  k_swap_aperture_map_chunk
+  k_swap_aperture_unmap_chunk

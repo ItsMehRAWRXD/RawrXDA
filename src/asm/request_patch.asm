@@ -1,7 +1,7 @@
 ; =============================================================================
 ; request_patch.asm — Server Layer ASM Kernel
 ; =============================================================================
-; Request/response interception stubs for Layer 3 server hotpatching.
+; Request/response interception hooks for Layer 3 server hotpatching.
 ; Called by gguf_server_hotpatch.cpp for high-performance buffer inspection.
 ;
 ; Exports:

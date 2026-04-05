@@ -51,6 +51,13 @@ LocalReasoningEngine::AnalysisResult LocalReasoningEngine::analyze(const Analysi
     result.passesCompleted = 0;
 
     try {
+        // Reject inputs that could cause unbounded memory use or hang
+        constexpr size_t kMaxSourceCodeBytes = 4ULL * 1024 * 1024; // 4 MB
+        if (context.sourceCode.size() > kMaxSourceCodeBytes) {
+            result.summary = "Analysis rejected: source code exceeds 4 MB limit";
+            return result;
+        }
+
         // Multi-pass analysis
         result = performAnalysisPasses(context);
         

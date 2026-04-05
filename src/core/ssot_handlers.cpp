@@ -6174,7 +6174,7 @@ CommandResult handleAINoRefusal(const CommandContext& ctx)
         PostMessageA(hwnd, WM_COMMAND, 4203, 0);
         return CommandResult::ok("ai.noRefusal");
     }
-    // Toggle no-refusal mode and project it into backend sampling config
+    // Toggle direct-response mode and project it into backend sampling config
     static bool noRefusal = false;
     noRefusal = !noRefusal;
 
@@ -6199,7 +6199,7 @@ CommandResult handleAINoRefusal(const CommandContext& ctx)
         fclose(f);
     }
     char buf[96];
-    snprintf(buf, sizeof(buf), "[AI] No-refusal mode: %s\n", noRefusal ? "ENABLED" : "DISABLED");
+    snprintf(buf, sizeof(buf), "[AI] Direct-response mode: %s\n", noRefusal ? "ENABLED" : "DISABLED");
     ctx.output(buf);
     // AI mode change logged via output above
     return CommandResult::ok("ai.noRefusal");

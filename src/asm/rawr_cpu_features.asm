@@ -10,7 +10,8 @@
 ; GATE LOGIC (AVX-512):
 ;   1. CPUID(1): OSXSAVE (ECX.27) + AVX (ECX.28) present
 ;   2. XGETBV(XCR0): XMM (bit 1) + YMM (bit 2) enabled by OS
-;   3. CPUID(7,0): AVX-512F (EBX.16) present
+;   3. CPUID(7,0): AVX-512F (EBX.16) + AVX-512DQ (EBX.17) +
+;      AVX-512BW (EBX.30) + AVX-512VL (EBX.31) present
 ;   4. XGETBV(XCR0): opmask (bit 5) + ZMM_hi256 (bit 6) +
 ;      hi16_ZMM (bit 7) enabled by OS
 ;
@@ -72,13 +73,25 @@ rawr_cpu_has_avx512 PROC FRAME
     cmp     eax, XCR0_XMM_YMM
     jne     @@fail
 
-    ; ── Gate 3: CPUID(7,0) — AVX-512F feature bit ─────────────────────
+    ; ── Gate 3: CPUID(7,0) — required AVX-512 feature subset ───────────
     mov     eax, 7
     xor     ecx, ecx
     cpuid                           ; clobbers EAX — but we saved XCR0 in R8D
 
     ; EBX bit 16 = AVX-512F
     bt      ebx, 16
+    jnc     @@fail
+
+    ; EBX bit 17 = AVX-512DQ
+    bt      ebx, 17
+    jnc     @@fail
+
+    ; EBX bit 30 = AVX-512BW
+    bt      ebx, 30
+    jnc     @@fail
+
+    ; EBX bit 31 = AVX-512VL
+    bt      ebx, 31
     jnc     @@fail
 
     ; ── Gate 4: XCR0 bits 5/6/7 — OS enabled AVX-512 XSTATE ──────────

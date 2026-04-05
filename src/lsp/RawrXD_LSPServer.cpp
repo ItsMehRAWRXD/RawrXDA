@@ -1408,7 +1408,7 @@ std::string RawrXDLSPServer::uriToFilePath(const std::string& uri) const {
     std::string path = uri;
     // Strip file:// prefix
     if (path.rfind("file:///", 0) == 0) {
-        path = path.substr(8);  // "file:///" → remove prefix, keep drive letter
+        path = path.substr(8);
     } else if (path.rfind("file://", 0) == 0) {
         path = path.substr(7);
     }
@@ -1428,6 +1428,18 @@ std::string RawrXDLSPServer::uriToFilePath(const std::string& uri) const {
 #ifdef _WIN32
     std::replace(decoded.begin(), decoded.end(), '/', '\\');
 #endif
+    // SECURITY: Validate path stays within workspace root (prevent path traversal)
+    // Get absolute paths for comparison
+    char absPath[MAX_PATH] = {};
+    char absRoot[MAX_PATH] = {};
+    if (GetFullPathNameA(decoded.c_str(), MAX_PATH, absPath, nullptr) &&
+        GetFullPathNameA(m_config.rootPath.c_str(), MAX_PATH, absRoot, nullptr)) {
+        // Ensure the file is under the root path
+        if (_strnicmp(absPath, absRoot, strlen(absRoot)) != 0) {
+            // Path is outside workspace root - REJECT
+            return "";  // Return empty to signal access denied
+        }
+    }
     return decoded;
 }
 

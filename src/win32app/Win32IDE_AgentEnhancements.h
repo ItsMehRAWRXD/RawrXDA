@@ -79,7 +79,7 @@ struct PlanTokenBudgetState {
 // ============================================================================
 struct AgentModelRoute {
     std::string stepType;
-    std::string selectedTier;   // "local_gguf" | "ollama" | "cloud_stub"
+    std::string selectedTier;   // "local_gguf" | "ollama" | "unavailable"
     std::string modelName;
     bool        fallbackUsed = false;
 };

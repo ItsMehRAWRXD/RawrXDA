@@ -83,6 +83,21 @@ void collectMoeMixturePlanRowRefs(const std::uint32_t modelIndex, const std::uin
     }
     return nullptr;
 }
+
+[[nodiscard]] bool checkedMulSizeT(std::size_t a, std::size_t b, std::size_t& out) noexcept
+{
+    if (a == 0 || b == 0)
+    {
+        out = 0;
+        return true;
+    }
+    if (a > (std::numeric_limits<std::size_t>::max() / b))
+    {
+        return false;
+    }
+    out = a * b;
+    return true;
+}
 }  // namespace
 
 class RawrXDTransformer::MoEPrepackWorker
@@ -268,6 +283,8 @@ void RawrXDTransformer::SetSwarmScheduler(RawrXD::Swarm::ISwarmScheduler* schedu
     if (m_swarmScheduler)
         m_swarmScheduler->setPlanRowEvictionObserver({});
     m_swarmScheduler = scheduler;
+    m_swarmPinningSuppressed = false;
+    m_swarmPinFailureStreak = 0;
     refreshSwarmPlanSliceIndex();
     installSwarmPlanRowEvictionObserver_();
 }
@@ -490,7 +507,7 @@ std::expected<void, RawrXD::Swarm::SchedulerError> RawrXDTransformer::pinSwarmSl
 {
     if (!appendPinnedRows)
         outPinnedPlanRows.clear();
-    if (!m_swarmScheduler)
+    if (!m_swarmScheduler || m_swarmPinningSuppressed)
         return {};
 
     constexpr std::uint32_t kStaticExpert = 0xFFFFFFFFu;
@@ -544,7 +561,19 @@ std::expected<void, RawrXD::Swarm::SchedulerError> RawrXDTransformer::pinSwarmSl
 
     const auto pinned = m_swarmScheduler->pinPlanRows(std::span<const std::size_t>(rows.data(), rows.size()));
     if (!pinned)
+    {
+        if (m_swarmPinFailureStreak < std::numeric_limits<std::uint32_t>::max())
+            ++m_swarmPinFailureStreak;
+        constexpr std::uint32_t kPinFailureTrip = 8u;
+        if (!m_swarmPinningSuppressed && m_swarmPinFailureStreak >= kPinFailureTrip)
+        {
+            m_swarmPinningSuppressed = true;
+            std::printf("[Forward] WARN: suppressing swarm pin hooks after %u consecutive pin failures\n",
+                        static_cast<unsigned>(m_swarmPinFailureStreak));
+        }
         return pinned;
+    }
+    m_swarmPinFailureStreak = 0;
     outPinnedPlanRows.insert(outPinnedPlanRows.end(), rows.begin(), rows.end());
     return {};
 }
@@ -1136,10 +1165,11 @@ void VectorAdd_AVX512(float* out, const float* a, const float* b, int size)
 
 namespace
 {
-/// One Mixtral-style expert: try `ffn_gate`/`ffn_up`/`ffn_down` then `w1`/`w3`/`w2` naming.
-[[nodiscard]] bool forwardMoEExpertSwiGLU(RawrXDModelLoader* loader, const std::string& blkPrefix, std::uint32_t expert,
-                                          float* xNormed, std::vector<float>& h1, std::vector<float>& h3,
-                                          std::vector<float>& finalFfn, int dim, int hdim)
+/// Shared MoE expert gate/up/SiLU path; optional down into \p finalFfn when \p applyDown.
+[[nodiscard]] bool forwardMoEExpertSwiGLUImpl(RawrXDModelLoader* loader, const std::string& blkPrefix,
+                                              std::uint32_t expert, float* xNormed, std::vector<float>& h1,
+                                              std::vector<float>& h3, std::vector<float>* finalFfn, int dim, int hdim,
+                                              bool applyDown)
 {
     if (!loader)
         return false;
@@ -1176,12 +1206,31 @@ namespace
         for (int i = 0; i < hdim; i++)
             h1[i] *= h3[i];
 #endif
-        if (!loader->StreamingMatMul(d, h1.data(), finalFfn.data(), static_cast<size_t>(hdim),
+        if (!applyDown)
+            return true;
+        if (!finalFfn)
+            return false;
+        if (!loader->StreamingMatMul(d, h1.data(), finalFfn->data(), static_cast<size_t>(hdim),
                                      static_cast<size_t>(dim)))
             continue;
         return true;
     }
     return false;
+}
+
+[[nodiscard]] bool forwardMoEExpertSwiGLUPostActivation(RawrXDModelLoader* loader, const std::string& blkPrefix,
+                                                        std::uint32_t expert, float* xNormed, std::vector<float>& h1,
+                                                        std::vector<float>& h3, int dim, int hdim)
+{
+    return forwardMoEExpertSwiGLUImpl(loader, blkPrefix, expert, xNormed, h1, h3, nullptr, dim, hdim, false);
+}
+
+/// One Mixtral-style expert: try `ffn_gate`/`ffn_up`/`ffn_down` then `w1`/`w3`/`w2` naming.
+[[nodiscard]] bool forwardMoEExpertSwiGLU(RawrXDModelLoader* loader, const std::string& blkPrefix, std::uint32_t expert,
+                                          float* xNormed, std::vector<float>& h1, std::vector<float>& h3,
+                                          std::vector<float>& finalFfn, int dim, int hdim)
+{
+    return forwardMoEExpertSwiGLUImpl(loader, blkPrefix, expert, xNormed, h1, h3, &finalFfn, dim, hdim, true);
 }
 }  // namespace
 
@@ -1191,12 +1240,99 @@ void RawrXDTransformer::Initialize(VkDevice device, VkPhysicalDevice physDevice,
     this->config = cfg;
     this->loader = loader;
 
+    if (config.n_layers <= 0 || config.n_heads <= 0 || config.dim <= 0)
+    {
+        printf("[RawrXD] FATAL: invalid transformer config (layers=%d heads=%d dim=%d)\n", config.n_layers,
+               config.n_heads, config.dim);
+        kv_cache_k.clear();
+        kv_cache_v.clear();
+        kv_cache_pos.clear();
+        return;
+    }
+    if (config.dim % config.n_heads != 0)
+    {
+        printf("[RawrXD] FATAL: dim %d not divisible by n_heads %d\n", config.dim, config.n_heads);
+        kv_cache_k.clear();
+        kv_cache_v.clear();
+        kv_cache_pos.clear();
+        return;
+    }
+
     // Initialize KV Cache — use seq_len if n_ctx wasn't set
     int ctx = config.n_ctx > 0 ? config.n_ctx : (config.seq_len > 0 ? config.seq_len : 2048);
     // Use n_kv_heads dimension for KV cache (GQA/MQA support)
     int kv_dim = (config.n_kv_heads > 0 ? config.n_kv_heads : config.n_heads) * (config.dim / config.n_heads);
-    size_t kv_size = (size_t)config.n_layers * ctx * kv_dim;
+    if (ctx <= 0 || kv_dim <= 0)
+    {
+        printf("[RawrXD] FATAL: invalid cache dimensions (ctx=%d kv_dim=%d)\n", ctx, kv_dim);
+        kv_cache_k.clear();
+        kv_cache_v.clear();
+        kv_cache_pos.clear();
+        return;
+    }
+
+    std::size_t kv_size = 0;
+    std::size_t layCtx = 0;
+    if (!checkedMulSizeT(static_cast<std::size_t>(config.n_layers), static_cast<std::size_t>(ctx), layCtx) ||
+        !checkedMulSizeT(layCtx, static_cast<std::size_t>(kv_dim), kv_size))
+    {
+        printf("[RawrXD] FATAL: KV cache size overflow risk (layers=%d ctx=%d kv_dim=%d)\n", config.n_layers, ctx,
+               kv_dim);
+        kv_cache_k.clear();
+        kv_cache_v.clear();
+        kv_cache_pos.clear();
+        return;
+    }
+    // Hard cap: never allocate more than 256 MB per K/V buffer to stay within
+    // process memory budgets on systems with aperture reservation constraints.
+    constexpr std::size_t kMaxKvBytesPerBuffer = 256ull * 1024 * 1024;
+    const std::size_t kMaxKvFloatsPerBuffer = kMaxKvBytesPerBuffer / sizeof(float);
+    if (kv_size > kMaxKvFloatsPerBuffer)
+    {
+        const int capped_ctx = static_cast<int>(kMaxKvFloatsPerBuffer / static_cast<std::size_t>(std::max(1, kv_dim * config.n_layers)));
+        printf("[RawrXD] KV cache budget cap: ctx %d -> %d (kv_size %zu -> budget %zu floats)\n",
+               ctx, capped_ctx, kv_size, kMaxKvFloatsPerBuffer);
+        ctx = std::max(32, capped_ctx);
+        kv_size = static_cast<std::size_t>(config.n_layers) * static_cast<std::size_t>(ctx) * static_cast<std::size_t>(kv_dim);
+    }
     printf("[RawrXD] KV cache: %zu floats (%.1f MB per cache)\n", kv_size, kv_size * 4.0 / 1e6);
+    // Diagnose available memory before heap probe
+    {
+        MEMORYSTATUSEX ms{};
+        ms.dwLength = sizeof(ms);
+        GlobalMemoryStatusEx(&ms);
+        printf("[RawrXD] MEMSTATUS pre-probe: phys_avail=%llu MB, virt_avail=%llu MB, commit_avail=%llu MB\n",
+               ms.ullAvailPhys >> 20, ms.ullAvailVirtual >> 20,
+               (ms.ullTotalPageFile - ms.ullTotalPhys + ms.ullAvailPhys) >> 20);
+    }
+    // Heap probe: validate both K+V allocations are feasible before vector resize
+    {
+        // We need TWO allocations of kv_size*sizeof(float) for K and V caches
+        while (ctx >= 32) {
+            kv_size = static_cast<std::size_t>(config.n_layers) * static_cast<std::size_t>(ctx) * static_cast<std::size_t>(kv_dim);
+            const std::size_t probeBytes = kv_size * sizeof(float);
+            void* probeK = malloc(probeBytes);
+            void* probeV = probeK ? malloc(probeBytes) : nullptr;
+            const bool ok = (probeK != nullptr && probeV != nullptr);
+            if (probeK) free(probeK);
+            if (probeV) free(probeV);
+            if (ok) {
+                printf("[RawrXD] HEAP PROBE OK: ctx=%d (2x %.0f MB = %.0f MB available)\n",
+                       ctx, probeBytes / 1048576.0, 2.0 * probeBytes / 1048576.0);
+                break;
+            }
+            printf("[RawrXD] HEAP PROBE FAIL at ctx=%d (2x %.0f MB), halving\n", ctx, probeBytes / 1048576.0);
+            ctx /= 2;
+        }
+        if (ctx < 32) { printf("[RawrXD] FATAL: KV cache heap exhausted even at minimum ctx\n"); return; }
+    }
+    kv_size = static_cast<std::size_t>(config.n_layers) * static_cast<std::size_t>(ctx) * static_cast<std::size_t>(kv_dim);
+    printf("[RawrXD] KV cache final: ctx=%d, %zu floats (%.1f MB per cache)\n", ctx, kv_size, kv_size * 4.0 / 1e6);
+
+    // Keep runtime config synchronized with the probed cache geometry.
+    // Forward-path cache indexing derives from config.n_ctx.
+    config.n_ctx = ctx;
+
     kv_cache_k.resize(kv_size, 0.0f);
     kv_cache_v.resize(kv_size, 0.0f);
     kv_cache_pos.assign(static_cast<size_t>(config.n_layers) * static_cast<size_t>(ctx), -1);
@@ -1216,10 +1352,16 @@ void RawrXDTransformer::Initialize(VkDevice device, VkPhysicalDevice physDevice,
     m_moeGroupedPackCacheMisses = 0;
     m_moeGroupedFallbacks = 0;
     m_moeGroupedSyncPackInserts = 0;
+    m_moeGroupedWeightedApplies = 0;
+    m_moeGroupedSingleExpertApplies = 0;
+    m_moeGroupedWeightedFallbacks = 0;
+    m_moeGroupedSingleExpertFallbacks = 0;
     m_moePackEvictedByPlanRow = 0;
     m_moePrepackQueueDropped = 0;
     m_moePrepackSkippedNotResident = 0;
     m_moePrepackInserts = 0;
+    m_swarmPinningSuppressed = false;
+    m_swarmPinFailureStreak = 0;
     shutdownMoePrepackWorker_();
     m_moeMixturePlanPackCache.reset();
     if (config.moe_down_enable_grouped_integration && config.moe_down_grouped_pack_cache_max_entries > 0)
@@ -1257,8 +1399,13 @@ bool RawrXDTransformer::tryMoeSyncPackMixtureIntoCache(const std::uint32_t layer
     }
     const std::size_t inD = static_cast<std::size_t>(hdim);
     const std::size_t outD = static_cast<std::size_t>(dim);
-    const std::size_t nTot = static_cast<std::size_t>(kExperts) * outD;
-    std::vector<float> packed(inD * nTot);
+    std::size_t nTot = 0;
+    std::size_t packedElems = 0;
+    if (!checkedMulSizeT(static_cast<std::size_t>(kExperts), outD, nTot) || !checkedMulSizeT(inD, nTot, packedElems))
+    {
+        return false;
+    }
+    std::vector<float> packed(packedElems);
     RawrXD::MoEAccumRef::packExpertDownWeightsF32(inD, outD, kExperts, wptrs.data(), packed.data());
     if (planRows.empty())
         m_moeMixturePlanPackCache->put(cacheKey, std::move(packed));
@@ -1304,10 +1451,12 @@ std::vector<float> RawrXDTransformer::Forward(const std::vector<uint32_t>& token
 
     const int cache_ctx = std::max(1, config.n_ctx > 0 ? config.n_ctx : (config.seq_len > 0 ? config.seq_len : 2048));
     const int max_tokens_per_call = std::max(1, std::min(cache_ctx, config.seq_len > 0 ? config.seq_len : cache_ctx));
-    const int T = std::min(static_cast<int>(tokens.size()), max_tokens_per_call);
-    if (static_cast<int>(tokens.size()) > T)
+    const size_t incoming_tokens = tokens.size();
+    const size_t capped_tokens = std::min(incoming_tokens, static_cast<size_t>(max_tokens_per_call));
+    const int T = static_cast<int>(capped_tokens);
+    if (incoming_tokens > capped_tokens)
     {
-        printf("[Forward] WARN: truncating token batch %zu -> %d\n", tokens.size(), T);
+        printf("[Forward] WARN: truncating token batch %zu -> %d\n", incoming_tokens, T);
     }
     int64_t current_pos = static_cast<int64_t>(std::max(0, start_pos));
 
@@ -1431,18 +1580,34 @@ std::vector<float> RawrXDTransformer::Forward(const std::vector<uint32_t>& token
                (static_cast<size_t>(config.vocab_size) * (static_cast<size_t>(dim) / 256) * 84) >> 20);
     }
 
+    // Upfront token ID bounds validation — reject before embedding lookup
+    for (int t = 0; t < T; t++)
+    {
+        const uint32_t& token = tokens[t];
+        if (token >= static_cast<uint32_t>(config.vocab_size))
+        {
+            printf("[Forward] FATAL: Token ID %u out of bounds [0, %d) at position %d. Rejecting batch.\n", 
+                   token, config.vocab_size, t);
+            return {};
+        }
+    }
+
     // Current hidden state and reusable per-layer buffers.
     std::vector<float> x(dim);
     std::vector<float> residual(dim);
     std::vector<float> q(dim), k(kv_dim), v(kv_dim);
+    std::vector<float> packed_qkv(static_cast<size_t>(dim) + static_cast<size_t>(kv_dim) * 2U);
     std::vector<float> att_out(dim), attn_final(dim);
+    std::vector<float> packed_ffn_gate_up(static_cast<size_t>(config.hidden_dim) * 2U);
     std::vector<float> h1(config.hidden_dim), h3(config.hidden_dim), final_ffn(dim), moe_ffn_acc(dim);
     std::vector<float> scores(cache_ctx);
     std::vector<uint8_t> score_valid(cache_ctx, 0);
 
     for (int t = 0; t < T; t++)
     {
-        if (m_swarmScheduler)
+        const bool swarmTokenActive = (m_swarmScheduler != nullptr) && (loader != nullptr) && (loader->getExperts() > 0) &&
+                                      !m_swarmPinningSuppressed;
+        if (swarmTokenActive)
             m_swarmScheduler->onForwardTokenStepBegin();
 
         maybeSampleMoEReuseFromHeatmap();
@@ -1457,12 +1622,8 @@ std::vector<float> RawrXDTransformer::Forward(const std::vector<uint32_t>& token
             printf("[Forward] FATAL: vocab_size=%d\n", config.vocab_size);
             return {};
         }
-        if (token >= static_cast<uint32_t>(config.vocab_size))
-        {
-            printf("[Forward] WARN: token %u >= vocab_size %d, clamping\n", token, config.vocab_size);
-            token = static_cast<uint32_t>(config.vocab_size - 1);
-        }
 
+        // Token ID already validated upfront — no need to clamp
         bool row_ok = loader->GetTensorRow(emb_name, static_cast<size_t>(token), x.data(), static_cast<size_t>(dim));
         if (!row_ok)
         {
@@ -1478,6 +1639,8 @@ std::vector<float> RawrXDTransformer::Forward(const std::vector<uint32_t>& token
         // 2. Transformer Layers
         for (int l = 0; l < config.n_layers; l++)
         {
+            const bool layerSwarmActive = (m_swarmScheduler != nullptr) && !m_swarmPinningSuppressed &&
+                                          (loader != nullptr) && (loader->getExperts() > 0);
             std::vector<std::size_t> layerPinnedPlanRows;
             struct SwarmLayerPinGuard
             {
@@ -1491,12 +1654,12 @@ std::vector<float> RawrXDTransformer::Forward(const std::vector<uint32_t>& token
                         rows->clear();
                     }
                 }
-            } swarmPinGuard{m_swarmScheduler, &layerPinnedPlanRows};
+            } swarmPinGuard{layerSwarmActive ? m_swarmScheduler : nullptr, &layerPinnedPlanRows};
 
-            const bool moeTwoPhasePin = m_swarmScheduler != nullptr && loader->getExperts() > 0 &&
+            const bool moeTwoPhasePin = layerSwarmActive && loader->getExperts() > 0 &&
                                         swarmLayerHasExpertSlices(static_cast<std::uint32_t>(l));
 
-            if (m_swarmScheduler)
+            if (layerSwarmActive)
             {
                 (void)m_swarmScheduler->onLayerComputeStarted(0u, static_cast<std::uint32_t>(l));
                 const SwarmPinLayerParts pinPart =
@@ -1542,24 +1705,47 @@ std::vector<float> RawrXDTransformer::Forward(const std::vector<uint32_t>& token
             const std::string wq_name = prefix + "attn_q.weight";
             const std::string wk_name = prefix + "attn_k.weight";
             const std::string wv_name = prefix + "attn_v.weight";
+            const std::string wqkv_name = prefix + "attn_qkv.weight";
             const std::string wo_name = prefix + "attn_output.weight";
 
-            if (!loader->StreamingMatMul(wq_name, x.data(), q.data(), dim, dim))
+            const bool has_split_qkv = loader->hasTensorNamed(wq_name) && loader->hasTensorNamed(wk_name) &&
+                                       loader->hasTensorNamed(wv_name);
+            if (has_split_qkv)
             {
-                printf("[Forward] FATAL: StreamingMatMul failed for %s\n", wq_name.c_str());
-                return {};
-            }
+                if (!loader->StreamingMatMul(wq_name, x.data(), q.data(), dim, dim))
+                {
+                    printf("[Forward] FATAL: StreamingMatMul failed for %s\n", wq_name.c_str());
+                    return {};
+                }
 
-            if (!loader->StreamingMatMul(wk_name, x.data(), k.data(), dim, kv_dim))
-            {
-                printf("[Forward] FATAL: StreamingMatMul failed for %s\n", wk_name.c_str());
-                return {};
-            }
+                if (!loader->StreamingMatMul(wk_name, x.data(), k.data(), dim, kv_dim))
+                {
+                    printf("[Forward] FATAL: StreamingMatMul failed for %s\n", wk_name.c_str());
+                    return {};
+                }
 
-            if (!loader->StreamingMatMul(wv_name, x.data(), v.data(), dim, kv_dim))
+                if (!loader->StreamingMatMul(wv_name, x.data(), v.data(), dim, kv_dim))
+                {
+                    printf("[Forward] FATAL: StreamingMatMul failed for %s\n", wv_name.c_str());
+                    return {};
+                }
+            }
+            else
             {
-                printf("[Forward] FATAL: StreamingMatMul failed for %s\n", wv_name.c_str());
-                return {};
+                const size_t packed_qkv_dim = static_cast<size_t>(dim) + static_cast<size_t>(kv_dim) * 2U;
+                if (!loader->hasTensorNamed(wqkv_name) ||
+                    !loader->StreamingMatMul(wqkv_name, x.data(), packed_qkv.data(), dim, packed_qkv_dim))
+                {
+                    printf("[Forward] FATAL: Missing compatible attention projection for %s (expected split q/k/v or packed qkv)\n",
+                           prefix.c_str());
+                    return {};
+                }
+
+                std::memcpy(q.data(), packed_qkv.data(), static_cast<size_t>(dim) * sizeof(float));
+                std::memcpy(k.data(), packed_qkv.data() + static_cast<size_t>(dim),
+                            static_cast<size_t>(kv_dim) * sizeof(float));
+                std::memcpy(v.data(), packed_qkv.data() + static_cast<size_t>(dim) + static_cast<size_t>(kv_dim),
+                            static_cast<size_t>(kv_dim) * sizeof(float));
             }
 
             // RoPE — apply separately for Q (n_heads) and K (n_kv_heads)
@@ -1572,6 +1758,13 @@ std::vector<float> RawrXDTransformer::Forward(const std::vector<uint32_t>& token
             const size_t layer_base =
                 static_cast<size_t>(l) * static_cast<size_t>(cache_ctx) * static_cast<size_t>(kv_dim);
             const size_t cache_offset = layer_base + static_cast<size_t>(slot) * static_cast<size_t>(kv_dim);
+            if (cache_offset > kv_cache_k.size() || cache_offset > kv_cache_v.size() ||
+                static_cast<size_t>(kv_dim) > (kv_cache_k.size() - cache_offset) ||
+                static_cast<size_t>(kv_dim) > (kv_cache_v.size() - cache_offset))
+            {
+                printf("[Forward] FATAL: KV cache write OOB risk (layer=%d slot=%d kv_dim=%d)\n", l, slot, kv_dim);
+                return {};
+            }
             memcpy(kv_cache_k.data() + cache_offset, k.data(), static_cast<size_t>(kv_dim) * sizeof(float));
             memcpy(kv_cache_v.data() + cache_offset, v.data(), static_cast<size_t>(kv_dim) * sizeof(float));
             kv_cache_pos[static_cast<size_t>(l) * static_cast<size_t>(cache_ctx) + static_cast<size_t>(slot)] = abs_pos;
@@ -1667,7 +1860,7 @@ std::vector<float> RawrXDTransformer::Forward(const std::vector<uint32_t>& token
 
             std::vector<std::uint32_t> moeExpertPick;
             std::vector<float> moeMixtureWeights;
-            if (moeTwoPhasePin && m_swarmScheduler)
+            if (moeTwoPhasePin && layerSwarmActive)
             {
                 (void)tryPickMoERouterExperts(static_cast<std::uint32_t>(l), x.data(), moeExpertPick,
                                               moeMixtureWeights);
@@ -1697,23 +1890,36 @@ std::vector<float> RawrXDTransformer::Forward(const std::vector<uint32_t>& token
             }
 
             const bool denseFfn = loader->hasTensorNamed(w1_name);
-            if (denseFfn)
+            const bool packedDenseFfn = !denseFfn && loader->hasTensorNamed(w2_name) && loader->hasTensorNamed(w3_name);
+            if (denseFfn || packedDenseFfn)
             {
-                // Gate projection (streaming to avoid materializing large weight)
-                if (!loader->StreamingMatMul(w1_name, x.data(), h1.data(), dim, hdim))
+                if (denseFfn)
                 {
-                    printf("[Forward] FATAL: StreamingMatMul failed for %s\n", w1_name.c_str());
-                    return {};
+                    if (!loader->StreamingMatMul(w1_name, x.data(), h1.data(), dim, hdim))
+                    {
+                        printf("[Forward] FATAL: StreamingMatMul failed for %s\n", w1_name.c_str());
+                        return {};
+                    }
+
+                    if (!loader->StreamingMatMul(w3_name, x.data(), h3.data(), dim, hdim))
+                    {
+                        printf("[Forward] FATAL: StreamingMatMul failed for %s\n", w3_name.c_str());
+                        return {};
+                    }
+                }
+                else
+                {
+                    const size_t packedFfnDim = static_cast<size_t>(hdim) * 2U;
+                    if (!loader->StreamingMatMul(w3_name, x.data(), packed_ffn_gate_up.data(), dim, packedFfnDim))
+                    {
+                        printf("[Forward] FATAL: StreamingMatMul failed for packed FFN %s\n", w3_name.c_str());
+                        return {};
+                    }
+                    std::memcpy(h1.data(), packed_ffn_gate_up.data(), static_cast<size_t>(hdim) * sizeof(float));
+                    std::memcpy(h3.data(), packed_ffn_gate_up.data() + static_cast<size_t>(hdim),
+                                static_cast<size_t>(hdim) * sizeof(float));
                 }
 
-                // Up projection (streaming)
-                if (!loader->StreamingMatMul(w3_name, x.data(), h3.data(), dim, hdim))
-                {
-                    printf("[Forward] FATAL: StreamingMatMul failed for %s\n", w3_name.c_str());
-                    return {};
-                }
-
-                // SiLU(gate) * up
                 Silu_AVX512(h1.data(), hdim);
 #ifdef __AVX512F__
                 {
@@ -1732,7 +1938,6 @@ std::vector<float> RawrXDTransformer::Forward(const std::vector<uint32_t>& token
                     h1[i] *= h3[i];
 #endif
 
-                // Down projection: hidden_dim → dim (streaming)
                 if (!loader->StreamingMatMul(w2_name, h1.data(), final_ffn.data(), hdim, dim))
                 {
                     printf("[Forward] FATAL: StreamingMatMul failed for %s\n", w2_name.c_str());
@@ -1741,79 +1946,169 @@ std::vector<float> RawrXDTransformer::Forward(const std::vector<uint32_t>& token
             }
             else
             {
+                auto tryRunGroupedMoEDown = [&](const std::vector<std::uint32_t>& expertPick,
+                                                const std::vector<float>& mixtureWeights,
+                                                const bool weightedMode) -> bool
+                {
+                    const int kPick = static_cast<int>(expertPick.size());
+                    if (kPick <= 0 || mixtureWeights.size() != expertPick.size())
+                        return false;
+                    if (!config.moe_down_enable_grouped_integration || !m_moeMixturePlanPackCache)
+                        return false;
+                    if (chooseMoEDownProjectPath(static_cast<std::uint32_t>(l), static_cast<std::size_t>(hdim),
+                                                 static_cast<std::size_t>(dim),
+                                                 kPick) != RawrXD::MoEDownProject::Path::GroupedCached)
+                        return false;
+
+                    const std::string mixKey = makeMoeMixturePackCacheKey(0u, static_cast<std::uint32_t>(l),
+                                                                          expertPick, m_swarmPlanSliceIndex);
+                    std::vector<std::size_t> mixturePlanRows;
+                    collectMoeMixturePlanRowRefs(0u, static_cast<std::uint32_t>(l), expertPick, m_swarmPlanSliceIndex,
+                                                 mixturePlanRows);
+                    const std::span<const std::size_t> mixtureRowsSpan(mixturePlanRows.data(), mixturePlanRows.size());
+
+                    auto tryApplyGroupedPacked = [&](const float* packedPtr, std::size_t packedCount)
+                    {
+                        const std::size_t expectPacked = static_cast<std::size_t>(hdim) *
+                                                         static_cast<std::size_t>(dim) *
+                                                         static_cast<std::size_t>(kPick);
+                        if (!config.moe_down_use_grouped_down_math || !packedPtr || packedCount != expectPacked)
+                            return false;
+
+                        std::vector<float> h1Rows(static_cast<std::size_t>(kPick) * static_cast<std::size_t>(hdim));
+                        bool hidOk = true;
+                        for (int ii = 0; ii < kPick; ++ii)
+                        {
+                            if (mixtureWeights[static_cast<std::size_t>(ii)] <= 0.f)
+                            {
+                                std::fill_n(h1Rows.data() +
+                                                static_cast<std::size_t>(ii) * static_cast<std::size_t>(hdim),
+                                            static_cast<std::size_t>(hdim), 0.f);
+                                continue;
+                            }
+                            if (!forwardMoEExpertSwiGLUPostActivation(loader, prefix,
+                                                                      expertPick[static_cast<std::size_t>(ii)],
+                                                                      x.data(), h1, h3, dim, hdim))
+                            {
+                                hidOk = false;
+                                break;
+                            }
+                            std::memcpy(h1Rows.data() + static_cast<std::size_t>(ii) * static_cast<std::size_t>(hdim),
+                                        h1.data(), static_cast<std::size_t>(hdim) * sizeof(float));
+                        }
+                        if (!hidOk)
+                            return false;
+
+                        std::fill(moe_ffn_acc.begin(), moe_ffn_acc.end(), 0.f);
+                        RawrXD::MoEAccumRef::moeDownProjectBatchedExpertsFromPackedF32(
+                            h1Rows.data(), static_cast<std::size_t>(hdim), static_cast<std::size_t>(dim), kPick,
+                            packedPtr, mixtureWeights.data(), moe_ffn_acc.data());
+
+                        bool anyPositiveW = false;
+                        for (float w : mixtureWeights)
+                        {
+                            if (w > 0.f)
+                            {
+                                anyPositiveW = true;
+                                break;
+                            }
+                        }
+                        if (!anyPositiveW)
+                            return false;
+
+                        for (int j = 0; j < dim; ++j)
+                            final_ffn[static_cast<std::size_t>(j)] = moe_ffn_acc[static_cast<std::size_t>(j)];
+                        if (weightedMode)
+                            ++m_moeGroupedWeightedApplies;
+                        else
+                            ++m_moeGroupedSingleExpertApplies;
+                        return true;
+                    };
+
+                    const float* packedPtr = nullptr;
+                    std::size_t packedCount = 0;
+                    if (m_moeMixturePlanPackCache->tryGet(mixKey, &packedPtr, &packedCount))
+                    {
+                        ++m_moeGroupedPackCacheHits;
+                        if (tryApplyGroupedPacked(packedPtr, packedCount))
+                            return true;
+                        ++m_moeGroupedFallbacks;
+                        if (weightedMode)
+                            ++m_moeGroupedWeightedFallbacks;
+                        else
+                            ++m_moeGroupedSingleExpertFallbacks;
+                        return false;
+                    }
+
+                    ++m_moeGroupedPackCacheMisses;
+                    bool syncInserted = false;
+                    if (config.moe_down_grouped_sync_pack_on_miss &&
+                        tryMoeSyncPackMixtureIntoCache(static_cast<std::uint32_t>(l), prefix, expertPick, hdim, dim,
+                                                       mixKey, mixtureRowsSpan))
+                    {
+                        ++m_moeGroupedSyncPackInserts;
+                        syncInserted = true;
+                    }
+
+                    if (syncInserted && m_moeMixturePlanPackCache->tryGet(mixKey, &packedPtr, &packedCount))
+                    {
+                        ++m_moeGroupedPackCacheHits;
+                        if (tryApplyGroupedPacked(packedPtr, packedCount))
+                            return true;
+                    }
+
+                    if (config.moe_down_grouped_async_prepack)
+                    {
+                        MoEPrepackJob job;
+                        job.layer = static_cast<std::uint32_t>(l);
+                        job.blkPrefix = prefix;
+                        job.expertPick = expertPick;
+                        job.hdim = hdim;
+                        job.dim = dim;
+                        job.cacheKey = mixKey;
+                        job.planRows = mixturePlanRows;
+                        tryEnqueueMoePrepack_(std::move(job));
+                    }
+                    ++m_moeGroupedFallbacks;
+                    if (weightedMode)
+                        ++m_moeGroupedWeightedFallbacks;
+                    else
+                        ++m_moeGroupedSingleExpertFallbacks;
+                    return false;
+                };
+
                 bool usedMixture = false;
                 if (config.moe_weighted_mixture && !moeExpertPick.empty() &&
                     moeMixtureWeights.size() == moeExpertPick.size())
                 {
-                    if (config.moe_down_enable_grouped_integration && m_moeMixturePlanPackCache)
-                    {
-                        const int kPick = static_cast<int>(moeExpertPick.size());
-                        if (chooseMoEDownProjectPath(static_cast<std::uint32_t>(l), static_cast<std::size_t>(hdim),
-                                                     static_cast<std::size_t>(dim),
-                                                     kPick) == RawrXD::MoEDownProject::Path::GroupedCached)
-                        {
-                            const std::string mixKey = makeMoeMixturePackCacheKey(0u, static_cast<std::uint32_t>(l),
-                                                                                  moeExpertPick, m_swarmPlanSliceIndex);
-                            std::vector<std::size_t> mixturePlanRows;
-                            collectMoeMixturePlanRowRefs(0u, static_cast<std::uint32_t>(l), moeExpertPick,
-                                                         m_swarmPlanSliceIndex, mixturePlanRows);
-                            const std::span<const std::size_t> mixtureRowsSpan(mixturePlanRows.data(),
-                                                                               mixturePlanRows.size());
-                            const float* packedPtr = nullptr;
-                            std::size_t packedCount = 0;
-                            if (m_moeMixturePlanPackCache->tryGet(mixKey, &packedPtr, &packedCount))
-                            {
-                                ++m_moeGroupedPackCacheHits;
-                                (void)packedPtr;
-                                (void)packedCount;
-                                ++m_moeGroupedFallbacks;
-                            }
-                            else
-                            {
-                                ++m_moeGroupedPackCacheMisses;
-                                if (config.moe_down_grouped_sync_pack_on_miss &&
-                                    tryMoeSyncPackMixtureIntoCache(static_cast<std::uint32_t>(l), prefix, moeExpertPick,
-                                                                   hdim, dim, mixKey, mixtureRowsSpan))
-                                    ++m_moeGroupedSyncPackInserts;
-                                else if (config.moe_down_grouped_async_prepack)
-                                {
-                                    MoEPrepackJob job;
-                                    job.layer = static_cast<std::uint32_t>(l);
-                                    job.blkPrefix = prefix;
-                                    job.expertPick = moeExpertPick;
-                                    job.hdim = hdim;
-                                    job.dim = dim;
-                                    job.cacheKey = mixKey;
-                                    job.planRows = mixturePlanRows;
-                                    tryEnqueueMoePrepack_(std::move(job));
-                                }
-                                ++m_moeGroupedFallbacks;
-                            }
-                        }
-                    }
-                    std::fill(moe_ffn_acc.begin(), moe_ffn_acc.end(), 0.f);
-                    bool anyPositiveW = false;
-                    for (std::size_t ii = 0; ii < moeExpertPick.size(); ++ii)
-                    {
-                        const float w = moeMixtureWeights[ii];
-                        if (w <= 0.f)
-                            continue;
-                        anyPositiveW = true;
-                        if (!forwardMoEExpertSwiGLU(loader, prefix, moeExpertPick[ii], x.data(), h1, h3, final_ffn, dim,
-                                                    hdim))
-                        {
-                            printf("[Forward] FATAL: MoE expert FFN failed blk.%d expert %u\n", l,
-                                   static_cast<unsigned>(moeExpertPick[ii]));
-                            return {};
-                        }
-                        for (int j = 0; j < dim; ++j)
-                            moe_ffn_acc[static_cast<std::size_t>(j)] += w * final_ffn[static_cast<std::size_t>(j)];
-                    }
-                    if (anyPositiveW)
-                    {
-                        for (int j = 0; j < dim; ++j)
-                            final_ffn[static_cast<std::size_t>(j)] = moe_ffn_acc[static_cast<std::size_t>(j)];
+                    if (tryRunGroupedMoEDown(moeExpertPick, moeMixtureWeights, true))
                         usedMixture = true;
+                    if (!usedMixture)
+                    {
+                        std::fill(moe_ffn_acc.begin(), moe_ffn_acc.end(), 0.f);
+                        bool anyPositiveW = false;
+                        for (std::size_t ii = 0; ii < moeExpertPick.size(); ++ii)
+                        {
+                            const float w = moeMixtureWeights[ii];
+                            if (w <= 0.f)
+                                continue;
+                            anyPositiveW = true;
+                            if (!forwardMoEExpertSwiGLU(loader, prefix, moeExpertPick[ii], x.data(), h1, h3, final_ffn,
+                                                        dim, hdim))
+                            {
+                                printf("[Forward] FATAL: MoE expert FFN failed blk.%d expert %u\n", l,
+                                       static_cast<unsigned>(moeExpertPick[ii]));
+                                return {};
+                            }
+                            for (int j = 0; j < dim; ++j)
+                                moe_ffn_acc[static_cast<std::size_t>(j)] += w * final_ffn[static_cast<std::size_t>(j)];
+                        }
+                        if (anyPositiveW)
+                        {
+                            for (int j = 0; j < dim; ++j)
+                                final_ffn[static_cast<std::size_t>(j)] = moe_ffn_acc[static_cast<std::size_t>(j)];
+                            usedMixture = true;
+                        }
                     }
                 }
                 if (!usedMixture)
@@ -1821,6 +2116,14 @@ std::vector<float> RawrXDTransformer::Forward(const std::vector<uint32_t>& token
                     std::uint32_t expertRun = 0;
                     if (!moeExpertPick.empty())
                         expertRun = moeExpertPick[0];
+                    if (!moeExpertPick.empty())
+                    {
+                        const std::vector<std::uint32_t> groupedPick = {expertRun};
+                        const std::vector<float> groupedWeights = {1.0f};
+                        usedMixture = tryRunGroupedMoEDown(groupedPick, groupedWeights, false);
+                    }
+                    if (usedMixture)
+                        continue;
                     if (!forwardMoEExpertSwiGLU(loader, prefix, expertRun, x.data(), h1, h3, final_ffn, dim, hdim))
                     {
                         printf("[Forward] FATAL: MoE FFN has no dense gate.weight and no ffn_experts.* tensors for "
@@ -1838,7 +2141,7 @@ std::vector<float> RawrXDTransformer::Forward(const std::vector<uint32_t>& token
                     x[i] = 0.0f;
             }
 
-            if (m_swarmScheduler)
+            if (layerSwarmActive)
             {
                 if (!layerPinnedPlanRows.empty())
                 {

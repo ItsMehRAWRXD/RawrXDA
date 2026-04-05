@@ -1,0 +1,7 @@
+LIBRARY RawrXD_Singularity_Test
+EXPORTS
+    k_swap_aperture_init
+    k_swap_aperture_map_chunk
+    k_swap_aperture_unmap_chunk
+    k_header_verify_fast
+    k_header_verify_fast_get_state

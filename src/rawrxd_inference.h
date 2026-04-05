@@ -3,11 +3,14 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <functional>
+#include <limits>
 #include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
+
 
 #ifdef RAWR_ENABLE_VULKAN
 #include <vulkan/vulkan.h>
@@ -15,6 +18,17 @@
 // Vulkan stubs for CPU mode
 #ifndef VK_NULL_HANDLE
 #define VK_NULL_HANDLE 0
+#endif
+#ifndef VK_STRUCTURE_TYPE_APPLICATION_INFO
+#define VK_STRUCTURE_TYPE_APPLICATION_INFO 0
+#define VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO 0
+#define VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO 0
+#define VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO 0
+#define VK_MAKE_VERSION(a, b, c) 0
+#define VK_API_VERSION_1_2 0
+#define VK_SUCCESS 0
+#define VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU 0
+#define VK_QUEUE_COMPUTE_BIT 0
 #endif
 typedef void* VkInstance;
 typedef void* VkPhysicalDevice;
@@ -44,15 +58,6 @@ typedef struct
 {
     uint32_t queueFlags;
 } VkQueueFamilyProperties;
-#define VK_STRUCTURE_TYPE_APPLICATION_INFO 0
-#define VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO 0
-#define VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO 0
-#define VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO 0
-#define VK_MAKE_VERSION(a, b, c) 0
-#define VK_API_VERSION_1_2 0
-#define VK_SUCCESS 0
-#define VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU 0
-#define VK_QUEUE_COMPUTE_BIT 0
 #endif
 #include "core/gguf_swarm_plan_builder.hpp"
 #include "rawrxd_model_loader.h"
@@ -60,6 +65,8 @@ typedef struct
 #include "rawrxd_tokenizer.h"
 #include "rawrxd_transformer.h"
 #include "swarm_scheduler.hpp"
+#include "titan_token_trace.h"
+#include "utf8_validator.h"
 
 /// Snapshot of MoE grouped pack cache + async prepack counters (Win32IDE HUD / staging telemetry).
 struct MoEPackHudMetrics
@@ -68,6 +75,10 @@ struct MoEPackHudMetrics
     std::uint64_t packMisses = 0;
     std::uint64_t groupedFallbacks = 0;
     std::uint64_t syncPackInserts = 0;
+    std::uint64_t groupedWeightedApplies = 0;
+    std::uint64_t groupedSingleExpertApplies = 0;
+    std::uint64_t groupedWeightedFallbacks = 0;
+    std::uint64_t groupedSingleExpertFallbacks = 0;
     std::uint64_t prepackInserts = 0;
     std::uint64_t prepackQueueDropped = 0;
     std::uint64_t prepackSkippedNotResident = 0;
@@ -77,6 +88,13 @@ struct MoEPackHudMetrics
     std::uint64_t packCacheEvictions = 0;
     std::uint64_t packCacheSelectiveRowInvalidations = 0;
 };
+
+inline void NormalizeMoEPackHudMetrics(MoEPackHudMetrics& m) noexcept
+{
+    const std::uint64_t splitFallbacks = m.groupedWeightedFallbacks + m.groupedSingleExpertFallbacks;
+    if (splitFallbacks > m.groupedFallbacks)
+        m.groupedFallbacks = splitFallbacks;
+}
 
 // RawrXD Real Inference Orchestrator
 // One-shot: Load model -> Tokenize -> Forward -> Sample -> Detokenize
@@ -92,6 +110,27 @@ class RawrXDInference
     uint32_t m_contextLimit = 0;
     std::vector<float> m_lastLogits;
     std::string m_lastLoadErrorMessage;
+    TitanTokenTraceBuffer<256> m_tokenTraceBuffer;  // Token pipeline tracing (256-entry ring buffer)
+    VkInstance m_vkInstance = VK_NULL_HANDLE;
+    VkPhysicalDevice m_vkPhysicalDevice = VK_NULL_HANDLE;
+    VkDevice m_vkDevice = VK_NULL_HANDLE;
+
+    void ResetOwnedVulkanContext() noexcept
+    {
+#ifdef RAWR_ENABLE_VULKAN
+        if (m_vkDevice != VK_NULL_HANDLE)
+        {
+            vkDestroyDevice(m_vkDevice, nullptr);
+            m_vkDevice = VK_NULL_HANDLE;
+        }
+        if (m_vkInstance != VK_NULL_HANDLE)
+        {
+            vkDestroyInstance(m_vkInstance, nullptr);
+            m_vkInstance = VK_NULL_HANDLE;
+        }
+#endif
+        m_vkPhysicalDevice = VK_NULL_HANDLE;
+    }
 
     // Helpers
     VkInstance CreateVulkanInstance()
@@ -167,9 +206,15 @@ class RawrXDInference
         {
             if (queueFamilies[i].queueFlags & VK_QUEUE_COMPUTE_BIT)
             {
-                computeFamily = i;
+                computeFamily = static_cast<int>(i);
                 break;
             }
+        }
+
+        if (computeFamily < 0)
+        {
+            printf("failed to find compute queue family!\n");
+            return VK_NULL_HANDLE;
         }
 
         float queuePriority = 1.0f;
@@ -197,25 +242,67 @@ class RawrXDInference
     }
 
   public:
+        ~RawrXDInference() { ResetOwnedVulkanContext(); }
+
+        RawrXDInference() = default;
+        RawrXDInference(const RawrXDInference&) = delete;
+        RawrXDInference& operator=(const RawrXDInference&) = delete;
+        RawrXDInference(RawrXDInference&&) = delete;
+        RawrXDInference& operator=(RawrXDInference&&) = delete;
+
     const std::string& GetLastLoadErrorMessage() const { return m_lastLoadErrorMessage; }
 
-    bool Initialize(const wchar_t* modelPath, const char* vocabPath, const char* mergesPath)
+    bool Initialize(const std::string& modelPath)
     {
+        m_initialized = false;
+        m_contextLimit = 0;
+        m_lastLogits.clear();
+        m_swarmScheduler.reset();
+        ResetOwnedVulkanContext();
+
+        if (modelPath.empty())
+        {
+            m_lastLoadErrorMessage = "init_args: missing modelPath";
+            return false;
+        }
+
         m_lastLoadErrorMessage.clear();
         loader.SetLoadErrorCallback([this](const std::string& stage, const std::string& message)
                                     { m_lastLoadErrorMessage = stage + ": " + message; });
 #ifdef RAWR_ENABLE_VULKAN
         VkInstance instance = CreateVulkanInstance();
+        VkPhysicalDevice physDevice = VK_NULL_HANDLE;
+        VkDevice device = VK_NULL_HANDLE;
+        auto cleanupVulkanInit = [&]()
+        {
+            if (device != VK_NULL_HANDLE)
+            {
+                vkDestroyDevice(device, nullptr);
+                device = VK_NULL_HANDLE;
+            }
+            if (instance != VK_NULL_HANDLE)
+            {
+                vkDestroyInstance(instance, nullptr);
+                instance = VK_NULL_HANDLE;
+            }
+        };
+
         if (!instance)
             return false;
 
-        VkPhysicalDevice physDevice = SelectPhysicalDevice(instance);
+        physDevice = SelectPhysicalDevice(instance);
         if (!physDevice)
+        {
+            cleanupVulkanInit();
             return false;
+        }
 
-        VkDevice device = CreateLogicalDevice(physDevice);
+        device = CreateLogicalDevice(physDevice);
         if (!device)
+        {
+            cleanupVulkanInit();
             return false;
+        }
 #else
         // CPU-only mode — no GPU required
         VkDevice device = VK_NULL_HANDLE;
@@ -224,13 +311,42 @@ class RawrXDInference
 #endif
 
         printf("[RawrXD] Stage: loader.Load\n");
-        if (!loader.Load(modelPath, device, physDevice))
+        int wideLength = MultiByteToWideChar(CP_UTF8, 0, modelPath.c_str(), -1, nullptr, 0);
+        if (wideLength <= 0)
+            wideLength = MultiByteToWideChar(CP_ACP, 0, modelPath.c_str(), -1, nullptr, 0);
+        if (wideLength <= 0)
+        {
+            m_lastLoadErrorMessage = "loader_load: model path conversion failed";
+#ifdef RAWR_ENABLE_VULKAN
+            cleanupVulkanInit();
+#endif
+            return false;
+        }
+
+        std::wstring wideModelPath(static_cast<size_t>(wideLength), L'\0');
+        int converted = MultiByteToWideChar(CP_UTF8, 0, modelPath.c_str(), -1, wideModelPath.data(), wideLength);
+        if (converted <= 0)
+            converted = MultiByteToWideChar(CP_ACP, 0, modelPath.c_str(), -1, wideModelPath.data(), wideLength);
+        if (converted <= 0)
+        {
+            m_lastLoadErrorMessage = "loader_load: model path conversion failed";
+#ifdef RAWR_ENABLE_VULKAN
+            cleanupVulkanInit();
+#endif
+            return false;
+        }
+
+        printf("[RawrXD] Loading model from: %ls\n", wideModelPath.c_str());
+        if (!loader.Load(wideModelPath.c_str(), device, physDevice))
         {
             if (m_lastLoadErrorMessage.empty())
             {
                 m_lastLoadErrorMessage = loader.GetLastLoadErrorMessage();
             }
             printf("[RawrXD] Failed to load model\n");
+#ifdef RAWR_ENABLE_VULKAN
+            cleanupVulkanInit();
+#endif
             return false;
         }
 
@@ -258,23 +374,124 @@ class RawrXDInference
         cfg.rope_theta = 10000.0f;
         cfg.rms_norm_eps = 1e-5f;
 
+        if (const char* ctxEnv = std::getenv("RAWRXD_INFERENCE_CTX"))
+        {
+            char* endPtr = nullptr;
+            const unsigned long requested = std::strtoul(ctxEnv, &endPtr, 10);
+            if (endPtr != ctxEnv && *endPtr == '\0')
+            {
+                constexpr uint32_t kMinCtx = 32;
+                constexpr uint32_t kMaxCtx = 131072;
+                const uint32_t clamped = static_cast<uint32_t>(std::min<unsigned long>(
+                    kMaxCtx,
+                    std::max<unsigned long>(kMinCtx, requested)));
+                cfg.n_ctx = clamped;
+                cfg.seq_len = clamped;
+                printf("[RawrXD] Context override active via RAWRXD_INFERENCE_CTX=%u\n", clamped);
+            }
+        }
+
+        // Staging: sovereign MoE grouped pack + async prepack (see RawrXDTransformer::Config). Off unless env set.
+        if (const char* moeEnv = std::getenv("RAWRXD_MOE_GROUPED_INTEGRATION"))
+        {
+            if (moeEnv && moeEnv[0] != '\0' && (moeEnv[0] == '1' || moeEnv[0] == 't' || moeEnv[0] == 'T' || moeEnv[0] == 'y' || moeEnv[0] == 'Y'))
+            {
+                cfg.moe_down_enable_grouped_integration = true;
+                cfg.moe_down_grouped_async_prepack = true;
+                cfg.moe_down_grouped_sync_pack_on_miss = false;
+            }
+        }
+
+        // Validate configuration bounds before passing to transformer
+        // Reject pathologically large or zero values for critical dimensions
+        const uint32_t MAX_REASONABLE_DIM = 32768;
+        const uint32_t MAX_REASONABLE_LAYERS = 256;
+        const uint32_t MAX_REASONABLE_HEADS = 512;
+        const uint32_t MAX_REASONABLE_VOCAB = 1000000;
+        
+        if (cfg.dim == 0 || cfg.dim > MAX_REASONABLE_DIM ||
+            cfg.n_layers == 0 || cfg.n_layers > MAX_REASONABLE_LAYERS ||
+            cfg.n_heads == 0 || cfg.n_heads > MAX_REASONABLE_HEADS ||
+            cfg.n_kv_heads == 0 || cfg.n_kv_heads > cfg.n_heads ||
+            cfg.vocab_size == 0 || cfg.vocab_size > MAX_REASONABLE_VOCAB)
+        {
+            m_lastLoadErrorMessage = "config_validation: transformer config values out of bounds (dim/layers/heads/vocab invalid)";
+            printf("[RawrXD] Config validation failed: dim=%d layers=%d heads=%d kv_heads=%d vocab=%d\n", 
+                   cfg.dim, cfg.n_layers, cfg.n_heads, cfg.n_kv_heads, cfg.vocab_size);
+#ifdef RAWR_ENABLE_VULKAN
+            cleanupVulkanInit();
+#endif
+            return false;
+        }
+
         printf("[RawrXD] Config: dim=%d layers=%d heads=%d kv_heads=%d vocab=%d hidden=%d ctx=%d\n", cfg.dim,
                cfg.n_layers, cfg.n_heads, cfg.n_kv_heads, cfg.vocab_size, cfg.hidden_dim, cfg.n_ctx);
+
+        printf("[RawrXD] Stage: tokenizer.Load\n");
+        if (!tokenizer.LoadFromGGUF(modelPath))
+        {
+            m_lastLoadErrorMessage = "tokenizer_load: failed to load vocab from GGUF";
+#ifdef RAWR_ENABLE_VULKAN
+            cleanupVulkanInit();
+#endif
+            return false;
+        }
+
         printf("[RawrXD] Stage: transformer.Initialize\n");
-        transformer.Initialize(device, physDevice, cfg, &loader);
+        try {
+            transformer.Initialize(device, physDevice, cfg, &loader);
+        }
+        catch (const std::exception& ex) {
+            m_lastLoadErrorMessage = std::string("transformer_init: exception during Initialize: ") + ex.what();
+            printf("[RawrXD] Transformer initialization threw exception: %s\n", ex.what());
+#ifdef RAWR_ENABLE_VULKAN
+            cleanupVulkanInit();
+#endif
+            return false;
+        }
+        catch (...) {
+            m_lastLoadErrorMessage = "transformer_init: unknown exception during Initialize";
+            printf("[RawrXD] Transformer initialization threw unknown exception\n");
+#ifdef RAWR_ENABLE_VULKAN
+            cleanupVulkanInit();
+#endif
+            return false;
+        }
 
         m_swarmScheduler = RawrXD::Swarm::makeSwarmSchedulerWithLoader(&loader);
+        if (!m_swarmScheduler)
+        {
+            m_lastLoadErrorMessage = "swarm_init: scheduler allocation failed";
+#ifdef RAWR_ENABLE_VULKAN
+            cleanupVulkanInit();
+#endif
+            return false;
+        }
         RawrXD::Swarm::SchedulerConfig swarmCfg;
         swarmCfg.enableAsyncPrefetchThread = true;
         swarmCfg.admitFirstSliceOnExecutePlan = false;
         swarmCfg.prefetchAheadLayers = 2;
         swarmCfg.prefetchIoPollMs = 4;
-        (void)m_swarmScheduler->configure(swarmCfg);
+        if (auto configureResult = m_swarmScheduler->configure(swarmCfg); !configureResult.has_value())
+        {
+            m_lastLoadErrorMessage = std::string("swarm_configure: ") +
+                                     RawrXD::Swarm::schedulerErrorMessage(configureResult.error());
+#ifdef RAWR_ENABLE_VULKAN
+            cleanupVulkanInit();
+#endif
+            return false;
+        }
 
         std::vector<RawrXD::Swarm::ModelSlice> swarmPlan;
         const uint64_t fileSz = loader.GetFileSizeBytes();
         const uint32_t nl = static_cast<uint32_t>(cfg.n_layers);
-        if (fileSz > 0 && nl > 0)
+        
+        // Validate file size and layer count are reasonable before division
+        if (fileSz == 0 || nl == 0)
+        {
+            printf("[RawrXD] Warning: Swarm plan skipped (fileSz=%llu nl=%u)\n", fileSz, nl);
+        }
+        else if (fileSz > 0 && nl > 0)
         {
             swarmPlan = RawrXD::Swarm::buildLayerSlicesFromGGUF(loader, nl);
             if (!swarmPlan.empty())
@@ -295,6 +512,8 @@ class RawrXDInference
             }
             else
             {
+                // Fallback: striped plan (only if fileSz/nl won't overflow)
+                const uint64_t per = fileSz / static_cast<uint64_t>(nl);
                 for (uint32_t li = 0; li < nl; ++li)
                 {
                     RawrXD::Swarm::ModelSlice s;
@@ -302,7 +521,6 @@ class RawrXDInference
                     s.id.layerStart = li;
                     s.id.layerEnd = li + 1u;
                     s.id.expertIndex = 0xFFFFFFFFu;
-                    const uint64_t per = fileSz / static_cast<uint64_t>(nl);
                     s.fileOffsetBytes = per * static_cast<uint64_t>(li);
                     s.byteSize = (li + 1u == nl) ? (fileSz - s.fileOffsetBytes) : per;
                     swarmPlan.push_back(std::move(s));
@@ -310,14 +528,34 @@ class RawrXDInference
                 printf("[RawrXD] Swarm plan: file/layer stripe fallback (%u slices)\n", nl);
             }
         }
-        (void)m_swarmScheduler->submitPlan(std::move(swarmPlan));
-        (void)m_swarmScheduler->executePlan();
+        if (auto submitResult = m_swarmScheduler->submitPlan(std::move(swarmPlan)); !submitResult.has_value())
+        {
+            m_lastLoadErrorMessage = std::string("swarm_submit_plan: ") +
+                                     RawrXD::Swarm::schedulerErrorMessage(submitResult.error());
+#ifdef RAWR_ENABLE_VULKAN
+            cleanupVulkanInit();
+#endif
+            return false;
+        }
+        if (auto executeResult = m_swarmScheduler->executePlan(); !executeResult.has_value())
+        {
+            m_lastLoadErrorMessage = std::string("swarm_execute_plan: ") +
+                                     RawrXD::Swarm::schedulerErrorMessage(executeResult.error());
+#ifdef RAWR_ENABLE_VULKAN
+            cleanupVulkanInit();
+#endif
+            return false;
+        }
         transformer.SetSwarmScheduler(m_swarmScheduler.get());
 
-        printf("[RawrXD] Stage: tokenizer.Load\n");
-        tokenizer.Load(vocabPath);
         m_contextLimit = static_cast<uint32_t>(cfg.n_ctx);
         m_lastLogits.clear();
+
+    #ifdef RAWR_ENABLE_VULKAN
+        m_vkInstance = instance;
+        m_vkPhysicalDevice = physDevice;
+        m_vkDevice = device;
+    #endif
 
         printf("[RawrXD] Inference engine READY\n");
         m_initialized = true;
@@ -361,6 +599,11 @@ class RawrXDInference
         m.packMisses = transformer.moeGroupedPackCacheMisses();
         m.groupedFallbacks = transformer.moeGroupedFallbacks();
         m.syncPackInserts = transformer.moeGroupedSyncPackInserts();
+        m.groupedWeightedApplies = transformer.moeGroupedWeightedApplies();
+        m.groupedSingleExpertApplies = transformer.moeGroupedSingleExpertApplies();
+        m.groupedWeightedFallbacks = transformer.moeGroupedWeightedFallbacks();
+        m.groupedSingleExpertFallbacks = transformer.moeGroupedSingleExpertFallbacks();
+        NormalizeMoEPackHudMetrics(m);
         m.prepackInserts = transformer.moePrepackInserts();
         m.prepackQueueDropped = transformer.moePrepackQueueDropped();
         m.prepackSkippedNotResident = transformer.moePrepackSkippedNotResident();
@@ -382,6 +625,23 @@ class RawrXDInference
             return false;
         }
         return m_swarmScheduler->captureExpertHeatmapSnapshot(params, out);
+    }
+
+    /// EMA-to-SDMA Binding: Predict next expert ID for kinetic prefetching.
+    /// Queries SwarmScheduler's m_recentExpertPins to identify high-probability expert.
+    /// @param current_layer: Layer index currently executing
+    /// @param model_index: Model ID (multi-model swarm support)
+    /// @return Predicted expert ordinal (0xFFFFFFFF if no prediction available)
+    [[nodiscard]] std::uint32_t PredictNextExpertId(std::uint32_t current_layer, std::uint32_t model_index = 0) const
+    {
+        if (!m_swarmScheduler)
+            return 0xFFFFFFFFu;  // No EMA predictor available
+        
+        // Query SwarmScheduler for most likely speculative expert in next layer
+        // (This is a simplified heuristic - full implementation would query isLikelySpeculativeExpert_)
+        // For now, return first expert in MoE layer as baseline (layer-local ordinal 0)
+        // TODO: Expose SwarmScheduler::isLikelySpeculativeExpert_() or equivalent prediction API
+        return 0;  // Baseline: always predict expert 0 (temporal locality)
     }
 
     // Expose loader metadata to facade
@@ -406,13 +666,103 @@ class RawrXDInference
         return tokenizer.Decode(tokens);
     }
 
+    // Token pipeline tracing API
+    TitanTokenTraceBuffer<256>& GetTokenTraceBuffer() { return m_tokenTraceBuffer; }
+
+    // Dump recent traces to JSON summary (useful for diagnostics)
+    std::string DumpTokenTraceSummary(size_t lastNTokens = 128)
+    {
+        TitanTokenTrace::Stalls avg_stalls = {};
+        uint8_t dominant_cause = 0;
+        m_tokenTraceBuffer.compute_aggregates(lastNTokens, avg_stalls, dominant_cause);
+
+        char buffer[512];
+        snprintf(buffer, sizeof(buffer),
+            "{\n"
+            "  \"avg_tps\": %.2f,\n"
+            "  \"avg_compute_ms\": %u,\n"
+            "  \"avg_weight_ms\": %u,\n"
+            "  \"avg_sched_ms\": %u,\n"
+            "  \"avg_kv_ms\": %u,\n"
+            "  \"dominant_cause\": \"%s\"\n"
+            "}\n",
+            (avg_stalls.total_time_us > 0) ? (1000000.0f / avg_stalls.total_time_us) : 0.0f,
+            avg_stalls.compute_time_us / 1000,
+            avg_stalls.weight_latency_us / 1000,
+            avg_stalls.sched_delay_us / 1000,
+            avg_stalls.kv_latency_us / 1000,
+            TitanTokenTrace::cause_name(dominant_cause));
+
+        return std::string(buffer);
+    }
+
+    // Dump all token traces to CSV file for offline analysis
+    void DumpTokenTracesToCSV(const char* filepath)
+    {
+        m_tokenTraceBuffer.dump_csv(filepath);
+    }
+
+    // Diagnose a specific token for corruption/misalignment issues
+    std::string DiagnoseToken(uint32_t token_id)
+    {
+        if (!m_initialized)
+            return "ERROR: inference not initialized";
+
+        // Attempt to decode the token
+        std::vector<uint32_t> tokens = {token_id};
+        std::string decoded = tokenizer.DecodeSafe(tokens);
+
+        // Check bounds
+        int vocab_size = loader.getVocabSize();
+        bool id_valid = UTF8Validator::is_valid_token_id(token_id, vocab_size);
+
+        // Check for replacement characters
+        bool has_replacement = UTF8Validator::contains_replacement_char(decoded);
+
+        // Check UTF-8 validity
+        bool valid_utf8 = UTF8Validator::is_valid_utf8_string(decoded.c_str());
+
+        char buffer[256];
+        snprintf(buffer, sizeof(buffer),
+            "token_id=%u vocab_size=%d valid_id=%d decoded_len=%zu valid_utf8=%d has_replacement=%d",
+            token_id,
+            vocab_size,
+            id_valid ? 1 : 0,
+            decoded.length(),
+            valid_utf8 ? 1 : 0,
+            has_replacement ? 1 : 0);
+
+        return std::string(buffer);
+    }
+
     std::vector<float> ForwardTokens(const std::vector<uint32_t>& tokens, uint32_t startPos = 0)
     {
         if (!m_initialized || tokens.empty())
         {
             return {};
         }
-        m_lastLogits = transformer.Forward(tokens, startPos);
+        if (startPos > static_cast<uint32_t>(std::numeric_limits<int>::max()))
+        {
+            m_lastLoadErrorMessage = "forward_tokens: startPos exceeds transformer int range";
+            return {};
+        }
+
+        try
+        {
+            m_lastLogits = transformer.Forward(tokens, static_cast<int>(startPos));
+        }
+        catch (const std::exception& ex)
+        {
+            m_lastLoadErrorMessage = std::string("forward_tokens: ") + ex.what();
+            m_lastLogits.clear();
+            return {};
+        }
+        catch (...)
+        {
+            m_lastLoadErrorMessage = "forward_tokens: unknown exception";
+            m_lastLogits.clear();
+            return {};
+        }
         return m_lastLogits;
     }
 
@@ -436,20 +786,74 @@ class RawrXDInference
         {
             tokens.erase(tokens.begin(), tokens.end() - m_contextLimit);
         }
+        
+        // Initialize trace for this generation session
+        TitanTokenTrace currentTrace = {};
+        currentTrace.batch_id = static_cast<uint16_t>((uintptr_t)this & 0xFFFF);  // Use object address as session ID
+        currentTrace.vocab_size = vocabSize;
+        currentTrace.layer_count = loader.getLayers();
+        currentTrace.expert_count = 0;  // TODO: extract from MoE config if present
+        currentTrace.record_t0();  // Mark generation loop start
+        
+        // Validate all input prompt tokens are within vocab bounds
         for (auto& t : tokens)
         {
-            if (t >= vocabSize)
-                t %= vocabSize;
+            if (t >= vocabSize) {
+                m_lastLoadErrorMessage = "generate_from_tokens: input prompt contains invalid token (token=" 
+                    + std::to_string(t) + ", vocabSize=" + std::to_string(vocabSize) + ")";
+                m_lastLogits.clear();
+                return generated;
+            }
         }
 
-        auto logits = transformer.Forward(tokens, 0);
+        std::vector<float> logits;
+        try
+        {
+            currentTrace.record_t1();  // Scheduler dispatch
+            logits = transformer.Forward(tokens, 0);
+            currentTrace.record_t2();  // Weights ready
+        }
+        catch (const std::exception& ex)
+        {
+            m_lastLoadErrorMessage = std::string("generate_from_tokens: initial forward failed: ") + ex.what();
+            m_lastLogits.clear();
+            return generated;
+        }
+        catch (...)
+        {
+            m_lastLoadErrorMessage = "generate_from_tokens: initial forward failed with unknown exception";
+            m_lastLogits.clear();
+            return generated;
+        }
         m_lastLogits = logits;
         uint32_t absolutePos = static_cast<uint32_t>(tokens.size());
+
+        // Emit one prefill-stage trace row so diagnostics survive long prefill runs
+        // even if generation does not reach the first sampled token yet.
+        {
+            TitanTokenTrace prefillTrace = currentTrace;
+            prefillTrace.token_id = tokens.empty() ? 0u : tokens.back();
+            prefillTrace.record_t3();
+            prefillTrace.record_t4();
+            prefillTrace.record_t5();
+            prefillTrace.record_t6();
+            prefillTrace.compute_stalls();
+            m_tokenTraceBuffer.push(prefillTrace);
+        }
 
         for (uint32_t i = 0; i < maxTokens; i++)
         {
             if (logits.empty())
                 break;
+            
+            // Validation: logits array must contain exactly vocabSize elements
+            // Mismatch indicates Forward() error or model config corruption
+            if (static_cast<uint32_t>(logits.size()) != vocabSize) {
+                m_lastLoadErrorMessage = "generate_from_tokens: logits size mismatch (got " 
+                    + std::to_string(logits.size()) + ", expected " + std::to_string(vocabSize) + ")";
+                m_lastLogits.clear();
+                return generated;
+            }
 
             bool hasFinite = false;
             for (float v : logits)
@@ -463,29 +867,91 @@ class RawrXDInference
             if (!hasFinite)
                 break;
 
-            uint32_t nextToken = sampler.Sample(logits.data(), logits.size(), tokens);
+            uint32_t nextToken = 0;
+            try
+            {
+                currentTrace.record_t3();  // Compute begin (pre-sample)
+                nextToken = sampler.Sample(logits.data(), logits.size(), tokens);
+                currentTrace.record_t4();  // Compute end (post-sample softmax)
+            }
+            catch (const std::exception& ex)
+            {
+                m_lastLoadErrorMessage = std::string("generate_from_tokens: sampler failed: ") + ex.what();
+                m_lastLogits.clear();
+                return generated;
+            }
+            catch (...)
+            {
+                m_lastLoadErrorMessage = "generate_from_tokens: sampler failed with unknown exception";
+                m_lastLogits.clear();
+                return generated;
+            }
+            
+            // Token must be within vocab bounds (no silent wrapping allowed)
             if (nextToken >= vocabSize)
             {
-                nextToken %= vocabSize;
+                m_lastLoadErrorMessage = "generate_from_tokens: sampler returned invalid token (token=" 
+                    + std::to_string(nextToken) + ", vocabSize=" + std::to_string(vocabSize) + ")";
+                m_lastLogits.clear();
+                return generated;
             }
+            
+            currentTrace.token_id = nextToken;
+            currentTrace.record_t5();  // KV cache updated
+            
             tokens.push_back(nextToken);
             if (m_contextLimit > 0 && tokens.size() > m_contextLimit)
             {
                 tokens.erase(tokens.begin(), tokens.end() - m_contextLimit);
             }
             generated.push_back(nextToken);
+            
+            // Record token emission and compute stall attribution
+            currentTrace.record_t6();
+            currentTrace.compute_stalls();
+            m_tokenTraceBuffer.push(currentTrace);
+            
+            // Prepare for next iteration
+            currentTrace.record_t0();
 
             if (nextToken == 2)
                 break;
 
             std::vector<uint32_t> nextTokVec = {nextToken};
-            logits = transformer.Forward(nextTokVec, absolutePos);
+            if (absolutePos > static_cast<uint32_t>(std::numeric_limits<int>::max()))
+            {
+                m_lastLoadErrorMessage = "generate_from_tokens: absolute position exceeds transformer int range";
+                m_lastLogits.clear();
+                return generated;
+            }
+            try
+            {
+                logits = transformer.Forward(nextTokVec, static_cast<int>(absolutePos));
+            }
+            catch (const std::exception& ex)
+            {
+                m_lastLoadErrorMessage = std::string("generate_from_tokens: incremental forward failed: ") + ex.what();
+                m_lastLogits.clear();
+                return generated;
+            }
+            catch (...)
+            {
+                m_lastLoadErrorMessage = "generate_from_tokens: incremental forward failed with unknown exception";
+                m_lastLogits.clear();
+                return generated;
+            }
+            if (absolutePos == std::numeric_limits<uint32_t>::max())
+            {
+                m_lastLoadErrorMessage = "generate_from_tokens: absolute position overflow";
+                m_lastLogits.clear();
+                return generated;
+            }
             absolutePos++;
             m_lastLogits = logits;
 
             if (callback)
             {
-                const std::string piece = tokenizer.Decode({nextToken});
+                const std::string piece = tokenizer.DecodeSafe({nextToken});
                 try
                 {
                     callback(nextToken, piece);

@@ -122,13 +122,19 @@ inline void AgenticFileOperations::modifyFileWithApproval(const std::string& fil
 
 inline void AgenticFileOperations::deleteFileWithApproval(const std::string& filePath)
 {
+    std::string oldContent;
+    {
+        std::ifstream f(filePath);
+        if (f) oldContent.assign(std::istreambuf_iterator<char>(f), {});
+    }
+
     if (!requestApproval(filePath, AgenticFileActionType::DELETE_FILE, nullptr)) {
         if (m_onCancelled) m_onCancelled(filePath);
         return;
     }
     std::remove(filePath.c_str());
     if (m_actionHistory.size() < MAX_HISTORY)
-        m_actionHistory.push_back({ filePath, AgenticFileActionType::DELETE_FILE, {}, {}, std::chrono::system_clock::now() });
+        m_actionHistory.push_back({ filePath, AgenticFileActionType::DELETE_FILE, {}, oldContent, std::chrono::system_clock::now() });
     if (m_onDeleted) m_onDeleted(filePath);
 }
 
@@ -141,6 +147,9 @@ inline void AgenticFileOperations::undoLastAction()
         if (f) f << last.oldContent;
     } else if (last.actionType == AgenticFileActionType::CREATE_FILE) {
         std::remove(last.filePath.c_str());
+    } else if (last.actionType == AgenticFileActionType::DELETE_FILE) {
+        std::ofstream f(last.filePath);
+        if (f) f << last.oldContent;
     }
     if (m_onUndone) m_onUndone(last.filePath);
     m_actionHistory.pop_back();

@@ -303,11 +303,18 @@ void Win32IDE::hideSubAgentProgress() {
 
 void Win32IDE::showSwarmStatus() {
     if (!m_agenticBridge) {
+        initializeAgenticBridge();
+    }
+    if (!m_agenticBridge) {
         appendToOutput("SubAgent system not initialized.\n", "Output", OutputSeverity::Warning);
         return;
     }
 
     auto* mgr = m_agenticBridge->GetSubAgentManager();
+    if (!mgr) {
+        m_agenticBridge->Initialize("", m_agenticBridge->GetCurrentModel());
+        mgr = m_agenticBridge->GetSubAgentManager();
+    }
     if (!mgr) {
         appendToOutput("SubAgentManager not initialized.\n", "Output", OutputSeverity::Warning);
         return;

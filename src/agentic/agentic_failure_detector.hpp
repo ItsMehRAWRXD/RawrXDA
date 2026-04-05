@@ -1,2 +1,3 @@
 #pragma once
-// Stub for agentic_failure_detector.hpp
+// Forward to the canonical implementation in src/agent/
+#include "../agent/agentic_failure_detector.hpp"

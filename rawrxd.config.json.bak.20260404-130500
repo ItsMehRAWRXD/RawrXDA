@@ -1,0 +1,126 @@
+{
+  "inference": {
+    "topP": 0.9,
+    "repetitionPenalty": 1.1,
+    "batchSize": 512,
+    "topK": 40,
+    "maxTokens": 512,
+    "temperature": 0.7,
+    "embeddingFoldMode": "mean",
+    "contextSize": 4096,
+    "threads": 8,
+    "gpuLayers": 0
+  },
+  "theme": {
+    "accent": "#007ACC",
+    "activityBarBackground": "#333333",
+    "sidebarBackground": "#252526",
+    "background": "#1E1E1E",
+    "statusBarBackground": "#007ACC",
+    "name": "Dark Modern",
+    "foreground": "#D4D4D4"
+  },
+  "ollama": {
+    "timeout": 30,
+    "model": "llama2",
+    "baseUrl": "http://localhost:11434"
+  },
+  "agent": {
+    "memoryLimit": 1024,
+    "autoApprove": false,
+    "cycleCount": 10,
+    "cycleAgentCounter": 1,
+    "qualitySpeedBalance": "Auto",
+    "sandboxed": true,
+    "perModelInstances": 1,
+    "maxIterations": 10
+  },
+  "editor": {
+    "autoSave": false,
+    "wordWrap": true,
+    "fontSize": 14,
+    "lineNumbers": true,
+    "fontFamily": "Consolas",
+    "minimap": true,
+    "autoSaveInterval": 30,
+    "tabSize": 4
+  },
+  "debugger": {
+    "stopOnEntry": false,
+    "engine": "gdb",
+    "showDisassembly": false,
+    "externalConsole": false
+  },
+  "features": {
+    "gitIntegration": true,
+    "autonomy": true,
+    "flashAttention": true,
+    "speculativeDecoding": true,
+    "gpuRenderer": true,
+    "vulkanCompute": false,
+    "agenticBridge": true,
+    "debugger": true,
+    "reverseEngineering": true,
+    "extensionSystem": true,
+    "powerShellPanel": true,
+    "voiceAutomation": true,
+    "copilotChat": true,
+    "metricsExport": true,
+    "commandPalette": true
+  },
+  "performance": {
+    "lazyInit": true,
+    "maxMemoryMB": 2048,
+    "deferredRendering": true
+  },
+  "reverseEngineering": {
+    "maxFileSize": 104857600,
+    "dumpbinPath": "",
+    "defaultFormat": "hex"
+  },
+  "terminal": {
+    "timeoutMs": 30000,
+    "fontSize": 13,
+    "scrollback": 10000,
+    "timeoutMode": "fixed",
+    "timeoutMinMs": 10000,
+    "timeoutMaxMs": 120000,
+    "shell": "powershell.exe",
+    "cursorStyle": "block"
+  },
+  "voiceAutomation": {
+    "defaultProvider": "WindowsSAPI",
+    "rate": 1.0,
+    "enabled": false,
+    "pitch": 1.0,
+    "pluginSearchPaths": "plugins;voice_plugins;extensions/voice",
+    "speakOnStream": true,
+    "interruptOnNew": true,
+    "volume": 0.8,
+    "maxQueueSize": 32,
+    "defaultVoice": ""
+  },
+  "modelServer": {
+    "tiinyAI": {
+      "command": "D:\\rawrxd\\bin\\tiinyai.exe",
+      "port": 45100
+    },
+    "configPath": "D:\\rawrxd\\ide\\model-server\\config.json",
+    "pyre": {
+      "command": "D:\\rawrxd\\build_ide_output\\CodexAIReverseEngine.exe",
+      "port": 45102
+    },
+    "aiPort": 3001,
+    "gguf": {
+      "command": "D:\\rawrxd\\build_ide_output\\CodexAIReverseEngine.exe",
+      "port": 45101
+    },
+    "proxyPort": 3000
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "rawrxd.log",
+    "maxSizeMB": 50,
+    "rotateCount": 5
+  }
+}

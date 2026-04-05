@@ -82,6 +82,9 @@ class RawrXDTransformer
         int moe_down_policy_divergence_logs_per_minute_cap = 32;
         /// Experimental: run grouped down-pack cache probe in MoE mixture path (math still uses per-expert SwiGLU).
         bool moe_down_enable_grouped_integration = false;
+        /// When true with grouped integration, use batched down-project on pack-cache hit (\ref
+        /// MoEAccumRef::moeDownProjectBatchedExpertsFromPackedF32); shadow mode keeps this false.
+        bool moe_down_use_grouped_down_math = false;
         /// LRU capacity for \ref MoEIntegr::MoEMixturePlanPackCache (minimum 1 when integration is enabled).
         int moe_down_grouped_pack_cache_max_entries = 16;
         /// Max total packed float payload bytes for the mixture pack cache (`0` = no byte cap, entry limit only).
@@ -131,6 +134,19 @@ class RawrXDTransformer
     [[nodiscard]] std::uint64_t moeGroupedPackCacheMisses() const noexcept { return m_moeGroupedPackCacheMisses; }
     [[nodiscard]] std::uint64_t moeGroupedFallbacks() const noexcept { return m_moeGroupedFallbacks; }
     [[nodiscard]] std::uint64_t moeGroupedSyncPackInserts() const noexcept { return m_moeGroupedSyncPackInserts; }
+    [[nodiscard]] std::uint64_t moeGroupedWeightedApplies() const noexcept { return m_moeGroupedWeightedApplies; }
+    [[nodiscard]] std::uint64_t moeGroupedSingleExpertApplies() const noexcept
+    {
+        return m_moeGroupedSingleExpertApplies;
+    }
+    [[nodiscard]] std::uint64_t moeGroupedWeightedFallbacks() const noexcept
+    {
+        return m_moeGroupedWeightedFallbacks;
+    }
+    [[nodiscard]] std::uint64_t moeGroupedSingleExpertFallbacks() const noexcept
+    {
+        return m_moeGroupedSingleExpertFallbacks;
+    }
 
     /// Entries removed because a referenced swarm plan row's slice left the working set.
     [[nodiscard]] std::uint64_t moePackEvictedByPlanRow() const noexcept { return m_moePackEvictedByPlanRow; }
@@ -163,6 +179,8 @@ class RawrXDTransformer
     std::function<void(const std::string&)> m_layerProgressCb;
     RawrXD::Swarm::ISwarmScheduler* m_swarmScheduler = nullptr;
     RawrXD::Swarm::SwarmPlanSliceIndex m_swarmPlanSliceIndex{};
+    bool m_swarmPinningSuppressed = false;
+    std::uint32_t m_swarmPinFailureStreak = 0;
 
     /// On success, appends plan row indices passed to `pinPlanRows` (for matching `unpinPlanRows`).
     /// When \p appendPinnedRows is false, \p outPinnedPlanRows is cleared first.
@@ -239,6 +257,10 @@ class RawrXDTransformer
     std::uint64_t m_moeGroupedPackCacheMisses = 0;
     std::uint64_t m_moeGroupedFallbacks = 0;
     std::uint64_t m_moeGroupedSyncPackInserts = 0;
+    std::uint64_t m_moeGroupedWeightedApplies = 0;
+    std::uint64_t m_moeGroupedSingleExpertApplies = 0;
+    std::uint64_t m_moeGroupedWeightedFallbacks = 0;
+    std::uint64_t m_moeGroupedSingleExpertFallbacks = 0;
 
     std::uint64_t m_moePackEvictedByPlanRow = 0;
     std::uint64_t m_moePrepackQueueDropped = 0;

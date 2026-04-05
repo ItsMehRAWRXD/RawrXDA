@@ -9,6 +9,47 @@
 #include <iomanip>
 #include <fstream>
 #include <map>
+#include <cstdint>
+#include <cstring>
+
+namespace {
+void wipeStringMemory(std::string& value)
+{
+    if (!value.empty()) {
+        SecureZeroMemory(value.data(), value.size());
+        value.clear();
+        value.shrink_to_fit();
+    }
+}
+
+HWND g_titanDiagWindow = nullptr;
+
+void TitanDiagnosticForwarder(const char* text)
+{
+    HWND hwnd = g_titanDiagWindow;
+    if (!hwnd || !text || !*text)
+        return;
+
+    WPARAM type = 0;
+    if (strstr(text, "error") || strstr(text, "ERROR") || strstr(text, "fail") || strstr(text, "FAIL"))
+    {
+        type = 2;
+    }
+    else if (strstr(text, "warn") || strstr(text, "WARN"))
+    {
+        type = 1;
+    }
+
+    char* heapCopy = _strdup(text);
+    if (!heapCopy)
+        return;
+
+    if (!PostMessageA(hwnd, WM_RAWR_LOG_MESSAGE, type, reinterpret_cast<LPARAM>(heapCopy)))
+    {
+        free(heapCopy);
+    }
+}
+}
 
 // SCAFFOLD_270: Status bar and Copilot status
 
@@ -239,6 +280,12 @@ void Win32IDE::createSecondarySidebar(HWND hwndParent)
         WS_CHILD | WS_VISIBLE,
         0, 0, m_secondarySidebarWidth, 600,
         hwndParent, (HMENU)IDC_SECONDARY_SIDEBAR, m_hInstance, nullptr);
+
+    if (m_hwndSecondarySidebar) {
+        SetWindowLongPtrA(m_hwndSecondarySidebar, GWLP_USERDATA, (LONG_PTR)this);
+        m_oldSidebarProc =
+            (WNDPROC)SetWindowLongPtrA(m_hwndSecondarySidebar, GWLP_WNDPROC, (LONG_PTR)SidebarProcImpl);
+    }
     
     // Header label
     m_hwndSecondarySidebarHeader = CreateWindowExA(
@@ -260,6 +307,12 @@ void Win32IDE::createSecondarySidebar(HWND hwndParent)
         WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN | WS_VSCROLL,
         5, 490, m_secondarySidebarWidth - 10, 60,
         m_hwndSecondarySidebar, (HMENU)IDC_COPILOT_CHAT_INPUT, m_hInstance, nullptr);
+
+    if (m_hwndCopilotChatInput) {
+        m_oldCopilotInputProc =
+            (WNDPROC)SetWindowLongPtrA(m_hwndCopilotChatInput, GWLP_WNDPROC, (LONG_PTR)CopilotChatInputProc);
+        SetWindowLongPtrA(m_hwndCopilotChatInput, GWLP_USERDATA, (LONG_PTR)this);
+    }
     
     // Send button
     m_hwndCopilotSendBtn = CreateWindowExA(
@@ -267,6 +320,12 @@ void Win32IDE::createSecondarySidebar(HWND hwndParent)
         WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
         5, 555, 80, 28,
         m_hwndSecondarySidebar, (HMENU)IDC_COPILOT_SEND_BTN, m_hInstance, nullptr);
+
+    if (m_hwndCopilotSendBtn) {
+        m_oldCopilotSendBtnProc =
+            (WNDPROC)SetWindowLongPtrA(m_hwndCopilotSendBtn, GWLP_WNDPROC, (LONG_PTR)CopilotButtonProc);
+        SetWindowLongPtrA(m_hwndCopilotSendBtn, GWLP_USERDATA, (LONG_PTR)this);
+    }
     
     // Clear button
     m_hwndCopilotClearBtn = CreateWindowExA(
@@ -274,17 +333,28 @@ void Win32IDE::createSecondarySidebar(HWND hwndParent)
         WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
         90, 555, 80, 28,
         m_hwndSecondarySidebar, (HMENU)IDC_COPILOT_CLEAR_BTN, m_hInstance, nullptr);
+
+    if (m_hwndCopilotClearBtn) {
+        m_oldCopilotClearBtnProc =
+            (WNDPROC)SetWindowLongPtrA(m_hwndCopilotClearBtn, GWLP_WNDPROC, (LONG_PTR)CopilotButtonProc);
+        SetWindowLongPtrA(m_hwndCopilotClearBtn, GWLP_USERDATA, (LONG_PTR)this);
+    }
     
-    // Set initial message
-    SetWindowTextA(m_hwndCopilotChatOutput, 
-        "GitHub Copilot Chat\r\n"
-        "==================\r\n\r\n"
-        "Ask me anything about your code!\r\n\r\n"
-        "Examples:\r\n"
-        "- Explain this code\r\n"
-        "- How do I fix this error?\r\n"
-        "- Generate unit tests\r\n"
-        "- Refactor this function\r\n");
+    // Initialize Ollama bridge for streaming completions
+    if (!m_ollamaBridge) {
+        m_ollamaBridge = std::make_unique<RawrXD::OllamaBridge>();
+        if (m_ollamaBridge->Initialize()) {
+            m_ollamaBridge->SetContextWindow(4096);  // Optimize for IDE chat
+            m_ollamaBackendEnabled = true;
+            RAWRXD_LOG_INFO("Win32IDE_VSCodeUI") << "✅ Ollama bridge initialized at 127.0.0.1:11434";
+        } else {
+            m_ollamaBackendEnabled = false;
+            RAWRXD_LOG_WARNING("Win32IDE_VSCodeUI") << "⚠️ Ollama bridge init failed";
+        }
+    }
+    
+    clearCopilotChat();
+    tryConfigureNativeStreamBridge();
 
     // If the full chat panel added mode toggles elsewhere, this path has none — safe no-op when null.
     syncAgentModeUiFromBridge();
@@ -296,6 +366,14 @@ void Win32IDE::updateSecondarySidebarContent()
 {
     // Update chat display with history + tool action status + working bubbles
     std::string chatText;
+    if (m_chatHistory.empty()) {
+        chatText = "GitHub Copilot Chat\r\n"
+                   "==================\r\n\r\n"
+                   "Chat cleared. Ask me anything about your code!\r\n";
+        SetWindowTextA(m_hwndCopilotChatOutput, chatText.c_str());
+        return;
+    }
+
     for (size_t i = 0; i < m_chatHistory.size(); ++i) {
         const auto& msg = m_chatHistory[i];
         if (msg.first == "user") {
@@ -336,28 +414,90 @@ void Win32IDE::sendCopilotMessage(const std::string& message)
     // Add user message to history
     m_chatHistory.push_back({"user", message});
     
-    // Generate response using the AI inference system
-    std::string response;
+    // Append user message to chat display immediately
+    {
+        std::string userDisplay = "You: " + message + "\r\n\r\n";
+        SendMessage(m_hwndCopilotChatOutput, EM_SETSEL, -1, -1);
+        SendMessage(m_hwndCopilotChatOutput, EM_REPLACESEL, FALSE, (LPARAM)userDisplay.c_str());
+    }
     
-    if (isModelLoaded()) {
-        RAWRXD_LOG_INFO("Win32IDE_VSCodeUI") << "[sendCopilotMessage] Model is loaded, calling generateResponse...";
-        // Use the loaded GGUF model for inference
-        response = generateResponse(message);
-        RAWRXD_LOG_INFO("Win32IDE_VSCodeUI") << "[sendCopilotMessage] Inference response: " << response;
-    } else {
-        // No model loaded - prompt user to load one
-        RAWRXD_LOG_WARNING("Win32IDE_VSCodeUI") << "[sendCopilotMessage] No model loaded!";
-        response = "⚠️ No AI model loaded.\r\n\r\n"
-                   "To use AI assistance, please load a GGUF model:\r\n"
-                   "1. Open the File Explorer (Activity Bar → Explorer icon)\r\n"
-                   "2. Navigate to a folder containing .gguf files\r\n"
-                   "3. Double-click a model file to load it\r\n\r\n"
-                   "Supported models: LLaMA, Mistral, Phi, Qwen, and other GGUF-compatible models.\r\n\r\n"
-                   "Once loaded, I can help with:\r\n"
-                   "• Code explanation and analysis\r\n"
-                   "• Bug fixing suggestions\r\n"
-                   "• Code generation\r\n"
-                   "• Programming questions";
+    // Try Ollama backend first (streaming)
+    std::string response;
+    bool useOllama = m_ollamaBackendEnabled && m_ollamaBridge;
+    
+    if (useOllama) {
+        // Start streaming from Ollama
+        RAWRXD_LOG_INFO("Win32IDE_VSCodeUI") << "[sendCopilotMessage] Using Ollama backend (streaming)";
+        
+        std::string model = "phi:latest";  // Default model in Ollama
+        
+        // Create callback that appends tokens directly to chat output
+        auto tokenCallback = [this](const std::string& token, bool done) {
+            if (!token.empty() && m_hwndCopilotChatOutput) {
+                appendStreamingToken(token);
+
+                // Append token to chat output
+                SendMessage(m_hwndCopilotChatOutput, EM_SETSEL, -1, -1);
+                SendMessage(m_hwndCopilotChatOutput, EM_REPLACESEL, FALSE, (LPARAM)token.c_str());
+                
+                // Auto-scroll to bottom
+                SendMessage(m_hwndCopilotChatOutput, EM_SCROLLCARET, 0, 0);
+            }
+            
+            if (done) {
+                // Append completion marker and spacing
+                std::string marker = "\r\n\r\nCopilot: ";
+                SendMessage(m_hwndCopilotChatOutput, EM_SETSEL, -1, -1);
+                SendMessage(m_hwndCopilotChatOutput, EM_REPLACESEL, FALSE, (LPARAM)"\r\n\r\n");
+            }
+        };
+        
+        // Stream the completion
+        bool streamSuccess = m_ollamaBridge->StreamCompletion(model, message, tokenCallback);
+        
+        if (streamSuccess) {
+            // Get final response text for history
+            char buffer[16384] = {0};
+            GetWindowTextA(m_hwndCopilotChatOutput, buffer, sizeof(buffer));
+            response = buffer;
+            RAWRXD_LOG_INFO("Win32IDE_VSCodeUI") << "[sendCopilotMessage] Ollama stream completed";
+        } else {
+            RAWRXD_LOG_WARNING("Win32IDE_VSCodeUI") << "[sendCopilotMessage] Ollama stream failed";
+            response = "❌ Ollama backend connection failed. Check if Ollama is running on localhost:11434.";
+            useOllama = false;
+        }
+    }
+    
+    // Fall back to loaded GGUF model if Ollama unavailable
+    if (!useOllama) {
+        if (isModelLoaded()) {
+            RAWRXD_LOG_INFO("Win32IDE_VSCodeUI") << "[sendCopilotMessage] Model is loaded, calling generateResponse...";
+            // Use the loaded GGUF model for inference
+            response = generateResponse(message);
+            RAWRXD_LOG_INFO("Win32IDE_VSCodeUI") << "[sendCopilotMessage] Inference response: " << response;
+            
+            // Append local model response to chat
+            std::string responseDisplay = "Copilot (Local): " + response + "\r\n\r\n";
+            SendMessage(m_hwndCopilotChatOutput, EM_SETSEL, -1, -1);
+            SendMessage(m_hwndCopilotChatOutput, EM_REPLACESEL, FALSE, (LPARAM)responseDisplay.c_str());
+        } else {
+            // No model loaded - prompt user to load one
+            RAWRXD_LOG_WARNING("Win32IDE_VSCodeUI") << "[sendCopilotMessage] No model loaded!";
+            response = "⚠️ No AI model loaded.\r\n\r\n"
+                       "To use AI assistance, please load a GGUF model:\r\n"
+                       "1. Open the File Explorer (Activity Bar → Explorer icon)\r\n"
+                       "2. Navigate to a folder containing .gguf files\r\n"
+                       "3. Double-click a model file to load it\r\n\r\n"
+                       "Supported models: LLaMA, Mistral, Phi, Qwen, and other GGUF-compatible models.\r\n\r\n"
+                       "Once loaded, I can help with:\r\n"
+                       "• Code explanation and analysis\r\n"
+                       "• Bug fixing suggestions\r\n"
+                       "• Code generation\r\n"
+                       "• Programming questions";
+            
+            SendMessage(m_hwndCopilotChatOutput, EM_SETSEL, -1, -1);
+            SendMessage(m_hwndCopilotChatOutput, EM_REPLACESEL, FALSE, (LPARAM)response.c_str());
+        }
     }
     
     m_chatHistory.push_back({"assistant", response});
@@ -374,9 +514,6 @@ void Win32IDE::sendCopilotMessage(const std::string& message)
 
     RAWRXD_LOG_INFO("Win32IDE_VSCodeUI") << "[sendCopilotMessage] Added response to history, updating UI...";
     RAWRXD_LOG_INFO("Win32IDE_VSCodeUI") << "=== SEND MESSAGE END ===";
-    
-    // Update display
-    updateSecondarySidebarContent();
     
     // Clear input
     SetWindowTextA(m_hwndCopilotChatInput, "");
@@ -395,6 +532,210 @@ void Win32IDE::appendCopilotResponse(const std::string& response)
 {
     m_chatHistory.push_back({"assistant", response});
     updateSecondarySidebarContent();
+}
+
+void Win32IDE::tryConfigureNativeStreamBridge()
+{
+    if (m_streamBridgeConfigured) {
+        return;
+    }
+    if (!m_hwndMain || !IsWindow(m_hwndMain)) {
+        return;
+    }
+
+    if (!m_streamBridgeModule) {
+        m_streamBridgeModule = GetModuleHandleA("RawrXD_Titan.dll");
+        if (!m_streamBridgeModule) {
+            m_streamBridgeModule = GetModuleHandleA("RawrXD.dll");
+        }
+        if (!m_streamBridgeModule) {
+            static const char* kStreamBridgeCandidates[] = {
+                "D:\\rawrxd\\build_smoke_verify2\\bin\\RawrXD_Titan.dll",
+                "D:\\rawrxd\\bin\\RawrXD_Titan.dll",
+                "RawrXD_Titan.dll",
+                "bin\\RawrXD_Titan.dll"
+            };
+            for (const char* candidate : kStreamBridgeCandidates) {
+                m_streamBridgeModule = LoadLibraryA(candidate);
+                if (m_streamBridgeModule) {
+                    RAWRXD_LOG_INFO("Win32IDE_VSCodeUI") << "Loaded stream bridge module from: " << candidate;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (!m_streamBridgeModule) {
+        RAWRXD_LOG_WARNING("Win32IDE_VSCodeUI") << "Native stream bridge module not available";
+        return;
+    }
+
+    g_titanDiagWindow = m_hwndMain;
+
+    using StreamConfigureWindowFn = int32_t(__stdcall*)(uint64_t, uint32_t, uint32_t);
+    using StreamResetFn = int32_t(__stdcall*)();
+    using SetDiagnosticCallbackFn = int32_t(__stdcall*)(void (*)(const char*));
+    constexpr int32_t kRawrSuccess = 0;
+
+    auto* setDiagnosticCallback = reinterpret_cast<SetDiagnosticCallbackFn>(
+        GetProcAddress(m_streamBridgeModule, "RawrXD_SetDiagnosticCallback"));
+    if (setDiagnosticCallback)
+    {
+        int32_t cbStatus = setDiagnosticCallback(TitanDiagnosticForwarder);
+        if (cbStatus != kRawrSuccess)
+        {
+            RAWRXD_LOG_WARNING("Win32IDE_VSCodeUI") << "RawrXD_SetDiagnosticCallback failed, status=" << cbStatus;
+        }
+    }
+
+    auto* configure = reinterpret_cast<StreamConfigureWindowFn>(
+        GetProcAddress(m_streamBridgeModule, "RawrXD_StreamConfigureWindow"));
+    if (!configure) {
+        RAWRXD_LOG_WARNING("Win32IDE_VSCodeUI") << "RawrXD_StreamConfigureWindow export missing";
+        return;
+    }
+
+    auto* reset = reinterpret_cast<StreamResetFn>(
+        GetProcAddress(m_streamBridgeModule, "RawrXD_StreamReset"));
+    if (reset) {
+        (void)reset();
+    }
+
+    int32_t status = configure(
+        static_cast<uint64_t>(reinterpret_cast<uintptr_t>(m_hwndMain)),
+        static_cast<uint32_t>(WM_RAWR_STREAM_DATA),
+        static_cast<uint32_t>(RAWR_STREAM_WPARAM_TAG));
+    if (status == kRawrSuccess) {
+        m_streamBridgeConfigured = true;
+        RAWRXD_LOG_INFO("Win32IDE_VSCodeUI") << "Native stream bridge configured (WM_APP+1337)";
+        return;
+    }
+
+    RAWRXD_LOG_WARNING("Win32IDE_VSCodeUI") << "Native stream bridge configuration failed, status=" << status;
+}
+
+void Win32IDE::handleNativeStreamTick(WPARAM wParam, LPARAM)
+{
+    if (static_cast<uint32_t>(wParam) != RAWR_STREAM_WPARAM_TAG) {
+        return;
+    }
+    if (!m_hwndCopilotChatOutput || !IsWindow(m_hwndCopilotChatOutput)) {
+        return;
+    }
+
+    if (!m_streamBridgeConfigured) {
+        tryConfigureNativeStreamBridge();
+        if (!m_streamBridgeConfigured) {
+            return;
+        }
+    }
+
+    using StreamPopFn = int32_t(__stdcall*)(char*, size_t, uint32_t*, uint64_t*);
+    using StreamGetStatsFn = int32_t(__stdcall*)(uint32_t*, uint32_t*);
+    constexpr int32_t kRawrSuccess = 0;
+
+    auto* popChunk = reinterpret_cast<StreamPopFn>(
+        GetProcAddress(m_streamBridgeModule, "RawrXD_StreamPop"));
+    if (!popChunk) {
+        return;
+    }
+
+    auto* getStats = reinterpret_cast<StreamGetStatsFn>(
+        GetProcAddress(m_streamBridgeModule, "RawrXD_StreamGetStats"));
+
+    constexpr size_t kChunkBufferSize = 4096;
+    char chunk[kChunkBufferSize] = {};
+    bool appended = false;
+
+    for (int i = 0; i < 256; ++i) {
+        uint32_t outLen = 0;
+        uint64_t outSeq = 0;
+        int32_t status = popChunk(chunk, sizeof(chunk), &outLen, &outSeq);
+        if (status != kRawrSuccess || outLen == 0) {
+            break;
+        }
+
+        if (outLen >= sizeof(chunk)) {
+            outLen = static_cast<uint32_t>(sizeof(chunk) - 1);
+        }
+        chunk[outLen] = '\0';
+
+        SendMessage(m_hwndCopilotChatOutput, EM_SETSEL, -1, -1);
+        SendMessage(m_hwndCopilotChatOutput, EM_REPLACESEL, FALSE, (LPARAM)chunk);
+        appended = true;
+    }
+
+    if (appended) {
+        SendMessage(m_hwndCopilotChatOutput, EM_SCROLLCARET, 0, 0);
+    }
+
+    if (getStats) {
+        uint32_t queued = 0;
+        uint32_t dropped = 0;
+        if (getStats(&queued, &dropped) == kRawrSuccess && dropped > 0) {
+            RAWRXD_LOG_WARNING("Win32IDE_VSCodeUI") << "Native stream dropped chunks=" << dropped
+                                                      << " queued=" << queued;
+        }
+    }
+}
+
+void Win32IDE::performEmergencyWipeAndShutdown()
+{
+    RAWRXD_LOG_WARNING("Win32IDE_VSCodeUI") << "Emergency wipe hotkey triggered";
+
+    for (auto& entry : m_chatHistory) {
+        wipeStringMemory(entry.first);
+        wipeStringMemory(entry.second);
+    }
+    m_chatHistory.clear();
+    m_chatToolActions.clear();
+    m_currentToolActions.clear();
+
+    {
+        std::lock_guard<std::mutex> lock(m_streamingOutputMutex);
+        wipeStringMemory(m_streamingOutput);
+    }
+    wipeStringMemory(m_ghostTextContent);
+    m_ghostTextVisible = false;
+    m_ghostTextPending = false;
+    m_ghostTextAccepted = false;
+    m_ghostTextLine = -1;
+    m_ghostTextColumn = -1;
+
+    {
+        std::lock_guard<std::mutex> lock(m_ghostTextCacheMutex);
+        for (auto& kv : m_ghostTextCache) {
+            wipeStringMemory(kv.second.completion);
+        }
+        m_ghostTextCache.clear();
+    }
+
+    if (m_streamBridgeModule) {
+        using StreamResetFn = int32_t(__stdcall*)();
+        auto* reset = reinterpret_cast<StreamResetFn>(GetProcAddress(m_streamBridgeModule, "RawrXD_StreamReset"));
+        if (reset) {
+            (void)reset();
+        }
+    }
+    m_streamBridgeConfigured = false;
+
+    if (m_hwndCopilotChatInput && IsWindow(m_hwndCopilotChatInput)) {
+        SetWindowTextA(m_hwndCopilotChatInput, "");
+    }
+    if (m_hwndCopilotChatOutput && IsWindow(m_hwndCopilotChatOutput)) {
+        SetWindowTextA(m_hwndCopilotChatOutput, "");
+    }
+    if (m_hwndEditor && IsWindow(m_hwndEditor)) {
+        SetWindowTextA(m_hwndEditor, "");
+    }
+
+    FlushProcessWriteBuffers();
+
+    if (m_hwndMain && IsWindow(m_hwndMain)) {
+        DestroyWindow(m_hwndMain);
+    } else {
+        PostQuitMessage(0);
+    }
 }
 
 LRESULT CALLBACK Win32IDE::SecondarySidebarProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)

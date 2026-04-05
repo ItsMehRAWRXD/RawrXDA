@@ -60,7 +60,10 @@ public:
      */
     static std::pair<std::vector<int8_t>, QuantParams> 
     quantizeChannelWise(const float* src, uint32_t numel, uint32_t channels = 1) {
-        if (!src || numel == 0) {
+        if (!src || numel == 0 || channels == 0) {
+            return {{}, {}};
+        }
+        if ((numel % channels) != 0) {
             return {{}, {}};
         }
 
@@ -83,6 +86,11 @@ public:
             for (uint32_t i = 0; i < elems_per_channel; ++i) {
                 min_val = std::min(min_val, src_ptr[i]);
                 max_val = std::max(max_val, src_ptr[i]);
+            }
+
+            // Reject non-finite activations before any arithmetic — casting NaN to int is UB.
+            if (!std::isfinite(min_val) || !std::isfinite(max_val)) {
+                return {{}, {}};
             }
 
             // Compute scale
@@ -116,6 +124,16 @@ public:
      */
     static std::vector<float> 
     dequantizeChannelWise(const int8_t* src, const QuantParams& params) {
+        if (!src || params.num_channels == 0 || params.num_elements_per_channel == 0) {
+            return {};
+        }
+        if (params.scale.size() < params.num_channels || params.zero_point.size() < params.num_channels) {
+            return {};
+        }
+        // Guard against uint32_t overflow in element-count product.
+        if (static_cast<uint64_t>(params.num_channels) * params.num_elements_per_channel > UINT32_MAX) {
+            return {};
+        }
         uint32_t numel = params.num_channels * params.num_elements_per_channel;
         std::vector<float> out(numel);
 
@@ -124,6 +142,10 @@ public:
 
         for (uint32_t ch = 0; ch < params.num_channels; ++ch) {
             float scale = params.scale[ch];
+            // Non-finite or non-positive scale means corrupted params — fail closed.
+            if (!std::isfinite(scale) || scale <= 0.0f) {
+                return {};
+            }
             int8_t zp = params.zero_point[ch];
 
             for (uint32_t i = 0; i < params.num_elements_per_channel; ++i) {
@@ -216,9 +238,14 @@ public:
         std::sort(scored.begin(), scored.end(),
                  [](const auto& a, const auto& b) { return a.first > b.first; });
 
-        // Keep top (1 - sparsity_target) * numel elements
+        // Keep top (1 - sparsity_target) * numel elements.
+        // Clamp sparsity_target to [0, 1] and guard against NaN/Inf to prevent UB
+        // in the static_cast (casting NaN to uint32_t is undefined behaviour).
+        const float sparsity = std::isfinite(cfg.sparsity_target)
+            ? std::clamp(cfg.sparsity_target, 0.0f, 1.0f)
+            : 0.0f;
         uint32_t keep_count = static_cast<uint32_t>(
-            numel * (1.0f - cfg.sparsity_target)
+            numel * (1.0f - sparsity)
         );
         keep_count = std::max(keep_count, 1u);  // Keep at least 1
 
@@ -237,9 +264,17 @@ public:
      * @brief Recover dense activation from sparse representation
      */
     static std::vector<float> recover(const SparseActivation& sparse) {
+        // Mismatched sizes indicate a corrupted SparseActivation — fail closed.
+        if (sparse.values.size() != sparse.indices.size()) {
+            return {};
+        }
         std::vector<float> dense(sparse.total_size, 0.0f);
 
-        for (uint32_t i = 0; i < sparse.values.size(); ++i) {
+        for (size_t i = 0; i < sparse.values.size(); ++i) {
+            // Guard against out-of-bounds indices from corrupted sparse data.
+            if (sparse.indices[i] >= sparse.total_size) {
+                continue;
+            }
             dense[sparse.indices[i]] = sparse.values[i];
         }
 
@@ -312,11 +347,25 @@ public:
         uint32_t head_dim) {
 
         CompressedKVCache cache;
+        // Null-pointer and dimension sanity checks before any allocation.
+        if (!keys || !values || seq_len == 0 || num_heads == 0 || head_dim == 0) {
+            return cache;
+        }
         cache.num_heads = num_heads;
         cache.head_dim = head_dim;
-        
+
         // Determine actual window size
         uint32_t window_size = std::min(seq_len, cache.window_size);
+
+        // Guard against uint32_t overflow in per-head buffer sizing.
+        if (window_size > 0 && head_dim > UINT32_MAX / window_size) {
+            return CompressedKVCache{};
+        }
+        const uint32_t head_numel_stride = window_size * head_dim;
+        if (num_heads > 0 && head_numel_stride > UINT32_MAX / num_heads) {
+            return CompressedKVCache{};
+        }
+
         uint32_t start_pos = seq_len - window_size;
 
         cache.num_cached_tokens = window_size;
@@ -353,6 +402,12 @@ public:
                 head_values.data(), head_numel, 1
             );
 
+            // If quantization failed (e.g., NaN input), abort the whole operation.
+            if (q_keys.size() < head_numel || k_params.scale.empty() ||
+                q_values.size() < head_numel || v_params.scale.empty()) {
+                return CompressedKVCache{};
+            }
+
             cache.key_scale[h] = k_params.scale[0];
             cache.value_scale[h] = v_params.scale[0];
 
@@ -377,9 +432,36 @@ public:
         float* values,
         uint32_t seq_len) {
 
+        if (!keys || !values) {
+            return;
+        }
+
         uint32_t window_size = compressed.num_cached_tokens;
         uint32_t num_heads = compressed.num_heads;
         uint32_t head_dim = compressed.head_dim;
+        if (window_size == 0 || num_heads == 0 || head_dim == 0) {
+            return;
+        }
+        if (seq_len < window_size) {
+            return;
+        }
+        // Validate that scale vectors cover all heads and data buffers are large enough.
+        if (compressed.key_scale.size() < num_heads ||
+            compressed.value_scale.size() < num_heads) {
+            return;
+        }
+        if (window_size > 0 && head_dim > UINT32_MAX / window_size) {
+            return;
+        }
+        const uint32_t head_numel_stride = window_size * head_dim;
+        if (num_heads > 0 && head_numel_stride > UINT32_MAX / num_heads) {
+            return;
+        }
+        const uint64_t expected_data = static_cast<uint64_t>(num_heads) * head_numel_stride;
+        if (compressed.key_data.size() < expected_data ||
+            compressed.value_data.size() < expected_data) {
+            return;
+        }
         uint32_t start_pos = seq_len - window_size;
 
         for (uint32_t h = 0; h < num_heads; ++h) {
@@ -403,8 +485,17 @@ public:
             k_params.num_channels = 1;
             k_params.num_elements_per_channel = head_numel;
 
+            QuantizationCodec::QuantParams v_params;
+            v_params.scale = {compressed.value_scale[h]};
+            v_params.zero_point = {0};
+            v_params.num_channels = 1;
+            v_params.num_elements_per_channel = head_numel;
+
             auto deq_keys = QuantizationCodec::dequantizeChannelWise(q_keys.data(), k_params);
-            auto deq_values = QuantizationCodec::dequantizeChannelWise(q_values.data(), k_params);
+            auto deq_values = QuantizationCodec::dequantizeChannelWise(q_values.data(), v_params);
+            if (deq_keys.size() < head_numel || deq_values.size() < head_numel) {
+                return;
+            }
 
             // Write back to output buffer
             for (uint32_t i = 0; i < window_size; ++i) {

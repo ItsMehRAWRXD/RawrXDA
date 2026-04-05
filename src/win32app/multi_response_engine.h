@@ -184,6 +184,9 @@ public:
 
     // Generation
     MultiResponseResult generateAll(uint64_t sid) {
+        // Lazy-initialize if needed before acquiring the mutex
+        if (!m_initialized) initialize();
+
         std::lock_guard<std::mutex> lock(m_mutex);
         auto it = m_sessions.find(sid);
         if (it == m_sessions.end())

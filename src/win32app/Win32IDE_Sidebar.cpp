@@ -6,10 +6,12 @@
 #include "../core/enterprise_license.h"
 #include "VSIXInstaller.hpp"
 #include "Win32IDE.h"
+#include "RawrXD_Layout.hpp"
 #include "Win32IDE_IELabels.h"
 #include <commctrl.h>
 #include <commdlg.h>
 #include <richedit.h>
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <regex>
@@ -104,6 +106,161 @@ constexpr int IDC_EXT_INSTALL_VSIX = 6055;
 
 // File Explorer IDs are defined centrally in Win32IDE_Commands.h
 
+namespace
+{
+HFONT g_sidebarUiFont = nullptr;
+HFONT g_sidebarTitleFont = nullptr;
+UINT g_sidebarFontDpi = 0;
+
+UINT getWindowDpiSafe(HWND hwnd)
+{
+    if (!hwnd)
+        return 96;
+    UINT dpi = GetDpiForWindow(hwnd);
+    return dpi > 0 ? dpi : 96;
+}
+
+HFONT createUiFontForDpi(UINT dpi, int pointSize, int weight)
+{
+    return CreateFontA(-MulDiv(pointSize, static_cast<int>(dpi), 72), 0, 0, 0, weight, FALSE, FALSE, FALSE,
+                       ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
+                       DEFAULT_PITCH | FF_SWISS, "Segoe UI");
+}
+
+void ensureSidebarFonts(UINT dpi)
+{
+    if (dpi == 0)
+        dpi = 96;
+    if (g_sidebarUiFont && g_sidebarTitleFont && g_sidebarFontDpi == dpi)
+        return;
+
+    if (g_sidebarUiFont)
+    {
+        DeleteObject(g_sidebarUiFont);
+        g_sidebarUiFont = nullptr;
+    }
+    if (g_sidebarTitleFont)
+    {
+        DeleteObject(g_sidebarTitleFont);
+        g_sidebarTitleFont = nullptr;
+    }
+
+    g_sidebarUiFont = createUiFontForDpi(dpi, 9, FW_NORMAL);
+    g_sidebarTitleFont = createUiFontForDpi(dpi, 10, FW_SEMIBOLD);
+    g_sidebarFontDpi = dpi;
+}
+
+void applySidebarFonts(HWND hwndSidebarTitle, HWND hwndExplorerToolbar, HWND hwndExplorerTree)
+{
+    const UINT dpi = getWindowDpiSafe(hwndSidebarTitle ? hwndSidebarTitle : hwndExplorerTree);
+    ensureSidebarFonts(dpi);
+
+    if (hwndSidebarTitle && g_sidebarTitleFont)
+        SendMessageA(hwndSidebarTitle, WM_SETFONT, reinterpret_cast<WPARAM>(g_sidebarTitleFont), TRUE);
+    if (hwndExplorerTree && g_sidebarUiFont)
+        SendMessageA(hwndExplorerTree, WM_SETFONT, reinterpret_cast<WPARAM>(g_sidebarUiFont), TRUE);
+
+    if (hwndExplorerToolbar && g_sidebarUiFont)
+    {
+        const int ids[] = {IDC_EXPLORER_NEW_FILE, IDC_EXPLORER_NEW_FOLDER, IDC_EXPLORER_REFRESH, IDC_EXPLORER_COLLAPSE};
+        for (int id : ids)
+        {
+            if (HWND hBtn = GetDlgItem(hwndExplorerToolbar, id))
+                SendMessageA(hBtn, WM_SETFONT, reinterpret_cast<WPARAM>(g_sidebarUiFont), TRUE);
+        }
+    }
+}
+
+void layoutExplorerToolbarButtons(HWND hwndToolbar, int width, int toolbarHeight, UINT dpi)
+{
+    if (!hwndToolbar)
+        return;
+
+    const int kButtonCount = 4;
+    const int buttonIds[kButtonCount] = {IDC_EXPLORER_NEW_FILE, IDC_EXPLORER_NEW_FOLDER, IDC_EXPLORER_REFRESH,
+                                          IDC_EXPLORER_COLLAPSE};
+
+    HWND buttons[kButtonCount] = {};
+    int visibleCount = 0;
+    for (int i = 0; i < kButtonCount; ++i)
+    {
+        buttons[i] = GetDlgItem(hwndToolbar, buttonIds[i]);
+        if (buttons[i])
+            ++visibleCount;
+    }
+    if (visibleCount == 0)
+        return;
+
+    const int pad = MulDiv(5, static_cast<int>(dpi), 96);
+    const int gap = MulDiv(4, static_cast<int>(dpi), 96);
+    const int safeWidth = (width > 0) ? width : 0;
+    const int avail = std::max(0, safeWidth - (2 * pad));
+    const int minSingleWidths[kButtonCount] = {52, 66, 72, 76};
+
+    int requiredSingle = 0;
+    for (int w : minSingleWidths)
+        requiredSingle += MulDiv(w, static_cast<int>(dpi), 96);
+    requiredSingle += gap * (kButtonCount - 1);
+
+    const bool useWrappedLayout = avail < requiredSingle;
+
+    HDWP hdwp = BeginDeferWindowPos(kButtonCount);
+    if (!hdwp)
+        return;
+
+    if (useWrappedLayout)
+    {
+        const int colW = std::max(44, (avail - gap) / 2);
+        const int rowGap = gap;
+        const int rowH = std::max(18, (toolbarHeight - (2 * pad) - rowGap) / 2);
+        const int x0 = pad;
+        const int x1 = pad + colW + gap;
+        const int y0 = pad;
+        const int y1 = pad + rowH + rowGap;
+
+        if (buttons[0])
+            hdwp = DeferWindowPos(hdwp, buttons[0], nullptr, x0, y0, colW, rowH, SWP_NOZORDER | SWP_NOACTIVATE);
+        if (buttons[1])
+            hdwp = DeferWindowPos(hdwp, buttons[1], nullptr, x1, y0, colW, rowH, SWP_NOZORDER | SWP_NOACTIVATE);
+        if (buttons[2])
+            hdwp = DeferWindowPos(hdwp, buttons[2], nullptr, x0, y1, colW, rowH, SWP_NOZORDER | SWP_NOACTIVATE);
+        if (buttons[3])
+            hdwp = DeferWindowPos(hdwp, buttons[3], nullptr, x1, y1, colW, rowH, SWP_NOZORDER | SWP_NOACTIVATE);
+    }
+    else
+    {
+        int x = pad;
+        const int rowH = std::max(18, toolbarHeight - (2 * pad));
+        for (int i = 0; i < kButtonCount; ++i)
+        {
+            if (!buttons[i])
+                continue;
+            const int btnW = MulDiv(minSingleWidths[i], static_cast<int>(dpi), 96);
+            hdwp = DeferWindowPos(hdwp, buttons[i], nullptr, x, pad, btnW, rowH, SWP_NOZORDER | SWP_NOACTIVATE);
+            x += btnW + gap;
+        }
+    }
+
+    EndDeferWindowPos(hdwp);
+}
+
+void applySidebarPaneLayout(HWND parent, std::initializer_list<RXDControl> controls)
+{
+    if (!parent)
+        return;
+
+    RXDLayoutEngine layout;
+    layout.Reserve(controls.size());
+    for (const auto& c : controls)
+    {
+        if (!c.hwnd)
+            continue;
+        layout.AddControl(c.hwnd, c.x_pct, c.y_pct, c.w_pct, c.h_pct, c.off_x, c.off_y, c.off_w, c.off_h);
+    }
+    layout.Update(parent);
+}
+}  // namespace
+
 WNDPROC Win32IDE::s_sidebarContentOldProc = nullptr;
 
 // Maps ListView index to extension ID (order may differ from m_extensions during search)
@@ -116,8 +273,9 @@ static std::vector<std::string> s_extensionDisplayIds;
 // ESP:m_hwndActivityBar — Activity Bar (Files, Search, SCM, Debug, Extensions, Recovery)
 void Win32IDE::createActivityBar(HWND hwndParent)
 {
-    m_hwndActivityBar = CreateWindowExA(0, "STATIC", "", WS_CHILD | WS_VISIBLE | SS_OWNERDRAW, 0, 0, ACTIVITY_BAR_WIDTH,
-                                        600, hwndParent, nullptr, m_hInstance, nullptr);
+    m_hwndActivityBar = CreateWindowExA(0, "STATIC", "",
+                                        WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SS_OWNERDRAW, 0,
+                                        0, ACTIVITY_BAR_WIDTH, 600, hwndParent, nullptr, m_hInstance, nullptr);
 
     SetWindowLongPtrA(m_hwndActivityBar, GWLP_USERDATA, (LONG_PTR)this);
     SetWindowLongPtrA(m_hwndActivityBar, GWLP_WNDPROC, (LONG_PTR)ActivityBarProc);
@@ -273,7 +431,9 @@ constexpr int SIDEBAR_TITLE_HEIGHT = 28;
 void Win32IDE::createPrimarySidebar(HWND hwndParent)
 {
     m_hwndSidebar =
-        CreateWindowExA(0, "STATIC", RAWRXD_IDE_LABEL_SIDEBAR, WS_CHILD | WS_VISIBLE | WS_BORDER, ACTIVITY_BAR_WIDTH, 0,
+        CreateWindowExA(0, "STATIC", RAWRXD_IDE_LABEL_SIDEBAR,
+                        WS_CHILD | WS_VISIBLE | WS_BORDER | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, ACTIVITY_BAR_WIDTH,
+                        0,
                         SIDEBAR_DEFAULT_WIDTH, 600, hwndParent, nullptr, m_hInstance, nullptr);
 
     // Visible title bar so the pane is clearly named (e.g. "File Explorer", "Search")
@@ -283,14 +443,11 @@ void Win32IDE::createPrimarySidebar(HWND hwndParent)
     if (m_hwndSidebarTitle)
     {
         SetWindowLongPtrA(m_hwndSidebarTitle, GWLP_USERDATA, (LONG_PTR)this);
-        HFONT hFont = CreateFontA(-14, 0, 0, 0, FW_SEMIBOLD, FALSE, FALSE, FALSE, ANSI_CHARSET, OUT_DEFAULT_PRECIS,
-                                  CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, "Segoe UI");
-        if (hFont)
-            SendMessage(m_hwndSidebarTitle, WM_SETFONT, (WPARAM)hFont, TRUE);
     }
 
     m_hwndSidebarContent =
-        CreateWindowExA(0, "STATIC", "", WS_CHILD | WS_VISIBLE, 0, SIDEBAR_TITLE_HEIGHT, SIDEBAR_DEFAULT_WIDTH,
+        CreateWindowExA(0, "STATIC", "", WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, 0,
+                        SIDEBAR_TITLE_HEIGHT, SIDEBAR_DEFAULT_WIDTH,
                         600 - SIDEBAR_TITLE_HEIGHT, m_hwndSidebar, nullptr, m_hInstance, nullptr);
     SetWindowLongPtrA(m_hwndSidebarContent, GWLP_USERDATA, (LONG_PTR)this);
     s_sidebarContentOldProc =
@@ -310,6 +467,8 @@ void Win32IDE::createPrimarySidebar(HWND hwndParent)
     createRunDebugView(m_hwndSidebarContent);
     createExtensionsView(m_hwndSidebarContent);
     createDiskRecoveryView(m_hwndSidebarContent);
+
+    applySidebarFonts(m_hwndSidebarTitle, m_hwndExplorerToolbar, m_hwndExplorerTree);
 
     // Default to Explorer view, but keep startup responsive by deferring the
     // initial directory population until after the window is visible.
@@ -337,6 +496,12 @@ void Win32IDE::createPrimarySidebar(HWND hwndParent)
     appendToOutput("[UX] View > File Explorer (Ctrl+Shift+E) | View > AI Chat (Ctrl+Shift+C) | Tools > License Creator "
                    "| Tools > Feature Registry\n",
                    "Output", OutputSeverity::Info);
+
+    // Force an initial layout pass so explorer buttons are correctly sized
+    // even before the first interactive resize.
+    RECT rcSidebar = {};
+    if (GetClientRect(m_hwndSidebar, &rcSidebar))
+        resizeSidebar(rcSidebar.right - rcSidebar.left, rcSidebar.bottom - rcSidebar.top);
 }
 
 LRESULT CALLBACK Win32IDE::SidebarProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -376,6 +541,21 @@ LRESULT CALLBACK Win32IDE::SidebarProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPAR
             return 0;
         }
 
+        case WM_DPICHANGED:
+#ifdef WM_DPICHANGED_AFTERPARENT
+        case WM_DPICHANGED_AFTERPARENT:
+#endif
+        {
+            if (pThis)
+            {
+                applySidebarFonts(pThis->m_hwndSidebarTitle, pThis->m_hwndExplorerToolbar, pThis->m_hwndExplorerTree);
+                RECT rc = {};
+                GetClientRect(hwnd, &rc);
+                pThis->resizeSidebar(rc.right, rc.bottom);
+            }
+            return 0;
+        }
+
         case WM_SIZE:
         {
             if (pThis)
@@ -385,6 +565,44 @@ LRESULT CALLBACK Win32IDE::SidebarProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPAR
                 pThis->resizeSidebar(width, height);
             }
             return 0;
+        }
+
+        case WM_COMMAND:
+        {
+            if (pThis)
+            {
+                const int controlId = LOWORD(wParam);
+                const int notifyCode = HIWORD(wParam);
+                constexpr int kCopilotSendBtn = 1204;
+                constexpr int kCopilotClearBtn = 1205;
+                constexpr int kModelSelector = 1208;
+                constexpr int kModelBrowseBtn = 1209;
+
+                if (controlId == kCopilotSendBtn)
+                {
+                    pThis->HandleCopilotSend();
+                    pThis->onCommand(pThis->m_hwndMain, controlId, (HWND)lParam, (UINT)notifyCode);
+                    return 0;
+                }
+                if (controlId == kCopilotClearBtn)
+                {
+                    pThis->HandleCopilotClear();
+                    pThis->onCommand(pThis->m_hwndMain, controlId, (HWND)lParam, (UINT)notifyCode);
+                    return 0;
+                }
+                if (controlId == kModelBrowseBtn)
+                {
+                    pThis->handleModelBrowse();
+                    return 0;
+                }
+                if (controlId == kModelSelector && notifyCode == CBN_SELCHANGE)
+                {
+                    pThis->onModelSelectionChanged();
+                    pThis->onCommand(pThis->m_hwndMain, controlId, (HWND)lParam, (UINT)notifyCode);
+                    return 0;
+                }
+            }
+            break;
         }
 
         case WM_NOTIFY:
@@ -551,7 +769,19 @@ void Win32IDE::toggleSecondarySidebar()
 void Win32IDE::setSidebarView(SidebarView view)
 {
     if (m_currentSidebarView == view)
+    {
+        if (view == SidebarView::Explorer)
+        {
+            if (m_hwndSidebarTitle)
+                SetWindowTextA(m_hwndSidebarTitle, "File Explorer");
+            if (m_hwndExplorerTree)
+                ShowWindow(m_hwndExplorerTree, SW_SHOW);
+            if (m_hwndExplorerToolbar)
+                ShowWindow(m_hwndExplorerToolbar, SW_SHOW);
+            refreshFileTree();
+        }
         return;
+    }
 
     // Hide all views
     ShowWindow(m_hwndExplorerTree, SW_HIDE);
@@ -650,6 +880,12 @@ void Win32IDE::setSidebarView(SidebarView view)
         case SidebarView::Explorer:
             ShowWindow(m_hwndExplorerTree, SW_SHOW);
             ShowWindow(m_hwndExplorerToolbar, SW_SHOW);
+            if (m_hwndSidebar)
+            {
+                RECT rcSidebar = {};
+                GetClientRect(m_hwndSidebar, &rcSidebar);
+                resizeSidebar(rcSidebar.right, rcSidebar.bottom);
+            }
             refreshFileTree();
             appendToOutput("Explorer view activated\n", "Output", OutputSeverity::Info);
             break;
@@ -658,6 +894,12 @@ void Win32IDE::setSidebarView(SidebarView view)
             ShowWindow(m_hwndSearchInput, SW_SHOW);
             ShowWindow(m_hwndSearchResults, SW_SHOW);
             ShowWindow(m_hwndSearchOptions, SW_SHOW);
+            if (m_hwndSidebar)
+            {
+                RECT rcSidebar = {};
+                GetClientRect(m_hwndSidebar, &rcSidebar);
+                resizeSidebar(rcSidebar.right, rcSidebar.bottom);
+            }
             SetFocus(m_hwndSearchInput);
             appendToOutput("Search view activated\n", "Output", OutputSeverity::Info);
             break;
@@ -666,6 +908,12 @@ void Win32IDE::setSidebarView(SidebarView view)
             ShowWindow(m_hwndSCMFileList, SW_SHOW);
             ShowWindow(m_hwndSCMToolbar, SW_SHOW);
             ShowWindow(m_hwndSCMMessageBox, SW_SHOW);
+            if (m_hwndSidebar)
+            {
+                RECT rcSidebar = {};
+                GetClientRect(m_hwndSidebar, &rcSidebar);
+                resizeSidebar(rcSidebar.right, rcSidebar.bottom);
+            }
             refreshSourceControlView();
             appendToOutput("Source Control view activated\n", "Output", OutputSeverity::Info);
             break;
@@ -673,6 +921,12 @@ void Win32IDE::setSidebarView(SidebarView view)
         case SidebarView::RunDebug:
             ShowWindow(m_hwndDebugConfigs, SW_SHOW);
             ShowWindow(m_hwndDebugToolbar, SW_SHOW);
+            if (m_hwndSidebar)
+            {
+                RECT rcSidebar = {};
+                GetClientRect(m_hwndSidebar, &rcSidebar);
+                resizeSidebar(rcSidebar.right, rcSidebar.bottom);
+            }
             appendToOutput("Run and Debug view activated\n", "Output", OutputSeverity::Info);
             break;
 
@@ -681,6 +935,12 @@ void Win32IDE::setSidebarView(SidebarView view)
             ShowWindow(m_hwndExtensionSearch, SW_SHOW);
             if (HWND hInstall = GetDlgItem(m_hwndSidebarContent, IDC_EXT_INSTALL_VSIX))
                 ShowWindow(hInstall, SW_SHOW);
+            if (m_hwndSidebar)
+            {
+                RECT rcSidebar = {};
+                GetClientRect(m_hwndSidebar, &rcSidebar);
+                resizeSidebar(rcSidebar.right, rcSidebar.bottom);
+            }
             loadInstalledExtensions();
             appendToOutput("Extensions view activated\n", "Output", OutputSeverity::Info);
             break;
@@ -756,39 +1016,97 @@ void Win32IDE::resizeSidebar(int width, int height)
     const int titleH = SIDEBAR_TITLE_HEIGHT;
     const int contentH = (height > titleH) ? (height - titleH) : 0;
 
+    // Batch moves to avoid per-control repaint/flicker while resizing.
+    HDWP hdwp = BeginDeferWindowPos(12);
+    if (!hdwp)
+        return;
+
     if (m_hwndSidebarTitle)
-        MoveWindow(m_hwndSidebarTitle, 0, 0, width, titleH, TRUE);
-    MoveWindow(m_hwndSidebarContent, 0, titleH, width, contentH, TRUE);
+        hdwp = DeferWindowPos(hdwp, m_hwndSidebarTitle, nullptr, 0, 0, width, titleH,
+                              SWP_NOZORDER | SWP_NOACTIVATE);
+    hdwp = DeferWindowPos(hdwp, m_hwndSidebarContent, nullptr, 0, titleH, width, contentH,
+                          SWP_NOZORDER | SWP_NOACTIVATE);
+    if (!hdwp)
+        return;
 
     // Resize active view controls within content area
     if (m_hwndExplorerTree && m_currentSidebarView == SidebarView::Explorer)
     {
-        MoveWindow(m_hwndExplorerToolbar, 0, 0, width, 30, TRUE);
-        MoveWindow(m_hwndExplorerTree, 0, 30, width, contentH - 30, TRUE);
+        const UINT dpi = getWindowDpiSafe(m_hwndSidebar ? m_hwndSidebar : m_hwndSidebarContent);
+        const int pad = MulDiv(5, static_cast<int>(dpi), 96);
+        const int gap = MulDiv(4, static_cast<int>(dpi), 96);
+        const int requiredSingle = MulDiv(52 + 66 + 72 + 76, static_cast<int>(dpi), 96) + (gap * 3);
+        const int usableW = (width > (pad * 2)) ? (width - pad * 2) : 0;
+        const bool wrapped = usableW < requiredSingle;
+
+        const int toolbarH = wrapped ? MulDiv(58, static_cast<int>(dpi), 96) : MulDiv(30, static_cast<int>(dpi), 96);
+        const int treeY = toolbarH;
+        const int treeH = (contentH > treeY) ? (contentH - treeY) : 0;
+
+        hdwp = DeferWindowPos(hdwp, m_hwndExplorerToolbar, nullptr, 0, 0, width, toolbarH,
+                              SWP_NOZORDER | SWP_NOACTIVATE);
+        if (!hdwp)
+            return;
+
+        hdwp = DeferWindowPos(hdwp, m_hwndExplorerTree, nullptr, 0, treeY, width, treeH,
+                              SWP_NOZORDER | SWP_NOACTIVATE);
+        if (!hdwp)
+            return;
+
+        layoutExplorerToolbarButtons(m_hwndExplorerToolbar, width, toolbarH, dpi);
+        applySidebarFonts(m_hwndSidebarTitle, m_hwndExplorerToolbar, m_hwndExplorerTree);
     }
     else if (m_hwndSearchInput && m_currentSidebarView == SidebarView::Search)
     {
-        MoveWindow(m_hwndSearchInput, 5, 10, width - 10, 25, TRUE);
-        MoveWindow(m_hwndSearchOptions, 5, 40, width - 10, 80, TRUE);
-        MoveWindow(m_hwndSearchResults, 5, 125, width - 10, contentH - 130, TRUE);
+        applySidebarPaneLayout(m_hwndSidebarContent,
+                               {
+                                   {m_hwndSearchInput, 0.0f, 0.0f, 1.0f, 0.0f, 5, 10, -10, 25},
+                                   {m_hwndSearchOptions, 0.0f, 0.0f, 1.0f, 0.0f, 5, 40, -10, 80},
+                                   {m_hwndSearchResults, 0.0f, 0.0f, 1.0f, 1.0f, 5, 125, -10, -130},
+                               });
+
+        EndDeferWindowPos(hdwp);
+        return;
     }
     else if (m_hwndSCMFileList && m_currentSidebarView == SidebarView::SourceControl)
     {
-        MoveWindow(m_hwndSCMToolbar, 0, 0, width, 35, TRUE);
-        MoveWindow(m_hwndSCMMessageBox, 5, 40, width - 10, 60, TRUE);
-        MoveWindow(m_hwndSCMFileList, 5, 105, width - 10, contentH - 110, TRUE);
+        applySidebarPaneLayout(m_hwndSidebarContent,
+                               {
+                                   {m_hwndSCMToolbar, 0.0f, 0.0f, 1.0f, 0.0f, 0, 0, 0, 35},
+                                   {m_hwndSCMMessageBox, 0.0f, 0.0f, 1.0f, 0.0f, 5, 40, -10, 60},
+                                   {m_hwndSCMFileList, 0.0f, 0.0f, 1.0f, 1.0f, 5, 105, -10, -110},
+                               });
+
+        EndDeferWindowPos(hdwp);
+        return;
     }
     else if (m_hwndDebugConfigs && m_currentSidebarView == SidebarView::RunDebug)
     {
-        MoveWindow(m_hwndDebugToolbar, 0, 0, width, 35, TRUE);
-        MoveWindow(m_hwndDebugConfigs, 5, 40, width - 10, 100, TRUE);
-        MoveWindow(m_hwndDebugVariables, 5, 145, width - 10, contentH - 150, TRUE);
+        applySidebarPaneLayout(m_hwndSidebarContent,
+                               {
+                                   {m_hwndDebugToolbar, 0.0f, 0.0f, 1.0f, 0.0f, 0, 0, 0, 35},
+                                   {m_hwndDebugConfigs, 0.0f, 0.0f, 1.0f, 0.0f, 5, 40, -10, 100},
+                                   {m_hwndDebugVariables, 0.0f, 0.0f, 1.0f, 1.0f, 5, 145, -10, -150},
+                               });
+
+        EndDeferWindowPos(hdwp);
+        return;
     }
     else if (m_hwndExtensionsList && m_currentSidebarView == SidebarView::Extensions)
     {
-        MoveWindow(m_hwndExtensionSearch, 5, 10, width - 10, 25, TRUE);
-        MoveWindow(m_hwndExtensionsList, 5, 68, width - 10, contentH - 73, TRUE);
+        const HWND hInstall = GetDlgItem(m_hwndSidebarContent, IDC_EXT_INSTALL_VSIX);
+        applySidebarPaneLayout(m_hwndSidebarContent,
+                               {
+                                   {m_hwndExtensionSearch, 0.0f, 0.0f, 1.0f, 0.0f, 5, 10, -10, 25},
+                                   {m_hwndExtensionsList, 0.0f, 0.0f, 1.0f, 1.0f, 5, 68, -10, -73},
+                                   {hInstall, 0.0f, 1.0f, 1.0f, 0.0f, 5, -36, -10, 28},
+                               });
+
+        EndDeferWindowPos(hdwp);
+        return;
     }
+
+    EndDeferWindowPos(hdwp);
 }
 
 // ============================================================================
@@ -800,37 +1118,48 @@ void Win32IDE::createExplorerView(HWND hwndParent)
     appendToOutput("createExplorerView() called\n", "Output", OutputSeverity::Info);
 
     // Toolbar with actions
-    m_hwndExplorerToolbar = CreateWindowExA(0, "STATIC", "", WS_CHILD | SS_OWNERDRAW, 0, 0, SIDEBAR_DEFAULT_WIDTH, 30,
-                                            hwndParent, nullptr, m_hInstance, nullptr);
+    m_hwndExplorerToolbar =
+        CreateWindowExA(0, "STATIC", "", WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SS_OWNERDRAW, 0, 0,
+                        SIDEBAR_DEFAULT_WIDTH, 30, hwndParent, nullptr, m_hInstance, nullptr);
     if (!m_hwndExplorerToolbar)
     {
         appendToOutput("Failed to create explorer toolbar\n", "Output", OutputSeverity::Error);
         return;
     }
 
-    // Toolbar buttons
+    // Toolbar buttons (initial responsive sizing; resizeSidebar refines this on WM_SIZE).
+    const int pad = 5;
+    const int gap = 4;
+    const int btnH = 24;
+    const int usableW = SIDEBAR_DEFAULT_WIDTH - pad * 2;
+    const int btnW = (usableW - gap * 3) / 4;
+
     const struct
     {
         int id;
         const char* text;
-        int x;
-    } buttons[] = {{IDC_EXPLORER_NEW_FILE, "New", 5},
-                   {IDC_EXPLORER_NEW_FOLDER, "Folder", 50},
-                   {IDC_EXPLORER_REFRESH, "Refresh", 105},
-                   {IDC_EXPLORER_COLLAPSE, "Collapse", 165}};
+        int index;
+    } buttons[] = {{IDC_EXPLORER_NEW_FILE, "New", 0},
+                   {IDC_EXPLORER_NEW_FOLDER, "Folder", 1},
+                   {IDC_EXPLORER_REFRESH, "Refresh", 2},
+                   {IDC_EXPLORER_COLLAPSE, "Collapse", 3}};
 
     for (const auto& btn : buttons)
     {
-        CreateWindowExA(0, "BUTTON", btn.text, WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, btn.x, 3, 45, 24,
-                        m_hwndExplorerToolbar, (HMENU)(INT_PTR)btn.id, m_hInstance, nullptr);
+        const int x = pad + btn.index * (btnW + gap);
+        HWND hBtn = CreateWindowExA(0, "BUTTON", btn.text, WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, x, 3, btnW, btnH,
+                                    m_hwndExplorerToolbar, (HMENU)(INT_PTR)btn.id, m_hInstance, nullptr);
+        if (hBtn && m_hFontUI)
+            SendMessageA(hBtn, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
     }
 
     // ESP:m_hwndExplorerTree — File Explorer TreeView (IDC_EXPLORER_TREE 6010)
     appendToOutput("Creating Explorer TreeView control\n", "Output", OutputSeverity::Debug);
     m_hwndExplorerTree =
         CreateWindowExA(WS_EX_CLIENTEDGE, WC_TREEVIEWA, RAWRXD_IDE_LABEL_FILE_EXPLORER,
-                        WS_CHILD | TVS_HASLINES | TVS_HASBUTTONS | TVS_LINESATROOT | TVS_SHOWSELALWAYS, 0, 30,
-                        SIDEBAR_DEFAULT_WIDTH, 570, hwndParent, (HMENU)IDC_EXPLORER_TREE, m_hInstance, nullptr);
+                        WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | TVS_HASLINES | TVS_HASBUTTONS |
+                            TVS_LINESATROOT | TVS_SHOWSELALWAYS,
+                        0, 30, SIDEBAR_DEFAULT_WIDTH, 570, hwndParent, (HMENU)IDC_EXPLORER_TREE, m_hInstance, nullptr);
     if (!m_hwndExplorerTree)
     {
         appendToOutput("Failed to create Explorer TreeView\n", "Output", OutputSeverity::Error);
@@ -839,6 +1168,7 @@ void Win32IDE::createExplorerView(HWND hwndParent)
 
     SetWindowLongPtrA(m_hwndExplorerTree, GWLP_USERDATA, (LONG_PTR)this);
     SetWindowLongPtrA(m_hwndExplorerTree, GWLP_WNDPROC, (LONG_PTR)ExplorerTreeProc);
+    applySidebarFonts(m_hwndSidebarTitle, m_hwndExplorerToolbar, m_hwndExplorerTree);
 
     // LOGGING AS REQUESTED
     char buf[256];

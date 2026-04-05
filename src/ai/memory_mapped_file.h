@@ -13,9 +13,16 @@ class MemoryMappedFile {
 private:
     HANDLE fileHandle = INVALID_HANDLE_VALUE;
     HANDLE mappingHandle = nullptr;
-    LPVOID mappedData = nullptr;
+    mutable LPVOID mappedViewBase = nullptr;
+    mutable LPVOID mappedData = nullptr;
     size_t fileSize = 0;
     std::string filePath;
+    mutable uint64_t mappedOffset = 0;
+    mutable size_t mappedViewSize = 0;
+    size_t allocationGranularity = 64 * 1024;
+    size_t preferredWindowSize = 2 * 1024 * 1024;
+
+    bool EnsureMappedRange(size_t offset, size_t size) const;
 
 public:
     MemoryMappedFile() = default;
@@ -46,7 +53,8 @@ public:
      */
     template<typename T>
     const T* GetStruct(size_t offset) const {
-        if (!mappedData || offset + sizeof(T) > fileSize) return nullptr;
+        if (offset > fileSize || sizeof(T) > fileSize - offset) return nullptr;
+        if (!EnsureMappedRange(offset, sizeof(T))) return nullptr;
         return reinterpret_cast<const T*>(static_cast<char*>(mappedData) + offset);
     }
     
@@ -57,7 +65,8 @@ public:
      * @return Pointer to region or nullptr if bounds exceeded
      */
     const void* GetRegion(size_t offset, size_t size) const {
-        if (!mappedData || offset + size > fileSize) return nullptr;
+        if (offset > fileSize || size > fileSize - offset) return nullptr;
+        if (!EnsureMappedRange(offset, size)) return nullptr;
         return static_cast<char*>(mappedData) + offset;
     }
     
@@ -68,12 +77,13 @@ public:
      * @return String or empty string if bounds exceeded
      */
     std::string GetString(size_t offset, size_t length) const {
-        if (!mappedData || offset + length > fileSize) return "";
+        if (offset > fileSize || length > fileSize - offset) return "";
+        if (!EnsureMappedRange(offset, length)) return "";
         return std::string(static_cast<char*>(mappedData) + offset, length);
     }
     
     size_t GetFileSize() const { return fileSize; }
-    bool IsOpen() const { return mappedData != nullptr; }
+    bool IsOpen() const { return mappingHandle != nullptr; }
     
     // Memory statistics
     struct MemoryStats {
@@ -84,6 +94,6 @@ public:
     };
     
     MemoryStats GetStats() const {
-        return {fileSize, fileSize, IsOpen(), filePath};
+        return {fileSize, mappedViewSize, IsOpen(), filePath};
     }
 };

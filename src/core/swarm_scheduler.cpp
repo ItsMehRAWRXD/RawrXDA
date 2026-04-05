@@ -202,6 +202,15 @@ static void appendJsonEscaped(std::string& o, const std::string& s)
     }
     return out;
 }
+
+[[nodiscard]] bool sliceRangeIsValid(const ModelSlice& slice)
+{
+    if (!slice.id.valid() || slice.byteSize == 0)
+        return false;
+    if (slice.fileOffsetBytes > std::numeric_limits<std::uint64_t>::max() - slice.byteSize)
+        return false;
+    return true;
+}
 }  // namespace
 
 // ---------------------------------------------------------------------------
@@ -337,6 +346,8 @@ std::expected<void, SchedulerError> RawrXDModelLoaderMemoryBackend::pinRange(std
     if (size > static_cast<std::uint64_t>(SIZE_MAX))
         return std::unexpected(SchedulerError::InvalidArgument);
 #endif
+    if (offset > std::numeric_limits<std::uint64_t>::max() - size)
+        return std::unexpected(SchedulerError::InvalidArgument);
     const std::size_t sz = static_cast<std::size_t>(size);
 
     if (m_pinned && (m_pinnedModel != modelIndex || m_pinnedOffset != offset || m_pinnedSize != size))
@@ -407,6 +418,8 @@ std::expected<void, SchedulerError> RawrXDModelLoaderMemoryBackend::prefetchPinR
     if (size > static_cast<std::uint64_t>(SIZE_MAX))
         return std::unexpected(SchedulerError::InvalidArgument);
 #endif
+    if (offset > std::numeric_limits<std::uint64_t>::max() - size)
+        return std::unexpected(SchedulerError::InvalidArgument);
     const std::size_t sz = static_cast<std::size_t>(size);
 
     if (m_loader->ComputeMappingCovers(offset, size))
@@ -419,11 +432,13 @@ std::expected<void, SchedulerError> RawrXDModelLoaderMemoryBackend::prefetchPinR
         m_prefetchPinned = false;
     }
 
+    // Prefetch is opportunistic; when disabled we treat it as a no-op, not an error.
+    if (!m_loader->IsPrefetchEnabled())
+        return {};
+
     void* p = m_loader->MapPrefetchWindow(offset, sz);
     if (!p)
     {
-        RawrXD::Logging::Logger::instance().error(std::string("[Swarm] MapPrefetchWindow failed offset=") +
-                                                  std::to_string(offset) + " size=" + std::to_string(size));
         return std::unexpected(SchedulerError::PinFailed);
     }
     m_prefetchPinned = true;
@@ -531,6 +546,11 @@ std::expected<void, SchedulerError> SwarmScheduler::configure(const SchedulerCon
 std::expected<void, SchedulerError> SwarmScheduler::submitPlan(std::vector<ModelSlice> plan)
 {
     std::lock_guard<std::mutex> lock(m_schedMutex);
+    for (const ModelSlice& slice : plan)
+    {
+        if (!sliceRangeIsValid(slice))
+            return std::unexpected(SchedulerError::InvalidArgument);
+    }
     for (const auto& r : m_workingSet.residents())
     {
         if (r.holdCount != 0)

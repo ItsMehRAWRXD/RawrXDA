@@ -111,6 +111,8 @@ struct HeadlessConfig {
     bool            verbose        = false;
     bool            quiet          = false;
     bool            jsonOutput     = false;  // --json: emit structured JSON
+    bool            exitAfterLoad  = false;  // --exit-after-load: forensic one-shot
+    bool            forensicMapOnly = false; // --forensic-map-only: skip full GGUF parse and map probe only
     bool            enableRepl     = false;  // --repl: interactive mode
     bool            enableServer   = true;   // --no-server: disable HTTP
     int             maxTokens      = 2048;
@@ -119,6 +121,45 @@ struct HeadlessConfig {
     int             ollamaPort     = 11434;
     std::string     workingDir;             // --dir <path>
     bool            listModelsOnly = false; // --list: list Ollama models and exit
+    bool            benchAttention = false; // --bench-attention: run hidden flash-attention benchmark and exit
+    bool            benchSweep = false;     // --bench-sweep: run hidden scaling sweep benchmark matrix and exit
+    int             benchBatchSize = 1;     // --bench-batch
+    int             benchSeqLen = 1024;     // --bench-seq-len
+    int             benchHeadDim = 128;     // --bench-head-dim
+    int             benchNumHeads = 32;     // --bench-heads
+    int             benchWarmupIters = 1;   // --bench-warmup
+    int             benchMeasureIters = 2;  // --bench-iters
+    bool            benchMedianMode = false; // --bench-median: report median iteration instead of mean
+    std::string     benchCsvPath;            // --bench-csv <path>: append benchmark row to CSV
+    bool            traceTokenSummary = false; // --trace-token-summary: emit Titan token trace summary after single-shot
+    std::string     traceTokenCsvPath;        // --trace-token-csv <path>: dump Titan token trace CSV after single-shot
+};
+
+// ============================================================================
+// Streaming protocol contract for partial backend updates
+// ============================================================================
+enum class BackendRequestType {
+    GeneralInference = 0,
+    LSPCompletion = 1,
+    ArchitecturalReasoning = 2
+};
+
+struct StreamChunk {
+    uint64_t    sequence_id = 0;
+    std::string token_delta;
+    bool        is_final = false;
+};
+
+struct ExtendedBackendResult {
+    bool               success = false;
+    BackendRequestType request_type = BackendRequestType::GeneralInference;
+    std::string        final_text;
+    std::vector<StreamChunk> chunks;
+    uint64_t           prompt_tokens = 0;
+    uint64_t           completion_tokens = 0;
+    double             tokens_per_sec = 0.0;
+    double             latency_ms = 0.0;
+    std::string        error;
 };
 
 // ============================================================================
@@ -153,10 +194,13 @@ public:
     bool isModelLoaded() const;
     std::string getLoadedModelName() const;
     std::string getModelInfo() const;
+    bool prepareInferenceBackend(const std::string& requestedModel = std::string());
 
     // ---- Inference ----
     std::string runInference(const std::string& prompt);
     std::string runInference(const std::string& prompt, int maxTokens, float temperature);
+    void runInferenceStreaming(const std::string& prompt,
+                               std::function<void(const StreamChunk&)> chunkCallback);
     void runInferenceStreaming(const std::string& prompt,
                                std::function<void(const char*, size_t)> tokenCallback);
 
@@ -247,6 +291,7 @@ public:
     std::string getFullStatusDump() const;
     std::string getVersionString() const;
     uint64_t getUptimeMs() const;
+    std::string captureProfileBundleV1(const std::string& baselineLabel = "baseline_a", int sampleSeconds = 30);
 
     // ---- Instructions Context (Phase 34 — persistent across session) ----
     std::string getInstructionsContent() const;
@@ -279,6 +324,8 @@ private:
     int runReplMode();
     int runSingleShotMode();
     int runBatchMode();
+    int runAttentionBenchMode();
+    int runScalingSweepMode();
 
     // ---- REPL helpers ----
     void processReplCommand(const std::string& input);
@@ -291,6 +338,9 @@ private:
     // ---- HTTP server (delegating to Win32IDE_LocalServer logic) ----
     void serverLoop();
     void handleClient(SOCKET clientFd);
+
+    // SEH crash guard for detached client threads
+    static DWORD headlessHandleClientSafe(HeadlessIDE*, SOCKET);
 
     // ---- Shutdown ----
     void shutdownAll();
@@ -320,6 +370,7 @@ private:
     bool m_phase12Initialized         = false;
     bool m_hotpatchInitialized        = false;
     bool m_instructionsInitialized  = false;
+    bool m_headlessMinimal            = true;
 
     // HTTP server state
     std::atomic<bool>                 m_serverRunning{false};
@@ -330,6 +381,8 @@ private:
     bool                              m_modelLoaded     = false;
     std::string                       m_loadedModelPath;
     std::string                       m_loadedModelName;
+    bool                              m_orchestratorModelLoaded = false;
+    std::string                       m_orchestratorModelTag = "headless";
 
     // Active backend state
     AIBackendType                     m_activeBackend   = AIBackendType::LocalGGUF;

@@ -260,7 +260,7 @@ std::string Win32IDE::getBackendConfigFilePath() const
 void Win32IDE::loadBackendConfigs()
 {
     std::string path = getBackendConfigFilePath();
-    std::ifstream ifs(path);
+    std::ifstream ifs(path, std::ios::binary | std::ios::ate);
     if (!ifs.is_open())
     {
         logInfo("[BackendSwitcher] No saved config at " + path + " — using defaults");
@@ -269,6 +269,19 @@ void Win32IDE::loadBackendConfigs()
 
     try
     {
+        const std::streampos endPos = ifs.tellg();
+        if (endPos <= 0)
+        {
+            return;
+        }
+        const size_t fileSize = static_cast<size_t>(endPos);
+        static constexpr size_t kMaxBackendConfigBytes = 4u * 1024u * 1024u;
+        if (fileSize > kMaxBackendConfigBytes)
+        {
+            logError("loadBackendConfigs", "Config file too large: " + path);
+            return;
+        }
+        ifs.seekg(0);
         std::string fileContent((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
         nlohmann::json j = nlohmann::json::parse(fileContent);
 
@@ -1199,7 +1212,19 @@ std::string Win32IDE::httpPost(const std::string& url, const std::string& body, 
     size_t colonPos = host.find(':');
     if (colonPos != std::string::npos)
     {
-        port = std::stoi(host.substr(colonPos + 1));
+        try
+        {
+            const int parsedPort = std::stoi(host.substr(colonPos + 1));
+            if (parsedPort < 1 || parsedPort > 65535)
+            {
+                return "";
+            }
+            port = parsedPort;
+        }
+        catch (...)
+        {
+            return "";
+        }
         host = host.substr(0, colonPos);
     }
 
@@ -1241,6 +1266,14 @@ std::string Win32IDE::httpPost(const std::string& url, const std::string& body, 
     }
 
     // Send request
+    static constexpr size_t kMaxHttpRequestBytes = 8u * 1024u * 1024u;
+    if (body.size() > kMaxHttpRequestBytes)
+    {
+        WinHttpCloseHandle(hRequest);
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+        return "";
+    }
     BOOL sent = WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0,
                                    body.empty() ? WINHTTP_NO_REQUEST_DATA : (LPVOID)body.c_str(), (DWORD)body.size(),
                                    (DWORD)body.size(), 0);
@@ -1262,6 +1295,8 @@ std::string Win32IDE::httpPost(const std::string& url, const std::string& body, 
 
     // Read response
     std::string responseBody;
+    static constexpr size_t kMaxHttpResponseBytes = 256u * 1024u * 1024u;
+    size_t totalRead = 0;
     DWORD bytesRead = 0;
     DWORD bytesAvailable = 0;
     do
@@ -1273,6 +1308,14 @@ std::string Win32IDE::httpPost(const std::string& url, const std::string& body, 
 
         std::vector<char> buf(bytesAvailable + 1, 0);
         WinHttpReadData(hRequest, buf.data(), bytesAvailable, &bytesRead);
+        totalRead += static_cast<size_t>(bytesRead);
+        if (totalRead > kMaxHttpResponseBytes)
+        {
+            WinHttpCloseHandle(hRequest);
+            WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            return "";
+        }
         responseBody.append(buf.data(), bytesRead);
     } while (bytesRead > 0);
 

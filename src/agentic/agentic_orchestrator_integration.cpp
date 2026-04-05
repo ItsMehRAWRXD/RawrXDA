@@ -8,11 +8,43 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
+#include <algorithm>
+#include <cctype>
 
 namespace Agentic
 {
 
 namespace {
+
+std::string toLower(std::string s)
+{
+    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+    });
+    return s;
+}
+
+bool hasAnyTerm(const std::string& haystack, const std::initializer_list<const char*> terms)
+{
+    for (const char* t : terms)
+    {
+        if (haystack.find(t) != std::string::npos)
+            return true;
+    }
+    return false;
+}
+
+PlanStep makeStep(const std::string& id, const std::string& title, const std::string& description,
+                  bool isMutating, StepRisk risk)
+{
+    PlanStep s;
+    s.id = id;
+    s.title = title;
+    s.description = description;
+    s.is_mutating = isMutating;
+    s.risk_level = risk;
+    return s;
+}
 
 void tryLoadApprovalPolicyFromDisk(AgenticPlanningOrchestrator& orch)
 {
@@ -62,53 +94,72 @@ void OrchestratorIntegration::initialize()
         return;
     }
 
-    // Wire planner: for now, use a stub that generates basic plans
+    // Wire planner with deterministic task-aware plan generation.
     m_orchestrator->setPlanGenerationFn(
         [this](const std::string& task) -> ExecutionPlan
         {
             ExecutionPlan plan;
             plan.description = task;
             plan.source_task = task;
-            plan.planner_model = "default_stub";
-            plan.confidence_score = 0.75f;
+            plan.planner_model = "deterministic_rule_planner_v1";
+            plan.confidence_score = 0.82f;
 
-            // Create a default multi-step plan
-            // In production, this would call an actual LLM planner
-            PlanStep step1;
-            step1.id = "step_1_analyze";
-            step1.title = "Analyze task requirements";
-            step1.description = "Parse task to understand scope and dependencies";
-            step1.is_mutating = false;
-            step1.risk_level = StepRisk::VeryLow;
-            plan.steps.push_back(step1);
+            const std::string lowered = toLower(task);
+            const bool isBugFix = hasAnyTerm(lowered, {"fix", "bug", "crash", "error", "regression"});
+            const bool isFeature = hasAnyTerm(lowered, {"add", "implement", "feature", "support"});
+            const bool isRefactor = hasAnyTerm(lowered, {"refactor", "cleanup", "restructure"});
+            const bool isPerf = hasAnyTerm(lowered, {"optimize", "latency", "performance", "throughput"});
+            const bool touchesBuild = hasAnyTerm(lowered, {"cmake", "build", "link", "compile"});
+            const bool touchesTests = hasAnyTerm(lowered, {"test", "coverage", "ctest", "smoke"});
 
-            PlanStep step2;
-            step2.id = "step_2_prepare";
-            step2.title = "Prepare workspace";
-            step2.description = "Set up build environment and dependencies";
-            step2.is_mutating = false;
-            step2.risk_level = StepRisk::Low;
-            step2.dependencies.push_back(step1.id);
-            plan.steps.push_back(step2);
+            PlanStep discover = makeStep(
+                "step_1_discover",
+                "Discover current behavior",
+                "Locate relevant symbols and verify current execution path before making changes.",
+                false,
+                StepRisk::VeryLow);
+            discover.actions.push_back("semantic_search");
+            discover.actions.push_back("read_file");
+            plan.steps.push_back(std::move(discover));
 
-            PlanStep step3;
-            step3.id = "step_3_implement";
-            step3.title = "Implement changes";
-            step3.description = "Execute code modifications as planned";
-            step3.is_mutating = true;
-            step3.risk_level = StepRisk::Medium;  // Will be re-analyzed
-            step3.dependencies.push_back(step2.id);
-            step3.affected_files.push_back("src/implementation.cpp");
-            plan.steps.push_back(step3);
+            PlanStep design = makeStep(
+                "step_2_design",
+                "Design concrete change",
+                "Define minimal code edits and safety checks for the task.",
+                false,
+                isRefactor ? StepRisk::Low : StepRisk::VeryLow);
+            design.dependencies.push_back("step_1_discover");
+            plan.steps.push_back(std::move(design));
 
-            PlanStep step4;
-            step4.id = "step_4_validate";
-            step4.title = "Validate and test";
-            step4.description = "Run tests to verify implementation";
-            step4.is_mutating = false;
-            step4.risk_level = StepRisk::VeryLow;
-            step4.dependencies.push_back(step3.id);
-            plan.steps.push_back(step4);
+            PlanStep implement = makeStep(
+                "step_3_implement",
+                isBugFix ? "Patch failing behavior" : (isFeature ? "Implement feature behavior" : "Apply code changes"),
+                "Edit impacted files and wire runtime paths to concrete implementations.",
+                true,
+                (isPerf || isRefactor) ? StepRisk::Medium : StepRisk::Low);
+            implement.dependencies.push_back("step_2_design");
+            implement.actions.push_back("apply_patch");
+            plan.steps.push_back(std::move(implement));
+
+            PlanStep build = makeStep(
+                "step_4_build",
+                "Build and verify",
+                "Compile updated targets and verify no regressions were introduced.",
+                false,
+                touchesBuild ? StepRisk::Medium : StepRisk::Low);
+            build.dependencies.push_back("step_3_implement");
+            build.actions.push_back("cmake_build");
+            plan.steps.push_back(std::move(build));
+
+            PlanStep validate = makeStep(
+                "step_5_validate",
+                touchesTests ? "Run validation tests" : "Run smoke validation",
+                "Execute targeted checks and confirm behavior with runtime evidence.",
+                false,
+                StepRisk::VeryLow);
+            validate.dependencies.push_back("step_4_build");
+            validate.actions.push_back(touchesTests ? "run_tests" : "smoke_test");
+            plan.steps.push_back(std::move(validate));
 
             return plan;
         });

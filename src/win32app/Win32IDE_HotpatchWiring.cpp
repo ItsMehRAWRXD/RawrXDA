@@ -22,6 +22,7 @@
 #include "../core/confidence_gate.h"
 #include "multi_response_engine.h"
 #include "../core/universal_model_hotpatcher.h"
+#include "../core/hotpatch_wiring.h"
 #include "../../include/swarm_orchestrator.h"
 #include "../agent_history.h"
 #include "../agent_explainability.h"
@@ -34,6 +35,7 @@
 #include <fstream>
 #include <sstream>
 #include <chrono>
+#include <cctype>
 #include <csignal>
 #include <cstring>
 #include <algorithm>
@@ -46,6 +48,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <vector>
+#include <unordered_map>
 #include <windows.h>
 #include <utility>
 
@@ -60,10 +63,503 @@ static std::atomic<HeadlessIDE*> g_headlessInstance{nullptr};
 static std::unique_ptr<RawrXD::LSPServer::RawrXDLSPServer> g_embeddedLSP;
 static std::mutex                       g_embeddedLSPMutex;
 
+namespace {
+constexpr size_t kMaxHeadlessHotpatchRequestBytes = 64u * 1024u;
+constexpr size_t kMaxHeadlessHotpatchBodyBytes = 32u * 1024u;
+constexpr size_t kMaxHeadlessHotpatchPromptBytes = 32u * 1024u;
+constexpr size_t kMaxHeadlessHotpatchInferenceBytes = 1024u * 1024u;
+constexpr size_t kMaxHeadlessHotpatchResponseBytes = 1024u * 1024u;
+constexpr size_t kMaxOptionalEnginePathBytes = 1024u;
+constexpr size_t kMaxOptionalEngineIdBytes = 128u;
+constexpr size_t kMaxLspFastPathResponseBytes = 128u * 1024u;
+constexpr double kTitanMaxLatencyMs = 2000.0;
+constexpr double kTitanMinTokensPerSecond = 3.5;
+constexpr uint32_t kTitanBreachDetourThreshold = 3;
+constexpr uint32_t kTitanHealthyRestoreThreshold = 5;
+constexpr const char* kLspFastPathPipeName = "\\\\.\\pipe\\rawrxd-lsp-headless";
+
+struct InferenceTransportTelemetry {
+    bool attempted = false;
+    bool success = false;
+    bool timedOut = false;
+    uint64_t promptTokens = 0;
+    uint64_t completionTokens = 0;
+    double tps = 0.0;
+    double durationMs = 0.0;
+    std::string error;
+};
+
+static std::string jsonEscapeFastPath(const std::string& input) {
+    std::string out;
+    out.reserve(input.size() + 32);
+    for (char c : input) {
+        switch (c) {
+            case '"': out += "\\\""; break;
+            case '\\': out += "\\\\"; break;
+            case '\n': out += "\\n"; break;
+            case '\r': out += "\\r"; break;
+            case '\t': out += "\\t"; break;
+            default: out.push_back(c); break;
+        }
+    }
+    return out;
+}
+
+static BackendRequestType classifyBackendRequestType(const std::string& prompt) {
+    if (prompt.find("\"request_type\":\"LSP_COMPLETION\"") != std::string::npos ||
+        prompt.find("request_type=LSP_COMPLETION") != std::string::npos ||
+        prompt.rfind("LSP_COMPLETION:", 0) == 0 ||
+        prompt.rfind("lsp_completion:", 0) == 0) {
+        return BackendRequestType::LSPCompletion;
+    }
+
+    if (prompt.find("\"request_type\":\"ARCH_REASONING\"") != std::string::npos ||
+        prompt.find("request_type=ARCH_REASONING") != std::string::npos ||
+        prompt.find("swarm") != std::string::npos) {
+        return BackendRequestType::ArchitecturalReasoning;
+    }
+
+    return BackendRequestType::GeneralInference;
+}
+
+static bool tryLspNamedPipeFastPath(const std::string& prompt,
+                                    std::string& outResponse,
+                                    std::string& outError) {
+    if (prompt.empty()) {
+        outError = "empty LSP prompt";
+        return false;
+    }
+
+    if (!WaitNamedPipeA(kLspFastPathPipeName, 25)) {
+        outError = "LSP fast-path pipe unavailable";
+        return false;
+    }
+
+    HANDLE hPipe = CreateFileA(
+        kLspFastPathPipeName,
+        GENERIC_READ | GENERIC_WRITE,
+        0,
+        nullptr,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        nullptr);
+    if (hPipe == INVALID_HANDLE_VALUE) {
+        outError = "failed to open LSP fast-path pipe";
+        return false;
+    }
+
+    bool ok = false;
+    DWORD mode = PIPE_READMODE_BYTE;
+    if (!SetNamedPipeHandleState(hPipe, &mode, nullptr, nullptr)) {
+        outError = "failed to configure LSP fast-path pipe";
+    } else {
+        std::string payload =
+            "{\"request_type\":\"LSP_COMPLETION\",\"prompt\":\"" +
+            jsonEscapeFastPath(prompt) + "\"}\n";
+
+        DWORD written = 0;
+        if (!WriteFile(hPipe, payload.data(), static_cast<DWORD>(payload.size()), &written, nullptr) ||
+            written != payload.size()) {
+            outError = "failed to write to LSP fast-path pipe";
+        } else {
+            std::string response;
+            response.reserve(4096);
+            char buffer[1024] = {};
+            DWORD read = 0;
+
+            while (ReadFile(hPipe, buffer, sizeof(buffer), &read, nullptr) && read > 0) {
+                if (response.size() + static_cast<size_t>(read) > kMaxLspFastPathResponseBytes) {
+                    outError = "LSP fast-path response too large";
+                    response.clear();
+                    break;
+                }
+                response.append(buffer, buffer + read);
+                if (response.find('\n') != std::string::npos) {
+                    break;
+                }
+            }
+
+            if (!response.empty()) {
+                while (!response.empty() && (response.back() == '\n' || response.back() == '\r')) {
+                    response.pop_back();
+                }
+                outResponse = response;
+                ok = true;
+            } else if (outError.empty()) {
+                outError = "empty LSP fast-path response";
+            }
+        }
+    }
+
+    CloseHandle(hPipe);
+    return ok;
+}
+
+using InferenceTransportDetourFn = bool (*) (
+    HeadlessIDE* ide,
+    const std::string& prompt,
+    bool cloudSelected,
+    const HeadlessConfig& config,
+    bool modelLoaded,
+    const std::string& loadedModelName,
+    InferenceTransportTelemetry& telemetry,
+    std::string& outResponse);
+
+static bool inferenceTransportPrimary(
+    HeadlessIDE* ide,
+    const std::string& prompt,
+    bool cloudSelected,
+    const HeadlessConfig& config,
+    bool modelLoaded,
+    const std::string& loadedModelName,
+    InferenceTransportTelemetry& telemetry,
+    std::string& outResponse);
+
+static bool inferenceTransportRecovery(
+    HeadlessIDE* ide,
+    const std::string& prompt,
+    bool cloudSelected,
+    const HeadlessConfig& config,
+    bool modelLoaded,
+    const std::string& loadedModelName,
+    InferenceTransportTelemetry& telemetry,
+    std::string& outResponse);
+
+static std::atomic<InferenceTransportDetourFn> g_activeInferenceTransport{nullptr};
+static std::atomic<uint32_t> g_titanConsecutiveBreaches{0};
+static std::atomic<uint32_t> g_titanConsecutiveHealthy{0};
+static std::atomic<uint64_t> g_titanLastLatencyMs{0};
+static std::atomic<uint64_t> g_titanLastTpsMilli{0};
+static std::atomic<uint64_t> g_streamSequenceCounter{1};
+
+static bool performOllamaTransport(
+    HeadlessIDE* ide,
+    const std::string& prompt,
+    bool cloudSelected,
+    const HeadlessConfig& config,
+    bool modelLoaded,
+    const std::string& loadedModelName,
+    int timeoutMs,
+    int maxTokens,
+    float temperature,
+    InferenceTransportTelemetry& telemetry,
+    std::string& outResponse) {
+    telemetry.attempted = true;
+    auto start = std::chrono::steady_clock::now();
+
+    if (!ide) {
+        telemetry.error = "null ide instance";
+        return false;
+    }
+
+    IOutputSink* sink = ide->getOutputSink();
+
+    if (cloudSelected && sink) {
+        sink->appendOutput(
+            "Cloud backend selected in headless mode: routing through local Ollama transport",
+            OutputSeverity::Warning);
+    }
+
+    RawrXD::Agent::OllamaConfig cfg;
+    cfg.host = "127.0.0.1";
+    cfg.port = 11434;
+    cfg.temperature = temperature;
+    cfg.max_tokens = maxTokens;
+    cfg.timeout_ms = timeoutMs;
+    cfg.use_gpu = true;
+    cfg.num_gpu = 99;
+
+    RawrXD::Agent::AgentOllamaClient client(cfg);
+
+    std::vector<RawrXD::Agent::ChatMessage> messages;
+    messages.push_back({"system", "You are RawrXD IDE's embedded AI assistant. "
+        "Provide accurate, concise answers. When asked about code, give working examples.", "", {}});
+    if (modelLoaded) {
+        messages.push_back({"system", "Loaded model: " + loadedModelName, "", {}});
+    }
+    messages.push_back({"user", prompt, "", {}});
+
+    auto result = client.ChatSync(messages);
+
+    const auto end = std::chrono::steady_clock::now();
+    telemetry.durationMs = std::chrono::duration<double, std::milli>(end - start).count();
+    telemetry.promptTokens = result.prompt_tokens;
+    telemetry.completionTokens = result.completion_tokens;
+    telemetry.tps = result.tokens_per_sec;
+    telemetry.success = result.success;
+
+    if (result.success) {
+        outResponse = result.response;
+        if (sink) {
+            char perf[320];
+            snprintf(perf, sizeof(perf),
+                     "[inference] %llu prompt + %llu completion tokens, %.1f tok/s, %.0f ms",
+                     (unsigned long long)result.prompt_tokens,
+                     (unsigned long long)result.completion_tokens,
+                     result.tokens_per_sec, telemetry.durationMs);
+            sink->appendOutput(perf, OutputSeverity::Debug);
+        }
+        return true;
+    }
+
+    telemetry.error = result.error_message;
+    if (result.error_message.find("timeout") != std::string::npos ||
+        result.error_message.find("timed out") != std::string::npos) {
+        telemetry.timedOut = true;
+    }
+
+    if (sink) {
+        sink->appendOutput(("Ollama inference failed: " + result.error_message).c_str(),
+                           OutputSeverity::Warning);
+    }
+    return true;
+}
+
+static bool inferenceTransportPrimary(
+    HeadlessIDE* ide,
+    const std::string& prompt,
+    bool cloudSelected,
+    const HeadlessConfig& config,
+    bool modelLoaded,
+    const std::string& loadedModelName,
+    InferenceTransportTelemetry& telemetry,
+    std::string& outResponse) {
+    return performOllamaTransport(
+        ide,
+        prompt,
+        cloudSelected,
+        config,
+        modelLoaded,
+        loadedModelName,
+        static_cast<int>(kTitanMaxLatencyMs),
+        std::max(1, config.maxTokens),
+        config.temperature,
+        telemetry,
+        outResponse);
+}
+
+static bool inferenceTransportRecovery(
+    HeadlessIDE* ide,
+    const std::string& prompt,
+    bool cloudSelected,
+    const HeadlessConfig& config,
+    bool modelLoaded,
+    const std::string& loadedModelName,
+    InferenceTransportTelemetry& telemetry,
+    std::string& outResponse) {
+    const int recoveryMaxTokens = std::max(64, std::min(config.maxTokens, 512));
+    const float recoveryTemp = std::max(0.2f, std::min(config.temperature, 0.5f));
+    if (ide && ide->getOutputSink()) {
+        ide->getOutputSink()->appendOutput(
+            "Titan recovery detour active (2000ms/3.5 tok/s guardrails)",
+            OutputSeverity::Warning);
+    }
+    return performOllamaTransport(
+        ide,
+        prompt,
+        cloudSelected,
+        config,
+        modelLoaded,
+        loadedModelName,
+        static_cast<int>(kTitanMaxLatencyMs),
+        recoveryMaxTokens,
+        recoveryTemp,
+        telemetry,
+        outResponse);
+}
+
+static bool isTitanBreach(const InferenceTransportTelemetry& telemetry) {
+    if (!telemetry.success) {
+        return true;
+    }
+    if (telemetry.durationMs > kTitanMaxLatencyMs) {
+        return true;
+    }
+    if (telemetry.completionTokens > 0) {
+        if (telemetry.tps <= 0.0 || telemetry.tps < kTitanMinTokensPerSecond) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static float computeTitanConfidenceScore(const InferenceTransportTelemetry& telemetry) {
+    if (!telemetry.success) {
+        return 0.15f;
+    }
+
+    float score = 1.0f;
+    if (telemetry.durationMs > 0.0) {
+        const double latencyRatio = kTitanMaxLatencyMs / std::max(kTitanMaxLatencyMs, telemetry.durationMs);
+        score = std::min(score, static_cast<float>(latencyRatio));
+    }
+
+    if (telemetry.completionTokens > 0 && telemetry.tps > 0.0) {
+        const double throughputRatio = std::min(1.0, telemetry.tps / kTitanMinTokensPerSecond);
+        score = std::min(score, static_cast<float>(throughputRatio));
+    }
+
+    if (score < 0.0f) score = 0.0f;
+    if (score > 1.0f) score = 1.0f;
+    return score;
+}
+
+static void engageRecoveryDetour(IOutputSink* sink, const char* reason) {
+    InferenceTransportDetourFn expected = &inferenceTransportPrimary;
+    if (g_activeInferenceTransport.compare_exchange_strong(
+            expected,
+            &inferenceTransportRecovery,
+            std::memory_order_acq_rel,
+            std::memory_order_acquire)) {
+        if (sink) {
+            const std::string msg = std::string("[titan-guard] Recovery detour engaged: ") +
+                                    (reason ? reason : "threshold breach");
+            sink->appendOutput(msg.c_str(), OutputSeverity::Warning);
+        }
+    }
+}
+
+static void restorePrimaryDetour(IOutputSink* sink) {
+    InferenceTransportDetourFn expected = &inferenceTransportRecovery;
+    if (g_activeInferenceTransport.compare_exchange_strong(
+            expected,
+            &inferenceTransportPrimary,
+            std::memory_order_acq_rel,
+            std::memory_order_acquire)) {
+        if (sink) {
+            sink->appendOutput("[titan-guard] Restored primary inference detour", OutputSeverity::Info);
+        }
+    }
+}
+
+static std::string jsonEscape(const std::string& value) {
+    std::string out;
+    out.reserve(value.size() + 16);
+    for (char c : value) {
+        switch (c) {
+            case '"': out += "\\\""; break;
+            case '\\': out += "\\\\"; break;
+            case '\n': out += "\\n"; break;
+            case '\r': out += "\\r"; break;
+            case '\t': out += "\\t"; break;
+            default: out.push_back(c); break;
+        }
+    }
+    return out;
+}
+
+static bool isReasonablePromptSize(const std::string& prompt) noexcept {
+    return prompt.size() <= kMaxHeadlessHotpatchPromptBytes;
+}
+
+static bool hasNonEmptyEnvVar(const char* name) noexcept {
+    if (!name || !*name) {
+        return false;
+    }
+    const char* value = std::getenv(name);
+    return value && *value;
+}
+
+static bool hasCloudBackendCredential(HeadlessIDE::AIBackendType type) noexcept {
+    switch (type) {
+        case HeadlessIDE::AIBackendType::OpenAI:
+            return hasNonEmptyEnvVar("OPENAI_API_KEY");
+        case HeadlessIDE::AIBackendType::Claude:
+            return hasNonEmptyEnvVar("ANTHROPIC_API_KEY");
+        case HeadlessIDE::AIBackendType::Gemini:
+            return hasNonEmptyEnvVar("GEMINI_API_KEY") || hasNonEmptyEnvVar("GOOGLE_API_KEY");
+        default:
+            return false;
+    }
+}
+
+static bool validateOptionalEngineArgs(const char* enginePath,
+                                       const char* engineId,
+                                       const char*& reason) noexcept {
+    reason = nullptr;
+    if (!enginePath || !engineId || !*enginePath || !*engineId) {
+        reason = "missing engine id/path";
+        return false;
+    }
+
+    const size_t pathLen = std::strlen(enginePath);
+    const size_t idLen = std::strlen(engineId);
+    if (pathLen == 0 || pathLen > kMaxOptionalEnginePathBytes) {
+        reason = "invalid engine path length";
+        return false;
+    }
+    if (idLen == 0 || idLen > kMaxOptionalEngineIdBytes) {
+        reason = "invalid engine id length";
+        return false;
+    }
+    if (std::strstr(enginePath, "..") != nullptr) {
+        reason = "engine path contains parent traversal";
+        return false;
+    }
+
+    for (size_t i = 0; i < idLen; ++i) {
+        const unsigned char ch = static_cast<unsigned char>(engineId[i]);
+        const bool allowed =
+            std::isalnum(ch) != 0 || ch == '_' || ch == '-' || ch == '.';
+        if (!allowed) {
+            reason = "engine id contains invalid characters";
+            return false;
+        }
+    }
+
+    for (size_t i = 0; i < pathLen; ++i) {
+        const unsigned char ch = static_cast<unsigned char>(enginePath[i]);
+        if (std::iscntrl(ch) != 0 || ch == '"' || ch == '<' || ch == '>' ||
+            ch == '|' || ch == '*' || ch == '?') {
+            reason = "engine path contains invalid characters";
+            return false;
+        }
+    }
+
+    return true;
+}
+}
+
 static void headlessSignalHandler(int sig) {
     HeadlessIDE* inst = g_headlessInstance.load();
     if (inst) {
         inst->requestShutdown();
+    }
+}
+
+static void tryLoadOptionalEngineLogged(EngineManager* manager, const char* enginePath, const char* engineId)
+{
+    if (!manager || !enginePath || !engineId)
+        return;
+
+    const char* validationReason = nullptr;
+    if (!validateOptionalEngineArgs(enginePath, engineId, validationReason))
+    {
+        std::cerr << "[HeadlessIDE] Optional engine load skipped: reason="
+                  << (validationReason ? validationReason : "invalid arguments")
+                  << " id=" << (engineId ? engineId : "<null>")
+                  << " path=" << (enginePath ? enginePath : "<null>") << std::endl;
+        return;
+    }
+
+    try
+    {
+        const bool loaded = manager->LoadEngine(enginePath, engineId);
+        if (!loaded)
+        {
+            std::cerr << "[HeadlessIDE] Optional engine load failed: id=" << engineId
+                      << " path=" << enginePath << std::endl;
+        }
+    }
+    catch (const std::exception& ex)
+    {
+        std::cerr << "[HeadlessIDE] Optional engine load threw: id=" << engineId
+                  << " path=" << enginePath << " error=" << ex.what() << std::endl;
+    }
+    catch (...)
+    {
+        std::cerr << "[HeadlessIDE] Optional engine load threw unknown exception: id=" << engineId
+                  << " path=" << enginePath << std::endl;
     }
 }
 
@@ -415,10 +911,10 @@ HeadlessResult HeadlessIDE::initEngines() {
     if (!m_engineManager) {
         m_engineManager = new EngineManager();
         if (RawrXD::EnterpriseLicense::Instance().Is800BUnlocked() || RawrXD::g_800B_Unlocked) {
-            try { m_engineManager->LoadEngine("engines/800b-5drive/800b_engine.dll", "800b-5drive"); } catch (...) {}
+            tryLoadOptionalEngineLogged(m_engineManager, "engines/800b-5drive/800b_engine.dll", "800b-5drive");
         }
-        try { m_engineManager->LoadEngine("engines/codex-ultimate/codex.dll", "codex-ultimate"); } catch (...) {}
-        try { m_engineManager->LoadEngine("engines/rawrxd-compiler/compiler.dll", "rawrxd-compiler"); } catch (...) {}
+        tryLoadOptionalEngineLogged(m_engineManager, "engines/codex-ultimate/codex.dll", "codex-ultimate");
+        tryLoadOptionalEngineLogged(m_engineManager, "engines/rawrxd-compiler/compiler.dll", "rawrxd-compiler");
     }
     if (!m_codexUltimate) {
         m_codexUltimate = new CodexUltimate();
@@ -487,9 +983,9 @@ HeadlessResult HeadlessIDE::initLLMRouter() {
     RouterEntry routes[] = {
         { AIBackendType::Ollama,    "Ollama",    1, m_backendManagerInitialized },
         { AIBackendType::LocalGGUF, "LocalGGUF",  2, m_modelLoaded },
-        { AIBackendType::OpenAI,    "OpenAI",    10, false },
-        { AIBackendType::Claude,    "Claude",    11, false },
-        { AIBackendType::Gemini,    "Gemini",    12, false },
+        { AIBackendType::OpenAI,    "OpenAI",    10, hasCloudBackendCredential(AIBackendType::OpenAI) },
+        { AIBackendType::Claude,    "Claude",    11, hasCloudBackendCredential(AIBackendType::Claude) },
+        { AIBackendType::Gemini,    "Gemini",    12, hasCloudBackendCredential(AIBackendType::Gemini) },
     };
 
     int activeRoutes = 0;
@@ -682,6 +1178,7 @@ HeadlessResult HeadlessIDE::initPhase10() {
     confidence.setPolicy(GatePolicy::Normal);
     confidence.setEnabled(true);
     confidence.setAutoEscalate(true); // headless: auto-escalate
+    confidence.setSelfAbortThreshold(3);
 
     m_phase10Initialized = true;
     auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
@@ -728,17 +1225,46 @@ HeadlessResult HeadlessIDE::initPhase12() {
 
 HeadlessResult HeadlessIDE::initHotpatch() {
     auto startTime = std::chrono::steady_clock::now();
+
+    // Initialize the three-layer hotpatch system
     auto& hotpatcher = UniversalModelHotpatcher::instance();
     if (!hotpatcher.isInitialized()) {
         hotpatcher.initialize();
     }
+
+    // Initialize the coordinator with the Governor
+    auto& governor = ExecutionGovernor::instance();
+    auto& coordinator = HotpatchCoordinator::instance();
+    if (!coordinator.initialize(&governor)) {
+        std::string err = "Hotpatch coordination failed: coordinator init error";
+        m_outputSink->appendOutput(err.c_str(), OutputSeverity::Warning);
+        return HeadlessResult::error(err);
+    }
+
+    // Initialize the safety gate
+    auto& safetyGate = PatchSafetyGate::instance();
+    if (!safetyGate.initialize()) {
+        std::string err = "Hotpatch safety gate initialization failed";
+        m_outputSink->appendOutput(err.c_str(), OutputSeverity::Warning);
+        return HeadlessResult::error(err);
+    }
+
+    if (g_activeInferenceTransport.load(std::memory_order_acquire) == nullptr) {
+        g_activeInferenceTransport.store(&inferenceTransportPrimary, std::memory_order_release);
+    }
+    g_titanConsecutiveBreaches.store(0, std::memory_order_release);
+    g_titanConsecutiveHealthy.store(0, std::memory_order_release);
+    g_titanLastLatencyMs.store(0, std::memory_order_release);
+    g_titanLastTpsMilli.store(0, std::memory_order_release);
+
     m_hotpatchInitialized = true;
     auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
         std::chrono::steady_clock::now() - startTime).count();
-    std::string msg = "Three-layer hotpatch initialized [" + std::to_string(elapsed) + "us]";
+    std::string msg = "Three-layer hotpatch system initialized (hotpatcher + coordinator + safety gate) [" + 
+                      std::to_string(elapsed) + "us]";
     m_outputSink->appendOutput(msg.c_str(), OutputSeverity::Debug);
     m_outputSink->onStatusUpdate("hotpatch", "active");
-    return HeadlessResult::ok("Hotpatch ready");
+    return HeadlessResult::ok("Hotpatch system ready");
 }
 
 HeadlessResult HeadlessIDE::initInstructions() {
@@ -828,10 +1354,10 @@ bool HeadlessIDE::loadModel(const std::string& filepath) {
     }
 
     CPUInference::GGUFHeader hdr = loader->GetHeader();
-    // Validate magic: 0x46475547 = "GGUF" little-endian
-    if (hdr.magic != 0x46475547) {
+    // Validate magic: 0x46554747 = "GGUF" little-endian (bytes 47 47 55 46)
+    if (hdr.magic != 0x46554747U) {
         char buf[128];
-        snprintf(buf, sizeof(buf), "Bad GGUF magic: 0x%08X (expected 0x46475547)", hdr.magic);
+        snprintf(buf, sizeof(buf), "Bad GGUF magic: 0x%08X (expected 0x46554747)", hdr.magic);
         m_outputSink->appendOutput(buf, OutputSeverity::Error);
         loader->Close();
         return false;
@@ -941,11 +1467,16 @@ std::string HeadlessIDE::runInference(const std::string& prompt, int maxTokens, 
 }
 
 void HeadlessIDE::runInferenceStreaming(const std::string& prompt,
-                                         std::function<void(const char*, size_t)> tokenCallback) {
+                                        std::function<void(const StreamChunk&)> chunkCallback) {
     if (!m_modelLoaded) {
         m_outputSink->appendOutput("No model loaded for streaming inference", OutputSeverity::Error);
         return;
     }
+
+    const uint64_t sequenceId = g_streamSequenceCounter.fetch_add(1, std::memory_order_relaxed);
+    ExtendedBackendResult streamResult;
+    streamResult.success = false;
+    streamResult.request_type = classifyBackendRequestType(prompt);
 
     m_outputSink->onStreamStart("inference");
 
@@ -965,25 +1496,52 @@ void HeadlessIDE::runInferenceStreaming(const std::string& prompt,
         messages.push_back({"system", "You are RawrXD IDE's embedded AI assistant.", "", {}});
         messages.push_back({"user", prompt, "", {}});
 
+        auto emitChunk = [&](const std::string& delta, bool isFinal) {
+            StreamChunk chunk;
+            chunk.sequence_id = sequenceId;
+            chunk.token_delta = delta;
+            chunk.is_final = isFinal;
+
+            if (streamResult.chunks.size() < 8192) {
+                streamResult.chunks.push_back(chunk);
+            }
+            if (!isFinal) {
+                streamResult.completion_tokens++;
+                streamResult.final_text += delta;
+            }
+            if (chunkCallback) {
+                chunkCallback(chunk);
+            }
+        };
+
         bool streamOk = client.ChatStream(
             messages, nlohmann::json::array(),
             /* on_token */ [&](const std::string& token) {
-                if (tokenCallback) {
-                    tokenCallback(token.c_str(), token.size());
-                }
+                emitChunk(token, false);
                 m_outputSink->onStreamingToken(token.c_str(), token.size(), StreamTokenOrigin::Inference);
             },
             /* on_tool_call */ [](const std::string&, const nlohmann::json&) {},
             /* on_done */ [&](const std::string& full, uint64_t pt, uint64_t ct, double tps) {
+                streamResult.success = true;
+                streamResult.prompt_tokens = pt;
+                streamResult.completion_tokens = ct;
+                streamResult.tokens_per_sec = tps;
+                if (streamResult.final_text.empty()) {
+                    streamResult.final_text = full;
+                }
                 char perf[256];
                 snprintf(perf, sizeof(perf), "[stream] %llu+%llu tokens, %.1f tok/s",
                          (unsigned long long)pt, (unsigned long long)ct, tps);
                 m_outputSink->appendOutput(perf, OutputSeverity::Debug);
             },
             /* on_error */ [&](const std::string& err) {
+                streamResult.error = err;
                 m_outputSink->appendOutput(("Stream error: " + err).c_str(), OutputSeverity::Error);
             }
         );
+
+        // Emit stream terminator so consumers can de-interlace concurrent requests safely.
+        emitChunk(std::string(), true);
 
         m_outputSink->onStreamEnd("inference", streamOk);
         return;
@@ -991,10 +1549,43 @@ void HeadlessIDE::runInferenceStreaming(const std::string& prompt,
 
     // Fallback: batch inference emitted as single chunk
     std::string result = runInference(prompt);
-    if (tokenCallback && !result.empty()) {
-        tokenCallback(result.c_str(), result.size());
+    if (!result.empty()) {
+        StreamChunk deltaChunk;
+        deltaChunk.sequence_id = sequenceId;
+        deltaChunk.token_delta = result;
+        deltaChunk.is_final = false;
+        streamResult.success = true;
+        streamResult.final_text = result;
+        streamResult.completion_tokens = 1;
+        if (streamResult.chunks.size() < 8192) {
+            streamResult.chunks.push_back(deltaChunk);
+        }
+        if (chunkCallback) {
+            chunkCallback(deltaChunk);
+        }
+    }
+
+    StreamChunk finalChunk;
+    finalChunk.sequence_id = sequenceId;
+    finalChunk.is_final = true;
+    if (streamResult.chunks.size() < 8192) {
+        streamResult.chunks.push_back(finalChunk);
+    }
+    if (chunkCallback) {
+        chunkCallback(finalChunk);
     }
     m_outputSink->onStreamEnd("inference", !result.empty());
+}
+
+void HeadlessIDE::runInferenceStreaming(const std::string& prompt,
+                                         std::function<void(const char*, size_t)> tokenCallback) {
+    runInferenceStreaming(prompt,
+        [tokenCallback](const StreamChunk& chunk) {
+            if (!tokenCallback || chunk.is_final || chunk.token_delta.empty()) {
+                return;
+            }
+            tokenCallback(chunk.token_delta.c_str(), chunk.token_delta.size());
+        });
 }
 
 // ============================================================================
@@ -1008,10 +1599,54 @@ bool HeadlessIDE::setActiveBackend(AIBackendType type) {
         return false;
     }
 
+    if (m_activeBackend == type) {
+        char buf[256];
+        snprintf(buf, sizeof(buf), "Backend already active: %s", backendNames[idx]);
+        m_outputSink->appendOutput(buf, OutputSeverity::Debug);
+        return true;
+    }
+
+    if (!m_headlessMinimal && type == AIBackendType::LocalGGUF && !m_modelLoaded) {
+        std::vector<std::string> candidateModelPaths;
+        auto addCandidate = [&](const std::string& path) {
+            if (path.empty()) {
+                return;
+            }
+            if (std::find(candidateModelPaths.begin(), candidateModelPaths.end(), path) == candidateModelPaths.end()) {
+                candidateModelPaths.push_back(path);
+            }
+        };
+
+        addCandidate(m_config.modelPath);
+        addCandidate(m_loadedModelPath);
+        if (const char* envPath = std::getenv("RAWRXD_NATIVE_MODEL_PATH")) {
+            addCandidate(envPath);
+        }
+
+        for (const auto& candidate : candidateModelPaths) {
+            char autoLoadBuf[384];
+            snprintf(autoLoadBuf, sizeof(autoLoadBuf), "LocalGGUF backend requires a loaded model; attempting auto-load: %s", candidate.c_str());
+            m_outputSink->appendOutput(autoLoadBuf, OutputSeverity::Info);
+            if (loadModel(candidate)) {
+                m_outputSink->appendOutput("LocalGGUF auto-load succeeded", OutputSeverity::Info);
+                break;
+            }
+        }
+    }
+
     // Probe health before switching
     if (!probeBackendHealth(type)) {
-        char buf[256];
-        snprintf(buf, sizeof(buf), "Backend '%s' health check failed — switch aborted", backendNames[idx]);
+        const char* hint = "";
+        switch (type) {
+            case AIBackendType::LocalGGUF: hint = " (load a model first)"; break;
+            case AIBackendType::Ollama:    hint = " (ensure Ollama is running on port 11434)"; break;
+            case AIBackendType::OpenAI:   hint = " (set OPENAI_API_KEY)"; break;
+            case AIBackendType::Claude:   hint = " (set ANTHROPIC_API_KEY)"; break;
+            case AIBackendType::Gemini:   hint = " (set GOOGLE_API_KEY or GEMINI_API_KEY)"; break;
+            default: break;
+        }
+        char buf[384];
+        snprintf(buf, sizeof(buf), "Backend '%s' health check failed — switch aborted%s", backendNames[idx], hint);
         m_outputSink->appendOutput(buf, OutputSeverity::Warning);
         return false;
     }
@@ -1069,9 +1704,9 @@ bool HeadlessIDE::probeBackendHealth(AIBackendType type) {
         case AIBackendType::OpenAI:
         case AIBackendType::Claude:
         case AIBackendType::Gemini:
-            // Cloud backends: check if API key is configured
-            // (API key management is in BackendState singleton)
-            return false; // Not yet configured in headless mode
+            // Cloud backends: considered healthy when a credential is present.
+            // The request path can still fall back to Ollama when cloud transport is unavailable.
+            return hasCloudBackendCredential(type);
 
         default:
             return false;
@@ -1079,53 +1714,144 @@ bool HeadlessIDE::probeBackendHealth(AIBackendType type) {
 }
 
 std::string HeadlessIDE::routeInferenceRequest(const std::string& prompt) {
+    if (!isReasonablePromptSize(prompt)) {
+        return "[error] Prompt too large";
+    }
+
     m_inferenceRequestCount++;
     recordSimpleEvent("inference_request");
 
-    auto t0 = std::chrono::steady_clock::now();
+    const BackendRequestType requestType = classifyBackendRequestType(prompt);
 
-    // Route based on active backend type
-    if (m_activeBackend == AIBackendType::Ollama || m_activeBackend == AIBackendType::LocalGGUF) {
-        // Use AgentOllamaClient for Ollama-backed inference
-        RawrXD::Agent::OllamaConfig cfg;
-        cfg.host = "127.0.0.1";
-        cfg.port = 11434;
-        // chat_model left empty — auto-detected from Ollama /api/tags
-        cfg.temperature = m_config.temperature;
-        cfg.max_tokens = m_config.maxTokens;
-        cfg.use_gpu = true;
-        cfg.num_gpu = 99;
-
-        RawrXD::Agent::AgentOllamaClient client(cfg);
-
-        // Build conversation with system context
-        std::vector<RawrXD::Agent::ChatMessage> messages;
-        messages.push_back({"system", "You are RawrXD IDE's embedded AI assistant. "
-            "Provide accurate, concise answers. When asked about code, give working examples.", "", {}});
-        if (m_modelLoaded) {
-            messages.push_back({"system", "Loaded model: " + m_loadedModelName, "", {}});
+    if (requestType == BackendRequestType::LSPCompletion) {
+        std::string fastPathResponse;
+        std::string fastPathError;
+        if (tryLspNamedPipeFastPath(prompt, fastPathResponse, fastPathError)) {
+            if (m_outputSink) {
+                m_outputSink->appendOutput("[router] LSP completion routed through named-pipe fast path",
+                                           OutputSeverity::Debug);
+            }
+            return fastPathResponse;
         }
-        messages.push_back({"user", prompt, "", {}});
 
-        auto result = client.ChatSync(messages);
+        if (m_outputSink && !fastPathError.empty()) {
+            m_outputSink->appendOutput(("[router] LSP fast-path fallback: " + fastPathError).c_str(),
+                                       OutputSeverity::Debug);
+        }
+    }
 
-        auto t1 = std::chrono::steady_clock::now();
-        double durationMs = std::chrono::duration<double, std::milli>(t1 - t0).count();
+    if (m_headlessMinimal && m_activeBackend == AIBackendType::LocalGGUF && !m_modelLoaded) {
+        if (!probeBackendHealth(AIBackendType::Ollama)) {
+            return "[error] Inference unavailable in headless minimal mode — no local model loaded and Ollama is unreachable";
+        }
+    }
 
-        if (result.success) {
-            char perf[256];
-            snprintf(perf, sizeof(perf),
-                     "[inference] %llu prompt + %llu completion tokens, %.1f tok/s, %.0f ms",
-                     (unsigned long long)result.prompt_tokens,
-                     (unsigned long long)result.completion_tokens,
-                     result.tokens_per_sec, durationMs);
-            m_outputSink->appendOutput(perf, OutputSeverity::Debug);
-            return result.response;
-        } else {
-            m_outputSink->appendOutput(
-                ("Ollama inference failed: " + result.error_message).c_str(),
-                OutputSeverity::Warning);
-            // Fall through to engine manager path
+    // Route based on active backend type.
+    // Cloud modes currently reuse the local Ollama transport as a practical fallback.
+    const bool cloudSelected = (m_activeBackend == AIBackendType::OpenAI ||
+                                m_activeBackend == AIBackendType::Claude ||
+                                m_activeBackend == AIBackendType::Gemini);
+    const bool canUseLocalTransport = (m_activeBackend == AIBackendType::Ollama ||
+                                       m_activeBackend == AIBackendType::LocalGGUF ||
+                                       (cloudSelected && m_backendManagerInitialized));
+
+    if (canUseLocalTransport) {
+        InferenceTransportDetourFn detour =
+            g_activeInferenceTransport.load(std::memory_order_acquire);
+        if (!detour) {
+            detour = &inferenceTransportPrimary;
+            g_activeInferenceTransport.store(detour, std::memory_order_release);
+        }
+
+        InferenceTransportTelemetry telemetry;
+        std::string transportResponse;
+        const bool attempted = detour(
+            this,
+            prompt,
+            cloudSelected,
+            m_config,
+            m_modelLoaded,
+            m_loadedModelName,
+            telemetry,
+            transportResponse);
+
+        if (attempted) {
+            g_titanLastLatencyMs.store(
+                telemetry.durationMs > 0.0 ? static_cast<uint64_t>(telemetry.durationMs) : 0,
+                std::memory_order_release);
+            g_titanLastTpsMilli.store(
+                telemetry.tps > 0.0 ? static_cast<uint64_t>(telemetry.tps * 1000.0) : 0,
+                std::memory_order_release);
+
+            bool breach = isTitanBreach(telemetry);
+            const float confidenceScore = computeTitanConfidenceScore(telemetry);
+
+            if (m_phase10Initialized) {
+                auto& confidence = ConfidenceGate::instance();
+                const ConfidenceEvaluation eval = confidence.evaluateAndRecord(
+                    confidenceScore,
+                    ActionClass::QueryModel,
+                    SafetyRiskTier::High,
+                    "titan_inference_guard");
+                if (eval.decision == ConfidenceDecision::Abort) {
+                    breach = true;
+                }
+            }
+
+            if (breach) {
+                const uint32_t breaches =
+                    g_titanConsecutiveBreaches.fetch_add(1, std::memory_order_acq_rel) + 1;
+                g_titanConsecutiveHealthy.store(0, std::memory_order_release);
+
+                if (m_hotpatchInitialized) {
+                    auto& hp = UniversalModelHotpatcher::instance();
+                    hp.enableAutoPressureResponse(true);
+                    if (hp.isInitialized()) {
+                        const SurgeryResult surgery = hp.triggerPressureResponse();
+                        if (!surgery.success) {
+                            m_outputSink->appendOutput(
+                                ("[titan-guard] Hotpatch pressure response failed: " +
+                                 std::string(surgery.detail ? surgery.detail : "unknown")).c_str(),
+                                OutputSeverity::Warning);
+                        }
+                    }
+                }
+
+                char breachBuf[320];
+                snprintf(breachBuf,
+                         sizeof(breachBuf),
+                         "[titan-guard] breach #%u latency=%.0fms tps=%.2f (budget %.0fms / %.1f tok/s)",
+                         breaches,
+                         telemetry.durationMs,
+                         telemetry.tps,
+                         kTitanMaxLatencyMs,
+                         kTitanMinTokensPerSecond);
+                m_outputSink->appendOutput(breachBuf, OutputSeverity::Warning);
+
+                if (breaches >= kTitanBreachDetourThreshold) {
+                    engageRecoveryDetour(m_outputSink, "consecutive titan threshold breaches");
+                }
+            } else {
+                g_titanConsecutiveBreaches.store(0, std::memory_order_release);
+                const uint32_t healthy =
+                    g_titanConsecutiveHealthy.fetch_add(1, std::memory_order_acq_rel) + 1;
+                if (healthy >= kTitanHealthyRestoreThreshold) {
+                    restorePrimaryDetour(m_outputSink);
+                }
+            }
+
+            if (telemetry.success) {
+                if (transportResponse.size() > kMaxHeadlessHotpatchInferenceBytes) {
+                    return transportResponse.substr(0, kMaxHeadlessHotpatchInferenceBytes);
+                }
+                return transportResponse;
+            }
+
+            if (!telemetry.error.empty()) {
+                m_outputSink->appendOutput(
+                    ("Ollama inference failed: " + telemetry.error).c_str(),
+                    OutputSeverity::Warning);
+            }
         }
     }
 
@@ -1337,7 +2063,17 @@ std::string HeadlessIDE::getHotpatchStatus() const {
     oss << "Layers requantized: " << stats.layersRequantized.load() << "\n";
     oss << "Total surgeries: " << stats.totalSurgeries.load() << "\n";
     oss << "Memory saved: " << (stats.totalMemorySaved.load() / (1024*1024)) << " MB\n";
-    oss << "Pressure events: " << stats.pressureEvents.load();
+    oss << "Pressure events: " << stats.pressureEvents.load() << "\n";
+    const uint64_t latencyMs = g_titanLastLatencyMs.load(std::memory_order_acquire);
+    const double tps = static_cast<double>(g_titanLastTpsMilli.load(std::memory_order_acquire)) / 1000.0;
+    const uint32_t breaches = g_titanConsecutiveBreaches.load(std::memory_order_acquire);
+    const InferenceTransportDetourFn detour = g_activeInferenceTransport.load(std::memory_order_acquire);
+    oss << "Titan guard: "
+        << (detour == &inferenceTransportRecovery ? "RECOVERY" : "PRIMARY")
+        << " (budget=" << static_cast<int>(kTitanMaxLatencyMs) << "ms/"
+        << kTitanMinTokensPerSecond << " tok/s)\n";
+    oss << "Last sample: " << latencyMs << "ms, " << tps << " tok/s\n";
+    oss << "Consecutive breaches: " << breaches;
     return oss.str();
 }
 
@@ -1447,12 +2183,54 @@ void HeadlessIDE::serverLoop() {
 }
 
 void HeadlessIDE::handleClient(SOCKET clientFd) {
+    const uint64_t requestStartMs = GetTickCount64();
+    const unsigned long requestId = static_cast<unsigned long>(requestStartMs ^ static_cast<uint64_t>(GetCurrentThreadId()));
+    auto statusText = [](int code) -> const char* {
+        switch (code) {
+            case 200: return "OK";
+            case 204: return "No Content";
+            case 400: return "Bad Request";
+            case 404: return "Not Found";
+            case 405: return "Method Not Allowed";
+            case 413: return "Payload Too Large";
+            default: return "Internal Server Error";
+        }
+    };
+    auto sendAll = [&](const std::string& payload) {
+        size_t sent = 0;
+        while (sent < payload.size()) {
+            const int chunk = send(clientFd, payload.c_str() + sent,
+                                   static_cast<int>(payload.size() - sent), 0);
+            if (chunk <= 0) {
+                break;
+            }
+            sent += static_cast<size_t>(chunk);
+        }
+    };
+
     // Read HTTP request
     char buf[8192] = {};
     int bytesRead = recv(clientFd, buf, sizeof(buf) - 1, 0);
     if (bytesRead <= 0) return;
 
     std::string request(buf, bytesRead);
+    if (request.size() > kMaxHeadlessHotpatchRequestBytes) {
+        const std::string errBody = "{\"error\":\"Request too large\"}";
+        std::ostringstream errResp;
+        errResp << "HTTP/1.1 413 " << statusText(413) << "\r\n";
+        errResp << "Content-Type: application/json\r\n";
+        errResp << "Content-Length: " << errBody.size() << "\r\n";
+        errResp << "Access-Control-Allow-Origin: *\r\n";
+        errResp << "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n";
+        errResp << "Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With\r\n";
+        errResp << "X-Content-Type-Options: nosniff\r\n";
+        errResp << "Cache-Control: no-store\r\n";
+        errResp << "X-Request-Id: " << requestId << "\r\n";
+        errResp << "Connection: close\r\n\r\n";
+        errResp << errBody;
+        sendAll(errResp.str());
+        return;
+    }
 
     // Parse method and path
     std::string method, path;
@@ -1465,6 +2243,101 @@ void HeadlessIDE::handleClient(SOCKET clientFd) {
         }
     }
 
+    auto trimAsciiCopy = [](std::string value) {
+        auto isSpace = [](unsigned char ch) {
+            return ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n';
+        };
+        while (!value.empty() && isSpace(static_cast<unsigned char>(value.front()))) {
+            value.erase(value.begin());
+        }
+        while (!value.empty() && isSpace(static_cast<unsigned char>(value.back()))) {
+            value.pop_back();
+        }
+        return value;
+    };
+    auto toLowerCopy = [](std::string value) {
+        std::transform(value.begin(), value.end(), value.begin(),
+                       [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        return value;
+    };
+    auto toUpperCopy = [](std::string value) {
+        std::transform(value.begin(), value.end(), value.begin(),
+                       [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
+        return value;
+    };
+    auto stripQueryAndFragment = [](const std::string& value) {
+        const size_t q = value.find('?');
+        const size_t h = value.find('#');
+        const size_t cut = (q == std::string::npos)
+                               ? h
+                               : ((h == std::string::npos) ? q : std::min(q, h));
+        return (cut == std::string::npos) ? value : value.substr(0, cut);
+    };
+
+    method = toUpperCopy(trimAsciiCopy(std::move(method)));
+    path = stripQueryAndFragment(trimAsciiCopy(std::move(path)));
+
+    auto parseHttpHeaders = [&](const std::string& rawRequest) {
+        std::unordered_map<std::string, std::string> headers;
+        size_t firstLineEnd = rawRequest.find("\r\n");
+        if (firstLineEnd == std::string::npos) {
+            return headers;
+        }
+        size_t cursor = firstLineEnd + 2;
+        while (cursor < rawRequest.size()) {
+            size_t lineEnd = rawRequest.find("\r\n", cursor);
+            if (lineEnd == std::string::npos || lineEnd == cursor) {
+                break;
+            }
+
+            std::string line = rawRequest.substr(cursor, lineEnd - cursor);
+            size_t colon = line.find(':');
+            if (colon != std::string::npos) {
+                std::string key = toLowerCopy(trimAsciiCopy(line.substr(0, colon)));
+                std::string value = trimAsciiCopy(line.substr(colon + 1));
+                if (!key.empty() && headers.find(key) == headers.end()) {
+                    headers.emplace(std::move(key), std::move(value));
+                }
+            }
+
+            cursor = lineEnd + 2;
+        }
+        return headers;
+    };
+    const auto headers = parseHttpHeaders(request);
+
+    auto getHeadlessAuthToken = [&]() -> const std::string& {
+        static const std::string token = []() {
+            if (const char* env = std::getenv("RAWRXD_HEADLESS_AUTH_TOKEN")) {
+                return trimAsciiCopy(std::string(env));
+            }
+            return std::string();
+        }();
+        return token;
+    };
+    auto isPublicRouteNoAuthRequired = [&](const std::string& route) {
+        return route == "/" ||
+               route == "/health" ||
+               route == "/api/health" ||
+               route == "/api/status" ||
+               route == "/api/headless/status" ||
+               route == "/api/version" ||
+               route == "/api/features" ||
+               route == "/api/manifest";
+    };
+    auto hasMatchingBearerToken = [&]() {
+        const auto it = headers.find("authorization");
+        if (it == headers.end()) {
+            return false;
+        }
+        const std::string auth = trimAsciiCopy(it->second);
+        if (auth.size() < 8 || toLowerCopy(auth.substr(0, 7)) != "bearer ") {
+            return false;
+        }
+        const std::string token = trimAsciiCopy(auth.substr(7));
+        return !token.empty() && token == getHeadlessAuthToken();
+    };
+
     // Extract body (after double newline)
     std::string body;
     {
@@ -1473,94 +2346,266 @@ void HeadlessIDE::handleClient(SOCKET clientFd) {
             body = request.substr(bodyStart + 4);
         }
     }
+    if (body.size() > kMaxHeadlessHotpatchBodyBytes) {
+        const std::string errBody = "{\"error\":\"Request body too large\"}";
+        std::ostringstream errResp;
+        errResp << "HTTP/1.1 413 " << statusText(413) << "\r\n";
+        errResp << "Content-Type: application/json\r\n";
+        errResp << "Content-Length: " << errBody.size() << "\r\n";
+        errResp << "Access-Control-Allow-Origin: *\r\n";
+        errResp << "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n";
+        errResp << "Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With\r\n";
+        errResp << "X-Content-Type-Options: nosniff\r\n";
+        errResp << "Cache-Control: no-store\r\n";
+        errResp << "X-Request-Id: " << requestId << "\r\n";
+        errResp << "Connection: close\r\n\r\n";
+        errResp << errBody;
+        sendAll(errResp.str());
+        return;
+    }
+
+    if (method.empty() || path.empty()) {
+        const std::string errBody = "{\"success\":false,\"error\":\"bad_request\"}";
+        std::ostringstream errResp;
+        errResp << "HTTP/1.1 400 " << statusText(400) << "\r\n";
+        errResp << "Content-Type: application/json\r\n";
+        errResp << "Content-Length: " << errBody.size() << "\r\n";
+        errResp << "Access-Control-Allow-Origin: *\r\n";
+        errResp << "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n";
+        errResp << "Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With\r\n";
+        errResp << "X-Content-Type-Options: nosniff\r\n";
+        errResp << "Cache-Control: no-store\r\n";
+        errResp << "X-Request-Id: " << requestId << "\r\n";
+        errResp << "Connection: close\r\n\r\n";
+        errResp << errBody;
+        sendAll(errResp.str());
+        return;
+    }
+
+    if (method == "OPTIONS") {
+        std::ostringstream preflight;
+        preflight << "HTTP/1.1 204 " << statusText(204) << "\r\n";
+        preflight << "Content-Length: 0\r\n";
+        preflight << "Access-Control-Allow-Origin: *\r\n";
+        preflight << "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n";
+        preflight << "Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With\r\n";
+        preflight << "X-Content-Type-Options: nosniff\r\n";
+        preflight << "Cache-Control: no-store\r\n";
+        preflight << "X-Request-Id: " << requestId << "\r\n";
+        preflight << "Connection: close\r\n\r\n";
+        sendAll(preflight.str());
+        return;
+    }
 
     // Route to handlers (mirrors Win32IDE_LocalServer.cpp endpoints)
     std::string responseBody;
     std::string contentType = "application/json";
     int statusCode = 200;
 
-    if (path == "/api/status" || path == "/api/headless/status") {
+    auto methodNotAllowed = [&]() {
+        statusCode = 405;
+        responseBody = "{\"success\":false,\"error\":\"method_not_allowed\"}";
+    };
+
+    if (!getHeadlessAuthToken().empty() && !isPublicRouteNoAuthRequired(path) && !hasMatchingBearerToken()) {
+        statusCode = 401;
+        responseBody = "{\"success\":false,\"error\":\"unauthorized\"}";
+    }
+    else if (path == "/api/status" || path == "/api/headless/status") {
+        if (method != "GET") {
+            methodNotAllowed();
+        } else {
         responseBody = getFullStatusDump();
+        }
     }
     else if (path == "/api/version") {
+        if (method != "GET") {
+            methodNotAllowed();
+        } else {
         responseBody = "{\"version\":\"" + std::string(VERSION) + "\",\"phase\":\"" + BUILD_PHASE + "\",\"mode\":\"headless\"}";
+        }
     }
     else if (path == "/api/model/info") {
+        if (method != "GET") {
+            methodNotAllowed();
+        } else {
         responseBody = "{\"loaded\":" + std::string(m_modelLoaded ? "true" : "false") +
-                       ",\"name\":\"" + m_loadedModelName + "\"}";
+                       ",\"name\":\"" + jsonEscape(m_loadedModelName) + "\"}";
+        }
     }
-    else if (path == "/api/generate" && method == "POST") {
+    else if (path == "/api/generate") {
+        if (method != "POST") {
+            methodNotAllowed();
+        } else {
         // Parse prompt from JSON body
         std::string prompt;
-        try {
-            auto j = nlohmann::json::parse(body);
+        auto j = nlohmann::json::parse(body, nullptr, false);
+        if (!j.is_discarded()) {
             prompt = j.value("prompt", "");
-        } catch (...) {
+        } else {
             prompt = body;
         }
-        std::string result = runInference(prompt);
-        responseBody = "{\"response\":\"" + result + "\"}";
+        if (!isReasonablePromptSize(prompt)) {
+            statusCode = 413;
+            responseBody = "{\"error\":\"Prompt too large\"}";
+        } else {
+            std::string result = runInference(prompt);
+            responseBody = "{\"response\":\"" + jsonEscape(result) + "\"}";
+        }
+        }
     }
-    else if (path == "/v1/chat/completions" && method == "POST") {
+    else if (path == "/v1/chat/completions") {
+        if (method != "POST") {
+            methodNotAllowed();
+        } else {
         // OpenAI-compatible endpoint
         std::string prompt;
-        try {
-            auto j = nlohmann::json::parse(body);
+        auto j = nlohmann::json::parse(body, nullptr, false);
+        if (!j.is_discarded()) {
             auto messages = j.value("messages", nlohmann::json::array());
             if (!messages.empty()) {
                 prompt = messages[messages.size() - 1].value("content", "");
             }
-        } catch (...) {
+        } else {
             prompt = body;
         }
-        std::string result = runInference(prompt);
-        responseBody = "{\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"" + result + "\"}}]}";
+        if (!isReasonablePromptSize(prompt)) {
+            statusCode = 413;
+            responseBody = "{\"error\":\"Prompt too large\"}";
+        } else {
+            std::string result = runInference(prompt);
+            responseBody = "{\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"" + jsonEscape(result) + "\"}}]}";
+        }
+        }
     }
     else if (path == "/api/backend/status") {
-        responseBody = "{\"status\":\"" + getBackendStatusString() + "\"}";
+        if (method != "GET") {
+            methodNotAllowed();
+        } else {
+        responseBody = "{\"status\":\"" + jsonEscape(getBackendStatusString()) + "\"}";
+        }
     }
     else if (path == "/api/router/status") {
-        responseBody = "{\"status\":\"" + getRouterStatusString() + "\"}";
+        if (method != "GET") {
+            methodNotAllowed();
+        } else {
+        responseBody = "{\"status\":\"" + jsonEscape(getRouterStatusString()) + "\"}";
+        }
     }
     else if (path == "/api/governor/status") {
-        responseBody = "{\"status\":\"" + getGovernorStatus() + "\"}";
+        if (method != "GET") {
+            methodNotAllowed();
+        } else {
+        responseBody = "{\"status\":\"" + jsonEscape(getGovernorStatus()) + "\"}";
+        }
+    }
+    else if (path == "/api/governor/policy") {
+        if (method != "GET") {
+            methodNotAllowed();
+        } else {
+            auto& governor = ExecutionGovernor::instance();
+            const GovernorPolicy policy = governor.getPolicy();
+            std::ostringstream oss;
+            oss << "{\"success\":true,\"policy\":{";
+            oss << "\"allow_terminal_commands\":" << (policy.allowTerminalCommands ? "true" : "false") << ",";
+            oss << "\"block_critical_risk\":" << (policy.blockCriticalRisk ? "true" : "false") << ",";
+            oss << "\"max_command_bytes\":" << policy.maxCommandBytes << ",";
+            oss << "\"max_timeout_ms\":" << policy.maxTimeoutMs;
+            oss << "}}";
+            responseBody = oss.str();
+        }
+    }
+    else if (path == "/api/governor/audit") {
+        if (method != "GET") {
+            methodNotAllowed();
+        } else {
+            auto& governor = ExecutionGovernor::instance();
+            const auto records = governor.getAuditTrail(50);
+            std::ostringstream oss;
+            oss << "{\"success\":true,\"count\":" << records.size() << "}";
+            responseBody = oss.str();
+        }
     }
     else if (path == "/api/safety/status") {
-        responseBody = "{\"status\":\"" + getSafetyStatus() + "\"}";
+        if (method != "GET") {
+            methodNotAllowed();
+        } else {
+        responseBody = "{\"status\":\"" + jsonEscape(getSafetyStatus()) + "\"}";
+        }
     }
     else if (path == "/api/swarm/status") {
-        responseBody = "{\"status\":\"" + getSwarmStatus() + "\"}";
+        if (method != "GET") {
+            methodNotAllowed();
+        } else {
+        responseBody = "{\"status\":\"" + jsonEscape(getSwarmStatus()) + "\"}";
+        }
     }
     else if (path == "/api/debug/status") {
-        responseBody = "{\"status\":\"" + getNativeDebugStatus() + "\"}";
+        if (method != "GET") {
+            methodNotAllowed();
+        } else {
+        responseBody = "{\"status\":\"" + jsonEscape(getNativeDebugStatus()) + "\"}";
+        }
     }
     else if (path == "/api/hotpatch/status") {
-        responseBody = "{\"status\":\"" + getHotpatchStatus() + "\"}";
+        if (method != "GET") {
+            methodNotAllowed();
+        } else {
+        responseBody = "{\"status\":\"" + jsonEscape(getHotpatchStatus()) + "\"}";
+        }
     }
     else if (path == "/api/asm/status") {
-        responseBody = "{\"status\":\"" + getAsmSemanticStatsString() + "\"}";
+        if (method != "GET") {
+            methodNotAllowed();
+        } else {
+        responseBody = "{\"status\":\"" + jsonEscape(getAsmSemanticStatsString()) + "\"}";
+        }
     }
     else if (path == "/api/lsp/status") {
-        responseBody = "{\"status\":\"" + getLSPStatusString() + "\"}";
+        if (method != "GET") {
+            methodNotAllowed();
+        } else {
+        responseBody = "{\"status\":\"" + jsonEscape(getLSPStatusString()) + "\"}";
+        }
     }
     else if (path == "/api/hybrid/status") {
-        responseBody = "{\"status\":\"" + getHybridBridgeStatusString() + "\"}";
+        if (method != "GET") {
+            methodNotAllowed();
+        } else {
+        responseBody = "{\"status\":\"" + jsonEscape(getHybridBridgeStatusString()) + "\"}";
+        }
     }
     else if (path == "/api/agent/history") {
-        responseBody = "{\"stats\":\"" + getAgentHistoryStats() + "\"}";
+        if (method != "GET") {
+            methodNotAllowed();
+        } else {
+        responseBody = "{\"stats\":\"" + jsonEscape(getAgentHistoryStats()) + "\"}";
+        }
     }
     else if (path == "/api/failure/stats") {
-        responseBody = "{\"stats\":\"" + getFailureDetectorStats() + "\"}";
+        if (method != "GET") {
+            methodNotAllowed();
+        } else {
+        responseBody = "{\"stats\":\"" + jsonEscape(getFailureDetectorStats()) + "\"}";
+        }
     }
     else if (path == "/api/manifest" || path == "/api/features") {
+        if (method != "GET") {
+            methodNotAllowed();
+        } else {
         responseBody = getFeatureManifestJSON();
         if (responseBody.empty()) {
             responseBody = "{\"features\":\"headless mode\"}";
         }
+        }
     }
     else if (path == "/health" || path == "/api/health") {
+        if (method != "GET") {
+            methodNotAllowed();
+        } else {
         responseBody = "{\"status\":\"ok\",\"mode\":\"headless\",\"uptime\":" +
                        std::to_string(getUptimeMs()) + "}";
+        }
     }
     // ========== Phase 34: Production Instructions Context ==========
     else if (path == "/api/instructions" && method == "GET") {
@@ -1577,7 +2622,7 @@ void HeadlessIDE::handleClient(SOCKET clientFd) {
         auto& ip = InstructionsProvider::instance();
         if (!ip.isLoaded()) ip.loadAll();
         std::string content = ip.getAllContent();
-        responseBody = "{\"content\":\"" + content + "\"}";
+        responseBody = "{\"content\":\"" + jsonEscape(content) + "\"}";
         // Return raw markdown as text/markdown
         contentType = "text/markdown; charset=utf-8";
         responseBody = ip.getAllContent();
@@ -1586,25 +2631,36 @@ void HeadlessIDE::handleClient(SOCKET clientFd) {
         auto& ip = InstructionsProvider::instance();
         auto r = ip.reload();
         responseBody = "{\"success\":" + std::string(r.success ? "true" : "false") +
-                       ",\"detail\":\"" + std::string(r.detail) + "\"}";
+                       ",\"detail\":\"" + jsonEscape(std::string(r.detail)) + "\"}";
     }
     else {
         statusCode = 404;
-        responseBody = "{\"error\":\"Not found\",\"path\":\"" + path + "\"}";
+        responseBody = "{\"error\":\"Not found\",\"path\":\"" + jsonEscape(path) + "\"}";
     }
 
     // Send HTTP response
+    if (responseBody.size() > kMaxHeadlessHotpatchResponseBytes) {
+        statusCode = 413;
+        responseBody = "{\"error\":\"Response too large\"}";
+    }
+
     std::ostringstream resp;
-    resp << "HTTP/1.1 " << statusCode << " " << (statusCode == 200 ? "OK" : "Not Found") << "\r\n";
+    resp << "HTTP/1.1 " << statusCode << " " << statusText(statusCode) << "\r\n";
     resp << "Content-Type: " << contentType << "\r\n";
     resp << "Content-Length: " << responseBody.size() << "\r\n";
     resp << "Access-Control-Allow-Origin: *\r\n";
+    resp << "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n";
+    resp << "Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With\r\n";
+    resp << "X-Content-Type-Options: nosniff\r\n";
+    resp << "Cache-Control: no-store\r\n";
+    resp << "X-Request-Id: " << requestId << "\r\n";
+    resp << "X-Response-Time-Ms: " << (GetTickCount64() - requestStartMs) << "\r\n";
     resp << "Connection: close\r\n";
     resp << "\r\n";
     resp << responseBody;
 
     std::string response = resp.str();
-    send(clientFd, response.c_str(), static_cast<int>(response.size()), 0);
+    sendAll(response);
 }
 
 // ============================================================================

@@ -1647,18 +1647,26 @@ void MainWindow::logAITelemetry(const std::string& model, bool success) {
     if (log.is_open()) {
         auto now = std::chrono::system_clock::now();
         std::time_t now_c = std::chrono::system_clock::to_time_t(now);
+        const std::string safeModel = (model.size() <= 128) ? model : model.substr(0, 128);
         log << std::put_time(std::localtime(&now_c), "%F %T") 
-            << " [AI_REQUEST] Model=" << model 
+            << " [AI_REQUEST] Model=" << safeModel 
             << " Success=" << (success ? "YES" : "NO") << "\n";
     }
 }
 
 void MainWindow::exportMetrics(const std::string& format) {
     std::string filename = "ai_metrics_export." + (format.empty() ? "txt" : format);
-    std::ifstream src("ai_usage.log", std::ios::binary);
+    std::ifstream src("ai_usage.log", std::ios::binary | std::ios::ate);
     std::ofstream dst(filename, std::ios::binary);
     
     if (src && dst) {
+        static constexpr std::streamoff kMaxMetricsExportBytes = 1024 * 1024;
+        const std::streamoff size = src.tellg();
+        if (size < 0 || size > kMaxMetricsExportBytes) {
+            MessageBoxA(m_hwnd, "ai_usage.log is too large to export safely.", "Export Failed", MB_OK | MB_ICONERROR);
+            return;
+        }
+        src.seekg(0, std::ios::beg);
         dst << src.rdbuf();
         std::string msg = "Metrics exported to: " + filename;
         MessageBoxA(m_hwnd, msg.c_str(), "Export Successful", MB_OK | MB_ICONINFORMATION);
@@ -1680,6 +1688,9 @@ void MainWindow::showMetricsReport() {
         std::string line;
         int count = 0;
         while (std::getline(logFile, line)) {
+            if (line.size() > 512) {
+                line.resize(512);
+            }
             report += line + "\n";
             count++;
             if (count > 50) {
@@ -2005,7 +2016,7 @@ LRESULT CALLBACK MainWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPA
             if ((GetKeyState(VK_CONTROL) & 0x8000) && wParam == 'T') { window->addTab("Untitled"); return 0; }
             if ((GetKeyState(VK_CONTROL) & 0x8000) && wParam == 'W') { if(window->m_tabs.size()>1) window->closeTab(window->m_currentTab); return 0; }
             if ((GetKeyState(VK_CONTROL) & 0x8000) && wParam == VK_TAB) { size_t n=window->m_tabs.size(); if(n>1) window->switchTab((window->m_currentTab+1)%n); return 0; }
-            if ((GetKeyState(VK_CONTROL)&0x8000) && (GetKeyState(VK_SHIFT)&0x8000) && wParam=='P') { window->toggleCommandPalette(); return 0; }
+            if ((GetKeyState(VK_CONTROL)&0x8000) && (GetKeyState(VK_SHIFT)&0x8000) && wParam=='P' && !(lParam & 0x40000000)) { window->toggleCommandPalette(); return 0; }
             if ((GetKeyState(VK_CONTROL) & 0x8000) && wParam == 'H') {
                 if (window->m_findPanelHwnd) ShowWindow(window->m_findPanelHwnd, SW_SHOW);
                 return 0;
@@ -2936,7 +2947,20 @@ void MainWindow::executePaletteSelection(int index) {
 }
 
 void MainWindow::loadSettings() {
-    std::ifstream in("RawrXDSettings.json"); if(!in) return; std::string line, content; while(std::getline(in,line)) content += line; in.close();
+    std::ifstream in("RawrXDSettings.json", std::ios::binary | std::ios::ate);
+    if(!in) return;
+    static constexpr std::streamoff kMaxSettingsBytes = 256 * 1024;
+    const std::streamoff size = in.tellg();
+    if (size < 0 || size > kMaxSettingsBytes) {
+        return;
+    }
+    in.seekg(0, std::ios::beg);
+    std::string content(static_cast<size_t>(size), '\0');
+    if (!content.empty()) {
+        in.read(content.data(), size);
+        if (!in) return;
+    }
+    in.close();
     auto findVal=[&](const std::string& key)->std::string{ auto p=content.find(key); if(p==std::string::npos) return ""; auto c=content.find(':',p); if(c==std::string::npos) return ""; auto q=content.find_first_of(",}" , c+1); return content.substr(c+1, q-(c+1)); };
     std::string theme = findVal("theme"); if(!theme.empty()){ if(theme.find("dark")!=std::string::npos) m_currentTheme=0; else m_currentTheme=1; }
     std::string fontSize = findVal("fontSize"); if(!fontSize.empty()) m_fontSize = atoi(fontSize.c_str());
@@ -2985,7 +3009,7 @@ void MainWindow::loadSettings() {
                 const size_t q2 = raw.find('"', q1 + 1);
                 if (q2 == std::string::npos) break;
                 std::string item = raw.substr(q1 + 1, q2 - q1 - 1);
-                if (!item.empty()) g_debugWatchExpressions.push_back(item);
+                if (!item.empty() && item.size() <= 256 && g_debugWatchExpressions.size() < 128) g_debugWatchExpressions.push_back(item);
                 pos = q2 + 1;
             }
         }
@@ -3000,7 +3024,7 @@ void MainWindow::loadSettings() {
             g_breakpointLines.clear();
             while (std::getline(ss, token, ',')) {
                 const int v = atoi(token.c_str());
-                if (v > 0) {
+                if (v > 0 && v <= 1000000 && g_breakpointLines.size() < 10000) {
                     g_breakpointLines.insert(v);
                 }
             }

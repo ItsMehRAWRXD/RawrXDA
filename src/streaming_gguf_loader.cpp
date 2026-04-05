@@ -5,6 +5,7 @@
 #include <cstring>
 #include <stdexcept>
 #include <iostream>
+#include <new>
 
 // SCAFFOLD_102: Streaming GGUF loader
 
@@ -110,7 +111,15 @@ GGUFHeader StreamingGGUFLoader::GetHeader() const {
 }
 
 bool StreamingGGUFLoader::ParseMetadata() {
+    constexpr uint64_t MAX_METADATA_KV_COUNT = 10000;  // Prevent unbounded iteration
+    
     if (!file_.is_open() || header_.metadata_kv_count == 0) {
+        return false;
+    }
+    
+    if (header_.metadata_kv_count > MAX_METADATA_KV_COUNT) {
+        std::cerr << "❌ Metadata KV count " << header_.metadata_kv_count 
+                  << " exceeds max " << MAX_METADATA_KV_COUNT << std::endl;
         return false;
     }
     
@@ -220,10 +229,17 @@ bool StreamingGGUFLoader::ParseMetadata() {
             }
             case GGUFConstants::GGUF_VALUE_TYPE_ARRAY: {
                 // Array type: element_type (uint32) + count (uint64) + elements
+                constexpr uint64_t MAX_ARRAY_COUNT = 100000000;  // 100M elements max
                 uint32_t element_type;
                 uint64_t arr_count;
                 if (!ReadValue(element_type)) return false;
                 if (!ReadValue(arr_count)) return false;
+                
+                if (arr_count > MAX_ARRAY_COUNT) {
+                    std::cerr << "❌ Array count " << arr_count 
+                              << " exceeds max " << MAX_ARRAY_COUNT << std::endl;
+                    return false;
+                }
                 
                 // Parse array elements based on element type
                 // For string arrays (tokenizer tokens), collect them
@@ -361,10 +377,17 @@ bool StreamingGGUFLoader::BuildTensorIndex() {
             case GGUFConstants::GGUF_VALUE_TYPE_STRING: { if (!ReadString(value)) return false; break; }
             case GGUFConstants::GGUF_VALUE_TYPE_ARRAY: {
                 // Must skip the entire array: element_type + count + elements
+                constexpr uint64_t MAX_ARRAY_COUNT = 100000000;  // 100M elements max
                 uint32_t elem_type;
                 uint64_t arr_count;
                 if (!ReadValue(elem_type)) return false;
                 if (!ReadValue(arr_count)) return false;
+                
+                if (arr_count > MAX_ARRAY_COUNT) {
+                    std::cerr << "❌ Array count " << arr_count 
+                              << " exceeds max " << MAX_ARRAY_COUNT << " while skipping metadata array" << std::endl;
+                    return false;
+                }
                 
                 for (uint64_t a = 0; a < arr_count; ++a) {
                     switch (elem_type) {
@@ -541,7 +564,14 @@ bool StreamingGGUFLoader::LoadZone(const std::string& zone_name, uint64_t max_me
     
     // Stream from disk
     zone.data.clear();
-    zone.data.reserve(zone.total_bytes);
+    try {
+        zone.data.reserve(zone.total_bytes);
+    } catch (const std::bad_alloc&) {
+        // Reserve failure is non-fatal: continue with incremental growth.
+        std::cerr << "[StreamingGGUFLoader] LoadZone: reserve failed for zone '"
+                  << zone_name << "' (" << zone.total_bytes << " bytes), falling back to incremental buffering"
+                  << std::endl;
+    }
     
     uint64_t total_loaded = 0;
     
@@ -562,7 +592,14 @@ bool StreamingGGUFLoader::LoadZone(const std::string& zone_name, uint64_t max_me
         
         // Read from disk into zone buffer
         size_t old_size = zone.data.size();
-        zone.data.resize(old_size + ref.size);
+        try {
+            zone.data.resize(old_size + ref.size);
+        } catch (const std::bad_alloc&) {
+            std::cerr << "[StreamingGGUFLoader] LoadZone: resize failed for tensor '"
+                      << tensor_name << "' (" << ref.size << " bytes)" << std::endl;
+            zone.data.resize(old_size);
+            return false;
+        }
         
         file_.read(reinterpret_cast<char*>(zone.data.data() + old_size), ref.size);
         
@@ -761,8 +798,14 @@ bool StreamingGGUFLoader::ReadValue(T& value) {
 }
 
 bool StreamingGGUFLoader::ReadString(std::string& value) {
+    constexpr uint64_t MAX_STRING_SIZE = 16 * 1024 * 1024;  // 16 MB
     uint64_t len;
     if (!ReadValue(len)) return false;
+    
+    if (len > MAX_STRING_SIZE) {
+        std::cerr << "❌ String size " << len << " exceeds max " << MAX_STRING_SIZE << std::endl;
+        return false;
+    }
     
     value.resize(len);
     file_.read(&value[0], len);
@@ -878,7 +921,14 @@ bool StreamingGGUFLoader::StreamZoneFromDisk(const std::string& zone_name) {
 
     // Allocate buffer for the entire zone
     zone.data.clear();
-    zone.data.reserve(static_cast<size_t>(zone.total_bytes));
+    try {
+        zone.data.reserve(static_cast<size_t>(zone.total_bytes));
+    } catch (const std::bad_alloc&) {
+        // Reserve failure is non-fatal: continue with incremental growth.
+        std::cerr << "[StreamingGGUFLoader] StreamZoneFromDisk: reserve failed for zone '"
+                  << zone_name << "' (" << zone.total_bytes << " bytes), falling back to incremental buffering"
+                  << std::endl;
+    }
 
     // Stream each tensor in the zone from disk
     for (const auto& tensor_name : zone.tensors) {
@@ -899,7 +949,14 @@ bool StreamingGGUFLoader::StreamZoneFromDisk(const std::string& zone_name) {
         }
 
         size_t prev_size = zone.data.size();
-        zone.data.resize(prev_size + static_cast<size_t>(ref.size));
+        try {
+            zone.data.resize(prev_size + static_cast<size_t>(ref.size));
+        } catch (const std::bad_alloc&) {
+            std::cerr << "[StreamingGGUFLoader] StreamZoneFromDisk: resize failed for tensor '"
+                      << tensor_name << "' (" << ref.size << " bytes)" << std::endl;
+            zone.data.clear();
+            return false;
+        }
         file_.read(reinterpret_cast<char*>(zone.data.data() + prev_size),
                    static_cast<std::streamsize>(ref.size));
 

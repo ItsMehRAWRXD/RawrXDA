@@ -720,6 +720,7 @@ void cmd_replay(const std::string& args)
     else if (sub == "last")
     {
         int count = parseInt(rest, 10);
+        if (count < 1 || count > 1000) count = 10;
         auto records = replay.getLastN(static_cast<uint64_t>(count));
         if (records.empty())
         {
@@ -928,7 +929,10 @@ void cmd_governor(const std::string& args)
             while (!command.empty() && command.back() == ' ')
                 command.pop_back();
             std::string timeoutStr = rest.substr(timeoutPos + 10);
-            timeout = static_cast<uint64_t>(parseInt(timeoutStr, static_cast<int>(timeout)));
+            {
+                int parsedTimeout = parseInt(timeoutStr, static_cast<int>(timeout));
+                if (parsedTimeout > 0) timeout = static_cast<uint64_t>(parsedTimeout);
+            }
         }
 
         // Gate check before executing
@@ -1216,6 +1220,7 @@ void cmd_history(const std::string& args)
     if (sub == "show" || sub.empty())
     {
         int count = parseInt(rest, 20);
+        if (count < 1 || count > 1000) count = 20;
         HistoryQuery q;
         q.limit = count;
         auto events = g_historyRecorder->query(q);
@@ -1936,7 +1941,9 @@ void cmd_model(const std::string& args)
             std::cout << "Usage: !model evict <layer_index>\n";
             return;
         }
-        uint32_t idx = static_cast<uint32_t>(parseInt(rest, -1));
+        int rawIdx = parseInt(rest, -1);
+        if (rawIdx < 0) { std::cout << "Invalid layer index.\n"; return; }
+        uint32_t idx = static_cast<uint32_t>(rawIdx);
         auto r = hotpatcher.evictLayer(idx);
         std::cout << (r.success ? "✅ Layer evicted: " : "❌ Failed to evict layer: ") << r.detail << "\n";
     }
@@ -1947,7 +1954,9 @@ void cmd_model(const std::string& args)
             std::cout << "Usage: !model reload <layer_index>\n";
             return;
         }
-        uint32_t idx = static_cast<uint32_t>(parseInt(rest, -1));
+        int rawIdx = parseInt(rest, -1);
+        if (rawIdx < 0) { std::cout << "Invalid layer index.\n"; return; }
+        uint32_t idx = static_cast<uint32_t>(rawIdx);
         auto r = hotpatcher.reloadLayer(idx);
         std::cout << (r.success ? "✅ Layer reloaded: " : "❌ Failed to reload layer: ") << r.detail << "\n";
     }
@@ -2031,7 +2040,9 @@ void cmd_swarm_orchestrator(const std::string& args)
             return;
         }
 
-        uint32_t totalLayers = static_cast<uint32_t>(parseInt(layerStr, 128));
+        int rawLayers = parseInt(layerStr, 128);
+        if (rawLayers < 1 || rawLayers > 1024) rawLayers = 128;
+        uint32_t totalLayers = static_cast<uint32_t>(rawLayers);
         std::cout << "[Swarm] Distributing " << totalLayers << " layers from " << modelPath << "...\n";
         auto r = swarm.distributeModel(modelPath, totalLayers);
         std::cout << (r.success ? "✅ " : "❌ ") << r.detail << "\n";

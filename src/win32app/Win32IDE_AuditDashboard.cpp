@@ -467,6 +467,10 @@ std::vector<Win32IDE::RuntimeValidationCheck> Win32IDE::runCriticalValidationBat
         }
 
         SubAgentManager* mgr = (m_agenticBridge ? m_agenticBridge->GetSubAgentManager() : nullptr);
+        if (!mgr && m_agenticBridge) {
+            m_agenticBridge->Initialize("", m_agenticBridge->GetCurrentModel());
+            mgr = m_agenticBridge->GetSubAgentManager();
+        }
         bool ok = false;
         std::ostringstream oss;
         if (!mgr) {

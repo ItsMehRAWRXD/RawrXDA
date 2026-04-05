@@ -29,6 +29,7 @@
 #include <windows.h>
 #endif
 
+#include "cpu_inference_engine.h"
 #include "ultra_fast_inference.h"
 
 // ============================================================================
@@ -57,10 +58,12 @@ static inline void UTC_LogEvent(const char*) {}
 struct InferenceCLI {
     std::string modelPath;
     std::string prompt;
+    std::string traceCsvPath;
     int maxTokens       = 256;
     float temperature   = 0.7f;
     bool benchmark      = false;
     bool interactive    = false;
+    bool traceSummary   = false;
     bool verbose        = false;
 
     static InferenceCLI parse(int argc, char* argv[]) {
@@ -78,6 +81,10 @@ struct InferenceCLI {
                 cli.benchmark = true;
             } else if (strcmp(argv[i], "--interactive") == 0) {
                 cli.interactive = true;
+            } else if (strcmp(argv[i], "--trace-token-summary") == 0) {
+                cli.traceSummary = true;
+            } else if (strcmp(argv[i], "--trace-token-csv") == 0 && i + 1 < argc) {
+                cli.traceCsvPath = argv[++i];
             } else if (strcmp(argv[i], "--verbose") == 0) {
                 cli.verbose = true;
             } else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
@@ -88,6 +95,8 @@ struct InferenceCLI {
                 printf("  --temperature <f>    Sampling temperature (default: 0.7)\n");
                 printf("  --bench              Run TPS benchmark\n");
                 printf("  --interactive        Interactive REPL mode\n");
+                printf("  --trace-token-summary Emit Titan token trace summary after generation\n");
+                printf("  --trace-token-csv <path> Dump Titan token trace CSV after generation\n");
                 printf("  --verbose            Verbose telemetry output\n");
                 exit(0);
             }
@@ -175,6 +184,72 @@ static BenchmarkResult runBenchmark(const InferenceCLI& cli) {
     printf("  Throughput:       %.2f tok/s\n", result.tokensPerSecond);
 
     return result;
+}
+
+static int runTitanTrace(const InferenceCLI& cli)
+{
+    auto engine = RawrXD::CPUInferenceEngine::GetSharedInstance();
+    if (!engine)
+    {
+        std::fprintf(stderr, "[TitanTrace] Failed to acquire CPUInferenceEngine shared instance\n");
+        return 3;
+    }
+
+    if (!engine->IsModelLoaded() && !engine->LoadModel(cli.modelPath))
+    {
+        std::fprintf(stderr, "[TitanTrace] LoadModel failed: %s\n", engine->GetLastLoadErrorMessage().c_str());
+        return 4;
+    }
+
+    engine->ClearTokenTraceBuffer();
+    const std::vector<int32_t> promptTokens = engine->Tokenize(cli.prompt);
+    if (promptTokens.empty())
+    {
+        std::fprintf(stderr, "[TitanTrace] Tokenize failed or returned no tokens\n");
+        return 5;
+    }
+
+    std::string response;
+    int generatedTokens = 0;
+    engine->GenerateStreaming(
+        promptTokens,
+        cli.maxTokens,
+        [&](const std::string& token)
+        {
+            response += token;
+            if (cli.verbose)
+            {
+                std::printf("%s", token.c_str());
+                std::fflush(stdout);
+            }
+        },
+        [&]() {},
+        [&](int32_t)
+        {
+            ++generatedTokens;
+        });
+
+    if (cli.verbose)
+        std::printf("\n");
+
+    if (cli.traceSummary)
+    {
+        std::printf("%s", engine->DumpTokenTraceSummary(static_cast<size_t>(cli.maxTokens)).c_str());
+    }
+
+    if (!cli.traceCsvPath.empty())
+    {
+        if (!engine->DumpTokenTracesToCSV(cli.traceCsvPath))
+        {
+            std::fprintf(stderr, "[TitanTrace] Failed to write CSV: %s\n", cli.traceCsvPath.c_str());
+            return 6;
+        }
+        std::printf("trace_csv=%s\n", cli.traceCsvPath.c_str());
+    }
+
+    std::printf("generated_tokens=%d\n", generatedTokens);
+    std::printf("response=%s\n", response.c_str());
+    return 0;
 }
 
 // ============================================================================
@@ -285,6 +360,10 @@ int main(int argc, char* argv[]) {
         BenchmarkResult bench = runBenchmark(cli);
         (void)bench;
         return 0;
+    }
+
+    if (cli.traceSummary || !cli.traceCsvPath.empty()) {
+        return runTitanTrace(cli);
     }
 
     if (cli.interactive) {

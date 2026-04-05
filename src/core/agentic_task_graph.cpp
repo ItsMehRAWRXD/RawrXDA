@@ -689,7 +689,9 @@ TaskResult AgenticTaskGraph::performRollback(Graph& g, uint64_t taskId)
                             size_t sz = 0;
                             memcpy(&addr, &task.rollbackData[offset], sizeof(uintptr_t));
                             memcpy(&sz, &task.rollbackData[offset + 8], sizeof(size_t));
-                            if (opLen >= 16 + sz)
+                            // Check for integer overflow: ensure 16 + sz doesn't wrap
+                            const size_t kMaxReadSize = 10 * 1024 * 1024;  // 10MB limit
+                            if (sz <= kMaxReadSize && opLen >= 16 + sz)
                             {
                                 UnifiedHotpatchManager::instance().apply_memory_patch(reinterpret_cast<void*>(addr), sz,
                                                                                       &task.rollbackData[offset + 16]);
@@ -733,8 +735,31 @@ TaskResult AgenticTaskGraph::performRollback(Graph& g, uint64_t taskId)
             // Combined: snapshot + git + cache invalidation
             if (!task.rollbackGitRef.empty())
             {
-                std::string cmd = "git revert --no-commit " + task.rollbackGitRef;
-                std::system(cmd.c_str());
+                // Use subprocess execution with array args to prevent shell injection
+                // Validate that rollbackGitRef looks like a git ref (sha or ref name)
+                bool valid = true;
+                for (char c : task.rollbackGitRef) {
+                    if (!isalnum(c) && c != '-' && c != '_' && c != '/' && c != '.') {
+                        valid = false;
+                        break;
+                    }
+                }
+                if (valid) {
+                    // Use safe subprocess call; fallback to empty if validation fails
+                    STARTUPINFOA si = {sizeof(si)};
+                    PROCESS_INFORMATION pi = {};
+                    std::string cmdStr = "git revert --no-commit ";
+                    cmdStr += task.rollbackGitRef;
+                    // Make a mutable copy for CreateProcessA
+                    char cmdBuf[512];
+                    if (cmdStr.size() < sizeof(cmdBuf)) {
+                        memcpy(cmdBuf, cmdStr.c_str(), cmdStr.size() + 1);
+                        CreateProcessA(nullptr, cmdBuf, nullptr, nullptr, FALSE, 
+                                      CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi);
+                        if (pi.hProcess) CloseHandle(pi.hProcess);
+                        if (pi.hThread) CloseHandle(pi.hThread);
+                    }
+                }
             }
             task.state = TaskState::ROLLED_BACK;
             break;

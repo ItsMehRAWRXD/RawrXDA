@@ -38,6 +38,7 @@
 #include <algorithm>
 #include <chrono>
 #include <ctime>
+#include <deque>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -62,6 +63,54 @@
 Win32IDE* g_pMainIDE = nullptr;
 
 static std::wstring utf8ToWide(const std::string& utf8);
+
+namespace
+{
+struct PendingInferenceRequest
+{
+    std::string prompt;
+    std::function<void(const std::string&, bool)> callback;
+};
+
+std::mutex g_pendingInferenceMutex;
+std::unordered_map<Win32IDE*, std::deque<PendingInferenceRequest>> g_pendingInferenceByIde;
+constexpr size_t kMaxPendingInferenceRequestsPerIde = 16;
+
+size_t EnqueuePendingInference(Win32IDE* ide, PendingInferenceRequest&& req)
+{
+    std::lock_guard<std::mutex> lock(g_pendingInferenceMutex);
+    auto& q = g_pendingInferenceByIde[ide];
+    if (q.size() >= kMaxPendingInferenceRequestsPerIde)
+    {
+        return 0;
+    }
+    q.emplace_back(std::move(req));
+    return q.size();
+}
+
+bool DequeuePendingInference(Win32IDE* ide, PendingInferenceRequest& out)
+{
+    std::lock_guard<std::mutex> lock(g_pendingInferenceMutex);
+    auto it = g_pendingInferenceByIde.find(ide);
+    if (it == g_pendingInferenceByIde.end() || it->second.empty())
+    {
+        return false;
+    }
+    out = std::move(it->second.front());
+    it->second.pop_front();
+    if (it->second.empty())
+    {
+        g_pendingInferenceByIde.erase(it);
+    }
+    return true;
+}
+
+void ClearPendingInference(Win32IDE* ide)
+{
+    std::lock_guard<std::mutex> lock(g_pendingInferenceMutex);
+    g_pendingInferenceByIde.erase(ide);
+}
+}  // namespace
 
 extern "C" unsigned __int64 RawrXD_EnableSeLockMemoryPrivilege();
 extern "C" void* RawrXD_MapModelView2MB(HANDLE hMap, uint64_t off, size_t sz, uint64_t* outBaseOrError);
@@ -678,6 +727,10 @@ static std::string wideToUtf8(const wchar_t* wide)
 #define IDM_VIEW_USE_VULKAN_RENDERER 2027
 #define IDM_VIEW_SIDEBAR 2028
 #define IDM_VIEW_TERMINAL 2029
+#define IDM_VIEW_EXPERT_HEATMAP 2032
+#define IDM_VIEW_SOVEREIGN_SNAP_COMPACT 2033
+#define IDM_VIEW_SOVEREIGN_SNAP_STANDARD 2034
+#define IDM_VIEW_SOVEREIGN_SNAP_WIDE 2035
 
 #define IDM_TERMINAL_POWERSHELL 4001
 #define IDM_TERMINAL_CMD 4002
@@ -690,6 +743,7 @@ static std::string wideToUtf8(const wchar_t* wide)
 #define IDM_TOOLS_PROFILE_STOP 3011
 #define IDM_TOOLS_PROFILE_RESULTS 3012
 #define IDM_TOOLS_ANALYZE_SCRIPT 3013
+#define IDM_INTERNAL_CAPTURE_PROFILE 3014
 
 #define IDM_GIT_STATUS 3020
 #define IDM_GIT_COMMIT 3021
@@ -747,7 +801,7 @@ Win32IDE::Win32IDE(HINSTANCE hInstance)
       m_sidebarWidth(250), m_currentSidebarView(SidebarView::None),
       // Secondary Sidebar
       m_hwndSecondarySidebar(nullptr), m_hwndSecondarySidebarHeader(nullptr), m_secondarySidebarVisible(false),
-      m_secondarySidebarWidth(320),
+      m_secondarySidebarWidth(320), m_ollamaBackendEnabled(false),
       // Explorer View
       m_hwndExplorerTree(nullptr), m_hwndExplorerToolbar(nullptr), m_hImageListExplorer(nullptr), m_explorerRootPath(),
       // Search View
@@ -783,7 +837,8 @@ Win32IDE::Win32IDE(HINSTANCE hInstance)
       m_modelOperationActive(false), m_modelOperationCancelled(false), m_modelProgressPercent(0.0f),
       m_hwndModelProgressBar(nullptr), m_hwndModelProgressLabel(nullptr), m_hwndModelProgressContainer(nullptr),
       m_hwndModelCancelBtn(nullptr), m_sessionRestored(false), m_annotationsVisible(true), m_annotationFont(nullptr),
-      m_hwndAnnotationOverlay(nullptr), m_nativePipelineReady(false), m_tabManager(nullptr)
+    m_hwndAnnotationOverlay(nullptr), m_nativePipelineReady(false), m_tabManager(nullptr),
+    m_inferenceRunning(false), m_inferenceStopRequested(false)
 {
     // ============================================================
     // MINIMAL CONSTRUCTOR — all heavy init deferred to onCreate()
@@ -916,6 +971,20 @@ void Win32IDE::createMenuBar(HWND hwnd)
     AppendMenuW(hViewMenu, MF_STRING, ID_VIEW_SYNTAX_HIGHLIGHTING_TOGGLE, L"Syntax &Highlighting");
     AppendMenuW(hViewMenu, MF_STRING, ID_VIEW_VISION_ENCODER, L"&Vision Encoder");
     AppendMenuW(hViewMenu, MF_STRING, ID_VIEW_SEMANTIC_INDEX, L"&Semantic Index");
+    AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_EXPERT_HEATMAP, L"Expert &heatmap (swarm)");
+    HMENU hSovereignSnapMenu = CreatePopupMenu();
+    AppendMenuW(hSovereignSnapMenu, MF_STRING, IDM_VIEW_SOVEREIGN_SNAP_COMPACT, L"Compact (240)");
+    AppendMenuW(hSovereignSnapMenu, MF_STRING, IDM_VIEW_SOVEREIGN_SNAP_STANDARD, L"Standard (360)");
+    AppendMenuW(hSovereignSnapMenu, MF_STRING, IDM_VIEW_SOVEREIGN_SNAP_WIDE, L"Wide (480)");
+    AppendMenuW(hViewMenu, MF_POPUP, (UINT_PTR)hSovereignSnapMenu, L"Sovereign &Snap");
+    HMENU hLayoutProfilesMenu = CreatePopupMenu();
+    AppendMenuW(hLayoutProfilesMenu, MF_STRING, IDM_VIEW_LAYOUT_PROFILE_FOCUS, L"&Focus");
+    AppendMenuW(hLayoutProfilesMenu, MF_STRING, IDM_VIEW_LAYOUT_PROFILE_CODING, L"&Coding");
+    AppendMenuW(hLayoutProfilesMenu, MF_STRING, IDM_VIEW_LAYOUT_PROFILE_DEBUG, L"&Debug");
+    AppendMenuW(hLayoutProfilesMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hLayoutProfilesMenu, MF_STRING, IDM_VIEW_LAYOUT_PROFILE_APPLY, L"&Apply Saved...");
+    AppendMenuW(hLayoutProfilesMenu, MF_STRING, IDM_VIEW_LAYOUT_PROFILE_SAVE, L"&Save Current...");
+    AppendMenuW(hViewMenu, MF_POPUP, (UINT_PTR)hLayoutProfilesMenu, L"Layout &Profiles");
     AppendMenuW(hViewMenu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_USE_STREAMING_LOADER, L"Use Streaming Loader (Low Memory)");
     AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_USE_VULKAN_RENDERER, L"Enable Vulkan Renderer (experimental)");
@@ -947,6 +1016,7 @@ void Win32IDE::createMenuBar(HWND hwnd)
     AppendMenuW(hToolsMenu, MF_STRING, IDM_TOOLS_PROFILE_RESULTS, L"Profile &Results...");
     AppendMenuW(hToolsMenu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(hToolsMenu, MF_STRING, IDM_TOOLS_ANALYZE_SCRIPT, L"&Analyze Script");
+    AppendMenuW(hToolsMenu, MF_STRING, IDM_INTERNAL_CAPTURE_PROFILE, L"Capture Profile Bundle v1");
     AppendMenuW(hToolsMenu, MF_SEPARATOR, 0, nullptr);
 
     // Voice Chat submenu (Unicode — Qt removal / pure Win32)
@@ -1668,8 +1738,18 @@ void Win32IDE::createEditor(HWND hwnd)
     if (m_hwndEditor)
     {
         SetPropW(m_hwndEditor, kEditorWndProp, (HANDLE)this);
+        SetLastError(0);
         WNDPROC oldEditorProc = (WNDPROC)SetWindowLongPtrW(m_hwndEditor, GWLP_WNDPROC, (LONG_PTR)EditorSubclassProc);
-        SetPropW(m_hwndEditor, kEditorProcProp, (HANDLE)oldEditorProc);
+        const DWORD subclassError = GetLastError();
+        if (!oldEditorProc && subclassError != ERROR_SUCCESS)
+        {
+            RemovePropW(m_hwndEditor, kEditorWndProp);
+            LOG_ERROR("Failed to subclass editor control, gle=" + std::to_string(subclassError));
+        }
+        else
+        {
+            SetPropW(m_hwndEditor, kEditorProcProp, (HANDLE)oldEditorProc);
+        }
     }
 }
 
@@ -1694,7 +1774,13 @@ void Win32IDE::createTerminal(HWND hwnd)
     if (m_hwndCommandInput)
     {
         SetWindowLongPtr(m_hwndCommandInput, GWLP_USERDATA, (LONG_PTR)this);
+        SetLastError(0);
         m_oldCommandInputProc = (WNDPROC)SetWindowLongPtr(m_hwndCommandInput, GWLP_WNDPROC, (LONG_PTR)CommandInputProc);
+        const DWORD subclassError = GetLastError();
+        if (!m_oldCommandInputProc && subclassError != ERROR_SUCCESS)
+        {
+            LOG_ERROR("Failed to subclass command input, gle=" + std::to_string(subclassError));
+        }
     }
 }
 
@@ -1703,6 +1789,13 @@ int Win32IDE::createTerminalPane(Win32TerminalManager::ShellType shellType, cons
     HWND hwnd = CreateWindowExW(WS_EX_CLIENTEDGE, RICHEDIT_CLASSW, L"",
                                 WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY, 0, 0,
                                 0, 0, m_hwndMain, nullptr, m_hInstance, nullptr);
+
+    if (!hwnd)
+    {
+        const DWORD createError = GetLastError();
+        LOG_ERROR("Failed to create terminal pane, gle=" + std::to_string(createError));
+        return -1;
+    }
 
     // LOGGING AS REQUESTED
     char logBuf[256];
@@ -2464,6 +2557,32 @@ void Win32IDE::setWindowText(HWND hwnd, const std::string& text)
     SetWindowTextW(hwnd, utf8ToWide(text).c_str());
     if (hwnd == m_hwndEditor)
     {
+        // Keep editor readable and reset viewport when swapping document content.
+        COLORREF bg = m_currentTheme.backgroundColor;
+        COLORREF fg = m_currentTheme.textColor;
+        const int contrast =
+            abs((int)GetRValue(bg) - (int)GetRValue(fg)) + abs((int)GetGValue(bg) - (int)GetGValue(fg)) +
+            abs((int)GetBValue(bg) - (int)GetBValue(fg));
+        if (contrast < 96)
+        {
+            fg = RGB(212, 212, 212);
+        }
+
+        CHARFORMAT2W cf;
+        ZeroMemory(&cf, sizeof(cf));
+        cf.cbSize = sizeof(cf);
+        cf.dwMask = CFM_COLOR;
+        cf.crTextColor = fg;
+        SendMessageW(m_hwndEditor, EM_SETCHARFORMAT, SCF_DEFAULT, (LPARAM)&cf);
+
+        int firstVisible = (int)SendMessage(m_hwndEditor, EM_GETFIRSTVISIBLELINE, 0, 0);
+        if (firstVisible > 0)
+        {
+            SendMessage(m_hwndEditor, EM_LINESCROLL, 0, -firstVisible);
+        }
+        SendMessage(m_hwndEditor, EM_SETSEL, 0, 0);
+        SendMessage(m_hwndEditor, EM_SCROLLCARET, 0, 0);
+
         syncEditorToGpuSurface();
     }
 }
@@ -2642,6 +2761,7 @@ void Win32IDE::updateMenuEnableStates()
     // Vulkan renderer menu state
     CheckMenuItem(m_hMenu, IDM_VIEW_USE_VULKAN_RENDERER,
                   MF_BYCOMMAND | (m_useVulkanRenderer ? MF_CHECKED : MF_UNCHECKED));
+    updateSovereignSnapMenuChecks();
     // Breadcrumbs (View) — sync check with m_settings.breadcrumbsEnabled
     CheckMenuItem(m_hMenu, IDM_T1_BREADCRUMBS_TOGGLE,
                   MF_BYCOMMAND | (m_settings.breadcrumbsEnabled ? MF_CHECKED : MF_UNCHECKED));
@@ -2927,7 +3047,10 @@ void Win32IDE::copyWithFormatting()
             char* dest = (char*)GlobalLock(hMem);
             memcpy(dest, text.c_str(), text.size() + 1);
             GlobalUnlock(hMem);
-            SetClipboardData(CF_TEXT, hMem);
+            // SetClipboardData takes ownership of hMem on success; only free on failure
+            if (!SetClipboardData(CF_TEXT, hMem)) {
+                GlobalFree(hMem);
+            }
         }
         CloseClipboard();
     }
@@ -3057,7 +3180,10 @@ void Win32IDE::copyLineNumbers()
             char* dest = (char*)GlobalLock(hMem);
             memcpy(dest, lineNumbers.c_str(), lineNumbers.size() + 1);
             GlobalUnlock(hMem);
-            SetClipboardData(CF_TEXT, hMem);
+            // SetClipboardData takes ownership of hMem on success; only free on failure
+            if (!SetClipboardData(CF_TEXT, hMem)) {
+                GlobalFree(hMem);
+            }
         }
         CloseClipboard();
     }
@@ -4796,12 +4922,7 @@ void Win32IDE::loadModelFromPath(const std::string& filepath)
 bool Win32IDE::loadGGUFModel(const std::string& filepath)
 {
     if (!m_ggufLoader)
-    {
-        std::string error = "Error: GGUF Loader not initialized";
-        appendToOutput(error, "Errors", OutputSeverity::Error);
-        ErrorReporter::report(error, m_hwndMain);
-        return false;
-    }
+        m_ggufLoader = std::make_unique<RawrXD::StreamingGGUFLoader>();
 
     appendToOutput("Loading GGUF model: " + filepath + "\n", "Output", OutputSeverity::Info);
     appendToOutput("This may take a moment for large files...\n", "Output", OutputSeverity::Info);
@@ -5500,7 +5621,10 @@ void Win32IDE::showFileContextMenu(const std::string& filePath, bool isDirectory
                     char* dest = (char*)GlobalLock(hMem);
                     strcpy_s(dest, filePath.size() + 1, filePath.c_str());
                     GlobalUnlock(hMem);
-                    SetClipboardData(CF_TEXT, hMem);
+                    // SetClipboardData takes ownership of hMem on success; only free on failure
+                    if (!SetClipboardData(CF_TEXT, hMem)) {
+                        GlobalFree(hMem);
+                    }
                 }
                 CloseClipboard();
             }
@@ -5521,25 +5645,36 @@ void Win32IDE::refreshFileExplorer()
 
 bool Win32IDE::isModelLoaded() const
 {
-    // Model is loaded if we have a path and either streaming loader or agentic bridge has it (local models usable
-    // regardless of agentic detection)
-    if (m_loadedModelPath.empty())
-        return false;
-    if (m_ggufLoader && !m_modelTensors.empty())
+    const auto engine = m_nativeEngine ? m_nativeEngine : RawrXD::CPUInferenceEngine::GetSharedInstance();
+    if (engine && engine->IsModelLoaded())
         return true;
-    if (m_agenticBridge && m_agenticBridge->IsInitialized())
+
+    if (m_agenticBridge && m_agenticBridge->HasUsableBackend())
         return true;
+
+    if (!m_loadedModelPath.empty() && m_ggufLoader && !m_modelTensors.empty())
+        return true;
+
     return false;
 }
 
 std::string Win32IDE::sendMessageToModel(const std::string& message)
 {
-    // Allow chat when agentic bridge is initialized (local model or Ollama/cloud via routeInferenceRequest)
-    bool canChat = isModelLoaded() || (m_agenticBridge && m_agenticBridge->IsInitialized());
+    const auto engine = m_nativeEngine ? m_nativeEngine : RawrXD::CPUInferenceEngine::GetSharedInstance();
+    const bool canChat = isModelLoaded();
     if (!canChat)
     {
+        std::string lastErr;
+        if (engine)
+            lastErr = engine->GetLastLoadErrorMessage();
+        if (lastErr.empty() && m_agenticBridge)
+            lastErr = m_agenticBridge->GetLastModelLoadError();
+        if (!lastErr.empty())
+            return std::string("Error: Inference blocked — ") + lastErr +
+                   "\n(Check tokenizer.json / merges.txt beside the GGUF, arch support, or Backend Switcher / "
+                   "Ollama.)\n";
         return "Error: No model loaded. Load a GGUF (File > Open / Load Model) or set up Ollama/backend in Backend "
-               "Switcher.";
+               "Switcher.\n";
     }
 
     // Phase 8B/8C: Route through LLM router (if enabled) or backend manager
@@ -5553,7 +5688,16 @@ std::string Win32IDE::sendMessageToModel(const std::string& message)
         }
     }
 
-    // First try: send through local Ollama if available
+    // Local CPU when weights are resident (authoritative; before Ollama shortcut).
+    if (engine && engine->IsModelLoaded())
+    {
+        auto tokens = engine->Tokenize(message);
+        auto output_tokens = engine->Generate(tokens, 512);
+        std::string response = engine->Detokenize(output_tokens);
+        m_chatHistory.push_back({message, response});
+        return response;
+    }
+
     std::string llmResponse;
     if (trySendToOllama(message, llmResponse))
     {
@@ -5561,27 +5705,10 @@ std::string Win32IDE::sendMessageToModel(const std::string& message)
         return llmResponse;
     }
 
-    // Fallback: Local CPU Inference (Real Logic)
-    if (m_ggufLoader)
-    {
-        // Use the native fallback engine if available
-        if (m_nativeEngine)
-        {
-            auto* engine = m_nativeEngine.get();
-            auto tokens = engine->Tokenize(message);
-            auto output_tokens = engine->Generate(tokens, 512);
-            std::string response = engine->Detokenize(output_tokens);
-            m_chatHistory.push_back({message, response});
-            return response;
-        }
-    }
-
-    // Ensure agentic bridge has current model so chat and agentic work regardless of which path loaded it
     if (!m_loadedModelPath.empty())
         const_cast<Win32IDE*>(this)->ensureAgenticBridgeHasModel(m_loadedModelPath);
 
-    // Chat via agentic bridge (works for any local model; agentic/tools allowed when model supports it)
-    if (m_agenticBridge && m_agenticBridge->IsInitialized())
+    if (m_agenticBridge && m_agenticBridge->HasUsableBackend())
     {
         AgentResponse r = m_agenticBridge->ExecuteAgentCommand(message);
         if (r.type != AgentResponseType::AGENT_ERROR && !r.content.empty())
@@ -5593,7 +5720,18 @@ std::string Win32IDE::sendMessageToModel(const std::string& message)
             return r.content;
     }
 
-    return "Error: Local model loaded but Native Inference Engine not initialized.\n";
+    std::string detail;
+    if (engine)
+        detail = engine->GetLastLoadErrorMessage();
+    if (detail.empty() && m_agenticBridge)
+        detail = m_agenticBridge->GetLastModelLoadError();
+    if (!detail.empty())
+    {
+        return "Error: Inference unavailable — " + detail +
+               "\n(Check tokenizer.json / merges.txt beside the GGUF, arch support, and free RAM.)\n";
+    }
+    return "Error: No inference backend produced a response. Load a GGUF (File > Load Model), or configure "
+           "Ollama/backend in Backend Switcher.\n";
 }
 
 void Win32IDE::toggleChatMode()
@@ -6192,18 +6330,19 @@ bool Win32IDE::initializeInference()
 void Win32IDE::shutdownInference()
 {
     std::lock_guard<std::mutex> lock(m_inferenceMutex);
+    ClearPendingInference(this);
 
-    if (m_inferenceRunning)
+    if (m_inferenceRunning.load())
     {
-        m_inferenceStopRequested = true;
+        m_inferenceStopRequested.store(true);
         if (m_inferenceThread.joinable())
         {
             m_inferenceThread.join();
         }
     }
 
-    m_inferenceRunning = false;
-    m_inferenceStopRequested = false;
+    m_inferenceRunning.store(false);
+    m_inferenceStopRequested.store(false);
     m_currentInferencePrompt.clear();
     m_currentInferenceResponse.clear();
 
@@ -6215,10 +6354,10 @@ std::string Win32IDE::generateResponse(const std::string& prompt)
     SCOPED_METRIC("inference.generate_response");
     METRICS.increment("inference.requests_total");
 
-    if (m_inferenceRunning)
+    if (m_inferenceRunning.load())
     {
         METRICS.increment("inference.requests_rejected");
-        return "Inference already in progress. Please wait...";
+        return "System busy: inference worker is processing another request. Please retry shortly.";
     }
 
     // Phase 8B/8C: Route through LLM router (if enabled) or backend manager
@@ -6404,17 +6543,29 @@ void Win32IDE::generateResponseAsync(const std::string& prompt, std::function<vo
     METRICS.increment("inference.async_requests_total");
     std::lock_guard<std::mutex> lock(m_inferenceMutex);
 
-    if (m_inferenceRunning)
+    if (m_inferenceRunning.load())
     {
-        METRICS.increment("inference.async_requests_rejected");
-        if (callback)
-            callback("Inference already in progress.", true);
+        std::function<void(const std::string&, bool)> pendingCallback = callback;
+        const size_t queuedDepth = EnqueuePendingInference(this, PendingInferenceRequest{prompt, std::move(pendingCallback)});
+        if (queuedDepth == 0)
+        {
+            METRICS.increment("inference.async_requests_rejected");
+            if (callback)
+            {
+                callback("System busy: inference queue is full. Please retry.", true);
+            }
+        }
+        else
+        {
+            METRICS.increment("inference.async_requests_queued");
+        }
         return;
     }
 
-    m_inferenceRunning = true;
-    m_inferenceStopRequested = false;
+    m_inferenceRunning.store(true);
+    m_inferenceStopRequested.store(false);
     m_currentInferencePrompt = prompt;
+    m_currentInferenceResponse.clear();
     m_inferenceCallback = callback;
 
     // Launch dedicated inference thread using Native Agentic Bridge
@@ -6422,69 +6573,104 @@ void Win32IDE::generateResponseAsync(const std::string& prompt, std::function<vo
         [this, prompt]()
         {
             DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+            auto finishAndScheduleNext = [this]()
+            {
+                {
+                    std::lock_guard<std::mutex> lock(m_inferenceMutex);
+                    m_inferenceRunning.store(false);
+                }
+
+                PendingInferenceRequest next;
+                if (DequeuePendingInference(this, next))
+                {
+                    generateResponseAsync(next.prompt, std::move(next.callback));
+                }
+            };
             if (_guard.cancelled)
             {
-                m_inferenceRunning = false;
+                finishAndScheduleNext();
                 return;
             }
-            if (!m_agenticBridge)
+            try
             {
-                if (!m_loadedModelPath.empty())
-                    ensureAgenticBridgeHasModel(m_loadedModelPath);
                 if (!m_agenticBridge)
                 {
-                    if (m_inferenceCallback)
-                        m_inferenceCallback("Error: Agentic Bridge not initialized.", true);
-                    m_inferenceRunning = false;
-                    return;
-                }
-            }
-            if (m_agenticBridge && !m_loadedModelPath.empty() &&
-                m_agenticBridge->GetCurrentModel() != m_loadedModelPath)
-                m_agenticBridge->LoadModel(m_loadedModelPath);
-
-            // Set callback to route NativeAgent stream to the UI
-            m_agenticBridge->SetOutputCallback(
-                [this](const std::string& type, const std::string& msg)
-                {
-                    if (m_inferenceStopRequested || isShuttingDown())
-                        return;
-                    // "stream" type is what we send to chat UI
-                    if (m_inferenceCallback)
-                        m_inferenceCallback(msg, false);
-                });
-
-            // Execute via agent bridge (supports /edit, /think, etc.)
-            m_agenticBridge->ExecuteAgentCommand(prompt);
-
-            // Phase 4B: Choke Point 4 — hookPostGeneration after streaming inference
-            // Note: For streaming responses, the full output was already sent via callback.
-            // We hook here for failure detection on the completed inference cycle.
-            // The response content was streamed — we check the accumulated result if available.
-            if (!m_inferenceStopRequested)
-            {
-                std::string accumulatedResponse = m_currentInferenceResponse;
-                if (!accumulatedResponse.empty())
-                {
-                    FailureClassification inferenceFailure = hookPostGeneration(accumulatedResponse, prompt);
-                    if (inferenceFailure.reason != AgentFailureType::None)
+                    if (!m_loadedModelPath.empty())
+                        ensureAgenticBridgeHasModel(m_loadedModelPath);
+                    if (!m_agenticBridge)
                     {
-                        LOG_WARNING(
-                            "[Phase4B] Inference failure detected: " + failureTypeString(inferenceFailure.reason) +
-                            " (confidence=" + std::to_string(inferenceFailure.confidence) + ")");
-                        // For streaming responses, we log the failure and record it
-                        // but don't auto-retry (the user sees output in real-time)
-                        recordSimpleEvent(AgentEventType::FailureDetected,
-                                          "Inference failure: " + failureTypeString(inferenceFailure.reason) + " | " +
-                                              inferenceFailure.evidence);
+                        if (m_inferenceCallback)
+                            m_inferenceCallback("Error: Agentic Bridge not initialized.", true);
+                        finishAndScheduleNext();
+                        return;
                     }
                 }
-            }
+                if (m_agenticBridge && !m_loadedModelPath.empty() &&
+                    m_agenticBridge->GetCurrentModel() != m_loadedModelPath)
+                    m_agenticBridge->LoadModel(m_loadedModelPath);
 
-            m_inferenceRunning = false;
-            if (m_inferenceCallback && !isShuttingDown())
+                // Set callback to route NativeAgent stream to the UI
+                m_agenticBridge->SetOutputCallback(
+                    [this](const std::string& type, const std::string& msg)
+                    {
+                        if (m_inferenceStopRequested.load() || isShuttingDown())
+                            return;
+                        // "stream" type is what we send to chat UI
+                        if (m_inferenceCallback)
+                            m_inferenceCallback(msg, false);
+                    });
+
+                // Execute via agent bridge (supports /edit, /think, etc.)
+                m_agenticBridge->ExecuteAgentCommand(prompt);
+
+                // Phase 4B: Choke Point 4 — hookPostGeneration after streaming inference
+                // Note: For streaming responses, the full output was already sent via callback.
+                // We hook here for failure detection on the completed inference cycle.
+                // The response content was streamed — we check the accumulated result if available.
+                if (!m_inferenceStopRequested.load())
+                {
+                    std::string accumulatedResponse = m_currentInferenceResponse;
+                    if (!accumulatedResponse.empty())
+                    {
+                        FailureClassification inferenceFailure = hookPostGeneration(accumulatedResponse, prompt);
+                        if (inferenceFailure.reason != AgentFailureType::None)
+                        {
+                            LOG_WARNING(
+                                "[Phase4B] Inference failure detected: " + failureTypeString(inferenceFailure.reason) +
+                                " (confidence=" + std::to_string(inferenceFailure.confidence) + ")");
+                            // For streaming responses, we log the failure and record it
+                            // but don't auto-retry (the user sees output in real-time)
+                            recordSimpleEvent(AgentEventType::FailureDetected,
+                                              "Inference failure: " + failureTypeString(inferenceFailure.reason) + " | " +
+                                                  inferenceFailure.evidence);
+                        }
+                    }
+                }
+
+                auto completionCb = m_inferenceCallback;
+                finishAndScheduleNext();
+                if (completionCb && !isShuttingDown())
+                {
+                    completionCb("", true);  // Finalize
+                }
+            }
+            catch (const std::exception& e)
             {
-                m_inferenceCallback("", true);  // Finalize
+                auto completionCb = m_inferenceCallback;
+                finishAndScheduleNext();
+                if (completionCb && !isShuttingDown())
+                {
+                    completionCb(std::string("Error: ") + e.what(), true);
+                }
+            }
+            catch (...)
+            {
+                auto completionCb = m_inferenceCallback;
+                finishAndScheduleNext();
+                if (completionCb && !isShuttingDown())
+                {
+                    completionCb("Error: inference worker crashed.", true);
+                }
             }
         });
 
@@ -6493,7 +6679,8 @@ void Win32IDE::generateResponseAsync(const std::string& prompt, std::function<vo
 
 void Win32IDE::stopInference()
 {
-    m_inferenceStopRequested = true;
+    m_inferenceStopRequested.store(true);
+    ClearPendingInference(this);
 }
 
 void Win32IDE::setInferenceConfig(const InferenceConfig& config)
@@ -6556,7 +6743,7 @@ void Win32IDE::onInferenceToken(const std::string& token)
 
 void Win32IDE::onInferenceComplete(const std::string& fullResponse)
 {
-    m_inferenceRunning = false;
+    m_inferenceRunning.store(false);
     m_currentInferenceResponse = fullResponse;
 
     // Final context window update
@@ -6763,7 +6950,8 @@ void Win32IDE::createChatPanel()
         return;
     }
     SetWindowLongPtr(m_hwndSecondarySidebar, GWLP_USERDATA, (LONG_PTR)this);
-    m_oldSidebarProc = (WNDPROC)SetWindowLongPtr(m_hwndSecondarySidebar, GWLP_WNDPROC, (LONG_PTR)SidebarProc);
+    m_oldSidebarProc =
+        (WNDPROC)SetWindowLongPtr(m_hwndSecondarySidebar, GWLP_WNDPROC, (LONG_PTR)SidebarProcImpl);
 
     m_hwndSecondarySidebarHeader = CreateWindowExW(0, L"STATIC", L"AI Chat", WS_CHILD | WS_VISIBLE | SS_LEFT, 5, 5, 290,
                                                    25, m_hwndSecondarySidebar, nullptr, m_hInstance, nullptr);
@@ -6901,6 +7089,11 @@ void Win32IDE::createChatPanel()
     if (m_hwndCopilotChatInput)
     {
         SendMessage(m_hwndCopilotChatInput, WM_SETFONT, (WPARAM)hFont, TRUE);
+
+        // Subclass chat input so Enter sends and Shift+Enter inserts a newline.
+        m_oldCopilotInputProc =
+            (WNDPROC)SetWindowLongPtr(m_hwndCopilotChatInput, GWLP_WNDPROC, (LONG_PTR)CopilotChatInputProc);
+        SetWindowLongPtr(m_hwndCopilotChatInput, GWLP_USERDATA, (LONG_PTR)this);
     }
 
     m_hwndCopilotSendBtn =
@@ -6910,6 +7103,9 @@ void Win32IDE::createChatPanel()
     if (m_hwndCopilotSendBtn)
     {
         SendMessage(m_hwndCopilotSendBtn, WM_SETFONT, (WPARAM)hFont, TRUE);
+        m_oldCopilotSendBtnProc =
+            (WNDPROC)SetWindowLongPtr(m_hwndCopilotSendBtn, GWLP_WNDPROC, (LONG_PTR)CopilotButtonProc);
+        SetWindowLongPtr(m_hwndCopilotSendBtn, GWLP_USERDATA, (LONG_PTR)this);
     }
 
     m_hwndCopilotClearBtn =
@@ -6919,7 +7115,12 @@ void Win32IDE::createChatPanel()
     if (m_hwndCopilotClearBtn)
     {
         SendMessage(m_hwndCopilotClearBtn, WM_SETFONT, (WPARAM)hFont, TRUE);
+        m_oldCopilotClearBtnProc =
+            (WNDPROC)SetWindowLongPtr(m_hwndCopilotClearBtn, GWLP_WNDPROC, (LONG_PTR)CopilotButtonProc);
+        SetWindowLongPtr(m_hwndCopilotClearBtn, GWLP_USERDATA, (LONG_PTR)this);
     }
+
+    clearCopilotChat();
 
     m_secondarySidebarVisible = true;
     m_secondarySidebarWidth = 320;
@@ -6932,6 +7133,32 @@ void Win32IDE::populateModelSelector()
 {
     if (!m_hwndModelSelector)
         return;
+
+    OutputDebugStringA("[ModelDiscovery] populateModelSelector begin\n");
+
+    auto addModelDirectory = [this](const std::string& rawDir)
+    {
+        const size_t first = rawDir.find_first_not_of(" \t\r\n\"");
+        if (first == std::string::npos)
+            return;
+
+        const size_t last = rawDir.find_last_not_of(" \t\r\n\"");
+        const std::string candidate = rawDir.substr(first, last - first + 1);
+        if (candidate.empty())
+            return;
+
+        std::error_code ec;
+        if (!std::filesystem::exists(candidate, ec))
+            return;
+
+        if (std::find(m_userModelDirectories.begin(), m_userModelDirectories.end(), candidate) ==
+            m_userModelDirectories.end())
+        {
+            std::string dbg = "[ModelDiscovery] add directory: " + candidate + "\n";
+            OutputDebugStringA(dbg.c_str());
+            m_userModelDirectories.push_back(candidate);
+        }
+    };
 
     // Preserve prior selection if possible
     std::string previousSelection;
@@ -6948,21 +7175,84 @@ void Win32IDE::populateModelSelector()
 
     m_availableModels.clear();
 
-    // Only populate if user has selected model directories
-    if (m_userModelDirectories.empty())
+    m_userModelDirectories.erase(std::remove_if(m_userModelDirectories.begin(), m_userModelDirectories.end(),
+                                                [](const std::string& dir)
+                                                {
+                                                    std::error_code ec;
+                                                    return !std::filesystem::exists(dir, ec);
+                                                }),
+                                 m_userModelDirectories.end());
+
+    static const std::vector<std::string> kCommonModelDirs = {"D:\\OllamaModels", "F:\\OllamaModels",
+                                                              "D:\\models", "F:\\models"};
+    for (const auto& candidate : kCommonModelDirs)
     {
-        // No directories selected - list remains empty
-        return;
+        addModelDirectory(candidate);
+    }
+
+    const DWORD envLen = GetEnvironmentVariableA("OLLAMA_MODELS", nullptr, 0);
+    if (envLen > 1)
+    {
+        std::string envValue(static_cast<size_t>(envLen), '\0');
+        const DWORD copied = GetEnvironmentVariableA("OLLAMA_MODELS", envValue.data(), envLen);
+        if (copied > 0)
+        {
+            envValue.resize(copied);
+            size_t start = 0;
+            while (start <= envValue.size())
+            {
+                const size_t end = envValue.find(';', start);
+                addModelDirectory(envValue.substr(start, end == std::string::npos ? std::string::npos : end - start));
+                if (end == std::string::npos)
+                    break;
+                start = end + 1;
+            }
+        }
+    }
+
+    const DWORD envRawrLen = GetEnvironmentVariableA("RAWRXD_MODELS_PATH", nullptr, 0);
+    if (envRawrLen > 1)
+    {
+        std::string envValue(static_cast<size_t>(envRawrLen), '\0');
+        const DWORD copied = GetEnvironmentVariableA("RAWRXD_MODELS_PATH", envValue.data(), envRawrLen);
+        if (copied > 0)
+        {
+            envValue.resize(copied);
+            size_t start = 0;
+            while (start <= envValue.size())
+            {
+                const size_t end = envValue.find(';', start);
+                addModelDirectory(envValue.substr(start, end == std::string::npos ? std::string::npos : end - start));
+                if (end == std::string::npos)
+                    break;
+                start = end + 1;
+            }
+        }
+    }
+
+    if (!m_loadedModelPath.empty())
+    {
+        addModelDirectory(std::filesystem::path(m_loadedModelPath).parent_path().string());
     }
 
     // Use backend directory listing for each user-selected directory
     for (const auto& dir : m_userModelDirectories)
     {
         std::vector<std::string> modelsFromDir = getModelsFromDirectory(dir);
+        std::string dbg = "[ModelDiscovery] " + dir + " -> " + std::to_string(modelsFromDir.size()) + " model(s)\n";
+        OutputDebugStringA(dbg.c_str());
         for (const auto& model : modelsFromDir)
         {
             m_availableModels.push_back(model);
         }
+    }
+
+    if (m_availableModels.empty())
+    {
+        m_availableModels.push_back("llama2");
+        m_availableModels.push_back("mistral");
+        m_availableModels.push_back("neural-chat");
+        m_availableModels.push_back("dolphin-mixtral");
     }
 
     // Remove duplicates
@@ -6973,7 +7263,12 @@ void Win32IDE::populateModelSelector()
     // Populate combobox
     for (const auto& model : m_availableModels)
     {
-        SendMessageW(m_hwndModelSelector, CB_ADDSTRING, 0, (LPARAM)utf8ToWide(model).c_str());
+        const LRESULT addRes = SendMessageW(m_hwndModelSelector, CB_ADDSTRING, 0, (LPARAM)utf8ToWide(model).c_str());
+        if (addRes == CB_ERR || addRes == CB_ERRSPACE)
+        {
+            std::string dbg = "[ModelDiscovery] CB_ADDSTRING failed for: " + model + "\n";
+            OutputDebugStringA(dbg.c_str());
+        }
     }
 
     // Restore prior selection when possible
@@ -6997,67 +7292,113 @@ void Win32IDE::populateModelSelector()
             selectedIdx = 0;
         SendMessage(m_hwndModelSelector, CB_SETCURSEL, selectedIdx, 0);
     }
+
+    const int uiCount = (int)SendMessage(m_hwndModelSelector, CB_GETCOUNT, 0, 0);
+    if (uiCount <= 0)
+    {
+        OutputDebugStringA("[ModelDiscovery] ui_count=0 after populate, applying hard fallback entries\n");
+        static const wchar_t* kFallbackModels[] = {
+            L"phi3mini.gguf",
+            L"llama2",
+            L"mistral",
+            L"neural-chat"
+        };
+        for (const auto* fallbackModel : kFallbackModels)
+        {
+            SendMessageW(m_hwndModelSelector, CB_ADDSTRING, 0, (LPARAM)fallbackModel);
+        }
+        SendMessage(m_hwndModelSelector, CB_SETCURSEL, 0, 0);
+    }
+
+    const int finalUiCount = (int)SendMessage(m_hwndModelSelector, CB_GETCOUNT, 0, 0);
+    std::string dbg = "[ModelDiscovery] complete available=" + std::to_string(m_availableModels.size()) +
+                      " ui_count=" + std::to_string(finalUiCount) + "\n";
+    OutputDebugStringA(dbg.c_str());
 }
 
 std::vector<std::string> Win32IDE::getModelsFromDirectory(const std::string& directory)
 {
     std::vector<std::string> models;
-
-    // Check if local server is running
-    if (!m_localServerRunning.load())
-    {
-        // Local server not running yet - return empty list
-        // Models will be populated when directories are selected and server is running
-        return models;
-    }
-
-    // Make HTTP request to /api/list-directory
-    std::string url = "http://localhost:" + std::to_string(m_settings.localServerPort) + "/api/list-directory";
-    std::string requestBody = "{\"path\":\"" + directory + "\",\"depth\":1,\"maxEntries\":10000}";
-
-    std::string response = makeHttpRequest(url, "POST", requestBody, "application/json");
-    if (response.empty())
-    {
-        LOG_WARNING("Failed to get directory listing for: " + directory);
-        return models;
-    }
-
-    // Parse JSON response using nlohmann/json
     try
     {
-        auto jsonResponse = nlohmann::json::parse(response);
-        if (jsonResponse.contains("entries") && jsonResponse["entries"].is_array())
+        std::error_code ec;
+        if (!std::filesystem::exists(directory, ec))
         {
-            for (const auto& entry : jsonResponse["entries"])
-            {
-                if (entry.contains("name") && entry.contains("type"))
-                {
-                    std::string name = entry["name"];
-                    std::string type = entry["type"];
+            LOG_WARNING("Directory does not exist: " + directory + " (ec=" + std::to_string(ec.value()) + ")");
+            return models;
+        }
 
-                    // Check if it's a file and has GGUF extension
-                    if (type == "file" && !name.empty())
+        std::filesystem::recursive_directory_iterator it(
+            directory, std::filesystem::directory_options::skip_permission_denied, ec);
+        std::filesystem::recursive_directory_iterator end;
+
+        while (it != end)
+        {
+            if (ec)
+            {
+                ec.clear();
+                try
+                {
+                    it.increment(ec);
+                }
+                catch (...)
+                {
+                    break;
+                }
+                continue;
+            }
+
+            try
+            {
+                const auto& entry = *it;
+                if (entry.is_regular_file(ec))
+                {
+                    const std::string fullPath = entry.path().string();
+                    std::string ext = entry.path().extension().string();
+                    std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+
+                    if (ext == ".gguf" || ext == ".bin" || ext == ".ggml")
                     {
-                        std::string ext = name.substr(name.find_last_of('.') + 1);
-                        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-                        if (ext == "gguf" || ext == "bin" || ext == "ggml")
-                        {
-                            // Remove extension for display
-                            size_t dotPos = name.find_last_of('.');
-                            if (dotPos != std::string::npos)
-                            {
-                                std::string displayName = name.substr(0, dotPos);
-                                models.push_back(displayName);
-                            }
-                        }
+                        models.push_back(fullPath);
                     }
                 }
+                else if (ec)
+                {
+                    ec.clear();
+                }
+
+                try
+                {
+                    it.increment(ec);
+                }
+                catch (const std::exception& e)
+                {
+                    LOG_WARNING("Error during directory iteration: " + std::string(e.what()));
+                    break;
+                }
             }
+            catch (const std::exception& e)
+            {
+                LOG_WARNING("Exception processing directory entry: " + std::string(e.what()));
+                try
+                {
+                    it.increment(ec);
+                }
+                catch (...)
+                {
+                    break;
+                }
+            }
+        }
+
+        if (ec && ec.value() != 0)
+        {
+            LOG_WARNING("Directory iteration error: " + ec.message());
         }
     }
     catch (const std::exception& e)
     {
-        LOG_ERROR("Error parsing directory listing response: " + std::string(e.what()));
+        LOG_ERROR("Error parsing directory listing: " + std::string(e.what()));
     }
 
     return models;
@@ -7175,10 +7516,34 @@ void Win32IDE::HandleCopilotSend()
         return;
     }
 
+    if (!m_hwndModelSelector || !IsWindow(m_hwndModelSelector))
+    {
+        appendToOutput("\n[Error] Model selector unavailable. Please reopen AI Chat pane.\n", "Output", OutputSeverity::Error);
+        OutputDebugStringA("[HandleCopilotSend] model selector unavailable\n");
+        return;
+    }
+
+    int comboCount = (int)SendMessage(m_hwndModelSelector, CB_GETCOUNT, 0, 0);
+    if (comboCount <= 0 || m_availableModels.empty())
+    {
+        OutputDebugStringA("[HandleCopilotSend] model list empty, forcing repopulate\n");
+        populateModelSelector();
+        comboCount = (int)SendMessage(m_hwndModelSelector, CB_GETCOUNT, 0, 0);
+    }
+
+    if (comboCount <= 0 || m_availableModels.empty())
+    {
+        appendToOutput("\n[Error] No models discovered. Configure OLLAMA_MODELS/RAWRXD_MODELS_PATH and reopen chat.\n",
+                       "Output", OutputSeverity::Error);
+        OutputDebugStringA("[HandleCopilotSend] aborting send due to empty model list\n");
+        return;
+    }
+
     // Get selected model
     int modelIdx = (int)SendMessage(m_hwndModelSelector, CB_GETCURSEL, 0, 0);
-    std::string selectedModel =
-        (modelIdx >= 0 && modelIdx < (int)m_availableModels.size()) ? m_availableModels[modelIdx] : "llama2";
+    if (modelIdx < 0 || modelIdx >= (int)m_availableModels.size())
+        modelIdx = 0;
+    std::string selectedModel = m_availableModels[modelIdx];
 
     // Display user message
     std::string displayText = "\n> User: " + userMessage + "\n";
@@ -7198,6 +7563,12 @@ void Win32IDE::HandleCopilotSend()
     {
         if (!m_hwndCopilotChatOutput)
             return;
+
+        // Completion callbacks may use empty payloads as end-of-stream markers.
+        if (response.empty())
+        {
+            return;
+        }
 
         std::string displayResp = "AI: " + response + (complete ? "\n" : "");
         int len = GetWindowTextLengthW(m_hwndCopilotChatOutput);
@@ -7220,10 +7591,68 @@ void Win32IDE::HandleCopilotClear()
     if (!m_hwndCopilotChatOutput || !m_hwndCopilotChatInput)
         return;
 
-    SetWindowTextW(m_hwndCopilotChatOutput,
-                   L"Welcome to RawrXD AI Chat!\n\nSelect a model and type your message to begin.");
-    SetWindowTextW(m_hwndCopilotChatInput, L"");
+    clearCopilotChat();
     m_chatHistory.clear();
+}
+
+// ============================================================================
+// CopilotChatInputProc — Chat input (EDIT control) subclass window procedure
+// Intercepts ENTER key to send messages; Shift+ENTER creates newlines.
+// ============================================================================
+LRESULT CALLBACK Win32IDE::CopilotChatInputProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    Win32IDE* pThis = (Win32IDE*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+
+    if (pThis && uMsg == WM_KEYDOWN && wParam == VK_RETURN)
+    {
+        const bool shiftPressed = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+        if (!shiftPressed)
+        {
+            OutputDebugStringA("[CopilotChatInputProc] ENTER send\n");
+            pThis->HandleCopilotSend();
+            return 0;
+        }
+    }
+
+    if (pThis && pThis->m_oldCopilotInputProc)
+    {
+        return CallWindowProc(pThis->m_oldCopilotInputProc, hwnd, uMsg, wParam, lParam);
+    }
+    return DefWindowProcW(hwnd, uMsg, wParam, lParam);
+}
+
+LRESULT CALLBACK Win32IDE::CopilotButtonProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    Win32IDE* pThis = (Win32IDE*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    const int controlId = GetDlgCtrlID(hwnd);
+
+    if (pThis && (uMsg == BM_CLICK || uMsg == WM_LBUTTONUP))
+    {
+        if (controlId == 1204)
+        {
+            pThis->HandleCopilotSend();
+            return 0;
+        }
+        if (controlId == 1205)
+        {
+            pThis->HandleCopilotClear();
+            return 0;
+        }
+    }
+
+    WNDPROC oldProc = nullptr;
+    if (pThis)
+    {
+        if (controlId == 1204)
+            oldProc = pThis->m_oldCopilotSendBtnProc;
+        else if (controlId == 1205)
+            oldProc = pThis->m_oldCopilotClearBtnProc;
+    }
+
+    if (oldProc)
+        return CallWindowProc(oldProc, hwnd, uMsg, wParam, lParam);
+
+    return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 }
 
 void Win32IDE::HandleCopilotStreamUpdate(const char* token, size_t length)
@@ -7555,6 +7984,7 @@ void Win32IDE::addTab(const std::string& filePath, const std::string& displayNam
         SendMessageW(m_hwndTabBar, TCM_INSERTITEMW, index, (LPARAM)&tci);
         SendMessage(m_hwndTabBar, TCM_SETCURSEL, index, 0);
         m_activeTabIndex = index;
+        syncAgentContextFromActiveTab();
     }
 }
 
@@ -7567,6 +7997,51 @@ std::pair<int, int> Win32IDE::getCursorPosition()
     int lineStart = (int)SendMessageW(m_hwndEditor, EM_LINEINDEX, line - 1, 0);
     int col = charPos - lineStart + 1;
     return {line, col};
+}
+
+void Win32IDE::syncAgentContextFromActiveTab()
+{
+    std::string workspaceRoot = m_projectRoot;
+    if (workspaceRoot.empty())
+        workspaceRoot = m_explorerRootPath;
+
+    if (m_activeTabIndex >= 0 && m_activeTabIndex < (int)m_editorTabs.size())
+    {
+        const auto& tab = m_editorTabs[m_activeTabIndex];
+        m_currentFile = tab.filePath;
+        setCurrentDirectoryFromFile(m_currentFile);
+
+        if (!m_currentFile.empty())
+            m_syntaxLanguage = detectLanguageFromExtension(m_currentFile);
+        else
+            m_syntaxLanguage = SyntaxLanguage::None;
+
+        if (workspaceRoot.empty())
+            workspaceRoot = m_currentDirectory;
+
+        updateTitleBarText();
+
+        if (m_agenticBridge)
+        {
+            m_agenticBridge->SetWorkspaceRoot(workspaceRoot);
+            m_agenticBridge->SetLanguageContext(getSyntaxLanguageName(), m_currentFile);
+        }
+        return;
+    }
+
+    m_currentFile.clear();
+    m_syntaxLanguage = SyntaxLanguage::None;
+
+    if (workspaceRoot.empty())
+        workspaceRoot = m_currentDirectory;
+
+    updateTitleBarText();
+
+    if (m_agenticBridge)
+    {
+        m_agenticBridge->SetWorkspaceRoot(workspaceRoot);
+        m_agenticBridge->SetLanguageContext(getSyntaxLanguageName(), "");
+    }
 }
 
 void Win32IDE::onTabChanged()
@@ -7597,9 +8072,6 @@ void Win32IDE::onTabChanged()
         // Load tab content into editor
         setWindowText(m_hwndEditor, tab.content);
 
-        // Update current file path
-        m_currentFile = tab.filePath;
-
         // Restore cursor position
         int lineIndex = (int)SendMessageW(m_hwndEditor, EM_LINEINDEX, tab.cursorLine - 1, 0);
         int charPos = lineIndex + tab.cursorCol - 1;
@@ -7608,8 +8080,7 @@ void Win32IDE::onTabChanged()
         // Restore stashed annotations for the incoming tab
         restoreAnnotationsForTab();
 
-        // Re-detect language for the new file and recolor
-        m_syntaxLanguage = detectLanguageFromExtension(m_currentFile);
+        syncAgentContextFromActiveTab();
         onEditorContentChanged();
 
         // Update status bar
@@ -7765,11 +8236,11 @@ void Win32IDE::loadTabsState()
                 // Load active tab content
                 const auto& tab = m_editorTabs[m_activeTabIndex];
                 setWindowText(m_hwndEditor, tab.content);
-                m_currentFile = tab.filePath;
                 // Set cursor
                 int lineIndex = (int)SendMessageW(m_hwndEditor, EM_LINEINDEX, tab.cursorLine - 1, 0);
                 int charPos = lineIndex + tab.cursorCol - 1;
                 SendMessageW(m_hwndEditor, EM_SETSEL, charPos, charPos);
+                syncAgentContextFromActiveTab();
                 // Update status bar
                 if (m_hwndStatusBar)
                 {
@@ -7811,8 +8282,8 @@ void Win32IDE::removeTab(int index)
     if (m_editorTabs.empty())
     {
         m_activeTabIndex = -1;
-        m_currentFile.clear();
         setWindowText(m_hwndEditor, "");
+        syncAgentContextFromActiveTab();
     }
     else if (index <= m_activeTabIndex)
     {
@@ -9185,6 +9656,50 @@ LRESULT CALLBACK Win32IDE::SidebarProcImpl(HWND hwnd, UINT uMsg, WPARAM wParam, 
 
     switch (uMsg)
     {
+        case WM_SHOWWINDOW:
+        {
+            if (pThis && wParam)
+            {
+                pThis->populateModelSelector();
+                const int cnt = (pThis->m_hwndModelSelector && IsWindow(pThis->m_hwndModelSelector))
+                                    ? (int)SendMessage(pThis->m_hwndModelSelector, CB_GETCOUNT, 0, 0)
+                                    : -1;
+                std::string dbg = "[SidebarProcImpl] WM_SHOWWINDOW repopulate model count=" + std::to_string(cnt) + "\n";
+                OutputDebugStringA(dbg.c_str());
+            }
+            break;
+        }
+
+        case WM_SETFOCUS:
+        {
+            if (pThis)
+            {
+                pThis->populateModelSelector();
+                const int cnt = (pThis->m_hwndModelSelector && IsWindow(pThis->m_hwndModelSelector))
+                                    ? (int)SendMessage(pThis->m_hwndModelSelector, CB_GETCOUNT, 0, 0)
+                                    : -1;
+                std::string dbg = "[SidebarProcImpl] WM_SETFOCUS repopulate model count=" + std::to_string(cnt) + "\n";
+                OutputDebugStringA(dbg.c_str());
+            }
+            break;
+        }
+
+        case WM_ACTIVATE:
+        {
+            if (pThis && LOWORD(wParam) != WA_INACTIVE)
+            {
+                const int cnt = (pThis->m_hwndModelSelector && IsWindow(pThis->m_hwndModelSelector))
+                                    ? (int)SendMessage(pThis->m_hwndModelSelector, CB_GETCOUNT, 0, 0)
+                                    : -1;
+                if (cnt <= 0)
+                {
+                    OutputDebugStringA("[SidebarProcImpl] WM_ACTIVATE refresh because model count is zero\n");
+                    pThis->populateModelSelector();
+                }
+            }
+            break;
+        }
+
         case WM_PAINT:
         {
             PAINTSTRUCT ps;
@@ -9208,7 +9723,34 @@ LRESULT CALLBACK Win32IDE::SidebarProcImpl(HWND hwnd, UINT uMsg, WPARAM wParam, 
                 int controlId = LOWORD(wParam);
                 int notifyCode = HIWORD(wParam);
                 // Route button clicks from AI Chat panel controls
-                if (controlId == IDC_AI_MAX_MODE && notifyCode == BN_CLICKED)
+                if (controlId == IDC_COPILOT_SEND_BTN)
+                {
+                    OutputDebugStringA("[SidebarProcImpl] Send clicked\n");
+                    pThis->HandleCopilotSend();
+                    pThis->onCommand(pThis->m_hwndMain, controlId, (HWND)lParam, (UINT)notifyCode);
+                    return 0;
+                }
+                else if (controlId == IDC_COPILOT_CLEAR_BTN)
+                {
+                    OutputDebugStringA("[SidebarProcImpl] Clear clicked\n");
+                    pThis->HandleCopilotClear();
+                    pThis->onCommand(pThis->m_hwndMain, controlId, (HWND)lParam, (UINT)notifyCode);
+                    return 0;
+                }
+                else if (controlId == IDC_MODEL_BROWSE_BTN)
+                {
+                    OutputDebugStringA("[SidebarProcImpl] Browse clicked\n");
+                    pThis->handleModelBrowse();
+                    return 0;
+                }
+                else if (controlId == IDC_MODEL_SELECTOR && notifyCode == CBN_SELCHANGE)
+                {
+                    OutputDebugStringA("[SidebarProcImpl] Model selection changed\n");
+                    pThis->onModelSelectionChanged();
+                    pThis->onCommand(pThis->m_hwndMain, controlId, (HWND)lParam, (UINT)notifyCode);
+                    return 0;
+                }
+                else if (controlId == IDC_AI_MAX_MODE && notifyCode == BN_CLICKED)
                 {
                     pThis->onAIModeMax();
                 }
@@ -9232,6 +9774,62 @@ LRESULT CALLBACK Win32IDE::SidebarProcImpl(HWND hwnd, UINT uMsg, WPARAM wParam, 
         {
             if (pThis)
             {
+                const int panelW = (std::max)(0, (int)LOWORD(lParam));
+                const int panelH = (std::max)(0, (int)HIWORD(lParam));
+                const int margin = pThis->dpiScale(6);
+                const int gap = pThis->dpiScale(6);
+                const int headerH = pThis->dpiScale(28);
+                const int buttonH = pThis->dpiScale(30);
+                const int minButtonW = pThis->dpiScale(76);
+                const int minInputH = pThis->dpiScale(72);
+                const int maxInputH = pThis->dpiScale(160);
+
+                const int fullW = (std::max)(0, panelW - margin * 2);
+                int topY = headerH + margin;
+
+                HDWP hdwp = BeginDeferWindowPos(12);
+                auto moveControl = [&](HWND control, int x, int y, int w, int h)
+                {
+                    if (!control || !IsWindow(control))
+                        return;
+                    if (hdwp)
+                    {
+                        hdwp = DeferWindowPos(hdwp, control, nullptr, x, y, w, h, SWP_NOZORDER | SWP_NOACTIVATE);
+                        if (hdwp)
+                            return;
+                    }
+                    MoveWindow(control, x, y, w, h, TRUE);
+                };
+
+                moveControl(pThis->m_hwndSecondarySidebarHeader, 0, 0, panelW, headerH);
+
+                // If model selector controls exist in this build lane, lay them out responsively.
+                HWND hwndBrowseBtn = GetDlgItem(hwnd, IDC_MODEL_BROWSE_BTN);
+                if (pThis->m_hwndModelSelector && IsWindow(pThis->m_hwndModelSelector))
+                {
+                    const int selectorY = pThis->dpiScale(34);
+                    const int browseW = pThis->dpiScale(84);
+                    const int selectorW = (std::max)(pThis->dpiScale(96), fullW - browseW - gap);
+                    moveControl(pThis->m_hwndModelSelector, margin, selectorY, selectorW, pThis->dpiScale(240));
+                    moveControl(hwndBrowseBtn, margin + selectorW + gap, selectorY, browseW, pThis->dpiScale(24));
+                    topY = (std::max)(topY, selectorY + pThis->dpiScale(24) + margin);
+                }
+
+                const int buttonW = (std::max)(minButtonW, (fullW - gap) / 2);
+                const int buttonY = (std::max)(topY, panelH - margin - buttonH);
+                const int inputH = (std::max)(minInputH, (std::min)(maxInputH, panelH / 4));
+                const int inputY = (std::max)(topY, buttonY - gap - inputH);
+                const int outputY = topY;
+                const int outputH = (std::max)(0, inputY - gap - outputY);
+
+                moveControl(pThis->m_hwndCopilotChatOutput, margin, outputY, fullW, outputH);
+                moveControl(pThis->m_hwndCopilotChatInput, margin, inputY, fullW, inputH);
+                moveControl(pThis->m_hwndCopilotSendBtn, margin, buttonY, buttonW, buttonH);
+                moveControl(pThis->m_hwndCopilotClearBtn, margin + buttonW + gap, buttonY, buttonW, buttonH);
+
+                if (hdwp)
+                    EndDeferWindowPos(hdwp);
+
                 pThis->updateSecondarySidebarContent();
             }
             return 0;
@@ -9354,6 +9952,11 @@ void Win32IDE::sendToAllTerminals(const std::string& command)
 void Win32IDE::refreshExtensions()
 {
     LOG_INFO("refreshExtensions");
+    if (!m_extensionLoader)
+    {
+        try { m_extensionLoader = std::make_unique<RawrXD::ExtensionLoader>(); m_extensionLoader->Scan(); m_extensionLoader->LoadNativeModules(); }
+        catch (...) { m_extensionLoader.reset(); }
+    }
     if (m_extensionLoader)
     {
         m_extensionLoader->Scan();
@@ -9363,13 +9966,18 @@ void Win32IDE::refreshExtensions()
     }
     else
     {
-        appendToOutput("⚠️ Extension loader not initialized\n", "Output", OutputSeverity::Warning);
+        appendToOutput("⚠️ Extension loader unavailable (init failed)\n", "Output", OutputSeverity::Warning);
     }
 }
 
 void Win32IDE::loadExtension(const std::string& name)
 {
     LOG_INFO("loadExtension: " + name);
+    if (!m_extensionLoader)
+    {
+        try { m_extensionLoader = std::make_unique<RawrXD::ExtensionLoader>(); m_extensionLoader->Scan(); m_extensionLoader->LoadNativeModules(); }
+        catch (...) { m_extensionLoader.reset(); }
+    }
     if (m_extensionLoader)
     {
         // Re-scan to ensure extension list is current, then load native modules
@@ -9379,13 +9987,18 @@ void Win32IDE::loadExtension(const std::string& name)
     }
     else
     {
-        appendToOutput("⚠️ Extension loader not initialized\n", "Output", OutputSeverity::Warning);
+        appendToOutput("⚠️ Extension loader unavailable (init failed)\n", "Output", OutputSeverity::Warning);
     }
 }
 
 void Win32IDE::unloadExtension(const std::string& name)
 {
     LOG_INFO("unloadExtension: " + name);
+    if (!m_extensionLoader)
+    {
+        try { m_extensionLoader = std::make_unique<RawrXD::ExtensionLoader>(); m_extensionLoader->Scan(); m_extensionLoader->LoadNativeModules(); }
+        catch (...) { m_extensionLoader.reset(); }
+    }
     if (m_extensionLoader)
     {
         bool unloaded = m_extensionLoader->UnloadExtension(name);
@@ -9401,13 +10014,18 @@ void Win32IDE::unloadExtension(const std::string& name)
     }
     else
     {
-        appendToOutput("⚠️ Extension loader not initialized\n", "Output", OutputSeverity::Warning);
+        appendToOutput("⚠️ Extension loader unavailable (init failed)\n", "Output", OutputSeverity::Warning);
     }
 }
 
 void Win32IDE::showExtensionHelp(const std::string& name)
 {
     LOG_INFO("showExtensionHelp: " + name);
+    if (!m_extensionLoader)
+    {
+        try { m_extensionLoader = std::make_unique<RawrXD::ExtensionLoader>(); m_extensionLoader->Scan(); m_extensionLoader->LoadNativeModules(); }
+        catch (...) { m_extensionLoader.reset(); }
+    }
     if (m_extensionLoader)
     {
         std::string help = m_extensionLoader->GetHelp(name);
@@ -9415,7 +10033,7 @@ void Win32IDE::showExtensionHelp(const std::string& name)
     }
     else
     {
-        appendToOutput("⚠️ Extension loader not initialized\n", "Output", OutputSeverity::Warning);
+        appendToOutput("⚠️ Extension loader unavailable (init failed)\n", "Output", OutputSeverity::Warning);
     }
 }
 

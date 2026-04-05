@@ -5,16 +5,31 @@
 // ============================================================================
 #include "cpu_inference_engine.h"
 #include "rawrxd_inference.h"
+#include "rawr_circular_sdma.h"
+#include "kernels/dequant_q6k_avx512.h"
+#include "kernels/kv_accum_avx512.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
+#include <immintrin.h>
 #include <iostream>
+#include <limits>
 #include <mutex>
 #include <thread>
 
+extern "C" {
+    uint64_t g_sdma_flip_count = 0;
+    uint64_t g_sdma_wait_cycles = 0;
+    uint64_t g_expert_cache_hits = 0;
+    uint64_t g_expert_cache_misses = 0;
+    uint64_t g_sovereign_bar_base = 0;
+    volatile unsigned long long g_rawrxd_mailbox_data_seq = 0;
+    volatile unsigned long long g_rawrxd_mailbox_consumed_seq = 0;
+    volatile unsigned long long g_rawrxd_mailbox_frame_ready = 0;
+}
 
 namespace RawrXD
 {
@@ -23,6 +38,122 @@ namespace RawrXD
 // File-scope inference backend (the REAL compute chain)
 // ============================================================================
 static RawrXDInference s_inferenceBackend;
+
+namespace
+{
+constexpr size_t kMaxContextTokens = 1'000'000;
+constexpr size_t kMaxKvCacheBytes = 8ull * 1024ull * 1024ull * 1024ull;
+
+bool checkedMulSize(size_t a, size_t b, size_t& out)
+{
+    if (a == 0 || b == 0)
+    {
+        out = 0;
+        return true;
+    }
+    if (a > (std::numeric_limits<size_t>::max() / b))
+    {
+        return false;
+    }
+    out = a * b;
+    return true;
+}
+
+bool utf8ToWideChecked(const std::string& utf8, std::wstring& wide)
+{
+    wide.clear();
+    if (utf8.empty())
+        return false;
+
+    const int len = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, nullptr, 0);
+    if (len <= 0)
+        return false;
+
+    wide.resize(static_cast<size_t>(len));
+    const int conv = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, &wide[0], len);
+    if (conv <= 0)
+    {
+        wide.clear();
+        return false;
+    }
+    if (!wide.empty() && wide.back() == L'\0')
+        wide.pop_back();
+    return !wide.empty();
+}
+
+inline float DotProductF32(const float* a, const float* b, int n)
+{
+    if (!a || !b || n <= 0)
+        return 0.0f;
+
+#if defined(__AVX512F__)
+    int i = 0;
+    __m512 acc = _mm512_setzero_ps();
+    for (; i + 16 <= n; i += 16)
+    {
+        const __m512 va = _mm512_loadu_ps(a + i);
+        const __m512 vb = _mm512_loadu_ps(b + i);
+        acc = _mm512_fmadd_ps(va, vb, acc);
+    }
+    float sum = _mm512_reduce_add_ps(acc);
+    for (; i < n; ++i)
+        sum += a[i] * b[i];
+    return sum;
+#else
+    float sum = 0.0f;
+    for (int i = 0; i < n; ++i)
+        sum += a[i] * b[i];
+    return sum;
+#endif
+}
+
+inline bool KvHotPathTelemetryEnabled()
+{
+    static int enabled = -1;
+    if (enabled < 0)
+    {
+        char value[8] = {};
+        const DWORD len = GetEnvironmentVariableA("RAWRXD_KV_HOTPATH_TIMER", value, static_cast<DWORD>(sizeof(value)));
+        enabled = (len > 0 && len < sizeof(value) && value[0] != '0') ? 1 : 0;
+    }
+    return enabled != 0;
+}
+
+inline void AccumulateScaledKVHotPath(float* dst, const float* src, float scale, int n)
+{
+    if (!dst || !src || n <= 0)
+    {
+        return;
+    }
+
+    if (scale == 1.0f)
+    {
+        KernelOps::AccumulateKV(src, dst, n);
+        return;
+    }
+
+    KernelOps::AccumulateScaledKV(src, dst, n, scale);
+}
+}  // namespace
+
+[[nodiscard]] static bool ConvertTokensToU32Checked(const std::vector<int32_t>& in, std::vector<uint32_t>& out,
+                                                    const char* caller)
+{
+    out.clear();
+    out.reserve(in.size());
+    for (size_t i = 0; i < in.size(); ++i)
+    {
+        const int32_t tok = in[i];
+        if (tok < 0)
+        {
+            printf("[CPUInferenceEngine] ERROR: %s received negative token %d at index %zu\n", caller, tok, i);
+            out.clear();
+            return false;
+        }
+        out.push_back(static_cast<uint32_t>(tok));
+    }
+    return true;
+}
 
 // ============================================================================
 // Shared CPUInferenceEngine (single facade; matches single s_inferenceBackend).
@@ -70,38 +201,15 @@ bool CPUInferenceEngine::LoadModel(const std::string& model_path)
         return false;
     }
 
-    // UTF-8 → wchar_t for the loader
-    std::wstring wpath;
-    int len = MultiByteToWideChar(CP_UTF8, 0, model_path.c_str(), -1, nullptr, 0);
-    if (len > 0)
-    {
-        wpath.resize(len);
-        MultiByteToWideChar(CP_UTF8, 0, model_path.c_str(), -1, &wpath[0], len);
-        if (!wpath.empty() && wpath.back() == L'\0')
-            wpath.pop_back();
-    }
-
-    // Locate tokenizer files alongside the model
-    namespace fs = std::filesystem;
-    fs::path modelDir = fs::path(model_path).parent_path();
-    std::string vocabPath = (modelDir / "tokenizer.json").string();
-    std::string mergesPath = (modelDir / "merges.txt").string();
-
-    // Fallback: check current directory
-    if (!fs::exists(vocabPath))
-        vocabPath = "tokenizer.json";
-    if (!fs::exists(mergesPath))
-        mergesPath = "merges.txt";
-
     printf("[CPUInferenceEngine] Loading model: %s\n", model_path.c_str());
     printf("[CPUInferenceEngine] Stage: initialize backend\n");
 
     try
     {
-        if (s_inferenceBackend.Initialize(wpath.c_str(), vocabPath.c_str(), mergesPath.c_str()))
+        if (s_inferenceBackend.Initialize(model_path))
         {
-            m_modelLoaded = true;
             m_lastLoadErrorMessage.clear();
+            m_modelLoaded = true;
 
             // Propagate metadata from backend to facade members
             int bvs = s_inferenceBackend.getVocabSize();
@@ -142,17 +250,20 @@ bool CPUInferenceEngine::LoadModel(const std::string& model_path)
     }
     catch (const std::bad_alloc&)
     {
+        m_modelLoaded = false;
         m_lastLoadErrorMessage = "OOM during RawrXDInference::Initialize";
         printf("[CPUInferenceEngine] OOM during backend initialization\n");
         return false;
     }
     catch (const std::exception& e)
     {
+        m_modelLoaded = false;
         m_lastLoadErrorMessage = std::string("exception during RawrXDInference::Initialize: ") + e.what();
         printf("[CPUInferenceEngine] Exception during backend initialization: %s\n", e.what());
         return false;
     }
 
+    m_modelLoaded = false;
     m_lastLoadErrorMessage = s_inferenceBackend.GetLastLoadErrorMessage();
     if (m_lastLoadErrorMessage.empty())
     {
@@ -191,7 +302,9 @@ std::string CPUInferenceEngine::Detokenize(const std::vector<int32_t>& tokens)
 {
     if (!m_modelLoaded || tokens.empty())
         return "";
-    std::vector<uint32_t> u32_toks(tokens.begin(), tokens.end());
+    std::vector<uint32_t> u32_toks;
+    if (!ConvertTokensToU32Checked(tokens, u32_toks, "Detokenize"))
+        return "";
     return s_inferenceBackend.Detokenize(u32_toks);
 }
 
@@ -205,13 +318,41 @@ std::vector<float> CPUInferenceEngine::Eval(const std::vector<int32_t>& input_to
     if (input_tokens.empty())
         return {};
 
-    std::vector<uint32_t> toks(input_tokens.begin(), input_tokens.end());
-    auto logits = s_inferenceBackend.ForwardTokens(toks, static_cast<uint32_t>(m_currentPos));
+    std::vector<uint32_t> toks;
+    if (!ConvertTokensToU32Checked(input_tokens, toks, "Eval"))
+        return {};
+    const uint32_t startPos = (m_currentPos < 0) ? 0u : static_cast<uint32_t>(m_currentPos);
+    auto logits = s_inferenceBackend.ForwardTokens(toks, startPos);
     if (!logits.empty())
     {
         m_lastState = logits;
     }
     return m_lastState;
+}
+
+std::string CPUInferenceEngine::DumpTokenTraceSummary(size_t lastNTokens) const
+{
+    return s_inferenceBackend.DumpTokenTraceSummary(lastNTokens);
+}
+
+bool CPUInferenceEngine::DumpTokenTracesToCSV(const std::string& filepath) const
+{
+    if (filepath.empty())
+        return false;
+    s_inferenceBackend.DumpTokenTracesToCSV(filepath.c_str());
+    return true;
+}
+
+void CPUInferenceEngine::ClearTokenTraceBuffer()
+{
+    s_inferenceBackend.GetTokenTraceBuffer().clear();
+}
+
+std::string CPUInferenceEngine::DiagnoseToken(int32_t tokenId) const
+{
+    if (tokenId < 0)
+        return "ERROR: token id must be non-negative";
+    return s_inferenceBackend.DiagnoseToken(static_cast<uint32_t>(tokenId));
 }
 
 void CPUInferenceEngine::GenerateStreaming(const std::vector<int32_t>& input_tokens, int max_tokens,
@@ -241,7 +382,16 @@ void CPUInferenceEngine::GenerateStreaming(const std::vector<int32_t>& input_tok
     max_tokens = std::min(max_tokens, 8192);
 
     auto start = std::chrono::high_resolution_clock::now();
-    m_currentPos = static_cast<int>(input_tokens.size());
+    if (input_tokens.size() > static_cast<size_t>(std::numeric_limits<int>::max()))
+    {
+        printf("[CPUInferenceEngine] Warning: input_tokens.size() %zu exceeds int range, clamping\n",
+               input_tokens.size());
+        m_currentPos = std::numeric_limits<int>::max();
+    }
+    else
+    {
+        m_currentPos = static_cast<int>(input_tokens.size());
+    }
     printf("[CPUInferenceEngine] GenerateStreaming: input_tokens=%llu max_tokens=%d\n",
            static_cast<unsigned long long>(input_tokens.size()), max_tokens);
 
@@ -249,7 +399,13 @@ void CPUInferenceEngine::GenerateStreaming(const std::vector<int32_t>& input_tok
     emitSwarmTelemetryThrottled_(true);
 
     // Stream directly from token IDs to avoid detokenize->retokenize drift.
-    std::vector<uint32_t> u32_toks(input_tokens.begin(), input_tokens.end());
+    std::vector<uint32_t> u32_toks;
+    if (!ConvertTokensToU32Checked(input_tokens, u32_toks, "GenerateStreaming"))
+    {
+        if (complete_callback)
+            complete_callback();
+        return;
+    }
     try
     {
         s_inferenceBackend.GenerateFromTokens(u32_toks, static_cast<uint32_t>(max_tokens),
@@ -309,7 +465,8 @@ void CPUInferenceEngine::SetDeepResearch(bool enabled)
 void CPUInferenceEngine::SetSwarmMode(bool enabled, int chainDepth)
 {
     m_swarmMode = enabled;
-    m_swarmChainDepth = chainDepth;
+    // Prevent divide-by-zero and negative depth in swarm scheduling.
+    m_swarmChainDepth = enabled ? std::max(1, chainDepth) : 1;
 }
 
 // ============================================================================
@@ -317,7 +474,7 @@ void CPUInferenceEngine::SetSwarmMode(bool enabled, int chainDepth)
 // ============================================================================
 void CPUInferenceEngine::SetContextSize(size_t size)
 {
-    m_contextLimit = size;
+    m_contextLimit = (size > kMaxContextTokens) ? kMaxContextTokens : size;
 }
 
 size_t CPUInferenceEngine::GetMemoryUsage() const
@@ -349,11 +506,12 @@ void CPUInferenceEngine::GenerateSwarmStreaming(const std::vector<int32_t>& inpu
 
     std::vector<int32_t> current_tokens = input_tokens;
     int tokens_generated = 0;
-    const int tokens_per_model = max_tokens / m_swarmChainDepth;
+    const int chain_depth = std::max(1, m_swarmChainDepth);
+    const int tokens_per_model = std::max(1, max_tokens / chain_depth);
 
-    printf("[Swarm] Starting chain with %zu models, depth %d\n", m_swarmModels.size(), m_swarmChainDepth);
+    printf("[Swarm] Starting chain with %zu models, depth %d\n", m_swarmModels.size(), chain_depth);
 
-    for (int chain_step = 0; chain_step < m_swarmChainDepth && tokens_generated < max_tokens; ++chain_step)
+    for (int chain_step = 0; chain_step < chain_depth && tokens_generated < max_tokens; ++chain_step)
     {
         // Select model for this step (cycle through available models)
         size_t model_idx = chain_step % m_swarmModels.size();
@@ -368,7 +526,13 @@ void CPUInferenceEngine::GenerateSwarmStreaming(const std::vector<int32_t>& inpu
         for (int batch = 0; batch < speculative_depth; ++batch)
         {
             std::vector<int32_t> batch_tokens;
-            std::vector<uint32_t> prompt_tokens(current_tokens.begin(), current_tokens.end());
+            std::vector<uint32_t> prompt_tokens;
+            if (!ConvertTokensToU32Checked(current_tokens, prompt_tokens, "GenerateSwarmStreaming"))
+            {
+                if (complete_callback)
+                    complete_callback();
+                return;
+            }
             std::vector<uint32_t> generated = model->GenerateFromTokens(
                 prompt_tokens, static_cast<uint32_t>(std::max(1, tokens_per_model / speculative_depth)),
                 [&](uint32_t token_id, const std::string& token_str)
@@ -404,11 +568,27 @@ void CPUInferenceEngine::GenerateSwarmStreaming(const std::vector<int32_t>& inpu
         // Update current tokens for next model
         current_tokens.insert(current_tokens.end(), step_tokens.begin(), step_tokens.end());
 
-        // Limit context
+        // Limit context with safe arithmetic
         if (current_tokens.size() > m_contextLimit)
         {
-            size_t keep_start = current_tokens.size() - m_contextLimit + input_tokens.size();
-            current_tokens = std::vector<int32_t>(current_tokens.begin() + keep_start, current_tokens.end());
+            // Compute: keep_start = current_tokens.size() - m_contextLimit + input_tokens.size()
+            // Safely to avoid unsigned underflow when current_tokens.size() < m_contextLimit
+            size_t keep_start = 0;
+            size_t excess = current_tokens.size() - m_contextLimit;
+            if (input_tokens.size() > excess)
+            {
+                // Preserve as much input context as possible
+                keep_start = 0;
+            }
+            else
+            {
+                // Remove early tokens, preserving input context
+                keep_start = excess;
+            }
+            if (keep_start < current_tokens.size())
+            {
+                current_tokens = std::vector<int32_t>(current_tokens.begin() + keep_start, current_tokens.end());
+            }
         }
     }
 
@@ -430,6 +610,12 @@ bool CPUInferenceEngine::LoadSwarmFromDirectory(const std::string& directoryPath
 {
     namespace fs = std::filesystem;
     fs::path dirPath(directoryPath);
+
+    if (maxModels <= 0)
+    {
+        m_lastLoadErrorMessage = "maxModels must be > 0";
+        return false;
+    }
 
     if (!fs::exists(dirPath) || !fs::is_directory(dirPath))
     {
@@ -470,31 +656,9 @@ bool CPUInferenceEngine::LoadSwarmModels(const std::vector<std::string>& modelPa
     {
         auto model = std::make_unique<RawrXDInference>();
 
-        // Convert to wide string
-        std::wstring wpath;
-        int len = MultiByteToWideChar(CP_UTF8, 0, path.c_str(), -1, nullptr, 0);
-        if (len > 0)
-        {
-            wpath.resize(len);
-            MultiByteToWideChar(CP_UTF8, 0, path.c_str(), -1, &wpath[0], len);
-            if (!wpath.empty() && wpath.back() == L'\0')
-                wpath.pop_back();
-        }
-
-        // Locate tokenizer files
-        namespace fs = std::filesystem;
-        fs::path modelDir = fs::path(path).parent_path();
-        std::string vocabPath = (modelDir / "tokenizer.json").string();
-        std::string mergesPath = (modelDir / "merges.txt").string();
-
-        if (!fs::exists(vocabPath))
-            vocabPath = "tokenizer.json";
-        if (!fs::exists(mergesPath))
-            mergesPath = "merges.txt";
-
         printf("[Swarm] Loading model %zu/%zu: %s\n", m_swarmModels.size() + 1, modelPaths.size(), path.c_str());
 
-        if (!model->Initialize(wpath.c_str(), vocabPath.c_str(), mergesPath.c_str()))
+        if (!model->Initialize(path))
         {
             m_lastLoadErrorMessage = "Failed to load swarm model: " + path;
             m_swarmModels.clear();
@@ -516,7 +680,7 @@ void CPUInferenceEngine::UpdateWeights(const std::vector<std::vector<float>>& la
 
 void CPUInferenceEngine::SetContextLimit(size_t limit)
 {
-    m_contextLimit = limit;
+    m_contextLimit = (limit > kMaxContextTokens) ? kMaxContextTokens : limit;
 }
 
 void CPUInferenceEngine::RegisterMemoryPlugin(std::shared_ptr<RawrXD::IMemoryPlugin> plugin)
@@ -539,13 +703,18 @@ std::string CPUInferenceEngine::MoEPackHudStatusLineUtf8() const
     if (!m_modelLoaded)
         return {};
     const MoEPackHudMetrics m = s_inferenceBackend.moEPackHudMetrics();
-    char b[384];
+    char b[512];
     const int n = std::snprintf(
         b, sizeof(b),
-        "MoE pack: hit=%llu miss=%llu fb=%llu | sync=%llu pre=%llu | qdrop=%llu qnr=%llu rowEv=%llu q~=%zu | "
-        "B=%zu evict=%llu rInv=%llu",
+        "MoE pack: hit=%llu miss=%llu fb=%llu | wa=%llu sa=%llu wf=%llu sf=%llu | sync=%llu pre=%llu | "
+        "qdrop=%llu qnr=%llu rowEv=%llu q~=%llu | B=%llu evict=%llu rInv=%llu",
         static_cast<unsigned long long>(m.packHits), static_cast<unsigned long long>(m.packMisses),
-        static_cast<unsigned long long>(m.groupedFallbacks), static_cast<unsigned long long>(m.syncPackInserts),
+        static_cast<unsigned long long>(m.groupedFallbacks),
+        static_cast<unsigned long long>(m.groupedWeightedApplies),
+        static_cast<unsigned long long>(m.groupedSingleExpertApplies),
+        static_cast<unsigned long long>(m.groupedWeightedFallbacks),
+        static_cast<unsigned long long>(m.groupedSingleExpertFallbacks),
+        static_cast<unsigned long long>(m.syncPackInserts),
         static_cast<unsigned long long>(m.prepackInserts), static_cast<unsigned long long>(m.prepackQueueDropped),
         static_cast<unsigned long long>(m.prepackSkippedNotResident),
         static_cast<unsigned long long>(m.packEvictedByPlanRow),
@@ -555,6 +724,76 @@ std::string CPUInferenceEngine::MoEPackHudStatusLineUtf8() const
     if (n <= 0)
         return {};
     return std::string(b, static_cast<std::size_t>(n));
+}
+
+CPUInferenceEngine::SDMAKineticMetrics CPUInferenceEngine::QuerySDMATelemetry() const
+{
+    SDMAKineticMetrics metrics{};
+    if (!m_modelLoaded)
+        return metrics;
+
+    metrics.flip_count = CircularSDMA::g_sdma_flip_count;
+    metrics.wait_cycles = CircularSDMA::g_sdma_wait_cycles;
+    metrics.cache_hits = CircularSDMA::g_expert_cache_hits;
+    metrics.cache_misses = CircularSDMA::g_expert_cache_misses;
+
+    // Derived metrics
+    const std::uint64_t total_predictions = metrics.cache_hits + metrics.cache_misses;
+    if (total_predictions > 0)
+    {
+        metrics.cache_hit_rate = static_cast<double>(metrics.cache_hits) / static_cast<double>(total_predictions);
+    }
+
+    if (metrics.flip_count > 0)
+    {
+        const double avg_cycles = static_cast<double>(metrics.wait_cycles) / static_cast<double>(metrics.flip_count);
+        constexpr double CPU_GHZ = 2.4;  // Target CPU frequency
+        metrics.avg_wait_ms = avg_cycles / (CPU_GHZ * 1e6);
+        
+        constexpr std::uint64_t MAX_WAIT_CYCLES_32MS = 76'800'000ull;  // 32ms @ 2.4 GHz
+        metrics.within_32ms_target = (avg_cycles < static_cast<double>(MAX_WAIT_CYCLES_32MS));
+    }
+
+    return metrics;
+}
+
+std::string CPUInferenceEngine::SDMAKineticHudStatusLineUtf8() const
+{
+    if (!m_modelLoaded)
+        return {};
+    
+    const SDMAKineticMetrics m = QuerySDMATelemetry();
+    if (m.flip_count == 0)
+        return "SDMA: [inactive]";
+
+    char b[256];
+    const int n = std::snprintf(
+        b, sizeof(b),
+        "SDMA: flips=%llu hit=%.1f%% wait=%.2fms %s",
+        static_cast<unsigned long long>(m.flip_count),
+        m.cache_hit_rate * 100.0,
+        m.avg_wait_ms,
+        m.within_32ms_target ? "[OK]" : "[SLOW]");
+    
+    if (n <= 0)
+        return {};
+    return std::string(b, static_cast<std::size_t>(n));
+}
+
+bool CPUInferenceEngine::CaptureSwarmExpertHeatmap(const RawrXD::Swarm::ExpertHeatmapCaptureParams& params,
+                                                   RawrXD::Swarm::ExpertHeatmapSnapshot& out) const
+{
+    if (!m_modelLoaded)
+    {
+        out = {};
+        return false;
+    }
+    return s_inferenceBackend.CaptureSwarmExpertHeatmap(params, out);
+}
+
+std::uint64_t CPUInferenceEngine::SwarmPlanGeneration() const
+{
+    return s_inferenceBackend.swarmPlanGeneration();
 }
 
 void CPUInferenceEngine::emitSwarmTelemetryThrottled_(bool force)
@@ -589,13 +828,18 @@ void CPUInferenceEngine::emitSwarmTelemetryThrottled_(bool force)
         static_cast<unsigned long long>(st.evictionRejectedInUse), static_cast<unsigned long long>(st.evictStarvation),
         static_cast<unsigned long long>(st.pinBlockAttempts), static_cast<unsigned long long>(st.pinBlockTimeouts),
         static_cast<unsigned long long>(st.pinBlockLatencyMsTotal), static_cast<unsigned>(st.inUseSliceCount));
-    char moeBuf[400];
+    char moeBuf[512];
     const int nm = std::snprintf(
         moeBuf, sizeof(moeBuf),
-        "[MOE_PACK] hit=%llu miss=%llu fb=%llu sync_i=%llu pre_i=%llu qdrop=%llu qnr=%llu row_ev=%llu q~=%llu "
-        "B=%llu ev=%llu rinv=%llu\n",
+        "[MOE_PACK] hit=%llu miss=%llu fb=%llu wa=%llu sa=%llu wf=%llu sf=%llu sync_i=%llu pre_i=%llu "
+        "qdrop=%llu qnr=%llu row_ev=%llu q~=%llu B=%llu ev=%llu rinv=%llu\n",
         static_cast<unsigned long long>(moem.packHits), static_cast<unsigned long long>(moem.packMisses),
-        static_cast<unsigned long long>(moem.groupedFallbacks), static_cast<unsigned long long>(moem.syncPackInserts),
+        static_cast<unsigned long long>(moem.groupedFallbacks),
+        static_cast<unsigned long long>(moem.groupedWeightedApplies),
+        static_cast<unsigned long long>(moem.groupedSingleExpertApplies),
+        static_cast<unsigned long long>(moem.groupedWeightedFallbacks),
+        static_cast<unsigned long long>(moem.groupedSingleExpertFallbacks),
+        static_cast<unsigned long long>(moem.syncPackInserts),
         static_cast<unsigned long long>(moem.prepackInserts), static_cast<unsigned long long>(moem.prepackQueueDropped),
         static_cast<unsigned long long>(moem.prepackSkippedNotResident),
         static_cast<unsigned long long>(moem.packEvictedByPlanRow),
@@ -638,9 +882,33 @@ bool CPUInferenceEngine::MatVecQ4(const float* matrix, const float* vector, floa
 // ============================================================================
 float* CPUInferenceEngine::AllocateTensor(size_t size)
 {
-    auto ptr = std::make_unique<float[]>(size);
+    if (size == 0 || size > (std::numeric_limits<size_t>::max() / sizeof(float)))
+    {
+        return nullptr;
+    }
+
+    size_t bytes = 0;
+    if (!checkedMulSize(size, sizeof(float), bytes))
+    {
+        return nullptr;
+    }
+    if (m_totalMemoryAllocated > (std::numeric_limits<size_t>::max() - bytes))
+    {
+        return nullptr;
+    }
+
+    std::unique_ptr<float[]> ptr;
+    try
+    {
+        ptr = std::make_unique<float[]>(size);
+    }
+    catch (const std::bad_alloc&)
+    {
+        return nullptr;
+    }
+
     float* raw = ptr.get();
-    m_totalMemoryAllocated += size * sizeof(float);
+    m_totalMemoryAllocated += bytes;
     m_memoryPool.push_back(std::move(ptr));
     return raw;
 }
@@ -656,10 +924,40 @@ void CPUInferenceEngine::DeallocateTensor(float* ptr)
 // ============================================================================
 void CPUInferenceEngine::InitKVCache()
 {
+    if (m_numLayers <= 0 || m_embeddingDim <= 0)
+    {
+        m_kv_cache.clear();
+        m_dynamicKVCache = false;
+        return;
+    }
+
     m_kv_cache.resize(m_numLayers);
 
     // Memory-gate bypass: For large contexts, use dynamic allocation instead of pre-allocation
-    size_t initialSize = (m_contextLimit > 1000000) ? 1000000 : m_contextLimit;  // Start with 1M for unlimited
+    size_t initialSize = (m_contextLimit > kMaxContextTokens) ? kMaxContextTokens : m_contextLimit;
+
+    const size_t layers = static_cast<size_t>(m_numLayers);
+    const size_t dim = static_cast<size_t>(m_embeddingDim);
+    size_t perLayerElems = 0;
+    if (!checkedMulSize(initialSize, dim, perLayerElems))
+    {
+        initialSize = 0;
+    }
+    else
+    {
+        size_t perTokenBytes = 0;
+        size_t tmp = 0;
+        bool budgetMulOk = checkedMulSize(layers, dim, tmp) && checkedMulSize(tmp, sizeof(float), tmp) &&
+                           checkedMulSize(tmp, 2, perTokenBytes);
+        if (budgetMulOk && perTokenBytes > 0)
+        {
+            const size_t maxTokensByBudget = kMaxKvCacheBytes / perTokenBytes;
+            if (maxTokensByBudget < initialSize)
+            {
+                initialSize = maxTokensByBudget;
+            }
+        }
+    }
 
     for (auto& layer : m_kv_cache)
     {
@@ -668,7 +966,7 @@ void CPUInferenceEngine::InitKVCache()
     }
 
     // Mark as using dynamic allocation for large contexts
-    m_dynamicKVCache = (m_contextLimit > 1000000);
+    m_dynamicKVCache = (m_contextLimit >= kMaxContextTokens);
 }
 
 // ============================================================================
@@ -722,6 +1020,8 @@ void CPUInferenceEngine::ApplySoftmax(float* data, int size)
 
 void CPUInferenceEngine::LayerNorm(float* data, int size, float epsilon)
 {
+    if (!data || size <= 0)
+        return;
     float mean = 0.0f;
     for (int i = 0; i < size; i++)
         mean += data[i];
@@ -746,6 +1046,8 @@ void CPUInferenceEngine::GELU(float* data, int size)
 
 void CPUInferenceEngine::RMSNorm(float* data, int size, float epsilon)
 {
+    if (!data || size <= 0)
+        return;
     float ss = 0.0f;
     for (int i = 0; i < size; i++)
         ss += data[i] * data[i];
@@ -756,9 +1058,13 @@ void CPUInferenceEngine::RMSNorm(float* data, int size, float epsilon)
 
 void CPUInferenceEngine::RoPE(float* data, int dim, int pos, int rotary_dim)
 {
-    for (int i = 0; i < rotary_dim; i += 2)
+    if (!data || dim <= 1 || rotary_dim <= 1)
+        return;
+    const int safe_rotary_dim = std::min(rotary_dim, dim);
+    const int even_rotary_dim = safe_rotary_dim - (safe_rotary_dim % 2);
+    for (int i = 0; i < even_rotary_dim; i += 2)
     {
-        float freq = 1.0f / std::pow(10000.0f, static_cast<float>(i) / rotary_dim);
+        float freq = 1.0f / std::pow(10000.0f, static_cast<float>(i) / even_rotary_dim);
         float val = pos * freq;
         float cos_val = std::cos(val);
         float sin_val = std::sin(val);
@@ -772,9 +1078,28 @@ void CPUInferenceEngine::RoPE(float* data, int dim, int pos, int rotary_dim)
 void CPUInferenceEngine::MultiHeadAttention(const float* query, const float* key, const float* value, float* output,
                                             int seq_len, int embed_dim, int num_heads, int layer_idx)
 {
+    (void)layer_idx;
+    if (!query || !key || !value || !output || seq_len <= 0 || embed_dim <= 0 || num_heads <= 0)
+        return;
+    if ((embed_dim % num_heads) != 0)
+        return;
+    const size_t seq_len_u = static_cast<size_t>(seq_len);
+    if (seq_len_u > (std::numeric_limits<size_t>::max() / seq_len_u))
+        return;
+
     int head_dim = embed_dim / num_heads;
     std::vector<float> attn_scores(seq_len * seq_len);
     float scale = 1.0f / std::sqrt(static_cast<float>(head_dim));
+
+    LARGE_INTEGER qpc_freq{};
+    LARGE_INTEGER qpc_batch_start{};
+    LARGE_INTEGER qpc_batch_end{};
+    const bool kv_timer_enabled = KvHotPathTelemetryEnabled();
+    if (kv_timer_enabled)
+    {
+        QueryPerformanceFrequency(&qpc_freq);
+        QueryPerformanceCounter(&qpc_batch_start);
+    }
 
     // Q*K^T scaled
     for (int h = 0; h < num_heads; h++)
@@ -784,11 +1109,9 @@ void CPUInferenceEngine::MultiHeadAttention(const float* query, const float* key
         {
             for (int j = 0; j <= i; j++)
             {  // Causal mask
-                float score = 0.0f;
-                for (int d = 0; d < head_dim; d++)
-                {
-                    score += query[i * embed_dim + offset + d] * key[j * embed_dim + offset + d];
-                }
+                const float* q_ptr = &query[i * embed_dim + offset];
+                const float* k_ptr = &key[j * embed_dim + offset];
+                const float score = DotProductF32(q_ptr, k_ptr, head_dim);
                 attn_scores[i * seq_len + j] = score * scale;
             }
             for (int j = i + 1; j < seq_len; j++)
@@ -800,23 +1123,41 @@ void CPUInferenceEngine::MultiHeadAttention(const float* query, const float* key
         for (int i = 0; i < seq_len; i++)
         {
             ApplySoftmax(&attn_scores[i * seq_len], seq_len);
-            for (int d = 0; d < head_dim; d++)
+            // AVX-512 accelerated equivalent of the scalar accumulation above.
+            float* out_ptr = &output[i * embed_dim + offset];
+            std::fill(out_ptr, out_ptr + head_dim, 0.0f);
+            for (int j = 0; j < seq_len; ++j)
             {
-                float sum = 0.0f;
-                for (int j = 0; j < seq_len; j++)
-                {
-                    sum += attn_scores[i * seq_len + j] * value[j * embed_dim + offset + d];
-                }
-                output[i * embed_dim + offset + d] = sum;
+                const float s = attn_scores[i * seq_len + j];
+                const float* v_ptr = &value[j * embed_dim + offset];
+                AccumulateScaledKVHotPath(out_ptr, v_ptr, s, head_dim);
             }
         }
+    }
+
+    if (kv_timer_enabled && qpc_freq.QuadPart > 0)
+    {
+        QueryPerformanceCounter(&qpc_batch_end);
+        const LONGLONG ticks = qpc_batch_end.QuadPart - qpc_batch_start.QuadPart;
+        const double us = (static_cast<double>(ticks) * 1000000.0) / static_cast<double>(qpc_freq.QuadPart);
+        std::printf("[CPUInferenceEngine] KV hot-path batch_us=%.3f seq=%d embed=%d heads=%d\n", us, seq_len, embed_dim,
+                    num_heads);
     }
 }
 
 void CPUInferenceEngine::FeedForward(const float* input, float* output, int dim)
 {
     // Simple projection stub — real path goes through RawrXDTransformer
-    std::memcpy(output, input, dim * sizeof(float));
+    if (!input || !output || dim <= 0)
+    {
+        return;
+    }
+    size_t bytes = 0;
+    if (!checkedMulSize(static_cast<size_t>(dim), sizeof(float), bytes))
+    {
+        return;
+    }
+    std::memcpy(output, input, bytes);
 }
 
 void CPUInferenceEngine::TransformerLayer(const float* input, float* output, int layer_idx, int seq_len,
@@ -830,8 +1171,17 @@ void CPUInferenceEngine::TransformerLayer(const float* input, float* output, int
         return;
     }
     int dim = m_embeddingDim > 0 ? m_embeddingDim : 4096;
-    size_t sz = static_cast<size_t>(seq_len) * static_cast<size_t>(dim);
-    std::memcpy(output, input, sz * sizeof(float));
+    size_t sz = 0;
+    if (!checkedMulSize(static_cast<size_t>(seq_len), static_cast<size_t>(dim), sz))
+    {
+        return;
+    }
+    size_t bytes = 0;
+    if (!checkedMulSize(sz, sizeof(float), bytes))
+    {
+        return;
+    }
+    std::memcpy(output, input, bytes);
     for (int t = 0; t < seq_len; ++t)
     {
         RMSNorm(output + static_cast<size_t>(t) * dim, dim);
@@ -868,14 +1218,47 @@ void DequantizeF16(const uint8_t* quantized, float* output, int num_elements);
 
 void CPUInferenceEngine::DequantizeTensor(const std::vector<uint8_t>& src, float* dst, size_t size, TensorType type)
 {
+    if (!dst || size == 0)
+    {
+        return;
+    }
+    if (size > static_cast<size_t>(std::numeric_limits<int>::max()))
+    {
+        return;
+    }
+
+    auto safeZeroOut = [&]() {
+        size_t bytes = 0;
+        if (checkedMulSize(size, sizeof(float), bytes))
+        {
+            std::memset(dst, 0, bytes);
+        }
+    };
+
     switch (type)
     {
         case TensorType::Q4_0:
+        {
+            const size_t nblocks = size / 32;
+            if (src.size() < nblocks * 18)
+            {
+                safeZeroOut();
+                return;
+            }
             CPUOps::DequantizeQ4_0(src.data(), dst, static_cast<int>(size));
             break;
+        }
         case TensorType::Q8_0:
+        {
+            const size_t nblocks = size / 32;
+            if (src.size() < nblocks * 34)
+            {
+                safeZeroOut();
+                return;
+            }
             CPUOps::DequantizeQ8_0(src.data(), dst, static_cast<int>(size));
             break;
+        }
         case TensorType::Q4_K:
             CPUOps::DequantizeQ4_K(src.data(), dst, static_cast<int>(size));
             break;
@@ -892,13 +1275,23 @@ void CPUInferenceEngine::DequantizeTensor(const std::vector<uint8_t>& src, float
             CPUOps::DequantizeQ3_K(src.data(), dst, static_cast<int>(size));
             break;
         case TensorType::F16:
+            if (src.size() < size * sizeof(uint16_t))
+            {
+                safeZeroOut();
+                return;
+            }
             CPUOps::DequantizeF16(src.data(), dst, static_cast<int>(size));
             break;
         case TensorType::F32:
+            if (src.size() < size * sizeof(float))
+            {
+                safeZeroOut();
+                return;
+            }
             std::memcpy(dst, src.data(), size * sizeof(float));
             break;
         default:
-            std::memset(dst, 0, size * sizeof(float));
+            safeZeroOut();
             break;
     }
 }
@@ -978,6 +1371,8 @@ void SiLU(float* data, int size)
 
 void LayerNorm(float* data, int size, float epsilon)
 {
+    if (!data || size <= 0)
+        return;
     float mean = 0.0f;
     for (int i = 0; i < size; i++)
         mean += data[i];
@@ -993,6 +1388,8 @@ void LayerNorm(float* data, int size, float epsilon)
 
 void RMSNorm(float* data, int size, float epsilon)
 {
+    if (!data || size <= 0)
+        return;
     float ss = 0.0f;
     for (int i = 0; i < size; i++)
         ss += data[i] * data[i];
@@ -1077,10 +1474,8 @@ void DequantizeQ5_K(const uint8_t* quantized, float* output, int num_elements)
 
 void DequantizeQ6_K(const uint8_t* quantized, float* output, int num_elements)
 {
-    int nblocks = num_elements / 256;
-    for (int b = 0; b < nblocks; b++)
-        for (int i = 0; i < 256; i++)
-            output[b * 256 + i] = 0.0f;
+    // Use AVX-512 kernel for maximum KV-cache dequant throughput
+    RawrXD::KernelOps::DequantizeQ6K_AVX512(quantized, output, num_elements);
 }
 
 void DequantizeQ2_K(const uint8_t* quantized, float* output, int num_elements)

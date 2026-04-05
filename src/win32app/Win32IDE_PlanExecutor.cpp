@@ -155,6 +155,8 @@ static void syncAgenticStepExecution(Agentic::AgenticPlanningOrchestrator* orch,
 std::string Win32IDE::executeAgentPlanStepViaBridge(const PlanStep& step)
 {
     AgenticBridge* bridge = m_agenticBridge;
+    if (bridge && !bridge->IsInitialized())
+        bridge->Initialize("", bridge->GetCurrentModel());
     if (!bridge || !bridge->IsInitialized())
         return "[Error] Agent not initialized";
 
@@ -195,6 +197,8 @@ std::string Win32IDE::executeAgentPlanStepViaBridge(const PlanStep& step)
 
 void Win32IDE::generateAgentPlan(const std::string& goal)
 {
+    if (m_agenticBridge && !m_agenticBridge->IsInitialized())
+        m_agenticBridge->Initialize("", m_agenticBridge->GetCurrentModel());
     if (!m_agenticBridge || !m_agenticBridge->IsInitialized())
     {
         appendToOutput("[Plan] Agent not initialized. Configure a model first.", "General", OutputSeverity::Warning);

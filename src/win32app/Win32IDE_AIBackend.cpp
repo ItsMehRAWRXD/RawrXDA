@@ -6,6 +6,7 @@
 #include <string>
 #include <thread>
 #include <cstdlib>
+#include <cerrno>
 #include <windows.h>
 #include <winhttp.h>
 #include <thread>
@@ -27,12 +28,19 @@ public:
     ModelConnection(const std::string& url) : baseUrl(url) {}
 
     bool checkConnection() {
+        static constexpr size_t kMaxEndpointBytes = 2048;
+        static constexpr size_t kMaxHostBytes = 255;
+        static constexpr size_t kMaxPathBytes = 2048;
+
         bool secure = false;
         std::string host = "localhost";
         INTERNET_PORT port = 11434;
         std::string path = "/api/tags";
 
         std::string endpoint = baseUrl;
+        if (endpoint.size() > kMaxEndpointBytes) {
+            return false;
+        }
         if (!endpoint.empty()) {
             if (endpoint.rfind("https://", 0) == 0) {
                 secure = true;
@@ -50,6 +58,13 @@ public:
                 if (path.empty()) path = "/api/tags";
             }
 
+            if (!path.empty() && path.front() != '/') {
+                path.insert(path.begin(), '/');
+            }
+            if (path.size() > kMaxPathBytes) {
+                return false;
+            }
+
             size_t colon = hostPort.find(':');
             if (colon == std::string::npos) {
                 if (!hostPort.empty()) host = hostPort;
@@ -57,12 +72,20 @@ public:
                 host = hostPort.substr(0, colon);
                 const std::string portText = hostPort.substr(colon + 1);
                 if (!portText.empty()) {
-                    unsigned long parsed = std::strtoul(portText.c_str(), nullptr, 10);
-                    if (parsed > 0 && parsed <= 65535) {
+                    char* endp = nullptr;
+                    errno = 0;
+                    unsigned long parsed = std::strtoul(portText.c_str(), &endp, 10);
+                    if (errno == 0 && endp && *endp == '\0' && parsed > 0 && parsed <= 65535) {
                         port = static_cast<INTERNET_PORT>(parsed);
+                    } else {
+                        return false;
                     }
                 }
             }
+        }
+
+        if (host.empty() || host.size() > kMaxHostBytes) {
+            return false;
         }
 
         std::wstring wHost(host.begin(), host.end());

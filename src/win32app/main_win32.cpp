@@ -29,6 +29,8 @@
 #include "HeadlessIDE.h"
 #include "Win32IDE.h"
 #include "Win32IDE_AgenticBrowser.h"
+#include "WindowVisibilityHelpers.h"
+#include "../../include/RawrXD_ApertureManager.h"
 #include <commctrl.h>
 #include <dbghelp.h>
 #include <shellscalingapi.h>
@@ -98,33 +100,102 @@ static bool isTruthyEnvVar(const char* name)
     return !(value[0] == '0' || value[0] == 'n' || value[0] == 'N' || value[0] == 'f' || value[0] == 'F');
 }
 
+static bool fileExists(const std::filesystem::path& p)
+{
+    std::error_code ec;
+    return std::filesystem::exists(p, ec) && std::filesystem::is_regular_file(p, ec);
+}
+
+static bool isValidDistRoot(const std::filesystem::path& root)
+{
+    return fileExists(root / "manifest.json") && fileExists(root / "recursive_sha256_snapshot.txt");
+}
+
+static bool resolveDistRootForIntegrity(std::filesystem::path& outRoot)
+{
+    outRoot.clear();
+
+    if (const char* envRoot = std::getenv("RAWRXD_DIST_ROOT"); envRoot && envRoot[0])
+    {
+        std::filesystem::path p(envRoot);
+        if (isValidDistRoot(p))
+        {
+            outRoot = std::filesystem::absolute(p);
+            return true;
+        }
+    }
+
+    std::error_code ec;
+    const std::filesystem::path cwd = std::filesystem::current_path(ec);
+    if (ec)
+    {
+        return false;
+    }
+
+    const std::vector<std::filesystem::path> candidates = {
+        cwd / "dist",
+        cwd,
+        cwd.parent_path() / "dist",
+        cwd.parent_path().parent_path() / "dist",
+        std::filesystem::path("d:/dist")
+    };
+
+    for (const auto& candidate : candidates)
+    {
+        if (isValidDistRoot(candidate))
+        {
+            outRoot = std::filesystem::absolute(candidate);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static bool runApertureIntegrityPreflight(std::string& errorOut, std::string& distRootOut)
+{
+    errorOut.clear();
+    distRootOut.clear();
+
+    if (isTruthyEnvVar("RAWRXD_SKIP_APERTURE_PREFLIGHT"))
+    {
+        return true;
+    }
+
+    std::filesystem::path distRootPath;
+    if (!resolveDistRootForIntegrity(distRootPath))
+    {
+        return true; // No discoverable dist root; do not block non-dist developer launches.
+    }
+
+    distRootOut = distRootPath.string();
+    std::string apertureError;
+    auto aperture = RawrXD::buildApertureFromManifest(distRootOut, 0, apertureError);
+    if (!aperture)
+    {
+        errorOut = apertureError.empty() ? "Aperture integrity preflight failed" : apertureError;
+        return false;
+    }
+
+    return true;
+}
+
 static void bootIntegratedRuntimeSafely()
 {
-#if defined(_MSC_VER) && defined(_WIN32)
-    __try
-    {
-        RawrXD::IntegratedRuntime::boot();
-    }
-    __except (EXCEPTION_EXECUTE_HANDLER)
-    {
-        DWORD code = GetExceptionCode();
-        char msg[256];
-        snprintf(msg, sizeof(msg),
-                 "[main_win32] Integrated runtime crashed with SEH 0x%08lX (non-fatal, continuing)\n", code);
-        OutputDebugStringA(msg);
-        startupTrace("integrated_runtime_seh", msg);
-    }
-#else
     try
     {
         RawrXD::IntegratedRuntime::boot();
+    }
+    catch (const std::exception& ex)
+    {
+        OutputDebugStringA(("[main_win32] Integrated runtime C++ exception: " + std::string(ex.what()) + "\n").c_str());
+        startupTrace("integrated_runtime_cpp_exception", ex.what());
     }
     catch (...)
     {
         OutputDebugStringA("[main_win32] Integrated runtime threw C++ exception (non-fatal, continuing)\n");
         startupTrace("integrated_runtime_cpp_exception");
     }
-#endif
 }
 
 static void emitStartupHeapSnapshot(const char* stage)
@@ -279,7 +350,15 @@ static bool hasHeadlessHelpFlag(LPSTR lpCmdLine)
 {
     if (!lpCmdLine)
         return false;
-    return strstr(lpCmdLine, "--help") != nullptr || strstr(lpCmdLine, "-h") != nullptr;
+
+    std::istringstream iss(lpCmdLine);
+    std::string token;
+    while (iss >> token)
+    {
+        if (token == "--help" || token == "-h" || token == "/?")
+            return true;
+    }
+    return false;
 }
 
 static void printHeadlessQuickHelp()
@@ -718,6 +797,11 @@ static void spawnRecoveryLauncher(const char* logPath, const char* dumpPath)
 // ============================================================================
 // Parse WinMain command line into argc/argv for headless mode
 // ============================================================================
+// Bounds: cap argument count and individual token size to prevent DoS via
+// a crafted shortcut/registry launch key.
+static constexpr size_t kMaxCmdArgs    = 64;     // hard cap on # of arguments
+static constexpr size_t kMaxTokenBytes = 4096;   // hard cap on single-token length
+
 static void parseCmdLine(LPSTR lpCmdLine, int& argc, char**& argv)
 {
     static std::vector<std::string> args;
@@ -734,21 +818,28 @@ static void parseCmdLine(LPSTR lpCmdLine, int& argc, char**& argv)
         std::string token;
         while (iss >> token)
         {
+            if (args.size() >= kMaxCmdArgs) break;  // DoS guard: cap argument count
             // Handle quoted arguments
             if (!token.empty() && token.front() == '"')
             {
                 token = token.substr(1);
                 std::string rest;
-                while (!token.empty() && token.back() != '"' && std::getline(iss, rest, '"'))
+                // Bound accumulation size to prevent memory DoS via unclosed quoted string
+                while (!token.empty() && token.back() != '"' &&
+                       token.size() < kMaxTokenBytes &&
+                       std::getline(iss, rest, '"'))
                 {
-                    token += " " + rest;
+                    token += ' ';
+                    token += rest;
                 }
                 if (!token.empty() && token.back() == '"')
                 {
                     token.pop_back();
                 }
+                // Clamp in case we hit kMaxTokenBytes mid-accumulation
+                if (token.size() > kMaxTokenBytes) token.resize(kMaxTokenBytes);
             }
-            args.push_back(token);
+            args.push_back(std::move(token));
         }
     }
 
@@ -841,11 +932,14 @@ static void pumpMessages()
 
 // Force main window visible and to foreground (SetForegroundWindow often fails when
 // launched by another process; AttachThreadInput + BringWindowToTop works around it).
-// Also moves the window onto the primary monitor if placement is off-screen (e.g. disconnected monitor).
+// Off-screen rescue is centralized through WindowVisibilityHelpers.
 static void ensureMainWindowVisible(HWND hMain)
 {
     if (!hMain || !IsWindow(hMain))
         return;
+
+    RawrXD::Win32Visibility::LogPlacementSnapshot(hMain, "ensureMainWindowVisible:before");
+
     if (IsIconic(hMain))
     {
         ShowWindow(hMain, SW_RESTORE);
@@ -853,34 +947,9 @@ static void ensureMainWindowVisible(HWND hMain)
     }
     if (!IsWindowVisible(hMain))
         ShowWindow(hMain, SW_SHOWNORMAL);
-    WINDOWPLACEMENT wp = {sizeof(WINDOWPLACEMENT)};
-    if (GetWindowPlacement(hMain, &wp))
-    {
-        if (wp.showCmd != SW_SHOWNORMAL && wp.showCmd != SW_SHOW)
-        {
-            wp.showCmd = SW_SHOWNORMAL;
-            SetWindowPlacement(hMain, &wp);
-        }
-        // If window rect is entirely off-screen (e.g. saved on disconnected monitor), move to primary
-        RECT vr = {GetSystemMetrics(SM_XVIRTUALSCREEN), GetSystemMetrics(SM_YVIRTUALSCREEN),
-                   GetSystemMetrics(SM_CXVIRTUALSCREEN) + GetSystemMetrics(SM_XVIRTUALSCREEN),
-                   GetSystemMetrics(SM_CYVIRTUALSCREEN) + GetSystemMetrics(SM_YVIRTUALSCREEN)};
-        RECT wr = wp.rcNormalPosition;
-        if (wr.left >= vr.right || wr.right <= vr.left || wr.top >= vr.bottom || wr.bottom <= vr.top)
-        {
-            HMONITOR hMon = MonitorFromPoint(POINT{0, 0}, MONITOR_DEFAULTTOPRIMARY);
-            MONITORINFO mi = {sizeof(mi)};
-            if (hMon && GetMonitorInfoA(hMon, &mi))
-            {
-                const RECT& r = mi.rcWork;
-                int w = (std::min)((int)(wr.right - wr.left), (int)(r.right - r.left) - 100);
-                int h = (std::min)((int)(wr.bottom - wr.top), (int)(r.bottom - r.top) - 100);
-                wp.rcNormalPosition = {r.left + 50, r.top + 50, r.left + 50 + w, r.top + 50 + h};
-                wp.showCmd = SW_SHOWNORMAL;
-                SetWindowPlacement(hMain, &wp);
-            }
-        }
-    }
+
+    RawrXD::Win32Visibility::NormalizePlacementForVisibility(hMain);
+
     ShowWindow(hMain, SW_SHOW);
     SetWindowPos(hMain, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
     BringWindowToTop(hMain);
@@ -897,6 +966,8 @@ static void ensureMainWindowVisible(HWND hMain)
         if (fgTid != myTid && fgTid != 0)
             AttachThreadInput(myTid, fgTid, FALSE);
     }
+
+    RawrXD::Win32Visibility::LogPlacementSnapshot(hMain, "ensureMainWindowVisible:after");
 }
 
 // Storage for phase-created objects (createWindow phase sets these; cleanup uses them).
@@ -1149,6 +1220,81 @@ static bool runPhase(const std::string& name, Win32IDE& ide, HINSTANCE, LPSTR lp
     return true;
 }
 
+static bool runPhaseSafely(const std::string& name, Win32IDE& ide, HINSTANCE hInstance, LPSTR lpCmdLine,
+                           bool* phaseOk = nullptr)
+{
+    if (phaseOk)
+        *phaseOk = false;
+
+    try
+    {
+        const bool ok = runPhase(name, ide, hInstance, lpCmdLine);
+        if (phaseOk)
+            *phaseOk = ok;
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        startupTrace("startup_phase_cpp_exception", ex.what());
+        return false;
+    }
+    catch (...)
+    {
+        startupTrace("startup_phase_cpp_exception_unknown", name.c_str());
+        return false;
+    }
+}
+
+static bool showMainWindowSafely(Win32IDE& ide)
+{
+    try
+    {
+        ide.showMainWindowSafe();
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        startupTrace("show_window_cpp_exception", ex.what());
+        return false;
+    }
+    catch (...)
+    {
+        startupTrace("show_window_cpp_exception_unknown");
+        return false;
+    }
+}
+
+static bool headlessInitializeSafely(HeadlessIDE& headless, int argc, char** argv, HeadlessResult& result,
+                                     DWORD& sehCode)
+{
+    sehCode = 0;
+    (void)sehCode;
+    try
+    {
+        result = headless.initialize(argc, argv);
+        return true;
+    }
+    catch (...)
+    {
+        return false;
+    }
+}
+
+static bool headlessRunSafely(HeadlessIDE& headless, int& exitCode, DWORD& sehCode)
+{
+    sehCode = 0;
+    (void)sehCode;
+    try
+    {
+        exitCode = headless.run();
+        return true;
+    }
+    catch (...)
+    {
+        return false;
+    }
+}
+
 // Background thread: run Camellia encryptWorkspace so main thread stays responsive.
 static DWORD WINAPI camelliaEncryptWorkspaceThread(LPVOID param)
 {
@@ -1216,16 +1362,100 @@ extern "C" const PfnDliHook __pfnDliFailureHook2 = DelayLoadFailureHook;
 extern "C" void rawrxd_init_deep_thinking();
 extern "C" int rawrxd_agentic_deep_think_loop(const char* prompt);
 
+static void ensureConsoleAttached(bool attachInput)
+{
+    auto hasUsableStdHandle = [](DWORD stdId) -> bool {
+        HANDLE h = GetStdHandle(stdId);
+        if (h == nullptr || h == INVALID_HANDLE_VALUE)
+            return false;
+        const DWORD fileType = GetFileType(h);
+        return fileType != FILE_TYPE_UNKNOWN;
+    };
+
+    const bool needStdout = !hasUsableStdHandle(STD_OUTPUT_HANDLE);
+    const bool needStderr = !hasUsableStdHandle(STD_ERROR_HANDLE);
+    const bool needStdin = attachInput && !hasUsableStdHandle(STD_INPUT_HANDLE);
+
+    // Keep existing redirections when they are already valid.
+    if (!needStdout && !needStderr && !needStdin)
+        return;
+
+    if (!GetConsoleWindow())
+    {
+        if (!AttachConsole(ATTACH_PARENT_PROCESS))
+            AllocConsole();
+    }
+
+    FILE* stream = nullptr;
+    if (needStdout)
+        freopen_s(&stream, "CONOUT$", "w", stdout);
+    if (needStderr)
+        freopen_s(&stream, "CONOUT$", "w", stderr);
+    if (needStdin)
+        freopen_s(&stream, "CONIN$", "r", stdin);
+}
+
+static bool tryEnsureConsoleAttached(bool attachInput, DWORD& sehCode)
+{
+    sehCode = 0;
+#if defined(_MSC_VER) && defined(_WIN32)
+    __try
+    {
+        ensureConsoleAttached(attachInput);
+        return true;
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER)
+    {
+        sehCode = GetExceptionCode();
+        return false;
+    }
+#else
+    ensureConsoleAttached(attachInput);
+    return true;
+#endif
+}
+
+static void logHeadlessDiag(const char* phase, const char* detail = nullptr)
+{
+    char msg[640] = {};
+    if (detail && detail[0])
+    {
+        snprintf(msg, sizeof(msg), "[headless] %s | %s\n", phase ? phase : "(null)", detail);
+    }
+    else
+    {
+        snprintf(msg, sizeof(msg), "[headless] %s\n", phase ? phase : "(null)");
+    }
+
+    OutputDebugStringA(msg);
+    HANDLE hErr = GetStdHandle(STD_ERROR_HANDLE);
+    if (hErr != nullptr && hErr != INVALID_HANDLE_VALUE)
+    {
+        fprintf(stderr, "%s", msg);
+    }
+
+    char exePath[MAX_PATH] = {};
+    std::string logPath = "headless_startup.log";
+    if (GetModuleFileNameA(nullptr, exePath, MAX_PATH) > 0)
+    {
+        std::string p = exePath;
+        size_t slash = p.find_last_of("\\/");
+        if (slash != std::string::npos)
+            logPath = p.substr(0, slash + 1) + "headless_startup.log";
+    }
+
+    std::ofstream out(logPath, std::ios::out | std::ios::app);
+    if (out)
+    {
+        out << msg;
+        out.flush();
+    }
+}
+
 static void runDeepThinkingStressTest(LPSTR lpCmdLine)
 {
     // Redirect stdout for feedback if console exists or create one
-    if (!GetConsoleWindow())
-    {
-        AllocConsole();
-        FILE* consoleOutput;
-        freopen_s(&consoleOutput, "CONOUT$", "w", stdout);
-        freopen_s(&consoleOutput, "CONOUT$", "w", stderr);
-    }
+    ensureConsoleAttached(false);
 
     // Parse iterations (default 1000)
     int iterations = 1000;
@@ -1366,7 +1596,7 @@ static bool initIdeForFeatureProbe(Win32IDE& ide, HINSTANCE hInstance, LPSTR lpC
         if (!runPhase(name, ide, hInstance, lpCmdLine))
             return false;
     }
-    ensureMainWindowVisible(ide.getMainWindow());
+    ide.showMainWindowSafe();
     for (int i = 0; i < 8; ++i)
         pumpMessages();
     return true;
@@ -1477,8 +1707,7 @@ static int runFeatureProbeCLI(HINSTANCE hInstance, LPSTR lpCmdLine)
         fprintf(stderr, "[feature-probe] FAIL: createWindow failed\n");
         return 2;
     }
-    ide->showWindow();
-    ensureMainWindowVisible(ide->getMainWindow());
+    ide->showMainWindowSafe();
     for (int i = 0; i < 6; ++i)
         pumpMessages();
 
@@ -1713,9 +1942,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
     if (GetEnvironmentVariableA("RAWRXD_DEBUG_CONSOLE", debugConsoleBuf, (DWORD)sizeof(debugConsoleBuf)) != 0 &&
         debugConsoleBuf[0] == '1')
     {
-        AllocConsole();
-        freopen("CONOUT$", "w", stdout);
-        freopen("CONOUT$", "w", stderr);
+        ensureConsoleAttached(false);
     }
 
     if (lpCmdLine && strstr(lpCmdLine, "--test-deep-thinking"))
@@ -1726,10 +1953,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
 
     if (hasFeatureProbeFlag(lpCmdLine))
     {
-        AllocConsole();
-        freopen("CONOUT$", "w", stdout);
-        freopen("CONOUT$", "w", stderr);
-        freopen("CONIN$", "r", stdin);
+        ensureConsoleAttached(true);
         int rc = runFeatureProbeCLI(hInstance, lpCmdLine);
         FreeConsole();
         return rc;
@@ -1737,10 +1961,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
 
     if (hasAutoFixFlag(lpCmdLine))
     {
-        AllocConsole();
-        freopen("CONOUT$", "w", stdout);
-        freopen("CONOUT$", "w", stderr);
-        freopen("CONIN$", "r", stdin);
+        ensureConsoleAttached(true);
         int argc = 0;
         char** argv = nullptr;
         parseCmdLine(lpCmdLine, argc, argv);
@@ -1762,6 +1983,30 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
         }
     }
     emitStartupHeapSnapshot("startup_log_initialized");
+
+    {
+        std::string integrityError;
+        std::string distRoot;
+        if (!runApertureIntegrityPreflight(integrityError, distRoot))
+        {
+            startupTrace("integrity_preflight_failed", integrityError.c_str());
+            std::ostringstream oss;
+            oss << "RawrXD startup was blocked by integrity preflight.\n\n"
+                << "Reason:\n" << integrityError << "\n\n"
+                << "Dist Root:\n" << (distRoot.empty() ? "(not resolved)" : distRoot);
+            MessageBoxA(nullptr, oss.str().c_str(), "RawrXD Integrity Gate", MB_ICONERROR | MB_OK);
+            return 91;
+        }
+
+        if (!distRoot.empty())
+        {
+            startupTrace("INTEGRITY_VERIFIED", distRoot.c_str());
+        }
+        else
+        {
+            startupTrace("integrity_preflight_skipped_no_dist");
+        }
+    }
 
 #ifdef _DEBUG
     // Optional: enable CRT debug heap checking via environment variable.
@@ -1791,10 +2036,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
         char buf[8];
         if (GetEnvironmentVariableA("RAWRXD_DEBUG_CONSOLE", buf, (DWORD)sizeof(buf)) != 0 && buf[0] == '1')
         {
-            AllocConsole();
-            freopen("CONOUT$", "w", stdout);
-            freopen("CONOUT$", "w", stderr);
-            freopen("CONIN$", "r", stdin);
+            ensureConsoleAttached(true);
             fprintf(stderr, "[RawrXD] Debug console enabled\n");
         }
     }
@@ -1848,34 +2090,114 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
             delete s_startupLog;
             s_startupLog = nullptr;
         }
-        // Allocate a console for stdout/stderr (WinMain doesn't have one)
-        AllocConsole();
-        freopen("CONOUT$", "w", stdout);
-        freopen("CONOUT$", "w", stderr);
-        freopen("CONIN$", "r", stdin);
+        logHeadlessDiag("before_console_attach");
+
+        // Console attach is best-effort in headless mode; transport startup must continue even if it fails.
+        DWORD consoleSeh = 0;
+        if (tryEnsureConsoleAttached(true, consoleSeh))
+        {
+            logHeadlessDiag("after_console_attach");
+        }
+        else
+        {
+            char sehDiag[128] = {};
+            snprintf(sehDiag, sizeof(sehDiag), "code=0x%08lX", consoleSeh);
+            logHeadlessDiag("console_attach_seh", sehDiag);
+            logHeadlessDiag("after_console_attach_skipped");
+        }
+
+        logHeadlessDiag("before_help_gate");
 
         // Fast-exit help path to avoid hangs when only --headless/--help are provided
-        if (hasHeadlessHelpFlag(lpCmdLine) || (lpCmdLine && strlen(lpCmdLine) == 0))
+        if (hasHeadlessHelpFlag(lpCmdLine) || (lpCmdLine && lpCmdLine[0] == '\0'))
         {
+            logHeadlessDiag("help_gate_exit");
             printHeadlessQuickHelp();
             return 0;
         }
 
+        logHeadlessDiag("after_help_gate");
+
+        logHeadlessDiag("headless_block_enter");
+
         int argc = 0;
         char** argv = nullptr;
+        logHeadlessDiag("parse_cmdline_begin");
         parseCmdLine(lpCmdLine, argc, argv);
+        logHeadlessDiag("parse_cmdline_end");
+
+        char cwd[MAX_PATH] = {};
+        GetCurrentDirectoryA(MAX_PATH, cwd);
+        char launchDiag[768] = {};
+        snprintf(launchDiag, sizeof(launchDiag), "argc=%d cmdline=\"%s\" cwd=\"%s\"", argc,
+                 lpCmdLine ? lpCmdLine : "", cwd);
+        logHeadlessDiag("launch", launchDiag);
 
         HeadlessIDE headless;
-        HeadlessResult r = headless.initialize(argc, argv);
+        HeadlessResult r{};
+        try
+        {
+            logHeadlessDiag("initialize_begin");
+            DWORD initSeh = 0;
+            if (!headlessInitializeSafely(headless, argc, argv, r, initSeh))
+            {
+                char sehDiag[256] = {};
+                snprintf(sehDiag, sizeof(sehDiag), "code=0x%08lX", initSeh);
+                logHeadlessDiag("initialize_seh", sehDiag);
+                return (int)initSeh;
+            }
+            char initDiag[256] = {};
+            snprintf(initDiag, sizeof(initDiag), "success=%d errorCode=%d", r.success ? 1 : 0, r.errorCode);
+            logHeadlessDiag("initialize_end", initDiag);
+        }
+        catch (const std::exception& ex)
+        {
+            logHeadlessDiag("initialize_cpp_exception", ex.what());
+            return 1;
+        }
+        catch (...)
+        {
+            logHeadlessDiag("initialize_cpp_exception_unknown");
+            return 1;
+        }
+
         if (!r.success)
         {
             if (r.errorCode == 0)
                 return 0;  // --help requested
             fprintf(stderr, "Headless init failed: %s (code %d)\n", r.detail, r.errorCode);
+            char failDiag[384] = {};
+            snprintf(failDiag, sizeof(failDiag), "detail=\"%s\" code=%d", r.detail ? r.detail : "", r.errorCode);
+            logHeadlessDiag("initialize_failed", failDiag);
             return r.errorCode;
         }
 
-        int exitCode = headless.run();
+        int exitCode = 1;
+        try
+        {
+            logHeadlessDiag("run_begin");
+            DWORD runSeh = 0;
+            if (!headlessRunSafely(headless, exitCode, runSeh))
+            {
+                char sehDiag[256] = {};
+                snprintf(sehDiag, sizeof(sehDiag), "code=0x%08lX", runSeh);
+                logHeadlessDiag("run_seh", sehDiag);
+                return (int)runSeh;
+            }
+            char runDiag[128] = {};
+            snprintf(runDiag, sizeof(runDiag), "exitCode=%d", exitCode);
+            logHeadlessDiag("run_end", runDiag);
+        }
+        catch (const std::exception& ex)
+        {
+            logHeadlessDiag("run_cpp_exception", ex.what());
+            return 1;
+        }
+        catch (...)
+        {
+            logHeadlessDiag("run_cpp_exception_unknown");
+            return 1;
+        }
 
         FreeConsole();
         return exitCode;
@@ -1890,10 +2212,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
             delete s_startupLog;
             s_startupLog = nullptr;
         }
-        AllocConsole();
-        freopen("CONOUT$", "w", stdout);
-        freopen("CONOUT$", "w", stderr);
-        freopen("CONIN$", "r", stdin);
+        ensureConsoleAttached(true);
         int rc = runStartupSelfTest();
         exportCommandArtifacts("--selftest");
         FreeConsole();
@@ -1935,7 +2254,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
     for (const std::string& name : quickPhases)
     {
         startupTrace(name.c_str(), "phase_start");
-        if (!runPhase(name, ide, hInstance, lpCmdLine))
+        bool phaseOk = false;
+        if (!runPhaseSafely(name, ide, hInstance, lpCmdLine, &phaseOk) || !phaseOk)
         {
             if (s_startupLog)
             {
@@ -1951,9 +2271,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
 
     // CRITICAL: Show window NOW before any heavy initialization
     startupTrace("showWindow");
-    ide.showWindow();
+    if (!showMainWindowSafely(ide))
+    {
+        if (s_startupLog)
+        {
+            s_startupLog->close();
+            delete s_startupLog;
+            s_startupLog = nullptr;
+        }
+        MessageBoxW(nullptr, L"Failed to show IDE window", L"Error", MB_OK | MB_ICONERROR);
+        return 1;
+    }
     emitStartupHeapSnapshot("after_show_window");
-    ensureMainWindowVisible(ide.getMainWindow());
     Win32IDE_AgenticBrowser_NotifyMainWindow(ide.getMainWindow());
     if (const char* ab = std::getenv("RAWRXD_AGENTIC_BROWSER"))
     {
@@ -1977,7 +2306,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
         if (RawrXD::Startup::isPhaseLazy(name))
             continue;
         startupTrace((std::string("heavy_") + name).c_str(), "start");
-        if (!runPhase(name, ide, hInstance, lpCmdLine))
+        bool phaseOk = false;
+        if (!runPhaseSafely(name, ide, hInstance, lpCmdLine, &phaseOk) || !phaseOk)
         {
             OutputDebugStringA(("[main_win32] Heavy phase failed: " + name + "\n").c_str());
         }

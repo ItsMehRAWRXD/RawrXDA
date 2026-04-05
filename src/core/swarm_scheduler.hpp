@@ -27,13 +27,8 @@ class RawrXDModelLoader;
 #include <utility>
 #include <vector>
 
-// C++23 compatibility layer
-#if __cplusplus >= 202302L || (defined(_MSVC_LANG) && _MSVC_LANG >= 202302L)
-#include <expected>
-#include <optional>
-#else
+// C++20/23 compatibility layer
 #include "swarm_scheduler_compat.hpp"
-#endif
 
 namespace RawrXD
 {

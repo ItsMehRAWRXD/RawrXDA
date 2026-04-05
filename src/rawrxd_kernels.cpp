@@ -152,10 +152,24 @@ extern "C" void DequantQ4_0_AVX512(void* src, uint16_t* dst, size_t blocks) {
     // value = d * (q - 8), where q is signed 4-bit stored as 0..15.
     if (!src || !dst || blocks == 0) return;
 
+    // Compute required dst capacity: blocks * 32 uint16_t values
+    // Prevent integer overflow: blocks * 32 must not overflow size_t
+    constexpr size_t BLOCK_SIZE_ELEMENTS = 32;  // Q4_0 block produces 32 uint16_t values
+    constexpr size_t MAX_BLOCKS = (static_cast<size_t>(-1) / BLOCK_SIZE_ELEMENTS);
+    
+    if (blocks > MAX_BLOCKS) {
+        // Block count would cause multiplication overflow
+        return;
+    }
+    
+    size_t required_dst_capacity = blocks * BLOCK_SIZE_ELEMENTS;
+    // Note: We cannot validate dst capacity at runtime without a separate capacity parameter.
+    // This guards against integer overflow in the multiplication above.
+    
     const Q4_0_Block* b = (const Q4_0_Block*)src;
     for (size_t bi = 0; bi < blocks; ++bi) {
         const float d = HalfBitsToFloat(b[bi].d);
-        uint16_t* out = dst + bi * 32;
+        uint16_t* out = dst + bi * BLOCK_SIZE_ELEMENTS;
 
         for (int i = 0; i < 16; ++i) {
             const uint8_t packed = b[bi].qs[i];
@@ -169,6 +183,7 @@ extern "C" void DequantQ4_0_AVX512(void* src, uint16_t* dst, size_t blocks) {
 
 extern "C" void DequantQ4_0_AVX2(void* src, uint16_t* dst, size_t blocks) {
     // Baseline fallback (no AVX2 required here).
+    // Overflow protection is handled by DequantQ4_0_AVX512.
     DequantQ4_0_AVX512(src, dst, blocks);
 }
 

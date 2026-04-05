@@ -196,11 +196,25 @@ bool StreamingGGUFLoader//readString(std::string& str, size_t offset, size_t& ne
 bool StreamingGGUFLoader//parseMetadata() {
 
 
+    // Validate metadata count before iterating
+    if (header.metadata_count > 100000) {
+        setError("Metadata count suspiciously large (" + std::to_string(header.metadata_count) + 
+                ", max 100k), possible file corruption");
+        return false;
+    }
+
     for (uint64_t i = 0; i < header.metadata_count; ++i) {
         // Read metadata key
         std::string key;
         if (!readString(key, currentFileOffset, currentFileOffset)) {
             setError("Failed to read metadata key at index " + std::to_string(i));
+            return false;
+        }
+        
+        // Validate key not empty
+        if (key.empty()) {
+            setError("Empty metadata key at index " + std::to_string(i) + 
+                    "; possible file corruption");
             return false;
         }
         
@@ -211,6 +225,13 @@ bool StreamingGGUFLoader//parseMetadata() {
             return false;
         }
         currentFileOffset += sizeof(uint32_t);
+        
+        // Validate value type enum
+        if (valueTypeRaw > 12) {  // GGUF spec limit on value types
+            setError("Invalid metadata value type " + std::to_string(valueTypeRaw) + 
+                    " for key: " + key + "; likely file corruption");
+            return false;
+        }
         
         GGUFValueType valueType = static_cast<GGUFValueType>(valueTypeRaw);
         GGUFMetadataValue metadataValue;
@@ -412,6 +433,15 @@ bool StreamingGGUFLoader//parseTensorInfo() {
 
     tensors.reserve(header.tensor_count);
     
+    // Validate tensor count before iterating to prevent DoS attacks
+    if (header.tensor_count > 1000000) {
+        setError("Tensor count impossibly large (" + std::to_string(header.tensor_count) + 
+                ", max 1M), likely malformed GGUF file");
+        return false;
+    }
+        const uint64_t MAX_TOTAL_TENSOR_SIZE = 100ULL * 1024ULL * 1024ULL * 1024ULL; // 100GB limit
+        uint64_t cumulativeTensorSize = 0;
+
     for (uint64_t i = 0; i < header.tensor_count; ++i) {
         GGUFTensorInfo tensor;
         
@@ -436,6 +466,19 @@ bool StreamingGGUFLoader//parseTensorInfo() {
                 setError("Failed to read dimension " + std::to_string(d) + " for tensor: " + tensor.name);
                 return false;
             }
+            
+            // Validate dimension is positive and not pathologically large
+            if (tensor.shape[d] == 0) {
+                setError("Tensor " + tensor.name + " has dimension " + std::to_string(d) + 
+                        " with size 0; invalid tensor shape");
+                return false;
+            }
+            if (tensor.shape[d] > 0x7FFFFFFF) {
+                setError("Tensor " + tensor.name + " dimension " + std::to_string(d) + 
+                        " exceeds max int32 (" + std::to_string(tensor.shape[d]) + 
+                        "); likely file corruption");
+                return false;
+            }
             currentFileOffset += sizeof(uint64_t);
         }
         
@@ -457,6 +500,12 @@ bool StreamingGGUFLoader//parseTensorInfo() {
         
         // Calculate tensor size
         tensor.size_bytes = getTensorDataSize(tensor.type, tensor.shape);
+            cumulativeTensorSize += tensor.size_bytes;
+            if (cumulativeTensorSize > MAX_TOTAL_TENSOR_SIZE) {
+                setError("Total tensor data would exceed " + formatBytes(MAX_TOTAL_TENSOR_SIZE) + 
+                        " limit; rejecting file to prevent memory exhaustion");
+                return false;
+            }
         
         tensors.push_back(tensor);
         

@@ -30,14 +30,22 @@
 #include "Win32IDE.h"
 #include "Win32IDE_Types.h"
 #include <algorithm>
+#include <cerrno>
 #include <cctype>
 #include <chrono>
 #include <condition_variable>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <richedit.h>
 #include <sstream>
 #include <thread>
+
+static constexpr size_t kMaxLspMessageBytes = 4u * 1024u * 1024u;
+static constexpr size_t kMaxLspBufferBytes = 8u * 1024u * 1024u;
+static constexpr size_t kMaxLspConfigBytes = 2u * 1024u * 1024u;
+static constexpr size_t kMaxLspArgs = 64u;
+static constexpr size_t kMaxLspArgBytes = 1024u;
 
 // ============================================================================
 // SEMANTIC TOKENS — Full delta-capable implementation
@@ -524,6 +532,13 @@ void Win32IDE::lspReaderThread(LSPLanguage lang)
 
         buffer.append(readBuf, bytesRead);
 
+        // Fail-closed: prevent unbounded buffer growth from malformed streams.
+        if (buffer.size() > kMaxLspBufferBytes)
+        {
+            buffer.clear();
+            break;
+        }
+
         // Parse JSON-RPC messages from buffer
         while (true)
         {
@@ -544,7 +559,31 @@ void Win32IDE::lspReaderThread(LSPLanguage lang)
                 size_t valStart = clPos + 15;  // strlen("Content-Length:")
                 while (valStart < header.size() && header[valStart] == ' ')
                     valStart++;
-                contentLength = std::stoi(header.substr(valStart));
+
+                errno = 0;
+                char* end = nullptr;
+                const std::string contentLenStr = header.substr(valStart);
+                const unsigned long parsed = std::strtoul(contentLenStr.c_str(), &end, 10);
+                if (end == contentLenStr.c_str() || errno != 0)
+                {
+                    buffer.erase(0, headerEnd + 4);
+                    continue;
+                }
+                while (end && *end == ' ')
+                {
+                    ++end;
+                }
+                if (end && *end != '\0')
+                {
+                    buffer.erase(0, headerEnd + 4);
+                    continue;
+                }
+                if (parsed > kMaxLspMessageBytes)
+                {
+                    buffer.erase(0, headerEnd + 4);
+                    continue;
+                }
+                contentLength = static_cast<int>(parsed);
             }
 
             if (contentLength <= 0)
@@ -1895,7 +1934,7 @@ std::string Win32IDE::getLSPConfigFilePath() const
 void Win32IDE::loadLSPConfig()
 {
     std::string path = getLSPConfigFilePath();
-    std::ifstream ifs(path);
+    std::ifstream ifs(path, std::ios::binary | std::ios::ate);
     if (!ifs.is_open())
     {
         logInfo("[LSP] No saved config at " + path + " — using defaults");
@@ -1904,7 +1943,23 @@ void Win32IDE::loadLSPConfig()
 
     try
     {
-        std::string fileContent((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
+        const std::streamoff fileSize = ifs.tellg();
+        if (fileSize < 0 || static_cast<size_t>(fileSize) > kMaxLspConfigBytes)
+        {
+            logInfo("[LSP] Config too large — using defaults");
+            return;
+        }
+        ifs.seekg(0, std::ios::beg);
+        std::string fileContent(static_cast<size_t>(fileSize), '\0');
+        if (!fileContent.empty())
+        {
+            ifs.read(fileContent.data(), static_cast<std::streamsize>(fileContent.size()));
+            if (!ifs)
+            {
+                logInfo("[LSP] Failed to read config fully — using defaults");
+                return;
+            }
+        }
         nlohmann::json j = nlohmann::json::parse(fileContent);
 
         if (j.contains("servers") && j["servers"].is_array())
@@ -1929,9 +1984,15 @@ void Win32IDE::loadLSPConfig()
                 if (sj.contains("args") && sj["args"].is_array())
                 {
                     cfg.args.clear();
-                    for (size_t ai = 0; ai < sj["args"].size(); ++ai)
+                    const size_t argCount = std::min(sj["args"].size(), kMaxLspArgs);
+                    for (size_t ai = 0; ai < argCount; ++ai)
                     {
-                        cfg.args.push_back(sj["args"][ai].get<std::string>());
+                        if (!sj["args"][ai].is_string())
+                            continue;
+                        std::string arg = sj["args"][ai].get<std::string>();
+                        if (arg.size() > kMaxLspArgBytes)
+                            continue;
+                        cfg.args.push_back(std::move(arg));
                     }
                 }
                 if (sj.contains("rootUri"))

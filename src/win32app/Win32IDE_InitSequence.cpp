@@ -53,6 +53,11 @@ static bool hasHeadlessFlag(LPSTR lpCmdLine) {
 // ============================================================================
 // Parse WinMain command line into argc/argv for headless mode
 // ============================================================================
+// Bounds: cap argument count and individual token size to prevent DoS via
+// a crafted shortcut/registry launch key.
+static constexpr size_t kMaxCmdArgs    = 64;     // hard cap on # of arguments
+static constexpr size_t kMaxTokenBytes = 4096;   // hard cap on single-token length
+
 static void parseCmdLine(LPSTR lpCmdLine, int& argc, char**& argv) {
     static std::vector<std::string> args;
     static std::vector<char*> ptrs;
@@ -66,18 +71,26 @@ static void parseCmdLine(LPSTR lpCmdLine, int& argc, char**& argv) {
         std::istringstream iss(cmdLine);
         std::string token;
         while (iss >> token) {
+            if (args.size() >= kMaxCmdArgs) break;  // DoS guard: cap argument count
             // Handle quoted arguments
             if (!token.empty() && token.front() == '"') {
                 token = token.substr(1);
                 std::string rest;
-                while (token.back() != '"' && std::getline(iss, rest, '"')) {
-                    token += " " + rest;
+                // Guard: token may be empty after substr(1) — calling .back() on an
+                // empty string is UB.  Also bound accumulation to prevent memory DoS.
+                while ((token.empty() || token.back() != '"') &&
+                       token.size() < kMaxTokenBytes &&
+                       std::getline(iss, rest, '"')) {
+                    token += ' ';
+                    token += rest;
                 }
                 if (!token.empty() && token.back() == '"') {
                     token.pop_back();
                 }
+                // Clamp in case we hit kMaxTokenBytes mid-accumulation
+                if (token.size() > kMaxTokenBytes) token.resize(kMaxTokenBytes);
             }
-            args.push_back(token);
+            args.push_back(std::move(token));
         }
     }
 
@@ -357,8 +370,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
         }
     }
 
-    // Show window and force layout
-    ide.showWindow();
+    // Show window through the unified safe visibility path.
+    ide.showMainWindowSafe();
 
     // Parity-audit: start the visibility watchdog (2 s interval)
     ide.startVisibilityWatchdog();

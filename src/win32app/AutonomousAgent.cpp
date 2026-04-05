@@ -1481,7 +1481,7 @@ void AutonomousAgent::OnDigestionQueued(DWORD taskId, const std::wstring& source
     LeaveCriticalSection(&m_digestionLock);
     
     char logBuf[512];
-    sprintf_s(logBuf, "Digestion Task %lu queued for %S", taskId, source.c_str());
+    sprintf_s(logBuf, "Digestion Task %lu queued for %s", taskId, source.c_str());
     EmitBeacon(BeaconType::DIGESTION_QUEUED, S_OK, logBuf);
     AgentUtils::OutputAgentLog(logBuf);
 }

@@ -35,6 +35,33 @@ nlohmann::json ExecutionPlan::toJson() const
     j["rejected_steps"] = rejected_steps;
     j["current_step"] = current_step_index.load();
     j["is_executing"] = is_executing.load();
+
+    nlohmann::json step_array = nlohmann::json::array();
+    for (const auto& step : steps)
+    {
+        nlohmann::json sj;
+        sj["id"] = step.id;
+        sj["title"] = step.title;
+        sj["description"] = step.description;
+        sj["actions"] = step.actions;
+        sj["affected_files"] = step.affected_files;
+        sj["dependencies"] = step.dependencies;
+        sj["risk_level"] = static_cast<int>(step.risk_level);
+        sj["complexity_score"] = step.complexity_score;
+        sj["is_mutating"] = step.is_mutating;
+        sj["is_rollbackable"] = step.is_rollbackable;
+        sj["estimated_duration_ms"] = step.estimated_duration_ms;
+        sj["eligible_for_auto_approval"] = step.eligible_for_auto_approval;
+        sj["status"] = static_cast<int>(step.status);
+        sj["approval_status"] = static_cast<int>(step.approval_status);
+        sj["approval_reason"] = step.approval_reason;
+        sj["approval_user"] = step.approval_user;
+        sj["execution_result"] = step.execution_result;
+        sj["generated_artifacts"] = step.generated_artifacts;
+        sj["error_message"] = step.error_message;
+        step_array.push_back(std::move(sj));
+    }
+    j["steps"] = std::move(step_array);
     return j;
 }
 

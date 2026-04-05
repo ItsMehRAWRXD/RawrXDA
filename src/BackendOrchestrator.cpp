@@ -2,6 +2,7 @@
 #include "BackendOrchestrator.h"
 #include "InferenceProfiler.h"
 #include "gguf_loader.h"
+#include "kernels/kv_accum_avx512.h"
 
 #include <sstream>
 #include <iostream>
@@ -15,6 +16,7 @@
 #include <filesystem>
 #include <regex>
 #include <unordered_set>
+#include <cstdlib>
 
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -33,6 +35,7 @@
 #endif
 
 static constexpr SIZE_T kSlidingApertureSize = 2ULL * 1024ULL * 1024ULL * 1024ULL;
+static constexpr SIZE_T kSlidingApertureMinReserve = 8ULL * 1024ULL * 1024ULL;
 
 namespace RawrXD {
 
@@ -63,8 +66,19 @@ using PFN_UnmapViewOfFile2 = BOOL(WINAPI*)(
     PVOID,
     ULONG);
 
+using PFN_PrefetchVirtualMemory = BOOL(WINAPI*)(
+    HANDLE,
+    ULONG_PTR,
+    PWIN32_MEMORY_RANGE_ENTRY,
+    ULONG);
+
 using PFN_SubmitInference = bool(__stdcall*)(const char*, uint64_t*);
 using PFN_GetResult = bool(__stdcall*)(uint64_t, char*, uint32_t);
+using PFN_CreateInferenceEngine = void*(__stdcall*)();
+using PFN_DestroyInferenceEngine = void(__stdcall*)(void*);
+using PFN_InferenceEngineLoadModel = bool(__stdcall*)(void*, const char*);
+using PFN_InferenceEngineSubmitInference = bool(__stdcall*)(void*, const char*, uint64_t*);
+using PFN_InferenceEngineGetResult = bool(__stdcall*)(void*, uint64_t, char*, uint32_t);
 
 PFN_VirtualAlloc2 GetVirtualAlloc2Ptr() {
     static PFN_VirtualAlloc2 fn = []() -> PFN_VirtualAlloc2 {
@@ -99,10 +113,237 @@ PFN_UnmapViewOfFile2 GetUnmapViewOfFile2Ptr() {
     return fn;
 }
 
+PFN_PrefetchVirtualMemory GetPrefetchVirtualMemoryPtr() {
+    static PFN_PrefetchVirtualMemory fn = []() -> PFN_PrefetchVirtualMemory {
+        HMODULE kernel32 = GetModuleHandleW(L"kernel32.dll");
+        if (!kernel32) {
+            return nullptr;
+        }
+        return reinterpret_cast<PFN_PrefetchVirtualMemory>(GetProcAddress(kernel32, "PrefetchVirtualMemory"));
+    }();
+    return fn;
+}
+
+static constexpr uint64_t kGgufMapTelemetryDecisionBudget = 128;
+static constexpr size_t kGgufApertureMinWindowBytes = 2ULL * 1024ULL * 1024ULL;
+static constexpr size_t kGgufAperturePrefetchBytes = 2ULL * 1024ULL * 1024ULL;
+
+struct GgufMapTelemetry {
+    bool enabled = false;
+    std::atomic<uint64_t> remaining_decisions{0};
+    std::atomic<uint64_t> reuses{0};
+    std::atomic<uint64_t> remaps{0};
+    std::atomic<uint64_t> prefetch_bytes{0};
+    std::atomic<uint64_t> window_bytes{0};
+    std::atomic<uint64_t> align_large_2mb{0};
+    std::atomic<uint64_t> align_sys_64kb{0};
+    std::atomic<uint64_t> align_legacy_reserve{0};
+    std::atomic<uint64_t> align_direct_map{0};
+};
+
+GgufMapTelemetry& GetGgufMapTelemetry() {
+    static GgufMapTelemetry telemetry;
+    static std::once_flag init_once;
+    GgufMapTelemetry* telemetry_ptr = &telemetry;
+    std::call_once(init_once, [telemetry_ptr]() {
+        char value[8] = {};
+        const DWORD len = GetEnvironmentVariableA("RAWRXD_GGUF_MAP_TELEMETRY", value, static_cast<DWORD>(sizeof(value)));
+        telemetry_ptr->enabled = len > 0 && len < sizeof(value) && value[0] != '0';
+        telemetry_ptr->remaining_decisions.store(
+            telemetry_ptr->enabled ? kGgufMapTelemetryDecisionBudget : 0,
+            std::memory_order_relaxed);
+    });
+    return telemetry;
+}
+
+bool ShouldRecordGgufMapDecision() {
+    auto& telemetry = GetGgufMapTelemetry();
+    if (!telemetry.enabled) {
+        return false;
+    }
+    uint64_t remaining = telemetry.remaining_decisions.load(std::memory_order_relaxed);
+    while (remaining > 0) {
+        if (telemetry.remaining_decisions.compare_exchange_weak(
+                remaining, remaining - 1, std::memory_order_relaxed, std::memory_order_relaxed)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void RecordGgufMapReuse(size_t window_bytes) {
+    if (!ShouldRecordGgufMapDecision()) {
+        return;
+    }
+    auto& telemetry = GetGgufMapTelemetry();
+    telemetry.reuses.fetch_add(1, std::memory_order_relaxed);
+    telemetry.window_bytes.fetch_add(static_cast<uint64_t>(window_bytes), std::memory_order_relaxed);
+}
+
+void RecordGgufMapRemap(size_t window_bytes) {
+    if (!ShouldRecordGgufMapDecision()) {
+        return;
+    }
+    auto& telemetry = GetGgufMapTelemetry();
+    telemetry.remaps.fetch_add(1, std::memory_order_relaxed);
+    telemetry.window_bytes.fetch_add(static_cast<uint64_t>(window_bytes), std::memory_order_relaxed);
+}
+
+void RecordGgufPrefetch(size_t prefetch_bytes) {
+    auto& telemetry = GetGgufMapTelemetry();
+    if (!telemetry.enabled || prefetch_bytes == 0) {
+        return;
+    }
+    telemetry.prefetch_bytes.fetch_add(static_cast<uint64_t>(prefetch_bytes), std::memory_order_relaxed);
+}
+
+enum : uint32_t {
+    kAlignModeLarge2MB = 1u << 0,
+    kAlignModeSys64KB = 1u << 1,
+    kAlignModeLegacyReserve = 1u << 2,
+    kAlignModeDirectMap = 1u << 3,
+};
+
+void RecordGgufAlignmentMode(uint32_t mode) {
+    auto& telemetry = GetGgufMapTelemetry();
+    if (!telemetry.enabled) {
+        return;
+    }
+    if ((mode & kAlignModeLarge2MB) != 0u) {
+        telemetry.align_large_2mb.fetch_add(1, std::memory_order_relaxed);
+    }
+    if ((mode & kAlignModeSys64KB) != 0u) {
+        telemetry.align_sys_64kb.fetch_add(1, std::memory_order_relaxed);
+    }
+    if ((mode & kAlignModeLegacyReserve) != 0u) {
+        telemetry.align_legacy_reserve.fetch_add(1, std::memory_order_relaxed);
+    }
+    if ((mode & kAlignModeDirectMap) != 0u) {
+        telemetry.align_direct_map.fetch_add(1, std::memory_order_relaxed);
+    }
+}
+
+bool HasSeLockMemoryPrivilege() {
+    HANDLE token = nullptr;
+    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) {
+        return false;
+    }
+
+    LUID luid{};
+    if (!LookupPrivilegeValueA(nullptr, SE_LOCK_MEMORY_NAME, &luid)) {
+        CloseHandle(token);
+        return false;
+    }
+
+    PRIVILEGE_SET required{};
+    required.PrivilegeCount = 1;
+    required.Control = PRIVILEGE_SET_ALL_NECESSARY;
+    required.Privilege[0].Luid = luid;
+    required.Privilege[0].Attributes = SE_PRIVILEGE_ENABLED;
+
+    BOOL hasPrivilege = FALSE;
+    const BOOL ok = PrivilegeCheck(token, &required, &hasPrivilege);
+    CloseHandle(token);
+    return ok && hasPrivilege != FALSE;
+}
+
+bool IsLargePageAlignmentAvailable() {
+    static std::once_flag once;
+    static bool available = false;
+    std::call_once(once, []() {
+        const SIZE_T largePageMin = GetLargePageMinimum();
+        available = (largePageMin >= (2ULL * 1024ULL * 1024ULL)) && HasSeLockMemoryPrivilege();
+    });
+    return available;
+}
+
+void FlushGgufMapTelemetrySummary() {
+    auto& telemetry = GetGgufMapTelemetry();
+    if (!telemetry.enabled) {
+        return;
+    }
+
+    const uint64_t reuses = telemetry.reuses.exchange(0, std::memory_order_relaxed);
+    const uint64_t remaps = telemetry.remaps.exchange(0, std::memory_order_relaxed);
+    const uint64_t prefetch_bytes = telemetry.prefetch_bytes.exchange(0, std::memory_order_relaxed);
+    const uint64_t window_bytes = telemetry.window_bytes.exchange(0, std::memory_order_relaxed);
+    const uint64_t align_large_2mb = telemetry.align_large_2mb.exchange(0, std::memory_order_relaxed);
+    const uint64_t align_sys_64kb = telemetry.align_sys_64kb.exchange(0, std::memory_order_relaxed);
+    const uint64_t align_legacy_reserve = telemetry.align_legacy_reserve.exchange(0, std::memory_order_relaxed);
+    const uint64_t align_direct_map = telemetry.align_direct_map.exchange(0, std::memory_order_relaxed);
+    telemetry.remaining_decisions.store(kGgufMapTelemetryDecisionBudget, std::memory_order_relaxed);
+
+    if (reuses == 0 && remaps == 0 && prefetch_bytes == 0 &&
+        align_large_2mb == 0 && align_sys_64kb == 0 && align_legacy_reserve == 0 && align_direct_map == 0) {
+        return;
+    }
+
+    const uint64_t decisions = reuses + remaps;
+    const uint64_t avg_window_kb = decisions == 0 ? 0 : (window_bytes / decisions) / 1024ULL;
+    uint32_t alignMask = 0;
+    if (align_large_2mb > 0) {
+        alignMask |= kAlignModeLarge2MB;
+    }
+    if (align_sys_64kb > 0) {
+        alignMask |= kAlignModeSys64KB;
+    }
+    if (align_legacy_reserve > 0) {
+        alignMask |= kAlignModeLegacyReserve;
+    }
+
+    std::string alignMode;
+    if ((alignMask & kAlignModeLarge2MB) != 0u) {
+        alignMode = "LARGE_2MB";
+    }
+    if ((alignMask & kAlignModeSys64KB) != 0u) {
+        if (!alignMode.empty()) {
+            alignMode += "|";
+        }
+        alignMode += "SYS_64KB";
+    }
+    if ((alignMask & kAlignModeLegacyReserve) != 0u) {
+        if (!alignMode.empty()) {
+            alignMode += "|";
+        }
+        alignMode += "LEGACY_RESERVE";
+    }
+    if ((alignMask & kAlignModeDirectMap) != 0u) {
+        if (!alignMode.empty()) {
+            alignMode += "|";
+        }
+        alignMode += "DIRECT_MAP";
+    }
+    if (alignMode.empty()) {
+        alignMode = "UNSPECIFIED";
+    }
+
+    std::ostringstream oss;
+    oss << "GGUF_MAP_STATS: reuses=" << reuses
+        << ", remaps=" << remaps
+        << ", prefetch_kb=" << (prefetch_bytes / 1024ULL)
+        << ", avg_win=" << avg_window_kb << "KB"
+        << ", ALIGN_MODE=" << alignMode
+        << ", ALIGN_MASK=0x" << std::hex << alignMask << std::dec
+        << "\n";
+    const std::string line = oss.str();
+    OutputDebugStringA(line.c_str());
+    std::cout << line;
+    std::cout.flush();
+}
+
 struct NativeInferenceApi {
     HMODULE module = nullptr;
     PFN_SubmitInference submit = nullptr;
     PFN_GetResult getResult = nullptr;
+    PFN_CreateInferenceEngine createEngine = nullptr;
+    PFN_DestroyInferenceEngine destroyEngine = nullptr;
+    PFN_InferenceEngineLoadModel loadModel = nullptr;
+    PFN_InferenceEngineSubmitInference submitEngine = nullptr;
+    PFN_InferenceEngineGetResult getResultEngine = nullptr;
+    void* engineHandle = nullptr;
+    bool modelLoaded = false;
+    bool sawWin32Symbols = false;
+    bool engineCreateFailed = false;
     bool initialized = false;
 };
 
@@ -112,16 +353,58 @@ NativeInferenceApi& GetNativeInferenceApi() {
         return api;
     }
 
-    api.module = LoadLibraryW(L"RawrXD_InferenceEngine.dll");
-    if (!api.module) {
-        api.module = LoadLibraryW(L"RawrXD_InferenceEngine_Win32.dll");
-    }
+    const wchar_t* kCandidates[] = {
+        L"RawrXD_InferenceEngine.dll",
+        L"RawrXD_InferenceEngine_Win32.dll"
+    };
 
-    if (api.module) {
-        api.submit = reinterpret_cast<PFN_SubmitInference>(
-            GetProcAddress(api.module, "SubmitInference"));
-        api.getResult = reinterpret_cast<PFN_GetResult>(
-            GetProcAddress(api.module, "GetResult"));
+    for (const wchar_t* candidate : kCandidates) {
+        HMODULE module = LoadLibraryW(candidate);
+        if (!module) {
+            continue;
+        }
+
+        PFN_SubmitInference legacySubmit = reinterpret_cast<PFN_SubmitInference>(
+            GetProcAddress(module, "SubmitInference"));
+        PFN_GetResult legacyGetResult = reinterpret_cast<PFN_GetResult>(
+            GetProcAddress(module, "GetResult"));
+
+        if (legacySubmit && legacyGetResult) {
+            api.module = module;
+            api.submit = legacySubmit;
+            api.getResult = legacyGetResult;
+            break;
+        }
+
+        PFN_CreateInferenceEngine createEngine = reinterpret_cast<PFN_CreateInferenceEngine>(
+            GetProcAddress(module, "CreateInferenceEngine"));
+        PFN_DestroyInferenceEngine destroyEngine = reinterpret_cast<PFN_DestroyInferenceEngine>(
+            GetProcAddress(module, "DestroyInferenceEngine"));
+        PFN_InferenceEngineLoadModel loadModel = reinterpret_cast<PFN_InferenceEngineLoadModel>(
+            GetProcAddress(module, "InferenceEngine_LoadModel"));
+        PFN_InferenceEngineSubmitInference submitEngine = reinterpret_cast<PFN_InferenceEngineSubmitInference>(
+            GetProcAddress(module, "InferenceEngine_SubmitInference"));
+        PFN_InferenceEngineGetResult getResultEngine = reinterpret_cast<PFN_InferenceEngineGetResult>(
+            GetProcAddress(module, "InferenceEngine_GetResult"));
+
+        if (createEngine && submitEngine && getResultEngine) {
+            api.sawWin32Symbols = true;
+            void* engineHandle = createEngine();
+            if (engineHandle) {
+                api.module = module;
+                api.createEngine = createEngine;
+                api.destroyEngine = destroyEngine;
+                api.loadModel = loadModel;
+                api.submitEngine = submitEngine;
+                api.getResultEngine = getResultEngine;
+                api.engineHandle = engineHandle;
+                break;
+            } else {
+                api.engineCreateFailed = true;
+            }
+        }
+
+        FreeLibrary(module);
     }
 
     api.initialized = true;
@@ -134,22 +417,48 @@ bool RunNativeInferenceSync(const std::string& prompt,
                             std::string& metadata,
                             std::string& error) {
     NativeInferenceApi& api = GetNativeInferenceApi();
-    if (!api.module || !api.submit || !api.getResult) {
-        error = "Native inference API unavailable (SubmitInference/GetResult missing)";
+    const bool legacyApiReady = (api.module && api.submit && api.getResult);
+    const bool win32ApiReady = (api.module && api.engineHandle && api.submitEngine && api.getResultEngine);
+
+    if (!legacyApiReady && !win32ApiReady) {
+        if (api.sawWin32Symbols && api.engineCreateFailed) {
+            error = "Native inference API unavailable (Win32 symbols found, CreateInferenceEngine failed)";
+        } else {
+            error = "Native inference API unavailable (SubmitInference/GetResult missing)";
+        }
         return false;
     }
 
+    if (win32ApiReady && api.loadModel && !api.modelLoaded) {
+        char modelPath[2048] = {};
+        const DWORD len = GetEnvironmentVariableA("RAWRXD_NATIVE_MODEL_PATH", modelPath, static_cast<DWORD>(sizeof(modelPath)));
+        if (len > 0 && len < sizeof(modelPath)) {
+            api.modelLoaded = api.loadModel(api.engineHandle, modelPath);
+        }
+    }
+
     uint64_t requestId = 0;
-    if (!api.submit(prompt.c_str(), &requestId)) {
-        error = "SubmitInference failed";
-        return false;
+    if (legacyApiReady) {
+        if (!api.submit(prompt.c_str(), &requestId)) {
+            error = "SubmitInference failed";
+            return false;
+        }
+    } else {
+        if (!api.submitEngine(api.engineHandle, prompt.c_str(), &requestId)) {
+            error = "InferenceEngine_SubmitInference failed";
+            return false;
+        }
     }
 
     auto start = std::chrono::steady_clock::now();
     std::vector<char> buffer(1024 * 1024, 0);
 
     while (true) {
-        if (api.getResult(requestId, buffer.data(), static_cast<uint32_t>(buffer.size()))) {
+        const bool gotResult = legacyApiReady
+            ? api.getResult(requestId, buffer.data(), static_cast<uint32_t>(buffer.size()))
+            : api.getResultEngine(api.engineHandle, requestId, buffer.data(), static_cast<uint32_t>(buffer.size()));
+
+        if (gotResult) {
             completion = std::string(buffer.data());
             const auto elapsedNs = std::chrono::duration_cast<std::chrono::nanoseconds>(
                 std::chrono::steady_clock::now() - start).count();
@@ -254,18 +563,225 @@ int discoverLayerCountFromGguf(const std::string& model_path) {
 }
 
 struct MappedShardFile {
+    struct WindowStripe {
+        void* ptr = nullptr;
+        uint64_t offset = 0;
+        size_t size = 0;
+    };
+
     std::string path;
     int device_index = -1;
     HANDLE hFile = INVALID_HANDLE_VALUE;
     HANDLE hMapping = nullptr;
     void* view = nullptr;
     uint64_t size_bytes = 0;
+    size_t reserved_aperture_size = 0;
+    bool has_placeholder_reservation = false;
+    void* active_window = nullptr;
+    uint64_t active_window_offset = 0;
+    size_t active_window_size = 0;
+    std::vector<WindowStripe> stripes;
+    size_t next_stripe_index = 0;
 };
+
+bool readEnvFlag(const char* name, bool defaultValue) {
+    if (!name || !*name) {
+        return defaultValue;
+    }
+    char v[16] = {};
+    const DWORD len = GetEnvironmentVariableA(name, v, static_cast<DWORD>(sizeof(v)));
+    if (len == 0 || len >= sizeof(v)) {
+        return defaultValue;
+    }
+    if (v[0] == '0' || v[0] == 'n' || v[0] == 'N' || v[0] == 'f' || v[0] == 'F') {
+        return false;
+    }
+    return true;
+}
+
+int readEnvInt(const char* name, int defaultValue, int minValue, int maxValue) {
+    if (!name || !*name) {
+        return defaultValue;
+    }
+    char v[32] = {};
+    const DWORD len = GetEnvironmentVariableA(name, v, static_cast<DWORD>(sizeof(v)));
+    if (len == 0 || len >= sizeof(v)) {
+        return defaultValue;
+    }
+
+    char* end = nullptr;
+    const long parsed = std::strtol(v, &end, 10);
+    if (end == v) {
+        return defaultValue;
+    }
+    const long clamped = std::max<long>(minValue, std::min<long>(maxValue, parsed));
+    return static_cast<int>(clamped);
+}
+
+int getApertureStripeCount() {
+    return readEnvInt("RAWRXD_APERTURE_STRIPES", 2, 1, 8);
+}
+
+bool useGraphAwarePrefetch() {
+    return readEnvFlag("RAWRXD_GRAPH_AWARE_PREFETCH", true);
+}
+
+SIZE_T alignDownSize(SIZE_T value, SIZE_T alignment) {
+    if (alignment == 0) {
+        return value;
+    }
+    return value - (value % alignment);
+}
+
+SIZE_T alignUpSize(SIZE_T value, SIZE_T alignment) {
+    if (alignment == 0) {
+        return value;
+    }
+    const SIZE_T rem = value % alignment;
+    if (rem == 0) {
+        return value;
+    }
+    if (value > std::numeric_limits<SIZE_T>::max() - (alignment - rem)) {
+        return value;
+    }
+    return value + (alignment - rem);
+}
+
+bool reserveSlidingAperture(SIZE_T requested_size,
+                           void*& out_view,
+                           size_t& out_reserved_size,
+                           bool& out_has_placeholder_reservation) {
+    out_view = nullptr;
+    out_reserved_size = 0;
+    out_has_placeholder_reservation = false;
+
+    SYSTEM_INFO sysInfo{};
+    GetSystemInfo(&sysInfo);
+    const SIZE_T granularity = static_cast<SIZE_T>(sysInfo.dwAllocationGranularity);
+    if (granularity == 0) {
+        return false;
+    }
+
+    const SIZE_T min_reserve = alignUpSize(kSlidingApertureMinReserve, granularity);
+    SIZE_T attempt_size = alignDownSize(requested_size, granularity);
+    if (attempt_size < min_reserve) {
+        attempt_size = min_reserve;
+    }
+
+    bool allow2mb = IsLargePageAlignmentAvailable();
+    {
+        char v[8] = {};
+        const DWORD len = GetEnvironmentVariableA("RAWRXD_PLACEHOLDER_ALIGN_2MB", v, static_cast<DWORD>(sizeof(v)));
+        if (len > 0 && len < sizeof(v) && v[0] == '0') {
+            allow2mb = false;
+        }
+    }
+    const SIZE_T large_page_alignment = 2ULL * 1024ULL * 1024ULL;
+
+    PFN_VirtualAlloc2 virtualAlloc2 = GetVirtualAlloc2Ptr();
+
+    while (attempt_size >= min_reserve) {
+        void* view = nullptr;
+        if (virtualAlloc2) {
+            std::vector<SIZE_T> alignments;
+            alignments.reserve(2);
+            if (allow2mb && large_page_alignment >= granularity) {
+                alignments.push_back(large_page_alignment);
+            }
+            alignments.push_back(granularity);
+
+            for (const SIZE_T alignment : alignments) {
+                SIZE_T aligned_attempt_size = alignDownSize(attempt_size, alignment);
+                if (aligned_attempt_size < min_reserve) {
+                    aligned_attempt_size = alignUpSize(min_reserve, alignment);
+                }
+                if (aligned_attempt_size < min_reserve) {
+                    continue;
+                }
+
+                MEM_ADDRESS_REQUIREMENTS addrReq{};
+                addrReq.LowestStartingAddress = nullptr;
+                addrReq.HighestEndingAddress = nullptr;
+                addrReq.Alignment = alignment;
+
+                MEM_EXTENDED_PARAMETER param{};
+                param.Type = MemExtendedParameterAddressRequirements;
+                param.Pointer = &addrReq;
+
+                view = virtualAlloc2(GetCurrentProcess(), nullptr, aligned_attempt_size,
+                                     MEM_RESERVE | MEM_RESERVE_PLACEHOLDER, PAGE_NOACCESS,
+                                     &param, 1);
+                if (view) {
+                    out_view = view;
+                    out_reserved_size = static_cast<size_t>(aligned_attempt_size);
+                    out_has_placeholder_reservation = true;
+                    if (alignment == large_page_alignment) {
+                        RecordGgufAlignmentMode(kAlignModeLarge2MB);
+                    } else {
+                        RecordGgufAlignmentMode(kAlignModeSys64KB);
+                    }
+                    return true;
+                }
+            }
+        }
+
+        if (!view) {
+            view = VirtualAlloc(nullptr, attempt_size, MEM_RESERVE, PAGE_NOACCESS);
+        }
+
+        if (view) {
+            out_view = view;
+            out_reserved_size = static_cast<size_t>(attempt_size);
+            out_has_placeholder_reservation = false;
+            RecordGgufAlignmentMode(kAlignModeLegacyReserve | kAlignModeSys64KB);
+            return true;
+        }
+
+        const SIZE_T next_attempt = alignDownSize(attempt_size / 2, granularity);
+        if (next_attempt < min_reserve || next_attempt >= attempt_size) {
+            break;
+        }
+        attempt_size = next_attempt;
+    }
+
+    return false;
+}
 
 std::mutex g_mapped_shards_mutex;
 std::unordered_map<std::string, std::vector<MappedShardFile>> g_mapped_shards_by_tag;
 
+void unmapSlidingWindow(MappedShardFile& file) {
+    auto unmap_one = [&](void* ptr) {
+        if (!ptr) {
+            return;
+        }
+        if (file.has_placeholder_reservation && GetUnmapViewOfFile2Ptr()) {
+            PFN_UnmapViewOfFile2 unmapViewOfFile2 = GetUnmapViewOfFile2Ptr();
+            unmapViewOfFile2(GetCurrentProcess(), ptr, MEM_PRESERVE_PLACEHOLDER);
+        } else {
+            UnmapViewOfFile(ptr);
+        }
+    };
+
+    if (!file.stripes.empty()) {
+        for (auto& stripe : file.stripes) {
+            unmap_one(stripe.ptr);
+            stripe.ptr = nullptr;
+            stripe.offset = 0;
+            stripe.size = 0;
+        }
+    } else if (file.active_window) {
+        unmap_one(file.active_window);
+    }
+
+    file.active_window = nullptr;
+    file.active_window_offset = 0;
+    file.active_window_size = 0;
+    file.next_stripe_index = 0;
+}
+
 void closeMappedShardFile(MappedShardFile& m) {
+    unmapSlidingWindow(m);
     if (m.view) {
         // [HOTPATCH] For placeholder reservations, use VirtualFree instead of UnmapViewOfFile
         VirtualFree(m.view, 0, MEM_RELEASE);
@@ -313,19 +829,38 @@ bool mapShardFileReadOnly(const std::string& path, int device_index, MappedShard
 
     // Reserve a fixed-size placeholder aperture so MapViewOfFile3 can atomically
     // replace the full placeholder region without needing placeholder splitting.
-    PFN_VirtualAlloc2 virtualAlloc2 = GetVirtualAlloc2Ptr();
-    const SIZE_T aperture_size = static_cast<SIZE_T>(std::min<uint64_t>(out.size_bytes, kSlidingApertureSize));
-    if (virtualAlloc2) {
-        out.view = virtualAlloc2(GetCurrentProcess(), nullptr, aperture_size,
-            MEM_RESERVE | MEM_RESERVE_PLACEHOLDER, PAGE_NOACCESS, nullptr, 0);
+    const SIZE_T target_aperture = static_cast<SIZE_T>(std::min<uint64_t>(out.size_bytes, kSlidingApertureSize));
+    if (!reserveSlidingAperture(target_aperture, out.view, out.reserved_aperture_size, out.has_placeholder_reservation)) {
+        out.view = nullptr;
+        out.reserved_aperture_size = 0;
+        out.has_placeholder_reservation = false;
     }
+
+    const bool allowDirectMap =
+        readEnvFlag("RAWRXD_ALLOW_DIRECT_MAP", false) || readEnvFlag("RAWRXD_HEADLESS_MINIMAL", false);
     if (!out.view) {
-        out.view = VirtualAlloc(nullptr, aperture_size, MEM_RESERVE, PAGE_NOACCESS);
-    }
-    if (!out.view) {
-        reason = "placeholder reservation failed for: " + path + " (error=" + std::to_string(GetLastError()) + ")";
-        closeMappedShardFile(out);
-        return false;
+        if (!allowDirectMap) {
+            reason = "placeholder reservation failed for: " + path + " (error=" + std::to_string(GetLastError()) + ")";
+            closeMappedShardFile(out);
+            return false;
+        }
+
+        // Resilience mode: allow direct view mapping without placeholder aperture.
+        // This keeps model registration alive even on fragmented VA spaces where placeholder reserve fails.
+        out.view = nullptr;
+        out.reserved_aperture_size = 0;
+        out.has_placeholder_reservation = false;
+        RecordGgufAlignmentMode(kAlignModeDirectMap | kAlignModeSys64KB);
+
+        std::ostringstream oss;
+        oss << "[LoaderTrace] direct-map fallback enabled for " << path
+            << (readEnvFlag("RAWRXD_ALLOW_DIRECT_MAP", false)
+                    ? " (RAWRXD_ALLOW_DIRECT_MAP=1)\n"
+                    : " (RAWRXD_HEADLESS_MINIMAL=1)\n");
+        const std::string line = oss.str();
+        OutputDebugStringA(line.c_str());
+        std::cout << line;
+        std::cout.flush();
     }
 
     // Create file mapping for sliding window access
@@ -378,8 +913,12 @@ void clearAllMappedShards() {
     g_mapped_shards_by_tag.clear();
 }
 
-// [HOTPATCH] Sliding Window Access: Map a 2GB window on demand
-bool mapSlidingWindow(const MappedShardFile& file, uint64_t offset, size_t window_size, void*& window_ptr, std::string& reason) {
+// [HOTPATCH] Sliding Window Access: map a 64KB-aligned aperture with a larger logical prefetch runway.
+bool mapSlidingWindow(MappedShardFile& file, uint64_t offset, size_t window_size, void*& window_ptr, std::string& reason) {
+    window_ptr = nullptr;
+    const bool allowDirectMap =
+        readEnvFlag("RAWRXD_ALLOW_DIRECT_MAP", false) || readEnvFlag("RAWRXD_HEADLESS_MINIMAL", false);
+
     // Ensure offset is aligned to allocation granularity (usually 64KB)
     SYSTEM_INFO sysInfo;
     GetSystemInfo(&sysInfo);
@@ -389,58 +928,197 @@ bool mapSlidingWindow(const MappedShardFile& file, uint64_t offset, size_t windo
         reason = "sliding window offset beyond file size";
         return false;
     }
+    if (offset >= file.size_bytes) {
+        reason = "sliding window request beyond file size";
+        return false;
+    }
 
-    // Calculate how much to map (up to window_size, but aligned)
-    const size_t map_size = std::min(window_size, static_cast<size_t>(file.size_bytes - aligned_offset));
+    const uint64_t safe_window_size = std::min<uint64_t>(static_cast<uint64_t>(window_size), file.size_bytes - offset);
+    const uint64_t requested_end = offset + safe_window_size;
+
+    // Stripe-aware fast path: reuse any existing mapped stripe that already covers the request.
+    if (!file.stripes.empty()) {
+        for (const auto& stripe : file.stripes) {
+            if (stripe.ptr && offset >= stripe.offset && requested_end <= stripe.offset + stripe.size) {
+                window_ptr = static_cast<char*>(stripe.ptr) + static_cast<size_t>(offset - stripe.offset);
+                RecordGgufMapReuse(stripe.size);
+                return true;
+            }
+        }
+    } else if (file.active_window && offset >= file.active_window_offset && requested_end <= file.active_window_offset + file.active_window_size) {
+        window_ptr = static_cast<char*>(file.active_window) + static_cast<size_t>(offset - file.active_window_offset);
+        RecordGgufMapReuse(file.active_window_size);
+        return true;
+    }
+
+    // Calculate how much to map. Keep the physical offset aligned at 64KB, but
+    // expand the logical window to include a prefetch runway ahead of the active slice.
+    uint64_t desired_window = std::max<uint64_t>(safe_window_size, kGgufApertureMinWindowBytes);
+    desired_window = std::max<uint64_t>(desired_window, safe_window_size + kGgufAperturePrefetchBytes);
+    desired_window = std::min<uint64_t>(desired_window, file.size_bytes - aligned_offset);
+    desired_window = std::min<uint64_t>(desired_window, kSlidingApertureSize);
+    if (file.reserved_aperture_size > 0) {
+        desired_window = std::min<uint64_t>(desired_window, static_cast<uint64_t>(file.reserved_aperture_size));
+    }
+    const size_t map_size = static_cast<size_t>(desired_window);
     void* base_address = file.view;
 
-    if (PFN_MapViewOfFile3 mapViewOfFile3 = GetMapViewOfFile3Ptr()) {
-        window_ptr = mapViewOfFile3(
-            file.hMapping,
-            GetCurrentProcess(),
-            base_address,
-            aligned_offset,
-            map_size,
-            MEM_REPLACE_PLACEHOLDER,
-            PAGE_READONLY,
-            nullptr,
-            0);
-        if (window_ptr) {
+    auto map_one_window = [&](uint64_t map_offset, size_t one_map_size, void* one_base, void*& mapped_out, std::string& map_reason) -> bool {
+        mapped_out = nullptr;
+
+        if (PFN_MapViewOfFile3 mapViewOfFile3 = GetMapViewOfFile3Ptr()) {
+            ULONG allocationType = 0;
+            if (file.has_placeholder_reservation) {
+                allocationType = MEM_REPLACE_PLACEHOLDER;
+            } else if (!allowDirectMap) {
+                allocationType = MEM_REPLACE_PLACEHOLDER;
+            }
+
+            void* mapped_view = mapViewOfFile3(
+                file.hMapping,
+                GetCurrentProcess(),
+                file.has_placeholder_reservation ? one_base : nullptr,
+                map_offset,
+                one_map_size,
+                allocationType,
+                PAGE_READONLY,
+                nullptr,
+                0);
+            if (mapped_view) {
+                mapped_out = mapped_view;
+                std::ostringstream oss;
+                oss << "[LoaderTrace] MapViewOfFile3 mode="
+                    << (file.has_placeholder_reservation ? "placeholder-replace" : "direct")
+                    << " base=" << mapped_view
+                    << " offset=" << map_offset
+                    << " size=" << one_map_size << "\n";
+                const std::string line = oss.str();
+                OutputDebugStringA(line.c_str());
+                std::cout << line;
+                std::cout.flush();
+            }
+        }
+
+        // Legacy fallback for systems without placeholder swap support.
+        if (!mapped_out) {
+            if (file.has_placeholder_reservation && map_offset == 0 && one_map_size <= kSlidingApertureSize) {
+                mapped_out = MapViewOfFileEx(file.hMapping, FILE_MAP_READ,
+                    static_cast<DWORD>(map_offset >> 32), static_cast<DWORD>(map_offset),
+                    one_map_size, one_base);
+            } else if (!file.has_placeholder_reservation && allowDirectMap) {
+                mapped_out = MapViewOfFileEx(file.hMapping, FILE_MAP_READ,
+                    static_cast<DWORD>(map_offset >> 32), static_cast<DWORD>(map_offset),
+                    one_map_size, nullptr);
+            } else {
+                SetLastError(ERROR_NOT_SUPPORTED);
+                mapped_out = nullptr;
+            }
+
+            if (mapped_out) {
+                std::ostringstream oss;
+                oss << "[LoaderTrace] MapViewOfFileEx mode="
+                    << (file.has_placeholder_reservation ? "reserved-base" : "direct")
+                    << " base=" << mapped_out
+                    << " offset=" << map_offset
+                    << " size=" << one_map_size << "\n";
+                const std::string line = oss.str();
+                OutputDebugStringA(line.c_str());
+                std::cout << line;
+                std::cout.flush();
+            }
+        }
+
+        if (!mapped_out) {
+            map_reason = "sliding window map failed at offset " + std::to_string(map_offset) +
+                " (error=" + std::to_string(GetLastError()) + ")";
+            return false;
+        }
+
+        return true;
+    };
+
+    // Placeholder reservations only support one active replace mapping without placeholder splitting.
+    int stripe_target = getApertureStripeCount();
+    if (file.has_placeholder_reservation && stripe_target > 1) {
+        stripe_target = 1;
+    }
+
+    const bool graph_prefetch = useGraphAwarePrefetch();
+    const size_t prefetch_budget = graph_prefetch
+        ? static_cast<size_t>(kGgufAperturePrefetchBytes * 2ULL)
+        : kGgufAperturePrefetchBytes;
+
+    // Rebuild stripe set for this region.
+    unmapSlidingWindow(file);
+    file.stripes.assign(static_cast<size_t>(stripe_target), {});
+
+    for (int i = 0; i < stripe_target; ++i) {
+        const uint64_t stripe_offset_raw = aligned_offset + (static_cast<uint64_t>(i) * map_size);
+        if (stripe_offset_raw >= file.size_bytes) {
+            break;
+        }
+
+        const uint64_t stripe_offset = (stripe_offset_raw / sysInfo.dwAllocationGranularity) * sysInfo.dwAllocationGranularity;
+        const uint64_t stripe_max_size = file.size_bytes - stripe_offset;
+        const size_t stripe_size = static_cast<size_t>(std::min<uint64_t>(map_size, stripe_max_size));
+        if (stripe_size == 0) {
+            break;
+        }
+
+        void* mapped_view = nullptr;
+        std::string map_reason;
+        if (!map_one_window(stripe_offset, stripe_size, base_address, mapped_view, map_reason)) {
+            reason = map_reason;
+            unmapSlidingWindow(file);
+            file.stripes.clear();
+            return false;
+        }
+
+        file.stripes[static_cast<size_t>(i)].ptr = mapped_view;
+        file.stripes[static_cast<size_t>(i)].offset = stripe_offset;
+        file.stripes[static_cast<size_t>(i)].size = stripe_size;
+        RecordGgufMapRemap(stripe_size);
+
+        if (PFN_PrefetchVirtualMemory prefetchVirtualMemory = GetPrefetchVirtualMemoryPtr()) {
+            const uint64_t stripe_end = stripe_offset + stripe_size;
+            const uint64_t prefetch_start = (i == 0) ? requested_end : stripe_offset;
+            if (prefetch_start < stripe_end) {
+                const size_t prefetch_size = static_cast<size_t>(std::min<uint64_t>(stripe_end - prefetch_start, prefetch_budget));
+                if (prefetch_size > 0) {
+                    WIN32_MEMORY_RANGE_ENTRY range{};
+                    range.VirtualAddress = static_cast<char*>(mapped_view) + static_cast<size_t>(prefetch_start - stripe_offset);
+                    range.NumberOfBytes = prefetch_size;
+                    if (prefetchVirtualMemory(GetCurrentProcess(), 1, &range, 0)) {
+                        RecordGgufPrefetch(prefetch_size);
+                    }
+                }
+            }
+        }
+    }
+
+    for (const auto& stripe : file.stripes) {
+        if (stripe.ptr && offset >= stripe.offset && requested_end <= stripe.offset + stripe.size) {
+            file.active_window = stripe.ptr;
+            file.active_window_offset = stripe.offset;
+            file.active_window_size = stripe.size;
+            window_ptr = static_cast<char*>(stripe.ptr) + static_cast<size_t>(offset - stripe.offset);
             return true;
         }
     }
 
-    // Legacy fallback for systems without placeholder swap support.
-    if (aligned_offset == 0 && map_size <= kSlidingApertureSize) {
-        window_ptr = MapViewOfFileEx(file.hMapping, FILE_MAP_READ,
-            static_cast<DWORD>(aligned_offset >> 32), static_cast<DWORD>(aligned_offset),
-            map_size, base_address);
-    } else {
-        SetLastError(ERROR_NOT_SUPPORTED);
-        window_ptr = nullptr;
-    }
-
-    if (!window_ptr) {
-        reason = "sliding window map failed at offset " + std::to_string(aligned_offset) +
-            " (error=" + std::to_string(GetLastError()) + ")";
-        return false;
-    }
-
-    return true;
-}
-
-// [HOTPATCH] Unmap sliding window
-void unmapSlidingWindow(void* window_ptr) {
-    if (window_ptr) {
-        if (PFN_UnmapViewOfFile2 unmapViewOfFile2 = GetUnmapViewOfFile2Ptr()) {
-            unmapViewOfFile2(GetCurrentProcess(), window_ptr, MEM_PRESERVE_PLACEHOLDER);
-        } else {
-            UnmapViewOfFile(window_ptr);
-        }
-    }
+    reason = "sliding stripe map did not cover requested range";
+    unmapSlidingWindow(file);
+    file.stripes.clear();
+    return false;
 }
 
 } // namespace
+
+std::string GetApertureAlignmentStrategyLabel() {
+    return IsLargePageAlignmentAvailable()
+        ? "LARGE_2MB->SYS_64KB"
+        : "SYS_64KB_ONLY";
+}
 
 // ─── Singleton ────────────────────────────────────────────────────────────────
 BackendOrchestrator& BackendOrchestrator::Instance() {
@@ -455,6 +1133,8 @@ BackendOrchestrator::BackendOrchestrator() {
     for (int i = 0; i < (int)BackendKind::Count; ++i) {
         m_health[i].kind = static_cast<BackendKind>(i);
     }
+
+    ConfigureSovereignScalingFromEnv();
 }
 
 BackendOrchestrator::~BackendOrchestrator() {
@@ -464,6 +1144,25 @@ BackendOrchestrator::~BackendOrchestrator() {
 // ─── Lifecycle ────────────────────────────────────────────────────────────────
 bool BackendOrchestrator::Initialize() {
     if (m_initialized.load()) return true;
+
+    ConfigureSovereignScalingFromEnv();
+
+    {
+        bool has_avx512 = RawrXD::KernelOps::HasAVX512Runtime();
+        if (has_avx512) {
+            alignas(64) float src[16] = {0.0f};
+            alignas(64) float dst[16] = {0.0f};
+            for (int i = 0; i < 16; ++i) {
+                src[i] = 1.0f;
+                dst[i] = static_cast<float>(i);
+            }
+            const bool ok = RawrXD::KernelOps::AccumulateKV_AVX512(src, dst, 16);
+            has_avx512 = ok && dst[0] == 1.0f && dst[15] == 16.0f;
+        }
+        m_supports_avx512_kernels.store(has_avx512, std::memory_order_relaxed);
+        std::cout << "[BackendOrchestrator] AVX512 KV kernels "
+                  << (has_avx512 ? "enabled" : "disabled") << "\n";
+    }
 
     // Probe available backends
     for (int i = 0; i < (int)BackendKind::Count; ++i) {
@@ -502,6 +1201,7 @@ void BackendOrchestrator::Shutdown() {
 
     // Release model shard file mappings.
     clearAllMappedShards();
+    FlushGgufMapTelemetrySummary();
 }
 
 // ─── Enhancement 1: Dynamic backend selection ─────────────────────────────────
@@ -692,6 +1392,10 @@ double BackendOrchestrator::GetSpecDecodingAcceptRate() const {
     return m_spec_accept_rate.load(std::memory_order_relaxed);
 }
 
+bool BackendOrchestrator::SupportsAVX512Kernels() const {
+    return m_supports_avx512_kernels.load(std::memory_order_relaxed);
+}
+
 // ─── Enhancement 5: Model hot-swapping ───────────────────────────────────────
 bool BackendOrchestrator::LoadModel(const std::string& path, const std::string& tag) {
     std::vector<int> device_indices;
@@ -725,11 +1429,111 @@ bool BackendOrchestrator::LoadModel(const std::string& path, const std::string& 
         return false;
     }
 
+    {
+        std::lock_guard<std::mutex> mapped_lk(g_mapped_shards_mutex);
+        auto it = g_mapped_shards_by_tag.find(tag);
+        if (it != g_mapped_shards_by_tag.end() && !it->second.empty()) {
+            void* warm_ptr = nullptr;
+            std::string warm_reason;
+            mapSlidingWindow(it->second.front(), 0, 64 * 1024, warm_ptr, warm_reason);
+        }
+    }
+
     std::lock_guard<std::mutex> lk(m_model_mtx);
     m_model_paths[tag] = path;
     // The actual inference engine load remains delegated to active backend.
     std::cout << "[BackendOrchestrator] Registered model tag='" << tag
               << "' path=" << path << " with " << plan.size() << " shard plan entries\n";
+    return true;
+}
+
+bool BackendOrchestrator::ForensicMapProbe(const std::string& path, uint64_t offset, size_t window_size, std::string* out_reason) {
+    HANDLE hFile = CreateFileA(path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (hFile == INVALID_HANDLE_VALUE) {
+        if (out_reason) {
+            *out_reason = "CreateFileA failed";
+        }
+        return false;
+    }
+
+    LARGE_INTEGER size = {};
+    if (!GetFileSizeEx(hFile, &size) || size.QuadPart <= 0) {
+        CloseHandle(hFile);
+        if (out_reason) {
+            *out_reason = "GetFileSizeEx failed or empty file";
+        }
+        return false;
+    }
+
+    const uint64_t file_size = static_cast<uint64_t>(size.QuadPart);
+    HANDLE hMapping = CreateFileMappingA(hFile, nullptr, PAGE_READONLY, 0, 0, nullptr);
+    if (!hMapping) {
+        CloseHandle(hFile);
+        if (out_reason) {
+            *out_reason = "CreateFileMappingA failed";
+        }
+        return false;
+    }
+
+    SYSTEM_INFO sysInfo{};
+    GetSystemInfo(&sysInfo);
+    const uint64_t granularity = std::max<uint64_t>(sysInfo.dwAllocationGranularity, 64 * 1024ULL);
+    const uint64_t max_offset = file_size > 0 ? (file_size - 1) : 0;
+    const uint64_t safe_offset = std::min<uint64_t>(offset, max_offset);
+    const uint64_t aligned_offset = (safe_offset / granularity) * granularity;
+
+    uint64_t desired_window = std::max<uint64_t>(window_size, kGgufApertureMinWindowBytes);
+    desired_window = std::max<uint64_t>(desired_window, static_cast<uint64_t>(64 * 1024));
+    desired_window = std::min<uint64_t>(desired_window, file_size - aligned_offset);
+    if (desired_window == 0) {
+        CloseHandle(hMapping);
+        CloseHandle(hFile);
+        if (out_reason) {
+            *out_reason = "computed zero map window";
+        }
+        return false;
+    }
+
+    void* mapped_view = MapViewOfFile(hMapping, FILE_MAP_READ,
+        static_cast<DWORD>(aligned_offset >> 32),
+        static_cast<DWORD>(aligned_offset & 0xFFFFFFFFULL),
+        static_cast<SIZE_T>(desired_window));
+    if (!mapped_view) {
+        const DWORD err = GetLastError();
+        CloseHandle(hMapping);
+        CloseHandle(hFile);
+        if (out_reason) {
+            *out_reason = "MapViewOfFile failed (error=" + std::to_string(err) + ")";
+        }
+        return false;
+    }
+
+    volatile unsigned char touch = *reinterpret_cast<volatile unsigned char*>(mapped_view);
+    (void)touch;
+    RecordGgufMapRemap(static_cast<size_t>(desired_window));
+
+    std::string forensic_stats_line;
+
+    // Emit deterministic forensic evidence even when decision-budget telemetry is gated.
+    {
+        const uint64_t avg_window_kb = desired_window / 1024ULL;
+        std::ostringstream oss;
+        oss << "GGUF_MAP_STATS: reuses=0, remaps=1, prefetch_kb=0, avg_win="
+            << avg_window_kb << "KB\n";
+        forensic_stats_line = oss.str();
+        OutputDebugStringA(forensic_stats_line.c_str());
+        std::cout << forensic_stats_line;
+        std::cout.flush();
+    }
+
+    UnmapViewOfFile(mapped_view);
+    CloseHandle(hMapping);
+    CloseHandle(hFile);
+
+    FlushGgufMapTelemetrySummary();
+    if (out_reason) {
+        *out_reason = forensic_stats_line;
+    }
     return true;
 }
 
@@ -750,6 +1554,7 @@ bool BackendOrchestrator::UnloadModel(const std::string& tag) {
     m_model_paths.erase(tag);
     if (m_active_model_tag == tag) m_active_model_tag.clear();
     clearTagMappedShards(tag);
+    FlushGgufMapTelemetrySummary();
     return true;
 }
 
@@ -1155,6 +1960,7 @@ void BackendOrchestrator::DumpMetricsNow() const {
     if (m_metrics_path.empty()) return;
     std::ostringstream oss;
     oss << InferenceProfiler::Instance().GetPrometheusText();
+    const SovereignScalingConfig scaling = GetSovereignScalingConfig();
 
     // AppendBackendOrchestrator-specific metrics
     oss << "# HELP rawrxd_cache_hit_rate Semantic cache hit rate\n"
@@ -1163,6 +1969,11 @@ void BackendOrchestrator::DumpMetricsNow() const {
     oss << "rawrxd_queue_depth_normal " << GetQueueDepth(RequestPriority::Normal) << "\n";
     oss << "rawrxd_queue_depth_batch "  << GetQueueDepth(RequestPriority::Batch)  << "\n";
     oss << "rawrxd_active_backend "     << (int)GetActiveBackend()                << "\n";
+    oss << "rawrxd_aperture_stripes "   << scaling.aperture_stripes               << "\n";
+    oss << "rawrxd_prefetch_depth "     << GetRecommendedPrefetchDepth()          << "\n";
+    oss << "rawrxd_fusion_width "       << GetRecommendedFusionWidth()            << "\n";
+    oss << "rawrxd_cpu_temp_c "         << m_cpu_temp_c.load(std::memory_order_relaxed) << "\n";
+    oss << "rawrxd_nvme_temp_c "        << m_nvme_temp_c.load(std::memory_order_relaxed) << "\n";
 
     std::ofstream f(m_metrics_path, std::ios::trunc);
     if (f.is_open()) f << oss.str();
@@ -1174,6 +1985,101 @@ void BackendOrchestrator::MetricsExportLoop(int interval_s) {
         if (!m_metrics_running.load()) break;
         DumpMetricsNow();
     }
+}
+
+void BackendOrchestrator::ConfigureSovereignScaling(SovereignScalingConfig cfg) {
+    cfg.aperture_stripes = std::clamp(cfg.aperture_stripes, 1, 8);
+    cfg.prefetch_depth = std::clamp(cfg.prefetch_depth, 1, 8);
+    cfg.fusion_width = std::clamp(cfg.fusion_width, 1, 8);
+    cfg.kv_recent_tokens = std::max(1, cfg.kv_recent_tokens);
+    cfg.kv_mid_tokens = std::max(cfg.kv_recent_tokens + 1, cfg.kv_mid_tokens);
+
+    std::lock_guard<std::mutex> lk(m_scaling_mtx);
+    m_scaling_cfg = cfg;
+}
+
+void BackendOrchestrator::ConfigureSovereignScalingFromEnv() {
+    SovereignScalingConfig cfg;
+    {
+        std::lock_guard<std::mutex> lk(m_scaling_mtx);
+        cfg = m_scaling_cfg;
+    }
+
+    cfg.enabled = readEnvFlag("RAWRXD_SOVEREIGN_SCALING", cfg.enabled);
+    cfg.graph_aware_prefetch = readEnvFlag("RAWRXD_GRAPH_AWARE_PREFETCH", cfg.graph_aware_prefetch);
+    cfg.thermal_aware_scheduler = readEnvFlag("RAWRXD_THERMAL_AWARE_SCHED", cfg.thermal_aware_scheduler);
+    cfg.async_token_overlap = readEnvFlag("RAWRXD_ASYNC_TOKEN_OVERLAP", cfg.async_token_overlap);
+    cfg.nvme_direct_streaming = readEnvFlag("RAWRXD_NVME_DIRECT_STREAM", cfg.nvme_direct_streaming);
+    cfg.cross_layer_fusion = readEnvFlag("RAWRXD_CROSS_LAYER_FUSION", cfg.cross_layer_fusion);
+    cfg.aperture_stripes = readEnvInt("RAWRXD_APERTURE_STRIPES", cfg.aperture_stripes, 1, 8);
+    cfg.prefetch_depth = readEnvInt("RAWRXD_PREFETCH_DEPTH", cfg.prefetch_depth, 1, 8);
+    cfg.fusion_width = readEnvInt("RAWRXD_FUSION_WIDTH", cfg.fusion_width, 1, 8);
+    cfg.kv_recent_tokens = readEnvInt("RAWRXD_KV_RECENT_TOKENS", cfg.kv_recent_tokens, 1, 65536);
+    cfg.kv_mid_tokens = readEnvInt("RAWRXD_KV_MID_TOKENS", cfg.kv_mid_tokens, cfg.kv_recent_tokens + 1, 262144);
+
+    ConfigureSovereignScaling(cfg);
+}
+
+SovereignScalingConfig BackendOrchestrator::GetSovereignScalingConfig() const {
+    std::lock_guard<std::mutex> lk(m_scaling_mtx);
+    return m_scaling_cfg;
+}
+
+KVPrecisionTier BackendOrchestrator::GetKVPrecisionTierForAge(int token_age) const {
+    const SovereignScalingConfig cfg = GetSovereignScalingConfig();
+    if (token_age <= cfg.kv_recent_tokens) {
+        return KVPrecisionTier::FP16;
+    }
+    if (token_age <= cfg.kv_mid_tokens) {
+        return KVPrecisionTier::Q6;
+    }
+    return KVPrecisionTier::Q4;
+}
+
+void BackendOrchestrator::UpdateThermalReadings(float cpu_temp_c, float nvme_temp_c) {
+    m_cpu_temp_c.store(std::max(0.0f, cpu_temp_c), std::memory_order_relaxed);
+    m_nvme_temp_c.store(std::max(0.0f, nvme_temp_c), std::memory_order_relaxed);
+}
+
+int BackendOrchestrator::GetRecommendedPrefetchDepth() const {
+    const SovereignScalingConfig cfg = GetSovereignScalingConfig();
+    if (!cfg.enabled) {
+        return 1;
+    }
+    if (!cfg.thermal_aware_scheduler) {
+        return cfg.prefetch_depth;
+    }
+
+    const float thermal_peak = std::max(
+        m_cpu_temp_c.load(std::memory_order_relaxed),
+        m_nvme_temp_c.load(std::memory_order_relaxed));
+
+    if (thermal_peak >= 82.0f) {
+        return std::max(1, cfg.prefetch_depth - 2);
+    }
+    if (thermal_peak >= 74.0f) {
+        return std::max(1, cfg.prefetch_depth - 1);
+    }
+    return cfg.prefetch_depth;
+}
+
+int BackendOrchestrator::GetRecommendedFusionWidth() const {
+    const SovereignScalingConfig cfg = GetSovereignScalingConfig();
+    if (!cfg.enabled || !cfg.cross_layer_fusion) {
+        return 1;
+    }
+    if (!cfg.thermal_aware_scheduler) {
+        return cfg.fusion_width;
+    }
+
+    const float thermal_peak = std::max(
+        m_cpu_temp_c.load(std::memory_order_relaxed),
+        m_nvme_temp_c.load(std::memory_order_relaxed));
+
+    if (thermal_peak >= 82.0f) {
+        return std::max(1, cfg.fusion_width - 1);
+    }
+    return cfg.fusion_width;
 }
 
 } // namespace RawrXD

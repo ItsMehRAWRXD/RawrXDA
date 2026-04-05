@@ -141,7 +141,7 @@ void Win32TerminalManager::writeInput(const std::string& data)
 {
     if (!m_running || !m_hStdInWrite) return;
 
-    DWORD written;
+    DWORD written = 0;
     WriteFile(m_hStdInWrite, data.c_str(), data.size(), &written, nullptr);
 }
 

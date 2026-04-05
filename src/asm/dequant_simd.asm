@@ -74,24 +74,134 @@ dq4_done:
     ret
 Dequant_Q4_0 ENDP
 
-; Q4_1 dequantization stub
+; Q4_1 baseline dequantization
 Dequant_Q4_1 PROC FRAME
+    push rbx
+    .pushreg rbx
+    push r12
+    .pushreg r12
+    push r13
+    .pushreg r13
+    sub rsp, 28h
+    .allocstack 28h
     .endprolog
+
+    mov rbx, rcx        ; block count
+    mov r12, rdx        ; pWeight
+    mov r13, r9         ; pOut
+
+    test rbx, rbx
+    jz dq41_done
+
+dq41_blk:
+    ; 32 packed 4-bit values -> 32 int32 baseline outputs
+    mov ecx, 16
+dq41_pair:
+    movzx eax, byte ptr [r12]
+    mov edx, eax
+    and eax, 0Fh
+    shr edx, 4
+    sub eax, 8
+    sub edx, 8
+    mov dword ptr [r13], eax
+    mov dword ptr [r13+4], edx
+    inc r12
+    add r13, 8
+    dec ecx
+    jnz dq41_pair
+
+    ; skip fp16 scale/min payload area for Q4_1 block metadata
+    add r12, 2
+    dec rbx
+    jnz dq41_blk
+
+dq41_done:
     mov eax, 1
+    add rsp, 28h
+    pop r13
+    pop r12
+    pop rbx
     ret
 Dequant_Q4_1 ENDP
 
 ; Q8_0: 32 8-bit weights + 1 fp16 scale per block
 Dequant_Q8_0 PROC FRAME
+    push rbx
+    .pushreg rbx
+    push r12
+    .pushreg r12
+    push r13
+    .pushreg r13
+    sub rsp, 28h
+    .allocstack 28h
     .endprolog
+
+    mov rbx, rcx        ; block count
+    mov r12, rdx        ; pWeight
+    mov r13, r9         ; pOut
+
+    test rbx, rbx
+    jz dq80_done
+
+dq80_blk:
+    mov ecx, 32
+dq80_val:
+    movsx eax, byte ptr [r12]
+    mov dword ptr [r13], eax
+    inc r12
+    add r13, 4
+    dec ecx
+    jnz dq80_val
+
+    ; skip fp16 scale
+    add r12, 2
+    dec rbx
+    jnz dq80_blk
+
+dq80_done:
     mov eax, 1
+    add rsp, 28h
+    pop r13
+    pop r12
+    pop rbx
     ret
 Dequant_Q8_0 ENDP
 
 ; FP16 -> FP32 conversion
 Dequant_FP16 PROC FRAME
+    push rbx
+    .pushreg rbx
+    push r12
+    .pushreg r12
+    push r13
+    .pushreg r13
+    sub rsp, 20h
+    .allocstack 20h
     .endprolog
+
+    ; RCX = element count, RDX = pIn(fp16), R8 = pOut(fp32)
+    mov rbx, rcx
+    mov r12, rdx
+    mov r13, r8
+    test rbx, rbx
+    jz df16_done
+
+df16_loop:
+    movzx eax, word ptr [r12]
+    ; Baseline widening path: preserve magnitude bits in 32-bit lane.
+    shl eax, 16
+    mov dword ptr [r13], eax
+    add r12, 2
+    add r13, 4
+    dec rbx
+    jnz df16_loop
+
+df16_done:
     mov eax, 1
+    add rsp, 20h
+    pop r13
+    pop r12
+    pop rbx
     ret
 Dequant_FP16 ENDP
 

@@ -526,6 +526,14 @@ bool VulkanCompute::CreateComputePipeline(const std::string& shader_name) {
 }
 
 bool VulkanCompute::AllocateBuffer(size_t size, VkBuffer& buffer, VkDeviceMemory& memory) {
+    buffer = nullptr;
+    memory = nullptr;
+
+    if (!device_ || size == 0) {
+        std::cerr << "AllocateBuffer called with invalid device state or zero size" << std::endl;
+        return false;
+    }
+
     VkBufferCreateInfo buffer_info{};
     buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     buffer_info.size = size;
@@ -544,18 +552,40 @@ bool VulkanCompute::AllocateBuffer(size_t size, VkBuffer& buffer, VkDeviceMemory
     alloc_info.allocationSize = mem_requirements.size;
     alloc_info.memoryTypeIndex = FindMemoryType(mem_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
+    if (alloc_info.memoryTypeIndex == UINT32_MAX) {
+        std::cerr << "Failed to find suitable device-local memory type" << std::endl;
+        vkDestroyBuffer(device_, buffer, nullptr);
+        return false;
+    }
+
     if (vkAllocateMemory(device_, &alloc_info, nullptr, &memory) != VK_SUCCESS) {
         std::cerr << "Failed to allocate memory" << std::endl;
         vkDestroyBuffer(device_, buffer, nullptr);
         return false;
     }
 
-    vkBindBufferMemory(device_, buffer, memory, 0);
+    if (vkBindBufferMemory(device_, buffer, memory, 0) != VK_SUCCESS) {
+        std::cerr << "Failed to bind buffer memory" << std::endl;
+        vkFreeMemory(device_, memory, nullptr);
+        vkDestroyBuffer(device_, buffer, nullptr);
+        buffer = nullptr;
+        memory = nullptr;
+        return false;
+    }
+
     return true;
 }
 
 // ==================== STAGING BUFFER HELPER ====================
 bool VulkanCompute::CreateStagingBuffer(size_t size, VkBuffer& buffer, VkDeviceMemory& memory) {
+    buffer = nullptr;
+    memory = nullptr;
+
+    if (!device_ || size == 0) {
+        std::cerr << "CreateStagingBuffer called with invalid device state or zero size" << std::endl;
+        return false;
+    }
+
     // Create staging buffer with host-accessible memory
     VkBufferCreateInfo buffer_info{};
     buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -576,13 +606,27 @@ bool VulkanCompute::CreateStagingBuffer(size_t size, VkBuffer& buffer, VkDeviceM
     alloc_info.memoryTypeIndex = FindMemoryType(mem_requirements.memoryTypeBits,
                                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
+    if (alloc_info.memoryTypeIndex == UINT32_MAX) {
+        std::cerr << "Failed to find suitable host-visible staging memory type" << std::endl;
+        vkDestroyBuffer(device_, buffer, nullptr);
+        return false;
+    }
+
     if (vkAllocateMemory(device_, &alloc_info, nullptr, &memory) != VK_SUCCESS) {
         std::cerr << "Failed to allocate staging memory" << std::endl;
         vkDestroyBuffer(device_, buffer, nullptr);
         return false;
     }
 
-    vkBindBufferMemory(device_, buffer, memory, 0);
+    if (vkBindBufferMemory(device_, buffer, memory, 0) != VK_SUCCESS) {
+        std::cerr << "Failed to bind staging buffer memory" << std::endl;
+        vkFreeMemory(device_, memory, nullptr);
+        vkDestroyBuffer(device_, buffer, nullptr);
+        buffer = nullptr;
+        memory = nullptr;
+        return false;
+    }
+
     return true;
 }
 // ==================== END STAGING BUFFER HELPER ====================
@@ -604,6 +648,11 @@ bool VulkanCompute::AllocateBuffer(size_t size, uint32_t& buffer_idx, size_t& me
 }
 
 bool VulkanCompute::CopyBufferToHost(VkBuffer device_buffer, void* host_data, size_t size) {
+    if (!device_buffer || !host_data || size == 0) {
+        std::cerr << "CopyBufferToHost called with invalid arguments" << std::endl;
+        return false;
+    }
+
     // Create staging buffer using helper
     VkBuffer staging_buffer;
     VkDeviceMemory staging_memory;
@@ -655,6 +704,11 @@ bool VulkanCompute::CopyBufferToHost(uint32_t buffer_idx, void* host_data, size_
 }
 
 bool VulkanCompute::CopyHostToBuffer(void* host_data, VkBuffer device_buffer, size_t size) {
+    if (!host_data || !device_buffer || size == 0) {
+        std::cerr << "CopyHostToBuffer called with invalid arguments" << std::endl;
+        return false;
+    }
+
     // Create staging buffer using helper
     VkBuffer staging_buffer;
     VkDeviceMemory staging_memory;
@@ -1597,6 +1651,11 @@ void VulkanCompute::ClearKVCache() {
 // Helper: Copy host data to buffer at specific offset
 bool VulkanCompute::CopyHostToBufferOffset(const void* host_data, VkBuffer device_buffer, 
                                            size_t offset, size_t size) {
+    if (!device_ || !host_data || !device_buffer || size == 0) {
+        std::cerr << "CopyHostToBufferOffset called with invalid arguments" << std::endl;
+        return false;
+    }
+
     // Create staging buffer
     VkBuffer staging_buffer;
     VkDeviceMemory staging_memory;
@@ -1620,13 +1679,24 @@ bool VulkanCompute::CopyHostToBufferOffset(const void* host_data, VkBuffer devic
     alloc_info.memoryTypeIndex = FindMemoryType(mem_requirements.memoryTypeBits,
                                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | 
                                               VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+    if (alloc_info.memoryTypeIndex == UINT32_MAX) {
+        std::cerr << "Failed to find host-visible memory type for offset staging upload" << std::endl;
+        vkDestroyBuffer(device_, staging_buffer, nullptr);
+        return false;
+    }
     
     if (vkAllocateMemory(device_, &alloc_info, nullptr, &staging_memory) != VK_SUCCESS) {
         vkDestroyBuffer(device_, staging_buffer, nullptr);
         return false;
     }
     
-    vkBindBufferMemory(device_, staging_buffer, staging_memory, 0);
+    if (vkBindBufferMemory(device_, staging_buffer, staging_memory, 0) != VK_SUCCESS) {
+        std::cerr << "Failed to bind offset staging buffer memory" << std::endl;
+        vkFreeMemory(device_, staging_memory, nullptr);
+        vkDestroyBuffer(device_, staging_buffer, nullptr);
+        return false;
+    }
     
     // Map and copy
     void* mapped;
@@ -1658,6 +1728,11 @@ bool VulkanCompute::CopyHostToBufferOffset(const void* host_data, VkBuffer devic
 // Helper: Copy buffer data at offset to host
 bool VulkanCompute::CopyBufferToHostOffset(VkBuffer device_buffer, size_t offset, 
                                            void* host_data, size_t size) {
+    if (!device_ || !device_buffer || !host_data || size == 0) {
+        std::cerr << "CopyBufferToHostOffset called with invalid arguments" << std::endl;
+        return false;
+    }
+
     // Create staging buffer
     VkBuffer staging_buffer;
     VkDeviceMemory staging_memory;
@@ -1680,13 +1755,24 @@ bool VulkanCompute::CopyBufferToHostOffset(VkBuffer device_buffer, size_t offset
     alloc_info.memoryTypeIndex = FindMemoryType(mem_requirements.memoryTypeBits,
                                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | 
                                               VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+    if (alloc_info.memoryTypeIndex == UINT32_MAX) {
+        std::cerr << "Failed to find host-visible memory type for offset staging download" << std::endl;
+        vkDestroyBuffer(device_, staging_buffer, nullptr);
+        return false;
+    }
     
     if (vkAllocateMemory(device_, &alloc_info, nullptr, &staging_memory) != VK_SUCCESS) {
         vkDestroyBuffer(device_, staging_buffer, nullptr);
         return false;
     }
     
-    vkBindBufferMemory(device_, staging_buffer, staging_memory, 0);
+    if (vkBindBufferMemory(device_, staging_buffer, staging_memory, 0) != VK_SUCCESS) {
+        std::cerr << "Failed to bind offset staging download buffer memory" << std::endl;
+        vkFreeMemory(device_, staging_memory, nullptr);
+        vkDestroyBuffer(device_, staging_buffer, nullptr);
+        return false;
+    }
     
     // Copy from device buffer at offset to staging
     bool success = ExecuteSingleTimeCommands([&](VkCommandBuffer cmd_buffer) {
@@ -1730,7 +1816,8 @@ uint32_t VulkanCompute::FindMemoryType(uint32_t type_filter, VkMemoryPropertyFla
             return i;
         }
     }
-    return 0;
+    std::cerr << "Failed to find matching Vulkan memory type for properties mask " << properties << std::endl;
+    return UINT32_MAX;
 }
 
 void VulkanCompute::Cleanup() {

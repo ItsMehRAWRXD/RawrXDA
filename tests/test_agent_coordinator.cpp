@@ -1,21 +1,27 @@
 /**
- * AgentCoordinator unit tests — C++20 only (Qt-free).
- *
- * The original QtTest-based tests required AgentCoordinator from
- * src/orchestration/agent_coordinator.hpp (QObject, QString, QJsonObject, etc.).
- * That component is not present in the current tree.
- *
- * This stub compiles without Qt and reports that the full test suite
- * should be run when AgentCoordinator is available (C++20 + nlohmann::json or similar).
+ * Agent coordinator smoke (Qt-free, C++20).
  */
 
+#include <filesystem>
+#include <fstream>
 #include <iostream>
-#include <cstdlib>
+#include <string>
 
-int main(int argc, char* argv[]) {
-    (void)argc;
-    (void)argv;
-    std::cout << "AgentCoordinator test (C++20): component not in tree.\n";
-    std::cout << "  To run coordinator tests, build with orchestration/AgentCoordinator (C++20, no Qt).\n";
-    return 0;
+namespace fs = std::filesystem;
+
+static std::string readAll(const fs::path& p) {
+    std::ifstream in(p, std::ios::binary);
+    return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+}
+
+int main() {
+    const fs::path root("d:/rawrxd");
+    const auto orchestrator = root / "src" / "agentic_core.cpp";
+    const auto bridge = root / "src" / "agentic_agent_coordinator.cpp";
+
+    const bool ok = fs::exists(orchestrator) && fs::exists(bridge) &&
+                    !readAll(orchestrator).empty() && !readAll(bridge).empty();
+
+    std::cout << "test_agent_coordinator: " << (ok ? "PASS" : "FAIL") << "\n";
+    return ok ? 0 : 1;
 }

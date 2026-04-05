@@ -113,8 +113,9 @@ void Win32IDE::createCrucibleMenu(HMENU parentMenu) {
 // ============================================================================
 
 void Win32IDE::cmdCrucibleRunAll() {
+    if (!m_crucibleEngine) initCrucible();
     if (!m_crucibleEngine) {
-        appendToOutput("[Crucible] Engine not initialized.\n");
+        appendToOutput("[Crucible] Engine initialization failed — cannot run tests.\n");
         return;
     }
     if (m_crucibleEngine->isRunning()) {
@@ -236,8 +237,9 @@ void Win32IDE::cmdCrucibleCancel() {
 }
 
 void Win32IDE::cmdCrucibleStatus() {
+    if (!m_crucibleEngine) initCrucible();
     if (!m_crucibleEngine) {
-        appendToOutput("[Crucible] Engine not initialized.\n");
+        appendToOutput("[Crucible] Engine initialization failed — cannot query status.\n");
         return;
     }
 

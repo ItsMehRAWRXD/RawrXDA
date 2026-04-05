@@ -160,11 +160,51 @@ std::string AgenticPuppeteer::applyRefusalBypass(const std::string& response) {
 }
 
 std::string AgenticPuppeteer::correctHallucination(const std::string& response) {
-    return response; // Placeholder for real logic
+    std::string corrected = response;
+
+    const std::vector<std::pair<std::string, std::string>> replacements = {
+        {"As of my knowledge cutoff", "Based on available project context"},
+        {"I'm not sure but", "Based on the available evidence"},
+        {"probably", "likely"},
+        {"I think", "Analysis suggests"}
+    };
+
+    for (const auto& pair : replacements) {
+        size_t pos = 0;
+        while ((pos = corrected.find(pair.first, pos)) != std::string::npos) {
+            corrected.replace(pos, pair.first.size(), pair.second);
+            pos += pair.second.size();
+        }
+    }
+
+    return corrected;
 }
 
 std::string AgenticPuppeteer::enforceFormat(const std::string& response) {
-    return response; // Placeholder for real logic
+    std::string formatted = response;
+
+    auto trim = [](const std::string& s) {
+        const size_t start = s.find_first_not_of(" \t\r\n");
+        if (start == std::string::npos) return std::string();
+        const size_t end = s.find_last_not_of(" \t\r\n");
+        return s.substr(start, end - start + 1);
+    };
+
+    formatted = trim(formatted);
+    if (formatted.empty()) return formatted;
+
+    // Ensure code fences are balanced for markdown payloads.
+    size_t fenceCount = 0;
+    size_t pos = 0;
+    while ((pos = formatted.find("```", pos)) != std::string::npos) {
+        ++fenceCount;
+        pos += 3;
+    }
+    if ((fenceCount % 2) != 0) {
+        formatted += "\n```";
+    }
+
+    return formatted;
 }
 
 std::string AgenticPuppeteer::handleInfiniteLoop(const std::string& response) {

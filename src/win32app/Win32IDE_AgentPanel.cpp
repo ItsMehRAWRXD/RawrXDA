@@ -87,6 +87,9 @@ struct AgentEditLog {
 
 class AgentEditSession {
 public:
+    static constexpr size_t MAX_FILE_SIZE = 100 * 1024 * 1024; // 100 MB limit
+    static constexpr size_t MAX_EDITS = 1000;  // Maximum edits per session
+    
     AgentEditSession() {
         m_log.sessionId = "edit-" + std::to_string(GetTickCount64());
         m_log.timestamp = GetTimestamp();
@@ -101,9 +104,38 @@ public:
                      const std::string& search,
                      const std::string& replace,
                      const std::string& reasoning = "") {
-        // Read original
+        // Reject empty search string (prevents infinite loops / bad diffs)
+        if (search.empty()) {
+            std::cerr << "[AgentPanel] ProposeEdit: search string is empty (file: " << path << ")" << std::endl;
+            return false;
+        }
+        
+        // Reject too many edits in one session
+        if (m_edits.size() >= MAX_EDITS) {
+            std::cerr << "[AgentPanel] ProposeEdit: edit session limit exceeded (" << MAX_EDITS << ")" << std::endl;
+            return false;
+        }
+        
+        // Read original file with size validation
         std::ifstream file(path, std::ios::binary);
-        if (!file.is_open()) return false;
+        if (!file.is_open()) {
+            std::cerr << "[AgentPanel] ProposeEdit: failed to open " << path << " (error " << GetLastError() << ")" << std::endl;
+            return false;
+        }
+        
+        // Check file size before reading
+        std::streamoff fileSize = 0;
+        file.seekg(0, std::ios::end);
+        fileSize = file.tellg();
+        file.seekg(0, std::ios::beg);
+        
+        if (fileSize < 0 || static_cast<size_t>(fileSize) > MAX_FILE_SIZE) {
+            std::cerr << "[AgentPanel] ProposeEdit: file too large (" << fileSize 
+                      << " bytes, max " << MAX_FILE_SIZE << ")" << std::endl;
+            file.close();
+            return false;
+        }
+        
         std::ostringstream ss;
         ss << file.rdbuf();
         file.close();
@@ -111,7 +143,10 @@ public:
 
         // Compute proposed content
         size_t pos = original.find(search);
-        if (pos == std::string::npos) return false;
+        if (pos == std::string::npos) {
+            std::cerr << "[AgentPanel] ProposeEdit: search string not found in " << path << std::endl;
+            return false;
+        }
 
         std::string proposed = original.substr(0, pos) + replace +
                                original.substr(pos + search.size());
@@ -132,6 +167,19 @@ public:
     bool ProposeNewFile(const std::string& path,
                         const std::string& content,
                         const std::string& reasoning = "") {
+        // Validate session edit count
+        if (m_edits.size() >= MAX_EDITS) {
+            std::cerr << "[AgentPanel] ProposeNewFile: edit session limit exceeded (" << MAX_EDITS << ")" << std::endl;
+            return false;
+        }
+        
+        // Validate content size
+        if (content.size() > MAX_FILE_SIZE) {
+            std::cerr << "[AgentPanel] ProposeNewFile: content too large (" << content.size() 
+                      << " bytes, max " << MAX_FILE_SIZE << ")" << std::endl;
+            return false;
+        }
+        
         FileEdit edit;
         edit.path = path;
         edit.originalContent = ""; // New file
@@ -208,35 +256,74 @@ public:
                 continue;
             }
 
+            // Validate final content size before write
+            if (finalContent.size() > MAX_FILE_SIZE) {
+                std::cerr << "[AgentPanel] ApplyAccepted: final content too large for " << edit.path 
+                          << " (" << finalContent.size() << " bytes, max " << MAX_FILE_SIZE << ")" << std::endl;
+                m_log.AddEntry(edit, "size_exceeded");
+                continue;
+            }
+
             // Create backup before writing
             if (fs::exists(edit.path)) {
                 std::string backupPath = edit.path + ".pre_agent_bak";
                 try {
                     fs::copy_file(edit.path, backupPath,
                                   fs::copy_options::overwrite_existing);
-                } catch (...) {}
+                    std::cout << "[AgentPanel] Backup created: " << backupPath << std::endl;
+                } catch (const std::filesystem::filesystem_error& e) {
+                    std::cerr << "[AgentPanel] WARNING: Failed to create backup for " << edit.path 
+                              << ": " << e.what() << std::endl;
+                    // Continue anyway; this isn't fatal
+                }
             }
 
-            // Ensure parent directories exist
+            // Ensure parent directories exist with error context
             try {
                 fs::path parentDir = fs::path(edit.path).parent_path();
                 if (!parentDir.empty() && !fs::exists(parentDir)) {
                     fs::create_directories(parentDir);
+                    std::cout << "[AgentPanel] Created directory: " << parentDir.string() << std::endl;
                 }
-            } catch (...) {}
+            } catch (const std::filesystem::filesystem_error& e) {
+                std::cerr << "[AgentPanel] ERROR: Failed to create parent directory for " << edit.path 
+                          << ": " << e.what() << std::endl;
+                m_log.AddEntry(edit, "mkdir_failed");
+                continue;
+            }
 
-            // Write to disk
+            // Write to disk with explicit error handling
             std::ofstream outFile(edit.path, std::ios::trunc | std::ios::binary);
-            if (outFile.is_open()) {
+            if (!outFile.is_open()) {
+                std::cerr << "[AgentPanel] ERROR: Failed to open " << edit.path << " for writing"
+                          << " (error " << GetLastError() << ")" << std::endl;
+                m_log.AddEntry(edit, "open_failed");
+                continue;
+            }
+            
+            try {
                 outFile.write(finalContent.data(), finalContent.size());
+                if (outFile.fail()) {
+                    std::cerr << "[AgentPanel] ERROR: Write failed for " << edit.path 
+                              << " (wrote " << outFile.tellp() << " of " << finalContent.size() << " bytes)" << std::endl;
+                    outFile.close();
+                    m_log.AddEntry(edit, "write_failed");
+                    continue;
+                }
                 outFile.close();
                 ++appliedCount;
                 m_log.AddEntry(edit, "applied");
-            } else {
-                m_log.AddEntry(edit, "write_failed");
+                std::cout << "[AgentPanel] Applied: " << edit.path << std::endl;
+            } catch (const std::exception& e) {
+                std::cerr << "[AgentPanel] ERROR: Exception writing " << edit.path 
+                          << ": " << e.what() << std::endl;
+                outFile.close();
+                m_log.AddEntry(edit, "exception");
             }
         }
 
+        std::cout << "[AgentPanel] ApplyAccepted complete: " << appliedCount 
+                  << " of " << m_edits.size() << " applied" << std::endl;
         return appliedCount;
     }
 
@@ -249,10 +336,39 @@ public:
     const AgentEditLog& GetLog() const { return m_log; }
 
     bool SaveLog(const std::string& path) const {
+        // Ensure parent directory exists
+        try {
+            fs::path logDir = fs::path(path).parent_path();
+            if (!logDir.empty() && !fs::exists(logDir)) {
+                fs::create_directories(logDir);
+            }
+        } catch (const std::filesystem::filesystem_error& e) {
+            std::cerr << "[AgentPanel] Failed to create log directory: " << e.what() << std::endl;
+            return false;
+        }
+        
         std::ofstream file(path);
-        if (!file.is_open()) return false;
-        file << m_log.toJson().dump(2);
-        return true;
+        if (!file.is_open()) {
+            std::cerr << "[AgentPanel] Failed to open log file for writing: " << path 
+                      << " (error " << GetLastError() << ")" << std::endl;
+            return false;
+        }
+        
+        try {
+            file << m_log.toJson().dump(2);
+            if (file.fail()) {
+                std::cerr << "[AgentPanel] Write failed for log file: " << path << std::endl;
+                file.close();
+                return false;
+            }
+            file.close();
+            std::cout << "[AgentPanel] Saved edit log: " << path << std::endl;
+            return true;
+        } catch (const std::exception& e) {
+            std::cerr << "[AgentPanel] Exception writing log file: " << e.what() << std::endl;
+            file.close();
+            return false;
+        }
     }
 
     // ---- Summary for display ----

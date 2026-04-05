@@ -22,6 +22,9 @@
 #include "../core/agent_safety_contract.h"
 #include "../core/deterministic_replay.h"
 #include "../core/confidence_gate.h"
+#include <cerrno>
+#include <cstdlib>
+#include <limits>
 #include <sstream>
 #include <iomanip>
 
@@ -29,6 +32,60 @@
 // These are duplicated here because LocalServerUtil is a static namespace
 // in a separate translation unit. DO NOT SIMPLIFY.
 namespace LocalServerUtil {
+
+static constexpr size_t kMaxGovernorCommandBytes = 64u * 1024u;
+
+static bool tryParseUint64Field(const std::string& body, const std::string& key, uint64_t& outValue) {
+    const std::string searchKey = "\"" + key + "\":";
+    size_t pos = body.find(searchKey);
+    if (pos == std::string::npos) return false;
+    pos += searchKey.length();
+    while (pos < body.length() && (body[pos] == ' ' || body[pos] == '\t')) pos++;
+    std::string numStr;
+    while (pos < body.length() && body[pos] >= '0' && body[pos] <= '9') {
+        numStr += body[pos++];
+    }
+    if (numStr.empty() || numStr.size() > 20) return false;
+
+    errno = 0;
+    char* end = nullptr;
+    unsigned long long parsed = std::strtoull(numStr.c_str(), &end, 10);
+    if (end == numStr.c_str() || *end != '\0' || errno != 0) return false;
+    outValue = static_cast<uint64_t>(parsed);
+    return true;
+}
+
+static bool tryParseIntField(const std::string& body, const std::string& key, int& outValue) {
+    uint64_t tmp = 0;
+    if (!tryParseUint64Field(body, key, tmp)) {
+        return false;
+    }
+    if (tmp > static_cast<uint64_t>(std::numeric_limits<int>::max())) {
+        return false;
+    }
+    outValue = static_cast<int>(tmp);
+    return true;
+}
+
+static bool tryParseFloatField(const std::string& body, const std::string& key, float& outValue) {
+    const std::string searchKey = "\"" + key + "\":";
+    size_t pos = body.find(searchKey);
+    if (pos == std::string::npos) return false;
+    pos += searchKey.length();
+    while (pos < body.length() && (body[pos] == ' ' || body[pos] == '\t')) pos++;
+    std::string numStr;
+    while (pos < body.length() && ((body[pos] >= '0' && body[pos] <= '9') || body[pos] == '.' || body[pos] == '-')) {
+        numStr += body[pos++];
+    }
+    if (numStr.empty() || numStr.size() > 32) return false;
+
+    errno = 0;
+    char* end = nullptr;
+    float parsed = std::strtof(numStr.c_str(), &end);
+    if (end == numStr.c_str() || *end != '\0' || errno != 0) return false;
+    outValue = parsed;
+    return true;
+}
 
 static std::string escapeJson(const std::string& value) {
     std::string out;
@@ -459,15 +516,16 @@ void Win32IDE::handleGovernorSubmitEndpoint(SOCKET client, const std::string& bo
         }
     }
 
-    size_t toPos = body.find("\"timeoutMs\":");
-    if (toPos != std::string::npos) {
-        size_t numStart = toPos + 12;
-        while (numStart < body.length() && (body[numStart] == ' ' || body[numStart] == '\t')) numStart++;
-        std::string numStr;
-        while (numStart < body.length() && body[numStart] >= '0' && body[numStart] <= '9') {
-            numStr += body[numStart++];
-        }
-        if (!numStr.empty()) timeoutMs = std::stoull(numStr);
+    if (command.size() > LocalServerUtil::kMaxGovernorCommandBytes) {
+        std::string err = LocalServerUtil::buildHttpResponse(413,
+            "{\"error\":\"command_too_large\",\"message\":\"command exceeds size limit\"}");
+        send(client, err.c_str(), (int)err.size(), 0);
+        return;
+    }
+
+    uint64_t parsedTimeoutMs = 0;
+    if (LocalServerUtil::tryParseUint64Field(body, "timeoutMs", parsedTimeoutMs)) {
+        timeoutMs = std::min<uint64_t>(parsedTimeoutMs, 24ull * 60ull * 60ull * 1000ull);
     }
 
     if (command.empty()) {
@@ -509,15 +567,8 @@ void Win32IDE::handleGovernorKillEndpoint(SOCKET client, const std::string& body
     // Parse taskId
     size_t idPos = body.find("\"taskId\":");
     uint64_t taskId = 0;
-    if (idPos != std::string::npos) {
-        size_t numStart = idPos + 9;
-        while (numStart < body.length() && (body[numStart] == ' ' || body[numStart] == '\t')) numStart++;
-        std::string numStr;
-        while (numStart < body.length() && body[numStart] >= '0' && body[numStart] <= '9') {
-            numStr += body[numStart++];
-        }
-        if (!numStr.empty()) taskId = std::stoull(numStr);
-    }
+    (void)idPos;
+    (void)LocalServerUtil::tryParseUint64Field(body, "taskId", taskId);
 
     bool killed = false;
     if (taskId == 0) {
@@ -543,15 +594,8 @@ void Win32IDE::handleGovernorKillEndpoint(SOCKET client, const std::string& body
 void Win32IDE::handleGovernorResultEndpoint(SOCKET client, const std::string& body) {
     size_t idPos = body.find("\"taskId\":");
     uint64_t taskId = 0;
-    if (idPos != std::string::npos) {
-        size_t numStart = idPos + 9;
-        while (numStart < body.length() && (body[numStart] == ' ' || body[numStart] == '\t')) numStart++;
-        std::string numStr;
-        while (numStart < body.length() && body[numStart] >= '0' && body[numStart] <= '9') {
-            numStr += body[numStart++];
-        }
-        if (!numStr.empty()) taskId = std::stoull(numStr);
-    }
+    (void)idPos;
+    (void)LocalServerUtil::tryParseUint64Field(body, "taskId", taskId);
 
     GovernorCommandResult result;
     bool found = ExecutionGovernor::instance().getTaskResult(taskId, result);
@@ -624,40 +668,25 @@ void Win32IDE::handleSafetyCheckEndpoint(SOCKET client, const std::string& body)
     float confidence = 1.0f;
     std::string description;
 
-    auto extractInt = [&body](const std::string& key) -> int {
-        std::string searchKey = "\"" + key + "\":";
-        size_t pos = body.find(searchKey);
-        if (pos == std::string::npos) return -1;
-        pos += searchKey.length();
-        while (pos < body.length() && (body[pos] == ' ' || body[pos] == '\t')) pos++;
-        std::string numStr;
-        while (pos < body.length() && (body[pos] >= '0' && body[pos] <= '9')) {
-            numStr += body[pos++];
-        }
-        if (numStr.empty()) return -1;
-        return std::stoi(numStr);
-    };
+    int val = -1;
+    float fval = -1.0f;
 
-    auto extractFloat = [&body](const std::string& key) -> float {
-        std::string searchKey = "\"" + key + "\":";
-        size_t pos = body.find(searchKey);
-        if (pos == std::string::npos) return -1.0f;
-        pos += searchKey.length();
-        while (pos < body.length() && (body[pos] == ' ' || body[pos] == '\t')) pos++;
-        std::string numStr;
-        while (pos < body.length() && (body[pos] >= '0' && body[pos] <= '9' || body[pos] == '.' || body[pos] == '-')) {
-            numStr += body[pos++];
-        }
-        if (numStr.empty()) return -1.0f;
-        return std::stof(numStr);
-    };
+    if (LocalServerUtil::tryParseIntField(body, "action", val)) {
+        actionInt = val;
+    }
+    if (LocalServerUtil::tryParseIntField(body, "risk", val)) {
+        riskInt = val;
+    }
+    if (LocalServerUtil::tryParseFloatField(body, "confidence", fval) && fval >= 0.0f && fval <= 1.0f) {
+        confidence = fval;
+    }
 
-    int val = extractInt("action");
-    if (val >= 0) actionInt = val;
-    val = extractInt("risk");
-    if (val >= 0) riskInt = val;
-    float fval = extractFloat("confidence");
-    if (fval >= 0) confidence = fval;
+    if (actionInt < 0) {
+        actionInt = 99;
+    }
+    if (riskInt < 0 || riskInt > static_cast<int>(SafetyRiskTier::Critical)) {
+        riskInt = 2;
+    }
 
     auto result = AgentSafetyContract::instance().checkAction(
         (ActionClass)actionInt,
@@ -709,15 +738,8 @@ void Win32IDE::handleSafetyRollbackEndpoint(SOCKET client, const std::string& bo
     // Parse optional actionId (0 = rollback last)
     uint64_t actionId = 0;
     size_t idPos = body.find("\"actionId\":");
-    if (idPos != std::string::npos) {
-        size_t numStart = idPos + 11;
-        while (numStart < body.length() && (body[numStart] == ' ' || body[numStart] == '\t')) numStart++;
-        std::string numStr;
-        while (numStart < body.length() && body[numStart] >= '0' && body[numStart] <= '9') {
-            numStr += body[numStart++];
-        }
-        if (!numStr.empty()) actionId = std::stoull(numStr);
-    }
+    (void)idPos;
+    (void)LocalServerUtil::tryParseUint64Field(body, "actionId", actionId);
 
     bool success = false;
     if (actionId > 0) {
@@ -763,15 +785,8 @@ void Win32IDE::handleReplayStatusEndpoint(SOCKET client) {
 void Win32IDE::handleReplayRecordsEndpoint(SOCKET client, const std::string& body) {
     uint64_t count = 50;
     size_t countPos = body.find("\"count\":");
-    if (countPos != std::string::npos) {
-        size_t numStart = countPos + 8;
-        while (numStart < body.length() && (body[numStart] == ' ' || body[numStart] == '\t')) numStart++;
-        std::string numStr;
-        while (numStart < body.length() && body[numStart] >= '0' && body[numStart] <= '9') {
-            numStr += body[numStart++];
-        }
-        if (!numStr.empty()) count = std::stoull(numStr);
-    }
+    (void)countPos;
+    (void)LocalServerUtil::tryParseUint64Field(body, "count", count);
     if (count > 500) count = 500;
 
     auto records = ReplayJournal::instance().getLastN(count);
@@ -865,40 +880,17 @@ void Win32IDE::handleConfidenceEvaluateEndpoint(SOCKET client, const std::string
     int actionInt = 0;
     int riskInt = 2;
 
-    auto extractFloat = [&body](const std::string& key) -> float {
-        std::string searchKey = "\"" + key + "\":";
-        size_t pos = body.find(searchKey);
-        if (pos == std::string::npos) return -1.0f;
-        pos += searchKey.length();
-        while (pos < body.length() && (body[pos] == ' ' || body[pos] == '\t')) pos++;
-        std::string numStr;
-        while (pos < body.length() && (body[pos] >= '0' && body[pos] <= '9' || body[pos] == '.' || body[pos] == '-')) {
-            numStr += body[pos++];
-        }
-        if (numStr.empty()) return -1.0f;
-        return std::stof(numStr);
-    };
-
-    auto extractInt = [&body](const std::string& key) -> int {
-        std::string searchKey = "\"" + key + "\":";
-        size_t pos = body.find(searchKey);
-        if (pos == std::string::npos) return -1;
-        pos += searchKey.length();
-        while (pos < body.length() && (body[pos] == ' ' || body[pos] == '\t')) pos++;
-        std::string numStr;
-        while (pos < body.length() && body[pos] >= '0' && body[pos] <= '9') {
-            numStr += body[pos++];
-        }
-        if (numStr.empty()) return -1;
-        return std::stoi(numStr);
-    };
-
-    float fval = extractFloat("confidence");
-    if (fval >= 0) confidence = fval;
-    int val = extractInt("action");
-    if (val >= 0) actionInt = val;
-    val = extractInt("risk");
-    if (val >= 0) riskInt = val;
+    float fval = -1.0f;
+    int val = -1;
+    if (LocalServerUtil::tryParseFloatField(body, "confidence", fval) && fval >= 0.0f && fval <= 1.0f) {
+        confidence = fval;
+    }
+    if (LocalServerUtil::tryParseIntField(body, "action", val)) {
+        actionInt = val;
+    }
+    if (LocalServerUtil::tryParseIntField(body, "risk", val)) {
+        riskInt = val;
+    }
 
     auto eval = ConfidenceGate::instance().evaluateAndRecord(
         confidence, (ActionClass)actionInt, (SafetyRiskTier)riskInt);

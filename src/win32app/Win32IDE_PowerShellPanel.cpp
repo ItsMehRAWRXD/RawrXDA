@@ -69,13 +69,19 @@ void Win32IDE::createPowerShellPanel() {
         m_hInstance,
         NULL
     );
+    if (!m_hwndPowerShellOutput) {
+        LOG_ERROR("Failed to create PowerShell output control");
+    }
     
-    // Set output font (DPI-scaled)
-    HFONT hFont = CreateFont(
-        -dpiScale(16), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
-        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-        CLEARTYPE_QUALITY, FIXED_PITCH | FF_MODERN, "Consolas"
-    );
+    // Set output font (DPI-scaled) using owned member handle (avoids leaked temp HFONTs).
+    if (!m_hFontPowerShell) {
+        m_hFontPowerShell = CreateFontA(
+            -dpiScale(16), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+            DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+            CLEARTYPE_QUALITY, FIXED_PITCH | FF_MODERN, "Consolas"
+        );
+    }
+    HFONT hFont = m_hFontPowerShell ? m_hFontPowerShell : (HFONT)GetStockObject(DEFAULT_GUI_FONT);
     SendMessage(m_hwndPowerShellOutput, WM_SETFONT, (WPARAM)hFont, TRUE);
     
     // Set background color
@@ -92,13 +98,23 @@ void Win32IDE::createPowerShellPanel() {
         m_hInstance,
         NULL
     );
-    
-    SendMessage(m_hwndPowerShellInput, WM_SETFONT, (WPARAM)hFont, TRUE);
-    
-    // Subclass input for custom handling (Enter key, history navigation)
-    SetPropA(m_hwndPowerShellInput, "IDE_PTR", this);
-    WNDPROC oldProc = (WNDPROC)SetWindowLongPtr(m_hwndPowerShellInput, GWLP_WNDPROC, (LONG_PTR)PowerShellInputProc);
-    SetPropA(m_hwndPowerShellInput, "OLDPROC", (HANDLE)oldProc);
+    if (!m_hwndPowerShellInput) {
+        LOG_ERROR("Failed to create PowerShell input control");
+    } else {
+        SendMessage(m_hwndPowerShellInput, WM_SETFONT, (WPARAM)hFont, TRUE);
+
+        // Subclass input for custom handling (Enter key, history navigation)
+        SetPropA(m_hwndPowerShellInput, "IDE_PTR", this);
+        SetLastError(0);
+        WNDPROC oldProc = (WNDPROC)SetWindowLongPtrA(m_hwndPowerShellInput, GWLP_WNDPROC, (LONG_PTR)PowerShellInputProc);
+        const DWORD subclassError = GetLastError();
+        if (!oldProc && subclassError != ERROR_SUCCESS) {
+            LOG_ERROR("Failed to subclass PowerShell input control, gle=" + std::to_string(subclassError));
+            RemovePropA(m_hwndPowerShellInput, "IDE_PTR");
+        } else {
+            SetPropA(m_hwndPowerShellInput, "OLDPROC", (HANDLE)oldProc);
+        }
+    }
     
     // Create Execute button
     m_hwndPSBtnExecute = CreateWindowExA(
@@ -123,11 +139,14 @@ void Win32IDE::createPowerShellPanel() {
         NULL
     );
     
-    HFONT hSmallFont = CreateFont(
-        -dpiScale(12), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
-        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-        CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, "Segoe UI"
-    );
+    if (!m_hFontPowerShellStatus) {
+        m_hFontPowerShellStatus = CreateFontA(
+            -dpiScale(12), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+            DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+            CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, "Segoe UI"
+        );
+    }
+    HFONT hSmallFont = m_hFontPowerShellStatus ? m_hFontPowerShellStatus : (HFONT)GetStockObject(DEFAULT_GUI_FONT);
     SendMessage(m_hwndPowerShellStatusBar, WM_SETFONT, (WPARAM)hSmallFont, TRUE);
     
     // Initialize PowerShell UI only. The shell session itself is started lazily
@@ -761,5 +780,8 @@ LRESULT CALLBACK Win32IDE::PowerShellInputProc(HWND hwnd, UINT uMsg, WPARAM wPar
         }
     }
     
-    return CallWindowProc(oldProc, hwnd, uMsg, wParam, lParam);
+    if (oldProc) {
+        return CallWindowProcA(oldProc, hwnd, uMsg, wParam, lParam);
+    }
+    return DefWindowProcA(hwnd, uMsg, wParam, lParam);
 }

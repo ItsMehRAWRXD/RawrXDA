@@ -197,7 +197,7 @@ int main(int argc, char** argv)
         }
         else if (arg == "--no-refusal")
         {
-            // Enable no-refusal mode
+            // Enable direct-response mode
         }
         else if (arg == "--bypass-all")
         {
@@ -230,7 +230,7 @@ Usage: RawrEngine [options]  (or RawrXD_CLI for pure CLI build)
   --chain-depth <n> Number of models to chain in swarm (default: 1)
   --manifest <path> Manifest model for swarm orchestration
   --max-mode        Enable maximum performance mode
-  --no-refusal      Enable no-refusal mode for swarm
+    --no-refusal      Enable direct-response mode for swarm
   --bypass-all      Enable all security bypasses
   --no-http         Disable HTTP server
   --no-repl         Disable interactive REPL

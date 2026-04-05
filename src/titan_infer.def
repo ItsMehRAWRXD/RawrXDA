@@ -1,6 +1,138 @@
 LIBRARY RawrXD_Titan
 EXPORTS
-    Titan_Initialize     @1
-    Titan_InferAsync     @2
-    Titan_Shutdown       @3
-    Titan_Abort          @4
+    ; Section A: Lifecycle Management (8 exports)
+    RawrXD_Initialize                  @1
+    RawrXD_Shutdown                    @2
+    RawrXD_Reset                       @3
+    RawrXD_Abort                       @4
+    RawrXD_GetStatus                   @5
+    RawrXD_GetVersion                  @6
+    RawrXD_GetCapabilities             @7
+    RawrXD_SetLogLevel                 @8
+
+    ; Section B: Model Management (12 exports)
+    RawrXD_LoadModel                   @9
+    RawrXD_UnloadModel                 @10
+    RawrXD_GetModelInfo                @11
+    RawrXD_ListModels                  @12
+    RawrXD_SelectModel                 @13
+    RawrXD_GetActiveModel              @14
+    RawrXD_PreloadChunks               @15
+    RawrXD_ReleaseChunks               @16
+    RawrXD_GetChunkStatus              @17
+    RawrXD_ValidateModelIntegrity      @18
+    RawrXD_GetModelPath                @19
+    RawrXD_CacheModelMetadata          @20
+
+    ; Section C: Inference Operations (16 exports)
+    RawrXD_InferAsync                  @21
+    RawrXD_InferSync                   @22
+    RawrXD_CancelInference             @23
+    RawrXD_WaitForInference            @24
+    RawrXD_GetInferenceResult          @25
+    RawrXD_GetInferenceTokenCount      @26
+    RawrXD_SetSamplingParams           @27
+    RawrXD_GetSamplingParams           @28
+    RawrXD_SetSystemPrompt             @29
+    RawrXD_GetSystemPrompt             @30
+    RawrXD_TokenizeInput               @31
+    RawrXD_DetokenizeOutput            @32
+    RawrXD_GetTokenizerInfo            @33
+    RawrXD_EstimateTokens              @34
+    RawrXD_BeginStreaming              @35
+    RawrXD_EndStreaming                @36
+
+    ; Section D: Aperture/VA Subdivision (12 exports)
+    RawrXD_ApertureInit                @37
+    RawrXD_ApertureShutdown            @38
+    RawrXD_MapChunk                    @39
+    RawrXD_UnmapChunk                  @40
+    RawrXD_GetApertureBase             @41
+    RawrXD_GetApertureUtilization      @42
+    RawrXD_CompactAperture             @43
+    RawrXD_PreAllocateChunks           @44
+    RawrXD_GetChunkMappingLatency      @45
+    RawrXD_GetChunkUnmapLatency        @46
+    RawrXD_SetAperturePolicy           @47
+    RawrXD_GetAperturePolicy           @48
+
+    ; Section E: Memory & Performance (14 exports)
+    RawrXD_AllocateBuffer              @49
+    RawrXD_FreeBuffer                  @50
+    RawrXD_GetMemoryStats              @51
+    RawrXD_GetHeapStats                @52
+    RawrXD_MemoryGC                    @53
+    RawrXD_SetWorkingSetLimit          @54
+    RawrXD_GetWorkingSetLimit          @55
+    RawrXD_GetPeakMemoryUsage          @56
+    RawrXD_ResetMemoryStatistics       @57
+    RawrXD_GetVAFragmentation          @58
+    RawrXD_GetCacheMissRate            @59
+    RawrXD_GetInferenceLatency         @60
+    RawrXD_GetThroughputTokensPerSec   @61
+    RawrXD_ResetPerformanceCounters    @62
+
+    ; Section F: Errors, Diagnostics & Observability (10 exports)
+    RawrXD_GetLastError                @63
+    RawrXD_GetErrorString              @64
+    RawrXD_ClearError                  @65
+    RawrXD_EnableDiagnostics           @66
+    RawrXD_DisableDiagnostics          @67
+    RawrXD_GetDiagnosticLog            @68
+    RawrXD_SetDiagnosticCallback       @69
+    RawrXD_GenerateAuditReport         @70
+    RawrXD_ValidateInternalConsistency @71
+    RawrXD_DumpHeapWalker              @72
+
+    ; Section G: Advanced Features (5 exports)
+    RawrXD_EnableHotpatch              @73
+    RawrXD_ApplyHotpatch               @74
+    RawrXD_QueryHotpatchStatus         @75
+    RawrXD_EnableQuantization          @76
+    RawrXD_BatchInferences             @77
+
+    ; Section H: Kinetic SDMA Telemetry (1 export)
+    Rawr_Get_SDMA_Telemetry            @78
+
+    ; Section I: Virtual Stream Bridge (4 exports)
+    RawrXD_StreamConfigureWindow       @79
+    RawrXD_StreamPop                   @80
+    RawrXD_StreamGetStats              @81
+    RawrXD_StreamReset                 @82
+
+    ; Section J: RF Counter Bridge (1 export)
+    RawrXD_GetRFCounters               @83
+
+    ; Section K: Air-Gapped Document Indexer (2 exports)
+    RawrXD_Indexer_MapDocument         @86
+    RawrXD_Indexer_ReleaseDocument     @87
+
+    ; Section L: Indexer Embedding Loop (1 export)
+    RawrXD_Indexer_GenerateEmbeddings  @88
+
+    ; Section M: Indexer Similarity Query (1 export)
+    RawrXD_Indexer_Query               @89
+
+    ; Section N: Native Fusion Bridge (2 exports)
+    RawrXD_WeightedFusion              @90
+    RawrXD_GetFusionInvocationCount    @91
+
+    ; Section O: Native Phrase-Gate Bridge (2 exports)
+    RawrXD_ApplyPenaltyAndPhraseGate   @92
+    RawrXD_GetPhraseGateInvocationCount @93
+
+    ; Section P: Air-Gapped Indexer (1 export)
+    RawrXD_Indexer_Ingest              @84
+
+    ; Gap fills for backward compatibility
+    ; (Ordinals 85 reserved for future use)
+
+; Section Q: Thread Priority & Affinity Control (3 exports, Phase 15.2)
+    RawrXD_SetInferenceThreadPolicy    @94
+    RawrXD_GetInferenceThreadPolicy    @95
+    RawrXD_SetInferenceThreadAffinity  @96
+
+    ; Section R: Extended Metrics Display (3 exports, Phase 15.4)
+    Rawr_CalculateThroughput           @97
+    Rawr_CalculateLatency              @98
+    Rawr_CalculateCacheHitRatio        @99

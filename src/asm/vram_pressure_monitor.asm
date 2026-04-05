@@ -3,6 +3,9 @@
 ; High-frequency VRAM pressure monitoring (<1ms polling)
 ;-------------------------------------------------------------------------
 
+.data
+g_last_vram_pressure dq 0
+
 .code
 
 ; External VRAM limit
@@ -31,6 +34,7 @@ rawrxd_poll_vram_pressure proc
 
 @done:
     ; RAX now contains pressure percentage
+    mov qword ptr [g_last_vram_pressure], rax
     pop rbp
     ret
 rawrxd_poll_vram_pressure endp
@@ -41,10 +45,10 @@ rawrxd_poll_vram_pressure endp
 ;-------------------------------------------------------------------------
 rawrxd_check_swap_trigger proc
     ; RCX = threshold (e.g., 90)
-    ; In a real impl, we'd call a driver hook here. 
-    ; For simulation, we'll use a placeholder register comparison.
-    
-    mov eax, 1 ; Placeholder: Always suggest downscale for 120B testing
+    mov rax, qword ptr [g_last_vram_pressure]
+    cmp rax, rcx
+    setae al
+    movzx eax, al
     ret
 rawrxd_check_swap_trigger endp
 

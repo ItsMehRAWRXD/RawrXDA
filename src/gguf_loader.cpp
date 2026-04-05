@@ -266,6 +266,14 @@ bool GGUFLoader::ParseMetadata() {
         return true;
     }
     
+    // Bounds check: cap metadata KV count to prevent unbounded iteration
+    // Typical GGUF files have <1000 metadata entries; allow up to 10000 as conservative upper bound
+    const uint64_t MAX_METADATA_KV_COUNT = 10000;
+    if (header_.metadata_kv_count > MAX_METADATA_KV_COUNT) {
+        throw std::runtime_error("Metadata KV count " + std::to_string(header_.metadata_kv_count) + 
+                                 " exceeds limit of " + std::to_string(MAX_METADATA_KV_COUNT));
+    }
+    
     file_.seekg(header_.metadata_offset);
     
     for (uint64_t i = 0; i < header_.metadata_kv_count; ++i) {
@@ -306,13 +314,29 @@ bool GGUFLoader::ParseMetadata() {
             if (key == "general.architecture") {
                 if (value == "llama") metadata_.architecture_type = 1;
             } else if (key == "llama.block_count") {
-                metadata_.layer_count = std::stoul(value);
+                try {
+                    metadata_.layer_count = std::stoul(value);
+                } catch (const std::exception&) {
+                    metadata_.layer_count = 0;  // safe fallback on parse error
+                }
             } else if (key == "llama.context_length") {
-                metadata_.context_length = std::stoul(value);
+                try {
+                    metadata_.context_length = std::stoul(value);
+                } catch (const std::exception&) {
+                    metadata_.context_length = 0;  // safe fallback on parse error
+                }
             } else if (key == "llama.embedding_length") {
-                metadata_.embedding_dim = std::stoul(value);
+                try {
+                    metadata_.embedding_dim = std::stoul(value);
+                } catch (const std::exception&) {
+                    metadata_.embedding_dim = 0;  // safe fallback on parse error
+                }
             } else if (key == "llama.vocab_size") {
-                metadata_.vocab_size = std::stoul(value);
+                try {
+                    metadata_.vocab_size = std::stoul(value);
+                } catch (const std::exception&) {
+                    metadata_.vocab_size = 0;  // safe fallback on parse error
+                }
             }
         } else if (value_type == 4) {  // uint32
             uint32_t uint_val;
@@ -388,8 +412,15 @@ bool GGUFLoader::ParseMetadata() {
             uint64_t array_length;
             if (!ReadValue(array_type)) throw std::runtime_error("Failed to read array type for key: " + key);
             if (!ReadValue(array_length)) throw std::runtime_error("Failed to read array length for key: " + key);
-            
-            // Serialize for kv_pairs but also capture structured tokenizer data
+
+            // Safety cap: array_length is from untrusted file data; an implausibly large value
+            // would loop indefinitely consuming memory.  1 billion covers the largest real models.
+            constexpr uint64_t kMaxArrayLen = 1ULL << 30;
+            if (array_length > kMaxArrayLen) {
+                throw std::runtime_error("Metadata array length too large ("
+                                         + std::to_string(array_length)
+                                         + ") for key: " + key);
+            }
             std::string array_str = "[";
             std::vector<std::string> string_elems;
             std::vector<float> float_elems;
@@ -552,6 +583,11 @@ bool GGUFLoader::LoadTensorZone(const std::string& tensor_name, std::vector<uint
     }
     
     const TensorInfo* tensor_info = it->second;
+    // A zero size_bytes means CalculateTensorSize failed (unsupported type or overflow).
+    if (tensor_info->size_bytes == 0) {
+        throw std::runtime_error("Tensor has zero computed size (unsupported type or dimension overflow): "
+                                 + tensor_name);
+    }
     data.resize(tensor_info->size_bytes);
     file_.seekg(tensor_info->offset);
     file_.read(reinterpret_cast<char*>(data.data()), tensor_info->size_bytes);
@@ -580,7 +616,11 @@ bool GGUFLoader::LoadTensorRange(size_t start_idx, size_t count, std::vector<uin
     // Calculate total size needed for output buffer
     size_t total_size = 0;
     for (size_t i = start_idx; i < start_idx + count; ++i) {
-        total_size += tensors_[i].size_bytes;
+        const size_t sz = tensors_[i].size_bytes;
+        if (sz > SIZE_MAX - total_size) {
+            throw std::overflow_error("Total tensor range size overflows size_t");
+        }
+        total_size += sz;
     }
     
     data.resize(total_size);
@@ -636,12 +676,12 @@ bool GGUFLoader::ReadString(std::string& value) {
     uint64_t len;
     if (!ReadValue(len)) return false;
     
-    // Safety check: strings longer than 100MB are invalid
-    // This prevents bad allocation errors from corrupted metadata
-    const uint64_t MAX_STRING_SIZE = 100 * 1024 * 1024;  // 100MB limit
+    // Safety check: strings longer than 16MB are invalid per GGUF spec
+    // This prevents catastrophic allocation from corrupted/malicious metadata
+    // GGUF metadata keys/values should be <1MB in practice; 16MB is conservative upper bound
+    const uint64_t MAX_STRING_SIZE = 16 * 1024 * 1024;  // 16MB limit (was 100MB)
     if (len > MAX_STRING_SIZE) {
-        
-        return false;
+        throw std::runtime_error("String size " + std::to_string(len) + " exceeds 16MB limit");
     }
     
     value.resize(len);
@@ -652,6 +692,10 @@ bool GGUFLoader::ReadString(std::string& value) {
 uint64_t GGUFLoader::CalculateTensorSize(const std::vector<uint64_t>& shape, GGMLType type) const {
     uint64_t num_elements = 1;
     for (uint64_t dim : shape) {
+        // Guard against uint64_t overflow in the dimension product.
+        if (dim > 0 && num_elements > UINT64_MAX / dim) {
+            return 0;  // overflow guard — caller treats 0 as invalid size
+        }
         num_elements *= dim;
     }
     

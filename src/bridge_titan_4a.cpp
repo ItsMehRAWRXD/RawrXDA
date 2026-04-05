@@ -12,6 +12,32 @@
 #include <windows.h>
 #include <string.h>
 
+static int DecodeModelTextToWide(const char* text, int len, wchar_t* out, int outCapacity)
+{
+    if (!text || len <= 0 || !out || outCapacity <= 0) {
+        return 0;
+    }
+
+    int useLen = len;
+    if (useLen > outCapacity - 1) {
+        useLen = outCapacity - 1;
+    }
+
+    int wlen = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, text, useLen, out, outCapacity - 1);
+    if (wlen <= 0) {
+        wlen = MultiByteToWideChar(CP_ACP, 0, text, useLen, out, outCapacity - 1);
+    }
+    if (wlen <= 0) {
+        for (int i = 0; i < useLen; ++i) {
+            out[i] = (wchar_t)(unsigned char)text[i];
+        }
+        wlen = useLen;
+    }
+
+    out[wlen] = 0;
+    return wlen;
+}
+
 // ============================================================================
 // Constants
 // ============================================================================
@@ -130,13 +156,9 @@ static void TitanInferenceCallback(const char* text, int len)
 {
     if (!text || len <= 0) return;
 
-    // Convert ANSI → wide
     static wchar_t wbuf[MAX_GHOST_LEN];
-    int wlen = 0;
-    for (int i = 0; i < len && i < MAX_GHOST_LEN - 1; i++) {
-        wbuf[wlen++] = (wchar_t)(unsigned char)text[i];
-    }
-    wbuf[wlen] = 0;
+    int wlen = DecodeModelTextToWide(text, len, wbuf, MAX_GHOST_LEN);
+    if (wlen <= 0) return;
 
     // ================================================================
     // Phase 4B: Route through Neural Pruning Scorer

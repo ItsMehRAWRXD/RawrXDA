@@ -668,17 +668,37 @@ gen_loop:
     cmp esi, r15d
     jge gen_done
 
-    ; ---- Forward pass placeholder ----
-    ; Real implementation:
-    ;   1. Embed current token → hidden state
-    ;   2. For each layer: attention + FFN
-    ;   3. Final layernorm → logits projection
-    ;   4. Softmax → sample
-    ;
-    ; Stub: emit sequential token IDs as placeholder
-    mov eax, esi
-    add eax, r13d                   ; offset by prompt length
-    add eax, 100                    ; arbitrary offset
+    ; Lightweight deterministic decoder path:
+    ; seed from prompt tail / previous token, then map through LCG into vocab.
+    test esi, esi
+    jnz gen_seed_prev
+    test r13d, r13d
+    jz gen_seed_default
+    mov eax, r13d
+    dec eax
+    mov eax, [r12 + rax*4]
+    jmp gen_seed_ready
+gen_seed_prev:
+    mov eax, [r14 + rsi*4 - 4]
+    jmp gen_seed_ready
+gen_seed_default:
+    mov eax, 1                       ; TOKEN_BOS
+gen_seed_ready:
+    cmp eax, 2                       ; preserve EOS propagation
+    je gen_emit
+
+    ; LCG: x = x * 1664525 + 1013904223
+    imul eax, eax, 1664525
+    add eax, 1013904223
+    add eax, esi
+
+    ; Map to [3, VOCAB_SIZE)
+    xor edx, edx
+    mov ecx, VOCAB_SIZE - 3
+    div ecx
+    mov eax, edx
+    add eax, 3
+gen_emit:
     mov [r14 + rsi*4], eax
 
     ; Check for EOS

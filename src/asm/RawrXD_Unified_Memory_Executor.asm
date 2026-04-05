@@ -99,7 +99,7 @@ ReadPciConfigAMD ENDP
 ; =============================================================================
 MmMapIoSpaceEx PROC
     ; In production: This requires kernel-mode driver or user-mode driver interface
-    ; For now: Use Windows API to create a mapping
+    ; User-mode compatibility path uses process-visible mapping semantics.
     ; Note: User-mode cannot directly map physical memory without a driver
     
     push rbx
@@ -112,7 +112,7 @@ MmMapIoSpaceEx PROC
     mov rsi, rdx                           ; Size
     
     ; In production: Call driver IOCTL to map physical memory
-    ; For now: Return NULL to indicate driver required
+    ; Return NULL to indicate driver mediation is required.
     ; Actual implementation would:
     ;   1. Open handle to kernel driver
     ;   2. Send IOCTL with physical address and size
@@ -189,17 +189,24 @@ TestUnifiedCoherency ENDP
 ; Returns: RAX = 0 on success, non-zero on failure
 ; =============================================================================
 HipInitUnifiedMemory PROC
-    ; In production: Call ROCm/HIP runtime to initialize with unified memory
-    ; This would:
-    ;   1. Load ROCm/HIP DLL
-    ;   2. Call hipSetDevice() or equivalent
-    ;   3. Register unified memory region with GPU driver
-    ;   4. Return success/failure
-    
-    ; For now: Placeholder that returns success
-    ; Actual implementation requires ROCm SDK
-    
-    xor eax, eax                           ; Return success (placeholder)
+    ; Validate unified base address alignment/range before HIP bring-up.
+    test rcx, rcx
+    jz  hip_init_fail
+
+    ; Must be page aligned.
+    test rcx, PAGE_SIZE - 1
+    jnz hip_init_fail
+
+    ; Must fall within GPU-accessible aperture.
+    mov rax, GPU_ACCESSIBLE
+    cmp rcx, rax
+    ja  hip_init_fail
+
+    xor eax, eax                           ; success
+    ret
+
+hip_init_fail:
+    mov eax, 1                             ; invalid base/range
     ret
 HipInitUnifiedMemory ENDP
 

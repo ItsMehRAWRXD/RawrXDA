@@ -728,6 +728,9 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd)
 {
     LocalServerSocket client = clientFd;
 
+    static constexpr size_t kMaxHeaderBytes = 64u * 1024u;
+    static constexpr size_t kMaxRequestBodyBytes = 16u * 1024u * 1024u;
+
     // Read request
     std::string data;
     char buffer[8192];
@@ -743,6 +746,13 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd)
     while ((received = recv(client, buffer, sizeof(buffer), 0)) > 0)
     {
         data.append(buffer, buffer + received);
+        if (data.size() > kMaxHeaderBytes)
+        {
+            const std::string resp = LocalServerUtil::buildHttpResponse(413, "{\"error\":\"Request headers too large\"}");
+            LocalServerUtil::sendAll(client, resp);
+            closesocket(client);
+            return;
+        }
         if (data.find("\r\n\r\n") != std::string::npos)
             break;
     }
@@ -773,9 +783,24 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd)
         }
     }
 
+    if (contentLength > kMaxRequestBodyBytes)
+    {
+        const std::string resp = LocalServerUtil::buildHttpResponse(413, "{\"error\":\"Request body too large\"}");
+        LocalServerUtil::sendAll(client, resp);
+        closesocket(client);
+        return;
+    }
+
     while (body.size() < contentLength && (received = recv(client, buffer, sizeof(buffer), 0)) > 0)
     {
         body.append(buffer, buffer + received);
+        if (body.size() > kMaxRequestBodyBytes)
+        {
+            const std::string resp = LocalServerUtil::buildHttpResponse(413, "{\"error\":\"Request body too large\"}");
+            LocalServerUtil::sendAll(client, resp);
+            closesocket(client);
+            return;
+        }
     }
 
     // Parse method and path

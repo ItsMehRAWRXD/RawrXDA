@@ -23,9 +23,55 @@
 #include <chrono>
 #include <random>
 #include <iomanip>
+#include <cerrno>
+#include <cstdlib>
 #include <nlohmann/json.hpp>
 #include <commctrl.h>
 #include <set>
+
+namespace {
+constexpr size_t kMaxHistoryLineBytes = 64u * 1024u;
+constexpr size_t kMaxHistoryMetadataBytes = 16u * 1024u;
+constexpr size_t kMaxHistoryFieldBytes = 8u * 1024u;
+constexpr int kMaxHistoryLoadEvents = 5000;
+constexpr int kMaxSessionHistoryEvents = 10000;
+constexpr size_t kMaxHistoryRetainedLines = 20000;
+
+std::string boundedJsonString(const nlohmann::json& j, const char* key, size_t maxBytes)
+{
+    if (!j.contains(key) || !j[key].is_string())
+        return {};
+    std::string out = j[key].get<std::string>();
+    if (out.size() > maxBytes)
+        out.resize(maxBytes);
+    return out;
+}
+
+uint64_t parseU64Field(const nlohmann::json& j, const char* key)
+{
+    if (!j.contains(key))
+        return 0;
+    const auto& v = j[key];
+    if (v.is_number_integer())
+    {
+        const int64_t n = v.get<int64_t>();
+        return n < 0 ? 0 : static_cast<uint64_t>(n);
+    }
+    if (v.is_string())
+    {
+        const std::string s = v.get<std::string>();
+        if (s.empty() || s.size() > 32)
+            return 0;
+        char* end = nullptr;
+        errno = 0;
+        const unsigned long long parsed = std::strtoull(s.c_str(), &end, 10);
+        if (errno != 0 || !end || *end != '\0')
+            return 0;
+        return static_cast<uint64_t>(parsed);
+    }
+    return 0;
+}
+}
 
 // SCAFFOLD_038: Agent history and replay
 
@@ -117,10 +163,127 @@ AgentEvent AgentEvent::fromJSONL(const std::string& line) {
     ev.success     = false;
     ev.type        = AgentEventType::SessionEvent;
 
-    try {
-        nlohmann::json j = nlohmann::json::parse(line);
+    auto extractStringField = [&](const char* key, size_t maxBytes) -> std::string {
+        const std::string pat = std::string("\"") + key + "\":\"";
+        size_t pos = line.find(pat);
+        if (pos == std::string::npos) {
+            const std::string patSp = std::string("\"") + key + "\": \"";
+            pos = line.find(patSp);
+            if (pos == std::string::npos)
+                return {};
+            pos += patSp.size();
+        } else {
+            pos += pat.size();
+        }
 
-        std::string typeStr = j.value("type", std::string("Unknown"));
+        std::string out;
+        out.reserve(64);
+        bool escape = false;
+        while (pos < line.size()) {
+            const char c = line[pos++];
+            if (escape) {
+                switch (c) {
+                    case 'n': out.push_back('\n'); break;
+                    case 'r': out.push_back('\r'); break;
+                    case 't': out.push_back('\t'); break;
+                    case '\\': out.push_back('\\'); break;
+                    case '"': out.push_back('"'); break;
+                    default: out.push_back(c); break;
+                }
+                escape = false;
+                if (out.size() >= maxBytes)
+                    break;
+                continue;
+            }
+            if (c == '\\') {
+                escape = true;
+                continue;
+            }
+            if (c == '"')
+                break;
+            out.push_back(c);
+            if (out.size() >= maxBytes)
+                break;
+        }
+        return out;
+    };
+
+    auto extractU64Field = [&](const char* key) -> uint64_t {
+        const std::string pat = std::string("\"") + key + "\":";
+        size_t pos = line.find(pat);
+        if (pos == std::string::npos) {
+            const std::string patSp = std::string("\"") + key + "\": ";
+            pos = line.find(patSp);
+            if (pos == std::string::npos)
+                return 0;
+            pos += patSp.size();
+        } else {
+            pos += pat.size();
+        }
+        while (pos < line.size() && line[pos] == ' ') ++pos;
+        if (pos >= line.size()) return 0;
+        size_t endPos = pos;
+        while (endPos < line.size() && std::isdigit(static_cast<unsigned char>(line[endPos])) != 0) ++endPos;
+        if (endPos == pos || (endPos - pos) > 32) return 0;
+        const std::string n = line.substr(pos, endPos - pos);
+        char* endPtr = nullptr;
+        errno = 0;
+        const unsigned long long parsed = std::strtoull(n.c_str(), &endPtr, 10);
+        if (errno != 0 || !endPtr || *endPtr != '\0') return 0;
+        return static_cast<uint64_t>(parsed);
+    };
+
+    auto extractMetaField = [&]() -> std::string {
+        const std::string pat = "\"meta\":";
+        size_t pos = line.find(pat);
+        if (pos == std::string::npos)
+            return {};
+        pos += pat.size();
+        while (pos < line.size() && line[pos] == ' ') ++pos;
+        if (pos >= line.size())
+            return {};
+
+        const char start = line[pos];
+        if (start != '{' && start != '[')
+            return {};
+        const char endCh = (start == '{') ? '}' : ']';
+        int depth = 0;
+        bool inString = false;
+        bool escape = false;
+        size_t begin = pos;
+        for (; pos < line.size(); ++pos) {
+            const char c = line[pos];
+            if (inString) {
+                if (escape) {
+                    escape = false;
+                } else if (c == '\\') {
+                    escape = true;
+                } else if (c == '"') {
+                    inString = false;
+                }
+                continue;
+            }
+            if (c == '"') {
+                inString = true;
+                continue;
+            }
+            if (c == start) ++depth;
+            else if (c == endCh) {
+                --depth;
+                if (depth == 0) {
+                    std::string out = line.substr(begin, pos - begin + 1);
+                    if (out.size() > kMaxHistoryMetadataBytes)
+                        out.resize(kMaxHistoryMetadataBytes);
+                    return out;
+                }
+            }
+        }
+        return {};
+    };
+
+    std::string typeStr = extractStringField("type", 64);
+    if (typeStr.empty())
+        typeStr = "Unknown";
 
         // Map type string back to enum
         static const struct { const char* name; AgentEventType type; } typeMap[] = {
@@ -148,41 +311,27 @@ AgentEvent AgentEvent::fromJSONL(const std::string& line) {
             {"SessionEvent",       AgentEventType::SessionEvent},
             {nullptr, AgentEventType::SessionEvent}
         };
-        for (int i = 0; typeMap[i].name; i++) {
-            if (typeStr == typeMap[i].name) {
-                ev.type = typeMap[i].type;
-                break;
-            }
+    for (int i = 0; typeMap[i].name; i++) {
+        if (typeStr == typeMap[i].name) {
+            ev.type = typeMap[i].type;
+            break;
         }
+    }
 
-        // Use int cast for uint64_t fields (our nlohmann::json is minimal)
-        if (j.contains("ts")) {
-            // timestampMs may exceed int range — parse as two halves if needed
-            // For our minimal json: value<int> is safe up to ~2B; use string fallback
-            ev.timestampMs = (uint64_t)(unsigned int)j.value("ts", (int)0);
-        }
+    ev.timestampMs = extractU64Field("ts");
+    ev.durationMs = static_cast<uint32_t>(std::min<uint64_t>(extractU64Field("dur"), UINT32_MAX));
 
-        ev.sessionId  = j.value("session", std::string(""));
-        ev.parentId   = j.value("parent", std::string(""));
-        ev.agentId    = j.value("agent", std::string(""));
-        ev.prompt     = j.value("prompt", std::string(""));
-        ev.result     = j.value("result", std::string(""));
-        ev.durationMs = j.value("dur", (int)0);
+    ev.sessionId = extractStringField("session", 256);
+    ev.parentId = extractStringField("parent", 256);
+    ev.agentId = extractStringField("agent", 256);
+    ev.prompt = extractStringField("prompt", kMaxHistoryFieldBytes);
+    ev.result = extractStringField("result", kMaxHistoryFieldBytes);
+    ev.metadata = extractMetaField();
 
-        if (j.contains("meta")) {
-            // Metadata is stored as raw JSON — re-serialize
-            ev.metadata = j["meta"].dump(0);
-        }
-
-        if (j.contains("ok")) {
-            // ok is a bool, but our minimal json returns it in value<int> via truthiness
-            std::string okStr = j.value("ok", std::string("false"));
-            ev.success = (okStr == "true" || okStr == "1");
-        }
-
-    } catch (const std::exception& e) {
-        LOG_WARNING("Failed to parse agent history event: " + std::string(e.what()));
-        ev.result = "Parse error: " + std::string(e.what());
+    if (line.find("\"ok\":true") != std::string::npos || line.find("\"ok\": true") != std::string::npos) {
+        ev.success = true;
+    } else if (line.find("\"ok\":\"1\"") != std::string::npos || line.find("\"ok\":1") != std::string::npos) {
+        ev.success = true;
     }
 
     return ev;
@@ -245,7 +394,11 @@ void Win32IDE::recordEvent(AgentEventType type, const std::string& agentId,
     ev.agentId     = agentId;
     ev.prompt      = truncateForLog(prompt);
     ev.result      = truncateForLog(result);
-    ev.metadata    = metadata;
+    if (metadata.size() <= kMaxHistoryMetadataBytes) {
+        ev.metadata = metadata;
+    } else {
+        ev.metadata = "{}";
+    }
     ev.durationMs  = durationMs;
     ev.success     = success;
 
@@ -346,14 +499,21 @@ std::vector<AgentEvent> Win32IDE::loadHistory(int maxEvents) const {
     std::vector<AgentEvent> events;
     std::string path = getHistoryFilePath();
 
+    if (maxEvents <= 0) return events;
+    const int boundedMaxEvents = std::min(maxEvents, kMaxHistoryLoadEvents);
+
     std::ifstream f(path);
     if (!f) return events;
 
     // Read all lines, then take the last maxEvents
     std::vector<std::string> lines;
+    lines.reserve(static_cast<size_t>(boundedMaxEvents));
     std::string line;
     while (std::getline(f, line)) {
-        if (!line.empty() && line[0] == '{') {
+        if (!line.empty() && line[0] == '{' && line.size() <= kMaxHistoryLineBytes) {
+            if ((int)lines.size() >= boundedMaxEvents) {
+                lines.erase(lines.begin());
+            }
             lines.push_back(std::move(line));
         }
     }
@@ -361,11 +521,11 @@ std::vector<AgentEvent> Win32IDE::loadHistory(int maxEvents) const {
 
     // Take last N lines
     int startIdx = 0;
-    if ((int)lines.size() > maxEvents) {
-        startIdx = (int)lines.size() - maxEvents;
+    if ((int)lines.size() > boundedMaxEvents) {
+        startIdx = (int)lines.size() - boundedMaxEvents;
     }
 
-    events.reserve(maxEvents);
+    events.reserve(static_cast<size_t>(boundedMaxEvents));
     for (int i = startIdx; i < (int)lines.size(); i++) {
         events.push_back(AgentEvent::fromJSONL(lines[i]));
     }
@@ -377,18 +537,23 @@ std::vector<AgentEvent> Win32IDE::loadHistoryForSession(const std::string& sessi
     std::vector<AgentEvent> events;
     std::string path = getHistoryFilePath();
 
+    if (sessionId.empty() || sessionId.size() > 256) return events;
+
     std::ifstream f(path);
     if (!f) return events;
 
     std::string line;
     while (std::getline(f, line)) {
-        if (line.empty() || line[0] != '{') continue;
+        if (line.empty() || line[0] != '{' || line.size() > kMaxHistoryLineBytes) continue;
         // Quick check before full parse
         if (line.find(sessionId) == std::string::npos) continue;
 
         AgentEvent ev = AgentEvent::fromJSONL(line);
         if (ev.sessionId == sessionId) {
             events.push_back(std::move(ev));
+            if ((int)events.size() >= kMaxSessionHistoryEvents) {
+                break;
+            }
         }
     }
 
@@ -442,7 +607,7 @@ void Win32IDE::pruneHistory(int maxAgeDays, int maxFileBytes) {
     }
 
     while (std::getline(f, line)) {
-        if (line.empty() || line[0] != '{') continue;
+        if (line.empty() || line[0] != '{' || line.size() > kMaxHistoryLineBytes) continue;
 
         bool keep = true;
 
@@ -456,6 +621,9 @@ void Win32IDE::pruneHistory(int maxAgeDays, int maxFileBytes) {
         }
 
         if (keep) {
+            if (kept.size() >= kMaxHistoryRetainedLines) {
+                kept.erase(kept.begin());
+            }
             kept.push_back(std::move(line));
         }
     }

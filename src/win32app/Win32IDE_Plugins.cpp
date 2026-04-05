@@ -22,6 +22,7 @@
 // initPluginSystem — Called from deferredHeavyInit
 // =============================================================================
 void Win32IDE::initPluginSystem() {
+    if (m_pluginLoader) return;  // already initialized
     LOG_INFO("initPluginSystem: starting Phase 43 plugin system");
 
     m_pluginLoader = std::make_unique<RawrXD::Win32PluginLoader>();
@@ -103,8 +104,9 @@ bool Win32IDE::handlePluginCommand(int id) {
 // showPluginPanel — Scrollable panel showing loaded plugins and their status
 // =============================================================================
 void Win32IDE::showPluginPanel() {
+    if (!m_pluginLoader) initPluginSystem();
     if (!m_pluginLoader) {
-        MessageBoxA(m_hwndMain, "Plugin system not initialized.", "Plugins", MB_OK | MB_ICONWARNING);
+        MessageBoxA(m_hwndMain, "Plugin system could not be initialized.", "Plugins", MB_OK | MB_ICONWARNING);
         return;
     }
 
@@ -210,8 +212,9 @@ void Win32IDE::showPluginPanel() {
 // onPluginLoad — Open file dialog to select a DLL plugin
 // =============================================================================
 void Win32IDE::onPluginLoad() {
+    if (!m_pluginLoader) initPluginSystem();
     if (!m_pluginLoader) {
-        appendToOutput("⚠️ Plugin system not initialized\n", "Plugins", OutputSeverity::Warning);
+        appendToOutput("⚠️ Plugin system could not be initialized\n", "Plugins", OutputSeverity::Warning);
         return;
     }
 
@@ -358,8 +361,9 @@ void Win32IDE::onPluginScanDir() {
 // onPluginShowStatus — Quick status output
 // =============================================================================
 void Win32IDE::onPluginShowStatus() {
+    if (!m_pluginLoader) initPluginSystem();
     if (!m_pluginLoader) {
-        appendToOutput("⚠️ Plugin system not initialized\n", "Plugins", OutputSeverity::Warning);
+        appendToOutput("⚠️ Plugin system could not be initialized\n", "Plugins", OutputSeverity::Warning);
         return;
     }
 

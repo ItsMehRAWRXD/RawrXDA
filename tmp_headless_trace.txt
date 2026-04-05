@@ -1,0 +1,86 @@
+[SSOT AUDIT] WARNING: Registry integrity issue detected!
+  Total: 533  GUI: 507  CLI: 519
+  Null handlers: 0  Duplicate IDs: 3  Duplicate aliases: 0
+[Prometheus] Listening on port 9090 for /metrics...
+[WARN] Command registry integrity: 0 null handlers, 3 duplicate IDs, 0 duplicate aliases
+2026-04-05 00:20:47 [INFO] [RuntimeSurface] [RuntimeSurface] bootstrap begin (no startup scan/index)
+2026-04-05 00:20:47 [INFO] [RuntimeSurface] [RawrXD::Quant] Layout Legend: Q4S (Signed 4-bit): UI '-4bit', Wire: val+8, Range [-8,7]. Q6S (Signed 6-bit): UI '-6bit', Wire: val+32, Range [-32,31]. Q4U/Q6U: Standard Unsigned Mapping.
+2026-04-05 00:20:47 [INFO] [RuntimeSurface] [CompressedPoolBudget] budget_bytes=0
+2026-04-05 00:20:47 [INFO] [RuntimeSurface] [ModularModelLoader] resident layer budget=0
+2026-04-05 00:20:47 [INFO] [RuntimeSurface] [RuntimeSurface] llama.cpp/exllamaV2 parity register entries=12
+2026-04-05 00:20:47 [INFO] [RuntimeSurface] [RuntimeSurface] four-lane gate ready (max 4 of 5 lanes unless explicit module)
+2026-04-05 00:20:47 [INFO] [RuntimeSurface] [RuntimeSurface] bootstrap complete
+[headless] before_console_attach
+[headless] after_console_attach
+[headless] before_help_gate
+[headless] after_help_gate
+[headless] headless_block_enter
+[headless] parse_cmdline_begin
+[headless] parse_cmdline_end
+[headless] launch | argc=12 cmdline="--headless --backend local --no-server --model d:/phi3mini.gguf --prompt hello --max-tokens 1 --trace-token-summary" cwd="D:\rawrxd\build\bin"
+[headless] initialize_begin
+RawrXD Headless IDE initializing...
+[MEM_STRATEGY] SYS_64KB_ONLY
+Headless minimal profile active (RAWRXD_HEADLESS_MINIMAL=1): skipping optional subsystem threads
+[BackendOrchestrator] AVX512 KV kernels enabled
+Loading model: d:/phi3mini.gguf
+[ModelSourceResolver] Resolving: d:/phi3mini.gguf
+[ModelSourceResolver] Detected source: Local File
+[ModelSourceResolver] ✅ Local file validated: d:/phi3mini.gguf
+
+📊 Zone Assignment Summary:
+   embedding: 1 tensors, 52 MB
+   layers_0: 40 tensors, 445 MB
+   layers_1: 40 tensors, 445 MB
+   layers_2: 40 tensors, 445 MB
+   layers_3: 40 tensors, 445 MB
+   misc: 2 tensors, 0 MB
+   output_head: 34 tensors, 232 MB
+
+✅ GGUF Model opened in streaming mode
+   File: d:/phi3mini.gguf
+   Tensors: 197
+   Zones: 7
+   Memory (header+index): ~0 MB
+[BackendOrchestrator] Model sharded across 1 device(s), layers=32, files=1, bytes=2176177120
+  device=0 layers=0-31 files=1 assigned_bytes=2176177120
+[BackendOrchestrator] LoadModel failed: placeholder reservation failed for: d:/phi3mini.gguf (error=203)
+[WARN]  BackendOrchestrator model registration failed; continuing with header-only load
+[headless] initialize_end | success=1 errorCode=0
+[headless] run_begin
+[ERROR] Failed to load trace model: initial_window_map: [RawrXD] Failed to map initial window for GGUF parsing
+[headless] run_end | exitCode=1
+Model loaded: phi3mini.gguf
+  GGUF version: 3
+  Tensors: 197
+  Metadata KVs: 36
+  Layers: 0
+  Context length: 3452816845
+  Embedding dim: 0
+  Vocab size: 3452816845
+  File size: 2075 MB
+  Load latency: 8622 ms
+
+Headless IDE initialized successfully.
+[CPUInferenceEngine] Loading model: d:/phi3mini.gguf
+[CPUInferenceEngine] Stage: initialize backend
+[RawrXD] CPU-only mode (Vulkan disabled)
+[RawrXD] Stage: loader.Load
+[RawrXD] ⚡ INITIALIZING SOVEREIGN NEURAL HIVE-MIND SYSTEMS...
+[RawrXD] Policy bypass interceptor disabled: runtime binary patching is not permitted
+[RawrXD] ⚡ Speculative Swarm: Ready for 20x model chaining (600B+ aggregate)
+[RawrXD] ⚡ AVX-512 VPOPCNT: Ready for 0.8-bit weight reconstruction
+[RawrXD][BACKEND] backend=cpu-only result=ok reason=cpu fallback verified
+[RawrXD] VirtualAlloc2 with MEM_RESERVE_PLACEHOLDER failed (Error: 87)
+[RawrXD] Reserved aperture attempt 2048 MB failed (Error: 87)
+[RawrXD] Reserved aperture attempt 1024 MB failed (Error: 8)
+[RawrXD] Reserved aperture attempt 512 MB failed (Error: 8)
+[RawrXD] Reserved aperture attempt 256 MB failed (Error: 8)
+[RawrXD] Using legacy sliding window mapping (no reserved aperture) window=2048 MB
+[VMM] SeLockMemoryPrivilege not held; Large Pages disabled (falling back).
+[RawrXD] Stage: parse_header_metadata
+[RawrXD] MapViewOfFile failed for window at 0, size 536870912 (Error: 8)
+[RawrXD] Failed to map initial window for GGUF parsing
+[RawrXD] Failed to load model
+[CPUInferenceEngine] Failed to load model
+[Scheduler] Shutdown complete

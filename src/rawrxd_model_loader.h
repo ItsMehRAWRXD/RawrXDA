@@ -109,6 +109,7 @@ class RawrXDModelLoader
     void* GetCurrentViewBase() const;
     void* GetCurrentView() const;
     void SetPrefetchEnabled(bool enabled) { m_prefetchEnabled = enabled; }
+    bool IsPrefetchEnabled() const { return m_prefetchEnabled; }
     void SetWorkingSetLockEnabled(bool enabled) { m_workingSetLockEnabled = enabled; }
     void SetSilencePrivilegeWarnings(bool enabled) { m_silencePrivilegeWarnings = enabled; }
     bool HintRange(uint64_t offset, size_t size);
@@ -158,6 +159,9 @@ class RawrXDModelLoader
     uint64_t m_streamingRangeStart = 0;
     uint64_t m_streamingRangeEnd = 0;
     size_t m_streamingLockedWindowSize = 0;
+    size_t m_streamingPressureCapBytes = 0;
+    std::uint32_t m_prefetchOomFailureStreak = 0;
+    bool m_prefetchSuppressedForStreaming = false;
 
     /// Serialize compute window (MapWindow) vs prefetch window (MapPrefetchWindow) for safe dual mapping.
     mutable std::mutex m_slidingWindowMutex;
@@ -188,6 +192,7 @@ class RawrXDModelLoader
     int n_heads_kv = 0;
     int n_ctx = 0;
     int vocab_size = 0;
+    std::vector<std::string> vocab;  // Token strings from GGUF
     int n_ffn = 0;  // feed_forward_length (0 = infer from dim*4)
     int n_experts = 0;
     int n_experts_used = 0;
@@ -216,6 +221,7 @@ class RawrXDModelLoader
     int getKVHeads() const { return n_heads_kv; }
     int getCtx() const { return n_ctx; }
     int getVocabSize() const { return vocab_size; }
+    const std::vector<std::string>& getVocab() const { return vocab; }
     int getFFNDim() const { return n_ffn; }
     int getExperts() const { return n_experts; }
     /// MoE metadata (`expert_used_count`); 0 if unset — callers may fall back to a small default.

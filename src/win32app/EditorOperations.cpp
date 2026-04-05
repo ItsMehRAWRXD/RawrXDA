@@ -8,6 +8,11 @@
 #include <algorithm>
 #include <regex>
 
+namespace {
+constexpr size_t kMaxEditorFileBytes = 8u * 1024u * 1024u;
+constexpr size_t kMaxEditorPathBytes = 4096u;
+}
+
 namespace RawrXD {
 namespace Win32App {
 
@@ -136,6 +141,10 @@ const EditorOperations::FileContext* EditorOperations::GetFileContext(int fileId
 
 bool EditorOperations::OpenFile(const std::string& filePath) {
     std::lock_guard<std::mutex> lock(m_filesMutex);
+
+    if (filePath.empty() || filePath.size() > kMaxEditorPathBytes) {
+        return false;
+    }
     
     // Check if already open
     for (const auto& ctx : m_openFiles) {
@@ -145,19 +154,30 @@ bool EditorOperations::OpenFile(const std::string& filePath) {
     }
 
     // Read file content
-    std::ifstream file(filePath, std::ios::binary);
+    std::ifstream file(filePath, std::ios::binary | std::ios::ate);
     if (!file.is_open()) {
         return false;
     }
 
-    std::stringstream buffer;
-    buffer << file.rdbuf();
+    const std::streamoff fileSize = file.tellg();
+    if (fileSize < 0 || static_cast<size_t>(fileSize) > kMaxEditorFileBytes) {
+        return false;
+    }
+    file.seekg(0, std::ios::beg);
+
+    std::string content(static_cast<size_t>(fileSize), '\0');
+    if (fileSize > 0) {
+        file.read(content.data(), fileSize);
+        if (!file) {
+            return false;
+        }
+    }
     file.close();
 
     FileContext ctx;
     ctx.id = m_nextFileId++;
     ctx.path = filePath;
-    ctx.content = buffer.str();
+    ctx.content = std::move(content);
     ctx.isDirty = false;
     ctx.isReadOnly = false;
 
@@ -183,12 +203,20 @@ bool EditorOperations::SaveFile(int fileId) {
         return false;
     }
 
+    if (ctx->path.empty() || ctx->path.size() > kMaxEditorPathBytes) {
+        return false;
+    }
+
     std::ofstream file(ctx->path, std::ios::binary);
     if (!file.is_open()) {
         return false;
     }
 
     file << ctx->content;
+    file.flush();
+    if (!file) {
+        return false;
+    }
     file.close();
     ctx->isDirty = false;
     return true;
@@ -201,12 +229,20 @@ bool EditorOperations::SaveFileAs(int fileId, const std::string& newPath) {
         return false;
     }
 
+    if (newPath.empty() || newPath.size() > kMaxEditorPathBytes) {
+        return false;
+    }
+
     std::ofstream file(newPath, std::ios::binary);
     if (!file.is_open()) {
         return false;
     }
 
     file << ctx->content;
+    file.flush();
+    if (!file) {
+        return false;
+    }
     file.close();
     ctx->path = newPath;
     ctx->isDirty = false;

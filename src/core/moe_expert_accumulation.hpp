@@ -69,6 +69,35 @@ inline void packExpertDownWeightsF32(std::size_t inDim, std::size_t outDim, int 
     }
 }
 
+/// Batched MoE down-project from \b pre-packed down weights (layout from \ref packExpertDownWeightsF32).
+/// \p hiddens is row-major \f$[K \times \mathrm{inDim}]\f$ — row \e e is that expert's post-SwiGLU hidden.
+/// \p packed is row-major \f$[\mathrm{inDim} \times (K\cdot\mathrm{outDim})]\f$.
+/// Accumulates \f$\sum_e w_e \cdot (h_e W^{(e)}_{\mathrm{down}})\f$ into \p acc (length \p outDim).
+inline void moeDownProjectBatchedExpertsFromPackedF32(const float* hiddens, std::size_t inDim, std::size_t outDim,
+                                                      int numExperts, const float* packed, const float* weights,
+                                                      float* acc)
+{
+    if (!hiddens || !packed || !weights || !acc || numExperts <= 0 || inDim == 0 || outDim == 0)
+        return;
+    const std::size_t stride = static_cast<std::size_t>(numExperts) * outDim;
+    for (int e = 0; e < numExperts; ++e)
+    {
+        const float w = weights[static_cast<std::size_t>(e)];
+        if (w == 0.f)
+            continue;
+        const float* h = hiddens + static_cast<std::size_t>(e) * inDim;
+        for (std::size_t j = 0; j < outDim; ++j)
+        {
+            float sum = 0.f;
+            for (std::size_t i = 0; i < inDim; ++i)
+            {
+                sum += h[i] * packed[i * stride + static_cast<std::size_t>(e) * outDim + j];
+            }
+            acc[j] += w * sum;
+        }
+    }
+}
+
 /// Grouped path: one small GEMM (1×inDim)·(inDim×(K·outDim)) then scale each expert block by \p weights and sum into \p
 /// acc.
 inline void moeDownProjectGroupedF32(const float* hidden, std::size_t inDim, std::size_t outDim, int numExperts,

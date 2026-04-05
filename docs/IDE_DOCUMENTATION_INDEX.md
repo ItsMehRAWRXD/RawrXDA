@@ -4,6 +4,14 @@ This folder is opened by **Help → Documentation** (F1) in the RawrXD Win32 IDE
 
 ---
 
+## Architecture
+
+| Document | Description |
+|----------|-------------|
+| [SOVEREIGN_NEURAL_HIVE_MIND_ARCHITECTURE.md](SOVEREIGN_NEURAL_HIVE_MIND_ARCHITECTURE.md) | Production-gate architecture baseline with throughput, smoke/contract evidence, and post-release operating guidance. |
+
+---
+
 ## Reverse Engineering
 
 | Document | Description |

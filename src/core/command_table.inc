@@ -152,7 +152,7 @@ COMMAND_TABLE(4155, AUTONOMY_MEMORY,    "autonomy.memory",      "!autonomy_memor
 COMMAND_TABLE(4200, AI_MODE_MAX,        "ai.maxMode",           "!max",                 BOTH, AIMODE,         handleAIMaxMode,            "",             "All systems max power")
 COMMAND_TABLE(4201, AI_MODE_DEEP_THINK, "ai.deepThinking",      "!deep",                BOTH, AIMODE,         handleAIDeepThinking,       "",             "Enable deep thinking mode")
 COMMAND_TABLE(4202, AI_MODE_DEEP_RESEARCH,"ai.deepResearch",    "!research",            BOTH, AIMODE,         handleAIDeepResearch,       "",             "Enable research mode")
-COMMAND_TABLE(4203, AI_MODE_NO_REFUSAL, "ai.noRefusal",         "!no_refusal",          BOTH, AIMODE,         handleAINoRefusal,          "",             "Toggle no-refusal mode")
+COMMAND_TABLE(4203, AI_MODE_NO_REFUSAL, "ai.noRefusal",         "!no_refusal",          BOTH, AIMODE,         handleAINoRefusal,          "",             "Toggle direct-response mode")
 COMMAND_TABLE(4210, AI_CONTEXT_4K,      "ai.context4K",         "!ctx 4k",             BOTH, AIMODE,         handleAIContext4K,          "",             "Set 4K context window")
 COMMAND_TABLE(4211, AI_CONTEXT_32K,     "ai.context32K",        "!ctx 32k",            BOTH, AIMODE,         handleAIContext32K,         "",             "Set 32K context window")
 COMMAND_TABLE(4212, AI_CONTEXT_64K,     "ai.context64K",        "!ctx 64k",            BOTH, AIMODE,         handleAIContext64K,         "",             "Set 64K context window")

@@ -147,6 +147,10 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
             LOG_INFO("WM_USER+100 received (reserved no-op)");
             return 0;
 
+        case WM_APP + 1337:
+            handleNativeStreamTick(wParam, lParam);
+            return 0;
+
         // Peek overlay: deferred navigate + tear-down (posted from PeekOverlayWindow — avoids destroying
         // overlay from inside its own WndProc).
         case WM_RAWRXD_PEEK_FINISH:

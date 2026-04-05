@@ -14,999 +14,1234 @@ extern "C" void LogMessage(const char* msg) {
     printf("[ASM Bridge] %s\n", msg);
 }
 
+extern "C" void RawrXD_AccelRouter_Create_MASM();
+extern "C" void RawrXD_AccelRouter_ForceBackend_MASM();
+extern "C" void RawrXD_AccelRouter_GetActiveBackend_MASM();
+extern "C" void RawrXD_AccelRouter_GetStatsJson_MASM();
+extern "C" void RawrXD_AccelRouter_Init_MASM();
+extern "C" void RawrXD_AccelRouter_IsBackendAvailable_MASM();
+extern "C" void RawrXD_AccelRouter_Shutdown_MASM();
+extern "C" void RawrXD_AccelRouter_Submit_MASM();
+extern "C" void RawrXD_Acquire_CoT_Lock_MASM();
+extern "C" void RawrXD_Acquire_CoT_Lock_Shared_MASM();
+extern "C" void RawrXD_AgentRouter_ExecuteTask_MASM();
+extern "C" void RawrXD_AgentRouter_Initialize_MASM();
+extern "C" void RawrXD_AgentTool_QuantizeModel_MASM();
+extern "C" void RawrXD_Apply_FFN_SwiGLU_MASM();
+extern "C" void RawrXD_Apply_RMSNorm_MASM();
+extern "C" void RawrXD_Apply_RoPE_Direct_MASM();
+extern "C" void RawrXD_ArrayList_Add_MASM();
+extern "C" void RawrXD_ArrayList_Clear_MASM();
+extern "C" void RawrXD_ArrayList_Create_MASM();
+extern "C" void* RawrXD_ArenaAllocate_MASM(size_t size);
+extern "C" void RawrXD_asm_apply_memory_patch_MASM();
+extern "C" void RawrXD_asm_camellia256_decrypt_ctr_MASM();
+extern "C" void RawrXD_asm_camellia256_encrypt_ctr_MASM();
+extern "C" void RawrXD_asm_camellia256_get_hmac_key_MASM();
+extern "C" void RawrXD_CleanupInference_MASM();
+extern "C" void RawrXD_CompletionProvider_Adapter_Create_MASM();
+extern "C" void RawrXD_Compute_MHA_Parallel_MASM();
+extern "C" void RawrXD_ConsolePrint_MASM();
+extern "C" void RawrXD_CoT_EnableMultiProducer_MASM();
+extern "C" void RawrXD_CoT_Has_Large_Pages_MASM();
+extern "C" void RawrXD_CoT_Initialize_Core_MASM();
+extern "C" void RawrXD_CoT_SelectCopyEngine_MASM();
+extern "C" void RawrXD_CoT_Shutdown_Core_MASM();
+extern "C" void RawrXD_CoT_TLS_SetError_MASM();
+extern "C" void RawrXD_CoT_UpdateTelemetry_MASM();
+extern "C" void RawrXD_DefinitionProvider_Adapter_Create_MASM();
+extern "C" void RawrXD_DependencyGraph_AddNode_MASM();
+extern "C" void RawrXD_DependencyGraph_Create_MASM();
+extern "C" void RawrXD_DirectIO_Prefetch_MASM();
+extern "C" void RawrXD_DiskExplorer_Init_MASM();
+extern "C" void RawrXD_DiskExplorer_ScanDrives_MASM();
+extern "C" void RawrXD_DiskKernel_AsyncReadSectors_MASM();
+extern "C" void RawrXD_DiskKernel_DetectPartitions_MASM();
+extern "C" void RawrXD_DiskKernel_EnumerateDrives_MASM();
+extern "C" void RawrXD_DiskKernel_GetAsyncStatus_MASM();
+extern "C" void RawrXD_DiskKernel_Init_MASM();
+extern "C" void RawrXD_DiskKernel_Shutdown_MASM();
+extern "C" void RawrXD_DiskRecovery_Abort_MASM();
+extern "C" void RawrXD_DiskRecovery_Cleanup_MASM();
+extern "C" void RawrXD_DiskRecovery_ExtractKey_MASM();
+extern "C" void RawrXD_DiskRecovery_FindDrive_MASM();
+extern "C" void RawrXD_DiskRecovery_GetStats_MASM();
+extern "C" void RawrXD_DiskRecovery_Init_MASM();
+extern "C" void RawrXD_DiskRecovery_Run_MASM();
+extern "C" void RawrXD_DispatchComputeStage_MASM();
+extern "C" void RawrXD_Disposable_Create_MASM();
+extern "C" void RawrXD_DisposableCollection_Create_MASM();
+extern "C" void RawrXD_DisposableCollection_Dispose_MASM();
+extern "C" void RawrXD_EstimateRAM_Safe_MASM();
+extern "C" void RawrXD_EventFire_ExtensionActivated_MASM();
+extern "C" void RawrXD_EventFire_ExtensionDeactivated_MASM();
+extern "C" void RawrXD_EventListener_DisposeInternal_MASM();
+extern "C" void RawrXD_Extension_CleanupLanguageClients_MASM();
+extern "C" void RawrXD_Extension_CleanupWebviews_MASM();
+extern "C" void RawrXD_Extension_GetCurrent_MASM();
+extern "C" void RawrXD_Extension_ValidateCapabilities_MASM();
+extern "C" void RawrXD_ExtensionContext_Create_MASM();
+extern "C" void RawrXD_ExtensionHostBridge_ProcessMessages_MASM();
+extern "C" void RawrXD_ExtensionHostBridge_RegisterWebview_MASM();
+extern "C" void RawrXD_ExtensionHostBridge_SendMessage_MASM();
+extern "C" void RawrXD_ExtensionHostBridge_SendNotification_MASM();
+extern "C" void RawrXD_ExtensionHostBridge_SendRequest_MASM();
+extern "C" void RawrXD_ExtensionManifest_FromJson_MASM();
+extern "C" void RawrXD_ExtensionModule_Load_MASM();
+extern "C" void RawrXD_ExtensionStorage_GetPath_MASM();
+extern "C" void RawrXD_find_pattern_asm_MASM();
+extern "C" void RawrXD_fnv1a_hash64_MASM();
+extern "C" void RawrXD_GenerateTokens_MASM();
+extern "C" void RawrXD_GetBurstCount_MASM();
+extern "C" void RawrXD_GetBurstPlan_MASM();
+extern "C" void RawrXD_GetElapsedMicroseconds_MASM();
+extern "C" void RawrXD_GetTensorOffset_MASM();
+extern "C" void RawrXD_GetTensorSize_MASM();
+extern "C" void RawrXD_GGUF_LoadFile_MASM();
+extern "C" void RawrXD_HashMap_Create_MASM();
+extern "C" void RawrXD_HashMap_ForEach_MASM();
+extern "C" void RawrXD_HashMap_Get_MASM();
+extern "C" void RawrXD_HashMap_Put_MASM();
+extern "C" void RawrXD_HashMap_Remove_MASM();
+extern "C" void RawrXD_HoverProvider_Adapter_Create_MASM();
+extern "C" void RawrXD_HttpRouter_Initialize_MASM();
+extern "C" void RawrXD_HybridCPU_MatMul_MASM();
+extern "C" void RawrXD_HybridGPU_Init_MASM();
+extern "C" void RawrXD_HybridGPU_MatMul_MASM();
+extern "C" void RawrXD_HybridGPU_Synchronize_MASM();
+extern "C" void RawrXD_Inference_Initialize_MASM();
+extern "C" void RawrXD_InferenceEngine_Submit_MASM();
+extern "C" void RawrXD_JoinCluster_MASM();
+extern "C" void RawrXD_Json_GetArray_MASM();
+extern "C" void RawrXD_Json_GetArrayField_MASM();
+extern "C" void RawrXD_Json_GetInt_MASM();
+extern "C" void RawrXD_Json_GetObjectField_MASM();
+extern "C" void RawrXD_Json_GetObjectKeys_MASM();
+extern "C" void RawrXD_Json_GetString_MASM();
+extern "C" void RawrXD_Json_GetStringField_MASM();
+extern "C" void RawrXD_Json_HasField_MASM();
+extern "C" void RawrXD_Json_ParseFile_MASM();
+extern "C" void RawrXD_Json_ParseObject_MASM();
+extern "C" void RawrXD_Json_ParseString_MASM();
+extern "C" void RawrXD_JsonObject_Create_MASM();
+extern "C" void RawrXD_LoadTensorBlock_MASM();
+extern "C" void RawrXD_LSP_Handshake_Sequence_MASM();
+extern "C" void RawrXD_LSP_JsonRpc_BuildNotification_MASM();
+extern "C" void RawrXD_LSP_Transport_Write_MASM();
+extern "C" void RawrXD_LspClient_ForwardMessage_MASM();
+extern "C" void RawrXD_Marketplace_DownloadExtension_MASM();
+extern "C" void RawrXD_Math_InitTables_MASM();
+extern "C" void RawrXD_ModelBridge_GetProfile_MASM();
+extern "C" void RawrXD_ModelBridge_Init_MASM();
+extern "C" void RawrXD_ModelBridge_LoadModel_MASM();
+extern "C" void RawrXD_ModelBridge_UnloadModel_MASM();
+extern "C" void RawrXD_ModelBridge_ValidateLoad_MASM();
+extern "C" void RawrXD_ModelState_AcquireInstance_MASM();
+extern "C" void RawrXD_ModelState_Initialize_MASM();
+extern "C" void RawrXD_ModelState_Transition_MASM();
+extern "C" void RawrXD_NanoDisk_AbortJob_MASM();
+extern "C" void RawrXD_NanoDisk_GetJobResult_MASM();
+extern "C" void RawrXD_NanoDisk_GetJobStatus_MASM();
+extern "C" void RawrXD_NanoDisk_Init_MASM();
+extern "C" void RawrXD_NanoDisk_Shutdown_MASM();
+extern "C" void RawrXD_NanoQuant_DequantizeMatMul_MASM();
+extern "C" void RawrXD_NanoQuant_DequantizeTensor_MASM();
+extern "C" void RawrXD_NanoQuant_GetCompressionRatio_MASM();
+extern "C" void RawrXD_NanoQuant_QuantizeTensor_MASM();
+extern "C" void RawrXD_NVMe_GetTemperature_MASM();
+extern "C" void RawrXD_NVMe_GetWearLevel_MASM();
+extern "C" void RawrXD_Observable_Create_ActiveTextEditor_MASM();
+extern "C" void RawrXD_Observable_Create_VisibleTextEditors_MASM();
+extern "C" void RawrXD_Observable_Create_WorkspaceFolders_MASM();
+extern "C" void RawrXD_OrchestratorInitialize_MASM();
+extern "C" void RawrXD_OutputChannel_Append_MASM();
+extern "C" void RawrXD_OutputChannel_AppendLine_MASM();
+extern "C" void RawrXD_OutputChannel_Create_MASM();
+extern "C" void RawrXD_OutputChannel_CreateAPI_MASM();
+extern "C" void RawrXD_Path_Join_MASM();
+extern "C" void RawrXD_Path_Join_PackageJson_MASM();
+extern "C" void RawrXD_Phase1Initialize_MASM();
+extern "C" void RawrXD_Phase1LogMessage_MASM();
+extern "C" void RawrXD_Phase2Initialize_MASM();
+extern "C" void RawrXD_Phase3Initialize_MASM();
+extern "C" void RawrXD_Phase4Initialize_MASM();
+extern "C" void RawrXD_Pipe_RunServer_MASM();
+extern "C" void RawrXD_PrintU64_MASM();
+extern "C" void RawrXD_ProcessReceivedHeartbeat_MASM();
+extern "C" void RawrXD_ProcessSwarmQueue_MASM();
+extern "C" void RawrXD_Provider_FromDocumentSelector_MASM();
+extern "C" void RawrXD_Provider_Register_MASM();
+extern "C" void RawrXD_QueueInferenceJob_MASM();
+extern "C" void RawrXD_RaftEventLoop_MASM();
+extern "C" void RawrXD_RawrXD_Calc_ContentLength_MASM();
+extern "C" void RawrXD_rawrxd_dispatch_cli_MASM();
+extern "C" void RawrXD_rawrxd_dispatch_command_MASM();
+extern "C" void RawrXD_rawrxd_dispatch_feature_MASM();
+extern "C" void RawrXD_rawrxd_get_feature_count_MASM();
+extern "C" void RawrXD_RawrXD_JSON_Stringify_MASM();
+extern "C" void RawrXD_RawrXD_Marketplace_ResolveSymbol_MASM();
+extern "C" void RawrXD_RawrXD_UI_Push_Notify_MASM();
+extern "C" void RawrXD_ReadTsc_MASM();
+extern "C" void RawrXD_Registry_CreateKey_MASM();
+extern "C" void RawrXD_Registry_KeyExists_MASM();
+extern "C" void RawrXD_Registry_SetDwordValue_MASM();
+extern "C" void RawrXD_Registry_SetQwordValue_MASM();
+extern "C" void RawrXD_Registry_SetStringValue_MASM();
+extern "C" void RawrXD_Release_CoT_Lock_MASM();
+extern "C" void RawrXD_Release_CoT_Lock_Shared_MASM();
+extern "C" void RawrXD_ResolveZonePointer_MASM();
+extern "C" void RawrXD_RingBufferConsumer_Initialize_MASM();
+extern "C" void RawrXD_RingBufferConsumer_Shutdown_MASM();
+extern "C" void RawrXD_RouteModelLoad_MASM();
+extern "C" void RawrXD_Sample_Logits_TopP_MASM();
+extern "C" void RawrXD_SemVer_Parse_MASM();
+extern "C" void RawrXD_SemVer_ParseRange_MASM();
+extern "C" void RawrXD_SemVer_Satisfies_MASM();
+extern "C" void RawrXD_ShellInteg_CompleteCommand_MASM();
+extern "C" void RawrXD_ShellInteg_ExecuteCommand_MASM();
+extern "C" void RawrXD_ShellInteg_GetCommandHistory_MASM();
+extern "C" void RawrXD_ShellInteg_GetStats_MASM();
+extern "C" void RawrXD_ShellInteg_IsAlive_MASM();
+extern "C" void RawrXD_Shield_AES_DecryptShim_MASM();
+extern "C" void RawrXD_Shield_GenerateHWID_MASM();
+extern "C" void RawrXD_Shield_TimingCheck_MASM();
+extern "C" void RawrXD_Shield_VerifyIntegrity_MASM();
+extern "C" void RawrXD_SidecarMain_MASM();
+extern "C" void RawrXD_Spinlock_Acquire_MASM();
+extern "C" void RawrXD_Spinlock_Release_MASM();
+extern "C" void RawrXD_StartPipeServer_MASM();
+extern "C" void RawrXD_StreamFormatter_WriteToken_MASM();
+extern "C" void RawrXD_StreamTensorByName_MASM();
+extern "C" void RawrXD_SubmitInferenceRequest_MASM();
+extern "C" void RawrXD_SubmitTask_MASM();
+extern "C" void RawrXD_Swarm_Initialize_MASM();
+extern "C" void RawrXD_Swarm_SubmitJob_MASM();
+extern "C" void RawrXD_SwarmTransportControl_MASM();
+extern "C" void RawrXD_System_InitializePrimitives_MASM();
+extern "C" void RawrXD_Telemetry_SanitizeData_MASM();
+extern "C" void RawrXD_Titan_DirectStorage_Cleanup_MASM();
+extern "C" void RawrXD_Titan_GGML_Cleanup_MASM();
+extern "C" void RawrXD_Titan_InferenceThread_MASM();
+extern "C" void RawrXD_Titan_Initialize_MASM();
+extern "C" void RawrXD_Titan_LoadModel_MASM();
+extern "C" void RawrXD_Titan_RunInference_MASM();
+extern "C" void RawrXD_Titan_RunInferenceStep_MASM();
+extern "C" void RawrXD_Titan_Shutdown_MASM();
+extern "C" void RawrXD_Titan_Stop_All_Streams_MASM();
+extern "C" void RawrXD_Titan_SubmitPrompt_MASM();
+extern "C" void RawrXD_Titan_Vulkan_Cleanup_MASM();
+extern "C" void RawrXD_Unlock_800B_Kernel_MASM();
+extern "C" void RawrXD_ValidateModelAlignment_MASM();
+extern "C" void RawrXD_Vram_Allocate_MASM();
+extern "C" void RawrXD_Vram_Initialize_MASM();
+extern "C" void RawrXD_VulkanDMA_RegisterTensor_MASM();
+extern "C" void RawrXD_VulkanKernel_AllocBuffer_MASM();
+extern "C" void RawrXD_VulkanKernel_Cleanup_MASM();
+extern "C" void RawrXD_VulkanKernel_CopyToDevice_MASM();
+extern "C" void RawrXD_VulkanKernel_CopyToHost_MASM();
+extern "C" void RawrXD_VulkanKernel_CreatePipeline_MASM();
+extern "C" void RawrXD_VulkanKernel_DispatchFlashAttn_MASM();
+extern "C" void RawrXD_VulkanKernel_DispatchMatMul_MASM();
+extern "C" void RawrXD_VulkanKernel_GetStats_MASM();
+extern "C" void RawrXD_VulkanKernel_HotswapShader_MASM();
+extern "C" void RawrXD_VulkanKernel_Init_MASM();
+extern "C" void RawrXD_VulkanKernel_LoadShader_MASM();
+extern "C" void RawrXD_WebviewPanel_CreateAPI_MASM();
+extern "C" void RawrXD_Week1Initialize_MASM();
+extern "C" void RawrXD_Week23Initialize_MASM();
+
 // Titan inference engine stubs
 extern "C" void Titan_LoadModel() {
-    LogMessage("Titan_LoadModel stub called");
+    RawrXD_Titan_LoadModel_MASM();
 }
 
 extern "C" void Titan_RunInferenceStep() {
-    LogMessage("Titan_RunInferenceStep stub called");
+    RawrXD_Titan_RunInferenceStep_MASM();
 }
 
 extern "C" void Titan_InferenceThread() {
-    LogMessage("Titan_InferenceThread stub called");
+    RawrXD_Titan_InferenceThread_MASM();
 }
 
 extern "C" void Titan_Initialize() {
-    LogMessage("Titan_Initialize stub called");
+    RawrXD_Titan_Initialize_MASM();
 }
 
 extern "C" void Titan_RunInference() {
-    LogMessage("Titan_RunInference stub called");
+    RawrXD_Titan_RunInference_MASM();
 }
 
 extern "C" void Titan_Shutdown() {
-    LogMessage("Titan_Shutdown stub called");
+    RawrXD_Titan_Shutdown_MASM();
 }
 
 extern "C" void Titan_SubmitPrompt() {
-    LogMessage("Titan_SubmitPrompt stub called");
+    RawrXD_Titan_SubmitPrompt_MASM();
 }
 
 extern "C" void Titan_DirectStorage_Cleanup() {
-    LogMessage("Titan_DirectStorage_Cleanup stub called");
+    RawrXD_Titan_DirectStorage_Cleanup_MASM();
 }
 
 extern "C" void Titan_GGML_Cleanup() {
-    LogMessage("Titan_GGML_Cleanup stub called");
+    RawrXD_Titan_GGML_Cleanup_MASM();
 }
 
 extern "C" void Titan_Vulkan_Cleanup() {
-    LogMessage("Titan_Vulkan_Cleanup stub called");
+    RawrXD_Titan_Vulkan_Cleanup_MASM();
 }
 
 extern "C" void Titan_Stop_All_Streams() {
-    LogMessage("Titan_Stop_All_Streams stub called");
+    RawrXD_Titan_Stop_All_Streams_MASM();
 }
 
 // Math stubs
 extern "C" void Math_InitTables() {
-    LogMessage("Math_InitTables stub called");
+    RawrXD_Math_InitTables_MASM();
 }
 
 // Pipe stubs
 extern "C" void StartPipeServer() {
-    LogMessage("StartPipeServer stub called");
+    RawrXD_StartPipeServer_MASM();
 }
 
 extern "C" void Pipe_RunServer() {
-    LogMessage("Pipe_RunServer stub called");
+    RawrXD_Pipe_RunServer_MASM();
 }
 
 // System primitives
 extern "C" void System_InitializePrimitives() {
-    LogMessage("System_InitializePrimitives stub called");
+    RawrXD_System_InitializePrimitives_MASM();
 }
 
 // Spinlock stubs
 extern "C" void Spinlock_Acquire() {
-    LogMessage("Spinlock_Acquire stub called");
+    RawrXD_Spinlock_Acquire_MASM();
 }
 
 extern "C" void Spinlock_Release() {
-    LogMessage("Spinlock_Release stub called");
+    RawrXD_Spinlock_Release_MASM();
 }
 
 // Ring buffer consumer stubs
 extern "C" void RingBufferConsumer_Initialize() {
-    LogMessage("RingBufferConsumer_Initialize stub called");
+    RawrXD_RingBufferConsumer_Initialize_MASM();
 }
 
 extern "C" void RingBufferConsumer_Shutdown() {
-    LogMessage("RingBufferConsumer_Shutdown stub called");
+    RawrXD_RingBufferConsumer_Shutdown_MASM();
 }
 
 // HTTP router stub
 extern "C" void HttpRouter_Initialize() {
-    LogMessage("HttpRouter_Initialize stub called");
+    RawrXD_HttpRouter_Initialize_MASM();
 }
 
 // Inference job queue stub
 extern "C" void QueueInferenceJob() {
-    LogMessage("QueueInferenceJob stub called");
+    RawrXD_QueueInferenceJob_MASM();
 }
 
 // Model state stubs
 extern "C" void ModelState_Initialize() {
-    LogMessage("ModelState_Initialize stub called");
+    RawrXD_ModelState_Initialize_MASM();
 }
 
 extern "C" void ModelState_Transition() {
-    LogMessage("ModelState_Transition stub called");
+    RawrXD_ModelState_Transition_MASM();
 }
 
 extern "C" void ModelState_AcquireInstance() {
-    LogMessage("ModelState_AcquireInstance stub called");
+    RawrXD_ModelState_AcquireInstance_MASM();
 }
 
 // Swarm stubs
 extern "C" void Swarm_Initialize() {
-    LogMessage("Swarm_Initialize stub called");
+    RawrXD_Swarm_Initialize_MASM();
 }
 
 extern "C" void Swarm_SubmitJob() {
-    LogMessage("Swarm_SubmitJob stub called");
+    RawrXD_Swarm_SubmitJob_MASM();
 }
 
 // Agent router stubs
 extern "C" void AgentRouter_Initialize() {
-    LogMessage("AgentRouter_Initialize stub called");
+    RawrXD_AgentRouter_Initialize_MASM();
 }
 
 extern "C" void AgentRouter_ExecuteTask() {
-    LogMessage("AgentRouter_ExecuteTask stub called");
+    RawrXD_AgentRouter_ExecuteTask_MASM();
 }
 
 // VRAM stubs
 extern "C" void Vram_Initialize() {
-    LogMessage("Vram_Initialize stub called");
+    RawrXD_Vram_Initialize_MASM();
 }
 
 extern "C" void Vram_Allocate() {
-    LogMessage("Vram_Allocate stub called");
+    RawrXD_Vram_Allocate_MASM();
 }
 
 // Accelerator router stubs
 extern "C" void AccelRouter_Init() {
-    LogMessage("AccelRouter_Init stub called");
+    RawrXD_AccelRouter_Init_MASM();
 }
 
 extern "C" void AccelRouter_Shutdown() {
-    LogMessage("AccelRouter_Shutdown stub called");
+    RawrXD_AccelRouter_Shutdown_MASM();
 }
 
 extern "C" void AccelRouter_Submit() {
-    LogMessage("AccelRouter_Submit stub called");
+    RawrXD_AccelRouter_Submit_MASM();
 }
 
 extern "C" void AccelRouter_GetActiveBackend() {
-    LogMessage("AccelRouter_GetActiveBackend stub called");
+    RawrXD_AccelRouter_GetActiveBackend_MASM();
 }
 
 extern "C" void AccelRouter_IsBackendAvailable() {
-    LogMessage("AccelRouter_IsBackendAvailable stub called");
+    RawrXD_AccelRouter_IsBackendAvailable_MASM();
 }
 
 extern "C" void AccelRouter_ForceBackend() {
-    LogMessage("AccelRouter_ForceBackend stub called");
+    RawrXD_AccelRouter_ForceBackend_MASM();
 }
 
 extern "C" void AccelRouter_GetStatsJson() {
-    LogMessage("AccelRouter_GetStatsJson stub called");
+    RawrXD_AccelRouter_GetStatsJson_MASM();
 }
 
 extern "C" void AccelRouter_Create() {
-    LogMessage("AccelRouter_Create stub called");
+    RawrXD_AccelRouter_Create_MASM();
 }
 
 // Agent tool stub
 extern "C" void AgentTool_QuantizeModel() {
-    LogMessage("AgentTool_QuantizeModel stub called");
+    RawrXD_AgentTool_QuantizeModel_MASM();
 }
 
 // Arena allocate stub
 extern "C" void* ArenaAllocate(size_t size) {
-    LogMessage("ArenaAllocate stub called");
-    return malloc(size);
+    return RawrXD_ArenaAllocate_MASM(size);
 }
 
 // Array list stubs
 extern "C" void ArrayList_Create() {
-    LogMessage("ArrayList_Create stub called");
+    RawrXD_ArrayList_Create_MASM();
 }
 
 extern "C" void ArrayList_Add() {
-    LogMessage("ArrayList_Add stub called");
+    RawrXD_ArrayList_Add_MASM();
 }
 
 extern "C" void ArrayList_Clear() {
-    LogMessage("ArrayList_Clear stub called");
+    RawrXD_ArrayList_Clear_MASM();
 }
 
 // ASM apply memory patch stub
 extern "C" void asm_apply_memory_patch() {
-    LogMessage("asm_apply_memory_patch stub called");
+    RawrXD_asm_apply_memory_patch_MASM();
 }
 
 // Camellia stubs
 extern "C" void asm_camellia256_encrypt_ctr() {
-    LogMessage("asm_camellia256_encrypt_ctr stub called");
+    RawrXD_asm_camellia256_encrypt_ctr_MASM();
 }
 
 extern "C" void asm_camellia256_decrypt_ctr() {
-    LogMessage("asm_camellia256_decrypt_ctr stub called");
+    RawrXD_asm_camellia256_decrypt_ctr_MASM();
 }
 
 extern "C" void asm_camellia256_get_hmac_key() {
-    LogMessage("asm_camellia256_get_hmac_key stub called");
+    RawrXD_asm_camellia256_get_hmac_key_MASM();
 }
 
 // CoT stubs
 extern "C" void CoT_Initialize_Core() {
-    LogMessage("CoT_Initialize_Core stub called");
+    RawrXD_CoT_Initialize_Core_MASM();
 }
 
 extern "C" void CoT_Shutdown_Core() {
-    LogMessage("CoT_Shutdown_Core stub called");
+    RawrXD_CoT_Shutdown_Core_MASM();
 }
 
 extern "C" void CoT_SelectCopyEngine() {
-    LogMessage("CoT_SelectCopyEngine stub called");
+    RawrXD_CoT_SelectCopyEngine_MASM();
 }
 
 extern "C" void CoT_EnableMultiProducer() {
-    LogMessage("CoT_EnableMultiProducer stub called");
+    RawrXD_CoT_EnableMultiProducer_MASM();
 }
 
 extern "C" void CoT_Has_Large_Pages() {
-    LogMessage("CoT_Has_Large_Pages stub called");
+    RawrXD_CoT_Has_Large_Pages_MASM();
 }
 
 extern "C" void CoT_TLS_SetError() {
-    LogMessage("CoT_TLS_SetError stub called");
+    RawrXD_CoT_TLS_SetError_MASM();
 }
 
 extern "C" void CoT_UpdateTelemetry() {
-    LogMessage("CoT_UpdateTelemetry stub called");
+    RawrXD_CoT_UpdateTelemetry_MASM();
 }
 
 extern "C" void Acquire_CoT_Lock() {
-    LogMessage("Acquire_CoT_Lock stub called");
+    RawrXD_Acquire_CoT_Lock_MASM();
 }
 
 extern "C" void Acquire_CoT_Lock_Shared() {
-    LogMessage("Acquire_CoT_Lock_Shared stub called");
+    RawrXD_Acquire_CoT_Lock_Shared_MASM();
 }
 
 extern "C" void Release_CoT_Lock() {
-    LogMessage("Release_CoT_Lock stub called");
+    RawrXD_Release_CoT_Lock_MASM();
 }
 
 extern "C" void Release_CoT_Lock_Shared() {
-    LogMessage("Release_CoT_Lock_Shared stub called");
+    RawrXD_Release_CoT_Lock_Shared_MASM();
 }
 
 // Disk kernel stubs
 extern "C" void DiskKernel_Init() {
-    LogMessage("DiskKernel_Init stub called");
+    RawrXD_DiskKernel_Init_MASM();
 }
 
 extern "C" void DiskKernel_Shutdown() {
-    LogMessage("DiskKernel_Shutdown stub called");
+    RawrXD_DiskKernel_Shutdown_MASM();
 }
 
 extern "C" void DiskKernel_EnumerateDrives() {
-    LogMessage("DiskKernel_EnumerateDrives stub called");
+    RawrXD_DiskKernel_EnumerateDrives_MASM();
 }
 
 extern "C" void DiskKernel_DetectPartitions() {
-    LogMessage("DiskKernel_DetectPartitions stub called");
+    RawrXD_DiskKernel_DetectPartitions_MASM();
 }
 
 extern "C" void DiskKernel_AsyncReadSectors() {
-    LogMessage("DiskKernel_AsyncReadSectors stub called");
+    RawrXD_DiskKernel_AsyncReadSectors_MASM();
 }
 
 extern "C" void DiskKernel_GetAsyncStatus() {
-    LogMessage("DiskKernel_GetAsyncStatus stub called");
+    RawrXD_DiskKernel_GetAsyncStatus_MASM();
 }
 
 // Disk recovery stubs
 extern "C" void DiskRecovery_Init() {
-    LogMessage("DiskRecovery_Init stub called");
+    RawrXD_DiskRecovery_Init_MASM();
 }
 
 extern "C" void DiskRecovery_Run() {
-    LogMessage("DiskRecovery_Run stub called");
+    RawrXD_DiskRecovery_Run_MASM();
 }
 
 extern "C" void DiskRecovery_FindDrive() {
-    LogMessage("DiskRecovery_FindDrive stub called");
+    RawrXD_DiskRecovery_FindDrive_MASM();
 }
 
 extern "C" void DiskRecovery_ExtractKey() {
-    LogMessage("DiskRecovery_ExtractKey stub called");
+    RawrXD_DiskRecovery_ExtractKey_MASM();
 }
 
 extern "C" void DiskRecovery_GetStats() {
-    LogMessage("DiskRecovery_GetStats stub called");
+    RawrXD_DiskRecovery_GetStats_MASM();
 }
 
 extern "C" void DiskRecovery_Cleanup() {
-    LogMessage("DiskRecovery_Cleanup stub called");
+    RawrXD_DiskRecovery_Cleanup_MASM();
 }
 
 extern "C" void DiskRecovery_Abort() {
-    LogMessage("DiskRecovery_Abort stub called");
+    RawrXD_DiskRecovery_Abort_MASM();
 }
 
 // Extension stubs
 extern "C" void Extension_CleanupLanguageClients() {
-    LogMessage("Extension_CleanupLanguageClients stub called");
+    RawrXD_Extension_CleanupLanguageClients_MASM();
 }
 
 extern "C" void Extension_CleanupWebviews() {
-    LogMessage("Extension_CleanupWebviews stub called");
+    RawrXD_Extension_CleanupWebviews_MASM();
 }
 
 extern "C" void Extension_GetCurrent() {
-    LogMessage("Extension_GetCurrent stub called");
+    RawrXD_Extension_GetCurrent_MASM();
 }
 
 extern "C" void Extension_ValidateCapabilities() {
-    LogMessage("Extension_ValidateCapabilities stub called");
+    RawrXD_Extension_ValidateCapabilities_MASM();
 }
 
 extern "C" void ExtensionContext_Create() {
-    LogMessage("ExtensionContext_Create stub called");
+    RawrXD_ExtensionContext_Create_MASM();
 }
 
 extern "C" void ExtensionHostBridge_ProcessMessages() {
-    LogMessage("ExtensionHostBridge_ProcessMessages stub called");
+    RawrXD_ExtensionHostBridge_ProcessMessages_MASM();
 }
 
 extern "C" void ExtensionHostBridge_RegisterWebview() {
-    LogMessage("ExtensionHostBridge_RegisterWebview stub called");
+    RawrXD_ExtensionHostBridge_RegisterWebview_MASM();
 }
 
 extern "C" void ExtensionHostBridge_SendMessage() {
-    LogMessage("ExtensionHostBridge_SendMessage stub called");
+    RawrXD_ExtensionHostBridge_SendMessage_MASM();
 }
 
 extern "C" void ExtensionHostBridge_SendNotification() {
-    LogMessage("ExtensionHostBridge_SendNotification stub called");
+    RawrXD_ExtensionHostBridge_SendNotification_MASM();
 }
 
 extern "C" void ExtensionHostBridge_SendRequest() {
-    LogMessage("ExtensionHostBridge_SendRequest stub called");
+    RawrXD_ExtensionHostBridge_SendRequest_MASM();
 }
 
 extern "C" void ExtensionManifest_FromJson() {
-    LogMessage("ExtensionManifest_FromJson stub called");
+    RawrXD_ExtensionManifest_FromJson_MASM();
 }
 
 extern "C" void ExtensionModule_Load() {
-    LogMessage("ExtensionModule_Load stub called");
+    RawrXD_ExtensionModule_Load_MASM();
 }
 
 extern "C" void ExtensionStorage_GetPath() {
-    LogMessage("ExtensionStorage_GetPath stub called");
+    RawrXD_ExtensionStorage_GetPath_MASM();
 }
 
 // GGUF load stub
 extern "C" void GGUF_LoadFile() {
-    LogMessage("GGUF_LoadFile stub called");
+    RawrXD_GGUF_LoadFile_MASM();
 }
 
 // Hybrid CPU/GPU stubs
 extern "C" void HybridCPU_MatMul() {
-    LogMessage("HybridCPU_MatMul stub called");
+    RawrXD_HybridCPU_MatMul_MASM();
 }
 
 extern "C" void HybridGPU_Init() {
-    LogMessage("HybridGPU_Init stub called");
+    RawrXD_HybridGPU_Init_MASM();
 }
 
 extern "C" void HybridGPU_MatMul() {
-    LogMessage("HybridGPU_MatMul stub called");
+    RawrXD_HybridGPU_MatMul_MASM();
 }
 
 extern "C" void HybridGPU_Synchronize() {
-    LogMessage("HybridGPU_Synchronize stub called");
+    RawrXD_HybridGPU_Synchronize_MASM();
 }
 
 // Inference stubs
 extern "C" void Inference_Initialize() {
-    LogMessage("Inference_Initialize stub called");
+    RawrXD_Inference_Initialize_MASM();
 }
 
 extern "C" void InferenceEngine_Submit() {
-    LogMessage("InferenceEngine_Submit stub called");
+    RawrXD_InferenceEngine_Submit_MASM();
 }
 
 extern "C" void SubmitInferenceRequest() {
-    LogMessage("SubmitInferenceRequest stub called");
+    RawrXD_SubmitInferenceRequest_MASM();
 }
 
 // JSON stubs
 extern "C" void Json_ParseString() {
-    LogMessage("Json_ParseString stub called");
+    RawrXD_Json_ParseString_MASM();
 }
 
 extern "C" void Json_ParseObject() {
-    LogMessage("Json_ParseObject stub called");
+    RawrXD_Json_ParseObject_MASM();
 }
 
 extern "C" void Json_ParseFile() {
-    LogMessage("Json_ParseFile stub called");
+    RawrXD_Json_ParseFile_MASM();
 }
 
 extern "C" void Json_GetString() {
-    LogMessage("Json_GetString stub called");
+    RawrXD_Json_GetString_MASM();
 }
 
 extern "C" void Json_GetInt() {
-    LogMessage("Json_GetInt stub called");
+    RawrXD_Json_GetInt_MASM();
 }
 
 extern "C" void Json_GetArray() {
-    LogMessage("Json_GetArray stub called");
+    RawrXD_Json_GetArray_MASM();
 }
 
 extern "C" void Json_GetObjectField() {
-    LogMessage("Json_GetObjectField stub called");
+    RawrXD_Json_GetObjectField_MASM();
 }
 
 extern "C" void Json_GetStringField() {
-    LogMessage("Json_GetStringField stub called");
+    RawrXD_Json_GetStringField_MASM();
 }
 
 extern "C" void Json_GetArrayField() {
-    LogMessage("Json_GetArrayField stub called");
+    RawrXD_Json_GetArrayField_MASM();
 }
 
 extern "C" void Json_GetObjectKeys() {
-    LogMessage("Json_GetObjectKeys stub called");
+    RawrXD_Json_GetObjectKeys_MASM();
 }
 
 extern "C" void Json_HasField() {
-    LogMessage("Json_HasField stub called");
+    RawrXD_Json_HasField_MASM();
 }
 
 extern "C" void JsonObject_Create() {
-    LogMessage("JsonObject_Create stub called");
+    RawrXD_JsonObject_Create_MASM();
 }
 
 // LSP stubs
 extern "C" void LSP_Handshake_Sequence() {
-    LogMessage("LSP_Handshake_Sequence stub called");
+    RawrXD_LSP_Handshake_Sequence_MASM();
 }
 
 extern "C" void LSP_JsonRpc_BuildNotification() {
-    LogMessage("LSP_JsonRpc_BuildNotification stub called");
+    RawrXD_LSP_JsonRpc_BuildNotification_MASM();
 }
 
 extern "C" void LSP_Transport_Write() {
-    LogMessage("LSP_Transport_Write stub called");
+    RawrXD_LSP_Transport_Write_MASM();
 }
 
 extern "C" void LspClient_ForwardMessage() {
-    LogMessage("LspClient_ForwardMessage stub called");
+    RawrXD_LspClient_ForwardMessage_MASM();
 }
 
 // Marketplace stubs
 extern "C" void Marketplace_DownloadExtension() {
-    LogMessage("Marketplace_DownloadExtension stub called");
+    RawrXD_Marketplace_DownloadExtension_MASM();
 }
 
 extern "C" void RawrXD_Marketplace_ResolveSymbol() {
-    LogMessage("RawrXD_Marketplace_ResolveSymbol stub called");
+    RawrXD_RawrXD_Marketplace_ResolveSymbol_MASM();
 }
 
 // Model bridge stubs
 extern "C" void ModelBridge_Init() {
-    LogMessage("ModelBridge_Init stub called");
+    RawrXD_ModelBridge_Init_MASM();
 }
 
 extern "C" void ModelBridge_LoadModel() {
-    LogMessage("ModelBridge_LoadModel stub called");
+    RawrXD_ModelBridge_LoadModel_MASM();
 }
 
 extern "C" void ModelBridge_UnloadModel() {
-    LogMessage("ModelBridge_UnloadModel stub called");
+    RawrXD_ModelBridge_UnloadModel_MASM();
 }
 
 extern "C" void ModelBridge_ValidateLoad() {
-    LogMessage("ModelBridge_ValidateLoad stub called");
+    RawrXD_ModelBridge_ValidateLoad_MASM();
 }
 
 extern "C" void ModelBridge_GetProfile() {
-    LogMessage("ModelBridge_GetProfile stub called");
+    RawrXD_ModelBridge_GetProfile_MASM();
 }
 
 // Nano disk stubs
 extern "C" void NanoDisk_Init() {
-    LogMessage("NanoDisk_Init stub called");
+    RawrXD_NanoDisk_Init_MASM();
 }
 
 extern "C" void NanoDisk_Shutdown() {
-    LogMessage("NanoDisk_Shutdown stub called");
+    RawrXD_NanoDisk_Shutdown_MASM();
 }
 
 extern "C" void NanoDisk_GetJobStatus() {
-    LogMessage("NanoDisk_GetJobStatus stub called");
+    RawrXD_NanoDisk_GetJobStatus_MASM();
 }
 
 extern "C" void NanoDisk_GetJobResult() {
-    LogMessage("NanoDisk_GetJobResult stub called");
+    RawrXD_NanoDisk_GetJobResult_MASM();
 }
 
 extern "C" void NanoDisk_AbortJob() {
-    LogMessage("NanoDisk_AbortJob stub called");
+    RawrXD_NanoDisk_AbortJob_MASM();
 }
 
 // Nano quant stubs
 extern "C" void NanoQuant_QuantizeTensor() {
-    LogMessage("NanoQuant_QuantizeTensor stub called");
+    RawrXD_NanoQuant_QuantizeTensor_MASM();
 }
 
 extern "C" void NanoQuant_DequantizeTensor() {
-    LogMessage("NanoQuant_DequantizeTensor stub called");
+    RawrXD_NanoQuant_DequantizeTensor_MASM();
 }
 
 extern "C" void NanoQuant_DequantizeMatMul() {
-    LogMessage("NanoQuant_DequantizeMatMul stub called");
+    RawrXD_NanoQuant_DequantizeMatMul_MASM();
 }
 
 extern "C" void NanoQuant_GetCompressionRatio() {
-    LogMessage("NanoQuant_GetCompressionRatio stub called");
+    RawrXD_NanoQuant_GetCompressionRatio_MASM();
 }
 
 // NVMe stubs
 extern "C" void NVMe_GetTemperature() {
-    LogMessage("NVMe_GetTemperature stub called");
+    RawrXD_NVMe_GetTemperature_MASM();
 }
 
 extern "C" void NVMe_GetWearLevel() {
-    LogMessage("NVMe_GetWearLevel stub called");
+    RawrXD_NVMe_GetWearLevel_MASM();
 }
 
 // Observable stubs
 extern "C" void Observable_Create_ActiveTextEditor() {
-    LogMessage("Observable_Create_ActiveTextEditor stub called");
+    RawrXD_Observable_Create_ActiveTextEditor_MASM();
 }
 
 extern "C" void Observable_Create_VisibleTextEditors() {
-    LogMessage("Observable_Create_VisibleTextEditors stub called");
+    RawrXD_Observable_Create_VisibleTextEditors_MASM();
 }
 
 extern "C" void Observable_Create_WorkspaceFolders() {
-    LogMessage("Observable_Create_WorkspaceFolders stub called");
+    RawrXD_Observable_Create_WorkspaceFolders_MASM();
 }
 
 // Orchestrator stub
 extern "C" void OrchestratorInitialize() {
-    LogMessage("OrchestratorInitialize stub called");
+    RawrXD_OrchestratorInitialize_MASM();
 }
 
 // Output channel stubs
 extern "C" void OutputChannel_Create() {
-    LogMessage("OutputChannel_Create stub called");
+    RawrXD_OutputChannel_Create_MASM();
 }
 
 extern "C" void OutputChannel_CreateAPI() {
-    LogMessage("OutputChannel_CreateAPI stub called");
+    RawrXD_OutputChannel_CreateAPI_MASM();
 }
 
 extern "C" void OutputChannel_Append() {
-    LogMessage("OutputChannel_Append stub called");
+    RawrXD_OutputChannel_Append_MASM();
 }
 
 extern "C" void OutputChannel_AppendLine() {
-    LogMessage("OutputChannel_AppendLine stub called");
+    RawrXD_OutputChannel_AppendLine_MASM();
 }
 
 // Phase initialize stubs
 extern "C" void Phase1Initialize() {
-    LogMessage("Phase1Initialize stub called");
+    RawrXD_Phase1Initialize_MASM();
 }
 
 extern "C" void Phase1LogMessage() {
-    LogMessage("Phase1LogMessage stub called");
+    RawrXD_Phase1LogMessage_MASM();
 }
 
 extern "C" void Phase2Initialize() {
-    LogMessage("Phase2Initialize stub called");
+    RawrXD_Phase2Initialize_MASM();
 }
 
 extern "C" void Phase3Initialize() {
-    LogMessage("Phase3Initialize stub called");
+    RawrXD_Phase3Initialize_MASM();
 }
 
 extern "C" void Phase4Initialize() {
-    LogMessage("Phase4Initialize stub called");
+    RawrXD_Phase4Initialize_MASM();
 }
 
 extern "C" void Week1Initialize() {
-    LogMessage("Week1Initialize stub called");
+    RawrXD_Week1Initialize_MASM();
 }
 
 extern "C" void Week23Initialize() {
-    LogMessage("Week23Initialize stub called");
+    RawrXD_Week23Initialize_MASM();
 }
 
 // Process stubs
 extern "C" void ProcessReceivedHeartbeat() {
-    LogMessage("ProcessReceivedHeartbeat stub called");
+    RawrXD_ProcessReceivedHeartbeat_MASM();
 }
 
 extern "C" void ProcessSwarmQueue() {
-    LogMessage("ProcessSwarmQueue stub called");
+    RawrXD_ProcessSwarmQueue_MASM();
 }
 
 // Raft stub
 extern "C" void RaftEventLoop() {
-    LogMessage("RaftEventLoop stub called");
+    RawrXD_RaftEventLoop_MASM();
 }
 
 // RawrXD stubs
 extern "C" void RawrXD_Calc_ContentLength() {
-    LogMessage("RawrXD_Calc_ContentLength stub called");
+    RawrXD_RawrXD_Calc_ContentLength_MASM();
 }
 
 extern "C" void rawrxd_dispatch_cli() {
-    LogMessage("rawrxd_dispatch_cli stub called");
+    RawrXD_rawrxd_dispatch_cli_MASM();
 }
 
 extern "C" void rawrxd_dispatch_command() {
-    LogMessage("rawrxd_dispatch_command stub called");
+    RawrXD_rawrxd_dispatch_command_MASM();
 }
 
 extern "C" void rawrxd_dispatch_feature() {
-    LogMessage("rawrxd_dispatch_feature stub called");
+    RawrXD_rawrxd_dispatch_feature_MASM();
 }
 
 extern "C" void rawrxd_get_feature_count() {
-    LogMessage("rawrxd_get_feature_count stub called");
+    RawrXD_rawrxd_get_feature_count_MASM();
 }
 
 extern "C" void RawrXD_JSON_Stringify() {
-    LogMessage("RawrXD_JSON_Stringify stub called");
+    RawrXD_RawrXD_JSON_Stringify_MASM();
 }
 
 extern "C" void RawrXD_UI_Push_Notify() {
-    LogMessage("RawrXD_UI_Push_Notify stub called");
+    RawrXD_RawrXD_UI_Push_Notify_MASM();
 }
 
 // Route model load stub
 extern "C" void RouteModelLoad() {
-    LogMessage("RouteModelLoad stub called");
+    RawrXD_RouteModelLoad_MASM();
 }
 
 // Sample logits stub
 extern "C" void Sample_Logits_TopP() {
-    LogMessage("Sample_Logits_TopP stub called");
+    RawrXD_Sample_Logits_TopP_MASM();
 }
 
 // Shield stubs
 extern "C" void Shield_AES_DecryptShim() {
-    LogMessage("Shield_AES_DecryptShim stub called");
+    RawrXD_Shield_AES_DecryptShim_MASM();
 }
 
 extern "C" void Shield_GenerateHWID() {
-    LogMessage("Shield_GenerateHWID stub called");
+    RawrXD_Shield_GenerateHWID_MASM();
 }
 
 extern "C" void Shield_TimingCheck() {
-    LogMessage("Shield_TimingCheck stub called");
+    RawrXD_Shield_TimingCheck_MASM();
 }
 
 extern "C" void Shield_VerifyIntegrity() {
-    LogMessage("Shield_VerifyIntegrity stub called");
+    RawrXD_Shield_VerifyIntegrity_MASM();
 }
 
 // Sidecar stub
 extern "C" void SidecarMain() {
-    LogMessage("SidecarMain stub called");
+    RawrXD_SidecarMain_MASM();
 }
 
 // Stream formatter stub
 extern "C" void StreamFormatter_WriteToken() {
-    LogMessage("StreamFormatter_WriteToken stub called");
+    RawrXD_StreamFormatter_WriteToken_MASM();
 }
 
 // Stream tensor stub
 extern "C" void StreamTensorByName() {
-    LogMessage("StreamTensorByName stub called");
+    RawrXD_StreamTensorByName_MASM();
 }
 
 // Submit task stub
 extern "C" void SubmitTask() {
-    LogMessage("SubmitTask stub called");
+    RawrXD_SubmitTask_MASM();
 }
 
 // Swarm transport stub
 extern "C" void SwarmTransportControl() {
-    LogMessage("SwarmTransportControl stub called");
+    RawrXD_SwarmTransportControl_MASM();
 }
 
 // Telemetry stub
 extern "C" void Telemetry_SanitizeData() {
-    LogMessage("Telemetry_SanitizeData stub called");
+    RawrXD_Telemetry_SanitizeData_MASM();
 }
 
 // Unlock stub
 extern "C" void Unlock_800B_Kernel() {
-    LogMessage("Unlock_800B_Kernel stub called");
+    RawrXD_Unlock_800B_Kernel_MASM();
 }
 
 // Validate model stub
 extern "C" void ValidateModelAlignment() {
-    LogMessage("ValidateModelAlignment stub called");
+    RawrXD_ValidateModelAlignment_MASM();
 }
 
 // Vulkan DMA stub
 extern "C" void VulkanDMA_RegisterTensor() {
-    LogMessage("VulkanDMA_RegisterTensor stub called");
+    RawrXD_VulkanDMA_RegisterTensor_MASM();
 }
 
 // Vulkan kernel stubs
 extern "C" void VulkanKernel_Init() {
-    LogMessage("VulkanKernel_Init stub called");
+    RawrXD_VulkanKernel_Init_MASM();
 }
 
 extern "C" void VulkanKernel_Cleanup() {
-    LogMessage("VulkanKernel_Cleanup stub called");
+    RawrXD_VulkanKernel_Cleanup_MASM();
 }
 
 extern "C" void VulkanKernel_LoadShader() {
-    LogMessage("VulkanKernel_LoadShader stub called");
+    RawrXD_VulkanKernel_LoadShader_MASM();
 }
 
 extern "C" void VulkanKernel_CreatePipeline() {
-    LogMessage("VulkanKernel_CreatePipeline stub called");
+    RawrXD_VulkanKernel_CreatePipeline_MASM();
 }
 
 extern "C" void VulkanKernel_AllocBuffer() {
-    LogMessage("VulkanKernel_AllocBuffer stub called");
+    RawrXD_VulkanKernel_AllocBuffer_MASM();
 }
 
 extern "C" void VulkanKernel_CopyToDevice() {
-    LogMessage("VulkanKernel_CopyToDevice stub called");
+    RawrXD_VulkanKernel_CopyToDevice_MASM();
 }
 
 extern "C" void VulkanKernel_CopyToHost() {
-    LogMessage("VulkanKernel_CopyToHost stub called");
+    RawrXD_VulkanKernel_CopyToHost_MASM();
 }
 
 extern "C" void VulkanKernel_DispatchMatMul() {
-    LogMessage("VulkanKernel_DispatchMatMul stub called");
+    RawrXD_VulkanKernel_DispatchMatMul_MASM();
 }
 
 extern "C" void VulkanKernel_DispatchFlashAttn() {
-    LogMessage("VulkanKernel_DispatchFlashAttn stub called");
+    RawrXD_VulkanKernel_DispatchFlashAttn_MASM();
 }
 
 extern "C" void VulkanKernel_HotswapShader() {
-    LogMessage("VulkanKernel_HotswapShader stub called");
+    RawrXD_VulkanKernel_HotswapShader_MASM();
 }
 
 extern "C" void VulkanKernel_GetStats() {
-    LogMessage("VulkanKernel_GetStats stub called");
+    RawrXD_VulkanKernel_GetStats_MASM();
 }
 
 // Webview panel stub
 extern "C" void WebviewPanel_CreateAPI() {
-    LogMessage("WebviewPanel_CreateAPI stub called");
+    RawrXD_WebviewPanel_CreateAPI_MASM();
 }
 
 // Additional stubs for completion
 extern "C" void Apply_FFN_SwiGLU() {
-    LogMessage("Apply_FFN_SwiGLU stub called");
+    RawrXD_Apply_FFN_SwiGLU_MASM();
 }
 
 extern "C" void Apply_RMSNorm() {
-    LogMessage("Apply_RMSNorm stub called");
+    RawrXD_Apply_RMSNorm_MASM();
 }
 
 extern "C" void Apply_RoPE_Direct() {
-    LogMessage("Apply_RoPE_Direct stub called");
+    RawrXD_Apply_RoPE_Direct_MASM();
 }
 
 extern "C" void Compute_MHA_Parallel() {
-    LogMessage("Compute_MHA_Parallel stub called");
+    RawrXD_Compute_MHA_Parallel_MASM();
 }
 
 extern "C" void DispatchComputeStage() {
-    LogMessage("DispatchComputeStage stub called");
+    RawrXD_DispatchComputeStage_MASM();
 }
 
 extern "C" void GenerateTokens() {
-    LogMessage("GenerateTokens stub called");
+    RawrXD_GenerateTokens_MASM();
 }
 
 extern "C" void CleanupInference() {
-    LogMessage("CleanupInference stub called");
+    RawrXD_CleanupInference_MASM();
 }
 
 extern "C" void ConsolePrint() {
-    LogMessage("ConsolePrint stub called");
+    RawrXD_ConsolePrint_MASM();
 }
 
 extern "C" void DirectIO_Prefetch() {
-    LogMessage("DirectIO_Prefetch stub called");
+    RawrXD_DirectIO_Prefetch_MASM();
 }
 
 extern "C" void DiskExplorer_Init() {
-    LogMessage("DiskExplorer_Init stub called");
+    RawrXD_DiskExplorer_Init_MASM();
 }
 
 extern "C" void DiskExplorer_ScanDrives() {
-    LogMessage("DiskExplorer_ScanDrives stub called");
+    RawrXD_DiskExplorer_ScanDrives_MASM();
 }
 
 extern "C" void EstimateRAM_Safe() {
-    LogMessage("EstimateRAM_Safe stub called");
+    RawrXD_EstimateRAM_Safe_MASM();
 }
 
 extern "C" void EventFire_ExtensionActivated() {
-    LogMessage("EventFire_ExtensionActivated stub called");
+    RawrXD_EventFire_ExtensionActivated_MASM();
 }
 
 extern "C" void EventFire_ExtensionDeactivated() {
-    LogMessage("EventFire_ExtensionDeactivated stub called");
+    RawrXD_EventFire_ExtensionDeactivated_MASM();
 }
 
 extern "C" void EventListener_DisposeInternal() {
-    LogMessage("EventListener_DisposeInternal stub called");
+    RawrXD_EventListener_DisposeInternal_MASM();
 }
 
 extern "C" void find_pattern_asm() {
-    LogMessage("find_pattern_asm stub called");
+    RawrXD_find_pattern_asm_MASM();
 }
 
 extern "C" void fnv1a_hash64() {
-    LogMessage("fnv1a_hash64 stub called");
+    RawrXD_fnv1a_hash64_MASM();
 }
 
 extern "C" void GetBurstCount() {
-    LogMessage("GetBurstCount stub called");
+    RawrXD_GetBurstCount_MASM();
 }
 
 extern "C" void GetBurstPlan() {
-    LogMessage("GetBurstPlan stub called");
+    RawrXD_GetBurstPlan_MASM();
 }
 
 extern "C" void GetElapsedMicroseconds() {
-    LogMessage("GetElapsedMicroseconds stub called");
+    RawrXD_GetElapsedMicroseconds_MASM();
 }
 
 extern "C" void GetTensorOffset() {
-    LogMessage("GetTensorOffset stub called");
+    RawrXD_GetTensorOffset_MASM();
 }
 
 extern "C" void GetTensorSize() {
-    LogMessage("GetTensorSize stub called");
+    RawrXD_GetTensorSize_MASM();
 }
 
 extern "C" void HashMap_Create() {
-    LogMessage("HashMap_Create stub called");
+    RawrXD_HashMap_Create_MASM();
 }
 
 extern "C" void HashMap_Get() {
-    LogMessage("HashMap_Get stub called");
+    RawrXD_HashMap_Get_MASM();
 }
 
 extern "C" void HashMap_Put() {
-    LogMessage("HashMap_Put stub called");
+    RawrXD_HashMap_Put_MASM();
 }
 
 extern "C" void HashMap_Remove() {
-    LogMessage("HashMap_Remove stub called");
+    RawrXD_HashMap_Remove_MASM();
 }
 
 extern "C" void HashMap_ForEach() {
-    LogMessage("HashMap_ForEach stub called");
+    RawrXD_HashMap_ForEach_MASM();
 }
 
 extern "C" void DependencyGraph_AddNode() {
-    LogMessage("DependencyGraph_AddNode stub called");
+    RawrXD_DependencyGraph_AddNode_MASM();
 }
 
 extern "C" void DependencyGraph_Create() {
-    LogMessage("DependencyGraph_Create stub called");
+    RawrXD_DependencyGraph_Create_MASM();
 }
 
 extern "C" void Disposable_Create() {
-    LogMessage("Disposable_Create stub called");
+    RawrXD_Disposable_Create_MASM();
 }
 
 extern "C" void DisposableCollection_Create() {
-    LogMessage("DisposableCollection_Create stub called");
+    RawrXD_DisposableCollection_Create_MASM();
 }
 
 extern "C" void DisposableCollection_Dispose() {
-    LogMessage("DisposableCollection_Dispose stub called");
+    RawrXD_DisposableCollection_Dispose_MASM();
 }
 
 extern "C" void JoinCluster() {
-    LogMessage("JoinCluster stub called");
+    RawrXD_JoinCluster_MASM();
 }
 
 extern "C" void LoadTensorBlock() {
-    LogMessage("LoadTensorBlock stub called");
+    RawrXD_LoadTensorBlock_MASM();
 }
 
 extern "C" void Path_Join() {
-    LogMessage("Path_Join stub called");
+    RawrXD_Path_Join_MASM();
 }
 
 extern "C" void Path_Join_PackageJson() {
-    LogMessage("Path_Join_PackageJson stub called");
+    RawrXD_Path_Join_PackageJson_MASM();
 }
 
 extern "C" void PrintU64() {
-    LogMessage("PrintU64 stub called");
+    RawrXD_PrintU64_MASM();
 }
 
 extern "C" void Provider_FromDocumentSelector() {
-    LogMessage("Provider_FromDocumentSelector stub called");
+    RawrXD_Provider_FromDocumentSelector_MASM();
 }
 
 extern "C" void Provider_Register() {
-    LogMessage("Provider_Register stub called");
+    RawrXD_Provider_Register_MASM();
 }
 
 extern "C" void ReadTsc() {
-    LogMessage("ReadTsc stub called");
+    RawrXD_ReadTsc_MASM();
 }
 
 extern "C" void Registry_CreateKey() {
-    LogMessage("Registry_CreateKey stub called");
+    RawrXD_Registry_CreateKey_MASM();
 }
 
 extern "C" void Registry_KeyExists() {
-    LogMessage("Registry_KeyExists stub called");
+    RawrXD_Registry_KeyExists_MASM();
 }
 
 extern "C" void Registry_SetDwordValue() {
-    LogMessage("Registry_SetDwordValue stub called");
+    RawrXD_Registry_SetDwordValue_MASM();
 }
 
 extern "C" void Registry_SetQwordValue() {
-    LogMessage("Registry_SetQwordValue stub called");
+    RawrXD_Registry_SetQwordValue_MASM();
 }
 
 extern "C" void Registry_SetStringValue() {
-    LogMessage("Registry_SetStringValue stub called");
+    RawrXD_Registry_SetStringValue_MASM();
 }
 
 extern "C" void ResolveZonePointer() {
-    LogMessage("ResolveZonePointer stub called");
+    RawrXD_ResolveZonePointer_MASM();
 }
 
 extern "C" void SemVer_Parse() {
-    LogMessage("SemVer_Parse stub called");
+    RawrXD_SemVer_Parse_MASM();
 }
 
 extern "C" void SemVer_ParseRange() {
-    LogMessage("SemVer_ParseRange stub called");
+    RawrXD_SemVer_ParseRange_MASM();
 }
 
 extern "C" void SemVer_Satisfies() {
-    LogMessage("SemVer_Satisfies stub called");
+    RawrXD_SemVer_Satisfies_MASM();
 }
 
 extern "C" void ShellInteg_CompleteCommand() {
-    LogMessage("ShellInteg_CompleteCommand stub called");
+    RawrXD_ShellInteg_CompleteCommand_MASM();
 }
 
 extern "C" void ShellInteg_ExecuteCommand() {
-    LogMessage("ShellInteg_ExecuteCommand stub called");
+    RawrXD_ShellInteg_ExecuteCommand_MASM();
 }
 
 extern "C" void ShellInteg_GetCommandHistory() {
-    LogMessage("ShellInteg_GetCommandHistory stub called");
+    RawrXD_ShellInteg_GetCommandHistory_MASM();
 }
 
 extern "C" void ShellInteg_GetStats() {
-    LogMessage("ShellInteg_GetStats stub called");
+    RawrXD_ShellInteg_GetStats_MASM();
 }
 
 extern "C" void ShellInteg_IsAlive() {
-    LogMessage("ShellInteg_IsAlive stub called");
+    RawrXD_ShellInteg_IsAlive_MASM();
 }
 
 extern "C" void CompletionProvider_Adapter_Create() {
-    LogMessage("CompletionProvider_Adapter_Create stub called");
+    RawrXD_CompletionProvider_Adapter_Create_MASM();
 }
 
 extern "C" void DefinitionProvider_Adapter_Create() {
-    LogMessage("DefinitionProvider_Adapter_Create stub called");
+    RawrXD_DefinitionProvider_Adapter_Create_MASM();
 }
 
 extern "C" void HoverProvider_Adapter_Create() {
-    LogMessage("HoverProvider_Adapter_Create stub called");
+    RawrXD_HoverProvider_Adapter_Create_MASM();
 }
 
 // Global variables for ASM

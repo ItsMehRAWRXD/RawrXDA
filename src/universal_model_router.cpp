@@ -152,7 +152,7 @@ std::vector<std::string> UniversalModelRouter::getModelsForBackend(ModelBackend 
 
 bool UniversalModelRouter::loadConfigFromFile(const std::string& config_file_path)
 {
-    std::ifstream file(config_file_path);
+    std::ifstream file(config_file_path, std::ios::binary | std::ios::ate);
     if (!file.is_open()) {
         if (m_onError) {
             m_onError("Cannot open config file: " + config_file_path);
@@ -160,6 +160,18 @@ bool UniversalModelRouter::loadConfigFromFile(const std::string& config_file_pat
         return false;
     }
     try {
+        const std::streampos endPos = file.tellg();
+        if (endPos <= 0) {
+            if (m_onError) m_onError("Config file is empty or unreadable");
+            return false;
+        }
+        const size_t fileSize = static_cast<size_t>(endPos);
+        static constexpr size_t kMaxRouterConfigBytes = 4u * 1024u * 1024u;
+        if (fileSize > kMaxRouterConfigBytes) {
+            if (m_onError) m_onError("Config file too large (max 4MB)");
+            return false;
+        }
+        file.seekg(0);
         std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
         file.close();
         nlohmann::json j = nlohmann::json::parse(content);
@@ -177,9 +189,23 @@ bool UniversalModelRouter::loadConfigFromJson(const json& config_json)
         return false;
     }
 
+    static constexpr size_t kMaxConfiguredModels = 2048;
+    static constexpr size_t kMaxModelNameBytes = 256;
+    static constexpr size_t kMaxModelIdBytes = 1024;
+    static constexpr size_t kMaxEndpointBytes = 2048;
+    static constexpr size_t kMaxApiKeyBytes = 1024;
+    static constexpr size_t kMaxDescriptionBytes = 4096;
+
+    const auto& modelsObj = config_json["models"];
+    if (modelsObj.size() > kMaxConfiguredModels) {
+        if (m_onError) m_onError("Too many configured models");
+        return false;
+    }
+
     m_modelRegistry.clear();
-    for (auto it = config_json["models"].begin(); it != config_json["models"].end(); ++it) {
+    for (auto it = modelsObj.begin(); it != modelsObj.end(); ++it) {
         const std::string& name = it.key();
+        if (name.empty() || name.size() > kMaxModelNameBytes) continue;
         const auto& mc = it.value();
         if (!mc.is_object()) continue;
 
@@ -189,6 +215,12 @@ bool UniversalModelRouter::loadConfigFromJson(const json& config_json)
         config.api_key = mc.value("api_key", "");
         config.endpoint = mc.value("endpoint", "");
         config.description = mc.value("description", "");
+        if (config.model_id.size() > kMaxModelIdBytes ||
+            config.api_key.size() > kMaxApiKeyBytes ||
+            config.endpoint.size() > kMaxEndpointBytes ||
+            config.description.size() > kMaxDescriptionBytes) {
+            continue;
+        }
         if (mc.contains("full_config")) {
             config.full_config = mc["full_config"];
         } else {
@@ -361,6 +393,18 @@ static void invokeOllamaGenerate(const std::string& model_name, const std::strin
     std::function<void(const std::string& chunk, bool complete)> callback)
 {
     if (!callback) return;
+    static constexpr size_t kMaxPromptBytes = 1u * 1024u * 1024u;
+    static constexpr size_t kMaxModelNameBytes = 256u;
+    static constexpr size_t kMaxResponseBodyBytes = 256u * 1024u * 1024u;
+    static constexpr size_t kMaxStreamingLineBytes = 1u * 1024u * 1024u;
+    if (prompt.size() > kMaxPromptBytes) {
+        callback("Error: Prompt too large (max 1MB).", true);
+        return;
+    }
+    if (model_name.empty() || model_name.size() > kMaxModelNameBytes) {
+        callback("Error: Invalid model name.", true);
+        return;
+    }
     const wchar_t* host = L"localhost";
     INTERNET_PORT port = 11434;
     HINTERNET hSession = WinHttpOpen(L"RawrXD-Router/1.0", WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, NULL, NULL, 0);
@@ -395,6 +439,7 @@ static void invokeOllamaGenerate(const std::string& model_name, const std::strin
     if (!sent) { WinHttpCloseHandle(hRequest); WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession); callback("Error: Ollama request send failed.", true); return; }
     if (!WinHttpReceiveResponse(hRequest, NULL)) { WinHttpCloseHandle(hRequest); WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession); callback("Error: Ollama not responding.", true); return; }
     std::string lineBuf;
+    size_t totalRead = 0;
     char buf[4096];
     DWORD dwRead;
     for (;;) {
@@ -402,6 +447,12 @@ static void invokeOllamaGenerate(const std::string& model_name, const std::strin
         if (!WinHttpQueryDataAvailable(hRequest, &dwRead) || dwRead == 0) break;
         if (dwRead > sizeof(buf)) dwRead = sizeof(buf);
         if (!WinHttpReadData(hRequest, buf, dwRead, &dwRead) || dwRead == 0) break;
+        totalRead += static_cast<size_t>(dwRead);
+        if (totalRead > kMaxResponseBodyBytes) {
+            callback("Error: Ollama response exceeded size limit.", true);
+            WinHttpCloseHandle(hRequest); WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession);
+            return;
+        }
         for (DWORD i = 0; i < dwRead; i++) {
             if (buf[i] == '\n') {
                 if (!lineBuf.empty()) {
@@ -425,6 +476,11 @@ static void invokeOllamaGenerate(const std::string& model_name, const std::strin
                 lineBuf.clear();
             } else {
                 lineBuf += buf[i];
+                if (lineBuf.size() > kMaxStreamingLineBytes) {
+                    callback("Error: Ollama stream line exceeded size limit.", true);
+                    WinHttpCloseHandle(hRequest); WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession);
+                    return;
+                }
             }
         }
     }

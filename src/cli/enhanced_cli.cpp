@@ -70,13 +70,15 @@ RawrXD::Expected<void, CLIError> EnhancedCLI::runInteractive() {
     while(true) {
         char* input = readline("> ");
         if (!input) break;
+        // Use unique_ptr to ensure proper deallocation (delete[] matches new[])
+        std::unique_ptr<char[], decltype(&operator delete[])> inputGuard(input, &operator delete[]);
         if (*input) {
             std::string line(input);
             auto res = executeCommand(line);
             if (res) std::cout << res.value() << "\n";
             else std::cerr << "Error: " << (int)res.error() << "\n";
-            free(input);
         }
+        // inputGuard automatically calls delete[] on scope exit
     }
     return {};
 }

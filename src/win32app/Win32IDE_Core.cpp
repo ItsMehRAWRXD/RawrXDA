@@ -21,6 +21,7 @@
 #include "../modules/ExtensionLoader.hpp"
 #include "../modules/native_memory.hpp"
 #include "../native_agent.hpp"
+#include "../streaming_gguf_loader.h"
 #include "IDEConfig.h"
 #include "IDELogger.h"
 #include "ModelConnection.h"
@@ -30,6 +31,7 @@
 #include "Win32IDE_AgenticBrowser.h"
 #include "Win32IDE_ComponentManagers.h"  // Complete types for unique_ptr<T> dtor
 #include "Win32IDE_IELabels.h"
+#include "WindowVisibilityHelpers.h"
 #include "enterprise_feature_manager.hpp"
 #include "feature_registry_panel.h"
 #include "lsp/RawrXD_LSPServer.h"
@@ -41,7 +43,11 @@
 #ifndef WM_DPICHANGED
 #define WM_DPICHANGED 0x02E0
 #endif
+#ifndef MOD_NOREPEAT
+#define MOD_NOREPEAT 0x4000
+#endif
 #include <algorithm>
+#include <cstdlib>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -78,6 +84,7 @@
 // Window Class Name
 // ============================================================================
 static const char* kWindowClassName = "RawrXD_IDE_MainWindow";
+static constexpr int kEmergencyWipeHotkeyId = 0xA0F0;
 
 // Implemented in src/multi_file_search.cpp (Win32 dialog invoked by MultiFileSearchWidget::show()).
 extern void MultiFileSearchWidget_ShowDialog(void* ctx);
@@ -175,6 +182,7 @@ static void drawLayoutDebugOverlay(HWND hwnd, HDC hdc);
 
 static constexpr UINT_PTR IDT_VISIBILITY_WATCHDOG = 0x7D11;
 static constexpr UINT_PTR IDT_GPU_TELEMETRY = 0x7D12;  // 2-second backend/GPU status refresh
+static constexpr UINT_PTR IDT_SESSION_SAVE_DEBOUNCE = 0x7D13;
 
 static bool isLayoutDebugOverlayEnabled()
 {
@@ -205,6 +213,16 @@ static void logFirstPaint()
     }
 }
 
+static void logWindowPlacementSnapshot(HWND hwnd, const char* phase)
+{
+    RawrXD::Win32Visibility::LogPlacementSnapshot(hwnd, phase);
+}
+
+static void normalizeWindowPlacementForVisibility(HWND hwnd)
+{
+    RawrXD::Win32Visibility::NormalizePlacementForVisibility(hwnd);
+}
+
 static void runWindowVisibilityWatchdog(HWND hwnd)
 {
     if (!hwnd || !IsWindow(hwnd))
@@ -218,6 +236,8 @@ static void runWindowVisibilityWatchdog(HWND hwnd)
     {
         ShowWindow(hwnd, SW_SHOW);
     }
+
+    normalizeWindowPlacementForVisibility(hwnd);
 
     RECT rc = {};
     GetWindowRect(hwnd, &rc);
@@ -277,6 +297,7 @@ static void drawLayoutDebugOverlay(HWND hwnd, HDC hdc)
 // SEH wrappers — must be standalone functions without C++ objects (MSVC C2712)
 typedef void (*OnCreateFn)(void* self, HWND hwnd);
 typedef void (*DeferredInitFn)(void* self);
+typedef void (*OnCreateStepFn)(void* self, HWND hwnd);
 
 static void sehCallOnCreate(OnCreateFn fn, void* self, HWND hwnd)
 {
@@ -306,6 +327,42 @@ static void sehCallOnCreate(OnCreateFn fn, void* self, HWND hwnd)
                                "Some panels may be missing.";
         OutputDebugStringA(crashMsg);
         MessageBoxA(hwnd, crashMsg, "RawrXD IDE - Startup Warning", MB_OK | MB_ICONWARNING);
+    }
+#endif
+}
+
+static bool sehCallOnCreateStep(OnCreateStepFn fn, void* self, HWND hwnd, const char* stepName)
+{
+#if defined(_MSC_VER)
+    __try
+    {
+        fn(self, hwnd);
+        return true;
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER)
+    {
+        char crashMsg[512];
+        snprintf(crashMsg, sizeof(crashMsg),
+                 "[RawrXD] SEH exception 0x%08lX in onCreate step '%s'. Continuing startup.\n",
+                 GetExceptionCode(),
+                 (stepName && stepName[0]) ? stepName : "unknown");
+        OutputDebugStringA(crashMsg);
+        return false;
+    }
+#else
+    try
+    {
+        fn(self, hwnd);
+        return true;
+    }
+    catch (...)
+    {
+        char crashMsg[512];
+        snprintf(crashMsg, sizeof(crashMsg),
+                 "[RawrXD] C++ exception in onCreate step '%s'. Continuing startup.\n",
+                 (stepName && stepName[0]) ? stepName : "unknown");
+        OutputDebugStringA(crashMsg);
+        return false;
     }
 #endif
 }
@@ -754,6 +811,11 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
                 onGhostTextTimer();
                 return 0;
             }
+            if (wParam == 8889)
+            {  // TITAN_PAGING_HEARTBEAT_TIMER_ID
+                onTitanPagingHeartbeatTimer();
+                return 0;
+            }
             if (wParam == MODEL_PROGRESS_TIMER_ID)
             {
                 // Poll model progress and update the progress bar UI
@@ -799,6 +861,17 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
             if (wParam == IDT_GPU_TELEMETRY)
             {
                 updateStatusBarBackend();
+                refreshMoEPackHudStatusBarPart();
+                return 0;
+            }
+            if (wParam == IDT_SESSION_SAVE_DEBOUNCE)
+            {
+                KillTimer(hwnd, IDT_SESSION_SAVE_DEBOUNCE);
+                if (m_sessionSaveDebouncePending)
+                {
+                    m_sessionSaveDebouncePending = false;
+                    saveSession();
+                }
                 return 0;
             }
             if (wParam == 42)
@@ -841,6 +914,11 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 
         // Phase 33: Voice Chat Global Hotkeys
         case WM_HOTKEY:
+            if (wParam == kEmergencyWipeHotkeyId)
+            {
+                performEmergencyWipeAndShutdown();
+                return 0;
+            }
             if (wParam == 0xA001)
             {  // VOICE_HOTKEY_TOGGLE_PTT
                 cmdVoicePTT();
@@ -863,6 +941,10 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
             {
                 DestroyWindow(hwnd);
             }
+            return 0;
+
+        case WM_APP + 1337:
+            handleNativeStreamTick(wParam, lParam);
             return 0;
 
         // Tier 1: Auto-update notification (WM_APP+501)
@@ -907,6 +989,18 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
                 free(const_cast<char*>(text));  // Allocated with _strdup
             return 0;
         }
+
+        case WM_TITAN_GHOST_STREAM:
+            Win32IDE_HandleTitanGhostStreamMessage(this);
+            return 0;
+
+        case WM_TITAN_AGENT_STREAM:
+            onTitanAgentStreamMessage();
+            return 0;
+
+        case WM_TITAN_AGENT_DONE:
+            onTitanAgentDone((int)wParam);
+            return 0;
 
         case WM_DESTROY:
             KillTimer(hwnd, IDT_VISIBILITY_WATCHDOG);
@@ -1032,6 +1126,16 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
                 refreshMoEPackHudStatusBarPart();
                 return 0;
             }
+            if (uMsg == WM_RAWR_LOG_MESSAGE)
+            {
+                const char* text = reinterpret_cast<const char*>(lParam);
+                if (text)
+                {
+                    LogToOutputPanel(text, static_cast<int>(wParam));
+                    free(const_cast<char*>(text));
+                }
+                return 0;
+            }
             // Handle Ghost Text completion delivery from background thread
             if (uMsg == WM_GHOST_TEXT_READY)
             {
@@ -1039,6 +1143,21 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
                 onGhostTextReady((int)wParam, completionText);
                 if (completionText)
                     free(const_cast<char*>(completionText));
+                return 0;
+            }
+            if (uMsg == WM_TITAN_GHOST_STREAM)
+            {
+                Win32IDE_HandleTitanGhostStreamMessage(this);
+                return 0;
+            }
+            if (uMsg == WM_TITAN_AGENT_STREAM)
+            {
+                onTitanAgentStreamMessage();
+                return 0;
+            }
+            if (uMsg == WM_TITAN_AGENT_DONE)
+            {
+                onTitanAgentDone((int)wParam);
                 return 0;
             }
             // Handle Plan Executor messages
@@ -1094,6 +1213,24 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
     }
 
     return DefWindowProcA(hwnd, uMsg, wParam, lParam);
+}
+
+void Win32IDE::LogToOutputPanel(const char* message, int type)
+{
+    if (!message || !*message)
+        return;
+
+    OutputSeverity severity = OutputSeverity::Info;
+    const char* tabName = "Output";
+    if (type == 1)
+        severity = OutputSeverity::Warning;
+    else if (type == 2)
+    {
+        severity = OutputSeverity::Error;
+        tabName = "Errors";
+    }
+
+    appendToOutput(std::string(message), tabName, severity);
 }
 
 // ============================================================================
@@ -1153,9 +1290,18 @@ bool Win32IDE::createWindow()
         METRICS.increment("config.loads_total");
     }
 
-    // Load RichEdit libraries — need both for RICHEDIT_CLASSA and MSFTEDIT_CLASS
-    LoadLibraryA("riched20.dll");
-    LoadLibraryA("msftedit.dll");
+    // Load RichEdit libraries up front so control creation failures are explicit.
+    HMODULE hRichEdit20 = LoadLibraryA("riched20.dll");
+    HMODULE hMsftEdit = LoadLibraryA("msftedit.dll");
+    if (!hRichEdit20)
+    {
+        LOG_ERROR("Failed to load riched20.dll (RichEdit20 controls unavailable)");
+        return false;
+    }
+    if (!hMsftEdit)
+    {
+        LOG_WARNING("msftedit.dll not available; continuing with riched20 lane");
+    }
 
     WNDCLASSEXA wc = {};
     wc.cbSize = sizeof(WNDCLASSEXA);
@@ -1163,7 +1309,8 @@ bool Win32IDE::createWindow()
     wc.lpfnWndProc = Win32IDE::WindowProc;
     wc.hInstance = m_hInstance;
     wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
-    wc.hbrBackground = CreateSolidBrush(RGB(30, 30, 30));
+    HBRUSH classBackgroundBrush = CreateSolidBrush(RGB(30, 30, 30));
+    wc.hbrBackground = classBackgroundBrush;
     wc.lpszClassName = kWindowClassName;
     wc.hIcon = LoadIcon(nullptr, IDI_APPLICATION);
     wc.hIconSm = LoadIcon(nullptr, IDI_APPLICATION);
@@ -1172,6 +1319,11 @@ bool Win32IDE::createWindow()
     {
         // Class might already be registered
         DWORD err = GetLastError();
+        if (classBackgroundBrush)
+        {
+            DeleteObject(classBackgroundBrush);
+            classBackgroundBrush = nullptr;
+        }
         if (err != ERROR_CLASS_ALREADY_EXISTS)
         {
             LOG_ERROR("Failed to register window class");
@@ -1194,7 +1346,8 @@ bool Win32IDE::createWindow()
     }
     m_hwndMain =
         CreateWindowExA(WS_EX_APPWINDOW, kWindowClassName, "RawrXD IDE - Native Win32 AI Development Environment",
-                        WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN | WS_VISIBLE, winX, winY, winW, winH, nullptr, nullptr,
+                        WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VISIBLE, winX, winY, winW,
+                        winH, nullptr, nullptr,
                         m_hInstance, this);
 
     if (!m_hwndMain)
@@ -1254,25 +1407,20 @@ static void forceWindowToForeground(HWND hwnd)
 }
 
 // ============================================================================
-// showWindow - Show and update the main window (always normal, never minimized)
-// Ignores launcher nCmdShow so the IDE never opens minimized or disappears.
+// showMainWindowSafe - canonical path for bringing the main IDE window onscreen.
 // ============================================================================
-void Win32IDE::showWindow()
+void Win32IDE::showMainWindowSafe()
 {
     if (!m_hwndMain)
         return;
+
+    logWindowPlacementSnapshot(m_hwndMain, "showMainWindowSafe:before");
+
     if (IsIconic(m_hwndMain))
         ShowWindow(m_hwndMain, SW_RESTORE);
+
+    normalizeWindowPlacementForVisibility(m_hwndMain);
     ShowWindow(m_hwndMain, SW_SHOWNORMAL);
-    WINDOWPLACEMENT wp = {sizeof(WINDOWPLACEMENT)};
-    if (GetWindowPlacement(m_hwndMain, &wp))
-    {
-        if (wp.showCmd != SW_SHOWNORMAL && wp.showCmd != SW_SHOW)
-        {
-            wp.showCmd = SW_SHOWNORMAL;
-            SetWindowPlacement(m_hwndMain, &wp);
-        }
-    }
     UpdateWindow(m_hwndMain);
     SetWindowPos(m_hwndMain, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
     BringWindowToTop(m_hwndMain);
@@ -1283,6 +1431,16 @@ void Win32IDE::showWindow()
     SetTimer(m_hwndMain, IDT_GPU_TELEMETRY, 2000, nullptr);
     FLASHWINFO fwi = {sizeof(FLASHWINFO), m_hwndMain, FLASHW_ALL | FLASHW_TIMERNOFG, 3, 0};
     FlashWindowEx(&fwi);
+
+    logWindowPlacementSnapshot(m_hwndMain, "showMainWindowSafe:after");
+}
+
+// ============================================================================
+// showWindow - backwards-compatible wrapper for existing callers.
+// ============================================================================
+void Win32IDE::showWindow()
+{
+    showMainWindowSafe();
 }
 
 // ============================================================================
@@ -1513,13 +1671,100 @@ void Win32IDE::onSize(int width, int height)
 
     int sidebarWidth = m_sidebarVisible ? m_sidebarWidth : 0;
     int secondarySidebarWidth = m_secondarySidebarVisible ? m_secondarySidebarWidth : 0;
+    const int minEditorWidth = dpiScale(320);
+    const int minPanelHeight = dpiScale(96);
+
+    auto isNear = [this](int widthValue, int basePixels) -> bool
+    {
+        const int target = dpiScale(basePixels);
+        const int tol = dpiScale(12);
+        const int delta = (widthValue >= target) ? (widthValue - target) : (target - widthValue);
+        return delta <= tol;
+    };
+
+    if (m_activeSnapState != SnapState::None && m_activeSnapState != SnapState::Custom)
+    {
+        bool stillOnPreset = false;
+        switch (m_activeSnapState)
+        {
+            case SnapState::Compact:
+                stillOnPreset = isNear(m_secondarySidebarWidth, 240);
+                break;
+            case SnapState::Standard:
+                stillOnPreset = isNear(m_secondarySidebarWidth, 360);
+                break;
+            case SnapState::Wide:
+                stillOnPreset = isNear(m_secondarySidebarWidth, 480);
+                break;
+            default:
+                break;
+        }
+
+        if (!stillOnPreset)
+        {
+            m_activeSnapState = SnapState::Custom;
+            updateSovereignSnapMenuChecks();
+            saveSessionDebounced(500);
+        }
+    }
+
+    // Guard against corrupted/restored splitter values that can collapse editor/chat regions.
+    sidebarWidth = (std::max)(0, sidebarWidth);
+    secondarySidebarWidth = (std::max)(0, secondarySidebarWidth);
+    sidebarWidth = (std::min)(sidebarWidth, width);
+    secondarySidebarWidth = (std::min)(secondarySidebarWidth, width);
+
+    const int maxSidebarsCombined = (std::max)(0, width - minEditorWidth);
+    long long combinedSidebars = static_cast<long long>(sidebarWidth) + static_cast<long long>(secondarySidebarWidth);
+    if (combinedSidebars > maxSidebarsCombined)
+    {
+        int over = static_cast<int>(combinedSidebars - maxSidebarsCombined);
+        int reduceSecondary = (std::min)(over, secondarySidebarWidth);
+        secondarySidebarWidth -= reduceSecondary;
+        over -= reduceSecondary;
+        if (over > 0)
+            sidebarWidth = (std::max)(0, sidebarWidth - over);
+    }
     // Only reserve space for panels that actually have HWNDs created
     int panelHeight = (m_outputPanelVisible && m_hwndOutputTabs) ? m_outputTabHeight : 0;
     int powerShellHeight = (m_powerShellPanelVisible && m_hwndPowerShellPanel) ? m_powerShellPanelHeight : 0;
 
+    panelHeight = (std::max)(0, panelHeight);
+    powerShellHeight = (std::max)(0, powerShellHeight);
+
     int contentTop = TOOLBAR_HEIGHT;
     int contentBottom = height - STATUSBAR_HEIGHT;
     int contentHeight = contentBottom - contentTop;
+
+    // Batch as many child reposition ops as possible to reduce resize flicker/overdraw.
+    HDWP hdwp = BeginDeferWindowPos(24);
+    auto moveChild = [&](HWND child, int x, int y, int w, int h, BOOL repaint = TRUE)
+    {
+        if (!child || !IsWindow(child))
+            return;
+
+        if (hdwp)
+        {
+            hdwp = DeferWindowPos(hdwp, child, nullptr, x, y, w, h, SWP_NOZORDER | SWP_NOACTIVATE);
+            if (hdwp)
+                return;
+        }
+
+        MoveWindow(child, x, y, w, h, repaint);
+    };
+
+    // Clamp bottom panels so they cannot consume all editor space.
+    const int maxBottomPanelsHeight = (std::max)(0, contentHeight - minPanelHeight);
+    long long combinedBottomPanels = static_cast<long long>(panelHeight) + static_cast<long long>(powerShellHeight);
+    if (combinedBottomPanels > maxBottomPanelsHeight)
+    {
+        int over = static_cast<int>(combinedBottomPanels - maxBottomPanelsHeight);
+        int reducePowerShell = (std::min)(over, powerShellHeight);
+        powerShellHeight -= reducePowerShell;
+        over -= reducePowerShell;
+        if (over > 0)
+            panelHeight = (std::max)(0, panelHeight - over);
+    }
 
     // Status bar
     if (m_hwndStatusBar)
@@ -1530,32 +1775,39 @@ void Win32IDE::onSize(int width, int height)
     // Toolbar
     if (m_hwndToolbar)
     {
-        MoveWindow(m_hwndToolbar, 0, 0, width, TOOLBAR_HEIGHT, TRUE);
+        moveChild(m_hwndToolbar, 0, 0, width, TOOLBAR_HEIGHT, TRUE);
     }
 
     // Activity bar (far left)
     if (m_hwndActivityBar)
     {
-        MoveWindow(m_hwndActivityBar, 0, contentTop, ACTIVITY_BAR_WIDTH, contentHeight, TRUE);
+        moveChild(m_hwndActivityBar, 0, contentTop, ACTIVITY_BAR_WIDTH, contentHeight, TRUE);
     }
 
     // Primary sidebar
     if (m_hwndSidebar && m_sidebarVisible)
     {
-        MoveWindow(m_hwndSidebar, ACTIVITY_BAR_WIDTH, contentTop, sidebarWidth, contentHeight, TRUE);
+        moveChild(m_hwndSidebar, ACTIVITY_BAR_WIDTH, contentTop, sidebarWidth, contentHeight, TRUE);
     }
 
     // Calculate editor area
     int editorLeft = ACTIVITY_BAR_WIDTH + sidebarWidth;
     int editorRight = width - secondarySidebarWidth;
     int editorWidth = editorRight - editorLeft;
+    if (editorWidth < minEditorWidth)
+    {
+        editorWidth = (std::max)(0, width - editorLeft);
+        secondarySidebarWidth = 0;
+        editorRight = editorLeft + editorWidth;
+    }
     int editorAreaHeight = contentHeight - panelHeight - powerShellHeight;
+    editorAreaHeight = (std::max)(0, editorAreaHeight);
 
     // Tab bar (above editor)
     int tabBarBottom = contentTop;
     if (m_hwndTabBar)
     {
-        MoveWindow(m_hwndTabBar, editorLeft, contentTop, editorWidth, TAB_BAR_HEIGHT, TRUE);
+        moveChild(m_hwndTabBar, editorLeft, contentTop, editorWidth, TAB_BAR_HEIGHT, TRUE);
         tabBarBottom = contentTop + TAB_BAR_HEIGHT;
     }
 
@@ -1563,17 +1815,18 @@ void Win32IDE::onSize(int width, int height)
     int breadcrumbBottom = tabBarBottom;
     if (m_hwndBreadcrumbs && m_settings.breadcrumbsEnabled)
     {
-        MoveWindow(m_hwndBreadcrumbs, editorLeft, tabBarBottom, editorWidth, m_breadcrumbHeight, TRUE);
+        moveChild(m_hwndBreadcrumbs, editorLeft, tabBarBottom, editorWidth, m_breadcrumbHeight, TRUE);
         breadcrumbBottom = tabBarBottom + m_breadcrumbHeight;
     }
 
     int editorContentHeight = editorAreaHeight - (breadcrumbBottom - contentTop);
+    editorContentHeight = (std::max)(0, editorContentHeight);
 
     // Line number gutter (left of editor)
     int gutterWidth = m_hwndLineNumbers ? m_lineNumberWidth : 0;
     if (m_hwndLineNumbers)
     {
-        MoveWindow(m_hwndLineNumbers, editorLeft, breadcrumbBottom, gutterWidth, editorContentHeight, TRUE);
+        moveChild(m_hwndLineNumbers, editorLeft, breadcrumbBottom, gutterWidth, editorContentHeight, TRUE);
     }
 
     // Editor (right of gutter)
@@ -1582,7 +1835,8 @@ void Win32IDE::onSize(int width, int height)
         int minimapW = (m_minimapVisible && m_hwndMinimap) ? m_minimapWidth : 0;
         int editorX = editorLeft + gutterWidth;
         int editorW = editorWidth - gutterWidth - minimapW;
-        MoveWindow(m_hwndEditor, editorX, breadcrumbBottom, editorW, editorContentHeight, TRUE);
+        editorW = (std::max)(0, editorW);
+        moveChild(m_hwndEditor, editorX, breadcrumbBottom, editorW, editorContentHeight, TRUE);
 
         // Annotation overlay (same rect as editor, draws inline annotations on top)
         if (m_hwndAnnotationOverlay && IsWindow(m_hwndAnnotationOverlay))
@@ -1594,7 +1848,8 @@ void Win32IDE::onSize(int width, int height)
         // Minimap
         if (m_hwndMinimap && m_minimapVisible)
         {
-            MoveWindow(m_hwndMinimap, editorRight - minimapW, breadcrumbBottom, minimapW, editorContentHeight, TRUE);
+            minimapW = (std::max)(0, (std::min)(minimapW, editorWidth));
+            moveChild(m_hwndMinimap, editorRight - minimapW, breadcrumbBottom, minimapW, editorContentHeight, TRUE);
         }
     }
 
@@ -1605,7 +1860,7 @@ void Win32IDE::onSize(int width, int height)
         // Output tabs
         if (m_hwndOutputTabs)
         {
-            MoveWindow(m_hwndOutputTabs, editorLeft, panelTop, editorWidth, panelHeight, TRUE);
+            moveChild(m_hwndOutputTabs, editorLeft, panelTop, editorWidth, panelHeight, TRUE);
         }
         int termTop = contentTop + editorAreaHeight;
         int tabBarH = 24;
@@ -1615,13 +1870,13 @@ void Win32IDE::onSize(int width, int height)
         {
             if (kv.second)
             {
-                MoveWindow(kv.second, editorLeft, termTop + tabBarH, editorWidth, termHeight - tabBarH, TRUE);
+                moveChild(kv.second, editorLeft, termTop + tabBarH, editorWidth, termHeight - tabBarH, TRUE);
             }
         }
         // Problems ListView (5th tab) — same region
         if (m_hwndProblemsListView)
         {
-            MoveWindow(m_hwndProblemsListView, editorLeft, termTop + tabBarH, editorWidth, termHeight - tabBarH, TRUE);
+            moveChild(m_hwndProblemsListView, editorLeft, termTop + tabBarH, editorWidth, termHeight - tabBarH, TRUE);
         }
         panelTop += panelHeight;
     }
@@ -1641,15 +1896,25 @@ void Win32IDE::onSize(int width, int height)
     // PowerShell panel
     if (m_hwndPowerShellPanel && m_powerShellPanelVisible)
     {
-        MoveWindow(m_hwndPowerShellPanel, editorLeft, panelTop, editorWidth, powerShellHeight, TRUE);
-        // Also layout internal PowerShell controls
-        updatePowerShellPanelLayout(editorWidth, powerShellHeight);
+        moveChild(m_hwndPowerShellPanel, editorLeft, panelTop, editorWidth, powerShellHeight, TRUE);
     }
 
     // Secondary sidebar (Copilot Chat / AI Panel)
     if (m_hwndSecondarySidebar && m_secondarySidebarVisible)
     {
-        MoveWindow(m_hwndSecondarySidebar, editorRight, contentTop, secondarySidebarWidth, contentHeight, TRUE);
+        moveChild(m_hwndSecondarySidebar, editorRight, contentTop, secondarySidebarWidth, contentHeight, TRUE);
+    }
+
+    if (hdwp)
+    {
+        EndDeferWindowPos(hdwp);
+        hdwp = nullptr;
+    }
+
+    // Also layout internal PowerShell controls
+    if (m_hwndPowerShellPanel && m_powerShellPanelVisible)
+    {
+        updatePowerShellPanelLayout(editorWidth, powerShellHeight);
     }
 
     // Update line numbers after layout
@@ -1659,6 +1924,70 @@ void Win32IDE::onSize(int width, int height)
     m_editorRect = {editorLeft, contentTop, editorLeft + editorWidth, contentTop + editorAreaHeight};
 
     Win32IDE_AgenticBrowser_Relayout();
+}
+
+void Win32IDE::applySovereignSnapPreset(int basePixels, const wchar_t* presetName, bool persistSession)
+{
+    const int minSnap = dpiScale(180);
+    const int maxSnap = dpiScale(640);
+    const int targetWidth = (std::max)(minSnap, (std::min)(maxSnap, dpiScale(basePixels)));
+
+    if (basePixels == 240)
+        m_activeSnapState = SnapState::Compact;
+    else if (basePixels == 360)
+        m_activeSnapState = SnapState::Standard;
+    else if (basePixels == 480)
+        m_activeSnapState = SnapState::Wide;
+    else
+        m_activeSnapState = SnapState::Custom;
+
+    m_sidebarWidth = targetWidth;
+    m_secondarySidebarWidth = targetWidth;
+    updateSovereignSnapMenuChecks();
+
+    if (m_hwndMain && IsWindow(m_hwndMain))
+    {
+        RECT rc = {};
+        if (GetClientRect(m_hwndMain, &rc))
+        {
+            onSize(rc.right - rc.left, rc.bottom - rc.top);
+        }
+    }
+
+    if (m_hwndStatusBar && IsWindow(m_hwndStatusBar))
+    {
+        wchar_t msg[128] = {};
+        swprintf(msg, 128, L"Sovereign Snap: %ls", presetName ? presetName : L"Custom");
+        SendMessageW(m_hwndStatusBar, SB_SETTEXTW, 0, (LPARAM)msg);
+    }
+
+    if (persistSession)
+    {
+        // Persist immediately so snap preference survives crash/abrupt shutdown.
+        saveSession();
+    }
+}
+
+void Win32IDE::updateSovereignSnapMenuChecks()
+{
+    if (!m_hMenu)
+        return;
+
+    UINT checkedId = 0;
+    if (m_activeSnapState == SnapState::Compact)
+        checkedId = IDM_VIEW_SOVEREIGN_SNAP_COMPACT;
+    else if (m_activeSnapState == SnapState::Standard)
+        checkedId = IDM_VIEW_SOVEREIGN_SNAP_STANDARD;
+    else if (m_activeSnapState == SnapState::Wide)
+        checkedId = IDM_VIEW_SOVEREIGN_SNAP_WIDE;
+
+    const UINT flags = MF_BYCOMMAND;
+    CheckMenuItem(m_hMenu, IDM_VIEW_SOVEREIGN_SNAP_COMPACT,
+                  flags | (checkedId == IDM_VIEW_SOVEREIGN_SNAP_COMPACT ? MF_CHECKED : MF_UNCHECKED));
+    CheckMenuItem(m_hMenu, IDM_VIEW_SOVEREIGN_SNAP_STANDARD,
+                  flags | (checkedId == IDM_VIEW_SOVEREIGN_SNAP_STANDARD ? MF_CHECKED : MF_UNCHECKED));
+    CheckMenuItem(m_hMenu, IDM_VIEW_SOVEREIGN_SNAP_WIDE,
+                  flags | (checkedId == IDM_VIEW_SOVEREIGN_SNAP_WIDE ? MF_CHECKED : MF_UNCHECKED));
 }
 
 // ============================================================================
@@ -1810,6 +2139,90 @@ bool Win32IDE::trySendToOllama(const std::string& prompt, std::string& outRespon
 void Win32IDE::onCreate(HWND hwnd)
 {
     m_hwndMain = hwnd;
+    bool hadOnCreateStepFailure = false;
+    auto initOptionalPanelsStep = +[](void* self, HWND h)
+    {
+        auto* ide = static_cast<Win32IDE*>(self);
+
+        // Optional panels (keep them alive for the lifetime of the IDE; no extra stub layers).
+        // These are lightweight wrappers; heavy init is still deferred.
+        if (!ide->m_modelRegistry)
+            ide->m_modelRegistry = new ModelRegistry(h);
+        if (!ide->m_interpretabilityPanel)
+        {
+            ide->m_interpretabilityPanel = new InterpretabilityPanel();
+            ide->m_interpretabilityPanel->setParent(h);
+        }
+        if (!ide->m_checkpointManager)
+            ide->m_checkpointManager = new CheckpointManager(h);
+        if (!ide->m_ciCdSettings)
+            ide->m_ciCdSettings = new CICDSettings();
+        if (!ide->m_multiFileSearch)
+        {
+            ide->m_multiFileSearch = new MultiFileSearchWidget();
+            // Default root: project root if set; else current working directory.
+            const std::string root = ide->m_projectRoot.empty() ? std::filesystem::current_path().string() : ide->m_projectRoot;
+            ide->m_multiFileSearch->setProjectRoot(root);
+            ide->m_multiFileSearch->setShowCallback(&MultiFileSearchWidget_ShowDialog, ide->m_multiFileSearch);
+        }
+        if (!ide->m_benchmarkMenu)
+            ide->m_benchmarkMenu = new BenchmarkMenu(h);
+
+        if (ide->m_modelRegistry)
+        {
+            ide->m_modelRegistry->setShowCallback(
+                [](void* ctx)
+                {
+                    auto* cbIde = static_cast<Win32IDE*>(ctx);
+                    if (cbIde)
+                        cbIde->showModelRegistryDialog();
+                },
+                ide);
+        }
+
+        if (ide->m_ciCdSettings)
+        {
+            ide->m_ciCdSettings->setShowCallback(
+                [](void* ctx)
+                {
+                    auto* cbIde = static_cast<Win32IDE*>(ctx);
+                    if (cbIde)
+                        cbIde->showCICDSettingsDialog();
+                },
+                ide);
+        }
+
+        if (ide->m_checkpointManager)
+        {
+            ide->m_checkpointManager->setShowCallback(
+                [](void* ctx, const std::vector<CheckpointManager::CheckpointIndex>& checkpoints)
+                {
+                    auto* cbIde = static_cast<Win32IDE*>(ctx);
+                    if (!cbIde)
+                        return;
+                    std::string msg = "[CheckpointManager] Checkpoints: " + std::to_string(checkpoints.size()) + "\n";
+                    for (const auto& cp : checkpoints)
+                    {
+                        msg += "  - " + cp.checkpointId + "\n";
+                    }
+                    cbIde->appendToOutput(msg, "Output", Win32IDE::OutputSeverity::Info);
+                },
+                ide);
+        }
+    };
+    auto createMenuBarStep = +[](void* self, HWND h) { static_cast<Win32IDE*>(self)->createMenuBar(h); };
+    auto createToolbarStep = +[](void* self, HWND h) { static_cast<Win32IDE*>(self)->createToolbar(h); };
+    auto createActivityBarStep = +[](void* self, HWND h) { static_cast<Win32IDE*>(self)->createActivityBar(h); };
+    auto createPrimarySidebarStep = +[](void* self, HWND h) { static_cast<Win32IDE*>(self)->createPrimarySidebar(h); };
+    auto createTabBarStep = +[](void* self, HWND h) { static_cast<Win32IDE*>(self)->createTabBar(h); };
+    auto createBreadcrumbBarStep = +[](void* self, HWND h) { static_cast<Win32IDE*>(self)->createBreadcrumbBar(h); };
+    auto createLineNumberGutterStep = +[](void* self, HWND h) { static_cast<Win32IDE*>(self)->createLineNumberGutter(h); };
+    auto createEditorStep = +[](void* self, HWND h) { static_cast<Win32IDE*>(self)->createEditor(h); };
+    auto createAnnotationOverlayStep = +[](void* self, HWND h) { static_cast<Win32IDE*>(self)->createAnnotationOverlay(h); };
+    auto createTerminalStep = +[](void* self, HWND h) { static_cast<Win32IDE*>(self)->createTerminal(h); };
+    auto createEnhancedStatusBarStep = +[](void* self, HWND h) { static_cast<Win32IDE*>(self)->createEnhancedStatusBar(h); };
+    auto createOutputTabsStep = +[](void* self, HWND) { static_cast<Win32IDE*>(self)->createOutputTabs(); };
+    auto createChatPanelStep = +[](void* self, HWND) { static_cast<Win32IDE*>(self)->createChatPanel(); };
 
     // Initialize Common Controls
     INITCOMMONCONTROLSEX icex = {};
@@ -1823,154 +2236,180 @@ void Win32IDE::onCreate(HWND hwnd)
     // Each step is wrapped so a crash pinpoints the exact function.
     // ================================================================
 
-    // Optional panels (keep them alive for the lifetime of the IDE; no extra stub layers).
-    // These are lightweight wrappers; heavy init is still deferred.
-    if (!m_modelRegistry)
-        m_modelRegistry = new ModelRegistry(hwnd);
-    if (!m_interpretabilityPanel)
-    {
-        m_interpretabilityPanel = new InterpretabilityPanel();
-        m_interpretabilityPanel->setParent(hwnd);
-    }
-    if (!m_checkpointManager)
-        m_checkpointManager = new CheckpointManager(hwnd);
-    if (!m_ciCdSettings)
-        m_ciCdSettings = new CICDSettings();
-    if (!m_multiFileSearch)
-    {
-        m_multiFileSearch = new MultiFileSearchWidget();
-        // Default root: project root if set; else current working directory.
-        const std::string root = m_projectRoot.empty() ? std::filesystem::current_path().string() : m_projectRoot;
-        m_multiFileSearch->setProjectRoot(root);
-        m_multiFileSearch->setShowCallback(&MultiFileSearchWidget_ShowDialog, m_multiFileSearch);
-    }
-    if (!m_benchmarkMenu)
-        m_benchmarkMenu = new BenchmarkMenu(hwnd);
-
-    if (m_modelRegistry)
-    {
-        m_modelRegistry->setShowCallback(
-            [](void* ctx)
-            {
-                auto* ide = static_cast<Win32IDE*>(ctx);
-                if (ide)
-                    ide->showModelRegistryDialog();
-            },
-            this);
-    }
-
-    if (m_ciCdSettings)
-    {
-        m_ciCdSettings->setShowCallback(
-            [](void* ctx)
-            {
-                auto* ide = static_cast<Win32IDE*>(ctx);
-                if (ide)
-                    ide->showCICDSettingsDialog();
-            },
-            this);
-    }
-
-    if (m_checkpointManager)
-    {
-        m_checkpointManager->setShowCallback(
-            [](void* ctx, const std::vector<CheckpointManager::CheckpointIndex>& checkpoints)
-            {
-                auto* ide = static_cast<Win32IDE*>(ctx);
-                if (!ide)
-                    return;
-                std::string msg = "[CheckpointManager] Checkpoints: " + std::to_string(checkpoints.size()) + "\n";
-                for (const auto& cp : checkpoints)
-                {
-                    msg += "  - " + cp.checkpointId + "\n";
-                }
-                ide->appendToOutput(msg, "Output", Win32IDE::OutputSeverity::Info);
-            },
-            this);
-    }
+    OutputDebugStringA("[onCreate] initOptionalPanels...\n");
+    hadOnCreateStepFailure |= !sehCallOnCreateStep(initOptionalPanelsStep, this, hwnd, "initOptionalPanels");
 
     OutputDebugStringA("[onCreate] createMenuBar...\n");
-    createMenuBar(hwnd);  // ESP:m_hMenu — menus/submenus wired end-to-end
+    hadOnCreateStepFailure |= !sehCallOnCreateStep(createMenuBarStep, this, hwnd, "createMenuBar");
     OutputDebugStringA("[onCreate] createToolbar...\n");
-    createToolbar(hwnd);
+    hadOnCreateStepFailure |= !sehCallOnCreateStep(createToolbarStep, this, hwnd, "createToolbar");
 
     OutputDebugStringA("[onCreate] createActivityBar...\n");
-    createActivityBar(hwnd);
+    hadOnCreateStepFailure |= !sehCallOnCreateStep(createActivityBarStep, this, hwnd, "createActivityBar");
     OutputDebugStringA("[onCreate] createPrimarySidebar...\n");
-    createPrimarySidebar(hwnd);
+    hadOnCreateStepFailure |= !sehCallOnCreateStep(createPrimarySidebarStep, this, hwnd, "createPrimarySidebar");
 
     OutputDebugStringA("[onCreate] createTabBar...\n");
-    createTabBar(hwnd);
+    hadOnCreateStepFailure |= !sehCallOnCreateStep(createTabBarStep, this, hwnd, "createTabBar");
     OutputDebugStringA("[onCreate] createBreadcrumbBar...\n");
-    createBreadcrumbBar(hwnd);  // ESP:IDC_BREADCRUMB_BAR — symbol path bar
+    hadOnCreateStepFailure |= !sehCallOnCreateStep(createBreadcrumbBarStep, this, hwnd, "createBreadcrumbBar");
     OutputDebugStringA("[onCreate] createLineNumberGutter...\n");
-    createLineNumberGutter(hwnd);
+    hadOnCreateStepFailure |= !sehCallOnCreateStep(createLineNumberGutterStep, this, hwnd, "createLineNumberGutter");
     OutputDebugStringA("[onCreate] createEditor...\n");
-    createEditor(hwnd);
-    createAnnotationOverlay(hwnd);
+    hadOnCreateStepFailure |= !sehCallOnCreateStep(createEditorStep, this, hwnd, "createEditor");
+    hadOnCreateStepFailure |= !sehCallOnCreateStep(createAnnotationOverlayStep, this, hwnd, "createAnnotationOverlay");
     OutputDebugStringA("[onCreate] createTerminal...\n");
-    createTerminal(hwnd);
+    hadOnCreateStepFailure |= !sehCallOnCreateStep(createTerminalStep, this, hwnd, "createTerminal");
     OutputDebugStringA("[onCreate] createEnhancedStatusBar...\n");
-    createEnhancedStatusBar(hwnd);
+    hadOnCreateStepFailure |= !sehCallOnCreateStep(createEnhancedStatusBarStep, this, hwnd, "createEnhancedStatusBar");
 
     OutputDebugStringA("[onCreate] createOutputTabs...\n");
-    createOutputTabs();
-    OutputDebugStringA("[onCreate] createPowerShellPanel...\n");
-    createPowerShellPanel();
+    hadOnCreateStepFailure |= !sehCallOnCreateStep(createOutputTabsStep, this, hwnd, "createOutputTabs");
     OutputDebugStringA("[onCreate] createChatPanel...\n");
-    createChatPanel();
+    hadOnCreateStepFailure |= !sehCallOnCreateStep(createChatPanelStep, this, hwnd, "createChatPanel");
 
-    if (m_hwndMain)
-    {
-        SetPropA(m_hwndMain, "RawrXD.IDE.Label", (HANDLE)RAWRXD_IDE_LABEL_MAIN_WINDOW);
-        if (m_interpretabilityPanel)
-            m_interpretabilityPanel->setParent(m_hwndMain);
-    }
+    hadOnCreateStepFailure |= !sehCallOnCreateStep(
+        +[](void* self, HWND)
+        {
+            auto* ide = static_cast<Win32IDE*>(self);
+            if (ide->m_hwndMain)
+            {
+                SetPropA(ide->m_hwndMain, "RawrXD.IDE.Label", (HANDLE)RAWRXD_IDE_LABEL_MAIN_WINDOW);
+                if (ide->m_interpretabilityPanel)
+                    ide->m_interpretabilityPanel->setParent(ide->m_hwndMain);
+            }
+        },
+        this,
+        hwnd,
+        "attachMainWindowProps");
 
     LOG_INFO("onCreate complete — all panels created");
     OutputDebugStringA("[onCreate] all panels created OK\n");
+    if (hadOnCreateStepFailure)
+    {
+        LOG_INFO("onCreate recovered from one or more panel creation failures; startup continued");
+        OutputDebugStringA("[onCreate] recovered from panel creation failures; check prior onCreate step crash logs\n");
+    }
 
     OutputDebugStringA("[onCreate] initSyntaxColorizer...\n");
-    initSyntaxColorizer();
+    hadOnCreateStepFailure |= !sehCallOnCreateStep(+[](void* self, HWND) { static_cast<Win32IDE*>(self)->initSyntaxColorizer(); },
+                                                    this,
+                                                    hwnd,
+                                                    "initSyntaxColorizer");
 
     OutputDebugStringA("[onCreate] initGhostText...\n");
-    initGhostText();
+    hadOnCreateStepFailure |=
+        !sehCallOnCreateStep(+[](void* self, HWND) { static_cast<Win32IDE*>(self)->initGhostText(); }, this, hwnd, "initGhostText");
 
     OutputDebugStringA("[onCreate] restoreSession...\n");
-    restoreSession();
+    hadOnCreateStepFailure |=
+        !sehCallOnCreateStep(+[](void* self, HWND) { static_cast<Win32IDE*>(self)->restoreSession(); }, this, hwnd, "restoreSession");
 
-    {
-        char buf[512];
-        sprintf_s(buf,
-                  "HWND audit: Main=%p Editor=%p Sidebar=%p "
-                  "ExplorerTree=%p OutputTabs=%p PowerShellPanel=%p",
-                  m_hwndMain, m_hwndEditor, m_hwndSidebar, m_hwndExplorerTree, m_hwndOutputTabs, m_hwndPowerShellPanel);
-        LOG_INFO(std::string(buf));
-    }
+    OutputDebugStringA("[onCreate] applyStartupLayoutProfileFromEnv...\n");
+    hadOnCreateStepFailure |= !sehCallOnCreateStep(
+        +[](void* self, HWND)
+        {
+            static_cast<Win32IDE*>(self)->applyStartupLayoutProfileFromEnv();
+        },
+        this,
+        hwnd,
+        "applyStartupLayoutProfileFromEnv");
 
-    // Apply dark theme immediately (lightweight — just sets color values + SendMessage)
-    populateBuiltinThemes();  // Register all 16 built-in themes
-    m_currentTheme.backgroundColor = RGB(30, 30, 30);
-    m_currentTheme.textColor = RGB(212, 212, 212);
-    m_currentTheme.selectionColor = RGB(38, 79, 120);
-    m_currentTheme.lineNumberColor = RGB(128, 128, 128);
-    if (m_backgroundBrush)
-        DeleteObject(m_backgroundBrush);
-    m_backgroundBrush = CreateSolidBrush(RGB(30, 30, 30));
-    applyTheme();
+    hadOnCreateStepFailure |= !sehCallOnCreateStep(
+        +[](void* self, HWND)
+        {
+            auto* ide = static_cast<Win32IDE*>(self);
+            char buf[512];
+            sprintf_s(buf,
+                      "HWND audit: Main=%p Editor=%p Sidebar=%p "
+                      "ExplorerTree=%p OutputTabs=%p PowerShellPanel=%p",
+                      ide->m_hwndMain,
+                      ide->m_hwndEditor,
+                      ide->m_hwndSidebar,
+                      ide->m_hwndExplorerTree,
+                      ide->m_hwndOutputTabs,
+                      ide->m_hwndPowerShellPanel);
+            LOG_INFO(std::string(buf));
+        },
+        this,
+        hwnd,
+        "logWindowAudit");
 
-    // Update status bar with initial state (12-part enhanced bar: Line/Col, Encoding, Language, etc.)
-    if (m_hwndStatusBar)
-    {
-        updateEnhancedStatusBar();
-        m_contextUsage.maxTokens = m_settings.aiContextWindow;
-        updateContextWindowDisplay();
-    }
+    hadOnCreateStepFailure |= !sehCallOnCreateStep(
+        +[](void* self, HWND)
+        {
+            auto* ide = static_cast<Win32IDE*>(self);
+            // Apply dark theme immediately (lightweight — just sets color values + SendMessage)
+            ide->populateBuiltinThemes();  // Register all 16 built-in themes
+            ide->m_currentTheme.backgroundColor = RGB(30, 30, 30);
+            ide->m_currentTheme.textColor = RGB(212, 212, 212);
+            ide->m_currentTheme.selectionColor = RGB(38, 79, 120);
+            ide->m_currentTheme.lineNumberColor = RGB(128, 128, 128);
+            if (ide->m_backgroundBrush)
+                DeleteObject(ide->m_backgroundBrush);
+            ide->m_backgroundBrush = CreateSolidBrush(RGB(30, 30, 30));
+            ide->applyTheme();
+        },
+        this,
+        hwnd,
+        "applyInitialTheme");
 
-    // Initialize backend manager and LLM router at startup so Ollama/cloud can be used
-    // without requiring a local GGUF to be loaded first (see docs/AGENTIC_AND_MODEL_LOADING_AUDIT.md).
-    initBackendManager();
-    initLLMRouter();
+    hadOnCreateStepFailure |= !sehCallOnCreateStep(
+        +[](void* self, HWND)
+        {
+            auto* ide = static_cast<Win32IDE*>(self);
+            // Update status bar with initial state (12-part enhanced bar: Line/Col, Encoding, Language, etc.)
+            if (ide->m_hwndStatusBar)
+            {
+                ide->updateEnhancedStatusBar();
+                ide->m_contextUsage.maxTokens = ide->m_settings.aiContextWindow;
+                ide->updateContextWindowDisplay();
+            }
+        },
+        this,
+        hwnd,
+        "initStatusBarState");
+
+    hadOnCreateStepFailure |= !sehCallOnCreateStep(
+        +[](void* self, HWND)
+        {
+            auto* ide = static_cast<Win32IDE*>(self);
+            // Initialize backend manager and LLM router at startup so Ollama/cloud can be used
+            // without requiring a local GGUF to be loaded first (see docs/AGENTIC_AND_MODEL_LOADING_AUDIT.md).
+            ide->initBackendManager();
+            ide->initLLMRouter();
+        },
+        this,
+        hwnd,
+        "initBackendAndRouter");
+
+    hadOnCreateStepFailure |= !sehCallOnCreateStep(
+        +[](void* self, HWND h)
+        {
+            auto* ide = static_cast<Win32IDE*>(self);
+
+            // Critical pane recovery: ensure center + right workspace controls exist.
+            if (!ide->m_hwndEditor || !IsWindow(ide->m_hwndEditor))
+                ide->createEditor(h);
+            if (!ide->m_hwndOutputTabs || !IsWindow(ide->m_hwndOutputTabs))
+                ide->createOutputTabs();
+            if (!ide->m_hwndPowerShellPanel || !IsWindow(ide->m_hwndPowerShellPanel))
+                ide->createTerminal(h);
+            if (!ide->m_hwndSecondarySidebar || !IsWindow(ide->m_hwndSecondarySidebar))
+                ide->createChatPanel();
+
+            if (ide->m_secondarySidebarWidth <= 0)
+                ide->m_secondarySidebarWidth = ide->dpiScale(360);
+
+            RECT rc = {};
+            if (ide->m_hwndMain && GetClientRect(ide->m_hwndMain, &rc))
+            {
+                ide->onSize(rc.right - rc.left, rc.bottom - rc.top);
+            }
+        },
+        this,
+        hwnd,
+        "recoverCriticalPanesAndRelayout");
 
     // Defer heavy init to after window is fully created
     PostMessage(hwnd, WM_APP + 100, 0, 0);
@@ -2410,6 +2849,7 @@ void Win32IDE::deferredHeavyInitBody()
         voiceLoadPreferences();
         createVoiceChatPanel(m_hwndMain);
         registerVoiceHotkeys();
+        RegisterHotKey(m_hwndMain, kEmergencyWipeHotkeyId, MOD_CONTROL | MOD_SHIFT | MOD_ALT | MOD_NOREPEAT, 'K');
         updateVoiceStatusBar();
     }
     catch (...)
@@ -2581,6 +3021,22 @@ void Win32IDE::deferredHeavyInitBody()
         }
     }
 
+    // Standby StreamingGGUFLoader so load/inspect paths never hit a nullptr gate (non-authoritative vs CPU engine).
+    if (!isShuttingDown() && !m_ggufLoader)
+    {
+        try
+        {
+            m_ggufLoader = std::make_unique<RawrXD::StreamingGGUFLoader>();
+            appendToOutput("[Init] Streaming GGUF loader ready (standby)\n", "System", OutputSeverity::Info);
+        }
+        catch (...)
+        {
+            OutputDebugStringA("ERROR: StreamingGGUFLoader allocation failed (non-fatal)\n");
+            appendToOutput("[Init] Streaming GGUF loader not created; CPU inference path unchanged.\n", "System",
+                           OutputSeverity::Warning);
+        }
+    }
+
     OutputDebugStringA("deferredHeavyInit complete (background thread)\n");
 
     // Initialize AI backend probe (background thread, posts WM_AI_BACKEND_STATUS on result)
@@ -2610,6 +3066,12 @@ void Win32IDE::deferredHeavyInitBody()
 void Win32IDE::onDestroy()
 {
     LOG_INFO("Win32IDE::onDestroy - shutting down");
+
+    if (m_hwndExpertHeatmapPanel && IsWindow(m_hwndExpertHeatmapPanel))
+    {
+        DestroyWindow(m_hwndExpertHeatmapPanel);
+        m_hwndExpertHeatmapPanel = nullptr;
+    }
 
     clearInferenceLayerProgressCallback();
 
@@ -2667,6 +3129,7 @@ void Win32IDE::onDestroy()
     // Shutdown Phase 33: Voice Chat Engine
     voiceSavePreferences();
     unregisterVoiceHotkeys();
+    UnregisterHotKey(m_hwndMain, kEmergencyWipeHotkeyId);
     shutdownVoiceChat();
 
     // Shutdown Phase 33: Quick-Win Systems
@@ -2957,19 +3420,13 @@ void Win32IDE::onCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
         HandleCopilotClear();
         return;
     }
-    if (id == 1206)
-    {
-        setAgenticMode(RawrXD::AgenticMode::Plan);
-        return;
-    }
-    if (id == 1207)
-    {
-        setAgenticMode(RawrXD::AgenticMode::Agent);
-        return;
-    }
     if (id == 1208)
     {
-        setAgenticMode(RawrXD::AgenticMode::Ask);
+        if (codeNotify == CBN_SELCHANGE)
+        {
+            OutputDebugStringA("[onCommand] Model selection changed\n");
+            onModelSelectionChanged();
+        }
         return;
     }
     if (id == 1209)  // IDC_MODEL_BROWSE_BTN
@@ -3310,6 +3767,15 @@ void Win32IDE::onCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
             if (m_hwndStatusBar)
                 SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
                             (LPARAM)(m_secondarySidebarVisible ? L"Chat panel shown" : L"Chat panel hidden"));
+            return;
+        case IDM_VIEW_SOVEREIGN_SNAP_COMPACT:
+            applySovereignSnapPreset(240, L"Compact");
+            return;
+        case IDM_VIEW_SOVEREIGN_SNAP_STANDARD:
+            applySovereignSnapPreset(360, L"Standard");
+            return;
+        case IDM_VIEW_SOVEREIGN_SNAP_WIDE:
+            applySovereignSnapPreset(480, L"Wide");
             return;
         case IDM_VIEW_AGENT_PANEL:
             toggleAgentPanel();

@@ -8,7 +8,7 @@
 
 namespace AIModelLoader {
 
-static const uint32_t GGUF_MAGIC = 0x46475547; // "GGUF" in little-endian
+static const uint32_t GGUF_MAGIC = 0x46554747U; // "GGUF" little-endian (bytes 47 47 55 46)
 
 class GGUFModelLoader : public IModelLoader {
 public:

@@ -30,7 +30,20 @@ extern "C" {
     void* __stdcall GetProcAddress(HMODULE hModule, const char* lpProcName);
     HANDLE __stdcall CreateThread(void* sa, size_t stack, LPTHREAD_START_ROUTINE fn, LPVOID param, DWORD flags, DWORD* tid);
     BOOL __stdcall CloseHandle(HANDLE h);
+    int __stdcall MultiByteToWideChar(UINT CodePage, DWORD dwFlags, const char* lpMultiByteStr, int cbMultiByte, wchar_t* lpWideCharStr, int cchWideChar);
 }
+
+#ifndef CP_UTF8
+#define CP_UTF8 65001
+#endif
+
+#ifndef CP_ACP
+#define CP_ACP 0
+#endif
+
+#ifndef MB_ERR_INVALID_CHARS
+#define MB_ERR_INVALID_CHARS 0x00000008
+#endif
 
 // Global required by ui.asm (EXTERN g_hInstance:QWORD)
 extern "C" void* g_hInstance = nullptr;
@@ -45,6 +58,29 @@ extern "C" unsigned long g_accumulatedSteps = 0;
 // ============================================================================
 
 static const int MAX_GHOST_LEN_CPP   = 1024;
+
+static int DecodeModelTextToWide(const char* text, int len, wchar_t* out, int outCapacity) {
+    if (!text || len <= 0 || !out || outCapacity <= 0) return 0;
+
+    int useLen = len;
+    if (useLen > outCapacity - 1) {
+        useLen = outCapacity - 1;
+    }
+
+    int wlen = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, text, useLen, out, outCapacity - 1);
+    if (wlen <= 0) {
+        wlen = MultiByteToWideChar(CP_ACP, 0, text, useLen, out, outCapacity - 1);
+    }
+    if (wlen <= 0) {
+        for (int i = 0; i < useLen; ++i) {
+            out[i] = (wchar_t)(unsigned char)text[i];
+        }
+        wlen = useLen;
+    }
+
+    out[wlen] = 0;
+    return wlen;
+}
 
 // ============================================================================
 // Titan 70B Live Inference Protocol - Phase 4A
@@ -78,13 +114,9 @@ static void Titan_Live_Callback(const char* text, int len) {
     if (!text || len <= 0) return;
 
     static wchar_t wbuf[MAX_GHOST_LEN_CPP];
-    int i = 0;
-    while (text[i] && i < MAX_GHOST_LEN_CPP - 1) {
-        wbuf[i] = (wchar_t)(unsigned char)text[i];
-        i++;
-    }
-    wbuf[i] = 0;
-    Bridge_OnSuggestionReady(wbuf, i);
+    int wlen = DecodeModelTextToWide(text, len, wbuf, MAX_GHOST_LEN_CPP);
+    if (wlen <= 0) return;
+    Bridge_OnSuggestionReady(wbuf, wlen);
 }
 
 // ============================================================================

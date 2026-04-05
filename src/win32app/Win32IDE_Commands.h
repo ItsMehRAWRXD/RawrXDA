@@ -64,9 +64,20 @@
 // ---- View commands ---------------------------------------------------------
 #define IDM_VIEW_FILE_EXPLORER      2030
 #define IDM_VIEW_EXTENSIONS         2031
+#define IDM_VIEW_SOVEREIGN_SNAP_COMPACT   2033
+#define IDM_VIEW_SOVEREIGN_SNAP_STANDARD  2034
+#define IDM_VIEW_SOVEREIGN_SNAP_WIDE      2035
+#define IDM_VIEW_LAYOUT_PROFILE_FOCUS     2036
+#define IDM_VIEW_LAYOUT_PROFILE_CODING    2037
+#define IDM_VIEW_LAYOUT_PROFILE_DEBUG     2038
+#define IDM_VIEW_LAYOUT_PROFILE_APPLY     2039
+#define IDM_VIEW_LAYOUT_PROFILE_SAVE      2040
 #define IDM_VIEW_COLLABORATION      3060
 #define IDM_VIEW_PROBLEMS           7056
 #define IDM_VIEW_AGENT_PANEL        7057
+
+// ---- Internal profiling/capture commands -----------------------------------
+#define IDM_INTERNAL_CAPTURE_PROFILE 3014
 
 // ---- Theme commands (3100–3117) --------------------------------------------
 #define IDM_THEME_BASE              3100
@@ -415,6 +426,10 @@
 // ---- Custom WM_APP window messages -----------------------------------------
 #define WM_FILE_CHANGED_EXTERNAL        (WM_APP + 200)
 #define WM_GHOST_TEXT_READY             (WM_APP + 400)
+#define WM_TITAN_GHOST_STREAM           (WM_APP + 401)
+#define WM_RAWR_LOG_MESSAGE             (WM_APP + 402)  // wParam = type (0=info,1=warn,2=error), lParam = allocated string
+#define WM_TITAN_AGENT_STREAM           (WM_APP + 403)
+#define WM_TITAN_AGENT_DONE             (WM_APP + 404)
 #define WM_PLAN_READY                   (WM_APP + 500)
 #define WM_PLAN_STEP_DONE               (WM_APP + 501)
 #define WM_PLAN_COMPLETE                (WM_APP + 502)

@@ -223,6 +223,10 @@ void Win32IDE::onSubAgentChain() {
     if (!m_agenticBridge) initializeAgenticBridge();
     // Smoke test string expectation: SubAgentManager* mgr = m_agenticBridge
     SubAgentManager* mgr = (m_agenticBridge ? m_agenticBridge->GetSubAgentManager() : nullptr);
+    if (!mgr && m_agenticBridge) {
+        m_agenticBridge->Initialize("", m_agenticBridge->GetCurrentModel());
+        mgr = m_agenticBridge->GetSubAgentManager();
+    }
     if (!mgr) {
         appendToOutput("⚠️ SubAgentManager not initialized (agent bridge unavailable)\n", "Output", OutputSeverity::Warning);
         return;
@@ -266,6 +270,10 @@ void Win32IDE::onSubAgentSwarm() {
 
     if (!m_agenticBridge) initializeAgenticBridge();
     SubAgentManager* mgr = (m_agenticBridge ? m_agenticBridge->GetSubAgentManager() : nullptr);
+    if (!mgr && m_agenticBridge) {
+        m_agenticBridge->Initialize("", m_agenticBridge->GetCurrentModel());
+        mgr = m_agenticBridge->GetSubAgentManager();
+    }
     if (!mgr) {
         appendToOutput("⚠️ SubAgentManager not initialized (agent bridge unavailable)\n", "Output", OutputSeverity::Warning);
         return;
@@ -320,6 +328,10 @@ void Win32IDE::onSubAgentTodoList() {
 
     if (!m_agenticBridge) initializeAgenticBridge();
     SubAgentManager* mgr = (m_agenticBridge ? m_agenticBridge->GetSubAgentManager() : nullptr);
+    if (!mgr && m_agenticBridge) {
+        m_agenticBridge->Initialize("", m_agenticBridge->GetCurrentModel());
+        mgr = m_agenticBridge->GetSubAgentManager();
+    }
     if (!mgr) {
         appendToOutput("⚠️ SubAgentManager not initialized (agent bridge unavailable)\n", "Output", OutputSeverity::Warning);
         return;
@@ -360,6 +372,10 @@ void Win32IDE::onSubAgentTodoClear() {
 
     if (!m_agenticBridge) initializeAgenticBridge();
     SubAgentManager* mgr = (m_agenticBridge ? m_agenticBridge->GetSubAgentManager() : nullptr);
+    if (!mgr && m_agenticBridge) {
+        m_agenticBridge->Initialize("", m_agenticBridge->GetCurrentModel());
+        mgr = m_agenticBridge->GetSubAgentManager();
+    }
     if (!mgr) {
         appendToOutput("⚠️ SubAgentManager not initialized (agent bridge unavailable)\n", "Output", OutputSeverity::Warning);
         return;
@@ -375,6 +391,10 @@ void Win32IDE::onSubAgentStatus() {
 
     if (!m_agenticBridge) initializeAgenticBridge();
     SubAgentManager* mgr = (m_agenticBridge ? m_agenticBridge->GetSubAgentManager() : nullptr);
+    if (!mgr && m_agenticBridge) {
+        m_agenticBridge->Initialize("", m_agenticBridge->GetCurrentModel());
+        mgr = m_agenticBridge->GetSubAgentManager();
+    }
     if (!mgr) {
         appendToOutput("⚠️ SubAgentManager not initialized (agent bridge unavailable)\n", "Output", OutputSeverity::Warning);
         return;

@@ -609,13 +609,25 @@ UltraFastInferenceEngine::~UltraFastInferenceEngine() {
 }
 
 void UltraFastInferenceEngine::loadModel(const std::string& model_path) {
+    constexpr size_t kMaxSampleBytes = 64ull * 1024ull * 1024ull;
+    constexpr size_t kMinSampleFloats = 1024ull;
+
     std::ifstream file(model_path, std::ios::binary | std::ios::ate);
     if (file.is_open()) {
-        std::streamsize size = file.tellg();
+        const std::streamsize size = file.tellg();
         file.seekg(0, std::ios::beg);
-        model_weights_.resize(size / sizeof(float));
-        if (file.read(reinterpret_cast<char*>(model_weights_.data()), size)) {
-            // Successfully loaded model weights
+
+        // The standalone engine uses a simplified forward path, so sampling a bounded
+        // prefix of the model is sufficient for benchmark plumbing without trying to
+        // materialize multi-GB GGUF payloads into RAM.
+        const size_t sample_bytes = static_cast<size_t>(std::max<std::streamsize>(
+            static_cast<std::streamsize>(kMinSampleFloats * sizeof(float)),
+            std::min<std::streamsize>(size, static_cast<std::streamsize>(kMaxSampleBytes))));
+        const size_t sample_floats = std::max<size_t>(kMinSampleFloats, sample_bytes / sizeof(float));
+
+        model_weights_.resize(sample_floats, 0.1f);
+        if (file.read(reinterpret_cast<char*>(model_weights_.data()), static_cast<std::streamsize>(sample_floats * sizeof(float)))) {
+            // Successfully loaded a bounded sample of model weights.
         } else {
             // Fallback to dummy data on read failure
             model_weights_.resize(1024 * 1024);
