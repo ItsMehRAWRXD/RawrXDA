@@ -942,8 +942,11 @@ static std::string WideToUtf8(const wchar_t* ws)
     int len = WideCharToMultiByte(CP_UTF8, 0, ws, -1, nullptr, 0, nullptr, nullptr);
     if (len <= 0)
         return "";
-    std::string result(len - 1, '\0');
-    WideCharToMultiByte(CP_UTF8, 0, ws, -1, &result[0], len, nullptr, nullptr);
+    std::string result(static_cast<size_t>(len), '\0');
+    const int converted = WideCharToMultiByte(CP_UTF8, 0, ws, -1, result.data(), len, nullptr, nullptr);
+    if (converted <= 0)
+        return "";
+    result.resize(static_cast<size_t>(converted - 1));
     return result;
 }
 
@@ -2353,12 +2356,22 @@ bool RawrXDModelLoader::Load(const wchar_t* path, VkDevice vkDevice, VkPhysicalD
 #endif
 
     // 1. Memory-mapped file (zero copy from disk)
+    if (!path || path[0] == L'\0')
+    {
+        const std::string msg = "[RawrXD][GATE-5] invalid empty model path";
+        printf("%s\n", msg.c_str());
+        setLoadError("gate_file_access", msg);
+        return false;
+    }
+
     m_file =
         CreateFileW(path, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
     if (m_file == INVALID_HANDLE_VALUE)
     {
-        // Gate 5: explicit permission/access failure for runtime user.
-        const std::string msg = std::string("[RawrXD][GATE-5] permission denied for runtime user: ") + modelPathUtf8;
+        const DWORD openError = GetLastError();
+        const std::string msg = std::string("[RawrXD][GATE-5] file open failed err=") +
+                                std::to_string(static_cast<unsigned long>(openError)) +
+                                " path=" + modelPathUtf8;
         printf("%s\n", msg.c_str());
         setLoadError("gate_file_access", msg);
         return false;
@@ -2678,9 +2691,9 @@ bool RawrXDModelLoader::Load(const wchar_t* path, VkDevice vkDevice, VkPhysicalD
 
     // 6. Build tensor lookup map
     printf("[RawrXD] Stage: build_tensor_lookup_map\n");
-    for (auto& t : tensorInfos)
+    for (size_t i = 0; i < tensorInfos.size(); ++i)
     {
-        m_tensors[t.name] = std::move(t);
+        m_tensors[tensorInfos[i].name] = std::move(tensorInfos[i]);
     }
 
     // Gate 7: Reject models where critical config dimensions are zero or incoherent.
@@ -2839,6 +2852,7 @@ uint8_t* RawrXDModelLoader::ParseMetadata(uint8_t* ptr, uint64_t count)
                 }
                 if (!advancePtr(ptr, 8))
                     return nullptr;
+                printf("[DEBUG] String key: %s, value length: %llu\n", key.c_str(), (unsigned long long)vlen);
                 if (key == "general.architecture")
                 {
                     m_metadataArchitecture.assign((char*)ptr, static_cast<size_t>(vlen));
@@ -2868,10 +2882,11 @@ uint8_t* RawrXDModelLoader::ParseMetadata(uint8_t* ptr, uint64_t count)
 
                 if (key == "tokenizer.ggml.tokens")
                 {
+                    printf("[DEBUG] tokenizer.ggml.tokens: atype=%u, Alen=%llu\n", atype, (unsigned long long)Alen);
                     if (atype == 8 && Alen > 0 && Alen < 1000000)  // reasonable bounds
                     {
-                        vocab_size = (int)Alen;
                         vocab.reserve(Alen);
+                        printf("[DEBUG] Reserved %llu for vocab\n", (unsigned long long)Alen);
                     }
                 }
 
@@ -2918,6 +2933,12 @@ uint8_t* RawrXDModelLoader::ParseMetadata(uint8_t* ptr, uint64_t count)
                 if (type == 4 || type == 5)
                 {
                     const uint32_t val = *(uint32_t*)ptr;
+                    printf("[DEBUG] Scalar key: %s, type: %u, value: %u\n", key.c_str(), type, val);
+                    
+                    if (key.find("vocab") != std::string::npos)
+                    {
+                        printf("[DEBUG] Found vocab-related key: %s = %u\n", key.c_str(), val);
+                    }
                     if (key == "general.file_type")
                     {
                         m_metadataFileType = val;
@@ -2957,8 +2978,8 @@ uint8_t* RawrXDModelLoader::ParseMetadata(uint8_t* ptr, uint64_t count)
                     }
                     else if (key == "tokenizer.ggml.vocab_size")
                     {
-                        if (val > 0 && val < 1000000)  // reasonable bounds
-                            vocab_size = static_cast<int>(val);
+                        // Don't set vocab_size from scalar, use vocab.size() instead
+                        printf("[DEBUG] Ignoring tokenizer.ggml.vocab_size scalar: %u\n", val);
                     }
                 }
 
@@ -2979,7 +3000,10 @@ uint8_t* RawrXDModelLoader::ParseMetadata(uint8_t* ptr, uint64_t count)
     if (!vocab.empty())
     {
         vocab_size = (int)vocab.size();
+        printf("[DEBUG] Fallback: set vocab_size to vocab.size() = %d\n", vocab_size);
     }
+    
+    printf("[DEBUG] Final: vocab_size=%d, vocab.size()=%llu\n", vocab_size, (unsigned long long)vocab.size());
     
     return ptr;
 }
@@ -4006,10 +4030,13 @@ class SpeculativeSwarmOrchestrator
         if (source_it == active_batches.end())
             return false;
 
+        // Store the source batch data before potential reallocation
+        SpeculativeBatch source_batch = *source_it;
+
         // Create handoff batch for target model
         SpeculativeBatch handoff_batch = {
-            to_model_offset, source_it->batch_size, kv_data,
-            source_it->confidence_threshold * 0.9f  // Slight confidence decay
+            to_model_offset, source_batch.batch_size, kv_data,
+            source_batch.confidence_threshold * 0.9f  // Slight confidence decay
         };
 
         active_batches.push_back(handoff_batch);
