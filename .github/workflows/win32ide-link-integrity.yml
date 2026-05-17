@@ -1,0 +1,73 @@
+# Win32IDE link integrity: mandatory link + ABI/import/size regression vs baseline.
+name: Win32IDE Link Integrity
+
+on:
+  pull_request:
+    branches: [main, dev, "feature/*", "backup/*", "chore/*"]
+    paths:
+      - "CMakeLists.txt"
+      - "src/win32app/**"
+      - "src/ui/**"
+      - "scripts/Export-Win32IDELinkBaseline.ps1"
+      - "reports/win32ide/**"
+      - ".github/workflows/win32ide-link-integrity.yml"
+  workflow_dispatch:
+
+jobs:
+  link-integrity:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Enable Git long paths (Windows checkout)
+        run: git config --system core.longpaths true
+        shell: pwsh
+
+      - name: Setup MSVC (Win32IDE link)
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Configure Win32IDE (Ninja Release, probe gates ON)
+        run: cmake -B build-win32 -G Ninja -DCMAKE_BUILD_TYPE=Release -DRAWRXD_ENABLE_IDE_PROBE_GATES=ON
+        shell: pwsh
+
+      - name: Build RawrXD-Win32IDE
+        run: |
+          $ErrorActionPreference = "Stop"
+          cmake --build build-win32 --target RawrXD-Win32IDE -j 8 2>&1 | Tee-Object -FilePath $env:RUNNER_TEMP/win32ide-build.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (Select-String -Path $env:RUNNER_TEMP/win32ide-build.log -Pattern 'LNK2019|LNK1120|unresolved external') {
+            throw 'Unresolved externals in Win32IDE link'
+          }
+        shell: pwsh
+
+      - name: Assert clean link (no LNK2019/LNK1120)
+        run: |
+          $ErrorActionPreference = "Stop"
+          $bin = Join-Path $env:GITHUB_WORKSPACE "build-win32\bin\RawrXD-Win32IDE.exe"
+          if (-not (Test-Path $bin)) { throw "RawrXD-Win32IDE.exe missing after build" }
+        shell: pwsh
+
+      - name: Export linker telemetry and diff baseline
+        run: |
+          $ErrorActionPreference = "Stop"
+          & ./scripts/Export-Win32IDELinkBaseline.ps1 -BuildDir build-win32 -FailOnRegression
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        shell: pwsh
+
+      - name: Upload linker artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: win32ide-link-telemetry
+          path: |
+            reports/win32ide/link-baseline.json
+            reports/win32ide/imports.txt
+            reports/win32ide/sections.txt
+            reports/win32ide/binary-size.txt
+            reports/win32ide/symbols.map
+            build-win32/bin/RawrXD-Win32IDE.map
+          if-no-files-found: warn
