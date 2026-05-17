@@ -18,8 +18,14 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 45
     steps:
+      - name: Enable Git long paths (Windows checkout)
+        run: git config --system core.longpaths true
+        shell: pwsh
+
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Configure Win32IDE (Ninja Release, probe gates ON)
         run: cmake -B build-win32 -G Ninja -DCMAKE_BUILD_TYPE=Release -DRAWRXD_ENABLE_IDE_PROBE_GATES=ON
