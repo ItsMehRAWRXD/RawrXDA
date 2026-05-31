@@ -223,7 +223,7 @@ bool EnhancedModelLoader::preflightMemory(const std::string& modelPath, std::str
 bool EnhancedModelLoader::loadModel(const std::string& modelInput) {
     if (!m_formatRouter) m_formatRouter = std::make_unique<FormatRouter>();
     if (!m_hfDownloader) m_hfDownloader = std::make_unique<HFDownloader>();
-    if (!m_ollamaProxy) m_ollamaProxy = std::make_unique<OllamaProxy>();
+    if (!m_ollamaProxy) m_ollamaProxy = std::make_unique<NativeProxy>();
 
     if (m_onLoadingStage) m_onLoadingStage("Detecting model format...");
 
@@ -243,7 +243,7 @@ bool EnhancedModelLoader::loadModelAsync(const std::string& modelInput) {
     // Keep behavior deterministic: load synchronously, but preserve API.
     if (!m_formatRouter) m_formatRouter = std::make_unique<FormatRouter>();
     if (!m_hfDownloader) m_hfDownloader = std::make_unique<HFDownloader>();
-    if (!m_ollamaProxy) m_ollamaProxy = std::make_unique<OllamaProxy>();
+    if (!m_ollamaProxy) m_ollamaProxy = std::make_unique<NativeProxy>();
 
     const auto start = std::chrono::steady_clock::now();
     const auto src_opt = m_formatRouter->route(modelInput);
@@ -407,7 +407,7 @@ bool EnhancedModelLoader::loadHFModel(const std::string& repoId) {
 
 bool EnhancedModelLoader::loadOllamaModel(const std::string& modelName) {
     if (m_onLoadingStage) m_onLoadingStage("Connecting to Ollama...");
-    if (!m_ollamaProxy) m_ollamaProxy = std::make_unique<OllamaProxy>();
+    if (!m_ollamaProxy) m_ollamaProxy = std::make_unique<NativeProxy>();
 
     if (!endpointAllowed(m_pinnedLocalEndpoint)) {
         m_lastError = "Endpoint rejected: local runtime is pinned to localhost unless remote fallback is enabled";
@@ -429,7 +429,7 @@ bool EnhancedModelLoader::loadOllamaModel(const std::string& modelName) {
     }
 
     m_ollamaProxy->setModel(modelName);
-    m_modelPath = "ollama:" + modelName;
+    m_modelPath = "native:" + modelName;
     m_loadedFormat = ModelFormat::OLLAMA_REMOTE;
     std::cout << "[EnhancedModelLoader] endpoint=" << m_pinnedLocalEndpoint << " local=true\n";
 
@@ -451,7 +451,7 @@ bool EnhancedModelLoader::loadOllamaModel(const std::string& modelName) {
 
     // Commit to Unified Metadata Bridge
     RawrXD::Bridge::UnifiedModelMetadata unifiedMeta;
-    unifiedMeta.source = "ollama";
+    unifiedMeta.source = "native";
     unifiedMeta.family = meta.found ? meta.family : "";
     unifiedMeta.quantization = meta.found ? meta.quantization_level : "";
     unifiedMeta.parameter_count = 0; // Populate if available

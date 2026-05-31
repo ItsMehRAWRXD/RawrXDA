@@ -19,15 +19,6 @@ namespace fs = std::filesystem;
 // Helpers
 // ---------------------------------------------------------------------------
 
-static void zt_log(const char* fmt, ...) {
-    va_list ap;
-    va_start(ap, fmt);
-    fprintf(stderr, "[ZeroTouch] ");
-    vfprintf(stderr, fmt, ap);
-    fprintf(stderr, "\n");
-    va_end(ap);
-}
-
 static bool writeTextFile(const fs::path& path, const std::string& content) {
     std::ofstream ofs(path, std::ios::out | std::ios::trunc);
     if (!ofs.is_open()) return false;

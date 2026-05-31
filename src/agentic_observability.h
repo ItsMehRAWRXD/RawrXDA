@@ -9,32 +9,35 @@
 // =============================================================================
 #pragma once
 
-#include <string>
-#include <vector>
-#include <unordered_map>
-#include <chrono>
-#include <memory>
-#include <functional>
-#include <thread>
 #include <atomic>
+#include <chrono>
+#include <functional>
+#include <memory>
+#include <mutex>
 #include <nlohmann/json.hpp>
+#include <string>
+#include <thread>
+#include <unordered_map>
+#include <vector>
 
 // ---------------------------------------------------------------------------
 // Log level enum
 // ---------------------------------------------------------------------------
-enum class LogLevel : int {
-    ObsDebug    = 0,
-    ObsInfo     = 1,
-    ObsWarn     = 2,
-    ObsError    = 3,
+enum class LogLevel : int
+{
+    ObsDebug = 0,
+    ObsInfo = 1,
+    ObsWarn = 2,
+    ObsError = 3,
     ObsCritical = 4
 };
 
 // ---------------------------------------------------------------------------
 // AgenticObservability — Singleton-friendly observability hub
 // ---------------------------------------------------------------------------
-class AgenticObservability {
-public:
+class AgenticObservability
+{
+  public:
     using TimePoint = std::chrono::system_clock::time_point;
 
     // -----------------------------------------------------------------------
@@ -48,92 +51,86 @@ public:
     // -----------------------------------------------------------------------
     // Structured Logging
     // -----------------------------------------------------------------------
-    struct LogEntry {
-        TimePoint       timestamp;
-        LogLevel        level;
-        std::string     component;
-        std::string     message;
-        nlohmann::json  context;
-        std::string     traceId;
-        std::string     spanId;
+    struct LogEntry
+    {
+        TimePoint timestamp;
+        LogLevel level;
+        std::string component;
+        std::string message;
+        nlohmann::json context;
+        std::string traceId;
+        std::string spanId;
     };
 
-    void log(LogLevel level,
-             const std::string& component,
-             const std::string& message,
+    void log(LogLevel level, const std::string& component, const std::string& message,
              const nlohmann::json& context = {});
 
-    void logDebug(const std::string& component, const std::string& message,
-                  const nlohmann::json& context = {});
-    void logInfo(const std::string& component, const std::string& message,
-                 const nlohmann::json& context = {});
-    void logWarn(const std::string& component, const std::string& message,
-                 const nlohmann::json& context = {});
-    void logError(const std::string& component, const std::string& message,
-                  const nlohmann::json& context = {});
-    void logCritical(const std::string& component, const std::string& message,
-                     const nlohmann::json& context = {});
+    void logDebug(const std::string& component, const std::string& message, const nlohmann::json& context = {});
+    void logInfo(const std::string& component, const std::string& message, const nlohmann::json& context = {});
+    void logWarn(const std::string& component, const std::string& message, const nlohmann::json& context = {});
+    void logError(const std::string& component, const std::string& message, const nlohmann::json& context = {});
+    void logCritical(const std::string& component, const std::string& message, const nlohmann::json& context = {});
 
-    std::vector<LogEntry> getLogs(int limit = 100,
-                                 LogLevel minLevel = LogLevel::ObsDebug,
-                                 const std::string& component = "") const;
+    std::vector<LogEntry> getLogs(int limit = 100, LogLevel minLevel = LogLevel::ObsDebug,
+                                  const std::string& component = "") const;
 
-    std::vector<LogEntry> getLogsByTimeRange(const TimePoint& start,
-                                             const TimePoint& end,
+    std::vector<LogEntry> getLogsByTimeRange(const TimePoint& start, const TimePoint& end,
                                              LogLevel minLevel = LogLevel::ObsDebug) const;
 
     // Log callback
-    using LogCallback = void(*)(const LogEntry& entry, void* userData);
-    void setLogCallback(LogCallback cb, void* userData = nullptr) {
-        m_logCb = cb; m_logCbData = userData;
+    using LogCallback = void (*)(const LogEntry& entry, void* userData);
+    void setLogCallback(LogCallback cb, void* userData = nullptr)
+    {
+      m_logCb = cb;
+      m_logCbData = userData;
     }
 
     // -----------------------------------------------------------------------
     // Metrics
     // -----------------------------------------------------------------------
-    struct MetricPoint {
-        std::string     metricName;
-        float           value;
-        nlohmann::json  labels;
-        TimePoint       timestamp;
-        std::string     unit;
+    struct MetricPoint
+    {
+        std::string metricName;
+        float value;
+        nlohmann::json labels;
+        TimePoint timestamp;
+        std::string unit;
     };
 
-    void recordMetric(const std::string& metricName, float value,
-                      const nlohmann::json& labels = {},
+    void recordMetric(const std::string& metricName, float value, const nlohmann::json& labels = {},
                       const std::string& unit = "");
 
-    void incrementCounter(const std::string& metricName, int delta = 1,
-                          const nlohmann::json& labels = {});
+    void incrementCounter(const std::string& metricName, int delta = 1, const nlohmann::json& labels = {});
     float getCounterValue(const std::string& metricName) const;
 
-    void setGauge(const std::string& metricName, float value,
-                  const nlohmann::json& labels = {});
+    void setGauge(const std::string& metricName, float value, const nlohmann::json& labels = {});
     float getGaugeValue(const std::string& metricName) const;
 
-    void recordHistogram(const std::string& metricName, float value,
-                         const nlohmann::json& labels = {});
+    void recordHistogram(const std::string& metricName, float value, const nlohmann::json& labels = {});
     nlohmann::json getHistogramStats(const std::string& metricName) const;
 
-    std::vector<MetricPoint> getMetrics(const std::string& pattern = "",
-                                        int limit = 100) const;
+    std::vector<MetricPoint> getMetrics(const std::string& pattern = "", int limit = 100) const;
     nlohmann::json getMetricsSummary() const;
     nlohmann::json getPercentiles(const std::string& metricName) const;
 
     // Metric callback
-    using MetricCallback = void(*)(const std::string& metricName, void* userData);
-    void setMetricCallback(MetricCallback cb, void* userData = nullptr) {
-        m_metricCb = cb; m_metricCbData = userData;
+    using MetricCallback = void (*)(const std::string& metricName, void* userData);
+    void setMetricCallback(MetricCallback cb, void* userData = nullptr)
+    {
+        m_metricCb = cb;
+        m_metricCbData = userData;
     }
 
     // -----------------------------------------------------------------------
     // Timing guard (RAII duration measurement)
     // -----------------------------------------------------------------------
-    class TimingGuard {
-    public:
+    class TimingGuard
+    {
+      public:
         TimingGuard(AgenticObservability* obs, const std::string& metricName);
         ~TimingGuard();
-    private:
+
+      private:
         AgenticObservability* m_obs;
         std::string m_metricName;
         std::chrono::high_resolution_clock::time_point m_start;
@@ -144,32 +141,26 @@ public:
     // -----------------------------------------------------------------------
     // Distributed Tracing
     // -----------------------------------------------------------------------
-    struct TraceSpan {
-        std::string     spanId;
-        std::string     parentSpanId;
-        std::string     operation;
-        TimePoint       startTime;
-        TimePoint       endTime;
-        bool            hasError = false;
-        std::string     errorMessage;
-        int             statusCode = 0;
-        nlohmann::json  attributes;
+    struct TraceSpan
+    {
+        std::string spanId;
+        std::string parentSpanId;
+        std::string operation;
+        TimePoint startTime;
+        TimePoint endTime;
+        bool hasError = false;
+        std::string errorMessage;
+        int statusCode = 0;
+        nlohmann::json attributes;
     };
 
     std::string startTrace(const std::string& operation);
-    std::string startSpan(const std::string& spanName,
-                          const std::string& parentSpanId = "");
-    void endSpan(const std::string& spanId,
-                 bool hasError = false,
-                 const std::string& errorMessage = "",
+    std::string startSpan(const std::string& spanName, const std::string& parentSpanId = "");
+    void endSpan(const std::string& spanId, bool hasError = false, const std::string& errorMessage = "",
                  int statusCode = 0);
 
-    void setSpanAttribute(const std::string& spanId,
-                          const std::string& key,
-                          const nlohmann::json& value);
-    void addSpanEvent(const std::string& spanId,
-                      const std::string& eventName,
-                      const nlohmann::json& attributes = {});
+    void setSpanAttribute(const std::string& spanId, const std::string& key, const nlohmann::json& value);
+    void addSpanEvent(const std::string& spanId, const std::string& eventName, const nlohmann::json& attributes = {});
 
     TraceSpan* getSpan(const std::string& spanId);
     std::vector<TraceSpan> getTraceSpans(const std::string& traceId) const;
@@ -178,9 +169,11 @@ public:
     void setTracingEnabled(bool enabled) { m_tracingEnabled = enabled; }
 
     // Span callback
-    using SpanCallback = void(*)(const std::string& spanId, void* userData);
-    void setSpanCallback(SpanCallback cb, void* userData = nullptr) {
-        m_spanCb = cb; m_spanCbData = userData;
+    using SpanCallback = void (*)(const std::string& spanId, void* userData);
+    void setSpanCallback(SpanCallback cb, void* userData = nullptr)
+    {
+        m_spanCb = cb;
+        m_spanCbData = userData;
     }
 
     // -----------------------------------------------------------------------
@@ -196,8 +189,7 @@ public:
     // -----------------------------------------------------------------------
     // Export / Reporting
     // -----------------------------------------------------------------------
-    std::string generateReport(const TimePoint& startTime,
-                               const TimePoint& endTime) const;
+    std::string generateReport(const TimePoint& startTime, const TimePoint& endTime) const;
     std::string exportMetricsAsCsv() const;
     std::string exportTracesAsJson() const;
     std::string exportLogsAsJson() const;
@@ -210,7 +202,7 @@ public:
     void stopHeartbeatLoop();
 
     // -----------------------------------------------------------------------
-    // Core Agent Metrics Hooks 
+    // Core Agent Metrics Hooks
     // -----------------------------------------------------------------------
     void updateTokensPerSecond(float tps);
     void updateAgentLoopIterationTime(float ms);
@@ -229,46 +221,49 @@ public:
     // -----------------------------------------------------------------------
     static std::string timePointToISO(const TimePoint& tp);
 
-private:
+  private:
     std::string generateTraceId();
     std::string generateSpanId();
     std::string levelToString(LogLevel level) const;
     void checkAndRotateLogs();
 
+    /// Protects m_logs, m_metrics, m_spans, m_traceSpans, m_errorCounts (heartbeat thread vs main).
+    mutable std::recursive_mutex m_mutex;
+
     // Logs
-    std::vector<LogEntry>   m_logs;
-    int                     m_maxLogEntries = 10000;
-    int                     m_totalLogsWritten = 0;
+    std::vector<LogEntry> m_logs;
+    int m_maxLogEntries = 10000;
+    int m_totalLogsWritten = 0;
 
     // Metrics
     std::vector<MetricPoint> m_metrics;
-    int                     m_metricsBufferSize = 50000;
-    int                     m_totalMetricsRecorded = 0;
+    int m_metricsBufferSize = 50000;
+    int m_totalMetricsRecorded = 0;
 
     // Traces
     std::unordered_map<std::string, std::vector<std::string>> m_traceSpans;
-    std::unordered_map<std::string, TraceSpan>                m_spans;
-    bool                    m_tracingEnabled = true;
+    std::unordered_map<std::string, TraceSpan> m_spans;
+    bool m_tracingEnabled = true;
 
     // Error tracking
     std::unordered_map<std::string, int> m_errorCounts;
 
     // Timing
-    TimePoint               m_systemStartTime;
+    TimePoint m_systemStartTime;
 
     // Sampling
-    double                  m_samplingRate = 1.0;
+    double m_samplingRate = 1.0;
 
     // Heartbeat
     std::unique_ptr<std::thread> m_heartbeatThread;
-    std::atomic<bool>            m_heartbeatRunning{false};
+    std::atomic<bool> m_heartbeatRunning{false};
     void heartbeatWorker();
 
     // Callbacks
-    LogCallback             m_logCb = nullptr;
-    void*                   m_logCbData = nullptr;
-    MetricCallback          m_metricCb = nullptr;
-    void*                   m_metricCbData = nullptr;
-    SpanCallback            m_spanCb = nullptr;
-    void*                   m_spanCbData = nullptr;
+    LogCallback m_logCb = nullptr;
+    void* m_logCbData = nullptr;
+    MetricCallback m_metricCb = nullptr;
+    void* m_metricCbData = nullptr;
+    SpanCallback m_spanCb = nullptr;
+    void* m_spanCbData = nullptr;
 };

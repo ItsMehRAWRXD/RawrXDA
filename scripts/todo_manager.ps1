@@ -44,6 +44,7 @@ param(
     [string]$Status = "pending",
     [string]$StoragePath = "D:\lazy init ide\data\todos.json",
     [string]$ExportPath = "",
+    [switch]$Json,
     [switch]$AgenticMode,
     [switch]$Watch,
     [switch]$Verbose
@@ -692,6 +693,20 @@ switch ($Operation) {
     "parse" {
         if (-not $Command) {
             throw "Command parameter required for parse operation. Use: -Command '!todos 1. Task one 2. Task two'"
+        }
+
+        if ($Json) {
+            $parsedTodos = [TodoCommandParser]::Parse($Command)
+            @($parsedTodos | ForEach-Object {
+                @{
+                    Text = $_.Text
+                    Priority = if ($_.Priority) { $_.Priority } else { $Priority }
+                    Status = if ($_.Status) { $_.Status } else { 'pending' }
+                    Source = if ($_.Source) { $_.Source } else { 'parsed' }
+                    Category = if ($_.Category) { $_.Category } else { 'general' }
+                }
+            }) | ConvertTo-Json -Depth 4
+            return
         }
         
         Write-Host "`n📝 Parsing command..." -ForegroundColor Cyan

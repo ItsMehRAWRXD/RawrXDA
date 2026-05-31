@@ -277,9 +277,6 @@ std::string CICDSettings::queueJob(const std::string& jobId)
     m_runLogs[runId] = log;
     it->second.lastRunAt = log.startTime;
 
-    // Real Logic: Log to stdout or trigger event bus if available
-    std::cout << "[CI/CD] Job Started: " << jobId << " (RunID: " << runId << ")" << std::endl;
-    
     return runId;
 }
 
@@ -440,7 +437,6 @@ std::string CICDSettings::deployModel(const std::string& jobId, const std::strin
     // if (runIt->second.status != JobStatus::Completed) { ... }
 
     std::string deploymentId = generateDeploymentId();
-    std::cout << "[Deployment] Starting deployment sequence for Job: " << jobId << ", Run: " << runId << std::endl;
 
     // Retrieve Deployment Config
     auto configIt = m_deploymentConfigs.find(jobId);
@@ -456,7 +452,6 @@ std::string CICDSettings::deployModel(const std::string& jobId, const std::strin
         fs::path sourcePath = fs::path(modelPath);
         if (fs::exists(sourcePath)) {
             fs::copy(sourcePath, deployDir / sourcePath.filename(), fs::copy_options::overwrite_existing);
-            std::cout << "[Deployment] Copied model artifact to: " << deployDir.string() << std::endl;
         } else {
              throw std::runtime_error("Deployment Source Invalid: " + modelPath);
         }
@@ -473,10 +468,8 @@ std::string CICDSettings::deployModel(const std::string& jobId, const std::strin
         metaFile << meta.dump(4);
         metaFile.close();
 
-        std::cout << "[Deployment] Deployment " << deploymentId << " completed successfully." << std::endl;
-
     } catch (const std::exception& e) {
-        std::cerr << "[Deployment] Failed with error: " << e.what() << std::endl;
+        last_error_ = std::string("CI/CD deploy failed: ") + e.what();
         return ""; // Indicate failure
     }
 
@@ -486,7 +479,6 @@ std::string CICDSettings::deployModel(const std::string& jobId, const std::strin
 bool CICDSettings::rollbackDeployment(const std::string& deploymentId, const std::string& targetRunId)
 {
     // deploymentRolledBack(deploymentId); // signal
-    std::cout << "[Rollback] Rolling back " << deploymentId << " to run " << targetRunId << std::endl;
     return true;
 }
 

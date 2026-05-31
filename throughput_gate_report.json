@@ -1,0 +1,133 @@
+﻿{
+    "checks":  [
+                   {
+                       "Detail":  "OK",
+                       "Status":  "PASS",
+                       "Category":  "baseline",
+                       "Name":  "Baseline file loaded"
+                   },
+                   {
+                       "Detail":  "OK",
+                       "Status":  "PASS",
+                       "Category":  "baseline",
+                       "Name":  "Baseline has perf section"
+                   },
+                   {
+                       "Detail":  "OK",
+                       "Status":  "PASS",
+                       "Category":  "baseline",
+                       "Name":  "Baseline has replay section"
+                   },
+                   {
+                       "Detail":  "OK",
+                       "Status":  "PASS",
+                       "Category":  "counters",
+                       "Name":  "Error count within bounds"
+                   },
+                   {
+                       "Detail":  "OK",
+                       "Status":  "PASS",
+                       "Category":  "counters",
+                       "Name":  "SCSI failures within bounds"
+                   },
+                   {
+                       "Detail":  "No baseline (0)",
+                       "Status":  "SKIP",
+                       "Category":  "perf",
+                       "Name":  "GEMM ops/sec regression check"
+                   },
+                   {
+                       "Detail":  "No baseline (0)",
+                       "Status":  "SKIP",
+                       "Category":  "perf",
+                       "Name":  "FlashAttn ops/sec regression check"
+                   },
+                   {
+                       "Detail":  "No baseline (0)",
+                       "Status":  "SKIP",
+                       "Category":  "perf",
+                       "Name":  "Token throughput regression check"
+                   },
+                   {
+                       "Detail":  "No baseline (0)",
+                       "Status":  "SKIP",
+                       "Category":  "perf",
+                       "Name":  "Inference latency regression check"
+                   },
+                   {
+                       "Detail":  "OK",
+                       "Status":  "PASS",
+                       "Category":  "hotpatch",
+                       "Name":  "Hotpatch did not spike errors"
+                   },
+                   {
+                       "Detail":  "OK",
+                       "Status":  "PASS",
+                       "Category":  "structural",
+                       "Name":  "Telemetry kernel ASM exists"
+                   },
+                   {
+                       "Detail":  "OK",
+                       "Status":  "PASS",
+                       "Category":  "structural",
+                       "Name":  "Prometheus exporter ASM exists"
+                   },
+                   {
+                       "Detail":  "OK",
+                       "Status":  "PASS",
+                       "Category":  "structural",
+                       "Name":  "Telemetry bridge header exists"
+                   },
+                   {
+                       "Detail":  "OK",
+                       "Status":  "PASS",
+                       "Category":  "structural",
+                       "Name":  "Replay+Telemetry fusion header exists"
+                   },
+                   {
+                       "Detail":  "OK",
+                       "Status":  "PASS",
+                       "Category":  "structural",
+                       "Name":  "Hotpatch safety header exists"
+                   }
+               ],
+    "milestone":  "T3-D",
+    "gate":  "THROUGHPUT_CI_GATE",
+    "environment":  {
+                        "os":  "Microsoft Windows 10.0.26200 ",
+                        "powershell":  "5.1.26100.7920"
+                    },
+    "version":  "1.0.0",
+    "summary":  {
+                    "failed":  0,
+                    "skipped":  4,
+                    "total":  15,
+                    "passed":  11
+                },
+    "thresholds":  {
+                       "latency_increase_pct":  5,
+                       "flash_attn_drop_pct":  5,
+                       "gemm_drop_pct":  3,
+                       "token_drop_pct":  3,
+                       "patch_delta_pct":  50
+                   },
+    "timestamp":  "2026-04-05 10:40:46",
+    "badge":  "THROUGHPUT_GATE_PASS",
+    "current_counters":  {
+                             "agent_loop_count":  0,
+                             "server_patches":  0,
+                             "byte_patches":  0,
+                             "scsi_fails":  0,
+                             "errors":  0,
+                             "flush_ops":  0,
+                             "mem_patches":  0,
+                             "inference_count":  0
+                         },
+    "result":  "PASS",
+    "current_performance":  {
+                                "avg_latency_ms":  0,
+                                "gemm_ops_per_sec":  0,
+                                "flash_attn_ops_per_sec":  0,
+                                "tokens_per_sec":  0
+                            }
+}

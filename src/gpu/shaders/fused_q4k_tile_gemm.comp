@@ -1,0 +1,209 @@
+#version 450
+
+#extension GL_EXT_control_flow_attributes : enable
+#extension GL_EXT_shader_16bit_storage : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int8 : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int16 : require
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+#extension GL_EXT_integer_dot_product : require
+
+// =============================================================================
+// FusedQ4K_TileGEMM - RDNA3-optimized tiled matrix multiply for Q4_K weights
+// =============================================================================
+// Key optimizations:
+// 1. Wavefront-cooperative Q4_K block loading (64 lanes = 1 wave)
+// 2. LDS staging for dequantized values (reuse across multiple outputs)
+// 3. Integer dot product for packed 4-bit values
+// 4. Persistent tile accumulation in registers
+// =============================================================================
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+// Q4_K block structure: 144 bytes / 256 elements
+// - qs: 128 bytes (256 x 4-bit values packed as 64 x uint16)
+// - dm: 4 bytes (2 x float16: scale and min)
+// - scales: 12 bytes (6 x uint16 packed scales)
+
+struct block_q4_k {
+    uint16_t qs[64];    // 128 bytes: packed 4-bit weights
+    float16_t d;        // 2 bytes: global scale
+    float16_t m;        // 2 bytes: global min
+    uint8_t scales[12]; // 12 bytes: per-group scales
+};
+
+// Q8_1 block for activations: 40 bytes / 32 elements
+struct block_q8_1 {
+    int8_t qs[32];      // 32 bytes: 8-bit values
+    float16_t d;        // 2 bytes: scale
+    float16_t s;        // 2 bytes: sum scale
+};
+
+// Push constants
+layout(push_constant) uniform parameter {
+    uint M;             // Output rows
+    uint N;             // Output cols (batch size, typically 1 for inference)
+    uint K;             // Inner dimension
+    uint ne0;           // Row stride
+    uint ne1;           // Col stride
+    uint batch_stride;  // Batch stride
+} p;
+
+// Buffers
+layout(binding = 0) readonly buffer A { block_q4_k data_a[]; };
+layout(binding = 1) readonly buffer B { block_q8_1 data_b[]; };
+layout(binding = 2) writeonly buffer D { float data_d[]; };
+
+// Shared memory for tile staging
+// Each workgroup processes TILE_M rows x TILE_K columns
+#define TILE_M 64
+#define TILE_K 256  // One Q4_K block = 256 elements
+
+shared float s_a[TILE_M][TILE_K];  // Dequantized weights
+shared float s_b[TILE_K];          // Activations (broadcast for N=1)
+shared float s_partial[64];        // Workgroup reduction buffer
+
+// Dequantize a Q4_K block to float
+// Block layout: 256 elements in 16 groups of 16
+// Each group has: 4-bit values + 6-bit scale
+void dequantize_q4k_block(uint block_idx, out float values[256]) {
+    block_q4_k block = data_a[block_idx];
+    
+    float d = float(block.d);
+    float m = float(block.m);
+    
+    // Unpack scales (12 bytes = 24 nibbles, but we need 16 scales)
+    // Scales are packed: scales[i] = (scales[i/2] >> (4*(i%2))) & 0xF for lower 16
+    // Upper 8 scales use different packing
+    
+    uint scales[16];
+    for (int i = 0; i < 6; i++) {
+        scales[i*2]     = uint(block.scales[i]) & 0xFu;
+        scales[i*2 + 1] = (uint(block.scales[i]) >> 4) & 0xFu;
+    }
+    // Scales 12-15 are packed differently
+    scales[12] = uint(block.scales[6]) & 0xFu;
+    scales[13] = (uint(block.scales[6]) >> 4) & 0xFu;
+    scales[14] = uint(block.scales[7]) & 0xFu;
+    scales[15] = (uint(block.scales[7]) >> 4) & 0xFu;
+    
+    // Unpack 4-bit weights
+    for (int g = 0; g < 16; g++) {
+        float sc = d * float(scales[g] & 0x3Fu);
+        float min = m * float(scales[g] >> 4);
+        
+        for (int j = 0; j < 16; j++) {
+            uint packed = uint(block.qs[g * 4 + j / 4]);
+            uint nibble = (packed >> (4 * (j % 4))) & 0xFu;
+            values[g * 16 + j] = sc * float(nibble) - min;
+        }
+    }
+}
+
+// Cooperative load of Q4_K block to shared memory
+// Each lane handles 4 elements
+void load_q4k_tile_to_shmem(uint block_row_start, uint block_col, uint num_blocks) {
+    uint lane_id = gl_LocalInvocationID.x;
+    
+    // Each lane loads 4 consecutive elements from the block
+    for (uint b = 0; b < num_blocks; b++) {
+        uint block_idx = block_row_start + b;
+        block_q4_k block = data_a[block_idx];
+        
+        float d = float(block.d);
+        float m = float(block.m);
+        
+        // Cooperative unpack: 64 lanes x 4 elements = 256 elements
+        uint elem_base = lane_id * 4;
+        
+        // Get scale for this group
+        uint group = elem_base / 16;
+        uint scale_idx = group / 2;
+        uint scale_shift = (group % 2) * 4;
+        
+        uint scale_byte = uint(block.scales[min(scale_idx, 5u)]);
+        uint sc = (scale_byte >> scale_shift) & 0xFu;
+        
+        // Unpack 4 nibbles
+        uint packed0 = uint(block.qs[elem_base / 4]);
+        uint packed1 = uint(block.qs[(elem_base + 2) / 4]);
+        
+        // Extract 4-bit values
+        float sc_f = d * float(sc);
+        float min_f = m * float((scale_byte >> (scale_shift + 4)) & 0xFu);
+        
+        s_a[lane_id][elem_base + 0] = sc_f * float(packed0 & 0xFu) - min_f;
+        s_a[lane_id][elem_base + 1] = sc_f * float((packed0 >> 4) & 0xFu) - min_f;
+        s_a[lane_id][elem_base + 2] = sc_f * float((packed0 >> 8) & 0xFu) - min_f;
+        s_a[lane_id][elem_base + 3] = sc_f * float((packed0 >> 12) & 0xFu) - min_f;
+    }
+}
+
+// Load activation block to shared memory
+void load_activation_tile(uint k_start, uint k_count) {
+    uint lane_id = gl_LocalInvocationID.x;
+    
+    for (uint k = lane_id; k < k_count; k += 64) {
+        uint block_idx = (k_start + k) / 32;
+        uint elem_in_block = (k_start + k) % 32;
+        
+        block_q8_1 block = data_b[block_idx];
+        float d = float(block.d);
+        s_b[k] = d * float(block.qs[elem_in_block]);
+    }
+}
+
+void main() {
+    uint lane_id = gl_LocalInvocationID.x;
+    uint wg_id = gl_WorkGroupID.x;
+    
+    // Each workgroup handles TILE_M output rows
+    uint row_start = wg_id * TILE_M;
+    uint row_end = min(row_start + TILE_M, p.M);
+    uint num_rows = row_end - row_start;
+    
+    // Accumulator in registers
+    float acc = 0.0;
+    
+    // Process K dimension in tiles
+    uint num_k_tiles = (p.K + TILE_K - 1) / TILE_K;
+    
+    for (uint kt = 0; kt < num_k_tiles; kt++) {
+        uint k_start = kt * TILE_K;
+        uint k_end = min(k_start + TILE_K, p.K);
+        uint k_count = k_end - k_start;
+        
+        // Cooperative load of weight tile
+        uint block_row_start = row_start * (p.K / 256) + (k_start / 256);
+        load_q4k_tile_to_shmem(block_row_start, k_start, 1);
+        
+        // Load activation tile
+        load_activation_tile(k_start, k_count);
+        
+        // Barrier to ensure shared memory is ready
+        barrier();
+        
+        // Compute partial dot product
+        // Each lane handles 4 consecutive K values
+        for (uint k = lane_id; k < k_count; k += 64) {
+            acc += s_a[lane_id / 4][k] * s_b[k];
+        }
+    }
+    
+    // Reduction within workgroup
+    // Use subgroup operations if available, otherwise shared memory
+    s_partial[lane_id] = acc;
+    barrier();
+    
+    // Tree reduction
+    for (uint stride = 32; stride > 0; stride >>= 1) {
+        if (lane_id < stride) {
+            s_partial[lane_id] += s_partial[lane_id + stride];
+        }
+        barrier();
+    }
+    
+    // Write result
+    if (lane_id == 0) {
+        data_d[row_start] = s_partial[0];
+    }
+}

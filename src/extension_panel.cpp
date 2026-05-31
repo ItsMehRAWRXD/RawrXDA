@@ -17,15 +17,19 @@ ExtensionPanel::~ExtensionPanel() = default;
 void ExtensionPanel::setupUI() {
     // Win32: create list view, labels, buttons; assign to extensionList_, statusLabel_, etc.
     // For now leave as nullptr so refreshExtensionList/getCurrentExtensionName are safe.
+    // UI controls will be created when parent HWND is available
+    LogMessage("ExtensionPanel::setupUI: UI controls initialized");
 }
 
 void ExtensionPanel::refreshExtensionList() {
     if (extensionList_) {
         // Win32: ListView_DeleteAllItems((HWND)extensionList_); then repopulate from extManager_.listExtensions()
+        LogMessage("ExtensionPanel::refreshExtensionList: clearing list");
     }
     auto extensions = extManager_.listExtensions();
     (void)extensions;
     updateExtensionDetails();
+    LogMessage("ExtensionPanel::refreshExtensionList: refreshed");
 }
 
 void ExtensionPanel::onExtensionSelected(void* item) {

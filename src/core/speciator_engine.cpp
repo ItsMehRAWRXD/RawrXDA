@@ -287,8 +287,19 @@ bool SpeciatorEngine::checkSpeciation(SpeciesType species) {
 #ifdef RAWR_HAS_MASM
     return asm_speciator_speciate(static_cast<uint32_t>(species)) == 1;
 #else
-    (void)species;
-    return false;
+    // Software fallback: check population diversity heuristic
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (m_population.empty()) {
+        return false;
+    }
+    std::size_t speciesCount = 0;
+    for (const auto& genome : m_population) {
+        if (genome.species == species) {
+            speciesCount++;
+        }
+    }
+    // Speciation threshold: at least 10% of population belongs to this species
+    return speciesCount >= m_population.size() / 10;
 #endif
 }
 

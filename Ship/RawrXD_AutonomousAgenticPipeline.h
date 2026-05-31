@@ -96,6 +96,7 @@ public:
         uint32_t maxAutoFixRetries = 3u;
         bool enableSelfHealing = true;
         bool notifyExternalCoordinatorOnFailure = false;
+        uint32_t contextWindowTokens = 4096u;
     };
 
     AutonomousAgenticPipelineCoordinator();
@@ -122,6 +123,7 @@ public:
     void setExternalAgentCoordinator(void* coordinator);  // RawrXD_AgentCoordinator C API
     Config getConfig() const;
     void setConfig(const Config& c);
+    void setContextWindow(int tokens);
 
     // Self-healing: mark failure and trigger auto-fix cycle
     void reportPipelineFailure(PipelineStage stage, const std::string& message);

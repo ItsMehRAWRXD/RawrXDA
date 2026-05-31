@@ -1538,7 +1538,7 @@ LRESULT CALLBACK MainWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPA
             if(LOWORD(wParam) == 1999) { window->addTab("Untitled"); return 0; }
             if(LOWORD(wParam) >= 2000 && LOWORD(wParam) < 2100) { size_t idx = LOWORD(wParam) - 2000; window->switchTab(idx); return 0; }
             if(LOWORD(wParam) == 3001) { int sel = (int)SendMessage(window->m_commandPaletteHwnd, LB_GETCURSEL, 0, 0); window->executePaletteSelection(sel); window->toggleCommandPalette(); return 0; }
-            // Floating panel toggle example
+            // Floating panel toggle
             if (LOWORD(wParam) == 1000) {
                 window->toggleFloatingPanel();
                 return 0;

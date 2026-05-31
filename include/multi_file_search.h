@@ -75,9 +75,12 @@ private:
     bool isIgnored(const std::string& filePath, const std::vector<std::regex>& patterns);
     void addResultToTree(const MultiFileSearchResult& result);
     void updateStatus(const std::string& message);
+    bool globMatchExtList(const std::string& name, const std::string& patternCsv);
 
     HWND m_searchInput = nullptr;
     HWND m_statusLabel = nullptr;
+    HWND m_resultsList = nullptr;
+    HWND m_resultsTree = nullptr;
 
     std::string m_projectRoot;
     std::string m_searchQuery;

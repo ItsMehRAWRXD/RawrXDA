@@ -1,6 +1,6 @@
 #include "binary-ops.h"
 
-#if defined(GGML_USE_ACCELERATE)
+#if defined(GGML_RXD_USE_ACCELERATE)
 #include <Accelerate/Accelerate.h>
 
 using vDSP_fn_t = void (*)(const float *, vDSP_Stride, const float *, vDSP_Stride, float *, vDSP_Stride, vDSP_Length);
@@ -47,28 +47,28 @@ static inline void vec_binary_op_non_contiguous(const int64_t n, const int64_t n
 }
 
 template <float (*op)(float, float), typename src0_t, typename src1_t, typename dst_t>
-static void apply_binary_op(const ggml_compute_params * params, ggml_tensor * dst) {
-    const ggml_tensor * src0 = dst->src[0];
-    const ggml_tensor * src1 = dst->src[1];
+static void apply_binary_op(const ggml_rxd_compute_params * params, ggml_rxd_tensor * dst) {
+    const ggml_rxd_tensor * src0 = dst->src[0];
+    const ggml_rxd_tensor * src1 = dst->src[1];
 
-    GGML_ASSERT(ggml_can_repeat(src1, src0) && ggml_are_same_shape(src0, dst));
+    GGML_RXD_ASSERT(ggml_rxd_can_repeat(src1, src0) && ggml_rxd_are_same_shape(src0, dst));
 
-    GGML_TENSOR_BINARY_OP_LOCALS
+    GGML_RXD_TENSOR_BINARY_OP_LOCALS
 
-    GGML_ASSERT( nb0 == sizeof(dst_t));
-    GGML_ASSERT(nb00 == sizeof(src0_t));
+    GGML_RXD_ASSERT( nb0 == sizeof(dst_t));
+    GGML_RXD_ASSERT(nb00 == sizeof(src0_t));
 
     const auto [ir0, ir1] = get_thread_range(params, src0);
     const bool is_src1_contiguous = (nb10 == sizeof(src1_t));
 
     if (!is_src1_contiguous) { // broadcast not implemented yet for non-contiguous
-        GGML_ASSERT(ggml_are_same_shape(src0, src1));
+        GGML_RXD_ASSERT(ggml_rxd_are_same_shape(src0, src1));
     }
 
-#ifdef GGML_USE_ACCELERATE
+#ifdef GGML_RXD_USE_ACCELERATE
     vDSP_fn_t vDSP_op = nullptr;
     // TODO - avoid the f32-only check using type 'trait' lookup tables and row-based src-to-float conversion functions
-    if (src0->type == GGML_TYPE_F32 && src1->type == GGML_TYPE_F32 && dst->type == GGML_TYPE_F32) {
+    if (src0->type == GGML_RXD_TYPE_F32 && src1->type == GGML_RXD_TYPE_F32 && dst->type == GGML_RXD_TYPE_F32) {
         if (op == op_add) {
             vDSP_op = vDSP_vadd;
         } else if (op == op_sub) {
@@ -99,7 +99,7 @@ static void apply_binary_op(const ggml_compute_params * params, ggml_tensor * ds
             const int64_t nr0 = ne00 / ne10;
 
             for (int64_t r = 0; r < nr0; ++r) {
-#ifdef GGML_USE_ACCELERATE
+#ifdef GGML_RXD_USE_ACCELERATE
                 if constexpr (std::is_same_v<src0_t, float> && std::is_same_v<src1_t, float> && std::is_same_v<dst_t, float>) {
                     if (vDSP_op != nullptr) {
                         vDSP_op(src1_ptr, 1, src0_ptr + r*ne10, 1, dst_ptr + r*ne10, 1, ne10);
@@ -117,42 +117,44 @@ static void apply_binary_op(const ggml_compute_params * params, ggml_tensor * ds
 
 // TODO: Use the 'traits' lookup table (for type conversion fns), instead of a mass of 'if' conditions with long templates
 template <float (*op)(float, float)>
-static void binary_op(const ggml_compute_params * params, ggml_tensor * dst) {
-    const ggml_tensor * src0 = dst->src[0];
-    const ggml_tensor * src1 = dst->src[1];
+static void binary_op(const ggml_rxd_compute_params * params, ggml_rxd_tensor * dst) {
+    const ggml_rxd_tensor * src0 = dst->src[0];
+    const ggml_rxd_tensor * src1 = dst->src[1];
 
-    /*  */ if (src0->type == GGML_TYPE_F32  && src1->type == GGML_TYPE_F32  && dst->type == GGML_TYPE_F32) { // all f32
+    /*  */ if (src0->type == GGML_RXD_TYPE_F32  && src1->type == GGML_RXD_TYPE_F32  && dst->type == GGML_RXD_TYPE_F32) { // all f32
         apply_binary_op<op, float, float, float>(params, dst);
-    } else if (src0->type == GGML_TYPE_F16  && src1->type == GGML_TYPE_F16  && dst->type == GGML_TYPE_F16) { // all f16
-        apply_binary_op<op, ggml_fp16_t, ggml_fp16_t, ggml_fp16_t>(params, dst);
-    } else if (src0->type == GGML_TYPE_BF16 && src1->type == GGML_TYPE_BF16 && dst->type == GGML_TYPE_BF16) { // all bf16
-        apply_binary_op<op, ggml_bf16_t, ggml_bf16_t, ggml_bf16_t>(params, dst);
-    } else if (src0->type == GGML_TYPE_BF16 && src1->type == GGML_TYPE_F32  && dst->type == GGML_TYPE_BF16) {
-        apply_binary_op<op, ggml_bf16_t, float, ggml_bf16_t>(params, dst);
-    } else if (src0->type == GGML_TYPE_BF16 && src1->type == GGML_TYPE_F32  && dst->type == GGML_TYPE_F32) {
-        apply_binary_op<op, ggml_bf16_t, float, float>(params, dst);
-    } else if (src0->type == GGML_TYPE_F16  && src1->type == GGML_TYPE_F32  && dst->type == GGML_TYPE_F16) {
-        apply_binary_op<op, ggml_fp16_t, float, ggml_fp16_t>(params, dst);
-    } else if (src0->type == GGML_TYPE_F16  && src1->type == GGML_TYPE_F32  && dst->type == GGML_TYPE_F32) {
-        apply_binary_op<op, ggml_fp16_t, float, float>(params, dst);
+    } else if (src0->type == GGML_RXD_TYPE_F16  && src1->type == GGML_RXD_TYPE_F16  && dst->type == GGML_RXD_TYPE_F16) { // all f16
+        apply_binary_op<op, ggml_rxd_fp16_t, ggml_rxd_fp16_t, ggml_rxd_fp16_t>(params, dst);
+    } else if (src0->type == GGML_RXD_TYPE_BF16 && src1->type == GGML_RXD_TYPE_BF16 && dst->type == GGML_RXD_TYPE_BF16) { // all bf16
+        apply_binary_op<op, ggml_rxd_bf16_t, ggml_rxd_bf16_t, ggml_rxd_bf16_t>(params, dst);
+    } else if (src0->type == GGML_RXD_TYPE_BF16 && src1->type == GGML_RXD_TYPE_F32  && dst->type == GGML_RXD_TYPE_BF16) {
+        apply_binary_op<op, ggml_rxd_bf16_t, float, ggml_rxd_bf16_t>(params, dst);
+    } else if (src0->type == GGML_RXD_TYPE_BF16 && src1->type == GGML_RXD_TYPE_F32  && dst->type == GGML_RXD_TYPE_F32) {
+        apply_binary_op<op, ggml_rxd_bf16_t, float, float>(params, dst);
+    } else if (src0->type == GGML_RXD_TYPE_F16  && src1->type == GGML_RXD_TYPE_F32  && dst->type == GGML_RXD_TYPE_F16) {
+        apply_binary_op<op, ggml_rxd_fp16_t, float, ggml_rxd_fp16_t>(params, dst);
+    } else if (src0->type == GGML_RXD_TYPE_F16  && src1->type == GGML_RXD_TYPE_F32  && dst->type == GGML_RXD_TYPE_F32) {
+        apply_binary_op<op, ggml_rxd_fp16_t, float, float>(params, dst);
     } else {
-        GGML_ABORT("%s: unsupported types: dst: %s, src0: %s, src1: %s\n", __func__,
-            ggml_type_name(dst->type), ggml_type_name(src0->type), ggml_type_name(src1->type));
+        GGML_RXD_ABORT("%s: unsupported types: dst: %s, src0: %s, src1: %s\n", __func__,
+            ggml_rxd_type_name(dst->type), ggml_rxd_type_name(src0->type), ggml_rxd_type_name(src1->type));
     }
 }
 
-void ggml_compute_forward_add_non_quantized(const ggml_compute_params * params, ggml_tensor * dst) {
+void ggml_rxd_compute_forward_add_non_quantized(const ggml_rxd_compute_params * params, ggml_rxd_tensor * dst) {
     binary_op<op_add>(params, dst);
 }
 
-void ggml_compute_forward_sub(const ggml_compute_params * params, ggml_tensor * dst) {
+void ggml_rxd_compute_forward_sub(const ggml_rxd_compute_params * params, ggml_rxd_tensor * dst) {
     binary_op<op_sub>(params, dst);
 }
 
-void ggml_compute_forward_mul(const ggml_compute_params * params, ggml_tensor * dst) {
+void ggml_rxd_compute_forward_mul(const ggml_rxd_compute_params * params, ggml_rxd_tensor * dst) {
     binary_op<op_mul>(params, dst);
 }
 
-void ggml_compute_forward_div(const ggml_compute_params * params, ggml_tensor * dst) {
+void ggml_rxd_compute_forward_div(const ggml_rxd_compute_params * params, ggml_rxd_tensor * dst) {
     binary_op<op_div>(params, dst);
 }
+
+

@@ -1,0 +1,5 @@
+RawrXD AVX2 Tokenizer Benchmark
+scalar_ms=35
+avx2_ms=36
+speedup=0.972222x
+total_mb=50

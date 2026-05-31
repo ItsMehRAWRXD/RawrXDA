@@ -23,6 +23,7 @@
 #include <filesystem>
 #include <sstream>
 #include <iomanip>
+#include <fstream>
 
 // Windows-only
 #include <winioctl.h>
@@ -40,6 +41,10 @@ static constexpr int    INQUIRY_BUFFER_SIZE     = 64;
 static constexpr size_t SECTOR_BUFFER_SIZE      = 1048576;  // 1MB
 static constexpr DWORD  SPARSE_FSCTL            = 0x000900C4; // FSCTL_SET_SPARSE
 
+static constexpr size_t CARVE_MAX_JPEG_BYTES     = 64 * 1024 * 1024;
+static constexpr size_t CARVE_MAX_PNG_BYTES      = 64 * 1024 * 1024;
+static constexpr size_t CARVE_MAX_ZIP_BYTES      = 128 * 1024 * 1024;
+
 // ---------------------------------------------------------------------------
 // Helper: build \\.\PhysicalDriveN path
 // ---------------------------------------------------------------------------
@@ -55,6 +60,37 @@ static std::string BuildDrivePath(int driveNumber) {
 static double GetTimestampSec() {
     auto now = std::chrono::steady_clock::now();
     return std::chrono::duration<double>(now.time_since_epoch()).count();
+}
+
+static bool MatchAt(const std::vector<uint8_t>& data, size_t pos, const uint8_t* sig, size_t len) {
+    if (pos + len > data.size()) {
+        return false;
+    }
+    return std::memcmp(data.data() + pos, sig, len) == 0;
+}
+
+static bool FindPattern(const std::vector<uint8_t>& data,
+                        size_t from,
+                        const uint8_t* sig,
+                        size_t len,
+                        size_t limit,
+                        size_t& outPos) {
+    if (from >= data.size()) {
+        return false;
+    }
+
+    const size_t hardEnd = std::min(data.size(), from + limit);
+    if (hardEnd < len) {
+        return false;
+    }
+
+    for (size_t i = from; i + len <= hardEnd; ++i) {
+        if (std::memcmp(data.data() + i, sig, len) == 0) {
+            outPos = i;
+            return true;
+        }
+    }
+    return false;
 }
 
 // ---------------------------------------------------------------------------
@@ -78,6 +114,69 @@ DiskRecoveryAgent::~DiskRecoveryAgent() {
     if (m_hTarget != INVALID_HANDLE_VALUE) CloseHandle(m_hTarget);
     if (m_hLog    != INVALID_HANDLE_VALUE) CloseHandle(m_hLog);
     if (m_hBadMap != INVALID_HANDLE_VALUE) CloseHandle(m_hBadMap);
+}
+
+// Move constructor
+DiskRecoveryAgent::DiskRecoveryAgent(DiskRecoveryAgent&& other) noexcept
+    : m_config(std::move(other.m_config))
+    , m_state(other.m_state.load())
+    , m_abortRequested(other.m_abortRequested.load())
+    , m_pauseRequested(other.m_pauseRequested.load())
+    , m_hSource(other.m_hSource)
+    , m_hTarget(other.m_hTarget)
+    , m_hLog(other.m_hLog)
+    , m_hBadMap(other.m_hBadMap)
+    , m_driveInfo(other.m_driveInfo)
+    , m_keyExtracted(other.m_keyExtracted)
+    , m_stats(other.m_stats)
+    , m_badSectors(std::move(other.m_badSectors))
+    , m_eventCallback(std::move(other.m_eventCallback))
+    , m_workerThread(std::move(other.m_workerThread))
+{
+    memcpy(m_encryptionKey, other.m_encryptionKey, sizeof(m_encryptionKey));
+    memcpy(m_transferBuffer, other.m_transferBuffer, sizeof(m_transferBuffer));
+    
+    other.m_hSource = INVALID_HANDLE_VALUE;
+    other.m_hTarget = INVALID_HANDLE_VALUE;
+    other.m_hLog = INVALID_HANDLE_VALUE;
+    other.m_hBadMap = INVALID_HANDLE_VALUE;
+}
+
+// Move assignment
+DiskRecoveryAgent& DiskRecoveryAgent::operator=(DiskRecoveryAgent&& other) noexcept {
+    if (this != &other) {
+        Abort();
+        if (m_workerThread.joinable()) {
+            m_workerThread.join();
+        }
+        if (m_hSource != INVALID_HANDLE_VALUE) CloseHandle(m_hSource);
+        if (m_hTarget != INVALID_HANDLE_VALUE) CloseHandle(m_hTarget);
+        if (m_hLog    != INVALID_HANDLE_VALUE) CloseHandle(m_hLog);
+        if (m_hBadMap != INVALID_HANDLE_VALUE) CloseHandle(m_hBadMap);
+        
+        m_config = std::move(other.m_config);
+        m_state = other.m_state.load();
+        m_abortRequested = other.m_abortRequested.load();
+        m_pauseRequested = other.m_pauseRequested.load();
+        m_hSource = other.m_hSource;
+        m_hTarget = other.m_hTarget;
+        m_hLog = other.m_hLog;
+        m_hBadMap = other.m_hBadMap;
+        m_driveInfo = other.m_driveInfo;
+        m_keyExtracted = other.m_keyExtracted;
+        m_stats = other.m_stats;
+        m_badSectors = std::move(other.m_badSectors);
+        m_eventCallback = std::move(other.m_eventCallback);
+        m_workerThread = std::move(other.m_workerThread);
+        memcpy(m_encryptionKey, other.m_encryptionKey, sizeof(m_encryptionKey));
+        memcpy(m_transferBuffer, other.m_transferBuffer, sizeof(m_transferBuffer));
+        
+        other.m_hSource = INVALID_HANDLE_VALUE;
+        other.m_hTarget = INVALID_HANDLE_VALUE;
+        other.m_hLog = INVALID_HANDLE_VALUE;
+        other.m_hBadMap = INVALID_HANDLE_VALUE;
+    }
+    return *this;
 }
 
 // ---------------------------------------------------------------------------
@@ -726,6 +825,103 @@ PatchResult DiskRecoveryAgent::ExportBadSectorMap(const std::string& path) const
 
     CloseHandle(hFile);
     return PatchResult::ok("Bad sector map exported");
+}
+
+PatchResult DiskRecoveryAgent::CarveKnownSignatures(const std::string& imagePath,
+                                                    const std::string& outputDir,
+                                                    size_t maxFiles) {
+    if (imagePath.empty() || outputDir.empty()) {
+        return PatchResult::error("Image path and output directory are required");
+    }
+    if (maxFiles == 0) {
+        return PatchResult::error("maxFiles must be > 0");
+    }
+
+    std::ifstream in(imagePath, std::ios::binary);
+    if (!in.is_open()) {
+        return PatchResult::error("Failed to open raw image for carving");
+    }
+
+    std::error_code ec;
+    std::filesystem::create_directories(outputDir, ec);
+
+    std::vector<uint8_t> bytes;
+    in.seekg(0, std::ios::end);
+    const std::streamoff fileSize = in.tellg();
+    in.seekg(0, std::ios::beg);
+
+    if (fileSize <= 0) {
+        return PatchResult::error("Image file is empty");
+    }
+
+    bytes.resize(static_cast<size_t>(fileSize));
+    in.read(reinterpret_cast<char*>(bytes.data()), fileSize);
+    if (!in) {
+        return PatchResult::error("Failed to read image file bytes");
+    }
+
+    static const uint8_t kJpegSoi[] = {0xFF, 0xD8, 0xFF};
+    static const uint8_t kJpegEoi[] = {0xFF, 0xD9};
+    static const uint8_t kPngSig[] = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
+    static const uint8_t kPngIend[] = {0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82};
+    static const uint8_t kZipLocal[] = {0x50, 0x4B, 0x03, 0x04};
+    static const uint8_t kZipEocd[] = {0x50, 0x4B, 0x05, 0x06};
+
+    size_t carvedCount = 0;
+    size_t i = 0;
+    while (i + 8 < bytes.size() && carvedCount < maxFiles) {
+        size_t start = i;
+        size_t end = 0;
+        const char* ext = nullptr;
+
+        if (MatchAt(bytes, i, kJpegSoi, sizeof(kJpegSoi))) {
+            size_t eoiPos = 0;
+            if (FindPattern(bytes, i + sizeof(kJpegSoi), kJpegEoi, sizeof(kJpegEoi), CARVE_MAX_JPEG_BYTES, eoiPos)) {
+                start = i;
+                end = eoiPos + sizeof(kJpegEoi);
+                ext = "jpg";
+            }
+        } else if (MatchAt(bytes, i, kPngSig, sizeof(kPngSig))) {
+            size_t iendPos = 0;
+            if (FindPattern(bytes, i + sizeof(kPngSig), kPngIend, sizeof(kPngIend), CARVE_MAX_PNG_BYTES, iendPos)) {
+                start = i;
+                end = iendPos + sizeof(kPngIend);
+                ext = "png";
+            }
+        } else if (MatchAt(bytes, i, kZipLocal, sizeof(kZipLocal))) {
+            size_t eocdPos = 0;
+            if (FindPattern(bytes, i + sizeof(kZipLocal), kZipEocd, sizeof(kZipEocd), CARVE_MAX_ZIP_BYTES, eocdPos)) {
+                start = i;
+                end = eocdPos + sizeof(kZipEocd) + 22;
+                if (end > bytes.size()) {
+                    end = bytes.size();
+                }
+                ext = "zip";
+            }
+        }
+
+        if (ext != nullptr && end > start) {
+            std::ostringstream name;
+            name << outputDir << "\\carved_" << std::setw(6) << std::setfill('0') << carvedCount
+                 << "_0x" << std::hex << start << "." << ext;
+            std::ofstream out(name.str(), std::ios::binary | std::ios::trunc);
+            if (out.is_open()) {
+                out.write(reinterpret_cast<const char*>(bytes.data() + start),
+                          static_cast<std::streamsize>(end - start));
+                ++carvedCount;
+            }
+            i = end;
+            continue;
+        }
+
+        ++i;
+    }
+
+    static thread_local std::string resultMsg;
+    std::ostringstream summary;
+    summary << "Carving complete: " << carvedCount << " file(s) extracted from " << imagePath;
+    resultMsg = summary.str();
+    return PatchResult::ok(resultMsg.c_str());
 }
 
 // ---------------------------------------------------------------------------

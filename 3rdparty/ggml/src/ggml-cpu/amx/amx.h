@@ -4,5 +4,5 @@
 // GGML internal header
 
 #if defined(__AMX_INT8__) && defined(__AVX512VNNI__)
-ggml_backend_buffer_type_t ggml_backend_amx_buffer_type(void);
+ggml_rxd_backend_buffer_type_t ggml_rxd_backend_amx_buffer_type(void);
 #endif

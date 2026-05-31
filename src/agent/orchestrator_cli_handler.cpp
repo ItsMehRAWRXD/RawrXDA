@@ -152,8 +152,6 @@ std::string OrchestratorCLI::handleAudit(const std::vector<std::string>& args) {
 std::string OrchestratorCLI::handleExecute(const std::vector<std::string>& args) {
     std::string mode = args.size() > 1 ? args[1] : "all";
 
-    std::cout << "[Orchestrator] Executing in mode: " << mode << "\n";
-
     bool success = false;
     if (mode == "all") {
         success = m_orchestrator->execute();
@@ -169,8 +167,6 @@ std::string OrchestratorCLI::handleExecute(const std::vector<std::string>& args)
 
     json result = stats.toJSON();
     result["success"] = success;
-
-    std::cout << "[Orchestrator] Execution " << (success ? "completed" : "failed") << ".\n";
 
     return formatJson(result);
 }
@@ -220,8 +216,6 @@ std::string OrchestratorCLI::handleExecuteCategory(const std::vector<std::string
 
     std::string category = args[1];
 
-    std::cout << "[Orchestrator] Executing category: " << category << "\n";
-
     bool success = m_orchestrator->executeCategory(category);
 
     auto stats = m_orchestrator->getStats();
@@ -235,18 +229,13 @@ std::string OrchestratorCLI::handleExecuteCategory(const std::vector<std::string
 
 std::string OrchestratorCLI::handleStatus() {
     auto status = m_orchestrator->getDetailedStatus();
-    std::cout << "[Orchestrator] Status retrieved.\n";
     return formatJson(status);
 }
 
 std::string OrchestratorCLI::handleAutoOptimize() {
-    std::cout << "[Orchestrator] Running auto-optimization...\n";
-
     m_orchestrator->autoOptimize();
 
     auto recommendations = m_orchestrator->getOptimizationRecommendations();
-
-    std::cout << "[Orchestrator] Auto-optimization complete.\n";
 
     return formatJson(recommendations);
 }
@@ -261,8 +250,6 @@ std::string OrchestratorCLI::handleLoadConfig(const std::string& configFile) {
         json configJson = json::parse(ifs);
         loadConfigFromJson(configJson);
 
-        std::cout << "[Orchestrator] Config loaded from: " << configFile << "\n";
-
         return formatJson(json{{"success", true, "configFile", configFile}});
     } catch (const std::exception& e) {
         return formatJson(json{{"error", std::string("Failed to load config: ") + e.what()}}, false);
@@ -276,7 +263,6 @@ std::string OrchestratorCLI::handleSaveProgress(const std::string& filename) {
     result["success"] = success;
     if (success) {
         result["file"] = filename.empty() ? "orchestrator_progress.json" : filename;
-        std::cout << "[Orchestrator] Progress saved.\n";
     } else {
         result["error"] = "Failed to save progress";
     }
@@ -313,8 +299,6 @@ std::string OrchestratorCLI::handleSetQualityMode(const std::string& mode) {
 
     m_orchestrator->setQualityMode(qm);
 
-    std::cout << "[Orchestrator] Quality mode set to: " << mode << "\n";
-
     return formatJson(json{{"success", true, "qualityMode", mode}});
 }
 
@@ -325,8 +309,6 @@ std::string OrchestratorCLI::handleSetAgentMultiplier(int multiplier) {
 
     m_orchestrator->setAgentCycleMultiplier(multiplier);
 
-    std::cout << "[Orchestrator] Agent multiplier set to: " << multiplier << "x\n";
-
     return formatJson(json{{"success", true, "agentMultiplier", multiplier}});
 }
 
@@ -336,8 +318,6 @@ std::string OrchestratorCLI::handleSetAgentCount(int count) {
     }
 
     m_orchestrator->setAgentCount(count);
-
-    std::cout << "[Orchestrator] Agent count set to: " << count << "\n";
 
     return formatJson(json{{"success", true, "agentCount", count}});
 }

@@ -30,6 +30,10 @@ const RawrXD = {
 
     handleNativeMessage: (data) => {
         switch(data.type) {
+            case "DATA_INTEGRITY_HEATMAP":
+                // Batch 11: Render the live D2D heatmap in the dashboard overlay
+                if (RawrXD.components.heatmap) RawrXD.components.heatmap.update(data.payload);
+                break;
             case "DATA_DISASM":
                 if(RawrXD.components.disasm) RawrXD.components.disasm.update(data.payload);
                 break;

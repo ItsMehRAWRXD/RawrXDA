@@ -96,6 +96,14 @@ function AppContent() {
     shortcuts
   } = ide;
 
+  const chatShortcutLabel = useMemo(() => {
+    const primary = formatShortcutDisplayFixed(shortcuts.chat);
+    if (!primary || primary === 'Ctrl+L') {
+      return 'Ctrl+Shift+O / Ctrl+L';
+    }
+    return `${primary} / Ctrl+L`;
+  }, [shortcuts.chat]);
+
   const saveWithFeedback = React.useCallback(async () => {
     const r = await saveActiveFile();
     if (r.success) {
@@ -197,7 +205,7 @@ function AppContent() {
     if (rightDockTab !== prev) {
       if (rightDockTab) {
         playUiSound('open');
-        setStatusLine(`Panel: ${rightDockTab} — Ctrl+L / A / M / Y / G`);
+        setStatusLine(`Panel: ${rightDockTab} — ${chatShortcutLabel} / A / M / Y / G`);
         noisyLog('[dock] open', rightDockTab);
       } else if (prev) {
         playUiSound('close');
@@ -238,7 +246,7 @@ function AppContent() {
     openProject();
   };
 
-  /** Cursor / Copilot–style command registry for the palette */
+  /** RawrXD command registry for the palette */
   const paletteCommands = useMemo(() => {
     const list = [
       {
@@ -257,9 +265,9 @@ function AppContent() {
       },
       {
         id: 'chat',
-        label: 'Chat: Open AI Chat',
+        label: 'RawrXD: Open Chat Dock',
         category: 'Chat',
-        accelerator: 'Ctrl+L',
+        accelerator: chatShortcutLabel,
         action: () => openRightDock('chat')
       },
       {
@@ -403,7 +411,10 @@ function AppContent() {
         setSettingsOpen(true);
         return;
       }
-      if (matchesShortcut(e, shortcuts.chat)) {
+      if (
+        matchesShortcut(e, shortcuts.chat) ||
+        matchesShortcut(e, { requireMod: true, shift: false, alt: false, key: 'l' })
+      ) {
         e.preventDefault();
         openRightDock('chat');
         return;
@@ -510,6 +521,7 @@ function AppContent() {
           projectRoot={projectRoot}
           settings={settings}
           agentProps={agentDockProps}
+          chatShortcutLabel={chatShortcutLabel}
         />
       </div>
       <Terminal projectRoot={projectRoot} />

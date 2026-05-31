@@ -9,7 +9,7 @@
 | `RawrXD_ExtensionHost.asm` | Host: scans `Extensions\*.rawr`, loads DLLs, routes commands/chat |
 | `RawrXD_ExtensionHost_Hijacker.asm` | **Beacon-style injector**: replaces VS Code/Cursor ExtensionHost in-process with RawrXD native modules (no JS) |
 | `Build_ExtensionHost_Hijacker.ps1` | Build script: ML64 + LINK → `build\RawrXD_ExtensionHost_Hijacker.exe` |
-| `RawrXD_LSP.asm` | **LSP bridge** (replaces rawrxd-lsp-client): CreatePipe, CreateProcess clangd, JSON-RPC Content-Length framing, init/completion commands |
+| `RawrXD_LSP.asm` | **LSP bridge** (replaces rawrxd-lsp-client): CreatePipe, CreateProcess clangd, bounded JSON-RPC Content-Length framing, initialize/initialized handshake, init/completion commands |
 | `RawrXD_Copilot.asm` | **AI/Copilot** (replaces bigdaddyg-copilot): WinHTTP POST to localhost:11434/api/generate, stream tokens to pfnCallback |
 | `RawrXD_Agentic.asm` | **Agent** (replaces rawrz-agentic): agentic.compile → CreateProcess build, HandleChat → Ollama streaming |
 | `package.json` | Unified VSIX manifest (BigDaddyG, extensionPack) |
@@ -44,6 +44,37 @@ D:\rawrxd\extension-host\Build_ExtensionHost_Hijacker.ps1 -Deploy   # copy exe t
 # Run hijacker (requires admin) – injects into Code Helper / Cursor Helper
 # .\extension-host\build\RawrXD_ExtensionHost_Hijacker.exe
 ```
+
+## rawr-cli (manifest DX)
+
+Use rawr-cli to create, sign, and verify extension manifests before loading them.
+
+```powershell
+# Create a starter manifest
+node D:\rawrxd\extension-host\rawr-cli.js manifest-init --id demo.extension --out D:\temp\demo.manifest.json
+
+# Sign a manifest with an Ed25519 private key
+node D:\rawrxd\extension-host\rawr-cli.js manifest-sign --manifest D:\temp\demo.manifest.json --key D:\keys\signing.key.pem --key-id trusted-root
+
+# Lint a manifest against current negotiation rules before loading
+node D:\rawrxd\extension-host\rawr-cli.js manifest-lint --manifest D:\temp\demo.manifest.json --trust D:\keys\trust-anchors.json
+
+# Verify a manifest with trust anchors map
+node D:\rawrxd\extension-host\rawr-cli.js manifest-verify --manifest D:\temp\demo.manifest.json --trust D:\keys\trust-anchors.json
+```
+
+Trust anchors file format:
+
+```json
+{
+  "trusted-root": "-----BEGIN PUBLIC KEY-----\\n...\\n-----END PUBLIC KEY-----\\n"
+}
+```
+
+Telemetry hardening note:
+
+- `extension-host-manager.js` runs a one-time startup sink probe before spawning any extension host process.
+- The probe validates append-mode writability and fsync on `capability-lineage.log` and fails closed with `audit_sink_unavailable:*` if persistence cannot be guaranteed.
 
 ## Architecture
 

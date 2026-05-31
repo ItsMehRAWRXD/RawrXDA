@@ -769,7 +769,7 @@ CrucibleStageResult CrucibleEngine::stage_SP_GeneratePatchPayload() {
 
     // In a full implementation, we would lower the optimized IR to x86-64 machine code.
     // For the crucible test, we generate a "better" version of the function:
-    //   - The optimized version returns a computed constant (demonstrating
+    //   - The optimized version returns a computed constant (showing
     //     that constant folding + dead code elimination reduced the function
     //     to a single return).
     //

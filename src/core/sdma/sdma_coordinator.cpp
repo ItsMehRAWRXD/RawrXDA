@@ -17,6 +17,7 @@ namespace sdma {
 // EXTERNAL SYMBOLS (defined in MASM)
 // ============================================================
 alignas(64) SDMASchedulerState g_sdma_scheduler_state{};
+uint8_t* g_sdma_work_queue_base = nullptr;
 uint64_t g_sdma_work_queue_head = 0;
 uint64_t g_sdma_work_queue_tail = 0;
 uint64_t g_tsc_freq_500ns = 0;  // Initialized at startup
@@ -59,6 +60,9 @@ bool SDMACoordinator::initialize(
     g_sdma_scheduler_state.bytes_moved = 0;
     g_sdma_scheduler_state.coalescing_hits = 0;
     g_sdma_scheduler_state.scheduling_stalls = 0;
+    g_sdma_work_queue_base = reinterpret_cast<uint8_t*>(m_work_queue);
+    g_sdma_work_queue_head = 0;
+    g_sdma_work_queue_tail = 0;
     
     // Calculate TSC frequency for 500ns deadline calculations
     // Assume ~3GHz CPU: 500ns = 1500 TSC ticks

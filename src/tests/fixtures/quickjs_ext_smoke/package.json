@@ -1,0 +1,11 @@
+{
+  "name": "rawrxd-quickjs-ext-smoke",
+  "displayName": "RawrXD QuickJS Smoke Extension",
+  "version": "0.0.1",
+  "publisher": "rawrxd",
+  "main": "extension.js",
+  "activationEvents": [
+    "*"
+  ]
+}
+

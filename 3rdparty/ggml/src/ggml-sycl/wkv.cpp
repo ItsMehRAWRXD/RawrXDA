@@ -179,7 +179,7 @@ static void rwkv_wkv7_f32_kernel(
     }
 }
 
-void ggml_sycl_op_rwkv_wkv6(ggml_backend_sycl_context& ctx, ggml_tensor* dst) {
+void ggml_rxd_sycl_op_rwkv_wkv6(ggml_rxd_backend_sycl_context& ctx, ggml_rxd_tensor* dst) {
     scope_op_debug_print scope_dbg_print(__func__, dst, /*num_src=*/6);
     const float* k_d = (const float*)dst->src[0]->data;
     const float* v_d = (const float*)dst->src[1]->data;
@@ -194,9 +194,9 @@ void ggml_sycl_op_rwkv_wkv6(ggml_backend_sycl_context& ctx, ggml_tensor* dst) {
     const int64_t C = dst->ne[0];
     const int64_t H = dst->src[0]->ne[1];
 
-    GGML_ASSERT(dst->src[5]->type == GGML_TYPE_F32);
-    GGML_ASSERT(C % H == 0);
-    GGML_ASSERT(C / H == WKV_BLOCK_SIZE || C / H == WKV_BLOCK_SIZE * 2); // The current sycl kernel is designed for RWKV6, HEAD_SIZE == 64
+    GGML_RXD_ASSERT(dst->src[5]->type == GGML_RXD_TYPE_F32);
+    GGML_RXD_ASSERT(C % H == 0);
+    GGML_RXD_ASSERT(C / H == WKV_BLOCK_SIZE || C / H == WKV_BLOCK_SIZE * 2); // The current sycl kernel is designed for RWKV6, HEAD_SIZE == 64
 
     dpct::queue_ptr stream = ctx.stream();
 
@@ -235,7 +235,7 @@ void ggml_sycl_op_rwkv_wkv6(ggml_backend_sycl_context& ctx, ggml_tensor* dst) {
     }
 }
 
-void ggml_sycl_op_rwkv_wkv7(ggml_backend_sycl_context& ctx, ggml_tensor* dst) {
+void ggml_rxd_sycl_op_rwkv_wkv7(ggml_rxd_backend_sycl_context& ctx, ggml_rxd_tensor* dst) {
     scope_op_debug_print scope_dbg_print(__func__, dst, /*num_src=*/7);
     const float* r_d = (const float*)dst->src[0]->data;
     const float* w_d = (const float*)dst->src[1]->data;
@@ -251,9 +251,9 @@ void ggml_sycl_op_rwkv_wkv7(ggml_backend_sycl_context& ctx, ggml_tensor* dst) {
     const int64_t C = dst->ne[0];
     const int64_t H = dst->src[0]->ne[1];
 
-    GGML_ASSERT(dst->src[6]->type == GGML_TYPE_F32);
-    GGML_ASSERT(C % H == 0);
-    GGML_ASSERT(C / H == WKV_BLOCK_SIZE || C / H == WKV_BLOCK_SIZE * 2);
+    GGML_RXD_ASSERT(dst->src[6]->type == GGML_RXD_TYPE_F32);
+    GGML_RXD_ASSERT(C % H == 0);
+    GGML_RXD_ASSERT(C / H == WKV_BLOCK_SIZE || C / H == WKV_BLOCK_SIZE * 2);
 
     dpct::queue_ptr stream = ctx.stream();
 

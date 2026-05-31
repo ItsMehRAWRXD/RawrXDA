@@ -47,7 +47,6 @@ bool ChatSystem::addModel(const ModelConfig& config) {
 bool ChatSystem::switchModel(const std::string& modelName) {
     auto it = m_models.find(modelName);
     if (it == m_models.end()) {
-        std::cerr << "[ChatSystem] Model not found: " << modelName << std::endl;
         return false;
     }
     m_currentModel = it->second;
@@ -91,7 +90,6 @@ int ChatSystem::createConversation(const std::string& title) {
 bool ChatSystem::loadConversation(int conversationId) {
     auto it = m_conversations.find(conversationId);
     if (it == m_conversations.end()) {
-        std::cerr << "[ChatSystem] Conversation not found: " << conversationId << std::endl;
         return false;
     }
     m_currentConversationId = conversationId;
@@ -200,7 +198,7 @@ std::string ChatSystem::generateResponse(const std::string& userMessage, bool st
             },
             []() {},
             [](const std::string& error) {
-                std::cerr << "[ChatSystem] Error: " << error << std::endl;
+                (void)error;
             }
         );
         return fullResponse;
@@ -243,7 +241,7 @@ void ChatSystem::startStreamingResponse(
             std::string authHeader;
 
             if (m_currentModel.source == ModelSource::Local) {
-                streamUrl = "http://localhost:11434/api/generate";
+                streamUrl = "http://localhost:11435/api/generate";
                 streamBody = "{\"model\":\"" + m_currentModel.modelId + "\",\"prompt\":\"";
                 for (char c : fullPrompt) {
                     if (c == '"') streamBody += "\\\"";
@@ -875,7 +873,7 @@ std::string ChatSystem::callLocalModel(const std::string& prompt) {
     body += ",\"num_predict\":" + std::to_string(m_currentModel.maxTokens);
     body += ",\"stream\":false}";
 
-    std::string response = makeHTTPRequest("http://localhost:11434/api/generate", "POST", body);
+    std::string response = makeHTTPRequest("http://localhost:11435/api/generate", "POST", body);
     if (response.empty()) return "Error: Could not connect to local Ollama instance. Is it running?";
 
     // Parse response JSON - extract "response" field

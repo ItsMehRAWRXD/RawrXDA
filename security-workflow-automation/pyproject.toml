@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "secflow-automation"
+version = "0.1.0"
+description = "Expert-grade defensive cybersecurity workflow automation engine"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "RawrXD Security Automation" }]
+license = { text = "MIT" }
+dependencies = []
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["secflow_automation*"]

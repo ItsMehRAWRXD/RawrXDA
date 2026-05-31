@@ -367,6 +367,12 @@ void AutonomousAgenticPipelineCoordinator::setConfig(const Config& c)
     m_impl->config = c;
 }
 
+void AutonomousAgenticPipelineCoordinator::setContextWindow(int tokens)
+{
+    if (tokens > 0)
+        m_impl->config.contextWindowTokens = static_cast<uint32_t>(tokens);
+}
+
 void AutonomousAgenticPipelineCoordinator::reportPipelineFailure(PipelineStage stage, const std::string& message)
 {
     m_impl->reportPipelineFailureInternal(stage, message);

@@ -1,0 +1,8 @@
+EXE=D:\rawrxd\build-win32\bin\RawrEngine.exe
+MODEL=F:\OllamaModels\Phi-3-mini-4k-instruct-q8_0.gguf
+PROMPT=<|user|>
+status ping task verify<|end|>
+<|assistant|>
+
+MAX_TOKENS=48
+MODEL_SIZE=2176177120

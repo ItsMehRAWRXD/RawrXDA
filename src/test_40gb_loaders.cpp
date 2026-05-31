@@ -72,8 +72,15 @@ public:
     }
     
     void PrintHeader() {
-
-
+        std::cout << "========================================\n";
+        std::cout << "  RawrXD Model Loader Benchmark v1.0\n";
+        std::cout << "========================================\n";
+        std::cout << std::setw(40) << std::left << "Model Path"
+                  << std::setw(15) << "Loader"
+                  << std::setw(15) << "Time (ms)"
+                  << std::setw(15) << "Tensors"
+                  << std::endl;
+        std::cout << std::string(85, '-') << std::endl;
     }
 };
 

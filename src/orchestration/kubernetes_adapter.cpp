@@ -11,7 +11,7 @@
 #include <vector>
 #include <unordered_map>
 
-// Stub license check for test mode
+// Conditional license check for test mode
 #ifdef BUILD_K8S_TEST
 #define LICENSE_CHECK(feature) true
 #else

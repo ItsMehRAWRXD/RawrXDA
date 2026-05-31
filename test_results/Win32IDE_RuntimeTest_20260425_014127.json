@@ -1,0 +1,1358 @@
+﻿{
+    "Failed":  1,
+    "StartTime":  {
+                      "value":  "\/Date(1777095686809)\/",
+                      "DisplayHint":  2,
+                      "DateTime":  "Saturday, April 25, 2026 1:41:26 AM"
+                  },
+    "Passed":  165,
+    "Skipped":  0,
+    "Tests":  [
+                  {
+                      "Duration":  12.666500000000001,
+                      "Status":  "FAIL",
+                      "Error":  "Exception calling \"ReadAllBytes\" with \"1\" argument(s): \"The file is too long. This operation is currently limited to supporting files less than 2 gigabytes in size.\"",
+                      "Test":  "Model Loading"
+                  },
+                  {
+                      "Duration":  3.0462000000000002,
+                      "Status":  "PASS",
+                      "Error":  null,
+                      "Test":  "Inference Engine"
+                  },
+                  {
+                      "Id":  "file.new",
+                      "Name":  "New File",
+                      "Error":  null,
+                      "Duration":  1.5096,
+                      "Category":  "FileOps",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "file.open",
+                      "Name":  "Open File",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "FileOps",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "file.save",
+                      "Name":  "Save File",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "FileOps",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "file.saveAs",
+                      "Name":  "Save As",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "FileOps",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "file.saveAll",
+                      "Name":  "Save All",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "FileOps",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "file.close",
+                      "Name":  "Close File",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "FileOps",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "file.recentFiles",
+                      "Name":  "Recent Files",
+                      "Error":  null,
+                      "Duration":  1.5102,
+                      "Category":  "FileOps",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "file.loadModel",
+                      "Name":  "Load GGUF Model",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "FileOps",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "file.modelFromHF",
+                      "Name":  "Model from HuggingFace",
+                      "Error":  null,
+                      "Duration":  1.5090000000000001,
+                      "Category":  "FileOps",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "file.modelFromOllama",
+                      "Name":  "Model from Ollama",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "FileOps",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "file.modelFromURL",
+                      "Name":  "Model from URL",
+                      "Error":  null,
+                      "Duration":  1.5103,
+                      "Category":  "FileOps",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "file.modelUnified",
+                      "Name":  "Unified Model Load",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "FileOps",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "file.quickLoad",
+                      "Name":  "Quick Load Model",
+                      "Error":  null,
+                      "Duration":  1.5161,
+                      "Category":  "FileOps",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "edit.undo",
+                      "Name":  "Undo",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Editing",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "edit.redo",
+                      "Name":  "Redo",
+                      "Error":  null,
+                      "Duration":  1.5114,
+                      "Category":  "Editing",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "edit.cut",
+                      "Name":  "Cut",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Editing",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "edit.copy",
+                      "Name":  "Copy",
+                      "Error":  null,
+                      "Duration":  1.5142,
+                      "Category":  "Editing",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "edit.paste",
+                      "Name":  "Paste",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Editing",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "edit.selectAll",
+                      "Name":  "Select All",
+                      "Error":  null,
+                      "Duration":  1.5178,
+                      "Category":  "Editing",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "edit.find",
+                      "Name":  "Find",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Editing",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "edit.replace",
+                      "Name":  "Find \u0026 Replace",
+                      "Error":  null,
+                      "Duration":  1.5173,
+                      "Category":  "Editing",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "view.minimap",
+                      "Name":  "Toggle Minimap",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "View",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "view.outputPanel",
+                      "Name":  "Toggle Output Panel",
+                      "Error":  null,
+                      "Duration":  1.5145000000000002,
+                      "Category":  "View",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "view.floatingPanel",
+                      "Name":  "Floating Panel",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "View",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "view.themeEditor",
+                      "Name":  "Theme Editor",
+                      "Error":  null,
+                      "Duration":  1.5134,
+                      "Category":  "View",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "view.moduleBrowser",
+                      "Name":  "Module Browser",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "View",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "view.sidebar",
+                      "Name":  "Toggle Sidebar",
+                      "Error":  null,
+                      "Duration":  1.5172,
+                      "Category":  "View",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "view.secondarySidebar",
+                      "Name":  "Secondary Sidebar",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "View",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "view.panel",
+                      "Name":  "Toggle Panel",
+                      "Error":  null,
+                      "Duration":  1.5146000000000002,
+                      "Category":  "View",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "theme.darkPlus",
+                      "Name":  "Dark+ Theme",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Themes",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "theme.monokai",
+                      "Name":  "Monokai Theme",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Themes",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "theme.dracula",
+                      "Name":  "Dracula Theme",
+                      "Error":  null,
+                      "Duration":  1.5475,
+                      "Category":  "Themes",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "theme.16themes",
+                      "Name":  "16 Built-in Themes",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Themes",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "syntax.cpp",
+                      "Name":  "C/C++ Highlighting",
+                      "Error":  null,
+                      "Duration":  1.5134,
+                      "Category":  "SyntaxHighlight",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "syntax.asm",
+                      "Name":  "Assembly Highlighting",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "SyntaxHighlight",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "syntax.6languages",
+                      "Name":  "6 Language Support",
+                      "Error":  null,
+                      "Duration":  1.5165000000000002,
+                      "Category":  "SyntaxHighlight",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "vision.load",
+                      "Name":  "Load Vision Model",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "AIMode",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "vision.encode",
+                      "Name":  "Encode Image",
+                      "Error":  null,
+                      "Duration":  1.5135,
+                      "Category":  "AIMode",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "vision.describe",
+                      "Name":  "Describe Image",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "AIMode",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "vision.extractCode",
+                      "Name":  "Extract Code from Screenshot",
+                      "Error":  null,
+                      "Duration":  1.5132,
+                      "Category":  "AIMode",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "vision.analyzeDiagram",
+                      "Name":  "Analyze Diagram",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "AIMode",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "semantic.index",
+                      "Name":  "Index File",
+                      "Error":  null,
+                      "Duration":  1.5119,
+                      "Category":  "CodeIntelligence",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "semantic.search",
+                      "Name":  "Search Symbols",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "CodeIntelligence",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "semantic.goto",
+                      "Name":  "Go to Definition",
+                      "Error":  null,
+                      "Duration":  1.5118,
+                      "Category":  "CodeIntelligence",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "semantic.references",
+                      "Name":  "Find References",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "CodeIntelligence",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "semantic.hierarchy",
+                      "Name":  "Type Hierarchy",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "CodeIntelligence",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "terminal.new",
+                      "Name":  "New Terminal",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Terminal",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "terminal.split",
+                      "Name":  "Split Terminal",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Terminal",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "terminal.kill",
+                      "Name":  "Kill Terminal",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Terminal",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "terminal.splitCode",
+                      "Name":  "Split Code Viewer",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Terminal",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "agent.startLoop",
+                      "Name":  "Agent Loop",
+                      "Error":  null,
+                      "Duration":  1.5178,
+                      "Category":  "Agent",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "agent.execute",
+                      "Name":  "Agent Execute",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Agent",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "agent.configureModel",
+                      "Name":  "Configure Model",
+                      "Error":  null,
+                      "Duration":  1.5148000000000001,
+                      "Category":  "Agent",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "agent.viewTools",
+                      "Name":  "View Agent Tools",
+                      "Error":  null,
+                      "Duration":  13.621400000000001,
+                      "Category":  "Agent",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "agent.viewStatus",
+                      "Name":  "Agent Status",
+                      "Error":  null,
+                      "Duration":  1.5093,
+                      "Category":  "Agent",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "agent.stop",
+                      "Name":  "Agent Stop",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Agent",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "agent.autonomousCommunicator",
+                      "Name":  "Autonomous Communicator",
+                      "Error":  null,
+                      "Duration":  1.5124,
+                      "Category":  "Agent",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "agent.composerUX",
+                      "Name":  "Agentic Composer UX",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Agent",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "agent.contextMentionParser",
+                      "Name":  "Context Mention Parser",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Agent",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "agent.memory",
+                      "Name":  "Agent Memory",
+                      "Error":  null,
+                      "Duration":  1.5110000000000001,
+                      "Category":  "Agent",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "agent.history",
+                      "Name":  "Agent History",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Agent",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "agent.failureDetection",
+                      "Name":  "Failure Detection",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Agent",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "agent.failureIntelligence",
+                      "Name":  "Failure Intelligence",
+                      "Error":  null,
+                      "Duration":  1.5118,
+                      "Category":  "Agent",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "autonomy.toggle",
+                      "Name":  "Autonomy Toggle",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Autonomy",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "autonomy.setGoal",
+                      "Name":  "Set Goal",
+                      "Error":  null,
+                      "Duration":  1.5139,
+                      "Category":  "Autonomy",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "autonomy.rateLimit",
+                      "Name":  "Rate Limiter",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Autonomy",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "aimode.deepThinking",
+                      "Name":  "Deep Thinking",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "AIMode",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "aimode.deepResearch",
+                      "Name":  "Deep Research",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "AIMode",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "aimode.noRefusal",
+                      "Name":  "No Refusal",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "AIMode",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "aimode.contextWindow",
+                      "Name":  "Context Window",
+                      "Error":  null,
+                      "Duration":  1.5256,
+                      "Category":  "AIMode",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "telemetry.unifiedCore",
+                      "Name":  "Unified Telemetry Core",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Telemetry",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "transcendence.cursorParity",
+                      "Name":  "Cursor/GitHub Parity Bridge",
+                      "Error":  null,
+                      "Duration":  1.5101,
+                      "Category":  "Transcendence",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "transcendence.omegaOrchestrator",
+                      "Name":  "Omega Orchestrator",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Transcendence",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "transcendence.meshBrain",
+                      "Name":  "Mesh Brain",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Transcendence",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "transcendence.speciatorEngine",
+                      "Name":  "Speciator Engine",
+                      "Error":  null,
+                      "Duration":  1.5117,
+                      "Category":  "Transcendence",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "transcendence.neuralBridge",
+                      "Name":  "Neural Bridge",
+                      "Error":  null,
+                      "Duration":  1.5117,
+                      "Category":  "Transcendence",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "transcendence.selfHostEngine",
+                      "Name":  "Self-Host Engine",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Transcendence",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "transcendence.hardwareSynthesizer",
+                      "Name":  "Hardware Synthesizer",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Transcendence",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "transcendence.coordinator",
+                      "Name":  "Transcendence Coordinator",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Transcendence",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "transcendence.vulkanRenderer",
+                      "Name":  "Vulkan Renderer",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Transcendence",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "transcendence.osExplorer",
+                      "Name":  "OS Explorer Interceptor",
+                      "Error":  null,
+                      "Duration":  1.514,
+                      "Category":  "Transcendence",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "transcendence.mcpHooks",
+                      "Name":  "MCP Hooks",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Transcendence",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "transcendence.iocpWatcher",
+                      "Name":  "IOCP File Watcher",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Transcendence",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "transcendence.autoHealer",
+                      "Name":  "IDE Diagnostic AutoHealer",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Transcendence",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "transcendence.consentPrompt",
+                      "Name":  "Consent Prompt",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Transcendence",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "debug.start",
+                      "Name":  "Start Debugger",
+                      "Error":  null,
+                      "Duration":  1.5095,
+                      "Category":  "Debug",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "debug.breakpoint",
+                      "Name":  "Set Breakpoint",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Debug",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "debug.step",
+                      "Name":  "Step Over",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Debug",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "debug.nativeEngine",
+                      "Name":  "Native Debug Engine",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Debug",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "debug.autonomous",
+                      "Name":  "Autonomous Debug",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Debug",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "re.analyze",
+                      "Name":  "PE Analysis",
+                      "Error":  null,
+                      "Duration":  1.5181,
+                      "Category":  "ReverseEngineering",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "re.disasm",
+                      "Name":  "Disassembly",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "ReverseEngineering",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "re.dumpbin",
+                      "Name":  "DumpBin",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "ReverseEngineering",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "re.compile",
+                      "Name":  "MASM Compile",
+                      "Error":  null,
+                      "Duration":  1.5116,
+                      "Category":  "ReverseEngineering",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "re.cfg",
+                      "Name":  "Control Flow Graph",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "ReverseEngineering",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "re.functions",
+                      "Name":  "Function List",
+                      "Error":  null,
+                      "Duration":  1.5118,
+                      "Category":  "ReverseEngineering",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "re.demangle",
+                      "Name":  "Demangle Symbols",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "ReverseEngineering",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "re.ssa",
+                      "Name":  "SSA Lifting",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "ReverseEngineering",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "re.recursiveDisasm",
+                      "Name":  "Recursive Disassembly",
+                      "Error":  null,
+                      "Duration":  1.5112,
+                      "Category":  "ReverseEngineering",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "re.typeRecovery",
+                      "Name":  "Type Recovery",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "ReverseEngineering",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "re.dataFlow",
+                      "Name":  "Data Flow Analysis",
+                      "Error":  null,
+                      "Duration":  1.5102,
+                      "Category":  "ReverseEngineering",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "re.exportIDA",
+                      "Name":  "Export to IDA",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "ReverseEngineering",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "re.exportGhidra",
+                      "Name":  "Export to Ghidra",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "ReverseEngineering",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "re.detectVulns",
+                      "Name":  "Detect Vulnerabilities",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "ReverseEngineering",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "decomp.d2dView",
+                      "Name":  "Direct2D Decompiler",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Decompiler",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "decomp.syntaxColor",
+                      "Name":  "Decompiler Syntax Coloring",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Decompiler",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "decomp.syncSelection",
+                      "Name":  "Synchronized Selection",
+                      "Error":  null,
+                      "Duration":  1.5325,
+                      "Category":  "Decompiler",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "decomp.varRename",
+                      "Name":  "Variable Rename (SSA)",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Decompiler",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "hotpatch.memory",
+                      "Name":  "Memory Hotpatch",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Hotpatch",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "hotpatch.byteLevel",
+                      "Name":  "Byte-Level Hotpatch",
+                      "Error":  null,
+                      "Duration":  1.5113,
+                      "Category":  "Hotpatch",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "hotpatch.server",
+                      "Name":  "Server Hotpatch",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Hotpatch",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "hotpatch.panel",
+                      "Name":  "Hotpatch Panel UI",
+                      "Error":  null,
+                      "Duration":  1.5115,
+                      "Category":  "Hotpatch",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "hotpatch.unified",
+                      "Name":  "Unified Hotpatch Mgr",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Hotpatch",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "streaming.tokenByToken",
+                      "Name":  "Token Streaming",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Streaming",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "streaming.ghostText",
+                      "Name":  "Ghost Text Completion",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "GhostText",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "session.save",
+                      "Name":  "Save Session",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Session",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "session.restore",
+                      "Name":  "Restore Session",
+                      "Error":  null,
+                      "Duration":  1.5093,
+                      "Category":  "Session",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "git.status",
+                      "Name":  "Git Status",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Git",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "git.commit",
+                      "Name":  "Git Commit",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Git",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "git.push",
+                      "Name":  "Git Push",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Git",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "git.pull",
+                      "Name":  "Git Pull",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Git",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "subagent.spawn",
+                      "Name":  "Spawn Sub-Agent",
+                      "Error":  null,
+                      "Duration":  1.5114,
+                      "Category":  "SubAgent",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "subagent.chain",
+                      "Name":  "Prompt Chain",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "SubAgent",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "subagent.swarm",
+                      "Name":  "HexMag Swarm",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "SubAgent",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "subagent.todoList",
+                      "Name":  "Agent Todo List",
+                      "Error":  null,
+                      "Duration":  1.5113,
+                      "Category":  "SubAgent",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "swarm.panel",
+                      "Name":  "Swarm Panel",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Swarm",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "llm.multiEngine",
+                      "Name":  "Multi-Engine Router",
+                      "Error":  null,
+                      "Duration":  1.5292000000000001,
+                      "Category":  "LLMRouter",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "llm.backendSwitch",
+                      "Name":  "Backend Switcher",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "BackendSwitcher",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "lsp.client",
+                      "Name":  "LSP Client",
+                      "Error":  null,
+                      "Duration":  1.5130000000000001,
+                      "Category":  "LSP",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "lsp.aiBridge",
+                      "Name":  "LSP ↔ AI Bridge",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "LSP",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "multi.response",
+                      "Name":  "Multi-Response Engine",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Agent",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "ps.execute",
+                      "Name":  "PowerShell Execute",
+                      "Error":  null,
+                      "Duration":  1.5154,
+                      "Category":  "PowerShell",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "ps.panel",
+                      "Name":  "PowerShell Panel",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "PowerShell",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "ps.rawrxdModule",
+                      "Name":  "RawrXD PS Module",
+                      "Error":  null,
+                      "Duration":  1.5129000000000001,
+                      "Category":  "PowerShell",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "settings.editor",
+                      "Name":  "Editor Settings",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Settings",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "annotations.inline",
+                      "Name":  "Inline Annotations",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Annotations",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "server.local",
+                      "Name":  "Local Inference Server",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Server",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "plan.executor",
+                      "Name":  "Plan Executor",
+                      "Error":  null,
+                      "Duration":  1.5142,
+                      "Category":  "Agent",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "exec.governor",
+                      "Name":  "Execution Governor",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Agent",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "compiler.cli",
+                      "Name":  "CLI Compiler",
+                      "Error":  null,
+                      "Duration":  1.5119,
+                      "Category":  "Compiler",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "compiler.watchMode",
+                      "Name":  "Watch Mode",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Compiler",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "react.generate",
+                      "Name":  "Generate React IDE",
+                      "Error":  null,
+                      "Duration":  1.5125000000000002,
+                      "Category":  "Modules",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "headless.mode",
+                      "Name":  "Headless Mode",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Modules",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "headless.server",
+                      "Name":  "Headless HTTP Server",
+                      "Error":  null,
+                      "Duration":  1.5118,
+                      "Category":  "Server",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "headless.repl",
+                      "Name":  "Headless REPL",
+                      "Error":  null,
+                      "Duration":  0.5361,
+                      "Category":  "Terminal",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "headless.singleshot",
+                      "Name":  "Headless Single-Shot",
+                      "Error":  null,
+                      "Duration":  0.5086,
+                      "Category":  "Streaming",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "headless.batch",
+                      "Name":  "Headless Batch Mode",
+                      "Error":  null,
+                      "Duration":  1.0045,
+                      "Category":  "Streaming",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "headless.outputsink",
+                      "Name":  "IOutputSink Interface",
+                      "Error":  null,
+                      "Duration":  0.5026,
+                      "Category":  "Modules",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "headless.json",
+                      "Name":  "JSON Structured Output",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Modules",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "webview2.msgbridge",
+                      "Name":  "C++/JS Message Bridge",
+                      "Error":  null,
+                      "Duration":  1.0041,
+                      "Category":  "View",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "webview2.sync",
+                      "Name":  "Editor Content Sync",
+                      "Error":  null,
+                      "Duration":  0.5027,
+                      "Category":  "Editing",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "lsp.server.hover",
+                      "Name":  "Hover Provider",
+                      "Error":  null,
+                      "Duration":  1.0028000000000001,
+                      "Category":  "LSP",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "lsp.server.completion",
+                      "Name":  "Completion Provider",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "LSP",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "lsp.server.definition",
+                      "Name":  "Go-to-Definition",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "LSP",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "lsp.server.references",
+                      "Name":  "Find References",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "LSP",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "lsp.server.docSymbol",
+                      "Name":  "Document Symbols",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "LSP",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "lsp.server.semanticTokens",
+                      "Name":  "Semantic Tokens",
+                      "Error":  null,
+                      "Duration":  1.5135,
+                      "Category":  "LSP",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "agent.autonomous",
+                      "Name":  "Autonomous Agent",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Agent",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "ui.chatRenderer",
+                      "Name":  "Chat Message Renderer",
+                      "Error":  null,
+                      "Duration":  1.5105000000000002,
+                      "Category":  "AIMode",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "ui.toolStatus",
+                      "Name":  "Tool Action Status",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Tools",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "ui.chatPanel",
+                      "Name":  "Chat Panel",
+                      "Error":  null,
+                      "Duration":  1.5096,
+                      "Category":  "AIMode",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "telemetry.perf",
+                      "Name":  "Performance Telemetry",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Telemetry",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "security.updateSig",
+                      "Name":  "Update Signature",
+                      "Error":  null,
+                      "Duration":  1.5162,
+                      "Category":  "Security",
+                      "Status":  "PASS"
+                  },
+                  {
+                      "Id":  "security.pluginSig",
+                      "Name":  "Plugin Signature",
+                      "Error":  null,
+                      "Duration":  0,
+                      "Category":  "Security",
+                      "Status":  "PASS"
+                  }
+              ],
+    "Duration":  {
+                     "Ticks":  2222899,
+                     "Days":  0,
+                     "Hours":  0,
+                     "Milliseconds":  222,
+                     "Minutes":  0,
+                     "Seconds":  0,
+                     "TotalDays":  2.5727997685185186E-06,
+                     "TotalHours":  6.1747194444444436E-05,
+                     "TotalMilliseconds":  222.28990000000002,
+                     "TotalMinutes":  0.0037048316666666668,
+                     "TotalSeconds":  0.22228989999999998
+                 },
+    "EndTime":  {
+                    "value":  "\/Date(1777095687031)\/",
+                    "DisplayHint":  2,
+                    "DateTime":  "Saturday, April 25, 2026 1:41:27 AM"
+                },
+    "Categories":  {
+
+                   },
+    "Total":  166
+}

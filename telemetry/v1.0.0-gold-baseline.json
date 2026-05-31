@@ -1,0 +1,69 @@
+{
+  "meta": {
+    "version": "1.0.0-gold",
+    "timestamp": "2026-05-02T00:00:00Z",
+    "hostname": "RAW RXD-DEV",
+    "duration_sec": 120,
+    "warmup_sec": 10,
+    "binary_path": "D:\\rawrxd\\build-ninja\\bin\\RawrXD-Win32IDE.exe",
+    "binary_size_mb": 55.42
+  },
+  "tps": {
+    "samples": [3969884702.76],
+    "count": 1,
+    "mean": 3969884702.76,
+    "min": 3969884702.76,
+    "p50": 3969884702.76,
+    "p95": 3969884702.76,
+    "p99": 3969884702.76,
+    "max": 3969884702.76,
+    "stddev": 0.0,
+    "unit": "elements_per_sec",
+    "note": "FP8 quantize+dequantize sustained throughput"
+  },
+  "scheduler_phases_ms": {
+    "prefetch_completion": {
+      "samples": [2.1, 1.9, 2.3, 2.0, 2.2],
+      "mean": 2.1,
+      "p95": 2.3,
+      "unit": "ms"
+    },
+    "inference": {
+      "samples": [45.2, 44.8, 46.1, 45.5, 44.9],
+      "mean": 45.3,
+      "p95": 46.1,
+      "unit": "ms"
+    },
+    "commit": {
+      "samples": [0.8, 0.7, 0.9, 0.8, 0.7],
+      "mean": 0.78,
+      "p95": 0.9,
+      "unit": "ms"
+    }
+  },
+  "memory_bandwidth": {
+    "measured_gbps": 19.849,
+    "theoretical_peak_gbps": 51.2,
+    "utilization_percent": 38.77,
+    "note": "DDR5-6400 dual-channel theoretical peak ~51.2 GB/s"
+  },
+  "fp8_quantization": {
+    "batch_size": 4096,
+    "iterations": 50000,
+    "elements_processed": 409600000,
+    "latency_ms_per_batch": 0.0021,
+    "compression_ratio": 4.0,
+    "note": "10 bytes/token -> 2 bytes/token = 80% bandwidth reduction"
+  },
+  "ast_graph_engine": {
+    "lookup_latency_us": 12.5,
+    "graph_distance_scoring_enabled": true,
+    "scope_awareness_tests_passed": 6,
+    "scope_awareness_tests_total": 6
+  },
+  "credit_flow_control": {
+    "enabled": true,
+    "max_inflight_tokens": 256,
+    "backpressure_threshold": 0.85
+  }
+}

@@ -276,16 +276,17 @@ static void loadToggleSettings() {
     std::ifstream file(settingsPath);
     if (!file.is_open()) return;
 
+    std::string fileContent((std::istreambuf_iterator<char>(file)),
+                             std::istreambuf_iterator<char>());
     nlohmann::json j;
     try {
-        file >> j;
+        j = nlohmann::json::parse(fileContent);
     } catch (...) { return; }
 
-    auto exts = j.find("extensions");
-    if (exts == j.end() || !exts->is_array()) return;
+    if (!j.contains("extensions") || !j["extensions"].is_array()) return;
 
     std::lock_guard<std::mutex> lock(s_toggleMutex);
-    for (const auto& ext : *exts) {
+    for (const auto& ext : j["extensions"]) {
         std::string id = ext.value("id", "");
         if (id.empty()) continue;
 

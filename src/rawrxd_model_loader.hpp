@@ -306,9 +306,61 @@ class RawrXDModelLoader {
           CreateGPUBuffer(t, src, size);
           t.onGPU = true;
       }
-      void DequantAndUploadQ5_0(Tensor& t, Q5_0_Block* blocks, size_t n) {}
-      void DequantAndUploadQ8_0(Tensor& t, Q8_0_Block* blocks, size_t n) {}
-      void DequantAndUploadQ4_K(Tensor& t, Q4_K_Block* blocks, size_t n) {}
+      void DequantAndUploadQ5_0(Tensor& t, Q5_0_Block* blocks, size_t n) {
+          if (!blocks || n == 0) return;
+          size_t numElements = n * 32; // 32 elements per block
+          std::vector<float> dequant(numElements);
+          size_t idx = 0;
+          for (size_t b = 0; b < n; ++b) {
+              const float d = blocks[b].d;
+              const uint32_t qh = blocks[b].qh;
+              for (int i = 0; i < 32; ++i) {
+                  uint8_t q = (i < 16) ? blocks[b].qs[i] : blocks[b].qs[i - 16];
+                  uint8_t x = (q >> (i & 1) * 4) & 0x0F;
+                  uint8_t h = (qh >> i) & 1;
+                  uint8_t val = x | (h << 4);
+                  dequant[idx++] = d * (static_cast<float>(val) - 16.0f);
+              }
+          }
+          UploadF32(t, dequant.data(), numElements);
+      }
+
+      void DequantAndUploadQ8_0(Tensor& t, Q8_0_Block* blocks, size_t n) {
+          if (!blocks || n == 0) return;
+          size_t numElements = n * 32;
+          std::vector<float> dequant(numElements);
+          size_t idx = 0;
+          for (size_t b = 0; b < n; ++b) {
+              const float d = blocks[b].d;
+              for (int i = 0; i < 32; ++i) {
+                  dequant[idx++] = d * static_cast<float>(blocks[b].qs[i]);
+              }
+          }
+          UploadF32(t, dequant.data(), numElements);
+      }
+
+      void DequantAndUploadQ4_K(Tensor& t, Q4_K_Block* blocks, size_t n) {
+          if (!blocks || n == 0) return;
+          size_t numElements = n * 256; // 256 elements per Q4_K block
+          std::vector<float> dequant(numElements);
+          size_t idx = 0;
+          for (size_t b = 0; b < n; ++b) {
+              const float d = blocks[b].d;
+              const float dmin = blocks[b].dmin;
+              for (int i = 0; i < 256; ++i) {
+                  int qid = i / 32;
+                  int qoff = i % 32;
+                  uint8_t q = (qoff < 16) ? blocks[b].qs[qid * 16 + qoff]
+                                            : blocks[b].qs[qid * 16 + qoff - 16];
+                  uint8_t x = (q >> (qoff & 1) * 4) & 0x0F;
+                  uint8_t sc = blocks[b].scales[(qid / 2) * 4 + (qid & 1)];
+                  float scale = d * ((sc & 0x0F) + 1);
+                  float min = dmin * ((sc >> 4) + 1);
+                  dequant[idx++] = scale * static_cast<float>(x) - min;
+              }
+          }
+          UploadF32(t, dequant.data(), numElements);
+      }
 
       void LoadTensorAsync(Tensor& t) {
           void* srcData = (uint8_t*)mappedView + t.offset;

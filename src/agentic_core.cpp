@@ -311,16 +311,11 @@ public:
         if (!config.workspaceRoot.empty()) {
             std::error_code ec;
             if (!std::filesystem::exists(config.workspaceRoot, ec)) {
-                std::cerr << "[AgenticCore] WARNING: workspace root does not exist: "
-                          << config.workspaceRoot << std::endl;
+                fprintf(stderr, "[AgenticCore] Warning: workspace root does not exist: %s\n", config.workspaceRoot.c_str());
             }
         }
 
         m_ready = true;
-        std::cout << "[AgenticCore] Initialized with workspace: " << config.workspaceRoot << std::endl;
-        if (!config.modelPath.empty()) {
-            std::cout << "[AgenticCore] Model: " << config.modelPath << std::endl;
-        }
         m_taskCount = 0;
         m_totalLatencyMs = 0.0;
         return true;
@@ -330,10 +325,6 @@ public:
         std::lock_guard<std::mutex> lock(m_mutex);
         if (m_ready) {
             m_ready = false;
-            std::cout << "[AgenticCore] Shutdown (processed " << m_taskCount.load()
-                      << " tasks, avg " 
-                      << (m_taskCount > 0 ? m_totalLatencyMs / m_taskCount : 0.0)
-                      << "ms)" << std::endl;
         }
     }
     
@@ -358,13 +349,7 @@ public:
         std::lock_guard<std::mutex> lock(m_mutex);
         m_cancelled = false;
         
-        std::cout << "[AgenticCore] Executing " << taskTypeName(type) << ": "
-                  << instruction.substr(0, 80) << std::endl;
-        
         // Route to real handler based on task type
-        switch (type) {
-        case TaskType::FileOperation:
-            result = executeFileOp(instruction, m_config.workspaceRoot);
             break;
         case TaskType::TerminalCommand:
             result = executeTerminalCmd(instruction, m_config.workspaceRoot);
@@ -384,14 +369,9 @@ public:
         m_taskCount.fetch_add(1, std::memory_order_relaxed);
         m_totalLatencyMs += result.latencyMs;
         
-        std::cout << "[AgenticCore] Task " << (result.success ? "OK" : "FAIL")
-                  << " (" << result.latencyMs << "ms)" << std::endl;
+        // Task completed
         return result;
-    }
-    
-    TaskResult executeTaskAsync(const std::string& instruction, 
-                                ProgressCallback onProgress) override {
-        if (onProgress) {
+    }Resif (onProgress) {
             onProgress("Starting task...", 0.0f);
         }
         
@@ -420,9 +400,8 @@ public:
     
     void cancelCurrentTask() override {
         m_cancelled = true;
-        std::cout << "[AgenticCore] Task cancellation requested" << std::endl;
+        // Task cancellation requested
     }
-    
     std::string getStatus() const override {
         if (!m_ready) return "not_initialized";
         if (m_cancelled) return "cancelled";

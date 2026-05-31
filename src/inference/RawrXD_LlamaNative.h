@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <functional>
 #include <cstdint>
 
 // ============================================================================
@@ -125,6 +126,11 @@ extern "C" {
 }
 
 // ============================================================================
+// Streaming callback — invoked for each generated token piece
+// ============================================================================
+using TokenCallback = std::function<void(const std::string& token_piece)>;
+
+// ============================================================================
 // LlamaNativeBridge - Dynamic DLL binding for llama.cpp inference
 // ============================================================================
 class LlamaNativeBridge {
@@ -149,6 +155,14 @@ public:
         llama_token eos = 0;
         std::string path;
         bool loaded = false;
+    };
+
+    // Speculative decoding configuration
+    struct SpeculativeConfig {
+        bool enabled = false;
+        int32_t draft_tokens = 5;
+        float draft_temperature = 0.6f;
+        std::string draft_model_path;  // Optional smaller draft model
     };
 
     LlamaNativeBridge();
@@ -182,10 +196,26 @@ public:
         float topP = 0.95f,
         int32_t topK = 40
     );
+
+    // Streaming generation — invokes on_token for each detokenized piece
+    GenerationResult GenerateStream(
+        const std::string& prompt,
+        TokenCallback on_token,
+        int32_t maxTokens = 2048,
+        float temperature = 0.8f,
+        float topP = 0.95f,
+        int32_t topK = 40
+    );
     
     // Clear KV cache (for new conversation)
     void ClearKVCache();
     
+    // ========================================================================
+    // Configuration
+    // ========================================================================
+    void SetSpeculativeConfig(const SpeculativeConfig& cfg) { speculativeCfg_ = cfg; }
+    void SetKVQuantType(int32_t type_k, int32_t type_v) { kvTypeK_ = type_k; kvTypeV_ = type_v; }
+
     // ========================================================================
     // State queries
     // ========================================================================
@@ -243,6 +273,11 @@ private:
     std::vector<llama_pos> posBuf_;
     std::vector<llama_seq_id> seqBuf_;
     std::vector<int8_t> logitsBuf_;
+
+    // Configuration
+    SpeculativeConfig speculativeCfg_;
+    int32_t kvTypeK_ = 0;   // 0=default, 1=Q8_0, 2=Q4_0, 3=Q4_K
+    int32_t kvTypeV_ = 0;
 
     // Internal helpers
     bool BindExports();

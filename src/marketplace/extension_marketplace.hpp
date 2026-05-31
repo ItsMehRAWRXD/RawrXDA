@@ -240,6 +240,13 @@ public:
     // Set marketplace API endpoint
     ExtResult setRegistryUrl(const std::string& url);
 
+    // Sync remote catalog/index to local cache for discovery
+    ExtResult syncRegistryIndex();
+
+    // Auto-update controls
+    ExtResult setAutoUpdateEnabled(bool enabled, uint32_t intervalMinutes = 360);
+    bool isAutoUpdateEnabled() const;
+
     // Apply enterprise policy
     ExtResult applyPolicy(const EnterprisePolicyConfig& config);
 
@@ -411,6 +418,9 @@ private:
     std::string installDir_;
     std::string cacheDir_;
     std::string registryUrl_;
+    bool autoUpdateEnabled_ = false;
+    uint32_t autoUpdateIntervalMinutes_ = 360;
+    uint64_t lastAutoUpdateCheckEpochMs_ = 0;
 
     // Installed extensions (id → manifest)
     std::unordered_map<std::string, ExtensionManifest> installed_;

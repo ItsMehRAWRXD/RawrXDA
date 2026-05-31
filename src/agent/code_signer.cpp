@@ -46,8 +46,6 @@ bool CodeSigner::executeCommand(const std::string& command,
 
     if (!CreateProcessA(nullptr, cmd.data(), nullptr, nullptr,
                         FALSE, 0, nullptr, nullptr, &si, &pi)) {
-        fprintf(stderr, "[WARN] [CodeSigner] Failed to start: %s (err %lu)\n",
-                command.c_str(), GetLastError());
         return false;
     }
 
@@ -58,15 +56,12 @@ bool CodeSigner::executeCommand(const std::string& command,
     CloseHandle(pi.hThread);
 
     if (exitCode != 0) {
-        fprintf(stderr, "[WARN] [CodeSigner] Command failed | Exit code: %lu\n", exitCode);
         return false;
     }
     return true;
 #else
     int rc = std::system(cmdLine.c_str());
     if (WIFEXITED(rc) && WEXITSTATUS(rc) == 0) return true;
-    fprintf(stderr, "[WARN] [CodeSigner] Command failed | Exit: %d\n",
-            WIFEXITED(rc) ? WEXITSTATUS(rc) : -1);
     return false;
 #endif
 }
@@ -77,7 +72,6 @@ bool CodeSigner::signWindowsExecutable(const std::string& exePath,
                                        const std::string& certPassword) {
 #ifdef _WIN32
     if (!fs::exists(exePath)) {
-        fprintf(stderr, "[WARN] [CodeSigner] Executable not found: %s\n", exePath.c_str());
         return false;
     }
 
@@ -100,15 +94,11 @@ bool CodeSigner::signWindowsExecutable(const std::string& exePath,
     }
     args.push_back(exePath);
 
-    fprintf(stderr, "[INFO] [CodeSigner] SIGN_START | File: %s\n", exePath.c_str());
     bool ok = executeCommand("signtool.exe", args);
-    fprintf(stderr, "[%s] [CodeSigner] SIGN_%s | File: %s\n",
-            ok ? "INFO" : "WARN", ok ? "SUCCESS" : "FAILED", exePath.c_str());
     if (onSignatureCompleted) onSignatureCompleted(exePath, ok);
     return ok;
 #else
     (void)exePath; (void)certPath; (void)certPassword;
-    fprintf(stderr, "[WARN] [CodeSigner] Windows signing not supported on this platform\n");
     return false;
 #endif
 }
@@ -118,7 +108,6 @@ bool CodeSigner::signMacOSBundle(const std::string& bundlePath,
                                  const std::string& identity) {
 #ifdef __APPLE__
     if (!fs::exists(bundlePath)) {
-        fprintf(stderr, "[WARN] [CodeSigner] Bundle not found: %s\n", bundlePath.c_str());
         return false;
     }
     std::string sigId = identity.empty()
@@ -130,15 +119,11 @@ bool CodeSigner::signMacOSBundle(const std::string& bundlePath,
         "--force", "--sign", sigId, "--options", "runtime",
         "--timestamp", "--deep", bundlePath};
 
-    fprintf(stderr, "[INFO] [CodeSigner] SIGN_START | Bundle: %s\n", bundlePath.c_str());
     bool ok = executeCommand("codesign", args);
-    fprintf(stderr, "[%s] [CodeSigner] SIGN_%s | Bundle: %s\n",
-            ok ? "INFO" : "WARN", ok ? "SUCCESS" : "FAILED", bundlePath.c_str());
     if (onSignatureCompleted) onSignatureCompleted(bundlePath, ok);
     return ok;
 #else
     (void)bundlePath; (void)identity;
-    fprintf(stderr, "[WARN] [CodeSigner] macOS signing not supported on this platform\n");
     return false;
 #endif
 }
@@ -152,10 +137,7 @@ bool CodeSigner::verifySignature(const std::string& exePath) {
 #else
     (void)exePath;
     bool ok = false;
-    fprintf(stderr, "[WARN] [CodeSigner] Verification not supported\n");
 #endif
-    fprintf(stderr, "[%s] [CodeSigner] VERIFY_%s | File: %s\n",
-            ok ? "INFO" : "WARN", ok ? "SUCCESS" : "FAILED", exePath.c_str());
     return ok;
 }
 
@@ -170,13 +152,11 @@ bool CodeSigner::notarizeMacOSApp(const std::string& bundlePath,
         if (env) pwd = env;
     }
     if (appleId.empty() || pwd.empty()) {
-        fprintf(stderr, "[WARN] [CodeSigner] Notarization requires Apple ID + password\n");
         return false;
     }
 
     std::string zipPath = bundlePath + ".zip";
     if (!executeCommand("zip", {"-r", zipPath, bundlePath})) {
-        fprintf(stderr, "[WARN] [CodeSigner] Failed to create ZIP\n");
         return false;
     }
 
@@ -185,10 +165,7 @@ bool CodeSigner::notarizeMacOSApp(const std::string& bundlePath,
          "--apple-id", appleId, "--password", pwd, "--wait"});
 
     if (ok) {
-        fprintf(stderr, "[INFO] [CodeSigner] NOTARIZE_SUCCESS\n");
         executeCommand("xcrun", {"stapler", "staple", bundlePath});
-    } else {
-        fprintf(stderr, "[WARN] [CodeSigner] NOTARIZE_FAILED\n");
     }
 
     fs::remove(zipPath);
@@ -196,7 +173,6 @@ bool CodeSigner::notarizeMacOSApp(const std::string& bundlePath,
     return ok;
 #else
     (void)bundlePath; (void)appleId; (void)password;
-    fprintf(stderr, "[WARN] [CodeSigner] Notarization not supported\n");
     return false;
 #endif
 }

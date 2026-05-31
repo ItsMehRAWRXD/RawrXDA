@@ -22,6 +22,33 @@
 
 using namespace RawrXD::Debugger;
 
+namespace {
+
+const char* debuggerStateLabel(DebugSessionState state)
+{
+    switch (state) {
+        case DebugSessionState::Idle: return "Idle";
+        case DebugSessionState::Launching: return "Launching";
+        case DebugSessionState::Attaching: return "Attaching";
+        case DebugSessionState::Running: return "Running";
+        case DebugSessionState::Broken: return "Paused";
+        case DebugSessionState::Stepping: return "Stepping";
+        case DebugSessionState::Detaching: return "Detaching";
+        case DebugSessionState::Terminated: return "Terminated";
+        case DebugSessionState::Error: return "Error";
+        default: return "Unknown";
+    }
+}
+
+bool debuggerStateHasLiveSession(DebugSessionState state)
+{
+    return state != DebugSessionState::Idle &&
+           state != DebugSessionState::Terminated &&
+           state != DebugSessionState::Error;
+}
+
+} // namespace
+
 // Debugger Control IDs
 #define IDC_DEBUGGER_CONTAINER 2100
 #define IDC_DEBUGGER_TOOLBAR 2101
@@ -297,9 +324,17 @@ void Win32IDE::createDebuggerUI()
 void Win32IDE::attachDebugger()
 {
     METRICS.increment("debugger.attach_total");
+    auto& engine = NativeDebuggerEngine::Instance();
+
     if (m_debuggerAttached) return;
 
-    auto& engine = NativeDebuggerEngine::Instance();
+    const DebugSessionState existingState = engine.getState();
+    if (debuggerStateHasLiveSession(existingState)) {
+        registerDebuggerEngineCallbacks();
+        syncDebuggerSessionStateFromEngine();
+        appendToOutput("🔍 Debugger UI adopted active native debug session", "Output", OutputSeverity::Info);
+        return;
+    }
 
     // Ensure engine is initialized (Phase 12 initPhase12 should have done this,
     // but guard against late startup)
@@ -353,6 +388,20 @@ void Win32IDE::attachDebugger()
     m_debuggerPaused = false;
 
     // Register callbacks so engine events flow back to UI
+    registerDebuggerEngineCallbacks();
+
+    std::string status = "✅ Debugger Attached | Engine: ";
+    status += attachR.detail;
+    SetWindowTextA(m_hwndDebuggerStatus, status.c_str());
+    appendToOutput("🔍 Debugger attached — NativeDebuggerEngine active", "Output", OutputSeverity::Info);
+
+    syncDebuggerSessionStateFromEngine();
+}
+
+void Win32IDE::registerDebuggerEngineCallbacks()
+{
+    auto& engine = NativeDebuggerEngine::Instance();
+
     engine.setBreakpointHitCallback([](const NativeBreakpoint* bp,
                                        const RegisterSnapshot* regs,
                                        void* userData) {
@@ -397,18 +446,62 @@ void Win32IDE::attachDebugger()
                 break;
         }
     }, this);
+}
 
-    std::string status = "✅ Debugger Attached | Engine: ";
-    status += attachR.detail;
-    SetWindowTextA(m_hwndDebuggerStatus, status.c_str());
-    appendToOutput("🔍 Debugger attached — NativeDebuggerEngine active", "Output", OutputSeverity::Info);
+void Win32IDE::syncDebuggerSessionStateFromEngine()
+{
+    auto& engine = NativeDebuggerEngine::Instance();
+    const DebugSessionState state = engine.getState();
+    const bool hasSession = debuggerStateHasLiveSession(state);
+
+    m_debuggerAttached = hasSession;
+    m_debuggerPaused = (state == DebugSessionState::Broken);
+
+    if (!hasSession) {
+        if (state == DebugSessionState::Error) {
+            SetWindowTextA(m_hwndDebuggerStatus, "❌ Debugger error state");
+        } else {
+            SetWindowTextA(m_hwndDebuggerStatus, "Debugger: Not Attached");
+        }
+        updateDebuggerUI();
+        return;
+    }
+
+    std::ostringstream status;
+    status << "Debug Session: " << debuggerStateLabel(state);
+
+    const std::string& targetPath = engine.getTargetPath();
+    if (!targetPath.empty()) {
+        status << " | " << targetPath;
+    } else if (!engine.getTargetName().empty()) {
+        status << " | " << engine.getTargetName();
+    }
+
+    if (engine.getTargetPID() != 0) {
+        status << " | PID " << engine.getTargetPID();
+    }
+
+    SetWindowTextA(m_hwndDebuggerStatus, status.str().c_str());
+
+    if (m_debuggerPaused) {
+        updateVariables();
+        updateCallStack();
+        updateMemoryView();
+    } else {
+        updateDebuggerUI();
+    }
 }
 
 void Win32IDE::detachDebugger()
 {
-    if (!m_debuggerAttached) return;
-
     auto& engine = NativeDebuggerEngine::Instance();
+    if (!m_debuggerAttached) {
+        const DebugSessionState state = engine.getState();
+        if (!debuggerStateHasLiveSession(state)) {
+            return;
+        }
+        syncDebuggerSessionStateFromEngine();
+    }
 
     // Detach from target process via DbgEng
     DebugResult r = engine.detach();
@@ -553,9 +646,14 @@ void Win32IDE::stepOutExecution()
 
 void Win32IDE::stopDebugger()
 {
-    if (!m_debuggerAttached) return;
-
     auto& engine = NativeDebuggerEngine::Instance();
+    if (!m_debuggerAttached) {
+        const DebugSessionState state = engine.getState();
+        if (!debuggerStateHasLiveSession(state)) {
+            return;
+        }
+        syncDebuggerSessionStateFromEngine();
+    }
 
     // Terminate the target process via DbgEng before detaching
     DebugResult r = engine.terminateTarget();
@@ -1008,6 +1106,11 @@ void Win32IDE::updateCallStack()
 {
     if (!m_hwndDebuggerStackTrace) return;
 
+    int requestedFrameIndex = m_selectedStackFrameIndex;
+    if (requestedFrameIndex < 0) {
+        requestedFrameIndex = 0;
+    }
+
     // Fetch real stack frames from engine when paused
     if (m_debuggerAttached && m_debuggerPaused) {
         auto& engine = NativeDebuggerEngine::Instance();
@@ -1032,14 +1135,18 @@ void Win32IDE::updateCallStack()
                 m_callStack.push_back(sf);
             }
 
-            // Update debugger current position from top frame and selected frame index
+            // Preserve the current frame selection when the stack refreshes.
             if (!m_callStack.empty()) {
-                m_selectedStackFrameIndex = 0;
-                const auto& top = m_callStack.front();
-                if (!top.file.empty()) {
-                    m_debuggerCurrentFile = top.file;
-                    m_debuggerCurrentLine = top.line;
-                    highlightDebuggerLine(top.file, top.line);
+                if (requestedFrameIndex >= static_cast<int>(m_callStack.size())) {
+                    requestedFrameIndex = 0;
+                }
+
+                m_selectedStackFrameIndex = requestedFrameIndex;
+                const auto& activeFrame = m_callStack[static_cast<size_t>(m_selectedStackFrameIndex)];
+                if (!activeFrame.file.empty()) {
+                    m_debuggerCurrentFile = activeFrame.file;
+                    m_debuggerCurrentLine = activeFrame.line;
+                    highlightDebuggerLine(activeFrame.file, activeFrame.line);
                 }
             }
         }
@@ -1078,6 +1185,14 @@ void Win32IDE::updateCallStack()
             std::string line_str = std::to_string(frame.line);
             lvi.pszText = const_cast<char*>(line_str.c_str());
             ListView_SetItem(m_hwndDebuggerStackTrace, &lvi);
+        }
+
+        if (m_selectedStackFrameIndex >= 0 && m_selectedStackFrameIndex < static_cast<int>(m_callStack.size())) {
+            ListView_SetItemState(m_hwndDebuggerStackTrace,
+                                  m_selectedStackFrameIndex,
+                                  LVIS_SELECTED | LVIS_FOCUSED,
+                                  LVIS_SELECTED | LVIS_FOCUSED);
+            ListView_EnsureVisible(m_hwndDebuggerStackTrace, m_selectedStackFrameIndex, FALSE);
         }
     }
 }
@@ -1427,4 +1542,38 @@ void Win32IDE::toggleDebugger()
     } else {
         attachDebugger();
     }
+}
+
+// ============================================================================
+// DEBUGGER COMMAND WRAPPERS (DAPServer compatibility)
+// ============================================================================
+
+void Win32IDE::startDebugging()
+{
+    attachDebugger();
+}
+
+void Win32IDE::stopDebugging()
+{
+    stopDebugger();
+}
+
+void Win32IDE::stepOver()
+{
+    stepOverExecution();
+}
+
+void Win32IDE::stepInto()
+{
+    stepIntoExecution();
+}
+
+void Win32IDE::stepOut()
+{
+    stepOutExecution();
+}
+
+void Win32IDE::continueExecution()
+{
+    resumeExecution();
 }

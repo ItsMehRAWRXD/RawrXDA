@@ -11,10 +11,35 @@
 // ============================================================================
 
 #include "execution_governor.h"
+#include "hotpatch_wiring.h"
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
 #include <cstring>
+
+namespace {
+
+static std::string toLowerCopy(const std::string& s) {
+    std::string out = s;
+    std::transform(out.begin(), out.end(), out.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return out;
+}
+
+static bool containsTokenInsensitive(const std::string& haystack, const std::string& needle) {
+    if (needle.empty()) {
+        return false;
+    }
+    const std::string lhs = toLowerCopy(haystack);
+    const std::string rhs = toLowerCopy(needle);
+    return lhs.find(rhs) != std::string::npos;
+}
+
+static uint64_t nowTickMs() {
+    return static_cast<uint64_t>(GetTickCount64());
+}
+
+} // namespace
 
 // ============================================================================
 // TERMINAL WATCHDOG — Non-blocking process execution
@@ -303,7 +328,20 @@ ExecutionGovernor& ExecutionGovernor::instance() {
 ExecutionGovernor::ExecutionGovernor()
     : m_initialized(false), m_running(false), m_nextId(1),
       m_maxConcurrent(TerminalWatchdog::MAX_CONCURRENT_PROCESSES),
-      m_activeTasks(0) {}
+      m_activeTasks(0),
+      m_hotpatchPhase(0),
+      m_pausingNewSubmissions(false) {
+        m_policy.denyTokens = {
+                " format ",
+                " del /f /s /q",
+                " rd /s /q",
+                " rmdir /s /q",
+                " reg delete",
+                " Remove-Item -Recurse -Force",
+                " bcdedit /delete",
+                " diskpart"
+        };
+}
 
 ExecutionGovernor::~ExecutionGovernor() {
     shutdown();
@@ -356,6 +394,34 @@ GovernorTaskId ExecutionGovernor::submitTask(GovernoredTask&& task) {
 
     std::lock_guard<std::mutex> lock(m_mutex);
 
+    if (m_pausingNewSubmissions.load(std::memory_order_acquire)) {
+        GovernorTaskId taskId = m_nextId++;
+        task.id = taskId;
+        task.state.store(GovernorTaskState::Failed);
+        task.startTime = std::chrono::steady_clock::now();
+        task.endTime = task.startTime;
+        task.bytesRead = 0;
+        task.outputBuffer = "[RawrXD Governor: hotpatch quiescence active] submissions paused for patch " +
+                            (m_activePatchId.empty() ? std::string("<unknown>") : m_activePatchId);
+        m_tasks.emplace(taskId, std::move(task));
+        m_stats.totalFailed++;
+        m_stats.totalSubmitted++;
+
+        GovernorAuditRecord paused = {};
+        paused.taskId = taskId;
+        paused.type = m_tasks[taskId].type;
+        paused.risk = m_tasks[taskId].risk;
+        paused.state = GovernorTaskState::Failed;
+        paused.timestampMs = nowTickMs();
+        paused.timeoutMs = m_tasks[taskId].timeoutMs;
+        paused.policyDenied = true;
+        paused.description = m_tasks[taskId].description;
+        paused.detail = "submission paused by hotpatch quiescence";
+        paused.exitCode = -5;
+        recordAuditLocked(paused);
+        return taskId;
+    }
+
     // Assign ID
     task.id = m_nextId++;
     task.state.store(GovernorTaskState::Pending);
@@ -363,6 +429,31 @@ GovernorTaskId ExecutionGovernor::submitTask(GovernoredTask&& task) {
     task.bytesRead = 0;
 
     GovernorTaskId taskId = task.id;
+
+    // Enforce non-bypassable policy gate prior to scheduling.
+    const GovernorSubmissionDecision decision = evaluateSubmission(task);
+    if (!decision.allowed) {
+        task.state.store(GovernorTaskState::Failed);
+        task.outputBuffer = "[RawrXD Governor: policy denied] " + decision.reason;
+        task.endTime = std::chrono::steady_clock::now();
+        m_tasks.emplace(taskId, std::move(task));
+        m_stats.totalFailed++;
+        m_stats.totalSubmitted++;
+
+        GovernorAuditRecord denied = {};
+        denied.taskId = taskId;
+        denied.type = m_tasks[taskId].type;
+        denied.risk = m_tasks[taskId].risk;
+        denied.state = GovernorTaskState::Failed;
+        denied.timestampMs = nowTickMs();
+        denied.timeoutMs = m_tasks[taskId].timeoutMs;
+        denied.policyDenied = true;
+        denied.description = m_tasks[taskId].description;
+        denied.detail = decision.reason;
+        denied.exitCode = -4;
+        recordAuditLocked(denied);
+        return taskId;
+    }
 
     // Check concurrent limit
     if (m_activeTasks.load() >= m_maxConcurrent) {
@@ -373,6 +464,19 @@ GovernorTaskId ExecutionGovernor::submitTask(GovernoredTask&& task) {
         m_tasks.emplace(taskId, std::move(task));
         m_stats.totalFailed++;
         m_stats.totalSubmitted++;
+
+        GovernorAuditRecord saturated = {};
+        saturated.taskId = taskId;
+        saturated.type = m_tasks[taskId].type;
+        saturated.risk = m_tasks[taskId].risk;
+        saturated.state = GovernorTaskState::Failed;
+        saturated.timestampMs = nowTickMs();
+        saturated.timeoutMs = m_tasks[taskId].timeoutMs;
+        saturated.policyDenied = true;
+        saturated.description = m_tasks[taskId].description;
+        saturated.detail = "max concurrent tasks reached";
+        saturated.exitCode = -4;
+        recordAuditLocked(saturated);
         return taskId;
     }
 
@@ -395,6 +499,17 @@ GovernorTaskId ExecutionGovernor::submitTask(GovernoredTask&& task) {
         std::thread worker(&ExecutionGovernor::executeCommandWorker, this, taskId);
         worker.detach();
     }
+
+    GovernorAuditRecord accepted = {};
+    accepted.taskId = taskId;
+    accepted.type = t.type;
+    accepted.risk = t.risk;
+    accepted.state = t.state.load();
+    accepted.timestampMs = nowTickMs();
+    accepted.timeoutMs = t.timeoutMs;
+    accepted.description = t.description;
+    accepted.detail = "accepted";
+    recordAuditLocked(accepted);
 
     return taskId;
 }
@@ -500,6 +615,109 @@ bool ExecutionGovernor::getTaskResult(GovernorTaskId id, GovernorCommandResult& 
             break;
     }
     return true;
+}
+
+void ExecutionGovernor::setPolicy(const GovernorPolicy& policy) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_policy = policy;
+}
+
+GovernorPolicy ExecutionGovernor::getPolicy() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_policy;
+}
+
+GovernorSubmissionDecision ExecutionGovernor::evaluateSubmission(const GovernoredTask& task) const {
+    GovernorSubmissionDecision d = {};
+
+    const auto deny = [&](const std::string& reason) {
+        d.allowed = false;
+        d.reason = reason;
+    };
+
+    switch (task.type) {
+        case GovernorTaskType::TerminalCommand:
+            if (!m_policy.allowTerminalCommands) {
+                deny("terminal commands disabled by policy");
+            }
+            break;
+        case GovernorTaskType::ToolInvocation:
+            if (!m_policy.allowToolInvocations) {
+                deny("tool invocations disabled by policy");
+            }
+            break;
+        case GovernorTaskType::AgentAction:
+            if (!m_policy.allowAgentActions) {
+                deny("agent actions disabled by policy");
+            }
+            break;
+        case GovernorTaskType::BackgroundJob:
+            if (!m_policy.allowBackgroundJobs) {
+                deny("background jobs disabled by policy");
+            }
+            break;
+        case GovernorTaskType::FileOperation:
+            if (!m_policy.allowFileOperations) {
+                deny("file operations disabled by policy");
+            }
+            break;
+        case GovernorTaskType::NetworkRequest:
+            if (!m_policy.allowNetworkRequests) {
+                deny("network requests disabled by policy");
+            }
+            break;
+        case GovernorTaskType::BuildTask:
+            if (!m_policy.allowBuildTasks) {
+                deny("build tasks disabled by policy");
+            }
+            break;
+        default:
+            break;
+    }
+
+    if (d.allowed && m_policy.blockCriticalRisk && task.risk == GovernorRiskTier::Critical) {
+        deny("critical risk blocked by policy");
+    }
+
+    if (d.allowed && m_policy.requireDescriptionForHighRisk &&
+        (task.risk == GovernorRiskTier::High || task.risk == GovernorRiskTier::Critical) &&
+        task.description.empty()) {
+        deny("high-risk task requires non-empty description");
+    }
+
+    if (d.allowed && task.timeoutMs > m_policy.maxTimeoutMs) {
+        deny("timeout exceeds policy maximum");
+    }
+
+    if (d.allowed && task.command.size() > static_cast<size_t>(m_policy.maxCommandBytes)) {
+        deny("command exceeds policy size limit");
+    }
+
+    if (d.allowed && !task.command.empty()) {
+        for (const auto& token : m_policy.denyTokens) {
+            if (containsTokenInsensitive(task.command, token)) {
+                deny("command matched deny token: " + token);
+                break;
+            }
+        }
+    }
+
+    return d;
+}
+
+std::vector<GovernorAuditRecord> ExecutionGovernor::getAuditTrail(size_t maxRecords) const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (maxRecords == 0 || m_auditTrail.empty()) {
+        return {};
+    }
+    const size_t count = std::min(maxRecords, m_auditTrail.size());
+    return std::vector<GovernorAuditRecord>(m_auditTrail.end() - static_cast<std::ptrdiff_t>(count),
+                                            m_auditTrail.end());
+}
+
+void ExecutionGovernor::clearAuditTrail() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_auditTrail.clear();
 }
 
 bool ExecutionGovernor::isTaskActive(GovernorTaskId id) const {
@@ -664,7 +882,14 @@ void ExecutionGovernor::watchdogLoop() {
 
             // Periodic prune
             pruneCompletedTasks();
+
+            if (m_pausingNewSubmissions.load(std::memory_order_acquire) &&
+                m_activeTasks.load(std::memory_order_acquire) == 0) {
+                HotpatchCoordinator::instance().notifyAllCheckpointed();
+            }
         }
+
+        HotpatchCoordinator::instance().pollOnce();
 
         Sleep(50); // Poll every 50ms — ~20 Hz watchdog frequency
     }
@@ -749,6 +974,27 @@ void ExecutionGovernor::executeCommandWorker(GovernorTaskId taskId) {
                 task.rollbackFn();
                 m_stats.totalRollbacks++;
             }
+
+            GovernorAuditRecord done = {};
+            done.taskId = taskId;
+            done.type = task.type;
+            done.risk = task.risk;
+            done.state = task.state.load();
+            done.timestampMs = nowTickMs();
+            done.timeoutMs = task.timeoutMs;
+            done.exitCode = result.exitCode;
+            done.timedOut = result.timedOut;
+            done.cancelled = result.cancelled;
+            done.description = task.description;
+            done.detail = result.statusDetail;
+            recordAuditLocked(done);
+
+            if (m_pausingNewSubmissions.load(std::memory_order_acquire)) {
+                auto checkpointIt = std::find(m_checkpointedTasks.begin(), m_checkpointedTasks.end(), taskId);
+                if (checkpointIt == m_checkpointedTasks.end()) {
+                    m_checkpointedTasks.push_back(taskId);
+                }
+            }
         }
     }
 
@@ -794,4 +1040,66 @@ void ExecutionGovernor::pruneCompletedTasks() {
     for (auto id : toPrune) {
         m_tasks.erase(id);
     }
+}
+
+void ExecutionGovernor::recordAuditLocked(const GovernorAuditRecord& record) {
+    m_auditTrail.push_back(record);
+    if (m_auditTrail.size() > MAX_AUDIT_RECORDS) {
+        const size_t overflow = m_auditTrail.size() - MAX_AUDIT_RECORDS;
+        m_auditTrail.erase(m_auditTrail.begin(),
+                           m_auditTrail.begin() + static_cast<std::ptrdiff_t>(overflow));
+    }
+}
+
+// ============================================================================
+// Hotpatch Coordination Hooks (Phase 12)
+// ============================================================================
+
+void ExecutionGovernor::onHotpatchStateChange(uint8_t patchPhase) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_hotpatchPhase.store(patchPhase, std::memory_order_release);
+
+    // HotpatchPhase::QuiescenceWait = 2: pause new submissions
+    if (patchPhase == 2) {
+        m_pausingNewSubmissions.store(true, std::memory_order_release);
+        m_checkpointedTasks.clear();
+    }
+    // HotpatchPhase::Idle = 0: resume submissions
+    else if (patchPhase == 0) {
+        m_pausingNewSubmissions.store(false, std::memory_order_release);
+        m_checkpointedTasks.clear();
+        m_activePatchId.clear();
+    }
+}
+
+bool ExecutionGovernor::isHotpatchActive() const {
+    uint8_t phase = m_hotpatchPhase.load(std::memory_order_acquire);
+    // Active if in phases 2-7 (QuiescenceWait through Rolled)
+    return phase >= 2 && phase <= 7;
+}
+
+std::string ExecutionGovernor::getActivePatchId() const {
+    if (!isHotpatchActive()) {
+        return "";
+    }
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_activePatchId;
+}
+
+void ExecutionGovernor::setActivePatchId(const std::string& patchId) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_activePatchId = patchId;
+}
+
+void ExecutionGovernor::taskReachCheckpoint(GovernorTaskId taskId) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    auto it = std::find(m_checkpointedTasks.begin(), m_checkpointedTasks.end(), taskId);
+    if (it == m_checkpointedTasks.end()) {
+        m_checkpointedTasks.push_back(taskId);
+    }
+}
+
+size_t ExecutionGovernor::getCheckpointedTaskCount() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_checkpointedTasks.size();
 }

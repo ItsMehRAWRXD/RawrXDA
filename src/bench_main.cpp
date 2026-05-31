@@ -94,6 +94,8 @@ int main(int argc, char* argv[]) {
     }
 
     std::string modelPath = argv[1];
+    // GPU inference is mandatory; --no-gpu is accepted on the command line for backward
+    // compatibility but ignored. The benchmark always exercises the GPU path.
     bool requestNoGPU = false;
     int iterations = 5;
     uint32_t matmulSize = 128; // M=K=N
@@ -102,7 +104,10 @@ int main(int argc, char* argv[]) {
     uint32_t attHeadDim = 64;
     for (int i=2; i<argc; ++i) {
         std::string arg = argv[i];
-        if (arg == "--no-gpu") requestNoGPU = true;
+        if (arg == "--no-gpu") {
+            std::cerr << "[bench] --no-gpu rejected: GPU inference is mandatory\n";
+            requestNoGPU = false; // force-clear; do not honor the flag
+        }
         else if (arg == "--iter" && i+1 < argc) { iterations = std::stoi(argv[++i]); }
         else if (arg == "--matmul-size" && i+1 < argc) { matmulSize = static_cast<uint32_t>(std::stoul(argv[++i])); }
         else if (arg == "--vec-size" && i+1 < argc) { vecSize = static_cast<uint32_t>(std::stoul(argv[++i])); }

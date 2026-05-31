@@ -149,11 +149,11 @@ int main() {
     // ---- TEST 1: Ollama available? ----
     printf("[TEST 1] Checking Ollama availability...\n");
     std::string root = Http_GET(L"localhost", 11434, L"/");
-    if (root.find("Ollama") != std::string::npos) {
+    if (root.find("native") != std::string::npos) {
         printf("  PASS: Ollama is running\n");
         pass++;
     } else {
-        printf("  FAIL: Ollama not reachable at localhost:11434\n");
+        printf("  FAIL: Ollama not reachable at localhost:11435\n");
         fail++;
         printf("\n*** Cannot continue without Ollama ***\n");
         return 1;
@@ -312,11 +312,11 @@ int main() {
         WinHttpCloseHandle(hSession);
     }
 
-    // ---- TEST 5: OllamaProxy::isOllamaAvailable() logic ----
-    printf("[TEST 5] OllamaProxy availability check logic...\n");
+    // ---- TEST 5: NativeProxy::isOllamaAvailable() logic ----
+    printf("[TEST 5] NativeProxy availability check logic...\n");
     {
         std::string resp = Http_GET(L"localhost", 11434, L"/");
-        bool available = resp.find("Ollama") != std::string::npos;
+        bool available = resp.find("native") != std::string::npos;
         if (available) {
             printf("  PASS: isOllamaAvailable() would return true\n");
             pass++;
@@ -326,8 +326,8 @@ int main() {
         }
     }
 
-    // ---- TEST 6: OllamaProxy::isModelAvailable() logic ----
-    printf("[TEST 6] OllamaProxy model availability check...\n");
+    // ---- TEST 6: NativeProxy::isModelAvailable() logic ----
+    printf("[TEST 6] NativeProxy model availability check...\n");
     {
         std::string resp = Http_GET(L"localhost", 11434, L"/api/tags");
         bool found = resp.find("\"bigdaddyg-alldrive:latest\"") != std::string::npos ||

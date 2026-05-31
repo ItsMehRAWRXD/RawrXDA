@@ -155,6 +155,7 @@ MasmOperationResult masm_ai_completion_stream_transform(const void* raw_completi
 uint64_t masm_get_performance_counter(void);
 uint64_t masm_get_cpu_features(void);  // Returns AVX512/AVX2/SSE4 capabilities
 MasmOperationResult masm_validate_memory_integrity(const void* buffer, size_t size, uint64_t expected_checksum);
+uint64_t masm_parse_slash_command(const char* input, char* action_out, char* arg_out, uint64_t arg_cap);
 
 } // extern "C"
 

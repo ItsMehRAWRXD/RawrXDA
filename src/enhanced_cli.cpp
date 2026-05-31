@@ -26,8 +26,33 @@ char* readline(const char* prompt) {
     }
     return nullptr;
 }
-void add_history(const char*) {}
-char** rl_completion_matches(const char*, char* (*)(const char*, int)) { return nullptr; }
+void add_history(const char* line) {
+    if (!line || !line[0]) return;
+    static std::vector<std::string> history;
+    static size_t maxHistory = 1000;
+    if (history.size() >= maxHistory) history.erase(history.begin());
+    history.push_back(line);
+}
+char** rl_completion_matches(const char* text, char* (*entry_func)(const char*, int)) {
+    if (!text || !entry_func) return nullptr;
+    std::vector<std::string> matches;
+    int i = 0;
+    while (true) {
+        char* match = entry_func(text, i);
+        if (!match) break;
+        matches.push_back(match);
+        free(match);
+        ++i;
+    }
+    if (matches.empty()) return nullptr;
+    char** result = (char**)malloc((matches.size() + 1) * sizeof(char*));
+    if (!result) return nullptr;
+    for (size_t j = 0; j < matches.size(); ++j) {
+        result[j] = _strdup(matches[j].c_str());
+    }
+    result[matches.size()] = nullptr;
+    return result;
+}
 using rl_compentry_func_t = char*(const char*, int);
 rl_compentry_func_t** rl_attempted_completion_function;
 #endif

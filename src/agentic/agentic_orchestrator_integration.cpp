@@ -8,11 +8,44 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
+#include <algorithm>
+#include <cctype>
+#include <chrono>
 
 namespace Agentic
 {
 
 namespace {
+
+std::string toLower(std::string s)
+{
+    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+    });
+    return s;
+}
+
+bool hasAnyTerm(const std::string& haystack, const std::initializer_list<const char*> terms)
+{
+    for (const char* t : terms)
+    {
+        if (haystack.find(t) != std::string::npos)
+            return true;
+    }
+    return false;
+}
+
+PlanStep makeStep(const std::string& id, const std::string& title, const std::string& description,
+                  bool isMutating, StepRisk risk)
+{
+    PlanStep s;
+    s.id = id;
+    s.title = title;
+    s.description = description;
+    s.is_mutating = isMutating;
+    s.risk_level = risk;
+    return s;
+}
 
 void tryLoadApprovalPolicyFromDisk(AgenticPlanningOrchestrator& orch)
 {
@@ -39,12 +72,11 @@ void tryLoadApprovalPolicyFromDisk(AgenticPlanningOrchestrator& orch)
         {
             auto j = nlohmann::json::parse(ss.str());
             orch.setApprovalPolicy(ApprovalPolicy::fromJson(j));
-            LOG_INFO("AgenticOrch", "Loaded approval policy from " + path);
             return;
         }
         catch (...)
         {
-            LOG_INFO("AgenticOrch", "approval_policy.json present but invalid JSON: " + path);
+            // Invalid JSON in approval policy file
         }
     }
 }
@@ -62,53 +94,72 @@ void OrchestratorIntegration::initialize()
         return;
     }
 
-    // Wire planner: for now, use a stub that generates basic plans
+    // Wire planner with deterministic task-aware plan generation.
     m_orchestrator->setPlanGenerationFn(
         [this](const std::string& task) -> ExecutionPlan
         {
             ExecutionPlan plan;
             plan.description = task;
             plan.source_task = task;
-            plan.planner_model = "default_stub";
-            plan.confidence_score = 0.75f;
+            plan.planner_model = "deterministic_rule_planner_v1";
+            plan.confidence_score = 0.82f;
 
-            // Create a default multi-step plan
-            // In production, this would call an actual LLM planner
-            PlanStep step1;
-            step1.id = "step_1_analyze";
-            step1.title = "Analyze task requirements";
-            step1.description = "Parse task to understand scope and dependencies";
-            step1.is_mutating = false;
-            step1.risk_level = StepRisk::VeryLow;
-            plan.steps.push_back(step1);
+            const std::string lowered = toLower(task);
+            const bool isBugFix = hasAnyTerm(lowered, {"fix", "bug", "crash", "error", "regression"});
+            const bool isFeature = hasAnyTerm(lowered, {"add", "implement", "feature", "support"});
+            const bool isRefactor = hasAnyTerm(lowered, {"refactor", "cleanup", "restructure"});
+            const bool isPerf = hasAnyTerm(lowered, {"optimize", "latency", "performance", "throughput"});
+            const bool touchesBuild = hasAnyTerm(lowered, {"cmake", "build", "link", "compile"});
+            const bool touchesTests = hasAnyTerm(lowered, {"test", "coverage", "ctest", "smoke"});
 
-            PlanStep step2;
-            step2.id = "step_2_prepare";
-            step2.title = "Prepare workspace";
-            step2.description = "Set up build environment and dependencies";
-            step2.is_mutating = false;
-            step2.risk_level = StepRisk::Low;
-            step2.dependencies.push_back(step1.id);
-            plan.steps.push_back(step2);
+            PlanStep discover = makeStep(
+                "step_1_discover",
+                "Discover current behavior",
+                "Locate relevant symbols and verify current execution path before making changes.",
+                false,
+                StepRisk::VeryLow);
+            discover.actions.push_back("semantic_search");
+            discover.actions.push_back("read_file");
+            plan.steps.push_back(std::move(discover));
 
-            PlanStep step3;
-            step3.id = "step_3_implement";
-            step3.title = "Implement changes";
-            step3.description = "Execute code modifications as planned";
-            step3.is_mutating = true;
-            step3.risk_level = StepRisk::Medium;  // Will be re-analyzed
-            step3.dependencies.push_back(step2.id);
-            step3.affected_files.push_back("src/implementation.cpp");
-            plan.steps.push_back(step3);
+            PlanStep design = makeStep(
+                "step_2_design",
+                "Design concrete change",
+                "Define minimal code edits and safety checks for the task.",
+                false,
+                isRefactor ? StepRisk::Low : StepRisk::VeryLow);
+            design.dependencies.push_back("step_1_discover");
+            plan.steps.push_back(std::move(design));
 
-            PlanStep step4;
-            step4.id = "step_4_validate";
-            step4.title = "Validate and test";
-            step4.description = "Run tests to verify implementation";
-            step4.is_mutating = false;
-            step4.risk_level = StepRisk::VeryLow;
-            step4.dependencies.push_back(step3.id);
-            plan.steps.push_back(step4);
+            PlanStep implement = makeStep(
+                "step_3_implement",
+                isBugFix ? "Patch failing behavior" : (isFeature ? "Implement feature behavior" : "Apply code changes"),
+                "Edit impacted files and wire runtime paths to concrete implementations.",
+                true,
+                (isPerf || isRefactor) ? StepRisk::Medium : StepRisk::Low);
+            implement.dependencies.push_back("step_2_design");
+            implement.actions.push_back("apply_patch");
+            plan.steps.push_back(std::move(implement));
+
+            PlanStep build = makeStep(
+                "step_4_build",
+                "Build and verify",
+                "Compile updated targets and verify no regressions were introduced.",
+                false,
+                touchesBuild ? StepRisk::Medium : StepRisk::Low);
+            build.dependencies.push_back("step_3_implement");
+            build.actions.push_back("cmake_build");
+            plan.steps.push_back(std::move(build));
+
+            PlanStep validate = makeStep(
+                "step_5_validate",
+                touchesTests ? "Run validation tests" : "Run smoke validation",
+                "Execute targeted checks and confirm behavior with runtime evidence.",
+                false,
+                StepRisk::VeryLow);
+            validate.dependencies.push_back("step_4_build");
+            validate.actions.push_back(touchesTests ? "run_tests" : "smoke_test");
+            plan.steps.push_back(std::move(validate));
 
             return plan;
         });
@@ -118,7 +169,23 @@ void OrchestratorIntegration::initialize()
         m_orchestrator->setRiskAnalysisFn(m_riskAnalyzer);
     }
 
-    m_orchestrator->setExecutionLogFn([](const std::string& log_entry) { LOG_INFO("AgenticOrch", log_entry); });
+    m_orchestrator->setExecutionLogFn(
+        [this](const std::string& log_entry)
+        {
+            if (m_onLogMessage)
+            {
+                m_onLogMessage(log_entry);
+            }
+        });
+
+    m_orchestrator->setApprovalCallback(
+        [this](const ExecutionPlan& plan, int step_idx)
+        {
+            if (m_onApprovalRequired)
+            {
+                m_onApprovalRequired(plan, step_idx);
+            }
+        });
 
     // Wire tool executor: delegates to the integration's callback
     m_orchestrator->setToolExecutorFn(
@@ -165,7 +232,6 @@ ExecutionPlan* OrchestratorIntegration::planAndApproveTask(const std::string& ta
     {
         auto& step = plan->steps[i];
 
-        // Use custom analyzer if provided, otherwise use built-in
         if (m_riskAnalyzer)
         {
             step.risk_level = m_riskAnalyzer(step);
@@ -180,8 +246,6 @@ ExecutionPlan* OrchestratorIntegration::planAndApproveTask(const std::string& ta
     for (size_t i = 0; i < plan->steps.size(); ++i)
     {
         auto& step = plan->steps[i];
-
-        // Determine eligibility for auto-approval based on policy and risk
         auto policy = m_orchestrator->getApprovalPolicy();
 
         bool should_auto_approve = false;
@@ -199,15 +263,144 @@ ExecutionPlan* OrchestratorIntegration::planAndApproveTask(const std::string& ta
             step.approval_status = ApprovalStatus::ApprovedAuto;
             step.approval_user = "system";
             step.approval_reason = "Auto-approved by policy";
+            if (m_onStepApproved)
+            {
+                m_onStepApproved(*plan, static_cast<int>(i));
+            }
         }
         else
         {
-            // Request human approval
-            m_orchestrator->requestApproval(plan, i);
+            m_orchestrator->requestApproval(plan, static_cast<int>(i));
+            if (m_onApprovalRequired)
+            {
+                m_onApprovalRequired(*plan, static_cast<int>(i));
+            }
         }
     }
 
+    if (m_onPlanGenerated)
+    {
+        m_onPlanGenerated(*plan);
+    }
+
     return plan;
+}
+
+bool OrchestratorIntegration::executePlanStep(ExecutionPlan* plan, int step_idx)
+{
+    if (!plan || !m_orchestrator)
+        return false;
+
+    if (m_onStepExecutionStarted)
+    {
+        m_onStepExecutionStarted(*plan, step_idx);
+    }
+
+    bool success = m_orchestrator->executeNextApprovedStep(plan);
+
+    if (success)
+    {
+        if (m_onStepCompleted)
+        {
+            m_onStepCompleted(*plan, step_idx);
+        }
+    }
+    else
+    {
+        if (m_onStepFailed)
+        {
+            m_onStepFailed(*plan, step_idx, plan->steps[step_idx].error_message);
+        }
+    }
+
+    return success;
+}
+
+bool OrchestratorIntegration::executeEntirePlan(ExecutionPlan* plan)
+{
+    if (!plan || !m_orchestrator)
+        return false;
+
+    if (m_onPlanExecutionStarted)
+    {
+        m_onPlanExecutionStarted(*plan);
+    }
+
+    plan->is_executing.store(true);
+    bool all_success = true;
+
+    for (size_t i = 0; i < plan->steps.size(); ++i)
+    {
+        if (!executePlanStep(plan, static_cast<int>(i)))
+        {
+            all_success = false;
+            break;
+        }
+    }
+
+    plan->is_executing.store(false);
+
+    if (all_success)
+    {
+        if (m_onPlanCompleted)
+        {
+            m_onPlanCompleted(*plan);
+        }
+    }
+    else
+    {
+        if (m_onPlanFailed)
+        {
+            m_onPlanFailed(*plan, "One or more steps failed during execution");
+        }
+    }
+
+    return all_success;
+}
+
+void OrchestratorIntegration::cancelPlan(ExecutionPlan* plan)
+{
+    if (!plan)
+        return;
+
+    plan->is_executing.store(false);
+    for (auto& step : plan->steps)
+    {
+        if (step.status == ExecutionStatus::Executing)
+        {
+            step.status = ExecutionStatus::Failed;
+            step.error_message = "Cancelled by user";
+        }
+    }
+
+    if (m_onPlanCancelled)
+    {
+        m_onPlanCancelled(*plan);
+    }
+}
+
+void OrchestratorIntegration::pausePlan(ExecutionPlan* plan)
+{
+    if (!plan)
+        return;
+
+    plan->is_executing.store(false);
+    if (m_onPlanPaused)
+    {
+        m_onPlanPaused(*plan);
+    }
+}
+
+void OrchestratorIntegration::resumePlan(ExecutionPlan* plan)
+{
+    if (!plan)
+        return;
+
+    plan->is_executing.store(true);
+    if (m_onPlanResumed)
+    {
+        m_onPlanResumed(*plan);
+    }
 }
 
 int OrchestratorIntegration::getPendingApprovalCount() const
@@ -226,8 +419,11 @@ std::vector<std::pair<ExecutionPlan*, int>> OrchestratorIntegration::getPendingA
 
 void OrchestratorIntegration::onPlanGeneration(const std::string& task, ExecutionPlan& plan)
 {
-    // Called during plan generation; allows customization
-    // (Currently used internally)
+    (void)task;
+    if (m_onPlanGenerated)
+    {
+        m_onPlanGenerated(plan);
+    }
 }
 
 void OrchestratorIntegration::onStepExecution(ExecutionPlan* plan, int step_idx)
@@ -237,7 +433,6 @@ void OrchestratorIntegration::onStepExecution(ExecutionPlan* plan, int step_idx)
 
     auto& step = plan->steps[step_idx];
 
-    // Execute each action in the step
     for (const auto& action : step.actions)
     {
         std::string output;
@@ -249,11 +444,19 @@ void OrchestratorIntegration::onStepExecution(ExecutionPlan* plan, int step_idx)
         {
             step.error_message = "Tool execution failed: " + action;
             step.status = ExecutionStatus::Failed;
+            if (m_onStepFailed)
+            {
+                m_onStepFailed(*plan, step_idx, step.error_message);
+            }
             return;
         }
     }
 
     step.status = ExecutionStatus::Success;
+    if (m_onStepCompleted)
+    {
+        m_onStepCompleted(*plan, step_idx);
+    }
 }
 
 void OrchestratorIntegration::onRollbackRequest(ExecutionPlan* plan, int step_idx)
@@ -263,6 +466,12 @@ void OrchestratorIntegration::onRollbackRequest(ExecutionPlan* plan, int step_id
 
     auto& step = plan->steps[step_idx];
     m_rollbackExecutor(step);
+    step.status = ExecutionStatus::Rolled_Back;
+
+    if (m_onStepRolledBack)
+    {
+        m_onStepRolledBack(*plan, step_idx);
+    }
 }
 
 }  // namespace Agentic

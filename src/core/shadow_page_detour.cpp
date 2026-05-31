@@ -16,6 +16,8 @@
 #endif
 #include <windows.h>
 #include "shadow_page_detour.hpp"
+#include "enterprise_license.h"
+#include "multi_gpu_manager.hpp"
 #include <cstring>
 #include <cstdio>
 #include <cstdlib>
@@ -83,6 +85,15 @@ static const uint8_t kRFC3713Ciphertext[16] = {
     0x9A, 0xCC, 0x23, 0x7D, 0xFF, 0x16, 0xD7, 0x6C,
     0x20, 0xEF, 0x7C, 0x91, 0x9E, 0x3A, 0x75, 0x09
 };
+
+static void broadcastBaselineSyncIfClusterActive() {
+    if (!RawrXD::EnterpriseLicense::isFeatureEnabled(0x80)) {
+        return;
+    }
+
+    // Reuse the watchdog's cluster sync path so peers absorb the updated baseline.
+    (void)SentinelWatchdog::instance().syncWithVulkanCluster();
+}
 
 // ============================================================================
 // AgenticAssembler Implementation
@@ -713,6 +724,19 @@ PatchResult SelfRepairLoop::applyBinaryPatch(const char* name,
     }
 
     SentinelWatchdog::instance().updateBaseline();
+    broadcastBaselineSyncIfClusterActive();
+    
+    // Batch 8: Titan Cluster Cluster-Wide Synchronization
+    // If we are in an Enterprise multi-GPU environment, we must notify
+    // the secondary nodes that a legitimate patch has occurred so they
+    // don't trigger a false-positive lockdown upon heartbeat sync.
+    if (RawrXD::EnterpriseLicense::isFeatureEnabled(0x80)) {
+        // In a real cluster, this would broadcast the new .text SHA-256
+        // or a "PatchUpdate" signal across the Vulkan P2P plane.
+        // For now, we ensure the local Sentinel is synced with the cluster.
+        SentinelWatchdog::instance().syncWithVulkanCluster();
+    }
+
     SentinelWatchdog::instance().activate();
 
     entry.patchedAddr = reinterpret_cast<void*>(execAddr);
@@ -761,6 +785,7 @@ PatchResult SelfRepairLoop::rollbackDetour(const char* name) {
     VirtualProtect(entry.originalAddr, 16, oldProtect, &dummy);
 
     SentinelWatchdog::instance().updateBaseline();
+    broadcastBaselineSyncIfClusterActive();
     SentinelWatchdog::instance().activate();
 
     entry.isActive   = false;
@@ -808,6 +833,7 @@ PatchResult SelfRepairLoop::rollbackAll() {
 
     // Rebaseline and reactivate sentinel after all rollbacks
     SentinelWatchdog::instance().updateBaseline();
+    broadcastBaselineSyncIfClusterActive();
     SentinelWatchdog::instance().activate();
 
     if (failures > 0) {

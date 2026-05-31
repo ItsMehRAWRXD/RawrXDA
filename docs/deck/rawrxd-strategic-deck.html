@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<!--
+  RawrXD strategic narrative — Stripe / Anthropic–inspired visual tone (warm neutrals, serif display, restrained accent).
+  Print: browser Print → Save as PDF for a deck-style export.
+-->
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>RawrXD — Native IDE × Inference</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,470;9..144,600&family=DM+Sans:ital,opsz@0,9..40,400;0,9..40,500;0,9..40,600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #09090b;
+      --bg2: #121214;
+      --fg: #f5f2eb;
+      --muted: #9b958c;
+      --line: rgba(245,242,235,0.08);
+      --accent: #e8c4a8;
+      --accent2: #8fb8d4;
+      --ollama: #4ade80;
+      --vllm: #a78bfa;
+      --rawr: #f0b8a0;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
+    body {
+      margin: 0; background: var(--bg); color: var(--fg);
+      font-family: "DM Sans", system-ui, sans-serif;
+      font-optical-sizing: auto;
+    }
+    section {
+      min-height: 100vh; scroll-snap-align: start;
+      display: flex; flex-direction: column; justify-content: center;
+      padding: clamp(2rem, 6vw, 5rem) clamp(1.25rem, 4vw, 4rem);
+      border-bottom: 1px solid var(--line);
+    }
+    section:nth-child(even) { background: var(--bg2); }
+    .wrap { max-width: 920px; margin: 0 auto; width: 100%; }
+    .eyebrow {
+      font-size: 0.7rem; letter-spacing: 0.22em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 1rem; font-weight: 600;
+    }
+    h1 {
+      font-family: Fraunces, Georgia, serif;
+      font-weight: 600;
+      font-size: clamp(2.1rem, 5vw, 3.25rem);
+      line-height: 1.08;
+      letter-spacing: -0.03em;
+      margin: 0 0 1.25rem;
+    }
+    h2 {
+      font-family: Fraunces, Georgia, serif;
+      font-weight: 470;
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      margin: 0 0 1rem;
+      letter-spacing: -0.02em;
+    }
+    p.lead { font-size: 1.15rem; line-height: 1.65; color: #d4cfc7; max-width: 54ch; margin: 0 0 1.5rem; }
+    p { line-height: 1.65; color: #c4beb4; max-width: 62ch; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem; }
+    @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
+    .card {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 1.35rem 1.5rem;
+    }
+    .card h3 { margin: 0 0 0.5rem; font-size: 0.95rem; font-weight: 600; }
+    .card p { margin: 0; font-size: 0.9rem; }
+    .pill {
+      display: inline-block; font-size: 0.65rem; font-weight: 600;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 0.35rem 0.65rem; border-radius: 999px; margin-bottom: 0.75rem;
+    }
+    .pill.ollama { background: rgba(74,222,128,0.12); color: var(--ollama); }
+    .pill.vllm { background: rgba(167,139,250,0.12); color: var(--vllm); }
+    .pill.rawr { background: rgba(240,184,160,0.12); color: var(--rawr); }
+    table {
+      width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-top: 1rem;
+    }
+    th, td {
+      text-align: left; padding: 0.65rem 0.75rem;
+      border-bottom: 1px solid var(--line);
+    }
+    th { color: var(--muted); font-weight: 600; font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; }
+    tr:last-child td { border-bottom: none; }
+    .ok { color: #86efac; }
+    .dash { color: var(--muted); }
+    footer.wrap { padding: 2rem 0 3rem; font-size: 0.8rem; color: var(--muted); }
+    @media print {
+      html { scroll-snap-type: none; }
+      section { min-height: auto; page-break-after: always; padding: 1.5rem; }
+      body { background: #fff; color: #111; }
+      section { border-color: #ddd; }
+      p, p.lead, .card p { color: #333; }
+      th { color: #555; }
+    }
+  </style>
+</head>
+<body>
+  <section>
+    <div class="wrap">
+      <div class="eyebrow">Product narrative</div>
+      <h1>Inference belongs in the IDE — not beside it.</h1>
+      <p class="lead">
+        RawrXD is a native Win32 IDE with first-class agent loops, speculative decoding, and a terminal model that matches
+        VS Code / Cursor — without shipping Electron or a generic chat bolt-on.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="eyebrow">Competitive framing</div>
+      <h2>Ollama · vLLM · RawrXD</h2>
+      <p class="lead">Three different layers — complementary, not interchangeable.</p>
+      <div class="grid2">
+        <div class="card">
+          <span class="pill ollama">Ollama</span>
+          <h3>Local model runtime &amp; UX</h3>
+          <p>Daemon pulls models, exposes a simple HTTP API, optimizes for “run Llama on my machine.” Great for scripts and apps — not an editing surface.</p>
+        </div>
+        <div class="card">
+          <span class="pill vllm">vLLM</span>
+          <h3>Throughput-oriented serving</h3>
+          <p>PagedAttention, continuous batching, multi-GPU — built for datacenter SLAs and OpenAI-compatible fleets. Operate inference as a service, not as an IDE feature.</p>
+        </div>
+        <div class="card" style="grid-column: 1 / -1;">
+          <span class="pill rawr">RawrXD</span>
+          <h3>IDE-native inference + agents</h3>
+          <p>
+            GGUF loaders, AVX-heavy paths, agent terminals, tool mirroring, and Win32 UI in one process.
+            Positioning: <strong>where developers already work</strong> — with parity keyboard model and read-only agent surfaces like Cursor.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="eyebrow">Terminal parity</div>
+      <h2>VS Code / Cursor–style terminal — shipped</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>VS Code</th>
+            <th>Cursor</th>
+            <th>RawrXD</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Integrated terminal tabs</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+          <tr><td>Ctrl+` toggle / focus</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+          <tr><td>Dark tab chrome</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+          <tr><td>Panel tooltips</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+          <tr><td>Read-only agent pane</td><td class="dash">—</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+          <tr><td>Tool output mirroring</td><td class="dash">—</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+          <tr><td>Multi-session shells</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="eyebrow">Next gaps (14-day sprint)</div>
+      <h2>Bridge unfinished parity</h2>
+      <table>
+        <thead>
+          <tr><th>Priority</th><th>Theme</th><th>Target outcome</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>P0</td><td>Shell integration</td><td>Git branch, exit codes, cwd — VS Code-level context</td></tr>
+          <tr><td>P1</td><td>Agent terminal stdin</td><td>Controlled prompts when the agent must ask for input</td></tr>
+          <tr><td>P2</td><td>Terminal find</td><td>Ctrl+F in scrollback</td></tr>
+          <tr><td>P3</td><td>Scrollback limits</td><td>10k–100k lines, enterprise retention</td></tr>
+        </tbody>
+      </table>
+      <p style="margin-top:2rem;">
+        <strong>Artifacts:</strong> run <code style="background:rgba(255,255,255,0.06);padding:0.15rem 0.45rem;border-radius:6px;">.\scripts\JsonTo-ChartsAndPdf.ps1</code>
+        to turn JSON telemetry into charts + PDF (Edge headless when available).
+      </p>
+    </div>
+  </section>
+
+  <footer class="wrap">
+    RawrXD — native Win32 · Rose Pine–aligned surfaces · Agentic bridge + speculative inference path.
+  </footer>
+</body>
+</html>

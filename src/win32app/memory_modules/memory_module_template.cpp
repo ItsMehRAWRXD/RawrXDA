@@ -7,7 +7,7 @@
 // 1. Copy this template
 // 2. Implement optimizations for your target context size
 // 3. Compile as DLL with name: memory_{SIZE}k.dll
-//    Example: memory_128k.dll, memory_256k.dll, memory_1024k.dll
+//    Pattern: memory_128k.dll, memory_256k.dll, memory_1024k.dll
 // 4. Place in IDE's memory_modules directory
 //
 // Build command (MinGW):

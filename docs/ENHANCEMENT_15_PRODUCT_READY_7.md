@@ -1,6 +1,6 @@
 # 15× enhancement backlog + 7× product-ready code
 
-Turns **partial** areas from **`docs/IDE_STRATEGIC_PILLARS.md`** and **`docs/BRIDGE_GAP_AUDIT.md`** into **actionable** work: **15 enhancement tracks (E01–E15)** and **7 product-readiness workstreams (PR01–PR07)**.
+Turns **partial** areas from **`docs/BRIDGE_GAP_AUDIT.md`** (and the capability snapshot below) into **actionable** work: **15 enhancement tracks (E01–E15)** and **7 product-readiness workstreams (PR01–PR07)**.
 
 Use **E** items for capability multiplier / user-visible depth; use **PR** items for shippable quality (build, safety, supportability).
 
@@ -80,13 +80,12 @@ These are **quality multipliers** on top of E-items: what makes the binary **saf
 
 1. **Tag work:** In commits/issues, use `E##` and/or `PR##` in the subject.
 2. **Reconcile counts:** Bump **`docs/IDE_MASTER_PROGRESS.md`** when an E-row’s “done when” is satisfied.
-3. **Pillars stay canonical:** **`docs/IDE_STRATEGIC_PILLARS.md`** = *why*; this file = *what to build next*.
+3. **Scope:** **`docs/BRIDGE_GAP_AUDIT.md`** = wiring gaps; this file = *what to build next* (E/PR) and *done when*.
 
 ---
 
 ## Related docs
 
-- **`docs/IDE_STRATEGIC_PILLARS.md`** — seven north-star themes  
 - **`docs/BRIDGE_GAP_AUDIT.md`** — wiring gaps (feeds E01, E05, PR03)  
 - **`docs/INFERENCE_PATH_MATRIX.md`** — path unification (E01)  
 - **`docs/AGENTIC_PLANNING_ORCHESTRATOR.md`** — gates + orchestrator (E05, E07)  

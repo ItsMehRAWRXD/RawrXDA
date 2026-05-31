@@ -186,12 +186,21 @@ private:
  */
 class MultiFileSearchWidget {
 public:
-    /**
-     * Destructor
-     */
     ~MultiFileSearchWidget();
 
+    void onSearchResultsReady();
+    void addResultToTree(const MultiFileSearchResult& result);
+    void onResultClicked();
+    void performSearch(const std::string& searchText, const std::string& patternCsv);
+    bool matchPattern(const std::string& name, const std::string& patternCsv);
+
 private:
+    HWND m_resultsList = nullptr;
+    HWND m_resultsTree = nullptr;
+    std::mutex m_resultsMutex;
+    std::vector<MultiFileSearchResult> m_pendingResults;
+    void* m_resultClickedCtx = nullptr;
+    void (*m_resultClickedCb)(void*, const MultiFileSearchResult&) = nullptr;
 };
 
 /**

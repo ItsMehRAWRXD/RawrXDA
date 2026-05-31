@@ -228,7 +228,7 @@ uint64_t fnv1a_hash64(const char* data, uint32_t len);
 // CoTMASMBridge.hpp          → CoT DLL interface
 // quant/nanoquant_bridge.h   → NanoQuant SIMD kernels
 // net/net_masm_bridge.h      → Network MASM bridge
-// ggml_masm/ggml_masm_bridge.h → GGML MASM bridge
+// ggml_rxd_masm/ggml_rxd_masm_bridge.h → GGML MASM bridge
 
 #ifdef __cplusplus
 }

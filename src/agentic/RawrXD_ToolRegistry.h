@@ -63,6 +63,12 @@ public:
 
     ToolResult Execute(const std::string& tool_name, const std::string& json_args, std::string& output);
 
+    // Native / MASM tool registration.  Call once at startup to surface built-in
+    // MASM kernels (NLShell_ValidateCommand, Vector_CosineSimilarity, etc.) as
+    // agent-callable tools without requiring a JSON registry file on disk.
+    bool RegisterNativeTool(ToolDefinition def);
+    void RegisterBuiltinMasmTools();
+
     using ConsentCallback = std::function<bool(const ToolDefinition&, const nlohmann::json&)>;
     void SetConsentCallback(ConsentCallback callback);
 
@@ -92,8 +98,66 @@ private:
     ToolResult HandleBuildProject(const nlohmann::json& args, std::string& output);
     ToolResult HandleStaticAnalysis(const nlohmann::json& args, std::string& output);
     ToolResult HandleGitOperation(const nlohmann::json& args, std::string& output);
+    ToolResult HandleReadFile(const nlohmann::json& args, std::string& output);
+    ToolResult HandleWriteFile(const nlohmann::json& args, std::string& output);
+    ToolResult HandleSearchFiles(const nlohmann::json& args, std::string& output);
+    ToolResult HandleExecuteCommand(const nlohmann::json& args, std::string& output);
+    ToolResult HandleListDirectory(const nlohmann::json& args, std::string& output);
+    ToolResult HandleGetFileInfo(const nlohmann::json& args, std::string& output);
+    ToolResult HandleGetWorkspaceInfo(const nlohmann::json& args, std::string& output);
+    ToolResult HandleApplyEdit(const nlohmann::json& args, std::string& output);
+    ToolResult HandleGetSymbols(const nlohmann::json& args, std::string& output);
+    ToolResult HandleGetCompletions(const nlohmann::json& args, std::string& output);
+    ToolResult HandleGetDiagnostics(const nlohmann::json& args, std::string& output);
 
-    mutable std::mutex m_mutex;
+    // Sovereign RE Tools
+    ToolResult HandleREDisassemble(const nlohmann::json& args, std::string& output);
+    ToolResult HandleREVerifyAssembly(const nlohmann::json& args, std::string& output);
+    ToolResult HandleREAnalyzeLogic(const nlohmann::json& args, std::string& output);
+
+    // Phase 34: Sovereign Sentinel & Multi-Agent Tools
+    ToolResult HandleWorkspacePageIn(const nlohmann::json& args, std::string& output);
+    ToolResult HandleAgentConsensus(const nlohmann::json& args, std::string& output);
+    ToolResult HandleHealSymbol(const nlohmann::json& args, std::string& output);
+    ToolResult HandleSentinelAudit(const nlohmann::json& args, std::string& output);
+    // Sovereign Binary Operations (Batch 4)
+    ToolResult HandleBinaryDecompile(const nlohmann::json& args, std::string& output);
+    ToolResult HandleAsmVerify(const nlohmann::json& args, std::string& output);
+    ToolResult HandleSegmentHeuristics(const nlohmann::json& args, std::string& output);
+    
+    // Phase 36: Mesh & Discovery
+    ToolResult HandleMeshDiscoveryStart(const nlohmann::json& args, std::string& output);
+    ToolResult HandleMeshStatus(const nlohmann::json& args, std::string& output);
+    ToolResult HandleMeshBootstrapVerify(const nlohmann::json& args, std::string& output);
+    
+        // Phase 46: NL Shell Guard
+        ToolResult HandleNLShellValidate(const nlohmann::json& args, std::string& output);
+
+        // Phase 47: Vector Search
+        ToolResult HandleVectorSearch(const nlohmann::json& args, std::string& output);
+
+        // Phase 48: MCP Bridge
+        ToolResult HandleMCPSpawn(const nlohmann::json& args, std::string& output);
+        ToolResult HandleMCPCallTool(const nlohmann::json& args, std::string& output);
+
+    // Phase 49: Web Search
+    ToolResult HandleWebSearch(const nlohmann::json& args, std::string& output);
+
+    // Phase 50: Snapshot
+    ToolResult HandleSnapshotCapture(const nlohmann::json& args, std::string& output);
+    ToolResult HandleSnapshotRestore(const nlohmann::json& args, std::string& output);
+
+    // Phase 51: CRDT
+    ToolResult HandleCRDTPropose(const nlohmann::json& args, std::string& output);
+    ToolResult HandleCRDTExport(const nlohmann::json& args, std::string& output);
+
+    // Phase 52: Fuzz Engine
+    ToolResult HandleFuzzKernel(const nlohmann::json& args, std::string& output);
+
+    // Phase 55: Replication
+    ToolResult HandleReplicationPush(const nlohmann::json& args, std::string& output);
+
+        mutable std::mutex m_mutex;
     std::unordered_map<std::string, ToolDefinition> m_tools;
     ConsentCallback m_consentCallback;
 

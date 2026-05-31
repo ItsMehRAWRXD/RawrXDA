@@ -49,6 +49,7 @@ struct IDETheme {
     COLORREF lineNumberBg;               // Gutter background
     COLORREF currentLineBg;              // Active line highlight
     COLORREF cursorColor;
+    COLORREF ghostTextColor;             // Inline completion / ghost text
 
     // Sidebar / Activity bar
     COLORREF sidebarBg;

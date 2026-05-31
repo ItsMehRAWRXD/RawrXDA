@@ -52,7 +52,7 @@ void ProcessWebView2Message(ICoreWebView2* webview, PCWSTR message) {
     // In a real implementation, you'd parse JSON here.
     // For now, we'll pass it to the dispatcher.
     
-    // Example: if message starts with "RAW:", pass the rest as binary
+    // Pattern: if message starts with "RAW:", pass the rest as binary
     // This keeps the C++ side "zero bloat".
     RawrXD_DispatchIPC(message, (uint32_t)wcslen(message) * sizeof(wchar_t));
 }

@@ -8,6 +8,7 @@
 #include <list>
 #include <string>
 #include <vector>
+#include <mutex>
 
 /**
  * Manages enterprise policies for extension installation:
@@ -15,7 +16,7 @@
  */
 class EnterprisePolicyEngine {
 public:
-    EnterprisePolicyEngine() = default;
+    EnterprisePolicyEngine();
     ~EnterprisePolicyEngine();
 
     void setAllowList(const std::vector<std::string>& extensionIds);
@@ -67,6 +68,7 @@ private:
     PolicySettings m_settings;
     std::list<AuditEntry> m_auditLog;
     bool m_compliant = true;
+    std::mutex m_mutex;
 
     PolicyViolationFn m_onPolicyViolation;
     AuditLogEntryFn m_onAuditLogEntry;

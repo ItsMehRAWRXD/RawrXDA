@@ -37,12 +37,14 @@
 //
 // Enhancement 7: Multi-model routing with fallback.
 //   - AgentModelRouter selects the best available model for each step type.
-//   - Falls back through a priority list: local GGUF → Ollama → cloud stub.
+//   - Falls back through a priority list: local GGUF -> Ollama -> unavailable.
 //   - Router state is shown in the plan dialog summary line.
 // ============================================================================
 
 #include "IDELogger.h"
 #include "Win32IDE.h"
+#include "Win32IDE_Phase16_AgenticController.h"
+#include "Win32IDE_Phase17_AgenticProfiler.h"
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -219,7 +221,19 @@ bool Win32IDE::validateAndDispatchToolCall(const std::string& toolName, const st
 
     if (!m_agenticBridge)
         return false;
-    return m_agenticBridge->DispatchModelToolCalls(toolName + " " + argsJson, toolResult);
+
+    // Phase 16: gate on aperture throttle, then time and record the dispatch.
+    if (!AgenticNotifyToolStart(toolName.c_str()))
+    {
+        toolResult = "[Phase16] Tool '" + toolName + "' deferred: aperture saturated";
+        return false;
+    }
+    Phase17ProfileGuard _p17(toolName);  // Phase 17: profile tool dispatch
+    const ULONGLONG ts = GetTickCount64();
+    const bool ok =
+        m_agenticBridge->DispatchModelToolCalls(std::string("TOOL:") + toolName + " " + argsJson, toolResult);
+    AgenticNotifyToolEnd(ok, static_cast<uint32_t>(GetTickCount64() - ts));
+    return ok;
 }
 
 // ============================================================================
@@ -563,14 +577,14 @@ std::string Win32IDE::getPlanTokenBudgetStatus() const
 // ENHANCEMENT 7 — Multi-model routing with fallback
 // ============================================================================
 
-// Model tier priority: local GGUF > Ollama > cloud stub
-static const std::vector<std::string> MODEL_PRIORITY = {"local_gguf", "ollama", "cloud_stub"};
+// Model tier priority: local GGUF > Ollama
+static const std::vector<std::string> MODEL_PRIORITY = {"local_gguf", "native"};
 
 // Step type → preferred model tier
 static const std::map<std::string, std::string> STEP_MODEL_PREFERENCE = {
     {"code_edit", "local_gguf"},     {"file_create", "local_gguf"}, {"file_delete", "local_gguf"},
-    {"shell_command", "local_gguf"}, {"analysis", "ollama"},        {"verification", "ollama"},
-    {"general", "ollama"},
+    {"shell_command", "local_gguf"}, {"analysis", "native"},        {"verification", "native"},
+    {"general", "native"},
 };
 
 AgentModelRoute Win32IDE::routeStepToModel(const PlanStep& step)
@@ -579,7 +593,7 @@ AgentModelRoute Win32IDE::routeStepToModel(const PlanStep& step)
     route.stepType = planStepTypeString(step.type);
 
     // Determine preferred tier
-    std::string preferred = "ollama";
+    std::string preferred = "native";
     auto it = STEP_MODEL_PREFERENCE.find(route.stepType);
     if (it != STEP_MODEL_PREFERENCE.end())
         preferred = it->second;
@@ -596,18 +610,18 @@ AgentModelRoute Win32IDE::routeStepToModel(const PlanStep& step)
     }
     else if (ollamaAvail)
     {
-        route.selectedTier = "ollama";
+        route.selectedTier = "native";
         route.modelName = m_agenticBridge->GetModelName();
-        route.fallbackUsed = (preferred != "ollama");
+        route.fallbackUsed = (preferred != "native");
     }
     else
     {
-        // Cloud stub fallback
-        route.selectedTier = "cloud_stub";
-        route.modelName = "stub";
+        route.selectedTier = "unavailable";
+        route.modelName.clear();
         route.fallbackUsed = true;
-        appendToOutput("[ModelRouter] ⚠️ No local/Ollama model available — using cloud stub", "General",
-                       OutputSeverity::Warning);
+        appendToOutput(
+            "[ModelRouter] ERROR: No local/Ollama model available; load a model before running agentic steps",
+            "General", OutputSeverity::Error);
     }
 
     if (route.fallbackUsed)
@@ -630,7 +644,7 @@ std::string Win32IDE::getModelRouterStatus() const
 
     std::ostringstream oss;
     oss << "Router: local=" << (localLoaded ? "✅" : "❌") << " ollama=" << (ollamaAvail ? "✅" : "❌")
-        << " cloud=stub";
+        << " cloud=disabled";
     return oss.str();
 }
 

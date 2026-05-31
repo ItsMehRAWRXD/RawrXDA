@@ -11,7 +11,8 @@ class DigestionOrchestrator  {public:
     void run(const std::string &rootDir, const DigestionModuleConfig &config);
     void* lastReport() const;
     DigestionMetrics metrics() const;
-\npublic:\n    void progress(int filesProcessed, int totalFiles, int stubsFound, int percent);
+
+\npublic:\n    void progress(int filesProcessed, int totalFiles, int stubsFound, int percent);
     void finished(const void* &report, const DigestionMetrics &metrics);
     void errorOccurred(const std::string &message);
 

@@ -1,5 +1,6 @@
 // Win32 Todo Integration Header
 // Provides Win32IDE C++ integration for PowerShell todo system
+// VSU Effects: Uses Adobe RGBa color space for professional color accuracy
 
 #pragma once
 
@@ -9,8 +10,10 @@
 #include <vector>
 #include <functional>
 #include <nlohmann/json.hpp>
+#include "../../include/RawrXD_ColorSpace.h"
 
 using json = nlohmann::json;
+using namespace RawrXD::ColorSpace;
 
 namespace RawrXD {
 namespace Todos {
@@ -26,8 +29,13 @@ struct TodoItem {
     std::string createdAt;
     std::string updatedAt;
     std::vector<std::string> tags;
-    int estimatedMinutes;
-    int actualMinutes;
+    int estimatedMinutes = 0;
+    int actualMinutes = 0;
+    std::vector<int> dependsOnIds;
+    int blockedById = 0;
+    std::string blockerType;
+    std::string blockerReason;
+    std::vector<std::string> statusTransitions;
     
     std::wstring GetStatusIcon() const {
         if (status == "pending") return L"⏳";
@@ -46,13 +54,13 @@ struct TodoItem {
         return L"⚪";
     }
     
-    COLORREF GetStatusColor() const {
-        if (status == "pending") return RGB(255, 255, 0);     // Yellow
-        if (status == "in-progress") return RGB(0, 255, 255); // Cyan
-        if (status == "completed") return RGB(0, 255, 0);     // Green
-        if (status == "blocked") return RGB(255, 0, 0);       // Red
-        if (status == "cancelled") return RGB(128, 128, 128); // Gray
-        return RGB(255, 255, 255);                            // White
+    AdobeRGBa GetStatusColor() const {
+        if (status == "pending") return VSU::Accents::Warning;      // Yellow
+        if (status == "in-progress") return VSU::Accents::Blue;   // Cyan
+        if (status == "completed") return VSU::Accents::Success;  // Green
+        if (status == "blocked") return VSU::Accents::Error;      // Red
+        if (status == "cancelled") return AdobeRGBa(0.50f, 0.50f, 0.50f, 1.00f); // Gray
+        return AdobeRGBa(1.00f, 1.00f, 1.00f, 1.00f);             // White
     }
 };
 
@@ -82,6 +90,7 @@ public:
     std::vector<TodoItem> GetAll() const { return items_; }
     std::vector<TodoItem> GetByStatus(const std::string& status) const;
     TodoItem* GetById(int id);
+    const TodoItem* GetById(int id) const;
     int GetCount() const { return static_cast<int>(items_.size()); }
     int GetMaxCount() const { return maxItems_; }
     bool CanAdd() const { return items_.size() < maxItems_; }
@@ -123,6 +132,7 @@ private:
     TodoItem ParseTodoFromJson(const json& j);
     json TodoToJson(const TodoItem& todo) const;
     bool ExecutePowerShellCommand(const std::string& operation, const std::vector<std::string>& args);
+    bool ExecutePowerShellCommandCapture(const std::string& operation, const std::vector<std::string>& args, std::string& output);
     static DWORD WINAPI PipeServerThreadProc(LPVOID param);
     static DWORD WINAPI FileWatchThreadProc(LPVOID param);
 };
@@ -136,7 +146,7 @@ public:
     static void RenderStatistics(HDC hdc, const TodoManager::Statistics& stats, RECT statsRect);
     
 private:
-    static void DrawText(HDC hdc, const std::wstring& text, RECT rect, COLORREF color);
+    static void DrawText(HDC hdc, const std::wstring& text, RECT rect, AdobeRGBa color);
     static void DrawIcon(HDC hdc, const std::wstring& icon, POINT pos);
 };
 

@@ -1,0 +1,7 @@
+[Prometheus] Listening on port 9090 for /metrics...
+[agentic-smoke] PASS: tool_registry read_file
+[agentic-smoke] PASS: tool_registry list_dir (explorer parity)
+[agentic-smoke] PASS: multi-step bounded loop (5 tool steps)
+[agentic-smoke] SKIP: live Ollama (set RAWRXD_AGENTIC_SMOKE_LIVE=1)
+[smoke] result=PASS duration_ms=178 ollama=skip models=0
+[Scheduler] Shutdown complete

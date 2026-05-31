@@ -26,7 +26,7 @@
 #include <fstream>
 #include <commdlg.h>
 
-// SCAFFOLD_243: Marketplace panel and VSIX install
+// Marketplace Panel and VSIX Install Implementation
 
 
 // ============================================================================

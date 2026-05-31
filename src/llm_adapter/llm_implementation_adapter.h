@@ -1,7 +1,7 @@
 // ============================================================================
 // AIImplementation Adapter - Real LLM Connectivity Integration
 // ============================================================================
-// This file demonstrates how to wire the LLMHttpClient into AIImplementation
+// This file shows how to wire the LLMHttpClient into AIImplementation
 // for real API calls to Ollama, OpenAI, Anthropic, etc.
 
 #pragma once
@@ -110,7 +110,7 @@ private:
  * LLMClientFactory: Easy factory for creating configured LLM clients
  * 
  * Usage:
- *   auto client = LLMClientFactory::createOllamaClient("http://localhost:11434");
+ *   auto client = LLMClientFactory::createOllamaClient("http://localhost:11435");
  *   auto client = LLMClientFactory::createOpenAIClient(apiKey);
  *   auto client = LLMClientFactory::createAnthropicClient(apiKey);
  */
@@ -118,12 +118,12 @@ class LLMClientFactory {
 public:
     /**
      * Create Ollama client (local inference)
-     * @param endpoint Ollama endpoint (e.g., "http://localhost:11434")
+     * @param endpoint Ollama endpoint (e.g., "http://localhost:11435")
      * @param model Default model to use
      * @return Configured HTTP client
      */
     static std::unique_ptr<LLMHttpClient> createOllamaClient(
-        const std::string& endpoint = "http://localhost:11434",
+        const std::string& endpoint = "http://localhost:11435",
         const std::string& model = "llama2"
     );
 
@@ -180,7 +180,7 @@ private:
 };
 
 // ============================================================================
-// Real-World Usage Examples
+// Real-World Usage
 // ============================================================================
 
 /*

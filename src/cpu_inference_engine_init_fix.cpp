@@ -24,7 +24,11 @@ auto findMetaInt = [&metadata](std::initializer_list<const char*> keys, int defa
         if (metadata.count(key)) {
             try {
                 return static_cast<int>(metadata.at(key).GetInt());  // or GetI32() depending on API
-            } catch (...) {}
+            } catch (const std::exception& e) {
+                OutputDebugStringA(("[cpu_inference_engine_init_fix] metadata parse exception: " + std::string(e.what()) + "\n").c_str());
+            } catch (...) {
+                OutputDebugStringA("[cpu_inference_engine_init_fix] metadata parse unknown exception\n");
+            }
         }
     }
     return defaultVal;

@@ -262,7 +262,7 @@ void IDEMainWindow::onCloudSettings() {
     // Would show cloud configuration dialog
     QMessageBox::information(this, "Cloud Settings",
         "Configure cloud providers:\n"
-        "- Ollama: localhost:11434 (Active)\n"
+        "- native: localhost:11435 (Active)\n"
         "- HuggingFace: API key required\n"
         "- AWS/Azure/GCP: Enterprise only");
 }
@@ -297,7 +297,9 @@ void IDEMainWindow::onDocumentation() {
 
 // Event Handlers
 void IDEMainWindow::onCodeChanged() {
-    // Code will be analyzed by timer
+    // Trigger code analysis on change
+    m_codeDirty = true;
+    m_lastEditTime = std::chrono::steady_clock::now();
 }
 
 void IDEMainWindow::onCursorPositionChanged() {
@@ -356,7 +358,9 @@ void IDEMainWindow::onSystemHealthUpdated(const SystemHealth& health) {
 }
 
 void IDEMainWindow::onMetricRecorded(const MetricData& metric) {
-    // Update metrics display
+    // Update metrics display with new data
+    m_metricsPanel->addMetric(metric);
+    m_statusBar->setMetric(metric.name, metric.value);
 }
 
 void IDEMainWindow::onThresholdViolation(const MetricData& metric, const std::string& severity) {
@@ -365,7 +369,12 @@ void IDEMainWindow::onThresholdViolation(const MetricData& metric, const std::st
 }
 
 void IDEMainWindow::onSnapshotCaptured(const PerformanceSnapshot& snapshot) {
-    // Update performance display
+    // Update performance display with snapshot data
+    fprintf(stderr, "[IDEMainWindow] Snapshot captured: CPU=%.1f%% RAM=%.1fMB\n", 
+            snapshot.cpuPercent, snapshot.memoryMB);
+    if (performanceMonitor) {
+        performanceMonitor->recordSnapshot(snapshot);
+    }
 }
 
 void IDEMainWindow::onModelDownloadProgress(const std::string& modelId, int percentage, int64_t speed, int64_t eta) {

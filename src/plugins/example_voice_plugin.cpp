@@ -1,11 +1,11 @@
 // ============================================================================
-// Example Voice Provider Plugin — Template for Custom TTS Extensions
+// Voice Provider Plugin — Template for Custom TTS Extensions
 // Phase 44: Voice Automation Extension System
 //
-// This is a complete example showing how to build a custom voice provider
+// This is a complete template showing how to build a custom voice provider
 // plugin for RawrXD's voice automation system. It implements all C-ABI
 // functions from voice_provider_plugin.h using a simple beep-based
-// "voice" for demonstration.
+// "voice" for testing.
 //
 // To create your own provider (e.g., ElevenLabs, Azure TTS, Coqui, etc.):
 //   1. Copy this file

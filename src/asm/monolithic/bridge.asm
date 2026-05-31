@@ -22,6 +22,11 @@ PUBLIC Bridge_GetSuggestionText
 PUBLIC Bridge_ClearSuggestion
 PUBLIC Bridge_RequestSuggestion
 PUBLIC Bridge_AbortInference
+PUBLIC Bridge_DispatchMessage
+PUBLIC Bridge_GetAgentContext
+PUBLIC Bridge_SetAstIndexRoot
+PUBLIC SubmitInference_Fixed
+PUBLIC SubmitInference
 
 ; ── Win32 imports ────────────────────────────────────────────────
 EXTERN CreateThread:PROC
@@ -49,6 +54,8 @@ EXTERN RTP_StreamParser_PushByte:PROC
 EXTERN RTP_StreamParser_GetPacket:PROC
 EXTERN RTP_DispatchPacket:PROC
 EXTERN RTP_EncodeToolResultFrame:PROC
+EXTERN ASTIndexer_GetContextForAgent:PROC
+EXTERN ASTIndexer_GetStatus:PROC
 
 ; ── UI callback (defined in ui.asm) ──────────────────────────────
 EXTERN Bridge_OnSuggestionReady:PROC
@@ -85,6 +92,13 @@ MAX_RTP_RESULT_BYTES    equ 8192
 
 ; WM_USER messages for thread→UI marshalling
 WM_GHOST_TEXT_READY     equ 0500h    ; wParam=len, lParam=ptr to WCHAR buf
+RXD_MSG_GET_CONTEXT     equ 0510h    ; query -> context markdown block
+RXD_MSG_GET_INDEX_STATUS equ 0511h   ; returns packed index progress
+
+; AgentContext flags/capabilities (runtime boundary between bridge/tools/AST)
+AGENTCTX_F_TOOL_REG_READY   equ 00000001h
+AGENTCTX_F_AST_READY        equ 00000002h
+AGENTCTX_TOOLCAP_DEFAULT    equ 0000FFFFh
 
 .data
 align 8
@@ -101,6 +115,23 @@ g_reqCol            dd  0
 g_reqTextPtr        dq  0            ; Pointer to UI text buffer
 g_reqPending        dd  0            ; 1 = worker is running
 
+align 8
+; Unified AgentContext (C-block runtime integration)
+; Layout kept flat for MASM/C++ interop.
+g_agentCtxFlags         dd 0
+g_agentCtxToolCaps      dd 0
+g_agentCtxCursorRow     dd 0
+g_agentCtxCursorCol     dd 0
+g_agentCtxPromptPtr     dq 0
+g_agentCtxPromptLen     dd 0
+g_agentCtxLastToolId    dd 0FFFFFFFFh
+g_agentCtxLastToolStat  dd 0
+g_agentCtxResponsePtr   dq 0
+g_agentCtxResponseCap   dd 0
+g_agentCtxContextPtr    dq 0
+g_agentCtxContextLen    dd 0
+g_agentCtxAstRoot       dq 0
+
 .data?
 align 16
 ; UTF-8 conversion buffers (not in .data to avoid bloating .exe)
@@ -113,6 +144,34 @@ g_rtpResultFrame    db MAX_RTP_RESULT_BYTES dup(?)
 g_rtpContextShadow  db 4096 dup(?)
 
 .code
+
+; ════════════════════════════════════════════════════════════════════
+; Bridge_GetAgentContext — Return pointer to unified AgentContext blob
+;   Returns: RAX = &g_agentCtxFlags (base address)
+; ════════════════════════════════════════════════════════════════════
+Bridge_GetAgentContext PROC
+    lea     rax, g_agentCtxFlags
+    ret
+Bridge_GetAgentContext ENDP
+
+
+; ════════════════════════════════════════════════════════════════════
+; Bridge_SetAstIndexRoot — Attach/detach runtime AST root pointer
+;   RCX = root pointer (0 detaches)
+;   Returns: EAX = 0
+; ════════════════════════════════════════════════════════════════════
+Bridge_SetAstIndexRoot PROC
+    mov     qword ptr [g_agentCtxAstRoot], rcx
+    test    rcx, rcx
+    jz      @bsar_clear
+    or      dword ptr [g_agentCtxFlags], AGENTCTX_F_AST_READY
+    xor     eax, eax
+    ret
+@bsar_clear:
+    and     dword ptr [g_agentCtxFlags], NOT AGENTCTX_F_AST_READY
+    xor     eax, eax
+    ret
+Bridge_SetAstIndexRoot ENDP
 
 ; ════════════════════════════════════════════════════════════════════
 ; Bridge_SubmitCompletion — Accept or reject the current suggestion
@@ -231,6 +290,8 @@ Bridge_RequestSuggestion PROC FRAME
     test    eax, eax
     jnz     @brs_busy
     mov     g_bridgeReady, 1
+    or      dword ptr [g_agentCtxFlags], AGENTCTX_F_TOOL_REG_READY
+    mov     dword ptr [g_agentCtxToolCaps], AGENTCTX_TOOLCAP_DEFAULT
 
 @brs_ready:
 
@@ -278,6 +339,17 @@ Bridge_RequestSuggestion PROC FRAME
     mov     g_reqTextPtr, rcx
     mov     g_reqRow, edx
     mov     g_reqCol, r8d
+    mov     dword ptr [g_agentCtxCursorRow], edx
+    mov     dword ptr [g_agentCtxCursorCol], r8d
+    mov     qword ptr [g_agentCtxPromptPtr], 0
+    mov     dword ptr [g_agentCtxPromptLen], 0
+    mov     dword ptr [g_agentCtxLastToolId], 0FFFFFFFFh
+    mov     dword ptr [g_agentCtxLastToolStat], 0
+    mov     qword ptr [g_agentCtxResponsePtr], 0
+    mov     dword ptr [g_agentCtxResponseCap], MAX_RESPONSE_BYTES - 1
+    lea     rax, g_rtpContextShadow
+    mov     qword ptr [g_agentCtxContextPtr], rax
+    mov     dword ptr [g_agentCtxContextLen], 0
 
     ; Mark pending + inference pending in UI
     mov     g_reqPending, 1
@@ -416,12 +488,20 @@ Bridge_WorkerThread PROC FRAME
     ; Null-terminate UTF-8 prompt
     lea     rsi, g_utf8Prompt
     mov     byte ptr [rsi + rbx], 0
+    lea     rax, g_utf8Prompt
+    mov     qword ptr [g_agentCtxPromptPtr], rax
+    mov     dword ptr [g_agentCtxPromptLen], ebx
+    lea     rax, g_utf8Response
+    mov     qword ptr [g_agentCtxResponsePtr], rax
+    mov     dword ptr [g_agentCtxResponseCap], MAX_RESPONSE_BYTES - 1
 
     ; ── Step 2.5: Build binary RTP context blob for model interface ─────────
     lea     rcx, g_rtpContextShadow
     mov     edx, 4096
     lea     r8, [rsp+4Ch]
     call    RTP_BuildContextBlob
+    mov     eax, dword ptr [rsp+4Ch]
+    mov     dword ptr [g_agentCtxContextLen], eax
 
     ; ── Step 3: RTP Agent Loop (plan→execute→verify), then ReAct fallback ──
     ; RTP_AgentLoop_Run(userPrompt, outBuf, outCap, maxIters)
@@ -598,6 +678,8 @@ Bridge_WorkerThread PROC FRAME
     mov     g_reqPending, 0
     mov     byte ptr [g_inferencePending], 0
     mov     g_routerAbort, 0
+    mov     qword ptr [g_agentCtxPromptPtr], 0
+    mov     dword ptr [g_agentCtxPromptLen], 0
 
     xor     eax, eax                     ; Thread exit code
     add     rsp, 50h
@@ -629,5 +711,143 @@ Bridge_AbortInference PROC FRAME
     add     rsp, 28h
     ret
 Bridge_AbortInference ENDP
+
+; ════════════════════════════════════════════════════════════════════
+; SubmitInference_Fixed — Monolithic compatibility entrypoint
+;   RCX = UTF-8 prompt
+;   RDX = context flags (reserved)
+;   R8  = UTF-8 response buffer
+;   R9  = response buffer capacity in bytes
+; Returns:
+;   EAX = 0 on success, -1 on failure
+;
+; Uses existing monolithic runtime in strict order:
+;   1) RTP_AgentLoop_Run (tool-calling loop)
+;   2) ReAct_Run fallback
+;   3) InferenceRouter_Generate final fallback
+; ════════════════════════════════════════════════════════════════════
+SubmitInference_Fixed PROC FRAME
+    push    rbx
+    .pushreg rbx
+    push    rsi
+    .pushreg rsi
+    push    rdi
+    .pushreg rdi
+    sub     rsp, 20h
+    .allocstack 20h
+    .endprolog
+
+    mov     rbx, rcx                    ; prompt
+    mov     rsi, r8                     ; out buffer
+    mov     edi, r9d                    ; out capacity
+
+    test    rbx, rbx
+    jz      @sif_fail
+    test    rsi, rsi
+    jz      @sif_fail
+
+    test    edi, edi
+    jnz     @sif_cap_ok
+    mov     edi, MAX_RESPONSE_BYTES - 1
+@sif_cap_ok:
+
+    ; Ensure tool + ReAct runtime initialized before inference dispatch.
+    cmp     g_bridgeReady, 1
+    je      @sif_runtime_ready
+    call    Tool_Init
+    call    ReAct_Init
+    test    eax, eax
+    jnz     @sif_fail
+    mov     g_bridgeReady, 1
+@sif_runtime_ready:
+
+    ; Stage 1: RTP agent loop (native tool-call dispatcher path)
+    mov     rcx, rbx
+    mov     rdx, rsi
+    mov     r8d, edi
+    mov     r9d, 4
+    call    RTP_AgentLoop_Run
+    cmp     eax, 0
+    jge     @sif_success
+
+    ; Stage 2: ReAct fallback using system policy prompt
+    lea     rcx, szReActSystem
+    mov     rdx, rbx
+    mov     r8,  rsi
+    mov     r9d, edi
+    call    ReAct_Run
+    cmp     eax, 0
+    je      @sif_success
+
+    ; Stage 3: Direct router completion fallback
+    mov     rcx, rbx
+    mov     rdx, rsi
+    mov     r8d, edi
+    call    InferenceRouter_Generate
+    test    eax, eax
+    jg      @sif_success
+
+@sif_fail:
+    mov     ecx, BRIDGE_BEACON_SLOT
+    mov     edx, BRIDGE_EVT_ROUTER_FAIL
+    mov     r8d, 0FEh                    ; 0xFE = SubmitInference path failure
+    call    BeaconSend
+    mov     eax, -1
+    jmp     @sif_ret
+
+@sif_success:
+    xor     eax, eax
+
+@sif_ret:
+    add     rsp, 20h
+    pop     rdi
+    pop     rsi
+    pop     rbx
+    ret
+SubmitInference_Fixed ENDP
+
+
+; ════════════════════════════════════════════════════════════════════
+; Bridge_DispatchMessage — Monolithic bridge control/message seam
+;   ECX = RXD_MSG_*
+;   RDX = payload pointer / query pointer
+;   R8D = flags
+;   Returns:
+;     RXD_MSG_GET_CONTEXT      -> RAX = UTF-8 context buffer, EDX = byte len
+;     RXD_MSG_GET_INDEX_STATUS -> RAX = packed status (low32 indexed, high32 total)
+;     unknown                  -> RAX = 0, EDX = 0
+; ════════════════════════════════════════════════════════════════════
+Bridge_DispatchMessage PROC FRAME
+    sub     rsp, 28h
+    .allocstack 28h
+    .endprolog
+
+    cmp     ecx, RXD_MSG_GET_CONTEXT
+    je      @get_context
+    cmp     ecx, RXD_MSG_GET_INDEX_STATUS
+    je      @get_status
+
+    xor     eax, eax
+    xor     edx, edx
+    add     rsp, 28h
+    ret
+
+@get_context:
+    mov     rcx, rdx
+    mov     edx, r8d
+    call    ASTIndexer_GetContextForAgent
+    add     rsp, 28h
+    ret
+
+@get_status:
+    call    ASTIndexer_GetStatus
+    add     rsp, 28h
+    ret
+Bridge_DispatchMessage ENDP
+
+; Legacy alias retained for callers expecting SubmitInference symbol.
+SubmitInference PROC
+    jmp     SubmitInference_Fixed
+SubmitInference ENDP
 
 END

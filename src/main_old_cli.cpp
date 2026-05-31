@@ -101,7 +101,7 @@ void InitializeApplication() {
             }
         }
     } catch (...) {
-        // Ignore errors in directory iteration
+        fprintf(stderr, "[MainOldCLI] Directory iteration error\n");
     }
     
     if (model_count == 0) {

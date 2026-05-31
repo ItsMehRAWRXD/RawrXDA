@@ -1,0 +1,77 @@
+# ============================================================================
+# bigdaddyg_70b_loader_config.json - Optimized for 70B+ Models on 64GB DDR5
+# ============================================================================
+# Memory Layout for 64GB DDR5 @ 5600MHz:
+#   - OS + RawrXD Runtime: ~4GB
+#   - Model Working Set: ~40GB (70B Q4_K_M)
+#   - KV Cache: ~8GB (32K context)
+#   - Agent/Extension Overhead: ~4GB
+#   - Headroom: ~8GB
+# ============================================================================
+
+{
+    "model": {
+        "name": "bigdaddyg",
+        "path": "F:/models/bigdaddyg.gguf",
+        "type": "Q4_K_M",
+        "estimated_size_gb": 40,
+        "parameters_b": 70
+    },
+    
+    "memory": {
+        "total_system_gb": 64,
+        "available_for_model_gb": 48,
+        "sliding_window_size_gb": 2,
+        "prefetch_ahead_layers": 3,
+        "max_resident_layers": 8,
+        "kv_cache_max_gb": 8,
+        "kv_cache_context_length": 32768
+    },
+    
+    "aperture": {
+        "enable_sovereign_path": true,
+        "placeholder_size_gb": 4,
+        "use_mapviewoffile3": true,
+        "mem_replace_placeholder": true,
+        "large_pages": false
+    },
+    
+    "scheduler": {
+        "max_working_set_gb": 16,
+        "eviction_threshold_gb": 12,
+        "enable_async_prefetch": true,
+        "prefetch_io_poll_ms": 2,
+        "enable_aperture_monitoring": true,
+        "aperture_sample_interval": 5,
+        "aperture_flush_threshold": 0.10
+    },
+    
+    "gpu": {
+        "enable_async_batching": true,
+        "batch_size": 16,
+        "flush_interval_ms": 8,
+        "max_vram_gb": 24,
+        "offload_layers": 0
+    },
+    
+    "inference": {
+        "threads": 16,
+        "batch_size": 512,
+        "flash_attention": true,
+        "continuous_batching": true,
+        "speculative_decoding": false
+    },
+    
+ "agent": {
+        "enable_lock_free_coordinator": true,
+        "worker_threads": 8,
+        "task_queue_depth": 1024
+    },
+    
+    "monitoring": {
+        "log_memory_usage": true,
+        "log_telemetry": true,
+        "log_aperture_counters": true,
+        "report_interval_ms": 5000
+    }
+}

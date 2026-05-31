@@ -250,7 +250,6 @@ std::vector<PerfRecord> MetaLearn::loadDB(bool* ok) {
     std::ifstream f(path);
     if (!f.is_open()) {
         if (ok) *ok = false;
-        fprintf(stderr, "[WARN] [MetaLearn] Failed to open %s\n", path.c_str());
         return {};
     }
 
@@ -300,7 +299,6 @@ bool MetaLearn::record(const std::string& quant,
 
     if (!saveDatabase()) {
         m_records.pop_back();
-        fprintf(stderr, "[WARN] [MetaLearn] Failed to persist record\n");
         return false;
     }
     return true;
@@ -313,8 +311,6 @@ bool MetaLearn::autoTuneQuant() {
     if (m_lastQuantSuggestion == best) return true;
     m_lastQuantSuggestion = best;
     if (onSuggestionReady) onSuggestionReady(best.c_str());
-    fprintf(stderr, "[INFO] [MetaLearn] Auto-selected quant: %s (TPS: %.1f, PPL: %.2f)\n",
-            best.c_str(), avgTps, avgPpl);
     return true;
 }
 
@@ -325,8 +321,6 @@ bool MetaLearn::autoTuneKernel() {
     if (m_lastKernelSuggestion == best) return true;
     m_lastKernelSuggestion = best;
     if (onKernelSuggestionReady) onKernelSuggestionReady(best.c_str());
-    fprintf(stderr, "[INFO] [MetaLearn] Auto-selected kernel: %s (TPS: %.1f)\n",
-            best.c_str(), avgTps);
     return true;
 }
 
@@ -369,7 +363,6 @@ bool MetaLearn::loadDatabase() {
         m_records.push_back(rec);
     }
 
-    fprintf(stderr, "[INFO] [MetaLearn] Loaded %zu records\n", m_records.size());
     return true;
 }
 
@@ -392,7 +385,6 @@ bool MetaLearn::saveDatabase() const {
     fs::create_directories(fs::path(m_dbPath).parent_path());
     std::ofstream f(m_dbPath, std::ios::trunc);
     if (!f.is_open()) {
-        fprintf(stderr, "[WARN] [MetaLearn] Cannot write %s\n", m_dbPath.c_str());
         return false;
     }
     f << output;

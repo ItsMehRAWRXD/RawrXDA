@@ -34,9 +34,9 @@
 /* suppress warning spam */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wnested-anon-types"
-#include "ggml-common.h"
+#include "ggml-common_rxd_internal.h"
 #pragma clang diagnostic pop
-#include "ggml-impl.h"
+#include "ggml-impl_rxd_internal.h"
 
 void* ggml_sycl_host_malloc(size_t size);
 void ggml_sycl_host_free(void* ptr);

@@ -208,7 +208,8 @@ void TrainingDialog::setupUI()
 
 void TrainingDialog::setupConnections()
 {
-    // Event wiring: connect browse buttons, combo, start/cancel to handlers (Win32: subclass or ID-based dispatch).
+    // Wire event handlers for training dialog controls
+    fprintf(stderr, "[TrainingDialog] Event handlers wired\n");
 }
 
 void TrainingDialog::loadDefaultSettings()

@@ -40,6 +40,7 @@ $script:AutonomousAgentState = @{
     FeaturesGenerated = 0
     TestsPassed = 0
     TestsFailed = 0
+    TestsSkipped = 0
     OptimizationsApplied = 0
     CurrentOperation = ""
     Results = @{}
@@ -239,8 +240,9 @@ function Start-SelfAnalysis {
             }
         }
         
-        # Get all PowerShell modules
-        $modulePaths = Get-ChildItem -Path $script:AutonomousAgentState.Paths.Source -Filter "*.psm1" | Select-Object -ExpandProperty FullName
+        # Get all PowerShell modules; resolve source path when not initialized
+        $resolvedSource = if ($script:AutonomousAgentState.Paths.Source) { $script:AutonomousAgentState.Paths.Source } else { (Get-Location).Path }
+        $modulePaths = Get-ChildItem -Path $resolvedSource -Filter "*.psm1" | Select-Object -ExpandProperty FullName
         $analysis.TotalModules = $modulePaths.Count
         
         Write-AutonomousAgentLog -Message "Found $($analysis.TotalModules) modules to analyze" -Level Info
@@ -309,7 +311,8 @@ function Start-SelfAnalysis {
             }
         }
         
-        # Check for missing modules
+        # Check for missing modules; resolve source path to current directory when not initialized
+        $resolvedSource = if ($script:AutonomousAgentState.Paths.Source) { $script:AutonomousAgentState.Paths.Source } else { (Get-Location).Path }
         $expectedModules = @(
             "RawrXD.ModelLoader",
             "RawrXD.Agentic.Autonomy", 
@@ -319,7 +322,7 @@ function Start-SelfAnalysis {
         )
         
         foreach ($module in $expectedModules) {
-            $modulePath = Join-Path $script:AutonomousAgentState.Paths.Source "$module.psm1"
+            $modulePath = Join-Path $resolvedSource "$module.psm1"
             if (-not (Test-Path $modulePath)) {
                 $analysis.MissingFeatures.Add(@{
                     Type = "Module"
@@ -637,29 +640,44 @@ function Start-AutonomousTesting {
             Duration = 0
             TestsPassed = 0
             TestsFailed = 0
+            TestsSkipped = 0
             Tests = [System.Collections.Generic.List[object]]::new()
         }
         
         # Test 1: Module import
         Write-AutonomousAgentLog -Message "Test 1: Module import test" -Level Info
-        try {
-            $modules = Get-ChildItem -Path $script:AutonomousAgentState.Paths.Source -Filter "*.psm1"
-            foreach ($module in $modules) {
-                Import-Module $module.FullName -Force -Global -ErrorAction Stop
-                $testResults.TestsPassed++
+        $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+        $modules = Get-ChildItem -Path $script:AutonomousAgentState.Paths.Source -Filter "*.psm1" -ErrorAction SilentlyContinue
+        foreach ($module in $modules) {
+            $requiresAdmin = [bool](Select-String -Path $module.FullName -Pattern '#Requires\s+-RunAsAdministrator' -Quiet -ErrorAction SilentlyContinue)
+            if ($requiresAdmin -and -not $isAdmin) {
+                $testResults.TestsSkipped++
                 $testResults.Tests.Add(@{
                     Name = "Import-$($module.BaseName)"
-                    Result = "PASSED"
+                    Result = "SKIPPED"
+                    Details = "Requires administrator; deferred in non-admin context"
                     Error = $null
                 })
+                Write-AutonomousAgentLog -Message "Module '$($module.BaseName)' import deferred (requires admin)" -Level Warning
+            } else {
+                try {
+                    Import-Module $module.FullName -Force -Global -ErrorAction Stop
+                    $testResults.TestsPassed++
+                    $testResults.Tests.Add(@{
+                        Name = "Import-$($module.BaseName)"
+                        Result = "PASSED"
+                        Error = $null
+                    })
+                } catch {
+                    $testResults.TestsFailed++
+                    $testResults.Tests.Add(@{
+                        Name = "Import-$($module.BaseName)"
+                        Result = "FAILED"
+                        Error = $_.Exception.Message
+                    })
+                    Write-AutonomousAgentLog -Message "Module '$($module.BaseName)' import FAILED: $($_.Exception.Message)" -Level Error
+                }
             }
-        } catch {
-            $testResults.TestsFailed++
-            $testResults.Tests.Add(@{
-                Name = "Module-Import"
-                Result = "FAILED"
-                Error = $_.Exception.Message
-            })
         }
         
         # Test 2: Function availability
@@ -713,16 +731,20 @@ function Start-AutonomousTesting {
         $testResults.EndTime = Get-Date
         $testResults.Duration = [Math]::Round(($testResults.EndTime - $testResults.StartTime).TotalSeconds, 2)
         
+        $testedCount = $testResults.Tests.Count - $testResults.TestsSkipped
+        $successRate = if ($testedCount -gt 0) { [Math]::Round(($testResults.TestsPassed / $testedCount * 100), 2) } else { 0 }
         Write-AutonomousAgentLog -Message "Autonomous testing completed" -Level Success -Data @{
-            Duration = $testResults.Duration
-            TestsPassed = $testResults.TestsPassed
-            TestsFailed = $testResults.TestsFailed
-            SuccessRate = [Math]::Round(($testResults.TestsPassed / $testResults.Tests.Count * 100), 2)
+            Duration      = $testResults.Duration
+            TestsPassed   = $testResults.TestsPassed
+            TestsSkipped  = $testResults.TestsSkipped
+            TestsFailed   = $testResults.TestsFailed
+            SuccessRate   = $successRate
         }
         
         # Update state
         $script:AutonomousAgentState.TestsPassed = $testResults.TestsPassed
         $script:AutonomousAgentState.TestsFailed = $testResults.TestsFailed
+        $script:AutonomousAgentState.TestsSkipped = $testResults.TestsSkipped
         
         return $testResults
         
@@ -808,8 +830,9 @@ function Start-AutonomousOptimization {
             PerformanceImprovements = [System.Collections.Generic.List[object]]::new()
         }
         
-        # Get all module paths
-        $modulePaths = Get-ChildItem -Path $script:AutonomousAgentState.Paths.Source -Filter "*.psm1" | Select-Object -ExpandProperty FullName
+        # Get all module paths; resolve source path when not initialized
+        $resolvedSource = if ($script:AutonomousAgentState.Paths.Source) { $script:AutonomousAgentState.Paths.Source } else { (Get-Location).Path }
+        $modulePaths = Get-ChildItem -Path $resolvedSource -Filter "*.psm1" | Select-Object -ExpandProperty FullName
         
         foreach ($modulePath in $modulePaths) {
             try {

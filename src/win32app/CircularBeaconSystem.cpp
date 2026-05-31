@@ -71,10 +71,6 @@ bool BeaconHub::unregisterBeacon(BeaconKind kind)
     auto it = m_beaconMap.find(key);
     if (it == m_beaconMap.end()) return false;
 
-    OutputDebugStringA("[BeaconHub] Unregistered beacon: ");
-    OutputDebugStringA(it->second.name.c_str());
-    OutputDebugStringA("\n");
-
     m_beaconMap.erase(it);
     m_ringOrder.erase(
         std::remove(m_ringOrder.begin(), m_ringOrder.end(), kind),

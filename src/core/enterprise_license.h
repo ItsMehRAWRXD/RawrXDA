@@ -377,6 +377,9 @@ private:
     EnterpriseLicense() = default;
     ~EnterpriseLicense() = default;
 
+    // Sovereign-grade kernel unlock bridge (RSA-derived AES-256 key material).
+    void* UnlockKernelWithSovereignKey(const uint8_t* pKeyMaterial, size_t keyLen);
+
     bool m_initialized = false;
     mutable std::mutex m_mutex;
     LicenseState m_lastState = LicenseState::Invalid;

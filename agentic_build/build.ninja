@@ -126,7 +126,6 @@ build obj/gpu_inference_benchmark/inference_engine.obj: compile src/qtapp/infere
   includes = /Iinclude /Isrc
 build obj/gpu_inference_benchmark/gguf_loader.obj: compile src/qtapp/gguf_loader.cpp
   includes = /Iinclude /Isrc
-build obj/gpu_inference_benchmark/gguf_loader.obj: compile src/gguf_loader.cpp
   includes = /Iinclude /Isrc
 build obj/gpu_inference_benchmark/transformer_inference.obj: compile src/qtapp/transformer_inference.cpp
   includes = /Iinclude /Isrc
@@ -143,7 +142,8 @@ build obj/gpu_inference_benchmark/metrics_collector.obj: compile src/qtapp/metri
 build obj/gpu_inference_benchmark/quant_utils.obj: compile src/qtapp/quant_utils.cpp
   includes = /Iinclude /Isrc
 
-build bin/gpu_inference_benchmark.exe: link obj/gpu_inference_benchmark/gpu_inference_benchmark.obj obj/gpu_inference_benchmark/inference_engine.obj obj/gpu_inference_benchmark/gguf_loader.obj obj/gpu_inference_benchmark/gguf_loader.obj obj/gpu_inference_benchmark/transformer_inference.obj obj/gpu_inference_benchmark/bpe_tokenizer.obj obj/gpu_inference_benchmark/sentencepiece_tokenizer.obj obj/gpu_inference_benchmark/vocabulary_loader.obj obj/gpu_inference_benchmark/gpu_backend.obj obj/gpu_inference_benchmark/metrics_collector.obj obj/gpu_inference_benchmark/quant_utils.obj
+build bin/gpu_inference_benchmark.exe: link obj/gpu_inference_benchmark/gpu_inference_benchmark.obj obj/gpu_inference_benchmark/inference_engine.obj obj/gpu_inference_benchmark/gguf_loader.obj obj/gpu_inference_benchmark/transformer_inference.obj obj/gpu_inference_benchmark/bpe_tokenizer.obj obj/gpu_inference_benchmark/sentencepiece_tokenizer.obj obj/gpu_inference_benchmark/vocabulary_loader.obj obj/gpu_inference_benchmark/gpu_backend.obj obj/gpu_inference_benchmark/metrics_collector.obj obj/gpu_inference_benchmark/quant_utils.obj
+
 
 build obj/minimal_qt_test/minimal_qt_test.obj: compile src/minimal_qt_test.cpp
   includes = /Iinclude /Isrc
@@ -156,7 +156,6 @@ build obj/gguf_hotpatch_tester/inference_engine.obj: compile src/qtapp/inference
   includes = /Iinclude /Isrc
 build obj/gguf_hotpatch_tester/gguf_loader.obj: compile src/qtapp/gguf_loader.cpp
   includes = /Iinclude /Isrc
-build obj/gguf_hotpatch_tester/gguf_loader.obj: compile src/gguf_loader.cpp
   includes = /Iinclude /Isrc
 build obj/gguf_hotpatch_tester/transformer_inference.obj: compile src/qtapp/transformer_inference.cpp
   includes = /Iinclude /Isrc
@@ -173,7 +172,8 @@ build obj/gguf_hotpatch_tester/metrics_collector.obj: compile src/qtapp/metrics_
 build obj/gguf_hotpatch_tester/quant_utils.obj: compile src/qtapp/quant_utils.cpp
   includes = /Iinclude /Isrc
 
-build bin/gguf_hotpatch_tester.exe: link obj/gguf_hotpatch_tester/gguf_hotpatch_tester.obj obj/gguf_hotpatch_tester/inference_engine.obj obj/gguf_hotpatch_tester/gguf_loader.obj obj/gguf_hotpatch_tester/gguf_loader.obj obj/gguf_hotpatch_tester/transformer_inference.obj obj/gguf_hotpatch_tester/bpe_tokenizer.obj obj/gguf_hotpatch_tester/sentencepiece_tokenizer.obj obj/gguf_hotpatch_tester/vocabulary_loader.obj obj/gguf_hotpatch_tester/gpu_backend.obj obj/gguf_hotpatch_tester/metrics_collector.obj obj/gguf_hotpatch_tester/quant_utils.obj
+build bin/gguf_hotpatch_tester.exe: link obj/gguf_hotpatch_tester/gguf_hotpatch_tester.obj obj/gguf_hotpatch_tester/inference_engine.obj obj/gguf_hotpatch_tester/gguf_loader.obj obj/gguf_hotpatch_tester/transformer_inference.obj obj/gguf_hotpatch_tester/bpe_tokenizer.obj obj/gguf_hotpatch_tester/sentencepiece_tokenizer.obj obj/gguf_hotpatch_tester/vocabulary_loader.obj obj/gguf_hotpatch_tester/gpu_backend.obj obj/gguf_hotpatch_tester/metrics_collector.obj obj/gguf_hotpatch_tester/quant_utils.obj
+
 
 build obj/test_chat_streaming/test_chat_streaming.obj: compile src/qtapp/test_chat_streaming.cpp
   includes = /Iinclude /Isrc
@@ -181,7 +181,6 @@ build obj/test_chat_streaming/inference_engine.obj: compile src/qtapp/inference_
   includes = /Iinclude /Isrc
 build obj/test_chat_streaming/gguf_loader.obj: compile src/qtapp/gguf_loader.cpp
   includes = /Iinclude /Isrc
-build obj/test_chat_streaming/gguf_loader.obj: compile src/gguf_loader.cpp
   includes = /Iinclude /Isrc
 build obj/test_chat_streaming/transformer_inference.obj: compile src/qtapp/transformer_inference.cpp
   includes = /Iinclude /Isrc
@@ -198,7 +197,8 @@ build obj/test_chat_streaming/metrics_collector.obj: compile src/qtapp/metrics_c
 build obj/test_chat_streaming/quant_utils.obj: compile src/qtapp/quant_utils.cpp
   includes = /Iinclude /Isrc
 
-build bin/test_chat_streaming.exe: link obj/test_chat_streaming/test_chat_streaming.obj obj/test_chat_streaming/inference_engine.obj obj/test_chat_streaming/gguf_loader.obj obj/test_chat_streaming/gguf_loader.obj obj/test_chat_streaming/transformer_inference.obj obj/test_chat_streaming/bpe_tokenizer.obj obj/test_chat_streaming/sentencepiece_tokenizer.obj obj/test_chat_streaming/vocabulary_loader.obj obj/test_chat_streaming/gpu_backend.obj obj/test_chat_streaming/metrics_collector.obj obj/test_chat_streaming/quant_utils.obj
+build bin/test_chat_streaming.exe: link obj/test_chat_streaming/test_chat_streaming.obj obj/test_chat_streaming/inference_engine.obj obj/test_chat_streaming/gguf_loader.obj obj/test_chat_streaming/transformer_inference.obj obj/test_chat_streaming/bpe_tokenizer.obj obj/test_chat_streaming/sentencepiece_tokenizer.obj obj/test_chat_streaming/vocabulary_loader.obj obj/test_chat_streaming/gpu_backend.obj obj/test_chat_streaming/metrics_collector.obj obj/test_chat_streaming/quant_utils.obj
+
 
 build obj/RawrXD-Agent/agent_main.obj: compile src/agent/agent_main.cpp
   includes = /Iinclude /Isrc
@@ -270,6 +270,7 @@ build obj/RawrXD-Win32IDE/Diagnostics.obj: compile src/utils/Diagnostics.cpp
 
 build bin/RawrXD-Win32IDE.exe: link obj/RawrXD-Win32IDE/main_win32.obj obj/RawrXD-Win32IDE/Win32IDE.obj obj/RawrXD-Win32IDE/Win32IDE_Sidebar.obj obj/RawrXD-Win32IDE/Win32IDE_VSCodeUI.obj obj/RawrXD-Win32IDE/Win32IDE_PowerShellPanel.obj obj/RawrXD-Win32IDE/Win32IDE_PowerShell.obj obj/RawrXD-Win32IDE/Win32IDE_Logger.obj obj/RawrXD-Win32IDE/TransparentRenderer.obj obj/RawrXD-Win32IDE/Win32TerminalManager.obj obj/RawrXD-Win32IDE/Win32IDE_FileOps.obj obj/RawrXD-Win32IDE/Win32IDE_Commands.obj obj/RawrXD-Win32IDE/Win32IDE_Debugger.obj obj/RawrXD-Win32IDE/Win32IDE_AgenticBridge.obj obj/RawrXD-Win32IDE/Win32IDE_AgentCommands.obj obj/RawrXD-Win32IDE/Win32IDE_Autonomy.obj obj/RawrXD-Win32IDE/gguf_loader.obj obj/RawrXD-Win32IDE/gguf_vocab_resolver.obj obj/RawrXD-Win32IDE/streaming_gguf_loader.obj obj/RawrXD-Win32IDE/ErrorReporter.obj obj/RawrXD-Win32IDE/Diagnostics.obj
 
+
 build obj/test_terminal/test_terminal.obj: compile src/win32app/test_terminal.cpp
   includes = /Iinclude /Isrc
 build obj/test_terminal/Win32TerminalManager.obj: compile src/win32app/Win32TerminalManager.cpp
@@ -311,6 +312,7 @@ build obj/RawrXD-ModelLoader/baseline_profile.obj: compile src/baseline_profile.
 
 build bin/RawrXD-ModelLoader.exe: link obj/RawrXD-ModelLoader/main.obj obj/RawrXD-ModelLoader/gguf_loader.obj obj/RawrXD-ModelLoader/vulkan_compute.obj obj/RawrXD-ModelLoader/hf_downloader.obj obj/RawrXD-ModelLoader/gui.obj obj/RawrXD-ModelLoader/api_server.obj obj/RawrXD-ModelLoader/settings.obj obj/RawrXD-ModelLoader/telemetry.obj obj/RawrXD-ModelLoader/ai_metrics.obj obj/RawrXD-ModelLoader/overclock_vendor.obj obj/RawrXD-ModelLoader/overclock_governor.obj obj/RawrXD-ModelLoader/baseline_profile.obj
 
+
 build obj/RawrXD-CLI/rawrxd_cli.obj: compile src/rawrxd_cli.cpp
   includes = /Iinclude /Isrc
 build obj/RawrXD-CLI/gguf_loader.obj: compile src/gguf_loader.cpp
@@ -334,6 +336,7 @@ build obj/RawrXD-CLI/baseline_profile.obj: compile src/baseline_profile.cpp
 
 build bin/RawrXD-CLI.exe: link obj/RawrXD-CLI/rawrxd_cli.obj obj/RawrXD-CLI/gguf_loader.obj obj/RawrXD-CLI/vulkan_compute.obj obj/RawrXD-CLI/hf_downloader.obj obj/RawrXD-CLI/api_server.obj obj/RawrXD-CLI/settings.obj obj/RawrXD-CLI/telemetry.obj obj/RawrXD-CLI/overclock_vendor.obj obj/RawrXD-CLI/overclock_governor.obj obj/RawrXD-CLI/baseline_profile.obj
 
+
 build obj/model_loader_bench/bench_main.obj: compile src/bench_main.cpp
   includes = /Iinclude /Isrc
 build obj/model_loader_bench/gguf_loader.obj: compile src/gguf_loader.cpp
@@ -346,6 +349,7 @@ build obj/model_loader_bench/telemetry.obj: compile src/telemetry.cpp
   includes = /Iinclude /Isrc
 
 build bin/model_loader_bench.exe: link obj/model_loader_bench/bench_main.obj obj/model_loader_bench/gguf_loader.obj obj/model_loader_bench/vulkan_compute.obj obj/model_loader_bench/settings.obj obj/model_loader_bench/telemetry.obj
+
 
 build obj/rawrxd_stress/oc_stress.obj: compile src/oc_stress.cpp
   includes = /Iinclude /Isrc
@@ -412,6 +416,7 @@ build obj/RawrXD-SimpleIDE/chat_panel.obj: compile src/ui/chat_panel.cpp
 
 build bin/RawrXD-SimpleIDE.exe: link obj/RawrXD-SimpleIDE/main_simple.obj obj/RawrXD-SimpleIDE/MainWindowSimple.obj obj/RawrXD-SimpleIDE/editor_buffer.obj obj/RawrXD-SimpleIDE/syntax_engine.obj obj/RawrXD-SimpleIDE/overclock_vendor.obj obj/RawrXD-SimpleIDE/overclock_governor.obj obj/RawrXD-SimpleIDE/settings.obj obj/RawrXD-SimpleIDE/telemetry.obj obj/RawrXD-SimpleIDE/baseline_profile.obj obj/RawrXD-SimpleIDE/gguf_loader.obj obj/RawrXD-SimpleIDE/ai_metrics.obj obj/RawrXD-SimpleIDE/ai_session.obj obj/RawrXD-SimpleIDE/ollama_client.obj obj/RawrXD-SimpleIDE/websocket_server.obj obj/RawrXD-SimpleIDE/agentic_tools.obj obj/RawrXD-SimpleIDE/file_ops.obj obj/RawrXD-SimpleIDE/git_client.obj obj/RawrXD-SimpleIDE/indexer.obj obj/RawrXD-SimpleIDE/semantic_store.obj obj/RawrXD-SimpleIDE/split_layout.obj obj/RawrXD-SimpleIDE/chat_panel.obj
 
+
 build obj/RawrXD-Chromatic/chromatic_main.obj: compile src/chromatic_main.cpp
   includes = /Iinclude /Isrc
 build obj/RawrXD-Chromatic/chromatic_window.obj: compile src/ui/chromatic_window.cpp
@@ -473,6 +478,7 @@ build obj/RawrXD-TestRunner/streaming_gguf_loader.obj: compile src/streaming_ggu
   includes = /Iinclude /Isrc
 
 build bin/RawrXD-TestRunner.exe: link obj/RawrXD-TestRunner/test_runner.obj obj/RawrXD-TestRunner/Win32IDE.obj obj/RawrXD-TestRunner/Win32IDE_Commands.obj obj/RawrXD-TestRunner/Win32IDE_Debugger.obj obj/RawrXD-TestRunner/Win32IDE_FileOps.obj obj/RawrXD-TestRunner/Win32IDE_PowerShell.obj obj/RawrXD-TestRunner/Win32IDE_PowerShellPanel.obj obj/RawrXD-TestRunner/Win32IDE_Sidebar.obj obj/RawrXD-TestRunner/Win32IDE_VSCodeUI.obj obj/RawrXD-TestRunner/Win32IDE_AgenticBridge.obj obj/RawrXD-TestRunner/Win32IDE_AgentCommands.obj obj/RawrXD-TestRunner/Win32TerminalManager.obj obj/RawrXD-TestRunner/TransparentRenderer.obj obj/RawrXD-TestRunner/VulkanRenderer.obj obj/RawrXD-TestRunner/gguf_loader.obj obj/RawrXD-TestRunner/streaming_gguf_loader.obj
+
 
 build obj/bench_q8_0_end2end/bench_q8_0_end2end.obj: compile tests/bench_q8_0_end2end.cpp
   includes = /Iinclude /Isrc
@@ -548,6 +554,7 @@ build obj/test_agent_coordinator_integration/inflate_deflate_cpp.obj: compile sr
 
 build bin/test_agent_coordinator_integration.exe: link obj/test_agent_coordinator_integration/test_agent_coordinator_integration.obj obj/test_agent_coordinator_integration/model_loader.obj obj/test_agent_coordinator_integration/inference_engine_stub.obj obj/test_agent_coordinator_integration/gguf_server.obj obj/test_agent_coordinator_integration/gguf_loader.obj obj/test_agent_coordinator_integration/inflate_deflate_cpp.obj
 
+
 build obj/test_kv_cache/test_kv_cache.obj: compile src/test_kv_cache.cpp
   includes = /Iinclude /Isrc
 build obj/test_kv_cache/vulkan_compute.obj: compile src/vulkan_compute.cpp
@@ -564,6 +571,7 @@ build obj/test_gguf_loader/gguf_vocab_resolver.obj: compile src/gguf_vocab_resol
 
 build bin/test_gguf_loader.exe: link obj/test_gguf_loader/test_gguf_loader.obj obj/test_gguf_loader/gguf_loader.obj obj/test_gguf_loader/gguf_vocab_resolver.obj
 
+
 build obj/test_gguf_loader_simple/test_gguf_loader_simple.obj: compile tests/test_gguf_loader_simple.cpp
   includes = /Iinclude /Isrc
 build obj/test_gguf_loader_simple/gguf_loader.obj: compile src/gguf_loader.cpp
@@ -572,6 +580,7 @@ build obj/test_gguf_loader_simple/gguf_vocab_resolver.obj: compile src/gguf_voca
   includes = /Iinclude /Isrc
 
 build bin/test_gguf_loader_simple.exe: link obj/test_gguf_loader_simple/test_gguf_loader_simple.obj obj/test_gguf_loader_simple/gguf_loader.obj obj/test_gguf_loader_simple/gguf_vocab_resolver.obj
+
 
 
 build lib/brutal_gzip.lib: link 
@@ -601,12 +610,12 @@ build obj/benchmark_completions/vocabulary_loader.obj: compile src/qtapp/vocabul
   includes = /Iinclude /Isrc
 build obj/benchmark_completions/inflate_deflate_cpp.obj: compile src/qtapp/inflate_deflate_cpp.cpp
   includes = /Iinclude /Isrc
-build obj/benchmark_completions/gguf_loader.obj: compile src/gguf_loader.cpp
   includes = /Iinclude /Isrc
 build obj/benchmark_completions/memory_mapped_file.obj: compile src/ai/memory_mapped_file.cpp
   includes = /Iinclude /Isrc
 build obj/benchmark_completions/streaming_gguf_loader_qt.obj: compile src/ai/streaming_gguf_loader_qt.cpp
   includes = /Iinclude /Isrc
 
-build bin/benchmark_completions.exe: link obj/benchmark_completions/benchmark_completions_full.obj obj/benchmark_completions/real_time_completion_engine.obj obj/benchmark_completions/inference_engine.obj obj/benchmark_completions/gguf_loader.obj obj/benchmark_completions/quant_utils.obj obj/benchmark_completions/transformer_inference.obj obj/benchmark_completions/bpe_tokenizer.obj obj/benchmark_completions/sentencepiece_tokenizer.obj obj/benchmark_completions/vocabulary_loader.obj obj/benchmark_completions/inflate_deflate_cpp.obj obj/benchmark_completions/gguf_loader.obj obj/benchmark_completions/memory_mapped_file.obj obj/benchmark_completions/streaming_gguf_loader_qt.obj
+build bin/benchmark_completions.exe: link obj/benchmark_completions/benchmark_completions_full.obj obj/benchmark_completions/real_time_completion_engine.obj obj/benchmark_completions/inference_engine.obj obj/benchmark_completions/gguf_loader.obj obj/benchmark_completions/quant_utils.obj obj/benchmark_completions/transformer_inference.obj obj/benchmark_completions/bpe_tokenizer.obj obj/benchmark_completions/sentencepiece_tokenizer.obj obj/benchmark_completions/vocabulary_loader.obj obj/benchmark_completions/inflate_deflate_cpp.obj obj/benchmark_completions/memory_mapped_file.obj obj/benchmark_completions/streaming_gguf_loader_qt.obj
+
 

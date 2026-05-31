@@ -1,29 +1,29 @@
 #include "ollama_rest_client.h"
 #include <iostream>
 
-size_t OllamaRESTClient::curlWriteCallback(void* contents, size_t size, size_t nmemb, std::string* userp) {
+size_t NativeRestClient::curlWriteCallback(void* contents, size_t size, size_t nmemb, std::string* userp) {
     userp->append((const char*)contents, size * nmemb);
     return size * nmemb;
 }
 
-OllamaRESTClient::OllamaRESTClient()
-    : m_baseUrl("http://localhost:11434")
+NativeRestClient::NativeRestClient()
+    : m_baseUrl("http://localhost:11435")
     , m_curl(curl_easy_init())
     , m_timeout_ms(5000) {}
 
-OllamaRESTClient::~OllamaRESTClient() {
+NativeRestClient::~NativeRestClient() {
     if (m_curl) {
         curl_easy_cleanup(m_curl);
     }
 }
 
-bool OllamaRESTClient::connect(const std::string& host, int port, int timeout_ms) {
+bool NativeRestClient::connect(const std::string& host, int port, int timeout_ms) {
     m_baseUrl = "http://" + host + ":" + std::to_string(port);
     m_timeout_ms = timeout_ms;
     return isServerReady();
 }
 
-bool OllamaRESTClient::isServerReady() {
+bool NativeRestClient::isServerReady() {
     if (!m_curl) return false;
 
     std::string readBuffer;
@@ -48,7 +48,7 @@ bool OllamaRESTClient::isServerReady() {
     return http_code == 200;
 }
 
-std::vector<OllamaRESTClient::OllamaModel> OllamaRESTClient::getAvailableModels() {
+std::vector<NativeRestClient::OllamaModel> NativeRestClient::getAvailableModels() {
     std::vector<OllamaModel> result;
 
     if (!m_curl) return result;
@@ -101,7 +101,7 @@ std::vector<OllamaRESTClient::OllamaModel> OllamaRESTClient::getAvailableModels(
     return result;
 }
 
-json OllamaRESTClient::getModelsJSON() {
+json NativeRestClient::getModelsJSON() {
     if (!m_curl) return json::array();
 
     std::string readBuffer;
@@ -126,7 +126,7 @@ json OllamaRESTClient::getModelsJSON() {
     }
 }
 
-std::vector<OllamaRESTClient::OllamaModel> OllamaRESTClient::filterModels(
+std::vector<NativeRestClient::OllamaModel> NativeRestClient::filterModels(
     const std::vector<OllamaModel>& models, 
     std::function<bool(const OllamaModel&)> predicate) {
     
@@ -139,7 +139,7 @@ std::vector<OllamaRESTClient::OllamaModel> OllamaRESTClient::filterModels(
     return filtered;
 }
 
-const OllamaRESTClient::OllamaModel* OllamaRESTClient::findModelById(
+const NativeRestClient::OllamaModel* NativeRestClient::findModelById(
     const std::vector<OllamaModel>& models, 
     const std::string& targetId) {
     

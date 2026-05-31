@@ -4,6 +4,7 @@
 #include <chrono>
 #include <algorithm>
 #include <vector>
+#include <nlohmann/json.hpp>
 
 // Windows Crypto for Signature Verification
 #include <windows.h>
@@ -125,11 +126,22 @@ void EnterprisePolicyEngine::logExtensionUninstallation(const std::string& exten
     addToAuditLog(userId, extensionId, "uninstall", "Extension uninstalled");
 }
 
-std::vector<EnterprisePolicyEngine::AuditEntry> EnterprisePolicyEngine::getAuditLog(int limit) {
+std::vector<std::string> EnterprisePolicyEngine::getAuditLog(int limit) {
     std::lock_guard<std::mutex> lock(m_mutex);
-    if (limit <= 0 || limit >= m_auditLog.size()) return m_auditLog;
-    
-    return std::vector<AuditEntry>(m_auditLog.end() - limit, m_auditLog.end());
+    std::vector<std::string> result;
+        auto it = m_auditLog.begin();
+        if (limit > 0 && (int)m_auditLog.size() > limit)
+            std::advance(it, (int)m_auditLog.size() - limit);
+        for (; it != m_auditLog.end(); ++it) {
+            nlohmann::json obj;
+            obj["timestamp"]   = it->timestamp;
+            obj["userId"]      = it->userId;
+            obj["extensionId"] = it->extensionId;
+            obj["action"]      = it->action;
+            obj["details"]     = it->details;
+            result.push_back(obj.dump());
+        }
+        return result;
 }
 
 bool EnterprisePolicyEngine::checkDenyList(const std::string& id) {
@@ -143,8 +155,8 @@ bool EnterprisePolicyEngine::checkAllowList(const std::string& id) {
 void EnterprisePolicyEngine::addToAuditLog(const std::string& userId, const std::string& extensionId, 
                                            const std::string& action, const std::string& details) {
     AuditEntry entry;
-    entry.timestamp = std::chrono::duration_cast<std::chrono::seconds>(
-                          std::chrono::system_clock::now().time_since_epoch()).count();
+        entry.timestamp = std::to_string(std::chrono::duration_cast<std::chrono::seconds>(
+                              std::chrono::system_clock::now().time_since_epoch()).count());
     entry.userId = userId;
     entry.extensionId = extensionId;
     entry.action = action;
@@ -152,10 +164,6 @@ void EnterprisePolicyEngine::addToAuditLog(const std::string& userId, const std:
     m_auditLog.push_back(entry);
 }
 
-void EnterprisePolicyEngine::policyViolation(const std::string& extensionId, const std::string& reason) {
-    // Possibly trigger alerts
-    std::cerr << "POLICY VIOLATION [" << extensionId << "]: " << reason << std::endl;
-}
 
 bool EnterprisePolicyEngine::isJwtValid(const std::string& token) {
     if (m_settings.jwtSecret.empty()) return true; // Default open if no secret

@@ -110,6 +110,7 @@ extern "C" {
     extern SDMASchedulerState g_sdma_scheduler_state;
     
     // Work queue pointers (modified by MASM)
+    extern uint8_t* g_sdma_work_queue_base;
     extern uint64_t g_sdma_work_queue_head;
     extern uint64_t g_sdma_work_queue_tail;
     

@@ -47,21 +47,42 @@ namespace Crash {
 // Module State
 // ============================================================================
 
-static CrashConfig      g_config;
-static CrashReport      g_lastReport;
-static LPTOP_LEVEL_EXCEPTION_FILTER g_previousFilter = nullptr;
-static std::atomic<bool> g_installed{false};
-static std::atomic<bool> g_inCrashHandler{false};
+static CrashConfig      g_config;  // Plain struct, safe
+static CrashReport      g_lastReport;  // Plain struct, safe
+static LPTOP_LEVEL_EXCEPTION_FILTER g_previousFilter = nullptr;  // Plain pointer, safe
+
+// LAZY SINGLETON PATTERN: Avoid SIOF - std::atomic with non-trivial constructor
+inline std::atomic<bool>& GetInstalled() {
+    static std::atomic<bool>* inst = new std::atomic<bool>(false);
+    return *inst;
+}
+#define g_installed GetInstalled()
+
+inline std::atomic<bool>& GetInCrashHandler() {
+    static std::atomic<bool>* inst = new std::atomic<bool>(false);
+    return *inst;
+}
+#define g_inCrashHandler GetInCrashHandler()
 
 // Active patches tracking (lock-free, crash-safe)
 static constexpr int MAX_ACTIVE_PATCHES = 64;
-static uint32_t g_activePatchIds[MAX_ACTIVE_PATCHES];
-static std::atomic<int> g_activePatchCount{0};
+static uint32_t g_activePatchIds[MAX_ACTIVE_PATCHES];  // Plain array, safe
+
+inline std::atomic<int>& GetActivePatchCount() {
+    static std::atomic<int>* inst = new std::atomic<int>(0);
+    return *inst;
+}
+#define g_activePatchCount GetActivePatchCount()
 
 // Quarantined patches
 static constexpr int MAX_QUARANTINED = 64;
-static uint32_t g_quarantinedPatchIds[MAX_QUARANTINED];
-static std::atomic<int> g_quarantinedCount{0};
+static uint32_t g_quarantinedPatchIds[MAX_QUARANTINED];  // Plain array, safe
+
+inline std::atomic<int>& GetQuarantinedCount() {
+    static std::atomic<int>* inst = new std::atomic<int>(0);
+    return *inst;
+}
+#define g_quarantinedCount GetQuarantinedCount()
 
 // ============================================================================
 // Helpers

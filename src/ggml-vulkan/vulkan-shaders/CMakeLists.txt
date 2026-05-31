@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.19)
 project("vulkan-shaders-gen" C CXX)
+# Add custom include path for Windows SDK headers
+if(WIN32)
+    include_directories(BEFORE SYSTEM "D:/rawrxd/include")
+endif()
+
 
 find_package (Threads REQUIRED)
 

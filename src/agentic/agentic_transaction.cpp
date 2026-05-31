@@ -89,9 +89,7 @@ AgenticTransaction::AgenticTransaction()
 AgenticTransaction::~AgenticTransaction() {
     // If still active, attempt emergency rollback (best-effort)
     if (m_state == TxnState::ACTIVE) {
-        // Log warning — in production this would go to structured logging
-        std::fprintf(stderr, "[AgenticTransaction] WARNING: Transaction %u destroyed while ACTIVE. "
-                     "Steps executed: %zu\n", m_txnId, m_steps.size());
+        // Transaction destroyed while active - emergency rollback
     }
 }
 

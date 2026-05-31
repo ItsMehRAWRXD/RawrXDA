@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sovereign Evolution Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body { background: #0b0e14; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; }
+        h1 { color: #00ffcc; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 15px; }
+        .log { font-family: 'Consolas', monospace; font-size: 12px; height: 300px; overflow-y: scroll; background: #010409; padding: 10px; border-radius: 4px; }
+        .event-KernelPromoted { color: #00ffcc; }
+        .event-SealEvent { color: #ffcc00; }
+        .event-PulseCycleComplete { color: #8b949e; }
+        .stat { font-size: 24px; font-weight: bold; color: #58a6ff; }
+        .label { font-size: 12px; color: #8b949e; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+    <h1>Sovereign 🧭 Cognitive Visibility</h1>
+    
+    <div class="grid">
+        <div class="card">
+            <div class="label">Kernel Lineage & Consensus</div>
+            <div id="lineage-graph" class="mermaid">
+                graph TD
+                K0[K-Scalar-0] --> K1[K-AVX2-V1]
+                K1 --> K2[K-512-FMA-G]
+                style K2 fill:#004433,stroke:#00ffcc
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="label">Evolution Decision Trace</div>
+            <div id="event-log" class="log">
+                <!-- Live events append here -->
+                <div>[INITIALIZED] Swarm monitoring active.</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="label">Stability Envelope (CPS)</div>
+            <div style="height: 200px; display: flex; align-items: center; justify-content: center; background: #010409;">
+                <canvas id="stability-chart"></canvas>
+                <div style="text-align: center;">
+                    <div class="stat">0.01ms</div>
+                    <div class="label">Jitter Variance</div>
+                    <div class="stat" style="color: #3fb950;">100%</div>
+                    <div class="label">Validation Rate</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="label">System Status</div>
+            <div>
+                <p><strong>Node ID:</strong> LocalNode_AVX512</p>
+                <p><strong>Cycletime Plateau:</strong> 1,219 cycles</p>
+                <p><strong>XOM Status:</strong> <span style="color: #3fb950;">SEALED</span></p>
+                <p><strong>P2P Swarm:</strong> <span style="color: #3fb950;">SYNCED (4 Nodes)</span></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+
+        // Mock WebSocket / Named Pipe Polling for Simulation
+        function logEvent(type, node, data) {
+            const log = document.getElementById('event-log');
+            const entry = document.createElement('div');
+            entry.className = `event-${type}`;
+            const time = new Date().toLocaleTimeString();
+            entry.innerHTML = `[${time}] <b>${type}</b> on <i>${node}</i>: ${JSON.stringify(data)}`;
+            log.prepend(entry);
+        }
+
+        // Simulate incoming events
+        setInterval(() => {
+            const types = ['PulseCycleComplete', 'SealEvent'];
+            const type = types[Math.floor(Math.random() * types.length)];
+            if (type === 'PulseCycleComplete') {
+                logEvent(type, 'LocalNode', { status: 'IDLE', peers: 4 });
+            } else {
+                logEvent(type, 'LocalNode', { address: '0x00007FF7', protection: 'XOM' });
+            }
+        }, 5000);
+
+        // Kernel Promotion Simulation
+        setTimeout(() => {
+            logEvent('KernelPromoted', 'Node_D', {
+                candidate: "vpermq_opt_v2",
+                replaced: "vpermq_opt_v1",
+                fitness_gain: "+5.8%",
+                decision: "PROMOTED"
+            });
+        }, 10000);
+    </script>
+</body>
+</html>

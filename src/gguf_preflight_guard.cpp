@@ -13,15 +13,15 @@
 
 namespace RawrXD {
 
-constexpr uint32_t GGML_TYPE_F32 = 0;
-constexpr uint32_t GGML_TYPE_F16 = 1;
-constexpr uint32_t GGML_TYPE_Q4_0 = 2;
-constexpr uint32_t GGML_TYPE_Q8_0 = 8;
-constexpr uint32_t GGML_TYPE_Q2_K = 10;
-constexpr uint32_t GGML_TYPE_Q3_K = 11;
-constexpr uint32_t GGML_TYPE_Q4_K = 12;
-constexpr uint32_t GGML_TYPE_Q5_K = 13;
-constexpr uint32_t GGML_TYPE_Q6_K = 14;
+constexpr uint32_t GGML_RXD_TYPE_F32 = 0;
+constexpr uint32_t GGML_RXD_TYPE_F16 = 1;
+constexpr uint32_t GGML_RXD_TYPE_Q4_0 = 2;
+constexpr uint32_t GGML_RXD_TYPE_Q8_0 = 8;
+constexpr uint32_t GGML_RXD_TYPE_Q2_K = 10;
+constexpr uint32_t GGML_RXD_TYPE_Q3_K = 11;
+constexpr uint32_t GGML_RXD_TYPE_Q4_K = 12;
+constexpr uint32_t GGML_RXD_TYPE_Q5_K = 13;
+constexpr uint32_t GGML_RXD_TYPE_Q6_K = 14;
 
 static bool endsWithCaseInsensitive(const std::string& s, const std::string& suffix) {
     if (s.size() < suffix.size()) {
@@ -215,17 +215,17 @@ bool GGUFPreflightGuard::validateMemoryHeadroom(ComputeBackend backend, uint64_t
     return true;
 }
 
-bool GGUFPreflightGuard::validateQuantizationSupport(uint32_t ggml_type) {
-    switch (ggml_type) {
-    case GGML_TYPE_F32:
-    case GGML_TYPE_F16:
-    case GGML_TYPE_Q4_0:
-    case GGML_TYPE_Q8_0:
-    case GGML_TYPE_Q2_K:
-    case GGML_TYPE_Q3_K:
-    case GGML_TYPE_Q4_K:
-    case GGML_TYPE_Q5_K:
-    case GGML_TYPE_Q6_K:
+bool GGUFPreflightGuard::validateQuantizationSupport(uint32_t ggml_rxd_type) {
+    switch (ggml_rxd_type) {
+    case GGML_RXD_TYPE_F32:
+    case GGML_RXD_TYPE_F16:
+    case GGML_RXD_TYPE_Q4_0:
+    case GGML_RXD_TYPE_Q8_0:
+    case GGML_RXD_TYPE_Q2_K:
+    case GGML_RXD_TYPE_Q3_K:
+    case GGML_RXD_TYPE_Q4_K:
+    case GGML_RXD_TYPE_Q5_K:
+    case GGML_RXD_TYPE_Q6_K:
         return true;
     default:
         return false;

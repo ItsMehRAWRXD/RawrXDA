@@ -1,0 +1,132 @@
+#version 450
+
+#extension GL_EXT_control_flow_attributes : enable
+#extension GL_EXT_shader_16bit_storage : require
+#extension GL_EXT_shader_8bit_storage : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int8 : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int16 : require
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+
+// =============================================================================
+// FusedQ4K_Q8_1_GEMV - Phase 2A vertical slice.
+//   - 1 thread = 1 output row (still GEMV-shaped, no tiling).
+//   - Weights:    Q4_K, byte-exact ggml block_q4_K layout (144 B).
+//   - Activations: Q8_1, byte-exact ggml block_q8_1 layout (36 B).
+//   - Reconstruction:
+//       q4k_w[k]   = d_w * scale_lo - min_w * mn_lo   (low nibble path)
+//                  = d_w * scale_hi - min_w * mn_hi   (high nibble path)
+//       q8_1_a[k]  = d_a * qa[k]
+//   - Output: FP32 dot product per row.
+// Out of scope:
+//   - LDS tiling (Phase 3)
+//   - Vectorized unpack (Phase 2B)
+//   - MFMA (Phase 4)
+// =============================================================================
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(push_constant) uniform Push {
+    uint M;              // output rows
+    uint N;              // expected = 1 (single token)
+    uint K;              // inner dim, must be multiple of 256
+    uint stride_a_blocks;// Q4_K blocks per row of A   (== K / 256)
+    uint stride_b_blocks;// Q8_1 blocks for activation (== K / 32)
+    uint stride_out;     // unused for N=1
+} pc;
+
+// ggml block_q4_K (144 B): d, dmin, scales[12], qs[128]
+struct block_q4_K {
+    float16_t d;
+    float16_t dmin;
+    uint8_t   scales[12];
+    uint8_t   qs[128];
+};
+
+// ggml block_q8_1 (36 B): d, s, qs[32]  -- s = d * sum(qs[i]), unused here.
+struct block_q8_1 {
+    float16_t d;
+    float16_t s;
+    int8_t    qs[32];
+};
+
+layout(set = 0, binding = 0) readonly  buffer A_buf { block_q4_K  data_a[]; };
+layout(set = 0, binding = 1) readonly  buffer B_buf { block_q8_1  data_b[]; };
+layout(set = 0, binding = 2) writeonly buffer D_buf { float        data_d[]; };
+
+// ggml get_scale_min_k4 (j in [0,8))
+void get_scale_min_k4_inline(uint j, uint8_t s0, uint8_t s1, uint8_t s2, uint8_t s3,
+                             uint8_t s4, uint8_t s5, uint8_t s6, uint8_t s7,
+                             uint8_t s8, uint8_t s9, uint8_t s10, uint8_t s11,
+                             out uint sc, out uint mn) {
+    uint q[12];
+    q[0]=uint(s0); q[1]=uint(s1); q[2]=uint(s2);  q[3]=uint(s3);
+    q[4]=uint(s4); q[5]=uint(s5); q[6]=uint(s6);  q[7]=uint(s7);
+    q[8]=uint(s8); q[9]=uint(s9); q[10]=uint(s10);q[11]=uint(s11);
+    if (j < 4u) {
+        sc = q[j]      & 63u;
+        mn = q[j + 4u] & 63u;
+    } else {
+        sc = (q[j + 4u] & 0xFu) | ((q[j - 4u] >> 6) << 4);
+        mn = (q[j + 4u] >> 4)   | ((q[j]      >> 6) << 4);
+    }
+}
+
+void main() {
+    uint row = gl_WorkGroupID.x * 64u + gl_LocalInvocationID.x;
+    if (row >= pc.M) return;
+
+    uint kblocks    = pc.stride_a_blocks; // K / 256
+    uint kblocks_q8 = pc.stride_b_blocks; // K / 32
+    float acc = 0.0;
+
+    // Each Q4_K super-block = 256 weights = 8 Q8_1 sub-blocks (32 each).
+    for (uint b = 0u; b < kblocks; b++) {
+        block_q4_K blk = data_a[row * kblocks + b];
+        float d_w   = float(blk.d);
+        float min_w = float(blk.dmin);
+
+        // Mirror ggml dequantize_row_q4_K loop layout: 4 segments of 64 weights.
+        for (uint seg = 0u; seg < 4u; seg++) {
+            uint sc_lo, mn_lo, sc_hi, mn_hi;
+            get_scale_min_k4_inline(
+                seg * 2u + 0u,
+                blk.scales[0], blk.scales[1], blk.scales[2],  blk.scales[3],
+                blk.scales[4], blk.scales[5], blk.scales[6],  blk.scales[7],
+                blk.scales[8], blk.scales[9], blk.scales[10], blk.scales[11],
+                sc_lo, mn_lo);
+            get_scale_min_k4_inline(
+                seg * 2u + 1u,
+                blk.scales[0], blk.scales[1], blk.scales[2],  blk.scales[3],
+                blk.scales[4], blk.scales[5], blk.scales[6],  blk.scales[7],
+                blk.scales[8], blk.scales[9], blk.scales[10], blk.scales[11],
+                sc_hi, mn_hi);
+
+            float d1 = d_w * float(sc_lo); float m1 = min_w * float(mn_lo);
+            float d2 = d_w * float(sc_hi); float m2 = min_w * float(mn_hi);
+
+            uint qs_off = seg * 32u;
+            // Q8_1 sub-block index for the low half (32 weights per sub-block).
+            // K offset of this segment = b*256 + seg*64; covers 2 q8_1 blocks.
+            uint q8_idx_lo = (b * 256u + seg * 64u)        / 32u;
+            uint q8_idx_hi = (b * 256u + seg * 64u + 32u)  / 32u;
+
+            block_q8_1 ab_lo = data_b[q8_idx_lo];
+            block_q8_1 ab_hi = data_b[q8_idx_hi];
+            float d_a_lo = float(ab_lo.d);
+            float d_a_hi = float(ab_hi.d);
+
+            [[unroll]]
+            for (uint l = 0u; l < 32u; l++) {
+                uint qb = uint(blk.qs[qs_off + l]);
+                float w_lo = d1 * float(qb & 0xFu) - m1;
+                float w_hi = d2 * float(qb >> 4)   - m2;
+                float a_lo = d_a_lo * float(int(ab_lo.qs[l]));
+                float a_hi = d_a_hi * float(int(ab_hi.qs[l]));
+                acc += w_lo * a_lo;
+                acc += w_hi * a_hi;
+            }
+        }
+    }
+
+    data_d[row] = acc;
+}

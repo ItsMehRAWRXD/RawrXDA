@@ -116,7 +116,9 @@ static bool tryExtractJsonString(const std::string& body, const std::string& key
     std::string out;
     out.reserve(64);
     bool escaped = false;
-    for (; pos < body.size(); ++pos) {
+    // Fail-closed: cap JSON string extraction at 64KB
+    static constexpr size_t kMaxJsonStringSize = 65536;
+    for (; pos < body.size() && out.size() < kMaxJsonStringSize; ++pos) {
         const char c = body[pos];
         if (escaped) {
             switch (c) {
@@ -600,6 +602,22 @@ void Win32IDE::handleMultiResponseGenerateEndpoint(SOCKET client, const std::str
     prompt = LocalServerUtil::trim(prompt);
     context = LocalServerUtil::trim(context);
 
+    // Fail-closed: cap prompt at 256KB, context at 128KB (DoS prevention)
+    static constexpr size_t kMaxPromptSize = 262144;
+    static constexpr size_t kMaxContextSize = 131072;
+    if (prompt.size() > kMaxPromptSize) {
+        const std::string response = LocalServerUtil::buildHttpResponse(
+            400, LocalServerUtil::buildErrorJson("prompt_too_large", "Prompt exceeds maximum size"));
+        send(client, response.c_str(), (int)response.size(), 0);
+        return;
+    }
+    if (context.size() > kMaxContextSize) {
+        const std::string response = LocalServerUtil::buildHttpResponse(
+            400, LocalServerUtil::buildErrorJson("context_too_large", "Context exceeds maximum size"));
+        send(client, response.c_str(), (int)response.size(), 0);
+        return;
+    }
+
     int64_t mr = 0;
     if (LocalServerUtil::tryExtractJsonInt64(body, "maxResponses", mr)) {
         if (mr <= 0 || mr > static_cast<int64_t>(std::numeric_limits<int>::max())) {
@@ -698,6 +716,15 @@ void Win32IDE::handleMultiResponsePreferEndpoint(SOCKET client, const std::strin
     std::string reason;
     (void)LocalServerUtil::tryExtractJsonString(body, "reason", reason);
     reason = LocalServerUtil::trim(reason);
+
+    // Fail-closed: cap reason field at 4KB to prevent DoS
+    static constexpr size_t kMaxReasonSize = 4096;
+    if (reason.size() > kMaxReasonSize) {
+        const std::string response = LocalServerUtil::buildHttpResponse(
+            400, LocalServerUtil::buildErrorJson("reason_too_large", "Reason field exceeds maximum size"));
+        send(client, response.c_str(), (int)response.size(), 0);
+        return;
+    }
 
     if (!hasSessionId || !hasResponseIndex ||
         sessionId < 0 || responseIndex < 0 ||

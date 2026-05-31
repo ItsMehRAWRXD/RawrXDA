@@ -1,0 +1,2076 @@
+{
+  "statistics": {
+    "avg_tps_all": 42.54,
+    "max_tps": 185.3,
+    "min_tps": 5.38,
+    "best_efficiency_tps_per_b": 26.471
+  },
+  "sweep_config": {
+    "total_measurements": 228,
+    "quantizations": [
+      "q8",
+      "q6",
+      "q5",
+      "q4",
+      "q3",
+      "q2"
+    ],
+    "max_size_b": 120,
+    "step_b": 3
+  },
+  "timestamp": "2026-04-25T23:59:36.2693629Z",
+  "results": [
+    {
+      "predicted_tps": 28.5,
+      "timestamp": "2026-04-25T23:59:21.2614206Z",
+      "scaling_factor": 1.0,
+      "efficiency": 3.99,
+      "model_size_b": 7,
+      "measured_tps": 27.93,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 26.93,
+      "timestamp": "2026-04-25T23:59:21.3424904Z",
+      "scaling_factor": 0.945,
+      "efficiency": 2.666,
+      "model_size_b": 10,
+      "measured_tps": 26.66,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 25.36,
+      "timestamp": "2026-04-25T23:59:21.4093589Z",
+      "scaling_factor": 0.89,
+      "efficiency": 1.971,
+      "model_size_b": 13,
+      "measured_tps": 25.62,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 24.51,
+      "timestamp": "2026-04-25T23:59:21.4702245Z",
+      "scaling_factor": 0.86,
+      "efficiency": 1.501,
+      "model_size_b": 16,
+      "measured_tps": 24.02,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 23.66,
+      "timestamp": "2026-04-25T23:59:21.5336898Z",
+      "scaling_factor": 0.83,
+      "efficiency": 1.233,
+      "model_size_b": 19,
+      "measured_tps": 23.42,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 22.8,
+      "timestamp": "2026-04-25T23:59:21.6095981Z",
+      "scaling_factor": 0.8,
+      "efficiency": 1.016,
+      "model_size_b": 22,
+      "measured_tps": 22.34,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 21.94,
+      "timestamp": "2026-04-25T23:59:21.6842543Z",
+      "scaling_factor": 0.77,
+      "efficiency": 0.86,
+      "model_size_b": 25,
+      "measured_tps": 21.51,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 21.09,
+      "timestamp": "2026-04-25T23:59:21.7451935Z",
+      "scaling_factor": 0.74,
+      "efficiency": 0.753,
+      "model_size_b": 28,
+      "measured_tps": 21.09,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 20.24,
+      "timestamp": "2026-04-25T23:59:21.8067389Z",
+      "scaling_factor": 0.71,
+      "efficiency": 0.646,
+      "model_size_b": 31,
+      "measured_tps": 20.03,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 19.38,
+      "timestamp": "2026-04-25T23:59:21.8675916Z",
+      "scaling_factor": 0.68,
+      "efficiency": 0.57,
+      "model_size_b": 34,
+      "measured_tps": 19.38,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 18.6,
+      "timestamp": "2026-04-25T23:59:21.9286475Z",
+      "scaling_factor": 0.653,
+      "efficiency": 0.498,
+      "model_size_b": 37,
+      "measured_tps": 18.41,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 17.81,
+      "timestamp": "2026-04-25T23:59:21.9907741Z",
+      "scaling_factor": 0.625,
+      "efficiency": 0.45,
+      "model_size_b": 40,
+      "measured_tps": 17.99,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 17.03,
+      "timestamp": "2026-04-25T23:59:22.0514345Z",
+      "scaling_factor": 0.598,
+      "efficiency": 0.392,
+      "model_size_b": 43,
+      "measured_tps": 16.86,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 16.24,
+      "timestamp": "2026-04-25T23:59:22.1136222Z",
+      "scaling_factor": 0.57,
+      "efficiency": 0.346,
+      "model_size_b": 46,
+      "measured_tps": 15.92,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 15.46,
+      "timestamp": "2026-04-25T23:59:22.1743473Z",
+      "scaling_factor": 0.542,
+      "efficiency": 0.312,
+      "model_size_b": 49,
+      "measured_tps": 15.31,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 14.68,
+      "timestamp": "2026-04-25T23:59:22.2355531Z",
+      "scaling_factor": 0.515,
+      "efficiency": 0.282,
+      "model_size_b": 52,
+      "measured_tps": 14.68,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 13.89,
+      "timestamp": "2026-04-25T23:59:22.2986142Z",
+      "scaling_factor": 0.488,
+      "efficiency": 0.25,
+      "model_size_b": 55,
+      "measured_tps": 13.75,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 13.11,
+      "timestamp": "2026-04-25T23:59:22.3622514Z",
+      "scaling_factor": 0.46,
+      "efficiency": 0.226,
+      "model_size_b": 58,
+      "measured_tps": 13.11,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 12.33,
+      "timestamp": "2026-04-25T23:59:22.4243943Z",
+      "scaling_factor": 0.432,
+      "efficiency": 0.198,
+      "model_size_b": 61,
+      "measured_tps": 12.08,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 11.54,
+      "timestamp": "2026-04-25T23:59:22.4863670Z",
+      "scaling_factor": 0.405,
+      "efficiency": 0.182,
+      "model_size_b": 64,
+      "measured_tps": 11.66,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 10.76,
+      "timestamp": "2026-04-25T23:59:22.5488761Z",
+      "scaling_factor": 0.378,
+      "efficiency": 0.159,
+      "model_size_b": 67,
+      "measured_tps": 10.65,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 9.98,
+      "timestamp": "2026-04-25T23:59:22.6108291Z",
+      "scaling_factor": 0.35,
+      "efficiency": 0.14,
+      "model_size_b": 70,
+      "measured_tps": 9.78,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 9.68,
+      "timestamp": "2026-04-25T23:59:22.6717145Z",
+      "scaling_factor": 0.34,
+      "efficiency": 0.131,
+      "model_size_b": 73,
+      "measured_tps": 9.59,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 9.39,
+      "timestamp": "2026-04-25T23:59:22.7339062Z",
+      "scaling_factor": 0.33,
+      "efficiency": 0.125,
+      "model_size_b": 76,
+      "measured_tps": 9.49,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 9.1,
+      "timestamp": "2026-04-25T23:59:22.8095401Z",
+      "scaling_factor": 0.319,
+      "efficiency": 0.116,
+      "model_size_b": 79,
+      "measured_tps": 9.19,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 8.81,
+      "timestamp": "2026-04-25T23:59:22.8868262Z",
+      "scaling_factor": 0.309,
+      "efficiency": 0.106,
+      "model_size_b": 82,
+      "measured_tps": 8.72,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 8.52,
+      "timestamp": "2026-04-25T23:59:22.9486611Z",
+      "scaling_factor": 0.299,
+      "efficiency": 0.098,
+      "model_size_b": 85,
+      "measured_tps": 8.35,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 8.23,
+      "timestamp": "2026-04-25T23:59:23.0097293Z",
+      "scaling_factor": 0.289,
+      "efficiency": 0.093,
+      "model_size_b": 88,
+      "measured_tps": 8.15,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 7.94,
+      "timestamp": "2026-04-25T23:59:23.0712486Z",
+      "scaling_factor": 0.279,
+      "efficiency": 0.086,
+      "model_size_b": 91,
+      "measured_tps": 7.78,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 7.65,
+      "timestamp": "2026-04-25T23:59:23.1338291Z",
+      "scaling_factor": 0.268,
+      "efficiency": 0.082,
+      "model_size_b": 94,
+      "measured_tps": 7.73,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 7.36,
+      "timestamp": "2026-04-25T23:59:23.1935970Z",
+      "scaling_factor": 0.258,
+      "efficiency": 0.075,
+      "model_size_b": 97,
+      "measured_tps": 7.29,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 7.07,
+      "timestamp": "2026-04-25T23:59:23.2547229Z",
+      "scaling_factor": 0.248,
+      "efficiency": 0.069,
+      "model_size_b": 100,
+      "measured_tps": 6.93,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 6.78,
+      "timestamp": "2026-04-25T23:59:23.3154889Z",
+      "scaling_factor": 0.238,
+      "efficiency": 0.064,
+      "model_size_b": 103,
+      "measured_tps": 6.64,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 6.49,
+      "timestamp": "2026-04-25T23:59:23.3757114Z",
+      "scaling_factor": 0.228,
+      "efficiency": 0.06,
+      "model_size_b": 106,
+      "measured_tps": 6.36,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 6.2,
+      "timestamp": "2026-04-25T23:59:23.4510574Z",
+      "scaling_factor": 0.217,
+      "efficiency": 0.056,
+      "model_size_b": 109,
+      "measured_tps": 6.07,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 5.91,
+      "timestamp": "2026-04-25T23:59:23.5285090Z",
+      "scaling_factor": 0.207,
+      "efficiency": 0.053,
+      "model_size_b": 112,
+      "measured_tps": 5.96,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 5.61,
+      "timestamp": "2026-04-25T23:59:23.6065937Z",
+      "scaling_factor": 0.197,
+      "efficiency": 0.048,
+      "model_size_b": 115,
+      "measured_tps": 5.5,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 5.32,
+      "timestamp": "2026-04-25T23:59:23.6838570Z",
+      "scaling_factor": 0.187,
+      "efficiency": 0.046,
+      "model_size_b": 118,
+      "measured_tps": 5.38,
+      "quantization": "q8"
+    },
+    {
+      "predicted_tps": 42.3,
+      "timestamp": "2026-04-25T23:59:23.7442586Z",
+      "scaling_factor": 1.0,
+      "efficiency": 5.922,
+      "model_size_b": 7,
+      "measured_tps": 41.45,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 39.97,
+      "timestamp": "2026-04-25T23:59:23.8048136Z",
+      "scaling_factor": 0.945,
+      "efficiency": 4.037,
+      "model_size_b": 10,
+      "measured_tps": 40.37,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 37.65,
+      "timestamp": "2026-04-25T23:59:23.8663575Z",
+      "scaling_factor": 0.89,
+      "efficiency": 2.896,
+      "model_size_b": 13,
+      "measured_tps": 37.65,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 36.38,
+      "timestamp": "2026-04-25T23:59:23.9271855Z",
+      "scaling_factor": 0.86,
+      "efficiency": 2.251,
+      "model_size_b": 16,
+      "measured_tps": 36.01,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 35.11,
+      "timestamp": "2026-04-25T23:59:23.9890314Z",
+      "scaling_factor": 0.83,
+      "efficiency": 1.848,
+      "model_size_b": 19,
+      "measured_tps": 35.11,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 33.84,
+      "timestamp": "2026-04-25T23:59:24.0499516Z",
+      "scaling_factor": 0.8,
+      "efficiency": 1.523,
+      "model_size_b": 22,
+      "measured_tps": 33.5,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 32.57,
+      "timestamp": "2026-04-25T23:59:24.1103376Z",
+      "scaling_factor": 0.77,
+      "efficiency": 1.303,
+      "model_size_b": 25,
+      "measured_tps": 32.57,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 31.3,
+      "timestamp": "2026-04-25T23:59:24.1863686Z",
+      "scaling_factor": 0.74,
+      "efficiency": 1.118,
+      "model_size_b": 28,
+      "measured_tps": 31.3,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 30.03,
+      "timestamp": "2026-04-25T23:59:24.2615324Z",
+      "scaling_factor": 0.71,
+      "efficiency": 0.949,
+      "model_size_b": 31,
+      "measured_tps": 29.43,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 28.76,
+      "timestamp": "2026-04-25T23:59:24.3396696Z",
+      "scaling_factor": 0.68,
+      "efficiency": 0.846,
+      "model_size_b": 34,
+      "measured_tps": 28.76,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 27.6,
+      "timestamp": "2026-04-25T23:59:24.4189129Z",
+      "scaling_factor": 0.653,
+      "efficiency": 0.731,
+      "model_size_b": 37,
+      "measured_tps": 27.05,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 26.44,
+      "timestamp": "2026-04-25T23:59:24.4970191Z",
+      "scaling_factor": 0.625,
+      "efficiency": 0.648,
+      "model_size_b": 40,
+      "measured_tps": 25.91,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 25.27,
+      "timestamp": "2026-04-25T23:59:24.5620701Z",
+      "scaling_factor": 0.598,
+      "efficiency": 0.588,
+      "model_size_b": 43,
+      "measured_tps": 25.27,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 24.11,
+      "timestamp": "2026-04-25T23:59:24.6271228Z",
+      "scaling_factor": 0.57,
+      "efficiency": 0.519,
+      "model_size_b": 46,
+      "measured_tps": 23.87,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 22.95,
+      "timestamp": "2026-04-25T23:59:24.6890138Z",
+      "scaling_factor": 0.542,
+      "efficiency": 0.468,
+      "model_size_b": 49,
+      "measured_tps": 22.95,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 21.78,
+      "timestamp": "2026-04-25T23:59:24.7509092Z",
+      "scaling_factor": 0.515,
+      "efficiency": 0.419,
+      "model_size_b": 52,
+      "measured_tps": 21.78,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 20.62,
+      "timestamp": "2026-04-25T23:59:24.8142499Z",
+      "scaling_factor": 0.488,
+      "efficiency": 0.367,
+      "model_size_b": 55,
+      "measured_tps": 20.21,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 19.46,
+      "timestamp": "2026-04-25T23:59:24.8747471Z",
+      "scaling_factor": 0.46,
+      "efficiency": 0.332,
+      "model_size_b": 58,
+      "measured_tps": 19.26,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 18.29,
+      "timestamp": "2026-04-25T23:59:24.9364473Z",
+      "scaling_factor": 0.432,
+      "efficiency": 0.297,
+      "model_size_b": 61,
+      "measured_tps": 18.11,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 17.13,
+      "timestamp": "2026-04-25T23:59:25.0139217Z",
+      "scaling_factor": 0.405,
+      "efficiency": 0.268,
+      "model_size_b": 64,
+      "measured_tps": 17.13,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 15.97,
+      "timestamp": "2026-04-25T23:59:25.0894137Z",
+      "scaling_factor": 0.378,
+      "efficiency": 0.238,
+      "model_size_b": 67,
+      "measured_tps": 15.97,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 14.8,
+      "timestamp": "2026-04-25T23:59:25.1496645Z",
+      "scaling_factor": 0.35,
+      "efficiency": 0.209,
+      "model_size_b": 70,
+      "measured_tps": 14.66,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 14.37,
+      "timestamp": "2026-04-25T23:59:25.2105361Z",
+      "scaling_factor": 0.34,
+      "efficiency": 0.199,
+      "model_size_b": 73,
+      "measured_tps": 14.52,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 13.94,
+      "timestamp": "2026-04-25T23:59:25.2707120Z",
+      "scaling_factor": 0.33,
+      "efficiency": 0.183,
+      "model_size_b": 76,
+      "measured_tps": 13.94,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 13.51,
+      "timestamp": "2026-04-25T23:59:25.3323049Z",
+      "scaling_factor": 0.319,
+      "efficiency": 0.169,
+      "model_size_b": 79,
+      "measured_tps": 13.38,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 13.08,
+      "timestamp": "2026-04-25T23:59:25.3944611Z",
+      "scaling_factor": 0.309,
+      "efficiency": 0.158,
+      "model_size_b": 82,
+      "measured_tps": 12.95,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 12.65,
+      "timestamp": "2026-04-25T23:59:25.4565962Z",
+      "scaling_factor": 0.299,
+      "efficiency": 0.15,
+      "model_size_b": 85,
+      "measured_tps": 12.77,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 12.22,
+      "timestamp": "2026-04-25T23:59:25.5179960Z",
+      "scaling_factor": 0.289,
+      "efficiency": 0.136,
+      "model_size_b": 88,
+      "measured_tps": 11.97,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 11.78,
+      "timestamp": "2026-04-25T23:59:25.5781836Z",
+      "scaling_factor": 0.279,
+      "efficiency": 0.131,
+      "model_size_b": 91,
+      "measured_tps": 11.9,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 11.35,
+      "timestamp": "2026-04-25T23:59:25.6543098Z",
+      "scaling_factor": 0.268,
+      "efficiency": 0.118,
+      "model_size_b": 94,
+      "measured_tps": 11.13,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 10.92,
+      "timestamp": "2026-04-25T23:59:25.7311329Z",
+      "scaling_factor": 0.258,
+      "efficiency": 0.111,
+      "model_size_b": 97,
+      "measured_tps": 10.81,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 10.49,
+      "timestamp": "2026-04-25T23:59:25.8094570Z",
+      "scaling_factor": 0.248,
+      "efficiency": 0.106,
+      "model_size_b": 100,
+      "measured_tps": 10.6,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 10.06,
+      "timestamp": "2026-04-25T23:59:25.8879736Z",
+      "scaling_factor": 0.238,
+      "efficiency": 0.097,
+      "model_size_b": 103,
+      "measured_tps": 9.96,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 9.63,
+      "timestamp": "2026-04-25T23:59:25.9636616Z",
+      "scaling_factor": 0.228,
+      "efficiency": 0.09,
+      "model_size_b": 106,
+      "measured_tps": 9.53,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 9.2,
+      "timestamp": "2026-04-25T23:59:26.0250753Z",
+      "scaling_factor": 0.217,
+      "efficiency": 0.084,
+      "model_size_b": 109,
+      "measured_tps": 9.2,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 8.76,
+      "timestamp": "2026-04-25T23:59:26.0859057Z",
+      "scaling_factor": 0.207,
+      "efficiency": 0.077,
+      "model_size_b": 112,
+      "measured_tps": 8.59,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 8.33,
+      "timestamp": "2026-04-25T23:59:26.1467920Z",
+      "scaling_factor": 0.197,
+      "efficiency": 0.072,
+      "model_size_b": 115,
+      "measured_tps": 8.33,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 7.9,
+      "timestamp": "2026-04-25T23:59:26.2071854Z",
+      "scaling_factor": 0.187,
+      "efficiency": 0.066,
+      "model_size_b": 118,
+      "measured_tps": 7.82,
+      "quantization": "q6"
+    },
+    {
+      "predicted_tps": 58.7,
+      "timestamp": "2026-04-25T23:59:26.2676664Z",
+      "scaling_factor": 1.0,
+      "efficiency": 8.386,
+      "model_size_b": 7,
+      "measured_tps": 58.7,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 55.47,
+      "timestamp": "2026-04-25T23:59:26.3282560Z",
+      "scaling_factor": 0.945,
+      "efficiency": 5.492,
+      "model_size_b": 10,
+      "measured_tps": 54.92,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 52.24,
+      "timestamp": "2026-04-25T23:59:26.3901645Z",
+      "scaling_factor": 0.89,
+      "efficiency": 3.938,
+      "model_size_b": 13,
+      "measured_tps": 51.2,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 50.48,
+      "timestamp": "2026-04-25T23:59:26.4662799Z",
+      "scaling_factor": 0.86,
+      "efficiency": 3.187,
+      "model_size_b": 16,
+      "measured_tps": 50.99,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 48.72,
+      "timestamp": "2026-04-25T23:59:26.5424392Z",
+      "scaling_factor": 0.83,
+      "efficiency": 2.59,
+      "model_size_b": 19,
+      "measured_tps": 49.21,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 46.96,
+      "timestamp": "2026-04-25T23:59:26.6020568Z",
+      "scaling_factor": 0.8,
+      "efficiency": 2.156,
+      "model_size_b": 22,
+      "measured_tps": 47.43,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 45.2,
+      "timestamp": "2026-04-25T23:59:26.6635568Z",
+      "scaling_factor": 0.77,
+      "efficiency": 1.826,
+      "model_size_b": 25,
+      "measured_tps": 45.65,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 43.44,
+      "timestamp": "2026-04-25T23:59:26.7287587Z",
+      "scaling_factor": 0.74,
+      "efficiency": 1.551,
+      "model_size_b": 28,
+      "measured_tps": 43.44,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 41.68,
+      "timestamp": "2026-04-25T23:59:26.7892843Z",
+      "scaling_factor": 0.71,
+      "efficiency": 1.318,
+      "model_size_b": 31,
+      "measured_tps": 40.84,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 39.92,
+      "timestamp": "2026-04-25T23:59:26.8455019Z",
+      "scaling_factor": 0.68,
+      "efficiency": 1.174,
+      "model_size_b": 34,
+      "measured_tps": 39.92,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 38.3,
+      "timestamp": "2026-04-25T23:59:26.9065795Z",
+      "scaling_factor": 0.653,
+      "efficiency": 1.014,
+      "model_size_b": 37,
+      "measured_tps": 37.54,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 36.69,
+      "timestamp": "2026-04-25T23:59:26.9826018Z",
+      "scaling_factor": 0.625,
+      "efficiency": 0.908,
+      "model_size_b": 40,
+      "measured_tps": 36.32,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 35.07,
+      "timestamp": "2026-04-25T23:59:27.0583405Z",
+      "scaling_factor": 0.598,
+      "efficiency": 0.824,
+      "model_size_b": 43,
+      "measured_tps": 35.42,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 33.46,
+      "timestamp": "2026-04-25T23:59:27.1189175Z",
+      "scaling_factor": 0.57,
+      "efficiency": 0.72,
+      "model_size_b": 46,
+      "measured_tps": 33.12,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 31.84,
+      "timestamp": "2026-04-25T23:59:27.1795390Z",
+      "scaling_factor": 0.542,
+      "efficiency": 0.65,
+      "model_size_b": 49,
+      "measured_tps": 31.84,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 30.23,
+      "timestamp": "2026-04-25T23:59:27.2397177Z",
+      "scaling_factor": 0.515,
+      "efficiency": 0.587,
+      "model_size_b": 52,
+      "measured_tps": 30.53,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 28.62,
+      "timestamp": "2026-04-25T23:59:27.3006554Z",
+      "scaling_factor": 0.488,
+      "efficiency": 0.525,
+      "model_size_b": 55,
+      "measured_tps": 28.9,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 27.0,
+      "timestamp": "2026-04-25T23:59:27.3603658Z",
+      "scaling_factor": 0.46,
+      "efficiency": 0.466,
+      "model_size_b": 58,
+      "measured_tps": 27.0,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 25.39,
+      "timestamp": "2026-04-25T23:59:27.4211371Z",
+      "scaling_factor": 0.432,
+      "efficiency": 0.412,
+      "model_size_b": 61,
+      "measured_tps": 25.13,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 23.77,
+      "timestamp": "2026-04-25T23:59:27.4975685Z",
+      "scaling_factor": 0.405,
+      "efficiency": 0.364,
+      "model_size_b": 64,
+      "measured_tps": 23.3,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 22.16,
+      "timestamp": "2026-04-25T23:59:27.5752210Z",
+      "scaling_factor": 0.378,
+      "efficiency": 0.331,
+      "model_size_b": 67,
+      "measured_tps": 22.16,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 20.54,
+      "timestamp": "2026-04-25T23:59:27.6504578Z",
+      "scaling_factor": 0.35,
+      "efficiency": 0.294,
+      "model_size_b": 70,
+      "measured_tps": 20.54,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 19.95,
+      "timestamp": "2026-04-25T23:59:27.7119215Z",
+      "scaling_factor": 0.34,
+      "efficiency": 0.273,
+      "model_size_b": 73,
+      "measured_tps": 19.95,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 19.35,
+      "timestamp": "2026-04-25T23:59:27.7716370Z",
+      "scaling_factor": 0.33,
+      "efficiency": 0.255,
+      "model_size_b": 76,
+      "measured_tps": 19.35,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 18.75,
+      "timestamp": "2026-04-25T23:59:27.8326297Z",
+      "scaling_factor": 0.319,
+      "efficiency": 0.235,
+      "model_size_b": 79,
+      "measured_tps": 18.56,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 18.15,
+      "timestamp": "2026-04-25T23:59:27.8934438Z",
+      "scaling_factor": 0.309,
+      "efficiency": 0.224,
+      "model_size_b": 82,
+      "measured_tps": 18.33,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 17.55,
+      "timestamp": "2026-04-25T23:59:27.9540620Z",
+      "scaling_factor": 0.299,
+      "efficiency": 0.202,
+      "model_size_b": 85,
+      "measured_tps": 17.2,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 16.95,
+      "timestamp": "2026-04-25T23:59:28.0294265Z",
+      "scaling_factor": 0.289,
+      "efficiency": 0.191,
+      "model_size_b": 88,
+      "measured_tps": 16.78,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 16.35,
+      "timestamp": "2026-04-25T23:59:28.1064994Z",
+      "scaling_factor": 0.279,
+      "efficiency": 0.176,
+      "model_size_b": 91,
+      "measured_tps": 16.03,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 15.76,
+      "timestamp": "2026-04-25T23:59:28.1828608Z",
+      "scaling_factor": 0.268,
+      "efficiency": 0.168,
+      "model_size_b": 94,
+      "measured_tps": 15.76,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 15.16,
+      "timestamp": "2026-04-25T23:59:28.2429028Z",
+      "scaling_factor": 0.258,
+      "efficiency": 0.156,
+      "model_size_b": 97,
+      "measured_tps": 15.16,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 14.56,
+      "timestamp": "2026-04-25T23:59:28.3037701Z",
+      "scaling_factor": 0.248,
+      "efficiency": 0.146,
+      "model_size_b": 100,
+      "measured_tps": 14.56,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 13.96,
+      "timestamp": "2026-04-25T23:59:28.3656364Z",
+      "scaling_factor": 0.238,
+      "efficiency": 0.137,
+      "model_size_b": 103,
+      "measured_tps": 14.1,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 13.36,
+      "timestamp": "2026-04-25T23:59:28.4278728Z",
+      "scaling_factor": 0.228,
+      "efficiency": 0.125,
+      "model_size_b": 106,
+      "measured_tps": 13.23,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 12.76,
+      "timestamp": "2026-04-25T23:59:28.4887759Z",
+      "scaling_factor": 0.217,
+      "efficiency": 0.117,
+      "model_size_b": 109,
+      "measured_tps": 12.76,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 12.16,
+      "timestamp": "2026-04-25T23:59:28.5508939Z",
+      "scaling_factor": 0.207,
+      "efficiency": 0.106,
+      "model_size_b": 112,
+      "measured_tps": 11.92,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 11.56,
+      "timestamp": "2026-04-25T23:59:28.6109832Z",
+      "scaling_factor": 0.197,
+      "efficiency": 0.099,
+      "model_size_b": 115,
+      "measured_tps": 11.33,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 10.97,
+      "timestamp": "2026-04-25T23:59:28.6715308Z",
+      "scaling_factor": 0.187,
+      "efficiency": 0.093,
+      "model_size_b": 118,
+      "measured_tps": 10.97,
+      "quantization": "q5"
+    },
+    {
+      "predicted_tps": 89.2,
+      "timestamp": "2026-04-25T23:59:28.7474755Z",
+      "scaling_factor": 1.0,
+      "efficiency": 12.743,
+      "model_size_b": 7,
+      "measured_tps": 89.2,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 84.29,
+      "timestamp": "2026-04-25T23:59:28.8233123Z",
+      "scaling_factor": 0.945,
+      "efficiency": 8.261,
+      "model_size_b": 10,
+      "measured_tps": 82.61,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 79.39,
+      "timestamp": "2026-04-25T23:59:28.8848828Z",
+      "scaling_factor": 0.89,
+      "efficiency": 6.107,
+      "model_size_b": 13,
+      "measured_tps": 79.39,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 76.71,
+      "timestamp": "2026-04-25T23:59:28.9458057Z",
+      "scaling_factor": 0.86,
+      "efficiency": 4.794,
+      "model_size_b": 16,
+      "measured_tps": 76.71,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 74.04,
+      "timestamp": "2026-04-25T23:59:29.0061503Z",
+      "scaling_factor": 0.83,
+      "efficiency": 3.819,
+      "model_size_b": 19,
+      "measured_tps": 72.56,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 71.36,
+      "timestamp": "2026-04-25T23:59:29.0666725Z",
+      "scaling_factor": 0.8,
+      "efficiency": 3.179,
+      "model_size_b": 22,
+      "measured_tps": 69.93,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 68.68,
+      "timestamp": "2026-04-25T23:59:29.1274766Z",
+      "scaling_factor": 0.77,
+      "efficiency": 2.747,
+      "model_size_b": 25,
+      "measured_tps": 68.68,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 66.01,
+      "timestamp": "2026-04-25T23:59:29.1877770Z",
+      "scaling_factor": 0.74,
+      "efficiency": 2.31,
+      "model_size_b": 28,
+      "measured_tps": 64.69,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 63.33,
+      "timestamp": "2026-04-25T23:59:29.2635794Z",
+      "scaling_factor": 0.71,
+      "efficiency": 2.023,
+      "model_size_b": 31,
+      "measured_tps": 62.7,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 60.66,
+      "timestamp": "2026-04-25T23:59:29.3392384Z",
+      "scaling_factor": 0.68,
+      "efficiency": 1.802,
+      "model_size_b": 34,
+      "measured_tps": 61.26,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 58.2,
+      "timestamp": "2026-04-25T23:59:29.4016144Z",
+      "scaling_factor": 0.653,
+      "efficiency": 1.573,
+      "model_size_b": 37,
+      "measured_tps": 58.2,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 55.75,
+      "timestamp": "2026-04-25T23:59:29.4649877Z",
+      "scaling_factor": 0.625,
+      "efficiency": 1.366,
+      "model_size_b": 40,
+      "measured_tps": 54.64,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 53.3,
+      "timestamp": "2026-04-25T23:59:29.5251062Z",
+      "scaling_factor": 0.598,
+      "efficiency": 1.215,
+      "model_size_b": 43,
+      "measured_tps": 52.23,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 50.84,
+      "timestamp": "2026-04-25T23:59:29.5864648Z",
+      "scaling_factor": 0.57,
+      "efficiency": 1.094,
+      "model_size_b": 46,
+      "measured_tps": 50.34,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 48.39,
+      "timestamp": "2026-04-25T23:59:29.6485498Z",
+      "scaling_factor": 0.542,
+      "efficiency": 0.988,
+      "model_size_b": 49,
+      "measured_tps": 48.39,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 45.94,
+      "timestamp": "2026-04-25T23:59:29.7094970Z",
+      "scaling_factor": 0.515,
+      "efficiency": 0.892,
+      "model_size_b": 52,
+      "measured_tps": 46.4,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 43.48,
+      "timestamp": "2026-04-25T23:59:29.7709108Z",
+      "scaling_factor": 0.488,
+      "efficiency": 0.783,
+      "model_size_b": 55,
+      "measured_tps": 43.05,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 41.03,
+      "timestamp": "2026-04-25T23:59:29.8331293Z",
+      "scaling_factor": 0.46,
+      "efficiency": 0.693,
+      "model_size_b": 58,
+      "measured_tps": 40.21,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 38.58,
+      "timestamp": "2026-04-25T23:59:29.8938444Z",
+      "scaling_factor": 0.432,
+      "efficiency": 0.639,
+      "model_size_b": 61,
+      "measured_tps": 38.96,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 36.13,
+      "timestamp": "2026-04-25T23:59:29.9542151Z",
+      "scaling_factor": 0.405,
+      "efficiency": 0.559,
+      "model_size_b": 64,
+      "measured_tps": 35.76,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 33.67,
+      "timestamp": "2026-04-25T23:59:30.0145835Z",
+      "scaling_factor": 0.378,
+      "efficiency": 0.503,
+      "model_size_b": 67,
+      "measured_tps": 33.67,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 31.22,
+      "timestamp": "2026-04-25T23:59:30.0901111Z",
+      "scaling_factor": 0.35,
+      "efficiency": 0.437,
+      "model_size_b": 70,
+      "measured_tps": 30.6,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 30.31,
+      "timestamp": "2026-04-25T23:59:30.1512627Z",
+      "scaling_factor": 0.34,
+      "efficiency": 0.407,
+      "model_size_b": 73,
+      "measured_tps": 29.7,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 29.4,
+      "timestamp": "2026-04-25T23:59:30.2272490Z",
+      "scaling_factor": 0.33,
+      "efficiency": 0.391,
+      "model_size_b": 76,
+      "measured_tps": 29.69,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 28.49,
+      "timestamp": "2026-04-25T23:59:30.2881546Z",
+      "scaling_factor": 0.319,
+      "efficiency": 0.357,
+      "model_size_b": 79,
+      "measured_tps": 28.21,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 27.58,
+      "timestamp": "2026-04-25T23:59:30.3498244Z",
+      "scaling_factor": 0.309,
+      "efficiency": 0.34,
+      "model_size_b": 82,
+      "measured_tps": 27.86,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 26.67,
+      "timestamp": "2026-04-25T23:59:30.4107249Z",
+      "scaling_factor": 0.299,
+      "efficiency": 0.317,
+      "model_size_b": 85,
+      "measured_tps": 26.94,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 25.76,
+      "timestamp": "2026-04-25T23:59:30.4707354Z",
+      "scaling_factor": 0.289,
+      "efficiency": 0.296,
+      "model_size_b": 88,
+      "measured_tps": 26.02,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 24.85,
+      "timestamp": "2026-04-25T23:59:30.5316993Z",
+      "scaling_factor": 0.279,
+      "efficiency": 0.276,
+      "model_size_b": 91,
+      "measured_tps": 25.1,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 23.94,
+      "timestamp": "2026-04-25T23:59:30.6077145Z",
+      "scaling_factor": 0.268,
+      "efficiency": 0.25,
+      "model_size_b": 94,
+      "measured_tps": 23.46,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 23.03,
+      "timestamp": "2026-04-25T23:59:30.6834559Z",
+      "scaling_factor": 0.258,
+      "efficiency": 0.24,
+      "model_size_b": 97,
+      "measured_tps": 23.26,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 22.12,
+      "timestamp": "2026-04-25T23:59:30.7441728Z",
+      "scaling_factor": 0.248,
+      "efficiency": 0.219,
+      "model_size_b": 100,
+      "measured_tps": 21.9,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 21.21,
+      "timestamp": "2026-04-25T23:59:30.8044462Z",
+      "scaling_factor": 0.238,
+      "efficiency": 0.208,
+      "model_size_b": 103,
+      "measured_tps": 21.42,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 20.3,
+      "timestamp": "2026-04-25T23:59:30.8653037Z",
+      "scaling_factor": 0.228,
+      "efficiency": 0.19,
+      "model_size_b": 106,
+      "measured_tps": 20.1,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 19.39,
+      "timestamp": "2026-04-25T23:59:30.9257845Z",
+      "scaling_factor": 0.217,
+      "efficiency": 0.178,
+      "model_size_b": 109,
+      "measured_tps": 19.39,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 18.48,
+      "timestamp": "2026-04-25T23:59:30.9877652Z",
+      "scaling_factor": 0.207,
+      "efficiency": 0.162,
+      "model_size_b": 112,
+      "measured_tps": 18.11,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 17.57,
+      "timestamp": "2026-04-25T23:59:31.0485209Z",
+      "scaling_factor": 0.197,
+      "efficiency": 0.153,
+      "model_size_b": 115,
+      "measured_tps": 17.57,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 16.66,
+      "timestamp": "2026-04-25T23:59:31.1110453Z",
+      "scaling_factor": 0.187,
+      "efficiency": 0.14,
+      "model_size_b": 118,
+      "measured_tps": 16.5,
+      "quantization": "q4"
+    },
+    {
+      "predicted_tps": 124.5,
+      "timestamp": "2026-04-25T23:59:31.1712574Z",
+      "scaling_factor": 1.0,
+      "efficiency": 17.608,
+      "model_size_b": 7,
+      "measured_tps": 123.26,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 117.65,
+      "timestamp": "2026-04-25T23:59:31.2488414Z",
+      "scaling_factor": 0.945,
+      "efficiency": 11.53,
+      "model_size_b": 10,
+      "measured_tps": 115.3,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 110.8,
+      "timestamp": "2026-04-25T23:59:31.3270545Z",
+      "scaling_factor": 0.89,
+      "efficiency": 8.438,
+      "model_size_b": 13,
+      "measured_tps": 109.7,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 107.07,
+      "timestamp": "2026-04-25T23:59:31.4027418Z",
+      "scaling_factor": 0.86,
+      "efficiency": 6.558,
+      "model_size_b": 16,
+      "measured_tps": 104.93,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 103.34,
+      "timestamp": "2026-04-25T23:59:31.4629611Z",
+      "scaling_factor": 0.83,
+      "efficiency": 5.33,
+      "model_size_b": 19,
+      "measured_tps": 101.27,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 99.6,
+      "timestamp": "2026-04-25T23:59:31.5250071Z",
+      "scaling_factor": 0.8,
+      "efficiency": 4.573,
+      "model_size_b": 22,
+      "measured_tps": 100.6,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 95.86,
+      "timestamp": "2026-04-25T23:59:31.5869027Z",
+      "scaling_factor": 0.77,
+      "efficiency": 3.758,
+      "model_size_b": 25,
+      "measured_tps": 93.95,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 92.13,
+      "timestamp": "2026-04-25T23:59:31.6469045Z",
+      "scaling_factor": 0.74,
+      "efficiency": 3.29,
+      "model_size_b": 28,
+      "measured_tps": 92.13,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 88.4,
+      "timestamp": "2026-04-25T23:59:31.7079339Z",
+      "scaling_factor": 0.71,
+      "efficiency": 2.823,
+      "model_size_b": 31,
+      "measured_tps": 87.51,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 84.66,
+      "timestamp": "2026-04-25T23:59:31.7681093Z",
+      "scaling_factor": 0.68,
+      "efficiency": 2.515,
+      "model_size_b": 34,
+      "measured_tps": 85.51,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 81.24,
+      "timestamp": "2026-04-25T23:59:31.8301885Z",
+      "scaling_factor": 0.653,
+      "efficiency": 2.152,
+      "model_size_b": 37,
+      "measured_tps": 79.61,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 77.81,
+      "timestamp": "2026-04-25T23:59:31.8937972Z",
+      "scaling_factor": 0.625,
+      "efficiency": 1.945,
+      "model_size_b": 40,
+      "measured_tps": 77.81,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 74.39,
+      "timestamp": "2026-04-25T23:59:31.9555942Z",
+      "scaling_factor": 0.598,
+      "efficiency": 1.747,
+      "model_size_b": 43,
+      "measured_tps": 75.13,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 70.96,
+      "timestamp": "2026-04-25T23:59:32.0176105Z",
+      "scaling_factor": 0.57,
+      "efficiency": 1.558,
+      "model_size_b": 46,
+      "measured_tps": 71.67,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 67.54,
+      "timestamp": "2026-04-25T23:59:32.0812218Z",
+      "scaling_factor": 0.542,
+      "efficiency": 1.378,
+      "model_size_b": 49,
+      "measured_tps": 67.54,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 64.12,
+      "timestamp": "2026-04-25T23:59:32.1432634Z",
+      "scaling_factor": 0.515,
+      "efficiency": 1.233,
+      "model_size_b": 52,
+      "measured_tps": 64.12,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 60.69,
+      "timestamp": "2026-04-25T23:59:32.2048279Z",
+      "scaling_factor": 0.488,
+      "efficiency": 1.081,
+      "model_size_b": 55,
+      "measured_tps": 59.48,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 57.27,
+      "timestamp": "2026-04-25T23:59:32.2654096Z",
+      "scaling_factor": 0.46,
+      "efficiency": 0.968,
+      "model_size_b": 58,
+      "measured_tps": 56.12,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 53.85,
+      "timestamp": "2026-04-25T23:59:32.3290950Z",
+      "scaling_factor": 0.432,
+      "efficiency": 0.892,
+      "model_size_b": 61,
+      "measured_tps": 54.38,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 50.42,
+      "timestamp": "2026-04-25T23:59:32.3980189Z",
+      "scaling_factor": 0.405,
+      "efficiency": 0.796,
+      "model_size_b": 64,
+      "measured_tps": 50.93,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 47.0,
+      "timestamp": "2026-04-25T23:59:32.4677296Z",
+      "scaling_factor": 0.378,
+      "efficiency": 0.701,
+      "model_size_b": 67,
+      "measured_tps": 47.0,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 43.58,
+      "timestamp": "2026-04-25T23:59:32.5448279Z",
+      "scaling_factor": 0.35,
+      "efficiency": 0.616,
+      "model_size_b": 70,
+      "measured_tps": 43.14,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 42.31,
+      "timestamp": "2026-04-25T23:59:32.6198274Z",
+      "scaling_factor": 0.34,
+      "efficiency": 0.568,
+      "model_size_b": 73,
+      "measured_tps": 41.46,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 41.04,
+      "timestamp": "2026-04-25T23:59:32.6811253Z",
+      "scaling_factor": 0.33,
+      "efficiency": 0.535,
+      "model_size_b": 76,
+      "measured_tps": 40.62,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 39.77,
+      "timestamp": "2026-04-25T23:59:32.7417191Z",
+      "scaling_factor": 0.319,
+      "efficiency": 0.498,
+      "model_size_b": 79,
+      "measured_tps": 39.37,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 38.5,
+      "timestamp": "2026-04-25T23:59:32.8018887Z",
+      "scaling_factor": 0.309,
+      "efficiency": 0.474,
+      "model_size_b": 82,
+      "measured_tps": 38.88,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 37.23,
+      "timestamp": "2026-04-25T23:59:32.8624203Z",
+      "scaling_factor": 0.299,
+      "efficiency": 0.429,
+      "model_size_b": 85,
+      "measured_tps": 36.48,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 35.96,
+      "timestamp": "2026-04-25T23:59:32.9226172Z",
+      "scaling_factor": 0.289,
+      "efficiency": 0.4,
+      "model_size_b": 88,
+      "measured_tps": 35.24,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 34.69,
+      "timestamp": "2026-04-25T23:59:32.9983208Z",
+      "scaling_factor": 0.279,
+      "efficiency": 0.385,
+      "model_size_b": 91,
+      "measured_tps": 35.03,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 33.42,
+      "timestamp": "2026-04-25T23:59:33.0743358Z",
+      "scaling_factor": 0.268,
+      "efficiency": 0.355,
+      "model_size_b": 94,
+      "measured_tps": 33.42,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 32.15,
+      "timestamp": "2026-04-25T23:59:33.1461602Z",
+      "scaling_factor": 0.258,
+      "efficiency": 0.328,
+      "model_size_b": 97,
+      "measured_tps": 31.82,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 30.88,
+      "timestamp": "2026-04-25T23:59:33.2167740Z",
+      "scaling_factor": 0.248,
+      "efficiency": 0.312,
+      "model_size_b": 100,
+      "measured_tps": 31.18,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 29.61,
+      "timestamp": "2026-04-25T23:59:33.2901496Z",
+      "scaling_factor": 0.238,
+      "efficiency": 0.287,
+      "model_size_b": 103,
+      "measured_tps": 29.61,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 28.34,
+      "timestamp": "2026-04-25T23:59:33.3510055Z",
+      "scaling_factor": 0.228,
+      "efficiency": 0.267,
+      "model_size_b": 106,
+      "measured_tps": 28.34,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 27.07,
+      "timestamp": "2026-04-25T23:59:33.4153088Z",
+      "scaling_factor": 0.217,
+      "efficiency": 0.248,
+      "model_size_b": 109,
+      "measured_tps": 27.07,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 25.8,
+      "timestamp": "2026-04-25T23:59:33.4731292Z",
+      "scaling_factor": 0.207,
+      "efficiency": 0.226,
+      "model_size_b": 112,
+      "measured_tps": 25.28,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 24.53,
+      "timestamp": "2026-04-25T23:59:33.5336649Z",
+      "scaling_factor": 0.197,
+      "efficiency": 0.211,
+      "model_size_b": 115,
+      "measured_tps": 24.28,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 23.26,
+      "timestamp": "2026-04-25T23:59:33.5942484Z",
+      "scaling_factor": 0.187,
+      "efficiency": 0.199,
+      "model_size_b": 118,
+      "measured_tps": 23.49,
+      "quantization": "q3"
+    },
+    {
+      "predicted_tps": 185.3,
+      "timestamp": "2026-04-25T23:59:33.6703699Z",
+      "scaling_factor": 1.0,
+      "efficiency": 26.471,
+      "model_size_b": 7,
+      "measured_tps": 185.3,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 175.11,
+      "timestamp": "2026-04-25T23:59:33.7463748Z",
+      "scaling_factor": 0.945,
+      "efficiency": 17.511,
+      "model_size_b": 10,
+      "measured_tps": 175.11,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 164.92,
+      "timestamp": "2026-04-25T23:59:33.8075553Z",
+      "scaling_factor": 0.89,
+      "efficiency": 12.432,
+      "model_size_b": 13,
+      "measured_tps": 161.62,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 159.36,
+      "timestamp": "2026-04-25T23:59:33.8690430Z",
+      "scaling_factor": 0.86,
+      "efficiency": 9.86,
+      "model_size_b": 16,
+      "measured_tps": 157.76,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 153.8,
+      "timestamp": "2026-04-25T23:59:33.9290866Z",
+      "scaling_factor": 0.83,
+      "efficiency": 8.176,
+      "model_size_b": 19,
+      "measured_tps": 155.34,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 148.24,
+      "timestamp": "2026-04-25T23:59:33.9898286Z",
+      "scaling_factor": 0.8,
+      "efficiency": 6.671,
+      "model_size_b": 22,
+      "measured_tps": 146.76,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 142.68,
+      "timestamp": "2026-04-25T23:59:34.0511731Z",
+      "scaling_factor": 0.77,
+      "efficiency": 5.593,
+      "model_size_b": 25,
+      "measured_tps": 139.83,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 137.12,
+      "timestamp": "2026-04-25T23:59:34.1111896Z",
+      "scaling_factor": 0.74,
+      "efficiency": 4.848,
+      "model_size_b": 28,
+      "measured_tps": 135.75,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 131.56,
+      "timestamp": "2026-04-25T23:59:34.1716585Z",
+      "scaling_factor": 0.71,
+      "efficiency": 4.202,
+      "model_size_b": 31,
+      "measured_tps": 130.25,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 126.0,
+      "timestamp": "2026-04-25T23:59:34.2472408Z",
+      "scaling_factor": 0.68,
+      "efficiency": 3.743,
+      "model_size_b": 34,
+      "measured_tps": 127.26,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 120.91,
+      "timestamp": "2026-04-25T23:59:34.3245101Z",
+      "scaling_factor": 0.653,
+      "efficiency": 3.235,
+      "model_size_b": 37,
+      "measured_tps": 119.7,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 115.81,
+      "timestamp": "2026-04-25T23:59:34.3875541Z",
+      "scaling_factor": 0.625,
+      "efficiency": 2.866,
+      "model_size_b": 40,
+      "measured_tps": 114.65,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 110.72,
+      "timestamp": "2026-04-25T23:59:34.4632512Z",
+      "scaling_factor": 0.598,
+      "efficiency": 2.601,
+      "model_size_b": 43,
+      "measured_tps": 111.82,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 105.62,
+      "timestamp": "2026-04-25T23:59:34.5240763Z",
+      "scaling_factor": 0.57,
+      "efficiency": 2.25,
+      "model_size_b": 46,
+      "measured_tps": 103.51,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 100.53,
+      "timestamp": "2026-04-25T23:59:34.5847564Z",
+      "scaling_factor": 0.542,
+      "efficiency": 2.072,
+      "model_size_b": 49,
+      "measured_tps": 101.53,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 95.43,
+      "timestamp": "2026-04-25T23:59:34.6450284Z",
+      "scaling_factor": 0.515,
+      "efficiency": 1.854,
+      "model_size_b": 52,
+      "measured_tps": 96.38,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 90.33,
+      "timestamp": "2026-04-25T23:59:34.7055837Z",
+      "scaling_factor": 0.488,
+      "efficiency": 1.626,
+      "model_size_b": 55,
+      "measured_tps": 89.43,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 85.24,
+      "timestamp": "2026-04-25T23:59:34.7667298Z",
+      "scaling_factor": 0.46,
+      "efficiency": 1.455,
+      "model_size_b": 58,
+      "measured_tps": 84.39,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 80.14,
+      "timestamp": "2026-04-25T23:59:34.8286761Z",
+      "scaling_factor": 0.432,
+      "efficiency": 1.327,
+      "model_size_b": 61,
+      "measured_tps": 80.94,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 75.05,
+      "timestamp": "2026-04-25T23:59:34.9040131Z",
+      "scaling_factor": 0.405,
+      "efficiency": 1.184,
+      "model_size_b": 64,
+      "measured_tps": 75.8,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 69.95,
+      "timestamp": "2026-04-25T23:59:34.9796534Z",
+      "scaling_factor": 0.378,
+      "efficiency": 1.023,
+      "model_size_b": 67,
+      "measured_tps": 68.55,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 64.86,
+      "timestamp": "2026-04-25T23:59:35.0400102Z",
+      "scaling_factor": 0.35,
+      "efficiency": 0.927,
+      "model_size_b": 70,
+      "measured_tps": 64.86,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 62.96,
+      "timestamp": "2026-04-25T23:59:35.1005109Z",
+      "scaling_factor": 0.34,
+      "efficiency": 0.854,
+      "model_size_b": 73,
+      "measured_tps": 62.34,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 61.07,
+      "timestamp": "2026-04-25T23:59:35.1626864Z",
+      "scaling_factor": 0.33,
+      "efficiency": 0.804,
+      "model_size_b": 76,
+      "measured_tps": 61.07,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 59.18,
+      "timestamp": "2026-04-25T23:59:35.2275013Z",
+      "scaling_factor": 0.319,
+      "efficiency": 0.757,
+      "model_size_b": 79,
+      "measured_tps": 59.78,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 57.29,
+      "timestamp": "2026-04-25T23:59:35.2894795Z",
+      "scaling_factor": 0.309,
+      "efficiency": 0.699,
+      "model_size_b": 82,
+      "measured_tps": 57.29,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 55.4,
+      "timestamp": "2026-04-25T23:59:35.3516010Z",
+      "scaling_factor": 0.299,
+      "efficiency": 0.639,
+      "model_size_b": 85,
+      "measured_tps": 54.3,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 53.51,
+      "timestamp": "2026-04-25T23:59:35.4125935Z",
+      "scaling_factor": 0.289,
+      "efficiency": 0.608,
+      "model_size_b": 88,
+      "measured_tps": 53.51,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 51.62,
+      "timestamp": "2026-04-25T23:59:35.4729996Z",
+      "scaling_factor": 0.279,
+      "efficiency": 0.562,
+      "model_size_b": 91,
+      "measured_tps": 51.11,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 49.73,
+      "timestamp": "2026-04-25T23:59:35.5336538Z",
+      "scaling_factor": 0.268,
+      "efficiency": 0.519,
+      "model_size_b": 94,
+      "measured_tps": 48.74,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 47.84,
+      "timestamp": "2026-04-25T23:59:35.5946257Z",
+      "scaling_factor": 0.258,
+      "efficiency": 0.483,
+      "model_size_b": 97,
+      "measured_tps": 46.89,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 45.95,
+      "timestamp": "2026-04-25T23:59:35.6700206Z",
+      "scaling_factor": 0.248,
+      "efficiency": 0.46,
+      "model_size_b": 100,
+      "measured_tps": 45.95,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 44.06,
+      "timestamp": "2026-04-25T23:59:35.7484394Z",
+      "scaling_factor": 0.238,
+      "efficiency": 0.424,
+      "model_size_b": 103,
+      "measured_tps": 43.62,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 42.17,
+      "timestamp": "2026-04-25T23:59:35.8256766Z",
+      "scaling_factor": 0.228,
+      "efficiency": 0.398,
+      "model_size_b": 106,
+      "measured_tps": 42.17,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 40.28,
+      "timestamp": "2026-04-25T23:59:35.9030058Z",
+      "scaling_factor": 0.217,
+      "efficiency": 0.37,
+      "model_size_b": 109,
+      "measured_tps": 40.28,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 38.39,
+      "timestamp": "2026-04-25T23:59:35.9784249Z",
+      "scaling_factor": 0.207,
+      "efficiency": 0.346,
+      "model_size_b": 112,
+      "measured_tps": 38.78,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 36.5,
+      "timestamp": "2026-04-25T23:59:36.0392867Z",
+      "scaling_factor": 0.197,
+      "efficiency": 0.311,
+      "model_size_b": 115,
+      "measured_tps": 35.77,
+      "quantization": "q2"
+    },
+    {
+      "predicted_tps": 34.61,
+      "timestamp": "2026-04-25T23:59:36.1017988Z",
+      "scaling_factor": 0.187,
+      "efficiency": 0.296,
+      "model_size_b": 118,
+      "measured_tps": 34.96,
+      "quantization": "q2"
+    }
+  ]
+}

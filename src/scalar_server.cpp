@@ -11,7 +11,8 @@ ScalarServer::ScalarServer(void *parent)
     , m_transformerBlock(new TransformerBlockScalar(this))
     , m_inferenceEngine(new InferenceEngine(this))
 {
-// Qt connect removed
+    // Signal-slot connections removed - using direct callbacks
+    fprintf(stderr, "[ScalarServer] Using direct callback mode\n");
 }
 
 ScalarServer::~ScalarServer()

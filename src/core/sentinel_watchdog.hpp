@@ -49,6 +49,11 @@
 
 // Forward declarations (avoid circular includes)
 struct PatchResult;
+class VulkanCompute;
+
+#ifndef VK_DEFINE_HANDLE
+typedef struct VkSemaphore_T* VkSemaphore;
+#endif
 
 // ============================================================================
 // Sentinel Configuration Constants
@@ -58,6 +63,12 @@ struct PatchResult;
 #define SENTINEL_SHA256_DIGEST_SIZE     32      // SHA-256 = 256 bits = 32 bytes
 #define SENTINEL_RDTSC_THRESHOLD        50000   // Cycles — debugger step detection
 #define SENTINEL_MAX_VIOLATIONS         3       // Max violations before lockdown
+
+// Heartbeat Sync-Plane (Batch 7) — Vulkan timeline semaphore configuration
+#define SENTINEL_HEARTBEAT_TIMEOUT_NS       1000000ULL  // 1 ms — sub-ms latency target
+#define SENTINEL_HEARTBEAT_HMAC_KEY_SIZE    32          // HMAC-SHA256 key length
+#define SENTINEL_HEARTBEAT_PAYLOAD_BYTES    64          // VRAM-lean 64-byte payload per node
+#define SENTINEL_HEARTBEAT_INTERVAL_CYCLES  5           // Every 5 watchdog cycles (~2.5 s)
 
 // ============================================================================
 // Sentinel Event Types
@@ -72,7 +83,13 @@ enum class SentinelEventType : uint32_t {
     LockdownTriggered       = 0x10,     // Workspace encrypted, process terminating
     BaselineUpdated         = 0x20,     // Authorized patch — baseline rehashed
     Activated               = 0x40,     // Watchdog started
-    Deactivated             = 0x80      // Watchdog paused (authorized patch window)
+    Deactivated             = 0x80,     // Watchdog paused (authorized patch window)
+
+    // Batch 7 — Vulkan sync-plane heartbeat events
+    HeartbeatVerified       = 0x100,    // Cryptographic heartbeat verified OK
+    HeartbeatTimeout        = 0x200,    // Remote GPU node did not respond within 1 ms
+    HeartbeatDesync         = 0x400,    // Heartbeat counter desync (possible tamper)
+    KernelWeightsWiped      = 0x800     // Decrypted kernel weights + HMAC key zeroed
 };
 
 // ============================================================================
@@ -127,6 +144,16 @@ public:
     // Called between atomic_swap and sentinel_activate in the patch lifecycle.
     PatchResult updateBaseline();
 
+    // ---- Multi-GPU Sync ----
+    // Synchronize the watchdog state with the Vulkan compute plane.
+    // Ensures that if one GPU node is tampered, the entire cluster locks down.
+    PatchResult syncWithVulkanCluster();
+
+    // Register the VulkanCompute engine for Vulkan sync-plane heartbeat operations.
+    // Must be called before activate() when multi-GPU (feature 0x80) is enabled.
+    // In single-GPU mode, also enables local semaphore self-consistency checks.
+    void setVulkanCompute(VulkanCompute* vk);
+
     // ---- Query ----
     bool isActive() const;
     SentinelStats getStats() const;
@@ -168,6 +195,26 @@ private:
     // Encrypt all workspace files (lockdown response)
     void encryptWorkspace();
 
+    // ---- Heartbeat Sync-Plane (Batch 7) ----
+    // Initialize Vulkan timeline semaphores and lean VRAM payload buffer.
+    // Called lazily on first syncWithVulkanCluster() when m_vkCompute is wired.
+    bool initHeartbeatSyncPlane();
+
+    // Compute HMAC-SHA256 over execution state:
+    //   counter(8) || violationCount(4) || tickCount(8) || baselineHash[0..15](16)
+    // Uses BCrypt HMAC with m_heartbeatHmacKey derived at sync-plane init.
+    bool computeHeartbeatHMAC(uint64_t counter,
+                              uint8_t  outHmac[SENTINEL_SHA256_DIGEST_SIZE]);
+
+    // Non-blocking poll of the remote GPU node's timeline semaphore.
+    // Reads the current value; if stale, waits up to SENTINEL_HEARTBEAT_TIMEOUT_NS (1 ms).
+    // Returns false if the node timed out or its counter desynchronised.
+    bool checkRemoteHeartbeatNonBlocking();
+
+    // Zero decrypted kernel weights and HMAC key material on lockdown.
+    // Called from triggerLockdown() BEFORE encryptWorkspace().
+    void wipeKernelWeights();
+
     // ---- Watchdog Thread ----
     static DWORD WINAPI WatchdogThreadProc(LPVOID param);
     void watchdogLoop();
@@ -201,6 +248,29 @@ private:
 
     // RDTSC baseline for timing checks
     uint64_t                    m_lastRdtsc;
+
+    // ---- Vulkan Sync-Plane (Batch 7) ----
+    // Non-owning pointer to the compute engine; set via setVulkanCompute().
+    VulkanCompute*              m_vkCompute;
+    // Local GPU timeline semaphore — monotonically incremented each heartbeat cycle.
+    VkSemaphore                 m_localHeartbeatSem;
+    // Remote GPU timeline semaphore — imported via KMT handle from peer node.
+    VkSemaphore                 m_remoteHeartbeatSem;
+    // KMT export handle for the local semaphore (shared with the peer GPU).
+    HANDLE                      m_semaphoreKmtHandle;
+    // Monotonic heartbeat counter for this node (atomic).
+    std::atomic<uint64_t>       m_heartbeatCounter;
+    // Last confirmed value of the remote node's timeline semaphore.
+    uint64_t                    m_lastRemoteCounter;
+    // HMAC-SHA256 key derived at sync-plane init (BCrypt RNG + baseline hash mixing).
+    uint8_t                     m_heartbeatHmacKey[SENTINEL_HEARTBEAT_HMAC_KEY_SIZE];
+    // True once initHeartbeatSyncPlane() has succeeded.
+    bool                        m_syncPlaneInit;
+    // Index into VulkanCompute's internal buffer table for the VRAM payload buffer.
+    // UINT32_MAX = not allocated.
+    uint32_t                    m_heartbeatBufIdx;
+    // Cycle counter used to gate heartbeat invocation to SENTINEL_HEARTBEAT_INTERVAL_CYCLES.
+    uint32_t                    m_heartbeatCycleCount;
 };
 
 // ============================================================================

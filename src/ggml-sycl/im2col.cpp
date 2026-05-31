@@ -15,7 +15,7 @@
 #include <sycl/sycl.hpp>
 #include <type_traits>  // For std::is_same_v
 
-#include "ggml.h"
+#include "ggml_rxd_internal.h"
 
 template <typename T>
 static void im2col_kernel(const float * x, T * dst, int64_t batch_offset, int64_t offset_delta, int64_t IC, int64_t IW,

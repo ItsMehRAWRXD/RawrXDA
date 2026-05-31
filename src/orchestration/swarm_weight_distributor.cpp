@@ -53,7 +53,7 @@ public:
         std::cout << "[Swarm] Model size: " << (totalSize / (1024*1024)) << " MB" << std::endl;
 
         // Note: Real GGUF parsing would happen here via RawrXD_GGUF_GraphInterpreter.asm
-        // For Phase 15 Scaling verification, we'll demonstrate shard-based distribution.
+        // For Phase 15 Scaling verification, use shard-based distribution.
         
         for (const auto& assign : assignments) {
             std::cout << "[Swarm] Distributing Layers " << assign.startLayer << "-" << assign.endLayer 

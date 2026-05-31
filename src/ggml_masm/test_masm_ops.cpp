@@ -1,7 +1,7 @@
 // test_masm_ops.cpp
 // Regression and fuzz testing for MASM tensor operations
 
-#include "ggml_masm_bridge.h"
+#include "ggml_rxd_masm_bridge.h"
 #include <iostream>
 #include <vector>
 #include <cmath>
@@ -50,7 +50,7 @@ bool TestMatMul() {
     }
 
     // MASM implementation
-    int result = GGML_BackendDispatch(GGML_OP_MATMUL, A.data(), B.data(), C.data(), N, N, N);
+    int result = GGML_RXD_BackendDispatch(GGML_RXD_OP_MATMUL, A.data(), B.data(), C.data(), N, N, N);
     assert(result == 0);
 
     bool pass = CompareFloats(C.data(), C_ref.data(), N * N);
@@ -73,7 +73,7 @@ bool TestAdd() {
     }
 
     // MASM implementation
-    int result = GGML_BackendDispatch(GGML_OP_ADD, A.data(), B.data(), C.data(), size, size, size);
+    int result = GGML_RXD_BackendDispatch(GGML_RXD_OP_ADD, A.data(), B.data(), C.data(), size, size, size);
     assert(result == 0);
 
     bool pass = CompareFloats(C.data(), C_ref.data(), size);
@@ -96,7 +96,7 @@ bool TestMul() {
     }
 
     // MASM implementation
-    int result = GGML_BackendDispatch(GGML_OP_MUL, A.data(), B.data(), C.data(), size, size, size);
+    int result = GGML_RXD_BackendDispatch(GGML_RXD_OP_MUL, A.data(), B.data(), C.data(), size, size, size);
     assert(result == 0);
 
     bool pass = CompareFloats(C.data(), C_ref.data(), size);
@@ -113,11 +113,11 @@ bool TestQuantizeQ8_0() {
     std::vector<float> C(size);
 
     // MASM quantization
-    int result = GGML_BackendDispatch(GGML_OP_QUANTIZE_Q8_0, A.data(), nullptr, B.data(), size, 0, 0);
+    int result = GGML_RXD_BackendDispatch(GGML_RXD_OP_QUANTIZE_Q8_0, A.data(), nullptr, B.data(), size, 0, 0);
     assert(result == 0);
 
     // MASM dequantization
-    result = GGML_BackendDispatch(GGML_OP_DEQUANTIZE_Q8_0, B.data(), nullptr, C.data(), size, 0, 0);
+    result = GGML_RXD_BackendDispatch(GGML_RXD_OP_DEQUANTIZE_Q8_0, B.data(), nullptr, C.data(), size, 0, 0);
     assert(result == 0);
 
     // Check lossy round-trip (tolerance higher for quantization)
@@ -136,7 +136,7 @@ bool FuzzTest() {
         std::vector<float> C(size);
 
         int op = i % 3; // Add, Mul, or Quantize
-        int result = GGML_BackendDispatch(op, A.data(), B.data(), C.data(), size, size, size);
+        int result = GGML_RXD_BackendDispatch(op, A.data(), B.data(), C.data(), size, size, size);
         if (result != 0) {
             
             return false;

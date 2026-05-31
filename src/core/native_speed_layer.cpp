@@ -29,6 +29,21 @@ namespace NativeSpeed {
 // ASM extern declarations — MASM64 kernels
 // ============================================================================
 extern "C" {
+    // RawrXD_NativeModelBridge.asm exports
+    void Titan_SiLU_AVX512(float* pData, int n);
+    void Titan_RMSNorm_AVX512(const float* pIn, float* pOut, const float* pWeight, int n);
+
+    // RAWRXD_SAMPLER_AVX512.asm exports
+    void Sampler_ApplyTemperature_AVX512(float* pLogits, int n, float invTemp);
+    float Sampler_FindMax_AVX512(const float* pLogits, int n);
+    float Sampler_ExpSum_AVX512(const float* pLogits, int n, float maxVal);
+    void Sampler_SoftMax_TopK_Fused(float* pLogits, uint32_t* pIndices, int n, int K);
+
+    // RAWRXD_KV_APERTURE.asm exports
+    void KV_ApertureMap(void* pBase, size_t nSize);
+    void KV_PageFlush(void* pData, size_t nBytes);
+    void KV_StreamStore_AVX512(float* pDst, const float* pSrc, int nFloats);
+
     // inference_core.asm exports
     void sgemm_avx2(const float* A, const float* B, float* C,
                     int M, int N, int K);
@@ -64,6 +79,13 @@ extern "C" {
     void dequant_q8_0_avx2(const void* src, float* dst, uint64_t nblocks);
     void dequant_q8_0_avx512(const void* src, float* dst, uint64_t nblocks);
     void dequant_q2k_avx2(const void* src, float* dst, uint64_t nblocks);
+    extern "C" int dequant_q6k_avx512(const void* src, float* dst, int n);
+
+    static void dequant_q6k_avx512_wrapper(const void* src, float* dst, uint64_t nblocks) {
+        // Q6_K has 16 elements per partial block in our ASM, 16 blocks per GGUF hyper-block (256 elements).
+        // nblocks here refers to GGUF blocks (256 elements each).
+        dequant_q6k_avx512(src, dst, (int)(nblocks * 256));
+    }
 
     // Quantized GEMV
     void qgemv_q4_0_avx2(const void* A, const float* x, float* y,
@@ -277,6 +299,9 @@ DequantFn GetDequantKernel(QuantType qt, const CPUFeatures& cpu) {
         case QuantType::Q2_K:
             if (cpu.hasAVX2)        return dequant_q2k_avx2;
             return nullptr;  // No scalar fallback for Q2_K yet
+        case QuantType::Q6_K:
+            if (cpu.hasAVX512F && cpu.hasAVX512BW && cpu.hasAVX512VL) return dequant_q6k_avx512_wrapper;
+            return nullptr;
         default:
             return nullptr;
     }
@@ -492,6 +517,12 @@ static float vdot_scalar(const float* a, const float* b, int n) {
     return sum;
 }
 
+static void silu_scalar(float* x, int n) {
+    for (int i = 0; i < n; ++i) {
+        x[i] = x[i] / (1.0f + expf(-x[i]));
+    }
+}
+
 static void fused_mlp_scalar(const float* x, const float* W1,
                              const float* b1, const float* W2,
                              const float* b2, float* out,
@@ -638,7 +669,7 @@ PatchResult NativeSpeedLayer::PopulateDispatchTable() {
 
     // RMSNorm
     if (m_cpu.hasAVX512F && avx512Allowed) {
-        m_dispatch.rmsnorm = native_rmsnorm_avx512;
+        m_dispatch.rmsnorm = (void (__cdecl *)(const float *,const float *,float *,int,float))Titan_RMSNorm_AVX512;
     } else if (m_cpu.hasAVX2) {
         m_dispatch.rmsnorm = native_rmsnorm_avx2;
     } else {
@@ -652,6 +683,36 @@ PatchResult NativeSpeedLayer::PopulateDispatchTable() {
         m_dispatch.softmax = native_softmax_avx2;
     } else {
         m_dispatch.softmax = Fallback::softmax_scalar;
+    }
+
+    // SiLU
+    if (m_cpu.hasAVX512F && avx512Allowed) {
+        m_dispatch.silu = Titan_SiLU_AVX512;
+    } else {
+        m_dispatch.silu = Fallback::silu_scalar;
+    }
+
+    // Sampler
+    if (m_cpu.hasAVX512F && avx512Allowed) {
+        m_dispatch.sampler_temp = Sampler_ApplyTemperature_AVX512;
+        m_dispatch.sampler_max  = Sampler_FindMax_AVX512;
+        m_dispatch.sampler_expsum = Sampler_ExpSum_AVX512;
+        m_dispatch.sampler_topk = Sampler_SoftMax_TopK_Fused;
+    } else {
+        m_dispatch.sampler_temp = [](float* x, int n, float invTemp) {
+            for (int i = 0; i < n; ++i) x[i] *= invTemp;
+        };
+        m_dispatch.sampler_max = [](const float* x, int n) -> float {
+            float maxVal = x[0];
+            for (int i = 1; i < n; ++i) if (x[i] > maxVal) maxVal = x[i];
+            return maxVal;
+        };
+        m_dispatch.sampler_expsum = [](const float* x, int n, float maxVal) -> float {
+            float sumExp = 0.0f;
+            for (int i = 0; i < n; ++i) sumExp += expf(x[i] - maxVal);
+            return sumExp;
+        };
+        m_dispatch.sampler_topk = nullptr; // Fallback handled in the wrapper
     }
 
     // RoPE
@@ -1064,6 +1125,8 @@ enum OpType : uint32_t {
     OP_ROPE      = 6,
     OP_VDOT      = 7,
     OP_QGEMV     = 8,
+    OP_SILU      = 9,
+    OP_SAMPLER   = 10,
 };
 
 void NativeSpeedLayer::SGEMM(const float* A, const float* B, float* C,
@@ -1110,10 +1173,49 @@ void NativeSpeedLayer::RMSNorm(const float* x, const float* weight,
     MeasureAndRecord(OP_RMSNORM, 0, start);
 }
 
+void NativeSpeedLayer::SiLU(float* x, int n) {
+    auto start = std::chrono::high_resolution_clock::now();
+    m_dispatch.silu(x, n);
+    MeasureAndRecord(OP_SILU, 0, start); // Assuming OP_SILU is defined or adding it
+}
+
 void NativeSpeedLayer::SoftMax(float* x, int n) {
     auto start = std::chrono::high_resolution_clock::now();
     m_dispatch.softmax(x, n);
     MeasureAndRecord(OP_SOFTMAX, 0, start);
+}
+
+void NativeSpeedLayer::SamplerApplyTemperature(float* x, int n, float invTemp) {
+    auto start = std::chrono::high_resolution_clock::now();
+    m_dispatch.sampler_temp(x, n, invTemp);
+    MeasureAndRecord(OP_SAMPLER, 0, start);
+}
+
+float NativeSpeedLayer::SamplerFindMax(const float* x, int n) {
+    auto start = std::chrono::high_resolution_clock::now();
+    float res = m_dispatch.sampler_max(x, n);
+    MeasureAndRecord(OP_SAMPLER, 0, start);
+    return res;
+}
+
+float NativeSpeedLayer::SamplerExpSum(const float* x, int n, float maxVal) {
+    auto start = std::chrono::high_resolution_clock::now();
+    float res = m_dispatch.sampler_expsum(x, n, maxVal);
+    MeasureAndRecord(OP_SAMPLER, 0, start);
+    return res;
+}
+
+void NativeSpeedLayer::SamplerSoftMaxTopKFused(float* logits, uint32_t* indices, int n, int K) {
+    auto start = std::chrono::high_resolution_clock::now();
+    if (m_dispatch.sampler_topk) {
+        m_dispatch.sampler_topk(logits, indices, n, K);
+    } else {
+        // Fallback or assert
+        for (int i = 0; i < n; ++i) indices[i] = i;
+        std::partial_sort(indices, indices + K, indices + n,
+            [&](uint32_t a, uint32_t b) { return logits[a] > logits[b]; });
+    }
+    MeasureAndRecord(OP_SAMPLER, 0, start);
 }
 
 void NativeSpeedLayer::RoPE(float* q, float* k, int headDim, int nHeads,

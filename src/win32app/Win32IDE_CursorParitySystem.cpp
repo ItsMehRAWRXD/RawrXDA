@@ -11,6 +11,7 @@
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
+#include <sstream>
 
 // ============================================================================
 // CURSOR THEME SYSTEM
@@ -498,11 +499,20 @@ public:
     }
 
 private:
+    static CursorAnimationSystem* s_instance;
+public:
+    void setSingleton() { s_instance = this; }
+private:
     static VOID CALLBACK animationTimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime) {
-        // This would need access to the animation system instance
-        // In a real implementation, this would be handled differently
+        if (!s_instance || !s_instance->m_isAnimating) return;
+        if (s_instance->m_animationFrames.empty()) return;
+        s_instance->m_currentFrame = (s_instance->m_currentFrame + 1) %
+            static_cast<int>(s_instance->m_animationFrames.size());
+        SetCursor(s_instance->m_animationFrames[s_instance->m_currentFrame]);
     }
 };
+
+CursorAnimationSystem* CursorAnimationSystem::s_instance = nullptr;
 
 // ============================================================================
 // CURSOR PARITY MANAGER
@@ -625,21 +635,48 @@ std::vector<std::string> Win32IDE::getAvailableCursorBehaviors() const {
 void Win32IDE::showCursorSettingsDialog() {
     if (!m_cursorParityManager) initCursorParitySystem();
 
-    // In a real implementation, this would show a dialog with cursor settings
-    LOG_INFO("Cursor Settings:");
-    LOG_INFO("  Current Theme: %s", getCurrentCursorTheme().c_str());
-    LOG_INFO("  Current Behavior: %s", getCurrentCursorBehavior().c_str());
-
     auto themes = getAvailableCursorThemes();
-    LOG_INFO("  Available Themes:");
-    for (const auto& theme : themes) {
-        LOG_INFO("    %s", theme.c_str());
+    auto behaviors = getAvailableCursorBehaviors();
+    std::string curTheme = getCurrentCursorTheme();
+    std::string curBehavior = getCurrentCursorBehavior();
+
+    // Build a numbered list for user selection
+    std::ostringstream os;
+    os << "Current Theme: " << curTheme << "\r\n"
+       << "Current Behavior: " << curBehavior << "\r\n\r\n"
+       << "== Themes ==\r\n";
+    for (size_t i = 0; i < themes.size(); ++i)
+        os << "  " << (i + 1) << ". " << themes[i] << "\r\n";
+    os << "\r\nEnter theme number (or 0 to keep current):";
+
+    wchar_t buf[64] = {};
+    std::wstring titleW = L"Cursor Settings";
+    std::wstring promptW(os.str().begin(), os.str().end());
+    if (DialogBoxWithInput(titleW.c_str(), promptW.c_str(), buf, 64)) {
+        int sel = _wtoi(buf);
+        if (sel >= 1 && sel <= (int)themes.size()) {
+            if (m_cursorParityManager)
+                m_cursorParityManager->setCursorTheme(themes[sel - 1]);
+            appendToOutput("[Cursor] Theme set to: " + themes[sel - 1] + "\n");
+        }
     }
 
-    auto behaviors = getAvailableCursorBehaviors();
-    LOG_INFO("  Available Behaviors:");
-    for (const auto& behavior : behaviors) {
-        LOG_INFO("    %s", behavior.c_str());
+    // Second dialog for behavior
+    std::ostringstream ob;
+    ob << "== Cursor Behaviors ==\r\n";
+    for (size_t i = 0; i < behaviors.size(); ++i)
+        ob << "  " << (i + 1) << ". " << behaviors[i] << "\r\n";
+    ob << "\r\nEnter behavior number (or 0 to keep current):";
+
+    std::wstring promptB(ob.str().begin(), ob.str().end());
+    memset(buf, 0, sizeof(buf));
+    if (DialogBoxWithInput(titleW.c_str(), promptB.c_str(), buf, 64)) {
+        int sel = _wtoi(buf);
+        if (sel >= 1 && sel <= (int)behaviors.size()) {
+            if (m_cursorParityManager)
+                m_cursorParityManager->setCursorBehavior(behaviors[sel - 1]);
+            appendToOutput("[Cursor] Behavior set to: " + behaviors[sel - 1] + "\n");
+        }
     }
 }
 

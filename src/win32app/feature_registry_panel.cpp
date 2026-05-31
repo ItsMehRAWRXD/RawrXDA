@@ -1,10 +1,12 @@
 // feature_registry_panel.cpp - Enterprise Feature Registry Display Panel Implementation
 // Win32 native rendering of feature matrix with license tier gating
 // Uses V2 API: EnterpriseLicenseV2, FeatureFlagsRuntime, LicenseEnforcer
+// VSU Effects: Adobe RGBa color space with Acrylic/Mica backgrounds
 
 #include "feature_registry_panel.h"
 #include "../../include/license_enforcement.h"
 #include "../../include/feature_flags_runtime.h"
+#include "../../include/RawrXD_ColorSpace.h"
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
@@ -15,6 +17,15 @@
 using namespace RawrXD::License;
 using namespace RawrXD::Flags;
 using namespace RawrXD::Enforce;
+using namespace RawrXD::ColorSpace;
+
+// Helper to convert AdobeRGBa to COLORREF for Win32 GDI
+inline COLORREF AdobeRGBaToCOLORREF(const AdobeRGBa& color) {
+    auto srgb = color.TosRGB();
+    return RGB(static_cast<int>(srgb.r * 255), 
+               static_cast<int>(srgb.g * 255), 
+               static_cast<int>(srgb.b * 255));
+}
 
 bool FeatureRegistryPanel::s_classRegistered = false;
 std::function<void(const std::string&)> FeatureRegistryPanel::s_consoleOutputCb;
@@ -47,7 +58,7 @@ bool FeatureRegistryPanel::create(HWND parent, int x, int y, int width, int heig
         wc.hInstance = GetModuleHandle(nullptr);
         wc.lpszClassName = PANEL_CLASS;
         wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
-        wc.hbrBackground = CreateSolidBrush(m_colors.background);
+        wc.hbrBackground = CreateSolidBrush(AdobeRGBaToCOLORREF(m_colors.background));
         if (!RegisterClassExW(&wc)) return false;
         s_classRegistered = true;
     }
@@ -171,7 +182,7 @@ void FeatureRegistryPanel::paint(HDC hdc) {
     HGDIOBJ oldBmp = SelectObject(memDC, memBmp);
 
     // Background
-    HBRUSH bgBrush = CreateSolidBrush(m_colors.background);
+    HBRUSH bgBrush = CreateSolidBrush(AdobeRGBaToCOLORREF(m_colors.background));
     FillRect(memDC, &clientRect, bgBrush);
     DeleteObject(bgBrush);
 
@@ -191,7 +202,7 @@ void FeatureRegistryPanel::paintHeader(HDC hdc, RECT& area) {
     auto& lic = EnterpriseLicenseV2::Instance();
 
     RECT headerRect = { area.left, area.top, area.right, area.top + 60 };
-    HBRUSH hdrBrush = CreateSolidBrush(m_colors.headerBg);
+    HBRUSH hdrBrush = CreateSolidBrush(AdobeRGBaToCOLORREF(m_colors.headerBg));
     FillRect(hdc, &headerRect, hdrBrush);
     DeleteObject(hdrBrush);
 
@@ -202,7 +213,7 @@ void FeatureRegistryPanel::paintHeader(HDC hdc, RECT& area) {
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
         CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Segoe UI");
     HGDIOBJ oldFont = SelectObject(hdc, titleFont);
-    SetTextColor(hdc, m_colors.textNormal);
+    SetTextColor(hdc, AdobeRGBaToCOLORREF(m_colors.textNormal));
 
     std::wstring title = L"RawrXD Enterprise Feature Registry";
     TextOutW(hdc, area.left + 12, area.top + 6, title.c_str(), (int)title.size());
@@ -221,11 +232,11 @@ void FeatureRegistryPanel::paintHeader(HDC hdc, RECT& area) {
     wss << L"  |  Enabled: " << enabled << L" / " << TOTAL_FEATURES;
     std::wstring wsummary = wss.str();
 
-    COLORREF tierColor = m_colors.tierCommunity;
+    COLORREF tierColor = AdobeRGBaToCOLORREF(m_colors.tierCommunity);
     switch (lic.currentTier()) {
-        case LicenseTierV2::Professional: tierColor = m_colors.tierPro; break;
-        case LicenseTierV2::Enterprise:   tierColor = m_colors.tierEnterprise; break;
-        case LicenseTierV2::Sovereign:    tierColor = m_colors.tierSovereign; break;
+        case LicenseTierV2::Professional: tierColor = AdobeRGBaToCOLORREF(m_colors.tierPro); break;
+        case LicenseTierV2::Enterprise:   tierColor = AdobeRGBaToCOLORREF(m_colors.tierEnterprise); break;
+        case LicenseTierV2::Sovereign:    tierColor = AdobeRGBaToCOLORREF(m_colors.tierSovereign); break;
         default: break;
     }
     SetTextColor(hdc, tierColor);
@@ -234,7 +245,7 @@ void FeatureRegistryPanel::paintHeader(HDC hdc, RECT& area) {
     // Feature count on right
     std::wstring countStr = L"Showing: " + std::to_wstring(m_filteredItems.size()) +
                             L" / " + std::to_wstring(m_displayItems.size());
-    SetTextColor(hdc, m_colors.textDim);
+    SetTextColor(hdc, AdobeRGBaToCOLORREF(m_colors.textDim));
     SIZE textSize;
     GetTextExtentPoint32W(hdc, countStr.c_str(), (int)countStr.size(), &textSize);
     TextOutW(hdc, area.right - textSize.cx - 12, area.top + 30, countStr.c_str(), (int)countStr.size());
@@ -245,7 +256,7 @@ void FeatureRegistryPanel::paintHeader(HDC hdc, RECT& area) {
 
     // Column headers
     RECT colRect = { area.left, area.top + 48, area.right, area.top + 60 };
-    HBRUSH colBrush = CreateSolidBrush(RGB(45, 45, 45));
+    HBRUSH colBrush = CreateSolidBrush(AdobeRGBaToCOLORREF(VSU::Acrylic::DarkLuminosity));
     FillRect(hdc, &colRect, colBrush);
     DeleteObject(colBrush);
 
@@ -253,7 +264,7 @@ void FeatureRegistryPanel::paintHeader(HDC hdc, RECT& area) {
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
         CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Segoe UI");
     SelectObject(hdc, colFont);
-    SetTextColor(hdc, m_colors.textDim);
+    SetTextColor(hdc, AdobeRGBaToCOLORREF(m_colors.textDim));
 
     TextOutW(hdc, area.left + 12,  colRect.top, L"STATUS", 6);
     TextOutW(hdc, area.left + 90,  colRect.top, L"FEATURE", 7);
@@ -295,8 +306,8 @@ void FeatureRegistryPanel::paintFeatureList(HDC hdc, RECT& area) {
 void FeatureRegistryPanel::paintFeatureRow(HDC hdc, const FeatureDisplayItem& item,
                                             RECT& row, bool selected) {
     // Row background
-    COLORREF bgColor = selected ? m_colors.selectedBg :
-                       ((row.top / m_rowHeight) % 2 == 0 ? m_colors.rowBg : m_colors.rowAltBg);
+    COLORREF bgColor = selected ? AdobeRGBaToCOLORREF(m_colors.selectedBg) :
+                       ((row.top / m_rowHeight) % 2 == 0 ? AdobeRGBaToCOLORREF(m_colors.rowBg) : AdobeRGBaToCOLORREF(m_colors.rowAltBg));
     HBRUSH rowBrush = CreateSolidBrush(bgColor);
     FillRect(hdc, &row, rowBrush);
     DeleteObject(rowBrush);
@@ -305,21 +316,21 @@ void FeatureRegistryPanel::paintFeatureRow(HDC hdc, const FeatureDisplayItem& it
     int y = row.top + 5;
 
     // Lock status indicator
-    SetTextColor(hdc, item.unlocked ? m_colors.unlockedColor : m_colors.lockedColor);
+    SetTextColor(hdc, item.unlocked ? AdobeRGBaToCOLORREF(m_colors.unlockedColor) : AdobeRGBaToCOLORREF(m_colors.lockedColor));
     std::wstring lockStr = item.unlocked ? L"[OPEN]" : L"[LOCK]";
     TextOutW(hdc, row.left + 12, y, lockStr.c_str(), (int)lockStr.size());
 
     // Feature name
-    SetTextColor(hdc, item.unlocked ? m_colors.textNormal : m_colors.textDim);
+    SetTextColor(hdc, item.unlocked ? AdobeRGBaToCOLORREF(m_colors.textNormal) : AdobeRGBaToCOLORREF(m_colors.textDim));
     std::wstring wname(item.name.begin(), item.name.end());
     TextOutW(hdc, row.left + 90, y, wname.c_str(), (int)wname.size());
 
     // Tier
-    COLORREF tierColor = m_colors.tierCommunity;
+    COLORREF tierColor = AdobeRGBaToCOLORREF(m_colors.tierCommunity);
     switch (item.requiredTier) {
-        case LicenseTierV2::Professional: tierColor = m_colors.tierPro; break;
-        case LicenseTierV2::Enterprise:   tierColor = m_colors.tierEnterprise; break;
-        case LicenseTierV2::Sovereign:    tierColor = m_colors.tierSovereign; break;
+        case LicenseTierV2::Professional: tierColor = AdobeRGBaToCOLORREF(m_colors.tierPro); break;
+        case LicenseTierV2::Enterprise:   tierColor = AdobeRGBaToCOLORREF(m_colors.tierEnterprise); break;
+        case LicenseTierV2::Sovereign:    tierColor = AdobeRGBaToCOLORREF(m_colors.tierSovereign); break;
         default: break;
     }
     SetTextColor(hdc, tierColor);
@@ -327,19 +338,19 @@ void FeatureRegistryPanel::paintFeatureRow(HDC hdc, const FeatureDisplayItem& it
     TextOutW(hdc, row.left + 380, y, wtier.c_str(), (int)wtier.size());
 
     // Implementation status badges
-    SetTextColor(hdc, item.implemented ? m_colors.implColor : m_colors.missingColor);
+    SetTextColor(hdc, item.implemented ? AdobeRGBaToCOLORREF(m_colors.implColor) : AdobeRGBaToCOLORREF(m_colors.missingColor));
     TextOutW(hdc, row.left + 470, y, item.implemented ? L"YES" : L"NO", item.implemented ? 3 : 2);
 
-    SetTextColor(hdc, item.wired ? m_colors.implColor : m_colors.missingColor);
+    SetTextColor(hdc, item.wired ? AdobeRGBaToCOLORREF(m_colors.implColor) : AdobeRGBaToCOLORREF(m_colors.missingColor));
     TextOutW(hdc, row.left + 520, y, item.wired ? L"YES" : L"NO", item.wired ? 3 : 2);
 
-    SetTextColor(hdc, item.tested ? m_colors.unlockedColor : m_colors.textDim);
+    SetTextColor(hdc, item.tested ? AdobeRGBaToCOLORREF(m_colors.unlockedColor) : AdobeRGBaToCOLORREF(m_colors.textDim));
     TextOutW(hdc, row.left + 575, y, item.tested ? L"YES" : L"---", 3);
 }
 
 void FeatureRegistryPanel::paintStatusBar(HDC hdc, RECT& area) {
     RECT statusRect = { area.left, area.bottom, area.right, area.bottom + 30 };
-    HBRUSH statusBrush = CreateSolidBrush(m_colors.headerBg);
+    HBRUSH statusBrush = CreateSolidBrush(AdobeRGBaToCOLORREF(m_colors.headerBg));
     FillRect(hdc, &statusRect, statusBrush);
     DeleteObject(statusBrush);
 
@@ -348,7 +359,7 @@ void FeatureRegistryPanel::paintStatusBar(HDC hdc, RECT& area) {
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
         CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Segoe UI");
     HGDIOBJ oldFont = SelectObject(hdc, statusFont);
-    SetTextColor(hdc, m_colors.textDim);
+    SetTextColor(hdc, AdobeRGBaToCOLORREF(m_colors.textDim));
 
     // Count stats
     int impl = 0, miss = 0, unlocked = 0, locked = 0;

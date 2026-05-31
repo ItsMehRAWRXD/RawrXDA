@@ -207,7 +207,64 @@ std::string parse_pe_headers_internal(const std::string& filepath) {
         return output.str();
     }
     
-    output << "✅ Valid PE/COFF File\\r\\n\\r\\n\";\n    output << \"FILE HEADER\\r\\n\";\n    output << \"────────────────────────────────────────────\\r\\n\";\n    output << \"Machine:              \";\n    \n    switch (ntHeaders->FileHeader.Machine) {\n        case IMAGE_FILE_MACHINE_AMD64: output << \"x64 (AMD64)\\r\\n\"; break;\n        case IMAGE_FILE_MACHINE_I386: output << \"x86 (I386)\\r\\n\"; break;\n        case IMAGE_FILE_MACHINE_ARM64: output << \"ARM64\\r\\n\"; break;\n        default: output << \"Unknown (\" << std::hex << ntHeaders->FileHeader.Machine << std::dec << \")\\r\\n\"; break;\n    }\n    \n    output << \"Sections:             \" << ntHeaders->FileHeader.NumberOfSections << \"\\r\\n\";\n    output << \"Timestamp:            \" << ntHeaders->FileHeader.TimeDateStamp << \"\\r\\n\";\n    output << \"Characteristics:      0x\" << std::hex << ntHeaders->FileHeader.Characteristics << std::dec << \"\\r\\n\\r\\n\";\n    \n    output << \"OPTIONAL HEADER\\r\\n\";\n    output << \"────────────────────────────────────────────\\r\\n\";\n    output << \"Magic:                0x\" << std::hex << ntHeaders->OptionalHeader.Magic << std::dec;\n    output << (ntHeaders->OptionalHeader.Magic == IMAGE_NT_OPTIONAL_HDR64_MAGIC ? \" (PE32+)\" : \" (PE32)\") << \"\\r\\n\";\n    output << \"Entry Point:          0x\" << std::hex << ntHeaders->OptionalHeader.AddressOfEntryPoint << std::dec << \"\\r\\n\";\n    output << \"Image Base:           0x\" << std::hex << ntHeaders->OptionalHeader.ImageBase << std::dec << \"\\r\\n\";\n    output << \"Subsystem:            \";\n    \n    switch (ntHeaders->OptionalHeader.Subsystem) {\n        case IMAGE_SUBSYSTEM_WINDOWS_GUI: output << \"Windows GUI\\r\\n\"; break;\n        case IMAGE_SUBSYSTEM_WINDOWS_CUI: output << \"Console\\r\\n\"; break;\n        default: output << \"Other\\r\\n\"; break;\n    }\n    \n    output << \"\\r\\nSECTIONS\\r\\n\";\n    output << \"────────────────────────────────────────────\\r\\n\";\n    \n    IMAGE_SECTION_HEADER* section = IMAGE_FIRST_SECTION(ntHeaders);\n    for (int i = 0; i < ntHeaders->FileHeader.NumberOfSections; i++) {\n        output << \"Section \" << (i + 1) << \": \";\n        output << std::string((char*)section[i].Name, 8) << \"\\r\\n\";\n        output << \"  Virtual Size:       0x\" << std::hex << section[i].Misc.VirtualSize << std::dec << \"\\r\\n\";\n        output << \"  Virtual Address:    0x\" << std::hex << section[i].VirtualAddress << std::dec << \"\\r\\n\";\n        output << \"  Raw Data Size:      0x\" << std::hex << section[i].SizeOfRawData << std::dec << \"\\r\\n\";\n        output << \"  Characteristics:    0x\" << std::hex << section[i].Characteristics << std::dec << \"\\r\\n\\r\\n\";\n    }\n    \n    delete[] fileData;\n    return output.str();\n}\n\nvoid Win32IDE::AppendTerminalText(const std::string& text) {\n    if (!m_hwndTerminal) return;\n    \n    int len = GetWindowTextLengthA(m_hwndTerminal);\n    SendMessageA(m_hwndTerminal, EM_SETSEL, len, len);\n    SendMessageA(m_hwndTerminal, EM_REPLACESEL, FALSE, (LPARAM)text.c_str());\n}\n\nstd::string Win32IDE::getCurrentFilePath() const {\n    // Return current file path (stub - implement based on your editor state)\n    if (m_currentFilePath.empty()) {\n        return \"\";"}
+    output << "✅ Valid PE/COFF File\r\n\r\n";
+    output << "FILE HEADER\r\n";
+    output << "────────────────────────────────────────────\r\n";
+    output << "Machine:              ";
+
+    switch (ntHeaders->FileHeader.Machine) {
+        case IMAGE_FILE_MACHINE_AMD64: output << "x64 (AMD64)\r\n"; break;
+        case IMAGE_FILE_MACHINE_I386: output << "x86 (I386)\r\n"; break;
+        case IMAGE_FILE_MACHINE_ARM64: output << "ARM64\r\n"; break;
+        default: output << "Unknown (" << std::hex << ntHeaders->FileHeader.Machine << std::dec << ")\r\n"; break;
     }
-    return m_currentFilePath;
+
+    output << "Sections:             " << ntHeaders->FileHeader.NumberOfSections << "\r\n";
+    output << "Timestamp:            " << ntHeaders->FileHeader.TimeDateStamp << "\r\n";
+    output << "Characteristics:      0x" << std::hex << ntHeaders->FileHeader.Characteristics << std::dec << "\r\n\r\n";
+
+    output << "OPTIONAL HEADER\r\n";
+    output << "────────────────────────────────────────────\r\n";
+    output << "Magic:                0x" << std::hex << ntHeaders->OptionalHeader.Magic << std::dec;
+    output << (ntHeaders->OptionalHeader.Magic == IMAGE_NT_OPTIONAL_HDR64_MAGIC ? " (PE32+)" : " (PE32)") << "\r\n";
+    output << "Entry Point:          0x" << std::hex << ntHeaders->OptionalHeader.AddressOfEntryPoint << std::dec << "\r\n";
+    output << "Image Base:           0x" << std::hex << ntHeaders->OptionalHeader.ImageBase << std::dec << "\r\n";
+    output << "Subsystem:            ";
+
+    switch (ntHeaders->OptionalHeader.Subsystem) {
+        case IMAGE_SUBSYSTEM_WINDOWS_GUI: output << "Windows GUI\r\n"; break;
+        case IMAGE_SUBSYSTEM_WINDOWS_CUI: output << "Console\r\n"; break;
+        default: output << "Other\r\n"; break;
+    }
+
+    output << "\r\nSECTIONS\r\n";
+    output << "────────────────────────────────────────────\r\n";
+
+    IMAGE_SECTION_HEADER* section = IMAGE_FIRST_SECTION(ntHeaders);
+    for (int i = 0; i < ntHeaders->FileHeader.NumberOfSections; i++) {
+        output << "Section " << (i + 1) << ": ";
+        output << std::string(reinterpret_cast<char*>(section[i].Name), 8) << "\r\n";
+        output << "  Virtual Size:       0x" << std::hex << section[i].Misc.VirtualSize << std::dec << "\r\n";
+        output << "  Virtual Address:    0x" << std::hex << section[i].VirtualAddress << std::dec << "\r\n";
+        output << "  Raw Data Size:      0x" << std::hex << section[i].SizeOfRawData << std::dec << "\r\n";
+        output << "  Characteristics:    0x" << std::hex << section[i].Characteristics << std::dec << "\r\n\r\n";
+    }
+
+    delete[] fileData;
+    return output.str();
+}
+
+void Win32IDE::AppendTerminalText(const std::string& text) {
+    if (!m_hwndTerminal) return;
+
+    int len = GetWindowTextLengthA(m_hwndTerminal);
+    SendMessageA(m_hwndTerminal, EM_SETSEL, len, len);
+    SendMessageA(m_hwndTerminal, EM_REPLACESEL, FALSE, (LPARAM)text.c_str());
+}
+
+std::string Win32IDE::getCurrentFilePath() const {
+    if (m_currentFile.empty()) {
+        return "";
+    }
+    return m_currentFile;
 }

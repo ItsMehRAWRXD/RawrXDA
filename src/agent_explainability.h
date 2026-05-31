@@ -14,7 +14,7 @@
 //   2. FailureAttribution — why a failure was detected & how correction applied
 //   3. PolicyAttribution  — which policies fired and what they changed
 //   4. SessionExplanation — full session-level causal narrative
-//   5. ExplainabilitySnapshot — JSON export for audits / bug reports / demos
+//   5. ExplainabilitySnapshot — JSON export for audits / bug reports
 // ============================================================================
 
 #include <string>
@@ -234,7 +234,7 @@ public:
 
     // ---- Export ----
 
-    /// Generate a portable snapshot (JSON) for audit/bug report/demo.
+    /// Generate a portable snapshot (JSON) for audit/bug report.
     ExplainabilitySnapshot generateSnapshot() const;
 
     /// Export snapshot to file. Returns true on success.

@@ -130,7 +130,7 @@ struct ModelProfile {
     uint64_t        parameterCount;     // Estimated parameters
     uint32_t        tensorCount;        // Number of tensors
     uint32_t        layerCount;         // Transformer layers
-    uint32_t        quantType;          // Primary quantization (ggml_type)
+    uint32_t        quantType;          // Primary quantization (ggml_rxd_type)
     bool            isSharded;          // Multi-file model
     uint32_t        shardCount;         // Number of shard files
 };

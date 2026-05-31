@@ -12,6 +12,7 @@
 #include "agentic_autonomous_config.h"
 #include "native_agent.hpp"
 #include "agent/autonomous_subagent.hpp"
+#include "nlohmann/json.hpp"
 #include <random>
 #include <iomanip>
 #include <algorithm>
@@ -756,11 +757,45 @@ std::string SubAgentManager::getStatusSummary() const {
 // Tool Call Dispatch
 // ============================================================================
 
+static std::string ScrubJsonPayload(const std::string& raw) {
+    // 1. Find the first '{' and last '}'
+    size_t start = raw.find('{');
+    size_t end = raw.rfind('}');
+    
+    if (start == std::string::npos || end == std::string::npos || end < start) {
+        return "{}"; // Return empty object to trigger "Invalid Tool Call" logic
+    }
+    
+    // 2. Extract substring (handles Markdown wrappers naturally)
+    return raw.substr(start, (end - start) + 1);
+}
+
 bool SubAgentManager::dispatchToolCall(
     const std::string& parentId,
     const std::string& modelOutput,
     std::string& toolResult)
 {
+    try {
+        std::string cleanJson = ScrubJsonPayload(modelOutput);
+        if (cleanJson == "{}") {
+             // Fallback to legacy string searching if no JSON object at all, 
+             // but only if it matches known legacy patterns.
+             if (modelOutput.find("tool:") == std::string::npos && modelOutput.find("\"load_model\"") == std::string::npos) {
+                 return false; 
+             }
+        } else {
+            auto j = nlohmann::json::parse(cleanJson);
+            // Handle nlohmann::json tool dispatch here in the future
+            // For now, we still fall through to the legacy extraction below if needed,
+            // but we've verified the JSON is at least parsable.
+        }
+    } catch (const std::exception& e) {
+        // Keep parser compatibility across json implementations that do not expose parse_error.
+        logInfo("[Agentic Error] JSON Parse failed: " + std::string(e.what()));
+    } catch (...) {
+        logInfo("[Agentic Error] JSON Parse failed: unknown exception");
+    }
+
     auto extractFieldNear = [&](size_t fromPos, const std::string& fieldName) -> std::string {
         std::string key = "\"" + fieldName + "\"";
         size_t kpos = modelOutput.find(key, fromPos);

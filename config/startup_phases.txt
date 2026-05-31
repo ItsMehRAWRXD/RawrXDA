@@ -1,6 +1,50 @@
-# RawrXD IDE startup phase order — all phases run at boot (no skips).
+# RawrXD IDE startup phase order — canonical front-to-back list (see runPhase in main_win32.cpp).
 # One phase name per line. Empty lines and # comments ignored.
 # Prefix with lazy: to run on first use only (not used by default).
+#
+# Note: Win32 GUI WinMain uses a split bootstrap (quick phases through createWindow, then
+# showMainWindowSafe, then heavy phases). Feature probes use this file order end-to-end.
+# First eight phases: init_common_controls .. showWindow — keep them safe for cold start.
+#   Matrix: docs/STARTUP_PHASES_BATCH1_E01_E08_MATRIX.md
+#   Traces: startup_conjoined_phases_1_8_step (phase|PR02 session) after each; showWindow also runs E0-02 visibility.
+#   Optional: RAWRXD_ENABLE_STARTUP_VALIDATION_BATCH1=1 → Win32IDE::runCriticalValidationBatch1 after showWindow.
+# Next eight: extension_bootstrap .. message_loop_entered — post-show wiring, optional heavy init (env-gated).
+# Phases 9–16 pair with E0-01..E0-08 (Win32IDE::runCriticalValidationBatch3):
+#   extension_bootstrap→E0-01, integrated_runtime→E0-06, camellia_init→E0-03, masm_init→E0-07,
+#   swarm→E0-04, auto_update→E0-02, layout→E0-05, message_loop_entered→E0-08.
+# E0-09..E0-16 (Win32IDE::runCriticalValidationBatch4): registry, config, logs, GET /api/status,
+#   FeatureRegistry, agentic bridge, QuickJS host, engines — traced after localhost API server start.
+# E0-17..E0-24 (Batch5 / traceConjoinedE0ExtendedBatch): PR02 session, phase manifest, extensions|plugins,
+#   license init, client area, sidebars, child HWND count, GUI thread — pre message_loop_entered rollup.
+# Front-to-back: pre-create + mid phases emit startup_conjoined_e0 via e0IndexForPreOrMidShowPhase
+#   (init_common_controls→17, first_run_gauntlet→18, vsix_loader→19, plugin_signature→4, creating_ide_instance→10,
+#   createWindow→7, enterprise_license→20; showWindow→E0-02 separately).
+# E0-17..24 extended batch runs after post-show layout (before E0-01..08 rollup and API E0-09..16).
+# Each heavy post-show phase logs startup_conjoined_e0 (phase|E0|detail); summary startup_conjoined_e0_summary.
+# Optional RAWRXD_STARTUP_E0_VERBOSE_ROLLUP=1 → startup_conjoined_e0_rollup duplicate pass/fail lines.
+# Post-API batch logs startup_conjoined_e0_b4 as post_api|<anchor>|… then startup_conjoined_e0_b4_summary.
+# E0-17..E0-24: startup_conjoined_e0_b5 as pre_loop|<anchor>|… then startup_conjoined_e0_b5_summary (after layout).
+# E0-25..E0-32 (Batch6): main enabled, editor class, output chrome, copilot output, title, model selector, menu depth,
+#   focus under main — traced after PostMessage(WM_APP+199), SetFocus(editor), and one pumpMessages() pass, before runMessageLoop.
+#   Traces: startup_conjoined_e0_25_32_begin (session), startup_conjoined_e0_b6 as loop_ready|<anchor>|…,
+#   then startup_conjoined_e0_b6_summary (E0-32 expects focus on editor or other child).
+# E0-33..E0-40 (Batch7 / traceConjoinedE0ShellDeepBatch in main_win32.cpp): RichEdit module, toolbar, tab bar, custom close control,
+#   canonical phase names in manifest, main HWND DPI, FeatureRegistry breadth, splitter or activity bar — same hook as Batch6
+#   (after focus + pump). Traces: startup_conjoined_e0_33_40_begin, startup_conjoined_e0_b7 as shell_deep|<anchor>|…,
+#   startup_conjoined_e0_b7_summary.
+# E0-41..E0-48 (Batch8 / traceConjoinedE0WorkbenchBatch): gutter|minimap, command input, chrome min/max, explorer trees,
+#   sidebar content host, host exe path, phase license+extension gates, main window not hung — same pre-loop pump as b6/b7.
+#   Traces: startup_conjoined_e0_41_48_begin, startup_conjoined_e0_b8 as workbench|<anchor>|…, startup_conjoined_e0_b8_summary.
+# E0-49..E0-56 (Batch9 / traceConjoinedE0AgentChromeBatch): copilot input/send, clear or secondary sidebar, settings,
+#   title label, Git surface, model progress UI, ide_startup.log — immediately after Batch8, before runMessageLoop.
+#   Traces: startup_conjoined_e0_49_56_begin, startup_conjoined_e0_b9 as agent_chrome|<anchor>|…,
+#   startup_conjoined_e0_b9_summary.
+# E0-57..E0-64 (Batch10 / traceConjoinedE0PanelsDeepBatch): problems UI, debug console, debugger dock, extensions,
+#   outline, search results, module browser, context/max-token sliders — after Batch9, before runMessageLoop.
+#   Traces: startup_conjoined_e0_57_64_begin, startup_conjoined_e0_b10 as panels_deep|<anchor>|…,
+#   startup_conjoined_e0_b10_summary.
+# WinMain early batches 1–8: startup_conjoined_early_1_8 — replay|session|b1..b3 after log open; b4..b8 on each milestone;
+#   winmain_early_e0_1..e0_8 also emit startup_conjoined_early_1_8|step|session (pre–Win32IDE E0 narrative).
 #
 init_common_controls
 first_run_gauntlet
@@ -10,6 +54,7 @@ creating_ide_instance
 createWindow
 enterprise_license
 showWindow
+extension_bootstrap
 integrated_runtime
 camellia_init
 masm_init

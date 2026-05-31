@@ -67,11 +67,11 @@ static void kernel_roll_fused_i0_i1(
     });
 }
 
-void ggml_sycl_roll(ggml_backend_sycl_context & ctx, ggml_tensor *dst) {
-    GGML_ASSERT(dst->type == GGML_TYPE_F32);
+void ggml_rxd_sycl_roll(ggml_rxd_backend_sycl_context & ctx, ggml_rxd_tensor *dst) {
+    GGML_RXD_ASSERT(dst->type == GGML_RXD_TYPE_F32);
 
-    const ggml_tensor *src = dst->src[0];
-    GGML_ASSERT(src && src->type == GGML_TYPE_F32);
+    const ggml_rxd_tensor *src = dst->src[0];
+    GGML_RXD_ASSERT(src && src->type == GGML_RXD_TYPE_F32);
 
     const int ne0 = (int) dst->ne[0];
     const int ne1 = (int) dst->ne[1];
@@ -86,7 +86,7 @@ void ggml_sycl_roll(ggml_backend_sycl_context & ctx, ggml_tensor *dst) {
 
 
     if ((shift0 | shift1 | shift2 | shift3) == 0) {
-        const size_t nb = ggml_nbytes(src);
+        const size_t nb = ggml_rxd_nbytes(src);
         queue *q = ctx.stream();
         SYCL_CHECK(CHECK_TRY_ERROR(q->memcpy(dst->data, src->data, nb)));
         return;
@@ -108,7 +108,7 @@ void ggml_sycl_roll(ggml_backend_sycl_context & ctx, ggml_tensor *dst) {
 
         const float *src_d = (const float *) src->data;
         float *dst_d = (float *) dst->data;
-        GGML_ASSERT(src_d && dst_d);
+        GGML_RXD_ASSERT(src_d && dst_d);
 
         kernel_roll_fused_i0_i1(
             *q, src_d, dst_d,

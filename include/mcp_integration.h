@@ -281,6 +281,10 @@ private:
     void* m_stdinWrite    = nullptr;
     void* m_stdoutRead    = nullptr;
 
+    // HTTP transport mode
+    bool m_httpMode = false;
+    std::string m_httpUrl;
+
     mutable std::mutex m_mutex;
     int64_t m_nextId = 1;
 };

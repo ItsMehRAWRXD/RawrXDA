@@ -8,6 +8,7 @@
 //   - MC_GapBuffer (ASM) for text storage
 //   - MC_TokenizeLine (ASM) for syntax highlighting
 //   - Direct2D / DirectWrite for GPU-accelerated rendering
+//   - Adobe RGBa color space for professional color accuracy
 //
 // Architecture:
 //   MonacoCoreEngine owns:
@@ -39,6 +40,7 @@
 
 #include "editor_engine.h"
 #include "RawrXD_MonacoCore.h"
+#include "RawrXD_ColorSpace.h"
 
 #include <d2d1.h>
 #include <dwrite.h>
@@ -189,6 +191,11 @@ private:
     // ---- Color Helpers ----
     D2D1_COLOR_F tokenColor(MC_TokenType type) const;
     D2D1_COLOR_F bgraToD2D(uint32_t bgra) const;
+    
+    // ---- VSU Effect Rendering ----
+    void renderAcrylicBackground();
+    void renderMicaBackground();
+    void renderElevationShadow(const D2D1_RECT_F& rect, uint32_t shadowColor);
 
     // ---- Window ----
     HWND                        m_hwnd = nullptr;
@@ -1399,8 +1406,53 @@ void MonacoCoreEngine::invalidateLineCache(int line) {
 }
 
 D2D1_COLOR_F MonacoCoreEngine::bgraToD2D(uint32_t bgra) const {
-    MC_ColorF c = MC_BGRAtoColorF(bgra);
-    return D2D1::ColorF(c.r, c.g, c.b, c.a);
+    // Convert BGRA to Adobe RGBa color space for professional color accuracy
+    using namespace RawrXD::ColorSpace;
+    AdobeRGBa color = AdobeRGBa::FromBGRA(bgra);
+    auto d2d = color.ToD2D();
+    return D2D1::ColorF(d2d.r, d2d.g, d2d.b, d2d.a);
+}
+
+// ============================================================================
+// VSU Effect Rendering Helpers
+// ============================================================================
+
+void MonacoCoreEngine::renderAcrylicBackground() {
+    if (!m_renderTarget) return;
+    
+    // Render acrylic material effect with noise texture
+    // Base layer
+    m_brush->SetColor(bgraToD2D(MC_Colors::ACRYLIC_DARK_BASE));
+    m_renderTarget->FillRectangle(
+        D2D1::RectF(0, 0, static_cast<float>(m_viewportWidth), static_cast<float>(m_viewportHeight)),
+        m_brush
+    );
+    
+    // Luminosity layer (simulated with semi-transparent overlay)
+    m_brush->SetColor(bgraToD2D(0x99333333));  // 60% gray
+    m_renderTarget->FillRectangle(
+        D2D1::RectF(0, 0, static_cast<float>(m_viewportWidth), static_cast<float>(m_viewportHeight)),
+        m_brush
+    );
+}
+
+void MonacoCoreEngine::renderMicaBackground() {
+    if (!m_renderTarget) return;
+    
+    // Render mica material effect (tinted wallpaper)
+    m_brush->SetColor(bgraToD2D(MC_Colors::MICA_DARK_TINT));
+    m_renderTarget->FillRectangle(
+        D2D1::RectF(0, 0, static_cast<float>(m_viewportWidth), static_cast<float>(m_viewportHeight)),
+        m_brush
+    );
+}
+
+void MonacoCoreEngine::renderElevationShadow(const D2D1_RECT_F& rect, uint32_t shadowColor) {
+    if (!m_renderTarget || !m_brush) return;
+    
+    // Render elevation shadow for depth perception
+    m_brush->SetColor(bgraToD2D(shadowColor));
+    m_renderTarget->FillRectangle(rect, m_brush);
 }
 
 // ============================================================================

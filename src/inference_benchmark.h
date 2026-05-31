@@ -18,6 +18,7 @@ struct BenchmarkResult {
     BackendType backend;
     std::string backendName;
     std::string modelPath;
+    std::string draftModelPath;
     std::string testPrompt;
     int maxTokens;
     double totalTimeMs;
@@ -25,7 +26,10 @@ struct BenchmarkResult {
     double latencyP50Ms;
     double latencyP95Ms;
     double latencyP99Ms;
+    double acceptanceRate;
+    double speedupVsBaseline;
     size_t memoryUsageBytes;
+    bool speculativeMode;
     bool success;
     std::string errorMessage;
 };
@@ -42,6 +46,10 @@ struct BenchmarkConfig {
     int benchmarkRuns = 5;
     bool enableMemoryTracking = true;
     bool enableLatencyProfiling = true;
+    bool enableSpeculativeBenchmarks = false;
+    std::string draftModelPath;
+    int speculativeDraftTokens = 4;
+    float speculativeAcceptanceThreshold = 0.3f;
 };
 
 /**
@@ -78,6 +86,13 @@ public:
                                    int maxTokens,
                                    int numRuns = 5);
 
+    BenchmarkResult benchmarkSpeculative(const std::string& modelPath,
+                                       const std::string& draftModelPath,
+                                       const std::string& testPrompt,
+                                       int maxTokens,
+                                       int numRuns,
+                                       const BenchmarkConfig& config);
+
     /**
      * @brief Compare backends and generate performance report
      * @param results Benchmark results to compare
@@ -108,7 +123,15 @@ private:
                                        int maxTokens,
                                        int numRuns);
 
-    size_t measureMemoryUsage(std::unique_ptr<InferenceEngine>& engine);
+    std::vector<double> measureSpeculativeLatencies(const std::string& modelPath,
+                                                  const std::string& draftModelPath,
+                                                  const std::string& testPrompt,
+                                                  int maxTokens,
+                                                  int numRuns,
+                                                  double& acceptanceRate,
+                                                  const BenchmarkConfig& config);
+
+    size_t measureMemoryUsage(const std::unique_ptr<InferenceEngine>& engine);
 
     void warmupEngine(std::unique_ptr<InferenceEngine>& engine,
                      const std::string& modelPath,

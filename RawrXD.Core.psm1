@@ -450,4 +450,33 @@ function Parse-AgentCommand {
     return $null
 }
 
-Export-ModuleMember -Function Write-EmergencyLog, Write-StartupLog, Send-OllamaRequest, Start-BackgroundTask, Test-OllamaConnection, Show-OllamaConfigurationDialog, Verify-AgentToolRegistry, Parse-AgentCommand
+# ============================================
+# AUTONOMOUS AGENT TOOL REGISTRATIONS
+# Wire the PS-level autonomous tools into the shared $script:agentTools registry
+# so Parse-AgentCommand / Verify-AgentToolRegistry can discover them at runtime.
+# ============================================
+Register-AgentTool -Name 'Start-SelfAnalysis' `
+    -Description 'Analyse all RawrXD modules for documentation gaps, security patterns, and error-handling coverage.' `
+    -Handler { Start-SelfAnalysis }
+
+Register-AgentTool -Name 'Start-AutonomousTesting' `
+    -Description 'Run the module-import, function-availability, and self-analysis test suite.' `
+    -Handler { Start-AutonomousTesting }
+
+Register-AgentTool -Name 'Start-AutomaticFeatureGeneration' `
+    -Description 'Generate missing documentation, error-handling, and feature stubs for analysed modules.' `
+    -Parameters @{ AnalysisResults = @{ Type = 'object'; Required = $false; Description = 'Output from Start-SelfAnalysis. Auto-runs analysis when omitted.' } } `
+    -Handler {
+        param($AnalysisResults)
+        $analysis = if ($AnalysisResults) { $AnalysisResults } else { Start-SelfAnalysis }
+        Start-AutomaticFeatureGeneration -AnalysisResults $analysis
+    }
+
+Register-AgentTool -Name 'Get-AutonomousAgentStatus' `
+    -Description 'Return the current autonomous agent state snapshot.' `
+    -Handler { Get-AutonomousAgentStatus }
+
+Export-ModuleMember -Function Write-EmergencyLog, Write-StartupLog, Send-OllamaRequest,
+    Start-BackgroundTask, Test-OllamaConnection, Show-OllamaConfigurationDialog,
+    Verify-AgentToolRegistry, Parse-AgentCommand, Register-AgentTool
+

@@ -441,7 +441,7 @@ std::string SimpleWebSocketServer::performHandshake(const std::string& request) 
         std::string key = match[1];
         // Compute accept key (simplified - in real implementation use proper SHA-1)
         std::string acceptKey = key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-        // For demo purposes, using a simple hash
+        // Using a simple hash
         size_t hash = std::hash<std::string>{}(acceptKey);
         char hashStr[17];
         sprintf(hashStr, "%016zx", hash);
@@ -510,7 +510,7 @@ bool StandaloneWebBridgeServer::initialize() {
     try {
         // Create the TCP proxy server
         m_proxyServer = std::make_unique<GGUFProxyServer>();
-        m_proxyServer->initialize(11434, m_hotPatcher, "http://localhost:11434");
+        m_proxyServer->initialize(11434, m_hotPatcher, "http://localhost:11435");
 
         // Create web API
         m_webAPI = std::make_unique<StandaloneWebAPI>(m_proxyServer.get());

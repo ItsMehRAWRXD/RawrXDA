@@ -203,12 +203,17 @@ VSCodeAPIResult QuickJSExtensionHost::initialize(Win32IDE* host, HWND mainWindow
     m_defaultSandbox.allowEval              = false;
     m_defaultSandbox.allowBytecodeLoad      = false;
     m_defaultSandbox.allowNetworkShims      = false;
+    m_defaultSandbox.allowWebAssembly       = false;
 
-    // Default allowed paths: extensions dir + workspace + globalStorage
+    // Default allowed paths: always extension roots + global storage; workspace read
+    // access is only granted when workspace trust is enabled.
     m_defaultSandbox.allowedReadPaths.push_back(m_extensionsDir);
-    m_defaultSandbox.allowedReadPaths.push_back(std::filesystem::current_path());
     m_defaultSandbox.allowedReadPaths.push_back(std::filesystem::current_path() / "globalStorage");
     m_defaultSandbox.allowedWritePaths.push_back(std::filesystem::current_path() / "globalStorage");
+
+    if (vscode::VSCodeExtensionAPI::instance().isWorkspaceTrusted()) {
+        m_defaultSandbox.allowedReadPaths.push_back(std::filesystem::current_path());
+    }
 
     m_initialized = true;
 
@@ -548,18 +553,12 @@ bool QuickJSExtensionHost::parsePackageJson(const std::filesystem::path& extensi
         return false;
     }
 
-    // Read file content
     std::ifstream infile(pkgPath);
     if (!infile.is_open()) return false;
 
     std::string content((std::istreambuf_iterator<char>(infile)),
                          std::istreambuf_iterator<char>());
     infile.close();
-
-    // Minimal JSON parser for package.json fields we need
-    // (We cannot use nlohmann::json here because the VSIX loader uses it but
-    //  we want the QuickJS host to be dependency-minimal. We use a simple
-    //  field extractor.)
 
     auto extractString = [&](const std::string& key) -> std::string {
         std::string search = "\"" + key + "\"";
@@ -575,7 +574,7 @@ bool QuickJSExtensionHost::parsePackageJson(const std::filesystem::path& extensi
 
         size_t end = pos;
         while (end < content.size() && content[end] != '"') {
-            if (content[end] == '\\') end++; // skip escaped chars
+            if (content[end] == '\\') end++;
             end++;
         }
 
@@ -610,6 +609,19 @@ bool QuickJSExtensionHost::parsePackageJson(const std::filesystem::path& extensi
         return result;
     };
 
+    auto extractBoolNear = [&](size_t startPos, const std::string& key, bool defaultVal) -> bool {
+        std::string search = "\"" + key + "\"";
+        size_t pos = content.find(search, startPos);
+        if (pos == std::string::npos) return defaultVal;
+        size_t colon = content.find(':', pos + search.length());
+        if (colon == std::string::npos) return defaultVal;
+        size_t val = content.find_first_not_of(" \t\r\n", colon + 1);
+        if (val == std::string::npos) return defaultVal;
+        if (content.compare(val, 4, "true") == 0) return true;
+        if (content.compare(val, 5, "false") == 0) return false;
+        return defaultVal;
+    };
+
     outManifest.name        = extractString("name");
     outManifest.displayName = extractString("displayName");
     outManifest.version     = extractString("version");
@@ -618,7 +630,6 @@ bool QuickJSExtensionHost::parsePackageJson(const std::filesystem::path& extensi
     outManifest.main        = extractString("main");
     outManifest.extensionKind = extractString("extensionKind");
 
-    // Build composite ID
     if (!outManifest.publisher.empty() && !outManifest.name.empty()) {
         outManifest.id = outManifest.publisher + "." + outManifest.name;
     } else {
@@ -628,6 +639,81 @@ bool QuickJSExtensionHost::parsePackageJson(const std::filesystem::path& extensi
     outManifest.activationEvents = extractStringArray("activationEvents");
     outManifest.categories = extractStringArray("categories");
     outManifest.extensionDependencies = extractStringArray("extensionDependencies");
+    outManifest.requestedPermissions = extractStringArray("permissions");
+
+    size_t untrustedPos = content.find("\"untrustedWorkspaces\"");
+    if (untrustedPos != std::string::npos) {
+        bool supported = extractBoolNear(untrustedPos, "supported", true);
+        outManifest.requiresWorkspaceTrust = !supported;
+    }
+
+    size_t contributesPos = content.find("\"contributes\"");
+    if (contributesPos != std::string::npos) {
+        size_t commandsPos = content.find("\"commands\"", contributesPos);
+        if (commandsPos != std::string::npos) {
+            size_t arrStart = content.find('[', commandsPos);
+            size_t arrEnd = content.find(']', arrStart);
+            if (arrStart != std::string::npos && arrEnd != std::string::npos && arrEnd > arrStart) {
+                size_t scan = arrStart;
+                while ((scan = content.find("\"command\"", scan)) != std::string::npos && scan < arrEnd) {
+                    size_t cColon = content.find(':', scan);
+                    size_t cQ1 = content.find('"', cColon + 1);
+                    size_t cQ2 = content.find('"', cQ1 + 1);
+                    if (cColon == std::string::npos || cQ1 == std::string::npos || cQ2 == std::string::npos || cQ2 > arrEnd) break;
+
+                    VSCodeExtensionManifest::ContributedCommand cc;
+                    cc.command = content.substr(cQ1 + 1, cQ2 - cQ1 - 1);
+
+                    size_t tPos = content.find("\"title\"", cQ2);
+                    if (tPos != std::string::npos && tPos < arrEnd) {
+                        size_t tColon = content.find(':', tPos);
+                        size_t tQ1 = content.find('"', tColon + 1);
+                        size_t tQ2 = content.find('"', tQ1 + 1);
+                        if (tColon != std::string::npos && tQ1 != std::string::npos && tQ2 != std::string::npos && tQ2 < arrEnd) {
+                            cc.title = content.substr(tQ1 + 1, tQ2 - tQ1 - 1);
+                        }
+                    }
+
+                    if (cc.title.empty()) cc.title = cc.command;
+                    if (!cc.command.empty()) outManifest.commands.push_back(std::move(cc));
+                    scan = cQ2 + 1;
+                }
+            }
+        }
+
+        size_t cfgPos = content.find("\"configuration\"", contributesPos);
+        size_t propsPos = (cfgPos != std::string::npos) ? content.find("\"properties\"", cfgPos) : std::string::npos;
+        if (propsPos != std::string::npos) {
+            size_t propsStart = content.find('{', propsPos);
+            size_t propsEnd = content.find('}', propsStart);
+            if (propsStart != std::string::npos && propsEnd != std::string::npos && propsEnd > propsStart) {
+                VSCodeExtensionManifest::ContributedConfiguration cfg;
+                cfg.title = extractString("title");
+
+                size_t scan = propsStart + 1;
+                while (scan < propsEnd) {
+                    size_t kQ1 = content.find('"', scan);
+                    size_t kQ2 = content.find('"', kQ1 + 1);
+                    if (kQ1 == std::string::npos || kQ2 == std::string::npos || kQ2 >= propsEnd) break;
+
+                    std::string key = content.substr(kQ1 + 1, kQ2 - kQ1 - 1);
+                    size_t typePos = content.find("\"type\"", kQ2);
+                    if (typePos == std::string::npos || typePos > propsEnd) break;
+                    size_t typeColon = content.find(':', typePos);
+                    size_t tQ1 = content.find('"', typeColon + 1);
+                    size_t tQ2 = content.find('"', tQ1 + 1);
+                    if (typeColon == std::string::npos || tQ1 == std::string::npos || tQ2 == std::string::npos || tQ2 > propsEnd) break;
+
+                    cfg.properties[key] = content.substr(tQ1 + 1, tQ2 - tQ1 - 1);
+                    scan = tQ2 + 1;
+                }
+
+                if (!cfg.properties.empty()) {
+                    outManifest.configuration.push_back(std::move(cfg));
+                }
+            }
+        }
+    }
 
     logInfo("[QuickJS Host] Parsed package.json: id='%s', main='%s', activationEvents=%zu",
             outManifest.id.c_str(), outManifest.main.c_str(),
@@ -666,6 +752,11 @@ VSCodeAPIResult QuickJSExtensionHost::loadJSExtension(
     }
     if (!extensionId || !extensionPath || !manifest) {
         return VSCodeAPIResult::error("loadJSExtension: null parameters");
+    }
+
+    if (manifest->requiresWorkspaceTrust &&
+        !vscode::VSCodeExtensionAPI::instance().isWorkspaceTrusted()) {
+        return VSCodeAPIResult::error("loadJSExtension: extension requires trusted workspace");
     }
 
     // Check for duplicate
@@ -759,6 +850,12 @@ bool QuickJSExtensionHost::injectGlobals(QuickJSExtensionRuntime* rt) {
     ok = ok && injectRequire(rt);
     ok = ok && injectVSCodeAPI(rt);
     ok = ok && injectExtensionContext(rt);
+
+    if (ok && !rt->sandbox.allowWebAssembly) {
+        JSValue global = JS_GetGlobalObject(rt->context);
+        JS_SetPropertyStr(rt->context, global, "WebAssembly", JS_UNDEFINED);
+        JS_FreeValue(rt->context, global);
+    }
 
     return ok;
 }

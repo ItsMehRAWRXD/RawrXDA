@@ -1,11 +1,113 @@
 #pragma once
 #include <cstdint>
+#include <cstring>
 #include <functional>
 #include <limits>
 #include <memory>
+#include <new>
 #include <span>
+#include <stdexcept>
 #include <string>
 #include <vector>
+
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+
+// ---------------------------------------------------------------------------
+// VAllocBuffer — thin RAII wrapper around VirtualAlloc for large buffers that
+// must bypass the debug CRT heap.  Provides the std::vector subset used by
+// the KV cache (data/size/resize/assign/clear).
+// VirtualAlloc returns zero-filled pages, so 0.0f fill is free.
+// ---------------------------------------------------------------------------
+template <typename T> struct VAllocBuffer
+{
+    T* m_ptr = nullptr;
+    size_t m_size = 0;
+
+    VAllocBuffer() = default;
+    ~VAllocBuffer() { free_(); }
+    VAllocBuffer(const VAllocBuffer&) = delete;
+    VAllocBuffer& operator=(const VAllocBuffer&) = delete;
+    VAllocBuffer(VAllocBuffer&& o) noexcept : m_ptr(o.m_ptr), m_size(o.m_size)
+    {
+        o.m_ptr = nullptr;
+        o.m_size = 0;
+    }
+    VAllocBuffer& operator=(VAllocBuffer&& o) noexcept
+    {
+        if (this != &o)
+        {
+            free_();
+            m_ptr = o.m_ptr;
+            m_size = o.m_size;
+            o.m_ptr = nullptr;
+            o.m_size = 0;
+        }
+        return *this;
+    }
+
+    T* data() noexcept { return m_ptr; }
+    const T* data() const noexcept { return m_ptr; }
+    size_t size() const noexcept { return m_size; }
+    bool empty() const noexcept { return m_size == 0; }
+
+    // Allocate n elements, zero-filled.  val is accepted for interface compat
+    // but must be zero (VirtualAlloc guarantees zero pages).
+    void resize(size_t n, T /*val*/ = T{})
+    {
+        free_();
+        if (n == 0)
+            return;
+        const size_t bytes = n * sizeof(T);
+        m_ptr = static_cast<T*>(::VirtualAlloc(nullptr, bytes, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE));
+        if (!m_ptr)
+        {
+            DWORD err = ::GetLastError();
+            printf("[VAllocBuffer] VirtualAlloc FAILED: n=%zu bytes=%zu err=%lu\n", n, bytes, (unsigned long)err);
+            throw std::bad_alloc();
+        }
+        m_size = n;
+        // Pages are zero-filled by the OS — no memset needed for 0/0.0f.
+    }
+
+    void assign(size_t n, T val)
+    {
+        free_();
+        if (n == 0)
+            return;
+        const size_t bytes = n * sizeof(T);
+        m_ptr = static_cast<T*>(::VirtualAlloc(nullptr, bytes, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE));
+        if (!m_ptr)
+        {
+            DWORD err = ::GetLastError();
+            printf("[VAllocBuffer] VirtualAlloc FAILED (assign): n=%zu bytes=%zu err=%lu\n", n, bytes,
+                   (unsigned long)err);
+            throw std::bad_alloc();
+        }
+        m_size = n;
+        // VirtualAlloc zeros pages.  If caller requests non-zero fill, do it.
+        T zero{};
+        if (std::memcmp(&val, &zero, sizeof(T)) != 0)
+            for (size_t i = 0; i < n; ++i)
+                m_ptr[i] = val;
+    }
+
+    void clear() noexcept { free_(); }
+    void shrink_to_fit() noexcept { /* no-op — VirtualAlloc is always exact */ }
+
+  private:
+    void free_() noexcept
+    {
+        if (m_ptr)
+        {
+            ::VirtualFree(m_ptr, 0, MEM_RELEASE);
+            m_ptr = nullptr;
+        }
+        m_size = 0;
+    }
+};
 
 #ifdef RAWR_ENABLE_VULKAN
 #include <vulkan/vulkan.h>
@@ -82,6 +184,9 @@ class RawrXDTransformer
         int moe_down_policy_divergence_logs_per_minute_cap = 32;
         /// Experimental: run grouped down-pack cache probe in MoE mixture path (math still uses per-expert SwiGLU).
         bool moe_down_enable_grouped_integration = false;
+        /// When true with grouped integration, use batched down-project on pack-cache hit (\ref
+        /// MoEAccumRef::moeDownProjectBatchedExpertsFromPackedF32); shadow mode keeps this false.
+        bool moe_down_use_grouped_down_math = false;
         /// LRU capacity for \ref MoEIntegr::MoEMixturePlanPackCache (minimum 1 when integration is enabled).
         int moe_down_grouped_pack_cache_max_entries = 16;
         /// Max total packed float payload bytes for the mixture pack cache (`0` = no byte cap, entry limit only).
@@ -97,11 +202,17 @@ class RawrXDTransformer
         /// After a heatmap snapshot, enqueue up to N resident expert hints per tick (async prepack only).
         bool moe_down_grouped_prepack_hint_from_heatmap = false;
         int moe_down_grouped_prepack_heatmap_max_hints_per_tick = 16;
+
+        /// Minimal expert prefetch: after router top‑K is known, materialize the expert gate/up/down tensors via
+        /// RawrXDModelLoader hotpatch slots to avoid first-use stalls.
+        bool moe_expert_prefetch = true;
+        /// Cap prefetch fanout even if router returns more experts (0 = no cap).
+        int moe_expert_prefetch_max = 8;
     };
 
     ~RawrXDTransformer();
 
-    void Initialize(VkDevice device, VkPhysicalDevice physDevice, Config cfg, RawrXDModelLoader* loader);
+    bool Initialize(VkDevice device, VkPhysicalDevice physDevice, Config cfg, RawrXDModelLoader* loader);
     std::vector<float> Forward(const std::vector<uint32_t>& tokens, int start_pos);
 
     /** Optional: layer forward progress (e.g. "[STEP] Layer …"). Safe to invoke from worker threads. */
@@ -131,6 +242,16 @@ class RawrXDTransformer
     [[nodiscard]] std::uint64_t moeGroupedPackCacheMisses() const noexcept { return m_moeGroupedPackCacheMisses; }
     [[nodiscard]] std::uint64_t moeGroupedFallbacks() const noexcept { return m_moeGroupedFallbacks; }
     [[nodiscard]] std::uint64_t moeGroupedSyncPackInserts() const noexcept { return m_moeGroupedSyncPackInserts; }
+    [[nodiscard]] std::uint64_t moeGroupedWeightedApplies() const noexcept { return m_moeGroupedWeightedApplies; }
+    [[nodiscard]] std::uint64_t moeGroupedSingleExpertApplies() const noexcept
+    {
+        return m_moeGroupedSingleExpertApplies;
+    }
+    [[nodiscard]] std::uint64_t moeGroupedWeightedFallbacks() const noexcept { return m_moeGroupedWeightedFallbacks; }
+    [[nodiscard]] std::uint64_t moeGroupedSingleExpertFallbacks() const noexcept
+    {
+        return m_moeGroupedSingleExpertFallbacks;
+    }
 
     /// Entries removed because a referenced swarm plan row's slice left the working set.
     [[nodiscard]] std::uint64_t moePackEvictedByPlanRow() const noexcept { return m_moePackEvictedByPlanRow; }
@@ -163,6 +284,8 @@ class RawrXDTransformer
     std::function<void(const std::string&)> m_layerProgressCb;
     RawrXD::Swarm::ISwarmScheduler* m_swarmScheduler = nullptr;
     RawrXD::Swarm::SwarmPlanSliceIndex m_swarmPlanSliceIndex{};
+    bool m_swarmPinningSuppressed = false;
+    std::uint32_t m_swarmPinFailureStreak = 0;
 
     /// On success, appends plan row indices passed to `pinPlanRows` (for matching `unpinPlanRows`).
     /// When \p appendPinnedRows is false, \p outPinnedPlanRows is cleared first.
@@ -214,9 +337,11 @@ class RawrXDTransformer
     void onSwarmPlanRowsEvicted_(std::span<const std::size_t> rows);
     void installSwarmPlanRowEvictionObserver_();
 
-    // KV Cache
-    std::vector<float> kv_cache_k;
-    std::vector<float> kv_cache_v;
+    void prefetchMoEExperts_(const std::string& blkPrefix, const std::vector<std::uint32_t>& expertOrdinals);
+
+    // KV Cache — float buffers use VirtualAlloc to bypass debug CRT heap limits.
+    VAllocBuffer<float> kv_cache_k;
+    VAllocBuffer<float> kv_cache_v;
     std::vector<int64_t> kv_cache_pos;
 
     /// Resident ratio EMA per layer (expert rows only); reset on plan generation change.
@@ -239,11 +364,19 @@ class RawrXDTransformer
     std::uint64_t m_moeGroupedPackCacheMisses = 0;
     std::uint64_t m_moeGroupedFallbacks = 0;
     std::uint64_t m_moeGroupedSyncPackInserts = 0;
+    std::uint64_t m_moeGroupedWeightedApplies = 0;
+    std::uint64_t m_moeGroupedSingleExpertApplies = 0;
+    std::uint64_t m_moeGroupedWeightedFallbacks = 0;
+    std::uint64_t m_moeGroupedSingleExpertFallbacks = 0;
 
     std::uint64_t m_moePackEvictedByPlanRow = 0;
     std::uint64_t m_moePrepackQueueDropped = 0;
     std::uint64_t m_moePrepackSkippedNotResident = 0;
     std::uint64_t m_moePrepackInserts = 0;
+
+    std::uint64_t m_moeExpertPrefetchAttempts = 0;
+    std::uint64_t m_moeExpertPrefetchMaterialized = 0;
+    std::uint64_t m_moeExpertPrefetchErrors = 0;
 
     std::unique_ptr<MoEPrepackWorker, MoEPrepackWorkerDeleter> m_moePrepackWorker;
 };

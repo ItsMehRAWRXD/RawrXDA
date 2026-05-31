@@ -6,6 +6,7 @@
 #include <mutex>
 #include <regex>
 #include <string>
+#include <unordered_set>
 #include <unordered_map>
 #include <vector>
 #include <algorithm>
@@ -15,12 +16,18 @@
 #include <cstring>
 #include <windows.h>
 
-// SCAFFOLD_068: agentic_puppeteer orchestration
+// Agentic Puppeteer Orchestration Implementation
 
 
-// MASM Bridge for byte-level corrections
-static std::unique_ptr<MasmBridge> g_puppeteerMasmBridge;
-static std::atomic<bool> g_puppeteerMasmInitialized{false};
+// MASM Bridge for byte-level corrections - LAZY SINGLETON PATTERN to avoid SIOF
+// std::unique_ptr has non-trivial constructor that must be lazy-initialized
+inline std::unique_ptr<MasmBridge>& GetPuppeteerMasmBridge() {
+    static std::unique_ptr<MasmBridge>* inst = new std::unique_ptr<MasmBridge>();
+    return *inst;
+}
+#define g_puppeteerMasmBridge GetPuppeteerMasmBridge()
+
+static std::atomic<bool> g_puppeteerMasmInitialized{false};  // atomic is trivially constructible
 static std::atomic<uint64_t> g_correctionBytesProcessed{0};
 static std::atomic<uint64_t> g_masmCorrectionCycles{0};
 
@@ -106,6 +113,13 @@ static std::string toLower(const std::string& str) {
     return lower;
 }
 
+static std::string trimCopy(const std::string& value) {
+    const size_t start = value.find_first_not_of(" \t\r\n");
+    if (start == std::string::npos) return "";
+    const size_t end = value.find_last_not_of(" \t\r\n");
+    return value.substr(start, end - start + 1);
+}
+
 // Helper: check if vector contains element
 template<typename T>
 static bool vectorContains(const std::vector<T>& vec, const T& val) {
@@ -130,7 +144,7 @@ AgenticPuppeteer::AgenticPuppeteer()
         "according to", "was invented by"
     };
 
-    fprintf(stderr, "[INFO] [AgenticPuppeteer] Initialized with refusal patterns and hallucination patterns\n");
+    // Initialized with refusal patterns and hallucination patterns
 }
 
 AgenticPuppeteer::~AgenticPuppeteer()
@@ -223,10 +237,22 @@ FailureType AgenticPuppeteer::detectFailure(const std::string& response)
     }
 
     // Check for hallucination indicators
+    int hallucinationMatches = 0;
     for (const std::string& pattern : m_hallucinationPatterns) {
         std::string lowerPattern = toLower(pattern);
         if (lower.find(lowerPattern) != std::string::npos) {
-            return FailureType::Hallucination;
+            ++hallucinationMatches;
+        }
+    }
+    if (hallucinationMatches >= 2) {
+        return FailureType::Hallucination;
+    }
+
+    // Check for explicit loop patterns configured by callers
+    for (const std::string& pattern : m_loopPatterns) {
+        const std::string lowerPattern = toLower(pattern);
+        if (!lowerPattern.empty() && countSubstring(lower, lowerPattern) >= 2) {
+            return FailureType::InfiniteLoop;
         }
     }
 
@@ -248,6 +274,18 @@ FailureType AgenticPuppeteer::detectFailure(const std::string& response)
     // Check for token limit (truncated response)
     if (response.ends_with("...") || response.ends_with("[truncated]")) {
         return FailureType::TokenLimitExceeded;
+    }
+
+    // Check for format violations: broken JSON or unmatched fenced code blocks.
+    const std::string trimmed = toLower(trimCopy(response));
+    const size_t fenceCount = countSubstring(response, "```");
+    if ((trimmed.starts_with("{") || trimmed.starts_with("[")) &&
+        ((countSubstring(response, "{") != countSubstring(response, "}")) ||
+         (countSubstring(response, "[") != countSubstring(response, "]")))) {
+        return FailureType::FormatViolation;
+    }
+    if ((fenceCount % 2) != 0) {
+        return FailureType::FormatViolation;
     }
 
     return FailureType::None;
@@ -323,7 +361,7 @@ void AgenticPuppeteer::setEnabled(bool enable)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_enabled = enable;
-    fprintf(stderr, "[INFO] [AgenticPuppeteer] %s\n", enable ? "Enabled" : "Disabled");
+    // Enabled/Disabled
 }
 
 bool AgenticPuppeteer::isEnabled() const
@@ -347,19 +385,39 @@ std::string AgenticPuppeteer::applyRefusalBypass(const std::string& response)
 
 std::string AgenticPuppeteer::correctHallucination(const std::string& response)
 {
-    // Remove hallucination indicators
     std::string corrected = response;
+    static const std::vector<std::pair<std::regex, std::string>> replacements = {
+        {std::regex("\\b(i think|probably|likely|might)\\b", std::regex::icase), ""},
+        {std::regex("\\bas of my knowledge cutoff[^\\.]*\\.?", std::regex::icase), ""},
+        {std::regex("\\bi'm not sure but\\b", std::regex::icase), ""}
+    };
 
-    for (const std::string& pattern : m_hallucinationPatterns) {
-        corrected = std::regex_replace(corrected, std::regex(pattern + ".*?\\."), "");
+    for (const auto& [pattern, replacement] : replacements) {
+        corrected = std::regex_replace(corrected, pattern, replacement);
     }
 
-    // Add disclaimer
-    if (!corrected.empty()) {
-        corrected = "[Note: This response has been filtered for accuracy.]\n\n" + corrected;
+    std::vector<std::string> sentences;
+    std::unordered_set<std::string> seen;
+    std::stringstream stream(corrected);
+    std::string sentence;
+    while (std::getline(stream, sentence, '.')) {
+        const std::string trimmed = trimCopy(sentence);
+        const std::string canonical = toLower(trimmed);
+        if (!trimmed.empty() && !seen.contains(canonical)) {
+            seen.insert(canonical);
+            sentences.push_back(trimmed);
+        }
     }
 
-    return corrected;
+    corrected.clear();
+    for (size_t index = 0; index < sentences.size(); ++index) {
+        if (index > 0) corrected += ". ";
+        corrected += sentences[index];
+    }
+    if (!corrected.empty() && corrected.back() != '.') {
+        corrected.push_back('.');
+    }
+    return corrected.empty() ? trimCopy(response) : corrected;
 }
 
 std::string AgenticPuppeteer::enforceFormat(const std::string& response)
@@ -368,8 +426,15 @@ std::string AgenticPuppeteer::enforceFormat(const std::string& response)
     std::string corrected = response;
 
     // Fix JSON if present
-    if (corrected.starts_with('{') && !corrected.ends_with('}')) {
-        corrected.append("}");
+    if (corrected.starts_with('{')) {
+        while (countSubstring(corrected, "{") > countSubstring(corrected, "}")) {
+            corrected.push_back('}');
+        }
+    }
+    if (corrected.starts_with('[')) {
+        while (countSubstring(corrected, "[") > countSubstring(corrected, "]")) {
+            corrected.push_back(']');
+        }
     }
 
     // Fix markdown code blocks
@@ -390,13 +455,18 @@ std::string AgenticPuppeteer::handleInfiniteLoop(const std::string& response)
 
     // Remove duplicate consecutive lines
     std::vector<std::string> unique;
+    std::unordered_map<std::string, int> lineFrequency;
     for (const std::string& line : lines) {
-        if (unique.empty() || unique.back() != line) {
-            unique.push_back(line);
+        const std::string trimmed = trimCopy(line);
+        if (trimmed.empty()) continue;
+        if (lineFrequency[trimmed] >= 2) continue;
+        if (unique.empty() || unique.back() != trimmed) {
+            lineFrequency[trimmed]++;
+            unique.push_back(trimmed);
         }
     }
 
-    return joinStrings(unique, "\n");
+    return unique.empty() ? trimCopy(response) : joinStrings(unique, "\n");
 }
 
 // RefusalBypassPuppeteer Implementation
@@ -404,7 +474,7 @@ std::string AgenticPuppeteer::handleInfiniteLoop(const std::string& response)
 RefusalBypassPuppeteer::RefusalBypassPuppeteer()
     : AgenticPuppeteer()
 {
-    fprintf(stderr, "[INFO] [RefusalBypassPuppeteer] Specialized for refusal bypass\n");
+    // Specialized for refusal bypass
 }
 
 CorrectionResult RefusalBypassPuppeteer::bypassRefusal(const std::string& refusedResponse, const std::string& originalPrompt)
@@ -435,7 +505,7 @@ std::string RefusalBypassPuppeteer::generateAlternativePrompt(const std::string&
 HallucinationCorrectorPuppeteer::HallucinationCorrectorPuppeteer()
     : AgenticPuppeteer()
 {
-    fprintf(stderr, "[INFO] [HallucinationCorrectorPuppeteer] Specialized for hallucination detection\n");
+    // Specialized for hallucination detection
 }
 
 CorrectionResult HallucinationCorrectorPuppeteer::detectAndCorrectHallucination(
@@ -478,7 +548,7 @@ std::string HallucinationCorrectorPuppeteer::validateFactuality(const std::strin
 FormatEnforcerPuppeteer::FormatEnforcerPuppeteer()
     : AgenticPuppeteer()
 {
-    fprintf(stderr, "[INFO] [FormatEnforcerPuppeteer] Specialized for format enforcement\n");
+    // Specialized for format enforcement
 }
 
 CorrectionResult FormatEnforcerPuppeteer::enforceJsonFormat(const std::string& response)
@@ -512,7 +582,11 @@ CorrectionResult FormatEnforcerPuppeteer::enforceJsonFormat(const std::string& r
         if (!fixedDoc.is_null()) {
             return CorrectionResult::ok(corrected, FailureType::FormatViolation);
         }
-    } catch (...) {}
+    } catch (const std::exception& e) {
+        std::cerr << "[ERROR] FormatEnforcerPuppeteer JSON repair exception: " << e.what() << std::endl;
+    } catch (...) {
+        std::cerr << "[ERROR] FormatEnforcerPuppeteer JSON repair unknown exception" << std::endl;
+    }
 
     return CorrectionResult::error(FailureType::FormatViolation, "Could not repair JSON");
 }

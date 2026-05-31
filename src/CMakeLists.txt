@@ -1,6 +1,10 @@
 include(CheckCXXCompilerFlag)
 include("../cmake/common.cmake")
 
+if (NOT DEFINED GGML_SCHED_MAX_COPIES OR GGML_SCHED_MAX_COPIES STREQUAL "")
+    # Must be a numeric literal; empty breaks ggml-backend.cpp array dimensions.
+    set(GGML_SCHED_MAX_COPIES 4 CACHE STRING "ggml: max input copies for pipeline parallelism" FORCE)
+endif()
 add_compile_definitions(GGML_SCHED_MAX_COPIES=${GGML_SCHED_MAX_COPIES})
 
 # enable libstdc++ assertions for debug builds
@@ -192,285 +196,301 @@ endif()
 if(NOT TARGET ggml-base)
     message(STATUS "Defining GGML targets inline (submodule not found)")
 
-if (GGML_BACKEND_DL AND NOT BUILD_SHARED_LIBS)
-    message(FATAL_ERROR "GGML_BACKEND_DL requires BUILD_SHARED_LIBS")
-endif()
-
-add_library(ggml-base
-            ../include/ggml.h
-            ../include/ggml-alloc.h
-            ../include/ggml-backend.h
-            ../include/ggml-cpp.h
-            ../include/ggml-opt.h
-            ../include/gguf.h
-            ggml.c
-            ggml.cpp
-            ggml-alloc.c
-            ggml-backend.cpp
-            ggml-opt.cpp
-            ggml-threading.cpp
-            ggml-threading.h
-            ggml-quants.c
-            ggml-quants.h
-            gguf.cpp)
-
-set_target_properties(ggml-base PROPERTIES
-    VERSION ${GGML_VERSION}
-    SOVERSION ${GGML_VERSION_MAJOR}
-)
-
-# Suppress known upstream warnings in GGML
-# These are non-critical issues in the upstream library, not our code
-if (MSVC)
-    # C4530: Exception handling in /EHsc mode (Vulkan SDK headers)
-    # C4003: Insufficient macro arguments (Windows SDK quirk)
-    # C4319: Zero-extending type conversions (Vulkan specification)
-    # C4005: Macro redefinition (Windows SDK compatibility)
-    target_compile_options(ggml-base PRIVATE /wd4530 /wd4003 /wd4319 /wd4005)
-endif()
-
-target_include_directories(ggml-base PRIVATE .)
-if (GGML_BACKEND_DL)
-    target_compile_definitions(ggml-base PUBLIC GGML_BACKEND_DL)
-endif()
-
-add_library(ggml
-            ggml-backend-reg.cpp)
-add_library(ggml::ggml ALIAS ggml)
-
-set_target_properties(ggml PROPERTIES
-    VERSION ${GGML_VERSION}
-    SOVERSION ${GGML_VERSION_MAJOR}
-)
-
-if (GGML_BACKEND_DIR)
-    if (NOT GGML_BACKEND_DL)
-        message(FATAL_ERROR "GGML_BACKEND_DIR requires GGML_BACKEND_DL")
-    endif()
-    target_compile_definitions(ggml PUBLIC GGML_BACKEND_DIR="${GGML_BACKEND_DIR}")
-endif()
-
-target_link_libraries(ggml PUBLIC ggml-base)
-
-if (CMAKE_SYSTEM_NAME MATCHES "Linux")
-    target_link_libraries(ggml PRIVATE dl)
-endif()
-
-function(ggml_add_backend_library backend)
-    if (GGML_BACKEND_DL)
-        add_library(${backend} MODULE ${ARGN})
-        # write the shared library to the output directory
-        set_target_properties(${backend} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-        target_compile_definitions(${backend} PRIVATE GGML_BACKEND_DL)
-        add_dependencies(ggml ${backend})
-        if (GGML_BACKEND_DIR)
-            install(TARGETS ${backend} LIBRARY DESTINATION ${GGML_BACKEND_DIR})
-        else()
-            install(TARGETS ${backend} LIBRARY DESTINATION ${CMAKE_INSTALL_BINDIR})
-        endif()
-    else()
-        add_library(${backend} ${ARGN})
-        target_link_libraries(ggml PUBLIC ${backend})
-        install(TARGETS ${backend} LIBRARY)
+    if (GGML_BACKEND_DL AND NOT BUILD_SHARED_LIBS)
+        message(FATAL_ERROR "GGML_BACKEND_DL requires BUILD_SHARED_LIBS")
     endif()
 
-    target_link_libraries(${backend} PRIVATE ggml-base)
-    target_include_directories(${backend} PRIVATE ..)
+    add_library(ggml-base
+                ../3rdparty/ggml/include/ggml.h
+                ../3rdparty/ggml/include/ggml-alloc.h
+                ../3rdparty/ggml/include/ggml-backend.h
+                ../3rdparty/ggml/include/ggml-cpp.h
+                ../3rdparty/ggml/include/ggml-opt.h
+                ../3rdparty/ggml/include/gguf.h
+                ../3rdparty/ggml/src/ggml.c
+                ../3rdparty/ggml/src/ggml.cpp
+                ../3rdparty/ggml/src/ggml-alloc.c
+                ../3rdparty/ggml/src/ggml-backend.cpp
+                ../3rdparty/ggml/src/ggml-opt.cpp
+                ../3rdparty/ggml/src/ggml-threading.cpp
+                ../3rdparty/ggml/src/ggml-threading.h
+                ../3rdparty/ggml/src/ggml-quants.c
+                ../3rdparty/ggml/src/ggml-quants.h
+                ../3rdparty/ggml/src/gguf.cpp)
 
-    if (${BUILD_SHARED_LIBS})
-        target_compile_definitions(${backend} PRIVATE GGML_BACKEND_BUILD)
-        target_compile_definitions(${backend} PUBLIC  GGML_BACKEND_SHARED)
-    endif()
-
-    # Set versioning properties for all backend libraries
-    set_target_properties(${backend} PROPERTIES
+    set_target_properties(ggml-base PROPERTIES
         VERSION ${GGML_VERSION}
         SOVERSION ${GGML_VERSION_MAJOR}
     )
 
-    if(NOT GGML_AVAILABLE_BACKENDS)
-        set(GGML_AVAILABLE_BACKENDS "${backend}"
-            CACHE INTERNAL "List of backends for cmake package")
-    else()
-        list(FIND GGML_AVAILABLE_BACKENDS "${backend}" has_backend)
-        if(has_backend EQUAL -1)
-            set(GGML_AVAILABLE_BACKENDS "${GGML_AVAILABLE_BACKENDS};${backend}"
-                CACHE INTERNAL "List of backends for cmake package")
-        endif()
+    if (MSVC)
+        target_compile_options(ggml-base PRIVATE /wd4530 /wd4003 /wd4319 /wd4005)
     endif()
-endfunction()
 
-function(ggml_add_backend backend)
-    string(TOUPPER "GGML_${backend}" backend_id)
-    if (${backend_id})
-        string(TOLOWER "ggml-${backend}" backend_target)
-        add_subdirectory(${backend_target})
-        message(STATUS "Including ${backend} backend")
+    target_include_directories(ggml-base PUBLIC ../3rdparty/ggml/include)
+    target_include_directories(ggml-base PRIVATE . ../3rdparty/ggml/src)
+    if (GGML_BACKEND_DL)
+        target_compile_definitions(ggml-base PUBLIC GGML_BACKEND_DL)
+    endif()
+
+    add_library(ggml
+                ggml-backend-reg.cpp)
+    add_library(ggml::ggml ALIAS ggml)
+
+    set_target_properties(ggml PROPERTIES
+        VERSION ${GGML_VERSION}
+        SOVERSION ${GGML_VERSION_MAJOR}
+    )
+
+    if (GGML_BACKEND_DIR)
         if (NOT GGML_BACKEND_DL)
-            string(TOUPPER "GGML_USE_${backend}" backend_use)
-            target_compile_definitions(ggml PUBLIC ${backend_use})
+            message(FATAL_ERROR "GGML_BACKEND_DIR requires GGML_BACKEND_DL")
         endif()
-    endif()
-endfunction()
-
-function(ggml_add_cpu_backend_variant tag_name)
-    set(GGML_CPU_TAG_NAME ${tag_name})
-    # other: OPENMP LLAMAFILE CPU_HBM
-    if (GGML_SYSTEM_ARCH STREQUAL "x86")
-        foreach (feat NATIVE
-                      SSE42
-                      AVX AVX2 BMI2 AVX_VNNI FMA F16C
-                      AVX512 AVX512_VBMI AVX512_VNNI AVX512_BF16
-                      AMX_TILE AMX_INT8 AMX_BF16)
-            set(GGML_${feat} OFF)
-        endforeach()
-
-        foreach (feat ${ARGN})
-            set(GGML_${feat} ON)
-        endforeach()
-    elseif (GGML_SYSTEM_ARCH STREQUAL "ARM")
-        foreach (feat ${ARGN})
-            set(GGML_INTERNAL_${feat} ON)
-        endforeach()
-    elseif (GGML_SYSTEM_ARCH STREQUAL "PowerPC")
-        foreach (feat ${ARGN})
-            set(GGML_INTERNAL_${feat} ON)
-        endforeach()
-    elseif (GGML_SYSTEM_ARCH STREQUAL "s390x")
-        foreach (feat VXE2 NNPA)
-            set(GGML_INTERNAL_${feat} OFF)
-        endforeach()
-
-        foreach (feat ${ARGN})
-            set(GGML_INTERNAL_${feat} ON)
-        endforeach()
+        target_compile_definitions(ggml PUBLIC GGML_BACKEND_DIR="${GGML_BACKEND_DIR}")
     endif()
 
-    ggml_add_cpu_backend_variant_impl(${tag_name})
-endfunction()
+    target_link_libraries(ggml PUBLIC ggml-base)
 
-ggml_add_backend(CPU)
-
-if (GGML_CPU_ALL_VARIANTS)
-    if (NOT GGML_BACKEND_DL)
-        message(FATAL_ERROR "GGML_CPU_ALL_VARIANTS requires GGML_BACKEND_DL")
-    elseif (GGML_CPU_ARM_ARCH)
-        message(FATAL_ERROR "Cannot use both GGML_CPU_ARM_ARCH and GGML_CPU_ALL_VARIANTS")
+    if (CMAKE_SYSTEM_NAME MATCHES "Linux")
+        target_link_libraries(ggml PRIVATE dl)
     endif()
-    if (GGML_SYSTEM_ARCH STREQUAL "x86")
-        ggml_add_cpu_backend_variant(x64)
-        ggml_add_cpu_backend_variant(sse42        SSE42)
-        ggml_add_cpu_backend_variant(sandybridge  SSE42 AVX)
-        ggml_add_cpu_backend_variant(haswell      SSE42 AVX F16C AVX2 BMI2 FMA)
-        ggml_add_cpu_backend_variant(skylakex     SSE42 AVX F16C AVX2 BMI2 FMA AVX512)
-        ggml_add_cpu_backend_variant(icelake      SSE42 AVX F16C AVX2 BMI2 FMA AVX512 AVX512_VBMI AVX512_VNNI)
-        ggml_add_cpu_backend_variant(alderlake    SSE42 AVX F16C AVX2 BMI2 FMA AVX_VNNI)
-        if (NOT MSVC)
-            # MSVC doesn't support AMX
-            ggml_add_cpu_backend_variant(sapphirerapids SSE42 AVX F16C AVX2 BMI2 FMA AVX512 AVX512_VBMI AVX512_VNNI AVX512_BF16 AMX_TILE AMX_INT8)
-        endif()
-    elseif(GGML_SYSTEM_ARCH STREQUAL "ARM")
-        if (CMAKE_SYSTEM_NAME MATCHES "Linux")
-            # Many of these features are optional so we build versions with popular
-            # combinations and name the backends based on the version they were
-            # first released with
-            ggml_add_cpu_backend_variant(armv8.0_1)
-            ggml_add_cpu_backend_variant(armv8.2_1    DOTPROD)
-            ggml_add_cpu_backend_variant(armv8.2_2    DOTPROD FP16_VECTOR_ARITHMETIC)
-            ggml_add_cpu_backend_variant(armv8.2_3    DOTPROD FP16_VECTOR_ARITHMETIC SVE)
-            ggml_add_cpu_backend_variant(armv8.6_1    DOTPROD FP16_VECTOR_ARITHMETIC SVE MATMUL_INT8)
-            ggml_add_cpu_backend_variant(armv8.6_2    DOTPROD FP16_VECTOR_ARITHMETIC SVE MATMUL_INT8 SVE2)
-            ggml_add_cpu_backend_variant(armv9.2_1    DOTPROD FP16_VECTOR_ARITHMETIC SVE MATMUL_INT8 SME)
-            ggml_add_cpu_backend_variant(armv9.2_2    DOTPROD FP16_VECTOR_ARITHMETIC SVE MATMUL_INT8 SVE2 SME)
-        elseif (CMAKE_SYSTEM_NAME MATCHES "Android")
-            # Android-specific backends with SoC-compatible feature sets
-            ggml_add_cpu_backend_variant(android_armv8.0_1)
-            ggml_add_cpu_backend_variant(android_armv8.2_1    DOTPROD)
-            ggml_add_cpu_backend_variant(android_armv8.2_2    DOTPROD FP16_VECTOR_ARITHMETIC)
-            ggml_add_cpu_backend_variant(android_armv8.6_1    DOTPROD FP16_VECTOR_ARITHMETIC MATMUL_INT8)
-        elseif (APPLE)
-            ggml_add_cpu_backend_variant(apple_m1             DOTPROD)
-            ggml_add_cpu_backend_variant(apple_m2_m3          DOTPROD MATMUL_INT8)
-            ggml_add_cpu_backend_variant(apple_m4             DOTPROD MATMUL_INT8 NOSVE SME)
+
+    function(ggml_add_backend_library backend)
+        if (GGML_BACKEND_DL)
+            add_library(${backend} MODULE ${ARGN})
+            set_target_properties(${backend} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+            target_compile_definitions(${backend} PRIVATE GGML_BACKEND_DL)
+            add_dependencies(ggml ${backend})
+            if (GGML_BACKEND_DIR)
+                install(TARGETS ${backend} LIBRARY DESTINATION ${GGML_BACKEND_DIR})
+            else()
+                install(TARGETS ${backend} LIBRARY DESTINATION ${CMAKE_INSTALL_BINDIR})
+            endif()
         else()
-            message(FATAL_ERROR "Unsupported ARM target OS: ${CMAKE_SYSTEM_NAME}")
+            add_library(${backend} ${ARGN})
+            target_link_libraries(ggml PUBLIC ${backend})
+            install(TARGETS ${backend} LIBRARY)
         endif()
-    elseif (GGML_SYSTEM_ARCH STREQUAL "PowerPC")
-        if (CMAKE_SYSTEM_NAME MATCHES "Linux")
-            ggml_add_cpu_backend_variant(power0)
-            ggml_add_cpu_backend_variant(power7_1       POWER7)
-            ggml_add_cpu_backend_variant(power7_2       POWER7  VSX)
-            ggml_add_cpu_backend_variant(power8_1       POWER8)
-            ggml_add_cpu_backend_variant(power8_2       POWER8  VSX)
-            ggml_add_cpu_backend_variant(power9         POWER9  VSX)
-            ggml_add_cpu_backend_variant(power10        POWER10 VSX)
-            ggml_add_cpu_backend_variant(power11        POWER11 VSX)
+
+        target_link_libraries(${backend} PRIVATE ggml-base)
+        target_include_directories(${backend} PRIVATE ..)
+
+        if (${BUILD_SHARED_LIBS})
+            target_compile_definitions(${backend} PRIVATE GGML_BACKEND_BUILD)
+            target_compile_definitions(${backend} PUBLIC  GGML_BACKEND_SHARED)
+        endif()
+
+        set_target_properties(${backend} PROPERTIES
+            VERSION ${GGML_VERSION}
+            SOVERSION ${GGML_VERSION_MAJOR}
+        )
+
+        if(NOT GGML_AVAILABLE_BACKENDS)
+            set(GGML_AVAILABLE_BACKENDS "${backend}"
+                CACHE INTERNAL "List of backends for cmake package")
         else()
-            message(FATAL_ERROR "Unsupported PowerPC target OS: ${CMAKE_SYSTEM_NAME}")
+            list(FIND GGML_AVAILABLE_BACKENDS "${backend}" has_backend)
+            if(has_backend EQUAL -1)
+                set(GGML_AVAILABLE_BACKENDS "${GGML_AVAILABLE_BACKENDS};${backend}"
+                    CACHE INTERNAL "List of backends for cmake package")
+            endif()
         endif()
-    elseif (GGML_SYSTEM_ARCH STREQUAL "s390x")
-        if (CMAKE_SYSTEM_NAME MATCHES "Linux")
-            ggml_add_cpu_backend_variant(z15    Z15 VXE2)
-            ggml_add_cpu_backend_variant(z16    Z16 VXE2 NNPA)
+    endfunction()
+
+    function(ggml_add_backend backend)
+        string(TOUPPER "GGML_${backend}" backend_id)
+        if (${backend_id})
+            string(TOLOWER "ggml-${backend}" backend_target)
+            add_subdirectory(${backend_target})
+            message(STATUS "Including ${backend} backend")
+            if (NOT GGML_BACKEND_DL)
+                string(TOUPPER "GGML_USE_${backend}" backend_use)
+                target_compile_definitions(ggml PUBLIC ${backend_use})
+            endif()
+        endif()
+    endfunction()
+
+    function(ggml_add_cpu_backend_variant tag_name)
+        set(GGML_CPU_TAG_NAME ${tag_name})
+        if (GGML_SYSTEM_ARCH STREQUAL "x86")
+            foreach (feat NATIVE
+                          SSE42
+                          AVX AVX2 BMI2 AVX_VNNI FMA F16C
+                          AVX512 AVX512_VBMI AVX512_VNNI AVX512_BF16
+                          AMX_TILE AMX_INT8 AMX_BF16)
+                set(GGML_${feat} OFF)
+            endforeach()
+
+            foreach (feat ${ARGN})
+                set(GGML_${feat} ON)
+            endforeach()
+        elseif (GGML_SYSTEM_ARCH STREQUAL "ARM")
+            foreach (feat ${ARGN})
+                set(GGML_INTERNAL_${feat} ON)
+            endforeach()
+        elseif (GGML_SYSTEM_ARCH STREQUAL "PowerPC")
+            foreach (feat ${ARGN})
+                set(GGML_INTERNAL_${feat} ON)
+            endforeach()
+        elseif (GGML_SYSTEM_ARCH STREQUAL "s390x")
+            foreach (feat VXE2 NNPA)
+                set(GGML_INTERNAL_${feat} OFF)
+            endforeach()
+
+            foreach (feat ${ARGN})
+                set(GGML_INTERNAL_${feat} ON)
+            endforeach()
+        endif()
+
+        ggml_add_cpu_backend_variant_impl(${tag_name})
+    endfunction()
+
+    ggml_add_backend(CPU)
+
+    if (GGML_CPU_ALL_VARIANTS)
+        if (NOT GGML_BACKEND_DL)
+            message(FATAL_ERROR "GGML_CPU_ALL_VARIANTS requires GGML_BACKEND_DL")
+        elseif (GGML_CPU_ARM_ARCH)
+            message(FATAL_ERROR "Cannot use both GGML_CPU_ARM_ARCH and GGML_CPU_ALL_VARIANTS")
+        endif()
+        if (GGML_SYSTEM_ARCH STREQUAL "x86")
+            ggml_add_cpu_backend_variant(x64)
+            ggml_add_cpu_backend_variant(sse42        SSE42)
+            ggml_add_cpu_backend_variant(sandybridge  SSE42 AVX)
+            ggml_add_cpu_backend_variant(haswell      SSE42 AVX F16C AVX2 BMI2 FMA)
+            ggml_add_cpu_backend_variant(skylakex     SSE42 AVX F16C AVX2 BMI2 FMA AVX512)
+            ggml_add_cpu_backend_variant(icelake      SSE42 AVX F16C AVX2 BMI2 FMA AVX512 AVX512_VBMI AVX512_VNNI)
+            ggml_add_cpu_backend_variant(alderlake    SSE42 AVX F16C AVX2 BMI2 FMA AVX_VNNI)
+            if (NOT MSVC)
+                ggml_add_cpu_backend_variant(sapphirerapids SSE42 AVX F16C AVX2 BMI2 FMA AVX512 AVX512_VBMI AVX512_VNNI AVX512_BF16 AMX_TILE AMX_INT8)
+            endif()
+        elseif(GGML_SYSTEM_ARCH STREQUAL "ARM")
+            if (CMAKE_SYSTEM_NAME MATCHES "Linux")
+                ggml_add_cpu_backend_variant(armv8.0_1)
+                ggml_add_cpu_backend_variant(armv8.2_1    DOTPROD)
+                ggml_add_cpu_backend_variant(armv8.2_2    DOTPROD FP16_VECTOR_ARITHMETIC)
+                ggml_add_cpu_backend_variant(armv8.2_3    DOTPROD FP16_VECTOR_ARITHMETIC SVE)
+                ggml_add_cpu_backend_variant(armv8.6_1    DOTPROD FP16_VECTOR_ARITHMETIC SVE MATMUL_INT8)
+                ggml_add_cpu_backend_variant(armv8.6_2    DOTPROD FP16_VECTOR_ARITHMETIC SVE MATMUL_INT8 SVE2)
+                ggml_add_cpu_backend_variant(armv9.2_1    DOTPROD FP16_VECTOR_ARITHMETIC SVE MATMUL_INT8 SME)
+                ggml_add_cpu_backend_variant(armv9.2_2    DOTPROD FP16_VECTOR_ARITHMETIC SVE MATMUL_INT8 SVE2 SME)
+            elseif (CMAKE_SYSTEM_NAME MATCHES "Android")
+                ggml_add_cpu_backend_variant(android_armv8.0_1)
+                ggml_add_cpu_backend_variant(android_armv8.2_1    DOTPROD)
+                ggml_add_cpu_backend_variant(android_armv8.2_2    DOTPROD FP16_VECTOR_ARITHMETIC)
+                ggml_add_cpu_backend_variant(android_armv8.6_1    DOTPROD FP16_VECTOR_ARITHMETIC MATMUL_INT8)
+            elseif (APPLE)
+                ggml_add_cpu_backend_variant(apple_m1             DOTPROD)
+                ggml_add_cpu_backend_variant(apple_m2_m3          DOTPROD MATMUL_INT8)
+                ggml_add_cpu_backend_variant(apple_m4             DOTPROD MATMUL_INT8 NOSVE SME)
+            else()
+                message(FATAL_ERROR "Unsupported ARM target OS: ${CMAKE_SYSTEM_NAME}")
+            endif()
+        elseif (GGML_SYSTEM_ARCH STREQUAL "PowerPC")
+            if (CMAKE_SYSTEM_NAME MATCHES "Linux")
+                ggml_add_cpu_backend_variant(power0)
+                ggml_add_cpu_backend_variant(power7_1       POWER7)
+                ggml_add_cpu_backend_variant(power7_2       POWER7  VSX)
+                ggml_add_cpu_backend_variant(power8_1       POWER8)
+                ggml_add_cpu_backend_variant(power8_2       POWER8  VSX)
+                ggml_add_cpu_backend_variant(power9         POWER9  VSX)
+                ggml_add_cpu_backend_variant(power10        POWER10 VSX)
+                ggml_add_cpu_backend_variant(power11        POWER11 VSX)
+            else()
+                message(FATAL_ERROR "Unsupported PowerPC target OS: ${CMAKE_SYSTEM_NAME}")
+            endif()
+        elseif (GGML_SYSTEM_ARCH STREQUAL "s390x")
+            if (CMAKE_SYSTEM_NAME MATCHES "Linux")
+                ggml_add_cpu_backend_variant(z15    Z15 VXE2)
+                ggml_add_cpu_backend_variant(z16    Z16 VXE2 NNPA)
+            else()
+                message(FATAL_ERROR "Unsupported s390x target OS: ${CMAKE_SYSTEM_NAME}")
+            endif()
         else()
-            message(FATAL_ERROR "Unsupported s390x target OS: ${CMAKE_SYSTEM_NAME}")
+            message(FATAL_ERROR "GGML_CPU_ALL_VARIANTS not yet supported with ${GGML_SYSTEM_ARCH} on ${CMAKE_SYSTEM_NAME}")
         endif()
-    else()
-        message(FATAL_ERROR "GGML_CPU_ALL_VARIANTS not yet supported with ${GGML_SYSTEM_ARCH} on ${CMAKE_SYSTEM_NAME}")
+    elseif (GGML_CPU)
+        ggml_add_cpu_backend_variant_impl("")
     endif()
-elseif (GGML_CPU)
-    ggml_add_cpu_backend_variant_impl("")
-endif()
 
-ggml_add_backend(BLAS)
-ggml_add_backend(CANN)
-ggml_add_backend(CUDA)
-ggml_add_backend(HIP)
-ggml_add_backend(METAL)
-ggml_add_backend(MUSA)
-ggml_add_backend(RPC)
-ggml_add_backend(SYCL)
-ggml_add_backend(Vulkan)
-ggml_add_backend(WebGPU)
-ggml_add_backend(zDNN)
-ggml_add_backend(OpenCL)
-ggml_add_backend(Hexagon)
+    ggml_add_backend(BLAS)
+    ggml_add_backend(CANN)
+    ggml_add_backend(CUDA)
+    ggml_add_backend(HIP)
+    ggml_add_backend(METAL)
+    ggml_add_backend(MUSA)
+    ggml_add_backend(RPC)
+    ggml_add_backend(SYCL)
+    ggml_add_backend(Vulkan)
+    ggml_add_backend(WebGPU)
+    ggml_add_backend(zDNN)
+    ggml_add_backend(OpenCL)
+    ggml_add_backend(Hexagon)
 
-# Suppress known Vulkan backend upstream warnings on MSVC
-if (MSVC AND TARGET ggml-vulkan)
-    target_compile_options(ggml-vulkan PRIVATE /wd4530 /wd4003 /wd4319 /wd4005)
-endif()
-
-foreach (target ggml-base ggml)
-    target_include_directories(${target} PUBLIC    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include> $<INSTALL_INTERFACE:include>)
-    target_compile_features   (${target} PRIVATE c_std_11 cxx_std_17) # don't bump
-endforeach()
-
-target_link_libraries(ggml-base PRIVATE Threads::Threads)
-
-find_library(MATH_LIBRARY m)
-if (MATH_LIBRARY)
-    if (NOT WIN32 OR NOT DEFINED ENV{ONEAPI_ROOT})
-        target_link_libraries(ggml-base PRIVATE m)
+    if (MSVC AND TARGET ggml-vulkan)
+        target_compile_options(ggml-vulkan PRIVATE /wd4530 /wd4003 /wd4319 /wd4005)
     endif()
-endif()
 
-if (CMAKE_SYSTEM_NAME MATCHES "Android")
-    target_link_libraries(ggml-base PRIVATE dl)
-endif()
-
-if(CMAKE_SYSTEM_NAME MATCHES "visionOS")
-    target_compile_definitions(ggml-base PUBLIC _DARWIN_C_SOURCE)
-endif()
-
-if (BUILD_SHARED_LIBS)
     foreach (target ggml-base ggml)
-        set_target_properties(${target} PROPERTIES POSITION_INDEPENDENT_CODE ON)
-        target_compile_definitions(${target} PRIVATE GGML_BUILD)
-        target_compile_definitions(${target} PUBLIC  GGML_SHARED)
+        target_include_directories(${target} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include> $<INSTALL_INTERFACE:include>)
+        target_compile_features(${target} PRIVATE c_std_11 cxx_std_17)
     endforeach()
+
+    target_link_libraries(ggml-base PRIVATE Threads::Threads)
+
+    find_library(MATH_LIBRARY m)
+    if (MATH_LIBRARY)
+        if (NOT WIN32 OR NOT DEFINED ENV{ONEAPI_ROOT})
+            target_link_libraries(ggml-base PRIVATE m)
+        endif()
+    endif()
+
+    if (CMAKE_SYSTEM_NAME MATCHES "Android")
+        target_link_libraries(ggml-base PRIVATE dl)
+    endif()
+
+    if(CMAKE_SYSTEM_NAME MATCHES "visionOS")
+        target_compile_definitions(ggml-base PUBLIC _DARWIN_C_SOURCE)
+    endif()
+
+    if (BUILD_SHARED_LIBS)
+        foreach (target ggml-base ggml)
+            set_target_properties(${target} PROPERTIES POSITION_INDEPENDENT_CODE ON)
+            target_compile_definitions(${target} PRIVATE GGML_BUILD)
+            target_compile_definitions(${target} PUBLIC GGML_SHARED)
+        endforeach()
+    endif()
+endif() # NOT TARGET ggml-base
+
+# ----------------------------------------------------------------------------
+# RawrXD GPU Enforcement Gate + ATC GPU dispatch
+# Mandatory, no-toggle GPU requirement library. Linked into every entry point
+# that hosts inference (IDE, CLI, Serve, API, fingerprint test).
+# ----------------------------------------------------------------------------
+if (NOT TARGET rawrxd_gpu_gate)
+    add_library(rawrxd_gpu_gate STATIC
+                gpu_enforcement.h
+                gpu_enforcement.cpp
+                atc_gpu_dispatch.h
+                atc_gpu_dispatch.cpp
+                braided_quantizer.h
+                braided_quantizer.cpp
+                atc_codec.h
+                atc_codec.cpp)
+    target_include_directories(rawrxd_gpu_gate PUBLIC . ../3rdparty/ggml/include)
+    target_link_libraries(rawrxd_gpu_gate PUBLIC ggml-base)
+    if (MSVC)
+        target_compile_options(rawrxd_gpu_gate PRIVATE /wd4530 /wd4005)
+    endif()
 endif()
 
-else()
-    message(STATUS "Using GGML targets from submodule")
-endif() # NOT TARGET ggml-base
+add_executable(atc_fingerprint_test test/atc_fingerprint_test.cpp)
+target_link_libraries(atc_fingerprint_test PRIVATE rawrxd_gpu_gate ggml-base)
+if (MSVC)
+    target_link_libraries(atc_fingerprint_test PRIVATE psapi)
+endif()
+
+# gguf
+if(NOT TARGET gguf)
+    add_library(gguf INTERFACE)
+endif()

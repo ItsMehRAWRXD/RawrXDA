@@ -5,7 +5,7 @@
 // Shards 120B-800B model layers across up to 64 nodes, each running
 // UniversalModelHotpatcher locally with per-layer quantization.
 //
-// Memory Distribution Example (4-node LAN, 800B model):
+// Memory Distribution (4-node LAN, 800B model):
 //   Node 1 (Coordinator): Layers 0-31  (Embedding + Early) - Q4_K_M
 //   Node 2 (Worker GPU):  Layers 32-95 (Mid) - Q6_K (GPU accelerated)
 //   Node 3 (Worker CPU):  Layers 96-127 (Late) - Q3_K_M (CPU only)
@@ -38,6 +38,30 @@
 #include <random>
 #include <cstring>
 #include <cstdio>
+#include <type_traits>
+
+#ifdef _DEBUG
+#define SAFE_LOOKUP(m, k) \
+    ([&]() -> decltype(auto) { \
+        auto it = (m).find(k); \
+        if (it == (m).end()) { \
+            __debugbreak(); \
+        } \
+        return it->second; \
+    })()
+#else
+#define SAFE_LOOKUP(m, k) \
+    ([&]() -> decltype(auto) { \
+        auto it = (m).find(k); \
+        if (it == (m).end()) { \
+            std::cerr << "[SWARM] SAFE_LOOKUP failed for key: " << (k) << "\n"; \
+            using _SafeLookupValue = std::remove_reference_t<decltype(it->second)>; \
+            static _SafeLookupValue dummy{}; \
+            return (dummy); \
+        } \
+        return (it->second); \
+    })()
+#endif
 
 namespace RawrXD {
 namespace Swarm {
@@ -486,6 +510,30 @@ SwarmResult SwarmOrchestrator::rebalance() {
 // Inference
 // ============================================================================
 
+namespace {
+
+constexpr const char* kSwarmTextUnsupported =
+    "[SwarmPending] Distributed text generation backend not implemented";
+
+void WriteSwarmOutput(const SwarmInferenceRequest& req, const char* text) {
+    if (!req.outputData || req.outputCapacity == 0 || !text) {
+        return;
+    }
+
+    char* buffer = static_cast<char*>(req.outputData);
+    const size_t textLen = std::strlen(text);
+    const size_t copyLen = std::min<size_t>(textLen, static_cast<size_t>(req.outputCapacity - 1));
+    if (copyLen > 0) {
+        std::memcpy(buffer, text, copyLen);
+    }
+    buffer[copyLen] = '\0';
+    if (req.outputSizeWritten) {
+        *req.outputSizeWritten = static_cast<uint64_t>(copyLen);
+    }
+}
+
+} // namespace
+
 SwarmResult SwarmOrchestrator::submitInference(const SwarmInferenceRequest& req) {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_pendingRequests.push(req);
@@ -669,47 +717,55 @@ void SwarmOrchestrator::detectDeadNodes() {
 bool SwarmOrchestrator::sendToNode(const std::string& nodeId, uint16_t msgType,
                                      const void* data, size_t len) {
     std::lock_guard<std::mutex> lock(m_mutex);
-    auto it = m_nodes.find(nodeId);
-    if (it == m_nodes.end()) return false;
-
     if (nodeId == m_nodeId) return true; // Self-send is a no-op
 
-    // Connect to node's data port
-    SOCKET sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (sock == INVALID_SOCKET) return false;
+    try {
+        auto nodeIt = m_nodes.find(nodeId);
+        if (nodeIt == m_nodes.end()) {
+            std::cerr << "[SWARM] sendToNode: missing node " << nodeId << "\n";
+            return false;
+        }
+        const auto& node = nodeIt->second;
 
-    sockaddr_in addr = it->second.address;
-    addr.sin_port = htons(SWARM_DATA_PORT);
+        // Connect to node's data port
+        SOCKET sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        if (sock == INVALID_SOCKET) return false;
 
-    // Set connect timeout
-    DWORD timeout = 5000;
-    setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (const char*)&timeout, sizeof(timeout));
+        sockaddr_in addr = node.address;
+        addr.sin_port = htons(SWARM_DATA_PORT);
 
-    if (connect(sock, (sockaddr*)&addr, sizeof(addr)) != 0) {
+        // Set connect timeout
+        DWORD timeout = 5000;
+        setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (const char*)&timeout, sizeof(timeout));
+
+        if (connect(sock, (sockaddr*)&addr, sizeof(addr)) != 0) {
+            closesocket(sock);
+            return false;
+        }
+
+        // Build and send header
+        uint8_t header[32];
+        memset(header, 0, sizeof(header));
+        *reinterpret_cast<uint32_t*>(header + 0) = SWARM_MAGIC;
+        *reinterpret_cast<uint16_t*>(header + 4) = msgType;
+        *reinterpret_cast<uint16_t*>(header + 6) = 32;
+        *reinterpret_cast<uint64_t*>(header + 8) = len;
+
+        send(sock, (const char*)header, 32, 0);
+
+        // Send payload if any
+        if (data && len > 0) {
+            send(sock, (const char*)data, (int)len, 0);
+            m_stats.bytesSent.fetch_add(32 + len, std::memory_order_relaxed);
+        } else {
+            m_stats.bytesSent.fetch_add(32, std::memory_order_relaxed);
+        }
+
         closesocket(sock);
+        return true;
+    } catch (...) {
         return false;
     }
-
-    // Build and send header
-    uint8_t header[32];
-    memset(header, 0, sizeof(header));
-    *reinterpret_cast<uint32_t*>(header + 0) = SWARM_MAGIC;
-    *reinterpret_cast<uint16_t*>(header + 4) = msgType;
-    *reinterpret_cast<uint16_t*>(header + 6) = 32;
-    *reinterpret_cast<uint64_t*>(header + 8) = len;
-
-    send(sock, (const char*)header, 32, 0);
-
-    // Send payload if any
-    if (data && len > 0) {
-        send(sock, (const char*)data, (int)len, 0);
-        m_stats.bytesSent.fetch_add(32 + len, std::memory_order_relaxed);
-    } else {
-        m_stats.bytesSent.fetch_add(32, std::memory_order_relaxed);
-    }
-
-    closesocket(sock);
-    return true;
 }
 
 bool SwarmOrchestrator::broadcastUDP(uint16_t msgType, const void* data, size_t len) {
@@ -984,9 +1040,16 @@ void SwarmOrchestrator::inferenceWorkerThread() {
             }
         }
 
+        WriteSwarmOutput(req, kSwarmTextUnsupported);
+
         // Invoke completion callback
         if (req.onComplete) {
-            req.onComplete(req.inputData, req.inputSize);
+            if (req.outputData && req.outputCapacity > 0) {
+                const uint64_t sizeWritten = req.outputSizeWritten ? *req.outputSizeWritten : 0;
+                req.onComplete(req.outputData, sizeWritten);
+            } else {
+                req.onComplete(req.inputData, req.inputSize);
+            }
         }
     }
 }

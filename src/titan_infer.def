@@ -1,6 +1,13 @@
 LIBRARY RawrXD_Titan
 EXPORTS
-    Titan_Initialize     @1
-    Titan_InferAsync     @2
-    Titan_Shutdown       @3
-    Titan_Abort          @4
+    RawrXD_Initialize @1
+    RawrXD_Shutdown @2
+    RawrXD_Reset @3
+    RawrXD_Abort @4
+    RawrXD_GetStatus @5
+    RawrXD_GetVersion @6
+    RawrXD_GetCapabilities @7
+    RawrXD_SetLogLevel @8
+    RawrXD_LoadModel @9
+    SubmitInference
+    GetResult

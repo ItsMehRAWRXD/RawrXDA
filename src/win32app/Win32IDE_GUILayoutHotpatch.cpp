@@ -18,10 +18,8 @@
 #include <vector>
 #include <algorithm>
 
-// SCAFFOLD_042: GUILayout hotpatch application
-
-
-namespace {
+// GUI Layout Hotpatch Application Implementation
+// ============================================================================
 
 // UTF-8 (std::string) to UTF-16 (std::wstring) for Unicode Win32 APIs
 static std::wstring utf8ToWide(const std::string& utf8) {
@@ -34,14 +32,11 @@ static std::wstring utf8ToWide(const std::string& utf8) {
     return out;
 }
 
-} // namespace
-
 #ifdef _WIN32
 #pragma comment(lib, "gdi32.lib")
 #endif
 
-namespace {
-
+// Layout entry structure - moved outside anonymous namespace for accessibility
 struct LayoutEntry {
     std::string name;
     HWND        hwnd = nullptr;
@@ -50,10 +45,7 @@ struct LayoutEntry {
     std::string issues;
 };
 
-static RawrXD::Multimodal::VisionEncoder& getVisionEncoder() {
-    static RawrXD::Multimodal::VisionEncoder s_encoder;
-    return s_encoder;
-}
+namespace {
 
 // Collect RECT in main window client coordinates.
 static void getChildRectInMain(HWND hMain, HWND hChild, RECT& out) {
@@ -249,6 +241,14 @@ static HWND createViewerDialog(HWND parent, const std::vector<uint8_t>& bmpData,
 
     ShowWindow(hDlg, SW_SHOW);
     return hDlg;
+}
+
+// ============================================================================
+// Vision encoder accessor (moved outside anonymous namespace for accessibility)
+// ============================================================================
+static RawrXD::Multimodal::VisionEncoder& getVisionEncoder() {
+    static RawrXD::Multimodal::VisionEncoder s_encoder;
+    return s_encoder;
 }
 
 // ============================================================================

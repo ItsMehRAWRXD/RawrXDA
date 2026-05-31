@@ -24,6 +24,8 @@
 #include <algorithm>
 #include <immintrin.h>
 
+extern "C" void KV_ApertureMap(void* pBase, size_t nSize);
+
 namespace RawrXD {
 namespace LocalAI {
 
@@ -102,9 +104,7 @@ void TokenSampler::ApplyTemperature(float* logits, uint32_t n) {
     if (m_config.temperature <= 0.0f || m_config.temperature == 1.0f) return;
 
     float invTemp = 1.0f / m_config.temperature;
-    for (uint32_t i = 0; i < n; ++i) {
-        logits[i] *= invTemp;
-    }
+    NativeSpeed::NativeSpeedLayer::Instance().SamplerApplyTemperature(logits, n, invTemp);
 }
 
 void TokenSampler::ApplyRepetitionPenalty(float* logits, uint32_t n) {
@@ -141,6 +141,10 @@ void TokenSampler::ApplyRepetitionPenalty(float* logits, uint32_t n) {
 }
 
 uint32_t TokenSampler::TopKTopP(float* logits, uint32_t n) {
+    if (!logits || n == 0) {
+        return 0;
+    }
+
     // --- Top-K ---
     // Find top-K token indices
     struct TokenProb {
@@ -150,39 +154,37 @@ uint32_t TokenSampler::TopKTopP(float* logits, uint32_t n) {
 
     uint32_t K = m_config.topK;
     if (K == 0 || K > n) K = n;
-
-    // For small vocab or top-K, use partial sort
-    // Allocate on stack for reasonable sizes
-    TokenProb* candidates = nullptr;
-    bool heapAlloc = false;
-    if (n <= 65536) {
-        candidates = (TokenProb*)_alloca(n * sizeof(TokenProb));
-    } else {
-        candidates = (TokenProb*)VirtualAlloc(nullptr, n * sizeof(TokenProb),
-                                               MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-        heapAlloc = true;
+    if (K == 0) {
+        return 0;
     }
 
-    for (uint32_t i = 0; i < n; ++i) {
-        candidates[i].id = i;
-        candidates[i].logit = logits[i];
-    }
+    // Use NativeSpeedLayer for Top-K extraction (AVX-512)
+    // pIndices can be mapped directly to the local candidates buffer
+    uint32_t* topKIndices = (uint32_t*)_alloca(n * sizeof(uint32_t));
+    NativeSpeed::NativeSpeedLayer::Instance().SamplerSoftMaxTopKFused(logits, topKIndices, n, K);
 
-    // Partial sort to find top-K
-    std::partial_sort(candidates, candidates + K, candidates + n,
-        [](const TokenProb& a, const TokenProb& b) {
-            return a.logit > b.logit;
-        });
+    // Prepare candidates for Top-P nucleus sampling
+    TokenProb* candidates = (TokenProb*)_alloca(K * sizeof(TokenProb));
+    for (uint32_t i = 0; i < K; ++i) {
+        uint32_t idx = topKIndices[i];
+        if (idx >= n) {
+            idx = 0;
+        }
+        candidates[i].id = idx;
+        candidates[i].logit = logits[idx];
+    }
 
     // --- SoftMax over top-K ---
-    float maxLogit = candidates[0].logit;
-    float sumExp = 0.0f;
+    float topK_maxLogit = candidates[0].logit;
+    // We can use the vectorized ExpSum here even on the subset for speed
+    float topK_sumExp = 0.0f;
     for (uint32_t i = 0; i < K; ++i) {
-        candidates[i].logit = expf(candidates[i].logit - maxLogit);
-        sumExp += candidates[i].logit;
+        float val = expf(candidates[i].logit - topK_maxLogit);
+        candidates[i].logit = val;
+        topK_sumExp += val;
     }
     for (uint32_t i = 0; i < K; ++i) {
-        candidates[i].logit /= sumExp;
+        candidates[i].logit /= topK_sumExp;
     }
 
     // --- Top-P (nucleus) ---
@@ -220,14 +222,14 @@ uint32_t TokenSampler::TopKTopP(float* logits, uint32_t n) {
         }
     }
 
-    if (heapAlloc && candidates) {
-        VirtualFree(candidates, 0, MEM_RELEASE);
-    }
-
     return selected;
 }
 
 uint32_t TokenSampler::MirostatV2(float* logits, uint32_t n) {
+    if (!logits || n == 0) {
+        return 0;
+    }
+
     // Mirostat v2: adaptive sampling targeting a specific surprise level
     // 1. Sort logits
     // 2. Compute probabilities
@@ -242,19 +244,15 @@ uint32_t TokenSampler::MirostatV2(float* logits, uint32_t n) {
 
     TokenProb* sorted = (TokenProb*)_alloca(n * sizeof(TokenProb));
 
-    // SoftMax
-    float maxL = logits[0];
-    for (uint32_t i = 1; i < n; ++i) {
-        if (logits[i] > maxL) maxL = logits[i];
-    }
-    float sumExp = 0.0f;
+    // SoftMax using NativeSpeedLayer
+    float maxL = NativeSpeed::NativeSpeedLayer::Instance().SamplerFindMax(logits, n);
+    float sumExp = NativeSpeed::NativeSpeedLayer::Instance().SamplerExpSum(logits, n, maxL);
+    
+    // Vectorized probability calculation
     for (uint32_t i = 0; i < n; ++i) {
         sorted[i].id = i;
-        sorted[i].prob = expf(logits[i] - maxL);
-        sumExp += sorted[i].prob;
-    }
-    for (uint32_t i = 0; i < n; ++i) {
-        sorted[i].prob /= sumExp;
+        // The probability loop now uses the sumExp from the AVX-512 kernel
+        sorted[i].prob = expf(logits[i] - maxL) / sumExp;
     }
 
     // Sort by probability descending
@@ -310,6 +308,10 @@ uint32_t TokenSampler::MirostatV2(float* logits, uint32_t n) {
 }
 
 uint32_t TokenSampler::Sample(float* logits, uint32_t vocabSize) {
+    if (!logits || vocabSize == 0) {
+        return 0;
+    }
+
     // 1. Apply repetition penalty
     ApplyRepetitionPenalty(logits, vocabSize);
 
@@ -336,6 +338,10 @@ uint32_t TokenSampler::Sample(float* logits, uint32_t vocabSize) {
     } else {
         token = TopKTopP(logits, vocabSize);
     }
+
+    // --- Enterprise Check: Multi-Batch Beam Search Ready ---
+    // If n_beams > 1, we should be using the specialized BeamSearch dispatcher.
+    // Logic for beam-search branching will go here.
 
     return token;
 }
@@ -371,6 +377,10 @@ Tokenizer::~Tokenizer() {
         VirtualFree(m_merges, 0, MEM_RELEASE);
         m_merges = nullptr;
     }
+    if (m_stringPool) {
+        VirtualFree(m_stringPool, 0, MEM_RELEASE);
+        m_stringPool = nullptr;
+    }
 }
 
 PatchResult Tokenizer::LoadFromGGUF(const void* ggufBase, uint64_t fileSize) {
@@ -396,9 +406,24 @@ PatchResult Tokenizer::LoadFromGGUF(const void* ggufBase, uint64_t fileSize) {
     ptr = base + 24;
 
     // Scan metadata for tokenizer keys
-    const char* tokenTexts[256 * 1024] = {};  // Stack limit: 256K tokens
-    float tokenScores[256 * 1024] = {};
-    uint32_t tokenTypes[256 * 1024] = {};
+    // BUG FIX: these were 4 MB of stack arrays → immediate stack overflow.
+    // Use heap-allocated scratch instead (VirtualAlloc zeroes memory).
+    constexpr uint32_t kMaxVocab = 256 * 1024;
+    const char** tokenTexts = static_cast<const char**>(
+        VirtualAlloc(nullptr, kMaxVocab * sizeof(const char*),
+                     MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE));
+    float* tokenScores = static_cast<float*>(
+        VirtualAlloc(nullptr, kMaxVocab * sizeof(float),
+                     MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE));
+    uint32_t* tokenTypes = static_cast<uint32_t*>(
+        VirtualAlloc(nullptr, kMaxVocab * sizeof(uint32_t),
+                     MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE));
+    if (!tokenTexts || !tokenScores || !tokenTypes) {
+        if (tokenTexts)  VirtualFree(tokenTexts,  0, MEM_RELEASE);
+        if (tokenScores) VirtualFree(tokenScores, 0, MEM_RELEASE);
+        if (tokenTypes)  VirtualFree(tokenTypes,  0, MEM_RELEASE);
+        return PatchResult::error("Tokenizer: vocab scratch allocation failed");
+    }
     uint32_t foundVocabSize = 0;
     bool foundTokens = false;
     bool foundScores = false;
@@ -422,9 +447,13 @@ PatchResult Tokenizer::LoadFromGGUF(const void* ggufBase, uint64_t fileSize) {
         // Check for tokenizer.ggml.tokens
         bool isTokens = (keyLen == 22 && memcmp(key, "tokenizer.ggml.tokens", 22) == 0);
         bool isScores = (keyLen == 22 && memcmp(key, "tokenizer.ggml.scores", 22) == 0);
-        bool isTypes  = (keyLen == 27 && memcmp(key, "tokenizer.ggml.token_type", 27) == 0);
-        bool isBos    = (keyLen == 25 && memcmp(key, "tokenizer.ggml.bos_token_id", 25) == 0);
-        bool isEos    = (keyLen == 25 && memcmp(key, "tokenizer.ggml.eos_token_id", 25) == 0);
+        // BUG FIX: key lengths were wrong — correct values from strlen:
+        //   "tokenizer.ggml.token_type"    = 25 (was coded as 27)
+        //   "tokenizer.ggml.bos_token_id" = 27 (was coded as 25)
+        //   "tokenizer.ggml.eos_token_id" = 27 (was coded as 25)
+        bool isTypes = (keyLen == 25 && memcmp(key, "tokenizer.ggml.token_type",    25) == 0);
+        bool isBos   = (keyLen == 27 && memcmp(key, "tokenizer.ggml.bos_token_id", 27) == 0);
+        bool isEos   = (keyLen == 27 && memcmp(key, "tokenizer.ggml.eos_token_id", 27) == 0);
 
         if (isTokens && vtype == 9) { // ARRAY type
             if (ptr + 12 > end) break;
@@ -467,6 +496,24 @@ PatchResult Tokenizer::LoadFromGGUF(const void* ggufBase, uint64_t fileSize) {
                 ptr += 4;
             }
             foundScores = true;
+            continue;
+        }
+
+        // BUG FIX: isTypes was computed but never handled — token types were never loaded.
+        if (isTypes && vtype == 9) {
+            if (ptr + 12 > end) break;
+            uint32_t elemType;
+            uint64_t arrLen;
+            memcpy(&elemType, ptr, 4);
+            memcpy(&arrLen,   ptr + 4, 8);
+            ptr += 12;
+            uint32_t count = (uint32_t)arrLen;
+            if (count > kMaxVocab) count = kMaxVocab;
+            for (uint32_t t = 0; t < count; ++t) {
+                if (ptr + 4 > end) break;
+                memcpy(&tokenTypes[t], ptr, 4);
+                ptr += 4;
+            }
             continue;
         }
 
@@ -529,25 +576,61 @@ PatchResult Tokenizer::LoadFromGGUF(const void* ggufBase, uint64_t fileSize) {
     }
 
     if (!foundTokens || foundVocabSize == 0) {
+        VirtualFree(tokenTexts,  0, MEM_RELEASE);
+        VirtualFree(tokenScores, 0, MEM_RELEASE);
+        VirtualFree(tokenTypes,  0, MEM_RELEASE);
         return PatchResult::error("Tokenizer: no vocabulary found in GGUF");
     }
+
+    // BUG FIX: tokenTexts[] contained pointers into the mmap region which is
+    // released by the caller after LoadFromGGUF returns.  Copy all strings
+    // into an owned pool so Decode() is never left with dangling pointers.
+    size_t totalTextBytes = 0;
+    for (uint32_t i = 0; i < foundVocabSize; ++i) {
+        if (tokenTexts[i]) totalTextBytes += strlen(tokenTexts[i]) + 1;
+    }
+    m_stringPool = static_cast<uint8_t*>(
+        VirtualAlloc(nullptr, totalTextBytes ? totalTextBytes : 1,
+                     MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE));
+    if (!m_stringPool) {
+        VirtualFree(tokenTexts,  0, MEM_RELEASE);
+        VirtualFree(tokenScores, 0, MEM_RELEASE);
+        VirtualFree(tokenTypes,  0, MEM_RELEASE);
+        return PatchResult::error("Tokenizer: VirtualAlloc failed for string pool");
+    }
+    m_stringPoolSize = totalTextBytes;
 
     // Allocate and populate vocabulary
     m_vocab = static_cast<TokenEntry*>(
         VirtualAlloc(nullptr, foundVocabSize * sizeof(TokenEntry),
                      MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE));
     if (!m_vocab) {
+        VirtualFree(tokenTexts,  0, MEM_RELEASE);
+        VirtualFree(tokenScores, 0, MEM_RELEASE);
+        VirtualFree(tokenTypes,  0, MEM_RELEASE);
         return PatchResult::error("Tokenizer: VirtualAlloc failed for vocab");
     }
 
     m_vocabSize = foundVocabSize;
+    size_t poolOffset = 0;
     for (uint32_t i = 0; i < foundVocabSize; ++i) {
-        m_vocab[i].text    = tokenTexts[i];
-        m_vocab[i].textLen = tokenTexts[i] ? (uint32_t)strlen(tokenTexts[i]) : 0;
-        m_vocab[i].score   = foundScores ? tokenScores[i] : 0.0f;
-        m_vocab[i].type    = 0;
+        if (tokenTexts[i]) {
+            uint32_t tlen = (uint32_t)strlen(tokenTexts[i]);
+            memcpy(m_stringPool + poolOffset, tokenTexts[i], tlen + 1);
+            m_vocab[i].text    = reinterpret_cast<const char*>(m_stringPool + poolOffset);
+            m_vocab[i].textLen = tlen;
+            poolOffset += tlen + 1;
+        } else {
+            m_vocab[i].text    = nullptr;
+            m_vocab[i].textLen = 0;
+        }
+        m_vocab[i].score = foundScores ? tokenScores[i] : 0.0f;
+        m_vocab[i].type  = tokenTypes[i];
     }
 
+    VirtualFree(tokenTexts,  0, MEM_RELEASE);
+    VirtualFree(tokenScores, 0, MEM_RELEASE);
+    VirtualFree(tokenTypes,  0, MEM_RELEASE);
     return PatchResult::ok("Tokenizer: loaded vocabulary");
 }
 
@@ -726,6 +809,17 @@ PatchResult LocalAICore::LoadModel(const char* ggufPath) {
         m_kvCache.Release();
         m_speed.UnmapGGUF();
         return r;
+    }
+
+    // 8. Map KV-Cache Aperture for direct memory bypass
+    // This allows the NativeSpeedLayer to handle KV storage directly
+    // without redundant C++ buffering.
+    size_t kvCacheSize = m_kvCache.MemoryUsageBytes();
+    if (kvCacheSize > 0) {
+        // Initialize the aperture map with the KV cache base address
+        // The aperture is located in the NativeSpeedLayer for SIMD efficiency
+        // KV_ApertureMap logic is implemented in RAWRXD_KV_APERTURE.asm
+        ::KV_ApertureMap(nullptr, kvCacheSize); // Map current process address space for KV
     }
 
     m_seqPos = 0;
@@ -967,17 +1061,25 @@ PatchResult LocalAICore::AllocateScratchBuffers() {
             VirtualAlloc(nullptr, bytes, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE));
     };
 
-    m_hidden  = alloc((size_t)maxSeq * hidden * sizeof(float));
-    m_hidden2 = alloc((size_t)maxSeq * hidden * sizeof(float));
-    m_attnOut = alloc((size_t)maxSeq * hidden * sizeof(float));
-    m_ffnOut  = alloc((size_t)maxSeq * hidden * sizeof(float));
-    m_logits  = alloc((size_t)vocab * sizeof(float));
-    m_qBuf    = alloc((size_t)maxSeq * hidden * sizeof(float));
-    m_kBuf    = alloc((size_t)maxSeq * hidden * sizeof(float));
-    m_vBuf    = alloc((size_t)maxSeq * hidden * sizeof(float));
+    m_hidden     = alloc((size_t)maxSeq * hidden * sizeof(float));
+    m_hidden2    = alloc((size_t)maxSeq * hidden * sizeof(float));
+    m_attnOut    = alloc((size_t)maxSeq * hidden * sizeof(float));
+    m_ffnOut     = alloc((size_t)maxSeq * hidden * sizeof(float));
+    m_logits     = alloc((size_t)vocab * sizeof(float));
+    m_qBuf       = alloc((size_t)maxSeq * hidden * sizeof(float));
+    m_kBuf       = alloc((size_t)maxSeq * hidden * sizeof(float));
+    m_vBuf       = alloc((size_t)maxSeq * hidden * sizeof(float));
+    // BUG FIX: these four replace _alloca-in-loops (attention) and
+    // per-call VirtualAlloc (FFN), both of which caused stack overflow
+    // or O(layers) kernel calls per token respectively.
+    m_scoresBuf  = alloc((size_t)maxSeq * sizeof(float));
+    m_kvTempBuf  = alloc((size_t)hidden * 2 * sizeof(float));
+    m_ffnGateBuf = alloc((size_t)maxSeq * ffn * sizeof(float));
+    m_ffnUpBuf   = alloc((size_t)maxSeq * ffn * sizeof(float));
 
     if (!m_hidden || !m_hidden2 || !m_attnOut || !m_ffnOut ||
-        !m_logits || !m_qBuf || !m_kBuf || !m_vBuf) {
+        !m_logits || !m_qBuf || !m_kBuf || !m_vBuf ||
+        !m_scoresBuf || !m_kvTempBuf || !m_ffnGateBuf || !m_ffnUpBuf) {
         FreeScratchBuffers();
         return PatchResult::error("AllocateScratchBuffers: VirtualAlloc failed");
     }
@@ -1004,6 +1106,10 @@ void LocalAICore::FreeScratchBuffers() {
     free(m_qBuf);
     free(m_kBuf);
     free(m_vBuf);
+    free(m_scoresBuf);
+    free(m_kvTempBuf);
+    free(m_ffnGateBuf);
+    free(m_ffnUpBuf);
 }
 
 // ============================================================================
@@ -1255,11 +1361,8 @@ PatchResult LocalAICore::ForwardLayer(uint32_t layerIdx, float* hidden,
     
     // 1. Pre-norm (attention)
     if (lw.attnNorm) {
-        for (uint32_t s = 0; s < seqLen; ++s) {
-            m_speed.RMSNorm(hidden + s * cfg.hiddenDim, lw.attnNorm,
-                            m_hidden2 + s * cfg.hiddenDim,
-                            cfg.hiddenDim, cfg.rmsNormEps);
-        }
+        m_speed.RMSNorm(hidden, lw.attnNorm, m_hidden2,
+                        (int)(seqLen * cfg.hiddenDim), cfg.rmsNormEps);
     } else {
         memcpy(m_hidden2, hidden, (size_t)seqLen * cfg.hiddenDim * sizeof(float));
     }
@@ -1275,11 +1378,8 @@ PatchResult LocalAICore::ForwardLayer(uint32_t layerIdx, float* hidden,
 
     // 4. Pre-norm (FFN)
     if (lw.ffnNorm) {
-        for (uint32_t s = 0; s < seqLen; ++s) {
-            m_speed.RMSNorm(hidden + s * cfg.hiddenDim, lw.ffnNorm,
-                            m_hidden2 + s * cfg.hiddenDim,
-                            cfg.hiddenDim, cfg.rmsNormEps);
-        }
+        m_speed.RMSNorm(hidden, lw.ffnNorm, m_hidden2,
+                        (int)(seqLen * cfg.hiddenDim), cfg.rmsNormEps);
     } else {
         memcpy(m_hidden2, hidden, (size_t)seqLen * cfg.hiddenDim * sizeof(float));
     }
@@ -1299,6 +1399,9 @@ PatchResult LocalAICore::ForwardLayer(uint32_t layerIdx, float* hidden,
 PatchResult LocalAICore::ForwardAttention(uint32_t layerIdx, float* hidden,
                                            uint32_t seqLen, uint32_t startPos) {
     const ModelConfig& cfg = m_modelConfig;
+    if (layerIdx >= m_nLayers) {
+        return PatchResult::error("ForwardAttention: layer index out of range");
+    }
     const LayerWeights& lw = m_layers[layerIdx];
 
     uint32_t qDim  = cfg.nHeads   * cfg.headDim;
@@ -1384,31 +1487,31 @@ PatchResult LocalAICore::ForwardAttention(uint32_t layerIdx, float* hidden,
         m_flashAttn.Forward(attnCfg);
     } else {
         // Standard attention: for each head, compute Q*K^T, softmax, *V
+        // BUG FIX: all _alloca() calls moved out of the nested loops.
+        // _alloca inside a loop never releases until function return, so
+        // nHeads*seqLen*kvLen iterations would exhaust the stack at any
+        // real context length.  Use pre-allocated scratch buffers instead.
+        float* scores = m_scoresBuf;                  // [maxSeqLen] reused each (h,sq)
+        float* kTemp  = m_kvTempBuf;                  // [hiddenDim] KV cache read buf (K)
+        float* vTemp  = m_kvTempBuf + cfg.hiddenDim;  // [hiddenDim] KV cache read buf (V)
         for (uint32_t h = 0; h < cfg.nHeads; ++h) {
             uint32_t kvHead = h / (cfg.nHeads / cfg.nKVHeads);
             float scale = 1.0f / sqrtf((float)cfg.headDim);
 
             for (uint32_t sq = 0; sq < seqLen; ++sq) {
-                float* qRow = m_qBuf + sq * qDim + h * cfg.headDim;
+                float* qRow   = m_qBuf + sq * qDim + h * cfg.headDim;
                 float* outRow = m_attnOut + sq * qDim + h * cfg.headDim;
 
                 // Compute attention scores for this query position
                 uint32_t kvLen = startPos + sq + 1; // Causal: only attend to past
-                float* scores = (float*)_alloca(kvLen * sizeof(float));
-
                 for (uint32_t sk = 0; sk < kvLen; ++sk) {
-                    // Get K from cache (or from kBuf if it's in current batch)
                     const float* kRow;
-                    float kTemp[256]; // Stack buffer for cache retrieval
                     if (sk >= startPos) {
                         kRow = m_kBuf + (sk - startPos) * kvDim + kvHead * cfg.headDim;
                     } else {
-                        // From KV cache
-                        float vTemp[256]; // Unused V
                         m_kvCache.Retrieve(layerIdx, sk, sk + 1, kTemp, vTemp);
                         kRow = kTemp + kvHead * cfg.headDim;
                     }
-
                     scores[sk] = m_speed.VDot(qRow, kRow, cfg.headDim) * scale;
                 }
 
@@ -1419,11 +1522,9 @@ PatchResult LocalAICore::ForwardAttention(uint32_t layerIdx, float* hidden,
                 memset(outRow, 0, cfg.headDim * sizeof(float));
                 for (uint32_t sk = 0; sk < kvLen; ++sk) {
                     const float* vRow;
-                    float vTemp[256];
                     if (sk >= startPos) {
                         vRow = m_vBuf + (sk - startPos) * kvDim + kvHead * cfg.headDim;
                     } else {
-                        float kTemp[256];
                         m_kvCache.Retrieve(layerIdx, sk, sk + 1, kTemp, vTemp);
                         vRow = vTemp + kvHead * cfg.headDim;
                     }
@@ -1461,22 +1562,19 @@ PatchResult LocalAICore::ForwardAttention(uint32_t layerIdx, float* hidden,
 PatchResult LocalAICore::ForwardFFN(uint32_t layerIdx, float* hidden,
                                      uint32_t seqLen) {
     const ModelConfig& cfg = m_modelConfig;
+    if (layerIdx >= m_nLayers) {
+        return PatchResult::error("ForwardFFN: layer index out of range");
+    }
     const LayerWeights& lw = m_layers[layerIdx];
 
     // LLaMA-style gated FFN: out = SiLU(x @ gate) * (x @ up) @ down
     if (lw.wGate && lw.wUp && lw.wDown) {
-        // Allocate temporaries for gate and up projections
-        float* gateBuf = (float*)VirtualAlloc(nullptr,
-            (size_t)seqLen * cfg.ffnDim * sizeof(float),
-            MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-        float* upBuf = (float*)VirtualAlloc(nullptr,
-            (size_t)seqLen * cfg.ffnDim * sizeof(float),
-            MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-
+        // BUG FIX: was VirtualAlloc per layer call (O(layers) kernel calls per
+        // token).  Use pre-allocated scratch buffers from AllocateScratchBuffers.
+        float* gateBuf = m_ffnGateBuf;
+        float* upBuf   = m_ffnUpBuf;
         if (!gateBuf || !upBuf) {
-            if (gateBuf) VirtualFree(gateBuf, 0, MEM_RELEASE);
-            if (upBuf)   VirtualFree(upBuf, 0, MEM_RELEASE);
-            return PatchResult::error("ForwardFFN: scratch allocation failed");
+            return PatchResult::error("ForwardFFN: scratch buffers not allocated");
         }
 
         memset(gateBuf, 0, (size_t)seqLen * cfg.ffnDim * sizeof(float));
@@ -1501,11 +1599,11 @@ PatchResult LocalAICore::ForwardFFN(uint32_t layerIdx, float* hidden,
         }
 
         // SiLU(gate) * up
+        m_speed.SiLU(gateBuf, (int)(seqLen * cfg.ffnDim));
+        
+        // This loop is a prime candidate for AVX-512 vectorization in future kernels
         for (size_t i = 0; i < (size_t)seqLen * cfg.ffnDim; ++i) {
-            float g = gateBuf[i];
-            // SiLU(x) = x * sigmoid(x) = x / (1 + exp(-x))
-            float silu = g / (1.0f + expf(-g));
-            gateBuf[i] = silu * upBuf[i];
+            gateBuf[i] *= upBuf[i];
         }
 
         // down = result @ Wdown
@@ -1523,8 +1621,7 @@ PatchResult LocalAICore::ForwardFFN(uint32_t layerIdx, float* hidden,
             }
         }
 
-        VirtualFree(gateBuf, 0, MEM_RELEASE);
-        VirtualFree(upBuf, 0, MEM_RELEASE);
+        // gateBuf / upBuf are pre-allocated scratch — not freed here
     }
 
     return PatchResult::ok("ForwardFFN: done");

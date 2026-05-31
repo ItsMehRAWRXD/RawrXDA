@@ -12,6 +12,10 @@
 - Production tree and all scripted defaults assume **`D:\RawrXD`**. Do not document or default to Cursor worktrees or other drive paths.
 - Optional override: environment variable **`RAWRXD_REPO_ROOT`** (see `docs/REPOSITORY_ROOT.md`).
 
+### **Canonical IDE — Win32 only (no Qt in production)**
+- **Shipped / buildable IDE** lives under **`src/win32app/`** (native Win32 + STL + project `Ship/` helpers). Do not add Qt, Qt Quick, wxWidgets, or other portable GUI toolkits to production IDE sources.
+- **Legacy Qt shell** and Qt-only helpers are quarantined under **`src/legacy/qtapp/`** and **`src/legacy/qt_support/`** with headers in **`include/legacy_qt/`**. They are not part of the default CMake graph; do not extend them for new product features—port to Win32 instead.
+
 ---
 
 ## 💻 C++ STYLE GUIDELINES (2026 Standard)

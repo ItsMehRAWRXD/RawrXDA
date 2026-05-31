@@ -90,6 +90,8 @@ public:
     FileInfo GetFileInfo(int fileId);
     std::vector<int> GetOpenFileIds();
 
+    void RegisterCommands();
+
 private:
     EditorOperations();
     ~EditorOperations();

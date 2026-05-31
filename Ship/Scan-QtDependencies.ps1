@@ -73,7 +73,7 @@ foreach ($file in $allFiles) {
 }
 
 function Categorize-File($path) {
-    if ($path -like "*\qtapp\*") { return "UI_Layer" }
+    if ($path -like "*\legacy\qtapp\*" -or $path -like "*\qtapp\*") { return "UI_Layer" }
     if ($path -like "*\agentic\*") { return "Agentic_Core" }
     if ($path -like "*\agent\*") { return "Agent_System" }
     if ($path -like "*\utils\*") { return "Utilities" }
@@ -167,8 +167,8 @@ Write-Host ""
 
 # Next actions
 Write-Host "🚀 RECOMMENDED NEXT ACTIONS:" -ForegroundColor Green
-Write-Host "  1. Start with: src/qtapp/MainWindow.cpp (highest impact)" -ForegroundColor White
-Write-Host "  2. Then: src/qtapp/main_qt.cpp (entry point)" -ForegroundColor White
+Write-Host "  1. Legacy reference: src/legacy/qtapp/MainWindow.cpp (not shipped)" -ForegroundColor White
+Write-Host "  2. Legacy entry: src/legacy/qtapp/main_qt.cpp" -ForegroundColor White
 Write-Host "  3. Then: src/agentic_*.cpp (core logic)" -ForegroundColor White
 Write-Host "  4. Batch process utils/ (low complexity, high volume)" -ForegroundColor White
 Write-Host "  5. Finally: tests/ (validate everything works)" -ForegroundColor White

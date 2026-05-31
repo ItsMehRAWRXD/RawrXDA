@@ -401,7 +401,7 @@ void Win32IDE::cmdHotpatchShowEventLog() {
 
 void Win32IDE::cmdHotpatchMemoryApply() {
     // Input contract: <address_hex> <hex_bytes>
-    // Example: 0x7FFE1234 909090
+    // Pattern: 0x7FFE1234 909090
     std::string input = ReadClipboardText(m_hwndMain);
     if (input.empty() && m_hwndCopilotChatInput) {
         input = getWindowText(m_hwndCopilotChatInput);

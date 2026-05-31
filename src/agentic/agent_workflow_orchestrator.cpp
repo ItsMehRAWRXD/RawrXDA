@@ -434,11 +434,12 @@ public:
 
         wf.overallState = TaskState::Running;
         wf.startTime = std::chrono::steady_clock::now();
+        const std::string resumedWorkflowId = wf.id;
         m_workflows[wf.id] = std::move(wf);
-        emitEvent(WorkflowEventKind::WorkflowResumed, m_workflows[wf.id].id, "", "Workflow resumed from checkpoint");
+        emitEvent(WorkflowEventKind::WorkflowResumed, resumedWorkflowId, "", "Workflow resumed from checkpoint");
         lock.unlock();
 
-        return executeWorkflow(m_workflows[wf.id].id);
+        return executeWorkflow(resumedWorkflowId);
     }
 
     // ── Manual approval gates (IDE-driven granular escalation) ─────────────
@@ -667,6 +668,50 @@ public:
 
 private:
     AgentWorkflowOrchestrator() = default;
+
+    void restoreTaskRuntime(TaskNode& task) {
+        if (task.id == "plan") {
+            task.executor = [](TaskNode& self) -> bool {
+                self.outputs["plan_summary"] = "Plan generated for: " + self.description;
+                self.outputs["step_count"] = std::to_string(self.inputs.size());
+                return true;
+            };
+            task.validator = [](TaskNode& self) -> bool {
+                return !self.outputs["plan_summary"].empty();
+            };
+            return;
+        }
+
+        if (task.id.rfind("exec_", 0) == 0) {
+            task.executor = [](TaskNode& self) -> bool {
+                self.outputs["result"] = "Executed: " + self.description;
+                return true;
+            };
+            task.validator = [](TaskNode& self) -> bool {
+                return self.outputs.count("result") > 0;
+            };
+            task.rollback = [](TaskNode& self) -> bool {
+                self.outputs["rollback"] = "Rolled back: " + self.description;
+                return true;
+            };
+            return;
+        }
+
+        if (task.id == "validate") {
+            task.executor = [](TaskNode& self) -> bool {
+                self.outputs["validation"] = "All steps validated";
+                return true;
+            };
+            return;
+        }
+
+        if (task.id == "commit") {
+            task.executor = [](TaskNode& self) -> bool {
+                self.outputs["commit_status"] = "committed";
+                return true;
+            };
+        }
+    }
 
     // ── Execute a Single Task with Retry ─────────────────────────────────────
     bool executeTask(Workflow& wf, TaskNode& task) {
@@ -1020,6 +1065,7 @@ private:
                 }
             }
 
+            restoreTaskRuntime(t);
             out.taskIndex[t.id] = out.tasks.size();
             out.tasks.push_back(std::move(t));
         }

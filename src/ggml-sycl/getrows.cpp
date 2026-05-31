@@ -10,7 +10,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 
-#include "ggml-impl.h"
+#include "ggml-impl_rxd_internal.h"
 #include "common.hpp"
 #include "dequantize.hpp"
 #include "getrows.hpp"

@@ -149,7 +149,7 @@ std::string RawrEngine::generate(const std::string& prompt, int max_tokens,
         InferenceKernels::rmsnorm_avx512(x.data(), x.data(), output_norm, dim);
         
         // Output projection (logits) with quantized-or-f32 dispatch.
-        if (output_weight_type == GGML_TYPE_Q4_0) {
+        if (output_weight_type == GGML_RXD_TYPE_Q4_0) {
             InferenceKernels::matmul_q4_0_fused(
                 x.data(), (block_q4_0*)output_weight, logits.data(), 1, vocab_size, dim);
         } else {

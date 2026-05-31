@@ -33,6 +33,8 @@ set(SOVEREIGN_WRAPPER_SOURCES
     AgenticEngineSovereignHook.cpp
     RawrXD_SovereignStatusPanel.h
     RawrXD_SovereignStatusPanel.cpp
+    sovereign_cursor.hpp
+    sovereign_cursor.cpp
 )
 
 #=============================================================================

@@ -83,5 +83,29 @@ void InteractiveShell::DisplayPrompt() {
 }
 
 // Minimal shell: no persistent history; override in a full shell if needed.
-void InteractiveShell::SaveHistory() {}
-void InteractiveShell::LoadHistory() {}
+void InteractiveShell::SaveHistory() {
+    // Save command history to file
+    if (history_.empty()) return;
+    
+    std::ofstream file("shell_history.txt", std::ios::app);
+    if (file.is_open()) {
+        for (const auto& cmd : history_) {
+            file << cmd << "\n";
+        }
+        file.close();
+    }
+}
+
+void InteractiveShell::LoadHistory() {
+    // Load command history from file
+    std::ifstream file("shell_history.txt");
+    if (file.is_open()) {
+        std::string line;
+        while (std::getline(file, line)) {
+            if (!line.empty()) {
+                history_.push_back(line);
+            }
+        }
+        file.close();
+    }
+}

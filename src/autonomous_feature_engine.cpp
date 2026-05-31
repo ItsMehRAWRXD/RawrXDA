@@ -628,20 +628,66 @@ double AutonomousFeatureEngine::calculateMaintainability(const std::string& code
     return mi;
 }
 double AutonomousFeatureEngine::calculateReliability(const std::string& code) {
-    // Heuristic: More branches/conditions = less reliable
+    // Heuristic: More branches/conditions = less reliable (capped)
     int complexity = calculateComplexity(code);
-    return std::max(0.0, 100.0 - complexity);
+    double score = std::max(0.0, 100.0 - complexity * 2.5);
+
+    // Penalize unchecked error returns
+    if (code.find("catch (...) {}") != std::string::npos ||
+        code.find("catch(...)") != std::string::npos) {
+        score -= 15.0;
+    }
+    // Penalize raw pointers without null checks
+    if (code.find("new ") != std::string::npos && code.find("nullptr") == std::string::npos) {
+        score -= 10.0;
+    }
+    return std::max(0.0, score);
 }
 double AutonomousFeatureEngine::calculateSecurity(const std::string& code) {
-    // Scan for keywords: strcpy, system, etc.
-    if (code.find("strcpy") != std::string::npos || code.find("system(") != std::string::npos) {
-        return 40.0;
+    double score = 95.0;
+    // Critical unsafe functions
+    if (code.find("strcpy(") != std::string::npos) score -= 30.0;
+    if (code.find("strcat(") != std::string::npos) score -= 30.0;
+    if (code.find("sprintf(") != std::string::npos) score -= 25.0;
+    if (code.find("gets(") != std::string::npos) score -= 40.0;
+    if (code.find("system(") != std::string::npos) score -= 20.0;
+    // Potential injection vectors
+    if (code.find("eval(") != std::string::npos) score -= 25.0;
+    if (code.find("exec(") != std::string::npos) score -= 20.0;
+    // Missing bounds checks with raw buffers
+    if (code.find("char[") != std::string::npos && code.find("sizeof") == std::string::npos) {
+        score -= 10.0;
     }
-    return 95.0;    
+    return std::max(0.0, score);
 }
 double AutonomousFeatureEngine::calculateEfficiency(const std::string& code) {
-    // Scan for nested loops?
-    return 88.0;
+    double score = 85.0;
+    // Nested loops penalty
+    int loopDepth = 0, maxLoopDepth = 0;
+    size_t pos = 0;
+    while ((pos = code.find("for (", pos)) != std::string::npos) {
+        loopDepth++;
+        maxLoopDepth = std::max(maxLoopDepth, loopDepth);
+        pos++;
+    }
+    pos = 0;
+    while ((pos = code.find("while (", pos)) != std::string::npos) {
+        loopDepth++;
+        maxLoopDepth = std::max(maxLoopDepth, loopDepth);
+        pos++;
+    }
+    if (maxLoopDepth >= 3) score -= 20.0;
+    else if (maxLoopDepth == 2) score -= 10.0;
+
+    // Recursion penalty (stack growth)
+    if (code.find("recursion") != std::string::npos || code.find("recursive") != std::string::npos) {
+        score -= 5.0;
+    }
+    // String concatenation in loops penalty
+    if (code.find("for (") != std::string::npos && code.find("+=") != std::string::npos) {
+        score -= 10.0;
+    }
+    return std::max(0.0, score);
 }
 void AutonomousFeatureEngine::recordUserInteraction(const std::string& s, bool accepted) {
     // Determine type from suggestion ID (hacky but works if ID stores type, otherwise need mapping)

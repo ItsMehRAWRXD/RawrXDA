@@ -1,4 +1,5 @@
-// SCAFFOLD_346: OrchestrationUI void* parent doc
+// Orchestration UI Header - Task Orchestration Interface
+// Win32: parent is HWND for CreateWindowExW when embedding the orchestration UI.
 
 #pragma once
 

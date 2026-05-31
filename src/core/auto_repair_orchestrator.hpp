@@ -96,6 +96,12 @@ enum class AnomalySeverity : uint8_t {
     Fatal       = 4     // System integrity compromised beyond repair
 };
 
+enum class RecoveryState : uint8_t {
+    Healthy     = 0,
+    Healing     = 1,
+    Lockdown    = 2
+};
+
 // ============================================================================
 // Anomaly Log Entry
 // ============================================================================
@@ -212,6 +218,7 @@ public:
     // ---- Query ----
     AutoRepairStats getStats() const;
     std::string statsToJson() const;
+    RecoveryState getRecoveryState() const;
 
     // ---- Anomaly Log (ring buffer) ----
     const AnomalyEntry* getAnomalyLog(uint32_t& outCount) const;
@@ -270,6 +277,7 @@ private:
     std::atomic<bool>               m_running;
     std::atomic<bool>               m_paused;
     std::atomic<bool>               m_shutdownRequested;
+    std::atomic<RecoveryState>      m_recoveryState;
     HANDLE                          m_orchestratorThread;
     DWORD                           m_orchestratorThreadId;
 

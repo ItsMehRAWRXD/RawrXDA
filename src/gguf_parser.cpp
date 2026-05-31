@@ -24,7 +24,13 @@ Expected<ParsedGGUFModel, std::string> GGUFParser::parse(const std::string& path
     
     model.vocab = meta.tokens;
     model.token_scores = meta.token_scores;
-    model.token_types = meta.token_types;
+    
+    std::vector<uint32_t> types_uint;
+    types_uint.reserve(meta.token_types.size());
+    for(const auto& type_val : meta.token_types) {
+        types_uint.push_back(static_cast<uint32_t>(type_val));
+    }
+    model.token_types = types_uint;
     
     // Retrieve Tensor Info to populate metadata
     std::vector<TensorInfo> infos = loader.GetTensorInfo();

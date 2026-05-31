@@ -78,7 +78,9 @@ public:
         // 4. Agentic Feedback Loop: Logic -> Machine Code
         if (query.find("DMA") != std::string::npos) {
             UI::UpdateStatus("Self-Correction: Triggering Titan DMA Core...");
-            Titan_PerformDMA(nullptr, nullptr, 0); 
+            unsigned char src[32] = {};
+            unsigned char dst[32] = {};
+            Titan_PerformDMA(src, dst, sizeof(src));
         }
 
         state = AgentState::Finished;

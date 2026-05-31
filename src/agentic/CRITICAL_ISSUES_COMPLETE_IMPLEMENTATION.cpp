@@ -11,28 +11,28 @@
 #include <immintrin.h>
 
 // GGML forward declarations
-typedef struct ggml_context ggml_context;
-typedef struct ggml_cgraph ggml_cgraph;
-typedef struct ggml_tensor ggml_tensor;
+typedef struct ggml_rxd_context ggml_rxd_context;
+typedef struct ggml_rxd_cgraph ggml_rxd_cgraph;
+typedef struct ggml_rxd_tensor ggml_rxd_tensor;
 
 extern "C" {
-    ggml_context* ggml_init(int mem_size);
-    void ggml_free(ggml_context* ctx);
-    ggml_tensor* ggml_new_tensor_3d(ggml_context* ctx, int type, int ne0, int ne1, int ne2);
-    ggml_tensor* ggml_new_tensor_4d(ggml_context* ctx, int type, int ne0, int ne1, int ne2, int ne3);
-    ggml_tensor* ggml_new_f32(ggml_context* ctx, float x);
-    ggml_tensor* ggml_mul_mat(ggml_context* ctx, ggml_tensor* a, ggml_tensor* b);
-    ggml_tensor* ggml_rope_inplace(ggml_context* ctx, ggml_tensor* a, int n_dims, int mode);
-    ggml_tensor* ggml_soft_max_inplace(ggml_context* ctx, ggml_tensor* a);
-    ggml_tensor* ggml_norm_inplace(ggml_context* ctx, ggml_tensor* a);
-    ggml_tensor* ggml_scale_inplace(ggml_context* ctx, ggml_tensor* a, ggml_tensor* s);
-    ggml_tensor* ggml_add_inplace(ggml_context* ctx, ggml_tensor* a, ggml_tensor* b);
-    ggml_tensor* ggml_mul_inplace(ggml_context* ctx, ggml_tensor* a, ggml_tensor* b);
-    ggml_tensor* ggml_view_3d(ggml_context* ctx, ggml_tensor* a, int ne0, int ne1, int ne2, int offset);
-    ggml_cgraph* ggml_new_graph(ggml_context* ctx);
-    void ggml_build_forward_expand(ggml_cgraph* cgraph, ggml_tensor* tensor);
-    void ggml_graph_compute(ggml_context* ctx, ggml_cgraph* cgraph);
-    float* ggml_get_data_f32(ggml_tensor* tensor);
+    ggml_rxd_context* ggml_rxd_init(int mem_size);
+    void ggml_rxd_free(ggml_rxd_context* ctx);
+    ggml_rxd_tensor* ggml_rxd_new_tensor_3d(ggml_rxd_context* ctx, int type, int ne0, int ne1, int ne2);
+    ggml_rxd_tensor* ggml_rxd_new_tensor_4d(ggml_rxd_context* ctx, int type, int ne0, int ne1, int ne2, int ne3);
+    ggml_rxd_tensor* ggml_rxd_new_f32(ggml_rxd_context* ctx, float x);
+    ggml_rxd_tensor* ggml_rxd_mul_mat(ggml_rxd_context* ctx, ggml_rxd_tensor* a, ggml_rxd_tensor* b);
+    ggml_rxd_tensor* ggml_rxd_rope_inplace(ggml_rxd_context* ctx, ggml_rxd_tensor* a, int n_dims, int mode);
+    ggml_rxd_tensor* ggml_rxd_soft_max_inplace(ggml_rxd_context* ctx, ggml_rxd_tensor* a);
+    ggml_rxd_tensor* ggml_rxd_norm_inplace(ggml_rxd_context* ctx, ggml_rxd_tensor* a);
+    ggml_rxd_tensor* ggml_rxd_scale_inplace(ggml_rxd_context* ctx, ggml_rxd_tensor* a, ggml_rxd_tensor* s);
+    ggml_rxd_tensor* ggml_rxd_add_inplace(ggml_rxd_context* ctx, ggml_rxd_tensor* a, ggml_rxd_tensor* b);
+    ggml_rxd_tensor* ggml_rxd_mul_inplace(ggml_rxd_context* ctx, ggml_rxd_tensor* a, ggml_rxd_tensor* b);
+    ggml_rxd_tensor* ggml_rxd_view_3d(ggml_rxd_context* ctx, ggml_rxd_tensor* a, int ne0, int ne1, int ne2, int offset);
+    ggml_rxd_cgraph* ggml_rxd_new_graph(ggml_rxd_context* ctx);
+    void ggml_rxd_build_forward_expand(ggml_rxd_cgraph* cgraph, ggml_rxd_tensor* tensor);
+    void ggml_rxd_graph_compute(ggml_rxd_context* ctx, ggml_rxd_cgraph* cgraph);
+    float* ggml_rxd_get_data_f32(ggml_rxd_tensor* tensor);
 }
 
 // ============================================================================
@@ -40,8 +40,8 @@ extern "C" {
 // ============================================================================
 
 typedef struct {
-    ggml_tensor* K;          // [n_layers, n_ctx, n_embd]
-    ggml_tensor* V;          // [n_layers, n_ctx, n_embd]
+    ggml_rxd_tensor* K;          // [n_layers, n_ctx, n_embd]
+    ggml_rxd_tensor* V;          // [n_layers, n_ctx, n_embd]
     int32_t n_layers;
     int32_t n_ctx;
     int32_t n_embd;
@@ -91,28 +91,28 @@ float Attention_ComputeHeadScore(
 // Attention Forward Pass - Q@K^T with RoPE and Causal Masking
 // ============================================================================
 
-ggml_tensor* Attention_Forward(
-    ggml_context* ctx,
-    ggml_tensor* Q,           // [batch, seq_len, n_embd]
-    ggml_tensor* K,           // [batch, past_len, n_embd]
-    ggml_tensor* V,           // [batch, past_len, n_embd]
+ggml_rxd_tensor* Attention_Forward(
+    ggml_rxd_context* ctx,
+    ggml_rxd_tensor* Q,           // [batch, seq_len, n_embd]
+    ggml_rxd_tensor* K,           // [batch, past_len, n_embd]
+    ggml_rxd_tensor* V,           // [batch, past_len, n_embd]
     int32_t n_heads,
     int32_t past_len,
     int32_t current_pos)
 {
     // Compute attention scores: Q @ K^T / sqrt(d_k)
-    ggml_tensor* scores = ggml_mul_mat(ctx, K, Q);
+    ggml_rxd_tensor* scores = ggml_rxd_mul_mat(ctx, K, Q);
     
     // Scale by 1/sqrt(d_k)
     float scale = 1.0f / sqrtf(64.0f);
-    ggml_tensor* scale_tensor = ggml_new_f32(ctx, scale);
-    scores = ggml_scale_inplace(ctx, scores, scale_tensor);
+    ggml_rxd_tensor* scale_tensor = ggml_rxd_new_f32(ctx, scale);
+    scores = ggml_rxd_scale_inplace(ctx, scores, scale_tensor);
     
     // Softmax over sequence dimension
-    scores = ggml_soft_max_inplace(ctx, scores);
+    scores = ggml_rxd_soft_max_inplace(ctx, scores);
     
     // Attention output: scores @ V
-    ggml_tensor* out = ggml_mul_mat(ctx, V, scores);
+    ggml_rxd_tensor* out = ggml_rxd_mul_mat(ctx, V, scores);
     
     return out;
 }
@@ -173,7 +173,7 @@ int32_t Sample_TopK(float* logits, int vocab_size, int k, float temperature)
 // ============================================================================
 
 typedef struct {
-    ggml_context* ctx;
+    ggml_rxd_context* ctx;
     int32_t n_layers;
     int32_t n_embd;
     int32_t n_heads;
@@ -203,18 +203,18 @@ float AIModelCaller_RunInference(
     // Decoding phase: generate tokens autoregressively
     while (output_pos < max_output_len && current_pos < model->n_ctx) {
         // Create compute graph for this position
-        ggml_cgraph* cgraph = ggml_new_graph(model->ctx);
+        ggml_rxd_cgraph* cgraph = ggml_rxd_new_graph(model->ctx);
         
         // Build transformer forward pass:
         // 1. Token embedding lookup for current position
         // 2. For each layer: RMSNorm → Attention(Q,K,V with KV cache) → RMSNorm → FFN(gate,up,down)
         // 3. Final RMSNorm → output projection to vocab logits
         if (cgraph) {
-            ggml_graph_compute(model->ctx, cgraph);
+            ggml_rxd_graph_compute(model->ctx, cgraph);
             
             // Extract logits for the last token from the output tensor
-            ggml_tensor* output_node = cgraph->nodes[cgraph->n_nodes - 1];
-            float* logits = (float*)ggml_get_data(output_node);
+            ggml_rxd_tensor* output_node = cgraph->nodes[cgraph->n_nodes - 1];
+            float* logits = (float*)ggml_rxd_get_data(output_node);
             
             if (logits && output_tokens) {
                 // Apply temperature scaling and sample next token
@@ -243,12 +243,12 @@ float AIModelCaller_RunInference(
 // KV Cache Management
 // ============================================================================
 
-KVCache* KVCache_Create(int32_t n_layers, int32_t n_ctx, int32_t n_embd, ggml_context* ctx)
+KVCache* KVCache_Create(int32_t n_layers, int32_t n_ctx, int32_t n_embd, ggml_rxd_context* ctx)
 {
     KVCache* cache = (KVCache*)malloc(sizeof(KVCache));
     
-    cache->K = ggml_new_tensor_3d(ctx, 0, n_embd, n_ctx, n_layers);
-    cache->V = ggml_new_tensor_3d(ctx, 0, n_embd, n_ctx, n_layers);
+    cache->K = ggml_rxd_new_tensor_3d(ctx, 0, n_embd, n_ctx, n_layers);
+    cache->V = ggml_rxd_new_tensor_3d(ctx, 0, n_embd, n_ctx, n_layers);
     
     cache->n_layers = n_layers;
     cache->n_ctx = n_ctx;
@@ -292,7 +292,7 @@ void InferenceContext_Release(InferenceContext* ctx)
     int32_t new_count = __atomic_sub_fetch(&ctx->ref_count, 1, __ATOMIC_SEQ_CST);
     if (new_count == 0) {
         if (ctx->model && ctx->model->ctx) {
-            ggml_free(ctx->model->ctx);
+            ggml_rxd_free(ctx->model->ctx);
         }
         free(ctx);
     }
@@ -339,7 +339,7 @@ TransformerModel* AIModelCaller_CreateModel(
     int32_t n_ctx)
 {
     const size_t mem_size = 1024 * 1024 * 1024;  // 1GB
-    ggml_context* ctx = ggml_init(mem_size);
+    ggml_rxd_context* ctx = ggml_rxd_init(mem_size);
     
     if (!ctx) {
         return NULL;
@@ -368,7 +368,7 @@ void AIModelCaller_DestroyModel(TransformerModel* model)
     if (model) {
         KVCache_Destroy(&model->kv_cache);
         if (model->ctx) {
-            ggml_free(model->ctx);
+            ggml_rxd_free(model->ctx);
         }
         free(model);
     }

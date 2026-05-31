@@ -7,12 +7,16 @@ ObservabilityDashboard::ObservabilityDashboard(Profiler* profiler, void* parent)
     , m_tabWidget(nullptr)
     , m_profiler(profiler)
 {
-    // Lightweight constructor - defer Qt Charts creation to initialize()
+    // Lightweight constructor - initialize metrics storage
+    m_metrics.reserve(1024);
+    m_initialized = false;
 }
 
 ObservabilityDashboard::~ObservabilityDashboard()
 {
-    // Qt handles widget cleanup
+    // Cleanup metrics storage
+    m_metrics.clear();
+    m_metrics.shrink_to_fit();
 }
 
 // Two-phase init: Create Qt Charts widgets after void is running

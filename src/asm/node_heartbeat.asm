@@ -2,32 +2,24 @@
 ; node_heartbeat.asm — RawrXD RDTSC-Based Failure Detection
 ; ═══════════════════════════════════════════════════════════════════
 
-; External Monolithic API (Beaconism)
-EXTERN BeaconSend:PROC
-
-PUBLIC rawrxd_emit_heartbeat
-PUBLIC rawrxd_check_heartbeat_timeout
-
 .data
-szNodeFailure db "NODE FAILURE: Node %s heartbeat TIMEOUT after %llu cycles", 0
-szHeartbeatMsg db "HEARTBEAT: Timestamp %llu emitted", 0
+; g_last_zmm_heartbeat: defined in Sentinel.cpp
+EXTERN g_last_zmm_heartbeat:QWORD
 
 .code
 
 ; ────────────────────────────────────────────────────────────────
 ; rawrxd_emit_heartbeat
 ; Returns RAX = Current RDTSC Timestamp
+; Side effect: Updates g_last_zmm_heartbeat (atomic-ish on x64)
 ; ────────────────────────────────────────────────────────────────
 rawrxd_emit_heartbeat PROC
     rdtsc
     shl     rdx, 32
     or      rax, rdx
     
-    ; Optional: Send heartbeat beacon for debug audit
-    ; mov     ecx, 10
-    ; lea     rdx, szHeartbeatMsg
-    ; mov     r8, rax
-    ; call    BeaconSend
+    ; Update global heartbeat tracker for Sentinel to monitor
+    mov     [g_last_zmm_heartbeat], rax
     ret
 rawrxd_emit_heartbeat ENDP
 
@@ -36,7 +28,7 @@ rawrxd_emit_heartbeat ENDP
 ; RCX = Last Heartbeat Timestamp
 ; RDX = Timeout Threshold (cycles)
 ; R8  = Pointer to NodeID (String)
-; Returns RAX = 1 if TIMEOUT (Node Down), 0 if Up
+; Returns RAX = Delta if OK, 0xFFFFFFFFFFFFFFFF if TIMEOUT (Node Down)
 ; ────────────────────────────────────────────────────────────────
 rawrxd_check_heartbeat_timeout PROC FRAME
     push    rbp
@@ -46,28 +38,23 @@ rawrxd_check_heartbeat_timeout PROC FRAME
     .allocstack 32
     .endprolog
 
+    push    rdx             ; backup threshold
     rdtsc                   ; Current cycles
     shl     rdx, 32
     or      rax, rdx        ; Current TSC in RAX
+    pop     r11             ; threshold in r11
     
-    mov     r9, rax         ; Backup current TSC
-    sub     rax, rcx        ; Delta = Current - Last
+    sub     rax, rcx        ; RAX = Delta = Current - Last
     
-    cmp     rax, rdx        ; Delta > Threshold?
+    cmp     rax, r11        ; Delta > Threshold?
     jbe     @is_alive
     
     ; TIMEOUT DETECTED
-    mov     ecx, 8          ; Beacon ID
-    lea     rdx, szNodeFailure
-    mov     r8, r8          ; NodeID string
-    mov     r9, rax         ; Delta cycles
-    call    BeaconSend
-    
-    mov     rax, 1          ; Signal failure
+    mov     rax, 0FFFFFFFFFFFFFFFFh ; Signal failure
     jmp     @exit
 
 @is_alive:
-    xor     rax, rax        ; Still up
+    ; return Delta in RAX (already there)
 
 @exit:
     leave

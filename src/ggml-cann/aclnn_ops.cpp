@@ -22,8 +22,8 @@
 
 #include "aclnn_ops.h"
 
-#include "ggml-impl.h"
-#include "ggml.h"
+#include "ggml-impl_rxd_internal.h"
+#include "ggml_rxd_internal.h"
 
 #include <aclnnop/aclnn_add.h>
 #include <aclnnop/aclnn_addcdiv.h>

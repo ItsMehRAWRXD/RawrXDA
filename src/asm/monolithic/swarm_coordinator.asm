@@ -42,6 +42,7 @@ PUBLIC SwarmCoord_DistributeWork
 PUBLIC SwarmCoord_AllReduce
 PUBLIC SwarmCoord_GetWorkerStatus
 PUBLIC SwarmCoord_Shutdown
+PUBLIC SwarmD_Unified_LoadBalancer
 PUBLIC g_coordReady
 PUBLIC g_workerCount
 
@@ -76,6 +77,7 @@ g_heartbeatThread   dq 0
 
 align 16
 g_workerThreads     dq MAX_WORKERS dup(0)
+g_swarmdLbCursor    dq 0
 
 ; Worker state table: MAX_WORKERS x WORKER_STATE_SIZE
 ;   Offset 0:   state       (dd)
@@ -640,6 +642,105 @@ SwarmCoord_GetWorkerStatus PROC
     mov     eax, -1
     ret
 SwarmCoord_GetWorkerStatus ENDP
+
+
+; ════════════════════════════════════════════════════════════════════
+; SwarmD_Unified_LoadBalancer — Coordinator-native worker lane picker
+;   Returns EAX = selected worker lane index.
+;   Preference order: IDLE, DONE, BUSY, ERROR, DEAD.
+;   Uses cursor-based tie-break for fairness; falls back to modulo/legacy RR.
+;   Leaf — no FRAME.
+; ════════════════════════════════════════════════════════════════════
+SwarmD_Unified_LoadBalancer PROC
+    mov     ecx, g_workerCount
+    test    ecx, ecx
+    jle     sdlb_fallback_rr
+    cmp     ecx, MAX_WORKERS
+    jbe     sdlb_count_ok
+    mov     ecx, MAX_WORKERS
+
+sdlb_count_ok:
+    mov     r8d, -1                  ; best lane
+    mov     r9d, 7FFFFFFFh           ; best score
+    mov     r11d, dword ptr [g_swarmdLbCursor]
+    and     r11d, 7
+    xor     edx, edx                 ; lane index
+
+sdlb_scan_loop:
+    cmp     edx, ecx
+    jge     sdlb_scan_done
+
+    lea     r10, g_workerState
+    imul    eax, edx, WORKER_STATE_SIZE
+    cdqe
+    mov     eax, dword ptr [r10 + rax]
+
+    mov     r10d, 200
+    cmp     eax, WORKER_IDLE
+    je      sdlb_score_idle
+    cmp     eax, WORKER_DONE
+    je      sdlb_score_done
+    cmp     eax, WORKER_BUSY
+    je      sdlb_score_busy
+    cmp     eax, WORKER_ERROR
+    je      sdlb_score_error
+    cmp     eax, WORKER_DEAD
+    je      sdlb_score_dead
+    jmp     sdlb_score_ready
+
+sdlb_score_idle:
+    xor     r10d, r10d
+    jmp     sdlb_score_ready
+sdlb_score_done:
+    mov     r10d, 20
+    jmp     sdlb_score_ready
+sdlb_score_busy:
+    mov     r10d, 80
+    jmp     sdlb_score_ready
+sdlb_score_error:
+    mov     r10d, 220
+    jmp     sdlb_score_ready
+sdlb_score_dead:
+    mov     r10d, 240
+
+sdlb_score_ready:
+    mov     eax, edx
+    sub     eax, r11d
+    and     eax, 7
+    add     r10d, eax
+    cmp     r10d, r9d
+    jae     sdlb_scan_next
+    mov     r9d, r10d
+    mov     r8d, edx
+
+sdlb_scan_next:
+    inc     edx
+    jmp     sdlb_scan_loop
+
+sdlb_scan_done:
+    cmp     r8d, 0
+    jl      sdlb_fallback_rr
+    cmp     r9d, 200
+    jae     sdlb_fallback_rr
+    mov     eax, r8d
+    inc     qword ptr [g_swarmdLbCursor]
+    ret
+
+sdlb_fallback_rr:
+    mov     eax, dword ptr [g_swarmdLbCursor]
+    inc     qword ptr [g_swarmdLbCursor]
+    mov     ecx, g_workerCount
+    test    ecx, ecx
+    jle     sdlb_fallback_legacy4
+    xor     edx, edx
+    div     ecx
+    mov     eax, edx
+    ret
+
+sdlb_fallback_legacy4:
+    and     eax, 3
+    ret
+SwarmD_Unified_LoadBalancer ENDP
 
 
 ; ════════════════════════════════════════════════════════════════════

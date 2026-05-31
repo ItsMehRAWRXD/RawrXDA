@@ -14,6 +14,7 @@
 #include <sstream>
 #include <filesystem>
 #include <algorithm>
+#include <limits>
 
 #pragma comment(lib, "comctl32.lib")
 #pragma comment(lib, "comdlg32.lib")
@@ -62,6 +63,53 @@ static std::string getEditText(HWND h)
     return s;
 }
 
+static bool tryParseInt(const std::string& s, int& out)
+{
+    try {
+        size_t consumed = 0;
+        const long long v = std::stoll(s, &consumed, 10);
+        if (consumed != s.size()) return false;
+        if (v < static_cast<long long>(std::numeric_limits<int>::min()) ||
+            v > static_cast<long long>(std::numeric_limits<int>::max())) return false;
+        out = static_cast<int>(v);
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
+static bool tryParseFloat(const std::string& s, float& out)
+{
+    try {
+        size_t consumed = 0;
+        const float v = std::stof(s, &consumed);
+        if (consumed != s.size()) return false;
+        out = v;
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
+static bool tryParseHexColor(const std::string& s, uint32_t& out)
+{
+    try {
+        size_t consumed = 0;
+        const unsigned long v = std::stoul(s, &consumed, 16);
+        if (consumed != s.size()) return false;
+        if (v > std::numeric_limits<uint32_t>::max()) return false;
+        out = static_cast<uint32_t>(v);
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
+static int clampInt(int v, int minv, int maxv)
+{
+    return std::max(minv, std::min(maxv, v));
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Construction / Destruction
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -98,18 +146,23 @@ INT_PTR MonacoSettingsDialog::showModal()
     SetWindowLongPtrW(m_hDlg, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(DlgProc));
 
     m_originalSettings = m_settings;
+    m_modalResult = IDCANCEL;
     initControls(m_hDlg);
     updateUIFromSettings();
 
     if (m_hwndParent) EnableWindow(m_hwndParent, FALSE);
     MSG msg;
-    while (GetMessage(&msg, nullptr, 0, 0)) {
-        if (!IsWindow(m_hDlg)) break;
+    while (m_hDlg && IsWindow(m_hDlg)) {
+        const BOOL gm = GetMessage(&msg, nullptr, 0, 0);
+        if (gm <= 0) {
+            m_modalResult = IDCANCEL;
+            break;
+        }
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
     if (m_hwndParent) EnableWindow(m_hwndParent, TRUE);
-    return IDOK;
+    return m_modalResult;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -167,14 +220,16 @@ INT_PTR MonacoSettingsDialog::handleMsg(HWND hDlg, UINT msg, WPARAM wp, LPARAM l
 
         case IDCANCEL:
             m_settings = m_originalSettings;
-            DestroyWindow(hDlg); m_hDlg = nullptr; PostQuitMessage(0);
+            m_modalResult = IDCANCEL;
+            DestroyWindow(hDlg); m_hDlg = nullptr;
             return TRUE;
         }
         break;
 
     case WM_CLOSE:
         m_settings = m_originalSettings;
-        DestroyWindow(hDlg); m_hDlg = nullptr; PostQuitMessage(0);
+        m_modalResult = IDCANCEL;
+        DestroyWindow(hDlg); m_hDlg = nullptr;
         return TRUE;
     }
     return DefWindowProcW(hDlg, msg, wp, lp);
@@ -382,7 +437,6 @@ void MonacoSettingsDialog::createEditorTab(HWND parent, int /*page*/)
         64, y, 40, 22, parent, reinterpret_cast<HMENU>(IDC_MS_MINISCALE), hI, nullptr);
     y += 28;
 
-    // IntelliSense group
     CreateWindowExW(0, L"STATIC", L"─── IntelliSense (Enterprise) ───", WS_CHILD | WS_VISIBLE, 10, y, 300, 18, parent, nullptr, hI, nullptr);
     y += 22;
     check(m_hwndIntelli,   L"Enable IntelliSense",            IDC_MS_INTELLI);
@@ -684,7 +738,9 @@ void MonacoSettingsDialog::onApply()
     if (m_settingsCb) m_settingsCb(m_settings);
     if (m_themeCb)    m_themeCb(preset);
 
-    DestroyWindow(m_hDlg); m_hDlg = nullptr; PostQuitMessage(0);
+    m_modalResult = IDOK; 
+    DestroyWindow(m_hDlg); 
+    m_hDlg = nullptr;
 }
 
 void MonacoSettingsDialog::onReset()
@@ -820,56 +876,82 @@ bool MonacoSettingsDialog::loadFromFile(const std::string& path)
         std::string key = line.substr(0, eq);
         std::string val = line.substr(eq + 1);
 
-        auto i = [&]{ return std::stoi(val); };
-        auto b = [&]{ return val == "1" || val == "true"; };
-        auto clr = [&]{ return static_cast<uint32_t>(std::stoul(val, nullptr, 16)); };
+        int parsedInt = 0;
+        float parsedFloat = 0.0f;
+        uint32_t parsedColor = 0;
+        const bool parsedBool = (val == "1" || val == "true");
 
-        if      (key == "variant")       m_settings.variantIndex     = i();
-        else if (key == "theme")         m_settings.themePresetIndex = i();
+        if      (key == "variant" && tryParseInt(val, parsedInt))
+            m_settings.variantIndex     = clampInt(parsedInt, 0, 4);
+        else if (key == "theme" && tryParseInt(val, parsedInt))
+            m_settings.themePresetIndex = clampInt(parsedInt, 0, 11);
         else if (key == "fontFamily")    m_settings.fontFamily       = val;
-        else if (key == "fontSize")      m_settings.fontSize         = i();
-        else if (key == "fontWeight")    m_settings.fontWeight       = i();
-        else if (key == "fontLigatures") m_settings.fontLigatures    = b();
-        else if (key == "lineHeight")    m_settings.lineHeight       = std::stof(val);
-        else if (key == "wordWrap")      m_settings.wordWrap         = b();
-        else if (key == "tabSize")       m_settings.tabSize          = i();
-        else if (key == "insertSpaces")  m_settings.insertSpaces     = b();
-        else if (key == "autoIndent")    m_settings.autoIndent       = b();
-        else if (key == "bracketMatch")  m_settings.bracketMatching  = b();
-        else if (key == "autoClose")     m_settings.autoClosingBrackets = b();
-        else if (key == "formatPaste")   m_settings.formatOnPaste    = b();
-        else if (key == "neon")          m_settings.neonEffects      = b();
-        else if (key == "glowIntensity") m_settings.glowIntensity    = i();
-        else if (key == "scanline")      m_settings.scanlineDensity  = i();
-        else if (key == "glitch")        m_settings.glitchProbability = i();
-        else if (key == "particles")     m_settings.particles        = b();
-        else if (key == "particleCount") m_settings.particleCount    = i();
-        else if (key == "esp")           m_settings.espMode          = b();
-        else if (key == "espVar")        m_settings.espHighlightVariables = b();
-        else if (key == "espFn")         m_settings.espHighlightFunctions = b();
-        else if (key == "espWall")       m_settings.espWallhack      = b();
-        else if (key == "minimap")       m_settings.minimapEnabled   = b();
-        else if (key == "miniChar")      m_settings.minimapRenderChars = b();
-        else if (key == "miniScale")     m_settings.minimapScale     = i();
-        else if (key == "intelli")       m_settings.intellisense     = b();
-        else if (key == "quickSug")      m_settings.quickSuggestions = b();
-        else if (key == "sugDelay")      m_settings.suggestDelay     = i();
-        else if (key == "paramHint")     m_settings.parameterHints   = b();
-        else if (key == "renderDelay")   m_settings.renderDelay      = i();
-        else if (key == "vblankSync")    m_settings.vblankSync       = b();
-        else if (key == "predFetch")     m_settings.predictiveFetch  = i();
-        else if (key == "lazyTok")       m_settings.lazyTokenization = b();
-        else if (key == "lazyDelay")     m_settings.lazyTokenDelay   = i();
-        else if (key == "bgColor")       m_settings.backgroundColor  = clr();
-        else if (key == "fgColor")       m_settings.foregroundColor  = clr();
-        else if (key == "kwColor")       m_settings.keywordColor     = clr();
-        else if (key == "strColor")      m_settings.stringColor      = clr();
-        else if (key == "cmtColor")      m_settings.commentColor     = clr();
-        else if (key == "fnColor")       m_settings.functionColor    = clr();
-        else if (key == "typeColor")     m_settings.typeColor        = clr();
-        else if (key == "numColor")      m_settings.numberColor      = clr();
-        else if (key == "glowColor")     m_settings.glowColor        = clr();
-        else if (key == "glow2Color")    m_settings.glowSecondaryColor = clr();
+        else if (key == "fontSize" && tryParseInt(val, parsedInt))
+            m_settings.fontSize         = clampInt(parsedInt, 6, 96);
+        else if (key == "fontWeight" && tryParseInt(val, parsedInt))
+            m_settings.fontWeight       = clampInt(parsedInt, 100, 900);
+        else if (key == "fontLigatures") m_settings.fontLigatures    = parsedBool;
+        else if (key == "lineHeight" && tryParseFloat(val, parsedFloat))
+            m_settings.lineHeight       = std::max(0.0f, std::min(4.0f, parsedFloat));
+        else if (key == "wordWrap")      m_settings.wordWrap         = parsedBool;
+        else if (key == "tabSize" && tryParseInt(val, parsedInt))
+            m_settings.tabSize          = clampInt(parsedInt, 1, 16);
+        else if (key == "insertSpaces")  m_settings.insertSpaces     = parsedBool;
+        else if (key == "autoIndent")    m_settings.autoIndent       = parsedBool;
+        else if (key == "bracketMatch")  m_settings.bracketMatching  = parsedBool;
+        else if (key == "autoClose")     m_settings.autoClosingBrackets = parsedBool;
+        else if (key == "formatPaste")   m_settings.formatOnPaste    = parsedBool;
+        else if (key == "neon")          m_settings.neonEffects      = parsedBool;
+        else if (key == "glowIntensity" && tryParseInt(val, parsedInt))
+            m_settings.glowIntensity    = clampInt(parsedInt, 0, 100);
+        else if (key == "scanline" && tryParseInt(val, parsedInt))
+            m_settings.scanlineDensity  = clampInt(parsedInt, 0, 32);
+        else if (key == "glitch" && tryParseInt(val, parsedInt))
+            m_settings.glitchProbability = clampInt(parsedInt, 0, 256);
+        else if (key == "particles")     m_settings.particles        = parsedBool;
+        else if (key == "particleCount" && tryParseInt(val, parsedInt))
+            m_settings.particleCount    = clampInt(parsedInt, 0, 10000);
+        else if (key == "esp")           m_settings.espMode          = parsedBool;
+        else if (key == "espVar")        m_settings.espHighlightVariables = parsedBool;
+        else if (key == "espFn")         m_settings.espHighlightFunctions = parsedBool;
+        else if (key == "espWall")       m_settings.espWallhack      = parsedBool;
+        else if (key == "minimap")       m_settings.minimapEnabled   = parsedBool;
+        else if (key == "miniChar")      m_settings.minimapRenderChars = parsedBool;
+        else if (key == "miniScale" && tryParseInt(val, parsedInt))
+            m_settings.minimapScale     = clampInt(parsedInt, 1, 8);
+        else if (key == "intelli")       m_settings.intellisense     = parsedBool;
+        else if (key == "quickSug")      m_settings.quickSuggestions = parsedBool;
+        else if (key == "sugDelay" && tryParseInt(val, parsedInt))
+            m_settings.suggestDelay     = clampInt(parsedInt, 0, 5000);
+        else if (key == "paramHint")     m_settings.parameterHints   = parsedBool;
+        else if (key == "renderDelay" && tryParseInt(val, parsedInt))
+            m_settings.renderDelay      = clampInt(parsedInt, 0, 1000);
+        else if (key == "vblankSync")    m_settings.vblankSync       = parsedBool;
+        else if (key == "predFetch" && tryParseInt(val, parsedInt))
+            m_settings.predictiveFetch  = clampInt(parsedInt, 0, 4096);
+        else if (key == "lazyTok")       m_settings.lazyTokenization = parsedBool;
+        else if (key == "lazyDelay" && tryParseInt(val, parsedInt))
+            m_settings.lazyTokenDelay   = clampInt(parsedInt, 0, 5000);
+        else if (key == "bgColor" && tryParseHexColor(val, parsedColor))
+            m_settings.backgroundColor  = parsedColor;
+        else if (key == "fgColor" && tryParseHexColor(val, parsedColor))
+            m_settings.foregroundColor  = parsedColor;
+        else if (key == "kwColor" && tryParseHexColor(val, parsedColor))
+            m_settings.keywordColor     = parsedColor;
+        else if (key == "strColor" && tryParseHexColor(val, parsedColor))
+            m_settings.stringColor      = parsedColor;
+        else if (key == "cmtColor" && tryParseHexColor(val, parsedColor))
+            m_settings.commentColor     = parsedColor;
+        else if (key == "fnColor" && tryParseHexColor(val, parsedColor))
+            m_settings.functionColor    = parsedColor;
+        else if (key == "typeColor" && tryParseHexColor(val, parsedColor))
+            m_settings.typeColor        = parsedColor;
+        else if (key == "numColor" && tryParseHexColor(val, parsedColor))
+            m_settings.numberColor      = parsedColor;
+        else if (key == "glowColor" && tryParseHexColor(val, parsedColor))
+            m_settings.glowColor        = parsedColor;
+        else if (key == "glow2Color" && tryParseHexColor(val, parsedColor))
+            m_settings.glowSecondaryColor = parsedColor;
     }
     m_originalSettings = m_settings;
     return true;

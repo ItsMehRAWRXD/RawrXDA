@@ -8,14 +8,16 @@
 #include <cmath>
 #include <sstream>
 #include <random>
+#include <iostream>
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#include <mmsystem.h>
 #include <powrprof.h>
 #pragma comment(lib, "PowrProf.lib")
-#pragma comment(lib, "Winmm.lib")
+#else
+#include <unistd.h>
+#include <sys/mman.h>
 #endif
 
 namespace RawrXD {
@@ -157,7 +159,11 @@ public:
         // Inference optimization: reorder attention layers, fuse ops
         batchSize_ = 8;
         if (!args.empty()) {
-            try { batchSize_ = std::stoi(args); } catch (...) {}
+            try { batchSize_ = std::stoi(args); } catch (const std::exception& e) {
+                OutputDebugStringA((std::string("[DualEngine] batchSize parse error: ") + e.what() + "\n").c_str());
+            } catch (...) {
+                OutputDebugStringA("[DualEngine] batchSize parse unknown error\n");
+            }
         }
         // Simulate KV-cache optimization + operator fusion
         kvCacheOptimized_ = true;
@@ -176,7 +182,11 @@ public:
         // Benchmark: measure throughput
         uint32_t iterations = 100;
         if (!args.empty()) {
-            try { iterations = std::stoul(args); } catch (...) {}
+            try { iterations = std::stoul(args); } catch (const std::exception& e) {
+                OutputDebugStringA((std::string("[DualEngine] iterations parse error: ") + e.what() + "\n").c_str());
+            } catch (...) {
+                OutputDebugStringA("[DualEngine] iterations parse unknown error\n");
+            }
         }
         double totalMs = 0.0;
         for (uint32_t i = 0; i < iterations; ++i) {
@@ -269,7 +279,11 @@ public:
 
         targetTempC_ = 85.0f;
         if (!args.empty()) {
-            try { targetTempC_ = std::stof(args); } catch (...) {}
+            try { targetTempC_ = std::stof(args); } catch (const std::exception& e) {
+                OutputDebugStringA((std::string("[DualEngine] targetTempC parse error: ") + e.what() + "\n").c_str());
+            } catch (...) {
+                OutputDebugStringA("[DualEngine] targetTempC parse unknown error\n");
+            }
         }
         regulating_ = true;
 
@@ -338,7 +352,11 @@ public:
 
         int32_t targetMhz = 0;
         if (!args.empty()) {
-            try { targetMhz = std::stoi(args); } catch (...) {}
+            try { targetMhz = std::stoi(args); } catch (const std::exception& e) {
+                OutputDebugStringA((std::string("[DualEngine] targetMhz parse error: ") + e.what() + "\n").c_str());
+            } catch (...) {
+                OutputDebugStringA("[DualEngine] targetMhz parse unknown error\n");
+            }
         }
 
 #ifdef _WIN32
@@ -366,7 +384,11 @@ public:
         // Lock frequency at current level
         locked_ = true;
         if (!args.empty()) {
-            try { lockFreqMhz_ = std::stoi(args); } catch (...) {}
+            try { lockFreqMhz_ = std::stoi(args); } catch (const std::exception& e) {
+                OutputDebugStringA((std::string("[DualEngine] lockFreqMhz parse error: ") + e.what() + "\n").c_str());
+            } catch (...) {
+                OutputDebugStringA("[DualEngine] lockFreqMhz parse unknown error\n");
+            }
         }
 
 #ifdef _WIN32
@@ -404,7 +426,11 @@ public:
         // Enable read-ahead: increase file buffer size
         readAheadKB_ = 4096; // 4MB read-ahead
         if (!args.empty()) {
-            try { readAheadKB_ = std::stoul(args); } catch (...) {}
+            try { readAheadKB_ = std::stoul(args); } catch (const std::exception& e) {
+                OutputDebugStringA((std::string("[DualEngine] readAheadKB parse error: ") + e.what() + "\n").c_str());
+            } catch (...) {
+                OutputDebugStringA("[DualEngine] readAheadKB parse unknown error\n");
+            }
         }
 
 #ifdef _WIN32
@@ -481,7 +507,11 @@ public:
         // Optimize: coalesce small requests, set larger socket buffers
         maxBatchSize_ = 16;
         if (!args.empty()) {
-            try { maxBatchSize_ = std::stoul(args); } catch (...) {}
+            try { batchSize_ = std::stoi(args); } catch (const std::exception& e) {
+                OutputDebugStringA((std::string("[DualEngine] batchSize parse error: ") + e.what() + "\n").c_str());
+            } catch (...) {
+                OutputDebugStringA("[DualEngine] batchSize parse unknown error\n");
+            }
         }
         nagleDisabled_ = true; // TCP_NODELAY for latency
         batchingEnabled_ = true;
@@ -528,7 +558,11 @@ public:
 
         powerLimitWatts_ = 300.0f;
         if (!args.empty()) {
-            try { powerLimitWatts_ = std::stof(args); } catch (...) {}
+            try { powerLimitWatts_ = std::stof(args); } catch (const std::exception& e) {
+                OutputDebugStringA((std::string("[DualEngine] powerLimitWatts parse error: ") + e.what() + "\n").c_str());
+            } catch (...) {
+                OutputDebugStringA("[DualEngine] powerLimitWatts parse unknown error\n");
+            }
         }
         governing_ = true;
 
@@ -587,7 +621,11 @@ public:
         // Request coalescing: merge sequential requests within window
         coalesceWindowMs_ = 5;
         if (!args.empty()) {
-            try { coalesceWindowMs_ = std::stoul(args); } catch (...) {}
+            try { coalesceWindowMs_ = std::stoul(args); } catch (const std::exception& e) {
+                OutputDebugStringA((std::string("[DualEngine] coalesceWindowMs parse error: ") + e.what() + "\n").c_str());
+            } catch (...) {
+                OutputDebugStringA("[DualEngine] coalesceWindowMs parse unknown error\n");
+            }
         }
         coalescingActive_ = true;
 
@@ -647,7 +685,11 @@ public:
         // Maximize tokens/sec: increase batch size, enable continuous batching
         maxBatchTokens_ = 2048;
         if (!args.empty()) {
-            try { maxBatchTokens_ = std::stoul(args); } catch (...) {}
+            try { 
+                maxBatchTokens_ = std::stoul(args); 
+            } catch (const std::exception& e) {
+                std::cerr << "[DualEngine] maxBatchTokens parse error: " << e.what() << "\n";
+            }
         }
         continuousBatching_ = true;
 
@@ -685,9 +727,17 @@ public:
                     std::string key = token.substr(0, sep);
                     std::string val = token.substr(sep + 1);
                     if (key == "threads") {
-                        try { schedulerThreads_ = std::stoul(val); } catch (...) {}
+                        try { schedulerThreads_ = std::stoul(val); } catch (const std::exception& e) {
+                            OutputDebugStringA((std::string("[DualEngine] schedulerThreads parse error: ") + e.what() + "\n").c_str());
+                        } catch (...) {
+                            OutputDebugStringA("[DualEngine] schedulerThreads parse unknown error\n");
+                        }
                     } else if (key == "depth") {
-                        try { queueDepth_ = std::stoul(val); } catch (...) {}
+                        try { queueDepth_ = std::stoul(val); } catch (const std::exception& e) {
+                            OutputDebugStringA((std::string("[DualEngine] queueDepth parse error: ") + e.what() + "\n").c_str());
+                        } catch (...) {
+                            OutputDebugStringA("[DualEngine] queueDepth parse unknown error\n");
+                        }
                     }
                 }
             }
@@ -743,7 +793,9 @@ public:
             float newFitness = computeSystemFitness();
             float delta = newFitness - oldFitness;
             if (delta > 0 || prob(rng) < std::exp(delta / temperature)) {
-                // Accept
+                // Accept new state
+                current = next;
+                currentEnergy = nextEnergy;
             } else {
                 engineBias_[idx] = saved; // Reject
             }
@@ -760,9 +812,11 @@ public:
         if (!initialized_) return EngineResult::error("Not initialized");
         auto start = std::chrono::steady_clock::now();
 
-        // Entangle engine pairs
-        // Parse "A:B,C:D" format
+        // Clear existing pairs
+        entangledPairs_.clear();
+
         if (!args.empty()) {
+            // Parse "A:B,C:D" format
             std::istringstream iss(args);
             std::string token;
             while (std::getline(iss, token, ',')) {
@@ -774,14 +828,17 @@ public:
                         if (a < 10 && b < 10 && a != b) {
                             entangledPairs_.push_back({a, b});
                         }
-                    } catch (...) {}
+                    } catch (const std::exception& e) {
+                        std::cerr << "[DualEngine] entangledPairs parse error: " << e.what() << "\n";
+                    }
                 }
             }
         } else {
             // Auto-entangle: pair adjacent engines
-            entangledPairs_.clear();
             for (uint32_t i = 0; i < 10; i += 2) {
-                entangledPairs_.push_back({i, i + 1});
+                if (i + 1 < 10) {
+                    entangledPairs_.push_back({i, i + 1});
+                }
             }
         }
 
@@ -805,8 +862,11 @@ private:
     bool fusionActive_ = false;
     uint64_t fusionEpoch_ = 0;
     float engineBias_[10] = {};
-    struct EntangledPairSimple { uint32_t a, b; };
-    std::vector<EntangledPairSimple> entangledPairs_;
+    struct EntangledPair { 
+        uint32_t a, b; 
+        EntangledPair(uint32_t a, uint32_t b) : a(a), b(b) {}
+    };
+    std::vector<EntangledPair> entangledPairs_;
 };
 
 // ============================================================================
@@ -941,5 +1001,13 @@ EngineResult DualEngineCoordinator::dispatchCLI(const std::string& flag, const s
     }
     return EngineResult::error("Unknown CLI flag");
 }
+
+// ============================================================================
+// Platform-agnostic implementations for non-Windows systems
+// ============================================================================
+#ifndef _WIN32
+// Linux/macOS implementations for various engine features would go here
+// For example, alternative thermal reading methods, power management, etc.
+#endif
 
 } // namespace RawrXD

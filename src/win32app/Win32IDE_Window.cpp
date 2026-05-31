@@ -3,6 +3,10 @@
 #include <cassert>
 #include <commctrl.h>
 #include <cstring>
+
+extern "C" void Layout_CalculateAndApply(HWND hwnd, void* pIDE, int w, int h);
+extern "C" void Layout_GDI_Blit_Debug(HWND hwnd, void* pIDE);
+
 #include <shellscalingapi.h>  // GetDpiForWindow
 #include <windowsx.h>
 
@@ -41,7 +45,11 @@ bool Win32IDE::createWindow()
 
     if (!m_hwndMain)
     {
-        LOG_ERROR("Failed to create main window");
+        DWORD err = GetLastError();
+        char msg[256];
+        snprintf(msg, sizeof(msg), "Failed to create main window. Error=0x%08X", err);
+        LOG_ERROR(msg);
+        MessageBoxA(nullptr, msg, "RawrXD - CreateWindowExA Failure", MB_ICONERROR);
         return false;
     }
 
@@ -147,6 +155,10 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
             LOG_INFO("WM_USER+100 received (reserved no-op)");
             return 0;
 
+        case WM_APP + 1337:
+            handleNativeStreamTick(wParam, lParam);
+            return 0;
+
         // Peek overlay: deferred navigate + tear-down (posted from PeekOverlayWindow — avoids destroying
         // overlay from inside its own WndProc).
         case WM_RAWRXD_PEEK_FINISH:
@@ -212,6 +224,10 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
             initGhostText();
             LOG_INFO("Ghost text subsystem initialized");
 
+            // Initialize Neural Heatmap (Phase 2)
+            m_neuralHeatmap = std::make_unique<RawrXD::IDE::NeuralHeatmapRenderer>(hwnd);
+            m_neuralHeatmap->setVisible(true);
+
             // Refresh explorer contents after the app is already visible.
             PostMessage(hwnd, WM_APP + 201, 0, 0);
             return 0;
@@ -222,6 +238,25 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
             {
                 refreshFileTree();
             }
+            return 0;
+
+        // Safe cross-thread output append: lParam owns a heap-allocated std::string.
+        // Posted by AgentPanel_AppendToken (background IPC thread) → consumed on UI thread.
+        case WM_IDE_OUTPUT_APPEND_SAFE:
+        {
+            auto* payload = reinterpret_cast<std::string*>(lParam);
+            if (payload)
+            {
+                appendToOutput(*payload, "Agent", OutputSeverity::Info);
+                delete payload;
+            }
+            return 0;
+        }
+
+        // Deferred agent diff refresh (posted from AgentPanel_FinalizeStream on any thread).
+        case WM_APP + 112:
+            if (bridgeIsAgentPanelReady())
+                bridgeRefreshAgentDiff();
             return 0;
 
         case WM_ACTIVATE:
@@ -263,11 +298,36 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
                 RECT rcClient;
                 GetClientRect(hwnd, &rcClient);
                 FillRect(hdc, &rcClient, (HBRUSH)GetStockObject(BLACK_BRUSH));
+
+                // Render Phase 2 Neural Heatmap overlay
+                if (m_neuralHeatmap && m_neuralHeatmap->isVisible())
+                {
+                    m_neuralHeatmap->render(hdc, rcClient);
+                }
+
                 EndPaint(hwnd, &ps);
             }
             return 0;
         }
     }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Timer Message Handling (Phase 1C - Debug Hover)
+    // ────────────────────────────────────────────────────────────────────────
+    if (uMsg == WM_TIMER)
+    {
+        switch (wParam)
+        {
+            case 42001:  // HOVER_TIMER_ID (LSP Hover Timer)
+                onHoverTimer();
+                return 0;
+
+            case 0x2002:  // DEBUG_HOVER_TIMER_ID (Phase 1C - Debug Hover Timer)
+                onDebugHoverTimer();
+                return 0;
+        }
+    }
+
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 void Win32IDE::onCreate(HWND hwnd)
@@ -377,7 +437,10 @@ void Win32IDE::onSize(int width, int height)
 
     int currentX = 0;
 
-    // 1. Activity Bar (Far Left)
+    // 1. MASM Pure Layout Recovery (Forcing the middle visibility)
+    Layout_CalculateAndApply(m_hwndMain, this, width, height);
+
+    // 2. Activity Bar (Far Left)
     int workspaceX = 0;
     int workspaceWidth = width;
 

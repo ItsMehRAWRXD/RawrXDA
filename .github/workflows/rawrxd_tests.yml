@@ -1,0 +1,158 @@
+# ============================================================================
+# GitHub Actions CI Workflow for RawrXD Tests
+# Comprehensive testing across platforms
+# ============================================================================
+name: RawrXD Tests CI
+
+on:
+  push:
+    branches: [ main, develop, feature/* ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run tests daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  test-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        compiler: [gcc-11, clang-14]
+        build_type: [Debug, Release]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake ninja-build g++-11 clang-14 lcov gcovr valgrind
+        
+        git clone https://github.com/catchorg/Catch2.git /tmp/Catch2
+        cd /tmp/Catch2
+        git checkout v3.4.0
+        cmake -B build -S . -DBUILD_TESTING=OFF -G Ninja
+        sudo cmake --build build/ --target install
+    
+    - name: Configure CMake
+      run: |
+        if [ "${{ matrix.compiler }}" = "gcc-11" ]; then
+          export CC=gcc-11
+          export CXX=g++-11
+        else
+          export CC=clang-14
+          export CXX=clang++-14
+        fi
+        
+        cmake -B build -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -G Ninja
+    
+    - name: Build
+      run: cmake --build build --target RawrXD_Tests -j$(nproc)
+    
+    - name: Run unit tests
+      run: cd build && ctest -R Unit_Tests --output-on-failure -j$(nproc)
+    
+    - name: Run integration tests
+      run: cd build && ctest -R Integration_Tests --output-on-failure -j$(nproc)
+    
+    - name: Run all tests
+      run: cd build && ./tests/RawrXD_Tests --reporter junit --out test-results.xml
+    
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-results-linux-${{ matrix.compiler }}-${{ matrix.build_type }}
+        path: build/test-results.xml
+    
+    - name: Generate coverage
+      if: matrix.build_type == 'Debug' && matrix.compiler == 'gcc-11'
+      run: |
+        cmake -B build -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Debug \
+          -DCMAKE_CXX_FLAGS="--coverage" -DCMAKE_EXE_LINKER_FLAGS="--coverage"
+        cmake --build build --target RawrXD_Tests
+        cd build && ./tests/RawrXD_Tests
+        gcovr --xml --output coverage.xml
+    
+    - name: Upload coverage
+      if: matrix.build_type == 'Debug' && matrix.compiler == 'gcc-11'
+      uses: codecov/codecov-action@v3
+      with:
+        files: build/coverage.xml
+        fail_ci_if_error: false
+
+  test-windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        build_type: [Debug, Release]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    
+    - name: Install Catch2
+      run: |
+        git clone https://github.com/catchorg/Catch2.git C:\Catch2
+        cd C:\Catch2
+        git checkout v3.4.0
+        cmake -B build -S . -DBUILD_TESTING=OFF -G "Visual Studio 17 2022" -A x64
+        cmake --build build --config Release
+        cmake --install build --config Release
+    
+    - name: Configure CMake
+      run: |
+        cmake -B build -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} `
+          -G "Visual Studio 17 2022" -A x64
+    
+    - name: Build
+      run: cmake --build build --config ${{ matrix.build_type }} --target RawrXD_Tests -j4
+    
+    - name: Run tests
+      run: |
+        cd build
+        .\tests\${{ matrix.build_type }}\RawrXD_Tests.exe --reporter console
+    
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-results-windows-${{ matrix.build_type }}
+        path: build/tests/**/*.xml
+
+  test-macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        build_type: [Debug, Release]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    
+    - name: Install dependencies
+      run: brew install cmake ninja catch2
+    
+    - name: Configure CMake
+      run: cmake -B build -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -G Ninja
+    
+    - name: Build
+      run: cmake --build build --target RawrXD_Tests -j$(sysctl -n hw.ncpu)
+    
+    - name: Run tests
+      run: cd build && ./tests/RawrXD_Tests --reporter console
+    
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-results-macos-${{ matrix.build_type }}
+        path: build/test-results.xml

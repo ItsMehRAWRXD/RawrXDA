@@ -56,34 +56,34 @@ enum GGUFMetaType : uint32_t {
 
 // GGML type enum (matches llama.cpp)
 enum GGMLTypeEnum : uint32_t {
-    GGML_TYPE_F32     = 0,
-    GGML_TYPE_F16     = 1,
-    GGML_TYPE_Q4_0    = 2,
-    GGML_TYPE_Q4_1    = 3,
-    GGML_TYPE_Q5_0    = 6,
-    GGML_TYPE_Q5_1    = 7,
-    GGML_TYPE_Q8_0    = 8,
-    GGML_TYPE_Q8_1    = 9,
-    GGML_TYPE_Q2_K    = 10,
-    GGML_TYPE_Q3_K    = 11,
-    GGML_TYPE_Q4_K    = 12,
-    GGML_TYPE_Q5_K    = 13,
-    GGML_TYPE_Q6_K    = 14,
-    GGML_TYPE_Q8_K    = 15,
-    GGML_TYPE_IQ2_XXS = 16,
-    GGML_TYPE_IQ2_XS  = 17,
-    GGML_TYPE_IQ3_XXS = 18,
-    GGML_TYPE_IQ1_S   = 19,
-    GGML_TYPE_IQ4_NL  = 20,
-    GGML_TYPE_IQ3_S   = 21,
-    GGML_TYPE_IQ2_S   = 22,
-    GGML_TYPE_IQ4_XS  = 23,
-    GGML_TYPE_I8      = 24,
-    GGML_TYPE_I16     = 25,
-    GGML_TYPE_I32     = 26,
-    GGML_TYPE_I64     = 27,
-    GGML_TYPE_F64     = 28,
-    GGML_TYPE_IQ1_M   = 29,
+    GGML_RXD_TYPE_F32     = 0,
+    GGML_RXD_TYPE_F16     = 1,
+    GGML_RXD_TYPE_Q4_0    = 2,
+    GGML_RXD_TYPE_Q4_1    = 3,
+    GGML_RXD_TYPE_Q5_0    = 6,
+    GGML_RXD_TYPE_Q5_1    = 7,
+    GGML_RXD_TYPE_Q8_0    = 8,
+    GGML_RXD_TYPE_Q8_1    = 9,
+    GGML_RXD_TYPE_Q2_K    = 10,
+    GGML_RXD_TYPE_Q3_K    = 11,
+    GGML_RXD_TYPE_Q4_K    = 12,
+    GGML_RXD_TYPE_Q5_K    = 13,
+    GGML_RXD_TYPE_Q6_K    = 14,
+    GGML_RXD_TYPE_Q8_K    = 15,
+    GGML_RXD_TYPE_IQ2_XXS = 16,
+    GGML_RXD_TYPE_IQ2_XS  = 17,
+    GGML_RXD_TYPE_IQ3_XXS = 18,
+    GGML_RXD_TYPE_IQ1_S   = 19,
+    GGML_RXD_TYPE_IQ4_NL  = 20,
+    GGML_RXD_TYPE_IQ3_S   = 21,
+    GGML_RXD_TYPE_IQ2_S   = 22,
+    GGML_RXD_TYPE_IQ4_XS  = 23,
+    GGML_RXD_TYPE_I8      = 24,
+    GGML_RXD_TYPE_I16     = 25,
+    GGML_RXD_TYPE_I32     = 26,
+    GGML_RXD_TYPE_I64     = 27,
+    GGML_RXD_TYPE_F64     = 28,
+    GGML_RXD_TYPE_IQ1_M   = 29,
 };
 
 // Block sizes and bytes for quantized types
@@ -94,20 +94,20 @@ struct QuantBlockInfo {
 
 static QuantBlockInfo getQuantBlockInfo(uint32_t ggmlType) {
     switch (ggmlType) {
-        case GGML_TYPE_F32:     return { 1, 4 };
-        case GGML_TYPE_F16:     return { 1, 2 };
-        case GGML_TYPE_Q4_0:    return { 32, 18 };    // 2 (scale) + 16 (data)
-        case GGML_TYPE_Q4_1:    return { 32, 20 };    // 2+2 (scale+min) + 16
-        case GGML_TYPE_Q5_0:    return { 32, 22 };    // 2 (scale) + 4 (high bits) + 16
-        case GGML_TYPE_Q5_1:    return { 32, 24 };    // 2+2 + 4 + 16
-        case GGML_TYPE_Q8_0:    return { 32, 34 };    // 2 (scale) + 32 (data)
-        case GGML_TYPE_Q8_1:    return { 32, 36 };    // 2+2 + 32
-        case GGML_TYPE_Q2_K:    return { 256, 84 };
-        case GGML_TYPE_Q3_K:    return { 256, 110 };
-        case GGML_TYPE_Q4_K:    return { 256, 144 };
-        case GGML_TYPE_Q5_K:    return { 256, 176 };
-        case GGML_TYPE_Q6_K:    return { 256, 210 };
-        case GGML_TYPE_Q8_K:    return { 256, 292 };
+        case GGML_RXD_TYPE_F32:     return { 1, 4 };
+        case GGML_RXD_TYPE_F16:     return { 1, 2 };
+        case GGML_RXD_TYPE_Q4_0:    return { 32, 18 };    // 2 (scale) + 16 (data)
+        case GGML_RXD_TYPE_Q4_1:    return { 32, 20 };    // 2+2 (scale+min) + 16
+        case GGML_RXD_TYPE_Q5_0:    return { 32, 22 };    // 2 (scale) + 4 (high bits) + 16
+        case GGML_RXD_TYPE_Q5_1:    return { 32, 24 };    // 2+2 + 4 + 16
+        case GGML_RXD_TYPE_Q8_0:    return { 32, 34 };    // 2 (scale) + 32 (data)
+        case GGML_RXD_TYPE_Q8_1:    return { 32, 36 };    // 2+2 + 32
+        case GGML_RXD_TYPE_Q2_K:    return { 256, 84 };
+        case GGML_RXD_TYPE_Q3_K:    return { 256, 110 };
+        case GGML_RXD_TYPE_Q4_K:    return { 256, 144 };
+        case GGML_RXD_TYPE_Q5_K:    return { 256, 176 };
+        case GGML_RXD_TYPE_Q6_K:    return { 256, 210 };
+        case GGML_RXD_TYPE_Q8_K:    return { 256, 292 };
         default:                return { 1, 4 };       // Unknown, treat as F32
     }
 }
@@ -661,7 +661,7 @@ DMLResult GGUFDMLBridge::uploadSingleTensor(SessionState& state, size_t tensorIn
     uint64_t uploadSize = meta.rawSizeBytes;
     TensorDataType uploadType;
 
-    if (m_dequantOnCPU && meta.ggmlType != GGML_TYPE_F32 && meta.ggmlType != GGML_TYPE_F16) {
+    if (m_dequantOnCPU && meta.ggmlType != GGML_RXD_TYPE_F32 && meta.ggmlType != GGML_RXD_TYPE_F16) {
         // CPU-side dequantization
         uploadSize = meta.dequantSizeBytes;
         state.stagingBuffer.resize(static_cast<size_t>(uploadSize));
@@ -721,21 +721,21 @@ DMLResult GGUFDMLBridge::dequantizeTensor(const void* srcData, void* dstData,
     uint64_t numBlocks = (elementCount + blockInfo.blockSize - 1) / blockInfo.blockSize;
 
     switch (ggmlType) {
-        case GGML_TYPE_Q4_0: {
+        case GGML_RXD_TYPE_Q4_0: {
             // Use ASM kernel for Q4_0 dequantization
             int64_t result = asm_dml_dequant_q4_0_to_fp32(dstF32, src, numBlocks);
             if (result < 0) return DMLResult::error("Q4_0 dequant ASM failed", -10);
             break;
         }
 
-        case GGML_TYPE_Q8_0: {
+        case GGML_RXD_TYPE_Q8_0: {
             // Use ASM kernel for Q8_0 dequantization
             int64_t result = asm_dml_dequant_q8_0_to_fp32(dstF32, src, numBlocks);
             if (result < 0) return DMLResult::error("Q8_0 dequant ASM failed", -11);
             break;
         }
 
-        case GGML_TYPE_Q4_1: {
+        case GGML_RXD_TYPE_Q4_1: {
             // Q4_1: scale(fp16) + min(fp16) + 16 bytes data
             for (uint64_t b = 0; b < numBlocks; ++b) {
                 const uint8_t* block = src + b * blockInfo.blockBytes;
@@ -771,7 +771,7 @@ DMLResult GGUFDMLBridge::dequantizeTensor(const void* srcData, void* dstData,
             break;
         }
 
-        case GGML_TYPE_F16: {
+        case GGML_RXD_TYPE_F16: {
             // FP16 → FP32
             const uint16_t* srcF16 = reinterpret_cast<const uint16_t*>(src);
             for (uint64_t i = 0; i < elementCount; ++i) {
@@ -798,13 +798,13 @@ DMLResult GGUFDMLBridge::dequantizeTensor(const void* srcData, void* dstData,
             break;
         }
 
-        case GGML_TYPE_F32: {
+        case GGML_RXD_TYPE_F32: {
             // Direct copy
             memcpy(dstF32, src, elementCount * sizeof(float));
             break;
         }
 
-        case GGML_TYPE_Q5_0: {
+        case GGML_RXD_TYPE_Q5_0: {
             // Q5_0: fp16 scale (2B) + 4 bytes high-bits + 16 bytes low-nibbles = 22 bytes / 32 elements
             for (uint64_t b = 0; b < numBlocks; ++b) {
                 const uint8_t* block = src + b * 22;
@@ -842,7 +842,7 @@ DMLResult GGUFDMLBridge::dequantizeTensor(const void* srcData, void* dstData,
             break;
         }
 
-        case GGML_TYPE_Q5_1: {
+        case GGML_RXD_TYPE_Q5_1: {
             // Q5_1: fp16 scale (2B) + fp16 min (2B) + 4 bytes high-bits + 16 bytes low-nibbles = 24 bytes / 32 elements
             for (uint64_t b = 0; b < numBlocks; ++b) {
                 const uint8_t* block = src + b * 24;
@@ -879,7 +879,7 @@ DMLResult GGUFDMLBridge::dequantizeTensor(const void* srcData, void* dstData,
             break;
         }
 
-        case GGML_TYPE_Q8_1: {
+        case GGML_RXD_TYPE_Q8_1: {
             // Q8_1: fp32 scale (4B) + fp32 sum (4B) + 32 bytes quants = 40 bytes / 32 elements
             // Note: d = scale, s = sum (for dot product acceleration)
             for (uint64_t b = 0; b < numBlocks; ++b) {
@@ -895,7 +895,7 @@ DMLResult GGUFDMLBridge::dequantizeTensor(const void* srcData, void* dstData,
             break;
         }
 
-        case GGML_TYPE_Q2_K: {
+        case GGML_RXD_TYPE_Q2_K: {
             // Q2_K super-block: 256 elements, 84 bytes
             // Layout: scales[16] (uint8) + qs[64] (2-bit packed) + d (fp16) + dmin (fp16)
             for (uint64_t b = 0; b < numBlocks; ++b) {
@@ -942,7 +942,7 @@ DMLResult GGUFDMLBridge::dequantizeTensor(const void* srcData, void* dstData,
             break;
         }
 
-        case GGML_TYPE_Q3_K: {
+        case GGML_RXD_TYPE_Q3_K: {
             // Q3_K super-block: 256 elements, 110 bytes
             // Layout: hmask[32] + qs[64] + scales[12] + d(fp16)
             for (uint64_t b = 0; b < numBlocks; ++b) {
@@ -1000,7 +1000,7 @@ DMLResult GGUFDMLBridge::dequantizeTensor(const void* srcData, void* dstData,
             break;
         }
 
-        case GGML_TYPE_Q4_K: {
+        case GGML_RXD_TYPE_Q4_K: {
             // Q4_K super-block: 256 elements, 144 bytes
             // Layout: d(fp16) + dmin(fp16) + scales[12] (packed 6-bit) + qs[128] (4-bit)
             for (uint64_t b = 0; b < numBlocks; ++b) {
@@ -1053,7 +1053,7 @@ DMLResult GGUFDMLBridge::dequantizeTensor(const void* srcData, void* dstData,
             break;
         }
 
-        case GGML_TYPE_Q5_K: {
+        case GGML_RXD_TYPE_Q5_K: {
             // Q5_K super-block: 256 elements, 176 bytes
             // Layout: d(fp16) + dmin(fp16) + scales[12] + qh[32] + qs[128]
             for (uint64_t b = 0; b < numBlocks; ++b) {
@@ -1115,7 +1115,7 @@ DMLResult GGUFDMLBridge::dequantizeTensor(const void* srcData, void* dstData,
             break;
         }
 
-        case GGML_TYPE_Q6_K: {
+        case GGML_RXD_TYPE_Q6_K: {
             // Q6_K super-block: 256 elements, 210 bytes
             // Layout: ql[128] + qh[64] + scales[16] + d(fp16)
             for (uint64_t b = 0; b < numBlocks; ++b) {
@@ -1160,7 +1160,7 @@ DMLResult GGUFDMLBridge::dequantizeTensor(const void* srcData, void* dstData,
             break;
         }
 
-        case GGML_TYPE_Q8_K: {
+        case GGML_RXD_TYPE_Q8_K: {
             // Q8_K super-block: 256 elements, 292 bytes
             // Layout: d(fp32, 4B) + qs[256] (int8) + bsums[16] (int16, 32B)
             for (uint64_t b = 0; b < numBlocks; ++b) {
@@ -1406,7 +1406,7 @@ DMLResult GGUFDMLBridge::spillTensorToHostCache(SessionState& state, size_t tens
     asm_dml_prefetch_tensor_block(rawData, std::min(meta.rawSizeBytes, (uint64_t)4096));
 
     // Dequantize into host buffer
-    if (m_dequantOnCPU && meta.ggmlType != GGML_TYPE_F32 && meta.ggmlType != GGML_TYPE_F16) {
+    if (m_dequantOnCPU && meta.ggmlType != GGML_RXD_TYPE_F32 && meta.ggmlType != GGML_RXD_TYPE_F16) {
         uint64_t totalElements = 1;
         for (uint32_t d = 0; d < meta.shapeDims; ++d) {
             totalElements *= meta.shape[d];
@@ -1884,8 +1884,8 @@ uint64_t GGUFDMLBridge::computeDequantSize(uint32_t ggmlType, const uint32_t* sh
     uint32_t bytesPerElement = (m_computeType == TensorDataType::Float16) ? 2 : 4;
 
     // For F16/F32, no dequant needed — just the raw size
-    if (ggmlType == GGML_TYPE_F16) return totalElements * 2;
-    if (ggmlType == GGML_TYPE_F32) return totalElements * 4;
+    if (ggmlType == GGML_RXD_TYPE_F16) return totalElements * 2;
+    if (ggmlType == GGML_RXD_TYPE_F32) return totalElements * 4;
 
     // For quantized types: dequant to compute type
     return totalElements * bytesPerElement;
@@ -1893,26 +1893,26 @@ uint64_t GGUFDMLBridge::computeDequantSize(uint32_t ggmlType, const uint32_t* sh
 
 TensorDataType GGUFDMLBridge::ggmlTypeToTensorDataType(uint32_t ggmlType) const {
     switch (ggmlType) {
-        case GGML_TYPE_F32:  return TensorDataType::Float32;
-        case GGML_TYPE_F16:  return TensorDataType::Float16;
+        case GGML_RXD_TYPE_F32:  return TensorDataType::Float32;
+        case GGML_RXD_TYPE_F16:  return TensorDataType::Float16;
         default:             return m_computeType;  // Dequantized to compute type
     }
 }
 
 GGUFQuantType GGUFDMLBridge::ggmlTypeToQuantType(uint32_t ggmlType) const {
     switch (ggmlType) {
-        case GGML_TYPE_F32:  return GGUFQuantType::F32;
-        case GGML_TYPE_F16:  return GGUFQuantType::F16;
-        case GGML_TYPE_Q4_0: return GGUFQuantType::Q4_0;
-        case GGML_TYPE_Q4_1: return GGUFQuantType::Q4_1;
-        case GGML_TYPE_Q5_0: return GGUFQuantType::Q5_0;
-        case GGML_TYPE_Q5_1: return GGUFQuantType::Q5_1;
-        case GGML_TYPE_Q8_0: return GGUFQuantType::Q8_0;
-        case GGML_TYPE_Q2_K: return GGUFQuantType::Q2_K;
-        case GGML_TYPE_Q3_K: return GGUFQuantType::Q3_K_M;
-        case GGML_TYPE_Q4_K: return GGUFQuantType::Q4_K_M;
-        case GGML_TYPE_Q5_K: return GGUFQuantType::Q5_K_M;
-        case GGML_TYPE_Q6_K: return GGUFQuantType::Q6_K;
+        case GGML_RXD_TYPE_F32:  return GGUFQuantType::F32;
+        case GGML_RXD_TYPE_F16:  return GGUFQuantType::F16;
+        case GGML_RXD_TYPE_Q4_0: return GGUFQuantType::Q4_0;
+        case GGML_RXD_TYPE_Q4_1: return GGUFQuantType::Q4_1;
+        case GGML_RXD_TYPE_Q5_0: return GGUFQuantType::Q5_0;
+        case GGML_RXD_TYPE_Q5_1: return GGUFQuantType::Q5_1;
+        case GGML_RXD_TYPE_Q8_0: return GGUFQuantType::Q8_0;
+        case GGML_RXD_TYPE_Q2_K: return GGUFQuantType::Q2_K;
+        case GGML_RXD_TYPE_Q3_K: return GGUFQuantType::Q3_K_M;
+        case GGML_RXD_TYPE_Q4_K: return GGUFQuantType::Q4_K_M;
+        case GGML_RXD_TYPE_Q5_K: return GGUFQuantType::Q5_K_M;
+        case GGML_RXD_TYPE_Q6_K: return GGUFQuantType::Q6_K;
         default:             return GGUFQuantType::F32;
     }
 }

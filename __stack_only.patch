@@ -1,0 +1,587 @@
+diff --git a/src/win32app/mcp_hooks.asm b/src/win32app/mcp_hooks.asm
+index 863c75a0a..abf42b7ff 100644
+--- a/src/win32app/mcp_hooks.asm
++++ b/src/win32app/mcp_hooks.asm
+@@ -7054,2 +7073,2 @@ ExportMetrics PROC FRAME
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 64
++    .allocstack 64
+@@ -10010,0 +10078,82 @@ Cache_Store PROC FRAME engine:QWORD, key:QWORD, result:QWORD
++    push rbx
++    .pushreg rbx
++    push rsi
++    .pushreg rsi
++    push rdi
++    .pushreg rdi
++    push r12
++    .pushreg r12
++    sub rsp, 40
++    .allocstack 40
++    .endprolog
++
++    mov rbx, rcx            ; COMPILER_ENGINE*
++    mov rsi, rdx            ; key bytes (32)
++    mov rdi, r8             ; COMPILE_RESULT*
++
++    test rbx, rbx
++    jz @@fail
++    test rsi, rsi
++    jz @@fail
++    test rdi, rdi
++    jz @@fail
++
++    mov ecx, SIZEOF CACHE_ENTRY
++    call malloc
++    test rax, rax
++    jz @@fail
++    mov r12, rax            ; CACHE_ENTRY*
++
++    ; Copy 32-byte key
++    lea rdx, [r12].CACHE_ENTRY.key
++    mov ecx, 32
++@@copy_key:
++    mov al, byte ptr [rsi]
++    mov byte ptr [rdx], al
++    inc rsi
++    inc rdx
++    dec ecx
++    jnz @@copy_key
++
++    ; Copy COMPILE_RESULT payload
++    lea rdx, [r12].CACHE_ENTRY.result
++    mov rax, rdi
++    mov ecx, SIZEOF COMPILE_RESULT
++@@copy_result:
++    mov r10b, byte ptr [rax]
++    mov byte ptr [rdx], r10b
++    inc rax
++    inc rdx
++    dec ecx
++    jnz @@copy_result
++
++    mov byte ptr [r12].CACHE_ENTRY.valid, 1
++    mov qword ptr [r12].CACHE_ENTRY.accessCount, 1
++    mov qword ptr [r12].CACHE_ENTRY.timestamp, 0
++    mov rax, [r12].CACHE_ENTRY.result.objectCodeSize
++    mov [r12].CACHE_ENTRY.size, rax
++
++    ; Insert at head
++    mov rax, [rbx].COMPILER_ENGINE.cacheHead
++    mov qword ptr [r12].CACHE_ENTRY.pPrev, 0
++    mov [r12].CACHE_ENTRY.pNext, rax
++    test rax, rax
++    jz @@no_old_head
++    mov [rax].CACHE_ENTRY.pPrev, r12
++    jmp @@set_head
++@@no_old_head:
++    mov [rbx].COMPILER_ENGINE.cacheTail, r12
++@@set_head:
++    mov [rbx].COMPILER_ENGINE.cacheHead, r12
++    inc dword ptr [rbx].COMPILER_ENGINE.cacheCount
++    mov rax, [r12].CACHE_ENTRY.size
++    add [rbx].COMPILER_ENGINE.cacheSize, rax
++
++    ; Enforce cache capacity
++    mov rax, [rbx].COMPILER_ENGINE.cacheSize
++    cmp rax, [rbx].COMPILER_ENGINE.cacheMaxSize
++    jbe @@ok
++    mov rcx, rbx
++    xor rdx, rdx
++    call Cache_Evict
++@@ok:
+@@ -10015,0 +10175,51 @@ Cache_MoveToFront PROC FRAME engine:QWORD, entry:QWORD
++    push rbx
++    .pushreg rbx
++    push rsi
++    .pushreg rsi
++    sub rsp, 40
++    .allocstack 40
++    .endprolog
++
++    mov rbx, rcx            ; COMPILER_ENGINE*
++    mov rsi, rdx            ; CACHE_ENTRY*
++    test rbx, rbx
++    jz @@mtf_fail
++    test rsi, rsi
++    jz @@mtf_fail
++
++    mov rax, [rbx].COMPILER_ENGINE.cacheHead
++    cmp rsi, rax
++    je @@mtf_ok
++
++    ; Detach from current position
++    mov rax, [rsi].CACHE_ENTRY.pPrev
++    mov rdx, [rsi].CACHE_ENTRY.pNext
++    test rax, rax
++    jz @@mtf_no_prev
++    mov [rax].CACHE_ENTRY.pNext, rdx
++    jmp @@mtf_prev_done
++@@mtf_no_prev:
++    mov [rbx].COMPILER_ENGINE.cacheHead, rdx
++@@mtf_prev_done:
++    test rdx, rdx
++    jz @@mtf_no_next
++    mov [rdx].CACHE_ENTRY.pPrev, rax
++    jmp @@mtf_next_done
++@@mtf_no_next:
++    mov [rbx].COMPILER_ENGINE.cacheTail, rax
++@@mtf_next_done:
++
++    ; Insert at head
++    mov rax, [rbx].COMPILER_ENGINE.cacheHead
++    mov qword ptr [rsi].CACHE_ENTRY.pPrev, 0
++    mov [rsi].CACHE_ENTRY.pNext, rax
++    test rax, rax
++    jz @@mtf_set_tail
++    mov [rax].CACHE_ENTRY.pPrev, rsi
++    jmp @@mtf_set_head
++@@mtf_set_tail:
++    mov [rbx].COMPILER_ENGINE.cacheTail, rsi
++@@mtf_set_head:
++    mov [rbx].COMPILER_ENGINE.cacheHead, rsi
++
++@@mtf_ok:
+@@ -10020,0 +10238,56 @@ Cache_Evict PROC FRAME engine:QWORD, neededSize:QWORD
++    push rbx
++    .pushreg rbx
++    push rsi
++    .pushreg rsi
++    push rdi
++    .pushreg rdi
++    sub rsp, 40
++    .allocstack 40
++    .endprolog
++
++    mov rbx, rcx            ; COMPILER_ENGINE*
++    mov rsi, rdx            ; needed size
++    test rbx, rbx
++    jz @@evict_fail
++
++@@evict_loop:
++    mov rax, [rbx].COMPILER_ENGINE.cacheSize
++    add rax, rsi
++    cmp rax, [rbx].COMPILER_ENGINE.cacheMaxSize
++    jbe @@evict_ok
++
++    mov rdi, [rbx].COMPILER_ENGINE.cacheTail
++    test rdi, rdi
++    jz @@evict_ok
++
++    mov rax, [rdi].CACHE_ENTRY.pPrev
++    mov [rbx].COMPILER_ENGINE.cacheTail, rax
++    test rax, rax
++    jz @@evict_last
++    mov qword ptr [rax].CACHE_ENTRY.pNext, 0
++    jmp @@evict_links_done
++@@evict_last:
++    mov qword ptr [rbx].COMPILER_ENGINE.cacheHead, 0
++@@evict_links_done:
++
++    cmp dword ptr [rbx].COMPILER_ENGINE.cacheCount, 0
++    jle @@evict_count_done
++    dec dword ptr [rbx].COMPILER_ENGINE.cacheCount
++@@evict_count_done:
++
++    mov rax, [rbx].COMPILER_ENGINE.cacheSize
++    mov rdx, [rdi].CACHE_ENTRY.size
++    cmp rax, rdx
++    jae @@evict_sub_ok
++    xor rax, rax
++    jmp @@evict_store_size
++@@evict_sub_ok:
++    sub rax, rdx
++@@evict_store_size:
++    mov [rbx].COMPILER_ENGINE.cacheSize, rax
++
++    mov rcx, rdi
++    call free
++    jmp @@evict_loop
++
++@@evict_ok:
+@@ -10025,0 +10307,30 @@ Cache_Cleanup PROC FRAME engine:QWORD
++    push rbx
++    .pushreg rbx
++    push rsi
++    .pushreg rsi
++    push rdi
++    .pushreg rdi
++    sub rsp, 40
++    .allocstack 40
++    .endprolog
++
++    mov rbx, rcx
++    test rbx, rbx
++    jz @@cleanup_fail
++
++    mov rsi, [rbx].COMPILER_ENGINE.cacheHead
++@@cleanup_loop:
++    test rsi, rsi
++    jz @@cleanup_done_loop
++    mov rdi, [rsi].CACHE_ENTRY.pNext
++    mov rcx, rsi
++    call free
++    mov rsi, rdi
++    jmp @@cleanup_loop
++@@cleanup_done_loop:
++
++    mov qword ptr [rbx].COMPILER_ENGINE.cacheHead, 0
++    mov qword ptr [rbx].COMPILER_ENGINE.cacheTail, 0
++    mov dword ptr [rbx].COMPILER_ENGINE.cacheCount, 0
++    mov qword ptr [rbx].COMPILER_ENGINE.cacheSize, 0
++
+@@ -11125,0 +11445,82 @@ Cache_Store PROC FRAME engine:QWORD, key:QWORD, result:QWORD
++    push rbx
++    .pushreg rbx
++    push rsi
++    .pushreg rsi
++    push rdi
++    .pushreg rdi
++    push r12
++    .pushreg r12
++    sub rsp, 32
++    .allocstack 32
++    .endprolog
++
++    mov rbx, rcx            ; COMPILER_ENGINE*
++    mov rsi, rdx            ; key bytes (32)
++    mov rdi, r8             ; COMPILE_RESULT*
++
++    test rbx, rbx
++    jz @@fail
++    test rsi, rsi
++    jz @@fail
++    test rdi, rdi
++    jz @@fail
++
++    mov ecx, SIZEOF CACHE_ENTRY
++    call malloc
++    test rax, rax
++    jz @@fail
++    mov r12, rax            ; CACHE_ENTRY*
++
++    ; Copy 32-byte key
++    lea rdx, [r12].CACHE_ENTRY.key
++    mov ecx, 32
++@@copy_key:
++    mov al, byte ptr [rsi]
++    mov byte ptr [rdx], al
++    inc rsi
++    inc rdx
++    dec ecx
++    jnz @@copy_key
++
++    ; Copy COMPILE_RESULT payload
++    lea rdx, [r12].CACHE_ENTRY.result
++    mov rax, rdi
++    mov ecx, SIZEOF COMPILE_RESULT
++@@copy_result:
++    mov r10b, byte ptr [rax]
++    mov byte ptr [rdx], r10b
++    inc rax
++    inc rdx
++    dec ecx
++    jnz @@copy_result
++
++    mov byte ptr [r12].CACHE_ENTRY.valid, 1
++    mov qword ptr [r12].CACHE_ENTRY.accessCount, 1
++    mov qword ptr [r12].CACHE_ENTRY.timestamp, 0
++    mov rax, [r12].CACHE_ENTRY.result.objectCodeSize
++    mov [r12].CACHE_ENTRY.size, rax
++
++    ; Insert at head
++    mov rax, [rbx].COMPILER_ENGINE.cacheHead
++    mov qword ptr [r12].CACHE_ENTRY.pPrev, 0
++    mov [r12].CACHE_ENTRY.pNext, rax
++    test rax, rax
++    jz @@no_old_head
++    mov [rax].CACHE_ENTRY.pPrev, r12
++    jmp @@set_head
++@@no_old_head:
++    mov [rbx].COMPILER_ENGINE.cacheTail, r12
++@@set_head:
++    mov [rbx].COMPILER_ENGINE.cacheHead, r12
++    inc dword ptr [rbx].COMPILER_ENGINE.cacheCount
++    mov rax, [r12].CACHE_ENTRY.size
++    add [rbx].COMPILER_ENGINE.cacheSize, rax
++
++    ; Enforce cache capacity
++    mov rax, [rbx].COMPILER_ENGINE.cacheSize
++    cmp rax, [rbx].COMPILER_ENGINE.cacheMaxSize
++    jbe @@ok
++    mov rcx, rbx
++    xor rdx, rdx
++    call Cache_Evict
++@@ok:
+@@ -11130,0 +11542,51 @@ Cache_MoveToFront PROC FRAME engine:QWORD, entry:QWORD
++    push rbx
++    .pushreg rbx
++    push rsi
++    .pushreg rsi
++    sub rsp, 40
++    .allocstack 40
++    .endprolog
++
++    mov rbx, rcx            ; COMPILER_ENGINE*
++    mov rsi, rdx            ; CACHE_ENTRY*
++    test rbx, rbx
++    jz @@mtf_fail
++    test rsi, rsi
++    jz @@mtf_fail
++
++    mov rax, [rbx].COMPILER_ENGINE.cacheHead
++    cmp rsi, rax
++    je @@mtf_ok
++
++    ; Detach from current position
++    mov rax, [rsi].CACHE_ENTRY.pPrev
++    mov rdx, [rsi].CACHE_ENTRY.pNext
++    test rax, rax
++    jz @@mtf_no_prev
++    mov [rax].CACHE_ENTRY.pNext, rdx
++    jmp @@mtf_prev_done
++@@mtf_no_prev:
++    mov [rbx].COMPILER_ENGINE.cacheHead, rdx
++@@mtf_prev_done:
++    test rdx, rdx
++    jz @@mtf_no_next
++    mov [rdx].CACHE_ENTRY.pPrev, rax
++    jmp @@mtf_next_done
++@@mtf_no_next:
++    mov [rbx].COMPILER_ENGINE.cacheTail, rax
++@@mtf_next_done:
++
++    ; Insert at head
++    mov rax, [rbx].COMPILER_ENGINE.cacheHead
++    mov qword ptr [rsi].CACHE_ENTRY.pPrev, 0
++    mov [rsi].CACHE_ENTRY.pNext, rax
++    test rax, rax
++    jz @@mtf_set_tail
++    mov [rax].CACHE_ENTRY.pPrev, rsi
++    jmp @@mtf_set_head
++@@mtf_set_tail:
++    mov [rbx].COMPILER_ENGINE.cacheTail, rsi
++@@mtf_set_head:
++    mov [rbx].COMPILER_ENGINE.cacheHead, rsi
++
++@@mtf_ok:
+@@ -11135,0 +11605,56 @@ Cache_Evict PROC FRAME engine:QWORD, neededSize:QWORD
++    push rbx
++    .pushreg rbx
++    push rsi
++    .pushreg rsi
++    push rdi
++    .pushreg rdi
++    sub rsp, 40
++    .allocstack 40
++    .endprolog
++
++    mov rbx, rcx            ; COMPILER_ENGINE*
++    mov rsi, rdx            ; needed size
++    test rbx, rbx
++    jz @@evict_fail
++
++@@evict_loop:
++    mov rax, [rbx].COMPILER_ENGINE.cacheSize
++    add rax, rsi
++    cmp rax, [rbx].COMPILER_ENGINE.cacheMaxSize
++    jbe @@evict_ok
++
++    mov rdi, [rbx].COMPILER_ENGINE.cacheTail
++    test rdi, rdi
++    jz @@evict_ok
++
++    mov rax, [rdi].CACHE_ENTRY.pPrev
++    mov [rbx].COMPILER_ENGINE.cacheTail, rax
++    test rax, rax
++    jz @@evict_last
++    mov qword ptr [rax].CACHE_ENTRY.pNext, 0
++    jmp @@evict_links_done
++@@evict_last:
++    mov qword ptr [rbx].COMPILER_ENGINE.cacheHead, 0
++@@evict_links_done:
++
++    cmp dword ptr [rbx].COMPILER_ENGINE.cacheCount, 0
++    jle @@evict_count_done
++    dec dword ptr [rbx].COMPILER_ENGINE.cacheCount
++@@evict_count_done:
++
++    mov rax, [rbx].COMPILER_ENGINE.cacheSize
++    mov rdx, [rdi].CACHE_ENTRY.size
++    cmp rax, rdx
++    jae @@evict_sub_ok
++    xor rax, rax
++    jmp @@evict_store_size
++@@evict_sub_ok:
++    sub rax, rdx
++@@evict_store_size:
++    mov [rbx].COMPILER_ENGINE.cacheSize, rax
++
++    mov rcx, rdi
++    call free
++    jmp @@evict_loop
++
++@@evict_ok:
+@@ -11140,0 +11674,30 @@ Cache_Cleanup PROC FRAME engine:QWORD
++    push rbx
++    .pushreg rbx
++    push rsi
++    .pushreg rsi
++    push rdi
++    .pushreg rdi
++    sub rsp, 40
++    .allocstack 40
++    .endprolog
++
++    mov rbx, rcx
++    test rbx, rbx
++    jz @@cleanup_fail
++
++    mov rsi, [rbx].COMPILER_ENGINE.cacheHead
++@@cleanup_loop:
++    test rsi, rsi
++    jz @@cleanup_done_loop
++    mov rdi, [rsi].CACHE_ENTRY.pNext
++    mov rcx, rsi
++    call free
++    mov rsi, rdi
++    jmp @@cleanup_loop
++@@cleanup_done_loop:
++
++    mov qword ptr [rbx].COMPILER_ENGINE.cacheHead, 0
++    mov qword ptr [rbx].COMPILER_ENGINE.cacheTail, 0
++    mov dword ptr [rbx].COMPILER_ENGINE.cacheCount, 0
++    mov qword ptr [rbx].COMPILER_ENGINE.cacheSize, 0
++
+@@ -27024,2 +27595,2 @@ Tokenizer_Encode PROC FRAME
+-    sub rsp, 40
+-    .allocstack 40
++    sub rsp, 32
++    .allocstack 32
+@@ -34048,2 +34663,10 @@ LSPClient_CodeAction PROC FRAME
+-    sub rsp, 304
+-    .allocstack 304
++    push rsi
++    .pushreg rsi
++    push rdi
++    .pushreg rdi
++    push r12
++    .pushreg r12
++    push r13
++    .pushreg r13
++    sub rsp, 2048
++    .allocstack 2048
+@@ -34090,2 +34719,10 @@ LSPClient_Rename PROC FRAME
+-    sub rsp, 304
+-    .allocstack 304
++    push rsi
++    .pushreg rsi
++    push rdi
++    .pushreg rdi
++    push r12
++    .pushreg r12
++    push r13
++    .pushreg r13
++    sub rsp, 2048
++    .allocstack 2048
+@@ -34128,2 +34771,8 @@ LSPClient_FindReferences PROC FRAME
+-    sub rsp, 304
+-    .allocstack 304
++    push rsi
++    .pushreg rsi
++    push rdi
++    .pushreg rdi
++    push r12
++    .pushreg r12
++    sub rsp, 1032
++    .allocstack 1032
+@@ -37782,2 +38556,2 @@ Titan_Kernel_Lock_Pages PROC FRAME
+-    sub rsp, 40
+-    .allocstack 40
++    sub rsp, 32
++    .allocstack 32
+@@ -38486,4 +39316,33 @@ Titan_Open_Model_File PROC FRAME
+-    
+-    ; Placeholder - would open 11TB model file
+-    mov g_hModelFile, INVALID_HANDLE_VALUE
+-    mov rax, 0
++
++    ; Reuse existing valid handle when available.
++    mov rax, g_hModelFile
++    cmp rax, -1
++    je @@open_model
++    test rax, rax
++    jz @@open_model
++    xor eax, eax
++    ret
++
++@@open_model:
++    ; Fallback open path: try known local GGUF model file.
++    sub rsp, 56
++    lea rcx, szFinalModelPath        ; LPCWSTR lpFileName
++    mov edx, 80000000h               ; GENERIC_READ
++    mov r8d, 3                       ; FILE_SHARE_READ | FILE_SHARE_WRITE
++    xor r9d, r9d                     ; lpSecurityAttributes = NULL
++    mov qword ptr [rsp+32], 3        ; OPEN_EXISTING
++    mov qword ptr [rsp+40], 80h      ; FILE_ATTRIBUTE_NORMAL
++    mov qword ptr [rsp+48], 0        ; hTemplateFile = NULL
++    call CreateFileW
++    add rsp, 56
++
++    cmp rax, -1                      ; INVALID_HANDLE_VALUE
++    je @@open_fail
++
++    mov g_hModelFile, rax
++    xor eax, eax
++    ret
++
++@@open_fail:
++    mov g_hModelFile, -1
++    mov rax, -1
+@@ -38501,2 +39360,2 @@ Titan_Bootstrap_Sieve PROC FRAME
+-    sub rsp, 8
+-    .allocstack 8
++    sub rsp, 48
++    .allocstack 48
+@@ -40114,2 +41021,2 @@ Titan_CleanupOrchestrator PROC FRAME
+-    sub rsp, 40
+-    .allocstack 40
++    sub rsp, 32
++    .allocstack 32
+@@ -169193,2 +170233,2 @@ ChatServer_IsRunning PROC FRAME
+-    sub rsp, 40
+-    .allocstack 40
++    sub rsp, 32
++    .allocstack 32
+@@ -169971,2 +171011,2 @@ HttpClient_Cleanup PROC FRAME
+-    sub rsp, 40
+-    .allocstack 40
++    sub rsp, 32
++    .allocstack 32
+@@ -170012,2 +171052,2 @@ RawrXD_ChatServer_Shutdown PROC FRAME
+-    sub rsp, 40
+-    .allocstack 40
++    sub rsp, 32
++    .allocstack 32
+@@ -174709,2 +175745,2 @@ INFINITY_CheckQuadBuffer PROC FRAME
+-    sub rsp, 40
+-    .allocstack 40
++    sub rsp, 32
++    .allocstack 32
+@@ -175050,2 +176086,2 @@ INFINITY_HandleYTfnTrap PROC FRAME
+-    sub rsp, 40
+-    .allocstack 40
++    sub rsp, 32
++    .allocstack 32
+@@ -176490,3 +177526,8 @@ TITAN_AllocateGhostSlot PROC
+-    ; Find LRU slot in ghost cache
+-    ; Allocate 1GB pinned RAM
+-    mov rax, 1000000h   ; Placeholder
++    ; VirtualAlloc(NULL, 1GB, MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE)
++    sub rsp, 40
++    xor ecx, ecx
++    mov rdx, 40000000h
++    mov r8d, 3000h
++    mov r9d, 4
++    call QWORD PTR [__imp_VirtualAlloc]
++    add rsp, 40

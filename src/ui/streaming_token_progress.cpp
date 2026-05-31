@@ -9,24 +9,27 @@
 // ============================================================================
 
 #include "streaming_token_progress.h"
+#include "utils/I18nManager.h"
 #include <cstdio>
 #include <cstring>
 #include <algorithm>
+
+using namespace RawrXD;
 
 // ============================================================================
 // Constants
 // ============================================================================
 
-static constexpr COLORREF BG_COLOR       = RGB(30, 30, 35);
-static constexpr COLORREF BORDER_CLR     = RGB(60, 60, 65);
-static constexpr COLORREF TEXT_CLR       = RGB(220, 220, 220);
-static constexpr COLORREF LABEL_CLR     = RGB(140, 140, 140);
-static constexpr COLORREF PROGRESS_BG    = RGB(30, 30, 30);
-static constexpr COLORREF PROGRESS_FG1   = RGB(78, 201, 176);    // Teal
-static constexpr COLORREF PROGRESS_FG2   = RGB(86, 156, 214);    // Blue
-static constexpr COLORREF METRICS_CLR    = RGB(86, 156, 214);
-static constexpr COLORREF SUCCESS_CLR    = RGB(92, 184, 92);
-static constexpr COLORREF ACTIVE_CLR     = RGB(255, 200, 50);
+static constexpr COLORREF BG_COLOR       = RGB(25, 25, 30);
+static constexpr COLORREF BORDER_CLR     = RGB(45, 45, 50);
+static constexpr COLORREF TEXT_CLR       = RGB(235, 235, 235);
+static constexpr COLORREF LABEL_CLR     = RGB(160, 160, 160);
+static constexpr COLORREF PROGRESS_BG    = RGB(20, 20, 25);
+static constexpr COLORREF PROGRESS_FG1   = RGB(0, 150, 136);    // Richer Teal
+static constexpr COLORREF PROGRESS_FG2   = RGB(33, 150, 243);    // Modern Blue
+static constexpr COLORREF METRICS_CLR    = RGB(100, 181, 246);
+static constexpr COLORREF SUCCESS_CLR    = RGB(76, 175, 80);
+static constexpr COLORREF ACTIVE_CLR     = RGB(255, 193, 7);
 
 static const wchar_t* PROGRESS_CLASS = L"RawrXD_StreamingTokenProgress";
 bool StreamingTokenProgressBar::s_classRegistered = false;
@@ -142,7 +145,11 @@ void StreamingTokenProgressBar::startGeneration(int estimatedTokens) {
     m_startTick = GetTickCount();
     m_tokensPerSecond = 0.0;
 
-    wcscpy_s(m_statusText, L"\x26A1 Generating tokens...");
+    std::wstring startText = I18nManager::getInstance().translateW("GEN_START");
+    if (startText.empty()) startText = L"\x26A1 Generating tokens...";
+    else startText = L"\x26A1 " + startText;
+
+    wcscpy_s(m_statusText, startText.c_str());
     m_metricsText[0] = L'\0';
 
     m_timerId = SetTimer(m_hwnd, IDT_METRICS, 100, nullptr);
@@ -194,14 +201,19 @@ void StreamingTokenProgressBar::completeGeneration() {
     // Format completion message
     int sec = elapsed / 1000;
     int ms = elapsed % 1000;
+    
+    std::wstring fmt = I18nManager::getInstance().translateW("GEN_DONE");
+    if (fmt.empty()) fmt = L"\x2713 Generated %d tokens in %dm %ds (%.2f tok/s)";
+    else fmt = L"\x2713 " + fmt;
+
     if (sec >= 60) {
         int min = sec / 60;
         sec = sec % 60;
-        swprintf_s(m_statusText, L"\x2713 Generated %d tokens in %dm %ds (%.2f tok/s)",
+        swprintf_s(m_statusText, fmt.c_str(),
             m_totalTokens, min, sec, m_tokensPerSecond);
     } else {
-        swprintf_s(m_statusText, L"\x2713 Generated %d tokens in %d.%ds (%.2f tok/s)",
-            m_totalTokens, sec, ms / 100, m_tokensPerSecond);
+        swprintf_s(m_statusText, fmt.c_str(),
+            m_totalTokens, 0, sec, m_tokensPerSecond);
     }
 
     char log[256];
@@ -352,12 +364,16 @@ void StreamingTokenProgressBar::paintProgressBar(HDC hdc, int x, int y, int w, i
     }
 
     // Token count text in center
-    wchar_t tokenBuf[64];
+    wchar_t tokenBuf[128];
     if (m_estimatedTokens > 0) {
         int pct = m_estimatedTokens > 0 ? (m_totalTokens * 100 / m_estimatedTokens) : 0;
-        swprintf_s(tokenBuf, L"%d / %d tokens (%d%%)", m_totalTokens, m_estimatedTokens, pct);
+        std::wstring fmt = I18nManager::getInstance().translateW("EST_TOK");
+        if (fmt.empty()) fmt = L"%d / %d tokens (%d%%)";
+        swprintf_s(tokenBuf, fmt.c_str(), m_totalTokens, m_estimatedTokens, pct);
     } else {
-        swprintf_s(tokenBuf, L"%d tokens", m_totalTokens);
+        std::wstring fmt = I18nManager::getInstance().translateW("CUR_TOK");
+        if (fmt.empty()) fmt = L"%d tokens";
+        swprintf_s(tokenBuf, fmt.c_str(), m_totalTokens);
     }
     SelectObject(hdc, m_fontMetrics);
     SetTextColor(hdc, TEXT_CLR);

@@ -399,5 +399,36 @@ void Shutdown() {
 }
 
 } // namespace telemetry
-#include <string>
-void logEvent(const char* name, double v1, double v2) {}
+
+namespace {
+std::mutex g_legacyTelemetryLogMutex;
+std::vector<std::string> g_legacyTelemetryRecent;
+}
+
+void logEvent(const char* name, double v1, double v2) {
+    const std::string eventName = (name && name[0] != '\0') ? std::string(name) : std::string("unnamed");
+
+    {
+        std::lock_guard<std::mutex> lock(g_legacyTelemetryLogMutex);
+        std::ostringstream line;
+        line << eventName << " v1=" << v1 << " v2=" << v2;
+        g_legacyTelemetryRecent.push_back(line.str());
+        if (g_legacyTelemetryRecent.size() > 64) {
+            g_legacyTelemetryRecent.erase(g_legacyTelemetryRecent.begin());
+        }
+    }
+
+    nlohmann::json ctx;
+    ctx["event"] = eventName;
+    ctx["v1"] = v1;
+    ctx["v2"] = v2;
+    ctx["recent_count"] = static_cast<uint64_t>(g_legacyTelemetryRecent.size());
+
+    AgenticObservability::instance().logInfo("legacy.telemetry", eventName, ctx);
+    AgenticObservability::instance().incrementCounter("legacy_telemetry_events_total", 1, {{"event", eventName}});
+    AgenticObservability::instance().setGauge("legacy_telemetry_last_v1", static_cast<float>(v1), {{"event", eventName}});
+    AgenticObservability::instance().setGauge("legacy_telemetry_last_v2", static_cast<float>(v2), {{"event", eventName}});
+
+    IDELogger::instance().log(std::string("[Telemetry] ") + eventName + " v1=" + std::to_string(v1) +
+                              " v2=" + std::to_string(v2));
+}

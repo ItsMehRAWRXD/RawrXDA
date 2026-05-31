@@ -4,7 +4,7 @@
 #include <vector>
 #include <functional>
 
-namespace OllamaIntegration {
+namespace NativeIntegration {
 
 struct CompletionRequest {
     std::string model;           // e.g., "codellama:7b"
@@ -35,4 +35,4 @@ std::vector<std::string> GetAvailableModels();
 void StartAsyncSuggester(std::function<void(const std::string&)> on_suggestion);
 void StopAsyncSuggester();
 
-} // namespace OllamaIntegration
+} // namespace NativeIntegration

@@ -84,7 +84,7 @@ private:
     std::string generateFallbackCompletion(const std::string& prompt);
 
     // Configuration
-    std::string m_modelEndpoint = "http://localhost:11434";
+    std::string m_modelEndpoint = "http://localhost:11435";
     bool m_allowRemoteEndpoint = false;
     std::string m_modelName = "llama2";
     int m_requestTimeoutMs = 5000;

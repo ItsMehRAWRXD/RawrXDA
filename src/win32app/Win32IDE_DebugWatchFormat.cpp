@@ -313,11 +313,11 @@ void Win32IDE::cmdDbgWatchShow() {
 }
 
 // ============================================================================
-// Add sample watch variables (for demo/testing)
+// Add sample watch variables (for testing)
 // ============================================================================
 
 void Win32IDE::cmdDbgWatchAdd() {
-    // Add sample variables demonstrating type visualizers
+    // Add sample variables with type visualizers
     WatchVariable v1;
     v1.name = "greeting"; v1.type = "std::string";
     v1.value = "Hello, World!"; v1.format = WatchDisplayFormat::Auto;

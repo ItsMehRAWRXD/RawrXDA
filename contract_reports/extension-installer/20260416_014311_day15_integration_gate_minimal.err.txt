@@ -1,0 +1,4 @@
+[Prometheus] bind() failed on port 9090 (WSA=10048); exporter will continue in degraded mode.
+[Prometheus] Listening on port 9091 for /metrics...
+[AgenticObservability] Initialized - Ready for comprehensive observability
+[AgenticObservability] Destroyed - Logged 4 entries and 6 metrics

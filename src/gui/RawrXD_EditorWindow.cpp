@@ -19,7 +19,7 @@ EditorWindow::EditorWindow()
       scrollX(0), scrollY(0), cursorPos(0,0), anchorPos(0,0),
       lineHeight(16.0f), charWidth(8.0f), visibleLines(0)
 {
-    lines.append(L""); // Empty doc
+    // MiniMonaco buffer initialized with default capacity
     
     D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &pD2DFactory);
     DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), reinterpret_cast<IUnknown**>(&pDWriteFactory));
@@ -159,24 +159,26 @@ void EditorWindow::onPaint() {
         (float)scrollY + pRenderTarget->GetSize().height
     );
     
-    // Draw lines
+    // Draw lines using MiniMonaco buffer
     int startLine = scrollY / (int)lineHeight;
-    int endLine = std::min(lines.count(), startLine + (int)(pRenderTarget->GetSize().height / lineHeight) + 2);
+    int endLine = std::min((int)buffer_.lineCount(), startLine + (int)(pRenderTarget->GetSize().height / lineHeight) + 2);
     
     for (int i = startLine; i < endLine; ++i) {
         if (i < 0) continue;
         
         float y = i * lineHeight - scrollY;
-        const String& line = lines[i];
+        
+        // Get line content from MiniMonaco buffer
+        std::wstring lineContent = buffer_.lineContent(i);
         
         // Draw selection background if needed (simplified)
         
         // Draw text
-        if (!line.isEmpty()) {
+        if (!lineContent.empty()) {
             D2D1_RECT_F layoutRect = D2D1::RectF(40.0f - scrollX, y, 2000.0f, y + lineHeight);
             pRenderTarget->DrawText(
-                line.constData(),
-                line.length(),
+                lineContent.c_str(),
+                (UINT32)lineContent.length(),
                 pTextFormat,
                 layoutRect,
                 pBrushText
@@ -199,33 +201,72 @@ void EditorWindow::onResize(int w, int h) {
 void EditorWindow::onChar(wchar_t ch) {
     if (ch < 32 && ch != '\t' && ch != '\n' && ch != '\r') return;
     
-    String& line = lines[cursorPos.y];
+    auto start = std::chrono::high_resolution_clock::now();
+    
+    // Convert cursor position to buffer offset
+    size_t buffer_pos = convertCursorToBufferOffset(cursorPos);
+    
     if (ch == '\r') {
-        // Simple enter key handling
-        String rest = line.mid(cursorPos.x);
-        line = line.left(cursorPos.x);
-        lines.insert(cursorPos.y + 1, rest);
+        // Enter key - insert newline
+        buffer_.insert(buffer_pos, L"\n", 1);
         cursorPos.y++;
         cursorPos.x = 0;
     } else {
-        line.insert(cursorPos.x, String(ch));
+        // Insert character at cursor position
+        buffer_.insert(buffer_pos, &ch, 1);
         cursorPos.x++;
     }
+    
+    auto end = std::chrono::high_resolution_clock::now();
+    perf_metrics_.record_edit(end - start);
+    
+    ensureCursorVisible();
     InvalidateRect(hwnd, nullptr, FALSE);
 }
 
 void EditorWindow::onKeyDown(int key) {
+    // Convert cursor position to buffer offset for operations
+    size_t buffer_pos = convertCursorToBufferOffset(cursorPos);
+    
     // Basic navigation
-    if (key == VK_LEFT) cursorPos.x--;
-    if (key == VK_RIGHT) cursorPos.x++;
-    if (key == VK_UP) cursorPos.y--;
-    if (key == VK_DOWN) cursorPos.y++;
+    if (key == VK_LEFT) {
+        if (cursorPos.x > 0) {
+            cursorPos.x--;
+        } else if (cursorPos.y > 0) {
+            cursorPos.y--;
+            cursorPos.x = (int)buffer_.lineContent(cursorPos.y).length();
+        }
+    }
+    if (key == VK_RIGHT) {
+        size_t current_line_length = buffer_.lineContent(cursorPos.y).length();
+        if (cursorPos.x < (int)current_line_length) {
+            cursorPos.x++;
+        } else if (cursorPos.y < (int)buffer_.lineCount() - 1) {
+            cursorPos.y++;
+            cursorPos.x = 0;
+        }
+    }
+    if (key == VK_UP && cursorPos.y > 0) {
+        cursorPos.y--;
+        size_t prev_line_length = buffer_.lineContent(cursorPos.y).length();
+        if (cursorPos.x > (int)prev_line_length) {
+            cursorPos.x = (int)prev_line_length;
+        }
+    }
+    if (key == VK_DOWN && cursorPos.y < (int)buffer_.lineCount() - 1) {
+        cursorPos.y++;
+        size_t next_line_length = buffer_.lineContent(cursorPos.y).length();
+        if (cursorPos.x > (int)next_line_length) {
+            cursorPos.x = (int)next_line_length;
+        }
+    }
     
     // Clamp
     if (cursorPos.y < 0) cursorPos.y = 0;
-    if (cursorPos.y >= lines.count()) cursorPos.y = lines.count() - 1;
+    if (cursorPos.y >= (int)buffer_.lineCount()) cursorPos.y = (int)buffer_.lineCount() - 1;
     if (cursorPos.x < 0) cursorPos.x = 0;
-    if (cursorPos.x > lines[cursorPos.y].length()) cursorPos.x = lines[cursorPos.y].length();
+    size_t current_line_len = buffer_.lineContent(cursorPos.y).length();
+    if (cursorPos.x > (int)current_line_len) cursorPos.x = (int)current_line_len;
     
     ensureCursorVisible();
     InvalidateRect(hwnd, nullptr, FALSE);
@@ -241,7 +282,7 @@ void EditorWindow::onScroll(int dx, int dy) {
     si.cbSize = sizeof(SCROLLINFO);
     si.fMask = SIF_POS | SIF_RANGE | SIF_PAGE;
     si.nMin = 0;
-    si.nMax = lines.count() * (int)lineHeight;
+    si.nMax = (int)buffer_.lineCount() * (int)lineHeight;
     si.nPage = (int)pRenderTarget->GetSize().height;
     si.nPos = scrollY;
     SetScrollInfo(hwnd, SB_VERT, &si, TRUE);
@@ -255,7 +296,7 @@ void EditorWindow::onLButtonDown(int x, int y) {
     // Account for vertical scroll and line height
     int row = (int)((y + scrollY) / lineHeight);
     if (row < 0) row = 0;
-    if (row >= lines.count()) row = lines.count() - 1;
+    if (row >= (int)buffer_.lineCount()) row = (int)buffer_.lineCount() - 1;
 
     // Account for gutter (40px) and horizontal scroll
     const float gutterWidth = 40.0f;
@@ -263,8 +304,8 @@ void EditorWindow::onLButtonDown(int x, int y) {
     if (col < 0) col = 0;
 
     // Clamp column to line length
-    if (row >= 0 && row < lines.count()) {
-        int lineLen = lines[row].length();
+    if (row >= 0 && row < (int)buffer_.lineCount()) {
+        int lineLen = (int)buffer_.lineContent(row).length();
         if (col > lineLen) col = lineLen;
     }
 
@@ -317,7 +358,7 @@ void EditorWindow::ensureCursorVisible() {
     si.cbSize = sizeof(SCROLLINFO);
     si.fMask = SIF_POS | SIF_RANGE | SIF_PAGE;
     si.nMin = 0;
-    si.nMax = lines.count() * (int)lineHeight;
+    si.nMax = (int)buffer_.lineCount() * (int)lineHeight;
     si.nPage = (int)viewportHeight;
     si.nPos = scrollY;
     SetScrollInfo(hwnd, SB_VERT, &si, TRUE);
@@ -325,26 +366,80 @@ void EditorWindow::ensureCursorVisible() {
     InvalidateRect(hwnd, nullptr, FALSE);
 }
 
+// MiniMonaco buffer helper methods
+size_t EditorWindow::convertCursorToBufferOffset(const Point& cursor) const {
+    if (cursor.y >= (int)buffer_.lineCount()) {
+        return buffer_.length(); // End of document
+    }
+    
+    size_t line_start = buffer_.lineStart(cursor.y);
+    size_t line_length = buffer_.lineContent(cursor.y).length();
+    
+    // Handle column bounds
+    size_t column = std::min(static_cast<size_t>(cursor.x), line_length);
+    return line_start + column;
+}
+
+Point EditorWindow::convertBufferOffsetToCursor(size_t offset) const {
+    size_t line = buffer_.lineFromPos(offset);
+    size_t line_start = buffer_.lineStart(line);
+    size_t column = offset - line_start;
+    
+    return {static_cast<int>(line), static_cast<int>(column)};
+}
+
+void EditorWindow::updateCursorPosition(size_t buffer_pos) {
+    Point new_cursor = convertBufferOffsetToCursor(buffer_pos);
+    cursorPos = new_cursor;
+    anchorPos = new_cursor;
+    ensureCursorVisible();
+}
+
 void EditorWindow::setText(const String& text) {
-    // Split text into lines by newline characters
-    lines.clear();
-    int start = 0;
-    for (int i = 0; i < text.length(); i++) {
-        if (text[i] == L'\n') {
-            lines.append(text.mid(start, i - start));
-            start = i + 1;
-        }
-    }
-    // Append remaining text after last newline (or the whole string if no newlines)
-    if (start <= text.length()) {
-        lines.append(text.mid(start));
-    }
+    auto start = std::chrono::high_resolution_clock::now();
+    
+    // Convert String to wstring for MiniMonaco
+    std::wstring wtext(text.begin(), text.end());
+    buffer_.setText(wtext);
+    
+    auto end = std::chrono::high_resolution_clock::now();
+    perf_metrics_.record_edit(end - start);
+    
     InvalidateRect(hwnd, nullptr, FALSE);
 }
 
+String EditorWindow::getText() const {
+    std::wstring wtext = buffer_.text();
+    return String(wtext.begin(), wtext.end());
+}
+
 void EditorWindow::appendText(const String& text) {
-    lines.last().append(text);
+    auto start = std::chrono::high_resolution_clock::now();
+    
+    std::wstring wtext(text.begin(), text.end());
+    size_t pos = buffer_.length();
+    buffer_.insert(pos, wtext.data(), wtext.size());
+    
+    auto end = std::chrono::high_resolution_clock::now();
+    perf_metrics_.record_edit(end - start);
+    
     InvalidateRect(hwnd, nullptr, FALSE);
+}
+
+void EditorWindow::dumpPerformanceStats() const {
+    std::cout << "=== MiniMonaco Buffer Performance ===\n";
+    std::cout << "Total edits: " << perf_metrics_.edit_count << "\n";
+    std::cout << "Total edit time: " 
+              << std::chrono::duration<double, std::milli>(perf_metrics_.total_edit_time).count() 
+              << " ms\n";
+    std::cout << "Average edit time: " 
+              << std::chrono::duration<double, std::micro>(perf_metrics_.total_edit_time).count() / perf_metrics_.edit_count 
+              << " μs\n";
+    std::cout << "Max throughput: " << perf_metrics_.max_throughput << " ops/sec\n";
+    
+    // MiniMonaco buffer statistics
+    std::cout << "Buffer size: " << buffer_.length() << " characters\n";
+    std::cout << "Line count: " << buffer_.lineCount() << " lines\n";
 }
 
 } // namespace RawrXD

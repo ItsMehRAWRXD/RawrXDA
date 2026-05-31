@@ -861,4 +861,121 @@ extern "C"
         return 0;
     }
 
+    // ============================================================================
+    // WATCHDOG KERNEL STUBS
+    // ============================================================================
+    int asm_watchdog_init(const char* name) { (void)name; return 0; }
+    int asm_watchdog_verify(void) { return 0; }
+    int asm_watchdog_get_baseline(void* out, size_t len) { (void)out; (void)len; return 0; }
+    int asm_watchdog_get_status(void) { return 0; }
+    void asm_watchdog_shutdown(void) {
+        // Signal watchdog thread to stop and wait for clean exit
+        // In a full implementation, this would set an atomic flag and join the worker thread
+    }
+
+    // ============================================================================
+    // SAMPLER / TITAN AVX-512 STUBS
+    // ============================================================================
+    void Sampler_SoftMax_TopK_Fused(float* logits, int vocab, float temp, int topK, int* outToken, float* outProb)
+    {
+        (void)temp; (void)topK; (void)outProb;
+        if (!logits || vocab <= 0 || !outToken) return;
+        int best = 0;
+        float bestVal = logits[0];
+        for (int i = 1; i < vocab; ++i) { if (logits[i] > bestVal) { bestVal = logits[i]; best = i; } }
+        *outToken = best;
+    }
+    void Titan_SiLU_AVX512(float* x, int64_t n) { if (x && n > 0) for (int64_t i = 0; i < n; ++i) x[i] = x[i] / (1.0f + std::exp(-x[i])); }
+    void Titan_RMSNorm_AVX512(float* x, int64_t n, const float* weight, float eps)
+    {
+        (void)weight; (void)eps;
+        if (!x || n <= 0) return;
+    }
+    void Sampler_ApplyTemperature_AVX512(float* logits, int vocab, float temp)
+    {
+        if (!logits || vocab <= 0) return;
+        if (temp != 1.0f && temp > 0.0f) { for (int i = 0; i < vocab; ++i) logits[i] /= temp; }
+    }
+    void Sampler_FindMax_AVX512(const float* logits, int vocab, int* outIdx, float* outVal)
+    {
+        if (!logits || vocab <= 0 || !outIdx) return;
+        int best = 0; float bestVal = logits[0];
+        for (int i = 1; i < vocab; ++i) { if (logits[i] > bestVal) { bestVal = logits[i]; best = i; } }
+        *outIdx = best; if (outVal) *outVal = bestVal;
+    }
+    void Sampler_ExpSum_AVX512(const float* logits, int vocab, float* outSum)
+    {
+        if (!logits || vocab <= 0 || !outSum) return;
+        float s = 0.0f; for (int i = 0; i < vocab; ++i) s += std::exp(logits[i]); *outSum = s;
+    }
+
+    // ============================================================================
+    // MESH BRAIN STUBS
+    // ============================================================================
+    int asm_mesh_init(int maxNodes) { (void)maxNodes; return 0; }
+    int asm_mesh_gossip_disseminate(const void* data, size_t len) { (void)data; (void)len; return 0; }
+    uint64_t asm_mesh_shard_hash(const void* data, size_t len) { (void)data; (void)len; return 0; }
+    int asm_mesh_shard_bitfield(const void* data, size_t len, uint8_t* out) { (void)data; (void)len; (void)out; return 0; }
+    int asm_mesh_quorum_vote(int shardId, int vote) { (void)shardId; (void)vote; return 0; }
+    int asm_mesh_topology_update(void) { return 0; }
+    int asm_mesh_topology_active_count(void) { return 0; }
+    int asm_mesh_get_stats(void* out, size_t len) { (void)out; (void)len; return 0; }
+    void asm_mesh_shutdown(void) {
+        // Clean up mesh topology state and release any allocated node resources
+        // In a full implementation, this would clear the node registry and free buffers
+    }
+
+    // ============================================================================
+    // SPECIATOR ENGINE STUBS
+    // ============================================================================
+    int asm_speciator_init(int popSize) { (void)popSize; return 0; }
+    int asm_speciator_create_genome(int parentA, int parentB) { (void)parentA; (void)parentB; return 0; }
+    float asm_speciator_evaluate(int genomeId) { (void)genomeId; return 0.0f; }
+    int asm_speciator_crossover(int a, int b) { (void)a; (void)b; return 0; }
+    int asm_speciator_mutate(int genomeId, float rate) { (void)genomeId; (void)rate; return 0; }
+    int asm_speciator_select(int tournamentSize) { (void)tournamentSize; return 0; }
+    int asm_speciator_speciate(int genomeId) { (void)genomeId; return 0; }
+    int asm_speciator_gen_variant(int genomeId, int generation) { (void)genomeId; (void)generation; return 0; }
+    int asm_speciator_compete(int genomeA, int genomeB) { (void)genomeA; (void)genomeB; return 0; }
+    int asm_speciator_migrate(int genomeId, int targetPop) { (void)genomeId; (void)targetPop; return 0; }
+    int asm_speciator_get_stats(void* out, size_t len) { (void)out; (void)len; return 0; }
+    void asm_speciator_shutdown(void) {
+        // Release speciator population memory and reset evolutionary state
+        // In a full implementation, this would free genome buffers and clear species clusters
+    }
+
+    // ============================================================================
+    // NEURAL BRIDGE STUBS
+    // ============================================================================
+    int asm_neural_init(int channels) { (void)channels; return 0; }
+    int asm_neural_acquire_eeg(void* buffer, size_t samples) { (void)buffer; (void)samples; return 0; }
+    int asm_neural_fft_decompose(const void* in, void* out, size_t n) { (void)in; (void)out; (void)n; return 0; }
+    int asm_neural_extract_csp(const void* in, void* out, size_t n) { (void)in; (void)out; (void)n; return 0; }
+    int asm_neural_classify_intent(const void* features, size_t n, int* outClass) { (void)features; (void)n; (void)outClass; return 0; }
+    int asm_neural_detect_event(const void* stream, size_t n, int* outEvent) { (void)stream; (void)n; (void)outEvent; return 0; }
+    int asm_neural_encode_command(int intentClass, void* outCmd, size_t len) { (void)intentClass; (void)outCmd; (void)len; return 0; }
+    int asm_neural_gen_phosphene(int region, int intensity) { (void)region; (void)intensity; return 0; }
+    int asm_neural_haptic_pulse(int region, int intensity, int durationMs) { (void)region; (void)intensity; (void)durationMs; return 0; }
+    int asm_neural_calibrate(void) { return 0; }
+    int asm_neural_adapt(const void* feedback, size_t n) { (void)feedback; (void)n; return 0; }
+    int asm_neural_get_stats(void* out, size_t len) { (void)out; (void)len; return 0; }
+    void asm_neural_shutdown(void) {
+        // Release neural bridge resources: EEG buffers, FFT plans, and haptic state
+        // In a full implementation, this would free acquisition buffers and close hardware handles
+    }
+
+    // ============================================================================
+    // HARDWARE SYNTHESIZER STUBS
+    // ============================================================================
+    int asm_hwsynth_get_stats(void* out, size_t len) { (void)out; (void)len; return 0; }
+    void asm_hwsynth_shutdown(void) {
+        // Release hardware synthesizer resources and reset DSP state
+        // In a full implementation, this would close audio devices and free waveform buffers
+    }
+
+    // ============================================================================
+    // SIGNATURE UPDATE STUBS
+    // ============================================================================
+    int asm_spengine_cpu_optimize(const void* inSig, void* outSig, size_t len) { (void)inSig; (void)outSig; (void)len; return 0; }
+
 }

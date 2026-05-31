@@ -26,8 +26,6 @@ public:
         m_session.messages.push_back(userMsg);
         m_session.updatedAt = userMsg.timestamp;
         
-        std::cout << "[ChatPanel] User: " << text.substr(0, 80) << std::endl;
-        
         // Notify listeners
         if (m_onMessage) {
             m_onMessage(userMsg);
@@ -38,7 +36,6 @@ public:
         std::lock_guard<std::mutex> lock(m_mutex);
         m_session.messages.clear();
         m_session.updatedAt = currentTimestamp();
-        std::cout << "[ChatPanel] History cleared" << std::endl;
     }
     
     std::vector<Message> getHistory() const override {

@@ -3,7 +3,7 @@
 // ============================================================================
 // Enumerates EVERY discoverable GGUF model from local FS, Ollama blobs,
 // HuggingFace cache, and user cache. Brute-force probes each model across
-// all inference backends (CPU, Ollama API, Native pipeline) to produce a
+// all inference backends (CPU: %s | Native: %s | Native pipeline) to produce a
 // full compatibility matrix for CLI, GUI, and HTML IDE modes.
 //
 // Includes hotpatch integration: discovered models can be live-patched into
@@ -20,7 +20,7 @@
 #include "native_inference_pipeline.hpp"
 #include "../server/gguf_server_hotpatch.hpp"
 #include "../agent/model_invoker.hpp"
-#include "../agentic/AgentOllamaClient.h"
+#include "../agentic/NativeInferenceClient.h"
 #include "../gguf_loader.h"
 #include "../cpu_inference_engine.h"
 #include "perf_telemetry.hpp"
@@ -547,13 +547,13 @@ void ModelBruteForceEngine::ScanOllamaBlobs(std::vector<ModelProbeResult>& out,
         "C:\\OllamaModels\\blobs",
     };
 
-    // Also check OLLAMA_MODELS / RAWRXD_OLLAMA_PATH env vars
+    // Also check OLLAMA_MODELS / RAWRXD_NATIVE_PATH env vars
     char ollamaModels[MAX_PATH]{};
     if (GetEnvironmentVariableA("OLLAMA_MODELS", ollamaModels, MAX_PATH) > 0) {
         blobDirs.push_back(std::string(ollamaModels) + "\\blobs");
     }
     char rawrxdOllama[MAX_PATH]{};
-    if (GetEnvironmentVariableA("RAWRXD_OLLAMA_PATH", rawrxdOllama, MAX_PATH) > 0) {
+    if (GetEnvironmentVariableA("RAWRXD_NATIVE_PATH", rawrxdOllama, MAX_PATH) > 0) {
         blobDirs.push_back(std::string(rawrxdOllama) + "\\blobs");
     }
 
@@ -599,12 +599,12 @@ void ModelBruteForceEngine::ScanOllamaBlobs(std::vector<ModelProbeResult>& out,
 void ModelBruteForceEngine::ProbeWithOllama(ModelProbeResult& result,
                                              const BruteForceScanConfig& config) {
     try {
-        RawrXD::Agent::OllamaConfig ollamaConf;
+        RawrXD::Agent::NativeInferenceConfig ollamaConf;
         ollamaConf.timeout_ms = config.probe_timeout_ms;
         ollamaConf.max_tokens = config.probe_max_tokens;
         ollamaConf.temperature = config.probe_temperature;
 
-        RawrXD::Agent::AgentOllamaClient client(ollamaConf);
+        RawrXD::Agent::NativeInferenceClient client(ollamaConf);
         if (!client.TestConnection()) return;
 
         // Check if model name matches any Ollama-served model
@@ -639,7 +639,7 @@ void ModelBruteForceEngine::ProbeWithOllama(ModelProbeResult& result,
             result.probe_output = ir.response.substr(0, 200);
         }
     } catch (...) {
-        // No exceptions in release — this is a safety net
+        fprintf(stderr, "[ModelBruteforceEngine] Exception caught in safety net\n");
     }
 }
 
@@ -848,7 +848,7 @@ std::vector<ModelProbeResult> ModelBruteForceEngine::DiscoverAllModels(
         "C:\\models",
     };
     char rawrxdOllamaPath[MAX_PATH]{};
-    if (GetEnvironmentVariableA("RAWRXD_OLLAMA_PATH", rawrxdOllamaPath, MAX_PATH) > 0)
+    if (GetEnvironmentVariableA("RAWRXD_NATIVE_PATH", rawrxdOllamaPath, MAX_PATH) > 0)
         stdDirs.insert(stdDirs.begin(), rawrxdOllamaPath);
     char ollamaModelsEnv[MAX_PATH]{};
     if (GetEnvironmentVariableA("OLLAMA_MODELS", ollamaModelsEnv, MAX_PATH) > 0)
@@ -1106,7 +1106,7 @@ std::string ModelBruteForceEngine::FormatJSON(const std::vector<ModelProbeResult
             "\"context_length\":%u,\"embedding_dim\":%u,\"vocab_size\":%u,"
             "\"layer_count\":%u,\"head_count\":%u,\"head_count_kv\":%u,"
             "\"estimated_ram_gb\":%.2f,"
-            "\"cpu_loadable\":%s,\"ollama_available\":%s,\"native_loadable\":%s,"
+            "\"CPU: %s | Native: %s | Native_loadable\":%s,"
             "\"token_generated\":%s,\"tokens_per_sec\":%.1f,\"tokens_produced\":%u,"
             "\"cli_compatible\":%s,\"gui_compatible\":%s,\"html_compatible\":%s,"
             "\"scan_time_ms\":%.2f,\"probe_time_ms\":%.2f,"

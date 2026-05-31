@@ -1327,7 +1327,10 @@ class Readable extends EventEmitter {
         this.readable = true;
         this._readableState = { flowing: null, ended: false };
     }
-    read(size) { return null; }
+    read(size) { 
+        // Return empty buffer instead of null for better compatibility
+        return Buffer.from(''); 
+    }
     pipe(dest) { return dest; }
     unpipe(dest) { return this; }
     resume() { this._readableState.flowing = true; return this; }
@@ -1699,7 +1702,10 @@ const electron = {
         webContents = { send() {}, on() {}, executeJavaScript() { return Promise.resolve(); } };
         on() { return this; }
         static getAllWindows() { return []; }
-        static getFocusedWindow() { return null; }
+        static getFocusedWindow() { 
+            // Return a minimal window stub instead of null
+            return new BrowserWindow({}); 
+        }
     },
 
     // Dialog module
@@ -1795,7 +1801,10 @@ const electron = {
             return m; 
         }
         static setApplicationMenu(menu) {}
-        static getApplicationMenu() { return null; }
+        static getApplicationMenu() { 
+            // Return a minimal menu stub instead of null
+            return new Menu(); 
+        }
     },
 
     MenuItem: class MenuItem {
@@ -1824,7 +1833,7 @@ const electron = {
         show() { console.log('[Notification]', this.title); }
         close() {}
         on() { return this; }
-        static isSupported() { return false; }
+        static isSupported() { return true; }
     },
 
     // Screen

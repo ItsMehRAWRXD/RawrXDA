@@ -9,6 +9,43 @@
 #include <sstream>
 #include <iomanip>
 #include <commdlg.h>
+#include <filesystem>
+
+namespace {
+
+std::string getSemanticSnapshotPath(const Win32IDE* ide) {
+    namespace fs = std::filesystem;
+    if (!ide) return std::string("semantic_index.rxidx");
+
+    const std::string& projectRoot = ide->getProjectRoot();
+    const std::string& currentDirectory = ide->getCurrentDirectory();
+    std::string root = !projectRoot.empty() ? projectRoot : currentDirectory;
+    if (root.empty()) return std::string("semantic_index.rxidx");
+
+    try {
+        fs::path p(root);
+        p /= ".rawrxd";
+        p /= "semantic_index.rxidx";
+        return p.string();
+    } catch (...) {
+        return std::string("semantic_index.rxidx");
+    }
+}
+
+void ensureSemanticSnapshotDir(const std::string& snapshotPath) {
+    namespace fs = std::filesystem;
+    try {
+        fs::path p(snapshotPath);
+        fs::path parent = p.parent_path();
+        if (!parent.empty()) {
+            fs::create_directories(parent);
+        }
+    } catch (...) {
+        // Best effort only.
+    }
+}
+
+} // namespace
 
 // ============================================================================
 // Initialization
@@ -18,6 +55,16 @@ void Win32IDE::initSemanticPanel() {
     if (m_semanticPanelInitialized) return;
 
     appendToOutput("[Semantic] Phase 16 — Semantic Code Intelligence initialized.\n");
+    {
+        auto& sci = SemanticCodeIntelligence::instance();
+        const std::string snapshotPath = getSemanticSnapshotPath(this);
+        auto loadResult = sci.loadIndex(snapshotPath.c_str());
+        if (loadResult.success) {
+            appendToOutput("[Semantic] Loaded persisted index: " + snapshotPath + "\n");
+        } else {
+            appendToOutput("[Semantic] No persisted index loaded (" + std::string(loadResult.detail) + ").\n");
+        }
+    }
     m_semanticPanelInitialized = true;
 }
 
@@ -273,6 +320,14 @@ void Win32IDE::cmdSemIndexFile() {
         auto& sci = SemanticCodeIntelligence::instance();
         auto result = sci.indexFile(filePath);
         appendToOutput("[Semantic] " + std::string(result.detail) + ": " + filePath + "\n");
+        if (result.success) {
+            const std::string snapshotPath = getSemanticSnapshotPath(this);
+            ensureSemanticSnapshotDir(snapshotPath);
+            auto saveResult = sci.saveIndex(snapshotPath.c_str());
+            if (saveResult.success) {
+                appendToOutput("[Semantic] Persisted snapshot updated: " + snapshotPath + "\n");
+            }
+        }
     }
 }
 
@@ -280,11 +335,21 @@ void Win32IDE::cmdSemRebuildIndex() {
     auto& sci = SemanticCodeIntelligence::instance();
     auto result = sci.rebuildIndex();
     appendToOutput("[Semantic] " + std::string(result.detail) + "\n");
+    if (result.success) {
+        const std::string snapshotPath = getSemanticSnapshotPath(this);
+        ensureSemanticSnapshotDir(snapshotPath);
+        auto saveResult = sci.saveIndex(snapshotPath.c_str());
+        if (saveResult.success) {
+            appendToOutput("[Semantic] Persisted snapshot rebuilt: " + snapshotPath + "\n");
+        }
+    }
 }
 
 void Win32IDE::cmdSemSaveIndex() {
     OPENFILENAMEA ofn;
+    const std::string defaultPath = getSemanticSnapshotPath(this);
     char filePath[MAX_PATH] = "semantic_index.rxidx";
+    strncpy_s(filePath, defaultPath.c_str(), _TRUNCATE);
     ZeroMemory(&ofn, sizeof(ofn));
     ofn.lStructSize = sizeof(ofn);
     ofn.hwndOwner   = m_hwndMain;
@@ -303,7 +368,9 @@ void Win32IDE::cmdSemSaveIndex() {
 
 void Win32IDE::cmdSemLoadIndex() {
     OPENFILENAMEA ofn;
+    const std::string defaultPath = getSemanticSnapshotPath(this);
     char filePath[MAX_PATH] = "";
+    strncpy_s(filePath, defaultPath.c_str(), _TRUNCATE);
     ZeroMemory(&ofn, sizeof(ofn));
     ofn.lStructSize = sizeof(ofn);
     ofn.hwndOwner   = m_hwndMain;
@@ -316,6 +383,16 @@ void Win32IDE::cmdSemLoadIndex() {
         auto& sci = SemanticCodeIntelligence::instance();
         auto result = sci.loadIndex(filePath);
         appendToOutput("[Semantic] " + std::string(result.detail) + "\n");
+        if (result.success) {
+            const std::string snapshotPath = getSemanticSnapshotPath(this);
+            if (_stricmp(snapshotPath.c_str(), filePath) != 0) {
+                ensureSemanticSnapshotDir(snapshotPath);
+                auto saveResult = sci.saveIndex(snapshotPath.c_str());
+                if (saveResult.success) {
+                    appendToOutput("[Semantic] Canonical snapshot updated: " + snapshotPath + "\n");
+                }
+            }
+        }
     }
 }
 

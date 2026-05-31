@@ -1,0 +1,255 @@
+# =============================================================================
+# cmake/ValidateDependencies.cmake.in - Validate No Electron Dependencies
+# =============================================================================
+# This script is configured by CMake and invoked as a -P script after build
+# to validate that no forbidden Electron/Node.js/Qt DLLs are linked.
+#
+# Usage:
+#   cmake -DDEPS_FILE=<path> -DTARGET=<name> -P ValidateDependencies.cmake
+# =============================================================================
+
+# List of FORBIDDEN dependencies (Electron, Node.js, Qt, etc.)
+set(FORBIDDEN_DLLS
+    node.dll
+    node.exe
+    electron.dll
+    electron.exe
+    nodejs.dll
+    v8.dll
+    v8_libbase.dll
+    v8_libplatform.dll
+    libnode.dll
+    libuv.dll
+    icui18n.dll
+    icuuc.dll
+    icudt.dll
+    zlib1.dll
+    openssl.dll
+    libcrypto.dll
+    libssl.dll
+    nghttp2.dll
+    cares.dll
+    libpthread.dll
+    libgcc_s_seh.dll
+    libstdc++6.dll
+    libwinpthread.dll
+    Qt5Core.dll
+    Qt5Gui.dll
+    Qt5Widgets.dll
+    Qt6Core.dll
+    Qt6Gui.dll
+    Qt6Widgets.dll
+    Qt5Network.dll
+    Qt6Network.dll
+    libqt5core.dll
+    libqt6core.dll
+    Qt5Core.dll
+    Qt5Gui.dll
+    Qt5Widgets.dll
+    Qt6Core.dll
+    Qt6Gui.dll
+    Qt6Widgets.dll
+    Qt5Network.dll
+    Qt6Network.dll
+    libqt5core.dll
+    libqt6core.dll
+    Qt5Core.dll
+    Qt5Gui.dll
+    Qt5Widgets.dll
+    Qt6Core.dll
+    Qt6Gui.dll
+    Qt6Widgets.dll
+    Qt5Network.dll
+    Qt6Network.dll
+    libqt5core.dll
+    libqt6core.dll
+)
+
+# List of ALLOWED Windows system DLLs
+set(ALLOWED_DLLS
+    kernel32.dll
+    ntdll.dll
+    kernelbase.dll
+    user32.dll
+    gdi32.dll
+    gdi32full.dll
+    gdiplus.dll
+    msimg32.dll
+    opengl32.dll
+    glu32.dll
+    d3d11.dll
+    d3d12.dll
+    dxgi.dll
+    d2d1.dll
+    dwrite.dll
+    dcomp.dll
+    d3dcompiler47.dll
+    advapi32.dll
+    shell32.dll
+    shlwapi.dll
+    ole32.dll
+    oleaut32.dll
+    uuid.dll
+    comctl32.dll
+    comdlg32.dll
+    winspool.dll
+    winmm.dll
+    imm32.dll
+    version.dll
+    imagehlp.dll
+    psapi.dll
+    msvcrt.dll
+    msvcp140.dll
+    vcruntime140.dll
+    vcruntime140_1.dll
+    concrt140.dll
+    bcrypt.dll
+    crypt32.dll
+    cryptbase.dll
+    wintrust.dll
+    rsaenh.dll
+    ncrypt.dll
+    cryptsp.dll
+    secur32.dll
+    sspicli.dll
+    netutils.dll
+    srvcli.dll
+    wkscli.dll
+    netapi32.dll
+    setupapi.dll
+    cfgmgr32.dll
+    devobj.dll
+    winusb.dll
+    hid.dll
+    mscoree.dll
+    mscoreei.dll
+    clr.dll
+    mscorwks.dll
+    mscorlib.dll
+    ucrtbase.dll
+    ucrtbased.dll
+    vcruntime140d.dll
+    msvcp140d.dll
+    api-ms-win-core-libraryloader-l1-2-0.dll
+    api-ms-win-core-processthreads-l1-1-0.dll
+    api-ms-win-core-heap-l1-1-0.dll
+    api-ms-win-core-localization-l1-2-0.dll
+    api-ms-win-core-synch-l1-1-0.dll
+    api-ms-win-core-string-l1-1-0.dll
+    api-ms-win-core-file-l1-1-0.dll
+    api-ms-win-core-datetime-l1-1-0.dll
+    api-ms-win-core-sysinfo-l1-1-0.dll
+    api-ms-win-core-console-l1-1-0.dll
+    api-ms-win-core-debug-l1-1-0.dll
+    api-ms-win-core-errorhandling-l1-1-0.dll
+    api-ms-win-core-handle-l1-1-0.dll
+    api-ms-win-core-interlocked-l1-1-0.dll
+    api-ms-win-core-memory-l1-1-0.dll
+    api-ms-win-core-namedpipe-l1-1-0.dll
+    api-ms-win-core-processenvironment-l1-1-0.dll
+    api-ms-win-core-rtlsupport-l1-1-0.dll
+    api-ms-win-core-profile-l1-1-0.dll
+    api-ms-win-core-util-l1-1-0.dll
+    api-ms-win-crt-runtime-l1-1-0.dll
+    api-ms-win-crt-heap-l1-1-0.dll
+    api-ms-win-crt-string-l1-1-0.dll
+    api-ms-win-crt-stdio-l1-1-0.dll
+    api-ms-win-crt-convert-l1-1-0.dll
+    api-ms-win-crt-math-l1-1-0.dll
+    api-ms-win-crt-time-l1-1-0.dll
+    api-ms-win-crt-environment-l1-1-0.dll
+    api-ms-win-crt-filesystem-l1-1-0.dll
+    api-ms-win-crt-locale-l1-1-0.dll
+    api-ms-win-crt-utility-l1-1-0.dll
+    api-ms-win-crt-conio-l1-1-0.dll
+    api-ms-win-crt-process-l1-1-0.dll
+    api-ms-win-crt-private-l1-1-0.dll
+    api-ms-win-crt-multibyte-l1-1-0.dll
+    api-ms-win-crt-time-l1-1-0.dll
+)
+
+function(validate_dll DLL_PATH)
+    get_filename_component(DLL_NAME "${DLL_PATH}" NAME)
+    string(TOLOWER "${DLL_NAME}" DLL_NAME_LOWER)
+    
+    # Check if forbidden
+    foreach(FORBIDDEN ${FORBIDDEN_DLLS})
+        string(TOLOWER "${FORBIDDEN}" FORBIDDEN_LOWER)
+        if(DLL_NAME_LOWER STREQUAL FORBIDDEN_LOWER)
+            message(FATAL_ERROR 
+                "FORBIDDEN DEPENDENCY DETECTED: ${DLL_NAME}\n"
+                "This indicates Electron/Node.js/Qt contamination!\n"
+                "RawrXD requires pure native C++ - no Electron allowed.\n"
+                "Please remove any references to ${FORBIDDEN} from your build."
+            )
+        endif()
+    endforeach()
+    
+    # Check if unknown
+    set(IS_ALLOWED FALSE)
+    foreach(ALLOWED ${ALLOWED_DLLS})
+        string(TOLOWER "${ALLOWED}" ALLOWED_LOWER)
+        if(DLL_NAME_LOWER STREQUAL ALLOWED_LOWER)
+            set(IS_ALLOWED TRUE)
+            break()
+        endif()
+    endforeach()
+    
+    if(NOT IS_ALLOWED)
+        message(WARNING 
+            "UNKNOWN DEPENDENCY: ${DLL_NAME}\n"
+            "This DLL is not in the allowed list.\n"
+            "If this is a legitimate dependency, add it to ALLOWED_DLLS in cmake/ValidateDependencies.cmake.in"
+        )
+    endif()
+endfunction()
+
+function(validate_binary_dependencies TARGET_NAME)
+    get_target_property(BINARY_FILE "${TARGET_NAME}" BINARY_OUTPUT_LOCATION)
+    if(NOT BINARY_FILE)
+        get_target_property(BINARY_FILE "${TARGET_NAME}" RUNTIME_OUTPUT_DIRECTORY)
+        set(BINARY_FILE "${BINARY_FILE}/${CMAKE_BUILD_TYPE}/${TARGET_NAME}.exe")
+    endif()
+    
+    if(NOT EXISTS "${BINARY_FILE}")
+        message(STATUS "Binary not found: ${BINARY_FILE}")
+        return()
+    endif()
+    
+    message(STATUS "Validating dependencies for: ${TARGET_NAME}")
+    
+    # Run dumpbin to get imports
+    execute_process(
+        COMMAND "@DUMPBIN_EXE@" /DEPENDENTS "${BINARY_FILE}"
+        OUTPUT_VARIABLE DUMPBIN_OUTPUT
+        ERROR_VARIABLE DUMPBIN_ERROR
+        RESULT_VARIABLE DUMPBIN_RESULT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    
+    if(NOT DUMPBIN_RESULT EQUAL 0)
+        message(WARNING "dumpbin failed for ${TARGET_NAME}: ${DUMPBIN_ERROR}")
+        return()
+    endif()
+    
+    # Parse imports
+    string(REGEX MATCHALL "^[ \t]+[^ \t\r\n]+\\.dll" DLL_MATCHES "${DUMPBIN_OUTPUT}")
+    
+    foreach(DLL_MATCH ${DLL_MATCHES})
+        string(STRIP "${DLL_MATCH}" DLL_NAME)
+        validate_dll("${DLL_NAME}")
+    endforeach()
+    
+    message(STATUS "  Dependencies validated for ${TARGET_NAME}")
+endfunction()
+
+# Main validation
+if(DEFINED DEPS_FILE AND EXISTS "${DEPS_FILE}")
+    file(STRINGS "${DEPS_FILE}" DEPENDENCY_LINES)
+    foreach(LINE ${DEPENDENCY_LINES})
+        string(STRIP "${LINE}" LINE)
+        if(LINE MATCHES "\\.dll$")
+            validate_dll("${LINE}")
+        endif()
+    endforeach()
+endif()

@@ -1436,7 +1436,6 @@ extern "C" {
     void InitAICompletion() {
         if (!g_completion_engine) {
             g_completion_engine = new AICompletionEngine();
-            std::cout << "[AI COMPLETION] Engine initialized with multi-language fallback registry\n";
         }
     }
     
@@ -1444,7 +1443,6 @@ extern "C" {
         if (g_completion_engine) {
             delete g_completion_engine;
             g_completion_engine = nullptr;
-            std::cout << "[AI COMPLETION] Engine shut down\n";
         }
     }
 

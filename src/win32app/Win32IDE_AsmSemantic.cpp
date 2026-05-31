@@ -27,6 +27,9 @@
 #include <algorithm>
 #include <cctype>
 #include <chrono>
+#include <climits>
+#include <cerrno>
+#include <cstdlib>
 #include <filesystem>
 #include <regex>
 #include <unordered_set>
@@ -558,6 +561,34 @@ static std::string asmTrim(const std::string& s) {
     return s.substr(start, end - start + 1);
 }
 
+static bool asmTryParseImmediateInt(const std::string& token, int& outValue) {
+    std::string s = asmTrim(token);
+    if (s.empty() || s.size() > 32) {
+        return false;
+    }
+
+    int base = 10;
+    if (s.size() > 2 && (s.substr(0, 2) == "0x" || s.substr(0, 2) == "0X")) {
+        base = 16;
+    } else if (!s.empty() && (s.back() == 'h' || s.back() == 'H')) {
+        s.pop_back();
+        if (s.empty()) {
+            return false;
+        }
+        base = 16;
+    }
+
+    errno = 0;
+    char* end = nullptr;
+    const long parsed = std::strtol(s.c_str(), &end, base);
+    if (end == s.c_str() || *end != '\0' || errno == ERANGE || parsed < INT_MIN || parsed > INT_MAX) {
+        return false;
+    }
+
+    outValue = static_cast<int>(parsed);
+    return true;
+}
+
 static std::string asmTrimComment(const std::string& line) {
     // Strip ';' comments (MASM/NASM style)
     // Be careful not to strip semicolons inside strings
@@ -1036,17 +1067,53 @@ void Win32IDE::parseAsmFile(const std::string& filePath) {
 }
 
 void Win32IDE::parseAsmDirectory(const std::string& dirPath, bool recursive) {
+    static constexpr size_t kMaxAsmFilesScanned = 50000;
+    static constexpr size_t kMaxAsmPathBytes = 2048;
+    static constexpr size_t kMaxAsmRecursiveDepth = 16;
+
     try {
+        size_t scannedFiles = 0;
         if (recursive) {
-            for (const auto& entry : std::filesystem::recursive_directory_iterator(dirPath)) {
-                if (entry.is_regular_file() && asmIsAsmFile(entry.path().string())) {
-                    parseAsmFile(entry.path().string());
+            for (auto it = std::filesystem::recursive_directory_iterator(
+                     dirPath,
+                     std::filesystem::directory_options::skip_permission_denied);
+                 it != std::filesystem::recursive_directory_iterator(); ++it) {
+                if (it.depth() > static_cast<int>(kMaxAsmRecursiveDepth)) {
+                    it.disable_recursion_pending();
+                    continue;
+                }
+                if (!it->is_regular_file()) {
+                    continue;
+                }
+
+                const std::string filePath = it->path().string();
+                if (filePath.size() > kMaxAsmPathBytes) {
+                    continue;
+                }
+
+                if (asmIsAsmFile(filePath)) {
+                    parseAsmFile(filePath);
+                    if (++scannedFiles >= kMaxAsmFilesScanned) {
+                        break;
+                    }
                 }
             }
         } else {
             for (const auto& entry : std::filesystem::directory_iterator(dirPath)) {
-                if (entry.is_regular_file() && asmIsAsmFile(entry.path().string())) {
-                    parseAsmFile(entry.path().string());
+                if (!entry.is_regular_file()) {
+                    continue;
+                }
+
+                const std::string filePath = entry.path().string();
+                if (filePath.size() > kMaxAsmPathBytes) {
+                    continue;
+                }
+
+                if (asmIsAsmFile(filePath)) {
+                    parseAsmFile(filePath);
+                    if (++scannedFiles >= kMaxAsmFilesScanned) {
+                        break;
+                    }
                 }
             }
         }
@@ -1631,16 +1698,9 @@ Win32IDE::AsmBlockAnalysis Win32IDE::analyzeAsmBlock(
             size_t commaPos = strippedLower.find(',');
             if (commaPos != std::string::npos) {
                 std::string sizeStr = asmTrim(stripped.substr(commaPos + 1));
-                try {
-                    if (sizeStr.size() > 2 && (sizeStr.substr(0, 2) == "0x" || sizeStr.substr(0, 2) == "0X")) {
-                        stackAlloc = (int)std::stoul(sizeStr, nullptr, 16);
-                    } else if (sizeStr.back() == 'h' || sizeStr.back() == 'H') {
-                        stackAlloc = (int)std::stoul(sizeStr.substr(0, sizeStr.size() - 1), nullptr, 16);
-                    } else {
-                        stackAlloc = std::stoi(sizeStr);
-                    }
-                } catch (...) {
-                    // Could not parse stack size — leave as 0
+                int parsedStackAlloc = 0;
+                if (asmTryParseImmediateInt(sizeStr, parsedStackAlloc) && parsedStackAlloc >= 0) {
+                    stackAlloc = parsedStackAlloc;
                 }
             }
             regsModified.insert("rsp");
@@ -1802,16 +1862,10 @@ std::string Win32IDE::detectCallingConvention(
             size_t comma = stripped.find(',');
             if (comma != std::string::npos) {
                 std::string val = asmTrim(stripped.substr(comma + 1));
-                try {
-                    int v = 0;
-                    if (val.size() > 2 && val.substr(0, 2) == "0x")
-                        v = (int)std::stoul(val, nullptr, 16);
-                    else if (val.back() == 'h')
-                        v = (int)std::stoul(val.substr(0, val.size() - 1), nullptr, 16);
-                    else
-                        v = std::stoi(val);
+                int v = 0;
+                if (asmTryParseImmediateInt(val, v) && v >= 0) {
                     if (v >= 0x20) hasShadow = true;
-                } catch (...) {}
+                }
             }
         }
 
@@ -1822,7 +1876,10 @@ std::string Win32IDE::detectCallingConvention(
             std::string retArg = asmSecondWord(stripped);
             if (!retArg.empty()) {
                 hasRetN = true;
-                try { retCleanup = std::stoi(retArg); } catch (...) {}
+                int parsedRet = 0;
+                if (asmTryParseImmediateInt(retArg, parsedRet) && parsedRet >= 0) {
+                    retCleanup = parsedRet;
+                }
             }
         }
     }

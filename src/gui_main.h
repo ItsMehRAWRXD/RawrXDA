@@ -42,6 +42,12 @@ private:
     void onBuildInternal();
     void onRunInternal();
     void onDebugInternal();
+    
+    // AI Integration handlers
+    void onAIGenerateInternal();
+    void onAIDebugInternal();
+    void onAIOptimizeInternal();
+    void onAIAnalyzeInternal();
 
     HWND m_mainWindow{NULL};
     HWND m_editorWindow{NULL};

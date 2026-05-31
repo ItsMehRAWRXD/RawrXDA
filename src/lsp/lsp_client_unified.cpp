@@ -39,6 +39,7 @@
 #include <cstring>
 
 #include <nlohmann/json.hpp>
+#include "../core/build_stabilizer.hpp"
 using json = nlohmann::json;
 
 extern "C" int GetLocalFallbackCompletions(
@@ -509,7 +510,11 @@ public:
                         actions.push_back(action);
                     }
                 }
-            } catch (...) {}
+            } catch (const std::exception& e) {
+                OutputDebugStringA((std::string("[LSPClient] parse_actions exception: ") + e.what() + "\n").c_str());
+            } catch (...) {
+                OutputDebugStringA("[LSPClient] parse_actions unknown exception\n");
+            }
         }
         
         return actions;
@@ -705,6 +710,7 @@ private:
     std::condition_variable message_cv_;
     std::map<int, std::promise<std::string>> pending_requests_;
     std::mutex request_mutex_;
+    rawrxd::stability::ThreadSafeJSONParser json_parser_;
     
     // State
     std::atomic<bool> running_;
@@ -944,14 +950,12 @@ private:
     }
     
     void handle_server_message(const std::string& msg) {
-        // Parse JSON-RPC message
-        json message;
-        try {
-            message = json::parse(msg);
-        } catch (const json::exception& e) {
-            // Invalid JSON - log and ignore
+        // Parse JSON-RPC message through shared thread-safe parser.
+        std::optional<json> parsed_message = json_parser_.parse(msg);
+        if (!parsed_message.has_value()) {
             return;
         }
+        json message = std::move(parsed_message.value());
         
         // Check if it's a response (has "id") or notification (no "id")
         if (message.contains("id") && !message["id"].is_null()) {

@@ -104,6 +104,9 @@ public:
     // Reset state
     void reset();
 
+    // Force immediate switch (bypasses hysteresis)
+    void forceSwitch();
+
     // Accessors
     const QuantHysteresisState& state() const { return m_state; }
     QuantTier currentTier() const { return m_state.currentTier; }

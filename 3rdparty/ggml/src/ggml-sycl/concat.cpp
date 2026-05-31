@@ -12,8 +12,8 @@
 
 #include "concat.hpp"
 
-static inline size_t elem_size(ggml_type t) {
-    return ggml_type_size(t) / ggml_blck_size(t);
+static inline size_t elem_size(ggml_rxd_type t) {
+    return ggml_rxd_type_size(t) / ggml_rxd_blck_size(t);
 }
 
 template <typename T>
@@ -151,15 +151,15 @@ static void concat_T_sycl_non_cont(
 }
 
 template <typename T>
-void concat_impl_sycl(ggml_backend_sycl_context & ctx, ggml_tensor *dst) {
+void concat_impl_sycl(ggml_rxd_backend_sycl_context & ctx, ggml_rxd_tensor *dst) {
     scope_op_debug_print scope_dbg_print(__func__, dst, /*num_src=*/2);
-    const ggml_tensor *  src0   = dst->src[0];
-    const ggml_tensor *  src1   = dst->src[1];
+    const ggml_rxd_tensor *  src0   = dst->src[0];
+    const ggml_rxd_tensor *  src1   = dst->src[1];
     queue_ptr            stream = ctx.stream();
 
     const int32_t dim = ((int32_t *) dst->op_params)[0];
 
-    if (ggml_is_contiguous(src0) && ggml_is_contiguous(src1)) {
+    if (ggml_rxd_is_contiguous(src0) && ggml_rxd_is_contiguous(src1)) {
         const T * src0_d = (const T *) src0->data;
         const T * src1_d = (const T *) src1->data;
         T * dst_d = (T *) dst->data;
@@ -171,8 +171,8 @@ void concat_impl_sycl(ggml_backend_sycl_context & ctx, ggml_tensor *dst) {
                                 dst->ne[1], dst->ne[2], dim, stream);
             }
         } else {
-            const size_t size0 = ggml_nbytes(src0);
-            const size_t size1 = ggml_nbytes(src1);
+            const size_t size0 = ggml_rxd_nbytes(src0);
+            const size_t size1 = ggml_rxd_nbytes(src1);
 
             SYCL_CHECK(CHECK_TRY_ERROR(stream->memcpy(dst_d, src0_d, size0).wait()));
             SYCL_CHECK(CHECK_TRY_ERROR(stream->memcpy(dst_d + size0 / type_size, src1_d, size1).wait()));
@@ -186,17 +186,17 @@ void concat_impl_sycl(ggml_backend_sycl_context & ctx, ggml_tensor *dst) {
     }
 }
 
-void ggml_sycl_op_concat(ggml_backend_sycl_context & ctx, ggml_tensor *dst) {
+void ggml_rxd_sycl_op_concat(ggml_rxd_backend_sycl_context & ctx, ggml_rxd_tensor *dst) {
 
     switch (dst->type) {
-    case GGML_TYPE_F32:
+    case GGML_RXD_TYPE_F32:
         concat_impl_sycl<float>(ctx, dst);
         break;
-    case GGML_TYPE_I32:
+    case GGML_RXD_TYPE_I32:
         concat_impl_sycl<int32_t>(ctx, dst);
         break;
     default:
-    GGML_ASSERT(false && "ggml_sycl_op_concat: unsupported type");
+    GGML_RXD_ASSERT(false && "ggml_rxd_sycl_op_concat: unsupported type");
     break;
     }
 }

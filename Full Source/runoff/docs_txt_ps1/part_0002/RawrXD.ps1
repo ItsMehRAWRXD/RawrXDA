@@ -8363,15 +8363,15 @@ function Resolve-MarketplaceLanguageCode {
 function Normalize-MarketplaceEntry {
     param($Entry)
 
-    $name = $Entry.Name ?? $Entry.Id
+    $name = if ($Entry.Name) { $Entry.Name } else { $Entry.Id }
     $id = $Entry.Id
     if (-not $id -and $name) {
         $id = ($name.ToLower() -replace '[^a-z0-9]+', '-') -replace '^-+|-+$', ''
     }
 
-    $language = Resolve-MarketplaceLanguageCode -Input ($Entry.Language ?? $script:LANG_CUSTOM)
-    $downloads = [int64]($Entry.Downloads ?? 0)
-    $rating = [double]($Entry.Rating ?? 4.5)
+    $language = Resolve-MarketplaceLanguageCode -Input (if ($Entry.Language) { $Entry.Language } else { $script:LANG_CUSTOM })
+    $downloads = [int64](if ($Entry.Downloads) { $Entry.Downloads } else { 0 })
+    $rating = [double](if ($Entry.Rating) { $Entry.Rating } else { 4.5 })
     if ($rating -gt 5) { $rating = 5 }
     if ($rating -lt 0) { $rating = 0 }
 
@@ -8383,19 +8383,19 @@ function Normalize-MarketplaceEntry {
     return [PSCustomObject]@{
         Id           = $id
         Name         = $name
-        Description  = $Entry.Description ?? 'No description provided.'
-        Author       = $Entry.Author ?? 'RawrXD Community'
+        Description  = $Entryif (.Description) { .Description } else { 'No description provided.' }
+        Author       = $Entryif (.Author) { .Author } else { 'RawrXD Community' }
         Language     = $language
-        Capabilities = [int]($Entry.Capabilities ?? 0)
-        Version      = $Entry.Version ?? '1.0.0'
-        Category     = $Entry.Category ?? 'Marketplace'
+        Capabilities = [int](if ($Entry.Capabilities) { $Entry.Capabilities } else { 0 })
+        Version      = $Entryif (.Version) { .Version } else { '1.0.0' }
+        Category     = $Entryif (.Category) { .Category } else { 'Marketplace' }
         Downloads    = $downloads
         Rating       = [math]::Round($rating, 1)
         Tags         = $tags
-        MarketplaceId= $Entry.MarketplaceId ?? $id
-        Source       = $Entry.Source ?? 'Marketplace'
-        Installed    = [bool]($Entry.Installed ?? $false)
-        Enabled      = [bool]($Entry.Enabled ?? $false)
+        MarketplaceId= if ($Entry.MarketplaceId) { $Entry.MarketplaceId } else { $id }
+        Source       = $Entryif (.Source) { .Source } else { 'Marketplace' }
+        Installed    = [bool](if ($Entry.Installed) { $Entry.Installed } else { $false })
+        Enabled      = [bool](if ($Entry.Enabled) { $Entry.Enabled } else { $false })
         EntryPoint   = $Entry.EntryPoint
     }
 }
@@ -8572,7 +8572,7 @@ function Search-Marketplace {
             $entry.Source = $defaultSource
         }
 
-        $idKey = ($entry.Id ?? $entry.MarketplaceId ?? '')
+        $idKey = (if ($entry.Id) { $entry.Id } else { if ($entry.MarketplaceId) { $entry.MarketplaceId } else { '' } })
         if ($idKey) {
             $idKey = $idKey.ToString().ToLower()
             if ($seenIds.ContainsKey($idKey)) {
@@ -8607,11 +8607,11 @@ function Search-Marketplace {
     if ($IncludeRemote) {
         $catalog = Load-MarketplaceCatalog
         foreach ($entry in $catalog) {
-            & $evaluateEntry $entry ($entry.Source ?? 'Marketplace')
+            & $evaluateEntry $entry ($entryif (.Source) { .Source } else { 'Marketplace' })
         }
     }
 
-    return $results | Sort-Object @{ Expression = { $_.Downloads ?? 0 }; Descending = $true }, @{ Expression = { $_.Name }; Descending = $false }
+    return $results | Sort-Object @{ Expression = { ($_.Downloads, 0 | Select-Object -First 1) }; Descending = $true }, @{ Expression = { $_.Name }; Descending = $false }
 }
 
 function Show-Marketplace {

@@ -6,7 +6,7 @@
 #include <fstream>
 #include <filesystem>
 
-// SCAFFOLD_278: Integration.cpp and wWinMain tail
+// AI Integration Hub Implementation
 
 
 AIIntegrationHub::AIIntegrationHub() {
@@ -680,7 +680,7 @@ bool AIIntegrationHub::validateModelCompatibility(const std::string& modelPath) 
         return true;
     }
     
-    // Check Ollama-style model names (no file extension)
+    // Check native model names (no file extension)
     if (modelPath.find(':') != std::string::npos || modelPath.find('/') == std::string::npos) {
         m_logger->info("Ollama model reference detected: {}", modelPath);
         return true;

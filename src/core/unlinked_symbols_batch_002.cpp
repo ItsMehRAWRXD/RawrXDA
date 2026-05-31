@@ -71,7 +71,7 @@ private:
 extern "C" {
 
 // GGML compute functions
-void ggml_gemm_q4_0(const void* A, const void* B, void* C,
+void ggml_rxd_gemm_q4_0(const void* A, const void* B, void* C,
                     int M, int N, int K) {
     if (A == nullptr || B == nullptr || C == nullptr || M <= 0 || N <= 0 || K <= 0) {
         return;
@@ -94,13 +94,13 @@ void ggml_gemm_q4_0(const void* A, const void* B, void* C,
 
 void matmul_kernel_avx2(const float* A, const float* B, float* C,
                         int M, int N, int K) {
-    ggml_gemm_q4_0(A, B, C, M, N, K);
+    ggml_rxd_gemm_q4_0(A, B, C, M, N, K);
 }
 
 // Pyre compute kernels
 void asm_pyre_gemm_fp32(const float* A, const float* B, float* C,
                         int M, int N, int K) {
-    ggml_gemm_q4_0(A, B, C, M, N, K);
+    ggml_rxd_gemm_q4_0(A, B, C, M, N, K);
 }
 
 void asm_pyre_gemv_fp32(const float* A, const float* x, float* y,

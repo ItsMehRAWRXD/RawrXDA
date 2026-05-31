@@ -6,6 +6,7 @@
 
 #include "amd_gpu_accelerator.h"
 #include "unified_memory_executor.h"
+#include "gpu_warmup.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -201,7 +202,6 @@ AccelResult AMDGPUAccelerator::initialize(GPUBackend preferredBackend)
     if (!r.success)
     {
         m_activeBackend = GPUBackend::None;
-        std::cout << "[AMD-GPU] Warning: No GPU backend available, CPU-only mode.\n";
         // Not a fatal error — system works without GPU
     }
 
@@ -249,6 +249,24 @@ AccelResult AMDGPUAccelerator::initialize(GPUBackend preferredBackend)
               << "  AMD Features: 0x" << std::hex << m_amdFeatures << std::dec << "\n"
               << "  GPU Enabled: " << (m_gpuEnabled.load() ? "YES" : "NO") << "\n";
 
+    // Trigger GPU warmup (anti-lag) to prime compute pipelines
+    if (m_activeBackend != GPUBackend::None) {
+        std::cout << "[AMD-GPU] Triggering GPU warmup (anti-lag)...\n";
+        RawrXD::GPU::GPUPrimeConfig warmupConfig;
+        warmupConfig.maxDurationMs = 200;  // 200ms cap
+        warmupConfig.matmulDim = 256;    // Small matmul to prime tensor cores
+        warmupConfig.bufferSizeBytes = 4 * 1024 * 1024;  // 4MB buffer
+        auto warmupResult = RawrXD::GPU::GPUPrimeEngine::instance().warmupSync(
+            m_dx12Device, m_dx12Queue, warmupConfig);
+        if (warmupResult.success) {
+            std::cout << "[AMD-GPU] Warmup complete: " << warmupResult.durationMs << "ms"
+                      << " (matmul=" << warmupResult.matmulTimeUs << "us"
+                      << " memcpy=" << warmupResult.memcpyTimeUs << "us)\n";
+        } else {
+            std::cout << "[AMD-GPU] Warmup skipped (non-fatal)\n";
+        }
+    }
+
     return AccelResult::ok("AMD GPU accelerator initialized");
 }
 
@@ -295,8 +313,6 @@ void AMDGPUAccelerator::shutdown()
 
     m_activeBackend = GPUBackend::None;
     m_initialized.store(false);
-
-    std::cout << "[AMD-GPU] Shutdown complete.\n";
 }
 
 // ============================================================================
@@ -314,7 +330,6 @@ AccelResult AMDGPUAccelerator::enableGPU()
     if (!wasEnabled)
     {
         m_stats.toggleOnCount.fetch_add(1, std::memory_order_relaxed);
-        std::cout << "[AMD-GPU] GPU ENABLED — backend: " << getBackendName() << "\n";
 
         if (m_toggleCb)
         {

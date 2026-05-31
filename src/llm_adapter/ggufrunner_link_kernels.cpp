@@ -45,7 +45,7 @@ extern "C" void matmul_kernel_avx2(float* A, float* B, float* C, int N, int M, i
     }
 }
 
-extern "C" void ggml_gemm_q4_0(int M, int N, int K, const float* A, const uint8_t* Bq4, float scale, float* C) {
+extern "C" void ggml_rxd_gemm_q4_0(int M, int N, int K, const float* A, const uint8_t* Bq4, float scale, float* C) {
     if (!A || !Bq4 || !C || M <= 0 || N <= 0 || K <= 0) {
         return;
     }

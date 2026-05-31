@@ -249,7 +249,7 @@ bool Win32IDE::handleFailureIntelligenceCommand(int commandId) {
             return true;
         }
 
-        // For demo: mark as Transient
+        // Mark as Transient
         g_failureIntelligence->learnFromFailure(*recent[0], 
                                                Agentic::FailureCategory::Transient);
         appendToOutput("Pattern learned\n", "Output", OutputSeverity::Info);

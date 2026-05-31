@@ -18,12 +18,22 @@ bool EmbeddedTerminal::initialize(void* parent_hwnd, int width, int height) {
     sa.bInheritHandle = TRUE;
     
     if (!CreatePipe(&hInRead, &hInWrite, &sa, 0)) return false;
-    if (!CreatePipe(&hOutRead, &hOutWrite, &sa, 0)) return false;
+    if (!CreatePipe(&hOutRead, &hOutWrite, &sa, 0)) {
+        CloseHandle(hInRead);
+        CloseHandle(hInWrite);
+        return false;
+    }
     
-    // In a production environment, we would use CreatePseudoConsole here.
-    // Simplifying to standard pipes for Track B v14.7 stability.
+    // Prevent host-side handles from being inherited by child processes
+    SetHandleInformation(hInWrite, HANDLE_FLAG_INHERIT, 0);
+    SetHandleInformation(hOutRead, HANDLE_FLAG_INHERIT, 0);
+    
+    // Host writes to hInWrite → child reads from hInRead (stdin)
+    // Child writes to hOutWrite (stdout) → host reads from hOutRead
     hConPTY_in_ = hInWrite;
     hConPTY_out_ = hOutRead;
+    hChildStdIn_ = hInRead;
+    hChildStdOut_ = hOutWrite;
     
     return true;
 }
@@ -33,16 +43,27 @@ bool EmbeddedTerminal::executeCommand(const std::string& command,
                                      ExitCallback exit_cb) {
     if (running_) return false;
     
+    // Close previous process handle if still held
+    if (hProcess_ != INVALID_HANDLE_VALUE) {
+        CloseHandle(hProcess_);
+        hProcess_ = INVALID_HANDLE_VALUE;
+    }
+    
+    // Wait for previous output thread to finish
+    if (output_thread_.joinable()) {
+        output_thread_.join();
+    }
+    
     std::string full_cmd = "cmd.exe /c " + command;
-    STARTUPINFO si{};
+    STARTUPINFOA si{};
     si.cb = sizeof(si);
     si.dwFlags |= STARTF_USESTDHANDLES;
-    si.hStdInput = hConPTY_in_;
-    si.hStdOutput = hConPTY_out_;
-    si.hStdError = hConPTY_out_;
+    si.hStdInput = hChildStdIn_;
+    si.hStdOutput = hChildStdOut_;
+    si.hStdError = hChildStdOut_;
     
     PROCESS_INFORMATION pi{};
-    BOOL created = CreateProcess(
+    BOOL created = CreateProcessA(
         nullptr,
         const_cast<char*>(full_cmd.c_str()),
         nullptr, nullptr, TRUE,
@@ -54,6 +75,7 @@ bool EmbeddedTerminal::executeCommand(const std::string& command,
     
     if (!created) return false;
     
+    CloseHandle(pi.hThread);
     hProcess_ = pi.hProcess;
     running_ = true;
     
@@ -61,15 +83,13 @@ bool EmbeddedTerminal::executeCommand(const std::string& command,
         outputReader(output_cb);
     });
     
-    std::thread([this, exit_cb, pi]() {
-        WaitForSingleObject(pi.hProcess, INFINITE);
+    std::thread([this, exit_cb]() {
+        WaitForSingleObject(hProcess_, INFINITE);
         DWORD code;
-        GetExitCodeProcess(pi.hProcess, &code);
+        GetExitCodeProcess(hProcess_, &code);
         last_exit_code_ = static_cast<int>(code);
         running_ = false;
-        exit_cb(last_exit_code_);
-        CloseHandle(pi.hProcess);
-        CloseHandle(pi.hThread);
+        if (exit_cb) exit_cb(last_exit_code_);
     }).detach();
     
     return true;
@@ -115,6 +135,23 @@ void EmbeddedTerminal::terminate() {
         TerminateProcess(hProcess_, 1);
         running_ = false;
     }
+    if (output_thread_.joinable()) {
+        output_thread_.join();
+    }
+}
+
+bool EmbeddedTerminal::sendInput(const std::string& input) {
+    if (hConPTY_in_ == INVALID_HANDLE_VALUE) return false;
+    DWORD written = 0;
+    return WriteFile(hConPTY_in_, input.data(),
+                     static_cast<DWORD>(input.size()), &written, nullptr) && written > 0;
+}
+
+void EmbeddedTerminal::resize(int cols, int rows) {
+    (void)cols;
+    (void)rows;
+    // ConPTY resize via ResizePseudoConsole would go here;
+    // standard pipe mode does not support console resize.
 }
 
 bool EmbeddedTerminal::isRunning() const { return running_; }

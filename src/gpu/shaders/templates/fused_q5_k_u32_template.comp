@@ -1,0 +1,113 @@
+// fused_q5_k_u32 — distributed-lane GEMV, Q5_K weights x Q8_1 activations.
+// uint32-only SSBO loads to avoid the AMD RDNA3 lane-divergent byte-load bug.
+//
+// Layout (matches CPU std430 packing of block_q5_K / block_q8_1 byte-for-byte):
+//   block_q5_K = 176 B = 44 uints (QK_K = 256)
+//     bytes [0..1]    : fp16 d
+//     bytes [2..3]    : fp16 dmin
+//     bytes [4..15]   : scales[12]                  (get_scale_min_k4 packing)
+//     bytes [16..47]  : qh[32]                      (high bit plane)
+//     bytes [48..175] : qs[128]                     (low 4 bits, 2 per byte)
+//   block_q8_1 = 36 B = 9 uints, 8 q8_1 blocks per Q5_K kblock.
+//
+// 1 workgroup = 1 output row, 64 lanes split K=256 work:
+//   lane 0..31  -> (l = lane,        half = lo) for each of 4 segs
+//   lane 32..63 -> (l = lane - 32,   half = hi) for each of 4 segs
+// Each lane performs 4 MACs (1 per seg), then subgroupAdd, lane 0 writes.
+#version 450
+#extension GL_EXT_control_flow_attributes : enable
+#extension GL_KHR_shader_subgroup_basic : require
+#extension GL_KHR_shader_subgroup_arithmetic : require
+
+layout(local_size_x = 64) in;
+layout(push_constant) uniform Push { uint M, N, K, stride_a, stride_b; } pc;
+
+layout(set = 0, binding = 0) readonly  buffer A_buf { uint  data_a[]; };
+layout(set = 0, binding = 1) readonly  buffer B_buf { uint  data_b[]; };
+layout(set = 0, binding = 2) writeonly buffer D_buf { float data_d[]; };
+
+const uint A_BYTES    = 176u;  // bytes per block_q5_K (44 uints, exact multiple of 4)
+const uint B_STRIDE_U = 9u;    // uints per block_q8_1
+
+uint a_byte(uint a_byte_base, uint off) {
+    uint abs_off = a_byte_base + off;
+    uint w = data_a[abs_off >> 2];
+    return (w >> ((abs_off & 3u) * 8u)) & 0xFFu;
+}
+uint b_byte(uint b_base_u, uint off) {
+    uint w = data_b[b_base_u + (off >> 2)];
+    return (w >> ((off & 3u) * 8u)) & 0xFFu;
+}
+int b_byte_signed(uint b_base_u, uint off) {
+    uint u = b_byte(b_base_u, off);
+    return int(u) - int((u & 0x80u) << 1);
+}
+
+void gsm(uint j, uint a_byte_base, out uint sc, out uint mn) {
+    // Mirrors ggml get_scale_min_k4(); scales[] starts at byte offset 4.
+    if (j < 4u) {
+        sc = a_byte(a_byte_base, 4u + j)        & 63u;
+        mn = a_byte(a_byte_base, 4u + j + 4u)   & 63u;
+    } else {
+        uint b_jp4 = a_byte(a_byte_base, 4u + j + 4u);
+        uint b_jm4 = a_byte(a_byte_base, 4u + j - 4u);
+        uint b_j   = a_byte(a_byte_base, 4u + j);
+        sc = (b_jp4 & 0xFu) | ((b_jm4 >> 6) << 4);
+        mn = (b_jp4 >> 4)   | ((b_j    >> 6) << 4);
+    }
+}
+
+void main() {
+    uint row  = gl_WorkGroupID.x;
+    uint lane = gl_SubgroupInvocationID;
+    if (row >= pc.M) return;
+
+    bool hi = lane >= 32u;
+    uint l  = hi ? (lane - 32u) : lane;   // 0..31
+
+    float local_sum = 0.0;
+
+    uint nb = pc.stride_a;                 // # Q5_K kblocks per row
+
+    for (uint kb = 0u; kb < nb; kb++) {
+        uint a_byte_base = (row * nb + kb) * A_BYTES;
+
+        uint dpack = a_byte(a_byte_base, 0u) | (a_byte(a_byte_base, 1u) << 8u);
+        uint mpack = a_byte(a_byte_base, 2u) | (a_byte(a_byte_base, 3u) << 8u);
+        float dw = unpackHalf2x16(dpack).x;
+        float dm = unpackHalf2x16(mpack).x;
+
+        [[unroll]] for (uint seg = 0u; seg < 4u; seg++) {
+            uint sidx = (seg << 1) + (hi ? 1u : 0u);
+            uint sc, mn; gsm(sidx, a_byte_base, sc, mn);
+            float fsc = dw * float(sc);
+            float fmn = dm * float(mn);
+
+            // low nibble: byte at 48 + seg*32 + l, hi/lo selects nibble.
+            uint qbyte = a_byte(a_byte_base, 48u + (seg << 5) + l);
+            uint qlow  = hi ? (qbyte >> 4u) : (qbyte & 0xFu);
+
+            // high-bit plane qh[l]; mask depends on (seg, half).
+            uint bitmask = (hi ? 2u : 1u) << (seg << 1);
+            uint qh      = a_byte(a_byte_base, 16u + l);
+            uint qh_add  = ((qh & bitmask) != 0u) ? 16u : 0u;
+
+            float qv = float(qlow + qh_add);
+            float w  = fsc * qv - fmn;
+
+            // q8_1 element: k_in = seg*64 + (hi?32:0) + l within this kblock.
+            uint k_in       = (seg << 6) + (hi ? 32u : 0u) + l;   // 0..255
+            uint q8_blk_loc = k_in >> 5;                          // 0..7
+            uint q8_off_loc = k_in & 31u;
+            uint b_base_u   = (kb * 8u + q8_blk_loc) * B_STRIDE_U;
+            float bd        = unpackHalf2x16(data_b[b_base_u]).x;
+            int   bq        = b_byte_signed(b_base_u, 4u + q8_off_loc);
+            float a         = bd * float(bq);
+
+            local_sum += w * a;
+        }
+    }
+
+    float total = subgroupAdd(local_sum);
+    if (subgroupElect()) data_d[row] = total;
+}

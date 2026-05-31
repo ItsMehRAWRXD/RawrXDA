@@ -662,6 +662,36 @@ std::vector<const SymbolEntry*> SemanticCodeIntelligence::getSymbolsInFile(
     return results;
 }
 
+std::vector<std::string> SemanticCodeIntelligence::queryRelatedSymbols(const std::string& query, uint32_t maxFiles) const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    std::unordered_set<std::string> relatedFiles;
+    
+    // 1. Search symbols matching query
+    for (const auto& [id, sym] : m_symbols) {
+        if (fuzzyMatch(sym.name, query) || fuzzyMatch(sym.qualifiedName, query)) {
+            if (!sym.definition.filePath.empty()) {
+                relatedFiles.insert(sym.definition.filePath);
+            }
+            
+            // 2. Add files containing references to this symbol
+            auto refIt = m_refBySymbol.find(id);
+            if (refIt != m_refBySymbol.end()) {
+                for (size_t refIdx : refIt->second) {
+                    if (refIdx < m_references.size()) {
+                        const auto& ref = m_references[refIdx];
+                        if (!ref.location.filePath.empty()) {
+                            relatedFiles.insert(ref.location.filePath);
+                        }
+                    }
+                }
+            }
+        }
+        if (relatedFiles.size() >= maxFiles) break;
+    }
+
+    return std::vector<std::string>(relatedFiles.begin(), relatedFiles.end());
+}
+
 // ============================================================================
 // Indexing
 // ============================================================================
@@ -804,32 +834,147 @@ void SemanticCodeIntelligence::setCompleteCallback(IndexCompleteCallback cb, voi
 // ============================================================================
 // Serialization
 // ============================================================================
+
+// Helper for writing strings
+static void writeString(std::ostream& out, const std::string& str) {
+    uint32_t len = static_cast<uint32_t>(str.size());
+    out.write(reinterpret_cast<const char*>(&len), 4);
+    if (len > 0) {
+        out.write(str.data(), len);
+    }
+}
+
+// Helper for reading strings
+static std::string readString(std::istream& in) {
+    uint32_t len = 0;
+    in.read(reinterpret_cast<char*>(&len), 4);
+    if (len == 0) return "";
+    if (len > 1024 * 1024) return ""; // 1MB limit for sanity
+    std::string str(len, '\0');
+    in.read(&str[0], len);
+    return str;
+}
+
+// Helper for writing vectors of uint64_t
+static void writeU64Vector(std::ostream& out, const std::vector<uint64_t>& vec) {
+    uint32_t count = static_cast<uint32_t>(vec.size());
+    out.write(reinterpret_cast<const char*>(&count), 4);
+    if (count > 0) {
+        out.write(reinterpret_cast<const char*>(vec.data()), count * 8);
+    }
+}
+
+// Helper for reading vectors of uint64_t
+static std::vector<uint64_t> readU64Vector(std::istream& in) {
+    uint32_t count = 0;
+    in.read(reinterpret_cast<char*>(&count), 4);
+    if (count == 0) return {};
+    if (count > 1000000) return {}; // Sanity limit
+    std::vector<uint64_t> vec(count);
+    in.read(reinterpret_cast<char*>(vec.data()), count * 8);
+    return vec;
+}
+
 PatchResult SemanticCodeIntelligence::saveIndex(const char* filePath) const {
     std::lock_guard<std::mutex> lock(m_mutex);
 
     std::ofstream out(filePath, std::ios::binary);
     if (!out.is_open()) return PatchResult::error("Cannot open file for writing", -1);
 
-    // Write header
+    // Header
     uint64_t magic = 0x52585344494E4458ULL; // "RXSDINDX"
-    uint64_t version = 1;
-    uint64_t symbolCount = m_symbols.size();
-    uint64_t typeCount = m_types.size();
+    uint16_t version = 2; // Incremented version
+    uint64_t symbolCount = static_cast<uint64_t>(m_symbols.size());
+    uint64_t typeCount = static_cast<uint64_t>(m_types.size());
+    uint64_t scopeCount = static_cast<uint64_t>(m_scopes.size());
 
     out.write(reinterpret_cast<const char*>(&magic), 8);
-    out.write(reinterpret_cast<const char*>(&version), 8);
+    out.write(reinterpret_cast<const char*>(&version), 2);
     out.write(reinterpret_cast<const char*>(&symbolCount), 8);
     out.write(reinterpret_cast<const char*>(&typeCount), 8);
+    out.write(reinterpret_cast<const char*>(&scopeCount), 8);
 
-    // Write symbols (simplified — write name + kind + location)
-    for (auto& [id, sym] : m_symbols) {
-        uint32_t nameLen = static_cast<uint32_t>(sym.name.size());
-        out.write(reinterpret_cast<const char*>(&id), 8);
-        out.write(reinterpret_cast<const char*>(&nameLen), 4);
-        out.write(sym.name.c_str(), nameLen);
+    // 1. Write Types
+    for (auto const& [typeId, type] : m_types) {
+        out.write(reinterpret_cast<const char*>(&typeId), 8);
+        writeString(out, type.name);
+        writeString(out, type.qualifiedName);
+        out.write(reinterpret_cast<const char*>(&type.isConst), 1);
+        out.write(reinterpret_cast<const char*>(&type.isVolatile), 1);
+        out.write(reinterpret_cast<const char*>(&type.isPointer), 1);
+        out.write(reinterpret_cast<const char*>(&type.isReference), 1);
+        out.write(reinterpret_cast<const char*>(&type.isArray), 1);
+        out.write(reinterpret_cast<const char*>(&type.arraySize), 4);
+        out.write(reinterpret_cast<const char*>(&type.pointeeTypeId), 8);
+        writeU64Vector(out, type.templateArgs);
+        out.write(reinterpret_cast<const char*>(&type.sizeBytes), 8);
+    }
+
+    // 2. Write Symbols
+    for (auto const& [symId, sym] : m_symbols) {
+        out.write(reinterpret_cast<const char*>(&symId), 8);
+        writeString(out, sym.name);
+        writeString(out, sym.qualifiedName);
+        writeString(out, sym.displayName);
         uint8_t kind = static_cast<uint8_t>(sym.kind);
         out.write(reinterpret_cast<const char*>(&kind), 1);
+        uint8_t visibility = static_cast<uint8_t>(sym.visibility);
+        out.write(reinterpret_cast<const char*>(&visibility), 1);
+        out.write(reinterpret_cast<const char*>(&sym.typeId), 8);
+        out.write(reinterpret_cast<const char*>(&sym.parentSymbolId), 8);
+        
+        // Definition
+        writeString(out, sym.definition.filePath);
         out.write(reinterpret_cast<const char*>(&sym.definition.line), 4);
+        out.write(reinterpret_cast<const char*>(&sym.definition.column), 4);
+        out.write(reinterpret_cast<const char*>(&sym.definition.endLine), 4);
+        out.write(reinterpret_cast<const char*>(&sym.definition.endColumn), 4);
+        out.write(reinterpret_cast<const char*>(&sym.definition.offset), 8);
+
+        // Declarations
+        uint32_t declCount = static_cast<uint32_t>(sym.declarations.size());
+        out.write(reinterpret_cast<const char*>(&declCount), 4);
+        for (const auto& decl : sym.declarations) {
+            writeString(out, decl.filePath);
+            out.write(reinterpret_cast<const char*>(&decl.line), 4);
+            out.write(reinterpret_cast<const char*>(&decl.column), 4);
+            out.write(reinterpret_cast<const char*>(&decl.endLine), 4);
+            out.write(reinterpret_cast<const char*>(&decl.endColumn), 4);
+            out.write(reinterpret_cast<const char*>(&decl.offset), 8);
+        }
+
+        writeString(out, sym.documentation);
+        writeString(out, sym.signature);
+        writeU64Vector(out, sym.childSymbols);
+        writeU64Vector(out, sym.baseTypes);
+        writeU64Vector(out, sym.derivedTypes);
+        writeU64Vector(out, sym.implementedInterfaces);
+
+        out.write(reinterpret_cast<const char*>(&sym.isStatic), 1);
+        out.write(reinterpret_cast<const char*>(&sym.isVirtual), 1);
+        out.write(reinterpret_cast<const char*>(&sym.isAbstract), 1);
+        out.write(reinterpret_cast<const char*>(&sym.isInline), 1);
+        out.write(reinterpret_cast<const char*>(&sym.isConstexpr), 1);
+        out.write(reinterpret_cast<const char*>(&sym.isDeprecated), 1);
+        out.write(reinterpret_cast<const char*>(&sym.isGenerated), 1);
+        out.write(reinterpret_cast<const char*>(&sym.referenceCount), 4);
+        out.write(reinterpret_cast<const char*>(&sym.complexityCyclomatic), 4);
+    }
+
+    // 3. Write Scopes
+    for (auto const& [scopeId, scope] : m_scopes) {
+        out.write(reinterpret_cast<const char*>(&scopeId), 8);
+        writeString(out, scope.name);
+        out.write(reinterpret_cast<const char*>(&scope.parentScopeId), 8);
+        uint8_t kind = static_cast<uint8_t>(scope.kind);
+        out.write(reinterpret_cast<const char*>(&kind), 1);
+        writeU64Vector(out, scope.symbolIds);
+        writeU64Vector(out, scope.childScopes);
+        
+        // Scope range
+        writeString(out, scope.range.filePath);
+        out.write(reinterpret_cast<const char*>(&scope.range.line), 4);
+        out.write(reinterpret_cast<const char*>(&scope.range.endLine), 4);
     }
 
     out.close();
@@ -842,43 +987,130 @@ PatchResult SemanticCodeIntelligence::loadIndex(const char* filePath) {
     std::ifstream in(filePath, std::ios::binary);
     if (!in.is_open()) return PatchResult::error("Cannot open index file", -1);
 
-    uint64_t magic = 0, version = 0;
+    uint64_t magic = 0;
+    uint16_t version = 0;
     in.read(reinterpret_cast<char*>(&magic), 8);
-    in.read(reinterpret_cast<char*>(&version), 8);
+    in.read(reinterpret_cast<char*>(&version), 2);
 
-    if (magic != 0x52585344494E4458ULL) {
-        return PatchResult::error("Invalid index file magic", -2);
-    }
-    if (version != 1) {
-        return PatchResult::error("Unsupported index version", -3);
-    }
+    if (magic != 0x52585344494E4458ULL) return PatchResult::error("Invalid magic", -2);
+    if (version != 2) return PatchResult::error("Incompatible version", -3);
 
-    uint64_t symbolCount = 0, typeCount = 0;
+    uint64_t symbolCount = 0, typeCount = 0, scopeCount = 0;
     in.read(reinterpret_cast<char*>(&symbolCount), 8);
     in.read(reinterpret_cast<char*>(&typeCount), 8);
+    in.read(reinterpret_cast<char*>(&scopeCount), 8);
 
-    for (uint64_t i = 0; i < symbolCount; i++) {
-        uint64_t id = 0;
-        uint32_t nameLen = 0;
-        in.read(reinterpret_cast<char*>(&id), 8);
-        in.read(reinterpret_cast<char*>(&nameLen), 4);
+    // Clear existing
+    m_symbols.clear();
+    m_types.clear();
+    m_scopes.clear();
+    m_nameIndex.clear();
+    m_fileIndex.clear();
+    m_typeNameIndex.clear();
 
-        std::string name(nameLen, '\0');
-        in.read(&name[0], nameLen);
+    // 1. Read Types
+    for (uint64_t i = 0; i < typeCount; ++i) {
+        uint64_t typeId = 0;
+        in.read(reinterpret_cast<char*>(&typeId), 8);
+        TypeInfo type;
+        type.typeId = typeId;
+        type.name = readString(in);
+        type.qualifiedName = readString(in);
+        in.read(reinterpret_cast<char*>(&type.isConst), 1);
+        in.read(reinterpret_cast<char*>(&type.isVolatile), 1);
+        in.read(reinterpret_cast<char*>(&type.isPointer), 1);
+        in.read(reinterpret_cast<char*>(&type.isReference), 1);
+        in.read(reinterpret_cast<char*>(&type.isArray), 1);
+        in.read(reinterpret_cast<char*>(&type.arraySize), 4);
+        in.read(reinterpret_cast<char*>(&type.pointeeTypeId), 8);
+        type.templateArgs = readU64Vector(in);
+        in.read(reinterpret_cast<char*>(&type.sizeBytes), 8);
+        m_types[typeId] = type;
+        m_typeNameIndex[type.qualifiedName.empty() ? type.name : type.qualifiedName] = typeId;
+    }
 
+    // 2. Read Symbols
+    for (uint64_t i = 0; i < symbolCount; ++i) {
+        uint64_t symId = 0;
+        in.read(reinterpret_cast<char*>(&symId), 8);
+        SymbolEntry sym;
+        sym.symbolId = symId;
+        sym.name = readString(in);
+        sym.qualifiedName = readString(in);
+        sym.displayName = readString(in);
+        uint8_t kind = 0, visibility = 0;
+        in.read(reinterpret_cast<char*>(&kind), 1);
+        in.read(reinterpret_cast<char*>(&visibility), 1);
+        sym.kind = static_cast<SymbolKind>(kind);
+        sym.visibility = static_cast<SymbolVisibility>(visibility);
+        in.read(reinterpret_cast<char*>(&sym.typeId), 8);
+        in.read(reinterpret_cast<char*>(&sym.parentSymbolId), 8);
+
+        // Definition
+        sym.definition.filePath = readString(in);
+        in.read(reinterpret_cast<char*>(&sym.definition.line), 4);
+        in.read(reinterpret_cast<char*>(&sym.definition.column), 4);
+        in.read(reinterpret_cast<char*>(&sym.definition.endLine), 4);
+        in.read(reinterpret_cast<char*>(&sym.definition.endColumn), 4);
+        in.read(reinterpret_cast<char*>(&sym.definition.offset), 8);
+
+        // Declarations
+        uint32_t declCount = 0;
+        in.read(reinterpret_cast<char*>(&declCount), 4);
+        for (uint32_t d = 0; d < declCount; ++d) {
+            SourceLocation decl;
+            decl.filePath = readString(in);
+            in.read(reinterpret_cast<char*>(&decl.line), 4);
+            in.read(reinterpret_cast<char*>(&decl.column), 4);
+            in.read(reinterpret_cast<char*>(&decl.endLine), 4);
+            in.read(reinterpret_cast<char*>(&decl.endColumn), 4);
+            in.read(reinterpret_cast<char*>(&decl.offset), 8);
+            sym.declarations.push_back(decl);
+        }
+
+        sym.documentation = readString(in);
+        sym.signature = readString(in);
+        sym.childSymbols = readU64Vector(in);
+        sym.baseTypes = readU64Vector(in);
+        sym.derivedTypes = readU64Vector(in);
+        sym.implementedInterfaces = readU64Vector(in);
+
+        in.read(reinterpret_cast<char*>(&sym.isStatic), 1);
+        in.read(reinterpret_cast<char*>(&sym.isVirtual), 1);
+        in.read(reinterpret_cast<char*>(&sym.isAbstract), 1);
+        in.read(reinterpret_cast<char*>(&sym.isInline), 1);
+        in.read(reinterpret_cast<char*>(&sym.isConstexpr), 1);
+        in.read(reinterpret_cast<char*>(&sym.isDeprecated), 1);
+        in.read(reinterpret_cast<char*>(&sym.isGenerated), 1);
+        in.read(reinterpret_cast<char*>(&sym.referenceCount), 4);
+        in.read(reinterpret_cast<char*>(&sym.complexityCyclomatic), 4);
+
+        m_symbols[symId] = sym;
+        m_nameIndex[sym.name].push_back(symId);
+        if (!sym.definition.filePath.empty()) {
+            m_fileIndex[sym.definition.filePath].push_back(symId);
+        }
+    }
+
+    // 3. Read Scopes
+    for (uint64_t i = 0; i < scopeCount; ++i) {
+        uint64_t scopeId = 0;
+        in.read(reinterpret_cast<char*>(&scopeId), 8);
+        Scope scope;
+        scope.scopeId = scopeId;
+        scope.name = readString(in);
+        in.read(reinterpret_cast<char*>(&scope.parentScopeId), 8);
         uint8_t kind = 0;
         in.read(reinterpret_cast<char*>(&kind), 1);
+        scope.kind = static_cast<SymbolKind>(kind);
+        scope.symbolIds = readU64Vector(in);
+        scope.childScopes = readU64Vector(in);
 
-        uint32_t line = 0;
-        in.read(reinterpret_cast<char*>(&line), 4);
-
-        SymbolEntry sym;
-        sym.symbolId = id;
-        sym.name     = name;
-        sym.kind     = static_cast<SymbolKind>(kind);
-        sym.definition.line = line;
-        m_symbols[id] = sym;
-        m_nameIndex[name].push_back(id);
+        scope.range.filePath = readString(in);
+        in.read(reinterpret_cast<char*>(&scope.range.line), 4);
+        in.read(reinterpret_cast<char*>(&scope.range.endLine), 4);
+        
+        m_scopes[scopeId] = scope;
     }
 
     in.close();

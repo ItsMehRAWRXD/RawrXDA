@@ -1,6 +1,6 @@
 // WebSocketHub — Win32 Winsock implementation. No Qt.
 
-#include "collab/websocket_hub.h"
+#include "websocket_hub.h"
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <windows.h>
@@ -67,6 +67,9 @@ std::string sha1Base64(const std::string& in) {
 
 } // namespace
 
+namespace RawrXD {
+
+// Member function definitions (inside namespace RawrXD with unqualified names)
 WebSocketHub::~WebSocketHub() {
     stopServer();
 }
@@ -260,8 +263,10 @@ void WebSocketHub::stopServer() {
         m_serverThread.join();
 }
 
-void WebSocketHub::broadcastMessage(const std::string& messageJson) {
+    void WebSocketHub::broadcastMessage(const std::string& messageJson) {
     std::lock_guard<std::mutex> lock(m_clientsMutex);
     for (void* c : m_clients)
         sendTextToClient(c, messageJson);
 }
+
+    } // namespace RawrXD

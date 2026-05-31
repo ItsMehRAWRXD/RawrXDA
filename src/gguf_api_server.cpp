@@ -212,8 +212,8 @@ private:
         // Resolve Ollama backend from environment or defaults
         std::string ollamaHost = "localhost";
         int ollamaPort = 11434;
-        if (const char* env = std::getenv("OLLAMA_HOST")) ollamaHost = env;
-        if (const char* env = std::getenv("OLLAMA_PORT")) ollamaPort = std::stoi(env);
+        if (const char* env = std::getenv("RAWRXD_NATIVE_HOST")) ollamaHost = env;
+        if (const char* env = std::getenv("RAWRXD_NATIVE_PORT")) ollamaPort = std::stoi(env);
 
         // Avoid proxy loop: if we listen on the same port, use alternative
         if (ollamaPort == port_) {

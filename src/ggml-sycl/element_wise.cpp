@@ -1,6 +1,6 @@
 #include "common.hpp"
 #include "ggml-sycl/presets.hpp"
-#include "ggml.h"
+#include "ggml_rxd_internal.h"
 #include "element_wise.hpp"
 
 #define SYCL_GLOBAL_ID_LOOP(K, ITEM) \

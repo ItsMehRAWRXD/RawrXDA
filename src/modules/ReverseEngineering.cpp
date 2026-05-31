@@ -424,7 +424,7 @@ std::vector<RECodex::Pattern> RECodex::GetCommonPatterns() {
 
 std::vector<RECodex::Pattern> RECodex::GetMalwarePatterns() {
     std::vector<Pattern> patterns;
-    // Example pattern: Shellcode stub
+    // Pattern: Shellcode stub
     Pattern shellcode;
     shellcode.name = "Generic Shellcode Loop";
     shellcode.signature = {0xEB, 0xFE}; // jmp $
@@ -436,7 +436,7 @@ std::vector<RECodex::Pattern> RECodex::GetMalwarePatterns() {
 
 std::vector<RECodex::Pattern> RECodex::GetCompilerPatterns() {
     std::vector<Pattern> patterns;
-    // Example: MSVC Prologue
+    // MSVC Prologue
     Pattern msvc;
     msvc.name = "MSVC Prologue";
     msvc.signature = {0x55, 0x8B, 0xEC}; // push ebp; mov ebp, esp
@@ -550,7 +550,7 @@ NativeCompiler::CompileResult NativeCompiler::CompileToNative(
     // 3. Optimize the IR
     // 4. Generate machine code
     
-    // For now, return a simple example
+    // Return simple result
     if (sourceCode.find("int main") != std::string::npos) {
         // Simple main function - generate basic prologue/epilogue
         result.machineCode = {

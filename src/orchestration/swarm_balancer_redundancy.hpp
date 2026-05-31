@@ -69,7 +69,34 @@ public:
     }
 
 private:
+    struct TransferJob {
+        uint32_t layerId;
+        std::string targetNode;
+        int priority;
+        enum class TransferStatus { Queued, InProgress, Completed, Failed };
+        TransferStatus status;
+    };
+    
+    struct PeerInfo {
+        std::string nodeId;
+        std::string address;
+        uint16_t port;
+    };
+    
+    std::mutex mutex_;
+    std::vector<PeerInfo> peers_;
+    std::vector<TransferJob> transferQueue_;
+    
     void requestShardReplication(uint32_t layerId, size_t needed) {
-        // Placeholder for Peer-to-Peer layer transfer logic
+        // Production: enqueue P2P layer transfer jobs to reachable peers
+        std::lock_guard<std::mutex> lock(mutex_);
+        for (size_t i = 0; i < needed && i < peers_.size(); ++i) {
+            TransferJob job;
+            job.layerId = layerId;
+            job.targetNode = peers_[i].nodeId;
+            job.priority = 1;
+            job.status = TransferJob::TransferStatus::Queued;
+            transferQueue_.push_back(job);
+        }
     }
 };

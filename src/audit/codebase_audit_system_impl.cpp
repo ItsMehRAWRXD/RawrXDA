@@ -59,7 +59,6 @@ size_t count_keyword(const std::string& content, const std::string& keyword) {
 // =====================================================================
 
 CodebaseAuditSystem::CodebaseAuditSystem() {
-    std::cout << "[AuditSystem] Codebase Audit System initialized" << std::endl;
 }
 
 CodebaseAuditSystem::~CodebaseAuditSystem() {
@@ -74,7 +73,6 @@ bool CodebaseAuditSystem::initialize(const AuditConfiguration& config,
     
     try {
         if (!CodebaseAudit_Initialize((void*)&config, enable_continuous_monitoring ? 1 : 0)) {
-            std::cerr << "[AuditSystem] MASM backend initialization failed" << std::endl;
             return false;
         }
 
@@ -100,23 +98,16 @@ bool CodebaseAuditSystem::initialize(const AuditConfiguration& config,
         
         initialized_ = true;
         
-        std::cout << "[AuditSystem] Audit system initialized successfully" << std::endl;
-        std::cout << "  - Deep static analysis: " << (config_.perform_deep_static_analysis ? "enabled" : "disabled") << std::endl;
-        std::cout << "  - Security analysis: " << (config_.check_security_issues ? "enabled" : "disabled") << std::endl;
-        std::cout << "  - Performance analysis: " << (config_.analyze_performance ? "enabled" : "disabled") << std::endl;
-        
         return true;
         
     } catch (const std::exception& e) {
-        std::cerr << "[AuditSystem] Initialization failed: " << e.what() << std::endl;
+        last_error_ = std::string("Audit init failed: ") + e.what();
         return false;
     }
 }
 
 void CodebaseAuditSystem::shutdown() {
     if (!initialized_.load()) return;
-    
-    std::cout << "[AuditSystem] Shutting down audit system..." << std::endl;
     
     shutting_down_ = true;
     continuous_monitoring_enabled_ = false;
@@ -128,21 +119,17 @@ void CodebaseAuditSystem::shutdown() {
 
     CodebaseAudit_Shutdown();
     
-    std::cout << "[AuditSystem] Audit system shutdown complete" << std::endl;
     initialized_ = false;
 }
 
 ProjectAuditResult CodebaseAuditSystem::audit_full_project(const std::string& project_path,
                                                           const std::string& project_name) {
     if (!initialized_.load()) {
-        std::cerr << "[AuditSystem] System not initialized" << std::endl;
         ProjectAuditResult result;
         result.project_path = project_path;
         result.project_name = project_name.empty() ? "unknown" : project_name;
         return result;
     }
-    
-    std::cout << "[AuditSystem] Starting full project audit: " << project_path << std::endl;
     
     auto start_time = std::chrono::system_clock::now();
     ProjectAuditResult result;
@@ -154,7 +141,6 @@ ProjectAuditResult CodebaseAuditSystem::audit_full_project(const std::string& pr
     try {
         // Collect source files
         std::vector<std::string> source_files = collect_source_files(project_path, true);
-        std::cout << "[AuditSystem] Found " << source_files.size() << " source files to analyze" << std::endl;
         
         // Analyze each file
         for (const auto& file_path : source_files) {
@@ -243,13 +229,8 @@ ProjectAuditResult CodebaseAuditSystem::audit_full_project(const std::string& pr
         // Update statistics
         update_statistics(result);
         
-        std::cout << "[AuditSystem] Full project audit complete" << std::endl;
-        std::cout << "  - Total score: " << result.project_overall_score << std::endl;
-        std::cout << "  - Files passed: " << result.files_passed << "/" << result.total_files_analyzed << std::endl;
-        std::cout << "  - Critical issues: " << result.critical_issues << std::endl;
-        
     } catch (const std::exception& e) {
-        std::cerr << "[AuditSystem] Project audit failed: " << e.what() << std::endl;
+        (void)e;
         result.project_overall_score = 0.0;
         result.project_production_ready = false;
     }
@@ -323,7 +304,7 @@ FileAnalysisResult CodebaseAuditSystem::analyze_source_file(const std::string& f
         result.analysis_successful = true;
         
     } catch (const std::exception& e) {
-        std::cerr << "[AuditSystem] File analysis failed for " << file_path << ": " << e.what() << std::endl;
+        (void)e;
         result.analysis_successful = false;
     }
     
@@ -576,7 +557,7 @@ ProductionReadinessAssessment CodebaseAuditSystem::assess_production_readiness(c
         }
         
     } catch (const std::exception& e) {
-        std::cerr << "[AuditSystem] Production readiness assessment error: " << e.what() << std::endl;
+        (void)e;
     }
     
     return assessment;
@@ -587,7 +568,6 @@ std::vector<std::string> CodebaseAuditSystem::collect_source_files(const std::st
     
     try {
         if (!fs::exists(root_path)) {
-            std::cerr << "[AuditSystem] Path does not exist: " << root_path << std::endl;
             return files;
         }
         
@@ -610,7 +590,7 @@ std::vector<std::string> CodebaseAuditSystem::collect_source_files(const std::st
         }
         
     } catch (const std::exception& e) {
-        std::cerr << "[AuditSystem] Error collecting source files: " << e.what() << std::endl;
+        (void)e;
     }
     
     return files;
@@ -656,7 +636,7 @@ std::string CodebaseAuditSystem::read_file_content(const std::string& file_path)
         }
         return std::string(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
     } catch (const std::exception& e) {
-        std::cerr << "[AuditSystem] Error reading file: " << e.what() << std::endl;
+        last_error_ = std::string("Audit read failed: ") + e.what();
         return "";
     }
 }

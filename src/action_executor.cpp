@@ -37,7 +37,6 @@ void RawrXD_AICompletion_Stream(const std::string& prompt, std::function<void(co
     cb("");
 }
 
-// SCAFFOLD_128: RawrXD_InferenceEngine_Win32 entry points
 // Raw Win32 direct-to-metal inference binding
 bool RawrXD_InferenceEngine_Initialize()
 {

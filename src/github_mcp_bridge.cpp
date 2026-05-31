@@ -31,7 +31,7 @@ public:
 
         // Initialize MCP client for GitHub MCP server
         // This would connect to a GitHub MCP server implementation
-        mcp_client = std::make_unique<MCP::MCPClient>("http://localhost:3001"); // Example URL
+        mcp_client = std::make_unique<MCP::MCPClient>("http://localhost:3001");
 
         try {
             return mcp_client->initialize();

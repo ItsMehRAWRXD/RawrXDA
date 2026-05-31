@@ -1,5 +1,5 @@
 #pragma once
-// Legacy include redirected to CPU inference engine implementation
-// to avoid duplicate class definitions and keep Qt-free builds.
+// Canonical InferenceEngine declaration used by completion engines and tests.
+// The shim provides the complete class definition in a lightweight header.
 
-#include "../src/cpu_inference_engine.h"
+#include "../src/inference/InferenceEngine.hpp"

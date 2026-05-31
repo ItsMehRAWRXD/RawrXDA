@@ -1,0 +1,21 @@
+    return info;
+}
+
+bool Detour::isNearJumpPossible(void* from, void* to) {
+    int64_t diff = (int64_t)to - (int64_t)from;
+    return (diff >= -2147483648LL && diff <= 2147483647LL);
+}
+
+void* Detour::findCodeCave(void* near, size_t size, size_t searchRadius) {
+    uintptr_t base = (uintptr_t)near;
+    uintptr_t start = (base > searchRadius) ? base - searchRadius : 0;
+    uintptr_t end = base + searchRadius;
+    MEMORY_BASIC_INFORMATION mbi;
+    for (uintptr_t i = start; i < end; ) {
+        if (!VirtualQuery((void*)i, &mbi, sizeof(mbi))) break;
+        if (mbi.State == MEM_COMMIT && (mbi.Protect & (PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE))) {
+            uint8_t* p = (uint8_t*)mbi.BaseAddress;
+            size_t count = 0;
+            for (size_t k = 0; k < mbi.RegionSize; k++) {
+                if (p[k] == 0xCC || p[k] == 0x90) {
+                    if (++count >= size) return (void*)(&p[k - size + 1]);

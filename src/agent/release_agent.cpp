@@ -267,15 +267,109 @@ bool ReleaseAgent::uploadToCDN(const std::string& localFile, const std::string& 
     auto data = readBinaryFile(localFile);
     if (data.empty()) { m_lastError = "Cannot open " + localFile; notifyError(onError, m_lastError); return false; }
     std::string url = "https://" + account + ".blob.core.windows.net/updates/" + blobName;
-    fprintf(stderr, "[INFO] Would upload %zu bytes to %s\n", data.size(), url.c_str());
+
+    // Build HTTP PUT request for Azure Blob Storage
+    HINTERNET hSession = WinHttpOpen(L"RawrXD-ReleaseAgent/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+                                     WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+    if (!hSession) { m_lastError = "WinHttpOpen failed"; notifyError(onError, m_lastError); return false; }
+
+    std::wstring hostW = std::wstring(account.begin(), account.end()) + L".blob.core.windows.net";
+    HINTERNET hConnect = WinHttpConnect(hSession, hostW.c_str(), INTERNET_DEFAULT_HTTPS_PORT, 0);
+    if (!hConnect) { WinHttpCloseHandle(hSession); m_lastError = "WinHttpConnect failed"; notifyError(onError, m_lastError); return false; }
+
+    std::wstring targetW = L"/updates/" + std::wstring(blobName.begin(), blobName.end());
+    HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"PUT", targetW.c_str(), nullptr,
+                                            WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES,
+                                            WINHTTP_FLAG_SECURE);
+    if (!hRequest) { WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession); m_lastError = "WinHttpOpenRequest failed"; notifyError(onError, m_lastError); return false; }
+
+    // Set required Azure Blob Storage headers
+    std::string authHeader = "x-ms-blob-type: BlockBlob\r\n";
+    std::string dateHeader = "x-ms-date: " + getRFC1123Date() + "\r\n";
+    std::string versionHeader = "x-ms-version: 2023-11-03\r\n";
+    std::string contentType = "application/octet-stream";
+
+    WinHttpAddRequestHeaders(hRequest, std::wstring(authHeader.begin(), authHeader.end()).c_str(), (DWORD)-1, WINHTTP_ADDREQ_FLAG_ADD);
+    WinHttpAddRequestHeaders(hRequest, std::wstring(dateHeader.begin(), dateHeader.end()).c_str(), (DWORD)-1, WINHTTP_ADDREQ_FLAG_ADD);
+    WinHttpAddRequestHeaders(hRequest, std::wstring(versionHeader.begin(), versionHeader.end()).c_str(), (DWORD)-1, WINHTTP_ADDREQ_FLAG_ADD);
+
+    BOOL sent = WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0,
+                                   (LPVOID)data.data(), (DWORD)data.size(), (DWORD)data.size(), 0);
+    if (!sent) {
+        WinHttpCloseHandle(hRequest); WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession);
+        m_lastError = "WinHttpSendRequest failed"; notifyError(onError, m_lastError); return false;
+    }
+
+    BOOL received = WinHttpReceiveResponse(hRequest, nullptr);
+    DWORD statusCode = 0;
+    DWORD statusSize = sizeof(statusCode);
+    WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER, WINHTTP_HEADER_NAME_BY_INDEX,
+                        &statusCode, &statusSize, WINHTTP_NO_HEADER_INDEX);
+
+    WinHttpCloseHandle(hRequest);
+    WinHttpCloseHandle(hConnect);
+    WinHttpCloseHandle(hSession);
+
+    if (statusCode != 201) {
+        m_lastError = "Azure upload failed with HTTP " + std::to_string(statusCode);
+        notifyError(onError, m_lastError);
+        return false;
+    }
     return true;
 }
 
 bool ReleaseAgent::createGitHubRelease(const std::string& tag, const std::string& changelog) {
     std::string token = getEnv("GITHUB_TOKEN");
     if (token.empty()) { m_lastError = "GITHUB_TOKEN not set"; notifyError(onError, m_lastError); return false; }
+
+    // Build JSON payload
     JsonObject body{{"tag_name", tag}, {"name", tag}, {"body", changelog}, {"draft", false}, {"prerelease", false}};
-    fprintf(stderr, "[INFO] Would create GitHub release %s (payload %zu bytes)\n", tag.c_str(), JsonDoc::toJson(body).size());
+    std::string payload = JsonDoc::toJson(body);
+
+    // POST to GitHub API
+    HINTERNET hSession = WinHttpOpen(L"RawrXD-ReleaseAgent/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+                                     WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+    if (!hSession) { m_lastError = "WinHttpOpen failed"; notifyError(onError, m_lastError); return false; }
+
+    HINTERNET hConnect = WinHttpConnect(hSession, L"api.github.com", INTERNET_DEFAULT_HTTPS_PORT, 0);
+    if (!hConnect) { WinHttpCloseHandle(hSession); m_lastError = "WinHttpConnect failed"; notifyError(onError, m_lastError); return false; }
+
+    std::string ownerRepo = getEnv("GITHUB_REPO"); // e.g. "ItsMehRAWRXD/RawrXD"
+    if (ownerRepo.empty()) ownerRepo = "ItsMehRAWRXD/RawrXD";
+    std::wstring targetW = L"/repos/" + std::wstring(ownerRepo.begin(), ownerRepo.end()) + L"/releases";
+
+    HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"POST", targetW.c_str(), nullptr,
+                                            WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES,
+                                            WINHTTP_FLAG_SECURE);
+    if (!hRequest) { WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession); m_lastError = "WinHttpOpenRequest failed"; notifyError(onError, m_lastError); return false; }
+
+    std::string authHeader = "Authorization: Bearer " + token;
+    std::string contentType = "Content-Type: application/json";
+    WinHttpAddRequestHeaders(hRequest, std::wstring(authHeader.begin(), authHeader.end()).c_str(), (DWORD)-1, WINHTTP_ADDREQ_FLAG_ADD);
+    WinHttpAddRequestHeaders(hRequest, std::wstring(contentType.begin(), contentType.end()).c_str(), (DWORD)-1, WINHTTP_ADDREQ_FLAG_ADD);
+
+    BOOL sent = WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0,
+                                   (LPVOID)payload.data(), (DWORD)payload.size(), (DWORD)payload.size(), 0);
+    if (!sent) {
+        WinHttpCloseHandle(hRequest); WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession);
+        m_lastError = "WinHttpSendRequest failed"; notifyError(onError, m_lastError); return false;
+    }
+
+    WinHttpReceiveResponse(hRequest, nullptr);
+    DWORD statusCode = 0;
+    DWORD statusSize = sizeof(statusCode);
+    WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER, WINHTTP_HEADER_NAME_BY_INDEX,
+                        &statusCode, &statusSize, WINHTTP_NO_HEADER_INDEX);
+
+    WinHttpCloseHandle(hRequest);
+    WinHttpCloseHandle(hConnect);
+    WinHttpCloseHandle(hSession);
+
+    if (statusCode != 201) {
+        m_lastError = "GitHub release creation failed with HTTP " + std::to_string(statusCode);
+        notifyError(onError, m_lastError);
+        return false;
+    }
     if (onReleaseCreated) onReleaseCreated(tag);
     return true;
 }
@@ -294,7 +388,50 @@ bool ReleaseAgent::updateUpdateManifest(const std::string& tag, const std::strin
 bool ReleaseAgent::tweetRelease(const std::string& text) {
     std::string bearer = getEnv("TWITTER_BEARER");
     if (bearer.empty()) { m_lastError = "TWITTER_BEARER not set"; notifyError(onError, m_lastError); return false; }
-    fprintf(stderr, "[INFO] Would tweet release: %s\n", text.c_str());
+
+    // POST to Twitter/X API v2
+    HINTERNET hSession = WinHttpOpen(L"RawrXD-ReleaseAgent/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+                                     WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+    if (!hSession) { m_lastError = "WinHttpOpen failed"; notifyError(onError, m_lastError); return false; }
+
+    HINTERNET hConnect = WinHttpConnect(hSession, L"api.twitter.com", INTERNET_DEFAULT_HTTPS_PORT, 0);
+    if (!hConnect) { WinHttpCloseHandle(hSession); m_lastError = "WinHttpConnect failed"; notifyError(onError, m_lastError); return false; }
+
+    HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"POST", L"/2/tweets", nullptr,
+                                            WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES,
+                                            WINHTTP_FLAG_SECURE);
+    if (!hRequest) { WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession); m_lastError = "WinHttpOpenRequest failed"; notifyError(onError, m_lastError); return false; }
+
+    std::string authHeader = "Authorization: Bearer " + bearer;
+    std::string contentType = "Content-Type: application/json";
+    WinHttpAddRequestHeaders(hRequest, std::wstring(authHeader.begin(), authHeader.end()).c_str(), (DWORD)-1, WINHTTP_ADDREQ_FLAG_ADD);
+    WinHttpAddRequestHeaders(hRequest, std::wstring(contentType.begin(), contentType.end()).c_str(), (DWORD)-1, WINHTTP_ADDREQ_FLAG_ADD);
+
+    // Build tweet payload
+    std::string payload = "{\"text\": \"" + escapeJsonString(text) + "\"}";
+
+    BOOL sent = WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0,
+                                   (LPVOID)payload.data(), (DWORD)payload.size(), (DWORD)payload.size(), 0);
+    if (!sent) {
+        WinHttpCloseHandle(hRequest); WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession);
+        m_lastError = "WinHttpSendRequest failed"; notifyError(onError, m_lastError); return false;
+    }
+
+    WinHttpReceiveResponse(hRequest, nullptr);
+    DWORD statusCode = 0;
+    DWORD statusSize = sizeof(statusCode);
+    WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER, WINHTTP_HEADER_NAME_BY_INDEX,
+                        &statusCode, &statusSize, WINHTTP_NO_HEADER_INDEX);
+
+    WinHttpCloseHandle(hRequest);
+    WinHttpCloseHandle(hConnect);
+    WinHttpCloseHandle(hSession);
+
+    if (statusCode != 201) {
+        m_lastError = "Twitter post failed with HTTP " + std::to_string(statusCode);
+        notifyError(onError, m_lastError);
+        return false;
+    }
     if (onTweetSent) onTweetSent(text);
     return true;
 }

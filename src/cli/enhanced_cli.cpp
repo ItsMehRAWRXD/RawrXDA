@@ -17,8 +17,35 @@ extern "C" {
         strcpy_s(cstr, line.length() + 1, line.c_str());
         return cstr;
     }
-    void add_history(const char* line) {}
-    char** rl_completion_matches(const char* text, char* (*entry_func)(const char*, int)) { return nullptr; }
+    void add_history(const char* line) {
+        if (!line || !line[0]) return;
+        // Simple in-memory history (no readline dependency)
+        static std::vector<std::string> history;
+        static size_t maxHistory = 1000;
+        if (history.size() >= maxHistory) history.erase(history.begin());
+        history.push_back(line);
+    }
+    char** rl_completion_matches(const char* text, char* (*entry_func)(const char*, int)) {
+        if (!text || !entry_func) return nullptr;
+        // Collect matches
+        std::vector<std::string> matches;
+        int i = 0;
+        while (true) {
+            char* match = entry_func(text, i);
+            if (!match) break;
+            matches.push_back(match);
+            free(match);
+            ++i;
+        }
+        if (matches.empty()) return nullptr;
+        char** result = (char**)malloc((matches.size() + 1) * sizeof(char*));
+        if (!result) return nullptr;
+        for (size_t j = 0; j < matches.size(); ++j) {
+            result[j] = _strdup(matches[j].c_str());
+        }
+        result[matches.size()] = nullptr;
+        return result;
+    }
     rl_completion_func_t rl_attempted_completion_function = nullptr;
     void* rl_get_startup_hook() { return nullptr; }
 }
@@ -70,13 +97,15 @@ RawrXD::Expected<void, CLIError> EnhancedCLI::runInteractive() {
     while(true) {
         char* input = readline("> ");
         if (!input) break;
+        // Use unique_ptr to ensure proper deallocation (delete[] matches new[])
+        std::unique_ptr<char[], decltype(&operator delete[])> inputGuard(input, &operator delete[]);
         if (*input) {
             std::string line(input);
             auto res = executeCommand(line);
             if (res) std::cout << res.value() << "\n";
             else std::cerr << "Error: " << (int)res.error() << "\n";
-            free(input);
         }
+        // inputGuard automatically calls delete[] on scope exit
     }
     return {};
 }
@@ -108,7 +137,7 @@ RawrXD::Expected<std::string, CLIError> EnhancedCLI::cmdExit(const std::vector<s
     return "";
 }
 
-// Stubs for other commands mentioned in header
+// Status command — reports current CLI and engine state
 RawrXD::Expected<std::string, CLIError> EnhancedCLI::cmdStatus(const std::vector<std::string>&) {
     std::stringstream ss;
     ss << "RawrXD CLI Status\n";

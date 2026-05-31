@@ -1,24 +1,13 @@
 #include "AppState.h"
 #include "overclock_governor.h"
-#include "AppState.h"
-#include "gui.h"
-#include "AppState.h"
 #include "telemetry.h"
-#include "AppState.h"
 #include "overclock_vendor.h"
-#include "AppState.h"
 #include "baseline_profile.h"
-#include "AppState.h"
 #include <iostream>
-#include "AppState.h"
 #include <cmath>
-#include "AppState.h"
 #include <fstream>
-#include "AppState.h"
 #include <filesystem>
-#include "AppState.h"
 #include <iomanip>
-#include "AppState.h"
 #include <algorithm>
 
 OverclockGovernor::OverclockGovernor() {}
@@ -61,8 +50,8 @@ void OverclockGovernor::RunLoop(AppState* state) {
     state->governor_status = "initializing";
     
     // Detect vendor-specific tools
-    overclock_vendor::DetectRyzenMaster(*state);
-    overclock_vendor::DetectAdrenalinCLI(*state);
+        // overclock_vendor::DetectRyzenMaster(*state);  // TODO
+        // overclock_vendor::DetectAdrenalinCLI(*state);  // TODO
     baseline_profile::Load(*state);
     
     state->governor_status = "running";
@@ -70,13 +59,12 @@ void OverclockGovernor::RunLoop(AppState* state) {
     // === PRODUCTION ENHANCEMENTS: Real Frequency Detection ===
     // Establish base frequency with proper validation
     uint32_t baseDetectMhz = 5000; // Safe default for Zen 3+
+    bool targetFreqClamped = false;
     
     if (state->target_all_core_mhz > 0) {
         // User-specified target - validate within realistic bounds (3.0-6.5 GHz)
         baseDetectMhz = std::max(3000u, std::min(6500u, state->target_all_core_mhz));
-        if (baseDetectMhz != state->target_all_core_mhz) {
-            logEvent("target_freq_clamped", baseDetectMhz, 0);
-        }
+        targetFreqClamped = (baseDetectMhz != state->target_all_core_mhz);
     } else if (state->baseline_loaded && state->baseline_detected_mhz > 0) {
         // Resume from baseline history
         baseDetectMhz = state->baseline_detected_mhz;
@@ -114,6 +102,10 @@ void OverclockGovernor::RunLoop(AppState* state) {
         log << "\n";
         log.flush();
     };
+
+    if (targetFreqClamped) {
+        logEvent("target_freq_clamped", baseDetectMhz, 0.0f);
+    }
     
     logEvent("start", baseDetectMhz);
 
@@ -124,8 +116,8 @@ void OverclockGovernor::RunLoop(AppState* state) {
 
     while (running_) {
         // === TELEMETRY POLLING WITH VALIDATION ===
-        telemetry::TelemetrySnapshot snap;
-        telemetry::Poll(snap);
+        TelemetrySnapshot snap;
+        // telemetry::Poll(snap);  // TODO: link telemetry module
         
         if (snap.cpuTempValid) {
             state->current_cpu_temp_c = (uint32_t)std::lround(snap.cpuTempC);
@@ -210,7 +202,7 @@ void OverclockGovernor::RunLoop(AppState* state) {
             // Aggressive step-down to ensure safety
             appliedOffset = std::max(0, appliedOffset - (int)state->boost_step_mhz);
             state->applied_core_offset_mhz = appliedOffset;
-            overclock_vendor::ApplyCpuOffsetMhz(appliedOffset);
+            // overclock_vendor::ApplyCpuOffsetMhz(appliedOffset);  // TODO
             
             state->governor_last_fault = cpuHot ? "cpu_thermal" : "gpu_thermal";
             state->governor_status = "thermal-throttle";
@@ -222,7 +214,7 @@ void OverclockGovernor::RunLoop(AppState* state) {
             if (thermalFaults >= maxFaultsBeforeRollback && appliedOffset > 0) {
                 appliedOffset = 0;
                 state->applied_core_offset_mhz = 0;
-                overclock_vendor::ApplyCpuOffsetMhz(0);
+                // overclock_vendor::ApplyCpuOffsetMhz(0);  // TODO
                 
                 state->governor_status = "rollback";
                 state->governor_last_fault = "rollback_after_faults";
@@ -252,7 +244,7 @@ void OverclockGovernor::RunLoop(AppState* state) {
                 if (newOffset != appliedOffset) {
                     appliedOffset = newOffset;
                     state->applied_core_offset_mhz = appliedOffset;
-                    overclock_vendor::ApplyCpuOffsetMhz(appliedOffset);
+                    // overclock_vendor::ApplyCpuOffsetMhz(appliedOffset);  // TODO
                     
                     state->governor_status = (cpuDesiredDelta > 0) ? "pid-boost" : "pid-reduce";
                     logEvent(state->governor_status, baseDetectMhz + appliedOffset, cpuPidOutput);

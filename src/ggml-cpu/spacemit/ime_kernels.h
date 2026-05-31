@@ -24,3 +24,5 @@ void quantize_a_4row_i8(size_t blk_len, const float * a_ptr, size_t count_k, std
 
 }  // namespace ime1
 }  // namespace sqnbitgemm_spacemit_ime
+
+

@@ -89,6 +89,116 @@ public:
     static constexpr size_t MAX_PATH_LEN = 260;
 
     // ========================================================================
+    // ScanZipCentralDirForTraversal — check ZIP central directory entry NAMES
+    // (not file contents) for path traversal sequences. Returns true if safe.
+    // Scanning raw binary content for "../" causes false positives because
+    // legitimate JS bundles contain relative import paths in their source.
+    // ========================================================================
+    static bool ScanZipCentralDirForTraversal(const std::string& content) {
+        // ZIP central directory entry signature: PK\x01\x02 (0x02014B50)
+        const char kCDSig[4] = {'P', 'K', 0x01, 0x02};
+        const size_t sz = content.size();
+        size_t pos = 0;
+        size_t checkedEntries = 0;
+        static constexpr size_t kMaxEntries = 200000;
+
+        while (checkedEntries < kMaxEntries) {
+            pos = content.find(std::string(kCDSig, 4), pos);
+            if (pos == std::string::npos || pos + 46 > sz) break;
+
+            const unsigned char* data =
+                reinterpret_cast<const unsigned char*>(content.data());
+
+            uint16_t filenameLen = 0, extraLen = 0, commentLen = 0;
+            memcpy(&filenameLen, data + pos + 28, 2);
+            memcpy(&extraLen,    data + pos + 30, 2);
+            memcpy(&commentLen,  data + pos + 32, 2);
+
+            if (pos + 46 + filenameLen > sz) break; // truncated record
+
+            std::string entryName(content.data() + pos + 46, filenameLen);
+
+            // Reject entries whose name contains path traversal sequences
+            if (entryName.find("../") != std::string::npos ||
+                entryName.find("..\\") != std::string::npos) {
+                std::cerr << "[VSIX] Path traversal in ZIP entry name: "
+                          << entryName << "\n";
+                return false;
+            }
+            // Reject absolute paths in entry names
+            if (filenameLen > 0 &&
+                (entryName[0] == '/' || entryName[0] == '\\')) {
+                std::cerr << "[VSIX] Absolute path in ZIP entry name: "
+                          << entryName << "\n";
+                return false;
+            }
+
+            pos += 46u + filenameLen +
+                   static_cast<size_t>(extraLen) +
+                   static_cast<size_t>(commentLen);
+            ++checkedEntries;
+        }
+        return true; // no traversal found
+    }
+
+    // ========================================================================
+    // ExtractJsonString — pull a simple string value from a JSON object.
+    // Handles basic escape sequences. Not a general JSON parser.
+    // ========================================================================
+    static std::string ExtractJsonString(const std::string& json,
+                                         const std::string& key) {
+        const std::string needle = '"' + key + '"';
+        size_t pos = json.find(needle);
+        if (pos == std::string::npos) return {};
+        pos = json.find(':', pos + needle.size());
+        if (pos == std::string::npos) return {};
+        ++pos;
+        while (pos < json.size() && (json[pos] == ' ' || json[pos] == '\t' ||
+                                     json[pos] == '\n' || json[pos] == '\r'))
+            ++pos;
+        if (pos >= json.size() || json[pos] != '"') return {};
+        ++pos;
+        std::string result;
+        while (pos < json.size() && json[pos] != '"') {
+            if (json[pos] == '\\' && pos + 1 < json.size()) {
+                ++pos;
+                switch (json[pos]) {
+                    case 'n':  result += '\n'; break;
+                    case 't':  result += '\t'; break;
+                    case '"':  result += '"';  break;
+                    case '\\': result += '\\'; break;
+                    default:   result += json[pos]; break;
+                }
+            } else {
+                result += json[pos];
+            }
+            ++pos;
+        }
+        return result;
+    }
+
+    // ========================================================================
+    // ExtractActivationEvents — extract the activationEvents JSON array as-is.
+    // Returns "[]" if field is absent or malformed.
+    // ========================================================================
+    static std::string ExtractActivationEvents(const std::string& json) {
+        size_t pos = json.find("\"activationEvents\"");
+        if (pos == std::string::npos) return "[]";
+        size_t arrayStart = json.find('[', pos);
+        if (arrayStart == std::string::npos) return "[]";
+        int depth = 0;
+        size_t end = arrayStart;
+        for (; end < json.size(); ++end) {
+            if (json[end] == '[')      ++depth;
+            else if (json[end] == ']') { --depth; if (depth == 0) { ++end; break; } }
+        }
+        if (depth != 0) return "[]";
+        // Compact whitespace in the extracted array for clean JSON output
+        std::string raw = json.substr(arrayStart, end - arrayStart);
+        return raw;
+    }
+
+    // ========================================================================
     // Install — Full VSIX installation pipeline with security checks
     // ========================================================================
     static bool Install(const std::string& vsixPath) {
@@ -180,17 +290,67 @@ public:
 
         std::cout << "[VSIX] Converting '" << extName << "' to Native RawrXD Module..." << std::endl;
 
-        // Create wrapper to mark as "Native Converted"
+        // ---- Parse package.json for runtime activation metadata ----
+        // VSIX standard layout: extension/package.json (preferred) or package.json
+        std::string pkgJsonContent;
+        for (const char* relPath : {"extension\\package.json", "package.json"}) {
+            std::string candidate = installDir + "\\" + relPath;
+            std::ifstream pkgFile(candidate);
+            if (pkgFile.is_open()) {
+                pkgJsonContent.assign(
+                    std::istreambuf_iterator<char>(pkgFile),
+                    std::istreambuf_iterator<char>());
+                break;
+            }
+        }
+
+        std::string pkgName        = ExtractJsonString(pkgJsonContent, "name");
+        std::string pkgDisplayName = ExtractJsonString(pkgJsonContent, "displayName");
+        std::string pkgVersion     = ExtractJsonString(pkgJsonContent, "version");
+        std::string pkgPublisher   = ExtractJsonString(pkgJsonContent, "publisher");
+        std::string pkgDescription = ExtractJsonString(pkgJsonContent, "description");
+        std::string activationEventsJson = ExtractActivationEvents(pkgJsonContent);
+
+        // Prefer manifest fields from package.json; fall back to verification data
+        if (pkgPublisher.empty())   pkgPublisher = verification.publisher;
+        if (pkgVersion.empty())     pkgVersion   = verification.version;
+        if (pkgName.empty())        pkgName      = extName;
+        if (pkgDisplayName.empty()) pkgDisplayName = pkgName;
+
+        if (!activationEventsJson.empty() && activationEventsJson != "[]")
+            std::cout << "[VSIX] activationEvents: " << activationEventsJson << std::endl;
+        else
+            std::cout << "[VSIX] Warning: activationEvents absent in package.json" << std::endl;
+
+        // ---- Write native_manifest.json ----
+        // Escape helper for JSON string values
+        auto jsonEscape = [](const std::string& s) {
+            std::string out;
+            for (char c : s) {
+                if (c == '"')       out += "\\\"";
+                else if (c == '\\') out += "\\\\";
+                else if (c == '\n') out += "\\n";
+                else if (c == '\r') out += "\\r";
+                else if (c == '\t') out += "\\t";
+                else                out += c;
+            }
+            return out;
+        };
+
         std::ofstream metastub(installDir + "\\native_manifest.json");
         metastub << "{\n"
                  << "  \"converted\": true,\n"
                  << "  \"native_mode\": true,\n"
-                 << "  \"original_vsix\": \"" << extName << "\",\n"
-                 << "  \"signature_verified\": " << (verification.signatureVerified ? "true" : "false") << ",\n"
-                 << "  \"has_native_code\": " << (verification.hasNativeCode ? "true" : "false") << ",\n"
-                 << "  \"publisher\": \"" << verification.publisher << "\",\n"
-                 << "  \"version\": \"" << verification.version << "\",\n"
-                 << "  \"install_time\": " << GetTickCount64() << "\n"
+                 << "  \"original_vsix\": \""    << jsonEscape(extName)          << "\",\n"
+                 << "  \"id\": \""                << jsonEscape(pkgName)          << "\",\n"
+                 << "  \"display_name\": \""      << jsonEscape(pkgDisplayName)   << "\",\n"
+                 << "  \"description\": \""       << jsonEscape(pkgDescription)   << "\",\n"
+                 << "  \"publisher\": \""         << jsonEscape(pkgPublisher)     << "\",\n"
+                 << "  \"version\": \""           << jsonEscape(pkgVersion)       << "\",\n"
+                 << "  \"activation_events\": "   << activationEventsJson         << ",\n"
+                 << "  \"signature_verified\": "  << (verification.signatureVerified ? "true" : "false") << ",\n"
+                 << "  \"has_native_code\": "     << (verification.hasNativeCode  ? "true" : "false") << ",\n"
+                 << "  \"install_time\": "        << GetTickCount64()              << "\n"
                  << "}";
 
         std::cout << "[VSIX] Successfully installed native optimized version of " << extName
@@ -292,9 +452,10 @@ public:
                                     content.find(".exe") != std::string::npos ||
                                     content.find(".so") != std::string::npos);
 
-            // Check for path traversal attacks in ZIP entries
-            if (content.find("..\\") != std::string::npos ||
-                content.find("../") != std::string::npos) {
+            // Check for path traversal attacks in ZIP entry NAMES only.
+            // Raw binary search of the whole file content causes false positives
+            // because legitimate JS bundles contain "../" relative import paths.
+            if (!ScanZipCentralDirForTraversal(content)) {
                 return VSIXVerification::error("Path traversal detected in archive — rejecting");
             }
         }
@@ -311,6 +472,21 @@ public:
     // ========================================================================
     // ValidateExtractedContents — Post-extraction safety checks
     // ========================================================================
+    // Uninstall — remove an installed extension directory by id
+    static bool Uninstall(const std::string& extensionId) {
+        std::string installRoot = GetExtensionsInstallRoot();
+        std::error_code ec;
+        for (const auto& entry : std::filesystem::directory_iterator(installRoot, ec)) {
+            if (!entry.is_directory()) continue;
+            std::string dirName = entry.path().filename().string();
+            if (dirName.rfind(extensionId, 0) == 0) {
+                std::filesystem::remove_all(entry.path(), ec);
+                return !ec;
+            }
+        }
+        return false;
+    }
+
     static bool ValidateExtractedContents(const std::string& installDir) {
         std::error_code ec;
 

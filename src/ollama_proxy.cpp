@@ -13,7 +13,7 @@ struct OllamaProxyCtx {
     explicit OllamaProxyCtx(std::string base_url)
         : client(std::move(base_url)) {}
 
-    RawrXD::Backend::OllamaClient client;
+    RawrXD::Backend::NativeClient client;
     std::atomic<bool> stop_requested{false};
 };
 
@@ -50,14 +50,14 @@ static OllamaProxyCtx* EnsureCtx(void*& opaque_ctx, const std::string& base_url)
 
 } // namespace
 
-OllamaProxy::~OllamaProxy() {
+NativeProxy::~NativeProxy() {
     auto* ctx = reinterpret_cast<OllamaProxyCtx*>(m_networkContext);
     delete ctx;
     m_networkContext = nullptr;
     m_currentRequest = nullptr;
 }
 
-void OllamaProxy::setBaseUrl(const std::string& baseUrl) {
+void NativeProxy::setBaseUrl(const std::string& baseUrl) {
     if (!baseUrl.empty()) {
         m_ollamaUrl = baseUrl;
     }
@@ -67,17 +67,17 @@ void OllamaProxy::setBaseUrl(const std::string& baseUrl) {
     }
 }
 
-void OllamaProxy::setModel(const std::string& modelName) {
+void NativeProxy::setModel(const std::string& modelName) {
     m_modelName = modelName;
 }
 
-bool OllamaProxy::isOllamaAvailable() {
+bool NativeProxy::isOllamaAvailable() {
     auto* ctx = EnsureCtx(m_networkContext, m_ollamaUrl);
     ctx->client.setBaseUrl(m_ollamaUrl);
     return ctx->client.isRunning();
 }
 
-bool OllamaProxy::isModelAvailable(const std::string& modelName) {
+bool NativeProxy::isModelAvailable(const std::string& modelName) {
     auto* ctx = EnsureCtx(m_networkContext, m_ollamaUrl);
     ctx->client.setBaseUrl(m_ollamaUrl);
 
@@ -93,7 +93,7 @@ bool OllamaProxy::isModelAvailable(const std::string& modelName) {
     return false;
 }
 
-OllamaProxy::OllamaModelMeta OllamaProxy::getModelMetadata(const std::string& modelName) {
+NativeProxy::OllamaModelMeta NativeProxy::getModelMetadata(const std::string& modelName) {
     OllamaModelMeta result;
     auto* ctx = EnsureCtx(m_networkContext, m_ollamaUrl);
     ctx->client.setBaseUrl(m_ollamaUrl);
@@ -118,22 +118,22 @@ OllamaProxy::OllamaModelMeta OllamaProxy::getModelMetadata(const std::string& mo
     return result;
 }
 
-void OllamaProxy::generateResponse(const std::string& prompt, float temperature, int maxTokens) {
+void NativeProxy::generateResponse(const std::string& prompt, float temperature, int maxTokens) {
     auto* ctx = EnsureCtx(m_networkContext, m_ollamaUrl);
     ctx->client.setBaseUrl(m_ollamaUrl);
     ctx->stop_requested.store(false, std::memory_order_release);
 
     const std::string model = Trim(m_modelName);
     if (model.empty()) {
-        if (m_onError) m_onError("OllamaProxy: no model selected");
+        if (m_onError) m_onError("NativeProxy: no model selected");
         return;
     }
     if (Trim(prompt).empty()) {
-        if (m_onError) m_onError("OllamaProxy: empty prompt");
+        if (m_onError) m_onError("NativeProxy: empty prompt");
         return;
     }
     if (!ctx->client.isRunning()) {
-        if (m_onError) m_onError("OllamaProxy: Ollama not reachable at " + m_ollamaUrl);
+        if (m_onError) m_onError("NativeProxy: Ollama not reachable at " + m_ollamaUrl);
         return;
     }
 
@@ -148,7 +148,7 @@ void OllamaProxy::generateResponse(const std::string& prompt, float temperature,
     if (ctx->stop_requested.load(std::memory_order_acquire)) return;
 
     if (resp.error) {
-        if (m_onError) m_onError("OllamaProxy: " + resp.error_message);
+        if (m_onError) m_onError("NativeProxy: " + resp.error_message);
         return;
     }
 
@@ -160,16 +160,17 @@ void OllamaProxy::generateResponse(const std::string& prompt, float temperature,
     }
 }
 
-void OllamaProxy::stopGeneration() {
+void NativeProxy::stopGeneration() {
     auto* ctx = reinterpret_cast<OllamaProxyCtx*>(m_networkContext);
     if (ctx) ctx->stop_requested.store(true, std::memory_order_release);
 }
 
-void OllamaProxy::onNetworkReply() {
-    // Legacy hook point (Qt version). Current implementation is synchronous via backend::OllamaClient.
+void NativeProxy::onNetworkReply() {
+    // Legacy hook point (Qt version). Current implementation is synchronous via backend::NativeClient.
+    fprintf(stderr, "[NativeProxy] Network reply received (legacy hook)\n");
 }
 
-void OllamaProxy::onNetworkError(int code) {
-    if (m_onError) m_onError("OllamaProxy: network error code " + std::to_string(code));
+void NativeProxy::onNetworkError(int code) {
+    if (m_onError) m_onError("NativeProxy: network error code " + std::to_string(code));
 }
 

@@ -150,14 +150,14 @@ KVCache_Create PROC
     sub     rsp, 48
 
     ; Store parameters
-    mov     [rel kvcache_state + STATE_SIZE], ecx
-    mov     [rel kvcache_state + STATE_N_LAYERS], edx
-    mov     [rel kvcache_state + STATE_N_HEADS], r8d
-    mov     [rel kvcache_state + STATE_HEAD_DIM], r9d
-    mov     dword ptr [rel kvcache_state + STATE_USED], 0
-    mov     dword ptr [rel kvcache_state + STATE_HEAD], 0
-    mov     dword ptr [rel kvcache_state + STATE_N_SEQ], 0
-    mov     dword ptr [rel kvcache_state + STATE_SLIDING_WIN], 0
+    mov     dword ptr [kvcache_state + STATE_SIZE], ecx
+    mov     dword ptr [kvcache_state + STATE_N_LAYERS], edx
+    mov     dword ptr [kvcache_state + STATE_N_HEADS], r8d
+    mov     dword ptr [kvcache_state + STATE_HEAD_DIM], r9d
+    mov     dword ptr [kvcache_state + STATE_USED], 0
+    mov     dword ptr [kvcache_state + STATE_HEAD], 0
+    mov     dword ptr [kvcache_state + STATE_N_SEQ], 0
+    mov     dword ptr [kvcache_state + STATE_SLIDING_WIN], 0
 
     ; Calculate K/V cache size
     ; Size = n_layers * max_size * n_heads * head_dim * sizeof(float)
@@ -170,28 +170,28 @@ KVCache_Create PROC
 
     ; In production: VirtualAlloc for K and V
     ; For now, use static array (limited capacity)
-    lea     rax, [rel kvcache_cells]
-    mov     [rel kvcache_state + STATE_CELLS], rax
+    lea     rax, [kvcache_cells]
+    mov     qword ptr [kvcache_state + STATE_CELLS], rax
 
     ; Initialize cells to unused
-    lea     rdi, [rel kvcache_cells]
-    mov     ecx, [rel kvcache_state + STATE_SIZE]
+    lea     rdi, [kvcache_cells]
+    mov     ecx, dword ptr [kvcache_state + STATE_SIZE]
     imul    ecx, CELL_SIZEOF
     xor     eax, eax
     rep stosb
 
     ; Initialize sequence tracking
-    lea     rdi, [rel seq_start]
+    lea     rdi, [seq_start]
     mov     ecx, MAX_SEQ_ID
     mov     eax, -1
     rep stosd
 
-    lea     rdi, [rel seq_end]
+    lea     rdi, [seq_end]
     mov     ecx, MAX_SEQ_ID
     mov     eax, -1
     rep stosd
 
-    lea     rdi, [rel seq_used]
+    lea     rdi, [seq_used]
     mov     ecx, MAX_SEQ_ID
     xor     eax, eax
     rep stosd
@@ -214,9 +214,9 @@ KVCache_Create ENDP
 ; -----------------------------------------------------------------------------
 KVCache_Destroy PROC
     ; In production: VirtualFree
-    mov     qword ptr [rel kvcache_state + STATE_K_DATA], 0
-    mov     qword ptr [rel kvcache_state + STATE_V_DATA], 0
-    mov     qword ptr [rel kvcache_state + STATE_CELLS], 0
+    mov     qword ptr [kvcache_state + STATE_K_DATA], 0
+    mov     qword ptr [kvcache_state + STATE_V_DATA], 0
+    mov     qword ptr [kvcache_state + STATE_CELLS], 0
     xor     eax, eax
     ret
 KVCache_Destroy ENDP
@@ -228,28 +228,28 @@ KVCache_Destroy ENDP
 KVCache_Clear PROC
     push    rdi
 
-    mov     dword ptr [rel kvcache_state + STATE_USED], 0
-    mov     dword ptr [rel kvcache_state + STATE_HEAD], 0
+    mov     dword ptr [kvcache_state + STATE_USED], 0
+    mov     dword ptr [kvcache_state + STATE_HEAD], 0
 
     ; Clear all cells
-    mov     rdi, [rel kvcache_state + STATE_CELLS]
-    mov     ecx, [rel kvcache_state + STATE_SIZE]
+    mov     rdi, qword ptr [kvcache_state + STATE_CELLS]
+    mov     ecx, dword ptr [kvcache_state + STATE_SIZE]
     imul    ecx, CELL_SIZEOF
     xor     eax, eax
     rep stosb
 
     ; Clear sequence tracking
-    lea     rdi, [rel seq_start]
+    lea     rdi, [seq_start]
     mov     ecx, MAX_SEQ_ID
     mov     eax, -1
     rep stosd
 
-    lea     rdi, [rel seq_end]
+    lea     rdi, [seq_end]
     mov     ecx, MAX_SEQ_ID
     mov     eax, -1
     rep stosd
 
-    lea     rdi, [rel seq_used]
+    lea     rdi, [seq_used]
     mov     ecx, MAX_SEQ_ID
     xor     eax, eax
     rep stosd
@@ -265,7 +265,7 @@ KVCache_Clear ENDP
 ;   RCX = sliding_window (0 to disable)
 ; -----------------------------------------------------------------------------
 KVCache_SetConfig PROC
-    mov     [rel kvcache_state + STATE_SLIDING_WIN], ecx
+    mov     dword ptr [kvcache_state + STATE_SLIDING_WIN], ecx
     xor     eax, eax
     ret
 KVCache_SetConfig ENDP
@@ -299,9 +299,9 @@ KVCache_SeqAdd PROC
     mov     r15, r9                     ; v_data
 
     ; Find available slot (circular search from head)
-    mov     eax, [rel kvcache_state + STATE_HEAD]
-    mov     ebx, [rel kvcache_state + STATE_SIZE]
-    mov     rsi, [rel kvcache_state + STATE_CELLS]
+    mov     eax, dword ptr [kvcache_state + STATE_HEAD]
+    mov     ebx, dword ptr [kvcache_state + STATE_SIZE]
+    mov     rsi, qword ptr [kvcache_state + STATE_CELLS]
 
     xor     edi, edi                    ; Search count
 
@@ -325,7 +325,7 @@ KVCache_SeqAdd PROC
 
     ; Check if cell belongs to different sequence and is older
     ; (for sliding window eviction)
-    mov     r10d, [rel kvcache_state + STATE_SLIDING_WIN]
+    mov     r10d, dword ptr [kvcache_state + STATE_SLIDING_WIN]
     test    r10d, r10d
     jz      @@next_cell
 
@@ -347,22 +347,22 @@ KVCache_SeqAdd PROC
 
     ; Copy K data to cache
     ; Offset = slot * n_layers * n_heads * head_dim * sizeof(float)
-    mov     r10, [rel kvcache_state + STATE_K_DATA]
+    mov     r10, qword ptr [kvcache_state + STATE_K_DATA]
     test    r10, r10
     jz      @@skip_copy_k
 
-    mov     r8d, [rel kvcache_state + STATE_N_LAYERS]
-    imul    r8d, [rel kvcache_state + STATE_N_HEADS]
-    imul    r8d, [rel kvcache_state + STATE_HEAD_DIM]
+    mov     r8d, dword ptr [kvcache_state + STATE_N_LAYERS]
+    imul    r8d, dword ptr [kvcache_state + STATE_N_HEADS]
+    imul    r8d, dword ptr [kvcache_state + STATE_HEAD_DIM]
     imul    r8d, eax
     shl     r8d, 2                      ; * sizeof(float)
 
     ; Copy using AVX-512
     lea     rdi, [r10 + r8]
     mov     rsi, r14
-    mov     ecx, [rel kvcache_state + STATE_N_LAYERS]
-    imul    ecx, [rel kvcache_state + STATE_N_HEADS]
-    imul    ecx, [rel kvcache_state + STATE_HEAD_DIM]
+    mov     ecx, dword ptr [kvcache_state + STATE_N_LAYERS]
+    imul    ecx, dword ptr [kvcache_state + STATE_N_HEADS]
+    imul    ecx, dword ptr [kvcache_state + STATE_HEAD_DIM]
 
 @@copy_k_loop:
     cmp     ecx, 16
@@ -376,8 +376,8 @@ KVCache_SeqAdd PROC
 @@copy_k_tail:
     test    ecx, ecx
     jz      @@skip_copy_k
-    vmovss  xmm0, [rsi]
-    vmovss  [rdi], xmm0
+    vmovss  xmm0, dword ptr [rsi]
+    vmovss  dword ptr [rdi], xmm0
     add     rsi, 4
     add     rdi, 4
     dec     ecx
@@ -390,33 +390,33 @@ KVCache_SeqAdd PROC
     ; Update head position
     mov     ecx, eax
     inc     ecx
-    cmp     ecx, [rel kvcache_state + STATE_SIZE]
+    cmp     ecx, dword ptr [kvcache_state + STATE_SIZE]
     jl      @@no_head_wrap
     xor     ecx, ecx
 @@no_head_wrap:
-    mov     [rel kvcache_state + STATE_HEAD], ecx
+    mov     dword ptr [kvcache_state + STATE_HEAD], ecx
 
     ; Update used count
-    mov     ecx, [rel kvcache_state + STATE_USED]
-    cmp     ecx, [rel kvcache_state + STATE_SIZE]
+    mov     ecx, dword ptr [kvcache_state + STATE_USED]
+    cmp     ecx, dword ptr [kvcache_state + STATE_SIZE]
     jge     @@no_used_update
     inc     ecx
-    mov     [rel kvcache_state + STATE_USED], ecx
+    mov     dword ptr [kvcache_state + STATE_USED], ecx
 @@no_used_update:
 
     ; Update sequence tracking
     cmp     r12d, MAX_SEQ_ID
     jge     @@done
 
-    lea     rbx, [rel seq_start]
+    lea     rbx, [seq_start]
     cmp     dword ptr [rbx + r12*4], -1
     jne     @@update_end
     mov     [rbx + r12*4], r13d
 @@update_end:
-    lea     rbx, [rel seq_end]
+    lea     rbx, [seq_end]
     mov     [rbx + r12*4], r13d
 
-    lea     rbx, [rel seq_used]
+    lea     rbx, [seq_used]
     inc     dword ptr [rbx + r12*4]
 
 @@done:
@@ -456,8 +456,8 @@ KVCache_SeqRm PROC
     push    rdi
 
     mov     ebx, ecx                    ; seq_id
-    mov     rsi, [rel kvcache_state + STATE_CELLS]
-    mov     edi, [rel kvcache_state + STATE_SIZE]
+    mov     rsi, qword ptr [kvcache_state + STATE_CELLS]
+    mov     edi, dword ptr [kvcache_state + STATE_SIZE]
     xor     ecx, ecx                    ; index
     xor     edx, edx                    ; freed count
 
@@ -481,7 +481,7 @@ KVCache_SeqRm PROC
     inc     edx
 
     ; Decrement used count
-    dec     dword ptr [rel kvcache_state + STATE_USED]
+    dec     dword ptr [kvcache_state + STATE_USED]
 
 @@rm_next:
     inc     ecx
@@ -492,11 +492,11 @@ KVCache_SeqRm PROC
     cmp     ebx, MAX_SEQ_ID
     jge     @@rm_ret
 
-    lea     rax, [rel seq_start]
+    lea     rax, [seq_start]
     mov     dword ptr [rax + rbx*4], -1
-    lea     rax, [rel seq_end]
+    lea     rax, [seq_end]
     mov     dword ptr [rax + rbx*4], -1
-    lea     rax, [rel seq_used]
+    lea     rax, [seq_used]
     mov     dword ptr [rax + rbx*4], 0
 
 @@rm_ret:
@@ -530,8 +530,8 @@ KVCache_SeqCp PROC
     mov     r14d, r8d                   ; pos_start
     mov     r15d, r9d                   ; pos_end
 
-    mov     rsi, [rel kvcache_state + STATE_CELLS]
-    mov     edi, [rel kvcache_state + STATE_SIZE]
+    mov     rsi, qword ptr [kvcache_state + STATE_CELLS]
+    mov     edi, dword ptr [kvcache_state + STATE_SIZE]
     xor     ecx, ecx                    ; index
     xor     ebx, ebx                    ; copied count
 
@@ -599,8 +599,8 @@ KVCache_SeqKeep PROC
     mov     r13d, edx                   ; pos_start
     mov     ebx, r8d                    ; pos_end
 
-    mov     rsi, [rel kvcache_state + STATE_CELLS]
-    mov     edi, [rel kvcache_state + STATE_SIZE]
+    mov     rsi, qword ptr [kvcache_state + STATE_CELLS]
+    mov     edi, dword ptr [kvcache_state + STATE_SIZE]
     xor     ecx, ecx
     xor     edx, edx                    ; kept count
 
@@ -633,7 +633,7 @@ KVCache_SeqKeep PROC
 @@keep_remove:
     ; Remove cell
     mov     dword ptr [r8 + CELL_FLAGS], 0
-    dec     dword ptr [rel kvcache_state + STATE_USED]
+    dec     dword ptr [kvcache_state + STATE_USED]
 
 @@keep_next:
     inc     ecx
@@ -671,8 +671,8 @@ KVCache_SeqShift PROC
     mov     ebx, r8d                    ; pos_end
     mov     r14d, r9d                   ; delta
 
-    mov     rsi, [rel kvcache_state + STATE_CELLS]
-    mov     edi, [rel kvcache_state + STATE_SIZE]
+    mov     rsi, qword ptr [kvcache_state + STATE_CELLS]
+    mov     edi, dword ptr [kvcache_state + STATE_SIZE]
     xor     ecx, ecx
     xor     edx, edx                    ; shifted count
 
@@ -714,7 +714,7 @@ KVCache_SeqShift PROC
 @@shift_remove:
     ; Position went negative, remove cell
     mov     dword ptr [r8 + CELL_FLAGS], 0
-    dec     dword ptr [rel kvcache_state + STATE_USED]
+    dec     dword ptr [kvcache_state + STATE_USED]
 
 @@shift_next:
     inc     ecx
@@ -750,7 +750,7 @@ KVCache_Roll PROC
     mov     r12d, ecx                   ; n_to_evict
 
     ; If sliding window is set, evict based on position
-    mov     eax, [rel kvcache_state + STATE_SLIDING_WIN]
+    mov     eax, dword ptr [kvcache_state + STATE_SLIDING_WIN]
     test    eax, eax
     jz      @@roll_fifo
 
@@ -760,9 +760,9 @@ KVCache_Roll PROC
 
 @@roll_fifo:
     ; FIFO eviction from head
-    mov     rsi, [rel kvcache_state + STATE_CELLS]
-    mov     ebx, [rel kvcache_state + STATE_HEAD]
-    mov     edi, [rel kvcache_state + STATE_SIZE]
+    mov     rsi, qword ptr [kvcache_state + STATE_CELLS]
+    mov     ebx, dword ptr [kvcache_state + STATE_HEAD]
+    mov     edi, dword ptr [kvcache_state + STATE_SIZE]
     xor     ecx, ecx                    ; evicted count
 
 @@roll_loop:
@@ -786,7 +786,7 @@ KVCache_Roll PROC
 
     ; Evict
     mov     dword ptr [r9 + CELL_FLAGS], 0
-    dec     dword ptr [rel kvcache_state + STATE_USED]
+    dec     dword ptr [kvcache_state + STATE_USED]
 
 @@roll_next:
     inc     ecx
@@ -813,8 +813,8 @@ KVCache_Defrag PROC
     push    r12
     push    r13
 
-    mov     rsi, [rel kvcache_state + STATE_CELLS]
-    mov     edi, [rel kvcache_state + STATE_SIZE]
+    mov     rsi, qword ptr [kvcache_state + STATE_CELLS]
+    mov     edi, dword ptr [kvcache_state + STATE_SIZE]
     xor     r12d, r12d                  ; write index
     xor     r13d, r13d                  ; moves count
     xor     ecx, ecx                    ; read index
@@ -864,7 +864,7 @@ KVCache_Defrag PROC
 
 @@defrag_done:
     ; Update head position
-    mov     [rel kvcache_state + STATE_HEAD], r12d
+    mov     dword ptr [kvcache_state + STATE_HEAD], r12d
 
     mov     eax, r13d
     pop     r13
@@ -881,7 +881,7 @@ KVCache_Defrag ENDP
 ;   RCX = window_size (0 to disable)
 ; -----------------------------------------------------------------------------
 KVCache_SlidingWindow PROC
-    mov     [rel kvcache_state + STATE_SLIDING_WIN], ecx
+    mov     dword ptr [kvcache_state + STATE_SLIDING_WIN], ecx
     xor     eax, eax
     ret
 KVCache_SlidingWindow ENDP
@@ -914,8 +914,8 @@ KVCache_GetK PROC
     mov     r14d, r8d                   ; n_positions
     mov     r15, r9                     ; output
 
-    mov     rsi, [rel kvcache_state + STATE_CELLS]
-    mov     edi, [rel kvcache_state + STATE_SIZE]
+    mov     rsi, qword ptr [kvcache_state + STATE_CELLS]
+    mov     edi, dword ptr [kvcache_state + STATE_SIZE]
     xor     ebx, ebx                    ; output index
 
 @@getk_pos_loop:
@@ -946,13 +946,13 @@ KVCache_GetK PROC
 
     ; Found - copy K data
     ; Calculate source offset
-    mov     r8, [rel kvcache_state + STATE_K_DATA]
+    mov     r8, qword ptr [kvcache_state + STATE_K_DATA]
     test    r8, r8
     jz      @@getk_inc
 
-    mov     eax, [rel kvcache_state + STATE_N_LAYERS]
-    imul    eax, [rel kvcache_state + STATE_N_HEADS]
-    imul    eax, [rel kvcache_state + STATE_HEAD_DIM]
+    mov     eax, dword ptr [kvcache_state + STATE_N_LAYERS]
+    imul    eax, dword ptr [kvcache_state + STATE_N_HEADS]
+    imul    eax, dword ptr [kvcache_state + STATE_HEAD_DIM]
     mov     r10d, eax                   ; elements per slot
     imul    eax, ecx                    ; * slot index
     shl     eax, 2                      ; * sizeof(float)
@@ -1033,13 +1033,13 @@ KVCache_Find PROC
     push    rbx
 
     ; Check if we have space
-    mov     eax, [rel kvcache_state + STATE_USED]
+    mov     eax, dword ptr [kvcache_state + STATE_USED]
     add     eax, edx                    ; + n_tokens
-    cmp     eax, [rel kvcache_state + STATE_SIZE]
+    cmp     eax, dword ptr [kvcache_state + STATE_SIZE]
     jg      @@find_full
 
     ; Return current head
-    mov     eax, [rel kvcache_state + STATE_HEAD]
+    mov     eax, dword ptr [kvcache_state + STATE_HEAD]
     jmp     @@find_done
 
 @@find_full:
@@ -1060,7 +1060,7 @@ KVCache_Find ENDP
 ; Returns: RAX = used count
 ; -----------------------------------------------------------------------------
 KVCache_GetUsed PROC
-    mov     eax, [rel kvcache_state + STATE_USED]
+    mov     eax, dword ptr [kvcache_state + STATE_USED]
     ret
 KVCache_GetUsed ENDP
 
@@ -1070,7 +1070,7 @@ KVCache_GetUsed ENDP
 ; Returns: RAX = size
 ; -----------------------------------------------------------------------------
 KVCache_GetSize PROC
-    mov     eax, [rel kvcache_state + STATE_SIZE]
+    mov     eax, dword ptr [kvcache_state + STATE_SIZE]
     ret
 KVCache_GetSize ENDP
 
@@ -1080,7 +1080,7 @@ KVCache_GetSize ENDP
 ; Returns: RAX = head index
 ; -----------------------------------------------------------------------------
 KVCache_GetHead PROC
-    mov     eax, [rel kvcache_state + STATE_HEAD]
+    mov     eax, dword ptr [kvcache_state + STATE_HEAD]
     ret
 KVCache_GetHead ENDP
 
@@ -1092,10 +1092,10 @@ KVCache_GetHead ENDP
 ; Returns: RAX = 0 (success), -1 (invalid index)
 ; -----------------------------------------------------------------------------
 KVCache_GetCell PROC
-    cmp     ecx, [rel kvcache_state + STATE_SIZE]
+    cmp     ecx, dword ptr [kvcache_state + STATE_SIZE]
     jge     @@invalid
 
-    mov     rax, [rel kvcache_state + STATE_CELLS]
+    mov     rax, qword ptr [kvcache_state + STATE_CELLS]
     imul    ecx, ecx, CELL_SIZEOF
     add     rax, rcx
 
@@ -1141,8 +1141,8 @@ KVCache_SeqDiv PROC
     test    r14d, r14d
     jz      @@div_done                  ; Avoid divide by zero
 
-    mov     rsi, [rel kvcache_state + STATE_CELLS]
-    mov     edi, [rel kvcache_state + STATE_SIZE]
+    mov     rsi, qword ptr [kvcache_state + STATE_CELLS]
+    mov     edi, dword ptr [kvcache_state + STATE_SIZE]
     xor     ecx, ecx
     xor     edx, edx                    ; modified count
 

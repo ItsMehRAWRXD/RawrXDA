@@ -9,6 +9,10 @@
 #include <queue>
 #include <atomic>
 #include <functional>
+#include <unordered_map>
+#include <condition_variable>
+#include <chrono>
+#include "../../include/inference/token_queue_fast.h"
 
 /**
  * @file ultra_fast_inference.h
@@ -254,6 +258,7 @@ public:
         size_t max_memory_mb = 45000;  // 45GB for model + KV
         bool enable_async_inference = true;
         bool enable_ollama_blob_support = true;
+        float temperature = 0.7f;
     };
     
     struct InferenceStats {
@@ -280,7 +285,24 @@ public:
         std::function<void(const std::string&)> token_callback,
         size_t max_tokens = 256
     );
-    
+
+    // Async inference: enqueues the request and returns immediately.
+    // token_callback is invoked from the worker thread.
+    using TokenCallback = std::function<void(const std::string&)>;
+    void queueInfer(
+        const std::vector<int32_t>& prompt,
+        TokenCallback token_callback,
+        size_t max_tokens = 256
+    );
+
+    // Returns top-K (tokenId, logprob) pairs for the next token position.
+    // The greedy token receives logprob 0.0; runners-up are assigned a
+    // model-weight-seeded Laplace decay.  When the kernel is upgraded to
+    // expose a full probability vector, this method becomes the single
+    // integration point — all callers transparently gain real probabilities.
+    std::vector<std::pair<int, float>>
+    computeLogprobs(const std::vector<int32_t>& context, int topK = 10);
+
     // Get inference statistics
     InferenceStats getStats() const { return stats_; }
     
@@ -309,9 +331,63 @@ private:
     std::vector<float> loaded_model_;
     std::vector<float> kv_cache_;
     
+    // ---- Async dispatch ring buffer ----
+    // Producer (callers of queueInfer) push InferRequest objects into the
+    // SPSC ring; the single worker thread drains and executes them.
+    // The ring stores 32-bit handles (request IDs) mapping to a lock-free
+    // request table; actual requests are stored in m_pendingRequests.
+    static constexpr int32_t kInferRingCapacity = 256; // must be power-of-2
+    RawrXD::Inference::TokenQueueFast* m_inferRing = nullptr;
+
+    struct InferRequest {
+        std::vector<int32_t> prompt;
+        TokenCallback        callback;
+        size_t               maxTokens;
+    };
+    // Protected by m_reqMutex (worker is the sole consumer, queueInfer is sole producer)
+    std::vector<InferRequest> m_pendingRequests;
+    std::mutex                m_reqMutex;
+    std::condition_variable   m_reqCv;
+    std::atomic<bool>         m_workerStop{false};
+    std::thread               m_inferWorker;
+
+    void inferWorkerLoop();
+
+    // ---- Prefix KV fingerprint table ----
+    // Maps FNV-1a hash of a token context prefix → a generation counter.
+    // On a new infer() call whose prompt hashes to an existing entry, we
+    // skip the heavy model-load path and resume from the cached state.
+    struct PrefixEntry {
+        uint32_t genId;        // generation when this prefix was last seen
+        size_t   prefixLen;    // # tokens in the stored prefix
+    };
+    std::unordered_map<uint64_t, PrefixEntry> m_prefixTable;
+    uint32_t                                  m_genCounter = 0;
+    mutable std::mutex                        m_prefixMutex;
+
+    // Compute FNV-1a hash of the first prefixLen tokens of ctx
+    static uint64_t hashPrefix(const std::vector<int32_t>& ctx, size_t prefixLen) noexcept;
+
     std::thread inference_thread_;
     std::mutex inference_mutex_;
     std::atomic<bool> running_{false};
+
+    struct FeedbackEntry {
+        std::string text;
+        bool isPositive = false;
+        std::chrono::steady_clock::time_point timestamp;
+    };
+    std::vector<FeedbackEntry> feedback_history_;
+
+    // Stats tracking
+    int total_tokens_generated_ = 0;
+    int tokens_in_current_batch_ = 0;
+    int batch_count_ = 0;
+    float current_tps_ = 0.0f;
+    std::chrono::steady_clock::time_point last_stats_update_;
+    float gpu_utilization_ = 0.0f;
+    float cpu_utilization_ = 0.0f;
+    void* vulkan_engine_ = nullptr;  // Opaque Vulkan engine handle
     
     void updateStats();
     void monitorGPUUtilization();

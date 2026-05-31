@@ -27,6 +27,10 @@
 #include <cstring>
 #include <string_view>
 
+#ifndef RAWRXD_MIC_DEPS_DISABLED
+#define RAWRXD_MIC_DEPS_DISABLED 1
+#endif
+
 // ============================================================================
 // COMMAND EXPOSURE — Where a command is accessible
 // ============================================================================
@@ -68,6 +72,12 @@ enum CmdFlags : uint32_t
 // COMMAND TABLE — THE SINGLE SOURCE OF TRUTH
 // ============================================================================
 // Format: X(ID, SYMBOL, canonical_name, cli_alias, exposure, category, handler, flags)
+
+#if RAWRXD_MIC_DEPS_DISABLED
+#define RAWRXD_VOICE_CMD(...)
+#else
+#define RAWRXD_VOICE_CMD(...) X(__VA_ARGS__)
+#endif
 //
 // ID:         Win32 IDM_* value (0 = CLI-only, no GUI routing)
 // SYMBOL:     C++ enum symbol (becomes CmdID::SYMBOL)
@@ -169,14 +179,14 @@ enum CmdFlags : uint32_t
     X(3211, TRANS_TOGGLE, "view.transparencyToggle", "!opacity toggle", BOTH, "Transparency", handleTransToggle,       \
       CMD_NONE)                                                                                                        \
                                                                                                                        \
-    /* ═══════════════════ HELP (legacy 4001-4004) ═══════════════════ */                                              \
-    X(4001, HELP_ABOUT, "help.about", "!about", BOTH, "Help", handleHelpAbout, CMD_NONE)                               \
-    X(4002, HELP_CMDREF, "help.cmdref", "!cmdref", BOTH, "Help", handleHelpCmdRef, CMD_NONE)                           \
-    X(4003, HELP_PSDOCS, "help.psdocs", "!psdocs", BOTH, "Help", handleHelpPsDocs, CMD_NONE)                           \
-    X(4004, HELP_SEARCH, "help.search", "!help_search", BOTH, "Help", handleHelpSearch, CMD_NONE)                      \
+    /* ═══════════════════ HELP (7901-7904; Win32 menu + palette; NOT 4000-4099 terminal band) ═══════════════════ */  \
+    X(7901, HELP_CMDREF, "help.cmdref", "!cmdref", BOTH, "Help", handleHelpCmdRef, CMD_NONE)                           \
+    X(7902, HELP_PSDOCS, "help.psdocs", "!psdocs", BOTH, "Help", handleHelpPsDocs, CMD_NONE)                           \
+    X(7903, HELP_SEARCH, "help.search", "!help_search", BOTH, "Help", handleHelpSearch, CMD_NONE)                      \
+    X(7904, HELP_ABOUT, "help.about", "!about", BOTH, "Help", handleHelpAbout, CMD_NONE)                               \
                                                                                                                        \
     /* ═══════════════════ TERMINAL (4006-4010) ═══════════════════ */                                                 \
-    X(4005, TERMINAL_NEW, "terminal.new", "!terminal_new", BOTH, "Terminal", handleTerminalNew, CMD_NONE)            \
+    X(4005, TERMINAL_NEW, "terminal.new", "!terminal_new", BOTH, "Terminal", handleTerminalNew, CMD_NONE)              \
     X(4006, TERMINAL_KILL, "terminal.kill", "!terminal_kill", BOTH, "Terminal", handleTerminalKill, CMD_NONE)          \
     X(4007, TERMINAL_SPLIT_H, "terminal.splitH", "!terminal_split", BOTH, "Terminal", handleTerminalSplitH, CMD_NONE)  \
     X(4008, TERMINAL_SPLIT_V, "terminal.splitV", "!terminal_split_v", BOTH, "Terminal", handleTerminalSplitV,          \
@@ -215,6 +225,16 @@ enum CmdFlags : uint32_t
     X(4153, AUTONOMY_SET_GOAL, "autonomy.goal", "!autonomy_goal", BOTH, "Autonomy", handleAutonomyGoal, CMD_NONE)      \
     X(4154, AUTONOMY_STATUS, "autonomy.status", "!autonomy_status", BOTH, "Autonomy", handleAutonomyStatus, CMD_NONE)  \
     X(4155, AUTONOMY_MEMORY, "autonomy.memory", "!autonomy_memory", BOTH, "Autonomy", handleAutonomyMemory, CMD_NONE)  \
+                                                                                                                       \
+    /* ═══════════════════ PLAN ORCHESTRATOR (4164-4167) ═══════════════════ */                                        \
+    X(4164, PLAN_ORCHESTRATOR_START, "planOrchestrator.start", "!plan_start", BOTH, "PlanOrchestrator",                \
+      handlePlanOrchestratorStart, CMD_ASYNC)                                                                          \
+    X(4165, PLAN_ORCHESTRATOR_STOP, "planOrchestrator.stop", "!plan_stop", BOTH, "PlanOrchestrator",                   \
+      handlePlanOrchestratorStop, CMD_NONE)                                                                            \
+    X(4166, PLAN_ORCHESTRATOR_VIEW_STATUS, "planOrchestrator.status", "!plan_status", BOTH, "PlanOrchestrator",        \
+      handlePlanOrchestratorViewStatus, CMD_NONE)                                                                      \
+    X(4167, PLAN_ORCHESTRATOR_VIEW_PLAN, "planOrchestrator.viewPlan", "!plan_view", BOTH, "PlanOrchestrator",          \
+      handlePlanOrchestratorViewPlan, CMD_NONE)                                                                        \
                                                                                                                        \
     /* ═══════════════════ AI MODE (4200-4203) ═══════════════════ */                                                  \
     X(4200, AI_MODE_MAX, "ai.maxMode", "!max", BOTH, "AIMode", handleAIMaxMode, CMD_NONE)                              \
@@ -290,37 +310,38 @@ enum CmdFlags : uint32_t
     X(5047, BACKEND_SAVE_CFG, "backend.saveConfigs", "!backend save", BOTH, "Backend", handleBackendSaveConfigs,       \
       CMD_NONE)                                                                                                        \
                                                                                                                        \
-    /* ═══════════════════ ROUTER (5048-5081) ═══════════════════ */                                                   \
-    X(5048, ROUTER_ENABLE, "router.enable", "!router enable", BOTH, "Router", handleRouterEnable, CMD_NONE)            \
-    X(5049, ROUTER_DISABLE, "router.disable", "!router disable", BOTH, "Router", handleRouterDisable, CMD_NONE)        \
-    X(5050, ROUTER_STATUS, "router.status", "!router status", BOTH, "Router", handleRouterStatus, CMD_NONE)            \
-    X(5051, ROUTER_DECISION, "router.decision", "!router decision", BOTH, "Router", handleRouterDecision, CMD_NONE)    \
-    X(5052, ROUTER_SET_POLICY, "router.setPolicy", "!router policy", BOTH, "Router", handleRouterSetPolicy, CMD_NONE)  \
-    X(5053, ROUTER_CAPABILITIES, "router.capabilities", "!router caps", BOTH, "Router", handleRouterCapabilities,      \
+    /* ═══════════════════ ROUTER (6101-6134) ═══════════════════ */                                                   \
+    X(6101, ROUTER_ENABLE, "router.enable", "!router enable", BOTH, "Router", handleRouterEnable, CMD_NONE)            \
+    X(6102, ROUTER_DISABLE, "router.disable", "!router disable", BOTH, "Router", handleRouterDisable, CMD_NONE)        \
+    X(6103, ROUTER_STATUS, "router.status", "!router status", BOTH, "Router", handleRouterStatus, CMD_NONE)            \
+    X(6104, ROUTER_DECISION, "router.decision", "!router decision", BOTH, "Router", handleRouterDecision, CMD_NONE)    \
+    X(6105, ROUTER_SET_POLICY, "router.setPolicy", "!router policy", BOTH, "Router", handleRouterSetPolicy, CMD_NONE)  \
+    X(6106, ROUTER_CAPABILITIES, "router.capabilities", "!router caps", BOTH, "Router", handleRouterCapabilities,      \
       CMD_NONE)                                                                                                        \
-    X(5054, ROUTER_FALLBACKS, "router.fallbacks", "!router fallbacks", BOTH, "Router", handleRouterFallbacks,          \
+    X(6107, ROUTER_FALLBACKS, "router.fallbacks", "!router fallbacks", BOTH, "Router", handleRouterFallbacks,          \
       CMD_NONE)                                                                                                        \
-    X(5055, ROUTER_SAVE_CONFIG, "router.saveConfig", "!router save", BOTH, "Router", handleRouterSaveConfig, CMD_NONE) \
-    X(5056, ROUTER_ROUTE_PROMPT, "router.routePrompt", "!router route", BOTH, "Router", handleRouterRoutePrompt,       \
+    X(6108, ROUTER_SAVE_CONFIG, "router.saveConfig", "!router save", BOTH, "Router", handleRouterSaveConfig, CMD_NONE) \
+    X(6109, ROUTER_ROUTE_PROMPT, "router.routePrompt", "!router route", BOTH, "Router", handleRouterRoutePrompt,       \
       CMD_ASYNC)                                                                                                       \
-    X(5057, ROUTER_RESET_STATS, "router.resetStats", "!router reset", BOTH, "Router", handleRouterResetStats,          \
+    X(6110, ROUTER_RESET_STATS, "router.resetStats", "!router reset", BOTH, "Router", handleRouterResetStats,          \
       CMD_CONFIRM)                                                                                                     \
-    X(5071, ROUTER_WHY_BACKEND, "router.whyBackend", "!router why", BOTH, "Router", handleRouterWhyBackend, CMD_NONE)  \
-    X(5072, ROUTER_PIN_TASK, "router.pinTask", "!router pin", BOTH, "Router", handleRouterPinTask, CMD_NONE)           \
-    X(5073, ROUTER_UNPIN_TASK, "router.unpinTask", "!router unpin", BOTH, "Router", handleRouterUnpinTask, CMD_NONE)   \
-    X(5074, ROUTER_SHOW_PINS, "router.showPins", "!router pins", BOTH, "Router", handleRouterShowPins, CMD_NONE)       \
-    X(5075, ROUTER_HEATMAP, "router.heatmap", "!router heatmap", BOTH, "Router", handleRouterShowHeatmap, CMD_NONE)    \
-    X(5076, ROUTER_ENSEMBLE_ON, "router.ensembleEnable", "!router ensemble", BOTH, "Router",                           \
+    X(6111, ROUTER_WHY_BACKEND, "router.whyBackend", "!router why", BOTH, "Router", handleRouterWhyBackend, CMD_NONE)  \
+    X(6112, ROUTER_PIN_TASK, "router.pinTask", "!router pin", BOTH, "Router", handleRouterPinTask, CMD_NONE)           \
+    X(6113, ROUTER_UNPIN_TASK, "router.unpinTask", "!router unpin", BOTH, "Router", handleRouterUnpinTask, CMD_NONE)   \
+    X(6114, ROUTER_SHOW_PINS, "router.showPins", "!router pins", BOTH, "Router", handleRouterShowPins, CMD_NONE)       \
+    X(6115, ROUTER_HEATMAP, "router.heatmap", "!router heatmap", BOTH, "Router", handleRouterShowHeatmap, CMD_NONE)    \
+    X(6116, ROUTER_ENSEMBLE_ON, "router.ensembleEnable", "!router ensemble", BOTH, "Router",                           \
       handleRouterEnsembleEnable, CMD_NONE)                                                                            \
-    X(5077, ROUTER_ENSEMBLE_OFF, "router.ensembleDisable", "!router noensemble", BOTH, "Router",                       \
+    X(6117, ROUTER_ENSEMBLE_OFF, "router.ensembleDisable", "!router noensemble", BOTH, "Router",                       \
       handleRouterEnsembleDisable, CMD_NONE)                                                                           \
-    X(5078, ROUTER_ENSEMBLE_STAT, "router.ensembleStatus", "!router ens_stat", BOTH, "Router",                         \
+    X(6118, ROUTER_ENSEMBLE_STAT, "router.ensembleStatus", "!router ens_stat", BOTH, "Router",                         \
       handleRouterEnsembleStatus, CMD_NONE)                                                                            \
-    X(5079, ROUTER_SIMULATE, "router.simulate", "!router simulate", BOTH, "Router", handleRouterSimulate, CMD_ASYNC)   \
-    X(5080, ROUTER_SIMULATE_LAST, "router.simulateLast", "!router sim_last", BOTH, "Router", handleRouterSimulateLast, \
+    X(6119, ROUTER_SIMULATE, "router.simulate", "!router simulate", BOTH, "Router", handleRouterSimulate, CMD_ASYNC)   \
+    X(6120, ROUTER_SIMULATE_LAST, "router.simulateLast", "!router sim_last", BOTH, "Router", handleRouterSimulateLast, \
       CMD_NONE)                                                                                                        \
-    X(5081, ROUTER_COST_STATS, "router.costStats", "!router cost", BOTH, "Router", handleRouterShowCostStats,          \
+    X(6121, ROUTER_COST_STATS, "router.costStats", "!router cost", BOTH, "Router", handleRouterShowCostStats,          \
       CMD_NONE)                                                                                                        \
+    X(6130, IDM_BENCHMARK_MOE, "moe.benchmark", "!moe_bench", BOTH, "Performance", handleRouterStatus, CMD_ASYNC)      \
                                                                                                                        \
     /* ═══════════════════ LSP CLIENT (5058-5070) ═══════════════════ */                                               \
     X(5058, LSP_START_ALL, "lsp.startAll", "!lsp start", BOTH, "LSP", handleLspStartAll, CMD_ASYNC)                    \
@@ -606,17 +627,22 @@ enum CmdFlags : uint32_t
     X(9601, GAUNTLET_EXPORT, "gauntlet.export", "!gauntlet export", BOTH, "Gauntlet", handleGauntletExport, CMD_NONE)  \
                                                                                                                        \
     /* ═══════════════════ VOICE (9700-9709) ═══════════════════ */                                                    \
-    X(9700, VOICE_RECORD, "voice.record", "!voice record", BOTH, "Voice", handleVoiceRecord, CMD_NONE)                 \
-    X(9701, VOICE_PTT, "voice.ptt", "!voice ptt", BOTH, "Voice", handleVoicePTT, CMD_NONE)                             \
-    X(9702, VOICE_SPEAK, "voice.speak", "!voice speak", BOTH, "Voice", handleVoiceSpeak, CMD_NONE)                     \
-    X(9703, VOICE_JOIN_ROOM, "voice.joinRoom", "!voice join", BOTH, "Voice", handleVoiceJoinRoom, CMD_REQUIRES_NET)    \
-    X(9704, VOICE_DEVICES, "voice.devices", "!voice devices", BOTH, "Voice", handleVoiceDevices, CMD_NONE)             \
-    X(9705, VOICE_METRICS, "voice.metrics", "!voice metrics", BOTH, "Voice", handleVoiceMetrics, CMD_NONE)             \
-    X(9706, VOICE_TOGGLE_PANEL, "voice.togglePanel", "!voice status", BOTH, "Voice", handleVoiceStatus, CMD_NONE)      \
-    X(9707, VOICE_MODE_PTT, "voice.modePtt", "!voice mode", BOTH, "Voice", handleVoiceMode, CMD_NONE)                  \
-    X(9708, VOICE_MODE_CONTINUOUS, "voice.modeContinuous", "!voice continuous", BOTH, "Voice",                         \
-      handleVoiceModeContinuous, CMD_NONE)                                                                             \
-    X(9709, VOICE_MODE_DISABLED, "voice.modeDisabled", "!voice off", BOTH, "Voice", handleVoiceModeDisabled, CMD_NONE) \
+    RAWRXD_VOICE_CMD(9700, VOICE_RECORD, "voice.record", "!voice record", BOTH, "Voice", handleVoiceRecord, CMD_NONE) \
+    RAWRXD_VOICE_CMD(9701, VOICE_PTT, "voice.ptt", "!voice ptt", BOTH, "Voice", handleVoicePTT, CMD_NONE)             \
+    RAWRXD_VOICE_CMD(9702, VOICE_SPEAK, "voice.speak", "!voice speak", BOTH, "Voice", handleVoiceSpeak, CMD_NONE)     \
+    RAWRXD_VOICE_CMD(9703, VOICE_JOIN_ROOM, "voice.joinRoom", "!voice join", BOTH, "Voice", handleVoiceJoinRoom,      \
+                     CMD_REQUIRES_NET)                                                                                  \
+    RAWRXD_VOICE_CMD(9704, VOICE_DEVICES, "voice.devices", "!voice devices", BOTH, "Voice", handleVoiceDevices,       \
+                     CMD_NONE)                                                                                          \
+    RAWRXD_VOICE_CMD(9705, VOICE_METRICS, "voice.metrics", "!voice metrics", BOTH, "Voice", handleVoiceMetrics,       \
+                     CMD_NONE)                                                                                          \
+    RAWRXD_VOICE_CMD(9706, VOICE_TOGGLE_PANEL, "voice.togglePanel", "!voice status", BOTH, "Voice", handleVoiceStatus, \
+                     CMD_NONE)                                                                                          \
+    RAWRXD_VOICE_CMD(9707, VOICE_MODE_PTT, "voice.modePtt", "!voice mode", BOTH, "Voice", handleVoiceMode, CMD_NONE)  \
+    RAWRXD_VOICE_CMD(9708, VOICE_MODE_CONTINUOUS, "voice.modeContinuous", "!voice continuous", BOTH, "Voice",         \
+                     handleVoiceModeContinuous, CMD_NONE)                                                               \
+    RAWRXD_VOICE_CMD(9709, VOICE_MODE_DISABLED, "voice.modeDisabled", "!voice off", BOTH, "Voice",                    \
+                     handleVoiceModeDisabled, CMD_NONE)                                                                 \
                                                                                                                        \
     /* ═══════════════════ QW (Quality/Workflow 9800-9830) ═══════════════════ */                                      \
     X(9800, QW_SHORTCUT_EDITOR, "qw.shortcutEditor", "!qw shortcuts", BOTH, "QW", handleQwShortcutEditor, CMD_NONE)    \
@@ -696,9 +722,9 @@ enum CmdFlags : uint32_t
     X(0, CLI_AI_ENGINE, "cli.aiEngine", "!engine", CLI_ONLY, "CLI", handleAIEngineSelect, CMD_NONE)                    \
     X(0, CLI_AUTONOMY_RATE, "cli.autonomyRate", "!autonomy_rate", CLI_ONLY, "CLI", handleAutonomyRate, CMD_NONE)       \
     X(0, CLI_AUTONOMY_RUN, "cli.autonomyRun", "!autonomy_run", CLI_ONLY, "CLI", handleAutonomyRun, CMD_ASYNC)          \
-    X(0, CLI_VOICE_INIT, "cli.voiceInit", "!voice init", CLI_ONLY, "CLI", handleVoiceInit, CMD_NONE)                   \
-    X(0, CLI_VOICE_TRANSCRIBE, "cli.voiceTranscribe", "!voice transcribe", CLI_ONLY, "CLI", handleVoiceTranscribe,     \
-      CMD_NONE)                                                                                                        \
+    RAWRXD_VOICE_CMD(0, CLI_VOICE_INIT, "cli.voiceInit", "!voice init", CLI_ONLY, "CLI", handleVoiceInit, CMD_NONE)     \
+    RAWRXD_VOICE_CMD(0, CLI_VOICE_TRANSCRIBE, "cli.voiceTranscribe", "!voice transcribe", CLI_ONLY, "CLI",               \
+      handleVoiceTranscribe, CMD_NONE)                                                                                \
     X(0, CLI_SERVER_START, "cli.serverStart", "!server start", CLI_ONLY, "CLI", handleServerStart, CMD_ASYNC)          \
     X(0, CLI_SERVER_STOP, "cli.serverStop", "!server stop", CLI_ONLY, "CLI", handleServerStop, CMD_NONE)               \
     X(0, CLI_SERVER_STATUS, "cli.serverStatus", "!server status", CLI_ONLY, "CLI", handleServerStatus, CMD_NONE)       \
@@ -800,15 +826,20 @@ enum CmdFlags : uint32_t
       CMD_NONE)                                                                                                        \
                                                                                                                        \
     /* ═══════════════════ VOICE AUTOMATION (10200-10206) ═══════════════════ */                                       \
-    X(10200, VOICE_AUTO_TOGGLE, "voice.autoToggle", "!voice auto", BOTH, "Voice", handleVoiceAutoToggle, CMD_NONE)     \
-    X(10201, VOICE_AUTO_SETTINGS, "voice.autoSettings", "!voice settings", BOTH, "Voice", handleVoiceAutoSettings,     \
+    RAWRXD_VOICE_CMD(10200, VOICE_AUTO_TOGGLE, "voice.autoToggle", "!voice auto", BOTH, "Voice", handleVoiceAutoToggle, \
       CMD_NONE)                                                                                                        \
-    X(10202, VOICE_AUTO_NEXT, "voice.autoNextVoice", "!voice next", BOTH, "Voice", handleVoiceAutoNextVoice, CMD_NONE) \
-    X(10203, VOICE_AUTO_PREV, "voice.autoPrevVoice", "!voice prev", BOTH, "Voice", handleVoiceAutoPrevVoice, CMD_NONE) \
-    X(10204, VOICE_AUTO_RATE_UP, "voice.autoRateUp", "!voice rate_up", BOTH, "Voice", handleVoiceAutoRateUp, CMD_NONE) \
-    X(10205, VOICE_AUTO_RATE_DOWN, "voice.autoRateDown", "!voice rate_down", BOTH, "Voice", handleVoiceAutoRateDown,   \
-      CMD_NONE)                                                                                                        \
-    X(10206, VOICE_AUTO_STOP, "voice.autoStop", "!voice auto_stop", BOTH, "Voice", handleVoiceAutoStop, CMD_NONE)      \
+    RAWRXD_VOICE_CMD(10201, VOICE_AUTO_SETTINGS, "voice.autoSettings", "!voice settings", BOTH, "Voice",                 \
+      handleVoiceAutoSettings, CMD_NONE)                                                                              \
+    RAWRXD_VOICE_CMD(10202, VOICE_AUTO_NEXT, "voice.autoNextVoice", "!voice next", BOTH, "Voice",                      \
+      handleVoiceAutoNextVoice, CMD_NONE)                                                                             \
+    RAWRXD_VOICE_CMD(10203, VOICE_AUTO_PREV, "voice.autoPrevVoice", "!voice prev", BOTH, "Voice",                      \
+      handleVoiceAutoPrevVoice, CMD_NONE)                                                                             \
+    RAWRXD_VOICE_CMD(10204, VOICE_AUTO_RATE_UP, "voice.autoRateUp", "!voice rate_up", BOTH, "Voice",                   \
+      handleVoiceAutoRateUp, CMD_NONE)                                                                                \
+    RAWRXD_VOICE_CMD(10205, VOICE_AUTO_RATE_DOWN, "voice.autoRateDown", "!voice rate_down", BOTH, "Voice",             \
+      handleVoiceAutoRateDown, CMD_NONE)                                                                              \
+    RAWRXD_VOICE_CMD(10206, VOICE_AUTO_STOP, "voice.autoStop", "!voice auto_stop", BOTH, "Voice",                      \
+      handleVoiceAutoStop, CMD_NONE)                                                                                  \
                                                                                                                        \
     /* ═══════════════════ GAME ENGINE INTEGRATION (10619-10622) ═══════════════════ */                                \
     /* IDs 7001-7006 are reserved by resource.h for the Win32 Build menu — do not alias here. */                       \

@@ -3,7 +3,6 @@
 #include <optional>
 #include <chrono>
 #include <vector>
-#include <spdlog/spdlog.h> 
 
 namespace RawrXD {
 
@@ -50,6 +49,9 @@ struct Result<void> {
     static Result<void> unused() { return Result<void>(); }
 };
 
+// IDEConfig is defined in ide_engine.hpp - avoid redefinition
+#ifndef RAWRXD_IDECONFIG_DEFINED
+#define RAWRXD_IDECONFIG_DEFINED
 struct IDEConfig {
     std::string modelsPath = "./models";
     std::string toolsPath = "./tools";
@@ -59,7 +61,7 @@ struct IDEConfig {
     size_t maxWorkers = 4;
     size_t maxMemoryMB = 8192;
     std::chrono::seconds requestTimeout{30};
-    std::chrono::seconds keepAliveTimeout{60}; // Used in orchestrator
+    std::chrono::seconds keepAliveTimeout{60};
     
     bool enableLSP = true;
     bool enableTerminal = true;
@@ -70,17 +72,15 @@ struct IDEConfig {
     bool enableNetwork = true;
     bool enableVulkan = true;
     bool headless = false;
-    
-    // Added for compatibility with orchestrator
     bool enableLogging = true;
     bool enableFileLogging = true;
     bool enableTokenization = true;
     bool enableChainOfThought = true;
     bool enableMonaco = true;
     bool enableMetrics = true;
-    
-    int logLevel = 2; // spdlog::level::info
+    int logLevel = 2;
 };
+#endif
 
 #ifndef RAWRXD_SWARMTASK_DEFINED
 #define RAWRXD_SWARMTASK_DEFINED

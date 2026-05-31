@@ -1,0 +1,14 @@
+[Prometheus] Listening on port 9090 for /metrics...
+[RawrXD] Debug console enabled
+[ProjectChatSession] Initialized for project: .
+[ProjectChatSession] Storage: C:\Users\HiH8e\AppData\Roaming\RawrXD\workspaces\0002b5d3\chat_history.txt
+[ProjectChatSession] Loaded 1 messages
+[BenchmarkMenu] Menu created
+[2026-04-25T06:28:53][VoiceChat][INFO] VoiceChat initialized (microphone disabled build)
+[2026-04-25T06:28:53][VoiceAutomation][INFO] VoiceAutomation engine created
+[2026-04-25T06:28:53][VoiceAutomation][INFO] Initializing voice automation system
+[2026-04-25T06:28:53][VoiceAutomation][INFO] Speech worker thread started
+[2026-04-25T06:28:53][VoiceAutomation][INFO] Built-in SAPI provider registered {"voices":0}
+[2026-04-25T06:28:53][VoiceAutomation][INFO] Built-in SAPI voice provider loaded
+[2026-04-25T06:28:53][VoiceAutomation][INFO] Provider discovery complete {"discovered":0}
+[2026-04-25T06:28:53][VoiceAutomation][INFO] Voice automation initialized {"enabled":false,"providers":1}

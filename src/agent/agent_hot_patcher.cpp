@@ -53,25 +53,22 @@ bool AgentHotPatcher::initialize(const std::string& ggufLoaderPath, int intercep
     // Verify GGUF loader exists
     std::error_code ec;
     if (!fs::exists(ggufLoaderPath, ec)) {
-        fprintf(stderr, "GGUF loader not found: %s\n", ggufLoaderPath.c_str());
         return false;
     }
 
     // Load existing correction patterns
     if (!loadCorrectionPatterns()) {
-        fprintf(stderr, "No existing correction patterns found, starting fresh\n");
+        // No existing correction patterns found, starting fresh
     }
 
     // Start interceptor server if port specified
     if (interceptionPort > 0) {
         if (!startInterceptorServer(interceptionPort)) {
-            fprintf(stderr, "Failed to start interceptor server on port %d\n", interceptionPort);
             return false;
         }
     }
 
     m_enabled = true;
-    fprintf(stderr, "AgentHotPatcher initialized successfully\n");
 
     return true;
 }
@@ -471,7 +468,6 @@ void AgentHotPatcher::registerCorrectionPattern(const HallucinationDetection& pa
     if (!pattern.detectedContent.empty() && !pattern.expectedContent.empty()) {
         m_hallucationPatterns[pattern.detectedContent] = pattern.expectedContent;
         saveCorrectionPatterns();
-        fprintf(stderr, "Registered hallucination correction pattern\n");
     }
 }
 
@@ -482,7 +478,6 @@ void AgentHotPatcher::registerNavigationFix(const NavigationFix& fix)
     if (!fix.incorrectPath.empty() && !fix.correctPath.empty()) {
         m_navigationPatterns[fix.incorrectPath] = fix.correctPath;
         saveCorrectionPatterns();
-        fprintf(stderr, "Registered navigation fix pattern\n");
     }
 }
 
@@ -499,8 +494,6 @@ void AgentHotPatcher::createBehaviorPatch(const BehaviorPatch& patch)
     } else {
         m_behaviorPatches.push_back(patch); // Add new patch
     }
-
-    fprintf(stderr, "Behavior patch created/updated: %s\n", patch.patchId.c_str());
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -574,7 +567,6 @@ int AgentHotPatcher::getCorrectionPatternCount() const
 void AgentHotPatcher::setHotPatchingEnabled(bool enabled)
 {
     m_enabled = enabled;
-    fprintf(stderr, "Hot patching %s\n", enabled ? "enabled" : "disabled");
 }
 
 bool AgentHotPatcher::isHotPatchingEnabled() const
@@ -582,9 +574,9 @@ bool AgentHotPatcher::isHotPatchingEnabled() const
     return m_enabled;
 }
 
-void AgentHotPatcher::setDebugLogging(bool enabled)
+void AgentHotPatcher::setLogging(bool enabled)
 {
-    m_debugLogging = enabled;
+    m_logging = enabled;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -759,17 +751,11 @@ bool AgentHotPatcher::saveCorrectionPatterns()
     
     std::ofstream outFile(configPath);
     if (!outFile.is_open()) {
-        if (m_debugLogging)
-            fprintf(stderr, "[AgentHotPatcher] Failed to save correction patterns to %s\n", configPath.c_str());
         return false;
     }
     
     outFile << json;
     outFile.close();
-    
-    if (m_debugLogging)
-        fprintf(stderr, "[AgentHotPatcher] Saved %zu hallucination + %zu navigation patterns\n",
-                m_hallucationPatterns.size(), m_navigationPatterns.size());
     
     return true;
 }
@@ -777,8 +763,6 @@ bool AgentHotPatcher::saveCorrectionPatterns()
 bool AgentHotPatcher::startInterceptorServer(int port)
 {
     if (port <= 0 || port > 65535) {
-        if (m_debugLogging)
-            fprintf(stderr, "[AgentHotPatcher] Invalid interceptor port: %d\n", port);
         return false;
     }
     
@@ -787,13 +771,11 @@ bool AgentHotPatcher::startInterceptorServer(int port)
     // Create a TCP listener socket for intercepting model responses
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-        fprintf(stderr, "[AgentHotPatcher] WSAStartup failed\n");
         return false;
     }
     
     SOCKET listenSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (listenSocket == INVALID_SOCKET) {
-        fprintf(stderr, "[AgentHotPatcher] Socket creation failed: %d\n", WSAGetLastError());
         WSACleanup();
         return false;
     }
@@ -805,14 +787,12 @@ bool AgentHotPatcher::startInterceptorServer(int port)
     addr.sin_port = htons(static_cast<u_short>(port));
     
     if (bind(listenSocket, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) == SOCKET_ERROR) {
-        fprintf(stderr, "[AgentHotPatcher] Bind failed on port %d: %d\n", port, WSAGetLastError());
         closesocket(listenSocket);
         WSACleanup();
         return false;
     }
     
     if (listen(listenSocket, SOMAXCONN) == SOCKET_ERROR) {
-        fprintf(stderr, "[AgentHotPatcher] Listen failed: %d\n", WSAGetLastError());
         closesocket(listenSocket);
         WSACleanup();
         return false;
@@ -821,9 +801,6 @@ bool AgentHotPatcher::startInterceptorServer(int port)
     // Set non-blocking so we can check cancel state
     u_long nonBlocking = 1;
     ioctlsocket(listenSocket, FIONBIO, &nonBlocking);
-    
-    if (m_debugLogging)
-        fprintf(stderr, "[AgentHotPatcher] Interceptor server listening on 127.0.0.1:%d\n", port);
     
     // Accept loop runs in background — the caller (initialize) can manage lifetime
     // Store socket for cleanup in destructor (would need a member; for now, detach)

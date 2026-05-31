@@ -427,11 +427,20 @@ void Win32IDE::cmdCallStackCopy() {
 // ============================================================================
 
 void Win32IDE::cmdCallStackResolve() {
-    // Resolve a hardcoded test address (in production, prompt user)
-    // Use _ReturnAddress() or a known code address for demo resolution
+    // Prompt for hex address
+    wchar_t buf[64] = {};
+    if (!DialogBoxWithInput(L"Resolve Address",
+                            L"Enter address to resolve (hex, e.g. 7FFE12340000):",
+                            buf, 64)) {
+        return;
+    }
+
     uint64_t testAddr = 0;
-    void* retAddr = _ReturnAddress();
-    std::memcpy(&testAddr, &retAddr, sizeof(retAddr));
+    if (swscanf_s(buf, L"%llx", &testAddr) != 1 || testAddr == 0) {
+        appendToOutput("[CallStack] Invalid hex address.\n");
+        return;
+    }
+
     ResolvedStackFrame f = resolveAddress(testAddr);
 
     std::ostringstream oss;

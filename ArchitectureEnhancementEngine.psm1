@@ -917,7 +917,7 @@ function Estimate-ImplementationComplexity {
         ServiceLocator = 2
     }
     
-    return $complexityScores[$Pattern] ?? 3
+    if ($null -ne $complexityScores[$Pattern]) { return $complexityScores[$Pattern] } else { return 3 }
 }
 
 function Identify-MissingFeatures {

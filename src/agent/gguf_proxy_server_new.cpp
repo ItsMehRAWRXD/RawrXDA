@@ -47,7 +47,6 @@ bool GGUFProxyServer::startServer() {
     m_isListening = true;
     m_acceptThread = std::thread(&GGUFProxyServer::acceptLoop, this);
     
-    std::cout << "[GGUFProxyServer] Listening on " << m_listenPort << std::endl;
     return true;
 }
 

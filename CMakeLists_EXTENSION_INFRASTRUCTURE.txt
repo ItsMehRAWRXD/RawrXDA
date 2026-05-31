@@ -1,0 +1,93 @@
+# ============================================================================
+# CMakeLists_EXTENSION_INFRASTRUCTURE.txt
+# ============================================================================
+# Integration snippet for RawrXD IDE CMake build system
+# Add these lines to the main CMakeLists.txt for extension infrastructure
+# ============================================================================
+
+# Extension Infrastructure System Sources
+set(EXTENSION_INFRASTRUCTURE_HEADERS
+    include/quickjs_extension_host.h
+    include/extension_activation_events.h
+    include/extension_manifest_parser.h
+    include/extension_permissions.h
+    include/marketplace_discovery_backend.h
+    include/extension_dependency_resolver.h
+    include/extension_auto_updater.h
+    include/extension_configuration_ui.h
+    include/workspace_trust_integration.h
+)
+
+set(EXTENSION_INFRASTRUCTURE_SOURCES
+    src/quickjs_extension_host.cpp
+    src/extension_activation_events.cpp
+    src/extension_manifest_parser.cpp
+    src/extension_permissions.cpp
+    src/marketplace_discovery_backend.cpp
+    src/extension_dependency_resolver.cpp
+    src/extension_auto_updater.cpp
+    src/extension_configuration_ui.cpp
+    src/workspace_trust_integration.cpp
+)
+
+# Add to target
+target_sources(RawrXD_IDE PRIVATE
+    ${EXTENSION_INFRASTRUCTURE_SOURCES}
+)
+
+# Include directories
+target_include_directories(RawrXD_IDE PRIVATE include)
+
+# Link nlohmann/json (already required by RawrXD)
+# No new external dependencies added
+
+# System Dependencies
+if(WIN32)
+    target_link_libraries(RawrXD_IDE PRIVATE
+        kernel32
+        user32
+        advapi32
+    )
+endif()
+
+# Compiler flags
+if(MSVC)
+    target_compile_options(RawrXD_IDE PRIVATE
+        /std:c++20
+        /permissive-
+        /W4
+    )
+endif()
+
+# ============================================================================
+# Extension Infrastructure Managers - Initialization
+# ============================================================================
+# Add to IDE startup sequence (e.g., main.cpp or ide_main.cpp):
+#
+# #include "extension_activation_events.h"
+# #include "extension_permissions.h"
+# #include "marketplace_discovery_backend.h"
+# #include "extension_auto_updater.h"
+# #include "extension_configuration_ui.h"
+# #include "workspace_trust_integration.h"
+#
+# void InitializeExtensionInfrastructure() {
+#     // Initialize managers (singletons auto-instantiate on first access)
+#     auto& activationMgr = GetExtensionActivationEventManager();
+#     auto& permissionsMgr = GetExtensionPermissionsManager();
+#     auto& marketplaceMgr = GetMarketplaceDiscoveryBackend();
+#     auto& updaterMgr = GetExtensionAutoUpdater();
+#     auto& configMgr = GetExtensionConfigurationUI();
+#     auto& trustMgr = GetWorkspaceTrustManager();
+#
+#     // Start background services
+#     updaterMgr.StartAutoUpdateScheduler();
+#     marketplaceMgr.SyncMarketplaceAsync(nullptr);
+#
+#     // Load persistence
+#     permissionsMgr.LoadPermissions("perms.json");
+#     trustMgr.LoadTrustDecisions("trust_decisions.json");
+#     configMgr.LoadConfiguration("config.json");
+# }
+#
+# ============================================================================

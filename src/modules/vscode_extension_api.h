@@ -632,9 +632,10 @@ struct VSCodeQuickPickItem {
     std::string     detail;
     bool            picked;
     bool            alwaysShow;
+    bool            disabled;
     void*           userData;
 
-    VSCodeQuickPickItem() : picked(false), alwaysShow(false), userData(nullptr) {}
+    VSCodeQuickPickItem() : picked(false), alwaysShow(false), disabled(false), userData(nullptr) {}
 };
 
 // ============================================================================
@@ -784,8 +785,19 @@ struct VSCodeTerminal {
     SendTextCallback    sendTextFn;
     void*               sendTextCtx;
 
-    void show(bool preserveFocus = false) { (void)preserveFocus; }
-    void hide() {}
+    void show(bool preserveFocus = false) {
+        (void)preserveFocus;
+        if (alive && hTerminal) {
+            ShowWindow(hTerminal, SW_SHOW);
+        }
+    }
+    void hide() {
+        if (alive && hTerminal) {
+            ShowWindow(hTerminal, SW_HIDE);
+        }
+    }
+
+    HWND hTerminal = nullptr;
 
     VSCodeTerminal() : id(0), processId(0), exitStatus(-1), alive(false),
                        sendTextFn(nullptr), sendTextCtx(nullptr) {}
@@ -1008,6 +1020,8 @@ struct VSCodeExtensionManifest {
     std::unordered_map<std::string, std::vector<ContributedMenu>> menus;
 
     std::vector<std::string> extensionDependencies;
+    std::vector<std::string> requestedPermissions;
+    bool requiresWorkspaceTrust = false;
 };
 
 // ============================================================================
@@ -1686,6 +1700,12 @@ namespace vscode {
 
         VSCodeAPIResult loadNativeExtension(const char* dllPath, const char* extensionId);
 
+        // ---- Security / Trust ----
+        VSCodeAPIResult setWorkspaceTrusted(bool trusted);
+        bool isWorkspaceTrusted() const;
+        VSCodeAPIResult setPermissionPolicy(const char* permission, bool allowed);
+        bool isPermissionAllowed(const char* permission) const;
+
         // ---- Command Registry (routed to vscode::commands) ----
         VSCodeAPIResult registerCommand(const char* commandId,
                                          void (*handler)(void* ctx), void* ctx);
@@ -1839,6 +1859,11 @@ namespace vscode {
         std::unordered_map<std::string, std::unique_ptr<LoadedExtension>>   m_extensions;
         mutable std::mutex                                                   m_extensionsMutex;
 
+        // Extension security policy
+        std::unordered_map<std::string, bool>               m_permissionPolicy;
+        mutable std::mutex                                  m_policyMutex;
+        std::atomic<bool>                                   m_workspaceTrusted{true};
+
         // Cancellation token sources (pooled)
         std::vector<std::unique_ptr<CancellationTokenSource>>   m_tokenSources;
         mutable std::mutex                                      m_tokenMutex;
@@ -1886,6 +1911,15 @@ namespace vscode {
 
         // Extension context factory
         VSCodeExtensionContext createContext(const VSCodeExtensionManifest* manifest);
+        bool areManifestPermissionsAllowed(const VSCodeExtensionManifest& manifest,
+                           std::string* deniedPermission = nullptr) const;
+        
+        // Activation Event Dispatcher
+        void fireCommandActivationEvent(const char* commandId);
+        void fireLanguageActivationEvent(const char* languageId);
+        void fireViewActivationEvent(const char* viewId);
+        void fireFileOpenActivationEvent(const char* filePath);
+        void fireStartupActivationEvent();
 
         // Logging
         void logInfo(const char* fmt, ...) const;

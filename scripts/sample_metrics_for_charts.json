@@ -1,0 +1,28 @@
+{
+  "title": "RawrXD — Inference & Terminal Parity (sample)",
+  "series": [
+    {
+      "name": "Integrated terminal parity score (0–100)",
+      "values": [62, 74, 88, 94],
+      "labels": ["Week 1", "Week 2", "Week 3", "Ship"],
+      "kind": "line"
+    },
+    {
+      "name": "Agent tool latency p50 (ms)",
+      "values": [210, 185, 160, 142],
+      "labels": ["Baseline", "Bridge v1", "Mirror flag", "Tuned"],
+      "kind": "bar"
+    }
+  ],
+  "tables": [
+    {
+      "title": "Inference stack positioning (illustrative)",
+      "columns": ["Product", "Primary role", "Deployment"],
+      "rows": [
+        ["Ollama", "Local models + simple API", "Desktop / single-node"],
+        ["vLLM", "High-throughput serving", "GPU cluster / K8s"],
+        ["RawrXD IDE", "Native Win32 agent + GGUF + tools", "Desktop sovereign"]
+      ]
+    }
+  ]
+}

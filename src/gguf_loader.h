@@ -16,7 +16,7 @@
 #endif
 #include <windows.h>
 
-#ifdef RAWR_ENABLE_VULKAN
+#ifdef RAWR_HAS_VULKAN
 #include <vulkan/vulkan.h>
 #else
 // Fake Vulkan types for interface compatibility
@@ -28,11 +28,7 @@ typedef void* VkCommandBuffer;
 #define VK_QUEUE_TRANSFER_BIT 0x01
 #endif
 
-// Basic types for GGUF (defined in RawrXD_Interfaces.h)
-using RawrXD::GGMLType;
-using RawrXD::GGUFHeader;
-using RawrXD::GGUFMetadata;
-using RawrXD::TensorInfo;
+// Basic GGUF types are defined in `RawrXD_Interfaces.h` under `namespace RawrXD`.
 
 
 /*
@@ -52,14 +48,14 @@ public:
 
     // Helpers
     uint64_t GetMetadata(const std::string& key);
-    TensorInfo& GetTensor(const std::string& name);
+    RawrXD::TensorInfo& GetTensor(const std::string& name);
 
 private:
     std::ifstream file_;
     std::string filepath_;
     bool is_open_;
 
-    GGUFHeader header_val; // Renamed to avoid collision with struct type
+    RawrXD::GGUFHeader header_val; // Renamed to avoid collision with struct type
 
     // Handles for Memory Mapping
     HANDLE hFile = INVALID_HANDLE_VALUE;
@@ -75,13 +71,13 @@ private:
     VkCommandBuffer cmdBuffer;
 
     std::mutex tensorMutex;
-    std::unordered_map<std::string, TensorInfo> tensors;
+    std::unordered_map<std::string, RawrXD::TensorInfo> tensors;
 
     // Internal loading methods
     void CreateVulkanResources();
-    void LoadTensorAsync(TensorInfo& info);
-    void UploadF32(TensorInfo& info, void* src, size_t count);
-    void DequantAndUploadQ4_0(TensorInfo& info, void* src, size_t count);
+    void LoadTensorAsync(RawrXD::TensorInfo& info);
+    void UploadF32(RawrXD::TensorInfo& info, void* src, size_t count);
+    void DequantAndUploadQ4_0(RawrXD::TensorInfo& info, void* src, size_t count);
     // ... Add others as needed, simplified for this integration
 
     void BeginCommandBuffer();
@@ -122,14 +118,14 @@ class GGUFLoader : public RawrXD::IGGUFLoader
 
     // Implementation of new methods to avoid abstract class issues
     size_t GetTensorByteSize(const RawrXD::TensorInfo& tensor) const override { return tensor.size; }
-    std::string GetTypeString(RawrXD::GGMLType type) const override { return "f32"; }
-    bool BuildTensorIndex() override { return true; }
-    bool LoadZone(const std::string& zone_name, uint64_t max_memory_mb = 512) override { return true; }
-    bool UnloadZone(const std::string& zone_name) override { return true; }
+    std::string GetTypeString(RawrXD::GGMLType type) const override;
+    bool BuildTensorIndex() override;
+    bool LoadZone(const std::string& zone_name, uint64_t max_memory_mb = 512) override;
+    bool UnloadZone(const std::string& zone_name) override;
     bool LoadTensorZone(const std::string& tensor_name, std::vector<uint8_t>& data) override;
     uint64_t GetFileSize() const override;
-    uint64_t GetCurrentMemoryUsage() const override { return 0; }
-    std::vector<std::string> GetLoadedZones() const override { return {}; }
+    uint64_t GetCurrentMemoryUsage() const override;
+    std::vector<std::string> GetLoadedZones() const override;
     std::vector<std::string> GetAllZones() const override { return {}; }
     std::vector<RawrXD::TensorInfo> GetAllTensorInfo() const override { return tensors_; }
 
@@ -144,7 +140,7 @@ class GGUFLoader : public RawrXD::IGGUFLoader
         DEFLATE
     };
     virtual bool SetCompressionType(CompressionType type);
-    virtual bool IsCompressed() const { return false; }
+    virtual bool IsCompressed() const { return compression_type_ != CompressionType::NONE; }
     virtual bool DecompressData(const std::vector<uint8_t>& in, std::vector<uint8_t>& out);
     virtual bool CompressData(const std::vector<uint8_t>& in, std::vector<uint8_t>& out);
 
@@ -176,11 +172,30 @@ class GGUFLoader : public RawrXD::IGGUFLoader
     uint64_t fileSize = 0;
 
     CompressionType compression_type_ = CompressionType::NONE;
+    std::vector<std::string> loaded_zones_;
+    uint64_t current_memory_usage_ = 0;
     std::mutex tensorMutex;
+
+    // Vulkan resource tracking
+    bool vulkanResourcesCreated_ = false;
+    bool commandBufferActive_ = false;
 
     template <typename T> bool ReadValue(T& val);
     bool ReadString(std::string& str);
     size_t CalculateTensorSize(const std::vector<uint64_t>& shape, RawrXD::GGMLType type) const;
+
+    // GGUF value types for metadata parsing
+    enum class GGUFValueType : uint32_t {
+        UINT8 = 0, INT8 = 1, UINT16 = 2, INT16 = 3,
+        UINT32 = 4, INT32 = 5, FLOAT32 = 6, BOOL = 7,
+        STRING = 8, ARRAY = 9, UINT64 = 10, INT64 = 11, FLOAT64 = 12
+    };
+
+    bool ParseMetadataValue(GGUFValueType type, std::string& out);
+    size_t GetValueTypeSize(GGUFValueType type);
+
+    // Get tensor data by name (with span validation)
+    bool GetTensorData(const std::string& tensor_name, std::vector<uint8_t>& data);
 
   protected:
     std::string filepath_;
@@ -191,6 +206,9 @@ class GGUFLoader : public RawrXD::IGGUFLoader
     RawrXD::GGUFMetadata metadata_;
     std::vector<RawrXD::TensorInfo> tensors_;
     std::vector<std::string> unsupported_types_;
+
+    uint64_t tensor_info_offset = 0;
+    uint64_t data_base_offset = 0;
 
     void* mappedView = nullptr;
 

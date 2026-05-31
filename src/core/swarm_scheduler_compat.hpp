@@ -1,9 +1,20 @@
 #pragma once
 
-// Compatibility layer for C++23 features on older compilers
+// Compatibility layer for C++23 features on C++20 compilers
 
-#if defined(_MSC_VER) && _MSC_VER < 1930
-// MSVC < 19.30 doesn't have std::expected
+#if defined(_MSVC_LANG)
+    #if _MSVC_LANG < 202302L
+        // C++20 or earlier - provide custom std::expected implementation
+        #define NEED_EXPECTED_COMPAT 1
+    #endif
+#elif defined(__cplusplus)
+    #if __cplusplus < 202302L
+        // C++20 or earlier - provide custom std::expected implementation
+        #define NEED_EXPECTED_COMPAT 1
+    #endif
+#endif
+
+#ifdef NEED_EXPECTED_COMPAT
 #include <optional>
 #include <variant>
 

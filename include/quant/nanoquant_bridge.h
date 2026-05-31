@@ -20,9 +20,9 @@ static constexpr int    NQ1_SCALE_OFFSET     = 0;       // F16 scale at byte 0
 static constexpr int    NQ1_SIGNS_OFFSET     = 2;       // 32 bytes packed sign bits
 static constexpr int    QK_NQ1               = 256;     // Elements per NQ_1 block
 
-// GGML type identifiers (extends ggml_type enum)
-static constexpr int    GGML_TYPE_NQ_1       = 20;      // Block-level binary
-static constexpr int    GGML_TYPE_NQ_R4      = 21;      // Matrix-level rank-4
+// GGML type identifiers (extends ggml_rxd_type enum)
+static constexpr int    GGML_RXD_TYPE_NQ_1       = 20;      // Block-level binary
+static constexpr int    GGML_RXD_TYPE_NQ_R4      = 21;      // Matrix-level rank-4
 
 // NQ_MATRIX header layout
 static constexpr int    NQM_MAGIC_OFFSET     = 0;
@@ -130,7 +130,7 @@ uint32_t NQ1_GetBlockSize(void);
 float    NQ1_GetCompressionRatio(void);
 uint32_t NQ1_GetStats(NQStats* stats);
 
-// Type-based dispatch (compatible with ggml_type dispatch tables)
+// Type-based dispatch (compatible with ggml_rxd_type dispatch tables)
 // op: 0=dequant, 1=vecdot, 2=quant_fast, 3=quant_admm
 int64_t  NQ1_Dispatch(uint32_t op, void* arg1, void* arg2, uint64_t arg3);
 

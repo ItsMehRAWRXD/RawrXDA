@@ -1,9 +1,12 @@
 #pragma once
 #include <string>
 #include <vector>
-#include "lsp_client.hpp"
+#include <map>
+#include "agentic/lsp/LSPClient.hpp"
 
 namespace rawrxd::lsp {
+
+using namespace RawrXD::Agentic;
 
 struct Location {
     std::string uri;
@@ -24,7 +27,11 @@ struct TextEdit {
     std::string newText;
 };
 
-class LSPClientWired : public LSPClient {
+// Type aliases for LSP protocol types from base class
+using Diagnostic = RawrXD::Agentic::LSPDiagnostic;
+using CompletionItem = RawrXD::Agentic::LSPCompletionItem;
+
+class LSPClientWired : public RawrXD::Agentic::LSPClient {
 public:
     static LSPClientWired& instance() {
         static LSPClientWired instance;
@@ -36,7 +43,7 @@ public:
     
     // Real-time diagnostics to UI
     void publishDiagnostics(const std::string& file_path,
-                           std::vector<struct Diagnostic> diagnostics);
+                           std::vector<Diagnostic> diagnostics);
     
     // Hover info for editor
     std::string getHoverInfo(const std::string& file, 
@@ -49,7 +56,7 @@ public:
                           uint32_t character);
     
     // Auto-complete (ghost-text support)
-    std::vector<struct CompletionItem> getCompletions(const std::string& file,
+    std::vector<CompletionItem> getCompletions(const std::string& file,
                                                 uint32_t line,
                                                 uint32_t character,
                                                 const std::string& prefix);

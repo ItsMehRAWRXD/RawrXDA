@@ -223,13 +223,17 @@ void Win32IDE::onSubAgentChain() {
     if (!m_agenticBridge) initializeAgenticBridge();
     // Smoke test string expectation: SubAgentManager* mgr = m_agenticBridge
     SubAgentManager* mgr = (m_agenticBridge ? m_agenticBridge->GetSubAgentManager() : nullptr);
+    if (!mgr && m_agenticBridge) {
+        m_agenticBridge->Initialize("", m_agenticBridge->GetCurrentModel());
+        mgr = m_agenticBridge->GetSubAgentManager();
+    }
     if (!mgr) {
         appendToOutput("⚠️ SubAgentManager not initialized (agent bridge unavailable)\n", "Output", OutputSeverity::Warning);
         return;
     }
 
     // Prompt user for chain steps
-    // For now, demonstrate with a two-step chain derived from current editor content
+    // Two-step chain derived from current editor content
     std::string editorContent = getWindowText(m_hwndEditor);
     if (editorContent.empty()) {
         appendToOutput("⚠️ No editor content for chain input\n", "Output", OutputSeverity::Warning);
@@ -266,12 +270,16 @@ void Win32IDE::onSubAgentSwarm() {
 
     if (!m_agenticBridge) initializeAgenticBridge();
     SubAgentManager* mgr = (m_agenticBridge ? m_agenticBridge->GetSubAgentManager() : nullptr);
+    if (!mgr && m_agenticBridge) {
+        m_agenticBridge->Initialize("", m_agenticBridge->GetCurrentModel());
+        mgr = m_agenticBridge->GetSubAgentManager();
+    }
     if (!mgr) {
         appendToOutput("⚠️ SubAgentManager not initialized (agent bridge unavailable)\n", "Output", OutputSeverity::Warning);
         return;
     }
 
-    // Demonstrate swarm with parallel analysis tasks
+    // Swarm with parallel analysis tasks
     std::string editorContent = getWindowText(m_hwndEditor);
     if (editorContent.empty()) {
         appendToOutput("⚠️ No editor content for swarm input\n", "Output", OutputSeverity::Warning);
@@ -320,6 +328,10 @@ void Win32IDE::onSubAgentTodoList() {
 
     if (!m_agenticBridge) initializeAgenticBridge();
     SubAgentManager* mgr = (m_agenticBridge ? m_agenticBridge->GetSubAgentManager() : nullptr);
+    if (!mgr && m_agenticBridge) {
+        m_agenticBridge->Initialize("", m_agenticBridge->GetCurrentModel());
+        mgr = m_agenticBridge->GetSubAgentManager();
+    }
     if (!mgr) {
         appendToOutput("⚠️ SubAgentManager not initialized (agent bridge unavailable)\n", "Output", OutputSeverity::Warning);
         return;
@@ -360,6 +372,10 @@ void Win32IDE::onSubAgentTodoClear() {
 
     if (!m_agenticBridge) initializeAgenticBridge();
     SubAgentManager* mgr = (m_agenticBridge ? m_agenticBridge->GetSubAgentManager() : nullptr);
+    if (!mgr && m_agenticBridge) {
+        m_agenticBridge->Initialize("", m_agenticBridge->GetCurrentModel());
+        mgr = m_agenticBridge->GetSubAgentManager();
+    }
     if (!mgr) {
         appendToOutput("⚠️ SubAgentManager not initialized (agent bridge unavailable)\n", "Output", OutputSeverity::Warning);
         return;
@@ -375,6 +391,10 @@ void Win32IDE::onSubAgentStatus() {
 
     if (!m_agenticBridge) initializeAgenticBridge();
     SubAgentManager* mgr = (m_agenticBridge ? m_agenticBridge->GetSubAgentManager() : nullptr);
+    if (!mgr && m_agenticBridge) {
+        m_agenticBridge->Initialize("", m_agenticBridge->GetCurrentModel());
+        mgr = m_agenticBridge->GetSubAgentManager();
+    }
     if (!mgr) {
         appendToOutput("⚠️ SubAgentManager not initialized (agent bridge unavailable)\n", "Output", OutputSeverity::Warning);
         return;

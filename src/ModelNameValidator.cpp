@@ -11,7 +11,7 @@ bool isValidModelName(const std::string& modelName) {
     if (modelName.length() > 256) return false;
     
     // Allow: letters, numbers, hyphens, underscores, dots, colons (for tags)
-    // Examples:
+    // Patterns:
     //   - BigDaddyG-F32-FROM-Q4
     //   - llama-2-7b-chat
     //   - mistral:latest

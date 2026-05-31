@@ -1,0 +1,90 @@
+{
+  "$schema": "RawrXD IDE Autopilot Configuration - Extended Tool Call Limits",
+  "description": "Extended agent configuration with increased tool call limits for Autopilot mode",
+  "extends": "ide_bridge_config.json",
+  "version": "2.0-autopilot",
+  "server": {
+    "host": "127.0.0.1",
+    "port": 8080,
+    "timeout_ms": 60000,
+    "retry_count": 5,
+    "retry_delay_ms": 500
+  },
+  "autopilot": {
+    "enabled": true,
+    "mode": "extended",
+    "description": "Extended tool call limits for batch operations",
+    "tool_limits": {
+      "max_tool_calls_per_turn": 15,
+      "max_tool_calls_per_session": 150,
+      "max_concurrent_tools": 8,
+      "max_iterations": 50,
+      "batch_size": 15,
+      "batch_timeout_ms": 120000,
+      "enable_batch_optimization": true,
+      "parallel_tool_execution": true,
+      "tool_cooldown_ms": 100
+    },
+    "execution": {
+      "auto_verify": true,
+      "auto_commit": false,
+      "auto_build": true,
+      "build_before_verify": true,
+      "stop_on_error": false,
+      "max_errors_per_session": 10,
+      "recovery_attempts": 3
+    },
+    "memory": {
+      "enabled": true,
+      "max_memories": 5000,
+      "semantic_indexing": true,
+      "context_window_size": 20,
+      "persist_across_sessions": true
+    },
+    "streaming": {
+      "enabled": true,
+      "token_buffer_size": 4096,
+      "stream_timeout_ms": 30000,
+      "enable_token_streaming": true
+    }
+  },
+  "tool_use": {
+    "enabled": true,
+    "format": "xml_tags",
+    "tool_call_start": "<tool_call>",
+    "tool_call_end": "</tool_call>",
+    "tool_result_start": "<tool_result>",
+    "tool_result_end": "</tool_result>",
+    "max_tool_calls_per_turn": 15,
+    "max_iterations": 50,
+    "batch_processing": {
+      "enabled": true,
+      "batch_size": 15,
+      "parallel_execution": true,
+      "max_parallel_tools": 8
+    }
+  },
+  "capabilities": {
+    "agentic": {
+      "enabled": true,
+      "autonomy_level": "full",
+      "auto_verify": true,
+      "auto_commit": false,
+      "extended_mode": true,
+      "max_concurrent_operations": 15
+    }
+  },
+  "performance": {
+    "enable_caching": true,
+    "cache_ttl_seconds": 300,
+    "prefetch_tools": true,
+    "optimize_tool_order": true,
+    "enable_tool_parallelization": true
+  },
+  "logging": {
+    "enabled": false,
+    "level": "error",
+    "log_tool_calls": false,
+    "log_performance": false
+  }
+}

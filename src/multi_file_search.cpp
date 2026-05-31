@@ -125,14 +125,39 @@ void MultiFileSearchWidget::onResultItemDoubleClicked(void*, int) {
     }
     m_resultClickedCb(m_resultClickedCtx, selected);
 }
-void MultiFileSearchWidget::onSearchResultsReady() {}
-
-void MultiFileSearchWidget::onSearchFinished() {
-    m_isSearching = false;
-    if (m_completedCb) m_completedCb(m_completedCtx, m_totalResultCount);
+void MultiFileSearchWidget::onSearchResultsReady() {
+    // Update UI with search results
+    if (m_resultsList) {
+        // Refresh results display
+        InvalidateRect(m_resultsList, nullptr, FALSE);
+    }
 }
 
-static bool globMatchExtList(const std::string& name, const std::string& patternCsv) {
+void MultiFileSearchWidget::addResultToTree(const MultiFileSearchResult& result) {
+    if (!m_resultsTree) return;
+    
+    // Add file node
+    TVINSERTSTRUCTA tvis = {};
+    tvis.hParent = TVI_ROOT;
+    tvis.hInsertAfter = TVI_LAST;
+    tvis.item.mask = TVIF_TEXT;
+    tvis.item.pszText = const_cast<char*>(result.file.c_str());
+    HTREEITEM fileItem = TreeView_InsertItem(m_resultsTree, &tvis);
+    
+    // Add match node under file
+    std::string matchText = "Line " + std::to_string(result.line) + ": " + result.matchedText;
+    TVINSERTSTRUCTA matchTvis = {};
+    matchTvis.hParent = fileItem;
+    matchTvis.hInsertAfter = TVI_LAST;
+    matchTvis.item.mask = TVIF_TEXT;
+    matchTvis.item.pszText = const_cast<char*>(matchText.c_str());
+    TreeView_InsertItem(m_resultsTree, &matchTvis);
+    
+    // Expand file node
+    TreeView_Expand(m_resultsTree, fileItem, TVE_EXPAND);
+}
+
+bool MultiFileSearchWidget::globMatchExtList(const std::string& name, const std::string& patternCsv) {
     if (patternCsv.empty() || patternCsv == "*") return true;
 
     size_t p = 0;
@@ -250,7 +275,7 @@ void MultiFileSearchWidget::performSearch(const std::string& searchText,
             }
         }
     } catch (...) {
-        // Best-effort search; ignore filesystem exceptions.
+        fprintf(stderr, "[MultiFileSearch] Filesystem exception during search\n");
     }
 
     updateStatus("Found " + std::to_string(m_totalResultCount) +
@@ -308,8 +333,6 @@ bool MultiFileSearchWidget::isIgnored(const std::string& path, const std::vector
     }
     return false;
 }
-
-void MultiFileSearchWidget::addResultToTree(const MultiFileSearchResult&) {}
 
 void MultiFileSearchWidget::updateStatus(const std::string& message) {
 #ifdef _WIN32
@@ -519,5 +542,36 @@ void MultiFileSearchWidget_ShowDialog(void* ctx) {
     }
 }
 #else
-void MultiFileSearchWidget_ShowDialog(void*) {}
+void MultiFileSearchWidget_ShowDialog(void* parent) {
+    if (!parent) return;
+    HWND hParent = static_cast<HWND>(parent);
+    // Create a simple modal dialog for multi-file search
+    HWND hDlg = CreateWindowExW(
+        WS_EX_DLGMODALFRAME,
+        L"RawrXD_MultiFileSearchDlg",
+        L"Multi-File Search",
+        WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_SIZEBOX,
+        CW_USEDEFAULT, CW_USEDEFAULT, 800, 600,
+        hParent, nullptr, GetModuleHandle(nullptr), nullptr);
+    if (!hDlg) return;
+    ShowWindow(hDlg, SW_SHOW);
+    UpdateWindow(hDlg);
+    // Simple message loop for modal behavior
+    MSG msg;
+    while (GetMessageW(&msg, nullptr, 0, 0)) {
+        if (msg.message == WM_KEYDOWN && msg.wParam == VK_ESCAPE) {
+            DestroyWindow(hDlg);
+            break;
+        }
+        if (!IsDialogMessageW(hDlg, &msg)) {
+            TranslateMessage(&msg);
+            DispatchMessageW(&msg);
+        }
+        if (!IsWindow(hDlg)) break;
+    }
+}
 #endif
+
+void MultiFileSearchWidget::onSearchFinished() {
+    updateStatus("Search completed.");
+}

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -13,6 +14,7 @@ struct LlamaGenerateResult {
     std::string error;
     int32_t prompt_tokens = 0;
     int32_t generated_tokens = 0;
+    double ttft_ms = 0.0;
     double t_prompt_ms = 0.0;
     double t_gen_ms = 0.0;
 };
@@ -28,7 +30,9 @@ public:
     bool ensure_initialized(std::string& error);
     bool ensure_model_loaded(const std::wstring& gguf_path, int32_t gpu_layers, std::string& error);
 
-    LlamaGenerateResult generate(const std::string& prompt, int32_t max_tokens);
+    LlamaGenerateResult generate(const std::string& prompt,
+                                 int32_t max_tokens,
+                                 const std::function<void(const std::string&)>& on_token = {});
 
     std::string loaded_model_path_utf8() const;
 
@@ -52,6 +56,7 @@ private:
 
     void* m_model = nullptr;
     void* m_ctx = nullptr;
+    const void* m_vocab_handle = nullptr;
 
     int32_t m_vocab = 0;
     int32_t m_eos = -1;

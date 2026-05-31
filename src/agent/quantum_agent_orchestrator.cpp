@@ -222,7 +222,7 @@ bool buildIntentionalDemoBreakRemovalEdit(const std::string& filePath,
     size_t functionIndex = std::string::npos;
     const size_t searchEnd = (std::min)(lines.size(), markerIndex + 16);
     for (size_t i = markerIndex; i < searchEnd; ++i) {
-        if (lines[i].find("rawrxd_demo_break_function") != std::string::npos) {
+        if (lines[i].find("rawrxd_break_function") != std::string::npos) {
             functionIndex = i;
             break;
         }

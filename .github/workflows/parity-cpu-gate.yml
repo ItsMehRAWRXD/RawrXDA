@@ -1,0 +1,150 @@
+name: Parity CPU Gate
+
+# Hardware-free CLI/UI parity verification using the deterministic CPU fallback
+# lane (RAWRXD_PARITY_CPU=1). Builds only RawrXD-Serve (no Qt, no GPU) and
+# proves the unified inference adapter produces byte-identical, monotonically
+# sequenced token streams across runs.
+#
+# This gate is intentionally minimal so it stays green in any environment and
+# catches regressions in:
+#   - inference_parity_trace.h  (schema, seq[], seq_monotonic)
+#   - parity_cpu_fallback.h     (FNV-1a + splitmix64 determinism)
+#   - rawr_inference_pipeline   (UI dispatch wiring)
+#   - rawrxd_serve_main         (CLI dispatch wiring)
+#   - gpu_enforcement.cpp       (RAWRXD_PARITY_CPU bypass)
+
+on:
+  push:
+    branches: [main, master, dev]
+    paths:
+      - 'src/core/parity_cpu_fallback.h'
+      - 'src/core/inference_parity_trace.h'
+      - 'src/core/rawr_inference_pipeline.*'
+      - 'src/serve/**'
+      - 'src/gpu_enforcement.*'
+      - 'scripts/run_parity_cpu_smoke.ps1'
+      - 'scripts/compare_parity_trace.ps1'
+      - '.github/workflows/parity-cpu-gate.yml'
+  pull_request:
+    paths:
+      - 'src/core/parity_cpu_fallback.h'
+      - 'src/core/inference_parity_trace.h'
+      - 'src/core/rawr_inference_pipeline.*'
+      - 'src/serve/**'
+      - 'src/gpu_enforcement.*'
+      - 'scripts/run_parity_cpu_smoke.ps1'
+      - 'scripts/compare_parity_trace.ps1'
+  workflow_dispatch:
+
+jobs:
+  parity-cpu:
+    name: CLI Parity (CPU, hardware-free)
+    runs-on: windows-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Configure (CLI only, Win32IDE OFF)
+        shell: pwsh
+        run: |
+          cmake -S . -B build_parity -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DRAWRXD_BUILD_WIN32IDE=OFF
+        env:
+          CC: cl
+          CXX: cl
+
+      - name: Build RawrXD-Serve
+        shell: pwsh
+        run: cmake --build build_parity --target RawrXD-Serve -j
+
+      - name: Verify binary exists
+        shell: pwsh
+        run: |
+          $exe = "build_parity/bin/rawrxd.exe"
+          if (!(Test-Path $exe)) { throw "Missing $exe" }
+          Get-Item $exe | Format-List Name, Length, LastWriteTime
+
+      - name: Run parity-cpu smoke test
+        shell: pwsh
+        env:
+          RAWRXD_PARITY_CPU: "1"
+        run: |
+          ./scripts/run_parity_cpu_smoke.ps1 -BinDir "$PWD/build_parity/bin" `
+                                              -OutDir "$PWD/build_parity/parity_smoke"
+          if ($LASTEXITCODE -ne 0) { throw "parity-cpu smoke FAILED (exit $LASTEXITCODE)" }
+
+      - name: Verify seq monotonic in trace
+        shell: pwsh
+        run: |
+          $trace = "build_parity/parity_smoke/cli_run_A.json"
+          if (!(Test-Path $trace)) { throw "Trace missing: $trace" }
+          $j = Get-Content $trace -Raw | ConvertFrom-Json
+          if (-not $j.seq_monotonic) { throw "seq_monotonic=false in $trace" }
+          if ($j.seq.Count -ne $j.token_count) {
+            throw "seq.Count ($($j.seq.Count)) != token_count ($($j.token_count))"
+          }
+          for ($i = 0; $i -lt $j.seq.Count; $i++) {
+            if ($j.seq[$i] -ne $i) { throw "seq[$i]=$($j.seq[$i]) != $i" }
+          }
+          Write-Host "[OK] seq is strictly monotonic 0..$($j.seq.Count-1)"
+
+      - name: Verify temporal trace (token_us, steady_clock)
+        shell: pwsh
+        run: |
+          $trace = "build_parity/parity_smoke/cli_run_A.json"
+          $j = Get-Content $trace -Raw | ConvertFrom-Json
+          if (-not ($j.PSObject.Properties.Name -contains 'token_us')) {
+            throw "token_us field missing from trace — temporal capture regressed"
+          }
+          if ($j.token_us.Count -ne $j.token_count) {
+            throw "token_us.Count ($($j.token_us.Count)) != token_count ($($j.token_count))"
+          }
+          # steady_clock must be monotonic non-decreasing within a single run.
+          for ($i = 1; $i -lt $j.token_us.Count; $i++) {
+            if ([long]$j.token_us[$i] -lt [long]$j.token_us[$i-1]) {
+              throw "token_us non-monotonic at $i : $($j.token_us[$i-1]) -> $($j.token_us[$i])"
+            }
+          }
+          $span = [long]$j.token_us[-1] - [long]$j.token_us[0]
+          Write-Host "[OK] token_us monotonic, span=$span us across $($j.token_us.Count) tokens"
+
+      - name: Cross-run determinism (3x)
+        shell: pwsh
+        env:
+          RAWRXD_PARITY_CPU: "1"
+        run: |
+          $exe = "$PWD/build_parity/bin/rawrxd.exe"
+          $hashes = @()
+          for ($i = 1; $i -le 3; $i++) {
+            $out = "$PWD/build_parity/parity_smoke/det_run_$i.json"
+            & $exe run ci-determinism --prompt "ci parity gate run" --emit-json-trace $out 2>$null 1>$null
+            if (!(Test-Path $out)) { throw "Run $i produced no trace" }
+            # Hash only the tokens array (timing fields will differ).
+            $j = Get-Content $out -Raw | ConvertFrom-Json
+            $payload = ($j.tokens -join '|') + '#' + ($j.seq -join ',')
+            $h = [System.BitConverter]::ToString(
+              (New-Object System.Security.Cryptography.SHA256Managed).ComputeHash(
+                [System.Text.Encoding]::UTF8.GetBytes($payload)))
+            $hashes += $h
+            Write-Host "Run $i sha256(tokens+seq) = $($h.Substring(0,32))..."
+          }
+          if (($hashes | Select-Object -Unique).Count -ne 1) {
+            throw "Determinism check FAILED — 3 runs produced different token streams"
+          }
+          Write-Host "[OK] 3-run determinism verified"
+
+      - name: Upload traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: parity-traces-${{ github.run_id }}
+          path: build_parity/parity_smoke/*.json
+          retention-days: 7

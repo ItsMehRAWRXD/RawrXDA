@@ -3,7 +3,18 @@
 #include <string>
 
 extern "C" {
-    int _purecall() { return 0; }
+    int _purecall() {
+        // This is the runtime pure virtual call handler.
+        // It should never be reached in normal operation.
+        // Log the error and terminate cleanly rather than silently returning.
+        OutputDebugStringA("[SwarmLink] FATAL: _purecall invoked — invalid virtual dispatch detected.\n");
+        #if defined(_DEBUG)
+        DebugBreak();
+        #endif
+        // Terminate the process to prevent undefined behavior from continuing
+        TerminateProcess(GetCurrentProcess(), 0xC0000025);
+        return 1; // unreachable
+    }
 }
 
 AgenticModelManager::AgenticModelManager() 

@@ -345,9 +345,10 @@ bool ToolExecutor::validateRequest(const ExecutionRequest& request) {
             m_logFn("Warning: Tool not registered: " + request.tool_name);
         }
         // Allow unregistered tools by default
+        return true;
     }
     
-    return checkPolicy(policy, request);
+    return checkPolicy(*policy, request);
 }
 
 bool ToolExecutor::checkApproval(const ExecutionRequest& request) {
@@ -363,24 +364,20 @@ bool ToolExecutor::checkApproval(const ExecutionRequest& request) {
     return true;  // Default to approved
 }
 
-bool ToolExecutor::checkPolicy(const ToolPolicy* policy, const ExecutionRequest& request) const {
-    if (!policy) {
-        return true;  // No policy = allow by default
-    }
-    
-    if (!policy->enabled) {
+bool ToolExecutor::checkPolicy(const ToolPolicy& policy, const ExecutionRequest& request) const {
+    if (!policy.enabled) {
         return false;
     }
     
-    if (policy->read_only && m_all_readonly) {
+    if (policy.read_only && m_all_readonly) {
         return true;
     }
     
-    if (!policy->allow_any_args && !policy->allowed_args.empty()) {
+    if (!policy.allow_any_args && !policy.allowed_args.empty()) {
         // Check that all args are whitelisted
         for (const auto& arg : request.args) {
             bool found = false;
-            for (const auto& allowed : policy->allowed_args) {
+            for (const auto& allowed : policy.allowed_args) {
                 if (arg == allowed || arg.find(allowed) == 0) {
                     found = true;
                     break;
@@ -527,10 +524,10 @@ ExecutionResult ToolExecutor::spawnProcess(const std::string& exe, const std::ve
 #endif
 }
 
-bool ToolExecutor::monitorProcess(void* process_handle, int timeout_ms, std::string& stdout, std::string& stderr) {
+bool ToolExecutor::monitorProcess(void* process_handle, int timeout_ms, std::string& out, std::string& err) {
 #ifdef _WIN32
     (void)timeout_ms;
-    (void)stderr;
+    (void)err;
 
     HANDLE handle = static_cast<HANDLE>(process_handle);
     if (!handle) {
@@ -541,15 +538,42 @@ bool ToolExecutor::monitorProcess(void* process_handle, int timeout_ms, std::str
     char buffer[kBufferSize];
     DWORD bytes_read = 0;
     while (ReadFile(handle, buffer, kBufferSize, &bytes_read, nullptr) && bytes_read > 0) {
-        stdout.append(buffer, buffer + bytes_read);
+        out.append(buffer, buffer + bytes_read);
     }
     return true;
 #else
-    (void)process_handle;
-    (void)timeout_ms;
-    (void)stdout;
-    (void)stderr;
-    return false;
+    // POSIX: process_handle is a pipe fd; read with timeout via select/poll
+    int fd = reinterpret_cast<intptr_t>(process_handle);
+    if (fd < 0) {
+        return false;
+    }
+
+    const int timeout_sec = timeout_ms > 0 ? timeout_ms / 1000 : 30;
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(timeout_sec);
+
+    char buffer[4096];
+    while (std::chrono::steady_clock::now() < deadline) {
+        fd_set fds;
+        FD_ZERO(&fds);
+        FD_SET(fd, &fds);
+        struct timeval tv{};
+        tv.tv_sec = 1;
+        tv.tv_usec = 0;
+        int ret = select(fd + 1, &fds, nullptr, nullptr, &tv);
+        if (ret > 0 && FD_ISSET(fd, &fds)) {
+            ssize_t n = read(fd, buffer, sizeof(buffer));
+            if (n > 0) {
+                stdout.append(buffer, static_cast<size_t>(n));
+            } else if (n == 0) {
+                break; // EOF
+            }
+        } else if (ret == 0) {
+            continue; // timeout, keep trying
+        } else {
+            break; // error
+        }
+    }
+    return !stdout.empty();
 #endif
 }
 

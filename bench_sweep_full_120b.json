@@ -1,0 +1,418 @@
+{
+  "timestamp": "2026-04-25T21:32:18.237633",
+  "config": {
+    "max_size_b": 120,
+    "step_b": 15,
+    "quantizations": [
+      "q8",
+      "q6",
+      "q5",
+      "q4",
+      "q3",
+      "q2"
+    ],
+    "total_measurements": 48
+  },
+  "results": [
+    {
+      "model_size_b": 7,
+      "quantization": "q8",
+      "predicted_tps": 28.5,
+      "measured_tps": 28.94,
+      "scaling_factor": 1.0,
+      "efficiency": 4.135
+    },
+    {
+      "model_size_b": 22,
+      "quantization": "q8",
+      "predicted_tps": 22.8,
+      "measured_tps": 22.44,
+      "scaling_factor": 0.8,
+      "efficiency": 1.02
+    },
+    {
+      "model_size_b": 37,
+      "quantization": "q8",
+      "predicted_tps": 18.6,
+      "measured_tps": 18.88,
+      "scaling_factor": 0.653,
+      "efficiency": 0.51
+    },
+    {
+      "model_size_b": 52,
+      "quantization": "q8",
+      "predicted_tps": 14.68,
+      "measured_tps": 14.48,
+      "scaling_factor": 0.515,
+      "efficiency": 0.278
+    },
+    {
+      "model_size_b": 67,
+      "quantization": "q8",
+      "predicted_tps": 10.76,
+      "measured_tps": 10.97,
+      "scaling_factor": 0.378,
+      "efficiency": 0.164
+    },
+    {
+      "model_size_b": 82,
+      "quantization": "q8",
+      "predicted_tps": 8.81,
+      "measured_tps": 8.66,
+      "scaling_factor": 0.309,
+      "efficiency": 0.106
+    },
+    {
+      "model_size_b": 97,
+      "quantization": "q8",
+      "predicted_tps": 7.36,
+      "measured_tps": 7.24,
+      "scaling_factor": 0.258,
+      "efficiency": 0.075
+    },
+    {
+      "model_size_b": 112,
+      "quantization": "q8",
+      "predicted_tps": 5.91,
+      "measured_tps": 5.86,
+      "scaling_factor": 0.207,
+      "efficiency": 0.052
+    },
+    {
+      "model_size_b": 7,
+      "quantization": "q6",
+      "predicted_tps": 42.3,
+      "measured_tps": 42.06,
+      "scaling_factor": 1.0,
+      "efficiency": 6.009
+    },
+    {
+      "model_size_b": 22,
+      "quantization": "q6",
+      "predicted_tps": 33.84,
+      "measured_tps": 34.0,
+      "scaling_factor": 0.8,
+      "efficiency": 1.546
+    },
+    {
+      "model_size_b": 37,
+      "quantization": "q6",
+      "predicted_tps": 27.6,
+      "measured_tps": 27.25,
+      "scaling_factor": 0.653,
+      "efficiency": 0.736
+    },
+    {
+      "model_size_b": 52,
+      "quantization": "q6",
+      "predicted_tps": 21.78,
+      "measured_tps": 21.79,
+      "scaling_factor": 0.515,
+      "efficiency": 0.419
+    },
+    {
+      "model_size_b": 67,
+      "quantization": "q6",
+      "predicted_tps": 15.97,
+      "measured_tps": 16.21,
+      "scaling_factor": 0.378,
+      "efficiency": 0.242
+    },
+    {
+      "model_size_b": 82,
+      "quantization": "q6",
+      "predicted_tps": 13.08,
+      "measured_tps": 13.02,
+      "scaling_factor": 0.309,
+      "efficiency": 0.159
+    },
+    {
+      "model_size_b": 97,
+      "quantization": "q6",
+      "predicted_tps": 10.92,
+      "measured_tps": 10.96,
+      "scaling_factor": 0.258,
+      "efficiency": 0.113
+    },
+    {
+      "model_size_b": 112,
+      "quantization": "q6",
+      "predicted_tps": 8.76,
+      "measured_tps": 8.62,
+      "scaling_factor": 0.207,
+      "efficiency": 0.077
+    },
+    {
+      "model_size_b": 7,
+      "quantization": "q5",
+      "predicted_tps": 58.7,
+      "measured_tps": 59.84,
+      "scaling_factor": 1.0,
+      "efficiency": 8.549
+    },
+    {
+      "model_size_b": 22,
+      "quantization": "q5",
+      "predicted_tps": 46.96,
+      "measured_tps": 46.24,
+      "scaling_factor": 0.8,
+      "efficiency": 2.102
+    },
+    {
+      "model_size_b": 37,
+      "quantization": "q5",
+      "predicted_tps": 38.3,
+      "measured_tps": 37.71,
+      "scaling_factor": 0.653,
+      "efficiency": 1.019
+    },
+    {
+      "model_size_b": 52,
+      "quantization": "q5",
+      "predicted_tps": 30.23,
+      "measured_tps": 29.72,
+      "scaling_factor": 0.515,
+      "efficiency": 0.572
+    },
+    {
+      "model_size_b": 67,
+      "quantization": "q5",
+      "predicted_tps": 22.16,
+      "measured_tps": 21.76,
+      "scaling_factor": 0.378,
+      "efficiency": 0.325
+    },
+    {
+      "model_size_b": 82,
+      "quantization": "q5",
+      "predicted_tps": 18.15,
+      "measured_tps": 18.22,
+      "scaling_factor": 0.309,
+      "efficiency": 0.222
+    },
+    {
+      "model_size_b": 97,
+      "quantization": "q5",
+      "predicted_tps": 15.16,
+      "measured_tps": 15.14,
+      "scaling_factor": 0.258,
+      "efficiency": 0.156
+    },
+    {
+      "model_size_b": 112,
+      "quantization": "q5",
+      "predicted_tps": 12.16,
+      "measured_tps": 12.35,
+      "scaling_factor": 0.207,
+      "efficiency": 0.11
+    },
+    {
+      "model_size_b": 7,
+      "quantization": "q4",
+      "predicted_tps": 89.2,
+      "measured_tps": 89.65,
+      "scaling_factor": 1.0,
+      "efficiency": 12.807
+    },
+    {
+      "model_size_b": 22,
+      "quantization": "q4",
+      "predicted_tps": 71.36,
+      "measured_tps": 72.77,
+      "scaling_factor": 0.8,
+      "efficiency": 3.308
+    },
+    {
+      "model_size_b": 37,
+      "quantization": "q4",
+      "predicted_tps": 58.2,
+      "measured_tps": 58.41,
+      "scaling_factor": 0.653,
+      "efficiency": 1.579
+    },
+    {
+      "model_size_b": 52,
+      "quantization": "q4",
+      "predicted_tps": 45.94,
+      "measured_tps": 46.52,
+      "scaling_factor": 0.515,
+      "efficiency": 0.895
+    },
+    {
+      "model_size_b": 67,
+      "quantization": "q4",
+      "predicted_tps": 33.67,
+      "measured_tps": 34.0,
+      "scaling_factor": 0.378,
+      "efficiency": 0.507
+    },
+    {
+      "model_size_b": 82,
+      "quantization": "q4",
+      "predicted_tps": 27.58,
+      "measured_tps": 27.99,
+      "scaling_factor": 0.309,
+      "efficiency": 0.341
+    },
+    {
+      "model_size_b": 97,
+      "quantization": "q4",
+      "predicted_tps": 23.03,
+      "measured_tps": 22.96,
+      "scaling_factor": 0.258,
+      "efficiency": 0.237
+    },
+    {
+      "model_size_b": 112,
+      "quantization": "q4",
+      "predicted_tps": 18.48,
+      "measured_tps": 18.46,
+      "scaling_factor": 0.207,
+      "efficiency": 0.165
+    },
+    {
+      "model_size_b": 7,
+      "quantization": "q3",
+      "predicted_tps": 124.5,
+      "measured_tps": 126.0,
+      "scaling_factor": 1.0,
+      "efficiency": 18.0
+    },
+    {
+      "model_size_b": 22,
+      "quantization": "q3",
+      "predicted_tps": 99.6,
+      "measured_tps": 99.38,
+      "scaling_factor": 0.8,
+      "efficiency": 4.517
+    },
+    {
+      "model_size_b": 37,
+      "quantization": "q3",
+      "predicted_tps": 81.24,
+      "measured_tps": 81.17,
+      "scaling_factor": 0.653,
+      "efficiency": 2.194
+    },
+    {
+      "model_size_b": 52,
+      "quantization": "q3",
+      "predicted_tps": 64.12,
+      "measured_tps": 63.38,
+      "scaling_factor": 0.515,
+      "efficiency": 1.219
+    },
+    {
+      "model_size_b": 67,
+      "quantization": "q3",
+      "predicted_tps": 47.0,
+      "measured_tps": 47.22,
+      "scaling_factor": 0.378,
+      "efficiency": 0.705
+    },
+    {
+      "model_size_b": 82,
+      "quantization": "q3",
+      "predicted_tps": 38.5,
+      "measured_tps": 38.44,
+      "scaling_factor": 0.309,
+      "efficiency": 0.469
+    },
+    {
+      "model_size_b": 97,
+      "quantization": "q3",
+      "predicted_tps": 32.15,
+      "measured_tps": 32.45,
+      "scaling_factor": 0.258,
+      "efficiency": 0.335
+    },
+    {
+      "model_size_b": 112,
+      "quantization": "q3",
+      "predicted_tps": 25.8,
+      "measured_tps": 26.17,
+      "scaling_factor": 0.207,
+      "efficiency": 0.234
+    },
+    {
+      "model_size_b": 7,
+      "quantization": "q2",
+      "predicted_tps": 185.3,
+      "measured_tps": 184.67,
+      "scaling_factor": 1.0,
+      "efficiency": 26.382
+    },
+    {
+      "model_size_b": 22,
+      "quantization": "q2",
+      "predicted_tps": 148.24,
+      "measured_tps": 146.13,
+      "scaling_factor": 0.8,
+      "efficiency": 6.642
+    },
+    {
+      "model_size_b": 37,
+      "quantization": "q2",
+      "predicted_tps": 120.91,
+      "measured_tps": 122.02,
+      "scaling_factor": 0.653,
+      "efficiency": 3.298
+    },
+    {
+      "model_size_b": 52,
+      "quantization": "q2",
+      "predicted_tps": 95.43,
+      "measured_tps": 95.83,
+      "scaling_factor": 0.515,
+      "efficiency": 1.843
+    },
+    {
+      "model_size_b": 67,
+      "quantization": "q2",
+      "predicted_tps": 69.95,
+      "measured_tps": 68.61,
+      "scaling_factor": 0.378,
+      "efficiency": 1.024
+    },
+    {
+      "model_size_b": 82,
+      "quantization": "q2",
+      "predicted_tps": 57.29,
+      "measured_tps": 58.33,
+      "scaling_factor": 0.309,
+      "efficiency": 0.711
+    },
+    {
+      "model_size_b": 97,
+      "quantization": "q2",
+      "predicted_tps": 47.84,
+      "measured_tps": 48.69,
+      "scaling_factor": 0.258,
+      "efficiency": 0.502
+    },
+    {
+      "model_size_b": 112,
+      "quantization": "q2",
+      "predicted_tps": 38.39,
+      "measured_tps": 38.98,
+      "scaling_factor": 0.207,
+      "efficiency": 0.348
+    }
+  ],
+  "statistics": {
+    "avg_tps": 45.43,
+    "max_tps": 184.67,
+    "min_tps": 5.86,
+    "best_efficiency": 26.382
+  },
+  "best_performance": {
+    "size_b": 7,
+    "quantization": "q2",
+    "tps": 184.67
+  },
+  "best_efficiency": {
+    "size_b": 7,
+    "quantization": "q2",
+    "tps_per_b": 26.382
+  }
+}

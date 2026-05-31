@@ -1,0 +1,33 @@
+{
+  "name": "ollama-model-provider",
+  "version": "1.0.0",
+  "description": "Unified model provider for Ollama local and cloud models with chat window integration",
+  "author": "RawrXD Extension Team",
+  "apiVersion": 1,
+  "permissions": [
+    "model:discover",
+    "model:select",
+    "chat:create",
+    "chat:manage",
+    "ui:dropdown",
+    "network:access"
+  ],
+  "entryPoint": "ollama_model_provider.dll",
+  "configSchema": {
+    "ollamaEndpoint": {
+      "type": "string",
+      "default": "http://localhost:11435",
+      "description": "Ollama server endpoint"
+    },
+    "cloudModels": {
+      "type": "array",
+      "default": [],
+      "description": "List of cloud model endpoints"
+    },
+    "autoDiscover": {
+      "type": "boolean",
+      "default": true,
+      "description": "Auto-discover local models"
+    }
+  }
+}

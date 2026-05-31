@@ -1,0 +1,136 @@
+# ============================================================================
+# .github/workflows/release-validation.yml
+# ============================================================================
+# GitHub Actions workflow for automated release validation
+# Triggers on every tag push and validates before promotion
+# ============================================================================
+
+name: Release Validation
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to validate (e.g., v1.1.0-dev)'
+        required: true
+        default: 'v1.1.0-dev'
+      tag:
+        description: 'Git tag to checkout'
+        required: true
+
+jobs:
+  validate:
+    name: Validate Release
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.inputs.tag || github.ref }}
+        fetch-depth: 0
+
+    - name: Setup MSVC
+      uses: microsoft/setup-msbuild@v2
+      
+    - name: Setup Ninja
+      uses: seanmiddleditch/gha-setup-ninja@v4
+
+    - name: Cache Build
+      uses: actions/cache@v4
+      with:
+        path: |
+          build-validation
+          ~\.cmake
+        key: ${{ runner.os }}-cmake-${{ hashFiles('**/CMakeLists.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-cmake-
+
+    - name: Run Validation Harness
+      id: validation
+      shell: pwsh
+      run: |
+        $version = "${{ github.event.inputs.version || github.ref_name }}"
+        $tag = "${{ github.event.inputs.tag || github.ref_name }}"
+        
+        .\release_validation_harness.ps1 `
+          -Version $version `
+          -Tag $tag `
+          -BuildDir "${{ github.workspace }}\build-validation" `
+          -StressCycles 10 `
+          -GenerateReport
+        
+        $exitCode = $LASTEXITCODE
+        echo "VALIDATION_EXIT_CODE=$exitCode" >> $env:GITHUB_ENV
+        
+        if ($exitCode -eq 0) {
+          echo "VALIDATION_STATUS=PASS" >> $env:GITHUB_ENV
+        } else {
+          echo "VALIDATION_STATUS=FAIL" >> $env:GITHUB_ENV
+        }
+
+    - name: Upload Validation Report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: validation-report-${{ github.run_id }}
+        path: |
+          build-validation/validation_report.md
+          build-validation/validation_report.json
+          build-validation/validation.log
+
+    - name: Comment PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const report = fs.readFileSync('build-validation/validation_report.md', 'utf8');
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '## Release Validation Results\n\n' + report
+          });
+
+    - name: Fail on Validation Error
+      if: env.VALIDATION_STATUS == 'FAIL'
+      run: |
+        echo "❌ Validation failed. See uploaded artifacts for details."
+        exit 1
+
+    - name: Success Message
+      if: env.VALIDATION_STATUS == 'PASS'
+      run: |
+        echo "✅ Validation passed. Build is ready for promotion."
+
+  promote:
+    name: Promote Release
+    needs: validate
+    runs-on: ubuntu-latest
+    if: success()
+    
+    steps:
+    - name: Download Validation Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: validation-report-${{ github.run_id }}
+        path: validation-report
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          validation-report/*
+        body_path: validation-report/validation_report.md
+        draft: false
+        prerelease: ${{ contains(github.ref_name, '-dev') || contains(github.ref_name, '-alpha') || contains(github.ref_name, '-beta') }}
+
+    - name: Update Release Registry
+      run: |
+        echo "Registering release ${{ github.ref_name }} in release registry"
+        # This would update a release registry database

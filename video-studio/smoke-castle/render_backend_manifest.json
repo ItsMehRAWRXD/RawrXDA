@@ -1,0 +1,20 @@
+{
+  "job_id": "smoke-castle",
+  "engine": "tubi",
+  "provider": "local",
+  "local_model": "procedural",
+  "prompt": "Castlevania castle under moonlight",
+  "storyboard": "moonlit castle, torches, vampire silhouettes",
+  "style": "cinematic-gothic",
+  "duration": "5s",
+  "aspect_ratio": "16:9",
+  "resolution": "320p",
+  "render_width": 568,
+  "render_height": 320,
+  "fps": 12,
+  "rendered_frames": 60,
+  "frames_dir": "D:\\rawrxd\\video-studio\\smoke-castle\\frames",
+  "mp4_path": "D:\\rawrxd\\video-studio\\smoke-castle\\smoke-castle.mp4",
+  "mp4_created": false,
+  "encoder": "ffmpeg not found on PATH"
+}

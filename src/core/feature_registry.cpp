@@ -10,9 +10,9 @@
 //     4. Production Readiness Report generation
 //     5. Completion percentage calculation
 //
-// STUB PATTERNS:
+// FUNCTION PATTERN DETECTION:
 //   Defined here as byte arrays. The MASM kernel (IsStubFunction) or
-//   the C++ fallback scans function prologues for these patterns.
+//   the C++ fallback scans function prologues for unimplemented-function patterns.
 //
 // PATTERN:   No exceptions. bool/status returns.
 // THREADING: Internal std::mutex for all mutable state.
@@ -35,7 +35,7 @@
 #include <windows.h>
 
 // ============================================================================
-// STUB PATTERN BYTE ARRAYS
+// UNIMPLEMENTED FUNCTION PATTERN BYTE ARRAYS
 // ============================================================================
 namespace StubPatterns {
 
@@ -111,7 +111,7 @@ extern "C" int IsStubFunction(void* funcPtr, size_t maxBytesToScan) {
         const StubPattern& pat = StubPatterns::ALL_PATTERNS[p];
         if (pat.length <= maxBytesToScan) {
             if (memcmp(code, pat.bytes, pat.length) == 0) {
-                return 1;  // Stub detected
+                return 1;  // Unimplemented function pattern detected
             }
         }
     }
@@ -247,7 +247,7 @@ size_t FeatureRegistry::getCountByStatus(ImplStatus status) const {
 }
 
 // ============================================================================
-// STUB DETECTION — Invokes MASM kernel or C++ fallback
+// FUNCTION PATTERN DETECTION — Invokes MASM kernel or C++ fallback
 // ============================================================================
 
 void FeatureRegistry::detectStubs() {

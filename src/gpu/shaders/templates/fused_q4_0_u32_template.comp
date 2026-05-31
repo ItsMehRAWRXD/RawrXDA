@@ -1,0 +1,97 @@
+// fused_q4_0_u32 — distributed-lane GEMV, Q4_0 weights x Q8_1 activations.
+// uint32-only SSBO loads (no GL_EXT_shader_8bit_storage path) to dodge the
+// AMD RDNA3 lane-divergent byte-load miscompile.
+//
+// Layout (matches CPU std430 packing byte-for-byte):
+//   block_q4_0 = 18 B (NOT a multiple of 4) — A is reinterpreted as uint[];
+//     element offsets are computed in BYTES via ((byte_off >> 2)) and
+//     ((byte_off & 3) * 8u). Host MUST pad A so total byte count is multiple of 4.
+//   block_q4_0 byte map:
+//     [0..1]  : fp16 d
+//     [2..17] : qs[16] — two signed 4-bit nibbles per byte, zero-point = 8
+//   block_q8_1 = 36 B = 9 uints
+//     [0]     : pack16(d_fp16, s_fp16)
+//     [1..8]  : qs[0..31] signed int8
+//
+// QK4_0 = 32 == QK8_1, so one q8_1 block aligns 1:1 with one q4_0 block.
+// 1 workgroup = 1 output row, 64 lanes split K. Each kp iteration covers
+// 2 consecutive Q4_0 blocks (lanes 0..31 -> kp*2, lanes 32..63 -> kp*2+1).
+// Each lane does 1 MAC per iteration, then subgroupAdd reduces.
+#version 450
+#extension GL_EXT_control_flow_attributes : enable
+#extension GL_KHR_shader_subgroup_basic : require
+#extension GL_KHR_shader_subgroup_arithmetic : require
+
+layout(local_size_x = 64) in;
+layout(push_constant) uniform Push { uint M, N, K, stride_a, stride_b; } pc;
+
+layout(set = 0, binding = 0) readonly  buffer A_buf { uint  data_a[]; };
+layout(set = 0, binding = 1) readonly  buffer B_buf { uint  data_b[]; };
+layout(set = 0, binding = 2) writeonly buffer D_buf { float data_d[]; };
+
+const uint BYTES_Q4_0 = 18u;
+const uint B_STRIDE_U = 9u; // uints per block_q8_1
+
+uint a_byte_abs(uint abs_byte_off) {
+    uint w = data_a[abs_byte_off >> 2];
+    return (w >> ((abs_byte_off & 3u) * 8u)) & 0xFFu;
+}
+uint b_byte(uint b_base_u, uint off) {
+    uint w = data_b[b_base_u + (off >> 2)];
+    return (w >> ((off & 3u) * 8u)) & 0xFFu;
+}
+int b_byte_signed(uint b_base_u, uint off) {
+    uint u = b_byte(b_base_u, off);
+    return int(u) - int((u & 0x80u) << 1);
+}
+
+void main() {
+    uint row  = gl_WorkGroupID.x;
+    uint lane = gl_SubgroupInvocationID;
+    if (row >= pc.M) return;
+
+    float local_sum = 0.0;
+
+    uint nb = pc.stride_a;                     // # Q4_0 blocks per row
+
+    // Process 2 Q4_0 blocks per iteration:
+    //   lanes 0..31  -> block kp*2, element l
+    //   lanes 32..63 -> block kp*2+1, element l
+    uint pairs = (nb + 1u) >> 1;
+    
+    for (uint kp = 0u; kp < pairs; kp++) {
+        uint blk0 = kp << 1;
+        uint blk1 = blk0 + 1u;
+        
+        bool do_blk0 = blk0 < nb && lane < 32u;
+        bool do_blk1 = blk1 < nb && lane >= 32u;
+        
+        uint blk  = do_blk1 ? blk1 : blk0;
+        uint l    = lane & 31u;                 // 0..31 element index
+        
+        if (do_blk0 || do_blk1) {
+            // ---- weight (Q4_0) ----
+            uint a_byte_base = (row * nb + blk) * BYTES_Q4_0;
+            uint dpack = a_byte_abs(a_byte_base + 0u)
+                       | (a_byte_abs(a_byte_base + 1u) << 8u);
+            float d = unpackHalf2x16(dpack).x;
+
+            // qs[16] at bytes 2..17, two nibbles per byte
+            // element l uses byte (l >> 1), nibble (l & 1) ? hi : lo
+            uint qbyte = a_byte_abs(a_byte_base + 2u + (l >> 1u));
+            uint nib   = ((l & 1u) != 0u) ? (qbyte >> 4u) : (qbyte & 0xFu);
+            float w    = (float(int(nib) - 8)) * d;
+
+            // ---- activation (Q8_1, 1:1 with Q4_0 block) ----
+            uint b_base_u = blk * B_STRIDE_U;
+            float bd = unpackHalf2x16(data_b[b_base_u]).x;
+            int  bq  = b_byte_signed(b_base_u, 4u + l);
+            float a  = bd * float(bq);
+
+            local_sum += w * a;
+        }
+    }
+
+    float total = subgroupAdd(local_sum);
+    if (subgroupElect()) data_d[row] = total;
+}

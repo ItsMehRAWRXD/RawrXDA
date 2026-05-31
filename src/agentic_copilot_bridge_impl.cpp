@@ -8,12 +8,10 @@
 
 AgenticCopilotBridge::AgenticCopilotBridge()
 {
-    std::cout << "[AgenticCopilotBridge] Created - Copilot functionality initializing..." << std::endl;
 }
 
 AgenticCopilotBridge::~AgenticCopilotBridge()
 {
-    std::cout << "[AgenticCopilotBridge] Destroyed" << std::endl;
 }
 
 void AgenticCopilotBridge::initialize(AgenticEngine* engine, ChatInterface* chat,
@@ -22,7 +20,6 @@ void AgenticCopilotBridge::initialize(AgenticEngine* engine, ChatInterface* chat
     m_engine = engine;
     // Note: chat, editor, terminals are forward-declared but not used in this Qt-free implementation
     m_executor = executor;
-    std::cout << "[AgenticCopilotBridge] Initialized with engine and executor" << std::endl;
 }
 
 // ========== CORE COPILOT CAPABILITIES ==========
@@ -57,7 +54,6 @@ std::string AgenticCopilotBridge::generateTestsForCode(const std::string& code)
 std::string AgenticCopilotBridge::askAgent(const std::string& question, const json& context)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
-    std::cout << "[AgenticCopilotBridge] Asking agent: " << question << std::endl;
     
     if (!m_engine) {
         return "Engine not initialized. Cannot process question.";
@@ -84,16 +80,12 @@ std::string AgenticCopilotBridge::executeWithFailureRecovery(const std::string& 
         return "Engine not initialized";
     }
     
-    std::cout << "[AgenticCopilotBridge] Executing with failure recovery: " << prompt << std::endl;
-    
     // First attempt - call engine
     std::string response = "Response to: " + prompt;
     
     // Check for failures and hotpatch if needed
     json context = json::object();
     if (detectAndCorrectFailure(response, context)) {
-        std::cout << "[AgenticCopilotBridge] Failure detected and corrected" << std::endl;
-    }
     
     return response;
 }
@@ -119,7 +111,6 @@ bool AgenticCopilotBridge::detectAndCorrectFailure(std::string& response, const 
         response.find("failed") != std::string::npos ||
         response.find("exception") != std::string::npos) {
         
-        std::cout << "[AgenticCopilotBridge] Error detected in response" << std::endl;
         response = hotpatchResponse(response, context);
         return true;
     }
@@ -129,7 +120,6 @@ bool AgenticCopilotBridge::detectAndCorrectFailure(std::string& response, const 
         response.find("I cannot") != std::string::npos ||
         response.find("unable to") != std::string::npos) {
         
-        std::cout << "[AgenticCopilotBridge] Refusal detected - applying bypass" << std::endl;
         response = "Proceeding with alternative approach...";
         return true;
     }
@@ -151,9 +141,51 @@ json AgenticCopilotBridge::transformCode(const std::string& code, const std::str
         return result;
     }
     
-    std::cout << "[AgenticCopilotBridge] Transforming code with: " << transformation << std::endl;
+    std::string transformed = code;
     
-    std::string transformed = code;  // Placeholder
+    // Apply basic transformations based on requested operation
+    if (transformation == "format") {
+        // Simple formatting: normalize indentation to 4 spaces
+        std::string formatted;
+        int indent = 0;
+        bool inLine = false;
+        for (size_t i = 0; i < code.size(); ++i) {
+            char c = code[i];
+            if (c == '{') { formatted += c; formatted += '\n'; indent++; inLine = false; }
+            else if (c == '}') { formatted += '\n'; indent--; for (int j = 0; j < indent * 4; ++j) formatted += ' '; formatted += c; inLine = false; }
+            else if (c == ';') { formatted += c; formatted += '\n'; inLine = false; }
+            else if (c == '\n') { if (inLine) { formatted += '\n'; inLine = false; } }
+            else {
+                if (!inLine) { for (int j = 0; j < indent * 4; ++j) formatted += ' '; inLine = true; }
+                formatted += c;
+            }
+        }
+        transformed = formatted;
+    } else if (transformation == "minify") {
+        // Remove extra whitespace
+        std::string minified;
+        bool lastWasSpace = true;
+        for (char c : code) {
+            if (std::isspace(static_cast<unsigned char>(c))) {
+                if (!lastWasSpace) { minified += ' '; lastWasSpace = true; }
+            } else { minified += c; lastWasSpace = false; }
+        }
+        transformed = minified;
+    } else if (transformation == "comment_strip") {
+        // Strip C-style single-line comments
+        std::string stripped;
+        for (size_t i = 0; i < code.size(); ++i) {
+            if (i + 1 < code.size() && code[i] == '/' && code[i+1] == '/') {
+                while (i < code.size() && code[i] != '\n') ++i;
+            } else {
+                stripped += code[i];
+            }
+        }
+        transformed = stripped;
+    } else {
+        // Unknown transformation: return original with warning
+        result["warning"] = "Unknown transformation: '" + transformation + "'";
+    }
     
     result["success"] = true;
     result["original_code"] = code;
@@ -184,10 +216,54 @@ std::string AgenticCopilotBridge::findBugs(const std::string& code)
     if (!m_engine) return "Engine not initialized";
     
     std::string analysis = "Bug analysis:\n";
-    analysis += "- Check for null pointer dereferences\n";
-    analysis += "- Verify bounds checking\n";
-    analysis += "- Ensure proper resource cleanup";
-    
+    bool foundIssues = false;
+
+    // Check for null pointer dereference patterns
+    if (code.find("*") != std::string::npos && code.find("nullptr") == std::string::npos &&
+        code.find("NULL") == std::string::npos && code.find("if (") == std::string::npos) {
+        analysis += "- WARNING: Potential null pointer dereference (pointer use without null check)\n";
+        foundIssues = true;
+    }
+
+    // Check for unchecked array access
+    if (code.find("[") != std::string::npos && code.find(".at(") == std::string::npos &&
+        code.find("size()") == std::string::npos && code.find("length()") == std::string::npos) {
+        analysis += "- WARNING: Unchecked array/index access (consider bounds checking)\n";
+        foundIssues = true;
+    }
+
+    // Check for resource leaks (new without delete, fopen without fclose)
+    if ((code.find("new ") != std::string::npos && code.find("delete") == std::string::npos) ||
+        (code.find("fopen") != std::string::npos && code.find("fclose") == std::string::npos)) {
+        analysis += "- WARNING: Potential resource leak (allocation without corresponding release)\n";
+        foundIssues = true;
+    }
+
+    // Check for unsafe string functions
+    if (code.find("strcpy(") != std::string::npos || code.find("strcat(") != std::string::npos ||
+        code.find("sprintf(") != std::string::npos) {
+        analysis += "- WARNING: Use of unsafe C string functions (consider strncpy, strncat, snprintf)\n";
+        foundIssues = true;
+    }
+
+    // Check for magic numbers
+    size_t pos = 0;
+    int magicNumberCount = 0;
+    while ((pos = code.find_first_of("0123456789", pos)) != std::string::npos) {
+        size_t end = code.find_first_not_of("0123456789.", pos);
+        std::string num = code.substr(pos, end - pos);
+        if (num != "0" && num != "1" && num != "2" && num != "-1") magicNumberCount++;
+        pos = end;
+    }
+    if (magicNumberCount > 3) {
+        analysis += "- NOTE: Multiple magic numbers detected (consider named constants)\n";
+        foundIssues = true;
+    }
+
+    if (!foundIssues) {
+        analysis += "- No obvious issues detected by static heuristic scan\n";
+    }
+
     return analysis;
 }
 
@@ -202,10 +278,6 @@ json AgenticCopilotBridge::executeAgentTask(const json& task)
     std::string taskType = task.value("type", "unknown");
     std::string taskDescription = task.value("description", "");
     
-    std::cout << "[AgenticCopilotBridge] Executing agent task: " << taskType << std::endl;
-    
-    result["task_type"] = taskType;
-    result["success"] = true;
     result["output"] = "Task executed: " + taskDescription;
     
     return result;
@@ -218,8 +290,6 @@ json AgenticCopilotBridge::planMultiStepTask(const std::string& goal)
     json plan = json::array();
     
     if (!m_engine) return plan;
-    
-    std::cout << "[AgenticCopilotBridge] Planning multi-step task: " << goal << std::endl;
     
     // Create basic plan structure
     json step1 = json::object();
@@ -239,10 +309,6 @@ void AgenticCopilotBridge::submitFeedback(const std::string& feedback, bool isPo
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     
-    std::cout << "[AgenticCopilotBridge] User feedback: " 
-              << (isPositive ? "POSITIVE" : "NEGATIVE") << std::endl;
-    std::cout << "  Feedback: " << feedback << std::endl;
-    
     // Store feedback (in production, would write to database or file)
     json feedbackRecord = json::object();
     feedbackRecord["feedback"] = feedback;
@@ -261,14 +327,10 @@ void AgenticCopilotBridge::updateModel(const std::string& newModelPath)
     std::lock_guard<std::mutex> lock(m_mutex);
     
     if (!m_engine) {
-        std::cerr << "[AgenticCopilotBridge] Cannot update model: Engine not initialized" << std::endl;
         return;
     }
     
-    std::cout << "[AgenticCopilotBridge] Updating model to: " << newModelPath << std::endl;
-    
-    // Call engine to load new model
-    // In production, would validate file exists and load via GGUF loader
+    // Model update logic would go here
 }
 
 // ========== PRODUCTION FEATURES: MODEL TRAINING ==========
@@ -282,14 +344,8 @@ json AgenticCopilotBridge::trainModel(const std::string& datasetPath, const std:
     if (!m_executor) {
         result["success"] = false;
         result["error"] = "Agentic executor not available";
-        std::cerr << "[AgenticCopilotBridge] Cannot train model: Executor not available" << std::endl;
         return result;
     }
-    
-    std::cout << "[AgenticCopilotBridge] Starting model training: " << datasetPath << std::endl;
-    
-    // Call executor to train model
-    // This would involve creating training tasks and monitoring progress
     result["success"] = true;
     result["message"] = "Model training initiated";
     
@@ -309,9 +365,6 @@ void AgenticCopilotBridge::showResponse(const std::string& response)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     
-    std::cout << "[AgenticCopilotBridge] Response: " << response << std::endl;
-    
-    // Callback notification if registered
     if (m_agentResponseReadyCb) {
         m_agentResponseReadyCb(response);
     }
@@ -320,8 +373,6 @@ void AgenticCopilotBridge::showResponse(const std::string& response)
 void AgenticCopilotBridge::displayMessage(const std::string& message)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
-    
-    std::cout << "[AgenticCopilotBridge] Message: " << message << std::endl;
     
     // Callback notification if registered
     if (m_completionReadyCb) {

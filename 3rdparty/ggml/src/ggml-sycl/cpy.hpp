@@ -1,5 +1,5 @@
-#ifndef GGML_SYCL_CPY_HPP
-#define GGML_SYCL_CPY_HPP
+#ifndef GGML_RXD_SYCL_CPY_HPP
+#define GGML_RXD_SYCL_CPY_HPP
 
 #include "common.hpp"
 #include <float.h>
@@ -217,7 +217,7 @@ inline void cpy_blck_f32_iq4_nl(const char * cxi, char * cdsti) {
     dsti->d = sumq2 > 0 ? sumqx / sumq2 : d;
 }
 
-void ggml_sycl_cpy(ggml_backend_sycl_context & ctx, const ggml_tensor * src0, const ggml_tensor * src1);
-void ggml_sycl_dup(ggml_backend_sycl_context & ctx, ggml_tensor * dst);
+void ggml_rxd_sycl_cpy(ggml_rxd_backend_sycl_context & ctx, const ggml_rxd_tensor * src0, const ggml_rxd_tensor * src1);
+void ggml_rxd_sycl_dup(ggml_rxd_backend_sycl_context & ctx, ggml_rxd_tensor * dst);
 
-#endif  // GGML_SYCL_CPY_HPP
+#endif  // GGML_RXD_SYCL_CPY_HPP

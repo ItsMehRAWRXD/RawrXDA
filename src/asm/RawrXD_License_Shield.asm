@@ -31,6 +31,13 @@ PUBLIC Shield_CheckHeapFlags
 PUBLIC Shield_CheckKernelDebug
 PUBLIC Shield_MurmurHash3_x64
 PUBLIC Shield_DecryptKernelEntry
+PUBLIC Shield_ApplyFingerprint
+
+EXTERN GetModuleHandleA:PROC
+EXTERN GetVolumeInformationA:PROC
+EXTERN GetSystemFirmwareTable:PROC
+EXTERN GetComputerNameA:PROC
+EXTERN ExitProcess:PROC
 
 ; =============================================================================
 ;                             DATA
@@ -376,21 +383,33 @@ Shield_AES_DecryptShim PROC FRAME
 Shield_AES_DecryptShim ENDP
 
 ; =============================================================================
+; Shield_DecryptKernelEntry
+; High-level bridge to DecryptShim for the 800B Dual-Engine.
+; Finalizes the "Cryptographic Heart" by unlocking the inference entry point.
+;
+; RCX = Pointer to 256-bit AES key (derived from Sovereign RSA-4096)
+; Returns: RAX = Pointer to decrypted kernel entry
+; =============================================================================
+Shield_DecryptKernelEntry_Bridge PROC FRAME
+    .endprolog
+    ; Log call internally (if telemetry enabled, could increment counter)
+    push    rcx
+    call    Shield_AES_DecryptShim
+    pop     rcx
+    ret
+Shield_DecryptKernelEntry_Bridge ENDP
+
+; =============================================================================
 ; Shield_VerifyIntegrity
 ; Calculates rolling XOR hash of the .text section to detect binary patching.
 ; If an attacker NOPs out the license check, the hash changes → detection.
 ;
 ; Returns: EAX = 1 if .text section is clean, 0 if tampered
 ; =============================================================================
-Shield_VerifyIntegrity PROC FRAME
+Shield_VerifyIntegrity PROC
     push    rbx
-    .pushreg rbx
     push    rsi
-    .pushreg rsi
     push    rdi
-    .pushreg rdi
-
-    .endprolog
 
     ; Get our own module base (NULL = current EXE)
     xor     ecx, ecx
@@ -601,6 +620,13 @@ Shield_CheckHeapFlags PROC
     mov     rax, gs:[SHIELD_PEB_OFFSET]     ; RAX = PEB
     test    rax, rax
     jz      @@heap_clean                    ; No PEB? (shouldn't happen, assume clean)
+
+    ; ---- PEB.NtGlobalFlag check (offset 0xBC on x64) ----
+    ; If FLG_HEAP_ENABLE_TAIL_CHECK | FLG_HEAP_ENABLE_FREE_CHECK | FLG_HEAP_VALIDATE_PARAMETERS
+    ; are set (0x70), a debugger is definitely present.
+    mov     ecx, dword ptr [rax + SHIELD_NT_GLOBAL_FLAG]
+    and     ecx, 070h                       ; Mask for heap debug flags
+    jnz     @@heap_debug
 
     ; PEB.ProcessHeap is at offset 0x30 on x64
     mov     rax, [rax + 30h]               ; RAX = ProcessHeap
@@ -1025,18 +1051,91 @@ Shield_DecryptKernelEntry PROC FRAME
 Shield_DecryptKernelEntry ENDP
 
 ; =============================================================================
-; Shield_InitializeDefense
-; Master entry point that chains ALL 5 defense layers.
-; Called once at startup before any license validation.
-; On tamper detection: silently corrupts state → delayed crash.
+; Shield_ApplyFingerprint
+; Implements "Neural Fingerprinting" (Batch 10).
+; Injects unique, license-linked trace markers into a dequantization kernel
+; or weight buffer. If weights are leaked via VRAM dump, the signature
+; remains embedded in the numerical distribution.
 ;
-; Returns: EAX = 1 if all layers passed, 0 if any layer failed
-;          g_ShieldState bitmask updated with per-layer results
+; RCX = Pointer to target kernel or weight buffer
+; RDX = Buffer size in bytes
+; R8  = 64-bit Sovereign License ID (Entropy Salt)
+;
+; Strategy: Perturbs the lowest-precision bit of a subset of parameters
+; based on a PRNG seeded with the License ID.
 ; =============================================================================
-Shield_InitializeDefense PROC FRAME
+Shield_ApplyFingerprint PROC FRAME
     push    rbx
     .pushreg rbx
+    push    rsi
+    .pushreg rsi
+    push    rdi
+    .pushreg rdi
 
+    .endprolog
+
+    mov     rsi, rcx        ; RSI = target buffer
+    mov     rcx, rdx        ; RCX = size (loop counter)
+    mov     rax, r8         ; RAX = License ID (seed)
+
+    ; Basic entropy mix for the seed
+    mov     r10, rax
+    shl     r10, 13
+    xor     rax, r10
+    mov     r10, rax
+    shr     r10, 7
+    xor     rax, r10
+    mov     r10, rax
+    shl     r10, 17
+    xor     rax, r10        ; RAX = mixed seed
+
+    ; Simple LCG for PRNG: X = (aX + c) mod m
+    mov     r11, 2862933555777941757    ; 'a' from Knuth
+    mov     r12, 3037000493             ; 'c'
+    
+    ; Fingerprint loop: Iterate through buffer and inject markers
+    ; We process in 1KB strides to minimize throughput impact.
+@@fingerprint_loop:
+    cmp     rcx, 1024
+    jb      @@loop_done
+
+    ; Update PRNG
+    imul    rax, r11
+    add     rax, r12
+    
+    ; Use bits 32-40 of RAX to determine offset within the 1KB block
+    mov     rdi, rax
+    shr     rdi, 32
+    and     rdi, 1023       ; RDI = offset [0..1023]
+    
+    ; Inject marker (XOR with bit 0 of the byte at RSI+RDI)
+    ; This perturbs the 'Soul' of the model without breaking quantization accuracy.
+    mov     bl, byte ptr [rsi + rdi]
+    xor     bl, 1           ; Flip lowest bit
+    mov     byte ptr [rsi + rdi], bl
+
+    ; Advance 1KB
+    add     rsi, 1024
+    sub     rcx, 1024
+    jmp     @@fingerprint_loop
+
+@@loop_done:
+    mov     eax, 1          ; Success
+    pop     rdi
+    pop     rsi
+    pop     rbx
+    ret
+Shield_ApplyFingerprint ENDP
+
+; =============================================================================
+; Shield_InitializeDefense
+Shield_InitializeDefense PROC FRAME
+    push    rbp
+    .pushreg rbp
+    mov     rbp, rsp
+    .setframe rbp, 0
+    sub     rsp, 32
+    .allocstack 32
     .endprolog
 
     xor     ebx, ebx                        ; Layer result accumulator
@@ -1084,13 +1183,11 @@ Shield_InitializeDefense PROC FRAME
     cmp     ebx, 01Fh
     je      @@sid_clean
 
-    ; At least one layer failed → tamper detected
+    ; Fail closed without trap-based crashes.
+    ; Startup must remain stable even when integrity checks fail.
     lock inc g_ShieldTamperCount
-
-    ; Silent death: mutate canary (delayed corruption)
     mov     rax, g_CanaryXorKey
     xor     g_CanaryValue, rax
-
     xor     eax, eax                        ; Return 0 = tampered
     jmp     @@sid_exit
 

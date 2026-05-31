@@ -1,8 +1,8 @@
 #include "ggml-metal-ops.h"
 
-#include "ggml.h"
-#include "ggml-impl.h"
-#include "ggml-backend-impl.h"
+#include "ggml_rxd_internal.h"
+#include "ggml-impl_rxd_internal.h"
+#include "ggml-backend-impl_rxd_internal.h"
 
 #include "ggml-metal-impl.h"
 #include "ggml-metal-common.h"

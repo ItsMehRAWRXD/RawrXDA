@@ -1,7 +1,7 @@
 // =============================================================================
 // AgentOrchestrator.h — Agentic Loop Orchestrator
 // =============================================================================
-// Wires together ToolRegistry, AgentOllamaClient, and FIMPromptBuilder into
+// Wires together ToolRegistry, NativeInferenceClient, and FIMPromptBuilder into
 // a single agentic loop that can:
 //   1. Run multi-turn tool-calling conversations (agentic mode)
 //   2. Stream FIM completions for ghost text (completion mode)
@@ -16,7 +16,7 @@
 #pragma once
 
 #include "ToolRegistry.h"
-#include "AgentOllamaClient.h"
+#include "NativeInferenceClient.h"
 #include "FIMPromptBuilder.h"
 #include "AdvancedAgentCoordinator.h"  // Batch 2: Advanced Agent Coordination
 #include <nlohmann/json.hpp>
@@ -72,6 +72,7 @@ struct AgentSession {
     std::string session_id;
     std::vector<AgentStep> steps;
     std::vector<ChatMessage> messages;  // Full chat history
+    std::vector<std::string> applied_instruction_sources;
     int tool_calls_made = 0;
     int errors_encountered = 0;
     double total_elapsed_ms = 0.0;
@@ -96,9 +97,9 @@ public:
 
     // -- Configuration --
     void SetConfig(const OrchestratorConfig& config);
-    void SetNativeConfig(const OllamaConfig& config);
+    void SetNativeConfig(const NativeInferenceConfig& config);
     // Backward-compatible alias.
-    void SetOllamaConfig(const OllamaConfig& config);
+    void SetOllamaConfig(const NativeInferenceConfig& config);
     const OrchestratorConfig& GetConfig() const { return m_config; }
 
     // -- Agentic Mode --
@@ -173,10 +174,10 @@ private:
     std::condition_variable m_taskCv;
 
     OrchestratorConfig m_config;
-    OllamaConfig m_ollamaConfig;
+    NativeInferenceConfig m_nativeConfig;
 
     AgentToolRegistry& m_registry;
-    std::unique_ptr<AgentOllamaClient> m_client;
+    std::unique_ptr<NativeInferenceClient> m_client;
     FIMPromptBuilder m_fimBuilder;
 
     // Batch 2: Advanced Agent Coordination

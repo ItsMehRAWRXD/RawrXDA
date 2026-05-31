@@ -1,6 +1,6 @@
 #include "mmvq.hpp"
 
-#include "ggml.h"
+#include "ggml_rxd_internal.h"
 #include "common.hpp"
 #include "quants.hpp"
 #include "vecdotq.hpp"

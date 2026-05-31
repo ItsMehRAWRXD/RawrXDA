@@ -27,13 +27,13 @@ void pad_reflect_1d_f32(const float* src,float* dst,
 
 }
 
-void ggml_sycl_op_pad_reflect_1d(ggml_backend_sycl_context& ctx, ggml_tensor* dst){
+void ggml_rxd_sycl_op_pad_reflect_1d(ggml_rxd_backend_sycl_context& ctx, ggml_rxd_tensor* dst){
 
-    const ggml_tensor * src0 = dst->src[0];
+    const ggml_rxd_tensor * src0 = dst->src[0];
     queue_ptr           stream = ctx.stream();
 
-    GGML_ASSERT(src0->type == GGML_TYPE_F32);
-    GGML_ASSERT( dst->type == GGML_TYPE_F32);
+    GGML_RXD_ASSERT(src0->type == GGML_RXD_TYPE_F32);
+    GGML_RXD_ASSERT( dst->type == GGML_RXD_TYPE_F32);
 
     const int32_t * opts = (const int32_t *) dst->op_params;
     const int p0 = opts[0];

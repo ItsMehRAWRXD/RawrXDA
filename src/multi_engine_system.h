@@ -158,7 +158,7 @@ public:
         std::vector<int32_t> tokens;
         for (size_t i = 0; i < allLogits.size(); i += m_engines[0]->GetVocabSize()) {
             if (i < allLogits.size()) {
-                // Simple argmax for demonstration
+                // Simple argmax
                 float maxVal = -1e9;
                 int32_t bestToken = 0;
                 for (int j = 0; j < m_engines[0]->GetVocabSize() && i + j < allLogits.size(); ++j) {

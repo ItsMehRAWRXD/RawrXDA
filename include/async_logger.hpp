@@ -25,10 +25,13 @@
 #include <atomic>
 #include <thread>
 #include <chrono>
+#include <mutex>
 #include <cstdio>
 #include <cstring>
 #include <array>
 #include <functional>
+
+#include <mutex>
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -38,6 +41,10 @@
 // ============================================================================
 // Log Severity
 // ============================================================================
+#pragma push_macro("ERROR")
+#undef ERROR
+#pragma push_macro("DEBUG")
+#undef DEBUG
 enum class LogSeverity : uint8_t {
     TRACE   = 0,
     DEBUG   = 1,
@@ -309,5 +316,8 @@ private:
 #define RAWRXD_INFO(op, msg)  RAWRXD_LOG(LogSeverity::INFO, op, msg)
 #define RAWRXD_WARN(op, msg)  RAWRXD_LOG(LogSeverity::WARN, op, msg)
 #define RAWRXD_ERROR(op, msg) RAWRXD_LOG(LogSeverity::ERROR, op, msg)
+
+#pragma pop_macro("DEBUG")
+#pragma pop_macro("ERROR")
 
 #endif // RAWRXD_ASYNC_LOGGER_H

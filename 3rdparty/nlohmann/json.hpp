@@ -69,6 +69,12 @@ public:
         m_array.push_back(std::make_shared<json>(v));
     }
     
+    void erase(const std::string& key) {
+        if (m_type == value_t::object) {
+            m_object.erase(key);
+        }
+    }
+    
     std::string dump(int indent = -1) const { return "{}"; }
     
     value_t type() const { return m_type; }
@@ -86,6 +92,18 @@ public:
     };
     iterator begin() { return iterator(m_object.begin()); }
     iterator end() { return iterator(m_object.end()); }
+        struct const_iterator {
+            using map_iter = std::map<std::string, std::shared_ptr<json>>::const_iterator;
+            map_iter it;
+            const_iterator(map_iter i) : it(i) {}
+            const_iterator& operator++() { ++it; return *this; }
+            bool operator!=(const const_iterator& o) const { return it != o.it; }
+            const json& operator*() const { return *it->second; }
+            std::string key() const { return it->first; }
+            const json& value() const { return *it->second; }
+        };
+        const_iterator begin() const { return const_iterator(m_object.begin()); }
+        const_iterator end()   const { return const_iterator(m_object.end()); }
     
     // Conversion operators
     operator std::string() const { return m_string; }

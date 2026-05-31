@@ -604,10 +604,10 @@ std::string SwarmWorker::getCompilerPath(SwarmTaskType type) const {
             return "g++"; // Default
 
         case SwarmTaskType::AssembleMASM:
-            return "C:\\VS2022Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\bin\\Hostx64\\x64\\ml64.exe";
+            return "ml64.exe"; // Rely on PATH or Internal PE-Writer
 
         case SwarmTaskType::AssembleNASM:
-            return "nasm";
+            return "nasm.exe";
 
         default:
             return "";

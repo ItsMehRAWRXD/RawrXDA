@@ -1,14 +1,27 @@
 /**
- * VoiceProcessor tests — C++20 stub (Qt-free).
- *
- * Original tests used QSignalSpy, QEventLoop, QTimer, QString, QByteArray, QJsonObject
- * and orchestration/voice_processor.hpp (not in tree). This stub compiles without Qt.
+ * Voice processor smoke (Qt-free, C++20).
  */
 
-#include <gtest/gtest.h>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
+#include <string>
 
-TEST(VoiceProcessorStub, Placeholder) {
-    std::cout << "VoiceProcessor tests: orchestration/voice_processor not in tree.\n";
-    SUCCEED();
+namespace fs = std::filesystem;
+
+static std::string readAll(const fs::path& p) {
+    std::ifstream in(p, std::ios::binary);
+    return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+}
+
+int main() {
+    const fs::path root("d:/rawrxd");
+    const auto vp = root / "src" / "orchestration" / "voice_processor.cpp";
+    const auto vph = root / "src" / "orchestration" / "voice_processor.hpp";
+
+    const bool ok = fs::exists(vp) && fs::exists(vph) &&
+                    !readAll(vp).empty() && !readAll(vph).empty();
+
+    std::cout << "voice_processor_test: " << (ok ? "PASS" : "FAIL") << "\n";
+    return ok ? 0 : 1;
 }

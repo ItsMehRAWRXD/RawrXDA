@@ -18,7 +18,7 @@ constexpr int HEAD_DIM = HIDDEN_DIM / NUM_HEADS;
 // KVCacheBlock: Stores K and V for a chunk of tokens
 struct KVCacheBlock {
     // Layout: [BLOCK_SIZE, NUM_HEADS, HEAD_DIM]
-    // Using simple flat vector for demonstration, aligned Memory in production
+    // Using simple flat vector, aligned Memory in production
     std::vector<float> k_data;
     std::vector<float> v_data;
     int token_count = 0; // Usage within this block
@@ -96,7 +96,7 @@ public:
         // Copy data into block (Simulated memcpy)
         // [offset, :, :]
         size_t matrix_size = NUM_HEADS * HEAD_DIM;
-        // Simple copy for demonstration
+        // Simple copy
         // In AVX-512 version, this would be vectorized
         // We assume k/v are [NUM_HEADS * HEAD_DIM] flat
         

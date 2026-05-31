@@ -5162,7 +5162,7 @@ interface BackendsResponse {
 
 const BACKEND_COLORS: Record<string, string> = {
   LocalGGUF: '#4ec9b0',
-  Ollama: '#dcdcaa',
+  native: '#dcdcaa',
   OpenAI: '#569cd6',
   Claude: '#c586c0',
   Gemini: '#ce9178',
@@ -5451,7 +5451,7 @@ export const RouterPanel: React.FC = () => {
 
     if (loadingHm) return <div className="text-xs text-muted-foreground">Loading heatmap...</div>;
 
-    const backends = ['LocalGGUF', 'Ollama', 'OpenAI', 'Claude', 'Gemini'];
+    const backends = ['LocalGGUF', 'native', 'OpenAI', 'Claude', 'Gemini'];
     const heatColor = (avg: number, count: number) => {
       if (count === 0) return 'bg-gray-800/30';
       if (avg < 200) return 'bg-green-600/30 text-green-300';

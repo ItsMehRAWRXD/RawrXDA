@@ -235,36 +235,308 @@ void NativeEditor::renderLineNumbers(HDC hdc) {
     // simplified
 }
 
-void NativeEditor::renderDiagnostics(HDC hdc) {}
-void NativeEditor::renderSelection(HDC hdc) {}
-void NativeEditor::updateScrollBars() {}
-void NativeEditor::ensureCursorVisible() {}
+void NativeEditor::renderDiagnostics(HDC hdc) {
+    // Render diagnostic markers in gutter
+    if (m_diagnostics.empty()) return;
+    
+    for (const auto& diag : m_diagnostics) {
+        int y = diag.line * m_lineHeight;
+        if (y >= 0 && y < m_height) {
+            // Draw colored indicator based on severity
+            COLORREF color = RGB(255, 200, 0); // Warning
+            if (diag.severity == "error") color = RGB(255, 50, 50);
+            else if (diag.severity == "info") color = RGB(50, 150, 255);
+            
+            HBRUSH brush = CreateSolidBrush(color);
+            RECT markerRect = {2, y + 2, 8, y + m_lineHeight - 2};
+            FillRect(hdc, &markerRect, brush);
+            DeleteObject(brush);
+        }
+    }
+}
 
-void NativeEditor::create(HWND hwnd, const RECT& rect) {
-    // Using constructor created window
+void NativeEditor::renderSelection(HDC hdc) {
+    // Highlight selected text region
+    if (m_selectionStart.line == m_selectionEnd.line && 
+        m_selectionStart.column == m_selectionEnd.column) return;
+    
+    HBRUSH selBrush = CreateSolidBrush(RGB(0, 100, 200));
+    
+    int startLine = std::min(m_selectionStart.line, m_selectionEnd.line);
+    int endLine = std::max(m_selectionStart.line, m_selectionEnd.line);
+    
+    for (int line = startLine; line <= endLine; ++line) {
+        int y = line * m_lineHeight;
+        int startCol = (line == startLine) ? m_selectionStart.column : 0;
+        int endCol = (line == endLine) ? m_selectionEnd.column : m_lines[line].length();
+        
+        int x1 = startCol * m_charWidth + m_marginLeft;
+        int x2 = endCol * m_charWidth + m_marginLeft;
+        
+        RECT selRect = {x1, y, x2, y + m_lineHeight};
+        FillRect(hdc, &selRect, selBrush);
+    }
+    
+    DeleteObject(selBrush);
 }
-void NativeEditor::destroy() { DestroyWindow(hwnd); }
-void NativeEditor::insertText(const std::string& text, int line, int column) {}
-void NativeEditor::deleteText(int sl, int sc, int el, int ec) {}
-void NativeEditor::replaceText(const std::string& text, int sl, int sc, int el, int ec) {}
-void NativeEditor::showCompletionPopup(const std::vector<std::string>& c, int l, int col) {}
-void NativeEditor::hideCompletionPopup() {}
-void NativeEditor::showDiagnostic(const std::string& m, int l, int s) {}
-void NativeEditor::clearDiagnostics() {}
-void NativeEditor::applySyntaxHighlighting() {}
-void NativeEditor::onMouseClick(int x, int y) {}
-void NativeEditor::onMouseDoubleClick(int x, int y) {}
-void NativeEditor::onMouseWheel(int delta) {}
-void NativeEditor::setFont(const std::string& fontName, int fontSize) {
-    m_hFont = CreateFont(fontSize * 1.5, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, FIXED_PITCH | FF_MODERN, fontName.c_str());
+
+void NativeEditor::updateScrollBars() {
+    // Update scrollbar ranges based on content size
+    if (!m_hwnd) return;
+    
+    SCROLLINFO si = {};
+    si.cbSize = sizeof(si);
+    si.fMask = SIF_RANGE | SIF_PAGE | SIF_POS;
+    
+    // Vertical scrollbar
+    si.nMin = 0;
+    si.nMax = static_cast<int>(m_lines.size());
+    si.nPage = m_visibleLines;
+    si.nPos = m_scrollOffsetY;
+    SetScrollInfo(m_hwnd, SB_VERT, &si, TRUE);
+    
+    // Horizontal scrollbar
+    int maxLineWidth = 0;
+    for (const auto& line : m_lines) {
+        maxLineWidth = std::max(maxLineWidth, static_cast<int>(line.length()));
+    }
+    si.nMax = maxLineWidth;
+    si.nPage = m_visibleColumns;
+    si.nPos = m_scrollOffsetX;
+    SetScrollInfo(m_hwnd, SB_HORZ, &si, TRUE);
 }
-void NativeEditor::setTabSize(int spaces) {}
-void NativeEditor::enableWordWrap(bool enable) {}
-void NativeEditor::showLineNumbers(bool show) { m_showLineNumbers = show; }
-void NativeEditor::copyToClipboard() {}
-void NativeEditor::pasteFromClipboard() {}
-void NativeEditor::cutToClipboard() {}
-void NativeEditor::moveCursor(int ld, int cd) {}
-void NativeEditor::extendSelection(int ld, int cd) {}
+
+void NativeEditor::ensureCursorVisible() {
+    // Scroll to keep cursor in view
+    if (m_cursorLine < m_scrollOffsetY) {
+        m_scrollOffsetY = m_cursorLine;
+    } else if (m_cursorLine >= m_scrollOffsetY + m_visibleLines) {
+        m_scrollOffsetY = m_cursorLine - m_visibleLines + 1;
+    }
+    
+    if (m_cursorColumn < m_scrollOffsetX) {
+        m_scrollOffsetX = m_cursorColumn;
+    } else if (m_cursorColumn >= m_scrollOffsetX + m_visibleColumns) {
+        m_scrollOffsetX = m_cursorColumn - m_visibleColumns + 1;
+    }
+    
+    updateScrollBars();
+    InvalidateRect(m_hwnd, nullptr, FALSE);
+}
+
+void NativeEditor::insertText(const std::string& text, int line, int column) {
+    if (line < 0 || line >= static_cast<int>(m_lines.size())) return;
+    if (column < 0 || column > static_cast<int>(m_lines[line].length())) return;
+    
+    m_lines[line].insert(column, text);
+    m_modified = true;
+    InvalidateRect(m_hwnd, nullptr, FALSE);
+}
+
+void NativeEditor::deleteText(int sl, int sc, int el, int ec) {
+    if (sl < 0 || sl >= static_cast<int>(m_lines.size())) return;
+    if (el < 0 || el >= static_cast<int>(m_lines.size())) return;
+    
+    if (sl == el) {
+        // Single line deletion
+        m_lines[sl].erase(sc, ec - sc);
+    } else {
+        // Multi-line deletion
+        std::string remaining = m_lines[sl].substr(0, sc) + m_lines[el].substr(ec);
+        m_lines.erase(m_lines.begin() + sl, m_lines.begin() + el + 1);
+        m_lines.insert(m_lines.begin() + sl, remaining);
+    }
+    m_modified = true;
+    InvalidateRect(m_hwnd, nullptr, FALSE);
+}
+
+void NativeEditor::replaceText(const std::string& text, int sl, int sc, int el, int ec) {
+    deleteText(sl, sc, el, ec);
+    insertText(text, sl, sc);
+}
+
+void NativeEditor::showCompletionPopup(const std::vector<std::string>& c, int l, int col) {
+    m_completionItems = c;
+    m_completionLine = l;
+    m_completionColumn = col;
+    m_completionVisible = true;
+    InvalidateRect(m_hwnd, nullptr, FALSE);
+}
+
+void NativeEditor::hideCompletionPopup() {
+    m_completionVisible = false;
+    m_completionItems.clear();
+    InvalidateRect(m_hwnd, nullptr, FALSE);
+}
+
+void NativeEditor::showDiagnostic(const std::string& m, int l, int s) {
+    Diagnostic diag;
+    diag.message = m;
+    diag.line = l;
+    diag.severity = (s >= 2) ? "error" : (s >= 1) ? "warning" : "info";
+    m_diagnostics.push_back(diag);
+    InvalidateRect(m_hwnd, nullptr, FALSE);
+}
+
+void NativeEditor::clearDiagnostics() {
+    m_diagnostics.clear();
+    InvalidateRect(m_hwnd, nullptr, FALSE);
+}
+
+void NativeEditor::applySyntaxHighlighting() {
+    // Tokenize and apply syntax highlighting
+    // In production: use proper lexer/parser for the language
+    m_highlightCache.clear();
+    
+    for (size_t i = 0; i < m_lines.size(); ++i) {
+        std::vector<Token> tokens;
+        // Simple keyword highlighting
+        const std::string& line = m_lines[i];
+        size_t pos = 0;
+        while (pos < line.length()) {
+            // Skip whitespace
+            while (pos < line.length() && std::isspace(line[pos])) pos++;
+            if (pos >= line.length()) break;
+            
+            // Check for keywords
+            static const std::set<std::string> keywords = {
+                "if", "else", "for", "while", "return", "void", "int", "float", 
+                "double", "class", "struct", "namespace", "public", "private", "protected"
+            };
+            
+            size_t wordEnd = pos;
+            while (wordEnd < line.length() && (std::isalnum(line[wordEnd]) || line[wordEnd] == '_')) wordEnd++;
+            
+            if (wordEnd > pos) {
+                std::string word = line.substr(pos, wordEnd - pos);
+                Token token;
+                token.start = pos;
+                token.length = wordEnd - pos;
+                token.type = (keywords.count(word) > 0) ? TokenType::Keyword : TokenType::Identifier;
+                tokens.push_back(token);
+                pos = wordEnd;
+            } else {
+                pos++;
+            }
+        }
+        m_highlightCache[i] = tokens;
+    }
+    
+    InvalidateRect(m_hwnd, nullptr, FALSE);
+}
+
+void NativeEditor::onMouseClick(int x, int y) {
+    int line = (y / m_lineHeight) + m_scrollOffsetY;
+    int col = ((x - m_marginLeft) / m_charWidth) + m_scrollOffsetX;
+    
+    if (line >= 0 && line < static_cast<int>(m_lines.size())) {
+        m_cursorLine = line;
+        m_cursorColumn = std::min(col, static_cast<int>(m_lines[line].length()));
+        m_selectionStart = {m_cursorLine, m_cursorColumn};
+        m_selectionEnd = m_selectionStart;
+        InvalidateRect(m_hwnd, nullptr, FALSE);
+    }
+}
+
+void NativeEditor::onMouseDoubleClick(int x, int y) {
+    int line = (y / m_lineHeight) + m_scrollOffsetY;
+    if (line >= 0 && line < static_cast<int>(m_lines.size())) {
+        // Select word under cursor
+        const std::string& text = m_lines[line];
+        int col = ((x - m_marginLeft) / m_charWidth) + m_scrollOffsetX;
+        col = std::min(col, static_cast<int>(text.length()));
+        
+        int start = col;
+        while (start > 0 && (std::isalnum(text[start - 1]) || text[start - 1] == '_')) start--;
+        
+        int end = col;
+        while (end < static_cast<int>(text.length()) && (std::isalnum(text[end]) || text[end] == '_')) end++;
+        
+        m_selectionStart = {line, start};
+        m_selectionEnd = {line, end};
+        m_cursorLine = line;
+        m_cursorColumn = end;
+        InvalidateRect(m_hwnd, nullptr, FALSE);
+    }
+}
+
+void NativeEditor::onMouseWheel(int delta) {
+    int linesToScroll = delta / WHEEL_DELTA;
+    m_scrollOffsetY = std::max(0, m_scrollOffsetY - linesToScroll);
+    m_scrollOffsetY = std::min(m_scrollOffsetY, static_cast<int>(m_lines.size()) - m_visibleLines);
+    updateScrollBars();
+    InvalidateRect(m_hwnd, nullptr, FALSE);
+}
+
+void NativeEditor::setTabSize(int spaces) {
+    m_tabSize = spaces;
+    InvalidateRect(m_hwnd, nullptr, FALSE);
+}
+
+void NativeEditor::enableWordWrap(bool enable) {
+    m_wordWrap = enable;
+    InvalidateRect(m_hwnd, nullptr, FALSE);
+}
+
+void NativeEditor::copyToClipboard() {
+    if (m_selectionStart.line == m_selectionEnd.line && 
+        m_selectionStart.column == m_selectionEnd.column) return;
+    
+    std::string selectedText;
+    int startLine = std::min(m_selectionStart.line, m_selectionEnd.line);
+    int endLine = std::max(m_selectionStart.line, m_selectionEnd.line);
+    
+    for (int line = startLine; line <= endLine; ++line) {
+        int startCol = (line == startLine) ? m_selectionStart.column : 0;
+        int endCol = (line == endLine) ? m_selectionEnd.column : m_lines[line].length();
+        
+        if (line > startLine) selectedText += "\n";
+        selectedText += m_lines[line].substr(startCol, endCol - startCol);
+    }
+    
+    if (OpenClipboard(m_hwnd)) {
+        EmptyClipboard();
+        HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, selectedText.size() + 1);
+        if (hMem) {
+            char* pMem = static_cast<char*>(GlobalLock(hMem));
+            std::memcpy(pMem, selectedText.c_str(), selectedText.size() + 1);
+            GlobalUnlock(hMem);
+            SetClipboardData(CF_TEXT, hMem);
+        }
+        CloseClipboard();
+    }
+}
+
+void NativeEditor::pasteFromClipboard() {
+    if (!OpenClipboard(m_hwnd)) return;
+    
+    HANDLE hData = GetClipboardData(CF_TEXT);
+    if (hData) {
+        char* pText = static_cast<char*>(GlobalLock(hData));
+        if (pText) {
+            insertText(pText, m_cursorLine, m_cursorColumn);
+            GlobalUnlock(hData);
+        }
+    }
+    CloseClipboard();
+}
+
+void NativeEditor::cutToClipboard() {
+    copyToClipboard();
+    deleteText(m_selectionStart.line, m_selectionStart.column, m_selectionEnd.line, m_selectionEnd.column);
+}
+
+void NativeEditor::moveCursor(int ld, int cd) {
+    m_cursorLine = std::max(0, std::min(m_cursorLine + ld, static_cast<int>(m_lines.size()) - 1));
+    m_cursorColumn = std::max(0, std::min(m_cursorColumn + cd, static_cast<int>(m_lines[m_cursorLine].length())));
+    ensureCursorVisible();
+}
+
+void NativeEditor::extendSelection(int ld, int cd) {
+    m_cursorLine = std::max(0, std::min(m_cursorLine + ld, static_cast<int>(m_lines.size()) - 1));
+    m_cursorColumn = std::max(0, std::min(m_cursorColumn + cd, static_cast<int>(m_lines[m_cursorLine].length())));
+    m_selectionEnd = {m_cursorLine, m_cursorColumn};
+    ensureCursorVisible();
+}
 
 } // namespace RawrXD

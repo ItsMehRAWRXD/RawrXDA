@@ -4,8 +4,8 @@
 
 namespace RawrXD::Bridge {
     struct UnifiedModelMetadata {
-        std::string source;           // "gguf", "ollama", "hf"
-        std::string family;           // hotpatched from Ollama or GGUF metadata
+        std::string source;           // "gguf", "native", "hf"
+        std::string family;           // hotpatched from native inference or GGUF metadata
         std::string quantization;     // "Q4_K_M", "fp16", etc.
         uint64_t    parameter_count;
         uint32_t    context_length;

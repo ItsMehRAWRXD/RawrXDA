@@ -192,7 +192,7 @@ public:
      * Enable debug logging
      * @param enabled True to enable
      */
-    void setDebugLogging(bool enabled);
+    void setLogging(bool enabled);
 
     /**
      * Get correction statistics
@@ -223,7 +223,7 @@ private:
 
     // ====== Runtime state (protected by m_mutex) ======
     bool m_enabled = false;
-    bool m_debugLogging = false;
+    bool m_logging = false;
     mutable std::mutex m_mutex;
 
     // Configuration

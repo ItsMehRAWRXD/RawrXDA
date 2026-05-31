@@ -56,15 +56,15 @@ static void timestep_embedding_f32_sycl(
         });
 }
 
-void ggml_sycl_op_timestep_embedding(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
+void ggml_rxd_sycl_op_timestep_embedding(ggml_rxd_backend_sycl_context & ctx, ggml_rxd_tensor * dst) {
     scope_op_debug_print scope_dbg_print(__func__, dst, /*num_src=*/1);
-    const ggml_tensor *  src0   = dst->src[0];
+    const ggml_rxd_tensor *  src0   = dst->src[0];
     const float * src0_d = (const float *)src0->data;
     float * dst_d = (float *)dst->data;
     dpct::queue_ptr stream = ctx.stream();
 
-    GGML_ASSERT(src0->type == GGML_TYPE_F32);
-    GGML_ASSERT(dst->type == GGML_TYPE_F32);
+    GGML_RXD_ASSERT(src0->type == GGML_RXD_TYPE_F32);
+    GGML_RXD_ASSERT(dst->type == GGML_RXD_TYPE_F32);
 
     const int dim = dst->op_params[0];
     const int max_period = dst->op_params[1];

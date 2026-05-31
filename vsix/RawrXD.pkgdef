@@ -1,0 +1,21 @@
+; =============================================================================
+; PKGDEF - RawrXD Package Registration (Native C++ VSIX)
+; =============================================================================
+[$RootKey$\InstalledProducts\RawrXD]
+"Package"="{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}"
+"PID"="1.0"
+"ProductName"="RawrXD Code Editor"
+"ProductDetails"="High-performance native code editor with AI assistance"
+
+[$RootKey$\Packages\{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}]
+@="RawrXD.Package.RawrXDPackage, RawrXD.VSIX"
+"InprocServer32"="$PackageFolder$\RawrXD.VSIX.dll"
+"Class"="RawrXD.Package.RawrXDPackage"
+
+[$RootKey$\ToolWindows\{D1E2F3A4-B5C6-7890-DEF1-234567890123}]
+@="RawrXD Editor"
+"Name"="RawrXD Editor"
+"Package"="{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}"
+
+[$RootKey$\Menus\{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}]
+"Menu0"="{B1C2D3E4-F5A6-7890-BCDE-F12345678901}"

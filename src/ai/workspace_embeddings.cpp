@@ -24,14 +24,60 @@
 #include <random>
 #include <chrono>
 #include <functional>
+#include <iostream>
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+
+extern "C" int VecIdx_CheckCPU();
+extern "C" float VecIdx_DotProduct(const float* a, const float* b, uint32_t dim);
 #endif
 
 namespace RawrXD {
 namespace AI {
+
+namespace {
+
+bool CanUseNativeVectorKernel(const std::vector<float>& lhs, const std::vector<float>& rhs) {
+#ifdef _WIN32
+    if (lhs.empty() || lhs.size() != rhs.size()) {
+        return false;
+    }
+    static const int simdTier = VecIdx_CheckCPU();
+    return simdTier >= 2;
+#else
+    // POSIX: no native MASM kernel available; validate compatibility for portable path
+    return !lhs.empty() && lhs.size() == rhs.size() && lhs.size() % 4 == 0;
+#endif
+}
+
+float FastCosineSimilarity(const std::vector<float>& lhs, const std::vector<float>& rhs) {
+    if (lhs.empty() || lhs.size() != rhs.size()) {
+        return 0.0f;
+    }
+
+#ifdef _WIN32
+    if (CanUseNativeVectorKernel(lhs, rhs)) {
+        return VecIdx_DotProduct(lhs.data(), rhs.data(), static_cast<uint32_t>(lhs.size()));
+    }
+#endif
+
+    float dot = 0.0f;
+    float lhsNorm = 0.0f;
+    float rhsNorm = 0.0f;
+    for (size_t i = 0; i < lhs.size(); ++i) {
+        dot += lhs[i] * rhs[i];
+        lhsNorm += lhs[i] * lhs[i];
+        rhsNorm += rhs[i] * rhs[i];
+    }
+
+    lhsNorm = std::sqrt(lhsNorm);
+    rhsNorm = std::sqrt(rhsNorm);
+    return (lhsNorm > 1e-8f && rhsNorm > 1e-8f) ? dot / (lhsNorm * rhsNorm) : 0.0f;
+}
+
+} // namespace
 
 // ─── Configuration ───────────────────────────────────────────────────────────
 struct WorkspaceEmbeddingConfig {
@@ -187,7 +233,11 @@ public:
 
                 count += indexFile(pathStr);
             }
-        } catch (...) {}
+        } catch (const std::exception& e) {
+            std::cerr << "[ERROR] WorkspaceEmbeddings directory scan exception: " << e.what() << std::endl;
+        } catch (...) {
+            std::cerr << "[ERROR] WorkspaceEmbeddings directory scan unknown exception" << std::endl;
+        }
         return count;
     }
 
@@ -281,7 +331,7 @@ public:
         for (auto id : candidates) {
             auto it = m_chunks.find(id);
             if (it == m_chunks.end()) continue;
-            float sim = queryVec.cosineSimilarity(it->second.embedding);
+            float sim = FastCosineSimilarity(queryVec.data, it->second.embedding.data);
             scored.push_back({id, sim});
         }
 

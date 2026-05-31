@@ -1,7 +1,7 @@
 ; ============================================================================
 ; AICompletionIntegration.asm - AI Backend Integration Module
 ; ============================================================================
-; Demonstrates how to integrate RawrXD_TextEditorGUI with AI completion
+; Integration of RawrXD_TextEditorGUI with AI completion
 ; backends (llama.cpp, OpenAI, etc.)
 ; ============================================================================
 
@@ -43,7 +43,7 @@
 ;
 ; RETURNS: rax = 1 (success) or 0 (error)
 ;
-; EXAMPLE USAGE (from background thread):
+; USAGE (from background thread):
 ;   lea rcx, [window_data]
 ;   lea rdx, [ai_backend_url]
 ;   call AI_GetCompletion
@@ -93,7 +93,7 @@ AI_GetCompletion PROC FRAME
     ; ====== STEP 6: Insert tokens into buffer ======
     mov rcx, [rbx + 32]                ; rcx = buffer_ptr
     lea rdx, [rel ai_tokens_output]    ; rdx = parsed tokens
-    mov r8d, 5                         ; r8d = token count (example: 5 tokens)
+    mov r8d, 5                         ; r8d = token count (5 tokens)
     call AICompletion_InsertTokens
     
     ; ====== STEP 7: Update status ======
@@ -118,7 +118,7 @@ AI_GetCompletion ENDP
 ;   rcx = JSON response from AI backend
 ;   rdx = output buffer for parsed tokens
 ;
-; JSON Example Response:
+; JSON Response:
 ;   {"choices":[{"text":"def hello():\n    pass"}]}
 ;
 ; OPERATION:
@@ -200,7 +200,7 @@ AI_OnCompletionComplete ENDP
 ; ============================================================================
 
 ; ============================================================================
-; INTEGRATION EXAMPLE: Llama.cpp Backend
+; INTEGRATION: Llama.cpp Backend
 ; ============================================================================
 ;
 ; Backend URL: http://localhost:8000/v1/completions
@@ -235,7 +235,7 @@ AI_OnCompletionComplete ENDP
 ; ============================================================================
 
 ; ============================================================================
-; INTEGRATION EXAMPLE: OpenAI API
+; INTEGRATION: OpenAI API
 ; ============================================================================
 ;
 ; Backend URL: https://api.openai.com/v1/chat/completions
@@ -333,7 +333,7 @@ AI_OnCompletionComplete ENDP
 ; ============================================================================
 
 ; ============================================================================
-; EXAMPLE: Token Insertion with User Confirmation
+; Token Insertion with User Confirmation
 ; ============================================================================
 ;
 ; /* After AI provides completion */

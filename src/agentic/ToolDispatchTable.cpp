@@ -11,6 +11,9 @@
 #include "ToolRegistry.h"
 #include <cstring>
 #include <unordered_map>
+#include <fstream>
+#include <sstream>
+#include <cstdio>
 
 namespace RawrXD::Agentic {
 
@@ -27,25 +30,58 @@ struct ToolHandler {
 // Individual Tool Implementations (47 tools, IDs 0-46)
 // ============================================================================
 
-// Tool 0: ReadFile
+// Tool 0: ReadFile — args = file path
 static int Tool_ReadFile_Execute(const char* args, char* output, size_t outlen) {
-    if (!output || outlen < 32) return -1;
-    strcpy_s(output, outlen, "ReadFile: OK");
+    if (!args || !output || outlen < 2) return -1;
+    std::ifstream f(args, std::ios::binary);
+    if (!f.is_open()) {
+        snprintf(output, outlen, "ReadFile error: cannot open '%s'", args);
+        return -1;
+    }
+    std::ostringstream ss;
+    ss << f.rdbuf();
+    std::string content = ss.str();
+    if (content.size() >= outlen) {
+        content.resize(outlen - 1);
+    }
+    memcpy(output, content.data(), content.size());
+    output[content.size()] = '\0';
     return 0;
 }
 
-// Tool 1: WriteFile
+// Tool 1: WriteFile — args = "path\ncontent" (path is first line, rest is content)
 static int Tool_WriteFile_Execute(const char* args, char* output, size_t outlen) {
-    if (!output || outlen < 32) return -1;
-    strcpy_s(output, outlen, "WriteFile: OK");
+    if (!args || !output || outlen < 2) return -1;
+    const char* nl = strchr(args, '\n');
+    if (!nl) {
+        snprintf(output, outlen, "WriteFile error: args must be 'path\\ncontent'");
+        return -1;
+    }
+    std::string path(args, nl - args);
+    const char* content = nl + 1;
+    std::ofstream f(path, std::ios::binary | std::ios::trunc);
+    if (!f.is_open()) {
+        snprintf(output, outlen, "WriteFile error: cannot open '%s'", path.c_str());
+        return -1;
+    }
+    f.write(content, strlen(content));
+    if (!f.good()) {
+        snprintf(output, outlen, "WriteFile error: write failed for '%s'", path.c_str());
+        return -1;
+    }
+    snprintf(output, outlen, "WriteFile: OK (%zu bytes)", strlen(content));
     return 0;
 }
 
-// Tool 2: ExecuteCommand
+// Tool 2: ExecuteCommand — DISABLED: legacy _popen path is a command injection vector.
+// All command execution MUST go through AgentToolHandlers::ExecuteCommand() which has
+// path validation, timeout enforcement, and sandboxed CreateProcessW.
 static int Tool_ExecuteCommand_Execute(const char* args, char* output, size_t outlen) {
-    if (!output || outlen < 32) return -1;
-    strcpy_s(output, outlen, "ExecuteCommand: OK");
-    return 0;
+    if (!output || outlen < 2) return -1;
+    snprintf(output, outlen,
+        "ExecuteCommand via legacy dispatch is disabled for security. "
+        "Use AgentToolHandlers::ExecuteCommand() for sandboxed execution.");
+    return -1;
 }
 
 // Tool 3: CompleteCode

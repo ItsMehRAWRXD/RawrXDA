@@ -5,6 +5,71 @@
 #include <filesystem>
 #include <set>
 
+namespace {
+
+std::string normalizeLanguageId(const std::string& language) {
+    if (language == "c" || language == "cpp" || language == "c++" || language == "cc" || language == "cxx") {
+        return "cpp";
+    }
+    if (language == "py" || language == "python") {
+        return "python";
+    }
+    if (language == "javascript" || language == "js") {
+        return "javascript";
+    }
+    if (language == "typescript" || language == "ts") {
+        return "typescript";
+    }
+    return language;
+}
+
+std::string languageFromPath(const std::string& filePath) {
+    std::filesystem::path p(filePath);
+    std::string ext = p.extension().string();
+    if (ext == ".c" || ext == ".cc" || ext == ".cpp" || ext == ".cxx" || ext == ".h" || ext == ".hpp") {
+        return "cpp";
+    }
+    if (ext == ".py") return "python";
+    if (ext == ".js" || ext == ".mjs" || ext == ".cjs") return "javascript";
+    if (ext == ".ts" || ext == ".tsx") return "typescript";
+    return "";
+}
+
+std::string pathToFileUri(const std::string& filePath) {
+    std::filesystem::path abs = std::filesystem::absolute(std::filesystem::path(filePath));
+    std::string s = abs.string();
+    std::replace(s.begin(), s.end(), '\\', '/');
+    return "file:///" + s;
+}
+
+std::string readWholeFile(const std::string& filePath) {
+    std::ifstream in(filePath, std::ios::binary);
+    if (!in.is_open()) return "";
+    std::ostringstream ss;
+    ss << in.rdbuf();
+    return ss.str();
+}
+
+RawrXD::LSPConfig buildDefaultLspConfig(const std::string& language, const std::string& rootPath) {
+    RawrXD::LSPConfig cfg{};
+    cfg.languageId = normalizeLanguageId(language);
+    cfg.rootPath = rootPath;
+
+    if (cfg.languageId == "cpp") {
+        cfg.command = "clangd";
+        cfg.args = {"--background-index", "--pch-storage=memory"};
+    } else if (cfg.languageId == "python") {
+        cfg.command = "pylsp";
+    } else if (cfg.languageId == "javascript" || cfg.languageId == "typescript") {
+        cfg.command = "typescript-language-server";
+        cfg.args = {"--stdio"};
+    }
+
+    return cfg;
+}
+
+} // namespace
+
 namespace RawrXD {
 namespace IDE {
 
@@ -52,6 +117,41 @@ Location LanguageServerIntegration::goToDefinition(
     location.line = line;
     location.column = column;
     location.found = false;
+
+    if (supportsLanguage(language)) {
+        auto client = getClient(language);
+        if (client) {
+            const auto result = client->definition(pathToFileUri(filePath), line, column).get();
+            auto applyLocation = [&location](const nlohmann::json& entry) {
+                if (!entry.is_object() || !entry.contains("uri") || !entry.contains("range")) return false;
+                if (!entry["uri"].is_string() || !entry["range"].is_object()) return false;
+                const auto& range = entry["range"];
+                if (!range.contains("start") || !range["start"].is_object()) return false;
+                const auto& start = range["start"];
+                if (!start.contains("line") || !start.contains("character")) return false;
+
+                std::string uri = entry["uri"].get<std::string>();
+                if (uri.rfind("file:///", 0) == 0) {
+                    uri = uri.substr(8);
+                }
+                std::replace(uri.begin(), uri.end(), '/', '\\');
+
+                location.filePath = uri;
+                location.line = start["line"].get<int>();
+                location.column = start["character"].get<int>();
+                location.found = true;
+                return true;
+            };
+
+            if (result.is_object()) {
+                if (applyLocation(result)) return location;
+            } else if (result.is_array()) {
+                for (const auto& entry : result) {
+                    if (applyLocation(entry)) return location;
+                }
+            }
+        }
+    }
     
     // Read the file to extract the token at cursor
     std::ifstream file(filePath);
@@ -242,35 +342,49 @@ void LanguageServerIntegration::initializeRoot(const std::string& rootPath) {
 }
 
 void LanguageServerIntegration::openFile(const std::string& filePath, const std::string& languageISO) {
-    // Register open file with language server
-    if (supportsLanguage(languageISO)) {
-        auto client = getClient(languageISO);
-        if (client) {
-            // Would call LSP textDocument/didOpen
-        }
-    }
+    if (!supportsLanguage(languageISO)) return;
+
+    auto client = getClient(languageISO);
+    if (!client) return;
+
+    client->didOpen(pathToFileUri(filePath), readWholeFile(filePath));
 }
 
 void LanguageServerIntegration::closeFile(const std::string& filePath) {
-    // Notify language server that file is closed
+    (void)filePath;
+    // LSPClient does not expose didClose yet.
 }
 
 void LanguageServerIntegration::changeFile(const std::string& filePath, const std::string& content) {
-    // Notify language server of file changes
+    const std::string lang = languageFromPath(filePath);
+    if (lang.empty() || !supportsLanguage(lang)) return;
+
+    auto client = getClient(lang);
+    if (!client) return;
+
+    client->didChange(pathToFileUri(filePath), content);
 }
 
 std::shared_ptr<LSPClient> LanguageServerIntegration::getClient(const std::string& language) {
-    auto it = m_clients.find(language);
+    const std::string normalized = normalizeLanguageId(language);
+    auto it = m_clients.find(normalized);
     if (it != m_clients.end()) {
         return it->second;
     }
-    // Create new client for language if not exists
-    LSPConfig cfg;
-    cfg.languageId = language;
-    cfg.command = "";
-    cfg.rootPath = m_rootPath;
+
+    std::string effectiveRoot = m_rootPath;
+    if (effectiveRoot.empty()) {
+        effectiveRoot = std::filesystem::current_path().string();
+    }
+
+    LSPConfig cfg = buildDefaultLspConfig(normalized, effectiveRoot);
     auto client = std::make_shared<LSPClient>(cfg);
-    m_clients[language] = client;
+
+    if (client->start()) {
+        (void)client->initialize().get();
+    }
+
+    m_clients[normalized] = client;
     return client;
 }
 
@@ -316,6 +430,30 @@ std::vector<std::string> LanguageServerIntegration::getCompletionItems(
     const std::string& language, const std::string& codeContext) {
     
     std::vector<std::string> items;
+
+    if (supportsLanguage(language)) {
+        auto client = getClient(language);
+        if (client) {
+            const auto result = client->completion(pathToFileUri(filePath), line, column).get();
+            if (result.is_object() && result.contains("items") && result["items"].is_array()) {
+                for (const auto& item : result["items"]) {
+                    if (item.is_object() && item.contains("label") && item["label"].is_string()) {
+                        items.push_back(item["label"].get<std::string>());
+                    }
+                }
+            } else if (result.is_array()) {
+                for (const auto& item : result) {
+                    if (item.is_object() && item.contains("label") && item["label"].is_string()) {
+                        items.push_back(item["label"].get<std::string>());
+                    }
+                }
+            }
+        }
+    }
+
+    if (!items.empty()) {
+        return items;
+    }
     
     // Language-specific completions
     if (language == "cpp" || language == "c++") {
@@ -403,6 +541,10 @@ bool LanguageServerIntegration::initialize() {
 
 bool LanguageServerIntegration::shutdown() {
     m_isInitialized = false;
+    for (auto& kv : m_clients) {
+        if (kv.second) kv.second->stop();
+    }
+    m_clients.clear();
     return true;
 }
 

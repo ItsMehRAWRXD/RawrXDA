@@ -508,7 +508,8 @@ identify_loop:
     je no_prev_finalize
     mov rdi, r15
     imul rdi, sizeof FUNCTION_INFO
-    lea rdi, [g_functions + rdi]
+    lea rax, [g_functions]
+    add rdi, rax
     mov rax, rbx
     dec rax
     mov qword ptr [rdi + FUNCTION_INFO.exit_offset], rax
@@ -522,7 +523,8 @@ no_prev_finalize:
     
     mov rdi, r14
     imul rdi, sizeof FUNCTION_INFO
-    lea rdi, [g_functions + rdi]
+    lea rax, [g_functions]
+    add rdi, rax
     mov qword ptr [rdi + FUNCTION_INFO.entry_offset], rbx
     mov qword ptr [rdi + FUNCTION_INFO.exit_offset], 0
     mov dword ptr [rdi + FUNCTION_INFO.size_bytes], 0
@@ -545,7 +547,8 @@ identify_done:
     dec eax
     mov rdi, rax
     imul rdi, sizeof FUNCTION_INFO
-    lea rdi, [g_functions + rdi]
+    lea rax, [g_functions]
+    add rdi, rax
     mov rax, r13
     dec rax
     mov qword ptr [rdi + FUNCTION_INFO.exit_offset], rax
@@ -563,7 +566,8 @@ analyze_loop:
     jae analyze_done
     mov rdi, rbx
     imul rdi, sizeof FUNCTION_INFO
-    lea rcx, [g_functions + rdi]
+    lea rcx, [g_functions]
+    add rcx, rdi
     call AnalyzeFunctionRange
     inc ebx
     jmp analyze_loop
@@ -634,7 +638,8 @@ build_loop:
     ; Load FUNCTION_INFO
     mov r14, rbx
     imul r14, sizeof FUNCTION_INFO
-    lea r14, [g_functions + r14]
+    lea rax, [g_functions]
+    add r14, rax
 
     ; func_XXXX:
     lea rdx, sz_func_prefix

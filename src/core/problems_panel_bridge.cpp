@@ -25,8 +25,23 @@ std::string wideToUtf8(const wchar_t* wstr) {
     if (!out.empty() && out.back() == '\0') out.pop_back();
     return out;
 #else
-    (void)wstr;
-    return {};
+    // POSIX fallback: convert wchar_t sequence to UTF-8 via std::wstring_convert
+    std::wstring ws(wstr);
+    std::string out;
+    out.reserve(ws.size() * 4); // worst-case UTF-8 expansion
+    for (wchar_t wc : ws) {
+        if (wc <= 0x7F) {
+            out.push_back(static_cast<char>(wc));
+        } else if (wc <= 0x7FF) {
+            out.push_back(static_cast<char>(0xC0 | ((wc >> 6) & 0x1F)));
+            out.push_back(static_cast<char>(0x80 | (wc & 0x3F)));
+        } else {
+            out.push_back(static_cast<char>(0xE0 | ((wc >> 12) & 0x0F)));
+            out.push_back(static_cast<char>(0x80 | ((wc >> 6) & 0x3F)));
+            out.push_back(static_cast<char>(0x80 | (wc & 0x3F)));
+        }
+    }
+    return out;
 #endif
 }
 

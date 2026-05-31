@@ -56,7 +56,7 @@ void KeywordHashTable::initializeLanguage(Language lang) {
                 L"and", L"or", L"xor", L"not", L"neg", L"shl", L"shr", L"sar",
                 L"push", L"pop", L"call", L"ret", L"jmp", L"je", L"jne", L"jg", L"jge", L"jl", L"jle",
                 L"cmp", L"test", L"nop", L"int", L"syscall",
-                L"vmovups", L"vaddps", L"vmulps", // AVX examples
+                L"vmovups", L"vaddps", L"vmulps", // AVX
                 L"proc", L"endp", L"proto", L"invoke",
                 L".data", L".code", L".const", L"struct", L"ends",
                 L"byte", L"word", L"dword", L"qword", L"real4", L"real8",

@@ -1,7 +1,7 @@
 {
   "name": "rawrxd-ide-chatbot",
   "version": "1.0.0",
-  "description": "RawrXD IDE Chatbot with 120B Model Support",
+  "description": "RawrXD agentic IDE competing with GitHub Copilot Chat and Cursor Composer",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

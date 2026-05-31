@@ -42,21 +42,48 @@ public:
         for (auto& pair : m_processes) {
             if (pair.second.hProcess) {
                 ::TerminateProcess(pair.second.hProcess, 1);
+                WaitForSingleObject(pair.second.hProcess, 500);  // Wait up to 500ms for termination
                 CloseHandle(pair.second.hProcess);
             }
             if (pair.second.hThread) CloseHandle(pair.second.hThread);
             if (pair.second.hStdOut) CloseHandle(pair.second.hStdOut);
             if (pair.second.hStdErr) CloseHandle(pair.second.hStdErr);
         }
+        m_processes.clear();
         LeaveCriticalSection(&m_criticalSection);
         DeleteCriticalSection(&m_criticalSection);
     }
 
     DWORD ExecuteCommand(const wchar_t* command, const wchar_t* workingDir = nullptr) {
+        // Create pipes for stdout/stderr capture
+        HANDLE hStdOutRead = nullptr, hStdOutWrite = nullptr;
+        HANDLE hStdErrRead = nullptr, hStdErrWrite = nullptr;
+        
+        SECURITY_ATTRIBUTES sa = {0};
+        sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+        sa.bInheritHandle = TRUE;
+        sa.lpSecurityDescriptor = nullptr;
+
+        if (!CreatePipe(&hStdOutRead, &hStdOutWrite, &sa, 0) ||
+            !CreatePipe(&hStdErrRead, &hStdErrWrite, &sa, 0)) {
+            if (hStdOutRead) CloseHandle(hStdOutRead);
+            if (hStdOutWrite) CloseHandle(hStdOutWrite);
+            if (hStdErrRead) CloseHandle(hStdErrRead);
+            if (hStdErrWrite) CloseHandle(hStdErrWrite);
+            return 0;
+        }
+
+        // Make read ends non-inheritable
+        SetHandleInformation(hStdOutRead, HANDLE_FLAG_INHERIT, 0);
+        SetHandleInformation(hStdErrRead, HANDLE_FLAG_INHERIT, 0);
+
         STARTUPINFOW si = {0};
         si.cb = sizeof(STARTUPINFOW);
-        si.dwFlags = STARTF_USESHOWWINDOW;
+        si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
         si.wShowWindow = SW_HIDE;
+        si.hStdOutput = hStdOutWrite;
+        si.hStdError = hStdErrWrite;
+        si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
 
         PROCESS_INFORMATION pi = {0};
 
@@ -64,16 +91,27 @@ public:
         wcscpy_s(cmdLine, 32768, L"cmd.exe /c ");
         if (command) wcscat_s(cmdLine, 32768, command);
 
-        if (!CreateProcessW(nullptr, cmdLine, nullptr, nullptr, FALSE,
+        // Cast to non-const for CreateProcessW compatibility
+        wchar_t* mutableCmdLine = cmdLine;
+
+        if (!CreateProcessW(nullptr, mutableCmdLine, nullptr, nullptr, TRUE,
             CREATE_NO_WINDOW, nullptr, workingDir, &si, &pi)) {
+            CloseHandle(hStdOutRead);
+            CloseHandle(hStdOutWrite);
+            CloseHandle(hStdErrRead);
+            CloseHandle(hStdErrWrite);
             return 0;
         }
+
+        // Close write ends in parent process
+        CloseHandle(hStdOutWrite);
+        CloseHandle(hStdErrWrite);
 
         ProcessInfo pinfo;
         pinfo.hProcess = pi.hProcess;
         pinfo.hThread = pi.hThread;
-        pinfo.hStdOut = nullptr;
-        pinfo.hStdErr = nullptr;
+        pinfo.hStdOut = hStdOutRead;
+        pinfo.hStdErr = hStdErrRead;
         pinfo.dwProcessId = pi.dwProcessId;
         pinfo.running = true;
 
@@ -85,25 +123,37 @@ public:
     }
 
     bool ReadOutput(DWORD processId, char* buffer, size_t bufSize, size_t& bytesRead) {
+        if (!buffer || bufSize == 0) {
+            bytesRead = 0;
+            return false;
+        }
+
         EnterCriticalSection(&m_criticalSection);
 
         auto it = m_processes.find(processId);
         if (it == m_processes.end()) {
             LeaveCriticalSection(&m_criticalSection);
+            bytesRead = 0;
             return false;
         }
 
         HANDLE hPipe = it->second.hStdOut;
         LeaveCriticalSection(&m_criticalSection);
 
-        if (!hPipe || buffer == nullptr || bufSize == 0) {
+        if (!hPipe) {
             bytesRead = 0;
             return false;
         }
 
-        DWORD dwRead;
-        if (!ReadFile(hPipe, buffer, (DWORD)bufSize, &dwRead, nullptr)) {
-            return false;
+        DWORD dwRead = 0;
+        // Use non-blocking read with PeekNamedPipe first
+        DWORD dwAvailable = 0;
+        if (PeekNamedPipe(hPipe, nullptr, 0, nullptr, &dwAvailable, nullptr) && dwAvailable > 0) {
+            DWORD toRead = (dwAvailable < (DWORD)bufSize) ? dwAvailable : (DWORD)bufSize;
+            if (!ReadFile(hPipe, buffer, toRead, &dwRead, nullptr)) {
+                bytesRead = 0;
+                return false;
+            }
         }
 
         bytesRead = dwRead;
@@ -122,6 +172,15 @@ public:
         DWORD dwExitCode;
         bool running = GetExitCodeProcess(it->second.hProcess, &dwExitCode) &&
             (dwExitCode == STILL_ACTIVE);
+
+        // If process has finished, clean up its resources
+        if (!running) {
+            if (it->second.hProcess) CloseHandle(it->second.hProcess);
+            if (it->second.hThread) CloseHandle(it->second.hThread);
+            if (it->second.hStdOut) CloseHandle(it->second.hStdOut);
+            if (it->second.hStdErr) CloseHandle(it->second.hStdErr);
+            m_processes.erase(it);
+        }
 
         LeaveCriticalSection(&m_criticalSection);
         return running;
@@ -153,6 +212,15 @@ public:
         }
 
         bool result = ::TerminateProcess(it->second.hProcess, 1);
+        WaitForSingleObject(it->second.hProcess, 500);
+
+        // Properly close all handles
+        if (it->second.hProcess) CloseHandle(it->second.hProcess);
+        if (it->second.hThread) CloseHandle(it->second.hThread);
+        if (it->second.hStdOut) CloseHandle(it->second.hStdOut);
+        if (it->second.hStdErr) CloseHandle(it->second.hStdErr);
+        
+        m_processes.erase(it);
 
         LeaveCriticalSection(&m_criticalSection);
         return result;

@@ -343,7 +343,7 @@ int main() {
 
     // ── Telemetry JSON ─────────────────────────────────────────────────────
     {
-        FILE* fp = fopen("gpu_fused_demo.json", "w");
+        FILE* fp = fopen("gpu_fused.json", "w");
         if (fp) {
             fprintf(fp, "{\n");
             fprintf(fp, "  \"version\": \"v16.3-FUSED-LAYERS\",\n");
@@ -357,7 +357,7 @@ int main() {
             fprintf(fp, "  \"ops_per_layer\": 10\n");
             fprintf(fp, "}\n");
             fclose(fp);
-            printf("\n[TELEMETRY] Written to gpu_fused_demo.json\n");
+            printf("\n[TELEMETRY] Written to gpu_fused.json\n");
         }
     }
 

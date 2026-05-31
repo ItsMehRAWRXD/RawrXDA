@@ -55,7 +55,7 @@ __dpct_inline__ static void quantize_q8_1_impl(const float * __restrict__ x,
     d = amax == 0 ? 0 : d;
 }
 
-// No op to control codepath in ggml_sycl_op_mul_mat
+// No op to control codepath in ggml_rxd_sycl_op_mul_mat
 template <int ElementsPerWI> struct no_quantize_q8_1 {
     void operator()(const float *, void *, int, int, const sycl::nd_item<1> &) const {}
 };

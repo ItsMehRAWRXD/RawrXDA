@@ -125,7 +125,7 @@ void RealTimeCompletionEngine::prewarmCache(const std::string& filePath) {
             std::vector<int32_t> tokens = m_inferenceEngine->Tokenize(warmupPrompt);
             m_inferenceEngine->Generate(tokens, 5); 
         } catch (...) {
-            // Ignore errors during prewarm
+            fprintf(stderr, "[RealTimeCompletionEngine] Error during prewarm, continuing\n");
         }
     }).detach();
 }

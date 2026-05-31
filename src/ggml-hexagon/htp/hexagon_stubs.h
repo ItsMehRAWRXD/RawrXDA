@@ -1,5 +1,5 @@
 #pragma once
-#include "ggml.h"
+#include "ggml_rxd_internal.h"
 
 #ifdef __cplusplus
 extern "C" {

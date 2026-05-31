@@ -87,8 +87,8 @@ int main() {
 
     // Create a gradient showcase
     std::cout << "7. Creating gradient showcase...\n";
-    Canvas gradient_demo(512, 512);
-    gradient_demo.clear(Color::white());
+    Canvas gradient(512, 512);
+    gradient.clear(Color::white());
 
     // Linear gradients
     LinearGradient lin1(0, 0, 256, 256);
@@ -98,7 +98,7 @@ int main() {
 
     for (int y = 0; y < 256; ++y) {
         for (int x = 0; x < 256; ++x) {
-            gradient_demo.set(x, y, lin1.sample(static_cast<float>(x), static_cast<float>(y)));
+            gradient.set(x, y, lin1.sample(static_cast<float>(x), static_cast<float>(y)));
         }
     }
 
@@ -110,14 +110,14 @@ int main() {
 
     for (int y = 0; y < 256; ++y) {
         for (int x = 256; x < 512; ++x) {
-            gradient_demo.set(x, y, rad1.sample(static_cast<float>(x), static_cast<float>(y)));
+            gradient.set(x, y, rad1.sample(static_cast<float>(x), static_cast<float>(y)));
         }
     }
 
-    if (write_bmp(gradient_demo, "gradients.bmp")) {
+    if (write_bmp(gradient, "gradients.bmp")) {
         std::cout << "✓ Wrote gradients.bmp\n";
     }
-    if (write_png(gradient_demo, "gradients.png")) {
+    if (write_png(gradient, "gradients.png")) {
         std::cout << "✓ Wrote gradients.png\n";
     }
 

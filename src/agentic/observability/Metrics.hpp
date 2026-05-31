@@ -21,6 +21,7 @@ enum class MetricType {
 struct MetricValue {
     MetricType type;
     std::atomic<double> value{0.0};
+    std::atomic<uint64_t> count{0};
     std::chrono::system_clock::time_point lastUpdated;
     
     // Histogram data

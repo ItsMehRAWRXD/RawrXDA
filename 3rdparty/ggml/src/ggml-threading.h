@@ -6,8 +6,8 @@
 extern "C" {
 #endif
 
-GGML_API void ggml_critical_section_start(void);
-GGML_API void ggml_critical_section_end(void);
+GGML_RXD_API void ggml_rxd_critical_section_start(void);
+GGML_RXD_API void ggml_rxd_critical_section_end(void);
 
 #ifdef __cplusplus
 }

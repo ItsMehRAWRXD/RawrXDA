@@ -34,7 +34,7 @@ std::string AutoModelDownloader::findOllamaDirectory() const {
     if(userProfile) {
         searchPaths.push_back(std::string(userProfile) + "/.ollama/models");
     }
-    searchPaths.push_back("C:/ProgramData/Ollama/models"); // Example
+    searchPaths.push_back("C:/ProgramData/Ollama/models");
 #else
     const char* home = std::getenv("HOME");
     if(home) {

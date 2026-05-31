@@ -231,6 +231,7 @@ struct GoogleDorkScannerImpl {
     std::vector<DorkTarget> results;
     std::function<void(int, int, const std::string&)> progressCb;
     std::mutex resultsMutex;
+    bool initialized = false;
 
     GoogleDorkScannerImpl() {
         config.threadCount = 4;
@@ -251,7 +252,13 @@ GoogleDorkScanner::GoogleDorkScanner(const DorkScannerConfig& config) : m_impl(n
 }
 GoogleDorkScanner::~GoogleDorkScanner() { delete static_cast<GoogleDorkScannerImpl*>(m_impl); }
 
-bool GoogleDorkScanner::initialize() { return true; }
+bool GoogleDorkScanner::initialize() {
+    auto* impl = static_cast<GoogleDorkScannerImpl*>(m_impl);
+    if (!impl) return false;
+    impl->initialized = true;
+    impl->results.clear();
+    return true;
+}
 
 std::vector<DorkTarget> GoogleDorkScanner::scanSingle(const std::string& dork) {
     auto* impl = static_cast<GoogleDorkScannerImpl*>(m_impl);

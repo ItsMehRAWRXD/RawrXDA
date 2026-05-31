@@ -32,14 +32,14 @@ inline void set_f32(const float* src, float* dst,
 }
 
 // Main function: prepare GPU queue and launch parallel_for
-void ggml_sycl_op_set(ggml_backend_sycl_context& ctx, ggml_tensor* dst) {
-    const ggml_tensor* src0 = dst->src[0];
-    const ggml_tensor* src1 = dst->src[1];
+void ggml_rxd_sycl_op_set(ggml_rxd_backend_sycl_context& ctx, ggml_rxd_tensor* dst) {
+    const ggml_rxd_tensor* src0 = dst->src[0];
+    const ggml_rxd_tensor* src1 = dst->src[1];
 
     // Ensure shapes and types are compatible
-    GGML_ASSERT(ggml_are_same_shape(src0, dst));
-    GGML_ASSERT(ggml_is_contiguous(dst) && ggml_is_contiguous(src0));
-    GGML_ASSERT(dst->type == src0->type && src0->type == src1->type && dst->type == GGML_TYPE_F32);
+    GGML_RXD_ASSERT(ggml_rxd_are_same_shape(src0, dst));
+    GGML_RXD_ASSERT(ggml_rxd_is_contiguous(dst) && ggml_rxd_is_contiguous(src0));
+    GGML_RXD_ASSERT(dst->type == src0->type && src0->type == src1->type && dst->type == GGML_RXD_TYPE_F32);
 
     const int32_t* opts = (const int32_t*) dst->op_params;
     const int64_t nb[3]     = {opts[0]/sizeof(float), opts[1]/sizeof(float), opts[2]/sizeof(float)};
@@ -54,7 +54,7 @@ void ggml_sycl_op_set(ggml_backend_sycl_context& ctx, ggml_tensor* dst) {
 
     // Copy src0 to dst if not inplace
     if (!inplace)
-        stream->memcpy(dst_ptr, src0_ptr, ggml_nbytes(dst));
+        stream->memcpy(dst_ptr, src0_ptr, ggml_rxd_nbytes(dst));
 
     const int64_t ne[4] = {src1->ne[0], src1->ne[1], src1->ne[2], src1->ne[3]};
     const int64_t src_nb[3] = {src1->nb[1]/sizeof(float), src1->nb[2]/sizeof(float), src1->nb[3]/sizeof(float)};

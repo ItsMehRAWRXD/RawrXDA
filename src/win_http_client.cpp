@@ -83,7 +83,7 @@ static ParsedURL parseURL(const std::string& url) {
 //=============================================================================
 class WinHTTPClientImpl : public HTTPClient {
 public:
-    WinHTTPClientImpl() : m_timeoutConnect(10000), m_timeoutSend(30000), m_timeoutReceive(60000) {}
+    WinHTTPClientImpl() : m_timeoutConnect(10000), m_timeoutSend(30000), m_timeoutReceive(120000) {}
     ~WinHTTPClientImpl() override = default;
 
     void setTimeout(int connectMs, int sendMs, int receiveMs) {

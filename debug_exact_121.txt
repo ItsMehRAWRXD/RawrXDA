@@ -1,0 +1,37 @@
+    if (info.length == 0) info.length = 1;
+    return info;
+}
+
+bool Detour::isNearJumpPossible(void* from, void* to) {
+    int64_t diff = (int64_t)to - (int64_t)from;
+    return (diff >= -2147483648LL && diff <= 2147483647LL);
+}
+
+void* Detour::findCodeCave(void* near, size_t size, size_t radius) {
+    uintptr_t base = (uintptr_t)near;
+    uintptr_t start = (base > radius) ? base - radius : 0;
+    uintptr_t end = base + radius;
+    MEMORY_BASIC_INFORMATION mbi;
+    for (uintptr_t cur = start; cur < end; ) {
+        if (!VirtualQuery((void*)cur, &mbi, sizeof(mbi))) break;
+        if (mbi.State == MEM_COMMIT && (mbi.Protect & (PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE))) {
+            uint8_t* p = (uint8_t*)mbi.BaseAddress;
+            size_t found = 0;
+            for (size_t k = 0; k < mbi.RegionSize; k++) {
+                if (p[k] == 0xCC || p[k] == 0x90) { 
+                    if (++found >= size) return (void*)(p + k - size + 1); 
+                } else found = 0;
+            }
+        }
+        cur = (uintptr_t)mbi.BaseAddress + mbi.RegionSize;
+    }
+    return nullptr;
+}
+
+bool Detour::relocateInstruction(const uint8_t* src, uint8_t* dst, uintptr_t base, size_t* len) {
+    *len = (size_t)disassembleOne(src).length;
+    memcpy(dst, src, *len);
+    return true;
+}
+
+}

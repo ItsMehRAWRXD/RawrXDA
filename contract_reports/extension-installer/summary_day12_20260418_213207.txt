@@ -1,0 +1,8 @@
+RawrXD Extension Installer expansion (days 1-15; day 15 adds integration gate)
+Day=12 Live=False LiveInstall=False Strict=True SkipIntegrationGate=False
+
+Label=day12_marketplace_consistency
+ExitCode=0
+OutFile=D:\rawrxd\contract_reports\extension-installer\20260418_213207_day12_marketplace_consistency.out.txt
+ErrFile=D:\rawrxd\contract_reports\extension-installer\20260418_213207_day12_marketplace_consistency.err.txt
+

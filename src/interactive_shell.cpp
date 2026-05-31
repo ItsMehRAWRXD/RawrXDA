@@ -272,7 +272,7 @@ void InteractiveShell::SaveHistory() {
             out << command_history_[i] << "\n";
         }
     } catch (...) {
-        // Degrade silently — history is non-critical
+        fprintf(stderr, "[InteractiveShell] History save failed, continuing without persistence\n");
     }
 }
 
@@ -298,7 +298,7 @@ void InteractiveShell::LoadHistory() {
         }
         history_index_ = command_history_.size();
     } catch (...) {
-        // Degrade silently
+        fprintf(stderr, "[InteractiveShell] History load failed, starting with empty history\n");
     }
 }
 

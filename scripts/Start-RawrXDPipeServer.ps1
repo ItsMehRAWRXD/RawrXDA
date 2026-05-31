@@ -16,7 +16,8 @@ function Write-PipeResponse {
         [byte[]]$Payload
     )
 
-    $lengthBytes = [BitConverter]::GetBytes([int]($Payload?.Length ?? 0))
+    $payloadLength = if ($Payload) { $Payload.Length } else { 0 }
+    $lengthBytes = [BitConverter]::GetBytes([int]$payloadLength)
     $Stream.Write($lengthBytes, 0, 4)
     if ($Payload -and $Payload.Length -gt 0) {
         $Stream.Write($Payload, 0, $Payload.Length)

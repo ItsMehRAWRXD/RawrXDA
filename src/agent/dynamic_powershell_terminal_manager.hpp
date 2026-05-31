@@ -23,6 +23,7 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <cstddef>
 #include <functional>
 #include <map>
 #include <memory>
@@ -191,6 +192,10 @@ struct TerminalExecutionResult {
     std::string output;                               ///< Standard output
     std::string error_output;                         ///< Error output
     std::string error_message;                        ///< Error message (if any)
+    bool output_truncated{false};                     ///< Output exceeded cap and was circular-trimmed
+    size_t dropped_output_bytes{0};                   ///< Bytes dropped from oldest output tail
+    size_t dropped_output_lines{0};                   ///< Lines dropped from oldest output tail
+    size_t output_buffer_cap_bytes{0};                ///< Effective circular buffer cap in bytes
     
     std::chrono::milliseconds execution_time{0};      ///< Actual execution time
     std::chrono::milliseconds timeout_used{0};        ///< Timeout value used

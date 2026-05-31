@@ -416,14 +416,24 @@ EditorEngineResult WebView2EditorEngine::setLanguage(const char* languageId) {
 // ============================================================================
 EditorEngineResult WebView2EditorEngine::applyTheme(const IDETheme& theme) {
     // Use MonacoThemeExporter to convert IDETheme → MonacoThemeDef
-    // For now, we try to map by name
+    // Map theme to Monaco-compatible theme name
+    std::string monacoTheme;
+    if (theme.name == "dark" || theme.name == "Dark") {
+        monacoTheme = "vs-dark";
+    } else if (theme.name == "light" || theme.name == "Light") {
+        monacoTheme = "vs";
+    } else if (theme.name == "high-contrast" || theme.name == "High Contrast") {
+        monacoTheme = "hc-black";
+    } else {
+        // Custom RawrXD themes
+        monacoTheme = theme.name.empty() ? "rawrxd-cyberpunk-neon" : theme.name;
+    }
+    
     if (m_webView2 && m_webView2->isReady()) {
-        // Export and define the theme via MonacoThemeExporter
-        // Then set it as active
-        m_webView2->setTheme("rawrxd-cyberpunk-neon");  // Default
+        m_webView2->setTheme(monacoTheme);
         m_stats.themeChanges++;
     }
-    return EditorEngineResult::ok("Theme applied via WebView2");
+    return EditorEngineResult::ok(("Theme applied: " + monacoTheme).c_str());
 }
 
 // ============================================================================

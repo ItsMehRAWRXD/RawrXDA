@@ -26,13 +26,25 @@ namespace RawrXD::UI {
 namespace RawrXD::Backend { 
     struct OllamaChatMessage { std::string role; std::string content; }; 
     struct OllamaChatRequest { std::string model; bool stream; std::vector<OllamaChatMessage> messages; }; 
-    struct OllamaResponse { struct { std::string content; } message; };
-    class OllamaBackend { public: OllamaResponse chatSync(const OllamaChatRequest& r) { return {{""}}; } };
+    struct NativeInferenceResponse { struct { std::string content; } message; };
+    class OllamaBackend { public: NativeInferenceResponse chatSync(const OllamaChatRequest& r) { return {{""}}; } };
     class OllamaSession { 
     public: 
-        void setSessionName(const std::string&) {}
-        void recordUserPrompt(const std::string&) {}
-        void recordAIResponse(const std::string&, const std::string&, uint64_t, uint64_t) {}
+        void setSessionName(const std::string& name) { sessionName_ = name; }
+        void recordUserPrompt(const std::string& prompt) {
+            chatHistory_.push_back({"user", prompt});
+        }
+        void recordAIResponse(const std::string& model, const std::string& response, uint64_t tokensIn, uint64_t tokensOut) {
+            chatHistory_.push_back({"assistant", response});
+            totalTokensIn_ += tokensIn;
+            totalTokensOut_ += tokensOut;
+        }
+
+    private:
+        std::string sessionName_;
+        std::vector<std::pair<std::string, std::string>> chatHistory_;
+        uint64_t totalTokensIn_ = 0;
+        uint64_t totalTokensOut_ = 0;
     };
 }
 
@@ -290,11 +302,16 @@ public:
     HWND m_replaceAllBtnHwnd;
     HWND m_statusBarHwnd;
     HWND m_tabBarHwnd;
+    HWND m_tabScrollHwnd;
     HWND m_fileBrowserHwnd;
     HWND m_commandPaletteHwnd;
     HWND m_topChatHwnd;
     HWND m_userChatInputHwnd;
     HWND m_userChatSendBtn;
+    
+    // === Tool Registry Integration (Palette ↔ Executor Wiring) ===
+    std::vector<std::string> m_paletteTool;      // Tool names indexed by listbox position
+    std::vector<int> m_paletteIndex;             // Original registry indices
     
     HMENU m_menuBar;
 
@@ -345,11 +362,13 @@ public:
     std::string m_colorScheme = "default";
     std::string m_problemsFilter = "all";
     std::string m_currentModelPath;
+    std::string m_lastModelPath;  // Phase 1: model persistence across sessions
     
     size_t m_currentTheme = 0;
     size_t m_currentTab = 0;
     int m_fontSize = 11;
     int m_tabSize = 4;
+    int m_tabScrollOffset = 0;
     size_t m_maxFileSizeForLazyLoad = 0;
     long m_lastFindPos = -1;
     size_t m_lastEditPos = 0;

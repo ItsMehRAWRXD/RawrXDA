@@ -142,8 +142,19 @@ struct WizardPageBase {
     virtual void initializePage() {}
     virtual bool isComplete() const { return true; }
     virtual bool validatePage() { return true; }
-    void setTitle(const char*) {}
-    void setSubTitle(const char*) {}
+    void setTitle(const char* title) {
+        if (title && hWnd_) {
+            SetWindowTextA(hWnd_, title);
+        }
+        if (title) title_ = title;
+    }
+    void setSubTitle(const char* subtitle) {
+        if (subtitle) subtitle_ = subtitle;
+    }
+
+    std::string title_;
+    std::string subtitle_;
+    HWND hWnd_ = nullptr;
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════

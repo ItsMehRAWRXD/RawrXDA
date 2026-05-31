@@ -1,9 +1,11 @@
 // ============================================================================
 // license_manager_panel.cpp — License Manager UI Implementation
+// VSU Effects: Uses Adobe RGBa color space for professional color accuracy
 // ============================================================================
 
 #include "../include/license_manager_panel.h"
 #include "../include/enterprise_license.h"
+#include "../include/RawrXD_ColorSpace.h"
 #include <commctrl.h>
 #include <commdlg.h>
 #include <sstream>
@@ -14,7 +16,17 @@
 #pragma comment(lib, "comctl32.lib")
 #pragma comment(lib, "comdlg32.lib")
 
+using namespace RawrXD::ColorSpace;
+
 namespace RawrXD::License {
+
+// Helper to convert AdobeRGBa to COLORREF for Win32 GDI
+inline COLORREF AdobeRGBaToCOLORREF(const AdobeRGBa& color) {
+    auto srgb = color.TosRGB();
+    return RGB(static_cast<int>(srgb.r * 255), 
+               static_cast<int>(srgb.g * 255), 
+               static_cast<int>(srgb.b * 255));
+}
 
 namespace {
 constexpr int IDC_BROWSE = 7101;
@@ -78,7 +90,7 @@ bool LicenseManagerPanel::create(HWND parentHwnd, int x, int y, int width, int h
 
     if (!m_hwnd) return false;
 
-    m_brushBg = CreateSolidBrush(RGB(240, 240, 240));
+    m_brushBg = CreateSolidBrush(AdobeRGBaToCOLORREF(VSU::Mica::LightTint));
     createControls();
     updateControlData();
 
@@ -168,8 +180,8 @@ void LicenseManagerPanel::onPaint() {
     GetClientRect(m_hwnd, &rcClient);
 
     FillRect(hdc, &rcClient, m_brushBg);
-    SetTextColor(hdc, RGB(0, 0, 0));
-    SetBkColor(hdc, RGB(240, 240, 240));
+    SetTextColor(hdc, AdobeRGBaToCOLORREF(AdobeRGBa(0.00f, 0.00f, 0.00f, 1.00f)));
+    SetBkColor(hdc, AdobeRGBaToCOLORREF(VSU::Mica::LightTint));
 
     const int pad = 10;
     const int btnAreaHeight = 44;
@@ -207,8 +219,8 @@ void LicenseManagerPanel::drawLicenseInfo(HDC hdc, const RECT& rect) {
     std::string tierText = "Current Tier: ";
     tierText += tierStr;
 
-    SetTextColor(hdc, RGB(0, 0, 0));
-    SetBkColor(hdc, RGB(240, 240, 240));
+    SetTextColor(hdc, AdobeRGBaToCOLORREF(AdobeRGBa(0.00f, 0.00f, 0.00f, 1.00f)));
+    SetBkColor(hdc, AdobeRGBaToCOLORREF(VSU::Mica::LightTint));
 
     RECT rcText = rect;
     DrawText(hdc, tierText.c_str(), tierText.length(), &rcText, DT_LEFT | DT_TOP);

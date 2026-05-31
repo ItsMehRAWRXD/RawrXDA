@@ -1,0 +1,22 @@
+{
+  "name": "rawrxd-14day-strict",
+  "description": "Strict production finisher profile for RawrXD",
+  "defaults": {
+    "allDays": true,
+    "strict": true,
+    "noBuild": false,
+    "noTests": false
+  },
+  "fastMode": {
+    "strict": true,
+    "noBuild": true,
+    "noTests": true
+  },
+  "requiredOutputs": [
+    "reports/14day/day01_report.json",
+    "reports/14day/day04_runtime_probe.json",
+    "reports/14day/day14_report.json",
+    "reports/14day/final_scorecard.md",
+    "reports/14day/production_finisher.log"
+  ]
+}

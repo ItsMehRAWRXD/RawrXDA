@@ -11,6 +11,7 @@
 
 #include "enterprise/multi_gpu.h"
 #include "enterprise_license.h"
+#include "sentinel_watchdog.hpp"
 
 #include <iostream>
 #include <sstream>
@@ -18,6 +19,7 @@
 #include <algorithm>
 #include <numeric>
 #include <chrono>
+#include <atomic>
 
 #ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN
@@ -65,6 +67,10 @@ static GPUDeviceInfo s_defaultDevice = {
     0, 0, 0, 0, 0, 0.0f,
     false, true
 };
+
+static constexpr uint32_t kSentinelRouteLockdown = 0xDEADu;
+static std::atomic<uint32_t> s_clusterSentinelRoute{0};
+static std::atomic<uint64_t> s_clusterSentinelEpoch{0};
 
 // ============================================================================
 // Initialize
@@ -366,6 +372,25 @@ bool MultiGPUManager::AllDevicesHealthy() const {
 
 MultiGPUResult MultiGPUManager::RunHealthCheck() {
     std::lock_guard<std::mutex> lock(m_mutex);
+
+    uint32_t inboundRoute = 0;
+    if (ConsumeSentinelSignal(&inboundRoute) && inboundRoute == kSentinelRouteLockdown) {
+        for (auto& d : m_devices) {
+            d.available = false;
+        }
+        return MultiGPUResult::error("Cluster lockdown propagated from peer node", -0xDEAD);
+    }
+    
+    // Enterprise Sentinel Integration:
+    // If the local Sentinel has triggered a lockdown (violations exceeded),
+    // we must mark the entire GPU cluster as unhealthy to force atomic 
+    // shutdown of the P2P compute plane.
+    if (SentinelWatchdog::instance().getViolationCount() >= SENTINEL_MAX_VIOLATIONS) {
+        (void)BroadcastSentinelSignal(kSentinelRouteLockdown);
+        for (auto& d : m_devices) { d.available = false; }
+        return MultiGPUResult::error("Critical Sentinel Violation: Cluster Lockdown Initiated", -0xDEAD);
+    }
+
     uint32_t healthy = 0, unhealthy = 0;
 
     for (auto& d : m_devices) {
@@ -606,6 +631,47 @@ MultiGPUResult MultiGPUManager::DispatchBatch(uint32_t batchId,
 DispatchStats MultiGPUManager::GetDispatchStats() const {
     std::lock_guard<std::mutex> lock(m_mutex);
     return m_dispatchStats;
+}
+
+MultiGPUResult MultiGPUManager::BroadcastSentinelSignal(uint32_t routeCode) {
+    if (routeCode == 0) {
+        return MultiGPUResult::error("Invalid sentinel route code", -7);
+    }
+
+    if (!RawrXD::EnterpriseLicense::isFeatureEnabled(0x80)) {
+        return MultiGPUResult::error("Sentinel route broadcast requires Enterprise feature 0x80", -8);
+    }
+
+    s_clusterSentinelRoute.store(routeCode, std::memory_order_release);
+    s_clusterSentinelEpoch.fetch_add(1, std::memory_order_acq_rel);
+
+    if (routeCode == kSentinelRouteLockdown) {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        for (auto& d : m_devices) {
+            d.available = false;
+        }
+    }
+
+    return MultiGPUResult::ok("Sentinel route broadcast committed");
+}
+
+bool MultiGPUManager::ConsumeSentinelSignal(uint32_t* outRouteCode) {
+    if (!outRouteCode) {
+        return false;
+    }
+
+    const uint64_t epoch = s_clusterSentinelEpoch.load(std::memory_order_acquire);
+    if (epoch == 0) {
+        return false;
+    }
+
+    const uint64_t previous = m_lastConsumedSentinelEpoch.exchange(epoch, std::memory_order_acq_rel);
+    if (previous == epoch) {
+        return false;
+    }
+
+    *outRouteCode = s_clusterSentinelRoute.load(std::memory_order_acquire);
+    return true;
 }
 
 const std::vector<LayerAssignment>& MultiGPUManager::GetLayerAssignments() const {

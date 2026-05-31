@@ -1,0 +1,2 @@
+cd F:\rawrxd\demo_zero_deps
+demo_production.exe

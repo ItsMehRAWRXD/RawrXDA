@@ -15,6 +15,12 @@
 #include <cmath>
 #include <random>
 
+// VRAM pressure monitoring — MASM64 kernels (vram_pressure_monitor.asm)
+extern "C" {
+    int32_t rawrxd_poll_vram_pressure(uint64_t current_usage_bytes);
+    int32_t rawrxd_check_swap_trigger(uint32_t pressure_threshold);
+}
+
 namespace RawrXD {
 namespace Speculative {
 
@@ -94,6 +100,279 @@ SpeculativeDecoderV2::draft(const std::vector<int>& context, int numTokens) {
     }
 
     return result;
+}
+
+// ============================================================================
+// DraftTree helpers
+// ============================================================================
+
+std::vector<int>
+SpeculativeDecoderV2::DraftTree::pathTokenIds(int idx) const {
+    std::vector<int> path;
+    while (idx >= 0 && nodes[static_cast<size_t>(idx)].depth > 0) {
+        path.push_back(nodes[static_cast<size_t>(idx)].tokenId);
+        idx = nodes[static_cast<size_t>(idx)].parentIdx;
+    }
+    std::reverse(path.begin(), path.end());
+    return path;
+}
+
+std::vector<float>
+SpeculativeDecoderV2::DraftTree::pathLogprobs(int idx) const {
+    std::vector<float> path;
+    while (idx >= 0 && nodes[static_cast<size_t>(idx)].depth > 0) {
+        path.push_back(nodes[static_cast<size_t>(idx)].logprob);
+        idx = nodes[static_cast<size_t>(idx)].parentIdx;
+    }
+    std::reverse(path.begin(), path.end());
+    return path;
+}
+
+// ============================================================================
+// draftTree — BFS tree generation
+//
+// Each node at depth d expands to max(1, branchFactor >> (d-1)) children.
+// The total tree width thus decays geometrically, bounding VRAM usage while
+// still providing many candidate paths for the verifier to pick from.
+// ============================================================================
+SpeculativeDecoderV2::DraftTree
+SpeculativeDecoderV2::draftTree(const std::vector<int>& context,
+                                 int depth, int branchFactor) {
+    DraftTree tree;
+
+    // Virtual root at index 0 (depth 0, no token)
+    DraftTreeNode root;
+    root.depth    = 0;
+    root.parentIdx = -1;
+    tree.nodes.push_back(root);
+
+    // BFS frontier: list of (nodeIdx, context-for-that-node)
+    struct Frame {
+        int nodeIdx;
+        std::vector<int> ctx;
+    };
+    std::vector<Frame> frontier;
+    frontier.push_back({0, context});
+
+    for (int d = 1; d <= depth && !m_abortRequested.load(); ++d) {
+        // Shrink branching factor with depth: depth 1 = branchFactor,
+        // depth k = max(1, branchFactor >> (k-1))
+        int kBranch = std::max(1, branchFactor >> (d - 1));
+
+        std::vector<Frame> nextFrontier;
+        nextFrontier.reserve(frontier.size() * static_cast<size_t>(kBranch));
+
+        for (auto& frame : frontier) {
+            auto logprobs = m_draftModel.logprobs(
+                frame.ctx, kBranch, m_draftModel.userData);
+            if (logprobs.empty()) continue;
+
+            // Record first child index in parent node
+            int firstChildIdx = static_cast<int>(tree.nodes.size());
+            tree.nodes[static_cast<size_t>(frame.nodeIdx)].firstChild  = firstChildIdx;
+            tree.nodes[static_cast<size_t>(frame.nodeIdx)].childCount  = 0;
+
+            int spawned = 0;
+            for (int k = 0; k < kBranch && k < static_cast<int>(logprobs.size()); ++k) {
+                DraftTreeNode child;
+                child.tokenId  = logprobs[static_cast<size_t>(k)].first;
+                child.logprob  = logprobs[static_cast<size_t>(k)].second;
+                child.parentIdx = frame.nodeIdx;
+                child.depth    = d;
+
+                int childIdx = static_cast<int>(tree.nodes.size());
+                tree.nodes.push_back(child);
+                tree.nodes[static_cast<size_t>(frame.nodeIdx)].childCount++;
+                ++spawned;
+
+                // Only extend leaves deeper if below max depth
+                if (d < depth) {
+                    std::vector<int> childCtx = frame.ctx;
+                    childCtx.push_back(child.tokenId);
+                    nextFrontier.push_back({childIdx, std::move(childCtx)});
+                } else {
+                    tree.leafIndices.push_back(childIdx);
+                }
+            }
+            (void)spawned;
+        }
+        frontier = std::move(nextFrontier);
+    }
+
+    // Any nodes with no children are leaves (e.g., if the model returned
+    // fewer candidates than requested)
+    for (int i = 1; i < static_cast<int>(tree.nodes.size()); ++i) {
+        if (tree.nodes[static_cast<size_t>(i)].childCount == 0 &&
+            tree.nodes[static_cast<size_t>(i)].firstChild == -1) {
+            // Only add to leafIndices if not already there (from depth-exact leaves)
+            bool alreadyLeaf = false;
+            for (int li : tree.leafIndices)
+                if (li == i) { alreadyLeaf = true; break; }
+            if (!alreadyLeaf)
+                tree.leafIndices.push_back(i);
+        }
+    }
+
+    return tree;
+}
+
+// ============================================================================
+// draftTreeSeeded — ensemble variant: perturbs candidate selection with seed
+//
+// When ensembleDrafts > 1, each fan-out call uses a different branchSeed.
+// The seed is XORed into the token selection offset, rotating which top-K
+// logprob candidates are chosen at each node — yielding diverse draft paths
+// without requiring multiple draft models.
+// ============================================================================
+SpeculativeDecoderV2::DraftTree
+SpeculativeDecoderV2::draftTreeSeeded(const std::vector<int>& context,
+                                       int depth, int branchFactor,
+                                       uint32_t branchSeed) {
+    DraftTree tree;
+
+    DraftTreeNode root;
+    root.depth     = 0;
+    root.parentIdx = -1;
+    tree.nodes.push_back(root);
+
+    struct Frame {
+        int              nodeIdx;
+        std::vector<int> ctx;
+        uint32_t         seed;   // per-node seed carried forward
+    };
+    std::vector<Frame> frontier;
+    frontier.push_back({0, context, branchSeed});
+
+    for (int d = 1; d <= depth && !m_abortRequested.load(); ++d) {
+        int kBranch   = std::max(1, branchFactor >> (d - 1));
+        // Request extra candidates so the seed can pick different subsets
+        int kRequest  = std::min(kBranch * 3, 32);
+
+        std::vector<Frame> nextFrontier;
+        nextFrontier.reserve(frontier.size() * static_cast<size_t>(kBranch));
+
+        for (auto& frame : frontier) {
+            auto logprobs = m_draftModel.logprobs(
+                frame.ctx, kRequest, m_draftModel.userData);
+            if (logprobs.empty()) continue;
+
+            // Rotate the selection start by seed so different ensemble members
+            // pick different candidate subsets from the same logprob list.
+            size_t startOff = frame.seed % std::max<size_t>(1, logprobs.size());
+            uint32_t childSeed = frame.seed * 2654435761u; // LCG advance
+
+            int firstChildIdx = static_cast<int>(tree.nodes.size());
+            tree.nodes[static_cast<size_t>(frame.nodeIdx)].firstChild = firstChildIdx;
+            tree.nodes[static_cast<size_t>(frame.nodeIdx)].childCount = 0;
+
+            for (int k = 0; k < kBranch; ++k) {
+                size_t sourceIdx = (startOff + static_cast<size_t>(k))
+                                   % logprobs.size();
+                DraftTreeNode child;
+                child.tokenId   = logprobs[sourceIdx].first;
+                child.logprob   = logprobs[sourceIdx].second;
+                child.parentIdx = frame.nodeIdx;
+                child.depth     = d;
+
+                int childIdx = static_cast<int>(tree.nodes.size());
+                tree.nodes.push_back(child);
+                tree.nodes[static_cast<size_t>(frame.nodeIdx)].childCount++;
+
+                if (d < depth) {
+                    std::vector<int> childCtx = frame.ctx;
+                    childCtx.push_back(child.tokenId);
+                    nextFrontier.push_back({childIdx, std::move(childCtx), childSeed});
+                } else {
+                    tree.leafIndices.push_back(childIdx);
+                }
+                childSeed = childSeed * 1664525u + 1013904223u;
+            }
+        }
+        frontier = std::move(nextFrontier);
+    }
+
+    // Nodes with childCount == 0 and not in leafIndices are also leaves
+    for (int i = 1; i < static_cast<int>(tree.nodes.size()); ++i) {
+        auto& n = tree.nodes[static_cast<size_t>(i)];
+        if (n.childCount == 0 && n.firstChild == -1) {
+            bool already = false;
+            for (int li : tree.leafIndices)
+                if (li == i) { already = true; break; }
+            if (!already) tree.leafIndices.push_back(i);
+        }
+    }
+
+    return tree;
+}
+
+// ============================================================================
+// verifyTree — find the path with the longest accepted prefix
+// ============================================================================
+SpeculativeDecoderV2::VerifyResult
+SpeculativeDecoderV2::verifyTree(const std::vector<int>& context,
+                                  const DraftTree& tree) {
+    static thread_local std::mt19937 rng(std::random_device{}());
+
+    VerifyResult bestResult;
+    bestResult.acceptedCount = -1;  // sentinel: nothing tried yet
+    std::vector<int>   bestPathIds;
+    std::vector<float> bestPathLprobs;
+
+    for (int leafIdx : tree.leafIndices) {
+        // Reconstruct the path sequence
+        auto pathIds    = tree.pathTokenIds(leafIdx);
+        auto pathLprobs = tree.pathLogprobs(leafIdx);
+
+        if (pathIds.empty()) continue;
+
+        // Build a DraftResult along this path and call verify()
+        DraftResult dr;
+        dr.tokenIds = pathIds;
+        dr.logprobs = pathLprobs;
+
+        VerifyResult vr = verify(context, dr);
+
+        // Accept the path that contributes the most tokens
+        if (vr.acceptedCount > bestResult.acceptedCount ||
+            (vr.acceptedCount == bestResult.acceptedCount && vr.allAccepted)) {
+            bestResult     = vr;
+            bestPathIds    = pathIds;
+            bestPathLprobs = pathLprobs;
+        }
+
+        // Short-circuit: a fully accepted path of maximum depth is optimal
+        if (vr.allAccepted &&
+            vr.acceptedCount >= m_config.treeDepth) {
+            break;
+        }
+    }
+
+    // Populate the accepted token sequence so generateStreaming()'s accept
+    // phase can read them without re-walking the tree.
+    if (bestResult.acceptedCount > 0 && !bestPathIds.empty()) {
+        int n = std::min(bestResult.acceptedCount,
+                         static_cast<int>(bestPathIds.size()));
+        bestResult.acceptedTokenIds.assign(bestPathIds.begin(),
+                                            bestPathIds.begin() + n);
+        bestResult.acceptedLogprobs.assign(bestPathLprobs.begin(),
+                                            bestPathLprobs.begin() + n);
+    }
+
+    if (bestResult.acceptedCount < 0) {
+        // Fallback: generate one token from target directly
+        auto logprobs = m_targetModel.logprobs(context, 1, m_targetModel.userData);
+        bestResult.acceptedCount = 0;
+        bestResult.allAccepted   = false;
+        if (!logprobs.empty()) {
+            bestResult.correctionToken.id     = logprobs[0].first;
+            bestResult.correctionToken.logprob = logprobs[0].second;
+            if (m_targetModel.decode)
+                bestResult.correctionToken.text =
+                    m_targetModel.decode(logprobs[0].first, m_targetModel.userData);
+        }
+    }
+
+    return bestResult;
 }
 
 // ============================================================================
@@ -194,12 +473,26 @@ SpeculativeDecoderV2::verify(const std::vector<int>& context,
         return result;
     }
 
-    // Fallback: sequential verification
+    // Fallback: sequential verification with KV-delta caching.
+    // Each context in the draft window is an extension of the previous one;
+    // results computed in prior iterations are reused on cache hit, avoiding
+    // redundant re-encoding of already-verified prefixes.
     static thread_local std::mt19937 rng(std::random_device{}());
     verifyCtx = context;
 
     for (size_t i = 0; i < drafted.tokenIds.size(); ++i) {
-        auto targetLogprobs = m_targetModel.logprobs(verifyCtx, 10, m_targetModel.userData);
+        // --- KV-delta cache lookup ---
+        const auto* cached = m_kvDelta.lookup(verifyCtx);
+        std::vector<std::pair<int, float>> targetLogprobs;
+        if (cached) {
+            targetLogprobs = *cached;
+        } else {
+            targetLogprobs = m_targetModel.logprobs(verifyCtx, 10, m_targetModel.userData);
+            if (!targetLogprobs.empty()) {
+                m_kvDelta.insert(verifyCtx, targetLogprobs);
+            }
+        }
+
         if (targetLogprobs.empty()) break;
 
         // Find target probability for draft token
@@ -231,15 +524,26 @@ SpeculativeDecoderV2::verify(const std::vector<int>& context,
         }
     }
 
-    // All accepted — get one bonus token from target
+    // All accepted — get one bonus token from target (check cache first)
     result.allAccepted = true;
-    auto targetLogprobs = m_targetModel.logprobs(verifyCtx, 1, m_targetModel.userData);
-    if (!targetLogprobs.empty()) {
-        result.correctionToken.id = targetLogprobs[0].first;
-        result.correctionToken.logprob = targetLogprobs[0].second;
-        if (m_targetModel.decode) {
-            result.correctionToken.text = m_targetModel.decode(
-                targetLogprobs[0].first, m_targetModel.userData);
+    {
+        const auto* cached = m_kvDelta.lookup(verifyCtx);
+        std::vector<std::pair<int, float>> targetLogprobs;
+        if (cached) {
+            targetLogprobs = *cached;
+        } else {
+            targetLogprobs = m_targetModel.logprobs(verifyCtx, 1, m_targetModel.userData);
+            if (!targetLogprobs.empty()) {
+                m_kvDelta.insert(verifyCtx, targetLogprobs);
+            }
+        }
+        if (!targetLogprobs.empty()) {
+            result.correctionToken.id = targetLogprobs[0].first;
+            result.correctionToken.logprob = targetLogprobs[0].second;
+            if (m_targetModel.decode) {
+                result.correctionToken.text = m_targetModel.decode(
+                    targetLogprobs[0].first, m_targetModel.userData);
+            }
         }
     }
 
@@ -266,6 +570,20 @@ void SpeculativeDecoderV2::adjustDraftLength() {
         m_stats.currentDraftLen = std::max(
             m_config.minDraftTokens,
             m_stats.currentDraftLen - 1);
+    }
+
+    // VRAM pressure: when memory is tight, shorten drafts to avoid OOM;
+    // when memory is plentiful and vram budget is known, allow longer drafts.
+    constexpr uint64_t kVramHi = 40ULL * 1024ULL * 1024ULL * 1024ULL; // 40 GB
+    constexpr uint64_t kVramLo = 32ULL * 1024ULL * 1024ULL * 1024ULL; // 32 GB
+    uint64_t vram = m_vramUsageBytes.load(std::memory_order_relaxed);
+    if (vram > kVramHi) {
+        m_stats.currentDraftLen =
+            std::max(m_config.minDraftTokens, m_stats.currentDraftLen - 1);
+    } else if (vram > 0 && vram < kVramLo &&
+               m_stats.currentDraftLen < m_config.maxDraftTokens) {
+        m_stats.currentDraftLen =
+            std::min(m_config.maxDraftTokens, m_stats.currentDraftLen + 1);
     }
 }
 
@@ -321,6 +639,17 @@ SpeculativeDecoderV2::generateStreaming(const std::vector<int>& promptTokens,
     m_generating.store(true);
     m_abortRequested.store(false);
 
+    // Cross-generation KV-prefix reuse: if this generation's prompt is a
+    // strict prefix extension of the previous call's context, the cached
+    // KV-delta entries for the shared prefix are still valid — skip the reset.
+    {
+        bool prefixReuse = !m_lastContext.empty() &&
+            promptTokens.size() >= m_lastContext.size() &&
+            std::equal(m_lastContext.begin(), m_lastContext.end(),
+                       promptTokens.begin());
+        if (!prefixReuse) m_kvDelta.reset();
+    }
+
     std::vector<Token> outputTokens;
     std::vector<int> context = promptTokens;
     int generated = 0;
@@ -328,28 +657,85 @@ SpeculativeDecoderV2::generateStreaming(const std::vector<int>& promptTokens,
     while (generated < maxNewTokens && !m_abortRequested.load()) {
         int draftLen = m_stats.currentDraftLen;
 
-        // ---- Draft Phase ----
-        auto draftStart = std::chrono::high_resolution_clock::now();
-        auto drafted = draft(context, draftLen);
-        auto draftEnd = std::chrono::high_resolution_clock::now();
-        float draftMs = std::chrono::duration<float, std::milli>(
-            draftEnd - draftStart).count();
-        m_draftLatencyAvg.push(draftMs);
+        DraftResult  drafted;
+        VerifyResult verified;
+        float draftMs = 0.0f, verifyMs = 0.0f;
+        int   draftedCount = 0;
 
-        // ---- Verify Phase ----
-        auto verifyStart = std::chrono::high_resolution_clock::now();
-        auto verified = verify(context, drafted);
-        auto verifyEnd = std::chrono::high_resolution_clock::now();
-        float verifyMs = std::chrono::duration<float, std::milli>(
-            verifyEnd - verifyStart).count();
+        if (m_config.treeSpeculation) {
+            // ---- Tree (Ensemble) Draft Phase ----
+            auto t0 = std::chrono::high_resolution_clock::now();
+
+            // Fan-out: generate ensembleDrafts independent trees and pick the
+            // one whose best path has the highest accepted-token count.
+            const int nEnsemble = std::max(1, m_config.ensembleDrafts);
+            VerifyResult bestVerified;
+            bestVerified.acceptedCount = -1;
+            int bestDraftedCount = 0;
+
+            for (int e = 0; e < nEnsemble && !m_abortRequested.load(); ++e) {
+                DraftTree tree;
+                if (e == 0) {
+                    // Canonical tree — same deterministic BFS as before
+                    tree = draftTree(context, m_config.treeDepth,
+                                     m_config.treeBranching);
+                } else {
+                    // Seeded variant: rotates candidate selection by member index
+                    uint32_t seed = static_cast<uint32_t>(e) * 2654435761u;
+                    tree = draftTreeSeeded(context, m_config.treeDepth,
+                                           m_config.treeBranching, seed);
+                }
+
+                int treeDraftCount = static_cast<int>(tree.nodes.size()) - 1;
+
+                auto vr = verifyTree(context, tree);
+                if (vr.acceptedCount > bestVerified.acceptedCount ||
+                    (vr.acceptedCount == bestVerified.acceptedCount && vr.allAccepted)) {
+                    bestVerified   = vr;
+                    bestDraftedCount = treeDraftCount;
+                }
+
+                // Short-circuit: can't do better than a fully accepted max-depth tree
+                if (bestVerified.allAccepted &&
+                    bestVerified.acceptedCount >= m_config.treeDepth) break;
+            }
+
+            auto t1 = std::chrono::high_resolution_clock::now();
+            draftMs      = std::chrono::duration<float, std::milli>(t1 - t0).count();
+            verifyMs     = 0.0f;   // verify cost is folded into the above loop
+            draftedCount = bestDraftedCount;
+            verified     = bestVerified;
+        } else {
+            // ---- Linear Draft Phase ----
+            auto t0  = std::chrono::high_resolution_clock::now();
+            drafted  = draft(context, draftLen);
+            auto t1  = std::chrono::high_resolution_clock::now();
+            draftMs      = std::chrono::duration<float, std::milli>(t1 - t0).count();
+            draftedCount = static_cast<int>(drafted.tokenIds.size());
+
+            // ---- Linear Verify Phase ----
+            auto t2  = std::chrono::high_resolution_clock::now();
+            verified = verify(context, drafted);
+            auto t3  = std::chrono::high_resolution_clock::now();
+            verifyMs = std::chrono::duration<float, std::milli>(t3 - t2).count();
+        }
+
+        m_draftLatencyAvg.push(draftMs);
         m_verifyLatencyAvg.push(verifyMs);
 
         // ---- Accept Phase ----
-        // Add accepted draft tokens
+        // For tree speculation, verifyTree() stores the accepted token IDs in
+        // verified.acceptedTokenIds; for the linear path, fall back to drafted.
+        const auto& acceptedIds    = verified.acceptedTokenIds.empty()
+            ? drafted.tokenIds : verified.acceptedTokenIds;
+        const auto& acceptedLprobs = verified.acceptedLogprobs.empty()
+            ? drafted.logprobs : verified.acceptedLogprobs;
+
         for (int i = 0; i < verified.acceptedCount && generated < maxNewTokens; ++i) {
             Token tok;
-            tok.id = drafted.tokenIds[i];
-            tok.logprob = drafted.logprobs[i];
+            tok.id     = acceptedIds[i];
+            tok.logprob = acceptedLprobs.size() > static_cast<size_t>(i)
+                          ? acceptedLprobs[i] : 0.0f;
             if (m_draftModel.decode) {
                 tok.text = m_draftModel.decode(tok.id, m_draftModel.userData);
             }
@@ -375,14 +761,13 @@ SpeculativeDecoderV2::generateStreaming(const std::vector<int>& promptTokens,
         }
 
         // Update stats
-        m_acceptRateAvg.push(drafted.tokenIds.empty() ? 0.0f :
+        m_acceptRateAvg.push(draftedCount == 0 ? 0.0f :
             static_cast<float>(verified.acceptedCount) /
-            static_cast<float>(drafted.tokenIds.size()));
+            static_cast<float>(draftedCount));
 
-        updateStats(static_cast<int>(drafted.tokenIds.size()),
-                    verified.acceptedCount, draftMs, verifyMs);
+        updateStats(draftedCount, verified.acceptedCount, draftMs, verifyMs);
 
-        // Adjust draft length adaptively
+        // Adjust draft length adaptively (also consults VRAM pressure)
         adjustDraftLength();
 
         // Check for EOS (token id 0 or special stop tokens)
@@ -391,6 +776,8 @@ SpeculativeDecoderV2::generateStreaming(const std::vector<int>& promptTokens,
         }
     }
 
+    // Record end-of-generation context for cross-generation KV-prefix reuse.
+    m_lastContext = context;
     m_generating.store(false);
 
     AcceptanceStats finalStats;

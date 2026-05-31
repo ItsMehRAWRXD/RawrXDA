@@ -10,6 +10,7 @@
 #include "tool_registry.hpp"
 #include "plan_orchestrator.h"
 #include "universal_model_router.h"
+#include "autonomous_validation_integration.h"
 
 namespace RawrXD {
 
@@ -78,6 +79,7 @@ private:
     QualityMetrics m_qualityMetrics;
     std::string m_projectPath;
     std::vector<std::string> m_activePlans;
+    std::unique_ptr<Autonomous::OrchestratorIntegrationAdapter> m_validationAdapter;
     std::thread m_orchestratorThread;
     
     // Real implementation methods

@@ -25,7 +25,7 @@ constexpr int kHeartbeatIntervalMs = 15000;
 
 AgenticController::AgenticController()
 {
-    // No signal connections needed — callbacks used instead
+    fprintf(stderr, "[AgenticController] Created\n");
 }
 
 AgenticController::~AgenticController() = default;
@@ -50,7 +50,6 @@ AgenticResult AgenticController::bootstrap() {
     }
 
     m_heartbeatTimer.start(kHeartbeatIntervalMs);
-    LOG_INFO(std::string("AgenticController bootstrap completed in " + std::to_string(m_bootTimer.elapsed()) + " ms").c_str());
     return AgenticResult::Ok("Agentic system bootstrapped");
 }
 
@@ -68,8 +67,7 @@ AgenticResult AgenticController::ensureCoordinator() {
         };
 
         for (const auto role : seedRoles) {
-            const std::string agentId = m_coordinator->createAgent(role);
-            LOG_DEBUG(std::string("Primed agent " + agentId + " for role " + std::to_string(static_cast<int>(role))).c_str());
+            m_coordinator->createAgent(role);
         }
 
         return AgenticResult::Ok();
@@ -152,11 +150,7 @@ void AgenticController::tick() {
 }
 
 void AgenticController::handleLayoutRestored(const std::string& snapshotId) {
-    LOG_INFO(std::string("Agentic controller acknowledged snapshot " + snapshotId).c_str());
-
-    if (m_coordinator) {
-        m_coordinator->synchronizeAgentStates();
-    }
+    m_coordinator->synchronizeAgentStates();
 }
 
 void AgenticController::handleWindowActivated() {
@@ -165,13 +159,6 @@ void AgenticController::handleWindowActivated() {
     }
 
     const auto statuses = m_coordinator->getAllAgentStatuses();
-    int tasksCompleted = 0;
-    for (const auto& status : statuses) {
-        tasksCompleted += status.tasks_completed;
-    }
-
-    LOG_DEBUG(std::string("Window activation routed to agentic coordinator: agents=" +
-        std::to_string(statuses.size()) + " tasks_completed=" + std::to_string(tasksCompleted)).c_str());
 }
 
 } // namespace RawrXD::IDE

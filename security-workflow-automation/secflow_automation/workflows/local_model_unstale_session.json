@@ -1,0 +1,50 @@
+{
+  "name": "local_model_unstale_session",
+  "description": "Optimize local IDE model loading and maintain unstale sessions with fresh swap and no retry loop",
+  "risk_tier": "high",
+  "required_approvals": [],
+  "steps": [
+    {
+      "id": "plan_loading",
+      "action": "plan_local_model_loading",
+      "params": {
+        "model_path": "models/phi3-mini-q4.gguf",
+        "gpu_vendor": "amd"
+      }
+    },
+    {
+      "id": "open_local_session",
+      "action": "open_local_model_session",
+      "depends_on": ["plan_loading"],
+      "params": {
+        "model_path": "models/phi3-mini-q4.gguf",
+        "lane": "sharded_hot_swap",
+        "max_uses_before_stale": 1,
+        "allow_fresh_swap_no_retry": true
+      }
+    },
+    {
+      "id": "inference_pass_1",
+      "action": "run_local_model_inference",
+      "depends_on": ["open_local_session"],
+      "params": {
+        "prompt": "Assess suspicious lateral movement chains from local logs",
+        "min_tps": 8000
+      }
+    },
+    {
+      "id": "inference_pass_2",
+      "action": "run_local_model_inference",
+      "depends_on": ["inference_pass_1"],
+      "params": {
+        "prompt": "Correlate artifacts and generate response summary",
+        "min_tps": 8000
+      }
+    },
+    {
+      "id": "close_session",
+      "action": "close_local_model_session",
+      "depends_on": ["inference_pass_2"]
+    }
+  ]
+}

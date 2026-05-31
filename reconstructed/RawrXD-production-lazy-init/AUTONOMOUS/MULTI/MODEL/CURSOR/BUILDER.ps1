@@ -145,7 +145,9 @@ function Select-OptimalModel {
         "embedding" = "EMBEDDING"
     }
     
-    $taskType = $taskToType[$Task.ToLower()] ?? "CHAT"
+    $taskKey = $Task.ToLower()
+    $taskType = $taskToType[$taskKey]
+    if (-not $taskType) { $taskType = "CHAT" }
     
     $candidates = $AvailableModels | Where-Object { $_.Type -eq $taskType }
     

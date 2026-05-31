@@ -653,7 +653,11 @@ private:
                         files.push_back(p);
                 }
             }
-        } catch (...) {}
+        } catch (const std::exception& e) {
+            OutputDebugStringA(("[repo_refactor_engine] directory scan exception: " + std::string(e.what()) + "\n").c_str());
+        } catch (...) {
+            OutputDebugStringA("[repo_refactor_engine] directory scan unknown exception\n");
+        }
         return files;
     }
 

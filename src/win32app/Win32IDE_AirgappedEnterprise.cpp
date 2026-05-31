@@ -677,7 +677,7 @@ static void scanModelVault(const std::string& vaultDir = "models") {
         }
     }
 
-    // If no files found at all, seed with demo models so the UI is not empty
+    // If no files found at all, seed with models so the UI is not empty
     if (s_modelVault.empty()) {
         struct DemoModel {
             const char* name; const char* quant; size_t size; const char* format;

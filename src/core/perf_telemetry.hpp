@@ -116,9 +116,9 @@ enum class KernelSlot : uint32_t {
     Snapshot_Restore             = 45,
     Snapshot_Verify              = 46,
 
-    // Reserved for future kernels
-    Reserved_47                  = 47,
-    Reserved_48                  = 48,
+    // Speculation
+    Spec_CandidatesGeneration    = 47,
+    Spec_PrecomputeForward       = 48,
 
     // User-defined slots (49-63)
     UserSlot_0                   = 49,
@@ -266,6 +266,7 @@ public:
     // ---- Export ----
     std::string exportJSON() const;
     std::string exportCSV() const;
+    std::string exportSecureJSON() const; // Signed Batch 3 Frame
     std::string getDiagnostics() const;
 
     // ---- Bulk report for all active slots ----

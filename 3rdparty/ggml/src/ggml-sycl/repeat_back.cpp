@@ -2,18 +2,18 @@
 
 #include "common.hpp"
 
-#define GGML_ASSERT_TENSOR_FITS_INT(t) \
-    GGML_ASSERT((t)->ne[0] < INT_MAX && (t)->ne[1] < INT_MAX && (t)->ne[2] < INT_MAX && (t)->ne[3] < INT_MAX)
+#define GGML_RXD_ASSERT_TENSOR_FITS_INT(t) \
+    GGML_RXD_ASSERT((t)->ne[0] < INT_MAX && (t)->ne[1] < INT_MAX && (t)->ne[2] < INT_MAX && (t)->ne[3] < INT_MAX)
 
-void ggml_sycl_op_repeat_back(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
-    GGML_ASSERT(dst->src[0]->type == GGML_TYPE_F32);
-    GGML_ASSERT(dst->type == GGML_TYPE_F32);
+void ggml_rxd_sycl_op_repeat_back(ggml_rxd_backend_sycl_context & ctx, ggml_rxd_tensor * dst) {
+    GGML_RXD_ASSERT(dst->src[0]->type == GGML_RXD_TYPE_F32);
+    GGML_RXD_ASSERT(dst->type == GGML_RXD_TYPE_F32);
 
     const float * src0_dd = (const float *) dst->src[0]->data;
     float *       dst_dd  = (float *) dst->data;
 
-    GGML_ASSERT_TENSOR_FITS_INT(dst);
-    GGML_ASSERT_TENSOR_FITS_INT(dst->src[0]);
+    GGML_RXD_ASSERT_TENSOR_FITS_INT(dst);
+    GGML_RXD_ASSERT_TENSOR_FITS_INT(dst->src[0]);
 
     const int ne0 = dst->ne[0], ne1 = dst->ne[1], ne2 = dst->ne[2], ne3 = dst->ne[3];
     const int ne00 = dst->src[0]->ne[0], ne01 = dst->src[0]->ne[1], ne02 = dst->src[0]->ne[2],

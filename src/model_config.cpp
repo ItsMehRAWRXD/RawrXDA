@@ -12,7 +12,7 @@
 namespace RawrXD {
 namespace Backend {
 
-ModelConfiguration::ModelConfiguration(OllamaClient* client)
+ModelConfiguration::ModelConfiguration(NativeClient* client)
     : m_client(client) {
     initializeDefaultConfigs();
     if (m_client && m_client->isRunning()) {
@@ -40,13 +40,13 @@ void ModelConfiguration::loadAvailableModels() {
     }
 }
 
-void ModelConfiguration::populateModelDetails(const OllamaModel& ollama_model, ModelConfig& config) {
-    config.model_size_bytes = ollama_model.size;
-    config.modified_at = ollama_model.modified_at;
-    config.format = ollama_model.format;
-    config.family = ollama_model.family;
-    config.parameter_size = ollama_model.parameter_size;
-    config.quantization_level = ollama_model.quantization_level;
+void ModelConfiguration::populateModelDetails(const OllamaModel& RAWRXD_NATIVE_MODEL, ModelConfig& config) {
+    config.model_size_bytes = RAWRXD_NATIVE_MODEL.size;
+    config.modified_at = RAWRXD_NATIVE_MODEL.modified_at;
+    config.format = RAWRXD_NATIVE_MODEL.format;
+    config.family = RAWRXD_NATIVE_MODEL.family;
+    config.parameter_size = RAWRXD_NATIVE_MODEL.parameter_size;
+    config.quantization_level = RAWRXD_NATIVE_MODEL.quantization_level;
     
     // Set default capabilities based on model family
     if (!config.family.empty()) {

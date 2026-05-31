@@ -12,6 +12,7 @@
 #include <cstdio>
 #include <filesystem>
 #include <queue>
+#include <chrono>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -65,6 +66,37 @@ ExtResult ExtensionMarketplace::setRegistryUrl(const std::string& url) {
     std::lock_guard<std::mutex> lock(marketplaceMutex_);
     registryUrl_ = url;
     return ExtResult::ok("Registry URL set");
+}
+
+ExtResult ExtensionMarketplace::syncRegistryIndex() {
+    std::lock_guard<std::mutex> lock(marketplaceMutex_);
+    if (registryUrl_.empty()) {
+        return ExtResult::error("Registry URL not configured", 30);
+    }
+
+    std::string catalogUrl = registryUrl_ + "/catalog";
+    std::string catalogPath = cacheDir_ + "catalog.json";
+    ExtResult dr = httpDownload(catalogUrl, catalogPath);
+    if (!dr.success) {
+        return dr;
+    }
+
+    if (!std::filesystem::exists(catalogPath)) {
+        return ExtResult::error("Catalog sync completed without cache file", 31);
+    }
+
+    return ExtResult::ok("Registry catalog synced");
+}
+
+ExtResult ExtensionMarketplace::setAutoUpdateEnabled(bool enabled, uint32_t intervalMinutes) {
+    std::lock_guard<std::mutex> lock(marketplaceMutex_);
+    autoUpdateEnabled_ = enabled;
+    autoUpdateIntervalMinutes_ = (intervalMinutes == 0) ? 1 : intervalMinutes;
+    return ExtResult::ok(enabled ? "Auto-update enabled" : "Auto-update disabled");
+}
+
+bool ExtensionMarketplace::isAutoUpdateEnabled() const {
+    return autoUpdateEnabled_;
 }
 
 ExtResult ExtensionMarketplace::applyPolicy(const EnterprisePolicyConfig& config) {
@@ -145,6 +177,16 @@ ExtResult ExtensionMarketplace::checkPolicy(const ExtensionManifest& manifest) {
 
 ExtResult ExtensionMarketplace::search(const ExtensionSearchQuery& query,
                                         ExtensionSearchResponse& response) {
+    if (autoUpdateEnabled_) {
+        uint64_t nowMs = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()).count());
+        uint64_t intervalMs = static_cast<uint64_t>(autoUpdateIntervalMinutes_) * 60ULL * 1000ULL;
+        if (lastAutoUpdateCheckEpochMs_ == 0 || (nowMs - lastAutoUpdateCheckEpochMs_) >= intervalMs) {
+            lastAutoUpdateCheckEpochMs_ = nowMs;
+            updateAll();
+        }
+    }
+
     // For local/offline mode: search installed extensions
     response.results.clear();
     response.totalCount = 0;
@@ -684,22 +726,37 @@ ExtResult ExtensionMarketplace::checkDependencies(
 ExtResult ExtensionMarketplace::installWithDependencies(
     const std::string& extensionId)
 {
-    std::vector<std::string> depOrder;
-    ExtResult dr = getDependencyTree(extensionId, depOrder);
-    if (!dr.success) return dr;
+    if (installed_.find(extensionId) == installed_.end()) {
+        ExtResult installResult = installFromRegistry(extensionId);
+        if (!installResult.success) return installResult;
+    }
 
-    // Install in dependency order
-    for (const auto& depId : depOrder) {
-        if (installed_.find(depId) == installed_.end()) {
-            ExtResult ir = installFromRegistry(depId);
-            if (!ir.success) {
+    for (int pass = 0; pass < 8; ++pass) {
+        std::vector<std::string> missing;
+        ExtResult depCheck = checkDependencies(extensionId, missing);
+        if (depCheck.success || missing.empty()) {
+            return ExtResult::ok("Extension and dependencies installed");
+        }
+
+        for (const auto& depEntry : missing) {
+            std::string depId = depEntry;
+            size_t space = depId.find(' ');
+            if (space != std::string::npos) {
+                depId = depId.substr(0, space);
+            }
+
+            if (depId.empty() || installed_.find(depId) != installed_.end()) {
+                continue;
+            }
+
+            ExtResult depInstall = installFromRegistry(depId);
+            if (!depInstall.success) {
                 return ExtResult::error("Failed to install dependency", 6);
             }
         }
     }
 
-    // Finally install the target extension
-    return installFromRegistry(extensionId);
+    return ExtResult::error("Dependency resolution exceeded max passes", 6);
 }
 
 ExtResult ExtensionMarketplace::getDependencyTree(
@@ -901,8 +958,6 @@ ExtResult ExtensionMarketplace::parseManifest(const std::string& manifestPath,
                          std::istreambuf_iterator<char>());
     file.close();
 
-    // Minimal JSON parser for package.json
-    // Extract key fields: name, publisher, version, description, etc.
     auto extractField = [&content](const std::string& key) -> std::string {
         std::string pattern = "\"" + key + "\"";
         auto pos = content.find(pattern);
@@ -920,6 +975,28 @@ ExtResult ExtensionMarketplace::parseManifest(const std::string& manifestPath,
         return content.substr(quoteStart + 1, quoteEnd - quoteStart - 1);
     };
 
+    auto extractStringArray = [&content](const std::string& key) -> std::vector<std::string> {
+        std::vector<std::string> result;
+        std::string marker = "\"" + key + "\"";
+        size_t pos = content.find(marker);
+        if (pos == std::string::npos) return result;
+        size_t arrStart = content.find('[', pos);
+        size_t arrEnd = content.find(']', arrStart);
+        if (arrStart == std::string::npos || arrEnd == std::string::npos || arrEnd <= arrStart) {
+            return result;
+        }
+
+        size_t scan = arrStart + 1;
+        while (scan < arrEnd) {
+            size_t q1 = content.find('"', scan);
+            size_t q2 = content.find('"', q1 + 1);
+            if (q1 == std::string::npos || q2 == std::string::npos || q2 > arrEnd) break;
+            result.push_back(content.substr(q1 + 1, q2 - q1 - 1));
+            scan = q2 + 1;
+        }
+        return result;
+    };
+
     manifest.name = extractField("name");
     manifest.publisher = extractField("publisher");
     manifest.version = extractField("version");
@@ -929,6 +1006,48 @@ ExtResult ExtensionMarketplace::parseManifest(const std::string& manifestPath,
 
     if (!manifest.publisher.empty() && !manifest.name.empty()) {
         manifest.id = manifest.publisher + "." + manifest.name;
+    }
+
+    manifest.activationEvents = extractStringArray("activationEvents");
+
+    std::vector<std::string> depIds = extractStringArray("extensionDependencies");
+    for (const auto& depId : depIds) {
+        ExtensionManifest::Dependency dep;
+        dep.extensionId = depId;
+        dep.versionRange = ">=0.0.0";
+        manifest.dependencies.push_back(std::move(dep));
+    }
+
+    size_t contributesPos = content.find("\"contributes\"");
+    if (contributesPos != std::string::npos) {
+        size_t commandsPos = content.find("\"commands\"", contributesPos);
+        if (commandsPos != std::string::npos) {
+            size_t arrStart = content.find('[', commandsPos);
+            size_t arrEnd = content.find(']', arrStart);
+            if (arrStart != std::string::npos && arrEnd != std::string::npos && arrEnd > arrStart) {
+                size_t scan = arrStart;
+                while ((scan = content.find("\"command\"", scan)) != std::string::npos && scan < arrEnd) {
+                    size_t cColon = content.find(':', scan);
+                    size_t cQ1 = content.find('"', cColon + 1);
+                    size_t cQ2 = content.find('"', cQ1 + 1);
+                    if (cColon == std::string::npos || cQ1 == std::string::npos || cQ2 == std::string::npos || cQ2 > arrEnd) break;
+
+                    ExtensionManifest::ContributionPoint cp;
+                    cp.type = "commands";
+                    cp.payload = content.substr(cQ1 + 1, cQ2 - cQ1 - 1);
+                    manifest.contributions.push_back(std::move(cp));
+                    scan = cQ2 + 1;
+                }
+            }
+        }
+
+        size_t cfgPos = content.find("\"configuration\"", contributesPos);
+        if (cfgPos != std::string::npos) {
+            ExtensionManifest::ContributionPoint cp;
+            cp.type = "configuration";
+            cp.payload = "configuration";
+            manifest.contributions.push_back(std::move(cp));
+        }
     }
 
     return ExtResult::ok("Manifest parsed");

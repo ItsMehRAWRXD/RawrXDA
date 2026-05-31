@@ -23,7 +23,7 @@ float clampf(float v, float lo, float hi) {
 
 }
 
-// SCAFFOLD_069: agentic_hotpatch_orchestrator
+// Agentic Hotpatch Orchestrator Implementation
 
 
 // ============================================================================

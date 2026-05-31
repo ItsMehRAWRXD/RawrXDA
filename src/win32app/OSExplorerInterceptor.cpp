@@ -520,8 +520,18 @@ struct HookBackup {
     void*  trampoline;
 };
 
-static std::vector<HookBackup> g_hookBackups;
-static std::mutex g_hookMutex;
+// LAZY SINGLETON PATTERN: Avoid SIOF - non-trivial constructors
+inline std::vector<HookBackup>& GetHookBackups() {
+    static std::vector<HookBackup>* inst = new std::vector<HookBackup>();
+    return *inst;
+}
+#define g_hookBackups GetHookBackups()
+
+inline std::mutex& GetHookMutex() {
+    static std::mutex* inst = new std::mutex();
+    return *inst;
+}
+#define g_hookMutex GetHookMutex()
 
 void* StealthHook(void* targetFunction, void* hookFunction) {
     if (!targetFunction || !hookFunction) return targetFunction;
@@ -582,9 +592,24 @@ static void* g_origSend         = nullptr;
 static void* g_origRecv         = nullptr;
 
 // Interception stats (global, atomic for thread safety)
-static std::atomic<uint64_t> g_fileIOCallCount{0};
-static std::atomic<uint64_t> g_registryCallCount{0};
-static std::atomic<uint64_t> g_networkCallCount{0};
+// LAZY SINGLETON PATTERN: Avoid SIOF - std::atomic with non-trivial constructor
+inline std::atomic<uint64_t>& GetFileIOCallCount() {
+    static std::atomic<uint64_t>* inst = new std::atomic<uint64_t>(0);
+    return *inst;
+}
+#define g_fileIOCallCount GetFileIOCallCount()
+
+inline std::atomic<uint64_t>& GetRegistryCallCount() {
+    static std::atomic<uint64_t>* inst = new std::atomic<uint64_t>(0);
+    return *inst;
+}
+#define g_registryCallCount GetRegistryCallCount()
+
+inline std::atomic<uint64_t>& GetNetworkCallCount() {
+    static std::atomic<uint64_t>* inst = new std::atomic<uint64_t>(0);
+    return *inst;
+}
+#define g_networkCallCount GetNetworkCallCount()
 
 static HANDLE WINAPI HookedCreateFileW(
     LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode,
@@ -1113,8 +1138,14 @@ struct BeaconSignature {
     bool    active;
 };
 
-static std::vector<BeaconSignature> g_beacons;
-static bool g_beaconismInitialized = false;
+// LAZY SINGLETON PATTERN: Avoid SIOF
+inline std::vector<BeaconSignature>& GetBeacons() {
+    static std::vector<BeaconSignature>* inst = new std::vector<BeaconSignature>();
+    return *inst;
+}
+#define g_beacons GetBeacons()
+
+static bool g_beaconismInitialized = false;  // Trivial, safe
 
 // Initialize beaconism
 bool InitializeBeaconism() {

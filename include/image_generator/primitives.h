@@ -6,6 +6,10 @@
 
 namespace ig {
 
+// Forward declarations
+inline void fill_circle(Canvas& c, float cx, float cy, float r, const Color& col);
+inline void fill_polygon(Canvas& c, const std::vector<std::pair<float, float>>& pts, const Color& col);
+
 // ======================== Line Drawing (Xiaolin Wu AA) ========================
 
 static inline float ipart(float x) { return std::floor(x); }

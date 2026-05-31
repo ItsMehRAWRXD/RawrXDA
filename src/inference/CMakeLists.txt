@@ -17,6 +17,8 @@
 
 cmake_minimum_required(VERSION 3.20)
 
+option(RAWR_ENABLE_AVX512_GATED_FUSION "Enable AVX-512 gated fusion kernels in inference_kernels.cpp" ON)
+
 # Inherit parent project settings if built as subdirectory,
 # otherwise configure as standalone project.
 if(NOT CMAKE_PROJECT_NAME)
@@ -154,6 +156,16 @@ endif()
 # Compiler options
 # =============================================================================
 if(MSVC)
+    if(RAWR_ENABLE_AVX512_GATED_FUSION)
+        set_source_files_properties(
+            ${CMAKE_CURRENT_SOURCE_DIR}/../engine/inference_kernels.cpp
+            PROPERTIES COMPILE_OPTIONS "/arch:AVX512"
+        )
+        target_compile_definitions(RawrXD-InferenceEngine PRIVATE RAWR_ENABLE_AVX512_GATED_FUSION=1)
+    else()
+        target_compile_definitions(RawrXD-InferenceEngine PRIVATE RAWR_ENABLE_AVX512_GATED_FUSION=0)
+    endif()
+
     target_compile_options(RawrXD-InferenceEngine PRIVATE
         $<$<COMPILE_LANGUAGE:CXX>:/std:c++20>
         $<$<COMPILE_LANGUAGE:CXX>:/W3>

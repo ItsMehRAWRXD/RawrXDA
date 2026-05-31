@@ -11,7 +11,7 @@ MASMLexer::MASMLexer() {
         L"and", L"or", L"xor", L"not", L"neg", L"shl", L"shr", L"sar",
         L"push", L"pop", L"call", L"ret", L"jmp", L"je", L"jne", L"jg", L"jge", L"jl", L"jle",
         L"cmp", L"test", L"nop", L"int", L"syscall",
-        L"vmovups", L"vaddps", L"vmulps" // AVX examples
+        L"vmovups", L"vaddps", L"vmulps" // AVX
     };
     
     // x64 Registers

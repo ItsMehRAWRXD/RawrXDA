@@ -31,6 +31,7 @@
 #include <fstream>
 #include <filesystem>
 #include <chrono>
+#include <algorithm>
 
 namespace fs = std::filesystem;
 
@@ -194,19 +195,20 @@ public:
     bool removeFolder(const std::string& path) {
         std::lock_guard<std::mutex> lock(m_mutex);
         
-        for (auto it = m_config.folders.begin(); it != m_config.folders.end(); ++it) {
-            if (it->path == path) {
-                if (it->isRoot && m_config.folders.size() == 1) {
-                    fprintf(stderr, "[WorkspaceModel] Cannot remove last root folder\n");
-                    return false;
-                }
-                
-                m_config.folders.erase(it);
-                m_dirty = true;
-                
-                fprintf(stderr, "[WorkspaceModel] Removed folder: %s\n", path.c_str());
-                return true;
+        auto it = std::find_if(m_config.folders.begin(), m_config.folders.end(),
+            [&path](const WorkspaceFolder& f) { return f.path == path; });
+            
+        if (it != m_config.folders.end()) {
+            if (it->isRoot && m_config.folders.size() == 1) {
+                fprintf(stderr, "[WorkspaceModel] Cannot remove last root folder\n");
+                return false;
             }
+            
+            m_config.folders.erase(it);
+            m_dirty = true;
+            
+            fprintf(stderr, "[WorkspaceModel] Removed folder: %s\n", path.c_str());
+            return true;
         }
         
         return false;

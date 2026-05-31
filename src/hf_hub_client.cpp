@@ -770,4 +770,7 @@ public:
 // Public interface for use by HFDownloader
 extern "C" {
     // Simplified C interface for integration
+    const char* HFHub_GetVersion() {
+        return "1.0.0";
+    }
 }

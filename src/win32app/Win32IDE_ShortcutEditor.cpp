@@ -159,8 +159,12 @@ static std::string findConflictingCommand(const std::string& keyCombination, int
 // Seed default keybindings
 // ============================================================================
 
-static void seedDefaultBindings() {
+static void seedDefaultBindings(bool forceReseed = false) {
     static bool seeded = false;
+    if (forceReseed) {
+        s_keyBindings.clear();
+        seeded = false;
+    }
     if (seeded) return;
     seeded = true;
 
@@ -217,8 +221,20 @@ static void seedDefaultBindings() {
     add("nav.goToLine",      "Go to Line",         "Ctrl+G",           "Navigation");
     add("nav.goToFile",      "Go to File",         "Ctrl+P",           "Navigation");
     add("nav.goToSymbol",    "Go to Symbol",       "Ctrl+Shift+O",     "Navigation");
+    add("nav.goToWorkspaceSymbol", "Go to Workspace Symbol", "Ctrl+Shift+Alt+O", "Navigation");
     add("nav.goToDefinition","Go to Definition",    "F12",             "Navigation");
     add("nav.peekDefinition","Peek Definition",     "Alt+F12",         "Navigation");
+    add("nav.peekReferences", "Peek References",    "Shift+F12",       "Navigation");
+    add("nav.goToImplementation", "Go to Implementation", "Ctrl+F12",   "Navigation");
+    add("nav.goToTypeDefinition", "Go to Type Definition", "Ctrl+Alt+F12", "Navigation");
+    add("edit.formatSelection", "Format Selection", "Shift+Alt+F",     "Edit");
+    add("edit.codeActions", "Code Actions", "Ctrl+.", "Edit");
+    add("edit.showInlayHints", "Show Inlay Hints", "Ctrl+Alt+I", "Edit");
+    add("edit.toggleComment", "Toggle Comment", "Ctrl+/", "Edit");
+    add("edit.duplicateLine", "Duplicate Line", "Shift+Alt+Down", "Edit");
+    add("edit.deleteLine", "Delete Line", "Ctrl+Shift+K", "Edit");
+    add("edit.moveLineUp", "Move Line Up", "Alt+Up", "Edit");
+    add("edit.moveLineDown", "Move Line Down", "Alt+Down", "Edit");
 }
 
 // ============================================================================
@@ -695,12 +711,7 @@ void Win32IDE::cmdShortcutEditorRecord() {
 // ============================================================================
 
 void Win32IDE::cmdShortcutEditorReset() {
-    s_keyBindings.clear();
-    // Re-seed
-    bool* seedFlag = nullptr;
-    // Force re-seed by clearing the static flag via a trick:
-    // We re-add all defaults
-    seedDefaultBindings();
+    seedDefaultBindings(true);
     for (auto& kb : s_keyBindings) {
         kb.isCustom = false;
     }

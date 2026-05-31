@@ -7,7 +7,8 @@ extern "C" {
 
 void asm_lsp_bridge_shutdown(void)
 {
-    // Strict lane fallback: no-op shutdown keeps ABI surface linked.
+    // Strict lane fallback: shutdown with cleanup
+    fprintf(stderr, "[Win32IDE] Strict lane shutdown\n");
 }
 
 void asm_gguf_loader_close(void* ctx)

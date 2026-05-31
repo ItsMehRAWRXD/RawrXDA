@@ -1,29 +1,41 @@
 /**
- * Simple GGUF API Server - Lightweight Ollama-Compatible HTTP API
+ * Simple GGUF API Server - Lightweight Native Inference HTTP API
  * Provides real HTTP endpoints with actual inference backend via EngineRegistry
- * Demonstrates working Winsock HTTP server for model serving
+ * Working Winsock HTTP server for model serving
  */
 
 #include <winsock2.h>
 #include <windows.h>
+#include <winhttp.h>
+#include "gpu_enforcement.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <thread>
+#include <mutex>
 #include <atomic>
 #include <chrono>
-#include <ctime>
+#include <time>
 #include <sstream>
+#include <vector>
 #include "engine_iface.h"
 
 #pragma comment(lib, "ws2_32.lib")
+#pragma comment(lib, "winhttp.lib")
 #pragma warning(disable : 4996)
 
 // Global state
-static std::atomic<bool> g_running(false);
+static std::atomic<bool> g_running(false);  // atomic with trivial init is OK
 static SOCKET g_listen_socket = INVALID_SOCKET;
-static std::chrono::steady_clock::time_point g_start_time;
-static std::string g_active_model;   // currently loaded model name
+static std::chrono::steady_clock::time_point g_start_time;  // trivial
+
+// LAZY SINGLETON: std::string has non-trivial constructor
+inline std::string& GetActiveModel() {
+    static std::string* inst = new std::string();
+    return *inst;
+}
+#define g_active_model GetActiveModel()
+
 static Engine* g_active_engine = nullptr;
 
 // ============================================================
@@ -197,9 +209,6 @@ std::string HandleGenerateRequest(const std::string& body) {
          << R"(,"tokens_per_sec":)" << (int)tokens_per_sec
          << "}";
 
-    printf("[INFER] Engine=%s prompt_len=%zu response_len=%d %.1fms (%.0f tok/s)\n",
-           engine->name(), prompt.size(), eval_count, elapsed_ms, tokens_per_sec);
-
     return BuildHttpResponse(200, "application/json", json.str());
 }
 
@@ -218,7 +227,7 @@ std::string HandleClientRequest(const std::string& request) {
     std::string method, path, http_version;
     iss >> method >> path >> http_version;
     
-    printf("[REQ] %s %s\n", method.c_str(), path.c_str());
+    // Request received
     
     // Route to handlers
     if (method == "GET") {
@@ -257,7 +266,7 @@ std::string HandleClientRequest(const std::string& request) {
 // ============================================================
 
 void ServerLoop(int port) {
-    printf("[HTTP] Server loop started on port %d\n", port);
+    // Server loop started
     
     while (g_running.load()) {
         sockaddr_in client_addr;
@@ -266,7 +275,7 @@ void ServerLoop(int port) {
         SOCKET client_socket = accept(g_listen_socket, (sockaddr*)&client_addr, &client_addr_len);
         if (client_socket == INVALID_SOCKET) {
             if (WSAGetLastError() != WSAEINTR) {
-                printf("[HTTP] accept() failed: %d\n", WSAGetLastError());
+                fprintf(stderr, "[APIServer] accept() failed: %d\n", WSAGetLastError());
             }
             continue;
         }
@@ -289,7 +298,7 @@ void ServerLoop(int port) {
         closesocket(client_socket);
     }
     
-    printf("[HTTP] Server loop exited\n");
+    // Server loop exited
 }
 
 // ============================================================
@@ -297,19 +306,19 @@ void ServerLoop(int port) {
 // ============================================================
 
 bool InitializeServer(int port) {
-    printf("[HTTP] Initializing Winsock...\n");
+    // Initializing Winsock
     
     WSADATA wsa_data;
     int wsa_result = WSAStartup(MAKEWORD(2, 2), &wsa_data);
     if (wsa_result != 0) {
-        printf("[HTTP] WSAStartup failed: %d\n", wsa_result);
+        // WSAStartup failed
         return false;
     }
     
-    printf("[HTTP] Creating listen socket...\n");
+    // Creating listen socket
     g_listen_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (g_listen_socket == INVALID_SOCKET) {
-        printf("[HTTP] socket() failed: %d\n", WSAGetLastError());
+        // socket() failed
         WSACleanup();
         return false;
     }
@@ -325,7 +334,7 @@ bool InitializeServer(int port) {
     server_addr.sin_port = htons(port);
     
     if (bind(g_listen_socket, (sockaddr*)&server_addr, sizeof(server_addr)) == SOCKET_ERROR) {
-        printf("[HTTP] bind() failed: %d\n", WSAGetLastError());
+        // bind() failed
         closesocket(g_listen_socket);
         WSACleanup();
         return false;
@@ -333,21 +342,165 @@ bool InitializeServer(int port) {
     
     // Listen
     if (listen(g_listen_socket, SOMAXCONN) == SOCKET_ERROR) {
-        printf("[HTTP] listen() failed: %d\n", WSAGetLastError());
+        // listen() failed
         closesocket(g_listen_socket);
         WSACleanup();
         return false;
     }
     
-    printf("[HTTP] Server listening on port %d\n", port);
+    // Server listening on port
     return true;
 }
+
+// ============================================================
+// Smoke Test Mode — Bounded, deterministic validation
+// ============================================================
+
+#include <chrono>
+#include <thread>
+
+static bool g_smoke_test_mode = false;
+static int  g_smoke_timeout_sec = 10;
+
+static std::chrono::steady_clock::time_point SmokeStart() {
+    return std::chrono::steady_clock::now();
+}
+
+static bool SmokeTimedOut(const std::chrono::steady_clock::time_point& start) {
+    auto elapsed = std::chrono::steady_clock::now() - start;
+    return std::chrono::duration_cast<std::chrono::seconds>(elapsed).count() >= g_smoke_timeout_sec;
+}
+
+static void SmokeLog(const std::string& msg) {
+    std::cout << "[SMOKE] " << msg << std::endl;
+}
+
+// Forward declare internal HTTP client helper for smoke tests
+static std::string SmokeHttpGet(const std::string& path);
+
+static bool Test_OllamaVersion(const std::chrono::steady_clock::time_point& start) {
+    if (SmokeTimedOut(start)) {
+        SmokeLog("TIMEOUT before Ollama version test");
+        return false;
+    }
+
+    std::string response = SmokeHttpGet("/api/version");
+    if (response.empty() || response.find("version") == std::string::npos) {
+        SmokeLog("Ollama version FAILED");
+        return false;
+    }
+    SmokeLog("Ollama version OK");
+    return true;
+}
+
+static std::once_flag g_models_once;
+static std::string    g_models_cached;
+static bool           g_models_fetched = false;
+
+static bool Test_ModelDiscovery(const std::chrono::steady_clock::time_point& start) {
+    if (SmokeTimedOut(start)) {
+        SmokeLog("TIMEOUT before model discovery test");
+        return false;
+    }
+
+    std::call_once(g_models_once, [&]() {
+        std::string response = SmokeHttpGet("/api/tags");
+        if (!response.empty() && response.find("models") != std::string::npos) {
+            g_models_cached = response;
+            g_models_fetched = true;
+        }
+    });
+
+    if (!g_models_fetched) {
+        SmokeLog("Model discovery FAILED");
+        return false;
+    }
+    SmokeLog("Model discovery OK");
+    return true;
+}
+
+static int RunSmokeTest() {
+    SmokeLog("Starting bounded smoke test suite");
+    auto start = SmokeStart();
+
+    bool ok = true;
+    ok &= Test_OllamaVersion(start);
+    ok &= Test_ModelDiscovery(start);
+
+    if (!ok) {
+        SmokeLog("FAIL");
+        return 1;
+    }
+    SmokeLog("PASS");
+    return 0;
+}
+
+// Minimal internal HTTP GET for smoke tests (connects to localhost:port)
+static std::string SmokeHttpGet(const std::string& path) {
+    // Build full URL from the port we would have listened on
+    extern int g_smoke_target_port;
+    std::string url = "http://127.0.0.1:" + std::to_string(g_smoke_target_port) + path;
+
+    HINTERNET hSession = WinHttpOpen(L"RawrXD-Smoke/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+                                     WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+    if (!hSession) return "";
+
+    std::wstring wUrl(url.begin(), url.end());
+    URL_COMPONENTS urlComp = { sizeof(urlComp) };
+    urlComp.dwHostNameLength = (DWORD)-1;
+    urlComp.dwUrlPathLength  = (DWORD)-1;
+    WinHttpCrackUrl(wUrl.c_str(), 0, 0, &urlComp);
+
+    std::wstring host(urlComp.lpszHostName, urlComp.dwHostNameLength);
+    std::wstring wpath(urlComp.lpszUrlPath, urlComp.dwUrlPathLength);
+    INTERNET_PORT port = urlComp.nPort;
+
+    HINTERNET hConnect = WinHttpConnect(hSession, host.c_str(), port, 0);
+    if (!hConnect) { WinHttpCloseHandle(hSession); return ""; }
+
+    HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"GET", wpath.c_str(),
+                                            nullptr, WINHTTP_NO_REFERER,
+                                            WINHTTP_DEFAULT_ACCEPT_TYPES, 0);
+    if (!hRequest) { WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession); return ""; }
+
+    BOOL sent = WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0,
+                                   WINHTTP_NO_REQUEST_DATA, 0, 0, 0);
+    if (!sent || !WinHttpReceiveResponse(hRequest, nullptr)) {
+        WinHttpCloseHandle(hRequest);
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+        return "";
+    }
+
+    std::string response;
+    DWORD dwSize = 0;
+    do {
+        dwSize = 0;
+        WinHttpQueryDataAvailable(hRequest, &dwSize);
+        if (dwSize == 0) break;
+        std::vector<char> buffer(dwSize + 1);
+        DWORD dwRead = 0;
+        WinHttpReadData(hRequest, buffer.data(), dwSize, &dwRead);
+        buffer[dwRead] = '\0';
+        response.append(buffer.data(), dwRead);
+    } while (dwSize > 0);
+
+    WinHttpCloseHandle(hRequest);
+    WinHttpCloseHandle(hConnect);
+    WinHttpCloseHandle(hSession);
+    return response;
+}
+
+static int g_smoke_target_port = 11434;
 
 // ============================================================
 // Main Entry Point
 // ============================================================
 
 int main(int argc, char* argv[]) {
+    // Mandatory GPU gate — the API server refuses to start without a GPU.
+    rxd::gpu::require();
+
     int port = 11434;
     
     // Parse arguments
@@ -355,36 +508,56 @@ int main(int argc, char* argv[]) {
         std::string arg = argv[i];
         if (arg == "--port" && i + 1 < argc) {
             port = atoi(argv[++i]);
+        } else if (arg == "--smoke-test") {
+            g_smoke_test_mode = true;
+        } else if (arg == "--smoke-timeout" && i + 1 < argc) {
+            g_smoke_timeout_sec = atoi(argv[++i]);
         }
     }
     
-    printf("\n");
-    printf("╔════════════════════════════════════════════════════════╗\n");
-    printf("║   Simple GGUF API Server - Ollama-Compatible HTTP      ║\n");
-    printf("║              Real HTTP Server Implementation           ║\n");
-    printf("╚════════════════════════════════════════════════════════╝\n\n");
+    g_smoke_target_port = port;
+
+    // Smoke-test mode: bounded validation, no daemon loop
+    if (g_smoke_test_mode) {
+        // Start a background thread with the server so we can test against it
+        std::thread serverThread([&port]() {
+            if (!InitializeServer(port)) {
+                std::cerr << "[SMOKE] Failed to initialize server on port " << port << "\n";
+                return;
+            }
+            g_running = true;
+            g_start_time = std::chrono::steady_clock::now();
+            ServerLoop(port);
+        });
+
+        // Give the server a moment to come up
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+        int code = RunSmokeTest();
+
+        // Signal shutdown and clean up
+        g_running = false;
+        if (g_listen_socket != INVALID_SOCKET) {
+            closesocket(g_listen_socket);
+            g_listen_socket = INVALID_SOCKET;
+        }
+        if (serverThread.joinable()) {
+            serverThread.join();
+        }
+        WSACleanup();
+        return code;
+    }
+    
+    // Print banner
     
     // Initialize server
     if (!InitializeServer(port)) {
-        printf("FATAL: Failed to initialize server\n");
+        // Failed to initialize server
         return 1;
     }
     
     g_running = true;
     g_start_time = std::chrono::steady_clock::now();
-    
-    printf("\n");
-    printf("╔════════════════════════════════════════════════════════╗\n");
-    printf("║         Listening for Inference Requests               ║\n");
-    printf("╚════════════════════════════════════════════════════════╝\n\n");
-    
-    printf("Endpoints:\n");
-    printf("  GET  http://localhost:%d/health\n", port);
-    printf("  GET  http://localhost:%d/api/tags\n", port);
-    printf("  GET  http://localhost:%d/api/status\n", port);
-    printf("  POST http://localhost:%d/api/generate\n\n", port);
-    
-    printf("Press Ctrl+C to exit.\n\n");
     
     // Start server loop in main thread
     ServerLoop(port);

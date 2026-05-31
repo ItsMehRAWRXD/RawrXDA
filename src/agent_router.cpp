@@ -8,6 +8,7 @@
 
 #include "agent_modes.h"
 #include "agentic_engine.h"
+#include "core/scoped_instructions_provider.hpp"
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -18,6 +19,7 @@
 #include <functional>
 #include <sstream>
 #include <regex>
+#include <filesystem>
 #include <cmath>
 #include <deque>
 #include <thread>
@@ -329,6 +331,17 @@ public:
         // Inject workspace context if available
         if (!context.empty()) {
             prompt += "\n\nWorkspace context:\n" + context;
+        }
+
+        auto& scopedProvider = RawrXD::Core::ScopedInstructionsProvider::instance();
+        scopedProvider.setProjectRoot(std::filesystem::current_path().string());
+        const auto resolved = scopedProvider.resolveForTargets({}, 3000);
+        if (!resolved.empty()) {
+            prompt += "\n\nScoped Instructions:\n" + resolved.promptPayload;
+            const std::string telemetry = RawrXD::Core::ScopedInstructionsProvider::formatTelemetry(resolved);
+            if (!telemetry.empty()) {
+                prompt += "\n" + telemetry;
+            }
         }
 
         return prompt;

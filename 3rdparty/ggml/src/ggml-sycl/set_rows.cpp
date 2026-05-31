@@ -72,10 +72,10 @@ static void set_rows_sycl_q(const char * __restrict__ src0_d,
         char * dst_block = reinterpret_cast<char *>(reinterpret_cast<char *>(dst_d) + dst_offset);
         cpyblck(src_block, dst_block);
     });
-    GGML_UNUSED(ne10);
-    GGML_UNUSED(ne13);
-    GGML_UNUSED(nb00);
-    GGML_UNUSED(nb13);
+    GGML_RXD_UNUSED(ne10);
+    GGML_RXD_UNUSED(ne13);
+    GGML_RXD_UNUSED(nb00);
+    GGML_RXD_UNUSED(nb13);
 }
 
 template<typename TIn, typename TIdx, typename TOut>
@@ -148,15 +148,15 @@ static void set_rows_sycl(
 }
 
 template<typename TIn, typename TIdx>
-static void set_rows_sycl(ggml_backend_sycl_context & ctx, const ggml_tensor * src0, const ggml_tensor * src1, ggml_tensor * dst) {
+static void set_rows_sycl(ggml_rxd_backend_sycl_context & ctx, const ggml_rxd_tensor * src0, const ggml_rxd_tensor * src1, ggml_rxd_tensor * dst) {
     const char * src0_d = (const char *)src0->data;
     const TIdx * src1_d = (const TIdx *)src1->data;
 
-    GGML_TENSOR_BINARY_OP_LOCALS
+    GGML_RXD_TENSOR_BINARY_OP_LOCALS
 
     dpct::queue_ptr stream = ctx.stream();
     switch (dst->type) {
-        case GGML_TYPE_F32:
+        case GGML_RXD_TYPE_F32:
             set_rows_sycl<TIn, TIdx, float>(
                 src0_d, src1_d, (char *)dst->data,
                 ne00, ne01, ne02, ne03,
@@ -168,7 +168,7 @@ static void set_rows_sycl(ggml_backend_sycl_context & ctx, const ggml_tensor * s
                 stream
             );
             break;
-        case GGML_TYPE_F16:
+        case GGML_RXD_TYPE_F16:
             dpct::has_capability_or_fail(stream->get_device(), { sycl::aspect::fp16 });
             set_rows_sycl<TIn, TIdx, sycl::half>(
                 src0_d, src1_d, (char *)dst->data,
@@ -181,7 +181,7 @@ static void set_rows_sycl(ggml_backend_sycl_context & ctx, const ggml_tensor * s
                 stream
             );
             break;
-        case GGML_TYPE_BF16:
+        case GGML_RXD_TYPE_BF16:
             set_rows_sycl<TIn, TIdx, sycl::ext::oneapi::bfloat16>(
                 src0_d, src1_d, (char *)dst->data,
                 ne00, ne01, ne02, ne03,
@@ -193,40 +193,40 @@ static void set_rows_sycl(ggml_backend_sycl_context & ctx, const ggml_tensor * s
                 stream
             );
             break;
-        case GGML_TYPE_Q8_0:
+        case GGML_RXD_TYPE_Q8_0:
             set_rows_sycl_q<TIdx, block_q8_0, QK8_0, cpy_blck_f32_q8_0>(src0_d, src1_d, (block_q8_0 *)dst->data, ne00, ne01, ne02, ne03, ne10, ne11, ne12, ne13, nb00, nb01, nb02, nb03, nb10, nb11, nb12, nb13, nb1, nb2, nb3, stream);
             break;
-        case GGML_TYPE_Q5_1:
+        case GGML_RXD_TYPE_Q5_1:
             set_rows_sycl_q<TIdx, block_q5_1, QK5_1, cpy_blck_f32_q5_1>(src0_d, src1_d, (block_q5_1 *)dst->data, ne00, ne01, ne02, ne03, ne10, ne11, ne12, ne13, nb00, nb01, nb02, nb03, nb10, nb11, nb12, nb13, nb1, nb2, nb3, stream);
             break;
-        case GGML_TYPE_Q5_0:
+        case GGML_RXD_TYPE_Q5_0:
             set_rows_sycl_q<TIdx, block_q5_0, QK5_0, cpy_blck_f32_q5_0>(src0_d, src1_d, (block_q5_0 *)dst->data, ne00, ne01, ne02, ne03, ne10, ne11, ne12, ne13, nb00, nb01, nb02, nb03, nb10, nb11, nb12, nb13, nb1, nb2, nb3, stream);
             break;
-        case GGML_TYPE_Q4_1:
+        case GGML_RXD_TYPE_Q4_1:
             set_rows_sycl_q<TIdx, block_q4_1, QK4_1, cpy_blck_f32_q4_1>(src0_d, src1_d, (block_q4_1 *)dst->data, ne00, ne01, ne02, ne03, ne10, ne11, ne12, ne13, nb00, nb01, nb02, nb03, nb10, nb11, nb12, nb13, nb1, nb2, nb3, stream);
             break;
-        case GGML_TYPE_Q4_0:
+        case GGML_RXD_TYPE_Q4_0:
             set_rows_sycl_q<TIdx, block_q4_0, QK4_0, cpy_blck_f32_q4_0>(src0_d, src1_d, (block_q4_0 *)dst->data, ne00, ne01, ne02, ne03, ne10, ne11, ne12, ne13, nb00, nb01, nb02, nb03, nb10, nb11, nb12, nb13, nb1, nb2, nb3, stream);
             break;
-        case GGML_TYPE_IQ4_NL:
+        case GGML_RXD_TYPE_IQ4_NL:
             set_rows_sycl_q<TIdx, block_iq4_nl, QK4_NL, cpy_blck_f32_iq4_nl>(src0_d, src1_d, (block_iq4_nl *)dst->data, ne00, ne01, ne02, ne03, ne10, ne11, ne12, ne13, nb00, nb01, nb02, nb03, nb10, nb11, nb12, nb13, nb1, nb2, nb3, stream);
             break;
 
         default:
-            GGML_ABORT("Unsupported tensor type!");
+            GGML_RXD_ABORT("Unsupported tensor type!");
             break;
     }
 }
 
-void ggml_sycl_op_set_rows(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
+void ggml_rxd_sycl_op_set_rows(ggml_rxd_backend_sycl_context & ctx, ggml_rxd_tensor * dst) {
     scope_op_debug_print scope_dbg_print(__func__, dst, /*num_src=*/2);
-    const ggml_tensor * src0 = dst->src[0];
-    const ggml_tensor * src1 = dst->src[1];
+    const ggml_rxd_tensor * src0 = dst->src[0];
+    const ggml_rxd_tensor * src1 = dst->src[1];
 
-    GGML_ASSERT(dst->src[0]->type == GGML_TYPE_F32);
-    GGML_ASSERT(dst->src[1]->type == GGML_TYPE_I64 || dst->src[1]->type == GGML_TYPE_I32);
+    GGML_RXD_ASSERT(dst->src[0]->type == GGML_RXD_TYPE_F32);
+    GGML_RXD_ASSERT(dst->src[1]->type == GGML_RXD_TYPE_I64 || dst->src[1]->type == GGML_RXD_TYPE_I32);
 
-    if (src1->type == GGML_TYPE_I64) {
+    if (src1->type == GGML_RXD_TYPE_I64) {
         set_rows_sycl<float, int64_t>(ctx, src0, src1, dst);
     } else {
         set_rows_sycl<float, int32_t>(ctx, src0, src1, dst);

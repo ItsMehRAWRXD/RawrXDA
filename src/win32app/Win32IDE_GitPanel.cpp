@@ -121,6 +121,8 @@ static std::vector<std::string> parseBranches(const std::string& raw) {
 #define IDM_GIT_STAGE_FILE    9860
 #define IDM_GIT_UNSTAGE_FILE  9861
 #define IDM_GIT_LOG           9862
+#define IDM_GIT_MERGE         9863
+#define IDM_GIT_REBASE        9864
 #endif
 
 void Win32IDE::createGitPanel() {
@@ -191,9 +193,17 @@ void Win32IDE::createGitPanel() {
     CreateWindowExA(0, "BUTTON", "Branch", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
         x, btnY, btnW, btnH, m_hwndSidebar, (HMENU)(UINT_PTR)IDM_GIT_BRANCH_PICKER, m_hInstance, nullptr);
 
-    // ── Action buttons row 3 (stash) ──
+    // ── Action buttons row 3 (merge, rebase, stash) ──
     btnY += btnH + gap;
     x = 5;
+
+    CreateWindowExA(0, "BUTTON", "Merge", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        x, btnY, btnW, btnH, m_hwndSidebar, (HMENU)(UINT_PTR)IDM_GIT_MERGE, m_hInstance, nullptr);
+    x += btnW + gap;
+
+    CreateWindowExA(0, "BUTTON", "Rebase", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        x, btnY, btnW, btnH, m_hwndSidebar, (HMENU)(UINT_PTR)IDM_GIT_REBASE, m_hInstance, nullptr);
+    x += btnW + gap;
 
     CreateWindowExA(0, "BUTTON", "Stash", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
         x, btnY, btnW, btnH, m_hwndSidebar, (HMENU)(UINT_PTR)IDM_GIT_STASH, m_hInstance, nullptr);
@@ -201,7 +211,10 @@ void Win32IDE::createGitPanel() {
 
     CreateWindowExA(0, "BUTTON", "Stash Pop", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
         x, btnY, 80, btnH, m_hwndSidebar, (HMENU)(UINT_PTR)IDM_GIT_STASH_POP, m_hInstance, nullptr);
-    x += 80 + gap;
+
+    // ── Action buttons row 4 (file-specific) ──
+    btnY += btnH + gap;
+    x = 5;
 
     CreateWindowExA(0, "BUTTON", "+File", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
         x, btnY, 50, btnH, m_hwndSidebar, (HMENU)(UINT_PTR)IDM_GIT_STAGE_FILE, m_hInstance, nullptr);
@@ -293,11 +306,13 @@ void Win32IDE::handleGitPanelCommand(WORD cmdId) {
     case IDM_GIT_STAGE_ALL:
         runGitCommand(repo, "add -A");
         refreshGitStatus();
+        refreshFileTree();
         break;
 
     case IDM_GIT_UNSTAGE_ALL:
         runGitCommand(repo, "reset HEAD");
         refreshGitStatus();
+        refreshFileTree();
         break;
 
     case IDM_GIT_DIFF: {
@@ -336,6 +351,7 @@ void Win32IDE::handleGitPanelCommand(WORD cmdId) {
         appendToOutput("[Git Commit] " + result, "Git", OutputSeverity::Info);
         if (m_hwndGitCommitMsg) SetWindowTextA(m_hwndGitCommitMsg, "");
         refreshGitStatus();
+        refreshFileTree();
         break;
     }
 
@@ -347,6 +363,7 @@ void Win32IDE::handleGitPanelCommand(WORD cmdId) {
             ShowWindow(m_hwndGitDiff, SW_SHOW);
         }
         refreshGitStatus();
+        refreshFileTree();
         break;
     }
 
@@ -358,6 +375,7 @@ void Win32IDE::handleGitPanelCommand(WORD cmdId) {
             ShowWindow(m_hwndGitDiff, SW_SHOW);
         }
         refreshGitStatus();
+        refreshFileTree();
         break;
     }
 
@@ -385,6 +403,7 @@ void Win32IDE::handleGitPanelCommand(WORD cmdId) {
             std::string checkoutCmd = "checkout " + target;
             runGitCommand(repo, checkoutCmd.c_str());
             refreshGitStatus();
+            refreshFileTree();
         }
         break;
     }
@@ -393,6 +412,7 @@ void Win32IDE::handleGitPanelCommand(WORD cmdId) {
         std::string stashResult = runGitCommand(repo, "stash");
         appendToOutput("[Git Stash] " + stashResult, "Git", OutputSeverity::Info);
         refreshGitStatus();
+        refreshFileTree();
         break;
     }
 
@@ -404,6 +424,7 @@ void Win32IDE::handleGitPanelCommand(WORD cmdId) {
             MessageBoxA(m_hwndMain, popResult.c_str(), "Git Stash Pop", MB_OK | MB_ICONWARNING);
         }
         refreshGitStatus();
+        refreshFileTree();
         break;
     }
 
@@ -448,6 +469,7 @@ void Win32IDE::handleGitPanelCommand(WORD cmdId) {
         std::string addResult = runGitCommand(repo, addCmd.c_str());
         appendToOutput("[Git Stage] " + targetFile + ": " + addResult, "Git", OutputSeverity::Info);
         refreshGitStatus();
+        refreshFileTree();
         break;
     }
 
@@ -486,6 +508,7 @@ void Win32IDE::handleGitPanelCommand(WORD cmdId) {
         std::string resetResult = runGitCommand(repo, resetCmd.c_str());
         appendToOutput("[Git Unstage] " + targetFile + ": " + resetResult, "Git", OutputSeverity::Info);
         refreshGitStatus();
+        refreshFileTree();
         break;
     }
 
@@ -495,6 +518,78 @@ void Win32IDE::handleGitPanelCommand(WORD cmdId) {
         if (m_hwndGitDiff) {
             SetWindowTextA(m_hwndGitDiff, ("=== Recent Commits ===\r\n" + logResult).c_str());
             ShowWindow(m_hwndGitDiff, SW_SHOW);
+        }
+        break;
+    }
+
+    case IDM_GIT_MERGE: {
+        std::string branchList = runGitCommand(repo, "branch -a");
+        auto branches = parseBranches(branchList);
+        if (branches.empty()) break;
+
+        HMENU hMenu = CreatePopupMenu();
+        for (size_t i = 0; i < branches.size() && i < 50; ++i) {
+            AppendMenuA(hMenu, MF_STRING, 70000 + static_cast<UINT>(i), branches[i].c_str());
+        }
+        POINT pt;
+        GetCursorPos(&pt);
+        int sel = TrackPopupMenu(hMenu, TPM_RETURNCMD | TPM_NONOTIFY, pt.x, pt.y, 0, m_hwndMain, nullptr);
+        DestroyMenu(hMenu);
+
+        if (sel >= 70000 && sel < 70000 + (int)branches.size()) {
+            std::string target = branches[sel - 70000];
+            const char* remotePrefix = "remotes/origin/";
+            if (target.rfind(remotePrefix, 0) == 0)
+                target = target.substr(strlen(remotePrefix));
+
+            std::string mergeCmd = "merge " + target;
+            std::string mergeResult = runGitCommand(repo, mergeCmd.c_str());
+            appendToOutput("[Git Merge] " + mergeResult, "Git", OutputSeverity::Info);
+            if (m_hwndGitDiff) {
+                SetWindowTextA(m_hwndGitDiff, ("=== Merge Result ===\r\n" + mergeResult).c_str());
+                ShowWindow(m_hwndGitDiff, SW_SHOW);
+            }
+            if (mergeResult.find("CONFLICT") != std::string::npos) {
+                MessageBoxA(m_hwndMain, "Merge conflicts detected. Please resolve them manually.", "Git Merge", MB_OK | MB_ICONWARNING);
+            }
+            refreshGitStatus();
+            refreshFileTree();
+        }
+        break;
+    }
+
+    case IDM_GIT_REBASE: {
+        std::string branchList = runGitCommand(repo, "branch -a");
+        auto branches = parseBranches(branchList);
+        if (branches.empty()) break;
+
+        HMENU hMenu = CreatePopupMenu();
+        for (size_t i = 0; i < branches.size() && i < 50; ++i) {
+            AppendMenuA(hMenu, MF_STRING, 80000 + static_cast<UINT>(i), branches[i].c_str());
+        }
+        POINT pt;
+        GetCursorPos(&pt);
+        int sel = TrackPopupMenu(hMenu, TPM_RETURNCMD | TPM_NONOTIFY, pt.x, pt.y, 0, m_hwndMain, nullptr);
+        DestroyMenu(hMenu);
+
+        if (sel >= 80000 && sel < 80000 + (int)branches.size()) {
+            std::string target = branches[sel - 80000];
+            const char* remotePrefix = "remotes/origin/";
+            if (target.rfind(remotePrefix, 0) == 0)
+                target = target.substr(strlen(remotePrefix));
+
+            std::string rebaseCmd = "rebase " + target;
+            std::string rebaseResult = runGitCommand(repo, rebaseCmd.c_str());
+            appendToOutput("[Git Rebase] " + rebaseResult, "Git", OutputSeverity::Info);
+            if (m_hwndGitDiff) {
+                SetWindowTextA(m_hwndGitDiff, ("=== Rebase Result ===\r\n" + rebaseResult).c_str());
+                ShowWindow(m_hwndGitDiff, SW_SHOW);
+            }
+            if (rebaseResult.find("CONFLICT") != std::string::npos) {
+                MessageBoxA(m_hwndMain, "Rebase conflicts detected. Run 'git rebase --abort' or resolve and 'git rebase --continue'.", "Git Rebase", MB_OK | MB_ICONWARNING);
+            }
+            refreshGitStatus();
+            refreshFileTree();
         }
         break;
     }

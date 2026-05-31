@@ -7,7 +7,7 @@ endif()
 
 # RawrXD KeyGen — RSA-4096 Key Authority & License Signer (unlock 800B kernel / enterprise)
 # Build: standalone Win32 CLI; no Qt/engine deps. Use for --genkey, --hwid, --issue, --sign.
-add_executable(RawrXD_KeyGen WIN32
+add_executable(RawrXD_KeyGen
     RawrXD_KeyGen.cpp
 )
 target_link_libraries(RawrXD_KeyGen PRIVATE advapi32 crypt32)
@@ -15,8 +15,25 @@ if(MSVC)
   target_compile_options(RawrXD_KeyGen PRIVATE /W4)
 endif()
 
+# Titan GGML bridge probe - validates runtime handshake after Titan_Initialize.
+add_executable(rawrxd-titan-init-probe
+        titan_init_probe.cpp
+)
+target_link_libraries(rawrxd-titan-init-probe PRIVATE kernel32)
+
+# MiniCMake - tiny zero-dependency C++ build system driver.
+add_executable(minicmake
+        minicmake.cpp
+)
+if(MSVC)
+    target_compile_options(minicmake PRIVATE /W4)
+endif()
+
 # Simple GPU Test - For hotpatch testing framework
 if(TARGET InferenceEngine)
+    option(RAWRXD_BUILD_BENCH_CPU "Build bench_cpu CLI tool" OFF)
+    option(RAWRXD_BUILD_COMPREHENSIVE_BENCHMARK "Build comprehensive benchmark CLI tool" OFF)
+
   add_executable(simple_gpu_test
       simple_gpu_test.cpp
   )
@@ -37,35 +54,39 @@ if(TARGET InferenceEngine)
       ${_RAWRXD_OPTIONAL_GGML_LINK_LIBS}
   )
 
-  add_executable(bench_cpu
-      bench_cpu.cpp
-  )
+  if(RAWRXD_BUILD_BENCH_CPU)
+    add_executable(bench_cpu
+        bench_cpu.cpp
+    )
 
-  target_include_directories(bench_cpu PRIVATE
-      ${CMAKE_SOURCE_DIR}/src
-      ${CMAKE_SOURCE_DIR}/include
-  )
+    target_include_directories(bench_cpu PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/include
+    )
 
-  target_link_libraries(bench_cpu PRIVATE
-      InferenceEngine
-      ${_RAWRXD_OPTIONAL_GGML_LINK_LIBS}
-  )
+    target_link_libraries(bench_cpu PRIVATE
+        InferenceEngine
+        ${_RAWRXD_OPTIONAL_GGML_LINK_LIBS}
+    )
+  endif()
 
-  add_executable(comprehensive_benchmark
-      comprehensive_benchmark.cpp
-      ../backend_selector.cpp
-      ../inference_benchmark.cpp
-  )
+  if(RAWRXD_BUILD_COMPREHENSIVE_BENCHMARK)
+    add_executable(comprehensive_benchmark
+        comprehensive_benchmark.cpp
+        ../backend_selector.cpp
+        ../inference_benchmark.cpp
+    )
 
-  target_include_directories(comprehensive_benchmark PRIVATE
-      ${CMAKE_SOURCE_DIR}/src
-      ${CMAKE_SOURCE_DIR}/include
-  )
+    target_include_directories(comprehensive_benchmark PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/include
+    )
 
-  target_link_libraries(comprehensive_benchmark PRIVATE
-      InferenceEngine
-      ${_RAWRXD_OPTIONAL_GGML_LINK_LIBS}
-  )
+    target_link_libraries(comprehensive_benchmark PRIVATE
+        InferenceEngine
+        ${_RAWRXD_OPTIONAL_GGML_LINK_LIBS}
+    )
+  endif()
 
   # GGUF API Server - Real HTTP API with GPU inference
   add_executable(gguf_api_server
@@ -86,10 +107,28 @@ else()
   message(STATUS "[Tools] InferenceEngine library target not available; skipping inference-dependent CLI tools")
 endif()
 
-# Install targets (RawrXD_KeyGen ships with IDE for License Creator > Launch KeyGen)
-set(_RAWRXD_TOOL_INSTALL_TARGETS RawrXD_KeyGen)
+# RawrXD Streamability Benchmark - For testing large model loading
+if(TARGET InferenceEngine)
+  add_executable(RawrXD-StreamabilityBenchmark
+      RawrXD_StreamabilityBenchmark.cpp
+      ../mapped_window_streamer.cpp
+  )
 
-foreach(_rawrxd_tool_target simple_gpu_test real_multi_model_benchmark bench_cpu comprehensive_benchmark gguf_api_server)
+  target_link_libraries(RawrXD-StreamabilityBenchmark PRIVATE
+      InferenceEngine
+      ${_RAWRXD_OPTIONAL_GGML_LINK_LIBS}
+  )
+endif()
+
+# GGUF profile test (writer-only; does not depend on Win32IDE link closure)
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/gguf_profile_test/CMakeLists.txt")
+    add_subdirectory(gguf_profile_test)
+endif()
+
+# Install targets (RawrXD_KeyGen ships with IDE for License Creator > Launch KeyGen)
+set(_RAWRXD_TOOL_INSTALL_TARGETS RawrXD_KeyGen rawrxd-titan-init-probe minicmake)
+
+foreach(_rawrxd_tool_target simple_gpu_test real_multi_model_benchmark bench_cpu comprehensive_benchmark gguf_api_server RawrXD-StreamabilityBenchmark)
     if(TARGET ${_rawrxd_tool_target})
         list(APPEND _RAWRXD_TOOL_INSTALL_TARGETS ${_rawrxd_tool_target})
     endif()

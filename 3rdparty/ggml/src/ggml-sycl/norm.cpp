@@ -251,7 +251,7 @@ static void norm_f32_sycl(const float * x, float * dst, const int ncols, const i
         const float eps, queue_ptr stream, int device) {
 
     const sycl::range<3> global_dims(nsamples, nchannels, nrows);
-    GGML_ASSERT(ncols % WARP_SIZE == 0);
+    GGML_RXD_ASSERT(ncols % WARP_SIZE == 0);
     if (ncols < 1024) {
         const sycl::range<3> block_dims(1, 1, WARP_SIZE);
         stream->submit([&](sycl::handler& cgh) {
@@ -264,7 +264,7 @@ static void norm_f32_sycl(const float * x, float * dst, const int ncols, const i
             });
     }
     else {
-        const int work_group_size = ggml_sycl_info().max_work_group_sizes[device];
+        const int work_group_size = ggml_rxd_sycl_info().max_work_group_sizes[device];
         assert(work_group_size % (WARP_SIZE * WARP_SIZE) == 0);
         const sycl::range<3> block_dims(1, 1, work_group_size);
         /*
@@ -304,7 +304,7 @@ static void group_norm_f32_sycl(const float* x, float* dst,
             });
     }
     else {
-        const int work_group_size = ggml_sycl_info().max_work_group_sizes[device];
+        const int work_group_size = ggml_rxd_sycl_info().max_work_group_sizes[device];
         assert(work_group_size % (WARP_SIZE * WARP_SIZE) == 0);
         const sycl::range<3> block_dims(1, 1, work_group_size);
         /*
@@ -334,7 +334,7 @@ static void group_norm_f32_sycl(const float* x, float* dst,
 
 static void rms_norm_f32_sycl(const float* x, float* dst, const int ncols, const int nrows, const int nchannels, const int nsamples,
         const int64_t stride_row, const int64_t stride_channel, const int64_t stride_sample, const float eps, queue_ptr stream, int device) {
-    GGML_ASSERT(ncols % WARP_SIZE == 0);
+    GGML_RXD_ASSERT(ncols % WARP_SIZE == 0);
     // printf("%s ncols=%d, nrows=%d, WARP_SIZE=%d\n", __func__, ncols, nrows, WARP_SIZE);
 
     const sycl::range<3> global_dims(nsamples, nchannels, nrows);
@@ -350,7 +350,7 @@ static void rms_norm_f32_sycl(const float* x, float* dst, const int ncols, const
             });
     }
     else {
-        const int work_group_size = ggml_sycl_info().max_work_group_sizes[device];
+        const int work_group_size = ggml_rxd_sycl_info().max_work_group_sizes[device];
         assert(work_group_size % (WARP_SIZE * WARP_SIZE) == 0);
         const sycl::range<3> block_dims(1, 1, work_group_size);
         /*
@@ -374,7 +374,7 @@ static void rms_norm_f32_sycl(const float* x, float* dst, const int ncols, const
 static void l2_norm_f32_sycl(const float* x, float* dst, const int ncols,
     const int nrows, const float eps,
     queue_ptr stream, int device) {
-    GGML_ASSERT(ncols % WARP_SIZE == 0);
+    GGML_RXD_ASSERT(ncols % WARP_SIZE == 0);
     // printf("%s ncols=%d, nrows=%d, WARP_SIZE=%d\n", __func__, ncols, nrows, WARP_SIZE);
     if (ncols < 1024) {
         const sycl::range<3> block_dims(1, 1, WARP_SIZE);
@@ -390,7 +390,7 @@ static void l2_norm_f32_sycl(const float* x, float* dst, const int ncols,
             });
     }
     else {
-        const int work_group_size = ggml_sycl_info().max_work_group_sizes[device];
+        const int work_group_size = ggml_rxd_sycl_info().max_work_group_sizes[device];
         assert(work_group_size % (WARP_SIZE * WARP_SIZE) == 0);
         const sycl::range<3> block_dims(1, 1, work_group_size);
         /*
@@ -413,23 +413,23 @@ static void l2_norm_f32_sycl(const float* x, float* dst, const int ncols,
     }
 }
 
-void ggml_sycl_op_norm(ggml_backend_sycl_context& ctx, ggml_tensor* dst) {
-    const ggml_tensor * src0 = dst->src[0];
+void ggml_rxd_sycl_op_norm(ggml_rxd_backend_sycl_context& ctx, ggml_rxd_tensor* dst) {
+    const ggml_rxd_tensor * src0 = dst->src[0];
 
-    GGML_ASSERT(dst->src[0]->type == GGML_TYPE_F32);
-    GGML_ASSERT(dst->type == GGML_TYPE_F32);
+    GGML_RXD_ASSERT(dst->src[0]->type == GGML_RXD_TYPE_F32);
+    GGML_RXD_ASSERT(dst->type == GGML_RXD_TYPE_F32);
 
-    GGML_TENSOR_UNARY_OP_LOCALS
+    GGML_RXD_TENSOR_UNARY_OP_LOCALS
     dpct::queue_ptr main_stream = ctx.stream();
-    SYCL_CHECK(ggml_sycl_set_device(ctx.device));
+    SYCL_CHECK(ggml_rxd_sycl_set_device(ctx.device));
     const float * src0_dd = static_cast<const float *>(dst->src[0]->data);
     float *       dst_dd  = static_cast<float *>(dst->data);
 
     float eps;
     memcpy(&eps, dst->op_params, sizeof(float));
-    GGML_ASSERT(eps >= 0.0f);
-    const size_t ts0 = ggml_type_size(src0->type);
-    GGML_ASSERT(nb00 == ts0);
+    GGML_RXD_ASSERT(eps >= 0.0f);
+    const size_t ts0 = ggml_rxd_type_size(src0->type);
+    GGML_RXD_ASSERT(nb00 == ts0);
     const int64_t s01 = nb01 / ts0;
     const int64_t s02 = nb02 / ts0;
     const int64_t s03 = nb03 / ts0;
@@ -437,14 +437,14 @@ void ggml_sycl_op_norm(ggml_backend_sycl_context& ctx, ggml_tensor* dst) {
     norm_f32_sycl(src0_dd, dst_dd, ne00, ne01, ne02, ne03, s01, s02, s03, eps, main_stream, ctx.device);
 }
 
-void ggml_sycl_op_group_norm(ggml_backend_sycl_context& ctx, ggml_tensor* dst) {
+void ggml_rxd_sycl_op_group_norm(ggml_rxd_backend_sycl_context& ctx, ggml_rxd_tensor* dst) {
 
-    GGML_ASSERT(dst->src[0]->type == GGML_TYPE_F32);
-    GGML_ASSERT(dst->type == GGML_TYPE_F32);
+    GGML_RXD_ASSERT(dst->src[0]->type == GGML_RXD_TYPE_F32);
+    GGML_RXD_ASSERT(dst->type == GGML_RXD_TYPE_F32);
 
     int num_groups = dst->op_params[0];
     dpct::queue_ptr main_stream = ctx.stream();
-    SYCL_CHECK(ggml_sycl_set_device(ctx.device));
+    SYCL_CHECK(ggml_rxd_sycl_set_device(ctx.device));
 
     const float * src0_dd = static_cast<const float *>(dst->src[0]->data);
     float *       dst_dd  = static_cast<float *>(dst->data);
@@ -456,14 +456,14 @@ void ggml_sycl_op_group_norm(ggml_backend_sycl_context& ctx, ggml_tensor* dst) {
     group_norm_f32_sycl(src0_dd, dst_dd, num_groups, eps, group_size, dst->src[0]->ne[0] * dst->src[0]->ne[1] * dst->src[0]->ne[2], main_stream, ctx.device);
 }
 
-void ggml_sycl_op_rms_norm(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
+void ggml_rxd_sycl_op_rms_norm(ggml_rxd_backend_sycl_context & ctx, ggml_rxd_tensor * dst) {
 
-    const ggml_tensor * src0 = dst->src[0];
-    GGML_ASSERT(dst->src[0]->type == GGML_TYPE_F32);
-    GGML_ASSERT(dst->type == GGML_TYPE_F32);
+    const ggml_rxd_tensor * src0 = dst->src[0];
+    GGML_RXD_ASSERT(dst->src[0]->type == GGML_RXD_TYPE_F32);
+    GGML_RXD_ASSERT(dst->type == GGML_RXD_TYPE_F32);
 
     dpct::queue_ptr main_stream = ctx.stream();
-    SYCL_CHECK(ggml_sycl_set_device(ctx.device));
+    SYCL_CHECK(ggml_rxd_sycl_set_device(ctx.device));
 
     const float * src0_dd = static_cast<const float *>(dst->src[0]->data);
     float *       dst_dd  = static_cast<float *>(dst->data);
@@ -471,21 +471,21 @@ void ggml_sycl_op_rms_norm(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
     float eps;
     memcpy(&eps, dst->op_params, sizeof(float));
 
-    GGML_TENSOR_UNARY_OP_LOCALS
-    const size_t ts0 = ggml_type_size(src0->type);
-    GGML_ASSERT(nb00 == ts0);
+    GGML_RXD_TENSOR_UNARY_OP_LOCALS
+    const size_t ts0 = ggml_rxd_type_size(src0->type);
+    GGML_RXD_ASSERT(nb00 == ts0);
     const int64_t s01 = nb01 / ts0;
     const int64_t s02 = nb02 / ts0;
     const int64_t s03 = nb03 / ts0;
     rms_norm_f32_sycl(src0_dd, dst_dd, ne00, ne01, ne02, ne03, s01, s02, s03, eps, main_stream, ctx.device);
 }
 
-void ggml_sycl_op_rms_norm_back(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
+void ggml_rxd_sycl_op_rms_norm_back(ggml_rxd_backend_sycl_context & ctx, ggml_rxd_tensor * dst) {
     scope_op_debug_print scope_dbg_print(__func__, dst, /*num_src=*/2);
 
-    GGML_ASSERT(dst->src[0]->type == GGML_TYPE_F32); // dz
-    GGML_ASSERT(dst->src[1]->type == GGML_TYPE_F32); // x
-    GGML_ASSERT(dst->type         == GGML_TYPE_F32);
+    GGML_RXD_ASSERT(dst->src[0]->type == GGML_RXD_TYPE_F32); // dz
+    GGML_RXD_ASSERT(dst->src[1]->type == GGML_RXD_TYPE_F32); // x
+    GGML_RXD_ASSERT(dst->type         == GGML_RXD_TYPE_F32);
 
     float eps = 1e-5f;
     std::memcpy(&eps, dst->op_params, sizeof(float));
@@ -497,15 +497,15 @@ void ggml_sycl_op_rms_norm_back(ggml_backend_sycl_context & ctx, ggml_tensor * d
 
     const int64_t D  = dst->ne[0];
     const int64_t n1 = dst->ne[1], n2 = dst->ne[2], n3 = dst->ne[3]; (void) n3;
-    const int64_t N  = ggml_nrows(dst);
+    const int64_t N  = ggml_rxd_nrows(dst);
     if (D == 0 || N == 0) return;
 
-    const ggml_tensor *G = dst->src[0];
-    const ggml_tensor *X = dst->src[1];
-    const int ts = (int) ggml_type_size(X->type);
-    GGML_ASSERT((size_t) X->nb[0]   == (size_t) ts);
-    GGML_ASSERT((size_t) G->nb[0]   == (size_t) ts);
-    GGML_ASSERT((size_t) dst->nb[0] == (size_t) ts);
+    const ggml_rxd_tensor *G = dst->src[0];
+    const ggml_rxd_tensor *X = dst->src[1];
+    const int ts = (int) ggml_rxd_type_size(X->type);
+    GGML_RXD_ASSERT((size_t) X->nb[0]   == (size_t) ts);
+    GGML_RXD_ASSERT((size_t) G->nb[0]   == (size_t) ts);
+    GGML_RXD_ASSERT((size_t) dst->nb[0] == (size_t) ts);
 
     const int64_t xs1 = X->nb[1] / ts, xs2 = X->nb[2] / ts, xs3 = X->nb[3] / ts;
     const int64_t gs1 = G->nb[1] / ts, gs2 = G->nb[2] / ts, gs3 = G->nb[3] / ts;
@@ -514,7 +514,7 @@ void ggml_sycl_op_rms_norm_back(ggml_backend_sycl_context & ctx, ggml_tensor * d
     dpct::queue_ptr q = ctx.stream();
 
     // work-group size: multiple of WARP_SIZE, capped by device and 256, and not larger than D
-    const int device_max_wg = ggml_sycl_info().max_work_group_sizes[ctx.device];
+    const int device_max_wg = ggml_rxd_sycl_info().max_work_group_sizes[ctx.device];
     auto roundup = [](int v, int m) { return ((v + m - 1) / m) * m; };
     int wg_cap = 256;
     if (device_max_wg > 0) wg_cap = std::min(wg_cap, device_max_wg);
@@ -544,13 +544,13 @@ void ggml_sycl_op_rms_norm_back(ggml_backend_sycl_context & ctx, ggml_tensor * d
 
                 // per-thread accumulation (compensated by default)
                 float sum_xx = 0.f, sum_xg = 0.f;
-#ifndef GGML_SYCL_RMS_BACK_FAST
+#ifndef GGML_RXD_SYCL_RMS_BACK_FAST
                 float c_xx = 0.f, c_xg = 0.f;
 #endif
                 for (int64_t col = tid; col < D; col += WG) {
                     const float xv = x_row[col];
                     const float gv = g_row[col];
-#ifdef GGML_SYCL_RMS_BACK_FAST
+#ifdef GGML_RXD_SYCL_RMS_BACK_FAST
                     sum_xx += xv * xv;
                     sum_xg += xv * gv;
 #else
@@ -568,14 +568,14 @@ void ggml_sycl_op_rms_norm_back(ggml_backend_sycl_context & ctx, ggml_tensor * d
 
                 // warp-level reduction
                 sycl::float2 xx = sycl::float2(sum_xx,
-#ifndef GGML_SYCL_RMS_BACK_FAST
+#ifndef GGML_RXD_SYCL_RMS_BACK_FAST
                     c_xx
 #else
                     0.f
 #endif
                 );
                 sycl::float2 xg = sycl::float2(sum_xg,
-#ifndef GGML_SYCL_RMS_BACK_FAST
+#ifndef GGML_RXD_SYCL_RMS_BACK_FAST
                     c_xg
 #else
                     0.f
@@ -636,16 +636,16 @@ void ggml_sycl_op_rms_norm_back(ggml_backend_sycl_context & ctx, ggml_tensor * d
 
 }
 
-void ggml_sycl_op_l2_norm(ggml_backend_sycl_context& ctx, ggml_tensor* dst) {
+void ggml_rxd_sycl_op_l2_norm(ggml_rxd_backend_sycl_context& ctx, ggml_rxd_tensor* dst) {
 
-    GGML_ASSERT(dst->src[0]->type == GGML_TYPE_F32);
-    GGML_ASSERT(dst->type == GGML_TYPE_F32);
+    GGML_RXD_ASSERT(dst->src[0]->type == GGML_RXD_TYPE_F32);
+    GGML_RXD_ASSERT(dst->type == GGML_RXD_TYPE_F32);
 
     dpct::queue_ptr main_stream = ctx.stream();
-    SYCL_CHECK(ggml_sycl_set_device(ctx.device));
+    SYCL_CHECK(ggml_rxd_sycl_set_device(ctx.device));
 
     const int64_t ne00 = dst->src[0]->ne[0];
-    const int64_t nrows = ggml_nrows(dst->src[0]);
+    const int64_t nrows = ggml_rxd_nrows(dst->src[0]);
     const float * src0_dd = static_cast<const float *>(dst->src[0]->data);
     float * dst_dd = static_cast<float *>(dst->data);
 

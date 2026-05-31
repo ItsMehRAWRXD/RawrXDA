@@ -56,10 +56,14 @@ $script:Config = @{
     Temperature = 0.7
 }
 
+$resolvedWorkspace = Resolve-Path $Workspace -ErrorAction SilentlyContinue
+$workspaceRootPath = $PWD.Path
+if ($resolvedWorkspace) { $workspaceRootPath = $resolvedWorkspace.Path }
+
 $script:State = @{
     CurrentModel = $null
     CurrentTier = "auto"
-    WorkspaceRoot = (Resolve-Path $Workspace -ErrorAction SilentlyContinue)?.Path ?? $PWD.Path
+    WorkspaceRoot = $workspaceRootPath
     ChatHistory = @()
     ToolExecutor = $null
     Verbose = $Verbose.IsPresent
@@ -68,22 +72,24 @@ $script:State = @{
 # ============================================================================
 # ANSI Colors
 # ============================================================================
+$script:AnsiEsc = [char]27
 $script:Colors = @{
-    Reset   = "`e[0m"
-    Red     = "`e[31m"
-    Green   = "`e[32m"
-    Yellow  = "`e[33m"
-    Blue    = "`e[34m"
-    Magenta = "`e[35m"
-    Cyan    = "`e[36m"
-    White   = "`e[37m"
-    Bold    = "`e[1m"
-    Dim     = "`e[2m"
+    Reset   = "$script:AnsiEsc[0m"
+    Red     = "$script:AnsiEsc[31m"
+    Green   = "$script:AnsiEsc[32m"
+    Yellow  = "$script:AnsiEsc[33m"
+    Blue    = "$script:AnsiEsc[34m"
+    Magenta = "$script:AnsiEsc[35m"
+    Cyan    = "$script:AnsiEsc[36m"
+    White   = "$script:AnsiEsc[37m"
+    Bold    = "$script:AnsiEsc[1m"
+    Dim     = "$script:AnsiEsc[2m"
 }
 
 function Write-ColorOutput {
     param([string]$Color, [string]$Message, [switch]$NoNewline)
-    $c = $script:Colors[$Color] ?? ""
+    $c = ""
+    if ($script:Colors.ContainsKey($Color)) { $c = $script:Colors[$Color] }
     if ($NoNewline) {
         Write-Host "$c$Message$($script:Colors.Reset)" -NoNewline
     } else {
@@ -282,7 +288,8 @@ function Invoke-ModelShow {
         return
     }
     
-    $model = $ModelName ?? $script:State.CurrentModel
+    $model = $ModelName
+    if (-not $model) { $model = $script:State.CurrentModel }
     
     Write-ColorOutput Cyan "`n=== Model Information ===`n"
     Write-Host "  Model: $model"
@@ -314,7 +321,8 @@ function Invoke-Generate {
         return
     }
     
-    $model = $script:State.CurrentModel ?? $script:Config.DefaultModel
+    $model = $script:State.CurrentModel
+    if (-not $model) { $model = $script:Config.DefaultModel }
     
     Write-Info "Generating with $model...`n"
     
@@ -354,7 +362,8 @@ function Invoke-Stream {
         return
     }
     
-    $model = $script:State.CurrentModel ?? $script:Config.DefaultModel
+    $model = $script:State.CurrentModel
+    if (-not $model) { $model = $script:Config.DefaultModel }
     
     Write-Info "Streaming with $model...`n"
     
@@ -409,7 +418,8 @@ function Invoke-Chat {
     Write-ColorOutput Cyan "`n=== Interactive Chat ==="
     Write-ColorOutput Dim "Type 'exit' to leave, '/clear' to reset history`n"
     
-    $model = $script:State.CurrentModel ?? $script:Config.DefaultModel
+    $model = $script:State.CurrentModel
+    if (-not $model) { $model = $script:Config.DefaultModel }
     $history = @()
     
     while ($true) {
@@ -574,7 +584,8 @@ function Invoke-Tool {
             }
         }
         "file_list" {
-            $path = $Params.path ?? "."
+            $path = $Params.path
+            if (-not $path) { $path = "." }
             $recursive = $Params.recursive -eq "true"
             if (Test-Path $path) {
                 $result.success = $true
@@ -633,7 +644,8 @@ function Invoke-Tool {
         }
         "git_push" {
             try {
-                $remote = $Params.remote ?? "origin"
+                $remote = $Params.remote
+                if (-not $remote) { $remote = "origin" }
                 $branch = $Params.branch
                 if ($branch) {
                     git push $remote $branch
@@ -647,7 +659,8 @@ function Invoke-Tool {
         }
         "git_pull" {
             try {
-                $remote = $Params.remote ?? "origin"
+                $remote = $Params.remote
+                if (-not $remote) { $remote = "origin" }
                 $branch = $Params.branch
                 if ($branch) {
                     git pull $remote $branch
@@ -858,7 +871,8 @@ function Invoke-Agent {
         return
     }
     
-    $model = $script:State.CurrentModel ?? $script:Config.DefaultModel
+    $model = $script:State.CurrentModel
+    if (-not $model) { $model = $script:Config.DefaultModel }
     
     Write-Info "Running agentic task: $Task`n"
     
@@ -1198,11 +1212,14 @@ function Invoke-Settings {
         Write-ColorOutput Bold "`nModel Directories:"
         foreach ($dir in $script:Config.ModelsDir) {
             $exists = Test-Path $dir
-            Write-Host "  $dir ($($exists ? 'exists' : 'not found'))"
+            $existLabel = if ($exists) { 'exists' } else { 'not found' }
+            Write-Host "  $dir ($existLabel)"
         }
         
         Write-ColorOutput Bold "`nCurrent State:"
-        Write-Host "  Model: $($script:State.CurrentModel ?? 'None')"
+        $curModel = $script:State.CurrentModel
+        if (-not $curModel) { $curModel = 'None' }
+        Write-Host "  Model: $curModel"
         Write-Host "  Tier: $($script:State.CurrentTier)"
         Write-Host "  Workspace: $($script:State.WorkspaceRoot)"
         Write-Host "  Verbose: $($script:State.Verbose)"

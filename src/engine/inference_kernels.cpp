@@ -4,6 +4,9 @@
 #include <algorithm>
 #include <omp.h>
 #include <immintrin.h>
+#if defined(_MSC_VER)
+#include <intrin.h>
+#endif
 
 // ============================================================================
 // AVX2 SIMD Inference Kernels — RawrXD Performance Engine
@@ -40,6 +43,43 @@ static inline float hsum_avx(__m256 v) {
     shuf = _mm_movehl_ps(shuf, sums);
     sums = _mm_add_ss(sums, shuf);
     return _mm_cvtss_f32(sums);
+}
+
+static inline float hsum_avx512(__m512 v) {
+    alignas(64) float tmp[16];
+    _mm512_store_ps(tmp, v);
+    float s = 0.0f;
+    for (int i = 0; i < 16; ++i) {
+        s += tmp[i];
+    }
+    return s;
+}
+
+static inline bool runtime_has_avx512_gated_fusion() {
+#if defined(_MSC_VER) && defined(__AVX512F__)
+    int regs[4] = {0, 0, 0, 0};
+    __cpuidex(regs, 1, 0);
+    const bool osxsave = (regs[2] & (1 << 27)) != 0;
+    if (!osxsave) {
+        return false;
+    }
+
+    const unsigned long long xcr0 = _xgetbv(0);
+    const unsigned long long xmm_ymm_ok = ((xcr0 & 0x6u) == 0x6u);
+    const unsigned long long zmm_ok = ((xcr0 & 0xE0u) == 0xE0u);
+    if (!(xmm_ymm_ok && zmm_ok)) {
+        return false;
+    }
+
+    __cpuidex(regs, 7, 0);
+    const bool avx512f = (regs[1] & (1 << 16)) != 0;
+    const bool avx512dq = (regs[1] & (1 << 17)) != 0;
+    const bool avx512bw = (regs[1] & (1 << 30)) != 0;
+    const bool avx512vl = (regs[1] & (1 << 31)) != 0;
+    return avx512f && avx512dq && avx512bw && avx512vl;
+#else
+    return false;
+#endif
 }
 
 // --- Helper: Fast approximate exp for 8 floats (Schraudolph-style + polynomial) ---
@@ -176,11 +216,53 @@ static inline void unpack_q4_0_to_4x8f(const uint8_t* qs,
     w3 = _mm256_cvtepi32_ps(g3_lo);
 }
 
+#if defined(__AVX512F__) && defined(__AVX512BW__)
+// AVX-512 lane fusion: same unpack semantics as AVX2 helper, but outputs 2x16 float lanes.
+static inline void unpack_q4_0_to_2x16f_avx512(const uint8_t* qs,
+                                                __m512& w01,
+                                                __m512& w23) {
+    __m128i raw = _mm_loadu_si128((const __m128i*)qs);
+    const __m128i mask_lo = _mm_set1_epi8(0x0F);
+    __m128i lo_nibbles = _mm_and_si128(raw, mask_lo);
+    __m128i hi_nibbles = _mm_and_si128(_mm_srli_epi16(raw, 4), mask_lo);
+
+    __m128i interleaved_lo = _mm_unpacklo_epi8(lo_nibbles, hi_nibbles); // weights 0..15
+    __m128i interleaved_hi = _mm_unpackhi_epi8(lo_nibbles, hi_nibbles); // weights 16..31
+
+    __m512i i01 = _mm512_cvtepu8_epi32(interleaved_lo);
+    __m512i i23 = _mm512_cvtepu8_epi32(interleaved_hi);
+    w01 = _mm512_cvtepi32_ps(i01);
+    w23 = _mm512_cvtepi32_ps(i23);
+}
+
+static inline void accumulate_q4_0_block_avx512(const block_q4_0& block,
+                                                const float* xp,
+                                                __m512& acc01,
+                                                __m512& acc23) {
+    const __m512 vd = _mm512_set1_ps(fp16_to_fp32(block.d));
+    const __m512 zp = _mm512_set1_ps(8.0f);
+
+    __m512 fw01;
+    __m512 fw23;
+    unpack_q4_0_to_2x16f_avx512(block.qs, fw01, fw23);
+
+    fw01 = _mm512_mul_ps(_mm512_sub_ps(fw01, zp), vd);
+    fw23 = _mm512_mul_ps(_mm512_sub_ps(fw23, zp), vd);
+
+    const __m512 x01 = _mm512_loadu_ps(xp);
+    const __m512 x23 = _mm512_loadu_ps(xp + 16);
+
+    acc01 = _mm512_fmadd_ps(fw01, x01, acc01);
+    acc23 = _mm512_fmadd_ps(fw23, x23, acc23);
+}
+#endif
+
 void InferenceKernels::matmul_q4_0_fused(const float* x, const block_q4_0* w, float* y,
                        int n, int m, int k) {
     // x[n, k] * w[m, k] → y[n, m]
     // w is quantized as Q4_0 blocks: k/32 blocks per row of m
     const int blocks_per_row = k / 32;
+    static const bool use_avx512_gated_fusion = runtime_has_avx512_gated_fusion();
     
     #pragma omp parallel for schedule(static)
     for (int row = 0; row < n; row++) {
@@ -188,56 +270,110 @@ void InferenceKernels::matmul_q4_0_fused(const float* x, const block_q4_0* w, fl
         
         for (int col = 0; col < m; col++) {
             const block_q4_0* w_row = w + col * blocks_per_row;
-            
-            __m256 acc0 = _mm256_setzero_ps();
-            __m256 acc1 = _mm256_setzero_ps();
-            __m256 acc2 = _mm256_setzero_ps();
-            __m256 acc3 = _mm256_setzero_ps();
-            
-            for (int b = 0; b < blocks_per_row; b++) {
-                // Prefetch next block's weight data and activation chunk
-                if (b + 1 < blocks_per_row) {
-                    _mm_prefetch((const char*)&w_row[b + 1], _MM_HINT_T0);
-                    _mm_prefetch((const char*)(x_row + (b + 1) * 32), _MM_HINT_T0);
-                    _mm_prefetch((const char*)(x_row + (b + 1) * 32 + 16), _MM_HINT_T0);
+#if defined(__AVX512F__) && defined(__AVX512BW__)
+            if (use_avx512_gated_fusion) {
+                __m512 acc01_0 = _mm512_setzero_ps();
+                __m512 acc23_0 = _mm512_setzero_ps();
+                __m512 acc01_1 = _mm512_setzero_ps();
+                __m512 acc23_1 = _mm512_setzero_ps();
+                __m512 acc01_2 = _mm512_setzero_ps();
+                __m512 acc23_2 = _mm512_setzero_ps();
+                __m512 acc01_3 = _mm512_setzero_ps();
+                __m512 acc23_3 = _mm512_setzero_ps();
+                __m512 acc01_4 = _mm512_setzero_ps();
+                __m512 acc23_4 = _mm512_setzero_ps();
+                __m512 acc01_5 = _mm512_setzero_ps();
+                __m512 acc23_5 = _mm512_setzero_ps();
+                __m512 acc01_6 = _mm512_setzero_ps();
+                __m512 acc23_6 = _mm512_setzero_ps();
+                __m512 acc01_7 = _mm512_setzero_ps();
+                __m512 acc23_7 = _mm512_setzero_ps();
+
+                int b = 0;
+                for (; b + 7 < blocks_per_row; b += 8) {
+                    if (b + 8 < blocks_per_row) {
+                        _mm_prefetch((const char*)&w_row[b + 8], _MM_HINT_T0);
+                        _mm_prefetch((const char*)(x_row + (b + 8) * 32), _MM_HINT_T0);
+                        _mm_prefetch((const char*)(x_row + (b + 8) * 32 + 16), _MM_HINT_T0);
+                    }
+
+                    accumulate_q4_0_block_avx512(w_row[b + 0], x_row + (b + 0) * 32, acc01_0, acc23_0);
+                    accumulate_q4_0_block_avx512(w_row[b + 1], x_row + (b + 1) * 32, acc01_1, acc23_1);
+                    accumulate_q4_0_block_avx512(w_row[b + 2], x_row + (b + 2) * 32, acc01_2, acc23_2);
+                    accumulate_q4_0_block_avx512(w_row[b + 3], x_row + (b + 3) * 32, acc01_3, acc23_3);
+                    accumulate_q4_0_block_avx512(w_row[b + 4], x_row + (b + 4) * 32, acc01_4, acc23_4);
+                    accumulate_q4_0_block_avx512(w_row[b + 5], x_row + (b + 5) * 32, acc01_5, acc23_5);
+                    accumulate_q4_0_block_avx512(w_row[b + 6], x_row + (b + 6) * 32, acc01_6, acc23_6);
+                    accumulate_q4_0_block_avx512(w_row[b + 7], x_row + (b + 7) * 32, acc01_7, acc23_7);
                 }
+
+                for (; b < blocks_per_row; ++b) {
+                    if (b + 1 < blocks_per_row) {
+                        _mm_prefetch((const char*)&w_row[b + 1], _MM_HINT_T0);
+                        _mm_prefetch((const char*)(x_row + (b + 1) * 32), _MM_HINT_T0);
+                        _mm_prefetch((const char*)(x_row + (b + 1) * 32 + 16), _MM_HINT_T0);
+                    }
+                    accumulate_q4_0_block_avx512(w_row[b], x_row + b * 32, acc01_0, acc23_0);
+                }
+
+                __m512 total01 = _mm512_add_ps(_mm512_add_ps(acc01_0, acc01_1), _mm512_add_ps(acc01_2, acc01_3));
+                total01 = _mm512_add_ps(total01, _mm512_add_ps(_mm512_add_ps(acc01_4, acc01_5), _mm512_add_ps(acc01_6, acc01_7)));
+
+                __m512 total23 = _mm512_add_ps(_mm512_add_ps(acc23_0, acc23_1), _mm512_add_ps(acc23_2, acc23_3));
+                total23 = _mm512_add_ps(total23, _mm512_add_ps(_mm512_add_ps(acc23_4, acc23_5), _mm512_add_ps(acc23_6, acc23_7)));
+
+                y[row * m + col] = hsum_avx512(_mm512_add_ps(total01, total23));
+                continue;
+            } else
+#endif
+            {
+                __m256 acc0 = _mm256_setzero_ps();
+                __m256 acc1 = _mm256_setzero_ps();
+                __m256 acc2 = _mm256_setzero_ps();
+                __m256 acc3 = _mm256_setzero_ps();
+
+                for (int b = 0; b < blocks_per_row; b++) {
+                // Prefetch next block's weight data and activation chunk
+                    if (b + 1 < blocks_per_row) {
+                        _mm_prefetch((const char*)&w_row[b + 1], _MM_HINT_T0);
+                        _mm_prefetch((const char*)(x_row + (b + 1) * 32), _MM_HINT_T0);
+                        _mm_prefetch((const char*)(x_row + (b + 1) * 32 + 16), _MM_HINT_T0);
+                    }
                 
-                // 1. Load and convert FP16 scale to FP32
-                float d_val = fp16_to_fp32(w_row[b].d);
-                __m256 vd = _mm256_set1_ps(d_val);
-                const __m256 zp = _mm256_set1_ps(8.0f);
+                    // 1. Load and convert FP16 scale to FP32
+                    float d_val = fp16_to_fp32(w_row[b].d);
                 
-                // 2. Pure-integer AVX2 nibble unpack: 16 bytes → 4x __m256 float
-                //    No scalar loop, no alignas(32) float[32] temporary
-                const uint8_t* qs = w_row[b].qs;
-                const float* xp = x_row + b * 32;
-                
-                __m256 fw0, fw1, fw2, fw3;
-                unpack_q4_0_to_4x8f(qs, fw0, fw1, fw2, fw3);
-                
-                // Subtract zero-point and multiply by scale: w = (nibble - 8) * d
-                fw0 = _mm256_mul_ps(_mm256_sub_ps(fw0, zp), vd);
-                fw1 = _mm256_mul_ps(_mm256_sub_ps(fw1, zp), vd);
-                fw2 = _mm256_mul_ps(_mm256_sub_ps(fw2, zp), vd);
-                fw3 = _mm256_mul_ps(_mm256_sub_ps(fw3, zp), vd);
-                
-                // Load activations and FMA
-                __m256 x0 = _mm256_loadu_ps(xp);
-                __m256 x1 = _mm256_loadu_ps(xp + 8);
-                __m256 x2 = _mm256_loadu_ps(xp + 16);
-                __m256 x3 = _mm256_loadu_ps(xp + 24);
-                
-                acc0 = _mm256_fmadd_ps(fw0, x0, acc0);
-                acc1 = _mm256_fmadd_ps(fw1, x1, acc1);
-                acc2 = _mm256_fmadd_ps(fw2, x2, acc2);
-                acc3 = _mm256_fmadd_ps(fw3, x3, acc3);
+                    const uint8_t* qs = w_row[b].qs;
+                    const float* xp = x_row + b * 32;
+                    {
+                        __m256 vd = _mm256_set1_ps(d_val);
+                        const __m256 zp = _mm256_set1_ps(8.0f);
+
+                        __m256 fw0, fw1, fw2, fw3;
+                        unpack_q4_0_to_4x8f(qs, fw0, fw1, fw2, fw3);
+
+                        fw0 = _mm256_mul_ps(_mm256_sub_ps(fw0, zp), vd);
+                        fw1 = _mm256_mul_ps(_mm256_sub_ps(fw1, zp), vd);
+                        fw2 = _mm256_mul_ps(_mm256_sub_ps(fw2, zp), vd);
+                        fw3 = _mm256_mul_ps(_mm256_sub_ps(fw3, zp), vd);
+
+                        __m256 x0 = _mm256_loadu_ps(xp);
+                        __m256 x1 = _mm256_loadu_ps(xp + 8);
+                        __m256 x2 = _mm256_loadu_ps(xp + 16);
+                        __m256 x3 = _mm256_loadu_ps(xp + 24);
+
+                        acc0 = _mm256_fmadd_ps(fw0, x0, acc0);
+                        acc1 = _mm256_fmadd_ps(fw1, x1, acc1);
+                        acc2 = _mm256_fmadd_ps(fw2, x2, acc2);
+                        acc3 = _mm256_fmadd_ps(fw3, x3, acc3);
+                    }
+                }
+
+                __m256 sum01 = _mm256_add_ps(acc0, acc1);
+                __m256 sum23 = _mm256_add_ps(acc2, acc3);
+                __m256 total = _mm256_add_ps(sum01, sum23);
+                y[row * m + col] = hsum_avx(total);
             }
-            
-            // Horizontal sum of all 4 accumulators
-            __m256 sum01 = _mm256_add_ps(acc0, acc1);
-            __m256 sum23 = _mm256_add_ps(acc2, acc3);
-            __m256 total = _mm256_add_ps(sum01, sum23);
-            y[row * m + col] = hsum_avx(total);
         }
     }
 }

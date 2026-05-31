@@ -33,7 +33,7 @@
 //   - Refusal:       Rephrase to avoid trigger
 //   - FormatViolation: Add explicit format instructions
 //   - InfiniteLoop:  Reduce token count + termination instruction
-//   - QualityDegradation: Request higher quality with examples
+//   - QualityDegradation: Request higher quality
 //   - EmptyResponse: Simplify the prompt
 //   - SafetyViolation: Reframe as technical context
 //

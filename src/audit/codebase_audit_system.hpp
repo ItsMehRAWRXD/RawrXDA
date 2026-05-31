@@ -1,8 +1,5 @@
 #pragma once
-// SCAFFOLD_186: Audit detect stubs and report
-// SCAFFOLD_206: Audit log immutable checksum
-// SCAFFOLD_325: Stub vs production wording sweep
-// SCAFFOLD_352: SOURCE_CODE_AUDIT Phase 2
+// Codebase Audit System - Detects stubs, security issues, and code quality
 // Pure x64 MASM implementation: src/asm/RawrXD_CodebaseAuditSystem.asm
 
 #include <atomic>

@@ -594,7 +594,7 @@ void Win32IDE::cmdCrashShow() {
         return;
     }
 
-    // If no current crash, generate a demo
+    // If no current crash, generate sample
     if (s_currentCrash.timestamp.empty()) {
         s_currentCrash.timestamp     = getTimestampString();
         s_currentCrash.exceptionType = "DEMO — No real crash";

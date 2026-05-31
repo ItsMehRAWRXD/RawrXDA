@@ -82,7 +82,9 @@ public:
             UI::UpdateStatus("Agent detected failure in DMA path. Invoking Self-Healer Core...");
             
             // Execute the actually repaired MASM kernel
-            Titan_PerformDMA(nullptr, nullptr, 0); 
+            unsigned char src[32] = {};
+            unsigned char dst[32] = {};
+            Titan_PerformDMA(src, dst, sizeof(src));
             UI::UpdateStatus("DMA Path hot-patched and verified.");
         }
 

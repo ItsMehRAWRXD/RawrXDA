@@ -1,0 +1,1952 @@
+{
+  "timestamp": "2026-04-25T21:44:14.847965+00:00",
+  "config": {
+    "max_size_b": 70,
+    "step_b": 21,
+    "quantizations": [
+      "q8",
+      "q4",
+      "q2"
+    ],
+    "methods": [
+      "gguf_loader_whole_zone",
+      "streaming_zone_disk",
+      "mapped_window_streamer",
+      "streaming_zone_mmap_fallback",
+      "chunked_file_loader",
+      "iouring_zone_loader"
+    ],
+    "activation_size_b": 70,
+    "activation_quant": "q4",
+    "total_measurements": 72
+  },
+  "results": [
+    {
+      "model_size_b": 7,
+      "quantization": "q8",
+      "method": "gguf_loader_whole_zone",
+      "method_label": "GGUFLoader whole-zone",
+      "predicted_tps": 28.5,
+      "measured_tps": 28.32,
+      "scaling_factor": 1.0,
+      "efficiency": 4.046,
+      "approx_load_ms": 577.5,
+      "method_working_set_gb": 1.2
+    },
+    {
+      "model_size_b": 28,
+      "quantization": "q8",
+      "method": "gguf_loader_whole_zone",
+      "method_label": "GGUFLoader whole-zone",
+      "predicted_tps": 21.09,
+      "measured_tps": 21.07,
+      "scaling_factor": 0.74,
+      "efficiency": 0.753,
+      "approx_load_ms": 2310.0,
+      "method_working_set_gb": 1.2
+    },
+    {
+      "model_size_b": 49,
+      "quantization": "q8",
+      "method": "gguf_loader_whole_zone",
+      "method_label": "GGUFLoader whole-zone",
+      "predicted_tps": 15.46,
+      "measured_tps": 15.28,
+      "scaling_factor": 0.542,
+      "efficiency": 0.312,
+      "approx_load_ms": 4042.5,
+      "method_working_set_gb": 1.2
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q8",
+      "method": "gguf_loader_whole_zone",
+      "method_label": "GGUFLoader whole-zone",
+      "predicted_tps": 9.97,
+      "measured_tps": 9.85,
+      "scaling_factor": 0.35,
+      "efficiency": 0.141,
+      "approx_load_ms": 5775.0,
+      "method_working_set_gb": 1.2
+    },
+    {
+      "model_size_b": 7,
+      "quantization": "q8",
+      "method": "streaming_zone_disk",
+      "method_label": "StreamingGGUF zone from disk",
+      "predicted_tps": 26.51,
+      "measured_tps": 26.66,
+      "scaling_factor": 1.0,
+      "efficiency": 3.808,
+      "approx_load_ms": 420.0,
+      "method_working_set_gb": 0.9
+    },
+    {
+      "model_size_b": 28,
+      "quantization": "q8",
+      "method": "streaming_zone_disk",
+      "method_label": "StreamingGGUF zone from disk",
+      "predicted_tps": 19.61,
+      "measured_tps": 19.81,
+      "scaling_factor": 0.74,
+      "efficiency": 0.707,
+      "approx_load_ms": 1680.0,
+      "method_working_set_gb": 0.9
+    },
+    {
+      "model_size_b": 49,
+      "quantization": "q8",
+      "method": "streaming_zone_disk",
+      "method_label": "StreamingGGUF zone from disk",
+      "predicted_tps": 14.38,
+      "measured_tps": 14.43,
+      "scaling_factor": 0.542,
+      "efficiency": 0.295,
+      "approx_load_ms": 2940.0,
+      "method_working_set_gb": 0.9
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q8",
+      "method": "streaming_zone_disk",
+      "method_label": "StreamingGGUF zone from disk",
+      "predicted_tps": 9.28,
+      "measured_tps": 9.26,
+      "scaling_factor": 0.35,
+      "efficiency": 0.132,
+      "approx_load_ms": 4200.0,
+      "method_working_set_gb": 0.9
+    },
+    {
+      "model_size_b": 7,
+      "quantization": "q8",
+      "method": "mapped_window_streamer",
+      "method_label": "MappedWindowStreamer (MapViewOfFile)",
+      "predicted_tps": 25.65,
+      "measured_tps": 26.0,
+      "scaling_factor": 1.0,
+      "efficiency": 3.715,
+      "approx_load_ms": 273.0,
+      "method_working_set_gb": 0.3
+    },
+    {
+      "model_size_b": 28,
+      "quantization": "q8",
+      "method": "mapped_window_streamer",
+      "method_label": "MappedWindowStreamer (MapViewOfFile)",
+      "predicted_tps": 18.98,
+      "measured_tps": 18.81,
+      "scaling_factor": 0.74,
+      "efficiency": 0.672,
+      "approx_load_ms": 1092.0,
+      "method_working_set_gb": 0.3
+    },
+    {
+      "model_size_b": 49,
+      "quantization": "q8",
+      "method": "mapped_window_streamer",
+      "method_label": "MappedWindowStreamer (MapViewOfFile)",
+      "predicted_tps": 13.92,
+      "measured_tps": 13.98,
+      "scaling_factor": 0.542,
+      "efficiency": 0.285,
+      "approx_load_ms": 1911.0,
+      "method_working_set_gb": 0.3
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q8",
+      "method": "mapped_window_streamer",
+      "method_label": "MappedWindowStreamer (MapViewOfFile)",
+      "predicted_tps": 8.98,
+      "measured_tps": 8.81,
+      "scaling_factor": 0.35,
+      "efficiency": 0.126,
+      "approx_load_ms": 2730.0,
+      "method_working_set_gb": 0.3
+    },
+    {
+      "model_size_b": 7,
+      "quantization": "q8",
+      "method": "streaming_zone_mmap_fallback",
+      "method_label": "StreamingGGUF LoadZoneMapped fallback",
+      "predicted_tps": 25.08,
+      "measured_tps": 25.36,
+      "scaling_factor": 1.0,
+      "efficiency": 3.622,
+      "approx_load_ms": 294.0,
+      "method_working_set_gb": 0.35
+    },
+    {
+      "model_size_b": 28,
+      "quantization": "q8",
+      "method": "streaming_zone_mmap_fallback",
+      "method_label": "StreamingGGUF LoadZoneMapped fallback",
+      "predicted_tps": 18.56,
+      "measured_tps": 18.88,
+      "scaling_factor": 0.74,
+      "efficiency": 0.674,
+      "approx_load_ms": 1176.0,
+      "method_working_set_gb": 0.35
+    },
+    {
+      "model_size_b": 49,
+      "quantization": "q8",
+      "method": "streaming_zone_mmap_fallback",
+      "method_label": "StreamingGGUF LoadZoneMapped fallback",
+      "predicted_tps": 13.61,
+      "measured_tps": 13.69,
+      "scaling_factor": 0.542,
+      "efficiency": 0.279,
+      "approx_load_ms": 2058.0,
+      "method_working_set_gb": 0.35
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q8",
+      "method": "streaming_zone_mmap_fallback",
+      "method_label": "StreamingGGUF LoadZoneMapped fallback",
+      "predicted_tps": 8.78,
+      "measured_tps": 8.68,
+      "scaling_factor": 0.35,
+      "efficiency": 0.124,
+      "approx_load_ms": 2940.0,
+      "method_working_set_gb": 0.35
+    },
+    {
+      "model_size_b": 7,
+      "quantization": "q8",
+      "method": "chunked_file_loader",
+      "method_label": "ChunkedFileLoader/GGUFChunkedLoader",
+      "predicted_tps": 27.07,
+      "measured_tps": 26.96,
+      "scaling_factor": 1.0,
+      "efficiency": 3.852,
+      "approx_load_ms": 357.0,
+      "method_working_set_gb": 0.6
+    },
+    {
+      "model_size_b": 28,
+      "quantization": "q8",
+      "method": "chunked_file_loader",
+      "method_label": "ChunkedFileLoader/GGUFChunkedLoader",
+      "predicted_tps": 20.04,
+      "measured_tps": 19.99,
+      "scaling_factor": 0.74,
+      "efficiency": 0.714,
+      "approx_load_ms": 1428.0,
+      "method_working_set_gb": 0.6
+    },
+    {
+      "model_size_b": 49,
+      "quantization": "q8",
+      "method": "chunked_file_loader",
+      "method_label": "ChunkedFileLoader/GGUFChunkedLoader",
+      "predicted_tps": 14.69,
+      "measured_tps": 14.79,
+      "scaling_factor": 0.542,
+      "efficiency": 0.302,
+      "approx_load_ms": 2499.0,
+      "method_working_set_gb": 0.6
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q8",
+      "method": "chunked_file_loader",
+      "method_label": "ChunkedFileLoader/GGUFChunkedLoader",
+      "predicted_tps": 9.48,
+      "measured_tps": 9.59,
+      "scaling_factor": 0.35,
+      "efficiency": 0.137,
+      "approx_load_ms": 3570.0,
+      "method_working_set_gb": 0.6
+    },
+    {
+      "model_size_b": 7,
+      "quantization": "q8",
+      "method": "iouring_zone_loader",
+      "method_label": "IORingZoneLoader",
+      "predicted_tps": 30.5,
+      "measured_tps": 30.6,
+      "scaling_factor": 1.0,
+      "efficiency": 4.372,
+      "approx_load_ms": 231.0,
+      "method_working_set_gb": 0.45
+    },
+    {
+      "model_size_b": 28,
+      "quantization": "q8",
+      "method": "iouring_zone_loader",
+      "method_label": "IORingZoneLoader",
+      "predicted_tps": 22.57,
+      "measured_tps": 22.55,
+      "scaling_factor": 0.74,
+      "efficiency": 0.805,
+      "approx_load_ms": 924.0,
+      "method_working_set_gb": 0.45
+    },
+    {
+      "model_size_b": 49,
+      "quantization": "q8",
+      "method": "iouring_zone_loader",
+      "method_label": "IORingZoneLoader",
+      "predicted_tps": 16.54,
+      "measured_tps": 16.87,
+      "scaling_factor": 0.542,
+      "efficiency": 0.344,
+      "approx_load_ms": 1617.0,
+      "method_working_set_gb": 0.45
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q8",
+      "method": "iouring_zone_loader",
+      "method_label": "IORingZoneLoader",
+      "predicted_tps": 10.67,
+      "measured_tps": 10.55,
+      "scaling_factor": 0.35,
+      "efficiency": 0.151,
+      "approx_load_ms": 2310.0,
+      "method_working_set_gb": 0.45
+    },
+    {
+      "model_size_b": 7,
+      "quantization": "q4",
+      "method": "gguf_loader_whole_zone",
+      "method_label": "GGUFLoader whole-zone",
+      "predicted_tps": 89.2,
+      "measured_tps": 88.59,
+      "scaling_factor": 1.0,
+      "efficiency": 12.655,
+      "approx_load_ms": 577.5,
+      "method_working_set_gb": 1.2
+    },
+    {
+      "model_size_b": 28,
+      "quantization": "q4",
+      "method": "gguf_loader_whole_zone",
+      "method_label": "GGUFLoader whole-zone",
+      "predicted_tps": 66.01,
+      "measured_tps": 67.16,
+      "scaling_factor": 0.74,
+      "efficiency": 2.398,
+      "approx_load_ms": 2310.0,
+      "method_working_set_gb": 1.2
+    },
+    {
+      "model_size_b": 49,
+      "quantization": "q4",
+      "method": "gguf_loader_whole_zone",
+      "method_label": "GGUFLoader whole-zone",
+      "predicted_tps": 48.39,
+      "measured_tps": 47.76,
+      "scaling_factor": 0.542,
+      "efficiency": 0.975,
+      "approx_load_ms": 4042.5,
+      "method_working_set_gb": 1.2
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "method": "gguf_loader_whole_zone",
+      "method_label": "GGUFLoader whole-zone",
+      "predicted_tps": 31.22,
+      "measured_tps": 31.59,
+      "scaling_factor": 0.35,
+      "efficiency": 0.451,
+      "approx_load_ms": 5775.0,
+      "method_working_set_gb": 1.2
+    },
+    {
+      "model_size_b": 7,
+      "quantization": "q4",
+      "method": "streaming_zone_disk",
+      "method_label": "StreamingGGUF zone from disk",
+      "predicted_tps": 82.96,
+      "measured_tps": 84.55,
+      "scaling_factor": 1.0,
+      "efficiency": 12.079,
+      "approx_load_ms": 420.0,
+      "method_working_set_gb": 0.9
+    },
+    {
+      "model_size_b": 28,
+      "quantization": "q4",
+      "method": "streaming_zone_disk",
+      "method_label": "StreamingGGUF zone from disk",
+      "predicted_tps": 61.39,
+      "measured_tps": 61.23,
+      "scaling_factor": 0.74,
+      "efficiency": 2.187,
+      "approx_load_ms": 1680.0,
+      "method_working_set_gb": 0.9
+    },
+    {
+      "model_size_b": 49,
+      "quantization": "q4",
+      "method": "streaming_zone_disk",
+      "method_label": "StreamingGGUF zone from disk",
+      "predicted_tps": 45.0,
+      "measured_tps": 44.63,
+      "scaling_factor": 0.542,
+      "efficiency": 0.911,
+      "approx_load_ms": 2940.0,
+      "method_working_set_gb": 0.9
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "method": "streaming_zone_disk",
+      "method_label": "StreamingGGUF zone from disk",
+      "predicted_tps": 29.03,
+      "measured_tps": 29.53,
+      "scaling_factor": 0.35,
+      "efficiency": 0.422,
+      "approx_load_ms": 4200.0,
+      "method_working_set_gb": 0.9
+    },
+    {
+      "model_size_b": 7,
+      "quantization": "q4",
+      "method": "mapped_window_streamer",
+      "method_label": "MappedWindowStreamer (MapViewOfFile)",
+      "predicted_tps": 80.28,
+      "measured_tps": 78.71,
+      "scaling_factor": 1.0,
+      "efficiency": 11.244,
+      "approx_load_ms": 273.0,
+      "method_working_set_gb": 0.3
+    },
+    {
+      "model_size_b": 28,
+      "quantization": "q4",
+      "method": "mapped_window_streamer",
+      "method_label": "MappedWindowStreamer (MapViewOfFile)",
+      "predicted_tps": 59.41,
+      "measured_tps": 59.02,
+      "scaling_factor": 0.74,
+      "efficiency": 2.108,
+      "approx_load_ms": 1092.0,
+      "method_working_set_gb": 0.3
+    },
+    {
+      "model_size_b": 49,
+      "quantization": "q4",
+      "method": "mapped_window_streamer",
+      "method_label": "MappedWindowStreamer (MapViewOfFile)",
+      "predicted_tps": 43.55,
+      "measured_tps": 43.74,
+      "scaling_factor": 0.542,
+      "efficiency": 0.893,
+      "approx_load_ms": 1911.0,
+      "method_working_set_gb": 0.3
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "method": "mapped_window_streamer",
+      "method_label": "MappedWindowStreamer (MapViewOfFile)",
+      "predicted_tps": 28.1,
+      "measured_tps": 27.98,
+      "scaling_factor": 0.35,
+      "efficiency": 0.4,
+      "approx_load_ms": 2730.0,
+      "method_working_set_gb": 0.3
+    },
+    {
+      "model_size_b": 7,
+      "quantization": "q4",
+      "method": "streaming_zone_mmap_fallback",
+      "method_label": "StreamingGGUF LoadZoneMapped fallback",
+      "predicted_tps": 78.5,
+      "measured_tps": 78.42,
+      "scaling_factor": 1.0,
+      "efficiency": 11.203,
+      "approx_load_ms": 294.0,
+      "method_working_set_gb": 0.35
+    },
+    {
+      "model_size_b": 28,
+      "quantization": "q4",
+      "method": "streaming_zone_mmap_fallback",
+      "method_label": "StreamingGGUF LoadZoneMapped fallback",
+      "predicted_tps": 58.09,
+      "measured_tps": 57.05,
+      "scaling_factor": 0.74,
+      "efficiency": 2.037,
+      "approx_load_ms": 1176.0,
+      "method_working_set_gb": 0.35
+    },
+    {
+      "model_size_b": 49,
+      "quantization": "q4",
+      "method": "streaming_zone_mmap_fallback",
+      "method_label": "StreamingGGUF LoadZoneMapped fallback",
+      "predicted_tps": 42.58,
+      "measured_tps": 42.13,
+      "scaling_factor": 0.542,
+      "efficiency": 0.86,
+      "approx_load_ms": 2058.0,
+      "method_working_set_gb": 0.35
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "method": "streaming_zone_mmap_fallback",
+      "method_label": "StreamingGGUF LoadZoneMapped fallback",
+      "predicted_tps": 27.47,
+      "measured_tps": 27.98,
+      "scaling_factor": 0.35,
+      "efficiency": 0.4,
+      "approx_load_ms": 2940.0,
+      "method_working_set_gb": 0.35
+    },
+    {
+      "model_size_b": 7,
+      "quantization": "q4",
+      "method": "chunked_file_loader",
+      "method_label": "ChunkedFileLoader/GGUFChunkedLoader",
+      "predicted_tps": 84.74,
+      "measured_tps": 83.42,
+      "scaling_factor": 1.0,
+      "efficiency": 11.917,
+      "approx_load_ms": 357.0,
+      "method_working_set_gb": 0.6
+    },
+    {
+      "model_size_b": 28,
+      "quantization": "q4",
+      "method": "chunked_file_loader",
+      "method_label": "ChunkedFileLoader/GGUFChunkedLoader",
+      "predicted_tps": 62.71,
+      "measured_tps": 63.03,
+      "scaling_factor": 0.74,
+      "efficiency": 2.251,
+      "approx_load_ms": 1428.0,
+      "method_working_set_gb": 0.6
+    },
+    {
+      "model_size_b": 49,
+      "quantization": "q4",
+      "method": "chunked_file_loader",
+      "method_label": "ChunkedFileLoader/GGUFChunkedLoader",
+      "predicted_tps": 45.97,
+      "measured_tps": 46.83,
+      "scaling_factor": 0.542,
+      "efficiency": 0.956,
+      "approx_load_ms": 2499.0,
+      "method_working_set_gb": 0.6
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "method": "chunked_file_loader",
+      "method_label": "ChunkedFileLoader/GGUFChunkedLoader",
+      "predicted_tps": 29.66,
+      "measured_tps": 29.25,
+      "scaling_factor": 0.35,
+      "efficiency": 0.418,
+      "approx_load_ms": 3570.0,
+      "method_working_set_gb": 0.6
+    },
+    {
+      "model_size_b": 7,
+      "quantization": "q4",
+      "method": "iouring_zone_loader",
+      "method_label": "IORingZoneLoader",
+      "predicted_tps": 95.44,
+      "measured_tps": 97.27,
+      "scaling_factor": 1.0,
+      "efficiency": 13.896,
+      "approx_load_ms": 231.0,
+      "method_working_set_gb": 0.45
+    },
+    {
+      "model_size_b": 28,
+      "quantization": "q4",
+      "method": "iouring_zone_loader",
+      "method_label": "IORingZoneLoader",
+      "predicted_tps": 70.63,
+      "measured_tps": 71.81,
+      "scaling_factor": 0.74,
+      "efficiency": 2.565,
+      "approx_load_ms": 924.0,
+      "method_working_set_gb": 0.45
+    },
+    {
+      "model_size_b": 49,
+      "quantization": "q4",
+      "method": "iouring_zone_loader",
+      "method_label": "IORingZoneLoader",
+      "predicted_tps": 51.78,
+      "measured_tps": 51.24,
+      "scaling_factor": 0.542,
+      "efficiency": 1.046,
+      "approx_load_ms": 1617.0,
+      "method_working_set_gb": 0.45
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "method": "iouring_zone_loader",
+      "method_label": "IORingZoneLoader",
+      "predicted_tps": 33.41,
+      "measured_tps": 32.99,
+      "scaling_factor": 0.35,
+      "efficiency": 0.471,
+      "approx_load_ms": 2310.0,
+      "method_working_set_gb": 0.45
+    },
+    {
+      "model_size_b": 7,
+      "quantization": "q2",
+      "method": "gguf_loader_whole_zone",
+      "method_label": "GGUFLoader whole-zone",
+      "predicted_tps": 185.3,
+      "measured_tps": 182.49,
+      "scaling_factor": 1.0,
+      "efficiency": 26.069,
+      "approx_load_ms": 577.5,
+      "method_working_set_gb": 1.2
+    },
+    {
+      "model_size_b": 28,
+      "quantization": "q2",
+      "method": "gguf_loader_whole_zone",
+      "method_label": "GGUFLoader whole-zone",
+      "predicted_tps": 137.12,
+      "measured_tps": 135.87,
+      "scaling_factor": 0.74,
+      "efficiency": 4.852,
+      "approx_load_ms": 2310.0,
+      "method_working_set_gb": 1.2
+    },
+    {
+      "model_size_b": 49,
+      "quantization": "q2",
+      "method": "gguf_loader_whole_zone",
+      "method_label": "GGUFLoader whole-zone",
+      "predicted_tps": 100.53,
+      "measured_tps": 102.38,
+      "scaling_factor": 0.542,
+      "efficiency": 2.089,
+      "approx_load_ms": 4042.5,
+      "method_working_set_gb": 1.2
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q2",
+      "method": "gguf_loader_whole_zone",
+      "method_label": "GGUFLoader whole-zone",
+      "predicted_tps": 64.86,
+      "measured_tps": 64.77,
+      "scaling_factor": 0.35,
+      "efficiency": 0.925,
+      "approx_load_ms": 5775.0,
+      "method_working_set_gb": 1.2
+    },
+    {
+      "model_size_b": 7,
+      "quantization": "q2",
+      "method": "streaming_zone_disk",
+      "method_label": "StreamingGGUF zone from disk",
+      "predicted_tps": 172.33,
+      "measured_tps": 171.48,
+      "scaling_factor": 1.0,
+      "efficiency": 24.498,
+      "approx_load_ms": 420.0,
+      "method_working_set_gb": 0.9
+    },
+    {
+      "model_size_b": 28,
+      "quantization": "q2",
+      "method": "streaming_zone_disk",
+      "method_label": "StreamingGGUF zone from disk",
+      "predicted_tps": 127.52,
+      "measured_tps": 126.9,
+      "scaling_factor": 0.74,
+      "efficiency": 4.532,
+      "approx_load_ms": 1680.0,
+      "method_working_set_gb": 0.9
+    },
+    {
+      "model_size_b": 49,
+      "quantization": "q2",
+      "method": "streaming_zone_disk",
+      "method_label": "StreamingGGUF zone from disk",
+      "predicted_tps": 93.49,
+      "measured_tps": 92.41,
+      "scaling_factor": 0.542,
+      "efficiency": 1.886,
+      "approx_load_ms": 2940.0,
+      "method_working_set_gb": 0.9
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q2",
+      "method": "streaming_zone_disk",
+      "method_label": "StreamingGGUF zone from disk",
+      "predicted_tps": 60.32,
+      "measured_tps": 60.38,
+      "scaling_factor": 0.35,
+      "efficiency": 0.863,
+      "approx_load_ms": 4200.0,
+      "method_working_set_gb": 0.9
+    },
+    {
+      "model_size_b": 7,
+      "quantization": "q2",
+      "method": "mapped_window_streamer",
+      "method_label": "MappedWindowStreamer (MapViewOfFile)",
+      "predicted_tps": 166.77,
+      "measured_tps": 164.6,
+      "scaling_factor": 1.0,
+      "efficiency": 23.514,
+      "approx_load_ms": 273.0,
+      "method_working_set_gb": 0.3
+    },
+    {
+      "model_size_b": 28,
+      "quantization": "q2",
+      "method": "mapped_window_streamer",
+      "method_label": "MappedWindowStreamer (MapViewOfFile)",
+      "predicted_tps": 123.41,
+      "measured_tps": 124.72,
+      "scaling_factor": 0.74,
+      "efficiency": 4.454,
+      "approx_load_ms": 1092.0,
+      "method_working_set_gb": 0.3
+    },
+    {
+      "model_size_b": 49,
+      "quantization": "q2",
+      "method": "mapped_window_streamer",
+      "method_label": "MappedWindowStreamer (MapViewOfFile)",
+      "predicted_tps": 90.47,
+      "measured_tps": 90.82,
+      "scaling_factor": 0.542,
+      "efficiency": 1.854,
+      "approx_load_ms": 1911.0,
+      "method_working_set_gb": 0.3
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q2",
+      "method": "mapped_window_streamer",
+      "method_label": "MappedWindowStreamer (MapViewOfFile)",
+      "predicted_tps": 58.37,
+      "measured_tps": 57.76,
+      "scaling_factor": 0.35,
+      "efficiency": 0.825,
+      "approx_load_ms": 2730.0,
+      "method_working_set_gb": 0.3
+    },
+    {
+      "model_size_b": 7,
+      "quantization": "q2",
+      "method": "streaming_zone_mmap_fallback",
+      "method_label": "StreamingGGUF LoadZoneMapped fallback",
+      "predicted_tps": 163.06,
+      "measured_tps": 165.37,
+      "scaling_factor": 1.0,
+      "efficiency": 23.624,
+      "approx_load_ms": 294.0,
+      "method_working_set_gb": 0.35
+    },
+    {
+      "model_size_b": 28,
+      "quantization": "q2",
+      "method": "streaming_zone_mmap_fallback",
+      "method_label": "StreamingGGUF LoadZoneMapped fallback",
+      "predicted_tps": 120.67,
+      "measured_tps": 119.58,
+      "scaling_factor": 0.74,
+      "efficiency": 4.271,
+      "approx_load_ms": 1176.0,
+      "method_working_set_gb": 0.35
+    },
+    {
+      "model_size_b": 49,
+      "quantization": "q2",
+      "method": "streaming_zone_mmap_fallback",
+      "method_label": "StreamingGGUF LoadZoneMapped fallback",
+      "predicted_tps": 88.46,
+      "measured_tps": 88.15,
+      "scaling_factor": 0.542,
+      "efficiency": 1.799,
+      "approx_load_ms": 2058.0,
+      "method_working_set_gb": 0.35
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q2",
+      "method": "streaming_zone_mmap_fallback",
+      "method_label": "StreamingGGUF LoadZoneMapped fallback",
+      "predicted_tps": 57.07,
+      "measured_tps": 58.05,
+      "scaling_factor": 0.35,
+      "efficiency": 0.829,
+      "approx_load_ms": 2940.0,
+      "method_working_set_gb": 0.35
+    },
+    {
+      "model_size_b": 7,
+      "quantization": "q2",
+      "method": "chunked_file_loader",
+      "method_label": "ChunkedFileLoader/GGUFChunkedLoader",
+      "predicted_tps": 176.03,
+      "measured_tps": 172.82,
+      "scaling_factor": 1.0,
+      "efficiency": 24.688,
+      "approx_load_ms": 357.0,
+      "method_working_set_gb": 0.6
+    },
+    {
+      "model_size_b": 28,
+      "quantization": "q2",
+      "method": "chunked_file_loader",
+      "method_label": "ChunkedFileLoader/GGUFChunkedLoader",
+      "predicted_tps": 130.27,
+      "measured_tps": 132.43,
+      "scaling_factor": 0.74,
+      "efficiency": 4.73,
+      "approx_load_ms": 1428.0,
+      "method_working_set_gb": 0.6
+    },
+    {
+      "model_size_b": 49,
+      "quantization": "q2",
+      "method": "chunked_file_loader",
+      "method_label": "ChunkedFileLoader/GGUFChunkedLoader",
+      "predicted_tps": 95.5,
+      "measured_tps": 94.2,
+      "scaling_factor": 0.542,
+      "efficiency": 1.923,
+      "approx_load_ms": 2499.0,
+      "method_working_set_gb": 0.6
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q2",
+      "method": "chunked_file_loader",
+      "method_label": "ChunkedFileLoader/GGUFChunkedLoader",
+      "predicted_tps": 61.61,
+      "measured_tps": 62.58,
+      "scaling_factor": 0.35,
+      "efficiency": 0.894,
+      "approx_load_ms": 3570.0,
+      "method_working_set_gb": 0.6
+    },
+    {
+      "model_size_b": 7,
+      "quantization": "q2",
+      "method": "iouring_zone_loader",
+      "method_label": "IORingZoneLoader",
+      "predicted_tps": 198.27,
+      "measured_tps": 194.66,
+      "scaling_factor": 1.0,
+      "efficiency": 27.809,
+      "approx_load_ms": 231.0,
+      "method_working_set_gb": 0.45
+    },
+    {
+      "model_size_b": 28,
+      "quantization": "q2",
+      "method": "iouring_zone_loader",
+      "method_label": "IORingZoneLoader",
+      "predicted_tps": 146.72,
+      "measured_tps": 145.0,
+      "scaling_factor": 0.74,
+      "efficiency": 5.179,
+      "approx_load_ms": 924.0,
+      "method_working_set_gb": 0.45
+    },
+    {
+      "model_size_b": 49,
+      "quantization": "q2",
+      "method": "iouring_zone_loader",
+      "method_label": "IORingZoneLoader",
+      "predicted_tps": 107.56,
+      "measured_tps": 108.22,
+      "scaling_factor": 0.542,
+      "efficiency": 2.209,
+      "approx_load_ms": 1617.0,
+      "method_working_set_gb": 0.45
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q2",
+      "method": "iouring_zone_loader",
+      "method_label": "IORingZoneLoader",
+      "predicted_tps": 69.39,
+      "measured_tps": 69.44,
+      "scaling_factor": 0.35,
+      "efficiency": 0.992,
+      "approx_load_ms": 2310.0,
+      "method_working_set_gb": 0.45
+    }
+  ],
+  "activation_results": [
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 1,
+      "methods": [
+        "gguf_loader_whole_zone"
+      ],
+      "aggregate_base_tps": 31.24,
+      "contention_factor": 1.0,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 31.24,
+      "aggregate_working_set_gb": 1.2
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 1,
+      "methods": [
+        "streaming_zone_disk"
+      ],
+      "aggregate_base_tps": 29.01,
+      "contention_factor": 1.0,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 29.01,
+      "aggregate_working_set_gb": 0.9
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 1,
+      "methods": [
+        "mapped_window_streamer"
+      ],
+      "aggregate_base_tps": 28.57,
+      "contention_factor": 1.0,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 28.57,
+      "aggregate_working_set_gb": 0.3
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 1,
+      "methods": [
+        "streaming_zone_mmap_fallback"
+      ],
+      "aggregate_base_tps": 27.31,
+      "contention_factor": 1.0,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 27.31,
+      "aggregate_working_set_gb": 0.35
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 1,
+      "methods": [
+        "chunked_file_loader"
+      ],
+      "aggregate_base_tps": 29.13,
+      "contention_factor": 1.0,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 29.13,
+      "aggregate_working_set_gb": 0.6
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 1,
+      "methods": [
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 32.95,
+      "contention_factor": 1.0,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 32.95,
+      "aggregate_working_set_gb": 0.45
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 2,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "streaming_zone_disk"
+      ],
+      "aggregate_base_tps": 60.25,
+      "contention_factor": 0.915,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 55.13,
+      "aggregate_working_set_gb": 2.1
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 2,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "mapped_window_streamer"
+      ],
+      "aggregate_base_tps": 59.81,
+      "contention_factor": 0.915,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 54.73,
+      "aggregate_working_set_gb": 1.5
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 2,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "streaming_zone_mmap_fallback"
+      ],
+      "aggregate_base_tps": 58.55,
+      "contention_factor": 0.915,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 53.57,
+      "aggregate_working_set_gb": 1.55
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 2,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "chunked_file_loader"
+      ],
+      "aggregate_base_tps": 60.37,
+      "contention_factor": 0.915,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 55.24,
+      "aggregate_working_set_gb": 1.8
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 2,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 64.19,
+      "contention_factor": 0.915,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 58.73,
+      "aggregate_working_set_gb": 1.65
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 2,
+      "methods": [
+        "streaming_zone_disk",
+        "mapped_window_streamer"
+      ],
+      "aggregate_base_tps": 57.58,
+      "contention_factor": 0.915,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 52.69,
+      "aggregate_working_set_gb": 1.2
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 2,
+      "methods": [
+        "streaming_zone_disk",
+        "streaming_zone_mmap_fallback"
+      ],
+      "aggregate_base_tps": 56.32,
+      "contention_factor": 0.915,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 51.53,
+      "aggregate_working_set_gb": 1.25
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 2,
+      "methods": [
+        "streaming_zone_disk",
+        "chunked_file_loader"
+      ],
+      "aggregate_base_tps": 58.14,
+      "contention_factor": 0.915,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 53.2,
+      "aggregate_working_set_gb": 1.5
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 2,
+      "methods": [
+        "streaming_zone_disk",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 61.96,
+      "contention_factor": 0.915,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 56.69,
+      "aggregate_working_set_gb": 1.35
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 2,
+      "methods": [
+        "mapped_window_streamer",
+        "streaming_zone_mmap_fallback"
+      ],
+      "aggregate_base_tps": 55.88,
+      "contention_factor": 0.915,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 51.13,
+      "aggregate_working_set_gb": 0.65
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 2,
+      "methods": [
+        "mapped_window_streamer",
+        "chunked_file_loader"
+      ],
+      "aggregate_base_tps": 57.7,
+      "contention_factor": 0.915,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 52.8,
+      "aggregate_working_set_gb": 0.9
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 2,
+      "methods": [
+        "mapped_window_streamer",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 61.52,
+      "contention_factor": 0.915,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 56.29,
+      "aggregate_working_set_gb": 0.75
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 2,
+      "methods": [
+        "streaming_zone_mmap_fallback",
+        "chunked_file_loader"
+      ],
+      "aggregate_base_tps": 56.44,
+      "contention_factor": 0.915,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 51.64,
+      "aggregate_working_set_gb": 0.95
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 2,
+      "methods": [
+        "streaming_zone_mmap_fallback",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 60.26,
+      "contention_factor": 0.915,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 55.14,
+      "aggregate_working_set_gb": 0.8
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 2,
+      "methods": [
+        "chunked_file_loader",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 62.08,
+      "contention_factor": 0.915,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 56.8,
+      "aggregate_working_set_gb": 1.05
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 3,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "streaming_zone_disk",
+        "mapped_window_streamer"
+      ],
+      "aggregate_base_tps": 88.82,
+      "contention_factor": 0.83,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 73.72,
+      "aggregate_working_set_gb": 2.4
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 3,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "streaming_zone_disk",
+        "streaming_zone_mmap_fallback"
+      ],
+      "aggregate_base_tps": 87.56,
+      "contention_factor": 0.83,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 72.67,
+      "aggregate_working_set_gb": 2.45
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 3,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "streaming_zone_disk",
+        "chunked_file_loader"
+      ],
+      "aggregate_base_tps": 89.38,
+      "contention_factor": 0.83,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 74.19,
+      "aggregate_working_set_gb": 2.7
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 3,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "streaming_zone_disk",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 93.2,
+      "contention_factor": 0.83,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 77.36,
+      "aggregate_working_set_gb": 2.55
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 3,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "mapped_window_streamer",
+        "streaming_zone_mmap_fallback"
+      ],
+      "aggregate_base_tps": 87.12,
+      "contention_factor": 0.83,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 72.31,
+      "aggregate_working_set_gb": 1.85
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 3,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "mapped_window_streamer",
+        "chunked_file_loader"
+      ],
+      "aggregate_base_tps": 88.94,
+      "contention_factor": 0.83,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 73.82,
+      "aggregate_working_set_gb": 2.1
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 3,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "mapped_window_streamer",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 92.76,
+      "contention_factor": 0.83,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 76.99,
+      "aggregate_working_set_gb": 1.95
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 3,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "streaming_zone_mmap_fallback",
+        "chunked_file_loader"
+      ],
+      "aggregate_base_tps": 87.68,
+      "contention_factor": 0.83,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 72.77,
+      "aggregate_working_set_gb": 2.15
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 3,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "streaming_zone_mmap_fallback",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 91.5,
+      "contention_factor": 0.83,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 75.94,
+      "aggregate_working_set_gb": 2.0
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 3,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "chunked_file_loader",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 93.32,
+      "contention_factor": 0.83,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 77.46,
+      "aggregate_working_set_gb": 2.25
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 3,
+      "methods": [
+        "streaming_zone_disk",
+        "mapped_window_streamer",
+        "streaming_zone_mmap_fallback"
+      ],
+      "aggregate_base_tps": 84.89,
+      "contention_factor": 0.83,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 70.46,
+      "aggregate_working_set_gb": 1.55
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 3,
+      "methods": [
+        "streaming_zone_disk",
+        "mapped_window_streamer",
+        "chunked_file_loader"
+      ],
+      "aggregate_base_tps": 86.71,
+      "contention_factor": 0.83,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 71.97,
+      "aggregate_working_set_gb": 1.8
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 3,
+      "methods": [
+        "streaming_zone_disk",
+        "mapped_window_streamer",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 90.53,
+      "contention_factor": 0.83,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 75.14,
+      "aggregate_working_set_gb": 1.65
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 3,
+      "methods": [
+        "streaming_zone_disk",
+        "streaming_zone_mmap_fallback",
+        "chunked_file_loader"
+      ],
+      "aggregate_base_tps": 85.45,
+      "contention_factor": 0.83,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 70.92,
+      "aggregate_working_set_gb": 1.85
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 3,
+      "methods": [
+        "streaming_zone_disk",
+        "streaming_zone_mmap_fallback",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 89.27,
+      "contention_factor": 0.83,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 74.09,
+      "aggregate_working_set_gb": 1.7
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 3,
+      "methods": [
+        "streaming_zone_disk",
+        "chunked_file_loader",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 91.09,
+      "contention_factor": 0.83,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 75.6,
+      "aggregate_working_set_gb": 1.95
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 3,
+      "methods": [
+        "mapped_window_streamer",
+        "streaming_zone_mmap_fallback",
+        "chunked_file_loader"
+      ],
+      "aggregate_base_tps": 85.01,
+      "contention_factor": 0.83,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 70.56,
+      "aggregate_working_set_gb": 1.25
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 3,
+      "methods": [
+        "mapped_window_streamer",
+        "streaming_zone_mmap_fallback",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 88.83,
+      "contention_factor": 0.83,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 73.73,
+      "aggregate_working_set_gb": 1.1
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 3,
+      "methods": [
+        "mapped_window_streamer",
+        "chunked_file_loader",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 90.65,
+      "contention_factor": 0.83,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 75.24,
+      "aggregate_working_set_gb": 1.35
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 3,
+      "methods": [
+        "streaming_zone_mmap_fallback",
+        "chunked_file_loader",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 89.39,
+      "contention_factor": 0.83,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 74.19,
+      "aggregate_working_set_gb": 1.4
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 4,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "streaming_zone_disk",
+        "mapped_window_streamer",
+        "streaming_zone_mmap_fallback"
+      ],
+      "aggregate_base_tps": 116.13,
+      "contention_factor": 0.745,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 86.52,
+      "aggregate_working_set_gb": 2.75
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 4,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "streaming_zone_disk",
+        "mapped_window_streamer",
+        "chunked_file_loader"
+      ],
+      "aggregate_base_tps": 117.95,
+      "contention_factor": 0.745,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 87.87,
+      "aggregate_working_set_gb": 3.0
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 4,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "streaming_zone_disk",
+        "mapped_window_streamer",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 121.77,
+      "contention_factor": 0.745,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 90.72,
+      "aggregate_working_set_gb": 2.85
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 4,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "streaming_zone_disk",
+        "streaming_zone_mmap_fallback",
+        "chunked_file_loader"
+      ],
+      "aggregate_base_tps": 116.69,
+      "contention_factor": 0.745,
+      "memory_penalty_factor": 0.998,
+      "effective_tps": 86.72,
+      "aggregate_working_set_gb": 3.05
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 4,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "streaming_zone_disk",
+        "streaming_zone_mmap_fallback",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 120.51,
+      "contention_factor": 0.745,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 89.78,
+      "aggregate_working_set_gb": 2.9
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 4,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "streaming_zone_disk",
+        "chunked_file_loader",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 122.33,
+      "contention_factor": 0.745,
+      "memory_penalty_factor": 0.993,
+      "effective_tps": 90.45,
+      "aggregate_working_set_gb": 3.15
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 4,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "mapped_window_streamer",
+        "streaming_zone_mmap_fallback",
+        "chunked_file_loader"
+      ],
+      "aggregate_base_tps": 116.25,
+      "contention_factor": 0.745,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 86.61,
+      "aggregate_working_set_gb": 2.45
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 4,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "mapped_window_streamer",
+        "streaming_zone_mmap_fallback",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 120.07,
+      "contention_factor": 0.745,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 89.45,
+      "aggregate_working_set_gb": 2.3
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 4,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "mapped_window_streamer",
+        "chunked_file_loader",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 121.89,
+      "contention_factor": 0.745,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 90.81,
+      "aggregate_working_set_gb": 2.55
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 4,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "streaming_zone_mmap_fallback",
+        "chunked_file_loader",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 120.63,
+      "contention_factor": 0.745,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 89.87,
+      "aggregate_working_set_gb": 2.6
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 4,
+      "methods": [
+        "streaming_zone_disk",
+        "mapped_window_streamer",
+        "streaming_zone_mmap_fallback",
+        "chunked_file_loader"
+      ],
+      "aggregate_base_tps": 114.02,
+      "contention_factor": 0.745,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 84.94,
+      "aggregate_working_set_gb": 2.15
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 4,
+      "methods": [
+        "streaming_zone_disk",
+        "mapped_window_streamer",
+        "streaming_zone_mmap_fallback",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 117.84,
+      "contention_factor": 0.745,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 87.79,
+      "aggregate_working_set_gb": 2.0
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 4,
+      "methods": [
+        "streaming_zone_disk",
+        "mapped_window_streamer",
+        "chunked_file_loader",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 119.66,
+      "contention_factor": 0.745,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 89.15,
+      "aggregate_working_set_gb": 2.25
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 4,
+      "methods": [
+        "streaming_zone_disk",
+        "streaming_zone_mmap_fallback",
+        "chunked_file_loader",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 118.4,
+      "contention_factor": 0.745,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 88.21,
+      "aggregate_working_set_gb": 2.3
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 4,
+      "methods": [
+        "mapped_window_streamer",
+        "streaming_zone_mmap_fallback",
+        "chunked_file_loader",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 117.96,
+      "contention_factor": 0.745,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 87.88,
+      "aggregate_working_set_gb": 1.7
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 5,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "streaming_zone_disk",
+        "mapped_window_streamer",
+        "streaming_zone_mmap_fallback",
+        "chunked_file_loader"
+      ],
+      "aggregate_base_tps": 145.26,
+      "contention_factor": 0.66,
+      "memory_penalty_factor": 0.983,
+      "effective_tps": 94.19,
+      "aggregate_working_set_gb": 3.35
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 5,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "streaming_zone_disk",
+        "mapped_window_streamer",
+        "streaming_zone_mmap_fallback",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 149.08,
+      "contention_factor": 0.66,
+      "memory_penalty_factor": 0.99,
+      "effective_tps": 97.41,
+      "aggregate_working_set_gb": 3.2
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 5,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "streaming_zone_disk",
+        "mapped_window_streamer",
+        "chunked_file_loader",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 150.9,
+      "contention_factor": 0.66,
+      "memory_penalty_factor": 0.978,
+      "effective_tps": 97.35,
+      "aggregate_working_set_gb": 3.45
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 5,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "streaming_zone_disk",
+        "streaming_zone_mmap_fallback",
+        "chunked_file_loader",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 149.64,
+      "contention_factor": 0.66,
+      "memory_penalty_factor": 0.975,
+      "effective_tps": 96.29,
+      "aggregate_working_set_gb": 3.5
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 5,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "mapped_window_streamer",
+        "streaming_zone_mmap_fallback",
+        "chunked_file_loader",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 149.2,
+      "contention_factor": 0.66,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 98.47,
+      "aggregate_working_set_gb": 2.9
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 5,
+      "methods": [
+        "streaming_zone_disk",
+        "mapped_window_streamer",
+        "streaming_zone_mmap_fallback",
+        "chunked_file_loader",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 146.97,
+      "contention_factor": 0.66,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 97.0,
+      "aggregate_working_set_gb": 2.6
+    },
+    {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 6,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "streaming_zone_disk",
+        "mapped_window_streamer",
+        "streaming_zone_mmap_fallback",
+        "chunked_file_loader",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 178.21,
+      "contention_factor": 0.58,
+      "memory_penalty_factor": 0.96,
+      "effective_tps": 99.23,
+      "aggregate_working_set_gb": 3.8
+    }
+  ],
+  "statistics": {
+    "avg_tps": 63.36,
+    "max_tps": 194.66,
+    "min_tps": 8.68,
+    "best_efficiency": 27.809
+  },
+  "best_performance": {
+    "size_b": 7,
+    "quantization": "q2",
+    "method": "iouring_zone_loader",
+    "tps": 194.66
+  },
+  "best_efficiency": {
+    "size_b": 7,
+    "quantization": "q2",
+    "method": "iouring_zone_loader",
+    "tps_per_b": 27.809
+  },
+  "best_activation_by_width": {
+    "1": {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 1,
+      "methods": [
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 32.95,
+      "contention_factor": 1.0,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 32.95,
+      "aggregate_working_set_gb": 0.45
+    },
+    "2": {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 2,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 64.19,
+      "contention_factor": 0.915,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 58.73,
+      "aggregate_working_set_gb": 1.65
+    },
+    "3": {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 3,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "chunked_file_loader",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 93.32,
+      "contention_factor": 0.83,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 77.46,
+      "aggregate_working_set_gb": 2.25
+    },
+    "4": {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 4,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "mapped_window_streamer",
+        "chunked_file_loader",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 121.89,
+      "contention_factor": 0.745,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 90.81,
+      "aggregate_working_set_gb": 2.55
+    },
+    "5": {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 5,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "mapped_window_streamer",
+        "streaming_zone_mmap_fallback",
+        "chunked_file_loader",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 149.2,
+      "contention_factor": 0.66,
+      "memory_penalty_factor": 1.0,
+      "effective_tps": 98.47,
+      "aggregate_working_set_gb": 2.9
+    },
+    "6": {
+      "model_size_b": 70,
+      "quantization": "q4",
+      "active_count": 6,
+      "methods": [
+        "gguf_loader_whole_zone",
+        "streaming_zone_disk",
+        "mapped_window_streamer",
+        "streaming_zone_mmap_fallback",
+        "chunked_file_loader",
+        "iouring_zone_loader"
+      ],
+      "aggregate_base_tps": 178.21,
+      "contention_factor": 0.58,
+      "memory_penalty_factor": 0.96,
+      "effective_tps": 99.23,
+      "aggregate_working_set_gb": 3.8
+    }
+  }
+}

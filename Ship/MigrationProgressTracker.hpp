@@ -4,7 +4,7 @@
 // 
 // Usage:
 //   RawrXD::Migration::MigrationTracker::Instance().Initialize();
-//   RawrXD::Migration::MigrationTracker::Instance().StartTask(L"src/qtapp/MainWindow.cpp");
+//   RawrXD::Migration::MigrationTracker::Instance().StartTask(L"src/legacy/qtapp/MainWindow.cpp");
 //   RawrXD::Migration::MigrationTracker::Instance().PrintProgressReport();
 
 #pragma once
@@ -83,7 +83,7 @@ public:
 
     void Initialize() {
         // Priority 10 (CRITICAL) - UI Entry Points
-        AddTask(L"src/qtapp/MainWindow.cpp", L"RawrXD_MainWindow_Win32.dll", 
+        AddTask(L"src/legacy/qtapp/MainWindow.cpp", L"RawrXD_MainWindow_Win32.dll", 
                 Priority::Critical, std::chrono::hours(4), {
                     L"include:ThirdPartyMainWindow", L"include:ThirdPartyDock",
                     L"include:ThirdPartyMenuBar", L"include:ThirdPartyToolBar"
@@ -91,14 +91,14 @@ public:
                     L"CreateWindowEx", L"LoadMenu", L"WndProc"
                 });
         
-        AddTask(L"src/qtapp/main_qt.cpp", L"RawrXD_Foundation.dll",
+        AddTask(L"src/legacy/qtapp/main_qt.cpp", L"RawrXD_Foundation.dll",
                 Priority::Critical, std::chrono::hours(2), {
                     L"include:ThirdPartyApplication", L"include:ThirdPartyCoreApplication"
                 }, {
                     L"WinMain", L"Foundation::Initialize"
                 });
         
-        AddTask(L"src/qtapp/TerminalWidget.cpp", L"RawrXD_TerminalManager_Win32.dll",
+        AddTask(L"src/legacy/qtapp/TerminalWidget.cpp", L"RawrXD_TerminalManager_Win32.dll",
                 Priority::Critical, std::chrono::hours(3), {
                     L"include:ThirdPartyProcess", L"include:ThirdPartyThread"
                 }, {

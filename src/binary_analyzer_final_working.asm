@@ -1,11 +1,10 @@
 ;============================================================================
 ; Binary Analyzer Final Working v6.0
 ; Universal file format analyzer and converter
+; x64 MASM — ml64.exe compatible
 ;============================================================================
 
-.386
-.model flat, stdcall
-option casemap :none
+OPTION CASemap:NONE
 
 ;============================================================================
 ; INCLUDES

@@ -1,0 +1,215 @@
+﻿{
+    "Failed":  1,
+    "StartTime":  {
+                      "value":  "\/Date(1777098402012)\/",
+                      "DisplayHint":  2,
+                      "DateTime":  "Saturday, April 25, 2026 2:26:42 AM"
+                  },
+    "Passed":  20,
+    "Skipped":  0,
+    "Tests":  [
+                  {
+                      "Duration":  37.906600000000005,
+                      "Status":  "PASS",
+                      "Category":  "Chunked I/O",
+                      "Error":  "",
+                      "Test":  "Header file contains all classes"
+                  },
+                  {
+                      "Duration":  3.0801000000000003,
+                      "Status":  "PASS",
+                      "Category":  "Chunked I/O",
+                      "Error":  "",
+                      "Test":  "Implementation uses Windows file mapping"
+                  },
+                  {
+                      "Duration":  0,
+                      "Status":  "PASS",
+                      "Category":  "Chunked I/O",
+                      "Error":  "",
+                      "Test":  "GGUF parsing functions present"
+                  },
+                  {
+                      "Duration":  1.5148000000000001,
+                      "Status":  "PASS",
+                      "Category":  "Quantization",
+                      "Error":  "",
+                      "Test":  "Header has quant/dequant functions"
+                  },
+                  {
+                      "Duration":  1.5163,
+                      "Status":  "PASS",
+                      "Category":  "Quantization",
+                      "Error":  "",
+                      "Test":  "Implementation has all quant types"
+                  },
+                  {
+                      "Duration":  0,
+                      "Status":  "PASS",
+                      "Category":  "Quantization",
+                      "Error":  "",
+                      "Test":  "Quality measurement present"
+                  },
+                  {
+                      "Duration":  0,
+                      "Status":  "PASS",
+                      "Category":  "Hardware Spoof",
+                      "Error":  "",
+                      "Test":  "Header has all components"
+                  },
+                  {
+                      "Duration":  1.5128000000000001,
+                      "Status":  "PASS",
+                      "Category":  "Hardware Spoof",
+                      "Error":  "",
+                      "Test":  "GPU specs for AMD/NVIDIA/Cloud"
+                  },
+                  {
+                      "Duration":  0,
+                      "Status":  "PASS",
+                      "Category":  "Hardware Spoof",
+                      "Error":  "",
+                      "Test":  "Response pinning complete"
+                  },
+                  {
+                      "Duration":  1.5133,
+                      "Status":  "PASS",
+                      "Category":  "Hardware Spoof",
+                      "Error":  "",
+                      "Test":  "Playback control present"
+                  },
+                  {
+                      "Duration":  1.5386,
+                      "Status":  "PASS",
+                      "Category":  "Tool Registry",
+                      "Error":  "",
+                      "Test":  "Header has all components"
+                  },
+                  {
+                      "Duration":  0,
+                      "Status":  "PASS",
+                      "Category":  "Tool Registry",
+                      "Error":  "",
+                      "Test":  "Implementation has all tool types"
+                  },
+                  {
+                      "Duration":  0,
+                      "Status":  "PASS",
+                      "Category":  "Agentic Inference",
+                      "Error":  "",
+                      "Test":  "Header has all components"
+                  },
+                  {
+                      "Duration":  1.5108000000000001,
+                      "Status":  "PASS",
+                      "Category":  "Agentic Inference",
+                      "Error":  "",
+                      "Test":  "Implementation has all components"
+                  },
+                  {
+                      "Duration":  0,
+                      "Status":  "PASS",
+                      "Category":  "Agentic Inference",
+                      "Error":  "",
+                      "Test":  "BackendError handling present"
+                  },
+                  {
+                      "Duration":  1.5129000000000001,
+                      "Status":  "PASS",
+                      "Category":  "Weight Hotswap",
+                      "Error":  "",
+                      "Test":  "Header has all components"
+                  },
+                  {
+                      "Duration":  0,
+                      "Status":  "PASS",
+                      "Category":  "Weight Hotswap",
+                      "Error":  "",
+                      "Test":  "GGUF format header complete"
+                  },
+                  {
+                      "Duration":  19.6929,
+                      "Status":  "FAIL",
+                      "Category":  "Build System",
+                      "Error":  "quant_ops.c not in CMakeLists.txt",
+                      "Test":  "CMakeLists includes quant_ops.c"
+                  },
+                  {
+                      "Duration":  0,
+                      "Status":  "PASS",
+                      "Category":  "Build System",
+                      "Error":  "",
+                      "Test":  "CMakeLists includes chunked_file_loader"
+                  },
+                  {
+                      "Duration":  0,
+                      "Status":  "PASS",
+                      "Category":  "Build System",
+                      "Error":  "",
+                      "Test":  "CMakeLists includes tool_registry_enhanced"
+                  },
+                  {
+                      "Duration":  0,
+                      "Status":  "PASS",
+                      "Category":  "Build System",
+                      "Error":  "",
+                      "Test":  "CMakeLists includes AgenticSubmitInference"
+                  }
+              ],
+    "Duration":  {
+                     "Ticks":  1162777,
+                     "Days":  0,
+                     "Hours":  0,
+                     "Milliseconds":  116,
+                     "Minutes":  0,
+                     "Seconds":  0,
+                     "TotalDays":  1.3458067129629628E-06,
+                     "TotalHours":  3.229936111111111E-05,
+                     "TotalMilliseconds":  116.27770000000001,
+                     "TotalMinutes":  0.0019379616666666667,
+                     "TotalSeconds":  0.1162777
+                 },
+    "EndTime":  {
+                    "value":  "\/Date(1777098402128)\/",
+                    "DisplayHint":  2,
+                    "DateTime":  "Saturday, April 25, 2026 2:26:42 AM"
+                },
+    "Categories":  {
+                       "Weight Hotswap":  {
+                                              "Skipped":  0,
+                                              "Failed":  0,
+                                              "Passed":  2
+                                          },
+                       "Hardware Spoof":  {
+                                              "Skipped":  0,
+                                              "Failed":  0,
+                                              "Passed":  4
+                                          },
+                       "Agentic Inference":  {
+                                                 "Skipped":  0,
+                                                 "Failed":  0,
+                                                 "Passed":  3
+                                             },
+                       "Build System":  {
+                                            "Skipped":  0,
+                                            "Failed":  1,
+                                            "Passed":  3
+                                        },
+                       "Quantization":  {
+                                            "Skipped":  0,
+                                            "Failed":  0,
+                                            "Passed":  3
+                                        },
+                       "Chunked I/O":  {
+                                           "Skipped":  0,
+                                           "Failed":  0,
+                                           "Passed":  3
+                                       },
+                       "Tool Registry":  {
+                                             "Skipped":  0,
+                                             "Failed":  0,
+                                             "Passed":  2
+                                         }
+                   },
+    "Total":  21
+}

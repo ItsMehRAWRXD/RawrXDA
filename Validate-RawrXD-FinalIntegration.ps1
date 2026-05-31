@@ -1,4 +1,4 @@
-z# Validate-RawrXD-FinalIntegration.ps1
+# Validate-RawrXD-FinalIntegration.ps1
 # Verifies the 5 critical fixes + prevents WSOD regression
 
 param(

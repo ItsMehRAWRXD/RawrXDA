@@ -90,6 +90,18 @@ namespace MC_Colors {
 
     // Ghost text (AI overlay)
     constexpr uint32_t GHOST_TEXT        = 0x80808080;  // Semi-transparent gray
+    
+    // VSU Effect Colors (Acrylic/Mica materials)
+    constexpr uint32_t ACRYLIC_DARK_BASE = 0xD91E1E1E;  // 85% opacity dark
+    constexpr uint32_t ACRYLIC_LIGHT_BASE = 0xE6F5F5F5;  // 90% opacity light
+    constexpr uint32_t MICA_DARK_TINT    = 0xF51A1A1A;  // 96% opacity
+    constexpr uint32_t MICA_LIGHT_TINT   = 0xF7F5F5F5;  // 97% opacity
+    
+    // Elevation shadows (premultiplied)
+    constexpr uint32_t SHADOW_01         = 0x0A000000;  // 4% opacity
+    constexpr uint32_t SHADOW_04         = 0x1F000000;  // 12% opacity
+    constexpr uint32_t SHADOW_08         = 0x2E000000;  // 18% opacity
+    constexpr uint32_t SHADOW_16        = 0x3D000000;  // 24% opacity
 }
 
 // ============================================================================

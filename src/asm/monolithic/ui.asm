@@ -39,17 +39,18 @@ EXTERN PostMessageW:PROC          ; Needed for deferred ghost text requests
 EXTERN UIBridge_GenerateFeature:PROC
 
 ; Phase 27: Omniscient-Sovereign UI Enhancements (85-91)
-EXTERN SwarmV27_Temporal_Predictor:PROC
-EXTERN SwarmV27_ClockEdge_Dispatch:PROC
-EXTERN SwarmV27_History_Folder:PROC
 EXTERN SwarmD_Unified_LoadBalancer:PROC
+PUBLIC SwarmV27_Temporal_Predictor
+PUBLIC SwarmV27_ClockEdge_Dispatch
+PUBLIC SwarmV27_History_Folder
 
 .data
-g_GhostAlpha      dq 0x80               ; 85: Ghost-Text Transparency
+g_GhostAlpha      dq 80h                ; 85: Ghost-Text Transparency
 g_PulseSync       dq 0                  ; 86: RDTSC Heartbeat
 g_NeuralFocus     dq 0                  ; 87: Eye-Tracking / Focus Heatmap
 g_SubFrameDelta   dq 0                  ; 88: Sub-60Hz Interpolation
 g_HoloBuffer      dq 0                  ; 89: 1M Context Viewport
+g_v27TemporalState dq 0                 ; local predictor state
 
 EXTERN CreateFontIndirectW:PROC
 EXTERN SelectObject:PROC
@@ -4095,6 +4096,39 @@ ExportEditorBufferToPE PROC FRAME
     pop rbp
     ret
 ExportEditorBufferToPE ENDP
+
+; Internalized Phase-27 helpers (formerly unresolved compatibility exports)
+SwarmV27_ClockEdge_Dispatch PROC
+    rdtsc
+    shl     rdx, 32
+    or      rax, rdx
+    mov     qword ptr [g_PulseSync], rax
+    ret
+SwarmV27_ClockEdge_Dispatch ENDP
+
+SwarmV27_Temporal_Predictor PROC
+    mov     rax, qword ptr [g_PulseSync]
+    test    rax, rax
+    jnz     @tv27_have_seed
+    rdtsc
+    shl     rdx, 32
+    or      rax, rdx
+@tv27_have_seed:
+    imul    rax, rax, 1103515245
+    add     rax, 12345
+    and     rax, 7FFh
+    mov     qword ptr [g_v27TemporalState], rax
+    ret
+SwarmV27_Temporal_Predictor ENDP
+
+SwarmV27_History_Folder PROC
+    mov     rax, qword ptr [g_HoloBuffer]
+    test    rax, rax
+    jnz     @hv27_done
+    mov     eax, 100000h
+@hv27_done:
+    ret
+SwarmV27_History_Folder ENDP
 
 ; ═══════════════════════════════════════════════════════════════════
 ; PHASE 27-ZENITH: GHOST-LEVEL UI ENHANCEMENTS (85-91)

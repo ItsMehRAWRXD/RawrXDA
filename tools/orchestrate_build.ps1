@@ -11,6 +11,18 @@ $ErrorActionPreference = "Continue"
 $toolsDir = "D:\rawrxd\tools"
 $buildDir = "D:\rawrxd\build"
 
+# Guardrail: hard-pin all orchestrated builds to the expected repo root.
+$repoGuard = Join-Path "D:\rawrxd\scripts" "assert_repo_root.ps1"
+if (Test-Path $repoGuard) {
+    & $repoGuard -ExpectedRoot "d:/rawrxd" -CheckPath $PSScriptRoot
+    if ($LASTEXITCODE -ne 0) {
+        exit 1
+    }
+} else {
+    Write-Host "[GUARD] Missing repo root guard script: $repoGuard" -ForegroundColor Red
+    exit 1
+}
+
 # Ensure MSVC + NMake tools are on PATH for any cmake/nmake invocations.
 $vsEnv = Join-Path $toolsDir "ensure_vsenv.ps1"
 if (Test-Path $vsEnv) {

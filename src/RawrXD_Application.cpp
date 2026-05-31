@@ -63,7 +63,8 @@ String Application::applicationFilePath() {
 }
 
 void Application::setApplicationName(const String& name) {
-    // maybe set registry key or something. For now just unused
+    m_appName = name;
+    fprintf(stderr, "[Application] Name set to: %s\n", name.c_str());
 }
 
 } // namespace RawrXD

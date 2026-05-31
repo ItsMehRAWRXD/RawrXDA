@@ -4,28 +4,32 @@
 #include <cmath>
 #include <cstdio>
 #include <ctime>
+#include <iomanip>
+#include <mutex>
 #include <random>
 #include <sstream>
-#include <iomanip>
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-static std::string GenerateHexId(int length = 32) {
+static std::string GenerateHexId(int length = 32)
+{
     static thread_local std::mt19937 rng(
         static_cast<unsigned>(std::chrono::steady_clock::now().time_since_epoch().count()));
     std::uniform_int_distribution<int> dist(0, 15);
     const char hex[] = "0123456789abcdef";
     std::string result;
     result.reserve(length);
-    for (int i = 0; i < length; ++i) {
+    for (int i = 0; i < length; ++i)
+    {
         result += hex[dist(rng)];
     }
     return result;
 }
 
-static double SamplingRoll() {
+static double SamplingRoll()
+{
     static thread_local std::mt19937 rng(
         static_cast<unsigned>(std::chrono::steady_clock::now().time_since_epoch().count() ^ 0xBEEF));
     std::uniform_real_distribution<double> dist(0.0, 1.0);
@@ -36,30 +40,33 @@ static double SamplingRoll() {
 // Construction / Destruction
 // ---------------------------------------------------------------------------
 
-AgenticObservability& AgenticObservability::instance() {
+AgenticObservability& AgenticObservability::instance()
+{
     static AgenticObservability inst;
     return inst;
 }
 
-AgenticObservability::AgenticObservability()
-    : m_systemStartTime(std::chrono::system_clock::now())
+AgenticObservability::AgenticObservability() : m_systemStartTime(std::chrono::system_clock::now())
 {
-    fprintf(stderr, "[AgenticObservability] Initialized - Ready for comprehensive observability\n");
+    // Heartbeat writes metrics.prom and calls exportMetricsAsPrometheus from a worker thread; keep it off by default
+    // until explicitly started (avoids races during early smoke/CLI paths). UI/agentic subsystems may call
+    // startHeartbeatLoop() when telemetry export is desired.
+#if defined(RAWRXD_OBSERVABILITY_HEARTBEAT_DEFAULT) && RAWRXD_OBSERVABILITY_HEARTBEAT_DEFAULT
     startHeartbeatLoop();
+#endif
 }
 
 AgenticObservability::~AgenticObservability()
 {
     stopHeartbeatLoop();
-    fprintf(stderr, "[AgenticObservability] Destroyed - Logged %d entries and %d metrics\n",
-            m_totalLogsWritten, m_totalMetricsRecorded);
 }
 
 // ---------------------------------------------------------------------------
 // Time helpers
 // ---------------------------------------------------------------------------
 
-std::string AgenticObservability::timePointToISO(const TimePoint& tp) {
+std::string AgenticObservability::timePointToISO(const TimePoint& tp)
+{
     auto tt = std::chrono::system_clock::to_time_t(tp);
     std::tm tm_buf{};
 #ifdef _WIN32
@@ -74,16 +81,16 @@ std::string AgenticObservability::timePointToISO(const TimePoint& tp) {
 
 // ===== STRUCTURED LOGGING =====
 
-void AgenticObservability::log(
-    LogLevel level,
-    const std::string& component,
-    const std::string& message,
-    const nlohmann::json& context)
+void AgenticObservability::log(LogLevel level, const std::string& component, const std::string& message,
+                               const nlohmann::json& context)
 {
     // Apply sampling
-    if (SamplingRoll() > m_samplingRate) {
+    if (SamplingRoll() > m_samplingRate)
+    {
         return;
     }
+
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
 
     LogEntry entry;
     entry.timestamp = std::chrono::system_clock::now();
@@ -98,85 +105,84 @@ void AgenticObservability::log(
     m_totalLogsWritten++;
 
     // Keep buffer bounded
-    if (static_cast<int>(m_logs.size()) > m_maxLogEntries) {
+    if (static_cast<int>(m_logs.size()) > m_maxLogEntries)
+    {
         m_logs.erase(m_logs.begin());
     }
 
-    if (m_logCb) m_logCb(entry, m_logCbData);
+    if (m_logCb)
+        m_logCb(entry, m_logCbData);
 }
 
-void AgenticObservability::logDebug(
-    const std::string& component,
-    const std::string& message,
-    const nlohmann::json& context)
+void AgenticObservability::logDebug(const std::string& component, const std::string& message,
+                                    const nlohmann::json& context)
 {
     log(LogLevel::ObsDebug, component, message, context);
 }
 
-void AgenticObservability::logWarn(
-    const std::string& component,
-    const std::string& message,
-    const nlohmann::json& context)
+void AgenticObservability::logWarn(const std::string& component, const std::string& message,
+                                   const nlohmann::json& context)
 {
     log(LogLevel::ObsWarn, component, message, context);
 }
 
-void AgenticObservability::logInfo(
-    const std::string& component,
-    const std::string& message,
-    const nlohmann::json& context)
+void AgenticObservability::logInfo(const std::string& component, const std::string& message,
+                                   const nlohmann::json& context)
 {
-    log(LogLevel::ObsError, component, message, context);
+    log(LogLevel::ObsInfo, component, message, context);
 }
 
-void AgenticObservability::logError(
-    const std::string& component,
-    const std::string& message,
-    const nlohmann::json& context)
+void AgenticObservability::logError(const std::string& component, const std::string& message,
+                                    const nlohmann::json& context)
 {
     log(LogLevel::ObsError, component, message, context);
     m_errorCounts[component]++;
 }
 
-void AgenticObservability::logCritical(
-    const std::string& component,
-    const std::string& message,
-    const nlohmann::json& context)
+void AgenticObservability::logCritical(const std::string& component, const std::string& message,
+                                       const nlohmann::json& context)
 {
     log(LogLevel::ObsCritical, component, message, context);
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     m_errorCounts[component]++;
 }
 
-std::vector<AgenticObservability::LogEntry> AgenticObservability::getLogs(
-    int limit,
-    LogLevel minLevel,
-    const std::string& component) const
+std::vector<AgenticObservability::LogEntry> AgenticObservability::getLogs(int limit, LogLevel minLevel,
+                                                                          const std::string& component) const
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     std::vector<LogEntry> filtered;
 
-    for (const auto& entry : m_logs) {
-        if (entry.level < minLevel) continue;
-        if (!component.empty() && entry.component != component) continue;
+    for (const auto& entry : m_logs)
+    {
+        if (entry.level < minLevel)
+            continue;
+        if (!component.empty() && entry.component != component)
+            continue;
         filtered.push_back(entry);
     }
 
-    if (limit > 0 && static_cast<int>(filtered.size()) > limit) {
+    if (limit > 0 && static_cast<int>(filtered.size()) > limit)
+    {
         filtered.erase(filtered.begin(), filtered.end() - limit);
     }
 
     return filtered;
 }
 
-std::vector<AgenticObservability::LogEntry> AgenticObservability::getLogsByTimeRange(
-    const TimePoint& start,
-    const TimePoint& end,
-    LogLevel minLevel) const
+std::vector<AgenticObservability::LogEntry> AgenticObservability::getLogsByTimeRange(const TimePoint& start,
+                                                                                     const TimePoint& end,
+                                                                                     LogLevel minLevel) const
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     std::vector<LogEntry> filtered;
 
-    for (const auto& entry : m_logs) {
-        if (entry.timestamp < start || entry.timestamp > end) continue;
-        if (entry.level < minLevel) continue;
+    for (const auto& entry : m_logs)
+    {
+        if (entry.timestamp < start || entry.timestamp > end)
+            continue;
+        if (entry.level < minLevel)
+            continue;
         filtered.push_back(entry);
     }
 
@@ -185,12 +191,10 @@ std::vector<AgenticObservability::LogEntry> AgenticObservability::getLogsByTimeR
 
 // ===== METRICS =====
 
-void AgenticObservability::recordMetric(
-    const std::string& metricName,
-    float value,
-    const nlohmann::json& labels,
-    const std::string& unit)
+void AgenticObservability::recordMetric(const std::string& metricName, float value, const nlohmann::json& labels,
+                                        const std::string& unit)
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     MetricPoint point;
     point.metricName = metricName;
     point.value = value;
@@ -202,72 +206,75 @@ void AgenticObservability::recordMetric(
     m_totalMetricsRecorded++;
 
     // Keep buffer bounded
-    if (static_cast<int>(m_metrics.size()) > m_metricsBufferSize) {
+    if (static_cast<int>(m_metrics.size()) > m_metricsBufferSize)
+    {
         m_metrics.erase(m_metrics.begin());
     }
 
-    if (m_metricCb) m_metricCb(metricName, m_metricCbData);
+    if (m_metricCb)
+        m_metricCb(metricName, m_metricCbData);
 }
 
-void AgenticObservability::incrementCounter(
-    const std::string& metricName,
-    int delta,
-    const nlohmann::json& labels)
+void AgenticObservability::incrementCounter(const std::string& metricName, int delta, const nlohmann::json& labels)
 {
     recordMetric(metricName, static_cast<float>(delta), labels, "count");
 }
 
 float AgenticObservability::getCounterValue(const std::string& metricName) const
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     float sum = 0.0f;
-    for (const auto& metric : m_metrics) {
-        if (metric.metricName == metricName) {
+    for (const auto& metric : m_metrics)
+    {
+        if (metric.metricName == metricName)
+        {
             sum += metric.value;
         }
     }
     return sum;
 }
 
-void AgenticObservability::setGauge(
-    const std::string& metricName,
-    float value,
-    const nlohmann::json& labels)
+void AgenticObservability::setGauge(const std::string& metricName, float value, const nlohmann::json& labels)
 {
     recordMetric(metricName, value, labels, "gauge");
 }
 
 float AgenticObservability::getGaugeValue(const std::string& metricName) const
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     // Return most recent value
-    for (auto it = m_metrics.rbegin(); it != m_metrics.rend(); ++it) {
-        if (it->metricName == metricName) {
+    for (auto it = m_metrics.rbegin(); it != m_metrics.rend(); ++it)
+    {
+        if (it->metricName == metricName)
+        {
             return it->value;
         }
     }
     return 0.0f;
 }
 
-void AgenticObservability::recordHistogram(
-    const std::string& metricName,
-    float value,
-    const nlohmann::json& labels)
+void AgenticObservability::recordHistogram(const std::string& metricName, float value, const nlohmann::json& labels)
 {
     recordMetric(metricName + "_histogram", value, labels, "histogram");
 }
 
 nlohmann::json AgenticObservability::getHistogramStats(const std::string& metricName) const
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     std::vector<float> values;
 
-    for (const auto& metric : m_metrics) {
-        if (metric.metricName == metricName + "_histogram") {
+    for (const auto& metric : m_metrics)
+    {
+        if (metric.metricName == metricName + "_histogram")
+        {
             values.push_back(metric.value);
         }
     }
 
     nlohmann::json stats;
 
-    if (values.empty()) {
+    if (values.empty())
+    {
         stats["count"] = 0;
         return stats;
     }
@@ -275,7 +282,8 @@ nlohmann::json AgenticObservability::getHistogramStats(const std::string& metric
     std::sort(values.begin(), values.end());
 
     float sum = 0.0f;
-    for (float v : values) sum += v;
+    for (float v : values)
+        sum += v;
 
     stats["count"] = static_cast<int>(values.size());
     stats["min"] = values.front();
@@ -286,7 +294,8 @@ nlohmann::json AgenticObservability::getHistogramStats(const std::string& metric
     // Calculate standard deviation
     float variance = 0.0f;
     float mean = sum / static_cast<float>(values.size());
-    for (float v : values) {
+    for (float v : values)
+    {
         variance += (v - mean) * (v - mean);
     }
     stats["stddev"] = std::sqrt(variance / static_cast<float>(values.size()));
@@ -294,11 +303,8 @@ nlohmann::json AgenticObservability::getHistogramStats(const std::string& metric
     return stats;
 }
 
-AgenticObservability::TimingGuard::TimingGuard(
-    AgenticObservability* obs,
-    const std::string& metricName)
-    : m_obs(obs), m_metricName(metricName),
-      m_start(std::chrono::high_resolution_clock::now())
+AgenticObservability::TimingGuard::TimingGuard(AgenticObservability* obs, const std::string& metricName)
+    : m_obs(obs), m_metricName(metricName), m_start(std::chrono::high_resolution_clock::now())
 {
 }
 
@@ -306,32 +312,35 @@ AgenticObservability::TimingGuard::~TimingGuard()
 {
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - m_start);
-    
-    if (m_obs) {
+
+    if (m_obs)
+    {
         m_obs->recordMetric(m_metricName + "_duration", static_cast<float>(duration.count()), {}, "ms");
     }
 }
 
-std::unique_ptr<AgenticObservability::TimingGuard> AgenticObservability::measureDuration(
-    const std::string& metricName)
+std::unique_ptr<AgenticObservability::TimingGuard> AgenticObservability::measureDuration(const std::string& metricName)
 {
     return std::make_unique<TimingGuard>(this, metricName);
 }
 
-std::vector<AgenticObservability::MetricPoint> AgenticObservability::getMetrics(
-    const std::string& pattern,
-    int limit) const
+std::vector<AgenticObservability::MetricPoint> AgenticObservability::getMetrics(const std::string& pattern,
+                                                                                int limit) const
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     std::vector<MetricPoint> filtered;
 
-    for (const auto& metric : m_metrics) {
-        if (!pattern.empty() && metric.metricName.find(pattern) == std::string::npos) {
+    for (const auto& metric : m_metrics)
+    {
+        if (!pattern.empty() && metric.metricName.find(pattern) == std::string::npos)
+        {
             continue;
         }
         filtered.push_back(metric);
     }
 
-    if (limit > 0 && static_cast<int>(filtered.size()) > limit) {
+    if (limit > 0 && static_cast<int>(filtered.size()) > limit)
+    {
         filtered.erase(filtered.begin(), filtered.end() - limit);
     }
 
@@ -344,14 +353,17 @@ nlohmann::json AgenticObservability::getMetricsSummary() const
 
     // Group metrics by name
     std::unordered_map<std::string, std::vector<float>> metricGroups;
-    for (const auto& metric : m_metrics) {
+    for (const auto& metric : m_metrics)
+    {
         metricGroups[metric.metricName].push_back(metric.value);
     }
 
     nlohmann::json metrics;
-    for (const auto& pair : metricGroups) {
+    for (const auto& pair : metricGroups)
+    {
         float sum = 0.0f;
-        for (float v : pair.second) sum += v;
+        for (float v : pair.second)
+            sum += v;
 
         nlohmann::json metricInfo;
         metricInfo["count"] = static_cast<int>(pair.second.size());
@@ -369,17 +381,21 @@ nlohmann::json AgenticObservability::getMetricsSummary() const
 
 nlohmann::json AgenticObservability::getPercentiles(const std::string& metricName) const
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     std::vector<float> values;
 
-    for (const auto& metric : m_metrics) {
-        if (metric.metricName == metricName) {
+    for (const auto& metric : m_metrics)
+    {
+        if (metric.metricName == metricName)
+        {
             values.push_back(metric.value);
         }
     }
 
     nlohmann::json percentiles;
 
-    if (values.empty()) {
+    if (values.empty())
+    {
         return percentiles;
     }
 
@@ -396,8 +412,10 @@ nlohmann::json AgenticObservability::getPercentiles(const std::string& metricNam
 
 std::string AgenticObservability::startTrace(const std::string& operation)
 {
-    if (!m_tracingEnabled) return "";
+    if (!m_tracingEnabled)
+        return "";
 
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     std::string traceId = generateTraceId();
     m_traceSpans[traceId] = {};
 
@@ -406,10 +424,12 @@ std::string AgenticObservability::startTrace(const std::string& operation)
 
 std::string AgenticObservability::startSpan(const std::string& spanName, const std::string& parentSpanId)
 {
-    if (!m_tracingEnabled) return "";
+    if (!m_tracingEnabled)
+        return "";
 
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     std::string spanId = generateSpanId();
-    
+
     TraceSpan span;
     span.spanId = spanId;
     span.parentSpanId = parentSpanId;
@@ -423,48 +443,49 @@ std::string AgenticObservability::startSpan(const std::string& spanName, const s
     return spanId;
 }
 
-void AgenticObservability::endSpan(
-    const std::string& spanId,
-    bool hasError,
-    const std::string& errorMessage,
-    int statusCode)
+void AgenticObservability::endSpan(const std::string& spanId, bool hasError, const std::string& errorMessage,
+                                   int statusCode)
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     auto it = m_spans.find(spanId);
-    if (it != m_spans.end()) {
+    if (it != m_spans.end())
+    {
         it->second.endTime = std::chrono::system_clock::now();
         it->second.hasError = hasError;
         it->second.errorMessage = errorMessage;
         it->second.statusCode = statusCode;
 
-        if (m_spanCb) m_spanCb(spanId, m_spanCbData);
+        if (m_spanCb)
+            m_spanCb(spanId, m_spanCbData);
     }
 }
 
-void AgenticObservability::setSpanAttribute(
-    const std::string& spanId,
-    const std::string& key,
-    const nlohmann::json& value)
+void AgenticObservability::setSpanAttribute(const std::string& spanId, const std::string& key,
+                                            const nlohmann::json& value)
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     auto it = m_spans.find(spanId);
-    if (it != m_spans.end()) {
+    if (it != m_spans.end())
+    {
         it->second.attributes[key] = value;
     }
 }
 
-void AgenticObservability::addSpanEvent(
-    const std::string& spanId,
-    const std::string& eventName,
-    const nlohmann::json& attributes)
+void AgenticObservability::addSpanEvent(const std::string& spanId, const std::string& eventName,
+                                        const nlohmann::json& attributes)
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     auto it = m_spans.find(spanId);
-    if (it != m_spans.end()) {
+    if (it != m_spans.end())
+    {
         nlohmann::json event;
         event["name"] = eventName;
         event["timestamp"] = timePointToISO(std::chrono::system_clock::now());
         event["attributes"] = attributes;
-        
+
         // Store event in attributes array
-        if (!it->second.attributes.contains("events")) {
+        if (!it->second.attributes.contains("events"))
+        {
             it->second.attributes["events"] = nlohmann::json::array();
         }
         it->second.attributes["events"].push_back(event);
@@ -473,23 +494,28 @@ void AgenticObservability::addSpanEvent(
 
 AgenticObservability::TraceSpan* AgenticObservability::getSpan(const std::string& spanId)
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     auto it = m_spans.find(spanId);
-    if (it != m_spans.end()) {
+    if (it != m_spans.end())
+    {
         return &it->second;
     }
     return nullptr;
 }
 
-std::vector<AgenticObservability::TraceSpan> AgenticObservability::getTraceSpans(
-    const std::string& traceId) const
+std::vector<AgenticObservability::TraceSpan> AgenticObservability::getTraceSpans(const std::string& traceId) const
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     std::vector<TraceSpan> spans;
 
     auto it = m_traceSpans.find(traceId);
-    if (it != m_traceSpans.end()) {
-        for (const auto& spanId : it->second) {
+    if (it != m_traceSpans.end())
+    {
+        for (const auto& spanId : it->second)
+        {
             auto spanIt = m_spans.find(spanId);
-            if (spanIt != m_spans.end()) {
+            if (spanIt != m_spans.end())
+            {
                 spans.push_back(spanIt->second);
             }
         }
@@ -500,17 +526,31 @@ std::vector<AgenticObservability::TraceSpan> AgenticObservability::getTraceSpans
 
 nlohmann::json AgenticObservability::getTraceVisualization(const std::string& traceId) const
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     nlohmann::json visualization;
 
-    auto spans = getTraceSpans(traceId);
+    std::vector<TraceSpan> spans;
+
+    auto itTrace = m_traceSpans.find(traceId);
+    if (itTrace != m_traceSpans.end())
+    {
+        for (const auto& spanId : itTrace->second)
+        {
+            auto spanIt = m_spans.find(spanId);
+            if (spanIt != m_spans.end())
+            {
+                spans.push_back(spanIt->second);
+            }
+        }
+    }
     nlohmann::json spanArray = nlohmann::json::array();
 
-    for (const auto& span : spans) {
+    for (const auto& span : spans)
+    {
         nlohmann::json spanObj;
         spanObj["spanId"] = span.spanId;
         spanObj["operation"] = span.operation;
-        auto durationMs = std::chrono::duration_cast<std::chrono::milliseconds>(
-            span.endTime - span.startTime).count();
+        auto durationMs = std::chrono::duration_cast<std::chrono::milliseconds>(span.endTime - span.startTime).count();
         spanObj["duration"] = static_cast<int>(durationMs);
         spanObj["hasError"] = span.hasError;
 
@@ -527,10 +567,12 @@ nlohmann::json AgenticObservability::getTraceVisualization(const std::string& tr
 
 nlohmann::json AgenticObservability::getSystemHealth() const
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     nlohmann::json health;
 
     int errorCount = 0;
-    for (const auto& pair : m_errorCounts) {
+    for (const auto& pair : m_errorCounts)
+    {
         errorCount += pair.second;
     }
 
@@ -541,7 +583,7 @@ nlohmann::json AgenticObservability::getSystemHealth() const
     health["total_logs"] = m_totalLogsWritten;
     health["total_metrics"] = m_totalMetricsRecorded;
     health["total_errors"] = errorCount;
-    health["error_rate"] = errorCount / std::max(1.0f, uptime / 60.0f); // errors per minute
+    health["error_rate"] = errorCount / std::max(1.0f, uptime / 60.0f);  // errors per minute
 
     health["healthy"] = errorCount < 10;
 
@@ -556,14 +598,18 @@ bool AgenticObservability::isHealthy() const
 
 nlohmann::json AgenticObservability::getPerformanceSummary() const
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     nlohmann::json summary;
 
     // Find latency-related metrics
-    for (const auto& metric : m_metrics) {
-        if (metric.metricName.find("duration") != std::string::npos) {
+    for (const auto& metric : m_metrics)
+    {
+        if (metric.metricName.find("duration") != std::string::npos)
+        {
             std::string histogramName = metric.metricName;
             auto pos = histogramName.find("_duration");
-            if (pos != std::string::npos) {
+            if (pos != std::string::npos)
+            {
                 histogramName.erase(pos);
             }
             auto stats = getHistogramStats(histogramName);
@@ -576,10 +622,12 @@ nlohmann::json AgenticObservability::getPerformanceSummary() const
 
 nlohmann::json AgenticObservability::getErrorSummary() const
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     nlohmann::json summary;
 
     nlohmann::json errorsByComponent;
-    for (const auto& pair : m_errorCounts) {
+    for (const auto& pair : m_errorCounts)
+    {
         errorsByComponent[pair.first] = pair.second;
     }
 
@@ -591,14 +639,17 @@ nlohmann::json AgenticObservability::getErrorSummary() const
 
 std::vector<std::string> AgenticObservability::detectBottlenecks()
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     std::vector<std::string> bottlenecks;
 
     // Aggregate duration metrics: sum and count per metric name
     std::unordered_map<std::string, float> sumDurations;
-    std::unordered_map<std::string, int>   countDurations;
+    std::unordered_map<std::string, int> countDurations;
 
-    for (const auto& metric : m_metrics) {
-        if (metric.metricName.find("duration") != std::string::npos) {
+    for (const auto& metric : m_metrics)
+    {
+        if (metric.metricName.find("duration") != std::string::npos)
+        {
             sumDurations[metric.metricName] += metric.value;
             countDurations[metric.metricName]++;
         }
@@ -607,28 +658,33 @@ std::vector<std::string> AgenticObservability::detectBottlenecks()
     // Compute averages and flag operations exceeding 100ms threshold
     constexpr float BOTTLENECK_THRESHOLD_MS = 100.0f;
 
-    for (const auto& pair : sumDurations) {
+    for (const auto& pair : sumDurations)
+    {
         int count = countDurations[pair.first];
-        if (count == 0) continue;
+        if (count == 0)
+            continue;
         float avg = pair.second / static_cast<float>(count);
-        if (avg > BOTTLENECK_THRESHOLD_MS) {
-            bottlenecks.push_back(pair.first + " avg=" +
-                std::to_string(avg) + "ms (" +
-                std::to_string(count) + " samples)");
+        if (avg > BOTTLENECK_THRESHOLD_MS)
+        {
+            bottlenecks.push_back(pair.first + " avg=" + std::to_string(avg) + "ms (" + std::to_string(count) +
+                                  " samples)");
         }
     }
 
     // Sort by severity (longest average first)
     std::sort(bottlenecks.begin(), bottlenecks.end(),
-        [&](const std::string& a, const std::string& b) {
-            // Extract avg value from string for ordering
-            auto extractAvg = [](const std::string& s) -> float {
-                auto pos = s.find("avg=");
-                if (pos == std::string::npos) return 0.0f;
-                return std::stof(s.substr(pos + 4));
-            };
-            return extractAvg(a) > extractAvg(b);
-        });
+              [&](const std::string& a, const std::string& b)
+              {
+                  // Extract avg value from string for ordering
+                  auto extractAvg = [](const std::string& s) -> float
+                  {
+                      auto pos = s.find("avg=");
+                      if (pos == std::string::npos)
+                          return 0.0f;
+                      return std::stof(s.substr(pos + 4));
+                  };
+                  return extractAvg(a) > extractAvg(b);
+              });
 
     return bottlenecks;
 }
@@ -640,24 +696,26 @@ nlohmann::json AgenticObservability::analyzeLatency()
 
 // ===== EXPORT/REPORTING =====
 
-std::string AgenticObservability::generateReport(
-    const TimePoint& startTime,
-    const TimePoint& endTime) const
+std::string AgenticObservability::generateReport(const TimePoint& startTime, const TimePoint& endTime) const
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     std::ostringstream report;
     report << "=== OBSERVABILITY REPORT ===\n\n";
 
     report << "LOGS:\n";
     auto logs = getLogs(100, LogLevel::ObsDebug);
-    for (const auto& log : logs) {
-        if (log.timestamp < startTime || log.timestamp > endTime) continue;
-        report << "[" << timePointToISO(log.timestamp) << "] "
-               << log.component << ": " << log.message << "\n";
+    for (const auto& log : logs)
+    {
+        if (log.timestamp < startTime || log.timestamp > endTime)
+            continue;
+        report << "[" << timePointToISO(log.timestamp) << "] " << log.component << ": " << log.message << "\n";
     }
 
     report << "\nMETRICS:\n";
-    for (const auto& metric : getMetrics("", 50)) {
-        if (metric.timestamp < startTime || metric.timestamp > endTime) continue;
+    for (const auto& metric : getMetrics("", 50))
+    {
+        if (metric.timestamp < startTime || metric.timestamp > endTime)
+            continue;
         report << metric.metricName << " = " << metric.value << "\n";
     }
 
@@ -666,14 +724,14 @@ std::string AgenticObservability::generateReport(
 
 std::string AgenticObservability::exportMetricsAsCsv() const
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     std::ostringstream csv;
     csv << "timestamp,metric_name,value,unit\n";
 
-    for (const auto& metric : m_metrics) {
-        csv << timePointToISO(metric.timestamp) << ","
-            << metric.metricName << ","
-            << metric.value << ","
-            << metric.unit << "\n";
+    for (const auto& metric : m_metrics)
+    {
+        csv << timePointToISO(metric.timestamp) << "," << metric.metricName << "," << metric.value << "," << metric.unit
+            << "\n";
     }
 
     return csv.str();
@@ -681,10 +739,41 @@ std::string AgenticObservability::exportMetricsAsCsv() const
 
 std::string AgenticObservability::exportTracesAsJson() const
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     nlohmann::json traces = nlohmann::json::array();
 
-    for (const auto& pair : m_traceSpans) {
-        traces.push_back(getTraceVisualization(pair.first));
+    for (const auto& pair : m_traceSpans)
+    {
+        nlohmann::json visualization;
+
+        std::vector<TraceSpan> spans;
+        auto itTrace = m_traceSpans.find(pair.first);
+        if (itTrace != m_traceSpans.end())
+        {
+            for (const auto& spanId : itTrace->second)
+            {
+                auto spanIt = m_spans.find(spanId);
+                if (spanIt != m_spans.end())
+                {
+                    spans.push_back(spanIt->second);
+                }
+            }
+        }
+        nlohmann::json spanArray = nlohmann::json::array();
+        for (const auto& span : spans)
+        {
+            nlohmann::json spanObj;
+            spanObj["spanId"] = span.spanId;
+            spanObj["operation"] = span.operation;
+            auto durationMs =
+                std::chrono::duration_cast<std::chrono::milliseconds>(span.endTime - span.startTime).count();
+            spanObj["duration"] = static_cast<int>(durationMs);
+            spanObj["hasError"] = span.hasError;
+            spanArray.push_back(spanObj);
+        }
+        visualization["traceId"] = pair.first;
+        visualization["spans"] = spanArray;
+        traces.push_back(std::move(visualization));
     }
 
     return traces.dump(2);
@@ -692,9 +781,11 @@ std::string AgenticObservability::exportTracesAsJson() const
 
 std::string AgenticObservability::exportLogsAsJson() const
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     nlohmann::json logs = nlohmann::json::array();
 
-    for (const auto& log : m_logs) {
+    for (const auto& log : m_logs)
+    {
         nlohmann::json obj;
         obj["timestamp"] = timePointToISO(log.timestamp);
         obj["level"] = levelToString(log.level);
@@ -710,11 +801,13 @@ std::string AgenticObservability::exportLogsAsJson() const
 
 std::string AgenticObservability::exportMetricsAsPrometheus() const
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     std::ostringstream prom;
     std::unordered_map<std::string, float> latestMetrics;
-    
+
     // Grab the latest value for each metric
-    for (const auto& metric : m_metrics) {
+    for (const auto& metric : m_metrics)
+    {
         latestMetrics[metric.metricName] = metric.value;
     }
 
@@ -722,16 +815,19 @@ std::string AgenticObservability::exportMetricsAsPrometheus() const
     prom << "# HELP agentic_observability_total_logs Total number of written logs\n"
          << "# TYPE agentic_observability_total_logs counter\n"
          << "agentic_observability_total_logs " << m_totalLogsWritten << "\n";
-         
+
     prom << "# HELP agentic_observability_total_metrics Total number of metrics recorded\n"
          << "# TYPE agentic_observability_total_metrics counter\n"
          << "agentic_observability_total_metrics " << m_totalMetricsRecorded << "\n";
-    
-    for (const auto& pair : latestMetrics) {
+
+    for (const auto& pair : latestMetrics)
+    {
         // Sanitize metric name for prometheus (replacing non-alphanumeric with underscores mostly)
         std::string safeName = pair.first;
-        for(auto& c : safeName) {
-            if(!std::isalnum(c)) c = '_';
+        for (auto& c : safeName)
+        {
+            if (!std::isalnum(c))
+                c = '_';
         }
         prom << "# HELP " << safeName << " Auto-generated metric for " << pair.first << "\n"
              << "# TYPE " << safeName << " gauge\n"
@@ -743,23 +839,26 @@ std::string AgenticObservability::exportMetricsAsPrometheus() const
 
 void AgenticObservability::startHeartbeatLoop()
 {
-    if (m_heartbeatRunning) return;
+    if (m_heartbeatRunning)
+        return;
     m_heartbeatRunning = true;
     m_heartbeatThread = std::make_unique<std::thread>(&AgenticObservability::heartbeatWorker, this);
 }
 
 void AgenticObservability::stopHeartbeatLoop()
 {
-    if (m_heartbeatRunning) {
+    if (m_heartbeatRunning)
+    {
         m_heartbeatRunning = false;
-        if (m_heartbeatThread && m_heartbeatThread->joinable()) {
+        if (m_heartbeatThread && m_heartbeatThread->joinable())
+        {
             m_heartbeatThread->join();
         }
     }
 }
 
 // -----------------------------------------------------------------------
-// Core Agent Metrics Hooks 
+// Core Agent Metrics Hooks
 // -----------------------------------------------------------------------
 
 void AgenticObservability::updateTokensPerSecond(float tps)
@@ -789,22 +888,26 @@ void AgenticObservability::updateMemoryUsage(size_t bytes)
 
 void AgenticObservability::heartbeatWorker()
 {
-    while (m_heartbeatRunning) {
+    while (m_heartbeatRunning)
+    {
         // Collect automated memory metrics
         size_t memoryUsage = 0;
 #ifdef _WIN32
         PROCESS_MEMORY_COUNTERS pmc;
-        if (GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc))) {
+        if (GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc)))
+        {
             memoryUsage = pmc.WorkingSetSize;
         }
 #endif
-        if (memoryUsage > 0) {
+        if (memoryUsage > 0)
+        {
             recordMetric("memory_usage_bytes", static_cast<float>(memoryUsage), {}, "bytes");
         }
 
         // Write metrics to metrics.prom file
         std::ofstream promFile("metrics.prom", std::ios::trunc);
-        if (promFile.is_open()) {
+        if (promFile.is_open())
+        {
             promFile << exportMetricsAsPrometheus();
             promFile.flush();
             promFile.close();
@@ -828,19 +931,28 @@ std::string AgenticObservability::generateSpanId()
 
 std::string AgenticObservability::levelToString(LogLevel level) const
 {
-    switch (level) {
-        case LogLevel::ObsDebug: return "DEBUG";
-        case LogLevel::ObsInfo: return "INFO";
-        case LogLevel::ObsWarn: return "WARN";
-        case LogLevel::ObsError: return "ERROR";
-        case LogLevel::ObsCritical: return "CRITICAL";
-        default: return "UNKNOWN";
+    switch (level)
+    {
+        case LogLevel::ObsDebug:
+            return "DEBUG";
+        case LogLevel::ObsInfo:
+            return "INFO";
+        case LogLevel::ObsWarn:
+            return "WARN";
+        case LogLevel::ObsError:
+            return "ERROR";
+        case LogLevel::ObsCritical:
+            return "CRITICAL";
+        default:
+            return "UNKNOWN";
     }
 }
 
 void AgenticObservability::checkAndRotateLogs()
 {
-    if (static_cast<int>(m_logs.size()) > m_maxLogEntries) {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    if (static_cast<int>(m_logs.size()) > m_maxLogEntries)
+    {
         int toRemove = static_cast<int>(m_logs.size()) - (m_maxLogEntries * 9 / 10);
         m_logs.erase(m_logs.begin(), m_logs.begin() + toRemove);
     }

@@ -1,0 +1,13 @@
+2026-04-10 05:42:04 [INFO] [RuntimeSurface] [RuntimeSurface] bootstrap begin (no startup scan/index)
+2026-04-10 05:42:04 [INFO] [RuntimeSurface] [RawrXD::Quant] Layout Legend: Q4S (Signed 4-bit): UI '-4bit', Wire: val+8, Range [-8,7]. Q6S (Signed 6-bit): UI '-6bit', Wire: val+32, Range [-32,31]. Q4U/Q6U: Standard Unsigned Mapping.
+2026-04-10 05:42:04 [INFO] [RuntimeSurface] [CompressedPoolBudget] budget_bytes=0
+2026-04-10 05:42:04 [INFO] [RuntimeSurface] [ModularModelLoader] resident layer budget=0
+2026-04-10 05:42:04 [INFO] [RuntimeSurface] [RuntimeSurface] llama.cpp/exllamaV2 parity register entries=12
+2026-04-10 05:42:04 [INFO] [RuntimeSurface] [RuntimeSurface] four-lane gate ready (max 4 of 5 lanes unless explicit module)
+2026-04-10 05:42:04 [INFO] [RuntimeSurface] [RuntimeSurface] bootstrap complete
+RawrXD Headless IDE initializing...
+[MEM_STRATEGY] SYS_64KB_ONLY
+Headless minimal profile active (RAWRXD_HEADLESS_MINIMAL=1): skipping optional subsystem threads
+Headless IDE initialized successfully.
+The term "accurate" indicates that the information provided should be correct and reliable based on current knowledge up to a certain point in time (as of my last update). My responses are generated from extensive datasets which have been refined over years by human contributors, ensuring factual accuracy. However, it's always good practice for users to verify important or historical information using reputable sources as newer research and data could provide additional insights.
+[Scheduler] Shutdown complete

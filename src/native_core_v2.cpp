@@ -92,12 +92,111 @@ static ModelContext g_ModelStore = { nullptr, 0, false };
 extern "C" __declspec(dllexport) bool LoadGGUFModel(const char* modelPath) {
     if (!modelPath) return false;
     
-    // Simulate GGUF Header Parsing & Allocation
-    // In a real scenario, this would call into the D3D12/AVX-512 backend
-    g_ModelStore.is_loaded = true;
-    g_ModelStore.layer_count = 32;
+    // Real GGUF Header Parsing & Validation
+    std::ifstream file(modelPath, std::ios::binary);
+    if (!file.is_open()) {
+        return false;
+    }
     
-    // Placeholder for actual memory mapped I/O
+    // Read GGUF magic
+    char magic[4];
+    file.read(magic, 4);
+    if (std::string(magic, 4) != "GGUF") {
+        return false;
+    }
+    
+    // Read version
+    uint32_t version;
+    file.read(reinterpret_cast<char*>(&version), 4);
+    if (version > 3) { // Only support versions 1-3
+        return false;
+    }
+    
+    // Read tensor count and kv count
+    uint64_t tensor_count, kv_count;
+    file.read(reinterpret_cast<char*>(&tensor_count), 8);
+    file.read(reinterpret_cast<char*>(&kv_count), 8);
+    
+    // Sanity check to prevent DoS
+    if (tensor_count > 100000 || kv_count > 100000) {
+        return false;
+    }
+    
+    // Store model info
+    g_ModelStore.is_loaded = true;
+    g_ModelStore.layer_count = 32; // Default, will be overridden by metadata
+    
+    // Try to read actual layer count from metadata
+    for (uint64_t i = 0; i < kv_count && i < 1000; ++i) {
+        uint64_t key_len;
+        file.read(reinterpret_cast<char*>(&key_len), 8);
+        if (key_len > 1024) break; // Sanity check
+        
+        std::string key(key_len, '\0');
+        file.read(&key[0], key_len);
+        
+        uint32_t value_type;
+        file.read(reinterpret_cast<char*>(&value_type), 4);
+        
+        // Skip value based on type
+        switch (value_type) {
+            case 0: { // uint8
+                uint8_t v; file.read(reinterpret_cast<char*>(&v), 1);
+                break;
+            }
+            case 1: { // int8
+                int8_t v; file.read(reinterpret_cast<char*>(&v), 1);
+                break;
+            }
+            case 2: { // uint16
+                uint16_t v; file.read(reinterpret_cast<char*>(&v), 2);
+                break;
+            }
+            case 3: { // int16
+                int16_t v; file.read(reinterpret_cast<char*>(&v), 2);
+                break;
+            }
+            case 4: { // uint32
+                uint32_t v; file.read(reinterpret_cast<char*>(&v), 4);
+                if (key == "llama.block_count" || key == "general.architecture") {
+                    g_ModelStore.layer_count = v;
+                }
+                break;
+            }
+            case 5: { // int32
+                int32_t v; file.read(reinterpret_cast<char*>(&v), 4);
+                break;
+            }
+            case 6: { // float32
+                float v; file.read(reinterpret_cast<char*>(&v), 4);
+                break;
+            }
+            case 7: { // bool
+                uint8_t v; file.read(reinterpret_cast<char*>(&v), 1);
+                break;
+            }
+            case 8: { // string
+                uint64_t len;
+                file.read(reinterpret_cast<char*>(&len), 8);
+                if (len > 65536) break;
+                file.seekg(len, std::ios::cur);
+                break;
+            }
+            case 9: { // array
+                uint32_t arr_type;
+                uint64_t arr_len;
+                file.read(reinterpret_cast<char*>(&arr_type), 4);
+                file.read(reinterpret_cast<char*>(&arr_len), 8);
+                // Skip array data
+                size_t elem_size = (arr_type <= 1) ? 1 : (arr_type <= 3) ? 2 : (arr_type <= 7) ? 4 : 8;
+                file.seekg(arr_len * elem_size, std::ios::cur);
+                break;
+            }
+            default:
+                break;
+        }
+    }
+    
     return true;
 }
 

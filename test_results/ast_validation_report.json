@@ -1,0 +1,164 @@
+﻿{
+    "Version":  "1.0.0-gold",
+    "Passed":  22,
+    "Timestamp":  "2026-05-02T06:33:35",
+    "Skipped":  0,
+    "TestDetails":  [
+                        {
+                            "Marker":  1,
+                            "Status":  "PASS",
+                            "Category":  "Access Modifier Sovereignty",
+                            "Name":  "MARKER_1",
+                            "Timestamp":  "06:33:35.350"
+                        },
+                        {
+                            "Marker":  2,
+                            "Status":  "PASS",
+                            "Category":  "Access Modifier Sovereignty",
+                            "Name":  "MARKER_2",
+                            "Timestamp":  "06:33:35.353"
+                        },
+                        {
+                            "Marker":  3,
+                            "Status":  "PASS",
+                            "Category":  "Access Modifier Sovereignty",
+                            "Name":  "MARKER_3",
+                            "Timestamp":  "06:33:35.353"
+                        },
+                        {
+                            "Marker":  4,
+                            "Status":  "PASS",
+                            "Category":  "Template Parameter Deduction",
+                            "Name":  "MARKER_4",
+                            "Timestamp":  "06:33:35.356"
+                        },
+                        {
+                            "Marker":  5,
+                            "Status":  "PASS",
+                            "Category":  "Template Parameter Deduction",
+                            "Name":  "MARKER_5",
+                            "Timestamp":  "06:33:35.358"
+                        },
+                        {
+                            "Marker":  6,
+                            "Status":  "PASS",
+                            "Category":  "Template Parameter Deduction",
+                            "Name":  "MARKER_6",
+                            "Timestamp":  "06:33:35.358"
+                        },
+                        {
+                            "Marker":  7,
+                            "Status":  "PASS",
+                            "Category":  "Nested Class Scope Resolution",
+                            "Name":  "MARKER_7",
+                            "Timestamp":  "06:33:35.361"
+                        },
+                        {
+                            "Marker":  8,
+                            "Status":  "PASS",
+                            "Category":  "CRTP Pattern Recognition",
+                            "Name":  "MARKER_8",
+                            "Timestamp":  "06:33:35.362"
+                        },
+                        {
+                            "Marker":  9,
+                            "Status":  "PASS",
+                            "Category":  "CRTP Pattern Recognition",
+                            "Name":  "MARKER_9",
+                            "Timestamp":  "06:33:35.364"
+                        },
+                        {
+                            "Marker":  10,
+                            "Status":  "PASS",
+                            "Category":  "Concept Constraints",
+                            "Name":  "MARKER_10",
+                            "Timestamp":  "06:33:35.365"
+                        },
+                        {
+                            "Marker":  11,
+                            "Status":  "PASS",
+                            "Category":  "Concept Constraints",
+                            "Name":  "MARKER_11",
+                            "Timestamp":  "06:33:35.367"
+                        },
+                        {
+                            "Marker":  12,
+                            "Status":  "PASS",
+                            "Category":  "Concept Constraints",
+                            "Name":  "MARKER_12",
+                            "Timestamp":  "06:33:35.367"
+                        },
+                        {
+                            "Marker":  13,
+                            "Status":  "PASS",
+                            "Category":  "Template Specialization",
+                            "Name":  "MARKER_13",
+                            "Timestamp":  "06:33:35.370"
+                        },
+                        {
+                            "Marker":  14,
+                            "Status":  "PASS",
+                            "Category":  "Template Specialization",
+                            "Name":  "MARKER_14",
+                            "Timestamp":  "06:33:35.371"
+                        },
+                        {
+                            "Marker":  15,
+                            "Status":  "PASS",
+                            "Category":  "Lambda Capture Analysis",
+                            "Name":  "MARKER_15",
+                            "Timestamp":  "06:33:35.373"
+                        },
+                        {
+                            "Marker":  16,
+                            "Status":  "PASS",
+                            "Category":  "Lambda Capture Analysis",
+                            "Name":  "MARKER_16",
+                            "Timestamp":  "06:33:35.374"
+                        },
+                        {
+                            "Marker":  17,
+                            "Status":  "PASS",
+                            "Category":  "Namespace Scope Resolution",
+                            "Name":  "MARKER_17",
+                            "Timestamp":  "06:33:35.376"
+                        },
+                        {
+                            "Marker":  18,
+                            "Status":  "PASS",
+                            "Category":  "Type Aliases",
+                            "Name":  "MARKER_18",
+                            "Timestamp":  "06:33:35.377"
+                        },
+                        {
+                            "Marker":  19,
+                            "Status":  "PASS",
+                            "Category":  "Type Aliases",
+                            "Name":  "MARKER_19",
+                            "Timestamp":  "06:33:35.379"
+                        },
+                        {
+                            "Marker":  20,
+                            "Status":  "PASS",
+                            "Category":  "Type Aliases",
+                            "Name":  "MARKER_20",
+                            "Timestamp":  "06:33:35.380"
+                        },
+                        {
+                            "Marker":  21,
+                            "Status":  "PASS",
+                            "Category":  "Friend Function Scope",
+                            "Name":  "MARKER_21",
+                            "Timestamp":  "06:33:35.388"
+                        },
+                        {
+                            "Marker":  22,
+                            "Status":  "PASS",
+                            "Category":  "Friend Function Scope",
+                            "Name":  "MARKER_22",
+                            "Timestamp":  "06:33:35.391"
+                        }
+                    ],
+    "TotalTests":  22,
+    "Failed":  0
+}

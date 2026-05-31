@@ -12,7 +12,7 @@
 #include <iomanip>
 #include <sstream>
 
-// SCAFFOLD_043: Game engine panel
+// Game Engine Panel Implementation
 
 
 namespace fs = std::filesystem;
@@ -634,10 +634,41 @@ void Win32IDE::cmdGameEngineDebugStop()
 
 void Win32IDE::cmdGameEngineBreakpoint()
 {
-    // Simple dialog to set breakpoint
-    char buffer[512] = {};
-    // For now, use a simple input via output prompt
-    appendToOutput("[GameEngine] Set breakpoint: Use !engine bp <file> <line>\n");
+    // Prompt for file:line breakpoint location
+    wchar_t buf[512] = {};
+    if (!DialogBoxWithInput(L"Set Breakpoint", L"Enter breakpoint location (file:line):", buf, 512))
+        return;
+
+    // Parse "file:line" format
+    std::wstring input(buf);
+    size_t colon = input.rfind(L':');
+    if (colon == std::wstring::npos || colon == 0 || colon == input.size() - 1) {
+        appendToOutput("[GameEngine] Invalid format. Use: file.cpp:42\n");
+        return;
+    }
+    std::wstring fileW = input.substr(0, colon);
+    int line = _wtoi(input.substr(colon + 1).c_str());
+    if (line <= 0) {
+        appendToOutput("[GameEngine] Invalid line number.\n");
+        return;
+    }
+
+    std::string fileA;
+    {
+        int len = WideCharToMultiByte(CP_UTF8, 0, fileW.c_str(), (int)fileW.size(), nullptr, 0, nullptr, nullptr);
+        if (len > 0) {
+            fileA.resize(len);
+            WideCharToMultiByte(CP_UTF8, 0, fileW.c_str(), (int)fileW.size(), fileA.data(), len, nullptr, nullptr);
+        }
+    }
+    bool ok = m_gameEngineManager->setBreakpoint(fileA, line);
+    if (ok) {
+        std::ostringstream oss;
+        oss << "[GameEngine] Breakpoint set at " << fileA << ":" << line << "\n";
+        appendToOutput(oss.str());
+    } else {
+        appendToOutput("[GameEngine] Failed to set breakpoint at " + fileA + "\n");
+    }
 }
 
 void Win32IDE::cmdGameEngineAISummary()

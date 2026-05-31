@@ -106,9 +106,14 @@ void AgenticEngineSovereignHook::updateUI(const std::string& statusLine) {
     std::lock_guard<std::mutex> lock(s_hookMutex);
     m_lastStatus = statusLine;
     
-    // TODO: Wire to IDE UI panel
-    // This could call agenticEngine.updateStatusPanel(statusLine)
-    // or post a message to the Win32 window
+    // Post status update to IDE UI panel via window message
+    HWND hwnd = FindWindowA("RawrXD_IDE_Class", nullptr);
+    if (hwnd) {
+        constexpr UINT MSG_STATUS_PANEL = WM_USER + 0x3002;
+        char* buf = new char[statusLine.size() + 1];
+        std::memcpy(buf, statusLine.c_str(), statusLine.size() + 1);
+        PostMessageA(hwnd, MSG_STATUS_PANEL, reinterpret_cast<WPARAM>(buf), 0);
+    }
 }
 
 bool AgenticEngineSovereignHook::isSovereignEnabled() const {

@@ -36,7 +36,7 @@ struct Action {
 
 struct ExecutionContext {
     std::string projectRoot;
-    int timeoutMs = 30000;
+    int timeoutMs = 120000;  // 120s default for complex agentic operations
     int currentActionIndex = 0;
 };
 

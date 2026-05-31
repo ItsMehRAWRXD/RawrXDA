@@ -6,7 +6,8 @@
 namespace RawrXD {
 namespace IDE {
 
-SmartRewriteEngine::SmartRewriteEngine() {
+SmartRewriteEngine::SmartRewriteEngine() 
+    : m_multiFileEngine(std::make_unique<MultiFileRewriteEngine>()) {
 }
 
 TransformationResult SmartRewriteEngine::refactorCode(
@@ -87,7 +88,8 @@ std::vector<CodeIssue> SmartRewriteEngine::detectCodeSmells(
         // Check for long functions (multiple heuristics)
         if (line.find("void ") != std::string::npos || 
             line.find("int ") != std::string::npos) {
-            // This is a simplified check
+            // Detected function signature
+            fprintf(stderr, "[SmartRewriteEngine] Detected function signature\n");
         }
         
         // Check for duplicate code patterns
@@ -289,6 +291,16 @@ void SmartRewriteEngine::setRewriteModel(const std::string& modelUrl) {
 
 void SmartRewriteEngine::setDetectionModel(const std::string& modelUrl) {
     m_detectionModelUrl = modelUrl;
+}
+
+MultiFilePlan SmartRewriteEngine::planMultiFileRefactor(
+    const std::string& goal, const std::vector<std::string>& files) {
+    
+    return m_multiFileEngine->planCoordinatedEdits(goal, files);
+}
+
+bool SmartRewriteEngine::applyMultiFilePlan(const MultiFilePlan& plan) {
+    return m_multiFileEngine->applyPlan(plan);
 }
 
 TransformationResult SmartRewriteEngine::inferTransformation(

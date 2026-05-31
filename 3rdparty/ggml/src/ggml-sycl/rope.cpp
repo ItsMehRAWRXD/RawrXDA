@@ -229,7 +229,7 @@ static void rope_norm_sycl(const T * x, T * dst, const int ne0, const int ne1, c
                            const int n_dims, int nr, const int32_t * pos, const float freq_scale, const float freq_base,
                            const float ext_factor, const float attn_factor, const rope_corr_dims corr_dims,
                            const float * freq_factors, queue_ptr stream) {
-    GGML_ASSERT(ne0 % 2 == 0);
+    GGML_RXD_ASSERT(ne0 % 2 == 0);
     const sycl::range<3> block_dims(1, SYCL_ROPE_BLOCK_SIZE, 1);
     const int            num_blocks_x = ceil_div(ne0, (2 * SYCL_ROPE_BLOCK_SIZE));
     const sycl::range<3> block_nums(1, num_blocks_x, nr);
@@ -266,7 +266,7 @@ static void rope_neox_sycl(const T * x, T * dst, const int ne0, const int ne1, c
                            const int n_dims, const int nr, const int32_t * pos, const float freq_scale,
                            const float freq_base, const float ext_factor, const float attn_factor,
                            const rope_corr_dims corr_dims, const float * freq_factors, queue_ptr stream) {
-    GGML_ASSERT(ne0 % 2 == 0);
+    GGML_RXD_ASSERT(ne0 % 2 == 0);
     const sycl::range<3> block_dims(1, SYCL_ROPE_BLOCK_SIZE, 1);
     const int            num_blocks_x = ceil_div(ne0, (2 * SYCL_ROPE_BLOCK_SIZE));
     const sycl::range<3> block_nums(1, num_blocks_x, nr);
@@ -294,7 +294,7 @@ static void rope_multi_sycl(const T * x, T * dst, const int ne0, const int ne1, 
                              const float freq_scale, const float freq_base, const float ext_factor,
                              const float attn_factor, const rope_corr_dims corr_dims, const float * freq_factors,
                              const mrope_sections sections, const bool is_imrope, queue_ptr stream) {
-    GGML_ASSERT(ne0 % 2 == 0);
+    GGML_RXD_ASSERT(ne0 % 2 == 0);
     const sycl::range<3>    block_dims(1, SYCL_ROPE_BLOCK_SIZE, 1);
     const int               n_blocks_y = ceil_div(ne0, (2 * SYCL_ROPE_BLOCK_SIZE));
     const sycl::range<3>    grid_dims(1, n_blocks_y, nr);
@@ -329,7 +329,7 @@ static void rope_vision_sycl(const T * x, T * dst, const int ne0, const int ne1,
                              const float freq_scale, const float freq_base, const float ext_factor,
                              const float attn_factor, const rope_corr_dims corr_dims, const float * freq_factors,
                              const mrope_sections sections, queue_ptr stream) {
-    GGML_ASSERT(ne0 % 2 == 0);
+    GGML_RXD_ASSERT(ne0 % 2 == 0);
     const sycl::range<3>    block_dims(1, SYCL_ROPE_BLOCK_SIZE, 1);
     const int               n_blocks_y = ceil_div(ne0, (2 * SYCL_ROPE_BLOCK_SIZE));
     const sycl::range<3>    grid_dims(1, n_blocks_y, nr);
@@ -354,18 +354,18 @@ static void rope_vision_sycl(const T * x, T * dst, const int ne0, const int ne1,
     }
 }
 
-inline void ggml_sycl_op_rope(ggml_backend_sycl_context & ctx, ggml_tensor *dst) {
+inline void ggml_rxd_sycl_op_rope(ggml_rxd_backend_sycl_context & ctx, ggml_rxd_tensor *dst) {
 
-    GGML_ASSERT(dst->src[0]->type == GGML_TYPE_F32 || dst->src[0]->type == GGML_TYPE_F16);
-    GGML_ASSERT( dst->type == GGML_TYPE_F32 ||  dst->type == GGML_TYPE_F16);
-    GGML_ASSERT(dst->src[0]->type == dst->type);
+    GGML_RXD_ASSERT(dst->src[0]->type == GGML_RXD_TYPE_F32 || dst->src[0]->type == GGML_RXD_TYPE_F16);
+    GGML_RXD_ASSERT( dst->type == GGML_RXD_TYPE_F32 ||  dst->type == GGML_RXD_TYPE_F16);
+    GGML_RXD_ASSERT(dst->src[0]->type == dst->type);
     const int64_t ne00 = dst->src[0]->ne[0]; // head dims
     const int64_t ne01 = dst->src[0]->ne[1]; // num heads
     const int64_t ne02 = dst->src[0]->ne[2]; // num heads
-    const int64_t nr = ggml_nrows(dst->src[0]);
+    const int64_t nr = ggml_rxd_nrows(dst->src[0]);
 
-    const size_t s01 = dst->src[0]->nb[1] / ggml_type_size(dst->src[0]->type);
-    const size_t s02 = dst->src[0]->nb[2] / ggml_type_size(dst->src[0]->type);
+    const size_t s01 = dst->src[0]->nb[1] / ggml_rxd_type_size(dst->src[0]->type);
+    const size_t s02 = dst->src[0]->nb[2] / ggml_rxd_type_size(dst->src[0]->type);
 
 
     //const int n_past      = ((int32_t *) dst->op_params)[0];
@@ -391,17 +391,17 @@ inline void ggml_sycl_op_rope(ggml_backend_sycl_context & ctx, ggml_tensor *dst)
     memcpy(&beta_slow,   (int32_t *) dst->op_params + 10, sizeof(float));
     memcpy(&sections.v,  (int32_t *) dst->op_params + 11, sizeof(int)*4);
 
-    const bool is_neox = mode & GGML_ROPE_TYPE_NEOX;
-    const bool is_mrope = mode & GGML_ROPE_TYPE_MROPE;
-    const bool is_imrope = mode == GGML_ROPE_TYPE_IMROPE;
-    const bool is_vision = mode == GGML_ROPE_TYPE_VISION;
+    const bool is_neox = mode & GGML_RXD_ROPE_TYPE_NEOX;
+    const bool is_mrope = mode & GGML_RXD_ROPE_TYPE_MROPE;
+    const bool is_imrope = mode == GGML_RXD_ROPE_TYPE_IMROPE;
+    const bool is_vision = mode == GGML_RXD_ROPE_TYPE_VISION;
 
     if (is_mrope) {
-        GGML_ASSERT(sections.v[0] > 0 || sections.v[1] > 0 || sections.v[2] > 0);
+        GGML_RXD_ASSERT(sections.v[0] > 0 || sections.v[1] > 0 || sections.v[2] > 0);
     }
 
     if (is_vision) {
-        GGML_ASSERT(n_dims == ne00/2);
+        GGML_RXD_ASSERT(n_dims == ne00/2);
     }
 
     const int32_t * pos = (const int32_t *) dst->src[1]->data;
@@ -412,67 +412,67 @@ inline void ggml_sycl_op_rope(ggml_backend_sycl_context & ctx, ggml_tensor *dst)
     }
 
     rope_corr_dims corr_dims;
-    ggml_rope_yarn_corr_dims(n_dims, n_ctx_orig, freq_base, beta_fast, beta_slow, corr_dims.v);
+    ggml_rxd_rope_yarn_corr_dims(n_dims, n_ctx_orig, freq_base, beta_fast, beta_slow, corr_dims.v);
 
     dpct::queue_ptr main_stream = ctx.stream();
-    SYCL_CHECK(ggml_sycl_set_device(ctx.device));
+    SYCL_CHECK(ggml_rxd_sycl_set_device(ctx.device));
 
     // compute
     if (is_neox) {
-        GGML_SYCL_DEBUG("%s: neox path\n", __func__);
-        if (dst->src[0]->type == GGML_TYPE_F32) {
+        GGML_RXD_SYCL_DEBUG("%s: neox path\n", __func__);
+        if (dst->src[0]->type == GGML_RXD_TYPE_F32) {
             rope_neox_sycl((const float *) dst->src[0]->data, (float *) dst->data, ne00, ne01, s01, s02, n_dims, nr,
                            pos, freq_scale, freq_base, ext_factor, attn_factor, corr_dims, freq_factors, main_stream);
-        } else if (dst->src[0]->type == GGML_TYPE_F16) {
+        } else if (dst->src[0]->type == GGML_RXD_TYPE_F16) {
             rope_neox_sycl((const sycl::half *) dst->src[0]->data, (sycl::half *) dst->data, ne00, ne01, s01, s02,
                            n_dims, nr, pos, freq_scale, freq_base, ext_factor, attn_factor, corr_dims, freq_factors,
                            main_stream);
         } else {
-            GGML_ABORT("fatal error");
+            GGML_RXD_ABORT("fatal error");
         }
     } else if (is_mrope && !is_vision) {
-        GGML_SYCL_DEBUG("%s: mrope path\n", __func__);
-        if (dst->src[0]->type == GGML_TYPE_F16) {
+        GGML_RXD_SYCL_DEBUG("%s: mrope path\n", __func__);
+        if (dst->src[0]->type == GGML_RXD_TYPE_F16) {
             rope_multi_sycl((const sycl::half *)dst->src[0]->data, (sycl::half *)dst->data, ne00, ne01, ne02, s01,
                 s02, n_dims, nr, pos, freq_scale, freq_base, ext_factor, attn_factor, corr_dims,
                 freq_factors, sections, is_imrope, main_stream);
-        } else if (dst->src[0]->type == GGML_TYPE_F32) {
+        } else if (dst->src[0]->type == GGML_RXD_TYPE_F32) {
             rope_multi_sycl((const float *) dst->src[0]->data, (float *) dst->data, ne00, ne01, ne02, s01, s02, n_dims,
                              nr, pos, freq_scale, freq_base, ext_factor, attn_factor, corr_dims, freq_factors, sections,
                              is_imrope, main_stream);
         } else {
-            GGML_ABORT("Fatal error: Tensor type unsupported!");
+            GGML_RXD_ABORT("Fatal error: Tensor type unsupported!");
         }
     } else if (is_vision) {
-        GGML_SYCL_DEBUG("%s: vision path\n", __func__);
-        if (dst->src[0]->type == GGML_TYPE_F16) {
+        GGML_RXD_SYCL_DEBUG("%s: vision path\n", __func__);
+        if (dst->src[0]->type == GGML_RXD_TYPE_F16) {
             rope_vision_sycl((const sycl::half *) dst->src[0]->data, (sycl::half *) dst->data, ne00, ne01, ne02, s01,
                              s02, n_dims, nr, pos, freq_scale, freq_base, ext_factor, attn_factor, corr_dims,
                              freq_factors, sections, main_stream);
-        } else if (dst->src[0]->type == GGML_TYPE_F32) {
+        } else if (dst->src[0]->type == GGML_RXD_TYPE_F32) {
             rope_vision_sycl((const float *) dst->src[0]->data, (float *) dst->data, ne00, ne01, ne02, s01, s02, n_dims,
                              nr, pos, freq_scale, freq_base, ext_factor, attn_factor, corr_dims, freq_factors, sections,
                              main_stream);
         } else {
-            GGML_ABORT("Fatal error: Tensor type unsupported!");
+            GGML_RXD_ABORT("Fatal error: Tensor type unsupported!");
         }
     } else {
-        GGML_SYCL_DEBUG("%s: norm path\n", __func__);
-        if (dst->src[0]->type == GGML_TYPE_F32) {
+        GGML_RXD_SYCL_DEBUG("%s: norm path\n", __func__);
+        if (dst->src[0]->type == GGML_RXD_TYPE_F32) {
             rope_norm_sycl((const float *) dst->src[0]->data, (float *) dst->data, ne00, ne01, s01, s02, n_dims, nr,
                            pos, freq_scale, freq_base, ext_factor, attn_factor, corr_dims, freq_factors, main_stream);
-        } else if (dst->src[0]->type == GGML_TYPE_F16) {
+        } else if (dst->src[0]->type == GGML_RXD_TYPE_F16) {
             rope_norm_sycl((const sycl::half *) dst->src[0]->data, (sycl::half *) dst->data, ne00, ne01, s01, s02,
                            n_dims, nr, pos, freq_scale, freq_base, ext_factor, attn_factor, corr_dims, freq_factors,
                            main_stream);
         } else {
-            GGML_ABORT("fatal error");
+            GGML_RXD_ABORT("fatal error");
         }
     }
 }
 
-void ggml_sycl_rope(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
+void ggml_rxd_sycl_rope(ggml_rxd_backend_sycl_context & ctx, ggml_rxd_tensor * dst) {
     scope_op_debug_print scope_dbg_print(__func__, dst, /*num_src=*/3);
-    ggml_sycl_op_rope(ctx, dst);
+    ggml_rxd_sycl_op_rope(ctx, dst);
 }
 

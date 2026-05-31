@@ -771,26 +771,71 @@ void StreamingWebServer::setModelLoaderCallback(
 
 void StreamingWebServer::handleGenerateStream() {
     // Handle POST /api/generate with SSE response
+    fprintf(stderr, "[StreamingWebServer] POST /api/generate\n");
+    // Parse request body and stream tokens
+    std::string body = readRequestBody();
+    if (body.empty()) {
+        sendError(400, "Empty request body");
+        return;
+    }
+    // Start SSE stream
+    startSSEStream();
 }
 
 void StreamingWebServer::handleGenerateSSE() {
     // Handle GET /api/generate/stream with Server-Sent Events
+    fprintf(stderr, "[StreamingWebServer] GET /api/generate/stream\n");
+    startSSEStream();
 }
 
 void StreamingWebServer::handleBatchGenerate() {
     // Handle POST /api/batch/generate
+    fprintf(stderr, "[StreamingWebServer] POST /api/batch/generate\n");
+    std::string body = readRequestBody();
+    if (body.empty()) {
+        sendError(400, "Empty request body");
+        return;
+    }
+    // Process batch generation
+    processBatchRequest(body);
 }
 
 void StreamingWebServer::handleTokenize() {
     // Handle POST /api/tokenize
+    fprintf(stderr, "[StreamingWebServer] POST /api/tokenize\n");
+    std::string body = readRequestBody();
+    if (body.empty()) {
+        sendError(400, "Empty request body");
+        return;
+    }
+    // Tokenize text and return IDs
+    std::vector<int> tokens = tokenize(body);
+    sendJsonResponse({{"tokens", tokens}});
 }
 
 void StreamingWebServer::handleDetokenize() {
     // Handle POST /api/detokenize
+    fprintf(stderr, "[StreamingWebServer] POST /api/detokenize\n");
+    std::string body = readRequestBody();
+    if (body.empty()) {
+        sendError(400, "Empty request body");
+        return;
+    }
+    // Detokenize IDs and return text
+    std::string text = detokenize(body);
+    sendJsonResponse({{"text", text}});
 }
 
 void StreamingWebServer::handleStatus() {
     // Handle GET /api/status
+    fprintf(stderr, "[StreamingWebServer] GET /api/status\n");
+    nlohmann::json status = {
+        {"status", "ok"},
+        {"version", "1.0.0"},
+        {"models_loaded", getLoadedModelCount()},
+        {"requests_processed", m_requestCount}
+    };
+    sendJsonResponse(status);
 }
 
 // ============================================================================

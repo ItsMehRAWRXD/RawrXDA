@@ -25,7 +25,7 @@ class ModelCaller {
 public:
     enum class ModelType {
         GGUF_LOCAL,      // Local GGUF model via GGML
-        OLLAMA_REMOTE,   // Remote Ollama endpoint
+        NATIVE_REMOTE,   // Remote native inference endpoint
         OPENAI_API,      // OpenAI API (ChatGPT, GPT-4)
         HUGGINGFACE_API  // HuggingFace Inference API
     };

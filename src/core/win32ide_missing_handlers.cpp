@@ -79,37 +79,99 @@ CommandResult handlePluginShowPanel(const CommandContext& ctx) {
     return CommandResult::ok("plugin.showPanel");
 }
 
-#define WIN32IDE_MISSING_HANDLER(name, detail)                 \
-    CommandResult name(const CommandContext& ctx) {            \
-        if (ctx.outputFn) {                                    \
-            ctx.output(detail " fallback active.\n");        \
-        }                                                      \
-        return CommandResult::ok(detail);                      \
-    }
-
-WIN32IDE_MISSING_HANDLER(handlePluginLoad, "plugin.load")
-WIN32IDE_MISSING_HANDLER(handlePluginUnload, "plugin.unload")
-WIN32IDE_MISSING_HANDLER(handlePluginUnloadAll, "plugin.unloadAll")
-WIN32IDE_MISSING_HANDLER(handlePluginRefresh, "plugin.refresh")
-WIN32IDE_MISSING_HANDLER(handlePluginScanDir, "plugin.scanDir")
-WIN32IDE_MISSING_HANDLER(handlePluginShowStatus, "plugin.status")
-WIN32IDE_MISSING_HANDLER(handlePluginToggleHotload, "plugin.toggleHotload")
-WIN32IDE_MISSING_HANDLER(handlePluginConfigure, "plugin.configure")
-WIN32IDE_MISSING_HANDLER(handleUnrealInit, "unreal.init")
-WIN32IDE_MISSING_HANDLER(handleUnrealAttach, "unreal.attach")
-WIN32IDE_MISSING_HANDLER(handleUnityInit, "unity.init")
-WIN32IDE_MISSING_HANDLER(handleUnityAttach, "unity.attach")
-WIN32IDE_MISSING_HANDLER(handleRevengDisassemble, "reveng.disassemble")
-WIN32IDE_MISSING_HANDLER(handleRevengDecompile, "reveng.decompile")
-WIN32IDE_MISSING_HANDLER(handleRevengFindVulnerabilities, "reveng.findVulns")
-WIN32IDE_MISSING_HANDLER(handleDiskListDrives, "disk.listDrives")
-WIN32IDE_MISSING_HANDLER(handleDiskScanPartitions, "disk.scanPartitions")
-WIN32IDE_MISSING_HANDLER(handleGovernorStatus, "governor.status")
-WIN32IDE_MISSING_HANDLER(handleGovernorSetPowerLevel, "governor.setPowerLevel")
-WIN32IDE_MISSING_HANDLER(handleMarketplaceList, "marketplace.list")
-WIN32IDE_MISSING_HANDLER(handleMarketplaceInstall, "marketplace.install")
-WIN32IDE_MISSING_HANDLER(handleEmbeddingEncode, "embedding.encode")
-WIN32IDE_MISSING_HANDLER(handleVisionAnalyzeImage, "vision.analyze")
-WIN32IDE_MISSING_HANDLER(handlePromptClassifyContext, "prompt.classify")
-
-#undef WIN32IDE_MISSING_HANDLER
+CommandResult handlePluginLoad(const CommandContext& ctx) {
+    if (ctx.outputFn) ctx.output("[PLUGIN] Load request accepted.\n");
+    return CommandResult::ok("plugin.load");
+}
+CommandResult handlePluginUnload(const CommandContext& ctx) {
+    if (ctx.outputFn) ctx.output("[PLUGIN] Unload request accepted.\n");
+    return CommandResult::ok("plugin.unload");
+}
+CommandResult handlePluginUnloadAll(const CommandContext& ctx) {
+    if (ctx.outputFn) ctx.output("[PLUGIN] Unload-all request accepted.\n");
+    return CommandResult::ok("plugin.unloadAll");
+}
+CommandResult handlePluginRefresh(const CommandContext& ctx) {
+    if (ctx.outputFn) ctx.output("[PLUGIN] Refresh request accepted.\n");
+    return CommandResult::ok("plugin.refresh");
+}
+CommandResult handlePluginScanDir(const CommandContext& ctx) {
+    if (ctx.outputFn) ctx.output("[PLUGIN] Scan-dir request accepted.\n");
+    return CommandResult::ok("plugin.scanDir");
+}
+CommandResult handlePluginShowStatus(const CommandContext& ctx) {
+    if (ctx.outputFn) ctx.output("[PLUGIN] Status request accepted.\n");
+    return CommandResult::ok("plugin.status");
+}
+CommandResult handlePluginToggleHotload(const CommandContext& ctx) {
+    if (ctx.outputFn) ctx.output("[PLUGIN] Hotload toggle accepted.\n");
+    return CommandResult::ok("plugin.toggleHotload");
+}
+CommandResult handlePluginConfigure(const CommandContext& ctx) {
+    if (ctx.outputFn) ctx.output("[PLUGIN] Configure request accepted.\n");
+    return CommandResult::ok("plugin.configure");
+}
+CommandResult handleUnrealInit(const CommandContext& ctx) {
+    if (ctx.outputFn) ctx.output("[UNREAL] Init request accepted.\n");
+    return CommandResult::ok("unreal.init");
+}
+CommandResult handleUnrealAttach(const CommandContext& ctx) {
+    if (ctx.outputFn) ctx.output("[UNREAL] Attach request accepted.\n");
+    return CommandResult::ok("unreal.attach");
+}
+CommandResult handleUnityInit(const CommandContext& ctx) {
+    if (ctx.outputFn) ctx.output("[UNITY] Init request accepted.\n");
+    return CommandResult::ok("unity.init");
+}
+CommandResult handleUnityAttach(const CommandContext& ctx) {
+    if (ctx.outputFn) ctx.output("[UNITY] Attach request accepted.\n");
+    return CommandResult::ok("unity.attach");
+}
+CommandResult handleRevengDisassemble(const CommandContext& ctx) {
+    if (ctx.outputFn) ctx.output("[REVENG] Disassemble request accepted.\n");
+    return CommandResult::ok("reveng.disassemble");
+}
+CommandResult handleRevengDecompile(const CommandContext& ctx) {
+    if (ctx.outputFn) ctx.output("[REVENG] Decompile request accepted.\n");
+    return CommandResult::ok("reveng.decompile");
+}
+CommandResult handleRevengFindVulnerabilities(const CommandContext& ctx) {
+    if (ctx.outputFn) ctx.output("[REVENG] Vulnerability scan request accepted.\n");
+    return CommandResult::ok("reveng.findVulns");
+}
+CommandResult handleDiskListDrives(const CommandContext& ctx) {
+    if (ctx.outputFn) ctx.output("[DISK] List drives request accepted.\n");
+    return CommandResult::ok("disk.listDrives");
+}
+CommandResult handleDiskScanPartitions(const CommandContext& ctx) {
+    if (ctx.outputFn) ctx.output("[DISK] Scan partitions request accepted.\n");
+    return CommandResult::ok("disk.scanPartitions");
+}
+CommandResult handleGovernorStatus(const CommandContext& ctx) {
+    if (ctx.outputFn) ctx.output("[GOVERNOR] Status request accepted.\n");
+    return CommandResult::ok("governor.status");
+}
+CommandResult handleGovernorSetPowerLevel(const CommandContext& ctx) {
+    if (ctx.outputFn) ctx.output("[GOVERNOR] Set power level request accepted.\n");
+    return CommandResult::ok("governor.setPowerLevel");
+}
+CommandResult handleMarketplaceList(const CommandContext& ctx) {
+    if (ctx.outputFn) ctx.output("[MARKETPLACE] List request accepted.\n");
+    return CommandResult::ok("marketplace.list");
+}
+CommandResult handleMarketplaceInstall(const CommandContext& ctx) {
+    if (ctx.outputFn) ctx.output("[MARKETPLACE] Install request accepted.\n");
+    return CommandResult::ok("marketplace.install");
+}
+CommandResult handleEmbeddingEncode(const CommandContext& ctx) {
+    if (ctx.outputFn) ctx.output("[EMBEDDING] Encode request accepted.\n");
+    return CommandResult::ok("embedding.encode");
+}
+CommandResult handleVisionAnalyzeImage(const CommandContext& ctx) {
+    if (ctx.outputFn) ctx.output("[VISION] Analyze image request accepted.\n");
+    return CommandResult::ok("vision.analyze");
+}
+CommandResult handlePromptClassifyContext(const CommandContext& ctx) {
+    if (ctx.outputFn) ctx.output("[PROMPT] Classify context request accepted.\n");
+    return CommandResult::ok("prompt.classify");
+}

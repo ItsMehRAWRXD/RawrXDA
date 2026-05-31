@@ -68,7 +68,13 @@ enum class AMDFeatureFlag : uint32_t {
     WavefrontSize32 = 0x1000,  // 32-wide wavefront (RDNA wave32)
     ShaderClock     = 0x2000,  // shader_clock extension
     SubgroupShuffle = 0x4000,  // Subgroup shuffle operations
-    FP64            = 0x8000   // Native FP64 support (CDNA)
+    FP64            = 0x8000,  // Native FP64 support (CDNA)
+    
+    // Vendor-Expansion: Intel Arc / Battlemage Specifics
+    XMX             = 0x10000, // Intel Xe Matrix Extensions (XMX)
+    LSC_Cache_L1    = 0x20000, // Local Storage Cache L1 (Xe-HPG)
+    MeshShader      = 0x40000, // Native Mesh Shading
+    SamplerFeedback = 0x80000  // Sampler Feedback support
 };
 
 // ============================================================================

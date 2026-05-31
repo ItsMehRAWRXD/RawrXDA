@@ -34,6 +34,7 @@
 #include <cstring>
 #include <ctime>
 #include <chrono>
+#include <fstream>
 #include <map>
 #include <string>
 
@@ -430,24 +431,48 @@ LicenseResult EnterpriseLicenseV2::saveKeyToRegistry(const LicenseKeyV2& key) {
 }
 
 LicenseResult EnterpriseLicenseV2::requestAzureADLicense(const char* tenantId, const char* clientId) {
-    // Stub for Azure AD token-based enterprise licensing
-    std::lock_guard<std::mutex> lock(m_mutex);
-    
+    const char* tenant = (tenantId && *tenantId) ? tenantId : "common";
+    const char* client = (clientId && *clientId) ? clientId : "default";
+
     Logger::instance().logInfo("license.v2.azure_ad.request", {
-        {"tenantId", tenantId ? tenantId : "common"},
-        {"clientId", clientId ? clientId : "default"}
+        {"tenantId", tenant},
+        {"clientId", client}
     });
 
+    // Fallback path 1: load a pre-provisioned binary key from environment.
+    // This keeps air-gapped or CI deployments functional without MSAL plugin.
+    const char* keyFile = std::getenv("RAWRXD_LICENSE_KEY_FILE");
+    if (keyFile && *keyFile) {
+        std::ifstream ifs(keyFile, std::ios::binary);
+        if (ifs.good()) {
+            LicenseKeyV2 key{};
+            ifs.read(reinterpret_cast<char*>(&key), sizeof(key));
+            if (ifs.gcount() == static_cast<std::streamsize>(sizeof(key))) {
+                LicenseResult loaded = loadKeyFromMemory(&key, sizeof(key));
+                if (loaded.success) {
+                    (void)saveKeyToRegistry(key);
+                    std::lock_guard<std::mutex> lock(m_mutex);
+                    recordAudit(FeatureID::BasicGGUFLoading, true, "requestAzureADLicense",
+                               "Loaded enterprise key from RAWRXD_LICENSE_KEY_FILE");
+                    return LicenseResult::ok("License loaded from RAWRXD_LICENSE_KEY_FILE");
+                }
+            }
+        }
+    }
+
+    // Fallback path 2: use an already-provisioned local registry key.
+    LicenseResult registryResult = loadKeyFromRegistry();
+    if (registryResult.success) {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        recordAudit(FeatureID::BasicGGUFLoading, true, "requestAzureADLicense",
+                   "Loaded enterprise key from local registry");
+        return LicenseResult::ok("License loaded from local registry");
+    }
+
+    std::lock_guard<std::mutex> lock(m_mutex);
     recordAudit(FeatureID::BasicGGUFLoading, false, "requestAzureADLicense",
-               "Azure AD authentication flow triggered (Stub)");
-
-    // In a real implementation:
-    // 1. MSAL acquireToken()
-    // 2. POST to https://license.rawrxd.ai/v2/exchange with Bearer token
-    // 3. Receive signed LicenseKeyV2
-    // 4. loadKeyFromMemory() + saveKeyToRegistry()
-
-    return LicenseResult::error("Azure AD licensing requires the Enterprise Auth Plugin", 40);
+               "Azure AD plugin unavailable and no local fallback key present");
+    return LicenseResult::error("Azure AD licensing requires Enterprise Auth Plugin or pre-provisioned key (RAWRXD_LICENSE_KEY_FILE / registry)", 40);
 }
 
 LicenseResult EnterpriseLicenseV2::loadKeyFromMemory(const void* data, size_t size) {

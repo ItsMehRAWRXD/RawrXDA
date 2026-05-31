@@ -631,9 +631,9 @@ bool GGUFD3D12Bridge::DispatchMatVecQ4(ID3D12Resource* matrixBuffer,
     setupDescriptorsForDispatch(
         matrixBuffer, (uint32_t)(matrixBuffer->GetDesc().Width / 4ull),
         vectorBuffer, cols,
-        vectorBuffer, cols,  // placeholder gamma
+        vectorBuffer, cols,  // gamma vector (same dimensions as input)
             nullptr, 0,        // t3 cossin
-        outputBuffer, rows,  // u0 placeholder
+        outputBuffer, rows,  // u0 output staging
         outputBuffer, rows); // u1 output
 
     MatVecConstants c{};

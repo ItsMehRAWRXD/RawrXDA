@@ -52,9 +52,14 @@ extern "C" {
 
 // ============================================================================
 //  Thread safety mutex (singleton bridge is accessed from multiple threads)
+//  LAZY SINGLETON PATTERN to avoid SIOF
 // ============================================================================
 
-static std::mutex s_bridgeMutex;
+inline std::mutex& GetBridgeMutex() {
+    static std::mutex* inst = new std::mutex();
+    return *inst;
+}
+#define s_bridgeMutex GetBridgeMutex()
 
 // ============================================================================
 //  IMPLEMENTATION

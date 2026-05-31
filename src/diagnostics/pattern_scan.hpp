@@ -23,9 +23,18 @@ public:
     static std::size_t ScanModule(HMODULE moduleHandle);
     static std::size_t ScanSectionForSuspiciousPointers(const unsigned char* base, std::size_t size, const char* sectionName);
 #else
-    static std::size_t ScanCurrentModule() { return 0; }
-    static std::size_t ScanModule(void*) { return 0; }
-    static std::size_t ScanSectionForSuspiciousPointers(const unsigned char*, std::size_t, const char*) { return 0; }
+    static std::size_t ScanCurrentModule() {
+        // Non-Windows: no module scanning available
+        return 0;
+    }
+    static std::size_t ScanModule(void*) {
+        // Non-Windows: no module scanning available
+        return 0;
+    }
+    static std::size_t ScanSectionForSuspiciousPointers(const unsigned char*, std::size_t, const char*) {
+        // Non-Windows: no section scanning available
+        return 0;
+    }
 #endif
 };
 

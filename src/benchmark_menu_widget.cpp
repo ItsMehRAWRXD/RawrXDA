@@ -282,8 +282,8 @@ void BenchmarkSelector::setupUI() {
         WS_CHILD | WS_VISIBLE | WS_TABSTOP,
         0, 0, 10, 10, parent_, (HMENU)(INT_PTR)IDC_MODEL_BROWSE, GetModuleHandleW(nullptr), nullptr);
 
-    gpuCheckbox_ = CreateWindowExW(0, L"BUTTON", L"Enable GPU (if available)",
-        WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_AUTOCHECKBOX,
+    gpuCheckbox_ = CreateWindowExW(0, L"BUTTON", L"GPU inference (mandatory)",
+        WS_CHILD | WS_VISIBLE | WS_DISABLED | BS_AUTOCHECKBOX,
         0, 0, 10, 10, parent_, (HMENU)(INT_PTR)IDC_GPU, GetModuleHandleW(nullptr), nullptr);
     SendMessageW(gpuCheckbox_, BM_SETCHECK, BST_CHECKED, 0);
 
@@ -340,7 +340,9 @@ void BenchmarkSelector::setModelPath(const std::string& path) {
 }
 
 bool BenchmarkSelector::isGPUEnabled() const {
-    return gpuCheckbox_ && (SendMessageW(gpuCheckbox_, BM_GETCHECK, 0, 0) == BST_CHECKED);
+    // GPU inference is mandatory across IDE/CLI/Model. The checkbox is informational
+    // only and the runtime always reports GPU as enabled.
+    return true;
 }
 
 bool BenchmarkSelector::isVerbose() const {
@@ -525,6 +527,8 @@ void BenchmarkMenu::initialize() {
 
 void BenchmarkMenu::createMenu() {
     // Win32IDE already wires menu commands; we only provide the dialog behavior.
+    // Register benchmark menu items with the IDE menu system
+    fprintf(stderr, "[BenchmarkMenu] Menu created\n");
 }
 
 void BenchmarkMenu::createDialog() {

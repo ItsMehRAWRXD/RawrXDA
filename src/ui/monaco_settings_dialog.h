@@ -228,6 +228,7 @@ private:
     HWND m_hwndParent = nullptr;
     HWND m_hDlg       = nullptr;
     int  m_curPage    = 0;
+    INT_PTR m_modalResult = IDCANCEL;
 
     MonacoSettings m_settings;
     MonacoSettings m_originalSettings;

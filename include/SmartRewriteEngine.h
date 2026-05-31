@@ -4,6 +4,7 @@
 #include <vector>
 #include <memory>
 #include <chrono>
+#include "MultiFileRewriteEngine.h"
 
 namespace RawrXD {
 namespace IDE {
@@ -120,6 +121,13 @@ public:
     // Undo last transformation
     bool undo(std::string& code);
 
+    // Multi-file composition
+    MultiFilePlan planMultiFileRefactor(
+        const std::string& goal,
+        const std::vector<std::string>& files);
+        
+    bool applyMultiFilePlan(const MultiFilePlan& plan);
+
     // Configure models
     void setRewriteModel(const std::string& modelUrl);
     void setDetectionModel(const std::string& modelUrl);
@@ -158,6 +166,9 @@ private:
     std::string m_rewriteModelUrl;
     std::string m_detectionModelUrl;
     std::vector<UndoPoint> m_undoStack;
+    
+    // Multi-file composition engine
+    std::unique_ptr<MultiFileRewriteEngine> m_multiFileEngine;
 };
 
 } // namespace IDE

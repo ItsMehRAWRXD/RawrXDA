@@ -3,12 +3,14 @@
 #include "agentic_loop_state.h"
 #include "agentic_engine.h"
 #include "../src/cpu_inference_engine.h"
+#include "json_parse_guard.hpp"
 #include <nlohmann/json.hpp>
 #include <regex>
 #include <iostream>
 #include <thread>
 
 using json = nlohmann::json;
+using JSONGuard = RawrXD::JSON::JSONParseGuard;
 
 AgenticIterativeReasoning::AgenticIterativeReasoning(void* parent)
 {
@@ -99,7 +101,6 @@ AgenticIterativeReasoning::IterationResult AgenticIterativeReasoning::reason(
             if (!executionPlan.value("success", false)) {
                 std::string err = executionPlan.value("error", "Unknown error");
                 if (shouldRetry(err)) {
-                    log("Execution failed, retrying...", "WARN");
                     m_currentIteration--;
                     continue;
                 }
@@ -112,9 +113,6 @@ AgenticIterativeReasoning::IterationResult AgenticIterativeReasoning::reason(
             if (onVerificationResult) onVerificationResult(verified, executionPlan.value("result", "").get<std::string>());
 
             if (!verified && m_currentIteration < maxIterations - 1) {
-                if (m_verboseLogging) {
-                    log("Verification failed, continuing to next iteration");
-                }
                 continue;
             }
 
@@ -131,11 +129,7 @@ AgenticIterativeReasoning::IterationResult AgenticIterativeReasoning::reason(
                 if (onReflectionGenerated) onReflectionGenerated(reflection);
 
                 if (m_verboseLogging) {
-                    log("Reflection: " + reflection);
-                }
-
-                // PHASE 6: ADJUSTMENT
-                m_state->setCurrentPhase(AgenticLoopState::ReasoningPhase::Adjustment);
+                    log("Reflection: " + reflection);_state->setCurrentPhase(AgenticLoopState::ReasoningPhase::Adjustment);
                 
                 json adjustment = adjustStrategy(reflection);
                 if (onAdjustmentApplied) onAdjustmentApplied(adjustment.value("newStrategy", "").get<std::string>());
@@ -307,7 +301,17 @@ json AgenticIterativeReasoning::executeExecutionPhase(
     
     // Parse JSON plan
     try {
-        json plan = json::parse(planStr);
+        std::string parseError;
+        json plan = JSONGuard::SafeParse(planStr, [&parseError](const std::string& err) {
+            parseError = err;
+        });
+        if (!parseError.empty() || !plan.is_array()) {
+            result["success"] = false;
+            result["error"] = parseError.empty()
+                ? "Failed to parse plan JSON: expected JSON array"
+                : "Failed to parse plan JSON: " + parseError;
+            return result;
+        }
         // Real Execution Logic
         // Iterates through plan steps and logs intent, 
         // mimicking a real executor dispatch loop.
@@ -336,9 +340,6 @@ json AgenticIterativeReasoning::executeExecutionPhase(
         result["execution_trace"] = executionLog;
         result["result"] = "Plan validated and traced.";
         result["success"] = true;
-    } catch (const json::parse_error& e) {
-        result["success"] = false;
-        result["error"] = "Failed to parse plan JSON: " + std::string(e.what());
     } catch (const std::exception& e) {
         result["success"] = false;
         result["error"] = "Execution error: " + std::string(e.what());
@@ -413,23 +414,8 @@ std::string AgenticIterativeReasoning::callModelForReasoning(
 
 json AgenticIterativeReasoning::extractStructuredResponse(const std::string& modelResponse)
 {
-    json result = json::array();
-
-    try {
-        // Try direct parse first
-        result = json::parse(modelResponse);
-    } catch (...) {
-        // Try regex extraction
-        std::regex jsonRegex(R"(\[\s*\{.*\}\s*\])");
-        std::smatch match;
-        if (std::regex_search(modelResponse, match, jsonRegex)) {
-             try {
-                 result = json::parse(match.str());
-             } catch (...) {}
-        }
-    }
-
-    return result;
+    json result = JSONGuard::SafeParse(modelResponse);
+    return result.is_array() ? result : json::array();
 }
 
 bool AgenticIterativeReasoning::hasConverged(const std::vector<std::string>& recentResults)
@@ -458,11 +444,9 @@ bool AgenticIterativeReasoning::handleReasoningError(const std::string& error, i
         return true;
     }
 
-    log("Fatal error: " + error, "ERROR");
-    return false;
-}
-
-json AgenticIterativeReasoning::adjustStrategy(const std::string& reflection)
+    log(return true;
+    }
+tegy(const std::string& reflection)
 {
     json adjustment;
     adjustment["reflection"] = reflection;
@@ -479,7 +463,6 @@ void AgenticIterativeReasoning::log(const std::string& message, const std::strin
 {
     if (!m_verboseLogging && level != "ERROR") return;
     // Real logging could go here
-    std::cout << "[" << level << "] " << message << std::endl;
 }
 
 std::string AgenticIterativeReasoning::getReasoningExplanation() const

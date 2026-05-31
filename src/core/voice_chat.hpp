@@ -3,8 +3,7 @@
 // VoiceChat — Native Win32 Voice Chat Engine (Phase 33)
 // Replaces Qt6 VoiceProcessor with pure Win32 audio APIs
 // Features:
-//   - Audio capture via Windows waveIn API (16-bit PCM, 16kHz mono)
-//   - Audio playback via Windows waveOut API
+//   - Audio playback/capture backend disabled in this build
 //   - Push-to-talk (PTT) and voice-activity-detection (VAD) modes
 //   - WebSocket-based voice relay for P2P chat rooms
 //   - Speech-to-text transcription via local/remote AI backend
@@ -22,8 +21,6 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
-#include <mmsystem.h>
-#pragma comment(lib, "winmm.lib")
 #endif
 
 #include <cstdint>
@@ -212,26 +209,8 @@ public:
     VoiceChatResult shutdown();
 
 private:
-    // Platform-specific audio handles
-#ifdef _WIN32
-    HWAVEIN  m_hWaveIn  = nullptr;
-    HWAVEOUT m_hWaveOut = nullptr;
-    std::vector<WAVEHDR> m_waveInHeaders;
-    std::vector<std::vector<char>> m_waveInBuffers;
-    std::vector<WAVEHDR> m_waveOutHeaders;
-    int m_inputDeviceId  = WAVE_MAPPER;
-    int m_outputDeviceId = WAVE_MAPPER;
-
-    static void CALLBACK waveInProc(HWAVEIN hwi, UINT uMsg, DWORD_PTR dwInstance,
-                                     DWORD_PTR dwParam1, DWORD_PTR dwParam2);
-    static void CALLBACK waveOutProc(HWAVEOUT hwo, UINT uMsg, DWORD_PTR dwInstance,
-                                      DWORD_PTR dwParam1, DWORD_PTR dwParam2);
-    VoiceChatResult initWaveIn();
-    VoiceChatResult closeWaveIn();
-    VoiceChatResult initWaveOut();
-    VoiceChatResult closeWaveOut();
-    void processWaveInBuffer(WAVEHDR* header);
-#endif
+    int m_outputDeviceId = 0;
+    int m_inputDeviceId = 0;
 
     // VAD processing
     float computeRMS(const int16_t* samples, size_t count) const;

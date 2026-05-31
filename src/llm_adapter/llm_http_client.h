@@ -323,5 +323,3 @@ private:
     std::string urlEncode(const std::string& str);
     bool isValidURL(const std::string& url);
 };
-
-#endif // LLM_HTTP_CLIENT_H

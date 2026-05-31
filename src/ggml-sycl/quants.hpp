@@ -16,8 +16,8 @@
 
 #include <utility>
 
-#include "ggml-common.h"
-#include "ggml.h"
+#include "ggml-common_rxd_internal.h"
+#include "ggml_rxd_internal.h"
 
 namespace ggml_sycl_reordered {
 

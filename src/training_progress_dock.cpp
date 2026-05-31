@@ -16,7 +16,10 @@ TrainingProgressDock::TrainingProgressDock(ModelTrainer* trainer, void* parent)
     , m_totalBatchesProcessed(0)
     , m_statusLabel(nullptr)
 {
-    // Lightweight constructor - defer Qt widget creation
+    // Initialize training progress tracking
+    m_progress = 0.0f;
+    m_epoch = 0;
+    m_totalEpochs = 0;
 }
 
 void TrainingProgressDock::initialize() {

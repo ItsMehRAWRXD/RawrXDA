@@ -113,8 +113,8 @@ extern "C" {
     int64_t Crdt_GetLamport(void* doc);
 
     // ── Task Ingestion & Dispatcher ──
-    // Stubbed in copilot_gap_closer.cpp because implementation is in monolithic/tasks.asm 
-    // which uses different naming conventions.
+    // Forward declarations for task system (implemented in monolithic/tasks.asm).
+    // C++ wrappers bridge naming conventions between ASM and C++ callers.
     // int32_t Task_SubmitRequest(const char* taskDescription, const void** attachments, int32_t attachmentCount);
     // int32_t Task_GetStatus(int32_t taskId);
     // int32_t Task_Cancel(int32_t taskId);

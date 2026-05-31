@@ -211,7 +211,7 @@ function Invoke-RawrXDModelRequest {
                     ) -join "`n"
                     
                     # Calculate signature
-                    $kSecret = [System.Text.Encoding]::UTF8.GetBytes(("AWS4" + $secretKey)))
+                    $kSecret = [System.Text.Encoding]::UTF8.GetBytes(("AWS4" + $secretKey))
                     $kDate = New-Object System.Security.Cryptography.HMACSHA256($kSecret)
                     $kDate.Key = $kSecret
                     $kRegion = New-Object System.Security.Cryptography.HMACSHA256($kDate.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($dateStamp)))

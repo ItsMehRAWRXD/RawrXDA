@@ -5,6 +5,7 @@
 #include "InferenceSettingsManager.h"
 #include "settings_manager.h"
 
+#include <nlohmann/json.hpp>
 #include <algorithm>
 #include <cmath>
 
@@ -268,13 +269,52 @@ void InferenceSettingsManager::saveRecentModels()
 
 void* InferenceSettingsManager::exportToJSON() const
 {
-    (void)this;
-    return nullptr; /* TODO: use nlohmann::json when needed */
+    auto* j = new nlohmann::json();
+    (*j)["temperature"] = m_temperature;
+    (*j)["topP"] = m_topP;
+    (*j)["topK"] = m_topK;
+    (*j)["maxTokens"] = m_maxTokens;
+    (*j)["repetitionPenalty"] = m_repetitionPenalty;
+    (*j)["ollamaModelTag"] = m_ollamaModelTag;
+    (*j)["useOllama"] = m_useOllama;
+    (*j)["currentModelPath"] = m_currentModelPath;
+    (*j)["preset"] = static_cast<int>(m_currentPreset);
+    nlohmann::json models = nlohmann::json::array();
+    for (const auto& m : m_recentModels)
+        models.push_back(m);
+    (*j)["recentModels"] = models;
+    return j;
 }
 
 void InferenceSettingsManager::importFromJSON(const void*& json)
 {
-    (void)json;
-    /* TODO: use nlohmann::json when needed */
+    if (!json) return;
+    const auto* j = static_cast<const nlohmann::json*>(json);
+    if (!j->is_object()) return;
+
+    if (j->contains("temperature") && (*j)["temperature"].is_number())
+        m_temperature = (*j)["temperature"].get<double>();
+    if (j->contains("topP") && (*j)["topP"].is_number())
+        m_topP = (*j)["topP"].get<double>();
+    if (j->contains("topK") && (*j)["topK"].is_number_integer())
+        m_topK = (*j)["topK"].get<int>();
+    if (j->contains("maxTokens") && (*j)["maxTokens"].is_number_integer())
+        m_maxTokens = (*j)["maxTokens"].get<int>();
+    if (j->contains("repetitionPenalty") && (*j)["repetitionPenalty"].is_number())
+        m_repetitionPenalty = (*j)["repetitionPenalty"].get<double>();
+    if (j->contains("ollamaModelTag") && (*j)["ollamaModelTag"].is_string())
+        m_ollamaModelTag = (*j)["ollamaModelTag"].get<std::string>();
+    if (j->contains("useOllama") && (*j)["useOllama"].is_boolean())
+        m_useOllama = (*j)["useOllama"].get<bool>();
+    if (j->contains("currentModelPath") && (*j)["currentModelPath"].is_string())
+        m_currentModelPath = (*j)["currentModelPath"].get<std::string>();
+    if (j->contains("preset") && (*j)["preset"].is_number_integer())
+        m_currentPreset = static_cast<Preset>((*j)["preset"].get<int>());
+    if (j->contains("recentModels") && (*j)["recentModels"].is_array()) {
+        m_recentModels.clear();
+        for (const auto& m : (*j)["recentModels"])
+            if (m.is_string())
+                m_recentModels.push_back(m.get<std::string>());
+    }
 }
 

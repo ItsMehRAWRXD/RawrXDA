@@ -53,6 +53,9 @@ public:
         m_minLevel = level;
     }
 
+    // Alias accepted by test targets and third-party adapters.
+    void setLevel(LogLevel level) { setMinLevel(level); }
+
     void enableConsole(bool enable) {
         std::lock_guard<std::mutex> lock(m_mutex);
         m_enableConsole = enable;

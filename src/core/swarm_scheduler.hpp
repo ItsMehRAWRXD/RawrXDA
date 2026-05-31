@@ -27,13 +27,8 @@ class RawrXDModelLoader;
 #include <utility>
 #include <vector>
 
-// C++23 compatibility layer
-#if __cplusplus >= 202302L || (defined(_MSVC_LANG) && _MSVC_LANG >= 202302L)
-#include <expected>
-#include <optional>
-#else
+// C++20/23 compatibility layer
 #include "swarm_scheduler_compat.hpp"
-#endif
 
 namespace RawrXD
 {
@@ -46,7 +41,7 @@ namespace Swarm
 enum class SchedulerError : std::uint8_t
 {
     Ok = 0,
-    NotImplemented,  // Stub phase: operation not yet backed
+    NotImplemented,  // Phase-gate: operation reserved for future scheduler backend
     InvalidArgument,
     WorkingSetFull,
     PrefetchBusy,
@@ -56,6 +51,7 @@ enum class SchedulerError : std::uint8_t
     OutOfMemory,
     /// `submitPlan` refused: at least one resident slice still has an active compute pin (hold).
     PlanRowsHeld,
+    InvalidModelIndex,
 };
 
 inline const char* schedulerErrorMessage(SchedulerError e)
@@ -82,6 +78,8 @@ inline const char* schedulerErrorMessage(SchedulerError e)
             return "out_of_memory";
         case SchedulerError::PlanRowsHeld:
             return "plan_rows_held";
+        case SchedulerError::InvalidModelIndex:
+            return "invalid_model_index";
     }
     return "unknown";
 }
@@ -282,6 +280,10 @@ class ISwarmMemoryBackend
         (void)size;
         return false;
     }
+
+  protected:
+    mutable std::mutex m_prefetchMutex;
+    std::unordered_map<std::uint32_t, std::vector<std::pair<std::uint64_t, std::uint64_t>>> m_pinnedRanges;
 };
 
 // ---------------------------------------------------------------------------
@@ -403,6 +405,7 @@ struct ExpertHeatmapCell
     std::uint32_t layerEnd = 0;
     std::uint32_t expertIndex = 0xFFFFFFFFu;
     std::uint32_t planSpanOrdinal = 0;
+    std::uint32_t deviceOrdinal = 0;
     bool resident = false;
     bool prefetchInFlight = false;
     std::uint32_t holdCount = 0;

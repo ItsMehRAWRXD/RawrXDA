@@ -120,6 +120,12 @@ private:
     // Integration components
     std::shared_ptr<CopilotGapCloser> gap_closer_;
     std::shared_ptr<TaskDispatcher> task_dispatcher_;
+
+    // Runtime progress tracking (replaces placeholder completion estimates).
+    std::atomic<uint64_t> total_plans_created_{0};
+    std::atomic<uint64_t> total_plans_completed_{0};
+    std::atomic<uint64_t> total_steps_scheduled_{0};
+    std::atomic<uint64_t> total_steps_completed_{0};
     
     // Internal methods
     void OrchestratorLoop();

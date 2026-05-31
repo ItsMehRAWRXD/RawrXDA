@@ -1,6 +1,6 @@
 # IDE master progress tracker
 
-Cross-cutting backlog and **measured** doc-derived counts. Use this alongside category-specific lists (sovereign batches, bridge audit). **North-star themes (7 pillars):** `docs/IDE_STRATEGIC_PILLARS.md`. **Partial → ship:** `docs/ENHANCEMENT_15_PRODUCT_READY_7.md` (E01–E15, PR01–PR07).
+Cross-cutting backlog and **measured** doc-derived counts. Use this alongside category-specific lists (sovereign batches, bridge audit). **Themes / partial→ship:** `docs/ENHANCEMENT_15_PRODUCT_READY_7.md` (E01–E15, PR01–PR07) and `docs/BRIDGE_GAP_AUDIT.md`.
 
 Last updated: 2026-03-20 (batch 4 UI/remediation).
 

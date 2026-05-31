@@ -29,7 +29,7 @@ int main() {
             0x48, 0x8B, 0x00,                         // mov rax, [rax]
             0x48, 0x8B, 0x40, 0x08,                   // mov rax, [rax+8] (MessageBoxA)
 
-            // Call MessageBoxA(NULL, "Hello World!", "PE Writer Demo", MB_OK)
+            // Call MessageBoxA(NULL, "Hello World!", "PE Writer", MB_OK)
             0x48, 0x31, 0xC9,                         // xor rcx, rcx
             0x48, 0x8D, 0x15, 0x00, 0x00, 0x00, 0x00, // lea rdx, [rip+reloc_hello]
             0x48, 0x8D, 0x0D, 0x00, 0x00, 0x00, 0x00, // lea r8, [rip+reloc_title]
@@ -47,7 +47,7 @@ int main() {
         std::vector<uint8_t> data = {
             // "Hello World!" string
             'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd', '!', 0,
-            // "PE Writer Demo" string
+            // "PE Writer" string
             'P', 'E', ' ', 'W', 'r', 'i', 't', 'e', 'r', ' ', 'D', 'e', 'm', 'o', 0
         };
 

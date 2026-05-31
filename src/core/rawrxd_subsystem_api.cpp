@@ -514,7 +514,7 @@ SubsystemResult SubsystemRegistry::handleDiskRecovery(const SubsystemParams& par
     if (params.diskRecovery.extractKey) {
         int keyResult = DiskRecovery_ExtractKey(ctx);
         if (!keyResult) {
-            // Non-fatal — continue with recovery even without key
+            fprintf(stderr, "[RawrXDSubsystem] Key retrieval failed, continuing with recovery\n");
         }
     }
 

@@ -71,7 +71,7 @@ public:
 
     void setHotPatchingEnabled(bool enabled);
     bool isHotPatchingEnabled() const;
-    void setDebugLogging(bool enabled);
+    void setLogging(bool enabled);
 
     json getCorrectionStatistics() const;
     int getCorrectionPatternCount() const;
@@ -82,7 +82,7 @@ private:
     std::atomic<int> m_navigationFixesApplied{0};
 
     bool m_hotPatchingEnabled = false;
-    bool m_debugLogging = false;
+    bool m_logging = false;
     mutable std::mutex m_mutex;
     std::string m_ggufLoaderPath;
     

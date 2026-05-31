@@ -8,8 +8,18 @@
 #include <memory>
 #include <cstdint>
 #include <mutex>
+#include <optional>
+
+#include "../agentic_failure_detector.hpp"
 
 namespace RawrXD::Agentic::Hotpatch {
+
+// Optional error report for failure detection (ported from proposed pattern)
+struct FailureReport {
+    AgentFailureType type;
+    float confidence;
+    std::string description;
+};
 
 // Hotpatch hook types
 enum class HookType {
@@ -103,6 +113,11 @@ public:
     bool removeHook(const std::string& name);
     bool enableHook(const std::string& name);
     bool disableHook(const std::string& name);
+    
+    // Internal helpers (private)
+    bool applyHook(HookConfig& config);
+    bool removeHook(HookConfig& config);  // Internal overload
+    HookConfig* findHook(const std::string& name);
 
     // Global hotpatch toggle.
     bool setHotpatchingEnabled(bool enabled);
@@ -135,10 +150,14 @@ public:
     bool validateTarget(void* target) const;
     bool isAddressWritable(void* address) const;
     
+    // Failure detection (optional pattern)
+    std::optional<FailureReport> detectFailure(const std::string& output);
+    void setFailureThreshold(double confidence01);
+
 private:
     Engine() = default;
     void applyTemperaturePolicyLocked();
-
+    
     mutable std::mutex mutex_;
     bool hotpatchingEnabled_ = true;
     double modelTemperature_ = 0.5;
@@ -146,10 +165,8 @@ private:
     double unrestrictiveDial_ = 1.0;
     std::map<std::string, HookConfig> hooks_;
     std::map<UINT, std::function<void()>> hotkeys_;
-    
-    HookConfig* findHook(const std::string& name);
-    bool applyHook(HookConfig& config);
-    bool removeHook(HookConfig& config);
+    AgenticFailureDetector m_detector;
+    double m_failureThreshold = 0.7;
 };
 
 } // namespace RawrXD::Agentic::Hotpatch

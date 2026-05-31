@@ -37,7 +37,7 @@
 #include <nlohmann/json.hpp>
 #include <commctrl.h>
 
-// SCAFFOLD_036: Failure intelligence and remediation
+// Failure Intelligence and Remediation Implementation
 
 
 // ============================================================================

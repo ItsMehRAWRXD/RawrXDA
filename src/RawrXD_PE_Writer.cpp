@@ -245,7 +245,7 @@ public:
     void JMP_REL32(DWORD targetRVA) {
         callFixups.push_back({(DWORD)code.size() + 1, targetRVA});
         Emit((BYTE)0xE9);  // JMP rel32
-        Emit((DWORD)0);    // Placeholder
+        Emit((DWORD)0);    // Offset patched by linker
     }
     // JE rel32 (jump if equal / zero flag set)
     void JE_REL32(DWORD targetRVA) {

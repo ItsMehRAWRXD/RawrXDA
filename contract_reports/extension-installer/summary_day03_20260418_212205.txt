@@ -1,0 +1,8 @@
+RawrXD Extension Installer expansion (days 1-15; day 15 adds integration gate)
+Day=3 Live=False LiveInstall=False Strict=True SkipIntegrationGate=False
+
+Label=day03_idempotency
+ExitCode=0
+OutFile=D:\rawrxd\contract_reports\extension-installer\20260418_212204_day03_idempotency.out.txt
+ErrFile=D:\rawrxd\contract_reports\extension-installer\20260418_212204_day03_idempotency.err.txt
+

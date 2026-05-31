@@ -1,0 +1,10 @@
+{
+  "ok": true,
+  "timestamp": "2026-04-21T02:19:10.4430977-04:00",
+  "repoRoot": "D:\\rawrxd",
+  "buildDir": "D:\\rawrxd\\build-ninja",
+  "steps": {
+    "extension_installer_smoke_offline": "ok",
+    "turnkey_ide_smoke": "ok"
+  }
+}

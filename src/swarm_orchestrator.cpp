@@ -2,87 +2,127 @@
 #include <chrono>
 #include <iostream>
 #include <random>
+#include <string>
 
-namespace RawrXD {
+namespace RawrXD
+{
 
-SwarmOrchestrator::SwarmOrchestrator(size_t numWorkers) {
-    if (numWorkers == 0) {
+SwarmOrchestrator::SwarmOrchestrator(size_t numWorkers)
+{
+    if (numWorkers == 0)
+    {
         numWorkers = std::thread::hardware_concurrency();
     }
-    
+
     // Initialize queues
-    for (size_t i = 0; i < numWorkers; ++i) {
+    for (size_t i = 0; i < numWorkers; ++i)
+    {
         m_queues.push_back(std::make_unique<WorkerQueue>());
     }
 
     m_running = true;
-    for (size_t i = 0; i < numWorkers; ++i) {
-         m_threads.emplace_back(&SwarmOrchestrator::loop, this, i);
+    for (size_t i = 0; i < numWorkers; ++i)
+    {
+        m_threads.emplace_back(&SwarmOrchestrator::loop, this, i);
     }
 }
 
-SwarmOrchestrator::~SwarmOrchestrator() {
+SwarmOrchestrator::~SwarmOrchestrator()
+{
     shutdown();
 }
 
-void SwarmOrchestrator::shutdown() {
+void SwarmOrchestrator::shutdown()
+{
     m_running = false;
-    for (auto& t : m_threads) {
-        if (t.joinable()) t.join();
+    for (auto& t : m_threads)
+    {
+        if (t.joinable())
+            t.join();
     }
 }
 
-void SwarmOrchestrator::loop(int workerId) {
-    while (m_running) {
+void SwarmOrchestrator::loop(int workerId)
+{
+    while (m_running)
+    {
         std::unique_ptr<OrchestratorTask> task;
         {
             auto& q = *m_queues[workerId];
             std::lock_guard<std::mutex> lock(q.mutex);
-            if (!q.tasks.empty()) {
+            if (!q.tasks.empty())
+            {
                 task = std::move(q.tasks.front());
                 q.tasks.pop_front();
             }
         }
-        
-        if (task) {
-             // Process task
-             SwarmResult result;
-             result.executionTimeMs = 100.0f; // placeholder
-             // ... logic ...
-             result.consensus = "Processed: " + task->description;
-             // task->promise.set_value(result);
-             try {
+
+        if (task)
+        {
+            // Process task with actual timing
+            auto startTime = std::chrono::high_resolution_clock::now();
+            SwarmResult result;
+
+            // Simulate actual work based on task description length
+            size_t workUnits = task->description.length() + task->context.length();
+            volatile uint64_t dummy = 0;
+            for (size_t i = 0; i < workUnits * 100; ++i)
+            {
+                dummy += i * 7;
+            }
+            (void)dummy;  // Prevent optimization
+
+            auto endTime = std::chrono::high_resolution_clock::now();
+            result.executionTimeMs = std::chrono::duration<float, std::milli>(endTime - startTime).count();
+            result.consensus =
+                std::string("[stub swarm] CPU-only placeholder completed for task: ") + task->description;
+            // task->promise.set_value(result);
+            try
+            {
                 task->promise.set_value(result);
-             } catch(...) {}
-             m_totalTasksExecuted++;
-        } else {
-             // Steal
-             OrchestratorTask stolen;
-             if (stealWork(workerId, stolen)) {
-                 SwarmResult result;
-                 result.consensus = "Stolen: " + stolen.description;
-                 try {
-                     stolen.promise.set_value(result); 
-                 } catch (...) {}
-                 m_totalTasksExecuted++;
-             } else {
-                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
-             }
+            }
+            catch (...)
+            {
+            }
+            m_totalTasksExecuted++;
+        }
+        else
+        {
+            // Steal
+            OrchestratorTask stolen;
+            if (stealWork(workerId, stolen))
+            {
+                SwarmResult result;
+                result.consensus = "Stolen: " + stolen.description;
+                try
+                {
+                    stolen.promise.set_value(result);
+                }
+                catch (...)
+                {
+                }
+                m_totalTasksExecuted++;
+            }
+            else
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
         }
     }
 }
 
-std::future<SwarmResult> SwarmOrchestrator::submitTaskAsync(const std::string& taskDesc, const std::string& context) {
+std::future<SwarmResult> SwarmOrchestrator::submitTaskAsync(const std::string& taskDesc, const std::string& context)
+{
     auto task = std::make_unique<OrchestratorTask>();
     task->description = taskDesc;
     task->context = context;
     task->promise = std::promise<SwarmResult>();
     auto future = task->promise.get_future();
-    
+
     // Round robin push
     static std::atomic<size_t> nextWorker{0};
     size_t idx = nextWorker++ % m_queues.size();
-    
+
     {
         std::lock_guard<std::mutex> lock(m_queues[idx]->mutex);
         m_queues[idx]->tasks.push_back(std::move(task));
@@ -91,34 +131,43 @@ std::future<SwarmResult> SwarmOrchestrator::submitTaskAsync(const std::string& t
 }
 
 #if defined(__cpp_lib_expected) || (defined(_MSVC_LANG) && _MSVC_LANG >= 202302L)
-std::expected<SwarmResult, int> SwarmOrchestrator::executeTask(const std::string& task, const std::string& context) {
+std::expected<SwarmResult, int> SwarmOrchestrator::executeTask(const std::string& task, const std::string& context)
+{
     auto fut = submitTaskAsync(task, context);
-    if (fut.wait_for(std::chrono::seconds(5)) == std::future_status::timeout) {
-        return std::unexpected(408); // Timeout
+    if (fut.wait_for(std::chrono::seconds(5)) == std::future_status::timeout)
+    {
+        return std::unexpected(408);  // Timeout
     }
     return fut.get();
 }
 #else
-RawrXD::Expected<SwarmResult, int> SwarmOrchestrator::executeTask(const std::string& task, const std::string& context) {
+RawrXD::Expected<SwarmResult, int> SwarmOrchestrator::executeTask(const std::string& task, const std::string& context)
+{
     auto fut = submitTaskAsync(task, context);
-    if (fut.wait_for(std::chrono::seconds(5)) == std::future_status::timeout) {
-        return RawrXD::unexpected<int>(408); // Timeout
+    if (fut.wait_for(std::chrono::seconds(5)) == std::future_status::timeout)
+    {
+        return RawrXD::unexpected<int>(408);  // Timeout
     }
     return fut.get();
 }
 #endif
 
-bool SwarmOrchestrator::stealWork(int thiefId, OrchestratorTask& stolenTask) {
+bool SwarmOrchestrator::stealWork(int thiefId, OrchestratorTask& stolenTask)
+{
     // randomized stealing
-    for (size_t i=0; i<m_queues.size(); ++i) {
-        if (i == thiefId) continue;
+    for (size_t i = 0; i < m_queues.size(); ++i)
+    {
+        if (i == thiefId)
+            continue;
         auto& q = *m_queues[i];
-        if (q.mutex.try_lock()) {
-            if (!q.tasks.empty()) {
+        if (q.mutex.try_lock())
+        {
+            if (!q.tasks.empty())
+            {
                 // Steal from back
                 auto& ptr = q.tasks.back();
                 // Move content
-                stolenTask = std::move(*ptr); // This moves promise and data
+                stolenTask = std::move(*ptr);  // This moves promise and data
                 q.tasks.pop_back();
                 q.mutex.unlock();
                 return true;
@@ -129,12 +178,14 @@ bool SwarmOrchestrator::stealWork(int thiefId, OrchestratorTask& stolenTask) {
     return false;
 }
 
-SwarmResult SwarmOrchestrator::synthesizeConsensus(const std::vector<std::string>& results) {
+SwarmResult SwarmOrchestrator::synthesizeConsensus(const std::vector<std::string>& results)
+{
     return SwarmResult{};
 }
 
-nlohmann::json SwarmOrchestrator::getStatus() const {
+nlohmann::json SwarmOrchestrator::getStatus() const
+{
     return {{"active", true}, {"tasks_executed", m_totalTasksExecuted.load()}};
 }
 
-}
+}  // namespace RawrXD

@@ -36,6 +36,9 @@
 #include <thread>
 #include <condition_variable>
 #include <chrono>
+#include <queue>
+#include <memory>
+#include "../cpu_inference_measurement_integration.h"
 
 namespace RawrXD {
 
@@ -70,7 +73,7 @@ struct TensorSlot {
     int                 layerIndex;     // -1 for global tensors (embeddings, norms)
     uint64_t            sizeBytes;      // Raw (quantized) size on disk
     uint64_t            dequantBytes;   // Dequantized F32 size
-    uint32_t            quantType;      // ggml_type
+    uint32_t            quantType;      // ggml_rxd_type
     int32_t             refCount;       // Pin reference count
     uint64_t            lastAccessTick; // For LRU eviction
     
@@ -146,6 +149,11 @@ struct PrefetchRequest {
     uint64_t    priority;       // Lower = higher priority
     bool        completed;
     bool        cancelled;
+    
+    // For min-heap comparison (std::priority_queue is max-heap by default)
+    bool operator>(const PrefetchRequest& other) const {
+        return priority > other.priority;
+    }
 };
 
 // ============================================================================
@@ -165,12 +173,21 @@ struct SchedulerConfig {
     bool        enableTelemetry;        // Collect per-layer timing (default: true)
     bool        enablePrefetchHinting;  // Log prefetch hit/miss (default: true)
     
+    // Aperture pressure monitoring (Phase C)
+    bool        enableApertureMonitoring; // Sample KV aperture counters (default: true)
+    uint32_t    apertureSampleInterval;   // Sample every N layers (default: 10)
+    double      apertureFlushThreshold;     // Trigger throttling when flush/hit ratio exceeds this (default: 0.15)
+    
     // Threading
     int         computeThreads;         // Threads for MatMul/attention (default: hw cores)
 
     // Multi-GPU dispatch
     bool        enableMultiGPUDispatch; // Allow scheduler to plan multi-GPU execution
     Enterprise::DispatchStrategy multiGPUDispatchStrategy;
+    
+    // Windowed scheduling (Bottleneck #1 fix: decouple prefetch from execution)
+    bool        enableWindowedScheduling; // Overlap prefetch N layers ahead (default: true)
+    int         prefetchWindowSize;       // How many layers to keep prefetched ahead (default: 3)
     
     SchedulerConfig()
         : prefetchAhead(1)
@@ -180,9 +197,14 @@ struct SchedulerConfig {
         , evictionThreshold(3ULL * 1024 * 1024 * 1024) // 3GB trigger
         , enableTelemetry(true)
         , enablePrefetchHinting(true)
+        , enableApertureMonitoring(true)
+        , apertureSampleInterval(10)
+        , apertureFlushThreshold(0.15)
         , computeThreads(0)             // 0 = auto-detect
         , enableMultiGPUDispatch(false)
         , multiGPUDispatchStrategy(static_cast<Enterprise::DispatchStrategy>(0))
+        , enableWindowedScheduling(true)  // Enable by default for better overlap
+        , prefetchWindowSize(3)          // Keep 3 layers ahead prefetched
     {}
 };
 
@@ -217,6 +239,10 @@ public:
     // Run a single transformer layer with scheduling.
     // Handles: prefetch(layer+1) → pin(layer) → dequant → execute → release
     bool runScheduledLayer(float* state, float* scratch, int layerIdx, int seqPos);
+    
+    // Run layer with windowed prefetch overlap (Bottleneck #1 fix)
+    // Overlaps execution of layer N with prefetch of layer N+windowSize
+    bool runScheduledLayerWindowed(float* state, float* scratch, int layerIdx, int seqPos, int windowSize);
     
     // ---- Prefetch Control ----
     // Request async prefetch of a layer's tensors
@@ -290,10 +316,17 @@ private:
     // ---- Internal: Timing ----
     double nowMs() const;
     
+    // ---- Phase-Aware Measurement (NEW) ----
+    void setPhaseAwareCollector(RawrXD::Inference::PhaseAwareMeasurementCollector* collector);
+    void emitPhase(RawrXD::Inference::InferencePhase phase);
+    
     // ---- State ----
     CPUInferenceEngine*         m_engine;
     StreamingEngineRegistry*    m_registry;
     SchedulerConfig             m_config;
+    
+    // Phase-aware measurement collector
+    RawrXD::Inference::PhaseAwareMeasurementCollector* m_phaseCollector;
     
     // Layer manifests (indexed by layer)
     std::vector<LayerManifest>  m_manifests;
@@ -313,7 +346,8 @@ private:
     std::thread                 m_prefetchThread;
     std::mutex                  m_prefetchMutex;
     std::condition_variable     m_prefetchCV;
-    std::vector<PrefetchRequest> m_prefetchQueue;
+    // Min-heap for O(log N) priority access (was: std::vector with O(N) linear scan)
+    std::priority_queue<PrefetchRequest, std::vector<PrefetchRequest>, std::greater<>> m_prefetchQueue;
     std::atomic<bool>           m_prefetchRunning;
     std::atomic<bool>           m_shutdownRequested;
     

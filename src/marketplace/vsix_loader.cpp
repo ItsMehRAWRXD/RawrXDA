@@ -1,5 +1,5 @@
 // vsix_loader.cpp — Full VSIX installation and management system for C++20/Win32
-#include "vsix_loader.h"
+#include <marketplace/vsix_loader.h>
 #include <windows.h>
 #include <shlobj.h>
 #include <shldisp.h>
@@ -338,32 +338,33 @@ bool VsixLoader::downloadFile(const std::string& url, const std::string& targetP
                                       WINHTTP_NO_PROXY_BYPASS, 0);
     if (!hSession) return false;
 
-    // Parse URL
-    URL_COMPONENTSA urlComp;
-    ZeroMemory(&urlComp, sizeof(urlComp));
-    urlComp.dwStructSize = sizeof(urlComp);
-    urlComp.dwSchemeLength = -1;
-    urlComp.dwHostNameLength = -1;
-    urlComp.dwUrlPathLength = -1;
+    // Parse URL — WinHTTP is Unicode only
+    int wurlLen = MultiByteToWideChar(CP_UTF8, 0, url.c_str(), -1, nullptr, 0);
+    std::wstring wUrl(wurlLen > 0 ? wurlLen - 1 : 0, L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, url.c_str(), -1, &wUrl[0], wurlLen);
 
-    if (!WinHttpCrackUrlA(url.c_str(), (DWORD)url.length(), 0, &urlComp)) {
+    wchar_t hostBuf[1024] = {};
+    wchar_t pathBuf[4096] = {};
+    URL_COMPONENTS urlComp = {};
+    urlComp.dwStructSize       = sizeof(urlComp);
+    urlComp.lpszHostName       = hostBuf;
+    urlComp.dwHostNameLength   = static_cast<DWORD>(std::size(hostBuf));
+    urlComp.lpszUrlPath        = pathBuf;
+    urlComp.dwUrlPathLength    = static_cast<DWORD>(std::size(pathBuf));
+
+    if (!WinHttpCrackUrl(wUrl.c_str(), static_cast<DWORD>(wUrl.size()), 0, &urlComp)) {
         WinHttpCloseHandle(hSession);
         return false;
     }
 
-    std::string host(urlComp.lpszHostName, urlComp.dwHostNameLength);
-    std::string path(urlComp.lpszUrlPath, urlComp.dwUrlPathLength);
-
-    HINTERNET hConnect = WinHttpConnect(hSession, 
-                                        std::wstring(host.begin(), host.end()).c_str(),
-                                        urlComp.nPort, 0);
+    HINTERNET hConnect = WinHttpConnect(hSession, hostBuf, urlComp.nPort, 0);
     if (!hConnect) {
         WinHttpCloseHandle(hSession);
         return false;
     }
 
     HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"GET",
-                                            std::wstring(path.begin(), path.end()).c_str(),
+                                            pathBuf,
                                             nullptr, WINHTTP_NO_REFERER,
                                             WINHTTP_DEFAULT_ACCEPT_TYPES, 0);
     if (!hRequest) {
@@ -372,7 +373,7 @@ bool VsixLoader::downloadFile(const std::string& url, const std::string& targetP
         return false;
     }
 
-    if (!WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, nullptr, 0, 0)) {
+    if (!WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, nullptr, 0, 0, 0)) {
         WinHttpCloseHandle(hRequest);
         WinHttpCloseHandle(hConnect);
         WinHttpCloseHandle(hSession);

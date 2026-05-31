@@ -1,0 +1,262 @@
+// ============================================================================
+// RawrXD FP8 Quantization Compute Shader (GLSL)
+// Optimized for RX 7800 XT (RDNA3) - uses native FP8 when available
+// ============================================================================
+// Compile with: glslangValidator -V fp8_quantize.comp -o fp8_quantize.spv
+// Or use RawrXD's integrated SPIR-V generator
+// ============================================================================
+
+#version 450
+#extension GL_KHR_shader_subgroup_arithmetic : enable
+#extension GL_KHR_shader_subgroup_ballot : enable
+
+// Workgroup size optimized for RDNA3 wavefronts (32 threads)
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+// Format selection
+const int FORMAT_E4M3 = 0;
+const int FORMAT_E5M2 = 1;
+
+// Binding layout
+layout(std430, binding = 0) readonly buffer InputBuffer {
+    float data[];
+} input_buffer;
+
+layout(std430, binding = 1) writeonly buffer OutputBuffer {
+    uint8_t data[];
+} output_buffer;
+
+layout(std430, binding = 2) readonly buffer ScaleBuffer {
+    float scale;
+    int format;  // 0=E4M3, 1=E5M2
+} params;
+
+// FP8 constants
+const float E4M3_MAX = 448.0;
+const int E4M3_BIAS = 7;
+const int E5M2_BIAS = 15;
+
+// ============================================================================
+// Bit manipulation helpers (sovereign implementation)
+// ============================================================================
+
+// Extract float bits without using GLSL builtins that might be instrumented
+uint extractFloatBits(float f) {
+    return floatBitsToUint(f);
+}
+
+// Reconstruct float from bits
+float reconstructFloat(uint bits) {
+    return uintBitsToFloat(bits);
+}
+
+// ============================================================================
+// FP32 -> E4M3 conversion (direct bit manipulation)
+// ============================================================================
+uint8_t floatToE4M3(float value) {
+    // Handle zero
+    if (value == 0.0) return uint8_t(0);
+    
+    // Clamp to E4M3 range
+    value = clamp(value, -E4M3_MAX, E4M3_MAX);
+    
+    uint bits = extractFloatBits(value);
+    uint sign = (bits >> 31) & 0x1;
+    uint exp = (bits >> 23) & 0xFF;
+    uint mant = bits & 0x7FFFFF;
+    
+    // Adjust exponent bias: 127 (FP32) -> 7 (E4M3)
+    int newExp = int(exp) - 127 + E4M3_BIAS;
+    
+    // Handle denormals and underflow
+    if (newExp <= 0) {
+        if (newExp < -3) return uint8_t(sign << 7);  // Underflow to signed zero
+        
+        // Denormal: shift mantissa
+        uint denormMant = mant | 0x800000;  // Add implicit 1
+        denormMant >>= uint(1 - newExp);
+        uint mantBits = (denormMant >> 20) & 0x7;
+        return uint8_t((sign << 7) | mantBits);
+    }
+    
+    // Clamp exponent
+    newExp = min(newExp, 15);
+    
+    // Extract top 3 bits of mantissa
+    uint mantBits = (mant >> 20) & 0x7;
+    
+    // Round to nearest even
+    uint roundBit = (mant >> 19) & 0x1;
+    uint sticky = mant & 0x7FFFF;
+    
+    if (roundBit != 0u && (sticky != 0u || (mantBits & 0x1) != 0u)) {
+        mantBits++;
+        if (mantBits > 7u) {
+            mantBits = 0u;
+            newExp++;
+            if (newExp > 15) {
+                newExp = 15;
+                mantBits = 6u;  // Clamp to max finite
+            }
+        }
+    }
+    
+    uint expBits = uint(newExp) << 3;
+    return uint8_t((sign << 7) | expBits | mantBits);
+}
+
+// ============================================================================
+// FP32 -> E5M2 conversion
+// ============================================================================
+uint8_t floatToE5M2(float value) {
+    if (value == 0.0) return uint8_t(0);
+    
+    const float E5M2_MAX = 57344.0;
+    value = clamp(value, -E5M2_MAX, E5M2_MAX);
+    
+    uint bits = extractFloatBits(value);
+    uint sign = (bits >> 31) & 0x1;
+    uint exp = (bits >> 23) & 0xFF;
+    uint mant = bits & 0x7FFFFF;
+    
+    int newExp = int(exp) - 127 + E5M2_BIAS;
+    
+    if (newExp <= 0) {
+        if (newExp < -1) return uint8_t(sign <> 7);
+        
+        uint denormMant = mant | 0x800000;
+        denormMant >>= uint(1 - newExp);
+        uint mantBits = (denormMant >> 21) & 0x3;
+        return uint8_t((sign << 7) | mantBits);
+    }
+    
+    newExp = min(newExp, 31);
+    
+    uint mantBits = (mant >> 21) & 0x3;
+    
+    uint roundBit = (mant >> 20) & 0x1;
+    uint sticky = mant & 0xFFFFF;
+    
+    if (roundBit != 0u && (sticky != 0u || (mantBits & 0x1) != 0u)) {
+        mantBits++;
+        if (mantBits > 3u) {
+            mantBits = 0u;
+            newExp++;
+            if (newExp > 31) {
+                newExp = 31;
+                mantBits = 2u;
+            }
+        }
+    }
+    
+    uint expBits = uint(newExp) << 2;
+    return uint8_t((sign << 7) | expBits | mantBits);
+}
+
+// ============================================================================
+// FP8 -> FP32 dequantization
+// ============================================================================
+float e4m3ToFloat(uint8_t fp8) {
+    if (fp8 == uint8_t(0)) return 0.0;
+    
+    uint sign = uint((fp8 >> 7) & 0x1);
+    uint exp = uint((fp8 >> 3) & 0xF);
+    uint mant = uint(fp8 & 0x7);
+    
+    if (exp == 0u) {
+        // Denormal
+        float val = float(mant) / 8.0 * pow(2.0, -6.0);
+        return sign != 0u ? -val : val;
+    }
+    
+    int newExp = int(exp) - E4M3_BIAS + 127;
+    uint newMant = mant << 20;
+    
+    uint result = (sign << 31) | (uint(newExp) << 23) | newMant;
+    return reconstructFloat(result);
+}
+
+float e5m2ToFloat(uint8_t fp8) {
+    if (fp8 == uint8_t(0)) return 0.0;
+    
+    uint sign = uint((fp8 >> 7) & 0x1);
+    uint exp = uint((fp8 >> 2) & 0x1F);
+    uint mant = uint(fp8 & 0x3);
+    
+    if (exp == 0u) {
+        float val = float(mant) / 4.0 * pow(2.0, -14.0);
+        return sign != 0u ? -val : val;
+    }
+    
+    int newExp = int(exp) - E5M2_BIAS + 127;
+    uint newMant = mant << 21;
+    
+    uint result = (sign << 31) | (uint(newExp) << 23) | newMant;
+    return reconstructFloat(result);
+}
+
+// ============================================================================
+// Main compute shader entry point
+// ============================================================================
+void main() {
+    uint globalId = gl_GlobalInvocationID.x;
+    
+    // Bounds check
+    if (globalId >= input_buffer.data.length()) return;
+    
+    float inputVal = input_buffer.data[globalId];
+    float scaledVal = inputVal * params.scale;
+    
+    uint8_t result;
+    if (params.format == FORMAT_E4M3) {
+        result = floatToE4M3(scaledVal);
+    } else {
+        result = floatToE5M2(scaledVal);
+    }
+    
+    output_buffer.data[globalId] = result;
+}
+
+// ============================================================================
+// Subgroup-optimized version for RDNA3 (wave32)
+// Uses subgroup operations for scale factor computation
+// ============================================================================
+
+// Compute absmax using subgroup operations
+float subgroupAbsmax(float value) {
+    float absVal = abs(value);
+    return subgroupMax(absVal);
+}
+
+// Quantize with per-subgroup scale (for finer-grained quantization)
+layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+void main_subgroup_optimized() {
+    uint globalId = gl_WorkGroupID.x * 32u + gl_SubgroupInvocationID;
+    
+    if (globalId >= input_buffer.data.length()) return;
+    
+    float inputVal = input_buffer.data[globalId];
+    
+    // Compute per-wavefront absmax
+    float localAbsmax = subgroupAbsmax(inputVal);
+    
+    // Broadcast scale to all threads in subgroup
+    float scale = 1.0;
+    if (params.format == FORMAT_E4M3) {
+        scale = 448.0 / localAbsmax;
+    } else {
+        scale = 57344.0 / localAbsmax;
+    }
+    
+    // Quantize
+    float scaledVal = inputVal * scale;
+    
+    uint8_t result;
+    if (params.format == FORMAT_E4M3) {
+        result = floatToE4M3(scaledVal);
+    } else {
+        result = floatToE5M2(scaledVal);
+    }
+    
+    output_buffer.data[globalId] = result;
+}

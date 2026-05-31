@@ -1,0 +1,59 @@
+{
+  "name": "reverse_engineering_expansion_4d",
+  "description": "Multi-dimensional automation for discovering reverse-engineering subjects and optimizing backend TPS lanes",
+  "risk_tier": "high",
+  "required_approvals": [],
+  "steps": [
+    {
+      "id": "subject_discovery",
+      "action": "discover_re_subjects",
+      "params": {
+        "samples": [
+          {"name": "payment_terminal_firmware", "entropy": 7.5, "interfaces": 7, "market_signal": 0.93},
+          {"name": "industrial_plc_update_agent", "entropy": 7.8, "interfaces": 6, "market_signal": 0.89},
+          {"name": "consumer_router_recovery_blob", "entropy": 6.9, "interfaces": 5, "market_signal": 0.61}
+        ]
+      }
+    },
+    {
+      "id": "hardware_benchmark",
+      "action": "benchmark_inference_backends",
+      "depends_on": ["subject_discovery"],
+      "params": {
+        "gpu_vendor": "amd",
+        "candidates": ["amd_rocm", "cuda", "cpu_avx2"],
+        "workload_factor": 1.08
+      }
+    },
+    {
+      "id": "four_dimension_strategy",
+      "action": "four_d_strategy",
+      "depends_on": ["hardware_benchmark"],
+      "params": {
+        "technical_depth": 0.9,
+        "market_expansion": 0.92,
+        "throughput_scaling": 0.91,
+        "operational_complexity": 0.48
+      }
+    },
+    {
+      "id": "ops_notification",
+      "action": "notify_channel",
+      "depends_on": ["four_dimension_strategy"],
+      "condition": "vars.steps.hardware_benchmark.best_backend == amd_rocm",
+      "params": {
+        "channel": "#reverse-research-strategy",
+        "message": "4D strategy generated. AMD ROCm lane selected for higher projected TPS and commercial grouping expansion."
+      }
+    },
+    {
+      "id": "strategy_ticket",
+      "action": "create_ticket",
+      "depends_on": ["four_dimension_strategy"],
+      "params": {
+        "queue": "RE-STRAT",
+        "title": "4D reverse-engineering expansion and throughput optimization plan"
+      }
+    }
+  ]
+}

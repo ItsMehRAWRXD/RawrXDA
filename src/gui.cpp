@@ -194,7 +194,11 @@ void GUI::ApplyOverclockProfile(AppState& state) {
         if (log.is_open()) {
             log << "GUI ApplyOverclockProfile target=" << targetMhz << " status=" << state.governor_status << "\n";
         }
-    } catch (...) {}
+    } catch (const std::exception& e) {
+        OutputDebugStringA((std::string("[GUI] ApplyOverclockProfile log exception: ") + e.what() + "\n").c_str());
+    } catch (...) {
+        OutputDebugStringA("[GUI] ApplyOverclockProfile log unknown exception\n");
+    }
 }
 
 void GUI::ResetOverclockOffsets(AppState& state) {
@@ -210,7 +214,11 @@ void GUI::ResetOverclockOffsets(AppState& state) {
         if (log.is_open()) {
             log << "GUI ResetOverclockOffsets cpu_ok=" << okCpu << " gpu_ok=" << okGpu << " status=" << state.governor_status << "\n";
         }
-    } catch (...) {}
+    } catch (const std::exception& e) {
+        OutputDebugStringA((std::string("[GUI] ResetOverclockOffsets log exception: ") + e.what() + "\n").c_str());
+    } catch (...) {
+        OutputDebugStringA("[GUI] ResetOverclockOffsets log unknown exception\n");
+    }
 }
 
 void GUI::RenderDownloadWindow(AppState& state) {

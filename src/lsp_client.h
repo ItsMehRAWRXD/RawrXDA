@@ -35,6 +35,7 @@ public:
     
     bool start();
     void stop();
+    bool ensureReady();
     
     // Core LSP methods
     std::future<nlohmann::json> initialize();
@@ -42,6 +43,7 @@ public:
     void didChange(const std::string& uri, const std::string& text);
     std::future<nlohmann::json> completion(const std::string& uri, int line, int character);
     std::future<nlohmann::json> definition(const std::string& uri, int line, int character);
+    std::future<nlohmann::json> workspaceSymbols(const std::string& query);
     
 private:
     LSPConfig m_config;

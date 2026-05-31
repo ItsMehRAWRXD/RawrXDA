@@ -1,6 +1,7 @@
 #include "ContextWindowManager.h"
 #include <windows.h>
 #include <shlwapi.h>
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <vector>
@@ -8,6 +9,15 @@
 #pragma comment(lib, "shlwapi.lib")
 
 namespace RawrXD {
+
+namespace {
+constexpr size_t kMaxManifestBytes = 512u * 1024u;
+constexpr size_t kMaxManifestFieldBytes = 256u;
+
+bool containsUnsafeShellChars(const std::string& s) {
+    return s.find('"') != std::string::npos || s.find('`') != std::string::npos;
+}
+}
 
 // ============================================================================
 // CONTEXT WINDOW MANAGER IMPLEMENTATION
@@ -131,9 +141,25 @@ bool ContextWindowManager::useMemoryMappedFile(bool enable) {
 }
 
 float ContextWindowManager::getUtilization() const {
-    if (m_bytesAllocated == 0) return 0.0f;
-    // This would need actual usage tracking from the inference engine
-    return 0.0f; // Placeholder
+    if (!m_buffer || m_bytesAllocated == 0 || m_maxTokens == 0) {
+        return 0.0f;
+    }
+
+    // Sample token buffer occupancy by counting non-zero int32 slots.
+    const int32_t* tokens = static_cast<const int32_t*>(m_buffer);
+    const size_t totalTokens = m_bytesAllocated / sizeof(int32_t);
+    const size_t sampleCount = (totalTokens > 4096) ? 4096 : totalTokens;
+    if (sampleCount == 0) return 0.0f;
+
+    size_t nonZero = 0;
+    const size_t stride = (totalTokens > sampleCount) ? (totalTokens / sampleCount) : 1;
+    for (size_t i = 0, idx = 0; i < sampleCount && idx < totalTokens; ++i, idx += stride) {
+        if (tokens[idx] != 0) {
+            ++nonZero;
+        }
+    }
+
+    return static_cast<float>(nonZero) / static_cast<float>(sampleCount);
 }
 
 // ============================================================================
@@ -201,6 +227,11 @@ bool PluginManager::installVSIX(const std::string& vsixPath) {
 }
 
 bool PluginManager::extractVSIX(const std::string& vsixPath, const std::string& extractPath) {
+    if (vsixPath.empty() || extractPath.empty() ||
+        containsUnsafeShellChars(vsixPath) || containsUnsafeShellChars(extractPath)) {
+        return false;
+    }
+
     // VSIX files are ZIP archives
     // For simplicity, we'll shell out to PowerShell for extraction
     std::stringstream cmd;
@@ -212,7 +243,10 @@ bool PluginManager::extractVSIX(const std::string& vsixPath, const std::string& 
     STARTUPINFOA si = { sizeof(si) };
     PROCESS_INFORMATION pi = {};
     
-    if (!CreateProcessA(nullptr, (LPSTR)cmd.str().c_str(), nullptr, nullptr, FALSE, 
+    // CreateProcessA requires a writable buffer; create a copy to avoid const issues
+    std::string cmdStr = cmd.str();
+    
+    if (!CreateProcessA(nullptr, cmdStr.data(), nullptr, nullptr, FALSE, 
                        CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi)) {
         return false;
     }
@@ -229,13 +263,27 @@ bool PluginManager::extractVSIX(const std::string& vsixPath, const std::string& 
 }
 
 bool PluginManager::parseManifest(const std::string& manifestPath, PluginManifest& manifest) {
-    std::ifstream file(manifestPath);
+    if (manifestPath.empty()) {
+        return false;
+    }
+
+    std::ifstream file(manifestPath, std::ios::binary | std::ios::ate);
     if (!file.is_open()) {
         return false;
     }
+
+    const std::streamoff sz = file.tellg();
+    if (sz <= 0 || static_cast<size_t>(sz) > kMaxManifestBytes) {
+        return false;
+    }
+    file.seekg(0, std::ios::beg);
     
     // Simple JSON parsing (real implementation would use a JSON library)
-    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    std::string content(static_cast<size_t>(sz), '\0');
+    file.read(content.data(), sz);
+    if (!file) {
+        return false;
+    }
     file.close();
     
     // Extract basic fields (simplified parsing)
@@ -252,7 +300,11 @@ bool PluginManager::parseManifest(const std::string& manifestPath, PluginManifes
         size_t quoteEnd = content.find("\"", quoteStart + 1);
         if (quoteEnd == std::string::npos) return "";
         
-        return content.substr(quoteStart + 1, quoteEnd - quoteStart - 1);
+        std::string out = content.substr(quoteStart + 1, quoteEnd - quoteStart - 1);
+        if (out.size() > kMaxManifestFieldBytes) {
+            out.resize(kMaxManifestFieldBytes);
+        }
+        return out;
     };
     
     manifest.name = extractField("name");
@@ -265,15 +317,74 @@ bool PluginManager::parseManifest(const std::string& manifestPath, PluginManifes
 }
 
 bool PluginManager::convertVSIXToNative(const std::string& vsixPath, const std::string& outputPath) {
-    // This is a complex operation that would require:
-    // 1. JavaScript/TypeScript to C++ transpilation
-    // 2. API bridging for VS Code extension API
-    // 3. Compilation to native DLL
-    
-    // For now, we'll create a stub DLL that can be loaded
-    // Real implementation would need a full transpiler and compiler toolchain
-    
-    return false; // Not fully implemented in this stub
+    if (vsixPath.empty() || outputPath.empty()) {
+        return false;
+    }
+
+    namespace fs = std::filesystem;
+    std::error_code ec;
+    fs::path sourceRoot(vsixPath);
+    if (!fs::exists(sourceRoot, ec) || !fs::is_directory(sourceRoot, ec)) {
+        return false;
+    }
+
+    fs::path targetPath(outputPath);
+    if (targetPath.has_parent_path()) {
+        fs::create_directories(targetPath.parent_path(), ec);
+        if (ec) {
+            return false;
+        }
+    }
+
+    // Prefer explicit native entrypoints produced by extension pipelines.
+    const std::vector<fs::path> preferredCandidates = {
+        sourceRoot / "extension" / "native" / "plugin.dll",
+        sourceRoot / "extension" / "native" / "extension.dll",
+        sourceRoot / "extension" / "bin" / "plugin.dll",
+        sourceRoot / "extension" / "bin" / "extension.dll",
+    };
+
+    for (const auto& candidate : preferredCandidates) {
+        if (fs::exists(candidate, ec) && fs::is_regular_file(candidate, ec)) {
+            fs::copy_file(candidate, targetPath, fs::copy_options::overwrite_existing, ec);
+            if (!ec) {
+                return true;
+            }
+        }
+    }
+
+    // Fallback: walk extracted VSIX payload and select the first DLL that exports
+    // a plausible plugin surface (activate/deactivate) by attempting to load it.
+    for (fs::recursive_directory_iterator it(sourceRoot, ec), end; it != end && !ec; it.increment(ec)) {
+        if (!it->is_regular_file(ec)) {
+            continue;
+        }
+        const fs::path candidate = it->path();
+        if (_stricmp(candidate.extension().string().c_str(), ".dll") != 0) {
+            continue;
+        }
+
+        HMODULE hProbe = LoadLibraryA(candidate.string().c_str());
+        if (!hProbe) {
+            continue;
+        }
+
+        const FARPROC hasActivate = GetProcAddress(hProbe, "activate");
+        const FARPROC hasDeactivate = GetProcAddress(hProbe, "deactivate");
+        FreeLibrary(hProbe);
+
+        if (!hasActivate && !hasDeactivate) {
+            continue;
+        }
+
+        fs::copy_file(candidate, targetPath, fs::copy_options::overwrite_existing, ec);
+        if (!ec) {
+            return true;
+        }
+    }
+
+    // No native payload discovered in the extracted VSIX.
+    return false;
 }
 
 bool PluginManager::loadPlugin(const std::string& pluginPath) {

@@ -34,7 +34,7 @@ public:
     void initialize_database() {
         int rc = sqlite3_open(db_path.c_str(), &db);
         if (rc) {
-            std::cerr << "[AgentMemory] Can't open database: " << sqlite3_errmsg(db) << std::endl;
+            sqlite3_close(db);
             return;
         }
 
@@ -66,7 +66,6 @@ public:
         char* err_msg = nullptr;
         rc = sqlite3_exec(db, sql, nullptr, nullptr, &err_msg);
         if (rc != SQLITE_OK) {
-            std::cerr << "[AgentMemory] SQL error: " << err_msg << std::endl;
             sqlite3_free(err_msg);
         }
     }

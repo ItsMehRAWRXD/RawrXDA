@@ -10,6 +10,7 @@
 #include <thread>
 #include <fstream>
 #include <sstream>
+#include <cstring>
 
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "user32.lib")
@@ -17,8 +18,20 @@
 
 #ifdef NO_ASM
 extern "C" {
-    void Titan_ExecuteComputeKernel(void*, void*) {}
-    uint32_t Titan_PerformDMA(void*, void*, size_t) { return 0; }
+    void Titan_ExecuteComputeKernel(void* pContext, void* pPatch) {
+        (void)pContext;
+        (void)pPatch;
+        // NO_ASM fallback: log and return — compute kernel requires MASM build
+        OutputDebugStringA("[AmphibiousHost] Titan_ExecuteComputeKernel called in NO_ASM mode — no-op\n");
+    }
+    uint32_t Titan_PerformDMA(void* src, void* dst, size_t size) {
+        if (!src || !dst || size == 0) {
+            OutputDebugStringA("[AmphibiousHost] Titan_PerformDMA rejected: null pointer or zero size\n");
+            return 1;
+        }
+        std::memcpy(dst, src, size);
+        return 0;
+    }
 }
 #else
 // --- EXTERN MASM64 ENTRY POINTS ---
@@ -183,8 +196,14 @@ void RunAutonomousCycle(const std::string& task) {
     
     LogToOutput("\n[SYSTEM] Triggering Native ASM Kernel Payload -> Titan_PerformDMA\n");
     try {
-        Titan_PerformDMA(NULL, NULL, 0); 
-        LogToOutput("[SYSTEM] Kernel execution successful (No Crash).\n");
+        unsigned char src[64] = {};
+        unsigned char dst[64] = {};
+        const uint32_t rc = Titan_PerformDMA(src, dst, sizeof(src));
+        if (rc == 0) {
+            LogToOutput("[SYSTEM] Kernel execution successful (No Crash).\n");
+        } else {
+            LogToOutput("[SYSTEM] Kernel execution returned non-zero status.\n");
+        }
     } catch (...) {
         LogToOutput("[SYSTEM] Kernel execution encountered exception but was caught by host.\n");
     }

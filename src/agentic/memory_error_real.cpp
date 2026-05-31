@@ -617,7 +617,7 @@ private:
 
 #define TITAN_REGISTER_GGML(ctx) \
     CleanupRegistry::Instance().Register(ctx, ResourceType::GGMLContext, \
-        [](void* c) { ggml_free((ggml_context*)c); }, 200, #ctx)
+        [](void* c) { ggml_rxd_free((ggml_rxd_context*)c); }, 200, #ctx)
 
 // ============================================================
 // ERROR CHECKING HELPERS

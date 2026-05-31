@@ -31,18 +31,18 @@
 #include <cstring>
 
 /**
- * @brief	Maps a ggml_type to its corresponding aclDataType.
+ * @brief	Maps a ggml_rxd_type to its corresponding aclDataType.
  *
- * @details	This function takes a ggml_type as input and returns the corresponding
- *			aclDataType. It supports mapping for various ggml_types. If the input type
- *			does not match any of the predefined ggml_types, the function returns
+ * @details	This function takes a ggml_rxd_type as input and returns the corresponding
+ *			aclDataType. It supports mapping for various ggml_rxd_types. If the input type
+ *			does not match any of the predefined ggml_rxd_types, the function returns
  *          ACL_DT_UNDEFINED.
  *
- * @param	type    The ggml_type to be mapped.
+ * @param	type    The ggml_rxd_type to be mapped.
  * @return	The corresponding aclDataType. If the input type is not recognized,
  *			ACL_DT_UNDEFINED is returned.
  */
-aclDataType ggml_cann_type_mapping(ggml_type type);
+aclDataType ggml_rxd_cann_type_mapping(ggml_rxd_type type);
 
 // Deleter for acl objects.
 template <typename T, aclError (*DestroyFunc)(const T *)> struct acl_deleter {
@@ -59,14 +59,14 @@ using acl_scalar_ptr      = std::unique_ptr<aclScalar, acl_deleter<aclScalar, ac
 using acl_tensor_list_ptr = std::unique_ptr<aclTensorList, acl_deleter<aclTensorList, aclDestroyTensorList>>;
 
 /**
- * @brief   Creates an ACL tensor from a ggml_tensor with optional shape.
+ * @brief   Creates an ACL tensor from a ggml_rxd_tensor with optional shape.
  *
  * @details This function creates an ACL tensor based on the properties of the
- *          provided ggml_tensor. It supports customer shape by adjusting dimensions
+ *          provided ggml_rxd_tensor. It supports customer shape by adjusting dimensions
  *          and strides accordingly. If customer shape is applied, additional
  *          dimensions and strides are calculated based on the provided parameters.
  *
- * @param   tensor      Pointer to the ggml_tensor to be converted to ACL tensor.
+ * @param   tensor      Pointer to the ggml_rxd_tensor to be converted to ACL tensor.
  * @param   ne          Pointer to an array containing dimensions. Defaults to nullptr
  *                      if no customer shape is applied.
  * @param   nb          Pointer to an array containing strides. Defaults to nullptr
@@ -77,7 +77,7 @@ using acl_tensor_list_ptr = std::unique_ptr<aclTensorList, acl_deleter<aclTensor
  * @param   offset      Offset in bytes for the ACL tensor data. Defaults to 0.
  * @return  Pointer to the created ACL tensor.
  */
-acl_tensor_ptr ggml_cann_create_tensor(const ggml_tensor * tensor,
+acl_tensor_ptr ggml_rxd_cann_create_tensor(const ggml_rxd_tensor * tensor,
                                        int64_t *           ne     = nullptr,
                                        size_t *            nb     = nullptr,
                                        int64_t             dims   = 0,
@@ -105,7 +105,7 @@ acl_tensor_ptr ggml_cann_create_tensor(const ggml_tensor * tensor,
  * @return  Pointer to the created ACL tensor.
  */
 template <typename TYPE>
-acl_tensor_ptr ggml_cann_create_tensor(void *      data_ptr,
+acl_tensor_ptr ggml_rxd_cann_create_tensor(void *      data_ptr,
                                        aclDataType dtype,
                                        TYPE        type_size,
                                        int64_t *   ne,
@@ -113,8 +113,8 @@ acl_tensor_ptr ggml_cann_create_tensor(void *      data_ptr,
                                        int64_t     dims,
                                        aclFormat   format = ACL_FORMAT_ND,
                                        size_t      offset = 0) {
-    int64_t tmp_ne[GGML_MAX_DIMS * 2];
-    int64_t tmp_stride[GGML_MAX_DIMS * 2];
+    int64_t tmp_ne[GGML_RXD_MAX_DIMS * 2];
+    int64_t tmp_stride[GGML_RXD_MAX_DIMS * 2];
 
     memcpy(tmp_ne, ne, dims * sizeof(int64_t));
     for (int i = 0; i < dims; i++) {
@@ -148,7 +148,7 @@ acl_tensor_ptr ggml_cann_create_tensor(void *      data_ptr,
  *
  * @return A smart pointer managing the created ACL int array.
  */
-acl_int_array_ptr ggml_cann_create_int_array(const int64_t * value, uint64_t size);
+acl_int_array_ptr ggml_rxd_cann_create_int_array(const int64_t * value, uint64_t size);
 
 /**
  * @brief Create an ACL scalar resource wrapped in a smart pointer.
@@ -163,7 +163,7 @@ acl_int_array_ptr ggml_cann_create_int_array(const int64_t * value, uint64_t siz
  *
  * @return A smart pointer managing the created ACL scalar.
  */
-acl_scalar_ptr ggml_cann_create_scalar(void * value, aclDataType dataType);
+acl_scalar_ptr ggml_rxd_cann_create_scalar(void * value, aclDataType dataType);
 
 /**
  * @brief Create an ACL tensor list from multiple tensor smart pointers.
@@ -190,25 +190,25 @@ acl_scalar_ptr ggml_cann_create_scalar(void * value, aclDataType dataType);
  * @note This implementation is C++11 compatible. The ownership-release process is
  *       executed using a pack expansion inside an initializer list.
  */
-template <typename... acl_tensor_ptr> acl_tensor_list_ptr ggml_cann_create_tensor_list(acl_tensor_ptr &&... tensors) {
+template <typename... acl_tensor_ptr> acl_tensor_list_ptr ggml_rxd_cann_create_tensor_list(acl_tensor_ptr &&... tensors) {
     aclTensor *     raw_tensors[] = { tensors.get()... };
     aclTensorList * raw           = aclCreateTensorList(raw_tensors, sizeof...(tensors));
     // aclTensor will release by aclTensorList, so release ownership without
     // destroying the tensor
     int             dummy[]       = { (tensors.release(), 0)... };
-    GGML_UNUSED(dummy);
+    GGML_RXD_UNUSED(dummy);
     return acl_tensor_list_ptr(raw);
 }
 
 /**
  * @brief   Checks if tensors require broadcasting based on their shapes.
  *
- * @details This function determines if two ggml_tensors need to be broadcasted for
+ * @details This function determines if two ggml_rxd_tensors need to be broadcasted for
  *          element-wise operations. Broadcasting is necessary if the shapes of the
  *          tensors are not identical and no dimension in either tensor equals 1.
  *
- * @param   t0      Pointer to the first ggml_tensor.
- * @param   t1      Pointer to the second ggml_tensor.
+ * @param   t0      Pointer to the first ggml_rxd_tensor.
+ * @param   t1      Pointer to the second ggml_rxd_tensor.
  * @return  True if broadcasting is needed, False otherwise.
  *
  * @remarks This function iterates over the dimensions of t0 and t1. It checks if each
@@ -216,25 +216,25 @@ template <typename... acl_tensor_ptr> acl_tensor_list_ptr ggml_cann_create_tenso
  *          to 1. If such a dimension is found, broadcasting is required to align t1
  *          with t0 for element-wise operations.
  */
-bool ggml_cann_need_bcast(const ggml_tensor * t0, const ggml_tensor * t1);
+bool ggml_rxd_cann_need_bcast(const ggml_rxd_tensor * t0, const ggml_rxd_tensor * t1);
 
 /**
- * @brief   Computes broadcast shapes and strides for two ggml_tensors.
+ * @brief   Computes broadcast shapes and strides for two ggml_rxd_tensors.
  *
- * @details This function calculates the broadcast shapes and strides for two ggml_tensors,
+ * @details This function calculates the broadcast shapes and strides for two ggml_rxd_tensors,
  *          following the broadcasting rules similar to numpy. It adjusts dimensions and
  *          strides to ensure compatibility for element-wise operations where one tensor
  *          can be broadcasted to match the shape of another tensor.
  *
- * @param   src0                Pointer to the first ggml_tensor.
- * @param   src1                Pointer to the second ggml_tensor.
+ * @param   src0                Pointer to the first ggml_rxd_tensor.
+ * @param   src1                Pointer to the second ggml_rxd_tensor.
  * @param   bcast_ne_src0       Output array to store broadcasted dimensions for src0.
  * @param   bcast_ne_src1       Output array to store broadcasted dimensions for src1.
  * @param   bcast_nb_src0       Output array to store broadcasted strides for src0.
  * @param   bcast_nb_src1       Output array to store broadcasted strides for src1.
  * @return  Number of dimensions in the broadcasted shape.
  *
- * @pre     ggml_can_repeat(src1, src0) must return true, indicating src1 can be broadcasted
+ * @pre     ggml_rxd_can_repeat(src1, src0) must return true, indicating src1 can be broadcasted
  *          to match src0.
  *
  * @remarks This function iterates over the dimensions of src0 and src1, calculating the
@@ -271,8 +271,8 @@ bool ggml_cann_need_bcast(const ggml_tensor * t0, const ggml_tensor * t1);
  *  dim1 in a inserted dim, should add nb for dim1,
  *  and all other nb moves to next in order.
  */
-int64_t ggml_cann_get_bcast_shape(const ggml_tensor * src0,
-                                  const ggml_tensor * src1,
+int64_t ggml_rxd_cann_get_bcast_shape(const ggml_rxd_tensor * src0,
+                                  const ggml_rxd_tensor * src1,
                                   int64_t *           bcast_ne_src0,
                                   int64_t *           bcast_ne_src1,
                                   size_t *            bcast_nb_src0,
@@ -280,11 +280,11 @@ int64_t ggml_cann_get_bcast_shape(const ggml_tensor * src0,
 
 // Bcast macro to avoid duplicate code.
 #define BCAST_SHAPE(src0, src1)                                                                      \
-    int64_t bcast_##src0##_ne[GGML_MAX_DIMS * 2];                                                    \
-    int64_t bcast_##src1##_ne[GGML_MAX_DIMS * 2];                                                    \
-    size_t  bcast_##src0##_nb[GGML_MAX_DIMS * 2];                                                    \
-    size_t  bcast_##src1##_nb[GGML_MAX_DIMS * 2];                                                    \
-    int64_t bcast_dims = ggml_cann_get_bcast_shape(src0, src1, bcast_##src0##_ne, bcast_##src1##_ne, \
+    int64_t bcast_##src0##_ne[GGML_RXD_MAX_DIMS * 2];                                                    \
+    int64_t bcast_##src1##_ne[GGML_RXD_MAX_DIMS * 2];                                                    \
+    size_t  bcast_##src0##_nb[GGML_RXD_MAX_DIMS * 2];                                                    \
+    size_t  bcast_##src1##_nb[GGML_RXD_MAX_DIMS * 2];                                                    \
+    int64_t bcast_dims = ggml_rxd_cann_get_bcast_shape(src0, src1, bcast_##src0##_ne, bcast_##src1##_ne, \
                                                    bcast_##src0##_nb, bcast_##src1##_nb);
 
 #define BCAST_PARAM(tensor) bcast_##tensor##_ne, bcast_##tensor##_nb, bcast_dims
@@ -315,11 +315,11 @@ int64_t ggml_cann_get_bcast_shape(const ggml_tensor * src0,
  *          shapes needed for matrix multiplication. It ensures that dimensions where
  *          weight tensor requires expansion are appropriately handled to conform with
  *          broadcasting rules.
- * @note compare with ggml_cann_get_bcast_shape, mul_mat broadcast need add this new dim
+ * @note compare with ggml_rxd_cann_get_bcast_shape, mul_mat broadcast need add this new dim
  *       before cast dim.
- * @sa ggml_cann_get_bcast_shape
+ * @sa ggml_rxd_cann_get_bcast_shape
  */
-int64_t ggml_cann_get_mulmat_bcast_shape(const int64_t * input_ne,
+int64_t ggml_rxd_cann_get_mulmat_bcast_shape(const int64_t * input_ne,
                                          const int64_t * weight_ne,
                                          const int64_t * dst_ne,
                                          const size_t *  input_nb,
@@ -334,13 +334,13 @@ int64_t ggml_cann_get_mulmat_bcast_shape(const int64_t * input_ne,
 
 // Bcast macro to avoid duplicate code.
 #define BCAST_MUL_MAT_SHAPE(input, weight, dst)                                                                  \
-    int64_t bcast_##input##_ne[GGML_MAX_DIMS * 2];                                                               \
-    int64_t bcast_##weight##_ne[GGML_MAX_DIMS * 2];                                                              \
-    int64_t bcast_##dst##_ne[GGML_MAX_DIMS * 2];                                                                 \
-    size_t  bcast_##input##_nb[GGML_MAX_DIMS * 2];                                                               \
-    size_t  bcast_##weight##_nb[GGML_MAX_DIMS * 2];                                                              \
-    size_t  bcast_##dst##_nb[GGML_MAX_DIMS * 2];                                                                 \
-    int64_t bcast_dims = ggml_cann_get_mulmat_bcast_shape(                                                       \
+    int64_t bcast_##input##_ne[GGML_RXD_MAX_DIMS * 2];                                                               \
+    int64_t bcast_##weight##_ne[GGML_RXD_MAX_DIMS * 2];                                                              \
+    int64_t bcast_##dst##_ne[GGML_RXD_MAX_DIMS * 2];                                                                 \
+    size_t  bcast_##input##_nb[GGML_RXD_MAX_DIMS * 2];                                                               \
+    size_t  bcast_##weight##_nb[GGML_RXD_MAX_DIMS * 2];                                                              \
+    size_t  bcast_##dst##_nb[GGML_RXD_MAX_DIMS * 2];                                                                 \
+    int64_t bcast_dims = ggml_rxd_cann_get_mulmat_bcast_shape(                                                       \
         input->ne, weight->ne, dst->ne, input->nb, weight->nb, dst->nb, bcast_##input##_ne, bcast_##weight##_ne, \
         bcast_##dst##_ne, bcast_##input##_nb, bcast_##weight##_nb, bcast_##dst##_nb);
 

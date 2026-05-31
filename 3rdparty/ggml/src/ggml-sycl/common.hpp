@@ -10,8 +10,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 
-#ifndef GGML_SYCL_COMMON_HPP
-#define GGML_SYCL_COMMON_HPP
+#ifndef GGML_RXD_SYCL_COMMON_HPP
+#define GGML_RXD_SYCL_COMMON_HPP
 
 #include <cstddef>
 #include <fstream>
@@ -24,13 +24,13 @@
 #include "sycl_hw.hpp"
 
 
-#if GGML_SYCL_DNNL
+#if GGML_RXD_SYCL_DNNL
 #include "dnnl.hpp"
 #include "dnnl_sycl.hpp"
 #endif
 
-#define GGML_COMMON_DECL_SYCL
-#define GGML_COMMON_IMPL_SYCL
+#define GGML_RXD_COMMON_DECL_SYCL
+#define GGML_RXD_COMMON_IMPL_SYCL
 /* suppress warning spam */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wnested-anon-types"
@@ -38,8 +38,8 @@
 #pragma clang diagnostic pop
 #include "ggml-impl.h"
 
-void* ggml_sycl_host_malloc(size_t size);
-void ggml_sycl_host_free(void* ptr);
+void* ggml_rxd_sycl_host_malloc(size_t size);
+void ggml_rxd_sycl_host_free(void* ptr);
 
 
 extern int g_ggml_sycl_debug;
@@ -55,7 +55,7 @@ extern int g_ggml_sycl_prioritize_dmmv;
 #    define UNLIKELY(expr) (expr)
 #endif
 
-#define GGML_SYCL_DEBUG(...)              \
+#define GGML_RXD_SYCL_DEBUG(...)              \
     do {                                  \
         if (UNLIKELY(g_ggml_sycl_debug))  \
             fprintf(stderr, __VA_ARGS__); \
@@ -81,11 +81,11 @@ extern int g_ggml_sycl_prioritize_dmmv;
 #define VER_GEN12 1000000 // todo for hardward optimize.
 #define VER_GEN13 (VER_GEN12 + 1030) // todo for hardward optimize.
 
-#define GGML_SYCL_MAX_NODES 8192 // TODO: adapt to hardwares
+#define GGML_RXD_SYCL_MAX_NODES 8192 // TODO: adapt to hardwares
 
 // define for XMX in Intel GPU
 // TODO: currently, it's not used for XMX really.
-#if !defined(GGML_SYCL_FORCE_MMQ)
+#if !defined(GGML_RXD_SYCL_FORCE_MMQ)
     #define SYCL_USE_XMX
 #endif
 
@@ -93,29 +93,29 @@ extern int g_ggml_sycl_prioritize_dmmv;
 #define MMQ_MAX_BATCH_SIZE 32
 
 // dmmv = dequantize_mul_mat_vec
-#ifndef GGML_SYCL_DMMV_X
-#define GGML_SYCL_DMMV_X 32
+#ifndef GGML_RXD_SYCL_DMMV_X
+#define GGML_RXD_SYCL_DMMV_X 32
 #endif
-#ifndef GGML_SYCL_MMV_Y
-#define GGML_SYCL_MMV_Y 1
+#ifndef GGML_RXD_SYCL_MMV_Y
+#define GGML_RXD_SYCL_MMV_Y 1
 #endif
 
 typedef sycl::queue *queue_ptr;
 
-enum ggml_sycl_backend_gpu_mode {
+enum ggml_rxd_sycl_backend_gpu_mode {
   SYCL_UNSET_GPU_MODE = -1,
   SYCL_SINGLE_GPU_MODE = 0,
   SYCL_MUL_GPU_MODE
 };
 
-static_assert(sizeof(sycl::half) == sizeof(ggml_fp16_t), "wrong fp16 size");
+static_assert(sizeof(sycl::half) == sizeof(ggml_rxd_fp16_t), "wrong fp16 size");
 
 static void crash() {
   int* ptr = NULL;
   *ptr = 0;
 }
 
-[[noreturn]] static void ggml_sycl_error(
+[[noreturn]] static void ggml_rxd_sycl_error(
     const char* stmt,
     const char* func,
     const char* file,
@@ -123,36 +123,36 @@ static void crash() {
     const char* msg) {
   fprintf(stderr, "SYCL error: %s: %s\n", stmt, msg);
   fprintf(stderr, "  in function %s at %s:%d\n", func, file, line);
-  GGML_ABORT("SYCL error");
+  GGML_RXD_ABORT("SYCL error");
 }
 
 #define SYCL_CHECK(err)                                                                                    \
     do {                                                                                                   \
         auto err_ = (err);                                                                                 \
         if (err_ != 0)                                                                                     \
-            ggml_sycl_error(#err, __func__, __FILE__, __LINE__, "Exception caught in this line of code."); \
+            ggml_rxd_sycl_error(#err, __func__, __FILE__, __LINE__, "Exception caught in this line of code."); \
     } while (0)
 
 #if DPCT_COMPAT_RT_VERSION >= 11100
-#define GGML_SYCL_ASSUME(x) __builtin_assume(x)
+#define GGML_RXD_SYCL_ASSUME(x) __builtin_assume(x)
 #else
-#define GGML_SYCL_ASSUME(x)
+#define GGML_RXD_SYCL_ASSUME(x)
 #endif // DPCT_COMPAT_RT_VERSION >= 11100
 
-#ifdef GGML_SYCL_F16
+#ifdef GGML_RXD_SYCL_F16
 typedef sycl::half dfloat; // dequantize float
 typedef sycl::half2 dfloat2;
 #else
 typedef float dfloat; // dequantize float
 typedef sycl::float2 dfloat2;
-#endif // GGML_SYCL_F16
+#endif // GGML_RXD_SYCL_F16
 
 #define MMVQ_MAX_BATCH_SIZE  8
 
 static int g_all_sycl_device_count = -1;
 static bool g_ggml_backend_sycl_buffer_type_initialized = false;
 
-static ggml_sycl_backend_gpu_mode g_ggml_sycl_backend_gpu_mode =
+static ggml_rxd_sycl_backend_gpu_mode g_ggml_sycl_backend_gpu_mode =
     SYCL_UNSET_GPU_MODE;
 
 static void* g_scratch_buffer = nullptr;
@@ -170,11 +170,11 @@ static size_t g_scratch_offset = 0;
 
 int get_current_device_id();
 
-inline dpct::err0 ggml_sycl_set_device(const int device) try {
+inline dpct::err0 ggml_rxd_sycl_set_device(const int device) try {
   int current_device_id;
   SYCL_CHECK(CHECK_TRY_ERROR(current_device_id = get_current_device_id()));
 
-  // GGML_SYCL_DEBUG("ggml_sycl_set_device device_id=%d,
+  // GGML_RXD_SYCL_DEBUG("ggml_rxd_sycl_set_device device_id=%d,
   // current_device_id=%d\n", device, current_device);
   if (device == current_device_id) {
     return 0;
@@ -206,46 +206,46 @@ struct sycl_device_info {
 };
 
 
-struct ggml_sycl_device_info {
+struct ggml_rxd_sycl_device_info {
     int device_count;
 
-    sycl_device_info devices[GGML_SYCL_MAX_DEVICES] = {};
+    sycl_device_info devices[GGML_RXD_SYCL_MAX_DEVICES] = {};
 
-    std::array<float, GGML_SYCL_MAX_DEVICES> default_tensor_split = {};
+    std::array<float, GGML_RXD_SYCL_MAX_DEVICES> default_tensor_split = {};
 
-    int max_work_group_sizes[GGML_SYCL_MAX_DEVICES] = {0};
+    int max_work_group_sizes[GGML_RXD_SYCL_MAX_DEVICES] = {0};
 };
 
-const ggml_sycl_device_info & ggml_sycl_info();
+const ggml_rxd_sycl_device_info & ggml_rxd_sycl_info();
 
-struct ggml_sycl_pool {
-    virtual ~ggml_sycl_pool() = default;
+struct ggml_rxd_sycl_pool {
+    virtual ~ggml_rxd_sycl_pool() = default;
 
     virtual void * alloc(size_t size, size_t * actual_size) = 0;
     virtual void free(void * ptr, size_t size) = 0;
 };
 
 template<typename T>
-struct ggml_sycl_pool_alloc {
-    ggml_sycl_pool * pool = nullptr;
+struct ggml_rxd_sycl_pool_alloc {
+    ggml_rxd_sycl_pool * pool = nullptr;
     T * ptr = nullptr;
     size_t actual_size = 0;
 
-    explicit ggml_sycl_pool_alloc(ggml_sycl_pool & pool) : pool(&pool) {
+    explicit ggml_rxd_sycl_pool_alloc(ggml_rxd_sycl_pool & pool) : pool(&pool) {
     }
 
-    ggml_sycl_pool_alloc(ggml_sycl_pool & pool, size_t size) : pool(&pool) {
+    ggml_rxd_sycl_pool_alloc(ggml_rxd_sycl_pool & pool, size_t size) : pool(&pool) {
         alloc(size);
     }
 
-    ~ggml_sycl_pool_alloc() {
+    ~ggml_rxd_sycl_pool_alloc() {
         if (ptr != nullptr) {
             pool->free(ptr, actual_size);
         }
     }
 
     T * realloc(size_t size) {
-        GGML_ASSERT(pool != nullptr);
+        GGML_RXD_ASSERT(pool != nullptr);
         if (ptr)
             pool->free(ptr, actual_size);
         ptr = (T *) pool->alloc(size * sizeof(T), &this->actual_size);
@@ -254,13 +254,13 @@ struct ggml_sycl_pool_alloc {
 
     // size is in number of elements
     T * alloc(size_t size) {
-        GGML_ASSERT(pool != nullptr);
-        GGML_ASSERT(ptr == nullptr);
+        GGML_RXD_ASSERT(pool != nullptr);
+        GGML_RXD_ASSERT(ptr == nullptr);
         ptr = (T *) pool->alloc(size * sizeof(T), &this->actual_size);
         return ptr;
     }
 
-    T * alloc(ggml_sycl_pool & pool, size_t size) {
+    T * alloc(ggml_rxd_sycl_pool & pool, size_t size) {
         this->pool = &pool;
         return alloc(size);
     }
@@ -269,37 +269,37 @@ struct ggml_sycl_pool_alloc {
         return ptr;
     }
 
-    ggml_sycl_pool_alloc() = default;
-    ggml_sycl_pool_alloc(const ggml_sycl_pool_alloc &) = delete;
-    ggml_sycl_pool_alloc(ggml_sycl_pool_alloc &&) = delete;
-    ggml_sycl_pool_alloc& operator=(const ggml_sycl_pool_alloc &) = delete;
-    ggml_sycl_pool_alloc& operator=(ggml_sycl_pool_alloc &&) = delete;
+    ggml_rxd_sycl_pool_alloc() = default;
+    ggml_rxd_sycl_pool_alloc(const ggml_rxd_sycl_pool_alloc &) = delete;
+    ggml_rxd_sycl_pool_alloc(ggml_rxd_sycl_pool_alloc &&) = delete;
+    ggml_rxd_sycl_pool_alloc& operator=(const ggml_rxd_sycl_pool_alloc &) = delete;
+    ggml_rxd_sycl_pool_alloc& operator=(ggml_rxd_sycl_pool_alloc &&) = delete;
 };
 
 // backend interface
 
-struct ggml_tensor_extra_gpu {
-  void* data_device[GGML_SYCL_MAX_DEVICES]; // 1 pointer for each device for split
+struct ggml_rxd_tensor_extra_gpu {
+  void* data_device[GGML_RXD_SYCL_MAX_DEVICES]; // 1 pointer for each device for split
                                        // tensors
-  dpct::event_ptr events[GGML_SYCL_MAX_DEVICES]
-                        [GGML_SYCL_MAX_STREAMS]; // events for synchronizing multiple GPUs
+  dpct::event_ptr events[GGML_RXD_SYCL_MAX_DEVICES]
+                        [GGML_RXD_SYCL_MAX_STREAMS]; // events for synchronizing multiple GPUs
   optimize_feature optimized_feature;
 };
 
-void release_extra_gpu(ggml_tensor_extra_gpu * extra, std::vector<queue_ptr> streams={});
+void release_extra_gpu(ggml_rxd_tensor_extra_gpu * extra, std::vector<queue_ptr> streams={});
 
 namespace sycl_ex = sycl::ext::oneapi::experimental;
-struct ggml_backend_sycl_context {
+struct ggml_rxd_backend_sycl_context {
     int device;
     std::string name;
     optimize_feature opt_feature;
 
-    queue_ptr qptrs[GGML_SYCL_MAX_DEVICES][GGML_SYCL_MAX_STREAMS] = { { nullptr } };
+    queue_ptr qptrs[GGML_RXD_SYCL_MAX_DEVICES][GGML_RXD_SYCL_MAX_STREAMS] = { { nullptr } };
 
-    explicit ggml_backend_sycl_context(int device) :
+    explicit ggml_rxd_backend_sycl_context(int device) :
         device(device),
-        name(GGML_SYCL_NAME + std::to_string(device)) {
-        opt_feature = ggml_sycl_info().devices[device].opt_feature;
+        name(GGML_RXD_SYCL_NAME + std::to_string(device)) {
+        opt_feature = ggml_rxd_sycl_info().devices[device].opt_feature;
     }
 
     queue_ptr stream(int device, int stream) {
@@ -313,7 +313,7 @@ struct ggml_backend_sycl_context {
         return stream(device, 0);
     }
 
-#if GGML_SYCL_DNNL
+#if GGML_RXD_SYCL_DNNL
     dnnl::engine make_engine(sycl::queue* q) {
         // Get the device associated with the queue
         sycl::device dev = q->get_device();
@@ -359,10 +359,10 @@ struct ggml_backend_sycl_context {
     }
     dnnl::memory get_scratchpad_mem(const dnnl::memory::desc & scratchpad_md,
                                     const dnnl::engine & eng, const queue_ptr q) {
-        ggml_sycl_pool_alloc<uint8_t> * pool;
+        ggml_rxd_sycl_pool_alloc<uint8_t> * pool;
         auto it = scratchpad_map.find(q);
         if (it == scratchpad_map.end()) {
-            scratchpad_map[q] = std::make_unique<ggml_sycl_pool_alloc<uint8_t>>(this->pool());
+            scratchpad_map[q] = std::make_unique<ggml_rxd_sycl_pool_alloc<uint8_t>>(this->pool());
             pool = scratchpad_map[q].get();
         } else {
             pool = it->second.get();
@@ -378,38 +378,38 @@ struct ggml_backend_sycl_context {
 #endif
 
     // pool
-    std::unique_ptr<ggml_sycl_pool> pools[GGML_SYCL_MAX_DEVICES];
-    std::unordered_map<sycl::queue *, std::unique_ptr<ggml_sycl_pool_alloc<uint8_t>>> scratchpad_map;
+    std::unique_ptr<ggml_rxd_sycl_pool> pools[GGML_RXD_SYCL_MAX_DEVICES];
+    std::unordered_map<sycl::queue *, std::unique_ptr<ggml_rxd_sycl_pool_alloc<uint8_t>>> scratchpad_map;
 
-    std::unique_ptr<ggml_sycl_pool> host_pools[GGML_SYCL_MAX_DEVICES];
+    std::unique_ptr<ggml_rxd_sycl_pool> host_pools[GGML_RXD_SYCL_MAX_DEVICES];
 
-    static std::unique_ptr<ggml_sycl_pool> new_pool_for_device(queue_ptr qptr, int device);
+    static std::unique_ptr<ggml_rxd_sycl_pool> new_pool_for_device(queue_ptr qptr, int device);
 
-    static std::unique_ptr<ggml_sycl_pool> new_pool_for_host(queue_ptr qptr, int device);
+    static std::unique_ptr<ggml_rxd_sycl_pool> new_pool_for_host(queue_ptr qptr, int device);
 
-    ggml_sycl_pool & pool(int device) {
+    ggml_rxd_sycl_pool & pool(int device) {
         if (pools[device] == nullptr) {
             pools[device] = new_pool_for_device(stream(device,0), device);
         }
         return *pools[device];
     }
 
-    ggml_sycl_pool & pool() {
+    ggml_rxd_sycl_pool & pool() {
         return pool(device);
     }
 
-#ifdef GGML_SYCL_GRAPH
+#ifdef GGML_RXD_SYCL_GRAPH
     std::unique_ptr<sycl_ex::command_graph<sycl_ex::graph_state::executable>> exec_graph = nullptr;
 #endif
 
-    ggml_sycl_pool & host_pool(int device) {
+    ggml_rxd_sycl_pool & host_pool(int device) {
         if (host_pools[device] == nullptr) {
             host_pools[device] = new_pool_for_host(stream(device, 0), device);
         }
         return *host_pools[device];
     }
 
-    ggml_sycl_pool & host_pool() { return host_pool(device); }
+    ggml_rxd_sycl_pool & host_pool() { return host_pool(device); }
 };
 
 // common device functions
@@ -476,7 +476,7 @@ static __dpct_inline__ sycl::half2 warp_reduce_sum(sycl::half2 a) {
   return a;
 }
 
-static constexpr int ggml_sycl_get_physical_warp_size() {
+static constexpr int ggml_rxd_sycl_get_physical_warp_size() {
   // todo: for old iGPU + dGPU case, need to be changed.
   return WARP_SIZE;
 }
@@ -502,7 +502,7 @@ static __dpct_inline__ float warp_reduce_max(float x,
     return x;
 }
 
-/* Helper for Computing the linear offset of a ggml_tensor given
+/* Helper for Computing the linear offset of a ggml_rxd_tensor given
 per-dimension sizes, strides, and indices */
 template<int N>
 __dpct_inline__ size_t calculate_offset(const std::array<int, N> & strides, const std::array<int, N> & indices) {
@@ -552,17 +552,17 @@ template <int N, class T> std::string debug_get_array_str(const std::string & pr
 }
 
 inline std::string debug_get_tensor_str(const std::string &prefix,
-        const ggml_tensor *tensor, const std::string &suffix = "") {
+        const ggml_rxd_tensor *tensor, const std::string &suffix = "") {
     std::stringstream ss;
     if (LIKELY(!g_ggml_sycl_debug)) { return ss.str(); }
     ss << prefix.c_str() << "=";
     if (tensor) {
-        ss << "'" << tensor->name << "':type=" << ggml_type_name(tensor->type);
-        ss << debug_get_array_str<GGML_MAX_DIMS>(";ne", tensor->ne);
-        ss << debug_get_array_str<GGML_MAX_DIMS>(";nb", tensor->nb);
+        ss << "'" << tensor->name << "':type=" << ggml_rxd_type_name(tensor->type);
+        ss << debug_get_array_str<GGML_RXD_MAX_DIMS>(";ne", tensor->ne);
+        ss << debug_get_array_str<GGML_RXD_MAX_DIMS>(";nb", tensor->nb);
 
-        if (!ggml_is_contiguous(tensor)) { ss << ";strided"; }
-        if (ggml_is_permuted(tensor)) { ss << ";permuted"; }
+        if (!ggml_rxd_is_contiguous(tensor)) { ss << ";strided"; }
+        if (ggml_rxd_is_permuted(tensor)) { ss << ";permuted"; }
     } else {
         ss << "nullptr";
     }
@@ -575,28 +575,28 @@ struct scope_op_debug_print {
     // Use string_views to avoid the cost of creating a string and concatenating them
     // string_views must be alive for as long as the object is alive
     // scope_op_debug_print are used with string literals in practice which are stored in constant space so always accessible
-    scope_op_debug_print(const std::string_view & func, const std::string_view & func_suffix, const ggml_tensor * dst,
+    scope_op_debug_print(const std::string_view & func, const std::string_view & func_suffix, const ggml_rxd_tensor * dst,
                          std::size_t num_src, const std::string_view & suffix = "") :
         func(func),
         func_suffix(func_suffix) {
         if (LIKELY(!g_ggml_sycl_debug)) {
             return;
         }
-        GGML_SYCL_DEBUG("[SYCL][OP] call %s%s:", func.data(), func_suffix.data());
-        GGML_SYCL_DEBUG("%s", debug_get_tensor_str(" dst", dst).c_str());
+        GGML_RXD_SYCL_DEBUG("[SYCL][OP] call %s%s:", func.data(), func_suffix.data());
+        GGML_RXD_SYCL_DEBUG("%s", debug_get_tensor_str(" dst", dst).c_str());
         if (dst) {
             for (std::size_t i = 0; i < num_src; ++i) {
-                GGML_SYCL_DEBUG("%s", debug_get_tensor_str("\tsrc" + std::to_string(i), dst->src[i]).c_str());
+                GGML_RXD_SYCL_DEBUG("%s", debug_get_tensor_str("\tsrc" + std::to_string(i), dst->src[i]).c_str());
             }
         }
-        GGML_SYCL_DEBUG("%s\n", suffix.data());
+        GGML_RXD_SYCL_DEBUG("%s\n", suffix.data());
     }
 
-    scope_op_debug_print(const std::string_view & func, const ggml_tensor * dst, std::size_t num_src,
+    scope_op_debug_print(const std::string_view & func, const ggml_rxd_tensor * dst, std::size_t num_src,
                          const std::string_view & suffix = "") :
         scope_op_debug_print(func, "", dst, num_src, suffix) {}
 
-    ~scope_op_debug_print() { GGML_SYCL_DEBUG("[SYCL][OP] call %s%s done\n", func.data(), func_suffix.data()); }
+    ~scope_op_debug_print() { GGML_RXD_SYCL_DEBUG("[SYCL][OP] call %s%s done\n", func.data(), func_suffix.data()); }
 
   private:
     std::string_view func;
@@ -617,4 +617,4 @@ static __dpct_inline__ float get_alibi_slope(const float    max_bias,
     return dpct::pow(base, exph);
 }
 
-#endif // GGML_SYCL_COMMON_HPP
+#endif // GGML_RXD_SYCL_COMMON_HPP

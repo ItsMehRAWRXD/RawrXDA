@@ -112,7 +112,7 @@ void TransformerLayer::forward(float* x, int pos, int seq_len) {
     InferenceKernels::rmsnorm_avx512(tmp, x, attn_norm, dim);
     
     // QKV projections
-    if (wq_type == GGML_TYPE_Q4_0) {
+    if (wq_type == GGML_RXD_TYPE_Q4_0) {
         InferenceKernels::matmul_q4_0_fused(tmp, (block_q4_0*)wq, q, 1, dim, dim);
         InferenceKernels::matmul_q4_0_fused(tmp, (block_q4_0*)wk, k, 1, dim, dim);
         InferenceKernels::matmul_q4_0_fused(tmp, (block_q4_0*)wv, v, 1, dim, dim);
@@ -172,7 +172,7 @@ void TransformerLayer::forward(float* x, int pos, int seq_len) {
     }
     
     // Output projection
-    if (wq_type == GGML_TYPE_Q4_0) {
+    if (wq_type == GGML_RXD_TYPE_Q4_0) {
         InferenceKernels::matmul_q4_0_fused(attn_out, (block_q4_0*)wo, tmp, 1, dim, dim);
     } else {
         for (int i = 0; i < dim; i++) {
@@ -194,7 +194,7 @@ void TransformerLayer::forward(float* x, int pos, int seq_len) {
     float* ffn_out = scratch_ffn_out.data();
     
     // w1 @ x (gate)
-    if (ffn_type == GGML_TYPE_Q4_0) {
+    if (ffn_type == GGML_RXD_TYPE_Q4_0) {
         InferenceKernels::matmul_q4_0_fused(tmp, (block_q4_0*)w1, gate, 1, hidden_dim, dim);
     } else {
         for (int i = 0; i < hidden_dim; i++) {
@@ -207,7 +207,7 @@ void TransformerLayer::forward(float* x, int pos, int seq_len) {
     }
     
     // w3 @ x (up)
-    if (ffn_type == GGML_TYPE_Q4_0) {
+    if (ffn_type == GGML_RXD_TYPE_Q4_0) {
         InferenceKernels::matmul_q4_0_fused(tmp, (block_q4_0*)w3, up, 1, hidden_dim, dim);
     } else {
         for (int i = 0; i < hidden_dim; i++) {
@@ -224,7 +224,7 @@ void TransformerLayer::forward(float* x, int pos, int seq_len) {
     InferenceKernels::fused_silu_mul_avx2(gate, up, hidden_dim);
     
     // w2 @ result
-    if (ffn_type == GGML_TYPE_Q4_0) {
+    if (ffn_type == GGML_RXD_TYPE_Q4_0) {
         InferenceKernels::matmul_q4_0_fused(gate, (block_q4_0*)w2, ffn_out, 1, dim, hidden_dim);
     } else {
         for (int i = 0; i < dim; i++) {

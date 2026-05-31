@@ -1,9 +1,9 @@
-#ifndef GGML_SYCL_COUNT_EQUAL_HPP
-#define GGML_SYCL_COUNT_EQUAL_HPP
+#ifndef GGML_RXD_SYCL_COUNT_EQUAL_HPP
+#define GGML_RXD_SYCL_COUNT_EQUAL_HPP
 #include "common.hpp"
 
 #define SYCL_COUNT_EQUAL_CHUNK_SIZE 128
 
-void ggml_sycl_count_equal(ggml_backend_sycl_context & ctx, ggml_tensor * dst);
+void ggml_rxd_sycl_count_equal(ggml_rxd_backend_sycl_context & ctx, ggml_rxd_tensor * dst);
 
-#endif //GGML_SYCL_COUNT_EQUAL_HPP
+#endif //GGML_RXD_SYCL_COUNT_EQUAL_HPP

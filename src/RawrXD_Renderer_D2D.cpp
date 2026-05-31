@@ -107,9 +107,25 @@ void Renderer2D::clear(const Color& color) {
     if (target) target->Clear(color.toD2D());
 }
 
+void Renderer2D::clear(const ColorSpace::AdobeRGBa& color) {
+    if (target) {
+        auto d2d = color.ToD2D();
+        target->Clear(D2D1::ColorF(d2d.r, d2d.g, d2d.b, d2d.a));
+    }
+}
+
 void Renderer2D::drawRect(const Rect& rect, const Color& color, float strokeWidth) {
     if (target && solidBrush) {
         solidBrush->SetColor(color.toD2D());
+        D2D1_RECT_F r = D2D1::RectF((float)rect.x, (float)rect.y, (float)rect.x + rect.width, (float)rect.y + rect.height);
+        target->DrawRectangle(r, solidBrush, strokeWidth);
+    }
+}
+
+void Renderer2D::drawRect(const Rect& rect, const ColorSpace::AdobeRGBa& color, float strokeWidth) {
+    if (target && solidBrush) {
+        auto d2d = color.ToD2D();
+        solidBrush->SetColor(D2D1::ColorF(d2d.r, d2d.g, d2d.b, d2d.a));
         D2D1_RECT_F r = D2D1::RectF((float)rect.x, (float)rect.y, (float)rect.x + rect.width, (float)rect.y + rect.height);
         target->DrawRectangle(r, solidBrush, strokeWidth);
     }
@@ -123,9 +139,26 @@ void Renderer2D::fillRect(const Rect& rect, const Color& color) {
     }
 }
 
+void Renderer2D::fillRect(const Rect& rect, const ColorSpace::AdobeRGBa& color) {
+    if (target && solidBrush) {
+        auto d2d = color.ToD2D();
+        solidBrush->SetColor(D2D1::ColorF(d2d.r, d2d.g, d2d.b, d2d.a));
+        D2D1_RECT_F r = D2D1::RectF((float)rect.x, (float)rect.y, (float)rect.x + rect.width, (float)rect.y + rect.height);
+        target->FillRectangle(r, solidBrush);
+    }
+}
+
 void Renderer2D::drawLine(const Point& p1, const Point& p2, const Color& color, float strokeWidth) {
     if (target && solidBrush) {
         solidBrush->SetColor(color.toD2D());
+        target->DrawLine(D2D1::Point2F((float)p1.x, (float)p1.y), D2D1::Point2F((float)p2.x, (float)p2.y), solidBrush, strokeWidth);
+    }
+}
+
+void Renderer2D::drawLine(const Point& p1, const Point& p2, const ColorSpace::AdobeRGBa& color, float strokeWidth) {
+    if (target && solidBrush) {
+        auto d2d = color.ToD2D();
+        solidBrush->SetColor(D2D1::ColorF(d2d.r, d2d.g, d2d.b, d2d.a));
         target->DrawLine(D2D1::Point2F((float)p1.x, (float)p1.y), D2D1::Point2F((float)p2.x, (float)p2.y), solidBrush, strokeWidth);
     }
 }
@@ -138,6 +171,19 @@ void Renderer2D::drawText(const Point& p, const String& text, const Font& font, 
         if (font.getFormat()) {
             solidBrush->SetColor(color.toD2D());
             D2D1_RECT_F layoutRect = D2D1::RectF((float)p.x, (float)p.y, 10000.0f, 10000.0f); // Massive rect
+            target->DrawText(text.c_str(), text.length(), font.getFormat(), layoutRect, solidBrush);
+        }
+    }
+}
+
+void Renderer2D::drawText(const Point& p, const String& text, const Font& font, const ColorSpace::AdobeRGBa& color) {
+    if (target && solidBrush && writeFactory) {
+        const_cast<Font&>(font).updateFormat(writeFactory);
+        
+        if (font.getFormat()) {
+            auto d2d = color.ToD2D();
+            solidBrush->SetColor(D2D1::ColorF(d2d.r, d2d.g, d2d.b, d2d.a));
+            D2D1_RECT_F layoutRect = D2D1::RectF((float)p.x, (float)p.y, 10000.0f, 10000.0f);
             target->DrawText(text.c_str(), text.length(), font.getFormat(), layoutRect, solidBrush);
         }
     }
@@ -199,6 +245,95 @@ void Renderer2D::drawStyledText(const Point& p, const String& text, const Font& 
     );
 
     layout->Release();
+}
+
+// ============================================================================
+// VSU Effect Rendering Implementation
+// ============================================================================
+
+void Renderer2D::drawAcrylicBackground(const Rect& rect, const ColorSpace::AdobeRGBa& baseTint, const ColorSpace::AdobeRGBa& luminosity) {
+    if (!target || !solidBrush) return;
+    
+    // Base layer
+    auto baseD2d = baseTint.ToD2D();
+    solidBrush->SetColor(D2D1::ColorF(baseD2d.r, baseD2d.g, baseD2d.b, baseD2d.a));
+    D2D1_RECT_F r = D2D1::RectF((float)rect.x, (float)rect.y, (float)rect.x + rect.width, (float)rect.y + rect.height);
+    target->FillRectangle(r, solidBrush);
+    
+    // Luminosity layer (simulated with semi-transparent overlay)
+    auto lumD2d = luminosity.ToD2D();
+    solidBrush->SetColor(D2D1::ColorF(lumD2d.r, lumD2d.g, lumD2d.b, lumD2d.a * 0.6f));  // 60% intensity
+    target->FillRectangle(r, solidBrush);
+}
+
+void Renderer2D::drawMicaBackground(const Rect& rect, const ColorSpace::AdobeRGBa& tint) {
+    if (!target || !solidBrush) return;
+    
+    auto d2d = tint.ToD2D();
+    solidBrush->SetColor(D2D1::ColorF(d2d.r, d2d.g, d2d.b, d2d.a));
+    D2D1_RECT_F r = D2D1::RectF((float)rect.x, (float)rect.y, (float)rect.x + rect.width, (float)rect.y + rect.height);
+    target->FillRectangle(r, solidBrush);
+}
+
+void Renderer2D::drawElevationShadow(const Rect& rect, const ColorSpace::AdobeRGBa& shadowColor, float elevation) {
+    if (!target || !solidBrush) return;
+    
+    // Calculate shadow opacity based on elevation
+    float opacity = std::min(0.32f, 0.04f + (elevation / 32.0f) * 0.28f);
+    auto d2d = shadowColor.ToD2D();
+    
+    // Draw shadow with calculated opacity
+    solidBrush->SetColor(D2D1::ColorF(d2d.r, d2d.g, d2d.b, opacity));
+    D2D1_RECT_F r = D2D1::RectF((float)rect.x, (float)rect.y, (float)rect.x + rect.width, (float)rect.y + rect.height);
+    target->FillRectangle(r, solidBrush);
+}
+
+void Renderer2D::drawRoundedRect(const Rect& rect, float radius, const ColorSpace::AdobeRGBa& color, float strokeWidth) {
+    if (!target || !solidBrush) return;
+    
+    ID2D1RoundedRectangleGeometry* geometry = nullptr;
+    ID2D1Factory* d2dFactory = nullptr;
+    target->GetFactory(&d2dFactory);
+    
+    if (d2dFactory) {
+        D2D1_ROUNDED_RECT roundedRect = {
+            D2D1::RectF((float)rect.x, (float)rect.y, (float)rect.x + rect.width, (float)rect.y + rect.height),
+            radius, radius
+        };
+        
+        d2dFactory->CreateRoundedRectangleGeometry(roundedRect, &geometry);
+        if (geometry) {
+            auto d2d = color.ToD2D();
+            solidBrush->SetColor(D2D1::ColorF(d2d.r, d2d.g, d2d.b, d2d.a));
+            target->DrawGeometry(geometry, solidBrush, strokeWidth);
+            geometry->Release();
+        }
+        d2dFactory->Release();
+    }
+}
+
+void Renderer2D::fillRoundedRect(const Rect& rect, float radius, const ColorSpace::AdobeRGBa& color) {
+    if (!target || !solidBrush) return;
+    
+    ID2D1RoundedRectangleGeometry* geometry = nullptr;
+    ID2D1Factory* d2dFactory = nullptr;
+    target->GetFactory(&d2dFactory);
+    
+    if (d2dFactory) {
+        D2D1_ROUNDED_RECT roundedRect = {
+            D2D1::RectF((float)rect.x, (float)rect.y, (float)rect.x + rect.width, (float)rect.y + rect.height),
+            radius, radius
+        };
+        
+        d2dFactory->CreateRoundedRectangleGeometry(roundedRect, &geometry);
+        if (geometry) {
+            auto d2d = color.ToD2D();
+            solidBrush->SetColor(D2D1::ColorF(d2d.r, d2d.g, d2d.b, d2d.a));
+            target->FillGeometry(geometry, solidBrush);
+            geometry->Release();
+        }
+        d2dFactory->Release();
+    }
 }
 
 } // namespace RawrXD

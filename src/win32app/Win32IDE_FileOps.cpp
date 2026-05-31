@@ -9,8 +9,9 @@
 #include <commdlg.h>
 #include <commctrl.h>
 #include <algorithm>
+#include <filesystem>
 
-// SCAFFOLD_034: File operations and model load from explorer
+// File Operations and Model Load from Explorer Implementation
 
 
 // ============================================================================
@@ -101,12 +102,15 @@ void Win32IDE::openFileDialog() {
                 
                 std::string content((std::istreambuf_iterator<char>(file)), 
                                   std::istreambuf_iterator<char>());
-                SetWindowTextA(m_hwndEditor, content.c_str());
+                m_suppressLspDocumentSync = true;
+                setWindowText(m_hwndEditor, content);
+                m_suppressLspDocumentSync = false;
                 
                 m_currentFile = szFile;
                 m_fileModified = false;
                 setCurrentDirectoryFromFile(m_currentFile);
                 updateTitleBarText();
+                syncLSPDocumentOpen(m_currentFile, content);
                 
                 // Update recent files
                 updateRecentFiles(szFile);
@@ -144,12 +148,15 @@ void Win32IDE::openRecentFile(int index) {
         if (file) {
             std::string content((std::istreambuf_iterator<char>(file)), 
                               std::istreambuf_iterator<char>());
-            SetWindowTextA(m_hwndEditor, content.c_str());
+            m_suppressLspDocumentSync = true;
+            setWindowText(m_hwndEditor, content);
+            m_suppressLspDocumentSync = false;
             
             m_currentFile = filePath;
             m_fileModified = false;
             setCurrentDirectoryFromFile(m_currentFile);
             updateTitleBarText();
+            syncLSPDocumentOpen(m_currentFile, content);
             
             // Move to top of recent files
             updateRecentFiles(filePath);
@@ -220,9 +227,16 @@ void Win32IDE::closeFile() {
     if (m_fileModified && !promptSaveChanges()) {
         return;
     }
+
+    const std::string closingFile = m_currentFile;
+    if (!closingFile.empty()) {
+        syncLSPDocumentClose(closingFile);
+    }
     
     // Clear editor
-    SetWindowTextA(m_hwndEditor, "");
+    m_suppressLspDocumentSync = true;
+    setWindowText(m_hwndEditor, "");
+    m_suppressLspDocumentSync = false;
     
     // Reset state
     m_currentFile.clear();
@@ -303,3 +317,56 @@ void Win32IDE::clearRecentFiles() {
 }
 
 // Note: openFile() is defined in Win32IDE_clean.cpp and just calls openFileDialog()
+
+void Win32IDE::listAvailableModels()
+{
+    LOG_INFO("listAvailableModels called");
+    std::ostringstream oss;
+    oss << "=== Available Models ===\n";
+
+    // Enumerate .gguf files from common search paths
+    std::vector<std::string> searchRoots;
+    {
+        const std::string ws = !m_projectRoot.empty() ? m_projectRoot : m_explorerRootPath;
+        if (!ws.empty())
+            searchRoots.push_back(ws);
+    }
+    searchRoots.push_back("D:\\");
+    searchRoots.push_back(".");
+
+    std::vector<std::string> found;
+    for (const auto& root : searchRoots)
+    {
+        try
+        {
+            for (auto& entry : std::filesystem::recursive_directory_iterator(
+                     root, std::filesystem::directory_options::skip_permission_denied))
+            {
+                if (!entry.is_regular_file())
+                    continue;
+                const auto ext = entry.path().extension().string();
+                if (_stricmp(ext.c_str(), ".gguf") == 0)
+                    found.push_back(entry.path().string());
+                if (found.size() >= 50)
+                    break;
+            }
+        }
+        catch (...) {}
+        if (found.size() >= 50)
+            break;
+    }
+
+    if (found.empty())
+    {
+        oss << "  No .gguf model files found.\n";
+    }
+    else
+    {
+        oss << "  Found " << found.size() << " .gguf file(s):\n";
+        for (const auto& path : found)
+            oss << "    " << path << "\n";
+    }
+
+    oss << "========================\n";
+    appendToOutput(oss.str(), "Output", OutputSeverity::Info);
+}

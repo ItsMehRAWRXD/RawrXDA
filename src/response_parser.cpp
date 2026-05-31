@@ -14,7 +14,22 @@ ResponseParser::ResponseParser(
 }
 
 std::vector<ParsedCompletion> ResponseParser::parseResponse(const std::string& response) {
+    constexpr size_t MAX_RESPONSE_SIZE = 512 * 1024 * 1024;  // 512 MB single response limit
+    
     if (m_logger) m_logger->debug("Parsing complete response ({} chars)", response.length());
+    
+    // Validate response size (prevent DoS via oversized single response)
+    if (response.length() > MAX_RESPONSE_SIZE) {
+        if (m_logger) m_logger->warn("Response overflow: {} bytes exceeds max {}", 
+                                     response.length(), MAX_RESPONSE_SIZE);
+        std::vector<ParsedCompletion> result;
+        ParsedCompletion error_comp;
+        error_comp.text = "[RESPONSE_TOO_LARGE: rejected]";
+        error_comp.boundary = "ERROR";
+        error_comp.isComplete = false;
+        result.push_back(error_comp);
+        return result;
+    }
 
     // Strategy: Try multiple parsing approaches in order
     // 1. First split by statement boundaries (most accurate for code)
@@ -57,8 +72,24 @@ std::vector<ParsedCompletion> ResponseParser::parseResponse(const std::string& r
 }
 
 std::vector<ParsedCompletion> ResponseParser::parseChunk(const std::string& chunk) {
+    constexpr size_t MAX_BUFFER_SIZE = 256 * 1024 * 1024;  // 256 MB limit
+    
     m_logger->debug("Parsing chunk ({} chars, buffer size: {})", chunk.length(), m_buffer.length());
 
+    // Validate buffer size before accumulation (prevent DoS via unbounded streaming)
+    if (m_buffer.length() + chunk.length() > MAX_BUFFER_SIZE) {
+        m_logger->warn("Buffer overflow: current={} + chunk={} would exceed max {}", 
+                       m_buffer.length(), chunk.length(), MAX_BUFFER_SIZE);
+        // Fail-safe: refuse oversized chunk, maintain buffer integrity
+        std::vector<ParsedCompletion> result;
+        ParsedCompletion error_comp;
+        error_comp.text = "[BUFFER_OVERFLOW: chunk rejected]";
+        error_comp.boundary = "ERROR";
+        error_comp.isComplete = false;
+        result.push_back(error_comp);
+        return result;
+    }
+    
     // Add to buffer
     m_buffer += chunk;
 

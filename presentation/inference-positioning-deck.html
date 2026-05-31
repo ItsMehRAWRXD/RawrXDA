@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RawrXD — Inference positioning</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #0c0c0d;
+      --muted: #5c5c66;
+      --line: #e4e4e7;
+      --paper: #fafafa;
+      --accent: #635bff;
+      --warm: #c2410c;
+      --card: #ffffff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 17px;
+      line-height: 1.55;
+    }
+    .slide {
+      min-height: 100vh;
+      padding: 4.5rem clamp(1.5rem, 5vw, 4rem);
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      max-width: 920px;
+      margin: 0 auto;
+    }
+    .slide h1, .slide h2 {
+      font-family: "Fraunces", "Source Serif 4", serif;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin: 0 0 0.75rem;
+    }
+    h1 { font-size: clamp(2rem, 4vw, 2.75rem); }
+    h2 { font-size: clamp(1.35rem, 2.5vw, 1.75rem); }
+    .eyebrow {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+    .lead { font-size: 1.12rem; color: #2d2d33; max-width: 38rem; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1.5rem;
+      font-size: 0.95rem;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--line);
+    }
+    th {
+      background: #f4f4f5;
+      font-family: "Fraunces", serif;
+      font-weight: 600;
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #3f3f46;
+    }
+    tr:last-child td { border-bottom: none; }
+    .pill {
+      display: inline-block;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      background: #eef2ff;
+      color: #3730a3;
+    }
+    .warm { color: var(--warm); font-weight: 600; }
+    ul { margin: 1rem 0 0; padding-left: 1.2rem; color: #3b3b42; }
+    li { margin: 0.4rem 0; }
+    footer.note {
+      margin-top: 2rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+
+  <section class="slide">
+    <div class="eyebrow">Product narrative</div>
+    <h1>Native IDE inference, not “another chat wrapper.”</h1>
+    <p class="lead">
+      RawrXD pairs a <strong>Win32-first editor</strong> with <strong>sovereign GGUF paths</strong>,
+      <strong>agentic tools</strong>, and <strong>integrated terminals</strong> that behave like VS Code / Cursor —
+      including read-only agent surfaces and mirrored tool execution.
+    </p>
+    <footer class="note">Visual tone: Stripe-like structure + Anthropic-warm accent (terracotta) on key claims — not generic “AI purple slides.”</footer>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">Competitor framing</div>
+    <h2>Ollama vs vLLM vs RawrXD <span class="pill">positioning</span></h2>
+    <p class="lead">Use this table in decks and GTM; it is <em>orthogonal axes</em>, not “winner/loser.”</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Layer</th>
+          <th>Ollama</th>
+          <th>vLLM</th>
+          <th>RawrXD</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Primary job</td>
+          <td>Run models locally; simple HTTP API</td>
+          <td>Serve models at scale; PagedAttention / throughput</td>
+          <td class="warm">Ship a native IDE with agent + terminal + local inference</td>
+        </tr>
+        <tr>
+          <td>Who wins</td>
+          <td>Individual devs, quick experiments</td>
+          <td>Platform teams, multi-GPU serving</td>
+          <td>Teams wanting Cursor-class UX without web stack in the core loop</td>
+        </tr>
+        <tr>
+          <td>Composable?</td>
+          <td>Yes — swap models, call API</td>
+          <td>Yes — OpenAI-compatible frontends</td>
+          <td>Yes — bridges to routers; GGUF + tools + Win32 UI</td>
+        </tr>
+      </tbody>
+    </table>
+    <ul>
+      <li><strong>Ollama</strong> is the “get a model running” layer.</li>
+      <li><strong>vLLM</strong> is the “serve tokens cheaply at scale” layer.</li>
+      <li><strong>RawrXD</strong> is the “edit, run, agent, prove” layer — <span class="warm">desktop sovereign</span>.</li>
+    </ul>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">Artifacts</div>
+    <h2>JSON → charts → PDF</h2>
+    <p class="lead">
+      Run <code style="background:#f4f4f5;padding:0.15rem 0.4rem;border-radius:4px;">python scripts/JsonToChartsPdf.py scripts/sample_metrics_for_charts.json -o out.pdf</code>
+      after <code>pip install matplotlib numpy</code> to regenerate investor-ready PDFs from CI or agent JSON.
+    </p>
+    <footer class="note">Open this HTML in a browser; print to PDF for a deck handoff. Single file, no build step.</footer>
+  </section>
+
+</body>
+</html>

@@ -246,7 +246,7 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::generateCompletionsWithMod
             "\"options\":{\"temperature\":0.2,\"num_predict\":" + std::to_string(maxTokens) + ","
             "\"top_p\":0.9,\"stop\":[\"\\n\\n\",\"```\"]}}";
 
-        // WinHTTP request to Ollama on localhost:11434
+        // WinHTTP request to Ollama on localhost:11435
         HINTERNET hSession = WinHttpOpen(L"RawrXD-CompletionEngine/1.0",
             WINHTTP_ACCESS_TYPE_NO_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
         

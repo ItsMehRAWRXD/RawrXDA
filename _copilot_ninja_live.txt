@@ -1,0 +1,7 @@
+
+Name     Id StartTime            Path
+----     -- ---------            ----
+ninja 28780 4/16/2026 8:07:32 PM C:\Strawberry\c\bin\ninja.exe
+ninja 29380 4/16/2026 8:05:09 PM C:\Strawberry\c\bin\ninja.exe
+ninja 31184 4/16/2026 8:08:07 PM C:\Strawberry\c\bin\ninja.exe
+

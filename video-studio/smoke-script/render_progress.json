@@ -1,0 +1,7 @@
+{
+  "phase": "completed-without-mp4",
+  "current_frame": 60,
+  "total_frames": 60,
+  "percent": 100,
+  "note": "ffmpeg not found on PATH or common install locations"
+}

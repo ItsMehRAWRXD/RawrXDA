@@ -67,6 +67,21 @@ void PerformanceMonitor::recordMemoryUsage(const std::string& operation, size_t 
     data.metrics.memoryPeakUsage = std::max(data.metrics.memoryPeakUsage, bytes);
 }
 
+void PerformanceMonitor::recordLatency(const std::string& operation, long long microseconds) {
+    if (microseconds <= 0)
+        return;
+    std::lock_guard<std::mutex> lock(mutex_);
+    auto& data = operations_[operation];
+    const auto duration = std::chrono::microseconds(microseconds);
+    data.metrics.totalTime += duration;
+    data.metrics.operationCount++;
+    data.metrics.averageLatencyMs = static_cast<double>(data.metrics.totalTime.count()) /
+                                    (data.metrics.operationCount * 1000.0);
+    auto totalSeconds = std::chrono::duration_cast<std::chrono::seconds>(data.metrics.totalTime).count();
+    if (totalSeconds > 0)
+        data.metrics.throughputOpsPerSec = static_cast<double>(data.metrics.operationCount) / totalSeconds;
+}
+
 PerformanceMetrics PerformanceMonitor::getMetrics(const std::string& operation) const {
     std::lock_guard<std::mutex> lock(mutex_);
     auto it = operations_.find(operation);

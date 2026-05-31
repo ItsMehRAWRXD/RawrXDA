@@ -10,12 +10,12 @@ static constexpr int NQ1_SIGNS_OFFSET = 2;
 static constexpr int QK_NQ1 = 256;
 
 // GGML type identifiers
-#ifndef GGML_TYPE_NQ_1
-#define GGML_TYPE_NQ_1 20
+#ifndef GGML_RXD_TYPE_NQ_1
+#define GGML_RXD_TYPE_NQ_1 20
 #endif
 
-#ifndef GGML_TYPE_NQ_R4
-#define GGML_TYPE_NQ_R4 21
+#ifndef GGML_RXD_TYPE_NQ_R4
+#define GGML_RXD_TYPE_NQ_R4 21
 #endif
 
 // NQ_MATRIX layout constants

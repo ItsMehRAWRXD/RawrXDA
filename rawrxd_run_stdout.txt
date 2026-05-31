@@ -1,0 +1,19 @@
+2026-04-10 04:40:30 [INFO] [RuntimeSurface] [RuntimeSurface] bootstrap begin (no startup scan/index)
+2026-04-10 04:40:30 [INFO] [RuntimeSurface] [RawrXD::Quant] Layout Legend: Q4S (Signed 4-bit): UI '-4bit', Wire: val+8, Range [-8,7]. Q6S (Signed 6-bit): UI '-6bit', Wire: val+32, Range [-32,31]. Q4U/Q6U: Standard Unsigned Mapping.
+2026-04-10 04:40:30 [INFO] [RuntimeSurface] [CompressedPoolBudget] budget_bytes=0
+2026-04-10 04:40:30 [INFO] [RuntimeSurface] [ModularModelLoader] resident layer budget=0
+2026-04-10 04:40:30 [INFO] [RuntimeSurface] [RuntimeSurface] llama.cpp/exllamaV2 parity register entries=12
+2026-04-10 04:40:30 [INFO] [RuntimeSurface] [RuntimeSurface] four-lane gate ready (max 4 of 5 lanes unless explicit module)
+2026-04-10 04:40:30 [INFO] [RuntimeSurface] [RuntimeSurface] bootstrap complete
+2026-04-10 04:40:30 [INFO] [GGUFHotpatch] [GGUFHotpatch] 70B runtime defaults applied (alignment + optional unified memory)
+2026-04-10 04:40:30 [INFO] [Win32IDE_Breadcrumbs] Breadcrumb bar created
+[BackendOrchestrator] AVX512 KV kernels enabled
+[ExtensionLoader] Scan complete: 6 extension(s) found
+[ExtensionLoader] No DLL found for native extension: GitHub.copilot
+[ExtensionLoader] No DLL found for native extension: amazonwebservices.amazon-q-vscode
+[ExtensionLoader] LoadNativeModules summary: 0 loaded, 2 failed, 4 non-native
+[AgentController] Initialized with 4 tools
+[INFO] [AgentController] Wiring initialized with inference engine
+[BackendOrchestrator] Probing native candidate: RawrXD_Titan.dll
+[BackendOrchestrator] Loaded RawrXD_Titan.dll successfully at 00007FF97AC40000
+2026-04-10 04:40:31 [ERROR] [FIMSync failed: [BackendError] SubmitInference failed] OrchestratorBridge

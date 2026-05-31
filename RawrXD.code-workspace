@@ -1,0 +1,41 @@
+{
+  "folders": [
+    {
+      "path": "d:\\rawrxd"
+    }
+  ],
+  "settings": {
+    "chat.agent.maxToolCalls": 1000,
+    "chat.agent.extendedToolExecution": true,
+    "chat.agent.autopilot.enabled": true,
+    "chat.agent.autopilot.maxIterations": 1000,
+    "chat.agent.autopilot.toolLimit": 1000,
+    "chat.agent.autopilot.allowParallelToolCalls": true,
+    "chat.agent.autopilot.continueOnError": true,
+    "chat.agent.autopilot.rawrxdIntegration": true,
+    "chat.agent.maxRequests": 1000,
+    "github.copilot.chat.codeGeneration.instructions": [
+      {
+        "text": "RawrXD IDE: Zero-dependency, fully functional editor + explorer + chat pane + model streaming. Use extended tool execution with 1000 tool limit."
+      }
+    ]
+  },
+  "extensions": {
+    "recommendations": [
+      "github.copilot-chat"
+    ]
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "RawrXD IDE Autopilot",
+        "type": "copilot-chat",
+        "request": "launch",
+        "toolCallLimit": 1000,
+        "extendedExecution": true,
+        "parallelTools": true
+      }
+    ]
+  }
+}

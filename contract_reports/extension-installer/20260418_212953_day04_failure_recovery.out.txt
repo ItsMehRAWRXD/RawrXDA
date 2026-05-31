@@ -1,0 +1,113 @@
+=================================================================
+ RawrXD Extension Installer Smoke Test
+ Mode: OFFLINE (unit checks only)
+ Live install verify: DISABLED
+ Stress workers: 5 (offline/mixed mode)
+ Failure injection: ENABLED
+=================================================================
+
+--- Test 1: Priority extension list integrity ---
+[PASS] priority_list.not_empty
+[PASS] priority_list.all_ids_valid
+[PASS] priority_list.contains_amazon_q
+[PASS] priority_list.contains_copilot
+[PASS] priority_list.contains_copilot_chat
+
+--- Test 2: AmazonQ ↔ Copilot parity ---
+[PASS] parity.amazon_q_entry_found
+[PASS] parity.copilot_entry_found
+[PASS] parity.copilot_chat_entry_found
+[PASS] parity.amazon_q_is_AI
+[PASS] parity.copilot_is_AI
+[PASS] parity.copilot_chat_is_AI
+[PASS] parity.amazon_q_requires_auth
+[PASS] parity.copilot_requires_auth
+[PASS] parity.copilot_chat_requires_auth
+[PASS] parity.amazon_q_auto_install
+[PASS] parity.copilot_auto_install
+[PASS] parity.copilot_chat_auto_install
+[PASS] parity.amazon_q_has_display_name
+[PASS] parity.copilot_has_display_name
+[PASS] parity.copilot_chat_has_display_name
+
+--- Test 3: Category coverage ---
+[PASS] category.AI_present
+[PASS] category.Languages_present
+[PASS] category.Debuggers_present
+[PASS] category.SCM_present
+[PASS] category.Formatters_present
+[PASS] category.Linters_present
+[PASS] category.Themes_present
+
+--- Test 4: ExtensionAutoInstaller state ---
+[PASS] auto_installer.singleton_ok
+[PASS] auto_installer.garbage_id_not_installed
+[PASS] auto_installer.getInstalled_returns
+[PASS] auto_installer.getPending_no_crash
+[PASS] auto_installer.needsFirstRun_ok — needsFirstRun=false
+
+--- Test 5: Already-installed skip logic ---
+[PASS] batch_install.empty_list_ok — Successfully installed 0 extensions
+[PASS] batch_install.empty_list_zero_installed
+[PASS] batch_install.empty_list_zero_failed
+
+--- Test 6: VSIX security / id format guards ---
+[PASS] vsix_guard.bad_id_rejected[""]
+[PASS] vsix_guard.bad_id_rejected["noDot"]
+[PASS] vsix_guard.bad_id_rejected[".leadingDot"]
+[PASS] vsix_guard.bad_id_rejected["trailingDot."]
+[PASS] vsix_guard.bad_id_rejected["../path/traversal"]
+[PASS] vsix_guard.bad_id_rejected["pub lisher.ext name"]
+[PASS] vsix_guard.good_id_accepted["GitHub.copilot"]
+[PASS] vsix_guard.good_id_accepted["amazonwebservices.amazon-q-vscode"]
+[PASS] vsix_guard.good_id_accepted["ms-vscode.cpptools"]
+[PASS] vsix_guard.good_id_accepted["rust-lang.rust-analyzer"]
+
+--- Test 7: Install root path ---
+[PASS] install_root.non_empty
+[PASS] install_root.contains_RawrXD
+[PASS] install_root.ends_slash
+
+--- Test 8: AI extension convenience helper ---
+[PASS] ai_helper.expected_ai_count_nonzero
+[PASS] ai_helper.amazon_q_in_ai_list
+[PASS] ai_helper.copilot_in_ai_list
+
+--- Test 9: Marketplace ItemUrl format ---
+[PASS] item_url.copilot_non_empty
+[PASS] item_url.copilot_contains_publisher
+[PASS] item_url.copilot_contains_ext_name
+[PASS] item_url.amazon_q_non_empty
+[PASS] item_url.amazon_q_contains_publisher
+
+--- Test 10: Live marketplace probes ---
+[SKIP] live.copilot_getbyid — --live flag not set
+[SKIP] live.amazon_q_getbyid — --live flag not set
+[SKIP] live.search_AI — --live flag not set
+[SKIP] live.copilot_vs_q_version_format — --live flag not set
+
+--- Test 11: Live install execution path + activation artifacts ---
+[SKIP] live_install.cpptools.install_or_present — --live-install flag not set
+[SKIP] live_install.rust_analyzer.install_or_present — --live-install flag not set
+[SKIP] live_install.cpptools.artifacts — --live-install flag not set
+[SKIP] live_install.rust_analyzer.artifacts — --live-install flag not set
+[SKIP] live_install.cpptools.activation_events_present — --live-install flag not set
+[SKIP] live_install.rust_analyzer.activation_events_present — --live-install flag not set
+
+--- Test 12: Parallel install stress harness ---
+[PASS] stress.parallel_install.completed — workers=5 elapsed_ms=1026
+[PASS] stress.parallel_install.pending_cleared
+[PASS] stress.parallel_install.installed_unique
+[PASS] stress.parallel_install.summary — ok=0 already=4 failed=1
+
+--- Test 13: Failure injection and rollback consistency ---
+[PASS] failure.invalid_id_rejected — Invalid extension ID format
+[PASS] failure.download_404_rejected
+[VSIX] Analyzing package: .rawrxd\temp\corrupt-smoke.vsix
+[VSIX] Security Error: File too small to be a valid VSIX/ZIP
+[PASS] failure.corrupt_vsix_rejected
+[PASS] failure.state_consistent_after_failures
+
+=================================================================
+ Results: 64 passed  0 failed  10 skipped
+=================================================================

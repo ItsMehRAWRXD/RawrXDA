@@ -168,7 +168,25 @@ void WebView2Bridge::sendBinaryMessage(ipc::MessageType type, const void* data, 
     header->sequence = m_sequence++; // Incremented for every outgoing packet
     header->timestamp = GetTickCount64();
     header->payload_len = static_cast<uint32_t>(len);
-    header->crc32 = 0; // TODO: Implement CRC32
+    // CRC32 over header (with crc32 field zeroed) + payload
+    {
+        uint32_t crc = 0xFFFFFFFFu;
+        // Hash header bytes (crc32 field is already 0)
+        const uint8_t* hdr = reinterpret_cast<const uint8_t*>(header);
+        for (size_t i = 0; i < sizeof(ipc::RawrIPCHeader); ++i) {
+            crc ^= hdr[i];
+            for (int b = 0; b < 8; ++b)
+                crc = (crc >> 1) ^ (0xEDB88320u & (-(crc & 1u)));
+        }
+        // Hash payload
+        const uint8_t* p = static_cast<const uint8_t*>(data);
+        for (size_t i = 0; i < len; ++i) {
+            crc ^= p[i];
+            for (int b = 0; b < 8; ++b)
+                crc = (crc >> 1) ^ (0xEDB88320u & (-(crc & 1u)));
+        }
+        header->crc32 = crc ^ 0xFFFFFFFFu;
+    }
 
     if (len > 0 && data) {
         memcpy(packet.data() + sizeof(ipc::RawrIPCHeader), data, len);

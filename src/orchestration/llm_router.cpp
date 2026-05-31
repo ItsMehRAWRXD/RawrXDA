@@ -199,8 +199,60 @@ EnsembleResult LLMRouter::routeEnsemble(
              result.selectedModels.join(", "), 
              consensusMethod);
     
-    result.agreementLevel = 0.85f;  // Placeholder: would be calculated from actual responses
-    result.finalConfidence = 0.90f;
+    // Calculate agreement level based on capability similarity among selected models
+    if (result.selectedModels.size() > 1) {
+        double totalSimilarity = 0.0;
+        int pairCount = 0;
+        
+        for (size_t i = 0; i < result.selectedModels.size(); ++i) {
+            for (size_t j = i + 1; j < result.selectedModels.size(); ++j) {
+                const auto& modelA = m_models[result.selectedModels[i]];
+                const auto& modelB = m_models[result.selectedModels[j]];
+                
+                // Calculate cosine similarity of capability vectors
+                double dot = 0.0, normA = 0.0, normB = 0.0;
+                dot += modelA.capabilities.reasoning * modelB.capabilities.reasoning;
+                dot += modelA.capabilities.coding * modelB.capabilities.coding;
+                dot += modelA.capabilities.planning * modelB.capabilities.planning;
+                dot += modelA.capabilities.creativity * modelB.capabilities.creativity;
+                dot += modelA.capabilities.speed * modelB.capabilities.speed;
+                dot += modelA.capabilities.costEfficiency * modelB.capabilities.costEfficiency;
+                
+                normA += modelA.capabilities.reasoning * modelA.capabilities.reasoning;
+                normA += modelA.capabilities.coding * modelA.capabilities.coding;
+                normA += modelA.capabilities.planning * modelA.capabilities.planning;
+                normA += modelA.capabilities.creativity * modelA.capabilities.creativity;
+                normA += modelA.capabilities.speed * modelA.capabilities.speed;
+                normA += modelA.capabilities.costEfficiency * modelA.capabilities.costEfficiency;
+                
+                normB += modelB.capabilities.reasoning * modelB.capabilities.reasoning;
+                normB += modelB.capabilities.coding * modelB.capabilities.coding;
+                normB += modelB.capabilities.planning * modelB.capabilities.planning;
+                normB += modelB.capabilities.creativity * modelB.capabilities.creativity;
+                normB += modelB.capabilities.speed * modelB.capabilities.speed;
+                normB += modelB.capabilities.costEfficiency * modelB.capabilities.costEfficiency;
+                
+                if (normA > 0 && normB > 0) {
+                    double similarity = dot / (std::sqrt(normA) * std::sqrt(normB));
+                    totalSimilarity += similarity;
+                }
+                pairCount++;
+            }
+        }
+        
+        if (pairCount > 0) {
+            result.agreementLevel = totalSimilarity / pairCount;
+        } else {
+            result.agreementLevel = 1.0f; // Single model = perfect agreement with itself
+        }
+    } else if (result.selectedModels.size() == 1) {
+        result.agreementLevel = 1.0f;
+    } else {
+        result.agreementLevel = 0.0f;
+    }
+    
+    // Final confidence is weighted by agreement level
+    result.finalConfidence = 0.90f * result.agreementLevel;
 
 
     return result;

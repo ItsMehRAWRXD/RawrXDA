@@ -139,7 +139,7 @@ const char* featureName(FeatureID id) {
 
 // ─────────────────────────────────────────────────────
 // 4. EnterpriseLicenseV2::createKey — IDE build: use full impl from enterprise_licensev2_impl when RAWRXD_IDE_FULL_LICENSE.
-//    Stub only when building without full license (e.g. minimal IDE stub).
+//    Fallback only when building without full license (e.g. minimal IDE build).
 // ─────────────────────────────────────────────────────
 #if !defined(RAWRXD_IDE_FULL_LICENSE)
 namespace RawrXD::License {

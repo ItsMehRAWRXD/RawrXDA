@@ -5,7 +5,7 @@
 #
 # Environment (optional):
 #   RAWRXD_TEST_GGUF   default model path if -ModelPath omitted
-#   RAWRXD_BUILD_DIR   override build root (default: D:\rawrxd\build-ninja)
+#   RAWRXD_BUILD_DIR   override build root (default: first of build-win32, build-ninja under repo)
 #
 # Manual (GUI pulse — cannot be scripted here):
 #   1. Run bin\RawrXD-Win32IDE.exe
@@ -16,7 +16,7 @@
 [CmdletBinding()]
 param(
     [string]$ModelPath = $env:RAWRXD_TEST_GGUF,
-    [string]$BuildDir = $(if ($env:RAWRXD_BUILD_DIR) { $env:RAWRXD_BUILD_DIR } else { "D:\rawrxd\build-ninja" }),
+    [string]$BuildDir = "",
     [switch]$SkipHeadless,
     [switch]$IdeLogOnly,
     [switch]$FailOnIdeLogIssues
@@ -24,9 +24,29 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+$repoRoot = Split-Path -Parent $PSScriptRoot
+if (-not $BuildDir) {
+    if ($env:RAWRXD_BUILD_DIR -and (Test-Path (Join-Path $env:RAWRXD_BUILD_DIR "CMakeCache.txt"))) {
+        $BuildDir = $env:RAWRXD_BUILD_DIR
+    }
+    else {
+        foreach ($c in @(
+                (Join-Path $repoRoot "build-win32"),
+                (Join-Path $repoRoot "build-ninja"),
+                (Join-Path $repoRoot "build"))) {
+            if (Test-Path (Join-Path $c "CMakeCache.txt")) { $BuildDir = $c; break }
+        }
+    }
+}
+if (-not $BuildDir) {
+    $BuildDir = Join-Path $repoRoot "build-win32"
+}
+
 function Resolve-EngineExe {
     param([string]$Root)
     $candidates = @(
+        (Join-Path $Root "bin\Release\RawrEngine.exe"),
+        (Join-Path $Root "bin\Debug\RawrEngine.exe"),
         (Join-Path $Root "bin\RawrEngine.exe"),
         (Join-Path $Root "RawrEngine.exe")
     )

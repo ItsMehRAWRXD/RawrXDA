@@ -1,7 +1,7 @@
 #include "ggml-metal-common.h"
 
-#include "ggml-impl.h"
-#include "ggml-backend-impl.h"
+#include "ggml-impl_rxd_internal.h"
+#include "ggml-backend-impl_rxd_internal.h"
 
 #include <vector>
 

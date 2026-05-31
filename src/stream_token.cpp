@@ -225,7 +225,7 @@ int RawrXD_StreamGenerate(const char* model,
                     return tokenId;
                 }
             } catch (...) {
-                // Ignore incomplete or non-JSON lines and continue.
+                fprintf(stderr, "[StreamToken] Ignoring incomplete or non-JSON line\n");
             }
         }
     }

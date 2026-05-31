@@ -1843,30 +1843,7 @@ void Win32IDE::handleWelcomeCloneRepo()
 
 void Win32IDE::handleWelcomeOpenFolder()
 {
-    // Reuse the existing file open folder logic
-    char folderPath[MAX_PATH] = {};
-    BROWSEINFOA bi = {};
-    bi.hwndOwner = m_hwndMain;
-    bi.lpszTitle = "Select Folder to Open";
-    bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
-
-    LPITEMIDLIST pidl = SHBrowseForFolderA(&bi);
-    if (pidl)
-    {
-        SHGetPathFromIDListA(pidl, folderPath);
-        CoTaskMemFree(pidl);
-
-        if (folderPath[0])
-        {
-            m_settings.workingDirectory = folderPath;
-            m_explorerRootPath = folderPath;
-            m_projectRoot = folderPath;
-            if (m_agenticBridge)
-                m_agenticBridge->SetWorkspaceRoot(folderPath);
-            refreshFileTree();
-            appendToOutput("[Welcome] Opened folder: " + std::string(folderPath) + "\n");
-        }
-    }
+    openWorkspaceFolder();
 }
 
 void Win32IDE::handleWelcomeNewFile()

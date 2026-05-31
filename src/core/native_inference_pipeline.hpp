@@ -20,12 +20,17 @@
 #include "local_ai_core.hpp"
 #include "native_speed_layer.hpp"
 #include "model_memory_hotpatch.hpp"
+#include "speculative_inference_engine.hpp"
 #include <cstdint>
 #include <mutex>
 #include <atomic>
+#include <memory>
 #include <thread>
 
 namespace RawrXD {
+
+// Using declarations to avoid scope errors
+using namespace LocalAI;
 
 // ============================================================================
 // Win32 message IDs for streaming tokens to the IDE
@@ -76,6 +81,12 @@ struct PipelineConfig {
     // Performance
     bool        enableTelemetry     = true;
     float       targetTokensPerSec  = 0.0f; // 0 = no target
+    
+    // Speculative decoding
+    bool        enableSpeculativeDecoding = true;
+    int         speculativeGamma          = 8;
+    float       speculativeTemp           = 0.6f;
+    bool        enableSelfImprovement     = true;
 };
 
 // ============================================================================
@@ -87,6 +98,20 @@ struct TokenStreamEntry {
     uint32_t    textLen;
     float       latencyUs;
     uint32_t    seqPosition;
+};
+
+// ============================================================================
+// InferenceRequestToken — request-id scoped cooperative cancellation
+// ============================================================================
+struct InferenceRequestToken {
+    uint64_t          requestId = 0;
+    std::atomic<bool> cancelled{false};
+
+    InferenceRequestToken() = default;
+    explicit InferenceRequestToken(uint64_t id) : requestId(id) {}
+
+    void Cancel() { cancelled.store(true, std::memory_order_release); }
+    bool IsCancelled() const { return cancelled.load(std::memory_order_acquire); }
 };
 
 // ============================================================================
@@ -144,6 +169,12 @@ public:
     /// Stop current inference (if running)
     PatchResult StopInference();
 
+    /// Cancel a specific inference request by request-id.
+    PatchResult CancelInference(uint64_t requestId);
+
+    /// Current active request-id, or 0 if none.
+    uint64_t ActiveRequestId() const { return m_activeRequestId.load(std::memory_order_acquire); }
+
     /// Wait for current inference to complete
     PatchResult WaitForCompletion(uint32_t timeoutMs = 0);
 
@@ -161,7 +192,18 @@ public:
     // ---- Diagnostics --------------------------------------------------------
 
     /// Get the underlying LocalAICore
-    LocalAI::LocalAICore& GetCore() { return m_core; }
+    LocalAICore& GetCore() { return m_core; }
+
+    /// Get the speculative inference engine
+    Inference::SpeculativeInferenceEngine* GetSpeculativeEngine() { return m_specEngine.get(); }
+    
+    /// Enable/disable speculative decoding
+    void SetSpeculativeEnabled(bool enabled);
+    bool IsSpeculativeEnabled() const;
+    
+    /// Get speculative performance metrics
+    double GetSpeculativeTokensPerSec() const;
+    double GetSpeculativeAcceptanceRate() const;
 
     /// Get performance diagnostics string
     void GetDiagnostics(char* buf, size_t bufLen) const;
@@ -178,17 +220,31 @@ private:
                                          const char* text, uint32_t textLen);
     bool OnToken(uint32_t tokenId, const char* text, uint32_t textLen);
     void InferenceWorker(const char* prompt, uint32_t promptLen,
-                         LocalAI::SamplerConfig sampler);
+                         SamplerConfig sampler,
+                         std::shared_ptr<InferenceRequestToken> requestToken);
     void PostTokenMessage(const TokenStreamEntry& entry);
+    std::shared_ptr<InferenceRequestToken> ActiveRequestToken() const;
+    void ClearActiveRequest(uint64_t requestId);
+    
+    // Speculative decoding
+    PatchResult InferWithSpeculativeDecoding(const char* prompt, uint32_t promptLen,
+                                              const LocalAI::SamplerConfig& sampler);
 
     // ---- State --------------------------------------------------------------
     std::atomic<PipelineState>  m_state{PipelineState::Idle};
     PipelineConfig              m_config;
-    LocalAI::LocalAICore        m_core;
+    LocalAICore                 m_core;
 
     // Worker thread
     std::thread                 m_workerThread;
     std::atomic<bool>           m_stopRequested{false};
+    std::atomic<uint64_t>       m_nextRequestId{1};
+    std::atomic<uint64_t>       m_activeRequestId{0};
+    std::shared_ptr<InferenceRequestToken> m_activeRequestToken;
+    
+    // Speculative inference engine
+    std::unique_ptr<Inference::SpeculativeInferenceEngine> m_specEngine;
+    bool m_speculativeEnabled{true};
 
     // Output accumulator
     char*                       m_outputBuf     = nullptr;

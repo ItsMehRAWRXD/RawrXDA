@@ -594,37 +594,119 @@ void Win32IDE::cmdNetworkShowPanel() {
 // ============================================================================
 
 void Win32IDE::cmdNetworkAddPort() {
-    // Prompt for port number
-    char portBuf[32] = "3000";
-    // Simple InputBox via prompt
-    int port = 3000;
+    // Modal dialog to capture port forwarding parameters
+    const int DLG_W = 360, DLG_H = 260;
+    RECT rc;
+    GetClientRect(m_hwndMain, &rc);
+    MapWindowPoints(m_hwndMain, HWND_DESKTOP, (LPPOINT)&rc, 2);
+    int dx = rc.left + (rc.right - rc.left - DLG_W) / 2;
+    int dy = rc.top  + (rc.bottom - rc.top  - DLG_H) / 2;
 
-    // Check if user typed a port via command palette
-    // Fallback: use 3000 + entry count as default
+    // Default port: 3000 + existing count
+    int defaultPort;
     {
         std::lock_guard<std::mutex> lock(s_portMutex);
-        port = 3000 + (int)s_portEntries.size();
+        defaultPort = 3000 + (int)s_portEntries.size();
     }
 
-    PortForwardEntry* entry = new PortForwardEntry();
-    entry->localPort      = static_cast<uint16_t>(port);
-    entry->remotePort     = static_cast<uint16_t>(port);
-    entry->label          = "Port " + std::to_string(port);
-    entry->protocol       = "TCP";
-    entry->localAddress   = "localhost";
-    entry->forwardAddress = "localhost:" + std::to_string(port);
-    entry->active         = false;
+    HWND hDlg = CreateWindowExW(
+        WS_EX_DLGMODALFRAME | WS_EX_TOPMOST,
+        L"STATIC", L"Add Port Forward",
+        WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
+        dx, dy, DLG_W, DLG_H,
+        m_hwndMain, nullptr, GetModuleHandle(nullptr), nullptr);
+    if (!hDlg) return;
 
-    {
-        std::lock_guard<std::mutex> lock(s_portMutex);
-        s_portEntries.push_back(entry);
+    auto lbl = [&](const wchar_t* t, int y) {
+        CreateWindowExW(0, L"STATIC", t, WS_CHILD | WS_VISIBLE, 15, y, 100, 20, hDlg, 0, 0, 0);
+    };
+
+    lbl(L"Local Port:",  15);
+    HWND hLocal = CreateWindowExA(WS_EX_CLIENTEDGE, "EDIT",
+        std::to_string(defaultPort).c_str(),
+        WS_CHILD | WS_VISIBLE | ES_NUMBER, 120, 13, 80, 22, hDlg, (HMENU)4001, 0, 0);
+
+    lbl(L"Remote Port:", 45);
+    HWND hRemote = CreateWindowExA(WS_EX_CLIENTEDGE, "EDIT",
+        std::to_string(defaultPort).c_str(),
+        WS_CHILD | WS_VISIBLE | ES_NUMBER, 120, 43, 80, 22, hDlg, (HMENU)4002, 0, 0);
+
+    lbl(L"Label:",       75);
+    HWND hLabel = CreateWindowExA(WS_EX_CLIENTEDGE, "EDIT",
+        ("Port " + std::to_string(defaultPort)).c_str(),
+        WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL, 120, 73, 210, 22, hDlg, (HMENU)4003, 0, 0);
+
+    lbl(L"Protocol:",    105);
+    HWND hProto = CreateWindowExA(0, "COMBOBOX", "",
+        WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST, 120, 103, 100, 100, hDlg, (HMENU)4004, 0, 0);
+    SendMessageA(hProto, CB_ADDSTRING, 0, (LPARAM)"TCP");
+    SendMessageA(hProto, CB_ADDSTRING, 0, (LPARAM)"HTTP");
+    SendMessageA(hProto, CB_ADDSTRING, 0, (LPARAM)"HTTPS");
+    SendMessageA(hProto, CB_SETCURSEL, 0, 0);
+
+    CreateWindowExW(0, L"BUTTON", L"Add",
+        WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
+        DLG_W - 180, DLG_H - 55, 75, 28, hDlg, (HMENU)IDOK, 0, 0);
+    CreateWindowExW(0, L"BUTTON", L"Cancel",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        DLG_W - 95, DLG_H - 55, 75, 28, hDlg, (HMENU)IDCANCEL, 0, 0);
+
+    EnableWindow(m_hwndMain, FALSE);
+    MSG msg;
+    bool running = true;
+    while (running && GetMessage(&msg, nullptr, 0, 0)) {
+        if (msg.hwnd == hDlg || IsChild(hDlg, msg.hwnd)) {
+            if (msg.message == WM_COMMAND) {
+                WORD id = LOWORD(msg.wParam);
+                if (id == IDOK) {
+                    char buf[128];
+                    GetWindowTextA(hLocal, buf, sizeof(buf));
+                    int lp = atoi(buf);
+                    GetWindowTextA(hRemote, buf, sizeof(buf));
+                    int rp = atoi(buf);
+                    if (lp < 1 || lp > 65535) lp = defaultPort;
+                    if (rp < 1 || rp > 65535) rp = lp;
+
+                    char labelBuf[128];
+                    GetWindowTextA(hLabel, labelBuf, sizeof(labelBuf));
+
+                    int protoIdx = (int)SendMessageA(hProto, CB_GETCURSEL, 0, 0);
+                    const char* protocols[] = { "TCP", "HTTP", "HTTPS" };
+                    const char* proto = (protoIdx >= 0 && protoIdx < 3) ? protocols[protoIdx] : "TCP";
+
+                    PortForwardEntry* entry = new PortForwardEntry();
+                    entry->localPort      = static_cast<uint16_t>(lp);
+                    entry->remotePort     = static_cast<uint16_t>(rp);
+                    entry->label          = labelBuf[0] ? labelBuf : ("Port " + std::to_string(lp));
+                    entry->protocol       = proto;
+                    entry->localAddress   = "localhost";
+                    entry->forwardAddress = "localhost:" + std::to_string(rp);
+                    entry->active         = false;
+
+                    {
+                        std::lock_guard<std::mutex> lock(s_portMutex);
+                        s_portEntries.push_back(entry);
+                    }
+                    refreshPortListView();
+
+                    std::ostringstream oss;
+                    oss << "[NetworkPanel] Added port forward: " << lp
+                        << " -> " << rp << " (" << proto << ")\n";
+                    appendToOutput(oss.str());
+                    running = false;
+                } else if (id == IDCANCEL) {
+                    running = false;
+                }
+            }
+            if (msg.message == WM_CLOSE || msg.message == WM_DESTROY)
+                running = false;
+        }
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
     }
-
-    refreshPortListView();
-
-    std::ostringstream oss;
-    oss << "[NetworkPanel] Added port forward: " << port << " (TCP)\n";
-    appendToOutput(oss.str());
+    EnableWindow(m_hwndMain, TRUE);
+    SetForegroundWindow(m_hwndMain);
+    DestroyWindow(hDlg);
 }
 
 // ============================================================================

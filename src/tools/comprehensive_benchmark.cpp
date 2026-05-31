@@ -1,6 +1,7 @@
 #include "inference_benchmark.h"
 
 #include <fstream>
+#include <filesystem>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -10,6 +11,7 @@ int main(int argc, char* argv[]) {
     std::cout << "========================================" << std::endl;
 
     RawrXD::BenchmarkConfig config;
+    std::string draftModelPath;
     if (argc > 1) {
         config.modelPaths.push_back(argv[1]);
     } else {
@@ -17,6 +19,20 @@ int main(int argc, char* argv[]) {
             "F:\\OllamaModels\\Codestral-22B-v0.1-hf.Q4_K_S.gguf",
             "F:\\OllamaModels\\BigDaddyG-Q2_K-PRUNED-16GB.gguf"
         };
+    }
+
+    if (argc > 2) {
+        draftModelPath = argv[2];
+    } else if (std::filesystem::exists("D:\\phi3mini.gguf")) {
+        draftModelPath = "D:\\phi3mini.gguf";
+    }
+
+    if (!draftModelPath.empty()) {
+        config.enableSpeculativeBenchmarks = true;
+        config.draftModelPath = draftModelPath;
+        config.speculativeDraftTokens = 4;
+        std::cout << "Speculative benchmark enabled with draft model: "
+                  << draftModelPath << std::endl;
     }
 
     config.testPrompts = {

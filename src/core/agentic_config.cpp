@@ -104,8 +104,8 @@ private:
                             m_config->reloadConfiguration();
                         }
                     }
-                } catch (const std::exception&) {
-                    // File might be temporarily unavailable
+                } catch (const std::exception& e) {
+                    fprintf(stderr, "[AgenticConfig] File temporarily unavailable: %s\n", e.what());
                 }
                 
                 FindNextChangeNotification(m_watchHandle);
@@ -806,7 +806,11 @@ std::vector<std::string> AgenticConfiguration::getAvailableProfiles() {
                 }
             }
         }
-    } catch (...) {}
+    } catch (const std::exception& e) {
+        OutputDebugStringA((std::string("[AgenticConfig] listProfiles exception: ") + e.what() + "\n").c_str());
+    } catch (...) {
+        OutputDebugStringA("[AgenticConfig] listProfiles unknown exception\n");
+    }
     
     return profiles;
 }
@@ -1144,7 +1148,11 @@ bool AgenticConfiguration::validateValue(const std::string& key, const ConfigVar
                 if (std::holds_alternative<float>(value) && std::get<float>(value) < minVal) {
                     return false;
                 }
-            } catch (...) {}
+            } catch (const std::exception& e) {
+                OutputDebugStringA(("[agentic_config] min rule parse exception: " + std::string(e.what()) + "\n").c_str());
+            } catch (...) {
+                OutputDebugStringA("[agentic_config] min rule parse unknown exception\n");
+            }
         }
         
         if (rule.substr(0, 4) == "max:") {
@@ -1156,7 +1164,11 @@ bool AgenticConfiguration::validateValue(const std::string& key, const ConfigVar
                 if (std::holds_alternative<float>(value) && std::get<float>(value) > maxVal) {
                     return false;
                 }
-            } catch (...) {}
+            } catch (const std::exception& e) {
+                OutputDebugStringA(("[agentic_config] max rule parse exception: " + std::string(e.what()) + "\n").c_str());
+            } catch (...) {
+                OutputDebugStringA("[agentic_config] max rule parse unknown exception\n");
+            }
         }
         
         if (rule.substr(0, 5) == "enum:") {

@@ -15,7 +15,7 @@ import ModelsPanel from './ModelsPanel';
 import SymbolsPanel from './SymbolsPanel';
 
 const TABS = [
-  { id: 'chat', label: 'Chat', title: 'Chat panel (Ctrl+L)' },
+  { id: 'chat', label: 'Chat', title: 'RawrXD chat dock' },
   { id: 'agent', label: 'Agent', title: 'Agent panel (Ctrl+Shift+A)' },
   { id: 'modules', label: 'Modules', title: 'Module toggles (Ctrl+Shift+M)' },
   { id: 'symbols', label: 'Symbols', title: 'Text symbol index (Ctrl+Shift+Y)' },
@@ -23,7 +23,7 @@ const TABS = [
 ];
 
 /**
- * Secondary sidebar: Chat (Copilot) | Agent (autonomous) | Modules — Cursor-like layout.
+ * Secondary sidebar: RawrXD chat | Agent (autonomous) | Modules — Cursor-like layout.
  */
 const RightSidebarDock = ({
   tab,
@@ -32,7 +32,8 @@ const RightSidebarDock = ({
   activeFile,
   projectRoot,
   settings,
-  agentProps
+  agentProps,
+  chatShortcutLabel = 'Ctrl+Shift+O / Ctrl+L'
 }) => {
   const open = tab != null;
   const {
@@ -89,7 +90,7 @@ const RightSidebarDock = ({
                 aria-selected={tab === t.id}
                 aria-controls={`rawrxd-dock-panel-${t.id}`}
                 onClick={() => onSelectTab(t.id)}
-                title={t.title}
+                title={t.id === 'chat' ? `${t.title} (${chatShortcutLabel})` : t.title}
                 aria-label={`${t.label} panel`}
                 className={`flex-1 py-2 text-xs font-medium ${focusVisibleRing} ${
                   tab === t.id ? 'text-white border-b-2 border-ide-accent bg-gray-800/40' : 'text-gray-500 hover:text-gray-300'

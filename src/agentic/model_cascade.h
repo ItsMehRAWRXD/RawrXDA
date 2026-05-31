@@ -63,8 +63,8 @@ const char* taskTypeName(TaskType type);
 
 struct ModelCapability {
     std::string modelId;            // e.g., "phi-3-mini", "llama-3-8b"
-    std::string endpoint;           // e.g., "http://localhost:11434"
-    std::string provider;           // "ollama", "anthropic", "openai", "local"
+    std::string endpoint;           // e.g., "http://localhost:11435"
+    std::string provider;           // "native", "anthropic", "openai", "local"
 
     // Performance metrics (updated from telemetry)
     float latencyP50 = 0.0f;       // Milliseconds
@@ -106,7 +106,7 @@ struct ModelCapability {
 struct RoutingDecision {
     std::string modelId;
     float confidence;              // 0.0 - 1.0
-    std::string fallbackChain;     // "local-phi3 -> ollama-llama3 -> anthropic-claude"
+    std::string fallbackChain;     // "local-phi3 -> native-llama3 -> anthropic-claude"
     TaskType taskType;
     int estimatedTokens;           // Prompt token estimate
     const char* reason;            // Why this model was selected

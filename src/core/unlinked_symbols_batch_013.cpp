@@ -82,13 +82,13 @@ int asm_quadbuf_init(HWND hwnd, uint32_t width, uint32_t height, uint32_t flags)
 }
 
 int asm_quadbuf_render_thread(void* param) {
-    (void)param;
+    if (!param) return -1;
     g_quad.renderThreadRuns.fetch_add(1u, std::memory_order_relaxed);
     return 0;
 }
 
 int asm_gguf_loader_stage(void* ctx, uint32_t tensorIdx) {
-    (void)ctx;
+    if (!ctx) return -1;
     std::lock_guard<std::mutex> lock(g_gguf.mutex);
     if (!g_gguf.open) {
         return -1;
@@ -99,7 +99,7 @@ int asm_gguf_loader_stage(void* ctx, uint32_t tensorIdx) {
 }
 
 int asm_gguf_loader_stage_all(void* ctx) {
-    (void)ctx;
+    if (!ctx) return -1;
     std::lock_guard<std::mutex> lock(g_gguf.mutex);
     if (!g_gguf.open) {
         return -1;
@@ -110,7 +110,7 @@ int asm_gguf_loader_stage_all(void* ctx) {
 
 void asm_gguf_loader_get_residency(void* ctx, uint32_t* gpuCount, uint32_t* mappedCount,
                                    uint32_t* pendingCount) {
-    (void)ctx;
+    if (!ctx) return;
     if (gpuCount) {
         *gpuCount = 0;
     }

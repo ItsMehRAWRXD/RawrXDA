@@ -58,7 +58,7 @@ void SwarmLink_RingBuffer::WaitAndProcessIOCP() {
     // IOCP chunk loading processing complete
 }
 
-extern "C" void SwarmLink_UpdateTensor(ggml_tensor* tensor, void* new_data_ptr) {
+extern "C" void SwarmLink_UpdateTensor(ggml_rxd_tensor* tensor, void* new_data_ptr) {
     if (tensor) {
         // Hot-swap the underlying GGML tensor pointer safely
         InterlockedExchangePointer(&tensor->data, new_data_ptr);

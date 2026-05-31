@@ -3,6 +3,8 @@
 #include "cursor_widget.h"
 #include <windows.h>
 
+using namespace RawrXD;
+
 CursorWidget::CursorWidget(void* parent)
 {
     (void)parent;

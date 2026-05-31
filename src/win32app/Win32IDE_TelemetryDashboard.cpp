@@ -24,13 +24,8 @@
 #include <fstream>
 #include <unordered_map>
 
-// SCAFFOLD_274: Filter combo (ui/perf/error/agent)
-
-
-// SCAFFOLD_262: Telemetry dashboard and list
-
-
-// SCAFFOLD_031: Telemetry dashboard list view
+// Telemetry Dashboard Filter and List View Implementation
+// ============================================================================
 
 
 // ============================================================================

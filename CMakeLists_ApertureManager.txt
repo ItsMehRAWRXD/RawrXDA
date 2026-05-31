@@ -1,0 +1,75 @@
+# ============================================================================
+# ApertureManager: Manifest-Aware Aperture Orchestrator
+# Includes tri-factor validation (Manifest → Snapshot → Disk)
+# ============================================================================
+
+cmake_minimum_required(VERSION 3.20)
+project(RawrXD_ApertureManager CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Platform-specific includes
+if(MSVC)
+    set(WINDOWS_SDK_INCLUDE_DIR "C:/Program Files (x86)/Windows Kits/10/Include/10.0.22621.0")
+    set(NLOHMANN_JSON_INCLUDE "C:/Program Files (x86)/nlohmann_json/include")
+else()
+    set(WINDOWS_SDK_INCLUDE_DIR "/usr/include/w32")
+    set(NLOHMANN_JSON_INCLUDE "/usr/include")
+endif()
+
+# ApertureManager Library
+add_library(ApertureManager STATIC
+    src/RawrXD_ApertureManager.cpp
+)
+
+target_include_directories(ApertureManager PUBLIC
+    include
+    "${NLOHMANN_JSON_INCLUDE}"
+    "${WINDOWS_SDK_INCLUDE_DIR}/um"
+    "${WINDOWS_SDK_INCLUDE_DIR}/shared"
+    "${WINDOWS_SDK_INCLUDE_DIR}/ucrt"
+)
+
+target_link_libraries(ApertureManager PUBLIC
+    crypt32
+    kernel32
+)
+
+if(MSVC)
+    target_compile_options(ApertureManager PRIVATE /W4 /EHsc /O2)
+else()
+    target_compile_options(ApertureManager PRIVATE -Wall -Wextra -O2)
+endif()
+
+# ============================================================================
+# Integration Test Executable
+# ============================================================================
+
+add_executable(ApertureManager_IntegrationTest
+    src/RawrXD_ApertureManager_IntegrationTest.cpp
+)
+
+target_link_libraries(ApertureManager_IntegrationTest PRIVATE
+    ApertureManager
+)
+
+if(MSVC)
+    target_compile_options(ApertureManager_IntegrationTest PRIVATE /W4 /EHsc /O2)
+endif()
+
+# Enable testing
+enable_testing()
+
+add_test(
+    NAME ApertureManager_TriFactorValidation
+    COMMAND ApertureManager_IntegrationTest
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+)
+
+set_tests_properties(
+    ApertureManager_TriFactorValidation
+    PROPERTIES
+    TIMEOUT 120
+    PASS_REGULAR_EXPRESSION "ALL TESTS PASSED"
+)

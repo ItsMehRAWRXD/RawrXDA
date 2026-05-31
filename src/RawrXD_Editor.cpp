@@ -114,7 +114,11 @@ Editor::Editor(Window* parent) : Window(parent), stack(), font(L"Consolas", 12.0
 }
 
 Editor::~Editor() {
-    // ...
+    // Cleanup editor resources
+    if (m_document) {
+        delete m_document;
+        m_document = nullptr;
+    }
 }
 
 void Editor::setLexer(Lexer* l) {
@@ -361,7 +365,13 @@ void Editor::mouseMoveEvent(int x, int y, int mods) {
     }
 }
 
-void Editor::mouseReleaseEvent(int x, int y, int button) {}
+void Editor::mouseReleaseEvent(int x, int y, int button) {
+    (void)x; (void)y;
+    if (button == 1) { // Left button
+        // End drag selection
+        m_dragSelecting = false;
+    }
+}
 
 void Editor::moveCursor(int dLine, int dCol, bool keepSelection) {
     if (!keepSelection && (dLine != 0 || dCol != 0)) {

@@ -2,8 +2,8 @@
 // Replaces fake 0.42f generator with actual GGML forward pass
 // Implements full transformer forward pass with attention, KV cache, and sampling
 
-#include "ggml.h"
-#include "ggml-alloc.h"
+#include "ggml_rxd_internal.h"
+#include "ggml-alloc_rxd_internal.h"
 #include <windows.h>
 #include <vector>
 #include <cmath>
@@ -31,11 +31,11 @@ static void LogMessage(LogLevel level, const char* fmt, ...) {
 // KV CACHE STRUCTURE
 // ============================================================
 struct KVCache {
-    struct ggml_tensor* k;
-    struct ggml_tensor* v;
+    struct ggml_rxd_tensor* k;
+    struct ggml_rxd_tensor* v;
     int n_ctx;
     int n_used;
-    struct ggml_context* ctx;
+    struct ggml_rxd_context* ctx;
 };
 
 // ============================================================
@@ -69,13 +69,13 @@ bool InitKVCache(int n_ctx, int n_embd, int n_head) {
     size_t mem_size = n_ctx * n_embd * 2 * sizeof(float) + 1024;
     LogMessage(DEBUG, "Allocating %.2f MB for KV cache", mem_size / (1024.0f * 1024.0f));
     
-    struct ggml_init_params params = {
+    struct ggml_rxd_init_params params = {
         .mem_size   = (size_t)(mem_size),
         .mem_buffer = NULL,
         .no_alloc   = false,
     };
     
-    struct ggml_context* ctx = ggml_init(params);
+    struct ggml_rxd_context* ctx = ggml_rxd_init(params);
     if (!ctx) {
         LogMessage(ERROR, "Failed to initialize GGML context for KV cache");
         return false;
@@ -85,23 +85,23 @@ bool InitKVCache(int n_ctx, int n_embd, int n_head) {
     // Shape: [n_embd/n_head, n_head, n_ctx]
     int head_dim = n_embd / n_head;
     
-    g_kv_cache.k = ggml_new_tensor_3d(ctx, GGML_TYPE_F32, head_dim, n_head, n_ctx);
+    g_kv_cache.k = ggml_rxd_new_tensor_3d(ctx, GGML_RXD_TYPE_F32, head_dim, n_head, n_ctx);
     if (!g_kv_cache.k) {
         LogMessage(ERROR, "Failed to allocate K cache tensor");
-        ggml_free(ctx);
+        ggml_rxd_free(ctx);
         return false;
     }
     
-    g_kv_cache.v = ggml_new_tensor_3d(ctx, GGML_TYPE_F32, head_dim, n_head, n_ctx);
+    g_kv_cache.v = ggml_rxd_new_tensor_3d(ctx, GGML_RXD_TYPE_F32, head_dim, n_head, n_ctx);
     if (!g_kv_cache.v) {
         LogMessage(ERROR, "Failed to allocate V cache tensor");
-        ggml_free(ctx);
+        ggml_rxd_free(ctx);
         return false;
     }
     
     // Initialize to zero
-    memset(g_kv_cache.k->data, 0, ggml_nbytes(g_kv_cache.k));
-    memset(g_kv_cache.v->data, 0, ggml_nbytes(g_kv_cache.v));
+    memset(g_kv_cache.k->data, 0, ggml_rxd_nbytes(g_kv_cache.k));
+    memset(g_kv_cache.v->data, 0, ggml_rxd_nbytes(g_kv_cache.v));
     
     g_kv_cache.ctx = ctx;
     g_kv_cache.n_ctx = n_ctx;
@@ -191,7 +191,7 @@ InferenceResult RunRealInference(const std::vector<int>& input_tokens, int max_n
     }
     
     // Get GGML context from loaded model
-    struct ggml_context* model_ctx = (struct ggml_context*)g_ggml_ctx;
+    struct ggml_rxd_context* model_ctx = (struct ggml_rxd_context*)g_ggml_ctx;
     if (!model_ctx) {
         LogMessage(ERROR, "Model context not initialized");
         result.error_code = -3;
@@ -246,7 +246,7 @@ InferenceResult RunRealInference(const std::vector<int>& input_tokens, int max_n
         
         // Layer norm (RMSNorm) — attention input
         snprintf(nameBuf, sizeof(nameBuf), "blk.%d.attn_norm.weight", layer);
-        struct ggml_tensor* norm_w = ggml_get_tensor(model_ctx, nameBuf);
+        struct ggml_rxd_tensor* norm_w = ggml_rxd_get_tensor(model_ctx, nameBuf);
         std::vector<float> normed(n_embd_dim);
         float rms = 0.0f;
         for (int i = 0; i < n_embd_dim; ++i) rms += hidden[i] * hidden[i];
@@ -258,13 +258,13 @@ InferenceResult RunRealInference(const std::vector<int>& input_tokens, int max_n
         
         // Self-attention: Q, K, V projections
         snprintf(nameBuf, sizeof(nameBuf), "blk.%d.attn_q.weight", layer);
-        struct ggml_tensor* wq = ggml_get_tensor(model_ctx, nameBuf);
+        struct ggml_rxd_tensor* wq = ggml_rxd_get_tensor(model_ctx, nameBuf);
         snprintf(nameBuf, sizeof(nameBuf), "blk.%d.attn_k.weight", layer);
-        struct ggml_tensor* wk = ggml_get_tensor(model_ctx, nameBuf);
+        struct ggml_rxd_tensor* wk = ggml_rxd_get_tensor(model_ctx, nameBuf);
         snprintf(nameBuf, sizeof(nameBuf), "blk.%d.attn_v.weight", layer);
-        struct ggml_tensor* wv = ggml_get_tensor(model_ctx, nameBuf);
+        struct ggml_rxd_tensor* wv = ggml_rxd_get_tensor(model_ctx, nameBuf);
         snprintf(nameBuf, sizeof(nameBuf), "blk.%d.attn_output.weight", layer);
-        struct ggml_tensor* wo = ggml_get_tensor(model_ctx, nameBuf);
+        struct ggml_rxd_tensor* wo = ggml_rxd_get_tensor(model_ctx, nameBuf);
         
         // Simplified single-head attention (project, attend, output)
         std::vector<float> attn_out(n_embd_dim, 0.0f);
@@ -304,7 +304,7 @@ InferenceResult RunRealInference(const std::vector<int>& input_tokens, int max_n
         
         // FFN: norm -> gate/up -> silu -> down
         snprintf(nameBuf, sizeof(nameBuf), "blk.%d.ffn_norm.weight", layer);
-        struct ggml_tensor* ffn_norm = ggml_get_tensor(model_ctx, nameBuf);
+        struct ggml_rxd_tensor* ffn_norm = ggml_rxd_get_tensor(model_ctx, nameBuf);
         rms = 0.0f;
         for (int i = 0; i < n_embd_dim; ++i) rms += hidden[i] * hidden[i];
         rms = 1.0f / sqrtf(rms / n_embd_dim + 1e-5f);
@@ -314,11 +314,11 @@ InferenceResult RunRealInference(const std::vector<int>& input_tokens, int max_n
         }
         
         snprintf(nameBuf, sizeof(nameBuf), "blk.%d.ffn_gate.weight", layer);
-        struct ggml_tensor* wgate = ggml_get_tensor(model_ctx, nameBuf);
+        struct ggml_rxd_tensor* wgate = ggml_rxd_get_tensor(model_ctx, nameBuf);
         snprintf(nameBuf, sizeof(nameBuf), "blk.%d.ffn_up.weight", layer);
-        struct ggml_tensor* wup = ggml_get_tensor(model_ctx, nameBuf);
+        struct ggml_rxd_tensor* wup = ggml_rxd_get_tensor(model_ctx, nameBuf);
         snprintf(nameBuf, sizeof(nameBuf), "blk.%d.ffn_down.weight", layer);
-        struct ggml_tensor* wdown = ggml_get_tensor(model_ctx, nameBuf);
+        struct ggml_rxd_tensor* wdown = ggml_rxd_get_tensor(model_ctx, nameBuf);
         
         if (wgate && wup && wdown) {
             int ffn_dim = (int)wgate->ne[0];
@@ -353,7 +353,7 @@ InferenceResult RunRealInference(const std::vector<int>& input_tokens, int max_n
     }
     
     // 3. Final layer norm
-    struct ggml_tensor* output_norm = ggml_get_tensor(model_ctx, "output_norm.weight");
+    struct ggml_rxd_tensor* output_norm = ggml_rxd_get_tensor(model_ctx, "output_norm.weight");
     float rms_final = 0.0f;
     for (int i = 0; i < n_embd_dim; ++i) rms_final += hidden[i] * hidden[i];
     rms_final = 1.0f / sqrtf(rms_final / n_embd_dim + 1e-5f);
@@ -363,7 +363,7 @@ InferenceResult RunRealInference(const std::vector<int>& input_tokens, int max_n
     }
     
     // 4. Output projection (hidden -> logits)
-    struct ggml_tensor* output_weight = ggml_get_tensor(model_ctx, "output.weight");
+    struct ggml_rxd_tensor* output_weight = ggml_rxd_get_tensor(model_ctx, "output.weight");
     if (!output_weight) output_weight = tok_embeddings; // Weight tying
     
     if (output_weight && output_weight->data) {
@@ -458,7 +458,7 @@ void CleanupInference() {
     LogMessage(INFO, "Cleaning up inference engine");
     
     if (g_kv_cache.ctx != nullptr) {
-        ggml_free(g_kv_cache.ctx);
+        ggml_rxd_free(g_kv_cache.ctx);
         g_kv_cache.ctx = nullptr;
         g_kv_cache.k = nullptr;
         g_kv_cache.v = nullptr;

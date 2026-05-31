@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PackageManifest Version="2.0.0"
+    xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011"
+    xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
+    <Metadata>
+        <Identity Id="RawrXD.Prometheus.Native.14d0a8c2-3e2f-4a5b-9c1d-8e7f6a5b4c3d"
+                  Version="1.0.0"
+                  Language="en-US"
+                  Publisher="RawrXD" />
+        <DisplayName>RawrXD Prometheus Native</DisplayName>
+        <Description xml:space="preserve">Native Prometheus engine integration for RawrXD IDE — zero Electron dependencies, pure Win32/C++ implementation with MASM acceleration.</Description>
+        <MoreInfo>https://rawrxd.dev/docs/prometheus-native</MoreInfo>
+        <License>LICENSE.txt</License>
+        <Icon>Resources\Icon.png</Icon>
+        <PreviewImage>Resources\Preview.png</PreviewImage>
+        <Tags>RawrXD, Prometheus, Native, MASM, AI, LLM, Inference</Tags>
+    </Metadata>
+
+    <Installation>
+        <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[17.0, 18.0)">
+            <ProductArchitecture>amd64</ProductArchitecture>
+        </InstallationTarget>
+        <InstallationTarget Id="Microsoft.VisualStudio.Pro" Version="[17.0, 18.0)">
+            <ProductArchitecture>amd64</ProductArchitecture>
+        </InstallationTarget>
+        <InstallationTarget Id="Microsoft.VisualStudio.Enterprise" Version="[17.0, 18.0)">
+            <ProductArchitecture>amd64</ProductArchitecture>
+        </InstallationTarget>
+    </Installation>
+
+    <Dependencies>
+        <Dependency Id="Microsoft.Framework.NDP" DisplayName=".NET Framework" d:Source="Manual" Version="[4.8,)" />
+    </Dependencies>
+
+    <Prerequisites>
+        <Prerequisite Id="Microsoft.VisualStudio.Component.CoreEditor" Version="[17.0,18.0)" DisplayName="Visual Studio core editor" />
+        <Prerequisite Id="Microsoft.VisualStudio.Component.VC.ATL" Version="[17.0,18.0)" DisplayName="C++ ATL for latest v143 build tools (x86 &amp; x64)" />
+    </Prerequisites>
+
+    <Assets>
+        <Asset Type="Microsoft.VisualStudio.VsPackage" d:Source="File" Path="RawrXD.Prometheus.Native.pkgdef" />
+        <Asset Type="Microsoft.VisualStudio.MefComponent" d:Source="File" Path="RawrXD.Prometheus.Native.dll" />
+        <Asset Type="Microsoft.VisualStudio.ToolboxControl" d:Source="File" Path="RawrXD.Prometheus.Native.dll" />
+        <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="File" Path="RawrXD.Prometheus.Native.dll" AssemblyName="RawrXD.Prometheus.Native, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" />
+    </Assets>
+
+</PackageManifest>

@@ -100,8 +100,6 @@ BeaconSend PROC FRAME
     ; ECX=beaconID, RDX=pData, R8D=dataLen
     ; Ring header: [0]=writePos (dword), [4]=readPos (dword)
     ; Data entries: 16 bytes each (qword pData + dword len + 4 pad)
-    ; FRAME: 1 push (rbp) + 28h alloc = 8+8+40 = 56 → not 16-aligned
-    ;   Fix: 1 push + 20h = 8+8+32 = 48 → 48/16=3 exact. Good.
     push    rbp
     .pushreg rbp
     mov     rbp, rsp
@@ -110,9 +108,18 @@ BeaconSend PROC FRAME
     .allocstack 20h
     .endprolog
 
+    ; Fail closed on invalid slot or uninitialized ring to avoid NULL deref.
+    test    ecx, ecx
+    jl      @send_corrupt
+    cmp     ecx, BEACON_SLOTS
+    jae     @send_corrupt
+
     movsxd  rax, ecx
     lea     r10, g_beacons
     mov     r10, [r10 + rax*8]
+    test    r10, r10
+    jz      @send_corrupt
+
     mov     eax, dword ptr [r10]       ; current write offset
     add     eax, 16                    ; advance one 16-byte entry
     and     eax, 0FFFF0h               ; wrap within 1MB ring, 16-aligned
@@ -120,7 +127,12 @@ BeaconSend PROC FRAME
     mov     dword ptr [r10 + rax + 8], r8d  ; store dataLen (dword)
     mov     dword ptr [r10], eax       ; update write position
     xor     eax, eax
+    jmp     @send_done
 
+@send_corrupt:
+    mov     eax, -2
+
+@send_done:
     lea     rsp, [rbp]
     pop     rbp
     ret

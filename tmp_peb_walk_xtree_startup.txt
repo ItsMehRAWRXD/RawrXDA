@@ -1,0 +1,341 @@
+
+************* Preparing the environment for Debugger Extensions Gallery repositories **************
+   ExtensionRepository : Implicit
+   UseExperimentalFeatureForNugetShare : true
+   AllowNugetExeUpdate : true
+   NonInteractiveNuget : true
+   AllowNugetMSCredentialProviderInstall : true
+   AllowParallelInitializationOfLocalRepositories : true
+
+   EnableRedirectToV8JsProvider : false
+
+   -- Configuring repositories
+      ----> Repository : LocalInstalled, Enabled: true
+      ----> Repository : UserExtensions, Enabled: true
+
+>>>>>>>>>>>>> Preparing the environment for Debugger Extensions Gallery repositories completed, duration 0.000 seconds
+
+************* Waiting for Debugger Extensions Gallery to Initialize **************
+
+>>>>>>>>>>>>> Waiting for Debugger Extensions Gallery to Initialize completed, duration 0.031 seconds
+   ----> Repository : UserExtensions, Enabled: true, Packages count: 0
+   ----> Repository : LocalInstalled, Enabled: true, Packages count: 29
+
+Microsoft (R) Windows Debugger Version 10.0.26100.4188 AMD64
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+CommandLine: d:\rawrxd\build-ninja\bin\RawrXD-Win32IDE.exe
+
+************* Path validation summary **************
+Response                         Time (ms)     Location
+Deferred                                       srv*
+Symbol search path is: srv*
+Executable search path is: 
+
++------------------------------------------------------------------------+
+| This target supports Hardware-enforced Stack Protection. A HW based    |
+| "Shadow Stack" may be available to assist in debugging and analysis.   |
+| See aka.ms/userhsp for more info.                                      |
+|                                                                        |
+| dps @ssp                                                               |
+|                                                                        |
++------------------------------------------------------------------------+
+
+ModLoad: 00007ff6`323c0000 00007ff6`36f5f000   RawrXD-Win32IDE.exe
+ModLoad: 00007ff9`85200000 00007ff9`85467000   ntdll.dll
+ModLoad: 00007ff9`58ac0000 00007ff9`58b32000   C:\WINDOWS\System32\verifier.dll
+Page heap: pid 0x253C: page heap enabled with flags 0x3.
+ModLoad: 00007ff9`844b0000 00007ff9`84579000   C:\WINDOWS\System32\KERNEL32.DLL
+ModLoad: 00007ff9`82970000 00007ff9`82d64000   C:\WINDOWS\System32\KERNELBASE.dll
+ModLoad: 00007ff9`841e0000 00007ff9`842cf000   C:\WINDOWS\System32\COMDLG32.dll
+ModLoad: 00007ff9`74360000 00007ff9`745f3000   C:\WINDOWS\WinSxS\amd64_microsoft.windows.common-controls_6595b64144ccf1df_6.0.26100.8115_none_3e075c82e3354f9c\COMCTL32.dll
+ModLoad: 00007ff9`4bdf0000 00007ff9`4bf9a000   C:\WINDOWS\SYSTEM32\vulkan-1.dll
+ModLoad: 00007ff9`82e30000 00007ff9`82ed3000   C:\WINDOWS\System32\msvcp_win.dll
+ModLoad: 00007ff9`831d0000 00007ff9`83279000   C:\WINDOWS\System32\msvcrt.dll
+ModLoad: 00007ff9`826f0000 00007ff9`8283b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00007ff9`83000000 00007ff9`8302b000   C:\WINDOWS\System32\GDI32.dll
+ModLoad: 00007ff9`84860000 00007ff9`84be2000   C:\WINDOWS\System32\combase.dll
+ModLoad: 00007ff9`82d70000 00007ff9`82d97000   C:\WINDOWS\System32\win32u.dll
+ModLoad: 00007ff9`83040000 00007ff9`83158000   C:\WINDOWS\System32\RPCRT4.dll
+ModLoad: 00007ff9`82840000 00007ff9`8296b000   C:\WINDOWS\System32\gdi32full.dll
+ModLoad: 00007ff9`84d90000 00007ff9`84e46000   C:\WINDOWS\System32\ADVAPI32.dll
+ModLoad: 00007ff9`83e80000 00007ff9`84045000   C:\WINDOWS\System32\USER32.dll
+ModLoad: 00007ff9`85050000 00007ff9`85148000   C:\WINDOWS\System32\shcore.dll
+ModLoad: 00007ff9`81680000 00007ff9`816d1000   C:\WINDOWS\SYSTEM32\CFGMGR32.dll
+ModLoad: 00007ff9`84400000 00007ff9`844a7000   C:\WINDOWS\System32\sechost.dll
+ModLoad: 00007ff9`82f90000 00007ff9`82ff6000   C:\WINDOWS\System32\SHLWAPI.dll
+ModLoad: 00007ff9`81d00000 00007ff9`82568000   C:\WINDOWS\System32\Windows.Storage.dll
+ModLoad: 00007ff9`83280000 00007ff9`839e7000   C:\WINDOWS\System32\SHELL32.dll
+ModLoad: 00007ff9`81ad0000 00007ff9`81c3a000   C:\WINDOWS\System32\wintypes.dll
+ModLoad: 00007ff9`84bf0000 00007ff9`84d87000   C:\WINDOWS\System32\ole32.dll
+ModLoad: 00007ff9`84580000 00007ff9`84658000   C:\WINDOWS\System32\OLEAUT32.dll
+ModLoad: 00007ff9`842e0000 00007ff9`84360000   C:\WINDOWS\System32\WS2_32.dll
+ModLoad: 00007ff9`76e40000 00007ff9`77082000   C:\WINDOWS\SYSTEM32\dbghelp.dll
+ModLoad: 00007ff9`788b0000 00007ff9`789dd000   C:\WINDOWS\SYSTEM32\WINHTTP.dll
+ModLoad: 00007ff9`7df10000 00007ff9`7e54a000   C:\WINDOWS\SYSTEM32\d2d1.dll
+ModLoad: 00007ff9`82570000 00007ff9`826e7000   C:\WINDOWS\System32\CRYPT32.dll
+ModLoad: 00007ff9`7e7c0000 00007ff9`7ea27000   C:\WINDOWS\SYSTEM32\DWrite.dll
+ModLoad: 00007ff9`7e550000 00007ff9`7e7b3000   C:\WINDOWS\SYSTEM32\d3d11.dll
+ModLoad: 00007ff9`82da0000 00007ff9`82e22000   C:\WINDOWS\System32\WINTRUST.dll
+ModLoad: 00007ff9`7ea30000 00007ff9`7ec52000   C:\WINDOWS\SYSTEM32\dcomp.dll
+ModLoad: 00007ff9`7d820000 00007ff9`7dc9f000   C:\WINDOWS\SYSTEM32\D3DCOMPILER_47.dll
+ModLoad: 00007ff9`7f840000 00007ff9`7f86f000   C:\WINDOWS\SYSTEM32\dwmapi.dll
+ModLoad: 00007ff9`7f6d0000 00007ff9`7f811000   C:\WINDOWS\SYSTEM32\dxgi.dll
+ModLoad: 00007ff9`819c0000 00007ff9`819ea000   C:\WINDOWS\SYSTEM32\bcrypt.dll
+ModLoad: 00007ff9`74c70000 00007ff9`74cc6000   C:\WINDOWS\SYSTEM32\pdh.dll
+ModLoad: 00007ff9`80840000 00007ff9`8085b000   C:\WINDOWS\SYSTEM32\kernel.appcore.dll
+ModLoad: 00007ff9`7dcb0000 00007ff9`7dcc9000   C:\WINDOWS\SYSTEM32\Microsoft.Internal.WarpPal.dll
+ModLoad: 00007ff9`810c0000 00007ff9`810db000   C:\WINDOWS\SYSTEM32\cryptsp.dll
+ModLoad: 00007ff9`705a0000 00007ff9`70778000   C:\WINDOWS\WinSxS\amd64_microsoft.windows.gdiplus_6595b64144ccf1df_1.1.26100.8246_none_6ef5395a3dc52f61\gdiplus.dll
+ModLoad: 00007ff9`80200000 00007ff9`80232000   C:\WINDOWS\SYSTEM32\IPHLPAPI.DLL
+ModLoad: 00007ff9`7f5a0000 00007ff9`7f649000   C:\WINDOWS\SYSTEM32\UxTheme.dll
+ModLoad: 00007ff9`65170000 00007ff9`65178000   C:\WINDOWS\SYSTEM32\MSIMG32.dll
+ModLoad: 00007ff8`728d0000 00007ff8`728f3000   C:\WINDOWS\SYSTEM32\d3d12.dll
+ModLoad: 00007ff9`81780000 00007ff9`817de000   C:\WINDOWS\SYSTEM32\powrprof.dll
+ModLoad: 00007ff9`74600000 00007ff9`7463b000   C:\WINDOWS\SYSTEM32\dbgcore.DLL
+(253c.4644): Break instruction exception - code 80000003 (first chance)
+ntdll!LdrpDoDebuggerBreak+0x35:
+00007ff9`8531f56d cc              int     3
+0:000> cdb: Reading initial command '!peb; lm; q'
+PEB at 000000dfad69c000
+    InheritedAddressSpace:    No
+    ReadImageFileExecOptions: No
+    BeingDebugged:            Yes
+    ImageBaseAddress:         00007ff6323c0000
+    NtGlobalFlag:             2000000
+    NtGlobalFlag2:            0
+    Ldr                       00007ff9853d28e0
+    Ldr.Initialized:          Yes
+    Ldr.InInitializationOrderModuleList: 0000023e7c180ee0 . 0000023e7c1b8ee0
+    Ldr.InLoadOrderModuleList:           0000023e7c186ec0 . 0000023e7c796ec0
+    Ldr.InMemoryOrderModuleList:         0000023e7c186ed0 . 0000023e7c796ed0
+                    Base TimeStamp                     Module
+            7ff6323c0000 69f0139d Apr 27 21:55:41 2026 d:\rawrxd\build-ninja\bin\RawrXD-Win32IDE.exe
+            7ff985200000 f7576e9e Jul 01 19:05:02 2101 C:\WINDOWS\SYSTEM32\ntdll.dll
+            7ff958ac0000 55c2884c Aug 05 18:03:56 2015 C:\WINDOWS\System32\verifier.dll
+            7ff9844b0000 7635528f Nov 04 14:33:51 2032 C:\WINDOWS\System32\KERNEL32.DLL
+            7ff982970000 208e0cb7 Apr 23 08:44:39 1987 C:\WINDOWS\System32\KERNELBASE.dll
+            7ff9841e0000 34e38694 Feb 12 18:32:36 1998 C:\WINDOWS\System32\COMDLG32.dll
+            7ff974360000 4e2a93ef Jul 23 05:27:11 2011 C:\WINDOWS\WinSxS\amd64_microsoft.windows.common-controls_6595b64144ccf1df_6.0.26100.8115_none_3e075c82e3354f9c\COMCTL32.dll
+            7ff94bdf0000 697cea01 Jan 30 12:27:29 2026 C:\WINDOWS\SYSTEM32\vulkan-1.dll
+            7ff982e30000 0507fe14 Sep 03 19:11:16 1972 C:\WINDOWS\System32\msvcp_win.dll
+            7ff9831d0000 eebefd9d Dec 04 16:16:13 2096 C:\WINDOWS\System32\msvcrt.dll
+            7ff9826f0000 4eb988a2 Nov 08 14:53:06 2011 C:\WINDOWS\System32\ucrtbase.dll
+            7ff983000000 4278b613 May 04 07:46:27 2005 C:\WINDOWS\System32\GDI32.dll
+            7ff984860000 7b25c3be Jun 21 17:01:50 2035 C:\WINDOWS\System32\combase.dll
+            7ff982d70000 cfca569d Jun 20 17:22:37 2080 C:\WINDOWS\System32\win32u.dll
+            7ff983040000 19e2d0cf Oct 06 09:29:51 1983 C:\WINDOWS\System32\RPCRT4.dll
+            7ff982840000 184c423b Dec 01 23:21:15 1982 C:\WINDOWS\System32\gdi32full.dll
+            7ff984d90000 67fa684d Apr 12 09:19:09 2025 C:\WINDOWS\System32\ADVAPI32.dll
+            7ff983e80000 c1c92802 Jan 09 06:07:46 2073 C:\WINDOWS\System32\USER32.dll
+            7ff985050000 94d2bd4b Feb 13 09:23:07 2049 C:\WINDOWS\System32\shcore.dll
+            7ff981680000 6b52a917 Jan 21 19:55:51 2027 C:\WINDOWS\SYSTEM32\CFGMGR32.dll
+            7ff984400000 1dcbfa22 Nov 03 18:05:06 1985 C:\WINDOWS\System32\sechost.dll
+            7ff982f90000 4dc2f83a May 05 15:19:22 2011 C:\WINDOWS\System32\SHLWAPI.dll
+            7ff981d00000 23658bb4 Oct 26 04:24:20 1988 C:\WINDOWS\System32\Windows.Storage.dll
+            7ff983280000 4458d664 May 03 12:12:20 2006 C:\WINDOWS\System32\SHELL32.dll
+            7ff981ad0000 987b20d6 Jan 24 15:49:26 2051 C:\WINDOWS\System32\wintypes.dll
+            7ff984bf0000 e6e011c2 Sep 28 08:44:50 2092 C:\WINDOWS\System32\ole32.dll
+            7ff984580000 36cb7ef8 Feb 17 21:46:16 1999 C:\WINDOWS\System32\OLEAUT32.dll
+            7ff9842e0000 961972fe Oct 19 05:57:18 2049 C:\WINDOWS\System32\WS2_32.dll
+            7ff976e40000 04ea2b00 Aug 12 04:14:56 1972 C:\WINDOWS\SYSTEM32\dbghelp.dll
+            7ff9788b0000 8ad793da Oct 25 07:04:58 2043 C:\WINDOWS\SYSTEM32\WINHTTP.dll
+            7ff97df10000 5bde5028 Nov 03 21:49:28 2018 C:\WINDOWS\SYSTEM32\d2d1.dll
+            7ff982570000 e7a75cf5 Feb 26 11:46:45 2093 C:\WINDOWS\System32\CRYPT32.dll
+            7ff97e7c0000 b989bdc2 Aug 21 17:59:30 2068 C:\WINDOWS\SYSTEM32\DWrite.dll
+            7ff97e550000 00315431 Feb 07 05:00:17 1970 C:\WINDOWS\SYSTEM32\d3d11.dll
+            7ff982da0000 3cbdd365 Apr 17 15:56:21 2002 C:\WINDOWS\System32\WINTRUST.dll
+            7ff97ea30000 b53ddc5e May 10 11:16:46 2066 C:\WINDOWS\SYSTEM32\dcomp.dll
+            7ff97d820000 10df1d1b Dec 20 22:03:55 1978 C:\WINDOWS\SYSTEM32\D3DCOMPILER_47.dll
+            7ff97f840000 1d55efb9 Aug 06 06:13:13 1985 C:\WINDOWS\SYSTEM32\dwmapi.dll
+            7ff97f6d0000 725e6ef6 Oct 21 01:36:54 2030 C:\WINDOWS\SYSTEM32\dxgi.dll
+            7ff9819c0000 c45a880d May 22 22:16:45 2074 C:\WINDOWS\SYSTEM32\bcrypt.dll
+            7ff980840000 79f5990b Nov 02 23:50:35 2034 C:\WINDOWS\SYSTEM32\kernel.appcore.dll
+            7ff974c70000 7a10904f Nov 23 09:44:31 2034 C:\WINDOWS\SYSTEM32\pdh.dll
+            7ff97dcb0000 0b789c7e Feb 06 06:22:38 1976 C:\WINDOWS\SYSTEM32\Microsoft.Internal.WarpPal.dll
+            7ff9810c0000 d438a132 Oct 29 02:31:14 2082 C:\WINDOWS\SYSTEM32\cryptsp.dll
+            7ff9705a0000 9d6171e9 Sep 02 02:57:45 2053 C:\WINDOWS\WinSxS\amd64_microsoft.windows.gdiplus_6595b64144ccf1df_1.1.26100.8246_none_6ef5395a3dc52f61\gdiplus.dll
+            7ff980200000 3c66952b Feb 10 10:43:39 2002 C:\WINDOWS\SYSTEM32\IPHLPAPI.DLL
+            7ff97f5a0000 4b8cefdb Mar 02 06:00:43 2010 C:\WINDOWS\SYSTEM32\UxTheme.dll
+            7ff965170000 31e252f2 Jul 09 08:39:14 1996 C:\WINDOWS\SYSTEM32\MSIMG32.dll
+            7ff8728d0000 0829f82b May 05 02:43:55 1974 C:\WINDOWS\SYSTEM32\d3d12.dll
+            7ff981780000 aa6357b3 Aug 01 21:53:55 2060 C:\WINDOWS\SYSTEM32\powrprof.dll
+            7ff974600000 3686458a Dec 27 09:34:50 1998 C:\WINDOWS\SYSTEM32\dbgcore.DLL
+    SubSystemData:     0000000000000000
+    ProcessHeap:       0000023e7bf70000
+    ProcessParameters: 0000023e7c178870
+    CurrentDirectory:  'D:\'
+    WindowTitle:  'd:\rawrxd\build-ninja\bin\RawrXD-Win32IDE.exe'
+    ImageFile:    'd:\rawrxd\build-ninja\bin\RawrXD-Win32IDE.exe'
+    CommandLine:  'd:\rawrxd\build-ninja\bin\RawrXD-Win32IDE.exe'
+    DllPath:      '< Name not readable >'
+    Environment:  0000023e7bffedf0
+        3DVPATH=C:\AMD\Chipset_Software\Binaries\3D_V-Cache_Performance_Optimizer_Driver\
+        ACSetupSvcPort=23210
+        ALLUSERSPROFILE=C:\ProgramData
+        AMAZONQ_HOME=D:\amazonq-ide
+        APPDATA=C:\Users\HiH8e\AppData\Roaming
+        AWS_PROFILE=rawr-xd-force-reauth
+        AWS_REGION=us-east-1
+        AWS_ROLE_ARN=arn:aws:iam::000000000000:role/rawr-xd-force-auth
+        AWS_SDK_LOAD_DEFAULT_CREDS_CHAIN=true
+        AWS_WEB_IDENTITY_TOKEN_FILE=/dev/null
+        ChocolateyInstall=C:\ProgramData\chocolatey
+        ChocolateyLastPathUpdate=134074175776777527
+        CHROME_CRASHPAD_PIPE_NAME=\\.\pipe\crashpad_15844_WRRACJWJGJPFLJVS
+        CommonProgramFiles=C:\Program Files\Common Files
+        CommonProgramFiles(x86)=C:\Program Files (x86)\Common Files
+        CommonProgramW6432=C:\Program Files\Common Files
+        COMPUTERNAME=FCUKED
+        ComSpec=C:\WINDOWS\system32\cmd.exe
+        CURSOR_PRIVACY_MODE=true
+        DOTNET_CLI_TELEMETRY_OPTOUT=true
+        DriverData=C:\Windows\System32\Drivers\DriverData
+        EFC_2344_1262719628=1
+        EFC_2344_1592913036=1
+        EFC_2344_2283032206=1
+        EFC_2344_2775293581=1
+        EFC_2344_3789132940=1
+        FPS_BROWSER_APP_PROFILE_STRING=Internet Explorer
+        FPS_BROWSER_USER_PROFILE_STRING=Default
+        GITHUB_COPILOT_AGENTIC_ENABLED=true
+        GITHUB_COPILOT_OVERRIDE_LLM_MODEL=cheetah-stealth-agentic:latest
+        GITHUB_COPILOT_OVERRIDE_LLM_URL=http://localhost:11434/v1
+        GITHUB_COPILOT_OVERRIDE_MODEL=cheetah-stealth-agentic:latest
+        GIT_LFS_PATH=C:\Program Files\Git LFS
+        GOPATH=C:\Users\HiH8e\go
+        HOMEDRIVE=C:
+        HOMEPATH=\Users\HiH8e
+        LOCALAPPDATA=C:\Users\HiH8e\AppData\Local
+        LOGONSERVER=\\FCUKED
+        MYCOPILOT_HOME=D:\MyCoPilot-Complete-Portable
+        NUMBER_OF_PROCESSORS=16
+        OLLAMA_DEBUG=1
+        OLLAMA_FLASH_ATTENTION=true
+        OLLAMA_GPU=rocm
+        OLLAMA_LLM_LIBRARY=vulkan
+        OLLAMA_MAX_LOADED_MODELS=1
+        OLLAMA_MODELS=F:\OllamaModels
+        OLLAMA_NUM_THREADS=16
+        OLLAMA_ORIGINS=*
+        OLLAMA_VULKAN=false
+        OneDrive=C:\Users\HiH8e\OneDrive
+        OneDriveConsumer=C:\Users\HiH8e\OneDrive
+        OS=Windows_NT
+        Path=C:\Program Files (x86)\Windows Kits\10\Debuggers\x64;C:\Program Files\PowerShell\7;c:\Users\HiH8e\AppData\Roaming\Code\User\globalStorage\github.copilot-chat\debugCommand;c:\Users\HiH8e\AppData\Roaming\Code\User\globalStorage\github.copilot-chat\copilotCli;C:\VulkanSDK\1.4.328.1\Bin;C:\Program Files\ImageMagick-7.1.2-Q16-HDRI;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\WINDOWS\System32\OpenSSH\;C:\Program Files\dotnet\;C:\Program Files\Go\bin;C:\Program Files\Microsoft SQL Server\150\Tools\Binn\;C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\170\Tools\Binn\;C:\Program Files\Microsoft SQL Server\170\Tools\Binn\;D:\cursor\resources\app\bin;C:\Program Files\nodejs\;C:\Program Files\Amazon\AWSSAMCLI\bin\;C:\Program Files\Amazon\AWSCLIV2\;C:\Program Files\GitHub CLI\;C:\ProgramData\chocolatey\bin;C:\ProgramData\mingw64\mingw64\bin;C:\Program Files (x86)\IncrediBuild;C:\Program Files (x86)\Windows Kits\10\Windows Performance Toolkit\;C:\Program Files\localstack\localstack;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\WINDOWS\System32\OpenSSH\;C:\Program Files\CMake\bin;C:\Strawberry\c\bin;C:\Strawberry\perl\site\bin;C:\Strawberry\perl\bin;C:\Program Files (x86)\QuickTime\QTSystem\;C:\Program Files\Git LFS;C:\Program Files\Git\cmd;C:\Program Files\PowerShell\7\;C:\Users\HiH8e\AppData\Local\AMD\AI_Bundle\VSCode\bin;C:\Program Files\PowerShell\7;c:\Users\HiH8e\AppData\Roaming\Code\User\globalStorage\github.copilot-chat\debugCommand;c:\Users\HiH8e\AppData\Roaming\Code\User\globalStorage\github.copilot-chat\copilotCli;C:\VulkanSDK\1.4.328.1\Bin;C:\Program Files\ImageMagick-7.1.2-Q16-HDRI;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\WINDOWS\System32\OpenSSH\;C:\Program Files\dotnet\;C:\Program Files\Go\bin;C:\Program Files\Microsoft SQL Server\150\Tools\Binn\;C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\170\Tools\Binn\;C:\Program Files\Microsoft SQL Server\170\Tools\Binn\;D:\cursor\resources\app\bin;C:\Program Files\nodejs\;C:\Program Files\Amazon\AWSSAMCLI\bin\;C:\Program Files\Amazon\AWSCLIV2\;C:\Program Files\GitHub CLI\;C:\Program Files\PowerShell\7\;C:\ProgramData\chocolatey\bin;C:\ProgramData\mingw64\mingw64\bin;C:\Program Files (x86)\IncrediBuild;C:\Program Files (x86)\Windows Kits\10\Windows Performance Toolkit\;C:\Program Files\localstack\localstack;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\WINDOWS\System32\OpenSSH\;C:\Program Files\CMake\bin;C:\Strawberry\c\bin;C:\Strawberry\perl\site\bin;C:\Strawberry\perl\bin;C:\Program Files (x86)\QuickTime\QTSystem\;C:\Program Files\Git LFS;C:\Program Files\Git\cmd;C:\Users\HiH8e\AppData\Local\Programs\Python\Python312\Scripts\;C:\Users\HiH8e\AppData\Local\Programs\Python\Python312\;C:\Program Files\ImageMagick-7.1.2-Q16-HDRI;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\WINDOWS\System32\OpenSSH\;C:\Program Files\dotnet\;C:\Program Files\Go\bin;C:\Program Files\Microsoft SQL Server\150\Tools\Binn\;C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\170\Tools\Binn\;C:\Program Files\Microsoft SQL Server\170\Tools\Binn\;C:\Program Files\Git\cmd;D:\cursor\resources\app\bin;D:\Microsoft VS Code\bin;C:\Program Files\nodejs\;C:\Program Files\Amazon\AWSSAMCLI\bin\;C:\Program Files\Amazon\AWSCLIV2\;C:\Program Files\GitHub CLI\;C:\Program Files\PowerShell\7\;C:\ProgramData\chocolatey\bin;C:\ProgramData\mingw64\mingw64\bin;C:\Program Files (x86)\IncrediBuild;C:\Program Files (x86)\Windows Kits\10\Windows Performance Toolkit\;C:\Program Files\localstack\localstack;C:\Users\HiH8e\scoop\shims;C:\Program Files\PowerShell\7;C:\WINDOWS\System32\Win;C:\Users\HiH8e\AppData\Local\Programs\Ollama;C:\Users\HiH8e\AppData\Local\Microsoft\WindowsApps;E:\Everything\~dev\VSCode\bin;C:\Users\HiH8e\AppData\Local\Microsoft\WinGet\Links;;C:\Users\HiH8e\AppData\Local\spicetify;C:\Users\HiH8e\AppData\Local\Programs\cursor\resources\app\bin;C:\Users\HiH8e\.dotnet\tools;C:\Users\HiH8e\AppData\Local\RawrXD\Genesis\bin;C:\Users\HiH8e\AppData\Local\Amazon Q\bin;C:\Users\HiH8e\AppData\Local\Amazon Q\bin;C:\Users\HiH8e\.lmstudio\bin;c:\Users\HiH8e\.vscode\extensions\ms-python.debugpy-2025.18.0-win32-x64\bundled\scripts\noConfigScripts
+        PATHEXT=.COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC;.CPL
+        POWERSHELL_DISTRIBUTION_CHANNEL=MSI:Windows 10 Home
+        PROCESSOR_ARCHITECTURE=AMD64
+        PROCESSOR_IDENTIFIER=AMD64 Family 25 Model 97 Stepping 2, AuthenticAMD
+        PROCESSOR_LEVEL=25
+        PROCESSOR_REVISION=6102
+        ProgramData=C:\ProgramData
+        ProgramFiles=C:\Program Files
+        ProgramFiles(x86)=C:\Program Files (x86)
+        ProgramW6432=C:\Program Files
+        PSModulePath=C:\Users\HiH8e\OneDrive\Documents\PowerShell\Modules;C:\Program Files\PowerShell\Modules;c:\program files\powershell\7\Modules;C:\Program Files\WindowsPowerShell\Modules;C:\WINDOWS\system32\WindowsPowerShell\v1.0\Modules
+        PUBLIC=C:\Users\Public
+        RAWRXD_DISABLE_AUTOLOAD=1
+        RAWRXD_LOG_LEVEL=INFO
+        RAWRXD_MODEL_CACHE=C:\Users\HiH8e\AppData\Local\RawrXD Agentic IDE\cache\models
+        RAWRXD_NATIVE_BACKEND=D:\RawrXD\bin\emitter.exe
+        RAWRXD_PROJECT_ROOT=E:\
+        RlsSvcPort=22112
+        SESSIONNAME=Console
+        SystemDrive=C:
+        SystemRoot=C:\WINDOWS
+        TEMP=C:\Users\HiH8e\AppData\Local\Temp
+        TMP=C:\Users\HiH8e\AppData\Local\Temp
+        USERDOMAIN=FCUKED
+        USERDOMAIN_ROAMINGPROFILE=FCUKED
+        USERNAME=HiH8e
+        USERPROFILE=C:\Users\HiH8e
+        VK_SDK_PATH=C:\VulkanSDK\1.4.328.1
+        VULKAN_SDK=C:\VulkanSDK\1.4.328.1
+        windir=C:\WINDOWS
+        GIT_PAGER=cat
+        GIT_MERGE_AUTOEDIT=no
+        GIT_EDITOR=:
+        VSCODE_PREVENT_SHELL_HISTORY=1
+        TERM_PROGRAM=vscode
+        TERM_PROGRAM_VERSION=1.115.0
+        LANG=en_US.UTF-8
+        COLORTERM=truecolor
+        GIT_ASKPASS=d:\vsc0de\41dd792b5e\resources\app\extensions\git\dist\askpass.sh
+        VSCODE_GIT_ASKPASS_NODE=D:\vsc0de\Code.exe
+        VSCODE_GIT_ASKPASS_EXTRA_ARGS=
+        VSCODE_GIT_ASKPASS_MAIN=d:\vsc0de\41dd792b5e\resources\app\extensions\git\dist\askpass-main.js
+        VSCODE_GIT_IPC_HANDLE=\\.\pipe\vscode-git-1f93192168-sock
+        PYDEVD_DISABLE_FILE_VALIDATION=1
+        VSCODE_DEBUGPY_ADAPTER_ENDPOINTS=c:\Users\HiH8e\.vscode\extensions\ms-python.debugpy-2025.18.0-win32-x64\.noConfigDebugAdapterEndpoints\endpoint-4a056a2011d1a2b2.txt
+        BUNDLED_DEBUGPY_PATH=c:\Users\HiH8e\.vscode\extensions\ms-python.debugpy-2025.18.0-win32-x64\bundled\libs\debugpy
+        PYTHONSTARTUP=c:\Users\HiH8e\AppData\Roaming\Code\User\workspaceStorage\9f4f78f0e761783abdf5b99c1b6c97ae\ms-python.python\pythonrc.py
+        PYTHON_BASIC_REPL=1
+        VSCODE_INJECTION=1
+        VSCODE_NONCE=938bfb73-7147-4254-8599-26e5fa80fcb5
+        VSCODE_A11Y_MODE=0
+        VSCODE_STABLE=1
+start             end                 module name
+00007ff6`323c0000 00007ff6`36f5f000   RawrXD_Win32IDE   (deferred)             
+00007ff8`728d0000 00007ff8`728f3000   d3d12      (deferred)             
+00007ff9`4bdf0000 00007ff9`4bf9a000   vulkan_1   (deferred)             
+00007ff9`58ac0000 00007ff9`58b32000   verifier   (deferred)             
+00007ff9`65170000 00007ff9`65178000   MSIMG32    (deferred)             
+00007ff9`705a0000 00007ff9`70778000   gdiplus    (deferred)             
+00007ff9`74360000 00007ff9`745f3000   COMCTL32   (deferred)             
+00007ff9`74600000 00007ff9`7463b000   dbgcore    (deferred)             
+00007ff9`74c70000 00007ff9`74cc6000   pdh        (deferred)             
+00007ff9`76e40000 00007ff9`77082000   dbghelp    (deferred)             
+00007ff9`788b0000 00007ff9`789dd000   WINHTTP    (deferred)             
+00007ff9`7d820000 00007ff9`7dc9f000   D3DCOMPILER_47   (deferred)             
+00007ff9`7dcb0000 00007ff9`7dcc9000   Microsoft_Internal_WarpPal   (deferred)             
+00007ff9`7df10000 00007ff9`7e54a000   d2d1       (deferred)             
+00007ff9`7e550000 00007ff9`7e7b3000   d3d11      (deferred)             
+00007ff9`7e7c0000 00007ff9`7ea27000   DWrite     (deferred)             
+00007ff9`7ea30000 00007ff9`7ec52000   dcomp      (deferred)             
+00007ff9`7f5a0000 00007ff9`7f649000   UxTheme    (deferred)             
+00007ff9`7f6d0000 00007ff9`7f811000   dxgi       (deferred)             
+00007ff9`7f840000 00007ff9`7f86f000   dwmapi     (deferred)             
+00007ff9`80200000 00007ff9`80232000   IPHLPAPI   (deferred)             
+00007ff9`80840000 00007ff9`8085b000   kernel_appcore   (deferred)             
+00007ff9`810c0000 00007ff9`810db000   cryptsp    (deferred)             
+00007ff9`81680000 00007ff9`816d1000   CFGMGR32   (deferred)             
+00007ff9`81780000 00007ff9`817de000   powrprof   (deferred)             
+00007ff9`819c0000 00007ff9`819ea000   bcrypt     (deferred)             
+00007ff9`81ad0000 00007ff9`81c3a000   wintypes   (deferred)             
+00007ff9`81d00000 00007ff9`82568000   Windows_Storage   (deferred)             
+00007ff9`82570000 00007ff9`826e7000   CRYPT32    (deferred)             
+00007ff9`826f0000 00007ff9`8283b000   ucrtbase   (deferred)             
+00007ff9`82840000 00007ff9`8296b000   gdi32full   (deferred)             
+00007ff9`82970000 00007ff9`82d64000   KERNELBASE   (deferred)             
+00007ff9`82d70000 00007ff9`82d97000   win32u     (deferred)             
+00007ff9`82da0000 00007ff9`82e22000   WINTRUST   (deferred)             
+00007ff9`82e30000 00007ff9`82ed3000   msvcp_win   (deferred)             
+00007ff9`82f90000 00007ff9`82ff6000   SHLWAPI    (deferred)             
+00007ff9`83000000 00007ff9`8302b000   GDI32      (deferred)             
+00007ff9`83040000 00007ff9`83158000   RPCRT4     (deferred)             
+00007ff9`831d0000 00007ff9`83279000   msvcrt     (deferred)             
+00007ff9`83280000 00007ff9`839e7000   SHELL32    (deferred)             
+00007ff9`83e80000 00007ff9`84045000   USER32     (deferred)             
+00007ff9`841e0000 00007ff9`842cf000   COMDLG32   (deferred)             
+00007ff9`842e0000 00007ff9`84360000   WS2_32     (deferred)             
+00007ff9`84400000 00007ff9`844a7000   sechost    (deferred)             
+00007ff9`844b0000 00007ff9`84579000   KERNEL32   (deferred)             
+00007ff9`84580000 00007ff9`84658000   OLEAUT32   (deferred)             
+00007ff9`84860000 00007ff9`84be2000   combase    (deferred)             
+00007ff9`84bf0000 00007ff9`84d87000   ole32      (deferred)             
+00007ff9`84d90000 00007ff9`84e46000   ADVAPI32   (deferred)             
+00007ff9`85050000 00007ff9`85148000   shcore     (deferred)             
+00007ff9`85200000 00007ff9`85467000   ntdll      (pdb symbols)          C:\ProgramData\dbg\sym\ntdll.pdb\4FE96AFC99BB2AEBCC1F4B164354A6F51\ntdll.pdb
+quit:
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\atlmfc.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\ObjectiveC.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\concurrency.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\cpp_rest.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\stl.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Data.Json.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Devices.Geolocation.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Devices.Sensors.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Media.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\windows.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\winrt.natvis'

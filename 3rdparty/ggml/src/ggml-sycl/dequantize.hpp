@@ -10,8 +10,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 
-#ifndef GGML_SYCL_DEQUANTIZE_HPP
-#define GGML_SYCL_DEQUANTIZE_HPP
+#ifndef GGML_RXD_SYCL_DEQUANTIZE_HPP
+#define GGML_RXD_SYCL_DEQUANTIZE_HPP
 
 #include "common.hpp"
 
@@ -30,7 +30,7 @@ static __dpct_inline__ void dequantize_q4_0(const void *vx, const int64_t ib,
     v.x() = vui & 0xF;
     v.y() = vui >> 4;
 
-#ifdef GGML_SYCL_F16
+#ifdef GGML_RXD_SYCL_F16
     // v = v - {8.0f, 8.0f};
     // v = v * {d, d};
     v.s0() = (v.s0() - 8.0f) * d;
@@ -39,7 +39,7 @@ static __dpct_inline__ void dequantize_q4_0(const void *vx, const int64_t ib,
 #else
     v.x() = (v.x() - 8.0f) * d;
     v.y() = (v.y() - 8.0f) * d;
-#endif // GGML_SYCL_F16
+#endif // GGML_RXD_SYCL_F16
 }
 
 static __dpct_inline__ void dequantize_q4_0_reorder(const void *d_ptr, const int64_t ib, const void *qs,
@@ -53,7 +53,7 @@ static __dpct_inline__ void dequantize_q4_0_reorder(const void *d_ptr, const int
     v.x() = vui & 0xF;
     v.y() = vui >> 4;
 
-#ifdef GGML_SYCL_F16
+#ifdef GGML_RXD_SYCL_F16
     // v = v - {8.0f, 8.0f};
     // v = v * {d, d};
     v.s0() = (v.s0() - 8.0f) * d;
@@ -62,7 +62,7 @@ static __dpct_inline__ void dequantize_q4_0_reorder(const void *d_ptr, const int
 #else
     v.x() = (v.x() - 8.0f) * d;
     v.y() = (v.y() - 8.0f) * d;
-#endif // GGML_SYCL_F16
+#endif // GGML_RXD_SYCL_F16
 }
 
 static __dpct_inline__ void dequantize_q4_1(const void *vx, const int64_t ib,
@@ -77,7 +77,7 @@ static __dpct_inline__ void dequantize_q4_1(const void *vx, const int64_t ib,
     v.x() = vui & 0xF;
     v.y() = vui >> 4;
 
-#ifdef GGML_SYCL_F16
+#ifdef GGML_RXD_SYCL_F16
     // v = v * {d, d};
     // v = v + {m, m};
     v.s0() = sycl::fma(v.s0(), d, m);
@@ -86,7 +86,7 @@ static __dpct_inline__ void dequantize_q4_1(const void *vx, const int64_t ib,
 #else
     v.x() = sycl::fma(v.x(), d, m);
     v.y() = sycl::fma(v.y(), d, m);
-#endif // GGML_SYCL_F16
+#endif // GGML_RXD_SYCL_F16
 }
 
 static __dpct_inline__ void dequantize_q5_0(const void *vx, const int64_t ib,
@@ -104,7 +104,7 @@ static __dpct_inline__ void dequantize_q5_0(const void *vx, const int64_t ib,
     v.x() = ((x[ib].qs[iqs] & 0xf) | xh_0);
     v.y() = ((x[ib].qs[iqs] >> 4) | xh_1);
 
-#ifdef GGML_SYCL_F16
+#ifdef GGML_RXD_SYCL_F16
     // v = v - {16.0f, 16.0f};
     // v = v * {d, d};
     v.s0() = (v.s0() - 16.0f) * d;
@@ -113,7 +113,7 @@ static __dpct_inline__ void dequantize_q5_0(const void *vx, const int64_t ib,
 #else
     v.x() = (v.x() - 16.0f) * d;
     v.y() = (v.y() - 16.0f) * d;
-#endif // GGML_SYCL_F16
+#endif // GGML_RXD_SYCL_F16
 }
 
 static __dpct_inline__ void dequantize_q5_1(const void *vx, const int64_t ib,
@@ -132,7 +132,7 @@ static __dpct_inline__ void dequantize_q5_1(const void *vx, const int64_t ib,
     v.x() = ((x[ib].qs[iqs] & 0xf) | xh_0);
     v.y() = ((x[ib].qs[iqs] >> 4) | xh_1);
 
-#ifdef GGML_SYCL_F16
+#ifdef GGML_RXD_SYCL_F16
     // v = v * {d, d};
     // v = v + {m, m};
     v.s0() = sycl::fma(v.s0(), d, m);
@@ -140,7 +140,7 @@ static __dpct_inline__ void dequantize_q5_1(const void *vx, const int64_t ib,
 #else
     v.x() = sycl::fma(v.x(), d, m);
     v.y() = sycl::fma(v.y(), d, m);
-#endif // GGML_SYCL_F16
+#endif // GGML_RXD_SYCL_F16
 }
 
 static __dpct_inline__ void dequantize_q8_0(const void *vx, const int64_t ib,
@@ -152,14 +152,14 @@ static __dpct_inline__ void dequantize_q8_0(const void *vx, const int64_t ib,
     v.x() = x[ib].qs[iqs + 0];
     v.y() = x[ib].qs[iqs + 1];
 
-#ifdef GGML_SYCL_F16
+#ifdef GGML_RXD_SYCL_F16
     // v = v * {d, d};
     v.s0() *= d;
     v.s1() *= d;
 #else
     v.x() *= d;
     v.y() *= d;
-#endif // GGML_SYCL_F16
+#endif // GGML_RXD_SYCL_F16
 }
 
 template<typename dst_t>
@@ -427,11 +427,11 @@ static void dequantize_block_q4_K_reorder(const void * __restrict__ vx, dst_t * 
     const uint8_t * base          = static_cast<const uint8_t *>(vx);
     const size_t    qs_offset     = i * (QK_K / 2);
     const size_t    scales_offset = nb * (QK_K / 2) + i * K_SCALE_SIZE;
-    const size_t    dm_offset     = nb * (QK_K / 2) + nb * K_SCALE_SIZE + i * sizeof(ggml_half2);
+    const size_t    dm_offset     = nb * (QK_K / 2) + nb * K_SCALE_SIZE + i * sizeof(ggml_rxd_half2);
 
     const uint8_t *    qs_ptr     = base + qs_offset;
     const uint8_t *    scales_ptr = base + scales_offset;
-    ggml_half2         dm_values  = *reinterpret_cast<const ggml_half2 *>(base + dm_offset);
+    ggml_rxd_half2         dm_values  = *reinterpret_cast<const ggml_rxd_half2 *>(base + dm_offset);
 
     const float dall = dm_values.x();
     const float dmin = dm_values.y();
@@ -556,7 +556,7 @@ static void dequantize_block_q6_K_reorder(const void * __restrict__ vx, dst_t * 
     const uint8_t *   ql_ptr             = base_ptr + ql_offset;
     const uint8_t *   qh_ptr             = base_ptr + qh_offset;
     const uint8_t *   scales_ptr         = base_ptr + base_scales_offset;
-    const ggml_half * d                  = (const ggml_half *) (base_ptr + base_d_offset) + ib;
+    const ggml_rxd_half * d                  = (const ggml_rxd_half *) (base_ptr + base_d_offset) + ib;
 
     dst_t * y = yy + ib * QK_K + 128 * ip + il;
 
@@ -820,4 +820,4 @@ dequantize_block_iq4_xs(const void *__restrict__ vx, dst_t *__restrict__ yy,
 }
 
 
-#endif // GGML_SYCL_DEQUANTIZE_HPP
+#endif // GGML_RXD_SYCL_DEQUANTIZE_HPP

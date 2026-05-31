@@ -1,7 +1,25 @@
 include(CheckCXXCompilerFlag)
 include("../cmake/common.cmake")
 
+# ---------------------------------------------------------------------------
+# RawrXD build fix: ensure numeric scheduler copy count.
+# Some parent builds leave GGML_SCHED_MAX_COPIES empty, which turns into
+# -DGGML_SCHED_MAX_COPIES="" and breaks ggml-backend.cpp array sizing.
+# ---------------------------------------------------------------------------
+if (NOT DEFINED GGML_SCHED_MAX_COPIES OR "${GGML_SCHED_MAX_COPIES}" STREQUAL "")
+    set(GGML_SCHED_MAX_COPIES 8 CACHE STRING "ggml: max pipeline copies" FORCE)
+endif()
 add_compile_definitions(GGML_SCHED_MAX_COPIES=${GGML_SCHED_MAX_COPIES})
+
+# Provide version/commit strings used by ggml.c (safe when building as subproject).
+if (NOT DEFINED GGML_VERSION OR "${GGML_VERSION}" STREQUAL "")
+    set(GGML_VERSION "unknown" CACHE STRING "ggml: version string" FORCE)
+endif()
+if (NOT DEFINED GGML_BUILD_COMMIT OR "${GGML_BUILD_COMMIT}" STREQUAL "")
+    set(GGML_BUILD_COMMIT "unknown" CACHE STRING "ggml: commit string" FORCE)
+endif()
+add_compile_definitions(GGML_VERSION="${GGML_VERSION}")
+add_compile_definitions(GGML_COMMIT="${GGML_BUILD_COMMIT}")
 
 # enable libstdc++ assertions for debug builds
 if (CMAKE_SYSTEM_NAME MATCHES "Linux")

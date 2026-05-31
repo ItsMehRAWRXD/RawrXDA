@@ -327,3 +327,182 @@ LRESULT CALLBACK Win32IDE::HoverTooltipProc(HWND hwnd, UINT msg, WPARAM wParam, 
     }
     return DefWindowProcA(hwnd, msg, wParam, lParam);
 }
+
+// ============================================================================
+// DEBUGGER HOVER VALUE INTEGRATION (Phase 1C)
+// Shows variable values and expressions during debugging sessions
+// ============================================================================
+
+// Hover value state (separate from LSP hover)
+static struct {
+    UINT_PTR timerID = 0;
+    int lastLine = -1;
+    int lastColumn = -1;
+    std::string lastIdentifier;
+    bool showingDebugValue = false;
+} s_debugHoverState;
+
+const UINT DEBUG_HOVER_TIMER_ID = 0x2002;
+const int DEBUG_HOVER_DEBOUNCE_MS = 400;
+
+// ── Extract identifier at column position ──────────────────────────────────
+std::string Win32IDE::extractIdentifierAtColumn(const std::string& line, int column) {
+    if (column < 0 || column >= (int)line.length())
+        return "";
+
+    // Find start of identifier (move left while alphanumeric or _)
+    int start = column;
+    while (start > 0 && (std::isalnum((unsigned char)line[start - 1]) || line[start - 1] == '_'))
+        start--;
+
+    // Find end of identifier (move right while alphanumeric or _)
+    int end = column;
+    while (end < (int)line.length() && (std::isalnum((unsigned char)line[end]) || line[end] == '_'))
+        end++;
+
+    // If cursor is not on an identifier, try left neighbor
+    if (start == end && column > 0) {
+        start = column - 1;
+        while (start > 0 && (std::isalnum((unsigned char)line[start - 1]) || line[start - 1] == '_'))
+            start--;
+        if (std::isalnum((unsigned char)line[start]) || line[start] == '_') {
+            while (end < (int)line.length() && (std::isalnum((unsigned char)line[end]) || line[end] == '_'))
+                end++;
+        } else {
+            return "";
+        }
+    }
+
+    if (start == end)
+        return "";
+
+    return line.substr(start, end - start);
+}
+
+// ── RichEdit mouse move handler (debugger overlay) ────────────────────────
+void Win32IDE::onEditorMouseMoveDebugHover(int x, int y) {
+    // Only show hover during active debugging
+    if (!m_debuggingActive || !m_debuggerPaused) {
+        s_debugHoverState.showingDebugValue = false;
+        if (s_debugHoverState.timerID != 0) {
+            KillTimer(m_hwndMain, s_debugHoverState.timerID);
+            s_debugHoverState.timerID = 0;
+        }
+        return;
+    }
+
+    if (!m_hwndEditor)
+        return;
+
+    // Convert pixel position to character position
+    POINTL pt = {x, y};
+    int charIndex = (int)SendMessageA(m_hwndEditor, EM_CHARFROMPOS, 0, (LPARAM)&pt);
+    if (charIndex < 0)
+        return;
+
+    int line = (int)SendMessageA(m_hwndEditor, EM_LINEFROMCHAR, charIndex, 0);
+    int lineStart = (int)SendMessageA(m_hwndEditor, EM_LINEINDEX, line, 0);
+    int column = charIndex - lineStart;
+
+    // Skip if same position (avoid re-triggering)
+    if (s_debugHoverState.lastLine == line && s_debugHoverState.lastColumn == column)
+        return;
+
+    s_debugHoverState.lastLine = line;
+    s_debugHoverState.lastColumn = column;
+
+    // Kill existing timer and start debounce
+    if (s_debugHoverState.timerID != 0)
+        KillTimer(m_hwndMain, s_debugHoverState.timerID);
+
+    s_debugHoverState.timerID = SetTimer(m_hwndMain, DEBUG_HOVER_TIMER_ID,
+                                          DEBUG_HOVER_DEBOUNCE_MS, nullptr);
+}
+
+// ── Timer tick: trigger debug hover evaluation ─────────────────────────────
+void Win32IDE::onDebugHoverTimer() {
+    KillTimer(m_hwndMain, DEBUG_HOVER_TIMER_ID);
+    s_debugHoverState.timerID = 0;
+
+    if (!m_debuggingActive || !m_debuggerPaused)
+        return;
+
+    int line = s_debugHoverState.lastLine;
+    int column = s_debugHoverState.lastColumn;
+
+    if (line < 0 || column < 0)
+        return;
+
+    // Get line text directly from the editor control.
+    std::string lineText;
+    if (!m_hwndEditor)
+    {
+        return;
+    }
+
+    int lineIndex = static_cast<int>(SendMessageA(m_hwndEditor, EM_LINEINDEX, line, 0));
+    if (lineIndex < 0)
+    {
+        return;
+    }
+    int lineLen = static_cast<int>(SendMessageA(m_hwndEditor, EM_LINELENGTH, lineIndex, 0));
+    if (lineLen <= 0)
+    {
+        return;
+    }
+
+    std::vector<char> lineBuffer(static_cast<size_t>(lineLen) + 2, '\0');
+    *reinterpret_cast<WORD*>(lineBuffer.data()) = static_cast<WORD>(lineLen + 1);
+    LRESULT copied = SendMessageA(m_hwndEditor, EM_GETLINE, line, reinterpret_cast<LPARAM>(lineBuffer.data()));
+    if (copied <= 0)
+    {
+        return;
+    }
+    lineText.assign(lineBuffer.data(), static_cast<size_t>(copied));
+
+    // Extract identifier
+    std::string identifier = extractIdentifierAtColumn(lineText, column);
+    if (identifier.empty()) {
+        s_debugHoverState.showingDebugValue = false;
+        dismissHoverTooltip();
+        return;
+    }
+
+    s_debugHoverState.lastIdentifier = identifier;
+
+    // Evaluate the identifier in current frame context
+    std::string value, type;
+    int frameId = m_selectedStackFrameIndex >= 0 ? m_selectedStackFrameIndex : 0;
+
+    if (!evaluateWatchExpression(identifier, frameId, value, type)) {
+        s_debugHoverState.showingDebugValue = false;
+        dismissHoverTooltip();
+        return;
+    }
+
+    // Build tooltip content
+    std::string tooltipContent = identifier + " : " + type + "\n└─ " + value;
+
+    // Truncate long values
+    if (tooltipContent.length() > 200)
+        tooltipContent = tooltipContent.substr(0, 197) + "...";
+
+    s_debugHoverState.showingDebugValue = true;
+
+    // Get mouse position for tooltip placement
+    POINT screenPt;
+    GetCursorPos(&screenPt);
+
+    // Show debug value tooltip
+    showHoverTooltip(screenPt.x + 10, screenPt.y + 15, tooltipContent);
+}
+
+// ── Hide debug hover value ─────────────────────────────────────────────────
+void Win32IDE::hideDebugHoverValue() {
+    if (s_debugHoverState.timerID != 0) {
+        KillTimer(m_hwndMain, s_debugHoverState.timerID);
+        s_debugHoverState.timerID = 0;
+    }
+    s_debugHoverState.showingDebugValue = false;
+    s_debugHoverState.lastIdentifier.clear();
+}

@@ -26,28 +26,29 @@ public:
     // Main entry: logits in, token ID out
     uint32_t Sample(float* logits, size_t vocabSize, 
                     const std::vector<uint32_t>& promptTokens) {
-        // 1. Apply temperature
-        if (config.temperature != 1.0f) {
+        // 1. Apply repetition penalty first (on raw logits)
+        ApplyRepetitionPenalty(logits, vocabSize, promptTokens);
+        
+        // 2. Top-K filtering on raw logits (truncate unlikely tokens first)
+        TopKFilter(logits, vocabSize, config.topK);
+        
+        // 3. Apply temperature (on surviving logits only)
+        if (config.temperature > 0.0f && config.temperature != 1.0f) {
             float invTemp = 1.0f / config.temperature;
             for (size_t i = 0; i < vocabSize; i++) {
-                logits[i] *= invTemp;
+                if (logits[i] > -1e30f)  // skip already-filtered tokens
+                    logits[i] *= invTemp;
             }
         }
         
-        // 2. Apply repetition penalty
-        ApplyRepetitionPenalty(logits, vocabSize, promptTokens);
-        
-        // 3. Softmax to get probabilities
+        // 4. Softmax to get probabilities (handles -INFINITY → 0)
         SoftMax(logits, vocabSize);
         
-        // 4. Top-K filtering
-        TopKFilter(logits, vocabSize, config.topK);
-        
-        // 5. Top-P (Nucleus) filtering
+        // 5. Top-P (Nucleus) filtering on probabilities
         TopPFilter(logits, vocabSize, config.topP);
         
-        // 6. Renormalize after filtering
-        SoftMax(logits, vocabSize);
+        // 6. Renormalize filtered probabilities (simple sum-divide)
+        Normalize(logits, vocabSize);
         
         // 7. Sample from remaining distribution
         return MultinomialSample(logits, vocabSize);
@@ -127,7 +128,20 @@ private:
         
         // Zero out tail
         for (size_t i = cutoff; i < n; i++) {
-            logits[indices[i]] = -INFINITY;
+            logits[indices[i]] = 0.0f;
+        }
+    }
+    
+    void Normalize(float* x, size_t n) {
+        float sum = 0.0f;
+        for (size_t i = 0; i < n; i++) {
+            if (x[i] > 0.0f) sum += x[i];
+        }
+        if (sum > 0.0f) {
+            float invSum = 1.0f / sum;
+            for (size_t i = 0; i < n; i++) {
+                x[i] = x[i] > 0.0f ? x[i] * invSum : 0.0f;
+            }
         }
     }
     

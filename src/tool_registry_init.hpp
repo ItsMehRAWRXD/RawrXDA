@@ -21,3 +21,4 @@ protected:
 // Global tool registry functions (implementations in engine/ and modules/)
 void register_rawr_inference();
 void register_sovereign_engines();
+void register_git_mcp_tools();

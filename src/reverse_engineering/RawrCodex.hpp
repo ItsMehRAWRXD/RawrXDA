@@ -792,7 +792,7 @@ public:
                 if (mn == "mov" || mn == "movsx" || mn == "movzx" || mn == "movsxd") {
                     ssaInstr.op = SSAOpType::Assign;
                     ssaInstr.dstVarId = m_ssaNextVarId++;
-                    ssaInstr.src1VarId = static_cast<int32_t>(regVersions[0]); // placeholder
+                    ssaInstr.src1VarId = static_cast<int32_t>(regVersions[0]); // register version tracking
                 } else if (mn == "lea") {
                     ssaInstr.op = SSAOpType::Lea;
                     ssaInstr.dstVarId = m_ssaNextVarId++;

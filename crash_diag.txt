@@ -1,6 +1,0 @@
-self_diagnoser_installed
-PHASE: 0 Install
-PHASE: 0 WinMain entered
-self_diagnoser_installed
-PHASE: 0 Install
-PHASE: 0 WinMain entered

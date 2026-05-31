@@ -77,7 +77,7 @@ static std::string server_js(int port) {
     oss << "import { extname, join } from 'path';\n";
     oss << "import { WebSocketServer } from 'ws';\n\n";
     oss << "const port = process.env.PORT ? Number(process.env.PORT) : " << port << ";\n";
-    oss << "const ollamaUrl = process.env.OLLAMA_URL || 'http://localhost:11434';\n";
+    oss << "const ollamaUrl = process.env.OLLAMA_URL || 'http://localhost:11435';\n";
     oss << "const root = process.cwd();\n\n";
     oss << "const mime = {\n";
     oss << "  '.html': 'text/html',\n";
@@ -206,7 +206,7 @@ std::string ReactServerGenerator::Generate(const std::string& project_name, cons
     // Generate .env file for configuration
     std::ostringstream envContent;
     envContent << "PORT=" << config.port << "\n";
-    envContent << "OLLAMA_URL=http://localhost:11434\n";
+    envContent << "OLLAMA_URL=http://localhost:11435\n";
     envContent << "NODE_ENV=development\n";
     write_file(base / ".env", envContent.str());
 
@@ -245,7 +245,7 @@ std::string ReactServerGenerator::Generate(const std::string& project_name, cons
     readme << "| Variable | Default | Description |\n";
     readme << "|----------|---------|-------------|\n";
     readme << "| PORT | " << config.port << " | Server port |\n";
-    readme << "| OLLAMA_URL | http://localhost:11434 | Ollama API endpoint |\n";
+    readme << "| OLLAMA_URL | http://localhost:11435 | Ollama API endpoint |\n";
     readme << "| NODE_ENV | development | Environment mode |\n";
     write_file(base / "README.md", readme.str());
 

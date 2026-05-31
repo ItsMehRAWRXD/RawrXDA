@@ -85,7 +85,9 @@ class TextProcessingProcessor : IRequestProcessor {
     hidden [hashtable] SummarizeText([string] $text, [hashtable] $options) {
         # Advanced text summarization logic
         $sentences = $text -split '\.\s+'
-        $maxSentences = [math]::Min($options.MaxSentences ?? 3, $sentences.Length)
+        $ms = $options.MaxSentences
+        if (-not $ms) { $ms = 3 }
+        $maxSentences = [math]::Min($ms, $sentences.Length)
         
         # Simple extractive summarization (in real implementation, use NLP)
         $summary = ($sentences | Select-Object -First $maxSentences) -join ". "

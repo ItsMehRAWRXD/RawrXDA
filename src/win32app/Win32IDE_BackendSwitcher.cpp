@@ -1,6 +1,7 @@
 // ============================================================================
 // Win32IDE_BackendSwitcher.cpp — Phase 8B: AI Backend Switcher
 // ============================================================================
+#include "../gpu_enforcement.h"
 // Runtime switching between inference backends:
 //   - LocalGGUF  : Native RawrXD CPU inference engine
 //   - Ollama     : Ollama HTTP API (local or remote)
@@ -15,8 +16,9 @@
 // ============================================================================
 
 #include "../agent/local_reasoning_integration.hpp"
-#include "../agentic/AgentOllamaClient.h"
+#include "../agentic/NativeInferenceClient.h"
 #include "../modules/vsix_loader.h"
+#include "TitanIPC.h"
 #include "Win32IDE.h"
 #include "rawrxd/ide/inference_facade.hpp"
 #include <algorithm>
@@ -24,12 +26,14 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <psapi.h>
 #include <sstream>
 #include <winhttp.h>
 
 // nlohmann/json already included via Win32IDE.h
 
-namespace {
+namespace
+{
 bool isTruthyEnv(const char* value)
 {
     if (!value || !*value)
@@ -69,6 +73,62 @@ std::string compactSwarmSummary(const std::string& summary)
         end = summary.size();
     return summary.substr(pos, end - pos);
 }
+
+struct BackendMemorySnapshot
+{
+    DWORD memoryLoadPercent = 0;
+    SIZE_T processWorkingSetBytes = 0;
+    bool valid = false;
+};
+
+BackendMemorySnapshot sampleBackendMemorySnapshot()
+{
+    BackendMemorySnapshot snapshot;
+
+    MEMORYSTATUSEX mem{};
+    mem.dwLength = sizeof(mem);
+    if (GlobalMemoryStatusEx(&mem))
+    {
+        snapshot.memoryLoadPercent = mem.dwMemoryLoad;
+        snapshot.valid = true;
+    }
+
+    PROCESS_MEMORY_COUNTERS_EX pmc{};
+    if (GetProcessMemoryInfo(GetCurrentProcess(), reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&pmc), sizeof(pmc)))
+    {
+        snapshot.processWorkingSetBytes = pmc.WorkingSetSize;
+        snapshot.valid = true;
+    }
+
+    return snapshot;
+}
+
+std::string clampPromptForHeapSafety(const std::string& prompt)
+{
+    static constexpr size_t kMaxPromptBytes = 128ull * 1024ull;
+    if (prompt.size() <= kMaxPromptBytes)
+    {
+        return prompt;
+    }
+
+    std::string clamped = prompt.substr(0, kMaxPromptBytes);
+    clamped += "\n\n[truncated by RawrXD: prompt exceeded backend heap-safety limit]";
+    return clamped;
+}
+
+bool isCriticalBackendMemoryPressure(const BackendMemorySnapshot& snapshot)
+{
+    static constexpr SIZE_T kCriticalWorkingSetBytes = 3ull * 1024ull * 1024ull * 1024ull;
+    return snapshot.valid &&
+           (snapshot.memoryLoadPercent >= 92u || snapshot.processWorkingSetBytes >= kCriticalWorkingSetBytes);
+}
+
+bool isElevatedBackendMemoryPressure(const BackendMemorySnapshot& snapshot)
+{
+    static constexpr SIZE_T kElevatedWorkingSetBytes = 2ull * 1024ull * 1024ull * 1024ull;
+    return snapshot.valid &&
+           (snapshot.memoryLoadPercent >= 85u || snapshot.processWorkingSetBytes >= kElevatedWorkingSetBytes);
+}
 }  // namespace
 
 // ============================================================================
@@ -81,6 +141,9 @@ void Win32IDE::initBackendManager()
         return;
 
     logFunction("initBackendManager");
+
+    // Mandatory GPU gate — IDE refuses to host any backend without a GPU.
+    rxd::gpu::require();
 
     // ---- Populate default configs for each backend type --------------------
     auto& local = m_backendConfigs[(size_t)AIBackendType::LocalGGUF];
@@ -96,8 +159,8 @@ void Win32IDE::initBackendManager()
 
     auto& ollama = m_backendConfigs[(size_t)AIBackendType::Ollama];
     ollama.type = AIBackendType::Ollama;
-    ollama.name = "Ollama";
-    ollama.endpoint = "http://localhost:11434";
+    ollama.name = "native";
+    ollama.endpoint = "http://localhost:11435";
     ollama.model = "";  // Will be populated from Ollama /api/tags or settings
     ollama.apiKey = "";
     ollama.enabled = true;
@@ -111,7 +174,7 @@ void Win32IDE::initBackendManager()
     openai.endpoint = "https://api.openai.com";
     openai.model = "gpt-4o";
     openai.apiKey = "";
-    openai.enabled = false;  // Disabled until API key set
+    openai.enabled = true;   // Enabled by default; requests gated on API key presence
     openai.timeoutMs = 30000;
     openai.maxTokens = 4096;
     openai.temperature = 0.7f;
@@ -122,7 +185,7 @@ void Win32IDE::initBackendManager()
     claude.endpoint = "https://api.anthropic.com";
     claude.model = "claude-sonnet-4-20250514";
     claude.apiKey = "";
-    claude.enabled = false;  // Disabled until API key set
+    claude.enabled = true;   // Enabled by default; requests gated on API key presence
     claude.timeoutMs = 30000;
     claude.maxTokens = 4096;
     claude.temperature = 0.7f;
@@ -133,7 +196,7 @@ void Win32IDE::initBackendManager()
     gemini.endpoint = "https://generativelanguage.googleapis.com";
     gemini.model = "gemini-2.0-flash";
     gemini.apiKey = "";
-    gemini.enabled = false;  // Disabled until API key set
+    gemini.enabled = true;   // Enabled by default; requests gated on API key presence
     gemini.timeoutMs = 30000;
     gemini.maxTokens = 4096;
     gemini.temperature = 0.7f;
@@ -192,25 +255,25 @@ void Win32IDE::initBackendManager()
     // ---- Load saved configs (overrides defaults) ---------------------------
     loadBackendConfigs();
 
-    // ---- Auto-detect Ollama model if still empty ----------------------------
+    // ---- Auto-detect native model if still empty ----------------------------
     {
         auto& ollamaCfg = m_backendConfigs[(size_t)AIBackendType::Ollama];
         if (ollamaCfg.model.empty() && ollamaCfg.enabled)
         {
             try
             {
-                RawrXD::Agent::OllamaConfig probeCfg;
+                RawrXD::Agent::NativeInferenceConfig probeCfg;
                 probeCfg.host = "127.0.0.1";
-                probeCfg.port = 11434;
+                probeCfg.port = 11435;
                 probeCfg.timeout_ms = 3000;
-                RawrXD::Agent::AgentOllamaClient probeClient(probeCfg);
+                RawrXD::Agent::NativeInferenceClient probeClient(probeCfg);
                 if (probeClient.TestConnection())
                 {
                     auto models = probeClient.ListModels();
                     if (!models.empty())
                     {
                         ollamaCfg.model = models[0];
-                        logInfo("[BackendSwitcher] Auto-detected Ollama model: " + ollamaCfg.model);
+                        logInfo("[BackendSwitcher] Auto-detected native model: " + ollamaCfg.model);
                     }
                 }
             }
@@ -229,11 +292,14 @@ void Win32IDE::initBackendManager()
 
 void Win32IDE::shutdownBackendManager()
 {
-    if (!m_backendManagerInitialized)
-        return;
     logFunction("shutdownBackendManager");
-    saveBackendConfigs();
-    m_backendManagerInitialized = false;
+    if (m_backendManagerInitialized)
+    {
+        saveBackendConfigs();
+        m_backendManagerInitialized = false;
+    }
+    // Graceful TitanHost exit whether or not backends.json was ever saved.
+    RawrXD::TitanProxy::instance().shutdown();
 }
 
 // ============================================================================
@@ -260,7 +326,7 @@ std::string Win32IDE::getBackendConfigFilePath() const
 void Win32IDE::loadBackendConfigs()
 {
     std::string path = getBackendConfigFilePath();
-    std::ifstream ifs(path);
+    std::ifstream ifs(path, std::ios::binary | std::ios::ate);
     if (!ifs.is_open())
     {
         logInfo("[BackendSwitcher] No saved config at " + path + " — using defaults");
@@ -269,6 +335,19 @@ void Win32IDE::loadBackendConfigs()
 
     try
     {
+        const std::streampos endPos = ifs.tellg();
+        if (endPos <= 0)
+        {
+            return;
+        }
+        const size_t fileSize = static_cast<size_t>(endPos);
+        static constexpr size_t kMaxBackendConfigBytes = 4u * 1024u * 1024u;
+        if (fileSize > kMaxBackendConfigBytes)
+        {
+            logError("loadBackendConfigs", "Config file too large: " + path);
+            return;
+        }
+        ifs.seekg(0);
         std::string fileContent((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
         nlohmann::json j = nlohmann::json::parse(fileContent);
 
@@ -477,6 +556,9 @@ std::string Win32IDE::getBackendStatusString() const
         ss << "     endpoint: " << (cfg.endpoint.empty() ? "(native)" : cfg.endpoint) << "\n";
         ss << "     model:    " << (cfg.model.empty() ? "(loaded file)" : cfg.model) << "\n";
     }
+    // Native stream routing env label temporarily disabled - function not found
+    // ss << "  Native stream routing (env): " << RawrXD::Agent::GetOllamaStreamRoutingEnvLabel() << "\n";
+    ss << "  Native stream routing (env): (disabled)\n";
     return ss.str();
 }
 
@@ -564,7 +646,7 @@ bool Win32IDE::probeBackendHealth(AIBackendType type)
                 std::string resp = httpPost(cfg.endpoint + "/api/tags", "", {}, 5000);
                 healthy = !resp.empty() && resp.find("models") != std::string::npos;
                 if (!healthy)
-                    error = "Ollama not responding or no models available";
+                    error = "Native host not responding or no models available";
             }
             catch (...)
             {
@@ -625,7 +707,7 @@ bool Win32IDE::probeBackendHealth(AIBackendType type)
                 healthy = VSIXLoader::GetInstance().IsPluginLoaded("github.copilot");
                 if (!healthy)
                     error = "GitHub Copilot extension not loaded. Use AI menu > Install from VSIX, or switch to "
-                            "Ollama/Local.";
+                            "Native/Local.";
             }
             catch (...)
             {
@@ -642,7 +724,7 @@ bool Win32IDE::probeBackendHealth(AIBackendType type)
                 healthy = VSIXLoader::GetInstance().IsPluginLoaded("amazonwebservices.aws-toolkit-vscode");
                 if (!healthy)
                     error =
-                        "Amazon Q extension not loaded. Use AI menu > Install from VSIX, or switch to Ollama/Local.";
+                        "Amazon Q extension not loaded. Use AI menu > Install from VSIX, or switch to Native/Local.";
             }
             catch (...)
             {
@@ -711,6 +793,22 @@ std::string Win32IDE::routeInferenceRequest(const std::string& prompt)
     logInfo(std::string("[InferenceFacade] ") + rawrxd::ide::inferenceFacadeLaneField(backendTypeString(active)) +
             " op=routeInferenceRequest");
 
+    std::string effectivePrompt = clampPromptForHeapSafety(prompt);
+    const BackendMemorySnapshot memorySnapshot = sampleBackendMemorySnapshot();
+
+    if (active == AIBackendType::LocalGGUF && m_nativeEngine && m_nativeEngine->IsModelLoaded() &&
+        isElevatedBackendMemoryPressure(memorySnapshot))
+    {
+        m_nativeEngine->ClearCache();
+        appendToOutput("[InferenceFacade] Local GGUF cache cleared preemptively under memory pressure.\n", "General",
+                       OutputSeverity::Warning);
+        if (isCriticalBackendMemoryPressure(memorySnapshot))
+        {
+            return "[BackendSwitcher] Error: Local GGUF inference aborted due to critical memory pressure after cache "
+                   "reset.";
+        }
+    }
+
     std::string result;
     auto startTime = std::chrono::steady_clock::now();
     bool success = false;
@@ -718,28 +816,28 @@ std::string Win32IDE::routeInferenceRequest(const std::string& prompt)
     switch (active)
     {
         case AIBackendType::LocalGGUF:
-            result = routeToLocalGGUF(prompt);
+            result = routeToLocalGGUF(effectivePrompt);
             break;
         case AIBackendType::Ollama:
-            result = routeToOllama(prompt);
+            result = routeToOllama(effectivePrompt);
             break;
         case AIBackendType::OpenAI:
-            result = routeToOpenAI(prompt);
+            result = routeToOpenAI(effectivePrompt);
             break;
         case AIBackendType::Claude:
-            result = routeToClaude(prompt);
+            result = routeToClaude(effectivePrompt);
             break;
         case AIBackendType::Gemini:
-            result = routeToGemini(prompt);
+            result = routeToGemini(effectivePrompt);
             break;
         case AIBackendType::ReasoningEngine:
-            result = this->routeToReasoningEngine(prompt);
+            result = this->routeToReasoningEngine(effectivePrompt);
             break;
         case AIBackendType::GitHubCopilot:
-            result = routeToGitHubCopilot(prompt);
+            result = routeToGitHubCopilot(effectivePrompt);
             break;
         case AIBackendType::AmazonQ:
-            result = routeToAmazonQ(prompt);
+            result = routeToAmazonQ(effectivePrompt);
             break;
         default:
             result = "[BackendSwitcher] Unknown active backend";
@@ -809,10 +907,10 @@ std::string Win32IDE::routeToOllama(const std::string& prompt)
     const auto& cfg = m_backendConfigs[(size_t)AIBackendType::Ollama];
     if (cfg.endpoint.empty())
     {
-        return "[BackendSwitcher] Error: Ollama endpoint not configured";
+        return "[BackendSwitcher] Error: native endpoint not configured";
     }
 
-    // Build Ollama /api/generate request body
+    // Build native /api/generate request body
     nlohmann::json reqBody;
     reqBody["model"] = cfg.model;
     reqBody["prompt"] = prompt;
@@ -830,13 +928,13 @@ std::string Win32IDE::routeToOllama(const std::string& prompt)
         }
         if (rj.contains("error"))
         {
-            return "[BackendSwitcher] Error (Ollama): " + rj["error"].get<std::string>();
+            return "[BackendSwitcher] Error (native): " + rj["error"].get<std::string>();
         }
-        return "[BackendSwitcher] Error (Ollama): Unexpected response format";
+        return "[BackendSwitcher] Error (native): Unexpected response format";
     }
     catch (const std::exception& e)
     {
-        return std::string("[BackendSwitcher] Error (Ollama): ") + e.what();
+        return std::string("[BackendSwitcher] Error (native): ") + e.what();
     }
 }
 
@@ -1199,7 +1297,19 @@ std::string Win32IDE::httpPost(const std::string& url, const std::string& body, 
     size_t colonPos = host.find(':');
     if (colonPos != std::string::npos)
     {
-        port = std::stoi(host.substr(colonPos + 1));
+        try
+        {
+            const int parsedPort = std::stoi(host.substr(colonPos + 1));
+            if (parsedPort < 1 || parsedPort > 65535)
+            {
+                return "";
+            }
+            port = parsedPort;
+        }
+        catch (...)
+        {
+            return "";
+        }
         host = host.substr(0, colonPos);
     }
 
@@ -1241,6 +1351,14 @@ std::string Win32IDE::httpPost(const std::string& url, const std::string& body, 
     }
 
     // Send request
+    static constexpr size_t kMaxHttpRequestBytes = 8u * 1024u * 1024u;
+    if (body.size() > kMaxHttpRequestBytes)
+    {
+        WinHttpCloseHandle(hRequest);
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+        return "";
+    }
     BOOL sent = WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0,
                                    body.empty() ? WINHTTP_NO_REQUEST_DATA : (LPVOID)body.c_str(), (DWORD)body.size(),
                                    (DWORD)body.size(), 0);
@@ -1262,6 +1380,8 @@ std::string Win32IDE::httpPost(const std::string& url, const std::string& body, 
 
     // Read response
     std::string responseBody;
+    static constexpr size_t kMaxHttpResponseBytes = 256u * 1024u * 1024u;
+    size_t totalRead = 0;
     DWORD bytesRead = 0;
     DWORD bytesAvailable = 0;
     do
@@ -1273,6 +1393,14 @@ std::string Win32IDE::httpPost(const std::string& url, const std::string& body, 
 
         std::vector<char> buf(bytesAvailable + 1, 0);
         WinHttpReadData(hRequest, buf.data(), bytesAvailable, &bytesRead);
+        totalRead += static_cast<size_t>(bytesRead);
+        if (totalRead > kMaxHttpResponseBytes)
+        {
+            WinHttpCloseHandle(hRequest);
+            WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            return "";
+        }
         responseBody.append(buf.data(), bytesRead);
     } while (bytesRead > 0);
 
@@ -1334,11 +1462,10 @@ void Win32IDE::updateStatusBarBackend()
     // Append live GPU dispatch counters when the Vulkan compute layer is linked
 #if defined(RAWRXD_VULKAN_COMPUTE_LINKED)
     {
-        uint64_t attempts = 0, success = 0, fallback = 0,
-                 asm_calls = 0, invalid_abi = 0, pipeline_miss = 0;
-        VulkanKernel_GetRawDispatchCounters(&attempts, &success, &fallback,
-                                            &asm_calls, &invalid_abi, &pipeline_miss);
-        if (attempts > 0) {
+        uint64_t attempts = 0, success = 0, fallback = 0, asm_calls = 0, invalid_abi = 0, pipeline_miss = 0;
+        VulkanKernel_GetRawDispatchCounters(&attempts, &success, &fallback, &asm_calls, &invalid_abi, &pipeline_miss);
+        if (attempts > 0)
+        {
             label += " | " + std::to_string(success) + "d";
             if (fallback > 0)
                 label += " (" + std::to_string(fallback) + " fb)";
@@ -1369,7 +1496,7 @@ std::string Win32IDE::backendTypeString(AIBackendType type) const
         case AIBackendType::LocalGGUF:
             return "LocalGGUF";
         case AIBackendType::Ollama:
-            return "Ollama";
+            return "native";
         case AIBackendType::OpenAI:
             return "OpenAI";
         case AIBackendType::Claude:
@@ -1385,7 +1512,7 @@ Win32IDE::Win32IDE::AIBackendType Win32IDE::backendTypeFromString(const std::str
 {
     if (name == "LocalGGUF" || name == "local" || name == "Local GGUF")
         return AIBackendType::LocalGGUF;
-    if (name == "Ollama" || name == "ollama")
+    if (name == "native" || name == "native")
         return AIBackendType::Ollama;
     if (name == "OpenAI" || name == "openai")
         return AIBackendType::OpenAI;

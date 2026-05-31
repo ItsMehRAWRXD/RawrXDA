@@ -1256,1971 +1256,1971 @@
     },
     {
       "id": 60313,
-      "path": "Ship/QtMigrationTracker.hpp"
+      "path": "Ship/MigrationProgressTracker.hpp"
     },
     {
       "id": 60314,
-      "path": "Ship/QtReplacements.hpp"
+      "path": "Ship/RawrCompatIo.hpp"
     },
     {
       "id": 60315,
-      "path": "Ship/RawrEngine.py"
+      "path": "Ship/StdReplacements.hpp"
     },
     {
       "id": 60316,
-      "path": "Ship/RawrXD_AICompletion.c"
+      "path": "Ship/RawrEngine.py"
     },
     {
       "id": 60317,
-      "path": "Ship/RawrXD_AdvancedCodingAgent.cpp"
+      "path": "Ship/RawrXD_AICompletion.c"
     },
     {
       "id": 60318,
-      "path": "Ship/RawrXD_Agent.hpp"
+      "path": "Ship/RawrXD_AdvancedCodingAgent.cpp"
     },
     {
       "id": 60319,
-      "path": "Ship/RawrXD_AgentCoordinator.cpp"
+      "path": "Ship/RawrXD_Agent.hpp"
     },
     {
       "id": 60320,
-      "path": "Ship/RawrXD_AgentCoordinator_Minimal.cpp"
+      "path": "Ship/RawrXD_AgentCoordinator.cpp"
     },
     {
       "id": 60321,
-      "path": "Ship/RawrXD_AgentPool.cpp"
+      "path": "Ship/RawrXD_AgentCoordinator_Minimal.cpp"
     },
     {
       "id": 60322,
-      "path": "Ship/RawrXD_Agent_Complete.hpp"
+      "path": "Ship/RawrXD_AgentPool.cpp"
     },
     {
       "id": 60323,
-      "path": "Ship/RawrXD_Agent_Final.cpp"
+      "path": "Ship/RawrXD_Agent_Complete.hpp"
     },
     {
       "id": 60324,
-      "path": "Ship/RawrXD_AgenticController.cpp"
+      "path": "Ship/RawrXD_Agent_Final.cpp"
     },
     {
       "id": 60325,
-      "path": "Ship/RawrXD_AgenticEngine.c"
+      "path": "Ship/RawrXD_AgenticController.cpp"
     },
     {
       "id": 60326,
-      "path": "Ship/RawrXD_AgenticEngine.cpp"
+      "path": "Ship/RawrXD_AgenticEngine.c"
     },
     {
       "id": 60327,
-      "path": "Ship/RawrXD_CLI_Standalone.cpp"
+      "path": "Ship/RawrXD_AgenticEngine.cpp"
     },
     {
       "id": 60328,
-      "path": "Ship/RawrXD_CLI_Titan.asm"
+      "path": "Ship/RawrXD_CLI_Standalone.cpp"
     },
     {
       "id": 60329,
-      "path": "Ship/RawrXD_CloudClient.hpp"
+      "path": "Ship/RawrXD_CLI_Titan.asm"
     },
     {
       "id": 60330,
-      "path": "Ship/RawrXD_CodebaseEngine.hpp"
+      "path": "Ship/RawrXD_CloudClient.hpp"
     },
     {
       "id": 60331,
-      "path": "Ship/RawrXD_Complete.hpp"
+      "path": "Ship/RawrXD_CodebaseEngine.hpp"
     },
     {
       "id": 60332,
-      "path": "Ship/RawrXD_Configuration.cpp"
+      "path": "Ship/RawrXD_Complete.hpp"
     },
     {
       "id": 60333,
-      "path": "Ship/RawrXD_CopilotBridge.cpp"
+      "path": "Ship/RawrXD_Configuration.cpp"
     },
     {
       "id": 60334,
-      "path": "Ship/RawrXD_Core.cpp"
+      "path": "Ship/RawrXD_CopilotBridge.cpp"
     },
     {
       "id": 60335,
-      "path": "Ship/RawrXD_ErrorHandler.cpp"
+      "path": "Ship/RawrXD_Core.cpp"
     },
     {
       "id": 60336,
-      "path": "Ship/RawrXD_ErrorRecovery.hpp"
+      "path": "Ship/RawrXD_ErrorHandler.cpp"
     },
     {
       "id": 60337,
-      "path": "Ship/RawrXD_Executor.cpp"
+      "path": "Ship/RawrXD_ErrorRecovery.hpp"
     },
     {
       "id": 60338,
-      "path": "Ship/RawrXD_ExtensionMgr.hpp"
+      "path": "Ship/RawrXD_Executor.cpp"
     },
     {
       "id": 60339,
-      "path": "Ship/RawrXD_FileBrowser.c"
+      "path": "Ship/RawrXD_ExtensionMgr.hpp"
     },
     {
       "id": 60340,
-      "path": "Ship/RawrXD_FileManager_Win32.cpp"
+      "path": "Ship/RawrXD_FileBrowser.c"
     },
     {
       "id": 60341,
-      "path": "Ship/RawrXD_FileOperations.cpp"
+      "path": "Ship/RawrXD_FileManager_Win32.cpp"
     },
     {
       "id": 60342,
-      "path": "Ship/RawrXD_FileOperations.hpp"
+      "path": "Ship/RawrXD_FileOperations.cpp"
     },
     {
       "id": 60343,
-      "path": "Ship/RawrXD_FileWatcher.hpp"
+      "path": "Ship/RawrXD_FileOperations.hpp"
     },
     {
       "id": 60344,
-      "path": "Ship/RawrXD_FoundationTest.cpp"
+      "path": "Ship/RawrXD_FileWatcher.hpp"
     },
     {
       "id": 60345,
-      "path": "Ship/RawrXD_Foundation_Integration.cpp"
+      "path": "Ship/RawrXD_FoundationTest.cpp"
     },
     {
       "id": 60346,
-      "path": "Ship/RawrXD_GUI_Titan.asm"
+      "path": "Ship/RawrXD_Foundation_Integration.cpp"
     },
     {
       "id": 60347,
-      "path": "Ship/RawrXD_HybridCloudMgr.hpp"
+      "path": "Ship/RawrXD_GUI_Titan.asm"
     },
     {
       "id": 60348,
-      "path": "Ship/RawrXD_InferenceEngine.c"
+      "path": "Ship/RawrXD_HybridCloudMgr.hpp"
     },
     {
       "id": 60349,
-      "path": "Ship/RawrXD_InferenceEngine_Win32.cpp"
+      "path": "Ship/RawrXD_InferenceEngine.c"
     },
     {
       "id": 60350,
-      "path": "Ship/RawrXD_IntegrationTest.hpp"
+      "path": "Ship/RawrXD_InferenceEngine_Win32.cpp"
     },
     {
       "id": 60351,
-      "path": "Ship/RawrXD_JSON.hpp"
+      "path": "Ship/RawrXD_IntegrationTest.hpp"
     },
     {
       "id": 60352,
-      "path": "Ship/RawrXD_LSPClient.c"
+      "path": "Ship/RawrXD_JSON.hpp"
     },
     {
       "id": 60353,
-      "path": "Ship/RawrXD_MainWindow_Win32.cpp"
+      "path": "Ship/RawrXD_LSPClient.c"
     },
     {
       "id": 60354,
-      "path": "Ship/RawrXD_MemoryManager.cpp"
+      "path": "Ship/RawrXD_MainWindow_Win32.cpp"
     },
     {
       "id": 60355,
-      "path": "Ship/RawrXD_MetaLearn.hpp"
+      "path": "Ship/RawrXD_MemoryManager.cpp"
     },
     {
       "id": 60356,
-      "path": "Ship/RawrXD_ModelLoader.cpp"
+      "path": "Ship/RawrXD_MetaLearn.hpp"
     },
     {
       "id": 60357,
-      "path": "Ship/RawrXD_ModelRouter.c"
+      "path": "Ship/RawrXD_ModelLoader.cpp"
     },
     {
       "id": 60358,
-      "path": "Ship/RawrXD_NativeModelBridge.asm"
+      "path": "Ship/RawrXD_ModelRouter.c"
     },
     {
       "id": 60359,
-      "path": "Ship/RawrXD_NativeModelBridge_CLEAN.asm"
+      "path": "Ship/RawrXD_NativeModelBridge.asm"
     },
     {
       "id": 60360,
-      "path": "Ship/RawrXD_NativeModelBridge_FRESH.asm"
+      "path": "Ship/RawrXD_NativeModelBridge_CLEAN.asm"
     },
     {
       "id": 60361,
-      "path": "Ship/RawrXD_NativeModelBridge_PRODUCTION.asm"
+      "path": "Ship/RawrXD_NativeModelBridge_FRESH.asm"
     },
     {
       "id": 60362,
-      "path": "Ship/RawrXD_NativeModelBridge_TEST.asm"
+      "path": "Ship/RawrXD_NativeModelBridge_PRODUCTION.asm"
     },
     {
       "id": 60363,
-      "path": "Ship/RawrXD_NativeModelBridge_v2_FIXED.asm"
+      "path": "Ship/RawrXD_NativeModelBridge_TEST.asm"
     },
     {
       "id": 60364,
-      "path": "Ship/RawrXD_Overclock.hpp"
+      "path": "Ship/RawrXD_NativeModelBridge_v2_FIXED.asm"
     },
     {
       "id": 60365,
-      "path": "Ship/RawrXD_PlanOrchestrator.c"
+      "path": "Ship/RawrXD_Overclock.hpp"
     },
     {
       "id": 60366,
-      "path": "Ship/RawrXD_Planner.hpp"
+      "path": "Ship/RawrXD_PlanOrchestrator.c"
     },
     {
       "id": 60367,
-      "path": "Ship/RawrXD_ReleaseAgent.hpp"
+      "path": "Ship/RawrXD_Planner.hpp"
     },
     {
       "id": 60368,
-      "path": "Ship/RawrXD_ResourceManager_Win32.cpp"
+      "path": "Ship/RawrXD_ReleaseAgent.hpp"
     },
     {
       "id": 60369,
-      "path": "Ship/RawrXD_Search.c"
+      "path": "Ship/RawrXD_ResourceManager_Win32.cpp"
     },
     {
       "id": 60370,
-      "path": "Ship/RawrXD_SelfPatch.hpp"
+      "path": "Ship/RawrXD_Search.c"
     },
     {
       "id": 60371,
-      "path": "Ship/RawrXD_Settings.c"
+      "path": "Ship/RawrXD_SelfPatch.hpp"
     },
     {
       "id": 60372,
-      "path": "Ship/RawrXD_SettingsManager_Win32.cpp"
+      "path": "Ship/RawrXD_Settings.c"
     },
     {
       "id": 60373,
-      "path": "Ship/RawrXD_Streaming_Orchestrator.asm"
+      "path": "Ship/RawrXD_SettingsManager_Win32.cpp"
     },
     {
       "id": 60374,
-      "path": "Ship/RawrXD_SymbolIndex.hpp"
+      "path": "Ship/RawrXD_Streaming_Orchestrator.asm"
     },
     {
       "id": 60375,
-      "path": "Ship/RawrXD_SyntaxHL.c"
+      "path": "Ship/RawrXD_SymbolIndex.hpp"
     },
     {
       "id": 60376,
-      "path": "Ship/RawrXD_SystemMonitor.cpp"
+      "path": "Ship/RawrXD_SyntaxHL.c"
     },
     {
       "id": 60377,
-      "path": "Ship/RawrXD_TaskScheduler.cpp"
+      "path": "Ship/RawrXD_SystemMonitor.cpp"
     },
     {
       "id": 60378,
-      "path": "Ship/RawrXD_TerminalManager_Win32.cpp"
+      "path": "Ship/RawrXD_TaskScheduler.cpp"
     },
     {
       "id": 60379,
-      "path": "Ship/RawrXD_TerminalMgr.c"
+      "path": "Ship/RawrXD_TerminalManager_Win32.cpp"
     },
     {
       "id": 60380,
-      "path": "Ship/RawrXD_TestRunner.cpp"
+      "path": "Ship/RawrXD_TerminalMgr.c"
     },
     {
       "id": 60381,
-      "path": "Ship/RawrXD_Test_Components.cpp"
+      "path": "Ship/RawrXD_TestRunner.cpp"
     },
     {
       "id": 60382,
-      "path": "Ship/RawrXD_TextEditor_Win32.cpp"
+      "path": "Ship/RawrXD_Test_Components.cpp"
     },
     {
       "id": 60383,
-      "path": "Ship/RawrXD_Titan_Engine.asm"
+      "path": "Ship/RawrXD_TextEditor_Win32.cpp"
     },
     {
       "id": 60384,
-      "path": "Ship/RawrXD_Titan_Kernel.asm"
+      "path": "Ship/RawrXD_Titan_Engine.asm"
     },
     {
       "id": 60385,
-      "path": "Ship/RawrXD_Titan_MetaReverse.asm"
+      "path": "Ship/RawrXD_Titan_Kernel.asm"
     },
     {
       "id": 60386,
-      "path": "Ship/RawrXD_ToolRegistry.hpp"
+      "path": "Ship/RawrXD_Titan_MetaReverse.asm"
     },
     {
       "id": 60387,
-      "path": "Ship/RawrXD_WebView.hpp"
+      "path": "Ship/RawrXD_ToolRegistry.hpp"
     },
     {
       "id": 60388,
-      "path": "Ship/RawrXD_Win32_IDE.cpp"
+      "path": "Ship/RawrXD_WebView.hpp"
     },
     {
       "id": 60389,
-      "path": "Ship/RawrXD_cli.asm"
+      "path": "Ship/RawrXD_Win32_IDE.cpp"
     },
     {
       "id": 60390,
-      "path": "Ship/RawrXD_gui.html"
+      "path": "Ship/RawrXD_cli.asm"
     },
     {
       "id": 60391,
-      "path": "Ship/RawrXD_host.c"
+      "path": "Ship/RawrXD_gui.html"
     },
     {
       "id": 60392,
-      "path": "Ship/ReverseEngineered_Internals.hpp"
+      "path": "Ship/RawrXD_host.c"
     },
     {
       "id": 60393,
-      "path": "Ship/START_HERE.ps1"
+      "path": "Ship/ReverseEngineered_Internals.hpp"
     },
     {
       "id": 60394,
-      "path": "Ship/Scan-QtDependencies.ps1"
+      "path": "Ship/START_HERE.ps1"
     },
     {
       "id": 60395,
-      "path": "Ship/Titan_InferenceCore.asm"
+      "path": "Ship/Scan-QtDependencies.ps1"
     },
     {
       "id": 60396,
-      "path": "Ship/Titan_Streaming_Orchestrator_Fixed.asm"
+      "path": "Ship/Titan_InferenceCore.asm"
     },
     {
       "id": 60397,
-      "path": "Ship/ToolExecutionEngine.hpp"
+      "path": "Ship/Titan_Streaming_Orchestrator_Fixed.asm"
     },
     {
       "id": 60398,
-      "path": "Ship/ToolImplementations.hpp"
+      "path": "Ship/ToolExecutionEngine.hpp"
     },
     {
       "id": 60399,
-      "path": "Ship/Verify-QtRemoval.ps1"
+      "path": "Ship/ToolImplementations.hpp"
     },
     {
       "id": 60400,
-      "path": "Ship/Win32UIIntegration.hpp"
+      "path": "Ship/Verify-QtRemoval.ps1"
     },
     {
       "id": 60401,
-      "path": "Ship/Win32_HexConsole.hpp"
+      "path": "Ship/Win32UIIntegration.hpp"
     },
     {
       "id": 60402,
-      "path": "Ship/Win32_HotpatchManager.hpp"
+      "path": "Ship/Win32_HexConsole.hpp"
     },
     {
       "id": 60403,
-      "path": "Ship/Win32_IDE_Complete.cpp"
+      "path": "Ship/Win32_HotpatchManager.hpp"
     },
     {
       "id": 60404,
-      "path": "Ship/Win32_InferenceEngine.hpp"
+      "path": "Ship/Win32_IDE_Complete.cpp"
     },
     {
       "id": 60405,
-      "path": "Ship/Win32_InferenceEngine_Integration.hpp"
+      "path": "Ship/Win32_InferenceEngine.hpp"
     },
     {
       "id": 60406,
-      "path": "Ship/Win32_MainWindow.hpp"
+      "path": "Ship/Win32_InferenceEngine_Integration.hpp"
     },
     {
       "id": 60407,
-      "path": "Ship/agent_kernel_main.hpp"
+      "path": "Ship/Win32_MainWindow.hpp"
     },
     {
       "id": 60408,
-      "path": "Ship/benchmark_suite.cpp"
+      "path": "Ship/agent_kernel_main.hpp"
     },
     {
       "id": 60409,
-      "path": "Ship/build.bat"
+      "path": "Ship/benchmark_suite.cpp"
     },
     {
       "id": 60410,
-      "path": "Ship/build_agent.bat"
+      "path": "Ship/build.bat"
     },
     {
       "id": 60411,
-      "path": "Ship/build_agentic.bat"
+      "path": "Ship/build_agent.bat"
     },
     {
       "id": 60412,
-      "path": "Ship/build_all.bat"
+      "path": "Ship/build_agentic.bat"
     },
     {
       "id": 60413,
-      "path": "Ship/build_and_test_complete.bat"
+      "path": "Ship/build_all.bat"
     },
     {
       "id": 60414,
-      "path": "Ship/build_batch3.bat"
+      "path": "Ship/build_and_test_complete.bat"
     },
     {
       "id": 60415,
-      "path": "Ship/build_bridge_v2.bat"
+      "path": "Ship/build_batch3.bat"
     },
     {
       "id": 60416,
-      "path": "Ship/build_complete.bat"
+      "path": "Ship/build_bridge_v2.bat"
     },
     {
       "id": 60417,
-      "path": "Ship/build_coordinator.bat"
+      "path": "Ship/build_complete.bat"
     },
     {
       "id": 60418,
-      "path": "Ship/build_core.bat"
+      "path": "Ship/build_coordinator.bat"
     },
     {
       "id": 60419,
-      "path": "Ship/build_editor_components.bat"
+      "path": "Ship/build_core.bat"
     },
     {
       "id": 60420,
-      "path": "Ship/build_errorhandler.bat"
+      "path": "Ship/build_editor_components.bat"
     },
     {
       "id": 60421,
-      "path": "Ship/build_foundation.bat"
+      "path": "Ship/build_errorhandler.bat"
     },
     {
       "id": 60422,
-      "path": "Ship/build_foundation_test.bat"
+      "path": "Ship/build_foundation.bat"
     },
     {
       "id": 60423,
-      "path": "Ship/build_inferenceengine_win32.bat"
+      "path": "Ship/build_foundation_test.bat"
     },
     {
       "id": 60424,
-      "path": "Ship/build_model_bridge.bat"
+      "path": "Ship/build_inferenceengine_win32.bat"
     },
     {
       "id": 60425,
-      "path": "Ship/build_modelloader.bat"
+      "path": "Ship/build_model_bridge.bat"
     },
     {
       "id": 60426,
-      "path": "Ship/build_monitor.bat"
+      "path": "Ship/build_modelloader.bat"
     },
     {
       "id": 60427,
-      "path": "Ship/build_native_core.bat"
+      "path": "Ship/build_monitor.bat"
     },
     {
       "id": 60428,
-      "path": "Ship/build_production.bat"
+      "path": "Ship/build_native_core.bat"
     },
     {
       "id": 60429,
-      "path": "Ship/build_scheduler.bat"
+      "path": "Ship/build_production.bat"
     },
     {
       "id": 60430,
-      "path": "Ship/build_service_components.bat"
+      "path": "Ship/build_scheduler.bat"
     },
     {
       "id": 60431,
-      "path": "Ship/build_ship_ide_v2.bat"
+      "path": "Ship/build_service_components.bat"
     },
     {
       "id": 60432,
-      "path": "Ship/build_standalone.bat"
+      "path": "Ship/build_ship_ide_v2.bat"
     },
     {
       "id": 60433,
-      "path": "Ship/build_tests.bat"
+      "path": "Ship/build_standalone.bat"
     },
     {
       "id": 60434,
-      "path": "Ship/build_titan.bat"
+      "path": "Ship/build_tests.bat"
     },
     {
       "id": 60435,
-      "path": "Ship/build_titan_engine.bat"
+      "path": "Ship/build_titan.bat"
     },
     {
       "id": 60436,
-      "path": "Ship/build_titan_kernel.bat"
+      "path": "Ship/build_titan_engine.bat"
     },
     {
       "id": 60437,
-      "path": "Ship/build_titan_meta.bat"
+      "path": "Ship/build_titan_kernel.bat"
     },
     {
       "id": 60438,
-      "path": "Ship/build_ui_components.bat"
+      "path": "Ship/build_titan_meta.bat"
     },
     {
       "id": 60439,
-      "path": "Ship/chat_server.py"
+      "path": "Ship/build_ui_components.bat"
     },
     {
       "id": 60440,
-      "path": "Ship/compile_coordinator.bat"
+      "path": "Ship/chat_server.py"
     },
     {
       "id": 60441,
-      "path": "Ship/context-window-widget.js"
+      "path": "Ship/compile_coordinator.bat"
     },
     {
       "id": 60442,
-      "path": "Ship/generate_test_gguf.py"
+      "path": "Ship/context-window-widget.js"
     },
     {
       "id": 60443,
-      "path": "Ship/include/metrics_endpoint.h"
+      "path": "Ship/generate_test_gguf.py"
     },
     {
       "id": 60444,
-      "path": "Ship/rawrxd_agentic.asm"
+      "path": "Ship/include/metrics_endpoint.h"
     },
     {
       "id": 60445,
-      "path": "Ship/rawrxd_bridge.asm"
+      "path": "Ship/rawrxd_agentic.asm"
     },
     {
       "id": 60446,
-      "path": "Ship/rawrxd_cli_local.py"
+      "path": "Ship/rawrxd_bridge.asm"
     },
     {
       "id": 60447,
-      "path": "Ship/src/cli_main.cpp"
+      "path": "Ship/rawrxd_cli_local.py"
     },
     {
       "id": 60448,
-      "path": "Ship/src/stress_test.cpp"
+      "path": "Ship/src/cli_main.cpp"
     },
     {
       "id": 60449,
-      "path": "Ship/test_dll.c"
+      "path": "Ship/src/stress_test.cpp"
     },
     {
       "id": 60450,
-      "path": "Ship/test_dll_basic.ps1"
+      "path": "Ship/test_dll.c"
     },
     {
       "id": 60451,
-      "path": "Ship/test_file_operations.cpp"
+      "path": "Ship/test_dll_basic.ps1"
     },
     {
       "id": 60452,
-      "path": "Ship/test_suite.cpp"
+      "path": "Ship/test_file_operations.cpp"
     },
     {
       "id": 60453,
-      "path": "Ship/test_titan_engine.ps1"
+      "path": "Ship/test_suite.cpp"
     },
     {
       "id": 60454,
-      "path": "Ship/test_titan_kernel.ps1"
+      "path": "Ship/test_titan_engine.ps1"
     },
     {
       "id": 60455,
-      "path": "Ship/tools/cli_main.cpp"
+      "path": "Ship/test_titan_kernel.ps1"
     },
     {
       "id": 60456,
-      "path": "Ship/tools/stress_test.cpp"
+      "path": "Ship/tools/cli_main.cpp"
     },
     {
       "id": 60457,
-      "path": "Ship/win64_api.inc"
+      "path": "Ship/tools/stress_test.cpp"
     },
     {
       "id": 60458,
-      "path": "ShowFullOutput.ps1"
+      "path": "Ship/win64_api.inc"
     },
     {
       "id": 60459,
-      "path": "SourceDigestionEngine.ps1"
+      "path": "ShowFullOutput.ps1"
     },
     {
       "id": 60460,
-      "path": "SourceDigestionOrchestrator.ps1"
+      "path": "SourceDigestionEngine.ps1"
     },
     {
       "id": 60461,
-      "path": "TEST_EVERYTHING.ps1"
+      "path": "SourceDigestionOrchestrator.ps1"
     },
     {
       "id": 60462,
-      "path": "Test-Agentic-Commands.ps1"
+      "path": "TEST_EVERYTHING.ps1"
     },
     {
       "id": 60463,
-      "path": "Test-Agentic-Execution.ps1"
+      "path": "Test-Agentic-Commands.ps1"
     },
     {
       "id": 60464,
-      "path": "Test-Agentic-Headless.ps1"
+      "path": "Test-Agentic-Execution.ps1"
     },
     {
       "id": 60465,
-      "path": "Test-All-Discovered-Features.ps1"
+      "path": "Test-Agentic-Headless.ps1"
     },
     {
       "id": 60466,
-      "path": "Test-AutonomousAgent.ps1"
+      "path": "Test-All-Discovered-Features.ps1"
     },
     {
       "id": 60467,
-      "path": "Test-Deep-Validation.ps1"
+      "path": "Test-AutonomousAgent.ps1"
     },
     {
       "id": 60468,
-      "path": "Test-Instructions-v3.2.0.ps1"
+      "path": "Test-Deep-Validation.ps1"
     },
     {
       "id": 60469,
-      "path": "Test-Live-Ollama.ps1"
+      "path": "Test-Instructions-v3.2.0.ps1"
     },
     {
       "id": 60470,
-      "path": "Test-Making-Station.ps1"
+      "path": "Test-Live-Ollama.ps1"
     },
     {
       "id": 60471,
-      "path": "Test-ProductionReadiness.ps1"
+      "path": "Test-Making-Station.ps1"
     },
     {
       "id": 60472,
-      "path": "Test-RawrXD-Full.ps1"
+      "path": "Test-ProductionReadiness.ps1"
     },
     {
       "id": 60473,
-      "path": "Test-Security-Settings-Fix.ps1"
+      "path": "Test-RawrXD-Full.ps1"
     },
     {
       "id": 60474,
-      "path": "Test-Simple-Opening.ps1"
+      "path": "Test-Security-Settings-Fix.ps1"
     },
     {
       "id": 60475,
-      "path": "Test-ZeroDependencySystem.ps1"
+      "path": "Test-Simple-Opening.ps1"
     },
     {
       "id": 60476,
-      "path": "Tiny-Home/include/aes.h"
+      "path": "Test-ZeroDependencySystem.ps1"
     },
     {
       "id": 60477,
-      "path": "Tiny-Home/include/config.h"
+      "path": "Tiny-Home/include/aes.h"
     },
     {
       "id": 60478,
-      "path": "Tiny-Home/include/crypto.h"
+      "path": "Tiny-Home/include/config.h"
     },
     {
       "id": 60479,
-      "path": "Tiny-Home/include/hotkey.h"
+      "path": "Tiny-Home/include/crypto.h"
     },
     {
       "id": 60480,
-      "path": "Tiny-Home/include/llm.h"
+      "path": "Tiny-Home/include/hotkey.h"
     },
     {
       "id": 60481,
-      "path": "Tiny-Home/include/network.h"
+      "path": "Tiny-Home/include/llm.h"
     },
     {
       "id": 60482,
-      "path": "Tiny-Home/include/viewer.h"
+      "path": "Tiny-Home/include/network.h"
     },
     {
       "id": 60483,
-      "path": "Tiny-Home/src/aes.cpp"
+      "path": "Tiny-Home/include/viewer.h"
     },
     {
       "id": 60484,
-      "path": "Tiny-Home/src/config.cpp"
+      "path": "Tiny-Home/src/aes.cpp"
     },
     {
       "id": 60485,
-      "path": "Tiny-Home/src/crypto.cpp"
+      "path": "Tiny-Home/src/config.cpp"
     },
     {
       "id": 60486,
-      "path": "Tiny-Home/src/hotkey.cpp"
+      "path": "Tiny-Home/src/crypto.cpp"
     },
     {
       "id": 60487,
-      "path": "Tiny-Home/src/llm.cpp"
+      "path": "Tiny-Home/src/hotkey.cpp"
     },
     {
       "id": 60488,
-      "path": "Tiny-Home/src/main.cpp"
+      "path": "Tiny-Home/src/llm.cpp"
     },
     {
       "id": 60489,
-      "path": "Tiny-Home/src/network.cpp"
+      "path": "Tiny-Home/src/main.cpp"
     },
     {
       "id": 60490,
-      "path": "Tiny-Home/src/viewer.cpp"
+      "path": "Tiny-Home/src/network.cpp"
     },
     {
       "id": 60491,
-      "path": "Tune-Custom-Models.ps1"
+      "path": "Tiny-Home/src/viewer.cpp"
     },
     {
       "id": 60492,
-      "path": "Universal-Reverse-Engineer.ps1"
+      "path": "Tune-Custom-Models.ps1"
     },
     {
       "id": 60493,
-      "path": "VALIDATE_BUILD_SYSTEM.ps1"
+      "path": "Universal-Reverse-Engineer.ps1"
     },
     {
       "id": 60494,
-      "path": "VALIDATE_REVERSE_ENGINEERING.ps1"
+      "path": "VALIDATE_BUILD_SYSTEM.ps1"
     },
     {
       "id": 60495,
-      "path": "Validate-BuildIntegrity.ps1"
+      "path": "VALIDATE_REVERSE_ENGINEERING.ps1"
     },
     {
       "id": 60496,
-      "path": "Validate-License.ps1"
+      "path": "Validate-BuildIntegrity.ps1"
     },
     {
       "id": 60497,
-      "path": "Validate-NumericControls.ps1"
+      "path": "Validate-License.ps1"
     },
     {
       "id": 60498,
-      "path": "Validate-RawrXD.ps1"
+      "path": "Validate-NumericControls.ps1"
     },
     {
       "id": 60499,
-      "path": "Verify-Build.ps1"
+      "path": "Validate-RawrXD.ps1"
     },
     {
       "id": 60500,
-      "path": "WebView2Shim.ps1"
+      "path": "Verify-Build.ps1"
     },
     {
       "id": 60501,
-      "path": "_check_syntax.js"
+      "path": "WebView2Shim.ps1"
     },
     {
       "id": 60502,
-      "path": "_fix_test_qt.py"
+      "path": "_check_syntax.js"
     },
     {
       "id": 60503,
-      "path": "agentic_build/auto_build.py"
+      "path": "_fix_test_qt.py"
     },
     {
       "id": 60504,
-      "path": "agentic_build/build.ps1"
+      "path": "agentic_build/auto_build.py"
     },
     {
       "id": 60505,
-      "path": "agentic_build/build_config.json"
+      "path": "agentic_build/build.ps1"
     },
     {
       "id": 60506,
-      "path": "agentic_build_generator.py"
+      "path": "agentic_build/build_config.json"
     },
     {
       "id": 60507,
-      "path": "aggressive_qt_purge.ps1"
+      "path": "agentic_build_generator.py"
     },
     {
       "id": 60508,
-      "path": "apply_link_fix_cmake.ps1"
+      "path": "aggressive_qt_purge.ps1"
     },
     {
       "id": 60509,
-      "path": "architectural_enhancements/SecurityEnhancements.ps1"
+      "path": "apply_link_fix_cmake.ps1"
     },
     {
       "id": 60510,
-      "path": "architectural_enhancements/ThreadingEnhancements.ps1"
+      "path": "architectural_enhancements/SecurityEnhancements.ps1"
     },
     {
       "id": 60511,
-      "path": "audit/audit.bat"
+      "path": "architectural_enhancements/ThreadingEnhancements.ps1"
     },
     {
       "id": 60512,
-      "path": "audit/interface_audit.py"
+      "path": "audit/audit.bat"
     },
     {
       "id": 60513,
-      "path": "audit/interface_manifest.json"
+      "path": "audit/interface_audit.py"
     },
     {
       "id": 60514,
-      "path": "audit_chatbot.ps1"
+      "path": "audit/interface_manifest.json"
     },
     {
       "id": 60515,
-      "path": "audit_html.py"
+      "path": "audit_chatbot.ps1"
     },
     {
       "id": 60516,
-      "path": "audit_html2.py"
+      "path": "audit_html.py"
     },
     {
       "id": 60517,
-      "path": "audit_output/FeatureRainbowTable.json"
+      "path": "audit_html2.py"
     },
     {
       "id": 60518,
-      "path": "audit_output/MVP_Features.json"
+      "path": "audit_output/FeatureRainbowTable.json"
     },
     {
       "id": 60519,
-      "path": "audit_output/RawrXD_ComprehensiveManifest.json"
+      "path": "audit_output/MVP_Features.json"
     },
     {
       "id": 60520,
-      "path": "audit_report.json"
+      "path": "audit_output/RawrXD_ComprehensiveManifest.json"
     },
     {
       "id": 60521,
-      "path": "auto_generated_methods/Analyze_AutoGeneratedMethods.ps1"
+      "path": "audit_report.json"
     },
     {
       "id": 60522,
-      "path": "auto_generated_methods/AutoDependencyGraph_AutoFeature.ps1"
+      "path": "auto_generated_methods/Analyze_AutoGeneratedMethods.ps1"
     },
     {
       "id": 60523,
-      "path": "auto_generated_methods/AutoGeneratedMethods_CIReport.json"
+      "path": "auto_generated_methods/AutoDependencyGraph_AutoFeature.ps1"
     },
     {
       "id": 60524,
-      "path": "auto_generated_methods/AutoRefactorSuggestor_AutoFeature.ps1"
+      "path": "auto_generated_methods/AutoGeneratedMethods_CIReport.json"
     },
     {
       "id": 60525,
-      "path": "auto_generated_methods/AutonomousRepairOrchestrator.ps1"
+      "path": "auto_generated_methods/AutoRefactorSuggestor_AutoFeature.ps1"
     },
     {
       "id": 60526,
-      "path": "auto_generated_methods/AutonomousTaskOrchestrator.ps1"
+      "path": "auto_generated_methods/AutonomousRepairOrchestrator.ps1"
     },
     {
       "id": 60527,
-      "path": "auto_generated_methods/ContinuousIntegrationTrigger_AutoFeature.ps1"
+      "path": "auto_generated_methods/AutonomousTaskOrchestrator.ps1"
     },
     {
       "id": 60528,
-      "path": "auto_generated_methods/Demo-AutonomousEnhancement.ps1"
+      "path": "auto_generated_methods/ContinuousIntegrationTrigger_AutoFeature.ps1"
     },
     {
       "id": 60529,
-      "path": "auto_generated_methods/Demo-OneLiner-Generator.ps1"
+      "path": "auto_generated_methods/Demo-AutonomousEnhancement.ps1"
     },
     {
       "id": 60530,
-      "path": "auto_generated_methods/Demo-OneLinerGenerator.ps1"
+      "path": "auto_generated_methods/Demo-OneLiner-Generator.ps1"
     },
     {
       "id": 60531,
-      "path": "auto_generated_methods/Demo-ReverseEngineering.ps1"
+      "path": "auto_generated_methods/Demo-OneLinerGenerator.ps1"
     },
     {
       "id": 60532,
-      "path": "auto_generated_methods/Demo-SwarmMaster.ps1"
+      "path": "auto_generated_methods/Demo-ReverseEngineering.ps1"
     },
     {
       "id": 60533,
-      "path": "auto_generated_methods/Demo-SwarmSystem.ps1"
+      "path": "auto_generated_methods/Demo-SwarmMaster.ps1"
     },
     {
       "id": 60534,
-      "path": "auto_generated_methods/DependencyAnalysis_Report.json"
+      "path": "auto_generated_methods/Demo-SwarmSystem.ps1"
     },
     {
       "id": 60535,
-      "path": "auto_generated_methods/DependencyGraph.json"
+      "path": "auto_generated_methods/DependencyAnalysis_Report.json"
     },
     {
       "id": 60536,
-      "path": "auto_generated_methods/Deploy-ProductionSystem.ps1"
+      "path": "auto_generated_methods/DependencyGraph.json"
     },
     {
       "id": 60537,
-      "path": "auto_generated_methods/Deploy-RawrXD-OMEGA-1.ps1"
+      "path": "auto_generated_methods/Deploy-ProductionSystem.ps1"
     },
     {
       "id": 60538,
-      "path": "auto_generated_methods/Deploy-RawrXD-Ultimate.ps1"
+      "path": "auto_generated_methods/Deploy-RawrXD-OMEGA-1.ps1"
     },
     {
       "id": 60539,
-      "path": "auto_generated_methods/Deploy-RawrXDProduction.ps1"
+      "path": "auto_generated_methods/Deploy-RawrXD-Ultimate.ps1"
     },
     {
       "id": 60540,
-      "path": "auto_generated_methods/DirectoryScanner.ps1"
+      "path": "auto_generated_methods/Deploy-RawrXDProduction.ps1"
     },
     {
       "id": 60541,
-      "path": "auto_generated_methods/DynamicTestHarness_AutoFeature.ps1"
+      "path": "auto_generated_methods/DirectoryScanner.ps1"
     },
     {
       "id": 60542,
-      "path": "auto_generated_methods/Execute-UltimateDeployment.ps1"
+      "path": "auto_generated_methods/DynamicTestHarness_AutoFeature.ps1"
     },
     {
       "id": 60543,
-      "path": "auto_generated_methods/FineTune-AllModules.ps1"
+      "path": "auto_generated_methods/Execute-UltimateDeployment.ps1"
     },
     {
       "id": 60544,
-      "path": "auto_generated_methods/Generate_AutoDocs.ps1"
+      "path": "auto_generated_methods/FineTune-AllModules.ps1"
     },
     {
       "id": 60545,
-      "path": "auto_generated_methods/Integrate-OneLiner-With-OMEGA1.ps1"
+      "path": "auto_generated_methods/Generate_AutoDocs.ps1"
     },
     {
       "id": 60546,
-      "path": "auto_generated_methods/Integrate-OneLinerGenerator.ps1"
+      "path": "auto_generated_methods/Integrate-OneLiner-With-OMEGA1.ps1"
     },
     {
       "id": 60547,
-      "path": "auto_generated_methods/Integrate_MissingFeatures.ps1"
+      "path": "auto_generated_methods/Integrate-OneLinerGenerator.ps1"
     },
     {
       "id": 60548,
-      "path": "auto_generated_methods/Invoke_AllAutoGeneratedMethods.ps1"
+      "path": "auto_generated_methods/Integrate_MissingFeatures.ps1"
     },
     {
       "id": 60549,
-      "path": "auto_generated_methods/LiveMetricsDashboard_AutoFeature.ps1"
+      "path": "auto_generated_methods/Invoke_AllAutoGeneratedMethods.ps1"
     },
     {
       "id": 60550,
-      "path": "auto_generated_methods/ManifestChangeNotifier_AutoFeature.ps1"
+      "path": "auto_generated_methods/LiveMetricsDashboard_AutoFeature.ps1"
     },
     {
       "id": 60551,
-      "path": "auto_generated_methods/PluginAutoLoader_AutoFeature.ps1"
+      "path": "auto_generated_methods/ManifestChangeNotifier_AutoFeature.ps1"
     },
     {
       "id": 60552,
-      "path": "auto_generated_methods/PowershieldAuditSystem.ps1"
+      "path": "auto_generated_methods/PluginAutoLoader_AutoFeature.ps1"
     },
     {
       "id": 60553,
-      "path": "auto_generated_methods/Powershield_Audit_Report.json"
+      "path": "auto_generated_methods/PowershieldAuditSystem.ps1"
     },
     {
       "id": 60554,
-      "path": "auto_generated_methods/Powershield_Repair_Report.json"
+      "path": "auto_generated_methods/Powershield_Audit_Report.json"
     },
     {
       "id": 60555,
-      "path": "auto_generated_methods/RawrXD-Complete-Integration.ps1"
+      "path": "auto_generated_methods/Powershield_Repair_Report.json"
     },
     {
       "id": 60556,
-      "path": "auto_generated_methods/RawrXD-OMEGA-1-Master.ps1"
+      "path": "auto_generated_methods/RawrXD-Complete-Integration.ps1"
     },
     {
       "id": 60557,
-      "path": "auto_generated_methods/RawrXD-OMEGA-1-OneLiner.ps1"
+      "path": "auto_generated_methods/RawrXD-OMEGA-1-Master.ps1"
     },
     {
       "id": 60558,
-      "path": "auto_generated_methods/RawrXD-OMEGA-1-UltimateOneLiner.ps1"
+      "path": "auto_generated_methods/RawrXD-OMEGA-1-OneLiner.ps1"
     },
     {
       "id": 60559,
-      "path": "auto_generated_methods/RawrXD-OneLiner-Generator.ps1"
+      "path": "auto_generated_methods/RawrXD-OMEGA-1-UltimateOneLiner.ps1"
     },
     {
       "id": 60560,
-      "path": "auto_generated_methods/RawrXD.AgenticCommands.psm1"
+      "path": "auto_generated_methods/RawrXD-OneLiner-Generator.ps1"
     },
     {
       "id": 60561,
-      "path": "auto_generated_methods/RawrXD.AutoDependencyGraph.psm1"
+      "path": "auto_generated_methods/RawrXD.AgenticCommands.psm1"
     },
     {
       "id": 60562,
-      "path": "auto_generated_methods/RawrXD.AutoRefactorSuggestor.psm1"
+      "path": "auto_generated_methods/RawrXD.AutoDependencyGraph.psm1"
     },
     {
       "id": 60563,
-      "path": "auto_generated_methods/RawrXD.AutonomousEnhancement.psm1"
+      "path": "auto_generated_methods/RawrXD.AutoRefactorSuggestor.psm1"
     },
     {
       "id": 60564,
-      "path": "auto_generated_methods/RawrXD.ContinuousIntegrationTrigger.psm1"
+      "path": "auto_generated_methods/RawrXD.AutonomousEnhancement.psm1"
     },
     {
       "id": 60565,
-      "path": "auto_generated_methods/RawrXD.CustomModelLoaders.psm1"
+      "path": "auto_generated_methods/RawrXD.ContinuousIntegrationTrigger.psm1"
     },
     {
       "id": 60566,
-      "path": "auto_generated_methods/RawrXD.CustomModelPerformance.psm1"
+      "path": "auto_generated_methods/RawrXD.CustomModelLoaders.psm1"
     },
     {
       "id": 60567,
-      "path": "auto_generated_methods/RawrXD.DeploymentOrchestrator.psm1"
+      "path": "auto_generated_methods/RawrXD.CustomModelPerformance.psm1"
     },
     {
       "id": 60568,
-      "path": "auto_generated_methods/RawrXD.DynamicTestHarness.psm1"
+      "path": "auto_generated_methods/RawrXD.DeploymentOrchestrator.psm1"
     },
     {
       "id": 60569,
-      "path": "auto_generated_methods/RawrXD.FullBraceError.psm1"
+      "path": "auto_generated_methods/RawrXD.DynamicTestHarness.psm1"
     },
     {
       "id": 60570,
-      "path": "auto_generated_methods/RawrXD.LiveMetricsDashboard.psm1"
+      "path": "auto_generated_methods/RawrXD.FullBraceError.psm1"
     },
     {
       "id": 60571,
-      "path": "auto_generated_methods/RawrXD.Logging.psm1"
+      "path": "auto_generated_methods/RawrXD.LiveMetricsDashboard.psm1"
     },
     {
       "id": 60572,
-      "path": "auto_generated_methods/RawrXD.ManifestChangeNotifier.psm1"
+      "path": "auto_generated_methods/RawrXD.Logging.psm1"
     },
     {
       "id": 60573,
-      "path": "auto_generated_methods/RawrXD.Master.psm1"
+      "path": "auto_generated_methods/RawrXD.ManifestChangeNotifier.psm1"
     },
     {
       "id": 60574,
-      "path": "auto_generated_methods/RawrXD.Production.psm1"
+      "path": "auto_generated_methods/RawrXD.Master.psm1"
     },
     {
       "id": 60575,
-      "path": "auto_generated_methods/RawrXD.ProductionDeployer.psm1"
+      "path": "auto_generated_methods/RawrXD.Production.psm1"
     },
     {
       "id": 60576,
-      "path": "auto_generated_methods/RawrXD.ReverseEngineering.psm1"
+      "path": "auto_generated_methods/RawrXD.ProductionDeployer.psm1"
     },
     {
       "id": 60577,
-      "path": "auto_generated_methods/RawrXD.SecurityScanner.psm1"
+      "path": "auto_generated_methods/RawrXD.ReverseEngineering.psm1"
     },
     {
       "id": 60578,
-      "path": "auto_generated_methods/RawrXD.SelfHealingModule.psm1"
+      "path": "auto_generated_methods/RawrXD.SecurityScanner.psm1"
     },
     {
       "id": 60579,
-      "path": "auto_generated_methods/RawrXD.SourceCodeSummarizer.psm1"
+      "path": "auto_generated_methods/RawrXD.SelfHealingModule.psm1"
     },
     {
       "id": 60580,
-      "path": "auto_generated_methods/RawrXD.SwarmAgent.psm1"
+      "path": "auto_generated_methods/RawrXD.SourceCodeSummarizer.psm1"
     },
     {
       "id": 60581,
-      "path": "auto_generated_methods/RawrXD.SwarmMaster.psm1"
+      "path": "auto_generated_methods/RawrXD.SwarmAgent.psm1"
     },
     {
       "id": 60582,
-      "path": "auto_generated_methods/RawrXD.SwarmOrchestrator.psm1"
+      "path": "auto_generated_methods/RawrXD.SwarmMaster.psm1"
     },
     {
       "id": 60583,
-      "path": "auto_generated_methods/RawrXD.TestFramework.psm1"
+      "path": "auto_generated_methods/RawrXD.SwarmOrchestrator.psm1"
     },
     {
       "id": 60584,
-      "path": "auto_generated_methods/RawrXD.UltimateProduction.psm1"
+      "path": "auto_generated_methods/RawrXD.TestFramework.psm1"
     },
     {
       "id": 60585,
-      "path": "auto_generated_methods/RawrXD.Win32Deployment.psm1"
+      "path": "auto_generated_methods/RawrXD.UltimateProduction.psm1"
     },
     {
       "id": 60586,
-      "path": "auto_generated_methods/RawrXD_AIIntervention.psm1"
+      "path": "auto_generated_methods/RawrXD.Win32Deployment.psm1"
     },
     {
       "id": 60587,
-      "path": "auto_generated_methods/RawrXD_LegacyManualIntegration.ps1"
+      "path": "auto_generated_methods/RawrXD_AIIntervention.psm1"
     },
     {
       "id": 60588,
-      "path": "auto_generated_methods/RawrXD_MissingFeatures.ps1"
+      "path": "auto_generated_methods/RawrXD_LegacyManualIntegration.ps1"
     },
     {
       "id": 60589,
-      "path": "auto_generated_methods/RawrXD_OneLiner.ps1"
+      "path": "auto_generated_methods/RawrXD_MissingFeatures.ps1"
     },
     {
       "id": 60590,
-      "path": "auto_generated_methods/RawrXD_UniversalIntegrator.psm1"
+      "path": "auto_generated_methods/RawrXD_OneLiner.ps1"
     },
     {
       "id": 60591,
-      "path": "auto_generated_methods/RefactorSuggestions.json"
+      "path": "auto_generated_methods/RawrXD_UniversalIntegrator.psm1"
     },
     {
       "id": 60592,
-      "path": "auto_generated_methods/RefactorSuggestions_Report.json"
+      "path": "auto_generated_methods/RefactorSuggestions.json"
     },
     {
       "id": 60593,
-      "path": "auto_generated_methods/ReverseEngineer-AllModules.ps1"
+      "path": "auto_generated_methods/RefactorSuggestions_Report.json"
     },
     {
       "id": 60594,
-      "path": "auto_generated_methods/SecurityVulnerabilityScanner_AutoFeature.ps1"
+      "path": "auto_generated_methods/ReverseEngineer-AllModules.ps1"
     },
     {
       "id": 60595,
-      "path": "auto_generated_methods/SelfAuditSystem.ps1"
+      "path": "auto_generated_methods/SecurityVulnerabilityScanner_AutoFeature.ps1"
     },
     {
       "id": 60596,
-      "path": "auto_generated_methods/SelfHealingModule_AutoFeature.ps1"
+      "path": "auto_generated_methods/SelfAuditSystem.ps1"
     },
     {
       "id": 60597,
-      "path": "auto_generated_methods/SelfHealingModule_AutoFeature_Broken.ps1"
+      "path": "auto_generated_methods/SelfHealingModule_AutoFeature.ps1"
     },
     {
       "id": 60598,
-      "path": "auto_generated_methods/SelfHealing_Report_20260124_002149.json"
+      "path": "auto_generated_methods/SelfHealingModule_AutoFeature_Broken.ps1"
     },
     {
       "id": 60599,
-      "path": "auto_generated_methods/SourceCodeSummarizer_AutoFeature.ps1"
+      "path": "auto_generated_methods/SelfHealing_Report_20260124_002149.json"
     },
     {
       "id": 60600,
-      "path": "auto_generated_methods/SourceDigestionOrchestrator_AutoMethod.ps1"
+      "path": "auto_generated_methods/SourceCodeSummarizer_AutoFeature.ps1"
     },
     {
       "id": 60601,
-      "path": "auto_generated_methods/TaskExecutor.ps1"
+      "path": "auto_generated_methods/SourceDigestionOrchestrator_AutoMethod.ps1"
     },
     {
       "id": 60602,
-      "path": "auto_generated_methods/TaskReport_20260124_061026.json"
+      "path": "auto_generated_methods/TaskExecutor.ps1"
     },
     {
       "id": 60603,
-      "path": "auto_generated_methods/Test-Security-Settings-Fix_AutoMethod.ps1"
+      "path": "auto_generated_methods/TaskReport_20260124_061026.json"
     },
     {
       "id": 60604,
-      "path": "auto_generated_methods/Test_ManifestChangeNotifier.ps1"
+      "path": "auto_generated_methods/Test-Security-Settings-Fix_AutoMethod.ps1"
     },
     {
       "id": 60605,
-      "path": "auto_generated_methods/ai_patches/SourceDigestionOrchestrator_suggested.patch.ps1"
+      "path": "auto_generated_methods/Test_ManifestChangeNotifier.ps1"
     },
     {
       "id": 60606,
-      "path": "auto_generated_methods/ai_patches/Test-Security-Settings-Fix_suggested.patch.ps1"
+      "path": "auto_generated_methods/ai_patches/SourceDigestionOrchestrator_suggested.patch.ps1"
     },
     {
       "id": 60607,
-      "path": "auto_generated_methods/ai_suggestions/SourceDigestionOrchestrator_suggestions.json"
+      "path": "auto_generated_methods/ai_patches/Test-Security-Settings-Fix_suggested.patch.ps1"
     },
     {
       "id": 60608,
-      "path": "auto_generated_methods/ai_suggestions/Test-Security-Settings-Fix_suggestions.json"
+      "path": "auto_generated_methods/ai_suggestions/SourceDigestionOrchestrator_suggestions.json"
     },
     {
       "id": 60609,
-      "path": "auto_generated_methods/brace-violations.json"
+      "path": "auto_generated_methods/ai_suggestions/Test-Security-Settings-Fix_suggestions.json"
     },
     {
       "id": 60610,
-      "path": "auto_generated_methods/deployment-state-20260124-032500.json"
+      "path": "auto_generated_methods/brace-violations.json"
     },
     {
       "id": 60611,
-      "path": "auto_generated_methods/deployment-state-20260124-033402.json"
+      "path": "auto_generated_methods/deployment-state-20260124-032500.json"
     },
     {
       "id": 60612,
-      "path": "auto_generated_methods/integration_report.json"
+      "path": "auto_generated_methods/deployment-state-20260124-033402.json"
     },
     {
       "id": 60613,
-      "path": "auto_generated_methods/manifest.json"
+      "path": "auto_generated_methods/integration_report.json"
     },
     {
       "id": 60614,
-      "path": "auto_generated_methods/one-liner-demo-results.json"
+      "path": "auto_generated_methods/manifest.json"
     },
     {
       "id": 60615,
-      "path": "backend/audit_payload_sender.py"
+      "path": "auto_generated_methods/one-liner-demo-results.json"
     },
     {
       "id": 60616,
-      "path": "backend/build.bat"
+      "path": "backend/audit_payload_sender.py"
     },
     {
       "id": 60617,
-      "path": "backend/rawr_engine.py"
+      "path": "backend/build.bat"
     },
     {
       "id": 60618,
-      "path": "backend/rawrxd_backend.asm"
+      "path": "backend/rawr_engine.py"
     },
     {
       "id": 60619,
-      "path": "backend/rawrxd_backend.py"
+      "path": "backend/rawrxd_backend.asm"
     },
     {
       "id": 60620,
-      "path": "backend/server.js"
+      "path": "backend/rawrxd_backend.py"
     },
     {
       "id": 60621,
-      "path": "backend/test_backend.ps1"
+      "path": "backend/server.js"
     },
     {
       "id": 60622,
-      "path": "backups/RawrXD_backup_20260123_225535.ps1"
+      "path": "backend/test_backend.ps1"
     },
     {
       "id": 60623,
-      "path": "bbcov_old.json"
+      "path": "backups/RawrXD_backup_20260123_225535.ps1"
     },
     {
       "id": 60624,
-      "path": "bbcov_report.json"
+      "path": "bbcov_old.json"
     },
     {
       "id": 60625,
-      "path": "benchmark-quick-start.sh"
+      "path": "bbcov_report.json"
     },
     {
       "id": 60626,
-      "path": "build.bat"
+      "path": "benchmark-quick-start.sh"
     },
     {
       "id": 60627,
-      "path": "build_all_ide.bat"
+      "path": "build.bat"
     },
     {
       "id": 60628,
-      "path": "build_analyzer_proper.bat"
+      "path": "build_all_ide.bat"
     },
     {
       "id": 60629,
-      "path": "build_and_test_chat.bat"
+      "path": "build_analyzer_proper.bat"
     },
     {
       "id": 60630,
-      "path": "build_and_test_masm.ps1"
+      "path": "build_and_test_chat.bat"
     },
     {
       "id": 60631,
-      "path": "build_binary_analyzer.bat"
+      "path": "build_and_test_masm.ps1"
     },
     {
       "id": 60632,
-      "path": "build_check.bat"
+      "path": "build_binary_analyzer.bat"
     },
     {
       "id": 60633,
-      "path": "build_cli.bat"
+      "path": "build_check.bat"
     },
     {
       "id": 60634,
-      "path": "build_codex_ultimate.bat"
+      "path": "build_cli.bat"
     },
     {
       "id": 60635,
-      "path": "build_codex_vs2022.bat"
+      "path": "build_codex_ultimate.bat"
     },
     {
       "id": 60636,
-      "path": "build_digestion.bat"
+      "path": "build_codex_vs2022.bat"
     },
     {
       "id": 60637,
-      "path": "build_dumpbin.bat"
+      "path": "build_digestion.bat"
     },
     {
       "id": 60638,
-      "path": "build_dumpbin_final.bat"
+      "path": "build_dumpbin.bat"
     },
     {
       "id": 60639,
-      "path": "build_final.bat"
+      "path": "build_dumpbin_final.bat"
     },
     {
       "id": 60640,
-      "path": "build_gold.bat"
+      "path": "build_final.bat"
     },
     {
       "id": 60641,
-      "path": "build_gui.bat"
+      "path": "build_gold.bat"
     },
     {
       "id": 60642,
-      "path": "build_harvester.bat"
+      "path": "build_gui.bat"
     },
     {
       "id": 60643,
-      "path": "build_ide.bat"
+      "path": "build_harvester.bat"
     },
     {
       "id": 60644,
-      "path": "build_interconnect_complete.bat"
+      "path": "build_ide.bat"
     },
     {
       "id": 60645,
-      "path": "build_masm_interconnect.bat"
+      "path": "build_interconnect_complete.bat"
     },
     {
       "id": 60646,
-      "path": "build_msvc.bat"
+      "path": "build_masm_interconnect.bat"
     },
     {
       "id": 60647,
-      "path": "build_native_bridge.bat"
+      "path": "build_msvc.bat"
     },
     {
       "id": 60648,
-      "path": "build_native_http.bat"
+      "path": "build_native_bridge.bat"
     },
     {
       "id": 60649,
-      "path": "build_neural_core.bat"
+      "path": "build_native_http.bat"
     },
     {
       "id": 60650,
-      "path": "build_omega.bat"
+      "path": "build_neural_core.bat"
     },
     {
       "id": 60651,
-      "path": "build_omega_pro.bat"
+      "path": "build_omega.bat"
     },
     {
       "id": 60652,
-      "path": "build_omega_pro_final.bat"
+      "path": "build_omega_pro.bat"
     },
     {
       "id": 60653,
-      "path": "build_os_interceptor.bat"
+      "path": "build_omega_pro_final.bat"
     },
     {
       "id": 60654,
-      "path": "build_os_interceptor_ps.ps1"
+      "path": "build_os_interceptor.bat"
     },
     {
       "id": 60655,
-      "path": "build_os_interceptor_simple.bat"
+      "path": "build_os_interceptor_ps.ps1"
     },
     {
       "id": 60656,
-      "path": "build_os_interceptor_vs.bat"
+      "path": "build_os_interceptor_simple.bat"
     },
     {
       "id": 60657,
-      "path": "build_os_interceptor_vsenv.bat"
+      "path": "build_os_interceptor_vs.bat"
     },
     {
       "id": 60658,
-      "path": "build_phase3.bat"
+      "path": "build_os_interceptor_vsenv.bat"
     },
     {
       "id": 60659,
-      "path": "build_phase36.bat"
+      "path": "build_phase3.bat"
     },
     {
       "id": 60660,
-      "path": "build_quadbuffer.bat"
+      "path": "build_phase36.bat"
     },
     {
       "id": 60661,
-      "path": "build_rawrxd.bat"
+      "path": "build_quadbuffer.bat"
     },
     {
       "id": 60662,
-      "path": "build_ship_with_chat.bat"
+      "path": "build_rawrxd.bat"
     },
     {
       "id": 60663,
-      "path": "build_simple.bat"
+      "path": "build_ship_with_chat.bat"
     },
     {
       "id": 60664,
-      "path": "build_simple_dumpbin.bat"
+      "path": "build_simple.bat"
     },
     {
       "id": 60665,
-      "path": "build_standalone.bat"
+      "path": "build_simple_dumpbin.bat"
     },
     {
       "id": 60666,
-      "path": "build_tests.bat"
+      "path": "build_standalone.bat"
     },
     {
       "id": 60667,
-      "path": "build_tests.sh"
+      "path": "build_tests.bat"
     },
     {
       "id": 60668,
-      "path": "build_titan.bat"
+      "path": "build_tests.sh"
     },
     {
       "id": 60669,
-      "path": "build_titan_complete.bat"
+      "path": "build_titan.bat"
     },
     {
       "id": 60670,
-      "path": "build_titan_kernel.bat"
+      "path": "build_titan_complete.bat"
     },
     {
       "id": 60671,
-      "path": "build_titan_metareverse.bat"
+      "path": "build_titan_kernel.bat"
     },
     {
       "id": 60672,
-      "path": "build_titan_unified.bat"
+      "path": "build_titan_metareverse.bat"
     },
     {
       "id": 60673,
-      "path": "build_universal.ps1"
+      "path": "build_titan_unified.bat"
     },
     {
       "id": 60674,
-      "path": "build_universal_analyzer.bat"
+      "path": "build_universal.ps1"
     },
     {
       "id": 60675,
-      "path": "build_universal_simple.bat"
+      "path": "build_universal_analyzer.bat"
     },
     {
       "id": 60676,
-      "path": "build_v2.bat"
+      "path": "build_universal_simple.bat"
     },
     {
       "id": 60677,
-      "path": "check_env.bat"
+      "path": "build_v2.bat"
     },
     {
       "id": 60678,
-      "path": "check_syntax.ps1"
+      "path": "check_env.bat"
     },
     {
       "id": 60679,
-      "path": "ci/Test-CLIRegression.ps1"
+      "path": "check_syntax.ps1"
     },
     {
       "id": 60680,
-      "path": "ci/run.sh"
+      "path": "ci/Test-CLIRegression.ps1"
     },
     {
       "id": 60681,
-      "path": "ci/sovereign_dashboard_gate.ps1"
+      "path": "ci/run.sh"
     },
     {
       "id": 60682,
-      "path": "ci/telemetry_divergence_gate.ps1"
+      "path": "ci/sovereign_dashboard_gate.ps1"
     },
     {
       "id": 60683,
-      "path": "ci/throughput_ci_gate.ps1"
+      "path": "ci/telemetry_divergence_gate.ps1"
     },
     {
       "id": 60684,
-      "path": "ci_regression_report.json"
+      "path": "ci/throughput_ci_gate.ps1"
     },
     {
       "id": 60685,
-      "path": "cleanup_final_qt_and_logging.ps1"
+      "path": "ci_regression_report.json"
     },
     {
       "id": 60686,
-      "path": "cli_test/main.cpp"
+      "path": "cleanup_final_qt_and_logging.ps1"
     },
     {
       "id": 60687,
-      "path": "cmake/AutoFeatureRegistry.cmake"
+      "path": "cli_test/main.cpp"
     },
     {
       "id": 60688,
-      "path": "cmake/AutonomousHealer.cmake"
+      "path": "cmake/AutoFeatureRegistry.cmake"
     },
     {
       "id": 60689,
-      "path": "cmake/BuildTypes.cmake"
+      "path": "cmake/AutonomousHealer.cmake"
     },
     {
       "id": 60690,
-      "path": "cmake/GitVars.cmake"
+      "path": "cmake/BuildTypes.cmake"
     },
     {
       "id": 60691,
-      "path": "cmake/MASMCompiler.cmake"
+      "path": "cmake/GitVars.cmake"
     },
     {
       "id": 60692,
-      "path": "cmake/VerifyQtRuntime.cmake"
+      "path": "cmake/MASMCompiler.cmake"
     },
     {
       "id": 60693,
-      "path": "cmake/common.cmake"
+      "path": "cmake/VerifyQtRuntime.cmake"
     },
     {
       "id": 60694,
-      "path": "cmake_enhanced_loader.cmake"
+      "path": "cmake/common.cmake"
     },
     {
       "id": 60695,
-      "path": "compilers/_patched/ada_compiler_from_scratch.asm"
+      "path": "cmake_enhanced_loader.cmake"
     },
     {
       "id": 60696,
-      "path": "compilers/_patched/assembly_compiler_from_scratch.asm"
+      "path": "compilers/_patched/ada_compiler_from_scratch.asm"
     },
     {
       "id": 60697,
-      "path": "compilers/_patched/bash_compiler_from_scratch.asm"
+      "path": "compilers/_patched/assembly_compiler_from_scratch.asm"
     },
     {
       "id": 60698,
-      "path": "compilers/_patched/c___compiler_from_scratch.asm"
+      "path": "compilers/_patched/bash_compiler_from_scratch.asm"
     },
     {
       "id": 60699,
-      "path": "compilers/_patched/c__compiler_from_scratch.asm"
+      "path": "compilers/_patched/c___compiler_from_scratch.asm"
     },
     {
       "id": 60700,
-      "path": "compilers/_patched/c_compiler_from_scratch.asm"
+      "path": "compilers/_patched/c__compiler_from_scratch.asm"
     },
     {
       "id": 60701,
-      "path": "compilers/_patched/cadence_compiler_from_scratch.asm"
+      "path": "compilers/_patched/c_compiler_from_scratch.asm"
     },
     {
       "id": 60702,
-      "path": "compilers/_patched/carbon_compiler_from_scratch.asm"
+      "path": "compilers/_patched/cadence_compiler_from_scratch.asm"
     },
     {
       "id": 60703,
-      "path": "compilers/_patched/clojure_compiler_from_scratch.asm"
+      "path": "compilers/_patched/carbon_compiler_from_scratch.asm"
     },
     {
       "id": 60704,
-      "path": "compilers/_patched/cobol_compiler_from_scratch.asm"
+      "path": "compilers/_patched/clojure_compiler_from_scratch.asm"
     },
     {
       "id": 60705,
-      "path": "compilers/_patched/cross_compiler.asm"
+      "path": "compilers/_patched/cobol_compiler_from_scratch.asm"
     },
     {
       "id": 60706,
-      "path": "compilers/_patched/crystal_compiler_from_scratch.asm"
+      "path": "compilers/_patched/cross_compiler.asm"
     },
     {
       "id": 60707,
-      "path": "compilers/_patched/dart_compiler_from_scratch.asm"
+      "path": "compilers/_patched/crystal_compiler_from_scratch.asm"
     },
     {
       "id": 60708,
-      "path": "compilers/_patched/delphi_compiler_from_scratch.asm"
+      "path": "compilers/_patched/dart_compiler_from_scratch.asm"
     },
     {
       "id": 60709,
-      "path": "compilers/_patched/elixir_compiler_from_scratch.asm"
+      "path": "compilers/_patched/delphi_compiler_from_scratch.asm"
     },
     {
       "id": 60710,
-      "path": "compilers/_patched/eon_compiler_complete.asm"
+      "path": "compilers/_patched/elixir_compiler_from_scratch.asm"
     },
     {
       "id": 60711,
-      "path": "compilers/_patched/eon_compiler_from_scratch.asm"
+      "path": "compilers/_patched/eon_compiler_complete.asm"
     },
     {
       "id": 60712,
-      "path": "compilers/_patched/eon_compiler_main.asm"
+      "path": "compilers/_patched/eon_compiler_from_scratch.asm"
     },
     {
       "id": 60713,
-      "path": "compilers/_patched/eon_kernel_compiler.asm"
+      "path": "compilers/_patched/eon_compiler_main.asm"
     },
     {
       "id": 60714,
-      "path": "compilers/_patched/erlang_compiler_from_scratch.asm"
+      "path": "compilers/_patched/eon_kernel_compiler.asm"
     },
     {
       "id": 60715,
-      "path": "compilers/_patched/f__compiler_from_scratch.asm"
+      "path": "compilers/_patched/erlang_compiler_from_scratch.asm"
     },
     {
       "id": 60716,
-      "path": "compilers/_patched/fortran_compiler_from_scratch.asm"
+      "path": "compilers/_patched/f__compiler_from_scratch.asm"
     },
     {
       "id": 60717,
-      "path": "compilers/_patched/full_eon_compiler.asm"
+      "path": "compilers/_patched/fortran_compiler_from_scratch.asm"
     },
     {
       "id": 60718,
-      "path": "compilers/_patched/go_compiler_from_scratch.asm"
+      "path": "compilers/_patched/full_eon_compiler.asm"
     },
     {
       "id": 60719,
-      "path": "compilers/_patched/haskell_compiler_from_scratch.asm"
+      "path": "compilers/_patched/go_compiler_from_scratch.asm"
     },
     {
       "id": 60720,
-      "path": "compilers/_patched/integrated_eon_compiler.asm"
+      "path": "compilers/_patched/haskell_compiler_from_scratch.asm"
     },
     {
       "id": 60721,
-      "path": "compilers/_patched/jai_compiler_from_scratch.asm"
+      "path": "compilers/_patched/integrated_eon_compiler.asm"
     },
     {
       "id": 60722,
-      "path": "compilers/_patched/java_compiler_from_scratch.asm"
+      "path": "compilers/_patched/jai_compiler_from_scratch.asm"
     },
     {
       "id": 60723,
-      "path": "compilers/_patched/javascript_compiler_from_scratch.asm"
+      "path": "compilers/_patched/java_compiler_from_scratch.asm"
     },
     {
       "id": 60724,
-      "path": "compilers/_patched/julia_compiler_from_scratch.asm"
+      "path": "compilers/_patched/javascript_compiler_from_scratch.asm"
     },
     {
       "id": 60725,
-      "path": "compilers/_patched/kotlin_compiler_from_scratch.asm"
+      "path": "compilers/_patched/julia_compiler_from_scratch.asm"
     },
     {
       "id": 60726,
-      "path": "compilers/_patched/llvm_ir_compiler_from_scratch.asm"
+      "path": "compilers/_patched/kotlin_compiler_from_scratch.asm"
     },
     {
       "id": 60727,
-      "path": "compilers/_patched/lua_compiler_from_scratch.asm"
+      "path": "compilers/_patched/llvm_ir_compiler_from_scratch.asm"
     },
     {
       "id": 60728,
-      "path": "compilers/_patched/master_universal_compiler.asm"
+      "path": "compilers/_patched/lua_compiler_from_scratch.asm"
     },
     {
       "id": 60729,
-      "path": "compilers/_patched/matlab_compiler_from_scratch.asm"
+      "path": "compilers/_patched/master_universal_compiler.asm"
     },
     {
       "id": 60730,
-      "path": "compilers/_patched/motoko_compiler_from_scratch.asm"
+      "path": "compilers/_patched/matlab_compiler_from_scratch.asm"
     },
     {
       "id": 60731,
-      "path": "compilers/_patched/move_compiler_from_scratch.asm"
+      "path": "compilers/_patched/motoko_compiler_from_scratch.asm"
     },
     {
       "id": 60732,
-      "path": "compilers/_patched/multi_target_compiler.asm"
+      "path": "compilers/_patched/move_compiler_from_scratch.asm"
     },
     {
       "id": 60733,
-      "path": "compilers/_patched/n0mn0m_cross_platform_compiler.asm"
+      "path": "compilers/_patched/multi_target_compiler.asm"
     },
     {
       "id": 60734,
-      "path": "compilers/_patched/n0mn0m_quantum_asm_compiler.asm"
+      "path": "compilers/_patched/n0mn0m_cross_platform_compiler.asm"
     },
     {
       "id": 60735,
-      "path": "compilers/_patched/nim_compiler_from_scratch.asm"
+      "path": "compilers/_patched/n0mn0m_quantum_asm_compiler.asm"
     },
     {
       "id": 60736,
-      "path": "compilers/_patched/ocaml_compiler_from_scratch.asm"
+      "path": "compilers/_patched/nim_compiler_from_scratch.asm"
     },
     {
       "id": 60737,
-      "path": "compilers/_patched/odin_compiler_from_scratch.asm"
+      "path": "compilers/_patched/ocaml_compiler_from_scratch.asm"
     },
     {
       "id": 60738,
-      "path": "compilers/_patched/pascal_compiler_from_scratch.asm"
+      "path": "compilers/_patched/odin_compiler_from_scratch.asm"
     },
     {
       "id": 60739,
-      "path": "compilers/_patched/perl_compiler_from_scratch.asm"
+      "path": "compilers/_patched/pascal_compiler_from_scratch.asm"
     },
     {
       "id": 60740,
-      "path": "compilers/_patched/php_compiler_from_scratch.asm"
+      "path": "compilers/_patched/perl_compiler_from_scratch.asm"
     },
     {
       "id": 60741,
-      "path": "compilers/_patched/powershell_compiler_from_scratch.asm"
+      "path": "compilers/_patched/php_compiler_from_scratch.asm"
     },
     {
       "id": 60742,
-      "path": "compilers/_patched/python_compiler_from_scratch.asm"
+      "path": "compilers/_patched/powershell_compiler_from_scratch.asm"
     },
     {
       "id": 60743,
-      "path": "compilers/_patched/r_compiler_from_scratch.asm"
+      "path": "compilers/_patched/python_compiler_from_scratch.asm"
     },
     {
       "id": 60744,
-      "path": "compilers/_patched/reverser_compiler.asm"
+      "path": "compilers/_patched/r_compiler_from_scratch.asm"
     },
     {
       "id": 60745,
-      "path": "compilers/_patched/reverser_compiler_from_scratch.asm"
+      "path": "compilers/_patched/reverser_compiler.asm"
     },
     {
       "id": 60746,
-      "path": "compilers/_patched/ruby_compiler_from_scratch.asm"
+      "path": "compilers/_patched/reverser_compiler_from_scratch.asm"
     },
     {
       "id": 60747,
-      "path": "compilers/_patched/rust_compiler_from_scratch.asm"
+      "path": "compilers/_patched/ruby_compiler_from_scratch.asm"
     },
     {
       "id": 60748,
-      "path": "compilers/_patched/scala_compiler_from_scratch.asm"
+      "path": "compilers/_patched/rust_compiler_from_scratch.asm"
     },
     {
       "id": 60749,
-      "path": "compilers/_patched/self_contained_compiler_gui.asm"
+      "path": "compilers/_patched/scala_compiler_from_scratch.asm"
     },
     {
       "id": 60750,
-      "path": "compilers/_patched/self_hosted_eon_compiler.asm"
+      "path": "compilers/_patched/self_contained_compiler_gui.asm"
     },
     {
       "id": 60751,
-      "path": "compilers/_patched/solidity_compiler_from_scratch.asm"
+      "path": "compilers/_patched/self_hosted_eon_compiler.asm"
     },
     {
       "id": 60752,
-      "path": "compilers/_patched/swift_compiler_from_scratch.asm"
+      "path": "compilers/_patched/solidity_compiler_from_scratch.asm"
     },
     {
       "id": 60753,
-      "path": "compilers/_patched/test_complete_compiler.asm"
+      "path": "compilers/_patched/swift_compiler_from_scratch.asm"
     },
     {
       "id": 60754,
-      "path": "compilers/_patched/test_full_eon_compiler.asm"
+      "path": "compilers/_patched/test_complete_compiler.asm"
     },
     {
       "id": 60755,
-      "path": "compilers/_patched/test_self_hosted_compiler.asm"
+      "path": "compilers/_patched/test_full_eon_compiler.asm"
     },
     {
       "id": 60756,
-      "path": "compilers/_patched/typescript_compiler_from_scratch.asm"
+      "path": "compilers/_patched/test_self_hosted_compiler.asm"
     },
     {
       "id": 60757,
-      "path": "compilers/_patched/uber_elegant_compiler.asm"
+      "path": "compilers/_patched/typescript_compiler_from_scratch.asm"
     },
     {
       "id": 60758,
-      "path": "compilers/_patched/universal_compiler_runtime.asm"
+      "path": "compilers/_patched/uber_elegant_compiler.asm"
     },
     {
       "id": 60759,
-      "path": "compilers/_patched/universal_compiler_runtime_clean.asm"
+      "path": "compilers/_patched/universal_compiler_runtime.asm"
     },
     {
       "id": 60760,
-      "path": "compilers/_patched/universal_cross_platform_compiler.asm"
+      "path": "compilers/_patched/universal_compiler_runtime_clean.asm"
     },
     {
       "id": 60761,
-      "path": "compilers/_patched/universal_multi_language_compiler.asm"
+      "path": "compilers/_patched/universal_cross_platform_compiler.asm"
     },
     {
       "id": 60762,
-      "path": "compilers/_patched/v_compiler_from_scratch.asm"
+      "path": "compilers/_patched/universal_multi_language_compiler.asm"
     },
     {
       "id": 60763,
-      "path": "compilers/_patched/vb_net_compiler_from_scratch.asm"
+      "path": "compilers/_patched/v_compiler_from_scratch.asm"
     },
     {
       "id": 60764,
-      "path": "compilers/_patched/vyper_compiler_from_scratch.asm"
+      "path": "compilers/_patched/vb_net_compiler_from_scratch.asm"
     },
     {
       "id": 60765,
-      "path": "compilers/_patched/webassembly_compiler_from_scratch.asm"
+      "path": "compilers/_patched/vyper_compiler_from_scratch.asm"
     },
     {
       "id": 60766,
-      "path": "compilers/_patched/zig_compiler_from_scratch.asm"
+      "path": "compilers/_patched/webassembly_compiler_from_scratch.asm"
     },
     {
       "id": 60767,
-      "path": "compilers/languages_supported_manifest.json"
+      "path": "compilers/_patched/zig_compiler_from_scratch.asm"
     },
     {
       "id": 60768,
-      "path": "complete_n0mn0m_universal_ide.py"
+      "path": "compilers/languages_supported_manifest.json"
     },
     {
       "id": 60769,
-      "path": "config.example.json"
+      "path": "complete_n0mn0m_universal_ide.py"
     },
     {
       "id": 60770,
-      "path": "config/RawrXD.config.json"
+      "path": "config.example.json"
     },
     {
       "id": 60771,
-      "path": "config/bigdaddyg_stress_test_report.json"
+      "path": "config/RawrXD.config.json"
     },
     {
       "id": 60772,
-      "path": "config/cot_toggle.json"
+      "path": "config/bigdaddyg_stress_test_report.json"
     },
     {
       "id": 60773,
-      "path": "config/enterprise.json"
+      "path": "config/cot_toggle.json"
     },
     {
       "id": 60774,
-      "path": "config/env.paths.json"
+      "path": "config/enterprise.json"
     },
     {
       "id": 60775,
-      "path": "config/hardware_capabilities.json"
+      "path": "config/env.paths.json"
     },
     {
       "id": 60776,
-      "path": "config/production_config.json"
+      "path": "config/hardware_capabilities.json"
     },
     {
       "id": 60777,
-      "path": "config/rollback.json"
+      "path": "config/production_config.json"
     },
     {
       "id": 60778,
-      "path": "config/security.json"
+      "path": "config/rollback.json"
     },
     {
       "id": 60779,
-      "path": "config/source_file_registry.json"
+      "path": "config/security.json"
     },
     {
       "id": 60780,
-      "path": "config/sovereign_binding.json"
+      "path": "config/source_file_registry.json"
     },
     {
       "id": 60781,
-      "path": "config/sovereign_control_block.json"
+      "path": "config/sovereign_binding.json"
     },
     {
       "id": 60782,
-      "path": "config/thermal_config.json"
+      "path": "config/sovereign_control_block.json"
     },
     {
       "id": 60783,
-      "path": "config/virtual_vram_pool.json"
+      "path": "config/thermal_config.json"
     },
     {
       "id": 60784,
-      "path": "configure.bat"
+      "path": "config/virtual_vram_pool.json"
     },
     {
       "id": 60785,
-      "path": "configure_msvc.bat"
+      "path": "configure.bat"
     },
     {
       "id": 60786,
-      "path": "covfusion_report.json"
+      "path": "configure_msvc.bat"
     },
     {
       "id": 60787,
-      "path": "craft_room/TestPlugin.psm1"
+      "path": "covfusion_report.json"
     },
     {
       "id": 60788,
-      "path": "cursor_dump.ps1"
+      "path": "craft_room/TestPlugin.psm1"
     },
     {
       "id": 60789,
-      "path": "cursor_js_analyzer.ps1"
+      "path": "cursor_dump.ps1"
     },
     {
       "id": 60790,
-      "path": "debug_digestion_test.ps1"
+      "path": "cursor_js_analyzer.ps1"
     },
     {
       "id": 60791,
-      "path": "debug_rules.ps1"
+      "path": "debug_digestion_test.ps1"
     },
     {
       "id": 60792,
-      "path": "deobf/RawrXD_Deobfuscator.inc"
+      "path": "debug_rules.ps1"
     },
     {
       "id": 60793,
-      "path": "deobf/RawrXD_MetaReverse.asm"
+      "path": "deobf/RawrXD_Deobfuscator.inc"
     },
     {
       "id": 60794,
-      "path": "deobf/RawrXD_OmegaDeobfuscator.asm"
+      "path": "deobf/RawrXD_MetaReverse.asm"
     },
     {
       "id": 60795,
-      "path": "deobf/build_deobf.bat"
+      "path": "deobf/RawrXD_OmegaDeobfuscator.asm"
     },
     {
       "id": 60796,
-      "path": "deobf/test_deobf.cpp"
+      "path": "deobf/build_deobf.bat"
     },
     {
       "id": 60797,
-      "path": "deployment_audit_config.json"
+      "path": "deobf/test_deobf.cpp"
     },
     {
       "id": 60798,
-      "path": "desktop/copilot_generator.ps1"
+      "path": "deployment_audit_config.json"
     },
     {
       "id": 60799,
-      "path": "desktop/demo.ps1"
+      "path": "desktop/copilot_generator.ps1"
     },
     {
       "id": 60800,
-      "path": "desktop/desktop_copilot.ps1"
+      "path": "desktop/demo.ps1"
     },
     {
       "id": 60801,
-      "path": "desktop/desktop_copilot_enhanced.ps1"
+      "path": "desktop/desktop_copilot.ps1"
     },
     {
       "id": 60802,
-      "path": "desktop/voice_assistant_full.ps1"
+      "path": "desktop/desktop_copilot_enhanced.ps1"
     },
     {
       "id": 60803,
-      "path": "desktop/voice_assistant_launcher.ps1"
+      "path": "desktop/voice_assistant_full.ps1"
     },
     {
       "id": 60804,
-      "path": "desktop/voice_music_player.ps1"
+      "path": "desktop/voice_assistant_launcher.ps1"
     },
     {
       "id": 60805,
@@ -5292,7 +5292,7 @@
     },
     {
       "id": 61322,
-      "path": "scripts/Demo_Sovereign_System.ps1"
+      "path": "scripts/Sovereign_System.ps1"
     },
     {
       "id": 61323,
@@ -6468,11 +6468,11 @@
     },
     {
       "id": 61616,
-      "path": "src/agentic/AgentOllamaClient.cpp"
+      "path": "src/agentic/NativeInferenceClient.cpp"
     },
     {
       "id": 61617,
-      "path": "src/agentic/AgentOllamaClient.h"
+      "path": "src/agentic/NativeInferenceClient.h"
     },
     {
       "id": 61618,
@@ -6560,11 +6560,11 @@
     },
     {
       "id": 61639,
-      "path": "src/agentic/OllamaProvider.cpp"
+      "path": "src/agentic/NativeStreamProvider.cpp"
     },
     {
       "id": 61640,
-      "path": "src/agentic/OllamaProvider.h"
+      "path": "src/agentic/NativeStreamProvider.h"
     },
     {
       "id": 61641,
@@ -11336,7 +11336,7 @@
     },
     {
       "id": 62833,
-      "path": "src/phase_1_2_integration_demo.cpp"
+      "path": "src/phase_1_2_integration.cpp"
     },
     {
       "id": 62834,

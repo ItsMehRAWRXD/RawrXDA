@@ -69,7 +69,6 @@ bool CodeSigner::signWindowsExecutable(const std::string& exePath,
     auto start = std::chrono::high_resolution_clock::now();
     
     if (!fs::exists(exePath)) {
-        std::cerr << "[CodeSigner] Executable not found: " << exePath << std::endl;
         return false;
     }
     
@@ -97,12 +96,6 @@ bool CodeSigner::signWindowsExecutable(const std::string& exePath,
     
     bool success = runProcess(signtool, args);
     
-    if (success) {
-        std::cout << "[CodeSigner] Successfully signed: " << exePath << std::endl;
-    } else {
-        std::cerr << "[CodeSigner] Failed to sign: " << exePath << std::endl;
-    }
-    
     return success;
 #else
     return false;
@@ -110,7 +103,7 @@ bool CodeSigner::signWindowsExecutable(const std::string& exePath,
 }
 
 bool CodeSigner::signMacOSBundle(const std::string& bundlePath, const std::string& identity) {
-    // Not implemented for Windows
+    // macOS bundle signing not supported on Windows builds
     return false;
 }
 

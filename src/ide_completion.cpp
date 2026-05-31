@@ -77,14 +77,14 @@ void CompletionWorkerThread() {
         }
 
         // Query Ollama API
-        OllamaIntegration::CompletionRequest req;
+        NativeIntegration::CompletionRequest req;
         req.model = g_current_model;
         req.prompt = ctx.current_line;
         req.temperature = 0.7f;
         req.num_predict = 128;  // Short suggestions
         req.stream = false;
 
-        OllamaIntegration::CompletionResponse response = OllamaIntegration::QueryCompletion(req);
+        NativeIntegration::CompletionResponse response = NativeIntegration::QueryCompletion(req);
 
         if (response.success && !response.text.empty()) {
             // Show popup with suggestion
@@ -103,7 +103,7 @@ void InitializeCompletionEngine(const std::string& default_model) {
     g_current_model = default_model;
 
     // Check if Ollama is available
-    g_engine_ready = OllamaIntegration::IsOllamaAvailable();
+    g_engine_ready = NativeIntegration::IsOllamaAvailable();
 
     if (!g_engine_ready) {
         // Try to connect later

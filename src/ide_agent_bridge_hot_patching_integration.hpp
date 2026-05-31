@@ -12,6 +12,7 @@ public:
     
     // Likely needs a signal or callback to notify editor
     static void diagnosticsAvailable(const std::string& uri, const std::vector<Diagnostic>& diags) {
-        // Placeholder for IDE integration (signal emission)
+        // Production: forward diagnostics to IDE editor for display
+        onLSPDiagnostic(uri, diags);
     }
 };

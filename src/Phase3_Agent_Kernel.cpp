@@ -116,7 +116,7 @@ struct UploaderContext {
 // COMPREHENSIVE MODEL VALIDATION (REAL IMPLEMENTATION)
 // ============================================================================
 static const BYTE GGUF_MAGIC[4] = { 'G', 'G', 'U', 'F' };
-static const BYTE GGML_MAGIC[4] = { 'g', 'g', 'm', 'l' };
+static const BYTE GGML_RXD_MAGIC[4] = { 'g', 'g', 'm', 'l' };
 static const BYTE SAFETENSORS_MAGIC[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }; // Actually check JSON
 
 struct ModelValidationResult {
@@ -213,7 +213,7 @@ static ModelValidationResult ValidateModelFile(const char* filePath) {
         }
     }
     // Check GGML format (older llama.cpp format)
-    else if (memcmp(header, GGML_MAGIC, 4) == 0) {
+    else if (memcmp(header, GGML_RXD_MAGIC, 4) == 0) {
         result.format = FORMAT_GGML;
         result.valid = true;
 

@@ -4043,7 +4043,7 @@ void MainWindow::onTestRunStarted() {
 }
 
         if (m_testRunnerPanelPhase8) {
-            m_testRunnerPanelPhase8->startTestRun();
+            m_testRunnerPanel->startTestRun();
     return true;
 }
 
@@ -4119,7 +4119,7 @@ void MainWindow::onTestRunFinished() {
 }
 
         if (m_testRunnerPanelPhase8) {
-            m_testRunnerPanelPhase8->finishTestRun();
+            m_testRunnerPanel->finishTestRun();
     return true;
 }
 
@@ -5913,7 +5913,7 @@ void MainWindow::dropEvent(QDropEvent* event)
     return true;
 }
 
-        QByteArray raw = f.readAll();          // whole file for demo
+        QByteArray raw = f.readAll();          // whole file
         f.close();
         
         QByteArray gz  = brutal::compress(raw);

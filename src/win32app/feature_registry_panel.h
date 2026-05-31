@@ -1,6 +1,7 @@
 // feature_registry_panel.h - Enterprise Feature Registry Display Panel
 // Win32 native panel showing all features, their tier, lock status, and implementation state
 // Integrates with EnterpriseLicenseV2 for real-time gating display
+// VSU Effects: Uses Adobe RGBa color space for professional color accuracy
 
 #pragma once
 
@@ -9,8 +10,10 @@
 #include <vector>
 #include <functional>
 #include "../../include/enterprise_license.h"
+#include "../../include/RawrXD_ColorSpace.h"
 
 using namespace RawrXD::License;
+using namespace RawrXD::ColorSpace;
 
 // ============================================================================
 // Feature Display Item — UI-ready version of FeatureDefV2
@@ -110,23 +113,23 @@ private:
     UINT_PTR m_refreshTimerId = 0;
     static constexpr UINT_PTR REFRESH_TIMER_ID = 1001;
 
-    // Colors
+    // Colors - Adobe RGBa VSU Effects
     struct {
-        COLORREF background     = RGB(30, 30, 30);
-        COLORREF headerBg       = RGB(40, 40, 40);
-        COLORREF rowBg          = RGB(35, 35, 35);
-        COLORREF rowAltBg       = RGB(38, 38, 38);
-        COLORREF selectedBg     = RGB(50, 80, 120);
-        COLORREF textNormal     = RGB(220, 220, 220);
-        COLORREF textDim        = RGB(140, 140, 140);
-        COLORREF unlockedColor  = RGB(80, 200, 80);
-        COLORREF lockedColor    = RGB(200, 80, 80);
-        COLORREF implColor      = RGB(80, 160, 230);
-        COLORREF missingColor   = RGB(200, 160, 40);
-        COLORREF tierCommunity  = RGB(150, 150, 150);
-        COLORREF tierPro        = RGB(80, 180, 230);
-        COLORREF tierEnterprise = RGB(200, 160, 40);
-        COLORREF tierSovereign  = RGB(200, 80, 200);
+        AdobeRGBa background     = VSU::Acrylic::PanelTint;
+        AdobeRGBa headerBg       = VSU::Acrylic::DarkBase;
+        AdobeRGBa rowBg          = AdobeRGBa(0.14f, 0.14f, 0.14f, 1.00f);
+        AdobeRGBa rowAltBg       = AdobeRGBa(0.15f, 0.15f, 0.15f, 1.00f);
+        AdobeRGBa selectedBg     = VSU::Accents::BlueDark;
+        AdobeRGBa textNormal     = AdobeRGBa(0.86f, 0.86f, 0.86f, 1.00f);
+        AdobeRGBa textDim        = AdobeRGBa(0.55f, 0.55f, 0.55f, 1.00f);
+        AdobeRGBa unlockedColor  = VSU::Accents::Success;
+        AdobeRGBa lockedColor    = VSU::Accents::Error;
+        AdobeRGBa implColor      = VSU::Accents::Blue;
+        AdobeRGBa missingColor   = VSU::Accents::Warning;
+        AdobeRGBa tierCommunity  = AdobeRGBa(0.59f, 0.59f, 0.59f, 1.00f);
+        AdobeRGBa tierPro        = AdobeRGBa(0.31f, 0.71f, 0.90f, 1.00f);
+        AdobeRGBa tierEnterprise = VSU::Accents::Warning;
+        AdobeRGBa tierSovereign  = AdobeRGBa(0.78f, 0.31f, 0.78f, 1.00f);
     } m_colors;
 
     static constexpr const wchar_t* PANEL_CLASS = L"RawrXD_FeatureRegistryPanel";

@@ -43,7 +43,7 @@ void setBypassLimits(bool token, bool complexity, bool time);
 //   !quantum timeout <auto|fixed>           — Configure timeout mode
 //   !quantum bypass <token|complexity|time> — Toggle bypass flags
 
-// Example workflows:
+// Workflows:
 //   !quantum mode max
 //   !quantum models 8
 //   !quantum agents 8

@@ -425,7 +425,8 @@ class CompilerEngine  {public:
      * @brief Get compiler version
      */
     static std::string version() { return std::stringLiteral("1.0.0"); }
-    \npublic:\n    // === Compilation Signals ===
+    
+\npublic:\n    // === Compilation Signals ===
     void compilationStarted(const CompileOptions& options);
     void compilationProgress(CompilationStage stage, int percent, const std::string& message);
     void compilationDiagnostic(const Diagnostic& diagnostic);
@@ -441,7 +442,8 @@ class CompilerEngine  {public:
     // === Status Signals ===
     void statusMessage(const std::string& message);
     void errorOccurred(const std::string& error);
-\nprivate:\n    void onWorkerProgress(int percent, const std::string& message);
+
+\nprivate:\n    void onWorkerProgress(int percent, const std::string& message);
     void onWorkerFinished(const CompileResult& result);
     void onWorkerError(const std::string& error);
 
@@ -541,9 +543,11 @@ private:
 
 class CompilerWorker  {public:
     explicit CompilerWorker( = nullptr);
-    \npublic:\n    void compile(const CompileOptions& options, const std::string& source);
+    
+\npublic:\n    void compile(const CompileOptions& options, const std::string& source);
     void cancel();
-    \npublic:\n    void progress(int percent, const std::string& message);
+    
+\npublic:\n    void progress(int percent, const std::string& message);
     void finished(const CompileResult& result);
     void error(const std::string& message);
     
@@ -631,7 +635,8 @@ class ProjectManager  {public:
     std::string projectName() const { return m_projectName; }
     std::string projectDirectory() const { return m_projectDirectory; }
     std::string projectFile() const { return m_projectFile; }
-    \npublic:\n    void projectOpened(const std::string& name);
+    
+\npublic:\n    void projectOpened(const std::string& name);
     void projectClosed();
     void projectModified();
     void fileAdded(const std::string& path);
@@ -739,7 +744,8 @@ class DiagnosticsManager  {public:
     // UI Integration
     void setTreeWidget(QTreeWidget* tree) { m_treeWidget = tree; }
     void updateTreeWidget();
-    \npublic:\n    void diagnosticAdded(const Diagnostic& diagnostic);
+    
+\npublic:\n    void diagnosticAdded(const Diagnostic& diagnostic);
     void diagnosticsCleared();
     void diagnosticSelected(const Diagnostic& diagnostic);
     
@@ -839,7 +845,8 @@ class DebuggerInterface  {public:
     std::vector<StackFrame> getCallStack();
     std::map<std::string, std::string> getLocals();
     std::string evaluateExpression(const std::string& expression);
-    \npublic:\n    void debuggingStarted();
+    
+\npublic:\n    void debuggingStarted();
     void debuggingStopped();
     void breakpointHit(const Breakpoint& bp, const StackFrame& frame);
     void stepped(const StackFrame& frame);
@@ -884,12 +891,14 @@ class CompilerWidget {public:
     void setOptimization(OptimizationLevel level);
     void loadSettings(const void*& settings);
     void* saveSettings() const;
-    \npublic:\n    void compilationRequested(const std::string& file);
+    
+\npublic:\n    void compilationRequested(const std::string& file);
     void buildRequested();
     void runRequested();
     void debugRequested();
     void diagnosticClicked(const std::string& file, int line, int column);
-    \nprivate:\n    void onCompilationStarted(const CompileOptions& options);
+    
+\nprivate:\n    void onCompilationStarted(const CompileOptions& options);
     void onCompilationProgress(CompilationStage stage, int percent, const std::string& message);
     void onCompilationFinished(const CompileResult& result);
     void onBuildStarted();

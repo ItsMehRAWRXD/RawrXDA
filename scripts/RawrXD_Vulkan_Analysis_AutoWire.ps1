@@ -148,4 +148,5 @@ if ($VulkanSdk) {
     }
 }
 
-Write-Host "`n[+] AutoWire complete. SDK: $($VulkanSdk ?? 'none'); Tools: $($AnalysisTools.Count)" -ForegroundColor Green
+$sdkDisplay = if ($VulkanSdk) { $VulkanSdk } else { 'none' }
+Write-Host "`n[+] AutoWire complete. SDK: $sdkDisplay; Tools: $($AnalysisTools.Count)" -ForegroundColor Green

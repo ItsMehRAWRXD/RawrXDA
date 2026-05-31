@@ -318,13 +318,44 @@ PaintApp::PaintApp(void* parent)
     m_canvas = new PaintCanvas(1024, 768, nullptr);
 }
 
-void PaintApp::create_menu_bar() {}
+void PaintApp::create_menu_bar() {
+    HMENU hMenu = CreateMenu();
+    HMENU hFile = CreatePopupMenu();
+    HMENU hEdit = CreatePopupMenu();
+    HMENU hView = CreatePopupMenu();
+    
+    AppendMenu(hFile, MF_STRING, 1001, "New");
+    AppendMenu(hFile, MF_STRING, 1002, "Open...");
+    AppendMenu(hFile, MF_STRING, 1003, "Save");
+    AppendMenu(hFile, MF_SEPARATOR, 0, nullptr);
+    AppendMenu(hFile, MF_STRING, 1004, "Exit");
+    
+    AppendMenu(hEdit, MF_STRING, 2001, "Undo");
+    AppendMenu(hEdit, MF_STRING, 2002, "Redo");
+    AppendMenu(hEdit, MF_SEPARATOR, 0, nullptr);
+    AppendMenu(hEdit, MF_STRING, 2003, "Cut");
+    AppendMenu(hEdit, MF_STRING, 2004, "Copy");
+    AppendMenu(hEdit, MF_STRING, 2005, "Paste");
+    
+    AppendMenu(hView, MF_STRING, 3001, "Zoom In");
+    AppendMenu(hView, MF_STRING, 3002, "Zoom Out");
+    AppendMenu(hView, MF_STRING, 3003, "Fit to Window");
+    
+    AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hFile, "File");
+    AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hEdit, "Edit");
+    AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hView, "View");
+    
+    SetMenu(m_hwnd, hMenu);
+}
 
 void* PaintApp::create_tool_panel()
 {
     return nullptr;
 }
-void PaintApp::update_color_buttons() {}
+void PaintApp::update_color_buttons() {
+    if (m_fgColorBtn) InvalidateRect(m_fgColorBtn, nullptr, FALSE);
+    if (m_bgColorBtn) InvalidateRect(m_bgColorBtn, nullptr, FALSE);
+}
 
 void PaintApp::on_new_file()
 {
@@ -368,9 +399,35 @@ void PaintApp::on_save_as_png()
 #endif
 }
 
-void PaintApp::on_foreground_color_clicked() {}
+void PaintApp::on_foreground_color_clicked() {
+    CHOOSECOLOR cc = {};
+    COLORREF customColors[16] = {};
+    cc.lStructSize = sizeof(cc);
+    cc.hwndOwner = m_hwnd;
+    cc.lpCustColors = customColors;
+    cc.rgbResult = m_fgColor;
+    cc.Flags = CC_FULLOPEN | CC_RGBINIT;
+    if (ChooseColor(&cc)) {
+        m_fgColor = cc.rgbResult;
+        if (m_canvas) m_canvas->set_foreground_color(m_fgColor);
+        update_color_buttons();
+    }
+}
 
-void PaintApp::on_background_color_clicked() {}
+void PaintApp::on_background_color_clicked() {
+    CHOOSECOLOR cc = {};
+    COLORREF customColors[16] = {};
+    cc.lStructSize = sizeof(cc);
+    cc.hwndOwner = m_hwnd;
+    cc.lpCustColors = customColors;
+    cc.rgbResult = m_bgColor;
+    cc.Flags = CC_FULLOPEN | CC_RGBINIT;
+    if (ChooseColor(&cc)) {
+        m_bgColor = cc.rgbResult;
+        if (m_canvas) m_canvas->set_background_color(m_bgColor);
+        update_color_buttons();
+    }
+}
 
 void PaintApp::on_tool_changed(int index)
 {

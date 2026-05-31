@@ -222,7 +222,11 @@ public:
         if (m_type == Type::Double) return static_cast<int>(m_double);
         if (m_type == Type::Bool)   return m_bool ? 1 : 0;
         if (m_type == Type::String) {
-            try { return std::stoi(m_string); } catch (...) {}
+            try { return std::stoi(m_string); } catch (const std::exception& e) {
+                OutputDebugStringA(("[simple_json] toInt parse exception: " + std::string(e.what()) + "\n").c_str());
+            } catch (...) {
+                OutputDebugStringA("[simple_json] toInt parse unknown exception\n");
+            }
         }
         return def;
     }
@@ -231,7 +235,11 @@ public:
         if (m_type == Type::Double) return m_double;
         if (m_type == Type::Int)    return static_cast<double>(m_int);
         if (m_type == Type::String) {
-            try { return std::stod(m_string); } catch (...) {}
+            try { return std::stod(m_string); } catch (const std::exception& e) {
+                OutputDebugStringA(("[simple_json] toDouble parse exception: " + std::string(e.what()) + "\n").c_str());
+            } catch (...) {
+                OutputDebugStringA("[simple_json] toDouble parse unknown exception\n");
+            }
         }
         return def;
     }
@@ -544,10 +552,18 @@ private:
 
             std::string numStr(start, pos);
             if (isFloat) {
-                try { return JsonValue(std::stod(numStr)); } catch (...) {}
+                try { return JsonValue(std::stod(numStr)); } catch (const std::exception& e) {
+                    OutputDebugStringA(("[simple_json] float parse exception: " + std::string(e.what()) + "\n").c_str());
+                } catch (...) {
+                    OutputDebugStringA("[simple_json] float parse unknown exception\n");
+                }
                 return {};
             }
-            try { return JsonValue(static_cast<int64_t>(std::stoll(numStr))); } catch (...) {}
+            try { return JsonValue(static_cast<int64_t>(std::stoll(numStr))); } catch (const std::exception& e) {
+                OutputDebugStringA(("[simple_json] int parse exception: " + std::string(e.what()) + "\n").c_str());
+            } catch (...) {
+                OutputDebugStringA("[simple_json] int parse unknown exception\n");
+            }
             return {};
         }
 

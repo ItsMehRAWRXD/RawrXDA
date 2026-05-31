@@ -495,3 +495,22 @@ void Win32IDE::performSearchReplace(bool replaceAll) {
     // Re-run search to update results
     performSearch();
 }
+
+void Win32IDE::runWorkspaceSearchFromDialog(const std::string& query) {
+    if (query.empty()) {
+        return;
+    }
+
+    if (!m_hwndSearchInput) {
+        createSearchPanel();
+    }
+
+    if (!m_hwndSearchInput) {
+        appendToOutput("[Search] Search panel is unavailable\n", "Search", OutputSeverity::Warning);
+        return;
+    }
+
+    SetWindowTextA(m_hwndSearchInput, query.c_str());
+    SetFocus(m_hwndSearchInput);
+    performSearch();
+}

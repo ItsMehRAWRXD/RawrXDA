@@ -19,6 +19,18 @@ PUBLIC RawrXD_EnableSeLockMemoryPrivilege
 PUBLIC RawrXD_MapModelView2MB
 PUBLIC RawrXD_StreamToGPU_AVX512
 
+; External Win32 API declarations (resolved by linker via kernel32.lib / advapi32.lib)
+EXTRN GetCurrentProcess:PROC
+EXTRN GetLastError:PROC
+EXTRN CloseHandle:PROC
+EXTRN OpenProcessToken:PROC
+EXTRN LookupPrivilegeValueW:PROC
+EXTRN AdjustTokenPrivileges:PROC
+EXTRN CreateFileMappingW:PROC
+EXTRN MapViewOfFileEx:PROC
+EXTRN UnmapViewOfFile:PROC
+EXTRN OpenFileMappingW:PROC
+
 .const
 STATUS_UNSUCCESSFUL  EQU 0C0000001h
 ERROR_SUCCESS        EQU 0

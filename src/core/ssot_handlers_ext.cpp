@@ -12,7 +12,7 @@
 // ============================================================================
 
 #include "../../include/PathResolver.h"
-#include "../agentic/AgentOllamaClient.h"
+#include "../agentic/NativeInferenceClient.h"
 #include "js_extension_host.hpp"
 #include "multi_response_engine.h"
 #include "shared_feature_dispatch.h"
@@ -124,12 +124,12 @@ std::string extractStringParam(const char* args, const std::string& key)
 // ============================================================================
 // HELPER: Create Ollama client for CLI AI operations
 // ============================================================================
-static RawrXD::Agent::AgentOllamaClient createOllamaClientExt()
+static RawrXD::Agent::NativeInferenceClient createOllamaClientExt()
 {
-    RawrXD::Agent::OllamaConfig cfg;
+    RawrXD::Agent::NativeInferenceConfig cfg;
     cfg.host = "127.0.0.1";
     cfg.port = 11434;
-    return RawrXD::Agent::AgentOllamaClient(cfg);
+    return RawrXD::Agent::NativeInferenceClient(cfg);
 }
 
 // Global model selection for AI handlers
@@ -139,7 +139,7 @@ static struct
     std::mutex mtx;
 } g_aiModelState;
 
-static void applySelectedModel(RawrXD::Agent::AgentOllamaClient& client)
+static void applySelectedModel(RawrXD::Agent::NativeInferenceClient& client)
 {
     std::string model;
     {
@@ -203,7 +203,7 @@ static std::string localInlineCompletion(const std::string& prefix)
     if (last == '(')
         return prefix + ")";
     if (last == '{')
-        return prefix + "\n    // TODO: implement\n}";
+        return prefix + "\n    // TODO: implement body\n}";
     if (last == '[')
         return prefix + "]";
     if (last == '<')
@@ -220,7 +220,7 @@ static std::string localAiFallback(const std::string& mode, const std::string& i
     {
         oss << "[OFFLINE AI] Ollama is unavailable. Local response:\n";
         oss << "- Received " << input.size() << " characters.\n";
-        oss << "- Start Ollama (`ollama serve`) for full model responses.\n";
+        oss << "- Start native inference server (`ollama serve`) for full model responses.\n";
         oss << "- Suggested next step: clarify target file and desired output format.\n";
         return oss.str();
     }
@@ -327,7 +327,7 @@ struct RouterRuntimeState
     unsigned long long estimatedPromptTokens = 0;
     unsigned long long estimatedCompletionTokens = 0;
     std::string lastConfigPath = "config\\router_runtime_state.json";
-    std::vector<std::string> fallbackChain = {"ollama", "local", "openai", "claude", "gemini"};
+    std::vector<std::string> fallbackChain = {"native", "local", "openai", "claude", "gemini"};
     std::map<std::string, std::string> pinnedTasks;
     std::map<std::string, unsigned long long> backendHits;
     unsigned long long enableCount = 0;
@@ -707,7 +707,7 @@ struct HybridRuntimeState
 {
     std::mutex mtx;
     bool integrationEnabled = true;
-    std::string aiBackend = "ollama";
+    std::string aiBackend = "native";
     bool streamAnalyzeActive = false;
     bool semanticPrefetchEnabled = false;
     bool correctionLoopActive = false;
@@ -777,18 +777,18 @@ static std::string chooseRouterBackendForPrompt(const std::string& prompt, const
     if (_stricmp(policy.c_str(), "speed") == 0)
     {
         reasonOut = "speed policy favors ollama";
-        return "ollama";
+        return "native";
     }
     reasonOut = "quality policy favors strongest available backend";
-    return "ollama";
+    return "native";
 }
 
 static std::string normalizeRouterBackendKey(std::string backend)
 {
     std::transform(backend.begin(), backend.end(), backend.begin(),
                    [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
-    if (backend.find("ollama") != std::string::npos)
-        return "ollama";
+    if (backend.find("native") != std::string::npos)
+        return "native";
     if (backend.find("openai") != std::string::npos)
         return "openai";
     if (backend.find("claude") != std::string::npos || backend.find("anthropic") != std::string::npos)
@@ -803,7 +803,7 @@ static std::string normalizeRouterBackendKey(std::string backend)
 static bool isKnownBackendKey(const std::string& backend)
 {
     const std::string normalized = normalizeRouterBackendKey(backend);
-    return normalized == "local" || normalized == "ollama" || normalized == "openai" || normalized == "claude" ||
+    return normalized == "local" || normalized == "native" || normalized == "openai" || normalized == "claude" ||
            normalized == "gemini";
 }
 
@@ -877,7 +877,7 @@ static const char* apiEnvVarNameForProvider(const std::string& provider)
         return "ANTHROPIC_API_KEY";
     if (provider == "gemini")
         return "GEMINI_API_KEY";
-    if (provider == "ollama")
+    if (provider == "native")
         return "OLLAMA_API_KEY";
     if (provider == "local")
         return "RAWRXD_LOCAL_API_KEY";
@@ -4095,7 +4095,7 @@ CommandResult handleAINoRefusal(const CommandContext& ctx)
     }
     static bool noRefusal = false;
     noRefusal = !noRefusal;
-    ctx.output(noRefusal ? "[AI] No-refusal mode: ENABLED\n" : "[AI] No-refusal mode: DISABLED\n");
+    ctx.output(noRefusal ? "[AI] Direct-response mode: ENABLED\n" : "[AI] Direct-response mode: DISABLED\n");
     return CommandResult::ok("ai.noRefusal");
 }
 
@@ -4721,7 +4721,7 @@ CommandResult handleAIInlineComplete(const CommandContext& ctx)
 
     if (!client.TestConnection())
     {
-        ctx.output("[AI] Ollama not available at 127.0.0.1:11434. Using offline completion.\n");
+        ctx.output("[AI] Ollama not available at 127.0.0.1:11435. Using offline completion.\n");
         std::string completion = localInlineCompletion(ctx.args);
         if (completion.empty())
         {
@@ -6064,7 +6064,7 @@ CommandResult handleToolsSettings(const CommandContext& ctx)
         if (hw != INVALID_HANDLE_VALUE)
         {
             const char* defaults = "{\n  \"theme\": \"dark\",\n  \"fontSize\": 14,\n  \"tabSize\": 4,\n  \"autoSave\": "
-                                   "true,\n  \"ollamaUrl\": \"http://127.0.0.1:11434\"\n}\n";
+                                   "true,\n  \"ollamaUrl\": \"http://127.0.0.1:11435\"\n}\n";
             DWORD written = 0;
             WriteFile(hw, defaults, (DWORD)strlen(defaults), &written, nullptr);
             CloseHandle(hw);
@@ -8658,7 +8658,7 @@ CommandResult handlePromptClassifyContext(const CommandContext& ctx)
     if (ctx.isGui && ctx.idePtr)
     {
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
-        PostMessageA(hwnd, WM_COMMAND, 11600, 0);
+        PostMessageA(hwnd, WM_COMMAND, 12300, 0);  // IDM_CRASH_SHOW (Tier5 band 12200–12314)
         return CommandResult::ok("prompt.classifyContext");
     }
 
@@ -10294,7 +10294,7 @@ static CommandResult applyBackendSwitchRuntime(const CommandContext& ctx, const 
     const bool ollamaLive = createOllamaClientExt().TestConnection();
     std::string active = requested;
     std::string reason = "manual switch request";
-    if (requested == "ollama" && !ollamaLive)
+    if (requested == "native" && !ollamaLive)
     {
         active = "local";
         reason = "ollama offline fallback to local";
@@ -10369,7 +10369,7 @@ CommandResult handleBackendSwitchOllama(const CommandContext& ctx)
         return CommandResult::ok("backend.switchOllama");
     }
 
-    return applyBackendSwitchRuntime(ctx, "backend.switchOllama", "ollama");
+    return applyBackendSwitchRuntime(ctx, "backend.switchOllama", "native");
 }
 
 CommandResult handleBackendSwitchOpenAI(const CommandContext& ctx)
@@ -10493,7 +10493,7 @@ CommandResult handleBackendShowSwitcher(const CommandContext& ctx)
         activeBackend = "local";
     }
 
-    std::vector<std::string> backends = {"local", "ollama", "openai", "claude", "gemini"};
+    std::vector<std::string> backends = {"local", "native", "openai", "claude", "gemini"};
     for (const auto& candidate : preferredOrder)
     {
         const std::string normalized = normalizeRouterBackendKey(candidate);
@@ -10515,7 +10515,7 @@ CommandResult handleBackendShowSwitcher(const CommandContext& ctx)
         const std::string& backend = backends[i];
         const bool isActive = (backend == activeBackend);
         const char* availability = "ready";
-        if (backend == "ollama")
+        if (backend == "native")
         {
             availability = ollamaLive ? "online" : "offline";
         }
@@ -11445,7 +11445,7 @@ CommandResult handleRouterCapabilities(const CommandContext& ctx)
         {
             return "native";
         }
-        if (_stricmp(provider, "ollama") == 0)
+        if (_stricmp(provider, "native") == 0)
         {
             return ollamaLive ? "online" : "offline";
         }
@@ -11456,7 +11456,7 @@ CommandResult handleRouterCapabilities(const CommandContext& ctx)
     oss << "[ROUTER] Backend capabilities\n";
     oss << "  active: " << activeBackend << "\n";
     oss << "  local:   " << providerState("local") << " (offline deterministic execution)\n";
-    oss << "  ollama:  " << providerState("ollama") << " (chat/FIM/tool-routing)\n";
+    oss << "  native:  " << providerState("native") << " (chat/FIM/tool-routing)\n";
     oss << "  openai:  " << providerState("openai") << " (high-quality text/vision)\n";
     oss << "  claude:  " << providerState("claude") << " (long-context analysis)\n";
     oss << "  gemini:  " << providerState("gemini") << " (multimodal support)\n";
@@ -11763,13 +11763,13 @@ CommandResult handleRouterSimulateLast(const CommandContext& ctx)
     const bool ollamaLive = createOllamaClientExt().TestConnection();
 
     std::string executable = primary;
-    if (primary == "ollama" && !ollamaLive)
+    if (primary == "native" && !ollamaLive)
     {
         executable = "local";
     }
-    else if (primary != "local" && primary != "ollama")
+    else if (primary != "local" && primary != "native")
     {
-        executable = ollamaLive ? "ollama" : "local";
+        executable = ollamaLive ? "native" : "local";
     }
 
     {
@@ -11905,12 +11905,12 @@ CommandResult handleRouterRoutePrompt(const CommandContext& ctx)
 
     const bool ollamaLive = createOllamaClientExt().TestConnection();
     std::string executable = primary;
-    if (executable == "ollama" && !ollamaLive)
+    if (executable == "native" && !ollamaLive)
     {
         executable = "local";
         reason += "; ollama offline fallback";
     }
-    else if (executable != "local" && executable != "ollama" && executable != "openai" && executable != "claude" &&
+    else if (executable != "local" && executable != "native" && executable != "openai" && executable != "claude" &&
              executable != "gemini")
     {
         executable = "local";
@@ -12668,7 +12668,7 @@ CommandResult handleRouterEnsembleEnable(const CommandContext& ctx)
         }
         else if (state.fallbackChain.empty())
         {
-            state.fallbackChain = {"ollama", "local", "openai", "claude", "gemini"};
+            state.fallbackChain = {"native", "local", "openai", "claude", "gemini"};
         }
         ++state.ensembleEnableCount;
         enableCount = state.ensembleEnableCount;
@@ -27807,7 +27807,7 @@ struct CodebaseIndex
                             "void startDebugSession(const std::string& target) { /* debug logic */ }",
                             {}};
 
-        // Simulate embedding generation (random for demo)
+        // Simulate embedding generation
         chunk1.embedding.resize(768);
         chunk2.embedding.resize(768);
         for (int i = 0; i < 768; ++i)
@@ -28154,7 +28154,7 @@ static std::string swarm_firstToken(const CommandContext& ctx)
 
 struct AIBackendConfig
 {
-    std::string activeBackend = "local";  // "local", "ollama", "openai", "claude", "gemini"
+    std::string activeBackend = "local";  // "local", "native", "openai", "claude", "gemini"
 
     // Ollama specific
     std::string ollamaHost = "127.0.0.1";

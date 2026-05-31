@@ -86,7 +86,7 @@ PeekOverlayWindow::PeekOverlayWindow(HWND hwndParent, Win32IDE* ide, const std::
         wc.lpfnWndProc = WndProc;
         wc.hInstance = GetModuleHandle(nullptr);
         wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
-        wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+        wc.hbrBackground = CreateSolidBrush(RGB(30, 30, 35));
         wc.lpszClassName = L"RawrXD_PeekOverlay";
         RegisterClassExW(&wc);
         classRegistered = true;
@@ -261,41 +261,174 @@ LRESULT CALLBACK PeekOverlayWindow::WndProc(HWND hwnd, UINT msg, WPARAM wParam, 
 
 void PeekOverlayWindow::renderItem(HDC hdc, const PeekItem& item, int x, int y, int width, int height)
 {
-    // Draw border
+    // ---- Dark theme background ----
+    HBRUSH bgBrush = CreateSolidBrush(RGB(30, 30, 35));
+    RECT bgRect = {x, y, x + width, y + height};
+    FillRect(hdc, &bgRect, bgBrush);
+    DeleteObject(bgBrush);
+
+    SetBkMode(hdc, TRANSPARENT);
+
+    // ---- Header bar (file path + tabs for multi-item) ----
+    const int headerH = 28;
+    HBRUSH headerBrush = CreateSolidBrush(RGB(40, 40, 48));
+    RECT headerRect = {x, y, x + width, y + headerH};
+    FillRect(hdc, &headerRect, headerBrush);
+    DeleteObject(headerBrush);
+
+    // Title text (file:line in header)
+    HFONT headerFont = CreateFontW(-13, 0, 0, 0, FW_SEMIBOLD, FALSE, FALSE, FALSE,
+                                   DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
+                                   CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
+                                   DEFAULT_PITCH | FF_SWISS, L"Segoe UI");
+    HFONT oldFont = (HFONT)SelectObject(hdc, headerFont);
+
+    std::wstring headerText(item.title.begin(), item.title.end());
+    if (!item.file.empty()) {
+        // Show filename:line
+        std::string fname = item.file;
+        auto slash = fname.find_last_of("\\/");
+        if (slash != std::string::npos) fname = fname.substr(slash + 1);
+        std::string loc = fname + ":" + std::to_string(item.line);
+        headerText = std::wstring(loc.begin(), loc.end());
+    }
+
+    RECT titleRect = {x + 10, y + 4, x + width - 10, y + headerH};
+    SetTextColor(hdc, RGB(200, 200, 210));
+    DrawTextW(hdc, headerText.c_str(), -1, &titleRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+
+    // Tab indicator (current/total)
+    if (m_items.size() > 1) {
+        std::wstring tabText = std::to_wstring(m_currentIndex + 1) + L"/" + std::to_wstring(m_items.size());
+        RECT tabRect = {x + width - 80, y + 4, x + width - 10, y + headerH};
+        SetTextColor(hdc, RGB(140, 140, 160));
+        DrawTextW(hdc, tabText.c_str(), -1, &tabRect, DT_RIGHT | DT_VCENTER | DT_SINGLELINE);
+    }
+
+    SelectObject(hdc, oldFont);
+    DeleteObject(headerFont);
+
+    // ---- Separator line ----
+    HPEN sepPen = CreatePen(PS_SOLID, 1, RGB(60, 60, 70));
+    HPEN oldPen = (HPEN)SelectObject(hdc, sepPen);
+    MoveToEx(hdc, x, y + headerH, nullptr);
+    LineTo(hdc, x + width, y + headerH);
+    SelectObject(hdc, oldPen);
+    DeleteObject(sepPen);
+
+    // ---- Code content with line numbers ----
+    HFONT codeFont = CreateFontW(-13, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+                                 DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
+                                 CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
+                                 FIXED_PITCH | FF_MODERN, L"Consolas");
+    SelectObject(hdc, codeFont);
+
+    const int gutterWidth = 48;
+    const int lineHeight = 17;
+    const int contentTop = y + headerH + 6;
+    const int contentLeft = x + gutterWidth + 8;
+    const int maxVisibleLines = (height - headerH - 12) / lineHeight;
+
+    // Gutter background
+    HBRUSH gutterBrush = CreateSolidBrush(RGB(35, 35, 42));
+    RECT gutterRect = {x, y + headerH, x + gutterWidth, y + height};
+    FillRect(hdc, &gutterRect, gutterBrush);
+    DeleteObject(gutterBrush);
+
+    // Parse content into lines
+    std::vector<std::string> lines;
+    {
+        std::string remaining = item.content;
+        size_t pos = 0;
+        while (pos < remaining.size()) {
+            size_t nl = remaining.find('\n', pos);
+            if (nl == std::string::npos) {
+                lines.push_back(remaining.substr(pos));
+                break;
+            }
+            lines.push_back(remaining.substr(pos, nl - pos));
+            pos = nl + 1;
+        }
+    }
+
+    // Determine starting line number
+    int startLineNum = (item.line > 3) ? item.line - 3 : 1;
+
+    for (int i = 0; i < static_cast<int>(lines.size()) && i < maxVisibleLines; ++i) {
+        int drawY = contentTop + i * lineHeight;
+        int lineNum = startLineNum + i;
+        bool isTargetLine = (lineNum == item.line);
+
+        // Highlight target line background
+        if (isTargetLine || (!lines[i].empty() && lines[i].substr(0, 4) == ">>> ")) {
+            HBRUSH hlBrush = CreateSolidBrush(RGB(45, 50, 65));
+            RECT hlRect = {x + gutterWidth, drawY, x + width, drawY + lineHeight};
+            FillRect(hdc, &hlRect, hlBrush);
+            DeleteObject(hlBrush);
+        }
+
+        // Line number in gutter
+        std::wstring numStr = std::to_wstring(lineNum);
+        RECT numRect = {x + 4, drawY, x + gutterWidth - 4, drawY + lineHeight};
+        SetTextColor(hdc, isTargetLine ? RGB(180, 180, 200) : RGB(90, 90, 110));
+        DrawTextW(hdc, numStr.c_str(), -1, &numRect, DT_RIGHT | DT_VCENTER | DT_SINGLELINE);
+
+        // Code text — lightweight syntax coloring
+        std::string lineText = lines[i];
+        // Strip the ">>> " / "    " prefix from buildPeekItemsFromLspLocations
+        if (lineText.size() >= 4 && (lineText.substr(0, 4) == ">>> " || lineText.substr(0, 4) == "    ")) {
+            lineText = lineText.substr(4);
+        }
+
+        // Simple token classification for coloring
+        std::wstring wline(lineText.begin(), lineText.end());
+        RECT codeRect = {contentLeft, drawY, x + width - 8, drawY + lineHeight};
+
+        // Check for comment lines
+        std::string trimmed = lineText;
+        size_t ftrim = trimmed.find_first_not_of(" \t");
+        if (ftrim != std::string::npos) trimmed = trimmed.substr(ftrim);
+
+        if (trimmed.size() >= 2 && trimmed[0] == '/' && trimmed[1] == '/') {
+            SetTextColor(hdc, RGB(106, 153, 85));  // Green comments
+        } else if (trimmed.size() >= 1 && trimmed[0] == '#') {
+            SetTextColor(hdc, RGB(155, 120, 180)); // Purple preprocessor
+        } else if (trimmed.find("\"") != std::string::npos) {
+            SetTextColor(hdc, RGB(206, 145, 120)); // Orange strings
+        } else {
+            SetTextColor(hdc, RGB(212, 212, 212)); // Default light gray
+        }
+
+        DrawTextW(hdc, wline.c_str(), -1, &codeRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+    }
+
+    SelectObject(hdc, oldFont);
+    DeleteObject(codeFont);
+
+    // ---- Border ----
     drawBorder(hdc, x, y, width, height);
-
-    // Draw title
-    RECT titleRect = {x + 10, y + 10, x + width - 10, y + 30};
-    HFONT titleFont = CreateFontW(-14, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
-                                  CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Segoe UI");
-    HFONT oldFont = (HFONT)SelectObject(hdc, titleFont);
-    DrawTextW(hdc, std::wstring(item.title.begin(), item.title.end()).c_str(), -1, &titleRect, DT_LEFT | DT_VCENTER);
-    SelectObject(hdc, oldFont);
-    DeleteObject(titleFont);
-
-    // Draw content
-    RECT contentRect = {x + 10, y + 35, x + width - 10, y + height - 10};
-    HFONT contentFont = CreateFontW(-12, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
-                                    CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, FIXED_PITCH | FF_MODERN, L"Consolas");
-    SelectObject(hdc, contentFont);
-    DrawTextW(hdc, std::wstring(item.content.begin(), item.content.end()).c_str(), -1, &contentRect,
-              DT_LEFT | DT_TOP | DT_WORDBREAK);
-    SelectObject(hdc, oldFont);
-    DeleteObject(contentFont);
 }
 
 void PeekOverlayWindow::drawBorder(HDC hdc, int x, int y, int width, int height)
 {
-    HPEN pen = CreatePen(PS_SOLID, 2, RGB(0, 120, 215));
+    // Accent blue border matching VS Code peek
+    HPEN pen = CreatePen(PS_SOLID, 2, RGB(0, 122, 204));
     HPEN oldPen = (HPEN)SelectObject(hdc, pen);
     HBRUSH brush = (HBRUSH)GetStockObject(NULL_BRUSH);
     HBRUSH oldBrush = (HBRUSH)SelectObject(hdc, brush);
 
     Rectangle(hdc, x, y, x + width, y + height);
 
+    // Top accent line (brighter)
+    HPEN topPen = CreatePen(PS_SOLID, 2, RGB(0, 150, 240));
+    SelectObject(hdc, topPen);
+    MoveToEx(hdc, x, y, nullptr);
+    LineTo(hdc, x + width, y);
+
     SelectObject(hdc, oldPen);
     SelectObject(hdc, oldBrush);
     DeleteObject(pen);
+    DeleteObject(topPen);
 }
 
 // ============================================================================

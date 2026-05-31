@@ -102,7 +102,7 @@ public:
         GetCurrentDirectoryA(MAX_PATH, current_dir);
         terminal_.StartTerminalSession(current_dir);
         
-        // Wire callbacks (simplified for example)
+        // Wire callbacks
         /*
         orchestrator_.SetEditCallback([this](auto edits) {
             editor_.LoadEdits(edits);

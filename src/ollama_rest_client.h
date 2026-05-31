@@ -10,13 +10,13 @@
 using json = nlohmann::json;
 
 /**
- * @class OllamaRESTClient
+ * @class NativeRestClient
  * @brief Lightweight HTTP client for Ollama /api/tags discovery
  * 
- * Connects to local Ollama server on :11434 to enumerate available models.
+ * Connects to local Ollama server on :11435 to enumerate available models.
  * Models are returned as JSON to be registered with UniversalModelRouter.
  */
-class OllamaRESTClient {
+class NativeRestClient {
 public:
     struct OllamaModel {
         std::string name;           // e.g. "llama2:7b"
@@ -26,12 +26,12 @@ public:
         std::string modified_at;    // ISO timestamp
     };
 
-    OllamaRESTClient();
-    ~OllamaRESTClient();
+    NativeRestClient();
+    ~NativeRestClient();
 
     // Non-copyable
-    OllamaRESTClient(const OllamaRESTClient&) = delete;
-    OllamaRESTClient& operator=(const OllamaRESTClient&) = delete;
+    NativeRestClient(const NativeRestClient&) = delete;
+    NativeRestClient& operator=(const NativeRestClient&) = delete;
 
     /**
      * @brief Connect to local Ollama server
@@ -81,7 +81,7 @@ public:
     json getModelsJSON();
 
 private:
-    std::string m_baseUrl;  // e.g. "http://localhost:11434"
+    std::string m_baseUrl;  // e.g. "http://localhost:11435"
     CURL* m_curl;
     int m_timeout_ms;
 

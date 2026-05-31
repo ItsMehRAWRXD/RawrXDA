@@ -4,6 +4,15 @@ const path = require('path');
 const ffi = require('ffi-napi');
 const ref = require('ref-napi');
 
+// Extension host manager — loaded with fault isolation; server works without it
+let extHostManager = null;
+try {
+    extHostManager = require('./extension-host/extension-host-manager');
+    console.log('\u2705 Extension host manager ready, log:', extHostManager.logFile);
+} catch (ehErr) {
+    console.log('\u26a0\ufe0f  Extension host manager not loaded:', ehErr.message);
+}
+
 // Centralized version — single source of truth from package.json
 const PKG = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
 const SERVER_VERSION = PKG.version || '0.0.0';
@@ -174,6 +183,18 @@ const server = http.createServer((req, res) => {
     // ── CLI execution endpoint (build, deploy, etc.) ──
     if (url.pathname === '/api/cli' || url.pathname === '/api/build' || url.pathname === '/api/deploy') {
         handleCliRequest(req, res, url.pathname);
+        return;
+    }
+
+    // ── Autonomous agent tool endpoint ──
+    if (url.pathname === '/agent/tool' && req.method === 'POST') {
+        handleAgentToolRequest(req, res);
+        return;
+    }
+
+    // ── Autonomous agent status endpoint ──
+    if (url.pathname === '/agent/status' && req.method === 'GET') {
+        handleAgentStatusRequest(req, res);
         return;
     }
 
@@ -1030,6 +1051,97 @@ server.on('request', (req, res) => {
     }
 
     // ── /api/cli, /api/build, /api/deploy — execute shell commands for IDE ──
+    // ── Autonomous agent tool dispatch ──
+    // POST /agent/tool  { "tool": "Start-SelfAnalysis", "args": {} }
+    function handleAgentToolRequest(req, res) {
+        let body = '';
+        req.on('data', chunk => body += chunk);
+        req.on('end', () => {
+            const startMs = Date.now();
+            let parsed;
+            try {
+                parsed = body ? JSON.parse(body) : {};
+            } catch (e) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ ok: false, error: 'Invalid JSON body', detail: e.message }));
+                return;
+            }
+
+            const AGENT_TOOL_ALLOWLIST = [
+                'Start-SelfAnalysis',
+                'Start-AutonomousTesting',
+                'Start-AutomaticFeatureGeneration',
+                'Get-AutonomousAgentStatus',
+                'Initialize-AutonomousAgentState',
+            ];
+
+            const toolName = (parsed.tool || '').trim();
+            if (!toolName || !AGENT_TOOL_ALLOWLIST.includes(toolName)) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                    ok: false,
+                    error: 'Tool not in allowlist',
+                    allowlist: AGENT_TOOL_ALLOWLIST,
+                    received: toolName
+                }));
+                return;
+            }
+
+            const argsJson = JSON.stringify(parsed.args || {});
+            const bridgePath = path.join(__dirname, 'agent_tool_bridge.ps1');
+            const argsJsonSafe = argsJson.replace(/'/g, "''");
+            const psCommand = `pwsh.exe -NonInteractive -NoProfile -File "${bridgePath}" -Tool "${toolName}" -ArgsJson '${argsJsonSafe}'`;
+
+            const { exec } = require('child_process');
+            exec(psCommand, { cwd: __dirname, timeout: 45000, maxBuffer: 2 * 1024 * 1024 }, (err, stdout, stderr) => {
+                const durationMs = Date.now() - startMs;
+                let result;
+                try {
+                    // Primary: expect stdout to be exactly one JSON line (strict contract).
+                    // Fallback: scan for last line starting with '{' to tolerate any
+                    // residual module-init noise that might survive future refactors.
+                    try {
+                        result = JSON.parse(stdout.trim());
+                    } catch (_primaryErr) {
+                        const lines = stdout.split(/\r?\n/);
+                        const jsonLine = [...lines].reverse().find(l => l.trimStart().startsWith('{'));
+                        if (!jsonLine) throw _primaryErr;
+                        result = JSON.parse(jsonLine);
+                        result.__jsonFallback = true;   // telemetry: strict contract violated
+                    }
+                } catch (_) {
+                    result = { raw: stdout.slice(0, 4096), parseError: true };
+                }
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                    ok: !err,
+                    tool: toolName,
+                    durationMs,
+                    exitCode: err ? (err.code || 1) : 0,
+                    result,
+                    stderr: stderr ? stderr.slice(0, 2048) : ''
+                }));
+            });
+        });
+    }
+
+    // GET /agent/status — lightweight check (no PS spawn)
+    function handleAgentStatusRequest(req, res) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+            ok: true,
+            bridge: 'agent_tool_bridge.ps1',
+            allowlist: [
+                'Start-SelfAnalysis',
+                'Start-AutonomousTesting',
+                'Start-AutomaticFeatureGeneration',
+                'Get-AutonomousAgentStatus',
+                'Initialize-AutonomousAgentState',
+            ],
+            serverUptime: Math.round((Date.now() - serverMetrics.startTime) / 1000)
+        }));
+    }
+
     function handleCliRequest(req, res, endpoint) {
         let body = '';
         req.on('data', chunk => body += chunk);
@@ -1122,6 +1234,81 @@ server.on('request', (req, res) => {
         }));
         return;
     }
+    // ── Extension host status ──
+    if (url.pathname === '/extension-host/status' && req.method === 'GET') {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        if (!extHostManager) {
+            res.writeHead(503, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: false, error: 'Extension host manager not initialized' }));
+            return;
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, extensions: extHostManager.getStatus() }));
+        return;
+    }
+
+    // ── Extension host send ──
+    if (url.pathname === '/extension-host/send' && req.method === 'POST') {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        if (!extHostManager) {
+            res.writeHead(503, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: false, error: 'Extension host manager not initialized' }));
+            return;
+        }
+        let ehBody = '';
+        let ehTooLarge = false;
+        req.on('data', (chunk) => {
+            if (ehTooLarge) return;
+            ehBody += chunk;
+            if (Buffer.byteLength(ehBody) > 65536) {
+                ehTooLarge = true;
+                res.writeHead(413, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ ok: false, error: 'Payload too large (max 64KB)' }));
+                req.destroy();
+            }
+        });
+        req.on('end', () => {
+            if (ehTooLarge) return;
+            let parsed;
+            try { parsed = JSON.parse(ehBody); } catch (_) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ ok: false, error: 'Invalid JSON body' }));
+                return;
+            }
+            const extName    = typeof parsed.extension === 'string' ? parsed.extension.trim() : '';
+            const extType    = typeof parsed.type      === 'string' ? parsed.type.trim()      : '';
+            const extPayload = parsed.payload !== undefined ? parsed.payload : null;
+            // Allowlist: extension name must be safe filename chars only
+            if (!extName || !/^[a-zA-Z0-9_\-.]{1,64}$/.test(extName)) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ ok: false, error: 'extension: 1-64 chars [a-zA-Z0-9_.-] required' }));
+                return;
+            }
+            if (!extType || extType.length > 128) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ ok: false, error: 'type: 1-128 char string required' }));
+                return;
+            }
+            const allExts = extHostManager.getStatus();
+            const match   = allExts.find(e => e.name === extName);
+            if (!match) {
+                res.writeHead(404, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ ok: false, error: 'Extension not found: ' + extName }));
+                return;
+            }
+            extHostManager.sendToExtension(match.id, extType, extPayload, { source: 'server.js' })
+                .then(result => {
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ ok: true, result }));
+                })
+                .catch(err => {
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ ok: false, error: err.message }));
+                });
+        });
+        return;
+    }
+
     origListeners.forEach(fn => fn.call(server, req, res));
 });
 

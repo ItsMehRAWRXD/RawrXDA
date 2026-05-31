@@ -1,0 +1,9 @@
+{
+  "id": "INC-2026-00421",
+  "severity": 9,
+  "type": "ransomware",
+  "host": "wkstn-445",
+  "suspect_account": "j.smith",
+  "source_ip": "185.199.110.153",
+  "business_unit": "finance"
+}

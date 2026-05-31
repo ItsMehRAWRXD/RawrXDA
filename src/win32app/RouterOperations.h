@@ -66,6 +66,8 @@ public:
     // Enable/disable commands
     void SetCommandEnabled(const std::string& commandId, bool enabled);
 
+    void RegisterEditorCommands();
+
     // History
     struct HistoryEntry {
         std::string commandId;

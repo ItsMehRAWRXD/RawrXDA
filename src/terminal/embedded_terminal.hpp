@@ -41,8 +41,22 @@ public:
                                    uint32_t timeout_ms = 30000);
     
 private:
+    EmbeddedTerminal() = default;
+    ~EmbeddedTerminal() {
+        terminate();
+        if (hConPTY_in_  != INVALID_HANDLE_VALUE) CloseHandle(hConPTY_in_);
+        if (hConPTY_out_ != INVALID_HANDLE_VALUE) CloseHandle(hConPTY_out_);
+        if (hChildStdIn_ != INVALID_HANDLE_VALUE) CloseHandle(hChildStdIn_);
+        if (hChildStdOut_ != INVALID_HANDLE_VALUE) CloseHandle(hChildStdOut_);
+        if (hProcess_    != INVALID_HANDLE_VALUE) CloseHandle(hProcess_);
+    }
+    EmbeddedTerminal(const EmbeddedTerminal&) = delete;
+    EmbeddedTerminal& operator=(const EmbeddedTerminal&) = delete;
+
     HANDLE hConPTY_in_ = INVALID_HANDLE_VALUE;
     HANDLE hConPTY_out_ = INVALID_HANDLE_VALUE;
+    HANDLE hChildStdIn_ = INVALID_HANDLE_VALUE;
+    HANDLE hChildStdOut_ = INVALID_HANDLE_VALUE;
     HANDLE hProcess_ = INVALID_HANDLE_VALUE;
     std::thread output_thread_;
     std::thread error_thread_;

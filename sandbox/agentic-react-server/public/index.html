@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agentic React Server</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Tahoma, sans-serif;
+        background: radial-gradient(circle at top, #1c2f4b, #0f172a 58%);
+        color: #f8fafc;
+      }
+      .wrap {
+        max-width: 760px;
+        margin: 40px auto;
+        padding: 20px;
+      }
+      .panel {
+        background: rgba(15, 23, 42, 0.72);
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        border-radius: 14px;
+        padding: 18px;
+      }
+      input, button {
+        font-size: 14px;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+      }
+      input {
+        width: 100%;
+        box-sizing: border-box;
+        margin-bottom: 10px;
+        background: #0b1220;
+        color: #f8fafc;
+      }
+      button {
+        background: #0ea5e9;
+        color: #001018;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      pre {
+        background: #020617;
+        border-radius: 8px;
+        padding: 12px;
+        overflow: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script>
+      const { useState } = React;
+
+      function App() {
+        const [text, setText] = useState("Hello from RawrXD");
+        const [response, setResponse] = useState("(click send)");
+
+        async function submit() {
+          const r = await fetch('/api/echo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text, source: 'react-ui' })
+          });
+          const data = await r.json();
+          setResponse(JSON.stringify(data, null, 2));
+        }
+
+        return React.createElement('div', { className: 'wrap' },
+          React.createElement('h1', null, 'Agentic React Server'),
+          React.createElement('div', { className: 'panel' },
+            React.createElement('p', null, 'Minimal React UI + Node server endpoints.'),
+            React.createElement('input', {
+              value: text,
+              onChange: (e) => setText(e.target.value),
+              placeholder: 'Type message'
+            }),
+            React.createElement('button', { onClick: submit }, 'Send to /api/echo'),
+            React.createElement('h3', null, 'Response'),
+            React.createElement('pre', null, response)
+          )
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+    </script>
+  </body>
+</html>

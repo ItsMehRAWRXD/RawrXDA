@@ -10,8 +10,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 
-#ifndef GGML_SYCL_VECDOTQ_HPP
-#define GGML_SYCL_VECDOTQ_HPP
+#ifndef GGML_RXD_SYCL_VECDOTQ_HPP
+#define GGML_RXD_SYCL_VECDOTQ_HPP
 
 #include "dpct/helper.hpp"
 #include "ggml.h"
@@ -255,14 +255,14 @@ vec_dot_q6_K_q8_1_impl_mmvq(const int &vl, const int &vh,
 // VDR = vec dot ratio, how many contiguous integers each thread processes when the vec dot kernel is called
 // MMVQ = mul_mat_vec_q, MMQ = mul_mat_q
 
-template <ggml_type T> struct reorder_vec_dot_q_sycl {
-    static_assert(T != T, "ggml_type for reorder vecdot not implemented");
+template <ggml_rxd_type T> struct reorder_vec_dot_q_sycl {
+    static_assert(T != T, "ggml_rxd_type for reorder vecdot not implemented");
 };
 
-template <> struct reorder_vec_dot_q_sycl<GGML_TYPE_Q4_0> {
-    static constexpr ggml_type gtype = GGML_TYPE_Q4_0;
+template <> struct reorder_vec_dot_q_sycl<GGML_RXD_TYPE_Q4_0> {
+    static constexpr ggml_rxd_type gtype = GGML_RXD_TYPE_Q4_0;
 
-    using q4_0_block  = ggml_sycl_reordered::block_q_t<GGML_TYPE_Q4_0>;
+    using q4_0_block  = ggml_rxd_sycl_reordered::block_q_t<GGML_RXD_TYPE_Q4_0>;
     using q4_0_traits = typename q4_0_block::traits;
 
     __dpct_inline__ float vec_dot_q4_0_q8_1_impl(const int * v, const int * u, const float & d4, const sycl::half2 & ds8) {
@@ -288,7 +288,7 @@ template <> struct reorder_vec_dot_q_sycl<GGML_TYPE_Q4_0> {
                                      const std::pair<int, int> d_offset, const int8_t * q8_1_quant_ptr,
                                      const sycl::half2 * q8_1_ds, const int & iqs) {
         const uint8_t * bq4_0 = static_cast<const uint8_t *>(vbq) + ibx_offset.first;
-        const ggml_half d = *(reinterpret_cast<const ggml_half *>(static_cast<const uint8_t *>(vbq) + d_offset.first));
+        const ggml_rxd_half d = *(reinterpret_cast<const ggml_rxd_half *>(static_cast<const uint8_t *>(vbq) + d_offset.first));
         int             v[q4_0_traits::vdr_mmvq];
         int             u[2 * q4_0_traits::vdr_mmvq];
 
@@ -305,7 +305,7 @@ template <> struct reorder_vec_dot_q_sycl<GGML_TYPE_Q4_0> {
 };
 
 static inline float vec_dot_q4_K_q8_1_common(const int * __restrict__ q4, const uint16_t * __restrict__ scales,
-                                             const ggml_half2 & dm, const block_q8_1 * __restrict__ bq8_1,
+                                             const ggml_rxd_half2 & dm, const block_q8_1 * __restrict__ bq8_1,
                                              const int &        iqs) {
     int   v[2];
     int   u[2 * QR4_K];
@@ -341,10 +341,10 @@ static inline float vec_dot_q4_K_q8_1_common(const int * __restrict__ q4, const 
     return vec_dot_q4_K_q8_1_impl_vmmq(v, u, sc, m, dm, d8);
 }
 
-template <> struct reorder_vec_dot_q_sycl<GGML_TYPE_Q4_K> {
-    static constexpr ggml_type gtype = GGML_TYPE_Q4_K;
+template <> struct reorder_vec_dot_q_sycl<GGML_RXD_TYPE_Q4_K> {
+    static constexpr ggml_rxd_type gtype = GGML_RXD_TYPE_Q4_K;
 
-    using q4_k_block  = ggml_sycl_reordered::block_q_t<GGML_TYPE_Q4_K>;
+    using q4_k_block  = ggml_rxd_sycl_reordered::block_q_t<GGML_RXD_TYPE_Q4_K>;
     using q4_k_traits = typename q4_k_block::traits;
 
     __dpct_inline__ float operator()(const void * __restrict__ vbq, const std::pair<int, int> ibx_offset,
@@ -353,7 +353,7 @@ template <> struct reorder_vec_dot_q_sycl<GGML_TYPE_Q4_K> {
         const uint8_t *    base           = static_cast<const uint8_t *>(vbq);
         const uint8_t *    qs             = base + ibx_offset.first;
         const uint8_t *    scs            = base + d_offset.first;
-        const ggml_half2 * dms            = reinterpret_cast<const ggml_half2 *>(base + d_offset.second);
+        const ggml_rxd_half2 * dms            = reinterpret_cast<const ggml_rxd_half2 *>(base + d_offset.second);
 
         const int        bq8_offset = QR4_K * ((iqs / 2) / (QI8_1 / 2));
         const int *      q4         = (const int *) (qs + 16 * bq8_offset + 4 * ((iqs / 2) % 4));
@@ -394,10 +394,10 @@ template <> struct reorder_vec_dot_q_sycl<GGML_TYPE_Q4_K> {
     }
 };
 
-template <> struct reorder_vec_dot_q_sycl<GGML_TYPE_Q6_K> {
-    static constexpr ggml_type gtype = GGML_TYPE_Q6_K;
+template <> struct reorder_vec_dot_q_sycl<GGML_RXD_TYPE_Q6_K> {
+    static constexpr ggml_rxd_type gtype = GGML_RXD_TYPE_Q6_K;
 
-    using q6_k_block  = ggml_sycl_reordered::block_q_t<GGML_TYPE_Q6_K>;
+    using q6_k_block  = ggml_rxd_sycl_reordered::block_q_t<GGML_RXD_TYPE_Q6_K>;
     using q6_k_traits = typename q6_k_block::traits;
 
     __dpct_inline__ float vec_dot_q6_K_q8_1_impl_mmvq(const int vl, const int vh, const int * __restrict__ u,
@@ -429,7 +429,7 @@ template <> struct reorder_vec_dot_q_sycl<GGML_TYPE_Q6_K> {
         const uint8_t *   ql     = base + ibx_offset.first;
         const uint8_t *   qh     = base + ibx_offset.second;
         const int8_t *    scales = reinterpret_cast<const int8_t *>(base + d_offset.first);
-        const ggml_half * d      = (const ggml_half *) (base + d_offset.second);
+        const ggml_rxd_half * d      = (const ggml_rxd_half *) (base + d_offset.second);
 
         const int bq8_offset   = 2 * QR6_K * (iqs / (QI6_K / 2)) + (iqs % (QI6_K / 2)) / (QI6_K / 4);
         const int scale_offset = (QI6_K / 4) * (iqs / (QI6_K / 2)) + (iqs % (QI6_K / 2)) / (QI6_K / 8);
@@ -495,7 +495,7 @@ static __dpct_inline__ float vec_dot_q4_1_q8_1_impl(const int *v, const int *u,
         sumi = dpct::dp4a(vi1, u[2 * i + 1], sumi);
     }
 
-#ifdef GGML_SYCL_F16
+#ifdef GGML_RXD_SYCL_F16
     const sycl::float2 tmp =
         (dm4 * ds8).convert<float, sycl::rounding_mode::automatic>();
     const float d4d8 = tmp.x();
@@ -507,7 +507,7 @@ static __dpct_inline__ float vec_dot_q4_1_q8_1_impl(const int *v, const int *u,
         ds8.convert<float, sycl::rounding_mode::automatic>();
     const float d4d8 = dm4f.x() * ds8f.x();
     const float m4s8 = dm4f.y() * ds8f.y();
-#endif // GGML_SYCL_F16
+#endif // GGML_RXD_SYCL_F16
 
     // scale second part of sum by QI8_1/(vdr * QR4_1) to compensate for multiple threads adding it
     return sumi * d4d8 + m4s8 / (QI8_1 / (vdr * QR4_1));
@@ -577,7 +577,7 @@ vec_dot_q5_1_q8_1_impl(const int *vl, const int *vh, const int *u,
                           sumi); // SIMD dot product of quantized values
     }
 
-#ifdef GGML_SYCL_F16
+#ifdef GGML_RXD_SYCL_F16
      const sycl::float2 tmp =
         (dm5 * ds8).convert<float, sycl::rounding_mode::automatic>();
     const float d5d8 = tmp.x();
@@ -591,7 +591,7 @@ vec_dot_q5_1_q8_1_impl(const int *vl, const int *vh, const int *u,
         ds8.convert<float, sycl::rounding_mode::automatic>();
     const float d5d8 = dm5f.x() * ds8f.x();
     const float m5s8 = dm5f.y() * ds8f.y();
-#endif // GGML_SYCL_F16
+#endif // GGML_RXD_SYCL_F16
 
     // scale second part of sum by QI5_1 / vdr to compensate for multiple threads adding it
     return sumi*d5d8 + m5s8 / (QI5_1 / vdr);
@@ -629,7 +629,7 @@ static __dpct_inline__ float vec_dot_q8_1_q8_1_impl(const int *v, const int *u,
         sumi = dpct::dp4a(v[i], u[i], sumi);
     }
 
-#ifdef GGML_SYCL_F16
+#ifdef GGML_RXD_SYCL_F16
     const sycl::float2 tmp =
         (dm8 * ds8).convert<float, sycl::rounding_mode::automatic>();
     const float d8d8 = tmp.x();
@@ -641,7 +641,7 @@ static __dpct_inline__ float vec_dot_q8_1_q8_1_impl(const int *v, const int *u,
         ds8.convert<float, sycl::rounding_mode::automatic>();
     const float d8d8 = dm8f.x() * ds8f.x();
     const float m8s8 = dm8f.y() * ds8f.y();
-#endif // GGML_SYCL_F16
+#endif // GGML_RXD_SYCL_F16
 
     // scale second part of sum by QI8_1/ vdr to compensate for multiple threads adding it
     return sumi*d8d8 + m8s8 / (QI8_1 / vdr);
@@ -800,7 +800,7 @@ vec_dot_q3_K_q8_1(const void *__restrict__ vbq,
 
 static __dpct_inline__ float vec_dot_q4_K_q8_1(const void * __restrict__ vbq, const block_q8_1 * __restrict__ bq8_1,
                                                const int & iqs) {
-#ifndef GGML_QKK_64
+#ifndef GGML_RXD_QKK_64
 
     const block_q4_K * bq4_K = (const block_q4_K *) vbq;
 
@@ -861,7 +861,7 @@ static __dpct_inline__ float
 vec_dot_q5_K_q8_1(const void *__restrict__ vbq,
                   const block_q8_1 *__restrict__ bq8_1, const int &iqs) {
 
-#ifndef GGML_QKK_64
+#ifndef GGML_RXD_QKK_64
     const block_q5_K * bq5_K = (const block_q5_K *) vbq;
 
     int   vl[2];
@@ -1300,4 +1300,4 @@ vec_dot_iq4_xs_q8_1(const void *__restrict__ vbq,
 #endif
 }
 
-#endif // GGML_SYCL_VECDOTQ_HPP
+#endif // GGML_RXD_SYCL_VECDOTQ_HPP

@@ -64,23 +64,56 @@ void Win32IDE::setCaretBlinkRate(int milliseconds) {
 }
 
 void Win32IDE::animateCaretToPosition(int line, int column) {
-    // For now, just set the position immediately
-    // Future enhancement: implement smooth animation
-    if (m_hwndEditor) {
-        // Convert 1-based line/column to absolute character index.
-        const int line0 = std::max(0, line - 1);
-        const LRESULT lineStart = SendMessage(m_hwndEditor, EM_LINEINDEX, (WPARAM)line0, 0);
-        if (lineStart < 0) {
-            return;
+    if (!m_hwndEditor) return;
+
+    // Convert 1-based line/column to absolute character index.
+    const int line0 = std::max(0, line - 1);
+    const LRESULT lineStart = SendMessage(m_hwndEditor, EM_LINEINDEX, (WPARAM)line0, 0);
+    if (lineStart < 0) return;
+
+    const int requestedCol0 = std::max(0, column - 1);
+    const int lineLength = static_cast<int>(SendMessage(m_hwndEditor, EM_LINELENGTH, (WPARAM)lineStart, 0));
+    const int clampedCol0 = std::min(requestedCol0, std::max(0, lineLength));
+    const int charPos = static_cast<int>(lineStart) + clampedCol0;
+
+    // Smooth scroll: if the target line is off-screen, scroll incrementally
+    if (m_caretAnimationEnabled) {
+        int firstVisible = (int)SendMessage(m_hwndEditor, EM_GETFIRSTVISIBLELINE, 0, 0);
+        RECT editorRect;
+        GetClientRect(m_hwndEditor, &editorRect);
+        // Estimate visible line count from editor height and font metrics
+        HDC hdc = GetDC(m_hwndEditor);
+        TEXTMETRIC tm;
+        GetTextMetrics(hdc, &tm);
+        ReleaseDC(m_hwndEditor, hdc);
+        int visibleLines = (tm.tmHeight > 0) ? (editorRect.bottom - editorRect.top) / tm.tmHeight : 30;
+
+        int delta = line0 - firstVisible;
+        // If target is off-screen, animate the scroll in steps
+        if (delta < 0 || delta >= visibleLines) {
+            int scrollTarget = line0 - visibleLines / 3; // place target at ~1/3 from top
+            int scrollDelta = scrollTarget - firstVisible;
+            // Animate in up to 6 steps for a smooth feel
+            int steps = std::min(6, std::max(1, std::abs(scrollDelta) / 4));
+            for (int i = 1; i <= steps; ++i) {
+                int partial = scrollDelta * i / steps;
+                int stepDelta = partial - (scrollDelta * (i - 1) / steps);
+                if (stepDelta != 0)
+                    SendMessage(m_hwndEditor, EM_LINESCROLL, 0, stepDelta);
+                // Yield briefly for visual effect (~16ms per step)
+                MSG msg;
+                DWORD deadline = GetTickCount() + 16;
+                while (GetTickCount() < deadline) {
+                    if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
+                        TranslateMessage(&msg);
+                        DispatchMessage(&msg);
+                    }
+                }
+            }
         }
-
-        const int requestedCol0 = std::max(0, column - 1);
-        const int lineLength = static_cast<int>(SendMessage(m_hwndEditor, EM_LINELENGTH, (WPARAM)lineStart, 0));
-        const int clampedCol0 = std::min(requestedCol0, std::max(0, lineLength));
-        const int charPos = static_cast<int>(lineStart) + clampedCol0;
-
-        SendMessage(m_hwndEditor, EM_SETSEL, (WPARAM)charPos, (LPARAM)charPos);
     }
+
+    SendMessage(m_hwndEditor, EM_SETSEL, (WPARAM)charPos, (LPARAM)charPos);
 }
 
 bool Win32IDE::isCaretAnimationEnabled() const {

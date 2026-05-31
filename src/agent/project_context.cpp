@@ -93,7 +93,11 @@ void ProjectContext::scanProjectFiles(const std::filesystem::path& projectRootPa
                 analyzeFileContent(entry.path());
             }
         }
-    } catch (const std::exception&) { }
+    } catch (const std::exception& e) {
+        OutputDebugStringA(("[project_context] directory scan exception: " + std::string(e.what()) + "\n").c_str());
+    } catch (...) {
+        OutputDebugStringA("[project_context] directory scan unknown exception\n");
+    }
 }
 
 void ProjectContext::analyzeFileContent(const std::filesystem::path& filePath)

@@ -21,7 +21,7 @@ namespace full_agentic_ide {
 struct FullAgenticIDEConfig {
     std::string frameworkPath;
     std::string defaultModel;
-    std::string ollamaServer;
+    std::string NativeInferenceServer;
 };
 
 // Single orchestrator for the full agentic IDE: model, chat, tools, workspace

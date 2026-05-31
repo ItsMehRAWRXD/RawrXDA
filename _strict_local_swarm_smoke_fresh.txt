@@ -1,0 +1,43 @@
+
+=== T1: Launch and main window ===
+RUN_MARKER=2026-04-10 15:56:39.938
+[PASS] Binary found: d:\rawrxd\build-ninja-cert\bin\RawrXD-Win32IDE.exe
+[PASS] Launched PID=1744
+[PASS] Main window handle: 0x80B0972
+
+=== T2: Locate sender and receiver controls ===
+[PASS] Sidebar found: 0xC0C9E
+[PASS] Input(1202) hwnd=0x1E0D06
+[PASS] Output(1203) hwnd=0x840D04
+[PASS] Send(1204) hwnd=0xAD0D08
+[PASS] Clear(1205) hwnd=0xC20B18
+[PASS] Model(1208) hwnd=0x6F0CC2
+[PASS] Route B command target hwnd=0xC0C9E
+[PASS] Clear command target hwnd=0xC0C9E
+
+=== T2.5: Full model mode (route-only bypass disabled) ===
+[PASS] Full model mode active: preserving model selector state
+
+=== T3: Route A (ENTER key in sender input) -> receiver output ===
+[PASS] Route A produced receiver chat output
+[INFO] Route A output sample: > User: route_a_enter_155641018 GitHub Copilot Chat  ==================    Chat cleared. As
+[PASS] Process still alive after Route A
+[INFO] Route A settled output: > User: route_a_enter_155641018 GitHub Copilot Chat  ==================    Chat cleared. Ask me anything about your code!
+
+=== T4: Route B (sidebar WM_COMMAND send) -> receiver output ===
+[WARN] Route B did not produce receiver output within 10000ms
+[PASS] Process still alive after Route B
+[INFO] Route B settled output: <empty>
+
+=== T5: Route C (main window WM_COMMAND send) -> receiver output ===
+[FAIL] Route C did not produce receiver output within 10000ms
+[PASS] Process still alive after Route C
+[INFO] Route C settled output: <empty>
+
+=== T6: Receiver clear route ===
+[PASS] Clear route updated receiver output to expected welcome text
+[PASS] Process alive after all route tests
+
+=== SUMMARY ===
+PASS=18 FAIL=1 WARN=1
+RESULT=FAILED

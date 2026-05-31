@@ -12,11 +12,11 @@ int main() {
     std::cout << "🔍 Testing RawrXD Ollama Integration..." << std::endl;
     
     // Create Ollama client
-    RawrXD::Backend::OllamaClient client("http://localhost:11434");
+    RawrXD::Backend::NativeClient client("http://localhost:11435");
     
     // Test connection
     if (!client.isRunning()) {
-        std::cerr << "❌ Ollama server not running at localhost:11434" << std::endl;
+        std::cerr << "❌ Ollama server not running at localhost:11435" << std::endl;
         return 1;
     }
     

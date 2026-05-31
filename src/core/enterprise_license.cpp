@@ -259,6 +259,28 @@ EnterpriseLicense& EnterpriseLicense::Instance()
 }
 
 // ============================================================================
+// Internal Bridge to MASM Decrypt
+// ============================================================================
+void* EnterpriseLicense::UnlockKernelWithSovereignKey(const uint8_t* pKeyMaterial, size_t keyLen)
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (!HasFeatureMask(LicenseFeature::DualEngine800B))
+    {
+        LOG_ERROR("[EnterpriseLicense] Kernel unlock rejected: Requires 800B Dual-Engine feature.");
+        return nullptr;
+    }
+
+    if (keyLen != 32)  // AES-256 derived from RSA-4096 handshake
+    {
+        LOG_ERROR("[EnterpriseLicense] Kernel unlock rejected: Invalid key length.");
+        return nullptr;
+    }
+
+    LOG_INFO("[EnterpriseLicense] Invoking MASM Decrypt Bridge for 800B Kernel...");
+    return Shield_DecryptKernelEntry(pKeyMaterial);
+}
+
+// ============================================================================
 // Initialize
 // ============================================================================
 bool EnterpriseLicense::Initialize()
@@ -449,7 +471,11 @@ bool EnterpriseLicense::Is800BUnlocked() const
 {
     if (!m_initialized)
         return false;
-    return Enterprise_Unlock800BDualEngine() != 0;
+    // Read-only: do not call Enterprise_Unlock800BDualEngine() here — that mutates g_800B_Unlocked
+    // and is reserved for Initialize() after a validated license (see HasFeatureMask path).
+    if (g_800B_Unlocked != 0)
+        return true;
+    return HasFeatureMask(LicenseFeature::DualEngine800B);
 }
 
 bool EnterpriseLicense::IsEnterprise() const

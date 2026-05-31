@@ -3,9 +3,86 @@
 #include <fstream>
 #include <sstream>
 #include <chrono>
+#include <algorithm>
 #include <filesystem>
 #include <regex>
 #include <cstring>
+
+namespace {
+
+bool hasSourceExtension(const std::filesystem::path& path)
+{
+    const std::string ext = path.extension().string();
+    return ext == ".cpp" || ext == ".cxx" || ext == ".cc" || ext == ".c" ||
+           ext == ".h" || ext == ".hpp" || ext == ".hh" || ext == ".inl" ||
+           ext == ".cu" || ext == ".asm";
+}
+
+std::string summarizeIssues(const std::vector<std::string>& issues, std::size_t maxItems = 8)
+{
+    if (issues.empty()) {
+        return "No issues detected.";
+    }
+
+    std::ostringstream stream;
+    stream << "Detected issues (" << issues.size() << "):";
+    const std::size_t limit = std::min<std::size_t>(issues.size(), maxItems);
+    for (std::size_t index = 0; index < limit; ++index) {
+        stream << "\n- " << issues[index];
+    }
+    if (issues.size() > limit) {
+        stream << "\n- ...";
+    }
+    return stream.str();
+}
+
+std::string buildAutonomousGoal(const std::string& projectPath,
+                                const std::vector<std::string>& issues)
+{
+    std::ostringstream stream;
+    stream << "Repair the workspace autonomously.";
+    if (!projectPath.empty()) {
+        stream << " Workspace: " << projectPath << ".";
+    }
+    stream << " Prioritize the issues below, execute the minimum safe edits, then verify the result.";
+    stream << "\n" << summarizeIssues(issues);
+    return stream.str();
+}
+
+bool validateAutonomousOutcome(const std::vector<std::string>& beforeIssues,
+                               const std::vector<std::string>& afterIssues,
+                               const RawrXD::ExecutionResult& execution)
+{
+    if (afterIssues.empty()) {
+        return true;
+    }
+
+    if (beforeIssues.empty()) {
+        return execution.success && execution.failureCount == 0;
+    }
+
+    if (afterIssues.size() < beforeIssues.size()) {
+        return execution.failureCount == 0 || execution.successCount >= execution.failureCount;
+    }
+
+    return false;
+}
+
+void appendActivePlan(std::vector<std::string>& activePlans, const std::string& entry)
+{
+    if (entry.empty()) {
+        return;
+    }
+
+    activePlans.push_back(entry);
+    constexpr std::size_t kMaxHistory = 8;
+    if (activePlans.size() > kMaxHistory) {
+        activePlans.erase(activePlans.begin(),
+                          activePlans.begin() + static_cast<std::ptrdiff_t>(activePlans.size() - kMaxHistory));
+    }
+}
+
+} // namespace
 
 namespace RawrXD {
 
@@ -19,6 +96,7 @@ AutonomousIntelligenceOrchestrator::AutonomousIntelligenceOrchestrator(AgenticID
     m_toolRegistry = std::make_unique<ToolRegistry>(nullptr, nullptr);
     m_planOrchestrator = std::make_unique<PlanOrchestrator>();
     m_modelRouter = std::make_unique<UniversalModelRouter>();
+    m_validationAdapter = std::make_unique<Autonomous::OrchestratorIntegrationAdapter>();
     
     // Register default tools
     ToolDefinition searchDef;
@@ -44,8 +122,6 @@ AutonomousIntelligenceOrchestrator::AutonomousIntelligenceOrchestrator(AgenticID
         return json{{"content", buffer.str()}};
     };
     m_toolRegistry->registerTool(readDef);
-    
-    std::cout << "[Orchestrator] Initialized with REAL components." << std::endl;
 }
 
 AutonomousIntelligenceOrchestrator::~AutonomousIntelligenceOrchestrator() {
@@ -57,6 +133,12 @@ void AutonomousIntelligenceOrchestrator::startAutonomousMode(const std::string& 
     if (m_running) return;
     
     m_projectPath = projectPath;
+    if (m_planOrchestrator && !m_projectPath.empty()) {
+        m_planOrchestrator->setWorkspaceRoot(m_projectPath);
+    }
+    if (m_agenticEngine && !m_projectPath.empty()) {
+        m_agenticEngine->setWorkspaceRoot(m_projectPath);
+    }
     m_running = true;
     m_currentMode = OrchestratorMode::Autonomous;
     
@@ -87,27 +169,131 @@ void AutonomousIntelligenceOrchestrator::stopAutonomousMode() {
 }
 
 void AutonomousIntelligenceOrchestrator::orchestratorLoop() {
+    constexpr int kMaxAdaptiveRetries = 3;
+
     while (m_running) {
-        // 1. Monitor project state
-        // 2. Check for new tasks
-        // 3. Execute plan steps
-        // 4. Optimization passes
-        
-        if (m_currentMode == OrchestratorMode::Autonomous) {
-            // Real logic: scan for issues periodically
-            auto issues = scanForIssues(m_projectPath);
-            if (!issues.empty()) {
-                // Determine if we should auto-fix
-                for (const auto& issue : issues) {
-                    if (onNotification) {
-                        onNotification("Issue Detected", issue);
-                    }
-                    // Plan a fix...
-                    m_planOrchestrator->createPlan("Fix issue: " + issue);
+        if (m_currentMode != OrchestratorMode::Autonomous) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+            continue;
+        }
+
+        updateQualityMetrics();
+
+        const std::vector<std::string> baselineIssues = scanForIssues(m_projectPath);
+        if (baselineIssues.empty()) {
+            if (onNotification) {
+                onNotification("Status", "Autonomous loop verified workspace health.");
+            }
+            std::this_thread::sleep_for(std::chrono::seconds(2));
+            continue;
+        }
+
+        if (onNotification) {
+            onNotification("Planning", summarizeIssues(baselineIssues));
+        }
+
+        std::string goal = buildAutonomousGoal(m_projectPath, baselineIssues);
+        m_validationAdapter->initializeGoal(goal, m_projectPath);
+        auto currentStrategy = m_validationAdapter->getInitialStrategy(goal);
+
+        ExecutionResult lastResult;
+        std::vector<std::string> currentIssues = baselineIssues;
+        bool validated = false;
+
+        for (int attempt = 0; attempt < kMaxAdaptiveRetries && m_running; ++attempt) {
+            if (!m_planOrchestrator) {
+                break;
+            }
+
+            m_planOrchestrator->observeExternalEvent("Autonomous attempt " + std::to_string(attempt + 1) +
+                                                     " planning goal:\n" + goal);
+            lastResult = m_planOrchestrator->planAndExecute(goal, m_projectPath, false);
+
+            const std::vector<std::string> remainingIssues = scanForIssues(m_projectPath);
+            validated = validateAutonomousOutcome(currentIssues, remainingIssues, lastResult);
+
+            // Classify failure type and record attempt with decision context
+            Autonomous::FailureType failureType = Autonomous::FailureType::UNKNOWN;
+            if (!validated) {
+                Autonomous::PlanStep probeStep;
+                probeStep.id = "auto_" + std::to_string(attempt);
+                probeStep.action = goal;
+                failureType = m_validationAdapter->classifyStepFailure(
+                    probeStep, lastResult.errorMessage);
+
+                // Escalate immediately on environment errors
+                if (m_validationAdapter->getRetryStrategy(failureType) == "halt_and_escalate") {
+                    appendActivePlan(m_activePlans, "Autonomous halted: environment error requires human intervention.");
+                    if (onNotification) onNotification("Error", "Environment error; escalating.");
+                    break;
                 }
             }
+
+            m_validationAdapter->recordAttempt(
+                [&]{ Autonomous::PlanStep s; s.id = "auto_" + std::to_string(attempt); s.action = goal; return s; }(),
+                failureType,
+                lastResult.errorMessage.empty() ? "remaining: " + std::to_string(remainingIssues.size()) : lastResult.errorMessage,
+                validated,
+                static_cast<int>(currentIssues.size()),
+                static_cast<int>(remainingIssues.size())
+            );
+
+            {
+                std::ostringstream memoryEntry;
+                memoryEntry << "Attempt " << (attempt + 1)
+                            << " success=" << lastResult.success
+                            << " successCount=" << lastResult.successCount
+                            << " failureCount=" << lastResult.failureCount
+                            << " remainingIssues=" << remainingIssues.size();
+                appendActivePlan(m_activePlans, memoryEntry.str());
+            }
+
+            if (validated) {
+                if (onNotification) {
+                    onNotification("Validation", "Workspace issues reduced after autonomous execution.");
+                }
+                currentIssues = remainingIssues;
+                break;
+            }
+
+            std::ostringstream retryGoal;
+            retryGoal << "Retry autonomous repair with the remaining issues.\n"
+                      << summarizeIssues(remainingIssues);
+            if (!lastResult.errorMessage.empty()) {
+                retryGoal << "\nLast execution error: " << lastResult.errorMessage;
+            }
+            if (!lastResult.observations.empty()) {
+                retryGoal << "\nObserved output:";
+                for (const auto& observation : lastResult.observations) {
+                    retryGoal << "\n- " << observation;
+                }
+            }
+
+            goal = retryGoal.str();
+            currentIssues = remainingIssues;
         }
-        
+
+        // Check structured termination condition
+        if (m_validationAdapter->isInLoop()) {
+            appendActivePlan(m_activePlans, "Loop detected: repeated identical failures. Halting for human review.");
+            if (onNotification) onNotification("Loop", "Autonomous loop detected; halting.");
+        } else if (!m_validationAdapter->shouldContinue(static_cast<int>(currentIssues.size()))) {
+            const std::string reason = m_validationAdapter->getTerminationExplanation(
+                static_cast<int>(currentIssues.size()));
+            appendActivePlan(m_activePlans, "Termination: " + reason);
+            if (onNotification) onNotification("Termination", reason);
+        }
+
+        if (!validated) {
+            if (onNotification) {
+                onNotification("Warning", "Autonomous repair loop reached retry budget without full validation.");
+            }
+            appendActivePlan(m_activePlans, "Autonomous loop retry budget exhausted for workspace: " + m_projectPath);
+        } else {
+            updateQualityMetrics();
+            appendActivePlan(m_activePlans, "Autonomous loop validated workspace repair for: " + m_projectPath);
+        }
+
         std::this_thread::sleep_for(std::chrono::seconds(2));
     }
 }
@@ -274,12 +460,30 @@ void AutonomousIntelligenceOrchestrator::generateImplementation(const std::strin
     if (onNotification) {
         onNotification("Status", "Generating implementation for: " + requirement);
     }
-    
-    // Would call AI model to generate code based on requirement
-    std::string generatedCode = "// Auto-generated implementation\n// TODO: Review and test";
-    
-    if (onNotification) {
+
+    const std::string prompt =
+        "You are a C++ expert. Generate a complete, compilable implementation for the following requirement.\n"
+        "Requirement: " + requirement + "\n"
+        "Output only valid C++ code with no extra commentary.";
+
+    std::string generatedCode;
+    if (m_modelRouter)
+    {
+        generatedCode = m_modelRouter->routeQuery("", prompt, 0.2f);
+    }
+
+    if (generatedCode.empty())
+    {
+        generatedCode = "// Production fallback: model router unavailable\n"
+                       "// Requirement: " + requirement + "\n"
+                       "// Generated at: " + std::to_string(std::time(nullptr)) + "\n"
+                       "// TODO: Implement " + requirement + "\n";
+    }
+
+    if (onNotification)
+    {
         onNotification("Status", "Implementation generated");
+        onNotification("CodeGenResult", generatedCode);
     }
 }
 
@@ -341,9 +545,42 @@ void AutonomousIntelligenceOrchestrator::executePlan(const std::string& plan) {
 
 void AutonomousIntelligenceOrchestrator::updateQualityMetrics() {
     // Re-scan project and update quality metrics
-    if (!m_projectPath.empty()) {
-        m_qualityMetrics = assessCodeQuality(m_projectPath);
+    if (m_projectPath.empty() || !std::filesystem::exists(m_projectPath)) {
+        return;
     }
+
+    double codeQualitySum = 0.0;
+    double maintainabilitySum = 0.0;
+    double performanceSum = 0.0;
+    double securitySum = 0.0;
+    std::size_t fileCount = 0;
+
+    try {
+        for (const auto& entry : std::filesystem::recursive_directory_iterator(m_projectPath)) {
+            if (!entry.is_regular_file() || !hasSourceExtension(entry.path())) {
+                continue;
+            }
+
+            QualityMetrics metrics = assessCodeQuality(entry.path().string());
+            codeQualitySum += metrics.codeQualityScore;
+            maintainabilitySum += metrics.maintainabilityScore;
+            performanceSum += metrics.performanceScore;
+            securitySum += metrics.securityScore;
+            ++fileCount;
+        }
+    } catch (...) {
+        return;
+    }
+
+    if (fileCount == 0) {
+        return;
+    }
+
+    m_qualityMetrics.codeQualityScore = static_cast<float>(codeQualitySum / fileCount);
+    m_qualityMetrics.maintainabilityScore = static_cast<float>(maintainabilitySum / fileCount);
+    m_qualityMetrics.performanceScore = static_cast<float>(performanceSum / fileCount);
+    m_qualityMetrics.securityScore = static_cast<float>(securitySum / fileCount);
+    m_qualityMetrics.issues = scanForIssues(m_projectPath);
 }
 
 void AutonomousIntelligenceOrchestrator::monitorFileChanges(const std::string& path) {

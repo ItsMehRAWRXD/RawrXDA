@@ -1,9 +1,12 @@
 #include "todo_manager.h"
+#include "todo_scanner.h"
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <iomanip>
 #include <random>
+#include <algorithm>
+#include <filesystem>
 
 using json = nlohmann::json;
 
@@ -112,6 +115,75 @@ std::vector<TodoItem> TodoManager::getCompletedTodos() const {
         if (todo.isCompleted) completed.push_back(todo);
     }
     return completed;
+}
+
+void TodoManager::scanProjectForTodos(const std::string& projectPath) {
+    TodoScanner scanner(this);
+    ScanResult result = scanner.scanDirectory(projectPath);
+    
+    if (!result.success()) {
+        std::cerr << "TODO scan failed: " << result.error << std::endl;
+        return;
+    }
+    
+    std::cout << "Scanned " << result.scannedFiles << " files, found " 
+              << result.todos.size() << " TODO items" << std::endl;
+}
+
+void TodoManager::exportTodosToJson(const std::string& outputPath) {
+    json j_list = json::array();
+    
+    for (const auto& todo : todos_) {
+        json j;
+        j["id"] = todo.id;
+        j["description"] = todo.description;
+        j["filePath"] = todo.filePath;
+        j["lineNumber"] = todo.lineNumber;
+        j["isCompleted"] = todo.isCompleted;
+        j["created"] = std::chrono::duration_cast<std::chrono::seconds>(todo.created.time_since_epoch()).count();
+        j["completed"] = std::chrono::duration_cast<std::chrono::seconds>(todo.completed.time_since_epoch()).count();
+        j_list.push_back(j);
+    }
+    
+    std::ofstream f(outputPath);
+    if (f.is_open()) {
+        f << j_list.dump(4);
+    }
+}
+
+std::vector<TodoItem> TodoManager::getTodosByFile(const std::string& filePath) const {
+    std::vector<TodoItem> result;
+    for (const auto& todo : todos_) {
+        if (todo.filePath == filePath) {
+            result.push_back(todo);
+        }
+    }
+    return result;
+}
+
+std::vector<TodoItem> TodoManager::getTodosByType(const std::string& typeFilter) const {
+    std::vector<TodoItem> result;
+    for (const auto& todo : todos_) {
+        if (todo.description.find(typeFilter) != std::string::npos) {
+            result.push_back(todo);
+        }
+    }
+    return result;
+}
+
+void TodoManager::clearCompleted() {
+    auto it = std::remove_if(todos_.begin(), todos_.end(), 
+        [](const TodoItem& item) { return item.isCompleted; });
+    
+    if (it != todos_.end()) {
+        todos_.erase(it, todos_.end());
+        saveTodos();
+    }
+}
+
+void TodoManager::clearAll() {
+    todos_.clear();
+    saveTodos();
 }
 
 void TodoManager::saveTodos() {

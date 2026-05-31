@@ -20,7 +20,7 @@
 //     request, the agent can route through instruction rules to add context-aware
 //     references that static PDB analysis would miss.
 //
-//     Example: user queries "NtCreateFile" →
+//     Pattern: user queries "NtCreateFile" →
 //       PDB provider finds: ntdll.dll!NtCreateFile
 //       Instruction hook adds: ntoskrnl.exe!NtCreateFile (kernel-side)
 //                              kernelbase.dll!CreateFileW (wrapper)

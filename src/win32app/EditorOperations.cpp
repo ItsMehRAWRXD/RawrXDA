@@ -8,6 +8,35 @@
 #include <algorithm>
 #include <regex>
 
+namespace {
+constexpr size_t kMaxEditorFileBytes = 8u * 1024u * 1024u;
+constexpr size_t kMaxEditorPathBytes = 4096u;
+
+std::vector<std::string> splitArgs(const std::string& s, char delim = '|') {
+    std::vector<std::string> out;
+    std::stringstream ss(s);
+    std::string item;
+    while (std::getline(ss, item, delim)) {
+        out.push_back(item);
+    }
+    return out;
+}
+
+bool tryParseInt(const std::string& s, int& out) {
+    try {
+        size_t consumed = 0;
+        int v = std::stoi(s, &consumed);
+        if (consumed != s.size()) {
+            return false;
+        }
+        out = v;
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+}
+
 namespace RawrXD {
 namespace Win32App {
 
@@ -136,6 +165,10 @@ const EditorOperations::FileContext* EditorOperations::GetFileContext(int fileId
 
 bool EditorOperations::OpenFile(const std::string& filePath) {
     std::lock_guard<std::mutex> lock(m_filesMutex);
+
+    if (filePath.empty() || filePath.size() > kMaxEditorPathBytes) {
+        return false;
+    }
     
     // Check if already open
     for (const auto& ctx : m_openFiles) {
@@ -145,24 +178,256 @@ bool EditorOperations::OpenFile(const std::string& filePath) {
     }
 
     // Read file content
-    std::ifstream file(filePath, std::ios::binary);
+    std::ifstream file(filePath, std::ios::binary | std::ios::ate);
     if (!file.is_open()) {
         return false;
     }
 
-    std::stringstream buffer;
-    buffer << file.rdbuf();
+    const std::streamoff fileSize = file.tellg();
+    if (fileSize < 0 || static_cast<size_t>(fileSize) > kMaxEditorFileBytes) {
+        return false;
+    }
+    file.seekg(0, std::ios::beg);
+
+    std::string content(static_cast<size_t>(fileSize), '\0');
+    if (fileSize > 0) {
+        file.read(content.data(), fileSize);
+        if (!file) {
+            return false;
+        }
+    }
     file.close();
 
     FileContext ctx;
     ctx.id = m_nextFileId++;
     ctx.path = filePath;
-    ctx.content = buffer.str();
+    ctx.content = std::move(content);
     ctx.isDirty = false;
     ctx.isReadOnly = false;
 
     m_openFiles.push_back(ctx);
     return true;
+}
+
+void EditorOperations::RegisterCommands() {
+    auto& router = RouterOperations::Instance();
+
+    router.RegisterCommand({"editor.openFile", "Open File", "Open file via dialog", "Editor"}, [this]() {
+        std::string path;
+        if (RouterOperations::Instance().OpenFileDialog(path)) {
+            return OpenFile(path) ? RouterOperations::CommandResult{true, "File opened", "", 0}
+                                  : RouterOperations::CommandResult{false, "Failed to open file", "OPEN_FAILED", -1};
+        }
+        return RouterOperations::CommandResult{false, "File open cancelled", "CANCELLED", 0};
+    });
+
+    router.RegisterCommandWithArgs({"editor.openFilePath", "Open File Path", "Open file by path argument", "Editor"},
+                                   [this](const std::string& args) {
+                                       if (args.empty()) {
+                                           return RouterOperations::CommandResult{false, "Path argument is required", "INVALID_ARGS", -1};
+                                       }
+                                       return OpenFile(args) ? RouterOperations::CommandResult{true, "File opened", "", 0}
+                                                             : RouterOperations::CommandResult{false, "Failed to open file", "OPEN_FAILED", -1};
+                                   });
+
+    router.RegisterCommandWithArgs({"editor.closeFile", "Close File", "Args: fileId", "Editor"},
+                                   [this](const std::string& args) {
+                                       int fileId = 0;
+                                       if (!tryParseInt(args, fileId)) {
+                                           return RouterOperations::CommandResult{false, "Invalid fileId", "INVALID_ARGS", -1};
+                                       }
+                                       return CloseFile(fileId) ? RouterOperations::CommandResult{true, "File closed", "", 0}
+                                                                : RouterOperations::CommandResult{false, "Failed to close file", "CLOSE_FAILED", -1};
+                                   });
+
+    router.RegisterCommandWithArgs({"editor.saveFile", "Save File", "Args: fileId", "Editor"},
+                                   [this](const std::string& args) {
+                                       int fileId = 0;
+                                       if (!tryParseInt(args, fileId)) {
+                                           return RouterOperations::CommandResult{false, "Invalid fileId", "INVALID_ARGS", -1};
+                                       }
+                                       return SaveFile(fileId) ? RouterOperations::CommandResult{true, "File saved", "", 0}
+                                                               : RouterOperations::CommandResult{false, "Failed to save file", "SAVE_FAILED", -1};
+                                   });
+
+    router.RegisterCommandWithArgs({"editor.saveFileAs", "Save File As", "Args: fileId|newPath", "Editor"},
+                                   [this](const std::string& args) {
+                                       const auto parts = splitArgs(args);
+                                       if (parts.size() != 2) {
+                                           return RouterOperations::CommandResult{false, "Expected: fileId|newPath", "INVALID_ARGS", -1};
+                                       }
+                                       int fileId = 0;
+                                       if (!tryParseInt(parts[0], fileId)) {
+                                           return RouterOperations::CommandResult{false, "Invalid fileId", "INVALID_ARGS", -1};
+                                       }
+                                       return SaveFileAs(fileId, parts[1])
+                                                  ? RouterOperations::CommandResult{true, "File saved", "", 0}
+                                                  : RouterOperations::CommandResult{false, "Save As failed", "SAVE_AS_FAILED", -1};
+                                   });
+
+    router.RegisterCommandWithArgs({"editor.insertText", "Insert Text", "Args: fileId|line|column|text", "Editor"},
+                                   [this](const std::string& args) {
+                                       const auto parts = splitArgs(args);
+                                       if (parts.size() != 4) {
+                                           return RouterOperations::CommandResult{false, "Expected: fileId|line|column|text", "INVALID_ARGS", -1};
+                                       }
+                                       int fileId = 0, line = 0, column = 0;
+                                       if (!tryParseInt(parts[0], fileId) || !tryParseInt(parts[1], line) || !tryParseInt(parts[2], column)) {
+                                           return RouterOperations::CommandResult{false, "Invalid numeric args", "INVALID_ARGS", -1};
+                                       }
+                                       return InsertText(fileId, line, column, parts[3])
+                                                  ? RouterOperations::CommandResult{true, "Text inserted", "", 0}
+                                                  : RouterOperations::CommandResult{false, "Insert failed", "INSERT_FAILED", -1};
+                                   });
+
+    router.RegisterCommandWithArgs({"editor.deleteText", "Delete Text", "Args: fileId|line|column|length", "Editor"},
+                                   [this](const std::string& args) {
+                                       const auto parts = splitArgs(args);
+                                       if (parts.size() != 4) {
+                                           return RouterOperations::CommandResult{false, "Expected: fileId|line|column|length", "INVALID_ARGS", -1};
+                                       }
+                                       int fileId = 0, line = 0, column = 0, length = 0;
+                                       if (!tryParseInt(parts[0], fileId) || !tryParseInt(parts[1], line) ||
+                                           !tryParseInt(parts[2], column) || !tryParseInt(parts[3], length)) {
+                                           return RouterOperations::CommandResult{false, "Invalid numeric args", "INVALID_ARGS", -1};
+                                       }
+                                       return DeleteText(fileId, line, column, length)
+                                                  ? RouterOperations::CommandResult{true, "Text deleted", "", 0}
+                                                  : RouterOperations::CommandResult{false, "Delete failed", "DELETE_FAILED", -1};
+                                   });
+
+    router.RegisterCommandWithArgs({"editor.replaceText", "Replace Text", "Args: fileId|line|column|length|replacement", "Editor"},
+                                   [this](const std::string& args) {
+                                       const auto parts = splitArgs(args);
+                                       if (parts.size() != 5) {
+                                           return RouterOperations::CommandResult{false, "Expected: fileId|line|column|length|replacement", "INVALID_ARGS", -1};
+                                       }
+                                       int fileId = 0, line = 0, column = 0, length = 0;
+                                       if (!tryParseInt(parts[0], fileId) || !tryParseInt(parts[1], line) ||
+                                           !tryParseInt(parts[2], column) || !tryParseInt(parts[3], length)) {
+                                           return RouterOperations::CommandResult{false, "Invalid numeric args", "INVALID_ARGS", -1};
+                                       }
+                                       return ReplaceText(fileId, line, column, length, parts[4])
+                                                  ? RouterOperations::CommandResult{true, "Text replaced", "", 0}
+                                                  : RouterOperations::CommandResult{false, "Replace failed", "REPLACE_FAILED", -1};
+                                   });
+
+    router.RegisterCommandWithArgs({"editor.selectRange", "Select Range", "Args: fileId|startLine|startCol|endLine|endCol", "Editor"},
+                                   [this](const std::string& args) {
+                                       const auto parts = splitArgs(args);
+                                       if (parts.size() != 5) {
+                                           return RouterOperations::CommandResult{false, "Expected: fileId|startLine|startCol|endLine|endCol", "INVALID_ARGS", -1};
+                                       }
+                                       int fileId = 0, sl = 0, sc = 0, el = 0, ec = 0;
+                                       if (!tryParseInt(parts[0], fileId) || !tryParseInt(parts[1], sl) ||
+                                           !tryParseInt(parts[2], sc) || !tryParseInt(parts[3], el) || !tryParseInt(parts[4], ec)) {
+                                           return RouterOperations::CommandResult{false, "Invalid numeric args", "INVALID_ARGS", -1};
+                                       }
+                                       return SelectRange(fileId, sl, sc, el, ec)
+                                                  ? RouterOperations::CommandResult{true, "Range selected", "", 0}
+                                                  : RouterOperations::CommandResult{false, "Select failed", "SELECT_FAILED", -1};
+                                   });
+
+    router.RegisterCommandWithArgs({"editor.copy", "Copy", "Args: fileId", "Editor"}, [this](const std::string& args) {
+        int fileId = 0;
+        if (!tryParseInt(args, fileId)) {
+            return RouterOperations::CommandResult{false, "Invalid fileId", "INVALID_ARGS", -1};
+        }
+        return Copy(fileId) ? RouterOperations::CommandResult{true, "Copied", "", 0}
+                            : RouterOperations::CommandResult{false, "Copy failed", "COPY_FAILED", -1};
+    });
+
+    router.RegisterCommandWithArgs({"editor.cut", "Cut", "Args: fileId", "Editor"}, [this](const std::string& args) {
+        int fileId = 0;
+        if (!tryParseInt(args, fileId)) {
+            return RouterOperations::CommandResult{false, "Invalid fileId", "INVALID_ARGS", -1};
+        }
+        return Cut(fileId) ? RouterOperations::CommandResult{true, "Cut", "", 0}
+                           : RouterOperations::CommandResult{false, "Cut failed", "CUT_FAILED", -1};
+    });
+
+    router.RegisterCommandWithArgs({"editor.paste", "Paste", "Args: fileId|line|column", "Editor"},
+                                   [this](const std::string& args) {
+                                       const auto parts = splitArgs(args);
+                                       if (parts.size() != 3) {
+                                           return RouterOperations::CommandResult{false, "Expected: fileId|line|column", "INVALID_ARGS", -1};
+                                       }
+                                       int fileId = 0, line = 0, column = 0;
+                                       if (!tryParseInt(parts[0], fileId) || !tryParseInt(parts[1], line) || !tryParseInt(parts[2], column)) {
+                                           return RouterOperations::CommandResult{false, "Invalid numeric args", "INVALID_ARGS", -1};
+                                       }
+                                       return Paste(fileId, line, column)
+                                                  ? RouterOperations::CommandResult{true, "Pasted", "", 0}
+                                                  : RouterOperations::CommandResult{false, "Paste failed", "PASTE_FAILED", -1};
+                                   });
+
+    router.RegisterCommandWithArgs({"editor.undo", "Undo", "Args: fileId", "Editor"}, [this](const std::string& args) {
+        int fileId = 0;
+        if (!tryParseInt(args, fileId)) {
+            return RouterOperations::CommandResult{false, "Invalid fileId", "INVALID_ARGS", -1};
+        }
+        return Undo(fileId) ? RouterOperations::CommandResult{true, "Undone", "", 0}
+                            : RouterOperations::CommandResult{false, "Undo failed", "UNDO_FAILED", -1};
+    });
+
+    router.RegisterCommandWithArgs({"editor.redo", "Redo", "Args: fileId", "Editor"}, [this](const std::string& args) {
+        int fileId = 0;
+        if (!tryParseInt(args, fileId)) {
+            return RouterOperations::CommandResult{false, "Invalid fileId", "INVALID_ARGS", -1};
+        }
+        return Redo(fileId) ? RouterOperations::CommandResult{true, "Redone", "", 0}
+                            : RouterOperations::CommandResult{false, "Redo failed", "REDO_FAILED", -1};
+    });
+
+    router.RegisterCommandWithArgs({"editor.findAll", "Find All", "Args: fileId|pattern", "Editor"},
+                                   [this](const std::string& args) {
+                                       const auto parts = splitArgs(args);
+                                       if (parts.size() != 2) {
+                                           return RouterOperations::CommandResult{false, "Expected: fileId|pattern", "INVALID_ARGS", -1};
+                                       }
+                                       int fileId = 0;
+                                       if (!tryParseInt(parts[0], fileId)) {
+                                           return RouterOperations::CommandResult{false, "Invalid fileId", "INVALID_ARGS", -1};
+                                       }
+                                       const auto hits = FindAll(fileId, parts[1], false);
+                                       return RouterOperations::CommandResult{true, "Matches: " + std::to_string(hits.size()), "", 0};
+                                   });
+
+    router.RegisterCommandWithArgs({"editor.replaceAll", "Replace All", "Args: fileId|pattern|replacement", "Editor"},
+                                   [this](const std::string& args) {
+                                       const auto parts = splitArgs(args);
+                                       if (parts.size() != 3) {
+                                           return RouterOperations::CommandResult{false, "Expected: fileId|pattern|replacement", "INVALID_ARGS", -1};
+                                       }
+                                       int fileId = 0;
+                                       if (!tryParseInt(parts[0], fileId)) {
+                                           return RouterOperations::CommandResult{false, "Invalid fileId", "INVALID_ARGS", -1};
+                                       }
+                                       return ReplaceAll(fileId, parts[1], parts[2], false)
+                                                  ? RouterOperations::CommandResult{true, "ReplaceAll complete", "", 0}
+                                                  : RouterOperations::CommandResult{false, "ReplaceAll failed", "REPLACE_ALL_FAILED", -1};
+                                   });
+
+    router.RegisterCommand({"editor.getOpenFileIds", "Get Open File IDs", "Return open file IDs", "Editor"}, [this]() {
+        const auto ids = GetOpenFileIds();
+        std::string msg;
+        for (size_t i = 0; i < ids.size(); ++i) {
+            msg += std::to_string(ids[i]);
+            if (i + 1 < ids.size()) {
+                msg += ",";
+            }
+        }
+        return RouterOperations::CommandResult{true, msg.empty() ? "No open files" : msg, "", 0};
+    });
+
+    router.RegisterCommandWithArgs({"editor.getSelection", "Get Selection", "Args: fileId", "Editor"}, [this](const std::string& args) {
+        int fileId = 0;
+        if (!tryParseInt(args, fileId)) {
+            return RouterOperations::CommandResult{false, "Invalid fileId", "INVALID_ARGS", -1};
+        }
+        auto sel = GetSelection(fileId);
+        return RouterOperations::CommandResult{true, sel.selectedText, "", 0};
+    });
 }
 
 bool EditorOperations::CloseFile(int fileId) {
@@ -183,12 +448,20 @@ bool EditorOperations::SaveFile(int fileId) {
         return false;
     }
 
+    if (ctx->path.empty() || ctx->path.size() > kMaxEditorPathBytes) {
+        return false;
+    }
+
     std::ofstream file(ctx->path, std::ios::binary);
     if (!file.is_open()) {
         return false;
     }
 
     file << ctx->content;
+    file.flush();
+    if (!file) {
+        return false;
+    }
     file.close();
     ctx->isDirty = false;
     return true;
@@ -201,12 +474,20 @@ bool EditorOperations::SaveFileAs(int fileId, const std::string& newPath) {
         return false;
     }
 
+    if (newPath.empty() || newPath.size() > kMaxEditorPathBytes) {
+        return false;
+    }
+
     std::ofstream file(newPath, std::ios::binary);
     if (!file.is_open()) {
         return false;
     }
 
     file << ctx->content;
+    file.flush();
+    if (!file) {
+        return false;
+    }
     file.close();
     ctx->path = newPath;
     ctx->isDirty = false;

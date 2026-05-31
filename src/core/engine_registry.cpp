@@ -10,7 +10,12 @@
 #include <string>
 #include <unordered_map>
 
-static std::unordered_map<std::string, Engine*> s_engines;
+// LAZY SINGLETON PATTERN to avoid SIOF
+inline std::unordered_map<std::string, Engine*>& GetEngines() {
+    static std::unordered_map<std::string, Engine*>* inst = new std::unordered_map<std::string, Engine*>();
+    return *inst;
+}
+#define s_engines GetEngines()
 
 Engine* EngineRegistry::get(const std::string& name) {
     auto it = s_engines.find(name);

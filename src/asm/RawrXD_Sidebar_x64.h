@@ -59,5 +59,5 @@ void RawrXD_DarkMode_Force(HWND hWnd);
 #ifdef RAWRXD_LINK_SIDEBAR_ASM
   // Linked from RawrXD_Sidebar_x64.obj — no stubs needed
 #else
-  // TODO: Provide C++ fallback implementations if building without MASM
+  // C++ fallback implementations when building without MASM
 #endif

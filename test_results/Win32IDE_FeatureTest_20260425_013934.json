@@ -1,0 +1,1674 @@
+﻿{
+    "Failed":  0,
+    "StartTime":  {
+                      "value":  "\/Date(1777095574346)\/",
+                      "DisplayHint":  2,
+                      "DateTime":  "Saturday, April 25, 2026 1:39:34 AM"
+                  },
+    "BatchResults":  [
+                         {
+                             "Expected":  "",
+                             "Id":  "file.new",
+                             "Error":  null,
+                             "Category":  "FileOps",
+                             "Actual":  "Real",
+                             "Status":  "PASS",
+                             "Duration":  3.0432,
+                             "Name":  "New File"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "file.open",
+                             "Error":  null,
+                             "Category":  "FileOps",
+                             "Actual":  "Real",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Open File"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "file.save",
+                             "Error":  null,
+                             "Category":  "FileOps",
+                             "Actual":  "Real",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Save File"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "file.saveAs",
+                             "Error":  null,
+                             "Category":  "FileOps",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  1.5113,
+                             "Name":  "Save As"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "file.saveAll",
+                             "Error":  null,
+                             "Category":  "FileOps",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Save All"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "file.close",
+                             "Error":  null,
+                             "Category":  "FileOps",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Close File"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "file.recentFiles",
+                             "Error":  null,
+                             "Category":  "FileOps",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Recent Files"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "file.loadModel",
+                             "Error":  null,
+                             "Category":  "FileOps",
+                             "Actual":  "Real",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Load GGUF Model"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "file.modelFromHF",
+                             "Error":  null,
+                             "Category":  "FileOps",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Model from HuggingFace"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "file.modelFromOllama",
+                             "Error":  null,
+                             "Category":  "FileOps",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Model from Ollama"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "file.modelFromURL",
+                             "Error":  null,
+                             "Category":  "FileOps",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Model from URL"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "file.modelUnified",
+                             "Error":  null,
+                             "Category":  "FileOps",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Unified Model Load"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "file.quickLoad",
+                             "Error":  null,
+                             "Category":  "FileOps",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Quick Load Model"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "edit.undo",
+                             "Error":  null,
+                             "Category":  "Editing",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Undo"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "edit.redo",
+                             "Error":  null,
+                             "Category":  "Editing",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Redo"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "edit.cut",
+                             "Error":  null,
+                             "Category":  "Editing",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Cut"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "edit.copy",
+                             "Error":  null,
+                             "Category":  "Editing",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Copy"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "edit.paste",
+                             "Error":  null,
+                             "Category":  "Editing",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Paste"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "edit.selectAll",
+                             "Error":  null,
+                             "Category":  "Editing",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Select All"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "edit.find",
+                             "Error":  null,
+                             "Category":  "Editing",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Find"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "edit.replace",
+                             "Error":  null,
+                             "Category":  "Editing",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Find \u0026 Replace"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "view.minimap",
+                             "Error":  null,
+                             "Category":  "View",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Toggle Minimap"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "view.outputPanel",
+                             "Error":  null,
+                             "Category":  "View",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Toggle Output Panel"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "view.floatingPanel",
+                             "Error":  null,
+                             "Category":  "View",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Floating Panel"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "view.themeEditor",
+                             "Error":  null,
+                             "Category":  "View",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Theme Editor"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "view.moduleBrowser",
+                             "Error":  null,
+                             "Category":  "View",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Module Browser"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "view.sidebar",
+                             "Error":  null,
+                             "Category":  "View",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Toggle Sidebar"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "view.secondarySidebar",
+                             "Error":  null,
+                             "Category":  "View",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Secondary Sidebar"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "view.panel",
+                             "Error":  null,
+                             "Category":  "View",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Toggle Panel"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "theme.darkPlus",
+                             "Error":  null,
+                             "Category":  "Themes",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Dark+ Theme"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "theme.monokai",
+                             "Error":  null,
+                             "Category":  "Themes",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Monokai Theme"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "theme.dracula",
+                             "Error":  null,
+                             "Category":  "Themes",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Dracula Theme"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "theme.16themes",
+                             "Error":  null,
+                             "Category":  "Themes",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "16 Built-in Themes"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "syntax.cpp",
+                             "Error":  null,
+                             "Category":  "SyntaxHighlight",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "C/C++ Highlighting"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "syntax.asm",
+                             "Error":  null,
+                             "Category":  "SyntaxHighlight",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Assembly Highlighting"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "syntax.6languages",
+                             "Error":  null,
+                             "Category":  "SyntaxHighlight",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "6 Language Support"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "vision.load",
+                             "Error":  null,
+                             "Category":  "AIMode",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  1.5136,
+                             "Name":  "Load Vision Model"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "vision.encode",
+                             "Error":  null,
+                             "Category":  "AIMode",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Encode Image"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "vision.describe",
+                             "Error":  null,
+                             "Category":  "AIMode",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Describe Image"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "vision.extractCode",
+                             "Error":  null,
+                             "Category":  "AIMode",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Extract Code from Screenshot"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "vision.analyzeDiagram",
+                             "Error":  null,
+                             "Category":  "AIMode",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Analyze Diagram"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "semantic.index",
+                             "Error":  null,
+                             "Category":  "CodeIntelligence",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Index File"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "semantic.search",
+                             "Error":  null,
+                             "Category":  "CodeIntelligence",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Search Symbols"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "semantic.goto",
+                             "Error":  null,
+                             "Category":  "CodeIntelligence",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Go to Definition"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "semantic.references",
+                             "Error":  null,
+                             "Category":  "CodeIntelligence",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Find References"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "semantic.hierarchy",
+                             "Error":  null,
+                             "Category":  "CodeIntelligence",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Type Hierarchy"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "terminal.new",
+                             "Error":  null,
+                             "Category":  "Terminal",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "New Terminal"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "terminal.split",
+                             "Error":  null,
+                             "Category":  "Terminal",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Split Terminal"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "terminal.kill",
+                             "Error":  null,
+                             "Category":  "Terminal",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Kill Terminal"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "terminal.splitCode",
+                             "Error":  null,
+                             "Category":  "Terminal",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Split Code Viewer"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "agent.startLoop",
+                             "Error":  null,
+                             "Category":  "Agent",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Agent Loop"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "agent.execute",
+                             "Error":  null,
+                             "Category":  "Agent",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Agent Execute"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "agent.configureModel",
+                             "Error":  null,
+                             "Category":  "Agent",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Configure Model"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "agent.viewTools",
+                             "Error":  null,
+                             "Category":  "Agent",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "View Agent Tools"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "agent.viewStatus",
+                             "Error":  null,
+                             "Category":  "Agent",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Agent Status"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "agent.stop",
+                             "Error":  null,
+                             "Category":  "Agent",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Agent Stop"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "agent.autonomousCommunicator",
+                             "Error":  null,
+                             "Category":  "Agent",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Autonomous Communicator"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "agent.composerUX",
+                             "Error":  null,
+                             "Category":  "Agent",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Agentic Composer UX"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "agent.contextMentionParser",
+                             "Error":  null,
+                             "Category":  "Agent",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Context Mention Parser"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "agent.memory",
+                             "Error":  null,
+                             "Category":  "Agent",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Agent Memory"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "agent.history",
+                             "Error":  null,
+                             "Category":  "Agent",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Agent History"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "agent.failureDetection",
+                             "Error":  null,
+                             "Category":  "Agent",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Failure Detection"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "agent.failureIntelligence",
+                             "Error":  null,
+                             "Category":  "Agent",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Failure Intelligence"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "autonomy.toggle",
+                             "Error":  null,
+                             "Category":  "Autonomy",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Autonomy Toggle"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "autonomy.setGoal",
+                             "Error":  null,
+                             "Category":  "Autonomy",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Set Goal"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "autonomy.rateLimit",
+                             "Error":  null,
+                             "Category":  "Autonomy",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Rate Limiter"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "aimode.deepThinking",
+                             "Error":  null,
+                             "Category":  "AIMode",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Deep Thinking"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "aimode.deepResearch",
+                             "Error":  null,
+                             "Category":  "AIMode",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Deep Research"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "aimode.noRefusal",
+                             "Error":  null,
+                             "Category":  "AIMode",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "No Refusal"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "aimode.contextWindow",
+                             "Error":  null,
+                             "Category":  "AIMode",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Context Window"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "telemetry.unifiedCore",
+                             "Error":  null,
+                             "Category":  "Telemetry",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Unified Telemetry Core"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "transcendence.cursorParity",
+                             "Error":  null,
+                             "Category":  "Transcendence",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Cursor/GitHub Parity Bridge"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "transcendence.omegaOrchestrator",
+                             "Error":  null,
+                             "Category":  "Transcendence",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Omega Orchestrator"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "transcendence.meshBrain",
+                             "Error":  null,
+                             "Category":  "Transcendence",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Mesh Brain"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "transcendence.speciatorEngine",
+                             "Error":  null,
+                             "Category":  "Transcendence",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  1.5101,
+                             "Name":  "Speciator Engine"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "transcendence.neuralBridge",
+                             "Error":  null,
+                             "Category":  "Transcendence",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Neural Bridge"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "transcendence.selfHostEngine",
+                             "Error":  null,
+                             "Category":  "Transcendence",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Self-Host Engine"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "transcendence.hardwareSynthesizer",
+                             "Error":  null,
+                             "Category":  "Transcendence",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  1.5113,
+                             "Name":  "Hardware Synthesizer"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "transcendence.coordinator",
+                             "Error":  null,
+                             "Category":  "Transcendence",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Transcendence Coordinator"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "transcendence.vulkanRenderer",
+                             "Error":  null,
+                             "Category":  "Transcendence",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Vulkan Renderer"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "transcendence.osExplorer",
+                             "Error":  null,
+                             "Category":  "Transcendence",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "OS Explorer Interceptor"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "transcendence.mcpHooks",
+                             "Error":  null,
+                             "Category":  "Transcendence",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "MCP Hooks"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "transcendence.iocpWatcher",
+                             "Error":  null,
+                             "Category":  "Transcendence",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "IOCP File Watcher"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "transcendence.autoHealer",
+                             "Error":  null,
+                             "Category":  "Transcendence",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "IDE Diagnostic AutoHealer"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "transcendence.consentPrompt",
+                             "Error":  null,
+                             "Category":  "Transcendence",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Consent Prompt"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "debug.start",
+                             "Error":  null,
+                             "Category":  "Debug",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Start Debugger"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "debug.breakpoint",
+                             "Error":  null,
+                             "Category":  "Debug",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Set Breakpoint"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "debug.step",
+                             "Error":  null,
+                             "Category":  "Debug",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Step Over"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "debug.nativeEngine",
+                             "Error":  null,
+                             "Category":  "Debug",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Native Debug Engine"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "debug.autonomous",
+                             "Error":  null,
+                             "Category":  "Debug",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Autonomous Debug"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "re.analyze",
+                             "Error":  null,
+                             "Category":  "ReverseEngineering",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  1.518,
+                             "Name":  "PE Analysis"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "re.disasm",
+                             "Error":  null,
+                             "Category":  "ReverseEngineering",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Disassembly"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "re.dumpbin",
+                             "Error":  null,
+                             "Category":  "ReverseEngineering",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "DumpBin"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "re.compile",
+                             "Error":  null,
+                             "Category":  "ReverseEngineering",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "MASM Compile"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "re.cfg",
+                             "Error":  null,
+                             "Category":  "ReverseEngineering",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Control Flow Graph"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "re.functions",
+                             "Error":  null,
+                             "Category":  "ReverseEngineering",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Function List"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "re.demangle",
+                             "Error":  null,
+                             "Category":  "ReverseEngineering",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Demangle Symbols"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "re.ssa",
+                             "Error":  null,
+                             "Category":  "ReverseEngineering",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "SSA Lifting"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "re.recursiveDisasm",
+                             "Error":  null,
+                             "Category":  "ReverseEngineering",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Recursive Disassembly"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "re.typeRecovery",
+                             "Error":  null,
+                             "Category":  "ReverseEngineering",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Type Recovery"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "re.dataFlow",
+                             "Error":  null,
+                             "Category":  "ReverseEngineering",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Data Flow Analysis"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "re.exportIDA",
+                             "Error":  null,
+                             "Category":  "ReverseEngineering",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Export to IDA"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "re.exportGhidra",
+                             "Error":  null,
+                             "Category":  "ReverseEngineering",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Export to Ghidra"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "re.detectVulns",
+                             "Error":  null,
+                             "Category":  "ReverseEngineering",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  1.5084,
+                             "Name":  "Detect Vulnerabilities"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "decomp.d2dView",
+                             "Error":  null,
+                             "Category":  "Decompiler",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Direct2D Decompiler"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "decomp.syntaxColor",
+                             "Error":  null,
+                             "Category":  "Decompiler",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Decompiler Syntax Coloring"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "decomp.syncSelection",
+                             "Error":  null,
+                             "Category":  "Decompiler",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Synchronized Selection"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "decomp.varRename",
+                             "Error":  null,
+                             "Category":  "Decompiler",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Variable Rename (SSA)"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "hotpatch.memory",
+                             "Error":  null,
+                             "Category":  "Hotpatch",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Memory Hotpatch"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "hotpatch.byteLevel",
+                             "Error":  null,
+                             "Category":  "Hotpatch",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Byte-Level Hotpatch"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "hotpatch.server",
+                             "Error":  null,
+                             "Category":  "Hotpatch",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Server Hotpatch"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "hotpatch.panel",
+                             "Error":  null,
+                             "Category":  "Hotpatch",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Hotpatch Panel UI"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "hotpatch.unified",
+                             "Error":  null,
+                             "Category":  "Hotpatch",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Unified Hotpatch Mgr"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "streaming.tokenByToken",
+                             "Error":  null,
+                             "Category":  "Streaming",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Token Streaming"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "streaming.ghostText",
+                             "Error":  null,
+                             "Category":  "GhostText",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Ghost Text Completion"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "session.save",
+                             "Error":  null,
+                             "Category":  "Session",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Save Session"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "session.restore",
+                             "Error":  null,
+                             "Category":  "Session",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Restore Session"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "git.status",
+                             "Error":  null,
+                             "Category":  "Git",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Git Status"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "git.commit",
+                             "Error":  null,
+                             "Category":  "Git",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Git Commit"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "git.push",
+                             "Error":  null,
+                             "Category":  "Git",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Git Push"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "git.pull",
+                             "Error":  null,
+                             "Category":  "Git",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Git Pull"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "subagent.spawn",
+                             "Error":  null,
+                             "Category":  "SubAgent",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Spawn Sub-Agent"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "subagent.chain",
+                             "Error":  null,
+                             "Category":  "SubAgent",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Prompt Chain"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "subagent.swarm",
+                             "Error":  null,
+                             "Category":  "SubAgent",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "HexMag Swarm"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "subagent.todoList",
+                             "Error":  null,
+                             "Category":  "SubAgent",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Agent Todo List"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "swarm.panel",
+                             "Error":  null,
+                             "Category":  "Swarm",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Swarm Panel"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "llm.multiEngine",
+                             "Error":  null,
+                             "Category":  "LLMRouter",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Multi-Engine Router"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "llm.backendSwitch",
+                             "Error":  null,
+                             "Category":  "BackendSwitcher",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Backend Switcher"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "lsp.client",
+                             "Error":  null,
+                             "Category":  "LSP",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "LSP Client"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "lsp.aiBridge",
+                             "Error":  null,
+                             "Category":  "LSP",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "LSP ↔ AI Bridge"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "multi.response",
+                             "Error":  null,
+                             "Category":  "Agent",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Multi-Response Engine"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "ps.execute",
+                             "Error":  null,
+                             "Category":  "PowerShell",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "PowerShell Execute"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "ps.panel",
+                             "Error":  null,
+                             "Category":  "PowerShell",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "PowerShell Panel"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "ps.rawrxdModule",
+                             "Error":  null,
+                             "Category":  "PowerShell",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "RawrXD PS Module"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "settings.editor",
+                             "Error":  null,
+                             "Category":  "Settings",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Editor Settings"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "annotations.inline",
+                             "Error":  null,
+                             "Category":  "Annotations",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Inline Annotations"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "server.local",
+                             "Error":  null,
+                             "Category":  "Server",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Local Inference Server"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "plan.executor",
+                             "Error":  null,
+                             "Category":  "Agent",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Plan Executor"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "exec.governor",
+                             "Error":  null,
+                             "Category":  "Agent",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Execution Governor"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "compiler.cli",
+                             "Error":  null,
+                             "Category":  "Compiler",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "CLI Compiler"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "compiler.watchMode",
+                             "Error":  null,
+                             "Category":  "Compiler",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Watch Mode"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "react.generate",
+                             "Error":  null,
+                             "Category":  "Modules",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Generate React IDE"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "headless.mode",
+                             "Error":  null,
+                             "Category":  "Modules",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Headless Mode"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "headless.server",
+                             "Error":  null,
+                             "Category":  "Server",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Headless HTTP Server"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "headless.repl",
+                             "Error":  null,
+                             "Category":  "Terminal",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Headless REPL"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "headless.singleshot",
+                             "Error":  null,
+                             "Category":  "Streaming",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Headless Single-Shot"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "headless.batch",
+                             "Error":  null,
+                             "Category":  "Streaming",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Headless Batch Mode"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "headless.outputsink",
+                             "Error":  null,
+                             "Category":  "Modules",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "IOutputSink Interface"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "headless.json",
+                             "Error":  null,
+                             "Category":  "Modules",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "JSON Structured Output"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "webview2.msgbridge",
+                             "Error":  null,
+                             "Category":  "View",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "C++/JS Message Bridge"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "webview2.sync",
+                             "Error":  null,
+                             "Category":  "Editing",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Editor Content Sync"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "lsp.server.hover",
+                             "Error":  null,
+                             "Category":  "LSP",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Hover Provider"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "lsp.server.completion",
+                             "Error":  null,
+                             "Category":  "LSP",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Completion Provider"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "lsp.server.definition",
+                             "Error":  null,
+                             "Category":  "LSP",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Go-to-Definition"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "lsp.server.references",
+                             "Error":  null,
+                             "Category":  "LSP",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Find References"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "lsp.server.docSymbol",
+                             "Error":  null,
+                             "Category":  "LSP",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Document Symbols"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "lsp.server.semanticTokens",
+                             "Error":  null,
+                             "Category":  "LSP",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Semantic Tokens"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "agent.autonomous",
+                             "Error":  null,
+                             "Category":  "Agent",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Autonomous Agent"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "ui.chatRenderer",
+                             "Error":  null,
+                             "Category":  "AIMode",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Chat Message Renderer"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "ui.toolStatus",
+                             "Error":  null,
+                             "Category":  "Tools",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Tool Action Status"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "ui.chatPanel",
+                             "Error":  null,
+                             "Category":  "AIMode",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Chat Panel"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "telemetry.perf",
+                             "Error":  null,
+                             "Category":  "Telemetry",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Performance Telemetry"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "security.updateSig",
+                             "Error":  null,
+                             "Category":  "Security",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Update Signature"
+                         },
+                         {
+                             "Expected":  "",
+                             "Id":  "security.pluginSig",
+                             "Error":  null,
+                             "Category":  "Security",
+                             "Actual":  "",
+                             "Status":  "PASS",
+                             "Duration":  0,
+                             "Name":  "Plugin Signature"
+                         }
+                     ],
+    "Passed":  164,
+    "Skipped":  0,
+    "Duration":  {
+                     "Ticks":  2544010,
+                     "Days":  0,
+                     "Hours":  0,
+                     "Milliseconds":  254,
+                     "Minutes":  0,
+                     "Seconds":  0,
+                     "TotalDays":  2.9444560185185183E-06,
+                     "TotalHours":  7.0666944444444435E-05,
+                     "TotalMilliseconds":  254.401,
+                     "TotalMinutes":  0.0042400166666666664,
+                     "TotalSeconds":  0.254401
+                 },
+    "EndTime":  {
+                    "value":  "\/Date(1777095574600)\/",
+                    "DisplayHint":  2,
+                    "DateTime":  "Saturday, April 25, 2026 1:39:34 AM"
+                },
+    "Categories":  {
+
+                   },
+    "Total":  164
+}

@@ -28,6 +28,11 @@ SOURCE_EXTS = {
     ".cmake", ".html", ".json", ".yml", ".yaml",
 }
 
+# Basenames excluded from the Source Files menu (legacy non-IDE scripts)
+SKIP_FILE_BASENAMES = {
+    "voice_music_player.ps1",
+}
+
 # IDM base — source file menu items start at 60000
 IDM_BASE = 60000
 
@@ -37,6 +42,8 @@ def scan_files():
     for root, dirs, fnames in os.walk(REPO_ROOT):
         dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
         for fname in sorted(fnames):
+            if fname in SKIP_FILE_BASENAMES:
+                continue
             ext = os.path.splitext(fname)[1].lower()
             if ext not in SOURCE_EXTS:
                 continue

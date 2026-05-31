@@ -203,7 +203,7 @@ export function IdeFeaturesProvider({ children }) {
   /** 'chat' | 'agent' | 'modules' | 'symbols' | 'models' | null — M02 restore last tab from localStorage */
   const [rightDockTab, setRightDockTab] = useState(readInitialDockTab);
   const [toasts, setToasts] = useState([]);
-  const [statusLine, setStatusLine] = useState('Ready — Ctrl+Shift+P palette · Ctrl+, settings · Ctrl+L chat · Ctrl+Shift+G models');
+  const [statusLine, setStatusLine] = useState('Ready — Ctrl+Shift+P palette · Ctrl+, settings · Ctrl+Shift+O chat · Ctrl+Shift+G models');
 
   useEffect(() => {
     savePersisted(settings, modules, shortcuts);

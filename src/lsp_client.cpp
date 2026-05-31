@@ -15,6 +15,7 @@ namespace {
 class InMemoryJsonRpcTransport final : public RawrXD::JsonRpcTransport {
 public:
     bool connect(const std::string& cmd, const std::vector<std::string>& args) override {
+        std::lock_guard<std::mutex> lock(mutex_);
         (void)cmd;
         (void)args;
         connected_ = true;
@@ -22,18 +23,24 @@ public:
     }
 
     void send(const nlohmann::json& msg) override {
+        std::lock_guard<std::mutex> lock(mutex_);
         if (!connected_) return;
         lastMessage_ = msg;
     }
 
     nlohmann::json receive() override {
+        std::lock_guard<std::mutex> lock(mutex_);
         if (!connected_) return nlohmann::json::object();
         return lastMessage_.is_null() ? nlohmann::json::object() : lastMessage_;
     }
 
-    bool isConnected() const override { return connected_; }
+    bool isConnected() const override {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return connected_;
+    }
 
 private:
+    mutable std::mutex mutex_;
     bool connected_ = false;
     nlohmann::json lastMessage_;
 };
@@ -251,6 +258,23 @@ bool LSPClient::start() {
     return true;
 }
 
+bool LSPClient::ensureReady() {
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        if (!m_transport) m_transport = std::make_unique<StdioJsonRpcTransport>();
+    }
+
+    if (!m_transport->isConnected() && !start()) {
+        return false;
+    }
+
+    if (!m_initialized.load()) {
+        (void)initialize().get();
+    }
+
+    return m_transport && m_transport->isConnected() && m_initialized.load();
+}
+
 void LSPClient::stop() {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_initialized = false;
@@ -395,6 +419,27 @@ std::future<nlohmann::json> LSPClient::definition(const std::string& uri, int li
         params["position"] = pos;
 
         m_transport->send(createRequest("textDocument/definition", params));
+        const auto response = m_transport->receive();
+        if (response.contains("result")) return response["result"];
+        return nlohmann::json::array();
+    });
+}
+
+std::future<nlohmann::json> LSPClient::workspaceSymbols(const std::string& query) {
+    return std::async(std::launch::deferred, [this, query]() {
+        if (query.empty() || !ensureReady()) {
+            return nlohmann::json::array();
+        }
+
+        std::lock_guard<std::mutex> lock(m_mutex);
+        if (!m_transport || !m_transport->isConnected()) {
+            return nlohmann::json::array();
+        }
+
+        nlohmann::json params = nlohmann::json::object();
+        params["query"] = query;
+
+        m_transport->send(createRequest("workspace/symbol", params));
         const auto response = m_transport->receive();
         if (response.contains("result")) return response["result"];
         return nlohmann::json::array();

@@ -1,0 +1,1 @@
+ninja: error: 'd:/rawrxd/build/bin/RawrXD_Titan.lib', needed by 'bin/RawrXD-Win32IDE.exe', missing and no known rule to make it

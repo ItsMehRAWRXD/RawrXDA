@@ -2,7 +2,7 @@
 
 #include "ggml-metal-impl.h"
 
-#include "ggml-impl.h"
+#include "ggml-impl_rxd_internal.h"
 
 #include <cassert>
 #include <memory>

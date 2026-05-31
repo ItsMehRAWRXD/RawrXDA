@@ -15,7 +15,7 @@ namespace IDE {
 
 IntelligentCompletionEngine::IntelligentCompletionEngine()
     : m_confidenceThreshold(0.5f), m_maxSuggestions(10),
-      m_modelUrl("http://localhost:11434"), m_embeddingUrl("http://localhost:11434") {
+      m_modelUrl("http://localhost:11435"), m_embeddingUrl("http://localhost:11435") {
 }
 
 std::vector<CompletionSuggestion> IntelligentCompletionEngine::getCompletions(
@@ -284,7 +284,7 @@ std::vector<CompletionSuggestion> IntelligentCompletionEngine::inferCompletions(
             }
         }
     } catch (...) {
-        // Model unavailable — fall through to heuristic fallback
+        fprintf(stderr, "[CompletionEngine] Model unavailable, using heuristic fallback\n");
     }
 
     // Heuristic fallback if no model response

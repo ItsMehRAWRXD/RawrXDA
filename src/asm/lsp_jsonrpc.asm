@@ -169,9 +169,78 @@ LSP_CreateRequest ENDP
 ; RCX = buffer, RDX = size, R8 = outResult
 ; Returns: RAX = 1 success, 0 fail
 LSP_ParseResponse PROC FRAME
+    push rbx
+    .pushreg rbx
+    push rsi
+    .pushreg rsi
+    push rdi
+    .pushreg rdi
+    sub rsp, 20h
+    .allocstack 20h
     .endprolog
-    ; Stub - validate basic JSON structure
-    mov rax, 1
+
+    mov rbx, rcx            ; buffer
+    mov rsi, rdx            ; size
+    mov rdi, r8             ; outResult
+
+    test rbx, rbx
+    jz lsp_pr_fail
+    cmp rsi, 8
+    jb lsp_pr_fail
+
+    ; Parse declared content length from headers.
+    mov rcx, rbx
+    call LSP_GetContentLen
+    mov r10, rax            ; declared body bytes
+
+    ; Find CRLFCRLF header terminator.
+    xor r9, r9
+lsp_pr_scan:
+    cmp r9, rsi
+    jae lsp_pr_fail
+    cmp byte ptr [rbx + r9], 0Dh
+    jne lsp_pr_next
+    cmp byte ptr [rbx + r9 + 1], 0Ah
+    jne lsp_pr_next
+    cmp byte ptr [rbx + r9 + 2], 0Dh
+    jne lsp_pr_next
+    cmp byte ptr [rbx + r9 + 3], 0Ah
+    jne lsp_pr_next
+    jmp lsp_pr_hdr_done
+lsp_pr_next:
+    inc r9
+    jmp lsp_pr_scan
+
+lsp_pr_hdr_done:
+    lea rcx, [rbx + r9 + 4] ; body start
+    mov rax, rsi
+    sub rax, r9
+    sub rax, 4              ; available body bytes
+    cmp rax, r10
+    jb lsp_pr_fail
+
+    ; Basic JSON envelope check.
+    cmp byte ptr [rcx], '{'
+    jne lsp_pr_fail
+
+    ; Optionally return body pointer + declared length.
+    test rdi, rdi
+    jz lsp_pr_ok
+    mov [rdi], rcx
+    mov [rdi+8], r10
+
+lsp_pr_ok:
+    mov eax, 1
+    jmp lsp_pr_done
+
+lsp_pr_fail:
+    xor eax, eax
+
+lsp_pr_done:
+    add rsp, 20h
+    pop rdi
+    pop rsi
+    pop rbx
     ret
 LSP_ParseResponse ENDP
 

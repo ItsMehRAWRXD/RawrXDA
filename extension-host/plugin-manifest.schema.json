@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rawrxd.dev/schemas/plugin-manifest.schema.json",
+  "title": "RawrXD Plugin Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "capabilities"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[a-zA-Z0-9_.-]+$"
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fs",
+        "net",
+        "process",
+        "kv",
+        "ui"
+      ],
+      "properties": {
+        "fs": {
+          "oneOf": [
+            {
+              "type": "boolean",
+              "const": false
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "read",
+                "write"
+              ],
+              "properties": {
+                "read": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "write": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "net": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "allowHosts": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "allowPrivateNetwork": {
+                  "type": "boolean"
+                }
+              }
+            }
+          ]
+        },
+        "process": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "allow": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "kv": {
+          "type": "boolean"
+        },
+        "ui": {
+          "type": "boolean"
+        },
+        "runtime": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
