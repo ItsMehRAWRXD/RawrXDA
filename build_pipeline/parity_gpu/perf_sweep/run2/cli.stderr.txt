@@ -1,0 +1,19 @@
+[RawrXD][GPU] Loaded ggml-vulkan.dll for Vulkan backend detection
+ggml_vulkan: Found 2 Vulkan devices:
+ggml_vulkan: 0 = AMD Radeon RX 7800 XT (AMD proprietary driver) | uma: 0 | fp16: 1 | bf16: 1 | warp size: 64 | shared memory: 32768 | int dot: 1 | matrix cores: KHR_coopmat
+ggml_vulkan: 1 = AMD Radeon(TM) Graphics (AMD proprietary driver) | uma: 1 | fp16: 1 | bf16: 0 | warp size: 32 | shared memory: 32768 | int dot: 1 | matrix cores: none
+[RawrXD][GPU] Vulkan locked: AMD Radeon RX 7800 XT (15409 MiB free / 16368 MiB total) across 2 device(s)
+[CLI TOKEN] ?
+[CLI TOKEN]  Get
+[CLI TOKEN]  your
+[CLI TOKEN]  questions
+[CLI TOKEN]  ready
+[CLI TOKEN] ,
+[CLI TOKEN]  because
+[CLI TOKEN]  today
+[CLI TOKEN]  we
+[CLI TOKEN]  got
+[CLI TOKEN]  a
+[CLI TOKEN]  special
+[CLI TOKEN]  #
+[CLI TOKEN] 1

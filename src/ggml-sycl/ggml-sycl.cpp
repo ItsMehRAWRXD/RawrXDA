@@ -36,8 +36,8 @@
 #include <sycl/half_type.hpp>
 
 #include "ggml-sycl.h"
-#include "ggml-impl.h"
-#include "ggml-backend-impl.h"
+#include "ggml-impl_rxd_internal.h"
+#include "ggml-backend-impl_rxd_internal.h"
 
 #include "ggml-sycl/backend.hpp"
 #include "ggml-sycl/common.hpp"
@@ -52,7 +52,7 @@
 #include "ggml-sycl/repeat_back.hpp"
 #include "ggml-sycl/quantize.hpp"
 #include "ggml-sycl/ssm_conv.hpp"
-#include "ggml.h"
+#include "ggml_rxd_internal.h"
 
 static bool g_sycl_loaded = false;
 int g_ggml_sycl_debug = 0;

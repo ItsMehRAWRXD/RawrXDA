@@ -6,6 +6,9 @@
 #include <windows.h>
 #include <winhttp.h>
 #include <shlobj.h>
+#include <mutex>
+#include <thread>
+#include <vector>
 
 #pragma comment(lib, "winhttp.lib")
 #pragma comment(lib, "shell32.lib")
@@ -106,9 +109,9 @@ VsixInstaller::~VsixInstaller() {
 }
 
 void VsixInstaller::installFromUrl(const std::string& url, const std::string& extensionId) {
-    if (installationStarted) installationStarted(extensionId);
+    if (m_onStarted) m_onStarted(extensionId);
 
-    std::thread([this, url, extensionId]() {
+    std::thread([this, url, extensionId]() mutable {
         // Temp file
         TCHAR tempPath[MAX_PATH];
         GetTempPath(MAX_PATH, tempPath);
@@ -122,11 +125,11 @@ void VsixInstaller::installFromUrl(const std::string& url, const std::string& ex
 
         // Download
         bool success = DownloadFile(url, tempFile, [this, extensionId](int progress) {
-            if (installationProgress) installationProgress(extensionId, progress);
+            if (m_onProgress) m_onProgress(extensionId, progress);
         });
 
         if (!success) {
-            if (installationError) installationError(extensionId, "Download failed");
+            if (m_onError) m_onError(extensionId, "Download failed");
             return;
         }
 
@@ -153,12 +156,12 @@ void VsixInstaller::installFromFile(const std::string& filePath, const std::stri
     // Extract
     if (extractVsixPackage(filePath, installPath)) {
         if (activateExtension(extensionId)) {
-            if (installationCompleted) installationCompleted(extensionId, true);
+            if (m_onCompleted) m_onCompleted(extensionId, true);
         } else {
-             if (installationError) installationError(extensionId, "Activation failed");
+            if (m_onError) m_onError(extensionId, "Activation failed");
         }
     } else {
-        if (installationError) installationError(extensionId, "Extraction failed (Archive invalid?)");
+        if (m_onError) m_onError(extensionId, "Extraction failed (Archive invalid?)");
     }
 }
 
@@ -198,7 +201,7 @@ bool VsixInstaller::deactivateExtension(const std::string& extensionId) {
 bool VsixInstaller::uninstallExtension(const std::string& extensionId) {
     std::string path = getExtensionInstallPath(extensionId);
     if (!fs::exists(path)) {
-        if (uninstallCompleted) uninstallCompleted(extensionId, false);
+        if (m_onUninstallCompleted) m_onUninstallCompleted(extensionId, false);
         return false;
     }
     
@@ -206,7 +209,7 @@ bool VsixInstaller::uninstallExtension(const std::string& extensionId) {
     fs::remove_all(path, ec);
     
     bool success = !ec;
-    if (uninstallCompleted) uninstallCompleted(extensionId, success);
+    if (m_onUninstallCompleted) m_onUninstallCompleted(extensionId, success);
     return success;
 }
 

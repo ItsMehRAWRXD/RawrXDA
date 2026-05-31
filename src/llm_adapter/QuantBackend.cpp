@@ -54,19 +54,28 @@ void QuantBackend::matmul(
             // For models with pre-quantized tensors, this provides 4-bit inference
             if (m_quantizedWeights && m_quantizedWeightSize > 0) {
                 // Use ggml's quantized matmul kernel
-                struct ggml_init_params gparams = { .mem_size = N * M * K * 4 + 1024*1024, .mem_buffer = nullptr, .no_alloc = false };
-                struct ggml_context* ctx = ggml_init(gparams);
+                struct ggml_rxd_init_params gparams = { .mem_size = N * M * K * 4 + 1024*1024, .mem_buffer = nullptr, .no_alloc = false };
+                struct ggml_rxd_context* ctx = ggml_rxd_init(gparams);
                 if (ctx) {
-                    struct ggml_tensor* ta = ggml_new_tensor_2d(ctx, GGML_TYPE_F32, K, N);
-                    struct ggml_tensor* tb = ggml_new_tensor_2d(ctx, GGML_TYPE_Q4_0, K, M);
+                    struct ggml_rxd_tensor* ta = ggml_rxd_new_tensor_2d(ctx, GGML_RXD_TYPE_F32, K, N);
+                    struct ggml_rxd_tensor* tb = ggml_rxd_new_tensor_2d(ctx, GGML_RXD_TYPE_Q4_0, K, M);
                     memcpy(ta->data, A, N * K * sizeof(float));
-                    memcpy(tb->data, m_quantizedWeights, m_quantizedWeightSize);
-                    struct ggml_tensor* tc = ggml_mul_mat(ctx, tb, ta);
-                    struct ggml_cgraph* gf = ggml_new_graph(ctx);
-                    ggml_build_forward_expand(gf, tc);
-                    ggml_graph_compute_with_ctx(ctx, gf, 1);
+                    // Verify quantized weights fit in tensor buffer before copying
+                    size_t tbCapacity = ggml_rxd_nbytes(tb);
+                    if (m_quantizedWeightSize <= tbCapacity) {
+                        memcpy(tb->data, m_quantizedWeights, m_quantizedWeightSize);
+                    } else {
+                        // Quantized weights too large; skip this kernel and use fallback
+                        ggml_rxd_free(ctx);
+                        fallbackMatmul(A, B, C, N, M, K);
+                        break;
+                    }
+                    struct ggml_rxd_tensor* tc = ggml_rxd_mul_mat(ctx, tb, ta);
+                    struct ggml_rxd_cgraph* gf = ggml_rxd_new_graph(ctx);
+                    ggml_rxd_build_forward_expand(gf, tc);
+                    ggml_rxd_graph_compute_with_ctx(ctx, gf, 1);
                     memcpy(C, tc->data, N * M * sizeof(float));
-                    ggml_free(ctx);
+                    ggml_rxd_free(ctx);
                     break;
                 }
             }
@@ -108,7 +117,7 @@ bool QuantBackend::quantizeWeights(
             // Q4_0 block size is 32 elements = 18 bytes (2 bytes scale + 16 bytes data)
             size_t nBlocks = (count + 31) / 32;
             int64_t histogramBuf[16] = {};
-            ggml_quantize_q4_0((const float*)src, dst, (int)count, (int)count, histogramBuf);
+            ggml_rxd_quantize_q4_0((const float*)src, dst, (int)count, (int)count, histogramBuf);
             return true;
         }
         
@@ -116,7 +125,7 @@ bool QuantBackend::quantizeWeights(
             // Quantize float32 weights to Q8_0 format using ggml
             // Q8_0 block size is 32 elements = 34 bytes (2 bytes scale + 32 bytes data)
             int64_t histogramBuf[256] = {};
-            ggml_quantize_q8_0((const float*)src, dst, (int)count, (int)count, histogramBuf);
+            ggml_rxd_quantize_q8_0((const float*)src, dst, (int)count, (int)count, histogramBuf);
             return true;
         }
         

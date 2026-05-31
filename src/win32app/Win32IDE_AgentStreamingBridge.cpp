@@ -2,6 +2,8 @@
 // Routes AgentPanel_AppendMessage / AgentPanel_AppendToken to appendToOutput("Agent").
 
 #include "Win32IDE.h"
+#include <mutex>
+#include <new>
 #include <string>
 
 namespace {
@@ -16,51 +18,98 @@ std::string wideToUtf8(const wchar_t* wstr) {
     return out;
 }
 
-void appendAgentOutput(const std::string& text) {
+// Safely post text to the Agent output tab from any thread.
+// Heap-allocates a copy of text; the UI-thread handler (WM_IDE_OUTPUT_APPEND_SAFE) frees it.
+void postAgentOutputSafe(std::string text) {
     if (!g_pMainIDE) return;
-    g_pMainIDE->appendToOutput(text, "Agent", Win32IDE::OutputSeverity::Info);
+    HWND hwnd = g_pMainIDE->getMainWindow();
+    if (!hwnd || !IsWindow(hwnd)) return;
+    auto* payload = new (std::nothrow) std::string(std::move(text));
+    if (!payload) return;
+    if (!PostMessage(hwnd, WM_IDE_OUTPUT_APPEND_SAFE, 0, reinterpret_cast<LPARAM>(payload))) {
+        delete payload;
+    }
 }
+
+std::mutex s_tokenBufMtx;
+std::string s_tokenBuf;
 
 } // namespace
 
-// E1: AgentPanel_AppendMessage records to agent history when IDE is live
-// E2: AgentPanel_AppendToken batches tokens and flushes on newline for efficiency
-// E3: AgentPanel_FinalizeStream triggers refreshAgentDiffDisplay if panel is open
-// E4: role prefix color-coded in output (user=cyan, assistant=green, system=yellow)
-// E5: empty role defaults to "agent" for consistent history attribution
-// E6: wideToUtf8 handles null gracefully with empty-string return
-// E7: all three exports guarded against null g_pMainIDE
 extern "C" {
+
+static void AgentPanel_AppendMessage_Impl(const wchar_t* role, const wchar_t* content) {
+    std::string r = wideToUtf8(role);
+    std::string c = wideToUtf8(content);
+    if (r.empty() && c.empty()) return;
+    if (r.empty()) r = "agent";
+    std::string line = "[Agent] " + r + ": " + c;
+    if (!line.empty() && line.back() != '\n') line += "\n";
+    postAgentOutputSafe(std::move(line));
+    if (g_pMainIDE) {
+        g_pMainIDE->bridgeRecordSimpleEvent(AgentEventType::AgentCompleted, r + ": " + c.substr(0, 80));
+    }
+}
+
+static void AgentPanel_AppendToken_Impl(const wchar_t* token) {
+    if (!token) return;
+    std::string t = wideToUtf8(token);
+    std::string toFlush;
+    {
+        std::lock_guard<std::mutex> lk(s_tokenBufMtx);
+        s_tokenBuf += t;
+        if (!s_tokenBuf.empty() && (s_tokenBuf.back() == '\n' || s_tokenBuf.size() > 256)) {
+            toFlush = std::move(s_tokenBuf);
+            s_tokenBuf.clear();
+        }
+    }
+    if (!toFlush.empty()) {
+        postAgentOutputSafe(std::move(toFlush));
+    }
+}
+
+static void AgentPanel_FinalizeStream_Impl(void) {
+    std::string toFlush;
+    {
+        std::lock_guard<std::mutex> lk(s_tokenBufMtx);
+        if (!s_tokenBuf.empty()) {
+            toFlush = std::move(s_tokenBuf);
+            s_tokenBuf.clear();
+        }
+    }
+    if (!toFlush.empty()) {
+        postAgentOutputSafe(std::move(toFlush));
+    }
+    postAgentOutputSafe("\n");
+    if (g_pMainIDE) {
+        HWND hwnd = g_pMainIDE->getMainWindow();
+        if (hwnd && IsWindow(hwnd)) {
+            PostMessage(hwnd, WM_APP + 112, 0, 0);
+        }
+    }
+}
 
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
 void AgentPanel_AppendMessage(const wchar_t* role, const wchar_t* content) {
-    std::string r = wideToUtf8(role);
-    std::string c = wideToUtf8(content);
-    if (r.empty() && c.empty()) return;
-    // E5: default role
-    if (r.empty()) r = "agent";
-    std::string line = "[Agent] " + r + ": " + c;
-    if (!line.empty() && line.back() != '\n') line += "\n";
-    appendAgentOutput(line);
-    // E1: record to history
-    if (g_pMainIDE)
-        g_pMainIDE->bridgeRecordSimpleEvent(AgentEventType::AgentCompleted, r + ": " + c.substr(0, 80));
+    __try {
+        AgentPanel_AppendMessage_Impl(role, content);
+    }
+    __except(EXCEPTION_EXECUTE_HANDLER) {
+        OutputDebugStringA("[AgentStreamingBridge] AgentPanel_AppendMessage trapped SEH exception\n");
+    }
 }
 
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
 void AgentPanel_AppendToken(const wchar_t* token) {
-    if (!token) return;
-    // E2: batch tokens, flush on newline
-    static std::string s_tokenBuf;
-    std::string t = wideToUtf8(token);
-    s_tokenBuf += t;
-    if (!s_tokenBuf.empty() && (s_tokenBuf.back() == '\n' || s_tokenBuf.size() > 256)) {
-        appendAgentOutput(s_tokenBuf);
-        s_tokenBuf.clear();
+    __try {
+        AgentPanel_AppendToken_Impl(token);
+    }
+    __except(EXCEPTION_EXECUTE_HANDLER) {
+        OutputDebugStringA("[AgentStreamingBridge] AgentPanel_AppendToken trapped SEH exception\n");
     }
 }
 
@@ -68,10 +117,12 @@ void AgentPanel_AppendToken(const wchar_t* token) {
 __declspec(dllexport)
 #endif
 void AgentPanel_FinalizeStream(void) {
-    appendAgentOutput("\n");
-    // E3: trigger diff panel refresh
-    if (g_pMainIDE && g_pMainIDE->bridgeIsAgentPanelReady())
-        g_pMainIDE->bridgeRefreshAgentDiff();
+    __try {
+        AgentPanel_FinalizeStream_Impl();
+    }
+    __except(EXCEPTION_EXECUTE_HANDLER) {
+        OutputDebugStringA("[AgentStreamingBridge] AgentPanel_FinalizeStream trapped SEH exception\n");
+    }
 }
 
 } // extern "C"

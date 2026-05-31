@@ -24,6 +24,7 @@
 #include <ctime>
 #include <commctrl.h>
 #include <dbghelp.h>
+#include <atomic>
 
 #pragma comment(lib, "dbghelp.lib")
 
@@ -56,6 +57,7 @@ static std::vector<CrashReport> s_crashHistory;
 static HWND s_hwndCrashDialog  = nullptr;
 static HWND s_hwndCrashTrace   = nullptr;  // RichEdit for stack trace
 static bool s_crashDialogClassRegistered = false;
+static LPTOP_LEVEL_EXCEPTION_FILTER s_previousFilter = nullptr;  // Cathedral filter saved at install time
 static const wchar_t* CRASH_DIALOG_CLASS = L"RawrXD_CrashReporter";
 
 // Crash log file path
@@ -507,9 +509,30 @@ static bool ensureCrashDialogClass() {
 // Structured exception handler (to install as top-level filter)
 // ============================================================================
 
+static std::atomic<bool> s_inCrashHandler{false};  // Guard against recursive crash reporting
+
 static LONG WINAPI rawrxdUnhandledExceptionFilter(PEXCEPTION_POINTERS pExceptions) {
     if (!pExceptions || !pExceptions->ExceptionRecord) {
         return EXCEPTION_CONTINUE_SEARCH;
+    }
+
+    // Guard against recursive crash reporting - if we're already in the crash handler,
+    // just chain to the previous filter and exit immediately.
+    bool expected = false;
+    if (!s_inCrashHandler.compare_exchange_strong(expected, true)) {
+        // Already in crash handler - just chain to previous filter and exit
+        if (s_previousFilter) {
+            return s_previousFilter(pExceptions);
+        }
+        return EXCEPTION_CONTINUE_SEARCH;
+    }
+
+    // --- Chain to the Cathedral crash filter FIRST so it writes the .dmp file ---
+    // The Cathedral filter (crash_containment.cpp) owns MiniDumpWriteDump and the
+    // crash manifest.  Calling it before touching any STL or Win32 UI ensures the
+    // dump is committed even if the heap is corrupted and the dialog below faults.
+    if (s_previousFilter) {
+        s_previousFilter(pExceptions);
     }
 
     s_currentCrash = CrashReport{};
@@ -560,10 +583,13 @@ static LONG WINAPI rawrxdUnhandledExceptionFilter(PEXCEPTION_POINTERS pException
 void Win32IDE::initCrashReporter() {
     if (m_crashReporterInitialized) return;
 
-    // Install top-level exception filter
-    SetUnhandledExceptionFilter(rawrxdUnhandledExceptionFilter);
+    // Install top-level exception filter, saving the Cathedral crash filter that
+    // was registered by RawrXD::Crash::Install() in WinMain.  We chain through it
+    // on every crash so the Cathedral handler writes the .dmp BEFORE we try to
+    // display the UI dialog (which may fault if the heap is already corrupted).
+    s_previousFilter = SetUnhandledExceptionFilter(rawrxdUnhandledExceptionFilter);
 
-    OutputDebugStringA("[CrashReporter] Tier 5 — Crash reporter installed.\n");
+    OutputDebugStringA("[CrashReporter] Tier 5 — Crash reporter installed (Cathedral filter chained).\n");
     m_crashReporterInitialized = true;
     appendToOutput("[CrashReporter] Unhandled exception filter installed.\n");
 }
@@ -594,7 +620,7 @@ void Win32IDE::cmdCrashShow() {
         return;
     }
 
-    // If no current crash, generate a demo
+    // If no current crash, generate sample
     if (s_currentCrash.timestamp.empty()) {
         s_currentCrash.timestamp     = getTimestampString();
         s_currentCrash.exceptionType = "DEMO — No real crash";

@@ -5,44 +5,50 @@
 // ============================================================================
 #pragma once
 
+#include <chrono>
+#include <functional>
+#include <mutex>
 #include <string>
 #include <unordered_map>
-#include <mutex>
-#include <functional>
 #include <vector>
-#include <chrono>
 
 // ============================================================================
 // Feature Toggle System
 // ============================================================================
-class FeatureToggle {
-public:
-    static FeatureToggle& getInstance() {
+class FeatureToggle
+{
+  public:
+    static FeatureToggle& getInstance()
+    {
         static FeatureToggle instance;
         return instance;
     }
 
-    bool isEnabled(const std::string& feature) const {
+    bool isEnabled(const std::string& feature) const
+    {
         std::lock_guard<std::mutex> lock(m_mutex);
         auto it = m_features.find(feature);
         return it != m_features.end() && it->second;
     }
 
-    void setEnabled(const std::string& feature, bool enabled) {
+    void setEnabled(const std::string& feature, bool enabled)
+    {
         std::lock_guard<std::mutex> lock(m_mutex);
         m_features[feature] = enabled;
     }
 
-    std::vector<std::pair<std::string, bool>> getAllFeatures() const {
+    std::vector<std::pair<std::string, bool>> getAllFeatures() const
+    {
         std::lock_guard<std::mutex> lock(m_mutex);
         std::vector<std::pair<std::string, bool>> result;
-        for (const auto& [key, val] : m_features) {
+        for (const auto& [key, val] : m_features)
+        {
             result.push_back({key, val});
         }
         return result;
     }
 
-private:
+  private:
     FeatureToggle() = default;
     mutable std::mutex m_mutex;
     std::unordered_map<std::string, bool> m_features;
@@ -51,48 +57,58 @@ private:
 // ============================================================================
 // Performance Metrics Collector
 // ============================================================================
-class MetricsCollector {
-public:
-    static MetricsCollector& getInstance() {
+class MetricsCollector
+{
+  public:
+    static MetricsCollector& getInstance()
+    {
         static MetricsCollector instance;
         return instance;
     }
 
     // Counter: increment a named metric
-    void increment(const std::string& name, int64_t delta = 1) {
+    void increment(const std::string& name, int64_t delta = 1)
+    {
         std::lock_guard<std::mutex> lock(m_mutex);
         m_counters[name] += delta;
     }
 
     // Gauge: set a metric to a specific value
-    void gauge(const std::string& name, double value) {
+    void gauge(const std::string& name, double value)
+    {
         std::lock_guard<std::mutex> lock(m_mutex);
         m_gauges[name] = value;
     }
 
     // Histogram: record a duration or value for distribution tracking
-    void recordDuration(const std::string& name, double milliseconds) {
+    void recordDuration(const std::string& name, double milliseconds)
+    {
         std::lock_guard<std::mutex> lock(m_mutex);
         auto& hist = m_histograms[name];
         hist.count++;
         hist.sum += milliseconds;
-        if (milliseconds < hist.min) hist.min = milliseconds;
-        if (milliseconds > hist.max) hist.max = milliseconds;
+        if (milliseconds < hist.min)
+            hist.min = milliseconds;
+        if (milliseconds > hist.max)
+            hist.max = milliseconds;
     }
 
-    int64_t getCounter(const std::string& name) const {
+    int64_t getCounter(const std::string& name) const
+    {
         std::lock_guard<std::mutex> lock(m_mutex);
         auto it = m_counters.find(name);
         return it != m_counters.end() ? it->second : 0;
     }
 
-    double getGauge(const std::string& name) const {
+    double getGauge(const std::string& name) const
+    {
         std::lock_guard<std::mutex> lock(m_mutex);
         auto it = m_gauges.find(name);
         return it != m_gauges.end() ? it->second : 0.0;
     }
 
-    struct HistogramStats {
+    struct HistogramStats
+    {
         int64_t count = 0;
         double sum = 0.0;
         double min = 1e18;
@@ -100,7 +116,8 @@ public:
         double avg() const { return count > 0 ? sum / count : 0.0; }
     };
 
-    HistogramStats getHistogram(const std::string& name) const {
+    HistogramStats getHistogram(const std::string& name) const
+    {
         std::lock_guard<std::mutex> lock(m_mutex);
         auto it = m_histograms.find(name);
         return it != m_histograms.end() ? it->second : HistogramStats{};
@@ -109,15 +126,19 @@ public:
     // Prometheus-compatible text export
     std::string exportPrometheus() const;
 
+    // Structured JSON for dashboards / parity deck tooling (scripts/parity_deck)
+    std::string exportJson() const;
+
     // Reset all metrics
-    void reset() {
+    void reset()
+    {
         std::lock_guard<std::mutex> lock(m_mutex);
         m_counters.clear();
         m_gauges.clear();
         m_histograms.clear();
     }
 
-private:
+  private:
     MetricsCollector() = default;
     mutable std::mutex m_mutex;
     std::unordered_map<std::string, int64_t> m_counters;
@@ -128,19 +149,21 @@ private:
 // ============================================================================
 // Scoped Timer — automatically records duration to MetricsCollector
 // ============================================================================
-class ScopedTimer {
-public:
-    ScopedTimer(const std::string& metricName)
-        : m_name(metricName)
-        , m_start(std::chrono::high_resolution_clock::now()) {}
+class ScopedTimer
+{
+  public:
+    ScopedTimer(const std::string& metricName) : m_name(metricName), m_start(std::chrono::high_resolution_clock::now())
+    {
+    }
 
-    ~ScopedTimer() {
+    ~ScopedTimer()
+    {
         auto end = std::chrono::high_resolution_clock::now();
         double ms = std::chrono::duration<double, std::milli>(end - m_start).count();
         MetricsCollector::getInstance().recordDuration(m_name, ms);
     }
 
-private:
+  private:
     std::string m_name;
     std::chrono::high_resolution_clock::time_point m_start;
 };
@@ -148,9 +171,11 @@ private:
 // ============================================================================
 // IDE Configuration — loaded from rawrxd.config.json
 // ============================================================================
-class IDEConfig {
-public:
-    static IDEConfig& getInstance() {
+class IDEConfig
+{
+  public:
+    static IDEConfig& getInstance()
+    {
         static IDEConfig instance;
         return instance;
     }
@@ -187,8 +212,7 @@ public:
     // Resolve effective terminal timeout (ms): fixed | random [min,max] | auto.
     // If requirementHint is non-empty, used for auto/agentic: "agentic" | "audit" | "quick" | "default".
     // Per-run override (setTerminalTimeoutPerRunMs) takes precedence when > 0.
-    unsigned int getTerminalTimeoutMs(bool isAgenticTask = false,
-                                     const std::string& requirementHint = "") const;
+    unsigned int getTerminalTimeoutMs(bool isAgenticTask = false, const std::string& requirementHint = "") const;
 
     // Per-run PWSH/terminal timeout: set once for current run (e.g. random or user-chosen ms).
     // When > 0, getTerminalTimeoutMs returns this and optionally clears it (clearAfterUse = true).
@@ -202,10 +226,9 @@ public:
                                                     const std::string& requirementHint = "");
 
     // Compute next random/auto timeout without setting. For UI display or pre-flight checks.
-    unsigned int computeTerminalTimeoutMs(bool isAgenticTask = false,
-                                          const std::string& requirementHint = "") const;
+    unsigned int computeTerminalTimeoutMs(bool isAgenticTask = false, const std::string& requirementHint = "") const;
 
-private:
+  private:
     IDEConfig() { setDefaults(); }
     void setDefaults();
 

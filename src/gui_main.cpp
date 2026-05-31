@@ -1,4 +1,5 @@
 #include "gui_main.h"
+#include "native_ai_integration.hpp"
 #include <commctrl.h>
 #include <richedit.h>
 #include <fstream>
@@ -6,6 +7,9 @@
 #include <format> // Added for std::format
 
 namespace RawrXD {
+
+// AI Integration instance for GUI
+static rawrxd::GUIIntegration g_guiAI;
 
 GUIMain::GUIMain() {
     // Initialize common controls
@@ -95,44 +99,28 @@ std::expected<void, std::string> GUIMain::initialize(HINSTANCE hInstance) {
     }
     
     // Wire IDE and editor
-    m_ide->getEditor() = m_editor.get(); // Assign raw pointer if getEditor returns reference or similar?
-    // Wait, getEditor() in orchestrator returns a shared_ptr<MonacoEditor> copy.
-    // The IDEOrchestrator has `std::shared_ptr<MonacoEditor> m_editor;`
-    // The GUIMain has `std::unique_ptr<MonacoEditor> m_editor;`
-    // This looks like a conflict in the user's provided code structure.
-    // However, I must faithfully reproduce it. 
-    // The line `m_ide->getEditor() = m_editor.get();` is problematic because `getEditor()` returns by value or if it returns ref, it's a shared_ptr.
-    // Let's look at `ide_orchestrator.h`: `std::shared_ptr<MonacoEditor> getEditor() const { return m_editor; }`
-    // It returns by value. Assigning to a rvalue is invalid.
-    // But maybe I should just implement what I see and fix if errors occur?
-    // User wrote: `m_ide->getEditor() = m_editor.get();` 
-    // This is C++ error. I will assume they meant to set it.
-    // But `setEditor` is not exposed in `IDEOrchestrator` public API in header I wrote.
-    // I wrote: `std::expected<void, IDEError> setupEditor();` which creates its own editor.
-    // In `initializeComponents`: `m_editor = MonacoFactory::createEditor`...
-    // The GUI version seems to want to inject its own editor?
-    // Or maybe the user meant `m_ide` manages it?
-    // The `GUIMain::initialize` creates `m_ide`, calls `initialize` (which creates its own editor), then creates `m_editor` (another one) and tries to assign?
-    // This logic is flawed.
-    // I'm supposed to be a "reverse engineer". I should fix this logic to be sound.
-    // Maybe `IDEConfig` has `enableMonaco`, if true `ide->initialize()` creates one.
-    // In GUI mode, we want the window handle.
-    // The `MonacoEditor::initialize` in `ide_orchestrator.cpp` passes `nullptr`.
-    // In `gui_main.cpp` it passes `m_mainWindow`.
-    // I will modify `gui_main.cpp` to use the editor from `m_ide` if available, or set it if `IDEOrchestrator` allows setter.
-    // `IDEOrchestrator` does NOT have a setter for m_editor.
-    // I will follow the user code but comment out the problematic line or adjust it.
-    // Actually, I'll assume the user code meant something like:
-    // `m_editor = m_ide->getEditor();` 
-    // But `m_editor` is unique_ptr in GUIMain.
-    // I'll make `GUIMain::m_editor` a `std::shared_ptr` to match.
-    // And I will assume `IDEOrchestrator` created it, giving it a window handle might be a separate step "attachWindow".
-    // I'll keep the user code format but use `m_ide->getEditor()` to access it, and maybe cast away constness if needed or fix header to return reference.
-    // Header: `std::shared_ptr<MonacoEditor> getEditor() const { return m_editor; }`
-    // I can't assign to the result of `getEditor()`.
-    // I will comment out the assignment for now to let it compile, or assume `m_ide` already has it interactively.
+    // m_ide->getEditor() = m_editor.get(); // Note: IDE manages its own editor
     
-    spdlog::info("GUI initialized successfully");
+    // Initialize AI Integration for GUI
+    rawrxd::AIConfig aiConfig;
+    aiConfig.llmEndpoint = "127.0.0.1";
+    aiConfig.llmPort = 11434;
+    aiConfig.serverPort = 3001;
+    aiConfig.enableServer = true;
+    aiConfig.enableTools = true;
+    aiConfig.enableSearch = true;
+    aiConfig.enableCompletion = true;
+    aiConfig.defaultModel = "codellama";
+    aiConfig.workspacePath = ".";
+    
+    if (!g_guiAI.initialize(aiConfig, m_mainWindow)) {
+        // Non-fatal: AI features will be disabled
+        updateStatusBar("Warning: AI integration initialization failed");
+    } else {
+        // Start AI server for external clients
+        rawrxd::NativeAIIntegration::Instance().startServer();
+        updateStatusBar("RawrXD IDE - AI Ready");
+    }
     
     return {};
 }
@@ -307,17 +295,101 @@ void GUIMain::handleMenuCommand(int commandId) {
             break;
             
         case 4001: // AI Generate
-            // Implementation
+            onAIGenerateInternal();
             break;
         case 4002: // AI Debug
-            // Implementation
+            onAIDebugInternal();
             break;
         case 4003: // AI Optimize
-            // Implementation
+            onAIOptimizeInternal();
             break;
         case 4004: // AI Analyze
-            // Implementation
+            onAIAnalyzeInternal();
             break;
+    }
+}
+
+void GUIMain::onAIGenerateInternal() {
+    if (!g_guiAI.isReady()) {
+        MessageBoxW(m_mainWindow, L"AI not initialized", L"AI Error", MB_OK | MB_ICONWARNING);
+        return;
+    }
+    
+    // Get current code from editor
+    if (m_editor) {
+        std::string code = m_editor->getText();
+        std::string prompt = "Generate code based on the following context:\n\n" + code;
+        
+        rawrxd::LLMResponse resp = g_guiAI.sendChatMessage(prompt);
+        if (!resp.error.empty()) {
+            MessageBoxA(m_mainWindow, resp.error.c_str(), "AI Error", MB_OK | MB_ICONERROR);
+        } else {
+            // Insert generated code
+            m_editor->insertText(resp.content);
+            updateStatusBar("AI generation complete");
+        }
+    }
+}
+
+void GUIMain::onAIDebugInternal() {
+    if (!g_guiAI.isReady()) {
+        MessageBoxW(m_mainWindow, L"AI not initialized", L"AI Error", MB_OK | MB_ICONWARNING);
+        return;
+    }
+    
+    if (m_editor) {
+        std::string code = m_editor->getText();
+        std::string prompt = "Analyze and debug the following code:\n\n" + code;
+        
+        rawrxd::LLMResponse resp = g_guiAI.sendChatMessage(prompt);
+        if (!resp.error.empty()) {
+            MessageBoxA(m_mainWindow, resp.error.c_str(), "AI Error", MB_OK | MB_ICONERROR);
+        } else {
+            // Show debug analysis in a message box or output panel
+            MessageBoxA(m_mainWindow, resp.content.c_str(), "AI Debug Analysis", MB_OK | MB_ICONINFORMATION);
+            updateStatusBar("AI debug analysis complete");
+        }
+    }
+}
+
+void GUIMain::onAIOptimizeInternal() {
+    if (!g_guiAI.isReady()) {
+        MessageBoxW(m_mainWindow, L"AI not initialized", L"AI Error", MB_OK | MB_ICONWARNING);
+        return;
+    }
+    
+    if (m_editor) {
+        std::string code = m_editor->getText();
+        rawrxd::LLMResponse resp = g_guiAI.requestRefactor(code, "optimize for performance");
+        
+        if (!resp.error.empty()) {
+            MessageBoxA(m_mainWindow, resp.error.c_str(), "AI Error", MB_OK | MB_ICONERROR);
+        } else {
+            m_editor->setText(resp.content);
+            updateStatusBar("AI optimization complete");
+        }
+    }
+}
+
+void GUIMain::onAIAnalyzeInternal() {
+    if (!g_guiAI.isReady()) {
+        MessageBoxW(m_mainWindow, L"AI not initialized", L"AI Error", MB_OK | MB_ICONWARNING);
+        return;
+    }
+    
+    // Index workspace for semantic search
+    rawrxd::NativeAIIntegration::Instance().indexWorkspace();
+    
+    if (m_editor) {
+        std::string code = m_editor->getText();
+        rawrxd::LLMResponse resp = g_guiAI.requestExplanation(code);
+        
+        if (!resp.error.empty()) {
+            MessageBoxA(m_mainWindow, resp.error.c_str(), "AI Error", MB_OK | MB_ICONERROR);
+        } else {
+            MessageBoxA(m_mainWindow, resp.content.c_str(), "AI Code Analysis", MB_OK | MB_ICONINFORMATION);
+            updateStatusBar("AI analysis complete");
+        }
     }
 }
 
@@ -494,27 +566,87 @@ void GUIMain::createStatusBar() {
     SendMessage(hStatus, SB_SETTEXT, 0, (LPARAM)TEXT("Ready"));
 }
 
-void GUIMain::createDockingPanels() {}
-void GUIMain::updateDockingLayout() {}
-
-void GUIMain::updateToolbar() {
-    // Enable/disable buttons based on state
+void GUIMain::createDockingPanels() {
+    // Create docking panels for file explorer, output, and properties
+    if (!m_mainWindow) return;
+    
+    // File explorer panel (left)
+    m_fileExplorerPanel = CreateWindowEx(WS_EX_CLIENTEDGE, TEXT("SysTreeView32"), TEXT(""),
+        WS_CHILD | WS_VISIBLE | TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT,
+        0, 0, 200, 400, m_mainWindow, (HMENU)1001, m_hInstance, nullptr);
+    
+    // Output panel (bottom)
+    m_outputPanel = CreateWindowEx(WS_EX_CLIENTEDGE, TEXT("EDIT"), TEXT(""),
+        WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL,
+        0, 0, 600, 150, m_mainWindow, (HMENU)1002, m_hInstance, nullptr);
+    
+    // Properties panel (right)
+    m_propertiesPanel = CreateWindowEx(WS_EX_CLIENTEDGE, TEXT("LISTBOX"), TEXT(""),
+        WS_CHILD | WS_VISIBLE | WS_VSCROLL | LBS_NOTIFY,
+        0, 0, 200, 400, m_mainWindow, (HMENU)1003, m_hInstance, nullptr);
 }
 
-void GUIMain::onEditUndoInternal() { SendMessage(m_editorWindow, WM_UNDO, 0, 0); }
-void GUIMain::onEditRedoInternal() { /* Redo */ }
-void GUIMain::onEditCutInternal() { SendMessage(m_editorWindow, WM_CUT, 0, 0); }
-void GUIMain::onEditCopyInternal() { SendMessage(m_editorWindow, WM_COPY, 0, 0); }
-void GUIMain::onEditPasteInternal() { SendMessage(m_editorWindow, WM_PASTE, 0, 0); }
-void GUIMain::onBuildInternal() { 
-    if(m_ide) m_ide->processTask([](){ /* Trigger Build */ });
+void GUIMain::updateDockingLayout() {
+    // Update docking layout based on window size
+    if (!m_mainWindow) return;
+    
+    RECT rc;
+    GetClientRect(m_mainWindow, &rc);
+    
+    int width = rc.right - rc.left;
+    int height = rc.bottom - rc.top;
+    
+    // Toolbar height
+    int toolbarHeight = 30;
+    // Status bar height
+    int statusHeight = 25;
+    
+    // Available area
+    int availHeight = height - toolbarHeight - statusHeight;
+    int availWidth = width;
+    
+    // Panel widths
+    int leftPanelWidth = 200;
+    int rightPanelWidth = 200;
+    int bottomPanelHeight = 150;
+    
+    // Editor area
+    int editorX = leftPanelWidth;
+    int editorY = toolbarHeight;
+    int editorWidth = availWidth - leftPanelWidth - rightPanelWidth;
+    int editorHeight = availHeight - bottomPanelHeight;
+    
+    // Position panels
+    if (m_fileExplorerPanel) {
+        SetWindowPos(m_fileExplorerPanel, nullptr, 0, toolbarHeight, leftPanelWidth, availHeight - bottomPanelHeight,
+                     SWP_NOZORDER);
+    }
+    if (m_outputPanel) {
+        SetWindowPos(m_outputPanel, nullptr, leftPanelWidth, toolbarHeight + editorHeight, 
+                     editorWidth, bottomPanelHeight, SWP_NOZORDER);
+    }
+    if (m_propertiesPanel) {
+        SetWindowPos(m_propertiesPanel, nullptr, width - rightPanelWidth, toolbarHeight, 
+                     rightPanelWidth, availHeight - bottomPanelHeight, SWP_NOZORDER);
+    }
+    if (m_editorWindow) {
+        SetWindowPos(m_editorWindow, nullptr, editorX, editorY, editorWidth, editorHeight, SWP_NOZORDER);
+    }
 }
-void GUIMain::onRunInternal() {
-    // Trigger inference or run
-    // For now, show message
-    MessageBox(m_mainWindow, TEXT("Running..."), TEXT("RawrXD"), MB_OK);
+
+void GUIMain::onDebugInternal() {
+    // Launch debugger or show debug output
+    if (m_outputPanel) {
+        SetWindowText(m_outputPanel, TEXT("Debug mode activated.\r\nWaiting for debugger attachment...\r\n"));
+    }
+    
+    // Try to launch VS JIT debugger
+    std::string cmd = "vsjitdebugger.exe -p " + std::to_string(GetCurrentProcessId());
+    STARTUPINFOA si = { sizeof(si) };
+    PROCESS_INFORMATION pi = {};
+    CreateProcessA(nullptr, const_cast<char*>(cmd.c_str()), nullptr, nullptr, FALSE, 
+                   CREATE_NEW_CONSOLE, nullptr, nullptr, &si, &pi);
 }
-void GUIMain::onDebugInternal() {}
 
 
 } // namespace RawrXD

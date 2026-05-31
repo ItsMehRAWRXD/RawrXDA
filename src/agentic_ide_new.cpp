@@ -26,7 +26,8 @@ using namespace RawrXD;
 // ============================================================================
 
 AgenticIDE::AgenticIDE(const IDEConfig& config) : m_config(config) {
-    // Prevent copy during initialization, if any
+    m_initialized = false;
+    m_running = false;
 }
 
 AgenticIDE::~AgenticIDE() {
@@ -35,76 +36,33 @@ AgenticIDE::~AgenticIDE() {
 }
 
 Result<void> AgenticIDE::initialize() {
-    log("Initializing Agentic IDE...", spdlog::level::info);
-    
     // Setup logging first
     auto loggingResult = setupLogging();
     if (!loggingResult) {
         return loggingResult;
     }
     
-    log("Logging initialized", spdlog::level::debug);
-    
     // Initialize components
     auto componentResult = initializeComponents();
     if (!componentResult) {
-        log("Component initialization failed", spdlog::level::critical);
         return componentResult;
     }
-    
-    log("Components initialized", spdlog::level::debug);
     
     // Wire components together
     auto wiringResult = wireComponents();
     if (!wiringResult) {
-        log("Component wiring failed", spdlog::level::critical);
         return wiringResult;
     }
     
-    log("Components wired", spdlog::level::debug);
-    
-    log("Agentic IDE initialized successfully", spdlog::level::info);
     return Result<void>();
 }
 
 Result<void> AgenticIDE::setupLogging() {
-    try {
-        // Create logger
-        m_logger = spdlog::stdout_color_mt("agentic_ide");
-        
-        // Set log level
-        auto level = spdlog::level::from_str(m_config.logLevel);
-        m_logger->set_level(level);
-        spdlog::set_level(level);
-        
-        // Set pattern
-        spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] %v");
-        
-        // Add file sink if enabled
-        if (m_config.enableFileLogging) {
-            std::filesystem::path logPath(m_config.logPath);
-            auto logDir = logPath.parent_path();
-            if (!std::filesystem::exists(logDir)) {
-                std::filesystem::create_directories(logDir);
-            }
-            
-            auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(
-                m_config.logPath, true
-            );
-            m_logger->sinks().push_back(file_sink);
-        }
-        
-        log("Logging system initialized", spdlog::level::debug);
-        return Result<void>();
-        
-    } catch (const std::exception& e) {
-        return std::unexpected(IDEError::InitializationFailed);
-    }
+    // Logging disabled
+    return Result<void>();
 }
 
 Result<void> AgenticIDE::initializeComponents() {
-    log("Initializing components...", spdlog::level::debug);
-    
     // Foundation Layers
     try {
         m_modelRouter = std::make_unique<RawrXD::UniversalModelRouter>();
@@ -112,7 +70,6 @@ Result<void> AgenticIDE::initializeComponents() {
         m_terminalPool = std::make_unique<TerminalPool>();
         
     } catch (const std::exception& e) {
-        log(std::string("Foundation initialization failed: ") + e.what(), spdlog::level::critical);
         return std::unexpected(IDEError::InitializationFailed);
     }
     
@@ -125,7 +82,6 @@ Result<void> AgenticIDE::initializeComponents() {
         RawrXD::registerSystemTools(m_toolRegistry.get());
         
     } catch (const std::exception& e) {
-        log(std::string("Intelligence initialization failed: ") + e.what(), spdlog::level::critical);
         return std::unexpected(IDEError::InitializationFailed);
     }
     
@@ -138,7 +94,6 @@ Result<void> AgenticIDE::initializeComponents() {
         }
         
     } catch (const std::exception& e) {
-        log(std::string("Orchestration initialization failed: ") + e.what(), spdlog::level::critical);
         return std::unexpected(IDEError::InitializationFailed);
     }
     
@@ -158,7 +113,6 @@ Result<void> AgenticIDE::initializeComponents() {
         }
         
     } catch (const std::exception& e) {
-        log(std::string("Agent initialization failed: ") + e.what(), spdlog::level::critical);
         return std::unexpected(IDEError::InitializationFailed);
     }
     
@@ -173,24 +127,16 @@ Result<void> AgenticIDE::initializeComponents() {
         }
         
     } catch (const std::exception& e) {
-        log(std::string("UI initialization failed: ") + e.what(), spdlog::level::critical);
         return std::unexpected(IDEError::InitializationFailed);
     }
     
     // Hardware acceleration
-    if (RawrXD::Interconnect::Initialize()) {
-        auto metrics = RawrXD::Interconnect::GetMetrics();
-        log("MASM Interconnect online. Uptime: " + std::to_string(metrics.uptimeMs) + "ms", spdlog::level::info);
-    } else {
-        log("MASM Interconnect failed. Running in standard C++ mode.", spdlog::level::warn);
-    }
+    RawrXD::Interconnect::Initialize();
     
     return Result<void>();
 }
 
 Result<void> AgenticIDE::wireComponents() {
-    log("Wiring components...", spdlog::level::debug);
-    
     // Plan orchestrator dependencies
     if (m_planOrchestrator) {
         m_planOrchestrator->setInferenceEngine(m_inferenceEngine.get());
@@ -214,8 +160,6 @@ Result<void> AgenticIDE::wireComponents() {
 }
 
 Result<void> AgenticIDE::startBackgroundServices() {
-    log("Starting background services...", spdlog::level::debug);
-    
     // Start worker threads for background tasks
     for (size_t i = 0; i < m_config.maxWorkers; ++i) {
         m_workerThreads.emplace_back([this, i] {
@@ -260,19 +204,14 @@ Result<void> AgenticIDE::startBackgroundServices() {
         });
     }
     
-    log("Started " + std::to_string(m_config.maxWorkers) + " background workers", spdlog::level::debug);
-    
     return Result<void>();
 }
 
 Result<void> AgenticIDE::start() {
     bool expected = false;
     if (!m_running.compare_exchange_strong(expected, true)) {
-        log("IDE already running", spdlog::level::warn);
         return std::unexpected(IDEError::AlreadyRunning);
     }
-    
-    log("Starting Agentic IDE...", spdlog::level::info);
     
     auto serviceResult = startBackgroundServices();
     if (!serviceResult) {
@@ -281,10 +220,12 @@ Result<void> AgenticIDE::start() {
     }
     
     if (m_config.enableOrchestrator && m_orchestrator) {
-         m_orchestrator->startAutonomousMode("");
+         if (m_workspaceRoot.empty()) {
+             m_workspaceRoot = detectWorkspaceRoot();
+         }
+         m_orchestrator->startAutonomousMode(m_workspaceRoot);
     }
     
-    log("Agentic IDE started successfully", spdlog::level::info);
     return Result<void>();
 }
 
@@ -294,7 +235,9 @@ void AgenticIDE::stop() {
         return;
     }
     
-    log("Stopping Agentic IDE...", spdlog::level::info);
+    // Stop IDE
+    
+    stopBackgroundServices();
     
     stopBackgroundServices();
     
@@ -304,13 +247,9 @@ void AgenticIDE::stop() {
     
     if (m_zeroDayAgent) {
         m_zeroDayAgent->shutdown();
-    }
+    }evel::debug);
     
-    log("Agentic IDE stopped", spdlog::level::info);
-}
-
-void AgenticIDE::stopBackgroundServices() {
-    log("Stopping background services...", spdlog::level::debug);
+    m_running = false;
     
     m_running = false;
     
@@ -320,13 +259,13 @@ void AgenticIDE::stopBackgroundServices() {
         }
     }
     
-    m_workerThreads.clear();
-    log("Background services stopped", spdlog::level::debug);
-}
-
-void AgenticIDE::cleanupComponents() {
-    log("Cleaning up components...", spdlog::level::debug);
+    m_workerThreads.clear(
     
+    m_zeroDayAgent.reset();
+    m_orchestrator.reset();
+    m_chatInterface.reset();
+    m_multiTabEditor.reset();
+    m_toolRegistry.reset();
     m_zeroDayAgent.reset();
     m_orchestrator.reset();
     m_chatInterface.reset();
@@ -337,27 +276,20 @@ void AgenticIDE::cleanupComponents() {
     m_inferenceEngine.reset();
     m_modelRouter.reset();
     m_lspClient.reset();
-    m_planOrchestrator.reset();
-    
-    log("Components cleaned up", spdlog::level::debug);
-}
-
-void AgenticIDE::setEditor(RawrXD::Editor* editor) {
-    std::unique_lock lock(m_mutex);
-    m_guiEditor = editor;
-    
-    if (m_orchestrator && editor) {
+    m_planOrchestrator.reset(
         m_orchestrator->onNotification = [this, editor](const std::string& type, const std::string& msg) {
-            log("[Orchestrator][" + type + "] " + msg, spdlog::level::info);
+            // Handle orchestrator notifications
+            fprintf(stderr, "[AgenticIDE] Orchestrator notification: %s - %s\n", type.c_str(), msg.c_str());
+            if (type == "error") {
+                showNotification(msg, NotificationType::Error);
+            } else if (type == "warning") {
+                showNotification(msg, NotificationType::Warning);
+            } else {
+                showNotification(msg, NotificationType::Info);
+            }
         };
     }
 }
-
-json AgenticIDE::getStatus() const {
-    std::shared_lock lock(m_mutex);
-    
-    return {
-        {"running", m_running.load()},
         {"components", {
             {"model_router", m_modelRouter != nullptr},
             {"inference_engine", m_inferenceEngine != nullptr},
@@ -385,7 +317,7 @@ json AgenticIDE::getStatus() const {
 }
 
 void AgenticIDE::processConsoleInput() {
-    log("Console input processor started", spdlog::level::debug);
+    // Console input processor started
     
     std::string line;
     std::cout << "> ";
@@ -397,7 +329,7 @@ void AgenticIDE::processConsoleInput() {
         }
         
         if (line == "exit" || line == "quit") {
-            log("Exit command received", spdlog::level::info);
+            // Exit command received
             stop();
             break;
         }
@@ -414,14 +346,14 @@ void AgenticIDE::processConsoleInput() {
             if (m_chatInterface) {
                 m_chatInterface->sendMessage(line);
             } else {
-                log("Chat interface not available", spdlog::level::warn);
+                fprintf(stderr, "[AgenticIDE] Chat interface not available\n");
             }
         }
         
         std::cout << "> " << std::flush;
     }
     
-    log("Console input processor stopped", spdlog::level::debug);
+    // Console input processor stopped
 }
 
 std::string AgenticIDE::getTimestamp() const {
@@ -433,11 +365,15 @@ std::string AgenticIDE::getTimestamp() const {
 }
 
 void AgenticIDE::log(const std::string& message, spdlog::level::level_enum level) const {
-    if (m_logger) {
-        m_logger->log(level, message);
-    } else {
-        std::cout << "[" << getTimestamp() << "] " << message << std::endl;
+    const char* levelStr = "INFO";
+    switch (level) {
+        case spdlog::level::debug: levelStr = "DEBUG"; break;
+        case spdlog::level::warn:  levelStr = "WARN";  break;
+        case spdlog::level::err:   levelStr = "ERROR"; break;
+        case spdlog::level::critical: levelStr = "CRITICAL"; break;
+        default: break;
     }
+    fprintf(stderr, "[AgenticIDE][%s] %s\n", levelStr, message.c_str());
 }
 
 void AgenticIDE::setConfig(const IDEConfig& config) {
@@ -452,6 +388,9 @@ std::shared_ptr<T> AgenticIDE::getComponent() const {
 
 void AgenticIDE::startOrchestrator() {
     if (m_orchestrator) {
-        m_orchestrator->startAutonomousMode("");
+        if (m_workspaceRoot.empty()) {
+            m_workspaceRoot = detectWorkspaceRoot();
+        }
+        m_orchestrator->startAutonomousMode(m_workspaceRoot);
     }
 }

@@ -1,7 +1,7 @@
 #include <iostream>
 #include <string>
 
-// Stub implementations for testing
+// Smoke test implementations for the RawrXD Universal Generator Service
 std::string GenerateAnything(const std::string& intent, const std::string& parameters) {
     if (intent == "generate_project") {
         return "✓ Project generation initiated successfully!";

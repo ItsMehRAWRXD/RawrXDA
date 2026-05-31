@@ -90,18 +90,135 @@ namespace nlohmann {
         json& operator=(json&& other) = default;
 
         static json parse(const std::string& str) { 
-            // Very naive parser for simple values or empty object checking
-            if (str == "{}") return json::object();
-            if (str == "[]") return json::array();
-            return json(str); // For now just wrap content
+            size_t pos = 0;
+            return parse_value(str, pos);
         }
         // 3-arg overload: parse(str, callback, allow_exceptions)
-        static json parse(const std::string& str, void* /*cb*/, bool allow_exceptions) {
-            json result = parse(str);
-            if (!allow_exceptions) { /* never throws in our mini impl */ }
-            return result;
+        static json parse(const std::string& str, void* /*cb*/, bool /*allow_exceptions*/) {
+            return parse(str);
         }
+
+    private:
+        static void skip_ws(const std::string& s, size_t& pos) {
+            while (pos < s.size() && (s[pos] == ' ' || s[pos] == '\t' || s[pos] == '\r' || s[pos] == '\n'))
+                ++pos;
+        }
+
+        static json parse_value(const std::string& s, size_t& pos) {
+            skip_ws(s, pos);
+            if (pos >= s.size()) return json();
+            char c = s[pos];
+            if (c == '{') return parse_object(s, pos);
+            if (c == '[') return parse_array(s, pos);
+            if (c == '"') return parse_string_value(s, pos);
+            if (c == 't' || c == 'f') return parse_bool(s, pos);
+            if (c == 'n') return parse_null(s, pos);
+            return parse_number(s, pos);
+        }
+
+        static std::string parse_string_raw(const std::string& s, size_t& pos) {
+            if (pos >= s.size() || s[pos] != '"') return "";
+            ++pos; // skip opening quote
+            std::string out;
+            while (pos < s.size()) {
+                char c = s[pos++];
+                if (c == '"') return out;
+                if (c == '\\' && pos < s.size()) {
+                    char e = s[pos++];
+                    switch (e) {
+                        case '"': out += '"'; break;
+                        case '\\': out += '\\'; break;
+                        case '/': out += '/'; break;
+                        case 'b': out += '\b'; break;
+                        case 'f': out += '\f'; break;
+                        case 'n': out += '\n'; break;
+                        case 'r': out += '\r'; break;
+                        case 't': out += '\t'; break;
+                        case 'u': {
+                            // consume 4 hex digits, emit '?'
+                            for (int i = 0; i < 4 && pos < s.size(); ++i) ++pos;
+                            out += '?';
+                            break;
+                        }
+                        default: out += e; break;
+                    }
+                } else {
+                    out += c;
+                }
+            }
+            return out;
+        }
+
+        static json parse_string_value(const std::string& s, size_t& pos) {
+            return json(parse_string_raw(s, pos));
+        }
+
+        static json parse_number(const std::string& s, size_t& pos) {
+            size_t start = pos;
+            bool is_float = false;
+            if (pos < s.size() && s[pos] == '-') ++pos;
+            while (pos < s.size() && s[pos] >= '0' && s[pos] <= '9') ++pos;
+            if (pos < s.size() && s[pos] == '.') { is_float = true; ++pos; while (pos < s.size() && s[pos] >= '0' && s[pos] <= '9') ++pos; }
+            if (pos < s.size() && (s[pos] == 'e' || s[pos] == 'E')) { is_float = true; ++pos; if (pos < s.size() && (s[pos] == '+' || s[pos] == '-')) ++pos; while (pos < s.size() && s[pos] >= '0' && s[pos] <= '9') ++pos; }
+            std::string numStr = s.substr(start, pos - start);
+            json j;
+            j.type_ = 2;
+            j.value_ = std::make_shared<std::string>(numStr);
+            return j;
+        }
+
+        static json parse_bool(const std::string& s, size_t& pos) {
+            if (s.compare(pos, 4, "true") == 0) { pos += 4; return json(true); }
+            if (s.compare(pos, 5, "false") == 0) { pos += 5; return json(false); }
+            return json();
+        }
+
+        static json parse_null(const std::string& s, size_t& pos) {
+            if (s.compare(pos, 4, "null") == 0) { pos += 4; }
+            return json();
+        }
+
+        static json parse_object(const std::string& s, size_t& pos) {
+            json j = json::object();
+            ++pos; // skip '{'
+            skip_ws(s, pos);
+            if (pos < s.size() && s[pos] == '}') { ++pos; return j; }
+            while (pos < s.size()) {
+                skip_ws(s, pos);
+                std::string key = parse_string_raw(s, pos);
+                skip_ws(s, pos);
+                if (pos < s.size() && s[pos] == ':') ++pos;
+                json val = parse_value(s, pos);
+                (*j.object_)[key] = std::move(val);
+                skip_ws(s, pos);
+                if (pos < s.size() && s[pos] == ',') { ++pos; continue; }
+                if (pos < s.size() && s[pos] == '}') { ++pos; break; }
+                break; // malformed
+            }
+            return j;
+        }
+
+        static json parse_array(const std::string& s, size_t& pos) {
+            json j = json::array();
+            ++pos; // skip '['
+            skip_ws(s, pos);
+            if (pos < s.size() && s[pos] == ']') { ++pos; return j; }
+            while (pos < s.size()) {
+                json val = parse_value(s, pos);
+                j.array_->push_back(std::move(val));
+                skip_ws(s, pos);
+                if (pos < s.size() && s[pos] == ',') { ++pos; continue; }
+                if (pos < s.size() && s[pos] == ']') { ++pos; break; }
+                break; // malformed
+            }
+            return j;
+        }
+
+    public:
         bool is_discarded() const { return type_ == 0 && !value_ && !object_ && !array_; }
+        static bool accept(const std::string& str) {
+            try { size_t pos = 0; parse_value(str, pos); return true; } catch (...) { return false; }
+        }
         static json object() { json j; j.type_ = 4; j.object_ = std::make_shared<std::map<std::string, json>>(); return j; }
         static json object(std::initializer_list<std::pair<const std::string, json>> init) {
             json j = object();
@@ -261,11 +378,35 @@ namespace nlohmann {
         size_t erase(const std::string& key) {
             if (type_ == 4 && object_) return object_->erase(key);
             return 0;
+        }        
+        // Clear the JSON value
+        void clear() {
+            type_ = 0;
+            value_.reset();
+            object_.reset();
+            array_.reset();
+        }
+        static std::string escape_json(const std::string& s) {
+            std::string out;
+            out.reserve(s.size());
+            for (char c : s) {
+                switch (c) {
+                    case '"': out += "\\\""; break;
+                    case '\\': out += "\\\\"; break;
+                    case '\b': out += "\\b"; break;
+                    case '\f': out += "\\f"; break;
+                    case '\n': out += "\\n"; break;
+                    case '\r': out += "\\r"; break;
+                    case '\t': out += "\\t"; break;
+                    default: out += c; break;
+                }
+            }
+            return out;
         }
 
         std::string dump(int indent = -1) const {
             if (type_ == 0) return "null";
-            if (type_ == 1) return "\"" + (value_ ? *value_ : "") + "\"";
+            if (type_ == 1) return "\"" + escape_json(value_ ? *value_ : "") + "\"";
             if (type_ == 2) return value_ ? *value_ : "0";
             if (type_ == 3) return value_ ? *value_ : "false";
             
@@ -304,15 +445,23 @@ namespace nlohmann {
             using vec_it = std::vector<json>::iterator;
             using map_it = std::map<std::string, json>::iterator;
             bool is_arr;
-            vec_it vi; map_it mi;
+            vec_it vi; map_it mi, mi_end;
             // Proxy for ->first / ->second access on object iterators
             std::string first;   // key (valid for objects only)
             json* second_ptr_ = nullptr;
             json& second() { return *second_ptr_; }
 
-            json_iterator(vec_it a, vec_it) : is_arr(true), vi(a), mi() {}
-            json_iterator(map_it a, map_it) : is_arr(false), vi(), mi(a) { sync(); }
-            void sync() { if (!is_arr) { first = mi->first; second_ptr_ = &mi->second; } }
+            json_iterator(vec_it a, vec_it) : is_arr(true), vi(a), mi(), mi_end() {}
+            json_iterator(map_it a, map_it b) : is_arr(false), vi(), mi(a), mi_end(b) { sync(); }
+            void sync() {
+                if (is_arr || mi == map_it() || mi == mi_end) {
+                    first.clear();
+                    second_ptr_ = nullptr;
+                    return;
+                }
+                first = mi->first;
+                second_ptr_ = &mi->second;
+            }
             const std::string& key() const { return first; }
             json& value() { return *second_ptr_; }
             json& operator*() { return is_arr ? *vi : mi->second; }
@@ -325,14 +474,22 @@ namespace nlohmann {
             using vec_it = std::vector<json>::const_iterator;
             using map_it = std::map<std::string, json>::const_iterator;
             bool is_arr;
-            vec_it vi; map_it mi;
+            vec_it vi; map_it mi, mi_end;
             std::string first;
             const json* second_ptr_ = nullptr;
             const json& second() const { return *second_ptr_; }
 
-            const_json_iterator(vec_it a, vec_it) : is_arr(true), vi(a), mi() {}
-            const_json_iterator(map_it a, map_it) : is_arr(false), vi(), mi(a) { sync(); }
-            void sync() { if (!is_arr) { first = mi->first; second_ptr_ = &mi->second; } }
+            const_json_iterator(vec_it a, vec_it) : is_arr(true), vi(a), mi(), mi_end() {}
+            const_json_iterator(map_it a, map_it b) : is_arr(false), vi(), mi(a), mi_end(b) { sync(); }
+            void sync() {
+                if (is_arr || mi == map_it() || mi == mi_end) {
+                    first.clear();
+                    second_ptr_ = nullptr;
+                    return;
+                }
+                first = mi->first;
+                second_ptr_ = &mi->second;
+            }
             const std::string& key() const { return first; }
             const json& value() const { return *second_ptr_; }
             const json& operator*() const { return is_arr ? *vi : mi->second; }
@@ -363,13 +520,30 @@ namespace nlohmann {
 
         struct ItemsProxy {
              std::shared_ptr<std::map<std::string, json>> obj;
-             auto begin() { return obj ? obj->begin() : std::map<std::string, json>::iterator(); }
-             auto end() { return obj ? obj->end() : std::map<std::string, json>::iterator(); }
+             auto begin() {
+                 if (obj) return obj->begin();
+                 // Return begin() from a static empty map to avoid null dereference
+                 static std::map<std::string, json> empty_map;
+                 return empty_map.begin();
+             }
+             auto end() {
+                 if (obj) return obj->end();
+                 static std::map<std::string, json> empty_map;
+                 return empty_map.end();
+             }
         };
         struct ConstItemsProxy {
              std::shared_ptr<std::map<std::string, json>> obj;
-             auto begin() const { return obj ? obj->cbegin() : std::map<std::string, json>::const_iterator(); }
-             auto end() const { return obj ? obj->cend() : std::map<std::string, json>::const_iterator(); }
+             auto begin() const {
+                 if (obj) return obj->cbegin();
+                 static const std::map<std::string, json> empty_map;
+                 return empty_map.cbegin();
+             }
+             auto end() const {
+                 if (obj) return obj->cend();
+                 static const std::map<std::string, json> empty_map;
+                 return empty_map.cend();
+             }
         };
         ItemsProxy items() { return {object_}; }
         ConstItemsProxy items() const { return {object_}; }

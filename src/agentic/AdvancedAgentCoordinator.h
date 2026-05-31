@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <queue>
 #include <mutex>
+#include <shared_mutex>
 #include <condition_variable>
 #include <thread>
 #include <chrono>
@@ -144,6 +145,9 @@ struct RedundancyConfig {
 };
 
 // Core Advanced Agent Coordinator
+// P0 Fix: Lock-Free Dependency Counter - replaces mutex-based DAG traversal
+// with atomic dependency counters for zero-stall task coordination
+// See LockFreeAgentCoordinator.h for full implementation
 class AdvancedAgentCoordinator {
 public:
     static AdvancedAgentCoordinator& instance();
@@ -165,7 +169,7 @@ public:
     std::vector<std::string> getHealthyAgents() const;
     void quarantineUnhealthyAgent(const std::string& agentId);
 
-    // Enhancement 3: Task Dependency Management
+    // Enhancement 3: Task Dependency Management (Lock-Free)
     bool addTaskDependency(const std::string& taskId, const std::vector<std::string>& prerequisites);
     bool arePrerequisitesMet(const std::string& taskId) const;
     std::vector<std::string> getReadyTasks() const;
@@ -200,10 +204,13 @@ public:
     size_t getPendingTaskCount() const;
     AgentMetrics getCoordinatorMetrics() const;
 
+    // Lock-Free Coordinator Access (NEW)
+    class LockFreeAgentCoordinator* getLockFreeCoordinator() const { return m_lockFreeCoord; }
+
     // Constructor is public to allow unique_ptr ownership;
     // use instance() for singleton access, or construct directly for owned instances.
     AdvancedAgentCoordinator() = default;
-    ~AdvancedAgentCoordinator() = default;
+    ~AdvancedAgentCoordinator();
 
 private:
     AdvancedAgentCoordinator(const AdvancedAgentCoordinator&) = delete;
@@ -221,15 +228,26 @@ private:
     ScalingPolicy m_scalingPolicy;
     RedundancyConfig m_redundancyConfig;
 
-    // Synchronization
-    mutable std::mutex m_mutex;
+    // P0 Fix: Lock Sharding - 4 domain-specific locks
+    mutable std::shared_mutex m_agentMutex;
+    mutable std::mutex m_taskMutex;
     std::condition_variable m_taskAvailable;
+    mutable std::mutex m_commMutex;
+    mutable std::mutex m_recoveryMutex;
+    
+    // Legacy single mutex (kept for backward compatibility)
+    mutable std::mutex m_mutex;
+    bool useShardedLocks_ = true;
+
     std::atomic<bool> m_running{false};
 
     // Background threads
     std::thread m_scalingThread;
     std::thread m_healthMonitorThread;
     std::thread m_recoveryThread;
+
+    // Lock-Free Coordinator (NEW) - eliminates DAG traversal contention
+    class LockFreeAgentCoordinator* m_lockFreeCoord = nullptr;
 
     // Helper methods
     void scalingLoop();

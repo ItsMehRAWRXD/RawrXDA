@@ -10,19 +10,19 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 
-#ifndef GGML_SYCL_NORM_HPP
-#define GGML_SYCL_NORM_HPP
+#ifndef GGML_RXD_SYCL_NORM_HPP
+#define GGML_RXD_SYCL_NORM_HPP
 
 #include "common.hpp"
 
-void ggml_sycl_op_norm(ggml_backend_sycl_context& ctx, ggml_tensor* dst);
+void ggml_rxd_sycl_op_norm(ggml_rxd_backend_sycl_context& ctx, ggml_rxd_tensor* dst);
 
-void ggml_sycl_op_rms_norm(ggml_backend_sycl_context& ctx, ggml_tensor* dst);
+void ggml_rxd_sycl_op_rms_norm(ggml_rxd_backend_sycl_context& ctx, ggml_rxd_tensor* dst);
 
-void ggml_sycl_op_rms_norm_back(ggml_backend_sycl_context& ctx, ggml_tensor* dst);
+void ggml_rxd_sycl_op_rms_norm_back(ggml_rxd_backend_sycl_context& ctx, ggml_rxd_tensor* dst);
 
-void ggml_sycl_op_group_norm(ggml_backend_sycl_context& ctx, ggml_tensor* dst);
+void ggml_rxd_sycl_op_group_norm(ggml_rxd_backend_sycl_context& ctx, ggml_rxd_tensor* dst);
 
-void ggml_sycl_op_l2_norm(ggml_backend_sycl_context& ctx, ggml_tensor* dst);
+void ggml_rxd_sycl_op_l2_norm(ggml_rxd_backend_sycl_context& ctx, ggml_rxd_tensor* dst);
 
-#endif // GGML_SYCL_NORM_HPP
+#endif // GGML_RXD_SYCL_NORM_HPP

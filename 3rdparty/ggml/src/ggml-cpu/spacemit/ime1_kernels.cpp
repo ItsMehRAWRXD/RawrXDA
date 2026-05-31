@@ -1461,8 +1461,8 @@ void SQ4BitGemmM4Kernel_CompInt8_ScaleFp16_Impl(size_t            BlkLen,
                                                 size_t            BlockCountK,
                                                 const float *     Bias,
                                                 const size_t      ldc) {
-    GGML_UNUSED(QuantBScale);
-    GGML_UNUSED(QuantBZeroPoint);
+    GGML_RXD_UNUSED(QuantBScale);
+    GGML_RXD_UNUSED(QuantBZeroPoint);
     size_t       LDC   = ldc * sizeof(float);
     const size_t INNER = BlkLen / 16;
     float        tmp[4 * 16];
@@ -1834,8 +1834,8 @@ void SQ4BitGemmM4Kernel_CompInt8_Impl(size_t            BlkLen,
                                       size_t            BlockCountK,
                                       const float *     Bias,
                                       const size_t      ldc) {
-    GGML_UNUSED(QuantBScale);
-    GGML_UNUSED(QuantBZeroPoint);
+    GGML_RXD_UNUSED(QuantBScale);
+    GGML_RXD_UNUSED(QuantBZeroPoint);
     size_t       LDC   = ldc * sizeof(float);
     const size_t INNER = BlkLen / 16;
     float        tmp[4 * 16];
@@ -2204,8 +2204,8 @@ void SQ4BitGemmM1Kernel_CompInt8_ScaleFp16_Impl(size_t            BlkLen,
                                                 size_t            CountN,
                                                 size_t            BlockCountK,
                                                 const float *     Bias) {
-    GGML_UNUSED(QuantBScale);
-    GGML_UNUSED(QuantBZeroPoint);
+    GGML_RXD_UNUSED(QuantBScale);
+    GGML_RXD_UNUSED(QuantBZeroPoint);
     size_t INNER = BlkLen / 16;
 
     if constexpr (HasZeroPoint) {
@@ -2667,8 +2667,8 @@ void SQ4BitGemmM1Kernel_CompInt8_Impl(size_t            BlkLen,
                                       size_t            CountN,
                                       size_t            BlockCountK,
                                       const float *     Bias) {
-    GGML_UNUSED(QuantBScale);
-    GGML_UNUSED(QuantBZeroPoint);
+    GGML_RXD_UNUSED(QuantBScale);
+    GGML_RXD_UNUSED(QuantBZeroPoint);
     const size_t INNER = BlkLen / 16;
     if constexpr (HasZeroPoint) {
         for (size_t n = 0; n < CountN; n += 16) {
@@ -3167,9 +3167,9 @@ size_t gemm_kernel_i8i4(size_t            BlkLen,
                         size_t            ldc,
                         const float *     Bias,
                         const size_t      ScaleStride) {
-    GGML_UNUSED(CountM);
-    GGML_UNUSED(CountK);
-    GGML_UNUSED(ldc);
+    GGML_RXD_UNUSED(CountM);
+    GGML_RXD_UNUSED(CountK);
+    GGML_RXD_UNUSED(ldc);
     if (CountM >= 4) {
         if (QuantBZeroPoint != nullptr) {
             SQ4BitGemmM4Kernel_CompInt8_DispatchOnBlkLen<true>(BlkLen, QuantA, QuantBData, QuantBScale, QuantBZeroPoint,

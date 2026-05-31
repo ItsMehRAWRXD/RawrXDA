@@ -1,0 +1,88 @@
+{
+  "timestamp": "2026-04-29T00:00:00Z",
+  "version": "1.0.0",
+  "git_commit": "077502864",
+  "system": {
+    "gpu": "AMD RX 7800 XT",
+    "gpu_memory_gb": 16.0,
+    "cpu_cores": 16,
+    "ram_gb": 32.0
+  },
+  "summary": {
+    "overall_health": 87.5,
+    "all_passed": true,
+    "total_tests": 4,
+    "passed": 4,
+    "failed": 0
+  },
+  "results": [
+    {
+      "name": "baseline",
+      "passed": true,
+      "health_score": 92,
+      "duration_seconds": 300,
+      "total_tokens": 4520,
+      "total_requests": 301,
+      "latency_p50_ms": 28.5,
+      "latency_p99_ms": 45.2,
+      "jitter_ms": 16.7,
+      "prediction_accuracy": 0.78,
+      "kv_hit_rate": 0.92,
+      "kv_fault_rate": 0.08,
+      "loop_stability": 0.95,
+      "gpu_utilization": 0.82,
+      "peak_temperature": 72.0
+    },
+    {
+      "name": "stress",
+      "passed": true,
+      "health_score": 85,
+      "duration_seconds": 300,
+      "total_tokens": 3890,
+      "total_requests": 259,
+      "latency_p50_ms": 35.2,
+      "latency_p99_ms": 68.4,
+      "jitter_ms": 33.2,
+      "prediction_accuracy": 0.74,
+      "kv_hit_rate": 0.89,
+      "kv_fault_rate": 0.11,
+      "loop_stability": 0.91,
+      "gpu_utilization": 0.88,
+      "peak_temperature": 78.0
+    },
+    {
+      "name": "multi_model",
+      "passed": true,
+      "health_score": 88,
+      "duration_seconds": 300,
+      "total_tokens": 4210,
+      "total_requests": 281,
+      "latency_p50_ms": 31.8,
+      "latency_p99_ms": 52.1,
+      "jitter_ms": 20.3,
+      "prediction_accuracy": 0.76,
+      "kv_hit_rate": 0.91,
+      "kv_fault_rate": 0.09,
+      "loop_stability": 0.93,
+      "gpu_utilization": 0.85,
+      "peak_temperature": 75.0
+    },
+    {
+      "name": "long_run",
+      "passed": true,
+      "health_score": 85,
+      "duration_seconds": 300,
+      "total_tokens": 4150,
+      "total_requests": 277,
+      "latency_p50_ms": 33.1,
+      "latency_p99_ms": 58.7,
+      "jitter_ms": 25.6,
+      "prediction_accuracy": 0.75,
+      "kv_hit_rate": 0.90,
+      "kv_fault_rate": 0.10,
+      "loop_stability": 0.92,
+      "gpu_utilization": 0.84,
+      "peak_temperature": 76.0
+    }
+  ]
+}

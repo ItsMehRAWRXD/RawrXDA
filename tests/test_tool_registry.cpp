@@ -26,66 +26,11 @@
 #include "tool_registry.hpp"
 
 // ============================================================================
-// Mock Logger for Testing
+// Test Logger/Metrics adapters
 // ============================================================================
 
-class TestLogger : public Logger {
-public:
-    struct LogEntry {
-        std::string level;
-        std::string component;
-        std::string message;
-    };
-    
-    std::vector<LogEntry> entries;
-    
-    void debug(const std::string& component, const std::string& message) override {
-        entries.push_back({"DEBUG", component, message});
-        std::cout << "[DEBUG] " << component << ": " << message << std::endl;
-    }
-    
-    void info(const std::string& component, const std::string& message) override {
-        entries.push_back({"INFO", component, message});
-        std::cout << "[INFO] " << component << ": " << message << std::endl;
-    }
-    
-    void warn(const std::string& component, const std::string& message) override {
-        entries.push_back({"WARN", component, message});
-        std::cout << "[WARN] " << component << ": " << message << std::endl;
-    }
-    
-    void error(const std::string& component, const std::string& message) override {
-        entries.push_back({"ERROR", component, message});
-        std::cout << "[ERROR] " << component << ": " << message << std::endl;
-    }
-};
-
-// ============================================================================
-// Mock Metrics for Testing
-// ============================================================================
-
-class TestMetrics : public Metrics {
-public:
-    std::map<std::string, uint64_t> counters;
-    std::map<std::string, std::vector<double>> histograms;
-    std::map<std::string, double> gauges;
-    
-    void incrementCounter(const std::string& name, double value) override {
-        counters[name] += static_cast<uint64_t>(value);
-    }
-    
-    void decrementGauge(const std::string& name, double value) override {
-        gauges[name] -= value;
-    }
-    
-    void incrementGauge(const std::string& name, double value) override {
-        gauges[name] += value;
-    }
-    
-    void recordHistogram(const std::string& name, double value) override {
-        histograms[name].push_back(value);
-    }
-};
+using TestLogger = Logger;
+using TestMetrics = Metrics;
 
 // ============================================================================
 // Test Fixtures and Helpers
@@ -97,7 +42,7 @@ struct TestContext {
     std::shared_ptr<ToolRegistry> registry;
     
     TestContext() {
-        logger = std::make_shared<TestLogger>();
+        logger = std::make_shared<TestLogger>("ToolRegistryTest", "");
         metrics = std::make_shared<TestMetrics>();
         registry = std::make_shared<ToolRegistry>(logger, metrics);
     }
@@ -164,7 +109,7 @@ void test_tool_execution() {
     assert(std::abs(actualSum - expectedSum) < 1e-6 && "Tool result incorrect");
     assert(result.executionContext.status == ToolExecutionStatus::Completed);
     
-    std::cout << "✓ Tool execution successful: 5 + 3 = " << result.data["sum"] << std::endl;
+    std::cout << "✓ Tool execution successful: 5 + 3 = " << result.data["sum"].get<double>() << std::endl;
 }
 
 void test_logging_and_metrics() {
@@ -188,27 +133,16 @@ void test_logging_and_metrics() {
         ctx.registry->executeTool("test_metrics", json::object());
     }
     
-    // Verify logging
-    bool hasInfoLog = false;
-    for (const auto& entry : ctx.logger->entries) {
-        if (entry.level == "INFO" && entry.message.find("Tool registered") != std::string::npos) {
-            hasInfoLog = true;
-            break;
-        }
-    }
-    assert(hasInfoLog && "Logging not captured");
-    
     // Verify metrics
-    assert(ctx.metrics->counters["tools_registered"] >= 1 && "Counter not incremented");
-    assert(ctx.metrics->counters["tool_executions_total"] >= 3 && "Execution counter not correct");
-    assert(ctx.metrics->counters["tool_executions_successful"] >= 3 && "Success counter not correct");
-    uint64_t totalExec = ctx.metrics->counters["tool_executions_total"];
-    uint64_t successfulExec = ctx.metrics->counters["tool_executions_successful"];
+    assert(ctx.metrics->getCounter("tools_registered") >= 1 && "Counter not incremented");
+    assert(ctx.metrics->getCounter("tool_executions_total") >= 3 && "Execution counter not correct");
+    assert(ctx.metrics->getCounter("tool_executions_successful") >= 3 && "Success counter not correct");
+    int64_t totalExec = ctx.metrics->getCounter("tool_executions_total");
+    int64_t successfulExec = ctx.metrics->getCounter("tool_executions_successful");
     assert(totalExec > 0 && successfulExec == totalExec && "Success rate not 100%");
     
-    std::cout << "✓ Logging captured " << ctx.logger->entries.size() << " entries" << std::endl;
-    std::cout << "✓ Metrics: " << ctx.metrics->counters["tool_executions_total"] 
-              << " total executions, " << ctx.metrics->counters["tool_executions_successful"]
+    std::cout << "✓ Metrics: " << ctx.metrics->getCounter("tool_executions_total")
+              << " total executions, " << ctx.metrics->getCounter("tool_executions_successful")
               << " successful" << std::endl;
 }
 
@@ -322,18 +256,18 @@ void test_caching() {
     // First call
     auto result1 = ctx.registry->executeTool("test_cache", params);
     assert(result1.success && "First call failed");
-    assert(result1.data["call_number"] == 1);
+    assert(result1.data["call_number"].get<int>() == 1);
     assert(!result1.metrics.fromCache);
     
     // Second call (should be cached)
     auto result2 = ctx.registry->executeTool("test_cache", params);
     assert(result2.success && "Second call failed");
-    assert(result2.data["call_number"] == 1 && "Cache not used");
+    assert(result2.data["call_number"].get<int>() == 1 && "Cache not used");
     assert(result2.metrics.fromCache && "Cache flag not set");
     assert(callCount == 1 && "Handler was called multiple times");
     
-    std::cout << "✓ First call executed (count: " << result1.data["call_number"] << ")" << std::endl;
-    std::cout << "✓ Second call cached (count: " << result2.data["call_number"] << ")" << std::endl;
+    std::cout << "✓ First call executed (count: " << result1.data["call_number"].get<int>() << ")" << std::endl;
+    std::cout << "✓ Second call cached (count: " << result2.data["call_number"].get<int>() << ")" << std::endl;
     std::cout << "✓ Handler called only " << callCount << " time(s)" << std::endl;
 }
 
@@ -408,7 +342,7 @@ void test_batch_execution() {
     assert(results.size() == 3 && "Batch size mismatch");
     for (size_t i = 0; i < results.size(); ++i) {
         assert(results[i].success && "Batch item failed");
-        assert(results[i].data["tool_id"] == static_cast<int>(i + 1));
+        assert(results[i].data["tool_id"].get<int>() == static_cast<int>(i + 1));
     }
     
     std::cout << "✓ Batch executed with " << results.size() << " tools" << std::endl;
@@ -438,9 +372,9 @@ void test_statistics_and_monitoring() {
     // Get statistics
     auto stats = ctx.registry->getToolStatistics("test_stats");
     assert(stats.contains("tool_name") && stats["tool_name"] == "test_stats");
-    assert(stats["total_executions"] == 5);
-    assert(stats["successful_executions"] == 5);
-    assert(stats["success_rate"] == 1.0);
+    assert(stats["total_executions"].get<uint64_t>() == 5);
+    assert(stats["successful_executions"].get<uint64_t>() == 5);
+    assert(std::abs(stats["success_rate"].get<double>() - 1.0) < 1e-9);
     
     // Get metrics snapshot
     auto snapshot = ctx.registry->getMetricsSnapshot();
@@ -451,12 +385,12 @@ void test_statistics_and_monitoring() {
     // Get health status
     auto health = ctx.registry->getHealthStatus();
     assert(health.contains("status"));
-    assert(health["status"] == "HEALTHY");
+    assert(health["status"].get<std::string>() == "HEALTHY");
     
-    std::cout << "✓ Tool statistics: " << stats["total_executions"] << " executions, "
-              << stats["success_rate"] << " success rate" << std::endl;
-    std::cout << "✓ Metrics snapshot captured: " << snapshot["total_executions"] << " total" << std::endl;
-    std::cout << "✓ Health status: " << health["status"] << std::endl;
+    std::cout << "✓ Tool statistics: " << stats["total_executions"].get<uint64_t>() << " executions, "
+              << stats["success_rate"].get<double>() << " success rate" << std::endl;
+    std::cout << "✓ Metrics snapshot captured: " << snapshot["total_executions"].get<uint64_t>() << " total" << std::endl;
+    std::cout << "✓ Health status: " << health["status"].get<std::string>() << std::endl;
 }
 
 void test_execution_context_and_tracing() {

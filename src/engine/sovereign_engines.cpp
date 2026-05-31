@@ -23,7 +23,7 @@ static void dequant_tensor(const TensorInfo* t, float* dst, size_t max_floats) {
     size_t count = std::min(n_elements, max_floats);
 
     switch (t->type) {
-        case GGML_TYPE_Q4_0: {
+        case GGML_RXD_TYPE_Q4_0: {
             size_t nblocks = t->size / sizeof(block_q4_0);
             size_t total = nblocks * 32;
             if (total > max_floats) nblocks = max_floats / 32;
@@ -31,7 +31,7 @@ static void dequant_tensor(const TensorInfo* t, float* dst, size_t max_floats) {
                                         (int)(nblocks * 32));
             break;
         }
-        case GGML_TYPE_Q8_0: {
+        case GGML_RXD_TYPE_Q8_0: {
             size_t nblocks = t->size / sizeof(block_q8_0);
             size_t total = nblocks * 32;
             if (total > max_floats) nblocks = max_floats / 32;
@@ -39,7 +39,7 @@ static void dequant_tensor(const TensorInfo* t, float* dst, size_t max_floats) {
                                         (int)(nblocks * 32));
             break;
         }
-        case GGML_TYPE_F16: {
+        case GGML_RXD_TYPE_F16: {
             // fp16 → fp32 conversion
             const uint16_t* src = (const uint16_t*)t->data;
             for (size_t i = 0; i < count; i++) {
@@ -59,7 +59,7 @@ static void dequant_tensor(const TensorInfo* t, float* dst, size_t max_floats) {
             }
             break;
         }
-        case GGML_TYPE_F32:
+        case GGML_RXD_TYPE_F32:
         default:
             memcpy(dst, t->data, count * sizeof(float));
             break;

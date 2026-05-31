@@ -3,6 +3,7 @@
 
 #include <windows.h>
 #include <string>
+#include "core/thread_lifecycle_registry.h"
 #include <vector>
 #include <iostream>
 #include <thread>
@@ -84,6 +85,7 @@ public:
         }
         
         completion_thread_ = std::thread([this, context, token_callback, complete_callback]() {
+            REGISTER_THREAD("AICompletionEngine", "streaming completion");
             std::string completion = GenerateCompletion(context);
             
             // Stream word by word for smooth UX
@@ -97,6 +99,7 @@ public:
             if (!stop_requested_) {
                 complete_callback();
             }
+            RawrXD::Core::ThreadLifecycleRegistry::Instance().MarkExited(std::this_thread::get_id());
         });
     }
     
@@ -1436,7 +1439,6 @@ extern "C" {
     void InitAICompletion() {
         if (!g_completion_engine) {
             g_completion_engine = new AICompletionEngine();
-            std::cout << "[AI COMPLETION] Engine initialized with multi-language fallback registry\n";
         }
     }
     
@@ -1444,7 +1446,6 @@ extern "C" {
         if (g_completion_engine) {
             delete g_completion_engine;
             g_completion_engine = nullptr;
-            std::cout << "[AI COMPLETION] Engine shut down\n";
         }
     }
 

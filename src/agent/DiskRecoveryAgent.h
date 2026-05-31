@@ -135,6 +135,31 @@ struct RecoveryConfig {
 };
 
 // ---------------------------------------------------------------------------
+// RecoveryResult — simple result wrapper for tests
+// ---------------------------------------------------------------------------
+struct RecoveryResult {
+    bool success = false;
+    std::string detail;
+    int errorCode = 0;
+
+    static RecoveryResult ok(const std::string& msg = "Success") {
+        RecoveryResult r;
+        r.success = true;
+        r.detail = msg;
+        r.errorCode = 0;
+        return r;
+    }
+
+    static RecoveryResult error(const std::string& msg, int code = -1) {
+        RecoveryResult r;
+        r.success = false;
+        r.detail = msg;
+        r.errorCode = code;
+        return r;
+    }
+};
+
+// ---------------------------------------------------------------------------
 // RecoveryStats — live statistics
 // ---------------------------------------------------------------------------
 struct RecoveryStats {
@@ -148,6 +173,39 @@ struct RecoveryStats {
     std::atomic<uint32_t> percentComplete{0};
     double                elapsedSeconds  = 0.0;
     double                throughputMBps  = 0.0;
+
+    RecoveryStats() = default;
+    RecoveryStats(const RecoveryStats& other)
+        : sectorsProcessed(other.sectorsProcessed.load())
+        , goodSectors(other.goodSectors.load())
+        , badSectors(other.badSectors.load())
+        , retriesTotal(other.retriesTotal.load())
+        , bytesWritten(other.bytesWritten.load())
+        , currentLBA(other.currentLBA.load())
+        , totalSectors(other.totalSectors.load())
+        , percentComplete(other.percentComplete.load())
+        , elapsedSeconds(other.elapsedSeconds)
+        , throughputMBps(other.throughputMBps)
+    {}
+    RecoveryStats& operator=(const RecoveryStats& other) {
+        sectorsProcessed = other.sectorsProcessed.load();
+        goodSectors = other.goodSectors.load();
+        badSectors = other.badSectors.load();
+        retriesTotal = other.retriesTotal.load();
+        bytesWritten = other.bytesWritten.load();
+        currentLBA = other.currentLBA.load();
+        totalSectors = other.totalSectors.load();
+        percentComplete = other.percentComplete.load();
+        elapsedSeconds = other.elapsedSeconds;
+        throughputMBps = other.throughputMBps;
+        return *this;
+    }
+
+    double ProgressPercent() const {
+        uint64_t total = totalSectors.load();
+        if (total == 0) return 0.0;
+        return (static_cast<double>(currentLBA.load()) / static_cast<double>(total)) * 100.0;
+    }
 };
 
 // ---------------------------------------------------------------------------
@@ -230,6 +288,14 @@ class DiskRecoveryAgent {
 public:
     DiskRecoveryAgent();
     ~DiskRecoveryAgent();
+    
+    // Move semantics
+    DiskRecoveryAgent(DiskRecoveryAgent&& other) noexcept;
+    DiskRecoveryAgent& operator=(DiskRecoveryAgent&& other) noexcept;
+    
+    // Disable copy
+    DiskRecoveryAgent(const DiskRecoveryAgent&) = delete;
+    DiskRecoveryAgent& operator=(const DiskRecoveryAgent&) = delete;
 
     // -- Configuration --
     void SetConfig(const RecoveryConfig& config);
@@ -267,11 +333,20 @@ public:
     RecoveryState GetState() const { return m_state.load(); }
     const RecoveryStats& GetStats() const { return m_stats; }
     bool IsRunning() const { return m_state.load() == RecoveryState::Imaging; }
+    bool IsInitialized() const { return m_state.load() != RecoveryState::Idle; }
+    bool IsKeyExtracted() const { return m_keyExtracted; }
+    BridgeType GetBridgeType() const { return m_driveInfo.bridgeType; }
     const DriveInfo& GetDriveInfo() const { return m_driveInfo; }
 
     // -- Bad Sector Map --
     std::vector<uint64_t> GetBadSectorList() const;
     PatchResult ExportBadSectorMap(const std::string& path) const;
+
+    // -- Signature Carving --
+    // First-pass file carving for common signatures in recovered raw images.
+    PatchResult CarveKnownSignatures(const std::string& imagePath,
+                                     const std::string& outputDir,
+                                     size_t maxFiles = 256);
 
 private:
     // Internal helpers

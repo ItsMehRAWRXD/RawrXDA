@@ -2,7 +2,7 @@
 #define GGML_SYCL_ELEMENTWISE_HPP
 
 #include "common.hpp"
-#include "ggml.h"
+#include "ggml_rxd_internal.h"
 #include <limits> // For std::numeric_limits
 
 template <typename T>

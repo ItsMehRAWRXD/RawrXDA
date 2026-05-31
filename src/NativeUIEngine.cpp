@@ -207,18 +207,35 @@ void RenderVirtualTabs(HDC hdc, DOCK_NODE* node) {
     SetTextColor(hdc, RGB(220, 220, 220));
     SetBkMode(hdc, TRANSPARENT);
     
-    // For now, render dummy tabs based on panel registry
-    const char* tabs[] = { "Source", "ASM", "Trace" };
+    // Render Tab Headers from panel registry
+    SetTextColor(hdc, RGB(220, 220, 220));
+    SetBkMode(hdc, TRANSPARENT);
+    
+    // Query actual panel names from registry
+    std::vector<std::string> panelNames;
+    if (g_UI.panelCount > 0) {
+        for (uint32_t i = 0; i < g_UI.panelCount && i < 64; ++i) {
+            // Convert wchar_t title to narrow string for GDI
+            char narrowTitle[128] = {0};
+            WideCharToMultiByte(CP_ACP, 0, g_UI.panels[i].title, -1, narrowTitle, sizeof(narrowTitle), NULL, NULL);
+            panelNames.push_back(narrowTitle[0] ? narrowTitle : "Panel");
+        }
+    } else {
+        // Default panels when registry is empty
+        panelNames = {"Source", "ASM", "Trace"};
+    }
+    
     int tabX = rc.left + 5;
-    for (int i = 0; i < 3; i++) {
-        RECT tabRc = { tabX, rc.top + 2, tabX + 80, rc.bottom - 2 };
-        if (i == node->u.tabs.activeTabIndex) {
+    int tabWidth = std::max(60, (rc.right - rc.left - 10) / static_cast<int>(panelNames.size()));
+    for (size_t i = 0; i < panelNames.size(); ++i) {
+        RECT tabRc = { tabX, rc.top + 2, tabX + tabWidth - 5, rc.bottom - 2 };
+        if (static_cast<int>(i) == node->u.tabs.activeTabIndex) {
             HBRUSH hActive = CreateSolidBrush(RGB(30, 30, 30));
             FillRect(hdc, &tabRc, hActive);
             DeleteObject(hActive);
         }
-        DrawTextA(hdc, tabs[i], -1, &tabRc, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
-        tabX += 85;
+        DrawTextA(hdc, panelNames[i].c_str(), -1, &tabRc, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+        tabX += tabWidth;
     }
 }
 
@@ -245,7 +262,7 @@ void RepaintShell(HWND hWnd) {
     // 3. Render Virtual Chrome (Tabs / Splitters / Overlays)
     if (g_UI.pShellRoot) {
         // Walk the tree and render chrome regions
-        // For simplicity in this demo, render active node tabs
+        // Render active node tabs
         RenderVirtualTabs(memDC, g_UI.pShellRoot); 
     }
 
@@ -389,7 +406,7 @@ LRESULT CALLBACK EditorSubclass(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 
     // v22.2.0-SOVEREIGN-B: Runtime Model Lifecycle Registry (Hot-Swap)
     if (uMsg == WM_KEYDOWN && (GetKeyState(VK_CONTROL) & 0x8000) && wParam == 'M') {
-        // Toggle model swap (Demo cycle)
+        // Toggle model swap
         static int cycle = 0;
         const char* models[] = { "Llama-3-8B.gguf", "DeepSeek-V3.gguf", "Phi-4.gguf" };
         Titan_LoadModel(models[cycle++ % 3]);

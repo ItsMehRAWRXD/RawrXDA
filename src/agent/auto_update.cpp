@@ -118,7 +118,6 @@ std::vector<uint8_t> httpGet(const std::wstring& host, const std::wstring& path,
     }
 
     if (statusCode != 200) {
-        fprintf(stderr, "[ERROR] [AutoUpdate] HTTP %lu (expected 200)\n", statusCode);
         WinHttpCloseHandle(hReq); WinHttpCloseHandle(hConn); WinHttpCloseHandle(hSession);
         return body;
     }
@@ -145,12 +144,10 @@ bool AutoUpdate::checkAndInstall() {
 #ifdef _WIN32
     const char* disable = std::getenv("RAWRXD_DISABLE_AUTOUPDATE");
     if (disable && std::string(disable) == "1") {
-        fprintf(stderr, "[INFO] [AutoUpdate] SKIPPED – disabled via env\n");
         return true;
     }
 
     std::string updateUrl = getUpdateURL();
-    fprintf(stderr, "[INFO] [AutoUpdate] CHECK_START | URL: %s\n", updateUrl.c_str());
 
     // Parse URL
     bool tls = updateUrl.rfind("https", 0) == 0;
@@ -164,15 +161,13 @@ bool AutoUpdate::checkAndInstall() {
 
     auto manifestBytes = httpGet(host, path, tls);
     if (manifestBytes.empty()) {
-        fprintf(stderr, "[WARN] [AutoUpdate] CHECK_FAILED – empty response\n");
         return false;
     }
 
     json manifest;
     try {
         manifest = json::parse(manifestBytes.begin(), manifestBytes.end());
-    } catch (const json::exception& e) {
-        fprintf(stderr, "[WARN] [AutoUpdate] CHECK_FAILED – bad JSON: %s\n", e.what());
+    } catch (const json::exception&) {
         return false;
     }
 
@@ -181,11 +176,7 @@ bool AutoUpdate::checkAndInstall() {
     std::string remoteSHA = manifest.value("sha256", "");
     std::string localVer  = getAppVersion();
 
-    fprintf(stderr, "[INFO] [AutoUpdate] Local: %s, Remote: %s\n",
-            localVer.c_str(), remoteVer.c_str());
-
     if (remoteVer == localVer) {
-        fprintf(stderr, "[INFO] [AutoUpdate] UP_TO_DATE\n");
         return true;
     }
 
@@ -202,10 +193,8 @@ bool AutoUpdate::checkAndInstall() {
     std::wstring dHost(remoteURL.begin() + dhs, remoteURL.begin() + dps);
     std::wstring dPath(remoteURL.begin() + dps, remoteURL.end());
 
-    fprintf(stderr, "[INFO] [AutoUpdate] DOWNLOAD_START | Version: %s\n", remoteVer.c_str());
     auto dlBytes = httpGet(dHost, dPath, dTLS);
     if (dlBytes.empty()) {
-        fprintf(stderr, "[WARN] [AutoUpdate] DOWNLOAD_FAILED\n");
         return false;
     }
 
@@ -213,8 +202,6 @@ bool AutoUpdate::checkAndInstall() {
     if (!remoteSHA.empty()) {
         std::string sha = sha256Hex(dlBytes);
         if (sha != remoteSHA) {
-            fprintf(stderr, "[WARN] [AutoUpdate] INTEGRITY_FAILED | Expected: %s Got: %s\n",
-                    remoteSHA.c_str(), sha.c_str());
             return false;
         }
     }
@@ -223,14 +210,11 @@ bool AutoUpdate::checkAndInstall() {
     {
         std::ofstream f(localPath, std::ios::binary | std::ios::trunc);
         if (!f.is_open()) {
-            fprintf(stderr, "[WARN] [AutoUpdate] WRITE_FAILED | Path: %s\n", localPath.c_str());
             return false;
         }
         f.write(reinterpret_cast<const char*>(dlBytes.data()),
                 static_cast<std::streamsize>(dlBytes.size()));
     }
-
-    fprintf(stderr, "[INFO] [AutoUpdate] DOWNLOAD_COMPLETE | %zu bytes\n", dlBytes.size());
 
     // Launch replacement
     std::string launchCmd = "cmd.exe /C timeout /t 3 && \"" + localPath + "\"";
@@ -242,7 +226,6 @@ bool AutoUpdate::checkAndInstall() {
     CloseHandle(pi.hThread);
     ExitProcess(0);
 #else
-    fprintf(stderr, "[INFO] [AutoUpdate] Not supported on this platform\n");
     return false;
 #endif
 }

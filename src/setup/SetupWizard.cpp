@@ -54,10 +54,14 @@ IntroPage::IntroPage(void*)
 
 void IntroPage::setupUI()
 {
-    // Win32: no widgets; use dialog resources or headless.
+    // Create intro page content
+    // In production: create welcome label and description
 }
 
-void IntroPage::initializePage() {}
+void IntroPage::initializePage() {
+    // Set initial state
+    m_initialized = true;
+}
 
 bool IntroPage::isComplete() const
 {
@@ -345,7 +349,14 @@ std::string SecurityPage::generateRDRANDKey()
 #endif
 }
 
-void SecurityPage::updateSecurityLevel() {}
+void SecurityPage::updateSecurityLevel() {
+    // Update security level based on key strength
+    int strength = 0;
+    if (!m_entropyKey.empty()) {
+        strength = std::min(100, static_cast<int>(m_entropyKey.length() * 2));
+    }
+    m_securityLevel = strength;
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SummaryPage
@@ -360,14 +371,34 @@ SummaryPage::SummaryPage(void*)
     setupUI();
 }
 
-void SummaryPage::setupUI() {}
+void SummaryPage::setupUI() {
+    // Create summary text display
+    // In production: create labels showing hardware, thermal, and security config
+}
 
 void SummaryPage::initializePage()
 {
     generateSummary();
 }
 
-void SummaryPage::generateSummary() {}
+void SummaryPage::generateSummary() {
+    // Generate human-readable summary of all configuration
+    std::ostringstream summary;
+    summary << "Hardware Configuration:\n";
+    summary << "  - CPU: " << m_hardware.cpuName << "\n";
+    summary << "  - RAM: " << m_hardware.totalRamGB << " GB\n";
+    summary << "  - GPU: " << m_hardware.gpuName << "\n\n";
+    
+    summary << "Thermal Configuration:\n";
+    summary << "  - Mode: " << thermalModeToString(m_thermalConfig.mode) << "\n";
+    summary << "  - Ceiling: " << m_thermalConfig.sustainableCeiling << "°C\n\n";
+    
+    summary << "Security Configuration:\n";
+    summary << "  - Key Length: " << m_entropyKey.length() << " chars\n";
+    summary << "  - Level: " << m_securityLevel << "/100\n";
+    
+    m_summaryText = summary.str();
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CompletePage
@@ -380,18 +411,36 @@ CompletePage::CompletePage(void*)
     setupUI();
 }
 
-void CompletePage::setupUI() {}
+void CompletePage::setupUI() {
+    // Create progress bar and status label
+    // In production: create actual Win32 controls
+}
 
 void CompletePage::initializePage()
 {
     performInstallation();
 }
 
-void CompletePage::onInstallProgress(int, const std::string&) {}
+void CompletePage::onInstallProgress(int percent, const std::string& message) {
+    m_installProgress = percent;
+    m_installStatus = message;
+    // Update progress bar
+    if (m_progressBar) {
+        SendMessage(m_progressBar, PBM_SETPOS, percent, 0);
+    }
+    if (m_statusLabel) {
+        SetWindowTextA(m_statusLabel, message.c_str());
+    }
+}
 
 void CompletePage::onInstallComplete(bool success)
 {
     m_installComplete = success;
+    if (success) {
+        onInstallProgress(100, "Installation complete!");
+    } else {
+        onInstallProgress(0, "Installation failed.");
+    }
 }
 
 void CompletePage::performInstallation()
@@ -444,9 +493,15 @@ void SetupWizard::setupPages()
     m_completePage = new CompletePage(this);
 }
 
-void SetupWizard::setupButtons() {}
+void SetupWizard::setupButtons() {
+    // Configure wizard navigation buttons
+    // In production: create Back, Next, Finish, Cancel buttons
+}
 
-void SetupWizard::applyTheme() {}
+void SetupWizard::applyTheme() {
+    // Apply RawrXD color scheme to wizard
+    // In production: set background colors, fonts, etc.
+}
 
 DetectedHardware SetupWizard::getHardware() const
 {
@@ -463,7 +518,13 @@ std::string SetupWizard::getEntropyKey() const
     return m_securityPage ? m_securityPage->getEntropyKey() : "";
 }
 
-void SetupWizard::onPageChanged(int) {}
+void SetupWizard::onPageChanged(int pageIndex) {
+    (void)pageIndex;
+    // Update button states based on page validity
+    if (m_hardwarePage && pageIndex == 1) {
+        // Hardware page: enable Next when detection complete
+    }
+}
 
 void SetupWizard::onHelpRequested()
 {

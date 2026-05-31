@@ -32,6 +32,7 @@ PRIORITY_LOW        equ 0
     g_TotalScans        dq 0
     g_TotalMatches      dq 0
     g_AvgScanTime       dq 0
+    g_LowercaseMask     db 64 dup(20h)
 
 ; ============================================================================
 ; InitializePatternEngine
@@ -40,7 +41,25 @@ PRIORITY_LOW        equ 0
 ; ============================================================================
 PUBLIC InitializePatternEngine
 InitializePatternEngine PROC
-    xor eax, eax                ; Return success (simplified - no state tracking)
+    ; Detect AVX-512F + OS ZMM state support
+    mov qword ptr [g_Initialized], 0
+
+    mov eax, 7
+    xor ecx, ecx
+    cpuid
+    test ebx, 00010000h         ; AVX-512F
+    jz init_done
+
+    mov ecx, 0
+    xgetbv
+    and eax, 0E6h               ; XMM/YMM + opmask + ZMM_hi256 + hi16_ZMM
+    cmp eax, 0E6h
+    jne init_done
+
+    mov qword ptr [g_Initialized], 1
+
+init_done:
+    xor eax, eax                ; Return success
     ret
 InitializePatternEngine ENDP
 
@@ -101,6 +120,173 @@ ClassifyPattern PROC
     ; Quick scan for common patterns
     cmp edi, 3
     jb scan_done                ; Too short to contain pattern
+
+    ; ========================================
+    ; AVX-512 candidate prefilter
+    ; - Scans 64-byte blocks for token heads
+    ; - Prefers 2-byte heads to reduce scalar fallback frequency
+    ; ========================================
+    cmp qword ptr [g_Initialized], 1
+    jne scan_loop
+    cmp edi, 64
+    jb scan_loop
+
+    vmovdqu64 zmm31, zmmword ptr [g_LowercaseMask]
+
+avx_prefilter_loop:
+    cmp edi, 64
+    jb avx_prefilter_done
+
+    vmovdqu64 zmm0, zmmword ptr [rsi]
+    vporq zmm0, zmm0, zmm31
+
+    ; If we have >= 65 bytes, include second-byte comparisons from [rsi+1]
+    cmp edi, 65
+    jb avx_single_char_prefilter
+
+    vmovdqu64 zmm8, zmmword ptr [rsi+1]
+    vporq zmm8, zmm8, zmm31
+
+    xor rax, rax
+    kmovq k7, rax
+
+    ; "fi" (fixme)
+    mov eax, 'f'
+    vpbroadcastb zmm1, eax
+    vpcmpeqb k1, zmm0, zmm1
+    mov eax, 'i'
+    vpbroadcastb zmm1, eax
+    vpcmpeqb k2, zmm8, zmm1
+    kandq k1, k1, k2
+    korq k7, k7, k1
+
+    ; "bu" (bug)
+    mov eax, 'b'
+    vpbroadcastb zmm1, eax
+    vpcmpeqb k1, zmm0, zmm1
+    mov eax, 'u'
+    vpbroadcastb zmm1, eax
+    vpcmpeqb k2, zmm8, zmm1
+    kandq k1, k1, k2
+    korq k7, k7, k1
+
+    ; "to" (todo)
+    mov eax, 't'
+    vpbroadcastb zmm1, eax
+    vpcmpeqb k1, zmm0, zmm1
+    mov eax, 'o'
+    vpbroadcastb zmm1, eax
+    vpcmpeqb k2, zmm8, zmm1
+    kandq k1, k1, k2
+    korq k7, k7, k1
+
+    ; "xx" (xxx)
+    mov eax, 'x'
+    vpbroadcastb zmm1, eax
+    vpcmpeqb k1, zmm0, zmm1
+    mov eax, 'x'
+    vpbroadcastb zmm1, eax
+    vpcmpeqb k2, zmm8, zmm1
+    kandq k1, k1, k2
+    korq k7, k7, k1
+
+    ; "ha" (hack)
+    mov eax, 'h'
+    vpbroadcastb zmm1, eax
+    vpcmpeqb k1, zmm0, zmm1
+    mov eax, 'a'
+    vpbroadcastb zmm1, eax
+    vpcmpeqb k2, zmm8, zmm1
+    kandq k1, k1, k2
+    korq k7, k7, k1
+
+    ; "no" (note)
+    mov eax, 'n'
+    vpbroadcastb zmm1, eax
+    vpcmpeqb k1, zmm0, zmm1
+    mov eax, 'o'
+    vpbroadcastb zmm1, eax
+    vpcmpeqb k2, zmm8, zmm1
+    kandq k1, k1, k2
+    korq k7, k7, k1
+
+    ; "id" (idea)
+    mov eax, 'i'
+    vpbroadcastb zmm1, eax
+    vpcmpeqb k1, zmm0, zmm1
+    mov eax, 'd'
+    vpbroadcastb zmm1, eax
+    vpcmpeqb k2, zmm8, zmm1
+    kandq k1, k1, k2
+    korq k7, k7, k1
+
+    kortestq k7, k7
+    jnz avx_candidate_found_multi
+
+    add rsi, 64
+    sub edi, 64
+    jmp avx_prefilter_loop
+
+avx_single_char_prefilter:
+
+    mov eax, 'f'
+    vpbroadcastb zmm1, eax
+    vpcmpeqb k1, zmm0, zmm1
+
+    mov eax, 'b'
+    vpbroadcastb zmm1, eax
+    vpcmpeqb k2, zmm0, zmm1
+
+    mov eax, 't'
+    vpbroadcastb zmm1, eax
+    vpcmpeqb k3, zmm0, zmm1
+
+    mov eax, 'x'
+    vpbroadcastb zmm1, eax
+    vpcmpeqb k4, zmm0, zmm1
+
+    mov eax, 'h'
+    vpbroadcastb zmm1, eax
+    vpcmpeqb k5, zmm0, zmm1
+
+    mov eax, 'n'
+    vpbroadcastb zmm1, eax
+    vpcmpeqb k6, zmm0, zmm1
+
+    mov eax, 'i'
+    vpbroadcastb zmm1, eax
+    vpcmpeqb k7, zmm0, zmm1
+
+    korq k1, k1, k2
+    korq k1, k1, k3
+    korq k1, k1, k4
+    korq k1, k1, k5
+    korq k1, k1, k6
+    korq k1, k1, k7
+
+    kortestq k1, k1
+    jnz avx_candidate_found_single
+
+    add rsi, 64
+    sub edi, 64
+    jmp avx_prefilter_loop
+
+avx_candidate_found_multi:
+    kmovq rax, k7
+    tzcnt rax, rax
+    add rsi, rax
+    sub edi, eax
+    jmp scan_loop
+
+avx_candidate_found_single:
+    kmovq rax, k1
+    tzcnt rax, rax
+    add rsi, rax
+    sub edi, eax
+    jmp scan_loop
+
+avx_prefilter_done:
+    vzeroupper
     
     ; ========================================
     ; Pattern Detection Loop
@@ -230,11 +416,11 @@ try_hack:
 try_note:
     ; Check for "NOTE:"
     cmp edi, 4
-    jb try_shorter
+    jb try_idea
     mov al, byte ptr [rsi]
     or al, 20h
     cmp al, 'n'
-    jne try_shorter
+    jne try_idea
     mov al, byte ptr [rsi+1]
     or al, 20h
     cmp al, 'o'
@@ -250,6 +436,31 @@ try_note:
     
     ; Found NOTE!
     mov ebx, PATTERN_NOTE
+    jmp pattern_found
+
+try_idea:
+    ; Check for "IDEA:"
+    cmp edi, 4
+    jb try_shorter
+    mov al, byte ptr [rsi]
+    or al, 20h
+    cmp al, 'i'
+    jne try_shorter
+    mov al, byte ptr [rsi+1]
+    or al, 20h
+    cmp al, 'd'
+    jne try_shorter
+    mov al, byte ptr [rsi+2]
+    or al, 20h
+    cmp al, 'e'
+    jne try_shorter
+    mov al, byte ptr [rsi+3]
+    or al, 20h
+    cmp al, 'a'
+    jne try_shorter
+
+    ; Found IDEA!
+    mov ebx, PATTERN_IDEA
     jmp pattern_found
 
 try_shorter:

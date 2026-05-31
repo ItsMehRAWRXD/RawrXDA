@@ -189,7 +189,11 @@ AuditReport DeepIterationEngine::runAudit(const std::string& code, const std::st
             else { f.severity = AuditSeverity::Info; }
             report.findings.push_back(f);
         } else if (ln.substr(0, 16) == "COMPLEXITY_SCORE|") {
-            try { report.complexityScore = std::stof(ln.substr(16)); } catch (...) {}
+            try { report.complexityScore = std::stof(ln.substr(16)); } catch (const std::exception& e) {
+                OutputDebugStringA(("[deep_iteration_engine] complexity parse exception: " + std::string(e.what()) + "\n").c_str());
+            } catch (...) {
+                OutputDebugStringA("[deep_iteration_engine] complexity parse unknown exception\n");
+            }
         } else if (ln.substr(0, 10) == "CONVERGED|") {
             report.converged = (ln.find("yes") != std::string::npos || ln.find("YES") != std::string::npos);
         }

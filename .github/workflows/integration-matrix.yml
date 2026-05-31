@@ -1,0 +1,83 @@
+name: Integration Matrix
+
+on:
+  pull_request:
+    branches: [main, dev, master]
+  push:
+    branches: [main, dev, master]
+  workflow_dispatch:
+
+jobs:
+  integration:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        lane:
+          - parity-cpu-smoke
+          - replay-determinism
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Configure
+        shell: pwsh
+        run: |
+          cmake -S . -B build_integration -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DRAWRXD_BUILD_WIN32IDE=OFF
+
+      - name: Build RawrXD-Serve
+        shell: pwsh
+        run: cmake --build build_integration --target RawrXD-Serve -j
+
+      - name: Run matrix lane
+        shell: pwsh
+        env:
+          RAWRXD_PARITY_CPU: "1"
+        run: |
+          $binDir = "$PWD/build_integration/bin"
+          $exe = Join-Path $binDir "rawrxd.exe"
+          if (!(Test-Path $exe)) { throw "Missing $exe" }
+
+          if ("${{ matrix.lane }}" -eq "parity-cpu-smoke") {
+            ./scripts/run_parity_cpu_smoke.ps1 -BinDir $binDir -OutDir "$PWD/build_integration/parity_smoke"
+            if ($LASTEXITCODE -ne 0) {
+              throw "parity-cpu-smoke failed (exit $LASTEXITCODE)"
+            }
+            exit 0
+          }
+
+          New-Item -ItemType Directory -Force -Path "build_integration/replay" | Out-Null
+          $hashes = @()
+          for ($i = 1; $i -le 2; $i++) {
+            $out = "build_integration/replay/run_$i.json"
+            & $exe run integration-matrix --prompt "integration replay determinism" --emit-json-trace $out 2>$null 1>$null
+            if (!(Test-Path $out)) { throw "Missing replay trace: $out" }
+            $j = Get-Content $out -Raw | ConvertFrom-Json
+            $payload = ($j.tokens -join '|') + '#' + ($j.seq -join ',')
+            $sha = [System.BitConverter]::ToString((New-Object System.Security.Cryptography.SHA256Managed).ComputeHash([System.Text.Encoding]::UTF8.GetBytes($payload)))
+            $hashes += $sha
+            Write-Host "run $i sha256: $($sha.Substring(0, 24))..."
+          }
+
+          if (($hashes | Select-Object -Unique).Count -ne 1) {
+            throw "replay-determinism lane failed: divergent token streams"
+          }
+
+      - name: Upload integration traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-matrix-${{ matrix.lane }}-${{ github.run_id }}
+          path: |
+            build_integration/parity_smoke/*.json
+            build_integration/replay/*.json
+          retention-days: 7

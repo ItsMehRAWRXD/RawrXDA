@@ -87,9 +87,47 @@ std::vector<std::string> AdvancedCodingAgentIntegration::findBugs(
     m_logger->info("Analyzing code for bugs");
 
     std::vector<std::string> bugs;
-    
-    // Analysis would go here
-    // For now, return empty - actual bugs would be detected
+
+    // Real static analysis patterns
+    // 1. Check for potential null pointer dereferences
+    if (code.find("*ptr") != std::string::npos || code.find("->") != std::string::npos) {
+        if (code.find("if (ptr") == std::string::npos && code.find("if (!ptr") == std::string::npos) {
+            bugs.push_back("Potential null pointer dereference: pointer used without null check");
+        }
+    }
+
+    // 2. Check for unchecked return values
+    if (code.find("malloc(") != std::string::npos || code.find("new ") != std::string::npos) {
+        if (code.find("if (") == std::string::npos) {
+            bugs.push_back("Unchecked allocation result: memory allocation without null check");
+        }
+    }
+
+    // 3. Check for buffer overflow patterns
+    if (code.find("strcpy(") != std::string::npos || code.find("strcat(") != std::string::npos) {
+        bugs.push_back("Potential buffer overflow: use of unbounded string functions (strcpy/strcat)");
+    }
+
+    // 4. Check for resource leaks
+    if (code.find("fopen(") != std::string::npos || code.find("CreateFile") != std::string::npos) {
+        if (code.find("fclose") == std::string::npos && code.find("CloseHandle") == std::string::npos) {
+            bugs.push_back("Potential resource leak: file handle opened but not closed");
+        }
+    }
+
+    // 5. Check for division by zero
+    if (code.find("/ ") != std::string::npos || code.find("/=") != std::string::npos) {
+        if (code.find("if (") == std::string::npos) {
+            bugs.push_back("Potential division by zero: division without zero check");
+        }
+    }
+
+    // 6. Check for uninitialized variables
+    if (code.find("int ") != std::string::npos || code.find("char ") != std::string::npos) {
+        if (code.find("= ") == std::string::npos && code.find("(") == std::string::npos) {
+            bugs.push_back("Potential uninitialized variable: variable declared without initialization");
+        }
+    }
 
     m_metrics->incrementCounter("bug_analysis_runs");
     return bugs;
@@ -117,8 +155,86 @@ std::vector<SecurityIssue> AdvancedCodingAgentIntegration::scanSecurity(
     m_logger->info("Scanning security for {}", language);
 
     std::vector<SecurityIssue> issues;
-    
-    // Security analysis would go here
+
+    // 1. Check for hardcoded secrets
+    if (code.find("password = \"") != std::string::npos ||
+        code.find("api_key = \"") != std::string::npos ||
+        code.find("secret = \"") != std::string::npos ||
+        code.find("token = \"") != std::string::npos) {
+        SecurityIssue issue;
+        issue.severity = "HIGH";
+        issue.category = "secrets";
+        issue.description = "Hardcoded secret detected in source code";
+        issue.location = "inline";
+        issue.remediationSteps = {
+            "Move secrets to environment variables",
+            "Use a secrets manager (e.g., HashiCorp Vault)",
+            "Rotate exposed credentials immediately"
+        };
+        issues.push_back(issue);
+    }
+
+    // 2. Check for SQL injection patterns
+    if (code.find("SELECT ") != std::string::npos && code.find("+") != std::string::npos) {
+        SecurityIssue issue;
+        issue.severity = "CRITICAL";
+        issue.category = "injection";
+        issue.description = "Potential SQL injection: string concatenation in query";
+        issue.location = "inline";
+        issue.remediationSteps = {
+            "Use parameterized queries / prepared statements",
+            "Validate and sanitize all user inputs",
+            "Use an ORM framework"
+        };
+        issues.push_back(issue);
+    }
+
+    // 3. Check for unsafe deserialization
+    if (code.find("eval(") != std::string::npos || code.find("exec(") != std::string::npos) {
+        SecurityIssue issue;
+        issue.severity = "CRITICAL";
+        issue.category = "code-execution";
+        issue.description = "Dangerous code execution function (eval/exec) detected";
+        issue.location = "inline";
+        issue.remediationSteps = {
+            "Replace eval/exec with safer alternatives (JSON.parse, AST parsers)",
+            "Implement strict input validation",
+            "Use sandboxed execution environments"
+        };
+        issues.push_back(issue);
+    }
+
+    // 4. Check for insecure HTTP
+    if (code.find("http://") != std::string::npos) {
+        SecurityIssue issue;
+        issue.severity = "MEDIUM";
+        issue.category = "transport";
+        issue.description = "Insecure HTTP URL detected; data may be transmitted in plaintext";
+        issue.location = "inline";
+        issue.remediationSteps = {
+            "Replace http:// with https://",
+            "Enable HSTS headers",
+            "Use certificate pinning for sensitive APIs"
+        };
+        issues.push_back(issue);
+    }
+
+    // 5. Check for buffer overflow patterns (C/C++)
+    if (language == "cpp" || language == "c") {
+        if (code.find("strcpy(") != std::string::npos || code.find("gets(") != std::string::npos) {
+            SecurityIssue issue;
+            issue.severity = "HIGH";
+            issue.category = "memory";
+            issue.description = "Unsafe C function (strcpy/gets) detected — potential buffer overflow";
+            issue.location = "inline";
+            issue.remediationSteps = {
+                "Use strncpy_s or strlcpy instead of strcpy",
+                "Use fgets instead of gets",
+                "Enable stack canaries and ASLR"
+            };
+            issues.push_back(issue);
+        }
+    }
 
     m_metrics->incrementCounter("security_scans");
     return issues;

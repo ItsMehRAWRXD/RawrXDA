@@ -42,7 +42,7 @@ void printPerformanceMetrics(const RawrXD::HybridCloudManager& manager) {
 }
 
 //=============================================================================
-// Example 1: HuggingFace Model Discovery & Download
+// HuggingFace Model Discovery & Download
 //=============================================================================
 void example_huggingface_integration() {
     printHeader("HuggingFace Hub Integration");
@@ -113,7 +113,7 @@ void example_huggingface_integration() {
 }
 
 //=============================================================================
-// Example 2: Hybrid Cloud Manager - Basic Execution
+// Hybrid Cloud Manager - Basic Execution
 //=============================================================================
 void example_hybrid_cloud_basic() {
     printHeader("Hybrid Cloud Manager - Basic Execution");
@@ -184,7 +184,7 @@ void example_hybrid_cloud_basic() {
 }
 
 //=============================================================================
-// Example 3: Cost Management & Limits
+// Cost Management & Limits
 //=============================================================================
 void example_cost_management() {
     printHeader("Cost Management & Limits");
@@ -219,7 +219,7 @@ void example_cost_management() {
 }
 
 //=============================================================================
-// Example 4: Failover & Retry Logic
+// Failover & Retry Logic
 //=============================================================================
 void example_failover_retry() {
     printHeader("Failover & Retry Mechanisms");
@@ -230,7 +230,7 @@ void example_failover_retry() {
     RawrXD::FailoverConfig failoverConfig;
     failoverConfig.enabled = true;
     failoverConfig.maxRetries = 3;
-    failoverConfig.providerPriority = {"aws", "azure", "gcp", "ollama"};
+    failoverConfig.providerPriority = {"aws", "azure", "gcp", "native"};
     failoverConfig.fallbackToLocal = true;
     
     manager->setFailoverConfig(failoverConfig);
@@ -258,7 +258,7 @@ void example_failover_retry() {
 }
 
 //=============================================================================
-// Example 5: Cloud Switching Strategies
+// Cloud Switching Strategies
 //=============================================================================
 void example_cloud_switching() {
     printHeader("Cloud Switching Strategies");
@@ -290,24 +290,24 @@ int main() {
     std::cout << std::string(70, '=') << std::endl;
     
     try {
-        // Example 1: HuggingFace
+        // HuggingFace
         // Uncomment to run (requires HUGGINGFACE_HUB_TOKEN):
-        // example_huggingface_integration();
+        // huggingface_integration();
         
-        // Example 2: Basic hybrid execution
-        // example_hybrid_cloud_basic();
+        // Basic hybrid execution
+        // hybrid_cloud_basic();
         
-        // Example 3: Cost management
+        // Cost management
         example_cost_management();
         
-        // Example 4: Failover & retry
+        // Failover & retry
         example_failover_retry();
         
-        // Example 5: Cloud switching
+        // Cloud switching
         example_cloud_switching();
         
         std::cout << "\n" << std::string(70, '=') << std::endl;
-        std::cout << "  Examples completed!" << std::endl;
+        std::cout << "  Completed!" << std::endl;
         std::cout << std::string(70, '=') << "\n" << std::endl;
         
     } catch (const std::exception& e) {

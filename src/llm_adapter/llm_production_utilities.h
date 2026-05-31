@@ -9,8 +9,7 @@
 #include <sstream>
 #include <chrono>
 #include <algorithm>
-#include <openssl/rand.h>
-#include <openssl/evp.h>
+#include <random>
 
 namespace {
     // Simple Base64 encoder (production would use robust library)
@@ -453,7 +452,7 @@ private:
 };
 
 // ============================================================================
-// Full Integration Example - Real API Connectivity Test
+// Full Integration - Real API Connectivity Test
 // ============================================================================
 
 /**
@@ -479,7 +478,7 @@ public:
 
     /**
      * Test Ollama connectivity
-     * @param endpoint Ollama endpoint (e.g., "http://localhost:11434")
+     * @param endpoint Ollama endpoint (e.g., "http://localhost:11435")
      * @param model Model name (e.g., "llama2")
      * @param prompt Test prompt
      * @return Test result
@@ -553,5 +552,3 @@ public:
         const std::map<LLMBackend, HTTPConfig>& configs
     );
 };
-
-#endif // LLM_PRODUCTION_UTILITIES_H

@@ -1,0 +1,99 @@
+name: Parity GPU Gate
+
+# Real-backend parity validation for self-hosted GPU runners only.
+# Unlike the CPU gate, this workflow is allowed to fail when no real backend
+# trace is produced. It exists to close the final evidence gap: a real model,
+# a real backend, and a real trace stamped with backend/device identity.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master, dev]
+    paths:
+      - 'src/core/inference_parity_trace.h'
+      - 'src/core/rawr_inference_pipeline.*'
+      - 'src/serve/**'
+      - 'src/gpu_enforcement.*'
+      - 'scripts/run_parity_gpu_validation.ps1'
+      - 'scripts/compare_parity_trace.ps1'
+      - '.github/workflows/parity-gpu-gate.yml'
+  pull_request:
+    paths:
+      - 'src/core/inference_parity_trace.h'
+      - 'src/core/rawr_inference_pipeline.*'
+      - 'src/serve/**'
+      - 'src/gpu_enforcement.*'
+      - 'scripts/run_parity_gpu_validation.ps1'
+      - 'scripts/compare_parity_trace.ps1'
+
+jobs:
+  parity-gpu:
+    name: Real Backend Parity (self-hosted GPU)
+    runs-on: [self-hosted, windows, x64, gpu]
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Configure (CLI + headless UI driver)
+        shell: pwsh
+        run: |
+          cmake -S . -B build_gpu_parity -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DRAWRXD_BUILD_WIN32IDE=OFF
+        env:
+          CC: cl
+          CXX: cl
+
+      - name: Build RawrXD-Serve + Parity UI Driver
+        shell: pwsh
+        run: cmake --build build_gpu_parity --target RawrXD-Serve RawrXD-ParityUIDriver -j
+
+      - name: Run strict GPU validation
+        shell: pwsh
+        env:
+          RAWRXD_SERVE_INFERENCE_DLL: ${{ vars.RAWRXD_SERVE_INFERENCE_DLL }}
+          RAWRXD_GPU_TEST_MODEL: ${{ vars.RAWRXD_GPU_TEST_MODEL }}
+        run: |
+          if (-not $env:RAWRXD_GPU_TEST_MODEL) {
+            throw 'Repository/org variable RAWRXD_GPU_TEST_MODEL is required for parity-gpu-gate'
+          }
+          ./scripts/run_parity_gpu_validation.ps1 `
+            -BinDir "$PWD/build_gpu_parity/bin" `
+            -OutDir "$PWD/build_gpu_parity/parity_gpu" `
+            -Model $env:RAWRXD_GPU_TEST_MODEL `
+            -Prompt "Say exactly: ready" `
+            -MaxTokens 8 `
+            -MinRealTokens 1 `
+            -Strict
+          if ($LASTEXITCODE -ne 0) {
+            throw "strict GPU validation FAILED (exit $LASTEXITCODE)"
+          }
+
+      - name: Verify real backend evidence in CLI trace
+        shell: pwsh
+        run: |
+          $trace = "$PWD/build_gpu_parity/parity_gpu/cli_real.json"
+          if (!(Test-Path $trace)) { throw "Missing CLI trace: $trace" }
+          $j = Get-Content $trace -Raw | ConvertFrom-Json
+          if ($j.backend -in @('unknown', 'cpu-fallback')) {
+            throw "CLI trace backend is not real: $($j.backend)"
+          }
+          if ([string]::IsNullOrWhiteSpace($j.device)) {
+            throw "CLI trace device missing"
+          }
+          Write-Host "[OK] CLI trace backend=$($j.backend) device=$($j.device)"
+
+      - name: Upload GPU traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: parity-gpu-traces-${{ github.run_id }}
+          path: build_gpu_parity/parity_gpu/*
+          retention-days: 7

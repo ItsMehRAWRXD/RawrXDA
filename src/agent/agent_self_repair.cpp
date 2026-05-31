@@ -773,8 +773,7 @@ void AgentSelfRepair::emitTelemetry(const char* event) {
 #ifdef RAWR_HAS_MASM
     UTC_LogEvent(event);
 #else
-    OutputDebugStringA(event);
-    OutputDebugStringA("\n");
+    // Telemetry event
 #endif
 }
 

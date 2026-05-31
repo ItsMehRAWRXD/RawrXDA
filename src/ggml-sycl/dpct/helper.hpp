@@ -28,7 +28,7 @@ namespace oneapi {
 #include <oneapi/math.hpp>
 #endif
 
-#include "ggml.h"
+#include "ggml_rxd_internal.h"
 
 #if defined(__linux__)
 #include <sys/mman.h>

@@ -117,13 +117,13 @@ bool EngineGGUFLoader::parse() {
         for (uint32_t d = 0; d < n_dims; d++) {
             t.dims[d] = *(uint64_t*)ptr; ptr += 8;
         }
-        t.type = (ggml_type)*(uint32_t*)ptr; ptr += 4;
+        t.type = (ggml_rxd_type)*(uint32_t*)ptr; ptr += 4;
         t.offset = *(uint64_t*)ptr; ptr += 8;
         
         // Calculate size
         size_t n_elements = 1;
         for (auto d : t.dims) n_elements *= d;
-        t.size = ggml_nbytes(t.type, n_elements);
+        t.size = ggml_rxd_nbytes(t.type, n_elements);
         
         tensorMap[t.name] = tensors.size();
         tensors.push_back(t);
@@ -149,13 +149,13 @@ std::string EngineGGUFLoader::readString(uint8_t*& ptr) {
     return s;
 }
 
-size_t EngineGGUFLoader::ggml_nbytes(ggml_type type, size_t n) {
+size_t EngineGGUFLoader::ggml_rxd_nbytes(ggml_rxd_type type, size_t n) {
     switch (type) {
-        case GGML_TYPE_F32:  return n * 4;
-        case GGML_TYPE_F16:  return n * 2;
-        case GGML_TYPE_Q4_0: return (n / 32) * sizeof(block_q4_0);
-        case GGML_TYPE_Q4_1: return (n / 32) * sizeof(block_q4_1);
-        case GGML_TYPE_Q8_0: return (n / 32) * sizeof(block_q8_0);
+        case GGML_RXD_TYPE_F32:  return n * 4;
+        case GGML_RXD_TYPE_F16:  return n * 2;
+        case GGML_RXD_TYPE_Q4_0: return (n / 32) * sizeof(block_q4_0);
+        case GGML_RXD_TYPE_Q4_1: return (n / 32) * sizeof(block_q4_1);
+        case GGML_RXD_TYPE_Q8_0: return (n / 32) * sizeof(block_q8_0);
         default: return 0;
     }
 }

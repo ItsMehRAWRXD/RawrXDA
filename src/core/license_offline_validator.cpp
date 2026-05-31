@@ -26,7 +26,7 @@ OfflineLicenseValidator g_offlineValidator;
 
 static const char CACHE_FILENAME[] = "rawrxd_license.cache";
 static const char CACHE_MAGIC = 0x4D434C4F;  // "OLCM"
-static const uint32_t CACHE_VERSION = 1;
+static const uint32_t CACHE_VERSION = 2; // Upgraded version for RSA-4096 support
 
 // ============================================================================
 // Offline Cache Manager Implementation
@@ -234,8 +234,18 @@ OfflineValidationResult OfflineLicenseValidator::validateUsingCache() {
 
     // Check cache validity
     if (now > m_cache.cacheExpiry) {
+        // Production Hardening: Check grace period
+        uint32_t elapsedSinceExpiry = now - m_cache.cacheExpiry;
+        if (elapsedSinceExpiry < m_gracePeriodSeconds) {
+            result.success = true; // Still allow usage in grace period
+            result.reason = "Offline grace period active";
+            result.mode = OfflineValidationMode::GRACE_PERIOD;
+            result.gracePeriodRemaining = m_gracePeriodSeconds - elapsedSinceExpiry;
+            return result;
+        }
+
         result.success = false;
-        result.reason = "Cache validity expired";
+        result.reason = "Cache validity expired (Grace period finished)";
         result.errorCode = static_cast<uint16_t>(OfflineValidationError::CACHE_EXPIRED);
         result.mode = OfflineValidationMode::OFFLINE;
         return result;

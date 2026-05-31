@@ -18,7 +18,6 @@ void ErrorRecoveryManager::recordFailure(const std::string& operation) {
 
     if (state.failureCount >= 5) { // Default threshold
         state.open = true;
-        std::cerr << "[ErrorRecovery] Circuit breaker opened for: " << operation << std::endl;
     }
 }
 

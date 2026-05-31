@@ -55,16 +55,16 @@ public:
         m_logger->info("\n=== Demo 1: Response Parsing (Phase 1.3) ===");
 
         std::vector<std::string> testResponses = {
-            // Example 1: C++ function
+            // C++ function
             "void greet() {\n  std::cout << \"Hello\";\n}\n\nint main() {",
 
-            // Example 2: Python code
+            // Python code
             "def add(a, b):\n  return a + b\n\nresult = add(1, 2)",
 
-            // Example 3: JavaScript
+            // JavaScript
             "function sum(nums) {\n  return nums.reduce((a, b) => a + b);\n};",
 
-            // Example 4: Mixed statements
+            // Mixed statements
             "x = 42; y = 100; z = x + y; if (z > 100) { print('yes'); }"
         };
 
@@ -206,13 +206,13 @@ public:
 
         auto httpClient = m_libIntegration->getHTTPClient();
 
-        // Demo GET request
-        m_logger->info("\nDemo: GET request to http://localhost:11434/api/tags");
-        auto getResponse = httpClient->get("http://localhost:11434/api/tags");
+        // GET request
+        m_logger->info("\nDemo: GET request to http://localhost:11435/api/tags");
+        auto getResponse = httpClient->get("http://localhost:11435/api/tags");
         m_logger->info("  Status: {}", getResponse.statusCode);
         m_logger->info("  Response: {} bytes", getResponse.body.length());
 
-        // Demo POST request with JSON
+        // POST request with JSON
         m_logger->info("\nDemo: POST request with JSON payload");
         std::string jsonPayload = R"({
             "model": "llama2",
@@ -221,19 +221,19 @@ public:
         })";
 
         auto postResponse = httpClient->postJSON(
-            "http://localhost:11434/api/generate",
+            "http://localhost:11435/api/generate",
             jsonPayload
         );
         m_logger->info("  Status: {}", postResponse.statusCode);
         m_logger->info("  Response: {} bytes", postResponse.body.length());
 
-        // Demo streaming
+        // Streaming
         m_logger->info("\nDemo: Streaming request");
         std::vector<std::string> chunks;
         httpClient->streamRequest(
             HTTPRequest{
                 "GET",
-                "http://localhost:11434/api/generate?stream=true",
+                "http://localhost:11435/api/generate?stream=true",
                 "", {}, 30
             },
             [&chunks](const std::string& chunk) {
@@ -252,18 +252,18 @@ public:
 
         auto jsonHandler = m_libIntegration->getJSONHandler();
 
-        // Demo 1: Parse JSON
+        // Parse JSON
         std::string jsonData = R"({"model": "llama2", "tokens": 42, "quality": 0.95})";
         m_logger->info("\nParsing JSON: {}", jsonData);
         bool valid = jsonHandler->parseJSON(jsonData);
         m_logger->info("  Valid: {}", valid);
 
-        // Demo 2: Extract values
+        // Extract values
         m_logger->info("\nExtracting values:");
         m_logger->info("  model: '{}'", jsonHandler->extractValue(jsonData, "model"));
         m_logger->info("  tokens: '{}'", jsonHandler->extractValue(jsonData, "tokens"));
 
-        // Demo 3: Generate JSON
+        // Generate JSON
         m_logger->info("\nGenerating JSON from data:");
         std::vector<std::pair<std::string, std::string>> data = {
             {"name", "test_model"},
@@ -273,13 +273,13 @@ public:
         std::string generated = jsonHandler->generateJSON(data);
         m_logger->info("  Generated:\n{}", generated);
 
-        // Demo 4: Pretty print
+        // Pretty print
         m_logger->info("\nPretty-printing JSON:");
         std::string compact = R"({"a":1,"b":2,"c":{"d":3}})";
         std::string pretty = jsonHandler->prettyPrint(compact);
         m_logger->info("  {}", pretty);
 
-        // Demo 5: Minify
+        // Minify
         m_logger->info("\nMinifying JSON:");
         std::string minified = jsonHandler->minify(pretty);
         m_logger->info("  {}", minified);
@@ -379,7 +379,7 @@ int main(int argc, char* argv[]) {
         if (argc > 1 && std::string(argv[1]) == "--full") {
             app.runAllDemos();
         } else {
-            // Run individual demos based on arguments
+            // Run individual based on arguments
             if (argc == 1 || std::string(argv[1]).find("parsing") != std::string::npos) {
                 app.demo1_ResponseParsing();
                 app.demo2_StreamingParsing();

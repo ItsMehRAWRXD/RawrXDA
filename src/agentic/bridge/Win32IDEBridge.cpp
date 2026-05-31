@@ -45,7 +45,7 @@ bool Win32IDEBridge::initialize(HINSTANCE hInst, int nCmdShow) {
     initialized_ = true;
 
     // Initialize the Agent Orchestrator Bridge
-    // This wires ToolRegistry, OllamaClient, FIMPromptBuilder into BoundedAgentLoop
+    // This wires ToolRegistry, NativeClient, FIMPromptBuilder into BoundedAgentLoop
     {
         // Use build directory parent as working dir, or fallback to CWD
         std::string workingDir = ".";

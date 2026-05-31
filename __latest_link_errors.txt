@@ -1,0 +1,15 @@
+[1/8] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\bridge_on_suggestion_ready_stub.cpp.obj
+cl : Command line warning D9025 : overriding '/Zi' with '/Z7'
+[2/8] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\bridge_layer.cpp.obj
+cl : Command line warning D9025 : overriding '/Zi' with '/Z7'
+[3/8] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\ai\fast_spec_inference_bridge.cpp.obj
+cl : Command line warning D9025 : overriding '/Zi' with '/Z7'
+[4/8] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\titan\titan_abi.cpp.obj
+cl : Command line warning D9025 : overriding '/Zi' with '/Z7'
+[5/8] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\mapped_window_streamer.cpp.obj
+cl : Command line warning D9025 : overriding '/Zi' with '/Z7'
+[6/8] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\ai\fast_spec.cpp.obj
+cl : Command line warning D9025 : overriding '/Zi' with '/Z7'
+[7/8] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\HeadlessIDE_AutonomousWorkflowMode.cpp.obj
+cl : Command line warning D9025 : overriding '/Zi' with '/Z7'
+[8/8] RawrXD-Win32IDE: PRE_LINK optional del exe/pdb if unlocked; Linking CXX executable bin\RawrXD-Win32IDE.exe

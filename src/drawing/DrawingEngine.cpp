@@ -521,9 +521,20 @@ void Component::render(DrawingContext& ctx) {
     if (!m_visible) return;
 }
 
-void Component::onMouseDown(const Point& pos) {}
-void Component::onMouseUp(const Point& pos) {}
-void Component::onMouseMove(const Point& pos) {}
+void Component::onMouseDown(const Point& pos) {
+    // Base class: no-op. Subclasses override for click handling.
+    (void)pos;
+}
+
+void Component::onMouseUp(const Point& pos) {
+    // Base class: no-op. Subclasses override for release handling.
+    (void)pos;
+}
+
+void Component::onMouseMove(const Point& pos) {
+    // Base class: no-op. Subclasses override for drag/hover handling.
+    (void)pos;
+}
 
 // ========== BUTTON ==========
 

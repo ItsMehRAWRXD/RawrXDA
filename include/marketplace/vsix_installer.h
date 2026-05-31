@@ -8,17 +8,20 @@
 #include <functional>
 #include <string>
 #include <vector>
+#include <mutex>
+#include <thread>
 
 /**
  * Manages: downloading VSIX from URLs, extracting, installing to IDE.
  */
 class VsixInstaller {
 public:
-    VsixInstaller() = default;
+    VsixInstaller();
     ~VsixInstaller();
 
     void installFromUrl(const std::string& url, const std::string& extensionId);
     void installFromFile(const std::string& filePath);
+        void installFromFile(const std::string& filePath, const std::string& extensionId);
     bool uninstallExtension(const std::string& extensionId);
 
     bool isExtensionInstalled(const std::string& extensionId);
@@ -55,6 +58,7 @@ private:
     std::string getExtensionsDirectory();
     void cleanupTempFiles();
 
+    std::mutex m_mutex;
     StartedFn m_onStarted;
     ProgressFn m_onProgress;
     CompletedFn m_onCompleted;

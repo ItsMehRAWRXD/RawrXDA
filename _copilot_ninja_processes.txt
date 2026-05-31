@@ -1,0 +1,5 @@
+
+Name     Id Path                          StartTime
+----     -- ----                          ---------
+ninja 28184 C:\Strawberry\c\bin\ninja.exe 4/16/2026 7:45:28 PM
+

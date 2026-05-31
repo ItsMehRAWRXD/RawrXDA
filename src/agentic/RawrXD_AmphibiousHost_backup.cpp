@@ -8,8 +8,26 @@
 
 #ifdef NO_ASM
 extern "C" {
-    void Titan_ExecuteComputeKernel(void*, void*) {}
-    uint32_t Titan_PerformDMA(void*, void*, size_t) { return 0; }
+    void Titan_ExecuteComputeKernel(void* pContext, void* pPatch) {
+        if (!pContext || !pPatch) return;
+        // Minimal compute kernel: interpret pContext as float array, pPatch as scalar multiplier
+        float* data = static_cast<float*>(pContext);
+        float* patch = static_cast<float*>(pPatch);
+        if (!data || !patch) return;
+        // Apply scalar multiplication to first 1024 elements as a basic compute operation
+        const size_t count = 1024;
+        for (size_t i = 0; i < count; ++i) {
+            data[i] *= patch[0];
+        }
+    }
+    uint32_t Titan_PerformDMA(void* pSource, void* pDest, size_t size) {
+        if (!pSource || !pDest || size == 0) return 0;
+        // Use memcpy for DMA simulation (aligned for performance)
+        const size_t align = 64;
+        size_t alignedSize = (size + align - 1) & ~(align - 1);
+        memcpy(pDest, pSource, alignedSize);
+        return static_cast<uint32_t>(alignedSize);
+    }
 }
 #else
 // --- EXTERN MASM64 ENTRY POINTS ---

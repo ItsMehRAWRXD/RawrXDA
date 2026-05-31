@@ -1,0 +1,22 @@
+{
+  "ok": true,
+  "timestamp": "2026-04-21T02:19:10.3842853-04:00",
+  "repoRoot": "D:\\rawrxd",
+  "steps": {
+    "chat_copilot_parity_symbols": "ok",
+    "chat_agentic_ui_marshalling": "ok",
+    "agentic_chat_route_symbols": "ok",
+    "headless_copilot_smoke": "ok",
+    "win32_agentic_registry_smoke": "ok",
+    "tps_smoke": "skipped: -RunTpsSmoke or RAWRXD_SMOKE_MODEL; or -SkipTps"
+  },
+  "envHints": {
+    "laneBCli": "cmake --build <RAWRXD_BUILD_DIR|build-win32|build-ninja> --target RawrEngine ; <build-dir>\\bin\\RawrEngine.exe --copilot-smoke",
+    "tpsRef": "RAWRXD_TPS_REF",
+    "ideModelAutonomy": "ctest -C Debug -R test_ide_model_autonomy --output-on-failure (from configured build dir)",
+    "fastSourceOnly": "pwsh -File scripts/Smoke-IDE-TurnKey.ps1",
+    "tpsModel": "RAWRXD_SMOKE_MODEL=<path.gguf>",
+    "liveAgenticOllama": "RAWRXD_AGENTIC_SMOKE_LIVE=1",
+    "fullChatParity": "pwsh -File Ship/smoke_agentic_chat_parity.ps1"
+  }
+}

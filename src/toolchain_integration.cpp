@@ -30,49 +30,37 @@ bool ToolchainIntegration::initialize(const ToolchainConfig& config) {
     if (m_initialized.load()) return true;
     m_config = config;
 
-    spdlog::info("[ToolchainIntegration] Initializing...");
-
     /* 1. ToolchainBridge */
     m_bridge = std::make_unique<RawrXD::Toolchain::ToolchainBridge>();
     if (!m_bridge->initialize()) {
-        spdlog::error("[ToolchainIntegration] ToolchainBridge init failed");
         return false;
     }
-    spdlog::info("[ToolchainIntegration] ToolchainBridge initialized");
 
     /* 2. DiagnosticsProvider */
     m_diagProv = std::make_unique<DiagnosticsProvider>();
     m_diagProv->setDebounceMs(config.debounceMs);
     m_diagProv->setMaxDiagnosticsPerFile(config.maxDiagnostics);
     if (!m_diagProv->initialize(m_bridge.get())) {
-        spdlog::error("[ToolchainIntegration] DiagnosticsProvider init failed");
         return false;
     }
-    spdlog::info("[ToolchainIntegration] DiagnosticsProvider initialized");
 
     /* 3. BuildTaskProvider */
     m_buildProv = std::make_unique<BuildTaskProvider>();
     if (!m_buildProv->initialize(m_bridge.get(), m_diagProv.get())) {
-        spdlog::error("[ToolchainIntegration] BuildTaskProvider init failed");
         return false;
     }
-    spdlog::info("[ToolchainIntegration] BuildTaskProvider initialized");
 
     /* 4. Auto-detect build tasks in workspace */
     if (config.autoDetectTasks && !config.workspaceRoot.empty()) {
         auto tasks = m_buildProv->detectTasks(config.workspaceRoot);
-        spdlog::info("[ToolchainIntegration] Detected {} build tasks", tasks.size());
     }
 
     m_initialized.store(true);
-    spdlog::info("[ToolchainIntegration] Fully initialized");
     return true;
 }
 
 void ToolchainIntegration::shutdown() {
     if (!m_initialized.exchange(false)) return;
-
-    spdlog::info("[ToolchainIntegration] Shutting down...");
 
     if (m_buildProv)  m_buildProv->shutdown();
     if (m_diagProv)   m_diagProv->shutdown();
@@ -82,8 +70,6 @@ void ToolchainIntegration::shutdown() {
     m_diagProv.reset();
     m_bridge.reset();
     m_lsp = nullptr;
-
-    spdlog::info("[ToolchainIntegration] Shutdown complete");
 }
 
 /* =========================================================================
@@ -95,7 +81,6 @@ void ToolchainIntegration::connectToLSP(
     if (!lsp) return;
     m_lsp = lsp;
     registerLSPProviders(lsp);
-    spdlog::info("[ToolchainIntegration] Connected to LSP layer");
 }
 
 void ToolchainIntegration::registerLSPProviders(
@@ -117,8 +102,6 @@ void ToolchainIntegration::registerLSPProviders(
                 (void)d;
             });
         });
-
-    spdlog::debug("[ToolchainIntegration] LSP providers registered");
 }
 
 /* =========================================================================

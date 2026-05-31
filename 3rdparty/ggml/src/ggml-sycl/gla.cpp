@@ -75,7 +75,7 @@ static void gated_linear_attn_f32_kernel(const dpct::queue_ptr stream, u_int B, 
     });
 }
 
-void ggml_sycl_op_gated_linear_attn(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
+void ggml_rxd_sycl_op_gated_linear_attn(ggml_rxd_backend_sycl_context & ctx, ggml_rxd_tensor * dst) {
     scope_op_debug_print scope_dbg_print(__func__, dst, /*num_src=*/5);
     const float * k_d  = static_cast<const float *>(dst->src[0]->data);
     const float * v_d  = static_cast<const float *>(dst->src[1]->data);
@@ -89,9 +89,9 @@ void ggml_sycl_op_gated_linear_attn(ggml_backend_sycl_context & ctx, ggml_tensor
     const int64_t H = dst->src[0]->ne[1];
 
     dpct::queue_ptr stream = ctx.stream();
-    GGML_ASSERT(dst->src[4]->type == GGML_TYPE_F32);
-    GGML_ASSERT(C % H == 0);
-    GGML_ASSERT(C / H == 64 || C / H == 128);
+    GGML_RXD_ASSERT(dst->src[4]->type == GGML_RXD_TYPE_F32);
+    GGML_RXD_ASSERT(C % H == 0);
+    GGML_RXD_ASSERT(C / H == 64 || C / H == 128);
 
     float scale;
     memcpy(&scale, dst->op_params, sizeof(float));

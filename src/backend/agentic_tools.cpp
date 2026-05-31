@@ -1,5 +1,6 @@
 #define NOMINMAX
 #include "backend/agentic_tools.h"
+#include "agentic/ToolRegistry.h"
 #include "tools/file_ops.h"
 #include "tools/git_client.h"
 #include "backend/ollama_client.h"
@@ -39,7 +40,7 @@ AgenticToolExecutor::AgenticToolExecutor(const std::string& workspace_root)
     , m_allow_outside_workspace(false)
 {
     m_git_client = std::make_unique<Tools::GitClient>(workspace_root);
-    m_ollama_client = std::make_unique<OllamaClient>("http://localhost:11434");
+    m_ollama_client = std::make_unique<OllamaClient>("http://localhost:11434");  // Default Ollama port
     // Load persisted config (if any)
     loadPersistentConfig();
 }
@@ -95,8 +96,8 @@ std::string AgenticToolExecutor::toolToString(AgenticTool tool) const {
 		case AgenticTool::GIT_DIFF: return "git_diff";
 		case AgenticTool::GIT_STASH_SAVE: return "git_stash_save";
 		case AgenticTool::GIT_STASH_POP: return "git_stash_pop";
-		case AgenticTool::GIT_FETCH: return "git_fetch";
-		default: return "unknown";
+		case AgenticTool::GIT_FETCH: return "git_fetch";	case AgenticTool::TOGGLE_SPLIT_ANSWERS: return "toggle_split_answers";
+	case AgenticTool::GET_SPLIT_ANSWERS: return "get_split_answers";		default: return "unknown";
 	}
 }
 
@@ -123,6 +124,12 @@ AgenticTool AgenticToolExecutor::stringToTool(const std::string& name) const {
 	if (n == "git_stash_save") return AgenticTool::GIT_STASH_SAVE;
 	if (n == "git_stash_pop") return AgenticTool::GIT_STASH_POP;
 	if (n == "git_fetch") return AgenticTool::GIT_FETCH;
+	if (n == "toggle_split_answers") return AgenticTool::TOGGLE_SPLIT_ANSWERS;
+	if (n == "get_split_answers") return AgenticTool::GET_SPLIT_ANSWERS;
+	if (n == "hotpatch_status") return AgenticTool::HOTPATCH_STATUS;
+	if (n == "list_hotpatches") return AgenticTool::LIST_HOTPATCHES;
+	if (n == "apply_hotpatch") return AgenticTool::APPLY_HOTPATCH;
+	if (n == "revert_hotpatch") return AgenticTool::REVERT_HOTPATCH;
 	return AgenticTool::UNKNOWN;
 }
 
@@ -156,6 +163,13 @@ std::vector<ToolSchema> AgenticToolExecutor::getToolSchemas() const {
     // Safety toggle tools
     add("toggle_block_delete", "Enable/disable blocking of destructive delete commands", {{"enabled","true/false"}}, {"enabled"});
     add("get_block_delete", "Get current status of delete command blocking", {}, {});
+    // Split-answers toggle tools
+    add("toggle_split_answers", "Enable/disable split-answers mode for multi-part reasoning", {{"enabled","true/false"}}, {"enabled"});
+    add("get_split_answers", "Get current status of split-answers mode", {}, {});
+    add("hotpatch_status", "Get hotpatch subsystem statistics and health", {{"layer","Layer to query: all, memory, byte, server, pt, live, shadow, sentinel. Default: all."}}, {});
+    add("list_hotpatches", "List all active hotpatches across memory, byte, and server layers", {{"layer","Filter by layer: all, memory, byte, server, live, shadow. Default: all."}}, {});
+    add("apply_hotpatch", "Apply an in-memory hotpatch to a running module or address. Only memory-mode is permitted via agent tool.", {{"layer","Patch layer: memory, byte, or server"},{"target","Target address, file, or endpoint"},{"data","Patch payload (hex-encoded for memory/byte)"}}, {"layer","target"});
+    add("revert_hotpatch", "Revert the last applied hotpatch for a target, or by address.", {{"target","Module name, symbol, or target identifier"},{"address","Hex address string to revert patch at"}}, {"target"});
 	return v;
 }
 
@@ -205,6 +219,25 @@ ToolResult AgenticToolExecutor::executeTool(const std::string& tool_name, const 
         return ToolResult::Ok("get_block_delete", std::string(m_block_delete_commands ? "true" : "false"));
     }
 
+    // Split-answers toggle tools
+    if (tool_name == "toggle_split_answers") {
+        try {
+            auto parsed = json::parse(params_json.empty() ? "{}" : params_json);
+            if (parsed.contains("enabled") && parsed["enabled"].is_boolean()) {
+                m_split_answers = parsed["enabled"].get<bool>();
+                savePersistentConfig();
+                return ToolResult::Ok("toggle_split_answers", std::string("split_answers=") + (m_split_answers ? "true" : "false"));
+            }
+            return ToolResult::Fail("toggle_split_answers", "Missing or invalid 'enabled' boolean parameter");
+        } catch (const std::exception& e) {
+            return ToolResult::Fail("toggle_split_answers", e.what());
+        }
+    }
+
+    if (tool_name == "get_split_answers") {
+        return ToolResult::Ok("get_split_answers", std::string(m_split_answers ? "true" : "false"));
+    }
+
     return executeTool(stringToTool(tool_name), params_json);
 }
 
@@ -236,6 +269,12 @@ ToolResult AgenticToolExecutor::executeTool(AgenticTool tool, const std::string&
 		case AgenticTool::GIT_STASH_SAVE: result = executeGitStashSave(params); break;
 		case AgenticTool::GIT_STASH_POP: result = executeGitStashPop(params); break;
 		case AgenticTool::GIT_FETCH: result = executeGitFetch(params); break;
+		case AgenticTool::TOGGLE_SPLIT_ANSWERS:
+			result = ToolResult::Ok("toggle_split_answers", std::string("split_answers=") + (m_split_answers ? "true" : "false"));
+			break;
+		case AgenticTool::GET_SPLIT_ANSWERS:
+			result = ToolResult::Ok("get_split_answers", std::string(m_split_answers ? "true" : "false"));
+			break;
 		default: return ToolResult::Fail("unknown", "Unknown agentic tool name");
 	}
 	m_stats.total_tool_calls++;
@@ -425,9 +464,13 @@ void AgenticToolExecutor::loadPersistentConfig()
         std::string cfgPath = (fs::path(m_workspace_root) / ".rawrxd_agent_config.json").string();
         if (fs::exists(cfgPath)) {
             std::ifstream in(cfgPath);
-            json j; in >> j;
+            std::string content((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+            auto j = json::parse(content);
             if (j.contains("block_delete_commands") && j["block_delete_commands"].is_boolean()) {
                 m_block_delete_commands = j["block_delete_commands"].get<bool>();
+            }
+            if (j.contains("split_answers") && j["split_answers"].is_boolean()) {
+                m_split_answers = j["split_answers"].get<bool>();
             }
         } else {
             // Write default config
@@ -443,6 +486,7 @@ void AgenticToolExecutor::savePersistentConfig() const
     try {
         json j;
         j["block_delete_commands"] = m_block_delete_commands;
+        j["split_answers"] = m_split_answers;
         std::string cfgPath = (fs::path(m_workspace_root) / ".rawrxd_agent_config.json").string();
         std::ofstream out(cfgPath, std::ios::trunc);
         out << j.dump(2);
@@ -843,6 +887,66 @@ std::string AgenticToolExecutor::chatWithTools(const std::string& user_message, 
     }
     
     return finalAnswer;
+}
+
+// Hotpatch tool implementations (bridge to AgentToolRegistry) ------------------
+
+ToolResult AgenticToolExecutor::executeHotpatchStatus(const json& params) {
+    nlohmann::json a;
+    a["layer"] = params.value("layer", "all");
+    auto r = RawrXD::Agent::AgentToolRegistry::Instance().Dispatch("hotpatch_status", a);
+    json resultJson;
+    resultJson["success"] = r.success;
+    resultJson["output"] = r.output;
+    if (!r.success) resultJson["error"] = r.output;
+    return r.success 
+        ? ToolResult::Ok("hotpatch_status", resultJson.dump())
+        : ToolResult::Fail("hotpatch_status", r.output);
+}
+
+ToolResult AgenticToolExecutor::executeListHotpatches(const json& params) {
+    nlohmann::json a;
+    a["layer"] = params.value("layer", "all");
+    auto r = RawrXD::Agent::AgentToolRegistry::Instance().Dispatch("list_hotpatches", a);
+    json resultJson;
+    resultJson["success"] = r.success;
+    resultJson["output"] = r.output;
+    if (!r.success) resultJson["error"] = r.output;
+    return r.success 
+        ? ToolResult::Ok("list_hotpatches", resultJson.dump())
+        : ToolResult::Fail("list_hotpatches", r.output);
+}
+
+ToolResult AgenticToolExecutor::executeApplyHotpatch(const json& params) {
+    if (!params.contains("layer")) return ToolResult::Fail("apply_hotpatch", "Missing required parameter: layer");
+    if (!params.contains("target")) return ToolResult::Fail("apply_hotpatch", "Missing required parameter: target");
+    nlohmann::json a;
+    a["layer"]  = params["layer"];
+    a["target"] = params["target"];
+    if (params.contains("data")) a["data"] = params["data"];
+    auto r = RawrXD::Agent::AgentToolRegistry::Instance().Dispatch("apply_hotpatch", a);
+    json resultJson;
+    resultJson["success"] = r.success;
+    resultJson["output"] = r.output;
+    if (!r.success) resultJson["error"] = r.output;
+    return r.success 
+        ? ToolResult::Ok("apply_hotpatch", resultJson.dump())
+        : ToolResult::Fail("apply_hotpatch", r.output);
+}
+
+ToolResult AgenticToolExecutor::executeRevertHotpatch(const json& params) {
+    if (!params.contains("target")) return ToolResult::Fail("revert_hotpatch", "Missing required parameter: target");
+    nlohmann::json a;
+    a["target"] = params["target"];
+    if (params.contains("address")) a["address"] = params["address"];
+    auto r = RawrXD::Agent::AgentToolRegistry::Instance().Dispatch("revert_hotpatch", a);
+    json resultJson;
+    resultJson["success"] = r.success;
+    resultJson["output"] = r.output;
+    if (!r.success) resultJson["error"] = r.output;
+    return r.success 
+        ? ToolResult::Ok("revert_hotpatch", resultJson.dump())
+        : ToolResult::Fail("revert_hotpatch", r.output);
 }
 
 } } // namespace RawrXD::Backend

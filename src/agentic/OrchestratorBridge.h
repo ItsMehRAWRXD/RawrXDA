@@ -5,7 +5,8 @@
 
 #include "AgentOllamaClient.h"
 #include "AgentToolHandlers.h"
-#include "PredictionProvider.h"
+// Include OllamaProvider.h for Prediction types (NativeStreamProvider.h redirects to it)
+#include "OllamaProvider.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -22,7 +23,7 @@ public:
 
     // ---- Initialization (call during CLI startup) ----
     bool Initialize(const std::string& workingDir,
-                    const std::string& ollamaUrl = "http://localhost:11434");
+                    const std::string& ollamaUrl = "http://localhost:11434");  // Default Ollama port
 
     bool IsInitialized() const { return m_initialized; }
 
@@ -46,6 +47,15 @@ public:
     OrchestratorBridge() = default;
     ~OrchestratorBridge() = default;
 
+    // ---- Callbacks ----
+    using StatusCallback = std::function<void(const std::string&)>;
+    using ErrorCallback = std::function<void(const std::string&)>;
+    using AgentCompleteCallback = std::function<void(const std::string&)>;
+
+    void SetStatusCallback(StatusCallback cb) { m_onStatusUpdate = std::move(cb); }
+    void SetErrorCallback(ErrorCallback cb) { m_onError = std::move(cb); }
+    void SetAgentCompleteCallback(AgentCompleteCallback cb) { m_onAgentComplete = std::move(cb); }
+
 private:
     bool EnsureClientReady();
     void RefreshAvailableModels();
@@ -55,10 +65,13 @@ private:
 public:
     bool m_initialized = false;
     std::string m_workingDir;
-    std::unique_ptr<AgentOllamaClient> m_ollamaClient;
-    OllamaConfig m_ollamaConfig;
+    std::unique_ptr<NativeInferenceClient> m_nativeClient;
+    NativeInferenceConfig m_nativeConfig;
     int m_maxSteps = 8;
     std::vector<std::string> m_availableModels;
+    StatusCallback m_onStatusUpdate;
+    ErrorCallback m_onError;
+    AgentCompleteCallback m_onAgentComplete;
 };
 
 } // namespace Agent

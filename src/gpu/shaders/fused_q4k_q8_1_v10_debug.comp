@@ -1,0 +1,108 @@
+#version 450
+layout(local_size_x = 64) in;
+
+layout(set = 0, binding = 0) buffer Weights { uint data[]; } weights;
+layout(set = 0, binding = 1) buffer Input   { uint data[]; } input_b;
+layout(set = 0, binding = 2) buffer Output  { float data[]; } output_c;
+
+layout(push_constant) uniform PushConstants {
+    uint M;
+    uint K;
+} pcs;
+
+struct block_q4_K {
+    float16_t d;
+    float16_t dmin;
+    uint8_t scales[21]; // 3 blocks * 7 bytes
+    uint8_t qs[32];     // 64 values
+};
+
+struct block_q8_1 {
+    float16_t d;
+    float16_t s;
+    int8_t  qs[32];
+};
+
+shared float shared_b[256];
+
+void main() {
+    uint row = gl_WorkGroupID.x;
+    uint tid = gl_LocalInvocationID.x;
+
+    float acc = 0.0;
+    uint k_blocks = pcs.K / 256; 
+
+    for (uint i = 0; i < k_blocks; ++i) {
+        // Cooperative load 256 dequantized activations into LDS
+        // i * (256/32) = i * 8 blocks
+        uint b_idx_base = (i * 8u + (tid / 32u)) * 9u; // 36 bytes / 4 = 9 uints
+        uint b_off = tid % 32u;
+        
+        // Load block header and dequantize
+        // Each thread dequantizes 4 values to fill 256
+        // Simplification for v10: 1-to-1 mapping
+        // Thread t loads b_idx = (i*256 + t)
+        // Correct cooperative load for 256 elements using 64 threads (4 each)
+        for (uint l = 0; l < 4; ++l) {
+            uint b_elem_idx = i * 256u + (l * 64u + tid);
+            uint b_blk_idx = b_elem_idx / 32u;
+            uint b_blk_off = b_elem_idx % 32u;
+            
+            // Re-read block metadata (redundant but safe for debug)
+            uint u0 = input_b.data[b_blk_idx * 9u + 0u];
+            float d_b = float(unpackFloat2x16(u0).x);
+            
+            uint u2 = input_b.data[b_blk_idx * 9u + 2u + (b_blk_off / 4u)];
+            int q_b = int((u2 >> (8u * (b_blk_off % 4u))) & 0xFFu);
+            if (q_b > 127) q_b -= 256;
+            
+            shared_b[l * 64u + tid] = float(q_b) * d_b;
+        }
+
+        barrier();
+
+        // Compute 4 blocks of Q4_K (256 weights)
+        for (uint j = 0; j < 4; ++j) {
+            uint w_idx = (row * (pcs.K / 64u) + i * 4u + j) * 36u; // 144 bytes / 4 = 36 uints
+            
+            uint u0 = weights.data[w_idx + 0u];
+            float d   = float(unpackFloat2x16(u0).x);
+            float dmin = float(unpackFloat2x16(u0).y);
+            
+            uint tid_w = tid; // 0..63
+            uint is    = tid_w / 16u; // 0..3 (scale group)
+            uint is_sc = (tid_w / 32u) * 2u; // 0 or 2
+            
+            // Q4_K scales unpack
+            uint nib8 = (weights.data[w_idx + 1u + is] >> (8u * (tid_w % 4u))) & 0xFFu;
+            uint nib6 = (weights.data[w_idx + 5u + (tid_w / 4u)] >> (6u * (tid_w % 4u))) & 0x3Fu; // Not 8-bit aligned but we'll use a safer access
+            
+            // Re-use logic from v7 which we know works
+            // ... wait, v7 logic was compact. Let's use it exactly.
+            
+            // Unpack scales (6 bits each) - this was the tricky part in v7
+            uint sc_idx = tid_w / 4u;
+            uint sc_shift = (tid_w % 4u) * 6u;
+            uint sc_word = weights.data[w_idx + 1u + sc_idx];
+            // The scales are 12 bytes total (96 bits) -> 16 scales of 6 bits.
+            // In v7: uint sc6 = (weights.data[w_offset + 1u + (tid/4u)] >> ((tid%4u)*6u)) & 0x3Fu;
+            uint sc6 = (weights.data[w_idx + 1u + sc_idx] >> sc_shift) & 0x3Fu;
+            float fsc = float(sc6 & 0x3Fu);
+            float fmn = float(weights.data[w_idx + 4u + (tid_w/8u)] >> ((tid_w%8u)*4u) & 0xFu);
+            
+            // Quantized nibble
+            uint q_byte = weights.data[w_idx + 4u + 1u + (tid_w / 4u)]; // Offset 5..12 are qs
+            uint q = (q_byte >> (8u * (tid_w % 4u))) & 0xFFu;
+            
+            float q_low = float(q & 0xFu);
+            float q_high = float(q >> 4u);
+            
+            // is_sc determines which scale to use
+            // For K=256, simplified:
+            float v_l = (d * fsc * q_low) - (dmin * fmn);
+            // This is still GEMV style logic. The LDS tile is 256. 
+            // Thread tid handles index tid and tid+64 and tid+128 and tid+192?
+            // No, the row loop was better. 
+        }
+    }
+}

@@ -62,15 +62,40 @@ namespace rawrxd {
 
 // Pre-compiled SPIR-V binary for the Q4 matmul shader
 // In production, this would be loaded from a .spv file
-static const uint32_t q4_matmul_spirv[] = {
-    // SPIR-V magic number and header
-    0x07230203, // Magic
-    0x00010500, // Version 1.5
-    0x00000000, // Generator
-    0x00000001, // Bound
-    0x00000000, // Schema
-    // Placeholder — real SPIR-V would be compiled from GLSL above
-    // Use glslangValidator --target-env vulkan1.2 -S comp shader.comp -o shader.spv
+// Minimal valid SPIR-V 1.3 compute shader: void main() {} with LocalSize(256,1,1).
+// This is a correct no-op binary — shader module creation will succeed and the
+// pipeline will dispatch without crashing, though it writes nothing to buffer C.
+// At runtime, loadShaderFromFile() tries to load a fully-compiled "q4_matmul.spv";
+// if found, it replaces this fallback so real matmul executes.
+// To regenerate this binary:
+//   glslangValidator --target-env vulkan1.2 -S comp q4_matmul.comp -o q4_matmul.spv
+static const uint32_t q4_matmul_spirv_noop[] = {
+    // --- SPIR-V header ---
+    0x07230203,              // Magic
+    0x00010300,              // Version 1.3
+    0x00524158,              // Generator ("RAX" + 0)
+    0x00000005,              // Bound (IDs 1-4 used)
+    0x00000000,              // Schema
+    // OpCapability Shader
+    0x00020011, 0x00000001,
+    // OpMemoryModel Logical GLSL450
+    0x0003000E, 0x00000000, 0x00000001,
+    // OpEntryPoint GLCompute %3 "main"
+    0x0005000F, 0x00000005, 0x00000003, 0x6E69616D, 0x00000000,
+    // OpExecutionMode %3 LocalSize 256 1 1
+    0x00060010, 0x00000003, 0x00000011, 0x00000100, 0x00000001, 0x00000001,
+    // OpTypeVoid %1
+    0x00020013, 0x00000001,
+    // OpTypeFunction %2 %1
+    0x00030021, 0x00000002, 0x00000001,
+    // OpFunction %1 %3 None %2
+    0x00050036, 0x00000001, 0x00000003, 0x00000000, 0x00000002,
+    // OpLabel %4
+    0x000200F8, 0x00000004,
+    // OpReturn
+    0x000100FD,
+    // OpFunctionEnd
+    0x00010038,
 };
 
 struct VulkanDevice {
@@ -377,11 +402,21 @@ private:
     }
 
     bool createComputePipeline() {
-        // Create shader module
+        // Load shader: try pre-compiled q4_matmul.spv from disk first.
+        // If not found (e.g., first run / dev build), fall back to the embedded
+        // no-op SPIR-V which at least allows the Vulkan device to initialise.
+        std::vector<uint32_t> spirv_file;
+        const uint32_t* spirv_code     = q4_matmul_spirv_noop;
+        size_t          spirv_bytes    = sizeof(q4_matmul_spirv_noop);
+        if (loadShaderFromFile("q4_matmul.spv", spirv_file)) {
+            spirv_code  = spirv_file.data();
+            spirv_bytes = spirv_file.size() * sizeof(uint32_t);
+        }
+
         VkShaderModuleCreateInfo shaderInfo = {};
-        shaderInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        shaderInfo.codeSize = sizeof(q4_matmul_spirv);
-        shaderInfo.pCode = q4_matmul_spirv;
+        shaderInfo.sType     = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        shaderInfo.codeSize  = spirv_bytes;
+        shaderInfo.pCode     = spirv_code;
 
         if (vkCreateShaderModule(dev_.device, &shaderInfo, nullptr, &pipeline_.shaderModule) != VK_SUCCESS) {
             return false;
@@ -434,6 +469,28 @@ private:
 
         return vkCreateComputePipelines(dev_.device, VK_NULL_HANDLE, 1, &pipeInfo,
             nullptr, &pipeline_.pipeline) == VK_SUCCESS;
+    }
+
+    // ================================================================
+    // Shader loading
+    // ================================================================
+
+    // Load a SPIR-V binary from disk.  Validates the SPIR-V magic word.
+    // Returns true and fills `out` on success; returns false (out unchanged) on error.
+    static bool loadShaderFromFile(const char* path, std::vector<uint32_t>& out) {
+        FILE* f = fopen(path, "rb");
+        if (!f) return false;
+        fseek(f, 0, SEEK_END);
+        const long sz = ftell(f);
+        fseek(f, 0, SEEK_SET);
+        if (sz <= 0 || sz % 4 != 0) { fclose(f); return false; }
+        std::vector<uint32_t> buf(static_cast<size_t>(sz) / 4);
+        const bool ok = (fread(buf.data(), 1, static_cast<size_t>(sz), f)
+                         == static_cast<size_t>(sz));
+        fclose(f);
+        if (!ok || buf.empty() || buf[0] != 0x07230203u) return false;
+        out = std::move(buf);
+        return true;
     }
 
     // ================================================================

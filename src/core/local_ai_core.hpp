@@ -307,6 +307,8 @@ private:
     uint32_t    m_vocabSize     = 0;
     uint32_t    m_bosToken      = 1;
     uint32_t    m_eosToken      = 2;
+    uint8_t*    m_stringPool    = nullptr;   // Owned copies of all token strings
+    size_t      m_stringPoolSize = 0;
 
     // BPE merge table (sorted by priority)
     struct MergeEntry {
@@ -533,6 +535,10 @@ private:
     float*                  m_qBuf          = nullptr;  // Query projection buffer
     float*                  m_kBuf          = nullptr;  // Key projection buffer
     float*                  m_vBuf          = nullptr;  // Value projection buffer
+    float*                  m_scoresBuf     = nullptr;  // [maxSeqLen] attention scores per (h,sq)
+    float*                  m_kvTempBuf     = nullptr;  // [hiddenDim*2] KV cache read temp (K+V)
+    float*                  m_ffnGateBuf    = nullptr;  // [maxSeqLen*ffnDim] FFN gate scratch
+    float*                  m_ffnUpBuf      = nullptr;  // [maxSeqLen*ffnDim] FFN up scratch
 
     // Sequence position
     uint32_t                m_seqPos        = 0;

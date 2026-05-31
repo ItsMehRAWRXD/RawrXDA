@@ -1,0 +1,6 @@
+logs/*.log
+logs/*.txt
+tools/*.exe
+tools/*.obj
+tools/*.pdb
+startup_*.log

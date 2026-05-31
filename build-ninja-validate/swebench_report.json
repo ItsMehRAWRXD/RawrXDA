@@ -1,0 +1,16 @@
+{
+  "total": 4,
+  "completed": 0,
+  "patch_correct": 0,
+  "tests_passed": 0,
+  "task_completion_rate": 0.0000,
+  "patch_correctness": 0.0000,
+  "test_pass_rate": 0.0000,
+  "overall_score": 0.0000,
+  "results": [
+    {"task_id": "rawrxd-001", "status": 4, "patch_match": false, "tests_passed": false, "elapsed_ms": 0.00},
+    {"task_id": "rawrxd-002", "status": 4, "patch_match": false, "tests_passed": false, "elapsed_ms": 0.00},
+    {"task_id": "rawrxd-003", "status": 4, "patch_match": false, "tests_passed": false, "elapsed_ms": 0.00},
+    {"task_id": "rawrxd-004", "status": 4, "patch_match": false, "tests_passed": false, "elapsed_ms": 0.00}
+  ]
+}

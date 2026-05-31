@@ -177,7 +177,7 @@ static const CommandDescriptor g_commandTable[] = {
 
     // ── Backend Switch (5037 range) ────────────────────────────────────
     { 5037, "Backend: Switch Local",     FeatureCategory::AI, nullptr, "Switch to local inference" },
-    { 5038, "Backend: Switch Ollama",    FeatureCategory::AI, nullptr, "Switch to Ollama backend" },
+    { 5038, "Backend: Switch Native",    FeatureCategory::AI, nullptr, "Switch to native inference backend" },
     { 5039, "Backend: Switch OpenAI",    FeatureCategory::AI, nullptr, "Switch to OpenAI backend" },
     { 5040, "Backend: Switch Claude",    FeatureCategory::AI, nullptr, "Switch to Claude backend" },
     { 5041, "Backend: Switch Gemini",    FeatureCategory::AI, nullptr, "Switch to Gemini backend" },

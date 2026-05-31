@@ -1276,11 +1276,9 @@ void Win32IDE::applyCodeAction(const CodeAction& action) {
 
     if (action.kind == "source.organizeImports") {
         appendToOutput("[CodeAction] Organizing imports...\n");
-        // If LSP supports it, send textDocument/codeAction with only this action kind
-        // TODO: wire m_lspClientPtr once LSP client bridge is integrated
-        // if (m_lspClientPtr) {
-        //     m_lspClientPtr->GetCodeActions(m_currentFile, 0, 0, 0, 0);
-        // }
+        if (!lspOrganizeImports()) {
+            appendToOutput("[CodeAction] Organize imports: no LSP edits (server unavailable or no changes needed)\n");
+        }
         return;
     }
 

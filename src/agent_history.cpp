@@ -219,7 +219,7 @@ AgentHistoryRecorder::AgentHistoryRecorder(const std::string& storageDir)
         try {
             fs::create_directories(m_storageDir);
         } catch (const std::exception& ex) {
-            // Will log when callback is set
+            fprintf(stderr, "[AgentHistory] Failed to create storage directory: %s\n", ex.what());
         }
     }
     

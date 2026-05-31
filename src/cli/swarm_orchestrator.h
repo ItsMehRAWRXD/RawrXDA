@@ -146,6 +146,9 @@ struct SwarmInferenceRequest {
     std::vector<uint32_t> layerPath;    // Layer indices to traverse in order
     void*           inputData;          // KV cache / embedding input
     uint64_t        inputSize;          // Input size in bytes
+    void*           outputData;         // Optional caller-owned output buffer
+    uint64_t        outputCapacity;     // Bytes available in outputData
+    uint64_t*       outputSizeWritten;  // Optional written byte count
     uint32_t        currentLayer;       // Current progress in the pipeline
 
     // Callback: invoked when inference completes across all shards
@@ -273,12 +276,15 @@ private:
 
     // ---- Coordination Logic ----
     std::string selectOptimalNode(uint32_t layerIdx);
+    std::string selectOptimalNodeLocked(uint32_t layerIdx) const;
     bool migrateLayer(uint32_t layerIdx, const std::string& fromNode, const std::string& toNode);
     void updateTopology();
+    void updateTopologyLocked();
     void detectDeadNodes();
 
     // ---- Network Helpers ----
     bool sendToNode(const std::string& nodeId, uint16_t msgType, const void* data, size_t len);
+    bool sendToNodeUnlocked(const SwarmNode& node, uint16_t msgType, const void* data, size_t len);
     bool broadcastUDP(uint16_t msgType, const void* data, size_t len);
 
     // ---- Node ID Generation ----
@@ -306,6 +312,7 @@ private:
     std::thread             m_dataThread;
     std::thread             m_heartbeatThread;
     std::thread             m_inferenceThread;
+    std::atomic<uint32_t>   m_activeClientHandlers{0};
 
     // Statistics
     SwarmStats              m_stats;

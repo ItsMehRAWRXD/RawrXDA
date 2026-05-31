@@ -173,6 +173,47 @@ struct DiagnosticEntry {
 };
 
 // ============================================================================
+// CODE LENS ENTRY — actionable inline decoration
+// ============================================================================
+struct CodeLensEntry {
+    Range        range;
+    std::string  title;           // e.g., "5 references"
+    std::string  command;         // optional, e.g., "editor.action.goToReferences"
+    bool         isResolved = false;
+};
+
+// ============================================================================
+// INLAY HINT ENTRY — type hint or parameter label
+// ============================================================================
+struct InlayHintEntry {
+    Position     position;         // 0-based position
+    std::string  label;            // e.g., ": int" or "param: "
+    bool         paddingLeft  = false;
+    bool         paddingRight = false;
+    int          kind         = 1;  // 1 = Type, 2 = Parameter
+};
+
+// ============================================================================
+// CALL HIERARCHY ITEM — symbol in a call chain
+// ============================================================================
+struct CallHierarchyItem {
+    std::string  name;
+    int          kind = static_cast<int>(SymbolKind::Function);
+    std::string  detail;
+    std::string  uri;
+    Range        range;
+    Range        selectionRange;
+};
+
+// ============================================================================
+// INCOMING/OUTGOING CALL ENTRY
+// ============================================================================
+struct CallHierarchyCall {
+    CallHierarchyItem item;
+    std::vector<Range> fromRanges;  // ranges where the call occurs
+};
+
+// ============================================================================
 // SERVER STATISTICS — runtime counters
 // ============================================================================
 struct ServerStats {
@@ -188,6 +229,9 @@ struct ServerStats {
     uint64_t documentSymbolRequests = 0;
     uint64_t workspaceSymbolRequests = 0;
     uint64_t semanticTokenRequests  = 0;
+    uint64_t codeLensRequests       = 0;
+    uint64_t inlayHintRequests      = 0;
+    uint64_t callHierarchyRequests  = 0;
     uint64_t bytesRead              = 0;
     uint64_t bytesWritten           = 0;
     double   avgResponseMs          = 0.0;
@@ -211,6 +255,9 @@ struct ServerConfig {
     bool        enableDocumentSymbol = true;
     bool        enableWorkspaceSymbol = true;
     bool        enableDiagnostics    = true;
+    bool        enableCodeLens       = true;
+    bool        enableInlayHints     = true;
+    bool        enableCallHierarchy  = true;
     
     // Indexer tuning
     int         indexThrottleMs      = 200;    // debounce didChange re-index
@@ -329,6 +376,11 @@ private:
     nlohmann::json handleTextDocumentDocumentSymbol(int id, const nlohmann::json& params);
     nlohmann::json handleWorkspaceSymbol(int id, const nlohmann::json& params);
     nlohmann::json handleTextDocumentSemanticTokensFull(int id, const nlohmann::json& params);
+    nlohmann::json handleTextDocumentCodeLens(int id, const nlohmann::json& params);
+    nlohmann::json handleTextDocumentInlayHint(int id, const nlohmann::json& params);
+    nlohmann::json handleTextDocumentPrepareCallHierarchy(int id, const nlohmann::json& params);
+    nlohmann::json handleCallHierarchyIncomingCalls(int id, const nlohmann::json& params);
+    nlohmann::json handleCallHierarchyOutgoingCalls(int id, const nlohmann::json& params);
 
     // ---- LSP Notification Handlers ----
     void handleInitialized(const nlohmann::json& params);
@@ -352,6 +404,12 @@ private:
 
     // ---- Semantic token encoding ----
     std::vector<uint32_t> encodeSemanticTokens(const std::string& content) const;
+
+    // ---- Code lens, inlay hints, call hierarchy helpers ----
+    std::vector<CodeLensEntry> generateCodeLenses(const std::string& filePath, const std::string& content);
+    std::vector<InlayHintEntry> generateInlayHints(const std::string& filePath, const std::string& content);
+    std::vector<CallHierarchyCall> findCallers(const IndexedSymbol& symbol);
+    std::vector<CallHierarchyCall> findCallees(const IndexedSymbol& symbol, const std::string& fileContent);
 
     // ---- Thread entry points ----
     void readerThreadFunc();

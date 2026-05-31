@@ -164,6 +164,10 @@ struct JSExtensionState {
 
     // Polyfills consumed by this extension
     std::vector<std::string> requiredPolyfills;
+
+    // Native dispatch permissions granted from package.json
+    uint32_t        nativePermissionMask;
+    std::vector<std::string> grantedNativePermissions;
 };
 
 // ============================================================================
@@ -284,6 +288,13 @@ class JSExtensionHost {
 public:
     static JSExtensionHost& instance();
 
+    enum NativePermission : uint32_t {
+        NativePermNone           = 0,
+        NativePermTelemetry      = 1u << 0,
+        NativePermWorkspaceRead  = 1u << 1,
+        NativePermWindowNotify   = 1u << 2,
+    };
+
     // ---- Lifecycle ----
     PatchResult initialize();
     PatchResult shutdown();
@@ -320,6 +331,14 @@ public:
     // Register a custom module resolver for a specific module name
     PatchResult registerModuleResolver(const char* moduleName,
                                         const char* jsSource);
+
+    // ---- Native Dispatch Table ----
+    PatchResult invokeNativeDispatch(const char* extensionId,
+                                      const char* opName,
+                                      const char* payload,
+                                      std::string* outJson);
+    void getNativeDispatchOperations(const char* extensionId,
+                                      std::vector<std::string>* outOps) const;
 
     // ---- Execution ----
 
@@ -433,4 +452,19 @@ private:
 
     // ---- Statistics ----
     mutable Stats       m_stats;
+
+    // ---- Native Dispatch Registry ----
+    using NativeDispatchHandler = std::function<PatchResult(const std::string&, std::string&)>;
+    struct NativeDispatchEntry {
+        uint32_t requiredPermissions;
+        NativeDispatchHandler handler;
+    };
+    std::unordered_map<std::string, NativeDispatchEntry> m_nativeDispatch;
+    mutable std::mutex m_nativeDispatchMutex;
+
+    void registerDefaultNativeDispatch();
+    std::string getExtensionIdForContext(void* jsCtx) const;
+    uint32_t parseNativePermissionMask(const std::vector<std::string>& permissions) const;
+    bool hasNativePermission(const JSExtensionState* state, uint32_t requiredMask) const;
+    void bindNativeDispatchTable(void* ctx);
 };

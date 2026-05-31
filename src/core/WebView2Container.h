@@ -94,11 +94,11 @@ void WebView2Container_SetErrorCallback(WebView2ErrorCallback callback, void* us
 /// 4. C++ Standard:
 ///    - Requires C++11 or later (/std:c++11 minimum)
 /// 
-/// 5. Example CMake configuration:
+/// 5. CMake configuration:
 ///    find_package(Microsoft.Web.WebView2 REQUIRED)
 ///    target_link_libraries(your_target PRIVATE Microsoft.Web.WebView2::WebView2)
 /// 
-/// 6. Example Visual Studio project settings:
+/// 6. Visual Studio project settings:
 ///    - Additional Include Directories: $(WebView2)\include
 ///    - Additional Library Directories: $(WebView2)\lib
 ///    - Additional Dependencies: WebView2Loader.dll.lib

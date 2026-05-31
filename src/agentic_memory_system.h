@@ -7,6 +7,7 @@
 #include <chrono>
 #include <mutex>
 #include <atomic>
+#include <nlohmann/json.hpp>
 
 // Define MemoryType enum
 enum class MemoryType {
@@ -49,6 +50,10 @@ public:
     // Management
     size_t getMemoryCount() const;
     void clearAll();
+
+    // Persistence
+    nlohmann::json exportState() const;
+    bool importState(const nlohmann::json& state);
 
     // Stats
     size_t getTotalRetrieved() const { return m_totalRetrieved; }

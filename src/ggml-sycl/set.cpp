@@ -1,6 +1,6 @@
 #include "presets.hpp"
 #include "common.hpp"
-#include "ggml.h"
+#include "ggml_rxd_internal.h"
 #include "set.hpp"
 #include <cstdint>
 #include <sycl/sycl.hpp>

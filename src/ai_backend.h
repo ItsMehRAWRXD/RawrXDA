@@ -22,7 +22,7 @@
 // ── Backend type enum ──────────────────────────────────────────────────────
 enum class AIBackendType {
     LocalGGUF = 0,
-    Ollama    = 1,
+    Native    = 1,
     OpenAI    = 2,
     Claude    = 3,
     Gemini    = 4,
@@ -32,7 +32,7 @@ enum class AIBackendType {
 inline const char* aiBackendTypeName(AIBackendType t) {
     switch (t) {
         case AIBackendType::LocalGGUF: return "LocalGGUF";
-        case AIBackendType::Ollama:    return "Ollama";
+        case AIBackendType::Native:    return "native";
         case AIBackendType::OpenAI:    return "OpenAI";
         case AIBackendType::Claude:    return "Claude";
         case AIBackendType::Gemini:    return "Gemini";
@@ -43,7 +43,7 @@ inline const char* aiBackendTypeName(AIBackendType t) {
 
 inline AIBackendType aiBackendTypeFromName(const std::string& name) {
     if (name == "LocalGGUF" || name == "local")  return AIBackendType::LocalGGUF;
-    if (name == "Ollama"    || name == "ollama")  return AIBackendType::Ollama;
+    if (name == "native"    || name == "native")  return AIBackendType::Native;
     if (name == "OpenAI"    || name == "openai")  return AIBackendType::OpenAI;
     if (name == "Claude"    || name == "claude")  return AIBackendType::Claude;
     if (name == "Gemini"    || name == "gemini")  return AIBackendType::Gemini;

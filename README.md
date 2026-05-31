@@ -1,200 +1,130 @@
-# RawrXD PE Writer - Complete Implementation
+# RawrXD PE Writer - Implementation Notes
 
 ## Overview
 
-This is a complete PE32+ writer and machine code emitter implemented in pure x64 MASM assembly with zero dependencies and no CRT usage. It generates runnable Windows executables from scratch.
+This repository contains a PE32+ writer and machine-code emitter implemented in x64 MASM. The writer builds runnable Windows executables from scratch and manages PE headers, sections, imports, and relocation data.
 
-## Architecture
+This document is implementation-aligned with `RawrXD_PE_Writer.asm`.
 
-The PE writer follows a backend designer approach, providing a clean API for:
-- Creating PE executable contexts
-- Adding imports with proper IAT/INT structures  
-- Emitting machine code with section management
-- Writing complete PE files with all required headers
+## Public API Surface
 
-## Core Components
+Core PE writer entry points:
+- `PEWriter_CreateExecutable`
+- `PEWriter_AddSection`
+- `PEWriter_AddImport`
+- `PEWriter_AddCode`
+- `PEWriter_AddData`
+- `PEWriter_AddBssSpace`
+- `PEWriter_AddBaseRelocation`
+- `PEWriter_BuildRelocSection`
+- `PEWriter_WriteFile`
 
-### 1. Structures Defined
+Machine-code emitter entry points are also exported (`Emit_*`, label/relocation helpers).
 
-- **IMAGE_DOS_HEADER**: Standard DOS header with e_lfanew pointer
-- **IMAGE_NT_HEADERS64**: NT headers with file header and optional header
-- **IMAGE_SECTION_HEADER**: Section headers for .text, .rdata, .idata
-- **IMAGE_IMPORT_DESCRIPTOR**: Import table descriptors
-- **PE_CONTEXT**: Internal context structure for building PE files
+## Key Data Structures
 
-### 2. Key Functions
+- `IMAGE_DOS_HEADER`
+- `IMAGE_NT_HEADERS64`
+- `IMAGE_SECTION_HEADER`
+- `IMAGE_IMPORT_DESCRIPTOR`
+- `PE_CONTEXT` (expanded internal context with code/data/import/reloc/resource/exception fields)
 
-#### PEWriter_CreateExecutable
-- **Input**: RCX = image base (0 = default), RDX = entry point RVA
-- **Output**: RAX = PE context handle (0 = failure)
-- **Purpose**: Allocates and initializes complete PE context structure
+## Runtime and Memory Model
 
-**Implementation Details**:
-- Allocates memory for DOS header, NT headers, section headers
-- Initializes DOS header with proper signature and e_lfanew
-- Sets up NT headers with AMD64 machine type and PE32+ magic
-- Configures optional header with image base, section/file alignment
-- Allocates code buffer and import tables
-- Sets default virtual addresses and file offsets
+The implementation uses Win32 heap APIs directly:
+- `GetProcessHeap`
+- `HeapAlloc`
+- `HeapFree`
 
-#### PEWriter_AddImport
-- **Input**: RCX = PE context, RDX = DLL name, R8 = function name  
-- **Output**: RAX = 1 success, 0 failure
-- **Purpose**: Builds import table with proper IAT/INT structures
+No CRT allocation path is required by the writer itself.
 
-**Implementation Details**:
-- Manages import descriptors for multiple DLLs
-- Creates import lookup table (INT) entries
-- Sets up import address table (IAT) entries
-- Handles import by name structures
-- Tracks import count and validates limits
+## Current Defaults and Limits
 
-#### PEWriter_AddCode
-- **Input**: RCX = PE context, RDX = code buffer, R8 = code size
-- **Output**: RAX = RVA of code (0 = failure)
-- **Purpose**: Handles machine code emission with proper section management
+- Default image base: `0x140000000`
+- Section alignment: `0x1000`
+- File alignment: `0x200`
+- Subsystem default: `IMAGE_SUBSYSTEM_WINDOWS_CUI`
+- `MAX_IMPORTS = 100` (effective limit used by checks: 99 entries)
+- `MAX_CODE_SIZE = 0x100000` (1 MiB)
+- `MAX_SECTIONS = 16`
 
-**Implementation Details**:
-- Copies machine code to internal buffer
-- Validates code size against maximum limits
-- Calculates and returns RVA for the code
-- Updates internal code size tracking
-- Manages .text section content
+## Section Layout Behavior
 
-#### PEWriter_WriteFile
-- **Input**: RCX = PE context, RDX = filename
-- **Output**: RAX = 1 success, 0 failure  
-- **Purpose**: Complete file writing with all headers, sections, and import table
+The writer supports dynamic section management, and `PEWriter_WriteFile` currently normalizes output to a canonical 5-section baseline:
+- `.text`
+- `.rdata`
+- `.idata`
+- `.data`
+- `.reloc`
 
-**Implementation Details**:
-- Creates output file with proper Win32 API calls
-- Writes DOS header and DOS stub
-- Calculates and updates final NT header values
-- Writes section headers for .text, .rdata, .idata
-- Implements proper file padding and alignment
-- Writes section data with import table
-- Handles all RVA calculations and file offsets
+Imports and base relocations are written as part of the final image emission path.
 
-## Memory Management
+## Import Table Handling
 
-The implementation uses Windows heap APIs:
-- **GetProcessHeap()**: Gets current process heap
-- **HeapAlloc()**: Allocates zero-initialized memory
-- **HeapFree()**: Frees allocated memory on cleanup
+Import support includes:
+- Multiple DLL descriptors
+- DLL deduplication logic
+- Import-by-name entries
+- IAT/ILT construction
+- Import directory population in PE data directories
 
-All memory allocation includes proper error handling and cleanup.
+## Relocation Support
 
-## File Structure Layout
+Base relocation support is implemented:
+- `PEWriter_AddBaseRelocation`
+- `PEWriter_BuildRelocSection`
+- `.reloc` section emission in `PEWriter_WriteFile`
 
-```
-DOS Header (64 bytes)
-DOS Stub (variable size, padded to 0x80)  
-NT Headers (248 bytes for PE32+)
-Section Headers (40 bytes × 3 sections)
-Padding to file alignment (0x400)
-
-.text Section (code)
-- Machine code
-- Padded to file alignment
-
-.rdata Section (read-only data)
-- String constants, resources
-- Padded to file alignment  
-
-.idata Section (import data)
-- Import descriptors
-- Import lookup table
-- Import address table  
-- Import by name structures
-- Padded to file alignment
-```
-
-## Virtual Address Layout
-
-```
-0x1000: .text section (SECTION_ALIGNMENT)
-0x2000: .rdata section  
-0x3000: .idata section
-0x4000: Next available virtual address
-```
-
-## Constants and Defaults
-
-- **Image Base**: 0x140000000 (default for x64)
-- **Section Alignment**: 0x1000 (4KB)  
-- **File Alignment**: 0x200 (512 bytes)
-- **Entry Point**: Configurable RVA
-- **Subsystem**: Console application (IMAGE_SUBSYSTEM_WINDOWS_CUI)
-
-## Usage Example
+## Minimal Usage Example
 
 ```assembly
 ; Create PE context
-mov rcx, 0          ; Default image base
-mov rdx, 1000h      ; Entry point RVA  
+mov rcx, 0          ; default image base
+mov rdx, 1000h      ; entry point RVA
 call PEWriter_CreateExecutable
-mov rbx, rax        ; Save context
+mov rbx, rax
 
-; Add kernel32.dll imports
+; Add an import
 mov rcx, rbx
 mov rdx, offset dll_kernel32
-mov r8, offset func_GetStdHandle
+mov r8,  offset func_ExitProcess
 call PEWriter_AddImport
 
-; Add machine code
+; Add code bytes
 mov rcx, rbx
 mov rdx, offset code_buffer
-mov r8, code_size
+mov r8,  code_size
 call PEWriter_AddCode
 
-; Write executable file
-mov rcx, rbx  
-mov rdx, offset filename
+; Emit PE file
+mov rcx, rbx
+mov rdx, offset out_name
 call PEWriter_WriteFile
 ```
 
-## Build Instructions
+## Build and Test Notes
 
-1. Ensure MASM64 and Windows SDK are installed
-2. Run `build.bat` to compile PE writer and example
-3. Execute `PE_Writer_Example.exe` to generate `hello.exe`
-4. Test the generated executable
+- `build.bat` currently runs a CMake Debug build for the repository workspace.
+- The standalone PE writer demonstration source is `RawrXD_PE_Writer_Test.asm`.
+- The test source writes `test_output.exe`.
 
-## Error Handling
+## Error Handling Contract
 
-All functions return 0 on failure and non-zero on success. The implementation includes:
-- Memory allocation failure checks
-- File I/O error handling  
-- Input validation
-- Proper resource cleanup
-- Bounds checking for buffers
+Writer routines follow a simple return contract:
+- `0` = failure
+- non-zero = success (or valid RVA/handle for APIs that return addresses)
 
-## Limitations
+Checks include allocation validation, input checks, capacity bounds, and file I/O result handling.
 
-- Maximum 99 imports (MAX_IMPORTS - 1)
-- Maximum 64KB code size (MAX_CODE_SIZE)  
-- Three fixed sections (.text, .rdata, .idata)
-- Console subsystem only
-- No relocations support
-- No digital signatures
+## Scope Boundaries
 
-## Advanced Features
+Implemented:
+- PE32+ header/section emission
+- Import table construction
+- Code/data/bss support
+- Base relocation support
+- Machine-code emitter primitives
 
-The implementation provides a solid foundation for:
-- Custom section creation
-- Complex import binding
-- Resource embedding  
-- Digital signing
-- Relocation support
-- Exception handling tables
-
-## Technical Notes
-
-- Pure x64 MASM assembly - no CRT dependencies
-- Uses Windows heap for memory management
-- Generates PE32+ format for x64
-- Compatible with Windows Vista and later
-- Follows Microsoft PE specification
-- Zero external library dependencies except kernel32.dll
-
-This implementation provides a complete, production-ready PE32+ writer suitable for code generation backends, custom compilers, and executable packers.
+Out of scope in current writer path:
+- Authenticode/digital signing pipeline
+- Full production resource compiler workflow (beyond raw section buffer support)

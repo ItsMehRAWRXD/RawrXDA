@@ -148,11 +148,19 @@ public:
     
     Span trace(const std::string& name, const std::map<std::string, std::string>& tags = {});
     
+    // Batch 6: ZMM-Aligned Node Monitoring
+    void emitHeartbeat(const std::string& nodeName);
+    bool checkNodeHealth(const std::string& nodeName, uint64_t timeoutCycles);
+
 private:
     Telemetry() = default;
     
     ObservabilityConfig config_;
     bool initialized_ = false;
+
+    // Heartbeat tracking
+    std::mutex heartbeatMtx_;
+    std::map<std::string, uint64_t> lastHeartbeats_;
 };
 
 // Convenience macros

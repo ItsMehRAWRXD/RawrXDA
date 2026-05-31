@@ -358,25 +358,33 @@ void ModelCascadeRouter::setFallbackChain(const std::vector<std::string>& chain)
 std::string ModelCascadeRouter::getNextFallback(const std::string& failedModel) const {
     std::lock_guard<std::mutex> lock(m_mutex);
     auto it = std::find(m_fallbackChain.begin(), m_fallbackChain.end(), failedModel);
-    if (it != m_fallbackChain.end() && ++it != m_fallbackChain.end()) {
-        return *it;
+    if (it == m_fallbackChain.end()) {
+        return "";
+    }
+
+    auto next = it;
+    ++next;
+    if (next != m_fallbackChain.end()) {
+        return *next;
     }
     return "";
 }
 
 void ModelCascadeRouter::recordLatency(const std::string& modelId, float latencyMs) {
     std::lock_guard<std::mutex> lock(m_mutex);
-    auto it = m_histograms.find(modelId);
-    if (it != m_histograms.end()) {
-        it->second->recordLatency(latencyMs);
+    auto histogramIt = m_histograms.find(modelId);
+    if (histogramIt == m_histograms.end() || !histogramIt->second) {
+        return;
     }
+
+    histogramIt->second->recordLatency(latencyMs);
 
     // Update model capability
     auto mit = m_models.find(modelId);
     if (mit != m_models.end()) {
-        mit->second.latencyP50 = it->second->p50();
-        mit->second.latencyP95 = it->second->p95();
-        mit->second.latencyP99 = it->second->p99();
+        mit->second.latencyP50 = histogramIt->second->p50();
+        mit->second.latencyP95 = histogramIt->second->p95();
+        mit->second.latencyP99 = histogramIt->second->p99();
     }
 }
 

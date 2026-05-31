@@ -1,8 +1,10 @@
 #include "Engine.hpp"
+#include "../observability/Telemetry.hpp"
 #include <vector>
 #include <algorithm>
 #include <memory>
 #include <cstdint>
+#include <sstream>
 
 namespace {
 double Clamp01(double v) {
@@ -13,6 +15,9 @@ double Clamp01(double v) {
 }
 
 namespace RawrXD::Agentic::Hotpatch {
+
+// Forward declarations for internal helpers (defined later in file)
+class Engine;
 
 // MemoryProtection implementation
 MemoryProtection::MemoryProtection(void* address, size_t size, DWORD newProtection)
@@ -108,6 +113,12 @@ bool Detour::install() {
     }
     
     installed_ = true;
+
+    std::stringstream ss;
+    ss << "Hotpatch installed at " << target_ << " -> " << replacement_;
+    RawrXD::Agentic::Observability::Telemetry::instance().logInfo(ss.str());
+    RawrXD::Agentic::Observability::Telemetry::instance().metric("hotpatch.installed");
+
     return true;
 }
 
@@ -124,6 +135,12 @@ bool Detour::remove() {
     
     memcpy(target_, originalCode_.data(), originalCode_.size());
     installed_ = false;
+
+    std::stringstream ss;
+    ss << "Hotpatch removed from " << target_;
+    RawrXD::Agentic::Observability::Telemetry::instance().logInfo(ss.str());
+    RawrXD::Agentic::Observability::Telemetry::instance().metric("hotpatch.removed");
+
     return true;
 }
 
@@ -163,7 +180,103 @@ bool Detour::writeJump(void* from, void* to) {
     return true;
 }
 
+// ============================================================================
+// Internal helper functions (must be defined before use)
+// ============================================================================
+
+HookConfig* Engine::findHook(const std::string& name) {
+    auto it = hooks_.find(name);
+    return it != hooks_.end() ? &it->second : nullptr;
+}
+
+bool Engine::applyHook(HookConfig& config) {
+    if (!hotpatchingEnabled_) {
+        return false;
+    }
+
+    if (config.enabled) {
+        return true; // Already applied
+    }
+    
+    switch (config.type) {
+        case HookType::DETOUR: {
+            auto* detour = new Detour(config.target, config.replacement);
+            if (!detour->install()) {
+                delete detour;
+                return false;
+            }
+            config.trampoline = reinterpret_cast<void*>(detour->getTrampoline<void>());
+            config.runtimeHandle = detour;
+            break;
+        }
+        case HookType::PATCH: {
+            MemoryProtection prot(config.target, config.patchSize, PAGE_EXECUTE_READWRITE);
+            if (!prot.isValid()) {
+                return false;
+            }
+            // Save original bytes before patching
+            config.originalCode.resize(config.patchSize);
+            memcpy(config.originalCode.data(), config.target, config.patchSize);
+            // Apply the patch data over the target memory
+            memcpy(config.target, config.patchData.data(),
+                   std::min(config.patchSize, static_cast<size_t>(config.patchData.size())));
+            break;
+        }
+        default:
+            return false;
+    }
+    
+    config.enabled = true;
+    return true;
+}
+
+bool Engine::removeHook(HookConfig& config) {
+    if (!config.enabled) {
+        return true; // Already removed
+    }
+    
+    switch (config.type) {
+        case HookType::DETOUR: {
+            auto* detour = static_cast<Detour*>(config.runtimeHandle);
+            if (detour) {
+                if (!detour->remove()) {
+                    return false;
+                }
+                delete detour;
+                config.runtimeHandle = nullptr;
+                config.trampoline = nullptr;
+            } else {
+                // Best-effort fallback if runtime handle is missing.
+                MemoryProtection prot(config.target, 5, PAGE_EXECUTE_READWRITE);
+                if (!prot.isValid()) {
+                    return false;
+                }
+                if (config.originalCode.size() >= 5) {
+                    memcpy(config.target, config.originalCode.data(), 5);
+                }
+            }
+            break;
+        }
+        case HookType::PATCH: {
+            MemoryProtection prot(config.target, config.patchSize, PAGE_EXECUTE_READWRITE);
+            if (!prot.isValid()) {
+                return false;
+            }
+            memcpy(config.target, config.originalCode.data(), config.patchSize);
+            break;
+        }
+        default:
+            return false;
+    }
+    
+    config.enabled = false;
+    return true;
+}
+
+// ============================================================================
 // Engine implementation
+// ============================================================================
+
 Engine& Engine::instance() {
     static Engine instance;
     return instance;
@@ -438,93 +551,23 @@ bool Engine::isAddressWritable(void* address) const {
     return (mbi.Protect & (PAGE_READWRITE | PAGE_EXECUTE_READWRITE | PAGE_WRITECOPY)) != 0;
 }
 
-HookConfig* Engine::findHook(const std::string& name) {
-    auto it = hooks_.find(name);
-    return it != hooks_.end() ? &it->second : nullptr;
+std::optional<FailureReport> Engine::detectFailure(const std::string& output) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!m_detector.isEnabled()) {
+        return std::nullopt;
+    }
+    FailureInfo info = m_detector.detectFailure(output);
+    if (info.type == AgentFailureType::None || info.confidence < m_failureThreshold) {
+
+        return std::nullopt;
+    }
+    return FailureReport{ info.type, static_cast<float>(info.confidence), info.description };
 }
 
-bool Engine::applyHook(HookConfig& config) {
-    if (!hotpatchingEnabled_) {
-        return false;
-    }
-
-    if (config.enabled) {
-        return true; // Already applied
-    }
-    
-    switch (config.type) {
-        case HookType::DETOUR: {
-            auto* detour = new Detour(config.target, config.replacement);
-            if (!detour->install()) {
-                delete detour;
-                return false;
-            }
-            config.trampoline = reinterpret_cast<void*>(detour->getTrampoline<void()>());
-            config.runtimeHandle = detour;
-            break;
-        }
-        case HookType::PATCH: {
-            MemoryProtection prot(config.target, config.patchSize, PAGE_EXECUTE_READWRITE);
-            if (!prot.isValid()) {
-                return false;
-            }
-            // Save original bytes before patching
-            config.originalCode.resize(config.patchSize);
-            memcpy(config.originalCode.data(), config.target, config.patchSize);
-            // Apply the patch data over the target memory
-            memcpy(config.target, config.patchData.data(),
-                   std::min(config.patchSize, static_cast<size_t>(config.patchData.size())));
-            break;
-        }
-        default:
-            return false;
-    }
-    
-    config.enabled = true;
-    return true;
-}
-
-bool Engine::removeHook(HookConfig& config) {
-    if (!config.enabled) {
-        return true; // Already removed
-    }
-    
-    switch (config.type) {
-        case HookType::DETOUR: {
-            auto* detour = static_cast<Detour*>(config.runtimeHandle);
-            if (detour) {
-                if (!detour->remove()) {
-                    return false;
-                }
-                delete detour;
-                config.runtimeHandle = nullptr;
-                config.trampoline = nullptr;
-            } else {
-                // Best-effort fallback if runtime handle is missing.
-                MemoryProtection prot(config.target, 5, PAGE_EXECUTE_READWRITE);
-                if (!prot.isValid()) {
-                    return false;
-                }
-                if (config.originalCode.size() >= 5) {
-                    memcpy(config.target, config.originalCode.data(), 5);
-                }
-            }
-            break;
-        }
-        case HookType::PATCH: {
-            MemoryProtection prot(config.target, config.patchSize, PAGE_EXECUTE_READWRITE);
-            if (!prot.isValid()) {
-                return false;
-            }
-            memcpy(config.target, config.originalCode.data(), config.patchSize);
-            break;
-        }
-        default:
-            return false;
-    }
-    
-    config.enabled = false;
-    return true;
+void Engine::setFailureThreshold(double confidence01) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    m_failureThreshold = Clamp01(confidence01);
 }
 
 } // namespace RawrXD::Agentic::Hotpatch
+

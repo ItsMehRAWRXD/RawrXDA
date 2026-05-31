@@ -1,0 +1,115 @@
+// ============================================================================
+// PHASE 3 INTEGRATION DOCUMENTATION
+// Hot-Path Bridge: Wiring Phase 2 Modules into Inference Pipeline
+// ============================================================================
+// 
+// OVERVIEW:
+// The Phase 3 bridge (inference_int4kv_bridge.h/cpp) orchestrates the full
+// 4-phase memory-aware inference pipeline:
+//   1. Expert Gating (Phase 2A): Selective MEM_COMMIT for active experts
+//   2. Lazy INT4 KV Decompression (Phase 2B): On-demand KV unpacking + caching
+//   3. Flash Attention v2 (Phase 2C): Compute attention on decompressed KV
+//   4. Soft Eviction (Phase 2D): Selective MEM_DECOMMIT for inactive experts
+//
+// INTEGRATION POINTS:
+// 
+// (A) In LLM decode loop (pseudo-code):
+// ============================================================================
+//
+//     #include "inference/inference_int4kv_bridge.h"
+//     using namespace RawrXD::Inference;
+//
+//     // Initialize bridge once per session:
+//     Int4KVFlashAttentionBridge bridge;
+//
+//     // For each token t in decode:
+//     for (int t = 0; t < max_tokens; t++) {
+//         // Compute query for current token
+//         float query[n_heads * head_dim] = ComputeQuery(logits, layer_idx);
+//
+//         // Get expert routing decision (MoE gating)
+//         ExpertGatingInput gating = ComputeExpertGating(logits, num_experts);
+//
+//         // Configure attention parameters
+//         Int4KVConfig config{
+//             .seq_len = t + 1,
+//             .context_window = 2048,    // Look-back window
+//             .n_heads = 32,             // Model architecture
+//             .n_kv_heads = 8,           // GQA compression
+//             .head_dim = 128,
+//             .max_seq_len = 4096,
+//             .invalidate_cache_on_token_done = (t == max_tokens - 1)
+//         };
+//
+//         // EXECUTE PHASE 3 PIPELINE:
+//         // The bridge handles all 4 phases transparently
+//         bridge.ProcessToken(
+//             query,
+//             kv_int4_cache,             // INT4 quantized KV (95GB reserved)
+//             attention_output,          // Output buffer
+//             gating,                    // Expert selection bitmask
+//             config);
+//
+//         // Telemetry (optional, every N tokens):
+//         if (t % 100 == 0) {
+//             bridge.PrintTelemetry();
+//         }
+//     }
+//
+// (B) Memory architecture (aligned with Phase 2):
+// ============================================================================
+//
+//     95GB Logical Reservation (VirtualAlloc MEM_RESERVE)
+//     ├─ ~26.5GB Physical Commitment (MEM_COMMIT)
+//     │  ├─ Active expert tensors (MEM_COMMIT in Phase 2A)
+//     │  ├─ KV cache working set (~512 token window, INT4 unpacked to FP32)
+//     │  └─ Activation buffers
+//     │
+//     └─ ~68.5GB Logical Only (no physical pages)
+//        ├─ Inactive expert tensors (MEM_DECOMMIT in Phase 2D)
+//        └─ "Paged out" KV history (virtual only)
+//
+// (C) Expected memory footprint progression:
+// ============================================================================
+//
+//     Token 1:  6GB (1 expert committed + activation)
+//     Token 10: 8GB (10 experts active, rotating through MoE top-K)
+//     Token 100: 12GB (cache growing, peaks with expert diversity)
+//     Token 512: 26.5GB (steady-state with full context window)
+//     Token 1K+: 26.5GB (LRU eviction, KV window rolling)
+//
+// (D) Telemetry output (at regular intervals):
+// ============================================================================
+//
+//     [Phase2Telemetry]
+//       KV Tokens Decompressed: 10240
+//       Expert Commits: 48 | Decommits: 32
+//       Resident Set Peak: 26.50 GB | Current: 24.87 GB
+//       KV Cache Hits: 256 | Misses: 48
+//       Hit Rate: 84.2%
+//
+//     Interpretation:
+//       - 84.2% hit rate = KV window reuse efficient (good locality)
+//       - Peak 26.5GB matches target (model fits comfortably)
+//       - 48 expert commits vs 32 decommits = sparse MoE selectivity working
+//
+// ============================================================================
+// NEXT PHASES (Future Work)
+// ============================================================================
+//
+// Phase 4: Live Model Integration
+//   - Wire bridge.ProcessToken() into real Llama/Qwen inference loop
+//   - Test on 70B INT4 model (benchmark baseline)
+//   - Measure end-to-end latency overhead of lazy unpacking
+//
+// Phase 5: Soak Testing & Profiling
+//   - 10K token context inference (full paging stress)
+//   - Flamegraph expert gating + decommit overhead
+//   - Resident set stability (no memory leaks over time)
+//
+// Phase 6: 180B Scaling Validation
+//   - Load 180B parameter model (175B params + embeddings)
+//   - Confirm resident set stays <30GB
+//   - Measure tokens/second throughput
+//
+// ============================================================================

@@ -62,33 +62,30 @@ void parseHostPort(const std::string& ep, std::string& host, int& port) {
 
 // ---------------------------------------------------------------------------
 GGUFProxyServer::~GGUFProxyServer() {
-    try { stopServer(); } catch (...) {
-        fprintf(stderr, "[WARN] [GGUFProxyServer] Exception during destruction\n");
+    try { stopServer(); } catch (const std::exception& e) {
+        OutputDebugStringA(("[gguf_proxy_server] stopServer exception: " + std::string(e.what()) + "\n").c_str());
+    } catch (...) {
+        OutputDebugStringA("[gguf_proxy_server] stopServer unknown exception\n");
     }
 }
 
 void GGUFProxyServer::initialize(int listenPort, AgentHotPatcher* hotPatcher,
                                  const std::string& ggufEndpoint) {
     if (listenPort <= 0 || listenPort > 65535) {
-        fprintf(stderr, "[CRIT] [GGUFProxyServer] Invalid port: %d\n", listenPort);
         return;
     }
     m_listenPort   = listenPort;
     m_hotPatcher   = hotPatcher;
     m_ggufEndpoint = ggufEndpoint;
-    fprintf(stderr, "[INFO] [GGUFProxyServer] Initialized – port: %d, endpoint: %s\n",
-            listenPort, ggufEndpoint.c_str());
 }
 
 bool GGUFProxyServer::startServer() {
     if (m_listening) {
-        fprintf(stderr, "[INFO] [GGUFProxyServer] Already listening on port %d\n", m_listenPort);
         return true;
     }
 
     auto sock = static_cast<SocketType>(::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP));
     if (sock == kInvalidSocket) {
-        fprintf(stderr, "[WARN] [GGUFProxyServer] socket() failed\n");
         return false;
     }
 
@@ -102,20 +99,17 @@ bool GGUFProxyServer::startServer() {
     addr.sin_port        = htons(static_cast<uint16_t>(m_listenPort));
 
     if (::bind(sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0) {
-        fprintf(stderr, "[WARN] [GGUFProxyServer] bind() failed on port %d\n", m_listenPort);
         closesocket(static_cast<int>(sock));
         return false;
     }
 
     if (::listen(sock, SOMAXCONN) != 0) {
-        fprintf(stderr, "[WARN] [GGUFProxyServer] listen() failed\n");
         closesocket(static_cast<int>(sock));
         return false;
     }
 
     m_listenSocket = static_cast<uintptr_t>(sock);
     m_listening    = true;
-    fprintf(stderr, "[INFO] [GGUFProxyServer] Listening on port %d\n", m_listenPort);
     if (onServerStarted) onServerStarted(m_listenPort);
     return true;
 }
@@ -133,7 +127,6 @@ void GGUFProxyServer::stopServer() {
         m_listenSocket = 0;
     }
     m_listening = false;
-    fprintf(stderr, "[INFO] [GGUFProxyServer] Server stopped\n");
     if (onServerStopped) onServerStopped();
 }
 
@@ -162,8 +155,6 @@ void GGUFProxyServer::setConnectionTimeout(int ms) {
 
 // ---------------------------------------------------------------------------
 void GGUFProxyServer::handleIncomingConnection(uintptr_t socketDescriptor) {
-    fprintf(stderr, "[INFO] [GGUFProxyServer] New client connection: %zu\n",
-            static_cast<size_t>(socketDescriptor));
     auto conn = std::make_unique<ClientConnection>();
     conn->clientSocket = socketDescriptor;
     m_connections[socketDescriptor] = std::move(conn);
@@ -183,7 +174,6 @@ void GGUFProxyServer::forwardToGGUF(uintptr_t socketDescriptor) {
 
         auto sock = static_cast<SocketType>(::socket(AF_INET, SOCK_STREAM, 0));
         if (sock == kInvalidSocket) {
-            fprintf(stderr, "[WARN] [GGUFProxyServer] Failed to create GGUF socket\n");
             return;
         }
 
@@ -193,15 +183,11 @@ void GGUFProxyServer::forwardToGGUF(uintptr_t socketDescriptor) {
         inet_pton(AF_INET, host.c_str(), &addr.sin_addr);
 
         if (::connect(sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0) {
-            fprintf(stderr, "[WARN] [GGUFProxyServer] connect() to %s:%d failed\n",
-                    host.c_str(), port);
             closesocket(static_cast<int>(sock));
             return;
         }
 
         conn->ggufSocket = static_cast<uintptr_t>(sock);
-        fprintf(stderr, "[INFO] [GGUFProxyServer] Connected to GGUF at %s:%d\n",
-                host.c_str(), port);
     }
 
     if (conn->ggufSocket && !conn->requestBuffer.empty()) {

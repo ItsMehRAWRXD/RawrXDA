@@ -153,8 +153,18 @@ void QuantumDynamicTimeManager::learningLoop() {
 }
 
 void QuantumDynamicTimeManager::adjustTimeout(const std::string& taskType) {
-    // Placeholder for more sophisticated adjustment
-    // Could use statistical models, ML, etc.
+    auto it = m_taskStats.find(taskType);
+    if (it == m_taskStats.end() || it->second.sampleCount < 3) return;
+    const TaskStats& s = it->second;
+    // Adaptive: mean + headroom scaled by variance
+    double range = static_cast<double>((s.maxTime - s.minTime).count());
+    double mean  = static_cast<double>(s.avgTime.count());
+    double headroom = (s.successRate < 0.9) ? 2.0 : 1.5;
+    auto adjusted = std::chrono::milliseconds(static_cast<long long>(mean * headroom + range * 0.25));
+    adjusted = std::max(adjusted, m_baseTimeout / 2);
+    adjusted = std::min(adjusted, m_baseTimeout * 4);
+    // Apply by updating the stats avgTime as a smoothed target
+    it->second.avgTime = (it->second.avgTime + adjusted) / 2;
 }
 
 } // namespace Quantum

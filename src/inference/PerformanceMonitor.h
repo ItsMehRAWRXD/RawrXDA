@@ -25,6 +25,8 @@ public:
     void endOperation(const std::string& operation);
     void recordError(const std::string& operation);
     void recordMemoryUsage(const std::string& operation, size_t bytes);
+    // Record a pre-measured latency in microseconds without a start/end pair.
+    void recordLatency(const std::string& operation, long long microseconds);
 
     PerformanceMetrics getMetrics(const std::string& operation) const;
     std::unordered_map<std::string, PerformanceMetrics> getAllMetrics() const;

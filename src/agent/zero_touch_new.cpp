@@ -24,14 +24,12 @@ void ZeroTouch::installAll() {
     
     std::thread([this]() { installFileWatcher(); }).detach();
     std::thread([this]() { installVoiceTrigger(); }).detach();
-    
-    std::cout << "[ZeroTouch] Triggers installed" << std::endl;
+}
 }
 
 void ZeroTouch::installFileWatcher() {
     fs::path srcRoot = fs::current_path() / "src";
     if (!fs::exists(srcRoot)) {
-        std::cout << "[ZeroTouch] src directory missing, skipping file watcher" << std::endl;
         return;
     }
 
@@ -65,7 +63,6 @@ void ZeroTouch::installFileWatcher() {
                     if (lastWriteTimes[path] != currentStr) {
                         lastWriteTimes[path] = currentStr;
                         // Changed
-                        std::cout << "[ZeroTouch] File changed: " << path << std::endl;
                         
                         // Debounce/wait a bit? 
                         // Original had 5s delay.
@@ -84,7 +81,6 @@ void ZeroTouch::installFileWatcher() {
 void ZeroTouch::installGitHook() {
     fs::path hooksDir = fs::current_path() / ".git" / "hooks";
     if (!fs::exists(hooksDir)) {
-        std::cout << "[ZeroTouch] git hooks directory missing - skip" << std::endl;
         return;
     }
 
@@ -104,7 +100,6 @@ void ZeroTouch::installGitHook() {
 
     std::ofstream hookFile(hookPath);
     if (!hookFile) {
-        std::cerr << "[ZeroTouch] Failed to write git hook " << hookPath << std::endl;
         return;
     }
 
@@ -113,8 +108,7 @@ void ZeroTouch::installGitHook() {
     
     // Set executable permissions? On Windows fs::permissions might work or is ignored.
     // fs::permissions(hookPath, fs::perms::owner_exec | fs::perms::group_exec | fs::perms::others_exec, fs::perm_options::add);
-
-    std::cout << "[ZeroTouch] post-commit hook installed" << std::endl;
+}
 }
 
 void ZeroTouch::installVoiceTrigger() {

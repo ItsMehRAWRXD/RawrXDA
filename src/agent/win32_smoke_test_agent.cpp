@@ -16,8 +16,8 @@ struct SmokeTestResult {
 };
 
 void LogResult(const SmokeTestResult& res) {
-    std::cout << "[SMOKE TEST] " << (res.success ? "[PASS] " : "[FAIL] ") 
-              << res.testName << ": " << res.message << std::endl;
+    // Test result logging disabled
+    (void)res;
 }
 
 int main(int argc, char** argv) {

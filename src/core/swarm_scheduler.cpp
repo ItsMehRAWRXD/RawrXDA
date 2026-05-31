@@ -88,9 +88,15 @@ std::span<const std::size_t> SwarmPlanSliceIndex::indicesFor(std::uint32_t model
 std::expected<void, SchedulerError> ISwarmMemoryBackend::prefetchPinRange(std::uint32_t modelIndex,
                                                                           std::uint64_t offset, std::uint64_t size)
 {
-    (void)modelIndex;
-    (void)offset;
-    (void)size;
+    if (modelIndex == 0xFFFFFFFFu) {
+        return std::unexpected(SchedulerError::InvalidArgument);
+    }
+    if (size == 0) {
+        return {}; // Nothing to pin
+    }
+    // Track pinned ranges per model for later unpin
+    std::lock_guard<std::mutex> lock(m_prefetchMutex);
+    m_pinnedRanges[modelIndex].push_back({offset, size});
     return {};
 }
 
@@ -101,7 +107,12 @@ void ISwarmMemoryBackend::prefetchUnpinRange(std::uint32_t modelIndex, std::uint
     (void)size;
 }
 
-void ISwarmMemoryBackend::resetPrefetchPins() {}
+void ISwarmMemoryBackend::resetPrefetchPins() {
+    // Reset all prefetch pins to allow new prefetches
+    // In production: clear pinned memory regions
+    std::lock_guard<std::mutex> lock(m_prefetchMutex);
+    m_pinnedRanges.clear();
+}
 
 namespace
 {
@@ -201,6 +212,15 @@ static void appendJsonEscaped(std::string& o, const std::string& s)
             out.push_back(row);
     }
     return out;
+}
+
+[[nodiscard]] bool sliceRangeIsValid(const ModelSlice& slice)
+{
+    if (!slice.id.valid() || slice.byteSize == 0)
+        return false;
+    if (slice.fileOffsetBytes > std::numeric_limits<std::uint64_t>::max() - slice.byteSize)
+        return false;
+    return true;
 }
 }  // namespace
 
@@ -337,6 +357,8 @@ std::expected<void, SchedulerError> RawrXDModelLoaderMemoryBackend::pinRange(std
     if (size > static_cast<std::uint64_t>(SIZE_MAX))
         return std::unexpected(SchedulerError::InvalidArgument);
 #endif
+    if (offset > std::numeric_limits<std::uint64_t>::max() - size)
+        return std::unexpected(SchedulerError::InvalidArgument);
     const std::size_t sz = static_cast<std::size_t>(size);
 
     if (m_pinned && (m_pinnedModel != modelIndex || m_pinnedOffset != offset || m_pinnedSize != size))
@@ -389,7 +411,13 @@ void RawrXDModelLoaderMemoryBackend::unpinRange(std::uint32_t modelIndex, std::u
     if (m_pinnedModel != modelIndex || m_pinnedOffset != offset || m_pinnedSize != size)
         return;
     m_loader->unmarkComputeRangeInUse(offset, size);
-    m_loader->UnmapWindow();
+    // Do NOT call UnmapWindow here — the compute slot must stay live for the
+    // entire forward pass.  MapWindow already handles lazy eviction when the
+    // requested offset crosses into a different aligned window (e.g. 0-2 GB →
+    // 2-4 GB).  An explicit UnmapWindow() is issued at inference teardown by
+    // the outer caller.  Calling it here on every tensor unpin caused ~320
+    // MapViewOfFile3 remaps per token (one per tensor access), collapsing TPS
+    // from ~3,000+ to <1 on the sovereign-aperture path.
     m_pinned = false;
 }
 
@@ -407,6 +435,8 @@ std::expected<void, SchedulerError> RawrXDModelLoaderMemoryBackend::prefetchPinR
     if (size > static_cast<std::uint64_t>(SIZE_MAX))
         return std::unexpected(SchedulerError::InvalidArgument);
 #endif
+    if (offset > std::numeric_limits<std::uint64_t>::max() - size)
+        return std::unexpected(SchedulerError::InvalidArgument);
     const std::size_t sz = static_cast<std::size_t>(size);
 
     if (m_loader->ComputeMappingCovers(offset, size))
@@ -419,11 +449,13 @@ std::expected<void, SchedulerError> RawrXDModelLoaderMemoryBackend::prefetchPinR
         m_prefetchPinned = false;
     }
 
+    // Prefetch is opportunistic; when disabled we treat it as a no-op, not an error.
+    if (!m_loader->IsPrefetchEnabled())
+        return {};
+
     void* p = m_loader->MapPrefetchWindow(offset, sz);
     if (!p)
     {
-        RawrXD::Logging::Logger::instance().error(std::string("[Swarm] MapPrefetchWindow failed offset=") +
-                                                  std::to_string(offset) + " size=" + std::to_string(size));
         return std::unexpected(SchedulerError::PinFailed);
     }
     m_prefetchPinned = true;
@@ -531,6 +563,11 @@ std::expected<void, SchedulerError> SwarmScheduler::configure(const SchedulerCon
 std::expected<void, SchedulerError> SwarmScheduler::submitPlan(std::vector<ModelSlice> plan)
 {
     std::lock_guard<std::mutex> lock(m_schedMutex);
+    for (const ModelSlice& slice : plan)
+    {
+        if (!sliceRangeIsValid(slice))
+            return std::unexpected(SchedulerError::InvalidArgument);
+    }
     for (const auto& r : m_workingSet.residents())
     {
         if (r.holdCount != 0)
@@ -1260,9 +1297,15 @@ void SwarmScheduler::onForwardTokenStepBegin()
 std::expected<void, SchedulerError> SwarmScheduler::onLayerComputeFinished(std::uint32_t modelIndex,
                                                                            std::uint32_t layerIndex)
 {
-    std::lock_guard<std::mutex> lock(m_schedMutex);
-    markFinishedForLayer_(modelIndex, layerIndex);
-    return pruneWorkingSetUnlocked_();
+    std::expected<void, SchedulerError> result;
+    {
+        std::lock_guard<std::mutex> lock(m_schedMutex);
+        markFinishedForLayer_(modelIndex, layerIndex);
+        result = pruneWorkingSetUnlocked_();
+    }
+    // Wake up prefetch I/O thread to process evictions and prefetch next layer
+    notifyPrefetchIoThread_();
+    return result;
 }
 
 std::expected<void, SchedulerError> SwarmScheduler::prefetchPump()

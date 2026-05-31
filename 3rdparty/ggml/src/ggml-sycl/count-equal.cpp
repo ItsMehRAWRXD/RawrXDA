@@ -28,31 +28,31 @@ static void count_equal(const T *__restrict__ x, const T *__restrict__ y,
         (int *)dst, nequal);
 }
 
-void ggml_sycl_count_equal(ggml_backend_sycl_context &ctx, ggml_tensor *dst) {
+void ggml_rxd_sycl_count_equal(ggml_rxd_backend_sycl_context &ctx, ggml_rxd_tensor *dst) {
     scope_op_debug_print scope_dbg_print(__func__, dst, /*num_src=*/2);
-    const ggml_tensor * src0 = dst->src[0];
-    const ggml_tensor * src1 = dst->src[1];
+    const ggml_rxd_tensor * src0 = dst->src[0];
+    const ggml_rxd_tensor * src1 = dst->src[1];
 
-    GGML_ASSERT(src0->type == src1->type);
-    GGML_ASSERT( dst->type == GGML_TYPE_I64);
+    GGML_RXD_ASSERT(src0->type == src1->type);
+    GGML_RXD_ASSERT( dst->type == GGML_RXD_TYPE_I64);
 
-    GGML_ASSERT(ggml_are_same_shape(src0, src1));
-    GGML_ASSERT(ggml_is_contiguous(src0));
-    GGML_ASSERT(ggml_is_contiguous(src1));
-    GGML_ASSERT(ggml_is_contiguous(dst));
+    GGML_RXD_ASSERT(ggml_rxd_are_same_shape(src0, src1));
+    GGML_RXD_ASSERT(ggml_rxd_is_contiguous(src0));
+    GGML_RXD_ASSERT(ggml_rxd_is_contiguous(src1));
+    GGML_RXD_ASSERT(ggml_rxd_is_contiguous(dst));
 
     int64_t * dst_d  = (int64_t *) dst->data;
 
     dpct::queue_ptr stream = ctx.stream();
     const int id       = get_current_device_id();
-    const int nsm = ggml_sycl_info().devices[id].nsm;
+    const int nsm = ggml_rxd_sycl_info().devices[id].nsm;
 
-    const int64_t ne = ggml_nelements(src0);
-    GGML_ASSERT(ne < (1 << 30) && "atomicAdd implementation only supports int");
+    const int64_t ne = ggml_rxd_nelements(src0);
+    GGML_RXD_ASSERT(ne < (1 << 30) && "atomicAdd implementation only supports int");
     const int64_t dne =
-        GGML_PAD((ne + 4 * nsm - 1) / (4 * nsm), SYCL_COUNT_EQUAL_CHUNK_SIZE);
+        GGML_RXD_PAD((ne + 4 * nsm - 1) / (4 * nsm), SYCL_COUNT_EQUAL_CHUNK_SIZE);
 
-    SYCL_CHECK(CHECK_TRY_ERROR(stream->memset(dst_d, 0, ggml_nbytes(dst))));
+    SYCL_CHECK(CHECK_TRY_ERROR(stream->memset(dst_d, 0, ggml_rxd_nbytes(dst))));
 
     const dpct::dim3 block_dims(WARP_SIZE, 1, 1);
     const dpct::dim3 block_nums(
@@ -61,19 +61,19 @@ void ggml_sycl_count_equal(ggml_backend_sycl_context &ctx, ggml_tensor *dst) {
         1, 1);
 
     switch (src0->type) {
-    case GGML_TYPE_I32: {
+    case GGML_RXD_TYPE_I32: {
         const int *src0_d = (const int *)src0->data;
         const int *src1_d = (const int *)src1->data;
         stream->parallel_for(
             sycl::nd_range<3>(block_nums * block_dims, block_dims),
             [=](sycl::nd_item<3> item_ct1) {
                 count_equal(src0_d, src1_d, dst_d, dne, ne);
-                GGML_UNUSED(item_ct1);
+                GGML_RXD_UNUSED(item_ct1);
             });
 
     } break;
     default:
-        GGML_ASSERT(false);
+        GGML_RXD_ASSERT(false);
         break;
     }
 }

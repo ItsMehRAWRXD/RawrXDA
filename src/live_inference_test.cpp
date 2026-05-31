@@ -135,7 +135,7 @@ extern "C" void __stdcall mainCRTStartup() {
     
     OutLine("============================================================");
     OutLine("  RawrXD — Live Ollama Inference Validation");
-    OutLine("  Direct HTTP: 127.0.0.1:11434 bg40-unleashed:latest");
+    OutLine("  Direct HTTP: 127.0.0.1:11435 bg40-unleashed:latest");
     OutLine("============================================================");
     Out("\r\n");
     
@@ -214,7 +214,7 @@ extern "C" void __stdcall mainCRTStartup() {
         static char httpReq[20000];
         int hp = 0;
         hp = StrCopy(httpReq, hp, "POST /api/generate HTTP/1.1\r\n");
-        hp = StrCopy(httpReq, hp, "Host: 127.0.0.1:11434\r\n");
+        hp = StrCopy(httpReq, hp, "Host: 127.0.0.1:11435\r\n");
         hp = StrCopy(httpReq, hp, "Content-Type: application/json\r\n");
         hp = StrCopy(httpReq, hp, "Content-Length: ");
         hp = IntToStr(httpReq, hp, bp);
@@ -223,7 +223,7 @@ extern "C" void __stdcall mainCRTStartup() {
         hp += bp;
         
         // Connect
-        Out("  Connecting to 127.0.0.1:11434... ");
+        Out("  Connecting to 127.0.0.1:11435... ");
         SOCKET_T s = pfn_socket(AF_INET_, SOCK_STREAM_, 0);
         if (s == INVALID_SOCK) { OutLine("socket() FAILED!"); continue; }
         

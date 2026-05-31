@@ -1,4 +1,70 @@
-#!/usr/bin/env pwsh
+# RawrXD IDE Build Script
+# Production-ready build automation
+
+param(
+    [ValidateSet("Debug", "Release", "RelWithDebInfo")]
+    [string]$Configuration = "Release",
+    
+    [switch]$Clean,
+    [switch]$Test,
+    [switch]$Package
+)
+
+$ErrorActionPreference = "Stop"
+$ProjectRoot = $PSScriptRoot
+$BuildDir = Join-Path $ProjectRoot "build"
+$InstallDir = Join-Path $ProjectRoot "install"
+
+Write-Host "RawrXD IDE Build System" -ForegroundColor Cyan
+Write-Host "Configuration: $Configuration" -ForegroundColor Gray
+
+# Clean if requested
+if ($Clean -and (Test-Path $BuildDir)) {
+    Write-Host "Cleaning build directory..." -ForegroundColor Yellow
+    Remove-Item $BuildDir -Recurse -Force
+}
+
+# Create build directory
+New-Item -ItemType Directory -Force -Path $BuildDir | Out-Null
+
+# Configure
+Write-Host "Configuring CMake..." -ForegroundColor Green
+cmake -B $BuildDir -S $ProjectRoot `
+    -DCMAKE_BUILD_TYPE=$Configuration `
+    -DCMAKE_INSTALL_PREFIX=$InstallDir `
+    -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+
+if ($LASTEXITCODE -ne 0) {
+    throw "CMake configuration failed"
+}
+
+# Build
+Write-Host "Building..." -ForegroundColor Green
+cmake --build $BuildDir --config $Configuration --parallel
+
+if ($LASTEXITCODE -ne 0) {
+    throw "Build failed"
+}
+
+# Test
+if ($Test) {
+    Write-Host "Running tests..." -ForegroundColor Green
+    ctest --test-dir $BuildDir --output-on-failure -C $Configuration
+}
+
+# Package
+if ($Package) {
+    Write-Host "Creating package..." -ForegroundColor Green
+    cmake --install $BuildDir --config $Configuration --prefix $InstallDir
+    
+    $Version = "1.0.0"
+    $ZipName = "RawrXD-IDE-v$Version-win64.zip"
+    
+    Compress-Archive -Path "$InstallDir\\*" -DestinationPath $ZipName -Force
+    Write-Host "Package created: $ZipName" -ForegroundColor Cyan
+}
+
+Write-Host "Build complete!" -ForegroundColor Green#!/usr/bin/env pwsh
 <#
 .SYNOPSIS
     RawrXD IDE Build Script — Drives ml64.exe + cl.exe + link.exe

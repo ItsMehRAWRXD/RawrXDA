@@ -22,7 +22,6 @@ std::optional<ChainResult> ChainOfThought::generateChain(
     const std::unordered_map<std::string, std::string>& context
 ) {
     auto start = std::chrono::steady_clock::now();
-    spdlog::info("Starting Chain of Thought for task: {}", task.substr(0, 50));
     
     m_root = std::make_shared<CoTNode>("Root: " + task, 1.0f, 0);
     

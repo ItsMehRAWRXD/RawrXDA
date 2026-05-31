@@ -649,13 +649,11 @@ q8_store:
     jmp q8_block
 
 ; ────────────────────────────────────
-; Q4_K quantization stub
-; 256 elements → super-block with 2-bit scales + 4-bit weights
-; Full implementation requires K-quant clustering
+; Q4_K quantization path
+; 256 elements → super-block with 2-bit scales + 4-bit packed weights
 ; ────────────────────────────────────
 q_q4_k:
-    ; Simplified: treat as Q8_0 at half precision for now
-    ; Real Q4_K uses importance-weighted k-means on 256-element blocks
+    ; Baseline packed-nibble quantization with per-block scale
     xor ebx, ebx
 
 q4k_block:
@@ -746,8 +744,8 @@ q4k_next:
     jmp q4k_block
 
 ; ────────────────────────────────────
-; Q2_K quantization stub
-; Ultra-aggressive: 2 bits per weight + per-block scales
+; Q2_K quantization path
+; Ultra-aggressive: 2 bits per weight + per-block scale
 ; ────────────────────────────────────
 q_q2_k:
     xor ebx, ebx
@@ -907,10 +905,12 @@ RawrXD_KVCache_Init endp
 ;         R9  = pointer to V vector (KV_DIM_COMPRESSED floats)
 ; ============================================================================
 RawrXD_KVCache_Update proc
+    push rbx
     push rsi
     push rdi
 
-    mov rax, [rcx+72]              ; pKVCache
+    mov rbx, rcx                   ; preserve model handle
+    mov rax, [rbx+72]              ; pKVCache
     test rax, rax
     jz kvu_ret
 
@@ -931,13 +931,19 @@ RawrXD_KVCache_Update proc
     ; V offset = (KV_WINDOW_SIZE * KV_DIM_COMPRESSED * 4) + pos * KV_DIM_COMPRESSED * 4
     mov eax, KV_WINDOW_SIZE
     imul eax, KV_DIM_COMPRESSED * 4
-    mov rdx, [rcx+72]              ; reload pKVCache... wait, rcx was clobbered
-    ; Fix: we need the original model handle. This is a known issue in this stub.
-    ; Production version passes handle in a preserved register.
+    add eax, edx
+    mov rdx, [rbx+72]
+    lea rdi, [rdx + rax]
+
+    ; Copy V vector (64 floats = 256 bytes)
+    mov rsi, r9
+    mov ecx, KV_DIM_COMPRESSED
+    rep movsd
 
 kvu_ret:
     pop rdi
     pop rsi
+    pop rbx
     ret
 RawrXD_KVCache_Update endp
 

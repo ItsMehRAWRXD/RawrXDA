@@ -162,15 +162,15 @@ std::string EscapeJson(const std::string& value) {
     return out;
 }
 
-// ----- Ollama HTTP helpers (GET /api/tags, POST /api/generate) for models list + chat routing -----
-void ParseOllamaHost(const char* envUrl, std::string& host, int& port) {
+// ----- Local API HTTP helpers (internal model streaming endpoint) -----
+void ParseModelHost(const char* envUrl, std::string& host, int& port) {
     host = "localhost";
-    port = 11434;
+    port = 11435;
     if (!envUrl || !envUrl[0]) return;
     std::string u = envUrl;
     size_t start = 0;
     if (u.find("http://") == 0) start = 7;
-    else if (u.find("https://") == 0) { start = 8; if (port == 11434) port = 443; }
+    else if (u.find("https://") == 0) { start = 8; if (port == 11435) port = 443; }
     size_t colon = u.find(':', start);
     size_t slash = u.find('/', start);
     if (colon != std::string::npos && (slash == std::string::npos || colon < slash)) {
@@ -183,7 +183,7 @@ void ParseOllamaHost(const char* envUrl, std::string& host, int& port) {
         host = u.substr(start);
     }
     if (host.empty()) host = "localhost";
-    if (port <= 0 || port > 65535) port = 11434;
+    if (port <= 0 || port > 65535) port = 11435;
 }
 
 bool TcpHttpGet(const std::string& host, int port, const std::string& path, std::string& outBody) {
@@ -240,29 +240,57 @@ bool TcpHttpPost(const std::string& host, int port, const std::string& path,
     return true;
 }
 
-void ParseOllamaTagsModels(const std::string& body, std::vector<std::string>& names) {
+void ParseModelHostModels(const std::string& body, std::vector<std::string>& names) {
     names.clear();
+    // Accept both legacy {"models":[{"name":"..."}]} and OpenAI-style {"data":[{"id":"..."}]}
     size_t pos = body.find("\"models\"");
-    if (pos == std::string::npos) return;
-    pos = body.find('[', pos);
-    if (pos == std::string::npos) return;
-    for (;;) {
-        size_t nameKey = body.find("\"name\"", pos);
-        if (nameKey == std::string::npos || nameKey > body.find(']', pos)) break;
-        size_t colon = body.find(':', nameKey);
-        if (colon == std::string::npos) break;
-        size_t start = body.find('"', colon);
-        if (start == std::string::npos) break;
-        start++;
-        size_t end = start;
-        while (end < body.size() && body[end] != '"') { if (body[end] == '\\') end++; end++; }
-        if (end <= body.size()) names.push_back(body.substr(start, end - start));
-        pos = end + 1;
+    if (pos != std::string::npos) {
+        pos = body.find('[', pos);
+        if (pos != std::string::npos) {
+            for (;;) {
+                size_t nameKey = body.find("\"name\"", pos);
+                if (nameKey == std::string::npos || nameKey > body.find(']', pos)) break;
+                size_t colon = body.find(':', nameKey);
+                if (colon == std::string::npos) break;
+                size_t start = body.find('"', colon);
+                if (start == std::string::npos) break;
+                start++;
+                size_t end = start;
+                while (end < body.size() && body[end] != '"') { if (body[end] == '\\') end++; end++; }
+                if (end <= body.size()) names.push_back(body.substr(start, end - start));
+                pos = end + 1;
+            }
+        }
+    }
+
+    size_t dataPos = body.find("\"data\"");
+    if (dataPos != std::string::npos) {
+        dataPos = body.find('[', dataPos);
+        if (dataPos != std::string::npos) {
+            for (;;) {
+                size_t idKey = body.find("\"id\"", dataPos);
+                if (idKey == std::string::npos || idKey > body.find(']', dataPos)) break;
+                size_t colon = body.find(':', idKey);
+                if (colon == std::string::npos) break;
+                size_t start = body.find('"', colon);
+                if (start == std::string::npos) break;
+                start++;
+                size_t end = start;
+                while (end < body.size() && body[end] != '"') { if (body[end] == '\\') end++; end++; }
+                if (end <= body.size()) {
+                    const std::string id = body.substr(start, end - start);
+                    if (!id.empty() && std::find(names.begin(), names.end(), id) == names.end()) {
+                        names.push_back(id);
+                    }
+                }
+                dataPos = end + 1;
+            }
+        }
     }
 }
 
-bool OllamaGenerateSync(const std::string& host, int port, const std::string& model,
-                        const std::string& prompt, std::string& outResponse) {
+bool ModelHostGenerateSync(const std::string& host, int port, const std::string& model,
+                           const std::string& prompt, std::string& outResponse) {
     std::string escPrompt, escModel;
     for (char c : prompt) {
         if (c == '"') escPrompt += "\\\""; else if (c == '\\') escPrompt += "\\\\";
@@ -943,18 +971,6 @@ std::string CompletionServer::HandleChatRequest(const std::string& body) {
     std::string model;
     ExtractJsonString(body, "model", model);
     Trim(model);
-
-    // Optional model: route to Ollama when provided (agentic + local flow)
-    if (!model.empty()) {
-        std::string ollamaHostStr;
-        int ollamaPort = 11434;
-        ParseOllamaHost(std::getenv("OLLAMA_HOST"), ollamaHostStr, ollamaPort);
-        std::string response;
-        if (OllamaGenerateSync(ollamaHostStr, ollamaPort, model, message, response)) {
-            return "{\"response\":\"" + EscapeJson(response) + "\",\"model\":\"" + EscapeJson(model) + "\"}";
-        }
-        return "{\"error\":\"ollama_unavailable\",\"model\":\"" + EscapeJson(model) + "\",\"hint\":\"Start Ollama or check OLLAMA_HOST\"}";
-    }
 
     if (!agentic_engine_) {
         return R"({"error":"agentic_engine_not_available"})";
@@ -3490,9 +3506,9 @@ std::string CompletionServer::HandleLicenseMultiGPUStatusRequest() {
 }
 
 // ============================================================================
-// Models list — for Cursor Settings > Models (Ollama + local)
+// Models list — for Cursor Settings > Models (local/internal only)
 // GET /v1/models and GET /api/models return OpenAI-style list: local GGUF +
-// live Ollama /api/tags (when reachable) + well-known fallback IDs.
+// local internal API models (when reachable) + well-known fallback IDs.
 // ============================================================================
 std::string CompletionServer::HandleModelsListRequest() {
     std::vector<std::string> ids;
@@ -3507,22 +3523,22 @@ std::string CompletionServer::HandleModelsListRequest() {
         }
     }
     if (ids.empty()) ids.push_back("rawrxd");
-    // 2) Live Ollama models from GET /api/tags
-    const char* ollamaHostEnv = std::getenv("OLLAMA_HOST");
-    std::string ollamaHostStr;
-    int ollamaPort = 11434;
-    ParseOllamaHost(ollamaHostEnv, ollamaHostStr, ollamaPort);
+    // 2) Live internal models from GET /v1/models
+    const char* modelHostEnv = std::getenv("RAWRXD_INTERNAL_API_URL");
+    std::string modelHostStr;
+    int modelHostPort = 11435;
+    ParseModelHost(modelHostEnv, modelHostStr, modelHostPort);
     std::string tagsBody;
-    if (TcpHttpGet(ollamaHostStr, ollamaPort, "/api/tags", tagsBody)) {
-        std::vector<std::string> ollamaNames;
-        ParseOllamaTagsModels(tagsBody, ollamaNames);
-        for (const auto& n : ollamaNames) {
+    if (TcpHttpGet(modelHostStr, modelHostPort, "/v1/models", tagsBody)) {
+        std::vector<std::string> hostModelNames;
+        ParseModelHostModels(tagsBody, hostModelNames);
+        for (const auto& n : hostModelNames) {
             if (!n.empty() && std::find(ids.begin(), ids.end(), n) == ids.end())
                 ids.push_back(n);
         }
     }
     // 3) Well-known fallback IDs + BigDaddyG variants so Cursor never shows "invalid model name"
-    const std::string known[] = { "llama3", "llama2", "neural-chat", "BigDaddyG-Q4_K_M", "BigDaddyG-F32-FROM-Q4", "mistral", "codellama", "phi", "gemma" };
+    const std::string known[] = { "rawrxd", "headless-default", "localgguf", "BigDaddyG-Q4_K_M", "BigDaddyG-F32-FROM-Q4", "ministral3", "phi3mini" };
     for (const auto& k : known) {
         if (std::find(ids.begin(), ids.end(), k) == ids.end())
             ids.push_back(k);
@@ -3531,16 +3547,16 @@ std::string CompletionServer::HandleModelsListRequest() {
         if (RawrXD::ModelNameUtils::isValid(v) && std::find(ids.begin(), ids.end(), v) == ids.end())
             ids.push_back(v);
     }
-    // 4) Scan Ollama model directories so loaded models (e.g. BigDaddyG-F32-FROM-Q4) are always valid
+    // 4) Scan local model directories so loaded models are always valid
     std::vector<std::string> scanPaths;
-    if (const char* ollamaModels = std::getenv("OLLAMA_MODELS"))
-        if (ollamaModels[0]) scanPaths.push_back(ollamaModels);
+    if (const char* localModels = std::getenv("RAWRXD_MODELS_PATH"))
+        if (localModels[0]) scanPaths.push_back(localModels);
+    if (const char* localModel = std::getenv("RAWRXD_NATIVE_MODEL_PATH"))
+        if (localModel[0]) scanPaths.push_back(localModel);
 #ifdef _WIN32
-    char localAppData[MAX_PATH] = {};
-    if (SHGetFolderPathA(nullptr, CSIDL_LOCAL_APPDATA, nullptr, 0, localAppData) == S_OK)
-        scanPaths.push_back(std::string(localAppData) + "\\Ollama\\models");
-    scanPaths.push_back("D:\\OllamaModels");
-    scanPaths.push_back("C:\\OllamaModels");
+    scanPaths.push_back("D:\\models");
+    scanPaths.push_back("F:\\models");
+    scanPaths.push_back("D:\\rawrxd\\models");
 #endif
     RawrXD::ModelNameUtils::addDerivedNamesFromDirs(scanPaths, ids);
     // OpenAI-style response (Cursor Settings > Models expects this)
@@ -3621,7 +3637,11 @@ std::string CompletionServer::HandleAgenticAuditEstimateRequest(const std::strin
                 std::string val = pair.substr(eq + 1);
                 if (key == "codebase") codebase = val;
                 else if (key == "topN" && !val.empty()) {
-                    try { topN = std::max(1, std::min(99, std::stoi(val))); } catch (...) {}
+                    try { topN = std::max(1, std::min(99, std::stoi(val))); } catch (const std::exception& e) {
+                        OutputDebugStringA(("[complete_server] topN parse exception: " + std::string(e.what()) + "\n").c_str());
+                    } catch (...) {
+                        OutputDebugStringA("[complete_server] topN parse unknown exception\n");
+                    }
                 }
             }
         }
@@ -3641,8 +3661,8 @@ std::string CompletionServer::HandleAgenticAuditEstimateRequest(const std::strin
 } // namespace RawrXD
 
 // -----------------------------------------------------------------------------
-// Global OllamaGenerateSync — declared in complete_server.h, used by main.cpp (CLI)
-// Must be at global scope to match the declaration. Uses socket APIs from top of file.
+// Global compatibility wrappers for main.cpp CLI compatibility.
+// These target RawrXD local/internal API only.
 // -----------------------------------------------------------------------------
 namespace {
 #ifdef _WIN32
@@ -3709,32 +3729,31 @@ namespace {
     }
 }
 
-bool OllamaListModelsSync(const std::string& host, int port, std::vector<std::string>& outNames) {
+bool ModelHostListModelsSync(const std::string& host, int port, std::vector<std::string>& outNames) {
+    (void)host;
+    (void)port;
     outNames.clear();
+    outNames.push_back("rawrxd");
+    outNames.push_back("headless-default");
+    outNames.push_back("localgguf");
+
     std::string body;
-    if (!TcpGet(host, port, "/api/tags", body)) return false;
-    size_t pos = body.find("\"models\"");
-    if (pos == std::string::npos) return true;
-    pos = body.find('[', pos);
-    if (pos == std::string::npos) return true;
-    for (;;) {
-        size_t nameKey = body.find("\"name\"", pos);
-        if (nameKey == std::string::npos || nameKey > body.find(']', pos)) break;
-        size_t colon = body.find(':', nameKey);
-        if (colon == std::string::npos) break;
-        size_t start = body.find('"', colon);
-        if (start == std::string::npos) break;
-        start++;
-        size_t end = start;
-        while (end < body.size() && body[end] != '"') { if (body[end] == '\\') end++; end++; }
-        if (end <= body.size()) outNames.push_back(body.substr(start, end - start));
-        pos = end + 1;
+    if (!TcpGet("127.0.0.1", 11435, "/v1/models", body)) return true;
+
+    std::vector<std::string> parsed;
+    RawrXD::ParseModelHostModels(body, parsed);
+    for (const auto& name : parsed) {
+        if (!name.empty() && std::find(outNames.begin(), outNames.end(), name) == outNames.end()) {
+            outNames.push_back(name);
+        }
     }
     return true;
 }
 
-bool OllamaGenerateSync(const std::string& host, int port, const std::string& model,
-                        const std::string& prompt, std::string& outResponse) {
+bool ModelHostGenerateSync(const std::string& host, int port, const std::string& model,
+                           const std::string& prompt, std::string& outResponse) {
+    (void)host;
+    (void)port;
     std::string escPrompt, escModel;
     for (char c : prompt) {
         if (c == '"') escPrompt += "\\\""; else if (c == '\\') escPrompt += "\\\\";
@@ -3745,9 +3764,16 @@ bool OllamaGenerateSync(const std::string& host, int port, const std::string& mo
         if (c == '"') escModel += "\\\""; else if (c == '\\') escModel += "\\\\";
         else if (static_cast<unsigned char>(c) >= 32 || c == '\t') escModel += c;
     }
+    if (escModel.empty()) {
+        escModel = "headless-default";
+    }
+
     std::string body = "{\"model\":\"" + escModel + "\",\"prompt\":\"" + escPrompt + "\",\"stream\":false}";
     std::string out;
-    if (!TcpPost(host, port, "/api/generate", "application/json", body, out)) return false;
+    if (!TcpPost("127.0.0.1", 11435, "/api/generate", "application/json", body, out)) {
+        outResponse = "local_internal_api_unreachable";
+        return false;
+    }
     size_t respStart = out.find("\"response\":");
     if (respStart == std::string::npos) {
         size_t errStart = out.find("\"error\":");

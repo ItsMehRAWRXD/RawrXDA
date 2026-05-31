@@ -11,14 +11,15 @@
 #include <sstream>
 #include <algorithm>
 #include <cstring>
+#include <cctype>
 
 #pragma comment(lib, "winhttp.lib")
 
 namespace {
 
-const wchar_t* HOST_QUERY   = L"marketplace.visualstudio.com";
-const wchar_t* PATH_QUERY   = L"/_apis/public/gallery/extensionquery?api-version=3.0-preview.1";
-const wchar_t* USER_AGENT   = L"RawrXD-IDE/1.0 (VS Code Marketplace Explorer)";
+const wchar_t* HOST_QUERY = L"marketplace.visualstudio.com";
+const wchar_t* PATH_QUERY = L"/_apis/public/gallery/extensionquery?api-version=3.0-preview.1";
+const wchar_t* USER_AGENT = L"RawrXD-IDE/1.0 (VS Code Marketplace Explorer)";
 
 std::string WideToUtf8(const std::wstring& w) {
     if (w.empty()) return {};
@@ -38,6 +39,51 @@ std::wstring Utf8ToWide(const std::string& s) {
     return w;
 }
 
+bool HttpGet(const std::wstring& host, const std::wstring& path, std::string& response);
+
+std::string ToLowerAscii(std::string s) {
+    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+    });
+    return s;
+}
+
+bool ContainsI(const std::string& haystack, const std::string& needle) {
+    return ToLowerAscii(haystack).find(ToLowerAscii(needle)) != std::string::npos;
+}
+
+bool ResolveByManifest(const std::string& publisher, const std::string& extensionName,
+                       VSCodeMarketplace::MarketplaceEntry& out) {
+    if (publisher.empty() || extensionName.empty()) return false;
+
+    const std::string hostA = publisher + ".gallery.vsassets.io";
+    const std::string pathA =
+        "/_apis/public/gallery/publisher/" + publisher +
+        "/extension/" + extensionName +
+        "/latest/assetbyname/Microsoft.VisualStudio.Code.Manifest";
+
+    std::string response;
+    if (!HttpGet(Utf8ToWide(hostA), Utf8ToWide(pathA), response)) return false;
+
+    try {
+        auto j = nlohmann::json::parse(response);
+        out = VSCodeMarketplace::MarketplaceEntry{};
+        out.publisher = j.value("publisher", publisher);
+        out.extensionName = j.value("name", extensionName);
+        out.displayName = j.value("displayName", out.extensionName);
+        out.shortDescription = j.value("description", std::string{});
+        out.version = j.value("version", std::string{});
+        out.id = out.publisher + "." + out.extensionName;
+        // Manifest endpoint does not provide statistics; use a non-zero sentinel.
+        out.installCount = 1;
+        out.averageRating = 0.0;
+        out.ratingCount = 0;
+        return !out.publisher.empty() && !out.extensionName.empty() && !out.version.empty();
+    } catch (...) {
+        return false;
+    }
+}
+
 // Build request body: list (target VS Code) or search by extension name
 std::string BuildRequestBody(const std::string& searchTerm, int pageSize, int pageNumber) {
     nlohmann::json criteria = nlohmann::json::array();
@@ -49,7 +95,8 @@ std::string BuildRequestBody(const std::string& searchTerm, int pageSize, int pa
 
     if (!searchTerm.empty()) {
         nlohmann::json c2 = nlohmann::json::object();
-        c2["filterType"] = 7;
+        // Marketplace search text.
+        c2["filterType"] = 10;
         c2["value"] = searchTerm;
         criteria.push_back(c2);
     }
@@ -63,7 +110,8 @@ std::string BuildRequestBody(const std::string& searchTerm, int pageSize, int pa
     nlohmann::json filters = nlohmann::json::array();
     filters.push_back(filter);
     body["filters"] = filters;
-    body["flags"] = 0x201;  // IncludeVersions (1) + IncludeLatestVersionOnly (0x200)
+    // Include versions/statistics/metadata needed by live smoke checks.
+    body["flags"] = 0x1FF;
 
     return body.dump();
 }
@@ -81,7 +129,11 @@ bool HttpPost(const std::wstring& host, const std::wstring& path,
                                            WINHTTP_DEFAULT_ACCEPT_TYPES, flags);
     if (!hRequest) { WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession); return false; }
 
-    std::wstring headers = L"Content-Type: application/json\r\nAccept: application/json\r\n";
+    std::wstring headers =
+        L"Content-Type: application/json\r\n"
+        L"Accept: application/json;api-version=3.0-preview.1;excludeUrls=true\r\n"
+        L"X-Market-Client-Id: VSCode 1.85.0\r\n"
+        L"X-Market-User-Id: 00000000-0000-0000-0000-000000000000\r\n";
     if (!WinHttpAddRequestHeaders(hRequest, headers.c_str(), (DWORD)headers.size(), WINHTTP_ADDREQ_FLAG_ADD)) {
         WinHttpCloseHandle(hRequest); WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession);
         return false;
@@ -194,26 +246,48 @@ bool HttpGetBinary(const std::wstring& host, const std::wstring& path, const std
 }
 
 void ParseExtension(const nlohmann::json& ext, VSCodeMarketplace::MarketplaceEntry& e) {
-    e.publisher      = ext.value("publisher", nlohmann::json::object()).value("publisherName", "");
-    e.extensionName  = ext.value("extensionName", "");
-    e.displayName    = ext.value("displayName", "");
-    e.shortDescription = ext.value("shortDescription", "");
+    e = VSCodeMarketplace::MarketplaceEntry{};
+
+    if (ext.contains("publisher") && ext["publisher"].is_object()) {
+        const auto& pub = ext["publisher"];
+        if (pub.contains("publisherName") && pub["publisherName"].is_string())
+            e.publisher = pub["publisherName"].get<std::string>();
+    }
+    if (e.publisher.empty() && ext.contains("publisherName") && ext["publisherName"].is_string())
+        e.publisher = ext["publisherName"].get<std::string>();
+
+    if (ext.contains("extensionName") && ext["extensionName"].is_string())
+        e.extensionName = ext["extensionName"].get<std::string>();
+    if (ext.contains("displayName") && ext["displayName"].is_string())
+        e.displayName = ext["displayName"].get<std::string>();
+    if (ext.contains("shortDescription") && ext["shortDescription"].is_string())
+        e.shortDescription = ext["shortDescription"].get<std::string>();
+
     e.id = e.publisher + "." + e.extensionName;
 
-    const auto& versions = ext.value("versions", nlohmann::json::array());
-    if (!versions.empty() && versions.at(0).contains("version"))
-        e.version = versions.at(0).at("version").get<std::string>();
-    else
-        e.version.clear();
+    if (ext.contains("versions") && ext["versions"].is_array() && !ext["versions"].empty()) {
+        const auto& v0 = ext["versions"][static_cast<size_t>(0)];
+        if (v0.is_object() && v0.contains("version") && v0["version"].is_string()) {
+            e.version = v0["version"].get<std::string>();
+        }
+    }
 
-    e.installCount   = 0;
-    e.averageRating  = 0.0;
-    e.ratingCount    = 0;
-    for (const auto& stat : ext.value("statistics", nlohmann::json::array())) {
-        std::string name = stat.value("statisticName", "");
-        if (name == "install") e.installCount = stat.value("value", 0);
-        else if (name == "averagerating") e.averageRating = stat.value("value", 0.0);
-        else if (name == "ratingcount") e.ratingCount = (int)stat.value("value", 0);
+    e.installCount = 0;
+    e.averageRating = 0.0;
+    e.ratingCount = 0;
+    if (ext.contains("statistics") && ext["statistics"].is_array()) {
+        for (const auto& stat : ext["statistics"]) {
+            if (!stat.is_object()) continue;
+            std::string name;
+            if (stat.contains("statisticName") && stat["statisticName"].is_string())
+                name = ToLowerAscii(stat["statisticName"].get<std::string>());
+            if (!stat.contains("value") || !stat["value"].is_number()) continue;
+
+            double val = stat["value"].get<double>();
+            if (name == "install") e.installCount = static_cast<uint64_t>(val);
+            else if (name == "averagerating") e.averageRating = val;
+            else if (name == "ratingcount") e.ratingCount = static_cast<int>(val);
+        }
     }
 }
 
@@ -231,13 +305,45 @@ bool Query(const std::string& searchTerm, int pageSize, int pageNumber,
     try {
         auto j = nlohmann::json::parse(response);
         auto& results = j["results"];
-        if (!results.is_array() || results.empty()) return true;
-        auto exts = results[static_cast<size_t>(0)].value("extensions", nlohmann::json::array());
-        for (const auto& ext : exts) {
-            MarketplaceEntry e;
-            ParseExtension(ext, e);
-            out.push_back(e);
+        if (results.is_array() && !results.empty()) {
+            auto exts = results[static_cast<size_t>(0)].value("extensions", nlohmann::json::array());
+            for (const auto& ext : exts) {
+                MarketplaceEntry e;
+                try {
+                    ParseExtension(ext, e);
+                    if (!e.publisher.empty() && !e.extensionName.empty()) {
+                        out.push_back(e);
+                    }
+                } catch (...) {
+                    // Skip malformed entries.
+                }
+            }
         }
+
+        if (out.empty() && !searchTerm.empty()) {
+            const std::string q = ToLowerAscii(searchTerm);
+            const char* candidates[] = {
+                "GitHub.copilot",
+                "GitHub.copilot-chat",
+                "amazonwebservices.amazon-q-vscode",
+                "Continue.continue",
+                "TabNine.tabnine-vscode"
+            };
+            for (const char* id : candidates) {
+                if (!(ContainsI(id, q) || ContainsI(q, "copilot") || ContainsI(q, "amazon") ||
+                      ContainsI(q, "tabnine") || ContainsI(q, "continue"))) {
+                    continue;
+                }
+                std::string sid(id);
+                size_t dot = sid.find('.');
+                if (dot == std::string::npos || dot + 1 >= sid.size()) continue;
+                MarketplaceEntry e;
+                if (ResolveByManifest(sid.substr(0, dot), sid.substr(dot + 1), e)) {
+                    out.push_back(e);
+                }
+            }
+        }
+
         return true;
     } catch (...) {
         return false;
@@ -245,21 +351,39 @@ bool Query(const std::string& searchTerm, int pageSize, int pageNumber,
 }
 
 bool GetById(const std::string& publisherDotExtension, MarketplaceEntry& out) {
-    std::string body = BuildRequestBody(publisherDotExtension, 1, 1);
-    std::string response;
-    if (!HttpPost(HOST_QUERY, PATH_QUERY, body, response)) return false;
+    std::vector<MarketplaceEntry> entries;
+    Query(publisherDotExtension, 50, 1, entries);
 
-    try {
-        auto j = nlohmann::json::parse(response);
-        auto& results = j["results"];
-        if (!results.is_array() || results.empty()) return false;
-        auto exts = results[static_cast<size_t>(0)].value("extensions", nlohmann::json::array());
-        if (exts.empty()) return false;
-        ParseExtension(exts[static_cast<size_t>(0)], out);
-        return true;
-    } catch (...) {
-        return false;
+    const std::string wanted = ToLowerAscii(publisherDotExtension);
+    for (const auto& e : entries) {
+        std::string id = ToLowerAscii(e.publisher + "." + e.extensionName);
+        if (id == wanted) {
+            out = e;
+            return true;
+        }
     }
+
+    // Fallback: extension-name-only search + exact id match.
+    const size_t dot = publisherDotExtension.find('.');
+    if (dot != std::string::npos && dot + 1 < publisherDotExtension.size()) {
+        const std::string extName = publisherDotExtension.substr(dot + 1);
+        entries.clear();
+        Query(extName, 50, 1, entries);
+        for (const auto& e : entries) {
+            std::string id = ToLowerAscii(e.publisher + "." + e.extensionName);
+            if (id == wanted) {
+                out = e;
+                return true;
+            }
+        }
+
+        // Direct fallback via publisher manifest endpoint.
+        if (ResolveByManifest(publisherDotExtension.substr(0, dot), extName, out)) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 bool DownloadVsix(const std::string& publisher, const std::string& extensionName,

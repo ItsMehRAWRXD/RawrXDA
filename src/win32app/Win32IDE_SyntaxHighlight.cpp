@@ -729,6 +729,10 @@ void Win32IDE::applySyntaxColoringForVisibleRange() {
 // Sets a timer; when it fires, actual coloring runs.
 // ============================================================================
 void Win32IDE::onEditorContentChanged() {
+    if (m_suppressLspDocumentSync) {
+        return;
+    }
+
     // Mark current tab as modified
     if (m_activeTabIndex >= 0 && m_activeTabIndex < (int)m_editorTabs.size()) {
         m_editorTabs[m_activeTabIndex].modified = true;
@@ -741,6 +745,10 @@ void Win32IDE::onEditorContentChanged() {
     // Trigger ghost text debounce on every content change
     if (m_ghostTextEnabled) {
         triggerGhostTextCompletion();
+    }
+
+    if (!m_currentFile.empty() && m_hwndEditor) {
+        syncLSPDocumentChange(m_currentFile, getWindowText(m_hwndEditor));
     }
 
     if (!m_syntaxColoringEnabled) return;

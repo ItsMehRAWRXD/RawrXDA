@@ -24,8 +24,6 @@ QuantumProductionOrchestrator::QuantumProductionOrchestrator(const ProductionCon
     , m_adaptive_quality_threshold(config.min_code_quality)
     , m_adaptive_performance_threshold(config.min_performance_score)
 {
-    std::cout << "[QuantumOrchestrator] Initializing Quantum Production Orchestrator..." << std::endl;
-    
     // Initialize all subsystems
     QuantumAutonomousTodoSystem::AutonomousConfig todo_config;
     todo_config.max_agents = config.max_agent_count;
@@ -85,28 +83,19 @@ QuantumProductionOrchestrator::QuantumProductionOrchestrator(const ProductionCon
     
     m_metrics.status = SystemStatus::Idle;
     
-    std::cout << "[QuantumOrchestrator] System initialized in mode: " 
-              << static_cast<int>(config.mode) << std::endl;
 }
 
 QuantumProductionOrchestrator::~QuantumProductionOrchestrator() {
-    std::cout << "[QuantumOrchestrator] Shutting down system..." << std::endl;
-    
     shutdown();
     shutdownMasmOrchestration();
-    
-    std::cout << "[QuantumOrchestrator] System shutdown complete" << std::endl;
 }
 
 bool QuantumProductionOrchestrator::initialize() {
-    std::cout << "[QuantumOrchestrator] Starting system initialization..." << std::endl;
-    
     try {
         m_metrics.status = SystemStatus::Initializing;
         
         // Initialize agent cycling system
         if (!m_agent_cycling->initializeAgents()) {
-            std::cerr << "[QuantumOrchestrator] Failed to initialize agent cycling" << std::endl;
             return false;
         }
         
@@ -117,11 +106,9 @@ bool QuantumProductionOrchestrator::initialize() {
         
         m_metrics.status = SystemStatus::Idle;
         
-        std::cout << "[QuantumOrchestrator] System initialization completed successfully" << std::endl;
         return true;
         
     } catch (const std::exception& e) {
-        std::cerr << "[QuantumOrchestrator] Initialization failed: " << e.what() << std::endl;
         m_metrics.status = SystemStatus::Emergency_Shutdown;
         return false;
     }
@@ -131,8 +118,6 @@ void QuantumProductionOrchestrator::shutdown() {
     if (!m_running.load()) {
         return;
     }
-    
-    std::cout << "[QuantumOrchestrator] Initiating graceful shutdown..." << std::endl;
     
     m_running.store(false);
     m_autonomous_enabled.store(false);
@@ -167,11 +152,8 @@ void QuantumProductionOrchestrator::shutdown() {
 
 void QuantumProductionOrchestrator::startAutonomousOperation() {
     if (m_running.load()) {
-        std::cout << "[QuantumOrchestrator] System already running" << std::endl;
         return;
     }
-    
-    std::cout << "[QuantumOrchestrator] Starting autonomous operation..." << std::endl;
     
     m_running.store(true);
     m_autonomous_enabled.store(m_config.enable_autonomous_execution);
@@ -214,8 +196,6 @@ std::string QuantumProductionOrchestrator::processRequest(const std::string& req
         // Generate todos from request
         auto todos = m_todo_system->generateTodos(request);
         auto_request.generated_tasks.assign(todos.begin(), todos.end());
-        
-        std::cout << "[QuantumOrchestrator] Generated " << todos.size() << " tasks from request" << std::endl;
         
         // Execute tasks if we have them
         std::ostringstream result_stream;
@@ -335,12 +315,8 @@ std::vector<ExecutionResult> QuantumProductionOrchestrator::executeTop20MostDiff
     std::vector<ExecutionResult> results;
     
     if (difficult_tasks.empty()) {
-        std::cout << "[QuantumOrchestrator] No difficult tasks found to execute" << std::endl;
         return results;
     }
-    
-    std::cout << "[QuantumOrchestrator] Found " << difficult_tasks.size() 
-              << " difficult tasks to execute" << std::endl;
     
     // Execute tasks with maximum resources
     for (const auto& task : difficult_tasks) {
@@ -352,15 +328,9 @@ std::vector<ExecutionResult> QuantumProductionOrchestrator::executeTop20MostDiff
                 auto consensus_result = m_agent_cycling->executeWithConsensus(
                     task, std::max(5, task.min_agent_count));
                 result = consensus_result.merged_result;
-                
-                std::cout << "[QuantumOrchestrator] Executed difficult task '" << task.title 
-                          << "' with consensus (" << (result.success ? "SUCCESS" : "FAILED") << ")" << std::endl;
             } else {
                 // Use cycling for moderately difficult tasks
                 result = m_agent_cycling->executeWithCycling(task);
-                
-                std::cout << "[QuantumOrchestrator] Executed task '" << task.title 
-                          << "' with cycling (" << (result.success ? "SUCCESS" : "FAILED") << ")" << std::endl;
             }
             
             results.push_back(result);

@@ -253,7 +253,7 @@ QByteArray GGUFServerHotpatch::patchRequestBytes(const QByteArray& requestData)
     // Byte-level parameter patching (zero-copy when sizes match)
     for (auto it = m_defaultParams.constBegin(); it != m_defaultParams.constEnd(); ++it) {
         if (it.key() == "temperature") {
-            // Example: patch "0.9" -> "0.5" for temperature override
+            // Patch "0.9" -> "0.5" for temperature override
             QByteArray pattern = "\"temperature\":0.9";
             QByteArray replacement = QString("\"temperature\":%1").arg(it.value().toDouble()).toUtf8();
             

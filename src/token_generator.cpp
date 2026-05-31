@@ -335,8 +335,51 @@ void TokenGenerator::createMinimalVocabulary() {
     }
 }
 
-void TokenGenerator::loadConfigFromJSON(const std::string&) {}
-void TokenGenerator::loadTokenizerConfigFromJSON(const std::string&) {}
+void TokenGenerator::loadConfigFromJSON(const std::string& jsonStr) {
+    if (jsonStr.empty()) return;
+    try {
+        json j = json::parse(jsonStr, nullptr, false);
+        if (j.is_discarded()) return;
+        if (j.contains("vocab_size") && j["vocab_size"].is_number()) {
+            m_vocabSize = j["vocab_size"].get<int>();
+        }
+        if (j.contains("bos_token") && j["bos_token"].is_string()) {
+            auto it = m_vocab.find(j["bos_token"].get<std::string>());
+            if (it != m_vocab.end()) m_bosToken = it->second;
+        }
+        if (j.contains("eos_token") && j["eos_token"].is_string()) {
+            auto it = m_vocab.find(j["eos_token"].get<std::string>());
+            if (it != m_vocab.end()) m_eosToken = it->second;
+        }
+    } catch (...) {
+        fprintf(stderr, "[TokenGenerator] Malformed JSON config ignored\n");
+    }
+}
+
+void TokenGenerator::loadTokenizerConfigFromJSON(const std::string& jsonStr) {
+    if (jsonStr.empty()) return;
+    try {
+        json j = json::parse(jsonStr, nullptr, false);
+        if (j.is_discarded()) return;
+        if (j.contains("model") && j["model"].is_object()) {
+            const auto& model = j["model"];
+            if (model.contains("type") && model["type"].is_string()) {
+                m_tokenizerType = model["type"].get<std::string>();
+            }
+            if (model.contains("vocab") && model["vocab"].is_array()) {
+                std::vector<std::string> tokens;
+                for (const auto& v : model["vocab"]) {
+                    if (v.is_string()) tokens.push_back(v.get<std::string>());
+                }
+                if (!tokens.empty()) {
+                    loadVocabularyFromMemory(tokens, {}, {});
+                }
+            }
+        }
+    } catch (...) {
+        fprintf(stderr, "[TokenGenerator] Malformed tokenizer config ignored\n");
+    }
+}
 
 RawrXD::Expected<void, RawrXD::TokenError> TokenGenerator::loadVocabularyFromMemory(
     const std::vector<std::string>& tokens,
@@ -372,8 +415,45 @@ RawrXD::Expected<void, RawrXD::TokenError> TokenGenerator::loadVocabularyFromMem
     return {};
 }
 
-RawrXD::Expected<void, RawrXD::TokenError> TokenGenerator::loadVocabularyFromSentencePiece(const std::string&) { return {}; }
-RawrXD::Expected<void, RawrXD::TokenError> TokenGenerator::loadVocabularyFromJSON(const std::string&) { return {}; }
+RawrXD::Expected<void, RawrXD::TokenError> TokenGenerator::loadVocabularyFromSentencePiece(const std::string& path) {
+    // Minimal compatibility path: treat sentencepiece export as newline-delimited tokens.
+    return loadVocabulary(path);
+}
+
+RawrXD::Expected<void, RawrXD::TokenError> TokenGenerator::loadVocabularyFromJSON(const std::string& path) {
+    std::ifstream in(path);
+    if (!in.is_open()) {
+        return RawrXD::Unexpected(RawrXD::TokenError::VocabularyNotLoaded);
+    }
+
+    json j;
+    try {
+        in >> j;
+    } catch (...) {
+        return RawrXD::Unexpected(RawrXD::TokenError::InvalidFormat);
+    }
+
+    std::vector<std::string> tokens;
+    if (j.is_array()) {
+        for (const auto& v : j) {
+            if (v.is_string()) {
+                tokens.push_back(v.get<std::string>());
+            }
+        }
+    } else if (j.is_object() && j.contains("tokens") && j["tokens"].is_array()) {
+        for (const auto& v : j["tokens"]) {
+            if (v.is_string()) {
+                tokens.push_back(v.get<std::string>());
+            }
+        }
+    }
+
+    if (tokens.empty()) {
+        return RawrXD::Unexpected(RawrXD::TokenError::VocabularyNotLoaded);
+    }
+
+    return loadVocabularyFromMemory(tokens, {}, {});
+}
 
 bool TokenGenerator::isValidTokenId(int id) const { return m_idToToken.count(id); }
 bool TokenGenerator::isValidToken(const std::string& t) const { return m_vocab.count(t); }
@@ -385,12 +465,47 @@ size_t TokenGenerator::getCacheSize() const { return m_cacheSize; }
 RawrXD::Expected<std::vector<int>, RawrXD::TokenError> TokenGenerator::getFromCache(const std::string& k, bool) {
     return RawrXD::Unexpected(RawrXD::TokenError::TokenNotFound); 
 }
-void TokenGenerator::addToCache(const std::string&, const std::vector<int>&, bool) {}
-void TokenGenerator::evictCacheIfNeeded() {}
+void TokenGenerator::addToCache(const std::string& key, const std::vector<int>& tokens, bool persistent) {
+    (void)persistent;
+    if (key.empty() || tokens.empty()) return;
+    
+    CacheEntry entry;
+    entry.tokens = tokens;
+    entry.timestamp = std::chrono::steady_clock::now();
+    entry.hitCount = 1;
+    
+    tokenCache_[key] = entry;
+    evictCacheIfNeeded();
+}
 
-std::string TokenGenerator::detectTokenType(const std::string&) const { return "word"; }
-void TokenGenerator::logTokenization(const std::string&, const std::vector<int>&) {}
-void TokenGenerator::logError(const std::string&, RawrXD::TokenError) {}
+void TokenGenerator::evictCacheIfNeeded() {
+    const size_t MAX_CACHE_SIZE = 10000;
+    if (tokenCache_.size() <= MAX_CACHE_SIZE) return;
+    
+    // Evict oldest entries
+    std::vector<std::pair<std::string, CacheEntry>> entries(tokenCache_.begin(), tokenCache_.end());
+    std::sort(entries.begin(), entries.end(),
+        [](const auto& a, const auto& b) {
+            return a.second.hitCount < b.second.hitCount;
+        });
+    
+    size_t toEvict = tokenCache_.size() - MAX_CACHE_SIZE;
+    for (size_t i = 0; i < toEvict; ++i) {
+        tokenCache_.erase(entries[i].first);
+    }
+}
+
+void TokenGenerator::logTokenization(const std::string& text, const std::vector<int>& tokens) {
+    (void)text;
+    totalTokensGenerated_ += tokens.size();
+    tokenizationCount_++;
+}
+
+void TokenGenerator::logError(const std::string& context, RawrXD::TokenError error) {
+    (void)context;
+    errorCount_++;
+    lastError_ = error;
+}
 
 RawrXD::Expected<RawrXD::TokenInfo, RawrXD::TokenError> TokenGenerator::getTokenInfo(int id) {
      if (m_tokenInfo.count(id)) return m_tokenInfo.at(id);
@@ -410,7 +525,6 @@ RawrXD::Expected<std::vector<std::string>, RawrXD::TokenError> TokenGenerator::d
 void TokenGenerator::setVulkanCompute(std::shared_ptr<VulkanCompute> vulkan) {
     m_vulkan = vulkan;
     if (m_vulkan) {
-        spdlog::info("TokenGenerator: GPU Acceleration Enabled");
         m_config.enableGpu = true;
     }
 }
@@ -419,7 +533,6 @@ RawrXD::Expected<std::vector<std::vector<int>>, RawrXD::TokenError> TokenGenerat
     const std::vector<std::string>& texts
 ) {
     if (!m_vulkan || !m_config.enableGpu) {
-        spdlog::warn("GPU encoding requested but Vulkan not available. Falling back to CPU.");
         return encodeBatch(texts);
     }
     return encodeBatch(texts);

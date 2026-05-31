@@ -232,11 +232,55 @@ void MarketplaceUIView::onSettingsChanged()
     showStatus("Settings updated");
 }
 
-void MarketplaceUIView::setupSearchTab() {}
-void MarketplaceUIView::setupDetailsTab() {}
-void MarketplaceUIView::setupInstalledTab() {}
-void MarketplaceUIView::setupSettingsTab() {}
-void MarketplaceUIView::setupConnections() {}
+void MarketplaceUIView::setupSearchTab() {
+    // Configure search tab UI elements
+    if (m_searchInput) {
+        m_searchInput->setPlaceholderText("Search extensions...");
+    }
+    if (m_searchButton) {
+        // Connect search button to search handler
+    }
+    if (m_resultsList) {
+        m_resultsList->setSelectionMode(QAbstractItemView::SingleSelection);
+    }
+}
+
+void MarketplaceUIView::setupDetailsTab() {
+    // Configure extension details view
+    if (m_detailsView) {
+        m_detailsView->setReadOnly(true);
+        m_detailsView->setPlaceholderText("Select an extension to view details");
+    }
+}
+
+void MarketplaceUIView::setupInstalledTab() {
+    // Configure installed extensions list
+    if (m_installedList) {
+        m_installedList->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    }
+}
+
+void MarketplaceUIView::setupSettingsTab() {
+    // Configure marketplace settings
+    if (m_policyEngine) {
+        m_policyEngine->setRequireSignature(m_requireSignature);
+    }
+}
+
+void MarketplaceUIView::setupConnections() {
+    // Connect UI signals to slots
+    if (m_searchInput && m_searchButton) {
+        // Connect search input return pressed to search
+        // Connect search button clicked to search
+    }
+    if (m_resultsList) {
+        // Connect item selection changed to show details
+        // Connect item double clicked to install
+    }
+    if (m_installedList) {
+        // Connect item selection changed to enable/disable uninstall
+    }
+}
 
 void MarketplaceUIView::updateExtensionList(const std::string& extensionsJson)
 {

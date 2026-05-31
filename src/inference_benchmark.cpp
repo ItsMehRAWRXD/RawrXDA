@@ -1,8 +1,10 @@
 #include "inference_benchmark.h"
+#include "gpu/speculative_inference_bridge.h"
 #include <algorithm>
 #include <iostream>
 #include <sstream>
 #include <numeric>
+#include <limits>
 #include <windows.h>
 #include <psapi.h>
 
@@ -20,6 +22,8 @@ std::vector<BenchmarkResult> InferenceBenchmark::runBenchmarkSuite(const Benchma
     for (const auto& modelPath : config.modelPaths) {
         for (const auto& testPrompt : config.testPrompts) {
             for (int maxTokens : config.maxTokensList) {
+                double bestBaselineTps = 0.0;
+
                 // Get available backends
                 auto availableBackends = m_backendSelector->detectAvailableBackends();
 
@@ -36,9 +40,14 @@ std::vector<BenchmarkResult> InferenceBenchmark::runBenchmarkSuite(const Benchma
                                                      config.benchmarkRuns);
 
                         if (config.enableMemoryTracking) {
-                            // Additional memory measurement could be added here
+                            // Track peak memory during inference
+                            PROCESS_MEMORY_COUNTERS pmc;
+                            if (GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc))) {
+                                result.peakMemoryMB = pmc.PeakWorkingSetSize / (1024.0 * 1024.0);
+                            }
                         }
 
+                        bestBaselineTps = std::max(bestBaselineTps, result.tokensPerSec);
                         allResults.push_back(result);
 
                     } catch (const std::exception& e) {
@@ -51,10 +60,26 @@ std::vector<BenchmarkResult> InferenceBenchmark::runBenchmarkSuite(const Benchma
                         failedResult.modelPath = modelPath;
                         failedResult.testPrompt = testPrompt;
                         failedResult.maxTokens = maxTokens;
+                        failedResult.acceptanceRate = 0.0;
+                        failedResult.speedupVsBaseline = 0.0;
+                        failedResult.speculativeMode = false;
                         failedResult.success = false;
                         failedResult.errorMessage = e.what();
                         allResults.push_back(failedResult);
                     }
+                }
+
+                if (config.enableSpeculativeBenchmarks && !config.draftModelPath.empty()) {
+                    auto speculative = benchmarkSpeculative(modelPath,
+                                                            config.draftModelPath,
+                                                            testPrompt,
+                                                            maxTokens,
+                                                            config.benchmarkRuns,
+                                                            config);
+                    if (speculative.success && bestBaselineTps > 0.0) {
+                        speculative.speedupVsBaseline = speculative.tokensPerSec / bestBaselineTps;
+                    }
+                    allResults.push_back(std::move(speculative));
                 }
             }
         }
@@ -72,8 +97,12 @@ BenchmarkResult InferenceBenchmark::benchmarkBackend(BackendType backend,
     result.backend = backend;
     result.backendName = m_backendSelector->getBackendInfo(backend).name;
     result.modelPath = modelPath;
+    result.draftModelPath.clear();
     result.testPrompt = testPrompt;
     result.maxTokens = maxTokens;
+    result.acceptanceRate = 0.0;
+    result.speedupVsBaseline = 1.0;
+    result.speculativeMode = false;
 
     try {
         auto engine = m_backendSelector->createInferenceEngine(backend);
@@ -94,9 +123,14 @@ BenchmarkResult InferenceBenchmark::benchmarkBackend(BackendType backend,
 
         // Calculate statistics
         std::sort(latencies.begin(), latencies.end());
-        result.latencyP50Ms = latencies[latencies.size() / 2];
-        result.latencyP95Ms = latencies[static_cast<size_t>(latencies.size() * 0.95)];
-        result.latencyP99Ms = latencies[static_cast<size_t>(latencies.size() * 0.99)];
+        const size_t p50 = latencies.size() / 2;
+        const size_t p95 = std::min(latencies.size() - 1,
+            static_cast<size_t>(latencies.size() * 0.95));
+        const size_t p99 = std::min(latencies.size() - 1,
+            static_cast<size_t>(latencies.size() * 0.99));
+        result.latencyP50Ms = latencies[p50];
+        result.latencyP95Ms = latencies[p95];
+        result.latencyP99Ms = latencies[p99];
 
         double totalLatency = std::accumulate(latencies.begin(), latencies.end(), 0.0);
         result.totalTimeMs = totalLatency / numRuns;
@@ -110,6 +144,73 @@ BenchmarkResult InferenceBenchmark::benchmarkBackend(BackendType backend,
 
         result.success = true;
 
+    } catch (const std::exception& e) {
+        result.success = false;
+        result.errorMessage = e.what();
+    }
+
+    return result;
+}
+
+BenchmarkResult InferenceBenchmark::benchmarkSpeculative(const std::string& modelPath,
+                                                       const std::string& draftModelPath,
+                                                       const std::string& testPrompt,
+                                                       int maxTokens,
+                                                       int numRuns,
+                                                       const BenchmarkConfig& config) {
+    BenchmarkResult result;
+    result.backend = BackendType::CPU;
+    result.backendName = "SpeculativeDraftVerify";
+    result.modelPath = modelPath;
+    result.draftModelPath = draftModelPath;
+    result.testPrompt = testPrompt;
+    result.maxTokens = maxTokens;
+    result.acceptanceRate = 0.0;
+    result.speedupVsBaseline = 1.0;
+    result.speculativeMode = true;
+
+    try {
+        RawrXD::Speculative::SpeculativeInferenceBridge bridge;
+        RawrXD::Speculative::SpeculationConfig speculativeCfg;
+        speculativeCfg.maxDraftTokens = std::max(1, config.speculativeDraftTokens);
+        speculativeCfg.minDraftTokens = 1;
+        speculativeCfg.acceptanceThreshold = config.speculativeAcceptanceThreshold;
+        speculativeCfg.adaptiveDraftLen = true;
+
+        bridge.setDraftModel(draftModelPath);
+        bridge.setTargetModel(modelPath);
+        bridge.configure(speculativeCfg);
+
+        for (int i = 0; i < config.warmupRuns; ++i) {
+            (void)bridge.generateFromText(testPrompt, std::min(maxTokens, 8));
+        }
+
+        auto latencies = measureSpeculativeLatencies(modelPath,
+                                                    draftModelPath,
+                                                    testPrompt,
+                                                    maxTokens,
+                                                    numRuns,
+                                                    result.acceptanceRate,
+                                                    config);
+        if (latencies.empty()) {
+            throw std::runtime_error("No speculative latency measurements collected");
+        }
+
+        std::sort(latencies.begin(), latencies.end());
+        const size_t p50 = latencies.size() / 2;
+        const size_t p95 = std::min(latencies.size() - 1,
+            static_cast<size_t>(latencies.size() * 0.95));
+        const size_t p99 = std::min(latencies.size() - 1,
+            static_cast<size_t>(latencies.size() * 0.99));
+        result.latencyP50Ms = latencies[p50];
+        result.latencyP95Ms = latencies[p95];
+        result.latencyP99Ms = latencies[p99];
+
+        double totalLatency = std::accumulate(latencies.begin(), latencies.end(), 0.0);
+        result.totalTimeMs = totalLatency / latencies.size();
+        result.tokensPerSec = maxTokens / (result.totalTimeMs / 1000.0);
+        result.memoryUsageBytes = measureMemoryUsage(std::unique_ptr<InferenceEngine>());
+        result.success = true;
     } catch (const std::exception& e) {
         result.success = false;
         result.errorMessage = e.what();
@@ -147,6 +248,12 @@ std::string InferenceBenchmark::generateComparisonReport(const std::vector<Bench
             }
 
             report << result.backendName << ":\n";
+            if (result.speculativeMode) {
+                report << "  Mode: Speculative draft+verify\n";
+                report << "  Draft model: " << result.draftModelPath << "\n";
+                report << "  Acceptance rate: " << (result.acceptanceRate * 100.0) << "%\n";
+                report << "  Speedup vs best baseline: " << result.speedupVsBaseline << "x\n";
+            }
             report << "  Tokens/sec: " << result.tokensPerSec << "\n";
             report << "  Latency P50: " << result.latencyP50Ms << "ms\n";
             report << "  Latency P95: " << result.latencyP95Ms << "ms\n";
@@ -217,7 +324,50 @@ std::vector<double> InferenceBenchmark::measureLatencies(std::unique_ptr<Inferen
     return latencies;
 }
 
-size_t InferenceBenchmark::measureMemoryUsage(std::unique_ptr<InferenceEngine>& engine) {
+std::vector<double> InferenceBenchmark::measureSpeculativeLatencies(const std::string& modelPath,
+                                                                  const std::string& draftModelPath,
+                                                                  const std::string& testPrompt,
+                                                                  int maxTokens,
+                                                                  int numRuns,
+                                                                  double& acceptanceRate,
+                                                                  const BenchmarkConfig& config) {
+    std::vector<double> latencies;
+    double acceptanceAccumulator = 0.0;
+    int successfulRuns = 0;
+
+    for (int i = 0; i < numRuns; ++i) {
+        RawrXD::Speculative::SpeculativeInferenceBridge bridge;
+        RawrXD::Speculative::SpeculationConfig speculativeCfg;
+        speculativeCfg.maxDraftTokens = std::max(1, config.speculativeDraftTokens);
+        speculativeCfg.minDraftTokens = 1;
+        speculativeCfg.acceptanceThreshold = config.speculativeAcceptanceThreshold;
+        speculativeCfg.adaptiveDraftLen = true;
+
+        bridge.setDraftModel(draftModelPath);
+        bridge.setTargetModel(modelPath);
+        bridge.configure(speculativeCfg);
+
+        auto start = std::chrono::high_resolution_clock::now();
+        auto result = bridge.generateFromText(testPrompt, maxTokens);
+        auto end = std::chrono::high_resolution_clock::now();
+
+        if (!result.success || result.tokens.empty()) {
+            continue;
+        }
+
+        latencies.push_back(std::chrono::duration<double, std::milli>(end - start).count());
+        acceptanceAccumulator += result.stats.acceptanceRate;
+        ++successfulRuns;
+    }
+
+    acceptanceRate = successfulRuns > 0
+        ? (acceptanceAccumulator / successfulRuns)
+        : 0.0;
+    return latencies;
+}
+
+size_t InferenceBenchmark::measureMemoryUsage(const std::unique_ptr<InferenceEngine>& engine) {
+    (void)engine;
     PROCESS_MEMORY_COUNTERS pmc;
     if (GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc))) {
         return pmc.WorkingSetSize;
@@ -238,8 +388,8 @@ void InferenceBenchmark::warmupEngine(std::unique_ptr<InferenceEngine>& engine,
     for (int i = 0; i < warmupRuns; ++i) {
         try {
             engine->Generate(tokens, 5); // Short generation for warmup
-        } catch (const std::exception&) {
-            // Ignore warmup failures
+        } catch (const std::exception& e) {
+            fprintf(stderr, "[InferenceBenchmark] Warmup failed: %s\n", e.what());
         }
     }
 }

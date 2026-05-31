@@ -12,7 +12,6 @@ SwarmOrchestrator::SwarmOrchestrator(size_t maxAgents) : m_maxAgents(maxAgents) 
     // Initialize central brain (The Orchestrator itself)
     m_inferenceEngine = std::make_unique<AgenticEngine>();
     m_inferenceEngine->initialize();
-    m_inferenceEngine->appendSystemPrompt("You are the Swarm Orchestrator. Your role is to decompose complex tasks into subtasks and coordinate agents.");
 
     // Default agents
     addAgent("coding");
@@ -31,7 +30,7 @@ SwarmOrchestrator::~SwarmOrchestrator() {
     }
 }
 
-std::expected<void, SwarmError> SwarmOrchestrator::addAgent(const std::string& specialization) {
+RawrXD::Expected<void, SwarmError> SwarmOrchestrator::addAgent(const std::string& specialization) {
     try {
         auto agent = std::make_unique<SwarmAgent>();
         agent->id = "agent_" + std::to_string(m_agents.size());
@@ -40,15 +39,10 @@ std::expected<void, SwarmError> SwarmOrchestrator::addAgent(const std::string& s
         agent->engine = std::make_unique<AgenticEngine>();
         agent->engine->initialize();
         
-        // Configure agent specialization
-        std::string prompt = "You are a specialized Swarm Agent. Your specialization is: " + specialization + ".\n"
-                             "Focus solely on this aspect of the tasks provided.";
-        agent->engine->appendSystemPrompt(prompt);
-
         m_agents.push_back(std::move(agent));
-        return {};
+        return RawrXD::Expected<void, SwarmError>();
     } catch (...) {
-        return std::unexpected(SwarmError::AgentCreationFailed);
+        return RawrXD::unexpected(SwarmError::AgentCreationFailed);
     }
 }
 
@@ -62,14 +56,14 @@ std::vector<SwarmAgent*> SwarmOrchestrator::getAvailableAgents() const {
     return available;
 }
 
-std::expected<std::string, SwarmError> SwarmOrchestrator::executeTask(
+RawrXD::Expected<std::string, SwarmError> SwarmOrchestrator::executeTask(
     const std::string& task
 ) {
     auto decompositionResult = decomposeTask(task);
-    if (!decompositionResult) return std::unexpected(decompositionResult.error());
+    if (!decompositionResult) return RawrXD::unexpected(decompositionResult.error());
     
     auto subtasks = decompositionResult.value();
-    if (subtasks.empty()) return "Task decomposition yielded no actionable items.";
+    if (subtasks.empty()) return std::string("Task decomposition yielded no actionable items.");
 
     auto swarmTask = std::make_unique<SwarmTask>();
     swarmTask->id = generateTaskId();
@@ -78,9 +72,9 @@ std::expected<std::string, SwarmError> SwarmOrchestrator::executeTask(
     swarmTask->createdAt = std::chrono::steady_clock::now();
     
     // Check if we have agents
-    if (m_agents.empty()) return std::unexpected(SwarmError::AgentCreationFailed);
+    if (m_agents.empty()) return RawrXD::unexpected(SwarmError::AgentCreationFailed);
 
-    std::vector<std::future<std::expected<std::string, SwarmError>>> futures;
+    std::vector<std::future<RawrXD::Expected<std::string, SwarmError>>> futures;
 
     // Distribute tasks round-robin for now
     // A better implementation would match specialization
@@ -118,8 +112,8 @@ std::expected<std::string, SwarmError> SwarmOrchestrator::executeTask(
     return reachConsensus(results, confidences);
 }
 
-std::expected<std::vector<std::string>, SwarmError> SwarmOrchestrator::decomposeTask(const std::string& task) {
-    if (!m_inferenceEngine) return std::unexpected(SwarmError::ExecutionFailed);
+RawrXD::Expected<std::vector<std::string>, SwarmError> SwarmOrchestrator::decomposeTask(const std::string& task) {
+    if (!m_inferenceEngine) return RawrXD::unexpected(SwarmError::ExecutionFailed);
 
     std::string prompt = "Break down the following task into 3 distinct implementation steps. "
                          "Return ONLY a JSON array of strings e.g. [\"Step 1\", \"Step 2\"]. "
@@ -148,23 +142,23 @@ std::expected<std::vector<std::string>, SwarmError> SwarmOrchestrator::decompose
     return std::vector<std::string>{task};
 }
 
-std::expected<void, SwarmError> SwarmOrchestrator::distributeTask(SwarmTask& task, std::vector<SwarmAgent*>& agents) {
+RawrXD::Expected<void, SwarmError> SwarmOrchestrator::distributeTask(SwarmTask& task, std::vector<SwarmAgent*>& agents) {
     // Logic moved to executeTask for now in this iteration
-    return {};
+    return RawrXD::Expected<void, SwarmError>();
 }
 
-std::expected<std::string, SwarmError> SwarmOrchestrator::reachConsensus(
+RawrXD::Expected<std::string, SwarmError> SwarmOrchestrator::reachConsensus(
     const std::vector<std::string>& proposals,
     const std::vector<float>& confidences
 ) {
     return weightedVotingConsensus(proposals, confidences);
 }
 
-std::expected<std::string, SwarmError> SwarmOrchestrator::weightedVotingConsensus(
+RawrXD::Expected<std::string, SwarmError> SwarmOrchestrator::weightedVotingConsensus(
     const std::vector<std::string>& proposals,
     const std::vector<float>& confidences
 ) {
-    if (proposals.empty()) return std::unexpected(SwarmError::ConsensusFailed);
+    if (proposals.empty()) return RawrXD::unexpected(SwarmError::ConsensusFailed);
     
     // Synthesis: Concatenate results for now, or ask Leader to summarize
     std::stringstream synthesis;
@@ -183,12 +177,12 @@ std::expected<std::string, SwarmError> SwarmOrchestrator::weightedVotingConsensu
     return synthesis.str();
 }
 
-std::expected<std::string, SwarmError> SwarmOrchestrator::executeSubtask(
+RawrXD::Expected<std::string, SwarmError> SwarmOrchestrator::executeSubtask(
     SwarmAgent* agent,
     const std::string& subtask,
     const std::unordered_map<std::string, std::string>& context
 ) {
-    if (!agent || !agent->engine) return std::unexpected(SwarmError::AgentCreationFailed);
+    if (!agent || !agent->engine) return RawrXD::unexpected(SwarmError::AgentCreationFailed);
     
     // Mark agent busy
     bool wasBusy = agent->isBusy.exchange(true);
@@ -199,7 +193,7 @@ std::expected<std::string, SwarmError> SwarmOrchestrator::executeSubtask(
     agent->isBusy.store(false);
     agent->lastActive = std::chrono::steady_clock::now();
     
-    if (response.empty()) return std::unexpected(SwarmError::ExecutionFailed);
+    if (response.empty()) return RawrXD::unexpected(SwarmError::ExecutionFailed);
     return response;
 }
 

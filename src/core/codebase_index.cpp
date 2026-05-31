@@ -425,11 +425,20 @@ private:
 };
 
 // ============================================================================
-// Global Instance
+// Global Instance - LAZY SINGLETON PATTERN to avoid SIOF
 // ============================================================================
 
-static std::unique_ptr<CodebaseIndex> g_index;
-static std::mutex g_indexMutex;
+inline std::unique_ptr<CodebaseIndex>& GetCodebaseIndex() {
+    static std::unique_ptr<CodebaseIndex>* inst = new std::unique_ptr<CodebaseIndex>();
+    return *inst;
+}
+#define g_index GetCodebaseIndex()
+
+inline std::mutex& GetIndexMutex() {
+    static std::mutex* inst = new std::mutex();
+    return *inst;
+}
+#define g_indexMutex GetIndexMutex()
 
 } // namespace Core
 } // namespace RawrXD

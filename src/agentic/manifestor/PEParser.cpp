@@ -126,18 +126,23 @@ std::vector<PEImport> PEParser::getImports() const {
             static_cast<uint8_t*>(m_moduleBase) + thunkRVA);
 
         while (thunk->u1.AddressOfData != 0) {
+            PEImport imp;
+            imp.dllName = reinterpret_cast<const char*>(
+                static_cast<uint8_t*>(m_moduleBase) + importDesc->Name);
+            imp.thunkAddress = reinterpret_cast<uintptr_t>(thunk);
+
             if (!(thunk->u1.Ordinal & IMAGE_ORDINAL_FLAG)) {
                 // Import by name
                 auto* importByName = reinterpret_cast<IMAGE_IMPORT_BY_NAME*>(
                     static_cast<uint8_t*>(m_moduleBase) + thunk->u1.AddressOfData);
-                imp.functionNames.push_back(importByName->Name);
-                imp.hints.push_back(importByName->Hint);
+                imp.functionName = importByName->Name;
+                imp.ordinal = importByName->Hint;
             } else {
                 // Import by ordinal
-                uint16_t ordinal = static_cast<uint16_t>(thunk->u1.Ordinal & 0xFFFF);
-                imp.functionNames.push_back("Ordinal#" + std::to_string(ordinal));
-                imp.hints.push_back(ordinal);
+                imp.ordinal = static_cast<uint16_t>(thunk->u1.Ordinal & 0xFFFF);
+                imp.functionName = "Ordinal#" + std::to_string(imp.ordinal);
             }
+            imports.push_back(imp);
             thunk++;
         }
 

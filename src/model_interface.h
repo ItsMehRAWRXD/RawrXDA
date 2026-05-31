@@ -163,30 +163,38 @@ private:
     void onRouterInitialized();
     void onModelRegistered(const std::string& model_name);
 
+    // Statistics helpers
+    int getTotalCalls() const;
+    int getTotalSuccess() const;
+    int getTotalFailure() const;
+    int getTotalTokens() const;
+    double getTotalLatency() const;
+    std::string escapeJson(const std::string& s) const;
+
 private:
     // Internal generation methods
     GenerationResult generateInternal(const std::string& prompt,
                                      const std::string& model_name,
                                      const GenerationOptions& options);
-    
+
     void generateStreamInternal(const std::string& prompt,
                                const std::string& model_name,
                                std::function<void(const std::string&)> on_chunk,
                                std::function<void(const std::string&)> on_error,
                                const GenerationOptions& options);
-    
+
     // Helper methods
     bool isLocalModel(const std::string& model_name) const;
     bool isCloudModel(const std::string& model_name) const;
     ModelConfig getModelConfigOrThrow(const std::string& model_name) const;
-    
+
     // Member variables
     std::shared_ptr<UniversalModelRouter> router;
     std::shared_ptr<RawrXD::CPUInferenceEngine> local_engine;
     std::shared_ptr<CloudApiClient> cloud_client;
     std::string default_model;
     bool initialized_flag;
-    
+
     // Statistics tracking
     struct ModelStats {
         int call_count = 0;
@@ -196,9 +204,9 @@ private:
         double total_cost = 0.0;
         int total_tokens = 0;
     };
-    
+
     std::map<std::string, ModelStats> stats_map;
-    
+
     // Configuration
     int max_retries = 3;
     int retry_delay_ms = 1000;

@@ -1,0 +1,13 @@
+2026-04-10 06:04:14 [INFO] [RuntimeSurface] [RuntimeSurface] bootstrap begin (no startup scan/index)
+2026-04-10 06:04:14 [INFO] [RuntimeSurface] [RawrXD::Quant] Layout Legend: Q4S (Signed 4-bit): UI '-4bit', Wire: val+8, Range [-8,7]. Q6S (Signed 6-bit): UI '-6bit', Wire: val+32, Range [-32,31]. Q4U/Q6U: Standard Unsigned Mapping.
+2026-04-10 06:04:14 [INFO] [RuntimeSurface] [CompressedPoolBudget] budget_bytes=0
+2026-04-10 06:04:14 [INFO] [RuntimeSurface] [ModularModelLoader] resident layer budget=0
+2026-04-10 06:04:14 [INFO] [RuntimeSurface] [RuntimeSurface] llama.cpp/exllamaV2 parity register entries=12
+2026-04-10 06:04:14 [INFO] [RuntimeSurface] [RuntimeSurface] four-lane gate ready (max 4 of 5 lanes unless explicit module)
+2026-04-10 06:04:14 [INFO] [RuntimeSurface] [RuntimeSurface] bootstrap complete
+RawrXD Headless IDE initializing...
+[MEM_STRATEGY] SYS_64KB_ONLY
+Headless minimal profile active (RAWRXD_HEADLESS_MINIMAL=1): skipping optional subsystem threads
+Headless IDE initialized successfully.
+To simplify a mathematical expression or equation is to reduce it to its most basic form while maintaining the same value. For example, simplifying `2(3x + 4)` yields `6x + 8`. Simplification also involves removing unnecessary components from an algebraic statement without changing the original meaning and solving for variables when possible.
+[Scheduler] Shutdown complete

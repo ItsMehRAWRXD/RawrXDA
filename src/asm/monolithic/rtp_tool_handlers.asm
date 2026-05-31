@@ -99,9 +99,9 @@ FORWARD_HANDLER RawrXD_Tools_ReplaceInFile,       1
 FORWARD_HANDLER RawrXD_Tools_GetCoverage,         4
 
 ; Stage-1 split: family lanes (7..15) remove hard aliasing to legacy ID 3.
-; Behavior remains backward-compatible because those lanes currently route
-; to Tool_RunCommand in agent_tools.asm until per-tool contracts are added.
-FORWARD_HANDLER RawrXD_Tools_ExecuteCommand,      3
+; Behavior remains backward-compatible because family lanes now route through
+; Tool_ShellExec_Impl in agent_tools.asm, which accepts both "command" and "cmd".
+FORWARD_HANDLER RawrXD_Tools_ExecuteCommand,      11
 
 ; system / maintenance lane
 FORWARD_HANDLER RawrXD_Tools_ApplyHotpatch,       15

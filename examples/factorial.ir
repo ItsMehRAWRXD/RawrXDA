@@ -1,0 +1,23 @@
+// factorial.ir - Example IR input for universal compiler
+
+func factorial(n) {
+    if (n <= 1) {
+        return 1;
+    } else {
+        return n * factorial(n - 1);
+    }
+}
+
+func fibonacci(n) {
+    if (n <= 1) {
+        return n;
+    } else {
+        return fibonacci(n - 1) + fibonacci(n - 2);
+    }
+}
+
+func main() {
+    var int result = factorial(5);
+    var int fib = fibonacci(10);
+    return 0;
+}

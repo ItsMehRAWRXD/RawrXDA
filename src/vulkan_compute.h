@@ -17,6 +17,13 @@
 #include <atomic>
 #include <mutex>
 
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#endif
+
 // =============================================================================
 // Vulkan Type Stubs (when vulkan.h is not on include path)
 // =============================================================================
@@ -36,6 +43,7 @@ typedef struct VkPipelineLayout_T*  VkPipelineLayout;
 typedef struct VkDescriptorSetLayout_T* VkDescriptorSetLayout;
 typedef struct VkDescriptorPool_T*  VkDescriptorPool;
 typedef struct VkDescriptorSet_T*   VkDescriptorSet;
+typedef struct VkSemaphore_T*       VkSemaphore;
 typedef uint32_t VkMemoryPropertyFlags;
 
 // Minimal struct stubs for compilation without Vulkan SDK
@@ -62,6 +70,10 @@ struct VkPhysicalDeviceMemoryProperties {
         uint32_t flags;
     } memoryHeaps[16];
 };
+
+#ifndef VK_NULL_HANDLE
+#define VK_NULL_HANDLE 0
+#endif
 #endif
 
 // =============================================================================
@@ -81,11 +93,18 @@ struct VulkanTensor {
 struct VulkanDeviceInfo {
     VkPhysicalDeviceProperties       properties{};
     VkPhysicalDeviceMemoryProperties memory_props{};
+    VkPhysicalDevice                 physical_device      = nullptr;
     std::string                      device_name;
     uint32_t                         vendor_id            = 0;
     uint32_t                         device_id            = 0;
     int                              compute_queue_family = -1;
     bool                             supports_compute     = false;
+    uint32_t                         device_index         = 0;
+};
+
+struct VulkanP2PGroup {
+    std::vector<uint32_t> device_indices;
+    bool                  is_p2p_capable = false;
 };
 
 // =============================================================================
@@ -97,6 +116,14 @@ struct ComputeShader {
     VkPipeline               pipeline = nullptr;
     VkPipelineLayout         layout   = nullptr;
     std::vector<uint32_t>    spirv_code;
+};
+
+enum class MatMulKernelMode : uint32_t {
+    FloatF32 = 0,
+    Q4KQ81U32 = 1,
+    Q40U32 = 2,
+    Q5KU32 = 3,
+    Q6KU32 = 4,
 };
 
 // =============================================================================
@@ -144,6 +171,11 @@ public:
     const VulkanDeviceInfo& GetDeviceInfo() const { return device_info_; }
     const VulkanKernelStats& GetStats() const { return stats_; }
 
+    // ---- Multi-GPU P2P (v1.3) ----
+    bool EnumerateMultiGPUP2P();
+    const std::vector<VulkanDeviceInfo>& GetAvailableDevices() const { return all_devices_; }
+    const std::vector<VulkanP2PGroup>& GetP2PGroups() const { return p2p_groups_; }
+
     // ---- Instance/Device Setup ----
     bool CreateInstance();
     bool SelectPhysicalDevice();
@@ -157,9 +189,20 @@ public:
     bool ReplacePipeline(const std::string& shader_name, const std::string& new_spirv_path);
 
     // ---- Buffer Management ----
-    bool AllocateBuffer(size_t size, VkBuffer& buffer, VkDeviceMemory& memory);
-    bool AllocateBuffer(size_t size, uint32_t& buffer_idx, size_t& memory_size);
+    bool AllocateBuffer(size_t size, VkBuffer& buffer, VkDeviceMemory& memory, bool export_kmt = false);
+    bool AllocateBuffer(size_t size, uint32_t& buffer_idx, size_t& memory_size, bool export_kmt = false);
+    bool AllocateZeroCopyBuffer(size_t size, uint32_t& buffer_idx, void** host_ptr, bool export_kmt = false);
     bool CreateStagingBuffer(size_t size, VkBuffer& buffer, VkDeviceMemory& memory);
+
+    // ---- v1.3 P2P VRAM Sharing ----
+    bool ExportBufferKMT(uint32_t buffer_idx, HANDLE& kmt_handle);
+    bool ImportBufferKMT(HANDLE kmt_handle, size_t size, uint32_t& buffer_idx);
+    bool CreateTimelineSemaphore(VkSemaphore& semaphore, uint64_t initial_value = 0);
+    bool ExportTimelineSemaphoreKMT(VkSemaphore semaphore, HANDLE& kmt_handle);
+    bool ImportTimelineSemaphoreKMT(HANDLE kmt_handle, VkSemaphore& semaphore);
+    bool WaitTimelineSemaphore(VkSemaphore semaphore, uint64_t value, uint64_t timeout_ns = UINT64_MAX);
+    bool SignalTimelineSemaphore(VkSemaphore semaphore, uint64_t value);
+    bool GetTimelineSemaphoreValue(VkSemaphore semaphore, uint64_t& value);
 
     // ---- Data Transfer ----
     bool CopyBufferToHost(VkBuffer device_buffer, void* host_data, size_t size);
@@ -168,7 +211,11 @@ public:
     bool CopyHostToBuffer(void* host_data, uint32_t buffer_idx, size_t size);
     bool CopyHostToBufferOffset(const void* host_data, VkBuffer device_buffer,
                                 size_t offset, size_t size);
+    bool CopyHostToBufferOffset(const void* host_data, uint32_t buffer_idx,
+                                size_t offset, size_t size);
     bool CopyBufferToHostOffset(VkBuffer device_buffer, size_t offset,
+                                void* host_data, size_t size);
+    bool CopyBufferToHostOffset(uint32_t buffer_idx, size_t offset,
                                 void* host_data, size_t size);
 
     // ---- GGUF Tensor Upload ----
@@ -197,6 +244,19 @@ public:
                                   uint32_t output_idx, uint32_t seq_len,
                                   uint32_t head_dim, uint32_t num_heads,
                                   float scale = 0.0f);
+
+    // ---- Titan MoE Sharding (GPU-Accelerated Top-K Experts) ----
+    bool EnsureTitanMoEShardPipeline(const std::string& spirv_path);
+    bool DispatchTitanMoEShard(uint32_t experts_idx, uint32_t activations_idx,
+                               uint32_t logits_idx, uint32_t output_accum_idx,
+                               uint32_t num_experts, uint32_t hidden_dim,
+                               uint32_t top_k);
+    bool DispatchTitanMoEShardAsync(uint32_t experts_idx, uint32_t activations_idx,
+                                    uint32_t logits_idx, uint32_t output_accum_idx,
+                                    uint32_t num_experts, uint32_t hidden_dim,
+                                    uint32_t top_k,
+                                    VkSemaphore wait_sem = VK_NULL_HANDLE, uint64_t wait_val = 0,
+                                    VkSemaphore signal_sem = VK_NULL_HANDLE, uint64_t signal_val = 0);
 
     // ---- Generic Raw Dispatch (3 storage buffers + optional push constants) ----
     bool DispatchRaw3Buffers(const std::string& shader_name,
@@ -290,14 +350,24 @@ private:
 
     // ---- Device Info ----
     VulkanDeviceInfo    device_info_;
+    std::vector<VulkanDeviceInfo> all_devices_;
+    std::vector<VulkanP2PGroup>   p2p_groups_;
 
     // ---- Shader Registry ----
     std::map<std::string, ComputeShader>        shaders_;
     std::mutex                                  shader_mutex_;  // Protects hot-swap
 
     // ---- Buffer Tracking ----
-    std::vector<std::pair<VkBuffer, VkDeviceMemory>>  allocated_buffers_;
-    std::vector<VulkanTensor>                          uploaded_tensors_;
+    struct BufferMeta {
+        VkBuffer buffer;
+        VkDeviceMemory memory;
+        size_t size;
+        bool is_exportable;
+        HANDLE kmt_handle;
+        uint32_t deviceOrdinal; // v1.3 production lock
+    };
+    std::vector<BufferMeta> allocated_buffers_;
+    std::vector<VulkanTensor> uploaded_tensors_;
 
     // ---- Persistent Staging Buffer ----
     VkBuffer            staging_buffer_  = nullptr;
@@ -306,6 +376,8 @@ private:
     // ---- MatMul Permanent Descriptor System ----
     VkDescriptorSetLayout  matmul_descriptor_set_layout_ = nullptr;
     VkDescriptorPool       matmul_descriptor_pool_       = nullptr;
+    MatMulKernelMode       matmul_kernel_mode_           = MatMulKernelMode::FloatF32;
+    uint32_t               matmul_push_constant_words_   = 3;
 
     // ---- Fused MLP Descriptor System ----
     VkDescriptorSetLayout  fused_mlp_descriptor_layout_  = nullptr;
@@ -315,6 +387,10 @@ private:
     VkDescriptorSetLayout  flash_attn_descriptor_layout_ = nullptr;
     VkDescriptorPool       flash_attn_descriptor_pool_   = nullptr;
 
+    // Titan MoE
+    VkDescriptorSetLayout  titan_moe_descriptor_layout_  = nullptr;
+    VkDescriptorPool       titan_moe_descriptor_pool_    = nullptr;
+
     // ---- General Descriptor Pool ----
     VkDescriptorPool       descriptor_pool_              = nullptr;
 
@@ -323,7 +399,7 @@ private:
     std::queue<size_t>               available_buffer_indices_;
 
     // ---- KV Cache ----
-    std::vector<std::pair<VkBuffer, VkDeviceMemory>>  kv_cache_buffers_;
+    std::vector<BufferMeta>  kv_cache_buffers_;
     uint32_t kv_cache_num_layers_  = 0;
     uint32_t kv_cache_max_seq_len_ = 0;
     uint32_t kv_cache_head_dim_    = 0;
@@ -348,7 +424,8 @@ extern "C" {
     RAWRXD_VK_API int  VulkanKernel_Init(void);
     RAWRXD_VK_API int  VulkanKernel_LoadShader(const char* name, const char* spirv_path);
     RAWRXD_VK_API int  VulkanKernel_CreatePipeline(const char* shader_name);
-    RAWRXD_VK_API int  VulkanKernel_AllocBuffer(uint64_t size, uint32_t* out_idx);
+    RAWRXD_VK_API int  VulkanKernel_AllocBuffer(uint64_t size, uint32_t* out_idx, int export_kmt = 0);
+    RAWRXD_VK_API int  VulkanKernel_AllocZeroCopyBuffer(uint64_t size, uint32_t* out_idx, void** host_ptr, int export_kmt = 0);
     RAWRXD_VK_API int  VulkanKernel_CopyToDevice(uint32_t buf_idx, const void* data, uint64_t size);
     RAWRXD_VK_API int  VulkanKernel_CopyToHost(uint32_t buf_idx, void* data, uint64_t size);
     RAWRXD_VK_API int  VulkanKernel_DispatchMatMul(uint32_t a, uint32_t b, uint32_t out,
@@ -423,6 +500,12 @@ extern "C" {
 
     RAWRXD_VK_API void VulkanKernel_GetStats(uint64_t* dispatches, uint64_t* matmuls,
                                              uint64_t* attentions, uint64_t* errors);
+
+    // v1.3 Multi-GPU
+    RAWRXD_VK_API int VulkanKernel_EnumerateP2P(void);
+    RAWRXD_VK_API bool VulkanKernel_ExportKMT(uint32_t buffer_idx, HANDLE* handle);
+    RAWRXD_VK_API bool VulkanKernel_ImportKMT(HANDLE handle, size_t size, uint32_t* out_idx);
+
     RAWRXD_VK_API void VulkanKernel_Cleanup(void);
 }
 

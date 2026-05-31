@@ -57,10 +57,10 @@ load_tiles_q4_0(const void *__restrict__ vx, int *__restrict__ x_ql,
                 int *__restrict__ x_sc, const int &i_offset, const int &i_max,
                 const int &k, const int &blocks_per_row) {
     (void)x_qh; (void)x_sc;
-    GGML_SYCL_ASSUME(i_offset >= 0);
-    GGML_SYCL_ASSUME(i_offset <  nwarps);
-    GGML_SYCL_ASSUME(k >= 0);
-    GGML_SYCL_ASSUME(k <  WARP_SIZE);
+    GGML_RXD_SYCL_ASSUME(i_offset >= 0);
+    GGML_RXD_SYCL_ASSUME(i_offset <  nwarps);
+    GGML_RXD_SYCL_ASSUME(k >= 0);
+    GGML_RXD_SYCL_ASSUME(k <  WARP_SIZE);
 
     const int kbx  = k / QI4_0;
     const int kqsx = k % QI4_0;
@@ -142,10 +142,10 @@ load_tiles_q4_1(const void *__restrict__ vx, int *__restrict__ x_ql,
                 const int &k, const int &blocks_per_row) {
     (void)x_qh; (void)x_sc;
 
-    GGML_SYCL_ASSUME(i_offset >= 0);
-    GGML_SYCL_ASSUME(i_offset <  nwarps);
-    GGML_SYCL_ASSUME(k >= 0);
-    GGML_SYCL_ASSUME(k <  WARP_SIZE);
+    GGML_RXD_SYCL_ASSUME(i_offset >= 0);
+    GGML_RXD_SYCL_ASSUME(i_offset <  nwarps);
+    GGML_RXD_SYCL_ASSUME(k >= 0);
+    GGML_RXD_SYCL_ASSUME(k <  WARP_SIZE);
 
     const int kbx  = k / QI4_1;
     const int kqsx = k % QI4_1;
@@ -222,10 +222,10 @@ load_tiles_q5_0(const void *__restrict__ vx, int *__restrict__ x_ql,
                 const int &k, const int &blocks_per_row) {
     (void)x_qh; (void)x_sc;
 
-    GGML_SYCL_ASSUME(i_offset >= 0);
-    GGML_SYCL_ASSUME(i_offset <  nwarps);
-    GGML_SYCL_ASSUME(k >= 0);
-    GGML_SYCL_ASSUME(k <  WARP_SIZE);
+    GGML_RXD_SYCL_ASSUME(i_offset >= 0);
+    GGML_RXD_SYCL_ASSUME(i_offset <  nwarps);
+    GGML_RXD_SYCL_ASSUME(k >= 0);
+    GGML_RXD_SYCL_ASSUME(k <  WARP_SIZE);
 
     const int kbx  = k / QI5_0;
     const int kqsx = k % QI5_0;
@@ -326,10 +326,10 @@ load_tiles_q5_1(const void *__restrict__ vx, int *__restrict__ x_ql,
                 const int &k, const int &blocks_per_row) {
     (void)x_qh; (void)x_sc;
 
-    GGML_SYCL_ASSUME(i_offset >= 0);
-    GGML_SYCL_ASSUME(i_offset < nwarps);
-    GGML_SYCL_ASSUME(k >= 0);
-    GGML_SYCL_ASSUME(k <  WARP_SIZE);
+    GGML_RXD_SYCL_ASSUME(i_offset >= 0);
+    GGML_RXD_SYCL_ASSUME(i_offset < nwarps);
+    GGML_RXD_SYCL_ASSUME(k >= 0);
+    GGML_RXD_SYCL_ASSUME(k <  WARP_SIZE);
 
     const int kbx  = k / QI5_1;
     const int kqsx = k % QI5_1;
@@ -423,10 +423,10 @@ load_tiles_q8_0(const void *__restrict__ vx, int *__restrict__ x_ql,
                 const int &k, const int &blocks_per_row) {
     (void)x_qh; (void)x_sc;
 
-    GGML_SYCL_ASSUME(i_offset >= 0);
-    GGML_SYCL_ASSUME(i_offset <  nwarps);
-    GGML_SYCL_ASSUME(k >= 0);
-    GGML_SYCL_ASSUME(k <  WARP_SIZE);
+    GGML_RXD_SYCL_ASSUME(i_offset >= 0);
+    GGML_RXD_SYCL_ASSUME(i_offset <  nwarps);
+    GGML_RXD_SYCL_ASSUME(k >= 0);
+    GGML_RXD_SYCL_ASSUME(k <  WARP_SIZE);
 
     const int kbx  = k / QI8_0;
     const int kqsx = k % QI8_0;
@@ -499,10 +499,10 @@ load_tiles_q2_K(const void *__restrict__ vx, int *__restrict__ x_ql,
                 const int &k, const int &blocks_per_row) {
     (void)x_qh;
 
-    GGML_SYCL_ASSUME(i_offset >= 0);
-    GGML_SYCL_ASSUME(i_offset <  nwarps);
-    GGML_SYCL_ASSUME(k >= 0);
-    GGML_SYCL_ASSUME(k <  WARP_SIZE);
+    GGML_RXD_SYCL_ASSUME(i_offset >= 0);
+    GGML_RXD_SYCL_ASSUME(i_offset <  nwarps);
+    GGML_RXD_SYCL_ASSUME(k >= 0);
+    GGML_RXD_SYCL_ASSUME(k <  WARP_SIZE);
 
     const int kbx  = k / QI2_K;
     const int kqsx = k % QI2_K;
@@ -635,10 +635,10 @@ load_tiles_q3_K(const void *__restrict__ vx, int *__restrict__ x_ql,
                 int *__restrict__ x_sc, const int &i_offset, const int &i_max,
                 const int &k, const int &blocks_per_row) {
 
-    GGML_SYCL_ASSUME(i_offset >= 0);
-    GGML_SYCL_ASSUME(i_offset <  nwarps);
-    GGML_SYCL_ASSUME(k >= 0);
-    GGML_SYCL_ASSUME(k <  WARP_SIZE);
+    GGML_RXD_SYCL_ASSUME(i_offset >= 0);
+    GGML_RXD_SYCL_ASSUME(i_offset <  nwarps);
+    GGML_RXD_SYCL_ASSUME(k >= 0);
+    GGML_RXD_SYCL_ASSUME(k <  WARP_SIZE);
 
     const int kbx  = k / QI3_K;
     const int kqsx = k % QI3_K;
@@ -790,10 +790,10 @@ load_tiles_q4_K(const void *__restrict__ vx, int *__restrict__ x_ql,
                 const int &k, const int &blocks_per_row) {
     (void)x_qh;
 
-    GGML_SYCL_ASSUME(i_offset >= 0);
-    GGML_SYCL_ASSUME(i_offset <  nwarps);
-    GGML_SYCL_ASSUME(k >= 0);
-    GGML_SYCL_ASSUME(k <  WARP_SIZE);
+    GGML_RXD_SYCL_ASSUME(i_offset >= 0);
+    GGML_RXD_SYCL_ASSUME(i_offset <  nwarps);
+    GGML_RXD_SYCL_ASSUME(k >= 0);
+    GGML_RXD_SYCL_ASSUME(k <  WARP_SIZE);
 
     const int kbx  = k / QI4_K; // == 0 if QK_K == 256
     const int kqsx = k % QI4_K; // == k if QK_K == 256
@@ -925,10 +925,10 @@ load_tiles_q5_K(const void *__restrict__ vx, int *__restrict__ x_ql,
                 const int &k, const int &blocks_per_row) {
     (void)x_qh;
 
-    GGML_SYCL_ASSUME(i_offset >= 0);
-    GGML_SYCL_ASSUME(i_offset <  nwarps);
-    GGML_SYCL_ASSUME(k >= 0);
-    GGML_SYCL_ASSUME(k <  WARP_SIZE);
+    GGML_RXD_SYCL_ASSUME(i_offset >= 0);
+    GGML_RXD_SYCL_ASSUME(i_offset <  nwarps);
+    GGML_RXD_SYCL_ASSUME(k >= 0);
+    GGML_RXD_SYCL_ASSUME(k <  WARP_SIZE);
 
     const int kbx  = k / QI5_K; // == 0 if QK_K == 256
     const int kqsx = k % QI5_K; // == k if QK_K == 256
@@ -1069,10 +1069,10 @@ load_tiles_q6_K(const void *__restrict__ vx, int *__restrict__ x_ql,
                 const int &k, const int &blocks_per_row) {
     (void)x_qh;
 
-    GGML_SYCL_ASSUME(i_offset >= 0);
-    GGML_SYCL_ASSUME(i_offset <  nwarps);
-    GGML_SYCL_ASSUME(k >= 0);
-    GGML_SYCL_ASSUME(k <  WARP_SIZE);
+    GGML_RXD_SYCL_ASSUME(i_offset >= 0);
+    GGML_RXD_SYCL_ASSUME(i_offset <  nwarps);
+    GGML_RXD_SYCL_ASSUME(k >= 0);
+    GGML_RXD_SYCL_ASSUME(k <  WARP_SIZE);
 
     const int kbx  = k / QI6_K; // == 0 if QK_K == 256
     const int kqsx = k % QI6_K; // == k if QK_K == 256
@@ -1770,7 +1770,7 @@ template <bool need_check> static void
         tile_x_dm, tile_x_qh, tile_x_sc, item_ct1, tile_y_qs, tile_y_ds);
 }
 
-static void ggml_mul_mat_q4_0_q8_1_sycl(const void *vx, const void *vy,
+static void ggml_rxd_mul_mat_q4_0_q8_1_sycl(const void *vx, const void *vy,
                                         float *dst, const int ncols_x,
                                         const int nrows_x, const int ncols_y,
                                         const int nrows_y, const int nrows_dst,
@@ -1779,7 +1779,7 @@ static void ggml_mul_mat_q4_0_q8_1_sycl(const void *vx, const void *vy,
     int id;
     SYCL_CHECK(
         CHECK_TRY_ERROR(id = get_current_device_id()));
-    const int compute_capability = ggml_sycl_info().devices[id].cc;
+    const int compute_capability = ggml_rxd_sycl_info().devices[id].cc;
 
     int mmq_x, mmq_y, nwarps;
     if (compute_capability >= VER_GEN13) {
@@ -1799,7 +1799,7 @@ static void ggml_mul_mat_q4_0_q8_1_sycl(const void *vx, const void *vy,
         mmq_y  =  MMQ_Y_Q4_0_PASCAL;
         nwarps = NWARPS_Q4_0_PASCAL;
     } else {
-        GGML_ABORT("fatal error");
+        GGML_RXD_ABORT("fatal error");
     }
 
     const int block_num_x = (nrows_x + mmq_y - 1) / mmq_y;
@@ -1885,7 +1885,7 @@ catch (sycl::exception const &exc) {
   std::exit(1);
 }
 
-static void ggml_mul_mat_q4_1_q8_1_sycl(const void *vx, const void *vy,
+static void ggml_rxd_mul_mat_q4_1_q8_1_sycl(const void *vx, const void *vy,
                                         float *dst, const int ncols_x,
                                         const int nrows_x, const int ncols_y,
                                         const int nrows_y, const int nrows_dst,
@@ -1894,7 +1894,7 @@ static void ggml_mul_mat_q4_1_q8_1_sycl(const void *vx, const void *vy,
     int id;
     SYCL_CHECK(
         CHECK_TRY_ERROR(id = get_current_device_id()));
-    const int compute_capability = ggml_sycl_info().devices[id].cc;
+    const int compute_capability = ggml_rxd_sycl_info().devices[id].cc;
 
     int mmq_x, mmq_y, nwarps;
     if (compute_capability >= VER_GEN13) {
@@ -1914,7 +1914,7 @@ static void ggml_mul_mat_q4_1_q8_1_sycl(const void *vx, const void *vy,
         mmq_y  =  MMQ_Y_Q4_1_PASCAL;
         nwarps = NWARPS_Q4_1_PASCAL;
     } else {
-        GGML_ABORT("fatal error");
+        GGML_RXD_ABORT("fatal error");
     }
 
     const int block_num_x = (nrows_x + mmq_y - 1) / mmq_y;
@@ -2000,7 +2000,7 @@ catch (sycl::exception const &exc) {
   std::exit(1);
 }
 
-static void ggml_mul_mat_q5_0_q8_1_sycl(const void *vx, const void *vy,
+static void ggml_rxd_mul_mat_q5_0_q8_1_sycl(const void *vx, const void *vy,
                                         float *dst, const int ncols_x,
                                         const int nrows_x, const int ncols_y,
                                         const int nrows_y, const int nrows_dst,
@@ -2009,7 +2009,7 @@ static void ggml_mul_mat_q5_0_q8_1_sycl(const void *vx, const void *vy,
     int id;
     SYCL_CHECK(
         CHECK_TRY_ERROR(id = get_current_device_id()));
-    const int compute_capability = ggml_sycl_info().devices[id].cc;
+    const int compute_capability = ggml_rxd_sycl_info().devices[id].cc;
 
     int mmq_x, mmq_y, nwarps;
     if (compute_capability >= VER_GEN13) {
@@ -2029,7 +2029,7 @@ static void ggml_mul_mat_q5_0_q8_1_sycl(const void *vx, const void *vy,
         mmq_y  =  MMQ_Y_Q5_0_PASCAL;
         nwarps = NWARPS_Q5_0_PASCAL;
     } else {
-        GGML_ABORT("fatal error");
+        GGML_RXD_ABORT("fatal error");
     }
 
     const int block_num_x = (nrows_x + mmq_y - 1) / mmq_y;
@@ -2115,7 +2115,7 @@ catch (sycl::exception const &exc) {
   std::exit(1);
 }
 
-static void ggml_mul_mat_q5_1_q8_1_sycl(const void *vx, const void *vy,
+static void ggml_rxd_mul_mat_q5_1_q8_1_sycl(const void *vx, const void *vy,
                                         float *dst, const int ncols_x,
                                         const int nrows_x, const int ncols_y,
                                         const int nrows_y, const int nrows_dst,
@@ -2124,7 +2124,7 @@ static void ggml_mul_mat_q5_1_q8_1_sycl(const void *vx, const void *vy,
     int id;
     SYCL_CHECK(
         CHECK_TRY_ERROR(id = get_current_device_id()));
-    const int compute_capability = ggml_sycl_info().devices[id].cc;
+    const int compute_capability = ggml_rxd_sycl_info().devices[id].cc;
 
     int mmq_x, mmq_y, nwarps;
     if (compute_capability >= VER_GEN13) {
@@ -2144,7 +2144,7 @@ static void ggml_mul_mat_q5_1_q8_1_sycl(const void *vx, const void *vy,
         mmq_y  =  MMQ_Y_Q5_1_PASCAL;
         nwarps = NWARPS_Q5_1_PASCAL;
     } else {
-        GGML_ABORT("fatal error");
+        GGML_RXD_ABORT("fatal error");
     }
 
     const int block_num_x = (nrows_x + mmq_y - 1) / mmq_y;
@@ -2230,7 +2230,7 @@ catch (sycl::exception const &exc) {
   std::exit(1);
 }
 
-static void ggml_mul_mat_q8_0_q8_1_sycl(const void *vx, const void *vy,
+static void ggml_rxd_mul_mat_q8_0_q8_1_sycl(const void *vx, const void *vy,
                                         float *dst, const int ncols_x,
                                         const int nrows_x, const int ncols_y,
                                         const int nrows_y, const int nrows_dst,
@@ -2239,7 +2239,7 @@ static void ggml_mul_mat_q8_0_q8_1_sycl(const void *vx, const void *vy,
     int id;
     SYCL_CHECK(
         CHECK_TRY_ERROR(id = get_current_device_id()));
-    const int compute_capability = ggml_sycl_info().devices[id].cc;
+    const int compute_capability = ggml_rxd_sycl_info().devices[id].cc;
 
     int mmq_x, mmq_y, nwarps;
     if (compute_capability >= VER_GEN13) {
@@ -2259,7 +2259,7 @@ static void ggml_mul_mat_q8_0_q8_1_sycl(const void *vx, const void *vy,
         mmq_y  =  MMQ_Y_Q8_0_PASCAL;
         nwarps = NWARPS_Q8_0_PASCAL;
     } else {
-        GGML_ABORT("fatal error");
+        GGML_RXD_ABORT("fatal error");
     }
 
     const int block_num_x = (nrows_x + mmq_y - 1) / mmq_y;
@@ -2345,7 +2345,7 @@ catch (sycl::exception const &exc) {
   std::exit(1);
 }
 
-static void ggml_mul_mat_q2_K_q8_1_sycl(const void *vx, const void *vy,
+static void ggml_rxd_mul_mat_q2_K_q8_1_sycl(const void *vx, const void *vy,
                                         float *dst, const int ncols_x,
                                         const int nrows_x, const int ncols_y,
                                         const int nrows_y, const int nrows_dst,
@@ -2354,7 +2354,7 @@ static void ggml_mul_mat_q2_K_q8_1_sycl(const void *vx, const void *vy,
     int id;
     SYCL_CHECK(
         CHECK_TRY_ERROR(id = get_current_device_id()));
-    const int compute_capability = ggml_sycl_info().devices[id].cc;
+    const int compute_capability = ggml_rxd_sycl_info().devices[id].cc;
 
     int mmq_x, mmq_y, nwarps;
     if (compute_capability >= VER_GEN13) {
@@ -2374,7 +2374,7 @@ static void ggml_mul_mat_q2_K_q8_1_sycl(const void *vx, const void *vy,
         mmq_y  =  MMQ_Y_Q2_K_PASCAL;
         nwarps = NWARPS_Q2_K_PASCAL;
     } else {
-        GGML_ABORT("fatal error");
+        GGML_RXD_ABORT("fatal error");
     }
 
     const int block_num_x = (nrows_x + mmq_y - 1) / mmq_y;
@@ -2466,7 +2466,7 @@ catch (sycl::exception const &exc) {
   std::exit(1);
 }
 
-static void ggml_mul_mat_q3_K_q8_1_sycl(const void *vx, const void *vy,
+static void ggml_rxd_mul_mat_q3_K_q8_1_sycl(const void *vx, const void *vy,
                                         float *dst, const int ncols_x,
                                         const int nrows_x, const int ncols_y,
                                         const int nrows_y, const int nrows_dst,
@@ -2477,7 +2477,7 @@ static void ggml_mul_mat_q3_K_q8_1_sycl(const void *vx, const void *vy,
     int id;
     SYCL_CHECK(
         CHECK_TRY_ERROR(id = get_current_device_id()));
-    const int compute_capability = ggml_sycl_info().devices[id].cc;
+    const int compute_capability = ggml_rxd_sycl_info().devices[id].cc;
 
     int mmq_x, mmq_y, nwarps;
     if (compute_capability >= VER_GEN13) {
@@ -2497,7 +2497,7 @@ static void ggml_mul_mat_q3_K_q8_1_sycl(const void *vx, const void *vy,
         mmq_y  =  MMQ_Y_Q3_K_PASCAL;
         nwarps = NWARPS_Q3_K_PASCAL;
     } else {
-        GGML_ABORT("fatal error");
+        GGML_RXD_ABORT("fatal error");
     }
 
     const int block_num_x = (nrows_x + mmq_y - 1) / mmq_y;
@@ -2596,7 +2596,7 @@ catch (sycl::exception const &exc) {
   std::exit(1);
 }
 
-static void ggml_mul_mat_q4_K_q8_1_sycl(const void *vx, const void *vy,
+static void ggml_rxd_mul_mat_q4_K_q8_1_sycl(const void *vx, const void *vy,
                                         float *dst, const int ncols_x,
                                         const int nrows_x, const int ncols_y,
                                         const int nrows_y, const int nrows_dst,
@@ -2605,7 +2605,7 @@ static void ggml_mul_mat_q4_K_q8_1_sycl(const void *vx, const void *vy,
     int id;
     SYCL_CHECK(
         CHECK_TRY_ERROR(id = get_current_device_id()));
-    const int compute_capability = ggml_sycl_info().devices[id].cc;
+    const int compute_capability = ggml_rxd_sycl_info().devices[id].cc;
 
     int mmq_x, mmq_y, nwarps;
     if (compute_capability >= VER_GEN13) {
@@ -2625,7 +2625,7 @@ static void ggml_mul_mat_q4_K_q8_1_sycl(const void *vx, const void *vy,
         mmq_y  =  MMQ_Y_Q4_K_PASCAL;
         nwarps = NWARPS_Q4_K_PASCAL;
     } else {
-        GGML_ABORT("fatal error");
+        GGML_RXD_ABORT("fatal error");
     }
 
     const int block_num_x = (nrows_x + mmq_y - 1) / mmq_y;
@@ -2717,7 +2717,7 @@ catch (sycl::exception const &exc) {
   std::exit(1);
 }
 
-static void ggml_mul_mat_q5_K_q8_1_sycl(const void *vx, const void *vy,
+static void ggml_rxd_mul_mat_q5_K_q8_1_sycl(const void *vx, const void *vy,
                                         float *dst, const int ncols_x,
                                         const int nrows_x, const int ncols_y,
                                         const int nrows_y, const int nrows_dst,
@@ -2726,7 +2726,7 @@ static void ggml_mul_mat_q5_K_q8_1_sycl(const void *vx, const void *vy,
     int id;
     SYCL_CHECK(
         CHECK_TRY_ERROR(id = get_current_device_id()));
-    const int compute_capability = ggml_sycl_info().devices[id].cc;
+    const int compute_capability = ggml_rxd_sycl_info().devices[id].cc;
 
     int mmq_x, mmq_y, nwarps;
     if (compute_capability >= VER_GEN13) {
@@ -2746,7 +2746,7 @@ static void ggml_mul_mat_q5_K_q8_1_sycl(const void *vx, const void *vy,
         mmq_y  =  MMQ_Y_Q5_K_PASCAL;
         nwarps = NWARPS_Q5_K_PASCAL;
     } else {
-        GGML_ABORT("fatal error");
+        GGML_RXD_ABORT("fatal error");
     }
 
     const int block_num_x = (nrows_x + mmq_y - 1) / mmq_y;
@@ -2838,7 +2838,7 @@ catch (sycl::exception const &exc) {
   std::exit(1);
 }
 
-static void ggml_mul_mat_q6_K_q8_1_sycl(const void *vx, const void *vy,
+static void ggml_rxd_mul_mat_q6_K_q8_1_sycl(const void *vx, const void *vy,
                                         float *dst, const int ncols_x,
                                         const int nrows_x, const int ncols_y,
                                         const int nrows_y, const int nrows_dst,
@@ -2847,7 +2847,7 @@ static void ggml_mul_mat_q6_K_q8_1_sycl(const void *vx, const void *vy,
     int id;
     SYCL_CHECK(
         CHECK_TRY_ERROR(id = get_current_device_id()));
-    const int compute_capability = ggml_sycl_info().devices[id].cc;
+    const int compute_capability = ggml_rxd_sycl_info().devices[id].cc;
 
     int mmq_x, mmq_y, nwarps;
     if (compute_capability >= VER_GEN13) {
@@ -2867,7 +2867,7 @@ static void ggml_mul_mat_q6_K_q8_1_sycl(const void *vx, const void *vy,
         mmq_y  =  MMQ_Y_Q6_K_PASCAL;
         nwarps = NWARPS_Q6_K_PASCAL;
     } else {
-        GGML_ABORT("fatal error");
+        GGML_RXD_ABORT("fatal error");
     }
 
     const int block_num_x = (nrows_x + mmq_y - 1) / mmq_y;
@@ -2959,9 +2959,9 @@ catch (sycl::exception const &exc) {
   std::exit(1);
 }
 
-void ggml_sycl_op_mul_mat_q(
-    ggml_backend_sycl_context & ctx,
-    const ggml_tensor *src0, const ggml_tensor *src1, ggml_tensor *dst,
+void ggml_rxd_sycl_op_mul_mat_q(
+    ggml_rxd_backend_sycl_context & ctx,
+    const ggml_rxd_tensor *src0, const ggml_rxd_tensor *src1, ggml_rxd_tensor *dst,
     const char *src0_dd_i, const float *src1_ddf_i, const char *src1_ddq_i,
     float *dst_dd_i, const int64_t row_low, const int64_t row_high,
     const int64_t src1_ncols, const int64_t src1_padded_row_size,
@@ -2970,7 +2970,7 @@ void ggml_sycl_op_mul_mat_q(
     const int64_t ne00 = src0->ne[0];
 
     const int64_t ne10 = src1->ne[0];
-    GGML_ASSERT(ne10 % QK8_1 == 0);
+    GGML_RXD_ASSERT(ne10 % QK8_1 == 0);
 
     const int64_t ne0 = dst->ne[0];
 
@@ -2985,43 +2985,43 @@ void ggml_sycl_op_mul_mat_q(
     const int64_t nrows_dst = device_id == ctx.device ? ne0 : row_diff;
 
     switch (src0->type) {
-        case GGML_TYPE_Q4_0:
-            ggml_mul_mat_q4_0_q8_1_sycl(src0_dd_i, src1_ddq_i, dst_dd_i, ne00, row_diff, src1_ncols, src1_padded_row_size, nrows_dst, stream);
+        case GGML_RXD_TYPE_Q4_0:
+            ggml_rxd_mul_mat_q4_0_q8_1_sycl(src0_dd_i, src1_ddq_i, dst_dd_i, ne00, row_diff, src1_ncols, src1_padded_row_size, nrows_dst, stream);
             break;
-        case GGML_TYPE_Q4_1:
-            ggml_mul_mat_q4_1_q8_1_sycl(src0_dd_i, src1_ddq_i, dst_dd_i, ne00, row_diff, src1_ncols, src1_padded_row_size, nrows_dst, stream);
+        case GGML_RXD_TYPE_Q4_1:
+            ggml_rxd_mul_mat_q4_1_q8_1_sycl(src0_dd_i, src1_ddq_i, dst_dd_i, ne00, row_diff, src1_ncols, src1_padded_row_size, nrows_dst, stream);
             break;
-        case GGML_TYPE_Q5_0:
-            ggml_mul_mat_q5_0_q8_1_sycl(src0_dd_i, src1_ddq_i, dst_dd_i, ne00, row_diff, src1_ncols, src1_padded_row_size, nrows_dst, stream);
+        case GGML_RXD_TYPE_Q5_0:
+            ggml_rxd_mul_mat_q5_0_q8_1_sycl(src0_dd_i, src1_ddq_i, dst_dd_i, ne00, row_diff, src1_ncols, src1_padded_row_size, nrows_dst, stream);
             break;
-        case GGML_TYPE_Q5_1:
-            ggml_mul_mat_q5_1_q8_1_sycl(src0_dd_i, src1_ddq_i, dst_dd_i, ne00, row_diff, src1_ncols, src1_padded_row_size, nrows_dst, stream);
+        case GGML_RXD_TYPE_Q5_1:
+            ggml_rxd_mul_mat_q5_1_q8_1_sycl(src0_dd_i, src1_ddq_i, dst_dd_i, ne00, row_diff, src1_ncols, src1_padded_row_size, nrows_dst, stream);
             break;
-        case GGML_TYPE_Q8_0:
-            ggml_mul_mat_q8_0_q8_1_sycl(src0_dd_i, src1_ddq_i, dst_dd_i, ne00, row_diff, src1_ncols, src1_padded_row_size, nrows_dst, stream);
+        case GGML_RXD_TYPE_Q8_0:
+            ggml_rxd_mul_mat_q8_0_q8_1_sycl(src0_dd_i, src1_ddq_i, dst_dd_i, ne00, row_diff, src1_ncols, src1_padded_row_size, nrows_dst, stream);
             break;
-        case GGML_TYPE_Q2_K:
-            ggml_mul_mat_q2_K_q8_1_sycl(src0_dd_i, src1_ddq_i, dst_dd_i, ne00, row_diff, src1_ncols, src1_padded_row_size, nrows_dst, stream);
+        case GGML_RXD_TYPE_Q2_K:
+            ggml_rxd_mul_mat_q2_K_q8_1_sycl(src0_dd_i, src1_ddq_i, dst_dd_i, ne00, row_diff, src1_ncols, src1_padded_row_size, nrows_dst, stream);
             break;
-        case GGML_TYPE_Q3_K:
-            ggml_mul_mat_q3_K_q8_1_sycl(src0_dd_i, src1_ddq_i, dst_dd_i, ne00, row_diff, src1_ncols, src1_padded_row_size, nrows_dst, stream);
+        case GGML_RXD_TYPE_Q3_K:
+            ggml_rxd_mul_mat_q3_K_q8_1_sycl(src0_dd_i, src1_ddq_i, dst_dd_i, ne00, row_diff, src1_ncols, src1_padded_row_size, nrows_dst, stream);
             break;
-        case GGML_TYPE_Q4_K:
-            ggml_mul_mat_q4_K_q8_1_sycl(src0_dd_i, src1_ddq_i, dst_dd_i, ne00, row_diff, src1_ncols, src1_padded_row_size, nrows_dst, stream);
+        case GGML_RXD_TYPE_Q4_K:
+            ggml_rxd_mul_mat_q4_K_q8_1_sycl(src0_dd_i, src1_ddq_i, dst_dd_i, ne00, row_diff, src1_ncols, src1_padded_row_size, nrows_dst, stream);
             break;
-        case GGML_TYPE_Q5_K:
-            ggml_mul_mat_q5_K_q8_1_sycl(src0_dd_i, src1_ddq_i, dst_dd_i, ne00, row_diff, src1_ncols, src1_padded_row_size, nrows_dst, stream);
+        case GGML_RXD_TYPE_Q5_K:
+            ggml_rxd_mul_mat_q5_K_q8_1_sycl(src0_dd_i, src1_ddq_i, dst_dd_i, ne00, row_diff, src1_ncols, src1_padded_row_size, nrows_dst, stream);
             break;
-        case GGML_TYPE_Q6_K:
-            ggml_mul_mat_q6_K_q8_1_sycl(src0_dd_i, src1_ddq_i, dst_dd_i, ne00, row_diff, src1_ncols, src1_padded_row_size, nrows_dst, stream);
+        case GGML_RXD_TYPE_Q6_K:
+            ggml_rxd_mul_mat_q6_K_q8_1_sycl(src0_dd_i, src1_ddq_i, dst_dd_i, ne00, row_diff, src1_ncols, src1_padded_row_size, nrows_dst, stream);
             break;
         default:
-            GGML_ABORT("fatal error");
+            GGML_RXD_ABORT("fatal error");
     }
 
-    GGML_UNUSED(src1);
-    GGML_UNUSED(dst);
-    GGML_UNUSED(src1_ddf_i);
+    GGML_RXD_UNUSED(src1);
+    GGML_RXD_UNUSED(dst);
+    GGML_RXD_UNUSED(src1_ddf_i);
 }
 catch (sycl::exception const &exc) {
   std::cerr << exc.what() << "Exception caught at file:" << __FILE__

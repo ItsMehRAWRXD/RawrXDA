@@ -10,15 +10,15 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 
-#ifndef GGML_SYCL_DPCT_HELPER_HPP
-#define GGML_SYCL_DPCT_HELPER_HPP
+#ifndef GGML_RXD_SYCL_DPCT_HELPER_HPP
+#define GGML_RXD_SYCL_DPCT_HELPER_HPP
 
 #include <sycl/sycl.hpp>
 #include <sycl/half_type.hpp>
 #include <syclcompat/math.hpp>
 #include <map>
 
-#ifdef GGML_SYCL_USE_INTEL_ONEMKL
+#ifdef GGML_RXD_SYCL_USE_INTEL_ONEMKL
 #include <oneapi/mkl.hpp>
 // Allow to use the same namespace for Intel oneMKL and oneMath
 namespace oneapi {
@@ -100,18 +100,18 @@ template <typename Ts> struct matrix_info_t {
 };
 
 inline auto get_onemath_backend(sycl::queue& queue)
-#if defined(GGML_SYCL_GENERIC) || defined(GGML_SYCL_USE_INTEL_ONEMKL)
+#if defined(GGML_RXD_SYCL_GENERIC) || defined(GGML_RXD_SYCL_USE_INTEL_ONEMKL)
   -> sycl::queue&
 #endif
 {
 // If the backend is known at compile-time, use oneMath backend_selector to use
 // compile-time dispatching and avoid the need to dlopen libraries. Otherwise
 // fallback to runtime dispatching.
-#if defined(GGML_SYCL_NVIDIA)
+#if defined(GGML_RXD_SYCL_NVIDIA)
     return oneapi::math::backend_selector<oneapi::math::backend::cublas>{ queue };
-#elif defined(GGML_SYCL_AMD)
+#elif defined(GGML_RXD_SYCL_AMD)
     return oneapi::math::backend_selector<oneapi::math::backend::rocblas>{ queue };
-#elif defined(GGML_SYCL_GENERIC) || defined(GGML_SYCL_USE_INTEL_ONEMKL)
+#elif defined(GGML_RXD_SYCL_GENERIC) || defined(GGML_RXD_SYCL_USE_INTEL_ONEMKL)
     return queue;
 #else
     static_assert(false, "Unsupported backend");
@@ -1045,7 +1045,7 @@ namespace dpct
             if (backend == "opencl:cpu") return 4;
             if (backend == "opencl:acc") return 5;
             printf("convert_backend_index: can't handle backend=%s\n", backend.c_str());
-            GGML_ABORT("fatal error");
+            GGML_RXD_ABORT("fatal error");
         }
         static bool compare_backend(std::string &backend1, std::string &backend2) {
             return convert_backend_index(backend1) < convert_backend_index(backend2);
@@ -1454,7 +1454,7 @@ namespace dpct
             if (!size)
                 return sycl::event{};
             return q.memcpy(to_ptr, from_ptr, size, dep_events);
-            GGML_UNUSED(direction);
+            GGML_RXD_UNUSED(direction);
         }
 
         // Get actual copy range and make sure it will not exceed range.
@@ -2099,7 +2099,7 @@ namespace dpct
         if (!size)
             return sycl::event{};
         return q.memcpy(to_ptr, from_ptr, size, dep_events);
-        GGML_UNUSED(direction);
+        GGML_RXD_UNUSED(direction);
     }
 
     // Get actual copy range and make sure it will not exceed range.
@@ -2974,4 +2974,4 @@ namespace dpct
 
 } // COPY from DPCT head files
 
-#endif // GGML_SYCL_DPCT_HELPER_HPP
+#endif // GGML_RXD_SYCL_DPCT_HELPER_HPP

@@ -422,7 +422,8 @@ std::string SmartRewriteEngineIntegration::formatDiff(const std::vector<DiffHunk
         // Added lines
         for (const auto& line : hunk.addedLines) {
             if (!line.empty() && line[0] == ' ') {
-                // Skip - already printed as context in removed section
+                // Context line - already printed in removed section
+                continue;
             } else {
                 result += "+" + line + "\n";
             }

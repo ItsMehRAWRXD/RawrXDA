@@ -73,7 +73,8 @@ class TaskOrchestrator  {public:
     void balanceWorkloadWithMemory(std::vector<TaskDefinition>& tasks);
     bool canExecuteTask(const TaskDefinition& task) const;
     std::stringList splitDescription(const std::string& description) const;
-\npublic:\n    void taskSplitCompleted(const std::vector<TaskDefinition>& tasks);
+
+\npublic:\n    void taskSplitCompleted(const std::vector<TaskDefinition>& tasks);
     void modelSelectionCompleted(const std::map<std::string, std::string>& modelAssignments);
     void tabCreated(const std::string& tabName, const std::string& model);
     void taskStarted(const std::string& taskId, const std::string& model);

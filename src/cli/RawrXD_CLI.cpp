@@ -13,7 +13,7 @@ void RawrXD_CLI_Render(const std::string& token) {
     
     // Use VT100 sequences for "Competitive Edge" UI (colors, progress bars)
     // without the overhead of a terminal library.
-    // Example: Bright Cyan color
+    // Bright Cyan color
     std::string vt_seq = "\x1b[38;5;121m" + token + "\x1b[0m"; 
     
     WriteConsoleA(hOut, vt_seq.c_str(), (DWORD)vt_seq.length(), &written, NULL);

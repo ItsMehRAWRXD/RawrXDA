@@ -1,0 +1,69 @@
+{
+  "name": "ransomware_containment_expert",
+  "description": "Contain active ransomware blast radius with approval-gated high-impact controls",
+  "risk_tier": "critical",
+  "required_approvals": [
+    "host_isolation",
+    "disable_identity",
+    "edge_block"
+  ],
+  "steps": [
+    {
+      "id": "intel_enrichment",
+      "action": "enrich_ioc",
+      "params": {
+        "indicator": "SHA256:abc123deadbeef"
+      }
+    },
+    {
+      "id": "edr_snapshot",
+      "action": "query_edr",
+      "params": {
+        "host": "wkstn-445"
+      },
+      "depends_on": ["intel_enrichment"]
+    },
+    {
+      "id": "host_snapshot",
+      "action": "snapshot_host",
+      "depends_on": ["edr_snapshot"],
+      "condition": "incident.severity >= 8"
+    },
+    {
+      "id": "host_isolation",
+      "action": "isolate_host",
+      "depends_on": ["host_snapshot"],
+      "condition": "incident.type == ransomware",
+      "retries": 1
+    },
+    {
+      "id": "disable_identity",
+      "action": "disable_account",
+      "depends_on": ["host_isolation"],
+      "condition": "incident.severity >= 8"
+    },
+    {
+      "id": "edge_block",
+      "action": "block_ip",
+      "depends_on": ["disable_identity"]
+    },
+    {
+      "id": "open_ticket",
+      "action": "create_ticket",
+      "depends_on": ["edge_block"],
+      "params": {
+        "queue": "IR-P1",
+        "title": "Ransomware containment workflow"
+      }
+    },
+    {
+      "id": "war_room_notify",
+      "action": "notify_channel",
+      "depends_on": ["open_ticket"],
+      "params": {
+        "channel": "#soc-war-room",
+        "message": "Containment workflow completed. Review ticket INC-SEC-10042"
+      }
+    }
+  ]
+}

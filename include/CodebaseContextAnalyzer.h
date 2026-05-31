@@ -5,6 +5,8 @@
 #include <unordered_map>
 #include <memory>
 #include <set>
+#include "CodebaseVectorIndex.h"
+#include "SemanticDependencyGraph.h"
 
 namespace RawrXD {
 namespace IDE {
@@ -95,7 +97,11 @@ public:
         const std::string& language
     );
 
+    // Cross-file semantic analysis logic (P0/P1 Implementation)
+    std::shared_ptr<SemanticDependencyGraph> get_dependency_graph() const { return m_dependency_graph; }
+
 private:
+    std::shared_ptr<SemanticDependencyGraph> m_dependency_graph;
     struct FileInfo {
         std::string path;
         std::vector<Symbol> symbols;
@@ -123,6 +129,9 @@ private:
     std::unordered_map<std::string, Symbol> m_symbolTable;
     CodebaseAnalysis m_analysis;
     bool m_indexed;
+
+    // Semantic Vector Index
+    std::unique_ptr<CodebaseVectorIndex> m_vectorIndex;
 };
 
 } // namespace IDE

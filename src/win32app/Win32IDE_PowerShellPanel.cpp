@@ -1,10 +1,11 @@
 // Dedicated PowerShell Panel Implementation
 // Always-available PowerShell console for Win32IDE
 
+#include "../../Ship/Win32TerminalScrollback.hpp"
 #include "Win32IDE.h"
-#include <sstream>
 #include <algorithm>
 #include <richedit.h>
+#include <sstream>
 
 // PowerShell Panel Control IDs
 #define IDC_PS_PANEL_CONTAINER 5000
@@ -18,137 +19,149 @@
 #define IDC_PS_BTN_HISTORY 5013
 #define IDC_PS_BTN_RESTART 5014
 #define IDC_PS_BTN_LOAD_RAWRXD 5015
-#define IDC_PS_BTN_TOGGLE 5016
+// Dedicated range: must not overlap Win32IDE_Commands WM_COMMAND ids (e.g. 5016 = Settings).
+#define IDC_PS_BTN_TOGGLE 51916
 
 // ============================================================================
 // POWERSHELL PANEL CREATION
 // ============================================================================
 
-void Win32IDE::createPowerShellPanel() {
-    if (m_hwndPowerShellPanel) {
-        return; // Already created
+void Win32IDE::createPowerShellPanel()
+{
+    if (m_hwndPowerShellPanel)
+    {
+        return;  // Already created
     }
-    
-    // Create main PowerShell panel container
-    m_hwndPowerShellPanel = CreateWindowExA(
-        WS_EX_CLIENTEDGE,
-        "STATIC", "PowerShell Console",
-        WS_CHILD | WS_VISIBLE | WS_BORDER,
-        0, 0, 800, m_powerShellPanelHeight,
-        m_hwndMain,
-        (HMENU)IDC_PS_PANEL_CONTAINER,
-        m_hInstance,
-        NULL
-    );
 
-    // LOGGING AS REQUESTED
-    char logBuf[256];
-    sprintf_s(logBuf, "PowerShellPanel HWND created: %p (Parent: %p)", m_hwndPowerShellPanel, m_hwndMain);
-    LOG_INFO(std::string(logBuf));
-    
-    if (!m_hwndPowerShellPanel) {
+    // Create main PowerShell panel container
+    m_hwndPowerShellPanel =
+        CreateWindowExA(WS_EX_CLIENTEDGE, "STATIC", "PowerShell Console", WS_CHILD | WS_VISIBLE | WS_BORDER, 0, 0, 800,
+                        m_powerShellPanelHeight, m_hwndMain, (HMENU)IDC_PS_PANEL_CONTAINER, m_hInstance, NULL);
+
+    if (!m_hwndPowerShellPanel)
+    {
         return;
     }
-    
+
     // Store IDE pointer for callbacks
     SetPropA(m_hwndPowerShellPanel, "IDE_PTR", this);
-    
+
+    // Subclass the panel so WM_COMMAND from child buttons reaches PowerShellPanelProc (STATIC does not route
+    // application commands the way a dialog does).
+    {
+        WNDPROC oldPs = (WNDPROC)GetWindowLongPtrA(m_hwndPowerShellPanel, GWLP_WNDPROC);
+        SetPropA(m_hwndPowerShellPanel, "PS_PANEL_OLDPROC", (HANDLE)oldPs);
+        SetWindowLongPtrA(m_hwndPowerShellPanel, GWLP_WNDPROC, (LONG_PTR)PowerShellPanelProc);
+    }
+
     // Create toolbar
     createPowerShellToolbar();
-    
+
     // Create output area (rich edit for colored text)
     LoadLibraryA("Riched20.dll");
-    
-    m_hwndPowerShellOutput = CreateWindowExA(
-        WS_EX_CLIENTEDGE,
-        "RichEdit20A", "",
-        WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL,
-        5, 35, 790, m_powerShellPanelHeight - 95,
-        m_hwndPowerShellPanel,
-        (HMENU)IDC_PS_OUTPUT,
-        m_hInstance,
-        NULL
-    );
-    
-    // Set output font (DPI-scaled)
-    HFONT hFont = CreateFont(
-        -dpiScale(16), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
-        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-        CLEARTYPE_QUALITY, FIXED_PITCH | FF_MODERN, "Consolas"
-    );
+
+    m_hwndPowerShellOutput =
+        CreateWindowExA(WS_EX_CLIENTEDGE, "RichEdit20A", "",
+                        WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL, 5, 35, 790,
+                        m_powerShellPanelHeight - 95, m_hwndPowerShellPanel, (HMENU)IDC_PS_OUTPUT, m_hInstance, NULL);
+    if (!m_hwndPowerShellOutput)
+    {
+        LOG_ERROR("Failed to create PowerShell output control");
+    }
+
+    // Set output font (DPI-scaled) — match IDEConfig terminal.fontSize / terminal.fontFamily (integrated terminal
+    // parity).
+    if (!m_hFontPowerShell)
+    {
+        const int termPt = (std::max)(8, (std::min)(32, m_settings.integratedTerminalFontSize));
+        const char* termFace = m_settings.integratedTerminalFontFamily.empty()
+                                   ? "Consolas"
+                                   : m_settings.integratedTerminalFontFamily.c_str();
+        m_hFontPowerShell =
+            CreateFontA(-dpiScale(termPt), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
+                        CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, FIXED_PITCH | FF_MODERN, termFace);
+    }
+    HFONT hFont = m_hFontPowerShell ? m_hFontPowerShell : (HFONT)GetStockObject(DEFAULT_GUI_FONT);
     SendMessage(m_hwndPowerShellOutput, WM_SETFONT, (WPARAM)hFont, TRUE);
-    
+
     // Set background color
-    SendMessage(m_hwndPowerShellOutput, EM_SETBKGNDCOLOR, 0, RGB(1, 36, 86)); // PowerShell blue
-    
+    SendMessage(m_hwndPowerShellOutput, EM_SETBKGNDCOLOR, 0, RGB(1, 36, 86));  // PowerShell blue
+
+    // Parity with integrated terminal: same scrollback cap + RAWRXD_TERMINAL_SCROLLBACK_CHARS.
+    RawrXD_ApplyTerminalRichEditScrollback(m_hwndPowerShellOutput, m_settings.integratedTerminalScrollbackChars);
+
     // Create input area
     m_hwndPowerShellInput = CreateWindowExA(
-        WS_EX_CLIENTEDGE,
-        "EDIT", "",
-        WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
-        5, m_powerShellPanelHeight - 55, 690, 25,
-        m_hwndPowerShellPanel,
-        (HMENU)IDC_PS_INPUT,
-        m_hInstance,
-        NULL
-    );
-    
-    SendMessage(m_hwndPowerShellInput, WM_SETFONT, (WPARAM)hFont, TRUE);
-    
-    // Subclass input for custom handling (Enter key, history navigation)
-    SetPropA(m_hwndPowerShellInput, "IDE_PTR", this);
-    WNDPROC oldProc = (WNDPROC)SetWindowLongPtr(m_hwndPowerShellInput, GWLP_WNDPROC, (LONG_PTR)PowerShellInputProc);
-    SetPropA(m_hwndPowerShellInput, "OLDPROC", (HANDLE)oldProc);
-    
+        WS_EX_CLIENTEDGE, "EDIT", "", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL, 5,
+        m_powerShellPanelHeight - 55, 690, 25, m_hwndPowerShellPanel, (HMENU)IDC_PS_INPUT, m_hInstance, NULL);
+    if (!m_hwndPowerShellInput)
+    {
+        LOG_ERROR("Failed to create PowerShell input control");
+    }
+    else
+    {
+        SendMessage(m_hwndPowerShellInput, WM_SETFONT, (WPARAM)hFont, TRUE);
+
+        // Subclass input for custom handling (Enter key, history navigation)
+        SetPropA(m_hwndPowerShellInput, "IDE_PTR", this);
+        SetLastError(0);
+        WNDPROC oldProc =
+            (WNDPROC)SetWindowLongPtrA(m_hwndPowerShellInput, GWLP_WNDPROC, (LONG_PTR)PowerShellInputProc);
+        const DWORD subclassError = GetLastError();
+        if (!oldProc && subclassError != ERROR_SUCCESS)
+        {
+            LOG_ERROR("Failed to subclass PowerShell input control, gle=" + std::to_string(subclassError));
+            RemovePropA(m_hwndPowerShellInput, "IDE_PTR");
+        }
+        else
+        {
+            SetPropA(m_hwndPowerShellInput, "OLDPROC", (HANDLE)oldProc);
+        }
+    }
+
     // Create Execute button
-    m_hwndPSBtnExecute = CreateWindowExA(
-        0, "BUTTON", "Execute",
-        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        700, m_powerShellPanelHeight - 55, 90, 25,
-        m_hwndPowerShellPanel,
-        (HMENU)IDC_PS_BTN_EXECUTE,
-        m_hInstance,
-        NULL
-    );
+    m_hwndPSBtnExecute = CreateWindowExA(0, "BUTTON", "Execute", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 700,
+                                         m_powerShellPanelHeight - 55, 90, 25, m_hwndPowerShellPanel,
+                                         (HMENU)IDC_PS_BTN_EXECUTE, m_hInstance, NULL);
     SendMessage(m_hwndPSBtnExecute, WM_SETFONT, (WPARAM)hFont, TRUE);
-    
+
     // Create status bar
-    m_hwndPowerShellStatusBar = CreateWindowExA(
-        0, "STATIC", "PowerShell Status: Ready",
-        WS_CHILD | WS_VISIBLE | SS_LEFT,
-        5, m_powerShellPanelHeight - 25, 790, 20,
-        m_hwndPowerShellPanel,
-        (HMENU)IDC_PS_STATUSBAR,
-        m_hInstance,
-        NULL
-    );
-    
-    HFONT hSmallFont = CreateFont(
-        -dpiScale(12), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
-        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-        CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, "Segoe UI"
-    );
+    m_hwndPowerShellStatusBar = CreateWindowExA(0, "STATIC", "PowerShell: Ready",
+                                                WS_CHILD | WS_VISIBLE | SS_LEFT, 5, m_powerShellPanelHeight - 25, 790,
+                                                20, m_hwndPowerShellPanel, (HMENU)IDC_PS_STATUSBAR, m_hInstance, NULL);
+
+    if (!m_hFontPowerShellStatus)
+    {
+        m_hFontPowerShellStatus =
+            CreateFontA(-dpiScale(12), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
+                        CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, "Segoe UI");
+    }
+    HFONT hSmallFont = m_hFontPowerShellStatus ? m_hFontPowerShellStatus : (HFONT)GetStockObject(DEFAULT_GUI_FONT);
     SendMessage(m_hwndPowerShellStatusBar, WM_SETFONT, (WPARAM)hSmallFont, TRUE);
-    
+
+    // Toolbar row: same monospace/terminal font as output (integrated terminal parity).
+    {
+        const HWND toolbarBtns[] = {m_hwndPSBtnClear, m_hwndPSBtnStop, m_hwndPSBtnHistory, m_hwndPSBtnRestart,
+                                    m_hwndPSBtnLoadRawrXD};
+        for (HWND b : toolbarBtns)
+        {
+            if (b && IsWindow(b))
+                SendMessage(b, WM_SETFONT, (WPARAM)hFont, TRUE);
+        }
+    }
+
     // Initialize PowerShell UI only. The shell session itself is started lazily
     // on first use so the IDE can finish painting immediately.
     initializePowerShellPanel();
 
-    // LOGGING AS REQUESTED
-    // char logBuf[256]; // REUSED
-    sprintf_s(logBuf, "PowerShell Panel HWNDs: Main=%p Output=%p Input=%p", 
-              m_hwndPowerShellPanel, m_hwndPowerShellOutput, m_hwndPowerShellInput);
-    LOG_INFO(std::string(logBuf));
-    
     // Show welcome message
     appendPowerShellOutput("═══════════════════════════════════════════════════════════════\n", RGB(0, 255, 255));
     appendPowerShellOutput("  RawrXD Integrated PowerShell Console\n", RGB(255, 255, 0));
     appendPowerShellOutput("═══════════════════════════════════════════════════════════════\n", RGB(0, 255, 255));
     appendPowerShellOutput("\n", RGB(200, 200, 200));
-    
-    appendPowerShellOutput("PowerShell Version: pending (lazy start)\n", RGB(0, 255, 0));
-    appendPowerShellOutput("Edition: pending (lazy start)\n", RGB(0, 255, 0));
-    appendPowerShellOutput("\nType commands below or click 'Load RawrXD' to access RawrXD.ps1 functions\n", RGB(200, 200, 200));
+
+    appendPowerShellOutput("\nType commands below or click 'Load RawrXD' to access RawrXD.ps1 functions\n",
+                           RGB(200, 200, 200));
     appendPowerShellOutput("\nCommands:\n", RGB(255, 255, 0));
     appendPowerShellOutput("  - Enter: Execute command\n", RGB(150, 150, 150));
     appendPowerShellOutput("  - Up/Down: Navigate history\n", RGB(150, 150, 150));
@@ -157,100 +170,114 @@ void Win32IDE::createPowerShellPanel() {
     appendPowerShellOutput("\n" + getPowerShellPrompt(), RGB(0, 255, 0));
 }
 
-void Win32IDE::createPowerShellToolbar() {
-    if (!m_hwndPowerShellPanel) return;
-    
+void Win32IDE::createPowerShellToolbar()
+{
+    if (!m_hwndPowerShellPanel)
+        return;
+
     // Create toolbar buttons
     int btnX = 5;
     int btnY = 5;
     int btnWidth = 90;
     int btnHeight = 25;
     int btnSpacing = 5;
-    
-    m_hwndPSBtnClear = CreateWindowExA(
-        0, "BUTTON", "Clear",
-        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        btnX, btnY, btnWidth, btnHeight,
-        m_hwndPowerShellPanel,
-        (HMENU)IDC_PS_BTN_CLEAR,
-        m_hInstance, NULL
-    );
+
+    m_hwndPSBtnClear =
+        CreateWindowExA(0, "BUTTON", "Clear", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, btnX, btnY, btnWidth, btnHeight,
+                        m_hwndPowerShellPanel, (HMENU)IDC_PS_BTN_CLEAR, m_hInstance, NULL);
     btnX += btnWidth + btnSpacing;
-    
-    m_hwndPSBtnStop = CreateWindowExA(
-        0, "BUTTON", "Stop",
-        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        btnX, btnY, btnWidth, btnHeight,
-        m_hwndPowerShellPanel,
-        (HMENU)IDC_PS_BTN_STOP,
-        m_hInstance, NULL
-    );
+
+    m_hwndPSBtnStop = CreateWindowExA(0, "BUTTON", "Stop", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, btnX, btnY, btnWidth,
+                                      btnHeight, m_hwndPowerShellPanel, (HMENU)IDC_PS_BTN_STOP, m_hInstance, NULL);
     btnX += btnWidth + btnSpacing;
-    
-    m_hwndPSBtnHistory = CreateWindowExA(
-        0, "BUTTON", "History",
-        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        btnX, btnY, btnWidth, btnHeight,
-        m_hwndPowerShellPanel,
-        (HMENU)IDC_PS_BTN_HISTORY,
-        m_hInstance, NULL
-    );
+
+    m_hwndPSBtnHistory =
+        CreateWindowExA(0, "BUTTON", "History", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, btnX, btnY, btnWidth, btnHeight,
+                        m_hwndPowerShellPanel, (HMENU)IDC_PS_BTN_HISTORY, m_hInstance, NULL);
     btnX += btnWidth + btnSpacing;
-    
-    m_hwndPSBtnRestart = CreateWindowExA(
-        0, "BUTTON", "Restart",
-        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        btnX, btnY, btnWidth, btnHeight,
-        m_hwndPowerShellPanel,
-        (HMENU)IDC_PS_BTN_RESTART,
-        m_hInstance, NULL
-    );
+
+    m_hwndPSBtnRestart =
+        CreateWindowExA(0, "BUTTON", "Restart", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, btnX, btnY, btnWidth, btnHeight,
+                        m_hwndPowerShellPanel, (HMENU)IDC_PS_BTN_RESTART, m_hInstance, NULL);
     btnX += btnWidth + btnSpacing;
-    
-    m_hwndPSBtnLoadRawrXD = CreateWindowExA(
-        0, "BUTTON", "Load RawrXD",
-        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        btnX, btnY, 120, btnHeight,
-        m_hwndPowerShellPanel,
-        (HMENU)IDC_PS_BTN_LOAD_RAWRXD,
-        m_hInstance, NULL
-    );
+
+    m_hwndPSBtnLoadRawrXD =
+        CreateWindowExA(0, "BUTTON", "Load RawrXD", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, btnX, btnY, 120, btnHeight,
+                        m_hwndPowerShellPanel, (HMENU)IDC_PS_BTN_LOAD_RAWRXD, m_hInstance, NULL);
+    btnX += 120 + btnSpacing;
+
+    m_hwndPSBtnToggle =
+        CreateWindowExA(0, "BUTTON", "Hide panel", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, btnX, btnY, btnWidth,
+                        btnHeight, m_hwndPowerShellPanel, (HMENU)IDC_PS_BTN_TOGGLE, m_hInstance, NULL);
 }
 
-void Win32IDE::initializePowerShellPanel() {
-    // Start dedicated PowerShell terminal
-    m_dedicatedPowerShellTerminal = std::make_unique<Win32TerminalManager>();
-    
-    // Set up callbacks
-    m_dedicatedPowerShellTerminal->onOutput = [this](const std::string& output) {
-        if (isShuttingDown()) return;
-        appendPowerShellOutput(output, RGB(200, 200, 200));
+void Win32IDE::wireDedicatedPowerShellTerminalCallbacks()
+{
+    if (!m_dedicatedPowerShellTerminal)
+        return;
+
+    m_dedicatedPowerShellTerminal->onOutput = [this](const std::string& output)
+    {
+        if (isShuttingDown())
+            return;
+        std::string cwdUpd;
+        const std::string filtered = filterTerminalCwdTelemetry(m_dedicatedPowerShellCwdCarry, output, &cwdUpd);
+        if (!cwdUpd.empty())
+        {
+            const bool cwdChanged = (m_powerShellPanelWorkingDirectory != cwdUpd);
+            m_powerShellPanelWorkingDirectory = std::move(cwdUpd);
+            if (cwdChanged)
+            {
+                std::string gb;
+                queryGitBranchForIntegratedCwd(m_powerShellPanelWorkingDirectory, gb);
+                m_powerShellPanelGitBranchFromCwd = std::move(gb);
+            }
+            updatePowerShellStatus();
+        }
+        appendPowerShellOutput(filtered, RGB(200, 200, 200));
     };
-    
-    m_dedicatedPowerShellTerminal->onError = [this](const std::string& error) {
-        if (isShuttingDown()) return;
+
+    m_dedicatedPowerShellTerminal->onError = [this](const std::string& error)
+    {
+        if (isShuttingDown())
+            return;
         appendPowerShellOutput("[ERROR] " + error, RGB(255, 100, 100));
     };
-    
-    m_dedicatedPowerShellTerminal->onStarted = [this]() {
-        if (isShuttingDown()) return;
+
+    m_dedicatedPowerShellTerminal->onStarted = [this]()
+    {
+        if (isShuttingDown())
+            return;
         m_powerShellSessionActive = true;
         updatePowerShellStatus();
     };
-    
-    m_dedicatedPowerShellTerminal->onFinished = [this](int exitCode) {
-        if (isShuttingDown()) return;
+
+    m_dedicatedPowerShellTerminal->onFinished = [this](int exitCode)
+    {
+        if (isShuttingDown())
+            return;
         m_powerShellSessionActive = false;
-        appendPowerShellOutput("\n[PowerShell session ended with code: " + std::to_string(exitCode) + "]\n", RGB(255, 255, 0));
+        m_dedicatedPowerShellCwdCarry.clear();
+        m_powerShellPanelWorkingDirectory.clear();
+        m_powerShellPanelGitBranchFromCwd.clear();
+        appendPowerShellOutput("\n[PowerShell session ended with code: " + std::to_string(exitCode) + "]\n",
+                               RGB(255, 255, 0));
         updatePowerShellStatus();
     };
-    
+}
+
+void Win32IDE::initializePowerShellPanel()
+{
+    // Start dedicated PowerShell terminal
+    m_dedicatedPowerShellTerminal = std::make_unique<Win32TerminalManager>();
+    wireDedicatedPowerShellTerminalCallbacks();
+
     // Defer launching the shell process until the first command is executed.
     // This avoids a multi-second launch stall during WM_CREATE / startup.
     m_powerShellSessionActive = false;
-    m_psState.version = "pending";
-    m_psState.edition = "pending";
-    m_psState.currentExecutionPolicy = "pending";
+    m_psState.version.clear();
+    m_psState.edition.clear();
+    m_psState.currentExecutionPolicy.clear();
     updatePowerShellStatus();
 }
 
@@ -258,11 +285,14 @@ void Win32IDE::initializePowerShellPanel() {
 // POWERSHELL PANEL VISIBILITY & LAYOUT
 // ============================================================================
 
-void Win32IDE::showPowerShellPanel() {
-    if (m_hwndPowerShellPanel) {
+void Win32IDE::showPowerShellPanel()
+{
+    if (m_hwndPowerShellPanel)
+    {
         ShowWindow(m_hwndPowerShellPanel, SW_SHOW);
         m_powerShellPanelVisible = true;
-        
+        updatePowerShellToggleButtonLabel();
+
         // Force layout update
         RECT rc;
         GetClientRect(m_hwndMain, &rc);
@@ -270,11 +300,14 @@ void Win32IDE::showPowerShellPanel() {
     }
 }
 
-void Win32IDE::hidePowerShellPanel() {
-    if (m_hwndPowerShellPanel) {
+void Win32IDE::hidePowerShellPanel()
+{
+    if (m_hwndPowerShellPanel)
+    {
         ShowWindow(m_hwndPowerShellPanel, SW_HIDE);
         m_powerShellPanelVisible = false;
-        
+        updatePowerShellToggleButtonLabel();
+
         // Force layout update
         RECT rc;
         GetClientRect(m_hwndMain, &rc);
@@ -282,36 +315,38 @@ void Win32IDE::hidePowerShellPanel() {
     }
 }
 
-void Win32IDE::togglePowerShellPanel() {
-    if (m_powerShellPanelVisible) {
+void Win32IDE::togglePowerShellPanel()
+{
+    if (m_powerShellPanelVisible)
+    {
         hidePowerShellPanel();
-    } else {
+    }
+    else
+    {
         showPowerShellPanel();
     }
 }
 
-void Win32IDE::layoutPowerShellPanel() {
-    if (!m_hwndPowerShellPanel || !m_powerShellPanelVisible) {
-        // LOGGING AS REQUESTED
-        char buf[256];
-        sprintf_s(buf, "layoutPowerShellPanel skipped: hwnd=%p visible=%d", m_hwndPowerShellPanel, m_powerShellPanelVisible);
-        LOG_INFO(std::string(buf));
+void Win32IDE::updatePowerShellToggleButtonLabel()
+{
+    if (!m_hwndPSBtnToggle || !IsWindow(m_hwndPSBtnToggle))
+        return;
+    SetWindowTextA(m_hwndPSBtnToggle, m_powerShellPanelVisible ? "Hide panel" : "Show panel");
+}
+
+void Win32IDE::layoutPowerShellPanel()
+{
+    if (!m_hwndPowerShellPanel || !m_powerShellPanelVisible)
+    {
         return;
     }
-    
+
     RECT mainRect;
     GetClientRect(m_hwndMain, &mainRect);
-    
-    // LOGGING AS REQUESTED
-    char buf[256];
-    sprintf_s(buf, "layoutPowerShellPanel: Parent=%dx%d PanelHeight=%d HWND=%p", 
-              mainRect.right - mainRect.left, mainRect.bottom - mainRect.top, 
-              m_powerShellPanelHeight, m_hwndPowerShellPanel);
-    LOG_INFO(std::string(buf));
 
     int mainWidth = mainRect.right - mainRect.left;
     int mainHeight = mainRect.bottom - mainRect.top;
-    
+
     // Calculate correct bounds — must respect sidebar, activity bar, and secondary sidebar
     const int ACTIVITY_BAR_WIDTH = dpiScale(48);
     const int STATUSBAR_HEIGHT = dpiScale(24);
@@ -319,93 +354,129 @@ void Win32IDE::layoutPowerShellPanel() {
     int secondarySidebarWidth = m_secondarySidebarVisible ? m_secondarySidebarWidth : 0;
     int panelLeft = ACTIVITY_BAR_WIDTH + sidebarWidth;
     int panelWidth = mainWidth - panelLeft - secondarySidebarWidth;
-    
+
     // Position at bottom of IDE (above status bar)
     int panelTop = mainHeight - STATUSBAR_HEIGHT - m_powerShellPanelHeight;
-    
-    SetWindowPos(m_hwndPowerShellPanel, NULL,
-        panelLeft, panelTop,
-        panelWidth, m_powerShellPanelHeight,
-        SWP_NOZORDER);
-    
+
+    SetWindowPos(m_hwndPowerShellPanel, NULL, panelLeft, panelTop, panelWidth, m_powerShellPanelHeight, SWP_NOZORDER);
+
     updatePowerShellPanelLayout(panelWidth, m_powerShellPanelHeight);
 }
 
-void Win32IDE::updatePowerShellPanelLayout(int width, int height) {
-    if (!m_hwndPowerShellPanel) return;
-    
+void Win32IDE::updatePowerShellPanelLayout(int width, int height)
+{
+    if (!m_hwndPowerShellPanel)
+        return;
+
     // Layout internal controls
-    if (m_hwndPowerShellOutput) {
-        SetWindowPos(m_hwndPowerShellOutput, NULL,
-            5, 35,
-            width - 10, height - 95,
-            SWP_NOZORDER);
+    if (m_hwndPowerShellOutput)
+    {
+        SetWindowPos(m_hwndPowerShellOutput, NULL, 5, 35, width - 10, height - 95, SWP_NOZORDER);
     }
-    
-    if (m_hwndPowerShellInput) {
-        SetWindowPos(m_hwndPowerShellInput, NULL,
-            5, height - 55,
-            width - 110, 25,
-            SWP_NOZORDER);
+
+    if (m_hwndPowerShellInput)
+    {
+        SetWindowPos(m_hwndPowerShellInput, NULL, 5, height - 55, width - 110, 25, SWP_NOZORDER);
     }
-    
-    if (m_hwndPSBtnExecute) {
-        SetWindowPos(m_hwndPSBtnExecute, NULL,
-            width - 100, height - 55,
-            90, 25,
-            SWP_NOZORDER);
+
+    if (m_hwndPSBtnExecute)
+    {
+        SetWindowPos(m_hwndPSBtnExecute, NULL, width - 100, height - 55, 90, 25, SWP_NOZORDER);
     }
-    
-    if (m_hwndPowerShellStatusBar) {
-        SetWindowPos(m_hwndPowerShellStatusBar, NULL,
-            5, height - 25,
-            width - 10, 20,
-            SWP_NOZORDER);
+
+    if (m_hwndPowerShellStatusBar)
+    {
+        SetWindowPos(m_hwndPowerShellStatusBar, NULL, 5, height - 25, width - 10, 20, SWP_NOZORDER);
     }
 }
 
-void Win32IDE::resizePowerShellPanel(int width, int height) {
+void Win32IDE::resizePowerShellPanel(int width, int height)
+{
     m_powerShellPanelHeight = height;
     layoutPowerShellPanel();
+}
+
+void Win32IDE::refreshPowerShellPanelFontsFromTerminalSettings()
+{
+    if (!m_hwndPowerShellOutput || !IsWindow(m_hwndPowerShellOutput))
+        return;
+
+    if (m_hFontPowerShell)
+    {
+        DeleteObject(m_hFontPowerShell);
+        m_hFontPowerShell = nullptr;
+    }
+
+    const int termPt = (std::max)(8, (std::min)(32, m_settings.integratedTerminalFontSize));
+    const char* termFace =
+        m_settings.integratedTerminalFontFamily.empty() ? "Consolas" : m_settings.integratedTerminalFontFamily.c_str();
+    m_hFontPowerShell =
+        CreateFontA(-dpiScale(termPt), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
+                    CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, FIXED_PITCH | FF_MODERN, termFace);
+
+    const HFONT hFont = m_hFontPowerShell ? m_hFontPowerShell : (HFONT)GetStockObject(DEFAULT_GUI_FONT);
+    SendMessage(m_hwndPowerShellOutput, WM_SETFONT, (WPARAM)hFont, TRUE);
+    if (m_hwndPowerShellInput && IsWindow(m_hwndPowerShellInput))
+        SendMessage(m_hwndPowerShellInput, WM_SETFONT, (WPARAM)hFont, TRUE);
+    if (m_hwndPSBtnExecute && IsWindow(m_hwndPSBtnExecute))
+        SendMessage(m_hwndPSBtnExecute, WM_SETFONT, (WPARAM)hFont, TRUE);
+
+    const HWND toolbarBtns[] = {m_hwndPSBtnClear,   m_hwndPSBtnStop,       m_hwndPSBtnHistory,
+                                m_hwndPSBtnRestart, m_hwndPSBtnLoadRawrXD, m_hwndPSBtnToggle};
+    for (HWND b : toolbarBtns)
+    {
+        if (b && IsWindow(b))
+            SendMessage(b, WM_SETFONT, (WPARAM)hFont, TRUE);
+    }
+
+    RawrXD_ApplyTerminalRichEditScrollback(m_hwndPowerShellOutput, m_settings.integratedTerminalScrollbackChars);
 }
 
 // ============================================================================
 // POWERSHELL EXECUTION
 // ============================================================================
 
-void Win32IDE::executePowerShellInput() {
-    if (!m_hwndPowerShellInput) return;
-    
+void Win32IDE::executePowerShellInput()
+{
+    if (!m_hwndPowerShellInput)
+        return;
+
     char buffer[4096];
     GetWindowTextA(m_hwndPowerShellInput, buffer, sizeof(buffer));
-    
+
     std::string command(buffer);
-    if (command.empty()) {
+    if (command.empty())
+    {
         return;
     }
-    
+
     // Clear input
     SetWindowTextA(m_hwndPowerShellInput, "");
-    
+
     // Add to history
     addPowerShellHistory(command);
-    
+
     // Echo command
     appendPowerShellOutput(getPowerShellPrompt() + command + "\n", RGB(255, 255, 255));
-    
+
     // Execute
     executePowerShellPanelCommand(command);
 }
 
-void Win32IDE::executePowerShellPanelCommand(const std::string& command) {
-    if (!m_powerShellSessionActive) {
+void Win32IDE::executePowerShellPanelCommand(const std::string& command)
+{
+    if (!m_powerShellSessionActive)
+    {
         startPowerShellSession();
     }
 
     // Route to active terminal: tabbed terminals (Tier2) or dedicated PowerShell session
-    if (!m_terminalTabs.empty() && m_activeTerminalTab >= 0 && m_activeTerminalTab < static_cast<int>(m_terminalTabs.size())) {
+    if (!m_terminalTabs.empty() && m_activeTerminalTab >= 0 &&
+        m_activeTerminalTab < static_cast<int>(m_terminalTabs.size()))
+    {
         auto& tab = m_terminalTabs[m_activeTerminalTab];
-        if (tab.manager && tab.manager->isRunning()) {
+        if (tab.manager && tab.manager->isRunning())
+        {
             m_powerShellExecuting = true;
             updatePowerShellStatus();
             tab.manager->writeInput(command + "\r\n");
@@ -414,8 +485,10 @@ void Win32IDE::executePowerShellPanelCommand(const std::string& command) {
             return;
         }
     }
-    if (!m_dedicatedPowerShellTerminal || !m_powerShellSessionActive) {
-        appendPowerShellOutput("[ERROR] Terminal session not active. Start a terminal from the panel or add a tab.\n", RGB(255, 0, 0));
+    if (!m_dedicatedPowerShellTerminal || !m_powerShellSessionActive)
+    {
+        appendPowerShellOutput("[ERROR] Terminal session not active. Start a terminal from the panel or add a tab.\n",
+                               RGB(255, 0, 0));
         return;
     }
     m_powerShellExecuting = true;
@@ -425,47 +498,58 @@ void Win32IDE::executePowerShellPanelCommand(const std::string& command) {
     updatePowerShellStatus();
 }
 
-void Win32IDE::stopPowerShellExecution() {
-    if (!m_terminalTabs.empty() && m_activeTerminalTab >= 0 && m_activeTerminalTab < static_cast<int>(m_terminalTabs.size())) {
+void Win32IDE::stopPowerShellExecution()
+{
+    if (!m_terminalTabs.empty() && m_activeTerminalTab >= 0 &&
+        m_activeTerminalTab < static_cast<int>(m_terminalTabs.size()))
+    {
         auto& tab = m_terminalTabs[m_activeTerminalTab];
-        if (tab.manager && tab.manager->isRunning()) {
+        if (tab.manager && tab.manager->isRunning())
+        {
             tab.manager->writeInput("\x03");
             appendPowerShellOutput("\n[Execution stopped]\n", RGB(255, 255, 0));
             return;
         }
     }
-    if (m_dedicatedPowerShellTerminal && m_powerShellSessionActive) {
+    if (m_dedicatedPowerShellTerminal && m_powerShellSessionActive)
+    {
         m_dedicatedPowerShellTerminal->writeInput("\x03");
         appendPowerShellOutput("\n[Execution stopped]\n", RGB(255, 255, 0));
     }
 }
 
-void Win32IDE::clearPowerShellConsole() {
-    if (m_hwndPowerShellOutput) {
+void Win32IDE::clearPowerShellConsole()
+{
+    if (m_hwndPowerShellOutput)
+    {
         SetWindowTextA(m_hwndPowerShellOutput, "");
         appendPowerShellOutput(getPowerShellPrompt(), RGB(0, 255, 0));
     }
 }
 
-void Win32IDE::appendPowerShellOutput(const std::string& text, COLORREF color) {
-    if (!m_hwndPowerShellOutput) return;
-    
+void Win32IDE::appendPowerShellOutput(const std::string& text, COLORREF color)
+{
+    if (!m_hwndPowerShellOutput)
+        return;
+
     // Get current text length
     int len = GetWindowTextLength(m_hwndPowerShellOutput);
-    
+
     // Select end
     SendMessage(m_hwndPowerShellOutput, EM_SETSEL, len, len);
-    
-    // Set color
+
+    // Color + point size (parity with terminal.fontSize; face comes from WM_SETFONT on the control).
     CHARFORMAT2 cf = {};
     cf.cbSize = sizeof(CHARFORMAT2);
-    cf.dwMask = CFM_COLOR;
+    const int termPt = (std::max)(8, (std::min)(32, m_settings.integratedTerminalFontSize));
+    cf.dwMask = CFM_COLOR | CFM_SIZE;
     cf.crTextColor = color;
+    cf.yHeight = termPt * 20;
     SendMessage(m_hwndPowerShellOutput, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&cf);
-    
+
     // Append text
     SendMessage(m_hwndPowerShellOutput, EM_REPLACESEL, FALSE, (LPARAM)text.c_str());
-    
+
     // Scroll to bottom
     scrollPowerShellOutputToBottom();
 }
@@ -474,66 +558,78 @@ void Win32IDE::appendPowerShellOutput(const std::string& text, COLORREF color) {
 // POWERSHELL HISTORY
 // ============================================================================
 
-void Win32IDE::addPowerShellHistory(const std::string& command) {
-    if (command.empty()) return;
-    
+void Win32IDE::addPowerShellHistory(const std::string& command)
+{
+    if (command.empty())
+        return;
+
     // Don't add duplicates
-    if (!m_powerShellCommandHistory.empty() && 
-        m_powerShellCommandHistory.back() == command) {
+    if (!m_powerShellCommandHistory.empty() && m_powerShellCommandHistory.back() == command)
+    {
         return;
     }
-    
+
     m_powerShellCommandHistory.push_back(command);
-    
+
     // Limit history size
-    if (m_powerShellCommandHistory.size() > m_maxPowerShellHistory) {
+    if (m_powerShellCommandHistory.size() > m_maxPowerShellHistory)
+    {
         m_powerShellCommandHistory.erase(m_powerShellCommandHistory.begin());
     }
-    
+
     // Reset history index
     m_powerShellHistoryIndex = m_powerShellCommandHistory.size();
 }
 
-void Win32IDE::navigatePowerShellHistoryUp() {
-    if (m_powerShellCommandHistory.empty()) return;
-    
-    if (m_powerShellHistoryIndex > 0) {
+void Win32IDE::navigatePowerShellHistoryUp()
+{
+    if (m_powerShellCommandHistory.empty())
+        return;
+
+    if (m_powerShellHistoryIndex > 0)
+    {
         m_powerShellHistoryIndex--;
-        SetWindowTextA(m_hwndPowerShellInput, 
-            m_powerShellCommandHistory[m_powerShellHistoryIndex].c_str());
-        
+        SetWindowTextA(m_hwndPowerShellInput, m_powerShellCommandHistory[m_powerShellHistoryIndex].c_str());
+
         // Select all text
         SendMessage(m_hwndPowerShellInput, EM_SETSEL, 0, -1);
     }
 }
 
-void Win32IDE::navigatePowerShellHistoryDown() {
-    if (m_powerShellCommandHistory.empty()) return;
-    
-    if (m_powerShellHistoryIndex < static_cast<int>(m_powerShellCommandHistory.size()) - 1) {
+void Win32IDE::navigatePowerShellHistoryDown()
+{
+    if (m_powerShellCommandHistory.empty())
+        return;
+
+    if (m_powerShellHistoryIndex < static_cast<int>(m_powerShellCommandHistory.size()) - 1)
+    {
         m_powerShellHistoryIndex++;
-        SetWindowTextA(m_hwndPowerShellInput,
-            m_powerShellCommandHistory[m_powerShellHistoryIndex].c_str());
-        
+        SetWindowTextA(m_hwndPowerShellInput, m_powerShellCommandHistory[m_powerShellHistoryIndex].c_str());
+
         // Select all text
         SendMessage(m_hwndPowerShellInput, EM_SETSEL, 0, -1);
-    } else if (m_powerShellHistoryIndex == static_cast<int>(m_powerShellCommandHistory.size()) - 1) {
+    }
+    else if (m_powerShellHistoryIndex == static_cast<int>(m_powerShellCommandHistory.size()) - 1)
+    {
         m_powerShellHistoryIndex++;
         SetWindowTextA(m_hwndPowerShellInput, "");
     }
 }
 
-void Win32IDE::showPowerShellHistory() {
-    if (m_powerShellCommandHistory.empty()) {
+void Win32IDE::showPowerShellHistory()
+{
+    if (m_powerShellCommandHistory.empty())
+    {
         MessageBoxA(m_hwndMain, "No command history", "PowerShell History", MB_OK | MB_ICONINFORMATION);
         return;
     }
-    
+
     std::string history;
-    for (size_t i = 0; i < m_powerShellCommandHistory.size(); i++) {
+    for (size_t i = 0; i < m_powerShellCommandHistory.size(); i++)
+    {
         history += std::to_string(i + 1) + ": " + m_powerShellCommandHistory[i] + "\n";
     }
-    
+
     MessageBoxA(m_hwndMain, history.c_str(), "PowerShell Command History", MB_OK | MB_ICONINFORMATION);
 }
 
@@ -541,67 +637,135 @@ void Win32IDE::showPowerShellHistory() {
 // POWERSHELL SESSION MANAGEMENT
 // ============================================================================
 
-void Win32IDE::startPowerShellSession() {
-    if (m_powerShellSessionActive) {
+void Win32IDE::startPowerShellSession()
+{
+    if (m_powerShellSessionActive)
+    {
         return;
     }
-    
-    if (!m_dedicatedPowerShellTerminal) {
+
+    if (!m_dedicatedPowerShellTerminal)
+    {
         m_dedicatedPowerShellTerminal = std::make_unique<Win32TerminalManager>();
     }
-    
-    bool started = m_dedicatedPowerShellTerminal->start(Win32TerminalManager::PowerShell);
-    
-    if (started) {
+    // Win32TerminalManager::stop() clears callbacks; re-attach before every start so I/O works after Restart/Stop.
+    wireDedicatedPowerShellTerminalCallbacks();
+
+    std::string cwdStore;
+    const char* cwd = preferredIntegratedTerminalWorkingDirectory(cwdStore);
+    bool started = m_dedicatedPowerShellTerminal->start(Win32TerminalManager::PowerShell, cwd);
+
+    if (started)
+    {
         m_powerShellSessionActive = true;
+        m_dedicatedPowerShellCwdCarry.clear();
+        if (!cwdStore.empty())
+            m_powerShellPanelWorkingDirectory = cwdStore;
+        else
+        {
+            char buf[MAX_PATH] = {};
+            if (GetCurrentDirectoryA(MAX_PATH, buf))
+                m_powerShellPanelWorkingDirectory = buf;
+        }
+        {
+            std::string gb;
+            queryGitBranchForIntegratedCwd(m_powerShellPanelWorkingDirectory, gb);
+            m_powerShellPanelGitBranchFromCwd = std::move(gb);
+        }
         appendPowerShellOutput("[PowerShell session started]\n", RGB(0, 255, 0));
-    } else {
+    }
+    else
+    {
         appendPowerShellOutput("[ERROR] Failed to start PowerShell session\n", RGB(255, 0, 0));
     }
-    
+
     updatePowerShellStatus();
 }
 
-void Win32IDE::restartPowerShellSession() {
+void Win32IDE::restartPowerShellSession()
+{
     stopPowerShellSession();
-    Sleep(500); // Brief delay
+    Sleep(500);  // Brief delay
     startPowerShellSession();
 }
 
-void Win32IDE::stopPowerShellSession() {
-    if (m_dedicatedPowerShellTerminal) {
+void Win32IDE::stopPowerShellSession()
+{
+    if (m_dedicatedPowerShellTerminal)
+    {
         m_dedicatedPowerShellTerminal->stop();
         m_powerShellSessionActive = false;
+        m_dedicatedPowerShellCwdCarry.clear();
+        m_powerShellPanelWorkingDirectory.clear();
+        m_powerShellPanelGitBranchFromCwd.clear();
         appendPowerShellOutput("[PowerShell session stopped]\n", RGB(255, 255, 0));
     }
-    
+
     updatePowerShellStatus();
 }
 
-bool Win32IDE::isPowerShellSessionActive() const {
+bool Win32IDE::isPowerShellSessionActive() const
+{
     return m_powerShellSessionActive;
 }
 
-void Win32IDE::updatePowerShellStatus() {
-    if (!m_hwndPowerShellStatusBar) return;
-    
+void Win32IDE::updatePowerShellStatus()
+{
+    if (!m_hwndPowerShellStatusBar)
+        return;
+
     std::string status = "PowerShell: ";
-    
-    if (m_powerShellSessionActive) {
+
+    if (m_powerShellSessionActive)
+    {
         status += "Active";
-        if (m_powerShellExecuting) {
+        if (m_powerShellExecuting)
+        {
             status += " (Executing...)";
         }
-        if (m_powerShellRawrXDLoaded) {
+        if (m_powerShellRawrXDLoaded)
+        {
             status += " | RawrXD Module: Loaded";
         }
-    } else {
+    }
+    else
+    {
         status += "Not Active";
     }
-    
-    status += " | ";
-    status += m_psState.version.empty() ? "pending" : m_psState.version;
-    
+
+    if (!m_psState.version.empty()) {
+        status += " | ";
+        status += m_psState.version;
+    }
+
+    if (!m_terminalTabs.empty() && m_activeTerminalTab >= 0 &&
+        m_activeTerminalTab < static_cast<int>(m_terminalTabIntegratedWorkingDirectory.size()))
+    {
+        const size_t ti = static_cast<size_t>(m_activeTerminalTab);
+        if (ti < m_terminalTabGitBranchFromCwd.size() && !m_terminalTabGitBranchFromCwd[ti].empty())
+        {
+            status += " | ";
+            status += m_terminalTabGitBranchFromCwd[ti];
+        }
+        if (!m_terminalTabIntegratedWorkingDirectory[ti].empty())
+        {
+            const std::string& cwd = m_terminalTabIntegratedWorkingDirectory[ti];
+            status += " | ";
+            status += (cwd.size() > 48) ? (std::string("...") + cwd.substr(cwd.size() - 45)) : cwd;
+        }
+    }
+    else if (!m_powerShellPanelWorkingDirectory.empty())
+    {
+        if (!m_powerShellPanelGitBranchFromCwd.empty())
+        {
+            status += " | ";
+            status += m_powerShellPanelGitBranchFromCwd;
+        }
+        const std::string& cwd = m_powerShellPanelWorkingDirectory;
+        status += " | ";
+        status += (cwd.size() > 48) ? (std::string("...") + cwd.substr(cwd.size() - 45)) : cwd;
+    }
+
     SetWindowTextA(m_hwndPowerShellStatusBar, status.c_str());
 }
 
@@ -609,17 +773,20 @@ void Win32IDE::updatePowerShellStatus() {
 // RAWRXD.PS1 INTEGRATION
 // ============================================================================
 
-void Win32IDE::loadRawrXDModule() {
-    if (m_powerShellRawrXDLoaded) {
+void Win32IDE::loadRawrXDModule()
+{
+    if (m_powerShellRawrXDLoaded)
+    {
         appendPowerShellOutput("[RawrXD module already loaded]\n", RGB(255, 255, 0));
         return;
     }
-    
+
     appendPowerShellOutput("[Loading RawrXD.ps1 module...]\n", RGB(0, 255, 255));
-    
+
     bool success = loadRawrXDPowerShellModule();
-    
-    if (success) {
+
+    if (success)
+    {
         m_powerShellRawrXDLoaded = true;
         appendPowerShellOutput("[SUCCESS] RawrXD module loaded!\n", RGB(0, 255, 0));
         appendPowerShellOutput("Available functions:\n", RGB(255, 255, 0));
@@ -627,19 +794,23 @@ void Win32IDE::loadRawrXDModule() {
         appendPowerShellOutput("  - Invoke-PoshLLMInference\n", RGB(150, 150, 150));
         appendPowerShellOutput("  - Get-PoshLLMStatus\n", RGB(150, 150, 150));
         appendPowerShellOutput("\n" + getPowerShellPrompt(), RGB(0, 255, 0));
-    } else {
+    }
+    else
+    {
         appendPowerShellOutput("[ERROR] Failed to load RawrXD module\n", RGB(255, 0, 0));
         appendPowerShellOutput("Make sure RawrXD.ps1 is in the Powershield directory\n", RGB(255, 100, 100));
     }
-    
+
     updatePowerShellStatus();
 }
 
-void Win32IDE::unloadRawrXDModule() {
-    if (!m_powerShellRawrXDLoaded) {
+void Win32IDE::unloadRawrXDModule()
+{
+    if (!m_powerShellRawrXDLoaded)
+    {
         return;
     }
-    
+
     // There's no easy way to unload functions in PowerShell
     // So we just mark it as unloaded
     m_powerShellRawrXDLoaded = false;
@@ -647,28 +818,34 @@ void Win32IDE::unloadRawrXDModule() {
     updatePowerShellStatus();
 }
 
-void Win32IDE::executeRawrXDCommand(const std::string& command) {
-    if (!m_powerShellRawrXDLoaded) {
+void Win32IDE::executeRawrXDCommand(const std::string& command)
+{
+    if (!m_powerShellRawrXDLoaded)
+    {
         loadRawrXDModule();
     }
-    
+
     executePowerShellPanelCommand(command);
 }
 
 // quickLoadGGUFModel() is now implemented in Win32IDE.cpp with full model source
 // resolver support (HuggingFace, Ollama blobs, HTTP URLs, local files).
 
-void Win32IDE::quickInference() {
+void Win32IDE::quickInference()
+{
     // Simple dialog for inference
     char prompt[1024] = "";
-    
-    if (MessageBoxA(m_hwndMain, "Enter your prompt in the PowerShell console using:\nInvoke-PoshLLMInference -Prompt 'your prompt' -MaxTokens 100",
-        "Quick Inference", MB_OKCANCEL | MB_ICONINFORMATION) == IDOK) {
-        
+
+    if (MessageBoxA(m_hwndMain,
+                    "Enter your prompt in the PowerShell console using:\nInvoke-PoshLLMInference -Prompt 'your prompt' "
+                    "-MaxTokens 100",
+                    "Quick Inference", MB_OKCANCEL | MB_ICONINFORMATION) == IDOK)
+    {
+
         // Focus the input
         SetFocus(m_hwndPowerShellInput);
         SetWindowTextA(m_hwndPowerShellInput, "Invoke-PoshLLMInference -Prompt '' -MaxTokens 100");
-        
+
         // Position cursor before second quote
         SendMessage(m_hwndPowerShellInput, EM_SETSEL, 36, 36);
     }
@@ -678,13 +855,16 @@ void Win32IDE::quickInference() {
 // HELPER FUNCTIONS
 // ============================================================================
 
-std::string Win32IDE::getPowerShellPrompt() {
+std::string Win32IDE::getPowerShellPrompt()
+{
     return "PS> ";
 }
 
-void Win32IDE::scrollPowerShellOutputToBottom() {
-    if (!m_hwndPowerShellOutput) return;
-    
+void Win32IDE::scrollPowerShellOutputToBottom()
+{
+    if (!m_hwndPowerShellOutput)
+        return;
+
     // Scroll to bottom
     SendMessage(m_hwndPowerShellOutput, WM_VSCROLL, SB_BOTTOM, 0);
 }
@@ -693,66 +873,95 @@ void Win32IDE::scrollPowerShellOutputToBottom() {
 // WINDOW PROCEDURES
 // ============================================================================
 
-LRESULT CALLBACK Win32IDE::PowerShellPanelProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+LRESULT CALLBACK Win32IDE::PowerShellPanelProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
     Win32IDE* ide = (Win32IDE*)GetPropA(hwnd, "IDE_PTR");
-    
-    switch (uMsg) {
-        case WM_COMMAND: {
-            int id = LOWORD(wParam);
-            
-            switch (id) {
+    WNDPROC oldPs = (WNDPROC)GetPropA(hwnd, "PS_PANEL_OLDPROC");
+
+    switch (uMsg)
+    {
+        case WM_COMMAND:
+        {
+            const int id = LOWORD(wParam);
+            switch (id)
+            {
                 case IDC_PS_BTN_EXECUTE:
-                    if (ide) ide->executePowerShellInput();
-                    break;
+                    if (ide)
+                        ide->executePowerShellInput();
+                    return 0;
                 case IDC_PS_BTN_CLEAR:
-                    if (ide) ide->clearPowerShellConsole();
-                    break;
+                    if (ide)
+                        ide->clearPowerShellConsole();
+                    return 0;
                 case IDC_PS_BTN_STOP:
-                    if (ide) ide->stopPowerShellExecution();
-                    break;
+                    if (ide)
+                        ide->stopPowerShellExecution();
+                    return 0;
                 case IDC_PS_BTN_HISTORY:
-                    if (ide) ide->showPowerShellHistory();
-                    break;
+                    if (ide)
+                        ide->showPowerShellHistory();
+                    return 0;
                 case IDC_PS_BTN_RESTART:
-                    if (ide) ide->restartPowerShellSession();
-                    break;
+                    if (ide)
+                        ide->restartPowerShellSession();
+                    return 0;
                 case IDC_PS_BTN_LOAD_RAWRXD:
-                    if (ide) ide->loadRawrXDModule();
+                    if (ide)
+                        ide->loadRawrXDModule();
+                    return 0;
+                case IDC_PS_BTN_TOGGLE:
+                    if (ide)
+                        ide->togglePowerShellPanel();
+                    return 0;
+                default:
                     break;
             }
             break;
         }
+        default:
+            break;
     }
-    
-    return DefWindowProc(hwnd, uMsg, wParam, lParam);
+
+    if (oldPs)
+        return CallWindowProcA(oldPs, hwnd, uMsg, wParam, lParam);
+    return DefWindowProcA(hwnd, uMsg, wParam, lParam);
 }
 
-LRESULT CALLBACK Win32IDE::PowerShellInputProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+LRESULT CALLBACK Win32IDE::PowerShellInputProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
     Win32IDE* ide = (Win32IDE*)GetPropA(hwnd, "IDE_PTR");
     WNDPROC oldProc = (WNDPROC)GetPropA(hwnd, "OLDPROC");
-    
-    switch (uMsg) {
-        case WM_KEYDOWN: {
-            switch (wParam) {
+
+    switch (uMsg)
+    {
+        case WM_KEYDOWN:
+        {
+            switch (wParam)
+            {
                 case VK_RETURN:
                     // Execute command on Enter
-                    if (ide) ide->executePowerShellInput();
+                    if (ide)
+                        ide->executePowerShellInput();
                     return 0;
-                    
+
                 case VK_UP:
                     // Navigate history up
-                    if (ide) ide->navigatePowerShellHistoryUp();
+                    if (ide)
+                        ide->navigatePowerShellHistoryUp();
                     return 0;
-                    
+
                 case VK_DOWN:
                     // Navigate history down
-                    if (ide) ide->navigatePowerShellHistoryDown();
+                    if (ide)
+                        ide->navigatePowerShellHistoryDown();
                     return 0;
-                    
+
                 case 'L':
                     // Ctrl+L - Clear console
-                    if (GetKeyState(VK_CONTROL) & 0x8000) {
-                        if (ide) ide->clearPowerShellConsole();
+                    if (GetKeyState(VK_CONTROL) & 0x8000)
+                    {
+                        if (ide)
+                            ide->clearPowerShellConsole();
                         return 0;
                     }
                     break;
@@ -760,6 +969,10 @@ LRESULT CALLBACK Win32IDE::PowerShellInputProc(HWND hwnd, UINT uMsg, WPARAM wPar
             break;
         }
     }
-    
-    return CallWindowProc(oldProc, hwnd, uMsg, wParam, lParam);
+
+    if (oldProc)
+    {
+        return CallWindowProcA(oldProc, hwnd, uMsg, wParam, lParam);
+    }
+    return DefWindowProcA(hwnd, uMsg, wParam, lParam);
 }

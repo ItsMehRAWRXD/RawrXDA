@@ -1,0 +1,36 @@
+[RawrXD][GPU] Parity CPU fallback ACTIVE — GPU gate bypassed for deterministic trace test only.
+[PIPELINE PARITY-CPU] deterministic fallback active
+[UI TOKEN] from 
+[UI TOKEN] over 
+[UI TOKEN] stream 
+[UI TOKEN] fallback 
+[UI TOKEN] fox 
+[UI TOKEN] jumps 
+[UI TOKEN] the 
+[UI TOKEN] from 
+[UI TOKEN] world. 
+[UI TOKEN] verified. 
+[UI TOKEN] Hello 
+[UI TOKEN] fox 
+[UI TOKEN] fallback 
+[UI TOKEN] verified. 
+[UI TOKEN] token 
+[UI TOKEN] deterministic 
+[UI TOKEN] the 
+[UI TOKEN] from 
+[UI TOKEN] world. 
+[UI TOKEN] quick 
+[UI TOKEN] Hello 
+[UI TOKEN] brown 
+[UI TOKEN] dog. 
+[UI TOKEN] dog. 
+[UI TOKEN] quick 
+[UI TOKEN] fox 
+[UI TOKEN] world. 
+[UI TOKEN] token 
+[UI TOKEN] Hello 
+[UI TOKEN] token 
+[UI TOKEN] over 
+[UI TOKEN] RawrXD 
+[PIPELINE TRACE] wrote trace JSON (parity-cpu)
+[UI-DRIVER] done ok=1 tokens=32 error=0

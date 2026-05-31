@@ -10,12 +10,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 
-#ifndef GGML_SYCL_GEMM_HPP
-#define GGML_SYCL_GEMM_HPP
+#ifndef GGML_RXD_SYCL_GEMM_HPP
+#define GGML_RXD_SYCL_GEMM_HPP
 
 #include "ggml-sycl.h"
 
-#if GGML_SYCL_DNNL
+#if GGML_RXD_SYCL_DNNL
 
 #include "dnnl.hpp"
 #include "dnnl_sycl.hpp"
@@ -32,7 +32,7 @@ public:
         else static_assert(0);
     }
 
-    static void gemm(ggml_backend_sycl_context & ctx, int m, int n, int k,
+    static void gemm(ggml_rxd_backend_sycl_context & ctx, int m, int n, int k,
         const void * a, dt at, dnnl_dim_t stra0, dnnl_dim_t stra1, dnnl_dim_t stra2,
         const void * b, dt bt, dnnl_dim_t strb0, dnnl_dim_t strb1, dnnl_dim_t strb2,
         void * c, dt ct, const queue_ptr & q, dnnl_dim_t batches_a, dnnl_dim_t batches_b) {
@@ -54,7 +54,7 @@ public:
         dnnl::primitive_attr primitive_attr;
         primitive_attr.set_scratchpad_mode(dnnl::scratchpad_mode::user);
 
-#ifdef GGML_SYCL_F16
+#ifdef GGML_RXD_SYCL_F16
         primitive_attr.set_fpmath_mode(dnnl::fpmath_mode::f16);
 #endif
 
@@ -78,7 +78,7 @@ public:
         matmul_prim.execute(stream, matmul_args);
     }
 
-    static void row_gemm(ggml_backend_sycl_context & ctx, int m, int n, int k,
+    static void row_gemm(ggml_rxd_backend_sycl_context & ctx, int m, int n, int k,
         const void * a, dt at, const void * b, dt bt, void * c, dt ct, const queue_ptr & q) {
 
         gemm(ctx, m, n, k, a, at, 1, k, k * m, b, bt, 1, k, n * k, c, ct, q, 1, 1);
@@ -87,4 +87,4 @@ public:
 
 #endif
 
-#endif // GGML_SYCL_GEMM_HPP
+#endif // GGML_RXD_SYCL_GEMM_HPP

@@ -1,12 +1,27 @@
 /**
- * Phase2 integration tests — C++20 stub (Qt-free).
- * Original used QtTest, QSignalSpy, QTemporaryDir.
+ * Phase2 integration smoke (Qt-free, C++20).
  */
 
-#include <cstdio>
-#include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <string>
 
-int main(int, char**) {
-    std::fprintf(stderr, "[test_phase2_integration] C++20 stub. Phase2 features in Win32 IDE.\n");
-    return 0;
+namespace fs = std::filesystem;
+
+static std::string readAll(const fs::path& p) {
+    std::ifstream in(p, std::ios::binary);
+    return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+}
+
+int main() {
+    const fs::path root("d:/rawrxd");
+    const auto orchestrator = root / "src" / "agentic_core.cpp";
+    const auto bridge = root / "src" / "agentic_agent_coordinator.cpp";
+
+    const bool ok = fs::exists(orchestrator) && fs::exists(bridge) &&
+                    !readAll(orchestrator).empty() && !readAll(bridge).empty();
+
+    std::cout << "test_phase2_integration: " << (ok ? "PASS" : "FAIL") << "\n";
+    return ok ? 0 : 1;
 }

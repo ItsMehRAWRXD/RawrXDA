@@ -1,7 +1,7 @@
 #include "traits.h"
 
-#include "ggml-backend-impl.h"
-#include "ggml-backend.h"
+#include "../ggml-backend-impl_rxd_internal.h"
+#include "../ggml-backend_rxd_internal.h"
 
 namespace ggml::cpu {
 tensor_traits::~tensor_traits() {}
@@ -9,8 +9,8 @@ tensor_traits::~tensor_traits() {}
 extra_buffer_type::~extra_buffer_type() {}
 }  // namespace ggml::cpu
 
-bool ggml_cpu_extra_compute_forward(struct ggml_compute_params * params, struct ggml_tensor * op) {
-    for (auto extra : ggml_backend_cpu_get_extra_buffer_types()) {
+bool ggml_rxd_cpu_extra_compute_forward(struct ggml_rxd_compute_params * params, struct ggml_rxd_tensor * op) {
+    for (auto extra : ggml_rxd_backend_cpu_get_extra_buffer_types()) {
         if (extra && extra->context) {
             auto buf_extra     = (ggml::cpu::extra_buffer_type *) extra->context;
             auto tensor_traits = buf_extra->get_tensor_traits(op);
@@ -22,8 +22,8 @@ bool ggml_cpu_extra_compute_forward(struct ggml_compute_params * params, struct 
     return false;
 }
 
-bool ggml_cpu_extra_work_size(int n_threads, const struct ggml_tensor * op, size_t * size) {
-    for (auto extra : ggml_backend_cpu_get_extra_buffer_types()) {
+bool ggml_rxd_cpu_extra_work_size(int n_threads, const struct ggml_rxd_tensor * op, size_t * size) {
+    for (auto extra : ggml_rxd_backend_cpu_get_extra_buffer_types()) {
         if (extra && extra->context) {
             auto buf_extra     = (ggml::cpu::extra_buffer_type *) extra->context;
             auto tensor_traits = buf_extra->get_tensor_traits(op);
@@ -34,3 +34,5 @@ bool ggml_cpu_extra_work_size(int n_threads, const struct ggml_tensor * op, size
     }
     return false;
 }
+
+

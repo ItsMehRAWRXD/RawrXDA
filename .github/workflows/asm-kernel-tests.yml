@@ -1,0 +1,195 @@
+# ============================================================================
+# .github/workflows/asm-kernel-tests.yml
+# Sovereign ASM Kernel CI — GoogleTest v1.14.0
+# ============================================================================
+name: Sovereign ASM Kernel Tests
+
+on:
+  push:
+    branches: [main, feature/*, sovereign/*]
+    paths:
+      - 'src/asm/**'
+      - 'tests/asm/**'
+      - 'src/asm/sovereign_kernels.hpp'
+      - 'src/asm/SovereignSpeculativeEngine_abi.h'
+      - '.github/workflows/asm-kernel-tests.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/asm/**'
+      - 'tests/asm/**'
+      - 'src/asm/sovereign_kernels.hpp'
+      - 'src/asm/SovereignSpeculativeEngine_abi.h'
+
+jobs:
+  # ── Windows x64 AVX2 Build + Test ───────────────────────────────────────────
+  windows-avx2:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [Debug, Release]
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup MSVC
+      uses: microsoft/setup-msbuild@v2
+      with:
+        msbuild-architecture: x64
+
+    - name: Setup NASM
+      uses: ilammy/setup-nasm@v1
+      with:
+        platform: win64
+
+    - name: Cache GoogleTest
+      uses: actions/cache@v4
+      with:
+        path: ${{ github.workspace }}/build/_deps/googletest-src
+        key: ${{ runner.os }}-googletest-v1.14.0-${{ hashFiles('tests/asm/CMakeLists.txt') }}
+
+    - name: Configure CMake
+      run: |
+        cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
+          -DRAWRXD_BUILD_TESTS=ON `
+          -DRAWRXD_BUILD_ASM=ON `
+          -DCMAKE_BUILD_TYPE=${{ matrix.config }}
+
+    - name: Build ASM Kernels
+      run: cmake --build build --target sovereign_kernels --config ${{ matrix.config }} -j4
+
+    - name: Build Test Suite
+      run: cmake --build build --target test_sovereign_kernels --config ${{ matrix.config }} -j4
+
+    - name: Run Tests
+      run: |
+        cd build
+        ctest -C ${{ matrix.config }} --output-on-failure -R test_sovereign_kernels
+
+    - name: Upload Test Results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results-windows-${{ matrix.config }}
+        path: build/tests/test_sovereign_kernels.xml
+
+  # ── Linux x64 AVX2 Build + Test (cross-compile check) ───────────────────────
+  linux-avx2:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [Debug, Release]
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y nasm build-essential cmake
+
+    - name: Cache GoogleTest
+      uses: actions/cache@v4
+      with:
+        path: ${{ github.workspace }}/build/_deps/googletest-src
+        key: ${{ runner.os }}-googletest-v1.14.0-${{ hashFiles('tests/asm/CMakeLists.txt') }}
+
+    - name: Configure CMake
+      run: |
+        cmake -S . -B build -G "Unix Makefiles" \
+          -DRAWRXD_BUILD_TESTS=ON \
+          -DRAWRXD_BUILD_ASM=ON \
+          -DCMAKE_BUILD_TYPE=${{ matrix.config }}
+
+    - name: Build ASM Kernels
+      run: cmake --build build --target sovereign_kernels --config ${{ matrix.config }} -j$(nproc)
+
+    - name: Build Test Suite
+      run: cmake --build build --target test_sovereign_kernels --config ${{ matrix.config }} -j$(nproc)
+
+    - name: Run Tests
+      run: |
+        cd build
+        ctest -C ${{ matrix.config }} --output-on-failure -R test_sovereign_kernels
+
+    - name: Upload Test Results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results-linux-${{ matrix.config }}
+        path: build/tests/test_sovereign_kernels.xml
+
+  # ── Performance Regression Check ────────────────────────────────────────────
+  performance-regression:
+    runs-on: windows-latest
+    needs: windows-avx2
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup MSVC
+      uses: microsoft/setup-msbuild@v2
+      with:
+        msbuild-architecture: x64
+
+    - name: Build Benchmark Suite
+      run: |
+        cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
+          -DRAWRXD_BUILD_TESTS=ON `
+          -DRAWRXD_BUILD_ASM=ON
+        cmake --build build --target bench_sovereign_kernels --config Release -j4
+
+    - name: Run Benchmarks
+      run: |
+        cd build/tests
+        .\bench_sovereign_kernels.exe --gtest_filter="PerformanceBenchmark.*"
+
+    - name: Compare with Baseline
+      run: |
+        # TODO: Implement baseline comparison using stored metrics
+        # For now, just verify benchmarks run without crash
+        echo "Performance regression check complete"
+
+  # ── Code Coverage (Windows only, using OpenCppCoverage) ─────────────────────
+  coverage:
+    runs-on: windows-latest
+    needs: windows-avx2
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup MSVC
+      uses: microsoft/setup-msbuild@v2
+      with:
+        msbuild-architecture: x64
+
+    - name: Install OpenCppCoverage
+      run: choco install opencppcoverage
+
+    - name: Build with Coverage
+      run: |
+        cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
+          -DRAWRXD_BUILD_TESTS=ON `
+          -DRAWRXD_BUILD_ASM=ON `
+          -DCMAKE_CXX_FLAGS="/Zi /Od"
+        cmake --build build --target test_sovereign_kernels --config Debug -j4
+
+    - name: Run Coverage
+      run: |
+        OpenCppCoverage.exe --export_type cobertura:build/coverage.xml `
+          -- build/tests/Debug/test_sovereign_kernels.exe
+
+    - name: Upload Coverage
+      uses: codecov/codecov-action@v4
+      with:
+        files: build/coverage.xml
+        flags: asm-kernels
+        name: asm-kernel-coverage

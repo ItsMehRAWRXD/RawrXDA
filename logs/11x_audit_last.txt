@@ -1,0 +1,203 @@
+RawrXD 11-axis audit (src + include)
+Generated: 2026-04-15T21:56:51.3084257-04:00
+Files scanned: 4784
+
+=== 01_TODO_FIXME_HACK ===
+Files with hits: 210  Total matches (file-aggregated): 3910
+      43  src\masm\RawrXD_NativeHttpServer.asm
+      43  src\digestion\RawrXD_DigestionEngine.asm
+      43  src\gpu_masm\vk_instance.asm
+      43  src\digestion\digestion_asm_x64.asm
+      43  src\gpu\cuda_impl.asm
+      43  src\gpu\rocm_impl.asm
+      43  src\gpu\vulkan_impl.asm
+      43  src\foundation\Phase1_Master.asm
+      43  src\loader\Phase2_Master.asm
+      43  src\ggml_masm\attention.asm
+      43  src\asm\vision_projection_kernel.asm
+      43  src\asm\RawrXD_UnifiedOverclock_Governor.asm
+      43  src\asm\RawrXD_StreamingWeights.asm
+      43  src\masm\masm_solo_compiler_fixed.asm
+      43  src\asm\rawrxd_scc.asm
+
+=== 02_STUB_UNIMPL ===
+Files with hits: 812  Total matches (file-aggregated): 22801
+     564  src\core\auto_feature_stub_impl.cpp
+     472  src\asm\RawrXD_StubSweepBridge.asm
+     220  src\extension_host\RawrXD_ExtensionHost.asm
+     220  src\gpu_masm\vk_instance.asm
+     220  src\gpu_masm\cuda_api.asm
+     220  src\ggml_masm\tensor_ops.asm
+     220  src\gpu\cuda_impl.asm
+     220  src\agentic\memory_cleanup.asm
+     220  src\agentic\memory_cleanup_phase_integration.asm
+     220  src\gpu\rocm_impl.asm
+     220  src\agentic\gpu_dma_complete_production.asm
+     220  src\agentic\gpu_dma_complete_production_FIXED.asm
+     220  src\gpu\vulkan_impl.asm
+     220  src\ggml_masm\quantization.asm
+     220  src\ggml_masm\ggml_backend.asm
+
+=== 03_NOOP_INCOMPLETE ===
+Files with hits: 203  Total matches (file-aggregated): 1815
+     595  src\core\sqlite3.c
+     148  src\ui\command_registry.cpp
+      40  include\sqlite3.h
+      13  src\sovereign_features.cpp
+      12  src\core\extension_polyfill_engine.cpp
+      11  src\audit\audit_verifier.cpp
+      10  src\gpu_masm\gpu_kernels.asm
+      10  src\direct_io\nvme_thermal_sidecar.asm
+      10  src\gpu_masm\gpu_detection.asm
+      10  src\direct_io\nvme_thermal_stressor.asm
+      10  src\direct_io\quantum_auth.asm
+      10  src\direct_io\RAWRXD_BURSTCORE_X7.asm
+      10  src\direct_io\sidecar_minimal.asm
+      10  src\gpu\vulkan_impl.asm
+      10  src\asm\vision_projection_kernel.asm
+
+=== 04_THROW ===
+Files with hits: 183  Total matches (file-aggregated): 501
+      39  src\agentic\SovereignAssembler.cpp
+      26  src\security_manager.cpp
+      24  src\core\sqlite3.c
+      16  src\ggml-sycl\dpct\helper.hpp
+      14  src\core\rawrxd_json.hpp
+      13  src\ggml-vulkan\ggml-vulkan.cpp
+      10  src\ggml-hexagon\ggml-hexagon.cpp
+       7  src\legacy\qtapp\language_support_system.cpp
+       7  src\ggml-vulkan\vulkan-shaders\vulkan-shaders-gen.cpp
+       6  src\ai_completion_provider.cpp
+       6  src\core\code_linter.cpp
+       5  src\digestion\digestion_reverse_engineering.cpp
+       5  src\legacy\qtapp\digestion_reverse_engineering_enterprise.cpp
+       5  src\utils\Expected.h
+       5  src\tests\regression_suite.cpp
+
+=== 05_STDOUT_PRINTF ===
+Files with hits: 971  Total matches (file-aggregated): 13532
+     606  src\core\sqlite3.c
+     588  src\cli_shell.cpp
+     423  src\cli\cli_headless_systems.cpp
+     360  src\core\auto_feature_registry.cpp
+     305  src\main.cpp
+     239  src\rawrxd_model_loader.cpp
+     235  src\core\model_training_pipeline.cpp
+     192  src\cli\quantum_cli_commands.cpp
+     191  src\ggml-vulkan\ggml-vulkan.cpp
+     171  src\eval\swe_bench_harness.cpp
+     142  src\vulkan_compute.cpp
+     133  src\agent\agentic_copilot_bridge.cpp
+     126  src\tools\enterprise_license_unified_creator.cpp
+     111  src\cli_streaming_enhancements.cpp
+     102  src\ggml-metal\ggml-metal-device.cpp
+
+=== 06_RAW_NEW_DELETE ===
+Files with hits: 920  Total matches (file-aggregated): 17147
+    1364  src\core\sqlite3.c
+     282  src\legacy\qtapp\MainWindow.cpp
+     148  src\win32app\mcp_hooks.asm
+     148  src\agentic\gpu_dma_complete_final.asm
+     146  src\masm\RawrXD_LazyTensorPager.asm
+     146  src\agentic\RawrXD_Critical_Blockers_P0.asm
+     146  src\agentic\rawrxd_final_complete_implementation.asm
+     146  src\agentic\RawrXD_High_Priority_P1.asm
+     146  src\agentic\RawrXD_Low_Priority_P3.asm
+     146  src\agentic\RawrXD_Medium_Priority_P2.asm
+     146  src\agentic\RawrXD_Titan_Master_GodSource_REVERSE_ENGINEERED.asm
+     146  src\gpu_masm\vk_instance.asm
+     146  src\agentic\Titan_FullLogic_Simplified_vs_Production.asm
+     146  src\agentic\titan_masm_real.asm
+     146  src\agentic\Titan_Streaming_Orchestrator_Complete.asm
+
+=== 07_QT_INCLUDES ===
+Files with hits: 245  Total matches (file-aggregated): 1493
+      64  src\legacy\qtapp\MainWindow.cpp
+      30  src\legacy\qtapp\MainWindow_v5.cpp
+      30  src\legacy\qtapp\widgets\version_control_widget.cpp
+      28  src\legacy\qtapp\widgets\build_system_widget.cpp
+      28  src\legacy\qtapp\Subsystems_Production.h
+      25  src\legacy\qtapp\metrics_dashboard.cpp
+      24  src\legacy\qtapp\MainWindow_AI_Integration.cpp
+      20  src\legacy\qtapp\settings_dialog.cpp
+      19  src\legacy\qtapp\interpretability_panel_enhanced.cpp
+      18  src\legacy\qtapp\ci_cd_settings_broken.cpp
+      17  src\legacy\qtapp\widgets\masm_editor_widget.cpp
+      16  src\legacy\qtapp\tokenizer_selector.cpp
+      15  src\legacy\qtapp\ai_code_assistant_real.cpp
+      15  src\legacy\qtapp\ai_code_assistant_panel_real.cpp
+      15  src\legacy\qt_support\compiler_panel.cpp
+
+=== 08_DISABLED_IF0 ===
+Files with hits: 18  Total matches (file-aggregated): 128
+      54  src\core\ssot_handlers_ext.cpp
+      52  src\core\sqlite3.c
+       5  src\win32app\Win32IDE_AgentCommands.cpp
+       2  src\ggml-backend.cpp
+       2  src\ggml-cpu\ggml-cpu.c
+       1  src\agent\agentic_deep_thinking_engine.cpp
+       1  src\win32app\main_win32.cpp
+       1  src\modules\quickjs_extension_host.cpp
+       1  src\ggml-sycl\ggml-sycl.cpp
+       1  src\ggml-opencl\ggml-opencl.cpp
+       1  src\ggml-hexagon\htp\hvx-sigmoid.c
+       1  src\ggml-cpu\amx\common.h
+       1  src\eval\swe_bench_harness.cpp
+       1  src\core\shared_feature_dispatch.cpp
+       1  src\core\rawr_engine_link_shims.cpp
+
+=== 09_OUTPUTDEBUG ===
+Files with hits: 284  Total matches (file-aggregated): 14072
+     236  src\asm\RawrXD_StubSweepBridge.asm
+     153  src\agentic\gpu_dma_complete_final.asm
+     152  src\direct_io\adaptive_burst_router.asm
+     152  src\digestion\RawrXD_DigestionEngine.asm
+     152  src\gpu\rocm_impl.asm
+     152  src\digestion\digestion_asm_x64.asm
+     152  src\gpu\vulkan_impl.asm
+     152  src\loader\Phase2_Master.asm
+     152  src\masm\masm_solo_compiler_fixed.asm
+     152  src\masm\masm_solo_compiler.asm
+     152  src\masm\RawrXD_HttpChatServer.asm
+     152  src\masm\RawrXD_LazyTensorPager.asm
+     152  src\masm\RawrXD_NativeHttpServer.asm
+     152  src\masm\RawrXD_Streaming_Orchestrator.asm
+     152  src\masm\robust_tools.asm
+
+=== 10_BLOCKING_WAIT ===
+Files with hits: 45  Total matches (file-aggregated): 64
+      10  src\core\rawrxd_state_mmf.cpp
+       4  src\win32app\AutonomousAgent.cpp
+       3  src\gpu\directstorage_unified.cpp
+       2  src\masm\MASMCompilerWidget.cpp
+       2  src\compiler\compiler_asm_real.cpp
+       2  src\compiler\compiler_cpp_real.cpp
+       2  src\gpu\directstorage_real.cpp
+       2  src\core\autonomous_workflow_engine.cpp
+       1  src\ide_window.cpp
+       1  src\ide\RawrXD_IDE_Win32.cpp
+       1  src\marketplace\vsix_loader.cpp
+       1  src\Phase3_Agent_Kernel.cpp
+       1  src\runtime\SovereignMCPBridge.cpp
+       1  src\serve\rawrxd_serve_main.cpp
+       1  src\tests\sovereign_assembler_smoke.cpp
+
+=== 11_SECURITY_MARKERS ===
+Files with hits: 270  Total matches (file-aggregated): 2087
+      32  src\audit\codebase_audit_system_impl.cpp
+      27  src\audit\codebase_audit_system.cpp
+      20  src\direct_io\RAWRXD_BURSTCORE_X7.asm
+      20  src\agentic\Titan_FullLogic_Simplified_vs_Production.asm
+      20  src\direct_io\test_mmf.asm
+      20  src\extension_host\RawrXD_DAP.asm
+      20  src\agentic\RawrXD_Titan_Master_GodSource_REVERSE_ENGINEERED.asm
+      20  src\agentic\RawrXD_Production_ReverseEngineered.asm
+      20  src\agentic\RawrXD_Medium_Priority_P2.asm
+      20  src\agentic\RawrXD_Low_Priority_P3.asm
+      20  src\agentic\RawrXD_High_Priority_P1.asm
+      20  src\agentic\rawrxd_final_complete_implementation.asm
+      20  src\agentic\RawrXD_Critical_Blockers_P0.asm
+      20  src\agentic\RawrXD_Complete_ReverseEngineered.asm
+      20  src\agentic\RawrXD_Complete_Production_System.asm
+
+

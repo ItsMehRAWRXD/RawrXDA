@@ -177,7 +177,7 @@ private:
     
     RawrXD::Expected<std::vector<std::vector<int>>, TokenError> encodeBatchGPU(const std::vector<std::string>& texts);
     
-    // Stubs needed by cpp
+    // Tokenizer configuration loaders (implemented in token_generator.cpp)
     void loadConfigFromJSON(const std::string&);
     void loadTokenizerConfigFromJSON(const std::string&);
     RawrXD::Expected<void, TokenError> loadVocabularyFromSentencePiece(const std::string&);

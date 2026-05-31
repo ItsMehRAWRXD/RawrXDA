@@ -4,6 +4,11 @@
 #include <cmath>
 #include <algorithm>
 #include <cstring>
+#include <chrono>
+
+#if defined(__AVX512F__)
+#include <immintrin.h>
+#endif
 
 // Real flash attention implementation with memory-efficient tiling
 // Based on "FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness"
@@ -24,6 +29,49 @@ static inline void softmax_inplace(float* x, int size) {
     for (int i = 0; i < size; i++) {
         x[i] *= inv_sum;
     }
+}
+
+static inline float DotProductF32(const float* a, const float* b, int length) {
+#if defined(__AVX512F__)
+    int i = 0;
+    __m512 acc = _mm512_setzero_ps();
+    for (; i + 16 <= length; i += 16) {
+        __m512 va = _mm512_loadu_ps(a + i);
+        __m512 vb = _mm512_loadu_ps(b + i);
+        acc = _mm512_fmadd_ps(va, vb, acc);
+    }
+    float sum = _mm512_reduce_add_ps(acc);
+    for (; i < length; ++i) {
+        sum += a[i] * b[i];
+    }
+    return sum;
+#else
+    float sum = 0.0f;
+    for (int i = 0; i < length; ++i) {
+        sum += a[i] * b[i];
+    }
+    return sum;
+#endif
+}
+
+static inline void AccumulateScaledF32(float* dst, const float* src, float scale, int length) {
+#if defined(__AVX512F__)
+    int i = 0;
+    const __m512 s = _mm512_set1_ps(scale);
+    for (; i + 16 <= length; i += 16) {
+        __m512 vd = _mm512_loadu_ps(dst + i);
+        __m512 vs = _mm512_loadu_ps(src + i);
+        vd = _mm512_fmadd_ps(vs, s, vd);
+        _mm512_storeu_ps(dst + i, vd);
+    }
+    for (; i < length; ++i) {
+        dst[i] += src[i] * scale;
+    }
+#else
+    for (int i = 0; i < length; ++i) {
+        dst[i] += src[i] * scale;
+    }
+#endif
 }
 
 extern \"C\" {
@@ -56,10 +104,9 @@ extern \"C\" {
                         for (int qi = i; qi < block_i_end; qi++) {
                             for (int ki = j; ki < block_j_end; ki++) {
                                 // Q * K^T
-                                float score = 0.0f;
-                                for (int d = 0; d < head_size; d++) {
-                                    score += q_head[qi * head_size + d] * k_head[ki * head_size + d];
-                                }
+                                const float* q_row = &q_head[qi * head_size];
+                                const float* k_row = &k_head[ki * head_size];
+                                float score = DotProductF32(q_row, k_row, head_size);
                                 scores[(qi - i) * (block_j_end - j) + (ki - j)] = score * scale;
                             }
                             
@@ -69,9 +116,9 @@ extern \"C\" {
                             // Multiply by values and accumulate
                             for (int ki = j; ki < block_j_end; ki++) {
                                 float attn_weight = scores[(qi - i) * (block_j_end - j) + (ki - j)];
-                                for (int d = 0; d < head_size; d++) {
-                                    out_head[qi * head_size + d] += attn_weight * v_head[ki * head_size + d];
-                                }
+                                float* out_row = &out_head[qi * head_size];
+                                const float* v_row = &v_head[ki * head_size];
+                                AccumulateScaledF32(out_row, v_row, attn_weight, head_size);
                             }
                         }
                     }
@@ -98,10 +145,9 @@ extern \"C\" {
                 // Compute Q * K^T
                 for (int i = 0; i < seq_len; i++) {
                     for (int j = 0; j < seq_len; j++) {
-                        float score = 0.0f;
-                        for (int d = 0; d < head_size; d++) {
-                            score += q_head[i * head_size + d] * k_head[j * head_size + d];
-                        }
+                        const float* q_row = &q_head[i * head_size];
+                        const float* k_row = &k_head[j * head_size];
+                        float score = DotProductF32(q_row, k_row, head_size);
                         attn[i * seq_len + j] = score * scale;
                     }
                     
@@ -111,15 +157,54 @@ extern \"C\" {
                 
                 // Multiply by V
                 for (int i = 0; i < seq_len; i++) {
-                    for (int d = 0; d < head_size; d++) {
-                        float sum = 0.0f;
-                        for (int j = 0; j < seq_len; j++) {
-                            sum += attn[i * seq_len + j] * v_head[j * head_size + d];
-                        }
-                        out_head[i * head_size + d] = sum;
+                    float* out_row = &out_head[i * head_size];
+                    std::memset(out_row, 0, head_size * sizeof(float));
+                    for (int j = 0; j < seq_len; j++) {
+                        const float weight = attn[i * seq_len + j];
+                        const float* v_row = &v_head[j * head_size];
+                        AccumulateScaledF32(out_row, v_row, weight, head_size);
                     }
                 }
             }
         }
+    }
+
+    // Bench helper: returns average latency in milliseconds and optionally outputs TPS.
+    double MeasureAttentionLatency(int batch_size, int seq_len, int head_size, int num_heads,
+                                   int warmup_iters, int measure_iters, double* out_tps) {
+        if (batch_size <= 0 || seq_len <= 0 || head_size <= 0 || num_heads <= 0 ||
+            warmup_iters < 0 || measure_iters <= 0) {
+            if (out_tps) {
+                *out_tps = 0.0;
+            }
+            return 0.0;
+        }
+
+        const size_t total = static_cast<size_t>(batch_size) * static_cast<size_t>(num_heads) *
+                             static_cast<size_t>(seq_len) * static_cast<size_t>(head_size);
+        std::vector<float> q(total, 0.125f);
+        std::vector<float> k(total, 0.25f);
+        std::vector<float> v(total, 0.5f);
+        std::vector<float> out(total, 0.0f);
+
+        for (int i = 0; i < warmup_iters; ++i) {
+            flash_attention(q.data(), k.data(), v.data(), batch_size, seq_len, head_size, num_heads, out.data());
+        }
+
+        const auto start = std::chrono::high_resolution_clock::now();
+        for (int i = 0; i < measure_iters; ++i) {
+            flash_attention(q.data(), k.data(), v.data(), batch_size, seq_len, head_size, num_heads, out.data());
+        }
+        const auto end = std::chrono::high_resolution_clock::now();
+
+        const double elapsed_ms = std::chrono::duration<double, std::milli>(end - start).count();
+        const double avg_ms = elapsed_ms / static_cast<double>(measure_iters);
+        const double elapsed_s = elapsed_ms / 1000.0;
+        const double tokens = static_cast<double>(batch_size) * static_cast<double>(seq_len) * static_cast<double>(measure_iters);
+
+        if (out_tps) {
+            *out_tps = (elapsed_s > 0.0) ? (tokens / elapsed_s) : 0.0;
+        }
+        return avg_ms;
     }
 }

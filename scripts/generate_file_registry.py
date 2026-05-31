@@ -3,6 +3,11 @@
 import os
 from pathlib import Path
 
+SKIP_FILE_BASENAMES = {
+    "voice_music_player.ps1",
+}
+
+
 def main():
     # Scan all source files
     extensions = {'.cpp', '.h', '.hpp', '.asm', '.py', '.ps1', '.sh', '.c', '.cc'}
@@ -13,6 +18,8 @@ def main():
         dirs[:] = [d for d in dirs if d not in {'.git', 'build', 'node_modules', '.vs'}]
         
         for filename in filenames:
+            if filename in SKIP_FILE_BASENAMES:
+                continue
             if any(filename.endswith(ext) for ext in extensions):
                 filepath = os.path.join(root, filename)
                 files.append(filepath.replace('\\', '/'))

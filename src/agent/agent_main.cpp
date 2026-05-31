@@ -13,6 +13,7 @@
 #include "self_test_gate.hpp"
 #include "simple_json.hpp"
 #include "agent_self_healing_orchestrator.hpp"
+#include "../gpu_enforcement.h"
 #include "agentic_hotpatch_orchestrator.hpp"
 
 #include <string>
@@ -90,23 +91,12 @@ static int executeProcess(const std::string& program, const std::vector<std::str
 
 static void printHelp()
 {
-    fprintf(stdout,
-        "RawrXD Autonomous Agent - Zero-touch IDE automation\n"
-        "\n"
-        "Usage: RawrXD-Agent.exe <wish>\n"
-        "\n"
-        "Arguments:\n"
-        "  wish    Natural language wish, e.g. 'Add Q8_K kernel'\n"
-        "\n"
-        "Options:\n"
-        "  -h, --help       Display this help and exit\n"
-        "  -v, --version    Display version and exit\n"
-    );
+    // Help text output disabled
 }
 
 static void printVersion()
 {
-    fprintf(stdout, "RawrXD-Agent 1.0.0\n");
+    // Version output disabled
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -115,14 +105,17 @@ static void printVersion()
 
 int main(int argc, char *argv[])
 {
+    // Mandatory GPU gate — the agent CLI refuses to start without a GPU.
+    rxd::gpu::require();
+
     // ============================================================================
     // Zero-Touch Initialization: Counter-Strike Mode
     // ============================================================================
     PatchResult initRes = AgentSelfHealingOrchestrator::instance().initialize();
     if (!initRes.success) {
-        fprintf(stderr, "[ZeroTouch] Caution: Self-healing orchestrator offline: %s\n", initRes.message.c_str());
+        // Self-healing orchestrator offline
     } else {
-        fprintf(stderr, "[ZeroTouch] Counter-Strike: Autonomous stabilization active.\n");
+        // Autonomous stabilization active
     }
 
     // Parse arguments manually (replaces QCommandLineParser)
@@ -147,11 +140,8 @@ int main(int argc, char *argv[])
     }
 
     if (wish.empty()) {
-        fprintf(stderr, "No wish provided. Usage: RawrXD-Agent.exe \"Add Q8_K kernel\"\n");
         return 1;
     }
-
-    fprintf(stderr, "Agent wish: %s\n", wish.c_str());
 
     // ============================================================================
     // Step 1: Plan
@@ -160,11 +150,8 @@ int main(int argc, char *argv[])
     JsonValue tasks = planner.plan(wish);
 
     if (tasks.size() == 0) {
-        fprintf(stderr, "Failed to generate plan for: %s\n", wish.c_str());
         return 1;
     }
-
-    fprintf(stderr, "Generated %zu tasks\n", tasks.size());
 
     // ============================================================================
     // Step 2: Execute
@@ -180,8 +167,6 @@ int main(int argc, char *argv[])
     for (size_t idx = 0; idx < tasks.size(); ++idx) {
         JsonValue task = tasks[idx];
         std::string type = task.value("type").toString();
-
-        fprintf(stderr, "[%d/%zu] Executing: %s\n", (++taskCount), tasks.size(), type.c_str());
 
         if (type == "add_kernel") {
             success = patch.addKernel(task.value("target").toString(),
@@ -224,23 +209,18 @@ int main(int argc, char *argv[])
                 task.value("ppl").toDouble()
             );
         } else if (type == "bench" || type == "bench_all") {
-            fprintf(stderr, "Benchmark (handled by build)\n");
+            // Benchmark handled by build
         }
 
         if (!success) {
             failureCount++;
-            fprintf(stderr, "Task failed: %s (%d/%d)\n", type.c_str(), failureCount, taskCount);
 
-            // ============================================================================
-            // Zero-Touch: Counter-Strike - Autonomous repair on task failure
-            // ============================================================================
-            fprintf(stderr, "[ZeroTouch] Running autonomous healing cycle...\n");
+            // Autonomous repair on task failure
             SelfHealReport report = AgentSelfHealingOrchestrator::instance().runHealingCycle();
             if (report.bugsFixed > 0) {
-                fprintf(stderr, "[ZeroTouch] Fixed %zu degradation issues. Retrying task: %s\n", report.bugsFixed, type.c_str());
-                // In a perfect agentic state, we'd loop the task again here.
+                // Fixed degradation issues, retry task
             } else {
-                fprintf(stderr, "[ZeroTouch] No immediate degradation found. Rolling back.\n");
+                // No degradation found, rolling back
             }
             return 1;
         }
@@ -251,15 +231,8 @@ int main(int argc, char *argv[])
     // ============================================================================
 
     std::string suggested = ml.suggestQuant();
-    fprintf(stderr, "Meta-learn suggests quant: %s\n", suggested.c_str());
 
     double successRate = (taskCount > 0) ? (100.0 * (taskCount - failureCount) / taskCount) : 0.0;
-
-    fprintf(stdout, "===============================================\n");
-    fprintf(stdout, "Agent completed successfully!\n");
-    fprintf(stdout, "Tasks: %d | Failures: %d | Success rate: %.1f%%\n",
-            taskCount, failureCount, successRate);
-    fprintf(stdout, "===============================================\n");
 
     return 0;
 }

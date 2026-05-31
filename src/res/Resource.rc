@@ -1,6 +1,8 @@
 #include <windows.h>
 
-// IDI_APP_ICON ICON "app.ico"
+IDI_APP_ICON ICON "app.ico"
+
+1 RT_MANIFEST "RawrXD.manifest"
 
 VS_VERSION_INFO VERSIONINFO
  FILEVERSION 14,7,3,0

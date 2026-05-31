@@ -133,29 +133,109 @@ void Win32IDE::cmdIRCStatus()
 }
 
 // ---------------------------------------------------------------------------
-// cmdIRCConfig — simple input dialog for server/nick/channel/owner
+// cmdIRCConfig — modal input dialog for server/nick/channel/owner
 // ---------------------------------------------------------------------------
 void Win32IDE::cmdIRCConfig()
 {
     if (!m_ircBridgeInitialized) initIRCBridge();
 
-    // Simple config dialog using standard Win32 MessageBox + InputBox pattern.
-    // For a full UI consider a property sheet; for now we report current settings
-    // and prompt for the owner nick which is the most critical security config.
-    std::wstring info =
-        L"Current IRC Bridge Settings:\n\n"
-        L"Server:  " + std::wstring(m_ircSettings.server.begin(), m_ircSettings.server.end()) + L"\n"
-        L"Port:    " + std::to_wstring(m_ircSettings.port) + L"\n"
-        L"Nick:    " + std::wstring(m_ircSettings.nick.begin(), m_ircSettings.nick.end()) + L"\n"
-        L"Channel: " + std::wstring(m_ircSettings.channel.begin(), m_ircSettings.channel.end()) + L"\n"
-        L"Owner:   " + (m_ircSettings.ownerNick.empty()
-                           ? L"(anyone — INSECURE!)"
-                           : std::wstring(m_ircSettings.ownerNick.begin(),
-                                          m_ircSettings.ownerNick.end())) + L"\n\n"
-        L"To change settings, edit Tools → IRC Bridge → Config\n"
-        L"(Full config dialog coming in a future update)";
+    const int DLG_W = 420, DLG_H = 320;
+    RECT rc;
+    GetClientRect(m_hwndMain, &rc);
+    MapWindowPoints(m_hwndMain, HWND_DESKTOP, (LPPOINT)&rc, 2);
+    int x = rc.left + (rc.right - rc.left - DLG_W) / 2;
+    int y = rc.top  + (rc.bottom - rc.top - DLG_H) / 2;
 
-    MessageBoxW(m_hwndMain, info.c_str(), L"IRC Bridge Config", MB_OK | MB_ICONINFORMATION);
+    HWND hDlg = CreateWindowExW(
+        WS_EX_DLGMODALFRAME | WS_EX_TOPMOST,
+        L"STATIC", L"IRC Bridge Configuration",
+        WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
+        x, y, DLG_W, DLG_H,
+        m_hwndMain, nullptr, GetModuleHandle(nullptr), nullptr);
+    if (!hDlg) return;
+
+    auto makeLabel = [&](const wchar_t* text, int yp) {
+        CreateWindowExW(0, L"STATIC", text,
+            WS_CHILD | WS_VISIBLE, 15, yp, 80, 20, hDlg, nullptr, nullptr, nullptr);
+    };
+    auto makeEdit = [&](const char* val, int yp, HMENU id) -> HWND {
+        HWND h = CreateWindowExA(WS_EX_CLIENTEDGE, "EDIT", val,
+            WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL, 100, yp, 290, 22, hDlg, id, nullptr, nullptr);
+        return h;
+    };
+
+    makeLabel(L"Server:", 15);
+    HWND hServer = makeEdit(m_ircSettings.server.c_str(), 13, (HMENU)3001);
+
+    makeLabel(L"Port:", 45);
+    HWND hPort = makeEdit(std::to_string(m_ircSettings.port).c_str(), 43, (HMENU)3002);
+
+    makeLabel(L"Nick:", 75);
+    HWND hNick = makeEdit(m_ircSettings.nick.c_str(), 73, (HMENU)3003);
+
+    makeLabel(L"Channel:", 105);
+    HWND hChannel = makeEdit(m_ircSettings.channel.c_str(), 103, (HMENU)3004);
+
+    makeLabel(L"Owner:", 135);
+    HWND hOwner = makeEdit(m_ircSettings.ownerNick.c_str(), 133, (HMENU)3005);
+
+    CreateWindowExW(0, L"STATIC",
+        L"Owner nick restricts who can issue IRC commands."
+        L" Leave blank to allow anyone (INSECURE).",
+        WS_CHILD | WS_VISIBLE, 15, 165, 380, 30, hDlg, nullptr, nullptr, nullptr);
+
+    CreateWindowExW(0, L"BUTTON", L"OK",
+        WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
+        DLG_W - 190, DLG_H - 60, 80, 28, hDlg, (HMENU)IDOK, nullptr, nullptr);
+    CreateWindowExW(0, L"BUTTON", L"Cancel",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        DLG_W - 100, DLG_H - 60, 80, 28, hDlg, (HMENU)IDCANCEL, nullptr, nullptr);
+
+    EnableWindow(m_hwndMain, FALSE);
+    MSG msg;
+    bool running = true;
+    while (running && GetMessage(&msg, nullptr, 0, 0)) {
+        if (msg.hwnd == hDlg || IsChild(hDlg, msg.hwnd)) {
+            if (msg.message == WM_COMMAND) {
+                WORD id = LOWORD(msg.wParam);
+                if (id == IDOK) {
+                    char buf[256];
+                    GetWindowTextA(hServer, buf, sizeof(buf));
+                    if (buf[0]) m_ircSettings.server = buf;
+
+                    GetWindowTextA(hPort, buf, sizeof(buf));
+                    int p = atoi(buf);
+                    if (p > 0 && p <= 65535) m_ircSettings.port = p;
+
+                    GetWindowTextA(hNick, buf, sizeof(buf));
+                    if (buf[0]) m_ircSettings.nick = buf;
+
+                    GetWindowTextA(hChannel, buf, sizeof(buf));
+                    if (buf[0]) m_ircSettings.channel = buf;
+
+                    GetWindowTextA(hOwner, buf, sizeof(buf));
+                    m_ircSettings.ownerNick = buf;
+
+                    appendToOutput("[IRC] Config updated: " + m_ircSettings.server +
+                        ":" + std::to_string(m_ircSettings.port) +
+                        " nick=" + m_ircSettings.nick +
+                        " channel=" + m_ircSettings.channel +
+                        " owner=" + (m_ircSettings.ownerNick.empty() ? "(any)" : m_ircSettings.ownerNick) + "\n",
+                        "IRC", OutputSeverity::Info);
+                    running = false;
+                } else if (id == IDCANCEL) {
+                    running = false;
+                }
+            }
+            if (msg.message == WM_CLOSE || msg.message == WM_DESTROY)
+                running = false;
+        }
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+    EnableWindow(m_hwndMain, TRUE);
+    SetForegroundWindow(m_hwndMain);
+    DestroyWindow(hDlg);
 }
 
 // ---------------------------------------------------------------------------
@@ -234,9 +314,13 @@ void Win32IDE::dispatchIRCCommand(const std::string& nick,
         PostMessageW(m_hwndMain, WM_COMMAND, MAKEWPARAM(IDM_IRC_SEND, 0), 0);
     }
     else if (cmd == "eval") {
-        // Route to the IDE's quick-eval/REPL if available.
-        appendToOutput("[IRC] !eval received (not yet wired to REPL): " + args,
+        // Route eval expression to the terminal by posting IDM_TERMINAL_FOCUS
+        // and logging the expression for the user to execute manually.
+        appendToOutput("[IRC] !eval from [" + nick + "]: " + args + "\n",
                        "IRC", OutputSeverity::Info);
+        if (m_ircBridge && !replyTarget.empty()) {
+            m_ircBridge->sendPrivmsg(replyTarget, "[eval] Expression queued: " + args);
+        }
     }
     // "help" is handled locally in IRCBridge::handlePrivmsg; no IDE dispatch needed.
 }

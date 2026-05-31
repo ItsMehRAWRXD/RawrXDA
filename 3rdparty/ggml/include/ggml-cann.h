@@ -32,9 +32,9 @@ extern "C" {
 /**
  * @brief Maximum number of CANN devices supported.
  */
-#define GGML_CANN_MAX_DEVICES 16
+#define GGML_RXD_CANN_MAX_DEVICES 16
 
-GGML_BACKEND_API ggml_backend_reg_t ggml_backend_cann_reg(void);
+GGML_RXD_BACKEND_API ggml_rxd_backend_reg_t ggml_rxd_backend_cann_reg(void);
 
 /**
  * @brief Initializes the CANN backend for a specified device.
@@ -46,7 +46,7 @@ GGML_BACKEND_API ggml_backend_reg_t ggml_backend_cann_reg(void);
  * @param device The index of the device to initialize.
  * @return A pointer to the initialized backend instance, or nullptr on failure.
  */
-GGML_BACKEND_API ggml_backend_t ggml_backend_cann_init(int32_t device);
+GGML_RXD_BACKEND_API ggml_rxd_backend_t ggml_rxd_backend_cann_init(int32_t device);
 
 /**
  * @brief Checks if a given backend is a CANN backend.
@@ -57,7 +57,7 @@ GGML_BACKEND_API ggml_backend_t ggml_backend_cann_init(int32_t device);
  * @param backend The backend instance to check.
  * @return True if the backend is a CANN backend, false otherwise.
  */
-GGML_BACKEND_API bool ggml_backend_is_cann(ggml_backend_t backend);
+GGML_RXD_BACKEND_API bool ggml_rxd_backend_is_cann(ggml_rxd_backend_t backend);
 
 /**
  * @brief Retrieves the CANN buffer type for a specified device.
@@ -69,25 +69,25 @@ GGML_BACKEND_API bool ggml_backend_is_cann(ggml_backend_t backend);
  * @return A pointer to the buffer type interface for the specified device, or
  * nullptr if the device index is out of range.
  */
-GGML_BACKEND_API ggml_backend_buffer_type_t
-ggml_backend_cann_buffer_type(int32_t device);
+GGML_RXD_BACKEND_API ggml_rxd_backend_buffer_type_t
+ggml_rxd_backend_cann_buffer_type(int32_t device);
 
 /**
  * @brief Retrieves the number of CANN devices available.
  *
  * This function returns the number of CANN devices available based on
- * information obtained from `ggml_cann_info()`.
+ * information obtained from `ggml_rxd_cann_info()`.
  *
  * @return The number of CANN devices available.
  */
-GGML_BACKEND_API int32_t ggml_backend_cann_get_device_count(void);
+GGML_RXD_BACKEND_API int32_t ggml_rxd_backend_cann_get_device_count(void);
 
 /**
  * @brief pinned host buffer for use with the CPU backend for faster copies between CPU and NPU.
  *
  * @return A pointer to the host buffer type interface.
  */
-GGML_BACKEND_API ggml_backend_buffer_type_t ggml_backend_cann_host_buffer_type(void);
+GGML_RXD_BACKEND_API ggml_rxd_backend_buffer_type_t ggml_rxd_backend_cann_host_buffer_type(void);
 
 /**
  * @brief Retrieves the description of a specific CANN device.
@@ -99,7 +99,7 @@ GGML_BACKEND_API ggml_backend_buffer_type_t ggml_backend_cann_host_buffer_type(v
  * @param description Pointer to a buffer where the description will be written.
  * @param description_size Size of the description buffer.
  */
-GGML_BACKEND_API void ggml_backend_cann_get_device_description(
+GGML_RXD_BACKEND_API void ggml_rxd_backend_cann_get_device_description(
     int32_t device, char* description, size_t description_size);
 
 /**
@@ -114,7 +114,7 @@ GGML_BACKEND_API void ggml_backend_cann_get_device_description(
  * @param total Pointer to a variable where the total memory size will be
  * stored.
  */
-GGML_BACKEND_API void ggml_backend_cann_get_device_memory(int32_t device,
+GGML_RXD_BACKEND_API void ggml_rxd_backend_cann_get_device_memory(int32_t device,
                                                   size_t* free,
                                                   size_t* total);
 

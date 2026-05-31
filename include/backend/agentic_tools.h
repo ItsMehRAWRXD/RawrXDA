@@ -66,6 +66,12 @@ enum class AgenticTool {
     GIT_STASH_SAVE,
     GIT_STASH_POP,
     GIT_FETCH,
+    TOGGLE_SPLIT_ANSWERS,
+    GET_SPLIT_ANSWERS,
+    HOTPATCH_STATUS,
+    LIST_HOTPATCHES,
+    APPLY_HOTPATCH,
+    REVERT_HOTPATCH,
     UNKNOWN
 };
 
@@ -150,10 +156,17 @@ private:
     ToolResult executeGitStashPop(const nlohmann::json& params);
     ToolResult executeGitFetch(const nlohmann::json& params);
 
+    // Hotpatch tools
+    ToolResult executeHotpatchStatus(const nlohmann::json& params);
+    ToolResult executeListHotpatches(const nlohmann::json& params);
+    ToolResult executeApplyHotpatch(const nlohmann::json& params);
+    ToolResult executeRevertHotpatch(const nlohmann::json& params);
+
 private:
     std::string m_workspace_root;
     bool m_allow_outside_workspace = false;
     bool m_block_delete_commands = false;
+    bool m_split_answers = false;
     std::unique_ptr<Tools::GitClient> m_git_client;
     std::unique_ptr<OllamaClient> m_ollama_client;
     ToolStats m_stats;

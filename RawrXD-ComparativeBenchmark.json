@@ -1,0 +1,75 @@
+{
+  "benchmark": "RawrXD Speculative Comparative Benchmark",
+  "date": "2026-04-11",
+  "sequence_tokens": 256,
+  "runs": 12,
+  "draft_divergence_stride": 7,
+  "concurrency_results": [
+    {
+      "concurrency": 1,
+      "baseline_tps": 4061.81,
+      "speculative_tps": 5978.96,
+      "realized_speedup": 1.4720,
+      "acceptance_rate": 0.8304,
+      "decoder_speedup_ratio": 7.1046,
+      "baseline": {
+        "avg_ms": 59.1963,
+        "p50_ms": 59.2589,
+        "p95_ms": 59.6915,
+        "p99_ms": 59.6915,
+        "sigma_ms": 0.3049
+      },
+      "speculative": {
+        "avg_ms": 39.8386,
+        "p50_ms": 39.7481,
+        "p95_ms": 40.4341,
+        "p99_ms": 40.4341,
+        "sigma_ms": 0.3212
+      }
+    },
+    {
+      "concurrency": 4,
+      "baseline_tps": 15891.02,
+      "speculative_tps": 23117.75,
+      "realized_speedup": 1.4548,
+      "acceptance_rate": 0.8389,
+      "decoder_speedup_ratio": 6.8717,
+      "baseline": {
+        "avg_ms": 60.1279,
+        "p50_ms": 60.1402,
+        "p95_ms": 60.8431,
+        "p99_ms": 61.0672,
+        "sigma_ms": 0.5007
+      },
+      "speculative": {
+        "avg_ms": 40.8871,
+        "p50_ms": 40.8957,
+        "p95_ms": 41.5456,
+        "p99_ms": 41.7181,
+        "sigma_ms": 0.4006
+      }
+    },
+    {
+      "concurrency": 8,
+      "baseline_tps": 31166.94,
+      "speculative_tps": 45836.10,
+      "realized_speedup": 1.4707,
+      "acceptance_rate": 0.8424,
+      "decoder_speedup_ratio": 6.9946,
+      "baseline": {
+        "avg_ms": 61.2907,
+        "p50_ms": 60.9346,
+        "p95_ms": 65.5087,
+        "p99_ms": 68.3119,
+        "sigma_ms": 1.3533
+      },
+      "speculative": {
+        "avg_ms": 41.1015,
+        "p50_ms": 41.2347,
+        "p95_ms": 41.8100,
+        "p99_ms": 42.0513,
+        "sigma_ms": 1.5191
+      }
+    }
+  ]
+}

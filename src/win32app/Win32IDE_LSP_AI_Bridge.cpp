@@ -125,6 +125,9 @@ static std::string extractJsonString(const std::string& json, const std::string&
     if (pos == std::string::npos) return "";
     auto end = json.find('"', pos + 1);
     if (end == std::string::npos) return "";
+    // Fail-closed: cap JSON string extraction at 64KB
+    static constexpr size_t kMaxJsonValue = 65536;
+    if (end - pos - 1 > kMaxJsonValue) return "";
     return json.substr(pos + 1, end - pos - 1);
 }
 
@@ -351,11 +354,17 @@ std::vector<Win32IDE::HybridCompletionItem> Win32IDE::requestHybridCompletion(
     std::vector<HybridCompletionItem> aiItems;
     {
         // Read context around the cursor for AI prompt
+        // Fail-closed: cap file size at 1MB to prevent unbounded allocation
+        static constexpr size_t kMaxFileReadSize = 1048576;
         std::ifstream fin(filePath);
         if (fin.is_open()) {
             std::vector<std::string> lines;
             std::string fileLine;
-            while (std::getline(fin, fileLine)) lines.push_back(fileLine);
+            // Cap line count at 10000 to prevent unbounded vector growth
+            static constexpr size_t kMaxLines = 10000;
+            while (std::getline(fin, fileLine) && lines.size() < kMaxLines) {
+                lines.push_back(fileLine);
+            }
             fin.close();
 
             // Build context window: 10 lines before + current line
@@ -375,7 +384,12 @@ std::vector<Win32IDE::HybridCompletionItem> Win32IDE::requestHybridCompletion(
                     "Cursor at line " + std::to_string(line + 1) + ", column " + std::to_string(character) + "\n"
                     "Suggestions:";
 
+                // Fail-closed: cap AI response at 32KB to prevent OOM
+                static constexpr size_t kMaxAIResponse = 32768;
                 std::string aiResponse = routeInferenceRequest(aiPrompt);
+                if (aiResponse.size() > kMaxAIResponse) {
+                    aiResponse.resize(kMaxAIResponse);
+                }
 
                 // Parse AI suggestions (lines starting with '> ')
                 std::istringstream aiStream(aiResponse);
@@ -411,9 +425,19 @@ std::vector<Win32IDE::HybridCompletionItem> Win32IDE::requestHybridCompletion(
         {
             std::ifstream fin(filePath);
             if (fin.is_open()) {
+                // Fail-closed: cap file read at 2MB to prevent unbounded memory allocation
+                static constexpr size_t kMaxFileContent = 2097152;
                 std::ostringstream oss;
-                oss << fin.rdbuf();
-                fileContent = oss.str();
+                std::string chunk;
+                chunk.resize(65536); // Read in 64KB chunks
+                while (fileContent.size() < kMaxFileContent && fin.read(chunk.data(), chunk.size())) {
+                    size_t bytesRead = fin.gcount();
+                    if (fileContent.size() + bytesRead > kMaxFileContent) {
+                        bytesRead = kMaxFileContent - fileContent.size();
+                    }
+                    fileContent.append(chunk.data(), bytesRead);
+                    if (bytesRead < chunk.size()) break;
+                }
                 fin.close();
             }
         }
@@ -437,6 +461,11 @@ std::vector<Win32IDE::HybridCompletionItem> Win32IDE::requestHybridCompletion(
             // Determine language from extension
             std::string langId = ext;
             if (!langId.empty() && langId[0] == '.') langId = langId.substr(1);
+            // Fail-closed: cap language ID at 64 bytes
+            static constexpr size_t kMaxLangId = 64;
+            if (langId.size() > kMaxLangId) {
+                langId.resize(kMaxLangId);
+            }
 
             // Call the local fallback engine (defined in ai_completion_real.cpp)
             // Use dynamic struct matching LocalFallbackItem layout

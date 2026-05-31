@@ -44,7 +44,7 @@ inline std::wstring Utf8ToWide(const char* utf8, int len = -1) {
     int wlen = MultiByteToWideChar(CP_UTF8, 0, utf8, len, nullptr, 0);
     if (wlen <= 0) return {};
     std::wstring result(wlen, 0);
-    MultiByteToWideChar(CP_UTF8, 0, utf8, len, result.data(), wlen);
+    MultiByteToWideChar(CP_UTF8, 0, utf8, len, &result[0], wlen);
     return result;
 }
 

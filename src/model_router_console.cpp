@@ -209,7 +209,41 @@ void ModelRouterConsole::updateLogDisplay()
 
 void ModelRouterConsole::applyFilters()
 {
-    // Placeholder for filter implementation
+    // Apply search text and level filters to log entries
+    m_log_display->clear();
+    m_log_table->setRowCount(0);
+    
+    for (const auto& entry : m_log_entries)
+    {
+        bool matchesSearch = true;
+        bool matchesLevel = true;
+        
+        // Search text filter
+        if (!m_search_filter.empty()) {
+            std::string lowerSearch = m_search_filter;
+            std::transform(lowerSearch.begin(), lowerSearch.end(), lowerSearch.begin(), ::tolower);
+            
+            std::string lowerMessage = entry.message;
+            std::transform(lowerMessage.begin(), lowerMessage.end(), lowerMessage.begin(), ::tolower);
+            std::string lowerModel = entry.model;
+            std::transform(lowerModel.begin(), lowerModel.end(), lowerModel.begin(), ::tolower);
+            std::string lowerDetails = entry.details;
+            std::transform(lowerDetails.begin(), lowerDetails.end(), lowerDetails.begin(), ::tolower);
+            
+            matchesSearch = (lowerMessage.find(lowerSearch) != std::string::npos) ||
+                           (lowerModel.find(lowerSearch) != std::string::npos) ||
+                           (lowerDetails.find(lowerSearch) != std::string::npos);
+        }
+        
+        // Level filter
+        if (!m_level_filter.empty() && m_level_filter != "All") {
+            matchesLevel = (entry.level == m_level_filter);
+        }
+        
+        if (matchesSearch && matchesLevel) {
+            addLogToDisplay(entry);
+        }
+    }
 }
 
 // === Slot Implementations ===

@@ -1,0 +1,74 @@
+[CPUInferenceEngine] Loading model: F:\OllamaModels\Phi-3-mini-4k-instruct-q8_0.gguf
+[CPUInferenceEngine] Stage: initialize backend (GPU will be attempted first, with CPU fallback)
+[RawrXD] CPU-only mode (Vulkan disabled)
+[RawrXD] Stage: loader.Load
+[RawrXD] Loading model from: F:\OllamaModels\Phi-3-mini-4k-instruct-q8_0.gguf
+[RawrXD] ⚡ INITIALIZING SOVEREIGN NEURAL HIVE-MIND SYSTEMS...
+[RawrXD] Policy bypass interceptor disabled: runtime binary patching is not permitted
+[RawrXD] ⚡ Speculative Swarm: Ready for 20x model chaining (600B+ aggregate)
+[RawrXD] ⚡ AVX-512 VPOPCNT: Ready for 0.8-bit weight reconstruction
+[RawrXD][BACKEND] backend=cpu-only result=ok reason=cpu fallback verified
+[RawrXD] VirtualAlloc2 with MEM_RESERVE_PLACEHOLDER failed (Error: 87)
+[RawrXD] Reserved aperture attempt 2048 MB failed (Error: 87)
+[RawrXD] Reserved aperture fallback active: 1024 MB at 0000000001B00000 (MapViewOfFileEx swap lane)
+[RawrXD] Reserved aperture fallback degraded from 2048 MB to 1024 MB
+[VMM] SeLockMemoryPrivilege not held; Large Pages disabled (falling back).
+[RawrXD] Stage: parse_header_metadata
+[RawrXD] Reserved Aperture Window 0-0 GB: Mapped 64 MB at 0000000001B00000
+[DEBUG] String key: general.architecture, value length: 4
+[DEBUG] String key: general.type, value length: 5
+[DEBUG] String key: general.name, value length: 24
+[DEBUG] String key: general.finetune, value length: 13
+[DEBUG] String key: general.basename, value length: 5
+[DEBUG] String key: general.size_label, value length: 4
+[DEBUG] String key: general.license, value length: 3
+[DEBUG] String key: general.license.link, value length: 78
+[DEBUG] Scalar key: phi3.context_length, type: 4, value: 131072
+[DEBUG] Scalar key: phi3.rope.scaling.original_context_length, type: 4, value: 4096
+[DEBUG] Scalar key: phi3.embedding_length, type: 4, value: 3072
+[DEBUG] Scalar key: phi3.feed_forward_length, type: 4, value: 8192
+[DEBUG] Scalar key: phi3.block_count, type: 4, value: 32
+[DEBUG] Scalar key: phi3.attention.head_count, type: 4, value: 32
+[DEBUG] Scalar key: phi3.attention.head_count_kv, type: 4, value: 32
+[DEBUG] Scalar key: phi3.rope.dimension_count, type: 4, value: 96
+[DEBUG] Scalar key: general.file_type, type: 4, value: 2
+[DEBUG] Scalar key: phi3.attention.sliding_window, type: 4, value: 262144
+[DEBUG] String key: tokenizer.ggml.model, value length: 5
+[DEBUG] String key: tokenizer.ggml.pre, value length: 7
+[DEBUG] tokenizer.ggml.tokens: atype=8, Alen=32064
+[DEBUG] Reserved 32064 for vocab
+[DEBUG] Scalar key: tokenizer.ggml.bos_token_id, type: 4, value: 1
+[DEBUG] Scalar key: tokenizer.ggml.eos_token_id, type: 4, value: 32000
+[DEBUG] Scalar key: tokenizer.ggml.unknown_token_id, type: 4, value: 0
+[DEBUG] Scalar key: tokenizer.ggml.padding_token_id, type: 4, value: 32000
+[DEBUG] String key: tokenizer.chat_template, value length: 407
+[DEBUG] Scalar key: general.quantization_version, type: 4, value: 2
+[DEBUG] Fallback: set vocab_size to vocab.size() = 32064
+[DEBUG] Final: vocab_size=32064, vocab.size()=32064
+[RawrXD] Stage: parse_tensor_index tensor_count=197
+[RawrXD] Stage: tensor_materialization mode=lazy tensor_count=197 indexed_storage=2.03 GB
+[RawrXD] Data starts at offset 738400
+[RawrXD] Stage: build_tensor_lookup_map
+[RawrXD] Model loaded successfully. VRAM used: 0.00 GB
+[RawrXD] Config: dim=3072, layers=32, heads=32, kv_heads=32, vocab=32064, ctx=131072, experts=0, experts_used=0
+[RawrXD] Tensor names in model (197 total):
+  [  0] type=2 dims=8192 3072 blk.0.ffn_down.weight
+  [  1] type=2 dims=3072 3072 blk.2.attn_output.weight
+  [  2] type=0 dims=3072 blk.2.ffn_norm.weight
+  [  3] type=2 dims=3072 9216 blk.16.attn_qkv.weight
+  [  4] type=0 dims=3072 blk.19.ffn_norm.weight
+  [  5] type=2 dims=3072 16384 blk.1.ffn_up.weight
+  [  6] type=2 dims=8192 3072 blk.22.ffn_down.weight
+  [  7] type=2 dims=3072 3072 blk.19.attn_output.weight
+  [  8] type=2 dims=3072 32064 token_embd.weight
+  [  9] type=2 dims=3072 3072 blk.9.attn_output.weight
+  [ 10] type=2 dims=3072 16384 blk.0.ffn_up.weight
+  [ 11] type=2 dims=3072 9216 blk.17.attn_qkv.weight
+  [ 12] type=2 dims=3072 3072 blk.12.attn_output.weight
+  [ 13] type=2 dims=3072 3072 blk.1.attn_output.weight
+  [ 14] type=0 dims=3072 blk.0.attn_norm.weight
+  [ 15] type=0 dims=3072 blk.22.ffn_norm.weight
+  ... (181 more)
+[RawrXD] Config: dim=3072 layers=32 heads=32 kv_heads=32 vocab=32064 hidden=8192 ctx=2048
+[RawrXD] Stage: tokenizer.Load
+[Tokenizer] Loaded 32064 vocabulary entries from GGUF

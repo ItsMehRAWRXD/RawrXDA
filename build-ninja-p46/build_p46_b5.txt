@@ -1,0 +1,159 @@
+[0/1] Re-running CMake...
+-- [SDK Fix] INCLUDE = C:/VS2022Enterprise/VC/Tools/MSVC/14.50.35717/include;C:/Program Files (x86)/Windows Kits/10/Include/10.0.22621.0/ucrt;C:/Program Files (x86)/Windows Kits/10/Include/10.0.22621.0/shared;C:/Program Files (x86)/Windows Kits/10/Include/10.0.22621.0/um
+-- [SDK Fix] LIB     = C:/VS2022Enterprise/VC/Tools/MSVC/14.50.35717/lib/x64;C:/VS2022Enterprise/VC/Tools/MSVC/14.50.35717/lib/onecore/x64;C:/Program Files (x86)/Windows Kits/10/Lib/10.0.22621.0/ucrt/x64;C:/Program Files (x86)/Windows Kits/10/Lib/10.0.22621.0/um/x64
+-- [SDK Fix] MT      = C:/Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x64/mt.exe
+-- RawrXD v14.7.3 Target Configured - Zero Bloat Mode
+-- [Build Paths] MSVC CRT: C:/VS2022Enterprise/VC/Tools/MSVC/14.50.35717
+-- [Build Paths] SDK 10.0.22621.0: ucrt + um + shared
+-- MASM64 enabled: ASM kernels will be compiled
+-- [SSOT Ownership] RawrEngine provider=AUTO (CORE=0 EXT=0 AUTO=1 STUBS=0 FEATURES=0)
+-- [RawrEngine LaneB] Using curated headless core sources
+-- [CommandAudit] Audit targets available: audit-registry, audit-registry-ci
+-- [RE] Deobfuscator MASM64 targets registered
+-- [RE] Model reverse pipeline MASM64 target registered
+-- [RE] Omega v3 MASM32 target registered
+-- [RE] Reverser compiler NASM targets registered
+-- [RE] Reverse Engineering Suite configured:
+--   C++ Library:       RawrXD-RE-Library (pe_tools/re_tools.cpp)
+--   Headers:           4 HPP files (Codex, Compiler, DumpBin, ReverseEngine)
+--   Omega Suite:       19 ASM files across v3/v4/v5/v7 + src_variants
+--   Deobfuscator:      3 ASM files + 1 INC + build/test
+--   Reverser Compiler: 11 ASM + 6 tests + 1 .rev source
+--   PE Tools:          re_tools.cpp/h (PE analyzer + inline compiler)
+--   Model Reverse:     model-llm-harvester.asm
+--   Security Toolkit:  RawrXD_IDE_unified.asm
+--   RE Modules:        gpu_dma_complete_reverse_engineered.asm
+-- [Gold] Standalone deployment target: RawrXD_Gold.exe (all MASM linked)
+-- [MASM] Using prebuilt RawrXD_AgenticOrchestrator.obj
+-- [MASM] Using prebuilt RawrXD_Camellia256.obj
+-- [MASM] Using prebuilt RawrXD_SelfHost_Engine.obj
+-- [NanoQuant] DISABLED — enable with -DRAWR_ENABLE_NANOQUANT=ON
+-- [Vulkan] Found SDK: C:/VulkanSDK/1.4.328.1/include
+-- [Phase 6] Standalone inference engine target: RawrXD-InferenceEngine
+-- [Titan] GGML bridge scaffold disabled (set -DRAWR_ENABLE_GGML_LINK=ON to enable opt-in lane)
+-- [Titan] Omega HIP full kernel set disabled (set -DRAWRXD_ENABLE_OMEGA_HIP_FULL_KERNEL_SET=ON to opt in)
+-- [Titan] RAWRXD_INLINE_DISPATCH=0 (baseline dispatcher)
+-- [Titan] RAWRXD_ENABLE_OMEGA_HIP=AUTO -> ON (AUTO matched RDNA3 target (AMD Radeon RX 7800 XT;AMD Radeon(TM) Graphics))
+-- [Titan] RawrXD_Titan DLL target wired: 99-export lane + aperture kernels (swap + AVX-512 dispatch + header verify)
+-- MultiWindow Kernel DLL target enabled
+-- DynamicPromptEngine DLL target enabled (Unity/Unreal compatible)
+-- Win32IDE: Real lane - using isolated handlers + runtime handlers
+-- [Win32IDE] Sovereign GPU ASM disabled — skipping src/asm/gpu/* (set -DRAWRXD_LINK_GPU_SOVEREIGN_ASM=ON to enable)
+-- [Win32IDE] Agentic stub fallback enabled by RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK=ON
+-- [Win32IDE] Stub policy enforcement relaxed (RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK=ON)
+-- [Infra] Win32IDE wired to D:/rawrxd/external/rawr_infra
+-- QuickJS found: JS extension host enabled
+-- [Win32IDE] Monolithic ASM obj pack disabled (RAWRXD_LINK_WIN32IDE_MONOLITHIC_OBJS=OFF)
+-- RawrXD-Crypto skipped (requires WIN32 + MSVC + MASM + uac_bypass_impl_stub.cpp)
+-- [SSOT] Stub lane guard disabled (set RAWRXD_ENABLE_MISSING_HANDLER_STUBS=ON to enable).
+-- [CI] self_test_gate target available (cmake --build . --target self_test_gate)
+-- [CI] RAWR_ASAN=OFF
+-- RawrXD-AutoFixCLI skipped (cpu_inference_engine_autofix_stub.cpp missing)
+-- [Phase C] GPU Benchmark target: RawrXD-Benchmark
+-- [Phase D] Fused Layer Benchmark target: RawrXD-FusedBenchmark
+-- [Phase E] KV Cache Benchmark target: RawrXD-KVBenchmark
+-- [Phase 9] Query Fusion Benchmark target: RawrXD-QueryFusionBenchmark
+-- [Smoke] RawrXD-TpsSmoke target (Run-TpsSmoke.ps1)
+-- [Analysis] RawrXD-ModelAnalysis target (Implant_Model_Analysis.ps1 / ANALYSIS_QUICKSTART.md)
+-- [Analysis] Win32IDE linked to RawrXD-ModelAnalysisLib (RAWR_HAS_MODEL_ANATOMY)
+-- [BackendOrchestrator] Smoke test target: BackendOrchestratorShardSmoke
+-- [AgenticOrchestrator] Smoke test target: agentic_orchestrator_smoke_test (build with: cmake --build . --target agentic_orchestrator_smoke_test)
+-- [Tools] Native address resolver target enabled: address_resolver_native (smoke targets: address_resolver_native_smoke, address_resolver_native_smoke_soft, address_resolver_native_smoke_minimal)
+-- ========================================
+-- Registering Tests with CTest
+-- ========================================
+--   ✓ Added test_ai_completions
+--   - Skipping test_llm_connectivity (libcurl not found)
+--   ✓ Added test_tool_registry
+--   ✓ Added test_voice_processor
+--   - Skipping test_zero_retention_manager (GTest not found)
+--   ✓ Added test_semantic_diff_analyzer
+--   ✓ Added test_ai_merge_resolver
+--   ✓ Added test_ide_model_autonomy
+--   ✓ Added test_sandboxed_terminal
+--   ✓ Added test_agentic_file_operations
+--   ✓ Added model_registry_test
+--   - Skipping test_gguf_integration (GTest not found)
+--   ✓ Added test_swarm_scheduler_pin
+--   ✓ Added test_swarm_expert_heatmap_stress
+--   ✓ Added test_moe_mixture_reference
+--   ✓ Added test_moe_down_project_policy
+--   ✓ Added test_moe_plan_row_mixture_pack_cache
+--   ✓ Added test_moe_batched_down_project
+--   ✓ Added test_moe_pack_hud_metrics
+--   ✓ Added moe_grouped_gemm_bench (manual / CI microbench; not registered in CTest)
+--   ✓ Added test_basic_profiler
+--   ✓ Added test_batch3_profiler_smoke
+--   ✓ Added test_production_regression (Qt-free regression suite)
+--   ✓ Added test_instructions_provider
+-- ========================================
+-- Test Suite Registration Complete
+-- Run tests: ctest --output-on-failure -C Release
+-- Run specific: ctest -R <name> -V -C Release
+-- ========================================
+--   ✓ Added test_model_loader_streamer_smoke
+-- Configuring done (1.1s)
+-- Generating done (0.1s)
+-- Build files have been written to: D:/rawrxd/build-ninja-p46
+[1/9] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\runtime\SovereignReplication.cpp.obj
+[2/9] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\runtime\SovereignFuzzEngine.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/runtime/SovereignFuzzEngine.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DHAS_BRUTAL_GZIP_MASM=1 -DNOMINMAX -DRAWRXD_DISABLE_DUPLICATE_SHIMS=1 -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_HAS_SOVEREIGN_GPU_ASM=0 -DRAWRXD_HAS_TITAN_KERNEL=1 -DRAWRXD_INFRA_AVAILABLE=1 -DRAWRXD_LINK_ADVANCED_DEOBFUSCATOR_ASM=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=0 -DRAWRXD_LINK_CODEBASE_AUDIT_SYSTEM_ASM=0 -DRAWRXD_LINK_DUAL_ENGINE_QUANTUM_BEACON_ASM=0 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PATTERN_RECONSTRUCTOR_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=0 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_UNIFIED_OVERCLOCK_GOVERNOR_ASM=0 -DRAWRXD_LINK_VISION_PROJECTION_ASM=0 -DRAWRXD_MASM_CORE_NATIVE_BRIDGE=1 -DRAWRXD_PRODUCTION_STRIP_STUB_SOURCES=0 -DRAWRXD_STRICT_PRODUCTION_PROFILE=0 -DRAWRXD_USE_DEDICATED_CODELENS=1 -DRAWRXD_USE_DEDICATED_HOVER=1 -DRAWRXD_USE_DEDICATED_INLAY=1 -DRAWRXD_USE_DEDICATED_MINIMAP=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_MODEL_ANATOMY=1 -DRAWR_HAS_QUICKJS=1 -DRAWR_HAS_RAWR_INFERENCE=0 -DRAWR_HAS_SOVEREIGN_ENGINES=0 -DRAWR_HAS_VULKAN=1 -DRAWR_QUICKJS_STUB=0 -DRAWR_SINGULARITY_LINKED=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -Id:\rawrxd\include -ID:\rawrxd\Ship -ID:\rawrxd\include -ID:\rawrxd\external\rawr_infra\Headers -ID:\rawrxd\external\rawr_infra\Source -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\win32app -ID:\rawrxd\src\modules -ID:\rawrxd\src\utils -ID:\rawrxd\src\config -ID:\rawrxd\src\asm -ID:\rawrxd\src\lsp -ID:\rawrxd\src\plugin_system -ID:\rawrxd\src\ide -ID:\rawrxd\src\llm_adapter -ID:\rawrxd\src\auth -ID:\rawrxd\src\context -ID:\rawrxd\src\multimodal_engine -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\3rdparty\quickjs_ng -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:ID:\rawrxd\Ship\webview2\build\native\include -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++latest -MT /GS- /sdl- /EHsc /W0 /arch:AVX2 /Zi /O2 /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\runtime\SovereignFuzzEngine.cpp.obj /Fdbin\RawrXD-Win32IDE.pdb /FS -c D:\rawrxd\src\runtime\SovereignFuzzEngine.cpp
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\ratio(27): error C3861: 'integral_constant': identifier not found
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\ratio(27): note: the template instantiation context (the oldest one first) is
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\ratio(27): note: while compiling class template 'RawrXD::Runtime::std::_Safe_mult'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\ratio(27): error C7568: argument list missing after assumed function template 'integral_constant'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\ratio(27): error C3770: '<error>': is not a valid base class
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\ratio(139): error C7568: argument list missing after assumed function template 'void_t'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\ratio(137): error C2976: 'RawrXD::Runtime::std::_Ratio_multiply_sfinae': too few template arguments
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\ratio(138): note: see declaration of 'RawrXD::Runtime::std::_Ratio_multiply_sfinae'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\ratio(165): error C3861: 'bool_constant': identifier not found
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\ratio(165): note: the template instantiation context (the oldest one first) is
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\ratio(165): note: while compiling class template 'RawrXD::Runtime::std::ratio_equal'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\ratio(165): error C7568: argument list missing after assumed function template 'bool_constant'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\ratio(165): error C3770: '<error>': is not a valid base class
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\ratio(173): error C3861: 'bool_constant': identifier not found
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\ratio(173): note: the template instantiation context (the oldest one first) is
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\ratio(173): note: while compiling class template 'RawrXD::Runtime::std::ratio_not_equal'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\ratio(173): error C7568: argument list missing after assumed function template 'bool_constant'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\ratio(173): error C3770: '<error>': is not a valid base class
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\ratio(229): error C3861: 'bool_constant': identifier not found
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\ratio(229): note: the template instantiation context (the oldest one first) is
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\ratio(229): note: while compiling class template 'RawrXD::Runtime::std::ratio_less'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\ratio(229): error C7568: argument list missing after assumed function template 'bool_constant'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\ratio(229): error C3770: '<error>': is not a valid base class
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\ratio(237): error C3861: 'bool_constant': identifier not found
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\ratio(237): note: the template instantiation context (the oldest one first) is
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\ratio(237): note: while compiling class template 'RawrXD::Runtime::std::ratio_less_equal'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\ratio(237): error C7568: argument list missing after assumed function template 'bool_constant'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\ratio(237): error C3770: '<error>': is not a valid base class
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\ratio(254): error C3861: 'bool_constant': identifier not found
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\ratio(254): note: the template instantiation context (the oldest one first) is
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\ratio(254): note: while compiling class template 'RawrXD::Runtime::std::ratio_greater_equal'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\ratio(254): error C7568: argument list missing after assumed function template 'bool_constant'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\ratio(254): error C3770: '<error>': is not a valid base class
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\__msvc_chrono.hpp(31): error C3861: 'is_floating_point': identifier not found
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\__msvc_chrono.hpp(31): note: the template instantiation context (the oldest one first) is
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\__msvc_chrono.hpp(31): note: while compiling class template 'RawrXD::Runtime::std::chrono::treat_as_floating_point'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\__msvc_chrono.hpp(31): error C7568: argument list missing after assumed function template 'is_floating_point'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\__msvc_chrono.hpp(31): error C3770: '<error>': is not a valid base class
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\__msvc_chrono.hpp(45): error C3861: 'numeric_limits': identifier not found
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\__msvc_chrono.hpp(45): note: the template instantiation context (the oldest one first) is
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\__msvc_chrono.hpp(37): note: while compiling class template 'RawrXD::Runtime::std::chrono::duration_values'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\__msvc_chrono.hpp(50): error C3861: 'numeric_limits': identifier not found
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\__msvc_chrono.hpp(65): error C3861: 'bool_constant': identifier not found
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\__msvc_chrono.hpp(65): note: the template instantiation context (the oldest one first) is
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\__msvc_chrono.hpp(65): note: while compiling class template 'RawrXD::Runtime::std::chrono::is_clock'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\__msvc_chrono.hpp(65): error C7568: argument list missing after assumed function template 'bool_constant'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\__msvc_chrono.hpp(65): error C3770: '<error>': is not a valid base class
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\__msvc_chrono.hpp(84): error C3861: '_Is_specialization_v': identifier not found
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\__msvc_chrono.hpp(86): error C7568: argument list missing after assumed function template 'enable_if_t'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\__msvc_chrono.hpp(86): error C2993: '<error>': is not a valid type for non-type template parameter '__formal'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\__msvc_chrono.hpp(88): error C3861: 'is_arithmetic_v': identifier not found
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\__msvc_chrono.hpp(88): error C3861: 'is_arithmetic_v': identifier not found
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\__msvc_chrono.hpp(103): error C7568: argument list missing after assumed function template 'is_convertible_v'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\__msvc_chrono.hpp(103): note: the template instantiation context (the oldest one first) is
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\__msvc_chrono.hpp(91): note: while compiling class template 'RawrXD::Runtime::std::chrono::duration'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\__msvc_chrono.hpp(104): error C2061: syntax error: identifier 'treat_as_floating_point_v<`template-type-parameter-1'>'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\__msvc_chrono.hpp(103): error C2993: '<error>': is not a valid type for non-type template parameter '__formal'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\__msvc_chrono.hpp(112): error C2039: 'den': is not a member of '`global namespace''

@@ -1,5 +1,5 @@
 // =============================================================================
-// ggml_nanoquant.cpp
+// ggml_rxd_nanoquant.cpp
 // GGML Type Registration Implementation for NanoQuant NQ_1 and NQ_R4
 //
 // Delegates to_float / from_float / vec_dot to MASM64 ASM exports via
@@ -8,7 +8,7 @@
 // Rule: NO SOURCE FILE IS TO BE SIMPLIFIED
 // =============================================================================
 
-#include "ggml/ggml_nanoquant.h"
+#include "ggml/ggml_rxd_nanoquant.h"
 #include "quant/nanoquant_bridge.h"
 
 #include <cstring>
@@ -36,7 +36,7 @@ static void nq1_from_float(const float* src, void* dst, int64_t n_elements) {
 }
 
 /// Vector dot product: NQ_1 · F32 → scalar.
-/// Compatible with ggml_vec_dot_t signature.
+/// Compatible with ggml_rxd_vec_dot_t signature.
 ///   n        = number of elements
 ///   result   = output float*
 ///   vx       = NQ_1 block array
@@ -133,7 +133,7 @@ static void nq_r4_vec_dot(int n, float* result, size_t /*bs_x*/,
 //  Type Traits Table
 // =============================================================================
 
-static ggml_nanoquant_type_traits s_nq1_traits = {
+static ggml_rxd_nanoquant_type_traits s_nq1_traits = {
     /* type_name    */ "nq_1",
     /* blck_size    */ QK_NQ1,          // 256 elements per block
     /* type_size    */ BLOCK_NQ1_SIZE,  // 34 bytes per block
@@ -141,10 +141,10 @@ static ggml_nanoquant_type_traits s_nq1_traits = {
     /* to_float     */ nq1_to_float,
     /* from_float   */ nq1_from_float,
     /* vec_dot      */ nq1_vec_dot,
-    /* vec_dot_type */ 0                // GGML_TYPE_F32 = 0 (NQ_1 · F32)
+    /* vec_dot_type */ 0                // GGML_RXD_TYPE_F32 = 0 (NQ_1 · F32)
 };
 
-static ggml_nanoquant_type_traits s_nq_r4_traits = {
+static ggml_rxd_nanoquant_type_traits s_nq_r4_traits = {
     /* type_name    */ "nq_r4",
     /* blck_size    */ 1,               // Matrix-level, no fixed block size
     /* type_size    */ NQM_HEADER_SIZE, // Minimum header size (variable payload)
@@ -161,26 +161,26 @@ static std::atomic<bool> s_registered{false};
 //  Registration
 // =============================================================================
 
-bool ggml_register_nanoquant_types() {
+bool ggml_rxd_register_nanoquant_types() {
     if (s_registered.exchange(true)) {
         return true; // Already registered
     }
     
     // In a real ggml integration, this would call:
-    //   ggml_type_traits[GGML_TYPE_NQ_1] = { ... };
-    //   ggml_type_traits[GGML_TYPE_NQ_R4] = { ... };
+    //   ggml_rxd_type_traits[GGML_RXD_TYPE_NQ_1] = { ... };
+    //   ggml_rxd_type_traits[GGML_RXD_TYPE_NQ_R4] = { ... };
     //
     // For now, we store the traits in our static table and expose via
-    // ggml_get_nanoquant_traits(). The GGUF loader dispatches through
+    // ggml_rxd_get_nanoquant_traits(). The GGUF loader dispatches through
     // this when it encounters type 20 or 21 in a model file.
     
     return true;
 }
 
-const ggml_nanoquant_type_traits* ggml_get_nanoquant_traits(int type_id) {
+const ggml_rxd_nanoquant_type_traits* ggml_rxd_get_nanoquant_traits(int type_id) {
     switch (type_id) {
-        case GGML_TYPE_NQ_1:  return &s_nq1_traits;
-        case GGML_TYPE_NQ_R4: return &s_nq_r4_traits;
+        case GGML_RXD_TYPE_NQ_1:  return &s_nq1_traits;
+        case GGML_RXD_TYPE_NQ_R4: return &s_nq_r4_traits;
         default:              return nullptr;
     }
 }

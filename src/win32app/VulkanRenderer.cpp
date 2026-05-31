@@ -339,11 +339,26 @@ public:
         m_pendingCaretColumn = caretColumn;
     }
 
-    void SetTransparency(float) override {}
-    void DrawText(const std::wstring&, float, float, float, uint32_t) override {}
-    void DrawRect(float, float, float, float, uint32_t) override {}
-    void BeginFrame() override {}
-    void EndFrame() override {}
+    void SetTransparency(float alpha) override {
+        m_clearColor[3] = std::max(0.f, std::min(1.f, alpha));
+    }
+    void DrawText(const std::wstring&, float, float, float, uint32_t) override {
+        // GPU text rendering requires glyph atlas pipeline (Phase 2)
+    }
+    void DrawRect(float, float, float, float, uint32_t) override {
+        // GPU rect rendering requires vertex pipeline (Phase 2)
+    }
+    void BeginFrame() override {
+        if (!m_initialized) return;
+        // Frame begin is handled by Render() which manages the full acquire+submit cycle
+        m_frameActive = true;
+    }
+    void EndFrame() override {
+        if (!m_initialized || !m_frameActive) return;
+        m_frameActive = false;
+        // Trigger a render pass to flush any pending state
+        Render();
+    }
 
 private:
     // ---- Resolved function pointers ----
@@ -731,6 +746,7 @@ private:
     HMODULE m_vkModule = nullptr;
     HWND m_hwnd = nullptr;
     bool m_initialized = false;
+    bool m_frameActive = false;
     float m_clearColor[4] = { 0.f, 0.f, 0.f, 1.f };
     uint32_t m_width = 0, m_height = 0;
 

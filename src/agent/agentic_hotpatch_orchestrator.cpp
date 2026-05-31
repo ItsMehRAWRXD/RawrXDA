@@ -23,7 +23,7 @@ float clampf(float v, float lo, float hi) {
 
 }
 
-// SCAFFOLD_069: agentic_hotpatch_orchestrator
+// Agentic Hotpatch Orchestrator Implementation
 
 
 // ============================================================================
@@ -36,10 +36,10 @@ AgenticHotpatchOrchestrator& AgenticHotpatchOrchestrator::instance() {
 }
 
 AgenticHotpatchOrchestrator::AgenticHotpatchOrchestrator()
-    : m_enabled(true)
+    : m_enabled(false)
     , m_maxRetries(3)
     , m_confidenceThreshold(0.6f)
-    , m_autoEscalate(true)
+    , m_autoEscalate(false)
     , m_modelTemperature(0.7f)
     , m_sequenceCounter(0)
 {
@@ -354,8 +354,10 @@ CorrectionOutcome AgenticHotpatchOrchestrator::orchestrateCorrection(
     const InferenceFailureEvent& failure,
     char* outputBuffer, size_t bufferCapacity)
 {
-    // Context-agnostic behavior: hotpatch orchestration is always available.
-    m_enabled = true;
+    if (!m_enabled) {
+        return CorrectionOutcome::error(CorrectionAction::None,
+                                         "Hotpatch orchestration is disabled");
+    }
 
     const CorrectionPolicy* policy = findPolicy(failure.type);
     if (!policy || !policy->enabled) {
@@ -777,7 +779,7 @@ void AgenticHotpatchOrchestrator::setModelTemperature(float temperature) {
     const float tNorm = clampf(m_modelTemperature / 1.5f, 0.0f, 1.0f);
     m_confidenceThreshold = clampf(0.8f - (0.6f * tNorm), 0.2f, 0.9f);
     m_maxRetries = 1 + static_cast<int>(tNorm * 5.0f);
-    m_enabled = true;
+    // Do NOT auto-enable hotpatching here; m_enabled stays as-is.
 }
 
 float AgenticHotpatchOrchestrator::getModelTemperature() const {

@@ -9,14 +9,29 @@
 
 #include "../cpu_inference_engine.h"
 #include "../native_agent.hpp"
+#include "../agentic/StreamingResultChannel.h"
 #include "Win32IDE_SubAgent.h"
+#include <atomic>
 #include <functional>
 #include <memory>
 #include <string>
 #include <vector>
 
-// Forward declaration
+// Forward declaration for the headless server entry point (implemented in
+// agentic_bridge_headless.cpp and linked into both GUI and headless builds).
+extern "C" bool  RawrXD_StartHeadlessServer(uint16_t port);
+extern "C" void  RawrXD_StopHeadlessServer();
+
+#ifndef RAWRXD_SUBSYS_MODES_D_INTEGRATED
+#define RAWRXD_SUBSYS_MODES_D_INTEGRATED
+#endif
+
+// Forward declarations
 class Win32IDE;
+namespace RawrXD::Agentic
+{
+class StreamingResultChannel;
+}
 
 // Agent response types
 enum class AgentResponseType
@@ -40,12 +55,24 @@ struct AgentResponse
 class AgenticBridge
 {
   public:
+    enum class UILogSeverity : uint8_t
+    {
+        Info = 0,
+        Warning = 1,
+        Error = 2,
+    };
+
     AgenticBridge(Win32IDE* ide);
     ~AgenticBridge();
 
     // Core agent operations
     bool Initialize(const std::string& frameworkPath, const std::string& modelName = "");
     bool IsInitialized() const { return m_initialized; }
+    /// True when local weights are mapped or a remote/orchestrator path is configured (stricter than IsInitialized).
+    bool HasUsableBackend() const;
+
+    // Support for InferenceEngine interface
+    std::string GenerateResponse(const std::string& prompt);
 
     // Execute single agent command
     AgentResponse ExecuteAgentCommand(const std::string& prompt);
@@ -70,6 +97,10 @@ class AgenticBridge
     bool GetDeepResearch() const { return m_deepResearch; }
     void SetNoRefusal(bool enabled);
     bool GetNoRefusal() const { return m_noRefusal; }
+    void SetAgenticMode(bool enabled) { m_enableAgenticMode = enabled; }
+    bool IsAgenticMode() const { return m_enableAgenticMode; }
+    void SetAgenticSessionId(std::string sessionId) { m_currentSessionId = std::move(sessionId); }
+    const std::string& GetAgenticSessionId() const { return m_currentSessionId; }
     void SetSwarmMode(bool enabled);
     bool GetSwarmMode() const { return m_swarmMode; }
     bool LoadSwarmFromDirectory(const std::string& directoryPath, int maxModels = 5);
@@ -100,6 +131,13 @@ class AgenticBridge
     void SetWorkspaceRoot(const std::string& workspaceRoot);
     std::string GetWorkspaceRoot() const { return m_workspaceRoot; }
 
+    // Ghost stream telemetry (monotonic sequence auditing)
+    void ObserveGhostStreamSeq(uint64_t seq);
+    uint64_t GetLastGhostSeq() const;
+    uint64_t GetGhostSeqBacktracks() const;
+    uint64_t GetGhostSeqGapEvents() const;
+    void ResetGhostSeqTelemetry();
+
     // Output callback
     using OutputCallback = std::function<void(const std::string&, const std::string&)>;
     void SetOutputCallback(OutputCallback callback);
@@ -112,6 +150,9 @@ class AgenticBridge
     void SetProgressCallback(ProgressCallback cb) { m_progressCallback = std::move(cb); }
     void SetModelLoadErrorCallback(ModelLoadErrorCallback cb) { m_modelLoadErrorCallback = std::move(cb); }
     const std::string& GetLastModelLoadError() const { return m_lastModelLoadError; }
+
+    // Output panel integration
+    void SetMainWindow(HWND hwnd);
 
     // RE Tools Access
     std::string RunDumpbin(const std::string& path, const std::string& mode);
@@ -142,6 +183,19 @@ class AgenticBridge
     /// Dispatch tool calls detected in model output
     bool DispatchModelToolCalls(const std::string& modelOutput, std::string& toolResult);
 
+    /// Dispatch tool calls with streaming injection to UI
+    /// Emits tool events (started/result/error/complete) in real-time
+    /// This is the Phase 1 streaming implementation
+    /// @param modelOutput Model response with tool calls
+    /// @param onToolEvent Callback for each tool event (started/result/error/complete)
+    /// @return Final aggregated response after all tools complete
+    std::string DispatchModelToolCallsStreaming(
+        const std::string& modelOutput,
+        std::function<void(const RawrXD::Agentic::ToolExecutionEvent&)> onToolEvent);
+
+    /// Get the streaming result channel (for advanced usage)
+    RawrXD::Agentic::StreamingResultChannel* GetStreamingChannel() { return m_streamingChannel.get(); }
+
     // Compatibility wrappers (older UI command layer)
     void ExecuteSubAgentChain(const std::string& taskDescription);
     void ExecuteSubAgentSwarm(const std::string& taskDescription);
@@ -169,15 +223,30 @@ class AgenticBridge
 
     // Response parsing
     AgentResponse ParseAgentResponse(const std::string& rawOutput);
-    bool IsToolCall(const std::string& line);
-    bool IsAnswer(const std::string& line);
+    bool IsToolCall(const std::string& line) const;
+    bool IsAnswer(const std::string& line) const;
+    std::string BuildOpenTabsPromptContext() const;
+    std::vector<std::string> ExtractToolCallLines(const std::string& modelOutput) const;
+    bool DispatchToolLinesPolicyAware(const std::vector<std::string>& toolLines, const std::string& parentId,
+                                      std::string& toolResult,
+                                      RawrXD::Agentic::StreamingResultChannel* streamingChannel = nullptr);
+    bool DispatchToolLinesBatched(const std::vector<std::string>& toolLines, const std::string& parentId,
+                                  std::string& toolResult,
+                                  RawrXD::Agentic::StreamingResultChannel* streamingChannel = nullptr);
+    void HandleToolDispatchResult(const std::string& toolName, const std::string& toolResult) const;
 
     // Path resolution
     std::string ResolveFrameworkPath();
     std::string ResolveToolsModulePath();
+    std::string ResolveModelPath() const;
+    std::string StripAgenticPrefix(const std::string& prompt, bool& wasAgenticPrefixed) const;
+
+    // Tool implementation helpers
+    std::string RunCompilerImpl(const std::string& path, const std::string& arch);
 
     /// Pre-inference prompt augmentation (SubAgent + thought protocols).
     void applyAgentCapabilityHotpatches(std::string& refinedPrompt);
+    bool postLogToMainWindow(UILogSeverity severity, const std::string& message) const;
 
     Win32IDE* m_ide;
     bool m_initialized;
@@ -215,6 +284,20 @@ class AgenticBridge
     ProgressCallback m_progressCallback;
     ModelLoadErrorCallback m_modelLoadErrorCallback;
     std::string m_lastModelLoadError;
+    
+    // Streaming result channel for Phase 1 (tool result injection)
+    std::unique_ptr<RawrXD::Agentic::StreamingResultChannel> m_streamingChannel;
+    
     bool m_multiAgentEnabled = false;
     bool m_swarmMode = false;
+    bool m_enableAgenticMode = true;  // Align with IDE default: agentic tools unless user disables
+    std::string m_currentSessionId;
+    std::atomic<uint64_t> m_lastGhostSeq{0};
+    std::atomic<uint64_t> m_ghostSeqBacktracks{0};
+    std::atomic<uint64_t> m_ghostSeqGapEvents{0};
+    HWND m_hwndMain = nullptr;
+
+    // Self-hosting: loopback port where the headless backend is listening.
+    // 0 = not in headless IPC mode (standard in-process operation).
+    uint16_t m_headlessPort = 0;
 };

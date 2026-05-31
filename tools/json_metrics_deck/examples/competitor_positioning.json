@@ -1,0 +1,30 @@
+{
+  "deckTitle": "Inference & agent runtime — positioning",
+  "subtitle": "Local-first IDE + sovereign stack",
+  "competitors": [
+    {
+      "name": "Ollama",
+      "tagline": "Local model packaging & simple API",
+      "strengths": ["Fastest path to `ollama run`", "GGUF pull UX", "macOS/Linux first"],
+      "gaps": ["Not an IDE", "No first-class agent terminal / workspace tools", "Server tuning is DIY"]
+    },
+    {
+      "name": "vLLM",
+      "tagline": "Throughput-optimized LLM serving",
+      "strengths": ["PagedAttention / high batch throughput", "OpenAI-compatible server", "Production serving"],
+      "gaps": ["Ops-heavy", "Not a desktop product", "No integrated dev UX"]
+    },
+    {
+      "name": "RawrXD",
+      "tagline": "Native Win32 IDE + agentic loop + local inference bridges",
+      "strengths": ["Cursor/VS Code-class terminal parity", "Agent + user shell isolation", "Tight edit ↔ tool ↔ terminal loop"],
+      "gaps": ["Windows-first surface area", "Multi-GPU story still maturing"]
+    }
+  ],
+  "positioningLine": "Ollama wins packaging. vLLM wins datacenter throughput. RawrXD wins the developer desktop loop where code, terminal, and agents share one surface.",
+  "matrixScores": {
+    "ollama": [4, 5, 2, 2],
+    "vllm": [1, 2, 5, 2],
+    "rawrxd": [5, 3, 3, 5]
+  }
+}

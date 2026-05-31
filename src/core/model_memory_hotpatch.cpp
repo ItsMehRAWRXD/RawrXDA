@@ -78,6 +78,56 @@ static ModelMemoryHotpatchState g_modelState;
 // ---------------------------------------------------------------------------
 // apply_memory_patch
 // ---------------------------------------------------------------------------
+// Privilege check helper
+// ---------------------------------------------------------------------------
+static bool has_admin_privilege() {
+    BOOL isAdmin = FALSE;
+    PSID administratorsGroup = NULL;
+    SID_IDENTIFIER_AUTHORITY ntAuthority = SECURITY_NT_AUTHORITY;
+    if (AllocateAndInitializeSid(&ntAuthority, 2, SECURITY_BUILTIN_DOMAIN_RID,
+                                  DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0,
+                                  &administratorsGroup)) {
+        CheckTokenMembership(NULL, administratorsGroup, &isAdmin);
+        FreeSid(administratorsGroup);
+    }
+    return isAdmin == TRUE;
+}
+
+static bool has_debug_privilege() {
+    HANDLE hToken;
+    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken))
+        return false;
+    
+    DWORD dwSize = 0;
+    GetTokenInformation(hToken, TokenPrivileges, NULL, 0, &dwSize);
+    if (dwSize == 0) {
+        CloseHandle(hToken);
+        return false;
+    }
+    
+    auto pPrivs = std::make_unique<BYTE[]>(dwSize);
+    if (!GetTokenInformation(hToken, TokenPrivileges, pPrivs.get(), dwSize, &dwSize)) {
+        CloseHandle(hToken);
+        return false;
+    }
+    
+    CloseHandle(hToken);
+    
+    // Check for SeDebugPrivilege
+    TOKEN_PRIVILEGES* privs = reinterpret_cast<TOKEN_PRIVILEGES*>(pPrivs.get());
+    for (DWORD i = 0; i < privs->PrivilegeCount; ++i) {
+        LUID luidDebug;
+        if (LookupPrivilegeValue(NULL, SE_DEBUG_NAME, &luidDebug)) {
+            if (privs->Privileges[i].Luid.HighPart == luidDebug.HighPart &&
+                privs->Privileges[i].Luid.LowPart == luidDebug.LowPart) {
+                return (privs->Privileges[i].Attributes & SE_PRIVILEGE_ENABLED) != 0;
+            }
+        }
+    }
+    return false;
+}
+
+// ---------------------------------------------------------------------------
 PatchResult apply_memory_patch(void* addr, size_t size, const void* data) {
     if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
         RawrXD::License::FeatureID::MemoryHotpatching, __FUNCTION__))
@@ -87,13 +137,28 @@ PatchResult apply_memory_patch(void* addr, size_t size, const void* data) {
         return PatchResult::error("Null address, data, or zero size", 1);
     }
 
+    // Privilege escalation check
+    if (!has_admin_privilege()) {
+        return PatchResult::error(
+            "[PRIVILEGE] Memory hotpatching requires Administrator privileges. "
+            "Right-click and select 'Run as administrator', or run from an elevated command prompt.",
+            static_cast<int>(ERROR_ELEVATION_REQUIRED));
+    }
+
     std::lock_guard<std::mutex> lock(g_memPatchMutex);
 
     // Attempt to make memory writable
     DWORD oldProtect = 0;
     if (!VirtualProtect(addr, size, PAGE_EXECUTE_READWRITE, &oldProtect)) {
+        DWORD err = GetLastError();
         g_memPatchStats.totalFailed.fetch_add(1, std::memory_order_relaxed);
-        return PatchResult::error("VirtualProtect (make writable) failed", static_cast<int>(GetLastError()));
+        if (err == ERROR_ACCESS_DENIED) {
+            return PatchResult::error(
+                "VirtualProtect failed: Access denied. Ensure the process has sufficient privileges "
+                "and the target memory region is not protected by another security mechanism.",
+                static_cast<int>(err));
+        }
+        return PatchResult::error("VirtualProtect (make writable) failed", static_cast<int>(err));
     }
     g_memPatchStats.protectionChanges.fetch_add(1, std::memory_order_relaxed);
 

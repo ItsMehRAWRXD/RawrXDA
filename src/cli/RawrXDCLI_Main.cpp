@@ -4,6 +4,9 @@
 #include <nlohmann/json.hpp>
 #include "inference/MLInferenceEngine.hpp"
 #include "sovereign/SovereignCoreWrapper.hpp"
+#include "prometheus/prometheus_engine.h"
+#include "prometheus/prometheus_800b_config.h"
+#include "prometheus/prometheus_weight_loader.h"
 
 // ExternC declarations to call MASM sovereign core
 extern "C" {
@@ -25,8 +28,8 @@ using json = nlohmann::json;
 namespace RawrXD::CLI {
 
 /**
- * RawrXD CLI with Real ML Inference
- * 
+ * RawrXD CLI with Real ML Inference + Prometheus 800B MoE Engine
+ *
  * Pipeline:
  * 1. Initialize sovereign core + ML engine
  * 2. Read user prompt from stdin
@@ -39,6 +42,189 @@ public:
     RawrXDCLI() = default;
 
     int run(int argc, char* argv[]) {
+        // Parse command-line flags
+        bool usePrometheus = false;
+        std::string modelPath;
+        std::string userPrompt;
+        bool benchmarkMode = false;
+
+        for (int i = 1; i < argc; ++i) {
+            std::string arg = argv[i];
+            if (arg == "--prometheus" || arg == "--prometheus-800b") {
+                usePrometheus = true;
+                if (i + 1 < argc && argv[i + 1][0] != '-') {
+                    modelPath = argv[++i];
+                }
+            } else if (arg == "--prompt" && i + 1 < argc) {
+                userPrompt = argv[++i];
+            } else if (arg == "--benchmark") {
+                benchmarkMode = true;
+            } else if (arg == "--help" || arg == "-h") {
+                printHelp();
+                return 0;
+            }
+        }
+
+        if (usePrometheus) {
+            return runPrometheus(modelPath, userPrompt, benchmarkMode);
+        }
+
+        return runLegacy(userPrompt);
+    }
+
+private:
+    void printHelp() {
+        std::cout << "RawrXD CLI — Real Inference + Autonomous Core\n"
+                  << "Version: 1.0 (ml64 / curl / libcurl / Prometheus)\n\n"
+                  << "Usage:\n"
+                  << "  RawrXDCLI [options]\n\n"
+                  << "Options:\n"
+                  << "  --prometheus [model.gguf]  Use Prometheus 800B MoE engine\n"
+                  << "  --prompt \"text\"            User prompt (default: demo)\n"
+                  << "  --benchmark                Run memory/latency estimation\n"
+                  << "  --help, -h                 Show this help\n\n"
+                  << "Examples:\n"
+                  << "  RawrXDCLI --prometheus model.gguf --prompt \"Hello\"\n"
+                  << "  RawrXDCLI --prometheus --benchmark\n";
+    }
+
+    int runPrometheus(const std::string& modelPath, const std::string& prompt, bool benchmark) {
+        std::cout << "=== Prometheus 800B MoE Engine ===\n" << std::endl;
+
+        // Load 800B config
+        auto config = Prometheus::get800BConfig();
+        std::cout << "[Config] Hidden: " << config.hiddenDim
+                  << " | Layers: " << config.numLayers
+                  << " | Experts: " << config.numExperts
+                  << " | Active: " << config.expertsPerToken << std::endl;
+
+        // Memory estimation
+        auto memEst = Prometheus::MemoryEstimator::estimate(config);
+        std::cout << "\n[Memory Estimate]\n"
+                  << "  Model weights:  " << (memEst.modelWeightsBytes / 1e9) << " GB\n"
+                  << "  KV cache:      " << (memEst.kvCacheBytes / 1e9) << " GB\n"
+                  << "  Activations:   " << (memEst.activationBytes / 1e9) << " GB\n"
+                  << "  Total:         " << (memEst.totalBytes / 1e9) << " GB\n"
+                  << "  Recommended:   " << (memEst.recommendedVRAMBytes / 1e9) << " GB\n";
+
+        if (benchmark) {
+            // GPU benchmark (H100 profile)
+            auto gpuEst = Prometheus::LatencyEstimator::estimate(config, 800.0, 67.0, 1024, 256);
+            std::cout << "\n[GPU Benchmark — H100]\n"
+                      << "  Prefill:       " << gpuEst.prefillMs << " ms\n"
+                      << "  Per token:     " << gpuEst.tokenMs << " ms\n"
+                      << "  TPS:           " << gpuEst.tps << "\n";
+
+            // CPU benchmark (AVX-512, 16 threads)
+            auto cpuEst = Prometheus::LatencyEstimator::estimateCPU(config, 16, 1024, 256);
+            std::cout << "\n[CPU Benchmark — AVX-512, 16 threads]\n"
+                      << "  Prefill:       " << cpuEst.prefillMs << " ms\n"
+                      << "  Per token:     " << cpuEst.tokenMs << " ms\n"
+                      << "  TPS:           " << cpuEst.tps << "\n";
+
+            // Output JSON telemetry
+            json bench;
+            bench["config"]["hiddenDim"] = config.hiddenDim;
+            bench["config"]["numLayers"] = config.numLayers;
+            bench["config"]["numExperts"] = config.numExperts;
+            bench["memory"]["modelGB"] = memEst.modelWeightsBytes / 1e9;
+            bench["memory"]["kvCacheGB"] = memEst.kvCacheBytes / 1e9;
+            bench["memory"]["totalGB"] = memEst.totalBytes / 1e9;
+            bench["gpu"]["prefillMs"] = gpuEst.prefillMs;
+            bench["gpu"]["tokenMs"] = gpuEst.tokenMs;
+            bench["gpu"]["tps"] = gpuEst.tps;
+            bench["cpu"]["prefillMs"] = cpuEst.prefillMs;
+            bench["cpu"]["tokenMs"] = cpuEst.tokenMs;
+            bench["cpu"]["tps"] = cpuEst.tps;
+
+            std::ofstream f("d:\\rawrxd\\prometheus_benchmark.json");
+            f << bench.dump(4);
+            f.close();
+            std::cout << "\n✓ Benchmark written to: d:\\rawrxd\\prometheus_benchmark.json\n";
+            return 0;
+        }
+
+        // Load model weights if path provided
+        if (!modelPath.empty()) {
+            std::cout << "\n[Loading] " << modelPath << std::endl;
+            std::vector<Prometheus::TensorDesc> tensors;
+            auto loadResult = Prometheus::GGUFLoader::load(modelPath, tensors, &config);
+
+            if (!loadResult.success) {
+                std::cerr << "ERROR: " << loadResult.error << std::endl;
+                return 1;
+            }
+
+            std::cout << "✓ Loaded " << loadResult.tensorsLoaded
+                      << " tensors (" << (loadResult.bytesLoaded / 1e6) << " MB) in "
+                      << loadResult.loadTimeMs << " ms\n";
+        } else {
+            std::cout << "\n[Info] No model path provided — using random initialization\n";
+        }
+
+        // Run inference
+        std::string userPrompt = prompt;
+        if (userPrompt.empty()) {
+            userPrompt = "Explain the architecture of a 800B parameter Mixture-of-Experts model.";
+        }
+
+        std::cout << "\nPrompt: " << userPrompt << "\n\n";
+        std::cout << "Generating...\n";
+
+        // Create Prometheus engine
+        auto engine = Prometheus::PrometheusEngine::create(modelPath, config);
+        if (!engine) {
+            std::cerr << "ERROR: Failed to create PrometheusEngine" << std::endl;
+            return 1;
+        }
+
+        // Build message
+        Prometheus::Message msg;
+        msg.role = "user";
+        Prometheus::ContentPart part;
+        part.type = Prometheus::ContentPart::Type::Text;
+        part.text = userPrompt;
+        msg.content.push_back(part);
+
+        // Run inference
+        Prometheus::GenerationConfig genConfig;
+        genConfig.maxTokens = 256;
+        genConfig.temperature = 0.7f;
+        genConfig.streaming = true;
+
+        auto result = engine->generate({msg}, genConfig);
+
+        std::cout << "\n────────────────────────────────────────\n";
+        std::cout << result.text << "\n";
+        std::cout << "────────────────────────────────────────\n";
+        std::cout << "Tokens: " << result.totalTokens
+                  << " | Prompt: " << result.promptTokens
+                  << " | Completion: " << result.completionTokens
+                  << " | TPS: " << result.tokensPerSecond
+                  << " | Time: " << result.totalTime.count() << " ms\n";
+
+        // Output JSON telemetry
+        json out;
+        out["success"] = result.finished;
+        out["text"] = result.text;
+        out["tokens"]["total"] = result.totalTokens;
+        out["tokens"]["prompt"] = result.promptTokens;
+        out["tokens"]["completion"] = result.completionTokens;
+        out["tokens"]["reasoning"] = result.reasoningTokens;
+        out["performance"]["tps"] = result.tokensPerSecond;
+        out["performance"]["totalMs"] = result.totalTime.count();
+        out["performance"]["firstTokenMs"] = result.firstTokenLatency.count();
+        out["finishReason"] = result.finishReason;
+
+        std::ofstream f("d:\\rawrxd\\prometheus_output.json");
+        f << out.dump(4);
+        f.close();
+        std::cout << "\n✓ Output written to: d:\\rawrxd\\prometheus_output.json\n";
+
+        return 0;
+    }
+
+    int runLegacy(const std::string& prompt) {
         std::cout << "=== RawrXD CLI — Real Inference + Autonomous Core ===" << std::endl;
         std::cout << "Version: 1.0 (ml64 / curl / libcurl)" << std::endl;
 

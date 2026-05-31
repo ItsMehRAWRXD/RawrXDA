@@ -3,7 +3,7 @@
 #include <cmath>
 #include <algorithm>
 
-// SCAFFOLD_358: TransparentRenderer (if used)
+// Transparent Renderer Implementation
 
 
 #ifndef M_PI

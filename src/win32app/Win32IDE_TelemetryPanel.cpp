@@ -216,31 +216,14 @@ void Win32IDE::cmdTelUsageMeter() {
 // ============================================================================
 
 void Win32IDE::cmdTelMetricsDashboard() {
-    auto& tc = EnterpriseTelemetryCompliance::instance();
-    auto metrics = tc.getMetrics("");
-
-    if (metrics.empty()) {
-        appendToOutput("[Telemetry] No metrics recorded.\n");
+    if (isInferenceMetricsVisible()) {
+        hideInferenceMetricsPanel();
+        appendToOutput("[Telemetry] Sovereign runtime monitor hidden.\n");
         return;
     }
 
-    std::ostringstream oss;
-    oss << "[Telemetry] Metrics (" << metrics.size() << " recent):\n";
-
-    size_t shown = 0;
-    for (auto it = metrics.rbegin(); it != metrics.rend() && shown < 50; ++it, ++shown) {
-        oss << "  " << std::left << std::setw(30) << it->name
-            << " = " << std::fixed << std::setprecision(2) << it->value;
-
-        switch (it->type) {
-            case MetricType::Counter:   oss << " [counter]";   break;
-            case MetricType::Gauge:     oss << " [gauge]";     break;
-            case MetricType::Histogram: oss << " [histogram]"; break;
-            case MetricType::Summary:   oss << " [summary]";   break;
-        }
-        oss << "\n";
-    }
-    appendToOutput(oss.str());
+    showInferenceMetricsPanel();
+    appendToOutput("[Telemetry] Sovereign runtime monitor opened.\n");
 }
 
 void Win32IDE::cmdTelMetricsFlush() {

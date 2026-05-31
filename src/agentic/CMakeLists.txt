@@ -66,6 +66,7 @@ set(BRIDGE_SOURCES
 set(COORDINATION_SOURCES
     coordination/AgentCoordinator.cpp
     coordination/ConflictResolver.cpp
+    coordination/Phase2MultiAgentSwarm.cpp
 )
 
 # Source files - Planning (Phase 2)
@@ -88,6 +89,7 @@ set(AGENT_LOOP_SOURCES
 # Source files - X-Macro Tool Registry + Orchestrator (Phase: LLM Tool-Calling)
 set(ORCHESTRATOR_SOURCES
     ToolRegistry.cpp
+    ToolRegistry_HardwareSecurity_Batch1.cpp
     AgentOllamaClient.cpp
     FIMPromptBuilder.cpp
     AgentOrchestrator.cpp
@@ -284,4 +286,24 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/
 # Tests (if enabled)
 if(BUILD_TESTING)
     add_subdirectory(tests)
+endif()
+
+# Phase 2 multi-agent swarm runtime gate
+option(RAWRXD_BUILD_PHASE2_SWARM_GATE "Build Phase2 multi-agent swarm gate" ON)
+if(RAWRXD_BUILD_PHASE2_SWARM_GATE)
+    add_executable(phase2_swarm_gate
+        ${CMAKE_CURRENT_SOURCE_DIR}/../tests/phase2_swarm_gate.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/coordination/Phase2MultiAgentSwarm.cpp
+    )
+
+    target_include_directories(phase2_swarm_gate PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/../
+    )
+
+    if(MSVC)
+        target_compile_options(phase2_swarm_gate PRIVATE /std:c++20 /W4 /WX-)
+    else()
+        target_compile_options(phase2_swarm_gate PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
 endif()

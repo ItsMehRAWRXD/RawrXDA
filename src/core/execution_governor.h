@@ -178,6 +178,42 @@ struct GovernorStats {
     uint64_t peakConcurrent   = 0;
 };
 
+// Immutable submission policy for non-bypassable safety checks.
+struct GovernorPolicy {
+    bool allowTerminalCommands = true;
+    bool allowToolInvocations = true;
+    bool allowAgentActions = true;
+    bool allowBackgroundJobs = true;
+    bool allowFileOperations = true;
+    bool allowNetworkRequests = true;
+    bool allowBuildTasks = true;
+    bool blockCriticalRisk = true;
+    bool requireDescriptionForHighRisk = true;
+    uint64_t maxCommandBytes = 64u * 1024u;
+    uint64_t maxTimeoutMs = 10u * 60u * 1000u;
+    std::vector<std::string> denyTokens;
+};
+
+struct GovernorSubmissionDecision {
+    bool allowed = true;
+    std::string reason;
+};
+
+struct GovernorAuditRecord {
+    GovernorTaskId taskId = 0;
+    GovernorTaskType type = GovernorTaskType::TerminalCommand;
+    GovernorRiskTier risk = GovernorRiskTier::Low;
+    GovernorTaskState state = GovernorTaskState::Pending;
+    uint64_t timestampMs = 0;
+    uint64_t timeoutMs = 0;
+    int exitCode = -99;
+    bool policyDenied = false;
+    bool timedOut = false;
+    bool cancelled = false;
+    std::string description;
+    std::string detail;
+};
+
 // ============================================================================
 // TERMINAL WATCHDOG — Non-blocking CreateProcess + PeekNamedPipe
 // ============================================================================
@@ -301,6 +337,42 @@ public:
     // Check if governor is initialized
     bool isInitialized() const { return m_initialized.load(); }
 
+    // Hardened policy control. Policy checks are always enforced in submitTask.
+    void setPolicy(const GovernorPolicy& policy);
+    GovernorPolicy getPolicy() const;
+
+    // Evaluate a submission without enqueuing it.
+    GovernorSubmissionDecision evaluateSubmission(const GovernoredTask& task) const;
+
+    // Immutable audit trail access (bounded ring buffer).
+    std::vector<GovernorAuditRecord> getAuditTrail(size_t maxRecords = 100) const;
+    void clearAuditTrail();
+
+    // =========================================================================
+    // Hotpatch Coordination Hooks (Phase 12)
+    // =========================================================================
+    // Called by HotpatchCoordinator to coordinate safe patching windows
+    
+    // Notify Governor of hotpatch phase change
+    // Controls task submission policy during patch lifecycle
+    void onHotpatchStateChange(uint8_t patPhase);  // patPhase = HotpatchPhase enum
+
+    // Check if a hotpatch is currently active
+    bool isHotpatchActive() const;
+
+    // Get the active patch ID (empty if no patch)
+    std::string getActivePatchId() const;
+
+    // Update the active patch identifier while a patch is in flight.
+    void setActivePatchId(const std::string& patchId);
+
+    // Called by tasks to reach a checkpoint during hotpatch wait
+    // Allows Governor to coordinate quiescence
+    void taskReachCheckpoint(GovernorTaskId taskId);
+
+    // Get count of tasks that have checkpointed
+    size_t getCheckpointedTaskCount() const;
+
 private:
     ExecutionGovernor();
     ~ExecutionGovernor();
@@ -328,9 +400,20 @@ private:
     GovernorStats                                m_stats;
     int                                          m_maxConcurrent;
     std::atomic<int>                             m_activeTasks;
+    GovernorPolicy                               m_policy;
+    std::vector<GovernorAuditRecord>             m_auditTrail;
+
+    // Hotpatch coordination state (Phase 12)
+    std::atomic<uint8_t>                         m_hotpatchPhase;
+    std::string                                  m_activePatchId;
+    std::vector<GovernorTaskId>                  m_checkpointedTasks;
+    std::atomic<bool>                            m_pausingNewSubmissions;
 
     // Prune threshold: remove tasks older than this
     static constexpr int PRUNE_AFTER_SECONDS = 300;
     static constexpr int MAX_RETAINED_TASKS  = 1000;
+    static constexpr size_t MAX_AUDIT_RECORDS = 4096;
+
+    void recordAuditLocked(const GovernorAuditRecord& record);
 };
 

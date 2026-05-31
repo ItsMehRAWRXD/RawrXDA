@@ -197,8 +197,8 @@ private:
         // Proxy to Ollama /api/tags if available; else stub
         std::string host = "localhost";
         int ollamaPort = 11434;
-        if (getenv("OLLAMA_HOST")) host = getenv("OLLAMA_HOST");
-        if (getenv("OLLAMA_PORT")) ollamaPort = atoi(getenv("OLLAMA_PORT"));
+        if (getenv("RAWRXD_NATIVE_HOST")) host = getenv("RAWRXD_NATIVE_HOST");
+        if (getenv("RAWRXD_NATIVE_PORT")) ollamaPort = atoi(getenv("RAWRXD_NATIVE_PORT"));
         if (ollamaPort == port_) ollamaPort = 11434;
 
         std::wstring wHost(host.begin(), host.end());
@@ -231,8 +231,8 @@ private:
             return "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: " +
                    std::to_string(body.size()) + "\r\n\r\n" + body;
         }
-no_ollama:
-        body = "{\"models\":[],\"message\":\"Ollama not reachable; load a model via IDE or start Ollama\"}";
+no_native:
+        body = "{\"models\":[],\"message\":\"Ollama not reachable; load a model via IDE or Start native inference server\"}";
         return "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: " +
                std::to_string(body.size()) + "\r\n\r\n" + body;
     }
@@ -240,8 +240,8 @@ no_ollama:
     std::string HandleGenerate(const std::string& body) {
         std::string host = "localhost";
         int ollamaPort = 11434;
-        if (getenv("OLLAMA_HOST")) host = getenv("OLLAMA_HOST");
-        if (getenv("OLLAMA_PORT")) ollamaPort = atoi(getenv("OLLAMA_PORT"));
+        if (getenv("RAWRXD_NATIVE_HOST")) host = getenv("RAWRXD_NATIVE_HOST");
+        if (getenv("RAWRXD_NATIVE_PORT")) ollamaPort = atoi(getenv("RAWRXD_NATIVE_PORT"));
         if (ollamaPort == port_) ollamaPort = 11434;
 
         std::wstring wHost(host.begin(), host.end());
@@ -257,7 +257,7 @@ no_ollama:
                                         (LPVOID)body.data(), (DWORD)body.size(), (DWORD)body.size(), 0);
         if (!sent) {
             WinHttpCloseHandle(hReq); WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession);
-            return MakeErrorResponse(502, "Send to Ollama failed — is Ollama running?");
+            return MakeErrorResponse(502, "Send to Ollama failed — is native inference server running?");
         }
         if (!WinHttpReceiveResponse(hReq, nullptr)) {
             WinHttpCloseHandle(hReq); WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession);
@@ -438,7 +438,7 @@ no_ollama:
             fs::path manifestPath = dir / "manifest.json";
             std::ofstream mf(manifestPath);
             if (mf) { mf << manifest; mf.close(); }
-            std::string config = "{\"ollama_host\":\"localhost\",\"ollama_port\":11434,\"model\":\"" + model + "\"}";
+            std::string config = "{\"RAWRXD_NATIVE_HOST\":\"localhost\",\"RAWRXD_NATIVE_PORT\":11435,\"model\":\"" + model + "\"}";
             fs::path configPath = dir / "config.json";
             std::ofstream cf(configPath);
             if (cf) { cf << config; cf.close(); }

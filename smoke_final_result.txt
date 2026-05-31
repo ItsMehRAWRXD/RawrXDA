@@ -1,0 +1,19 @@
+Test project D:/rawrxd/build-ninja
+    Start 49: rawrengine_copilot_smoke
+1/3 Test #49: rawrengine_copilot_smoke ..........   Passed    0.04 sec
+    Start 50: win32ide_agentic_smoke
+2/3 Test #50: win32ide_agentic_smoke ............   Passed   21.48 sec
+    Start 52: ollama_stream_routing_env_smoke
+3/3 Test #52: ollama_stream_routing_env_smoke ...   Passed    0.63 sec
+
+100% tests passed, 0 tests failed out of 3
+
+Label Time Summary:
+agentic      =  22.11 sec*proc (2 tests)
+copilot      =   0.04 sec*proc (1 test)
+inference    =   0.04 sec*proc (1 test)
+ollama       =   0.63 sec*proc (1 test)
+smoke        =  22.14 sec*proc (3 tests)
+win32ide     =  21.48 sec*proc (1 test)
+
+Total Test time (real) =  22.15 sec

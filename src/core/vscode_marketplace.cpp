@@ -494,7 +494,10 @@ static std::unique_ptr<ExtensionCacheManager> g_cacheManager;
 static std::mutex g_managerMutex;
 
 ExtensionMarketplaceManager::~ExtensionMarketplaceManager() {
-    // Cleanup is handled by static destructors
+    // Cleanup: cancel pending requests and clear caches
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_pendingRequests.clear();
+    m_extensionCache.clear();
 }
 
 void ExtensionMarketplaceManager::searchExtensions(const std::string& query, int page, int pageSize) {
@@ -1149,8 +1152,8 @@ json ExtensionMarketplaceManager::transformSearchResults(const json& rawResponse
                 result.push_back(transformedExt);
             }
         }
-    } catch (const std::exception&) {
-        // Return empty result on parsing errors
+    } catch (const std::exception& e) {
+        fprintf(stderr, "[ExtensionMarketplaceManager] Parse error: %s\n", e.what());
     }
     
     return result;
@@ -1273,7 +1276,7 @@ void ExtensionMarketplaceManager::saveInstalledExtensions() {
         std::ofstream file("./data/installed_extensions.json");
         file << installedData.dump(2);
     } catch (...) {
-        // Ignore save errors for now
+        fprintf(stderr, "[ExtensionMarketplaceManager] Save error ignored\n");
     }
 }
 
@@ -1299,7 +1302,7 @@ void ExtensionMarketplaceManager::loadInstalledExtensions() {
             }
         }
     } catch (...) {
-        // Ignore load errors and start with empty list
+        fprintf(stderr, "[ExtensionMarketplaceManager] Load error, starting with empty list\n");
     }
 }
 

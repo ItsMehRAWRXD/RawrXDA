@@ -18,6 +18,8 @@ build_verify/
 build_win32_gui_test/
 build_gui_3/
 build-arm64/
+build-ninja/
+build-ninja-*/
 bin/
 lib/
 obj/
@@ -41,6 +43,7 @@ NUL.obj
 CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
+CTestTestfile.cmake
 Makefile
 
 # IDE
@@ -67,6 +70,7 @@ Thumbs.db
 # Dependencies
 node_modules/
 package-lock.json
+tools/json_metrics_deck/.venv/
 
 # Generated IDE
 out/rawrxd-ide/node_modules/
@@ -153,3 +157,63 @@ build_smoke_verify2/
 # Large scan/report files (>100MB)
 **/todo-scan-*.json
 **/Powershield_Audit_Report.json
+
+# === RawrXD build artifacts ===
+build/
+build-*/
+build-ninja/
+build-ninja-*/
+out/
+bin/
+obj/
+
+# === SWE Bench artifacts ===
+reports/*
+!reports/win32ide/
+!reports/win32ide/link-baseline.json
+!reports/win32ide/imports.txt
+!reports/win32ide/sections.txt
+!reports/win32ide/binary-size.txt
+reports/win32ide/symbols.map
+!reports/BENCHMARK_CONFIG.json
+!reports/*.baseline.json
+reports/_tmp_*.json
+reports/*.jsonl.tmp
+reports/*.partial.jsonl
+
+# === Ninja / CMake ===
+build.ninja
+.ninja_log
+.ninja_deps
+CMakeCache.txt
+CMakeFiles/
+
+# === Logs ===
+*.trace
+
+# === Legacy Ollama archive (historical only) ===
+archive/legacy_logs/
+*ollama*.log
+*ollama_logs_export_*.txt
+
+# === Windows linker artifacts ===
+*.pdb
+*.ilk
+*.exp
+*.lib
+
+# === Root SWE probe artifacts ===
+swe_*.json
+swe_*.jsonl
+swe_*.md
+swe_*_stdout.txt
+swe_prompt_dump_*/
+swe_raw_*/
+swe_*_raw/
+swe_*_raws/
+swe_*_prompts/
+
+build_prod/*.map
+build_prod/*.exe
+build_prod/*.pdb
+build_prod/*.dll

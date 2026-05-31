@@ -281,7 +281,7 @@ size_t GGUFServerHotpatchEnhanced::patchRequestBytes(uint8_t* data, size_t dataL
     std::lock_guard<std::mutex> lock(m_mutex);
     if (!m_enabled || m_defaultParams.empty()) return dataLen;
 
-    // Example: patch temperature value in raw JSON bytes
+    // Patch temperature value in raw JSON bytes
     // Search for "temperature":X.X pattern and replace the value
     const char* tempKey = "\"temperature\":";
     size_t keyLen = std::strlen(tempKey);

@@ -1,0 +1,6 @@
+[Prometheus] bind() failed.
+[IDEConfig] Config file not found: rawrxd.config.json — using defaults.
+[IDEConfig] Config file not found: D:\rawrxd\build-ninja\bin\rawrxd.config.json — using defaults.
+[AgentOllamaClient] Context decision requested=131072 env=0 system_max=131072 kv_max=167772 effective=118343 kv_bytes=9694658560 kv_per_token=81920 vram_budget=17179869184 kv_budget=9694708531 pressure_ratio=0.999995 pressure=1 adapted=1
+[AgentOllamaClient] Context decision requested=131072 env=0 system_max=131072 kv_max=167772 effective=118343 kv_bytes=9694658560 kv_per_token=81920 vram_budget=17179869184 kv_budget=9694708531 pressure_ratio=0.999995 pressure=1 adapted=1
+[AgentOllamaClient] SetConfig context requested=131072 env=0 system_max=131072 kv_max=167772 effective=118343 kv_bytes=9694658560 kv_per_token=81920 vram_budget=17179869184 kv_budget=9694708531 pressure_ratio=0.999995 pressure=1 adapted=1

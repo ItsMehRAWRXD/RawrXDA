@@ -67,8 +67,6 @@ QuantumDynamicTimeManager::QuantumDynamicTimeManager(AdjustmentStrategy strategy
     , m_enable_continuous_learning(true)
     , m_system_start_time(std::chrono::steady_clock::now())
 {
-    std::cout << "[QuantumTimeManager] Initializing Dynamic Time Management System..." << std::endl;
-    
     // Initialize MASM acceleration
     initializeMasmAcceleration();
     
@@ -123,8 +121,6 @@ QuantumDynamicTimeManager::QuantumDynamicTimeManager(AdjustmentStrategy strategy
 }
 
 QuantumDynamicTimeManager::~QuantumDynamicTimeManager() {
-    std::cout << "[QuantumTimeManager] Shutting down system..." << std::endl;
-    
     // Stop background threads
     m_running.store(false);
     
@@ -140,8 +136,6 @@ QuantumDynamicTimeManager::~QuantumDynamicTimeManager() {
     
     // Cleanup MASM
     shutdownMasmAcceleration();
-    
-    std::cout << "[QuantumTimeManager] System shutdown complete" << std::endl;
 }
 
 TimeAllocation QuantumDynamicTimeManager::calculateTimeAllocation(const ExecutionContext& context) {
@@ -406,7 +400,6 @@ void QuantumDynamicTimeManager::recordExecution(const std::string& task_id, cons
     // Find profile for this task type
     auto profile_it = m_time_profiles.find(context.task_type);
     if (profile_it == m_time_profiles.end()) {
-        std::cout << "[QuantumTimeManager] No profile found for task type: " << context.task_type << std::endl;
         return;
     }
     
@@ -468,8 +461,6 @@ void QuantumDynamicTimeManager::recordExecution(const std::string& task_id, cons
 
 void QuantumDynamicTimeManager::adaptProfilesBasedOnHistory() {
     std::lock_guard<std::mutex> lock(m_profiles_mutex);
-    
-    std::cout << "[QuantumTimeManager] Adapting profiles based on execution history..." << std::endl;
     
     for (auto& [task_type, profile] : m_time_profiles) {
         if (profile.adaptation_samples < 5) {

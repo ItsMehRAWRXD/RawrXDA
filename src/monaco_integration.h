@@ -34,8 +34,19 @@ public:
     RawrXD::Expected<void, std::string> loadFile(const std::string& path) { return {}; }
     RawrXD::Expected<void, std::string> saveFile(const std::string& path) { return {}; }
     std::string getCurrentFile() const { return ""; }
-    void setText(const std::string& text) {}
-    void shutdown() {}
+    void setText(const std::string& text) {
+        currentText = text;
+        if (hwndEditor) {
+            SetWindowTextA(hwndEditor, text.c_str());
+        }
+    }
+    void shutdown() {
+        if (hwndEditor) {
+            DestroyWindow(hwndEditor);
+            hwndEditor = nullptr;
+        }
+        currentText.clear();
+    }
     nlohmann::json getStatus() const { return {{"status", "shim"}}; }
     RawrXD::Expected<bool, std::string> setLanguageServer(const std::string& cmd) { return true; }
     

@@ -1,0 +1,16 @@
+{
+  "source": "cli",
+  "model": "parity-test-model",
+  "prompt": "validate cli ui parity end to end",
+  "backend": "cpu-fallback",
+  "device": "ParityCpuFallback",
+  "started_ms": 1777921500475,
+  "first_token_ms": 0,
+  "completed_ms": 129,
+  "token_count": 32,
+  "error": "",
+  "tokens": ["from ", "over ", "stream ", "fallback ", "fox ", "jumps ", "the ", "from ", "world. ", "verified. ", "Hello ", "fox ", "fallback ", "verified. ", "token ", "deterministic ", "the ", "from ", "world. ", "quick ", "Hello ", "brown ", "dog. ", "dog. ", "quick ", "fox ", "world. ", "token ", "Hello ", "token ", "over ", "RawrXD "],
+  "seq": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31],
+  "token_us": [2, 4536, 8972, 13456, 17926, 22552, 26888, 31247, 35712, 40036, 44488, 48804, 53266, 57682, 62040, 66435, 70893, 75198, 79605, 83958, 88304, 92737, 97096, 101461, 105845, 110162, 114507, 118830, 121023, 123185, 125379, 127597],
+  "seq_monotonic": true
+}

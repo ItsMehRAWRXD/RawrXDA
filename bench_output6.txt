@@ -1,0 +1,110 @@
+RawrXD Decode MicroBench
+model=F:\models\Qwen2.5-Coder-32B-Instruct-Q4_K_M.gguf
+ctx=512 n=8 threads=1 runs=1
+[run 1] loading model: F:\models\Qwen2.5-Coder-32B-Instruct-Q4_K_M.gguf
+[CPUInferenceEngine] Loading model: F:\models\Qwen2.5-Coder-32B-Instruct-Q4_K_M.gguf
+[CPUInferenceEngine] Stage: initialize backend (GPU will be attempted first, with CPU fallback)
+[RawrXD] CPU-only mode (Vulkan disabled)
+[RawrXD] Stage: loader.Load
+[RawrXD] Loading model from: F:\models\Qwen2.5-Coder-32B-Instruct-Q4_K_M.gguf
+[RawrXD] ⚡ INITIALIZING SOVEREIGN NEURAL HIVE-MIND SYSTEMS...
+[RawrXD] Policy bypass interceptor disabled: runtime binary patching is not permitted
+[RawrXD] ⚡ Speculative Swarm: Ready for 20x model chaining (600B+ aggregate)
+[RawrXD] ⚡ AVX-512 VPOPCNT: Ready for 0.8-bit weight reconstruction
+[RawrXD][BACKEND] backend=cpu-only result=ok reason=cpu fallback verified
+[RawrXD] ⚡ SOVEREIGN APERTURE: Reserved 4096 MB placeholder window (zero commit)
+[VMM] SeLockMemoryPrivilege not held; Large Pages disabled (falling back).
+[RawrXD] Stage: parse_header_metadata
+[RawrXD] ⚡ SOVEREIGN WINDOW 0-4 GB: Mapped 4096 MB at 000002351EB40000 (2000+ TPS ready)
+[DEBUG] String key: general.architecture, value length: 5
+[DEBUG] String key: general.type, value length: 5
+[DEBUG] String key: general.name, value length: 26
+[DEBUG] String key: general.finetune, value length: 8
+[DEBUG] String key: general.basename, value length: 13
+[DEBUG] String key: general.size_label, value length: 3
+[DEBUG] String key: general.license, value length: 10
+[DEBUG] String key: general.license.link, value length: 72
+[DEBUG] Scalar key: general.base_model.count, type: 4, value: 1
+[DEBUG] String key: general.base_model.0.name, value length: 17
+[DEBUG] String key: general.base_model.0.organization, value length: 4
+[DEBUG] String key: general.base_model.0.repo_url, value length: 45
+[DEBUG] Scalar key: qwen2.block_count, type: 4, value: 64
+[DEBUG] Scalar key: qwen2.context_length, type: 4, value: 32768
+[DEBUG] Scalar key: qwen2.embedding_length, type: 4, value: 5120
+[DEBUG] Scalar key: qwen2.feed_forward_length, type: 4, value: 27648
+[DEBUG] Scalar key: qwen2.attention.head_count, type: 4, value: 40
+[DEBUG] Scalar key: qwen2.attention.head_count_kv, type: 4, value: 8
+[DEBUG] Scalar key: general.file_type, type: 4, value: 15
+[DEBUG] String key: tokenizer.ggml.model, value length: 4
+[DEBUG] String key: tokenizer.ggml.pre, value length: 5
+[DEBUG] tokenizer.ggml.tokens: atype=8, Alen=152064
+[DEBUG] Reserved 152064 for vocab
+[DEBUG] Scalar key: tokenizer.ggml.eos_token_id, type: 4, value: 151645
+[DEBUG] Scalar key: tokenizer.ggml.padding_token_id, type: 4, value: 151643
+[DEBUG] Scalar key: tokenizer.ggml.bos_token_id, type: 4, value: 151643
+[DEBUG] String key: tokenizer.chat_template, value length: 2507
+[DEBUG] Scalar key: general.quantization_version, type: 4, value: 2
+[DEBUG] String key: quantize.imatrix.file, value length: 78
+[DEBUG] String key: quantize.imatrix.dataset, value length: 36
+[DEBUG] Scalar key: quantize.imatrix.entries_count, type: 5, value: 448
+[DEBUG] Scalar key: quantize.imatrix.chunks_count, type: 5, value: 128
+[DEBUG] Fallback: set vocab_size to vocab.size() = 152064
+[DEBUG] Final: vocab_size=152064, vocab.size()=152064
+[RawrXD] Stage: parse_tensor_index tensor_count=771
+[RawrXD] Stage: tensor_materialization mode=lazy tensor_count=771 indexed_storage=18.48 GB
+[RawrXD] Data starts at offset 5979104
+[RawrXD] Stage: build_tensor_lookup_map
+[RawrXD] Model loaded successfully. VRAM used: 0.00 GB
+[RawrXD] Config: dim=5120, layers=64, heads=40, kv_heads=8, vocab=152064, ctx=32768, experts=0, experts_used=0
+[RawrXD] Tensor names in model (771 total):
+  [  0] type=12 dims=5120 1024 blk.16.attn_k.weight
+  [  1] type=0 dims=5120 blk.0.attn_q.bias
+  [  2] type=12 dims=5120 27648 blk.59.ffn_up.weight
+  [  3] type=14 dims=5120 152064 output.weight
+  [  4] type=0 dims=5120 output_norm.weight
+  [  5] type=12 dims=5120 5120 blk.6.attn_output.weight
+  [  6] type=12 dims=5120 27648 blk.10.ffn_gate.weight
+  [  7] type=0 dims=5120 blk.3.attn_q.bias
+  [  8] type=12 dims=5120 152064 token_embd.weight
+  [  9] type=14 dims=27648 5120 blk.22.ffn_down.weight
+  [ 10] type=12 dims=5120 5120 blk.19.attn_output.weight
+  [ 11] type=12 dims=5120 5120 blk.2.attn_output.weight
+  [ 12] type=0 dims=5120 blk.2.ffn_norm.weight
+  [ 13] type=0 dims=5120 blk.19.ffn_norm.weight
+  [ 14] type=0 dims=5120 blk.47.attn_norm.weight
+  [ 15] type=0 dims=1024 blk.2.attn_v.bias
+  ... (755 more)
+[RawrXD] Page pre-touch thread launched (4096 MB in background)
+[RawrXD] Config: dim=5120 layers=64 heads=40 kv_heads=8 vocab=152064 hidden=27648 ctx=2048
+[RawrXD] Stage: tokenizer.Load
+[Tokenizer] Loaded 152064 vocabulary entries from GGUF
+[RawrXD] Stage: transformer.Initialize
+[RawrXD] KV cache: 134217728 floats (536.9 MB per cache)
+[RawrXD] MEMSTATUS pre-probe: phys_avail=36945 MB, virt_avail=134209437 MB, commit_avail=135900 MB
+[RawrXD] KV cache attempt: ctx=2048, 134217728 floats (536.9 MB per cache)
+[RawrXD] KV cache final: ctx=2048, 134217728 floats (536.9 MB per cache)
+[RawrXD] Transformer Initialized. AVX-512 Kernels Linked.
+[RawrXD] Swarm plan: GGUF coalesced (67 slices total=18.48 GiB max=609.08 MiB avg=282.48 MiB)
+[RawrXD] Inference engine READY
+[CPUInferenceEngine] Model loaded successfully
+[DIAG] Tokenized prompt: 5 tokens
+[DIAG] Starting generation for 8 tokens...
+[CPUInferenceEngine] GenerateStreaming: input_tokens=5 max_tokens=8
+[Forward] ENTRY: tokens=5 start_pos=0
+[Forward] Config check: dim=5120 layers=64 hidden=27648 heads=40
+[Forward] GQA: dim=5120 heads=40 kv_heads=8 head_dim=128 kv_dim=1024 hidden=27648
+[MEM] Generation start: avail_phys=36917 MB, avail_virt=134208411 MB
+[MEM] KV footprint: k=512 MB, v=512 MB; tile_buf peak=16 MB
+[MEM] output.weight shard est: vocab=152064 * row_bytes(Q2_K)=1680 = 243 MB
+[Forward] Processing token 1/5
+[Forward] Token 1: embedding lookup for token=128245
+[Forward] Token 1: calling GetTensorRow for embedding
+[Forward] Token 1: GetTensorRow returned true
+[Forward] Token 1: embedding lookup complete
+[Forward] Token 1: starting 64 transformer layers
+[Forward] Token 1: Layer 1/64 starting
+[Forward] Token 1: Layer 1 - getting attn_norm
+[Forward] Token 1: Layer 1 - applying RMSNorm
+[Forward] Token 1: Layer 1 - has_split_qkv=true
+[Forward] Token 1: Layer 1 - calling StreamingMatMul for Q
+[StreamingMatMul] FIRST CALL: tensor=blk.0.attn_q.weight K=5120 N=5120

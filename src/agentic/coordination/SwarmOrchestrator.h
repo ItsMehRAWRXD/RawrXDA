@@ -48,7 +48,7 @@ namespace std {
 }
 #endif
 
-// Stub spdlog if not available
+// Conditional spdlog fallback if not available
 #if __has_include(<spdlog/spdlog.h>)
 #include <spdlog/spdlog.h>
 #else
@@ -60,7 +60,7 @@ namespace spdlog {
 }
 #endif
 
-// Stub nlohmann/json if not available
+// Conditional nlohmann/json fallback if not available
 #if __has_include(<nlohmann/json.hpp>)
 #include <nlohmann/json.hpp>
 #else

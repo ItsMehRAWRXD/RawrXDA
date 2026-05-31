@@ -333,6 +333,5 @@ Below, **each surface** gets the **same seven enhancements** (M01–M07), spelle
 ## Related
 
 - **`docs/ENHANCEMENT_15_PRODUCT_READY_7.md`** — E01–E15, PR01–PR07  
-- **`docs/IDE_STRATEGIC_PILLARS.md`** — product themes  
 - **`docs/INFERENCE_PATH_MATRIX.md`** — path unification (pairs with M04/M05 for AI surfaces)  
 - **`docs/LOCALHOST_COMMUNICATION_MAP.md`** — reverse map: IDE **client** vs optional **bridge** listeners (11434 vs 11435 vs dev UI)  

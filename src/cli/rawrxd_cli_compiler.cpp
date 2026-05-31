@@ -665,9 +665,17 @@ public:
                 
                 // Cleanup intermediate files
                 if (assembled && linked) {
-                    try { fs::remove(asmFile); } catch (...) {}
+                    try { fs::remove(asmFile); } catch (const std::exception& e) {
+                        OutputDebugStringA(("[rawrxd_cli_compiler] remove asmFile exception: " + std::string(e.what()) + "\n").c_str());
+                    } catch (...) {
+                        OutputDebugStringA("[rawrxd_cli_compiler] remove asmFile unknown exception\n");
+                    }
                     if (options.format != OutputFormat::Obj) {
-                        try { fs::remove(objFile); } catch (...) {}
+                        try { fs::remove(objFile); } catch (const std::exception& e) {
+                            OutputDebugStringA(("[rawrxd_cli_compiler] remove objFile exception: " + std::string(e.what()) + "\n").c_str());
+                        } catch (...) {
+                            OutputDebugStringA("[rawrxd_cli_compiler] remove objFile unknown exception\n");
+                        }
                     }
                 }
             }
@@ -1198,7 +1206,7 @@ private:
         {
             // Pattern: "add i32 X, Y" where X and Y are constants → computed value
             // This operates on IR-level constant operations
-            // Example: "  %1 = add i32 3, 4" → "  %1 = i32 7"
+            // Pattern: "  %1 = add i32 3, 4" → "  %1 = i32 7"
             std::istringstream stream(ir);
             std::ostringstream optimized;
             std::string line;
@@ -1681,11 +1689,15 @@ public:
                   << "}";
     }
     
-    void result(const CompileResult& result) override {}
-    
-    void summary(const BuildStats& stats) override {
-        std::cout << ",\"summary\":{"
-                  << "\"success\":" << (stats.failedFiles == 0 ? "true" : "false") << ","
+    void result(const CompileResult& result) override {
+        std::cout << ",\"result\":{"
+                  << "\"file\":\"" << Utils::escapeJson(result.file) << "\","
+                  << "\"success\":" << (result.success ? "true" : "false") << ","
+                  << "\"errors\":" << result.errors << ","
+                  << "\"warnings\":" << result.warnings << ","
+                  << "\"timeMs\":" << result.timeMs
+                  << "}";
+    }
                   << "\"totalFiles\":" << stats.totalFiles << ","
                   << "\"compiledFiles\":" << stats.compiledFiles << ","
                   << "\"errors\":" << stats.errorCount << ","
@@ -1719,8 +1731,15 @@ public:
                   << "</diagnostic>\n";
     }
     
-    void result(const CompileResult& result) override {}
-    
+    void result(const CompileResult& result) override {
+        std::cout << "<result "
+                  << "file=\"" << Utils::escapeXml(result.file) << "\" "
+                  << "success=\"" << (result.success ? "true" : "false") << "\" "
+                  << "errors=\"" << result.errors << "\" "
+                  << "warnings=\"" << result.warnings << "\" "
+                  << "timeMs=\"" << result.timeMs << "\"/\u003e\n";
+    }
+
     void summary(const BuildStats& stats) override {
         std::cout << "<summary "
                   << "success=\"" << (stats.failedFiles == 0 ? "true" : "false") << "\" "

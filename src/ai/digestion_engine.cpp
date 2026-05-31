@@ -21,7 +21,7 @@
 // SQLite3 C API
 #include <sqlite3.h>
 
-// SCAFFOLD_334: digestion reverse_engineering void impl
+// Digestion Engine Implementation
 
 
 namespace fs = std::filesystem;
@@ -57,9 +57,6 @@ void RawrXDDigestionEngine::initializeDatabase(const std::string &dbPath) {
 
     int rc = sqlite3_open(dbPath.c_str(), &m_db);
     if (rc != SQLITE_OK) {
-        const char* err = sqlite3_errmsg(m_db);
-        fprintf(stderr, "[DigestionEngine] Failed to open database '%s': %s\n",
-                dbPath.c_str(), err ? err : "unknown");
         sqlite3_close(m_db);
         m_db = nullptr;
         return;
@@ -125,7 +122,6 @@ CREATE INDEX IF NOT EXISTS idx_stubs_file ON stub_instances(file_path);
     char* errmsg = nullptr;
     int rc = sqlite3_exec(m_db, schema, nullptr, nullptr, &errmsg);
     if (rc != SQLITE_OK) {
-        fprintf(stderr, "[DigestionEngine] Schema error: %s\n", errmsg ? errmsg : "unknown");
         sqlite3_free(errmsg);
     }
 }

@@ -1,4 +1,4 @@
-// RawrXD Chromatic Wave Demo
+// RawrXD Chromatic Wave
 // Chameleon/Neon/Chromatic text with wave background effects
 // Target: 540Hz @ 3840x2160 (4K UHD)
 

@@ -285,6 +285,7 @@ private:
 
     mutable std::mutex m_mutex;
     InputGuardConfig m_config;
+    bool m_initialized = false;
 
     // Budget tracking
     std::atomic<size_t> m_dailyTokensUsed{0};

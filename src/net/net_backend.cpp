@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-// Example C++ wrapper for HTTP operations
+// C++ wrapper for HTTP operations
 class HttpClient {
 public:
     static std::string Get(const std::string& url) {
@@ -27,7 +27,7 @@ public:
     }
 };
 
-// Example C++ wrapper for WebSocket operations
+// C++ wrapper for WebSocket operations
 class WebSocketClient {
 private:
     void* socket_handle;
@@ -59,7 +59,7 @@ public:
     }
 };
 
-// Example C++ wrapper for TCP operations
+// C++ wrapper for TCP operations
 class TcpClient {
 private:
     void* socket_handle;

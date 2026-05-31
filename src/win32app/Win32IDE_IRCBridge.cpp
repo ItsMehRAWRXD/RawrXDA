@@ -109,7 +109,12 @@ void IRCBridge::stop()
         m_sock = INVALID_SOCKET;
     }
     if (m_thread.joinable())
-        m_thread.join();
+    {
+        if (m_thread.get_id() == std::this_thread::get_id())
+            m_thread.detach();
+        else
+            m_thread.join();
+    }
     setState(IRCState::Disconnected);
     logToIDE("[IRC] Bridge stopped.");
 }

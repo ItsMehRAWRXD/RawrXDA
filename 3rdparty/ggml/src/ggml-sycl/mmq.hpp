@@ -10,16 +10,16 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 
-#ifndef GGML_SYCL_MMQ_HPP
-#define GGML_SYCL_MMQ_HPP
+#ifndef GGML_RXD_SYCL_MMQ_HPP
+#define GGML_RXD_SYCL_MMQ_HPP
 
 #include "common.hpp"
 
-void ggml_sycl_op_mul_mat_q(
-    ggml_backend_sycl_context & ctx,
-    const ggml_tensor* src0,
-    const ggml_tensor* src1,
-    ggml_tensor* dst,
+void ggml_rxd_sycl_op_mul_mat_q(
+    ggml_rxd_backend_sycl_context & ctx,
+    const ggml_rxd_tensor* src0,
+    const ggml_rxd_tensor* src1,
+    ggml_rxd_tensor* dst,
     const char* src0_dd_i,
     const float* src1_ddf_i,
     const char* src1_ddq_i,
@@ -30,4 +30,4 @@ void ggml_sycl_op_mul_mat_q(
     const int64_t src1_padded_row_size,
     const dpct::queue_ptr& stream);
 
-#endif // GGML_SYCL_MMQ_HPP
+#endif // GGML_RXD_SYCL_MMQ_HPP

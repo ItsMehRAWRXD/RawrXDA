@@ -1,430 +1,525 @@
 /**
  * @file model_invoker.cpp
- * @brief LLM invocation layer for wish-to-plan transformation (Qt-free)
+ * @brief Implementation of LLM invocation layer
  *
- * HTTP transport delegated to StlHttpClient (llm_http_client.hpp)
- * which handles WinHTTP on Windows and curl on POSIX.
- * Supports Ollama, Claude, and OpenAI backends.
+ * Provides synchronous and asynchronous wish->plan transformation
+ * with support for Ollama (local) and cloud LLMs.
  *
- * Post-Qt fix: futures are now retained via StlHttpClient/ChainStep
- * to prevent premature destruction that Qt's event loop hid.
+ * Architecture: C++20, no Qt, no exceptions
  */
+
 #include "model_invoker.hpp"
-#include "llm_http_client.hpp"
+#include "process_utils.hpp"
+#include "../gpu_enforcement.h"
 #include <algorithm>
 #include <cstdio>
-#include <cstdlib>
 #include <filesystem>
+#include <functional>
 #include <future>
 #include <regex>
 #include <string>
 #include <vector>
 
-#include <nlohmann/json.hpp>
-
-// SCAFFOLD_289: Model invoker
-
-namespace fs = std::filesystem;
 using json = nlohmann::json;
 
-// ---------------------------------------------------------------------------
-// HTTP helper — thin wrapper over StlHttpClient for backward compat
-// ---------------------------------------------------------------------------
+// ---- helpers ----
 namespace {
 
-/// Synchronous HTTP POST returning the response body (empty on error).
-/// Delegates to StlHttpClient singleton for proper async/future support.
-std::string httpPost(const std::string& url, const std::string& body,
-                     const std::string& apiKey = {},
-                     const std::string& extraHeaderKey = {},
-                     const std::string& extraHeaderVal = {},
-                     int timeoutMs = 30000) {
-    HttpRequest req;
-    req.method         = "POST";
-    req.url            = url;
-    req.body           = body;
-    req.apiKey         = apiKey;
-    req.extraHeaderKey = extraHeaderKey;
-    req.extraHeaderVal = extraHeaderVal;
-    req.timeoutMs      = timeoutMs;
-
-    HttpResponse resp = StlHttpClient::instance().send(req);
-    if (resp.success) return resp.body;
-
-    fprintf(stderr, "[WARN] [ModelInvoker] HTTP POST failed: %s (HTTP %d, %dms)\n",
-            resp.error.c_str(), resp.statusCode, resp.latencyMs);
-    return {};
+void planGenerationStarted(ModelInvoker* self, const std::string& wish) {
+    if (self->onPlanGenerationStarted) self->onPlanGenerationStarted(wish);
+}
+void planGenerated(ModelInvoker* self, const LLMResponse& resp) {
+    if (self->onPlanGenerated) self->onPlanGenerated(resp);
+}
+void invocationError(ModelInvoker* self, const std::string& err, bool retryable) {
+    if (self->onInvocationError) self->onInvocationError(err, retryable);
 }
 
-} // namespace
+std::string toLower(std::string s) {
+    std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+    return s;
+}
 
-// ---------------------------------------------------------------------------
-// ModelInvoker
-// ---------------------------------------------------------------------------
+int clampInt(int v, int lo, int hi) {
+    return std::max(lo, std::min(hi, v));
+}
 
+bool isMemBufferCrashSignature(const std::string& text) {
+    const std::string lowered = toLower(text);
+    return lowered.find("ggml_assert") != std::string::npos &&
+           lowered.find("mem_buffer") != std::string::npos;
+}
+
+} // anon
+
+/**
+ * @brief Set the LLM backend and endpoint
+ */
 void ModelInvoker::setLLMBackend(const std::string& backend,
                                   const std::string& endpoint,
-                                  const std::string& apiKey) {
-    m_backend  = backend;
+                                  const std::string& apiKey)
+{
+    // Mandatory GPU gate — every model invocation path requires a GPU.
+    rxd::gpu::require();
+
+    m_backend = toLower(backend);
     m_endpoint = endpoint;
-    m_apiKey   = apiKey;
+    m_apiKey = apiKey;
 
-    std::string be = backend;
-    std::transform(be.begin(), be.end(), be.begin(),
-                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    if (m_backend == "ollama")      m_model = "mistral";
+    else if (m_backend == "claude") m_model = "claude-3-sonnet-20240229";
+    else if (m_backend == "openai") m_model = "gpt-4-turbo";
 
-    if (be == "ollama")       m_model = "mistral";
-    else if (be == "claude")  m_model = "claude-3-sonnet-20240229";
-    else if (be == "openai")  m_model = "gpt-4o";
-    else if (be == "openai-turbo") m_model = "gpt-4-turbo";
-
-    fprintf(stderr, "[INFO] [ModelInvoker] Backend: %s @ %s (model: %s)\n",
-            backend.c_str(), endpoint.c_str(), m_model.c_str());
+    fprintf(stderr, "[INFO] [ModelInvoker] Backend set to %s at %s\n",
+            m_backend.c_str(), m_endpoint.c_str());
 }
 
-void ModelInvoker::setSystemPromptTemplate(const std::string& t) {
-    m_customSystemPrompt = t;
+/**
+ * @brief Set custom system prompt template
+ */
+void ModelInvoker::setSystemPromptTemplate(const std::string& template_)
+{
+    m_customSystemPrompt = template_;
 }
 
-void ModelInvoker::setCodebaseEmbeddings(const std::map<std::string, float>& e) {
-    m_codebaseEmbeddings = e;
+/**
+ * @brief Set codebase embeddings for RAG
+ */
+void ModelInvoker::setCodebaseEmbeddings(const std::map<std::string, float>& embeddings)
+{
+    m_codebaseEmbeddings = embeddings;
 }
 
-// ---------------------------------------------------------------------------
-LLMResponse ModelInvoker::invoke(const InvocationParams& params) {
-    // Cache
+/**
+ * @brief Synchronous invocation (blocks caller)
+ */
+LLMResponse ModelInvoker::invoke(const InvocationParams& params)
+{
+    // Check cache first
     if (m_cachingEnabled) {
-        std::string key = getCacheKey(params);
-        LLMResponse cached = getCachedResponse(key);
+        std::string cacheKey = getCacheKey(params);
+        LLMResponse cached = getCachedResponse(cacheKey);
         if (cached.success) {
-            fprintf(stderr, "[INFO] [ModelInvoker] Cache hit: %s\n",
-                    params.wish.substr(0, 60).c_str());
+            fprintf(stderr, "[INFO] [ModelInvoker] Cache hit for: %s\n", params.wish.c_str());
             return cached;
         }
     }
 
-    fprintf(stderr, "[INFO] [ModelInvoker] Invoking LLM: %s\n",
-            params.wish.substr(0, 80).c_str());
+    fprintf(stderr, "[INFO] [ModelInvoker] Invoking LLM with wish: %s\n", params.wish.c_str());
     m_isInvoking = true;
-    if (onPlanGenerationStarted) onPlanGenerationStarted(params.wish);
+    planGenerationStarted(this, params.wish);
 
     LLMResponse response;
 
-    try {
-        std::string userMsg = buildUserMessage(params);
-        json llmResp;
+    // Build prompts
+    std::string systemPrompt = m_customSystemPrompt.empty()
+                               ? buildSystemPrompt(params.availableTools)
+                               : m_customSystemPrompt;
+    std::string userMessage = buildUserMessage(params);
 
-        std::string be = m_backend;
-        std::transform(be.begin(), be.end(), be.begin(),
-                       [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    json llmResponse;
 
-        if (be == "ollama")
-            llmResp = sendOllamaRequest(m_model, userMsg, params.maxTokens, params.temperature);
-        else if (be == "claude")
-            llmResp = sendClaudeRequest(userMsg, params.maxTokens, params.temperature);
-        else if (be == "openai" || be == "openai-turbo")
-            llmResp = sendOpenAIRequest(userMsg, params.maxTokens, params.temperature);
-        else {
-            response.error = "Unknown backend: " + m_backend;
-            m_isInvoking = false;
-            return response;
-        }
-
-        // --- Fallback chain: if primary backend returned empty, try alternatives ---
-        if (llmResp.empty() && !m_apiKey.empty()) {
-            fprintf(stderr, "[WARN] [ModelInvoker] Primary backend '%s' failed, attempting fallback chain\n",
-                    be.c_str());
-
-            // Fallback 1: OpenAI GPT-4o
-            if (be != "openai") {
-                std::string savedModel = m_model;
-                m_model = "gpt-4o";
-                llmResp = sendOpenAIRequest(userMsg, params.maxTokens, params.temperature);
-                if (!llmResp.empty()) {
-                    be = "openai"; // Update for response parsing below
-                    fprintf(stderr, "[INFO] [ModelInvoker] Fallback to GPT-4o succeeded\n");
-                } else {
-                    m_model = savedModel;
-                }
-            }
-
-            // Fallback 2: GPT-4-turbo if GPT-4o also failed
-            if (llmResp.empty() && m_model != "gpt-4-turbo") {
-                std::string savedModel = m_model;
-                m_model = "gpt-4-turbo";
-                llmResp = sendOpenAIRequest(userMsg, params.maxTokens, params.temperature);
-                if (!llmResp.empty()) {
-                    be = "openai";
-                    fprintf(stderr, "[INFO] [ModelInvoker] Fallback to GPT-4-turbo succeeded\n");
-                } else {
-                    m_model = savedModel;
-                }
-            }
-
-            // Fallback 3: Ollama local
-            if (llmResp.empty() && be != "ollama" && !m_endpoint.empty()) {
-                std::string savedModel = m_model;
-                m_model = "mistral";
-                llmResp = sendOllamaRequest(m_model, userMsg, params.maxTokens, params.temperature);
-                if (!llmResp.empty()) {
-                    be = "ollama";
-                    fprintf(stderr, "[INFO] [ModelInvoker] Fallback to Ollama/mistral succeeded\n");
-                } else {
-                    m_model = savedModel;
-                }
-            }
-        }
-
-        if (llmResp.empty()) {
-            response.error = "Empty response from LLM";
-            m_isInvoking = false;
-            if (onInvocationError) onInvocationError(response.error, true);
-            return response;
-        }
-
-        // Parse backend-specific format
-        if (be == "ollama") {
-            response.rawOutput  = llmResp.value("response", "");
-            response.tokensUsed = llmResp.value("eval_count", 0)
-                                + llmResp.value("prompt_eval_count", 0);
-        } else if (be == "claude") {
-            auto content = llmResp.value("content", json::array());
-            if (!content.empty())
-                response.rawOutput = content.at(0).value("text", "");
-            if (llmResp.contains("usage"))
-                response.tokensUsed = llmResp.at("usage").value("output_tokens", 0);
-        } else if (be == "openai") {
-            auto choices = llmResp.value("choices", json::array());
-            if (!choices.empty())
-                response.rawOutput = choices.at(0).value("message", json{}).value("content", "");
-            if (llmResp.contains("usage"))
-                response.tokensUsed = llmResp.at("usage").value("completion_tokens", 0);
-        }
-
-        fprintf(stderr, "[INFO] [ModelInvoker] Response (%d tokens): %.200s\n",
-                response.tokensUsed, response.rawOutput.c_str());
-
-        response.parsedPlan = parsePlan(response.rawOutput);
-
-        if (!validatePlanSanity(response.parsedPlan)) {
-            response.error   = "Plan failed sanity checks";
-            response.success = false;
-            m_isInvoking = false;
-            if (onInvocationError) onInvocationError(response.error, true);
-            return response;
-        }
-
-        response.success   = true;
-        response.reasoning = llmResp.value("reasoning", "");
-
-        if (m_cachingEnabled) cacheResponse(getCacheKey(params), response);
-
-    } catch (const std::exception& e) {
-        response.error   = std::string("Exception: ") + e.what();
-        response.success = false;
-        if (onInvocationError) onInvocationError(response.error, false);
+    // Invoke appropriate backend
+    if (m_backend == "ollama") {
+        llmResponse = sendOllamaRequest(m_model, userMessage, params.maxTokens, params.temperature);
+    } else if (m_backend == "claude") {
+        llmResponse = sendClaudeRequest(userMessage, params.maxTokens, params.temperature);
+    } else if (m_backend == "openai") {
+        llmResponse = sendOpenAIRequest(userMessage, params.maxTokens, params.temperature);
+    } else {
+        response.error = "Unknown backend: " + m_backend;
+        m_isInvoking = false;
+        return response;
     }
+
+    // Handle empty response
+    if (llmResponse.empty() || llmResponse.is_null()) {
+        response.error = "Empty response from LLM";
+        m_isInvoking = false;
+        invocationError(this, response.error, true);
+        return response;
+    }
+
+    // Parse backend-specific response format
+    if (m_backend == "ollama") {
+        response.rawOutput = llmResponse.value("response", "");
+        response.tokensUsed = llmResponse.value("eval_count", 0) +
+                              llmResponse.value("prompt_eval_count", 0);
+    } else if (m_backend == "claude") {
+        auto content = llmResponse.value("content", json::array());
+        if (!content.empty() && content.at(0).contains("text")) {
+            response.rawOutput = content.at(0).value("text", "");
+        }
+        if (llmResponse.contains("usage"))
+            response.tokensUsed = llmResponse.value("usage", json::object()).value("output_tokens", 0);
+    } else if (m_backend == "openai") {
+        auto choices = llmResponse.value("choices", json::array());
+        if (!choices.empty() && choices.at(0).contains("message"))
+            response.rawOutput = choices.at(0)["message"].value("content", "");
+        if (llmResponse.contains("usage"))
+            response.tokensUsed = llmResponse.value("usage", json::object()).value("completion_tokens", 0);
+    }
+
+    fprintf(stderr, "[INFO] [ModelInvoker] LLM response: %.200s\n", response.rawOutput.c_str());
+
+    // Parse into structured plan
+    response.parsedPlan = parsePlan(response.rawOutput);
+
+    // Validate sanity
+    if (!validatePlanSanity(response.parsedPlan)) {
+        response.error = "Plan failed sanity checks";
+        response.success = false;
+        m_isInvoking = false;
+        invocationError(this, response.error, true);
+        return response;
+    }
+
+    response.success = true;
+    response.reasoning = llmResponse.value("reasoning", "");
+
+    // Cache successful response
+    if (m_cachingEnabled) {
+        cacheResponse(getCacheKey(params), response);
+    }
+
+    fprintf(stderr, "[INFO] [ModelInvoker] Generated plan with %zu actions\n",
+            response.parsedPlan.is_array() ? response.parsedPlan.size() : 0u);
 
     m_isInvoking = false;
     return response;
 }
 
-void ModelInvoker::invokeAsync(const InvocationParams& params) {
-    // Post-Qt fix: Use std::async + retain the future as member.
-    // Qt's deleteLater() auto-managed reply lifetime; STL requires explicit
-    // future retention or the destructor blocks/cancels the async operation.
-    m_asyncFuture = std::async(std::launch::async, [this, params]() {
-        LLMResponse resp = invoke(params);
-        if (onPlanGenerated) onPlanGenerated(resp);
-    });
+/**
+ * @brief Asynchronous invocation (non-blocking)
+ */
+void ModelInvoker::invokeAsync(const InvocationParams& params)
+{
+    std::thread([this, params]() {
+        LLMResponse response = invoke(params);
+        planGenerated(this, response);
+    }).detach();
 }
 
-void ModelInvoker::cancelPendingRequest() {
+/**
+ * @brief Cancel pending request
+ */
+void ModelInvoker::cancelPendingRequest()
+{
     m_isInvoking = false;
     fprintf(stderr, "[INFO] [ModelInvoker] Request cancelled\n");
 }
 
-// ---------------------------------------------------------------------------
-// Prompt building
-// ---------------------------------------------------------------------------
-std::string ModelInvoker::buildSystemPrompt(const std::vector<std::string>& tools) {
-    std::string p = R"(You are an intelligent IDE agent for the RawrXD code generation framework.
+/**
+ * @brief Build system prompt with tool descriptions
+ */
+std::string ModelInvoker::buildSystemPrompt(const std::vector<std::string>& tools)
+{
+    std::string prompt = R"(You are an intelligent IDE agent for the RawrXD code generation framework.
 
 Your role is to transform natural language wishes into structured action plans that can be executed by an automated system.
 
 # Available Tools
+You can use the following tools:
 )";
-    for (const auto& t : tools) p += "- " + t + "\n";
 
-    p += R"(
+    for (const std::string& tool : tools) {
+        prompt += "- " + tool + "\n";
+    }
+
+    prompt += R"(
 # Response Format
-Respond with a valid JSON array of actions. Each action must have:
+You MUST respond with a valid JSON array of actions. Each action must have:
 - type: string (action type name)
 - target: string (file, command, or target)
 - params: object (action-specific parameters)
 - description: string (human-readable description)
 
+Example:
+```json
+[
+  {
+    "type": "search_files",
+    "target": "src/",
+    "params": { "pattern": "*.cpp", "query": "TODO" },
+    "description": "Find all TODO comments in C++ files"
+  },
+  {
+    "type": "file_edit",
+    "target": "src/main.cpp",
+    "params": { "action": "append", "content": "// new code" },
+    "description": "Add new functionality"
+  },
+  {
+    "type": "build",
+    "target": "all",
+    "params": { "config": "Release" },
+    "description": "Build all targets"
+  }
+]
+```
+
 # Constraints
 - Do NOT suggest destructive operations without explicit user intent
+- Do NOT modify system files or configuration files without user approval
+- Do NOT create infinite loops or recursive procedures
 - Always break complex tasks into manageable steps
 - Use existing patterns found in the codebase
+
+# Context
+The system is RawrXD: A production-grade IDE for GGUF quantization and model serving.
+Current capabilities include: file search, text editing, project builds, test execution, and code generation.
 )";
-    return p;
+
+    return prompt;
 }
 
-std::string ModelInvoker::buildUserMessage(const InvocationParams& params) {
-    std::string msg = "User Wish: " + params.wish + "\n\n";
-    if (!params.context.empty())
-        msg += "Context: " + params.context + "\n\n";
-    if (!params.codebaseContext.empty())
-        msg += "Relevant Codebase:\n" + params.codebaseContext + "\n\n";
-    msg += "Please generate a structured action plan. Respond with ONLY valid JSON array.";
-    return msg;
+/**
+ * @brief Build user message with wish and context
+ */
+std::string ModelInvoker::buildUserMessage(const InvocationParams& params)
+{
+    std::string message = "User Wish: " + params.wish + "\n\n";
+
+    if (!params.context.empty()) {
+        message += "Context: " + params.context + "\n\n";
+    }
+
+    if (!params.codebaseContext.empty()) {
+        message += "Relevant Codebase:\n" + params.codebaseContext + "\n\n";
+    }
+
+    message += "Please generate a structured action plan to fulfill this wish. "
+               "Respond with ONLY valid JSON array, no additional text.";
+
+    return message;
 }
 
-// ---------------------------------------------------------------------------
-// Backend-specific HTTP calls
-// ---------------------------------------------------------------------------
+/**
+ * @brief Send request to Ollama API
+ */
 json ModelInvoker::sendOllamaRequest(const std::string& model,
                                       const std::string& prompt,
-                                      int maxTokens, double temperature) {
-    json payload = nlohmann::json::object({
-        {"model",       model},
-        {"prompt",      prompt},
-        {"temperature", temperature},
-        {"num_predict", maxTokens},
-        {"stream",      false}
-    });
-
+                                      int maxTokens,
+                                      double temperature)
+{
     std::string url = m_endpoint + "/api/generate";
-    fprintf(stderr, "[INFO] [ModelInvoker] POST %s\n", url.c_str());
-    std::string resp = httpPost(url, payload.dump(), {}, {}, {}, 30000);
+    const std::string safePrompt = prompt.empty() ? std::string(" ") : prompt;
 
-    if (resp.empty()) return {};
-    try { return json::parse(resp); }
-    catch (const std::exception& e) {
-        fprintf(stderr, "[WARN] [ModelInvoker] Ollama JSON parse error: %s\n", e.what());
-        return {};
+    json payload;
+    payload["model"] = model;
+    payload["prompt"] = safePrompt;
+    payload["temperature"] = temperature;
+    payload["num_predict"] = clampInt(maxTokens, 16, 512);
+    payload["stream"] = false;
+    payload["options"] = {
+        {"num_ctx", clampInt(maxTokens * 2, 256, 2048)},
+        {"num_batch", 64},
+        {"use_mmap", false}
+    };
+
+    std::string body = payload.dump();
+
+    fprintf(stderr, "[INFO] [ModelInvoker] Sending request to Ollama: %s\n", url.c_str());
+
+    http::Response resp = http::post(url, body, {
+        {"Content-Type", "application/json"}
+    });
+
+    if (!resp.ok()) {
+        fprintf(stderr, "[WARN] [ModelInvoker] Ollama error (HTTP %d): %s\n",
+                resp.statusCode, resp.error.c_str());
+
+        // One-shot safety retry for known llama.cpp runner mem-buffer crash path.
+        if (resp.statusCode == 500 &&
+            (isMemBufferCrashSignature(resp.error) || isMemBufferCrashSignature(resp.body))) {
+            json retryPayload = payload;
+            retryPayload["num_predict"] = 128;
+            retryPayload["options"]["num_ctx"] = 512;
+            retryPayload["options"]["num_batch"] = 32;
+            retryPayload["options"]["use_mmap"] = false;
+            retryPayload["options"]["num_gpu"] = 0;
+
+            const std::string retryBody = retryPayload.dump();
+            fprintf(stderr, "[WARN] [ModelInvoker] Retrying Ollama with reduced memory profile\n");
+            http::Response retryResp = http::post(url, retryBody, {
+                {"Content-Type", "application/json"}
+            });
+            if (retryResp.ok()) {
+                return json::parse(retryResp.body, nullptr, false);
+            }
+            fprintf(stderr, "[WARN] [ModelInvoker] Retry failed (HTTP %d): %s\n",
+                    retryResp.statusCode, retryResp.error.c_str());
+        }
+        return json();
     }
+
+    return json::parse(resp.body, nullptr, false);
 }
 
+/**
+ * @brief Send request to Claude API
+ */
 json ModelInvoker::sendClaudeRequest(const std::string& prompt,
-                                      int maxTokens, double temperature) {
-    json payload = nlohmann::json::object({
-        {"model",      m_model},
-        {"max_tokens", maxTokens},
-        {"temperature", temperature},
-        {"messages",   json::array({nlohmann::json::object({{"role", "user"}, {"content", prompt}})}) }
-    });
+                                      int maxTokens,
+                                      double temperature)
+{
+    json payload;
+    payload["model"] = m_model;
+    payload["max_tokens"] = maxTokens;
+    payload["temperature"] = temperature;
+    payload["messages"] = json::array({{{"role", "user"}, {"content", prompt}}});
 
-    std::string resp = httpPost("https://api.anthropic.com/v1/messages",
-                                payload.dump(), m_apiKey,
-                                "x-api-key", m_apiKey, 30000);
-    // Note: Claude uses x-api-key header, not Bearer token; we send both
+    std::string body = payload.dump();
 
-    if (resp.empty()) return {};
-    try { return json::parse(resp); }
-    catch (const std::exception& e) {
-        fprintf(stderr, "[WARN] [ModelInvoker] Claude JSON parse error: %s\n", e.what());
-        return {};
+    std::vector<std::pair<std::string, std::string>> headers = {
+        {"Content-Type", "application/json"},
+        {"x-api-key", m_apiKey},
+        {"anthropic-version", "2023-06-01"}
+    };
+    http::Response resp = http::post("https://api.anthropic.com/v1/messages", body, headers);
+
+    if (!resp.ok()) {
+        fprintf(stderr, "[WARN] [ModelInvoker] Claude API error (HTTP %d): %s\n",
+                resp.statusCode, resp.error.c_str());
+        return json();
     }
+
+    return json::parse(resp.body, nullptr, false);
 }
 
+/**
+ * @brief Send request to OpenAI API
+ */
 json ModelInvoker::sendOpenAIRequest(const std::string& prompt,
-                                      int maxTokens, double temperature) {
-    json payload = nlohmann::json::object({
-        {"model",      m_model},
-        {"max_tokens", maxTokens},
-        {"temperature", temperature},
-        {"messages",   json::array({nlohmann::json::object({{"role", "user"}, {"content", prompt}})}) }
-    });
+                                      int maxTokens,
+                                      double temperature)
+{
+    json payload;
+    payload["model"] = m_model;
+    payload["max_tokens"] = maxTokens;
+    payload["temperature"] = temperature;
+    payload["messages"] = json::array({{{"role", "user"}, {"content", prompt}}});
 
-    std::string resp = httpPost("https://api.openai.com/v1/chat/completions",
-                                payload.dump(), m_apiKey, {}, {}, 30000);
+    std::string body = payload.dump();
 
-    if (resp.empty()) return {};
-    try { return json::parse(resp); }
-    catch (const std::exception& e) {
-        fprintf(stderr, "[WARN] [ModelInvoker] OpenAI JSON parse error: %s\n", e.what());
-        return {};
+    std::vector<std::pair<std::string, std::string>> headers = {
+        {"Content-Type", "application/json"},
+        {"Authorization", "Bearer " + m_apiKey}
+    };
+    http::Response resp = http::post("https://api.openai.com/v1/chat/completions", body, headers);
+
+    if (!resp.ok()) {
+        fprintf(stderr, "[WARN] [ModelInvoker] OpenAI API error (HTTP %d): %s\n",
+                resp.statusCode, resp.error.c_str());
+        return json();
     }
+
+    return json::parse(resp.body, nullptr, false);
 }
 
-// ---------------------------------------------------------------------------
-// Plan parsing
-// ---------------------------------------------------------------------------
-json ModelInvoker::parsePlan(const std::string& llmOutput) {
-    // Strategy 1: Extract ```json ... ``` block
-    std::regex jsonBlock(R"(```(?:json)?\s*\n?([\s\S]*?)\n?```)");
+/**
+ * @brief Parse LLM response into structured plan
+ */
+json ModelInvoker::parsePlan(const std::string& llmOutput)
+{
+    // Strategy 1: Extract JSON from ```json ... ``` code blocks
+    std::regex jsonBlockRegex(R"(```(?:json)?\s*\n?([\s\S]*?)\n?```)");
     std::smatch match;
-    if (std::regex_search(llmOutput, match, jsonBlock)) {
-        try {
-            auto doc = json::parse(match[1].str());
-            if (doc.is_array()) return doc;
-        } catch (...) {}
+    if (std::regex_search(llmOutput, match, jsonBlockRegex) && match.size() > 1) {
+        std::string jsonStr = match[1].str();
+        auto parsed = json::parse(jsonStr, nullptr, false);
+        if (!parsed.is_discarded() && parsed.is_array()) {
+            return parsed;
+        }
     }
 
-    // Strategy 2: Parse entire output
-    try {
-        auto doc = json::parse(llmOutput);
-        if (doc.is_array()) return doc;
-    } catch (...) {}
+    // Strategy 2: Try parsing entire output as JSON
+    auto parsed = json::parse(llmOutput, nullptr, false);
+    if (!parsed.is_discarded() && parsed.is_array()) {
+        return parsed;
+    }
 
-    // Strategy 3: Fallback
+    // Strategy 3: Fallback - create generic action
     fprintf(stderr, "[WARN] [ModelInvoker] Failed to parse plan from LLM output\n");
-    return json::array({nlohmann::json::object({
-        {"type",        "user_input"},
-        {"description", llmOutput.substr(0, 500)}
-    })});
+    json fallback = json::array();
+    fallback.push_back({
+        {"type", "user_input"},
+        {"description", llmOutput.substr(0, std::min<size_t>(500, llmOutput.size()))}
+    });
+    return fallback;
 }
 
-bool ModelInvoker::validatePlanSanity(const json& plan) {
+/**
+ * @brief Validate plan sanity
+ */
+bool ModelInvoker::validatePlanSanity(const json& plan)
+{
     if (!plan.is_array() || plan.empty()) {
-        fprintf(stderr, "[WARN] [ModelInvoker] Empty plan\n");
+        fprintf(stderr, "[WARN] [ModelInvoker] Empty or non-array plan detected\n");
         return false;
     }
 
-    int count = 0;
-    std::vector<std::string> seen;
-    for (size_t i = 0; i < plan.size(); ++i) {
-        const auto& action = plan.at(i);
-        if (!action.is_object()) return false;
+    int actionCount = 0;
+    std::vector<std::string> seenTargets;
+
+    for (const auto& action : plan) {
+        if (!action.is_object()) {
+            fprintf(stderr, "[WARN] [ModelInvoker] Non-object in plan\n");
+            return false;
+        }
+
         std::string type = action.value("type", "");
 
+        // Check for dangerous operations
         if (type == "file_delete" || type == "format_drive" || type == "system_reboot") {
-            fprintf(stderr, "[WARN] [ModelInvoker] Dangerous op: %s\n", type.c_str());
+            fprintf(stderr, "[WARN] [ModelInvoker] Dangerous operation detected: %s\n", type.c_str());
             return false;
         }
 
+        // Check for circular
         std::string target = action.value("target", "");
-        if (!target.empty() &&
-            std::find(seen.begin(), seen.end(), target) != seen.end()) {
-            fprintf(stderr, "[WARN] [ModelInvoker] Circular dep on: %s\n", target.c_str());
-            return false;
+        for (const auto& seen : seenTargets) {
+            if (seen == target && !target.empty()) {
+                fprintf(stderr, "[WARN] [ModelInvoker] Duplicate target: %s\n", target.c_str());
+                // Just warn, don't fail - multiple actions on same target can be valid
+            }
         }
-        seen.push_back(target);
+        seenTargets.push_back(target);
 
-        if (++count > 100) {
-            fprintf(stderr, "[WARN] [ModelInvoker] Plan too large\n");
+        actionCount++;
+        if (actionCount > 100) {
+            fprintf(stderr, "[WARN] [ModelInvoker] Plan too large (>100 actions)\n");
             return false;
         }
     }
+
     return true;
 }
 
-// ---------------------------------------------------------------------------
-// Cache
-// ---------------------------------------------------------------------------
-std::string ModelInvoker::getCacheKey(const InvocationParams& params) const {
-    return params.wish.substr(0, 100);
+/**
+ * @brief Get cache key for request
+ */
+std::string ModelInvoker::getCacheKey(const InvocationParams& params) const
+{
+    return params.wish.substr(0, std::min<size_t>(100, params.wish.size()));
 }
 
-LLMResponse ModelInvoker::getCachedResponse(const std::string& key) const {
+/**
+ * @brief Load cached response
+ */
+LLMResponse ModelInvoker::getCachedResponse(const std::string& key) const
+{
     auto it = m_responseCache.find(key);
-    if (it != m_responseCache.end()) return it->second;
-    return {};
+    if (it != m_responseCache.end()) {
+        return it->second;
+    }
+    return LLMResponse();
 }
 
-void ModelInvoker::cacheResponse(const std::string& key, const LLMResponse& resp) {
-    m_responseCache[key] = resp;
+/**
+ * @brief Store response in cache
+ */
+void ModelInvoker::cacheResponse(const std::string& key, const LLMResponse& response)
+{
+    m_responseCache[key] = response;
 }

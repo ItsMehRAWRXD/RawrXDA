@@ -84,9 +84,20 @@ struct CheckpointInfo {
 // ================================================
 // Static Storage
 // ================================================
-static CheckpointEntry g_checkpoints[MAX_CHECKPOINTS];
-static std::atomic<size_t> g_checkpoint_count{0};
-static std::mutex g_checkpoint_mutex;
+static CheckpointEntry g_checkpoints[MAX_CHECKPOINTS];  // Plain array, safe
+
+// LAZY SINGLETON PATTERN: Avoid SIOF
+inline std::atomic<size_t>& GetCheckpointCount() {
+    static std::atomic<size_t>* inst = new std::atomic<size_t>(0);
+    return *inst;
+}
+#define g_checkpoint_count GetCheckpointCount()
+
+inline std::mutex& GetCheckpointMutex() {
+    static std::mutex* inst = new std::mutex();
+    return *inst;
+}
+#define g_checkpoint_mutex GetCheckpointMutex()
 
 // Configuration
 static char g_checkpoint_dir[MAX_PATH_LEN] = "checkpoints/";

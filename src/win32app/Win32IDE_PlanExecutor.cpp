@@ -127,25 +127,7 @@ static void syncAgenticStepExecution(Agentic::AgenticPlanningOrchestrator* orch,
 
 }  // namespace
 
-// SCAFFOLD_081: generateAgentPlan and WM_PLAN_READY
-
-
-// SCAFFOLD_080: Plan rollback and file backup
-
-
-// SCAFFOLD_079: Plan execution progress and pause
-
-
-// SCAFFOLD_078: Plan dialog Approve/Reject/Edit
-
-
-// SCAFFOLD_077: Plan step parsing (STEP/DESC/TYPE)
-
-
-// SCAFFOLD_019: Plan step execution and rollback
-
-
-// SCAFFOLD_018: Plan approval dialog and list view
+// Plan Executor Implementation
 
 
 // ============================================================================
@@ -155,6 +137,8 @@ static void syncAgenticStepExecution(Agentic::AgenticPlanningOrchestrator* orch,
 std::string Win32IDE::executeAgentPlanStepViaBridge(const PlanStep& step)
 {
     AgenticBridge* bridge = m_agenticBridge;
+    if (bridge && !bridge->IsInitialized())
+        bridge->Initialize("", bridge->GetCurrentModel());
     if (!bridge || !bridge->IsInitialized())
         return "[Error] Agent not initialized";
 
@@ -195,6 +179,8 @@ std::string Win32IDE::executeAgentPlanStepViaBridge(const PlanStep& step)
 
 void Win32IDE::generateAgentPlan(const std::string& goal)
 {
+    if (m_agenticBridge && !m_agenticBridge->IsInitialized())
+        m_agenticBridge->Initialize("", m_agenticBridge->GetCurrentModel());
     if (!m_agenticBridge || !m_agenticBridge->IsInitialized())
     {
         appendToOutput("[Plan] Agent not initialized. Configure a model first.", "General", OutputSeverity::Warning);

@@ -54,9 +54,19 @@ struct ExecutionContext {
 
 struct SafetyGate {
     std::string name;
-    std::function<bool(const ExecutionContext&)> check_function;
+    // DEFENSE: Replaced std::function with function pointer + context to avoid
+    // heap-allocated type-erasure destructor crashes (AV 0xC0000005 in ~std::function).
+    // The lambda must be stateless or capture via the context pointer.
+    bool (*check_function)(const ExecutionContext&, void* context){nullptr};
+    void* context{nullptr};
     std::string failure_message;
     bool is_critical{false};
+
+    SafetyGate() = default;
+    SafetyGate(std::string n, bool (*fn)(const ExecutionContext&, void*), void* ctx,
+               std::string msg, bool critical)
+        : name(std::move(n)), check_function(fn), context(ctx),
+          failure_message(std::move(msg)), is_critical(critical) {}
 };
 
 class AutonomousAgenticOrchestrator {
@@ -120,6 +130,12 @@ private:
     // Integration components
     std::shared_ptr<CopilotGapCloser> gap_closer_;
     std::shared_ptr<TaskDispatcher> task_dispatcher_;
+
+    // Runtime progress tracking (replaces placeholder completion estimates).
+    std::atomic<uint64_t> total_plans_created_{0};
+    std::atomic<uint64_t> total_plans_completed_{0};
+    std::atomic<uint64_t> total_steps_scheduled_{0};
+    std::atomic<uint64_t> total_steps_completed_{0};
     
     // Internal methods
     void OrchestratorLoop();

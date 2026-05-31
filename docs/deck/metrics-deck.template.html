@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>__TITLE_PLACEHOLDER__</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0c0b09;
+      --surface: #161311;
+      --border: #2a2622;
+      --text: #ece8e3;
+      --muted: #9a928a;
+      --accent: #e07850;
+      --accent2: #7ab8a8;
+      --stripe: #635bff;
+      --grid: rgba(255,255,255,0.06);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "DM Sans", system-ui, sans-serif;
+      font-optical-sizing: auto;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+      font-size: 15px;
+    }
+    .page {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 48px 28px 64px;
+    }
+    .hero {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 32px;
+      margin-bottom: 36px;
+    }
+    h1 {
+      font-family: "Fraunces", Georgia, serif;
+      font-weight: 700;
+      font-size: 2.15rem;
+      letter-spacing: -0.02em;
+      margin: 0 0 12px;
+      line-height: 1.15;
+    }
+    .subtitle { color: var(--muted); font-size: 1.05rem; max-width: 52ch; }
+    .meta { margin-top: 16px; font-size: 0.85rem; color: var(--muted); }
+    .pill {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-size: 0.75rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    h2 {
+      font-family: "Fraunces", Georgia, serif;
+      font-size: 1.35rem;
+      margin: 40px 0 16px;
+      letter-spacing: -0.02em;
+    }
+    .exec ul { margin: 0; padding-left: 1.2rem; color: var(--muted); }
+    .exec li { margin-bottom: 10px; }
+    .exec li strong { color: var(--text); font-weight: 600; }
+    .framing {
+      background: linear-gradient(135deg, var(--surface) 0%, #1a1714 100%);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 22px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    .framing em { color: var(--accent2); font-style: normal; font-weight: 600; }
+    table.compete {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+      margin-top: 12px;
+    }
+    table.compete th, table.compete td {
+      border: 1px solid var(--border);
+      padding: 12px 14px;
+      vertical-align: top;
+    }
+    table.compete th {
+      background: var(--surface);
+      text-align: left;
+      font-weight: 600;
+      color: var(--text);
+    }
+    table.compete td:first-child { font-weight: 600; color: var(--accent); }
+    .chart-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 16px;
+    }
+    .chart-wrap canvas { max-height: 360px; }
+    .footer {
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .footer span { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <span class="pill">Metrics deck · generated</span>
+      <h1 id="deck-title">Loading…</h1>
+      <p class="subtitle" id="deck-subtitle"></p>
+      <p class="meta" id="deck-meta"></p>
+    </header>
+
+    <section class="exec">
+      <h2>Executive snapshot</h2>
+      <ul id="exec-bullets"></ul>
+    </section>
+
+    <section>
+      <h2>Competitor framing — Ollama &amp; vLLM</h2>
+      <p class="framing" id="framing-text"></p>
+      <table class="compete" id="compete-table">
+        <thead><tr><th>Product</th><th>Position</th><th>Overlap with RawrXD</th><th>RawrXD angle</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Capability comparison (illustrative scores 0–10)</h2>
+      <p style="color:var(--muted);font-size:0.9rem;margin:0 0 8px;">Scores are narrative placeholders — replace JSON and re-export after real benchmarks.</p>
+      <div class="chart-wrap"><canvas id="chart-bar" height="320"></canvas></div>
+    </section>
+
+    <section>
+      <h2>Velocity index (illustrative time series)</h2>
+      <div class="chart-wrap"><canvas id="chart-line" height="280"></canvas></div>
+    </section>
+
+    <footer class="footer">
+      Generated from JSON → Chart.js → print-ready HTML. Export PDF with <span>Export-MetricsDeck.ps1</span>.
+    </footer>
+  </div>
+
+  <script>
+  (function () {
+    const METRICS_B64 = '__METRICS_B64__';
+    const data = JSON.parse(atob(METRICS_B64));
+
+    document.getElementById('deck-title').textContent = data.meta.title;
+    document.title = data.meta.title;
+    document.getElementById('deck-subtitle').textContent = data.meta.subtitle;
+    document.getElementById('deck-meta').textContent =
+      (data.meta.date || '') + (data.meta.version ? ' · v' + data.meta.version : '');
+
+    const ul = document.getElementById('exec-bullets');
+    (data.executive.bullets || []).forEach(function (b) {
+      const li = document.createElement('li');
+      li.textContent = b;
+      ul.appendChild(li);
+    });
+
+    const framing = document.getElementById('framing-text');
+    framing.innerHTML = data.competitors.framing.replace(/\*\*(.*?)\*\*/g, '<em>$1</em>');
+
+    const tbody = document.querySelector('#compete-table tbody');
+    (data.competitors.rows || []).forEach(function (r) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + escapeHtml(r.name) + '</td><td>' + escapeHtml(r.position) + '</td><td>' +
+        escapeHtml(r.overlap) + '</td><td>' + escapeHtml(r.rawrxdAngle) + '</td>';
+      tbody.appendChild(tr);
+    });
+
+    function escapeHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    const dims = data.scores.dimensions;
+    const series = data.scores.series;
+    const barCtx = document.getElementById('chart-bar').getContext('2d');
+    new Chart(barCtx, {
+      type: 'bar',
+      data: {
+        labels: dims,
+        datasets: [
+          { label: 'RawrXD', data: series.RawrXD, backgroundColor: '#e07850cc', borderColor: '#e07850', borderWidth: 1 },
+          { label: 'Ollama', data: series.Ollama, backgroundColor: '#7ab8a899', borderColor: '#7ab8a8', borderWidth: 1 },
+          { label: 'vLLM', data: series.vLLM, backgroundColor: '#635bff66', borderColor: '#635bff', borderWidth: 1 }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { labels: { color: '#ece8e3' } },
+          tooltip: { mode: 'index', intersect: false }
+        },
+        scales: {
+          x: { ticks: { color: '#9a928a', maxRotation: 45, minRotation: 25 }, grid: { color: 'rgba(255,255,255,0.06)' } },
+          y: { min: 0, max: 10, ticks: { color: '#9a928a' }, grid: { color: 'rgba(255,255,255,0.06)' } }
+        }
+      }
+    });
+
+    const ts = data.timeSeries;
+    const lineCtx = document.getElementById('chart-line').getContext('2d');
+    new Chart(lineCtx, {
+      type: 'line',
+      data: {
+        labels: ts.labels,
+        datasets: [
+          { label: 'RawrXD (index)', data: ts.rawrxd, borderColor: '#e07850', backgroundColor: 'rgba(224,120,80,0.12)', fill: true, tension: 0.35 },
+          { label: 'Baseline', data: ts.baseline, borderColor: '#635bff', backgroundColor: 'transparent', tension: 0.25, borderDash: [6,4] }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { labels: { color: '#ece8e3' } },
+          title: { display: true, text: ts.label || '', color: '#9a928a', font: { size: 12 } }
+        },
+        scales: {
+          x: { ticks: { color: '#9a928a' }, grid: { color: 'rgba(255,255,255,0.06)' } },
+          y: { ticks: { color: '#9a928a' }, grid: { color: 'rgba(255,255,255,0.06)' } }
+        }
+      }
+    });
+
+    document.dispatchEvent(new Event('deck-ready'));
+  })();
+  </script>
+</body>
+</html>

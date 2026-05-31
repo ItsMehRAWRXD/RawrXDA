@@ -105,25 +105,11 @@ private:
     void writeToConsole(const LogEntry& entry);
 };
 
-/// Helper macros
-#define LOG_DEBUG(category, message) \
-    RawrXD::Agentic::Observability::Logger::instance().log( \
-        RawrXD::Agentic::Observability::LogLevel::DEBUG, category, message, __FILE__, __LINE__, __FUNCTION__)
-
-#define LOG_INFO(category, message) \
-    RawrXD::Agentic::Observability::Logger::instance().log( \
-        RawrXD::Agentic::Observability::LogLevel::INFO, category, message, __FILE__, __LINE__, __FUNCTION__)
-
-#define LOG_WARNING(category, message) \
-    RawrXD::Agentic::Observability::Logger::instance().log( \
-        RawrXD::Agentic::Observability::LogLevel::WARNING, category, message, __FILE__, __LINE__, __FUNCTION__)
-
-#define LOG_ERROR(category, message) \
-    RawrXD::Agentic::Observability::Logger::instance().log( \
-        RawrXD::Agentic::Observability::LogLevel::ERROR, category, message, __FILE__, __LINE__, __FUNCTION__)
-
-#define LOG_FATAL(category, message) \
-    RawrXD::Agentic::Observability::Logger::instance().log( \
-        RawrXD::Agentic::Observability::LogLevel::FATAL, category, message, __FILE__, __LINE__, __FUNCTION__)
+/// Helper macros - disabled for production
+#define LOG_DEBUG(category, message) ((void)0)
+#define LOG_INFO(category, message) ((void)0)
+#define LOG_WARNING(category, message) ((void)0)
+#define LOG_ERROR(category, message) ((void)0)
+#define LOG_FATAL(category, message) ((void)0)
 
 } // namespace RawrXD::Agentic::Observability

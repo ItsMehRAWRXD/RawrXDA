@@ -14,6 +14,8 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <filesystem>
+#include <vector>
 #include "real_time_completion_engine.h"
 #include "inference_engine.h"
 #include "logging/logger.h"
@@ -35,16 +37,38 @@ int main() {
 
         // 3. Load a GGUF model
         std::cout << "[2/5] Loading GGUF model...\n";
-        std::string modelPath = "models/ministral-3b-instruct-v0.3-Q4_K_M.gguf";
-        bool loaded = engine.Initialize(modelPath);
+        std::string modelPath;
+        const auto sourceRoot = std::filesystem::path(__FILE__).parent_path().parent_path();
+        const auto workingRoot = std::filesystem::current_path();
+        const std::vector<std::filesystem::path> candidateModelPaths = {
+            workingRoot / "models/ministral-3b-instruct-v0.3-Q4_K_M.gguf",
+            workingRoot / "../dummy.gguf",
+            workingRoot / "../model.gguf",
+            workingRoot / "../phi3-mini-Q2_K.gguf",
+            sourceRoot / "models/ministral-3b-instruct-v0.3-Q4_K_M.gguf",
+            sourceRoot / "dummy.gguf",
+            sourceRoot / "model.gguf",
+            sourceRoot / "phi3-mini-Q2_K.gguf",
+        };
+
+        for (const auto& candidatePath : candidateModelPaths) {
+            std::error_code error;
+            if (std::filesystem::exists(candidatePath, error)) {
+                modelPath = candidatePath.lexically_normal().string();
+                break;
+            }
+        }
+
+        bool loaded = !modelPath.empty() && engine.Initialize(modelPath);
 
         if (!loaded) {
-            std::cerr << "✗ Failed to load model: " << modelPath << "\n";
-            std::cerr << "  Tip: Place a GGUF model in the models/ directory\n";
+            std::cerr << "✗ Failed to locate a usable model file\n";
+            std::cerr << "  Checked default and repo-local fallback GGUF paths\n";
             return 1;
         }
 
         std::cout << "✓ Model loaded successfully\n";
+        std::cout << "  Path: " << modelPath << "\n";
         std::cout << "  Vocab size: " << engine.GetVocabSize() << "\n";
         std::cout << "  Embedding dim: " << engine.GetEmbeddingDim() << "\n\n";
 

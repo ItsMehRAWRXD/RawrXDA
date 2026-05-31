@@ -1,0 +1,2 @@
+[1/2] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\BackendOrchestrator.cpp.obj
+[2/2] RawrXD-Win32IDE: PRE_LINK optional del exe/pdb if unlocked; Linking CXX executable bin\RawrXD-Win32IDE.exe

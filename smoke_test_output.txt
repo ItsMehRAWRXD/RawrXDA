@@ -1,0 +1,34 @@
+UpdateCTestConfiguration  from :D:/rawrxd/build/DartConfiguration.tcl
+Test project D:/rawrxd/build
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 50
+    Start 50: win32ide_agentic_smoke
+
+50: Test command: D:\rawrxd\build\bin\RawrXD-Win32IDE.exe "--agentic-smoke"
+50: Working Directory: D:/rawrxd/build/tests
+50: Environment variables: 
+50:  RAWRXD_AGENTIC_SMOKE_LIVE=1
+50:  RAWRXD_AGENTIC_SMOKE_MODEL=codestral22b-local:latest
+50: Test timeout computed to be: 600
+50: [Prometheus] Listening on port 9090 for /metrics...
+1/1 Test #50: win32ide_agentic_smoke ...........***Failed  298.04 sec
+
+0% tests passed, 1 tests failed out of 1
+
+Label Time Summary:
+agentic     = 298.04 sec*proc (1 test)
+smoke       = 298.04 sec*proc (1 test)
+win32ide    = 298.04 sec*proc (1 test)
+
+Total Test time (real) = 298.04 sec
+
+The following tests FAILED:
+	 50 - win32ide_agentic_smoke (Failed)                   agentic smoke win32ide
+Errors while running CTest
+Output from these tests are in: D:/rawrxd/build/Testing/Temporary/LastTest.log
+Use "--rerun-failed --output-on-failure" to re-run the failed cases verbosely.

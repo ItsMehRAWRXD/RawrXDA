@@ -5,6 +5,14 @@
 #include "IDELogger.h"
 #include <cassert>
 
+namespace {
+constexpr wchar_t kWindowManagerClassName[] = L"RawrXD.WindowManager.Host";
+
+LRESULT CALLBACK WindowManagerHostProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    return RawrXD::Win32App::WindowManager::Instance().HandleWindowMessage(hwnd, msg, wParam, lParam);
+}
+} // namespace
+
 namespace RawrXD {
 namespace Win32App {
 
@@ -32,11 +40,57 @@ WindowManager::~WindowManager() {
 }
 
 bool WindowManager::Initialize() {
-    // Secondary shell only: production main HWND + message loop live in Win32IDE_Core.
-    IDELogger::getInstance().log(
-        IDELogger::Level::WARNING,
-        "WindowManager::Initialize",
-        "Placeholder: WindowManager does not create the primary IDE frame; use Win32IDE_Core startup path.");
+    if (m_hwnd) {
+        return true;
+    }
+
+    HINSTANCE hInst = GetModuleHandleW(nullptr);
+    WNDCLASSEXW wc{};
+    wc.cbSize = sizeof(wc);
+    wc.style = CS_HREDRAW | CS_VREDRAW;
+    wc.lpfnWndProc = WindowManagerHostProc;
+    wc.hInstance = hInst;
+    wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
+    wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
+    wc.lpszClassName = kWindowManagerClassName;
+
+    if (!RegisterClassExW(&wc)) {
+        const DWORD err = GetLastError();
+        if (err != ERROR_CLASS_ALREADY_EXISTS) {
+            IDELogger::getInstance().log(
+                IDELogger::Level::ERR,
+                "WindowManager::Initialize",
+                "RegisterClassExW failed for host window class.");
+            return false;
+        }
+    }
+
+    m_hwnd = CreateWindowExW(
+        WS_EX_TOOLWINDOW,
+        kWindowManagerClassName,
+        L"RawrXD WindowManager Host",
+        WS_OVERLAPPEDWINDOW,
+        m_savedRect.x,
+        m_savedRect.y,
+        m_savedRect.width,
+        m_savedRect.height,
+        nullptr,
+        nullptr,
+        hInst,
+        nullptr);
+
+    if (!m_hwnd) {
+        IDELogger::getInstance().log(
+            IDELogger::Level::ERR,
+            "WindowManager::Initialize",
+            "CreateWindowExW failed for host window.");
+        return false;
+    }
+
+    // Keep this host hidden by default; primary shell ownership stays in Win32IDE_Core.
+    ::ShowWindow(m_hwnd, SW_HIDE);
+    ::UpdateWindow(m_hwnd);
+
     m_isVisible = false;
     return true;
 }

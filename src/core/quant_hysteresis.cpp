@@ -115,6 +115,8 @@ QuantHysteresisResult QuantHysteresisController::evaluate(int vramPercent) {
         // Exception: CRITICAL overrides all hysteresis
         if (rawTier == QTIER_CRITICAL) {
             // Force immediate switch regardless of dead-band/cooldown
+            fprintf(stderr, "[QuantHysteresis] CRITICAL tier - forcing immediate switch\n");
+            forceSwitch();
         }
 
         // Commit the tier change
@@ -220,6 +222,12 @@ uint64_t QuantHysteresisController::nowMs() const {
     uli.LowPart = ft.dwLowDateTime;
     uli.HighPart = ft.dwHighDateTime;
     return (uli.QuadPart - 116444736000000000ULL) / 10000ULL;
+}
+
+void QuantHysteresisController::forceSwitch() {
+    // Force immediate tier switch without hysteresis checks
+    m_state.lastSwitchMs = 0;  // Reset cooldown
+    m_state.inDeadBand = false;
 }
 
 } // namespace Quant

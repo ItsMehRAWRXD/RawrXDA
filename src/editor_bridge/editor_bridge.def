@@ -1,0 +1,10 @@
+LIBRARY editor_bridge
+EXPORTS
+    DllMain
+    DllGetClassObject
+    RawrXDSendBufferContext
+    RawrXDReceiveCompletion
+    RawrXDBeginEditTransaction
+    RawrXDEndEditTransaction
+    RawrXDSetProjectRoot
+    RawrXDRegisterActiveFile

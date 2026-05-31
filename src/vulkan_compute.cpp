@@ -1,3 +1,4 @@
+#define VK_USE_PLATFORM_WIN32_KHR
 #include <vulkan/vulkan.h>
 #include "vulkan_compute.h"
 #include <iostream>
@@ -11,6 +12,73 @@
 #include <cmath>
 #include <cstring>
 #include <windows.h>
+
+namespace {
+
+std::string toLowerCopy(std::string value) {
+    std::transform(value.begin(), value.end(), value.begin(), [](unsigned char ch) {
+        return static_cast<char>(std::tolower(ch));
+    });
+    return value;
+}
+
+bool isQ4KQ81U32ShaderPath(const std::string& spirv_path) {
+    const std::string lower = toLowerCopy(spirv_path);
+    return lower.find("q4k_q8_1") != std::string::npos && lower.find("u32") != std::string::npos;
+}
+
+MatMulKernelMode detectMatMulKernelMode(const std::string& spirv_path) {
+    const std::string lower = toLowerCopy(spirv_path);
+    if (lower.find("q4k_q8_1") != std::string::npos && lower.find("u32") != std::string::npos) {
+        return MatMulKernelMode::Q4KQ81U32;
+    }
+    if (lower.find("q4_0") != std::string::npos && lower.find("u32") != std::string::npos) {
+        return MatMulKernelMode::Q40U32;
+    }
+    if (lower.find("q5_k") != std::string::npos && lower.find("u32") != std::string::npos) {
+        return MatMulKernelMode::Q5KU32;
+    }
+    if (lower.find("q6_k") != std::string::npos && lower.find("u32") != std::string::npos) {
+        return MatMulKernelMode::Q6KU32;
+    }
+    return MatMulKernelMode::FloatF32;
+}
+
+bool getEnvVarString(const char* name, std::string& out) {
+    out.clear();
+    if (!name || !name[0]) {
+        return false;
+    }
+    char value[MAX_PATH] = {};
+    const DWORD len = GetEnvironmentVariableA(name, value, static_cast<DWORD>(sizeof(value)));
+    if (len == 0 || len >= sizeof(value)) {
+        return false;
+    }
+    out.assign(value, value + len);
+    return true;
+}
+
+bool resolveMatMulSpvPathFromEnv(std::string& out_path) {
+    out_path.clear();
+
+    std::string kernel_key;
+    if (getEnvVarString("RAWRXD_VULKAN_MATMUL_KERNEL", kernel_key)) {
+        const std::string k = toLowerCopy(kernel_key);
+        if (k == "q4k_q8_1_u32") {
+            if (getEnvVarString("RAWRXD_VULKAN_MATMUL_SPV_Q4K_Q8_1_U32", out_path)) return true;
+        } else if (k == "q4_0_u32") {
+            if (getEnvVarString("RAWRXD_VULKAN_MATMUL_SPV_Q4_0_U32", out_path)) return true;
+        } else if (k == "q5_k_u32") {
+            if (getEnvVarString("RAWRXD_VULKAN_MATMUL_SPV_Q5_K_U32", out_path)) return true;
+        } else if (k == "q6_k_u32") {
+            if (getEnvVarString("RAWRXD_VULKAN_MATMUL_SPV_Q6_K_U32", out_path)) return true;
+        }
+    }
+
+    return getEnvVarString("RAWRXD_VULKAN_MATMUL_SPV", out_path);
+}
+
+} // namespace
 
 // SCAFFOLD_105: Vulkan compute backend init
 
@@ -394,13 +462,60 @@ bool VulkanCompute::SelectPhysicalDevice() {
     vkGetPhysicalDeviceProperties(physical_device_, &device_info_.properties);
     vkGetPhysicalDeviceMemoryProperties(physical_device_, &device_info_.memory_props);
     
+    device_info_.physical_device = physical_device_;
     device_info_.device_name = device_info_.properties.deviceName;
     device_info_.vendor_id = device_info_.properties.vendorID;
     device_info_.device_id = device_info_.properties.deviceID;
+    device_info_.device_index = best_device_idx;
+
+    // v1.3 Roadmap: Populate all_devices for P2P enumeration
+    all_devices_.clear();
+    for (uint32_t i = 0; i < (uint32_t)devices.size(); ++i) {
+        VulkanDeviceInfo info{};
+        vkGetPhysicalDeviceProperties(devices[i], &info.properties);
+        vkGetPhysicalDeviceMemoryProperties(devices[i], &info.memory_props);
+        info.physical_device = devices[i];
+        info.device_name = info.properties.deviceName;
+        info.vendor_id = info.properties.vendorID;
+        info.device_id = info.properties.deviceID;
+        info.device_index = i;
+        all_devices_.push_back(info);
+    }
 
     std::cout << "Selected device: " << device_info_.device_name << std::endl;
 
     return true;
+}
+
+bool VulkanCompute::EnumerateMultiGPUP2P() {
+    if (instance_ == nullptr || all_devices_.size() < 2) {
+        std::cout << "v1.3 P2P: Insufficient devices for peer-to-peer fabric (" << all_devices_.size() << " found)" << std::endl;
+        return false;
+    }
+
+    p2p_groups_.clear();
+
+    // Check for Opaque Win32 KMT handle support for v1.3 handoff
+    std::cout << "v1.3 P2P: Scanning for DirectGMA / Win32 KMT affinity clusters..." << std::endl;
+
+    for (size_t i = 0; i < all_devices_.size(); ++i) {
+        for (size_t j = i + 1; j < all_devices_.size(); ++j) {
+            // In a full implementation, we would use vkGetPhysicalDeviceExternalBufferProperties
+            // to verify VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT support between devices.
+            // For now, we identify AMD-to-AMD pairs as primary candidates.
+            if (all_devices_[i].vendor_id == 0x1002 && all_devices_[j].vendor_id == 0x1002) {
+                VulkanP2PGroup group;
+                group.device_indices = { (uint32_t)i, (uint32_t)j };
+                group.is_p2p_capable = true; // Flag for v1.3 logic to attempt handle export
+                p2p_groups_.push_back(group);
+                
+                std::cout << "v1.3 P2P Affinity Found: [" << all_devices_[i].device_name << "] <-> [" 
+                          << all_devices_[j].device_name << "] (Index: " << i << "," << j << ")" << std::endl;
+            }
+        }
+    }
+
+    return !p2p_groups_.empty();
 }
 
 bool VulkanCompute::CreateLogicalDevice() {
@@ -434,13 +549,27 @@ bool VulkanCompute::CreateLogicalDevice() {
     queue_create_info.queueCount = 1;
     queue_create_info.pQueuePriorities = &queue_priority;
 
+    // v1.3 Roadmap: Multi-GPU P2P / DirectGMA extension enablement
+    std::vector<const char*> extensions = {
+        VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME,
+        "VK_KHR_external_memory_win32",
+        VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME
+    };
+
+    VkPhysicalDeviceTimelineSemaphoreFeatures timeline_semaphore_features{};
+    timeline_semaphore_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES;
+    timeline_semaphore_features.timelineSemaphore = VK_TRUE;
+
     VkDeviceCreateInfo device_create_info{};
     device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     device_create_info.queueCreateInfoCount = 1;
     device_create_info.pQueueCreateInfos = &queue_create_info;
+    device_create_info.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
+    device_create_info.ppEnabledExtensionNames = extensions.data();
+    device_create_info.pNext = &timeline_semaphore_features;
 
     if (vkCreateDevice(physical_device_, &device_create_info, nullptr, &device_) != VK_SUCCESS) {
-        std::cerr << "Failed to create logical device" << std::endl;
+        std::cerr << "Failed to create logical device (v1.3 P2P Extensions)" << std::endl;
         return false;
     }
 
@@ -525,9 +654,22 @@ bool VulkanCompute::CreateComputePipeline(const std::string& shader_name) {
     return true;
 }
 
-bool VulkanCompute::AllocateBuffer(size_t size, VkBuffer& buffer, VkDeviceMemory& memory) {
+bool VulkanCompute::AllocateBuffer(size_t size, VkBuffer& buffer, VkDeviceMemory& memory, bool export_kmt) {
+    buffer = nullptr;
+    memory = nullptr;
+
+    if (!device_ || size == 0) {
+        std::cerr << "AllocateBuffer called with invalid device state or zero size" << std::endl;
+        return false;
+    }
+
+    VkExternalMemoryBufferCreateInfo external_buffer_info{};
+    external_buffer_info.sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_BUFFER_CREATE_INFO;
+    external_buffer_info.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT;
+
     VkBufferCreateInfo buffer_info{};
     buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buffer_info.pNext = export_kmt ? &external_buffer_info : nullptr;
     buffer_info.size = size;
     buffer_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
@@ -539,10 +681,27 @@ bool VulkanCompute::AllocateBuffer(size_t size, VkBuffer& buffer, VkDeviceMemory
     VkMemoryRequirements mem_requirements;
     vkGetBufferMemoryRequirements(device_, buffer, &mem_requirements);
 
+    VkExportMemoryWin32HandleInfoKHR export_win32_handle_info{};
+    export_win32_handle_info.sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_WIN32_HANDLE_INFO_KHR;
+    export_win32_handle_info.pAttributes = nullptr;
+    export_win32_handle_info.dwAccess = GENERIC_ALL;
+
+    VkExportMemoryAllocateInfo export_alloc_info{};
+    export_alloc_info.sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO;
+    export_alloc_info.pNext = &export_win32_handle_info;
+    export_alloc_info.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT;
+
     VkMemoryAllocateInfo alloc_info{};
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    alloc_info.pNext = export_kmt ? &export_alloc_info : nullptr;
     alloc_info.allocationSize = mem_requirements.size;
     alloc_info.memoryTypeIndex = FindMemoryType(mem_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    if (alloc_info.memoryTypeIndex == UINT32_MAX) {
+        std::cerr << "Failed to find suitable device-local memory type" << std::endl;
+        vkDestroyBuffer(device_, buffer, nullptr);
+        return false;
+    }
 
     if (vkAllocateMemory(device_, &alloc_info, nullptr, &memory) != VK_SUCCESS) {
         std::cerr << "Failed to allocate memory" << std::endl;
@@ -550,12 +709,28 @@ bool VulkanCompute::AllocateBuffer(size_t size, VkBuffer& buffer, VkDeviceMemory
         return false;
     }
 
-    vkBindBufferMemory(device_, buffer, memory, 0);
+    if (vkBindBufferMemory(device_, buffer, memory, 0) != VK_SUCCESS) {
+        std::cerr << "Failed to bind buffer memory" << std::endl;
+        vkFreeMemory(device_, memory, nullptr);
+        vkDestroyBuffer(device_, buffer, nullptr);
+        buffer = nullptr;
+        memory = nullptr;
+        return false;
+    }
+
     return true;
 }
 
 // ==================== STAGING BUFFER HELPER ====================
 bool VulkanCompute::CreateStagingBuffer(size_t size, VkBuffer& buffer, VkDeviceMemory& memory) {
+    buffer = nullptr;
+    memory = nullptr;
+
+    if (!device_ || size == 0) {
+        std::cerr << "CreateStagingBuffer called with invalid device state or zero size" << std::endl;
+        return false;
+    }
+
     // Create staging buffer with host-accessible memory
     VkBufferCreateInfo buffer_info{};
     buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -576,34 +751,301 @@ bool VulkanCompute::CreateStagingBuffer(size_t size, VkBuffer& buffer, VkDeviceM
     alloc_info.memoryTypeIndex = FindMemoryType(mem_requirements.memoryTypeBits,
                                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
+    if (alloc_info.memoryTypeIndex == UINT32_MAX) {
+        std::cerr << "Failed to find suitable host-visible staging memory type" << std::endl;
+        vkDestroyBuffer(device_, buffer, nullptr);
+        return false;
+    }
+
     if (vkAllocateMemory(device_, &alloc_info, nullptr, &memory) != VK_SUCCESS) {
         std::cerr << "Failed to allocate staging memory" << std::endl;
         vkDestroyBuffer(device_, buffer, nullptr);
         return false;
     }
 
-    vkBindBufferMemory(device_, buffer, memory, 0);
+    if (vkBindBufferMemory(device_, buffer, memory, 0) != VK_SUCCESS) {
+        std::cerr << "Failed to bind staging buffer memory" << std::endl;
+        vkFreeMemory(device_, memory, nullptr);
+        vkDestroyBuffer(device_, buffer, nullptr);
+        buffer = nullptr;
+        memory = nullptr;
+        return false;
+    }
+
     return true;
 }
 // ==================== END STAGING BUFFER HELPER ====================
 
-bool VulkanCompute::AllocateBuffer(size_t size, uint32_t& buffer_idx, size_t& memory_size) {
+bool VulkanCompute::AllocateBuffer(size_t size, uint32_t& buffer_idx, size_t& memory_size, bool export_kmt) {
     VkBuffer buffer;
     VkDeviceMemory memory;
     
-    if (!AllocateBuffer(size, buffer, memory)) {
+    if (!AllocateBuffer(size, buffer, memory, export_kmt)) {
         return false;
     }
     
     buffer_idx = static_cast<uint32_t>(allocated_buffers_.size());
-    allocated_buffers_.push_back(std::make_pair(buffer, memory));
+    BufferMeta meta{};
+    meta.buffer = buffer;
+    meta.memory = memory;
+    meta.size = size;
+    meta.is_exportable = export_kmt;
+    meta.kmt_handle = nullptr;
+    meta.deviceOrdinal = device_info_.device_index; // v1.3 cluster affinity
+    allocated_buffers_.push_back(meta);
     memory_size = size;
     
-    std::cout << "Allocated buffer " << buffer_idx << " with " << size << " bytes" << std::endl;
+    std::cout << "Allocated buffer " << buffer_idx << " with " << size << " bytes" << (export_kmt ? " (Exportable)" : "") << std::endl;
     return true;
 }
 
+bool VulkanCompute::AllocateZeroCopyBuffer(size_t size, uint32_t& buffer_idx, void** host_ptr, bool export_kmt) {
+    if (!device_ || size == 0 || !host_ptr) return false;
+
+    VkBuffer buffer;
+    VkDeviceMemory memory;
+
+    VkExternalMemoryBufferCreateInfo external_buffer_info{};
+    external_buffer_info.sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_BUFFER_CREATE_INFO;
+    external_buffer_info.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT;
+
+    VkBufferCreateInfo bufferInfo{};
+    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferInfo.pNext = export_kmt ? &external_buffer_info : nullptr;
+    bufferInfo.size = size;
+    bufferInfo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    if (vkCreateBuffer(device_, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) return false;
+
+    VkMemoryRequirements memRequirements;
+    vkGetBufferMemoryRequirements(device_, buffer, &memRequirements);
+
+    VkExportMemoryWin32HandleInfoKHR export_win32_handle_info{};
+    export_win32_handle_info.sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_WIN32_HANDLE_INFO_KHR;
+    export_win32_handle_info.pAttributes = nullptr;
+    export_win32_handle_info.dwAccess = GENERIC_ALL;
+
+    VkExportMemoryAllocateInfo export_alloc_info{};
+    export_alloc_info.sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO;
+    export_alloc_info.pNext = &export_win32_handle_info;
+    export_alloc_info.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT;
+
+    VkMemoryAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.pNext = export_kmt ? &export_alloc_info : nullptr;
+    allocInfo.allocationSize = memRequirements.size;
+    // Request DEVICE_LOCAL + HOST_VISIBLE for Re-BAR / SAM access
+    allocInfo.memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, 
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+    if (vkAllocateMemory(device_, &allocInfo, nullptr, &memory) != VK_SUCCESS) {
+        vkDestroyBuffer(device_, buffer, nullptr);
+        return false;
+    }
+
+    vkBindBufferMemory(device_, buffer, memory, 0);
+
+    if (vkMapMemory(device_, memory, 0, size, 0, host_ptr) != VK_SUCCESS) {
+        vkFreeMemory(device_, memory, nullptr);
+        vkDestroyBuffer(device_, buffer, nullptr);
+        return false;
+    }
+
+    buffer_idx = static_cast<uint32_t>(allocated_buffers_.size());
+    BufferMeta meta{};
+    meta.buffer = buffer;
+    meta.memory = memory;
+    meta.size = size;
+    meta.is_exportable = export_kmt;
+    meta.kmt_handle = nullptr;
+    meta.deviceOrdinal = device_info_.device_index; // v1.3 cluster affinity
+    allocated_buffers_.push_back(meta);
+    return true;
+}
+
+bool VulkanCompute::ExportBufferKMT(uint32_t buffer_idx, HANDLE& kmt_handle) {
+    if (buffer_idx >= allocated_buffers_.size()) return false;
+    
+    if (!allocated_buffers_[buffer_idx].is_exportable) {
+        std::cerr << "v1.3 P2P: Buffer " << buffer_idx << " was not allocated with export_kmt=true" << std::endl;
+        return false;
+    }
+
+    if (allocated_buffers_[buffer_idx].kmt_handle != nullptr) {
+        kmt_handle = allocated_buffers_[buffer_idx].kmt_handle;
+        return true;
+    }
+
+    VkDeviceMemory memory = allocated_buffers_[buffer_idx].memory;
+    
+    VkMemoryGetWin32HandleInfoKHR handle_info{};
+    handle_info.sType = VK_STRUCTURE_TYPE_MEMORY_GET_WIN32_HANDLE_INFO_KHR;
+    handle_info.memory = memory;
+    handle_info.handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT;
+
+    // Load function pointer for vkGetMemoryWin32HandleKHR
+    auto fpGetMemoryWin32HandleKHR = (PFN_vkGetMemoryWin32HandleKHR)vkGetDeviceProcAddr(device_, "vkGetMemoryWin32HandleKHR");
+    if (!fpGetMemoryWin32HandleKHR) {
+        std::cerr << "v1.3 P2P: vkGetMemoryWin32HandleKHR not found" << std::endl;
+        return false;
+    }
+
+    if (fpGetMemoryWin32HandleKHR(device_, &handle_info, &kmt_handle) != VK_SUCCESS) {
+        std::cerr << "v1.3 P2P: Failed to export KMT handle for buffer " << buffer_idx << std::endl;
+        return false;
+    }
+
+    allocated_buffers_[buffer_idx].kmt_handle = kmt_handle;
+    std::cout << "v1.3 P2P: Exported KMT handle " << kmt_handle << " for buffer " << buffer_idx << std::endl;
+    return true;
+}
+
+bool VulkanCompute::ImportBufferKMT(HANDLE kmt_handle, size_t size, uint32_t& buffer_idx) {
+    if (!device_ || !kmt_handle) return false;
+
+    VkBuffer buffer;
+    VkDeviceMemory memory;
+
+    VkExternalMemoryBufferCreateInfo external_buffer_info{};
+    external_buffer_info.sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_BUFFER_CREATE_INFO;
+    external_buffer_info.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT;
+
+    VkBufferCreateInfo buffer_info{};
+    buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buffer_info.pNext = &external_buffer_info;
+    buffer_info.size = size;
+    buffer_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    if (vkCreateBuffer(device_, &buffer_info, nullptr, &buffer) != VK_SUCCESS) return false;
+
+    VkMemoryRequirements mem_reqs;
+    vkGetBufferMemoryRequirements(device_, buffer, &mem_reqs);
+
+    VkImportMemoryWin32HandleInfoKHR import_info{};
+    import_info.sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_WIN32_HANDLE_INFO_KHR;
+    import_info.handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT;
+    import_info.handle = kmt_handle;
+
+    VkMemoryAllocateInfo alloc_info{};
+    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    alloc_info.pNext = &import_info;
+    alloc_info.allocationSize = mem_reqs.size;
+    alloc_info.memoryTypeIndex = FindMemoryType(mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    if (vkAllocateMemory(device_, &alloc_info, nullptr, &memory) != VK_SUCCESS) {
+        vkDestroyBuffer(device_, buffer, nullptr);
+        return false;
+    }
+
+    vkBindBufferMemory(device_, buffer, memory, 0);
+
+    buffer_idx = static_cast<uint32_t>(allocated_buffers_.size());
+    BufferMeta meta{};
+    meta.buffer = buffer;
+    meta.memory = memory;
+    meta.size = size;
+    meta.is_exportable = false; // Imported is not re-exportable in this logic
+    meta.kmt_handle = kmt_handle;
+    meta.deviceOrdinal = device_info_.device_index; // v1.3 cluster affinity
+    allocated_buffers_.push_back(meta);
+    
+    std::cout << "v1.3 P2P: Imported KMT handle " << kmt_handle << " as buffer " << buffer_idx << std::endl;
+    return true;
+}
+
+bool VulkanCompute::CreateTimelineSemaphore(VkSemaphore& semaphore, uint64_t initial_value) {
+    VkSemaphoreTypeCreateInfo type_info{};
+    type_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
+    type_info.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
+    type_info.initialValue = initial_value;
+
+    VkExportSemaphoreWin32HandleInfoKHR export_win32_handle_info{};
+    export_win32_handle_info.sType = VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_WIN32_HANDLE_INFO_KHR;
+    export_win32_handle_info.pAttributes = nullptr;
+    export_win32_handle_info.dwAccess = GENERIC_ALL;
+    export_win32_handle_info.name = nullptr;
+
+    VkExportSemaphoreCreateInfo export_info{};
+    export_info.sType = VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO;
+    export_info.pNext = &export_win32_handle_info;
+    export_info.handleTypes = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT;
+
+    VkSemaphoreCreateInfo create_info{};
+    create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    create_info.pNext = &type_info;
+    // Chain export info to permit cross-device sync
+    type_info.pNext = &export_info;
+
+    return vkCreateSemaphore(device_, &create_info, nullptr, &semaphore) == VK_SUCCESS;
+}
+
+bool VulkanCompute::ExportTimelineSemaphoreKMT(VkSemaphore semaphore, HANDLE& kmt_handle) {
+    VkSemaphoreGetWin32HandleInfoKHR handle_info{};
+    handle_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_GET_WIN32_HANDLE_INFO_KHR;
+    handle_info.semaphore = semaphore;
+    handle_info.handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT;
+
+    auto fpGetSemaphoreWin32HandleKHR = (PFN_vkGetSemaphoreWin32HandleKHR)vkGetDeviceProcAddr(device_, "vkGetSemaphoreWin32HandleKHR");
+    if (!fpGetSemaphoreWin32HandleKHR) return false;
+
+    return fpGetSemaphoreWin32HandleKHR(device_, &handle_info, &kmt_handle) == VK_SUCCESS;
+}
+
+bool VulkanCompute::ImportTimelineSemaphoreKMT(HANDLE kmt_handle, VkSemaphore& semaphore) {
+    VkImportSemaphoreWin32HandleInfoKHR import_info{};
+    import_info.sType = VK_STRUCTURE_TYPE_IMPORT_SEMAPHORE_WIN32_HANDLE_INFO_KHR;
+    import_info.handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT;
+    import_info.handle = kmt_handle;
+
+    VkSemaphoreTypeCreateInfo type_info{};
+    type_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
+    type_info.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
+    type_info.pNext = &import_info;
+
+    VkSemaphoreCreateInfo create_info{};
+    create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    create_info.pNext = &type_info;
+
+    return vkCreateSemaphore(device_, &create_info, nullptr, &semaphore) == VK_SUCCESS;
+}
+
+bool VulkanCompute::WaitTimelineSemaphore(VkSemaphore semaphore, uint64_t value, uint64_t timeout_ns) {
+    VkSemaphoreWaitInfo wait_info{};
+    wait_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
+    wait_info.semaphoreCount = 1;
+    wait_info.pSemaphores = &semaphore;
+    wait_info.pValues = &value;
+
+    VkResult res = vkWaitSemaphores(device_, &wait_info, timeout_ns);
+    if (res == VK_TIMEOUT) return false;
+    if (res != VK_SUCCESS) {
+        std::cerr << "v1.3 P2P Failsafe: vkWaitSemaphores failed (" << res << "). Device potentially lost." << std::endl;
+        return false;
+    }
+    return true;
+}
+
+bool VulkanCompute::SignalTimelineSemaphore(VkSemaphore semaphore, uint64_t value) {
+    VkSemaphoreSignalInfo signal_info{};
+    signal_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SIGNAL_INFO;
+    signal_info.semaphore = semaphore;
+    signal_info.value = value;
+
+    return vkSignalSemaphore(device_, &signal_info) == VK_SUCCESS;
+}
+
+bool VulkanCompute::GetTimelineSemaphoreValue(VkSemaphore semaphore, uint64_t& value) {
+    return vkGetSemaphoreCounterValue(device_, semaphore, &value) == VK_SUCCESS;
+}
+
 bool VulkanCompute::CopyBufferToHost(VkBuffer device_buffer, void* host_data, size_t size) {
+    if (!device_buffer || !host_data || size == 0) {
+        std::cerr << "CopyBufferToHost called with invalid arguments" << std::endl;
+        return false;
+    }
+
     // Create staging buffer using helper
     VkBuffer staging_buffer;
     VkDeviceMemory staging_memory;
@@ -651,10 +1093,15 @@ bool VulkanCompute::CopyBufferToHost(uint32_t buffer_idx, void* host_data, size_
         return false;
     }
     
-    return CopyBufferToHost(allocated_buffers_[buffer_idx].first, host_data, size);
+    return CopyBufferToHost(allocated_buffers_[buffer_idx].buffer, host_data, size);
 }
 
 bool VulkanCompute::CopyHostToBuffer(void* host_data, VkBuffer device_buffer, size_t size) {
+    if (!host_data || !device_buffer || size == 0) {
+        std::cerr << "CopyHostToBuffer called with invalid arguments" << std::endl;
+        return false;
+    }
+
     // Create staging buffer using helper
     VkBuffer staging_buffer;
     VkDeviceMemory staging_memory;
@@ -702,7 +1149,7 @@ bool VulkanCompute::CopyHostToBuffer(void* host_data, uint32_t buffer_idx, size_
         return false;
     }
     
-    return CopyHostToBuffer(host_data, allocated_buffers_[buffer_idx].first, size);
+    return CopyHostToBuffer(host_data, allocated_buffers_[buffer_idx].buffer, size);
 }
 
 VulkanTensor VulkanCompute::TransferGGUFTensor(const std::string& tensor_name,
@@ -754,6 +1201,9 @@ bool VulkanCompute::EnsureMatMulPipeline(const std::string& spirv_path) {
     if (it != shaders_.end() && it->second.pipeline && matmul_descriptor_set_layout_ && matmul_descriptor_pool_) {
         return true;  // Already fully initialized
     }
+
+    matmul_kernel_mode_ = detectMatMulKernelMode(spirv_path);
+    matmul_push_constant_words_ = (matmul_kernel_mode_ == MatMulKernelMode::Q4KQ81U32) ? 5u : 3u;
     
     // 1. Load Shader
     if (!LoadShader("matmul", spirv_path)) {
@@ -812,7 +1262,7 @@ bool VulkanCompute::EnsureMatMulPipeline(const std::string& spirv_path) {
     VkPushConstantRange push_constant{};
     push_constant.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
     push_constant.offset = 0;
-    push_constant.size = sizeof(uint32_t) * 3;  // For M, K, N
+    push_constant.size = sizeof(uint32_t) * matmul_push_constant_words_;
     
     VkPipelineLayoutCreateInfo pipeline_layout_info{};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -898,17 +1348,28 @@ bool VulkanCompute::DispatchMatMul(uint32_t input_a_idx,
     
     // Get buffer handles
     VkBuffer buffers[3] = {
-        allocated_buffers_[input_a_idx].first,
-        allocated_buffers_[input_b_idx].first,
-        allocated_buffers_[output_idx].first
+        allocated_buffers_[input_a_idx].buffer,
+        allocated_buffers_[input_b_idx].buffer,
+        allocated_buffers_[output_idx].buffer
     };
     
-    // Calculate buffer sizes
+    // Use actual allocated sizes so packed quantized buffers can be bound unchanged.
     size_t sizes[3] = {
-        (size_t)M * K * sizeof(float),
-        (size_t)K * N * sizeof(float),
-        (size_t)M * N * sizeof(float)
+        allocated_buffers_[input_a_idx].size,
+        allocated_buffers_[input_b_idx].size,
+        allocated_buffers_[output_idx].size
     };
+
+    if (matmul_kernel_mode_ == MatMulKernelMode::Q4KQ81U32) {
+        if (N != 1u) {
+            std::cerr << "Q4_K x Q8_1 u32 kernel currently supports GEMV only (N must be 1)" << std::endl;
+            return false;
+        }
+        if ((K % 256u) != 0u) {
+            std::cerr << "Q4_K x Q8_1 u32 kernel requires K to be a multiple of 256" << std::endl;
+            return false;
+        }
+    }
 
     // --- 1. Allocate Descriptor Set from the PERMANENT Pool ---
     VkDescriptorSetAllocateInfo alloc_info{};
@@ -949,15 +1410,25 @@ bool VulkanCompute::DispatchMatMul(uint32_t input_a_idx,
 
     // --- 3. Execute Command Buffer (Dispatch) ---
     bool success = ExecuteSingleTimeCommands([&](VkCommandBuffer cmd_buffer) {
-        
-        // Push Constants (M, K, N dimensions to shader)
-        uint32_t push_data[3] = {M, K, N};
-        vkCmdPushConstants(cmd_buffer, 
-                           it->second.layout, 
-                           VK_SHADER_STAGE_COMPUTE_BIT, 
-                           0, 
-                           sizeof(push_data), 
-                           push_data);
+        if (matmul_kernel_mode_ == MatMulKernelMode::Q4KQ81U32) {
+            const uint32_t stride_a = K / 256u;
+            const uint32_t stride_b = K / 32u;
+            const uint32_t push_data[5] = { M, N, K, stride_a, stride_b };
+            vkCmdPushConstants(cmd_buffer,
+                               it->second.layout,
+                               VK_SHADER_STAGE_COMPUTE_BIT,
+                               0,
+                               sizeof(push_data),
+                               push_data);
+        } else {
+            const uint32_t push_data[3] = { M, K, N };
+            vkCmdPushConstants(cmd_buffer,
+                               it->second.layout,
+                               VK_SHADER_STAGE_COMPUTE_BIT,
+                               0,
+                               sizeof(push_data),
+                               push_data);
+        }
 
         // Bind Compute Pipeline
         vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, it->second.pipeline);
@@ -968,10 +1439,15 @@ bool VulkanCompute::DispatchMatMul(uint32_t input_a_idx,
                                 it->second.layout, 
                                 0, 1, &descriptor_set, 0, nullptr);
 
-        // Dispatch Command (Assuming 16x16 tile workgroup size in shader)
-        const uint32_t TILE_SIZE = 16;
-        uint32_t group_count_x = (N + TILE_SIZE - 1) / TILE_SIZE;
-        uint32_t group_count_y = (M + TILE_SIZE - 1) / TILE_SIZE;
+        uint32_t group_count_x = 1;
+        uint32_t group_count_y = 1;
+        if (matmul_kernel_mode_ == MatMulKernelMode::Q4KQ81U32) {
+            group_count_x = M;
+        } else {
+            const uint32_t TILE_SIZE = 16;
+            group_count_x = (N + TILE_SIZE - 1) / TILE_SIZE;
+            group_count_y = (M + TILE_SIZE - 1) / TILE_SIZE;
+        }
         
         std::cout << "Dispatching: " << group_count_x << "x" << group_count_y << "x1 workgroups" << std::endl;
         vkCmdDispatch(cmd_buffer, group_count_x, group_count_y, 1);
@@ -1021,9 +1497,9 @@ bool VulkanCompute::DispatchMatMul(uint32_t input_a_idx,
         }
 
         VkBuffer buffers[3] = {
-            allocated_buffers_[input_a_idx].first,
-            allocated_buffers_[input_b_idx].first,
-            allocated_buffers_[output_idx].first,
+            allocated_buffers_[input_a_idx].buffer,
+            allocated_buffers_[input_b_idx].buffer,
+            allocated_buffers_[output_idx].buffer,
         };
 
         VkDescriptorSetAllocateInfo alloc_info{};
@@ -1107,6 +1583,11 @@ bool VulkanCompute::DispatchMatMulAsync(uint32_t input_a_idx,
                                         uint32_t M,
                                         uint32_t K,
                                         uint32_t N) {
+    if (matmul_kernel_mode_ == MatMulKernelMode::Q4KQ81U32) {
+        std::cerr << "Async dispatch is not wired for Q4_K x Q8_1 u32 kernel yet" << std::endl;
+        return false;
+    }
+
     
     // Validate buffer indices
     if (input_a_idx >= allocated_buffers_.size() || 
@@ -1125,9 +1606,9 @@ bool VulkanCompute::DispatchMatMulAsync(uint32_t input_a_idx,
     
     // Get buffer handles
     VkBuffer buffers[3] = {
-        allocated_buffers_[input_a_idx].first,
-        allocated_buffers_[input_b_idx].first,
-        allocated_buffers_[output_idx].first
+        allocated_buffers_[input_a_idx].buffer,
+        allocated_buffers_[input_b_idx].buffer,
+        allocated_buffers_[output_idx].buffer
     };
     
     // Calculate buffer sizes
@@ -1454,7 +1935,7 @@ bool VulkanCompute::AllocateKVCache(uint32_t num_layers, uint32_t max_seq_len, u
             ClearKVCache();
             return false;
         }
-        kv_cache_buffers_[layer * 2] = {k_buffer, k_memory};
+        kv_cache_buffers_[layer * 2] = {k_buffer, k_memory, cache_size, false, nullptr};
         
         // Zero-initialize K cache
         std::vector<float> zeros(max_seq_len * head_dim, 0.0f);
@@ -1472,7 +1953,7 @@ bool VulkanCompute::AllocateKVCache(uint32_t num_layers, uint32_t max_seq_len, u
             ClearKVCache();
             return false;
         }
-        kv_cache_buffers_[layer * 2 + 1] = {v_buffer, v_memory};
+        kv_cache_buffers_[layer * 2 + 1] = {v_buffer, v_memory, cache_size, false, nullptr};
         
         // Zero-initialize V cache
         if (!CopyHostToBuffer(zeros.data(), v_buffer, cache_size)) {
@@ -1512,8 +1993,8 @@ bool VulkanCompute::AppendToKVCache(uint32_t layer_idx, const float* k_new,
     size_t size = kv_cache_head_dim_ * sizeof(float);
     
     // Get K/V cache buffers for this layer
-    VkBuffer k_buffer = kv_cache_buffers_[layer_idx * 2].first;
-    VkBuffer v_buffer = kv_cache_buffers_[layer_idx * 2 + 1].first;
+    VkBuffer k_buffer = kv_cache_buffers_[layer_idx * 2].buffer;
+    VkBuffer v_buffer = kv_cache_buffers_[layer_idx * 2 + 1].buffer;
     
     // Update K cache at token_pos
     if (!CopyHostToBufferOffset(k_new, k_buffer, offset, size)) {
@@ -1552,8 +2033,8 @@ bool VulkanCompute::GetKVCacheSlice(uint32_t layer_idx, uint32_t start_pos,
     size_t size = static_cast<size_t>(end_pos - start_pos) * kv_cache_head_dim_ * sizeof(float);
     
     // Get K/V cache buffers
-    VkBuffer k_buffer = kv_cache_buffers_[layer_idx * 2].first;
-    VkBuffer v_buffer = kv_cache_buffers_[layer_idx * 2 + 1].first;
+    VkBuffer k_buffer = kv_cache_buffers_[layer_idx * 2].buffer;
+    VkBuffer v_buffer = kv_cache_buffers_[layer_idx * 2 + 1].buffer;
     
     // Read K cache slice
     if (!CopyBufferToHostOffset(k_buffer, offset, k_out, size)) {
@@ -1576,12 +2057,12 @@ void VulkanCompute::ClearKVCache() {
     }
     
     // Clean up all KV cache buffers
-    for (auto& [buffer, memory] : kv_cache_buffers_) {
-        if (buffer) {
-            vkDestroyBuffer(device_, buffer, nullptr);
+    for (auto& meta : kv_cache_buffers_) {
+        if (meta.buffer) {
+            vkDestroyBuffer(device_, meta.buffer, nullptr);
         }
-        if (memory) {
-            vkFreeMemory(device_, memory, nullptr);
+        if (meta.memory) {
+            vkFreeMemory(device_, meta.memory, nullptr);
         }
     }
     
@@ -1597,6 +2078,11 @@ void VulkanCompute::ClearKVCache() {
 // Helper: Copy host data to buffer at specific offset
 bool VulkanCompute::CopyHostToBufferOffset(const void* host_data, VkBuffer device_buffer, 
                                            size_t offset, size_t size) {
+    if (!device_ || !host_data || !device_buffer || size == 0) {
+        std::cerr << "CopyHostToBufferOffset called with invalid arguments" << std::endl;
+        return false;
+    }
+
     // Create staging buffer
     VkBuffer staging_buffer;
     VkDeviceMemory staging_memory;
@@ -1620,13 +2106,24 @@ bool VulkanCompute::CopyHostToBufferOffset(const void* host_data, VkBuffer devic
     alloc_info.memoryTypeIndex = FindMemoryType(mem_requirements.memoryTypeBits,
                                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | 
                                               VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+    if (alloc_info.memoryTypeIndex == UINT32_MAX) {
+        std::cerr << "Failed to find host-visible memory type for offset staging upload" << std::endl;
+        vkDestroyBuffer(device_, staging_buffer, nullptr);
+        return false;
+    }
     
     if (vkAllocateMemory(device_, &alloc_info, nullptr, &staging_memory) != VK_SUCCESS) {
         vkDestroyBuffer(device_, staging_buffer, nullptr);
         return false;
     }
     
-    vkBindBufferMemory(device_, staging_buffer, staging_memory, 0);
+    if (vkBindBufferMemory(device_, staging_buffer, staging_memory, 0) != VK_SUCCESS) {
+        std::cerr << "Failed to bind offset staging buffer memory" << std::endl;
+        vkFreeMemory(device_, staging_memory, nullptr);
+        vkDestroyBuffer(device_, staging_buffer, nullptr);
+        return false;
+    }
     
     // Map and copy
     void* mapped;
@@ -1658,6 +2155,11 @@ bool VulkanCompute::CopyHostToBufferOffset(const void* host_data, VkBuffer devic
 // Helper: Copy buffer data at offset to host
 bool VulkanCompute::CopyBufferToHostOffset(VkBuffer device_buffer, size_t offset, 
                                            void* host_data, size_t size) {
+    if (!device_ || !device_buffer || !host_data || size == 0) {
+        std::cerr << "CopyBufferToHostOffset called with invalid arguments" << std::endl;
+        return false;
+    }
+
     // Create staging buffer
     VkBuffer staging_buffer;
     VkDeviceMemory staging_memory;
@@ -1680,13 +2182,24 @@ bool VulkanCompute::CopyBufferToHostOffset(VkBuffer device_buffer, size_t offset
     alloc_info.memoryTypeIndex = FindMemoryType(mem_requirements.memoryTypeBits,
                                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | 
                                               VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+    if (alloc_info.memoryTypeIndex == UINT32_MAX) {
+        std::cerr << "Failed to find host-visible memory type for offset staging download" << std::endl;
+        vkDestroyBuffer(device_, staging_buffer, nullptr);
+        return false;
+    }
     
     if (vkAllocateMemory(device_, &alloc_info, nullptr, &staging_memory) != VK_SUCCESS) {
         vkDestroyBuffer(device_, staging_buffer, nullptr);
         return false;
     }
     
-    vkBindBufferMemory(device_, staging_buffer, staging_memory, 0);
+    if (vkBindBufferMemory(device_, staging_buffer, staging_memory, 0) != VK_SUCCESS) {
+        std::cerr << "Failed to bind offset staging download buffer memory" << std::endl;
+        vkFreeMemory(device_, staging_memory, nullptr);
+        vkDestroyBuffer(device_, staging_buffer, nullptr);
+        return false;
+    }
     
     // Copy from device buffer at offset to staging
     bool success = ExecuteSingleTimeCommands([&](VkCommandBuffer cmd_buffer) {
@@ -1721,6 +2234,18 @@ bool VulkanCompute::CopyBufferToHostOffset(VkBuffer device_buffer, size_t offset
     return true;
 }
 
+bool VulkanCompute::CopyHostToBufferOffset(const void* host_data, uint32_t buffer_idx,
+                                           size_t offset, size_t size) {
+    if (buffer_idx >= allocated_buffers_.size()) return false;
+    return CopyHostToBufferOffset(host_data, allocated_buffers_[buffer_idx].buffer, offset, size);
+}
+
+bool VulkanCompute::CopyBufferToHostOffset(uint32_t buffer_idx, size_t offset,
+                                           void* host_data, size_t size) {
+    if (buffer_idx >= allocated_buffers_.size()) return false;
+    return CopyBufferToHostOffset(allocated_buffers_[buffer_idx].buffer, offset, host_data, size);
+}
+
 // ==================== END KV CACHE INFRASTRUCTURE ====================
 
 uint32_t VulkanCompute::FindMemoryType(uint32_t type_filter, VkMemoryPropertyFlags properties) {
@@ -1730,7 +2255,8 @@ uint32_t VulkanCompute::FindMemoryType(uint32_t type_filter, VkMemoryPropertyFla
             return i;
         }
     }
-    return 0;
+    std::cerr << "Failed to find matching Vulkan memory type for properties mask " << properties << std::endl;
+    return UINT32_MAX;
 }
 
 void VulkanCompute::Cleanup() {
@@ -1810,12 +2336,12 @@ void VulkanCompute::Cleanup() {
         }
         
         // Clean up allocated buffers
-        for (auto& [buffer, memory] : allocated_buffers_) {
-            if (buffer) {
-                vkDestroyBuffer(device_, buffer, nullptr);
+        for (auto& meta : allocated_buffers_) {
+            if (meta.buffer) {
+                vkDestroyBuffer(device_, meta.buffer, nullptr);
             }
-            if (memory) {
-                vkFreeMemory(device_, memory, nullptr);
+            if (meta.memory) {
+                vkFreeMemory(device_, meta.memory, nullptr);
             }
         }
         allocated_buffers_.clear();
@@ -2090,10 +2616,10 @@ bool VulkanCompute::DispatchFusedMLP(uint32_t input_idx, uint32_t weight1_idx,
     if (it == shaders_.end() || !it->second.pipeline || !fused_mlp_descriptor_layout_) return false;
 
     VkBuffer bufs[4] = {
-        allocated_buffers_[input_idx].first,
-        allocated_buffers_[weight1_idx].first,
-        allocated_buffers_[weight2_idx].first,
-        allocated_buffers_[output_idx].first
+        allocated_buffers_[input_idx].buffer,
+        allocated_buffers_[weight1_idx].buffer,
+        allocated_buffers_[weight2_idx].buffer,
+        allocated_buffers_[output_idx].buffer
     };
     size_t sizes[4] = {
         (size_t)batch_size * hidden_dim * sizeof(float),
@@ -2223,10 +2749,10 @@ bool VulkanCompute::DispatchFlashAttentionV2(uint32_t q_idx, uint32_t k_idx, uin
     }
 
     VkBuffer bufs[4] = {
-        allocated_buffers_[q_idx].first,
-        allocated_buffers_[k_idx].first,
-        allocated_buffers_[v_idx].first,
-        allocated_buffers_[output_idx].first
+        allocated_buffers_[q_idx].buffer,
+        allocated_buffers_[k_idx].buffer,
+        allocated_buffers_[v_idx].buffer,
+        allocated_buffers_[output_idx].buffer
     };
     size_t buf_size = static_cast<size_t>(num_heads) * seq_len * head_dim * sizeof(float);
 
@@ -2268,6 +2794,237 @@ bool VulkanCompute::DispatchFlashAttentionV2(uint32_t q_idx, uint32_t k_idx, uin
     if (success) {
         stats_.dispatch_count.fetch_add(1, std::memory_order_relaxed);
         stats_.attention_count.fetch_add(1, std::memory_order_relaxed);
+    }
+    return success;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Titan MoE Sharding (GPU-Accelerated Top-K Experts)
+// ─────────────────────────────────────────────────────────────────────────────
+
+bool VulkanCompute::EnsureTitanMoEShardPipeline(const std::string& spirv_path) {
+    auto it = shaders_.find("titan_moe_shard");
+    if (it != shaders_.end() && it->second.pipeline && titan_moe_descriptor_layout_) {
+        return true;
+    }
+
+    if (!LoadShader("titan_moe_shard", spirv_path)) return false;
+    it = shaders_.find("titan_moe_shard");
+    if (it == shaders_.end()) return false;
+
+    // 4 bindings: weights, activations, logits, output_accum
+    std::vector<VkDescriptorSetLayoutBinding> bindings(4);
+    for (uint32_t i = 0; i < 4; ++i) {
+        bindings[i].binding = i;
+        bindings[i].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        bindings[i].descriptorCount = 1;
+        bindings[i].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+        bindings[i].pImmutableSamplers = nullptr;
+    }
+
+    VkDescriptorSetLayoutCreateInfo layout_info{};
+    layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layout_info.bindingCount = 4;
+    layout_info.pBindings = bindings.data();
+    if (vkCreateDescriptorSetLayout(device_, &layout_info, nullptr, &titan_moe_descriptor_layout_) != VK_SUCCESS) return false;
+
+    // Pool size for sharding dispatches
+    VkDescriptorPoolSize pool_size{};
+    pool_size.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    pool_size.descriptorCount = 40;
+    VkDescriptorPoolCreateInfo pool_info{};
+    pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    pool_info.poolSizeCount = 1;
+    pool_info.pPoolSizes = &pool_size;
+    pool_info.maxSets = 10;
+    if (vkCreateDescriptorPool(device_, &pool_info, nullptr, &titan_moe_descriptor_pool_) != VK_SUCCESS) return false;
+
+    // Push constants: num_experts, hidden_dim, top_k
+    VkPushConstantRange push_constant{};
+    push_constant.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    push_constant.offset = 0;
+    push_constant.size = sizeof(uint32_t) * 3;
+
+    VkPipelineLayoutCreateInfo pli{};
+    pli.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pli.setLayoutCount = 1;
+    pli.pSetLayouts = &titan_moe_descriptor_layout_;
+    pli.pushConstantRangeCount = 1;
+    pli.pPushConstantRanges = &push_constant;
+    if (vkCreatePipelineLayout(device_, &pli, nullptr, &it->second.layout) != VK_SUCCESS) return false;
+
+    VkPipelineShaderStageCreateInfo stage{};
+    stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    stage.module = it->second.module;
+    stage.pName = "main";
+
+    VkComputePipelineCreateInfo cpi{};
+    cpi.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    cpi.layout = it->second.layout;
+    cpi.stage = stage;
+    if (vkCreateComputePipelines(device_, nullptr, 1, &cpi, nullptr, &it->second.pipeline) != VK_SUCCESS) return false;
+
+    std::cout << "Titan MoE Sharding pipeline initialized [AMD RX 7800 XT Optimized]" << std::endl;
+    return true;
+}
+
+bool VulkanCompute::DispatchTitanMoEShard(uint32_t experts_idx, uint32_t activations_idx,
+                                          uint32_t logits_idx, uint32_t output_accum_idx,
+                                          uint32_t num_experts, uint32_t hidden_dim,
+                                          uint32_t top_k) {
+    auto it = shaders_.find("titan_moe_shard");
+    if (it == shaders_.end()) return false;
+
+    VkDescriptorSetAllocateInfo ai{};
+    ai.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    ai.descriptorPool = titan_moe_descriptor_pool_;
+    ai.descriptorSetCount = 1;
+    ai.pSetLayouts = &titan_moe_descriptor_layout_;
+    VkDescriptorSet ds = nullptr;
+    if (vkAllocateDescriptorSets(device_, &ai, &ds) != VK_SUCCESS) return false;
+
+    // Expert weights size (F32)
+    size_t weight_size = (size_t)num_experts * hidden_dim * sizeof(float);
+    size_t vec_size = (size_t)hidden_dim * sizeof(float);
+    size_t logit_size = (size_t)num_experts * sizeof(float);
+
+    VkDescriptorBufferInfo bi[4];
+    bi[0] = { (VkBuffer)allocated_buffers_[experts_idx].buffer, 0, weight_size };
+    bi[1] = { (VkBuffer)allocated_buffers_[activations_idx].buffer, 0, vec_size };
+    bi[2] = { (VkBuffer)allocated_buffers_[logits_idx].buffer, 0, logit_size };
+    bi[3] = { (VkBuffer)allocated_buffers_[output_accum_idx].buffer, 0, vec_size };
+
+    VkWriteDescriptorSet writes[4];
+    for (int i = 0; i < 4; ++i) {
+        writes[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writes[i].pNext = nullptr;
+        writes[i].dstSet = ds;
+        writes[i].dstBinding = i;
+        writes[i].dstArrayElement = 0;
+        writes[i].descriptorCount = 1;
+        writes[i].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        writes[i].pImageInfo = nullptr;
+        writes[i].pBufferInfo = &bi[i];
+        writes[i].pTexelBufferView = nullptr;
+    }
+    vkUpdateDescriptorSets(device_, 4, writes, 0, nullptr);
+
+    bool success = ExecuteSingleTimeCommands([&](VkCommandBuffer cmd) {
+        uint32_t pc[3] = { num_experts, hidden_dim, top_k };
+        vkCmdPushConstants(cmd, it->second.layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(pc), pc);
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, it->second.pipeline);
+        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, it->second.layout, 0, 1, &ds, 0, nullptr);
+        
+        // 256 threads per workgroup, covering hidden_dim
+        vkCmdDispatch(cmd, (hidden_dim + 255) / 256, 1, 1);
+    });
+
+    if (ds) vkFreeDescriptorSets(device_, titan_moe_descriptor_pool_, 1, &ds);
+    if (success) {
+        stats_.dispatch_count.fetch_add(1, std::memory_order_relaxed);
+    }
+    return success;
+}
+
+bool VulkanCompute::DispatchTitanMoEShardAsync(uint32_t experts_idx, uint32_t activations_idx,
+                                             uint32_t logits_idx, uint32_t output_accum_idx,
+                                             uint32_t num_experts, uint32_t hidden_dim,
+                                             uint32_t top_k,
+                                             VkSemaphore wait_sem, uint64_t wait_val,
+                                             VkSemaphore signal_sem, uint64_t signal_val) {
+    auto it = shaders_.find("titan_moe_shard");
+    if (it == shaders_.end()) return false;
+
+    // Use a reusable descriptor set or allocate one (simplified for P2P)
+    VkDescriptorSetAllocateInfo ai{};
+    ai.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    ai.descriptorPool = titan_moe_descriptor_pool_;
+    ai.descriptorSetCount = 1;
+    ai.pSetLayouts = &titan_moe_descriptor_layout_;
+    VkDescriptorSet ds = nullptr;
+    if (vkAllocateDescriptorSets(device_, &ai, &ds) != VK_SUCCESS) return false;
+
+    size_t weight_size = (size_t)num_experts * hidden_dim * sizeof(float);
+    size_t vec_size = (size_t)hidden_dim * sizeof(float);
+    size_t logit_size = (size_t)num_experts * sizeof(float);
+
+    VkDescriptorBufferInfo bi[4];
+    bi[0] = { (VkBuffer)allocated_buffers_[experts_idx].buffer, 0, weight_size };
+    bi[1] = { (VkBuffer)allocated_buffers_[activations_idx].buffer, 0, vec_size };
+    bi[2] = { (VkBuffer)allocated_buffers_[logits_idx].buffer, 0, logit_size };
+    bi[3] = { (VkBuffer)allocated_buffers_[output_accum_idx].buffer, 0, vec_size };
+
+    VkWriteDescriptorSet writes[4];
+    for (int i = 0; i < 4; ++i) {
+        writes[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writes[i].dstSet = ds;
+        writes[i].dstBinding = i;
+        writes[i].descriptorCount = 1;
+        writes[i].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        writes[i].pBufferInfo = &bi[i];
+    }
+    vkUpdateDescriptorSets(device_, 4, writes, 0, nullptr);
+
+    // Record to a dedicated ASYNC command buffer
+    VkCommandBuffer cmd = nullptr; 
+    // Allocation logic... (assuming we use GetAsyncCommandBuffer helper if it exists, or just allocate)
+    VkCommandBufferAllocateInfo cb_ai{};
+    cb_ai.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    cb_ai.commandPool = command_pool_;
+    cb_ai.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    cb_ai.commandBufferCount = 1;
+    vkAllocateCommandBuffers(device_, &cb_ai, &cmd);
+
+    VkCommandBufferBeginInfo begin_info{};
+    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    vkBeginCommandBuffer(cmd, &begin_info);
+
+    uint32_t pc[3] = { num_experts, hidden_dim, top_k };
+    vkCmdPushConstants(cmd, it->second.layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(pc), pc);
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, it->second.pipeline);
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, it->second.layout, 0, 1, &ds, 0, nullptr);
+    vkCmdDispatch(cmd, (hidden_dim + 255) / 256, 1, 1);
+    
+    vkEndCommandBuffer(cmd);
+
+    // Submit with Timeline Sync
+    VkTimelineSemaphoreSubmitInfo timeline_info{};
+    timeline_info.sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO;
+    
+    uint64_t w_val = wait_val;
+    uint64_t s_val = signal_val;
+
+    VkSubmitInfo submit_info{};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.pNext = &timeline_info;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &cmd;
+
+    if (wait_sem != VK_NULL_HANDLE) {
+        submit_info.waitSemaphoreCount = 1;
+        submit_info.pWaitSemaphores = &wait_sem;
+        timeline_info.waitSemaphoreValueCount = 1;
+        timeline_info.pWaitSemaphoreValues = &w_val;
+        VkPipelineStageFlags wait_stages = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+        submit_info.pWaitDstStageMask = &wait_stages;
+    }
+
+    if (signal_sem != VK_NULL_HANDLE) {
+        submit_info.signalSemaphoreCount = 1;
+        submit_info.pSignalSemaphores = &signal_sem;
+        timeline_info.signalSemaphoreValueCount = 1;
+        timeline_info.pSignalSemaphoreValues = &s_val;
+    }
+
+    bool success = vkQueueSubmit(compute_queue_, 1, &submit_info, VK_NULL_HANDLE) == VK_SUCCESS;
+    
+    // Note: Descriptor set and cmd buffer cleanup should be handled via a retirement queue in a real impl
+    // For this P2P, assume the caller manages lifetime or we leak until cleanup.
+
+    if (success) {
+        stats_.dispatch_count.fetch_add(1, std::memory_order_relaxed);
     }
     return success;
 }
@@ -2462,13 +3219,12 @@ bool ensureMatMulPipelineFromEnv(VulkanCompute* instance) {
     static std::once_flag s_once;
     static int s_ok = 0;
     std::call_once(s_once, [&]() {
-        char path_buf[MAX_PATH] = {};
-        const DWORD len = GetEnvironmentVariableA("RAWRXD_VULKAN_MATMUL_SPV", path_buf, static_cast<DWORD>(sizeof(path_buf)));
-        if (len == 0 || len >= sizeof(path_buf)) {
+        std::string spv_path;
+        if (!resolveMatMulSpvPathFromEnv(spv_path) || spv_path.empty()) {
             s_ok = 0;
             return;
         }
-        s_ok = instance->EnsureMatMulPipeline(path_buf) ? 1 : 0;
+        s_ok = instance->EnsureMatMulPipeline(spv_path) ? 1 : 0;
     });
 
     return s_ok == 1;
@@ -2914,10 +3670,15 @@ int VulkanKernel_CreatePipeline(const char* shader_name) {
     return g_vulkan_instance->CreateComputePipeline(shader_name) ? 1 : 0;
 }
 
-int VulkanKernel_AllocBuffer(uint64_t size, uint32_t* out_idx) {
+int VulkanKernel_AllocBuffer(uint64_t size, uint32_t* out_idx, int export_kmt) {
     if (!g_vulkan_instance || !out_idx) return 0;
     size_t mem_size = 0;
-    return g_vulkan_instance->AllocateBuffer(static_cast<size_t>(size), *out_idx, mem_size) ? 1 : 0;
+    return g_vulkan_instance->AllocateBuffer(static_cast<size_t>(size), *out_idx, mem_size, export_kmt != 0) ? 1 : 0;
+}
+
+int VulkanKernel_AllocZeroCopyBuffer(uint64_t size, uint32_t* out_idx, void** host_ptr, int export_kmt) {
+    if (!g_vulkan_instance || !out_idx || !host_ptr) return 0;
+    return g_vulkan_instance->AllocateZeroCopyBuffer(static_cast<size_t>(size), *out_idx, host_ptr, export_kmt != 0) ? 1 : 0;
 }
 
 int VulkanKernel_CopyToDevice(uint32_t buf_idx, const void* data, uint64_t size) {
@@ -2957,6 +3718,21 @@ int VulkanKernel_DispatchFlashAttn(uint32_t q, uint32_t k, uint32_t v,
 int VulkanKernel_HotswapShader(const char* name, const uint32_t* spirv, uint64_t size) {
     if (!g_vulkan_instance || !name || !spirv) return 0;
     return g_vulkan_instance->HotswapShader(name, spirv, static_cast<size_t>(size)) ? 1 : 0;
+}
+
+int VulkanKernel_EnsureTitanMoEShardPipeline(const char* spirv_path) {
+    if (!g_vulkan_instance || !spirv_path) return 0;
+    return g_vulkan_instance->EnsureTitanMoEShardPipeline(spirv_path) ? 1 : 0;
+}
+
+int VulkanKernel_DispatchTitanMoEShard(uint32_t experts_idx, uint32_t activations_idx,
+                                        uint32_t logits_idx, uint32_t output_accum_idx,
+                                        uint32_t num_experts, uint32_t hidden_dim,
+                                        uint32_t top_k) {
+    if (!g_vulkan_instance) return 0;
+    return g_vulkan_instance->DispatchTitanMoEShard(experts_idx, activations_idx,
+                                                     logits_idx, output_accum_idx,
+                                                     num_experts, hidden_dim, top_k) ? 1 : 0;
 }
 
 int VulkanKernel_TryHotReloadFromFile(const char* name, const char* spirv_path, uint8_t out_uuid[16]) {
@@ -3181,6 +3957,21 @@ void VulkanKernel_GetStats(uint64_t* dispatches, uint64_t* matmuls,
     if (matmuls) *matmuls = s.matmul_count.load(std::memory_order_relaxed);
     if (attentions) *attentions = s.attention_count.load(std::memory_order_relaxed);
     if (errors) *errors = s.error_count.load(std::memory_order_relaxed);
+}
+
+int VulkanKernel_EnumerateP2P(void) {
+    if (!g_vulkan_instance) return 0;
+    return g_vulkan_instance->EnumerateMultiGPUP2P() ? (int)g_vulkan_instance->GetP2PGroups().size() : 0;
+}
+
+bool VulkanKernel_ExportKMT(uint32_t buffer_idx, HANDLE* handle) {
+    if (!g_vulkan_instance || !handle) return false;
+    return g_vulkan_instance->ExportBufferKMT(buffer_idx, *handle);
+}
+
+bool VulkanKernel_ImportKMT(HANDLE handle, size_t size, uint32_t* out_idx) {
+    if (!g_vulkan_instance || !out_idx) return false;
+    return g_vulkan_instance->ImportBufferKMT(handle, size, *out_idx);
 }
 
 void VulkanKernel_Cleanup(void) {

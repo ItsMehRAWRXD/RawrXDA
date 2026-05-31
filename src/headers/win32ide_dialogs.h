@@ -78,8 +78,33 @@ public:
      */
     void show();
 
+    /**
+     * Update thermal readings
+     * @param cpuTemp CPU temperature in Celsius
+     * @param gpuTemp GPU temperature in Celsius
+     * @param ambientTemp Ambient temperature in Celsius
+     */
+    void update(float cpuTemp, float gpuTemp, float ambientTemp);
+
+    /**
+     * Capture a thermal snapshot
+     * @return Current thermal snapshot
+     */
+    ThermalSnapshot captureSnapshot();
+
 private:
     void* m_hwnd;
+    float m_lastCpuTemp = 0.0f;
+    float m_lastGpuTemp = 0.0f;
+    float m_lastAmbientTemp = 0.0f;
+    
+    struct ThermalSample {
+        uint64_t timestamp;
+        float cpuTemp;
+        float gpuTemp;
+        float ambientTemp;
+    };
+    std::vector<ThermalSample> m_telemetryLog;
 };
 
 } // namespace rawrxd::thermal

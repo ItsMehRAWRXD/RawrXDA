@@ -1,0 +1,16 @@
+#version 450
+#extension GL_KHR_shader_subgroup_basic : require
+layout(local_size_x = 64) in;
+layout(push_constant) uniform Push { uint M, N, K, stride_a, stride_b; } pc;
+struct block_q4_K { uint16_t d; uint16_t dmin; uint8_t scales[12]; uint8_t qs[128]; };
+struct block_q8_1 { uint16_t d; uint16_t s; int8_t qs[32]; };
+layout(set = 0, binding = 0) readonly  buffer A_buf { block_q4_K data_a[]; };
+layout(set = 0, binding = 1) readonly  buffer B_buf { block_q8_1 data_b[]; };
+layout(set = 0, binding = 2) buffer D_buf { float      data_d[]; };
+void main() {
+    uint row = gl_WorkGroupID.x;
+    if (row >= pc.M) return;
+    if (gl_LocalInvocationID.x != 0u) return;
+    // write a deterministic per-row value
+    data_d[row] = float(row) * 0.5 + 9.323397;
+}

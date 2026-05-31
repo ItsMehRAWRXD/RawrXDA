@@ -1,0 +1,364 @@
+[1/3] Sync + regenerate SSOT beacon ownership artifacts
+Synced D:\rawrxd\src\core\ssot_beacon.symbols.txt from ssot_handlers_ext.cpp (633 symbols)
+Generated D:\rawrxd\src\core\ssot_beacon_table.inc (633 symbols)
+[2/3] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\win32app\TitanIPC.cpp.obj
+[3/3] Linking CXX executable gold\RawrXD_Gold.exe
+FAILED: gold/RawrXD_Gold.exe 
+C:\WINDOWS\system32\cmd.exe /C "cd . && "C:\Program Files\CMake\bin\cmake.exe" -E vs_link_exe --msvc-ver=1950 --intdir=CMakeFiles\RawrXD_Gold.dir --rc=C:\PROGRA~2\WI3CF2~1\10\bin\100226~1.0\x64\rc.exe --mt=C:\PROGRA~2\WI3CF2~1\10\bin\100226~1.0\x64\mt.exe --manifests  -- C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\link.exe /nologo @CMakeFiles\RawrXD_Gold.rsp  /out:gold\RawrXD_Gold.exe /implib:RawrXD_Gold.lib /pdb:gold\RawrXD_Gold.pdb /version:0.0 /machine:x64 /INCREMENTAL:NO /subsystem:console /LTCG /LARGEADDRESSAWARE:NO && cd ."
+LINK: command "C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\link.exe /nologo @CMakeFiles\RawrXD_Gold.rsp /out:gold\RawrXD_Gold.exe /implib:RawrXD_Gold.lib /pdb:gold\RawrXD_Gold.pdb /version:0.0 /machine:x64 /INCREMENTAL:NO /subsystem:console /LTCG /LARGEADDRESSAWARE:NO /MANIFEST:EMBED,ID=1" failed (exit code 1120) with the following output:
+asm_bridge.cpp.obj : error LNK2005: g_Counter_AgentLoop already defined in rawr_globals.asm.obj
+
+asm_bridge.cpp.obj : error LNK2005: g_Counter_BytePatches already defined in rawr_globals.asm.obj
+
+asm_bridge.cpp.obj : error LNK2005: g_Counter_Errors already defined in rawr_globals.asm.obj
+
+asm_bridge.cpp.obj : error LNK2005: g_Counter_FlushOps already defined in rawr_globals.asm.obj
+
+asm_bridge.cpp.obj : error LNK2005: g_Counter_Inference already defined in rawr_globals.asm.obj
+
+asm_bridge.cpp.obj : error LNK2005: g_Counter_MemPatches already defined in rawr_globals.asm.obj
+
+asm_bridge.cpp.obj : error LNK2005: g_Counter_ScsiFails already defined in rawr_globals.asm.obj
+
+asm_bridge.cpp.obj : error LNK2005: g_Counter_ServerPatches already defined in rawr_globals.asm.obj
+
+asm_bridge.cpp.obj : error LNK2005: DiskRecovery_Init already defined in RawrXD_DiskRecoveryAgent.asm.obj
+
+asm_bridge.cpp.obj : error LNK2005: DiskRecovery_Run already defined in RawrXD_DiskRecoveryAgent.asm.obj
+
+asm_bridge.cpp.obj : error LNK2005: DiskRecovery_FindDrive already defined in RawrXD_DiskRecoveryAgent.asm.obj
+
+asm_bridge.cpp.obj : error LNK2005: DiskRecovery_ExtractKey already defined in RawrXD_DiskRecoveryAgent.asm.obj
+
+asm_bridge.cpp.obj : error LNK2005: DiskRecovery_GetStats already defined in RawrXD_DiskRecoveryAgent.asm.obj
+
+asm_bridge.cpp.obj : error LNK2005: DiskRecovery_Cleanup already defined in RawrXD_DiskRecoveryAgent.asm.obj
+
+asm_bridge.cpp.obj : error LNK2005: DiskRecovery_Abort already defined in RawrXD_DiskRecoveryAgent.asm.obj
+
+asm_bridge.cpp.obj : error LNK2005: ModelBridge_Init already defined in model_bridge_x64.asm.obj
+
+asm_bridge.cpp.obj : error LNK2005: ModelBridge_LoadModel already defined in model_bridge_x64.asm.obj
+
+asm_bridge.cpp.obj : error LNK2005: ModelBridge_UnloadModel already defined in model_bridge_x64.asm.obj
+
+asm_bridge.cpp.obj : error LNK2005: ModelBridge_ValidateLoad already defined in model_bridge_x64.asm.obj
+
+asm_bridge.cpp.obj : error LNK2005: ModelBridge_GetProfile already defined in model_bridge_x64.asm.obj
+
+asm_bridge.cpp.obj : error LNK2005: ValidateModelAlignment already defined in model_bridge_x64.asm.obj
+
+asm_bridge.cpp.obj : error LNK2005: ConsolePrint already defined in RawrXD_DiskRecoveryAgent.asm.obj
+
+asm_bridge.cpp.obj : error LNK2005: EstimateRAM_Safe already defined in model_bridge_x64.asm.obj
+
+asm_bridge.cpp.obj : error LNK2005: PrintU64 already defined in RawrXD_DiskRecoveryAgent.asm.obj
+
+Sentinel.cpp.obj : error LNK2005: g_last_zmm_heartbeat already defined in Telemetry.cpp.obj
+
+rawrxd_cot_engine.obj : error LNK2005: g_executionState already defined in asm_bridge.cpp.obj
+
+rawrxd_cot_engine.obj : error LNK2005: g_arenaUsed already defined in asm_bridge.cpp.obj
+
+rawrxd_cot_engine.obj : error LNK2005: g_initialized already defined in asm_bridge.cpp.obj
+
+rawrxd_cot_engine.obj : error LNK2005: g_arenaCommitted already defined in asm_bridge.cpp.obj
+
+rawrxd_cot_engine.obj : error LNK2005: g_arenaBase already defined in asm_bridge.cpp.obj
+
+rawrxd_cot_engine.obj : error LNK2005: CoT_Initialize_Core already defined in asm_bridge.cpp.obj
+
+rawrxd_cot_engine.obj : error LNK2005: CoT_Shutdown_Core already defined in asm_bridge.cpp.obj
+
+rawrxd_cot_dll_entry.obj : error LNK2005: Acquire_CoT_Lock already defined in asm_bridge.cpp.obj
+
+rawrxd_cot_dll_entry.obj : error LNK2005: Release_CoT_Lock already defined in asm_bridge.cpp.obj
+
+rawrxd_cot_dll_entry.obj : error LNK2005: Acquire_CoT_Lock_Shared already defined in asm_bridge.cpp.obj
+
+rawrxd_cot_dll_entry.obj : error LNK2005: Release_CoT_Lock_Shared already defined in asm_bridge.cpp.obj
+
+rawrxd_cot_dll_entry.obj : error LNK2005: CoT_TLS_SetError already defined in asm_bridge.cpp.obj
+
+rawrxd_cot_dll_entry.obj : error LNK2005: CoT_Has_Large_Pages already defined in asm_bridge.cpp.obj
+
+rawrxd_cot_phase39.obj : error LNK2005: g_gpuQueueDepth already defined in asm_bridge.cpp.obj
+
+rawrxd_cot_phase39.obj : error LNK2005: g_arenaSealed already defined in asm_bridge.cpp.obj
+
+rawrxd_cot_phase39.obj : error LNK2005: g_telemetry already defined in asm_bridge.cpp.obj
+
+rawrxd_cot_phase39.obj : error LNK2005: g_commitGovernor already defined in asm_bridge.cpp.obj
+
+rawrxd_cot_phase39.obj : error LNK2005: g_canaryHeadOK already defined in asm_bridge.cpp.obj
+
+rawrxd_cot_phase39.obj : error LNK2005: g_backpressureThreshold already defined in asm_bridge.cpp.obj
+
+rawrxd_cot_phase39.obj : error LNK2005: g_replayMode already defined in asm_bridge.cpp.obj
+
+rawrxd_cot_phase39.obj : error LNK2005: CoT_SelectCopyEngine already defined in asm_bridge.cpp.obj
+
+rawrxd_cot_phase39.obj : error LNK2005: CoT_UpdateTelemetry already defined in asm_bridge.cpp.obj
+
+rawrxd_cot_phase39.obj : error LNK2005: CoT_EnableMultiProducer already defined in asm_bridge.cpp.obj
+
+RawrXD_License_Shield.obj : error LNK2005: Shield_TimingCheck already defined in asm_bridge.cpp.obj
+
+RawrXD_License_Shield.obj : error LNK2005: Shield_GenerateHWID already defined in asm_bridge.cpp.obj
+
+RawrXD_License_Shield.obj : error LNK2005: Shield_AES_DecryptShim already defined in asm_bridge.cpp.obj
+
+RawrXD_License_Shield.obj : error LNK2005: Shield_VerifyIntegrity already defined in asm_bridge.cpp.obj
+
+RawrXD_License_Shield.obj : error LNK2005: Unlock_800B_Kernel already defined in asm_bridge.cpp.obj
+
+RawrXD_HardwareSynthesizer.obj : error LNK2005: asm_hwsynth_init already defined in unlinked_symbols_batch_008.cpp.obj
+
+RawrXD_HardwareSynthesizer.obj : error LNK2005: asm_hwsynth_profile_dataflow already defined in unlinked_symbols_batch_009.cpp.obj
+
+RawrXD_HardwareSynthesizer.obj : error LNK2005: asm_hwsynth_gen_gemm_spec already defined in unlinked_symbols_batch_008.cpp.obj
+
+RawrXD_HardwareSynthesizer.obj : error LNK2005: asm_hwsynth_analyze_memhier already defined in unlinked_symbols_batch_009.cpp.obj
+
+RawrXD_HardwareSynthesizer.obj : error LNK2005: asm_hwsynth_predict_perf already defined in unlinked_symbols_batch_009.cpp.obj
+
+RawrXD_HardwareSynthesizer.obj : error LNK2005: asm_hwsynth_est_resources already defined in unlinked_symbols_batch_009.cpp.obj
+
+RawrXD_HardwareSynthesizer.obj : error LNK2005: asm_hwsynth_gen_jtag_header already defined in unlinked_symbols_batch_009.cpp.obj
+
+RawrXD_Camellia256.obj : error LNK2005: asm_camellia256_encrypt_ctr already defined in asm_bridge.cpp.obj
+
+RawrXD_Camellia256.obj : error LNK2005: asm_camellia256_decrypt_ctr already defined in asm_bridge.cpp.obj
+
+RawrXD_Camellia256.obj : error LNK2005: asm_camellia256_get_hmac_key already defined in asm_bridge.cpp.obj
+
+   Creating library RawrXD_Gold.lib and object RawrXD_Gold.exp
+
+main.cpp.obj : error LNK2001: unresolved external symbol "public: static class RawrXD::IDEEngine & __cdecl RawrXD::IDEEngine::Instance(void)" (?Instance@IDEEngine@RawrXD@@SAAEAV12@XZ)
+
+main.cpp.obj : error LNK2001: unresolved external symbol "public: bool __cdecl RawrXD::IDEEngine::Initialize(struct RawrXD::IDEConfig const &)" (?Initialize@IDEEngine@RawrXD@@QEAA_NAEBUIDEConfig@2@@Z)
+
+main.cpp.obj : error LNK2001: unresolved external symbol "public: void __cdecl RawrXD::IDEEngine::Shutdown(void)" (?Shutdown@IDEEngine@RawrXD@@QEAAXXZ)
+
+main.cpp.obj : error LNK2001: unresolved external symbol "public: struct RawrXD::DocumentID __cdecl RawrXD::IDEEngine::OpenDocument(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)" (?OpenDocument@IDEEngine@RawrXD@@QEAA?AUDocumentID@2@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z)
+
+main.cpp.obj : error LNK2001: unresolved external symbol "public: class std::vector<struct RawrXD::DocumentID,class std::allocator<struct RawrXD::DocumentID> > __cdecl RawrXD::IDEEngine::GetOpenDocuments(void)const " (?GetOpenDocuments@IDEEngine@RawrXD@@QEBA?AV?$vector@UDocumentID@RawrXD@@V?$allocator@UDocumentID@RawrXD@@@std@@@std@@XZ)
+
+main.cpp.obj : error LNK2001: unresolved external symbol "public: void __cdecl RawrXD::IDEEngine::RequestAIChat(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)" (?RequestAIChat@IDEEngine@RawrXD@@QEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z)
+
+main.cpp.obj : error LNK2001: unresolved external symbol "public: bool __cdecl RawrXD::IDEEngine::IsAIAvailable(void)const " (?IsAIAvailable@IDEEngine@RawrXD@@QEBA_NXZ)
+
+main.cpp.obj : error LNK2001: unresolved external symbol "public: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl RawrXD::IDEEngine::GetStatusMessage(void)const " (?GetStatusMessage@IDEEngine@RawrXD@@QEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ)
+
+native_speed_layer.cpp.obj : error LNK2001: unresolved external symbol Sampler_SoftMax_TopK_Fused
+
+native_speed_layer.cpp.obj : error LNK2001: unresolved external symbol Titan_SiLU_AVX512
+
+native_speed_layer.cpp.obj : error LNK2001: unresolved external symbol Titan_RMSNorm_AVX512
+
+native_speed_layer.cpp.obj : error LNK2001: unresolved external symbol Sampler_ApplyTemperature_AVX512
+
+native_speed_layer.cpp.obj : error LNK2001: unresolved external symbol Sampler_FindMax_AVX512
+
+native_speed_layer.cpp.obj : error LNK2001: unresolved external symbol Sampler_ExpSum_AVX512
+
+shadow_page_detour.cpp.obj : error LNK2001: unresolved external symbol asm_snapshot_capture
+
+shadow_page_detour.cpp.obj : error LNK2001: unresolved external symbol asm_snapshot_restore
+
+auto_repair_orchestrator.cpp.obj : error LNK2001: unresolved external symbol asm_snapshot_restore
+
+shadow_page_detour.cpp.obj : error LNK2001: unresolved external symbol asm_snapshot_get_stats
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: __cdecl RawrXD::Todos::TodoManager::TodoManager(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)" (??0TodoManager@Todos@RawrXD@@QEAA@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: __cdecl RawrXD::Todos::TodoManager::~TodoManager(void)" (??1TodoManager@Todos@RawrXD@@QEAA@XZ)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: bool __cdecl RawrXD::Todos::TodoManager::AddTodo(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)" (?AddTodo@TodoManager@Todos@RawrXD@@QEAA_NAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@00@Z)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: bool __cdecl RawrXD::Todos::TodoManager::UpdateTodo(int,class nlohmann::json const &)" (?UpdateTodo@TodoManager@Todos@RawrXD@@QEAA_NHAEBVjson@nlohmann@@@Z)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: bool __cdecl RawrXD::Todos::TodoManager::ClearAll(void)" (?ClearAll@TodoManager@Todos@RawrXD@@QEAA_NXZ)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: static struct RawrXD::Agent::ToolCallResult __cdecl RawrXD::Agent::CollabToolHandlers::HostSession(class nlohmann::json const &)" (?HostSession@CollabToolHandlers@Agent@RawrXD@@SA?AUToolCallResult@23@AEBVjson@nlohmann@@@Z)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: static struct RawrXD::Agent::ToolCallResult __cdecl RawrXD::Agent::CollabToolHandlers::JoinSession(class nlohmann::json const &)" (?JoinSession@CollabToolHandlers@Agent@RawrXD@@SA?AUToolCallResult@23@AEBVjson@nlohmann@@@Z)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: static struct RawrXD::Agent::ToolCallResult __cdecl RawrXD::Agent::CollabToolHandlers::LeaveSession(class nlohmann::json const &)" (?LeaveSession@CollabToolHandlers@Agent@RawrXD@@SA?AUToolCallResult@23@AEBVjson@nlohmann@@@Z)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: static struct RawrXD::Agent::ToolCallResult __cdecl RawrXD::Agent::CollabToolHandlers::ShareFile(class nlohmann::json const &)" (?ShareFile@CollabToolHandlers@Agent@RawrXD@@SA?AUToolCallResult@23@AEBVjson@nlohmann@@@Z)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: static struct RawrXD::Agent::ToolCallResult __cdecl RawrXD::Agent::CollabToolHandlers::EditSharedFile(class nlohmann::json const &)" (?EditSharedFile@CollabToolHandlers@Agent@RawrXD@@SA?AUToolCallResult@23@AEBVjson@nlohmann@@@Z)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: static struct RawrXD::Agent::ToolCallResult __cdecl RawrXD::Agent::CollabToolHandlers::ListParticipants(class nlohmann::json const &)" (?ListParticipants@CollabToolHandlers@Agent@RawrXD@@SA?AUToolCallResult@23@AEBVjson@nlohmann@@@Z)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: static struct RawrXD::Agent::ToolCallResult __cdecl RawrXD::Agent::CollabToolHandlers::SendChat(class nlohmann::json const &)" (?SendChat@CollabToolHandlers@Agent@RawrXD@@SA?AUToolCallResult@23@AEBVjson@nlohmann@@@Z)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: static struct RawrXD::Agent::ToolCallResult __cdecl RawrXD::Agent::CollabToolHandlers::CreateTerminal(class nlohmann::json const &)" (?CreateTerminal@CollabToolHandlers@Agent@RawrXD@@SA?AUToolCallResult@23@AEBVjson@nlohmann@@@Z)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: static struct RawrXD::Agent::ToolCallResult __cdecl RawrXD::Agent::CollabToolHandlers::TerminalInput(class nlohmann::json const &)" (?TerminalInput@CollabToolHandlers@Agent@RawrXD@@SA?AUToolCallResult@23@AEBVjson@nlohmann@@@Z)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: static struct RawrXD::Agent::ToolCallResult __cdecl RawrXD::Agent::CollabToolHandlers::TerminalScrollback(class nlohmann::json const &)" (?TerminalScrollback@CollabToolHandlers@Agent@RawrXD@@SA?AUToolCallResult@23@AEBVjson@nlohmann@@@Z)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: static struct RawrXD::Agent::ToolCallResult __cdecl RawrXD::Agent::CollabToolHandlers::ListTerminals(class nlohmann::json const &)" (?ListTerminals@CollabToolHandlers@Agent@RawrXD@@SA?AUToolCallResult@23@AEBVjson@nlohmann@@@Z)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: static struct RawrXD::Agent::ToolCallResult __cdecl RawrXD::Agent::CollabToolHandlers::PairStart(class nlohmann::json const &)" (?PairStart@CollabToolHandlers@Agent@RawrXD@@SA?AUToolCallResult@23@AEBVjson@nlohmann@@@Z)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: static struct RawrXD::Agent::ToolCallResult __cdecl RawrXD::Agent::CollabToolHandlers::PairSwapRoles(class nlohmann::json const &)" (?PairSwapRoles@CollabToolHandlers@Agent@RawrXD@@SA?AUToolCallResult@23@AEBVjson@nlohmann@@@Z)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: static struct RawrXD::Agent::ToolCallResult __cdecl RawrXD::Agent::CollabToolHandlers::AISuggest(class nlohmann::json const &)" (?AISuggest@CollabToolHandlers@Agent@RawrXD@@SA?AUToolCallResult@23@AEBVjson@nlohmann@@@Z)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: static struct RawrXD::Agent::ToolCallResult __cdecl RawrXD::Agent::CollabToolHandlers::ReviewCode(class nlohmann::json const &)" (?ReviewCode@CollabToolHandlers@Agent@RawrXD@@SA?AUToolCallResult@23@AEBVjson@nlohmann@@@Z)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: static struct RawrXD::Agent::ToolCallResult __cdecl RawrXD::Agent::CollabToolHandlers::GetStatus(class nlohmann::json const &)" (?GetStatus@CollabToolHandlers@Agent@RawrXD@@SA?AUToolCallResult@23@AEBVjson@nlohmann@@@Z)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: static struct RawrXD::Agent::ToolCallResult __cdecl RawrXD::Agent::CollabToolHandlers::SetPermission(class nlohmann::json const &)" (?SetPermission@CollabToolHandlers@Agent@RawrXD@@SA?AUToolCallResult@23@AEBVjson@nlohmann@@@Z)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: static struct RawrXD::Agent::ToolCallResult __cdecl RawrXD::Agent::CollabToolHandlers::KickParticipant(class nlohmann::json const &)" (?KickParticipant@CollabToolHandlers@Agent@RawrXD@@SA?AUToolCallResult@23@AEBVjson@nlohmann@@@Z)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: static class nlohmann::json __cdecl RawrXD::Agent::CollabToolHandlers::GetAllSchemas(void)" (?GetAllSchemas@CollabToolHandlers@Agent@RawrXD@@SA?AVjson@nlohmann@@XZ)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: static class RawrXD::Runtime::RawrXDVectorIndex & __cdecl RawrXD::Runtime::RawrXDVectorIndex::instance(void)" (?instance@RawrXDVectorIndex@Runtime@RawrXD@@SAAEAV123@XZ)
+
+RepositoryIndexer.cpp.obj : error LNK2001: unresolved external symbol "public: static class RawrXD::Runtime::RawrXDVectorIndex & __cdecl RawrXD::Runtime::RawrXDVectorIndex::instance(void)" (?instance@RawrXDVectorIndex@Runtime@RawrXD@@SAAEAV123@XZ)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: class std::vector<struct RawrXD::Runtime::SearchResult,class std::allocator<struct RawrXD::Runtime::SearchResult> > __cdecl RawrXD::Runtime::RawrXDVectorIndex::search(class std::vector<float,class std::allocator<float> > const &,unsigned __int64)" (?search@RawrXDVectorIndex@Runtime@RawrXD@@QEAA?AV?$vector@USearchResult@Runtime@RawrXD@@V?$allocator@USearchResult@Runtime@RawrXD@@@std@@@std@@AEBV?$vector@MV?$allocator@M@std@@@5@_K@Z)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: bool __cdecl RawrXD::Runtime::RawrXDVectorIndex::attachMappedGGUF(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,unsigned __int64,unsigned int,unsigned int,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)" (?attachMappedGGUF@RawrXDVectorIndex@Runtime@RawrXD@@QEAA_NAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@_KII0@Z)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: bool __cdecl RawrXD::Runtime::RawrXDVectorIndex::attachMappedGGUFTensor(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)" (?attachMappedGGUFTensor@RawrXDVectorIndex@Runtime@RawrXD@@QEAA_NAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@000@Z)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: bool __cdecl RawrXD::Runtime::RawrXDVectorIndex::loadMappedMetadataSidecar(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)" (?loadMappedMetadataSidecar@RawrXDVectorIndex@Runtime@RawrXD@@QEAA_NAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: bool __cdecl RawrXD::Runtime::RawrXDVectorIndex::hasMappedGGUF(void)const " (?hasMappedGGUF@RawrXDVectorIndex@Runtime@RawrXD@@QEBA_NXZ)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: unsigned int __cdecl RawrXD::Runtime::RawrXDVectorIndex::preferredDimensions(void)const " (?preferredDimensions@RawrXDVectorIndex@Runtime@RawrXD@@QEBAIXZ)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: static class RawrXD::Debug::AIDebugAgent & __cdecl RawrXD::Debug::AIDebugAgent::Instance(void)" (?Instance@AIDebugAgent@Debug@RawrXD@@SAAEAV123@XZ)
+
+ToolRegistry.cpp.obj : error LNK2001: unresolved external symbol "public: static class RawrXD::Debug::AIDebugAgent & __cdecl RawrXD::Debug::AIDebugAgent::Instance(void)" (?Instance@AIDebugAgent@Debug@RawrXD@@SAAEAV123@XZ)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: struct RawrXD::Debug::AIDebugAgent::ExceptionAnalysis __cdecl RawrXD::Debug::AIDebugAgent::AnalyzeLastException(void)" (?AnalyzeLastException@AIDebugAgent@Debug@RawrXD@@QEAA?AUExceptionAnalysis@123@XZ)
+
+ToolRegistry.cpp.obj : error LNK2001: unresolved external symbol "public: struct RawrXD::Debug::AIDebugAgent::ExceptionAnalysis __cdecl RawrXD::Debug::AIDebugAgent::AnalyzeLastException(void)" (?AnalyzeLastException@AIDebugAgent@Debug@RawrXD@@QEAA?AUExceptionAnalysis@123@XZ)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl RawrXD::Debug::AIDebugAgent::FormatAnalysisForLLM(struct RawrXD::Debug::AIDebugAgent::ExceptionAnalysis const &)" (?FormatAnalysisForLLM@AIDebugAgent@Debug@RawrXD@@QEAA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBUExceptionAnalysis@123@@Z)
+
+ToolRegistry.cpp.obj : error LNK2001: unresolved external symbol "public: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl RawrXD::Debug::AIDebugAgent::FormatAnalysisForLLM(struct RawrXD::Debug::AIDebugAgent::ExceptionAnalysis const &)" (?FormatAnalysisForLLM@AIDebugAgent@Debug@RawrXD@@QEAA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBUExceptionAnalysis@123@@Z)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: class std::vector<struct RawrXD::Debug::AIDebugAgent::BreakpointSuggestion,class std::allocator<struct RawrXD::Debug::AIDebugAgent::BreakpointSuggestion> > __cdecl RawrXD::Debug::AIDebugAgent::SuggestBreakpoints(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)" (?SuggestBreakpoints@AIDebugAgent@Debug@RawrXD@@QEAA?AV?$vector@UBreakpointSuggestion@AIDebugAgent@Debug@RawrXD@@V?$allocator@UBreakpointSuggestion@AIDebugAgent@Debug@RawrXD@@@std@@@std@@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@5@@Z)
+
+ToolRegistry.cpp.obj : error LNK2001: unresolved external symbol "public: class std::vector<struct RawrXD::Debug::AIDebugAgent::BreakpointSuggestion,class std::allocator<struct RawrXD::Debug::AIDebugAgent::BreakpointSuggestion> > __cdecl RawrXD::Debug::AIDebugAgent::SuggestBreakpoints(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)" (?SuggestBreakpoints@AIDebugAgent@Debug@RawrXD@@QEAA?AV?$vector@UBreakpointSuggestion@AIDebugAgent@Debug@RawrXD@@V?$allocator@UBreakpointSuggestion@AIDebugAgent@Debug@RawrXD@@@std@@@std@@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@5@@Z)
+
+AgentToolHandlers.cpp.obj : error LNK2001: unresolved external symbol "public: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl RawrXD::Debug::AIDebugAgent::CaptureDebugSnapshot(void)" (?CaptureDebugSnapshot@AIDebugAgent@Debug@RawrXD@@QEAA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ)
+
+ToolRegistry.cpp.obj : error LNK2001: unresolved external symbol "public: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl RawrXD::Debug::AIDebugAgent::CaptureDebugSnapshot(void)" (?CaptureDebugSnapshot@AIDebugAgent@Debug@RawrXD@@QEAA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ)
+
+RepositoryIndexer.cpp.obj : error LNK2001: unresolved external symbol "public: void __cdecl RawrXD::Runtime::RawrXDVectorIndex::addVector(class std::vector<float,class std::allocator<float> > const &,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,unsigned __int64)" (?addVector@RawrXDVectorIndex@Runtime@RawrXD@@QEAAXAEBV?$vector@MV?$allocator@M@std@@@std@@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@5@_K@Z)
+
+RawrXD_ToolRegistry.cpp.obj : error LNK2001: unresolved external symbol "public: static class RawrXD::Runtime::SovereignMCPBridge & __cdecl RawrXD::Runtime::SovereignMCPBridge::instance(void)" (?instance@SovereignMCPBridge@Runtime@RawrXD@@SAAEAV123@XZ)
+
+RawrXD_ToolRegistry.cpp.obj : error LNK2001: unresolved external symbol "public: bool __cdecl RawrXD::Runtime::SovereignMCPBridge::spawnServer(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,unsigned long)" (?spawnServer@SovereignMCPBridge@Runtime@RawrXD@@QEAA_NAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@K@Z)
+
+RawrXD_ToolRegistry.cpp.obj : error LNK2001: unresolved external symbol "public: class nlohmann::json __cdecl RawrXD::Runtime::SovereignMCPBridge::callTool(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class nlohmann::json const &,unsigned long)" (?callTool@SovereignMCPBridge@Runtime@RawrXD@@QEAA?AVjson@nlohmann@@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBV45@K@Z)
+
+RawrXD_ToolRegistry.cpp.obj : error LNK2001: unresolved external symbol "public: static class RawrXD::Networking::SovereignMeshProvider & __cdecl RawrXD::Networking::SovereignMeshProvider::Instance(void)" (?Instance@SovereignMeshProvider@Networking@RawrXD@@SAAEAV123@XZ)
+
+RawrXD_ToolRegistry.cpp.obj : error LNK2001: unresolved external symbol "public: bool __cdecl RawrXD::Networking::SovereignMeshProvider::VerifyMeshRoot(unsigned char const *)" (?VerifyMeshRoot@SovereignMeshProvider@Networking@RawrXD@@QEAA_NPEBE@Z)
+
+RawrXD_ToolRegistry.cpp.obj : error LNK2001: unresolved external symbol NLShell_ValidateCommand
+
+StreamingResultChannel.cpp.obj : error LNK2001: unresolved external symbol "public: static class RawrXD::Agentic::Observability::Logger & __cdecl RawrXD::Agentic::Observability::Logger::instance(void)" (?instance@Logger@Observability@Agentic@RawrXD@@SAAEAV1234@XZ)
+
+AgentOllamaClient.cpp.obj : error LNK2001: unresolved external symbol "public: static class RawrXD::Agentic::Observability::Logger & __cdecl RawrXD::Agentic::Observability::Logger::instance(void)" (?instance@Logger@Observability@Agentic@RawrXD@@SAAEAV1234@XZ)
+
+StreamingResultChannel.cpp.obj : error LNK2001: unresolved external symbol "public: void __cdecl RawrXD::Agentic::Observability::Logger::log(enum RawrXD::Agentic::Observability::LogLevel,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,char const *,int,char const *)" (?log@Logger@Observability@Agentic@RawrXD@@QEAAXW4LogLevel@234@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@1PEBDH2@Z)
+
+AgentOllamaClient.cpp.obj : error LNK2001: unresolved external symbol "public: void __cdecl RawrXD::Agentic::Observability::Logger::log(enum RawrXD::Agentic::Observability::LogLevel,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,char const *,int,char const *)" (?log@Logger@Observability@Agentic@RawrXD@@QEAAXW4LogLevel@234@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@1PEBDH2@Z)
+
+auto_repair_orchestrator.cpp.obj : error LNK2001: unresolved external symbol asm_snapshot_verify
+
+auto_repair_orchestrator.cpp.obj : error LNK2001: unresolved external symbol asm_snapshot_discard
+
+camellia256_bridge.cpp.obj : error LNK2001: unresolved external symbol asm_camellia256_auth_encrypt_file
+
+camellia256_bridge.cpp.obj : error LNK2001: unresolved external symbol asm_camellia256_auth_decrypt_file
+
+tool_registry.cpp.obj : error LNK2001: unresolved external symbol "void __cdecl register_git_mcp_tools(void)" (?register_git_mcp_tools@@YAXXZ)
+
+js_extension_host.cpp.obj : error LNK2001: unresolved external symbol "struct VSCodeAPIResult __cdecl vscode::commands::getCommands(bool,char * *,unsigned __int64,unsigned __int64 *)" (?getCommands@commands@vscode@@YA?AUVSCodeAPIResult@@_NPEAPEAD_KPEA_K@Z)
+
+js_extension_host.cpp.obj : error LNK2001: unresolved external symbol "struct VSCodeAPIResult __cdecl vscode::window::showInformationMessage(char const *,struct VSCodeMessageItem const *,unsigned __int64,int *)" (?showInformationMessage@window@vscode@@YA?AUVSCodeAPIResult@@PEBDPEBUVSCodeMessageItem@@_KPEAH@Z)
+
+js_extension_host.cpp.obj : error LNK2001: unresolved external symbol "struct VSCodeAPIResult __cdecl vscode::window::showQuickPick(struct VSCodeQuickPickItem const *,unsigned __int64,char const *,bool,int *,unsigned __int64,unsigned __int64 *)" (?showQuickPick@window@vscode@@YA?AUVSCodeAPIResult@@PEBUVSCodeQuickPickItem@@_KPEBD_NPEAH1PEA_K@Z)
+
+js_extension_host.cpp.obj : error LNK2001: unresolved external symbol "struct VSCodeAPIResult __cdecl vscode::window::showInputBox(struct VSCodeInputBoxOptions const *,char *,unsigned __int64)" (?showInputBox@window@vscode@@YA?AUVSCodeAPIResult@@PEBUVSCodeInputBoxOptions@@PEAD_K@Z)
+
+js_extension_host.cpp.obj : error LNK2001: unresolved external symbol "struct VSCodeAPIResult __cdecl vscode::workspace::openTextDocumentByPath(char const *,struct VSCodeTextDocument *)" (?openTextDocumentByPath@workspace@vscode@@YA?AUVSCodeAPIResult@@PEBDPEAUVSCodeTextDocument@@@Z)
+
+js_extension_host.cpp.obj : error LNK2001: unresolved external symbol "struct VSCodeAPIResult __cdecl vscode::workspace::findFiles(char const *,char const *,unsigned __int64,struct VSCodeUri *,unsigned __int64,unsigned __int64 *)" (?findFiles@workspace@vscode@@YA?AUVSCodeAPIResult@@PEBD0_KPEAUVSCodeUri@@1PEA_K@Z)
+
+js_extension_host.cpp.obj : error LNK2001: unresolved external symbol "public: static class vscode::VSCodeExtensionAPI & __cdecl vscode::VSCodeExtensionAPI::instance(void)" (?instance@VSCodeExtensionAPI@vscode@@SAAEAV12@XZ)
+
+js_extension_host.cpp.obj : error LNK2001: unresolved external symbol "public: struct VSCodeAPIResult __cdecl vscode::VSCodeExtensionAPI::registerCommand(char const *,void (__cdecl*)(void *),void *)" (?registerCommand@VSCodeExtensionAPI@vscode@@QEAA?AUVSCodeAPIResult@@PEBDP6AXPEAX@Z1@Z)
+
+js_extension_host.cpp.obj : error LNK2001: unresolved external symbol "public: struct VSCodeAPIResult __cdecl vscode::VSCodeExtensionAPI::executeCommand(char const *,char const *)" (?executeCommand@VSCodeExtensionAPI@vscode@@QEAA?AUVSCodeAPIResult@@PEBD0@Z)
+
+js_extension_host.cpp.obj : error LNK2001: unresolved external symbol "public: struct VSCodeAPIResult __cdecl vscode::VSCodeExtensionAPI::registerProvider(enum ProviderType,char const *,void *)" (?registerProvider@VSCodeExtensionAPI@vscode@@QEAA?AUVSCodeAPIResult@@W4ProviderType@@PEBDPEAX@Z)
+
+js_extension_host.cpp.obj : error LNK2001: unresolved external symbol "public: struct VSCodeStatusBarItem * __cdecl vscode::VSCodeExtensionAPI::createStatusBarItem(enum StatusBarAlignment,int)" (?createStatusBarItem@VSCodeExtensionAPI@vscode@@QEAAPEAUVSCodeStatusBarItem@@W4StatusBarAlignment@@H@Z)
+
+js_extension_host.cpp.obj : error LNK2001: unresolved external symbol "public: void __cdecl vscode::VSCodeExtensionAPI::updateStatusBar(void)" (?updateStatusBar@VSCodeExtensionAPI@vscode@@QEAAXXZ)
+
+js_extension_host.cpp.obj : error LNK2001: unresolved external symbol "public: struct VSCodeConfiguration __cdecl vscode::VSCodeExtensionAPI::getConfiguration(char const *)" (?getConfiguration@VSCodeExtensionAPI@vscode@@QEAA?AUVSCodeConfiguration@@PEBD@Z)
+
+watchdog_service.cpp.obj : error LNK2001: unresolved external symbol asm_watchdog_init
+
+watchdog_service.cpp.obj : error LNK2001: unresolved external symbol asm_watchdog_verify
+
+watchdog_service.cpp.obj : error LNK2001: unresolved external symbol asm_watchdog_get_baseline
+
+watchdog_service.cpp.obj : error LNK2001: unresolved external symbol asm_watchdog_get_status
+
+feature_handlers.cpp.obj : error LNK2001: unresolved external symbol "struct CommandResult __cdecl handleFileLoadModel(struct CommandContext const &)" (?handleFileLoadModel@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+
+unified_command_dispatch.cpp.obj : error LNK2001: unresolved external symbol "struct CommandResult __cdecl handleFileLoadModel(struct CommandContext const &)" (?handleFileLoadModel@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+
+agentic_transaction.cpp.obj : error LNK2001: unresolved external symbol "struct CommandResult __cdecl handleFileLoadModel(struct CommandContext const &)" (?handleFileLoadModel@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+
+AgentOllamaClient.cpp.obj : error LNK2001: unresolved external symbol "public: __cdecl RawrXD::Prediction::OllamaProvider::OllamaProvider(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)" (??0OllamaProvider@Prediction@RawrXD@@QEAA@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z)
+
+AgentOllamaClient.cpp.obj : error LNK2001: unresolved external symbol "public: virtual __cdecl RawrXD::Prediction::OllamaProvider::~OllamaProvider(void)" (??1OllamaProvider@Prediction@RawrXD@@UEAA@XZ)
+
+AgentOllamaClient.cpp.obj : error LNK2001: unresolved external symbol "public: void __cdecl RawrXD::Prediction::OllamaProvider::StreamHttpJsonLines(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::function<bool __cdecl(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)>)const " (?StreamHttpJsonLines@OllamaProvider@Prediction@RawrXD@@QEBAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@0V?$function@$$A6A_NAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z@5@@Z)
+
+AgentOllamaClient.cpp.obj : error LNK2001: unresolved external symbol "public: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl RawrXD::Prediction::OllamaProvider::GetFirstModelTag(void)const " (?GetFirstModelTag@OllamaProvider@Prediction@RawrXD@@QEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ)
+
+SovereignCoreWrapper.cpp.obj : error LNK2001: unresolved external symbol Sovereign_Pipeline_Cycle
+
+SovereignCoreWrapper.cpp.obj : error LNK2001: unresolved external symbol HealSymbolResolution
+
+SovereignCoreWrapper.cpp.obj : error LNK2001: unresolved external symbol ValidateDMAAlignment
+
+SovereignCoreWrapper.cpp.obj : error LNK2001: unresolved external symbol RawrXD_Trigger_Chat
+
+SovereignCoreWrapper.cpp.obj : error LNK2001: unresolved external symbol g_CycleCounter
+
+SovereignCoreWrapper.cpp.obj : error LNK2001: unresolved external symbol g_SovereignStatus
+
+SovereignCoreWrapper.cpp.obj : error LNK2001: unresolved external symbol g_SymbolHealCount
+
+SovereignCoreWrapper.cpp.obj : error LNK2001: unresolved external symbol g_ActiveAgentCount
+
+SovereignCoreWrapper.cpp.obj : error LNK2001: unresolved external symbol g_AgentRegistry
+
+context_config.cpp.obj : error LNK2001: unresolved external symbol "struct RawrXD::VRAMInfo __cdecl RawrXD::QueryVRAM(void)" (?QueryVRAM@RawrXD@@YA?AUVRAMInfo@1@XZ)
+
+
+Sentinel.cpp.obj : error LNK2001: unresolved external symbol RawrXD_Sentinel_CalculateHash_MASM
+
+
+gold\RawrXD_Gold.exe : fatal error LNK1120: 100 unresolved externals
+
+
+ninja: build stopped: subcommand failed.

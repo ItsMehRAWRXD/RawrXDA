@@ -21,7 +21,7 @@ int main(int argc, char* argv[]) {
     int httpPort = 8080;
     int wsPort = 8081;
     int ggufPort = 11434;
-    std::string ggufEndpoint = "http://localhost:11434";
+    std::string ggufEndpoint = "http://localhost:11435";
     std::string webRoot = ".";
 
     if (argc > 1) httpPort = std::atoi(argv[1]);

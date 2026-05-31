@@ -49,8 +49,14 @@ extern IEditorEngine* createRichEditEditorEngine();
 // ============================================================================
 
 // Static instance storage
-static EditorEngineFactory* s_factoryInstance = nullptr;
-static std::mutex s_factoryMutex;
+static EditorEngineFactory* s_factoryInstance = nullptr;  // Plain pointer, safe
+
+// LAZY SINGLETON PATTERN to avoid SIOF
+inline std::mutex& GetFactoryMutex() {
+    static std::mutex* inst = new std::mutex();
+    return *inst;
+}
+#define s_factoryMutex GetFactoryMutex()
 
 // ---- Singleton ----
 EditorEngineFactory& EditorEngineFactory::instance() {

@@ -137,8 +137,8 @@ struct HuggingFaceConfig {
 //=============================================================================
 // Ollama Configuration (Local)
 //=============================================================================
-struct OllamaConfig {
-    std::string endpoint = "http://localhost:11434";
+struct NativeInferenceConfig {
+    std::string endpoint = "http://localhost:11435";
     int port = 11434;
     
     // Available models (installed locally)
@@ -220,8 +220,8 @@ public:
     }
     
     // Ollama configuration
-    static OllamaConfig& getOllamaConfig() {
-        static OllamaConfig config;
+    static NativeInferenceConfig& getOllamaConfig() {
+        static NativeInferenceConfig config;
         return config;
     }
     

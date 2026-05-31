@@ -14,6 +14,8 @@ namespace RawrXD::Agent {
     class QuantumProductionOrchestrator;
     class QuantumAutonomousTodoSystem;
     class QuantumDynamicTimeManager;
+    class SovereignInferenceClient;
+    struct SovereignModelConfig;
 }
 
 extern "C" {
@@ -178,10 +180,14 @@ public:
     void resetStats();
 
 private:
-    // Model management
+    // Sovereign inference backend (replaces CPUInferenceEngine)
+    std::unique_ptr<RawrXD::Agent::SovereignInferenceClient> m_sovereignClient;
+    RawrXD::Agent::SovereignModelConfig m_sovereignConfig;
+    bool m_initialized = false;
+
+    // Legacy handles (kept for backward compat, migrated to sovereign)
     void* m_modelHandle = nullptr;
     void* m_tokenizerHandle = nullptr;
-    bool m_initialized = false;
 
     // Inference
     std::vector<CompletionSuggestion> performInference(

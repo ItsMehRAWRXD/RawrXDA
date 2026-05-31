@@ -1,6 +1,8 @@
 #pragma once
 #include <cstdint>
 #include <string>
+#include <atomic>
+#include <mutex>
 
 namespace RawrXD::Inference {
     class MemoryPressureGuard {
@@ -26,5 +28,14 @@ namespace RawrXD::Inference {
         // Pre-flight check before mmap
         static bool acquire_resources(uint64_t bytes, bool gpu);
         static void release_resources(uint64_t bytes, bool gpu);
+
+        // Committed resource tracking
+        static uint64_t committedRAM();
+        static uint64_t committedVRAM();
+
+    private:
+        static std::mutex            s_mu;
+        static std::atomic<uint64_t> s_committedRAM;
+        static std::atomic<uint64_t> s_committedVRAM;
     };
 }

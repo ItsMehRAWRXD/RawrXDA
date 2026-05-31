@@ -300,7 +300,7 @@ private:
         return SubsystemRegistry::instance().invoke(p); \
     })()
 
-// Example agent usage:
+// Agent usage:
 //   SubsystemResult r = RAWRXD_INVOKE(Compile);
 //   SubsystemResult r = RAWRXD_INVOKE(Entropy);
 //   SubsystemResult r = RAWRXD_INVOKE_WITH(Inject, { p.inject.pid = 1234; });

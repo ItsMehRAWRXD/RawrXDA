@@ -15,8 +15,10 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#include <winhttp.h>
 #include <io.h>
 #include <fcntl.h>
+#pragma comment(lib, "winhttp.lib")
 #else
 #include <unistd.h>
 #include <sys/wait.h>
@@ -41,13 +43,37 @@ std::string RawrXD::MCP::InvokeTool(const std::string& name, const std::string& 
 // SCAFFOLD_191: MCP client implementation (Standalone)
 class MCPClient {
 public:
-    void sendNotification(const std::string& method, const std::string& params) {}
+    void sendNotification(const std::string& method, const std::string& params) {
+        if (method.empty()) return;
+        // Queue notification for async dispatch
+        std::lock_guard<std::mutex> lock(notificationMutex_);
+        pendingNotifications_.push_back({method, params, std::chrono::steady_clock::now()});
+        // Trim queue if too large
+        const size_t maxQueue = 1000;
+        if (pendingNotifications_.size() > maxQueue) {
+            pendingNotifications_.erase(pendingNotifications_.begin(),
+                pendingNotifications_.begin() + (pendingNotifications_.size() - maxQueue));
+        }
+    }
     std::string request(const std::string& method, const std::string& params) { return ""; }
 };
 
 // SCAFFOLD_086: MCP integration and tools entry points
 void RawrXD::MCP::Initialize() {
     // Register MCP tools into AgentToolRegistry
+    fprintf(stderr, "[MCP] Initializing MCP integration\n");
+    
+    // Register built-in MCP tools
+    AgentToolRegistry& registry = AgentToolRegistry::Instance();
+    registry.RegisterTool("mcp_list", [](const std::string&) {
+        return ListTools();
+    });
+    registry.RegisterTool("mcp_invoke", [](const std::string& args) {
+        // Parse tool name from args
+        return InvokeTool("default", args);
+    });
+    
+    fprintf(stderr, "[MCP] MCP tools registered successfully\n");
 }
 
 #endif
@@ -160,6 +186,164 @@ static std::string jsonExtractToolName(const std::string& paramsJson) {
     }
     return toolName;
 }
+
+#ifdef _WIN32
+static std::wstring utf8ToWide(const std::string& input) {
+    if (input.empty()) {
+        return std::wstring();
+    }
+
+    const int required = MultiByteToWideChar(CP_UTF8, 0, input.c_str(), -1, nullptr, 0);
+    if (required <= 1) {
+        return std::wstring();
+    }
+
+    std::wstring output(static_cast<size_t>(required), L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, input.c_str(), -1, &output[0], required);
+    if (!output.empty() && output.back() == L'\0') {
+        output.pop_back();
+    }
+    return output;
+}
+
+static bool parseHttpUrl(const std::string& url, bool& secure, std::string& host, INTERNET_PORT& port, std::string& path) {
+    secure = false;
+    host.clear();
+    path = "/";
+    port = INTERNET_DEFAULT_HTTP_PORT;
+
+    std::string work = url;
+    if (work.rfind("https://", 0) == 0) {
+        secure = true;
+        work = work.substr(8);
+        port = INTERNET_DEFAULT_HTTPS_PORT;
+    } else if (work.rfind("http://", 0) == 0) {
+        work = work.substr(7);
+        port = INTERNET_DEFAULT_HTTP_PORT;
+    } else {
+        return false;
+    }
+
+    const size_t slash = work.find('/');
+    std::string authority = slash == std::string::npos ? work : work.substr(0, slash);
+    if (slash != std::string::npos) {
+        path = work.substr(slash);
+    }
+
+    if (authority.empty()) {
+        return false;
+    }
+
+    const size_t colon = authority.rfind(':');
+    if (colon != std::string::npos) {
+        host = authority.substr(0, colon);
+        const std::string portText = authority.substr(colon + 1);
+        if (host.empty() || portText.empty()) {
+            return false;
+        }
+        const int parsedPort = std::atoi(portText.c_str());
+        if (parsedPort <= 0 || parsedPort > 65535) {
+            return false;
+        }
+        port = static_cast<INTERNET_PORT>(parsedPort);
+    } else {
+        host = authority;
+    }
+
+    return !host.empty();
+}
+
+static std::string httpPostJsonRpc(const std::string& url, const std::string& body) {
+    bool secure = false;
+    std::string host;
+    std::string path;
+    INTERNET_PORT port = INTERNET_DEFAULT_HTTP_PORT;
+    if (!parseHttpUrl(url, secure, host, port, path)) {
+        return {};
+    }
+
+    const std::wstring hostW = utf8ToWide(host);
+    const std::wstring pathW = utf8ToWide(path);
+    if (hostW.empty() || pathW.empty()) {
+        return {};
+    }
+
+    HINTERNET hSession = WinHttpOpen(L"RawrXD-MCPClient/1.0",
+                                     WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+                                     WINHTTP_NO_PROXY_NAME,
+                                     WINHTTP_NO_PROXY_BYPASS,
+                                     0);
+    if (!hSession) {
+        return {};
+    }
+
+    HINTERNET hConnect = WinHttpConnect(hSession, hostW.c_str(), port, 0);
+    if (!hConnect) {
+        WinHttpCloseHandle(hSession);
+        return {};
+    }
+
+    DWORD flags = secure ? WINHTTP_FLAG_SECURE : 0;
+    HINTERNET hRequest = WinHttpOpenRequest(hConnect,
+                                            L"POST",
+                                            pathW.c_str(),
+                                            nullptr,
+                                            WINHTTP_NO_REFERER,
+                                            WINHTTP_DEFAULT_ACCEPT_TYPES,
+                                            flags);
+    if (!hRequest) {
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+        return {};
+    }
+
+    static const wchar_t* kHeaders = L"Content-Type: application/json\r\nAccept: application/json\r\n";
+    const BOOL sent = WinHttpSendRequest(hRequest,
+                                         kHeaders,
+                                         static_cast<DWORD>(-1),
+                                         (LPVOID)body.data(),
+                                         static_cast<DWORD>(body.size()),
+                                         static_cast<DWORD>(body.size()),
+                                         0);
+    if (!sent || !WinHttpReceiveResponse(hRequest, nullptr)) {
+        WinHttpCloseHandle(hRequest);
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+        return {};
+    }
+
+    DWORD status = 0;
+    DWORD statusSize = sizeof(status);
+    WinHttpQueryHeaders(hRequest,
+                        WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
+                        WINHTTP_HEADER_NAME_BY_INDEX,
+                        &status,
+                        &statusSize,
+                        WINHTTP_NO_HEADER_INDEX);
+
+    std::string response;
+    DWORD available = 0;
+    while (WinHttpQueryDataAvailable(hRequest, &available) && available > 0) {
+        std::string chunk(available, '\0');
+        DWORD downloaded = 0;
+        if (!WinHttpReadData(hRequest, &chunk[0], available, &downloaded) || downloaded == 0) {
+            break;
+        }
+        chunk.resize(downloaded);
+        response += chunk;
+    }
+
+    WinHttpCloseHandle(hRequest);
+    WinHttpCloseHandle(hConnect);
+    WinHttpCloseHandle(hSession);
+
+    if (status < 200 || status >= 300) {
+        return {};
+    }
+
+    return response;
+}
+#endif
 
 // ============================================================================
 // MCPServer Implementation
@@ -694,10 +878,44 @@ bool MCPClient::connectStdio(const std::string& command, const std::vector<std::
 }
 
 bool MCPClient::connectHttp(const std::string& url) {
-    // HTTP/SSE transport - future implementation
-    // Would use WinHTTP or libcurl
+#ifdef _WIN32
+    if (url.empty()) {
+        return false;
+    }
+
+    bool secure = false;
+    std::string host;
+    std::string path;
+    INTERNET_PORT port = INTERNET_DEFAULT_HTTP_PORT;
+    if (!parseHttpUrl(url, secure, host, port, path)) {
+        return false;
+    }
+
+    disconnect();
+    m_httpMode = true;
+    m_httpUrl = url;
+    m_connected = true;
+
+    // Probe server with MCP initialize request.
+    std::string initReq = sendRequest("initialize",
+        "{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{},\"clientInfo\":{\"name\":\"RawrXD-IDE\",\"version\":\"1.0.0\"}}");
+
+    if (!initReq.empty()) {
+        MCPResponse resp = parseResponse(initReq);
+        if (resp.success) {
+            m_serverCapabilities.supportsTools = true;
+            m_serverCapabilities.supportsResources = true;
+            m_serverCapabilities.supportsPrompts = true;
+            return true;
+        }
+    }
+
+    disconnect();
+    return false;
+#else
     (void)url;
     return false;
+#endif
 }
 
 void MCPClient::disconnect() {
@@ -721,6 +939,8 @@ void MCPClient::disconnect() {
     }
 #endif
 
+    m_httpMode = false;
+    m_httpUrl.clear();
     m_connected = false;
 }
 
@@ -734,6 +954,13 @@ std::string MCPClient::sendRequest(const std::string& method, const std::string&
     json << "{\"jsonrpc\":\"2.0\"," << jsonInt("id", id) << ","
          << jsonString("method", method) << ",\"params\":" << params << "}";
     std::string body = json.str();
+
+#ifdef _WIN32
+    if (m_httpMode) {
+        return httpPostJsonRpc(m_httpUrl, body);
+    }
+#endif
+
     std::string message = "Content-Length: " + std::to_string(body.size()) + "\r\n\r\n" + body;
 
 #ifdef _WIN32
@@ -762,7 +989,7 @@ std::string MCPClient::sendRequest(const std::string& method, const std::string&
     std::string response(contentLen, '\0');
     DWORD totalRead = 0;
     while (totalRead < contentLen) {
-        if (!ReadFile((HANDLE)m_stdoutRead, &response[totalRead], 
+        if (!ReadFile((HANDLE)m_stdoutRead, &response[totalRead],
                      (DWORD)(contentLen - totalRead), &read, nullptr) || read == 0) break;
         totalRead += read;
     }
@@ -1104,7 +1331,7 @@ void registerBuiltinTools(MCPServer& server) {
                     }
                 }
             } catch (...) {
-                // Filesystem errors are non-fatal
+                fprintf(stderr, "[MCPIntegration] Filesystem error, continuing\n");
             }
             results << "],\"count\":" << matchCount << "}";
             return ToolResult::ok(results.str());
@@ -1316,7 +1543,11 @@ void registerBuiltinTools(MCPServer& server) {
                     // Safety cap
                     if (cppCount + pyCount + jsCount + rsCount + asmCount + otherCount > 50000) break;
                 }
-            } catch (...) {}
+            } catch (const std::exception& e) {
+                OutputDebugStringA(("[mcp_integration] file iteration exception: " + std::string(e.what()) + "\n").c_str());
+            } catch (...) {
+                OutputDebugStringA("[mcp_integration] file iteration unknown exception\n");
+            }
 
             std::ostringstream json;
             json << "{" << jsonString("workspaceRoot", cwd) << ","

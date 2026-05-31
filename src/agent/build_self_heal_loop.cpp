@@ -1,878 +1,537 @@
-// build_self_heal_loop.cpp
-// Self-Healing Build Loop — SOURCE-LEVEL compile-time error repair.
-//
-// Compile:  cl /std:c++20 /EHsc build_self_heal_loop.cpp /I(include dir)
-//           link: winhttp.lib
-//
-// Zero stubs.  Every code path either succeeds or returns a descriptive
-// error string.  No exceptions.  Win32 only.
-// -----------------------------------------------------------------------
+// =============================================================================
+// test_orchestrator_modules.cpp — Regression Tests for Orchestrator Modules
+// =============================================================================
 
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#include <winhttp.h>
-#pragma comment(lib, "winhttp.lib")
-
-#include "build_self_heal_loop.hpp"
-
-#include <algorithm>
-#include <cassert>
-#include <cctype>
-#include <cstdio>
-#include <cstring>
-#include <fstream>
-#include <iostream>
-#include <sstream>
 #include <string>
 #include <vector>
+#include <cassert>
+#include <cstdint>
+#include <chrono>
+#include <sstream>
+#include <fstream>
+#include <functional>
+#include <filesystem>
 
-// nlohmann/json is already in the project for Ollama response parsing
-#include <nlohmann/json.hpp>
+#include "ToolRegistry.h"
+#include "FIMPromptBuilder.h"
+#include "NativeInferenceClient.h"
+#include "AgentOrchestrator.h"
+#include "DiskRecoveryAgent.h"
 
-namespace rawrxd {
+using namespace RawrXD::Agent;
+using namespace RawrXD::Recovery;
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Internal helpers
-// ═══════════════════════════════════════════════════════════════════════════
+static int g_testsPassed = 0;
+static int g_testsFailed = 0;
+static int g_testsSkipped = 0;
 
-static std::string wstrToStr(const std::wstring& w) {
-    if (w.empty()) return {};
-    int needed = WideCharToMultiByte(CP_UTF8, 0, w.c_str(),
-                                     static_cast<int>(w.size()),
-                                     nullptr, 0, nullptr, nullptr);
-    std::string s(needed, '\0');
-    WideCharToMultiByte(CP_UTF8, 0, w.c_str(),
-                        static_cast<int>(w.size()),
-                        s.data(), needed, nullptr, nullptr);
-    return s;
+struct TestResult {
+    bool passed;
+    std::string name;
+    std::string detail;
+    double elapsed_ms;
+};
+
+static std::vector<TestResult> g_results;
+
+#define TEST_ASSERT(cond, name) do { \
+    if (!(cond)) { \
+        g_testsFailed++; \
+        g_results.push_back({false, name, #cond, 0}); \
+        return; \
+    } \
+} while(0)
+
+#define TEST_ASSERT_EQ(a, b, name) do { \
+    if ((a) != (b)) { \
+        g_testsFailed++; \
+        g_results.push_back({false, name, "mismatch", 0}); \
+        return; \
+    } \
+} while(0)
+
+#define TEST_PASS(name) do { \
+    g_testsPassed++; \
+    g_results.push_back({true, name, "", 0}); \
+} while(0)
+
+#define TEST_SKIP(name, reason) do { \
+    g_testsSkipped++; \
+} while(0)
+
+// ==========================================================================
+// § 1. ToolRegistry — X-Macro Enum & Schema Generation
+// ==========================================================================
+
+void test_xmacro_enum_count() {
+    // Tool count may grow as new capabilities are added.
+    auto count = static_cast<uint32_t>(ToolId::_COUNT);
+    TEST_ASSERT(count >= 11, "X-Macro generates at least the baseline ToolId values");
+    TEST_PASS("xmacro_enum_count");
 }
 
-static std::wstring strToWstr(const std::string& s) {
-    if (s.empty()) return {};
-    int needed = MultiByteToWideChar(CP_UTF8, 0, s.c_str(),
-                                     static_cast<int>(s.size()),
-                                     nullptr, 0);
-    std::wstring w(needed, L'\0');
-    MultiByteToWideChar(CP_UTF8, 0, s.c_str(),
-                        static_cast<int>(s.size()),
-                        w.data(), needed);
-    return w;
+void test_registry_singleton() {
+    auto& reg1 = AgentToolRegistry::Instance();
+    auto& reg2 = AgentToolRegistry::Instance();
+    TEST_ASSERT(&reg1 == &reg2, "Registry is a singleton");
+    TEST_PASS("registry_singleton");
 }
 
-// JSON-escape a UTF-8 string for inline embedding in a JSON string literal.
-static std::string jsonEsc(const std::string& s) {
-    std::string out;
-    out.reserve(s.size() + 32);
-    for (unsigned char c : s) {
-        switch (c) {
-            case '"':  out += "\\\""; break;
-            case '\\': out += "\\\\"; break;
-            case '\n': out += "\\n";  break;
-            case '\r': out += "\\r";  break;
-            case '\t': out += "\\t";  break;
-            default:
-                if (c < 0x20) {
-                    char buf[8];
-                    snprintf(buf, sizeof(buf), "\\u%04x",
-                             static_cast<unsigned>(c));
-                    out += buf;
-                } else {
-                    out += static_cast<char>(c);
-                }
-        }
+void test_registry_list_tools() {
+    auto& reg = AgentToolRegistry::Instance();
+    auto tools = reg.ListTools();
+    TEST_ASSERT(tools.size() >= 11, "ListTools returns at least the baseline tools");
+
+    // Check specific tool names exist
+    bool hasReadFile = false, hasDiskRecovery = false;
+    for (const auto& t : tools) {
+        if (t == "read_file") hasReadFile = true;
+        if (t == "disk_recovery") hasDiskRecovery = true;
     }
-    return out;
+    TEST_ASSERT(hasReadFile, "read_file tool registered");
+    TEST_ASSERT(hasDiskRecovery, "disk_recovery tool registered");
+    TEST_PASS("registry_list_tools");
 }
 
-// Trim leading/trailing ASCII whitespace in-place.
-static void trim(std::string& s) {
-    s.erase(s.begin(),
-            std::find_if(s.begin(), s.end(),
-                         [](unsigned char c){ return !std::isspace(c); }));
-    s.erase(std::find_if(s.rbegin(), s.rend(),
-                         [](unsigned char c){ return !std::isspace(c); }).base(),
-            s.end());
+void test_registry_schemas_valid() {
+    auto& reg = AgentToolRegistry::Instance();
+    json schemas = reg.GetToolSchemas();
+    TEST_ASSERT(schemas.size() >= 11, "GetToolSchemas returns at least the baseline entries");
+
+    // Each schema should have type=function with function.name and function.parameters
+    for (size_t i = 0; i < schemas.size(); ++i) {
+        const auto& s = schemas[i];
+        TEST_ASSERT(s.contains("type"), "Schema has type field");
+        TEST_ASSERT(s.contains("function"), "Schema has function field");
+        const auto& fn = s["function"];
+        TEST_ASSERT(fn.contains("name"), "Function has name");
+        TEST_ASSERT(fn.contains("description"), "Function has description");
+        TEST_ASSERT(fn.contains("parameters"), "Function has parameters");
+    }
+    TEST_PASS("registry_schemas_valid");
 }
 
-// Split a string on a single-character delimiter.
-static std::vector<std::string> splitLines(const std::string& s,
-                                            char delim = '\n') {
-    std::vector<std::string> lines;
-    std::istringstream ss(s);
-    std::string l;
-    while (std::getline(ss, l, delim)) {
-        // Strip trailing CR (Windows CRLF)
-        if (!l.empty() && l.back() == '\r')
-            l.pop_back();
-        lines.push_back(std::move(l));
+void test_registry_dispatch_read_file() {
+    auto& reg = AgentToolRegistry::Instance();
+
+    // Create a temp file for testing
+    std::string tempPath = (std::filesystem::temp_directory_path() / "rawrxd_test_read.txt").string();
+    {
+        std::ofstream ofs(tempPath);
+        ofs << "Hello, RawrXD!";
     }
-    return lines;
+
+    json args;
+    args["path"] = tempPath;
+    auto result = reg.Dispatch("read_file", args);
+    TEST_ASSERT(result.success, "read_file dispatch succeeds");
+    TEST_ASSERT(result.output == "Hello, RawrXD!", "read_file returns correct content");
+    TEST_ASSERT(result.elapsed_ms >= 0, "elapsed_ms is non-negative");
+
+    // Cleanup
+    std::filesystem::remove(tempPath);
+    TEST_PASS("registry_dispatch_read_file");
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// BuildSelfHealer constructor
-// ═══════════════════════════════════════════════════════════════════════════
+void test_registry_dispatch_write_file() {
+    auto& reg = AgentToolRegistry::Instance();
 
-BuildSelfHealer::BuildSelfHealer(Config cfg) : m_cfg(std::move(cfg)) {}
+    std::string tempPath = (std::filesystem::temp_directory_path() / "rawrxd_test_write.txt").string();
 
-// ═══════════════════════════════════════════════════════════════════════════
-// log
-// ═══════════════════════════════════════════════════════════════════════════
+    json args;
+    args["path"] = tempPath;
+    args["content"] = "Written by test";
+    auto result = reg.Dispatch("write_file", args);
+    TEST_ASSERT(result.success, "write_file dispatch succeeds");
 
-void BuildSelfHealer::log(const std::string& msg) {
-    if (m_cfg.verbose) {
-        std::cout << "[BuildSelfHeal] " << msg << "\n";
-        std::cout.flush();
-    }
+    // Verify content
+    std::ifstream ifs(tempPath);
+    std::string content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
+    TEST_ASSERT(content == "Written by test", "write_file content is correct");
+
+    std::filesystem::remove(tempPath);
+    TEST_PASS("registry_dispatch_write_file");
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// runBuild — execute buildCmd, capture combined stdout+stderr
-// Returns the process exit code; outputOut receives the captured text.
-// ═══════════════════════════════════════════════════════════════════════════
+void test_registry_dispatch_unknown_tool() {
+    auto& reg = AgentToolRegistry::Instance();
 
-int BuildSelfHealer::runBuild(const std::string& buildCmd,
-                               const std::string& workDir,
-                               std::string& outputOut) {
-    outputOut.clear();
-
-    // ── Create an anonymous pipe for child stdout/stderr ──────────────────
-    SECURITY_ATTRIBUTES sa{};
-    sa.nLength        = sizeof(sa);
-    sa.bInheritHandle = TRUE;
-
-    HANDLE hReadPipe  = nullptr;
-    HANDLE hWritePipe = nullptr;
-    if (!CreatePipe(&hReadPipe, &hWritePipe, &sa, 0)) {
-        outputOut = "[runBuild] CreatePipe failed: " +
-                    std::to_string(GetLastError());
-        return -1;
-    }
-    // Don't inherit the read end in the child
-    SetHandleInformation(hReadPipe, HANDLE_FLAG_INHERIT, 0);
-
-    // ── Launch the process ────────────────────────────────────────────────
-    STARTUPINFOA si{};
-    si.cb          = sizeof(si);
-    si.hStdOutput  = hWritePipe;
-    si.hStdError   = hWritePipe;
-    si.hStdInput   = GetStdHandle(STD_INPUT_HANDLE);
-    si.dwFlags     = STARTF_USESTDHANDLES;
-
-    PROCESS_INFORMATION pi{};
-
-    // Use "cmd /c <buildCmd>" so shell builtins and scripts work
-    std::string cmdLine = "cmd /c " + buildCmd;
-
-    std::wstring wCmd = strToWstr(cmdLine);
-    std::wstring wDir = strToWstr(workDir);
-
-    BOOL ok = CreateProcessW(
-        nullptr,
-        wCmd.data(),          // lpCommandLine (mutable)
-        nullptr, nullptr,
-        TRUE,                 // bInheritHandles
-        CREATE_NO_WINDOW,
-        nullptr,
-        wDir.empty() ? nullptr : wDir.c_str(),
-        reinterpret_cast<LPSTARTUPINFOW>(&si),  // STARTUPINFOA is layout-compatible
-        &pi);
-
-    if (!ok) {
-        DWORD err = GetLastError();
-        CloseHandle(hReadPipe);
-        CloseHandle(hWritePipe);
-        outputOut = "[runBuild] CreateProcess failed err=" +
-                    std::to_string(err) + " cmd=" + cmdLine;
-        return -1;
-    }
-
-    // Close write end so we'll get EOF when the child exits
-    CloseHandle(hWritePipe);
-
-    // ── Read output until pipe closes ─────────────────────────────────────
-    std::string captured;
-    char buf[4096];
-    DWORD bytesRead;
-    while (ReadFile(hReadPipe, buf, sizeof(buf) - 1, &bytesRead, nullptr)
-           && bytesRead > 0) {
-        buf[bytesRead] = '\0';
-        captured.append(buf, bytesRead);
-    }
-    CloseHandle(hReadPipe);
-
-    // ── Wait for process with timeout ─────────────────────────────────────
-    WaitForSingleObject(pi.hProcess, m_cfg.buildTimeoutMs);
-
-    DWORD exitCode = static_cast<DWORD>(-1);
-    GetExitCodeProcess(pi.hProcess, &exitCode);
-
-    CloseHandle(pi.hProcess);
-    CloseHandle(pi.hThread);
-
-    outputOut = captured;
-    return static_cast<int>(exitCode);
+    json args;
+    auto result = reg.Dispatch("nonexistent_tool", args);
+    TEST_ASSERT(!result.success, "Unknown tool returns failure");
+    TEST_ASSERT(result.output.find("Unknown tool") != std::string::npos, "Error mentions unknown");
+    TEST_PASS("registry_dispatch_unknown_tool");
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// parseErrors — extract BuildError records from build output
-//
-// Handles:
-//   MSVC C/C++  :  path(line): error C1234: ...
-//                  path(line,col): error C1234: ...
-//   MSVC Linker :  path.obj : error LNK2005: ...
-//                  path.lib : error LNK1120: ...
-//   ML64 MASM   :  path.asm(line) : error A2006 : ...
-//                  path.asm(line) : warning A4072 : ...  (as errors if /WX)
-// ═══════════════════════════════════════════════════════════════════════════
+void test_registry_validation_missing_required() {
+    auto& reg = AgentToolRegistry::Instance();
 
-std::vector<BuildError> BuildSelfHealer::parseErrors(
-    const std::string& buildOutput)
-{
-    std::vector<BuildError> errors;
-    auto lines = splitLines(buildOutput);
-
-    for (const auto& raw : lines) {
-        // We need at least " error " somewhere
-        auto errPos = raw.find(" error ");
-        if (errPos == std::string::npos) continue;
-
-        // ── Try MSVC C/C++ / ML64 pattern ─────────────────────────────
-        // Format:  filepath(LINE[,COL]): error CXXX|AXXX: message
-        // Or:      filepath(LINE[,COL]) : error AXXX : message  (ML64 extra spaces)
-        //
-        // Find the first '(' that precedes errPos.
-        auto parenOpen  = raw.rfind('(', errPos);
-        auto parenClose = raw.find(')', parenOpen == std::string::npos
-                                         ? 0
-                                         : parenOpen);
-
-        if (parenOpen  != std::string::npos &&
-            parenClose != std::string::npos &&
-            parenClose  < errPos) {
-
-            std::string filePart  = raw.substr(0, parenOpen);
-            std::string linePart  = raw.substr(parenOpen + 1,
-                                               parenClose - parenOpen - 1);
-            std::string afterParen = raw.substr(parenClose + 1);
-
-            // Strip optional leading whitespace + colon from afterParen
-            size_t colonPos = afterParen.find(':');
-            if (colonPos == std::string::npos) continue;
-            std::string errorPart = afterParen.substr(colonPos + 1);
-            trim(errorPart);
-
-            // errorPart should now start with "error CXXX:" or "error AXXX :"
-            if (errorPart.rfind("error ", 0) != 0) continue;
-            errorPart = errorPart.substr(6); // skip "error "
-
-            std::string code, message;
-            auto spaceAfterCode = errorPart.find_first_of(": ");
-            if (spaceAfterCode != std::string::npos) {
-                code    = errorPart.substr(0, spaceAfterCode);
-                message = errorPart.substr(spaceAfterCode);
-                while (!message.empty() &&
-                       (message.front() == ':' || message.front() == ' '))
-                    message.erase(message.begin());
-            } else {
-                code    = errorPart;
-                message = "";
-            }
-
-            // Extract line number (take part before optional comma)
-            int lineNo = 0;
-            auto commaInLine = linePart.find(',');
-            std::string lineNumStr = commaInLine != std::string::npos
-                                   ? linePart.substr(0, commaInLine)
-                                   : linePart;
-            try { lineNo = std::stoi(lineNumStr); }
-            catch (...) { lineNo = 0; }
-
-            trim(filePart);
-            trim(code);
-            trim(message);
-
-            if (!filePart.empty() && !code.empty()) {
-                errors.push_back({ filePart, lineNo, code, message });
-            }
-            continue;
-        }
-
-        // ── Try MSVC Linker pattern ────────────────────────────────────
-        // Format:  path.ext : error LNKxxxx: message
-        // '<space>:<space>error ' already found; walk back to find filename.
-        // errPos points to start of " error "
-        // Before that should be " : " or ": "
-        auto colonWalk = raw.rfind(':', errPos);
-        if (colonWalk == std::string::npos) continue;
-
-        std::string filePart = raw.substr(0, colonWalk);
-        std::string restPart = raw.substr(errPos + 7); // skip " error "
-        trim(filePart);
-        trim(restPart);
-
-        // restPart: "LNK2005: ..."
-        std::string code, message;
-        auto colonInRest = restPart.find(':');
-        if (colonInRest != std::string::npos) {
-            code    = restPart.substr(0, colonInRest);
-            message = restPart.substr(colonInRest + 1);
-            trim(code);
-            trim(message);
-        } else {
-            code    = restPart;
-            message = "";
-        }
-
-        // Only accept if code looks like "LNKxxxx" or "Cxxxx"
-        if (code.size() >= 4 && (code[0] == 'L' || code[0] == 'C' ||
-                                   code[0] == 'A')) {
-            errors.push_back({ filePart, 0, code, message });
-        }
-    }
-
-    // Deduplicate: same file+line+code
-    std::sort(errors.begin(), errors.end(),
-              [](const BuildError& a, const BuildError& b) {
-                  if (a.file != b.file)  return a.file  < b.file;
-                  if (a.line != b.line)  return a.line  < b.line;
-                  return a.code < b.code;
-              });
-    errors.erase(
-        std::unique(errors.begin(), errors.end(),
-                    [](const BuildError& a, const BuildError& b) {
-                        return a.file == b.file &&
-                               a.line == b.line &&
-                               a.code == b.code;
-                    }),
-        errors.end());
-
-    return errors;
+    json emptyArgs;
+    auto result = reg.Dispatch("read_file", emptyArgs);
+    TEST_ASSERT(!result.success, "Missing required param returns failure");
+    TEST_ASSERT(result.output.find("path") != std::string::npos ||
+                result.output.find("Validation") != std::string::npos,
+                "Error mentions the missing parameter");
+    TEST_PASS("registry_validation_missing_required");
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// resolvePath — normalise a path relative to srcRoot
-// ═══════════════════════════════════════════════════════════════════════════
+void test_registry_stats() {
+    auto& reg = AgentToolRegistry::Instance();
 
-std::string BuildSelfHealer::resolvePath(const std::string& path,
-                                          const std::string& srcRoot) {
-    if (path.size() >= 2 && path[1] == ':') return path; // already absolute
-    if (!path.empty() && path[0] == '\\')   return path;
-    if (!srcRoot.empty())
-        return srcRoot + "\\" + path;
-    return path;
+    uint64_t invocations = reg.GetTotalInvocations();
+    uint64_t errors = reg.GetTotalErrors();
+    // After previous tests, should have some invocations
+    TEST_ASSERT(invocations > 0, "Invocation count > 0 after dispatches");
+    // We had at least one error (unknown tool, validation fail)
+    TEST_ASSERT(errors >= 1, "Error count tracks failures");
+    TEST_PASS("registry_stats");
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// readContext — read lines around errorLine, annotated with line numbers
-// ═══════════════════════════════════════════════════════════════════════════
+void test_registry_system_prompt() {
+    auto& reg = AgentToolRegistry::Instance();
 
-std::string BuildSelfHealer::readContext(const std::string& absPath,
-                                          int errorLine,
-                                          int contextLines) {
-    std::ifstream f(absPath);
-    if (!f.is_open()) return "[cannot open " + absPath + "]";
-
-    std::vector<std::string> fileLines;
-    std::string l;
-    while (std::getline(f, l)) {
-        if (!l.empty() && l.back() == '\r') l.pop_back();
-        fileLines.push_back(l);
-    }
-
-    int total     = static_cast<int>(fileLines.size());
-    int startLine = std::max(1, errorLine - contextLines);
-    int endLine   = std::min(total, errorLine + contextLines);
-
-    std::string out;
-    for (int i = startLine; i <= endLine; ++i) {
-        char prefix[16];
-        snprintf(prefix, sizeof(prefix),
-                 i == errorLine ? ">%4d| " : " %4d| ", i);
-        out += prefix;
-        out += fileLines[static_cast<size_t>(i - 1)];
-        out += '\n';
-    }
-    return out;
+    std::string prompt = reg.GetSystemPrompt("d:\\rawrxd", {"main.cpp", "ToolRegistry.h"});
+    TEST_ASSERT(!prompt.empty(), "System prompt is non-empty");
+    TEST_ASSERT(prompt.find("RawrXD Agent") != std::string::npos, "Prompt identifies as RawrXD Agent");
+    TEST_ASSERT(prompt.find("d:\\rawrxd") != std::string::npos, "Prompt includes CWD");
+    TEST_ASSERT(prompt.find("main.cpp") != std::string::npos, "Prompt lists open files");
+    TEST_PASS("registry_system_prompt");
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// buildLLMPrompt — format errors + source context into an LLM prompt
-// ═══════════════════════════════════════════════════════════════════════════
+// ==========================================================================
+// § 2. FIMPromptBuilder — Fill-in-Middle Prompt Construction
+// ==========================================================================
 
-std::string BuildSelfHealer::buildLLMPrompt(
-    const std::vector<BuildError>& errors,
-    const std::string& srcRoot)
-{
-    std::string prompt;
-    prompt.reserve(4096);
+void test_fim_build_basic() {
+    FIMPromptBuilder builder;
+    builder.SetFormat(FIMFormat::Qwen);
+    builder.SetMaxContextTokens(4096);
 
-    prompt +=
-        "You are a MASM64/C++ compile-error repair agent for the RawrXD sovereign IDE.\n"
-        "Rules:\n"
-        " 1. Output ONLY fix blocks — no prose, no explanations.\n"
-        " 2. Each fix block uses this exact format:\n"
-        "      --- fix begin (relative/path/to/file.cpp:START-END) ---\n"
-        "      <replacement lines>\n"
-        "      --- fix end ---\n"
-        "    where START and END are 1-based inclusive line numbers to replace.\n"
-        " 3. If the fix requires deleting lines with no replacement, leave the body empty.\n"
-        " 4. Do not change code outside the minimal repair window.\n"
-        " 5. Preserve indentation and coding style.\n\n";
+    EditorContext ctx;
+    ctx.filename = "test.cpp";
+    ctx.filepath = "d:\\project\\test.cpp";
+    ctx.language = "cpp";
+    ctx.cursor_line = 2;
+    ctx.cursor_column = 0;
+    ctx.full_content = "#include <iostream>\n\nint main() { return 0; }\n";
 
-    prompt += "===== ERRORS =====\n";
-    for (const auto& e : errors) {
-        char buf[512];
-        snprintf(buf, sizeof(buf), "  [%s] %s(%d): %s\n",
-                 e.code.c_str(), e.file.c_str(), e.line, e.message.c_str());
-        prompt += buf;
-    }
-    prompt += "\n";
-
-    // Group errors by file to avoid duplicate context reads
-    struct FileCtx { std::string absPath; std::vector<int> errorLines; };
-    std::vector<FileCtx> fileCtxs;
-
-    for (const auto& e : errors) {
-        if (e.line == 0) continue; // linker errors — no file context
-        std::string abs = resolvePath(e.file, srcRoot);
-        bool found = false;
-        for (auto& fc : fileCtxs) {
-            if (fc.absPath == abs) {
-                fc.errorLines.push_back(e.line);
-                found = true;
-                break;
-            }
-        }
-        if (!found)
-            fileCtxs.push_back({ abs, { e.line } });
-    }
-
-    if (!fileCtxs.empty()) {
-        prompt += "===== SOURCE CONTEXT =====\n";
-        for (const auto& fc : fileCtxs) {
-            // Show the region spanning all error lines in this file
-            int lo = *std::min_element(fc.errorLines.begin(), fc.errorLines.end());
-            int hi = *std::max_element(fc.errorLines.begin(), fc.errorLines.end());
-            // Widen by contextLines on each side
-            int startLineForContext = std::max(1, lo - m_cfg.contextLines);
-            int endLineForContext   = hi + m_cfg.contextLines;
-
-            // We'll just call readContext centred on the midpoint
-            int mid = (lo + hi) / 2;
-            int halfSpan = std::max(m_cfg.contextLines,
-                                    (endLineForContext - startLineForContext) / 2 + 1);
-
-            prompt += "FILE: " + fc.absPath + "\n";
-            prompt += readContext(fc.absPath, mid, halfSpan);
-            prompt += "\n";
-        }
-    }
-
-    return prompt;
+    auto result = builder.Build(ctx);
+    TEST_ASSERT(result.success, "FIM build succeeds");
+    TEST_ASSERT(!result.prompt.formatted_prompt.empty(), "Formatted prompt is non-empty");
+    TEST_ASSERT(result.prompt.estimated_tokens > 0, "Token estimate > 0");
+    TEST_PASS("fim_build_basic");
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// callOllama — WinHTTP POST to /api/generate, return LLM "response" field
-// ═══════════════════════════════════════════════════════════════════════════
+void test_fim_build_empty_content() {
+    FIMPromptBuilder builder;
+    EditorContext ctx;
+    ctx.full_content = "";
+    ctx.cursor_line = 0;
 
-std::string BuildSelfHealer::callOllama(const std::string& prompt) {
-    // Build JSON request body
-    std::string requestJson =
-        "{\"model\":\""  + jsonEsc(m_cfg.ollamaModel) + "\","
-        "\"prompt\":\""  + jsonEsc(prompt)             + "\","
-        "\"stream\":false}";
-
-    std::wstring wHost = strToWstr(m_cfg.ollamaHost);
-
-    HINTERNET hSession = WinHttpOpen(
-        L"RawrXD-BuildHeal/1.0",
-        WINHTTP_ACCESS_TYPE_NO_PROXY,
-        WINHTTP_NO_PROXY_NAME,
-        WINHTTP_NO_PROXY_BYPASS,
-        0);
-    if (!hSession) {
-        log("WinHttpOpen failed err=" + std::to_string(GetLastError()));
-        return {};
-    }
-
-    // Set timeouts (resolve, connect, send, receive) all to ollamaTimeoutMs
-    WinHttpSetTimeouts(hSession,
-                       static_cast<int>(m_cfg.ollamaTimeoutMs),
-                       static_cast<int>(m_cfg.ollamaTimeoutMs),
-                       static_cast<int>(m_cfg.ollamaTimeoutMs),
-                       static_cast<int>(m_cfg.ollamaTimeoutMs));
-
-    HINTERNET hConnect = WinHttpConnect(
-        hSession,
-        wHost.c_str(),
-        m_cfg.ollamaPort,
-        0);
-    if (!hConnect) {
-        log("WinHttpConnect failed err=" + std::to_string(GetLastError()));
-        WinHttpCloseHandle(hSession);
-        return {};
-    }
-
-    HINTERNET hRequest = WinHttpOpenRequest(
-        hConnect,
-        L"POST",
-        L"/api/generate",
-        nullptr,
-        WINHTTP_NO_REFERER,
-        WINHTTP_DEFAULT_ACCEPT_TYPES,
-        0);  // no WINHTTP_FLAG_SECURE (plain HTTP to local Ollama)
-    if (!hRequest) {
-        log("WinHttpOpenRequest failed err=" + std::to_string(GetLastError()));
-        WinHttpCloseHandle(hConnect);
-        WinHttpCloseHandle(hSession);
-        return {};
-    }
-
-    BOOL sent = WinHttpSendRequest(
-        hRequest,
-        L"Content-Type: application/json\r\n",
-        static_cast<DWORD>(-1L),
-        const_cast<char*>(requestJson.c_str()),
-        static_cast<DWORD>(requestJson.size()),
-        static_cast<DWORD>(requestJson.size()),
-        0);
-
-    std::string rawResponse;
-    if (sent && WinHttpReceiveResponse(hRequest, nullptr)) {
-        DWORD avail = 0;
-        while (WinHttpQueryDataAvailable(hRequest, &avail) && avail > 0) {
-            std::vector<char> buf(static_cast<size_t>(avail) + 1, '\0');
-            DWORD bytesRead = 0;
-            if (WinHttpReadData(hRequest, buf.data(), avail, &bytesRead))
-                rawResponse.append(buf.data(), bytesRead);
-        }
-    } else {
-        log("WinHTTP send/recv failed err=" + std::to_string(GetLastError()));
-    }
-
-    WinHttpCloseHandle(hRequest);
-    WinHttpCloseHandle(hConnect);
-    WinHttpCloseHandle(hSession);
-
-    if (rawResponse.empty()) return {};
-
-    // Parse Ollama JSON response → extract "response" field
-    try {
-        auto j = nlohmann::json::parse(rawResponse);
-        if (j.contains("response") && j["response"].is_string())
-            return j["response"].get<std::string>();
-        if (j.contains("error") && j["error"].is_string()) {
-            log("Ollama error: " + j["error"].get<std::string>());
-            return {};
-        }
-    } catch (const nlohmann::json::exception& je) {
-        log(std::string("JSON parse error: ") + je.what());
-    }
-
-    return rawResponse; // fallback: return raw text if JSON parse fails
+    auto result = builder.Build(ctx);
+    TEST_ASSERT(!result.success, "Empty content returns failure");
+    TEST_ASSERT(result.error.find("Empty") != std::string::npos, "Error mentions empty");
+    TEST_PASS("fim_build_empty_content");
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// extractPatches — pull FilePatch records from LLM response
-//
-// Expected format (one or more blocks):
-//   --- fix begin (relative/path/to/file.cpp:START-END) ---
-//   <replacement lines, may be empty>
-//   --- fix end ---
-// ═══════════════════════════════════════════════════════════════════════════
+void test_fim_build_invalid_cursor() {
+    FIMPromptBuilder builder;
+    EditorContext ctx;
+    ctx.full_content = "some code";
+    ctx.cursor_line = -5;
 
-std::vector<FilePatch> BuildSelfHealer::extractPatches(
-    const std::string& llmResponse)
-{
-    std::vector<FilePatch> patches;
-    auto lines = splitLines(llmResponse);
-
-    const std::string BEGIN_TAG = "--- fix begin (";
-    const std::string END_TAG   = "--- fix end ---";
-
-    size_t i = 0;
-    while (i < lines.size()) {
-        // Find "--- fix begin (...) ---"
-        size_t tagPos = lines[i].find(BEGIN_TAG);
-        if (tagPos == std::string::npos) { ++i; continue; }
-
-        std::string meta = lines[i].substr(tagPos + BEGIN_TAG.size());
-        // meta should now be "path:START-END) ---" or "path:START-END)---"
-        auto closeParenPos = meta.rfind(')');
-        if (closeParenPos == std::string::npos) { ++i; continue; }
-
-        std::string pathRange = meta.substr(0, closeParenPos);
-        // pathRange = "relative/path/to/file.cpp:START-END"
-        auto colonPos = pathRange.rfind(':');
-        if (colonPos == std::string::npos) { ++i; continue; }
-
-        std::string relPath  = pathRange.substr(0, colonPos);
-        std::string rangeStr = pathRange.substr(colonPos + 1);
-
-        int startLine = 0, endLine = 0;
-        auto dashPos = rangeStr.find('-');
-        if (dashPos != std::string::npos) {
-            try { startLine = std::stoi(rangeStr.substr(0, dashPos));   } catch (...) {}
-            try { endLine   = std::stoi(rangeStr.substr(dashPos + 1));  } catch (...) {}
-        } else {
-            try { startLine = endLine = std::stoi(rangeStr);            } catch (...) {}
-        }
-
-        trim(relPath);
-        if (relPath.empty() || startLine <= 0) { ++i; continue; }
-        if (endLine < startLine) endLine = startLine;
-
-        // Collect body until "--- fix end ---"
-        ++i;
-        std::string body;
-        while (i < lines.size()) {
-            if (lines[i].find(END_TAG) != std::string::npos) break;
-            body += lines[i];
-            body += '\n';
-            ++i;
-        }
-        ++i; // skip END_TAG line
-
-        // Normalise Windows back-slashes to whatever was in the compiler output
-        // (keep relPath as-is; applyPatches will try forward and back slash)
-        patches.push_back({ relPath, startLine, endLine, body });
-    }
-    return patches;
+    auto result = builder.Build(ctx);
+    TEST_ASSERT(!result.success, "Negative cursor returns failure");
+    TEST_PASS("fim_build_invalid_cursor");
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// applyPatches — write LLM-suggested replacements to source files
-// Returns true if at least one file was written.
-// ═══════════════════════════════════════════════════════════════════════════
+void test_fim_qwen_format_tokens() {
+    FIMPromptBuilder builder;
+    builder.SetFormat(FIMFormat::Qwen);
+    builder.SetMaxContextTokens(2048);
 
-bool BuildSelfHealer::applyPatches(const std::vector<FilePatch>& patches,
-                                    const std::string& srcRoot) {
-    if (patches.empty()) return false;
+    EditorContext ctx;
+    ctx.filename = "example.py";
+    ctx.filepath = "example.py";
+    ctx.language = "python";
+    ctx.cursor_line = 1;
+    ctx.cursor_column = 0;
+    ctx.full_content = "def hello():\n    pass\n";
 
-    bool anyApplied = false;
-
-    for (const auto& patch : patches) {
-        std::string absPath = resolvePath(patch.relPath, srcRoot);
-
-        // Also try with forward-slash normalisation
-        std::string absPathFwd = absPath;
-        std::replace(absPathFwd.begin(), absPathFwd.end(), '/', '\\');
-
-        // Read existing file
-        std::ifstream fin(absPathFwd);
-        if (!fin.is_open()) {
-            // Try exact path
-            fin.open(absPath);
-            if (!fin.is_open()) {
-                log("applyPatch: cannot open " + absPath);
-                continue;
-            }
-            absPathFwd = absPath;
-        }
-
-        std::vector<std::string> fileLines;
-        std::string l;
-        while (std::getline(fin, l)) {
-            if (!l.empty() && l.back() == '\r') l.pop_back();
-            fileLines.push_back(l);
-        }
-        fin.close();
-
-        int total = static_cast<int>(fileLines.size());
-        int s = patch.startLine - 1; // 0-based
-        int e = patch.endLine   - 1; // 0-based inclusive
-        if (s < 0 || s > total) {
-            log("applyPatch: startLine out of range in " + absPathFwd);
-            continue;
-        }
-        e = std::min(e, total - 1);
-
-        // Build replacement lines from patch body
-        auto replacementLines = splitLines(patch.replacement);
-        // Remove trailing empty line added by our extraction
-        while (!replacementLines.empty() &&
-               replacementLines.back().empty())
-            replacementLines.pop_back();
-
-        // Splice
-        std::vector<std::string> newFile;
-        newFile.reserve(fileLines.size() + replacementLines.size());
-        for (int k = 0; k < s; ++k)
-            newFile.push_back(fileLines[static_cast<size_t>(k)]);
-        for (const auto& rl : replacementLines)
-            newFile.push_back(rl);
-        for (int k = e + 1; k < total; ++k)
-            newFile.push_back(fileLines[static_cast<size_t>(k)]);
-
-        // Write to a temp file then rename (pseudo-atomic)
-        std::string tmpPath = absPathFwd + ".bsheal.tmp";
-        {
-            std::ofstream fout(tmpPath, std::ios::binary);
-            if (!fout.is_open()) {
-                log("applyPatch: cannot write tmp " + tmpPath);
-                continue;
-            }
-            for (const auto& wl : newFile) {
-                fout.write(wl.c_str(), static_cast<std::streamsize>(wl.size()));
-                fout.put('\n');
-            }
-        }
-
-        // Replace original
-        if (!MoveFileExA(tmpPath.c_str(), absPathFwd.c_str(),
-                         MOVEFILE_REPLACE_EXISTING)) {
-            log("applyPatch: MoveFileEx failed err=" +
-                std::to_string(GetLastError()));
-            DeleteFileA(tmpPath.c_str());
-            continue;
-        }
-
-        log("Patched " + absPathFwd + " lines " +
-            std::to_string(patch.startLine) + "-" +
-            std::to_string(patch.endLine));
-        anyApplied = true;
-    }
-
-    return anyApplied;
+    auto result = builder.Build(ctx);
+    TEST_ASSERT(result.success, "Qwen FIM build succeeds");
+    // Qwen uses <|fim_prefix|> / <|fim_suffix|> / <|fim_middle|>
+    auto& fp = result.prompt.formatted_prompt;
+    TEST_ASSERT(fp.find("fim_prefix") != std::string::npos ||
+                fp.find("fim_suffix") != std::string::npos ||
+                fp.find("prefix") != std::string::npos,
+                "Formatted prompt contains FIM tokens");
+    TEST_PASS("fim_qwen_format_tokens");
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// run — main self-healing loop
-// ═══════════════════════════════════════════════════════════════════════════
+void test_fim_build_from_parts() {
+    FIMPromptBuilder builder;
+    builder.SetFormat(FIMFormat::Qwen);
+    builder.SetMaxContextTokens(1024);
 
-HealResult BuildSelfHealer::run(const std::string& buildCmd,
-                                 const std::string& srcRoot) {
-    HealResult result{};
-
-    log("Starting self-heal loop: " + buildCmd);
-    log("srcRoot = " + srcRoot);
-    log("maxRetries = " + std::to_string(m_cfg.maxRetries));
-
-    for (int attempt = 0; attempt <= m_cfg.maxRetries; ++attempt) {
-        result.attemptsUsed = attempt;
-
-        // ── 1. Run the build ───────────────────────────────────────────
-        log("Attempt " + std::to_string(attempt) +
-            "/" + std::to_string(m_cfg.maxRetries) + " — running build...");
-
-        int exitCode = runBuild(buildCmd, srcRoot, result.buildOutput);
-
-        log("Build exited with code " + std::to_string(exitCode));
-
-        // ── 2. Parse errors ────────────────────────────────────────────
-        auto errors = parseErrors(result.buildOutput);
-
-        if (attempt == 0)
-            result.errorsOnEntry = static_cast<int>(errors.size());
-
-        if (errors.empty() && exitCode == 0) {
-            // Success!
-            result.success = true;
-            result.detail  = "Build succeeded after " +
-                             std::to_string(attempt) + " healing iteration(s).";
-            log(result.detail);
-            return result;
-        }
-
-        if (errors.empty() && exitCode != 0) {
-            // Build failed but no parseable errors — could be a script error
-            result.detail = "Build script returned non-zero exit but "
-                            "no parseable errors found. exitCode=" +
-                            std::to_string(exitCode);
-            log(result.detail);
-            // Still propagate to LLM with raw output as "error"
-            errors.push_back({ "(build script)", 0, "SCRIPT",
-                                result.buildOutput.substr(
-                                    0, std::min<size_t>(512,
-                                                        result.buildOutput.size())) });
-        }
-
-        log("Found " + std::to_string(errors.size()) + " error(s).");
-
-        // ── 3. Check retry budget ──────────────────────────────────────
-        if (attempt == m_cfg.maxRetries) {
-            result.detail = "Exhausted " + std::to_string(m_cfg.maxRetries) +
-                            " repair attempt(s) with " +
-                            std::to_string(errors.size()) +
-                            " error(s) remaining.";
-            log(result.detail);
-            return result;
-        }
-
-        // ── 4. Build LLM prompt ────────────────────────────────────────
-        log("Building LLM prompt for " +
-            std::to_string(errors.size()) + " error(s)...");
-        std::string prompt = buildLLMPrompt(errors, srcRoot);
-
-        // ── 5. Query Ollama ────────────────────────────────────────────
-        log("Querying Ollama model '" + m_cfg.ollamaModel + "'...");
-        std::string llmText = callOllama(prompt);
-        result.llmResponse = llmText;
-
-        if (llmText.empty()) {
-            result.detail = "Ollama returned empty response on attempt " +
-                            std::to_string(attempt) + ".";
-            log(result.detail + " Retrying build without change...");
-            // No patches to apply — loop will retry the same build, then exit.
-            continue;
-        }
-
-        log("LLM response length: " + std::to_string(llmText.size()) + " chars.");
-
-        // ── 6. Extract and apply patches ──────────────────────────────
-        auto patches = extractPatches(llmText);
-        log("Extracted " + std::to_string(patches.size()) + " patch(es).");
-
-        if (patches.empty()) {
-            log("No parseable fix blocks in LLM response; will retry.");
-            // Continue loop — maybe next attempt the build state differs.
-            continue;
-        }
-
-        bool applied = applyPatches(patches, srcRoot);
-        if (!applied) {
-            log("No patches could be applied to filesystem; retrying.");
-            continue;
-        }
-
-        log("Patches applied. Re-running build...");
-        // Loop back to attempt+1
-    }
-
-    // Should not reach here but defensive return
-    result.detail = "Heap loop ended without resolution.";
-    return result;
+    auto result = builder.BuildFromParts("int x = ", ";", "test.cpp");
+    TEST_ASSERT(result.success, "BuildFromParts succeeds");
+    TEST_ASSERT(result.prompt.prefix_lines >= 1, "Has prefix lines");
+    TEST_PASS("fim_build_from_parts");
 }
 
-} // namespace rawrxd
+void test_fim_prefix_ratio() {
+    FIMPromptBuilder builder;
+    builder.SetPrefixRatio(0.8f);
+    builder.SetMaxContextTokens(100);
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Optional standalone entry point — invoked by RawrXD --heal-build flag
-// ═══════════════════════════════════════════════════════════════════════════
-extern "C" int RawrXD_HealBuild(
-    const char* buildCmd,
-    const char* srcRoot,
-    const char* ollamaModel,
-    int         maxRetries)
-{
-    rawrxd::BuildSelfHealer::Config cfg{};
-    if (ollamaModel && ollamaModel[0])
-        cfg.ollamaModel = ollamaModel;
-    if (maxRetries > 0)
-        cfg.maxRetries = maxRetries;
+    // Create content large enough to require trimming
+    std::string bigContent;
+    for (int i = 0; i < 200; i++) bigContent += "line " + std::to_string(i) + "\n";
 
-    rawrxd::BuildSelfHealer healer(cfg);
-    auto result = healer.run(
-        buildCmd  ? buildCmd  : "",
-        srcRoot   ? srcRoot   : ".");
+    EditorContext ctx;
+    ctx.filename = "big.txt";
+    ctx.filepath = "big.txt";
+    ctx.cursor_line = 100;
+    ctx.cursor_column = 0;
+    ctx.full_content = bigContent;
 
-    std::cout << "\n[HealBuild] " << (result.success ? "SUCCESS" : "FAILED")
-              << " — attempts=" << result.attemptsUsed
-              << " errorsOnEntry=" << result.errorsOnEntry
-              << "\n";
-    if (!result.detail.empty())
-        std::cout << "[HealBuild] " << result.detail << "\n";
+    auto result = builder.Build(ctx);
+    TEST_ASSERT(result.success, "Large content FIM build succeeds");
+    TEST_ASSERT(result.prompt.estimated_tokens <= 120, "Token count is reasonably bounded");
+    TEST_PASS("fim_prefix_ratio");
+}
 
-    return result.success ? 0 : 1;
+// ==========================================================================
+// § 3. NativeInferenceClient — Config Validation (no server needed)
+// ==========================================================================
+
+void test_ollama_config_defaults() {
+    NativeInferenceConfig cfg;
+    TEST_ASSERT(cfg.host == "127.0.0.1", "Default host is localhost");
+    TEST_ASSERT(cfg.port == 11434, "Default port is 11434");
+    TEST_ASSERT(!cfg.chat_model.empty(), "Default chat model is set");
+    TEST_ASSERT(!cfg.fim_model.empty(), "Default FIM model is set");
+    TEST_ASSERT(cfg.timeout_ms > 0, "Default timeout > 0");
+    TEST_PASS("ollama_config_defaults");
+}
+
+void test_ollama_client_construction() {
+    NativeInferenceConfig cfg;
+    cfg.host = "127.0.0.1";
+    cfg.port = 11434;
+
+    // Construction should not throw or crash
+    NativeInferenceClient client(cfg);
+    TEST_PASS("ollama_client_construction");
+}
+
+void test_ollama_cancel_before_stream() {
+    NativeInferenceConfig cfg;
+    NativeInferenceClient client(cfg);
+
+    // Cancel when nothing is running should be safe
+    client.CancelStream();
+    TEST_PASS("ollama_cancel_before_stream");
+}
+
+// ==========================================================================
+// § 4. AgentOrchestrator — Session Management
+// ==========================================================================
+
+void test_orchestrator_construction() {
+    // Should create without crashing
+    AgentOrchestrator orch;
+    TEST_PASS("orchestrator_construction");
+}
+
+void test_orchestrator_config() {
+    AgentOrchestrator orch;
+    OrchestratorConfig cfg;
+    cfg.max_tool_rounds = 20;
+    cfg.max_conversation_tokens = 16000;
+    cfg.working_directory = "d:\\rawrxd";
+    cfg.auto_build_after_edit = true;
+    cfg.auto_diagnostics = true;
+
+    orch.SetConfig(cfg);
+    TEST_PASS("orchestrator_config");
+}
+
+void test_orchestrator_cancel() {
+    AgentOrchestrator orch;
+
+    // Cancel when nothing is running should be safe
+    orch.Cancel();
+    TEST_PASS("orchestrator_cancel");
+}
+
+// ==========================================================================
+// § 5. DiskRecoveryAgent — C++ Wrapper (no hardware required)
+// ==========================================================================
+
+void test_recovery_agent_construction() {
+    DiskRecoveryAgent agent;
+    TEST_ASSERT(!agent.IsInitialized(), "Agent starts uninitialized");
+    TEST_ASSERT(!agent.IsKeyExtracted(), "No key extracted on construction");
+    TEST_ASSERT(agent.GetBridgeType() == BridgeType::Unknown, "Bridge type is Unknown");
+    TEST_PASS("recovery_agent_construction");
+}
+
+void test_recovery_agent_stats_uninitialized() {
+    DiskRecoveryAgent agent;
+    auto stats = agent.GetStats();
+    TEST_ASSERT(stats.goodSectors == 0, "Zero good sectors when uninitialized");
+    TEST_ASSERT(stats.badSectors == 0, "Zero bad sectors when uninitialized");
+    TEST_ASSERT(stats.currentLBA == 0, "Zero current LBA when uninitialized");
+    TEST_ASSERT(stats.totalSectors == 0, "Zero total sectors when uninitialized");
+    TEST_PASS("recovery_agent_stats_uninitialized");
+}
+
+void test_recovery_agent_abort_safe() {
+    DiskRecoveryAgent agent;
+    // Abort on uninitialized agent should be safe (no-op)
+    agent.Abort();
+    TEST_PASS("recovery_agent_abort_safe");
+}
+
+void test_recovery_agent_move_semantics() {
+    DiskRecoveryAgent agent1;
+    DiskRecoveryAgent agent2 = std::move(agent1);
+    TEST_ASSERT(!agent2.IsInitialized(), "Moved-to agent has same state");
+    TEST_PASS("recovery_agent_move_semantics");
+}
+
+void test_recovery_stats_progress() {
+    RecoveryStats stats;
+    stats.goodSectors = 100;
+    stats.badSectors = 5;
+    stats.currentLBA = 500;
+    stats.totalSectors = 1000;
+
+    double pct = stats.ProgressPercent();
+    TEST_ASSERT(pct >= 49.9 && pct <= 50.1, "ProgressPercent computes correctly");
+
+    RecoveryStats empty;
+    empty.totalSectors = 0;
+    empty.currentLBA = 0;
+    TEST_ASSERT(empty.ProgressPercent() == 0.0, "Zero totalSectors gives 0%");
+    TEST_PASS("recovery_stats_progress");
+}
+
+void test_recovery_result_factories() {
+    auto ok = RecoveryResult::ok("Success");
+    TEST_ASSERT(ok.success, "ok() returns success=true");
+    TEST_ASSERT(ok.detail == "Success", "ok() detail matches");
+    TEST_ASSERT(ok.errorCode == 0, "ok() errorCode is 0");
+
+    auto err = RecoveryResult::error("Failed", 42);
+    TEST_ASSERT(!err.success, "error() returns success=false");
+    TEST_ASSERT(err.errorCode == 42, "error() preserves errorCode");
+    TEST_PASS("recovery_result_factories");
+}
+
+// ==========================================================================
+// § 6. ToolExecResult — Factory Pattern Validation
+// ==========================================================================
+
+void test_tool_exec_result_ok() {
+    auto r = ToolExecResult::ok("output data", 12.5);
+    TEST_ASSERT(r.success, "ok() is successful");
+    TEST_ASSERT(r.output == "output data", "ok() preserves output");
+    TEST_ASSERT(r.exit_code == 0, "ok() exit_code is 0");
+    TEST_ASSERT(r.elapsed_ms == 12.5, "ok() preserves elapsed_ms");
+    TEST_PASS("tool_exec_result_ok");
+}
+
+void test_tool_exec_result_error() {
+    auto r = ToolExecResult::error("bad things", -3);
+    TEST_ASSERT(!r.success, "error() is failure");
+    TEST_ASSERT(r.output == "bad things", "error() preserves message");
+    TEST_ASSERT(r.exit_code == -3, "error() preserves exit code");
+    TEST_PASS("tool_exec_result_error");
+}
+
+// ==========================================================================
+// § 7. Disk Recovery Tool Integration (via ToolRegistry dispatch)
+// ==========================================================================
+
+void test_disk_recovery_tool_stats_action() {
+    auto& reg = AgentToolRegistry::Instance();
+
+    json args;
+    args["action"] = "stats";
+    auto result = reg.Dispatch("disk_recovery", args);
+    // Should succeed even without hardware (returns zeroed stats)
+    TEST_ASSERT(result.success, "disk_recovery stats succeeds without hardware");
+    TEST_ASSERT(result.output.find("Good:") != std::string::npos, "Stats output has Good field");
+    TEST_PASS("disk_recovery_tool_stats_action");
+}
+
+void test_disk_recovery_tool_invalid_action() {
+    auto& reg = AgentToolRegistry::Instance();
+
+    json args;
+    args["action"] = "invalid_blah";
+    auto result = reg.Dispatch("disk_recovery", args);
+    TEST_ASSERT(!result.success, "Invalid action returns failure");
+    TEST_ASSERT(result.output.find("Unknown action") != std::string::npos, "Error mentions unknown");
+    TEST_PASS("disk_recovery_tool_invalid_action");
+}
+
+void test_disk_recovery_tool_missing_action() {
+    auto& reg = AgentToolRegistry::Instance();
+
+    json args;
+    auto result = reg.Dispatch("disk_recovery", args);
+    TEST_ASSERT(!result.success, "Missing action returns failure");
+    TEST_PASS("disk_recovery_tool_missing_action");
+}
+
+// ==========================================================================
+// Test Runner
+// ==========================================================================
+
+int main() {
+    test_xmacro_enum_count();
+    test_registry_singleton();
+    test_registry_list_tools();
+    test_registry_schemas_valid();
+    test_registry_dispatch_read_file();
+    test_registry_dispatch_write_file();
+    test_registry_dispatch_unknown_tool();
+    test_registry_validation_missing_required();
+    test_registry_stats();
+    test_registry_system_prompt();
+
+    test_fim_build_basic();
+    test_fim_build_empty_content();
+    test_fim_build_invalid_cursor();
+    test_fim_qwen_format_tokens();
+    test_fim_build_from_parts();
+    test_fim_prefix_ratio();
+
+    test_ollama_config_defaults();
+    test_ollama_client_construction();
+    test_ollama_cancel_before_stream();
+
+    test_orchestrator_construction();
+    test_orchestrator_config();
+    test_orchestrator_cancel();
+
+    test_recovery_agent_construction();
+    test_recovery_agent_stats_uninitialized();
+    test_recovery_agent_abort_safe();
+    test_recovery_agent_move_semantics();
+    test_recovery_stats_progress();
+    test_recovery_result_factories();
+
+    test_tool_exec_result_ok();
+    test_tool_exec_result_error();
+
+    test_disk_recovery_tool_stats_action();
+    test_disk_recovery_tool_invalid_action();
+    test_disk_recovery_tool_missing_action();
+
+    return g_testsFailed > 0 ? 1 : 0;
 }

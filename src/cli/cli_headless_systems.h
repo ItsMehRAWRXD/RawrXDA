@@ -188,6 +188,9 @@ void cmd_policy(const std::string& args);
 // !tools                 — List all registered tools
 void cmd_tools(const std::string& args);
 
+// !tool_exec <name> [json] — Execute a registered tool with optional JSON input
+void cmd_tool_exec(const std::string& args);
+
 // ============================================================================
 // MODEL HOTPATCHER COMMANDS (Phase 20 AVX-512 requantization pipeline)
 // ============================================================================

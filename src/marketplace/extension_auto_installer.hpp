@@ -161,11 +161,14 @@ private:
     ExtensionAutoInstaller& operator=(const ExtensionAutoInstaller&) = delete;
 
     AutoInstallResult installSingleExtension(const std::string& extensionId,
-                                              InstallProgressCallback callback);
+                                              InstallProgressCallback callback,
+                                              int currentIndex,
+                                              int totalExtensions);
 
     void emitProgress(const InstallProgress& progress, InstallProgressCallback callback);
     void saveInstallState();
     void loadInstallState();
+    void writeInstallStateLocked();
 
     mutable std::mutex mutex_;
     std::atomic<bool> firstRunComplete_;

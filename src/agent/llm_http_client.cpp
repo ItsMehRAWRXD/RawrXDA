@@ -287,9 +287,11 @@ HttpResponse StlHttpClient::platformSend(const HttpRequest& req) {
         WINHTTP_HEADER_NAME_BY_INDEX, &statusCode, &statusSize,
         WINHTTP_NO_HEADER_INDEX);
 
-    // Read body
+    // Read body — cap total read to prevent OOM from adversarial servers
+    static constexpr size_t kMaxResponseBodyBytes = 256ULL * 1024 * 1024; // 256 MB
     std::string responseBody;
     DWORD bytesAvail = 0;
+    size_t totalRead = 0;
     while (WinHttpQueryDataAvailable(hRequest, &bytesAvail) && bytesAvail > 0) {
         if (m_cancelled.load()) {
             WinHttpCloseHandle(hRequest);
@@ -299,11 +301,19 @@ HttpResponse StlHttpClient::platformSend(const HttpRequest& req) {
                 static_cast<int>(nowMs() - startT));
         }
 
+        if (totalRead + bytesAvail > kMaxResponseBodyBytes) {
+            bytesAvail = static_cast<DWORD>(kMaxResponseBodyBytes - totalRead);
+        }
+        if (bytesAvail == 0) break;
+
         size_t pos = responseBody.size();
         responseBody.resize(pos + bytesAvail);
         DWORD bytesRead = 0;
         WinHttpReadData(hRequest, responseBody.data() + pos, bytesAvail, &bytesRead);
         responseBody.resize(pos + bytesRead);
+        totalRead += bytesRead;
+
+        if (totalRead >= kMaxResponseBodyBytes) break;
     }
 
     int latency = static_cast<int>(nowMs() - startT);
@@ -389,7 +399,11 @@ HttpResponse StlHttpClient::platformSend(const HttpRequest& req) {
     if (lastNL != std::string::npos && lastNL > 0) {
         std::string codeStr = output.substr(lastNL + 1);
         body = output.substr(0, lastNL);
-        try { statusCode = std::stoi(codeStr); } catch (...) {}
+        try { statusCode = std::stoi(codeStr); } catch (const std::exception& e) {
+            OutputDebugStringA(("[llm_http_client] status code parse exception: " + std::string(e.what()) + "\n").c_str());
+        } catch (...) {
+            OutputDebugStringA("[llm_http_client] status code parse unknown exception\n");
+        }
     }
 
     bool isOk = (statusCode >= 200 && statusCode < 300);
@@ -426,7 +440,6 @@ void HttpChainStep::start(const std::string& url,
                        const std::string& jsonBody,
                        int timeoutMs) {
     if (m_state == State::Running) {
-        fprintf(stderr, "[WARN] [HttpChainStep:%s] Already running\n", m_name.c_str());
         return;
     }
 
@@ -435,9 +448,6 @@ void HttpChainStep::start(const std::string& url,
 
     // CRITICAL: m_future MUST be stored as member to keep the async alive
     m_future = StlHttpClient::instance().postJsonAsync(url, jsonBody, timeoutMs);
-
-    fprintf(stderr, "[INFO] [HttpChainStep:%s] Started async POST %s\n",
-            m_name.c_str(), url.c_str());
 }
 
 bool HttpChainStep::poll() {
@@ -454,10 +464,6 @@ bool HttpChainStep::poll() {
             m_result = HttpResponse::fail(std::string("Future exception: ") + e.what());
             m_state  = State::Failed;
         }
-        fprintf(stderr, "[INFO] [HttpChainStep:%s] %s (%dms)\n",
-                m_name.c_str(),
-                m_state == State::Completed ? "Completed" : "Failed",
-                m_result.latencyMs);
         return true;
     }
     return false;
@@ -471,8 +477,6 @@ bool HttpChainStep::waitFor(int timeoutMs) {
     if (timeoutMs > 0) {
         auto status = m_future.wait_for(std::chrono::milliseconds(timeoutMs));
         if (status != std::future_status::ready) {
-            fprintf(stderr, "[WARN] [HttpChainStep:%s] Wait timed out after %dms\n",
-                    m_name.c_str(), timeoutMs);
             return false;
         }
     } else {
@@ -514,13 +518,10 @@ bool HttpChainExecutor::executeAll(
     m_results.clear();
     m_cancelled.store(false);
 
-    fprintf(stderr, "[INFO] [HttpChainExecutor] Executing %zu steps\n", m_pending.size());
-
     std::string prevResult;
 
     for (size_t i = 0; i < m_pending.size(); ++i) {
         if (m_cancelled.load()) {
-            fprintf(stderr, "[WARN] [HttpChainExecutor] Cancelled at step %zu\n", i);
             return false;
         }
 
@@ -553,13 +554,10 @@ bool HttpChainExecutor::executeAll(
         if (ok) {
             prevResult = sr.response.body;
         } else {
-            fprintf(stderr, "[ERROR] [HttpChainExecutor] Step '%s' failed: %s\n",
-                    step.name.c_str(), sr.response.error.c_str());
             return false;
         }
     }
 
-    fprintf(stderr, "[INFO] [HttpChainExecutor] All %zu steps completed\n", m_pending.size());
     return true;
 }
 

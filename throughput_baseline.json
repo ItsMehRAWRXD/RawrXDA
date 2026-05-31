@@ -1,0 +1,32 @@
+﻿{
+    "version":  "1.0.0",
+    "replay":  {
+                   "tool_calls":  0,
+                   "session_id":  "",
+                   "agent_loop_count":  0,
+                   "tool_output_hashes":  [
+
+                                          ]
+               },
+    "performance":  {
+                        "avg_latency_ms":  0,
+                        "gemm_ops_per_sec":  0,
+                        "inference_count":  0,
+                        "flash_attn_ops_per_sec":  0,
+                        "tokens_per_sec":  0
+                    },
+    "created":  "2026-04-05 10:39:00",
+    "hotpatch":  {
+                     "pre_patch_errors":  0,
+                     "pre_patch_inference":  0,
+                     "post_patch_inference":  0,
+                     "post_patch_errors":  0
+                 },
+    "thresholds":  {
+                       "latency_increase_pct":  5,
+                       "flash_attn_drop_pct":  5,
+                       "gemm_drop_pct":  3,
+                       "token_drop_pct":  3,
+                       "patch_delta_pct":  50
+                   }
+}

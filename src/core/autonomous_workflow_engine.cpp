@@ -244,7 +244,7 @@ WorkflowStageResult AutonomousWorkflowEngine::executeScan(
                 }
             }
         } catch (...) {
-            // Filesystem errors are non-fatal — continue with what we found
+            fprintf(stderr, "[AutonomousWorkflowEngine] Filesystem error during scan, continuing\n");
         }
     }
 
@@ -333,7 +333,7 @@ WorkflowStageResult AutonomousWorkflowEngine::executeVerify(
                 }
             }
         } catch (...) {
-            // Non-fatal
+            fprintf(stderr, "[AutonomousWorkflowEngine] Non-fatal error during workflow execution\n");
         }
     }
 
@@ -580,7 +580,11 @@ WorkflowResult AutonomousWorkflowEngine::execute(
                     }
                 }
             }
-        } catch (...) {}
+        } catch (const std::exception& e) {
+            OutputDebugStringA(("[autonomous_workflow_engine] directory scan exception: " + std::string(e.what()) + "\n").c_str());
+        } catch (...) {
+            OutputDebugStringA("[autonomous_workflow_engine] directory scan unknown exception\n");
+        }
     }
     wf->snapshot = takeSnapshot(scanFiles);
 

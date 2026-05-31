@@ -17,8 +17,8 @@ public:
         // Uses Batch 1 logic (imaginary internal bridge for exports walking)
         // Here we just simulate adding a few symbols to the MASM Hash Table.
         
-        // Example: If walking a DLL, we'd find 'GetProcAddress' and its VA
-        // RawrXD_Symbol_Insert("ExampleSymbol", 0x140001000);
+        // Pattern: If walking a DLL, we'd find 'GetProcAddress' and its VA
+        // RawrXD_Symbol_Insert("Symbol", 0x140001000);
     }
 
     static uint64_t ResolveSymbol(const char* name) {

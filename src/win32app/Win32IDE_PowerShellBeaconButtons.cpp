@@ -85,7 +85,14 @@ bool ExecutePowerShellBeaconCommand(const std::string& command, std::string& out
     si.hStdError = hWritePipe;
     si.dwFlags |= STARTF_USESTDHANDLES;
 
-    std::string fullCommand = "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"" + command + "\"";
+    // Prefer PowerShell 7+ (pwsh.exe) over Windows PowerShell 5.1 (powershell.exe)
+    // PowerShell 7+ supports ?? null-coalescing operator and other modern syntax
+    std::string psExecutable = "powershell.exe";
+    char pwshPath[MAX_PATH] = {};
+    if (SearchPathA(nullptr, "pwsh.exe", nullptr, MAX_PATH, pwshPath, nullptr) && pwshPath[0]) {
+        psExecutable = "pwsh.exe";
+    }
+    std::string fullCommand = psExecutable + " -NoProfile -ExecutionPolicy Bypass -Command \"" + command + "\""
     std::vector<char> cmdLine(fullCommand.begin(), fullCommand.end());
     cmdLine.push_back('\0');
 

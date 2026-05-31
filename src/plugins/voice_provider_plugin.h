@@ -25,7 +25,7 @@
 //
 // Naming: DLL name should contain "voice", "tts", or "speech" for auto-discovery
 //
-// Example: my_custom_voice.dll with exports:
+// Pattern: my_custom_voice.dll with exports:
 //   extern "C" __declspec(dllexport) VoiceProviderInfo* VoiceProvider_GetInfo();
 //   extern "C" __declspec(dllexport) int VoiceProvider_Init(void* context);
 //   extern "C" __declspec(dllexport) int VoiceProvider_Speak(const SpeechRequest* req);

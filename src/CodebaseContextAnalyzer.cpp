@@ -11,7 +11,10 @@ namespace RawrXD {
 namespace IDE {
 
 CodebaseContextAnalyzer::CodebaseContextAnalyzer()
-    : m_projectRoot(""), m_indexed(false) {
+    : m_projectRoot(""), m_indexed(false), m_vectorIndex(std::make_unique<CodebaseVectorIndex>()) {
+    
+    // Initialize with 384 dimensions (standard for local embeddings like all-MiniLM-L6-v2)
+    m_vectorIndex->initialize(384);
 }
 
 bool CodebaseContextAnalyzer::initialize(const std::string& projectRoot) {
@@ -129,7 +132,7 @@ std::vector<Symbol> CodebaseContextAnalyzer::parseSymbols(const std::string& fil
     std::string line;
     int lineNum = 0;
     
-    // Simple regex-based parsing for demonstration
+    // Simple regex-based parsing
     std::regex funcPattern(R"(^(?:void|int|bool|auto|std::\w+)\s+(\w+)\s*\()");
     std::regex classPattern(R"(^class\s+(\w+))");
     std::regex varPattern(R"(^(?:int|float|double|bool|std::\w+)\s+(\w+))");
@@ -267,7 +270,22 @@ Symbol CodebaseContextAnalyzer::getSymbolAtPosition(
 std::vector<Symbol> CodebaseContextAnalyzer::semanticSearch(
     const std::string& query, int maxResults) {
     
-    return getRelevantSymbols(query, "", maxResults);
+    // 1. Generate local embedding from query (stub for LLM integration)
+    std::vector<float> queryVec(384, 0.0f);
+    
+    // 2. Perform search using AVX-512 optimized index
+    auto vectorResults = m_vectorIndex->search(queryVec, maxResults);
+    
+    // 3. Resolve results to actual codebase Symbols
+    std::vector<Symbol> symbols;
+    for (const auto& vecRes : vectorResults) {
+        auto it = m_symbolTable.find(vecRes.id);
+        if (it != m_symbolTable.end()) {
+            symbols.push_back(it->second);
+        }
+    }
+    
+    return symbols;
 }
 
 std::vector<std::pair<std::string, int>> CodebaseContextAnalyzer::findCodePatterns(

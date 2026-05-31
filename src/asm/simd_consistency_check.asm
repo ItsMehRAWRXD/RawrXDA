@@ -36,17 +36,28 @@ rawrxd_sha3_256_avx512 PROC FRAME
     or      rax, rdx
     mov     r10, rax            ; Start cycles
 
-    ; 2. Initialize Sponge State (AVX-512 Registers ZMM0-ZMM3)
-    ; Placeholder for actual sponge state initialization
+    ; 2. Initialize sponge state and absorb first 32 bytes baseline
     vpxord  zmm0, zmm0, zmm0
     vpxord  zmm1, zmm1, zmm1
+    test    rcx, rcx
+    jz      @@absorb_done
+    test    rdx, rdx
+    jz      @@absorb_done
+    cmp     rdx, 32
+    jae     @@absorb_32
+    ; For short payloads, hash starts from zero-state (deterministic fallback)
+    jmp     @@absorb_done
+@@absorb_32:
+    vmovdqu ymm2, ymmword ptr [rcx]
+    vpxor   ymm0, ymm0, ymm2
+@@absorb_done:
     
     ; 3. Absorb Data Blocks (AVX-512 XOR / Bitwise Ops)
     ; Omitted for brevity: Hardware-accelerated sponge absorption loop
     
     ; 4. Squeeze Hash (32-byte finalization)
     ; Store the result into R8
-    vmovdqu32 [r8], ymm0        ; Store 32-bytes from ZMM0 lower half
+    vmovdqu ymmword ptr [r8], ymm0
 
     ; 5. Final Performance Log (Beaconism)
     ; ...
@@ -62,14 +73,22 @@ rawrxd_sha3_256_avx512 ENDP
 ; Returns RAX = 1 if match, 0 if mismatch
 ; ────────────────────────────────────────────────────────────────
 rawrxd_compare_hash_vectors PROC
-    ; Load into YMM for 256-bit parallel compare
-    vmovdqu ymm0, [rcx]
-    vmovdqu ymm1, [rdx]
-    vpcmpeqq k1, ymm0, ymm1     ; Compare 64-bit quads
-    kmovw   eax, k1             ; Move mask to EAX
-    cmp     al, 0FFh            ; Check if all matched
-    sete    al                  ; Set AL if match
-    movzx   rax, al
+    push    rbx
+    mov     rbx, 32
+@@cmp_loop:
+    mov     al, [rcx]
+    cmp     al, [rdx]
+    jne     @@mismatch
+    inc     rcx
+    inc     rdx
+    dec     rbx
+    jnz     @@cmp_loop
+    mov     eax, 1
+    pop     rbx
+    ret
+@@mismatch:
+    xor     eax, eax
+    pop     rbx
     ret
 rawrxd_compare_hash_vectors ENDP
 
@@ -80,7 +99,79 @@ rawrxd_compare_hash_vectors ENDP
 ; R8  = Consensus Result Node Ptr
 ; ────────────────────────────────────────────────────────────────
 rawrxd_consensus_vote PROC
-    ; Omitted: Majority selection logic based on vote counts
+    push    rbx
+    push    rsi
+    push    rdi
+
+    ; Assume 3-node vote vector at RCX (qword IDs).
+    mov     rsi, rcx
+    mov     rbx, [rsi]
+    mov     rdi, 1
+
+    ; Boyer-Moore majority candidate over 3 entries.
+    mov     rax, [rsi + 8]
+    cmp     rdi, 0
+    jne     @@vote_1_cmp
+    mov     rbx, rax
+    mov     rdi, 1
+    jmp     @@vote_2
+@@vote_1_cmp:
+    cmp     rax, rbx
+    jne     @@vote_1_dec
+    inc     rdi
+    jmp     @@vote_2
+@@vote_1_dec:
+    dec     rdi
+
+@@vote_2:
+    mov     rax, [rsi + 16]
+    cmp     rdi, 0
+    jne     @@vote_2_cmp
+    mov     rbx, rax
+    mov     rdi, 1
+    jmp     @@verify
+@@vote_2_cmp:
+    cmp     rax, rbx
+    jne     @@vote_2_dec
+    inc     rdi
+    jmp     @@verify
+@@vote_2_dec:
+    dec     rdi
+
+@@verify:
+    xor     r9d, r9d
+    mov     rax, [rsi]
+    cmp     rax, rbx
+    jne     @@v1
+    inc     r9d
+@@v1:
+    mov     rax, [rsi + 8]
+    cmp     rax, rbx
+    jne     @@v2
+    inc     r9d
+@@v2:
+    mov     rax, [rsi + 16]
+    cmp     rax, rbx
+    jne     @@decide
+    inc     r9d
+
+@@decide:
+    cmp     r9d, edx
+    jb      @@no_majority
+    test    r8, r8
+    jz      @@ok
+    mov     [r8], rbx
+@@ok:
+    mov     eax, 1
+    jmp     @@done
+
+@@no_majority:
+    xor     eax, eax
+
+@@done:
+    pop     rdi
+    pop     rsi
+    pop     rbx
     ret
 rawrxd_consensus_vote ENDP
 

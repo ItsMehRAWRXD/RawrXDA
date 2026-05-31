@@ -1,5 +1,56 @@
 # RawrXD IDE v1.0 - Deployment Validation Checklist
 
+## v1.2.5 Release-Candidate Addendum
+
+**Status**: Release-candidate handoff in progress
+**Last Verified**: May 8, 2026
+**Primary Lane**: `d:\rawrxd\build_ninja`
+**Primary Artifact**: `D:\rawrxd\build_ninja\bin\RawrXD-Win32IDE.exe`
+
+### Verified Current State
+
+| Area | Status | Evidence |
+|---|---|---|
+| Win32IDE build/link | ✅ PASS | Link blockers closed by concrete type includes and missing TU wiring |
+| Headless launch | ✅ PASS | `--headless --port 11450 --backend localgguf --local-gpu off --model D:\phi3mini.gguf` |
+| Model load | ✅ PASS | `phi3mini.gguf` loaded in 169 ms |
+| HTTP listener | ✅ PASS | Server listening on `127.0.0.1:11450` |
+| Process stability | ✅ PASS | Sustained for 3+ seconds without crash |
+| Determinism harness | ⚠ Pending hardening | Existing benchmark harness timed out; binary remained valid |
+| GUI smoke automation | ⚠ Pending tuning | Chat control discovery still sensitive to post-launch timing |
+| Gold artifact presence | ⚠ Not verified | `RawrXD_Gold.exe` not found in known build outputs |
+| Archive target | ⚠ Not performed | `build-final-copilot` tree not found in workspace |
+
+### RC Closure Checklist
+
+- [x] `RawrXD-Win32IDE.exe` built successfully in `build_ninja`
+- [x] Linker closure verified for `ExecModeToolbar`, `GhostOverlay`, `ExecPipeline`, `PatchEngine`
+- [x] Headless CLI parsing verified
+- [x] GGUF model load verified with `D:\phi3mini.gguf`
+- [x] HTTP server startup verified on port `11450`
+- [x] Final sovereign gate report generated in Markdown and JSON under `D:\rawrxd\reports\14day\`
+- [ ] Replace the over-orchestrated determinism script with a minimal fixed-prompt harness
+- [ ] Re-run TTFT/TPS capture with direct localhost polling and explicit process ownership
+- [ ] Build and verify `RawrXD_Gold.exe` before marking Gold packaging complete
+- [ ] Decide archive destination only after the actual `build-final-copilot` path is identified
+
+### Immediate Deployment Decision
+
+**Decision**: Proceed as a Win32IDE release candidate, not a final Gold-packaged release.
+
+This repo now has enough evidence to move into a v1.2.5 deployment checklist pass for the Win32IDE track. It does **not** yet have enough evidence to claim Gold packaging complete, because the Gold artifact has not been verified in the known build outputs.
+
+### Required Next Step for v1.2.5
+
+Use a minimal deterministic harness with:
+
+1. One fixed prompt
+2. One fixed token budget
+3. One fixed timeout
+4. Direct `localhost` readiness polling
+5. Explicit process startup and shutdown ownership
+6. No model fallback or dynamic switching
+
 **Project:** RawrXD Text Editor with AI Completion
 **Build Date:** March 2026
 **Version:** 1.0.0 Release

@@ -158,6 +158,27 @@ public:
     // Execute and wait (synchronous convenience).
     GPUResult executeSync(const ComputeDispatch& dispatch, uint32_t timeoutMs = 5000);
 
+    // ---- Async Batched Dispatch (P0 Fix: Reclaim 3-5x throughput) ----
+    // Submit multiple dispatches as a single batch, signal once.
+    // This eliminates per-dispatch fence overhead.
+    struct BatchedDispatch {
+        std::vector<ComputeDispatch> dispatches;
+        uint32_t batchSize = 0;
+    };
+    uint64_t submitBatchedCompute(const BatchedDispatch& batch);
+    
+    // Flush pending batched dispatches (call periodically or on dependency boundary)
+    GPUResult flushBatchedDispatches();
+    
+    // Configure batching behavior
+    void setBatchingConfig(uint32_t maxBatchSize, uint32_t flushIntervalMs);
+    bool isBatchingEnabled() const { return batchingEnabled_; }
+    
+    // Start/stop background flush thread (call after initialize)
+    void startBackgroundFlushThread();
+    void stopBackgroundFlushThread();
+    bool isBackgroundFlushRunning() const { return backgroundFlushRunning_.load(); }
+
     // ---- Registry Integration ----
     // Register "GPU-DX12-Compute" engine with the StreamingEngineRegistry
     void registerWithStreamingRegistry();
@@ -187,9 +208,17 @@ private:
 
     // State
     std::atomic<bool>           initialized_    = false;
+    std::atomic<bool>           batchingEnabled_ = false;  // P0 Fix: Async batching
+    std::atomic<bool>           backgroundFlushRunning_ = false;  // P0 Fix: Background flush thread
     ComputeAPI                  activeAPI_      = ComputeAPI::None;
     GPUCapabilities             caps_           = {};
     mutable std::mutex          mutex_;
+    
+    // Background flush thread
+    std::thread                 backgroundFlushThread_;
+    std::condition_variable     backgroundFlushCV_;
+    std::mutex                  backgroundFlushMutex_;
+    void backgroundFlushThreadFunc();
 
     // Stats
     std::atomic<uint64_t>       usedVRAM_           = 0;
@@ -207,6 +236,7 @@ private:
     void      detectCapabilities();
     GPUResult resetCommandList();
     GPUResult executeAndWait();
+    uint64_t  flushBatchedDispatchesInternal();  // P0 Fix: Internal batch flush
 };
 
 // ============================================================================

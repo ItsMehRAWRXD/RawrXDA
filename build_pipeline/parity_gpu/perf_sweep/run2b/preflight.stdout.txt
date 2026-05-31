@@ -1,0 +1,12 @@
+NAME                              SIZE        QUANT       ARCH
+----                              ----        -----       ----
+Phi 3 Mini 128k Instruct          0.0 KB      unknown     phi3
+Qwen3.5 40B Claude 4.6 Opus Deckard Heretic Uncensored Thinking  6.0 GB      Q4_K_M      qwen35
+gptoss20b                         12.8 GB     unknown     gptoss
+gptoss20b_link                    0.0 KB      unknown     gptoss
+ministral3                        0.0 KB      unknown     mistral3
+models                            0.0 KB      unknown     llama
+tinyllama_tinyllama-1.1b-chat-v1.0  189.8 MB    Q4_0        llama
+tinyllama_tinyllama-1.1b-chat-v1.0  608.2 MB    unknown     llama
+
+8 model(s)

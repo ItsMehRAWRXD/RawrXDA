@@ -5,36 +5,57 @@
 #include <filesystem>
 #include <cctype>
 
+namespace {
+std::string ToLowerCopy(std::string s) {
+    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+    });
+    return s;
+}
+} // namespace
+
 namespace RawrXD {
 
+// Free-function safety gate checks (replaces lambdas to avoid std::function destructor crashes).
+static bool CheckFileSystemAccess(const RawrXD::ExecutionContext& ctx, void* /*ctx*/)
+{
+    return std::filesystem::exists(ctx.workspace_path) &&
+           std::filesystem::is_directory(ctx.workspace_path);
+}
+
+static bool CheckMemoryLimit(const RawrXD::ExecutionContext& ctx, void* /*ctx*/)
+{
+    return ctx.max_memory_usage > 0 && ctx.max_memory_usage <= 8ULL * 1024 * 1024 * 1024; // 8GB max
+}
+
+static bool CheckExecutionTimeLimit(const RawrXD::ExecutionContext& ctx, void* /*ctx*/)
+{
+    return ctx.max_execution_time.count() > 0 &&
+           ctx.max_execution_time <= std::chrono::hours(1);
+}
+
 AutonomousAgenticOrchestrator::AutonomousAgenticOrchestrator() {
-    // Initialize default safety gates
-    AddSafetyGate({
+    // Initialize default safety gates using function pointers (no std::function heap allocation).
+    AddSafetyGate(SafetyGate{
         "FileSystemAccess",
-        [](const ExecutionContext& ctx) {
-            return std::filesystem::exists(ctx.workspace_path) && 
-                   std::filesystem::is_directory(ctx.workspace_path);
-        },
+        &CheckFileSystemAccess,
+        nullptr,
         "Workspace path is not accessible or does not exist",
         true
     });
     
-    AddSafetyGate({
+    AddSafetyGate(SafetyGate{
         "MemoryLimit",
-        [](const ExecutionContext& ctx) {
-            // Basic memory check - in production would check actual usage
-            return ctx.max_memory_usage > 0 && ctx.max_memory_usage <= 8ULL * 1024 * 1024 * 1024; // 8GB max
-        },
+        &CheckMemoryLimit,
+        nullptr,
         "Memory limit exceeds safe threshold",
         false
     });
     
-    AddSafetyGate({
+    AddSafetyGate(SafetyGate{
         "ExecutionTimeLimit",
-        [](const ExecutionContext& ctx) {
-            return ctx.max_execution_time.count() > 0 && 
-                   ctx.max_execution_time <= std::chrono::hours(1);
-        },
+        &CheckExecutionTimeLimit,
+        nullptr,
         "Execution time limit exceeds safe threshold",
         false
     });
@@ -51,7 +72,7 @@ bool AutonomousAgenticOrchestrator::Initialize(const ExecutionContext& context) 
     
     // Validate execution context
     for (const auto& gate : safety_gates_) {
-        if (gate.is_critical && !gate.check_function(execution_context_)) {
+        if (gate.is_critical && gate.check_function && !gate.check_function(execution_context_, gate.context)) {
             if (onSafetyViolation) {
                 onSafetyViolation("Initialization", gate.failure_message);
             }
@@ -90,6 +111,8 @@ std::string AutonomousAgenticOrchestrator::CreatePlan(const std::string& objecti
     }
     
     plans_[plan.id] = plan;
+    total_plans_created_.fetch_add(1, std::memory_order_relaxed);
+    total_steps_scheduled_.fetch_add(static_cast<uint64_t>(plan.steps.size()), std::memory_order_relaxed);
     
     if (onPlanCreated) {
         onPlanCreated(plan.id);
@@ -178,7 +201,7 @@ bool AutonomousAgenticOrchestrator::ExecuteMultiStepPlan(const std::vector<std::
     for (size_t i = 0; i < steps.size(); ++i) {
         // Check safety gates before each step
         for (const auto& gate : gates) {
-            if (!gate.check_function(execution_context_)) {
+            if (gate.check_function && !gate.check_function(execution_context_, gate.context)) {
                 HandleSafetyViolation(gate.failure_message);
                 success = false;
                 break;
@@ -225,17 +248,17 @@ std::string AutonomousAgenticOrchestrator::GetCurrentActivity() const {
 }
 
 double AutonomousAgenticOrchestrator::GetProgressPercentage() const {
-    // Simplified progress calculation
-    std::lock_guard<std::mutex> lock(plans_mutex_);
-    if (plans_.empty()) return 0.0;
-    
-    size_t completed = 0;
-    for (const auto& [id, plan] : plans_) {
-        // In a real implementation, we'd track step completion
-        completed++; // Placeholder
+    const uint64_t scheduled = total_steps_scheduled_.load(std::memory_order_relaxed);
+    const uint64_t completed = total_steps_completed_.load(std::memory_order_relaxed);
+    if (scheduled == 0) {
+        const uint64_t plansCreated = total_plans_created_.load(std::memory_order_relaxed);
+        const uint64_t plansDone = total_plans_completed_.load(std::memory_order_relaxed);
+        if (plansCreated == 0) {
+            return 0.0;
+        }
+        return std::min(100.0, (static_cast<double>(plansDone) / static_cast<double>(plansCreated)) * 100.0);
     }
-    
-    return (double)completed / plans_.size() * 100.0;
+    return std::min(100.0, (static_cast<double>(completed) / static_cast<double>(scheduled)) * 100.0);
 }
 
 void AutonomousAgenticOrchestrator::SetCopilotGapCloser(std::shared_ptr<CopilotGapCloser> gap_closer) {
@@ -276,6 +299,10 @@ void AutonomousAgenticOrchestrator::OrchestratorLoop() {
             
             if (onPlanCompleted) {
                 onPlanCompleted(plan_id, success);
+            }
+
+            if (success) {
+                total_plans_completed_.fetch_add(1, std::memory_order_relaxed);
             }
             
             current_state_ = autonomous_mode_ ? AgentState::MONITORING : AgentState::IDLE;
@@ -319,7 +346,7 @@ bool AutonomousAgenticOrchestrator::ExecuteSafetyChecks(const ExecutionPlan& pla
     std::lock_guard<std::mutex> lock(safety_mutex_);
     
     for (const auto& gate : safety_gates_) {
-        if (!gate.check_function(execution_context_)) {
+        if (gate.check_function && !gate.check_function(execution_context_, gate.context)) {
             if (gate.is_critical) {
                 HandleSafetyViolation(gate.failure_message);
                 return false;
@@ -437,6 +464,7 @@ bool AutonomousAgenticOrchestrator::ExecuteStep(const std::string& step, const E
             while (true) {
                 const int32_t status = task_dispatcher_->GetStatus(task_id);
                 if (status == kTaskStatusCompleted) {
+                    total_steps_completed_.fetch_add(1, std::memory_order_relaxed);
                     return true;
                 }
                 if (status == kTaskStatusFailed || status == kTaskStatusCancelled) {
@@ -453,10 +481,42 @@ bool AutonomousAgenticOrchestrator::ExecuteStep(const std::string& step, const E
             }
         }
     }
-    
-    // Fallback execution
-    std::this_thread::sleep_for(std::chrono::milliseconds(50)); // Simulate work
-    return true; // Simplified success
+
+    // Deterministic fallback execution path (non-dispatcher mode).
+    const std::string stepLower = ToLowerCopy(step);
+    if (stepLower.empty()) {
+        return false;
+    }
+
+    // Respect restricted operations from context.
+    for (const auto& op : context.restricted_operations) {
+        if (op.empty()) {
+            continue;
+        }
+        const std::string opLower = ToLowerCopy(op);
+        if (stepLower.find(opLower) != std::string::npos) {
+            return false;
+        }
+    }
+
+    // Basic workspace precondition for file/system steps.
+    const bool touchesWorkspace =
+        stepLower.find("file") != std::string::npos ||
+        stepLower.find("scan") != std::string::npos ||
+        stepLower.find("backup") != std::string::npos ||
+        stepLower.find("validate") != std::string::npos;
+    if (touchesWorkspace) {
+        if (context.workspace_path.empty() ||
+            !std::filesystem::exists(context.workspace_path) ||
+            !std::filesystem::is_directory(context.workspace_path)) {
+            return false;
+        }
+    }
+
+    // Simulate bounded execution work for fallback lane.
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    total_steps_completed_.fetch_add(1, std::memory_order_relaxed);
+    return true;
 }
 
 void AutonomousAgenticOrchestrator::HandleSafetyViolation(const std::string& violation) {

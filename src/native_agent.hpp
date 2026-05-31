@@ -10,6 +10,7 @@
 #include <regex>
 #include <thread>
 #include <chrono>
+#include <functional>
 
 namespace RawrXD {
 
@@ -17,7 +18,8 @@ class NativeAgent {
 public:
     using OutputCallback = std::function<void(const std::string&)>;
 
-    NativeAgent(CPUInferenceEngine* engine) : m_engine(engine) {}
+    NativeAgent(CPUInferenceEngine* engine);
+    ~NativeAgent();
 
     void SetOutputCallback(OutputCallback cb) { m_callback = cb; }
     void SetDeepThink(bool enabled) { m_deepThink = enabled; }
@@ -50,16 +52,25 @@ public:
         std::vector<int32_t> input_ids = m_engine->Tokenize(fullPrompt);
         
         std::string fullResponse;
-        bool inThought = false;
+        Utf8StreamSanitizer utf8Stream;
 
         m_engine->GenerateStreaming(input_ids, 2048, 
             [&](const std::string& token) {
-                fullResponse += token;
-                
-                // Still notify callback if present
-                if (m_callback) m_callback(token);
+                const std::string sanitizedChunk = utf8Stream.Consume(token);
+                if (!sanitizedChunk.empty()) {
+                    fullResponse += sanitizedChunk;
+
+                    // Still notify callback if present
+                    if (m_callback) m_callback(sanitizedChunk);
+                }
             },
             [&]() {
+                const std::string tail = utf8Stream.Finish();
+                if (!tail.empty()) {
+                    fullResponse += tail;
+                    if (m_callback) m_callback(tail);
+                }
+
                 // AUTO-CORRECT Logic
                 if (m_autoCorrect && !fullResponse.empty()) {
                     std::string corrected = ::AdvancedFeatures::AutoCorrect(fullResponse);
@@ -67,6 +78,9 @@ public:
                         fullResponse = corrected;
                     }
                 }
+
+                // Final guard: always return strict UTF-8 text.
+                fullResponse = SanitizeUtf8Lossy(fullResponse);
             }
         );
 
@@ -133,6 +147,135 @@ public:
     }
 
 private:
+    class Utf8StreamSanitizer {
+    public:
+        std::string Consume(const std::string& chunk) {
+            pending_ += chunk;
+            return Extract(/*finalChunk=*/false);
+        }
+
+        std::string Finish() {
+            std::string out = Extract(/*finalChunk=*/true);
+            pending_.clear();
+            return out;
+        }
+
+    private:
+        static bool IsContinuation(unsigned char c) {
+            return (c & 0xC0u) == 0x80u;
+        }
+
+        std::string Extract(bool finalChunk) {
+            std::string out;
+            size_t i = 0;
+
+            while (i < pending_.size()) {
+                const unsigned char c0 = static_cast<unsigned char>(pending_[i]);
+
+                if (c0 <= 0x7Fu) {
+                    out.push_back(static_cast<char>(c0));
+                    ++i;
+                    continue;
+                }
+
+                auto need = [&](size_t count) -> bool {
+                    return (i + count) <= pending_.size();
+                };
+
+                // 2-byte sequence
+                if (c0 >= 0xC2u && c0 <= 0xDFu) {
+                    if (!need(2)) {
+                        if (!finalChunk) break;
+                        ++i;
+                        continue;
+                    }
+                    const unsigned char c1 = static_cast<unsigned char>(pending_[i + 1]);
+                    if (IsContinuation(c1)) {
+                        out.append(pending_, i, 2);
+                        i += 2;
+                    } else {
+                        ++i;
+                    }
+                    continue;
+                }
+
+                // 3-byte sequence
+                if (c0 >= 0xE0u && c0 <= 0xEFu) {
+                    if (!need(3)) {
+                        if (!finalChunk) break;
+                        ++i;
+                        continue;
+                    }
+                    const unsigned char c1 = static_cast<unsigned char>(pending_[i + 1]);
+                    const unsigned char c2 = static_cast<unsigned char>(pending_[i + 2]);
+                    bool ok = false;
+                    if (c0 == 0xE0u) {
+                        ok = (c1 >= 0xA0u && c1 <= 0xBFu) && IsContinuation(c2);
+                    } else if (c0 == 0xEDu) {
+                        ok = (c1 >= 0x80u && c1 <= 0x9Fu) && IsContinuation(c2);
+                    } else {
+                        ok = IsContinuation(c1) && IsContinuation(c2);
+                    }
+                    if (ok) {
+                        out.append(pending_, i, 3);
+                        i += 3;
+                    } else {
+                        ++i;
+                    }
+                    continue;
+                }
+
+                // 4-byte sequence
+                if (c0 >= 0xF0u && c0 <= 0xF4u) {
+                    if (!need(4)) {
+                        if (!finalChunk) break;
+                        ++i;
+                        continue;
+                    }
+                    const unsigned char c1 = static_cast<unsigned char>(pending_[i + 1]);
+                    const unsigned char c2 = static_cast<unsigned char>(pending_[i + 2]);
+                    const unsigned char c3 = static_cast<unsigned char>(pending_[i + 3]);
+                    bool ok = false;
+                    if (c0 == 0xF0u) {
+                        ok = (c1 >= 0x90u && c1 <= 0xBFu) && IsContinuation(c2) && IsContinuation(c3);
+                    } else if (c0 == 0xF4u) {
+                        ok = (c1 >= 0x80u && c1 <= 0x8Fu) && IsContinuation(c2) && IsContinuation(c3);
+                    } else {
+                        ok = IsContinuation(c1) && IsContinuation(c2) && IsContinuation(c3);
+                    }
+                    if (ok) {
+                        out.append(pending_, i, 4);
+                        i += 4;
+                    } else {
+                        ++i;
+                    }
+                    continue;
+                }
+
+                // Invalid lead byte (includes 0x80-0xC1, 0xF5-0xFF)
+                ++i;
+            }
+
+            if (i > 0) {
+                pending_.erase(0, i);
+            }
+            if (finalChunk && !pending_.empty()) {
+                pending_.clear();
+            }
+
+            return out;
+        }
+
+        std::string pending_;
+    };
+
+    static std::string SanitizeUtf8Lossy(const std::string& input) {
+        Utf8StreamSanitizer sanitizer;
+        std::string out = sanitizer.Consume(input);
+        out += sanitizer.Finish();
+        return out;
+    }
+
     CPUInferenceEngine* m_engine;
     OutputCallback m_callback;
     bool m_deepThink = true;
@@ -175,6 +318,9 @@ private:
             system += " For legitimate coding and engineering tasks in this IDE, provide the best help you can; "
                       "if something is unsafe or impossible, say what you can do instead.";
         }
+
+        system += " Output must be valid UTF-8 text. Do not apply locale-specific script rewrite rules "
+                  "(including Chinese-only normalization) unless the user explicitly asks for that language behavior.";
 
         // Tool descriptions — the model can emit these to trigger tool execution
         system += "\n\nYou have access to the following tools. To use a tool, emit the "

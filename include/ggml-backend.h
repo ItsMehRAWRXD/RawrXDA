@@ -1,18 +1,15 @@
 #pragma once
-#include "ggml.h"
 
-#ifdef __cplusplus
-extern "C" {
+// Repository-local GGML shim header.
+// Prefer the real backend header from `3rdparty/ggml/include` so ggml sources
+// build with the correct types and API surface.
+
+#if defined(__cplusplus)
+#if __has_include("../3rdparty/ggml/include/ggml-backend.h")
+#include "../3rdparty/ggml/include/ggml-backend.h"
+#else
+#error "Real GGML backend header not found at ../3rdparty/ggml/include/ggml-backend.h"
 #endif
-
-typedef void * ggml_backend_t;
-typedef void * ggml_backend_buffer_t;
-typedef void * ggml_backend_event_t;
-typedef void * ggml_backend_sched_t;
-
-struct ggml_backend_buffer_type;
-typedef struct ggml_backend_buffer_type * ggml_backend_buffer_type_t;
-
-#ifdef __cplusplus
-}
+#else
+#include "../3rdparty/ggml/include/ggml-backend.h"
 #endif

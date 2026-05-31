@@ -7,6 +7,47 @@
 #include <mutex>
 #include <unordered_map>
 #include <functional>
+#include <map>
+
+// ============================================================================
+// Contribution Structures
+// ============================================================================
+
+struct ContributedCommand {
+    std::string command;
+    std::string title;
+    std::string category;
+    std::string icon;
+};
+
+struct ContributedKeybinding {
+    std::string command;
+    std::string key;
+    std::string when;
+    std::string mac;
+    std::string linux;
+    std::string win;
+};
+
+struct ContributedMenuItem {
+    std::string command;
+    std::string group;
+    std::string when;
+};
+
+struct ContributedView {
+    std::string container;
+    std::string id;
+    std::string name;
+    std::string icon;
+};
+
+struct ContributedLanguage {
+    std::string id;
+    std::vector<std::string> aliases;
+    std::vector<std::string> extensions;
+    std::vector<std::string> filenames;
+};
 
 struct VSIXPlugin {
     std::string id;
@@ -23,6 +64,14 @@ struct VSIXPlugin {
     std::function<void()> onUnload;
     std::function<void(const std::string&)> onCommand;
     std::function<void(const nlohmann::json&)> onConfigure;
+    
+    // Contributions (from package.json "contributes" section)
+    std::vector<ContributedCommand> contributedCommands;
+    std::vector<ContributedKeybinding> contributedKeybindings;
+    std::map<std::string, std::vector<ContributedMenuItem>> contributedMenus;
+    std::vector<ContributedView> contributedViews;
+    std::vector<ContributedLanguage> contributedLanguages;
+    nlohmann::json contributedConfiguration;
 };
 
 class VSIXLoader {

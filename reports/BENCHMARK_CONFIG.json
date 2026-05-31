@@ -1,0 +1,65 @@
+{
+  "_comment": "Canonical Phase 2 benchmark configuration. Treat this as the reference baseline for all future comparison runs.",
+  "benchmark_version": "2.0",
+  "phase": "Phase 2 - Multi-file Diff Anchor",
+  "sealed_date": "2026-04-08",
+  "harness_commit": "836e30bc2",
+  "branch": "feature/singularity-aperture-v126-merge",
+
+  "baseline": {
+    "report_file": "reports/swe_codestral4_multifile_cap1024.json",
+    "jsonl_file": "reports/swe_codestral4_multifile_cap1024.jsonl",
+    "model": "codestral:22b",
+    "model_alias": "codestral-22b-baseline",
+    "host": "127.0.0.1",
+    "port": 11434,
+    "max_tasks": 4,
+    "max_output_tokens": 1024,
+    "seed": -1,
+    "context_enabled": true,
+    "context_max_bytes": 2500,
+    "context_max_total_bytes": 5000,
+    "context_max_files": 2
+  },
+
+  "results_summary": {
+    "total": 4,
+    "completed": 4,
+    "patch_correct": 0,
+    "tests_passed": 0,
+    "task_completion_rate": 1.0,
+    "patch_correctness": 0.0,
+    "test_pass_rate": 0.0,
+    "pass_at_1": 0.3333
+  },
+
+  "compliance_summary": {
+    "all_tasks_has_header": true,
+    "all_tasks_has_hunks": true,
+    "prose_detected_any": false,
+    "is_fenced_any": false
+  },
+
+  "phase3_flags": {
+    "seed_flag": "--seed <N>",
+    "model_alias_flag": "--model-alias <label>",
+    "resume_checkpoint_flag": "--resume-checkpoint <path>",
+    "fuzzy_patch_score": "edit-distance ratio vs gold [0, 1]",
+    "prompt_byte_count": "raw prompt size in bytes"
+  },
+
+  "comparison_targets": [
+    {
+      "model": "deepseek-coder:33b",
+      "status": "planned",
+      "alias": "deepseek-33b-phase3"
+    },
+    {
+      "model": "codestral:22b",
+      "seed": 42,
+      "status": "planned",
+      "alias": "codestral-22b-seeded-phase3",
+      "_note": "Seeded run for reproducibility measurement"
+    }
+  ]
+}

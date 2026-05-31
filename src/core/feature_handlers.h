@@ -71,6 +71,17 @@ CommandResult handleAutonomyGoal(const CommandContext& ctx);
 CommandResult handleAutonomyRate(const CommandContext& ctx);
 CommandResult handleAutonomyRun(const CommandContext& ctx);
 CommandResult handleAutonomyToggle(const CommandContext& ctx);
+CommandResult handleAutonomyStatus(const CommandContext& ctx);
+CommandResult handleAutonomyMemory(const CommandContext& ctx);
+
+// ============================================================================
+// PLAN ORCHESTRATOR — CLI: !plan_start/!plan_stop, GUI: IDM_PLAN_ORCHESTRATOR_*
+// ============================================================================
+
+CommandResult handlePlanOrchestratorStart(const CommandContext& ctx);
+CommandResult handlePlanOrchestratorStop(const CommandContext& ctx);
+CommandResult handlePlanOrchestratorViewStatus(const CommandContext& ctx);
+CommandResult handlePlanOrchestratorViewPlan(const CommandContext& ctx);
 
 // ============================================================================
 // SUB-AGENT — CLI: !subagent/!chain/!swarm, GUI: IDM_SUBAGENT_*

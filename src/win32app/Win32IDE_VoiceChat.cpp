@@ -18,9 +18,15 @@
 #include <cstdio>
 #include <string>
 
-// SCAFFOLD_029: Voice chat and transcript UI
-
-
+// Voice Chat UI Panel Implementation
+// Integrates VoiceChat engine into the Win32 IDE with:
+//   - Voice Chat menu items under Tools
+//   - Voice panel in bottom panel area
+//   - PTT hotkey support (Ctrl+Shift+V default)
+//   - VU meter / level indicator
+//   - Device selection dialog
+//   - Transcription display
+//   - Room management UI
 // ============================================================================
 // Static VoiceChat engine instance (one per IDE)
 // ============================================================================
@@ -134,6 +140,30 @@ void Win32IDE::createVoiceChatPanel(HWND hwndParent)
     if (!g_voiceChatInitialized) {
         initVoiceChat();
     }
+
+    if (g_hwndVoicePanel) {
+        return;
+    }
+
+    g_hwndVoicePanel = CreateWindowExA(
+        0, "STATIC", nullptr,
+        WS_CHILD | WS_CLIPCHILDREN,
+        0, 0, 600, 72,
+        hwndParent, nullptr, m_hInstance, nullptr);
+
+    CreateWindowExA(0, "STATIC",
+        "Voice chat capture is disabled in this build.",
+        WS_CHILD | WS_VISIBLE | SS_LEFT,
+        8, 8, 360, 20,
+        g_hwndVoicePanel, nullptr, m_hInstance, nullptr);
+
+    CreateWindowExA(0, "STATIC",
+        "Text-to-speech remains available through voice automation.",
+        WS_CHILD | WS_VISIBLE | SS_LEFT,
+        8, 30, 420, 18,
+        g_hwndVoicePanel, nullptr, m_hInstance, nullptr);
+
+    return;
 
     // Create voice panel window
     g_hwndVoicePanel = CreateWindowExA(
@@ -549,31 +579,12 @@ VoiceChat* Win32IDE::getVoiceChatEngine()
 
 void Win32IDE::registerVoiceHotkeys()
 {
-    if (!m_hwndMain) return;
-
-    // Ctrl+Shift+V — Push-to-talk toggle
-    RegisterHotKey(m_hwndMain, VOICE_HOTKEY_TOGGLE_PTT,
-                   MOD_CONTROL | MOD_SHIFT, 'V');
-
-    // Ctrl+Shift+M — Toggle voice panel visibility
-    RegisterHotKey(m_hwndMain, VOICE_HOTKEY_TOGGLE_PANEL,
-                   MOD_CONTROL | MOD_SHIFT, 'M');
-
-    // Ctrl+Shift+X — Stop/cancel recording
-    RegisterHotKey(m_hwndMain, VOICE_HOTKEY_STOP,
-                   MOD_CONTROL | MOD_SHIFT, 'X');
-
-    OutputDebugStringA("[Voice UX] Hotkeys registered: "
-                       "Ctrl+Shift+V (PTT), Ctrl+Shift+M (Panel), Ctrl+Shift+X (Stop)\n");
+    (void)m_hwndMain;
 }
 
 void Win32IDE::unregisterVoiceHotkeys()
 {
-    if (!m_hwndMain) return;
-    UnregisterHotKey(m_hwndMain, VOICE_HOTKEY_TOGGLE_PTT);
-    UnregisterHotKey(m_hwndMain, VOICE_HOTKEY_TOGGLE_PANEL);
-    UnregisterHotKey(m_hwndMain, VOICE_HOTKEY_STOP);
-    OutputDebugStringA("[Voice UX] Hotkeys unregistered\n");
+    (void)m_hwndMain;
 }
 
 // ============================================================================

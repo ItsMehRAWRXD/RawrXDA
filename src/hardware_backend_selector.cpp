@@ -271,10 +271,29 @@ void HardwareBackendSelector::detectAvailableBackends()
 
 bool HardwareBackendSelector::detectCuda()
 {
-    // Check if CUDA is available on the system
-    // This would normally use CUDA runtime API calls
-    // For now, we return false as CUDA detection requires CUDA toolkit
-    return false;
+    // Check if CUDA runtime is available on the system
+    HMODULE hCuda = LoadLibraryA("nvcuda.dll");
+    if (!hCuda) {
+        return false;
+    }
+    
+    typedef int (*cudaGetDeviceCount_t)(int*);
+    cudaGetDeviceCount_t cudaGetDeviceCount = 
+        (cudaGetDeviceCount_t)GetProcAddress(hCuda, "cuDeviceGetCount");
+    if (!cudaGetDeviceCount) {
+        cudaGetDeviceCount = (cudaGetDeviceCount_t)GetProcAddress(hCuda, "cudaGetDeviceCount");
+    }
+    
+    bool available = false;
+    if (cudaGetDeviceCount) {
+        int count = 0;
+        if (cudaGetDeviceCount(&count) == 0 && count > 0) {
+            available = true;
+        }
+    }
+    
+    FreeLibrary(hCuda);
+    return available;
 }
 
 bool HardwareBackendSelector::detectVulkan()
@@ -286,16 +305,52 @@ bool HardwareBackendSelector::detectVulkan()
 
 bool HardwareBackendSelector::detectRocm()
 {
-    // Check for AMD HIP runtime
-    // Would use HIP API to detect
-    return false; // Not detected by default
+    // Check for AMD HIP runtime via amdocl64.dll or hip.dll
+    HMODULE hHip = LoadLibraryA("amdhip64.dll");
+    if (!hHip) {
+        hHip = LoadLibraryA("hip.dll");
+    }
+    if (!hHip) {
+        return false;
+    }
+    
+    typedef int (*hipGetDeviceCount_t)(int*);
+    hipGetDeviceCount_t hipGetDeviceCount = 
+        (hipGetDeviceCount_t)GetProcAddress(hHip, "hipGetDeviceCount");
+    
+    bool available = false;
+    if (hipGetDeviceCount) {
+        int count = 0;
+        if (hipGetDeviceCount(&count) == 0 && count > 0) {
+            available = true;
+        }
+    }
+    
+    FreeLibrary(hHip);
+    return available;
 }
 
 bool HardwareBackendSelector::detectOneAPI()
 {
-    // Check for Intel oneAPI runtime
-    // Would use oneAPI API to detect
-    return false; // Not detected by default
+    // Check for Intel oneAPI Level Zero loader
+    HMODULE hZe = LoadLibraryA("ze_loader.dll");
+    if (!hZe) {
+        return false;
+    }
+    
+    typedef int (*zeDriverGet_t)(uint32_t*, void**);
+    zeDriverGet_t zeDriverGet = (zeDriverGet_t)GetProcAddress(hZe, "zeDriverGet");
+    
+    bool available = false;
+    if (zeDriverGet) {
+        uint32_t count = 0;
+        if (zeDriverGet(&count, nullptr) == 0 && count > 0) {
+            available = true;
+        }
+    }
+    
+    FreeLibrary(hZe);
+    return available;
 }
 
 bool HardwareBackendSelector::detectMetal()

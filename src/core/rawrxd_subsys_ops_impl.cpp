@@ -82,10 +82,10 @@ extern "C" void matmul_kernel_avx2(const float* A, const float* B, float* C, int
 }
 
 // ---------------------------------------------------------------------------
-// ggml_gemm_q4_0 – no-op stub; real Q4_0 requires quantization context.
+// ggml_rxd_gemm_q4_0 – no-op stub; real Q4_0 requires quantization context.
 // Zero-fills dst so callers receive a valid (zeroed) result rather than trash.
 // ---------------------------------------------------------------------------
-extern "C" void ggml_gemm_q4_0(const void* src0, const void* src1, float* dst, int64_t ne00, int64_t ne01)
+extern "C" void ggml_rxd_gemm_q4_0(const void* src0, const void* src1, float* dst, int64_t ne00, int64_t ne01)
 {
     (void)src0;
     (void)src1;

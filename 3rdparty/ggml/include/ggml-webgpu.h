@@ -7,12 +7,12 @@
 extern "C" {
 #endif
 
-#define GGML_WEBGPU_NAME "WebGPU"
+#define GGML_RXD_WEBGPU_NAME "WebGPU"
 
 // Needed for examples in ggml
-GGML_BACKEND_API ggml_backend_t ggml_backend_webgpu_init(void);
+GGML_RXD_BACKEND_API ggml_rxd_backend_t ggml_rxd_backend_webgpu_init(void);
 
-GGML_BACKEND_API ggml_backend_reg_t ggml_backend_webgpu_reg(void);
+GGML_RXD_BACKEND_API ggml_rxd_backend_reg_t ggml_rxd_backend_webgpu_reg(void);
 
 #ifdef  __cplusplus
 }

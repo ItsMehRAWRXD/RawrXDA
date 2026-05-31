@@ -10,13 +10,13 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 
-#ifndef GGML_SYCL_PRESETS_HPP
-#define GGML_SYCL_PRESETS_HPP
+#ifndef GGML_RXD_SYCL_PRESETS_HPP
+#define GGML_RXD_SYCL_PRESETS_HPP
 
-#define GGML_SYCL_MAX_STREAMS       8
-#define GGML_SYCL_MAX_BUFFERS       256
+#define GGML_RXD_SYCL_MAX_STREAMS       8
+#define GGML_RXD_SYCL_MAX_BUFFERS       256
 
-#define WARP_SIZE GGML_SYCL_WARP_SIZE
+#define WARP_SIZE GGML_RXD_SYCL_WARP_SIZE
 #define MATRIX_ROW_PADDING 512 // last row of quant. matrices is a multiple of this to avoid out-of-bounds memory accesses
 
 #define SYCL_GELU_BLOCK_SIZE 256
@@ -53,11 +53,11 @@
 #define SYCL_ARANGE_BLOCK_SIZE 256
 
 // dmmv = dequantize_mul_mat_vec
-#ifndef GGML_SYCL_DMMV_X
-#define GGML_SYCL_DMMV_X 32
+#ifndef GGML_RXD_SYCL_DMMV_X
+#define GGML_RXD_SYCL_DMMV_X 32
 #endif
-#ifndef GGML_SYCL_MMV_Y
-#define GGML_SYCL_MMV_Y 1
+#ifndef GGML_RXD_SYCL_MMV_Y
+#define GGML_RXD_SYCL_MMV_Y 1
 #endif
 
 #ifndef K_QUANTS_PER_ITERATION
@@ -66,11 +66,11 @@
 static_assert(K_QUANTS_PER_ITERATION == 1 || K_QUANTS_PER_ITERATION == 2, "K_QUANTS_PER_ITERATION must be 1 or 2");
 #endif
 
-#ifndef GGML_SYCL_PEER_MAX_BATCH_SIZE
-#define GGML_SYCL_PEER_MAX_BATCH_SIZE 128
-#endif // GGML_SYCL_PEER_MAX_BATCH_SIZE
+#ifndef GGML_RXD_SYCL_PEER_MAX_BATCH_SIZE
+#define GGML_RXD_SYCL_PEER_MAX_BATCH_SIZE 128
+#endif // GGML_RXD_SYCL_PEER_MAX_BATCH_SIZE
 
 #define MUL_MAT_SRC1_COL_STRIDE 128
 
 #define QK_WARP_SIZE 32
-#endif // GGML_SYCL_PRESETS_HPP
+#endif // GGML_RXD_SYCL_PRESETS_HPP

@@ -50,6 +50,278 @@ static HWND s_hwndTestTree     = nullptr;
 static bool s_testExplorerClassRegistered = false;
 static const wchar_t* TEST_EXPLORER_CLASS = L"RawrXD_TestExplorer";
 
+struct ProcessRunResult {
+    bool launched = false;
+    bool timedOut = false;
+    DWORD exitCode = static_cast<DWORD>(-1);
+    DWORD launchError = 0;
+    std::string output;
+};
+
+struct ScriptTestCase {
+    std::string name;
+    std::string scriptPath;
+    std::vector<std::string> arguments;
+    DWORD timeoutMs = 60000;
+};
+
+static std::string trimString(const std::string& value) {
+    const size_t first = value.find_first_not_of(" \t\r\n");
+    if (first == std::string::npos) return {};
+    const size_t last = value.find_last_not_of(" \t\r\n");
+    return value.substr(first, last - first + 1);
+}
+
+static std::string summarizeOutputLine(const std::string& output) {
+    std::istringstream stream(output);
+    std::string line;
+    while (std::getline(stream, line)) {
+        line = trimString(line);
+        if (line.empty()) continue;
+        if (line.size() > 160) {
+            return line.substr(0, 157) + "...";
+        }
+        return line;
+    }
+    return {};
+}
+
+static std::string quoteProcessArg(const std::string& value) {
+    if (value.empty()) return "\"\"";
+    const bool needsQuotes = value.find_first_of(" \t\"") != std::string::npos;
+    if (!needsQuotes) return value;
+
+    std::string escaped;
+    escaped.reserve(value.size() + 2);
+    escaped.push_back('"');
+    for (char ch : value) {
+        if (ch == '"') escaped += "\\\"";
+        else escaped.push_back(ch);
+    }
+    escaped.push_back('"');
+    return escaped;
+}
+
+static void appendSyntheticResult(std::ostringstream& output,
+                                  const char* status,
+                                  const std::string& name,
+                                  double durationMs,
+                                  const std::string& detail = {}) {
+    output << '[' << status << "] " << name;
+    if (!detail.empty()) {
+        output << " -> " << detail;
+    }
+    if (durationMs > 0.0) {
+        output << " (" << std::fixed << std::setprecision(2) << durationMs << " ms)";
+    }
+    output << '\n';
+}
+
+static ProcessRunResult runCapturedProcess(const std::string& commandLine,
+                                           const std::string& workDir,
+                                           DWORD timeoutMs) {
+    ProcessRunResult result;
+
+    SECURITY_ATTRIBUTES sa = {};
+    sa.nLength = sizeof(sa);
+    sa.bInheritHandle = TRUE;
+
+    HANDLE hRead = nullptr;
+    HANDLE hWrite = nullptr;
+    if (!CreatePipe(&hRead, &hWrite, &sa, 0)) {
+        result.launchError = GetLastError();
+        return result;
+    }
+
+    SetHandleInformation(hRead, HANDLE_FLAG_INHERIT, 0);
+
+    STARTUPINFOA si = {};
+    si.cb = sizeof(si);
+    si.dwFlags = STARTF_USESTDHANDLES;
+    si.hStdOutput = hWrite;
+    si.hStdError = hWrite;
+
+    PROCESS_INFORMATION pi = {};
+    std::vector<char> commandBuffer(commandLine.begin(), commandLine.end());
+    commandBuffer.push_back('\0');
+
+    if (!CreateProcessA(nullptr,
+                        commandBuffer.data(),
+                        nullptr,
+                        nullptr,
+                        TRUE,
+                        CREATE_NO_WINDOW,
+                        nullptr,
+                        workDir.empty() ? nullptr : workDir.c_str(),
+                        &si,
+                        &pi)) {
+        result.launchError = GetLastError();
+        CloseHandle(hWrite);
+        CloseHandle(hRead);
+        return result;
+    }
+
+    result.launched = true;
+    CloseHandle(hWrite);
+    hWrite = nullptr;
+
+    const ULONGLONG startTick = GetTickCount64();
+    char buffer[4096] = {};
+
+    while (true) {
+        DWORD available = 0;
+        if (PeekNamedPipe(hRead, nullptr, 0, nullptr, &available, nullptr) && available > 0) {
+            DWORD bytesRead = 0;
+            const DWORD toRead = (available < sizeof(buffer) - 1) ? available : static_cast<DWORD>(sizeof(buffer) - 1);
+            if (ReadFile(hRead, buffer, toRead, &bytesRead, nullptr) && bytesRead > 0) {
+                buffer[bytesRead] = '\0';
+                result.output.append(buffer, bytesRead);
+            }
+        }
+
+        const DWORD waitResult = WaitForSingleObject(pi.hProcess, 50);
+        if (waitResult == WAIT_OBJECT_0) {
+            break;
+        }
+
+        if (timeoutMs > 0 && (GetTickCount64() - startTick) >= timeoutMs) {
+            result.timedOut = true;
+            TerminateProcess(pi.hProcess, WAIT_TIMEOUT);
+            break;
+        }
+    }
+
+    while (true) {
+        DWORD bytesRead = 0;
+        if (!ReadFile(hRead, buffer, static_cast<DWORD>(sizeof(buffer) - 1), &bytesRead, nullptr) || bytesRead == 0) {
+            break;
+        }
+        buffer[bytesRead] = '\0';
+        result.output.append(buffer, bytesRead);
+    }
+
+    DWORD exitCode = 0;
+    if (GetExitCodeProcess(pi.hProcess, &exitCode)) {
+        result.exitCode = exitCode;
+    }
+
+    CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
+    CloseHandle(hRead);
+
+    return result;
+}
+
+static std::string resolvePreferredWin32IDEExe(const std::string& workDir) {
+    const std::filesystem::path workspace(workDir);
+    const std::filesystem::path parent = workspace.has_parent_path() ? workspace.parent_path() : workspace;
+    const std::vector<std::filesystem::path> candidates = {
+        workspace / "build" / "bin" / "Release" / "RawrXD-Win32IDE.exe",
+        workspace / "build" / "bin" / "RawrXD-Win32IDE.exe",
+        workspace / "build" / "RawrXD-Win32IDE.exe",
+        workspace / "build-ninja" / "bin" / "RawrXD-Win32IDE.exe",
+        workspace / "build-ninja" / "RawrXD-Win32IDE.exe",
+        workspace / "build" / "dist" / "RawrXD-Win32IDE.exe",
+        parent / "rawrxd" / "build" / "bin" / "Release" / "RawrXD-Win32IDE.exe",
+        parent / "rawrxd" / "build" / "bin" / "RawrXD-Win32IDE.exe",
+        parent / "rawrxd" / "build-ninja" / "bin" / "RawrXD-Win32IDE.exe",
+        parent / "rxdn_strict" / "bin" / "RawrXD-Win32IDE.exe",
+        parent / "rxdn" / "bin" / "RawrXD-Win32IDE.exe",
+        parent / "rxdn_ninja" / "bin" / "RawrXD-Win32IDE.exe",
+        std::filesystem::path("D:/rawrxd/build/bin/Release/RawrXD-Win32IDE.exe"),
+        std::filesystem::path("D:/rawrxd/build/bin/RawrXD-Win32IDE.exe"),
+        std::filesystem::path("D:/rawrxd/build-ninja/bin/RawrXD-Win32IDE.exe"),
+        std::filesystem::path("D:/rxdn/bin/RawrXD-Win32IDE.exe"),
+        std::filesystem::path("D:/rxdn_ninja/bin/RawrXD-Win32IDE.exe")
+    };
+
+    for (const auto& candidate : candidates) {
+        if (std::filesystem::exists(candidate)) {
+            return candidate.string();
+        }
+    }
+
+    return {};
+}
+
+static std::vector<ScriptTestCase> discoverQaScripts(const std::string& workDir, const std::string& exePath) {
+    std::vector<ScriptTestCase> scripts;
+    if (exePath.empty()) return scripts;
+
+    const std::filesystem::path workspace(workDir);
+    const std::filesystem::path parent = workspace.has_parent_path() ? workspace.parent_path() : workspace;
+    std::vector<std::filesystem::path> roots = {
+        workspace / "scripts",
+        parent / "scripts",
+        parent / "rawrxd" / "scripts",
+        std::filesystem::path("D:/scripts")
+    };
+
+    if (const char* envRoot = std::getenv("RAWRXD_QA_SCRIPTS_ROOT")) {
+        if (envRoot[0] != '\0') {
+            roots.emplace_back(envRoot);
+        }
+    }
+
+    std::sort(roots.begin(), roots.end());
+    roots.erase(std::unique(roots.begin(), roots.end()), roots.end());
+
+    auto addScript = [&](const char* displayName,
+                         const char* scriptName,
+                         std::vector<std::string> args,
+                         DWORD timeoutMs) {
+        for (const auto& root : roots) {
+            const std::filesystem::path scriptPath = root / scriptName;
+            if (!std::filesystem::exists(scriptPath)) continue;
+
+            scripts.push_back(ScriptTestCase{
+                displayName,
+                scriptPath.string(),
+                std::move(args),
+                timeoutMs,
+            });
+            break;
+        }
+    };
+
+    addScript("QA Smoke: Runtime Launch",
+              "runtime_smoke_check.ps1",
+              {"-ExePath", exePath, "-ProcessName", "RawrXD-Win32IDE"},
+              45000);
+
+    addScript("QA Smoke: Chat Pane Strict",
+              "smoke_test_chat_pane.ps1",
+              {"-ExePath", exePath, "-RequireModelResponse", "-RequireIdeModelLoadPath", "-FailOnWarnings", "-KillOnExit"},
+              90000);
+
+    addScript("QA Smoke: Chat Routes",
+              "smoke_test_chat_routes.ps1",
+              {"-ExePath", exePath, "-FullModelMode", "-KillOnExit"},
+              90000);
+
+    addScript("QA Smoke: All Routes",
+              "smoke_test_all_routes.ps1",
+              {"-ExePath", exePath, "-KillOnExit"},
+              120000);
+
+    addScript("QA Contract: Debug + Swarm",
+              "contract_test_debug_swarm.ps1",
+              {"-ExePath", exePath, "-KillOnExit"},
+              90000);
+
+    addScript("QA Contract: Router + Hybrid",
+              "contract_test_router_hybrid.ps1",
+              {"-ExePath", exePath, "-KillOnExit"},
+              90000);
+
+    addScript("QA Contract: Dual + MultiResponse",
+              "contract_test_dual_multiresponse.ps1",
+              {"-ExePath", exePath, "-KillOnExit"},
+              90000);
+
+    return scripts;
+}
+
 // ============================================================================
 // Parse test output (supports [PASS], [FAIL], [SKIP] format)
 // ============================================================================
@@ -396,22 +668,35 @@ void Win32IDE::cmdTestExplorerRun() {
     // ── Real test discovery: find test executables in workspace ─────────
     std::string workDir;
     {
-        char cwd[MAX_PATH] = {};
-        GetCurrentDirectoryA(MAX_PATH, cwd);
-        workDir = cwd;
+        if (!m_projectRoot.empty()) {
+            workDir = m_projectRoot;
+        } else if (!m_currentDirectory.empty()) {
+            workDir = m_currentDirectory;
+        } else {
+            char cwd[MAX_PATH] = {};
+            GetCurrentDirectoryA(MAX_PATH, cwd);
+            workDir = cwd;
+        }
     }
 
     // Search common build output directories for test executables
     std::vector<std::string> searchDirs = {
         workDir + "\\build\\tests",
         workDir + "\\build\\bin",
+        workDir + "\\build\\bin\\Release",
         workDir + "\\build\\Debug",
         workDir + "\\build\\Release",
+        workDir + "\\build-ninja\\bin",
         workDir + "\\build\\monolithic\\bin",
         workDir + "\\build\\win32ide\\bin",
         workDir + "\\build",
         workDir + "\\out\\test",
         workDir + "\\bin",
+        "D:\\rawrxd\\build\\bin",
+        "D:\\rawrxd\\build\\bin\\Release",
+        "D:\\rawrxd\\build-ninja\\bin",
+        "D:\\rxdn\\bin",
+        "D:\\rxdn_ninja\\bin",
     };
 
     std::vector<std::string> testExes;
@@ -441,12 +726,18 @@ void Win32IDE::cmdTestExplorerRun() {
                      std::filesystem::exists(workDir + "\\setup.cfg") ||
                      std::filesystem::exists(workDir + "\\pyproject.toml");
 
+    const std::string preferredExe = resolvePreferredWin32IDEExe(workDir);
+    const std::vector<ScriptTestCase> qaScripts = discoverQaScripts(workDir, preferredExe);
+
     std::ostringstream combinedOutput;
 
-    if (testExes.empty() && !hasCTest && !hasPytest) {
+    if (testExes.empty() && !hasCTest && !hasPytest && qaScripts.empty()) {
         appendToOutput("[TestExplorer] No test executables found. Checked:\n");
         for (const auto& d : searchDirs) {
             appendToOutput("  " + d + "\n");
+        }
+        if (preferredExe.empty()) {
+            appendToOutput("[TestExplorer] No Win32IDE binary found for smoke/contract validation.\n");
         }
         appendToOutput("[TestExplorer] Build your project with test targets to populate.\n");
 
@@ -462,7 +753,9 @@ void Win32IDE::cmdTestExplorerRun() {
             sa.nLength = sizeof(sa);
             sa.bInheritHandle = TRUE;
             HANDLE hRead = nullptr, hWrite = nullptr;
-            CreatePipe(&hRead, &hWrite, &sa, 0);
+            if (!CreatePipe(&hRead, &hWrite, &sa, 0)) {
+                combinedOutput << "[FAIL] CTest -> CreatePipe failed (error " << GetLastError() << ")\n";
+            } else {
             SetHandleInformation(hRead, HANDLE_FLAG_INHERIT, 0);
 
             STARTUPINFOA si = { sizeof(si) };
@@ -488,6 +781,7 @@ void Win32IDE::cmdTestExplorerRun() {
                 CloseHandle(pi.hProcess);
                 CloseHandle(pi.hThread);
             }
+            }
             if (hWrite) CloseHandle(hWrite);
             if (hRead) CloseHandle(hRead);
         }
@@ -501,7 +795,9 @@ void Win32IDE::cmdTestExplorerRun() {
             sa.nLength = sizeof(sa);
             sa.bInheritHandle = TRUE;
             HANDLE hRead = nullptr, hWrite = nullptr;
-            CreatePipe(&hRead, &hWrite, &sa, 0);
+            if (!CreatePipe(&hRead, &hWrite, &sa, 0)) {
+                combinedOutput << "[FAIL] pytest -> CreatePipe failed (error " << GetLastError() << ")\n";
+            } else {
             SetHandleInformation(hRead, HANDLE_FLAG_INHERIT, 0);
 
             STARTUPINFOA si = { sizeof(si) };
@@ -527,6 +823,7 @@ void Win32IDE::cmdTestExplorerRun() {
                 CloseHandle(pi.hProcess);
                 CloseHandle(pi.hThread);
             }
+            }
             if (hWrite) CloseHandle(hWrite);
             if (hRead) CloseHandle(hRead);
         }
@@ -539,7 +836,11 @@ void Win32IDE::cmdTestExplorerRun() {
             sa.nLength = sizeof(sa);
             sa.bInheritHandle = TRUE;
             HANDLE hRead = nullptr, hWrite = nullptr;
-            CreatePipe(&hRead, &hWrite, &sa, 0);
+            if (!CreatePipe(&hRead, &hWrite, &sa, 0)) {
+                combinedOutput << "[FAIL] " << std::filesystem::path(exe).filename().string()
+                               << " -> CreatePipe failed (error " << GetLastError() << ")\n";
+                continue;
+            }
             SetHandleInformation(hRead, HANDLE_FLAG_INHERIT, 0);
 
             STARTUPINFOA si = { sizeof(si) };
@@ -580,6 +881,50 @@ void Win32IDE::cmdTestExplorerRun() {
             }
             if (hWrite) CloseHandle(hWrite);
             if (hRead) CloseHandle(hRead);
+        }
+
+        // ── Run curated QA smoke and contract scripts ───────────────────
+        for (const auto& qaScript : qaScripts) {
+            appendToOutput("[TestExplorer] Running QA script: " + qaScript.name + "\n");
+
+            std::ostringstream command;
+            command << "powershell.exe -NoProfile -ExecutionPolicy Bypass -File "
+                    << quoteProcessArg(qaScript.scriptPath);
+            for (const auto& arg : qaScript.arguments) {
+                command << ' ' << quoteProcessArg(arg);
+            }
+
+            const ULONGLONG startTick = GetTickCount64();
+            ProcessRunResult result = runCapturedProcess(command.str(), workDir, qaScript.timeoutMs);
+            const double durationMs = static_cast<double>(GetTickCount64() - startTick);
+
+            if (!result.launched) {
+                std::ostringstream detail;
+                detail << "launch failed (error " << result.launchError << ')';
+                appendSyntheticResult(combinedOutput, "FAIL", qaScript.name, durationMs, detail.str());
+                continue;
+            }
+
+            if (result.timedOut) {
+                appendSyntheticResult(combinedOutput,
+                                      "FAIL",
+                                      qaScript.name,
+                                      durationMs,
+                                      "timed out after " + std::to_string(qaScript.timeoutMs / 1000) + " seconds");
+                continue;
+            }
+
+            const std::string detail = summarizeOutputLine(result.output);
+            if (result.exitCode == 0) {
+                appendSyntheticResult(combinedOutput, "PASS", qaScript.name, durationMs, detail);
+            } else {
+                std::ostringstream failureDetail;
+                failureDetail << "exit " << result.exitCode;
+                if (!detail.empty()) {
+                    failureDetail << ": " << detail;
+                }
+                appendSyntheticResult(combinedOutput, "FAIL", qaScript.name, durationMs, failureDetail.str());
+            }
         }
     }
 

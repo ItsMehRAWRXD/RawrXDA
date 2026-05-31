@@ -1,5 +1,13 @@
 #pragma once
 
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <winsock2.h>
+#include <windows.h>
+#endif
+
 #include <atomic>
 #include <thread>
 #include <memory>
@@ -210,4 +218,14 @@ private:
     std::chrono::steady_clock::time_point start_time_;
     std::atomic<uint64_t> ws_messages_sent_{0};
     std::atomic<uint64_t> ws_messages_received_{0};
+
+    // ---- Real HTTP Server ----
+    SOCKET listen_socket_ = INVALID_SOCKET;
+    std::vector<std::unique_ptr<std::thread>> worker_threads_;
+    std::atomic<bool> accept_running_{false};
+
+    void HttpAcceptThread();           // Main accept loop
+    void HttpWorkerThread(SOCKET client_socket); // Per-connection handler
+    bool ParseHttpRequest(SOCKET client, std::string& method, std::string& path, std::string& body);
+    void SendHttpResponse(SOCKET client, int status_code, const std::string& content_type, const std::string& body);
 };

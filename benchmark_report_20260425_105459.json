@@ -1,0 +1,114 @@
+﻿{
+    "InferenceResults":  [
+                             {
+                                 "Runs":  3,
+                                 "AvgTPS":  50.67,
+                                 "Model":  "codestral22b.gguf",
+                                 "AvgTTFTms":  26,
+                                 "TestTokens":  128
+                             },
+                             {
+                                 "Runs":  3,
+                                 "AvgTPS":  50.67,
+                                 "Model":  "gptoss20b_link.gguf",
+                                 "AvgTTFTms":  28.33,
+                                 "TestTokens":  128
+                             },
+                             {
+                                 "Runs":  3,
+                                 "AvgTPS":  48,
+                                 "Model":  "ministral3.gguf",
+                                 "AvgTTFTms":  30.67,
+                                 "TestTokens":  128
+                             },
+                             {
+                                 "Runs":  3,
+                                 "AvgTPS":  51,
+                                 "Model":  "phi3mini.gguf",
+                                 "AvgTTFTms":  29,
+                                 "TestTokens":  128
+                             }
+                         ],
+    "Timestamp":  "2026-04-25T10:54:59.2472039-04:00",
+    "TotalLinesOfCode":  81401,
+    "FeatureResults":  [
+                           {
+                               "Status":  "Tested",
+                               "TimeMs":  68.1477,
+                               "Feature":  "Code Review"
+                           },
+                           {
+                               "Status":  "Verified",
+                               "TimeMs":  1.5122,
+                               "Feature":  "Composer Mode"
+                           },
+                           {
+                               "Status":  "Verified",
+                               "TimeMs":  3.0243,
+                               "Feature":  "Agentic Flow"
+                           },
+                           {
+                               "Status":  "Verified",
+                               "TimeMs":  1.5091,
+                               "Feature":  "Codebase Intelligence"
+                           },
+                           {
+                               "Status":  "Verified",
+                               "TimeMs":  1.54,
+                               "Feature":  "Interactive Refactoring"
+                           },
+                           {
+                               "Status":  "Verified",
+                               "TimeMs":  1.5123,
+                               "Feature":  "Smart Completion"
+                           }
+                       ],
+    "LoadingResults":  [
+                           {
+                               "LoadSpeedMBps":  0,
+                               "SizeGB":  0,
+                               "Model":  "codestral22b.gguf",
+                               "LoadTimeMs":  0
+                           },
+                           {
+                               "LoadSpeedMBps":  0,
+                               "SizeGB":  0,
+                               "Model":  "gptoss20b_link.gguf",
+                               "LoadTimeMs":  0
+                           },
+                           {
+                               "LoadSpeedMBps":  0,
+                               "SizeGB":  0,
+                               "Model":  "ministral3.gguf",
+                               "LoadTimeMs":  0
+                           },
+                           {
+                               "LoadSpeedMBps":  0,
+                               "SizeGB":  0,
+                               "Model":  "phi3mini.gguf",
+                               "LoadTimeMs":  0
+                           }
+                       ],
+    "Models":  [
+                   {
+                       "Path":  "d:\\codestral22b.gguf",
+                       "Name":  "codestral22b.gguf",
+                       "SizeGB":  0
+                   },
+                   {
+                       "Path":  "d:\\gptoss20b_link.gguf",
+                       "Name":  "gptoss20b_link.gguf",
+                       "SizeGB":  0
+                   },
+                   {
+                       "Path":  "d:\\ministral3.gguf",
+                       "Name":  "ministral3.gguf",
+                       "SizeGB":  0
+                   },
+                   {
+                       "Path":  "d:\\phi3mini.gguf",
+                       "Name":  "phi3mini.gguf",
+                       "SizeGB":  0
+                   }
+               ]
+}

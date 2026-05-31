@@ -297,8 +297,6 @@ const char* EnterpriseFeatureManager::GetTierName(LicenseTier tier) {
 }
 
 // ============================================================================
-// Gate — check & log feature access
-// ============================================================================
 bool EnterpriseFeatureManager::Gate(uint64_t featureMask, const char* callerContext) const {
     if (IsFeatureEnabled(featureMask)) return true;
 

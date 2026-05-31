@@ -1,0 +1,12 @@
+LIBRARY RawrXD_Titan
+EXPORTS
+    LoadModelNative @98
+    Detokenize @97
+    ForwardPass @99
+    DequantizeRow_Q4_0_AVX512 @42
+    Titan_Initialize @100
+    Titan_LoadModel @101
+    Titan_RunInferenceStep @102
+    Titan_RMSNorm_AVX512 @103
+    Titan_SiLU_AVX512 @104
+

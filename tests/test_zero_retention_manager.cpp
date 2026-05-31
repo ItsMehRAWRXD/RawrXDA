@@ -1,22 +1,35 @@
 /**
- * ZeroRetentionManager unit tests — C++20 only (Qt-free).
- * Uses ZeroRetentionManager from src/terminal/zero_retention_manager.hpp (std::string, std::chrono).
+ * ZeroRetentionManager unit tests - C++20 only, Qt-free, no gtest.
  */
-
-#include <gtest/gtest.h>
+#include <cassert>
 #include <chrono>
 #include <thread>
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include <iostream>
+#include <stdexcept>
 
 #include "../src/terminal/zero_retention_manager.hpp"
 
 namespace fs = std::filesystem;
 
-class ZeroRetentionManagerTest : public ::testing::Test {
-protected:
-    void SetUp() override {
+static int s_pass = 0, s_fail = 0;
+
+#define EXPECT_TRUE(expr)  do { if(!(expr)) { std::cerr << "FAIL: " #expr " at " __FILE__ ":" << __LINE__ << "\n"; ++s_fail; } else ++s_pass; } while(0)
+#define EXPECT_FALSE(expr) EXPECT_TRUE(!(expr))
+#define EXPECT_EQ(a,b)     EXPECT_TRUE((a)==(b))
+#define EXPECT_NE(a,b)     EXPECT_TRUE((a)!=(b))
+#define EXPECT_GT(a,b)     EXPECT_TRUE((a)>(b))
+#define EXPECT_GE(a,b)     EXPECT_TRUE((a)>=(b))
+#define EXPECT_LE(a,b)     EXPECT_TRUE((a)<=(b))
+#define ASSERT_FALSE(expr) do { if(expr) { std::cerr << "ASSERT FAIL: " #expr " at " __FILE__ ":" << __LINE__ << "\n"; throw std::runtime_error("assertion"); } } while(0)
+
+struct Fixture {
+    fs::path m_tempDir;
+    std::unique_ptr<ZeroRetentionManager> m_manager;
+
+    Fixture() {
         m_tempDir = fs::temp_directory_path() / ("rawrxd_zrm_test_" + std::to_string(
             std::chrono::steady_clock::now().time_since_epoch().count()));
         fs::create_directories(m_tempDir);
@@ -26,13 +39,11 @@ protected:
         cfg.dataDirectory = m_tempDir.string();
         m_manager->setConfig(cfg);
     }
-
-    void TearDown() override {
+    ~Fixture() {
         m_manager.reset();
         std::error_code ec;
         fs::remove_all(m_tempDir, ec);
     }
-
     std::string createTempFile(const std::string& content = "") {
         fs::path p = m_tempDir / ("tmp_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
         std::ofstream f(p);
@@ -40,190 +51,159 @@ protected:
         f.close();
         return p.string();
     }
-
-    fs::path m_tempDir;
-    std::unique_ptr<ZeroRetentionManager> m_manager;
 };
 
-TEST_F(ZeroRetentionManagerTest, InitializationSucceeds) {
-    EXPECT_NE(m_manager.get(), nullptr);
+static void runTest(const char* name, auto fn) {
+    std::cout << "[ RUN ] " << name << std::endl;
+    try { Fixture fix; fn(fix); std::cout << "[  OK ] " << name << std::endl; }
+    catch(const std::exception& e) { std::cerr << "[FAIL] " << name << ": " << e.what() << std::endl; ++s_fail; }
 }
 
-TEST_F(ZeroRetentionManagerTest, SetAndGetConfig) {
-    ZeroRetentionManager::Config config;
-    config.sessionTtlMinutes = 120;
-    config.dataRetentionDays = 7;
-    config.auditRetentionDays = 180;
-    config.enableAutoCleanup = true;
-    config.cleanupIntervalMinutes = 30;
-    config.enableSecureWipe = true;
-    config.enableAuditLog = true;
-    config.auditLogPath = (m_tempDir / "audit.log").string();
-    config.dataDirectory = m_tempDir.string();
-    m_manager->setConfig(config);
-    ZeroRetentionManager::Config retrieved = m_manager->getConfig();
-    EXPECT_EQ(retrieved.sessionTtlMinutes, 120);
-    EXPECT_EQ(retrieved.dataRetentionDays, 7);
-    EXPECT_EQ(retrieved.auditRetentionDays, 180);
-    EXPECT_TRUE(retrieved.enableAutoCleanup);
-    EXPECT_EQ(retrieved.cleanupIntervalMinutes, 30);
-    EXPECT_TRUE(retrieved.enableSecureWipe);
-}
+int main() {
+    runTest("InitializationSucceeds", [](Fixture& f) {
+        EXPECT_NE(f.m_manager.get(), nullptr);
+    });
 
-TEST_F(ZeroRetentionManagerTest, DefaultConfigValues) {
-    ZeroRetentionManager::Config config = m_manager->getConfig();
-    EXPECT_EQ(config.sessionTtlMinutes, 60);
-    EXPECT_EQ(config.dataRetentionDays, 0);
-    EXPECT_EQ(config.auditRetentionDays, 90);
-    EXPECT_TRUE(config.enableAutoCleanup);
-    EXPECT_TRUE(config.enableSecureWipe);
-    EXPECT_TRUE(config.enableAuditLog);
-}
+    runTest("SetAndGetConfig", [](Fixture& f) {
+        ZeroRetentionManager::Config config;
+        config.sessionTtlMinutes = 120;
+        config.dataRetentionDays = 7;
+        config.auditRetentionDays = 180;
+        config.enableAutoCleanup = true;
+        config.cleanupIntervalMinutes = 30;
+        config.enableSecureWipe = true;
+        config.enableAuditLog = true;
+        f.m_manager->setConfig(config);
+        auto retrieved = f.m_manager->getConfig();
+        EXPECT_EQ(retrieved.sessionTtlMinutes, 120);
+        EXPECT_EQ(retrieved.dataRetentionDays, 7);
+        EXPECT_EQ(retrieved.auditRetentionDays, 180);
+        EXPECT_TRUE(retrieved.enableAutoCleanup);
+        EXPECT_EQ(retrieved.cleanupIntervalMinutes, 30);
+        EXPECT_TRUE(retrieved.enableSecureWipe);
+    });
 
-TEST_F(ZeroRetentionManagerTest, RegisterDataReturnsValidId) {
-    std::string path = createTempFile("test data");
-    std::string id = m_manager->registerData(path, ZeroRetentionManager::Session);
-    EXPECT_FALSE(id.empty());
-    EXPECT_GT(id.size(), 0u);
-}
+    runTest("DefaultConfigValues", [](Fixture& f) {
+        auto config = f.m_manager->getConfig();
+        EXPECT_EQ(config.sessionTtlMinutes, 60);
+        EXPECT_EQ(config.dataRetentionDays, 0);
+        EXPECT_EQ(config.auditRetentionDays, 90);
+        EXPECT_TRUE(config.enableAutoCleanup);
+        EXPECT_TRUE(config.enableSecureWipe);
+        EXPECT_TRUE(config.enableAuditLog);
+    });
 
-TEST_F(ZeroRetentionManagerTest, RegisterMultipleDataItems) {
-    std::string path1 = createTempFile();
-    std::string path2 = createTempFile();
-    std::string id1 = m_manager->registerData(path1, ZeroRetentionManager::Session);
-    std::string id2 = m_manager->registerData(path2, ZeroRetentionManager::Cached);
-    EXPECT_FALSE(id1.empty());
-    EXPECT_FALSE(id2.empty());
-    EXPECT_NE(id1, id2);
-}
+    runTest("RegisterDataReturnsValidId", [](Fixture& f) {
+        std::string path = f.createTempFile("test data");
+        std::string id = f.m_manager->registerData(path, ZeroRetentionManager::Session);
+        EXPECT_FALSE(id.empty());
+        EXPECT_GT(id.size(), 0u);
+    });
 
-TEST_F(ZeroRetentionManagerTest, RegisterDataWithCustomTTL) {
-    std::string path = createTempFile();
-    std::string id = m_manager->registerData(path, ZeroRetentionManager::Session, 120);
-    EXPECT_FALSE(id.empty());
-}
+    runTest("RegisterMultipleDataItems", [](Fixture& f) {
+        std::string path1 = f.createTempFile();
+        std::string path2 = f.createTempFile();
+        std::string id1 = f.m_manager->registerData(path1, ZeroRetentionManager::Session);
+        std::string id2 = f.m_manager->registerData(path2, ZeroRetentionManager::Cached);
+        EXPECT_FALSE(id1.empty());
+        EXPECT_FALSE(id2.empty());
+        EXPECT_NE(id1, id2);
+    });
 
-TEST_F(ZeroRetentionManagerTest, UnregisterValidDataSucceeds) {
-    std::string path = createTempFile();
-    std::string id = m_manager->registerData(path, ZeroRetentionManager::Session);
-    ASSERT_FALSE(id.empty());
-    bool result = m_manager->unregisterData(id);
-    EXPECT_TRUE(result);
-}
+    runTest("RegisterDataWithCustomTTL", [](Fixture& f) {
+        std::string path = f.createTempFile();
+        std::string id = f.m_manager->registerData(path, ZeroRetentionManager::Session, 120);
+        EXPECT_FALSE(id.empty());
+    });
 
-TEST_F(ZeroRetentionManagerTest, UnregisterInvalidIdFails) {
-    bool result = m_manager->unregisterData("invalid-id-12345");
-    EXPECT_FALSE(result);
-}
+    runTest("UnregisterValidDataSucceeds", [](Fixture& f) {
+        std::string path = f.createTempFile();
+        std::string id = f.m_manager->registerData(path, ZeroRetentionManager::Session);
+        ASSERT_FALSE(id.empty());
+        EXPECT_TRUE(f.m_manager->unregisterData(id));
+    });
 
-TEST_F(ZeroRetentionManagerTest, DeleteDataImmediately) {
-    std::string path = createTempFile("test data");
-    std::string id = m_manager->registerData(path, ZeroRetentionManager::Session);
-    ASSERT_FALSE(id.empty());
-    bool result = m_manager->deleteData(id, true);
-    EXPECT_TRUE(result);
-}
+    runTest("UnregisterInvalidIdFails", [](Fixture& f) {
+        EXPECT_FALSE(f.m_manager->unregisterData("invalid-id-12345"));
+    });
 
-TEST_F(ZeroRetentionManagerTest, DeleteInvalidIdFails) {
-    bool result = m_manager->deleteData("invalid-id", true);
-    EXPECT_FALSE(result);
-}
+    runTest("DeleteDataImmediately", [](Fixture& f) {
+        std::string path = f.createTempFile("test data");
+        std::string id = f.m_manager->registerData(path, ZeroRetentionManager::Session);
+        ASSERT_FALSE(id.empty());
+        EXPECT_TRUE(f.m_manager->deleteData(id, true));
+    });
 
-TEST_F(ZeroRetentionManagerTest, DeleteNonExpiredDataWithoutImmediate) {
-    std::string path = createTempFile();
-    std::string id = m_manager->registerData(path, ZeroRetentionManager::Session, 60);
-    ASSERT_FALSE(id.empty());
-    bool result = m_manager->deleteData(id, false);
-    EXPECT_FALSE(result);
-}
+    runTest("DeleteInvalidIdFails", [](Fixture& f) {
+        EXPECT_FALSE(f.m_manager->deleteData("invalid-id", true));
+    });
 
-TEST_F(ZeroRetentionManagerTest, AnonymizeInvalidIdFails) {
-    bool result = m_manager->anonymizeData("invalid-id");
-    EXPECT_FALSE(result);
-}
+    runTest("DeleteNonExpiredDataWithoutImmediate", [](Fixture& f) {
+        std::string path = f.createTempFile();
+        std::string id = f.m_manager->registerData(path, ZeroRetentionManager::Session, 60);
+        ASSERT_FALSE(id.empty());
+        EXPECT_FALSE(f.m_manager->deleteData(id, false));
+    });
 
-TEST_F(ZeroRetentionManagerTest, CleanupExpiredDataWorks) {
-    m_manager->cleanupExpiredData();
-    auto metrics = m_manager->getMetrics();
-    EXPECT_GE(metrics.dataEntriesDeleted, 0);
-}
+    runTest("AnonymizeInvalidIdFails", [](Fixture& f) {
+        EXPECT_FALSE(f.m_manager->anonymizeData("invalid-id"));
+    });
 
-TEST_F(ZeroRetentionManagerTest, PurgeAllDataByClassification) {
-    std::string path1 = createTempFile();
-    std::string path2 = createTempFile();
-    m_manager->registerData(path1, ZeroRetentionManager::Session);
-    m_manager->registerData(path2, ZeroRetentionManager::Session);
-    m_manager->purgeAllData(ZeroRetentionManager::Session);
-    auto entries = m_manager->getTrackedData(ZeroRetentionManager::Session);
-    EXPECT_TRUE(entries.empty());
-}
+    runTest("CleanupExpiredDataWorks", [](Fixture& f) {
+        f.m_manager->cleanupExpiredData();
+        auto metrics = f.m_manager->getMetrics();
+        EXPECT_GE(metrics.dataEntriesDeleted, 0);
+    });
 
-TEST_F(ZeroRetentionManagerTest, GetTrackedDataByClassification) {
-    std::string path1 = createTempFile();
-    std::string path2 = createTempFile();
-    std::string path3 = createTempFile();
-    m_manager->registerData(path1, ZeroRetentionManager::Session);
-    m_manager->registerData(path2, ZeroRetentionManager::Session);
-    m_manager->registerData(path3, ZeroRetentionManager::Cached);
-    auto sessionData = m_manager->getTrackedData(ZeroRetentionManager::Session);
-    EXPECT_EQ(sessionData.size(), 2u);
-}
+    runTest("PurgeAllDataByClassification", [](Fixture& f) {
+        f.m_manager->registerData(f.createTempFile(), ZeroRetentionManager::Session);
+        f.m_manager->registerData(f.createTempFile(), ZeroRetentionManager::Session);
+        f.m_manager->purgeAllData(ZeroRetentionManager::Session);
+        EXPECT_TRUE(f.m_manager->getTrackedData(ZeroRetentionManager::Session).empty());
+    });
 
-TEST_F(ZeroRetentionManagerTest, GetDataEntryReturnsValidEntry) {
-    std::string path = createTempFile();
-    std::string id = m_manager->registerData(path, ZeroRetentionManager::Sensitive);
-    auto entry = m_manager->getDataEntry(id);
-    EXPECT_EQ(entry.id, id);
-    EXPECT_EQ(entry.classification, ZeroRetentionManager::Sensitive);
-    EXPECT_FALSE(entry.isAnonymized);
-}
+    runTest("GetTrackedDataByClassification", [](Fixture& f) {
+        f.m_manager->registerData(f.createTempFile(), ZeroRetentionManager::Session);
+        f.m_manager->registerData(f.createTempFile(), ZeroRetentionManager::Session);
+        f.m_manager->registerData(f.createTempFile(), ZeroRetentionManager::Cached);
+        EXPECT_EQ(f.m_manager->getTrackedData(ZeroRetentionManager::Session).size(), 2u);
+    });
 
-TEST_F(ZeroRetentionManagerTest, GetInvalidDataEntryReturnsEmpty) {
-    auto entry = m_manager->getDataEntry("invalid-id");
-    EXPECT_TRUE(entry.id.empty());
-}
+    runTest("GetDataEntryReturnsValidEntry", [](Fixture& f) {
+        std::string path = f.createTempFile();
+        std::string id = f.m_manager->registerData(path, ZeroRetentionManager::Sensitive);
+        auto entry = f.m_manager->getDataEntry(id);
+        EXPECT_EQ(entry.id, id);
+        EXPECT_EQ(entry.classification, ZeroRetentionManager::Sensitive);
+        EXPECT_FALSE(entry.isAnonymized);
+    });
 
-TEST_F(ZeroRetentionManagerTest, InitialMetricsAreZero) {
-    auto metrics = m_manager->getMetrics();
-    EXPECT_EQ(metrics.dataEntriesTracked, 0);
-    EXPECT_EQ(metrics.dataEntriesDeleted, 0);
-    EXPECT_EQ(metrics.bytesDeleted, 0);
-    EXPECT_EQ(metrics.sessionsCleanedUp, 0);
-    EXPECT_EQ(metrics.anonymizationCount, 0);
-    EXPECT_EQ(metrics.auditEntriesCreated, 0);
-    EXPECT_EQ(metrics.errorCount, 0);
-}
+    runTest("GetInvalidDataEntryReturnsEmpty", [](Fixture& f) {
+        EXPECT_TRUE(f.m_manager->getDataEntry("invalid-id").id.empty());
+    });
 
-TEST_F(ZeroRetentionManagerTest, MetricsUpdateOnOperations) {
-    std::string path = createTempFile("test");
-    m_manager->registerData(path, ZeroRetentionManager::Session);
-    auto metrics = m_manager->getMetrics();
-    EXPECT_GT(metrics.dataEntriesTracked, 0);
-}
+    runTest("InitialMetricsAreZero", [](Fixture& f) {
+        auto m = f.m_manager->getMetrics();
+        EXPECT_EQ(m.dataEntriesTracked, 0);
+        EXPECT_EQ(m.dataEntriesDeleted, 0);
+        EXPECT_EQ(m.bytesDeleted, 0);
+        EXPECT_EQ(m.sessionsCleanedUp, 0);
+        EXPECT_EQ(m.anonymizationCount, 0);
+        EXPECT_EQ(m.errorCount, 0);
+    });
 
-TEST_F(ZeroRetentionManagerTest, ResetMetricsClearsCounters) {
-    std::string path = createTempFile();
-    m_manager->registerData(path, ZeroRetentionManager::Session);
-    auto before = m_manager->getMetrics();
-    EXPECT_GT(before.dataEntriesTracked, 0);
-    m_manager->resetMetrics();
-    auto after = m_manager->getMetrics();
-    EXPECT_EQ(after.dataEntriesTracked, 0);
-}
+    runTest("MetricsUpdateOnOperations", [](Fixture& f) {
+        f.m_manager->registerData(f.createTempFile("test"), ZeroRetentionManager::Session);
+        EXPECT_GT(f.m_manager->getMetrics().dataEntriesTracked, 0);
+    });
 
-TEST_F(ZeroRetentionManagerTest, ZeroRetentionPolicyConfig) {
-    ZeroRetentionManager::Config config;
-    config.dataRetentionDays = 0;
-    m_manager->setConfig(config);
-    std::string path = createTempFile();
-    std::string id = m_manager->registerData(path, ZeroRetentionManager::Sensitive);
-    auto entry = m_manager->getDataEntry(id);
-    EXPECT_FALSE(entry.id.empty());
-    EXPECT_LE(std::chrono::system_clock::to_time_t(entry.expiresAt),
-              std::chrono::system_clock::to_time_t(entry.createdAt) + 86400);
-}
+    runTest("ResetMetricsClearsCounters", [](Fixture& f) {
+        f.m_manager->registerData(f.createTempFile(), ZeroRetentionManager::Session);
+        EXPECT_GT(f.m_manager->getMetrics().dataEntriesTracked, 0);
+        f.m_manager->resetMetrics();
+        EXPECT_EQ(f.m_manager->getMetrics().dataEntriesTracked, 0);
+    });
 
-int main(int argc, char** argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
+    std::cout << "\nResults: " << s_pass << " passed, " << s_fail << " failed.\n";
+    return s_fail == 0 ? 0 : 1;
 }

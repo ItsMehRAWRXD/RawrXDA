@@ -1,6 +1,8 @@
 LIBRARY RawrXD_Titan
 EXPORTS
-    Titan_Initialize     @1
-    Titan_InferAsync     @2
-    Titan_Shutdown       @3
-    Titan_Abort          @4
+    ; Titan Legacy API (thin wrapper around llama.cpp)
+    Titan_LoadModel
+    Titan_IsLoaded
+    Titan_UnloadModel
+    Titan_PredictFIM
+    Titan_PredictChat

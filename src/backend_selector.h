@@ -33,6 +33,13 @@ struct BackendInfo {
     std::string computeCapability;
     bool supportsFP16 = false;
     bool supportsInt8 = false;
+    bool supportsFP8 = false;
+    bool supportsFP6 = false;
+    bool supportsFP4 = false;
+    bool supportsUnifiedMemory = false;
+    bool supportsMemoryPooling = false;
+    bool supportsSparseCompute = false;
+    bool supportsNPUOffload = false;
     double performanceScore = 0.0; // Relative performance score
 };
 

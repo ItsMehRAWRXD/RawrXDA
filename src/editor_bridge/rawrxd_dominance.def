@@ -1,0 +1,6 @@
+LIBRARY rawrxd_dominance
+EXPORTS
+    RawrXDAutonomousCorrect @1
+    RawrXDSwarmOrchestrate @2
+    RawrXDHotpatchInference @3
+    RawrXDSecureVaultIO @4

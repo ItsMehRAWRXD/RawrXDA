@@ -2,7 +2,7 @@
 // Win32IDE_SettingsGUI.cpp — Tier 1 Cosmetic #5: Visual Settings Editor
 // ============================================================================
 // Replaces the read-only settings dialog with a proper VS Code-style Settings UI:
-//   - Left-side category tree (General, Editor, AI/Model, Theme, Server)
+//   - Left-side category tree (General, Editor, Integrated Terminal, AI/Model, Theme, Server, Update)
 //   - Right-side property panel with checkboxes, spinners, dropdowns
 //   - Real-time search/filter bar at top
 //   - Apply + Save + Reset buttons
@@ -61,6 +61,14 @@ void Win32IDE::buildSettingsSchema()
         m_settingsSchema.push_back(cat);
     }
 
+    // Integrated terminal (rawrxd.config.json terminal.* — RichEdit scrollback + font)
+    {
+        SettingsCategory cat;
+        cat.name = "Integrated Terminal";
+        cat.keys = {"terminalScrollback", "terminalFontSize", "terminalFontFamily"};
+        m_settingsSchema.push_back(cat);
+    }
+
     // AI / Model
     {
         SettingsCategory cat;
@@ -78,7 +86,9 @@ void Win32IDE::buildSettingsSchema()
                     "amdUnifiedMemory",
                     "modelPrefetchEnabled",
                     "modelWorkingSetLockEnabled",
-                    "silencePrivilegeWarnings"};
+                    "silencePrivilegeWarnings",
+                    "agentTerminalIsolated",
+                    "currentFileContext"};
         m_settingsSchema.push_back(cat);
     }
 
@@ -117,13 +127,15 @@ static std::string getSettingType(const std::string& key)
         key == "syntaxColoring" || key == "minimap" || key == "smoothScroll" || key == "caretAnimation" ||
         key == "breadcrumbs" || key == "ghostText" || key == "failureDetector" || key == "amdUnifiedMemory" ||
         key == "localServer" || key == "modelPrefetchEnabled" || key == "modelWorkingSetLockEnabled" ||
-        key == "silencePrivilegeWarnings" || key == "autoUpdateCheck" || key == "showWelcomeOnStartup")
+        key == "silencePrivilegeWarnings" || key == "agentTerminalIsolated" || key == "currentFileContext" ||
+        key == "autoUpdateCheck" ||
+        key == "showWelcomeOnStartup")
     {
         return "bool";
     }
     if (key == "fontSize" || key == "tabSize" || key == "autoSaveInterval" || key == "aiTopK" || key == "aiMaxTokens" ||
         key == "aiContextWindow" || key == "failureMaxRetries" || key == "localServerPort" || key == "windowAlpha" ||
-        key == "themeId" || key == "uiScalePercent")
+        key == "themeId" || key == "uiScalePercent" || key == "terminalScrollback" || key == "terminalFontSize")
     {
         return "int";
     }
@@ -167,6 +179,8 @@ static std::string getSettingLabel(const std::string& key)
         {"modelPrefetchEnabled", "High-Performance Streaming: Prefetch"},
         {"modelWorkingSetLockEnabled", "High-Performance Streaming: Working Set Lock (best-effort)"},
         {"silencePrivilegeWarnings", "Silence Privilege Warnings (1314)"},
+        {"agentTerminalIsolated", "Agent: isolated terminal mirror"},
+        {"currentFileContext", "Agent: current file context"},
         {"themeId", "Color Theme"},
         {"windowAlpha", "Window Transparency (0-255)"},
         {"fileIconTheme", "File Icon Theme"},
@@ -174,7 +188,10 @@ static std::string getSettingLabel(const std::string& key)
         {"localServerPort", "Local Server Port"},
         {"autoUpdateCheck", "Check for Updates"},
         {"updateChannel", "Update Channel"},
-        {"showWelcomeOnStartup", "Show Welcome Page on Startup"}};
+        {"showWelcomeOnStartup", "Show Welcome Page on Startup"},
+        {"terminalScrollback", "Terminal scrollback (characters)"},
+        {"terminalFontSize", "Terminal font size (pt)"},
+        {"terminalFontFamily", "Terminal font face"}};
     auto it = labels.find(key);
     return it != labels.end() ? it->second : key;
 }
@@ -202,7 +219,14 @@ static std::string getSettingDescription(const std::string& key)
          "Suppress common privilege warnings (e.g. ERROR_PRIVILEGE_NOT_HELD/1314) during high-iteration benchmarks."},
         {"windowAlpha", "Window transparency level (255 = fully opaque)."},
         {"autoUpdateCheck", "Periodically check for application updates."},
-        {"fileIconTheme", "Icon theme for file explorer (seti, material, none)."}};
+        {"fileIconTheme", "Icon theme for file explorer (seti, material, none)."},
+        {"agentTerminalIsolated",
+         "When enabled, agent tool output goes to a dedicated read-only terminal pane (Cursor-style)."},
+        {"currentFileContext",
+         "When enabled, agentic AI automatically analyzes the active file for context-aware completions and chat."},
+        {"terminalScrollback", "RichEdit buffer limit per integrated terminal (clamped 262144–16777216)."},
+        {"terminalFontSize", "Point size for integrated terminal and PowerShell panel RichEdit (8–32)."},
+        {"terminalFontFamily", "Font family name (e.g. Consolas, Cascadia Mono)."}};
     auto it = desc.find(key);
     return it != desc.end() ? it->second : "";
 }
@@ -297,6 +321,16 @@ std::string Win32IDE_GetSettingValue(const IDESettings& s, const std::string& ke
         return s.updateChannel;
     if (key == "showWelcomeOnStartup")
         return s.showWelcomeOnStartup ? "true" : "false";
+    if (key == "agentTerminalIsolated")
+        return s.agentTerminalIsolated ? "true" : "false";
+    if (key == "currentFileContext")
+        return s.currentFileContextEnabled ? "true" : "false";
+    if (key == "terminalScrollback")
+        return std::to_string(s.integratedTerminalScrollbackChars);
+    if (key == "terminalFontSize")
+        return std::to_string(s.integratedTerminalFontSize);
+    if (key == "terminalFontFamily")
+        return s.integratedTerminalFontFamily;
     return "";
 }
 
@@ -402,6 +436,38 @@ static void Win32IDE_SetSettingValue(IDESettings& s, const std::string& key, con
         s.updateChannel = value;
     else if (key == "showWelcomeOnStartup")
         s.showWelcomeOnStartup = toBool(value);
+    else if (key == "agentTerminalIsolated")
+        s.agentTerminalIsolated = toBool(value);
+    else if (key == "currentFileContext")
+        s.currentFileContextEnabled = toBool(value);
+    else if (key == "terminalScrollback")
+    {
+        unsigned long v = 0;
+        try
+        {
+            v = std::stoul(value);
+        }
+        catch (...)
+        {
+            v = 0;
+        }
+        if (v < 262144ul)
+            v = 262144ul;
+        if (v > 16777216ul)
+            v = 16777216ul;
+        s.integratedTerminalScrollbackChars = static_cast<uint32_t>(v);
+    }
+    else if (key == "terminalFontSize")
+    {
+        int fs = toInt(value);
+        if (fs < 8)
+            fs = 8;
+        if (fs > 32)
+            fs = 32;
+        s.integratedTerminalFontSize = fs;
+    }
+    else if (key == "terminalFontFamily")
+        s.integratedTerminalFontFamily = value;
 }
 
 // ============================================================================
@@ -850,5 +916,6 @@ void Win32IDE::filterSettings(const std::string& query)
 
 void Win32IDE::populateSettingsTree()
 {
-    // Currently handled by tab control in createSettingsControls
+    // Settings navigation is handled by the tab control (m_hwndSettingsTabs)
+    // in createSettingsControls(). This is a no-op kept for API compatibility.
 }

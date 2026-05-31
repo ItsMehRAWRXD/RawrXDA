@@ -23,9 +23,20 @@ struct FileEntry {
     UINT commandId;
 };
 
-static std::vector<FileEntry> g_fileRegistry;
-static std::map<std::string, std::vector<FileEntry>> g_categorizedFiles;
-static int g_nextMenuId = 10000;  // Start menu IDs at 10000
+// LAZY SINGLETON PATTERN: Avoid SIOF - non-trivial constructors
+inline std::vector<FileEntry>& GetFileRegistry() {
+    static std::vector<FileEntry>* inst = new std::vector<FileEntry>();
+    return *inst;
+}
+#define g_fileRegistry GetFileRegistry()
+
+inline std::map<std::string, std::vector<FileEntry>>& GetCategorizedFiles() {
+    static std::map<std::string, std::vector<FileEntry>>* inst = new std::map<std::string, std::vector<FileEntry>>();
+    return *inst;
+}
+#define g_categorizedFiles GetCategorizedFiles()
+
+static int g_nextMenuId = 10000;  // Start menu IDs at 10000 - trivial, safe
 
 // ============================================================================
 // Category Detection

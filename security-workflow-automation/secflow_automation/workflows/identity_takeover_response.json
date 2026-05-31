@@ -1,0 +1,38 @@
+{
+  "name": "identity_takeover_response_expert",
+  "description": "Automated response for high-risk identity compromise scenarios",
+  "risk_tier": "high",
+  "required_approvals": [
+    "disable_identity"
+  ],
+  "steps": [
+    {
+      "id": "edr_snapshot",
+      "action": "query_edr"
+    },
+    {
+      "id": "disable_identity",
+      "action": "disable_account",
+      "depends_on": ["edr_snapshot"],
+      "condition": "incident.severity >= 7"
+    },
+    {
+      "id": "open_ticket",
+      "action": "create_ticket",
+      "depends_on": ["disable_identity"],
+      "params": {
+        "queue": "IAM-IR",
+        "title": "Identity takeover response"
+      }
+    },
+    {
+      "id": "notify_iam_team",
+      "action": "notify_channel",
+      "depends_on": ["open_ticket"],
+      "params": {
+        "channel": "#iam-security",
+        "message": "Identity takeover response executed. Immediate review required."
+      }
+    }
+  ]
+}

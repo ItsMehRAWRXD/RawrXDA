@@ -811,7 +811,7 @@ bool ProductionReleaseEngine::stripSymbolsFromPE(const std::string& exePath,
 
     // Remove debug flag from characteristics
     if (coffHeader.Characteristics & IMAGE_FILE_DEBUG_STRIPPED) {
-        // Already stripped
+        fprintf(stderr, "[ProductionRelease] Debug info already stripped\n");
     } else {
         coffHeader.Characteristics |= IMAGE_FILE_DEBUG_STRIPPED;
         // Write back

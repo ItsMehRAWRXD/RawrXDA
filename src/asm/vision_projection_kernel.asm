@@ -5783,13 +5783,17 @@ PUBLIC Phase_InitializeAll
 PUBLIC Titan_LogError
 
 END
- ; memory_cleanup.asm - FIXES ALL MEMORY LEAKS
+; ---------------------------------------------------------------------------
+; The following is an embedded reference to memory_cleanup.asm — kept as
+; documentation only.  ml64 does not support .386 / .MODEL FLAT.
+; ---------------------------------------------------------------------------
+; memory_cleanup.asm - FIXES ALL MEMORY LEAKS
 ; Implements proper cleanup/shutdown sequence with resource deallocation
 ; Addresses: L3 cache, file handles, DS requests, GGML context cleanup
-
-.386
-; .MODEL FLAT, STDCALL
-OPTION CASEMAP:NONE
+;
+; .386          ; REMOVED — not valid for ml64 (x64)
+; .MODEL FLAT, STDCALL  ; REMOVED — not valid for ml64 (x64)
+; OPTION CASEMAP:NONE
 
 INCLUDE windows.inc
 INCLUDE kernel32.inc
@@ -101295,11 +101299,13 @@ IFDEF RAX
     REG_15 equ r15
 ELSE
     ; Building with ML -> x86
+    ; NOTE: This file is assembled with ml64 (x64). The x86 branch below is
+    ;       kept for documentation only and is never hit at build time.
     x64 equ 0
     x86 equ 1
     PTR_S equ 4
-    .386
-; .model flat, stdcall
+    ; .386          ; REMOVED — not valid for ml64 (x64)
+    ; .model flat, stdcall  ; REMOVED — not valid for ml64 (x64)
     includelib kernel32.lib
     REG_AX equ eax
     REG_BX equ ebx

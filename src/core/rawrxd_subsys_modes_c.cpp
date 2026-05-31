@@ -68,3 +68,27 @@ extern "C" void SO_InitializeStreaming(void)
 {
     noteModeCall("SO_InitializeStreaming");
 }
+extern "C" void SO_CreateThreadPool(void)
+{
+    noteModeCall("SO_CreateThreadPool");
+}
+extern "C" void SO_StartDEFLATEThreads(void)
+{
+    noteModeCall("SO_StartDEFLATEThreads");
+}
+extern "C" void SO_InitializePrefetchQueue(void)
+{
+    noteModeCall("SO_InitializePrefetchQueue");
+}
+extern "C" void SO_PrintMetrics(void)
+{
+    noteModeCall("SO_PrintMetrics");
+}
+extern "C" void asm_gguf_loader_close(void)
+{
+    noteModeCall("asm_gguf_loader_close");
+}
+extern "C" void asm_lsp_bridge_shutdown(void)
+{
+    noteModeCall("asm_lsp_bridge_shutdown");
+}

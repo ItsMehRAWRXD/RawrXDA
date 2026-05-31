@@ -44,6 +44,7 @@ class AMDGPUAccelerator;
 class IntelGPUAccelerator;
 class ARM64GPUAccelerator;
 class CerebrasWSEAccelerator;
+class NvidiaCudaAccelerator;
 
 // ============================================================================
 // Backend Type Enum (Unified Across All Accelerators)
@@ -57,6 +58,7 @@ enum class RouterBackendType : uint8_t {
     ARM64_NPU       = 4,   // Phase 29B: Qualcomm Hexagon NPU (QNN/SNPE)
     Cerebras_WSE    = 5,   // Phase 29C: Cerebras WSE-2/3 (Network, gRPC/TCP)
     CPU_Fallback    = 6,   // AVX-512 / NEON / SVE2 (always available)
+    NVIDIA_CUDA     = 7,   // Phase 31: NVIDIA CUDA (Driver API, runtime-loaded)
     Auto            = 255
 };
 
@@ -290,6 +292,7 @@ private:
     RouterResult dispatchToARM64NPU(const RouterInferenceTask& task);
     RouterResult dispatchToCerebras(const RouterInferenceTask& task);
     RouterResult dispatchToCPU(const RouterInferenceTask& task);
+    RouterResult dispatchToNVIDIA(const RouterInferenceTask& task);
 
     // ===== Backend Selection Logic =====
     RouterBackendType autoSelectBackend(const RouterInferenceTask& task) const;
@@ -302,6 +305,7 @@ private:
     void probeIntel();
     void probeARM64();
     void probeCerebras();
+    void probeNVIDIA();
 
     // ===== State =====
     std::atomic<bool>              m_initialized{false};
@@ -310,7 +314,7 @@ private:
     mutable std::mutex             m_mutex;
 
     // Backend states (indexed by RouterBackendType cast to int)
-    static constexpr int MAX_BACKENDS = 7;
+    static constexpr int MAX_BACKENDS = 8;
     BackendState m_backends[MAX_BACKENDS];
 
     // Minimum data sizes for GPU acceleration (avoid dispatch overhead)

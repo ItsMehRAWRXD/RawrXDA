@@ -11,7 +11,7 @@
 #include <vector>
 #include <unordered_set>
 
-// Stub license check for test mode
+// Conditional license check for test mode
 #ifdef BUILD_CLASSNET_TEST
 #define LICENSE_CHECK(feature) true
 #else

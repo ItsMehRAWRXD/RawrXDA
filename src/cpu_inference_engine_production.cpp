@@ -25,7 +25,8 @@ CPUInferenceEngine::CPUInferenceEngine()
 }
 
 CPUInferenceEngine::~CPUInferenceEngine() {
-    // Cleanup
+    // Cleanup: unload model and free resources
+    UnloadModel();
 }
 
 bool CPUInferenceEngine::LoadModel(const std::string& model_path) {
@@ -43,7 +44,11 @@ bool CPUInferenceEngine::loadModel(const std::string& path) {
             std::cerr << "[CRITICAL] Model load blocked by Memory Manager: " << msg << std::endl;
             return false;
         }
-    } catch (...) {}
+    } catch (const std::exception& e) {
+        OutputDebugStringA(("[cpu_inference_engine_production] file_size exception: " + std::string(e.what()) + "\n").c_str());
+    } catch (...) {
+        OutputDebugStringA("[cpu_inference_engine_production] file_size unknown exception\n");
+    }
 
     // Titan Diagnostic Probe
     auto diag = RawrXD::Inference::TitanDiagnostics::probe();
@@ -141,9 +146,9 @@ std::vector<float> CPUInferenceEngine::Eval(const std::vector<int32_t>& input_to
     // 3. Compute logits
     
     int last_token_id = input_tokens.back();
-    std::vector<float> embedding(m_embeddingDim, 0.1f);  // Placeholder
+    std::vector<float> embedding(m_embeddingDim, 0.0f);
     
-    // Load embedding if possible
+    // Load embedding from model weights if available
     std::vector<uint8_t> emb_data;
     if (m_loader && m_loader->LoadTensorZone("token_embd.weight", emb_data)) {
         size_t row_bytes = m_embeddingDim * sizeof(float);

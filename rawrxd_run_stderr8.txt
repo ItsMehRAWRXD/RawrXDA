@@ -1,0 +1,13 @@
+[Prometheus] Listening on port 9090 for /metrics...
+[headless] before_console_attach
+[headless] after_console_attach
+[headless] before_help_gate
+[headless] after_help_gate
+[headless] headless_block_enter
+[headless] parse_cmdline_begin
+[headless] parse_cmdline_end
+[headless] launch | argc=5 cmdline="--agent-prompt --prompt Read README.md" cwd="D:\rawrxd\build-ninja\bin"
+[headless] initialize_begin
+[headless] initialize_end | success=1 errorCode=0
+[headless] run_begin
+[headless] run_end | exitCode=0

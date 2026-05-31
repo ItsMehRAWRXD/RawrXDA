@@ -17,16 +17,17 @@
 // ============================================================================
 
 #include "BoundedAgentLoop.h"
-#include "AgentOllamaClient.h"
+#include "NativeInferenceClient.h"
 
 #include <sstream>
 #include <thread>
 #include <chrono>
+#include <unordered_map>
 
-// SCAFFOLD_295: BoundedAgentLoop integration
+// Bounded Agent Loop Integration
 
 
-// SCAFFOLD_060: BoundedAgentLoop and cycle limit
+// BoundedAgentLoop and Cycle Limit Implementation
 
 
 using RawrXD::Agent::BoundedAgentLoop;
@@ -135,7 +136,7 @@ std::string BoundedAgentLoop::RunLoop(const std::string& userPrompt) {
         llm = m_llmBackend;
     }
     if (!llm) {
-        std::string baseUrl = m_config.ollamaBaseUrl;
+        std::string baseUrl = m_config.nativeBaseUrl;
         llm = [baseUrl](const LLMChatRequest& req) {
             return NativeChat(req, baseUrl);
         };
@@ -253,7 +254,7 @@ std::string BoundedAgentLoop::RunLoop(const std::string& userPrompt) {
 
                 m_state.store(AgentLoopState::Verifying);
                 json diagArgs = nlohmann::json::object({{"file", toolResult.filePath}});
-                auto diagResult = AgentToolHandlers::GetDiagnostics(diagArgs);
+                auto diagResult = AgentToolHandlers::GetCompileDiagnostics(diagArgs);
 
                 if (diagResult.isSuccess() && !diagResult.output.empty() &&
                     diagResult.output != "No diagnostics") {
@@ -315,15 +316,29 @@ std::string BoundedAgentLoop::RunLoop(const std::string& userPrompt) {
 // ============================================================================
 
 ToolCallResult BoundedAgentLoop::DispatchTool(const std::string& name, const json& args) {
-    if (name == "read_file")        return AgentToolHandlers::ToolReadFile(args);
-    if (name == "write_file")       return AgentToolHandlers::WriteFile(args);
-    if (name == "replace_in_file")  return AgentToolHandlers::ReplaceInFile(args);
-    if (name == "list_dir")         return AgentToolHandlers::ListDir(args);
-    if (name == "execute_command")  return AgentToolHandlers::ExecuteCommand(args);
-    if (name == "search_code")      return AgentToolHandlers::SearchCode(args);
-    if (name == "get_diagnostics")  return AgentToolHandlers::GetDiagnostics(args);
+    static const std::unordered_map<std::string, std::string> kToolAliases = {
+        {"terminal_runCommand", "terminal_run_command"},
+        {"search_ripGrep", "search_ripgrep"},
+        {"fs_readFile", "fs_read_file"},
+        {"fs_writeFile", "fs_write_file"},
+        {"fs_listDirectory", "fs_list_directory"},
+        {"fs_deleteFile", "fs_delete_file"},
+        {"fs_moveFile", "fs_move_file"},
+        {"fs_copyFile", "fs_copy_file"}
+    };
 
-    return ToolCallResult::NotFound(name);
+    const auto aliasIt = kToolAliases.find(name);
+    const std::string resolvedName = (aliasIt != kToolAliases.end()) ? aliasIt->second : name;
+
+    ToolCallResult result = AgentToolHandlers::Instance().Execute(resolvedName, args);
+    if (result.outcome == ToolOutcome::NotFound) {
+        result.metadata = nlohmann::json::object({
+            {"requested_tool", name},
+            {"resolved_tool", resolvedName},
+            {"dispatcher", "registry"}
+        });
+    }
+    return result;
 }
 
 // ============================================================================
@@ -400,7 +415,7 @@ LLMChatResponse BoundedAgentLoop::NativeChat(const LLMChatRequest& request,
     LLMChatResponse response;
 
     // Parse host:port from config URL for backward compatibility with existing config.
-    RawrXD::Agent::OllamaConfig cfg;
+    RawrXD::Agent::NativeInferenceConfig cfg;
     cfg.timeout_ms = 300000;
     cfg.temperature = request.temperature;
     cfg.max_tokens = request.maxTokens;
@@ -418,7 +433,7 @@ LLMChatResponse BoundedAgentLoop::NativeChat(const LLMChatRequest& request,
         try {
             cfg.port = static_cast<uint16_t>(std::stoi(hostPort.substr(colonPos + 1)));
         } catch (...) {
-            cfg.port = 11434;
+            cfg.port = 11434;  // Default Ollama port
         }
     } else if (!hostPort.empty()) {
         cfg.host = hostPort;
@@ -443,7 +458,7 @@ LLMChatResponse BoundedAgentLoop::NativeChat(const LLMChatRequest& request,
         nativeMessages.push_back(std::move(native));
     }
 
-    RawrXD::Agent::AgentOllamaClient client(cfg);
+    RawrXD::Agent::NativeInferenceClient client(cfg);
     InferenceResult native = client.ChatSync(nativeMessages, request.tools);
     if (!native.success) {
         response.success = false;

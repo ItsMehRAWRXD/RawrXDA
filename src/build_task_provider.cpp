@@ -242,7 +242,6 @@ bool BuildTaskProvider::initialize(RawrXD::Toolchain::ToolchainBridge* bridge,
     m_worker = std::thread([this]() { workerLoop(); });
 
     m_initialized.store(true);
-    spdlog::info("[BuildTaskProvider] Initialized");
     return true;
 }
 
@@ -263,8 +262,6 @@ void BuildTaskProvider::shutdown() {
         }
     }
     m_tasks.clear();
-
-    spdlog::info("[BuildTaskProvider] Shutdown");
 }
 
 /* ---- Task Submission ---- */
@@ -272,9 +269,6 @@ void BuildTaskProvider::shutdown() {
 uint64_t BuildTaskProvider::submitTask(const BuildTaskConfig& config) {
     uint64_t id = m_nextId.fetch_add(1);
     auto task = std::make_unique<BuildTask>(config, id);
-
-    spdlog::info(std::string("[BuildTaskProvider] Task #{} submitted: {} ({} files)"),
-                 id, config.label, config.sourceFiles.size());
 
     {
         std::lock_guard<std::mutex> lk(m_mutex);
@@ -374,14 +368,13 @@ std::vector<BuildTaskConfig> BuildTaskProvider::detectTasks(const std::string& r
             }
         }
     } catch (const std::exception& e) {
-        spdlog::warn("[BuildTaskProvider] detectTasks error: {}", e.what());
+        (void)e;
     }
 
     if (m_taskListCb && !detected.empty()) {
         m_taskListCb(detected);
     }
 
-    spdlog::info(std::string("[BuildTaskProvider] Detected {} build tasks in {}"), detected.size(), root);
     return detected;
 }
 
@@ -547,8 +540,6 @@ nlohmann::json BuildTaskProvider::getMetrics() const {
 /* ---- Worker Thread ---- */
 
 void BuildTaskProvider::workerLoop() {
-    spdlog::info("[BuildTaskProvider] Worker thread started");
-
     while (!m_shutdown.load()) {
         uint64_t taskId = 0;
 
@@ -576,13 +567,9 @@ void BuildTaskProvider::workerLoop() {
             runTask(task);
         }
     }
-
-    spdlog::info("[BuildTaskProvider] Worker thread exiting");
 }
 
 void BuildTaskProvider::runTask(BuildTask* task) {
-    spdlog::info(std::string("[BuildTaskProvider] Running task #{}: {}"), task->getId(), task->getLabel());
-
     task->run(m_bridge, m_diagProv);
 
     /* Update stats */
@@ -598,13 +585,6 @@ void BuildTaskProvider::runTask(BuildTask* task) {
                        task->getResult().elapsedMs;
         m_stats.avgBuildTimeMs = total / m_stats.totalBuilds;
     }
-
-    spdlog::info(std::string("[BuildTaskProvider] Task #{} finished: {} ({:.1f}ms, {} errors, {} warnings)"),
-                 task->getId(),
-                 task->getState() == BuildTaskState::Succeeded ? "SUCCESS" : "FAILED",
-                 task->getResult().elapsedMs,
-                 task->getResult().errorCount,
-                 task->getResult().warningCount);
 }
 
 std::string BuildTaskProvider::inferOutputPath(const std::string& sourceFile) {

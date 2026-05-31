@@ -1,8 +1,11 @@
 #pragma once
 #include <string>
+#include <functional>
 
 void init_runtime();
 std::string process_prompt(const std::string& input);
+std::string process_prompt_stream(const std::string& input,
+								  const std::function<bool(const std::string&)>& on_chunk);
 
 void set_mode(const std::string& mode_str);
 void set_engine(const std::string& engine_name);

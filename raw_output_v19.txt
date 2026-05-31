@@ -1,0 +1,3 @@
+ninja: error: build.ninja:100: unknown build rule 'CXX_COMPILER__RawrEngine_unscanned_RelWithDebInfo'
+build CMakeFiles\RawrEngine.dir\src\main_headless_core.cpp.obj: CXX_COMP...
+                                                                ^ near here

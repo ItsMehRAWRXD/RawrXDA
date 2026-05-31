@@ -1,20 +1,26 @@
 // Agent menu implementation for Win32IDE
 // Implements all agentic framework menu commands and integrations
 
-#include "../agentic/AgentOllamaClient.h"
+#include "../../include/enterprise_license.h"
+#include "../agentic/NativeInferenceClient.h"
+#include "../agentic/ToolRegistry.h"
 #include "../agentic/agentic_orchestrator_integration.hpp"
 #include "../core/enterprise_license.h"
+#include "AutonomousAgent.h"
 #include "IDELogger.h"
 #include "ModelConnection.h"
 #include "RawrXD_AgentCoordinator.h"
 #include "RawrXD_AutonomousAgenticPipeline.h"
 #include "Win32IDE.h"
 #include "Win32IDE_AgenticBridge.h"
+#include "Win32IDE_Commands.h"
+#include "Win32IDE_ModelDropdownProfile.h"
 #include "Win32SwarmBridge.h"
 #include <algorithm>
 #include <cctype>
 #include <fstream>
 #include <sstream>
+#include <vector>
 
 // Local IDM constants used in switch-case dispatch (defined via #define in Commands.cpp/Win32IDE.cpp)
 // IDM_AGENT_AUTONOMOUS_COMMUNICATOR: free slot in 4163–4199 range
@@ -30,451 +36,122 @@
 void HandleAutonomousCommunicator(void* idePtr);
 void HandleUnifiedTelemetry(void* idePtr);
 
+namespace
+{
+
+std::wstring utf8ToWideLocal(const std::string& text)
+{
+    if (text.empty())
+        return {};
+
+    const int wideLength = MultiByteToWideChar(CP_UTF8, 0, text.c_str(), static_cast<int>(text.size()), nullptr, 0);
+    if (wideLength <= 0)
+        return {};
+
+    std::wstring result(static_cast<size_t>(wideLength), L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, text.c_str(), static_cast<int>(text.size()), result.data(), wideLength);
+    return result;
+}
+
+Agentic::AgenticPlanningOrchestrator* getPlanningOrchestratorReady()
+{
+    auto& orch = Agentic::OrchestratorIntegration::instance();
+    if (!orch.getOrchestrator())
+    {
+        orch.initialize();
+    }
+    return orch.getOrchestrator();
+}
+
+bool invokeConfigureModelWithSehGuard(Win32IDE* ide)
+{
+    if (!ide)
+        return false;
+#ifdef _WIN32
+    auto invokeConfigureModelSehThunk = [](Win32IDE* target, DWORD* sehCode) -> bool
+    {
+        __try
+        {
+            target->onAgentConfigureModel();
+            return true;
+        }
+        __except(*sehCode = GetExceptionCode(), EXCEPTION_EXECUTE_HANDLER)
+        {
+            return false;
+        }
+    };
+
+    DWORD sehCode = 0;
+    if (invokeConfigureModelSehThunk(ide, &sehCode))
+        return true;
+
+        HWND hwnd = ide->getMainWindow();
+        if (hwnd && IsWindow(hwnd))
+        {
+            EnableWindow(hwnd, TRUE);
+            SetForegroundWindow(hwnd);
+            MessageBoxA(hwnd,
+                        "Configure Model hit a fatal native exception and was aborted safely.\n"
+                        "Check logs for ntdll/c0000005 details.",
+                        "Agent Error", MB_OK | MB_ICONERROR);
+        }
+        char crashMsg[160] = {};
+        snprintf(crashMsg, sizeof(crashMsg),
+                 "[Agent] onAgentConfigureModel trapped SEH exception 0x%08lX\n",
+                 static_cast<unsigned long>(sehCode));
+        OutputDebugStringA(crashMsg);
+        return false;
+#else
+    ide->onAgentConfigureModel();
+    return true;
+#endif
+}
+
+}  // namespace
+
 // ============================================================================
 // SUBAGENT CHAIN / SWARM / TODO HANDLERS (Phase 19B)
 // ============================================================================
-#if 0
-// Implemented elsewhere:
-// - SubAgent + agent memory UI: Win32IDE_SubAgent.cpp
-// - Autonomy UI: Win32IDE.cpp
-// - Bounded agent loop UI: Win32IDE_AgentPanel.cpp
-void Win32IDE::onSubAgentChain() {
-    LOG_INFO("onSubAgentChain called");
-    if (!m_agenticBridge) {
-        initializeAgenticBridge();
-    }
-    if (!m_agenticBridge) {
-        MessageBoxA(m_hwndMain, "Agentic Framework not initialized", "SubAgent Error", MB_OK | MB_ICONERROR);
-        return;
-    }
-    
-    // Get task description from user
-    char taskDesc[1024] = {0};
-    if (DialogBoxParamA(m_hInstance, "AGENT_PROMPT_DLG", m_hwndMain,
-        [](HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) -> INT_PTR {
-            switch (msg) {
-                case WM_INITDIALOG:
-                    SetWindowTextA(GetDlgItem(hwnd, 101), "Enter task for SubAgent Chain:");
-                    return TRUE;
-                case WM_COMMAND:
-                    if (LOWORD(wp) == IDOK) {
-                        GetDlgItemTextA(hwnd, 102, (char*)lp, 1024);
-                        EndDialog(hwnd, IDOK);
-                        return TRUE;
-                    } else if (LOWORD(wp) == IDCANCEL) {
-                        EndDialog(hwnd, IDCANCEL);
-                        return TRUE;
-                    }
-                    break;
-            }
-            return FALSE;
-        }, (LPARAM)taskDesc) != IDOK) {
-        return;
-    }
-    
-    if (strlen(taskDesc) == 0) {
-        strcpy_s(taskDesc, "Execute modular task sequence");
-    }
-    
-    appendToOutput("🔗 SubAgent Chain initiated: " + std::string(taskDesc) + "\n", "Output", OutputSeverity::Info);
-    
-    // Execute chain in background
-    std::thread([this, taskStr = std::string(taskDesc)]() {
-        DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
-        if (_guard.cancelled) return;
-        m_agenticBridge->ExecuteSubAgentChain(taskStr);
-    }).detach();
-}
+// Implemented in Win32IDE_SubAgent.cpp — declarations only here.
+// Keep only one implementation per handler to avoid duplicate linker symbols.
 
-void Win32IDE::onSubAgentSwarm() {
-    LOG_INFO("onSubAgentSwarm called");
-    if (!m_agenticBridge) {
-        initializeAgenticBridge();
-    }
-    if (!m_agenticBridge) {
-        MessageBoxA(m_hwndMain, "Agentic Framework not initialized", "SubAgent Error", MB_OK | MB_ICONERROR);
-        return;
-    }
-    
-    // Get swarm task from user
-    char taskDesc[1024] = {0};
-    if (DialogBoxParamA(m_hInstance, "AGENT_PROMPT_DLG", m_hwndMain,
-        [](HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) -> INT_PTR {
-            switch (msg) {
-                case WM_INITDIALOG:
-                    SetWindowTextA(GetDlgItem(hwnd, 101), "Enter task for SubAgent Swarm:");
-                    return TRUE;
-                case WM_COMMAND:
-                    if (LOWORD(wp) == IDOK) {
-                        GetDlgItemTextA(hwnd, 102, (char*)lp, 1024);
-                        EndDialog(hwnd, IDOK);
-                        return TRUE;
-                    } else if (LOWORD(wp) == IDCANCEL) {
-                        EndDialog(hwnd, IDCANCEL);
-                        return TRUE;
-                    }
-                    break;
-            }
-            return FALSE;
-        }, (LPARAM)taskDesc) != IDOK) {
-        return;
-    }
-    
-    if (strlen(taskDesc) == 0) {
-        strcpy_s(taskDesc, "Execute parallel task swarm");
-    }
-    
-    appendToOutput("🐝 SubAgent Swarm initiated: " + std::string(taskDesc) + "\n", "Output", OutputSeverity::Info);
-    
-    // Execute swarm in background
-    std::thread([this, taskStr = std::string(taskDesc)]() {
-        DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
-        if (_guard.cancelled) return;
-        m_agenticBridge->ExecuteSubAgentSwarm(taskStr);
-    }).detach();
-}
-
-void Win32IDE::onSubAgentTodoList() {
-    LOG_INFO("onSubAgentTodoList called");
-    if (!m_agenticBridge)
-        initializeAgenticBridge();
-    if (!m_agenticBridge) {
-        appendToOutput("[SubAgent] Bridge unavailable — load a model first (File > Load Model).\n", "Output", OutputSeverity::Warning);
-        return;
-    }
-
-    std::vector<std::string> todoItems = m_agenticBridge->GetSubAgentTodoList();
-    
-    std::stringstream todoOutput;
-    todoOutput << "=== SubAgent Todo List ===\n\n";
-    if (todoItems.empty()) {
-        todoOutput << "(empty)\n";
-    } else {
-        for (size_t i = 0; i < todoItems.size(); ++i) {
-            todoOutput << (i + 1) << ". " << todoItems[i] << "\n";
-        }
-    }
-    
-    appendToOutput(todoOutput.str(), "Output", OutputSeverity::Info);
-}
-
-void Win32IDE::onSubAgentTodoClear() {
-    LOG_INFO("onSubAgentTodoClear called");
-    if (!m_agenticBridge)
-        initializeAgenticBridge();
-    if (!m_agenticBridge) {
-        appendToOutput("[SubAgent] Bridge unavailable — load a model first (File > Load Model).\n", "Output", OutputSeverity::Warning);
-        return;
-    }
-
-    if (MessageBoxA(m_hwndMain, "Clear all SubAgent todo items?", "Confirm", MB_YESNO | MB_ICONQUESTION) == IDYES) {
-        m_agenticBridge->ClearSubAgentTodoList();
-        appendToOutput("🗑️ SubAgent Todo List cleared\n", "Output", OutputSeverity::Info);
-    }
-}
-
-void Win32IDE::onSubAgentStatus() {
-    LOG_INFO("onSubAgentStatus called");
-    if (!m_agenticBridge)
-        initializeAgenticBridge();
-    if (!m_agenticBridge) {
-        appendToOutput("[SubAgent] Bridge unavailable — load a model first (File > Load Model).\n", "Output", OutputSeverity::Warning);
-        return;
-    }
-
-    std::string status = m_agenticBridge->GetSubAgentStatus();
-    appendToOutput("=== SubAgent Status ===\n" + status + "\n", "Output", OutputSeverity::Info);
-}
+// onSubAgentChain()     → Win32IDE_SubAgent.cpp
+// onSubAgentSwarm()     → Win32IDE_SubAgent.cpp
+// onSubAgentTodoList()  → Win32IDE_SubAgent.cpp
+// onSubAgentTodoClear() → Win32IDE_SubAgent.cpp
+// onSubAgentStatus()    → Win32IDE_SubAgent.cpp
 
 // ============================================================================
 // AGENT MEMORY HANDLERS (Phase 19B)
 // ============================================================================
-void Win32IDE::onAgentMemoryView() {
-    LOG_INFO("onAgentMemoryView called");
-    if (!m_agenticBridge) {
-        initializeAgenticBridge();
-    }
-    if (!m_agenticBridge) {
-        MessageBoxA(m_hwndMain, "Agentic Framework not initialized", "Agent Error", MB_OK | MB_ICONERROR);
-        return;
-    }
-    
-    std::string memory = m_agenticBridge->ExportAgentMemory();
-    std::stringstream memOutput;
-    memOutput << "=== Agent Memory Context ===\n\n" << memory << "\n";
-    
-    appendToOutput(memOutput.str(), "Output", OutputSeverity::Info);
-}
+// Implemented in Win32IDE_SubAgent.cpp — declarations only here.
 
-void Win32IDE::onAgentMemoryClear() {
-    LOG_INFO("onAgentMemoryClear called");
-    if (!m_agenticBridge) {
-        initializeAgenticBridge();
-    }
-    if (!m_agenticBridge) {
-        MessageBoxA(m_hwndMain, "Agentic Framework not initialized", "Agent Error", MB_OK | MB_ICONERROR);
-        return;
-    }
-    
-    if (MessageBoxA(m_hwndMain, "Clear all agent memory? This cannot be undone.", "Confirm Clear", MB_YESNO | MB_ICONWARNING) == IDYES) {
-        m_agenticBridge->ClearAgentMemory();
-        appendToOutput("🗑️ Agent Memory cleared\n", "Output", OutputSeverity::Info);
-    }
-}
-
-void Win32IDE::onAgentMemoryExport() {
-    LOG_INFO("onAgentMemoryExport called");
-    if (!m_agenticBridge) {
-        initializeAgenticBridge();
-    }
-    if (!m_agenticBridge) {
-        MessageBoxA(m_hwndMain, "Agentic Framework not initialized", "Agent Error", MB_OK | MB_ICONERROR);
-        return;
-    }
-    
-    // Prefer the IDE's tracked directory; fall back to deriving from current file.
-    std::string exportPath = m_currentDirectory;
-    if (exportPath.empty()) {
-        exportPath = m_currentFile;
-        if (!exportPath.empty()) {
-            size_t lastSlash = exportPath.find_last_of("\\/");
-            if (lastSlash != std::string::npos) {
-                exportPath = exportPath.substr(0, lastSlash);
-            } else {
-                exportPath.clear();
-            }
-        }
-    }
-    if (exportPath.empty()) exportPath = ".";
-    exportPath += "\\agent_memory_export.json";
-    
-    std::string memory = m_agenticBridge->ExportAgentMemory();
-    
-    std::ofstream outFile(exportPath);
-    if (outFile.is_open()) {
-        outFile << memory;
-        outFile.close();
-        appendToOutput("✅ Agent Memory exported to: " + exportPath + "\n", "Output", OutputSeverity::Info);
-    } else {
-        appendToOutput("❌ Failed to export agent memory\n", "Errors", OutputSeverity::Error);
-    }
-}
+// onAgentMemoryView()   → Win32IDE_SubAgent.cpp
+// onAgentMemoryClear()  → Win32IDE_SubAgent.cpp
+// onAgentMemoryExport() → Win32IDE_SubAgent.cpp
 
 // ============================================================================
 // AUTONOMY HANDLERS
 // ============================================================================
-void Win32IDE::onAutonomyToggle() {
-    LOG_INFO("onAutonomyToggle called");
-    if (!m_agenticBridge) {
-        initializeAgenticBridge();
-    }
-    if (!m_autonomyManager) {
-        initializeAutonomy();
-    }
-    
-    bool isRunning = m_autonomyManager && m_autonomyManager->IsRunning();
-    if (m_autonomyManager) {
-        if (isRunning) {
-            m_autonomyManager->Stop();
-            appendToOutput("⏸️ Autonomy toggled OFF\n", "Output", OutputSeverity::Info);
-        } else {
-            m_autonomyManager->Start();
-            appendToOutput("▶️ Autonomy toggled ON\n", "Output", OutputSeverity::Info);
-        }
-    }
-}
+// Implemented in Win32IDE.cpp — declarations only here.
 
-void Win32IDE::onAutonomyStart() {
-    LOG_INFO("onAutonomyStart called");
-    if (!m_agenticBridge) {
-        initializeAgenticBridge();
-    }
-    if (!m_autonomyManager) {
-        initializeAutonomy();
-    }
-    
-    if (m_autonomyManager && !m_autonomyManager->IsRunning()) {
-        m_autonomyManager->Start();
-        appendToOutput("▶️ Autonomy started\n", "Output", OutputSeverity::Info);
-    }
-}
+// onAutonomyToggle()     → Win32IDE.cpp
+// onAutonomyStart()      → Win32IDE.cpp
+// onAutonomyStop()       → Win32IDE.cpp
+// onAutonomySetGoal()    → Win32IDE.cpp
+// onAutonomyViewStatus() → Win32IDE.cpp
+// onAutonomyViewMemory() → Win32IDE.cpp
 
-void Win32IDE::onAutonomyStop() {
-    LOG_INFO("onAutonomyStop called");
-    if (m_autonomyManager && m_autonomyManager->IsRunning()) {
-        m_autonomyManager->Stop();
-        appendToOutput("⏹️ Autonomy stopped\n", "Output", OutputSeverity::Info);
-    }
-}
+// ============================================================================
+// BOUNDED AGENT LOOP
+// ============================================================================
+// Implemented in Win32IDE_AgentPanel.cpp — declarations only here.
 
-void Win32IDE::onAutonomySetGoal() {
-    LOG_INFO("onAutonomySetGoal called");
-    if (!m_agenticBridge)
-        initializeAgenticBridge();
-    if (!m_autonomyManager)
-        initializeAutonomy();
-    if (!m_autonomyManager) {
-        appendToOutput("Autonomy unavailable: load a model first (File → Load Model).\n", "Output",
-                       OutputSeverity::Warning);
-        return;
-    }
-    
-    char goalText[512] = {0};
-    if (DialogBoxParamA(m_hInstance, "AGENT_PROMPT_DLG", m_hwndMain,
-        [](HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) -> INT_PTR {
-            switch (msg) {
-                case WM_INITDIALOG:
-                    SetWindowTextA(GetDlgItem(hwnd, 101), "Enter autonomy goal:");
-                    return TRUE;
-                case WM_COMMAND:
-                    if (LOWORD(wp) == IDOK) {
-                        GetDlgItemTextA(hwnd, 102, (char*)lp, 512);
-                        EndDialog(hwnd, IDOK);
-                        return TRUE;
-                    } else if (LOWORD(wp) == IDCANCEL) {
-                        EndDialog(hwnd, IDCANCEL);
-                        return TRUE;
-                    }
-                    break;
-            }
-            return FALSE;
-        }, (LPARAM)goalText) == IDOK && strlen(goalText) > 0) {
-        m_autonomyManager->SetGoal(std::string(goalText));
-        appendToOutput("🎯 Autonomy goal set: " + std::string(goalText) + "\n", "Output", OutputSeverity::Info);
-    }
-}
+// onBoundedAgentLoop() → Win32IDE_AgentPanel.cpp
 
-void Win32IDE::onAutonomyViewStatus() {
-    LOG_INFO("onAutonomyViewStatus called");
-    if (!m_agenticBridge)
-        initializeAgenticBridge();
-    if (!m_autonomyManager)
-        initializeAutonomy();
-    if (!m_autonomyManager) {
-        appendToOutput("Autonomy unavailable: load a model first (File → Load Model).\n", "Output",
-                       OutputSeverity::Warning);
-        return;
-    }
-    
-    std::string status = m_autonomyManager->GetStatus();
-    appendToOutput("=== Autonomy Status ===\n" + status + "\n", "Output", OutputSeverity::Info);
-}
-
-void Win32IDE::onAutonomyViewMemory() {
-    LOG_INFO("onAutonomyViewMemory called");
-    if (!m_agenticBridge)
-        initializeAgenticBridge();
-    if (!m_autonomyManager)
-        initializeAutonomy();
-    if (!m_autonomyManager) {
-        appendToOutput("Autonomy unavailable: load a model first (File → Load Model).\n", "Output",
-                       OutputSeverity::Warning);
-        return;
-    }
-    
-    std::string memory = m_autonomyManager->ExportMemory();
-    appendToOutput("=== Autonomy Memory ===\n" + memory + "\n", "Output", OutputSeverity::Info);
-}
-
-// ----------------------------------------------------------------------------
-// Autonomous Agentic Pipeline (Task 1: Wire + Build)
-// Init: create coordinator, wire buildChatPrompt / routeWithIntelligence / onInferenceToken / appendStreamingToken.
-// Trigger: Autonomy menu -> Pipeline: Run once | Start autonomous loop | Stop autonomous loop.
-// ----------------------------------------------------------------------------
-void Win32IDE::ensureAutonomousPipelineInitialized() {
-    if (m_autonomousPipeline)
-        return;
-    m_autonomousPipeline = std::make_unique<RawrXD::AutonomousAgenticPipelineCoordinator>();
-    m_autonomousPipeline->setBuildPrompt([this](const std::string& m) { return buildChatPrompt(m); });
-    m_autonomousPipeline->setRouteLLM([this](const std::string& p) { return routeWithIntelligence(p); });
-    m_autonomousPipeline->setOnToken([this](const std::string& t, bool) { onInferenceToken(t); });
-    m_autonomousPipeline->setAppendRenderer([this](const std::string& s) { appendStreamingToken(s); });
-    // Task 2: wire external AgentCoordinator so autonomous loop can pull tasks
-    if (!m_agentCoordinatorForPipeline) {
-        m_agentCoordinatorForPipeline = CreateAgentCoordinator();
-        if (m_agentCoordinatorForPipeline && AgentCoordinator_Initialize((AgentCoordinatorHandle)m_agentCoordinatorForPipeline)) {
-            m_autonomousPipeline->setExternalAgentCoordinator(m_agentCoordinatorForPipeline);
-            m_autonomousPipeline->setDequeueTaskFn([this](std::wstring* outDesc, int* outPriority) -> bool {
-                if (!m_agentCoordinatorForPipeline || !outDesc || !outPriority) return false;
-                wchar_t buf[4096];
-                if (!AgentCoordinator_TryDequeueTask(static_cast<AgentCoordinatorHandle>(m_agentCoordinatorForPipeline), buf, (int)4096, outPriority))
-                    return false;
-                *outDesc = buf;
-                return true;
-            });
-            LOG_INFO("Autonomous Pipeline wired to AgentCoordinator (dequeue tasks)");
-        }
-    }
-    LOG_INFO("Autonomous Agentic Pipeline initialized and wired");
-}
-
-// onPipelineRun / onPipelineAutonomyStart / onPipelineAutonomyStop defined after #endif below (outside #if 0)
-
-void Win32IDE::onBoundedAgentLoop() {
-    LOG_INFO("onBoundedAgentLoop called");
-    if (!m_agenticBridge) {
-        initializeAgenticBridge();
-    }
-    if (!m_agenticBridge) {
-        MessageBoxA(m_hwndMain, "Agentic Framework not initialized", "Agent Error", MB_OK | MB_ICONERROR);
-        return;
-    }
-    
-    // Get task and iteration limit from user
-    char taskDesc[1024] = {0};
-    if (DialogBoxParamA(m_hInstance, "AGENT_PROMPT_DLG", m_hwndMain,
-        [](HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) -> INT_PTR {
-            switch (msg) {
-                case WM_INITDIALOG:
-                    SetWindowTextA(GetDlgItem(hwnd, 101), "Enter task for Bounded Agent Loop (task:max_iterations):");
-                    return TRUE;
-                case WM_COMMAND:
-                    if (LOWORD(wp) == IDOK) {
-                        GetDlgItemTextA(hwnd, 102, (char*)lp, 1024);
-                        EndDialog(hwnd, IDOK);
-                        return TRUE;
-                    } else if (LOWORD(wp) == IDCANCEL) {
-                        EndDialog(hwnd, IDCANCEL);
-                        return TRUE;
-                    }
-                    break;
-            }
-            return FALSE;
-        }, (LPARAM)taskDesc) != IDOK) {
-        return;
-    }
-    
-    std::string input(taskDesc);
-    std::string task = input;
-    int maxIterations = 5; // default
-    
-    size_t colonPos = input.find(':');
-    if (colonPos != std::string::npos) {
-        task = input.substr(0, colonPos);
-        std::string iterStr = input.substr(colonPos + 1);
-        try {
-            maxIterations = std::stoi(iterStr);
-            if (maxIterations <= 0) maxIterations = 5;
-        } catch (...) {
-            maxIterations = 5;
-        }
-    }
-    
-    if (task.empty()) {
-        task = "Execute bounded task";
-    }
-    
-    appendToOutput("⚙️ Bounded Agent Loop with max iterations (" + std::to_string(maxIterations) + "): " + task + "\n", "Output", OutputSeverity::Info);
-    
-    // Execute with bounded retries in background
-    std::thread([this, taskStr = task, maxIter = maxIterations]() {
-        DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
-        if (_guard.cancelled) return;
-        m_agenticBridge->ExecuteBoundedAgentLoop(taskStr, maxIter);
-    }).detach();
-}
-
-#endif  // 0
+// ============================================================================
+// ACTIVE IMPLEMENTATIONS BELOW
+// ============================================================================
 
 // ensureAutonomousPipelineInitialized + pipeline handlers (defined here so they are compiled)
 // E1: workspace-aware prompt injection  E2: loop telemetry  E3: shutdown guard
@@ -491,8 +168,8 @@ void Win32IDE::ensureAutonomousPipelineInitialized()
 
     m_autonomousPipeline = std::make_unique<RawrXD::AutonomousAgenticPipelineCoordinator>();
 
-    // E6: context window size — not yet exposed on pipeline coordinator
-    // TODO: add setContextWindow() to AutonomousAgenticPipelineCoordinator
+    // E6: mirror IDE inference context window into pipeline coordinator
+    m_autonomousPipeline->setContextWindow(m_inferenceConfig.contextWindow);
 
     // E1 + E5: workspace root + recent memory snapshot injected into every prompt
     m_autonomousPipeline->setBuildPrompt(
@@ -616,8 +293,7 @@ void Win32IDE::initializeAgenticBridge()
                     if (m_hwndCopilotChatOutput)
                     {
                         std::string formatted = "🤖 " + title + "\n" + content + "\n\n";
-                        SendMessageA(m_hwndCopilotChatOutput, EM_SETSEL, -1, -1);
-                        SendMessageA(m_hwndCopilotChatOutput, EM_REPLACESEL, FALSE, (LPARAM)formatted.c_str());
+                        appendCopilotChatTextOnUiThread(formatted);
                     }
                 });
 
@@ -681,6 +357,10 @@ void Win32IDE::initializeAgenticBridge()
                 // Initialize Autonomy Manager
                 initializeAutonomy();
 
+                // Startup hardening: defer plan-orchestrator wiring until after boot.
+                // This path is optional for IDE startup and has been a recurring crash point.
+                LOG_WARNING("Skipping plan orchestrator wiring during startup hardening pass");
+
                 // Initialize Native Engine if not already done
                 if (!m_nativeEngine)
                 {
@@ -711,6 +391,27 @@ void Win32IDE::initializeAgenticBridge()
                     m_agenticBridge->SetWorkspaceRoot(m_projectRoot);
                 else if (!m_explorerRootPath.empty())
                     m_agenticBridge->SetWorkspaceRoot(m_explorerRootPath);
+
+                // Production hardening: surface any missing tool wiring immediately.
+                // This prevents "agent feels non-autonomous" due to silently missing handlers.
+                {
+                    auto missing = RawrXD::Agent::AgentToolRegistry::Instance().GetToolsMissingHandlers();
+                    if (!missing.empty())
+                    {
+                        std::string msg = "⚠️ Tool registry wiring incomplete. Missing handlers for:\n";
+                        for (const auto& name : missing)
+                        {
+                            msg += " - " + name + "\n";
+                        }
+                        appendToOutput(msg, "Errors", OutputSeverity::Warning);
+                        LOG_WARNING(msg);
+                    }
+                    else
+                    {
+                        appendToOutput("✅ Tool registry wiring OK (all handlers present)\n", "Output",
+                                       OutputSeverity::Info);
+                    }
+                }
 
                 // Propagate to Native Engine if available
                 if (m_nativeEngine)
@@ -752,7 +453,10 @@ void Win32IDE::initializeAgenticBridge()
                 }
 
                 // Set initial language context
-                m_agenticBridge->SetLanguageContext(getSyntaxLanguageName(), m_currentFile);
+                if (m_settings.currentFileContextEnabled)
+                    m_agenticBridge->SetLanguageContext(getSyntaxLanguageName(), m_currentFile);
+                else
+                    m_agenticBridge->SetLanguageContext(getSyntaxLanguageName(), "");
 
                 // Warm up the model with a simple query to reduce first-response latency
                 std::thread(
@@ -795,6 +499,9 @@ void Win32IDE::initializeAgenticBridge()
 
                 LOG_INFO("Agentic Bridge fully initialized with enhancements");
 
+                // Initialize Plan Orchestrator for autonomous task planning
+                initializePlanOrchestrator();
+
                 wireAgenticOrchestratorIntegration();
 
                 syncAgentModeUiFromBridge();
@@ -829,6 +536,411 @@ void Win32IDE::initializeAgenticBridge()
     {
         LOG_INFO("Agentic Bridge already initialized");
     }
+}
+
+// ============================================================================
+// PLAN ORCHESTRATOR INITIALIZATION — Autonomous Task Planning
+// ============================================================================
+
+void Win32IDE::initializePlanOrchestrator()
+{
+    LOG_INFO("Initializing Plan Orchestrator for autonomous task planning");
+
+    if (m_planOrchestrator)
+    {
+        LOG_INFO("Plan Orchestrator already initialized");
+        return;
+    }
+
+    try
+    {
+        m_planOrchestrator = std::make_unique<RawrXD::PlanOrchestrator>();
+
+        // Set workspace root
+        std::string workspaceRoot = m_projectRoot;
+        if (workspaceRoot.empty())
+            workspaceRoot = m_explorerRootPath;
+        if (workspaceRoot.empty())
+            workspaceRoot = m_currentDirectory;
+        if (workspaceRoot.empty() && !m_currentFile.empty())
+        {
+            size_t lastSlash = m_currentFile.find_last_of("\\/");
+            if (lastSlash != std::string::npos)
+                workspaceRoot = m_currentFile.substr(0, lastSlash);
+        }
+        if (workspaceRoot.empty())
+            workspaceRoot = ".";
+
+        m_planOrchestrator->setWorkspaceRoot(workspaceRoot);
+
+        if (!m_nativeEngine)
+        {
+            m_nativeEngine = RawrXD::CPUInferenceEngine::GetSharedInstance();
+        }
+
+        // Use the shared native inference engine for planner fallback.
+        // The bridge remains useful for model lifecycle and UI mode toggles,
+        // but its ad hoc wrapper did not implement tokenization or generation.
+        if (m_nativeEngine)
+        {
+            m_planOrchestrator->setInferenceEngine(m_nativeEngine.get());
+        }
+
+        m_planOrchestrator->setTerminalCommandSink([this](const std::string& command)
+                                                   { sendToAllTerminalsPublic(command); });
+
+        // Wire up event callbacks
+        m_planOrchestrator->onPlanningStarted = [this](const std::string& prompt)
+        {
+            appendToOutput("🧠 Plan Orchestrator: Starting planning for: " + prompt + "\n", "Output",
+                           OutputSeverity::Info);
+        };
+
+        m_planOrchestrator->onPlanningChunk = [this](const std::string& chunk)
+        {
+            if (!chunk.empty())
+            {
+                appendToOutput("🧠 Planning Stream: " + chunk + "\n", "Output", OutputSeverity::Info);
+            }
+        };
+
+        m_planOrchestrator->onPlanningCompleted = [this](const RawrXD::PlanningResult& result)
+        {
+            std::string msg = "🧠 Plan Orchestrator: Planning completed - " + std::to_string(result.tasks.size()) +
+                              " tasks generated\n";
+            if (!result.errorMessage.empty())
+            {
+                msg += "⚠️ Error: " + result.errorMessage + "\n";
+            }
+            appendToOutput(msg, "Output", OutputSeverity::Info);
+        };
+
+        m_planOrchestrator->onExecutionStarted = [this](int taskCount)
+        {
+            appendToOutput("⚡ Plan Orchestrator: Starting execution of " + std::to_string(taskCount) + " tasks\n",
+                           "Output", OutputSeverity::Info);
+        };
+
+        m_planOrchestrator->onStepCompleted = [this](const std::string& message)
+        {
+            if (!message.empty())
+            {
+                appendToOutput("📎 Plan Orchestrator Output: " + message + "\n", "Output", OutputSeverity::Info);
+            }
+        };
+
+        m_planOrchestrator->onPlanCompleted = [this](const std::string& message)
+        {
+            if (!message.empty())
+            {
+                appendToOutput("🎯 Plan Orchestrator: " + message + "\n", "Output", OutputSeverity::Info);
+            }
+        };
+
+        m_planOrchestrator->onTaskExecuted = [this](int index, bool success, const std::string& result)
+        {
+            std::string status = success ? "✅" : "❌";
+            appendToOutput("⚡ Task " + std::to_string(index + 1) + ": " + status + " " + result + "\n", "Output",
+                           OutputSeverity::Info);
+        };
+
+        m_planOrchestrator->onExecutionCompleted = [this](const RawrXD::ExecutionResult& result)
+        {
+            std::string msg = "🎯 Plan Orchestrator: Execution completed - " + std::to_string(result.successCount) +
+                              " successful, " + std::to_string(result.failureCount) + " failed\n";
+            appendToOutput(msg, "Output", OutputSeverity::Info);
+        };
+
+        m_planOrchestrator->onErrorOccurred = [this](const std::string& error)
+        { appendToOutput("❌ Plan Orchestrator Error: " + error + "\n", "Errors", OutputSeverity::Error); };
+
+        m_planOrchestrator->onWorkspaceChanged = [this]()
+        {
+            appendToOutput("🔄 Plan Orchestrator: Workspace changed, refreshing IDE state\n", "Output",
+                           OutputSeverity::Info);
+
+            refreshFileExplorer();
+
+            if (!m_currentFile.empty())
+            {
+                if (!m_fileModified)
+                {
+                    reloadCurrentFile();
+                }
+                else
+                {
+                    appendToOutput("⚠️ Planner changed workspace files while the current buffer has unsaved edits; "
+                                   "auto-reload skipped\n",
+                                   "Output", OutputSeverity::Warning);
+                }
+            }
+        };
+
+        // SECURITY GATEKEEPER: Human-in-the-loop approval for high-risk operations
+        m_planOrchestrator->onTaskApprovalRequired = [this](const RawrXD::EditTask& task) -> bool
+        {
+            std::string riskMsg = "🤖 Agent wants to execute a potentially risky operation:\n\n";
+            riskMsg += "Operation: " + task.operation + "\n";
+            riskMsg += "File: " + task.filePath + "\n";
+            if (!task.description.empty())
+            {
+                riskMsg += "Description: " + task.description + "\n";
+            }
+            riskMsg += "\nAllow this operation?";
+
+            int result = MessageBoxA(m_hwndMain, riskMsg.c_str(), "Security Gatekeeper",
+                                     MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2);
+            return (result == IDYES);
+        };
+
+        // Initialize the orchestrator
+        m_planOrchestrator->initialize();
+
+        // Start watching the workspace directory for file changes
+        if (!workspaceRoot.empty())
+        {
+            // Ensure file watcher is initialized
+            if (!m_fileWatcher)
+            {
+                initFileWatcher();
+            }
+            // Start watching the workspace directory
+            std::wstring wWorkspace(workspaceRoot.begin(), workspaceRoot.end());
+            if (m_fileWatcher && m_fileWatcher->Start(wWorkspace))
+            {
+                LOG_INFO("Watching workspace directory for plan orchestrator: " + workspaceRoot);
+                appendToOutput("👀 Watching workspace for autonomous planning updates\n", "Output",
+                               OutputSeverity::Info);
+            }
+            else
+            {
+                LOG_WARNING("Failed to start workspace watcher for plan orchestrator");
+            }
+        }
+
+        LOG_INFO("Plan Orchestrator initialized successfully");
+        appendToOutput("✅ Plan Orchestrator initialized for autonomous task planning\n", "Output",
+                       OutputSeverity::Info);
+    }
+    catch (const std::exception& e)
+    {
+        LOG_ERROR("Exception during Plan Orchestrator initialization: " + std::string(e.what()));
+        appendToOutput("❌ Failed to initialize Plan Orchestrator: " + std::string(e.what()) + "\n", "Errors",
+                       OutputSeverity::Error);
+    }
+    catch (...)
+    {
+        LOG_ERROR("Unknown exception during Plan Orchestrator initialization");
+        appendToOutput("❌ Unknown error during Plan Orchestrator initialization\n", "Errors", OutputSeverity::Error);
+    }
+}
+
+void Win32IDE::onPlanOrchestratorStart()
+{
+    LOG_INFO("onPlanOrchestratorStart called");
+
+    if (!m_planOrchestrator)
+    {
+        initializePlanOrchestrator();
+    }
+
+    if (!m_planOrchestrator)
+    {
+        MessageBoxA(m_hwndMain, "Plan Orchestrator not initialized", "Plan Orchestrator Error", MB_OK | MB_ICONERROR);
+        return;
+    }
+
+    // Get task description from user
+    char prompt[2048] = {0};
+    if (DialogBoxParamA(
+            m_hInstance, "AGENT_PROMPT_DLG", m_hwndMain,
+            [](HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) -> INT_PTR
+            {
+                switch (msg)
+                {
+                    case WM_INITDIALOG:
+                        SetWindowTextA(GetDlgItem(hwnd, 101), "Enter autonomous task for Plan Orchestrator:");
+                        return TRUE;
+                    case WM_COMMAND:
+                        if (LOWORD(wp) == IDOK)
+                        {
+                            GetDlgItemTextA(hwnd, 102, (char*)lp, 2048);
+                            EndDialog(hwnd, IDOK);
+                            return TRUE;
+                        }
+                        else if (LOWORD(wp) == IDCANCEL)
+                        {
+                            EndDialog(hwnd, IDCANCEL);
+                            return TRUE;
+                        }
+                        break;
+                }
+                return FALSE;
+            },
+            (LPARAM)prompt) != IDOK)
+    {
+        return;
+    }
+
+    if (strlen(prompt) == 0)
+    {
+        strcpy_s(prompt, "Analyze the codebase and suggest improvements");
+    }
+
+    std::string promptStr(prompt);
+    appendToOutput("🧠 Starting Plan Orchestrator: " + promptStr + "\n", "Output", OutputSeverity::Info);
+
+    // Execute plan and execute in background thread
+    std::thread(
+        [this, promptStr]()
+        {
+            DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+            if (_guard.cancelled)
+                return;
+
+            try
+            {
+                auto result = m_planOrchestrator->planAndExecute(promptStr, m_planOrchestrator->workspaceRoot());
+                if (result.success)
+                {
+                    appendToOutput("🎯 Plan Orchestrator completed successfully\n", "Output", OutputSeverity::Info);
+                }
+                else
+                {
+                    appendToOutput("❌ Plan Orchestrator failed: " + result.errorMessage + "\n", "Errors",
+                                   OutputSeverity::Error);
+                }
+            }
+            catch (const std::exception& e)
+            {
+                appendToOutput("❌ Plan Orchestrator exception: " + std::string(e.what()) + "\n", "Errors",
+                               OutputSeverity::Error);
+            }
+        })
+        .detach();
+}
+
+void Win32IDE::onPlanOrchestratorStop()
+{
+    LOG_INFO("onPlanOrchestratorStop called");
+
+    if (!m_planOrchestrator)
+    {
+        appendToOutput("⚠️ Plan Orchestrator not running\n", "Output", OutputSeverity::Warning);
+        return;
+    }
+
+    // Detach all event callbacks so any in-flight background thread stops posting
+    // to the UI output pane, then destroy the orchestrator instance so it can be
+    // re-created on the next Start command.
+    m_planOrchestrator->requestStop();
+    m_planOrchestrator.reset();
+    appendToOutput("🛑 Plan Orchestrator stopped\n", "Output", OutputSeverity::Info);
+}
+
+void Win32IDE::onPlanOrchestratorExecutePrompt(const std::string& prompt)
+{
+    LOG_INFO("onPlanOrchestratorExecutePrompt called with: " + prompt);
+
+    if (!m_planOrchestrator)
+    {
+        initializePlanOrchestrator();
+    }
+
+    if (!m_planOrchestrator)
+    {
+        appendToOutput("❌ Plan Orchestrator not available\n", "Errors", OutputSeverity::Error);
+        return;
+    }
+
+    appendToOutput("🧠 Executing prompt: " + prompt + "\n", "Output", OutputSeverity::Info);
+
+    // Execute in background thread
+    std::thread(
+        [this, prompt]()
+        {
+            DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+            if (_guard.cancelled)
+                return;
+
+            try
+            {
+                auto result = m_planOrchestrator->planAndExecute(prompt, m_planOrchestrator->workspaceRoot());
+                if (result.success)
+                {
+                    appendToOutput("🎯 Prompt execution completed successfully\n", "Output", OutputSeverity::Info);
+                }
+                else
+                {
+                    appendToOutput("❌ Prompt execution failed: " + result.errorMessage + "\n", "Errors",
+                                   OutputSeverity::Error);
+                }
+            }
+            catch (const std::exception& e)
+            {
+                appendToOutput("❌ Prompt execution exception: " + std::string(e.what()) + "\n", "Errors",
+                               OutputSeverity::Error);
+            }
+        })
+        .detach();
+}
+
+void Win32IDE::onPlanOrchestratorViewStatus()
+{
+    LOG_INFO("onPlanOrchestratorViewStatus called");
+
+    if (!m_planOrchestrator)
+    {
+        appendToOutput("⚠️ Plan Orchestrator not initialized\n", "Output", OutputSeverity::Warning);
+        return;
+    }
+
+    std::stringstream status;
+    status << "=== Plan Orchestrator Status ===\n";
+    status << "Workspace Root: " << m_planOrchestrator->workspaceRoot() << "\n";
+    status << "Initialized: Yes\n";
+    status << "Inference Engine: "
+           << ((m_nativeEngine && m_nativeEngine->IsModelLoaded()) ? "Native Engine" : "Planner Fallback") << "\n";
+    status << "Router Subsystem: " << (m_routerInitialized ? "Initialized" : "Inactive") << "\n";
+    status << "LSP Subsystem: " << (m_lspInitialized ? "Initialized" : "Inactive") << "\n";
+
+    appendToOutput(status.str(), "Output", OutputSeverity::Info);
+}
+
+void Win32IDE::onPlanOrchestratorViewPlan()
+{
+    LOG_INFO("onPlanOrchestratorViewPlan called");
+
+    if (!m_planOrchestrator)
+    {
+        appendToOutput("⚠️ Plan Orchestrator not initialized\n", "Output", OutputSeverity::Warning);
+        return;
+    }
+
+    // Get the current plan
+    auto plan = m_planOrchestrator->getPlan();
+
+    std::stringstream planOutput;
+    planOutput << "=== Current Plan ===\n";
+    if (plan.empty())
+    {
+        planOutput << "(No active plan)\n";
+    }
+    else
+    {
+        for (size_t i = 0; i < plan.size(); ++i)
+        {
+            const auto& step = plan[i];
+            planOutput << (i + 1) << ". " << step.description << " [" << (step.isComplete ? "Complete" : "Pending")
+                       << "]\n";
+            if (!step.result.empty())
+            {
+                planOutput << "   Result: " << step.result << "\n";
+            }
+        }
+    }
+
+    appendToOutput(planOutput.str(), "Output", OutputSeverity::Info);
 }
 
 // Start Agent Loop - multi-turn agentic conversation
@@ -1067,9 +1179,9 @@ void Win32IDE::onAgentConfigureModel()
 
     try
     {
-        RawrXD::Agent::OllamaConfig probeCfg;
+        RawrXD::Agent::NativeInferenceConfig probeCfg;
         probeCfg.timeout_ms = 5000;  // Increased timeout for reliability
-        RawrXD::Agent::AgentOllamaClient probeClient(probeCfg);
+        RawrXD::Agent::NativeInferenceClient probeClient(probeCfg);
 
         if (probeClient.TestConnection())
         {
@@ -1087,7 +1199,7 @@ void Win32IDE::onAgentConfigureModel()
     }
     catch (const std::exception& e)
     {
-        connectionStatus = std::string("❌ Ollama error: ") + e.what();
+        connectionStatus = std::string("❌ Native inference error: ") + e.what();
         LOG_ERROR("Ollama probe exception: " + std::string(e.what()));
         availableModels.clear();
     }
@@ -1133,7 +1245,7 @@ void Win32IDE::onAgentConfigureModel()
                                   "\n\nNo models available. Please ensure:\n"
                                   "1. Ollama is installed and running (ollama serve)\n"
                                   "2. At least one model is pulled (ollama pull <model>)\n"
-                                  "3. Ollama is accessible at http://localhost:11434\n\n"
+                                  "3. IDE inference server is accessible at http://localhost:11435\n\n"
                                   "Common models: llama2, mistral, neural-chat, deepseek-coder";
 
         MessageBoxA(m_hwndMain, detailedMsg.c_str(), "Agent Model Configuration", MB_OK | MB_ICONWARNING);
@@ -1173,7 +1285,22 @@ void Win32IDE::onAgentConfigureModel()
 
     EnableWindow(m_hwndMain, FALSE);
 
-    HWND hwndDlg = CreateWindowExA(WS_EX_DLGMODALFRAME, "STATIC", "🤖 Configure AI Model",
+    // Register a proper dialog window class — "STATIC" is for labels, not top-level windows.
+    static bool s_modelDlgClassRegistered = false;
+    if (!s_modelDlgClassRegistered)
+    {
+        WNDCLASSA wc{};
+        wc.lpfnWndProc = DefWindowProcA;
+        wc.hInstance = m_hInstance;
+        wc.lpszClassName = "RawrXD_ModelDlg";
+        wc.hCursor = LoadCursorA(nullptr, IDC_ARROW);
+        wc.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1);
+        RegisterClassA(&wc);
+        s_modelDlgClassRegistered = true;
+    }
+
+    // WS_EX_TOPMOST keeps dialog visible during screenshot attempts (focus theft protection)
+    HWND hwndDlg = CreateWindowExA(WS_EX_DLGMODALFRAME | WS_EX_TOPMOST, "RawrXD_ModelDlg", "Configure AI Model",
                                    WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_VISIBLE, dlgX, dlgY, dlgWidth, dlgHeight,
                                    m_hwndMain, nullptr, m_hInstance, nullptr);
 
@@ -1202,7 +1329,9 @@ void Win32IDE::onAgentConfigureModel()
     for (size_t i = 0; i < availableModels.size(); ++i)
     {
         const auto& model = availableModels[i];
-        SendMessageA(hwndCombo, CB_ADDSTRING, 0, (LPARAM)model.c_str());
+        const std::string uiLabel = rawrxd::BuildModelDropdownLabel(model);
+        const int itemIdx = (int)SendMessageA(hwndCombo, CB_ADDSTRING, 0, (LPARAM)uiLabel.c_str());
+        SendMessageA(hwndCombo, CB_SETITEMDATA, itemIdx, (LPARAM)i);
 
         // Pre-select current model or first in list
         if (model == currentModel)
@@ -1244,15 +1373,22 @@ void Win32IDE::onAgentConfigureModel()
                 int sel = (int)SendMessageA(hwndCombo, CB_GETCURSEL, 0, 0);
                 if (sel != CB_ERR)
                 {
-                    char buffer[256] = {0};
-                    SendMessageA(hwndCombo, CB_GETLBTEXT, sel, (LPARAM)buffer);
-                    selectedModel = buffer;
-
-                    // Remove "(current, not available)" suffix if present
-                    size_t notAvailPos = selectedModel.find(" (current, not available)");
-                    if (notAvailPos != std::string::npos)
+                    const LRESULT itemData = SendMessageA(hwndCombo, CB_GETITEMDATA, sel, 0);
+                    if (itemData != CB_ERR && itemData >= 0 && itemData < (LRESULT)availableModels.size())
                     {
-                        selectedModel = selectedModel.substr(0, notAvailPos);
+                        selectedModel = availableModels[(size_t)itemData];
+                    }
+                    else
+                    {
+                        // Safety fallback when item data is unavailable.
+                        char buffer[512] = {0};
+                        SendMessageA(hwndCombo, CB_GETLBTEXT, sel, (LPARAM)buffer);
+                        selectedModel = buffer;
+                        size_t suffixPos = selectedModel.find(" - A Carrot > - ");
+                        if (suffixPos != std::string::npos)
+                        {
+                            selectedModel = selectedModel.substr(0, suffixPos);
+                        }
                     }
 
                     accepted = true;
@@ -1416,10 +1552,13 @@ void Win32IDE::handleAgentCommand(int commandId)
     if (!m_agenticBridge)
         initializeAgenticBridge();
 
-    // Push current language context to the agent on every command dispatch
+    // Sync language/file context to match current-file-context setting.
     if (m_agenticBridge)
     {
-        m_agenticBridge->SetLanguageContext(getSyntaxLanguageName(), m_currentFile);
+        if (m_settings.currentFileContextEnabled)
+            m_agenticBridge->SetLanguageContext(getSyntaxLanguageName(), m_currentFile);
+        else
+            m_agenticBridge->SetLanguageContext("", "");
     }
 
     switch (commandId)
@@ -1435,7 +1574,7 @@ void Win32IDE::handleAgentCommand(int commandId)
             onAgentExecuteCommand();
             break;
         case IDM_AGENT_CONFIGURE_MODEL:
-            onAgentConfigureModel();
+            (void)invokeConfigureModelWithSehGuard(this);
             break;
         case IDM_AGENT_VIEW_TOOLS:
             onAgentViewTools();
@@ -1449,6 +1588,114 @@ void Win32IDE::handleAgentCommand(int commandId)
         case IDM_AGENT_AUTONOMOUS_COMMUNICATOR:
             HandleAutonomousCommunicator(this);
             break;
+
+        // --- Copilot Chat Actions (Global GUI commands) ---
+        case IDM_COPILOT_MARK_HELPFUL:
+        {
+            ++m_copilotHelpfulCount;
+            appendToOutput("[ChatFeedback] Helpful +1 (helpful=" + std::to_string(m_copilotHelpfulCount) +
+                               ", unhelpful=" + std::to_string(m_copilotUnhelpfulCount) + ")\n",
+                           "Output", OutputSeverity::Info);
+            appendCopilotChatTextOnUiThread("\n[Feedback] Marked as helpful.\n");
+            break;
+        }
+        case IDM_COPILOT_MARK_UNHELPFUL:
+        {
+            ++m_copilotUnhelpfulCount;
+            appendToOutput("[ChatFeedback] Unhelpful +1 (helpful=" + std::to_string(m_copilotHelpfulCount) +
+                               ", unhelpful=" + std::to_string(m_copilotUnhelpfulCount) + ")\n",
+                           "Output", OutputSeverity::Warning);
+            appendCopilotChatTextOnUiThread("\n[Feedback] Marked as unhelpful.\n");
+            break;
+        }
+        case IDM_COPILOT_COPY_LAST_RESPONSE:
+        {
+            if (m_lastCopilotAssistantResponse.empty())
+            {
+                appendCopilotChatTextOnUiThread("\n[Copy] No assistant response to copy yet.\n");
+                break;
+            }
+
+            const std::wstring wText = utf8ToWideLocal(m_lastCopilotAssistantResponse);
+            HWND owner = m_hwndMain && IsWindow(m_hwndMain) ? m_hwndMain : nullptr;
+            if (!OpenClipboard(owner))
+            {
+                appendCopilotChatTextOnUiThread("\n[Copy] Clipboard unavailable.\n");
+                break;
+            }
+
+            EmptyClipboard();
+            const size_t bytes = (wText.size() + 1) * sizeof(wchar_t);
+            HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, bytes);
+            if (hMem)
+            {
+                void* data = GlobalLock(hMem);
+                if (data)
+                {
+                    memcpy(data, wText.c_str(), bytes);
+                    GlobalUnlock(hMem);
+                    if (!SetClipboardData(CF_UNICODETEXT, hMem))
+                    {
+                        GlobalFree(hMem);
+                    }
+                    else
+                    {
+                        appendCopilotChatTextOnUiThread("\n[Copy] Last response copied.\n");
+                    }
+                }
+                else
+                {
+                    GlobalFree(hMem);
+                }
+            }
+            CloseClipboard();
+            break;
+        }
+        case IDM_COPILOT_RETRY_LAST_PROMPT:
+        {
+            if (m_lastCopilotUserPrompt.empty())
+            {
+                appendCopilotChatTextOnUiThread("\n[Retry] No prior prompt to retry.\n");
+                break;
+            }
+
+            if (m_hwndCopilotChatInput && IsWindow(m_hwndCopilotChatInput))
+            {
+                const std::wstring retryPrompt = utf8ToWideLocal(m_lastCopilotUserPrompt);
+                SetWindowTextW(m_hwndCopilotChatInput, retryPrompt.c_str());
+            }
+            appendCopilotChatTextOnUiThread("\n[Retry] Re-sending last prompt.\n");
+            postDeferredCopilotSend();
+            break;
+        }
+
+        // --- Current File Context Toggle ---
+        case IDM_AGENT_TOGGLE_FILE_CONTEXT:
+        {
+            m_settings.currentFileContextEnabled = !m_settings.currentFileContextEnabled;
+            saveSettings();
+            std::string status = m_settings.currentFileContextEnabled ? "enabled" : "disabled";
+            showAgentActivityStatus("Current File Context " + status);
+            if (m_agenticBridge)
+            {
+                if (m_settings.currentFileContextEnabled)
+                    m_agenticBridge->SetLanguageContext(getSyntaxLanguageName(), m_currentFile);
+                else
+                    m_agenticBridge->SetLanguageContext("", "");
+            }
+            // Refresh menu checkmark
+            HMENU hMenu = GetMenu(m_hwndMain);
+            if (hMenu)
+            {
+                HMENU hAgentMenu = GetSubMenu(hMenu, 6); // Approximate Agent menu index
+                if (hAgentMenu)
+                {
+                    CheckMenuItem(hAgentMenu, IDM_AGENT_TOGGLE_FILE_CONTEXT,
+                                  m_settings.currentFileContextEnabled ? MF_CHECKED : MF_UNCHECKED);
+                }
+            }
+            break;
+        }
 
         // --- Autonomy ---
         case IDM_AUTONOMY_TOGGLE:
@@ -1480,6 +1727,10 @@ void Win32IDE::handleAgentCommand(int commandId)
             break;
         case IDM_TELEMETRY_UNIFIED_CORE:
             HandleUnifiedTelemetry(this);
+            break;
+
+        case IDM_INFERENCE_SPECULATIVE_RELOAD:
+            syncSpeculativeInferenceFromConfig();
             break;
 
         // --- Agent Memory (Phase 19B) ---
@@ -1695,9 +1946,14 @@ void Win32IDE::handleAgentCommand(int commandId)
         }
         case IDM_AI_800B_STATUS:
         {
-            bool unlocked = RawrXD::EnterpriseLicense::is800BUnlocked();
-            std::string msg = unlocked ? "800B Dual-Engine: UNLOCKED (Enterprise)"
-                                       : "800B Dual-Engine: locked (requires Enterprise license)";
+            RawrXD::License::EnterpriseLicenseV2::Instance().initialize();
+            const bool v1 = RawrXD::EnterpriseLicense::is800BUnlocked();
+            const bool asmGlob = (RawrXD::g_800B_Unlocked != 0);
+            const bool v2 = RawrXD::License::EnterpriseLicenseV2::Instance().isFeatureEnabled(
+                RawrXD::License::FeatureID::DualEngine800B);
+            const bool unlocked = v1 || asmGlob || v2;
+            std::string msg = unlocked ? "800B Dual-Engine: UNLOCKED (V1/V2/MASM path active)"
+                                       : "800B Dual-Engine: locked (requires Enterprise entitlement)";
             appendToOutput(msg + "\n", "Output", OutputSeverity::Info);
             break;
         }
@@ -1859,6 +2115,7 @@ void Win32IDE::syncAgentModeUiFromBridge()
         deep = m_agenticBridge->GetDeepThinking();
         research = m_agenticBridge->GetDeepResearch();
         noRefusal = m_agenticBridge->GetNoRefusal();
+        m_agenticFunctionCallingMode = m_agenticBridge->IsAgenticMode();
     }
     else if (m_agent)
     {
@@ -1866,10 +2123,6 @@ void Win32IDE::syncAgentModeUiFromBridge()
         deep = m_agent->IsDeepThink();
         research = m_agent->IsDeepResearch();
         noRefusal = m_agent->IsNoRefusal();
-    }
-    else
-    {
-        return;
     }
 
     if (m_hMenu)
@@ -1887,6 +2140,10 @@ void Win32IDE::syncAgentModeUiFromBridge()
         SendMessage(m_hwndChkDeepResearch, BM_SETCHECK, research ? BST_CHECKED : BST_UNCHECKED, 0);
     if (m_hwndChkNoRefusal)
         SendMessage(m_hwndChkNoRefusal, BM_SETCHECK, noRefusal ? BST_CHECKED : BST_UNCHECKED, 0);
+    if (m_hwndChkAgenticMode)
+        SendMessage(m_hwndChkAgenticMode, BM_SETCHECK, m_agenticFunctionCallingMode ? BST_CHECKED : BST_UNCHECKED, 0);
+    if (m_agenticChatSession)
+        m_agenticChatSession->SetAgenticMode(m_agenticFunctionCallingMode);
 
     if (m_agent)
     {
@@ -1985,6 +2242,23 @@ void Win32IDE::onAIModeNoRefusal()
                    OutputSeverity::Info);
 }
 
+void Win32IDE::onAIModeAgentic()
+{
+    LOG_INFO("onAIModeAgentic toggled");
+    m_agenticFunctionCallingMode = !m_agenticFunctionCallingMode;
+    if (m_agenticChatSession)
+        m_agenticChatSession->SetAgenticMode(m_agenticFunctionCallingMode);
+    if (m_agenticBridge)
+        m_agenticBridge->SetAgenticMode(m_agenticFunctionCallingMode);
+    if (m_hwndChkAgenticMode)
+        SendMessage(m_hwndChkAgenticMode, BM_SETCHECK, m_agenticFunctionCallingMode ? BST_CHECKED : BST_UNCHECKED, 0);
+    if (m_agenticFunctionCallingMode)
+        refreshAgenticChatSessionContext();
+    appendToOutput(std::string("Agentic Mode (Function Calling) ") +
+                       (m_agenticFunctionCallingMode ? "ENABLED" : "DISABLED") + "\n",
+                   "Output", OutputSeverity::Info);
+}
+
 // ============================================================================
 // AGENTIC PLANNING ORCHESTRATOR — Full Approval Gate Handlers
 // ============================================================================
@@ -1992,11 +2266,42 @@ void Win32IDE::onAIModeNoRefusal()
 void Win32IDE::onPlanningStart()
 {
     LOG_INFO("onPlanningStart called");
-    auto& orch = Agentic::OrchestratorIntegration::instance();
-    if (!orch.getOrchestrator())
+    auto* orchestrator = getPlanningOrchestratorReady();
+    if (!orchestrator)
     {
-        orch.initialize();
+        appendToOutput("Planning orchestrator unavailable\n", "Output", OutputSeverity::Error);
+        return;
     }
+
+    // Wire the orchestrator callbacks to the IDE subsystems
+    auto& integration = Agentic::OrchestratorIntegration::instance();
+
+    // 1. Tool Execution Tunnel
+    integration.setToolExecutor(
+        [this](const std::string& tool, const std::string& args, std::string& output)
+        {
+            if (!m_agenticBridge)
+                return false;
+            // Single-line directive so ExtractToolCallLines + registry dispatch see the full JSON args.
+            const std::string toolCall = std::string("TOOL:") + tool + " " + args;
+            return m_agenticBridge->DispatchModelToolCalls(toolCall, output);
+        });
+
+    // 2. Risk Analyzer (HITL Gate)
+    integration.setRiskAnalyzer(
+        [this](const Agentic::PlanStep& step) -> Agentic::StepRisk
+        {
+            if (step.is_mutating && step.risk_level >= Agentic::StepRisk::Medium)
+            {
+                std::string msg =
+                    "Agent proposes high-risk action: " + step.title + "\n" + step.description + "\n\nAllow execution?";
+                if (MessageBoxA(m_hwndMain, msg.c_str(), "Safety Gatekeeper", MB_YESNO | MB_ICONWARNING) == IDNO)
+                {
+                    return Agentic::StepRisk::Critical;  // High risk used as "denied" signal here
+                }
+            }
+            return step.risk_level;
+        });
 
     char taskDesc[1024] = {0};
     if (DialogBoxParamA(
@@ -2030,7 +2335,7 @@ void Win32IDE::onPlanningStart()
         return;
     }
 
-    auto* plan = orch.planAndApproveTask(std::string(taskDesc));
+    auto* plan = Agentic::OrchestratorIntegration::instance().planAndApproveTask(std::string(taskDesc));
     if (!plan)
     {
         appendToOutput("Failed to generate plan\n", "Errors", OutputSeverity::Error);
@@ -2045,7 +2350,7 @@ void Win32IDE::onPlanningStart()
 
 void Win32IDE::onPlanningShowQueue()
 {
-    auto* orc = AGENTIC_GET_ORCHESTRATOR();
+    auto* orc = getPlanningOrchestratorReady();
     if (!orc)
     {
         appendToOutput("Orchestrator not initialized\n", "Output", OutputSeverity::Warning);
@@ -2075,7 +2380,7 @@ void Win32IDE::onPlanningShowQueue()
 
 void Win32IDE::onPlanningApproveStep()
 {
-    auto* orc = AGENTIC_GET_ORCHESTRATOR();
+    auto* orc = getPlanningOrchestratorReady();
     if (!orc)
     {
         appendToOutput("Orchestrator not initialized\n", "Output", OutputSeverity::Warning);
@@ -2097,7 +2402,7 @@ void Win32IDE::onPlanningApproveStep()
 
 void Win32IDE::onPlanningRejectStep()
 {
-    auto* orc = AGENTIC_GET_ORCHESTRATOR();
+    auto* orc = getPlanningOrchestratorReady();
     if (!orc)
     {
         appendToOutput("Orchestrator not initialized\n", "Output", OutputSeverity::Warning);
@@ -2118,7 +2423,7 @@ void Win32IDE::onPlanningRejectStep()
 
 void Win32IDE::onPlanningExecuteStep()
 {
-    auto* orc = AGENTIC_GET_ORCHESTRATOR();
+    auto* orc = getPlanningOrchestratorReady();
     if (!orc)
     {
         appendToOutput("Orchestrator not initialized\n", "Output", OutputSeverity::Warning);
@@ -2145,7 +2450,7 @@ void Win32IDE::onPlanningExecuteStep()
 
 void Win32IDE::onPlanningExecuteAll()
 {
-    auto* orc = AGENTIC_GET_ORCHESTRATOR();
+    auto* orc = getPlanningOrchestratorReady();
     if (!orc)
     {
         appendToOutput("Orchestrator not initialized\n", "Output", OutputSeverity::Warning);
@@ -2176,7 +2481,7 @@ void Win32IDE::onPlanningExecuteAll()
 
 void Win32IDE::onPlanningRollback()
 {
-    auto* orc = AGENTIC_GET_ORCHESTRATOR();
+    auto* orc = getPlanningOrchestratorReady();
     if (!orc)
     {
         appendToOutput("Orchestrator not initialized\n", "Output", OutputSeverity::Warning);
@@ -2207,7 +2512,7 @@ void Win32IDE::onPlanningRollback()
 
 void Win32IDE::onPlanningSetPolicy()
 {
-    auto* orc = AGENTIC_GET_ORCHESTRATOR();
+    auto* orc = getPlanningOrchestratorReady();
     if (!orc)
     {
         appendToOutput("Orchestrator not initialized\n", "Output", OutputSeverity::Warning);
@@ -2240,7 +2545,7 @@ void Win32IDE::onPlanningSetPolicy()
 
 void Win32IDE::onPlanningViewStatus()
 {
-    auto* orc = AGENTIC_GET_ORCHESTRATOR();
+    auto* orc = getPlanningOrchestratorReady();
     if (!orc)
     {
         appendToOutput("Orchestrator not initialized\n", "Output", OutputSeverity::Warning);
@@ -2253,7 +2558,7 @@ void Win32IDE::onPlanningViewStatus()
 
 void Win32IDE::onPlanningDiagnostics()
 {
-    auto* orc = AGENTIC_GET_ORCHESTRATOR();
+    auto* orc = getPlanningOrchestratorReady();
     if (!orc)
     {
         appendToOutput("Orchestrator not initialized\n", "Output", OutputSeverity::Warning);
@@ -2293,6 +2598,11 @@ void Win32IDE::onPlanningDiagnostics()
 void Win32IDE::setAgenticMode(RawrXD::AgenticMode mode)
 {
     m_agenticMode = mode;
+    if (m_agenticBridge)
+    {
+        // Keep bridge-level routing mode aligned with explicit Ask/Plan/Agent UI mode.
+        m_agenticBridge->SetAgenticMode(mode == RawrXD::AgenticMode::Agent);
+    }
     LOG_INFO("Agentic mode set to " + std::string(RawrXD::AgenticModeToString(mode)));
     if (m_hwndAgenticModeAsk)
         SendMessage(m_hwndAgenticModeAsk, BM_SETCHECK, (mode == RawrXD::AgenticMode::Ask) ? BST_CHECKED : BST_UNCHECKED,
@@ -2401,6 +2711,24 @@ void Win32IDE::initializeAutonomy()
         m_autonomyManager = std::make_unique<AutonomyManager>(m_agenticBridge);
         m_autonomyManager->setOutputCallback([this](const std::string& msg)
                                              { appendToOutput(msg, "Output", OutputSeverity::Warning); });
+    }
+
+    // Also bring up the always-on diagnostic + self-healing watchdog so autonomy has a backstop.
+    // This is safe to call multiple times; it is internally idempotent.
+    {
+        AgentConfig cfg;
+        cfg.enableAutoDiagnostics = true;
+        cfg.enableBeaconing = true;
+        cfg.enableSelfHealing = true;
+        cfg.enableReporting = true;
+        cfg.beaconIntervalMs = 1000;
+        AutonomousAgent::Initialize(cfg);
+        if (auto* agent = AutonomousAgent::Instance())
+        {
+            agent->SetIDEWindow(m_hwndMain);
+            agent->SetIDEProcessId(GetCurrentProcessId());
+            (void)agent->Start();
+        }
     }
 
     appendToOutput("✅ Autonomy Manager initialized\n", "Output", OutputSeverity::Info);

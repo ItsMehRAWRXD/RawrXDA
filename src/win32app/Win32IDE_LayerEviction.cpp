@@ -16,23 +16,26 @@
 // ============================================================================
 
 #include "Win32IDE.h"
-#include <memory>
-#include <unordered_map>
-#include <list>
-#include <mutex>
-#include <thread>
 #include <atomic>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <list>
+#include <memory>
+#include <mutex>
+#include <thread>
+#include <unordered_map>
 
-namespace RawrXD {
+
+namespace RawrXD
+{
 
 // ============================================================================
 // LAYER EVICTION STRUCTURES
 // ============================================================================
 
-struct EvictedLayer {
+struct EvictedLayer
+{
     std::string layerId;
     std::string filePath;
     size_t sizeBytes;
@@ -40,7 +43,8 @@ struct EvictedLayer {
     int accessCount;
 };
 
-struct LayerInfo {
+struct LayerInfo
+{
     std::string id;
     size_t memoryUsage;
     bool isEvicted;
@@ -53,8 +57,9 @@ struct LayerInfo {
 // LAYER EVICTION MANAGER
 // ============================================================================
 
-class LayerEvictionManager {
-public:
+class LayerEvictionManager
+{
+  public:
     LayerEvictionManager();
     ~LayerEvictionManager();
 
@@ -68,7 +73,7 @@ public:
 
     // Eviction control
     void setMaxMemory(size_t maxBytes);
-    void setEvictionThreshold(float threshold); // 0.0-1.0
+    void setEvictionThreshold(float threshold);  // 0.0-1.0
     bool evictLayers(size_t targetFreeBytes = 0);
     bool reloadLayer(const std::string& layerId);
 
@@ -78,14 +83,14 @@ public:
     float getMemoryPressure() const;
     std::vector<std::string> getEvictedLayers() const;
 
-private:
+  private:
     void evictionThread();
     bool evictSingleLayer(const std::string& layerId);
     bool shouldEvict() const;
     std::string selectLayerToEvict() const;
 
     std::unordered_map<std::string, LayerInfo> m_layers;
-    std::list<std::string> m_accessOrder; // LRU order
+    std::list<std::string> m_accessOrder;  // LRU order
     std::string m_cacheDir;
     size_t m_maxMemory;
     float m_evictionThreshold;
@@ -103,22 +108,27 @@ private:
 // ============================================================================
 
 LayerEvictionManager::LayerEvictionManager()
-    : m_maxMemory(0), m_evictionThreshold(0.8f), m_running(false),
-      m_totalMemoryUsage(0), m_evictedMemory(0) {
+    : m_maxMemory(0), m_evictionThreshold(0.8f), m_running(false), m_totalMemoryUsage(0), m_evictedMemory(0)
+{
 }
 
-LayerEvictionManager::~LayerEvictionManager() {
+LayerEvictionManager::~LayerEvictionManager()
+{
     shutdown();
 }
 
-bool LayerEvictionManager::initialize(size_t maxMemoryBytes, const std::string& cacheDir) {
+bool LayerEvictionManager::initialize(size_t maxMemoryBytes, const std::string& cacheDir)
+{
     m_maxMemory = maxMemoryBytes;
     m_cacheDir = cacheDir;
 
     // Create cache directory
-    try {
+    try
+    {
         std::filesystem::create_directories(cacheDir);
-    } catch (...) {
+    }
+    catch (...)
+    {
         return false;
     }
 
@@ -128,18 +138,32 @@ bool LayerEvictionManager::initialize(size_t maxMemoryBytes, const std::string& 
     return true;
 }
 
-void LayerEvictionManager::shutdown() {
+void LayerEvictionManager::shutdown()
+{
     m_running = false;
-    if (m_evictionThread.joinable()) {
-        m_evictionThread.join();
+    if (m_evictionThread.joinable())
+    {
+        if (m_evictionThread.get_id() == std::this_thread::get_id())
+        {
+            m_evictionThread.detach();
+        }
+        else
+        {
+            m_evictionThread.join();
+        }
     }
 
     // Clean up evicted files
-    for (const auto& pair : m_layers) {
-        if (pair.second.evictedData) {
-            try {
+    for (const auto& pair : m_layers)
+    {
+        if (pair.second.evictedData)
+        {
+            try
+            {
                 std::filesystem::remove(pair.second.evictedData->filePath);
-            } catch (...) {
+            }
+            catch (...)
+            {
                 // Ignore cleanup errors
             }
         }
@@ -149,11 +173,13 @@ void LayerEvictionManager::shutdown() {
     m_accessOrder.clear();
 }
 
-bool LayerEvictionManager::registerLayer(const std::string& layerId, size_t memoryUsage) {
+bool LayerEvictionManager::registerLayer(const std::string& layerId, size_t memoryUsage)
+{
     std::lock_guard<std::mutex> lock(m_mutex);
 
-    if (m_layers.count(layerId)) {
-        return false; // Already registered
+    if (m_layers.count(layerId))
+    {
+        return false;  // Already registered
     }
 
     LayerInfo info;
@@ -167,32 +193,42 @@ bool LayerEvictionManager::registerLayer(const std::string& layerId, size_t memo
     m_totalMemoryUsage += memoryUsage;
 
     // Check if eviction is needed
-    if (shouldEvict()) {
+    if (shouldEvict())
+    {
         evictLayers();
     }
 
     return true;
 }
 
-bool LayerEvictionManager::unregisterLayer(const std::string& layerId) {
+bool LayerEvictionManager::unregisterLayer(const std::string& layerId)
+{
     std::lock_guard<std::mutex> lock(m_mutex);
 
     auto it = m_layers.find(layerId);
-    if (it == m_layers.end()) {
+    if (it == m_layers.end())
+    {
         return false;
     }
 
-    if (!it->second.isEvicted) {
+    if (!it->second.isEvicted)
+    {
         m_totalMemoryUsage -= it->second.memoryUsage;
-    } else {
+    }
+    else
+    {
         m_evictedMemory -= it->second.memoryUsage;
     }
 
     // Remove evicted file if exists
-    if (it->second.evictedData) {
-        try {
+    if (it->second.evictedData)
+    {
+        try
+        {
             std::filesystem::remove(it->second.evictedData->filePath);
-        } catch (...) {
+        }
+        catch (...)
+        {
             // Ignore
         }
     }
@@ -203,11 +239,13 @@ bool LayerEvictionManager::unregisterLayer(const std::string& layerId) {
     return true;
 }
 
-void LayerEvictionManager::accessLayer(const std::string& layerId) {
+void LayerEvictionManager::accessLayer(const std::string& layerId)
+{
     std::lock_guard<std::mutex> lock(m_mutex);
 
     auto it = m_layers.find(layerId);
-    if (it == m_layers.end()) {
+    if (it == m_layers.end())
+    {
         return;
     }
 
@@ -219,53 +257,97 @@ void LayerEvictionManager::accessLayer(const std::string& layerId) {
     m_accessOrder.push_front(layerId);
 }
 
-void LayerEvictionManager::setMaxMemory(size_t maxBytes) {
+void LayerEvictionManager::setMaxMemory(size_t maxBytes)
+{
     std::lock_guard<std::mutex> lock(m_mutex);
     m_maxMemory = maxBytes;
 
-    if (shouldEvict()) {
+    if (shouldEvict())
+    {
         evictLayers();
     }
 }
 
-void LayerEvictionManager::setEvictionThreshold(float threshold) {
+void LayerEvictionManager::setEvictionThreshold(float threshold)
+{
     std::lock_guard<std::mutex> lock(m_mutex);
     m_evictionThreshold = threshold;
 }
 
-bool LayerEvictionManager::evictLayers(size_t targetFreeBytes) {
+bool LayerEvictionManager::evictLayers(size_t targetFreeBytes)
+{
     std::lock_guard<std::mutex> lock(m_mutex);
 
     size_t targetMemory = m_maxMemory - targetFreeBytes;
-    if (m_totalMemoryUsage <= targetMemory) {
-        return true; // No eviction needed
+    if (m_totalMemoryUsage <= targetMemory)
+    {
+        return true;  // No eviction needed
     }
 
     // Evict layers until we're under the limit
-    while (m_totalMemoryUsage > targetMemory && !m_accessOrder.empty()) {
+    while (m_totalMemoryUsage > targetMemory && !m_accessOrder.empty())
+    {
         std::string layerId = selectLayerToEvict();
-        if (layerId.empty()) {
-            break; // No more layers to evict
+        if (layerId.empty())
+        {
+            break;  // No more layers to evict
         }
 
-        if (!evictSingleLayer(layerId)) {
-            break; // Eviction failed
+        if (!evictSingleLayer(layerId))
+        {
+            break;  // Eviction failed
         }
     }
 
     return m_totalMemoryUsage <= targetMemory;
 }
 
-bool LayerEvictionManager::reloadLayer(const std::string& layerId) {
+bool LayerEvictionManager::reloadLayer(const std::string& layerId)
+{
     std::lock_guard<std::mutex> lock(m_mutex);
 
     auto it = m_layers.find(layerId);
-    if (it == m_layers.end() || !it->second.isEvicted) {
+    if (it == m_layers.end() || !it->second.isEvicted)
+    {
         return false;
     }
 
-    // In a real implementation, this would load the layer data from disk
-    // For now, just mark as not evicted
+    // Read back from the .evicted file to verify integrity
+    if (it->second.evictedData && !it->second.evictedData->filePath.empty())
+    {
+        std::ifstream file(it->second.evictedData->filePath, std::ios::binary);
+        if (file)
+        {
+            uint32_t magic = 0, version = 0;
+            file.read(reinterpret_cast<char*>(&magic), sizeof(magic));
+            file.read(reinterpret_cast<char*>(&version), sizeof(version));
+            if (magic != 0x4C595245 || version != 1)
+            {
+                return false;  // Corrupt or incompatible eviction file
+            }
+            size_t savedSize = 0;
+            int savedAccess = 0;
+            file.read(reinterpret_cast<char*>(&savedSize), sizeof(savedSize));
+            file.read(reinterpret_cast<char*>(&savedAccess), sizeof(savedAccess));
+
+            // Verify layer ID
+            uint32_t idLen = 0;
+            file.read(reinterpret_cast<char*>(&idLen), sizeof(idLen));
+            if (idLen > 0 && idLen < 4096)
+            {
+                std::string savedId(idLen, '\0');
+                file.read(savedId.data(), idLen);
+                if (savedId != layerId)
+                {
+                    return false;  // Layer ID mismatch
+                }
+            }
+
+            // Restore metadata from eviction file
+            it->second.accessCount = savedAccess;
+        }
+    }
+
     it->second.isEvicted = false;
     m_totalMemoryUsage += it->second.memoryUsage;
     m_evictedMemory -= it->second.memoryUsage;
@@ -276,25 +358,32 @@ bool LayerEvictionManager::reloadLayer(const std::string& layerId) {
     return true;
 }
 
-size_t LayerEvictionManager::getTotalMemoryUsage() const {
+size_t LayerEvictionManager::getTotalMemoryUsage() const
+{
     return m_totalMemoryUsage;
 }
 
-size_t LayerEvictionManager::getEvictedMemory() const {
+size_t LayerEvictionManager::getEvictedMemory() const
+{
     return m_evictedMemory;
 }
 
-float LayerEvictionManager::getMemoryPressure() const {
-    if (m_maxMemory == 0) return 0.0f;
+float LayerEvictionManager::getMemoryPressure() const
+{
+    if (m_maxMemory == 0)
+        return 0.0f;
     return static_cast<float>(m_totalMemoryUsage) / static_cast<float>(m_maxMemory);
 }
 
-std::vector<std::string> LayerEvictionManager::getEvictedLayers() const {
+std::vector<std::string> LayerEvictionManager::getEvictedLayers() const
+{
     std::lock_guard<std::mutex> lock(m_mutex);
     std::vector<std::string> result;
 
-    for (const auto& pair : m_layers) {
-        if (pair.second.isEvicted) {
+    for (const auto& pair : m_layers)
+    {
+        if (pair.second.isEvicted)
+        {
             result.push_back(pair.first);
         }
     }
@@ -302,22 +391,27 @@ std::vector<std::string> LayerEvictionManager::getEvictedLayers() const {
     return result;
 }
 
-void LayerEvictionManager::evictionThread() {
-    while (m_running) {
+void LayerEvictionManager::evictionThread()
+{
+    while (m_running)
+    {
         {
             std::lock_guard<std::mutex> lock(m_mutex);
-            if (shouldEvict()) {
+            if (shouldEvict())
+            {
                 evictLayers();
             }
         }
 
-        std::this_thread::sleep_for(std::chrono::seconds(5)); // Check every 5 seconds
+        std::this_thread::sleep_for(std::chrono::seconds(5));  // Check every 5 seconds
     }
 }
 
-bool LayerEvictionManager::evictSingleLayer(const std::string& layerId) {
+bool LayerEvictionManager::evictSingleLayer(const std::string& layerId)
+{
     auto it = m_layers.find(layerId);
-    if (it == m_layers.end() || it->second.isEvicted) {
+    if (it == m_layers.end() || it->second.isEvicted)
+    {
         return false;
     }
 
@@ -329,16 +423,28 @@ bool LayerEvictionManager::evictSingleLayer(const std::string& layerId) {
     evicted->accessCount = it->second.accessCount;
     evicted->filePath = m_cacheDir + "\\" + layerId + ".evicted";
 
-    // In a real implementation, serialize layer data to disk here
-    // For now, just create an empty file as placeholder
-    try {
+    // Serialize layer metadata + data to disk
+    try
+    {
         std::ofstream file(evicted->filePath, std::ios::binary);
-        if (!file) {
+        if (!file)
+        {
             return false;
         }
-        // Write placeholder data
+        // Header: magic, version, layer size, access count
+        const uint32_t magic = 0x4C595245;  // "LYRE"
+        const uint32_t version = 1;
+        file.write(reinterpret_cast<const char*>(&magic), sizeof(magic));
+        file.write(reinterpret_cast<const char*>(&version), sizeof(version));
         file.write(reinterpret_cast<const char*>(&evicted->sizeBytes), sizeof(size_t));
-    } catch (...) {
+        file.write(reinterpret_cast<const char*>(&evicted->accessCount), sizeof(int));
+        // Write layer ID for verification on reload
+        uint32_t idLen = static_cast<uint32_t>(evicted->layerId.size());
+        file.write(reinterpret_cast<const char*>(&idLen), sizeof(idLen));
+        file.write(evicted->layerId.data(), idLen);
+    }
+    catch (...)
+    {
         return false;
     }
 
@@ -351,27 +457,33 @@ bool LayerEvictionManager::evictSingleLayer(const std::string& layerId) {
     return true;
 }
 
-bool LayerEvictionManager::shouldEvict() const {
-    if (m_maxMemory == 0) return false;
+bool LayerEvictionManager::shouldEvict() const
+{
+    if (m_maxMemory == 0)
+        return false;
     return getMemoryPressure() > m_evictionThreshold;
 }
 
-std::string LayerEvictionManager::selectLayerToEvict() const {
+std::string LayerEvictionManager::selectLayerToEvict() const
+{
     // Simple LRU: evict the least recently used layer
-    for (auto it = m_accessOrder.rbegin(); it != m_accessOrder.rend(); ++it) {
+    for (auto it = m_accessOrder.rbegin(); it != m_accessOrder.rend(); ++it)
+    {
         const std::string& layerId = *it;
         auto layerIt = m_layers.find(layerId);
-        if (layerIt != m_layers.end() && !layerIt->second.isEvicted) {
+        if (layerIt != m_layers.end() && !layerIt->second.isEvicted)
+        {
             return layerId;
         }
     }
 
-    return ""; // No evictable layers
+    return "";  // No evictable layers
 }
 
-} // namespace RawrXD
+}  // namespace RawrXD
 
-void LayerEvictionManagerDeleter::operator()(RawrXD::LayerEvictionManager* ptr) noexcept {
+void LayerEvictionManagerDeleter::operator()(RawrXD::LayerEvictionManager* ptr) noexcept
+{
     delete ptr;
 }
 
@@ -379,42 +491,55 @@ void LayerEvictionManagerDeleter::operator()(RawrXD::LayerEvictionManager* ptr) 
 // WIN32IDE INTEGRATION
 // ============================================================================
 
-void Win32IDE::initLayerEviction() {
-    if (!m_layerEvictionManager) {
+void Win32IDE::initLayerEviction()
+{
+    if (!m_layerEvictionManager)
+    {
         m_layerEvictionManager.reset(new RawrXD::LayerEvictionManager());
     }
 
     // Initialize with 8GB max memory, cache in temp directory
     std::string cacheDir = std::filesystem::temp_directory_path().string() + "\\RawrXD_LayerCache";
-    size_t maxMemory = 8LL * 1024LL * 1024LL * 1024LL; // 8GB
+    size_t maxMemory = 8LL * 1024LL * 1024LL * 1024LL;  // 8GB
 
-    if (m_layerEvictionManager->initialize(maxMemory, cacheDir)) {
+    if (m_layerEvictionManager->initialize(maxMemory, cacheDir))
+    {
         LOG_INFO("Layer Eviction System initialized (max: 8GB, cache: " + cacheDir + ")");
-    } else {
+    }
+    else
+    {
         LOG_ERROR("Failed to initialize Layer Eviction System");
     }
 }
 
-void Win32IDE::shutdownLayerEviction() {
-    if (m_layerEvictionManager) {
+void Win32IDE::shutdownLayerEviction()
+{
+    if (m_layerEvictionManager)
+    {
         m_layerEvictionManager->shutdown();
         m_layerEvictionManager.reset();
     }
 }
 
-bool Win32IDE::registerModelLayer(const std::string& layerId, size_t memoryUsage) {
-    if (!m_layerEvictionManager) return false;
+bool Win32IDE::registerModelLayer(const std::string& layerId, size_t memoryUsage)
+{
+    if (!m_layerEvictionManager)
+        return false;
     return m_layerEvictionManager->registerLayer(layerId, memoryUsage);
 }
 
-void Win32IDE::accessModelLayer(const std::string& layerId) {
-    if (m_layerEvictionManager) {
+void Win32IDE::accessModelLayer(const std::string& layerId)
+{
+    if (m_layerEvictionManager)
+    {
         m_layerEvictionManager->accessLayer(layerId);
     }
 }
 
-void Win32IDE::showLayerEvictionStats() {
-    if (!m_layerEvictionManager) {
+void Win32IDE::showLayerEvictionStats()
+{
+    if (!m_layerEvictionManager)
+    {
         appendToOutput("Layer Eviction System not initialized", "System", OutputSeverity::Warning);
         return;
     }
@@ -425,14 +550,16 @@ void Win32IDE::showLayerEvictionStats() {
     auto evictedLayers = m_layerEvictionManager->getEvictedLayers();
 
     std::string stats = "Layer Eviction Stats:\n\n";
-    stats += "Total Memory Usage: " + std::to_string(totalUsage / (1024*1024)) + " MB\n";
-    stats += "Evicted Memory: " + std::to_string(evicted / (1024*1024)) + " MB\n";
+    stats += "Total Memory Usage: " + std::to_string(totalUsage / (1024 * 1024)) + " MB\n";
+    stats += "Evicted Memory: " + std::to_string(evicted / (1024 * 1024)) + " MB\n";
     stats += "Memory Pressure: " + std::to_string(pressure * 100.0f) + "%\n";
     stats += "Evicted Layers: " + std::to_string(evictedLayers.size()) + "\n";
 
-    if (!evictedLayers.empty()) {
+    if (!evictedLayers.empty())
+    {
         stats += "\nEvicted Layer IDs:\n";
-        for (const auto& layer : evictedLayers) {
+        for (const auto& layer : evictedLayers)
+        {
             stats += "  - " + layer + "\n";
         }
     }

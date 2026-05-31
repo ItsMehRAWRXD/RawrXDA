@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ai_assistant_engine.h"
+#include "SovereignCursor.h"
 #include <windows.h>
 #include <richedit.h>
 #include <string>
@@ -61,6 +62,22 @@ public:
     void ShowSettingsDialog();
     void SaveSettings();
     void LoadSettings();
+
+    // Sovereign Cursor Integration
+    bool InitializeSovereignCursor();
+    void ShutdownSovereignCursor();
+    void TriggerSovereignCompletion();
+    void TriggerSovereignInlineSuggestion();
+    void TriggerSovereignRefactor();
+    void TriggerSovereignExplain();
+    void TriggerSovereignFix();
+    void TriggerSovereignDiff(const std::wstring& instruction);
+    void AcceptSovereignSuggestion();
+    void RejectSovereignSuggestion();
+    void ShowSovereignCursorPanel();
+    void HideSovereignCursorPanel();
+    void UpdateSovereignCursorStatus(const std::string& status);
+    bool IsSovereignCursorReady() const;
 
 private:
     // UI Components
@@ -130,7 +147,24 @@ private:
         ModelProvider preferred_provider;
         std::string api_key;
         std::string api_endpoint;
+        bool current_file_context_enabled = true;  // Toggle for current file context analysis
     } m_settings;
+
+    // Current File Context Toggle
+    void SetCurrentFileContextEnabled(bool enabled) { m_settings.current_file_context_enabled = enabled; }
+    bool IsCurrentFileContextEnabled() const { return m_settings.current_file_context_enabled; }
+
+    // Sovereign Cursor
+    std::unique_ptr<SovereignCursor> m_sovereign_cursor;
+    HWND m_sovereign_cursor_panel = nullptr;
+    HWND m_sovereign_cursor_status = nullptr;
+    bool m_sovereign_cursor_initialized = false;
+    AISuggestion m_sovereign_current_suggestion;
+    bool m_sovereign_suggestion_visible = false;
+
+    void CreateSovereignCursorPanel();
+    void OnSovereignSuggestion(const AISuggestion& suggestion);
+    void ApplySovereignSuggestion(const AISuggestion& suggestion);
 };
 
 } // namespace AI

@@ -1,0 +1,29 @@
+﻿[
+    {
+        "Variant":  "baseline",
+        "TotalMs":  6974,
+        "FirstTokenMs":  96.3,
+        "PerTokenMs":  871.8,
+        "TokPerSec":  1.1,
+        "Tokens":  8,
+        "PhaseSamples":  0
+    },
+    {
+        "Variant":  "q4k_q8_1_u32",
+        "TotalMs":  7162,
+        "FirstTokenMs":  98.6,
+        "PerTokenMs":  895.2,
+        "TokPerSec":  1.1,
+        "Tokens":  8,
+        "PhaseSamples":  0
+    },
+    {
+        "Variant":  "q4_0_u32",
+        "TotalMs":  7271,
+        "FirstTokenMs":  97.7,
+        "PerTokenMs":  908.9,
+        "TokPerSec":  1.1,
+        "Tokens":  8,
+        "PhaseSamples":  0
+    }
+]

@@ -478,17 +478,17 @@ bool EnhancedModelLoader::loadHFModel(const std::string& repoId)
 bool EnhancedModelLoader::loadOllamaModel(const std::string& modelName)
 {
     try {
-        std::cout << "[ModelLoader] Connecting to Ollama: " << modelName << "\n";
+        std::cout << "[ModelLoader] Connecting to native: " << modelName << "\n";
         FIRE(m_onLoadingProgress, 20);
 
         if (!m_ollamaProxy->isOllamaAvailable()) {
-            m_lastError = "Ollama service not available on localhost:11434";
+            m_lastError = "Ollama service not available on localhost:11435";
             FIRE(m_onError, m_lastError);
             return false;
         }
 
         if (!m_ollamaProxy->isModelAvailable(modelName)) {
-            m_lastError = "Model not found in Ollama: " + modelName;
+            m_lastError = "Model not found in native: " + modelName;
             FIRE(m_onError, m_lastError);
             return false;
         }

@@ -1,6 +1,6 @@
 #include "rope.hpp"
 #include "ggml-sycl/common.hpp"
-#include "ggml.h"
+#include "ggml_rxd_internal.h"
 
 struct rope_corr_dims {
     float v[2];

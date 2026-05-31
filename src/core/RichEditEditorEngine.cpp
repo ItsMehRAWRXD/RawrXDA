@@ -1,5 +1,6 @@
 // ============================================================================
 // RichEditEditorEngine.cpp — IEditorEngine Adapter for Win32 RichEdit
+// VSU Effects: Uses Adobe RGBa color space for professional color accuracy
 // ============================================================================
 //
 // Phase 28: Editor Engine Abstraction — RichEdit Emergency Fallback
@@ -23,6 +24,7 @@
 // ============================================================================
 
 #include "editor_engine.h"
+#include "../include/RawrXD_ColorSpace.h"
 
 #include <windows.h>
 #include <commctrl.h> // For Subclass
@@ -33,8 +35,68 @@
 
 #pragma comment(lib, "comctl32.lib")
 
+using namespace RawrXD::ColorSpace;
+
+// Helper to convert AdobeRGBa to COLORREF for Win32 GDI
+inline COLORREF AdobeRGBaToCOLORREF(const AdobeRGBa& color) {
+    auto srgb = color.TosRGB();
+    return RGB(static_cast<int>(srgb.r * 255),
+               static_cast<int>(srgb.g * 255),
+               static_cast<int>(srgb.b * 255));
+}
+
+// Convert COLORREF to AdobeRGBa
+inline AdobeRGBa COLORREFToAdobeRGBa(COLORREF color) {
+    return AdobeRGBa(
+        GetRValue(color) / 255.0f,
+        GetGValue(color) / 255.0f,
+        GetBValue(color) / 255.0f,
+        1.0f
+    );
+}
+
 // Forward declaration
 struct IDETheme;
+
+// Syntax highlighting colors for common languages
+struct SyntaxColors {
+    COLORREF keyword;
+    COLORREF comment;
+    COLORREF string;
+    COLORREF number;
+    COLORREF identifier;
+};
+
+static std::map<std::string, SyntaxColors> g_syntaxThemes = {
+    {"cpp", {
+        RGB(86, 156, 214),    // Blue keywords
+        RGB(87, 166, 74),     // Green comments
+        RGB(206, 145, 120),   // Tan strings
+        RGB(181, 206, 168),   // Light green numbers
+        RGB(220, 220, 220)    // White identifiers
+    }},
+    {"python", {
+        RGB(86, 156, 214),    // Blue keywords
+        RGB(87, 166, 74),     // Green comments
+        RGB(206, 145, 120),   // Tan strings
+        RGB(181, 206, 168),   // Light green numbers
+        RGB(220, 220, 220)    // White identifiers
+    }},
+    {"javascript", {
+        RGB(86, 156, 214),    // Blue keywords
+        RGB(87, 166, 74),     // Green comments
+        RGB(206, 145, 120),   // Tan strings
+        RGB(181, 206, 168),   // Light green numbers
+        RGB(220, 220, 220)    // White identifiers
+    }},
+    {"plaintext", {
+        RGB(220, 220, 220),   // White text
+        RGB(220, 220, 220),   // White text
+        RGB(220, 220, 220),   // White text
+        RGB(220, 220, 220),   // White text
+        RGB(220, 220, 220)    // White text
+    }}
+};
 
 // ============================================================================
 // RichEditEditorEngine Implementation
@@ -158,8 +220,25 @@ private:
     int          m_ghostCol = -1;
     bool         m_isPaintingGhost = false;
 
+    // Line numbers
+    bool         m_showLineNumbers = false;
+    HFONT        m_hLineNumberFont = nullptr;
+    int          m_lineNumberWidth = 0;
+
+    // Colors
+    COLORREF     m_textColor = RGB(220, 220, 220);
+    COLORREF     m_backgroundColor = RGB(30, 30, 30);
+    COLORREF     m_ghostTextColor = RGB(128, 128, 128);
+
     // Static subclass for ghost text rendering
     static LRESULT CALLBACK SubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
+
+    // Internal helpers
+    void updateFont();
+    void createLineNumberMargin();
+    void applySyntaxHighlighting();
+    void paintLineNumbers();
+    void paintGhostText();
 };
 
 // ============================================================================
@@ -184,7 +263,9 @@ EditorCapability RichEditEditorEngine::getCapabilities() const {
          | EditorCapability::IMESupport
          | EditorCapability::ScrollBar
          | EditorCapability::GhostText
-         | EditorCapability::WordWrap;
+         | EditorCapability::WordWrap
+         | EditorCapability::SyntaxHighlighting
+         | EditorCapability::LineNumbers;
 }
 
 // ============================================================================
@@ -225,16 +306,7 @@ EditorEngineResult RichEditEditorEngine::initialize(HWND parentWindow) {
     SendMessage(m_hwndEdit, EM_SETEVENTMASK, 0, ENM_CHANGE | ENM_SELCHANGE);
 
     // Set default font
-    m_hFont = CreateFontW(
-        -MulDiv(m_fontSize, GetDeviceCaps(GetDC(m_hwndEdit), LOGPIXELSY), 72),
-        0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
-        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-        CLEARTYPE_QUALITY, FIXED_PITCH | FF_MODERN,
-        m_fontFamily.c_str()
-    );
-    if (m_hFont) {
-        SendMessage(m_hwndEdit, WM_SETFONT, (WPARAM)m_hFont, TRUE);
-    }
+    updateFont();
 
     // Set subclass for ghost text support
     SetWindowSubclass(m_hwndEdit, SubclassProc, 0, (DWORD_PTR)this);
@@ -247,6 +319,21 @@ EditorEngineResult RichEditEditorEngine::initialize(HWND parentWindow) {
     pf.rgxTabs[0] = 400;  // ~4 chars in twips
     SendMessage(m_hwndEdit, EM_SETPARAFORMAT, 0, (LPARAM)&pf);
 
+    // Set background color
+    SendMessage(m_hwndEdit, EM_SETBKGNDCOLOR, 0, m_backgroundColor);
+
+    // Set default text color
+    CHARFORMAT2 cf = {};
+    cf.cbSize = sizeof(cf);
+    cf.dwMask = CFM_COLOR;
+    cf.crTextColor = m_textColor;
+    SendMessage(m_hwndEdit, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cf);
+
+    // Create line number margin
+    createLineNumberMargin();
+
+    // Subclass and tab stops moved to updateFont section above
+
     if (m_readyFn) {
         m_readyFn(m_readyData);
     }
@@ -256,12 +343,17 @@ EditorEngineResult RichEditEditorEngine::initialize(HWND parentWindow) {
 
 EditorEngineResult RichEditEditorEngine::destroy() {
     if (m_hwndEdit) {
+        RemoveWindowSubclass(m_hwndEdit, SubclassProc, 0);
         DestroyWindow(m_hwndEdit);
         m_hwndEdit = nullptr;
     }
     if (m_hFont) {
         DeleteObject(m_hFont);
         m_hFont = nullptr;
+    }
+    if (m_hLineNumberFont) {
+        DeleteObject(m_hLineNumberFont);
+        m_hLineNumberFont = nullptr;
     }
     if (m_hRichEdit) {
         FreeLibrary(m_hRichEdit);
@@ -303,6 +395,12 @@ EditorEngineResult RichEditEditorEngine::setText(const char* utf8Text, uint32_t 
 
     SetWindowTextW(m_hwndEdit, wide.data());
     m_stats.contentChanges++;
+
+    // Apply syntax highlighting if needed
+    if (m_language != "plaintext") {
+        applySyntaxHighlighting();
+    }
+
     return EditorEngineResult::ok("Content set");
 }
 
@@ -364,33 +462,197 @@ EditorEngineResult RichEditEditorEngine::setLanguage(const char* languageId) {
 EditorEngineResult RichEditEditorEngine::applyTheme(const IDETheme& theme) {
     if (!m_hwndEdit) return EditorEngineResult::error("Not initialized");
 
+    // Convert AdobeRGBa colors to COLORREF
+    m_backgroundColor = AdobeRGBaToCOLORREF(theme.backgroundColor);
+    m_textColor = AdobeRGBaToCOLORREF(theme.textColor);
+    m_ghostTextColor = AdobeRGBaToCOLORREF(theme.ghostTextColor);
+
     // Set background color
-    SendMessage(m_hwndEdit, EM_SETBKGNDCOLOR, 0, theme.backgroundColor);
+    SendMessage(m_hwndEdit, EM_SETBKGNDCOLOR, 0, m_backgroundColor);
 
     // Set default text color
     CHARFORMAT2 cf = {};
     cf.cbSize = sizeof(cf);
     cf.dwMask = CFM_COLOR;
-    cf.crTextColor = theme.textColor;
+    cf.crTextColor = m_textColor;
     SendMessage(m_hwndEdit, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cf);
 
+    // Update syntax highlighting if needed
+    if (m_language != "plaintext") {
+        applySyntaxHighlighting();
+    }
+
     m_stats.themeChanges++;
-    return EditorEngineResult::ok("Theme applied (basic colors only)");
+    return EditorEngineResult::ok("Theme applied");
 }
 
-EditorEngineResult RichEditEditorEngine::setFontSize(int sizeDip) {
-    m_fontSize = sizeDip;
-    if (m_hFont) DeleteObject(m_hFont);
+void RichEditEditorEngine::updateFont() {
+    if (m_hFont) {
+        DeleteObject(m_hFont);
+        m_hFont = nullptr;
+    }
+
+    HDC hdc = GetDC(m_hwndEdit);
+    int fontSizePixels = -MulDiv(m_fontSize, GetDeviceCaps(hdc, LOGPIXELSY), 72);
+    ReleaseDC(m_hwndEdit, hdc);
+
     m_hFont = CreateFontW(
-        -MulDiv(m_fontSize, GetDeviceCaps(GetDC(m_hwndEdit), LOGPIXELSY), 72),
+        fontSizePixels,
         0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
         CLEARTYPE_QUALITY, FIXED_PITCH | FF_MODERN,
         m_fontFamily.c_str()
     );
+
     if (m_hFont && m_hwndEdit) {
         SendMessage(m_hwndEdit, WM_SETFONT, (WPARAM)m_hFont, TRUE);
     }
+
+    // Update line number font
+    if (m_hLineNumberFont) {
+        DeleteObject(m_hLineNumberFont);
+    }
+    m_hLineNumberFont = CreateFontW(
+        fontSizePixels,
+        0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+        CLEARTYPE_QUALITY, FIXED_PITCH | FF_MODERN,
+        L"Consolas"
+    );
+}
+
+void RichEditEditorEngine::createLineNumberMargin() {
+    if (!m_hwndEdit || !m_showLineNumbers) return;
+
+    // Get text metrics to calculate margin width
+    HDC hdc = GetDC(m_hwndEdit);
+    HFONT hOldFont = (HFONT)SelectObject(hdc, m_hFont);
+
+    TEXTMETRIC tm;
+    GetTextMetrics(hdc, &tm);
+    int charWidth = tm.tmAveCharWidth;
+    int marginWidth = charWidth * 6; // Space for 5 digits + padding
+
+    SelectObject(hdc, hOldFont);
+    ReleaseDC(m_hwndEdit, hdc);
+
+    // Set margin
+    SendMessage(m_hwndEdit, EM_SETMARGINS, EC_LEFTMARGIN, marginWidth);
+}
+
+void RichEditEditorEngine::applySyntaxHighlighting() {
+    if (m_language == "plaintext" || !m_hwndEdit) return;
+
+    auto it = g_syntaxThemes.find(m_language);
+    if (it == g_syntaxThemes.end()) return;
+
+    const SyntaxColors& colors = it->second;
+
+    // Get text length
+    int textLength = GetWindowTextLengthW(m_hwndEdit);
+    if (textLength <= 0) return;
+
+    // Get text content
+    std::vector<wchar_t> buffer(textLength + 1);
+    GetWindowTextW(m_hwndEdit, buffer.data(), textLength + 1);
+    std::wstring text = buffer.data();
+
+    // Simple keyword-based highlighting
+    std::vector<std::wstring> keywords = {
+        L"if", L"else", L"for", L"while", L"return", L"function",
+        L"class", L"struct", L"void", L"int", L"float", L"double",
+        L"const", L"static", L"public", L"private", L"protected"
+    };
+
+    for (const auto& keyword : keywords) {
+        size_t pos = 0;
+        while ((pos = text.find(keyword, pos)) != std::wstring::npos) {
+            // Check if it's a whole word
+            if ((pos == 0 || !iswalnum(text[pos - 1])) &&
+                (pos + keyword.length() >= text.length() || !iswalnum(text[pos + keyword.length()]))) {
+
+                // Set keyword color
+                CHARFORMAT2 cf = {};
+                cf.cbSize = sizeof(cf);
+                cf.dwMask = CFM_COLOR;
+                cf.crTextColor = colors.keyword;
+
+                SendMessage(m_hwndEdit, EM_SETSEL, (WPARAM)pos, (LPARAM)(pos + keyword.length()));
+                SendMessage(m_hwndEdit, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&cf);
+            }
+            pos += keyword.length();
+        }
+    }
+}
+
+void RichEditEditorEngine::paintLineNumbers() {
+    if (!m_hwndEdit || !m_showLineNumbers) return;
+
+    HDC hdc = GetDC(m_hwndEdit);
+    HFONT hOldFont = (HFONT)SelectObject(hdc, m_hLineNumberFont);
+
+    // Get client rect and text metrics
+    RECT clientRect;
+    GetClientRect(m_hwndEdit, &clientRect);
+
+    TEXTMETRIC tm;
+    GetTextMetrics(hdc, &tm);
+    int lineHeight = tm.tmHeight;
+
+    // Get scroll position
+    int firstVisibleLine = getFirstVisibleLine();
+    int visibleLines = clientRect.bottom / lineHeight + 2;
+
+    // Set up colors
+    SetTextColor(hdc, RGB(128, 128, 128)); // Gray line numbers
+    SetBkColor(hdc, RGB(40, 40, 40));      // Dark background
+    SetBkMode(hdc, OPAQUE);
+
+    // Paint line numbers
+    for (int i = 0; i < visibleLines; i++) {
+        int lineNum = firstVisibleLine + i + 1;
+        if (lineNum > (int)getLineCount()) break;
+
+        std::wstring numText = std::to_wstring(lineNum);
+        RECT numRect = {
+            2,
+            i * lineHeight,
+            clientRect.right - 2,
+            (i + 1) * lineHeight
+        };
+
+        DrawTextW(hdc, numText.c_str(), -1, &numRect,
+                 DT_RIGHT | DT_VCENTER | DT_SINGLELINE);
+    }
+
+    SelectObject(hdc, hOldFont);
+    ReleaseDC(m_hwndEdit, hdc);
+}
+
+void RichEditEditorEngine::paintGhostText() {
+    if (!m_hwndEdit || m_ghostText.empty()) return;
+
+    HDC hdc = GetDC(m_hwndEdit);
+    HFONT hOldFont = (HFONT)SelectObject(hdc, m_hFont);
+
+    // Get cursor position
+    POINT pt;
+    GetCaretPos(&pt);
+
+    // Set ghost text color
+    SetTextColor(hdc, m_ghostTextColor);
+    SetBkMode(hdc, TRANSPARENT);
+
+    // Paint ghost text
+    TextOutW(hdc, pt.x, pt.y, m_ghostText.c_str(), (int)m_ghostText.length());
+
+    SelectObject(hdc, hOldFont);
+    ReleaseDC(m_hwndEdit, hdc);
+}
+
+EditorEngineResult RichEditEditorEngine::setFontSize(int sizeDip) {
+    m_fontSize = sizeDip;
+    updateFont();
     return EditorEngineResult::ok("Font size set");
 }
 
@@ -399,8 +661,10 @@ EditorEngineResult RichEditEditorEngine::setFontFamily(const wchar_t* family) {
     return setFontSize(m_fontSize);  // Recreate font
 }
 
-EditorEngineResult RichEditEditorEngine::setLineNumbers(bool) {
-    return EditorEngineResult::error("RichEdit does not support line numbers natively");
+EditorEngineResult RichEditEditorEngine::setLineNumbers(bool enabled) {
+    m_showLineNumbers = enabled;
+    createLineNumberMargin();
+    return EditorEngineResult::ok("Line numbers toggled");
 }
 
 EditorEngineResult RichEditEditorEngine::setWordWrap(bool enabled) {
@@ -498,6 +762,11 @@ bool RichEditEditorEngine::hasFocus() const {
 // ============================================================================
 void RichEditEditorEngine::render() {
     // RichEdit handles its own rendering via Win32 messages.
+    // Force redraw to ensure content is visible
+    if (m_hwndEdit) {
+        InvalidateRect(m_hwndEdit, nullptr, FALSE);
+        UpdateWindow(m_hwndEdit);
+    }
 }
 
 // ============================================================================
@@ -505,49 +774,47 @@ void RichEditEditorEngine::render() {
 // ============================================================================
 LRESULT CALLBACK RichEditEditorEngine::SubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData) {
     auto* self = reinterpret_cast<RichEditEditorEngine*>(dwRefData);
-    
-    // We handle ghost text in WM_PAINT pass AFTER RichEdit
-    if (uMsg == WM_PAINT) {
-        // Redraw RichEdit content
-        LRESULT res = DefSubclassProc(hWnd, uMsg, wParam, lParam);
-        
-        if (self && !self->m_ghostText.empty() && self->m_hwndEdit) {
-            HDC hdc = GetDC(hWnd);
-            POINT pt;
-            GetCaretPos(&pt);
-            
-            HFONT hOldFont = (HFONT)SelectObject(hdc, self->m_hFont);
-            SetTextColor(hdc, RGB(128, 128, 128)); // Grey
-            SetBkMode(hdc, TRANSPARENT);
-            
-            TextOutW(hdc, pt.x, pt.y, self->m_ghostText.c_str(), (int)self->m_ghostText.length());
-            
-            SelectObject(hdc, hOldFont);
-            ReleaseDC(hWnd, hdc);
-            return 0; // Handled
+
+    switch (uMsg) {
+        case WM_PAINT: {
+            // First let RichEdit paint itself
+            LRESULT result = DefSubclassProc(hWnd, uMsg, wParam, lParam);
+
+            // Paint line numbers if enabled
+            if (self && self->m_showLineNumbers) {
+                self->paintLineNumbers();
+            }
+
+            // Paint ghost text if present
+            if (self && !self->m_ghostText.empty()) {
+                self->paintGhostText();
+            }
+
+            return result;
         }
-        return res;
+
+        case WM_NCDESTROY:
+            RemoveWindowSubclass(hWnd, SubclassProc, uIdSubclass);
+            break;
     }
-    
-    // Subclass cleanup
-    if (uMsg == WM_NCDESTROY) {
-        RemoveWindowSubclass(hWnd, SubclassProc, uIdSubclass);
-    }
-    
+
     return DefSubclassProc(hWnd, uMsg, wParam, lParam);
 }
 
 EditorEngineResult RichEditEditorEngine::setGhostText(int line, int col, const char* text) {
     if (!m_hwndEdit) return EditorEngineResult::error("Not initialized");
-    
+
     // Convert to wide for rendering
     int wideLen = MultiByteToWideChar(CP_UTF8, 0, text, -1, nullptr, 0);
     m_ghostText.resize(wideLen > 0 ? wideLen - 1 : 0);
     MultiByteToWideChar(CP_UTF8, 0, text, -1, &m_ghostText[0], (int)m_ghostText.size() + 1);
-    
+
     m_ghostLine = line;
     m_ghostCol = col;
-    
+
+    // Move cursor to ghost text position
+    setCursorPosition(line, col);
+
     InvalidateRect(m_hwndEdit, NULL, FALSE);
     return EditorEngineResult::ok("Ghost text set");
 }

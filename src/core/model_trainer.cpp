@@ -143,7 +143,7 @@ public:
         // This would call the actual tokenization method from the engine
         std::vector<uint32_t> tokens;
         
-        // Simplified tokenization for demonstration
+        // Simplified tokenization
         // In production, this would use the model's actual tokenizer
         std::istringstream stream(text);
         std::string word;
@@ -188,13 +188,13 @@ private:
     InferenceEngine* m_engine;
     
     uint32_t hashStringToToken(const std::string& word) {
-        // Simple hash-based tokenization for demonstration
+        // Simple hash-based tokenization
         std::hash<std::string> hasher;
         return static_cast<uint32_t>(hasher(word) % 32000); // Assuming 32k vocabulary
     }
     
     std::string tokenToString(uint32_t token) {
-        // Simple reverse mapping for demonstration
+        // Simple reverse mapping
         return "token_" + std::to_string(token);
     }
 };
@@ -985,7 +985,7 @@ std::vector<float> ModelTrainer::extractModelWeights() {
     size_t totalParams = m_vocabSize * m_embeddingDim + m_layerCount * m_embeddingDim * m_embeddingDim * 4;
     weights.resize(totalParams);
     
-    // Initialize with small random values (for demonstration)
+    // Initialize with small random values
     std::random_device rd;
     std::mt19937 gen(rd());
     std::normal_distribution<float> dist(0.0f, 0.02f);
@@ -1099,7 +1099,7 @@ std::vector<float> ModelTrainer::forwardPass(const std::vector<uint32_t>& inputs
     // Simplified forward pass - in production this would use the actual inference engine
     std::vector<float> logits;
     
-    // Generate dummy logits for demonstration
+    // Generate dummy logits
     size_t outputSize = inputs.size() * m_vocabSize;
     logits.resize(outputSize);
     

@@ -503,11 +503,35 @@ extern "C" uint32_t Vulkan_CreateComputePipeline(
         return 0;
     }
     
-    // Create pipeline layout
+    // Create descriptor set layout
+    VkDescriptorSetLayoutBinding bindings[] = {
+        { 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
+        { 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
+        { 2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr }
+    };
+
+    VkDescriptorSetLayoutCreateInfo layout_info = {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+        .bindingCount = 3,
+        .pBindings = bindings
+    };
+
+    VkDescriptorSetLayout descriptor_set_layout = nullptr;
+    vkCreateDescriptorSetLayout(ctx->device, &layout_info, nullptr, &descriptor_set_layout);
+
+    // Create pipeline layout with push constant support
+    VkPushConstantRange push_constant_range = {
+        .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+        .offset = 0,
+        .size = 128 // Sufficient for the Push struct
+    };
+
     VkPipelineLayoutCreateInfo pipeline_layout_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-        .setLayoutCount = 0,
-        .pushConstantRangeCount = 0
+        .setLayoutCount = 1,
+        .pSetLayouts = &descriptor_set_layout,
+        .pushConstantRangeCount = 1,
+        .pPushConstantRanges = &push_constant_range
     };
     
     VkResult result = vkCreatePipelineLayout(
@@ -562,6 +586,10 @@ extern "C" uint32_t Vulkan_CreateComputePipeline(
 extern "C" uint32_t Vulkan_DispatchCompute(
     void* context,
     VkPipeline pipeline,
+    VkPipelineLayout layout,
+    VkDescriptorSet descriptor_set,
+    const void* push_constants,
+    uint32_t push_constants_size,
     uint32_t group_count_x,
     uint32_t group_count_y,
     uint32_t group_count_z)
@@ -589,6 +617,16 @@ extern "C" uint32_t Vulkan_DispatchCompute(
     vkBeginCommandBuffer(cmd_buffer, &begin_info);
     
     vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
+    
+    // Bind descriptor set if provided
+    if (descriptor_set) {
+        vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, layout, 0, 1, &descriptor_set, 0, nullptr);
+    }
+
+    // Bind push constants if provided
+    if (push_constants && push_constants_size > 0) {
+        vkCmdPushConstants(cmd_buffer, layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, push_constants_size, push_constants);
+    }
     
     vkCmdDispatch(cmd_buffer, group_count_x, group_count_y, group_count_z);
     
@@ -663,7 +701,7 @@ extern "C" {
     uint32_t __stdcall Vulkan_CopyToBuffer(void*, VkBuffer, const void*, uint64_t);
     uint32_t __stdcall Vulkan_CopyFromBuffer(void*, VkBuffer, void*, uint64_t);
     uint32_t __stdcall Vulkan_CreateComputePipeline(void*, const ComputePipelineConfig*, VkPipeline*, VkPipelineLayout*);
-    uint32_t __stdcall Vulkan_DispatchCompute(void*, VkPipeline, uint32_t, uint32_t, uint32_t);
+    uint32_t __stdcall Vulkan_DispatchCompute(void*, VkPipeline, VkPipelineLayout, VkDescriptorSet, const void*, uint32_t, uint32_t, uint32_t, uint32_t);
     void __stdcall Vulkan_DestroyComputeContext(void*);
 }
 // vulkan_compute_real.cpp - PRODUCTION VULKAN INITIALIZATION

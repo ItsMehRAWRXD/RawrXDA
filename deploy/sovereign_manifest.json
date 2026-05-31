@@ -1,0 +1,28 @@
+{
+  "project": "RawrXD Sovereign MoE",
+  "version": "1.2.6",
+  "baseline_tag": "v1.2.6-sovereign-baseline",
+  "commit": "bc7682063",
+  "deployment_date": "2026-04-06",
+  "hardware_targets": {
+    "cpu": "AMD Ryzen 7 7800X3D (Zen 4)",
+    "instruction_set": "AVX-512 (ZMM Saturation)",
+    "gpu_offload": "Vulkan (HIP Fallback)"
+  },
+  "performance_benchmarks": {
+    "moe_sparse_gather_tps": 32258.1,
+    "latency_ms": 0.031,
+    "model_verified": "gptoss20b_link.gguf"
+  },
+  "active_modules": [
+    "Titan_MoE_SparseGather.asm",
+    "RAWRXD_KV_APERTURE.asm",
+    "RAWRXD_SAMPLER_AVX512.asm",
+    "Win32IDE_Core"
+  ],
+  "runtime_flags": {
+    "MOE_CONFIG_OFFSET": 32,
+    "BEACON_HEARTBEAT": "Enabled",
+    "ULTRA_HIGH_THROUGHPUT_V280": "Active"
+  }
+}

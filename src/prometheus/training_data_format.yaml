@@ -1,0 +1,123 @@
+# =============================================================================
+# TRAINING DATA FORMAT FOR PROMETHEUS 120B MoE
+# =============================================================================
+
+# Tool calling (Claude/GPT-4 style)
+tool_calling_example:
+  messages:
+    - role: system
+      content: |
+        You have access to the following tools:
+        - search(query: str) -> Search the web
+        - code_execute(code: str, language: str) -> Execute code safely
+        - read_file(path: str) -> Read a file
+        Use tools when needed. Call multiple tools in parallel when independent.
+    - role: user
+      content: "What's the weather in Tokyo and Paris right now?"
+    - role: assistant
+      content: |
+        <|tool_call|>
+        [
+          {"id": "call_1", "name": "search", "arguments": {"query": "current weather Tokyo"}},
+          {"id": "call_2", "name": "search", "arguments": {"query": "current weather Paris"}}
+        ]
+        </|tool_call|>
+    - role: tool
+      tool_call_id: "call_1"
+      content: "Tokyo: 22C, partly cloudy, humidity 65%"
+    - role: tool
+      tool_call_id: "call_2"
+      content: "Paris: 18C, overcast, light rain expected"
+    - role: assistant
+      content: |
+        Here's the current weather in both cities:
+        **Tokyo**: 22C, partly cloudy with 65% humidity
+        **Paris**: 18C, overcast with light rain expected
+
+# Extended thinking (Claude style)
+extended_thinking_example:
+  messages:
+    - role: user
+      content: "Is 97 a prime number? Show your reasoning."
+    - role: assistant
+      content: |
+        <|reasoning|>
+        Let me check if 97 is prime.
+        To verify if a number is prime, I need to check if it's divisible by any prime number up to its square root.
+        sqrt(97) ~ 9.85
+        Primes to check: 2, 3, 5, 7
+        - 97 / 2 = 48.5 (not divisible, odd number)
+        - 97 / 3 = 32.33... (sum of digits: 9+7=16, not divisible by 3)
+        - 97 / 5 = 19.4 (doesn't end in 0 or 5)
+        - 97 / 7 = 13.86... (7 * 13 = 91, 7 * 14 = 98)
+        None of these divide evenly, so 97 is prime.
+        </|reasoning|>
+        Yes, **97 is a prime number**.
+
+# Artifacts (Claude style)
+artifacts_example:
+  messages:
+    - role: user
+      content: "Create a Python function to calculate fibonacci numbers and show how it works."
+    - role: assistant
+      content: |
+        I'll create a Fibonacci calculator for you.
+        <|artifact|>
+        type: code
+        language: python
+        id: fib_calculator
+        title: Fibonacci Calculator
+        ---
+        def fibonacci(n: int) -> list[int]:
+            if n <= 0: return []
+            elif n == 1: return [0]
+            elif n == 2: return [0, 1]
+            fib = [0, 1]
+            for i in range(2, n):
+                fib.append(fib[i-1] + fib[i-2])
+            return fib
+        if __name__ == "__main__":
+            print(f"First 10 Fibonacci numbers: {fibonacci(10)}")
+        ---
+        </|artifact|>
+
+# Structured output (GPT-4 style)
+structured_output_example:
+  messages:
+    - role: system
+      content: |
+        Respond in JSON format matching this schema:
+        {
+          "type": "object",
+          "properties": {
+            "sentiment": {"type": "string", "enum": ["positive", "negative", "neutral"]},
+            "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+            "key_topics": {"type": "array", "items": {"type": "string"}}
+          },
+          "required": ["sentiment", "confidence", "key_topics"]
+        }
+    - role: user
+      content: "The new product launch exceeded all expectations. Sales tripled and customer feedback has been overwhelmingly positive!"
+    - role: assistant
+      content: |
+        <|json|>
+        {
+          "sentiment": "positive",
+          "confidence": 0.95,
+          "key_topics": ["product launch", "sales growth", "customer feedback"]
+        }
+        </|json|>
+
+# =============================================================================
+# TRAINING MIXTURE (recommended ratios)
+# =============================================================================
+training_mixture:
+  general_text: 40%
+  code: 15%
+  mathematics: 10%
+  tool_calling_demonstrations: 8%
+  extended_thinking: 8%
+  multi_turn_conversations: 10%
+  structured_output: 5%
+  multilingual: 4%
+  total_tokens: 2_000_000_000_000  # 2T tokens for 120B model

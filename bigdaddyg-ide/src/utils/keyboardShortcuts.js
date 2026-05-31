@@ -9,7 +9,8 @@
  * |-----------------|----------------------|----------------------------------|-------------------|
  * | commandPalette  | Ctrl+Shift+P         | View: Command Palette            | command-palette   |
  * | settings        | Ctrl+,               | Preferences: Open Settings       | settings          |
- * | chat            | Ctrl+L               | Chat: Open AI Chat               | chat              |
+ * | chat            | Ctrl+Shift+O         | RawrXD: Open Chat Dock           | chat              |
+ * |                 | legacy Ctrl+L alias   |                                  |                   |
  * | agent           | Ctrl+Shift+A         | Agent: Open Agent Panel          | agent             |
  * | modules         | Ctrl+Shift+M         | View: Extension Modules          | modules           |
  * | symbols         | Ctrl+Shift+Y         | RE: Symbols & xrefs              | symbols           |
@@ -27,7 +28,7 @@
 export const DEFAULT_SHORTCUTS = {
   commandPalette: { requireMod: true, shift: true, alt: false, key: 'p' },
   settings: { requireMod: true, shift: false, alt: false, key: ',' },
-  chat: { requireMod: true, shift: false, alt: false, key: 'l' },
+  chat: { requireMod: true, shift: true, alt: false, key: 'o' },
   agent: { requireMod: true, shift: true, alt: false, key: 'a' },
   modules: { requireMod: true, shift: true, alt: false, key: 'm' },
   symbols: { requireMod: true, shift: true, alt: false, key: 'y' },

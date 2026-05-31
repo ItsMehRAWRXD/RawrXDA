@@ -27,6 +27,7 @@
 ; =============================================================================
 
 INCLUDE RawrXD_Common.inc
+EXTERN rawrxd_emit_heartbeat:PROC
 
 ; =============================================================================
 ;                          CONSTANTS
@@ -204,6 +205,14 @@ native_rmsnorm_avx512 PROC FRAME
     sub rsp, 48
     .allocstack 48
     .endprolog
+
+    ; --- Heartbeat injection ---
+    mov [rsp+32], rcx
+    mov [rsp+40], rdx
+    call rawrxd_emit_heartbeat
+    mov rcx, [rsp+32]
+    mov rdx, [rsp+40]
+    ; --- End Heartbeat ---
 
     mov rsi, rcx
     mov rdi, rdx

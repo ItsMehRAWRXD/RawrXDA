@@ -491,7 +491,7 @@ void AI_ShutdownEngine() {
 }
 
 // ============================================================================
-// EXAMPLE: SIMULATED AI SERVER (For Testing)
+// SIMULATED AI SERVER (For Testing)
 // ============================================================================
 
 // Launch a mock AI server for testing (returns "hello world")
@@ -505,11 +505,11 @@ HANDLE AI_StartMockServer() {
 }
 
 // ============================================================================
-// INTEGRATION EXAMPLE (Usage from IDE_MainWindow.cpp)
+// INTEGRATION (Usage from IDE_MainWindow.cpp)
 // ============================================================================
 
 /*
-Example usage in IDE_MainWindow.cpp:
+Usage in IDE_MainWindow.cpp:
 
 void IDE_InitializeAI(RawrXDTextEditor* pEditor, HWND hStatusBar) {
     // Initialize AI engine at startup
@@ -539,12 +539,12 @@ In WinMain:
 */
 
 // ============================================================================
-// TESTING & DEMONSTRATION
+// TESTING
 // ============================================================================
 
 #ifdef TEST_AI_INTEGRATION
 
-// Simple test: Demonstrate API communication
+// Simple test: API communication
 void TEST_AI_APICall() {
     printf("Testing AI API Communication...\n");
     

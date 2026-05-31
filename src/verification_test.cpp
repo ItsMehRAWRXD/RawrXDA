@@ -26,13 +26,32 @@ using namespace RawrXD;
 namespace fs = std::filesystem;
 
 extern "C" void DequantQ4_0_AVX512(void* src, uint16_t* dst, size_t blocks) {
-    // Stub for verification test (AVX-512 required for real impl)
-    // Simply zero out
-    memset(dst, 0, blocks * 32 * sizeof(uint16_t));
+    if (!src || !dst || blocks == 0) return;
+    // Q4_0 dequantization: each block = 2 bytes scale + 16 bytes packed weights (32 x 4-bit)
+    const uint8_t* in = static_cast<const uint8_t*>(src);
+    for (size_t b = 0; b < blocks; ++b) {
+        // Read scale (first 2 bytes as half-precision float)
+        uint16_t scale_half = *reinterpret_cast<const uint16_t*>(in + b * 18);
+        // Convert half to float (simplified)
+        float scale = scale_half * 1.0f / 512.0f; // Approximate
+        // Unpack 16 bytes into 32 nibbles
+        for (int i = 0; i < 16; ++i) {
+            uint8_t packed = in[b * 18 + 2 + i];
+            uint8_t low = packed & 0x0F;
+            uint8_t high = (packed >> 4) & 0x0F;
+            // Dequantize: value = scale * (nibble - 8)
+            float v_low = scale * (static_cast<float>(low) - 8.0f);
+            float v_high = scale * (static_cast<float>(high) - 8.0f);
+            // Convert to uint16_t (simple clamp)
+            dst[b * 32 + i * 2] = static_cast<uint16_t>(std::max(0.0f, v_low * 1000.0f));
+            dst[b * 32 + i * 2 + 1] = static_cast<uint16_t>(std::max(0.0f, v_high * 1000.0f));
+        }
+    }
 }
 
 extern "C" void DequantQ4_0_AVX2(void* src, uint16_t* dst, size_t blocks) {
-    memset(dst, 0, blocks * 32 * sizeof(uint16_t));
+    // AVX2 path falls back to same implementation (compiler will vectorize)
+    DequantQ4_0_AVX512(src, dst, blocks);
 }
 
 void CreateDummyModel(const std::string& path) {
@@ -135,7 +154,7 @@ void TestInferencePipeline() {
     try {
         fs::remove(modelName);
     } catch(...) {
-        // Ignore removal errors
+        fprintf(stderr, "[VerificationTest] Removal error ignored\n");
     }
 }
 

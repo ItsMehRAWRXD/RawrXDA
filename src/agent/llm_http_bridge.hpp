@@ -225,7 +225,11 @@ inline std::vector<std::string> listOllamaModels(
         for (const auto& m : arr) {
             models.push_back(m.value("name", ""));
         }
-    } catch (...) {}
+    } catch (const std::exception& e) {
+        OutputDebugStringA(("[llm_http_bridge] JSON parse exception: " + std::string(e.what()) + "\n").c_str());
+    } catch (...) {
+        OutputDebugStringA("[llm_http_bridge] JSON parse unknown exception\n");
+    }
     return models;
 }
 

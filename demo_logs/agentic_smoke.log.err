@@ -1,0 +1,3 @@
+[Prometheus] Listening on port 9090 for /metrics...
+[AgenticObservability] Initialized - Ready for comprehensive observability
+[AgenticObservability] Destroyed - Logged 4 entries and 6 metrics

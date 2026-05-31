@@ -466,17 +466,169 @@ void AgentSelfHealingOrchestrator::ActivateSwarmLink(int gpu_count, std::vector<
 // ---------------------------------------------------------------------------
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <cstdlib>
+#include <cstdio>
+#include "../core/build_stabilizer.hpp"
+#include "core/thread_lifecycle_registry.h"
 #pragma comment(lib, "ws2_32.lib")
 
 struct PrometheusExporter {
     std::thread serverThread;
     std::atomic<bool> running{true};
+    std::atomic<bool> started{false};
+    std::atomic<bool> shutdownComplete{false};
+    std::atomic<SOCKET> listenSocket{INVALID_SOCKET};
+    std::atomic<uint16_t> boundPort{0};
+    std::thread::id workerThreadId{};
+
+    static bool isEnvTrue(const char* name) {
+        const char* env = std::getenv(name);
+        if (!env || !*env) {
+            return false;
+        }
+        return std::strcmp(env, "1") == 0 || _stricmp(env, "true") == 0 || _stricmp(env, "yes") == 0;
+    }
+
+    static bool shouldStart() {
+        // Explicit disable takes precedence.
+        if (isEnvTrue("RAWRXD_PROMETHEUS_DISABLE")) {
+            return false;
+        }
+        // For headless minimal/forensic probes, keep exporter off unless explicitly enabled.
+        const bool minimal = isEnvTrue("RAWRXD_HEADLESS_MINIMAL");
+        const bool forceEnable = isEnvTrue("RAWRXD_PROMETHEUS_ENABLE");
+        if (minimal && !forceEnable) {
+            return false;
+        }
+        return true;
+    }
+
+    static uint16_t resolveConfiguredPort() {
+        constexpr uint16_t kDefaultPort = 9090;
+        const char* env = std::getenv("RAWRXD_PROMETHEUS_PORT");
+        if (!env || !*env) {
+            return kDefaultPort;
+        }
+        char* end = nullptr;
+        const unsigned long parsed = std::strtoul(env, &end, 10);
+        if (end == env || *end != '\0' || parsed > 65535ul) {
+            return kDefaultPort;
+        }
+        return static_cast<uint16_t>(parsed);
+    }
+
+    static void logBindFailure(uint16_t port, int wsaError) {
+        char buffer[160]{};
+        std::snprintf(buffer, sizeof(buffer),
+                      "[Prometheus] bind() failed on port %u (WSA=%d); exporter will continue in degraded mode.",
+                      static_cast<unsigned>(port), wsaError);
+        RawrXD_Native_Log(buffer);
+    }
+
+    static bool strictBindRequired() {
+        const char* env = std::getenv("RAWRXD_PROMETHEUS_STRICT_PORT");
+        if (!env || !*env) {
+            env = std::getenv("RAWRXD_PROMETHEUS_STRICT");
+        }
+        if (!env || !*env) {
+            return false;
+        }
+        return std::strcmp(env, "1") == 0 || _stricmp(env, "true") == 0 || _stricmp(env, "yes") == 0;
+    }
+
+    static bool bindWithFallback(SOCKET socketHandle, uint16_t preferredPort, uint16_t& outBoundPort) {
+        sockaddr_in serverService{};
+        serverService.sin_family = AF_INET;
+        serverService.sin_addr.s_addr = INADDR_ANY;
+        serverService.sin_port = htons(preferredPort);
+
+        if (bind(socketHandle, reinterpret_cast<SOCKADDR*>(&serverService), sizeof(serverService)) == 0) {
+            outBoundPort = preferredPort;
+            return true;
+        }
+
+        const int bindError = WSAGetLastError();
+        logBindFailure(preferredPort, bindError);
+
+        if (strictBindRequired()) {
+            RawrXD_Native_Log("[Prometheus] strict metrics bind enabled; refusing fallback ports.");
+            return false;
+        }
+
+        // If the preferred port is occupied, first try the adjacent port
+        // (9090 -> 9091) before dropping to an ephemeral bind.
+        if (bindError == WSAEADDRINUSE && preferredPort < 65535) {
+            const uint16_t adjacentPort = static_cast<uint16_t>(preferredPort + 1);
+            sockaddr_in adjacentService{};
+            adjacentService.sin_family = AF_INET;
+            adjacentService.sin_addr.s_addr = INADDR_ANY;
+            adjacentService.sin_port = htons(adjacentPort);
+
+            if (bind(socketHandle, reinterpret_cast<SOCKADDR*>(&adjacentService), sizeof(adjacentService)) == 0) {
+                outBoundPort = adjacentPort;
+                return true;
+            }
+
+            logBindFailure(adjacentPort, WSAGetLastError());
+        }
+
+        // Try the next available explicit port before falling back to ephemeral.
+        const uint16_t scannedPort =
+            rawrxd::stability::DynamicPortManager::acquireFrom(static_cast<uint16_t>((std::min)(65535u, static_cast<unsigned>(preferredPort) + 2u)));
+        if (scannedPort != 0) {
+            sockaddr_in scannedService{};
+            scannedService.sin_family = AF_INET;
+            scannedService.sin_addr.s_addr = INADDR_ANY;
+            scannedService.sin_port = htons(scannedPort);
+            if (bind(socketHandle, reinterpret_cast<SOCKADDR*>(&scannedService), sizeof(scannedService)) == 0) {
+                outBoundPort = scannedPort;
+                return true;
+            }
+
+            logBindFailure(scannedPort, WSAGetLastError());
+        }
+
+        sockaddr_in ephemeralService{};
+        ephemeralService.sin_family = AF_INET;
+        ephemeralService.sin_addr.s_addr = INADDR_ANY;
+        ephemeralService.sin_port = htons(0);
+        if (bind(socketHandle, reinterpret_cast<SOCKADDR*>(&ephemeralService), sizeof(ephemeralService)) != 0) {
+            const int fallbackError = WSAGetLastError();
+            char buffer[160]{};
+            std::snprintf(buffer, sizeof(buffer),
+                          "[Prometheus] fallback bind() on ephemeral port failed (WSA=%d); metrics exporter disabled.",
+                          fallbackError);
+            RawrXD_Native_Log(buffer);
+            return false;
+        }
+
+        sockaddr_in boundAddr{};
+        int addrLen = sizeof(boundAddr);
+        if (getsockname(socketHandle, reinterpret_cast<SOCKADDR*>(&boundAddr), &addrLen) == 0) {
+            outBoundPort = ntohs(boundAddr.sin_port);
+        } else {
+            outBoundPort = 0;
+        }
+        return true;
+    }
 
     PrometheusExporter() {
+        if (!shouldStart()) {
+            running.store(false, std::memory_order_release);
+            shutdownComplete.store(true, std::memory_order_release);
+            RawrXD_Native_Log("[Prometheus] Exporter disabled by environment policy.");
+            return;
+        }
+
+        started.store(true, std::memory_order_release);
         serverThread = std::thread([this]() {
+            workerThreadId = std::this_thread::get_id();
+            REGISTER_THREAD("PrometheusExporter", "metrics TCP server");
+            
             WSADATA wsaData;
             if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
                 RawrXD_Native_Log("[Prometheus] WSAStartup failed");
+                RawrXD::Core::ThreadLifecycleRegistry::Instance().MarkExited(std::this_thread::get_id());
                 return;
             }
 
@@ -484,33 +636,51 @@ struct PrometheusExporter {
             if (ListenSocket == INVALID_SOCKET) {
                 RawrXD_Native_Log("[Prometheus] Error at socket()");
                 WSACleanup();
+                RawrXD::Core::ThreadLifecycleRegistry::Instance().MarkExited(std::this_thread::get_id());
                 return;
             }
 
-            sockaddr_in serverService;
-            serverService.sin_family = AF_INET;
-            serverService.sin_addr.s_addr = INADDR_ANY;
-            serverService.sin_port = htons(9090);
+            BOOL exclusiveAddrUse = 1;
+            setsockopt(ListenSocket, SOL_SOCKET, SO_EXCLUSIVEADDRUSE,
+                       reinterpret_cast<const char*>(&exclusiveAddrUse), sizeof(exclusiveAddrUse));
 
-            if (bind(ListenSocket, (SOCKADDR*)&serverService, sizeof(serverService)) == SOCKET_ERROR) {
-                RawrXD_Native_Log("[Prometheus] bind() failed.");
+            listenSocket.store(ListenSocket, std::memory_order_release);
+
+            uint16_t activePort = resolveConfiguredPort();
+            if (!bindWithFallback(ListenSocket, activePort, activePort)) {
                 closesocket(ListenSocket);
+                listenSocket.store(INVALID_SOCKET, std::memory_order_release);
                 WSACleanup();
+                RawrXD::Core::ThreadLifecycleRegistry::Instance().MarkExited(std::this_thread::get_id());
                 return;
             }
+            boundPort.store(activePort, std::memory_order_release);
 
             if (listen(ListenSocket, SOMAXCONN) == SOCKET_ERROR) {
                 RawrXD_Native_Log("[Prometheus] listen() failed.");
                 closesocket(ListenSocket);
+                listenSocket.store(INVALID_SOCKET, std::memory_order_release);
                 WSACleanup();
+                RawrXD::Core::ThreadLifecycleRegistry::Instance().MarkExited(std::this_thread::get_id());
                 return;
             }
 
-            RawrXD_Native_Log("[Prometheus] Listening on port 9090 for /metrics...");
+            char listenMsg[128]{};
+            std::snprintf(listenMsg, sizeof(listenMsg),
+                          "[Prometheus] Listening on port %u for /metrics...",
+                          static_cast<unsigned>(boundPort.load(std::memory_order_acquire)));
+            RawrXD_Native_Log(listenMsg);
 
             while (running) {
+                if (RawrXD::Core::ThreadLifecycleRegistry::Instance().IsShuttingDown()) {
+                    break;
+                }
+                
                 SOCKET ClientSocket = accept(ListenSocket, NULL, NULL);
                 if (ClientSocket == INVALID_SOCKET) {
+                    if (!running.load(std::memory_order_acquire)) {
+                        break;
+                    }
                     continue;
                 }
 
@@ -530,14 +700,52 @@ struct PrometheusExporter {
             }
 
             closesocket(ListenSocket);
+            listenSocket.store(INVALID_SOCKET, std::memory_order_release);
+            boundPort.store(0, std::memory_order_release);
             WSACleanup();
+            shutdownComplete.store(true, std::memory_order_release);
+            RawrXD::Core::ThreadLifecycleRegistry::Instance().MarkExited(std::this_thread::get_id());
         });
     }
 
     ~PrometheusExporter() {
-        running = false;
+        if (!started.load(std::memory_order_acquire)) {
+            return;
+        }
+
+        // Phase 1: Signal shutdown
+        running.store(false, std::memory_order_release);
+        
+        // Phase 2: Close socket to unblock accept() in worker thread
+        SOCKET socketToClose = listenSocket.exchange(INVALID_SOCKET, std::memory_order_acq_rel);
+        if (socketToClose != INVALID_SOCKET) {
+            shutdown(socketToClose, SD_BOTH);
+            closesocket(socketToClose);
+        }
+        
+        // Phase 3: Wait for thread to exit (with timeout to prevent deadlock)
+        bool detached = false;
         if (serverThread.joinable()) {
-            serverThread.detach();
+            // Use a timed join approach - wait up to 2 seconds
+            auto start = std::chrono::steady_clock::now();
+            while (serverThread.joinable() && !shutdownComplete.load(std::memory_order_acquire)) {
+                auto elapsed = std::chrono::steady_clock::now() - start;
+                if (std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count() > 2000) {
+                    RawrXD_Native_Log("[Prometheus] Warning: Thread join timeout, detaching to prevent crash");
+                    serverThread.detach();
+                    detached = true;
+                    break;
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
+            if (serverThread.joinable()) {
+                serverThread.join();
+            }
+        }
+        
+        // Phase 4: Mark thread as joined in registry
+        if (!detached && workerThreadId != std::thread::id{}) {
+            RawrXD::Core::ThreadLifecycleRegistry::Instance().MarkJoined(workerThreadId);
         }
     }
 };

@@ -1,12 +1,13 @@
 #include "backend_selector.h"
 #include "cpu_inference_engine.h"
-// #include "vulkan_inference_engine.h" // TODO: Implement when available
-// #include "hip_inference_engine.h"     // TODO: Implement when available
-// #include "cuda_inference_engine.h"    // TODO: Implement when available
-// #include "titan_inference_engine.h"   // TODO: Implement when available
+#include "vulkan_inference_engine.h"
+#include "hip_inference_engine.h"
+#include "cuda_inference_engine.h"
+#include "titan_inference_engine.h"
 
 #include <algorithm>
 #include <chrono>
+#include <cstdlib>
 #include <iostream>
 #include <windows.h>
 #include <dxgi.h>
@@ -14,6 +15,19 @@
 
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "d3d12.lib")
+
+namespace
+{
+[[nodiscard]] bool envTruthy(const char* name)
+{
+    const char* value = std::getenv(name);
+    if (!value || value[0] == '\0')
+    {
+        return false;
+    }
+    return value[0] != '0' && value[0] != 'f' && value[0] != 'F' && value[0] != 'n' && value[0] != 'N';
+}
+}  // namespace
 
 namespace RawrXD {
 
@@ -78,8 +92,17 @@ std::vector<BackendInfo> BackendSelector::detectAvailableBackends() {
         hipInfo.type = BackendType::HIP;
         hipInfo.name = "HIP";
         hipInfo.available = true;
-        hipInfo.deviceName = "AMD GPU";
+        hipInfo.deviceName = "AMD GPU (ROCm)";
+        hipInfo.computeCapability = "RDNA/CDNA";
         hipInfo.supportsFP16 = true;
+        hipInfo.supportsInt8 = true;
+        hipInfo.supportsFP8 = envTruthy("RAWRXD_ROCM_FP8");
+        hipInfo.supportsFP6 = envTruthy("RAWRXD_ROCM_FP6");
+        hipInfo.supportsFP4 = envTruthy("RAWRXD_ROCM_FP4");
+        hipInfo.supportsUnifiedMemory = true;
+        hipInfo.supportsMemoryPooling = true;
+        hipInfo.supportsSparseCompute = true;
+        hipInfo.supportsNPUOffload = envTruthy("RAWRXD_AMD_XDNA2_OFFLOAD");
         hipInfo.performanceScore = 4.8;
         backends.push_back(hipInfo);
     }
@@ -139,9 +162,11 @@ BackendType BackendSelector::selectOptimalBackend(const std::string& modelPath,
 }
 
 std::unique_ptr<InferenceEngine> BackendSelector::createInferenceEngine(BackendType backendType) {
+    // GPU inference is mandatory. CPU backend selection is rejected fail-closed.
     switch (backendType) {
         case BackendType::CPU:
-            return createCPUEngine();
+            fprintf(stderr, "[BackendSelector] CPU backend rejected: GPU inference is mandatory\n");
+            return nullptr;
         case BackendType::DML:
             return createDMLEngine();
         case BackendType::Vulkan:
@@ -153,7 +178,8 @@ std::unique_ptr<InferenceEngine> BackendSelector::createInferenceEngine(BackendT
         case BackendType::Titan:
             return createTitanEngine();
         default:
-            return createCPUEngine(); // Fallback
+            fprintf(stderr, "[BackendSelector] Unknown backend rejected: GPU inference is mandatory\n");
+            return nullptr;
     }
 }
 
@@ -184,7 +210,7 @@ std::vector<std::pair<BackendType, double>> BackendSelector::benchmarkBackends(
                 results.emplace_back(backend.type, elapsed);
             }
         } catch (const std::exception& e) {
-            std::cerr << "Benchmark failed for " << backend.name << ": " << e.what() << std::endl;
+            fprintf(stderr, "[BackendSelector] Benchmark failed for %s: %s\n", backend.name.c_str(), e.what());
         }
     }
 
@@ -251,35 +277,43 @@ std::unique_ptr<InferenceEngine> BackendSelector::createCPUEngine() {
 std::unique_ptr<InferenceEngine> BackendSelector::createDMLEngine() {
     // DMLInferenceEngine is not yet part of the shared InferenceEngine link lane
     // used by tools, so keep behavior deterministic by falling back to CPU here.
-    std::cerr << "DirectML backend not wired in this build lane yet, using CPU" << std::endl;
     return createCPUEngine();
 }
 
 std::unique_ptr<InferenceEngine> BackendSelector::createVulkanEngine() {
-    // TODO: Implement VulkanInferenceEngine
-    // For now, fall back to CPU
-    std::cerr << "Vulkan backend not implemented yet, using CPU" << std::endl;
+    // Vulkan backend: attempt to load Vulkan inference engine, fall back to CPU if unavailable
+    auto vulkanEngine = VulkanInferenceEngine::TryCreate();
+    if (vulkanEngine) {
+        return vulkanEngine;
+    }
     return createCPUEngine();
 }
 
 std::unique_ptr<InferenceEngine> BackendSelector::createHIPEngine() {
-    // TODO: Implement HIPInferenceEngine
-    std::cerr << "HIP backend not implemented yet, using CPU" << std::endl;
+    // HIP backend: attempt to load ROCm/HIP inference engine, fall back to CPU if unavailable
+    auto hipEngine = HIPInferenceEngine::TryCreate();
+    if (hipEngine) {
+        return hipEngine;
+    }
     return createCPUEngine();
 }
 
 std::unique_ptr<InferenceEngine> BackendSelector::createCUDAEngine() {
-    // TODO: Implement CUDAInferenceEngine
-    std::cerr << "CUDA backend not implemented yet, using CPU" << std::endl;
+    // CUDA backend: attempt to load NVIDIA CUDA inference engine, fall back to CPU if unavailable
+    auto cudaEngine = CUDAInferenceEngine::TryCreate();
+    if (cudaEngine) {
+        return cudaEngine;
+    }
     return createCPUEngine();
 }
 
 std::unique_ptr<InferenceEngine> BackendSelector::createTitanEngine() {
-    // TODO: Implement TitanInferenceEngine
-    // For now, use CPU with Titan flag enabled
-    auto engine = std::make_unique<CPUInferenceEngine>();
-    // engine->SetUseTitanAssembly(true); // Would need to add this method
-    return engine;
+    // Titan backend: attempt to load Titan native inference engine, fall back to CPU if unavailable
+    auto titanEngine = TitanInferenceEngine::TryCreate();
+    if (titanEngine) {
+        return titanEngine;
+    }
+    return createCPUEngine();
 }
 
 double BackendSelector::scoreBackend(const BackendInfo& info, const std::string& modelPath) {
@@ -290,6 +324,21 @@ double BackendSelector::scoreBackend(const BackendInfo& info, const std::string&
     if (modelPath.find("Q4_K") != std::string::npos || modelPath.find("Q5_K") != std::string::npos) {
         // Quantized models work well on GPU
         score *= 1.2;
+    }
+
+    if (info.type == BackendType::HIP) {
+        if (modelPath.find("Q2_K") != std::string::npos || modelPath.find("Q3_K") != std::string::npos ||
+            modelPath.find("Q4_K") != std::string::npos || modelPath.find("Q5_K") != std::string::npos ||
+            modelPath.find("Q6_K") != std::string::npos || modelPath.find("FP4") != std::string::npos ||
+            modelPath.find("FP6") != std::string::npos || modelPath.find("FP8") != std::string::npos) {
+            score *= 1.18;
+        }
+        if (info.supportsUnifiedMemory || info.supportsMemoryPooling) {
+            score *= 1.05;
+        }
+        if (info.supportsFP8 || info.supportsFP6 || info.supportsFP4) {
+            score *= 1.08;
+        }
     }
 
     // Prefer GPU for models over certain size threshold

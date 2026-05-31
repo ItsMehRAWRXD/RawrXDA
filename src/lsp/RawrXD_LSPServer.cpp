@@ -329,6 +329,16 @@ void RawrXDLSPServer::handleRequest(int id, const std::string& method, const jso
         result = handleWorkspaceSymbol(id, params);
     } else if (method == "textDocument/semanticTokens/full") {
         result = handleTextDocumentSemanticTokensFull(id, params);
+    } else if (method == "textDocument/codeLens") {
+        result = handleTextDocumentCodeLens(id, params);
+    } else if (method == "textDocument/inlayHint") {
+        result = handleTextDocumentInlayHint(id, params);
+    } else if (method == "textDocument/prepareCallHierarchy") {
+        result = handleTextDocumentPrepareCallHierarchy(id, params);
+    } else if (method == "callHierarchy/incomingCalls") {
+        result = handleCallHierarchyIncomingCalls(id, params);
+    } else if (method == "callHierarchy/outgoingCalls") {
+        result = handleCallHierarchyOutgoingCalls(id, params);
     } else {
         // Check custom handlers
         auto it = m_customRequestHandlers.find(method);
@@ -465,6 +475,15 @@ json RawrXDLSPServer::handleInitialize(int /*id*/, const json& params) {
         legend["tokenModifiers"] = tokenModifiers;
         caps["semanticTokensProvider"]["legend"] = legend;
         caps["semanticTokensProvider"]["full"]   = true;
+    }
+    if (m_config.enableCodeLens) {
+        caps["codeLensProvider"]["resolveProvider"] = false;
+    }
+    if (m_config.enableInlayHints) {
+        caps["inlayHintProvider"] = true;
+    }
+    if (m_config.enableCallHierarchy) {
+        caps["callHierarchyProvider"] = true;
     }
 
     json result;
@@ -1018,6 +1037,260 @@ void RawrXDLSPServer::clearDiagnostics(const std::string& uri) {
 }
 
 // ============================================================================
+// CODE LENS HANDLER
+// ============================================================================
+
+json RawrXDLSPServer::handleTextDocumentCodeLens(int /*id*/, const json& params) {
+    std::string uri = params["textDocument"]["uri"].get<std::string>();
+
+    {
+        std::lock_guard<std::mutex> lk(m_statsMutex);
+        m_stats.codeLensRequests++;
+    }
+
+    // Get document content
+    std::string content;
+    {
+        std::lock_guard<std::mutex> lk(m_docMutex);
+        auto it = m_openDocuments.find(uri);
+        if (it != m_openDocuments.end()) {
+            content = it->second.content;
+        }
+    }
+
+    std::string filePath = uriToFilePath(uri);
+    std::vector<CodeLensEntry> lenses = generateCodeLenses(filePath, content);
+
+    json result = json::array();
+    for (const auto& lens : lenses) {
+        json item;
+        item["range"]["start"]["line"]      = lens.range.start.line;
+        item["range"]["start"]["character"] = lens.range.start.character;
+        item["range"]["end"]["line"]        = lens.range.end.line;
+        item["range"]["end"]["character"]   = lens.range.end.character;
+        item["command"]["title"] = lens.title;
+        if (!lens.command.empty()) {
+            item["command"]["command"] = lens.command;
+        }
+        result.push_back(item);
+    }
+
+    return result;
+}
+
+// ============================================================================
+// INLAY HINT HANDLER
+// ============================================================================
+
+json RawrXDLSPServer::handleTextDocumentInlayHint(int /*id*/, const json& params) {
+    std::string uri = params["textDocument"]["uri"].get<std::string>();
+
+    {
+        std::lock_guard<std::mutex> lk(m_statsMutex);
+        m_stats.inlayHintRequests++;
+    }
+
+    // Get document content
+    std::string content;
+    {
+        std::lock_guard<std::mutex> lk(m_docMutex);
+        auto it = m_openDocuments.find(uri);
+        if (it != m_openDocuments.end()) {
+            content = it->second.content;
+        }
+    }
+
+    std::string filePath = uriToFilePath(uri);
+    std::vector<InlayHintEntry> hints = generateInlayHints(filePath, content);
+
+    json result = json::array();
+    for (const auto& hint : hints) {
+        json item;
+        item["position"]["line"]      = hint.position.line;
+        item["position"]["character"] = hint.position.character;
+        item["label"]      = hint.label;
+        item["paddingLeft"]  = hint.paddingLeft;
+        item["paddingRight"] = hint.paddingRight;
+        item["kind"]       = hint.kind;
+        result.push_back(item);
+    }
+
+    return result;
+}
+
+// ============================================================================
+// CALL HIERARCHY HANDLERS
+// ============================================================================
+
+json RawrXDLSPServer::handleTextDocumentPrepareCallHierarchy(int /*id*/, const json& params) {
+    std::string uri = params["textDocument"]["uri"].get<std::string>();
+    int line        = params["position"]["line"].get<int>();
+    int character   = params["position"]["character"].get<int>();
+
+    {
+        std::lock_guard<std::mutex> lk(m_statsMutex);
+        m_stats.callHierarchyRequests++;
+    }
+
+    // Find symbol at position
+    IndexedSymbol targetSymbol;
+    bool found = false;
+
+    {
+        std::shared_lock<std::shared_mutex> lk(m_symbolMutex);
+        for (const auto& sym : m_symbols) {
+            if (sym.filePath == uriToFilePath(uri) &&
+                sym.line == line &&
+                sym.startChar <= character && character <= sym.endChar) {
+                targetSymbol = sym;
+                found = true;
+                break;
+            }
+        }
+    }
+
+    if (!found) {
+        return json::array();
+    }
+
+    // Return a single CallHierarchyItem
+    json item;
+    item["name"]   = targetSymbol.name;
+    item["kind"]   = kindToLSPInt(targetSymbol.kind);
+    item["detail"] = targetSymbol.detail;
+    item["uri"]    = filePathToUri(targetSymbol.filePath);
+    item["range"]["start"]["line"]      = targetSymbol.line;
+    item["range"]["start"]["character"] = targetSymbol.startChar;
+    item["range"]["end"]["line"]        = targetSymbol.line;
+    item["range"]["end"]["character"]   = targetSymbol.endChar;
+    item["selectionRange"]["start"]["line"]      = targetSymbol.line;
+    item["selectionRange"]["start"]["character"] = targetSymbol.startChar;
+    item["selectionRange"]["end"]["line"]        = targetSymbol.line;
+    item["selectionRange"]["end"]["character"]   = targetSymbol.endChar;
+
+    json result = json::array();
+    result.push_back(item);
+    return result;
+}
+
+json RawrXDLSPServer::handleCallHierarchyIncomingCalls(int /*id*/, const json& params) {
+    // params["item"] contains the CallHierarchyItem from prepareCallHierarchy
+    std::string name = params["item"]["name"].get<std::string>();
+
+    IndexedSymbol targetSymbol;
+    bool found = false;
+
+    {
+        std::shared_lock<std::shared_mutex> lk(m_symbolMutex);
+        for (const auto& sym : m_symbols) {
+            if (sym.name == name) {
+                targetSymbol = sym;
+                found = true;
+                break;
+            }
+        }
+    }
+
+    if (!found) {
+        return json::array();
+    }
+
+    std::vector<CallHierarchyCall> calls = findCallers(targetSymbol);
+
+    json result = json::array();
+    for (const auto& call : calls) {
+        json callItem;
+        callItem["from"]["name"]   = call.item.name;
+        callItem["from"]["kind"]   = call.item.kind;
+        callItem["from"]["detail"] = call.item.detail;
+        callItem["from"]["uri"]    = call.item.uri;
+        callItem["from"]["range"]["start"]["line"]      = call.item.range.start.line;
+        callItem["from"]["range"]["start"]["character"] = call.item.range.start.character;
+        callItem["from"]["range"]["end"]["line"]        = call.item.range.end.line;
+        callItem["from"]["range"]["end"]["character"]   = call.item.range.end.character;
+        
+        json fromRanges = json::array();
+        for (const auto& r : call.fromRanges) {
+            json range;
+            range["start"]["line"]      = r.start.line;
+            range["start"]["character"] = r.start.character;
+            range["end"]["line"]        = r.end.line;
+            range["end"]["character"]   = r.end.character;
+            fromRanges.push_back(range);
+        }
+        callItem["fromRanges"] = fromRanges;
+
+        result.push_back(callItem);
+    }
+
+    return result;
+}
+
+json RawrXDLSPServer::handleCallHierarchyOutgoingCalls(int /*id*/, const json& params) {
+    // params["item"] contains the CallHierarchyItem from prepareCallHierarchy
+    std::string name = params["item"]["name"].get<std::string>();
+    std::string uri  = params["item"]["uri"].get<std::string>();
+
+    // Get document content for analyzing function body
+    std::string content;
+    {
+        std::lock_guard<std::mutex> lk(m_docMutex);
+        auto it = m_openDocuments.find(uri);
+        if (it != m_openDocuments.end()) {
+            content = it->second.content;
+        }
+    }
+
+    IndexedSymbol targetSymbol;
+    bool found = false;
+
+    {
+        std::shared_lock<std::shared_mutex> lk(m_symbolMutex);
+        for (const auto& sym : m_symbols) {
+            if (sym.name == name && sym.filePath == uriToFilePath(uri)) {
+                targetSymbol = sym;
+                found = true;
+                break;
+            }
+        }
+    }
+
+    if (!found) {
+        return json::array();
+    }
+
+    std::vector<CallHierarchyCall> calls = findCallees(targetSymbol, content);
+
+    json result = json::array();
+    for (const auto& call : calls) {
+        json callItem;
+        callItem["to"]["name"]   = call.item.name;
+        callItem["to"]["kind"]   = call.item.kind;
+        callItem["to"]["detail"] = call.item.detail;
+        callItem["to"]["uri"]    = call.item.uri;
+        callItem["to"]["range"]["start"]["line"]      = call.item.range.start.line;
+        callItem["to"]["range"]["start"]["character"] = call.item.range.start.character;
+        callItem["to"]["range"]["end"]["line"]        = call.item.range.end.line;
+        callItem["to"]["range"]["end"]["character"]   = call.item.range.end.character;
+        
+        json fromRanges = json::array();
+        for (const auto& r : call.fromRanges) {
+            json range;
+            range["start"]["line"]      = r.start.line;
+            range["start"]["character"] = r.start.character;
+            range["end"]["line"]        = r.end.line;
+            range["end"]["character"]   = r.end.character;
+            fromRanges.push_back(range);
+        }
+        callItem["fromRanges"] = fromRanges;
+
+        result.push_back(callItem);
+    }
+
+    return result;
+}
+
+// ============================================================================
 // SYMBOL INDEXING ENGINE
 // ============================================================================
 
@@ -1408,7 +1681,7 @@ std::string RawrXDLSPServer::uriToFilePath(const std::string& uri) const {
     std::string path = uri;
     // Strip file:// prefix
     if (path.rfind("file:///", 0) == 0) {
-        path = path.substr(8);  // "file:///" → remove prefix, keep drive letter
+        path = path.substr(8);
     } else if (path.rfind("file://", 0) == 0) {
         path = path.substr(7);
     }
@@ -1428,6 +1701,18 @@ std::string RawrXDLSPServer::uriToFilePath(const std::string& uri) const {
 #ifdef _WIN32
     std::replace(decoded.begin(), decoded.end(), '/', '\\');
 #endif
+    // SECURITY: Validate path stays within workspace root (prevent path traversal)
+    // Get absolute paths for comparison
+    char absPath[MAX_PATH] = {};
+    char absRoot[MAX_PATH] = {};
+    if (GetFullPathNameA(decoded.c_str(), MAX_PATH, absPath, nullptr) &&
+        GetFullPathNameA(m_config.rootPath.c_str(), MAX_PATH, absRoot, nullptr)) {
+        // Ensure the file is under the root path
+        if (_strnicmp(absPath, absRoot, strlen(absRoot)) != 0) {
+            // Path is outside workspace root - REJECT
+            return "";  // Return empty to signal access denied
+        }
+    }
     return decoded;
 }
 
@@ -1445,6 +1730,225 @@ bool RawrXDLSPServer::isCodeFile(const std::string& path) const {
         if (lowerExt == x) return true;
     }
     return false;
+}
+
+// ============================================================================
+// CODE LENS HELPER — generate reference counts for functions/classes
+// ============================================================================
+
+std::vector<CodeLensEntry> RawrXDLSPServer::generateCodeLenses(
+    const std::string& filePath, const std::string& content) {
+    std::vector<CodeLensEntry> lenses;
+
+    // Find all function and class definitions in the content
+    std::istringstream iss(content);
+    std::string line;
+    int lineNum = 0;
+
+    static const std::regex re_function(R"(\b(?:void|int|bool|auto|float|double|.*)\s+(\w+)\s*\([^)]*\)\s*(?:{|;))");
+    static const std::regex re_class(R"(\b(?:class|struct)\s+(\w+)\s*(?::|{))");
+
+    while (std::getline(iss, line)) {
+        // Find function definitions
+        std::sregex_iterator it(line.begin(), line.end(), re_function);
+        std::sregex_iterator end;
+        for (; it != end; ++it) {
+            if (it->size() > 1) {
+                std::string funcName = (*it)[1].str();
+                
+                // Count references to this function
+                uint64_t refCount = 0;
+                {
+                    std::shared_lock<std::shared_mutex> lk(m_symbolMutex);
+                    for (const auto& sym : m_symbols) {
+                        if (sym.name == funcName && sym.filePath == filePath) {
+                            refCount++;
+                        }
+                    }
+                }
+
+                CodeLensEntry lens;
+                lens.range.start.line      = lineNum;
+                lens.range.start.character = (int)it->position();
+                lens.range.end.line        = lineNum;
+                lens.range.end.character   = (int)(it->position() + it->length());
+                lens.title   = std::to_string(refCount) + " reference" + (refCount != 1 ? "s" : "");
+                lens.command = "editor.action.goToReferences";  // VS Code command
+                lenses.push_back(lens);
+            }
+        }
+
+        // Find class/struct definitions
+        {
+            std::sregex_iterator it(line.begin(), line.end(), re_class);
+            std::sregex_iterator end;
+            for (; it != end; ++it) {
+                if (it->size() > 1) {
+                    CodeLensEntry lens;
+                    lens.range.start.line      = lineNum;
+                    lens.range.start.character = (int)it->position();
+                    lens.range.end.line        = lineNum;
+                    lens.range.end.character   = (int)(it->position() + it->length());
+                    lens.title   = "Show definition";
+                    lens.command = "editor.action.goToDefinition";
+                    lenses.push_back(lens);
+                }
+            }
+        }
+
+        lineNum++;
+    }
+
+    return lenses;
+}
+
+// ============================================================================
+// INLAY HINT HELPER — generate type hints and parameter labels
+// ============================================================================
+
+std::vector<InlayHintEntry> RawrXDLSPServer::generateInlayHints(
+    const std::string& filePath, const std::string& content) {
+    std::vector<InlayHintEntry> hints;
+
+    // Parse content to extract variable declarations and function calls
+    std::istringstream iss(content);
+    std::string line;
+    int lineNum = 0;
+
+    // Regex for variable declarations with type inference: auto x = value;
+    static const std::regex re_auto_var(R"(\bauto\s+(\w+)\s*=)");
+    // Regex for function parameters
+    static const std::regex re_param(R"(\(([^)]*)\))");
+
+    while (std::getline(iss, line)) {
+        // Find auto variable declarations
+        {
+            std::sregex_iterator it(line.begin(), line.end(), re_auto_var);
+            std::sregex_iterator end;
+            for (; it != end; ++it) {
+                if (it->size() > 1) {
+                    int pos = (int)it->position() + (int)it->str().length();
+                    InlayHintEntry hint;
+                    hint.position.line      = lineNum;
+                    hint.position.character = pos;
+                    hint.label  = ": auto";  // Simplified; could deduce actual type
+                    hint.kind   = 1;  // Type hint
+                    hint.paddingLeft  = true;
+                    hint.paddingRight = false;
+                    hints.push_back(hint);
+                }
+            }
+        }
+
+        lineNum++;
+    }
+
+    return hints;
+}
+
+// ============================================================================
+// CALL HIERARCHY HELPER — find callers of a symbol
+// ============================================================================
+
+std::vector<CallHierarchyCall> RawrXDLSPServer::findCallers(const IndexedSymbol& symbol) {
+    std::vector<CallHierarchyCall> calls;
+    
+    // Look through all symbols for references to the target symbol
+    {
+        std::shared_lock<std::shared_mutex> lk(m_symbolMutex);
+        for (const auto& sym : m_symbols) {
+            // If this symbol's detail/container references the target symbol
+            if ((sym.detail.find(symbol.name) != std::string::npos ||
+                 sym.containerName == symbol.name)) {
+                
+                CallHierarchyCall call;
+                call.item.name  = sym.name;
+                call.item.kind  = static_cast<int>(sym.kind);
+                call.item.detail = sym.detail;
+                call.item.uri   = filePathToUri(sym.filePath);
+                call.item.range.start.line      = sym.line;
+                call.item.range.start.character = sym.startChar;
+                call.item.range.end.line        = sym.line;
+                call.item.range.end.character   = sym.endChar;
+                call.item.selectionRange = call.item.range;
+
+                // Mark the range where the call occurs
+                Range callRange = call.item.range;
+                call.fromRanges.push_back(callRange);
+
+                calls.push_back(call);
+            }
+        }
+    }
+
+    return calls;
+}
+
+// ============================================================================
+// CALL HIERARCHY HELPER — find callees from a symbol
+// ============================================================================
+
+std::vector<CallHierarchyCall> RawrXDLSPServer::findCallees(
+    const IndexedSymbol& symbol, const std::string& fileContent) {
+    std::vector<CallHierarchyCall> calls;
+
+    // Extract function names this symbol calls by parsing its details/signature
+    // This is simplified — a more robust implementation would parse the function body
+    static const std::regex re_call(R"((\w+)\s*\()");
+
+    std::istringstream iss(fileContent);
+    std::string line;
+    int lineNum = 0;
+
+    while (std::getline(iss, line)) {
+        // Only process lines near the symbol definition
+        if (lineNum < symbol.line - 5 || lineNum > symbol.line + 50) {
+            lineNum++;
+            continue;
+        }
+
+        std::sregex_iterator it(line.begin(), line.end(), re_call);
+        std::sregex_iterator end;
+        for (; it != end; ++it) {
+            if (it->size() > 1) {
+                std::string calleeName = (*it)[1].str();
+
+                // Find if this callee exists in our symbol database
+                {
+                    std::shared_lock<std::shared_mutex> lk(m_symbolMutex);
+                    for (const auto& sym : m_symbols) {
+                        if (sym.name == calleeName) {
+                            CallHierarchyCall call;
+                            call.item.name  = sym.name;
+                            call.item.kind  = static_cast<int>(sym.kind);
+                            call.item.detail = sym.detail;
+                            call.item.uri   = filePathToUri(sym.filePath);
+                            call.item.range.start.line      = sym.line;
+                            call.item.range.start.character = sym.startChar;
+                            call.item.range.end.line        = sym.line;
+                            call.item.range.end.character   = sym.endChar;
+                            call.item.selectionRange = call.item.range;
+
+                            // Mark the range where the call occurs
+                            Range callRange;
+                            callRange.start.line      = lineNum;
+                            callRange.start.character = (int)it->position();
+                            callRange.end.line        = lineNum;
+                            callRange.end.character   = (int)(it->position() + it->length());
+                            call.fromRanges.push_back(callRange);
+
+                            calls.push_back(call);
+                            break;  // Don't add duplicate calls
+                        }
+                    }
+                }
+            }
+        }
+
+        lineNum++;
+    }
+
+    return calls;
 }
 
 // ============================================================================
@@ -1545,6 +2049,9 @@ std::string RawrXDLSPServer::getStatsString() const {
         << "  DocSymbol:       " << s.documentSymbolRequests << "\n"
         << "  WkspSymbol:      " << s.workspaceSymbolRequests << "\n"
         << "  SemanticTokens:  " << s.semanticTokenRequests << "\n"
+        << "  CodeLens:        " << s.codeLensRequests << "\n"
+        << "  InlayHints:      " << s.inlayHintRequests << "\n"
+        << "  CallHierarchy:   " << s.callHierarchyRequests << "\n"
         << "  Bytes R/W:       " << s.bytesRead << " / " << s.bytesWritten << "\n";
     return oss.str();
 }

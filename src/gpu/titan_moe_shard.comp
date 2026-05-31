@@ -1,0 +1,55 @@
+#version 450
+
+// Expert Shard Shifting - 1024-wide Hidden Shard per dispatch
+// Mapping: 1024 floats per expert per activation
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+// expert_weights: [num_experts x expert_dim]
+layout(binding = 0, std430) readonly buffer ExpertWeights {
+    float weights[];
+};
+
+// input_activations: [hidden_dim]
+layout(binding = 1, std430) readonly buffer InputActivations {
+    float activations[];
+};
+
+// routing_logits: [num_experts]
+layout(binding = 2, std430) readonly buffer RoutingLogits {
+    float logits[];
+};
+
+// output_accum: [hidden_dim]
+layout(binding = 3, std430) buffer OutputAccum {
+    float out_accum[];
+};
+
+layout(push_constant) uniform MoEConstants {
+    uint num_experts;
+    uint hidden_dim;
+    uint top_k;
+} pc;
+
+shared float shared_input[256];
+
+void main() {
+    uint i = gl_GlobalInvocationID.x;
+    if (i >= pc.hidden_dim) return;
+
+    // Load activation once
+    uint ti = gl_LocalInvocationID.x;
+    shared_input[ti] = activations[i];
+    memoryBarrierShared();
+    barrier();
+
+    float acc = 0.0;
+    
+    for (uint k = 0; k < pc.num_experts; ++k) {
+        float logit = logits[k];
+        if (logit > 1e-6) {
+            acc += weights[k * pc.hidden_dim + i] * shared_input[ti] * logit;
+        }
+    }
+
+    out_accum[i] += acc;
+}

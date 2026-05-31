@@ -23,15 +23,15 @@ int main() {
     std::cout << "  ✓ Max model size: 20GB (VRAM)\n\n";
 
     std::cout << "[3/3] Starting API server...\n";
-    std::cout << "  ✓ HTTP server on http://localhost:11434\n";
+    std::cout << "  ✓ HTTP server on http://localhost:11435\n";
     std::cout << "  ✓ Ollama compatible endpoints\n";
     std::cout << "  ✓ OpenAI API format supported\n\n";
 
     std::cout << "╔════════════════════════════════════════════════════════╗\n";
     std::cout << "║           Ready for Inference Requests                ║\n";
     std::cout << "║                                                        ║\n";
-    std::cout << "║  curl http://localhost:11434/api/tags                 ║\n";
-    std::cout << "║  curl -X POST http://localhost:11434/api/generate ... ║\n";
+    std::cout << "║  curl http://localhost:11435/api/tags                 ║\n";
+    std::cout << "║  curl -X POST http://localhost:11435/api/generate ... ║\n";
     std::cout << "╚════════════════════════════════════════════════════════╝\n\n";
 
     std::cout << "Running... Press Ctrl+C to exit.\n";

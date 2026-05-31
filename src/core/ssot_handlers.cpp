@@ -14,7 +14,7 @@
 
 #include "ssot_handlers.h"
 #include "../../native_gguf_loader.h"
-#include "agentic/AgentOllamaClient.h"
+#include "agentic/NativeInferenceClient.h"
 #include "auto_repair_orchestrator.hpp"
 #include "byte_level_hotpatcher.hpp"
 #include "command_registry.hpp"
@@ -46,7 +46,9 @@
 #include <vector>
 #include <windows.h>
 
-static RawrXD::Agent::AgentOllamaClient& getAgentClient();
+#include "Win32IDE.h"  // routeToIde: ctx.idePtr is Win32IDE* (not HWND*)
+
+static RawrXD::Agent::NativeInferenceClient& getAgentClient();
 
 // ============================================================================
 // HELPER: Route to IDE UI via WM_COMMAND when in GUI mode (CLI gets text output)
@@ -515,10 +517,14 @@ static CommandResult routeToIde(const CommandContext& ctx, uint32_t cmdId, const
     ReverseTraceScope _trace("ssot.routeToIde");
     if (ctx.isGui && ctx.idePtr)
     {
-        // Route to Win32IDE's WM_COMMAND handler (use ctx.hwnd when set by adapter)
-        HWND hwnd = reinterpret_cast<HWND>(ctx.hwnd);
+        // Route to Win32IDE's WM_COMMAND handler (ctx.hwnd from win32_feature_adapter; idePtr is Win32IDE*).
+        HWND hwnd = static_cast<HWND>(ctx.hwnd);
         if (!hwnd)
-            hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);  // Fallback for older callers
+        {
+            auto* ide = static_cast<Win32IDE*>(ctx.idePtr);
+            if (ide)
+                hwnd = ide->getMainWindow();
+        }
         if (hwnd)
             PostMessageA(hwnd, WM_COMMAND, cmdId, 0);
         return CommandResult::ok(name);
@@ -656,8 +662,8 @@ namespace
 struct SSOBackendState
 {
     std::mutex mtx;
-    std::string activeBackend = "ollama";
-    RawrXD::Agent::OllamaConfig ollamaConfig;
+    std::string activeBackend = "native";
+    RawrXD::Agent::NativeInferenceConfig NativeInferenceConfig;
     std::map<std::string, std::string> apiKeys;
     std::string localModelInput;
     std::string localModelResolvedPath;
@@ -700,11 +706,11 @@ struct SSOConfidenceState
     }
 };
 
-static RawrXD::Agent::AgentOllamaClient createSsoOllamaClient()
+static RawrXD::Agent::NativeInferenceClient createSsoOllamaClient()
 {
     auto& bs = SSOBackendState::instance();
     std::lock_guard<std::mutex> lock(bs.mtx);
-    return RawrXD::Agent::AgentOllamaClient(bs.ollamaConfig);
+    return RawrXD::Agent::NativeInferenceClient(bs.NativeInferenceConfig);
 }
 
 struct BackendLocalModelResolution
@@ -2117,7 +2123,7 @@ CommandResult handleBackendSwitchLocal(const CommandContext& ctx)
     }
     else
     {
-        ctx.output("  Model Source: not configured. Use !backend_config local_model <path|url|hf_repo|ollama_model>\n");
+        ctx.output("  Model Source: not configured. Use !backend_config local_model <path|url|hf_repo|RAWRXD_NATIVE_MODEL>\n");
     }
     return CommandResult::ok("backend.switchLocal");
 }
@@ -2126,11 +2132,11 @@ CommandResult handleBackendSwitchOllama(const CommandContext& ctx)
 {
     ReverseTraceScope _trace("ssot.backend.switchOllama");
     auto& bs = SSOBackendState::instance();
-    RawrXD::Agent::OllamaConfig config;
+    RawrXD::Agent::NativeInferenceConfig config;
     {
         std::lock_guard<std::mutex> lock(bs.mtx);
-        bs.activeBackend = "ollama";
-        config = bs.ollamaConfig;
+        bs.activeBackend = "native";
+        config = bs.NativeInferenceConfig;
     }
 
     getAgentClient().SetConfig(config);
@@ -2143,9 +2149,9 @@ CommandResult handleBackendSwitchOllama(const CommandContext& ctx)
     std::string model;
     {
         std::lock_guard<std::mutex> lock(bs.mtx);
-        host = bs.ollamaConfig.host;
-        port = static_cast<int>(bs.ollamaConfig.port);
-        model = bs.ollamaConfig.chat_model;
+        host = bs.NativeInferenceConfig.host;
+        port = static_cast<int>(bs.NativeInferenceConfig.port);
+        model = bs.NativeInferenceConfig.chat_model;
     }
 
     char buf[320];
@@ -2244,14 +2250,14 @@ CommandResult handleBackendShowStatus(const CommandContext& ctx)
 {
     auto& bs = SSOBackendState::instance();
     std::string activeBackend;
-    RawrXD::Agent::OllamaConfig config;
+    RawrXD::Agent::NativeInferenceConfig config;
     std::string localModelInput;
     std::string localModelResolvedPath;
     std::string localModelError;
     {
         std::lock_guard<std::mutex> lock(bs.mtx);
         activeBackend = bs.activeBackend;
-        config = bs.ollamaConfig;
+        config = bs.NativeInferenceConfig;
         localModelInput = bs.localModelInput;
         localModelResolvedPath = bs.localModelResolvedPath;
         localModelError = bs.localModelError;
@@ -2273,6 +2279,10 @@ CommandResult handleBackendShowStatus(const CommandContext& ctx)
         status += "  Ollama TPS: " + oss.str() + " tok/s\n";
     }
     status += "  Streaming: " + std::string(metrics.isStreaming ? "YES" : "NO") + "\n";
+    if (!metrics.streamRouting.empty())
+    {
+        status += "  Stream routing: " + metrics.streamRouting + "\n";
+    }
     status += "  Consecutive Errors: " + std::to_string(metrics.consecutiveErrors) + "\n";
     if (!localModelInput.empty())
     {
@@ -2402,13 +2412,13 @@ CommandResult handleBackendConfigure(const CommandContext& ctx)
     {
         std::lock_guard<std::mutex> lock(bs.mtx);
         std::string status = "[BACKEND] Config:\n";
-        status += "  host=" + bs.ollamaConfig.host + "\n";
-        status += "  port=" + std::to_string(bs.ollamaConfig.port) + "\n";
-        status += "  model=" + bs.ollamaConfig.chat_model + "\n";
-        status += "  fim_model=" + bs.ollamaConfig.fim_model + "\n";
-        status += "  temperature=" + std::to_string(bs.ollamaConfig.temperature) + "\n";
-        status += "  max_tokens=" + std::to_string(bs.ollamaConfig.max_tokens) + "\n";
-        status += "  num_ctx=" + std::to_string(bs.ollamaConfig.num_ctx) + "\n";
+        status += "  host=" + bs.NativeInferenceConfig.host + "\n";
+        status += "  port=" + std::to_string(bs.NativeInferenceConfig.port) + "\n";
+        status += "  model=" + bs.NativeInferenceConfig.chat_model + "\n";
+        status += "  fim_model=" + bs.NativeInferenceConfig.fim_model + "\n";
+        status += "  temperature=" + std::to_string(bs.NativeInferenceConfig.temperature) + "\n";
+        status += "  max_tokens=" + std::to_string(bs.NativeInferenceConfig.max_tokens) + "\n";
+        status += "  num_ctx=" + std::to_string(bs.NativeInferenceConfig.num_ctx) + "\n";
         status += "  local_model=" + bs.localModelInput + "\n";
         status += "  Usage: !backend_config <key> <value>\n";
         ctx.output(status.c_str());
@@ -2426,19 +2436,19 @@ CommandResult handleBackendConfigure(const CommandContext& ctx)
     {
         std::lock_guard<std::mutex> lock(bs.mtx);
         if (key == "host")
-            bs.ollamaConfig.host = value;
+            bs.NativeInferenceConfig.host = value;
         else if (key == "port")
-            bs.ollamaConfig.port = static_cast<uint16_t>(std::atoi(value.c_str()));
+            bs.NativeInferenceConfig.port = static_cast<uint16_t>(std::atoi(value.c_str()));
         else if (key == "model" || key == "chat_model")
-            bs.ollamaConfig.chat_model = value;
+            bs.NativeInferenceConfig.chat_model = value;
         else if (key == "fim_model")
-            bs.ollamaConfig.fim_model = value;
+            bs.NativeInferenceConfig.fim_model = value;
         else if (key == "temperature")
-            bs.ollamaConfig.temperature = static_cast<float>(std::atof(value.c_str()));
+            bs.NativeInferenceConfig.temperature = static_cast<float>(std::atof(value.c_str()));
         else if (key == "max_tokens")
-            bs.ollamaConfig.max_tokens = std::atoi(value.c_str());
+            bs.NativeInferenceConfig.max_tokens = std::atoi(value.c_str());
         else if (key == "num_ctx")
-            bs.ollamaConfig.num_ctx = std::atoi(value.c_str());
+            bs.NativeInferenceConfig.num_ctx = std::atoi(value.c_str());
         else if (key == "local_model" || key == "local_model_path" || key == "model_source")
         {
             bs.localModelInput = localResolution.input;
@@ -2448,7 +2458,7 @@ CommandResult handleBackendConfigure(const CommandContext& ctx)
         else
             return CommandResult::error("Unknown config key");
 
-        getAgentClient().SetConfig(bs.ollamaConfig);
+        getAgentClient().SetConfig(bs.NativeInferenceConfig);
     }
 
     std::string msg = "[BACKEND] Set " + key + " = " + value + "\n";
@@ -2475,7 +2485,7 @@ CommandResult handleBackendHealthCheck(const CommandContext& ctx)
     ctx.output("[BACKEND] Health Check:\n");
     auto client = createSsoOllamaClient();
     bool ok = client.TestConnection();
-    ctx.output(ok ? "  ollama:  OK\n" : "  ollama:  FAIL\n");
+    ctx.output(ok ? "  native:  OK\n" : "  native:  FAIL\n");
 
     auto& bs = SSOBackendState::instance();
     {
@@ -2541,10 +2551,10 @@ CommandResult handleBackendSaveConfigs(const CommandContext& ctx)
         json += "{\n";
         json += "  \"activeBackend\": \"" + bs.activeBackend + "\",\n";
         json += "  \"ollama\": {\n";
-        json += "    \"host\": \"" + bs.ollamaConfig.host + "\",\n";
-        json += "    \"port\": " + std::to_string(bs.ollamaConfig.port) + ",\n";
-        json += "    \"chat_model\": \"" + bs.ollamaConfig.chat_model + "\",\n";
-        json += "    \"fim_model\": \"" + bs.ollamaConfig.fim_model + "\"\n";
+        json += "    \"host\": \"" + bs.NativeInferenceConfig.host + "\",\n";
+        json += "    \"port\": " + std::to_string(bs.NativeInferenceConfig.port) + ",\n";
+        json += "    \"chat_model\": \"" + bs.NativeInferenceConfig.chat_model + "\",\n";
+        json += "    \"fim_model\": \"" + bs.NativeInferenceConfig.fim_model + "\"\n";
         json += "  },\n";
         json += "  \"local\": {\n";
         json += "    \"model_input\": \"" + bs.localModelInput + "\",\n";
@@ -2602,7 +2612,7 @@ CommandResult handleRouterStatus(const CommandContext& ctx)
              "  Total routed: %llu\n"
              "  Total tokens: %llu\n",
              rs.enabled.load() ? "Yes" : "No", rs.policy.c_str(), bs.activeBackend.c_str(),
-             bs.ollamaConfig.chat_model.c_str(), rs.ensembleEnabled.load() ? "Yes" : "No",
+             bs.NativeInferenceConfig.chat_model.c_str(), rs.ensembleEnabled.load() ? "Yes" : "No",
              static_cast<unsigned long long>(rs.totalRouted.load()),
              static_cast<unsigned long long>(rs.totalTokens.load()));
     ctx.output(buf);
@@ -2612,164 +2622,8 @@ CommandResult handleRouterStatus(const CommandContext& ctx)
 }
 
 // ============================================================================
-// AUTO-GENERATED SSOT FORWARDERS
-// Keeps SSOT as owning symbol surface while reusing existing runtime implementations
-// in missing_handler_stubs.cpp.
+// ASM HANDLERS
 // ============================================================================
-CommandResult __rawrxd_missing_stub_handleAsmAnalyzeBlock(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleAsmCallGraph(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleAsmClearSymbols(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleAsmDataFlow(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleAsmDetectConvention(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleAsmFindRefs(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleAsmGoto(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleAsmInstructionInfo(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleAsmParse(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleAsmRegisterInfo(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleAsmSections(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleAsmSymbolTable(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleConfidenceSetPolicy(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleConfidenceStatus(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleDbgAddBp(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleDbgAddWatch(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleDbgAttach(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleDbgBreak(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleDbgClearBps(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleDbgDetach(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleDbgDisasm(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleDbgEnableBp(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleDbgEvaluate(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleDbgGo(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleDbgKill(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleDbgLaunch(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleDbgListBps(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleDbgMemory(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleDbgModules(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleDbgRegisters(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleDbgRemoveBp(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleDbgRemoveWatch(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleDbgSearchMemory(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleDbgSetRegister(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleDbgStack(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleDbgStatus(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleDbgStepInto(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleDbgStepOut(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleDbgStepOver(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleDbgSwitchThread(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleDbgSymbolPath(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleDbgThreads(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleDiskListDrives(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleDiskScanPartitions(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleEditGotoLine(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleEditMulticursorAdd(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleEditMulticursorRemove(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleEmbeddingEncode(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleFileAutoSave(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleFileCloseFolder(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleFileCloseTab(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleFileNewWindow(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleFileOpenFolder(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleGovernorSetPowerLevel(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleGovernorStatus(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleGovKillAll(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleGovStatus(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleGovSubmitCommand(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleGovTaskList(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleHybridAnalyzeFile(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleHybridAnnotateDiag(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleHybridAutoProfile(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleHybridComplete(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleHybridCorrectionLoop(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleHybridDiagnostics(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleHybridExplainSymbol(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleHybridSemanticPrefetch(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleHybridSmartRename(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleHybridStatus(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleHybridStreamAnalyze(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleHybridSymbolUsage(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleLspClearDiag(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleLspConfigure(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleLspDiagnostics(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleLspRestart(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleLspSaveConfig(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleLspSymbolInfo(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleMarketplaceInstall(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleMarketplaceList(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleModelFinetune(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleModelList(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleModelLoad(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleModelQuantize(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleModelUnload(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleMultiRespApplyPreferred(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleMultiRespClearHistory(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleMultiRespCompare(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleMultiRespGenerate(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleMultiRespSelectPreferred(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleMultiRespSetMax(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleMultiRespShowLatest(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleMultiRespShowPrefs(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleMultiRespShowStats(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleMultiRespShowStatus(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleMultiRespShowTemplates(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleMultiRespToggleTemplate(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handlePluginConfigure(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handlePluginLoad(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handlePluginRefresh(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handlePluginScanDir(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handlePluginShowPanel(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handlePluginShowStatus(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handlePluginToggleHotload(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handlePluginUnload(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handlePluginUnloadAll(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handlePromptClassifyContext(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleReplayCheckpoint(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleReplayExportSession(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleReplayShowLast(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleReplayStatus(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleRevengDecompile(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleRevengDisassemble(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleRevengFindVulnerabilities(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleRouterCapabilities(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleRouterDecision(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleRouterEnsembleDisable(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleRouterEnsembleEnable(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleRouterEnsembleStatus(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleRouterFallbacks(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleRouterPinTask(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleRouterResetStats(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleRouterRoutePrompt(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleRouterSaveConfig(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleRouterSetPolicy(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleRouterShowCostStats(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleRouterShowHeatmap(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleRouterShowPins(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleRouterSimulate(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleRouterSimulateLast(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleRouterUnpinTask(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleRouterWhyBackend(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleSafetyResetBudget(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleSafetyRollbackLast(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleSafetyShowViolations(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleSafetyStatus(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleToolsBuild(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleToolsCommandPalette(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleToolsDebug(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleToolsExtensions(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleToolsSettings(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleToolsTerminal(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleUnityAttach(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleUnityInit(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleUnrealAttach(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleUnrealInit(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleViewToggleFullscreen(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleViewToggleOutput(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleViewToggleSidebar(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleViewToggleTerminal(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleViewZoomIn(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleViewZoomOut(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleViewZoomReset(const CommandContext& ctx);
-CommandResult __rawrxd_missing_stub_handleVisionAnalyzeImage(const CommandContext& ctx);
-
 CommandResult handleAsmAnalyzeBlock(const CommandContext& ctx)
 {
     if (ctx.isGui && ctx.idePtr)
@@ -4368,7 +4222,7 @@ CommandResult handleModelFinetune(const CommandContext& ctx)
 CommandResult handleModelList(const CommandContext& ctx)
 {
     if (ctx.isGui && ctx.idePtr)
-        return routeToIde(ctx, 11001, "model.list");
+        return routeToIde(ctx, 1036, "model.list");
     const std::vector<std::string> discovered = discoverModelArtifacts();
     std::string active;
     std::string lastQuantized;
@@ -4760,7 +4614,7 @@ CommandResult handlePluginUnloadAll(const CommandContext& ctx)
 CommandResult handlePromptClassifyContext(const CommandContext& ctx)
 {
     if (ctx.isGui && ctx.idePtr)
-        routeToIde(ctx, 11600, "prompt.classify");
+        routeToIde(ctx, 12300, "prompt.classify");  // was 11600; Tier5 crash panel ID (IDM_CRASH_SHOW)
     std::string text = ctx.args ? std::string(ctx.args) : std::string();
     if (text.empty())
         return CommandResult::error("Usage: !prompt_classify <text>");
@@ -5871,7 +5725,7 @@ CommandResult handleTransToggle(const CommandContext& ctx)
 CommandResult handleHelpCmdRef(const CommandContext& ctx)
 {
     if (ctx.isGui && ctx.idePtr)
-        return routeToIde(ctx, 4002, "help.cmdref");
+        return routeToIde(ctx, 7901, "help.cmdref");
     ctx.output("=== RawrXD Command Reference ===\n");
     ctx.output("Type !help <command> for details on a specific command.\n");
     ctx.output("Categories: file, edit, agent, debug, hotpatch, ai, re, voice, server, git, swarm\n");
@@ -5881,7 +5735,7 @@ CommandResult handleHelpCmdRef(const CommandContext& ctx)
 CommandResult handleHelpPsDocs(const CommandContext& ctx)
 {
     if (ctx.isGui && ctx.idePtr)
-        return routeToIde(ctx, 4003, "help.psdocs");
+        return routeToIde(ctx, 7902, "help.psdocs");
     ctx.output("PowerShell Integration Docs:\n");
     ctx.output("  Import-Module RawrXD  ? Load the RawrXD PowerShell module\n");
     ctx.output("  Get-RawrXDCommand     ? List all available commands\n");
@@ -5892,7 +5746,7 @@ CommandResult handleHelpPsDocs(const CommandContext& ctx)
 CommandResult handleHelpSearch(const CommandContext& ctx)
 {
     if (ctx.isGui && ctx.idePtr)
-        return routeToIde(ctx, 4004, "help.search");
+        return routeToIde(ctx, 7903, "help.search");
     std::string query = ctx.args ? ctx.args : "";
     if (query.empty())
     {
@@ -6094,9 +5948,9 @@ static bool configureAIContextMemoryLocked(AIContextRuntimeState& st, uint32_t t
     return true;
 }
 
-static RawrXD::Agent::AgentOllamaClient& getAgentClient()
+static RawrXD::Agent::NativeInferenceClient& getAgentClient()
 {
-    static RawrXD::Agent::AgentOllamaClient client;
+    static RawrXD::Agent::NativeInferenceClient client;
     return client;
 }
 
@@ -6131,10 +5985,10 @@ static CommandResult setAIContextWindow(const CommandContext& ctx, uint32_t cmdI
     {
         auto& bs = SSOBackendState::instance();
         std::lock_guard<std::mutex> lock(bs.mtx);
-        bs.ollamaConfig.num_ctx = static_cast<int>(tokenCount);
-        if (bs.ollamaConfig.max_tokens > bs.ollamaConfig.num_ctx)
+        bs.NativeInferenceConfig.num_ctx = static_cast<int>(tokenCount);
+        if (bs.NativeInferenceConfig.max_tokens > bs.NativeInferenceConfig.num_ctx)
         {
-            bs.ollamaConfig.max_tokens = bs.ollamaConfig.num_ctx;
+            bs.NativeInferenceConfig.max_tokens = bs.NativeInferenceConfig.num_ctx;
         }
     }
 
@@ -6174,7 +6028,7 @@ CommandResult handleAINoRefusal(const CommandContext& ctx)
         PostMessageA(hwnd, WM_COMMAND, 4203, 0);
         return CommandResult::ok("ai.noRefusal");
     }
-    // Toggle no-refusal mode and project it into backend sampling config
+    // Toggle direct-response mode and project it into backend sampling config
     static bool noRefusal = false;
     noRefusal = !noRefusal;
 
@@ -6199,7 +6053,7 @@ CommandResult handleAINoRefusal(const CommandContext& ctx)
         fclose(f);
     }
     char buf[96];
-    snprintf(buf, sizeof(buf), "[AI] No-refusal mode: %s\n", noRefusal ? "ENABLED" : "DISABLED");
+    snprintf(buf, sizeof(buf), "[AI] Direct-response mode: %s\n", noRefusal ? "ENABLED" : "DISABLED");
     ctx.output(buf);
     // AI mode change logged via output above
     return CommandResult::ok("ai.noRefusal");
@@ -8818,8 +8672,8 @@ CommandResult handleVoiceModeContinuous(const CommandContext& ctx)
 {
     if (ctx.isGui && ctx.idePtr)
         return routeToIde(ctx, 9708, "voice.modeContinuous");
-    ctx.output("[VOICE] Mode set to CONTINUOUS\n");
-    ctx.output("  Input is always captured. Use !voice_mode_disabled to stop.\n");
+    ctx.output("[VOICE] Mode set to CONTINUOUS (microphone disabled build)\n");
+    ctx.output("  No microphone capture backend is active in this build.\n");
     return CommandResult::ok("voice.modeContinuous");
 }
 CommandResult handleVoiceModeDisabled(const CommandContext& ctx)
@@ -9227,4 +9081,9 @@ CommandResult handleTier1AutoUpdateCheck(const CommandContext& ctx)
 CommandResult handleTier1UpdateDismiss(const CommandContext& ctx)
 {
     return routeToIde(ctx, 12091, "tier1.updateDismiss");
+}
+
+CommandResult handleMoeBenchmark(const CommandContext& ctx)
+{
+    return routeToIde(ctx, 6130, "moe.benchmark");
 }

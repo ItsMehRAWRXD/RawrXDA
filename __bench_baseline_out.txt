@@ -1,0 +1,20 @@
+
+RawrXD — Zero-dependency Ollama replacement
+
+USAGE:
+  rawrxd serve  [--host <addr>] [--port <port>] [--model-dir <dir>]
+  rawrxd run    <model> [--prompt "your prompt"] [--emit-json-trace <file>]
+  rawrxd list
+  rawrxd show   <model>
+  rawrxd rm     <model>
+  rawrxd bench  [--model <model>] [--concurrency 1,4,8] [--json out.json]
+  rawrxd ps
+  rawrxd pull   <model>
+  rawrxd help
+
+ENVIRONMENT:
+  RAWRXD_HOST       Default host (default: 127.0.0.1)
+  RAWRXD_PORT       Default port (default: 11434)
+  RAWRXD_MODEL_DIR  Additional model search directory
+  RAWRXD_SERVE_INFERENCE_DLL  Optional path to RawrXD_ServeInference.dll (GGUF inference for serve and run)
+

@@ -1,0 +1,16 @@
+ninja: Entering directory `d:\rawrxd\build'
+[1/210] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\HeadlessIDE.cpp.obj
+[2/210] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_CoreRuntimeSpine.cpp.obj
+[3/210] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Commands.cpp.obj
+[4/210] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_ModelLab.cpp.obj
+[5/210] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_VSCodeUI.cpp.obj
+[6/210] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_CopilotNativeGlue.cpp.obj
+[7/210] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Watchdog.cpp.obj
+[8/210] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_SyntaxHighlight.cpp.obj
+[9/210] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_VisionEncoder.cpp.obj
+[10/210] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Themes.cpp.obj
+[11/210] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_StreamingUX.cpp.obj
+[12/210] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Sidebar.cpp.obj
+[13/210] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_SidebarRuntime.cpp.obj
+[14/210] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Debugger.cpp.obj
+[15/210] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AutonomousDebugger.cpp.obj

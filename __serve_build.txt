@@ -1,0 +1,139 @@
+[1/24] Building CXX object CMakeFiles\InferenceEngine.dir\src\loader\gguf_tensor_loader.cpp.obj
+[2/24] Building CXX object CMakeFiles\InferenceEngine.dir\src\weights\safetensors.cpp.obj
+[3/24] Building CXX object CMakeFiles\InferenceEngine.dir\src\weights\weight_init.cpp.obj
+[4/24] Building CXX object CMakeFiles\InferenceEngine.dir\src\weights\quantized_loaders.cpp.obj
+[5/24] Building CXX object CMakeFiles\InferenceEngine.dir\src\codec\brutal_gzip.cpp.obj
+[6/24] Building CXX object CMakeFiles\InferenceEngine.dir\src\codec\gzip_brutal_inflate.cpp.obj
+[7/24] Building CXX object CMakeFiles\InferenceEngine.dir\src\inference\inference_standalone_link_shims.cpp.obj
+[8/24] Building ASM_MASM object CMakeFiles\InferenceEngine.dir\src\asm\rawr_globals.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\rawr_globals.asm
+
+[9/24] Building ASM_MASM object CMakeFiles\InferenceEngine.dir\src\asm\rawr_cpu_features.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\rawr_cpu_features.asm
+
+[10/24] Building ASM_MASM object CMakeFiles\InferenceEngine.dir\src\asm\inference_core.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\inference_core.asm
+
+[11/24] Building ASM_MASM object CMakeFiles\InferenceEngine.dir\src\asm\inference_kernels.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\inference_kernels.asm
+
+[12/24] Building ASM_MASM object CMakeFiles\InferenceEngine.dir\src\asm\token_queue_dequeue.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\token_queue_dequeue.asm
+
+[13/24] Building ASM_MASM object CMakeFiles\InferenceEngine.dir\src\asm\RawrXD_SovereignTokenizerCore.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_SovereignTokenizerCore.asm
+
+[14/24] Building ASM_MASM object CMakeFiles\InferenceEngine.dir\src\asm\quant_avx2.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\quant_avx2.asm
+
+[15/24] Building ASM_MASM object CMakeFiles\InferenceEngine.dir\src\asm\RawrXD_KQuant_Dequant.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_KQuant_Dequant.asm
+
+[16/24] Building ASM_MASM object CMakeFiles\InferenceEngine.dir\src\asm\RawrXD_KQuant_Kernel.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_KQuant_Kernel.asm
+
+[17/24] Building ASM_MASM object CMakeFiles\InferenceEngine.dir\src\asm\FlashAttention_AVX512.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\FlashAttention_AVX512.asm
+
+[18/24] Building ASM_MASM object CMakeFiles\InferenceEngine.dir\src\kernels\dequant_q6k_avx512.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\kernels\dequant_q6k_avx512.asm
+
+[19/24] Building ASM_MASM object CMakeFiles\InferenceEngine.dir\src\kernels\kv_accum_avx512.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\kernels\kv_accum_avx512.asm
+
+[20/24] Building ASM_MASM object CMakeFiles\InferenceEngine.dir\src\asm\RawrXD_Telemetry_Kernel.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_Telemetry_Kernel.asm
+
+[21/24] Building ASM_MASM object CMakeFiles\InferenceEngine.dir\src\asm\model_streamer_x64.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\model_streamer_x64.asm
+
+[22/24] Linking CXX static library InferenceEngine.lib
+brutal_implementation.cpp.obj : warning LNK4006: "class std::vector<unsigned char,class std::allocator<unsigned char> > __cdecl brutal::compress(class std::vector<unsigned char,class std::allocator<unsigned char> > const &)" (?compress@brutal@@YA?AV?$vector@EV?$allocator@E@std@@@std@@AEBV23@@Z) already defined in brutal_gzip.cpp.obj; second definition ignored
+brutal_implementation.cpp.obj : warning LNK4006: "class std::vector<unsigned char,class std::allocator<unsigned char> > __cdecl brutal::decompress(class std::vector<unsigned char,class std::allocator<unsigned char> > const &)" (?decompress@brutal@@YA?AV?$vector@EV?$allocator@E@std@@@std@@AEBV23@@Z) already defined in brutal_gzip.cpp.obj; second definition ignored
+
+[23/24] Building CXX object CMakeFiles\RawrXD-ServeInference.dir\src\serve\RawrXD_ServeInference_dll.cpp.obj
+[24/24] Linking CXX shared library bin\RawrXD_ServeInference.dll

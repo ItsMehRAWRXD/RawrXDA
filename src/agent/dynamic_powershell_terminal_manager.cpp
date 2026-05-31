@@ -1,6 +1,8 @@
 #include "dynamic_powershell_terminal_manager.hpp"
+#include <array>
 #include <algorithm>
 #include <chrono>
+#include <deque>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -25,6 +27,7 @@ constexpr std::chrono::milliseconds MAX_TIMEOUT_LIMIT = 1800000ms; // 30 minutes
 constexpr double LEARNING_MOMENTUM = 0.9;
 constexpr double QUANTUM_ENHANCEMENT_FACTOR = 1.618; // Golden ratio
 constexpr uint32_t MAX_WORKER_THREADS = 8;
+constexpr size_t TERMINAL_OUTPUT_HARD_CAP_BYTES = 512ull * 1024ull * 1024ull; // 512 MB hard cap
 
 // Command complexity patterns for classification
 const std::vector<std::pair<std::regex, CommandComplexity>> COMPLEXITY_PATTERNS = {
@@ -63,6 +66,151 @@ inline double calculate_standard_deviation(const std::vector<std::chrono::millis
     return std::sqrt(variance);
 }
 
+class CircularLineBuffer {
+public:
+    explicit CircularLineBuffer(size_t cap_bytes)
+        : cap_bytes_(std::max<size_t>(1024, cap_bytes)) {}
+
+    void append(const std::string& chunk) {
+        if (chunk.empty()) return;
+
+        size_t start = 0;
+        for (size_t i = 0; i < chunk.size(); ++i) {
+            if (chunk[i] == '\n') {
+                push_line(chunk.substr(start, i - start + 1));
+                start = i + 1;
+            }
+        }
+        if (start < chunk.size()) {
+            push_line(chunk.substr(start));
+        }
+
+        const size_t target_bytes = cap_bytes_ > 5 ? (cap_bytes_ - (cap_bytes_ / 5)) : cap_bytes_;
+        while (bytes_ > target_bytes && !lines_.empty()) {
+            dropped_bytes_ += lines_.front().size();
+            dropped_lines_++;
+            bytes_ -= lines_.front().size();
+            lines_.pop_front();
+        }
+    }
+
+    std::string str() const {
+        std::string out;
+        out.reserve(bytes_ + 64);
+        for (const auto& line : lines_) {
+            out += line;
+        }
+        return out;
+    }
+
+    bool truncated() const { return dropped_bytes_ > 0; }
+    size_t dropped_bytes() const { return dropped_bytes_; }
+    size_t dropped_lines() const { return dropped_lines_; }
+    size_t cap_bytes() const { return cap_bytes_; }
+    size_t retained_bytes() const { return bytes_; }
+
+private:
+    void push_line(const std::string& line) {
+        lines_.push_back(line);
+        bytes_ += line.size();
+    }
+
+    size_t cap_bytes_{0};
+    size_t bytes_{0};
+    size_t dropped_bytes_{0};
+    size_t dropped_lines_{0};
+    std::deque<std::string> lines_;
+};
+
+#ifdef _WIN32
+std::wstring Utf8ToWideString(const std::string& input) {
+    if (input.empty()) {
+        return std::wstring();
+    }
+
+    const int wideLength = MultiByteToWideChar(CP_UTF8, 0, input.c_str(), -1, nullptr, 0);
+    if (wideLength <= 0) {
+        return std::wstring();
+    }
+
+    std::wstring output(static_cast<size_t>(wideLength) - 1, L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, input.c_str(), -1, output.data(), wideLength);
+    return output;
+}
+
+std::string Base64Encode(const unsigned char* data, size_t size) {
+    static constexpr char kAlphabet[] =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+    std::string encoded;
+    encoded.reserve(((size + 2) / 3) * 4);
+    for (size_t index = 0; index < size; index += 3) {
+        const uint32_t octetA = data[index];
+        const uint32_t octetB = (index + 1 < size) ? data[index + 1] : 0;
+        const uint32_t octetC = (index + 2 < size) ? data[index + 2] : 0;
+        const uint32_t triple = (octetA << 16) | (octetB << 8) | octetC;
+
+        encoded.push_back(kAlphabet[(triple >> 18) & 0x3F]);
+        encoded.push_back(kAlphabet[(triple >> 12) & 0x3F]);
+        encoded.push_back(index + 1 < size ? kAlphabet[(triple >> 6) & 0x3F] : '=');
+        encoded.push_back(index + 2 < size ? kAlphabet[triple & 0x3F] : '=');
+    }
+
+    return encoded;
+}
+
+std::string EncodePowerShellCommand(const std::string& command) {
+    const std::wstring script =
+        L"$OutputEncoding=[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; "
+        L"[Console]::InputEncoding=[System.Text.Encoding]::UTF8; & { " +
+        Utf8ToWideString(command) + L" }";
+    return Base64Encode(reinterpret_cast<const unsigned char*>(script.data()), script.size() * sizeof(wchar_t));
+}
+
+std::vector<wchar_t> BuildEnvironmentBlock(
+    const std::map<std::string, std::string>& sessionEnv,
+    const std::map<std::string, std::string>& requestEnv) {
+    if (sessionEnv.empty() && requestEnv.empty()) {
+        return {};
+    }
+
+    std::map<std::wstring, std::wstring> mergedEnv;
+    LPWCH environment = GetEnvironmentStringsW();
+    if (environment != nullptr) {
+        for (LPWCH current = environment; *current != L'\0'; current += wcslen(current) + 1) {
+            std::wstring entry(current);
+            const size_t separator = entry.find(L'=');
+            if (separator == std::wstring::npos || separator == 0) {
+                continue;
+            }
+            mergedEnv[entry.substr(0, separator)] = entry.substr(separator + 1);
+        }
+        FreeEnvironmentStringsW(environment);
+    }
+
+    const auto applyOverrides = [&mergedEnv](const std::map<std::string, std::string>& overrides) {
+        for (const auto& [key, value] : overrides) {
+            if (key.empty()) {
+                continue;
+            }
+            mergedEnv[Utf8ToWideString(key)] = Utf8ToWideString(value);
+        }
+    };
+
+    applyOverrides(sessionEnv);
+    applyOverrides(requestEnv);
+
+    std::vector<wchar_t> block;
+    for (const auto& [key, value] : mergedEnv) {
+        const std::wstring entry = key + L"=" + value;
+        block.insert(block.end(), entry.begin(), entry.end());
+        block.push_back(L'\0');
+    }
+    block.push_back(L'\0');
+    return block;
+}
+#endif
+
 // =====================================================================
 // DYNAMIC POWERSHELL TERMINAL MANAGER IMPLEMENTATION
 // =====================================================================
@@ -70,8 +218,6 @@ inline double calculate_standard_deviation(const std::vector<std::chrono::millis
 DynamicPowerShellTerminalManager::DynamicPowerShellTerminalManager()
     : startup_time_(std::chrono::system_clock::now()),
       random_generator_(std::chrono::high_resolution_clock::now().time_since_epoch().count()) {
-    
-    std::cout << "[TerminalManager] Dynamic PowerShell Terminal Manager initializing..." << std::endl;
     performance_metrics_ = {};
 }
 
@@ -81,7 +227,6 @@ DynamicPowerShellTerminalManager::~DynamicPowerShellTerminalManager() {
 
 bool DynamicPowerShellTerminalManager::initialize(const DynamicTimeoutConfig& config) {
     if (initialized_.load()) {
-        std::cout << "[TerminalManager] Already initialized" << std::endl;
         return true;
     }
     
@@ -112,25 +257,15 @@ bool DynamicPowerShellTerminalManager::initialize(const DynamicTimeoutConfig& co
         
         initialized_ = true;
         
-        std::cout << "[TerminalManager] Initialization complete" << std::endl;
-        std::cout << "  - Worker threads: " << thread_count << std::endl;
-        std::cout << "  - Base timeout: " << config_.base_timeout.count() << "ms" << std::endl;
-        std::cout << "  - Adaptive learning: " << (config_.enable_adaptive_learning ? "enabled" : "disabled") << std::endl;
-        std::cout << "  - Random variation: " << (config_.enable_random_variation ? "enabled" : "disabled") << std::endl;
-        std::cout << "  - Quantum enhancement: " << (config_.enable_quantum_enhancement ? "enabled" : "disabled") << std::endl;
-        
         return true;
         
-    } catch (const std::exception& e) {
-        std::cerr << "[TerminalManager] Initialization failed: " << e.what() << std::endl;
+    } catch (const std::exception&) {
         return false;
     }
 }
 
 void DynamicPowerShellTerminalManager::shutdown() {
     if (!initialized_.load()) return;
-    
-    std::cout << "[TerminalManager] Shutting down..." << std::endl;
     
     shutting_down_ = true;
     
@@ -162,8 +297,6 @@ void DynamicPowerShellTerminalManager::shutdown() {
     
     initialized_ = false;
     shutting_down_ = false;
-    
-    std::cout << "[TerminalManager] Shutdown complete" << std::endl;
 }
 
 std::string DynamicPowerShellTerminalManager::create_session(
@@ -201,9 +334,6 @@ std::string DynamicPowerShellTerminalManager::create_session(
         performance_metrics_.total_sessions_created++;
         performance_metrics_.active_sessions = sessions_.size();
     }
-    
-    std::cout << "[TerminalManager] Created session: " << session->session_id 
-              << " (working dir: " << session->working_directory << ")" << std::endl;
     
     return session->session_id;
 }
@@ -252,7 +382,6 @@ bool DynamicPowerShellTerminalManager::close_session(const std::string& session_
         performance_metrics_.active_sessions = sessions_.size();
     }
     
-    std::cout << "[TerminalManager] Closed session: " << session_id << std::endl;
     return true;
 }
 
@@ -294,11 +423,7 @@ void DynamicPowerShellTerminalManager::cleanup_inactive_sessions() {
     for (const auto& session_id : sessions_to_remove) {
         close_session(session_id);
     }
-    
-    if (!sessions_to_remove.empty()) {
-        std::cout << "[TerminalManager] Cleaned up " << sessions_to_remove.size() 
-                  << " inactive sessions" << std::endl;
-    }
+}
 }
 
 TerminalExecutionResult DynamicPowerShellTerminalManager::execute_command(const TerminalExecutionRequest& request) {
@@ -307,8 +432,6 @@ TerminalExecutionResult DynamicPowerShellTerminalManager::execute_command(const 
     }
     
     std::string request_id = generate_request_id();
-    std::cout << "[TerminalManager] Executing command: " << request.command 
-              << " (request: " << request_id << ")" << std::endl;
     
     auto result = execute_command_internal(request);
     result.request_id = request_id;
@@ -395,7 +518,7 @@ std::chrono::milliseconds DynamicPowerShellTerminalManager::calculate_dynamic_ti
         timeout = std::min(timeout, config_.max_timeout);
         
     } catch (const std::exception& e) {
-        std::cerr << "[TerminalManager] Error calculating timeout: " << e.what() << std::endl;
+        (void)e;
         timeout = config_.base_timeout;
     }
     
@@ -463,8 +586,6 @@ std::chrono::milliseconds DynamicPowerShellTerminalManager::predict_execution_ti
 }
 
 void DynamicPowerShellTerminalManager::optimize_timeouts() {
-    std::cout << "[TerminalManager] Optimizing timeouts based on execution history..." << std::endl;
-    
     std::lock_guard<std::mutex> lock(stats_mutex_);
     uint32_t optimizations = 0;
     
@@ -487,8 +608,6 @@ void DynamicPowerShellTerminalManager::optimize_timeouts() {
         std::lock_guard<std::mutex> metrics_lock(metrics_mutex_);
         performance_metrics_.adaptations_performed += optimizations;
     }
-    
-    std::cout << "[TerminalManager] Optimized " << optimizations << " timeout patterns" << std::endl;
 }
 
 TerminalExecutionResult DynamicPowerShellTerminalManager::execute_command_internal(const TerminalExecutionRequest& request) {
@@ -512,38 +631,178 @@ TerminalExecutionResult DynamicPowerShellTerminalManager::execute_command_intern
     result.timeout_used = timeout;
     result.started_at = std::chrono::system_clock::now();
     result.detected_complexity = analyze_command_complexity(request.command);
+
+    const size_t per_execution_cap = std::min<size_t>(config_.max_memory_per_session, TERMINAL_OUTPUT_HARD_CAP_BYTES);
+    CircularLineBuffer out_buffer(per_execution_cap);
+    CircularLineBuffer err_buffer(std::max<size_t>(4096, per_execution_cap / 4));
+    result.output_buffer_cap_bytes = per_execution_cap;
     
     try {
-        // Execute PowerShell command (simplified implementation)
-        // In production, this would use proper process creation and management
-        
-        std::cout << "[PowerShell:" << session_id << "] " << request.command << std::endl;
-        std::cout << "[PowerShell:" << session_id << "] Timeout: " << timeout.count() << "ms" << std::endl;
-        
-        // Simulate command execution based on complexity
+#ifdef _WIN32
+        SECURITY_ATTRIBUTES sa{};
+        sa.nLength = sizeof(sa);
+        sa.bInheritHandle = TRUE;
+
+        HANDLE stdoutRead = INVALID_HANDLE_VALUE;
+        HANDLE stdoutWrite = INVALID_HANDLE_VALUE;
+        HANDLE stderrRead = INVALID_HANDLE_VALUE;
+        HANDLE stderrWrite = INVALID_HANDLE_VALUE;
+        HANDLE stdinRead = INVALID_HANDLE_VALUE;
+
+        if (!CreatePipe(&stdoutRead, &stdoutWrite, &sa, 0) ||
+            !CreatePipe(&stderrRead, &stderrWrite, &sa, 0)) {
+            return TerminalExecutionResult::error_result("", "Failed to create process output pipes");
+        }
+        SetHandleInformation(stdoutRead, HANDLE_FLAG_INHERIT, 0);
+        SetHandleInformation(stderrRead, HANDLE_FLAG_INHERIT, 0);
+
+        stdinRead = CreateFileW(L"NUL", GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, &sa, OPEN_EXISTING,
+                                FILE_ATTRIBUTE_NORMAL, nullptr);
+        if (stdinRead == INVALID_HANDLE_VALUE) {
+            stdinRead = GetStdHandle(STD_INPUT_HANDLE);
+        }
+
+        const std::string encodedCommand = EncodePowerShellCommand(request.command);
+        std::wstring commandLine =
+            L"powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand " +
+            Utf8ToWideString(encodedCommand);
+        std::vector<wchar_t> commandLineBuffer(commandLine.begin(), commandLine.end());
+        commandLineBuffer.push_back(L'\0');
+
+        const std::string effectiveWorkingDirectory = request.working_directory.empty()
+                                                         ? session->working_directory
+                                                         : request.working_directory;
+        if (!request.working_directory.empty()) {
+            session->working_directory = request.working_directory;
+        }
+        std::wstring workingDirectoryWide = Utf8ToWideString(effectiveWorkingDirectory);
+
+        const std::vector<wchar_t> environmentBlock =
+            BuildEnvironmentBlock(session->environment_vars, request.environment_vars);
+
+        STARTUPINFOW startupInfo{};
+        startupInfo.cb = sizeof(startupInfo);
+        startupInfo.dwFlags = STARTF_USESTDHANDLES;
+        startupInfo.hStdInput = stdinRead;
+        startupInfo.hStdOutput = stdoutWrite;
+        startupInfo.hStdError = stderrWrite;
+
+        PROCESS_INFORMATION processInfo{};
+        const BOOL created = CreateProcessW(nullptr,
+                                            commandLineBuffer.data(),
+                                            nullptr,
+                                            nullptr,
+                                            TRUE,
+                                            CREATE_NO_WINDOW | CREATE_UNICODE_ENVIRONMENT,
+                                            environmentBlock.empty()
+                                                ? nullptr
+                                                : const_cast<wchar_t*>(environmentBlock.data()),
+                                            workingDirectoryWide.empty() ? nullptr : workingDirectoryWide.c_str(),
+                                            &startupInfo,
+                                            &processInfo);
+
+        CloseHandle(stdoutWrite);
+        CloseHandle(stderrWrite);
+        if (stdinRead != INVALID_HANDLE_VALUE && stdinRead != GetStdHandle(STD_INPUT_HANDLE)) {
+            CloseHandle(stdinRead);
+        }
+
+        if (!created) {
+            if (stdoutRead != INVALID_HANDLE_VALUE) CloseHandle(stdoutRead);
+            if (stderrRead != INVALID_HANDLE_VALUE) CloseHandle(stderrRead);
+            return TerminalExecutionResult::error_result(
+                "",
+                "Failed to spawn PowerShell process: " + std::to_string(static_cast<unsigned long>(GetLastError())));
+        }
+
+        session->process_handle = processInfo.hProcess;
+        session->process_id = processInfo.dwProcessId;
+        CloseHandle(processInfo.hThread);
+
+        auto drainPipe = [](HANDLE pipe,
+                            CircularLineBuffer& buffer,
+                            const std::function<void(const std::string&)>& callback) {
+            std::array<char, 4096> bytes{};
+            DWORD bytesRead = 0;
+            while (ReadFile(pipe, bytes.data(), static_cast<DWORD>(bytes.size()), &bytesRead, nullptr) &&
+                   bytesRead > 0) {
+                std::string chunk(bytes.data(), bytes.data() + bytesRead);
+                buffer.append(chunk);
+                if (callback) {
+                    callback(chunk);
+                }
+            }
+        };
+
+        std::thread stdoutThread(
+            drainPipe,
+            stdoutRead,
+            std::ref(out_buffer),
+            request.capture_output ? request.output_callback : std::function<void(const std::string&)>{});
+        std::thread stderrThread(
+            drainPipe,
+            stderrRead,
+            std::ref(err_buffer),
+            request.capture_errors ? request.error_callback : std::function<void(const std::string&)>{});
+
+        const ULONGLONG deadline = GetTickCount64() + static_cast<ULONGLONG>(timeout.count());
+        DWORD waitResult = WAIT_TIMEOUT;
+        while ((waitResult = WaitForSingleObject(processInfo.hProcess, 50)) == WAIT_TIMEOUT) {
+            if (GetTickCount64() >= deadline) {
+                result.timed_out = true;
+                TerminateProcess(processInfo.hProcess, 124);
+                WaitForSingleObject(processInfo.hProcess, 5000);
+                break;
+            }
+        }
+
+        if (stdoutThread.joinable()) {
+            stdoutThread.join();
+        }
+        if (stderrThread.joinable()) {
+            stderrThread.join();
+        }
+
+        CloseHandle(stdoutRead);
+        CloseHandle(stderrRead);
+
+        DWORD exitCode = 0;
+        GetExitCodeProcess(processInfo.hProcess, &exitCode);
+        CloseHandle(processInfo.hProcess);
+        session->process_handle = INVALID_HANDLE_VALUE;
+        session->process_id = 0;
+
+        result.exit_code = result.timed_out ? -1 : static_cast<int>(exitCode);
+        result.success = !result.timed_out && exitCode == 0;
+        if (result.timed_out) {
+            result.error_message = "Command execution timed out";
+            err_buffer.append(result.error_message + "\n");
+        } else if (exitCode != 0 && err_buffer.str().empty()) {
+            result.error_message = "Command exited with code " + std::to_string(exitCode);
+            err_buffer.append(result.error_message + "\n");
+        }
+#else
         std::this_thread::sleep_for(std::chrono::milliseconds(
             static_cast<int64_t>(result.detected_complexity) * 100));
-        
-        // Update session statistics
+        result.success = true;
+        result.exit_code = 0;
+        out_buffer.append("Terminal execution fallback path completed\n");
+#endif
+
         session->last_used = std::chrono::system_clock::now();
         session->commands_executed++;
-        
+
         auto end_time = std::chrono::high_resolution_clock::now();
         result.execution_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
         result.completed_at = std::chrono::system_clock::now();
-        
-        // Check for timeout
-        if (result.execution_time > timeout) {
-            result.success = false;
-            result.timed_out = true;
-            result.error_message = "Command execution timed out";
-            result.exit_code = -1;
-        } else {
-            result.success = true;
-            result.output = "Command executed successfully in " + 
-                          std::to_string(result.execution_time.count()) + "ms";
-            result.exit_code = 0;
-        }
+
+        result.output = request.capture_output ? out_buffer.str() : std::string();
+        result.error_output = request.capture_errors ? err_buffer.str() : std::string();
+        result.output_truncated = out_buffer.truncated() || err_buffer.truncated();
+        result.dropped_output_bytes = out_buffer.dropped_bytes() + err_buffer.dropped_bytes();
+        result.dropped_output_lines = out_buffer.dropped_lines() + err_buffer.dropped_lines();
+        result.memory_used = out_buffer.retained_bytes() + err_buffer.retained_bytes();
+        session->memory_usage = result.memory_used;
         
         // Update performance metrics
         {
@@ -571,6 +830,12 @@ TerminalExecutionResult DynamicPowerShellTerminalManager::execute_command_intern
     } catch (const std::exception& e) {
         result.success = false;
         result.error_message = std::string("Execution error: ") + e.what();
+        err_buffer.append(result.error_message + "\n");
+        result.error_output = err_buffer.str();
+        result.output_truncated = err_buffer.truncated();
+        result.dropped_output_bytes = err_buffer.dropped_bytes();
+        result.dropped_output_lines = err_buffer.dropped_lines();
+        result.memory_used = err_buffer.retained_bytes();
         result.exit_code = -1;
         result.completed_at = std::chrono::system_clock::now();
         
@@ -797,10 +1062,6 @@ void DynamicPowerShellTerminalManager::perform_maintenance_tasks() {
             performance_metrics_.timeout_accuracy = timeout_success_rate;
         }
     }
-    
-    std::cout << "[TerminalManager] Maintenance: " 
-              << performance_metrics_.active_sessions << " active sessions, "
-              << performance_metrics_.overall_success_rate * 100.0 << "% success rate" << std::endl;
 }
 
 bool DynamicPowerShellTerminalManager::validate_resource_limits() {
@@ -816,8 +1077,6 @@ bool DynamicPowerShellTerminalManager::validate_resource_limits() {
     // Check if memory limit exceeded
     size_t total_limit = config_.max_concurrent_sessions * config_.max_memory_per_session;
     if (total_memory > total_limit) {
-        std::cout << "[TerminalManager] WARNING: Memory usage (" << total_memory / 1024 / 1024 
-                  << "MB) exceeds limit (" << total_limit / 1024 / 1024 << "MB)" << std::endl;
         return false;
     }
     

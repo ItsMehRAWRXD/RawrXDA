@@ -37,7 +37,7 @@ bool CheckpointManager::initialize(const std::string& checkpointDir, int maxChec
         
         return true;
     } catch (const std::exception& e) {
-        (void)e;
+        m_lastError = std::string("Checkpoint init failed: ") + e.what();
         return false;
     }
 }

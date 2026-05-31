@@ -30,7 +30,7 @@ inline std::string describeBlockQuant(int storageBits, bool weightsSigned, std::
 /// Map common GGML type ids (subset) to descriptor; unknown → generic.
 inline std::string describeFromGgmlTypeId(std::uint32_t ggmlType, std::uint32_t blockWidth = 32)
 {
-    // Mirrors subset of llama.cpp ggml_type for labeling only — not for tensor math.
+    // Mirrors subset of llama.cpp ggml_rxd_type for labeling only — not for tensor math.
     switch (ggmlType)
     {
         case 2:  // Q4_0

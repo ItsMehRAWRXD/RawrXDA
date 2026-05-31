@@ -549,7 +549,13 @@ void Win32IDE::stopWatchingFile() {
 }
 
 void Win32IDE::onExternalFileChange(const std::string& changedFile) {
-    // Check if the changed file matches our watched file
+    // FILE SYSTEM WATCHER INTEGRATION: Notify Plan Orchestrator of workspace changes
+    // This triggers for any file change when watching workspace directory
+    if (m_planOrchestrator) {
+        m_planOrchestrator->notifyWorkspaceChanged();
+    }
+
+    // Check if the changed file matches our watched file (for single file watching)
     if (m_watchedFilePath.empty()) return;
 
     // Extract just the filename for comparison  
@@ -1164,6 +1170,93 @@ void Win32IDE::handleStatusBarClick(int partIndex) {
         showEncodingSelector();
         return;
     }
+    // Delegate remaining parts to extended action handler
+    handleStatusBarAction(partIndex);
+}
+
+LRESULT Win32IDE::handleStatusBarCustomDraw(NMHDR* pNMHDR) {
+    if (!pNMHDR || pNMHDR->hwndFrom != m_hwndStatusBar) {
+        return CDRF_DODEFAULT;
+    }
+
+    NMCUSTOMDRAW* pCD = reinterpret_cast<NMCUSTOMDRAW*>(pNMHDR);
+    if (!pCD) {
+        return CDRF_DODEFAULT;
+    }
+
+    switch (pCD->dwDrawStage) {
+    case CDDS_PREPAINT:
+        return CDRF_NOTIFYITEMDRAW;
+    case CDDS_ITEMPREPAINT:
+        if (static_cast<int>(pCD->dwItemSpec) == 5) {
+            return CDRF_NOTIFYPOSTPAINT;
+        }
+        return CDRF_DODEFAULT;
+    case CDDS_ITEMPOSTPAINT:
+        if (static_cast<int>(pCD->dwItemSpec) != 5) {
+            return CDRF_DODEFAULT;
+        }
+        break;
+    default:
+        return CDRF_DODEFAULT;
+    }
+
+    const bool autopilotEnabled = m_agenticFunctionCallingMode || (m_agenticBridge && m_agenticBridge->IsAgenticMode());
+    const bool autopilotActive = (m_agenticBridge && m_agenticBridge->IsAgentLoopRunning());
+    const bool agentEnabled = (m_agenticBridge != nullptr);
+    const bool agentActive = autopilotActive || m_titanAgentRunning || m_inferenceRunning.load() || m_streamingActive;
+
+    HDC hdc = pCD->hdc;
+    RECT rc = pCD->rc;
+    SetBkMode(hdc, TRANSPARENT);
+
+    const DWORD tick = GetTickCount();
+    const bool pulse = ((tick / 300u) % 2u) != 0u;
+
+    auto drawPill = [&](const wchar_t* label, bool enabled, bool active, int& rightEdge) {
+        RECT textProbe = {0, 0, 0, 0};
+        DrawTextW(hdc, label, -1, &textProbe, DT_CALCRECT | DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX);
+        const int textWidth = textProbe.right - textProbe.left;
+        const int pillH = 16;
+        const int padX = 10;
+        const int pillW = textWidth + (padX * 2);
+        const int y = rc.top + ((rc.bottom - rc.top - pillH) / 2);
+        RECT pill = {rightEdge - pillW, y, rightEdge, y + pillH};
+        rightEdge = pill.left - 8;
+
+        COLORREF fill = RGB(62, 25, 25);
+        COLORREF border = RGB(100, 52, 52);
+        COLORREF text = RGB(178, 140, 140);
+        if (enabled) {
+            fill = RGB(86, 32, 32);
+            border = RGB(138, 64, 64);
+            text = RGB(232, 210, 210);
+        }
+        if (active) {
+            fill = pulse ? RGB(190, 45, 45) : RGB(160, 36, 36);
+            border = pulse ? RGB(232, 80, 80) : RGB(210, 68, 68);
+            text = RGB(255, 236, 236);
+        }
+
+        HBRUSH brush = CreateSolidBrush(fill);
+        HPEN pen = CreatePen(PS_SOLID, 1, border);
+        HGDIOBJ oldBrush = SelectObject(hdc, brush);
+        HGDIOBJ oldPen = SelectObject(hdc, pen);
+        RoundRect(hdc, pill.left, pill.top, pill.right, pill.bottom, 8, 8);
+        SelectObject(hdc, oldBrush);
+        SelectObject(hdc, oldPen);
+        DeleteObject(brush);
+        DeleteObject(pen);
+
+        SetTextColor(hdc, text);
+        DrawTextW(hdc, label, -1, &pill, DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+    };
+
+    int right = rc.right - 10;
+    drawPill(L"Agent", agentEnabled, agentActive, right);
+    drawPill(L"Autopilot", autopilotEnabled, autopilotActive, right);
+
+    return CDRF_DODEFAULT;
 }
 
 

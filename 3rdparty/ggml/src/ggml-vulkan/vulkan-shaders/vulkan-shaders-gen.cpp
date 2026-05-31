@@ -347,7 +347,7 @@ void string_to_spv_func(std::string name, std::string in_path, std::string out_p
 #endif
     }
 
-    #ifdef GGML_VULKAN_SHADER_DEBUG_INFO
+    #ifdef GGML_RXD_VULKAN_SHADER_DEBUG_INFO
         cmd.push_back("-g");
     #endif
 
@@ -541,7 +541,7 @@ void matmul_shaders(bool fp16, MatMulIdType matmul_id_type, bool coopmat, bool c
         };
 
         // If bfloat16 is not supported, then only compile the scalar (promote to fp32) shader
-#if !defined(GGML_VULKAN_BFLOAT16_GLSLC_SUPPORT)
+#if !defined(GGML_RXD_VULKAN_BFLOAT16_GLSLC_SUPPORT)
         if (!(coopmat || coopmat2))
 #endif
         {
@@ -585,7 +585,7 @@ void matmul_shaders(bool fp16, MatMulIdType matmul_id_type, bool coopmat, bool c
             string_to_spv(shader_name + "_" + tname + "_f16_aligned", source_name,  merge_maps(merge_maps(base_dict, float_type_dict), {{data_a_key, "1"}, {"LOAD_VEC_A", load_vec_a},           {"LOAD_VEC_B", load_vec}, {"B_TYPE", aligned_b_type_f16}, {"D_TYPE", "float"}, {"ALIGNED", "1"}}), fp16, coopmat, coopmat2, f16acc);
         }
 
-#if defined(GGML_VULKAN_INTEGER_DOT_GLSLC_SUPPORT)
+#if defined(GGML_RXD_VULKAN_INTEGER_DOT_GLSLC_SUPPORT)
         // Integer dot mmq performs better with f32 accumulators
         if (!f16acc && !coopmat && !coopmat2 && (is_legacy_quant(tname) || is_k_quant(tname) || tname == "mxfp4")) {
             string_to_spv(shader_name + "_" + tname + "_q8_1", "mul_mmq.comp", merge_maps(merge_maps(base_dict, float_type_dict), {{data_a_key, "1"}, {"D_TYPE", "float"},}), fp16, coopmat, coopmat2, f16acc);
@@ -608,13 +608,13 @@ void process_shaders() {
         matmul_shaders(true, matmul_id_type, false, false, true);
 
         if (matmul_id_type != MatMulIdType::DEFAULT) {
-#if defined(GGML_VULKAN_COOPMAT_GLSLC_SUPPORT)
+#if defined(GGML_RXD_VULKAN_COOPMAT_GLSLC_SUPPORT)
             // Coopmat, fp32acc and fp16acc
             matmul_shaders(true, matmul_id_type, true, false, false);
             matmul_shaders(true, matmul_id_type, true, false, true);
 #endif
 
-#if defined(GGML_VULKAN_COOPMAT2_GLSLC_SUPPORT)
+#if defined(GGML_RXD_VULKAN_COOPMAT2_GLSLC_SUPPORT)
             // Coopmat2, fp32acc and fp16acc
             matmul_shaders(true, matmul_id_type, false, true, false);
             matmul_shaders(true, matmul_id_type, false, true, true);
@@ -634,7 +634,7 @@ void process_shaders() {
         for (const auto& tname : type_names) {
             if (tname == "bf16") continue;
 
-#if defined(GGML_VULKAN_COOPMAT2_GLSLC_SUPPORT)
+#if defined(GGML_RXD_VULKAN_COOPMAT2_GLSLC_SUPPORT)
             if (tname == "f16") {
                 string_to_spv("flash_attn_f32_f16_" + tname, "flash_attn_cm2.comp",
                     merge_maps(fa_base_dict, {{"Q_TYPE", "float"}, {"D_TYPE", "float"}}), true, false, true, f16acc);
@@ -644,7 +644,7 @@ void process_shaders() {
                     merge_maps(fa_base_dict, {{data_a_key, "1"}, {"Q_TYPE", "float"}, {"D_TYPE", "float"}, {"DEQUANTFUNC", "dequantFunc"+to_uppercase(tname) }, {"BLOCK_SIZE", "QUANT_K_"+to_uppercase(tname) }}), true, false, true, f16acc);
             }
 #endif
-#if defined(GGML_VULKAN_COOPMAT_GLSLC_SUPPORT)
+#if defined(GGML_RXD_VULKAN_COOPMAT_GLSLC_SUPPORT)
             if (tname == "f16") {
                 string_to_spv("flash_attn_f32_f16_" + tname, "flash_attn_cm1.comp",
                     merge_maps(fa_base_dict, {{"Q_TYPE", "float"}, {"D_TYPE", "float"}, {"COOPMAT", "1"}}), true, true, false, f16acc);
@@ -682,7 +682,7 @@ void process_shaders() {
         string_to_spv("mul_mat_vec_id_" + tname + "_f32", shader, merge_maps(base_dict, {{"MUL_MAT_ID", "1"}, {data_a_key, "1"}, {"B_TYPE", "float"}, {"B_TYPE_VEC2", "vec2"}, {"B_TYPE_VEC4", "vec4"}, {"D_TYPE", "float"}}));
 
         // mul mat vec with integer dot product
-#if defined(GGML_VULKAN_INTEGER_DOT_GLSLC_SUPPORT)
+#if defined(GGML_RXD_VULKAN_INTEGER_DOT_GLSLC_SUPPORT)
         if (is_legacy_quant(tname)) {
             string_to_spv("mul_mat_vec_" + tname + "_q8_1_f32", "mul_mat_vecq.comp", merge_maps(base_dict, {{data_a_key, "1"}, {"D_TYPE", "float"}, {"FLOAT_TYPE", "float"}, {"FLOAT_TYPE_VEC2", "vec2"}, {"ACC_TYPE", "float"}}));
             string_to_spv("mul_mat_vec_" + tname + "_q8_1_f32_subgroup", "mul_mat_vecq.comp", merge_maps(base_dict, {{data_a_key, "1"}, {"D_TYPE", "float"}, {"FLOAT_TYPE", "float"}, {"FLOAT_TYPE_VEC2", "vec2"}, {"ACC_TYPE", "float"}, {"USE_SUBGROUP_ADD", "1"}}));
@@ -928,7 +928,7 @@ void process_shaders() {
                 std::string name = std::string(transpose ? "conv_transpose_2d": "conv2d")
                     + (a_f16 ? "_f16" : "") + "_f32";
                 string_to_spv(name + (unroll ? "_unroll" : ""), "conv2d_mm.comp", defines);
-#if defined(GGML_VULKAN_COOPMAT2_GLSLC_SUPPORT)
+#if defined(GGML_RXD_VULKAN_COOPMAT2_GLSLC_SUPPORT)
                 if (unroll) {
                     defines["COOPMAT2"] = "1";
                     string_to_spv(name, "conv2d_mm.comp", defines, true, false, true);
@@ -1062,7 +1062,7 @@ void write_output_files() {
 
     std::vector<std::string> btypes = {"f16", "f32"};
 
-#if defined(GGML_VULKAN_INTEGER_DOT_GLSLC_SUPPORT)
+#if defined(GGML_RXD_VULKAN_INTEGER_DOT_GLSLC_SUPPORT)
     btypes.push_back("q8_1");
 #endif
 

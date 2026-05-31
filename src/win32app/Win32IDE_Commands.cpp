@@ -16,6 +16,10 @@
 #include "IDEConfig.h"
 #include "Win32IDE.h"
 #include "Win32IDE_Types.h"
+#include "ExtensionHost.h"
+#ifndef CP_UNICODE
+#define CP_UNICODE 1200
+#endif
 #include "win32_feature_adapter.h"
 
 
@@ -37,6 +41,7 @@
 #include <chrono>
 #include <commctrl.h>
 #include <commdlg.h>
+#include <cstdlib>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -75,9 +80,9 @@ HybridCloudManager& commandCloudManager()
     if (!initialized)
     {
         CloudProvider local;
-        local.providerId = "ollama";
-        local.name = "Ollama";
-        local.endpoint = "http://127.0.0.1:11434";
+        local.providerId = "native";
+        local.name = "native";
+        local.endpoint = "http://127.0.0.1:11435";
         local.isEnabled = true;
         local.isHealthy = true;
         local.costPerRequest = 0.0;
@@ -198,6 +203,12 @@ static constexpr size_t MAX_AGENT_CHECKPOINTS = 32;
 #ifndef IDM_FILE_MODEL_QUICK_LOAD
 #define IDM_FILE_MODEL_QUICK_LOAD 1035
 #endif
+#ifndef IDM_FILE_MODEL_LIST
+#define IDM_FILE_MODEL_LIST 1036
+#endif
+#ifndef IDM_FILE_OPEN_FOLDER
+#define IDM_FILE_OPEN_FOLDER 1037
+#endif
 #ifndef IDM_FILE_EXIT
 #define IDM_FILE_EXIT 2005
 #endif
@@ -287,29 +298,30 @@ static constexpr size_t MAX_AGENT_CHECKPOINTS = 32;
 #define IDM_OMEGA_GET_STATS 12405
 #endif
 
+// Edit menu IDs — must match Win32IDE.cpp createMenuBar / accelerators (2006 Select All; 2007–2019 edit)
 #ifndef IDM_EDIT_UNDO
-#define IDM_EDIT_UNDO 2001
+#define IDM_EDIT_UNDO 2007
 #endif
 #ifndef IDM_EDIT_REDO
-#define IDM_EDIT_REDO 2002
+#define IDM_EDIT_REDO 2008
 #endif
 #ifndef IDM_EDIT_CUT
-#define IDM_EDIT_CUT 2003
+#define IDM_EDIT_CUT 2009
 #endif
 #ifndef IDM_EDIT_COPY
-#define IDM_EDIT_COPY 2004
+#define IDM_EDIT_COPY 2010
 #endif
 #ifndef IDM_EDIT_PASTE
-#define IDM_EDIT_PASTE 2005
+#define IDM_EDIT_PASTE 2011
 #endif
 #ifndef IDM_EDIT_SELECT_ALL
 #define IDM_EDIT_SELECT_ALL 2006
 #endif
 #ifndef IDM_EDIT_FIND
-#define IDM_EDIT_FIND 2007
+#define IDM_EDIT_FIND 2016
 #endif
 #ifndef IDM_EDIT_REPLACE
-#define IDM_EDIT_REPLACE 2008
+#define IDM_EDIT_REPLACE 2017
 #endif
 
 // ============================================================================
@@ -401,9 +413,16 @@ static FuzzyResult fuzzyMatchScore(const std::string& query, const std::string& 
 
 bool Win32IDE::routeCommand(int commandId)
 {
+    // [BOUNDARY-POINT LOGGING] Command dispatch entry
+    char logBuf[256];
+    snprintf(logBuf, sizeof(logBuf), "[Win32IDE::routeCommand] ENTRY: commandId=%d (0x%04X)", commandId, commandId);
+    OutputDebugStringA(logBuf);
+    OutputDebugStringA("\n");
+
     // Route to appropriate handler based on command ID range
     if (commandId >= 1000 && commandId < 2000)
     {
+        OutputDebugStringA("[Win32IDE::routeCommand] Routing to >> handleFileCommand\n");
         handleFileCommand(commandId);
         return true;
     }
@@ -621,9 +640,9 @@ bool Win32IDE::routeCommand(int commandId)
         // Feature modules (refactor, language, vision, etc.)
         return handleFeaturesCommand(commandId);
     }
-    else if (commandId >= 11600 && commandId < 11615)
+    else if (commandId >= 12200 && commandId <= 12314)
     {
-        // Tier 5 and Phase 51: Crash Reporter + IRC Bridge
+        // Tier 5 cosmetics (line endings, network, test explorer, …) + IRC — IDs MUST NOT overlap 11500–11599
         return handleTier5Command(commandId);
     }
     else if (commandId >= 9400 && commandId < 9500)
@@ -639,6 +658,11 @@ bool Win32IDE::routeCommand(int commandId)
     {
         // Tier 1: Critical Cosmetics
         return handleTier1Command(commandId);
+    }
+    else if (commandId >= 11700 && commandId < 11800)
+    {
+        // Tier 2: Daily friction cosmetics (#11–#19: git diff, terminal tabs, hover, outline, refs, CodeLens, inlay)
+        return handleTier2Command(commandId);
     }
     else if (commandId >= 12100 && commandId < 12200)
     {
@@ -724,12 +748,115 @@ void Win32IDE::updateCommandStates()
         hasEditorContent = (textLen > 0);
     }
 
-    m_commandStates[IDM_EDIT_CUT] = hasSelection;
-    m_commandStates[IDM_EDIT_COPY] = hasSelection;
+    bool hasTerminalSearchableText = false;
+    bool hasTerminalSelection = false;
+    for (const auto& tp : m_terminalPanes)
+    {
+        if (!tp.hwnd || !IsWindow(tp.hwnd))
+            continue;
+        GETTEXTLENGTHEX gtl{};
+        gtl.flags = GTL_DEFAULT;
+        gtl.codepage = CP_UNICODE;
+        const LONG n = static_cast<LONG>(SendMessage(tp.hwnd, EM_GETTEXTLENGTHEX, (WPARAM)&gtl, 0));
+        if (n > 0)
+            hasTerminalSearchableText = true;
+        CHARRANGE tr{};
+        SendMessage(tp.hwnd, EM_EXGETSEL, 0, (LPARAM)&tr);
+        if (tr.cpMax > tr.cpMin)
+            hasTerminalSelection = true;
+    }
+
+    bool hasCommandContent = false;
+    bool hasCommandSelection = false;
+    if (m_hwndCommandInput && IsWindow(m_hwndCommandInput))
+    {
+        hasCommandContent = GetWindowTextLengthW(m_hwndCommandInput) > 0;
+        DWORD cs = 0, ce = 0;
+        SendMessage(m_hwndCommandInput, EM_GETSEL, (WPARAM)&cs, (LPARAM)&ce);
+        hasCommandSelection = (ce != cs);
+    }
+
+    bool hasPsPanelContent = false;
+    bool hasPsPanelSelection = false;
+    if (m_hwndPowerShellOutput && IsWindow(m_hwndPowerShellOutput))
+    {
+        GETTEXTLENGTHEX gtlPs{};
+        gtlPs.flags = GTL_DEFAULT;
+        gtlPs.codepage = CP_UNICODE;
+        const LONG nPs = static_cast<LONG>(SendMessage(m_hwndPowerShellOutput, EM_GETTEXTLENGTHEX, (WPARAM)&gtlPs, 0));
+        if (nPs > 0)
+            hasPsPanelContent = true;
+        CHARRANGE psR{};
+        SendMessage(m_hwndPowerShellOutput, EM_EXGETSEL, 0, (LPARAM)&psR);
+        if (psR.cpMax > psR.cpMin)
+            hasPsPanelSelection = true;
+    }
+    if (m_hwndPowerShellInput && IsWindow(m_hwndPowerShellInput))
+    {
+        if (GetWindowTextLengthW(m_hwndPowerShellInput) > 0)
+            hasPsPanelContent = true;
+        DWORD ps = 0, pe = 0;
+        SendMessage(m_hwndPowerShellInput, EM_GETSEL, (WPARAM)&ps, (LPARAM)&pe);
+        if (pe != ps)
+            hasPsPanelSelection = true;
+    }
+
+    bool hasOutputSearchableText = false;
+    bool hasOutputSelection = false;
+    for (const auto& kv : m_outputWindows)
+    {
+        if (!kv.second || !IsWindow(kv.second))
+            continue;
+        GETTEXTLENGTHEX gtlOut{};
+        gtlOut.flags = GTL_DEFAULT;
+        gtlOut.codepage = CP_UNICODE;
+        const LONG nOut = static_cast<LONG>(SendMessage(kv.second, EM_GETTEXTLENGTHEX, (WPARAM)&gtlOut, 0));
+        if (nOut > 0)
+            hasOutputSearchableText = true;
+        CHARRANGE outR{};
+        SendMessage(kv.second, EM_EXGETSEL, 0, (LPARAM)&outR);
+        if (outR.cpMax > outR.cpMin)
+            hasOutputSelection = true;
+    }
+
+    bool hasDebugConsoleSearchableText = false;
+    bool hasDebugConsoleSelection = false;
+    if (m_hwndDebugConsoleOutput && IsWindow(m_hwndDebugConsoleOutput))
+    {
+        GETTEXTLENGTHEX gtlDb{};
+        gtlDb.flags = GTL_DEFAULT;
+        gtlDb.codepage = CP_UNICODE;
+        const LONG nDb =
+            static_cast<LONG>(SendMessage(m_hwndDebugConsoleOutput, EM_GETTEXTLENGTHEX, (WPARAM)&gtlDb, 0));
+        if (nDb > 0)
+            hasDebugConsoleSearchableText = true;
+        CHARRANGE dbR{};
+        SendMessage(m_hwndDebugConsoleOutput, EM_EXGETSEL, 0, (LPARAM)&dbR);
+        if (dbR.cpMax > dbR.cpMin)
+            hasDebugConsoleSelection = true;
+    }
+    if (m_hwndDebugConsoleInput && IsWindow(m_hwndDebugConsoleInput) &&
+        GetWindowTextLengthW(m_hwndDebugConsoleInput) > 0)
+        hasDebugConsoleSearchableText = true;
+    if (m_hwndDebugConsoleInput && IsWindow(m_hwndDebugConsoleInput))
+    {
+        DWORD ds = 0, de = 0;
+        SendMessage(m_hwndDebugConsoleInput, EM_GETSEL, (WPARAM)&ds, (LPARAM)&de);
+        if (de != ds)
+            hasDebugConsoleSelection = true;
+    }
+
+    m_commandStates[IDM_EDIT_CUT] = hasSelection || hasCommandSelection || hasTerminalSelection ||
+                                    hasPsPanelSelection || hasOutputSelection || hasDebugConsoleSelection;
+    m_commandStates[IDM_EDIT_COPY] = hasSelection || hasTerminalSelection || hasCommandSelection ||
+                                     hasPsPanelSelection || hasOutputSelection || hasDebugConsoleSelection;
     m_commandStates[IDM_EDIT_PASTE] = IsClipboardFormatAvailable(CF_TEXT);
-    m_commandStates[IDM_EDIT_FIND] = hasEditorContent;
+    m_commandStates[IDM_EDIT_FIND] = hasEditorContent || hasTerminalSearchableText || hasPsPanelContent ||
+                                     hasOutputSearchableText || hasDebugConsoleSearchableText;
     m_commandStates[IDM_EDIT_REPLACE] = hasEditorContent;
-    m_commandStates[IDM_EDIT_SELECT_ALL] = hasEditorContent;
+    m_commandStates[IDM_EDIT_SELECT_ALL] = hasEditorContent || hasTerminalSearchableText || hasCommandContent ||
+                                           hasPsPanelContent || hasOutputSearchableText ||
+                                           hasDebugConsoleSearchableText;
 
     // File: Save All requires at least one modified tab
     bool anyModified = false;
@@ -760,6 +887,11 @@ void Win32IDE::updateCommandStates()
     m_commandStates[4003] = hasTerminal;  // Kill Terminal
     m_commandStates[4004] = hasTerminal;  // Clear Terminal
     m_commandStates[4005] = hasTerminal;  // Split Terminal
+    m_commandStates[4011] = true;         // New User Terminal
+    m_commandStates[4012] = true;         // New Agent Terminal
+    m_commandStates[IDM_TERMINAL_FOCUS_INTEGRATED] = true;
+    m_commandStates[IDM_TERMINAL_CLEAR_ALL] = hasTerminal;
+    m_commandStates[IDM_INFERENCE_SPECULATIVE_RELOAD] = true;
 
     // Agent/AI: always available once bridge exists
     bool agentReady = (m_agenticBridge != nullptr);
@@ -896,6 +1028,10 @@ void Win32IDE::handleFileCommand(int commandId)
             quickLoadGGUFModel();
             break;
 
+        case IDM_FILE_MODEL_LIST:
+            listAvailableModels();
+            break;
+
         case IDM_FILE_EXIT:
             if (!m_fileModified || promptSaveChanges())
             {
@@ -920,39 +1056,191 @@ void Win32IDE::handleFileCommand(int commandId)
 
 void Win32IDE::handleEditCommand(int commandId)
 {
+    extern HWND g_rawrxdIntegratedTerminalTabs;
+
+    const auto targetTextSurface = [this]() -> HWND
+    {
+        const HWND f = GetFocus();
+        if (f)
+        {
+            if (m_hwndEditor && IsWindow(m_hwndEditor) && f == m_hwndEditor)
+                return m_hwndEditor;
+            if (m_hwndCommandInput && IsWindow(m_hwndCommandInput) && f == m_hwndCommandInput)
+                return m_hwndCommandInput;
+            if (m_hwndPowerShellOutput && IsWindow(m_hwndPowerShellOutput) && f == m_hwndPowerShellOutput)
+                return m_hwndPowerShellOutput;
+            if (m_hwndPowerShellInput && IsWindow(m_hwndPowerShellInput) && f == m_hwndPowerShellInput)
+                return m_hwndPowerShellInput;
+            for (const auto& kv : m_outputWindows)
+            {
+                if (kv.second && IsWindow(kv.second) && f == kv.second)
+                    return kv.second;
+            }
+            if (m_outputPanelVisible && m_activePanelTab == PanelTab::Output)
+            {
+                auto pin = [](HWND root, HWND ff) -> bool
+                { return root && IsWindow(root) && ff && (ff == root || IsChild(root, ff)); };
+                if (m_hwndOutputTabs && IsWindow(m_hwndOutputTabs) && pin(m_hwndOutputTabs, f))
+                {
+                    const auto it = m_outputWindows.find(m_activeOutputTab);
+                    if (it != m_outputWindows.end() && it->second && IsWindow(it->second))
+                        return it->second;
+                }
+                if (m_hwndSeverityFilter && IsWindow(m_hwndSeverityFilter) && f == m_hwndSeverityFilter)
+                {
+                    const auto it = m_outputWindows.find(m_activeOutputTab);
+                    if (it != m_outputWindows.end() && it->second && IsWindow(it->second))
+                        return it->second;
+                }
+            }
+            if (m_outputPanelVisible && m_activePanelTab == PanelTab::Terminal && g_rawrxdIntegratedTerminalTabs &&
+                IsWindow(g_rawrxdIntegratedTerminalTabs) &&
+                (f == g_rawrxdIntegratedTerminalTabs || IsChild(g_rawrxdIntegratedTerminalTabs, f)))
+            {
+                TerminalPane* tp = getActiveTerminalPane();
+                if (tp && tp->hwnd && IsWindow(tp->hwnd))
+                    return tp->hwnd;
+            }
+            if (m_outputPanelVisible && m_activePanelTab == PanelTab::Terminal && m_hwndPanelToolbar &&
+                IsWindow(m_hwndPanelToolbar) && (f == m_hwndPanelToolbar || IsChild(m_hwndPanelToolbar, f)))
+            {
+                TerminalPane* tp = getActiveTerminalPane();
+                if (tp && tp->hwnd && IsWindow(tp->hwnd))
+                    return tp->hwnd;
+            }
+            if (m_outputPanelVisible && m_activePanelTab == PanelTab::Terminal && m_hwndPanelTabs &&
+                IsWindow(m_hwndPanelTabs) && (f == m_hwndPanelTabs || IsChild(m_hwndPanelTabs, f)))
+            {
+                TerminalPane* tp = getActiveTerminalPane();
+                if (tp && tp->hwnd && IsWindow(tp->hwnd))
+                    return tp->hwnd;
+            }
+            if (m_hwndDebugConsoleOutput && IsWindow(m_hwndDebugConsoleOutput) && f == m_hwndDebugConsoleOutput)
+                return m_hwndDebugConsoleOutput;
+            if (m_hwndDebugConsoleInput && IsWindow(m_hwndDebugConsoleInput) && f == m_hwndDebugConsoleInput)
+                return m_hwndDebugConsoleInput;
+            if (m_outputPanelVisible && m_activePanelTab == PanelTab::Problems && m_hwndProblemsListView &&
+                IsWindow(m_hwndProblemsListView))
+            {
+                if (f == m_hwndProblemsListView || IsChild(m_hwndProblemsListView, f))
+                    return m_hwndProblemsListView;
+                if (m_hwndProblemsFilter && IsWindow(m_hwndProblemsFilter) && f == m_hwndProblemsFilter)
+                    return m_hwndProblemsListView;
+                auto pin = [](HWND root, HWND ff) -> bool
+                { return root && IsWindow(root) && ff && (ff == root || IsChild(root, ff)); };
+                if (m_hwndPanelTabs && pin(m_hwndPanelTabs, f))
+                    return m_hwndProblemsListView;
+                if (m_hwndPanelToolbar && pin(m_hwndPanelToolbar, f))
+                    return m_hwndProblemsListView;
+            }
+            if (m_outputPanelVisible && m_activePanelTab == PanelTab::DebugConsole && m_hwndPanelTabs &&
+                IsWindow(m_hwndPanelTabs) && (f == m_hwndPanelTabs || IsChild(m_hwndPanelTabs, f)) &&
+                m_hwndDebugConsoleOutput && IsWindow(m_hwndDebugConsoleOutput))
+                return m_hwndDebugConsoleOutput;
+            if (m_outputPanelVisible && m_activePanelTab == PanelTab::DebugConsole && m_hwndPanelToolbar &&
+                IsWindow(m_hwndPanelToolbar) && (f == m_hwndPanelToolbar || IsChild(m_hwndPanelToolbar, f)) &&
+                m_hwndDebugConsoleOutput && IsWindow(m_hwndDebugConsoleOutput))
+                return m_hwndDebugConsoleOutput;
+            for (const auto& tp : m_terminalPanes)
+            {
+                if (tp.hwnd && f == tp.hwnd)
+                    return tp.hwnd;
+            }
+        }
+        return (m_hwndEditor && IsWindow(m_hwndEditor)) ? m_hwndEditor : nullptr;
+    };
+
     switch (commandId)
     {
         case IDM_EDIT_UNDO:
-            SendMessage(m_hwndEditor, EM_UNDO, 0, 0);
+            if (m_hwndEditor && IsWindow(m_hwndEditor))
+                SendMessage(m_hwndEditor, EM_UNDO, 0, 0);
             SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Undo");
             break;
 
         case IDM_EDIT_REDO:
-            SendMessage(m_hwndEditor, EM_REDO, 0, 0);
+            if (m_hwndEditor && IsWindow(m_hwndEditor))
+                SendMessage(m_hwndEditor, EM_REDO, 0, 0);
             SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Redo");
             break;
 
         case IDM_EDIT_CUT:
-            SendMessage(m_hwndEditor, WM_CUT, 0, 0);
-            m_fileModified = true;
-            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Cut");
+        {
+            HWND h = targetTextSurface();
+            if (!h)
+                break;
+            if (h == m_hwndProblemsListView)
+            {
+                copyProblemsListSelectionToClipboard();
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Copied (Problems list is read-only)");
+                break;
+            }
+            if (h == m_hwndEditor)
+            {
+                SendMessage(h, WM_CUT, 0, 0);
+                m_fileModified = true;
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Cut");
+            }
+            else if (h == m_hwndCommandInput)
+            {
+                SendMessage(h, WM_CUT, 0, 0);
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Cut");
+            }
+            else
+            {
+                SendMessage(h, WM_COPY, 0, 0);
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Copied (terminal output is read-only)");
+            }
             break;
+        }
 
         case IDM_EDIT_COPY:
-            SendMessage(m_hwndEditor, WM_COPY, 0, 0);
+        {
+            HWND h = targetTextSurface();
+            if (h == m_hwndProblemsListView)
+                copyProblemsListSelectionToClipboard();
+            else if (h)
+                SendMessage(h, WM_COPY, 0, 0);
             SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Copied");
             break;
+        }
 
         case IDM_EDIT_PASTE:
-            SendMessage(m_hwndEditor, WM_PASTE, 0, 0);
-            m_fileModified = true;
-            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Pasted");
+        {
+            HWND h = targetTextSurface();
+            if (!h)
+                break;
+            if (h == m_hwndEditor)
+            {
+                SendMessage(h, WM_PASTE, 0, 0);
+                m_fileModified = true;
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Pasted");
+            }
+            else if (h == m_hwndCommandInput || h == m_hwndPowerShellInput)
+            {
+                SendMessage(h, WM_PASTE, 0, 0);
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Pasted");
+            }
+            else
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Paste targets editor or shell input");
             break;
+        }
 
         case IDM_EDIT_SELECT_ALL:
-            SendMessage(m_hwndEditor, EM_SETSEL, 0, -1);
-            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "All text selected");
+        {
+            HWND h = targetTextSurface();
+            if (h == m_hwndProblemsListView)
+            {
+                selectAllProblemsListRows();
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "All problems rows selected");
+            }
+            else if (h)
+            {
+                SendMessage(h, EM_SETSEL, 0, -1);
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "All text selected");
+            }
             break;
+        }
 
         case IDM_EDIT_FIND:
             showFindDialog();
@@ -962,13 +1250,7 @@ void Win32IDE::handleEditCommand(int commandId)
             showReplaceDialog();
             break;
 
-        // Edit menu IDs from Win32IDE.cpp (2012-2019) — same actions as above or specific handlers
-        case 2016:  // IDM_EDIT_FIND (menu)
-            showFindDialog();
-            break;
-        case 2017:  // IDM_EDIT_REPLACE (menu)
-            showReplaceDialog();
-            break;
+        // Edit menu IDs from Win32IDE.cpp (2012-2015) — snippet / clipboard helpers
         case 2018:  // IDM_EDIT_FIND_NEXT
             findNext();
             if (m_hwndStatusBar)
@@ -1081,15 +1363,73 @@ void Win32IDE::handleViewCommand(int commandId)
                 toggleSidebar();
             SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "File Explorer");
             break;
-        case 2031:  // IDM_VIEW_EXTENSIONS — show sidebar with Extensions view
+        case 2031:  // IDM_VIEW_EXTENSIONS — show sidebar with Extensions view + floating panel
             setSidebarView(SidebarView::Extensions);
             if (!m_sidebarVisible)
                 toggleSidebar();
+            toggleExtensionPanel();  // Also open the LM Studio–style panel
             SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Extensions");
             break;
-        case 2029:  // IDM_VIEW_TERMINAL — focus or show terminal
+        case IDM_VIEW_GITHUB:  // show sidebar with GitHub view
+            setSidebarView(SidebarView::GitHub);
+            if (!m_sidebarVisible)
+                toggleSidebar();
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "GitHub");
+            break;
+        case IDM_VIEW_GITHUB_PULL_RELEASE:  // show sidebar with Pull Requests / Releases view
+            setSidebarView(SidebarView::GitHubPullRelease);
+            if (!m_sidebarVisible)
+                toggleSidebar();
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "GitHub Pull Requests / Releases");
+            break;
+        case IDM_VIEW_ACCOUNTS:  // show sidebar with Accounts view
+            setSidebarView(SidebarView::Accounts);
+            if (!m_sidebarVisible)
+                toggleSidebar();
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Accounts");
+            break;
+        case IDM_VIEW_MANAGE:  // show sidebar with Manage view
+            setSidebarView(SidebarView::Manage);
+            if (!m_sidebarVisible)
+                toggleSidebar();
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Manage");
+            break;
+        case 2029:  // IDM_VIEW_TERMINAL — VS Code / Cursor: toggle panel + focus terminal bar
+            onViewTerminalShortcut();
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)(m_outputPanelVisible ? "Terminal" : "Panel hidden"));
+            break;
+        case IDM_VIEW_TOGGLE_BOTTOM_PANEL:  // VS Code: Ctrl+J — show/hide bottom panel only
             toggleOutputPanel();
-            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Terminal");
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
+                        (LPARAM)(m_outputPanelVisible ? "Panel shown" : "Panel hidden"));
+            break;
+        case 2032:  // IDM_VIEW_EXPERT_HEATMAP
+            toggleExpertHeatmapPanel();
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Expert heatmap");
+            break;
+        case IDM_VIEW_SOVEREIGN_SNAP_COMPACT:
+            applySovereignSnapPreset(240, L"Compact");
+            break;
+        case IDM_VIEW_SOVEREIGN_SNAP_STANDARD:
+            applySovereignSnapPreset(360, L"Standard");
+            break;
+        case IDM_VIEW_SOVEREIGN_SNAP_WIDE:
+            applySovereignSnapPreset(480, L"Wide");
+            break;
+        case IDM_VIEW_LAYOUT_PROFILE_FOCUS:
+            applyBuiltInLayoutProfile("Focus");
+            break;
+        case IDM_VIEW_LAYOUT_PROFILE_CODING:
+            applyBuiltInLayoutProfile("Coding");
+            break;
+        case IDM_VIEW_LAYOUT_PROFILE_DEBUG:
+            applyBuiltInLayoutProfile("Debug");
+            break;
+        case IDM_VIEW_LAYOUT_PROFILE_APPLY:
+            promptAndApplySavedLayoutProfile();
+            break;
+        case IDM_VIEW_LAYOUT_PROFILE_SAVE:
+            promptAndSaveCurrentLayoutProfile();
             break;
 
         case 3001:  // Toggle Minimap
@@ -1185,6 +1525,27 @@ void Win32IDE::handleViewCommand(int commandId)
             if (m_hwndStatusBar)
                 SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Analyze Script");
             break;
+        case IDM_INTERNAL_CAPTURE_PROFILE:
+        {
+            // Run capture asynchronously so UI remains responsive during the 30s telemetry window.
+            std::thread(
+                [this]()
+                {
+                    const std::string bundlePath = captureProfileBundleV1("baseline_a", 30);
+                    if (bundlePath.empty())
+                    {
+                        LOG_ERROR("Profile Bundle v1 capture failed");
+                    }
+                    else
+                    {
+                        LOG_INFO("Profile Bundle v1 captured: " + bundlePath);
+                    }
+                })
+                .detach();
+            if (m_hwndStatusBar)
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Capturing Profile Bundle v1...");
+            break;
+        }
 
         case 3015:  // IDM_TOOLS_LICENSE_CREATOR — full License Creator dialog (Win32IDE_LicenseCreator.cpp)
             showLicenseCreatorDialog();
@@ -1196,6 +1557,457 @@ void Win32IDE::handleViewCommand(int commandId)
             if (m_hwndStatusBar)
                 SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Feature Registry");
             break;
+
+        case 3055:  // IDM_TOOLS_MODEL_LAB — GGUF metadata profile generator
+            showModelLabDialog();
+            if (m_hwndStatusBar)
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Model Lab");
+            break;
+
+        case IDM_TOOLS_RUN_14DAY_FINISHERS:
+        case IDM_TOOLS_RUN_14DAY_FINISHERS_STRICT:
+        case IDM_TOOLS_RUN_14DAY_QUALITY_GATES:
+        {
+            const bool strict = (commandId == IDM_TOOLS_RUN_14DAY_FINISHERS_STRICT);
+            const bool runQualityGateValidation = (commandId == IDM_TOOLS_RUN_14DAY_QUALITY_GATES);
+
+            auto append14DayLaunchAudit = [&](const std::string& outcome, const std::filesystem::path& scriptPath,
+                                              const std::string& scriptArgs, const std::string& details)
+            {
+                std::error_code ec;
+                const std::filesystem::path workspaceRoot = resolveRawrxdWorkspaceBase();
+                const std::filesystem::path reportDir = workspaceRoot / "reports" / "14day";
+                std::filesystem::create_directories(reportDir, ec);
+
+                std::ofstream out(reportDir / "ide_launch_audit.log", std::ios::app);
+                if (!out.is_open())
+                    return;
+
+                const auto now = std::chrono::system_clock::now();
+                const auto nowMs =
+                    std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+
+                out << nowMs << "|cmd=" << commandId << "|mode="
+                    << (runQualityGateValidation ? "quality-gates" : (strict ? "finishers-strict" : "finishers"))
+                    << "|outcome=" << outcome << "|script=" << scriptPath.string() << "|args=" << scriptArgs;
+                if (!details.empty())
+                    out << "|details=" << details;
+                out << "\n";
+            };
+
+            auto enqueue14DayRun = [&](const std::filesystem::path& scriptPath, const std::string& scriptArgs,
+                                       const char* label, const char* statusText) -> bool
+            {
+                std::string pathUtf8 = scriptPath.string();
+                if (pathUtf8.empty())
+                    return false;
+
+                std::string escapedPath;
+                escapedPath.reserve(pathUtf8.size() + 8);
+                for (char c : pathUtf8)
+                {
+                    if (c == '\'')
+                        escapedPath += "''";
+                    else
+                        escapedPath.push_back(c);
+                }
+
+                std::string psCommand = "& '" + escapedPath + "'";
+                if (!scriptArgs.empty())
+                    psCommand += " " + scriptArgs;
+
+                const std::string queued = executePowerShellCommand(psCommand, true);
+                appendToOutput(std::string("[14-Day] Queued ") + label + ": " + scriptPath.string() + "\n" +
+                                   "[14-Day] " + queued + "\n",
+                               "Output", OutputSeverity::Info);
+                append14DayLaunchAudit("queued", scriptPath, scriptArgs, queued);
+
+                if (m_hwndStatusBar)
+                {
+                    SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)statusText);
+                }
+                return true;
+            };
+
+            auto tryRunFromRoots = [&](const std::vector<std::filesystem::path>& roots,
+                                       const std::vector<std::filesystem::path>& relPaths, const std::string& args,
+                                       const char* label, const char* statusText) -> bool
+            {
+                for (const auto& root : roots)
+                {
+                    for (const auto& rel : relPaths)
+                    {
+                        const std::filesystem::path candidate = root / rel;
+                        if (std::filesystem::exists(candidate) && enqueue14DayRun(candidate, args, label, statusText))
+                        {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            };
+
+            std::vector<std::filesystem::path> roots;
+            if (!m_projectRoot.empty())
+                roots.emplace_back(m_projectRoot);
+            if (!m_currentDirectory.empty())
+                roots.emplace_back(m_currentDirectory);
+
+            char exePath[MAX_PATH] = {};
+            if (GetModuleFileNameA(nullptr, exePath, MAX_PATH) > 0)
+            {
+                roots.emplace_back(std::filesystem::path(exePath).parent_path());
+            }
+            roots.emplace_back(std::filesystem::current_path());
+
+            std::vector<std::filesystem::path> productionScriptCandidates;
+            productionScriptCandidates.emplace_back(std::filesystem::path("scripts") / "production" /
+                                                    "Invoke-14Day-ProductionFinishers.ps1");
+            productionScriptCandidates.emplace_back(std::filesystem::path("rawrxd") / "scripts" / "production" /
+                                                    "Invoke-14Day-ProductionFinishers.ps1");
+            productionScriptCandidates.emplace_back("Run-14Day-ProductionFinishers.ps1");
+            productionScriptCandidates.emplace_back(std::filesystem::path("rawrxd") /
+                                                    "Run-14Day-ProductionFinishers.ps1");
+
+            std::vector<std::filesystem::path> qualityGateScriptCandidates;
+            qualityGateScriptCandidates.emplace_back(std::filesystem::path("scripts") / "production" /
+                                                     "Invoke-14Day-QualityGateValidation.ps1");
+            qualityGateScriptCandidates.emplace_back(std::filesystem::path("rawrxd") / "scripts" / "production" /
+                                                     "Invoke-14Day-QualityGateValidation.ps1");
+
+            bool launched = false;
+            if (runQualityGateValidation)
+            {
+                launched = tryRunFromRoots(roots, qualityGateScriptCandidates, "-AllDays -Strict",
+                                           "quality-gate validation run", "14-day quality gates queued");
+            }
+            else
+            {
+                std::string args = "-AllDays";
+                if (strict)
+                    args += " -Strict";
+                launched = tryRunFromRoots(roots, productionScriptCandidates, args,
+                                           strict ? "production finisher run (strict)" : "production finisher run",
+                                           strict ? "14-day finishers queued (strict)" : "14-day finishers queued");
+            }
+
+            if (!launched)
+            {
+                append14DayLaunchAudit("failed", std::filesystem::path(), std::string(),
+                                       runQualityGateValidation ? "missing Invoke-14Day-QualityGateValidation.ps1"
+                                                                : "missing production finisher script");
+                appendToOutput(
+                    runQualityGateValidation
+                        ? "[14-Day] Could not find scripts/production/Invoke-14Day-QualityGateValidation.ps1\n"
+                        : "[14-Day] Could not find 14-day production finisher script\n",
+                    "Errors", OutputSeverity::Error);
+                if (m_hwndStatusBar)
+                    SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
+                                (LPARAM)(runQualityGateValidation ? "14-day quality-gate script not found"
+                                                                  : "14-day finisher script not found"));
+            }
+            break;
+        }
+
+        case IDM_TOOLS_OPEN_14DAY_REPORTS:
+        {
+            const std::filesystem::path reportDir = resolveRawrxdWorkspaceBase() / "reports" / "14day";
+            std::error_code ec;
+            std::filesystem::create_directories(reportDir, ec);
+            const auto openResult = (INT_PTR)ShellExecuteW(m_hwndMain, L"open", reportDir.wstring().c_str(), nullptr,
+                                                           nullptr, SW_SHOWNORMAL);
+            if (openResult <= 32)
+            {
+                appendToOutput(std::string("[14-Day] Failed to open reports folder: ") + reportDir.string() + "\n",
+                               "Errors", OutputSeverity::Error);
+                if (m_hwndStatusBar)
+                    SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "14-day reports open failed");
+            }
+            else
+            {
+                appendToOutput(std::string("[14-Day] Opened reports folder: ") + reportDir.string() + "\n", "Output",
+                               OutputSeverity::Info);
+                if (m_hwndStatusBar)
+                    SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "14-day reports folder opened");
+            }
+            break;
+        }
+
+        case IDM_TOOLS_SHOW_14DAY_GATE_SUMMARY:
+        {
+            const std::filesystem::path summaryPath =
+                resolveRawrxdWorkspaceBase() / "reports" / "14day" / "quality_gate_summary.md";
+            std::ifstream in(summaryPath);
+            if (!in.is_open())
+            {
+                appendToOutput(std::string("[14-Day] Could not read gate summary: ") + summaryPath.string() + "\n",
+                               "Errors", OutputSeverity::Error);
+                if (m_hwndStatusBar)
+                    SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "14-day gate summary missing");
+                break;
+            }
+
+            std::ostringstream preview;
+            preview << "[14-Day] Latest Quality Gate Summary\n";
+
+            std::string line;
+            int lineCount = 0;
+            while (std::getline(in, line) && lineCount < 30)
+            {
+                preview << line << "\n";
+                ++lineCount;
+            }
+
+            appendToOutput(preview.str(), "Output", OutputSeverity::Info);
+            if (m_hwndStatusBar)
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "14-day gate summary loaded");
+            break;
+        }
+
+        case IDM_TOOLS_SHOW_14DAY_ARTIFACT_MANIFEST:
+        {
+            const std::filesystem::path manifestPath =
+                resolveRawrxdWorkspaceBase() / "reports" / "14day" / "quality_gate_artifact_manifest.md";
+            std::ifstream in(manifestPath);
+            if (!in.is_open())
+            {
+                appendToOutput(std::string("[14-Day] Could not read artifact manifest: ") + manifestPath.string() +
+                                   "\n",
+                               "Errors", OutputSeverity::Error);
+                if (m_hwndStatusBar)
+                    SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "14-day artifact manifest missing");
+                break;
+            }
+
+            std::ostringstream preview;
+            preview << "[14-Day] Latest Artifact Manifest\n";
+
+            std::string line;
+            int lineCount = 0;
+            while (std::getline(in, line) && lineCount < 40)
+            {
+                preview << line << "\n";
+                ++lineCount;
+            }
+
+            appendToOutput(preview.str(), "Output", OutputSeverity::Info);
+            if (m_hwndStatusBar)
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "14-day artifact manifest loaded");
+            break;
+        }
+
+        case IDM_TOOLS_RUN_14DAY_INTEGRATION_GATE:
+        {
+            auto enqueueIntegrationGate = [&](const std::filesystem::path& scriptPath) -> bool
+            {
+                std::string pathUtf8 = scriptPath.string();
+                if (pathUtf8.empty())
+                    return false;
+
+                std::string escapedPath;
+                escapedPath.reserve(pathUtf8.size() + 8);
+                for (char c : pathUtf8)
+                {
+                    if (c == '\'')
+                        escapedPath += "''";
+                    else
+                        escapedPath.push_back(c);
+                }
+
+                const std::string psCommand = "& '" + escapedPath + "'";
+                const std::string queued = executePowerShellCommand(psCommand, true);
+                appendToOutput(std::string("[14-Day] Queued integration gate: ") + scriptPath.string() + "\n" +
+                                   "[14-Day] " + queued + "\n",
+                               "Output", OutputSeverity::Info);
+                if (m_hwndStatusBar)
+                    SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "14-day integration gate queued");
+                return true;
+            };
+
+            std::vector<std::filesystem::path> roots;
+            if (!m_projectRoot.empty())
+                roots.emplace_back(m_projectRoot);
+            if (!m_currentDirectory.empty())
+                roots.emplace_back(m_currentDirectory);
+            roots.emplace_back(resolveRawrxdWorkspaceBase());
+
+            char exePath[MAX_PATH] = {};
+            if (GetModuleFileNameA(nullptr, exePath, MAX_PATH) > 0)
+                roots.emplace_back(std::filesystem::path(exePath).parent_path());
+
+            std::vector<std::filesystem::path> scriptCandidates;
+            scriptCandidates.emplace_back(std::filesystem::path("scripts") / "Run-IntegrationGateMinimal.ps1");
+            scriptCandidates.emplace_back(std::filesystem::path("rawrxd") / "scripts" /
+                                          "Run-IntegrationGateMinimal.ps1");
+
+            bool launched = false;
+            for (const auto& root : roots)
+            {
+                for (const auto& rel : scriptCandidates)
+                {
+                    const std::filesystem::path candidate = root / rel;
+                    if (std::filesystem::exists(candidate) && enqueueIntegrationGate(candidate))
+                    {
+                        launched = true;
+                        break;
+                    }
+                }
+                if (launched)
+                    break;
+            }
+
+            if (!launched)
+            {
+                appendToOutput("[14-Day] Could not find scripts/Run-IntegrationGateMinimal.ps1\n", "Errors",
+                               OutputSeverity::Error);
+                if (m_hwndStatusBar)
+                    SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "14-day integration gate script not found");
+            }
+            break;
+        }
+
+        case IDM_TOOLS_RUN_14DAY_TURNKEY_SMOKE:
+        {
+            auto enqueueTurnkeySmoke = [&](const std::filesystem::path& scriptPath) -> bool
+            {
+                std::string pathUtf8 = scriptPath.string();
+                if (pathUtf8.empty())
+                    return false;
+
+                std::string escapedPath;
+                escapedPath.reserve(pathUtf8.size() + 8);
+                for (char c : pathUtf8)
+                {
+                    if (c == '\'')
+                        escapedPath += "''";
+                    else
+                        escapedPath.push_back(c);
+                }
+
+                const std::string psCommand = "& '" + escapedPath + "'";
+                const std::string queued = executePowerShellCommand(psCommand, true);
+                appendToOutput(std::string("[14-Day] Queued turnkey IDE smoke: ") + scriptPath.string() + "\n" +
+                                   "[14-Day] " + queued + "\n",
+                               "Output", OutputSeverity::Info);
+                if (m_hwndStatusBar)
+                    SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "14-day turnkey smoke queued");
+                return true;
+            };
+
+            std::vector<std::filesystem::path> roots;
+            if (!m_projectRoot.empty())
+                roots.emplace_back(m_projectRoot);
+            if (!m_currentDirectory.empty())
+                roots.emplace_back(m_currentDirectory);
+            roots.emplace_back(resolveRawrxdWorkspaceBase());
+
+            char exePath[MAX_PATH] = {};
+            if (GetModuleFileNameA(nullptr, exePath, MAX_PATH) > 0)
+                roots.emplace_back(std::filesystem::path(exePath).parent_path());
+
+            std::vector<std::filesystem::path> scriptCandidates;
+            scriptCandidates.emplace_back(std::filesystem::path("scripts") / "Run-TurnkeyIdeSmoke.ps1");
+            scriptCandidates.emplace_back(std::filesystem::path("rawrxd") / "scripts" / "Run-TurnkeyIdeSmoke.ps1");
+
+            bool launched = false;
+            for (const auto& root : roots)
+            {
+                for (const auto& rel : scriptCandidates)
+                {
+                    const std::filesystem::path candidate = root / rel;
+                    if (std::filesystem::exists(candidate) && enqueueTurnkeySmoke(candidate))
+                    {
+                        launched = true;
+                        break;
+                    }
+                }
+                if (launched)
+                    break;
+            }
+
+            if (!launched)
+            {
+                appendToOutput("[14-Day] Could not find scripts/Run-TurnkeyIdeSmoke.ps1\n", "Errors",
+                               OutputSeverity::Error);
+                if (m_hwndStatusBar)
+                    SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "14-day turnkey smoke script not found");
+            }
+            break;
+        }
+
+        case IDM_TOOLS_RUN_14DAY_AGGREGATE_GATE:
+        {
+            auto enqueueAggregateGate = [&](const std::filesystem::path& buildDir) -> bool
+            {
+                if (buildDir.empty())
+                    return false;
+
+                std::string dirUtf8 = buildDir.string();
+                if (dirUtf8.empty())
+                    return false;
+
+                std::string escapedDir;
+                escapedDir.reserve(dirUtf8.size() + 8);
+                for (char c : dirUtf8)
+                {
+                    if (c == '\'')
+                        escapedDir += "''";
+                    else
+                        escapedDir.push_back(c);
+                }
+
+                const std::string psCommand = "ctest --test-dir '" + escapedDir +
+                                              "' -R production_readiness_expansion_quality_gate -V -C Release";
+                const std::string queued = executePowerShellCommand(psCommand, true);
+                appendToOutput(std::string("[14-Day] Queued aggregate readiness gate from: ") + buildDir.string() +
+                                   "\n[14-Day] " + queued + "\n",
+                               "Output", OutputSeverity::Info);
+                if (m_hwndStatusBar)
+                    SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "14-day aggregate gate queued");
+                return true;
+            };
+
+            std::vector<std::filesystem::path> roots;
+            if (!m_projectRoot.empty())
+                roots.emplace_back(m_projectRoot);
+            if (!m_currentDirectory.empty())
+                roots.emplace_back(m_currentDirectory);
+            roots.emplace_back(resolveRawrxdWorkspaceBase());
+
+            char exePath[MAX_PATH] = {};
+            if (GetModuleFileNameA(nullptr, exePath, MAX_PATH) > 0)
+                roots.emplace_back(std::filesystem::path(exePath).parent_path());
+
+            std::vector<std::filesystem::path> buildDirCandidates;
+            buildDirCandidates.emplace_back("build-ninja");
+            buildDirCandidates.emplace_back(std::filesystem::path("rawrxd") / "build-ninja");
+
+            bool launched = false;
+            for (const auto& root : roots)
+            {
+                for (const auto& rel : buildDirCandidates)
+                {
+                    const std::filesystem::path candidate = root / rel;
+                    if (std::filesystem::exists(candidate) && std::filesystem::is_directory(candidate) &&
+                        enqueueAggregateGate(candidate))
+                    {
+                        launched = true;
+                        break;
+                    }
+                }
+                if (launched)
+                    break;
+            }
+
+            if (!launched)
+            {
+                appendToOutput("[14-Day] Could not find build-ninja directory for aggregate gate\n", "Errors",
+                               OutputSeverity::Error);
+                if (m_hwndStatusBar)
+                    SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "14-day aggregate gate build dir not found");
+            }
+            break;
+        }
 
         // ====================================================================
         // MODULES MENU (3050–3052) — IDM_MODULES_REFRESH, IMPORT, EXPORT
@@ -1599,6 +2411,16 @@ void Win32IDE::handleTerminalCommand(int commandId)
             SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Terminal cleared");
             break;
 
+        case IDM_TERMINAL_FOCUS_INTEGRATED:  // 4013 — palette / menu; same focus path as View ▸ Terminal (Ctrl+`)
+            focusIntegratedTerminalPanel();
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Terminal focused");
+            break;
+
+        case IDM_TERMINAL_CLEAR_ALL:  // 4014 — reset all sessions (distinct from clear active buffer, 4010)
+            clearAllTerminals();
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "All terminals cleared");
+            break;
+
         case 4005:  // Split Terminal
             splitTerminalHorizontal();
             SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Terminal split");
@@ -1618,6 +2440,36 @@ void Win32IDE::handleTerminalCommand(int commandId)
             splitTerminalVertical();
             SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM) "Terminal split vertically");
             break;
+
+        case IDM_TERMINAL_NEW_USER:  // concurrent user shell
+        {
+            switchPanelTab(PanelTab::Terminal);
+            int userCount = 0;
+            for (const auto& p : m_terminalPanes)
+            {
+                if (p.kind == TerminalPaneKind::UserInteractive)
+                    ++userCount;
+            }
+            std::string name = "PowerShell " + std::to_string(userCount + 1);
+            const int pid =
+                createTerminalPane(Win32TerminalManager::PowerShell, name, TerminalPaneKind::UserInteractive, true);
+            TerminalPane* p = findTerminalPane(pid);
+            if (p)
+                ensureShellRunningForPane(p, Win32TerminalManager::PowerShell);
+            layoutTerminalStrip();
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"New user terminal");
+        }
+        break;
+
+        case IDM_TERMINAL_NEW_AGENT:  // read-only for bar; parallel agent session
+        {
+            switchPanelTab(PanelTab::Terminal);
+            const int pid = createAgentTerminalPane(Win32TerminalManager::PowerShell, "");
+            if (m_primaryAgentTerminalId < 0)
+                m_primaryAgentTerminalId = pid;
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"New agent terminal");
+        }
+        break;
 
         case IDM_TERMINAL_SPLIT_CODE:  // Split Code Viewer (Phase 19B)
             splitCodeViewerHorizontal();
@@ -1751,6 +2603,15 @@ void Win32IDE::handleToolsCommand(int commandId)
             showAgentReplayDialog();
             break;
 
+        case IDM_COPILOT_EXPORT_CHAT:
+            exportCopilotChatHistoryToMarkdown();
+            break;
+
+        case IDM_COPILOT_RELOAD_HISTORY:
+            reloadPersistedChatHistoryIntoUi();
+            appendToOutput("[Chat] Reloaded workspace chat history from disk.\n", "Output", OutputSeverity::Info);
+            break;
+
         // ================================================================
         // Failure Intelligence — Phase 6 (5023+)
         // ================================================================
@@ -1824,6 +2685,8 @@ void Win32IDE::handleToolsCommand(int commandId)
         // ================================================================
         case 5027:  // List Active Policies
         {
+            if (!m_routerInitialized)
+                initLLMRouter();
             std::string routerStatus = getRouterStatusString();
             if (routerStatus.empty())
             {
@@ -1841,6 +2704,8 @@ void Win32IDE::handleToolsCommand(int commandId)
 
         case 5028:  // Generate Suggestions
         {
+            if (!m_routerInitialized)
+                initLLMRouter();
             std::string caps = getCapabilitiesString();
             if (caps.empty())
             {
@@ -1860,6 +2725,8 @@ void Win32IDE::handleToolsCommand(int commandId)
 
         case 5029:  // Show Heuristics
         {
+            if (!m_routerInitialized)
+                initLLMRouter();
             std::string stats = getRouterStatsString();
             if (stats.empty())
             {
@@ -2169,6 +3036,13 @@ void Win32IDE::handleToolsCommand(int commandId)
             appendToOutput("[BackendSwitcher] Backend configs saved to disk.", "General", OutputSeverity::Info);
             break;
 
+        case IDM_BACKEND_TOGGLE_LOCAL_GPU:  // 5322
+        {
+            const bool nextState = !isLocalGGUFGPUEnabled();
+            setLocalGGUFGPUEnabled(nextState);
+        }
+        break;
+
         // ================================================================
         // LLM Router — Phase 8C (5048+)
         // ================================================================
@@ -2327,7 +3201,16 @@ void Win32IDE::handleToolsCommand(int commandId)
             break;
 
         case IDM_ROUTER_SHOW_HEATMAP:  // 5075
-            appendToOutput(getCostLatencyHeatmapString(), "General", OutputSeverity::Info);
+            if (m_hwndExpertHeatmapPanel && IsWindow(m_hwndExpertHeatmapPanel))
+            {
+                // Refresh expert heatmap instead of text dump
+                SendMessageW(m_hwndExpertHeatmapPanel, WM_APP + 108, 0, 0);  // WM_RAWR_HEATMAP_REFRESH
+                SetForegroundWindow(m_hwndExpertHeatmapPanel);
+            }
+            else
+            {
+                toggleExpertHeatmapPanel();
+            }
             break;
 
         case IDM_ROUTER_ENSEMBLE_ENABLE:  // 5076
@@ -2442,6 +3325,71 @@ void Win32IDE::handleToolsCommand(int commandId)
         case IDM_LSP_SAVE_CONFIG:  // 5070
             saveLSPConfig();
             appendToOutput("[LSP] Configuration saved to " + getLSPConfigFilePath(), "General", OutputSeverity::Info);
+            break;
+
+        case IDM_EDITOR_GOTO_LINE:
+            showGoToLineDialog();
+            break;
+
+        case IDM_EDITOR_GOTO_SYMBOL:
+            showGoToSymbolPicker();
+            break;
+
+        case IDM_EDITOR_GOTO_WORKSPACE_SYMBOL:
+            cmdLSPWorkspaceSymbols();
+            break;
+
+        case IDM_EDITOR_PEEK_DEFINITION:
+            cmdLSPGotoDefinition();
+            break;
+
+        case IDM_EDITOR_PEEK_REFERENCES:
+            cmdLSPFindReferences();
+            break;
+
+        case IDM_EDITOR_FORMAT_SELECTION:
+            cmdLSPFormatRange();
+            break;
+
+        case IDM_EDITOR_TOGGLE_COMMENT:
+            if (!toggleEditorCommentSelection())
+                appendToOutput("[Editor] Toggle comment was not applied.", "General", OutputSeverity::Warning);
+            break;
+
+        case IDM_EDITOR_DUPLICATE_LINE:
+            if (!duplicateEditorLine((GetKeyState(VK_UP) & 0x8000) == 0))
+                appendToOutput("[Editor] Duplicate line was not applied.", "General", OutputSeverity::Warning);
+            break;
+
+        case IDM_EDITOR_DELETE_LINE:
+            if (!deleteEditorLine())
+                appendToOutput("[Editor] Delete line was not applied.", "General", OutputSeverity::Warning);
+            break;
+
+        case IDM_EDITOR_MOVE_LINE_UP:
+            if (!moveEditorLine(false))
+                appendToOutput("[Editor] Move line up was not applied.", "General", OutputSeverity::Warning);
+            break;
+
+        case IDM_EDITOR_MOVE_LINE_DOWN:
+            if (!moveEditorLine(true))
+                appendToOutput("[Editor] Move line down was not applied.", "General", OutputSeverity::Warning);
+            break;
+
+        case IDM_EDITOR_GOTO_IMPLEMENTATION:
+            cmdLSPImplementation();
+            break;
+
+        case IDM_EDITOR_GOTO_TYPE_DEFINITION:
+            cmdLSPTypeDefinition();
+            break;
+
+        case IDM_EDITOR_CODE_ACTIONS:
+            cmdLSPCodeActions();
+            break;
+
+        case IDM_EDITOR_SHOW_INLAY_HINTS:
+            cmdLSPInlayHints();
             break;
 
             // ============================================================
@@ -2977,7 +3925,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5903:  // Workspace Context Snapshot
         {
             namespace fs = std::filesystem;
-            fs::path snapshotDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
+            const fs::path snapshotDir = resolveRawrxdWorkspaceBase() / ".rawrxd";
             fs::create_directories(snapshotDir);
             fs::path snapshotPath = snapshotDir / "workspace_context_snapshot.json";
 
@@ -3050,7 +3998,7 @@ void Win32IDE::handleToolsCommand(int commandId)
             }
 
             namespace fs = std::filesystem;
-            fs::path root = m_currentDirectory.empty() ? fs::path(".") : fs::path(m_currentDirectory);
+            fs::path root = resolveRawrxdWorkspaceBase();
             std::map<std::string, int> perFileHits;
             int totalHits = 0;
             int scannedFiles = 0;
@@ -3327,7 +4275,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5911:  // Build Multi-File Reasoning Pack
         {
             namespace fs = std::filesystem;
-            fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
+            const fs::path outDir = resolveRawrxdWorkspaceBase() / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "reasoning_pack.md";
 
@@ -3601,7 +4549,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5918:  // Export Git-Aware Agent Context
         {
             namespace fs = std::filesystem;
-            fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
+            const fs::path outDir = resolveRawrxdWorkspaceBase() / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "agent_git_context.json";
 
@@ -3651,7 +4599,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5919:  // Build Multi-File Reasoning Pack (JSON)
         {
             namespace fs = std::filesystem;
-            fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
+            const fs::path outDir = resolveRawrxdWorkspaceBase() / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "reasoning_pack.json";
 
@@ -3730,7 +4678,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5921:  // Agent Checkpointed One-Turn
         {
             namespace fs = std::filesystem;
-            fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
+            const fs::path outDir = resolveRawrxdWorkspaceBase() / ".rawrxd";
             fs::create_directories(outDir);
             int64_t nowMs = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
                                 std::chrono::system_clock::now().time_since_epoch())
@@ -3818,7 +4766,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5923:  // Export Parity Readiness JSON
         {
             namespace fs = std::filesystem;
-            fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
+            const fs::path outDir = resolveRawrxdWorkspaceBase() / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "parity_readiness.json";
 
@@ -3859,8 +4807,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5924:  // Canonical Build Lane Audit
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path wrapperPath = root / "Build-AgenticIDE.ps1";
             fs::path ideBuildPath = root / "BUILD_IDE_PRODUCTION.ps1";
             fs::path monoBuildPath = root / "src" / "asm" / "monolithic" / "Build-Monolithic.ps1";
@@ -3903,8 +4850,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5925:  // Build Win32IDE Lane (Canonical Wrapper)
         {
             namespace fs = std::filesystem;
-            fs::path working =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path working = resolveRawrxdWorkspaceBase();
             fs::path wrapper = working / "Build-AgenticIDE.ps1";
             if (!fs::exists(wrapper))
             {
@@ -3935,7 +4881,7 @@ void Win32IDE::handleToolsCommand(int commandId)
             bool ok = !response.empty();
 
             namespace fs = std::filesystem;
-            fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
+            const fs::path outDir = resolveRawrxdWorkspaceBase() / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "inference_smoke_test.json";
 
@@ -4055,8 +5001,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5929:  // Catalog VSCode Tasks
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path tasksPath = root / ".vscode" / "tasks.json";
             if (!fs::exists(tasksPath))
             {
@@ -4092,8 +5037,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5930:  // Run VSCode Build Task (Best Effort)
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path tasksPath = root / ".vscode" / "tasks.json";
             if (!fs::exists(tasksPath))
             {
@@ -4172,8 +5116,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5931:  // Catalog VSCode Launch Configs
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path launchPath = root / ".vscode" / "launch.json";
             if (!fs::exists(launchPath))
             {
@@ -4209,8 +5152,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5932:  // Run VSCode Launch Config (Best Effort)
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path launchPath = root / ".vscode" / "launch.json";
             if (!fs::exists(launchPath))
             {
@@ -4301,7 +5243,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5933:  // Export Completion/LSP Readiness
         {
             namespace fs = std::filesystem;
-            fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
+            const fs::path outDir = resolveRawrxdWorkspaceBase() / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "completion_lsp_readiness.json";
 
@@ -4346,7 +5288,7 @@ void Win32IDE::handleToolsCommand(int commandId)
             auto tokens = lspSemanticTokensFull(uri);
 
             namespace fs = std::filesystem;
-            fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
+            const fs::path outDir = resolveRawrxdWorkspaceBase() / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "semantic_tokens_snapshot.json";
 
@@ -4397,7 +5339,7 @@ void Win32IDE::handleToolsCommand(int commandId)
             LSPSignatureHelpInfo sig = lspSignatureHelp(uri, lineIndex, column, 1);
 
             namespace fs = std::filesystem;
-            fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
+            const fs::path outDir = resolveRawrxdWorkspaceBase() / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "signature_help_snapshot.json";
 
@@ -4494,7 +5436,7 @@ void Win32IDE::handleToolsCommand(int commandId)
 
             // 2) Filesystem grep fallback
             namespace fs = std::filesystem;
-            fs::path root = m_currentDirectory.empty() ? fs::path(".") : fs::path(m_currentDirectory);
+            fs::path root = resolveRawrxdWorkspaceBase();
             const std::set<std::string> exts = {".c", ".cpp", ".h", ".hpp", ".asm", ".inc", ".py", ".js", ".ts"};
             struct GrepHit
             {
@@ -4589,7 +5531,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5937:  // Multi-File Reasoning Pack Builder (Symbol Graph + Diagnostics)
         {
             namespace fs = std::filesystem;
-            fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
+            const fs::path outDir = resolveRawrxdWorkspaceBase() / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "reasoning_pack_full.json";
 
@@ -4709,7 +5651,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5938:  // Workspace Embedding Exporter/Importer with Retrieval Scoring
         {
             namespace fs = std::filesystem;
-            fs::path root = m_currentDirectory.empty() ? fs::path(".") : fs::path(m_currentDirectory);
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "workspace_embeddings.json";
@@ -4927,7 +5869,7 @@ void Win32IDE::handleToolsCommand(int commandId)
             }
 
             namespace fs = std::filesystem;
-            fs::path root = m_currentDirectory.empty() ? fs::path(".") : fs::path(m_currentDirectory);
+            fs::path root = resolveRawrxdWorkspaceBase();
             const std::set<std::string> exts = {".c", ".cpp", ".h", ".hpp", ".asm", ".inc", ".py", ".js", ".ts"};
 
             auto isIdent = [](char c) { return std::isalnum((unsigned char)c) || c == '_'; };
@@ -5081,7 +6023,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5941:  // Agent Workflow Checkpoint + Rollback
         {
             namespace fs = std::filesystem;
-            fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
+            const fs::path outDir = resolveRawrxdWorkspaceBase() / ".rawrxd";
             fs::create_directories(outDir);
 
             // Check if user wants rollback: chat input contains "rollback"
@@ -5315,8 +6257,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5943:  // Build Lane Matrix Report
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path wrapper = root / "Build-AgenticIDE.ps1";
             fs::path ideBuild = root / "BUILD_IDE_PRODUCTION.ps1";
             fs::path monoBuild = root / "src" / "asm" / "monolithic" / "Build-Monolithic.ps1";
@@ -5362,8 +6303,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5944:  // Monolithic Completion Bridge Audit
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path bridgeAsm = root / "src" / "asm" / "monolithic" / "bridge.asm";
             fs::path routerAsm = root / "src" / "asm" / "monolithic" / "inference_router.asm";
             fs::path mainAsm = root / "src" / "asm" / "monolithic" / "main.asm";
@@ -5428,8 +6368,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5945:  // VSCode Task/Launch Parity Score
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path tasksPath = root / ".vscode" / "tasks.json";
             fs::path launchPath = root / ".vscode" / "launch.json";
 
@@ -5525,8 +6464,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5946:  // LSP Scaffold Marker Audit
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path lspClient = root / "src" / "win32app" / "Win32IDE_LSPClient.cpp";
             if (!fs::exists(lspClient))
             {
@@ -5601,7 +6539,7 @@ void Win32IDE::handleToolsCommand(int commandId)
                                         .count();
 
             namespace fs = std::filesystem;
-            fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
+            const fs::path outDir = resolveRawrxdWorkspaceBase() / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "ghost_text_cache_snapshot.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
@@ -5620,7 +6558,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5948:  // Build Copilot/Cursor Parity Dashboard
         {
             namespace fs = std::filesystem;
-            fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
+            const fs::path outDir = resolveRawrxdWorkspaceBase() / ".rawrxd";
             fs::create_directories(outDir);
 
             std::vector<fs::path> expected = {
@@ -5688,8 +6626,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5950:  // Search Panel Capability Audit
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path filePath = root / "src" / "win32app" / "Win32IDE_SearchPanel.cpp";
             std::ifstream in(filePath, std::ios::binary);
             if (!in.is_open())
@@ -5734,8 +6671,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5951:  // Terminal Tabs Spawn Audit
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path filePath = root / "src" / "win32app" / "Win32IDE_TerminalTabs.cpp";
             std::ifstream in(filePath, std::ios::binary);
             if (!in.is_open())
@@ -5779,8 +6715,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5952:  // Task Runner Pipe Capture Audit
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path filePath = root / "src" / "win32app" / "Win32IDE_TaskRunner.cpp";
             std::ifstream in(filePath, std::ios::binary);
             if (!in.is_open())
@@ -5825,8 +6760,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5953:  // Extensions Panel GUI Audit
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path filePath = root / "src" / "win32app" / "Win32IDE_ExtensionsPanel.cpp";
             std::ifstream in(filePath, std::ios::binary);
             if (!in.is_open())
@@ -5871,8 +6805,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5954:  // Canonical Build Verify (Wrapper)
         {
             namespace fs = std::filesystem;
-            fs::path working =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path working = resolveRawrxdWorkspaceBase();
             fs::path wrapper = working / "Build-AgenticIDE.ps1";
             if (!fs::exists(wrapper))
             {
@@ -5889,8 +6822,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5955:  // Canonical Build Test (Wrapper)
         {
             namespace fs = std::filesystem;
-            fs::path working =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path working = resolveRawrxdWorkspaceBase();
             fs::path wrapper = working / "Build-AgenticIDE.ps1";
             if (!fs::exists(wrapper))
             {
@@ -5907,7 +6839,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5956:  // Batch 7 Parity Scorecard
         {
             namespace fs = std::filesystem;
-            fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
+            const fs::path outDir = resolveRawrxdWorkspaceBase() / ".rawrxd";
             fs::create_directories(outDir);
 
             std::vector<fs::path> artifacts = {
@@ -6031,8 +6963,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5960:  // Task Runner Workflow Audit
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path taskRunner = root / "src" / "win32app" / "Win32IDE_TaskRunner.cpp";
             fs::path tasksJson = root / ".vscode" / "tasks.json";
             fs::path launchJson = root / ".vscode" / "launch.json";
@@ -6085,8 +7016,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5961:  // Run First VSCode Task Via Wrapper Command
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path tasksPath = root / ".vscode" / "tasks.json";
             if (!fs::exists(tasksPath))
             {
@@ -6128,8 +7058,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5962:  // Canonical Verify+Test Pipeline
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path wrapper = root / "Build-AgenticIDE.ps1";
             if (!fs::exists(wrapper))
             {
@@ -6150,7 +7079,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5963:  // Batch 8 Integration Scorecard
         {
             namespace fs = std::filesystem;
-            fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
+            const fs::path outDir = resolveRawrxdWorkspaceBase() / ".rawrxd";
             fs::create_directories(outDir);
             std::vector<fs::path> artifacts = {
                 outDir / "search_panel_capability_audit.json", outDir / "terminal_tabs_spawn_audit.json",
@@ -6255,8 +7184,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5966:  // Run VSCode Task By Label
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path tasksPath = root / ".vscode" / "tasks.json";
             if (!fs::exists(tasksPath))
             {
@@ -6311,8 +7239,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5967:  // Run VSCode Launch Config By Name
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path launchPath = root / ".vscode" / "launch.json";
             if (!fs::exists(launchPath))
             {
@@ -6377,8 +7304,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5968:  // Export Extension State Snapshot
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path stateFile = root / "extensions" / "extensions_state.txt";
             fs::path extDir = root / "extensions";
 
@@ -6428,8 +7354,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5969:  // Build Wrapper Matrix Runner
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path wrapper = root / "Build-AgenticIDE.ps1";
             if (!fs::exists(wrapper))
             {
@@ -6448,7 +7373,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5970:  // Batch 9 Integration Scorecard
         {
             namespace fs = std::filesystem;
-            fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
+            const fs::path outDir = resolveRawrxdWorkspaceBase() / ".rawrxd";
             fs::create_directories(outDir);
             std::vector<fs::path> artifacts = {
                 outDir / "search_panel_capability_audit.json", outDir / "terminal_tabs_spawn_audit.json",
@@ -6555,8 +7480,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5974:  // Build Wrapper Flag Audit
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path wrapper = root / "Build-AgenticIDE.ps1";
             if (!fs::exists(wrapper))
             {
@@ -6599,8 +7523,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5975:  // Build Wrapper Dynamic Lane Command
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path wrapper = root / "Build-AgenticIDE.ps1";
             if (!fs::exists(wrapper))
             {
@@ -6642,7 +7565,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5976:  // Parity Progress Ledger Update
         {
             namespace fs = std::filesystem;
-            fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
+            const fs::path outDir = resolveRawrxdWorkspaceBase() / ".rawrxd";
             fs::create_directories(outDir);
             fs::path ledger = outDir / "parity_progress_ledger.md";
 
@@ -6674,7 +7597,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5977:  // Batch 10 Integration Scorecard
         {
             namespace fs = std::filesystem;
-            fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
+            const fs::path outDir = resolveRawrxdWorkspaceBase() / ".rawrxd";
             fs::create_directories(outDir);
             std::vector<fs::path> artifacts = {
                 outDir / "search_panel_capability_audit.json", outDir / "terminal_tabs_spawn_audit.json",
@@ -6720,8 +7643,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5978:  // Lane Alignment Snapshot
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path wrapper = root / "Build-AgenticIDE.ps1";
             fs::path mainAsm = root / "src" / "asm" / "monolithic" / "main.asm";
 
@@ -6790,7 +7712,7 @@ void Win32IDE::handleToolsCommand(int commandId)
             std::string after = getRouterStatusString();
 
             namespace fs = std::filesystem;
-            fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
+            const fs::path outDir = resolveRawrxdWorkspaceBase() / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "router_readiness_transition_probe.json";
 
@@ -6819,8 +7741,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5980:  // Bridge ASM Event Map Export
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path bridgeAsm = root / "src" / "asm" / "monolithic" / "bridge.asm";
             std::ifstream in(bridgeAsm, std::ios::binary);
             if (!in.is_open())
@@ -6880,8 +7801,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5981:  // Cursor Parity Input Dialog Audit
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path parityCpp = root / "src" / "win32app" / "Win32IDE_CursorParity.cpp";
             std::ifstream in(parityCpp, std::ios::binary);
             if (!in.is_open())
@@ -6933,8 +7853,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5982:  // Git Panel Capability Audit
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path gitPanel = root / "src" / "win32app" / "Win32IDE_GitPanel.cpp";
             std::ifstream in(gitPanel, std::ios::binary);
             if (!in.is_open())
@@ -6993,7 +7912,7 @@ void Win32IDE::handleToolsCommand(int commandId)
             auto semantic = lspSemanticTokensFull(uri);
 
             namespace fs = std::filesystem;
-            fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
+            const fs::path outDir = resolveRawrxdWorkspaceBase() / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "unified_lsp_completion_probe.json";
 
@@ -7028,7 +7947,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5984:  // Batch 11 Integration Scorecard
         {
             namespace fs = std::filesystem;
-            fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
+            const fs::path outDir = resolveRawrxdWorkspaceBase() / ".rawrxd";
             fs::create_directories(outDir);
             std::vector<fs::path> artifacts = {outDir / "lane_alignment_snapshot.json",
                                                outDir / "router_readiness_transition_probe.json",
@@ -7076,8 +7995,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5985:  // Canonical Lane Mismatch Detector
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path wrapper = root / "Build-AgenticIDE.ps1";
             fs::path ideBuild = root / "BUILD_IDE_PRODUCTION.ps1";
             fs::path monoBuild = root / "src" / "asm" / "monolithic" / "Build-Monolithic.ps1";
@@ -7129,8 +8047,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5986:  // Monolithic Init Path Audit
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path mainAsm = root / "src" / "asm" / "monolithic" / "main.asm";
             std::ifstream in(mainAsm, std::ios::binary);
             if (!in.is_open())
@@ -7180,8 +8097,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5987:  // Bridge Router Fail Path Audit
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path bridgeAsm = root / "src" / "asm" / "monolithic" / "bridge.asm";
             std::ifstream in(bridgeAsm, std::ios::binary);
             if (!in.is_open())
@@ -7232,8 +8148,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5988:  // Tasks/Launch Fallback Audit
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path tasksCpp = root / "src" / "win32app" / "Win32IDE_Tasks.cpp";
             std::ifstream in(tasksCpp, std::ios::binary);
             if (!in.is_open())
@@ -7287,8 +8202,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5989:  // LSP Scaffold Delta Audit
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path lspClient = root / "src" / "win32app" / "Win32IDE_LSPClient.cpp";
             std::ifstream in(lspClient, std::ios::binary);
             if (!in.is_open())
@@ -7341,8 +8255,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5990:  // Git Panel UX Depth Audit
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path gitPanel = root / "src" / "win32app" / "Win32IDE_GitPanel.cpp";
             std::ifstream in(gitPanel, std::ios::binary);
             if (!in.is_open())
@@ -7386,7 +8299,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5991:  // Batch 12 Integration Scorecard
         {
             namespace fs = std::filesystem;
-            fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
+            const fs::path outDir = resolveRawrxdWorkspaceBase() / ".rawrxd";
             fs::create_directories(outDir);
             std::vector<fs::path> artifacts = {
                 outDir / "canonical_lane_mismatch_detector.json", outDir / "monolithic_init_path_audit.json",
@@ -7432,8 +8345,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5992:  // Canonical Lane Parity Runner
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path wrapper = root / "Build-AgenticIDE.ps1";
             if (!fs::exists(wrapper))
             {
@@ -7452,8 +8364,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5993:  // Monolithic Router/Bridge Cross-Link Audit
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path mainAsm = root / "src" / "asm" / "monolithic" / "main.asm";
             fs::path bridgeAsm = root / "src" / "asm" / "monolithic" / "bridge.asm";
             fs::path routerAsm = root / "src" / "asm" / "monolithic" / "inference_router.asm";
@@ -7517,8 +8428,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5994:  // Input Dialog Runtime Readiness Audit
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path parityCpp = root / "src" / "win32app" / "Win32IDE_CursorParity.cpp";
             fs::path quantumCpp = root / "src" / "win32app" / "Win32IDE_Quantum.cpp";
 
@@ -7574,8 +8484,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5995:  // Tasks/Launch Execution Plan Export
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path tasksPath = root / ".vscode" / "tasks.json";
             fs::path launchPath = root / ".vscode" / "launch.json";
 
@@ -7712,7 +8621,7 @@ void Win32IDE::handleToolsCommand(int commandId)
                                         .count();
 
             namespace fs = std::filesystem;
-            fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
+            const fs::path outDir = resolveRawrxdWorkspaceBase() / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "lsp_ghost_unification_pack.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
@@ -7731,7 +8640,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5998:  // Batch 13 Integration Scorecard
         {
             namespace fs = std::filesystem;
-            fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
+            const fs::path outDir = resolveRawrxdWorkspaceBase() / ".rawrxd";
             fs::create_directories(outDir);
             std::vector<fs::path> artifacts = {
                 outDir / "canonical_lane_mismatch_detector.json", outDir / "monolithic_init_path_audit.json",
@@ -7774,11 +8683,10 @@ void Win32IDE::handleToolsCommand(int commandId)
             // Parity Workflow Layer — Batch 14 (5894–5900)
             // ================================================================
 
-        case 5894:  // Wrapper Lane Dry-Run Analyzer
+        case 6994:  // Wrapper Lane Dry-Run Analyzer
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path wrapper = root / "Build-AgenticIDE.ps1";
             std::ifstream in(wrapper, std::ios::binary);
             if (!in.is_open())
@@ -7822,8 +8730,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5895:  // Monolithic Init Callsite Report
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path mainAsm = root / "src" / "asm" / "monolithic" / "main.asm";
             fs::path bridgeAsm = root / "src" / "asm" / "monolithic" / "bridge.asm";
             auto readText = [](const fs::path& p) -> std::string
@@ -7880,8 +8787,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5896:  // Bridge Handshake Timeline Export
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path bridgeAsm = root / "src" / "asm" / "monolithic" / "bridge.asm";
             std::ifstream in(bridgeAsm, std::ios::binary);
             if (!in.is_open())
@@ -7927,8 +8833,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5897:  // Input Dialog Blocker Detector
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path parity = root / "src" / "win32app" / "Win32IDE_CursorParity.cpp";
             std::ifstream in(parity, std::ios::binary);
             if (!in.is_open())
@@ -7978,8 +8883,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5898:  // Task/Launch Executable Availability Audit
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path tasksPath = root / ".vscode" / "tasks.json";
             fs::path launchPath = root / ".vscode" / "launch.json";
 
@@ -8048,7 +8952,7 @@ void Win32IDE::handleToolsCommand(int commandId)
                                         .count();
 
             namespace fs = std::filesystem;
-            fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
+            const fs::path outDir = resolveRawrxdWorkspaceBase() / ".rawrxd";
             fs::create_directories(outDir);
             fs::path outPath = outDir / "git_panel_action_plan.json";
             std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
@@ -8067,7 +8971,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5900:  // Batch 14 Integration Scorecard
         {
             namespace fs = std::filesystem;
-            fs::path outDir = fs::path(m_currentDirectory.empty() ? "." : m_currentDirectory) / ".rawrxd";
+            const fs::path outDir = resolveRawrxdWorkspaceBase() / ".rawrxd";
             fs::create_directories(outDir);
             std::vector<fs::path> artifacts = {outDir / "wrapper_lane_dry_run_analyzer.json",
                                                outDir / "monolithic_init_callsite_report.json",
@@ -8114,8 +9018,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5185:  // Canonical Wrapper + Lane Coherence Report
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path wrapper = root / "Build-AgenticIDE.ps1";
             fs::path ideBuild = root / "BUILD_IDE_PRODUCTION.ps1";
             fs::path monoBuild = root / "src" / "asm" / "monolithic" / "Build-Monolithic.ps1";
@@ -8161,8 +9064,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5186:  // Monolithic Router Boot Hook Audit
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path mainAsm = root / "src" / "asm" / "monolithic" / "main.asm";
             fs::path routerAsm = root / "src" / "asm" / "monolithic" / "inference_router.asm";
             fs::path bridgeAsm = root / "src" / "asm" / "monolithic" / "bridge.asm";
@@ -8224,8 +9126,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5187:  // Bridge/Router Readiness Contract Export
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path bridgeAsm = root / "src" / "asm" / "monolithic" / "bridge.asm";
             fs::path routerAsm = root / "src" / "asm" / "monolithic" / "inference_router.asm";
 
@@ -8282,8 +9183,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5188:  // UI Surface Readiness Audit (Input/Tasks/Git)
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path parityCpp = root / "src" / "win32app" / "Win32IDE_CursorParity.cpp";
             fs::path tasksCpp = root / "src" / "win32app" / "Win32IDE_Tasks.cpp";
             fs::path gitCpp = root / "src" / "win32app" / "Win32IDE_GitPanel.cpp";
@@ -8345,8 +9245,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5189:  // LSP + Ghost Unification Runtime Audit
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path lspCpp = root / "src" / "win32app" / "Win32IDE_LSPClient.cpp";
             fs::path ghostCpp = root / "src" / "win32app" / "Win32IDE_GhostText.cpp";
             fs::path ideCpp = root / "src" / "win32app" / "Win32IDE.cpp";
@@ -8408,8 +9307,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5190:  // Developer Tooling Capability Matrix Export
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path cmdFile = root / "src" / "win32app" / "Win32IDE_Commands.cpp";
             std::ifstream in(cmdFile, std::ios::binary);
             if (!in.is_open())
@@ -8468,8 +9366,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5191:  // Batch 15 Integration Scorecard
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             std::vector<fs::path> artifacts = {
@@ -8515,8 +9412,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5192:  // Parity Blocker Manifest (Actionable)
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
 
@@ -8589,8 +9485,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5194:  // Canonical Wrapper Patch Preview Export
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path wrapper = root / "Build-AgenticIDE.ps1";
             std::ifstream in(wrapper, std::ios::binary);
             if (!in.is_open())
@@ -8643,8 +9538,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5195:  // Monolithic Init Path Patch Preview Export
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path mainAsm = root / "src" / "asm" / "monolithic" / "main.asm";
             std::ifstream in(mainAsm, std::ios::binary);
             if (!in.is_open())
@@ -8688,8 +9582,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5196:  // Bridge Failure UX Beacon Compliance Audit
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path bridgeAsm = root / "src" / "asm" / "monolithic" / "bridge.asm";
             std::ifstream in(bridgeAsm, std::ios::binary);
             if (!in.is_open())
@@ -8732,8 +9625,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5197:  // IDE Runtime Parity Gate Checklist Export
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
 
@@ -8782,8 +9674,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5198:  // Batch 16 Integration Scorecard
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             std::vector<fs::path> artifacts = {outDir / "batch16_parity_blocker_manifest.json",
@@ -8831,8 +9722,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5210:  // Canonical Lane Verify+Test Runner (Sequenced)
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path wrapper = root / "Build-AgenticIDE.ps1";
             if (!fs::exists(wrapper))
             {
@@ -8852,8 +9742,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5211:  // Monolithic Startup Contract Report
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path mainAsm = root / "src" / "asm" / "monolithic" / "main.asm";
             fs::path bridgeAsm = root / "src" / "asm" / "monolithic" / "bridge.asm";
             fs::path routerAsm = root / "src" / "asm" / "monolithic" / "inference_router.asm";
@@ -8914,8 +9803,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5212:  // Router Readiness Traceability Pack
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path bridgeAsm = root / "src" / "asm" / "monolithic" / "bridge.asm";
             fs::path routerAsm = root / "src" / "asm" / "monolithic" / "inference_router.asm";
             fs::path mainAsm = root / "src" / "asm" / "monolithic" / "main.asm";
@@ -8979,8 +9867,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5213:  // UI Runtime Surface Contract Pack
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path parity = root / "src" / "win32app" / "Win32IDE_CursorParity.cpp";
             fs::path tasks = root / "src" / "win32app" / "Win32IDE_Tasks.cpp";
             fs::path git = root / "src" / "win32app" / "Win32IDE_GitPanel.cpp";
@@ -9029,8 +9916,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5214:  // LSP Completion Cohesion Report
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path lsp = root / "src" / "win32app" / "Win32IDE_LSPClient.cpp";
             fs::path ghost = root / "src" / "win32app" / "Win32IDE_GhostText.cpp";
             fs::path bridgeAsm = root / "src" / "asm" / "monolithic" / "bridge.asm";
@@ -9089,8 +9975,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5215:  // VSCode/Cursor/Copilot Capability Gap Delta Export
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path tooling = root / ".rawrxd" / "batch15_developer_tooling_matrix.json";
             nlohmann::json j;
             j["baseline"] = "VSCode+Copilot+Cursor parity matrix";
@@ -9141,8 +10026,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5216:  // Batch 17 Integration Scorecard
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             std::vector<fs::path> artifacts = {outDir / "batch17_monolithic_startup_contract.json",
@@ -9190,8 +10074,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5217:  // Parity Fail-Fast Gate Evaluator
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
 
@@ -9240,8 +10123,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5218:  // Canonical Build Artifact Verifier (v280/v281)
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path objDir = root / "obj";
             fs::path buildDir = root / "build";
             std::vector<fs::path> required = {objDir / "v280_fabric.obj",
@@ -9309,8 +10191,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5220:  // Gap-to-Action Plan Export (Top 7)
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             fs::path failFast = outDir / "batch18_fail_fast_gate_evaluator.json";
@@ -9374,8 +10255,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5221:  // Developer Tooling Readiness Gate
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path matrixPath = root / ".rawrxd" / "batch15_developer_tooling_matrix.json";
 
             nlohmann::json j;
@@ -9424,8 +10304,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5222:  // Cursor/Copilot Parity Ledger Rollup
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             std::vector<fs::path> cards = {
@@ -9470,8 +10349,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5223:  // Batch 18 Integration Scorecard
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
             std::vector<fs::path> artifacts = {outDir / "batch18_fail_fast_gate_evaluator.json",
@@ -9516,8 +10394,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5224:  // RTP End-to-End Smoke + Telemetry Export
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
 
@@ -9571,8 +10448,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5225:  // RTP Synthetic Packet Validate/Dispatch Smoke
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
 
@@ -9648,8 +10524,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5226:  // RTP Policy-Gate Negative Smoke (Blocked Payload)
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
 
@@ -9732,8 +10607,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5227:  // RTP Consolidated Smoke Suite + Scorecard
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
 
@@ -9831,8 +10705,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5228:  // RTP Suite Trend Ledger + Regression Detector
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
 
@@ -9946,8 +10819,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5229:  // RTP Parity Dashboard Export (Unified)
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
 
@@ -10035,8 +10907,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5230:  // RTP Release Gate (Strict) + Remediation Plan
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
 
@@ -10156,8 +11027,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5231:  // RTP Release Report (Markdown) from 5230
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
 
@@ -10275,8 +11145,7 @@ void Win32IDE::handleToolsCommand(int commandId)
         case 5232:  // RTP Executive Summary (One-Page)
         {
             namespace fs = std::filesystem;
-            fs::path root =
-                m_projectRoot.empty() ? (m_currentDirectory.empty() ? "." : m_currentDirectory) : m_projectRoot;
+            fs::path root = resolveRawrxdWorkspaceBase();
             fs::path outDir = root / ".rawrxd";
             fs::create_directories(outDir);
 
@@ -10377,6 +11246,21 @@ void Win32IDE::handleToolsCommand(int commandId)
                            releaseReady ? OutputSeverity::Info : OutputSeverity::Warning);
         }
         break;
+
+        // ================================================================
+        // Model Manager — unified model puller dialog
+        // ================================================================
+        case 6001:  // Model Manager
+            showModelManager();
+            break;
+
+        // ================================================================
+        // Downloads Panel — LM Studio-style download tracker
+        // ================================================================
+        case 6002:  // Downloads
+            toggleDownloadsPanel();
+            break;
+
         default:
             appendToOutput("[Tools] Unhandled command ID: " + std::to_string(commandId) + "\n", "Output",
                            OutputSeverity::Info);
@@ -10520,31 +11404,82 @@ void Win32IDE::handleHelpCommand(int commandId)
                         "View:\n"
                         "  F11 - Toggle Floating Panel\n"
                         "  Ctrl+M - Toggle Minimap\n"
-                        "  Ctrl+Shift+P - Command Palette\n\n"
+                        "  F1 - Command Palette (toggle)\n"
+                        "  Ctrl+P - Quick Open (files)\n"
+                        "  Ctrl+Shift+P - Command Palette\n"
+                        "  Ctrl+J - Toggle Panel (bottom)\n"
+                        "  Ctrl+L - Agent / Chat panel (Cursor-style)\n"
+                        "  Ctrl+Shift+C - Toggle Agent / Chat (secondary sidebar)\n"
+                        "  Ctrl+Shift+I - Bounded agent loop (tools)\n\n"
                         "Terminal:\n"
-                        "  F5 - Run in PowerShell\n"
-                        "  Ctrl+` - Toggle Terminal",
+                        "  Ctrl+` - Toggle integrated terminal & focus bar\n"
+                        "  Ctrl+Shift+` - New user terminal\n"
+                        "  Ctrl+Alt+T / Ctrl+Alt+A - New user / agent terminal\n"
+                        "  F5 - Run in PowerShell",
                         "Keyboard Shortcuts", MB_OK | MB_ICONINFORMATION);
             break;
 
         case 7006:
-        {  // Export Prometheus Metrics
+        {  // Export Prometheus + JSON metrics (feeds scripts/parity_deck/Render-ParityDeck.ps1)
             std::string metrics = METRICS.exportPrometheus();
-            // Write to file
-            CreateDirectoryA(".rawrxd", nullptr);
-            std::ofstream mf(".rawrxd/metrics.prom");
+            std::string metricsJson = METRICS.exportJson();
+            namespace fs = std::filesystem;
+            const fs::path base = resolveRawrxdWorkspaceBase();
+            if (const char* envRoot = std::getenv("RAWRXD_REPO_ROOT"))
+            {
+                if (envRoot[0] != '\0')
+                {
+                    std::error_code ec;
+                    const fs::path envPath = fs::path(envRoot).lexically_normal();
+                    if (fs::is_directory(envPath, ec) && base == envPath)
+                        appendToOutput("[Metrics] Using RAWRXD_REPO_ROOT: " + base.string() + "\n", "Output",
+                                       OutputSeverity::Info);
+                }
+            }
+            const fs::path rawrxdDir = base / ".rawrxd";
+            std::error_code ec;
+            fs::create_directories(rawrxdDir, ec);
+            const std::string promPath = (rawrxdDir / "metrics.prom").string();
+            const std::string jsonPath = (rawrxdDir / "metrics.json").string();
+            std::ofstream mf(promPath);
             if (mf)
             {
                 mf << metrics;
                 mf.close();
-                appendToOutput("Metrics exported to .rawrxd/metrics.prom\n", "Output", OutputSeverity::Info);
+                appendToOutput("Metrics exported to " + promPath + "\n", "Output", OutputSeverity::Info);
             }
-            // Also show in output panel
+            std::ofstream mj(jsonPath);
+            if (mj)
+            {
+                mj << metricsJson;
+                mj.close();
+                appendToOutput("Metrics JSON exported to " + jsonPath + "\n", "Output", OutputSeverity::Info);
+            }
             appendToOutput("=== Prometheus Metrics ===\n" + metrics + "\n", "Output", OutputSeverity::Info);
             break;
         }
         case 7007:  // Enterprise License / Features — full License Creator dialog
             showLicenseCreatorDialog();
+            break;
+
+        case 7008:  // F1 / accelerator: Toggle Command Palette (VS Code default)
+            if (m_commandPaletteVisible)
+                hideCommandPalette();
+            else
+                showCommandPalette();
+            break;
+
+        case IDM_FILE_QUICK_OPEN:  // Ctrl+P (TranslateAccelerator) — Quick Open file picker
+            if (m_commandPaletteVisible)
+                hideCommandPalette();
+            if (isQuickOpenPickerVisible())
+                hideQuickOpenPicker();
+            else
+                showQuickOpenPicker();
+            break;
+
+        case IDM_CHAT_EXPORT_CLIPBOARD:  // Command palette: Copilot-style export
+            copyChatHistoryToClipboard();
             break;
 
         default:
@@ -10660,17 +11595,44 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({1004, "File: Save As", "Ctrl+Shift+S", "File"});
     m_commandRegistry.push_back({1005, "File: Save All", "", "File"});
     m_commandRegistry.push_back({1006, "File: Close File", "Ctrl+W", "File"});
+    m_commandRegistry.push_back({IDM_FILE_QUICK_OPEN, "File: Quick Open", "Ctrl+P", "File"});
     m_commandRegistry.push_back({1020, "File: Clear Recent Files", "", "File"});
 
-    // Edit commands
-    m_commandRegistry.push_back({2001, "Edit: Undo", "Ctrl+Z", "Edit"});
-    m_commandRegistry.push_back({2002, "Edit: Redo", "Ctrl+Y", "Edit"});
-    m_commandRegistry.push_back({2003, "Edit: Cut", "Ctrl+X", "Edit"});
-    m_commandRegistry.push_back({2004, "Edit: Copy", "Ctrl+C", "Edit"});
-    m_commandRegistry.push_back({2005, "Edit: Paste", "Ctrl+V", "Edit"});
+    // Edit commands (IDs aligned with Win32IDE.cpp menu + WM_COMMAND handlers)
     m_commandRegistry.push_back({2006, "Edit: Select All", "Ctrl+A", "Edit"});
-    m_commandRegistry.push_back({2007, "Edit: Find", "Ctrl+F", "Edit"});
-    m_commandRegistry.push_back({2008, "Edit: Replace", "Ctrl+H", "Edit"});
+    m_commandRegistry.push_back({2007, "Edit: Undo", "Ctrl+Z", "Edit"});
+    m_commandRegistry.push_back({2008, "Edit: Redo", "Ctrl+Y", "Edit"});
+    m_commandRegistry.push_back({2009, "Edit: Cut", "Ctrl+X", "Edit"});
+    m_commandRegistry.push_back({2010, "Edit: Copy", "Ctrl+C", "Edit"});
+    m_commandRegistry.push_back({2011, "Edit: Paste", "Ctrl+V", "Edit"});
+    m_commandRegistry.push_back({2012, "Edit: Snippet Manager", "", "Edit"});
+    m_commandRegistry.push_back({2013, "Edit: Copy with Formatting", "", "Edit"});
+    m_commandRegistry.push_back({2014, "Edit: Paste Plain", "", "Edit"});
+    m_commandRegistry.push_back({2015, "Edit: Clipboard History", "", "Edit"});
+    m_commandRegistry.push_back({2016, "Edit: Find", "Ctrl+F", "Edit"});
+    m_commandRegistry.push_back({2017, "Edit: Replace", "Ctrl+H", "Edit"});
+    m_commandRegistry.push_back({2018, "Edit: Find Next", "F3", "Edit"});
+    m_commandRegistry.push_back({2019, "Edit: Find Previous", "Shift+F3", "Edit"});
+    m_commandRegistry.push_back({IDM_EDITOR_FORMAT_SELECTION, "Edit: Format Selection", "Shift+Alt+F", "Edit"});
+    m_commandRegistry.push_back({IDM_EDITOR_CODE_ACTIONS, "Edit: Code Actions", "Ctrl+.", "Edit"});
+    m_commandRegistry.push_back({IDM_EDITOR_SHOW_INLAY_HINTS, "Edit: Show Inlay Hints", "Ctrl+Alt+I", "Edit"});
+    m_commandRegistry.push_back({IDM_EDITOR_TOGGLE_COMMENT, "Edit: Toggle Comment", "Ctrl+/", "Edit"});
+    m_commandRegistry.push_back({IDM_EDITOR_DUPLICATE_LINE, "Edit: Duplicate Line", "Shift+Alt+Down", "Edit"});
+    m_commandRegistry.push_back({IDM_EDITOR_DELETE_LINE, "Edit: Delete Line", "Ctrl+Shift+K", "Edit"});
+    m_commandRegistry.push_back({IDM_EDITOR_MOVE_LINE_UP, "Edit: Move Line Up", "Alt+Up", "Edit"});
+    m_commandRegistry.push_back({IDM_EDITOR_MOVE_LINE_DOWN, "Edit: Move Line Down", "Alt+Down", "Edit"});
+
+    // Navigation tools exposed through the command palette even though they route via the tools lane.
+    m_commandRegistry.push_back({IDM_EDITOR_GOTO_LINE, "Navigation: Go To Line", "Ctrl+G", "Navigation"});
+    m_commandRegistry.push_back({IDM_EDITOR_GOTO_SYMBOL, "Navigation: Go To Symbol", "Ctrl+Shift+O", "Navigation"});
+    m_commandRegistry.push_back(
+        {IDM_EDITOR_GOTO_WORKSPACE_SYMBOL, "Navigation: Go To Workspace Symbol", "Ctrl+Shift+Alt+O", "Navigation"});
+    m_commandRegistry.push_back({IDM_EDITOR_PEEK_DEFINITION, "Navigation: Peek Definition", "Alt+F12", "Navigation"});
+    m_commandRegistry.push_back({IDM_EDITOR_PEEK_REFERENCES, "Navigation: Peek References", "Shift+F12", "Navigation"});
+    m_commandRegistry.push_back(
+        {IDM_EDITOR_GOTO_IMPLEMENTATION, "Navigation: Go To Implementation", "Ctrl+F12", "Navigation"});
+    m_commandRegistry.push_back(
+        {IDM_EDITOR_GOTO_TYPE_DEFINITION, "Navigation: Go To Type Definition", "Ctrl+Alt+F12", "Navigation"});
 
     // View commands (IDs must match handleViewCommand: 2020–2031, 3007, 3009)
     m_commandRegistry.push_back({2020, "View: Toggle Minimap", "Ctrl+M", "View"});
@@ -10681,26 +11643,61 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({2025, "View: Toggle Output Panel", "", "View"});
     m_commandRegistry.push_back({2026, "View: Use Streaming Loader", "", "View"});
     m_commandRegistry.push_back({2028, "View: Toggle Sidebar", "Ctrl+B", "View"});
-    m_commandRegistry.push_back({2029, "View: Terminal", "", "View"});
+    m_commandRegistry.push_back({2029, "View: Toggle Integrated Terminal", "Ctrl+`", "View"});
+    m_commandRegistry.push_back({IDM_VIEW_TOGGLE_BOTTOM_PANEL, "View: Toggle Panel", "Ctrl+J", "View"});
     m_commandRegistry.push_back({2030, "View: File Explorer", "Ctrl+Shift+E", "View"});
     m_commandRegistry.push_back({2031, "View: Extensions", "Ctrl+Shift+X", "View"});
+    m_commandRegistry.push_back({IDM_VIEW_GITHUB, "View: GitHub", "", "View"});
+    m_commandRegistry.push_back({IDM_VIEW_GITHUB_PULL_RELEASE, "View: GitHub Pull Requests / Releases", "", "View"});
+    m_commandRegistry.push_back({IDM_VIEW_ACCOUNTS, "View: Accounts", "", "View"});
+    m_commandRegistry.push_back({IDM_VIEW_MANAGE, "View: Manage", "", "View"});
+    m_commandRegistry.push_back({IDM_VIEW_SOVEREIGN_SNAP_COMPACT, "View: Sovereign Snap Compact", "", "View"});
+    m_commandRegistry.push_back({IDM_VIEW_SOVEREIGN_SNAP_STANDARD, "View: Sovereign Snap Standard", "", "View"});
+    m_commandRegistry.push_back({IDM_VIEW_SOVEREIGN_SNAP_WIDE, "View: Sovereign Snap Wide", "", "View"});
+    m_commandRegistry.push_back({IDM_VIEW_LAYOUT_PROFILE_FOCUS, "View: Layout Profile Focus", "", "View"});
+    m_commandRegistry.push_back({IDM_VIEW_LAYOUT_PROFILE_CODING, "View: Layout Profile Coding", "", "View"});
+    m_commandRegistry.push_back({IDM_VIEW_LAYOUT_PROFILE_DEBUG, "View: Layout Profile Debug", "", "View"});
+    m_commandRegistry.push_back({IDM_VIEW_LAYOUT_PROFILE_APPLY, "View: Apply Saved Layout Profile", "", "View"});
+    m_commandRegistry.push_back({IDM_VIEW_LAYOUT_PROFILE_SAVE, "View: Save Current Layout Profile", "", "View"});
     m_commandRegistry.push_back({3007, "View: AI Chat", "Ctrl+Alt+B", "View"});
-    m_commandRegistry.push_back({3009, "View: Agent Chat (autonomous)", "", "View"});
+    m_commandRegistry.push_back({3009, "View: Agent Chat (autonomous)", "Ctrl+L", "View"});
+    m_commandRegistry.push_back({7008, "Help: Toggle Command Palette", "F1 / Ctrl+Shift+P", "Help"});
+    m_commandRegistry.push_back({IDM_CHAT_EXPORT_CLIPBOARD, "Chat: Copy Conversation to Clipboard", "", "Chat"});
     // Tier 1 cosmetics (12000–12099, handleTier1Command) — accessible from View/category
     m_commandRegistry.push_back({IDM_T1_BREADCRUMBS_TOGGLE, "View: Toggle Breadcrumbs", "", "View"});
     m_commandRegistry.push_back({IDM_T1_FUZZY_PALETTE, "View: Fuzzy Command Palette", "", "View"});
     m_commandRegistry.push_back({IDM_T1_SETTINGS_GUI, "View: Settings", "", "View"});
     m_commandRegistry.push_back({IDM_T1_WELCOME_SHOW, "View: Welcome Page", "", "View"});
 
-    // Terminal commands (IDs match handleTerminalCommand: 4001–4010)
-    m_commandRegistry.push_back({4001, "Terminal: New PowerShell", "", "Terminal"});
-    m_commandRegistry.push_back({4002, "Terminal: New Command Prompt", "", "Terminal"});
-    m_commandRegistry.push_back({4003, "Terminal: Kill Terminal", "", "Terminal"});
+    // Tier 5 (12200–12314, handleTier5Command) — palette discoverability; full set in Win32IDE.h
+    m_commandRegistry.push_back({IDM_LINEENDING_DETECT, "Tier 5: Detect Line Endings", "", "Tier 5"});
+    m_commandRegistry.push_back({12201, "Tier 5: Convert Line Endings to CRLF", "", "Tier 5"});
+    m_commandRegistry.push_back({12202, "Tier 5: Convert Line Endings to LF", "", "Tier 5"});
+    m_commandRegistry.push_back({12203, "Tier 5: Convert Line Endings to CR", "", "Tier 5"});
+    m_commandRegistry.push_back({IDM_NETWORK_SHOW, "Tier 5: Network Panel", "", "Tier 5"});
+    m_commandRegistry.push_back({IDM_TESTEXPLORER_SHOW, "Tier 5: Test Explorer", "", "Tier 5"});
+    m_commandRegistry.push_back({IDM_TESTEXPLORER_RUN, "Tier 5: Run Tests", "", "Tier 5"});
+    m_commandRegistry.push_back({IDM_TELDASH_SHOW, "Tier 5: Telemetry Dashboard", "", "Tier 5"});
+    m_commandRegistry.push_back({IDM_TELDASH_STATS, "Tier 5: Telemetry Stats", "", "Tier 5"});
+    m_commandRegistry.push_back({IDM_MARKETPLACE_SHOW, "Tier 5: Extension Marketplace", "", "Tier 5"});
+    m_commandRegistry.push_back({IDM_SHORTCUT_SHOW, "Tier 5: Shortcut Editor", "", "Tier 5"});
+    m_commandRegistry.push_back({IDM_CRASH_SHOW, "Tier 5: Crash Reporter", "", "Tier 5"});
+    m_commandRegistry.push_back({IDM_IRC_CONNECT, "Tier 5: IRC Connect", "", "Tier 5"});
+
+    // Terminal commands (IDs match handleTerminalCommand: 4001–4014)
+    m_commandRegistry.push_back({4001, "Terminal: Start PowerShell in Active Session", "", "Terminal"});
+    m_commandRegistry.push_back({4002, "Terminal: Start Command Prompt in Active Session", "", "Terminal"});
+    m_commandRegistry.push_back({4003, "Terminal: Stop Terminal Session", "", "Terminal"});
     m_commandRegistry.push_back({4004, "Terminal: Clear Terminal", "", "Terminal"});
     m_commandRegistry.push_back({4005, "Terminal: Split Terminal", "", "Terminal"});
-    m_commandRegistry.push_back({4006, "Terminal: Kill", "", "Terminal"});
-    m_commandRegistry.push_back({4007, "Terminal: Split Horizontal", "", "Terminal"});
-    m_commandRegistry.push_back({4010, "Terminal: List Terminals", "", "Terminal"});
+    m_commandRegistry.push_back({4011, "Terminal: Create New Integrated Terminal", "Ctrl+Shift+`", "Terminal"});
+    m_commandRegistry.push_back({4012, "Terminal: Create New Agent Terminal", "Ctrl+Alt+A", "Terminal"});
+    m_commandRegistry.push_back({4006, "Terminal: Kill Active Terminal (timeout)", "", "Terminal"});
+    m_commandRegistry.push_back({4007, "Terminal: Split Terminal (horizontal)", "Ctrl+Shift+H", "Terminal"});
+    m_commandRegistry.push_back({4008, "Terminal: Split Terminal (vertical)", "Ctrl+Shift+V", "Terminal"});
+    m_commandRegistry.push_back({4010, "Terminal: Clear", "", "Terminal"});
+    m_commandRegistry.push_back({4013, "Terminal: Focus Integrated Terminal", "", "Terminal"});
+    m_commandRegistry.push_back({4014, "Terminal: Clear All Terminals", "", "Terminal"});
 
     // Tools commands
     m_commandRegistry.push_back({5001, "Tools: Start Profiling", "", "Tools"});
@@ -10708,7 +11705,7 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({5003, "Tools: Show Profile Results", "", "Tools"});
     m_commandRegistry.push_back({5004, "Tools: Analyze Script", "", "Tools"});
     m_commandRegistry.push_back({5005, "Tools: Code Snippets", "", "Tools"});
-    m_commandRegistry.push_back({5894, "Tools: Wrapper Lane Dry-Run Analyzer", "", "Tools"});
+    m_commandRegistry.push_back({6994, "Tools: Wrapper Lane Dry-Run Analyzer", "", "Tools"});
     m_commandRegistry.push_back({5895, "Tools: Monolithic Init Callsite Report", "", "Tools"});
     m_commandRegistry.push_back({5896, "Tools: Bridge Handshake Timeline Export", "", "Tools"});
     m_commandRegistry.push_back({5897, "Tools: Input Dialog Blocker Detector", "", "Tools"});
@@ -10850,8 +11847,27 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({5996, "Tools: Git Panel Command Dispatch Probe", "", "Tools"});
     m_commandRegistry.push_back({5997, "Tools: LSP Ghost Unification Pack Export", "", "Tools"});
     m_commandRegistry.push_back({5998, "Tools: Batch 13 Integration Scorecard", "", "Tools"});
+    m_commandRegistry.push_back({6001, "Tools: Model Manager", "Ctrl+Shift+P", "Tools"});
+    m_commandRegistry.push_back({6002, "Tools: Downloads", "Ctrl+Shift+D", "Tools"});
     m_commandRegistry.push_back({3015, "Tools: License Creator", "Ctrl+Shift+L", "Tools"});
     m_commandRegistry.push_back({3016, "Tools: Feature Registry", "Ctrl+Shift+F", "Tools"});
+    m_commandRegistry.push_back({3055, "Tools: Model Lab (GGUF Profile)", "Ctrl+Alt+M", "Tools"});
+    m_commandRegistry.push_back({IDM_TOOLS_RUN_14DAY_FINISHERS, "Tools: Run 14-Day Production Finishers", "", "Tools"});
+    m_commandRegistry.push_back(
+        {IDM_TOOLS_RUN_14DAY_FINISHERS_STRICT, "Tools: Run 14-Day Production Finishers (Strict)", "", "Tools"});
+    m_commandRegistry.push_back(
+        {IDM_TOOLS_RUN_14DAY_QUALITY_GATES, "Tools: Run 14-Day Quality Gate Validation", "", "Tools"});
+    m_commandRegistry.push_back({IDM_TOOLS_OPEN_14DAY_REPORTS, "Tools: Open 14-Day Reports Folder", "", "Tools"});
+    m_commandRegistry.push_back(
+        {IDM_TOOLS_SHOW_14DAY_GATE_SUMMARY, "Tools: Show Latest 14-Day Gate Summary", "", "Tools"});
+    m_commandRegistry.push_back(
+        {IDM_TOOLS_SHOW_14DAY_ARTIFACT_MANIFEST, "Tools: Show Latest 14-Day Artifact Manifest", "", "Tools"});
+    m_commandRegistry.push_back(
+        {IDM_TOOLS_RUN_14DAY_INTEGRATION_GATE, "Tools: Run 14-Day Integration Gate", "", "Tools"});
+    m_commandRegistry.push_back(
+        {IDM_TOOLS_RUN_14DAY_TURNKEY_SMOKE, "Tools: Run 14-Day Turnkey IDE Smoke", "", "Tools"});
+    m_commandRegistry.push_back(
+        {IDM_TOOLS_RUN_14DAY_AGGREGATE_GATE, "Tools: Run 14-Day Production Readiness Aggregate Gate", "", "Tools"});
 
     // Module commands (6100–6199; menu uses 3050–3052 in handleViewCommand)
     m_commandRegistry.push_back({6101, "Modules: Refresh List", "", "Modules"});
@@ -10943,6 +11959,33 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({IDM_SUBAGENT_TODO_CLEAR, "SubAgent: Todo Clear", "", "SubAgent"});
     m_commandRegistry.push_back({IDM_SUBAGENT_STATUS, "SubAgent: Status", "", "SubAgent"});
 
+    // Distributed Swarm (Phase 11)
+    m_commandRegistry.push_back({IDM_SWARM_STATUS, "Swarm: Show Status", "", "Swarm"});
+    m_commandRegistry.push_back({IDM_SWARM_START_LEADER, "Swarm: Start Leader", "", "Swarm"});
+    m_commandRegistry.push_back({IDM_SWARM_START_WORKER, "Swarm: Start Worker", "", "Swarm"});
+    m_commandRegistry.push_back({IDM_SWARM_START_HYBRID, "Swarm: Start Hybrid", "", "Swarm"});
+    m_commandRegistry.push_back({IDM_SWARM_STOP, "Swarm: Stop", "", "Swarm"});
+    m_commandRegistry.push_back({IDM_SWARM_LIST_NODES, "Swarm: List Nodes", "", "Swarm"});
+    m_commandRegistry.push_back({IDM_SWARM_ADD_NODE, "Swarm: Add Node", "", "Swarm"});
+    m_commandRegistry.push_back({IDM_SWARM_REMOVE_NODE, "Swarm: Remove Node", "", "Swarm"});
+    m_commandRegistry.push_back({IDM_SWARM_BLACKLIST_NODE, "Swarm: Blacklist Node", "", "Swarm"});
+    m_commandRegistry.push_back({IDM_SWARM_BUILD_SOURCES, "Swarm: Build from Sources", "", "Swarm"});
+    m_commandRegistry.push_back({IDM_SWARM_BUILD_CMAKE, "Swarm: Build from CMake", "", "Swarm"});
+    m_commandRegistry.push_back({IDM_SWARM_START_BUILD, "Swarm: Start Build", "", "Swarm"});
+    m_commandRegistry.push_back({IDM_SWARM_CANCEL_BUILD, "Swarm: Cancel Build", "", "Swarm"});
+    m_commandRegistry.push_back({IDM_SWARM_CACHE_STATUS, "Swarm: Cache Status", "", "Swarm"});
+    m_commandRegistry.push_back({IDM_SWARM_CACHE_CLEAR, "Swarm: Cache Clear", "", "Swarm"});
+    m_commandRegistry.push_back({IDM_SWARM_SHOW_CONFIG, "Swarm: Show Config", "", "Swarm"});
+    m_commandRegistry.push_back({IDM_SWARM_TOGGLE_DISCOVERY, "Swarm: Toggle Discovery", "", "Swarm"});
+    m_commandRegistry.push_back({IDM_SWARM_SHOW_TASK_GRAPH, "Swarm: Show Task Graph", "", "Swarm"});
+    m_commandRegistry.push_back({IDM_SWARM_SHOW_EVENTS, "Swarm: Show Events", "", "Swarm"});
+    m_commandRegistry.push_back({IDM_SWARM_SHOW_STATS, "Swarm: Show Stats", "", "Swarm"});
+    m_commandRegistry.push_back({IDM_SWARM_RESET_STATS, "Swarm: Reset Stats", "", "Swarm"});
+    m_commandRegistry.push_back({IDM_SWARM_WORKER_STATUS, "Swarm: Worker Status", "", "Swarm"});
+    m_commandRegistry.push_back({IDM_SWARM_WORKER_CONNECT, "Swarm: Worker Connect", "", "Swarm"});
+    m_commandRegistry.push_back({IDM_SWARM_WORKER_DISCONNECT, "Swarm: Worker Disconnect", "", "Swarm"});
+    m_commandRegistry.push_back({IDM_SWARM_FITNESS_TEST, "Swarm: Worker Fitness Test", "", "Swarm"});
+
     // Reverse Engineering (full suite)
     m_commandRegistry.push_back({IDM_REVENG_ANALYZE, "RE: Run Codex Analysis", "", "RE"});
     m_commandRegistry.push_back({IDM_REVENG_SET_BINARY_FROM_ACTIVE, "RE: Set binary from active document", "", "RE"});
@@ -10974,6 +12017,7 @@ void Win32IDE::buildCommandRegistry()
 
     // File: Load Model & Exit (not in original list)
     m_commandRegistry.push_back({1030, "File: Load AI Model (Local)", "", "File"});
+    m_commandRegistry.push_back({IDM_FILE_OPEN_FOLDER, "File: Open Folder", "Ctrl+Shift+O", "File"});
     m_commandRegistry.push_back({IDM_FILE_MODEL_FROM_HF, "File: Load Model from HuggingFace", "", "File"});
     m_commandRegistry.push_back({IDM_FILE_MODEL_FROM_OLLAMA, "File: Load Model from Ollama Blobs", "", "File"});
     m_commandRegistry.push_back({IDM_FILE_MODEL_FROM_URL, "File: Load Model from URL", "", "File"});
@@ -10998,6 +12042,9 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({5020, "History: Show Agent History Timeline", "", "History"});
     m_commandRegistry.push_back({5021, "History: Show Agent History Stats", "", "History"});
     m_commandRegistry.push_back({5022, "History: Replay Previous Session", "", "History"});
+    m_commandRegistry.push_back({IDM_COPILOT_EXPORT_CHAT, "Chat: Export Copilot Transcript (Markdown)", "", "AI"});
+    m_commandRegistry.push_back(
+        {IDM_COPILOT_RELOAD_HISTORY, "Chat: Reload Workspace Chat History From Disk", "", "AI"});
 
     // Failure Intelligence — Phase 6 (5023+ range — routed via handleToolsCommand)
     m_commandRegistry.push_back({5023, "AI: Toggle Failure Intelligence", "", "AI"});
@@ -11029,8 +12076,11 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({IDM_BACKEND_SHOW_SWITCHER, "Backend: Show Switcher Dialog", "", "Backend"});
     m_commandRegistry.push_back({IDM_BACKEND_CONFIGURE, "Backend: Configure Active Backend", "", "Backend"});
     m_commandRegistry.push_back({IDM_BACKEND_HEALTH_CHECK, "Backend: Health Check All Backends", "", "Backend"});
+    m_commandRegistry.push_back({IDM_INFERENCE_SPECULATIVE_RELOAD,
+                                 "Inference: Reload Speculative Decoding (Draft + Target GGUF)", "", "Inference"});
     m_commandRegistry.push_back({IDM_BACKEND_SET_API_KEY, "AI: Set API Key (Active Backend)", "", "AI"});
     m_commandRegistry.push_back({IDM_BACKEND_SAVE_CONFIGS, "Backend: Save Backend Configurations", "", "Backend"});
+    m_commandRegistry.push_back({IDM_BACKEND_TOGGLE_LOCAL_GPU, "Backend: Toggle LocalGGUF GPU", "", "Backend"});
 
     // ================================================================
     // LLM Router (5048–5057 range — routed via handleToolsCommand)
@@ -11345,6 +12395,98 @@ void Win32IDE::buildCommandRegistry()
     m_filteredCommands = m_commandRegistry;
 }
 
+std::vector<Win32IDE::LSPCodeAction> Win32IDE::lspCodeActions(const std::string& uri, int line, int startChar,
+                                                              int endChar,
+                                                              const std::vector<std::string>& diagnosticCodes)
+{
+    std::vector<LSPCodeAction> actions;
+    LSPLanguage lang = detectLanguageForFile(uriToFilePath(uri));
+    if (lang >= LSPLanguage::Count || m_lspStatuses[(size_t)lang].state != LSPServerState::Running)
+    {
+        return actions;
+    }
+
+    nlohmann::json params;
+    params["textDocument"]["uri"] = uri;
+    params["range"]["start"]["line"] = line;
+    params["range"]["start"]["character"] = startChar;
+    params["range"]["end"]["line"] = line;
+    params["range"]["end"]["character"] = endChar;
+
+    if (!diagnosticCodes.empty())
+    {
+        params["context"]["diagnostics"] = nlohmann::json::array();
+        for (const auto& code : diagnosticCodes)
+        {
+            params["context"]["diagnostics"].push_back(code);
+        }
+    }
+
+    int id = sendLSPRequest(lang, "textDocument/codeAction", params);
+    if (id < 0)
+        return actions;
+
+    nlohmann::json resp = readLSPResponse(lang, id, 5000);
+    m_lspStats.totalCodeActionRequests++;
+
+    if (!resp.contains("result") || !resp["result"].is_array())
+        return actions;
+
+    const auto& result = resp["result"];
+    for (size_t i = 0; i < result.size(); ++i)
+    {
+        const auto& aj = result[i];
+        LSPCodeAction action;
+        action.title = aj.value("title", "");
+        action.kind = aj.value("kind", "");
+
+        if (aj.contains("edit"))
+            action.hasEdit = true;
+        if (aj.contains("command") && aj["command"].is_object())
+            action.command = aj["command"].value("command", "");
+
+        actions.push_back(std::move(action));
+    }
+
+    return actions;
+}
+
+void Win32IDE::cmdLSPCodeActions()
+{
+    if (m_currentFile.empty() || !m_hwndEditor)
+    {
+        appendToOutput("[LSP] No active editor for code actions.", "General", OutputSeverity::Warning);
+        return;
+    }
+
+    CHARRANGE sel = {};
+    SendMessageW(m_hwndEditor, EM_EXGETSEL, 0, (LPARAM)&sel);
+
+    int line = SendMessageW(m_hwndEditor, EM_LINEFROMCHAR, sel.cpMin, 0);
+    int lineStart = SendMessageW(m_hwndEditor, EM_LINEINDEX, line, 0);
+    int startChar = sel.cpMin - lineStart;
+    int endChar = sel.cpMax - lineStart;
+
+    std::string uri = filePathToUri(m_currentFile);
+    std::vector<LSPCodeAction> actions = lspCodeActions(uri, line, startChar, endChar, {});
+
+    if (actions.empty())
+    {
+        appendToOutput("[LSP] No code actions available for this selection.", "General", OutputSeverity::Info);
+        return;
+    }
+
+    std::string output = "[LSP] Available code actions (" + std::to_string(actions.size()) + "):\n";
+    for (size_t i = 0; i < actions.size(); ++i)
+    {
+        output += "\n  " + std::to_string(i + 1) + ". " + actions[i].title;
+        if (!actions[i].kind.empty())
+            output += " [" + actions[i].kind + "]";
+    }
+
+    appendToOutput(output, "General", OutputSeverity::Info);
+}
+
 void Win32IDE::showCommandPalette()
 {
     if (m_commandPaletteVisible && m_hwndCommandPalette)
@@ -11450,8 +12592,9 @@ void Win32IDE::showCommandPalette()
     // Update command availability before populating
     updateCommandStates();
 
-    // Populate with all commands
+    // Populate with all commands (built-in + extensions)
     m_filteredCommands = m_commandRegistry;
+    m_filteredExtensionCommandIds.clear();
     m_fuzzyMatchPositions.clear();
     for (const auto& cmd : m_filteredCommands)
     {
@@ -11462,6 +12605,26 @@ void Win32IDE::showCommandPalette()
         }
         SendMessageA(m_hwndCommandPaletteList, LB_ADDSTRING, 0, (LPARAM)itemText.c_str());
         m_fuzzyMatchPositions.push_back({});  // no highlights when showing all
+        m_filteredExtensionCommandIds.emplace_back(); // empty = builtin
+    }
+
+    // Phase 5: Append extension commands
+    auto& extHost = RawrXD::Extensions::ExtensionHost::GetInstance();
+    if (extHost.IsInitialized()) {
+        auto extCmds = extHost.GetAvailableCommands();
+        for (const auto& cmdId : extCmds) {
+            CommandPaletteItem item;
+            item.id = -1; // sentinel: extension command
+            item.name = cmdId;
+            item.shortcut = "";
+            item.category = "Extension";
+            m_filteredCommands.push_back(item);
+            m_filteredExtensionCommandIds.push_back(cmdId);
+            m_fuzzyMatchPositions.push_back({});
+
+            std::string display = "Extension: " + cmdId;
+            SendMessageA(m_hwndCommandPaletteList, LB_ADDSTRING, 0, (LPARAM)display.c_str());
+        }
     }
 
     // Select first item
@@ -11492,6 +12655,7 @@ void Win32IDE::filterCommandPalette(const std::string& query)
     // Clear list
     SendMessageA(m_hwndCommandPaletteList, LB_RESETCONTENT, 0, 0);
     m_filteredCommands.clear();
+    m_filteredExtensionCommandIds.clear();
     m_fuzzyMatchPositions.clear();
 
     // ── Category prefix filter (:file, :ai, :theme, :git, etc.) ──
@@ -11600,6 +12764,7 @@ void Win32IDE::filterCommandPalette(const std::string& query)
     {
         const auto& cmd = m_commandRegistry[entry.registryIndex];
         m_filteredCommands.push_back(cmd);
+        m_filteredExtensionCommandIds.emplace_back(); // empty = builtin
         m_fuzzyMatchPositions.push_back(entry.fuzzy.matchPositions);
 
         std::string itemText = cmd.name;
@@ -11608,6 +12773,39 @@ void Win32IDE::filterCommandPalette(const std::string& query)
             itemText += "  [" + cmd.shortcut + "]";
         }
         SendMessageA(m_hwndCommandPaletteList, LB_ADDSTRING, 0, (LPARAM)itemText.c_str());
+    }
+
+    // Phase 5: Append matching extension commands
+    auto& extHost = RawrXD::Extensions::ExtensionHost::GetInstance();
+    if (extHost.IsInitialized()) {
+        auto extCmds = extHost.GetAvailableCommands();
+        for (const auto& cmdId : extCmds) {
+            bool matches = fuzzyQuery.empty();
+            if (!matches) {
+                std::string lowerCmd = cmdId;
+                std::transform(lowerCmd.begin(), lowerCmd.end(), lowerCmd.begin(),
+                               [](unsigned char c) { return (char)std::tolower(c); });
+                std::string lowerQ = fuzzyQuery;
+                std::transform(lowerQ.begin(), lowerQ.end(), lowerQ.begin(),
+                               [](unsigned char c) { return (char)std::tolower(c); });
+                matches = lowerCmd.find(lowerQ) != std::string::npos;
+            }
+            if (!categoryFilter.empty()) {
+                matches = matches && (categoryFilter == "ext" || categoryFilter == "extension");
+            }
+            if (matches) {
+                CommandPaletteItem item;
+                item.id = -1;
+                item.name = cmdId;
+                item.shortcut = "";
+                item.category = "Extension";
+                m_filteredCommands.push_back(item);
+                m_filteredExtensionCommandIds.push_back(cmdId);
+                m_fuzzyMatchPositions.push_back({});
+                std::string display = "Extension: " + cmdId;
+                SendMessageA(m_hwndCommandPaletteList, LB_ADDSTRING, 0, (LPARAM)display.c_str());
+            }
+        }
     }
 
     // Select first item if available
@@ -11628,9 +12826,25 @@ void Win32IDE::executeCommandFromPalette(int index)
     const auto& cmd = m_filteredCommands[index];
     int commandId = cmd.id;
     std::string cmdName = cmd.name;
-    bool enabled = isCommandEnabled(commandId);
 
     hideCommandPalette();
+
+    // Phase 5: Extension command dispatch (id == -1 sentinel)
+    if (commandId == -1 && index < (int)m_filteredExtensionCommandIds.size()) {
+        const std::string& extCmdId = m_filteredExtensionCommandIds[index];
+        auto& extHost = RawrXD::Extensions::ExtensionHost::GetInstance();
+        if (extHost.IsInitialized()) {
+            extHost.ExecuteCommand(extCmdId);
+            if (m_hwndStatusBar) {
+                std::string feedback = "\xE2\x9C\x93 Extension: " + extCmdId;
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)feedback.c_str());
+                SetTimer(m_hwndMain, IDT_STATUS_FLASH, 2000, nullptr);
+            }
+        }
+        return;
+    }
+
+    bool enabled = isCommandEnabled(commandId);
 
     if (!enabled)
     {
@@ -12370,7 +13584,7 @@ void Win32IDE::showMonacoSettingsDialog()
 // ============================================================================
 void Win32IDE::ExecuteToolingSmokeTest()
 {
-    // CRITICAL FIX: Demonstrate proper bounds checking for tool table access
+    // CRITICAL FIX: Proper bounds checking for tool table access
     //
     // BEFORE (BROKEN):
     //   if (count == 0) return;
@@ -12614,7 +13828,8 @@ bool Win32IDE::verifyFeatureRoutingCoverageAtStartup(std::string* report)
         IDM_ENTERPRISE_STRESS_SHOW,
     };
 
-    auto isHandledByFeatureSubrouter = [](int id) {
+    auto isHandledByFeatureSubrouter = [](int id)
+    {
         if (id >= IDM_TELEXPORT_JSON && id <= IDM_TELEXPORT_AUTO_STOP)
             return true;
         if (id >= IDM_COMPOSER_NEW_SESSION && id <= IDM_COMPOSER_SHOW_METRICS)
@@ -12655,8 +13870,7 @@ bool Win32IDE::verifyFeatureRoutingCoverageAtStartup(std::string* report)
 
     if (ok)
     {
-        oss << "[FeatureRouteVerifier] PASS: routed+handled IDs="
-            << (sizeof(kExpected) / sizeof(kExpected[0])) << "\n";
+        oss << "[FeatureRouteVerifier] PASS: routed+handled IDs=" << (sizeof(kExpected) / sizeof(kExpected[0])) << "\n";
     }
 
     const std::string summary = oss.str();
@@ -12942,9 +14156,13 @@ bool Win32IDE::handleOmegaOrchestratorCommand(int commandId)
             // Display OmegaOrchestrator diagnostic and performance statistics
             if (!omega.isActive())
             {
-                appendToOutput("[OmegaOrchestrator] Pipeline not active — no statistics available", "General",
-                               OutputSeverity::Info);
-                return true;
+                auto initResult = omega.initialize();
+                if (!initResult.success || !omega.isActive())
+                {
+                    appendToOutput("[OmegaOrchestrator] Pipeline not active — no statistics available", "General",
+                                   OutputSeverity::Info);
+                    return true;
+                }
             }
 
             auto stats = omega.getStats();
@@ -13790,6 +15008,8 @@ bool Win32IDE::handleKnowledgeGraphCommand(int commandId)
         case IDM_KNOWLEDGE_FLUSH:
         {
             if (!kg.isInitialized())
+                kg.initialize();
+            if (!kg.isInitialized())
             {
                 appendToOutput("[KnowledgeGraph] Not initialized — nothing to flush", "General",
                                OutputSeverity::Warning);
@@ -14084,7 +15304,7 @@ bool Win32IDE::handleFailureIntelligenceCommand(int commandId)
                 return true;
             }
 
-            // For demo: mark as Transient
+            // Mark as Transient
             g_failureIntelligence->learnFromFailure(*recent[0], Agentic::FailureCategory::Transient);
             appendToOutput("Pattern learned\n", "Output", OutputSeverity::Info);
             return true;

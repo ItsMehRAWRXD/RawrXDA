@@ -19,8 +19,8 @@ int get_current_device_id() {
   return dpct::dev_mgr::instance().current_device_id();
 }
 
-void* ggml_sycl_host_malloc(size_t size) try {
-  if (getenv("GGML_SYCL_NO_PINNED") != nullptr) {
+void* ggml_rxd_sycl_host_malloc(size_t size) try {
+  if (getenv("GGML_RXD_SYCL_NO_PINNED") != nullptr) {
     return nullptr;
   }
 
@@ -31,7 +31,7 @@ void* ggml_sycl_host_malloc(size_t size) try {
 
   if (err != 0) {
     // clear the error
-    GGML_LOG_ERROR("WARNING: failed to allocate %.2f MB of pinned memory: %s\n", size / 1024.0 / 1024.0,    "syclGetErrorString is not supported");
+    GGML_RXD_LOG_ERROR("WARNING: failed to allocate %.2f MB of pinned memory: %s\n", size / 1024.0 / 1024.0,    "syclGetErrorString is not supported");
     return nullptr;
   }
 
@@ -42,7 +42,7 @@ void* ggml_sycl_host_malloc(size_t size) try {
   std::exit(1);
 }
 
-void ggml_sycl_host_free(void* ptr) try {
+void ggml_rxd_sycl_host_free(void* ptr) try {
   // allow to use dpct::get_in_order_queue() for host malloc
   SYCL_CHECK(CHECK_TRY_ERROR(sycl::free(ptr, dpct::get_in_order_queue())));
 } catch (sycl::exception const& exc) {
@@ -66,15 +66,15 @@ int64_t downsample_sycl_global_range(int64_t accumulate_block_num, int64_t block
   return sycl_down_blk_size;
 }
 
-void release_extra_gpu(ggml_tensor_extra_gpu * extra, std::vector<queue_ptr> streams) {
-    for (int i = 0; i < ggml_sycl_info().device_count; ++i) {
-        for (int64_t is = 0; is < GGML_SYCL_MAX_STREAMS; ++is) {
+void release_extra_gpu(ggml_rxd_tensor_extra_gpu * extra, std::vector<queue_ptr> streams) {
+    for (int i = 0; i < ggml_rxd_sycl_info().device_count; ++i) {
+        for (int64_t is = 0; is < GGML_RXD_SYCL_MAX_STREAMS; ++is) {
             if (extra->events[i][is] != nullptr) {
                 SYCL_CHECK(CHECK_TRY_ERROR(dpct::destroy_event(extra->events[i][is])));
             }
         }
         if (extra->data_device[i] != nullptr && streams.size()>0) {
-            ggml_sycl_set_device(i);
+            ggml_rxd_sycl_set_device(i);
             SYCL_CHECK(
                 CHECK_TRY_ERROR(sycl::free(extra->data_device[i], *(streams[i]))));
         }

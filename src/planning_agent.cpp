@@ -29,7 +29,10 @@ PlanningAgent::~PlanningAgent() {
 }
 
 void PlanningAgent::initialize() {
-    // Setup initial state if needed
+    // Setup initial state
+    m_initialized = true;
+    m_planCount = 0;
+    m_lastPlanTime = std::chrono::steady_clock::now();
 }
 
 void PlanningAgent::setAgenticEngine(AgenticEngine* engine) {

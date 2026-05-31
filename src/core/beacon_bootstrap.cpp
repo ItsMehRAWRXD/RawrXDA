@@ -27,6 +27,10 @@
 #endif
 #include <windows.h>
 
+#ifndef RAWRXD_MIC_DEPS_DISABLED
+#define RAWRXD_MIC_DEPS_DISABLED 1
+#endif
+
 namespace RawrXD {
 
 // ============================================================================
@@ -158,9 +162,11 @@ static const VerbRoute g_verbRoutes[] = {
     { "mcp.resource.list",      BeaconKind::MCPServer },
 
     // ── Voice verbs ──
+#if !RAWRXD_MIC_DEPS_DISABLED
     { "voice.start",            BeaconKind::VoiceEngine },
     { "voice.stop",             BeaconKind::VoiceEngine },
     { "voice.tts",              BeaconKind::VoiceEngine },
+#endif
 
     // ── Git verbs ──
     { "git.commit",             BeaconKind::GitIntegration },
@@ -266,7 +272,9 @@ void bootstrapBeaconSystem(void* ide) {
         { BeaconKind::BackendSwitcher,   "BackendSwitcher"   },
         { BeaconKind::ProxyHotpatcher,   "ProxyHotpatcher"   },
         { BeaconKind::SelfRepairAgent,   "SelfRepairAgent"   },
+    #if !RAWRXD_MIC_DEPS_DISABLED
         { BeaconKind::VoiceEngine,       "VoiceEngine"       },
+    #endif
         { BeaconKind::StaticAnalysis,    "StaticAnalysis"     },
         { BeaconKind::SemanticIntel,     "SemanticIntel"     },
         { BeaconKind::GitIntegration,    "GitIntegration"    },
@@ -291,7 +299,9 @@ void bootstrapBeaconSystem(void* ide) {
         { BeaconKind::PanelSemantic,       "PanelSemantic"       },
         { BeaconKind::PanelStaticAnalysis, "PanelStaticAnalysis" },
         { BeaconKind::PanelTelemetry,      "PanelTelemetry"      },
+    #if !RAWRXD_MIC_DEPS_DISABLED
         { BeaconKind::PanelVoiceChat,      "PanelVoiceChat"      },
+    #endif
         { BeaconKind::PanelNetwork,        "PanelNetwork"        },
         { BeaconKind::PanelPowerShell,     "PanelPowerShell"     },
         { BeaconKind::PanelGit,            "PanelGit"            },

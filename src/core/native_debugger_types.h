@@ -398,7 +398,7 @@ typedef void (*BreakpointHitCallback)(const NativeBreakpoint* bp, const Register
 //                    ASM Kernel Interface (extern "C")
 // =============================================================================
 // These match the MASM64 exports in RawrXD_Debug_Engine.asm.
-// Stubs in debug_engine_stubs.cpp provide fallback when .obj is unavailable.
+// Fallback implementations in debug_engine_stubs.cpp when .obj is unavailable.
 
 #ifdef __cplusplus
 extern "C" {

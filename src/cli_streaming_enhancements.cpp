@@ -22,11 +22,6 @@ void initializeStreamingEnhancements() {
     g_batchEngine = std::make_unique<BatchProcessingEngine>(4);
     g_cacheManager = std::make_unique<KVCacheManager>(512 * 1024 * 1024);  // 512MB
     g_enhancedEngine = std::make_unique<EnhancedCLIEngine>();
-    
-    std::cout << "[INIT] Streaming enhancements initialized" << std::endl;
-    std::cout << "  - Async streaming engine: Ready" << std::endl;
-    std::cout << "  - Batch processing engine: Ready (4 workers)" << std::endl;
-    std::cout << "  - KV-cache manager: Ready (512MB)" << std::endl;
 }
 
 // ============================================================================
@@ -34,8 +29,6 @@ void initializeStreamingEnhancements() {
 // ============================================================================
 
 void cmdStreamAsync(const std::string& prompt) {
-    std::cout << "[INFO] Starting async streaming (non-blocking)..." << std::endl;
-    
     int tokenCount = 0;
     std::string fullResponse;
     
@@ -56,9 +49,6 @@ void cmdStreamAsync(const std::string& prompt) {
             }
         }
     );
-    
-    // Don't block - async operation continues
-    std::cout << "[INFO] Streaming in background. CLI remains responsive." << std::endl;
 }
 
 void cmdWaitStream(int timeoutMs) {

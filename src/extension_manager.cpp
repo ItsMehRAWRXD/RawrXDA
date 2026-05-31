@@ -156,7 +156,16 @@ bool ExtensionManager::executePowerShellCommand(const std::string& command, std:
     int exitCode = _pclose(pipe);
     return exitCode == 0;
 #else
-    return false; // Unix support would go here
+    // POSIX fallback using popen
+    std::string fullCmd = command + " 2>&1";
+    FILE* pipe = popen(fullCmd.c_str(), "r");
+    if (!pipe) return false;
+    char buffer[256];
+    while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+        output += buffer;
+    }
+    int exitCode = pclose(pipe);
+    return exitCode == 0;
 #endif
 }
 

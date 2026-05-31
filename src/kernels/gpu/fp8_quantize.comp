@@ -1,0 +1,31 @@
+// fp8_quantize.comp
+// Vulkan compute shader for FP8 quantization.
+// Matches CPU sovereign_fp8_quantize_avx512 interface for A/B parity.
+// Compile: glslangValidator -V fp8_quantize.comp -o fp8_quantize.spv
+
+#version 450
+#extension GL_KHR_memory_scope_semantics : enable
+
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) readonly buffer SrcBuffer {
+    float data[];
+} src;
+
+layout(set = 0, binding = 1) writeonly buffer DstBuffer {
+    uint data[];
+} dst;
+
+layout(push_constant) uniform Params {
+    float scale;
+    uint  element_count;
+} params;
+
+void main() {
+    uint gid = gl_GlobalInvocationID.x;
+    if (gid >= params.element_count) return;
+
+    float v = src.data[gid] * params.scale;
+    v = clamp(v, -448.0, 448.0);
+    dst.data[gid] = uint(int(v) & 0xFF);
+}

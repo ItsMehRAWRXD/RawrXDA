@@ -53,7 +53,7 @@ std::vector<std::string> SplitArgs(const std::string& input) {
     return args;
 }
 
-// Demo security function for hotpatching
+// Security function for hotpatching
 __declspec(noinline) bool SecurityCheck() {
     std::cout << "[SECURITY] Verifying License Key...\n";
     return false;

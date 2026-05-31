@@ -1,5 +1,5 @@
-#define GGML_COMMON_IMPL_CPP
-#define GGML_COMMON_DECL_CPP
+#define GGML_RXD_COMMON_IMPL_CPP
+#define GGML_RXD_COMMON_DECL_CPP
 #include "ggml-common.h"
 #include "ggml-backend-impl.h"
 
@@ -13,18 +13,18 @@
 #include <cstring>
 #include <cassert>
 #include <cstdlib> // for qsort
-#include <cstdio>  // for GGML_ASSERT
+#include <cstdio>  // for GGML_RXD_ASSERT
 
-#define GGML_CPU_CLANG_WORKAROUND
+#define GGML_RXD_CPU_CLANG_WORKAROUND
 #include "../../repack.h"
 
 #if defined(__GNUC__)
 #pragma GCC diagnostic ignored "-Woverlength-strings"
 #endif
 
-#define UNUSED GGML_UNUSED
+#define UNUSED GGML_RXD_UNUSED
 
-void ggml_gemv_q4_0_8x8_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, const void * GGML_RESTRICT vy, int nr, int nc) {
+void ggml_rxd_gemv_q4_0_8x8_q8_0(int n, float * GGML_RXD_RESTRICT s, size_t bs, const void * GGML_RXD_RESTRICT vx, const void * GGML_RXD_RESTRICT vy, int nr, int nc) {
     const int qk = QK8_0;
     const int nb = n / qk;
     const int ncols_interleaved = 8;
@@ -91,16 +91,16 @@ void ggml_gemv_q4_0_8x8_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const vo
                 const vfloat32m1_t facc = __riscv_vfcvt_f_x_v_f32m1(sumi_h8, vl / 4);
 
                 // vector version needs Zvfhmin extension
-                const float a_scale = GGML_CPU_FP16_TO_FP32(a_ptr[l].d);
+                const float a_scale = GGML_RXD_CPU_FP16_TO_FP32(a_ptr[l].d);
                 const float b_scales[8] = {
-                    GGML_CPU_FP16_TO_FP32(b_ptr[l].d[0]),
-                    GGML_CPU_FP16_TO_FP32(b_ptr[l].d[1]),
-                    GGML_CPU_FP16_TO_FP32(b_ptr[l].d[2]),
-                    GGML_CPU_FP16_TO_FP32(b_ptr[l].d[3]),
-                    GGML_CPU_FP16_TO_FP32(b_ptr[l].d[4]),
-                    GGML_CPU_FP16_TO_FP32(b_ptr[l].d[5]),
-                    GGML_CPU_FP16_TO_FP32(b_ptr[l].d[6]),
-                    GGML_CPU_FP16_TO_FP32(b_ptr[l].d[7])
+                    GGML_RXD_CPU_FP16_TO_FP32(b_ptr[l].d[0]),
+                    GGML_RXD_CPU_FP16_TO_FP32(b_ptr[l].d[1]),
+                    GGML_RXD_CPU_FP16_TO_FP32(b_ptr[l].d[2]),
+                    GGML_RXD_CPU_FP16_TO_FP32(b_ptr[l].d[3]),
+                    GGML_RXD_CPU_FP16_TO_FP32(b_ptr[l].d[4]),
+                    GGML_RXD_CPU_FP16_TO_FP32(b_ptr[l].d[5]),
+                    GGML_RXD_CPU_FP16_TO_FP32(b_ptr[l].d[6]),
+                    GGML_RXD_CPU_FP16_TO_FP32(b_ptr[l].d[7])
                 };
                 const vfloat32m1_t b_scales_vec = __riscv_vle32_v_f32m1(b_scales, vl / 4);
                 const vfloat32m1_t tmp1 = __riscv_vfmul_vf_f32m1(facc, a_scale, vl / 4);
@@ -112,10 +112,10 @@ void ggml_gemv_q4_0_8x8_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const vo
     }
 
 #endif
-    ggml_gemv_q4_0_8x8_q8_0_generic(n, s, bs, vx, vy, nr, nc);
+    ggml_rxd_gemv_q4_0_8x8_q8_0_generic(n, s, bs, vx, vy, nr, nc);
 }
 
-void ggml_gemm_q4_0_8x8_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, const void * GGML_RESTRICT vy, int nr, int nc) {
+void ggml_rxd_gemm_q4_0_8x8_q8_0(int n, float * GGML_RXD_RESTRICT s, size_t bs, const void * GGML_RXD_RESTRICT vx, const void * GGML_RXD_RESTRICT vy, int nr, int nc) {
     const int qk = QK8_0;
     const int nb = n / qk;
     const int ncols_interleaved = 8;
@@ -158,20 +158,20 @@ void ggml_gemm_q4_0_8x8_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const vo
 
                     // vector version needs Zvfhmin extension
                     const float a_scales[4] = {
-                        GGML_CPU_FP16_TO_FP32(a_ptr[l].d[0]),
-                        GGML_CPU_FP16_TO_FP32(a_ptr[l].d[1]),
-                        GGML_CPU_FP16_TO_FP32(a_ptr[l].d[2]),
-                        GGML_CPU_FP16_TO_FP32(a_ptr[l].d[3])
+                        GGML_RXD_CPU_FP16_TO_FP32(a_ptr[l].d[0]),
+                        GGML_RXD_CPU_FP16_TO_FP32(a_ptr[l].d[1]),
+                        GGML_RXD_CPU_FP16_TO_FP32(a_ptr[l].d[2]),
+                        GGML_RXD_CPU_FP16_TO_FP32(a_ptr[l].d[3])
                     };
                     const float b_scales[8] = {
-                        GGML_CPU_FP16_TO_FP32(b_ptr[l].d[0]),
-                        GGML_CPU_FP16_TO_FP32(b_ptr[l].d[1]),
-                        GGML_CPU_FP16_TO_FP32(b_ptr[l].d[2]),
-                        GGML_CPU_FP16_TO_FP32(b_ptr[l].d[3]),
-                        GGML_CPU_FP16_TO_FP32(b_ptr[l].d[4]),
-                        GGML_CPU_FP16_TO_FP32(b_ptr[l].d[5]),
-                        GGML_CPU_FP16_TO_FP32(b_ptr[l].d[6]),
-                        GGML_CPU_FP16_TO_FP32(b_ptr[l].d[7])
+                        GGML_RXD_CPU_FP16_TO_FP32(b_ptr[l].d[0]),
+                        GGML_RXD_CPU_FP16_TO_FP32(b_ptr[l].d[1]),
+                        GGML_RXD_CPU_FP16_TO_FP32(b_ptr[l].d[2]),
+                        GGML_RXD_CPU_FP16_TO_FP32(b_ptr[l].d[3]),
+                        GGML_RXD_CPU_FP16_TO_FP32(b_ptr[l].d[4]),
+                        GGML_RXD_CPU_FP16_TO_FP32(b_ptr[l].d[5]),
+                        GGML_RXD_CPU_FP16_TO_FP32(b_ptr[l].d[6]),
+                        GGML_RXD_CPU_FP16_TO_FP32(b_ptr[l].d[7])
                     };
                     const vfloat32m1_t b_scales_vec = __riscv_vle32_v_f32m1(b_scales, vl / 4);
 
@@ -338,5 +338,5 @@ void ggml_gemm_q4_0_8x8_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const vo
     }
 
 #endif
-    ggml_gemm_q4_0_8x8_q8_0_generic(n, s, bs, vx, vy, nr, nc);
+    ggml_rxd_gemm_q4_0_8x8_q8_0_generic(n, s, bs, vx, vy, nr, nc);
 }

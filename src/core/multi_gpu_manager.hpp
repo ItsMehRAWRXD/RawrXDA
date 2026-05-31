@@ -9,7 +9,11 @@ namespace Enterprise {
 struct LayerAssignment;
 struct MultiGPUResult;
 enum class DispatchStrategy;
-class MultiGPUManager;
+class MultiGPUManager {
+public:
+    static MultiGPUManager& Instance();
+    void UpdateFabricTelemetry(double latencyMs);
+};
 
 } // namespace Enterprise
 } // namespace RawrXD

@@ -78,16 +78,16 @@ struct is_type_qkk : std::integral_constant<bool,
     std::is_same<T, block_q6_K>::value ||
     std::is_same<T, block_iq4_xs>::value> {};
 
-#define GGML_DISPATCH_FLOATING_TYPES(TYPE, ...)                                        \
+#define GGML_RXD_DISPATCH_FLOATING_TYPES(TYPE, ...)                                        \
     [&] {                                                                              \
         switch (TYPE) {                                                                \
-            case GGML_TYPE_F16: {                                                      \
-                using type = ggml_fp16_t;                                              \
+            case GGML_RXD_TYPE_F16: {                                                      \
+                using type = ggml_rxd_fp16_t;                                              \
                 constexpr int blck_size = 16;                                          \
                 return __VA_ARGS__();                                                  \
             }                                                                          \
-            case GGML_TYPE_BF16: {                                                     \
-                using type = ggml_bf16_t;                                              \
+            case GGML_RXD_TYPE_BF16: {                                                     \
+                using type = ggml_rxd_bf16_t;                                              \
                 constexpr int blck_size = 32;                                          \
                 return __VA_ARGS__();                                                  \
             }                                                                          \
@@ -96,46 +96,46 @@ struct is_type_qkk : std::integral_constant<bool,
         }                                                                              \
     }()
 
-#define GGML_DISPATCH_QTYPES(QT, ...)                                                  \
+#define GGML_RXD_DISPATCH_QTYPES(QT, ...)                                                  \
     [&] {                                                                              \
         switch (QT) {                                                                  \
-            case GGML_TYPE_Q4_0: {                                                     \
+            case GGML_RXD_TYPE_Q4_0: {                                                     \
                 using type = block_q4_0;                                               \
                 using vec_dot_type = block_q8_0;                                       \
                 constexpr int blck_size = QK4_0;                                       \
                 return __VA_ARGS__();                                                  \
             }                                                                          \
-            case GGML_TYPE_Q4_1: {                                                     \
+            case GGML_RXD_TYPE_Q4_1: {                                                     \
                 using type = block_q4_1;                                               \
                 using vec_dot_type = block_q8_1;                                       \
                 constexpr int blck_size = QK4_1;                                       \
                 return __VA_ARGS__();                                                  \
             }                                                                          \
-            case GGML_TYPE_Q8_0: {                                                     \
+            case GGML_RXD_TYPE_Q8_0: {                                                     \
                 using type = block_q8_0;                                               \
                 using vec_dot_type = block_q8_0;                                       \
                 constexpr int blck_size = QK8_0;                                       \
                 return __VA_ARGS__();                                                  \
             }                                                                          \
-            case GGML_TYPE_Q4_K: {                                                     \
+            case GGML_RXD_TYPE_Q4_K: {                                                     \
                 using type = block_q4_K;                                               \
                 using vec_dot_type = block_q8_K;                                       \
                 constexpr int blck_size = QK_K;                                        \
                 return __VA_ARGS__();                                                  \
             }                                                                          \
-            case GGML_TYPE_Q5_K: {                                                     \
+            case GGML_RXD_TYPE_Q5_K: {                                                     \
                 using type = block_q5_K;                                               \
                 using vec_dot_type = block_q8_K;                                       \
                 constexpr int blck_size = QK_K;                                        \
                 return __VA_ARGS__();                                                  \
             }                                                                          \
-            case GGML_TYPE_Q6_K: {                                                     \
+            case GGML_RXD_TYPE_Q6_K: {                                                     \
                 using type = block_q6_K;                                               \
                 using vec_dot_type = block_q8_K;                                       \
                 constexpr int blck_size = QK_K;                                        \
                 return __VA_ARGS__();                                                  \
             }                                                                          \
-            case GGML_TYPE_IQ4_XS: {                                                   \
+            case GGML_RXD_TYPE_IQ4_XS: {                                                   \
                 using type = block_iq4_xs;                                             \
                 using vec_dot_type = block_q8_K;                                       \
                 constexpr int blck_size = QK_K;                                        \
@@ -146,7 +146,7 @@ struct is_type_qkk : std::integral_constant<bool,
         }                                                                              \
     }()
 
-#define GGML_DISPATCH_BOOL(BOOL_V, BOOL_NAME, ...)                                     \
+#define GGML_RXD_DISPATCH_BOOL(BOOL_V, BOOL_NAME, ...)                                     \
     [&] {                                                                              \
         if (BOOL_V) {                                                                  \
             constexpr bool BOOL_NAME = true;                                           \
@@ -203,7 +203,7 @@ struct tile_config_t{
 //
 
 #define TC_CONFIG_TILE(i, r, cb) tc.rows[i] = r; tc.colsb[i] = cb
-void ggml_tile_config_init(void) {
+void ggml_rxd_tile_config_init(void) {
     static thread_local bool is_first_time = true;
 
     if (!is_first_time) {
@@ -269,14 +269,14 @@ int get_row_size(int K) {
 }
 
 // vectorized dtype conversion
-inline float FP16_TO_FP32(ggml_half val) {
+inline float FP16_TO_FP32(ggml_rxd_half val) {
     __m256i v = _mm256_setr_epi16(
         val, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     __m512 o = _mm512_cvtph_ps(v);
     return _mm512_cvtss_f32(o);
 }
 
-inline __m512 FP16_TO_FP32_VEC(ggml_half val) {
+inline __m512 FP16_TO_FP32_VEC(ggml_rxd_half val) {
     __m256i v = _mm256_set1_epi16(val);
     return _mm512_cvtph_ps(v);
 }
@@ -454,7 +454,7 @@ void quantize_row_q8_K_vnni(const float * RESTRICT x, void * RESTRICT vy, int64_
 
         // Quantize these floats
         const float iscale = 127.f / amax;
-        y[i].d = GGML_CPU_FP32_TO_FP16(1 / iscale);
+        y[i].d = GGML_RXD_CPU_FP32_TO_FP16(1 / iscale);
         const float id = ( amax != 0.0f ) ? iscale : 0.f;
         const __m512 vscale = _mm512_set1_ps(id);
 
@@ -787,7 +787,7 @@ inline void pack_qs<block_iq4_xs>(void * RESTRICT packed_B, const block_iq4_xs *
 // pack B to vnni formats in 4bits or 8 bits
 void pack_B(void * RESTRICT packed_B, const block_q4_0 * RESTRICT B, int KB) {
     pack_qs(packed_B, B, KB);
-    ggml_half * d0 = reinterpret_cast<ggml_half *>((char *)packed_B + TILE_N * TILE_K / 2);
+    ggml_rxd_half * d0 = reinterpret_cast<ggml_rxd_half *>((char *)packed_B + TILE_N * TILE_K / 2);
     for (int n = 0; n < TILE_N; ++n) {
         d0[n] = B[n * KB].d;
     }
@@ -795,8 +795,8 @@ void pack_B(void * RESTRICT packed_B, const block_q4_0 * RESTRICT B, int KB) {
 
 void pack_B(void * RESTRICT packed_B, const block_q4_1 * RESTRICT B, int KB) {
     pack_qs(packed_B, B, KB);
-    ggml_half * d0 = reinterpret_cast<ggml_half *>((char *)packed_B + TILE_N * TILE_K / 2);
-    ggml_half * m0 = d0 + TILE_N;
+    ggml_rxd_half * d0 = reinterpret_cast<ggml_rxd_half *>((char *)packed_B + TILE_N * TILE_K / 2);
+    ggml_rxd_half * m0 = d0 + TILE_N;
     for (int n = 0; n < TILE_N; ++n) {
         d0[n] = B[n * KB].d;
         m0[n] = B[n * KB].m;
@@ -806,9 +806,9 @@ void pack_B(void * RESTRICT packed_B, const block_q4_1 * RESTRICT B, int KB) {
 inline void s8s8_compensation(void * RESTRICT packed_B) {
     // packed_B layout:
     //   quants {TILE_N, TILEK}  int8_t
-    //   d0     {TILE_N}      ggml_half
+    //   d0     {TILE_N}      ggml_rxd_half
     //   comp   {TILE_N}        int32_t
-    const int offset = TILE_N * TILE_K + TILE_N * sizeof(ggml_half);
+    const int offset = TILE_N * TILE_K + TILE_N * sizeof(ggml_rxd_half);
     __m512i vcomp = _mm512_setzero_si512();
     const __m512i off = _mm512_set1_epi8(static_cast<char>(0x80));
     for (int k = 0; k < 8; ++k) {
@@ -820,7 +820,7 @@ inline void s8s8_compensation(void * RESTRICT packed_B) {
 
 void pack_B(void * RESTRICT packed_B, const block_q8_0 * RESTRICT B, int KB) {
     pack_qs(packed_B, B, KB);
-    ggml_half * d0 = reinterpret_cast<ggml_half *>((char *)packed_B + TILE_N * TILE_K);
+    ggml_rxd_half * d0 = reinterpret_cast<ggml_rxd_half *>((char *)packed_B + TILE_N * TILE_K);
     for (int n = 0; n < TILE_N; ++n) {
         d0[n] = B[n * KB].d;
     }
@@ -845,15 +845,15 @@ inline void unpack_mins_and_scales(const uint8_t * scales, uint32_t * utmp) {
 //   quants {8, TILE_N, 16}  uint8
 //   scales {8, TILE_N}      uint8
 //   mins   {8, TILE_N}      uint8
-//   d      {TILE_N}     ggml_half
-//   dmin   {TILE_N}     ggml_half
+//   d      {TILE_N}     ggml_rxd_half
+//   dmin   {TILE_N}     ggml_rxd_half
 void pack_B(void * RESTRICT packed_B, const block_q4_K * RESTRICT B, int KB) {
     pack_qs(packed_B, B, KB);
 
     uint8_t * scales = reinterpret_cast<uint8_t *>((char *)packed_B + (QK_K / 2) * TILE_N);
     uint8_t * mins = scales + 8 * TILE_N;
-    ggml_half * d = reinterpret_cast<ggml_half *>(mins + 8 * TILE_N);
-    ggml_half * dmin = d + TILE_N;
+    ggml_rxd_half * d = reinterpret_cast<ggml_rxd_half *>(mins + 8 * TILE_N);
+    ggml_rxd_half * dmin = d + TILE_N;
 
     union {
         uint32_t u32[4];
@@ -876,15 +876,15 @@ void pack_B(void * RESTRICT packed_B, const block_q4_K * RESTRICT B, int KB) {
 //   qh     {8, TILE_N,  4}  uint8
 //   scales {8, TILE_N}      uint8
 //   mins   {8, TILE_N}      uint8
-//   d      {TILE_N}     ggml_half
-//   dmin   {TILE_N}     ggml_half
+//   d      {TILE_N}     ggml_rxd_half
+//   dmin   {TILE_N}     ggml_rxd_half
 void pack_B(void * RESTRICT packed_B, const block_q5_K * RESTRICT B, int KB) {
     pack_qs(packed_B, B, KB);
 
     uint8_t * scales = reinterpret_cast<uint8_t *>((char *)packed_B + (QK_K / 2) * TILE_N + (QK_K / 8) * TILE_N);
     uint8_t * mins = scales + 8 * TILE_N;
-    ggml_half * d = reinterpret_cast<ggml_half *>(mins + 8 * TILE_N);
-    ggml_half * dmin = d + TILE_N;
+    ggml_rxd_half * d = reinterpret_cast<ggml_rxd_half *>(mins + 8 * TILE_N);
+    ggml_rxd_half * dmin = d + TILE_N;
 
     union {
         uint32_t u32[4];
@@ -906,12 +906,12 @@ void pack_B(void * RESTRICT packed_B, const block_q5_K * RESTRICT B, int KB) {
 //   quants {16, TILE_N, 8}  uint8
 //   qh     {16, TILE_N, 4}  uint8
 //   scales {16, TILE_N}      uint8
-//   d      {TILE_N}     ggml_half
+//   d      {TILE_N}     ggml_rxd_half
 void pack_B(void * RESTRICT packed_B, const block_q6_K * RESTRICT B, int KB) {
     pack_qs(packed_B, B, KB);
 
     uint8_t * scales = reinterpret_cast<uint8_t *>((char *)packed_B + (QK_K / 2) * TILE_N + (QK_K / 4) * TILE_N);
-    ggml_half * d = reinterpret_cast<ggml_half *>(scales + 16 * TILE_N);
+    ggml_rxd_half * d = reinterpret_cast<ggml_rxd_half *>(scales + 16 * TILE_N);
     for (int n = 0; n < TILE_N; ++n) {
         const int8_t * ps = B[n * KB].scales;
         for (int k = 0; k < 16; ++k) {
@@ -924,12 +924,12 @@ void pack_B(void * RESTRICT packed_B, const block_q6_K * RESTRICT B, int KB) {
 // packed_B layout:
 //   quants {8, TILE_N, 16}  uint8
 //   scales {8, TILE_N}       int8
-//   d      {TILE_N}     ggml_half
+//   d      {TILE_N}     ggml_rxd_half
 void pack_B(void * RESTRICT packed_B, const block_iq4_xs * RESTRICT B, int KB) {
     pack_qs(packed_B, B, KB);
 
     int8_t * scales = reinterpret_cast<int8_t *>((char *)packed_B + (QK_K / 2) * TILE_N);
-    ggml_half * d = reinterpret_cast<ggml_half *>(scales + 8 * TILE_N);
+    ggml_rxd_half * d = reinterpret_cast<ggml_rxd_half *>(scales + 8 * TILE_N);
 
     // pack the scales
     for (int n = 0; n < TILE_N; ++n) {
@@ -947,8 +947,8 @@ void pack_B(void * RESTRICT packed_B, const block_iq4_xs * RESTRICT B, int KB) {
 
 template<typename TB, typename packed_B_t = packed_B_type<TB>>
 void unpack_B(packed_B_t * RESTRICT tile, const void * RESTRICT packed_B) {
-    GGML_UNUSED(tile);
-    GGML_UNUSED(packed_B);
+    GGML_RXD_UNUSED(tile);
+    GGML_RXD_UNUSED(packed_B);
 }
 
 template <>
@@ -1091,7 +1091,7 @@ struct acc_C<block_q8_0, block_q4_0, is_acc> {
         const __m512 vd0 = _mm512_cvtph_ps(_mm256_loadu_si256((const __m256i *)((const char *)packed_B + offset)));
 
         for (int m = 0; m < nr; ++m) {
-            const __m512 vd1 = _mm512_set1_ps(GGML_CPU_FP16_TO_FP32(A[m * lda].d));
+            const __m512 vd1 = _mm512_set1_ps(GGML_RXD_CPU_FP16_TO_FP32(A[m * lda].d));
             const __m512 vtile = _mm512_cvtepi32_ps(_mm512_loadu_si512(tile + m * TILE_N));
 
             __m512 vsum;
@@ -1111,11 +1111,11 @@ struct acc_C<block_q8_1, block_q4_1, is_acc> {
     static void apply(float * RESTRICT C, int ldc, const int32_t * RESTRICT tile, const block_q8_1 * A, int lda, const void * packed_B, int nr) {
         const int offset = TILE_N * TILE_K / 2;
         const __m512 vd0 = _mm512_cvtph_ps(_mm256_loadu_si256((const __m256i *)((const char *)packed_B + offset)));
-        const __m512 vm0 = _mm512_cvtph_ps(_mm256_loadu_si256((const __m256i *)((const char *)packed_B + offset + TILE_N * sizeof(ggml_half))));
+        const __m512 vm0 = _mm512_cvtph_ps(_mm256_loadu_si256((const __m256i *)((const char *)packed_B + offset + TILE_N * sizeof(ggml_rxd_half))));
 
         for (int m = 0; m < nr; ++m) {
-            const __m512 vd1 = _mm512_set1_ps(GGML_CPU_FP16_TO_FP32(A[m * lda].d));
-            const __m512 vs1 = _mm512_set1_ps(GGML_CPU_FP16_TO_FP32(A[m * lda].s));
+            const __m512 vd1 = _mm512_set1_ps(GGML_RXD_CPU_FP16_TO_FP32(A[m * lda].d));
+            const __m512 vs1 = _mm512_set1_ps(GGML_RXD_CPU_FP16_TO_FP32(A[m * lda].s));
             const __m512 vtile = _mm512_cvtepi32_ps(_mm512_loadu_si512(tile + m * TILE_N));
 
             __m512 vsum;
@@ -1138,7 +1138,7 @@ struct acc_C<block_q8_0, block_q8_0, is_acc> {
         const __m512 vd0 = _mm512_cvtph_ps(_mm256_loadu_si256((const __m256i *)((const char *)packed_B + offset)));
 
         for (int m = 0; m < nr; ++m) {
-            const __m512 vd1 = _mm512_set1_ps(GGML_CPU_FP16_TO_FP32(A[m * lda].d));
+            const __m512 vd1 = _mm512_set1_ps(GGML_RXD_CPU_FP16_TO_FP32(A[m * lda].d));
             const __m512 vtile = _mm512_cvtepi32_ps(_mm512_loadu_si512(tile + m * TILE_N));
 
             __m512 vsum;
@@ -1158,8 +1158,8 @@ struct acc_C<block_q8_K, block_q4_K, is_acc> {
     static void apply(float * RESTRICT C, int ldc, const int32_t * RESTRICT tile, const block_q8_K * A, int lda, const void * packed_B, int nr) {
         const uint8_t * scales = reinterpret_cast<const uint8_t *>((const char *)packed_B + (QK_K / 2) * TILE_N);
         const uint8_t * mins = scales + 8 * TILE_N;
-        const ggml_half * d0 = reinterpret_cast<const ggml_half *>(mins + 8 * TILE_N);
-        const ggml_half * dmin = d0 + TILE_N;
+        const ggml_rxd_half * d0 = reinterpret_cast<const ggml_rxd_half *>(mins + 8 * TILE_N);
+        const ggml_rxd_half * dmin = d0 + TILE_N;
 
         const __m512 vd0 = _mm512_cvtph_ps(_mm256_loadu_si256((const __m256i *)d0));
         const __m512 vdmin = _mm512_cvtph_ps(_mm256_loadu_si256((const __m256i *)dmin));
@@ -1200,8 +1200,8 @@ struct acc_C<block_q8_K, block_q5_K, is_acc> {
     static void apply(float * RESTRICT C, int ldc, const int32_t * RESTRICT tile, const block_q8_K * A, int lda, const void * packed_B, int nr) {
         const uint8_t * scales = reinterpret_cast<const uint8_t *>((const char *)packed_B + (QK_K / 2) * TILE_N + (QK_K / 8) * TILE_N);
         const uint8_t * mins = scales + 8 * TILE_N;
-        const ggml_half * d0 = reinterpret_cast<const ggml_half *>(mins + 8 * TILE_N);
-        const ggml_half * dmin = d0 + TILE_N;
+        const ggml_rxd_half * d0 = reinterpret_cast<const ggml_rxd_half *>(mins + 8 * TILE_N);
+        const ggml_rxd_half * dmin = d0 + TILE_N;
 
         const __m512 vd0 = _mm512_cvtph_ps(_mm256_loadu_si256((const __m256i *)d0));
         const __m512 vdmin = _mm512_cvtph_ps(_mm256_loadu_si256((const __m256i *)dmin));
@@ -1241,7 +1241,7 @@ template <bool is_acc>
 struct acc_C<block_q8_K, block_q6_K, is_acc> {
     static void apply(float * RESTRICT C, int ldc, const int32_t * RESTRICT tile, const block_q8_K * A, int lda, const void * packed_B, int nr) {
         const uint8_t * scales = reinterpret_cast<const uint8_t *>((const char *)packed_B + (QK_K / 2) * TILE_N + (QK_K / 4) * TILE_N);
-        const ggml_half * d0 = reinterpret_cast<const ggml_half *>(scales + 16 * TILE_N);
+        const ggml_rxd_half * d0 = reinterpret_cast<const ggml_rxd_half *>(scales + 16 * TILE_N);
 
         const __m512 vd0 = _mm512_cvtph_ps(_mm256_loadu_si256((const __m256i *)d0));
 
@@ -1267,7 +1267,7 @@ template <bool is_acc>
 struct acc_C<block_q8_K, block_iq4_xs, is_acc> {
     static void apply(float * RESTRICT C, int ldc, const int32_t * RESTRICT tile, const block_q8_K * A, int lda, const void * packed_B, int nr) {
         const int8_t * scales = reinterpret_cast<const int8_t *>((const char *)packed_B + (QK_K / 2) * TILE_N);
-        const ggml_half * d0 = reinterpret_cast<const ggml_half *>(scales + 8 * TILE_N);
+        const ggml_rxd_half * d0 = reinterpret_cast<const ggml_rxd_half *>(scales + 8 * TILE_N);
 
         const __m512 vd0 = _mm512_cvtph_ps(_mm256_loadu_si256((const __m256i *)d0));
 
@@ -1318,17 +1318,17 @@ inline void scale_C(const int32_t * RESTRICT tile, int32_t * RESTRICT sumi, cons
 template <typename TA, typename TB, typename TC, int BLOCK_M, int BLOCK_N, int BLOCK_K>
 struct tinygemm_kernel_avx {
     static void apply(int K, const TA * RESTRICT A, const TB * RESTRICT B, TC * RESTRICT C, int ldc) {
-        GGML_UNUSED(K);
-        GGML_UNUSED(A);
-        GGML_UNUSED(B);
-        GGML_UNUSED(C);
-        GGML_UNUSED(ldc);
+        GGML_RXD_UNUSED(K);
+        GGML_RXD_UNUSED(A);
+        GGML_RXD_UNUSED(B);
+        GGML_RXD_UNUSED(C);
+        GGML_RXD_UNUSED(ldc);
     }
 };
 
 template <int BLOCK_M, int BLOCK_N, int BLOCK_K>
-struct tinygemm_kernel_avx<float, ggml_fp16_t, float, BLOCK_M, BLOCK_N, BLOCK_K> {
-    static void apply(int K, const float * RESTRICT A, const ggml_fp16_t * RESTRICT B, float * RESTRICT C, int ldc) {
+struct tinygemm_kernel_avx<float, ggml_rxd_fp16_t, float, BLOCK_M, BLOCK_N, BLOCK_K> {
+    static void apply(int K, const float * RESTRICT A, const ggml_rxd_fp16_t * RESTRICT B, float * RESTRICT C, int ldc) {
         constexpr int ROWS = BLOCK_M;
         constexpr int COLS = BLOCK_N;
         assert(BLOCK_K == 16);
@@ -1438,7 +1438,7 @@ struct tinygemm_kernel_vnni<block_q8_0, block_q4_0, float, BLOCK_M, BLOCK_N, BLO
                     va[k] = _mm512_set1_epi32(a_ptr[k]);
                     vcomp = _mm512_dpbusd_epi32(vcomp, off, va[k]);
                 }
-                vd1 = _mm512_set1_ps(GGML_CPU_FP16_TO_FP32(A[0 * KB + i].d));
+                vd1 = _mm512_set1_ps(GGML_RXD_CPU_FP16_TO_FP32(A[0 * KB + i].d));
             }
 
             // load b
@@ -1499,8 +1499,8 @@ struct tinygemm_kernel_vnni<block_q8_1, block_q4_1, float, 1, BLOCK_N, BLOCK_K> 
                 for (int k = 0; k < 8; ++k) {
                     va[k] = _mm512_set1_epi32(a_ptr[k]);
                 }
-                vd1 = _mm512_set1_ps(GGML_CPU_FP16_TO_FP32(A[0 * KB + i].d));
-                vs1 = _mm512_set1_ps(GGML_CPU_FP16_TO_FP32(A[0 * KB + i].s));
+                vd1 = _mm512_set1_ps(GGML_RXD_CPU_FP16_TO_FP32(A[0 * KB + i].d));
+                vs1 = _mm512_set1_ps(GGML_RXD_CPU_FP16_TO_FP32(A[0 * KB + i].s));
             }
 
             // load b
@@ -1512,7 +1512,7 @@ struct tinygemm_kernel_vnni<block_q8_1, block_q4_1, float, 1, BLOCK_N, BLOCK_K> 
             }
             const int offset = TILE_N * TILE_K / 2;
             const __m512 vd0 = _mm512_cvtph_ps(_mm256_loadu_si256((const __m256i *)(b_ptr + offset)));
-            const __m512 vm0 = _mm512_cvtph_ps(_mm256_loadu_si256((const __m256i *)(b_ptr + offset + TILE_N * sizeof(ggml_half))));
+            const __m512 vm0 = _mm512_cvtph_ps(_mm256_loadu_si256((const __m256i *)(b_ptr + offset + TILE_N * sizeof(ggml_rxd_half))));
 
             __m512i vsum = _mm512_setzero_si512();
             for (int k = 0; k < 8; ++k) {
@@ -1572,7 +1572,7 @@ struct tinygemm_kernel_vnni<block_q8_0, block_q8_0, float, BLOCK_M, BLOCK_N, BLO
                     va[k] = _mm512_set1_epi32(a_ptr[k]);
                     va[k] = _mm512_add_epi8(va[k], off);
                 }
-                vd1 = _mm512_set1_ps(GGML_CPU_FP16_TO_FP32(A[0 * KB + i].d));
+                vd1 = _mm512_set1_ps(GGML_RXD_CPU_FP16_TO_FP32(A[0 * KB + i].d));
             }
 
             // load b
@@ -1582,7 +1582,7 @@ struct tinygemm_kernel_vnni<block_q8_0, block_q8_0, float, BLOCK_M, BLOCK_N, BLO
             }
             const int offset = TILE_N * TILE_K;
             const __m512 vd0 = _mm512_cvtph_ps(_mm256_loadu_si256((const __m256i *)(b_ptr + offset)));
-            const int offset2 = TILE_N * TILE_K + TILE_N * sizeof(ggml_half);
+            const int offset2 = TILE_N * TILE_K + TILE_N * sizeof(ggml_rxd_half);
             const __m512i vcomp = _mm512_loadu_si512((const __m512i *)(b_ptr + offset2));
 
             __m512i vsum = _mm512_setzero_si512();
@@ -1627,7 +1627,7 @@ struct tinygemm_kernel_vnni<block_q8_K, block_q4_K, float, BLOCK_M, BLOCK_N, BLO
         const int offset_scales = (QK_K / 2) * TILE_N;
         const int offset_mins   = (QK_K / 2) * TILE_N +  8 * TILE_N;
         const int offset_d0     = (QK_K / 2) * TILE_N + 16 * TILE_N;
-        const int offset_dmin   = (QK_K / 2) * TILE_N + 16 * TILE_N + TILE_N * sizeof(ggml_half);
+        const int offset_dmin   = (QK_K / 2) * TILE_N + 16 * TILE_N + TILE_N * sizeof(ggml_rxd_half);
 
         const __m512i lowMask = _mm512_set1_epi8(0xF);
 
@@ -1728,7 +1728,7 @@ struct tinygemm_kernel_vnni<block_q8_K, block_q5_K, float, BLOCK_M, BLOCK_N, BLO
         const int offset_scales = (QK_K / 2) * TILE_N + (QK_K / 8) * TILE_N;
         const int offset_mins   = (QK_K / 2) * TILE_N + (QK_K / 8) * TILE_N +  8 * TILE_N;
         const int offset_d0     = (QK_K / 2) * TILE_N + (QK_K / 8) * TILE_N + 16 * TILE_N;
-        const int offset_dmin   = (QK_K / 2) * TILE_N + (QK_K / 8) * TILE_N + 16 * TILE_N + TILE_N * sizeof(ggml_half);
+        const int offset_dmin   = (QK_K / 2) * TILE_N + (QK_K / 8) * TILE_N + 16 * TILE_N + TILE_N * sizeof(ggml_rxd_half);
 
         const __m512i lowMask = _mm512_set1_epi8(0xF);
 
@@ -2032,7 +2032,7 @@ void tinygemm_kernel_amx(int M, int N, int KB, const void * RESTRICT _A, const v
     const int TILE_SIZE = get_tile_size<TB>();
     const bool need_unpack = do_unpack<TB>::value;
 
-    GGML_ASSERT(M <= 2 * TILE_M && N == 2 * TILE_N);
+    GGML_RXD_ASSERT(M <= 2 * TILE_M && N == 2 * TILE_N);
     const TA * RESTRICT A = static_cast<const TA *>(_A);
     const char * RESTRICT B = static_cast<const char *>(_B);
 
@@ -2098,7 +2098,7 @@ void tinygemm_kernel_amx(int M, int N, int KB, const void * RESTRICT _A, const v
             const int ii = i - 1;
             const char * B_blk0 = B + PACKED_INDEX(0, i, KB, TILE_SIZE);
             const char * B_blk1 = B + PACKED_INDEX(1, i, KB, TILE_SIZE);
-            GGML_DISPATCH_BOOL(ii > 0, is_acc, [&] {
+            GGML_RXD_DISPATCH_BOOL(ii > 0, is_acc, [&] {
                 if (need_unpack) {
                     unpack_B<TB>(Tile0, B_blk0);
                     _tile_loadd(TMM0, Tile0, TILE_N * VNNI_BLK);
@@ -2186,7 +2186,7 @@ void tinygemm_kernel_amx(int M, int N, int KB, const void * RESTRICT _A, const v
             _tile_stored(TMM4, Tile4(C_cur), TILE_N * sizeof(int32_t));
             _tile_stored(TMM6, Tile6(C_cur), TILE_N * sizeof(int32_t));
 
-            GGML_DISPATCH_BOOL(i > 0, is_acc, [&] {
+            GGML_RXD_DISPATCH_BOOL(i > 0, is_acc, [&] {
                 acc_C<TA, TB, is_acc>::apply(C,          ldc, Tile4(C_cur), &A[i], KB, B + PACKED_INDEX(0, i, KB, TILE_SIZE), m0);
                 acc_C<TA, TB, is_acc>::apply(C + TILE_N, ldc, Tile6(C_cur), &A[i], KB, B + PACKED_INDEX(1, i, KB, TILE_SIZE), m0);
             });
@@ -2199,7 +2199,7 @@ void tinygemm_kernel_amx(int M, int N, int KB, const void * RESTRICT _A, const v
                 _tile_dpbssd(TMM7, TMM3, TMM1);
                 _tile_stored(TMM5, Tile5(C_cur), TILE_N * sizeof(int32_t));
                 _tile_stored(TMM7, Tile7(C_cur), TILE_N * sizeof(int32_t));
-                GGML_DISPATCH_BOOL(i > 0, is_acc, [&] {
+                GGML_RXD_DISPATCH_BOOL(i > 0, is_acc, [&] {
                     acc_C<TA, TB, is_acc>::apply(C + TILE_M * ldc,          ldc, Tile5(C_cur), &A[TILE_M * KB + i], KB, B + PACKED_INDEX(0, i, KB, TILE_SIZE), m1);
                     acc_C<TA, TB, is_acc>::apply(C + TILE_M * ldc + TILE_N, ldc, Tile7(C_cur), &A[TILE_M * KB + i], KB, B + PACKED_INDEX(1, i, KB, TILE_SIZE), m1);
                 });
@@ -2215,7 +2215,7 @@ void tinygemm_kernel_amx(int M, int N, int KB, const void * RESTRICT _A, const v
     static_assert(std::is_same<TA, block_q8_K>::value);
     const int TILE_SIZE = get_tile_size<TB>();
 
-    GGML_ASSERT(M <= 2 * TILE_M && N == 2 * TILE_N);
+    GGML_RXD_ASSERT(M <= 2 * TILE_M && N == 2 * TILE_N);
     const TA * RESTRICT A = static_cast<const TA *>(_A);
     const char * RESTRICT B = static_cast<const char *>(_B);
 
@@ -2243,7 +2243,7 @@ void tinygemm_kernel_amx(int M, int N, int KB, const void * RESTRICT _A, const v
     for (int i = 0; i < KB; ++i) {
         // step 1: accumulate the quants across 8 groups, each group with 32
         for (int k = 0; k < QK_K / k_group_size; ++k) {
-            GGML_DISPATCH_BOOL(k > 0, is_acc, [&] {
+            GGML_RXD_DISPATCH_BOOL(k > 0, is_acc, [&] {
                 _tile_zero(TMM4);
                 _tile_zero(TMM6);
 
@@ -2285,7 +2285,7 @@ void tinygemm_kernel_amx(int M, int N, int KB, const void * RESTRICT _A, const v
         }
 
         // step 2: accmulate the mins
-        GGML_DISPATCH_BOOL(i > 0, is_acc, [&] {
+        GGML_RXD_DISPATCH_BOOL(i > 0, is_acc, [&] {
             acc_C<TA, TB, is_acc>::apply(C,          ldc, Sumi4, &A[i], KB, B + PACKED_INDEX(0, i, KB, TILE_SIZE), m0);
             acc_C<TA, TB, is_acc>::apply(C + TILE_N, ldc, Sumi6, &A[i], KB, B + PACKED_INDEX(1, i, KB, TILE_SIZE), m0);
             if (m1 != 0) {
@@ -2300,15 +2300,15 @@ void tinygemm_kernel_amx(int M, int N, int KB, const void * RESTRICT _A, const v
 } // anonymous namespace
 
 // get the packed tensor size for quantized weights
-size_t ggml_backend_amx_get_alloc_size(const struct ggml_tensor * tensor) {
-    const enum ggml_type TYPE = tensor->type;
+size_t ggml_rxd_backend_amx_get_alloc_size(const struct ggml_rxd_tensor * tensor) {
+    const enum ggml_rxd_type TYPE = tensor->type;
 
     const int K = tensor->ne[0]; // ne0: in_features
     const int N = tensor->ne[1]; // ne1: out_features
 
     auto get_tensor_size = [&] {
         size_t row_size_B{0};
-        GGML_DISPATCH_QTYPES(TYPE, [&] {
+        GGML_RXD_DISPATCH_QTYPES(TYPE, [&] {
             row_size_B = get_row_size<type, blck_size>(K);
         });
         return N * row_size_B;
@@ -2318,30 +2318,30 @@ size_t ggml_backend_amx_get_alloc_size(const struct ggml_tensor * tensor) {
         return get_tensor_size();
     } else {
         // for f16, bf16 we don't do packing
-        return ggml_nbytes(tensor);
+        return ggml_rxd_nbytes(tensor);
     }
 }
 
 // pack weight to vnni format
-void ggml_backend_amx_convert_weight(struct ggml_tensor * tensor, const void * data, size_t offset, size_t size) {
-    GGML_ASSERT(offset == 0 && size == ggml_nbytes(tensor)); // only full tensor conversion is supported for now
+void ggml_rxd_backend_amx_convert_weight(struct ggml_rxd_tensor * tensor, const void * data, size_t offset, size_t size) {
+    GGML_RXD_ASSERT(offset == 0 && size == ggml_rxd_nbytes(tensor)); // only full tensor conversion is supported for now
 
-    const enum ggml_type TYPE = tensor->type;
+    const enum ggml_rxd_type TYPE = tensor->type;
 
     const int K = tensor->ne[0]; // ne0: in_features
     const int N = tensor->ne[1]; // ne1: out_features
 
-    GGML_DISPATCH_QTYPES(TYPE, [&] {
+    GGML_RXD_DISPATCH_QTYPES(TYPE, [&] {
         convert_B_packed_format<type, blck_size>((void *)((char *)tensor->data + offset), (const type *)data, N, K);
     });
 }
 
-size_t ggml_backend_amx_desired_wsize(const struct ggml_tensor * dst) {
-    struct ggml_tensor * src0 = dst->src[0];
+size_t ggml_rxd_backend_amx_desired_wsize(const struct ggml_rxd_tensor * dst) {
+    struct ggml_rxd_tensor * src0 = dst->src[0];
 
-    const enum ggml_type TYPE = src0->type;
+    const enum ggml_rxd_type TYPE = src0->type;
 
-    const bool is_floating_type = TYPE == GGML_TYPE_F16;
+    const bool is_floating_type = TYPE == GGML_RXD_TYPE_F16;
     if (is_floating_type) {
         return 0;
     }
@@ -2351,7 +2351,7 @@ size_t ggml_backend_amx_desired_wsize(const struct ggml_tensor * dst) {
 
     size_t desired_wsize = 0;
 
-    GGML_DISPATCH_QTYPES(TYPE, [&] {
+    GGML_RXD_DISPATCH_QTYPES(TYPE, [&] {
         const size_t row_size_A = K / blck_size * sizeof(vec_dot_type);
         desired_wsize = M * row_size_A;
     });
@@ -2367,15 +2367,15 @@ size_t ggml_backend_amx_desired_wsize(const struct ggml_tensor * dst) {
 //
 // the function performs: dst = src1 @ src0.T
 //
-void ggml_backend_amx_mul_mat(const ggml_compute_params * params, struct ggml_tensor * dst) {
-    struct ggml_tensor * src0 = dst->src[0];
-    struct ggml_tensor * src1 = dst->src[1];
+void ggml_rxd_backend_amx_mul_mat(const ggml_rxd_compute_params * params, struct ggml_rxd_tensor * dst) {
+    struct ggml_rxd_tensor * src0 = dst->src[0];
+    struct ggml_rxd_tensor * src1 = dst->src[1];
 
-    const enum ggml_type TYPE = src0->type;
+    const enum ggml_rxd_type TYPE = src0->type;
 
     // f16 only has avx512 kernels for now,
     // amx kernels will be added once 6th gen xeon is released.
-    const bool is_floating_type = TYPE == GGML_TYPE_F16;
+    const bool is_floating_type = TYPE == GGML_RXD_TYPE_F16;
 
     const int M = dst->ne[1];
     const int N = dst->ne[0];
@@ -2389,7 +2389,7 @@ void ggml_backend_amx_mul_mat(const ggml_compute_params * params, struct ggml_te
         const int NB = div_up(N, BLOCK_N);
 
         parallel_for_ggml(params, MB * NB, [&](int begin, int end) {
-            GGML_DISPATCH_FLOATING_TYPES(TYPE, [&] {
+            GGML_RXD_DISPATCH_FLOATING_TYPES(TYPE, [&] {
                 for (int i = begin; i < end; ++i) {
                     int mb = i / NB;
                     int nb = i % NB;
@@ -2425,16 +2425,16 @@ void ggml_backend_amx_mul_mat(const ggml_compute_params * params, struct ggml_te
 
     //TODO: performance improvement: merge quant A
     if (params->ith == 0) {
-        GGML_DISPATCH_QTYPES(TYPE, [&] {
+        GGML_RXD_DISPATCH_QTYPES(TYPE, [&] {
             const size_t row_size_A = K / blck_size * sizeof(vec_dot_type);
             const size_t desired_wsize = M * row_size_A;
             if (params->wsize < desired_wsize) {
-                GGML_ABORT("insufficient work space size");
+                GGML_RXD_ABORT("insufficient work space size");
             }
 
             // Q4_0, Q4_1, Q8_0 handles 1 TILE_K per blck_size
             // Q4_K, Q5_K, Q6_K, IQ4_XS handles 8 TILE_K per blck_size
-            GGML_ASSERT(TILE_K == blck_size || TILE_K * 8 == blck_size);
+            GGML_RXD_ASSERT(TILE_K == blck_size || TILE_K * 8 == blck_size);
 
             const float * A_data = static_cast<const float *>(src1->data);
             for (int m = 0; m < M; ++m) {
@@ -2443,7 +2443,7 @@ void ggml_backend_amx_mul_mat(const ggml_compute_params * params, struct ggml_te
         });
     }
 
-    ggml_barrier(params->threadpool);
+    ggml_rxd_barrier(params->threadpool);
 
     if (M == 1) {
         // MB = 1 and handle 8 tiles in each block
@@ -2452,7 +2452,7 @@ void ggml_backend_amx_mul_mat(const ggml_compute_params * params, struct ggml_te
         const int NB = div_up(N, BLOCK_N);
 
         parallel_for_ggml(params, NB, [&](int begin, int end) {
-            GGML_DISPATCH_QTYPES(TYPE, [&] {
+            GGML_RXD_DISPATCH_QTYPES(TYPE, [&] {
                 const int KB = K / blck_size;
                 const int TILE_SIZE = get_tile_size<type>();
                 const int row_size_A = KB * sizeof(vec_dot_type);
@@ -2483,9 +2483,9 @@ void ggml_backend_amx_mul_mat(const ggml_compute_params * params, struct ggml_te
 
     parallel_for_ggml(params, MB * NB, [&](int begin, int end) {
         // init tile config for each thread
-        ggml_tile_config_init();
+        ggml_rxd_tile_config_init();
 
-        GGML_DISPATCH_QTYPES(TYPE, [&] {
+        GGML_RXD_DISPATCH_QTYPES(TYPE, [&] {
             const int KB = K / blck_size;
             const int TILE_SIZE = get_tile_size<type>();
             const int row_size_A = KB * sizeof(vec_dot_type);

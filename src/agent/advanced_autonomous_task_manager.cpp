@@ -14,6 +14,7 @@
 #include <regex>
 #include <sstream>
 #include <thread>
+#include <windows.h>
 #include <immintrin.h> // For SIMD optimization
 
 using namespace std::chrono_literals;
@@ -53,6 +54,125 @@ inline uint32_t calculate_quantum_priority(const QuantumTask& task) {
     return complexity_weight + priority_weight + urgency_weight;
 }
 
+struct PowerShellExecutionResult {
+    bool launched{false};
+    bool timedOut{false};
+    DWORD exitCode{static_cast<DWORD>(-1)};
+    std::string stdoutText;
+    std::string stderrText;
+    std::string error;
+};
+
+static std::wstring utf8ToWide(const std::string& input) {
+    if (input.empty()) return std::wstring();
+    int size = MultiByteToWideChar(CP_UTF8, 0, input.c_str(), -1, nullptr, 0);
+    if (size <= 0) {
+        size = MultiByteToWideChar(CP_ACP, 0, input.c_str(), -1, nullptr, 0);
+        if (size <= 0) return std::wstring(input.begin(), input.end());
+        std::wstring out(static_cast<size_t>(size - 1), L'\0');
+        MultiByteToWideChar(CP_ACP, 0, input.c_str(), -1, out.data(), size);
+        return out;
+    }
+    std::wstring out(static_cast<size_t>(size - 1), L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, input.c_str(), -1, out.data(), size);
+    return out;
+}
+
+static std::string readPipeToString(HANDLE handle) {
+    std::string output;
+    char buffer[4096];
+    DWORD bytesRead = 0;
+    while (ReadFile(handle, buffer, sizeof(buffer), &bytesRead, nullptr) && bytesRead > 0) {
+        output.append(buffer, bytesRead);
+    }
+    return output;
+}
+
+static PowerShellExecutionResult runPowerShellCommandInternal(
+    const std::string& command,
+    const std::string& workingDirectory,
+    std::chrono::milliseconds timeout) {
+
+    PowerShellExecutionResult result;
+
+    SECURITY_ATTRIBUTES sa{};
+    sa.nLength = sizeof(sa);
+    sa.bInheritHandle = TRUE;
+
+    HANDLE stdoutRead = nullptr;
+    HANDLE stdoutWrite = nullptr;
+    HANDLE stderrRead = nullptr;
+    HANDLE stderrWrite = nullptr;
+
+    if (!CreatePipe(&stdoutRead, &stdoutWrite, &sa, 0) ||
+        !CreatePipe(&stderrRead, &stderrWrite, &sa, 0)) {
+        result.error = "Failed to create PowerShell output pipes";
+        if (stdoutRead) CloseHandle(stdoutRead);
+        if (stdoutWrite) CloseHandle(stdoutWrite);
+        if (stderrRead) CloseHandle(stderrRead);
+        if (stderrWrite) CloseHandle(stderrWrite);
+        return result;
+    }
+
+    SetHandleInformation(stdoutRead, HANDLE_FLAG_INHERIT, 0);
+    SetHandleInformation(stderrRead, HANDLE_FLAG_INHERIT, 0);
+
+    STARTUPINFOW startupInfo{};
+    startupInfo.cb = sizeof(startupInfo);
+    startupInfo.dwFlags = STARTF_USESTDHANDLES;
+    startupInfo.hStdOutput = stdoutWrite;
+    startupInfo.hStdError = stderrWrite;
+    startupInfo.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+
+    PROCESS_INFORMATION processInfo{};
+    std::wstring commandLine =
+        L"powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"" +
+        utf8ToWide(command) + L"\"";
+    std::wstring workingDirWide = utf8ToWide(workingDirectory.empty() ? fs::current_path().string() : workingDirectory);
+
+    std::vector<wchar_t> mutableCommand(commandLine.begin(), commandLine.end());
+    mutableCommand.push_back(L'\0');
+
+    result.launched = CreateProcessW(
+        nullptr,
+        mutableCommand.data(),
+        nullptr,
+        nullptr,
+        TRUE,
+        CREATE_NO_WINDOW,
+        nullptr,
+        workingDirWide.empty() ? nullptr : workingDirWide.c_str(),
+        &startupInfo,
+        &processInfo) != FALSE;
+
+    CloseHandle(stdoutWrite);
+    CloseHandle(stderrWrite);
+
+    if (!result.launched) {
+        result.error = "Failed to launch PowerShell process";
+        CloseHandle(stdoutRead);
+        CloseHandle(stderrRead);
+        return result;
+    }
+
+    const DWORD waitResult = WaitForSingleObject(processInfo.hProcess, static_cast<DWORD>(timeout.count()));
+    if (waitResult == WAIT_TIMEOUT) {
+        result.timedOut = true;
+        TerminateProcess(processInfo.hProcess, 1);
+        result.error = "PowerShell command timed out";
+    }
+
+    GetExitCodeProcess(processInfo.hProcess, &result.exitCode);
+    result.stdoutText = readPipeToString(stdoutRead);
+    result.stderrText = readPipeToString(stderrRead);
+
+    CloseHandle(stdoutRead);
+    CloseHandle(stderrRead);
+    CloseHandle(processInfo.hThread);
+    CloseHandle(processInfo.hProcess);
+    return result;
+}
+
 // =====================================================================
 // ADVANCED AUTONOMOUS TASK MANAGER IMPLEMENTATION
 // =====================================================================
@@ -66,8 +186,6 @@ AdvancedAutonomousTaskManager::AdvancedAutonomousTaskManager()
     multi_model_stats_ = {};
     cycle_agent_stats_ = {};
     quantum_stats_ = {};
-    
-    std::cout << "[QuantumAgent] Advanced Autonomous Task Manager initializing..." << std::endl;
 }
 
 AdvancedAutonomousTaskManager::~AdvancedAutonomousTaskManager() {
@@ -81,7 +199,6 @@ bool AdvancedAutonomousTaskManager::initialize(
     const QuantumOptimizationConfig& quantum_config) {
     
     if (initialized_.load()) {
-        std::cout << "[QuantumAgent] Already initialized" << std::endl;
         return true;
     }
     
@@ -96,8 +213,6 @@ bool AdvancedAutonomousTaskManager::initialize(
         if (quantum_config_.quantum_acceleration_enabled) {
             quantum_memory_pool_ = std::make_unique<uint8_t[]>(quantum_config_.memory_pool_size + QUANTUM_MEMORY_ALIGNMENT);
             quantum_stats_.quantum_acceleration_active = true;
-            std::cout << "[QuantumAgent] Quantum acceleration enabled with " 
-                      << (quantum_config_.memory_pool_size / 1024 / 1024) << "MB memory pool" << std::endl;
         }
         
         // Initialize agent system components
@@ -120,15 +235,11 @@ bool AdvancedAutonomousTaskManager::initialize(
         if (model_config.model_count > 1) {
             multi_model_stats_.total_configured_models = model_config.model_count;
             multi_model_stats_.load_balancing_active = model_config.load_balancing_enabled;
-            std::cout << "[QuantumAgent] Multi-model system initialized with " 
-                      << static_cast<uint32_t>(model_config.model_count) << " models" << std::endl;
         }
         
         // Initialize cycle agent system
         if (agent_config.agent_count > 1) {
             cycle_agent_stats_.total_configured_agents = agent_config.agent_count;
-            std::cout << "[QuantumAgent] Cycle agent system initialized with " 
-                      << static_cast<uint32_t>(agent_config.agent_count) << " agents" << std::endl;
         }
         
         // Start monitoring thread
@@ -140,18 +251,9 @@ bool AdvancedAutonomousTaskManager::initialize(
         
         initialized_ = true;
         
-        std::cout << "[QuantumAgent] Advanced Autonomous Task Manager initialization complete" << std::endl;
-        std::cout << "[QuantumAgent] Features enabled:" << std::endl;
-        std::cout << "  - Quantum acceleration: " << (quantum_config_.quantum_acceleration_enabled ? "YES" : "NO") << std::endl;
-        std::cout << "  - Multi-model support: " << static_cast<uint32_t>(model_config.model_count) << "x models" << std::endl;
-        std::cout << "  - Cycle agent system: " << static_cast<uint32_t>(agent_config.agent_count) << "x agents" << std::endl;
-        std::cout << "  - Worker threads: " << thread_count << std::endl;
-        std::cout << "  - Dynamic PowerShell timeout: " << (ps_config.auto_adjust_timeout ? "YES" : "NO") << std::endl;
-        
         return true;
         
     } catch (const std::exception& e) {
-        std::cerr << "[QuantumAgent] Initialization failed: " << e.what() << std::endl;
         return false;
     }
 }
@@ -159,7 +261,7 @@ bool AdvancedAutonomousTaskManager::initialize(
 void AdvancedAutonomousTaskManager::shutdown() {
     if (!initialized_.load()) return;
     
-    std::cout << "[QuantumAgent] Shutting down Advanced Autonomous Task Manager..." << std::endl;
+    // Shutting down Advanced Autonomous Task Manager
     
     shutting_down_ = true;
     
@@ -194,14 +296,10 @@ void AdvancedAutonomousTaskManager::shutdown() {
     
     initialized_ = false;
     shutting_down_ = false;
-    
-    std::cout << "[QuantumAgent] Shutdown complete" << std::endl;
 }
 
 std::vector<QuantumTask> AdvancedAutonomousTaskManager::generate_todos_automatically(
     const std::string& description, uint32_t max_todos, bool include_dependencies) {
-    
-    std::cout << "[QuantumAgent] Auto-generating todos for: " << description << std::endl;
     
     std::vector<QuantumTask> generated_todos;
     
@@ -281,10 +379,10 @@ std::vector<QuantumTask> AdvancedAutonomousTaskManager::generate_todos_automatic
             generated_todos.push_back(todo);
         }
         
-        std::cout << "[QuantumAgent] Generated " << generated_todos.size() << " todos automatically" << std::endl;
+        // Generated todos automatically
         
     } catch (const std::exception& e) {
-        std::cerr << "[QuantumAgent] Error generating todos: " << e.what() << std::endl;
+        // Error generating todos
     }
     
     return generated_todos;
@@ -318,8 +416,6 @@ std::string AdvancedAutonomousTaskManager::create_task(
         task_condition_.notify_one();
     }
     
-    std::cout << "[QuantumAgent] Created task: " << task->id << " - " << description << std::endl;
-    
     return task->id;
 }
 
@@ -352,7 +448,7 @@ QuantumTaskResult AdvancedAutonomousTaskManager::execute_task_sync(const std::st
         return QuantumTaskResult::error_result(task_id, "Task not found");
     }
     
-    std::cout << "[QuantumAgent] Executing task synchronously: " << task_id << std::endl;
+    // Executing task synchronously
     
     return execute_task_internal(task);
 }
@@ -382,12 +478,12 @@ bool AdvancedAutonomousTaskManager::execute_task_async(
 
 void AdvancedAutonomousTaskManager::start_autonomous_processing() {
     if (processing_active_.load()) {
-        std::cout << "[QuantumAgent] Autonomous processing already active" << std::endl;
+        // Autonomous processing already active
         return;
     }
     
     processing_active_ = true;
-    std::cout << "[QuantumAgent] Starting autonomous task processing..." << std::endl;
+    // Starting autonomous task processing
     
     // Notify all worker threads to start processing
     task_condition_.notify_all();
@@ -396,14 +492,12 @@ void AdvancedAutonomousTaskManager::start_autonomous_processing() {
 void AdvancedAutonomousTaskManager::stop_autonomous_processing() {
     if (!processing_active_.load()) return;
     
-    std::cout << "[QuantumAgent] Stopping autonomous task processing..." << std::endl;
+    // Stopping autonomous task processing
     processing_active_ = false;
 }
 
 bool AdvancedAutonomousTaskManager::execute_top_difficult_tasks(
     uint32_t count, bool preserve_complexity, bool bypass_constraints) {
-    
-    std::cout << "[QuantumAgent] Executing top " << count << " most difficult tasks" << std::endl;
     
     // Get all tasks and sort by difficulty
     std::vector<std::shared_ptr<QuantumTask>> all_tasks;
@@ -437,8 +531,6 @@ bool AdvancedAutonomousTaskManager::execute_top_difficult_tasks(
         }
     }
     
-    std::cout << "[QuantumAgent] Executed " << executed_count << " difficult tasks" << std::endl;
-    
     return executed_count > 0;
 }
 
@@ -451,47 +543,76 @@ std::string AdvancedAutonomousTaskManager::execute_powershell_command(
         calculate_dynamic_timeout(command) : 
         powershell_config_.base_timeout;
     
-    std::cout << "[QuantumAgent] Executing PowerShell command with " 
+    // Executing PowerShell command
               << timeout.count() << "ms timeout" << std::endl;
     
     auto start_time = std::chrono::high_resolution_clock::now();
     
     try {
-        // Create PowerShell process with dynamic timeout
-        std::string ps_script = "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"" + command + "\"";
-        
-        // Execute command (simplified implementation - in production would use proper process management)
-        std::cout << "[PowerShell] " << command << std::endl;
-        
         powershell_stats_.total_commands++;
-        
-        auto end_time = std::chrono::high_resolution_clock::now();
-        auto execution_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
-        
-        // Update average execution time
+        powershell_stats_.current_timeout = timeout;
+
+        const PowerShellExecutionResult execResult = runPowerShellCommandInternal(
+            command,
+            powershell_config_.working_directory,
+            timeout);
+
+        const auto end_time = std::chrono::high_resolution_clock::now();
+        const auto execution_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+
         if (powershell_stats_.successful_commands > 0) {
             powershell_stats_.avg_execution_time = std::chrono::milliseconds(
-                (powershell_stats_.avg_execution_time.count() * (powershell_stats_.successful_commands) + 
-                 execution_time.count()) / (powershell_stats_.successful_commands + 1)
+                (powershell_stats_.avg_execution_time.count() * powershell_stats_.successful_commands + execution_time.count()) /
+                (powershell_stats_.successful_commands + 1)
             );
         } else {
             powershell_stats_.avg_execution_time = execution_time;
         }
-        
-        powershell_stats_.successful_commands++;
-        powershell_stats_.current_timeout = timeout;
-        
-        // Auto-adjust timeout for next execution
-        if (auto_adjust_timeout && execution_time > timeout * 0.8) {
-            powershell_config_.base_timeout = timeout * 1.2;
+
+        auto increaseTimeout = [&](double multiplier) {
+            powershell_config_.base_timeout = std::min(
+                powershell_config_.max_timeout,
+                std::chrono::milliseconds(static_cast<int64_t>(powershell_config_.base_timeout.count() * multiplier)));
             powershell_stats_.timeout_adjustments++;
+        };
+
+        if (!execResult.launched) {
+            powershell_stats_.failed_commands++;
+            if (auto_adjust_timeout) increaseTimeout(1.25);
+            return std::string("Error: ") + execResult.error;
         }
-        
+
+        if (execResult.timedOut) {
+            powershell_stats_.failed_commands++;
+            if (auto_adjust_timeout) increaseTimeout(1.5);
+            std::ostringstream out;
+            out << "Timeout after " << timeout.count() << "ms";
+            if (!execResult.stdoutText.empty()) out << "\nSTDOUT:\n" << execResult.stdoutText;
+            if (!execResult.stderrText.empty()) out << "\nSTDERR:\n" << execResult.stderrText;
+            return out.str();
+        }
+
+        if (execResult.exitCode != 0) {
+            powershell_stats_.failed_commands++;
+            std::ostringstream out;
+            out << "ExitCode=" << execResult.exitCode;
+            if (!execResult.stdoutText.empty()) out << "\nSTDOUT:\n" << execResult.stdoutText;
+            if (!execResult.stderrText.empty()) out << "\nSTDERR:\n" << execResult.stderrText;
+            return out.str();
+        }
+
+        powershell_stats_.successful_commands++;
+        if (auto_adjust_timeout && execution_time > timeout * 0.8) {
+            increaseTimeout(1.2);
+        }
+
+        if (!execResult.stdoutText.empty()) return execResult.stdoutText;
+        if (!execResult.stderrText.empty()) return execResult.stderrText;
         return "Command executed successfully";
-        
+
     } catch (const std::exception& e) {
         powershell_stats_.failed_commands++;
-        std::cerr << "[PowerShell] Error: " << e.what() << std::endl;
+        // PowerShell error
         return std::string("Error: ") + e.what();
     }
 }
@@ -516,13 +637,13 @@ void AdvancedAutonomousTaskManager::set_powershell_timeout(std::chrono::millisec
     timeout = std::min(timeout, powershell_config_.max_timeout);
     
     powershell_config_.base_timeout = timeout;
-    std::cout << "[QuantumAgent] PowerShell timeout set to " << timeout.count() << "ms" << std::endl;
+    // PowerShell timeout set
 }
 
 void AdvancedAutonomousTaskManager::enable_random_timeout_variation(bool enabled) {
     std::lock_guard<std::mutex> lock(powershell_mutex_);
     powershell_config_.random_variation_enabled = enabled;
-    std::cout << "[QuantumAgent] Random timeout variation " << (enabled ? "enabled" : "disabled") << std::endl;
+    // Random timeout variation
 }
 
 AdvancedAutonomousTaskManager::PowerShellStats AdvancedAutonomousTaskManager::get_powershell_stats() const {
@@ -534,7 +655,6 @@ bool AdvancedAutonomousTaskManager::configure_multi_model_system(
     uint8_t model_count, const std::vector<std::string>& model_names, bool enable_load_balancing) {
     
     if (model_count == 0 || model_count > 99) {
-        std::cerr << "[QuantumAgent] Invalid model count: " << static_cast<uint32_t>(model_count) << std::endl;
         return false;
     }
     
@@ -545,9 +665,6 @@ bool AdvancedAutonomousTaskManager::configure_multi_model_system(
     multi_model_stats_.total_configured_models = model_count;
     multi_model_stats_.active_models = model_count;
     multi_model_stats_.load_balancing_active = enable_load_balancing;
-    
-    std::cout << "[QuantumAgent] Multi-model system configured: " 
-              << static_cast<uint32_t>(model_count) << " models" << std::endl;
     
     return true;
 }
@@ -564,13 +681,10 @@ QuantumTaskResult AdvancedAutonomousTaskManager::execute_multi_model_consensus(
         model_count = multi_model_config_.model_count;
     }
     
-    std::cout << "[QuantumAgent] Executing task on " << static_cast<uint32_t>(model_count) 
+    // Executing task on models
               << " models for consensus" << std::endl;
     
     std::vector<QuantumTaskResult> results;
-    
-    // Execute on multiple models in parallel
-    std::vector<std::future<QuantumTaskResult>> futures;
     
     for (uint8_t i = 0; i < model_count; ++i) {
         futures.emplace_back(std::async(std::launch::async, [this, task]() {
@@ -626,7 +740,7 @@ void AdvancedAutonomousTaskManager::initialize_worker_threads(uint32_t thread_co
     }
     
     comprehensive_stats_.thread_pool_size = thread_count;
-    std::cout << "[QuantumAgent] Initialized " << thread_count << " worker threads" << std::endl;
+    // Initialized worker threads
 }
 
 void AdvancedAutonomousTaskManager::worker_thread_function() {
@@ -807,7 +921,7 @@ std::vector<QuantumTask> AdvancedAutonomousTaskManager::generate_todos_from_anal
 
 bool AdvancedAutonomousTaskManager::execute_with_complexity_preservation(std::shared_ptr<QuantumTask> task) {
     // Execute task while preserving full complexity - no simplification
-    std::cout << "[QuantumAgent] Executing with complexity preservation: " << task->id << std::endl;
+    // Executing with complexity preservation
     
     // Disable any optimization that might simplify the task
     bool original_quantum_setting = quantum_config_.quantum_acceleration_enabled;
@@ -895,7 +1009,7 @@ void AdvancedAutonomousTaskManager::balance_quality_speed_automatically() {
 }
 
 void AdvancedAutonomousTaskManager::apply_reverse_engineered_optimizations() {
-    std::cout << "[QuantumAgent] Applying reverse-engineered optimizations..." << std::endl;
+    // Applying reverse-engineered optimizations
 
     if (quantum_memory_pool_) {
         uintptr_t pool_addr = reinterpret_cast<uintptr_t>(quantum_memory_pool_.get());
@@ -914,7 +1028,7 @@ void AdvancedAutonomousTaskManager::apply_reverse_engineered_optimizations() {
         quantum_config_.quantum_thread_count > 0 ? quantum_config_.quantum_thread_count : MAX_QUANTUM_THREADS
     );
 
-    std::cout << "[QuantumAgent] Reverse-engineered optimizations applied" << std::endl;
+    // Reverse-engineered optimizations applied
 }
 
 std::shared_ptr<QuantumTask> AdvancedAutonomousTaskManager::get_task(const std::string& task_id) {

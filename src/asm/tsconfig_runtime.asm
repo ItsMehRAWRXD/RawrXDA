@@ -69,6 +69,10 @@ ResolutionContext ends
 szBaseUrl           db '.',0
 szOutDir            db './out',0
 szNodeModules       db 'node_modules',0
+szPathNodePrefix    db '..\..\node_modules\',0
+szExtJs             db '.js',0
+szExtTs             db '.ts',0
+szExtDts            db '.d.ts',0
 
 ; Path mappings (from "paths" section)
 PathMappingsData:
@@ -588,29 +592,262 @@ TSConfig_LoadProposedAPI endp
 ; Utility Functions
 ; -----------------------------------------------------------------------------
 MatchWildcard proc
-    ; rsi = pattern (with *), rdi = string to match
-    ; returns: eax=1 if match, fills [rsp+20h] with wildcard capture
-    mov eax, 1  ; Stub: always matches for now
+    ; rdi = pattern (with optional *), rsi = string
+    ; returns: eax=1 if match, fills caller [rsp+20h] capture for wildcard case
+    push rbx
+    push r12
+    push r13
+
+    mov r12, rdi                    ; pattern
+    mov r13, rsi                    ; input string
+
+    ; Find '*'
+    xor ebx, ebx
+mw_find_star:
+    mov al, [r12 + rbx]
+    test al, al
+    jz mw_no_star
+    cmp al, '*'
+    je mw_star_found
+    inc ebx
+    jmp mw_find_star
+
+mw_no_star:
+    mov rcx, r12
+    mov rdx, r13
+    call strcmp
+    test eax, eax
+    sete al
+    movzx eax, al
+    jmp mw_done
+
+mw_star_found:
+    ; Prefix match for bytes [0..star)
+    xor edx, edx
+mw_prefix_cmp:
+    cmp edx, ebx
+    jae mw_prefix_ok
+    mov al, [r12 + rdx]
+    cmp al, [r13 + rdx]
+    jne mw_fail
+    inc edx
+    jmp mw_prefix_cmp
+
+mw_prefix_ok:
+    ; suffix_len = strlen(pattern + star + 1)
+    lea rcx, [r12 + rbx + 1]
+    call strlen
+    mov r9d, eax                    ; suffix_len
+
+    ; string_len = strlen(string)
+    mov rcx, r13
+    call strlen
+    mov r8d, eax                    ; string_len
+
+    ; Ensure string_len >= prefix_len + suffix_len
+    mov eax, ebx
+    add eax, r9d
+    cmp r8d, eax
+    jb mw_fail
+
+    ; Compare suffix at tail
+    mov eax, r8d
+    sub eax, r9d
+    lea rcx, [r13 + rax]            ; string suffix ptr
+    lea rdx, [r12 + rbx + 1]        ; pattern suffix ptr
+    call strcmp
+    test eax, eax
+    jne mw_fail
+
+    ; Copy wildcard capture to caller stack scratch ([caller rsp+20h])
+    ; in callee this resolves to [rsp+40h] after 3 pushes
+    lea rdx, [rsp + 40h]
+    lea rcx, [r13 + rbx]
+    mov eax, r8d
+    sub eax, ebx
+    sub eax, r9d                    ; capture_len
+    mov r10d, eax
+    test r10d, r10d
+    jle mw_cap_term
+mw_cap_copy:
+    mov al, [rcx]
+    mov [rdx], al
+    inc rcx
+    inc rdx
+    dec r10d
+    jnz mw_cap_copy
+mw_cap_term:
+    mov byte ptr [rdx], 0
+    mov eax, 1
+    jmp mw_done
+
+mw_fail:
+    xor eax, eax
+
+mw_done:
+    pop r13
+    pop r12
+    pop rbx
     ret
 MatchWildcard endp
 
 TryNodeModules proc
-    xor eax, eax  ; Not implemented - would search node_modules
+    ; rcx = ModuleRequest*
+    sub rsp, 20h
+    mov r11, rcx
+
+    lea rdi, (ModuleRequest ptr [r11]).outPath
+    lea rsi, szPathNodePrefix
+    call strcpy
+
+    lea rsi, (ModuleRequest ptr [r11]).moduleName
+    call strcat
+
+    lea rcx, (ModuleRequest ptr [r11]).outPath
+    call NormalizePath
+    call FileExists
+    test eax, eax
+    jnz tnm_done
+
+    lea rcx, (ModuleRequest ptr [r11]).outPath
+    call TryExtensions
+
+tnm_done:
+    add rsp, 20h
     ret
 TryNodeModules endp
 
 TryRelativePath proc
+    ; rcx = ModuleRequest*
+    sub rsp, 20h
+    mov r11, rcx
+
+    lea r10, (ModuleRequest ptr [r11]).moduleName
+    mov al, [r10]
+    cmp al, '.'
+    jne trp_fail
+
+    ; outPath = dirname(requestor) + moduleName
+    lea rdi, (ModuleRequest ptr [r11]).outPath
+    lea rsi, (ModuleRequest ptr [r11]).requestor
+    call strcpy
+
+    ; Trim to directory separator
+    lea rdi, (ModuleRequest ptr [r11]).outPath
+trp_seek_end:
+    mov al, [rdi]
+    test al, al
+    jz trp_backscan
+    inc rdi
+    jmp trp_seek_end
+trp_backscan:
+    cmp rdi, (ModuleRequest ptr [r11]).outPath
+    jbe trp_root
+    dec rdi
+    mov al, [rdi]
+    cmp al, '\\'
+    je trp_root
+    cmp al, '/'
+    je trp_root
+    jmp trp_backscan
+trp_root:
+    inc rdi
+    mov byte ptr [rdi], 0
+
+    lea rsi, (ModuleRequest ptr [r11]).moduleName
+    call strcat
+
+    lea rcx, (ModuleRequest ptr [r11]).outPath
+    call NormalizePath
+    call FileExists
+    test eax, eax
+    jnz trp_done
+
+    lea rcx, (ModuleRequest ptr [r11]).outPath
+    call TryExtensions
+    jmp trp_done
+
+trp_fail:
     xor eax, eax
+trp_done:
+    add rsp, 20h
     ret
 TryRelativePath endp
 
 TryExtensions proc
-    ; Try appending .js, .ts, .d.ts and checking existence
+    ; rcx = path buffer (in/out)
+    sub rsp, 160h
+    mov r11, rcx
+
+    ; temp = path
+    lea rdi, [rsp+20h]
+    mov rsi, r11
+    call strcpy
+    lea rsi, szExtJs
+    call strcat
+    lea rcx, [rsp+20h]
+    call FileExists
+    test eax, eax
+    jz te_try_ts
+    mov rdi, r11
+    lea rsi, [rsp+20h]
+    call strcpy
+    mov eax, 1
+    jmp te_done
+
+te_try_ts:
+    lea rdi, [rsp+20h]
+    mov rsi, r11
+    call strcpy
+    lea rsi, szExtTs
+    call strcat
+    lea rcx, [rsp+20h]
+    call FileExists
+    test eax, eax
+    jz te_try_dts
+    mov rdi, r11
+    lea rsi, [rsp+20h]
+    call strcpy
+    mov eax, 1
+    jmp te_done
+
+te_try_dts:
+    lea rdi, [rsp+20h]
+    mov rsi, r11
+    call strcpy
+    lea rsi, szExtDts
+    call strcat
+    lea rcx, [rsp+20h]
+    call FileExists
+    test eax, eax
+    jz te_fail
+    mov rdi, r11
+    lea rsi, [rsp+20h]
+    call strcpy
+    mov eax, 1
+    jmp te_done
+
+te_fail:
+    xor eax, eax
+te_done:
+    add rsp, 160h
     ret
 TryExtensions endp
 
 NormalizePath proc
-    ; Convert / to \, resolve .. and .
+    ; Convert '/' to '\\' in-place
+    mov rax, rcx
+np_loop:
+    mov dl, [rax]
+    test dl, dl
+    jz np_done
+    cmp dl, '/'
+    jne np_next
+    mov byte ptr [rax], '\\'
+np_next:
+    inc rax
+    jmp np_loop
+np_done:
     ret
 NormalizePath endp
 
@@ -654,10 +891,12 @@ strcpy proc
 strcpy endp
 
 strcat proc
+@@find_end:
     mov al, [rdi]
     test al, al
-    jnz strcat
-    dec rdi
+    jz @@copy
+    inc rdi
+    jmp @@find_end
 @@copy:
     mov al, [rsi]
     mov [rdi], al

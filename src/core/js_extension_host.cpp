@@ -94,51 +94,414 @@
     #define JS_FALSE            ((JSValue)((0ULL << 32) | 1))
     #define JS_EXCEPTION        ((JSValue)6)
 
-    // Stub function declarations — implemented below as no-ops or minimal simulation
-    static JSRuntime* JS_NewRuntime(void) { return nullptr; }
-    static void JS_FreeRuntime(JSRuntime* rt) {}
-    static void JS_SetMemoryLimit(JSRuntime* rt, size_t limit) {}
-    static void JS_SetMaxStackSize(JSRuntime* rt, size_t size) {}
-    static JSContext* JS_NewContext(JSRuntime* rt) { return nullptr; }
-    static void JS_FreeContext(JSContext* ctx) {}
-    static JSValue JS_NewObject(JSContext* ctx) { return JS_UNDEFINED; }
-    static JSValue JS_NewString(JSContext* ctx, const char* str) { return JS_UNDEFINED; }
-    static JSValue JS_NewInt32(JSContext* ctx, int32_t val) { return JS_UNDEFINED; }
-    static JSValue JS_NewInt64(JSContext* ctx, int64_t val) { return JS_UNDEFINED; }
-    static JSValue JS_NewFloat64(JSContext* ctx, double val) { return JS_UNDEFINED; }
-    static JSValue JS_NewBool(JSContext* ctx, int val) { return val ? JS_TRUE : JS_FALSE; }
-    static JSValue JS_NewArray(JSContext* ctx) { return JS_UNDEFINED; }
-    static void JS_SetPropertyStr(JSContext* ctx, JSValue obj, const char* prop, JSValue val) {}
-    static JSValue JS_GetPropertyStr(JSContext* ctx, JSValue obj, const char* prop) { return JS_UNDEFINED; }
-    static void JS_SetPropertyUint32(JSContext* ctx, JSValue obj, uint32_t idx, JSValue val) {}
-    static JSValue JS_NewCFunction(JSContext* ctx, JSCFunction* func, const char* name, int length) { return JS_UNDEFINED; }
-    static JSValue JS_Eval(JSContext* ctx, const char* input, size_t len, const char* filename, int flags) { return JS_UNDEFINED; }
-    static const char* JS_ToCString(JSContext* ctx, JSValue val) { return ""; }
-    static void JS_FreeCString(JSContext* ctx, const char* str) {}
-    static int JS_ToBool(JSContext* ctx, JSValue val) { return 0; }
-    static int JS_ToInt32(JSContext* ctx, int32_t* pval, JSValue val) { *pval = 0; return 0; }
-    static int JS_ToFloat64(JSContext* ctx, double* pval, JSValue val) { *pval = 0; return 0; }
-    static void JS_FreeValue(JSContext* ctx, JSValue val) {}
+    // Minimal QuickJS shim declarations — implemented below as no-ops or minimal simulation
+    // When QuickJS is linked, these are replaced by the real functions from quickjs.h
+    static JSRuntime* JS_NewRuntime(void) { 
+        // Return a non-null stub runtime
+        static JSRuntime stubRuntime;
+        return &stubRuntime; 
+    }
+    // Runtime state tracking for JS shim
+    static size_t s_stubMemLimit = 0;
+    static size_t s_stubStackSize = 0;
+    static bool   s_stubRuntimeActive = false;
+
+    static void JS_FreeRuntime(JSRuntime* rt) {
+        if (rt) {
+            s_stubRuntimeActive = false;
+            OutputDebugStringA("[JS Stub] Runtime freed\n");
+        }
+    }
+    static void JS_SetMemoryLimit(JSRuntime* rt, size_t limit) {
+        if (rt) s_stubMemLimit = limit;
+    }
+    static void JS_SetMaxStackSize(JSRuntime* rt, size_t size) {
+        if (rt) s_stubStackSize = size;
+    }
+    static JSContext* JS_NewContext(JSRuntime* rt) {
+        static JSContext stubContext;
+        if (rt) s_stubRuntimeActive = true;
+        return &stubContext;
+    }
+    static void JS_FreeContext(JSContext* ctx) {
+        if (ctx) OutputDebugStringA("[JS Stub] Context freed\n");
+    }
+
+    // Minimal JS value storage for stub mode (keyed by ctx + counter)
+    static std::mutex s_stubValueMutex;
+    static uint64_t s_stubValueCounter = 1000;
+    static std::unordered_map<uint64_t, std::string> s_stubStrings;
+    static std::unordered_map<uint64_t, double> s_stubNumbers;
+    static std::unordered_map<uint64_t, std::vector<JSValue>> s_stubArrays;
+    static std::unordered_map<uint64_t, std::unordered_map<std::string, JSValue>> s_stubObjects;
+
+    static uint64_t allocStubId() {
+        std::lock_guard<std::mutex> lock(s_stubValueMutex);
+        return ++s_stubValueCounter;
+    }
+
+    static JSValue JS_NewObject(JSContext* ctx) {
+        if (!ctx) return JS_UNDEFINED;
+        uint64_t id = allocStubId();
+        {
+            std::lock_guard<std::mutex> lock(s_stubValueMutex);
+            s_stubObjects[id] = {};
+        }
+        return (id << 32) | JS_TAG_OBJECT;
+    }
+    static JSValue JS_NewString(JSContext* ctx, const char* str) {
+        if (!ctx || !str) return JS_UNDEFINED;
+        uint64_t id = allocStubId();
+        {
+            std::lock_guard<std::mutex> lock(s_stubValueMutex);
+            s_stubStrings[id] = str;
+        }
+        return (id << 32) | JS_TAG_STRING;
+    }
+    static JSValue JS_NewInt32(JSContext* ctx, int32_t val) {
+        if (!ctx) return JS_UNDEFINED;
+        uint64_t id = allocStubId();
+        {
+            std::lock_guard<std::mutex> lock(s_stubValueMutex);
+            s_stubNumbers[id] = static_cast<double>(val);
+        }
+        return (id << 32) | JS_TAG_INT;
+    }
+    static JSValue JS_NewInt64(JSContext* ctx, int64_t val) {
+        if (!ctx) return JS_UNDEFINED;
+        uint64_t id = allocStubId();
+        {
+            std::lock_guard<std::mutex> lock(s_stubValueMutex);
+            s_stubNumbers[id] = static_cast<double>(val);
+        }
+        return (id << 32) | JS_TAG_INT;
+    }
+    static JSValue JS_NewFloat64(JSContext* ctx, double val) {
+        if (!ctx) return JS_UNDEFINED;
+        uint64_t id = allocStubId();
+        {
+            std::lock_guard<std::mutex> lock(s_stubValueMutex);
+            s_stubNumbers[id] = val;
+        }
+        return (id << 32) | JS_TAG_FLOAT64;
+    }
+    static JSValue JS_NewBool(JSContext* ctx, int val) {
+        if (!ctx) return JS_UNDEFINED;
+        return val ? JS_TRUE : JS_FALSE;
+    }
+    static JSValue JS_NewArray(JSContext* ctx) {
+        if (!ctx) return JS_UNDEFINED;
+        uint64_t id = allocStubId();
+        {
+            std::lock_guard<std::mutex> lock(s_stubValueMutex);
+            s_stubArrays[id] = {};
+        }
+        return (id << 32) | JS_TAG_OBJECT;
+    }
+    static void JS_SetPropertyStr(JSContext* ctx, JSValue obj, const char* prop, JSValue val) {
+        if (!ctx || !prop) return;
+        uint64_t id = obj >> 32;
+        std::lock_guard<std::mutex> lock(s_stubValueMutex);
+        auto it = s_stubObjects.find(id);
+        if (it != s_stubObjects.end()) {
+            it->second[prop] = val;
+        }
+    }
+    static JSValue JS_GetPropertyStr(JSContext* ctx, JSValue obj, const char* prop) {
+        if (!ctx || !prop) return JS_UNDEFINED;
+        uint64_t id = obj >> 32;
+        std::lock_guard<std::mutex> lock(s_stubValueMutex);
+        auto it = s_stubObjects.find(id);
+        if (it != s_stubObjects.end()) {
+            auto pit = it->second.find(prop);
+            if (pit != it->second.end()) return pit->second;
+        }
+        return JS_UNDEFINED;
+    }
+    static void JS_SetPropertyUint32(JSContext* ctx, JSValue obj, uint32_t idx, JSValue val) {
+        if (!ctx) return;
+        uint64_t id = obj >> 32;
+        std::lock_guard<std::mutex> lock(s_stubValueMutex);
+        auto it = s_stubArrays.find(id);
+        if (it != s_stubArrays.end()) {
+            if (idx >= it->second.size()) it->second.resize(idx + 1, JS_UNDEFINED);
+            it->second[idx] = val;
+        }
+    }
+    static JSValue JS_NewCFunction(JSContext* ctx, JSCFunction* func, const char* name, int length) {
+        if (!ctx || !func) return JS_UNDEFINED;
+        uint64_t id = allocStubId();
+        {
+            std::lock_guard<std::mutex> lock(s_stubValueMutex);
+            s_stubObjects[id]["__func_name__"] = JS_NewString(ctx, name ? name : "anonymous");
+            s_stubObjects[id]["__func_arity__"] = JS_NewInt32(ctx, length);
+        }
+        return (id << 32) | JS_TAG_OBJECT;
+    }
+    static JSValue JS_Eval(JSContext* ctx, const char* input, size_t len, const char* filename, int flags) {
+        if (!ctx) return JS_UNDEFINED;
+        (void)filename; (void)flags;
+        // Minimal JavaScript evaluation for stub mode
+        // Only handles very basic expressions and console.log
+        std::string code(input, len);
+        
+        // Handle console.log calls
+        if (code.find("console.log") != std::string::npos) {
+            size_t start = code.find('(');
+            size_t end = code.rfind(')');
+            if (start != std::string::npos && end != std::string::npos) {
+                std::string content = code.substr(start + 1, end - start - 1);
+                OutputDebugStringA("[JS STUB] console.log: ");
+                OutputDebugStringA(content.c_str());
+                OutputDebugStringA("\n");
+            }
+        }
+        
+        // Handle simple string literals
+        else if (code.find('"') != std::string::npos) {
+            size_t start = code.find('"');
+            size_t end = code.find('"', start + 1);
+            if (end != std::string::npos) {
+                std::string content = code.substr(start + 1, end - start - 1);
+                return JS_NewString(ctx, content.c_str());
+            }
+        }
+        
+        // Handle simple number literals
+        else if (std::isdigit(code[0])) {
+            try {
+                int value = std::stoi(code);
+                return JS_NewInt32(ctx, value);
+            } catch (...) {
+                fprintf(stderr, "[JSExtensionHost] Conversion error ignored\n");
+            }
+        }
+        
+        return JS_UNDEFINED; 
+    }
+    // Additional stub storage for exceptions, context opaque, module loader
+    static std::unordered_map<JSContext*, void*> s_stubContextOpaque;
+    static std::unordered_map<JSContext*, JSValue> s_stubExceptions;
+    static std::unordered_map<uint64_t, uint32_t> s_stubRefCounts;
+
+    static uint32_t getTag(JSValue val) {
+        return static_cast<uint32_t>(val & 0xFFFFFFFFULL);
+    }
+    static uint64_t getId(JSValue val) {
+        return val >> 32;
+    }
+
+    static const char* JS_ToCString(JSContext* ctx, JSValue val) {
+        if (!ctx) return "";
+        uint32_t tag = getTag(val);
+        if (tag == JS_TAG_UNDEFINED) return "undefined";
+        if (tag == JS_TAG_NULL)     return "null";
+        if (val == JS_TRUE)         return "true";
+        if (val == JS_FALSE)        return "false";
+        if (tag == JS_TAG_STRING) {
+            uint64_t id = getId(val);
+            std::lock_guard<std::mutex> lock(s_stubValueMutex);
+            auto it = s_stubStrings.find(id);
+            if (it != s_stubStrings.end()) return it->second.c_str();
+        }
+        if (tag == JS_TAG_INT || tag == JS_TAG_FLOAT64) {
+            uint64_t id = getId(val);
+            std::lock_guard<std::mutex> lock(s_stubValueMutex);
+            auto it = s_stubNumbers.find(id);
+            if (it != s_stubNumbers.end()) {
+                static thread_local char buf[64];
+                std::snprintf(buf, sizeof(buf), "%g", it->second);
+                return buf;
+            }
+        }
+        return "[object Object]";
+    }
+    static void JS_FreeCString(JSContext* ctx, const char* str) {
+        if (!ctx) return;
+        // In stub mode strings are stored in unordered_map; no per-call free needed
+        (void)str;
+    }
+    static int JS_ToBool(JSContext* ctx, JSValue val) {
+        if (!ctx) return 0;
+        uint32_t tag = getTag(val);
+        if (val == JS_FALSE || tag == JS_TAG_NULL || tag == JS_TAG_UNDEFINED) return 0;
+        if (val == JS_TRUE) return 1;
+        if (tag == JS_TAG_INT || tag == JS_TAG_FLOAT64) {
+            uint64_t id = getId(val);
+            std::lock_guard<std::mutex> lock(s_stubValueMutex);
+            auto it = s_stubNumbers.find(id);
+            if (it != s_stubNumbers.end()) return (it->second != 0.0) ? 1 : 0;
+        }
+        if (tag == JS_TAG_STRING) {
+            uint64_t id = getId(val);
+            std::lock_guard<std::mutex> lock(s_stubValueMutex);
+            auto it = s_stubStrings.find(id);
+            if (it != s_stubStrings.end()) return it->second.empty() ? 0 : 1;
+        }
+        return 1; // objects, arrays, functions are truthy
+    }
+    static int JS_ToInt32(JSContext* ctx, int32_t* pval, JSValue val) {
+        if (!ctx || !pval) return -1;
+        uint32_t tag = getTag(val);
+        if (tag == JS_TAG_INT || tag == JS_TAG_FLOAT64) {
+            uint64_t id = getId(val);
+            std::lock_guard<std::mutex> lock(s_stubValueMutex);
+            auto it = s_stubNumbers.find(id);
+            if (it != s_stubNumbers.end()) {
+                *pval = static_cast<int32_t>(it->second);
+                return 0;
+            }
+        }
+        *pval = 0;
+        return 0;
+    }
+    static int JS_ToFloat64(JSContext* ctx, double* pval, JSValue val) {
+        if (!ctx || !pval) return -1;
+        uint32_t tag = getTag(val);
+        if (tag == JS_TAG_INT || tag == JS_TAG_FLOAT64) {
+            uint64_t id = getId(val);
+            std::lock_guard<std::mutex> lock(s_stubValueMutex);
+            auto it = s_stubNumbers.find(id);
+            if (it != s_stubNumbers.end()) {
+                *pval = it->second;
+                return 0;
+            }
+        }
+        *pval = 0.0;
+        return 0;
+    }
+    static void JS_FreeValue(JSContext* ctx, JSValue val) {
+        if (!ctx) return;
+        uint64_t id = getId(val);
+        if (id == 0) return;
+        std::lock_guard<std::mutex> lock(s_stubValueMutex);
+        s_stubStrings.erase(id);
+        s_stubNumbers.erase(id);
+        s_stubArrays.erase(id);
+        s_stubObjects.erase(id);
+        s_stubRefCounts.erase(id);
+    }
     static int JS_IsException(JSValue val) { return val == JS_EXCEPTION; }
-    static int JS_IsString(JSValue val) { return 0; }
-    static int JS_IsObject(JSValue val) { return 0; }
+    static int JS_IsString(JSValue val) { return getTag(val) == JS_TAG_STRING; }
+    static int JS_IsObject(JSValue val) {
+        uint32_t tag = getTag(val);
+        return (tag == JS_TAG_OBJECT);
+    }
     static int JS_IsUndefined(JSValue val) { return val == JS_UNDEFINED; }
     static int JS_IsNull(JSValue val) { return val == JS_NULL; }
-    static JSValue JS_GetException(JSContext* ctx) { return JS_UNDEFINED; }
-    static JSValue JS_GetGlobalObject(JSContext* ctx) { return JS_UNDEFINED; }
-    static int JS_ExecutePendingJob(JSRuntime* rt, JSContext** pctx) { return 0; }
+    static JSValue JS_GetException(JSContext* ctx) {
+        if (!ctx) return JS_UNDEFINED;
+        std::lock_guard<std::mutex> lock(s_stubValueMutex);
+        auto it = s_stubExceptions.find(ctx);
+        if (it != s_stubExceptions.end()) {
+            JSValue exc = it->second;
+            s_stubExceptions.erase(it);
+            return exc;
+        }
+        return JS_UNDEFINED;
+    }
+    static JSValue JS_GetGlobalObject(JSContext* ctx) {
+        if (!ctx) return JS_UNDEFINED;
+        // Return a persistent global object id
+        static uint64_t globalId = 0;
+        if (globalId == 0) {
+            globalId = allocStubId();
+            std::lock_guard<std::mutex> lock(s_stubValueMutex);
+            s_stubObjects[globalId]["console"] = JS_UNDEFINED;
+        }
+        return (globalId << 32) | JS_TAG_OBJECT;
+    }
+    static int JS_ExecutePendingJob(JSRuntime* rt, JSContext** pctx) {
+        (void)rt;
+        if (pctx) *pctx = nullptr;
+        // In stub mode there are no real pending jobs
+        return 0;
+    }
     static void JS_SetModuleLoaderFunc(JSRuntime* rt,
         void* normalize_func,
         JSModuleDef* (*module_loader)(JSContext*, const char*, void*),
-        void* opaque) {}
-    static void JS_SetContextOpaque(JSContext* ctx, void* opaque) {}
-    static void* JS_GetContextOpaque(JSContext* ctx) { return nullptr; }
-    static JSValue JS_DupValue(JSContext* ctx, JSValue val) { return val; }
-    static int JS_IsFunction(JSContext* ctx, JSValue val) { return 0; }
+        void* opaque) {
+        (void)rt; (void)normalize_func; (void)module_loader; (void)opaque;
+        // Store module loader configuration for stub mode
+    }
+    static void JS_SetContextOpaque(JSContext* ctx, void* opaque) {
+        if (!ctx) return;
+        std::lock_guard<std::mutex> lock(s_stubValueMutex);
+        s_stubContextOpaque[ctx] = opaque;
+    }
+    static void* JS_GetContextOpaque(JSContext* ctx) {
+        if (!ctx) return nullptr;
+        std::lock_guard<std::mutex> lock(s_stubValueMutex);
+        auto it = s_stubContextOpaque.find(ctx);
+        return (it != s_stubContextOpaque.end()) ? it->second : nullptr;
+    }
+    static JSValue JS_DupValue(JSContext* ctx, JSValue val) {
+        if (!ctx) return JS_UNDEFINED;
+        uint64_t id = getId(val);
+        if (id == 0) return val;
+        std::lock_guard<std::mutex> lock(s_stubValueMutex);
+        auto it = s_stubRefCounts.find(id);
+        if (it != s_stubRefCounts.end()) {
+            it->second++;
+        } else {
+            s_stubRefCounts[id] = 2;
+        }
+        return val;
+    }
+    static int JS_IsFunction(JSContext* ctx, JSValue val) {
+        if (!ctx) return 0;
+        uint64_t id = getId(val);
+        std::lock_guard<std::mutex> lock(s_stubValueMutex);
+        auto it = s_stubObjects.find(id);
+        if (it != s_stubObjects.end()) {
+            return (it->second.count("__func_name__") > 0) ? 1 : 0;
+        }
+        return 0;
+    }
     static JSValue JS_Call(JSContext* ctx, JSValue func_obj, JSValue this_obj,
-                            int argc, JSValue* argv) { return JS_UNDEFINED; }
-    static int32_t JS_GetPropertyLength(JSContext* ctx, JSValue obj) { return 0; }
-    static JSValue JS_GetPropertyUint32(JSContext* ctx, JSValue obj, uint32_t idx) { return JS_UNDEFINED; }
+                            int argc, JSValue* argv) {
+        if (!ctx) return JS_UNDEFINED;
+        uint64_t id = getId(func_obj);
+        std::string funcName = "anonymous";
+        {
+            std::lock_guard<std::mutex> lock(s_stubValueMutex);
+            auto it = s_stubObjects.find(id);
+            if (it != s_stubObjects.end()) {
+                auto fit = it->second.find("__func_name__");
+                if (fit != it->second.end()) {
+                    uint64_t nameId = getId(fit->second);
+                    auto sit = s_stubStrings.find(nameId);
+                    if (sit != s_stubStrings.end()) funcName = sit->second;
+                }
+            }
+        }
+        char dbg[256];
+        std::snprintf(dbg, sizeof(dbg),
+                      "[JS Stub] Call '%s' with %d args\n", funcName.c_str(), argc);
+        OutputDebugStringA(dbg);
+        (void)this_obj; (void)argv;
+        return JS_UNDEFINED;
+    }
+    static int32_t JS_GetPropertyLength(JSContext* ctx, JSValue obj) {
+        if (!ctx) return 0;
+        uint64_t id = getId(obj);
+        std::lock_guard<std::mutex> lock(s_stubValueMutex);
+        auto it = s_stubArrays.find(id);
+        if (it != s_stubArrays.end()) {
+            return static_cast<int32_t>(it->second.size());
+        }
+        return 0;
+    }
+    static JSValue JS_GetPropertyUint32(JSContext* ctx, JSValue obj, uint32_t idx) {
+        if (!ctx) return JS_UNDEFINED;
+        uint64_t id = getId(obj);
+        std::lock_guard<std::mutex> lock(s_stubValueMutex);
+        auto it = s_stubArrays.find(id);
+        if (it != s_stubArrays.end() && idx < it->second.size()) {
+            return it->second[idx];
+        }
+        return JS_UNDEFINED;
+    }
 
     #define JS_EVAL_TYPE_GLOBAL 0
     #define JS_EVAL_TYPE_MODULE 1
@@ -299,6 +662,24 @@ std::vector<std::string> jsonGetStringArray(const std::string& json, const std::
     return result;
 }
 
+std::string jsonEscape(const std::string& value) {
+    std::string out;
+    out.reserve(value.size() + 8);
+    for (char ch : value) {
+        switch (ch) {
+            case '\\': out += "\\\\"; break;
+            case '"': out += "\\\""; break;
+            case '\n': out += "\\n"; break;
+            case '\r': out += "\\r"; break;
+            case '\t': out += "\\t"; break;
+            default:
+                out.push_back(ch);
+                break;
+        }
+    }
+    return out;
+}
+
 // Read entire file into string
 std::string readFileToString(const char* path) {
     HANDLE hFile = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ, nullptr,
@@ -417,6 +798,7 @@ PatchResult JSExtensionHost::initialize() {
 
     // ---- Bind vscode.* API ----
     bindVSCodeAPI(ctx);
+    registerDefaultNativeDispatch();
 
     // ---- Bind global helpers ----
     // console.log, console.warn, console.error
@@ -670,11 +1052,95 @@ void JSExtensionHost::bindVSCodeAPI(void* ctx) {
     bindVSCodeTasks(ctx);
     bindVSCodeEnv(ctx);
     bindVSCodeExtensions(ctx);
+    bindNativeDispatchTable(ctx);
 
     JS_SetPropertyStr(cx, global, "vscode", vscode);
     JS_FreeValue(cx, global);
 
     OutputDebugStringA("[JSExtensionHost] vscode.* API bound to QuickJS context\n");
+}
+
+void JSExtensionHost::bindNativeDispatchTable(void* ctx) {
+    JSContext* cx = static_cast<JSContext*>(ctx);
+    if (!cx) return;
+
+    JSValue global = JS_GetGlobalObject(cx);
+    JSValue bridge = JS_NewObject(cx);
+
+    JS_SetPropertyStr(cx, bridge, "invoke",
+        JS_NewCFunction(cx, [](JSContext* c, JSValue this_val, int argc, JSValue* argv) -> JSValue {
+            if (argc < 1) return JS_UNDEFINED;
+            auto* host = static_cast<JSExtensionHost*>(JS_GetContextOpaque(c));
+            if (!host) return JS_UNDEFINED;
+
+            const char* opName = JS_ToCString(c, argv[0]);
+            const char* payload = (argc >= 2) ? JS_ToCString(c, argv[1]) : nullptr;
+            if (!opName) {
+                if (payload) JS_FreeCString(c, payload);
+                return JS_UNDEFINED;
+            }
+
+            std::string extensionId = host->getExtensionIdForContext(c);
+            std::string outJson;
+            PatchResult result = host->invokeNativeDispatch(
+                extensionId.c_str(), opName, payload ? payload : "", &outJson);
+
+            JS_FreeCString(c, opName);
+            if (payload) JS_FreeCString(c, payload);
+
+            if (!result.success) {
+                return JS_UNDEFINED;
+            }
+            return JS_NewString(c, outJson.c_str());
+        }, "invoke", 2));
+
+    JS_SetPropertyStr(cx, bridge, "listOps",
+        JS_NewCFunction(cx, [](JSContext* c, JSValue this_val, int argc, JSValue* argv) -> JSValue {
+            auto* host = static_cast<JSExtensionHost*>(JS_GetContextOpaque(c));
+            if (!host) return JS_NewArray(c);
+            std::string extensionId = host->getExtensionIdForContext(c);
+            std::vector<std::string> ops;
+            host->getNativeDispatchOperations(extensionId.c_str(), &ops);
+
+            JSValue arr = JS_NewArray(c);
+            for (uint32_t i = 0; i < static_cast<uint32_t>(ops.size()); ++i) {
+                JS_SetPropertyUint32(c, arr, i, JS_NewString(c, ops[i].c_str()));
+            }
+            return arr;
+        }, "listOps", 0));
+
+    JS_SetPropertyStr(cx, bridge, "hasPermission",
+        JS_NewCFunction(cx, [](JSContext* c, JSValue this_val, int argc, JSValue* argv) -> JSValue {
+            if (argc < 1) return JS_FALSE;
+            auto* host = static_cast<JSExtensionHost*>(JS_GetContextOpaque(c));
+            if (!host) return JS_FALSE;
+            const char* opName = JS_ToCString(c, argv[0]);
+            if (!opName) return JS_FALSE;
+
+            std::string extensionId = host->getExtensionIdForContext(c);
+            std::vector<std::string> ops;
+            host->getNativeDispatchOperations(extensionId.c_str(), &ops);
+
+            bool allowed = false;
+            for (const auto& op : ops) {
+                if (op == opName) {
+                    allowed = true;
+                    break;
+                }
+            }
+
+            JS_FreeCString(c, opName);
+            return JS_NewBool(c, allowed ? 1 : 0);
+        }, "hasPermission", 1));
+
+    JS_SetPropertyStr(cx, global, "__rawrxdNative", JS_DupValue(cx, bridge));
+    JSValue extContext = JS_GetPropertyStr(cx, global, "__extensionContext");
+    if (!JS_IsUndefined(extContext) && !JS_IsNull(extContext)) {
+        JS_SetPropertyStr(cx, extContext, "nativeBridge", JS_DupValue(cx, bridge));
+    }
+    JS_FreeValue(cx, extContext);
+    JS_FreeValue(cx, bridge);
+    JS_FreeValue(cx, global);
 }
 
 void JSExtensionHost::bindVSCodeCommands(void* ctx) {
@@ -2115,6 +2581,12 @@ PatchResult JSExtensionHost::loadExtensionFromDir(const char* extensionDir) {
     state->apiCallCount = 0;
     state->jsContext = nullptr;
     state->jsModule = nullptr;
+    state->nativePermissionMask = 0;
+
+    std::vector<std::string> nativePermissions =
+        jsonGetStringArray(pkgJson, "rawrxdNativePermissions");
+    state->grantedNativePermissions = nativePermissions;
+    state->nativePermissionMask = parseNativePermissionMask(nativePermissions);
 
     // ---- Pre-analyze requires ----
     std::string mainSource = readFileToString(mainPath.c_str());
@@ -2383,6 +2855,7 @@ PatchResult JSExtensionHost::activateExtension(const char* extensionId) {
         JSContext* pendingCtx = nullptr;
         while (JS_ExecutePendingJob(static_cast<JSRuntime*>(m_jsRuntime), &pendingCtx) > 0) {
             // Process all pending microtasks
+            fprintf(stderr, "[JSExtensionHost] Processed pending microtask\n");
         }
     }
 
@@ -2520,6 +2993,178 @@ PatchResult JSExtensionHost::registerModuleResolver(const char* moduleName,
         PolyfillDescriptor::Strategy::FullShim,
         jsSource,
         100);
+}
+
+std::string JSExtensionHost::getExtensionIdForContext(void* jsCtx) const {
+    if (!jsCtx) return "";
+    std::lock_guard<std::mutex> lock(m_extensionsMutex);
+    for (const auto& [id, state] : m_extensions) {
+        if (state && state->jsContext == jsCtx) {
+            return id;
+        }
+    }
+    return "";
+}
+
+uint32_t JSExtensionHost::parseNativePermissionMask(const std::vector<std::string>& permissions) const {
+    uint32_t mask = 0;
+    for (const auto& perm : permissions) {
+        if (perm == "telemetry" || perm == "native.telemetry") {
+            mask |= NativePermTelemetry;
+        } else if (perm == "workspace.read" || perm == "native.workspace.read") {
+            mask |= NativePermWorkspaceRead;
+        } else if (perm == "window.notify" || perm == "native.window.notify") {
+            mask |= NativePermWindowNotify;
+        }
+    }
+    return mask;
+}
+
+bool JSExtensionHost::hasNativePermission(const JSExtensionState* state, uint32_t requiredMask) const {
+    if (!state) return false;
+    if (requiredMask == NativePermNone) return true;
+    return (state->nativePermissionMask & requiredMask) == requiredMask;
+}
+
+PatchResult JSExtensionHost::invokeNativeDispatch(const char* extensionId,
+                                                   const char* opName,
+                                                   const char* payload,
+                                                   std::string* outJson) {
+    if (!extensionId || !opName || !outJson) {
+        return PatchResult::error("Invalid native dispatch parameters");
+    }
+
+    std::string payloadStr = payload ? payload : "";
+
+    uint32_t permissionMask = 0;
+    {
+        std::lock_guard<std::mutex> lock(m_extensionsMutex);
+        auto it = m_extensions.find(extensionId);
+        if (it == m_extensions.end() || !it->second) {
+            return PatchResult::error("Native dispatch denied: unknown extension context");
+        }
+        permissionMask = it->second->nativePermissionMask;
+    }
+
+    NativeDispatchEntry entry;
+    {
+        std::lock_guard<std::mutex> lock(m_nativeDispatchMutex);
+        auto it = m_nativeDispatch.find(opName);
+        if (it == m_nativeDispatch.end()) {
+            return PatchResult::error("Native dispatch op not found");
+        }
+        entry = it->second;
+    }
+
+    if ((permissionMask & entry.requiredPermissions) != entry.requiredPermissions) {
+        return PatchResult::error("Native dispatch denied: missing permission");
+    }
+
+    std::string resultJson;
+    PatchResult result = entry.handler(payloadStr, resultJson);
+    if (!result.success) {
+        return result;
+    }
+    *outJson = resultJson;
+    return PatchResult::ok("Native dispatch executed");
+}
+
+void JSExtensionHost::getNativeDispatchOperations(const char* extensionId,
+                                                   std::vector<std::string>* outOps) const {
+    if (!extensionId || !outOps) return;
+    outOps->clear();
+
+    uint32_t permissionMask = 0;
+    {
+        std::lock_guard<std::mutex> lock(m_extensionsMutex);
+        auto it = m_extensions.find(extensionId);
+        if (it == m_extensions.end() || !it->second) {
+            return;
+        }
+        permissionMask = it->second->nativePermissionMask;
+    }
+
+    std::lock_guard<std::mutex> lock(m_nativeDispatchMutex);
+    for (const auto& [opName, entry] : m_nativeDispatch) {
+        if ((permissionMask & entry.requiredPermissions) == entry.requiredPermissions) {
+            outOps->push_back(opName);
+        }
+    }
+}
+
+void JSExtensionHost::registerDefaultNativeDispatch() {
+    std::lock_guard<std::mutex> lock(m_nativeDispatchMutex);
+    if (!m_nativeDispatch.empty()) {
+        return;
+    }
+
+    m_nativeDispatch["host.ping"] = {
+        NativePermNone,
+        [](const std::string& payload, std::string& outJson) -> PatchResult {
+            outJson = "{\"ok\":true,\"op\":\"host.ping\",\"echo\":\"" +
+                jsonEscape(payload) + "\"}";
+            return PatchResult::ok("ping");
+        }
+    };
+
+    m_nativeDispatch["host.getStats"] = {
+        NativePermNone,
+        [this](const std::string& payload, std::string& outJson) -> PatchResult {
+            (void)payload;
+            Stats stats = getStats();
+            std::ostringstream os;
+            os << "{\"ok\":true"
+               << ",\"jsExtensionsLoaded\":" << stats.jsExtensionsLoaded
+               << ",\"jsExtensionsActive\":" << stats.jsExtensionsActive
+               << ",\"totalJSApiCalls\":" << stats.totalJSApiCalls
+               << ",\"totalScriptExecutions\":" << stats.totalScriptExecutions
+               << ",\"polyfillsUsed\":" << stats.polyfillsUsed
+               << ",\"requireCalls\":" << stats.requireCalls
+               << ",\"timersCreated\":" << stats.timersCreated
+               << ",\"eventsDispatched\":" << stats.eventsDispatched
+               << ",\"avgActivationTimeMs\":" << stats.avgActivationTimeMs
+               << "}";
+            outJson = os.str();
+            return PatchResult::ok("stats");
+        }
+    };
+
+    m_nativeDispatch["workspace.findFiles"] = {
+        NativePermWorkspaceRead,
+        [](const std::string& payload, std::string& outJson) -> PatchResult {
+            const char* includePattern = payload.empty() ? "*" : payload.c_str();
+            VSCodeUri outUris[128] = {};
+            size_t outCount = 0;
+            auto result = vscode::workspace::findFiles(includePattern, "", 128,
+                outUris, 128, &outCount);
+            if (!result.success) {
+                return PatchResult::error("workspace.findFiles failed");
+            }
+
+            std::ostringstream os;
+            os << "{\"ok\":true,\"op\":\"workspace.findFiles\",\"count\":"
+               << outCount << ",\"files\":[";
+            for (size_t i = 0; i < outCount; ++i) {
+                if (i > 0) os << ',';
+                os << "\"" << jsonEscape(outUris[i].fsPath()) << "\"";
+            }
+            os << "]}";
+            outJson = os.str();
+            return PatchResult::ok("workspace.findFiles");
+        }
+    };
+
+    m_nativeDispatch["window.notify"] = {
+        NativePermWindowNotify,
+        [](const std::string& payload, std::string& outJson) -> PatchResult {
+            if (payload.empty()) {
+                return PatchResult::error("window.notify payload cannot be empty");
+            }
+            vscode::window::showInformationMessage(payload.c_str(), nullptr, 0, nullptr);
+            outJson = "{\"ok\":true,\"op\":\"window.notify\"}";
+            return PatchResult::ok("window.notify");
+        }
+    };
 }
 
 // ============================================================================
@@ -2998,6 +3643,7 @@ DWORD WINAPI JSExtensionHost::extensionHostThread(LPVOID param) {
             while (JS_ExecutePendingJob(
                 static_cast<JSRuntime*>(host->m_jsRuntime), &pendingCtx) > 0) {
                 // Process microtasks
+                fprintf(stderr, "[JSExtensionHost] Processed microtask in event loop\n");
             }
         }
     }

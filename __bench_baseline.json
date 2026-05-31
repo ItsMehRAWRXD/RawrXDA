@@ -1,0 +1,1 @@
+{"benchmark":"rawrxd-concurrency","results":[{"concurrency":1,"throughput_tps":1591287.70,"mean_ms":0.156,"p50_ms":0.154,"p95_ms":0.176,"p99_ms":0.203},{"concurrency":4,"throughput_tps":6026010.71,"mean_ms":0.163,"p50_ms":0.157,"p95_ms":0.206,"p99_ms":0.280},{"concurrency":8,"throughput_tps":6816532.75,"mean_ms":0.246,"p50_ms":0.232,"p95_ms":0.336,"p99_ms":0.386}]}

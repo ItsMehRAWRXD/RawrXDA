@@ -1,0 +1,32 @@
+; RawrXD smoke AV first-chance triage script
+; Usage:
+;   windbg -o -QY -WF D:\rawrxd\tmp\windbg_smoke.log -c "$$><D:\rawrxd\scripts\windbg_smoke_av.txt" D:\rawrxd\build_pipeline\bin\RawrXD-Win32IDE.exe --chat-ui-smoke-noninteractive --test-model D:\phi3mini.gguf --test-prompt "Say exactly: AGENTIC_TEST_OK" --test-max-tokens 16 --test-timeout-ms 120000
+
+.symfix
+.reload
+sxe av
+
+.logopen /t D:\rawrxd\tmp\windbg_smoke_av_session.log
+
+.echo === RawrXD smoke crash triage armed ===
+.echo If AV occurs, collect regs/stack/disassembly and dump analysis.
+
+; Candidate breakpoints in currently mapped corridor
+bu RawrXD-Win32IDE!runHeadlessSmokeChatNoWindow
+bu RawrXD-Win32IDE!runNonInteractiveChatUiSmoke
+bu RawrXD-Win32IDE!Win32IDE::loadGGUFModel
+
+; Continue execution
+g
+
+; On break (manual):
+; !analyze -v
+; r
+; k
+; ub @rip-20
+; u @rip
+; .ecxr
+; kv
+
+.logclose
+qd

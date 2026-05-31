@@ -3,20 +3,24 @@
 // =============================================================================
 #include "AgentOrchestrator.h"
 #include "../core/rawrxd_subsystem_api.hpp"
+#include "core/thread_lifecycle_registry.h"
 
 // Windows <wingdi.h> defines ERROR as 0 which clashes with LogLevel::ERROR
 #ifdef ERROR
 #undef ERROR
 #endif
 #include "agentic_observability.h"
+#include <algorithm>
+#include <cctype>
 #include <chrono>
 #include <cstdio>
 #include <filesystem>
 #include <iomanip>
 #include <random>
 #include <sstream>
+#include <unordered_map>
 
-// SCAFFOLD_061: AgentOrchestrator task dispatch implementation
+// AgentOrchestrator Task Dispatch Implementation
 // Reverse-engineered from IDE integration patterns:
 // 1. Task Queue Management
 // 2. Priority-based Thread Pooling
@@ -37,6 +41,54 @@ namespace Agent
 {
 
 namespace {
+struct TaskWorkerState {
+    std::atomic<bool> stop{false};
+    std::thread thread;
+};
+
+std::mutex g_taskWorkerMutex;
+std::unordered_map<AgentOrchestrator*, std::unique_ptr<TaskWorkerState>> g_taskWorkers;
+
+TaskWorkerState* FindTaskWorkerState(AgentOrchestrator* orchestrator)
+{
+    std::lock_guard<std::mutex> lock(g_taskWorkerMutex);
+    auto it = g_taskWorkers.find(orchestrator);
+    return it != g_taskWorkers.end() ? it->second.get() : nullptr;
+}
+
+TaskWorkerState* CreateTaskWorkerState(AgentOrchestrator* orchestrator)
+{
+    std::lock_guard<std::mutex> lock(g_taskWorkerMutex);
+    auto& state = g_taskWorkers[orchestrator];
+    if (!state) {
+        state = std::make_unique<TaskWorkerState>();
+    }
+    return state.get();
+}
+
+void ShutdownTaskWorkerState(AgentOrchestrator* orchestrator)
+{
+    std::unique_ptr<TaskWorkerState> state;
+    {
+        std::lock_guard<std::mutex> lock(g_taskWorkerMutex);
+        auto it = g_taskWorkers.find(orchestrator);
+        if (it == g_taskWorkers.end()) {
+            return;
+        }
+        state = std::move(it->second);
+        g_taskWorkers.erase(it);
+    }
+
+    if (!state) {
+        return;
+    }
+
+    state->stop.store(true);
+    if (state->thread.joinable()) {
+        state->thread.join();
+    }
+}
+
 std::vector<std::string> CollectPromptContextFiles(const std::string& rootDir)
 {
     namespace fs = std::filesystem;
@@ -103,6 +155,45 @@ nlohmann::json extractToolArgsFromPayload(const nlohmann::json& payload)
 
     return nlohmann::json::object();
 }
+
+std::vector<std::string> BuildZeroDependencyPlan(const std::string& request)
+{
+    const std::string lower = [&]() {
+        std::string s = request;
+        std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) {
+            return static_cast<char>(std::tolower(c));
+        });
+        return s;
+    }();
+
+    std::vector<std::string> plan;
+    plan.push_back("Analyze request and identify target files/functions.");
+
+    if (lower.find("search") != std::string::npos || lower.find("find") != std::string::npos) {
+        plan.push_back("Run search_code to locate relevant symbols and call paths.");
+    }
+    if (lower.find("fix") != std::string::npos || lower.find("patch") != std::string::npos ||
+        lower.find("edit") != std::string::npos || lower.find("refactor") != std::string::npos) {
+        plan.push_back("Apply targeted edits with replace_in_file or write_file.");
+    }
+    if (lower.find("build") != std::string::npos || lower.find("compile") != std::string::npos ||
+        lower.find("error") != std::string::npos || lower.find("test") != std::string::npos) {
+        plan.push_back("Execute build/diagnostics and iterate on failures.");
+    }
+
+    plan.push_back("Summarize concrete changes and verification evidence.");
+    return plan;
+}
+
+std::string FormatPlanForSystemPrompt(const std::vector<std::string>& plan)
+{
+    std::ostringstream oss;
+    oss << "\n\nLocal planner (zero-dependency)\n";
+    for (size_t i = 0; i < plan.size(); ++i) {
+        oss << (i + 1) << ". " << plan[i] << "\n";
+    }
+    return oss.str();
+}
 }  // namespace
 
 void AgentOrchestrator::DispatchTask(const std::string& task_id, const nlohmann::json& payload)
@@ -110,19 +201,32 @@ void AgentOrchestrator::DispatchTask(const std::string& task_id, const nlohmann:
     auto& obs = GetObservability();
     obs.logInfo(kComponent, "Dispatching task", {{"task_id", task_id}, {"payload", payload}});
 
+    TaskWorkerState* taskWorker = FindTaskWorkerState(this);
     std::lock_guard<std::mutex> lock(m_mutex);
+    if (!taskWorker || taskWorker->stop.load()) {
+        obs.logWarn(kComponent, "Dropping task during orchestrator shutdown", {{"task_id", task_id}});
+        return;
+    }
     m_taskQueue.push({task_id, payload, std::chrono::system_clock::now()});
     m_taskCv.notify_one();
 }
 
 void AgentOrchestrator::ProcessTaskQueue()
 {
+    TaskWorkerState* taskWorker = FindTaskWorkerState(this);
+    if (!taskWorker) {
+        GetObservability().logWarn(kComponent, "Task worker state missing; queue processor exiting");
+        return;
+    }
+
     while (true)
     {
+        CHECK_SHUTDOWN_AND_RETURN();
+        
         std::unique_lock<std::mutex> lock(m_mutex);
-        m_taskCv.wait(lock, [this] { return !m_taskQueue.empty() || m_cancelRequested.load(); });
+        m_taskCv.wait(lock, [this, taskWorker] { return !m_taskQueue.empty() || taskWorker->stop.load(); });
 
-        if (m_cancelRequested.load())
+        if (taskWorker->stop.load())
             break;
 
         auto task = m_taskQueue.front();
@@ -136,8 +240,11 @@ void AgentOrchestrator::ProcessTaskQueue()
 
 void AgentOrchestrator::ExecuteTask(const std::string& id, const nlohmann::json& payload)
 {
+    const std::string action =
+        (payload.contains("action") && payload["action"].is_string()) ? payload["action"].get<std::string>() : std::string{};
+
     // run_tool: delegate to ToolRegistry for LLM-style tool execution
-    if (payload.contains("action") && payload["action"] == "run_tool")
+    if (action == "run_tool")
     {
         std::string name = extractToolNameFromPayload(payload);
         if (name.empty()) {
@@ -153,19 +260,132 @@ void AgentOrchestrator::ExecuteTask(const std::string& id, const nlohmann::json&
                                    {{"task_id", id}, {"tool", name}, {"success", res.success}});
         return;
     }
-    // prompt: one-shot user message (log; extend with m_client->chat for real one-shot reply if needed)
-    if (payload.contains("action") && payload["action"] == "prompt" && payload.contains("text"))
+    // prompt/coordinated_task: run a bounded agent loop against the native tool stack.
+    if (action == "prompt" || action == "coordinated_task")
     {
-        std::string text = payload["text"].get<std::string>();
-        GetObservability().logInfo(kComponent, "ExecuteTask prompt",
-                                   {{"task_id", id}, {"text_len", static_cast<int>(text.size())}});
+        std::string text;
+        if (action == "prompt" && payload.contains("text") && payload["text"].is_string()) {
+            text = payload["text"].get<std::string>();
+        } else if (payload.contains("description") && payload["description"].is_string()) {
+            text = payload["description"].get<std::string>();
+        }
+
+        std::string specialization;
+        if (payload.contains("specialization") && payload["specialization"].is_string()) {
+            specialization = payload["specialization"].get<std::string>();
+        }
+
+        if (text.empty()) {
+            GetObservability().logWarn(kComponent, "ExecuteTask prompt missing text",
+                                       {{"task_id", id}, {"action", action}, {"payload", payload}});
+            return;
+        }
+
+        AgentSession session;
+        session.session_id = id;
+
+        const std::string cwd = m_config.working_directory.empty() ? "." : m_config.working_directory;
+        const std::vector<std::string> promptFiles = CollectPromptContextFiles(cwd);
+
+        ChatMessage sysMsg;
+        sysMsg.role = "system";
+        std::vector<std::string> scopedSources;
+        sysMsg.content = m_registry.GetSystemPrompt(cwd, promptFiles, &scopedSources);
+        session.applied_instruction_sources = scopedSources;
+        if (!scopedSources.empty()) {
+            GetObservability().logInfo(kComponent,
+                                       "Scoped instructions resolved",
+                                       {{"task_id", id}, {"source_count", static_cast<int>(scopedSources.size())}, {"sources", scopedSources}});
+        }
+        if (!specialization.empty()) {
+            sysMsg.content += "\n\nSpecialization focus: " + specialization;
+        }
+        session.messages.push_back(sysMsg);
+
+        ChatMessage userMsg;
+        userMsg.role = "user";
+        userMsg.content = text;
+        session.messages.push_back(userMsg);
+
+        int maxRounds = m_config.max_tool_rounds;
+        if (maxRounds < 1) {
+            maxRounds = 1;
+        }
+        if (maxRounds > 4) {
+            maxRounds = 4;
+        }
+
+        for (int round = 0; round < maxRounds; ++round)
+        {
+            if (m_cancelRequested.load()) {
+                break;
+            }
+
+            const bool hasMoreWork = RunOneRound(session, nullptr);
+            if (!hasMoreWork) {
+                break;
+            }
+            TrimHistory(session);
+        }
+
+        std::string finalResponse;
+        for (auto it = session.steps.rbegin(); it != session.steps.rend(); ++it)
+        {
+            if (it->type == AgentStep::Type::AssistantMessage && !it->content.empty())
+            {
+                finalResponse = it->content;
+                break;
+            }
+        }
+
+        GetObservability().logInfo(kComponent, "ExecuteTask conversational task completed",
+                                   {{"task_id", id},
+                                    {"action", action},
+                                    {"specialization", specialization},
+                                    {"applied_instruction_source_count", static_cast<int>(session.applied_instruction_sources.size())},
+                                    {"applied_instruction_sources", session.applied_instruction_sources},
+                                    {"tool_calls_made", session.tool_calls_made},
+                                    {"errors_encountered", session.errors_encountered},
+                                    {"response_len", static_cast<int>(finalResponse.size())}});
         return;
     }
 
-    // mesh_sync: handoff to Titan Sovereign Link (MASM64) when implemented
-    if (payload.contains("action") && payload["action"] == "mesh_sync")
+    // mesh_sync: capture coordination state and execute a real synchronized task pass.
+    if (action == "mesh_sync")
     {
-        GetObservability().logInfo(kComponent, "ExecuteTask mesh_sync (no-op)", {{"task_id", id}});
+        nlohmann::json meshState = {
+            {"advanced_coordination", static_cast<bool>(m_advancedCoordinator)},
+            {"cancel_requested", m_cancelRequested.load()}
+        };
+
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            meshState["pending_local_tasks"] = m_taskQueue.size();
+        }
+
+        if (m_advancedCoordinator) {
+            const auto metrics = m_advancedCoordinator->getCoordinatorMetrics();
+            meshState["coordinator_metrics"] = {
+                {"total_agents", metrics.totalAgents},
+                {"healthy_agents", metrics.healthyAgents},
+                {"pending_tasks", metrics.pendingTasks},
+                {"average_load", metrics.averageLoad},
+                {"active_recoveries", metrics.activeRecoveries}
+            };
+        }
+
+        std::string description = "Synchronize coordinator state and resolve queued agent work.";
+        if (payload.contains("description") && payload["description"].is_string()) {
+            description = payload["description"].get<std::string>();
+        } else if (payload.contains("text") && payload["text"].is_string()) {
+            description = payload["text"].get<std::string>();
+        }
+
+        GetObservability().logInfo(kComponent, "ExecuteTask mesh_sync snapshot", {{"task_id", id}, {"mesh_state", meshState}});
+        ExecuteTask(id + "_mesh", {{"action", "coordinated_task"},
+                                     {"description", description},
+                                     {"specialization", "mesh_sync"},
+                                     {"mesh_state", meshState}});
         return;
     }
     GetObservability().logInfo(kComponent, "ExecuteTask unhandled", {{"task_id", id}, {"payload", payload}});
@@ -186,7 +406,14 @@ using RawrXD::Agent::InferenceResult;
 
 AgentOrchestrator::AgentOrchestrator() : m_registry(AgentToolRegistry::Instance())
 {
-    m_client = std::make_unique<AgentOllamaClient>(m_ollamaConfig);
+    m_client = std::make_unique<NativeInferenceClient>(m_nativeConfig);
+    if (TaskWorkerState* taskWorker = CreateTaskWorkerState(this)) {
+        taskWorker->thread = std::thread([this]() {
+            REGISTER_THREAD("AgentOrchestrator", "task queue processor");
+            ProcessTaskQueue();
+            RawrXD::Core::ThreadLifecycleRegistry::Instance().MarkExited(std::this_thread::get_id());
+        });
+    }
 
     // Batch 2: Initialize Advanced Agent Coordinator
     m_advancedCoordinator = std::make_unique<Agentic::AdvancedAgentCoordinator>();
@@ -199,6 +426,11 @@ AgentOrchestrator::AgentOrchestrator() : m_registry(AgentToolRegistry::Instance(
 
 AgentOrchestrator::~AgentOrchestrator()
 {
+    if (TaskWorkerState* taskWorker = FindTaskWorkerState(this)) {
+        taskWorker->stop.store(true);
+    }
+    m_taskCv.notify_all();
+
     // Batch 2: Shutdown Advanced Coordinator first
     if (m_advancedCoordinator) {
         m_advancedCoordinator->shutdown();
@@ -209,6 +441,7 @@ AgentOrchestrator::~AgentOrchestrator()
     {
         m_asyncThread.join();
     }
+    ShutdownTaskWorkerState(this);
 }
 
 // ---------------------------------------------------------------------------
@@ -221,14 +454,14 @@ void AgentOrchestrator::SetConfig(const OrchestratorConfig& config)
     m_config = config;
 }
 
-void AgentOrchestrator::SetNativeConfig(const OllamaConfig& config)
+void AgentOrchestrator::SetNativeConfig(const NativeInferenceConfig& config)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
-    m_ollamaConfig = config;
-    m_client = std::make_unique<AgentOllamaClient>(config);
+    m_nativeConfig = config;
+    m_client = std::make_unique<NativeInferenceClient>(config);
 }
 
-void AgentOrchestrator::SetOllamaConfig(const OllamaConfig& config)
+void AgentOrchestrator::SetOllamaConfig(const NativeInferenceConfig& config)
 {
     SetNativeConfig(config);
 }
@@ -261,7 +494,21 @@ AgentSession AgentOrchestrator::RunAgentLoop(const std::string& user_message, St
     sysMsg.role = "system";
     const std::string cwd = m_config.working_directory.empty() ? "." : m_config.working_directory;
     const std::vector<std::string> promptFiles = CollectPromptContextFiles(cwd);
-    sysMsg.content = m_registry.GetSystemPrompt(cwd, promptFiles);
+    std::vector<std::string> scopedSources;
+    sysMsg.content = m_registry.GetSystemPrompt(cwd, promptFiles, &scopedSources);
+    session.applied_instruction_sources = scopedSources;
+    if (!scopedSources.empty()) {
+        obs.logInfo(kComponent,
+                    "Scoped instructions resolved",
+                    nlohmann::json::object(
+                        {{"session_id", session.session_id},
+                         {"source_count", static_cast<int>(scopedSources.size())},
+                         {"sources", scopedSources}}));
+    }
+
+    // Zero-dependency planner loop: deterministic local planning before tool rounds.
+    const auto localPlan = BuildZeroDependencyPlan(user_message);
+    sysMsg.content += FormatPlanForSystemPrompt(localPlan);
     session.messages.push_back(sysMsg);
 
     // User message
@@ -277,6 +524,15 @@ AgentSession AgentOrchestrator::RunAgentLoop(const std::string& user_message, St
     session.steps.push_back(userStep);
     if (on_step)
         on_step(userStep);
+
+    // Emit planner trace step to keep runtime introspectable.
+    AgentStep plannerStep;
+    plannerStep.type = AgentStep::Type::AssistantMessage;
+    plannerStep.content = "[planner]\n" + FormatPlanForSystemPrompt(localPlan);
+    plannerStep.elapsed_ms = 0.0;
+    session.steps.push_back(plannerStep);
+    if (on_step)
+        on_step(plannerStep);
 
     // Agentic loop: call LLM, execute tools, feed results back
     for (int round = 0; round < m_config.max_tool_rounds; ++round)
@@ -311,6 +567,8 @@ AgentSession AgentOrchestrator::RunAgentLoop(const std::string& user_message, St
 
     obs.logInfo(kComponent, "Agent loop completed",
                 nlohmann::json::object({{"session_id", session.session_id},
+                                        {"applied_instruction_source_count", static_cast<int>(session.applied_instruction_sources.size())},
+                                        {"applied_instruction_sources", session.applied_instruction_sources},
                                         {"tool_calls_made", session.tool_calls_made},
                                         {"errors_encountered", session.errors_encountered},
                                         {"total_elapsed_ms", session.total_elapsed_ms},
@@ -745,21 +1003,23 @@ void AgentOrchestrator::SubmitCoordinatedTask(const std::string& taskDescription
                                              const std::string& specialization,
                                              RawrXD::Agentic::TaskPriority priority)
 {
+    const std::string taskId = "coord_" + GenerateSessionId();
+    nlohmann::json payload = {
+        {"action", "coordinated_task"},
+        {"description", taskDescription},
+        {"specialization", specialization},
+        {"priority", static_cast<int>(priority)}
+    };
+
     if (!m_advancedCoordinator) {
         GetObservability().logWarn(kComponent, "Advanced coordination not enabled, using basic dispatch");
-        // Fallback to basic task dispatch
-        nlohmann::json payload = {
-            {"action", "coordinated_task"},
-            {"description", taskDescription},
-            {"specialization", specialization}
-        };
-        DispatchTask("coordinated_" + std::to_string(rand()), payload);
+        DispatchTask(taskId, payload);
         return;
     }
 
     // Create coordinated task
     auto task = std::make_shared<RawrXD::Agentic::AgentTask>();
-    task->id = "coord_" + GenerateSessionId();
+    task->id = taskId;
     task->description = taskDescription;
     task->specialization = specialization;
     task->parameters = nlohmann::json{
@@ -770,6 +1030,7 @@ void AgentOrchestrator::SubmitCoordinatedTask(const std::string& taskDescription
 
     // Submit to advanced coordinator
     m_advancedCoordinator->submitTask(task, priority);
+    DispatchTask(task->id, payload);
 
     GetObservability().logInfo(kComponent, "Coordinated task submitted",
                                nlohmann::json::object({

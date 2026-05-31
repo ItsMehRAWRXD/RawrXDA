@@ -84,7 +84,7 @@ public:
         }
 
         // Very lightweight JSON sniffing: expect an array with at least one element
-        // Example: [{"File":"...","Line":12,"Type":"TODO","Priority":"High","Confidence":0.78,"Content":"..."}]
+        // Pattern: [{"File":"...","Line":12,"Type":"TODO","Priority":"High","Confidence":0.78,"Content":"..."}]
         auto getValue = [&](const std::string& key) -> std::string {
             std::string token = "\"" + key + "\":";
             auto pos = response.find(token);
@@ -150,7 +150,7 @@ private:
 
 } // namespace RawrXD
 
-#ifdef RAWRXD_CLIENT_DEMO
+#ifdef RAWRXD_CLIENT_TEST
 int main() {
     RawrXD::PatternBridgeClient client;
     if (!client.// Connect removed) {

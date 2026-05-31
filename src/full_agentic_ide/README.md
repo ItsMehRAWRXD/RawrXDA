@@ -9,7 +9,6 @@
 | `FullAgenticIDE.h` | Public API: Init, LoadModel, Chat, SetWorkspaceRoot, GetStatus, GetAvailableTools |
 | `FullAgenticIDE.cpp` | Implementation: owns AgenticBridge, forwards all operations |
 | `README.md` | This overview |
-| `MANIFEST.md` | **Full stack manifest** — every component (bridge, engine, tools, init path) in one place; no scattered prototypes |
 
 ## Usage
 

@@ -85,6 +85,19 @@ PatchResult NativeInferencePipeline::Init(const PipelineConfig& cfg) {
 
     m_state.store(PipelineState::Idle);
 
+    // Initialize speculative inference engine
+    if (cfg.enableSpeculativeDecoding) {
+        m_specEngine = std::make_unique<Inference::SpeculativeInferenceEngine>();
+        if (!m_specEngine->initialize(40)) {  // 40GB arena
+            // Non-fatal: fall back to standard inference
+            m_specEngine.reset();
+        } else {
+            m_specEngine->set_gamma(cfg.speculativeGamma);
+            m_specEngine->enable_self_improvement(cfg.enableSelfImprovement);
+            m_speculativeEnabled = true;
+        }
+    }
+
     // Auto-load model if path provided
     if (cfg.autoLoadOnInit && cfg.modelPath[0] != '\0') {
         r = LoadModel(cfg.modelPath);
@@ -205,6 +218,19 @@ PatchResult NativeInferencePipeline::InferWithConfig(const char* prompt,
         return PatchResult::error("Pipeline: not ready for inference");
     }
 
+    // Use speculative inference if enabled and available
+    if (m_speculativeEnabled && m_specEngine && sampler.maxTokens > 0) {
+        return InferWithSpeculativeDecoding(prompt, promptLen, sampler);
+    }
+
+    const uint64_t requestId = m_nextRequestId.fetch_add(1, std::memory_order_acq_rel);
+    auto requestToken = std::make_shared<InferenceRequestToken>(requestId);
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_activeRequestToken = requestToken;
+        m_activeRequestId.store(requestId, std::memory_order_release);
+    }
+
     // Reset output
     m_outputLen = 0;
     m_tokenCount.store(0);
@@ -223,27 +249,35 @@ PatchResult NativeInferencePipeline::InferWithConfig(const char* prompt,
             VirtualAlloc(nullptr, promptLen + 1,
                          MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE));
         if (!promptCopy) {
+            ClearActiveRequest(requestId);
             m_state.store(PipelineState::Ready);
             return PatchResult::error("Pipeline: prompt copy allocation failed");
         }
         memcpy(promptCopy, prompt, promptLen);
         promptCopy[promptLen] = '\0';
 
-        m_workerThread = std::thread([this, promptCopy, promptLen, sampler]() {
-            InferenceWorker(promptCopy, promptLen, sampler);
+        m_workerThread = std::thread([this, promptCopy, promptLen, sampler, requestToken]() {
+            InferenceWorker(promptCopy, promptLen, sampler, requestToken);
             VirtualFree(promptCopy, 0, MEM_RELEASE);
         });
 
         return PatchResult::ok("Pipeline: inference started (async)");
     } else {
         // Synchronous inference
-        InferenceWorker(prompt, promptLen, sampler);
+        InferenceWorker(prompt, promptLen, sampler, requestToken);
         return PatchResult::ok("Pipeline: inference complete");
     }
 }
 
 void NativeInferencePipeline::InferenceWorker(const char* prompt,
-    uint32_t promptLen, LocalAI::SamplerConfig sampler) {
+    uint32_t promptLen, LocalAI::SamplerConfig sampler,
+    std::shared_ptr<InferenceRequestToken> requestToken) {
+
+    if (requestToken && requestToken->IsCancelled()) {
+        m_state.store(PipelineState::Ready);
+        ClearActiveRequest(requestToken->requestId);
+        return;
+    }
 
     sampler.eosToken = m_core.GetModelConfig().eosToken;
 
@@ -251,7 +285,11 @@ void NativeInferencePipeline::InferenceWorker(const char* prompt,
         prompt, promptLen, sampler,
         TokenCallbackTrampoline, this);
 
-    if (result.success) {
+    const bool cancelled = requestToken && requestToken->IsCancelled();
+
+    if (cancelled) {
+        m_state.store(PipelineState::Ready);
+    } else if (result.success) {
         m_state.store(PipelineState::Ready);
 
         if (m_config.targetHWND && m_config.postMessages) {
@@ -273,6 +311,10 @@ void NativeInferencePipeline::InferenceWorker(const char* prompt,
     if (result.outputTokens) {
         VirtualFree(result.outputTokens, 0, MEM_RELEASE);
     }
+
+    if (requestToken) {
+        ClearActiveRequest(requestToken->requestId);
+    }
 }
 
 bool NativeInferencePipeline::TokenCallbackTrampoline(void* userData,
@@ -286,6 +328,11 @@ bool NativeInferencePipeline::OnToken(uint32_t tokenId,
 
     // Check for stop request
     if (m_stopRequested.load(std::memory_order_relaxed)) {
+        return false;
+    }
+
+    auto requestToken = ActiveRequestToken();
+    if (requestToken && requestToken->IsCancelled()) {
         return false;
     }
 
@@ -334,10 +381,51 @@ PatchResult NativeInferencePipeline::StopInference() {
         return PatchResult::error("Pipeline: not currently inferring");
     }
 
+    const uint64_t requestId = ActiveRequestId();
+    if (requestId != 0) {
+        return CancelInference(requestId);
+    }
+
     m_stopRequested.store(true, std::memory_order_release);
     m_state.store(PipelineState::Stopping);
 
     return PatchResult::ok("Pipeline: stop requested");
+}
+
+PatchResult NativeInferencePipeline::CancelInference(uint64_t requestId) {
+    if (requestId == 0) {
+        return PatchResult::error("Pipeline: invalid request id");
+    }
+
+    std::shared_ptr<InferenceRequestToken> requestToken;
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        if (m_activeRequestId.load(std::memory_order_acquire) != requestId || !m_activeRequestToken) {
+            return PatchResult::error("Pipeline: request id is not active");
+        }
+        requestToken = m_activeRequestToken;
+    }
+
+    requestToken->Cancel();
+    m_stopRequested.store(true, std::memory_order_release);
+    if (m_state.load(std::memory_order_acquire) == PipelineState::Inferring) {
+        m_state.store(PipelineState::Stopping);
+    }
+
+    return PatchResult::ok("Pipeline: cancel requested");
+}
+
+std::shared_ptr<InferenceRequestToken> NativeInferencePipeline::ActiveRequestToken() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_activeRequestToken;
+}
+
+void NativeInferencePipeline::ClearActiveRequest(uint64_t requestId) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (m_activeRequestId.load(std::memory_order_acquire) == requestId) {
+        m_activeRequestToken.reset();
+        m_activeRequestId.store(0, std::memory_order_release);
+    }
 }
 
 PatchResult NativeInferencePipeline::WaitForCompletion(uint32_t timeoutMs) {
@@ -398,6 +486,69 @@ float NativeInferencePipeline::CurrentTokensPerSec() const {
     auto now = std::chrono::high_resolution_clock::now();
     float ms = std::chrono::duration<float, std::milli>(now - m_inferStart).count();
     return (ms > 0.0f) ? (count * 1000.0f / ms) : 0.0f;
+}
+
+// ============================================================================
+// Speculative Inference Methods
+// ============================================================================
+PatchResult NativeInferencePipeline::InferWithSpeculativeDecoding(const char* prompt,
+    uint32_t promptLen, const LocalAI::SamplerConfig& sampler) {
+    
+    if (!m_specEngine) {
+        return PatchResult::error("Pipeline: speculative engine not initialized");
+    }
+    
+    m_state.store(PipelineState::Inferring);
+    m_inferStart = std::chrono::high_resolution_clock::now();
+    
+    // Convert prompt to token IDs (simplified: use ASCII values)
+    std::vector<int> promptTokens;
+    for (uint32_t i = 0; i < promptLen && i < 2048; i++) {
+        promptTokens.push_back(static_cast<unsigned char>(prompt[i]));
+    }
+    
+    // Generate with speculative engine
+    std::vector<int> output;
+    int generated = m_specEngine->generate(output, promptTokens, 
+                                          sampler.maxTokens, 
+                                          m_config.speculativeTemp);
+    
+    // Convert tokens to text output
+    for (int tok : output) {
+        if (m_outputLen < m_outputCapacity - 2) {
+            m_outputBuf[m_outputLen++] = static_cast<char>(tok % 256);
+        }
+    }
+    m_outputBuf[m_outputLen] = '\0';
+    
+    m_tokenCount.store(generated);
+    m_state.store(PipelineState::Ready);
+    
+    // Post completion message
+    if (m_config.targetHWND && m_config.postMessages) {
+        PostMessageA((HWND)m_config.targetHWND, WM_NATIVE_AI_COMPLETE,
+                     (WPARAM)m_outputLen, (LPARAM)0);
+    }
+    
+    return PatchResult::ok("Pipeline: speculative inference complete");
+}
+
+void NativeInferencePipeline::SetSpeculativeEnabled(bool enabled) {
+    m_speculativeEnabled = enabled && m_specEngine != nullptr;
+}
+
+bool NativeInferencePipeline::IsSpeculativeEnabled() const {
+    return m_speculativeEnabled && m_specEngine != nullptr;
+}
+
+double NativeInferencePipeline::GetSpeculativeTokensPerSec() const {
+    if (!m_specEngine) return 0.0;
+    return m_specEngine->get_tokens_per_second();
+}
+
+double NativeInferencePipeline::GetSpeculativeAcceptanceRate() const {
+    if (!m_specEngine) return 0.0;
+    return m_specEngine->get_acceptance_rate();
 }
 
 void NativeInferencePipeline::GetDiagnostics(char* buf, size_t bufLen) const {

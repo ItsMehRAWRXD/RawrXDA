@@ -82,6 +82,7 @@ struct QuickJSSandboxConfig {
     bool        allowEval           = false;                // Disallow eval() by default
     bool        allowBytecodeLoad   = false;                // Disallow .qjsc loading
     bool        allowNetworkShims   = false;                // Block net/http/https requires
+    bool        allowWebAssembly    = false;                // Disable WebAssembly globals by default
 
     // Filesystem sandbox boundaries (extensions can only read/write within these)
     std::vector<std::filesystem::path>  allowedReadPaths;

@@ -14,7 +14,7 @@
 #define GGML_SYCL_VECDOTQ_HPP
 
 #include "dpct/helper.hpp"
-#include "ggml.h"
+#include "ggml_rxd_internal.h"
 #include "quants.hpp"
 
 typedef float (*vec_dot_q_sycl_t)(const void * __restrict__ vbq, const block_q8_1 * __restrict__ bq8_1,

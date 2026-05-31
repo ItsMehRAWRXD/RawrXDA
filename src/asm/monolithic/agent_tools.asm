@@ -46,6 +46,14 @@ PUBLIC Tool_RunCommand
 PUBLIC Tool_SearchCode
 PUBLIC Tool_GetDiagnostics
 PUBLIC Tool_GetSymbols
+PUBLIC Tool_ReadFile_Impl
+PUBLIC Tool_EditFile_Impl
+PUBLIC Tool_ShellExec_Impl
+PUBLIC Tool_SearchCode_Impl
+PUBLIC Tool_GetDiagnostics_Impl
+PUBLIC Tool_GetSymbols_Impl
+PUBLIC Tool_ListDir_Impl
+PUBLIC Tool_RunCommand_Impl
 
 ; ---------------------------------------------------------------------------
 ; CONSTANTS
@@ -68,8 +76,13 @@ TOOL_ID_MODEL_OPS   equ 13
 TOOL_ID_WEB_OPS     equ 14
 TOOL_ID_SYSTEM_OPS  equ 15
 TOOL_BUF_SIZE       equ 65536
+TOOL_PIPE_HALF      equ TOOL_BUF_SIZE / 2
 MAX_TOOLS           equ 16
 FIND_DATA_SIZE      equ 592
+WF_LOC_MATCHOFF     equ 32 + MAX_PATH*2 + 0
+WF_LOC_WRITEPTR     equ 32 + MAX_PATH*2 + 8
+WF_LOC_WRITELEN     equ 32 + MAX_PATH*2 + 16
+WF_LOC_MODE         equ 32 + MAX_PATH*2 + 24
 
 GENERIC_READ            equ 80000000h
 GENERIC_WRITE           equ 40000000h
@@ -142,6 +155,9 @@ szTool_NoInit       db "[tool] not initialized", 13, 10, 0
 szTool_BadId        db "[tool] unknown tool id", 13, 10, 0
 szTool_ReadOK       db "[tool:read_file] ", 0
 szTool_WriteOK      db "[tool:write_file] written ", 0
+szTool_ReplaceOK    db "[tool:replace_in_file] replaced 1 occurrence", 13, 10, 0
+szTool_ReplaceMiss  db "[tool:replace_in_file] exact match count must be 1", 13, 10, 0
+szTool_ReplaceBig   db "[tool:replace_in_file] output too large", 13, 10, 0
 szTool_DirHeader    db "[tool:list_dir] ", 0
 szTool_CmdHeader    db "[tool:run_cmd] exit=", 0
 szNoDiag            db "[no diagnostics pending]", 13, 10, 0
@@ -539,30 +555,30 @@ Tool_Init PROC FRAME
 
         ; Fill dispatch table with procedure addresses
         lea     rbx, [g_toolDispatch]              ; RIP-relative base
-        lea     rax, Tool_ReadFile
+        lea     rax, Tool_ReadFile_Impl
         mov     qword ptr [rbx + 0*8], rax
 
-        lea     rax, Tool_WriteFile
+        lea     rax, Tool_EditFile_Impl
         mov     qword ptr [rbx + 1*8], rax
 
-        lea     rax, Tool_ListDir
+        lea     rax, Tool_ListDir_Impl
         mov     qword ptr [rbx + 2*8], rax
 
-        lea     rax, Tool_RunCommand
+        lea     rax, Tool_RunCommand_Impl
         mov     qword ptr [rbx + 3*8], rax
 
-        lea     rax, Tool_SearchCode
+        lea     rax, Tool_SearchCode_Impl
         mov     qword ptr [rbx + 4*8], rax
 
-        lea     rax, Tool_GetDiagnostics
+        lea     rax, Tool_GetDiagnostics_Impl
         mov     qword ptr [rbx + 5*8], rax
 
-        lea     rax, Tool_GetSymbols
+        lea     rax, Tool_GetSymbols_Impl
         mov     qword ptr [rbx + 6*8], rax
 
-        ; Stage-1 family lanes: keep behavior compatible by routing to
-        ; Tool_RunCommand while preserving distinct tool IDs.
-        lea     rax, Tool_RunCommand
+        ; Family lanes use ShellExec impl so both "command" and legacy "cmd"
+        ; payloads are accepted consistently across RTP handlers.
+        lea     rax, Tool_ShellExec_Impl
         mov     qword ptr [rbx + TOOL_ID_GIT_OPS*8], rax
         mov     qword ptr [rbx + TOOL_ID_BUILD_OPS*8], rax
         mov     qword ptr [rbx + TOOL_ID_TEST_OPS*8], rax
@@ -798,6 +814,8 @@ Tool_WriteFile PROC FRAME
         .pushreg r13
         push    r14
         .pushreg r14
+        push    r15
+        .pushreg r15
         sub     rsp, 32 + MAX_PATH*2 + 32   ; shadow + two path/key bufs (padded)
         .allocstack 32 + MAX_PATH*2 + 32
         .endprolog
@@ -836,7 +854,174 @@ _wf_has_dynbuf:
         mov     r9, TOOL_BUF_SIZE - 1
         call    _JsonExtract
         mov     r14d, eax       ; content length
+        mov     qword ptr [rsp + WF_LOC_WRITEPTR], 0
+        mov     dword ptr [rsp + WF_LOC_WRITELEN], 0
+        mov     dword ptr [rsp + WF_LOC_MODE], 0
+        test    r14d, r14d
+        jnz     _wf_prepare_write
 
+        ; No whole-file content supplied. Check for exact replace contract:
+        ; {"path":"...","old_str":"...","new_str":"..."}
+        mov     rcx, rbx
+        lea     rdx, _wf_key_old_str
+        lea     r8,  [g_pipeBuf]
+        mov     r9,  TOOL_PIPE_HALF - 1
+        call    _JsonExtract
+        mov     r14d, eax       ; old_str length
+        test    r14d, r14d
+        jz      _wf_prepare_write
+
+        mov     rcx, rbx
+        lea     rdx, _wf_key_new_str
+        lea     r8,  [g_pipeBuf + TOOL_PIPE_HALF]
+        mov     r9,  TOOL_PIPE_HALF - 1
+        call    _JsonExtract
+        mov     r15d, eax       ; new_str length
+
+        ; Open existing file for edit mode.
+        mov     rcx, rdi
+        mov     edx, GENERIC_READ
+        mov     r8d, FILE_SHARE_READ
+        xor     r9d, r9d
+        mov     qword ptr [rsp+32], OPEN_EXISTING
+        mov     qword ptr [rsp+40], FILE_ATTRIBUTE_NORMAL
+        mov     qword ptr [rsp+48], 0
+        call    CreateFileA
+        cmp     rax, INVALID_HANDLE_VALUE
+        jne     _wf_edit_read
+        mov     eax, -1
+        jmp     _wf_ret
+
+_wf_edit_read:
+        mov     rsi, rax        ; hFile
+        mov     rcx, rsi
+        lea     rdx, [g_toolResultBuf]
+        mov     r8d, TOOL_BUF_SIZE - 1
+        lea     r9,  [g_toolBytesWritten]
+        mov     qword ptr [rsp+32], 0
+        call    ReadFile
+        mov     rcx, rsi
+        call    CloseHandle
+
+        mov     eax, dword ptr [g_toolBytesWritten]
+        lea     rcx, [g_toolResultBuf]
+        mov     byte ptr [rcx + rax], 0
+        mov     dword ptr [rsp + WF_LOC_MATCHOFF], 0FFFFFFFFh
+        xor     esi, esi        ; match count
+        xor     r10d, r10d      ; scan offset
+
+_wf_edit_scan:
+        mov     r11d, dword ptr [g_toolBytesWritten]
+        sub     r11d, r14d
+        cmp     r10d, r11d
+        ja      _wf_edit_scan_done
+        xor     r8d, r8d
+
+_wf_edit_cmp:
+        cmp     r8d, r14d
+        jae     _wf_edit_found
+        lea     r11, [rcx + r10]
+        movzx   eax, byte ptr [r11 + r8]
+        cmp     al, byte ptr [g_pipeBuf + r8]
+        jne     _wf_edit_next
+        inc     r8d
+        jmp     _wf_edit_cmp
+
+_wf_edit_found:
+        inc     esi
+        cmp     esi, 1
+        jne     _wf_edit_advance
+        mov     dword ptr [rsp + WF_LOC_MATCHOFF], r10d
+
+_wf_edit_advance:
+        add     r10d, r14d
+        jmp     _wf_edit_scan
+
+_wf_edit_next:
+        inc     r10d
+        jmp     _wf_edit_scan
+
+_wf_edit_scan_done:
+        cmp     esi, 1
+        je      _wf_edit_build
+        mov     rcx, r12
+        lea     rdx, szTool_ReplaceMiss
+        call    _StrCopy
+        mov     eax, -1
+        jmp     _wf_ret
+
+_wf_edit_build:
+        mov     eax, dword ptr [g_toolBytesWritten]
+        sub     eax, r14d
+        add     eax, r15d
+        cmp     eax, TOOL_BUF_SIZE - 1
+        jbe     _wf_edit_size_ok
+        mov     rcx, r12
+        lea     rdx, szTool_ReplaceBig
+        call    _StrCopy
+        mov     eax, -1
+        jmp     _wf_ret
+
+_wf_edit_size_ok:
+        mov     dword ptr [rsp + WF_LOC_WRITELEN], eax
+        mov     rax, qword ptr [g_toolDynBuf]
+        test    rax, rax
+        jnz     _wf_edit_have_dst
+        mov     rax, r12
+_wf_edit_have_dst:
+        mov     qword ptr [rsp + WF_LOC_WRITEPTR], rax
+        mov     dword ptr [rsp + WF_LOC_MODE], 1
+
+        mov     edx, dword ptr [rsp + WF_LOC_MATCHOFF]
+        xor     r8d, r8d
+
+_wf_copy_prefix:
+        cmp     r8d, edx
+        jae     _wf_copy_new
+        movzx   r9d, byte ptr [rcx + r8]
+        mov     byte ptr [rax + r8], r9b
+        inc     r8d
+        jmp     _wf_copy_prefix
+
+_wf_copy_new:
+        xor     r9d, r9d
+
+_wf_copy_new_loop:
+        cmp     r9d, r15d
+        jae     _wf_copy_suffix_setup
+        movzx   r10d, byte ptr [g_pipeBuf + TOOL_PIPE_HALF + r9]
+        mov     byte ptr [rax + r8], r10b
+        inc     r8d
+        inc     r9d
+        jmp     _wf_copy_new_loop
+
+_wf_copy_suffix_setup:
+        mov     r10d, edx
+        add     r10d, r14d
+        mov     r11d, dword ptr [g_toolBytesWritten]
+
+_wf_copy_suffix:
+        cmp     r10d, r11d
+        jae     _wf_prepare_write
+        movzx   r9d, byte ptr [rcx + r10]
+        mov     byte ptr [rax + r8], r9b
+        inc     r8d
+        inc     r10d
+        jmp     _wf_copy_suffix
+
+_wf_prepare_write:
+        mov     rax, qword ptr [rsp + WF_LOC_WRITEPTR]
+        test    rax, rax
+        jnz     _wf_open_write
+        mov     rax, qword ptr [g_toolDynBuf]
+        test    rax, rax
+        jnz     _wf_have_write_ptr
+        mov     rax, r12
+_wf_have_write_ptr:
+        mov     qword ptr [rsp + WF_LOC_WRITEPTR], rax
+        mov     dword ptr [rsp + WF_LOC_WRITELEN], r14d
+
+_wf_open_write:
         ; CreateFileA(path, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL)
         mov     rcx, rdi
         mov     edx, GENERIC_WRITE
@@ -853,20 +1038,18 @@ _wf_has_dynbuf:
 
 _wf_do_write:
         mov     rsi, rax        ; hFile
-        ; WriteFile(hFile, pContent, contentLen, &bytesWritten, NULL)
+        ; WriteFile(hFile, pContentOrEdited, contentLen, &bytesWritten, NULL)
         mov     rcx, rsi
-        mov     rdx, qword ptr [g_toolDynBuf]
-        test    rdx, rdx
-        jnz     _wf_has_content_ptr
-        mov     rdx, r12
-_wf_has_content_ptr:
-        mov     r8d, r14d
+        mov     rdx, qword ptr [rsp + WF_LOC_WRITEPTR]
+        mov     r8d, dword ptr [rsp + WF_LOC_WRITELEN]
         lea     r9,  [g_toolBytesWritten]
         mov     qword ptr [rsp+32], 0
         call    WriteFile
         ; CloseHandle
         mov     rcx, rsi
         call    CloseHandle
+        cmp     dword ptr [rsp + WF_LOC_MODE], 0
+        jne     _wf_replace_result
         ; Build result message: "[tool:write_file] written N bytes\r\n"
         mov     rcx, r12
         lea     rdx, szTool_WriteOK
@@ -876,7 +1059,7 @@ _wf_has_content_ptr:
         ; append byte count
         mov     rcx, r12
         mov     rdx, rbx
-        mov     r8d, r14d
+        mov     r8d, dword ptr [rsp + WF_LOC_WRITELEN]
         mov     r9,  r13
         call    _AppendUInt32
         mov     rbx, rax
@@ -887,9 +1070,17 @@ _wf_has_content_ptr:
         mov     r9, r13
         call    _AppendStr
         xor     eax, eax
+        jmp     _wf_ret
+
+_wf_replace_result:
+        mov     rcx, r12
+        lea     rdx, szTool_ReplaceOK
+        call    _StrCopy
+        xor     eax, eax
 
 _wf_ret:
         add     rsp, 32 + MAX_PATH*2 + 32
+        pop     r15
         pop     r14
         pop     r13
         pop     r12
@@ -900,6 +1091,8 @@ _wf_ret:
         ret
 
 _wf_key_content db "content", 0
+_wf_key_old_str db "old_str", 0
+_wf_key_new_str db "new_str", 0
 
 Tool_WriteFile ENDP
 
@@ -1109,7 +1302,6 @@ _rc_got_cmd:
         jnz     _rc_got_timeout
         mov     eax, 10000          ; default 10 seconds
 _rc_got_timeout:
-        mov     dword ptr [rbp - 4], eax    ; save timeout on frame (rbp not used as frame ptr here actually)
         ; Store timeout in r9d temporarily
         push    rax                         ; save timeout on stack temporarily
 
@@ -2666,5 +2858,702 @@ _steq_diff:
         mov     eax, 1
         ret
 _StrEq ENDP
+
+; ============================================================================
+;  _FindSubstr
+;  In:  RCX = haystack ptr, RDX = haystack len, R8 = needle ptr, R9 = needle len
+;  Out: RAX = byte offset of first match, -1 if not found
+; ============================================================================
+_FindSubstr PROC
+        test    rdx, rdx
+        jz      _fss_fail
+        test    r9, r9
+        jz      _fss_fail
+        cmp     r9, rdx
+        ja      _fss_fail
+
+        xor     r10, r10
+        mov     r11, rdx
+        sub     r11, r9
+
+_fss_outer:
+        cmp     r10, r11
+        ja      _fss_fail
+        xor     eax, eax
+_fss_inner:
+        cmp     rax, r9
+        jae     _fss_hit
+        lea     rdx, [rcx + r10]
+        movzx   edx, byte ptr [rdx + rax]
+        movzx   r11d, byte ptr [r8 + rax]
+        cmp     dl, r11b
+        jne     _fss_next
+        inc     rax
+        jmp     _fss_inner
+_fss_next:
+        inc     r10
+        jmp     _fss_outer
+_fss_hit:
+        mov     rax, r10
+        ret
+_fss_fail:
+        mov     rax, -1
+        ret
+_FindSubstr ENDP
+
+; ============================================================================
+;  Tool_ReadFile_Impl
+;  RCX = pJsonArgs {"path":"..."}
+;  RDX = pResultBuf
+;  R8  = bufSize
+;  Out: EAX = bytes written to result
+; ============================================================================
+Tool_ReadFile_Impl PROC FRAME
+        push    rbp
+        .pushreg rbp
+        push    rbx
+        .pushreg rbx
+        push    rsi
+        .pushreg rsi
+        push    rdi
+        .pushreg rdi
+        push    r12
+        .pushreg r12
+        push    r13
+        .pushreg r13
+        push    r14
+        .pushreg r14
+        sub     rsp, 32 + MAX_PATH + 44
+        .allocstack 32 + MAX_PATH + 44
+        .endprolog
+
+        mov     rbx, rcx
+        mov     r12, rdx
+        mov     r13, r8
+        lea     rdi, [rsp+32]                       ; path
+        lea     r14, [rsp+32+MAX_PATH]             ; key scratch
+
+        mov     dword ptr [r14], 68746170h         ; "path"
+        mov     byte ptr  [r14+4], 0
+        mov     rcx, rbx
+        mov     rdx, r14
+        mov     r8,  rdi
+        mov     r9,  MAX_PATH
+        call    _JsonExtract
+        test    eax, eax
+        jnz     _rfi_open
+
+        xor     rdx, rdx
+        mov     rcx, r12
+        lea     r8, _rfi_err_json
+        mov     r9, r13
+        call    _AppendStr
+        jmp     _rfi_ret
+
+_rfi_open:
+        mov     rcx, rdi
+        mov     edx, GENERIC_READ
+        mov     r8d, FILE_SHARE_READ
+        xor     r9d, r9d
+        mov     qword ptr [rsp+32], OPEN_EXISTING
+        mov     qword ptr [rsp+40], FILE_ATTRIBUTE_NORMAL
+        mov     qword ptr [rsp+48], 0
+        call    CreateFileA
+        cmp     rax, INVALID_HANDLE_VALUE
+        jne     _rfi_read
+
+        xor     rdx, rdx
+        mov     rcx, r12
+        lea     r8, _rfi_nf_json
+        mov     r9, r13
+        call    _AppendStr
+        jmp     _rfi_ret
+
+_rfi_read:
+        mov     rsi, rax                            ; hFile
+        mov     rdx, qword ptr [g_toolDynBuf]
+        test    rdx, rdx
+        jnz     _rfi_have_content
+        lea     rdx, g_pipeBuf
+_rfi_have_content:
+        mov     rcx, rsi
+        mov     r8,  TOOL_BUF_SIZE-4
+        lea     r9,  [g_toolBytesWritten]
+        mov     qword ptr [rsp+32], 0
+        call    ReadFile
+
+        mov     rcx, rsi
+        call    CloseHandle
+
+        mov     ebx, dword ptr [g_toolBytesWritten]
+        mov     rdx, qword ptr [g_toolDynBuf]
+        test    rdx, rdx
+        jnz     _rfi_term
+        lea     rdx, g_pipeBuf
+_rfi_term:
+        mov     byte ptr [rdx + rbx], 0
+
+        xor     r14d, r14d
+        mov     rcx, r12
+        mov     rdx, r14
+        lea     r8,  _rfi_prefix
+        mov     r9,  r13
+        call    _AppendStr
+        mov     r14, rax
+
+        mov     rcx, r12
+        mov     rdx, r14
+        mov     r8,  qword ptr [g_toolDynBuf]
+        test    r8, r8
+        jnz     _rfi_emit_content
+        lea     r8, g_pipeBuf
+_rfi_emit_content:
+        mov     r9, r13
+        call    _AppendStr
+        mov     r14, rax
+
+        mov     rcx, r12
+        mov     rdx, r14
+        lea     r8,  _rfi_suffix
+        mov     r9,  r13
+        call    _AppendStr
+
+_rfi_ret:
+        add     rsp, 32 + MAX_PATH + 44
+        pop     r14
+        pop     r13
+        pop     r12
+        pop     rdi
+        pop     rsi
+        pop     rbx
+        pop     rbp
+        ret
+
+_rfi_prefix   db '{"content":"',0
+_rfi_suffix   db '"}',0
+_rfi_err_json db '{"error":"invalid_path"}',0
+_rfi_nf_json  db '{"error":"file_not_found"}',0
+
+Tool_ReadFile_Impl ENDP
+
+; ============================================================================
+;  Tool_EditFile_Impl
+;  Dual mode:
+;    - if "content" exists: write_file behavior via Tool_WriteFile
+;    - else replace mode with {"path","old_string","new_string"}
+; ============================================================================
+Tool_EditFile_Impl PROC FRAME
+        push    rbp
+        .pushreg rbp
+        push    rbx
+        .pushreg rbx
+        push    rsi
+        .pushreg rsi
+        push    rdi
+        .pushreg rdi
+        push    r12
+        .pushreg r12
+        push    r13
+        .pushreg r13
+        push    r14
+        .pushreg r14
+        sub     rsp, 32 + MAX_PATH*4 + 48
+        .allocstack 32 + MAX_PATH*4 + 48
+        .endprolog
+
+        mov     rbx, rcx                                ; pJsonArgs
+        mov     r12, rdx                                ; pResultBuf
+        mov     r13, r8                                 ; bufSize
+
+        lea     rdi, [rsp+32]                           ; path
+        lea     rsi, [rsp+32+MAX_PATH]                  ; old_string
+        lea     rbp, [rsp+32+MAX_PATH*2]                ; new_string
+        lea     r14, [rsp+32+MAX_PATH*3]                ; backup path
+
+        ; If content exists, preserve write_file behavior.
+        lea     rdx, _efi_key_content
+        mov     rcx, rbx
+        lea     r8,  [rsp+32+MAX_PATH*4]
+        mov     r9,  8
+        call    _JsonExtract
+        test    eax, eax
+        jz      _efi_replace_mode
+        mov     rcx, rbx
+        mov     rdx, r12
+        mov     r8,  r13
+        call    Tool_WriteFile
+        jmp     _efi_ret
+
+_efi_replace_mode:
+        ; path
+        mov     dword ptr [rsp+32+MAX_PATH*4+16], 68746170h
+        mov     byte ptr  [rsp+32+MAX_PATH*4+20], 0
+        mov     rcx, rbx
+        lea     rdx, [rsp+32+MAX_PATH*4+16]
+        mov     r8,  rdi
+        mov     r9,  MAX_PATH
+        call    _JsonExtract
+        test    eax, eax
+        jz      _efi_fail
+
+        ; old_string
+        lea     rdx, _efi_key_old
+        mov     rcx, rbx
+        mov     r8,  rsi
+        mov     r9,  MAX_PATH
+        call    _JsonExtract
+        test    eax, eax
+        jz      _efi_fail
+        mov     dword ptr [rsp+32+MAX_PATH*4+0], eax    ; old_len
+
+        ; new_string
+        lea     rdx, _efi_key_new
+        mov     rcx, rbx
+        mov     r8,  rbp
+        mov     r9,  MAX_PATH
+        call    _JsonExtract
+        mov     dword ptr [rsp+32+MAX_PATH*4+4], eax    ; new_len
+
+        ; Read original file
+        mov     rcx, rdi
+        mov     edx, GENERIC_READ
+        mov     r8d, FILE_SHARE_READ
+        xor     r9d, r9d
+        mov     qword ptr [rsp+32], OPEN_EXISTING
+        mov     qword ptr [rsp+40], FILE_ATTRIBUTE_NORMAL
+        mov     qword ptr [rsp+48], 0
+        call    CreateFileA
+        cmp     rax, INVALID_HANDLE_VALUE
+        je      _efi_fail
+        mov     rbx, rax
+
+        mov     rdx, qword ptr [g_toolDynBuf]
+        test    rdx, rdx
+        jnz     _efi_read_have_buf
+        lea     rdx, g_pipeBuf
+_efi_read_have_buf:
+        mov     rcx, rbx
+        mov     r8,  TOOL_BUF_SIZE-4
+        lea     r9,  [g_toolBytesWritten]
+        mov     qword ptr [rsp+32], 0
+        call    ReadFile
+
+        mov     rcx, rbx
+        call    CloseHandle
+
+        mov     r10, qword ptr [g_toolDynBuf]
+        test    r10, r10
+        jnz     _efi_have_content
+        lea     r10, g_pipeBuf
+_efi_have_content:
+        mov     r11d, dword ptr [g_toolBytesWritten]    ; content_len
+        mov     byte ptr [r10 + r11], 0
+        mov     qword ptr [rsp+32+MAX_PATH*4+24], r10   ; content_ptr
+        mov     dword ptr [rsp+32+MAX_PATH*4+32], r11d  ; content_len
+
+        ; Locate old_string in content
+        mov     rcx, r10
+        mov     rdx, r11
+        mov     r8,  rsi
+        mov     r9d, dword ptr [rsp+32+MAX_PATH*4+0]
+        call    _FindSubstr
+        cmp     rax, -1
+        je      _efi_not_applied
+        mov     dword ptr [rsp+32+MAX_PATH*4+8], eax    ; match_off
+
+        ; backup path = path + .bak
+        mov     rcx, r14
+        mov     rdx, rdi
+        call    _StrCopy
+        mov     rcx, r14
+        mov     rdx, rax
+        lea     r8,  _efi_bak_suffix
+        mov     r9,  MAX_PATH
+        call    _AppendStr
+
+        mov     rcx, r14
+        call    DeleteFileA
+        mov     rcx, rdi
+        mov     rdx, r14
+        call    MoveFileA
+        test    eax, eax
+        jz      _efi_fail
+
+        ; Create rewritten file
+        mov     rcx, rdi
+        mov     edx, GENERIC_WRITE
+        xor     r8d, r8d
+        xor     r9d, r9d
+        mov     qword ptr [rsp+32], CREATE_ALWAYS
+        mov     qword ptr [rsp+40], FILE_ATTRIBUTE_NORMAL
+        mov     qword ptr [rsp+48], 0
+        call    CreateFileA
+        cmp     rax, INVALID_HANDLE_VALUE
+        je      _efi_fail
+        mov     rbx, rax
+
+        ; prefix
+        mov     eax, dword ptr [rsp+32+MAX_PATH*4+8]
+        test    eax, eax
+        jz      _efi_write_new
+        mov     rcx, rbx
+        mov     rdx, qword ptr [rsp+32+MAX_PATH*4+24]
+        mov     r8d, dword ptr [rsp+32+MAX_PATH*4+8]
+        lea     r9, [g_toolBytesWritten]
+        mov     qword ptr [rsp+32], 0
+        call    WriteFile
+
+_efi_write_new:
+        mov     rcx, rbx
+        mov     rdx, rbp
+        mov     r8d, dword ptr [rsp+32+MAX_PATH*4+4]
+        lea     r9, [g_toolBytesWritten]
+        mov     qword ptr [rsp+32], 0
+        call    WriteFile
+
+        ; suffix
+        mov     eax, dword ptr [rsp+32+MAX_PATH*4+8]
+        add     eax, dword ptr [rsp+32+MAX_PATH*4+0]
+        mov     ecx, dword ptr [rsp+32+MAX_PATH*4+32]
+        sub     ecx, eax
+        jle     _efi_close_new
+        mov     rcx, rbx
+        mov     rdx, qword ptr [rsp+32+MAX_PATH*4+24]
+        add     rdx, rax
+        mov     r8d, ecx
+        lea     r9, [g_toolBytesWritten]
+        mov     qword ptr [rsp+32], 0
+        call    WriteFile
+
+_efi_close_new:
+        mov     rcx, rbx
+        call    CloseHandle
+
+        ; success JSON
+        xor     rdx, rdx
+        mov     rcx, r12
+        lea     r8, _efi_ok_prefix
+        mov     r9, r13
+        call    _AppendStr
+        mov     rdx, rax
+        mov     rcx, r12
+        mov     r8,  r14
+        mov     r9,  r13
+        call    _AppendStr
+        mov     rdx, rax
+        mov     rcx, r12
+        lea     r8, _efi_ok_mid
+        mov     r9, r13
+        call    _AppendStr
+        mov     rdx, rax
+        mov     rcx, r12
+        mov     r8d, dword ptr [rsp+32+MAX_PATH*4+8]
+        mov     r9, r13
+        call    _AppendUInt32
+        mov     rdx, rax
+        mov     rcx, r12
+        lea     r8, _efi_ok_suffix
+        mov     r9, r13
+        call    _AppendStr
+        jmp     _efi_ret
+
+_efi_not_applied:
+        mov     rcx, r12
+        xor     rdx, rdx
+        lea     r8, _efi_noop_json
+        mov     r9, r13
+        call    _AppendStr
+        jmp     _efi_ret
+
+_efi_fail:
+        mov     rcx, r12
+        xor     rdx, rdx
+        lea     r8, _efi_fail_json
+        mov     r9, r13
+        call    _AppendStr
+
+_efi_ret:
+        add     rsp, 32 + MAX_PATH*4 + 48
+        pop     r14
+        pop     r13
+        pop     r12
+        pop     rdi
+        pop     rsi
+        pop     rbx
+        pop     rbp
+        ret
+
+_efi_key_content db "content",0
+_efi_key_old     db "old_string",0
+_efi_key_new     db "new_string",0
+_efi_bak_suffix  db ".bak",0
+_efi_ok_prefix   db '{"applied":true,"backup":"',0
+_efi_ok_mid      db '","offset":',0
+_efi_ok_suffix   db '}',0
+_efi_noop_json   db '{"applied":false}',0
+_efi_fail_json   db '{"error":"edit_failed"}',0
+
+Tool_EditFile_Impl ENDP
+
+; ============================================================================
+;  Tool_ShellExec_Impl
+;  RCX = pJsonArgs {"command":"...","timeout":N}
+;  RDX = pResultBuf
+;  R8  = bufSize
+;  Out: EAX = Tool_RunCommand exit code
+; ============================================================================
+Tool_ShellExec_Impl PROC FRAME
+        push    rbp
+        .pushreg rbp
+        push    rbx
+        .pushreg rbx
+        push    rsi
+        .pushreg rsi
+        push    rdi
+        .pushreg rdi
+        push    r12
+        .pushreg r12
+        push    r13
+        .pushreg r13
+        push    r14
+        .pushreg r14
+        sub     rsp, 32 + MAX_PATH*3 + 68
+        .allocstack 32 + MAX_PATH*3 + 68
+        .endprolog
+
+        mov     rbx, rcx
+        mov     r12, rdx
+        mov     r13, r8
+        lea     rsi, [rsp+32]                           ; command
+        lea     rdi, [rsp+32+MAX_PATH]                  ; normalized json for Tool_RunCommand
+        lea     r14, [rsp+32+MAX_PATH*2]                ; scratch
+
+        ; command key (preferred)
+        lea     rdx, _sei_key_command
+        mov     rcx, rbx
+        mov     r8,  rsi
+        mov     r9,  MAX_PATH
+        call    _JsonExtract
+        test    eax, eax
+        jnz     _sei_have_cmd
+
+        ; fallback to legacy cmd
+        lea     rdx, _sei_key_cmd
+        mov     rcx, rbx
+        mov     r8,  rsi
+        mov     r9,  MAX_PATH
+        call    _JsonExtract
+        test    eax, eax
+        jnz     _sei_have_cmd
+
+        mov     rcx, r12
+        xor     rdx, rdx
+        lea     r8,  _sei_err_json
+        mov     r9,  r13
+        call    _AppendStr
+        mov     eax, -1
+        jmp     _sei_ret
+
+_sei_have_cmd:
+        lea     rdx, _sei_key_timeout_ms
+        mov     rcx, rbx
+        call    _JsonExtractUInt
+        test    eax, eax
+        jnz     _sei_have_timeout
+        lea     rdx, _sei_key_timeout
+        mov     rcx, rbx
+        call    _JsonExtractUInt
+        test    eax, eax
+        jnz     _sei_have_timeout
+        mov     eax, 10000
+_sei_have_timeout:
+        mov     ebx, eax
+
+        ; Build {"cmd":"...","timeout_ms":N}
+        xor     rdx, rdx
+        mov     rcx, rdi
+        lea     r8,  _sei_norm_prefix
+        mov     r9,  MAX_PATH*2
+        call    _AppendStr
+        mov     rdx, rax
+        mov     rcx, rdi
+        mov     r8,  rsi
+        mov     r9,  MAX_PATH*2
+        call    _AppendStr
+        mov     rdx, rax
+        mov     rcx, rdi
+        lea     r8,  _sei_norm_mid
+        mov     r9,  MAX_PATH*2
+        call    _AppendStr
+        mov     rdx, rax
+        mov     rcx, rdi
+        mov     r8d, ebx
+        mov     r9,  MAX_PATH*2
+        call    _AppendUInt32
+        mov     rdx, rax
+        mov     rcx, rdi
+        lea     r8,  _sei_norm_suffix
+        mov     r9,  MAX_PATH*2
+        call    _AppendStr
+
+        mov     rcx, rdi
+        mov     rdx, r12
+        mov     r8,  r13
+        call    Tool_RunCommand
+        mov     esi, eax
+
+        mov     rcx, qword ptr [g_toolDynBuf]
+        test    rcx, rcx
+        jnz     _sei_have_tmp
+        lea     rcx, g_pipeBuf
+_sei_have_tmp:
+        mov     rdx, r12
+        call    _StrCopy
+
+        xor     rdx, rdx
+        mov     rcx, r12
+        lea     r8,  _sei_out_prefix
+        mov     r9,  r13
+        call    _AppendStr
+        mov     rdx, rax
+        mov     rcx, r12
+        mov     r8d, esi
+        mov     r9,  r13
+        call    _AppendUInt32
+        mov     rdx, rax
+        mov     rcx, r12
+        lea     r8,  _sei_out_mid
+        mov     r9,  r13
+        call    _AppendStr
+        mov     rdx, rax
+        mov     rcx, r12
+        mov     r8,  qword ptr [g_toolDynBuf]
+        test    r8, r8
+        jnz     _sei_emit_stdout
+        lea     r8, g_pipeBuf
+_sei_emit_stdout:
+        mov     r9, r13
+        call    _AppendStr
+        mov     rdx, rax
+        mov     rcx, r12
+        lea     r8,  _sei_out_suffix
+        mov     r9,  r13
+        call    _AppendStr
+        mov     eax, esi
+
+_sei_ret:
+        add     rsp, 32 + MAX_PATH*3 + 68
+        pop     r14
+        pop     r13
+        pop     r12
+        pop     rdi
+        pop     rsi
+        pop     rbx
+        pop     rbp
+        ret
+
+_sei_key_command    db "command",0
+_sei_key_cmd        db "cmd",0
+_sei_key_timeout_ms db "timeout_ms",0
+_sei_key_timeout    db "timeout",0
+_sei_norm_prefix    db '{"cmd":"',0
+_sei_norm_mid       db '","timeout_ms":',0
+_sei_norm_suffix    db '}',0
+_sei_out_prefix     db '{"exit_code":',0
+_sei_out_mid        db ',"stdout":"',0
+_sei_out_suffix     db '"}',0
+_sei_err_json       db '{"error":"missing_command"}',0
+
+Tool_ShellExec_Impl ENDP
+
+; ============================================================================
+;  Tool_SearchCode_Impl
+;  Thin ABI-safe wrapper to keep explicit _Impl lane for search_code.
+; ============================================================================
+Tool_SearchCode_Impl PROC FRAME
+        push    rbp
+        .pushreg rbp
+        sub     rsp, 20h
+        .allocstack 20h
+        .endprolog
+
+        call    Tool_SearchCode
+
+        add     rsp, 20h
+        pop     rbp
+        ret
+Tool_SearchCode_Impl ENDP
+
+; ============================================================================
+;  Tool_GetDiagnostics_Impl
+;  Thin ABI-safe wrapper to keep explicit _Impl lane for diagnostics.
+; ============================================================================
+Tool_GetDiagnostics_Impl PROC FRAME
+        push    rbp
+        .pushreg rbp
+        sub     rsp, 20h
+        .allocstack 20h
+        .endprolog
+
+        call    Tool_GetDiagnostics
+
+        add     rsp, 20h
+        pop     rbp
+        ret
+Tool_GetDiagnostics_Impl ENDP
+
+; ============================================================================
+;  Tool_GetSymbols_Impl
+;  Thin ABI-safe wrapper to keep explicit _Impl lane for symbols.
+; ============================================================================
+Tool_GetSymbols_Impl PROC FRAME
+        push    rbp
+        .pushreg rbp
+        sub     rsp, 20h
+        .allocstack 20h
+        .endprolog
+
+        call    Tool_GetSymbols
+
+        add     rsp, 20h
+        pop     rbp
+        ret
+Tool_GetSymbols_Impl ENDP
+
+; ============================================================================
+;  Tool_ListDir_Impl
+;  Thin ABI-safe wrapper to keep explicit _Impl lane for list_dir.
+; ============================================================================
+Tool_ListDir_Impl PROC FRAME
+        push    rbp
+        .pushreg rbp
+        sub     rsp, 20h
+        .allocstack 20h
+        .endprolog
+
+        call    Tool_ListDir
+
+        add     rsp, 20h
+        pop     rbp
+        ret
+Tool_ListDir_Impl ENDP
+
+; ============================================================================
+;  Tool_RunCommand_Impl
+;  Thin ABI-safe wrapper to keep explicit _Impl lane for run_command.
+; ============================================================================
+Tool_RunCommand_Impl PROC FRAME
+        push    rbp
+        .pushreg rbp
+        sub     rsp, 20h
+        .allocstack 20h
+        .endprolog
+
+        call    Tool_RunCommand
+
+        add     rsp, 20h
+        pop     rbp
+        ret
+Tool_RunCommand_Impl ENDP
 
 END

@@ -94,12 +94,12 @@ static void im2col_sycl_f32(const float * x, float * dst, int64_t IW, int64_t IH
                                 d0, d1, stream);
 }
 
-void ggml_sycl_op_im2col(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
-    const ggml_tensor * src0 = dst->src[0];
-    const ggml_tensor * src1 = dst->src[1];
+void ggml_rxd_sycl_op_im2col(ggml_rxd_backend_sycl_context & ctx, ggml_rxd_tensor * dst) {
+    const ggml_rxd_tensor * src0 = dst->src[0];
+    const ggml_rxd_tensor * src1 = dst->src[1];
 
-    GGML_ASSERT(src1->type == GGML_TYPE_F32);
-    GGML_ASSERT(dst->type == GGML_TYPE_F16 || dst->type == GGML_TYPE_F32);
+    GGML_RXD_ASSERT(src1->type == GGML_RXD_TYPE_F32);
+    GGML_RXD_ASSERT(dst->type == GGML_RXD_TYPE_F16 || dst->type == GGML_RXD_TYPE_F32);
 
     const int32_t s0 = ((const int32_t *) (dst->op_params))[0];
     const int32_t s1 = ((const int32_t *) (dst->op_params))[1];
@@ -126,7 +126,7 @@ void ggml_sycl_op_im2col(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
 
     queue_ptr stream = ctx.stream();
 
-    if (dst->type == GGML_TYPE_F16) {
+    if (dst->type == GGML_RXD_TYPE_F16) {
         im2col_sycl_f16((const float *) src1->data, (sycl::half *) dst->data, IW, IH, OW, OH, KW, KH, IC, batch,
                         batch_offset, delta_offset, s0, s1, p0, p1, d0, d1, stream);
     } else {

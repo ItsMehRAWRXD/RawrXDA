@@ -1,0 +1,126 @@
+
+************* Preparing the environment for Debugger Extensions Gallery repositories **************
+   ExtensionRepository : Implicit
+   UseExperimentalFeatureForNugetShare : true
+   AllowNugetExeUpdate : true
+   NonInteractiveNuget : true
+   AllowNugetMSCredentialProviderInstall : true
+   AllowParallelInitializationOfLocalRepositories : true
+
+   EnableRedirectToV8JsProvider : false
+
+   -- Configuring repositories
+      ----> Repository : LocalInstalled, Enabled: true
+      ----> Repository : UserExtensions, Enabled: true
+
+>>>>>>>>>>>>> Preparing the environment for Debugger Extensions Gallery repositories completed, duration 0.000 seconds
+
+************* Waiting for Debugger Extensions Gallery to Initialize **************
+
+>>>>>>>>>>>>> Waiting for Debugger Extensions Gallery to Initialize completed, duration 0.016 seconds
+   ----> Repository : UserExtensions, Enabled: true, Packages count: 0
+   ----> Repository : LocalInstalled, Enabled: true, Packages count: 29
+
+Microsoft (R) Windows Debugger Version 10.0.26100.4188 AMD64
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+CommandLine: d:\rawrxd\build-ninja\bin\RawrXD-Win32IDE.exe
+
+************* Path validation summary **************
+Response                         Time (ms)     Location
+Deferred                                       srv*
+Symbol search path is: srv*
+Executable search path is: 
+
++------------------------------------------------------------------------+
+| This target supports Hardware-enforced Stack Protection. A HW based    |
+| "Shadow Stack" may be available to assist in debugging and analysis.   |
+| See aka.ms/userhsp for more info.                                      |
+|                                                                        |
+| dps @ssp                                                               |
+|                                                                        |
++------------------------------------------------------------------------+
+
+ModLoad: 00007ff6`323c0000 00007ff6`36f5f000   RawrXD-Win32IDE.exe
+ModLoad: 00007ff9`85200000 00007ff9`85467000   ntdll.dll
+ModLoad: 00007ff9`4e880000 00007ff9`4e8f2000   C:\WINDOWS\System32\verifier.dll
+Page heap: pid 0x2708: page heap enabled with flags 0x3.
+ModLoad: 00007ff9`844b0000 00007ff9`84579000   C:\WINDOWS\System32\KERNEL32.DLL
+ModLoad: 00007ff9`82970000 00007ff9`82d64000   C:\WINDOWS\System32\KERNELBASE.dll
+ModLoad: 00007ff9`841e0000 00007ff9`842cf000   C:\WINDOWS\System32\COMDLG32.dll
+ModLoad: 00007ff9`4bdf0000 00007ff9`4bf9a000   C:\WINDOWS\SYSTEM32\vulkan-1.dll
+ModLoad: 00007ff9`74360000 00007ff9`745f3000   C:\WINDOWS\WinSxS\amd64_microsoft.windows.common-controls_6595b64144ccf1df_6.0.26100.8115_none_3e075c82e3354f9c\COMCTL32.dll
+ModLoad: 00007ff9`831d0000 00007ff9`83279000   C:\WINDOWS\System32\msvcrt.dll
+ModLoad: 00007ff9`82e30000 00007ff9`82ed3000   C:\WINDOWS\System32\msvcp_win.dll
+ModLoad: 00007ff9`826f0000 00007ff9`8283b000   C:\WINDOWS\System32\ucrtbase.dll
+ModLoad: 00007ff9`83000000 00007ff9`8302b000   C:\WINDOWS\System32\GDI32.dll
+ModLoad: 00007ff9`84860000 00007ff9`84be2000   C:\WINDOWS\System32\combase.dll
+ModLoad: 00007ff9`82d70000 00007ff9`82d97000   C:\WINDOWS\System32\win32u.dll
+ModLoad: 00007ff9`83040000 00007ff9`83158000   C:\WINDOWS\System32\RPCRT4.dll
+ModLoad: 00007ff9`82840000 00007ff9`8296b000   C:\WINDOWS\System32\gdi32full.dll
+ModLoad: 00007ff9`84d90000 00007ff9`84e46000   C:\WINDOWS\System32\ADVAPI32.dll
+ModLoad: 00007ff9`85050000 00007ff9`85148000   C:\WINDOWS\System32\shcore.dll
+ModLoad: 00007ff9`81680000 00007ff9`816d1000   C:\WINDOWS\SYSTEM32\CFGMGR32.dll
+ModLoad: 00007ff9`84400000 00007ff9`844a7000   C:\WINDOWS\System32\sechost.dll
+ModLoad: 00007ff9`83e80000 00007ff9`84045000   C:\WINDOWS\System32\USER32.dll
+ModLoad: 00007ff9`82f90000 00007ff9`82ff6000   C:\WINDOWS\System32\SHLWAPI.dll
+ModLoad: 00007ff9`81d00000 00007ff9`82568000   C:\WINDOWS\System32\Windows.Storage.dll
+ModLoad: 00007ff9`83280000 00007ff9`839e7000   C:\WINDOWS\System32\SHELL32.dll
+ModLoad: 00007ff9`81ad0000 00007ff9`81c3a000   C:\WINDOWS\System32\wintypes.dll
+ModLoad: 00007ff9`84bf0000 00007ff9`84d87000   C:\WINDOWS\System32\ole32.dll
+ModLoad: 00007ff9`84580000 00007ff9`84658000   C:\WINDOWS\System32\OLEAUT32.dll
+ModLoad: 00007ff9`842e0000 00007ff9`84360000   C:\WINDOWS\System32\WS2_32.dll
+ModLoad: 00007ff9`76e40000 00007ff9`77082000   C:\WINDOWS\SYSTEM32\dbghelp.dll
+ModLoad: 00007ff9`788b0000 00007ff9`789dd000   C:\WINDOWS\SYSTEM32\WINHTTP.dll
+ModLoad: 00007ff9`7df10000 00007ff9`7e54a000   C:\WINDOWS\SYSTEM32\d2d1.dll
+ModLoad: 00007ff9`7e7c0000 00007ff9`7ea27000   C:\WINDOWS\SYSTEM32\DWrite.dll
+ModLoad: 00007ff9`82570000 00007ff9`826e7000   C:\WINDOWS\System32\CRYPT32.dll
+ModLoad: 00007ff9`7e550000 00007ff9`7e7b3000   C:\WINDOWS\SYSTEM32\d3d11.dll
+ModLoad: 00007ff9`7ea30000 00007ff9`7ec52000   C:\WINDOWS\SYSTEM32\dcomp.dll
+ModLoad: 00007ff9`82da0000 00007ff9`82e22000   C:\WINDOWS\System32\WINTRUST.dll
+ModLoad: 00007ff9`7d820000 00007ff9`7dc9f000   C:\WINDOWS\SYSTEM32\D3DCOMPILER_47.dll
+ModLoad: 00007ff9`7f840000 00007ff9`7f86f000   C:\WINDOWS\SYSTEM32\dwmapi.dll
+ModLoad: 00007ff9`7f6d0000 00007ff9`7f811000   C:\WINDOWS\SYSTEM32\dxgi.dll
+ModLoad: 00007ff9`819c0000 00007ff9`819ea000   C:\WINDOWS\SYSTEM32\bcrypt.dll
+ModLoad: 00007ff9`80840000 00007ff9`8085b000   C:\WINDOWS\SYSTEM32\kernel.appcore.dll
+ModLoad: 00007ff9`74c70000 00007ff9`74cc6000   C:\WINDOWS\SYSTEM32\pdh.dll
+ModLoad: 00007ff9`810c0000 00007ff9`810db000   C:\WINDOWS\SYSTEM32\cryptsp.dll
+ModLoad: 00007ff9`7dcb0000 00007ff9`7dcc9000   C:\WINDOWS\SYSTEM32\Microsoft.Internal.WarpPal.dll
+ModLoad: 00007ff9`705a0000 00007ff9`70778000   C:\WINDOWS\WinSxS\amd64_microsoft.windows.gdiplus_6595b64144ccf1df_1.1.26100.8246_none_6ef5395a3dc52f61\gdiplus.dll
+ModLoad: 00007ff9`7f5a0000 00007ff9`7f649000   C:\WINDOWS\SYSTEM32\UxTheme.dll
+ModLoad: 00007ff9`80200000 00007ff9`80232000   C:\WINDOWS\SYSTEM32\IPHLPAPI.DLL
+ModLoad: 00007ff9`650d0000 00007ff9`650d8000   C:\WINDOWS\SYSTEM32\MSIMG32.dll
+ModLoad: 00007ff8`728d0000 00007ff8`728f3000   C:\WINDOWS\SYSTEM32\d3d12.dll
+ModLoad: 00007ff9`81780000 00007ff9`817de000   C:\WINDOWS\SYSTEM32\powrprof.dll
+ModLoad: 00007ff9`74600000 00007ff9`7463b000   C:\WINDOWS\SYSTEM32\dbgcore.DLL
+(2708.49ec): Break instruction exception - code 80000003 (first chance)
+ntdll!LdrpDoDebuggerBreak+0x35:
+00007ff9`8531f56d cc              int     3
+0:000> cdb: Reading initial command '.sympath+ d:\rawrxd\build-ninja\bin; .reload /f; x RawrXD-Win32IDE!*_CrtDbgReport*; x RawrXD-Win32IDE!*_Tree_const_iterator*operator==*; q'
+WARNING: Whitespace at start of path element
+WARNING: Whitespace at start of path element
+WARNING: Whitespace at start of path element
+WARNING: Whitespace at start of path element
+Symbol search path is: srv*;d:\rawrxd\build-ninja\bin; .reload /f; x RawrXD-Win32IDE!*_CrtDbgReport*; x RawrXD-Win32IDE!*_Tree_const_iterator*operator==*; q
+Expanded Symbol search path is: cache*;SRV*https://msdl.microsoft.com/download/symbols;d:\rawrxd\build-ninja\bin; .reload /f; x rawrxd-win32ide!*_crtdbgreport*; x rawrxd-win32ide!*_tree_const_iterator*operator==*; q
+WARNING: Whitespace at start of path element
+WARNING: Whitespace at start of path element
+WARNING: Whitespace at start of path element
+WARNING: Whitespace at start of path element
+
+************* Path validation summary **************
+Response                         Time (ms)     Location
+Deferred                                       srv*
+OK                                             d:\rawrxd\build-ninja\bin
+0:000>        ^ Syntax error in '& "C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\cdb.exe" -y "srv*;d:\rawrxd\build-ninja\bin" -c "sxd ibp; bp RawrXD-Win32IDE+0xbd040; g; kb; q" "d:\rawrxd\build-ninja\bin\RawrXD-Win32IDE.exe" > "d:\rawrxd\tmp_bp_json_treeeq.txt" 2>&1'
+0:000>        ^ Syntax error in '& "C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\cdb.exe" -y "srv*;d:\rawrxd\build-ninja\bin" -c "sxd ibp; bp RawrXD-Win32IDE+0xbd040; g; kb; q" "d:\rawrxd\build-ninja\bin\RawrXD-Win32IDE.exe"'
+0:000>        ^ Syntax error in '& "C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\cdb.exe" -y "srv*;d:\rawrxd\build-ninja\bin" -c "sxd ibp; bp RawrXD_Win32IDE+0xbd040; g; kb; q" "d:\rawrxd\build-ninja\bin\RawrXD-Win32IDE.exe"'
+0:000>        ^ addresses must be preceeded by whitespace error in 'Get-Process RawrXD-Win32IDE,cdb -ErrorAction SilentlyContinue | Stop-Process -Force'
+0:000>        ^ addresses must be preceeded by whitespace error in 'Get-Process RawrXD-Win32IDE -ErrorAction SilentlyContinue | Select-Object Id,ProcessName,Path | Format-Table -AutoSize'
+0:000> 0:000>        ^ pass count must be preceeded by whitespace error in 'powershell -NoProfile -ExecutionPolicy Bypass -File d:\scripts\clear_strict_lane_locks.ps1 -BuildDir d:\rawrxd\build-ninja -ExeName RawrXD-Win32IDE.exe -ProcessName RawrXD-Win32IDE'
+0:000>         ^ Syntax error in 'if (Test-Path 'd:\rxdn_ninja\bin\RawrXD-Win32IDE.exe') { Write-Output 'EXISTS' } else { Write-Output 'MISSING' }'
+0:000> Couldn't resolve error at 'et-Location d:\rawrxd; git status --short -- src/config/IDEConfig.cpp'
+0:000>        ^ addresses must be preceeded by whitespace error in 'Get-Process RawrXD-Win32IDE -ErrorAction SilentlyContinue | Stop-Process -Force'
+0:000>        ^ addresses must be preceeded by whitespace error in 'Get-Process | Where-Object { $_.ProcessName -like '*RawrXD*' -or $_.ProcessName -like '*Win32IDE*' } | Select-Object ProcessName,Id,Path | Format-Table -AutoSize | Out-String'
+0:000>        ^ addresses must be preceeded by whitespace error in 'Get-Process -Name 'RawrXD-Win32IDE' -ErrorAction SilentlyContinue | Select-Object ProcessName,Id,Path | Format-Table -AutoSize | Out-String'
+0:000> 0:000>        ^ Syntax error in 'Write-Output 'START_CHECK'; $exe='d:\rawrxd\build-ninja\bin\RawrXD-Win32IDE.exe'; Write-Output ('EXE_EXISTS='+(Test-Path $exe));'

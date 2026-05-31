@@ -35,7 +35,7 @@
 #include <chrono>
 #include <filesystem>
 
-// SCAFFOLD_338: Win32IDE_LSPServer Created state
+// LSP Server Implementation
 
 
 using json = nlohmann::json;

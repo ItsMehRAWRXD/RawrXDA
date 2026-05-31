@@ -94,7 +94,10 @@ bool Win32IDE_OpenFileFromMenu(HWND hwnd, UINT commandId) {
     if (m_ide && m_ide->getAgenticBridge()) {
         std::filesystem::path p(filepath);
         m_ide->getAgenticBridge()->SetWorkspaceRoot(p.parent_path().string());
-        m_ide->getAgenticBridge()->SetLanguageContext(p.extension().string(), filepath);
+        if (m_ide->getSettings().currentFileContextEnabled)
+            m_ide->getAgenticBridge()->SetLanguageContext(p.extension().string(), filepath);
+        else
+            m_ide->getAgenticBridge()->SetLanguageContext(p.extension().string(), "");
     }
 
     // Find editor control (assuming RichEdit control)

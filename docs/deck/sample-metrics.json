@@ -1,0 +1,59 @@
+{
+  "meta": {
+    "title": "RawrXD — Agentic IDE & Inference Plane",
+    "subtitle": "Parity, autonomy, and deployment positioning",
+    "date": "2026-04-11",
+    "version": "1.0"
+  },
+  "executive": {
+    "bullets": [
+      "Win32-native IDE shell with integrated terminals, agent-mirrored output, and tool guardrails — not a generic chat wrapper.",
+      "Inference stack can pair with local runners; product differentiation is the editor + agent loop + native UX velocity.",
+      "PDF and charts below are generated from this JSON via scripts/Export-MetricsDeck.ps1 — re-run after benchmarks to refresh."
+    ]
+  },
+  "competitors": {
+    "framing": "Ollama and vLLM are not substitutes for an IDE — they are complementary infrastructure. RawrXD owns the developer surface; runners own throughput and model serving.",
+    "rows": [
+      {
+        "name": "Ollama",
+        "position": "Local model distribution & simple API",
+        "overlap": "Pull/run GGUF; chat API; desktop app",
+        "rawrxdAngle": "Wire Ollama as one backend; RawrXD adds Win32 IDE, agent tools, terminal parity, and enterprise guardrails."
+      },
+      {
+        "name": "vLLM",
+        "position": "High-throughput GPU serving (PagedAttention, continuous batching)",
+        "overlap": "OpenAI-compatible HTTP endpoints",
+        "rawrxdAngle": "Optional remote backend for high-TPS workloads; IDE still controls tools, workspace trust, and audit trails."
+      },
+      {
+        "name": "RawrXD",
+        "position": "Native agentic IDE + optional local/remote inference",
+        "overlap": "None as a pure server — product is the shell",
+        "rawrxdAngle": "Ship Cursor/VS Code-class terminal UX with read-only agent panes, bounded loops, and integrated tool echo."
+      }
+    ]
+  },
+  "scores": {
+    "dimensions": [
+      "IDE / editor integration",
+      "Native Win32 UX",
+      "Agent tool & terminal mirroring",
+      "Throughput-oriented serving",
+      "Ease of local model pull",
+      "Enterprise audit / guardrails"
+    ],
+    "series": {
+      "RawrXD": [10, 10, 9, 5, 6, 8],
+      "Ollama": [6, 5, 4, 6, 10, 5],
+      "vLLM": [3, 3, 3, 10, 4, 7]
+    }
+  },
+  "timeSeries": {
+    "label": "Relative engineering velocity index (illustrative)",
+    "labels": ["W1", "W2", "W3", "W4", "W5", "W6"],
+    "rawrxd": [42, 48, 55, 63, 71, 78],
+    "baseline": [40, 41, 42, 43, 44, 45]
+  }
+}

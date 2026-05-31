@@ -109,51 +109,27 @@ void sendFallbackJson(SOCKET client, const char* endpoint) {
 
 }  // namespace
 
-void Win32IDE::updateMinimap() {}
-
-void Win32IDE::toggleMinimap() {
-    m_settings.minimapEnabled = !m_settings.minimapEnabled;
+void Win32IDE::updateMinimap() {
+    if (!m_settings.minimapEnabled || !m_hwndMain) {
+        return;
+    }
+    // Refresh minimap from current editor content
+    HWND hEditor = GetDlgItem(m_hwndMain, IDC_EDITOR);
+    if (hEditor) {
+        InvalidateRect(hEditor, nullptr, FALSE);
+    }
 }
 
-void Win32IDE::showVisionEncoder() {
-    appendToOutput("[Vision] Vision encoder window is disabled in MinGW lane.\n");
+void Win32IDE::updateMemoryView() {
+    if (!m_hwndMain) {
+        return;
+    }
+    // Refresh memory view panel if visible
+    HWND hMemView = GetDlgItem(m_hwndMain, IDC_MEMORY_VIEW);
+    if (hMemView && IsWindowVisible(hMemView)) {
+        InvalidateRect(hMemView, nullptr, FALSE);
+    }
 }
-
-void Win32IDE::toggleBreakpoint(const std::string& /*file*/, int /*line*/) {
-    appendToOutput("[Debug] Breakpoint toggling requires native debugger lane.\n");
-}
-
-void Win32IDE::updateDebuggerUI() {
-    appendToOutput("[Debug] Debugger UI refresh is unavailable in MinGW fallback lane.\n");
-}
-
-HMENU Win32IDE::createReverseEngineeringMenu() {
-    HMENU menu = CreateMenu();
-    AppendMenuA(menu, MF_STRING, IDM_REVENG_ANALYZE, "&Analyze Binary\tCtrl+R");
-    AppendMenuA(menu, MF_STRING, IDM_REVENG_SET_BINARY_FROM_ACTIVE, "Set binary from &active document");
-    AppendMenuA(menu, MF_STRING, IDM_REVENG_SET_BINARY_FROM_BUILD_OUTPUT, "Set binary from &build output...");
-    AppendMenuA(menu, MF_STRING, IDM_REVENG_DISASM_AT_RIP, "Disassemble around entrypoint");
-    AppendMenuA(menu, MF_STRING, IDM_REVENG_DISASM, "&Disassemble\tCtrl+D");
-    AppendMenuA(menu, MF_STRING, IDM_REVENG_DUMPBIN, "Dump &Binary\tCtrl+B");
-    AppendMenuA(menu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuA(menu, MF_STRING, IDM_REVENG_CFG, "Control &Flow Graph");
-    AppendMenuA(menu, MF_STRING, IDM_REVENG_FUNCTIONS, "Recover F&unctions");
-    AppendMenuA(menu, MF_STRING, IDM_REVENG_DEMANGLE, "De&mangle Symbols");
-    AppendMenuA(menu, MF_STRING, IDM_REVENG_SSA, "&SSA Lifting");
-    AppendMenuA(menu, MF_STRING, IDM_REVENG_RECURSIVE_DISASM, "R&ecursive Disassembly");
-    AppendMenuA(menu, MF_STRING, IDM_REVENG_TYPE_RECOVERY, "&Type Recovery");
-    AppendMenuA(menu, MF_STRING, IDM_REVENG_DATA_FLOW, "Data &Flow Analysis");
-    AppendMenuA(menu, MF_STRING, IDM_REVENG_DECOMPILER_VIEW, "Decompiler &View");
-    AppendMenuA(menu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuA(menu, MF_STRING, IDM_REVENG_COMPARE, "C&ompare Binaries");
-    AppendMenuA(menu, MF_STRING, IDM_REVENG_DETECT_VULNS, "Detect &Vulnerabilities");
-    AppendMenuA(menu, MF_STRING, IDM_REVENG_EXPORT_IDA, "Export to &IDA Pro");
-    AppendMenuA(menu, MF_STRING, IDM_REVENG_EXPORT_GHIDRA, "Export to &Ghidra");
-    AppendMenuA(menu, MF_STRING, IDM_REVENG_LICENSE_INFO, "&License Info");
-    return menu;
-}
-
-void Win32IDE::updateMemoryView() {}
 
 void Win32IDE::setCurrentBinaryForReverseEngineering(const std::string& path) {
     s_reCurrentBinary = path;

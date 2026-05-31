@@ -190,6 +190,8 @@ void Win32IDE::createTerminalTab(const std::string& profile) {
             LOG_INFO("[TerminalTabs] Spawned shell: " + cmdLine + " (pid=" + std::to_string(pi.dwProcessId) + ")");
         } else {
             LOG_ERROR("[TerminalTabs] CreateProcess failed for: " + cmdLine + " err=" + std::to_string(GetLastError()));
+            CloseHandle(hStdinWrite);
+            CloseHandle(hStdoutRead);
         }
 
         // Close child-side pipe handles (we keep our side)
@@ -395,9 +397,26 @@ LRESULT CALLBACK Win32IDE::TerminalInputSubclassProc(HWND hwnd, UINT msg, WPARAM
         return 0;
     }
 
-    // History: Up/Down arrows for command history (basic)
+    // History: Up/Down arrows for command history (basic ring buffer)
     if (msg == WM_KEYDOWN && (wParam == VK_UP || wParam == VK_DOWN)) {
-        // TODO: implement command history ring buffer
+        Win32IDE* ide = reinterpret_cast<Win32IDE*>(GetPropA(hwnd, "IDE_PTR"));
+        if (ide) {
+            auto& hist  = ide->m_powerShellCommandHistory;
+            auto& idx   = ide->m_powerShellHistoryIndex;
+            if (!hist.empty()) {
+                if (wParam == VK_UP) {
+                    if (idx < 0) idx = (int)hist.size() - 1;
+                    else if (idx > 0) --idx;
+                } else {
+                    if (idx >= 0 && idx < (int)hist.size() - 1) ++idx;
+                    else idx = -1;
+                }
+                const char* text = (idx >= 0 && idx < (int)hist.size())
+                                   ? hist[idx].c_str() : "";
+                SetWindowTextA(hwnd, text);
+                SendMessageA(hwnd, EM_SETSEL, (WPARAM)strlen(text), (LPARAM)strlen(text));
+            }
+        }
         return 0;
     }
 

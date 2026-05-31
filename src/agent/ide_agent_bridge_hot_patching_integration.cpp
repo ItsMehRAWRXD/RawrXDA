@@ -86,14 +86,11 @@ std::vector<CorrectionPatternRecord> fetchCorrectionPatternsFromDb(
     const std::string& dbPath) {
     std::vector<CorrectionPatternRecord> out;
     if (!fs::exists(dbPath)) {
-        fprintf(stderr, "[WARN] [IDEAgentBridge] Pattern DB not found: %s\n", dbPath.c_str());
         return out;
     }
 #if HAS_SQLITE
     sqlite3* db = nullptr;
     if (sqlite3_open_v2(dbPath.c_str(), &db, SQLITE_OPEN_READONLY, nullptr) != SQLITE_OK) {
-        fprintf(stderr, "[WARN] [IDEAgentBridge] Cannot open pattern DB: %s\n",
-                sqlite3_errmsg(db));
         sqlite3_close(db);
         return out;
     }
@@ -112,7 +109,7 @@ std::vector<CorrectionPatternRecord> fetchCorrectionPatternsFromDb(
     sqlite3_finalize(stmt);
     sqlite3_close(db);
 #else
-    fprintf(stderr, "[INFO] [IDEAgentBridge] sqlite3 not available – skipping pattern DB\n");
+    (void)dbPath;
 #endif
     return out;
 }
@@ -121,14 +118,11 @@ std::vector<BehaviorPatchRecord> fetchBehaviorPatchesFromDb(
     const std::string& dbPath) {
     std::vector<BehaviorPatchRecord> out;
     if (!fs::exists(dbPath)) {
-        fprintf(stderr, "[WARN] [IDEAgentBridge] Patch DB not found: %s\n", dbPath.c_str());
         return out;
     }
 #if HAS_SQLITE
     sqlite3* db = nullptr;
     if (sqlite3_open_v2(dbPath.c_str(), &db, SQLITE_OPEN_READONLY, nullptr) != SQLITE_OK) {
-        fprintf(stderr, "[WARN] [IDEAgentBridge] Cannot open patch DB: %s\n",
-                sqlite3_errmsg(db));
         sqlite3_close(db);
         return out;
     }
@@ -147,7 +141,7 @@ std::vector<BehaviorPatchRecord> fetchBehaviorPatchesFromDb(
     sqlite3_finalize(stmt);
     sqlite3_close(db);
 #else
-    fprintf(stderr, "[INFO] [IDEAgentBridge] sqlite3 not available – skipping patch DB\n");
+    (void)dbPath;
 #endif
     return out;
 }
@@ -161,27 +155,23 @@ IDEAgentBridgeWithHotPatching::IDEAgentBridgeWithHotPatching()
     : m_hotPatcher(nullptr)
     , m_proxyServer(nullptr)
     , m_hotPatchingEnabled(false)
-    , m_proxyPort("11435")
-    , m_ggufEndpoint("localhost:11434")
+    , m_proxyPort("11434")  // Default Ollama port
+    , m_ggufEndpoint("localhost:11434")  // Default Ollama port
 {
-    fprintf(stderr, "[INFO] [IDEAgentBridge] Creating extended bridge with hot patching\n");
 }
 
 IDEAgentBridgeWithHotPatching::~IDEAgentBridgeWithHotPatching() {
     try {
         if (m_proxyServer && m_proxyServer->isListening()) {
             m_proxyServer->stopServer();
-            fprintf(stderr, "[INFO] [IDEAgentBridge] Hot patching proxy shut down\n");
         }
     } catch (const std::exception& e) {
-        fprintf(stderr, "[WARN] [IDEAgentBridge] Exception on destruction: %s\n", e.what());
+        (void)e;
     }
 }
 
 // ---------------------------------------------------------------------------
 void IDEAgentBridgeWithHotPatching::initializeWithHotPatching() {
-    fprintf(stderr, "[INFO] [IDEAgentBridge] Initializing with hot patching\n");
-
     try {
         ensureLogDirectory();
         this->initialize();
@@ -189,11 +179,9 @@ void IDEAgentBridgeWithHotPatching::initializeWithHotPatching() {
         // Hot patcher
         m_hotPatcher = std::make_unique<AgentHotPatcher>();
         m_hotPatcher->initialize("./gguf_loader", 0);
-        fprintf(stderr, "[INFO] [IDEAgentBridge] AgentHotPatcher initialized\n");
 
         // Proxy
         m_proxyServer = std::make_unique<GGUFProxyServer>();
-        fprintf(stderr, "[INFO] [IDEAgentBridge] GGUFProxyServer created\n");
 
         // Wire callbacks instead of Qt signals
         m_hotPatcher->onHallucinationDetected = [this](const HallucinationDetection& d) {
@@ -209,8 +197,6 @@ void IDEAgentBridgeWithHotPatching::initializeWithHotPatching() {
             handleBehaviorPatchApplied(p);
         };
 
-        fprintf(stderr, "[INFO] [IDEAgentBridge] Hot patcher callbacks connected\n");
-
         loadCorrectionPatterns("data/correction_patterns.db");
         loadBehaviorPatches("data/behavior_patches.db");
 
@@ -219,21 +205,18 @@ void IDEAgentBridgeWithHotPatching::initializeWithHotPatching() {
             this->getModelInvoker()->setLLMBackend(
                 this->getModelInvoker()->getLLMBackend(),
                 "http://localhost:" + m_proxyPort);
-            fprintf(stderr, "[INFO] [IDEAgentBridge] ModelInvoker redirected to proxy\n");
         }
 
         m_hotPatchingEnabled = true;
-        fprintf(stderr, "[INFO] [IDEAgentBridge] Hot patching initialization complete\n");
 
     } catch (const std::exception& ex) {
-        fprintf(stderr, "[CRIT] [IDEAgentBridge] Hot patching init failed: %s\n", ex.what());
+        (void)ex;
         m_hotPatchingEnabled = false;
     }
 }
 
 bool IDEAgentBridgeWithHotPatching::startHotPatchingProxy() {
     if (!m_proxyServer) {
-        fprintf(stderr, "[WARN] [IDEAgentBridge] Proxy not initialized\n");
         return false;
     }
     if (m_proxyServer->isListening()) return true;
@@ -241,24 +224,22 @@ bool IDEAgentBridgeWithHotPatching::startHotPatchingProxy() {
     try {
         int port = std::atoi(m_proxyPort.c_str());
         if (!isValidPort(port)) {
-            fprintf(stderr, "[WARN] [IDEAgentBridge] Invalid proxy port: %s\n", m_proxyPort.c_str());
             return false;
         }
         if (!isValidEndpoint(m_ggufEndpoint)) {
-            fprintf(stderr, "[WARN] [IDEAgentBridge] Invalid endpoint: %s\n", m_ggufEndpoint.c_str());
             return false;
         }
 
         m_proxyServer->initialize(port, m_hotPatcher.get(), m_ggufEndpoint);
         if (!m_proxyServer->startServer()) {
-            fprintf(stderr, "[WARN] [IDEAgentBridge] Proxy start failed\n");
             return false;
         }
 
-        fprintf(stderr, "[INFO] [IDEAgentBridge] Proxy started on port %d\n", port);
         return true;
     } catch (const std::exception& ex) {
-        fprintf(stderr, "[CRIT] [IDEAgentBridge] Proxy exception: %s\n", ex.what());
+        if (m_logger) {
+            m_logger->error("HotPatchingProxy init failed: " + std::string(ex.what()));
+        }
         return false;
     }
 }
@@ -266,7 +247,6 @@ bool IDEAgentBridgeWithHotPatching::startHotPatchingProxy() {
 void IDEAgentBridgeWithHotPatching::stopHotPatchingProxy() {
     if (m_proxyServer && m_proxyServer->isListening()) {
         m_proxyServer->stopServer();
-        fprintf(stderr, "[INFO] [IDEAgentBridge] Proxy stopped\n");
     }
 }
 
@@ -297,8 +277,6 @@ void IDEAgentBridgeWithHotPatching::setHotPatchingEnabled(bool enabled) {
 
     if (m_hotPatcher) {
         m_hotPatcher->setHotPatchingEnabled(enabled);
-        fprintf(stderr, "[INFO] [IDEAgentBridge] Hot patching %s\n",
-                enabled ? "enabled" : "disabled");
     }
 
     if (m_proxyServer) {
@@ -316,36 +294,24 @@ void IDEAgentBridgeWithHotPatching::loadCorrectionPatterns(const std::string& db
     if (!m_hotPatcher) return;
     auto patterns = fetchCorrectionPatternsFromDb(dbPath);
     if (patterns.empty()) {
-        fprintf(stderr, "[INFO] [IDEAgentBridge] No correction patterns found – using defaults\n");
         return;
     }
 
-    int ok = 0;
     for (const auto& rec : patterns) {
-        fprintf(stderr, "[INFO] [IDEAgentBridge] Pattern ID=%d Type=%s Threshold=%.2f\n",
-                rec.id, rec.type.c_str(), rec.confidenceThreshold);
-        ok++;
+        (void)rec;
     }
-    fprintf(stderr, "[INFO] [IDEAgentBridge] Loaded %d/%zu correction patterns\n",
-            ok, patterns.size());
 }
 
 void IDEAgentBridgeWithHotPatching::loadBehaviorPatches(const std::string& dbPath) {
     if (!m_hotPatcher) return;
     auto patches = fetchBehaviorPatchesFromDb(dbPath);
     if (patches.empty()) {
-        fprintf(stderr, "[INFO] [IDEAgentBridge] No behavior patches found – using defaults\n");
         return;
     }
 
-    int ok = 0;
     for (const auto& rec : patches) {
-        fprintf(stderr, "[INFO] [IDEAgentBridge] Patch ID=%d Type=%s\n",
-                rec.id, rec.patchType.c_str());
-        ok++;
+        (void)rec;
     }
-    fprintf(stderr, "[INFO] [IDEAgentBridge] Loaded %d/%zu behavior patches\n",
-            ok, patches.size());
 }
 
 // ---------------------------------------------------------------------------
@@ -353,29 +319,22 @@ void IDEAgentBridgeWithHotPatching::loadBehaviorPatches(const std::string& dbPat
 // ---------------------------------------------------------------------------
 void IDEAgentBridgeWithHotPatching::handleHallucinationDetected(
     const HallucinationDetection& detection) {
-    fprintf(stderr, "[INFO] [IDEAgentBridge] Hallucination detected | Type: %s | Conf: %.2f\n",
-            detection.hallucationType.c_str(), detection.confidence);
-    logCorrection(detection);
+    (void)detection;
 }
 
 void IDEAgentBridgeWithHotPatching::handleHallucinationCorrected(
     const HallucinationDetection& correction) {
-    fprintf(stderr, "[INFO] [IDEAgentBridge] Hallucination corrected | Type: %s\n",
-            correction.hallucationType.c_str());
-    logCorrection(correction);
+    (void)correction;
 }
 
 void IDEAgentBridgeWithHotPatching::handleNavigationErrorFixed(
     const NavigationFix& fix) {
-    fprintf(stderr, "[INFO] [IDEAgentBridge] Nav error fixed | %s -> %s | Eff: %.2f\n",
-            fix.incorrectPath.c_str(), fix.correctPath.c_str(), fix.effectiveness);
-    logNavigationFix(fix);
+    (void)fix;
 }
 
 void IDEAgentBridgeWithHotPatching::handleBehaviorPatchApplied(
     const BehaviorPatch& patch) {
-    fprintf(stderr, "[INFO] [IDEAgentBridge] Behavior patch applied | ID: %s Type: %s Rate: %.2f\n",
-            patch.patchId.c_str(), patch.patchType.c_str(), patch.successRate);
+    (void)patch;
 }
 
 void IDEAgentBridgeWithHotPatching::onModelInvokerReplaced() {
@@ -383,8 +342,6 @@ void IDEAgentBridgeWithHotPatching::onModelInvokerReplaced() {
         std::string endpoint = "http://localhost:" + m_proxyPort;
         this->getModelInvoker()->setLLMBackend(
             this->getModelInvoker()->getLLMBackend(), endpoint);
-        fprintf(stderr, "[INFO] [IDEAgentBridge] ModelInvoker re-wired to proxy: %s\n",
-                endpoint.c_str());
     }
 }
 

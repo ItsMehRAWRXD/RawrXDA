@@ -304,8 +304,8 @@ std::vector<TensorDesc> GGUFAdapter::enumerate(const std::string& path) {
     dataStart = (dataStart + 31) & ~uint64_t(31);
 
     // Map ggml type -> QuantizationType
-    auto mapQuant = [](uint32_t ggml_type) -> QuantizationType {
-        switch (ggml_type) {
+    auto mapQuant = [](uint32_t ggml_rxd_type) -> QuantizationType {
+        switch (ggml_rxd_type) {
             case 0:  return QuantizationType::F16;    // F32 → treat as F16 tier
             case 1:  return QuantizationType::F16;
             case 8:  return QuantizationType::Q8_0;

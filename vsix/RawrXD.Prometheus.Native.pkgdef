@@ -1,0 +1,34 @@
+[$RootKey$\Packages\{14d0a8c2-3e2f-4a5b-9c1d-8e7f6a5b4c3d}]
+@="RawrXD Prometheus Native Package"
+"InprocServer32"="$PackageFolder$\RawrXD.Prometheus.Native.dll"
+"CompanyName"="RawrXD"
+"ProductName"="RawrXD Prometheus Native"
+"ProductVersion"="1.0.0"
+"MinEdition"="Community"
+"ID"=dword:00000001
+
+[$RootKey$\Menus]
+"{14d0a8c2-3e2f-4a5b-9c1d-8e7f6a5b4c3d}"=", 1000, 1"
+
+[$RootKey$\ToolWindows\{a1b2c3d4-e5f6-7890-abcd-ef1234567890}]
+@="RawrXD Prometheus Output"
+"Package"="{14d0a8c2-3e2f-4a5b-9c1d-8e7f6a5b4c3d}"
+"Float"="1"
+"Orientation"="Bottom"
+"DockedWidth"="300"
+"DockedHeight"="200"
+
+[$RootKey$\ToolWindows\{b2c3d4e5-f6a7-8901-bcde-f23456789012}]
+@="RawrXD Prometheus Model Browser"
+"Package"="{14d0a8c2-3e2f-4a5b-9c1d-8e7f6a5b4c3d}"
+"Float"="1"
+"Orientation"="Right"
+"DockedWidth"="350"
+"DockedHeight"="400"
+
+[$RootKey$\Services\{c3d4e5f6-a7b8-9012-cdef-345678901234}]
+@="{14d0a8c2-3e2f-4a5b-9c1d-8e7f6a5b4c3d}"
+"Name"="RawrXD Prometheus Engine Service"
+
+[$RootKey$\AutomationProperties\RawrXD.Prometheus.Native]
+"Package"="{14d0a8c2-3e2f-4a5b-9c1d-8e7f6a5b4c3d}"

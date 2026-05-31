@@ -194,8 +194,8 @@ private:
 
 } // namespace RawrXD
 
-// Shared with CLI (main.cpp) for full parity: chat via Ollama when no GGUF loaded
-bool OllamaGenerateSync(const std::string& host, int port, const std::string& model,
-                        const std::string& prompt, std::string& outResponse);
-// List Ollama models (for CLI --list). Returns true if request succeeded; outNames may be empty if none.
-bool OllamaListModelsSync(const std::string& host, int port, std::vector<std::string>& outNames);
+// Shared with CLI (main.cpp) for compatibility: routed to local/internal API endpoint.
+bool ModelHostGenerateSync(const std::string& host, int port, const std::string& model,
+                           const std::string& prompt, std::string& outResponse);
+// List local/internal models (for CLI --list). Returns true when request path is handled.
+bool ModelHostListModelsSync(const std::string& host, int port, std::vector<std::string>& outNames);

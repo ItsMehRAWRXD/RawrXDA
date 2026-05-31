@@ -83,10 +83,6 @@ QuantumAutonomousTodoSystem::QuantumAutonomousTodoSystem(const AutonomousConfig&
     // Initialize statistics
     m_stats = SystemStats{};
     m_stats.last_audit = std::chrono::system_clock::now();
-    
-    std::cout << "[QuantumTodo] Quantum Autonomous Todo System initialized with " 
-              << config.max_agents << " max agents, " << config.max_concurrent_tasks 
-              << " concurrent tasks" << std::endl;
 }
 
 QuantumAutonomousTodoSystem::~QuantumAutonomousTodoSystem() {
@@ -109,8 +105,6 @@ QuantumAutonomousTodoSystem::~QuantumAutonomousTodoSystem() {
     
     // Cleanup MASM bridge
     shutdownMasmBridge();
-    
-    std::cout << "[QuantumTodo] System shutdown complete" << std::endl;
 }
 
 std::vector<QuantumAutonomousTodoSystem::TaskDefinition> 
@@ -199,20 +193,15 @@ QuantumAutonomousTodoSystem::generateTodos(const std::string& from_request) {
     // Apply quantum prioritization
     todos = applyQuantumPrioritization(todos);
     
-    std::cout << "[QuantumTodo] Generated " << todos.size() << " todos from request: " 
-              << from_request.substr(0, 50) << "..." << std::endl;
-    
     return todos;
 }
 
-std::vector<QuantumAutonomousTodoSystem::TaskDefinition> 
+std::vector<QuantumAutonomousTodoSystem::TaskDefinition>
 QuantumAutonomousTodoSystem::auditProductionReadiness() {
     std::lock_guard<std::mutex> lock(m_stats_mutex);
     m_stats.audits_performed++;
     m_stats.last_audit = std::chrono::system_clock::now();
-    
-    std::cout << "[QuantumTodo] Starting comprehensive production readiness audit..." << std::endl;
-    
+
     std::vector<TaskDefinition> audit_todos;
     
     // Run MASM-accelerated analysis if available
@@ -270,8 +259,6 @@ QuantumAutonomousTodoSystem::auditProductionReadiness() {
         audit_todos.resize(m_config.max_todos_per_audit);
     }
     
-    std::cout << "[QuantumTodo] Production audit generated " << audit_todos.size() << " tasks" << std::endl;
-    
     return audit_todos;
 }
 
@@ -323,12 +310,6 @@ QuantumAutonomousTodoSystem::getTop20MostDifficult() {
         task.priority_score = calculateQuantumPriority(task);
     }
     
-    std::cout << "[QuantumTodo] Selected top " << all_tasks.size() 
-              << " most difficult tasks (avg difficulty: " 
-              << std::accumulate(all_tasks.begin(), all_tasks.end(), 0.0f,
-                   [](float sum, const TaskDefinition& t) { return sum + t.difficulty_score; }) / all_tasks.size()
-              << ")" << std::endl;
-    
     return all_tasks;
 }
 
@@ -339,8 +320,6 @@ QuantumAutonomousTodoSystem::executeTaskAutonomously(const TaskDefinition& task)
     m_stats.autonomous_executions++;
     
     auto start_time = std::chrono::high_resolution_clock::now();
-    
-    std::cout << "[QuantumTodo] Starting autonomous execution of task: " << task.title << std::endl;
     
     ExecutionResult result;
     result.task_id = task.id;
@@ -421,7 +400,6 @@ QuantumAutonomousTodoSystem::executeTaskAutonomously(const TaskDefinition& task)
     } catch (const std::exception& e) {
         result.success = false;
         result.errors.push_back("Exception during execution: " + std::string(e.what()));
-        std::cerr << "[QuantumTodo] Exception in executeTaskAutonomously: " << e.what() << std::endl;
     }
     
     auto end_time = std::chrono::high_resolution_clock::now();
@@ -433,10 +411,6 @@ QuantumAutonomousTodoSystem::executeTaskAutonomously(const TaskDefinition& task)
     
     m_stats.avg_quality_score = (m_stats.avg_quality_score * (m_stats.tasks_executed - 1) + 
                                 result.quality_score) / m_stats.tasks_executed;
-    
-    std::cout << "[QuantumTodo] Task completed: " << (result.success ? "SUCCESS" : "FAILED") 
-              << " (Quality: " << std::fixed << std::setprecision(2) << result.quality_score
-              << ", Time: " << result.execution_time.count() << "ms)" << std::endl;
     
     return result;
 }
@@ -450,8 +424,6 @@ QuantumAutonomousTodoSystem::executeWithMultipleAgents(const TaskDefinition& tas
         agent_count = task.min_agent_count;
     }
     agent_count = std::min(agent_count, m_config.max_agents);
-    
-    std::cout << "[QuantumTodo] Executing task with " << agent_count << " agents" << std::endl;
     
     std::vector<std::future<ExecutionResult>> agent_futures;
     std::vector<std::string> models = task.preferred_models;
@@ -515,11 +487,6 @@ QuantumAutonomousTodoSystem::executeWithMultipleAgents(const TaskDefinition& tas
     ExecutionResult merged_result = mergeAgentResults(agent_results);
     merged_result.task_id = task.id;
     merged_result.agents_used = agent_count;
-    
-    std::cout << "[QuantumTodo] Multi-agent execution completed: " 
-              << (merged_result.success ? "SUCCESS" : "FAILED")
-              << " (Agents: " << agent_count << ", Quality: " 
-              << std::fixed << std::setprecision(2) << merged_result.quality_score << ")" << std::endl;
     
     return merged_result;
 }
@@ -619,14 +586,11 @@ QuantumAutonomousTodoSystem::selectOptimalMode(const TaskDefinition& task) {
 
 void QuantumAutonomousTodoSystem::startAutonomousExecution() {
     if (m_running.load()) {
-        std::cout << "[QuantumTodo] System already running" << std::endl;
         return;
     }
     
     m_running.store(true);
     m_paused.store(false);
-    
-    std::cout << "[QuantumTodo] Starting autonomous execution system..." << std::endl;
     
     // Start management threads
     m_analysis_thread = std::thread(&QuantumAutonomousTodoSystem::quantumAnalysisLoop, this);
@@ -635,16 +599,12 @@ void QuantumAutonomousTodoSystem::startAutonomousExecution() {
     if (m_config.auto_audit_production_readiness) {
         m_audit_thread = std::thread(&QuantumAutonomousTodoSystem::auditManagerLoop, this);
     }
-    
-    std::cout << "[QuantumTodo] Autonomous execution started" << std::endl;
 }
 
 void QuantumAutonomousTodoSystem::stopAutonomousExecution() {
     if (!m_running.load()) {
         return;
     }
-    
-    std::cout << "[QuantumTodo] Stopping autonomous execution..." << std::endl;
     
     m_running.store(false);
     
@@ -658,8 +618,6 @@ void QuantumAutonomousTodoSystem::stopAutonomousExecution() {
     if (m_audit_thread.joinable()) {
         m_audit_thread.join();
     }
-    
-    std::cout << "[QuantumTodo] Autonomous execution stopped" << std::endl;
 }
 
 // [Implementation continues with remaining methods...]

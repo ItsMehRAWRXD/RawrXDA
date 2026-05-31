@@ -1,0 +1,24 @@
+# CMakeLists.txt integration patch for Mapped Window Streaming
+# Add this to the streaming_gguf_loader target:
+
+# Windows-specific: Mapped Window Streamer (file mapping API)
+if(WIN32)
+    target_sources(streaming_gguf_loader PRIVATE
+        src/streaming/MappedWindowStreamer.cpp)
+    
+    target_include_directories(streaming_gguf_loader PRIVATE
+        src/streaming)
+    
+    # Link Windows system libraries
+    target_link_libraries(streaming_gguf_loader PRIVATE
+        kernel32)  # For CreateFileMapping, MapViewOfFile, etc.
+    
+    # Compile-time flag to enable mapped window support
+    target_compile_definitions(streaming_gguf_loader PRIVATE
+        MAPPED_WINDOW_SUPPORT=1)
+    
+    message(STATUS "✓ Mapped Window Streaming enabled for Windows x64")
+else()
+    # POSIX: Use zone-based loader fallback
+    message(STATUS "• Mapped Window Streaming disabled (Windows only), using zone-based loader")
+endif()

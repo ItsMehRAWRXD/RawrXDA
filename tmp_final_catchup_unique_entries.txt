@@ -1,0 +1,86 @@
+    /* Final catch-up aliases: remaining missing IDM routes */                                                   \
+    X(4357, LEGACY_FINAL_IMPACT_SET_CONFIG, "legacy.impact.set.config", "!legacy_impact set config", GUI_ONLY, "Impact", handleAnalyze, CMD_NONE) \
+    X(4358, LEGACY_FINAL_IMPACT_HISTORY, "legacy.impact.history", "!legacy_impact history", GUI_ONLY, "Impact", handleAnalyze, CMD_NONE) \
+    X(4359, LEGACY_FINAL_IMPACT_DIAGNOSTICS, "legacy.impact.diagnostics", "!legacy_impact diagnostics", GUI_ONLY, "Impact", handleAnalyze, CMD_NONE) \
+    X(4360, LEGACY_FINAL_IMPACT_EXPORT_JSON, "legacy.impact.export.json", "!legacy_impact export json", GUI_ONLY, "Impact", handleAnalyze, CMD_NONE) \
+    X(4390, LEGACY_FINAL_COPILOT_EXPORT_CHAT, "legacy.copilot.export.chat", "!legacy_copilot export chat", GUI_ONLY, "Copilot", handleHistory, CMD_NONE) \
+    X(4391, LEGACY_FINAL_COPILOT_RELOAD_HISTORY, "legacy.copilot.reload.history", "!legacy_copilot reload history", GUI_ONLY, "Copilot", handleHistory, CMD_NONE) \
+    X(5051, LEGACY_FINAL_ROUTER_SHOW_DECISION, "legacy.router.show.decision", "!legacy_router show decision", GUI_ONLY, "Router", handleRouterDecision, CMD_NONE) \
+    X(5052, LEGACY_FINAL_ROUTER_SET_POLICY, "legacy.router.set.policy", "!legacy_router set policy", GUI_ONLY, "Router", handleRouterSetPolicy, CMD_NONE) \
+    X(5053, LEGACY_FINAL_ROUTER_SHOW_CAPABILITIES, "legacy.router.show.capabilities", "!legacy_router show capabilities", GUI_ONLY, "Router", handleRouterCapabilities, CMD_NONE) \
+    X(5054, LEGACY_FINAL_ROUTER_SHOW_FALLBACKS, "legacy.router.show.fallbacks", "!legacy_router show fallbacks", GUI_ONLY, "Router", handleRouterFallbacks, CMD_NONE) \
+    X(5055, LEGACY_FINAL_ROUTER_SAVE_CONFIG, "legacy.router.save.config", "!legacy_router save config", GUI_ONLY, "Router", handleRouterSaveConfig, CMD_NONE) \
+    X(5056, LEGACY_FINAL_ROUTER_ROUTE_PROMPT, "legacy.router.route.prompt", "!legacy_router route prompt", GUI_ONLY, "Router", handleRouterRoutePrompt, CMD_NONE) \
+    X(5057, LEGACY_FINAL_ROUTER_RESET_STATS, "legacy.router.reset.stats", "!legacy_router reset stats", GUI_ONLY, "Router", handleRouterResetStats, CMD_NONE) \
+    X(5075, LEGACY_FINAL_ROUTER_SHOW_HEATMAP, "legacy.router.show.heatmap", "!legacy_router show heatmap", GUI_ONLY, "Router", handleRouterShowHeatmap, CMD_NONE) \
+    X(5076, LEGACY_FINAL_ROUTER_ENSEMBLE_ENABLE, "legacy.router.ensemble.enable", "!legacy_router ensemble enable", GUI_ONLY, "Router", handleRouterEnsembleEnable, CMD_NONE) \
+    X(5077, LEGACY_FINAL_ROUTER_ENSEMBLE_DISABLE, "legacy.router.ensemble.disable", "!legacy_router ensemble disable", GUI_ONLY, "Router", handleRouterEnsembleDisable, CMD_NONE) \
+    X(5078, LEGACY_FINAL_ROUTER_ENSEMBLE_STATUS, "legacy.router.ensemble.status", "!legacy_router ensemble status", GUI_ONLY, "Router", handleRouterEnsembleStatus, CMD_NONE) \
+    X(5079, LEGACY_FINAL_ROUTER_SIMULATE, "legacy.router.simulate", "!legacy_router simulate", GUI_ONLY, "Router", handleRouterSimulate, CMD_NONE) \
+    X(5081, LEGACY_FINAL_ROUTER_SHOW_COST_STATS, "legacy.router.show.cost.stats", "!legacy_router show cost stats", GUI_ONLY, "Router", handleRouterShowCostStats, CMD_NONE) \
+    X(5300, LEGACY_FINAL_AI_MODEL_REGISTRY, "legacy.ai.model.registry", "!legacy_ai model registry", GUI_ONLY, "Ai", handleAIMaxMode, CMD_NONE) \
+    X(5301, LEGACY_FINAL_AI_CHECKPOINT_MGR, "legacy.ai.checkpoint.mgr", "!legacy_ai checkpoint mgr", GUI_ONLY, "Ai", handleAIMaxMode, CMD_NONE) \
+    X(5302, LEGACY_FINAL_AI_INTERPRET_PANEL, "legacy.ai.interpret.panel", "!legacy_ai interpret panel", GUI_ONLY, "Ai", handleAIMaxMode, CMD_NONE) \
+    X(5303, LEGACY_FINAL_AI_CICD_SETTINGS, "legacy.ai.cicd.settings", "!legacy_ai cicd settings", GUI_ONLY, "Ai", handleAIMaxMode, CMD_NONE) \
+    X(5304, LEGACY_FINAL_AI_MULTI_FILE_SEARCH, "legacy.ai.multi.file.search", "!legacy_ai multi file search", GUI_ONLY, "Ai", handleAIMaxMode, CMD_NONE) \
+    X(5305, LEGACY_FINAL_AI_BENCHMARK_MENU, "legacy.ai.benchmark.menu", "!legacy_ai benchmark menu", GUI_ONLY, "Ai", handleAIMaxMode, CMD_NONE) \
+    X(5310, LEGACY_FINAL_VIEW_MONACO_SETTINGS, "legacy.view.monaco.settings", "!legacy_view monaco settings", GUI_ONLY, "View", handleStatus, CMD_NONE) \
+    X(5311, LEGACY_FINAL_VIEW_THERMAL_DASHBOARD, "legacy.view.thermal.dashboard", "!legacy_view thermal dashboard", GUI_ONLY, "View", handleStatus, CMD_NONE) \
+    X(5320, LEGACY_FINAL_AGENT_SMOKE_TEST, "legacy.agent.smoke.test", "!legacy_agent smoke test", GUI_ONLY, "Agent", handleAgentLoop, CMD_ASYNC) \
+    X(5321, LEGACY_FINAL_AGENT_SET_CYCLE_AGENT_COUNTER, "legacy.agent.set.cycle.agent.counter", "!legacy_agent set cycle agent counter", GUI_ONLY, "Agent", handleAgentLoop, CMD_ASYNC) \
+    X(5880, LEGACY_FINAL_EDITOR_GOTO_LINE, "legacy.editor.goto.line", "!legacy_editor goto line", GUI_ONLY, "Editor", handleEditFind, CMD_REQUIRES_FILE) \
+    X(5881, LEGACY_FINAL_EDITOR_GOTO_SYMBOL, "legacy.editor.goto.symbol", "!legacy_editor goto symbol", GUI_ONLY, "Editor", handleLspGotoDef, CMD_REQUIRES_FILE) \
+    X(5882, LEGACY_FINAL_EDITOR_GOTO_WORKSPACE_SYMBOL, "legacy.editor.goto.workspace.symbol", "!legacy_editor goto workspace symbol", GUI_ONLY, "Editor", handleLspGotoDef, CMD_REQUIRES_FILE) \
+    X(5883, LEGACY_FINAL_EDITOR_PEEK_DEFINITION, "legacy.editor.peek.definition", "!legacy_editor peek definition", GUI_ONLY, "Editor", handleLspGotoDef, CMD_REQUIRES_FILE) \
+    X(5884, LEGACY_FINAL_EDITOR_PEEK_REFERENCES, "legacy.editor.peek.references", "!legacy_editor peek references", GUI_ONLY, "Editor", handleLspGotoDef, CMD_REQUIRES_FILE) \
+    X(5885, LEGACY_FINAL_EDITOR_FORMAT_SELECTION, "legacy.editor.format.selection", "!legacy_editor format selection", GUI_ONLY, "Editor", handleEditFind, CMD_REQUIRES_FILE) \
+    X(5886, LEGACY_FINAL_EDITOR_GOTO_IMPLEMENTATION, "legacy.editor.goto.implementation", "!legacy_editor goto implementation", GUI_ONLY, "Editor", handleLspGotoDef, CMD_REQUIRES_FILE) \
+    X(5887, LEGACY_FINAL_EDITOR_GOTO_TYPE_DEFINITION, "legacy.editor.goto.type.definition", "!legacy_editor goto type definition", GUI_ONLY, "Editor", handleLspGotoDef, CMD_REQUIRES_FILE) \
+    X(5888, LEGACY_FINAL_EDITOR_TOGGLE_COMMENT, "legacy.editor.toggle.comment", "!legacy_editor toggle comment", GUI_ONLY, "Editor", handleEditFind, CMD_REQUIRES_FILE) \
+    X(5889, LEGACY_FINAL_EDITOR_DUPLICATE_LINE, "legacy.editor.duplicate.line", "!legacy_editor duplicate line", GUI_ONLY, "Editor", handleEditFind, CMD_REQUIRES_FILE) \
+    X(5890, LEGACY_FINAL_EDITOR_DELETE_LINE, "legacy.editor.delete.line", "!legacy_editor delete line", GUI_ONLY, "Editor", handleEditFind, CMD_REQUIRES_FILE) \
+    X(5891, LEGACY_FINAL_EDITOR_MOVE_LINE_UP, "legacy.editor.move.line.up", "!legacy_editor move line up", GUI_ONLY, "Editor", handleEditFind, CMD_REQUIRES_FILE) \
+    X(5892, LEGACY_FINAL_EDITOR_MOVE_LINE_DOWN, "legacy.editor.move.line.down", "!legacy_editor move line down", GUI_ONLY, "Editor", handleEditFind, CMD_REQUIRES_FILE) \
+    X(5893, LEGACY_FINAL_EDITOR_SHOW_INLAY_HINTS, "legacy.editor.show.inlay.hints", "!legacy_editor show inlay hints", GUI_ONLY, "Editor", handleLspGotoDef, CMD_REQUIRES_FILE) \
+    X(5894, LEGACY_FINAL_EDITOR_CODE_ACTIONS, "legacy.editor.code.actions", "!legacy_editor code actions", GUI_ONLY, "Editor", handleLspGotoDef, CMD_REQUIRES_FILE) \
+    X(6001, LEGACY_FINAL_AGENTIC_TOGGLE, "legacy.agentic.toggle", "!legacy_agentic toggle", GUI_ONLY, "Agentic", handleAgentLoop, CMD_ASYNC) \
+    X(6002, LEGACY_FINAL_AGENTIC_PASSIVE, "legacy.agentic.passive", "!legacy_agentic passive", GUI_ONLY, "Agentic", handleAgentLoop, CMD_ASYNC) \
+    X(6003, LEGACY_FINAL_AGENTIC_SUGGESTIVE, "legacy.agentic.suggestive", "!legacy_agentic suggestive", GUI_ONLY, "Agentic", handleAgentLoop, CMD_ASYNC) \
+    X(6004, LEGACY_FINAL_AGENTIC_AUTONOMOUS, "legacy.agentic.autonomous", "!legacy_agentic autonomous", GUI_ONLY, "Agentic", handleAgentLoop, CMD_ASYNC) \
+    X(6005, LEGACY_FINAL_SHOW_SUGGESTIONS, "legacy.show.suggestions", "!legacy_show suggestions", GUI_ONLY, "Show", handleAnalyze, CMD_NONE) \
+    X(6006, LEGACY_FINAL_APPROVE_ACTION, "legacy.approve.action", "!legacy_approve action", GUI_ONLY, "Approve", handleAnalyze, CMD_NONE) \
+    X(6007, LEGACY_FINAL_REJECT_ACTION, "legacy.reject.action", "!legacy_reject action", GUI_ONLY, "Reject", handleAnalyze, CMD_NONE) \
+    X(7029, LEGACY_FINAL_FILE_QUICK_OPEN, "legacy.file.quick.open", "!legacy_file quick open", GUI_ONLY, "File", handleFileOpen, CMD_NONE) \
+    X(7030, LEGACY_FINAL_CHAT_EXPORT_CLIPBOARD, "legacy.chat.export.clipboard", "!legacy_chat export clipboard", GUI_ONLY, "Chat", handleAnalyze, CMD_NONE) \
+    X(7057, LEGACY_FINAL_VIEW_AGENT_PANEL, "legacy.view.agent.panel", "!legacy_view agent panel", GUI_ONLY, "View", handleStatus, CMD_NONE) \
+    X(8007, LEGACY_FINAL_EXEC_MODE_UNSAFE, "legacy.exec.mode.unsafe", "!legacy_exec mode unsafe", GUI_ONLY, "Exec", handleAIModeSet, CMD_NONE) \
+    X(8008, LEGACY_FINAL_EXEC_MODE_KERNEL, "legacy.exec.mode.kernel", "!legacy_exec mode kernel", GUI_ONLY, "Exec", handleAIModeSet, CMD_NONE) \
+    X(9018, LEGACY_FINAL_HOTPATCH_SET_TARGET_TPS, "legacy.hotpatch.set.target.tps", "!legacy_hotpatch set target tps", GUI_ONLY, "Hotpatch", handleHotpatchStatus, CMD_NONE) \
+    X(9550, LEGACY_FINAL_SECURITY_SCAN_SECRETS, "legacy.security.scan.secrets", "!legacy_security scan secrets", GUI_ONLY, "Security", handleSafetyStatus, CMD_NONE) \
+    X(9551, LEGACY_FINAL_SECURITY_SCAN_SAST, "legacy.security.scan.sast", "!legacy_security scan sast", GUI_ONLY, "Security", handleSafetyStatus, CMD_NONE) \
+    X(9552, LEGACY_FINAL_SECURITY_SCAN_DEPENDENCIES, "legacy.security.scan.dependencies", "!legacy_security scan dependencies", GUI_ONLY, "Security", handleSafetyStatus, CMD_NONE) \
+    X(9553, LEGACY_FINAL_SECURITY_DASHBOARD, "legacy.security.dashboard", "!legacy_security dashboard", GUI_ONLY, "Security", handleSafetyStatus, CMD_NONE) \
+    X(9554, LEGACY_FINAL_SECURITY_EXPORT_SBOM, "legacy.security.export.sbom", "!legacy_security export sbom", GUI_ONLY, "Security", handleSafetyStatus, CMD_NONE) \
+    X(10300, LEGACY_FINAL_VOICE_TOGGLE_LISTENING, "legacy.voice.toggle.listening", "!legacy_voice toggle listening", GUI_ONLY, "Voice", handleVoiceStatus, CMD_NONE) \
+    X(10301, LEGACY_FINAL_VOICE_TOGGLE_TTS, "legacy.voice.toggle.tts", "!legacy_voice toggle tts", GUI_ONLY, "Voice", handleVoiceSpeak, CMD_NONE) \
+    X(10302, LEGACY_FINAL_VOICE_SETTINGS, "legacy.voice.settings", "!legacy_voice settings", GUI_ONLY, "Voice", handleVoiceMode, CMD_NONE) \
+    X(10303, LEGACY_FINAL_VOICE_TTS_TEST, "legacy.voice.tts.test", "!legacy_voice tts test", GUI_ONLY, "Voice", handleVoiceSpeak, CMD_NONE) \
+    X(10400, LEGACY_FINAL_BUILD_SOLUTION, "legacy.build.solution", "!legacy_build solution", GUI_ONLY, "Build", handleTools, CMD_ASYNC) \
+    X(12330, LEGACY_FINAL_ENT_MODEL_COMPARE, "legacy.ent.model.compare", "!legacy_ent model compare", GUI_ONLY, "Ent", handleAnalyze, CMD_NONE) \
+    X(12331, LEGACY_FINAL_ENT_BATCH_PROCESS, "legacy.ent.batch.process", "!legacy_ent batch process", GUI_ONLY, "Ent", handleAnalyze, CMD_NONE) \
+    X(12332, LEGACY_FINAL_ENT_CUSTOM_STOP_SEQ, "legacy.ent.custom.stop.seq", "!legacy_ent custom stop seq", GUI_ONLY, "Ent", handleAnalyze, CMD_NONE) \
+    X(12333, LEGACY_FINAL_ENT_GRAMMAR_CONSTRAINTS, "legacy.ent.grammar.constraints", "!legacy_ent grammar constraints", GUI_ONLY, "Ent", handleAnalyze, CMD_NONE) \
+    X(12334, LEGACY_FINAL_ENT_LORA_ADAPTER, "legacy.ent.lora.adapter", "!legacy_ent lora adapter", GUI_ONLY, "Ent", handleAnalyze, CMD_NONE) \
+    X(12335, LEGACY_FINAL_ENT_RESPONSE_CACHE, "legacy.ent.response.cache", "!legacy_ent response cache", GUI_ONLY, "Ent", handleAnalyze, CMD_NONE) \
+    X(12336, LEGACY_FINAL_ENT_PROMPT_LIBRARY, "legacy.ent.prompt.library", "!legacy_ent prompt library", GUI_ONLY, "Ent", handleAnalyze, CMD_NONE) \
+    X(12337, LEGACY_FINAL_ENT_SESSION_EXPORT_IMPORT, "legacy.ent.session.export.import", "!legacy_ent session export import", GUI_ONLY, "Ent", handleAnalyze, CMD_NONE) \
+    X(12338, LEGACY_FINAL_ENT_MODEL_SHARDING, "legacy.ent.model.sharding", "!legacy_ent model sharding", GUI_ONLY, "Ent", handleAnalyze, CMD_NONE) \
+    X(12339, LEGACY_FINAL_ENT_TENSOR_PARALLEL, "legacy.ent.tensor.parallel", "!legacy_ent tensor parallel", GUI_ONLY, "Ent", handleAnalyze, CMD_NONE) \
+    X(12340, LEGACY_FINAL_ENT_PIPELINE_PARALLEL, "legacy.ent.pipeline.parallel", "!legacy_ent pipeline parallel", GUI_ONLY, "Ent", handleAnalyze, CMD_NONE) \
+    X(12341, LEGACY_FINAL_ENT_CUSTOM_QUANT, "legacy.ent.custom.quant", "!legacy_ent custom quant", GUI_ONLY, "Ent", handleAnalyze, CMD_NONE) \
+    X(12400, LEGACY_FINAL_OMEGA_START_AUTONOMOUS, "legacy.omega.start.autonomous", "!legacy_omega start autonomous", GUI_ONLY, "Omega", handleAnalyze, CMD_NONE) \
+    X(12401, LEGACY_FINAL_OMEGA_SET_GOAL, "legacy.omega.set.goal", "!legacy_omega set goal", GUI_ONLY, "Omega", handleAnalyze, CMD_NONE) \
+    X(12402, LEGACY_FINAL_OMEGA_OBSERVE_PIPELINE, "legacy.omega.observe.pipeline", "!legacy_omega observe pipeline", GUI_ONLY, "Omega", handleAnalyze, CMD_NONE) \
+    X(12403, LEGACY_FINAL_OMEGA_CANCEL_TASK, "legacy.omega.cancel.task", "!legacy_omega cancel task", GUI_ONLY, "Omega", handleAnalyze, CMD_NONE) \
+    X(12404, LEGACY_FINAL_OMEGA_SPAWN_AGENT, "legacy.omega.spawn.agent", "!legacy_omega spawn agent", GUI_ONLY, "Omega", handleAnalyze, CMD_NONE) \
+    X(12405, LEGACY_FINAL_OMEGA_GET_STATS, "legacy.omega.get.stats", "!legacy_omega get stats", GUI_ONLY, "Omega", handleAnalyze, CMD_NONE) \

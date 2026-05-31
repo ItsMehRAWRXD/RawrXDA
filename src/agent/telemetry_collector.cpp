@@ -90,8 +90,6 @@ bool TelemetryCollector::initialize() {
     m_sessionStartTime = nowMs();
     m_enabled          = loadUserConsent();
 
-    fprintf(stderr, "[Telemetry] Initialized (enabled=%d, session=%s)\n",
-            m_enabled, m_sessionId.c_str());
     return true;
 }
 
@@ -101,7 +99,6 @@ void TelemetryCollector::enableTelemetry() {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_enabled = true;
     saveUserConsent(true);
-    fprintf(stderr, "[Telemetry] Enabled\n");
     if (m_enabledCb) m_enabledCb(m_enabledCtx);
 }
 
@@ -109,7 +106,6 @@ void TelemetryCollector::disableTelemetry() {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_enabled = false;
     saveUserConsent(false);
-    fprintf(stderr, "[Telemetry] Disabled\n");
     if (m_disabledCb) m_disabledCb(m_disabledCtx);
 }
 
@@ -206,7 +202,6 @@ void TelemetryCollector::clearAllData() {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_events.clear();
     m_featureUsage.clear();
-    fprintf(stderr, "[Telemetry] All data cleared\n");
 }
 
 // ── flushData ────────────────────────────────────────────────────────────
@@ -234,8 +229,6 @@ void TelemetryCollector::flushData() {
     m_events.clear();
 
     if (m_flushedCb) m_flushedCb(m_flushedCtx, count);
-
-    fprintf(stderr, "[Telemetry] Flushed %d events\n", count);
 }
 
 // ── sanitize (private) ──────────────────────────────────────────────────
@@ -259,9 +252,7 @@ std::string TelemetryCollector::sanitize(const std::string& input) const {
 void TelemetryCollector::sendTelemetry(const JsonObject& payload) {
     std::string endpoint = getEnvVar("RAWRXD_TELEMETRY_URL");
     if (endpoint.empty()) {
-        // No endpoint configured – just log locally
-        fprintf(stderr, "[Telemetry] (no endpoint) payload: %s\n",
-                JsonDoc::toJson(payload).c_str());
+        // No endpoint configured – telemetry disabled
         return;
     }
 
@@ -272,10 +263,7 @@ void TelemetryCollector::sendTelemetry(const JsonObject& payload) {
         {"X-Session-Id", m_sessionId}
     });
 
-    if (!resp.ok()) {
-        fprintf(stderr, "[Telemetry] HTTP %d: %s\n",
-                resp.statusCode, resp.error.c_str());
-    }
+    (void)resp;
 }
 
 // ── loadUserConsent (private) ────────────────────────────────────────────

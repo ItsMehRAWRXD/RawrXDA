@@ -30,11 +30,11 @@
 #include <rpcmem.h>
 
 #define GGML_COMMON_IMPL_CPP
-#include "ggml-backend-impl.h"
-#include "ggml-common.h"
+#include "ggml-backend-impl_rxd_internal.h"
+#include "ggml-common_rxd_internal.h"
 #include "ggml-hexagon.h"
-#include "ggml-impl.h"
-#include "ggml-quants.h"
+#include "ggml-impl_rxd_internal.h"
+#include "ggml-quants_rxd_internal.h"
 #include "htp-msg.h"
 #include "htp_iface.h"
 

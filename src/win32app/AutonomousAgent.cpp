@@ -150,6 +150,12 @@ bool AutonomousAgent::Start()
     
     if (!m_agentThread || !m_monitorThread || !m_beaconThread) {
         m_running = false;
+        auto waitAndClose = [](HANDLE& h) {
+            if (h) { WaitForSingleObject(h, 5000); CloseHandle(h); h = nullptr; }
+        };
+        waitAndClose(m_agentThread);
+        waitAndClose(m_monitorThread);
+        waitAndClose(m_beaconThread);
         return false;
     }
     
@@ -993,18 +999,31 @@ bool DiagnosticEngine::TestHotkeyRegistration()
 
 bool DiagnosticEngine::TestDigestionEngine()
 {
-    // Test if the digestion engine is functional
-    // This would typically call a test function in the engine
-    // For now, we'll check if the function pointer is valid
+    // Test if the digestion engine is functional by loading and invoking it
     HMODULE hModule = LoadLibraryA("RawrXD_DigestionEngine.dll");
     if (!hModule) {
         return false;
     }
     
+    // Check that the critical AVX-512 export exists
     auto* pFunc = GetProcAddress(hModule, "RawrXD_DigestionEngine_Avx512");
-    FreeLibrary(hModule);
+    if (!pFunc) {
+        FreeLibrary(hModule);
+        return false;
+    }
     
-    return pFunc != nullptr;
+    // Also verify the engine version export if available
+    auto* pVersion = (const char* (*)())GetProcAddress(hModule, "RawrXD_DigestionEngine_Version");
+    if (pVersion) {
+        const char* ver = pVersion();
+        if (!ver || ver[0] == '\0') {
+            FreeLibrary(hModule);
+            return false;
+        }
+    }
+    
+    FreeLibrary(hModule);
+    return true;
 }
 
 bool DiagnosticEngine::TestMemoryAllocation()
@@ -1146,26 +1165,56 @@ void SelfHealingEngine::SetMaxAttempts(DWORD attempts)
 // Pre-defined Healing Actions
 bool SelfHealingEngine::RestartMessageLoop()
 {
-    // This would typically involve restarting the message pump
-    // For now, we'll just log the action
     OutputDebugStringA("[AGENT-HEALING] Restarting message loop\n");
     
     HWND hwnd = AutonomousAgent::Instance()->GetIDEWindow();
-    if (hwnd) {
-        PostMessageA(hwnd, WM_NULL, 0, 0); // Wake up the message loop
-        return true;
+    if (!hwnd || !IsWindow(hwnd)) {
+        return false;
     }
     
-    return false;
+    // Flush any pending messages that may be stuck
+    MSG msg;
+    while (PeekMessageA(&msg, hwnd, 0, 0, PM_REMOVE)) {
+        TranslateMessage(&msg);
+        DispatchMessageA(&msg);
+    }
+    
+    // Force a full repaint cycle to re-synchronize the UI
+    InvalidateRect(hwnd, nullptr, TRUE);
+    UpdateWindow(hwnd);
+    
+    // Post a WM_NULL to guarantee the message loop wakes up
+    PostMessageA(hwnd, WM_NULL, 0, 0);
+    return true;
 }
 
 bool SelfHealingEngine::ReloadEngine()
 {
     OutputDebugStringA("[AGENT-HEALING] Reloading engine\n");
     
-    // This would typically reload the digestion engine DLL
-    // For now, we'll just validate that the engine is accessible
-    return DiagnosticEngine::TestEngineLoad();
+    // Attempt full DLL unload/reload cycle for the digestion engine
+    HMODULE hModule = GetModuleHandleA("RawrXD_DigestionEngine.dll");
+    if (hModule) {
+        FreeLibrary(hModule);
+        OutputDebugStringA("[AGENT-HEALING] Engine DLL unloaded\n");
+    }
+    
+    // Reload the DLL fresh
+    hModule = LoadLibraryA("RawrXD_DigestionEngine.dll");
+    if (!hModule) {
+        OutputDebugStringA("[AGENT-HEALING] Engine DLL reload FAILED\n");
+        return false;
+    }
+    
+    // Verify the critical export is available
+    auto* pFunc = GetProcAddress(hModule, "RawrXD_DigestionEngine_Avx512");
+    if (!pFunc) {
+        OutputDebugStringA("[AGENT-HEALING] Engine loaded but critical export missing\n");
+        return false;
+    }
+    
+    OutputDebugStringA("[AGENT-HEALING] Engine DLL reloaded successfully\n");
+    return true;
 }
 
 bool SelfHealingEngine::ReinitHotkeys()
@@ -1207,18 +1256,65 @@ bool SelfHealingEngine::RecreateWindows()
 {
     OutputDebugStringA("[AGENT-HEALING] Recreating windows\n");
     
-    // This would typically recreate any corrupted windows
-    // For now, we'll just validate the main window
     HWND hwnd = AutonomousAgent::Instance()->GetIDEWindow();
-    return hwnd && IsWindow(hwnd);
+    if (!hwnd || !IsWindow(hwnd)) {
+        return false;
+    }
+    
+    // Enumerate child windows and force repaint on each
+    EnumChildWindows(hwnd, [](HWND child, LPARAM) -> BOOL {
+        if (IsWindow(child) && IsWindowVisible(child)) {
+            InvalidateRect(child, nullptr, TRUE);
+            UpdateWindow(child);
+        }
+        return TRUE;
+    }, 0);
+    
+    // Force main window repaint
+    InvalidateRect(hwnd, nullptr, TRUE);
+    UpdateWindow(hwnd);
+    
+    // Trigger a WM_SIZE to re-layout child panels
+    RECT rc;
+    GetClientRect(hwnd, &rc);
+    PostMessageA(hwnd, WM_SIZE, SIZE_RESTORED,
+                 MAKELPARAM(rc.right - rc.left, rc.bottom - rc.top));
+    
+    return true;
 }
 
 bool SelfHealingEngine::PerformFullRestart()
 {
     OutputDebugStringA("[AGENT-HEALING] Performing full restart\n");
     
-    // This would typically restart the entire IDE
-    // For now, we'll just return true to indicate the action was attempted
+    // Get our own executable path for re-launch
+    char exePath[MAX_PATH] = {};
+    DWORD len = GetModuleFileNameA(nullptr, exePath, MAX_PATH);
+    if (len == 0 || len >= MAX_PATH) {
+        OutputDebugStringA("[AGENT-HEALING] Failed to get exe path for restart\n");
+        return false;
+    }
+    
+    // Launch a new instance of ourselves
+    STARTUPINFOA si = {};
+    si.cb = sizeof(si);
+    PROCESS_INFORMATION pi = {};
+    
+    if (!CreateProcessA(exePath, nullptr, nullptr, nullptr, FALSE,
+                        0, nullptr, nullptr, &si, &pi)) {
+        OutputDebugStringA("[AGENT-HEALING] CreateProcess failed for restart\n");
+        return false;
+    }
+    
+    CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
+    
+    // Post quit to trigger graceful shutdown of this instance
+    HWND hwnd = AutonomousAgent::Instance()->GetIDEWindow();
+    if (hwnd) {
+        PostMessageA(hwnd, WM_CLOSE, 0, 0);
+    }
+    
     return true;
 }
 
@@ -1481,7 +1577,7 @@ void AutonomousAgent::OnDigestionQueued(DWORD taskId, const std::wstring& source
     LeaveCriticalSection(&m_digestionLock);
     
     char logBuf[512];
-    sprintf_s(logBuf, "Digestion Task %lu queued for %S", taskId, source.c_str());
+    sprintf_s(logBuf, "Digestion Task %lu queued for %s", taskId, source.c_str());
     EmitBeacon(BeaconType::DIGESTION_QUEUED, S_OK, logBuf);
     AgentUtils::OutputAgentLog(logBuf);
 }

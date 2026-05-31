@@ -226,7 +226,7 @@ WorkspaceReasoningProfileManager::analyzeWorkspace(const std::string& path) cons
         c.fileCount = count;
         c.isLargeCodebase = (count > 500);
     } catch (...) {
-        // Leave defaults — non-fatal
+        fprintf(stderr, "[WorkspaceReasoningProfiles] Using default profiles\n");
     }
 
     return c;

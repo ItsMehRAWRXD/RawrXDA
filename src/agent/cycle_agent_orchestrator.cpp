@@ -83,8 +83,6 @@ inline double calculate_load_variance(const std::vector<double>& loads) {
 CycleAgentOrchestrator::CycleAgentOrchestrator()
     : startup_time_(std::chrono::system_clock::now()),
       random_generator_(std::chrono::high_resolution_clock::now().time_since_epoch().count()) {
-    
-    std::cout << "[CycleOrchestrator] Cycle Agent Orchestrator initializing..." << std::endl;
     performance_stats_ = {};
     health_status_ = {};
     load_balance_stats_ = {};
@@ -98,13 +96,11 @@ bool CycleAgentOrchestrator::initialize(uint8_t initial_agent_count,
                                       SchedulingAlgorithm default_algorithm,
                                       bool enable_quantum_optimization) {
     if (initialized_.load()) {
-        std::cout << "[CycleOrchestrator] Already initialized" << std::endl;
         return true;
     }
     
     try {
         if (initial_agent_count == 0 || initial_agent_count > MAX_AGENTS) {
-            std::cerr << "[CycleOrchestrator] Invalid agent count: " << static_cast<uint32_t>(initial_agent_count) << std::endl;
             return false;
         }
         
@@ -134,23 +130,15 @@ bool CycleAgentOrchestrator::initialize(uint8_t initial_agent_count,
         
         initialized_ = true;
         
-        std::cout << "[CycleOrchestrator] Initialization complete" << std::endl;
-        std::cout << "  - Initial agents: " << static_cast<uint32_t>(initial_agent_count) << std::endl;
-        std::cout << "  - Scheduling algorithm: " << static_cast<uint32_t>(default_algorithm) << std::endl;
-        std::cout << "  - Quantum optimization: " << (quantum_optimization_enabled_ ? "enabled" : "disabled") << std::endl;
-        
         return true;
         
-    } catch (const std::exception& e) {
-        std::cerr << "[CycleOrchestrator] Initialization failed: " << e.what() << std::endl;
+    } catch (const std::exception&) {
         return false;
     }
 }
 
 void CycleAgentOrchestrator::shutdown() {
     if (!initialized_.load()) return;
-    
-    std::cout << "[CycleOrchestrator] Shutting down orchestrator..." << std::endl;
     
     shutting_down_ = true;
     
@@ -196,27 +184,22 @@ void CycleAgentOrchestrator::shutdown() {
     
     initialized_ = false;
     shutting_down_ = false;
-    
-    std::cout << "[CycleOrchestrator] Shutdown complete" << std::endl;
 }
 
 std::string CycleAgentOrchestrator::add_agent(const AgentConfiguration& config) {
     if (!initialized_.load()) {
-        std::cerr << "[CycleOrchestrator] Orchestrator not initialized" << std::endl;
         return "";
     }
     
     std::lock_guard<std::mutex> lock(agents_mutex_);
     
     if (agent_configs_.size() >= MAX_AGENTS) {
-        std::cerr << "[CycleOrchestrator] Maximum agent limit reached: " << MAX_AGENTS << std::endl;
         return "";
     }
     
     std::string agent_id = config.agent_id.empty() ? generate_agent_id() : config.agent_id;
     
     if (agent_configs_.find(agent_id) != agent_configs_.end()) {
-        std::cerr << "[CycleOrchestrator] Agent already exists: " << agent_id << std::endl;
         return "";
     }
     
@@ -238,9 +221,6 @@ std::string CycleAgentOrchestrator::add_agent(const AgentConfiguration& config) 
     auto agent_thread = std::make_unique<std::thread>(&CycleAgentOrchestrator::agent_thread_function, this, agent_id);
     runtime_info.thread_id = agent_thread->get_id();
     agent_threads_[agent_id] = std::move(agent_thread);
-    
-    std::cout << "[CycleOrchestrator] Added agent: " << agent_id 
-              << " (" << agent_config.agent_name << ")" << std::endl;
     
     return agent_id;
 }
@@ -276,14 +256,11 @@ bool CycleAgentOrchestrator::remove_agent(const std::string& agent_id, bool grac
         agent_runtime_info_.erase(runtime_it);
     }
     
-    std::cout << "[CycleOrchestrator] Removed agent: " << agent_id << std::endl;
-    
     return true;
 }
 
 bool CycleAgentOrchestrator::scale_agents(uint8_t target_count, bool preserve_existing) {
     if (target_count == 0 || target_count > MAX_AGENTS) {
-        std::cerr << "[CycleOrchestrator] Invalid target count: " << static_cast<uint32_t>(target_count) << std::endl;
         return false;
     }
     
@@ -292,7 +269,6 @@ bool CycleAgentOrchestrator::scale_agents(uint8_t target_count, bool preserve_ex
     uint8_t current_count = agent_configs_.size();
     
     if (target_count == current_count) {
-        std::cout << "[CycleOrchestrator] Already at target count: " << static_cast<uint32_t>(target_count) << std::endl;
         return true;
     }
     
@@ -321,9 +297,6 @@ bool CycleAgentOrchestrator::scale_agents(uint8_t target_count, bool preserve_ex
                 new (&lock) std::lock_guard<std::mutex>(agents_mutex_);
             }
         }
-        
-        std::cout << "[CycleOrchestrator] Scaled up from " << static_cast<uint32_t>(current_count) 
-                  << " to " << static_cast<uint32_t>(target_count) << " agents" << std::endl;
         
     } else {
         // Scale down - remove agents
@@ -361,9 +334,6 @@ bool CycleAgentOrchestrator::scale_agents(uint8_t target_count, bool preserve_ex
             remove_agent(agent_id, true);
             new (&lock) std::lock_guard<std::mutex>(agents_mutex_);
         }
-        
-        std::cout << "[CycleOrchestrator] Scaled down from " << static_cast<uint32_t>(current_count) 
-                  << " to " << static_cast<uint32_t>(target_count) << " agents" << std::endl;
     }
     
     return true;
@@ -389,31 +359,23 @@ CycleAgentTaskResult CycleAgentOrchestrator::execute_task(const CycleAgentTaskRe
         return CycleAgentTaskResult::error_result(request.request_id, "Orchestrator not initialized");
     }
     
-    std::cout << "[CycleOrchestrator] Executing task: " << request.request_id << std::endl;
-    
     // Select agent for task execution
     std::string selected_agent = get_next_agent(request.preferred_agent_type);
     if (selected_agent.empty()) {
         return CycleAgentTaskResult::error_result(request.request_id, "No suitable agent available");
     }
     
-    std::cout << "[CycleOrchestrator] Selected agent: " << selected_agent 
-              << " for task: " << request.request_id << std::endl;
-    
     // Execute task on selected agent
     auto result = execute_task_on_agent_internal(selected_agent, request);
     
     // Handle failover if enabled and task failed
     if (!result.success && request.allow_failover) {
-        std::cout << "[CycleOrchestrator] Task failed, attempting failover..." << std::endl;
-        
         // Try up to 3 other agents
         for (int retry = 0; retry < 3; ++retry) {
             std::string backup_agent = get_next_agent(request.preferred_agent_type);
             if (backup_agent != selected_agent && !backup_agent.empty()) {
                 result = execute_task_on_agent_internal(backup_agent, request);
                 if (result.success) {
-                    std::cout << "[CycleOrchestrator] Failover successful on agent: " << backup_agent << std::endl;
                     break;
                 }
             }
@@ -487,13 +449,10 @@ void CycleAgentOrchestrator::enable_auto_load_balancing(bool enabled, std::chron
     
     if (enabled) {
         load_balancing_thread_ = std::thread(&CycleAgentOrchestrator::load_balancing_thread_function, this);
-        std::cout << "[CycleOrchestrator] Auto load balancing enabled (interval: " 
-                  << interval.count() << "ms)" << std::endl;
     } else {
         if (load_balancing_thread_.joinable()) {
             load_balancing_thread_.join();
         }
-        std::cout << "[CycleOrchestrator] Auto load balancing disabled" << std::endl;
     }
 }
 
@@ -505,13 +464,10 @@ void CycleAgentOrchestrator::enable_health_monitoring(bool enabled, std::chrono:
     
     if (enabled) {
         health_monitoring_thread_ = std::thread(&CycleAgentOrchestrator::health_monitoring_thread_function, this);
-        std::cout << "[CycleOrchestrator] Health monitoring enabled (interval: " 
-                  << check_interval.count() << "ms)" << std::endl;
     } else {
         if (health_monitoring_thread_.joinable()) {
             health_monitoring_thread_.join();
         }
-        std::cout << "[CycleOrchestrator] Health monitoring disabled" << std::endl;
     }
 }
 
@@ -614,10 +570,6 @@ void CycleAgentOrchestrator::check_all_agents_health() {
     } else {
         health_status_.overall_health_score = 0.0;
     }
-    
-    std::cout << "[CycleOrchestrator] Health check complete: " 
-              << static_cast<uint32_t>(health_status_.healthy_agents) << "/" 
-              << static_cast<uint32_t>(health_status_.total_agents) << " agents healthy" << std::endl;
 }
 
 CycleAgentOrchestrator::PerformanceStatistics CycleAgentOrchestrator::get_performance_statistics() const {
@@ -696,8 +648,6 @@ std::string CycleAgentOrchestrator::generate_request_id() {
 }
 
 void CycleAgentOrchestrator::agent_thread_function(const std::string& agent_id) {
-    std::cout << "[CycleOrchestrator] Agent thread started: " << agent_id << std::endl;
-    
     try {
         // Update agent state to ready
         {
@@ -758,8 +708,7 @@ void CycleAgentOrchestrator::agent_thread_function(const std::string& agent_id) 
         }
         
     } catch (const std::exception& e) {
-        std::cerr << "[CycleOrchestrator] Agent thread error (" << agent_id << "): " << e.what() << std::endl;
-        
+        (void)e;
         // Update agent state to indicate failure
         std::lock_guard<std::mutex> lock(agents_mutex_);
         auto runtime_it = agent_runtime_info_.find(agent_id);
@@ -770,8 +719,6 @@ void CycleAgentOrchestrator::agent_thread_function(const std::string& agent_id) 
             runtime_it->second.last_error_message = e.what();
         }
     }
-    
-    std::cout << "[CycleOrchestrator] Agent thread ended: " << agent_id << std::endl;
 }
 
 std::string CycleAgentOrchestrator::select_agent_round_robin(AgentType preferred_type) {
@@ -883,8 +830,6 @@ CycleAgentTaskResult CycleAgentOrchestrator::execute_task_on_agent_internal(
         }
         
         // Simulate task processing
-        std::cout << "[CycleOrchestrator] Agent " << agent_id 
-                  << " processing task: " << request.task_description << std::endl;
         
         // Get agent configuration for processing time estimation
         AgentConfiguration agent_config;
@@ -924,8 +869,6 @@ CycleAgentTaskResult CycleAgentOrchestrator::execute_task_on_agent_internal(
         // Update agent statistics
         update_agent_statistics(agent_id, result);
         
-        std::cout << "[CycleOrchestrator] Task completed successfully by agent: " << agent_id << std::endl;
-        
     } catch (const std::exception& e) {
         result.success = false;
         result.error_message = std::string("Task execution error: ") + e.what();
@@ -942,9 +885,6 @@ CycleAgentTaskResult CycleAgentOrchestrator::execute_task_on_agent_internal(
                 runtime_it->second.last_error_message = e.what();
             }
         }
-        
-        std::cerr << "[CycleOrchestrator] Task failed on agent " << agent_id 
-                  << ": " << e.what() << std::endl;
     }
     
     // Update agent state back to ready
@@ -1112,7 +1052,7 @@ void CycleAgentOrchestrator::load_balancing_thread_function() {
         try {
             balance_agents_load_internal();
         } catch (const std::exception& e) {
-            std::cerr << "[CycleOrchestrator] Load balancing error: " << e.what() << std::endl;
+            (void)e;
         }
     }
 }
@@ -1127,7 +1067,7 @@ void CycleAgentOrchestrator::health_monitoring_thread_function() {
             check_all_agents_health();
             recover_failed_agents();
         } catch (const std::exception& e) {
-            std::cerr << "[CycleOrchestrator] Health monitoring error: " << e.what() << std::endl;
+            (void)e;
         }
     }
 }
@@ -1162,13 +1102,8 @@ void CycleAgentOrchestrator::balance_agents_load_internal() {
     
     // If variance is too high, attempt load balancing (simplified)
     if (load_variance > 0.2) {
-        std::cout << "[CycleOrchestrator] High load variance detected (" 
-                  << load_variance << "), balancing..." << std::endl;
-        
         // In a real implementation, this would redistribute tasks
         // For now, we just log the need for balancing
-        
-        std::cout << "[CycleOrchestrator] Load balancing completed" << std::endl;
     }
 }
 
@@ -1187,8 +1122,6 @@ void CycleAgentOrchestrator::recover_failed_agents() {
     }
     
     for (const auto& agent_id : failed_agents) {
-        std::cout << "[CycleOrchestrator] Attempting to recover failed agent: " << agent_id << std::endl;
-        
         // Set agent to recovering state
         {
             std::lock_guard<std::mutex> lock(agents_mutex_);
@@ -1213,8 +1146,6 @@ void CycleAgentOrchestrator::recover_failed_agents() {
                 runtime_it->second.last_activity = std::chrono::system_clock::now();
             }
         }
-        
-        std::cout << "[CycleOrchestrator] Agent recovery completed: " << agent_id << std::endl;
     }
 }
 

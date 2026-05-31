@@ -17,14 +17,11 @@ add_library(RawrXDOrchestration STATIC
     global_consistency_auditor.hpp
     agent_coordinator.hpp
     agent_coordinator.cpp
-    voice_processor.hpp
-    voice_processor.cpp
 )
 
 target_link_libraries(RawrXDOrchestration
     PUBLIC
         $<$<PLATFORM_ID:Windows>:ws2_32>
-        $<$<PLATFORM_ID:Windows>:winmm>
         $<$<PLATFORM_ID:Windows>:winhttp>
 )
 

@@ -8,7 +8,7 @@ LanguageTerraFormer::LanguageTerraFormer(TargetPlatform target)
     : target_(target) {}
 
 std::vector<uint8_t> LanguageTerraFormer::emitBinary(const ASTNode& root, uint32_t flags) {
-    // Prepare buffer (assume max 1MB for demo)
+    // Prepare buffer (assume max 1MB)
     buffer_.resize(1024 * 1024);
     std::memset(buffer_.data(), 0, buffer_.size());
 

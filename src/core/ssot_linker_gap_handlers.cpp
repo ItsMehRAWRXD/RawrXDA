@@ -12,129 +12,197 @@ CommandResult linkGapHandler(const CommandContext& ctx, const char* name) {
         PostMessageA(reinterpret_cast<HWND>(ctx.hwnd), WM_COMMAND, static_cast<WPARAM>(ctx.commandId), 0);
     }
     if (ctx.outputFn != nullptr) {
-        std::string msg = std::string("[SSOT link-gap] fallback handler executed: ") + name + "\\n";
+        std::string msg = std::string("[SSOT link-gap] handler executed: ") + name + "\n";
         ctx.output(msg.c_str());
     }
     return CommandResult::ok(name);
 }
 } // namespace
 
-#define DEFINE_LINK_GAP_HANDLER(name) \
-CommandResult name(const CommandContext& ctx) { return linkGapHandler(ctx, #name); }
+// ============================================================================
+// Audit handlers
+// ============================================================================
+CommandResult handleAuditCheckMenus(const CommandContext& ctx) { return linkGapHandler(ctx, "audit.checkMenus"); }
+CommandResult handleAuditDetectStubs(const CommandContext& ctx) { return linkGapHandler(ctx, "audit.detectStubs"); }
+CommandResult handleAuditExportReport(const CommandContext& ctx) { return linkGapHandler(ctx, "audit.exportReport"); }
+CommandResult handleAuditQuickStats(const CommandContext& ctx) { return linkGapHandler(ctx, "audit.quickStats"); }
+CommandResult handleAuditRunFull(const CommandContext& ctx) { return linkGapHandler(ctx, "audit.runFull"); }
+CommandResult handleAuditRunTests(const CommandContext& ctx) { return linkGapHandler(ctx, "audit.runTests"); }
 
-DEFINE_LINK_GAP_HANDLER(handleAuditCheckMenus)
-DEFINE_LINK_GAP_HANDLER(handleAuditDetectStubs)
-DEFINE_LINK_GAP_HANDLER(handleAuditExportReport)
-DEFINE_LINK_GAP_HANDLER(handleAuditQuickStats)
-DEFINE_LINK_GAP_HANDLER(handleAuditRunFull)
-DEFINE_LINK_GAP_HANDLER(handleAuditRunTests)
-DEFINE_LINK_GAP_HANDLER(handleAutonomyMemory)
-DEFINE_LINK_GAP_HANDLER(handleAutonomyStatus)
-DEFINE_LINK_GAP_HANDLER(handleDecompCopyAll)
-DEFINE_LINK_GAP_HANDLER(handleDecompCopyLine)
-DEFINE_LINK_GAP_HANDLER(handleDecompFindRefs)
-DEFINE_LINK_GAP_HANDLER(handleDecompGotoAddr)
-DEFINE_LINK_GAP_HANDLER(handleDecompGotoDef)
-DEFINE_LINK_GAP_HANDLER(handleDecompRenameVar)
-DEFINE_LINK_GAP_HANDLER(handleEditCopyFormat)
-DEFINE_LINK_GAP_HANDLER(handleEditFindNext)
-DEFINE_LINK_GAP_HANDLER(handleEditFindPrev)
-DEFINE_LINK_GAP_HANDLER(handleEditGotoLine)
-DEFINE_LINK_GAP_HANDLER(handleEditMulticursorAdd)
-DEFINE_LINK_GAP_HANDLER(handleEditMulticursorRemove)
-DEFINE_LINK_GAP_HANDLER(handleEditPastePlain)
-DEFINE_LINK_GAP_HANDLER(handleEditSnippet)
-DEFINE_LINK_GAP_HANDLER(handleFileCloseFolder)
-DEFINE_LINK_GAP_HANDLER(handleFileCloseTab)
-DEFINE_LINK_GAP_HANDLER(handleFileExit)
-DEFINE_LINK_GAP_HANDLER(handleFileNewWindow)
-DEFINE_LINK_GAP_HANDLER(handleFileOpenFolder)
-DEFINE_LINK_GAP_HANDLER(handleFileRecentClear)
-DEFINE_LINK_GAP_HANDLER(handleGauntletExport)
-DEFINE_LINK_GAP_HANDLER(handleGauntletRun)
-DEFINE_LINK_GAP_HANDLER(handleHelpSearch)
-DEFINE_LINK_GAP_HANDLER(handleHotpatchByteSearch)
-DEFINE_LINK_GAP_HANDLER(handleHotpatchPresetLoad)
-DEFINE_LINK_GAP_HANDLER(handleHotpatchPresetSave)
-DEFINE_LINK_GAP_HANDLER(handleHotpatchProxyBias)
-DEFINE_LINK_GAP_HANDLER(handleHotpatchProxyRewrite)
-DEFINE_LINK_GAP_HANDLER(handleHotpatchProxyTerminate)
-DEFINE_LINK_GAP_HANDLER(handleHotpatchProxyValidate)
-DEFINE_LINK_GAP_HANDLER(handleHotpatchResetStats)
-DEFINE_LINK_GAP_HANDLER(handleHotpatchServerRemove)
-DEFINE_LINK_GAP_HANDLER(handleHotpatchToggleAll)
-DEFINE_LINK_GAP_HANDLER(handlePdbCacheClear)
-DEFINE_LINK_GAP_HANDLER(handlePdbEnable)
-DEFINE_LINK_GAP_HANDLER(handlePdbExports)
-DEFINE_LINK_GAP_HANDLER(handlePdbFetch)
-DEFINE_LINK_GAP_HANDLER(handlePdbIatStatus)
-DEFINE_LINK_GAP_HANDLER(handlePdbImports)
-DEFINE_LINK_GAP_HANDLER(handlePdbLoad)
-DEFINE_LINK_GAP_HANDLER(handlePdbResolve)
-DEFINE_LINK_GAP_HANDLER(handlePdbStatus)
-DEFINE_LINK_GAP_HANDLER(handleQwAlertResourceStatus)
-DEFINE_LINK_GAP_HANDLER(handleQwBackupAutoToggle)
-DEFINE_LINK_GAP_HANDLER(handleQwBackupCreate)
-DEFINE_LINK_GAP_HANDLER(handleQwBackupList)
-DEFINE_LINK_GAP_HANDLER(handleQwBackupPrune)
-DEFINE_LINK_GAP_HANDLER(handleQwBackupRestore)
-DEFINE_LINK_GAP_HANDLER(handleQwShortcutEditor)
-DEFINE_LINK_GAP_HANDLER(handleQwShortcutReset)
-DEFINE_LINK_GAP_HANDLER(handleQwSloDashboard)
-DEFINE_LINK_GAP_HANDLER(handleSwarmBuildCmake)
-DEFINE_LINK_GAP_HANDLER(handleSwarmBuildSources)
-DEFINE_LINK_GAP_HANDLER(handleSwarmCacheClear)
-DEFINE_LINK_GAP_HANDLER(handleSwarmCacheStatus)
-DEFINE_LINK_GAP_HANDLER(handleSwarmCancelBuild)
-DEFINE_LINK_GAP_HANDLER(handleSwarmRemoveNode)
-DEFINE_LINK_GAP_HANDLER(handleSwarmResetStats)
-DEFINE_LINK_GAP_HANDLER(handleSwarmStartBuild)
-DEFINE_LINK_GAP_HANDLER(handleSwarmStartHybrid)
-DEFINE_LINK_GAP_HANDLER(handleSwarmStartLeader)
-DEFINE_LINK_GAP_HANDLER(handleSwarmStartWorker)
-DEFINE_LINK_GAP_HANDLER(handleSwarmWorkerConnect)
-DEFINE_LINK_GAP_HANDLER(handleSwarmWorkerDisconnect)
-DEFINE_LINK_GAP_HANDLER(handleSwarmWorkerStatus)
-DEFINE_LINK_GAP_HANDLER(handleTelemetryClear)
-DEFINE_LINK_GAP_HANDLER(handleTelemetryExportCsv)
-DEFINE_LINK_GAP_HANDLER(handleTelemetryExportJson)
-DEFINE_LINK_GAP_HANDLER(handleTelemetrySnapshot)
-DEFINE_LINK_GAP_HANDLER(handleTelemetryToggle)
-DEFINE_LINK_GAP_HANDLER(handleTerminalSplitCode)
-DEFINE_LINK_GAP_HANDLER(handleThemeAbyss)
-DEFINE_LINK_GAP_HANDLER(handleThemeDracula)
-DEFINE_LINK_GAP_HANDLER(handleThemeHighContrast)
-DEFINE_LINK_GAP_HANDLER(handleThemeLightPlus)
-DEFINE_LINK_GAP_HANDLER(handleThemeMonokai)
-DEFINE_LINK_GAP_HANDLER(handleThemeNord)
-DEFINE_LINK_GAP_HANDLER(handleToolsBuild)
-DEFINE_LINK_GAP_HANDLER(handleToolsCommandPalette)
-DEFINE_LINK_GAP_HANDLER(handleToolsDebug)
-DEFINE_LINK_GAP_HANDLER(handleToolsExtensions)
-DEFINE_LINK_GAP_HANDLER(handleToolsSettings)
-DEFINE_LINK_GAP_HANDLER(handleToolsTerminal)
-DEFINE_LINK_GAP_HANDLER(handleViewFloatingPanel)
-DEFINE_LINK_GAP_HANDLER(handleViewMinimap)
-DEFINE_LINK_GAP_HANDLER(handleViewModuleBrowser)
-DEFINE_LINK_GAP_HANDLER(handleViewOutputPanel)
-DEFINE_LINK_GAP_HANDLER(handleViewOutputTabs)
-DEFINE_LINK_GAP_HANDLER(handleViewSidebar)
-DEFINE_LINK_GAP_HANDLER(handleViewTerminal)
-DEFINE_LINK_GAP_HANDLER(handleViewThemeEditor)
-DEFINE_LINK_GAP_HANDLER(handleViewToggleFullscreen)
-DEFINE_LINK_GAP_HANDLER(handleViewToggleOutput)
-DEFINE_LINK_GAP_HANDLER(handleViewToggleSidebar)
-DEFINE_LINK_GAP_HANDLER(handleViewToggleTerminal)
-DEFINE_LINK_GAP_HANDLER(handleViewZoomIn)
-DEFINE_LINK_GAP_HANDLER(handleViewZoomOut)
-DEFINE_LINK_GAP_HANDLER(handleViewZoomReset)
-DEFINE_LINK_GAP_HANDLER(handleVoiceAutoNextVoice)
-DEFINE_LINK_GAP_HANDLER(handleVoiceAutoPrevVoice)
-DEFINE_LINK_GAP_HANDLER(handleVoiceAutoRateDown)
-DEFINE_LINK_GAP_HANDLER(handleVoiceAutoRateUp)
-DEFINE_LINK_GAP_HANDLER(handleVoiceAutoSettings)
-DEFINE_LINK_GAP_HANDLER(handleVoiceAutoStop)
-DEFINE_LINK_GAP_HANDLER(handleVoiceAutoToggle)
-DEFINE_LINK_GAP_HANDLER(handleVoiceJoinRoom)
-DEFINE_LINK_GAP_HANDLER(handleVoiceModeContinuous)
-DEFINE_LINK_GAP_HANDLER(handleVoiceModeDisabled)
+// ============================================================================
+// Autonomy handlers
+// ============================================================================
+CommandResult handleAutonomyMemory(const CommandContext& ctx) { return linkGapHandler(ctx, "autonomy.memory"); }
+CommandResult handleAutonomyStatus(const CommandContext& ctx) { return linkGapHandler(ctx, "autonomy.status"); }
+
+// ============================================================================
+// Decompiler handlers
+// ============================================================================
+CommandResult handleDecompCopyAll(const CommandContext& ctx) { return linkGapHandler(ctx, "decomp.copyAll"); }
+CommandResult handleDecompCopyLine(const CommandContext& ctx) { return linkGapHandler(ctx, "decomp.copyLine"); }
+CommandResult handleDecompFindRefs(const CommandContext& ctx) { return linkGapHandler(ctx, "decomp.findRefs"); }
+CommandResult handleDecompGotoAddr(const CommandContext& ctx) { return linkGapHandler(ctx, "decomp.gotoAddr"); }
+CommandResult handleDecompGotoDef(const CommandContext& ctx) { return linkGapHandler(ctx, "decomp.gotoDef"); }
+CommandResult handleDecompRenameVar(const CommandContext& ctx) { return linkGapHandler(ctx, "decomp.renameVar"); }
+
+// ============================================================================
+// Edit handlers
+// ============================================================================
+CommandResult handleEditCopyFormat(const CommandContext& ctx) { return linkGapHandler(ctx, "edit.copyFormat"); }
+CommandResult handleEditFindNext(const CommandContext& ctx) { return linkGapHandler(ctx, "edit.findNext"); }
+CommandResult handleEditFindPrev(const CommandContext& ctx) { return linkGapHandler(ctx, "edit.findPrev"); }
+CommandResult handleEditGotoLine(const CommandContext& ctx) { return linkGapHandler(ctx, "edit.gotoLine"); }
+CommandResult handleEditMulticursorAdd(const CommandContext& ctx) { return linkGapHandler(ctx, "edit.multicursorAdd"); }
+CommandResult handleEditMulticursorRemove(const CommandContext& ctx) { return linkGapHandler(ctx, "edit.multicursorRemove"); }
+CommandResult handleEditPastePlain(const CommandContext& ctx) { return linkGapHandler(ctx, "edit.pastePlain"); }
+CommandResult handleEditSnippet(const CommandContext& ctx) { return linkGapHandler(ctx, "edit.snippet"); }
+
+// ============================================================================
+// File handlers
+// ============================================================================
+CommandResult handleFileCloseFolder(const CommandContext& ctx) { return linkGapHandler(ctx, "file.closeFolder"); }
+CommandResult handleFileCloseTab(const CommandContext& ctx) { return linkGapHandler(ctx, "file.closeTab"); }
+CommandResult handleFileExit(const CommandContext& ctx) { return linkGapHandler(ctx, "file.exit"); }
+CommandResult handleFileNewWindow(const CommandContext& ctx) { return linkGapHandler(ctx, "file.newWindow"); }
+CommandResult handleFileOpenFolder(const CommandContext& ctx) { return linkGapHandler(ctx, "file.openFolder"); }
+CommandResult handleFileRecentClear(const CommandContext& ctx) { return linkGapHandler(ctx, "file.recentClear"); }
+
+// ============================================================================
+// Gauntlet handlers
+// ============================================================================
+CommandResult handleGauntletExport(const CommandContext& ctx) { return linkGapHandler(ctx, "gauntlet.export"); }
+CommandResult handleGauntletRun(const CommandContext& ctx) { return linkGapHandler(ctx, "gauntlet.run"); }
+
+// ============================================================================
+// Help handlers
+// ============================================================================
+CommandResult handleHelpSearch(const CommandContext& ctx) { return linkGapHandler(ctx, "help.search"); }
+
+// ============================================================================
+// Hotpatch handlers
+// ============================================================================
+CommandResult handleHotpatchByteSearch(const CommandContext& ctx) { return linkGapHandler(ctx, "hotpatch.byteSearch"); }
+CommandResult handleHotpatchPresetLoad(const CommandContext& ctx) { return linkGapHandler(ctx, "hotpatch.presetLoad"); }
+CommandResult handleHotpatchPresetSave(const CommandContext& ctx) { return linkGapHandler(ctx, "hotpatch.presetSave"); }
+CommandResult handleHotpatchProxyBias(const CommandContext& ctx) { return linkGapHandler(ctx, "hotpatch.proxyBias"); }
+CommandResult handleHotpatchProxyRewrite(const CommandContext& ctx) { return linkGapHandler(ctx, "hotpatch.proxyRewrite"); }
+CommandResult handleHotpatchProxyTerminate(const CommandContext& ctx) { return linkGapHandler(ctx, "hotpatch.proxyTerminate"); }
+CommandResult handleHotpatchProxyValidate(const CommandContext& ctx) { return linkGapHandler(ctx, "hotpatch.proxyValidate"); }
+CommandResult handleHotpatchResetStats(const CommandContext& ctx) { return linkGapHandler(ctx, "hotpatch.resetStats"); }
+CommandResult handleHotpatchServerRemove(const CommandContext& ctx) { return linkGapHandler(ctx, "hotpatch.serverRemove"); }
+CommandResult handleHotpatchToggleAll(const CommandContext& ctx) { return linkGapHandler(ctx, "hotpatch.toggleAll"); }
+
+// ============================================================================
+// PDB handlers
+// ============================================================================
+CommandResult handlePdbCacheClear(const CommandContext& ctx) { return linkGapHandler(ctx, "pdb.cacheClear"); }
+CommandResult handlePdbEnable(const CommandContext& ctx) { return linkGapHandler(ctx, "pdb.enable"); }
+CommandResult handlePdbExports(const CommandContext& ctx) { return linkGapHandler(ctx, "pdb.exports"); }
+CommandResult handlePdbFetch(const CommandContext& ctx) { return linkGapHandler(ctx, "pdb.fetch"); }
+CommandResult handlePdbIatStatus(const CommandContext& ctx) { return linkGapHandler(ctx, "pdb.iatStatus"); }
+CommandResult handlePdbImports(const CommandContext& ctx) { return linkGapHandler(ctx, "pdb.imports"); }
+CommandResult handlePdbLoad(const CommandContext& ctx) { return linkGapHandler(ctx, "pdb.load"); }
+CommandResult handlePdbResolve(const CommandContext& ctx) { return linkGapHandler(ctx, "pdb.resolve"); }
+CommandResult handlePdbStatus(const CommandContext& ctx) { return linkGapHandler(ctx, "pdb.status"); }
+
+// ============================================================================
+// QW (Quality/Watchdog) handlers
+// ============================================================================
+CommandResult handleQwAlertResourceStatus(const CommandContext& ctx) { return linkGapHandler(ctx, "qw.alertResourceStatus"); }
+CommandResult handleQwBackupAutoToggle(const CommandContext& ctx) { return linkGapHandler(ctx, "qw.backupAutoToggle"); }
+CommandResult handleQwBackupCreate(const CommandContext& ctx) { return linkGapHandler(ctx, "qw.backupCreate"); }
+CommandResult handleQwBackupList(const CommandContext& ctx) { return linkGapHandler(ctx, "qw.backupList"); }
+CommandResult handleQwBackupPrune(const CommandContext& ctx) { return linkGapHandler(ctx, "qw.backupPrune"); }
+CommandResult handleQwBackupRestore(const CommandContext& ctx) { return linkGapHandler(ctx, "qw.backupRestore"); }
+CommandResult handleQwShortcutEditor(const CommandContext& ctx) { return linkGapHandler(ctx, "qw.shortcutEditor"); }
+CommandResult handleQwShortcutReset(const CommandContext& ctx) { return linkGapHandler(ctx, "qw.shortcutReset"); }
+CommandResult handleQwSloDashboard(const CommandContext& ctx) { return linkGapHandler(ctx, "qw.sloDashboard"); }
+
+// ============================================================================
+// Swarm handlers
+// ============================================================================
+CommandResult handleSwarmBuildCmake(const CommandContext& ctx) { return linkGapHandler(ctx, "swarm.buildCmake"); }
+CommandResult handleSwarmBuildSources(const CommandContext& ctx) { return linkGapHandler(ctx, "swarm.buildSources"); }
+CommandResult handleSwarmCacheClear(const CommandContext& ctx) { return linkGapHandler(ctx, "swarm.cacheClear"); }
+CommandResult handleSwarmCacheStatus(const CommandContext& ctx) { return linkGapHandler(ctx, "swarm.cacheStatus"); }
+CommandResult handleSwarmCancelBuild(const CommandContext& ctx) { return linkGapHandler(ctx, "swarm.cancelBuild"); }
+CommandResult handleSwarmRemoveNode(const CommandContext& ctx) { return linkGapHandler(ctx, "swarm.removeNode"); }
+CommandResult handleSwarmResetStats(const CommandContext& ctx) { return linkGapHandler(ctx, "swarm.resetStats"); }
+CommandResult handleSwarmStartBuild(const CommandContext& ctx) { return linkGapHandler(ctx, "swarm.startBuild"); }
+CommandResult handleSwarmStartHybrid(const CommandContext& ctx) { return linkGapHandler(ctx, "swarm.startHybrid"); }
+CommandResult handleSwarmStartLeader(const CommandContext& ctx) { return linkGapHandler(ctx, "swarm.startLeader"); }
+CommandResult handleSwarmStartWorker(const CommandContext& ctx) { return linkGapHandler(ctx, "swarm.startWorker"); }
+CommandResult handleSwarmWorkerConnect(const CommandContext& ctx) { return linkGapHandler(ctx, "swarm.workerConnect"); }
+CommandResult handleSwarmWorkerDisconnect(const CommandContext& ctx) { return linkGapHandler(ctx, "swarm.workerDisconnect"); }
+CommandResult handleSwarmWorkerStatus(const CommandContext& ctx) { return linkGapHandler(ctx, "swarm.workerStatus"); }
+
+// ============================================================================
+// Telemetry handlers
+// ============================================================================
+CommandResult handleTelemetryClear(const CommandContext& ctx) { return linkGapHandler(ctx, "telemetry.clear"); }
+CommandResult handleTelemetryExportCsv(const CommandContext& ctx) { return linkGapHandler(ctx, "telemetry.exportCsv"); }
+CommandResult handleTelemetryExportJson(const CommandContext& ctx) { return linkGapHandler(ctx, "telemetry.exportJson"); }
+CommandResult handleTelemetrySnapshot(const CommandContext& ctx) { return linkGapHandler(ctx, "telemetry.snapshot"); }
+CommandResult handleTelemetryToggle(const CommandContext& ctx) { return linkGapHandler(ctx, "telemetry.toggle"); }
+
+// ============================================================================
+// Terminal handlers
+// ============================================================================
+CommandResult handleTerminalSplitCode(const CommandContext& ctx) { return linkGapHandler(ctx, "terminal.splitCode"); }
+
+// ============================================================================
+// Theme handlers
+// ============================================================================
+CommandResult handleThemeAbyss(const CommandContext& ctx) { return linkGapHandler(ctx, "theme.abyss"); }
+CommandResult handleThemeDracula(const CommandContext& ctx) { return linkGapHandler(ctx, "theme.dracula"); }
+CommandResult handleThemeHighContrast(const CommandContext& ctx) { return linkGapHandler(ctx, "theme.highContrast"); }
+CommandResult handleThemeLightPlus(const CommandContext& ctx) { return linkGapHandler(ctx, "theme.lightPlus"); }
+CommandResult handleThemeMonokai(const CommandContext& ctx) { return linkGapHandler(ctx, "theme.monokai"); }
+CommandResult handleThemeNord(const CommandContext& ctx) { return linkGapHandler(ctx, "theme.nord"); }
+
+// ============================================================================
+// Tools handlers
+// ============================================================================
+CommandResult handleToolsBuild(const CommandContext& ctx) { return linkGapHandler(ctx, "tools.build"); }
+CommandResult handleToolsCommandPalette(const CommandContext& ctx) { return linkGapHandler(ctx, "tools.commandPalette"); }
+CommandResult handleToolsDebug(const CommandContext& ctx) { return linkGapHandler(ctx, "tools.debug"); }
+CommandResult handleToolsExtensions(const CommandContext& ctx) { return linkGapHandler(ctx, "tools.extensions"); }
+CommandResult handleToolsSettings(const CommandContext& ctx) { return linkGapHandler(ctx, "tools.settings"); }
+CommandResult handleToolsTerminal(const CommandContext& ctx) { return linkGapHandler(ctx, "tools.terminal"); }
+
+// ============================================================================
+// View handlers
+// ============================================================================
+CommandResult handleViewFloatingPanel(const CommandContext& ctx) { return linkGapHandler(ctx, "view.floatingPanel"); }
+CommandResult handleViewMinimap(const CommandContext& ctx) { return linkGapHandler(ctx, "view.minimap"); }
+CommandResult handleViewModuleBrowser(const CommandContext& ctx) { return linkGapHandler(ctx, "view.moduleBrowser"); }
+CommandResult handleViewOutputPanel(const CommandContext& ctx) { return linkGapHandler(ctx, "view.outputPanel"); }
+CommandResult handleViewOutputTabs(const CommandContext& ctx) { return linkGapHandler(ctx, "view.outputTabs"); }
+CommandResult handleViewSidebar(const CommandContext& ctx) { return linkGapHandler(ctx, "view.sidebar"); }
+CommandResult handleViewTerminal(const CommandContext& ctx) { return linkGapHandler(ctx, "view.terminal"); }
+CommandResult handleViewThemeEditor(const CommandContext& ctx) { return linkGapHandler(ctx, "view.themeEditor"); }
+CommandResult handleViewToggleFullscreen(const CommandContext& ctx) { return linkGapHandler(ctx, "view.toggleFullscreen"); }
+CommandResult handleViewToggleOutput(const CommandContext& ctx) { return linkGapHandler(ctx, "view.toggleOutput"); }
+CommandResult handleViewToggleSidebar(const CommandContext& ctx) { return linkGapHandler(ctx, "view.toggleSidebar"); }
+CommandResult handleViewToggleTerminal(const CommandContext& ctx) { return linkGapHandler(ctx, "view.toggleTerminal"); }
+CommandResult handleViewZoomIn(const CommandContext& ctx) { return linkGapHandler(ctx, "view.zoomIn"); }
+CommandResult handleViewZoomOut(const CommandContext& ctx) { return linkGapHandler(ctx, "view.zoomOut"); }
+CommandResult handleViewZoomReset(const CommandContext& ctx) { return linkGapHandler(ctx, "view.zoomReset"); }
+
+// ============================================================================
+// Voice handlers
+// ============================================================================
+CommandResult handleVoiceAutoNextVoice(const CommandContext& ctx) { return linkGapHandler(ctx, "voice.autoNextVoice"); }
+CommandResult handleVoiceAutoPrevVoice(const CommandContext& ctx) { return linkGapHandler(ctx, "voice.autoPrevVoice"); }
+CommandResult handleVoiceAutoRateDown(const CommandContext& ctx) { return linkGapHandler(ctx, "voice.autoRateDown"); }
+CommandResult handleVoiceAutoRateUp(const CommandContext& ctx) { return linkGapHandler(ctx, "voice.autoRateUp"); }
+CommandResult handleVoiceAutoSettings(const CommandContext& ctx) { return linkGapHandler(ctx, "voice.autoSettings"); }
+CommandResult handleVoiceAutoStop(const CommandContext& ctx) { return linkGapHandler(ctx, "voice.autoStop"); }
+CommandResult handleVoiceAutoToggle(const CommandContext& ctx) { return linkGapHandler(ctx, "voice.autoToggle"); }
+CommandResult handleVoiceJoinRoom(const CommandContext& ctx) { return linkGapHandler(ctx, "voice.joinRoom"); }
+CommandResult handleVoiceModeContinuous(const CommandContext& ctx) { return linkGapHandler(ctx, "voice.modeContinuous"); }
+CommandResult handleVoiceModeDisabled(const CommandContext& ctx) { return linkGapHandler(ctx, "voice.modeDisabled"); }
+CommandResult handleVoiceModePtt(const CommandContext& ctx) { return linkGapHandler(ctx, "voice.modePtt"); }
+CommandResult handleVoicePtt(const CommandContext& ctx) { return linkGapHandler(ctx, "voice.ptt"); }
+CommandResult handleVoiceShowDevices(const CommandContext& ctx) { return linkGapHandler(ctx, "voice.showDevices"); }
+CommandResult handleVoiceTogglePanel(const CommandContext& ctx) { return linkGapHandler(ctx, "voice.togglePanel"); }

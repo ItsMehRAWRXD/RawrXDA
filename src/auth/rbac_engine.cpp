@@ -11,6 +11,8 @@
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
+#include <cerrno>
+#include <limits>
 #include <random>
 
 #ifdef _WIN32
@@ -58,13 +60,16 @@ inline uint32_t sha_gamma0(uint32_t x) { return sha_rotr(x, 7) ^ sha_rotr(x, 18)
 inline uint32_t sha_gamma1(uint32_t x) { return sha_rotr(x, 17) ^ sha_rotr(x, 19) ^ (x >> 10); }
 
 void sha256_compute(const uint8_t* data, size_t len, uint8_t hash[32]) {
+    // Guard: prevent overflow in padding-size arithmetic for absurdly large inputs
+    if (len > (SIZE_MAX >> 1)) { memset(hash, 0, 32); return; }
+
     uint32_t h[8] = {
         0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
         0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
     };
 
     // Pre-processing: pad message
-    uint64_t bitLen = len * 8;
+    uint64_t bitLen = static_cast<uint64_t>(len) * 8ULL;
     size_t padLen = ((len + 8) / 64 + 1) * 64;
     std::vector<uint8_t> padded(padLen, 0);
     memcpy(padded.data(), data, len);
@@ -108,6 +113,35 @@ void sha256_compute(const uint8_t* data, size_t len, uint8_t hash[32]) {
         hash[i * 4 + 2] = static_cast<uint8_t>(h[i] >> 8);
         hash[i * 4 + 3] = static_cast<uint8_t>(h[i]);
     }
+}
+
+// Constant-time memory comparison — prevents timing-based credential oracle
+static int rbac_memcmp_ct(const void* a, const void* b, size_t n) {
+    const volatile uint8_t* pa = static_cast<const volatile uint8_t*>(a);
+    const volatile uint8_t* pb = static_cast<const volatile uint8_t*>(b);
+    uint8_t diff = 0;
+    for (size_t i = 0; i < n; ++i) diff |= pa[i] ^ pb[i];
+    return static_cast<int>(diff);
+}
+
+// JSON string escaping — prevents injection when writing audit/config files
+static std::string jsonEscape(const std::string& s) {
+    std::string out;
+    out.reserve(s.size() + 8);
+    for (unsigned char c : s) {
+        switch (c) {
+            case '"':  out += "\\\""; break;
+            case '\\': out += "\\\\"; break;
+            case '\n': out += "\\n";  break;
+            case '\r': out += "\\r";  break;
+            case '\t': out += "\\t";  break;
+            default:
+                if (c < 0x20) {
+                    char buf[7]; snprintf(buf, sizeof(buf), "\\u%04x", c); out += buf;
+                } else { out += static_cast<char>(c); }
+        }
+    }
+    return out;
 }
 
 } // anonymous namespace
@@ -231,6 +265,8 @@ AuthResult RBACEngine::createRole(const Role& role) {
 
     if (role.name.empty())
         return AuthResult::error("Role name cannot be empty", 400);
+    if (role.name.size() > 128 || role.description.size() > 1024)
+        return AuthResult::error("Role field exceeds maximum allowed length", 400);
 
     if (roles_.find(role.name) != roles_.end())
         return AuthResult::error("Role already exists", 409);
@@ -352,6 +388,8 @@ AuthResult RBACEngine::createUser(const User& user) {
         return AuthResult::error("User ID cannot be empty", 400);
     if (user.username.empty())
         return AuthResult::error("Username cannot be empty", 400);
+    if (user.id.size() > 256 || user.username.size() > 256 || user.email.size() > 512)
+        return AuthResult::error("User field exceeds maximum allowed length", 400);
     if (users_.find(user.id) != users_.end())
         return AuthResult::error("User ID already exists", 409);
     if (usernameIndex_.find(user.username) != usernameIndex_.end())
@@ -534,7 +572,7 @@ AuthResult RBACEngine::unlockUser(const std::string& userId) {
 AuthResult RBACEngine::authenticateLocal(const std::string& username,
                                           const std::string& passwordHash,
                                           Session& outSession) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::unique_lock<std::mutex> lock(mutex_);
     stats_.totalAuthAttempts.fetch_add(1);
 
     auto idx = usernameIndex_.find(username);
@@ -566,9 +604,22 @@ AuthResult RBACEngine::authenticateLocal(const std::string& username,
         return AuthResult::denied("Account is disabled", 403);
     }
 
-    // Verify password hash
+    // Verify password hash - must exist and match
     auto phit = passwordHashes_.find(user.id);
-    if (phit != passwordHashes_.end() && phit->second != passwordHash) {
+    if (phit == passwordHashes_.end()) {
+        // No password hash stored for this user: reject authentication
+        user.failedLoginCount++;
+        stats_.failedAuths.fetch_add(1);
+        logAudit(user.id, "auth.login.fail", username,
+                 "No password credential configured", AuthResult::denied("Invalid credentials"));
+        return AuthResult::denied("Invalid credentials", 401);
+    }
+    // Constant-time comparison to prevent timing-based credential oracle
+    const bool hashMatch = (phit->second.size() == passwordHash.size()) &&
+        (phit->second.empty() ||
+         rbac_memcmp_ct(phit->second.data(), passwordHash.data(), phit->second.size()) == 0);
+    if (!hashMatch) {
+        // Password hash mismatch: reject authentication
         user.failedLoginCount++;
         if (compliance_.maxFailedLogins > 0 &&
             user.failedLoginCount >= compliance_.maxFailedLogins) {
@@ -601,17 +652,27 @@ AuthResult RBACEngine::authenticateLocal(const std::string& username,
     stats_.activeSessions.fetch_add(1);
     outSession = session;
 
-    // Notify session listeners
+    const std::string userId = user.id;
+
+    // Copy listener callbacks while mutex is held
+    std::vector<SessionListenerEntry> listenersToNotify;
     uint32_t lCount = sessionListenerCount_.load();
     for (uint32_t i = 0; i < lCount; ++i) {
         if (sessionListeners_[i].callback) {
-            sessionListeners_[i].callback(&session, true,
-                                           sessionListeners_[i].userData);
+            listenersToNotify.push_back(sessionListeners_[i]);
         }
     }
-
-    logAudit(user.id, "auth.login.success", username,
+    // Log success BEFORE releasing the mutex so the audit write is serialized
+    logAudit(userId, "auth.login.success", username,
              "Login successful", AuthResult::ok("Authenticated"));
+
+    // Release mutex BEFORE invoking callbacks to prevent deadlock if callback re-enters RBAC
+    lock.unlock();
+
+    // Notify session listeners OUTSIDE the mutex
+    for (const auto& listener : listenersToNotify) {
+        listener.callback(&outSession, true, listener.userData);
+    }
 
     return AuthResult::ok("Authenticated");
 }
@@ -640,6 +701,9 @@ AuthResult RBACEngine::authenticateSSO(const std::string& providerName,
             auto uidx = usernameIndex_.find(ssoUser.username);
             if (uidx == usernameIndex_.end()) {
                 if (pit->second.autoCreateUsers) {
+                    if (ssoUser.id.empty()) {
+                        ssoUser.id = providerName + "-" + ssoUser.username;
+                    }
                     ssoUser.ssoProvider = providerName;
                     ssoUser.createdAt = now();
                     ssoUser.isActive = true;
@@ -656,8 +720,20 @@ AuthResult RBACEngine::authenticateSSO(const std::string& providerName,
                 }
             }
 
+            // Resolve user from index to avoid accidental default insertion.
+            auto ridx = usernameIndex_.find(ssoUser.username);
+            if (ridx == usernameIndex_.end()) {
+                stats_.failedAuths.fetch_add(1);
+                return AuthResult::error("SSO user index missing", 500);
+            }
+            auto uit = users_.find(ridx->second);
+            if (uit == users_.end()) {
+                stats_.failedAuths.fetch_add(1);
+                return AuthResult::error("SSO user record missing", 500);
+            }
+
             // Create session
-            auto& user = users_[ssoUser.id];
+            auto& user = uit->second;
             user.lastLoginAt = now();
 
             Session session;
@@ -688,6 +764,17 @@ AuthResult RBACEngine::authenticateSSO(const std::string& providerName,
     // SAML assertion validation — parse XML, verify signature, extract NameID
     // Parse SAML Response XML for NameID, Conditions, and signature
     // This is a minimal SAML 2.0 Response parser (no full XML DOM dependency)
+
+    // Cap assertion size to guard against DoS from huge XML payloads
+    static constexpr size_t kMaxSamlAssertionBytes = 65536; // 64 KB
+    if (assertion.size() > kMaxSamlAssertionBytes) {
+        stats_.failedAuths.fetch_add(1);
+        logAudit("unknown", "auth.sso.fail", providerName,
+                 "SAML assertion size exceeds limit",
+                 AuthResult::denied("SAML: assertion too large"));
+        return AuthResult::denied("SAML assertion too large", 413);
+    }
+
     std::string nameId;
     std::string issuer;
     std::string audience;
@@ -750,18 +837,44 @@ AuthResult RBACEngine::authenticateSSO(const std::string& providerName,
         std::string noa = extractAttr(assertion, std::string(ns) + "Conditions", "NotOnOrAfter");
         // Simple ISO8601 timestamp parsing (YYYY-MM-DDTHH:MM:SSZ → epoch approx)
         auto parseIso = [](const std::string& ts) -> uint64_t {
-            if (ts.size() < 19) return 0;
+            // Enforce canonical UTC format to avoid ambiguous partial parses.
+            if (ts.size() != 20 || ts[19] != 'Z') return 0;
+            auto isDigitAt = [&](size_t idx) -> bool {
+                return idx < ts.size() && ts[idx] >= '0' && ts[idx] <= '9';
+            };
+            const size_t digitIdx[] = {0, 1, 2, 3, 5, 6, 8, 9, 11, 12, 14, 15, 17, 18};
+            for (size_t idx : digitIdx) {
+                if (!isDigitAt(idx)) return 0;
+            }
+            if (ts[4] != '-' || ts[7] != '-' || ts[10] != 'T' || ts[13] != ':' || ts[16] != ':')
+                return 0;
+
+            auto parse2 = [&](size_t idx) -> int {
+                return (ts[idx] - '0') * 10 + (ts[idx + 1] - '0');
+            };
+            auto parse4 = [&](size_t idx) -> int {
+                return (ts[idx] - '0') * 1000 + (ts[idx + 1] - '0') * 100 +
+                       (ts[idx + 2] - '0') * 10 + (ts[idx + 3] - '0');
+            };
+
             struct tm t = {};
-            t.tm_year = std::atoi(ts.c_str()) - 1900;
-            t.tm_mon = std::atoi(ts.c_str() + 5) - 1;
-            t.tm_mday = std::atoi(ts.c_str() + 8);
-            t.tm_hour = std::atoi(ts.c_str() + 11);
-            t.tm_min = std::atoi(ts.c_str() + 14);
-            t.tm_sec = std::atoi(ts.c_str() + 17);
+            t.tm_year = parse4(0) - 1900;
+            t.tm_mon = parse2(5) - 1;
+            t.tm_mday = parse2(8);
+            t.tm_hour = parse2(11);
+            t.tm_min = parse2(14);
+            t.tm_sec = parse2(17);
+            if (t.tm_mon < 0 || t.tm_mon > 11 || t.tm_mday < 1 || t.tm_mday > 31 ||
+                t.tm_hour < 0 || t.tm_hour > 23 || t.tm_min < 0 || t.tm_min > 59 ||
+                t.tm_sec < 0 || t.tm_sec > 60) {
+                return 0;
+            }
 #ifdef _WIN32
-            return static_cast<uint64_t>(_mkgmtime(&t));
+            const __time64_t v = _mkgmtime(&t);
+            return (v < 0) ? 0 : static_cast<uint64_t>(v);
 #else
-            return static_cast<uint64_t>(timegm(&t));
+            const time_t v = timegm(&t);
+            return (v < 0) ? 0 : static_cast<uint64_t>(v);
 #endif
         };
         if (!nb.empty()) notBefore = parseIso(nb);
@@ -837,7 +950,18 @@ AuthResult RBACEngine::authenticateSSO(const std::string& providerName,
             }
         }
 
-        auto& user = users_[ssoUser.id];
+        auto ridx = usernameIndex_.find(ssoUser.username);
+        if (ridx == usernameIndex_.end()) {
+            stats_.failedAuths.fetch_add(1);
+            return AuthResult::error("SAML user index missing", 500);
+        }
+        auto uit = users_.find(ridx->second);
+        if (uit == users_.end()) {
+            stats_.failedAuths.fetch_add(1);
+            return AuthResult::error("SAML user record missing", 500);
+        }
+
+        auto& user = uit->second;
         user.lastLoginAt = now();
 
         Session session;
@@ -867,6 +991,9 @@ AuthResult RBACEngine::authenticateSSO(const std::string& providerName,
 
 AuthResult RBACEngine::validateSession(const char* token,
                                         Session& outSession) const {
+    if (!token || token[0] == '\0')
+        return AuthResult::denied("Invalid session token", 401);
+
     std::lock_guard<std::mutex> lock(mutex_);
 
     auto it = sessions_.find(std::string(token));
@@ -894,6 +1021,9 @@ AuthResult RBACEngine::validateSession(const char* token,
 }
 
 AuthResult RBACEngine::invalidateSession(const char* token) {
+    if (!token || token[0] == '\0')
+        return AuthResult::error("Session not found", 404);
+
     std::lock_guard<std::mutex> lock(mutex_);
 
     auto it = sessions_.find(std::string(token));
@@ -931,6 +1061,9 @@ AuthResult RBACEngine::invalidateAllSessions(const std::string& userId) {
 }
 
 AuthResult RBACEngine::refreshSession(const char* token, Session& outSession) {
+    if (!token || token[0] == '\0')
+        return AuthResult::denied("Session not found", 404);
+
     std::lock_guard<std::mutex> lock(mutex_);
 
     auto it = sessions_.find(std::string(token));
@@ -958,6 +1091,12 @@ AuthResult RBACEngine::refreshSession(const char* token, Session& outSession) {
 
 AuthResult RBACEngine::checkPermission(const char* sessionToken,
                                         Permission required) const {
+    if (!sessionToken || sessionToken[0] == '\0') {
+        stats_.permissionChecks.fetch_add(1);
+        stats_.permissionDenials.fetch_add(1);
+        return AuthResult::denied("Invalid session token", 401);
+    }
+
     stats_.permissionChecks.fetch_add(1);
 
     Session session;
@@ -994,6 +1133,14 @@ AuthResult RBACEngine::authorize(const char* sessionToken,
                                   Permission required,
                                   const char* action,
                                   const char* resource) {
+    if (!sessionToken || sessionToken[0] == '\0') {
+        stats_.permissionChecks.fetch_add(1);
+        stats_.permissionDenials.fetch_add(1);
+        AuthResult denied = AuthResult::denied("Invalid session token", 401);
+        logAudit("unknown", action ? action : "authz.unknown", resource ? resource : "unknown", "Denied", denied);
+        return denied;
+    }
+
     AuthResult result = checkPermission(sessionToken, required);
 
     // Find user ID for audit
@@ -1150,11 +1297,26 @@ std::vector<AuditEntry> RBACEngine::getAuditLog(uint64_t fromSeq,
                                                    uint32_t maxEntries) const {
     std::lock_guard<std::mutex> lock(mutex_);
     std::vector<AuditEntry> result;
+    if (maxEntries == 0)
+        return result;
 
-    for (const auto& entry : auditLog_) {
-        if (entry.sequenceId >= fromSeq) {
-            result.push_back(entry);
-            if (result.size() >= maxEntries) break;
+    const size_t validCount = std::min(auditLog_.size(), static_cast<size_t>(auditSequence_.load()));
+    if (validCount == 0)
+        return result;
+
+    std::vector<const AuditEntry*> ordered;
+    ordered.reserve(validCount);
+    for (size_t i = 0; i < validCount; ++i) {
+        ordered.push_back(&auditLog_[i]);
+    }
+    std::sort(ordered.begin(), ordered.end(),
+              [](const AuditEntry* a, const AuditEntry* b) { return a->sequenceId < b->sequenceId; });
+
+    for (const AuditEntry* entry : ordered) {
+        if (entry->sequenceId >= fromSeq) {
+            result.push_back(*entry);
+            if (result.size() >= maxEntries)
+                break;
         }
     }
 
@@ -1167,16 +1329,23 @@ AuthResult RBACEngine::verifyAuditChain() const {
     if (!compliance_.auditHashChain)
         return AuthResult::ok("Hash chain not enabled");
 
-    if (auditLog_.empty())
+    const size_t validCount = std::min(auditLog_.size(), static_cast<size_t>(auditSequence_.load()));
+    if (validCount == 0)
         return AuthResult::ok("Empty log");
 
-    uint8_t prevHash[32] = {};
+    std::vector<const AuditEntry*> ordered;
+    ordered.reserve(validCount);
+    for (size_t i = 0; i < validCount; ++i) {
+        ordered.push_back(&auditLog_[i]);
+    }
+    std::sort(ordered.begin(), ordered.end(),
+              [](const AuditEntry* a, const AuditEntry* b) { return a->sequenceId < b->sequenceId; });
 
-    for (size_t i = 0; i < auditLog_.size(); ++i) {
-        const auto& entry = auditLog_[i];
+    for (size_t i = 0; i < ordered.size(); ++i) {
+        const auto& entry = *ordered[i];
 
         // Verify prevHash matches
-        if (i > 0 && memcmp(entry.prevHash, auditLog_[i - 1].entryHash, 32) != 0) {
+        if (i > 0 && memcmp(entry.prevHash, ordered[i - 1]->entryHash, 32) != 0) {
             return AuthResult::error("Audit chain broken at entry", 500);
         }
 
@@ -1184,9 +1353,10 @@ AuthResult RBACEngine::verifyAuditChain() const {
         AuditEntry verify = entry;
         uint8_t computedPrev[32];
         if (i > 0) {
-            memcpy(computedPrev, auditLog_[i - 1].entryHash, 32);
+            memcpy(computedPrev, ordered[i - 1]->entryHash, 32);
         } else {
-            memset(computedPrev, 0, 32);
+            // Ring buffer may start mid-chain; preserve stored anchor hash.
+            memcpy(computedPrev, entry.prevHash, 32);
         }
 
         // Build data to hash: seq + timestamp + userId + action + resource
@@ -1223,10 +1393,10 @@ AuthResult RBACEngine::exportAuditLog(const char* path) const {
         const auto& e = auditLog_[i];
         file << "  {\"seq\":" << e.sequenceId
              << ",\"ts\":" << e.timestamp
-             << ",\"user\":\"" << e.userId << "\""
-             << ",\"action\":\"" << e.action << "\""
-             << ",\"resource\":\"" << e.resource << "\""
-             << ",\"detail\":\"" << e.detail << "\""
+             << ",\"user\":\"" << jsonEscape(e.userId) << "\""
+             << ",\"action\":\"" << jsonEscape(e.action) << "\""
+             << ",\"resource\":\"" << jsonEscape(e.resource) << "\""
+             << ",\"detail\":\"" << jsonEscape(e.detail) << "\""
              << ",\"ok\":" << (e.result.success ? "true" : "false")
              << "}";
         if (i + 1 < auditLog_.size()) file << ",";
@@ -1311,9 +1481,22 @@ void RBACEngine::resetStats() {
 AuthResult RBACEngine::loadFromFile(const char* configPath) {
     std::lock_guard<std::mutex> lock(mutex_);
 
+    if (!configPath || configPath[0] == '\0') {
+        return AuthResult::error("Invalid config path", 400);
+    }
+
     std::ifstream file(configPath);
     if (!file.is_open())
         return AuthResult::error("Cannot open config file", 500);
+
+    // Cap config file size to prevent OOM from adversarial inputs
+    file.seekg(0, std::ios::end);
+    const std::streamoff configFileSize = file.tellg();
+    file.seekg(0, std::ios::beg);
+    static constexpr std::streamoff kMaxConfigFileSize = 4 * 1024 * 1024; // 4 MB
+    if (configFileSize < 0 || configFileSize > kMaxConfigFileSize) {
+        return AuthResult::error("Config file size invalid or exceeds 4 MB limit", 400);
+    }
 
     // Minimal JSON key-value extraction
     std::string content((std::istreambuf_iterator<char>(file)),
@@ -1327,14 +1510,24 @@ AuthResult RBACEngine::loadFromFile(const char* configPath) {
     }
 
     // JSON parsing helpers (match saveToFile format)
+    static constexpr size_t kMaxFieldBytes = 1024;
+    static constexpr size_t kMaxArrayItems = 256;
+    static constexpr size_t kMaxRolesToLoad = 4096;
+    static constexpr size_t kMaxUsersToLoad = 4096;
+    static constexpr size_t kMaxSsoProvidersToLoad = 512;
+
     auto extractStr = [](const std::string& obj, const std::string& key) -> std::string {
+        static constexpr size_t kMaxFieldBytesLocal = kMaxFieldBytes;
         std::string pat = "\"" + key + "\":\"";
         auto pos = obj.find(pat);
         if (pos == std::string::npos) { pat = "\"" + key + "\": \""; pos = obj.find(pat); }
         if (pos == std::string::npos) return "";
         auto s = pos + pat.size();
         auto e = obj.find('"', s);
-        return (e != std::string::npos) ? obj.substr(s, e - s) : "";
+        if (e == std::string::npos || e < s) return "";
+        std::string out = obj.substr(s, e - s);
+        if (out.size() > kMaxFieldBytesLocal) out.resize(kMaxFieldBytesLocal);
+        return out;
     };
     auto extractInt = [](const std::string& obj, const std::string& key) -> int64_t {
         std::string pat = "\"" + key + "\":";
@@ -1343,7 +1536,13 @@ AuthResult RBACEngine::loadFromFile(const char* configPath) {
         if (pos == std::string::npos) return 0;
         auto s = pos + pat.size();
         while (s < obj.size() && obj[s] == ' ') s++;
-        return std::strtoll(obj.c_str() + s, nullptr, 10);
+        if (s >= obj.size()) return 0;
+        char* endp = nullptr;
+        errno = 0;
+        const long long parsed = std::strtoll(obj.c_str() + s, &endp, 10);
+        if (errno != 0 || !endp || endp == (obj.c_str() + s)) return 0;
+        if (parsed < std::numeric_limits<int64_t>::min() || parsed > std::numeric_limits<int64_t>::max()) return 0;
+        return static_cast<int64_t>(parsed);
     };
     auto extractBool = [](const std::string& obj, const std::string& key) -> bool {
         std::string pat = "\"" + key + "\":true";
@@ -1353,6 +1552,8 @@ AuthResult RBACEngine::loadFromFile(const char* configPath) {
     };
     auto extractStrArray = [](const std::string& obj, const std::string& key) -> std::vector<std::string> {
         std::vector<std::string> result;
+        static constexpr size_t kMaxItemsLocal = kMaxArrayItems;
+        static constexpr size_t kMaxFieldBytesLocal = kMaxFieldBytes;
         std::string pat = "\"" + key + "\":[";
         auto pos = obj.find(pat);
         if (pos == std::string::npos) { pat = "\"" + key + "\": ["; pos = obj.find(pat); }
@@ -1362,10 +1563,12 @@ AuthResult RBACEngine::loadFromFile(const char* configPath) {
         if (arrStart == std::string::npos || arrEnd == std::string::npos) return result;
         std::string arr = obj.substr(arrStart + 1, arrEnd - arrStart - 1);
         size_t p = 0;
-        while ((p = arr.find('"', p)) != std::string::npos) {
+        while ((p = arr.find('"', p)) != std::string::npos && result.size() < kMaxItemsLocal) {
             auto e = arr.find('"', p + 1);
             if (e == std::string::npos) break;
-            result.push_back(arr.substr(p + 1, e - p - 1));
+            std::string item = arr.substr(p + 1, e - p - 1);
+            if (item.size() > kMaxFieldBytesLocal) item.resize(kMaxFieldBytesLocal);
+            result.push_back(std::move(item));
             p = e + 1;
         }
         return result;
@@ -1378,7 +1581,9 @@ AuthResult RBACEngine::loadFromFile(const char* configPath) {
         size_t arrEnd = content.find(']', arrStart);
         if (arrStart != std::string::npos && arrEnd != std::string::npos) {
             size_t pos = arrStart + 1;
+            size_t loadedRoles = 0;
             while (pos < arrEnd) {
+                if (loadedRoles >= kMaxRolesToLoad) break;
                 size_t objStart = content.find('{', pos);
                 if (objStart == std::string::npos || objStart >= arrEnd) break;
                 size_t objEnd = content.find('}', objStart);
@@ -1394,6 +1599,7 @@ AuthResult RBACEngine::loadFromFile(const char* configPath) {
                     role.parentRole = extractStr(entry, "parent");
                     role.isBuiltin = extractBool(entry, "builtin");
                     roles_[name] = role;
+                    ++loadedRoles;
                 }
                 pos = objEnd + 1;
             }
@@ -1407,7 +1613,9 @@ AuthResult RBACEngine::loadFromFile(const char* configPath) {
         size_t arrEnd = content.find(']', arrStart);
         if (arrStart != std::string::npos && arrEnd != std::string::npos) {
             size_t pos = arrStart + 1;
+            size_t loadedUsers = 0;
             while (pos < arrEnd) {
+                if (loadedUsers >= kMaxUsersToLoad) break;
                 size_t objStart = content.find('{', pos);
                 if (objStart == std::string::npos || objStart >= arrEnd) break;
                 // Find matching '}' — account for nested arrays
@@ -1416,6 +1624,9 @@ AuthResult RBACEngine::loadFromFile(const char* configPath) {
                 for (; objEnd < arrEnd; ++objEnd) {
                     if (content[objEnd] == '{') depth++;
                     else if (content[objEnd] == '}') { depth--; if (depth == 0) break; }
+                }
+                if (depth != 0 || objEnd >= arrEnd) {
+                    break;
                 }
                 std::string entry = content.substr(objStart, objEnd - objStart + 1);
 
@@ -1429,6 +1640,7 @@ AuthResult RBACEngine::loadFromFile(const char* configPath) {
                     user.roles = extractStrArray(entry, "roles");
                     computeEffectivePermissions(user);
                     users_[id] = user;
+                    ++loadedUsers;
                 }
                 pos = objEnd + 1;
             }
@@ -1442,7 +1654,9 @@ AuthResult RBACEngine::loadFromFile(const char* configPath) {
         size_t arrEnd = content.find(']', arrStart);
         if (arrStart != std::string::npos && arrEnd != std::string::npos) {
             size_t pos = arrStart + 1;
+            size_t loadedProviders = 0;
             while (pos < arrEnd) {
+                if (loadedProviders >= kMaxSsoProvidersToLoad) break;
                 size_t objStart = content.find('{', pos);
                 if (objStart == std::string::npos || objStart >= arrEnd) break;
                 size_t objEnd = content.find('}', objStart);
@@ -1457,6 +1671,7 @@ AuthResult RBACEngine::loadFromFile(const char* configPath) {
                     sso.entityId = extractStr(entry, "entityId");
                     sso.enabled = extractBool(entry, "enabled");
                     ssoProviders_[name] = sso;
+                    ++loadedProviders;
                 }
                 pos = objEnd + 1;
             }
@@ -1470,12 +1685,16 @@ AuthResult RBACEngine::loadFromFile(const char* configPath) {
         size_t objEnd = content.find('}', objStart);
         if (objStart != std::string::npos && objEnd != std::string::npos) {
             std::string comp = content.substr(objStart, objEnd - objStart + 1);
+            auto readUIntOrZero = [&](const std::string& key) -> uint32_t {
+                const int64_t v = extractInt(comp, key);
+                return static_cast<uint32_t>(v < 0 ? 0 : v);
+            };
             compliance_.enforceAuditLog = extractBool(comp, "enforceAuditLog");
             compliance_.enforceSessionTimeout = extractBool(comp, "enforceSessionTimeout");
-            compliance_.maxSessionDurationSec = static_cast<uint32_t>(extractInt(comp, "maxSessionDurationSec"));
-            compliance_.maxIdleTimeoutSec = static_cast<uint32_t>(extractInt(comp, "maxIdleTimeoutSec"));
-            compliance_.maxFailedLogins = static_cast<uint32_t>(extractInt(comp, "maxFailedLogins"));
-            compliance_.lockoutDurationSec = static_cast<uint32_t>(extractInt(comp, "lockoutDurationSec"));
+            compliance_.maxSessionDurationSec = readUIntOrZero("maxSessionDurationSec");
+            compliance_.maxIdleTimeoutSec = readUIntOrZero("maxIdleTimeoutSec");
+            compliance_.maxFailedLogins = readUIntOrZero("maxFailedLogins");
+            compliance_.lockoutDurationSec = readUIntOrZero("lockoutDurationSec");
             compliance_.requireMFA = extractBool(comp, "requireMFA");
             compliance_.auditHashChain = extractBool(comp, "auditHashChain");
         }
@@ -1490,6 +1709,9 @@ AuthResult RBACEngine::loadFromFile(const char* configPath) {
 AuthResult RBACEngine::saveToFile(const char* configPath) const {
     std::lock_guard<std::mutex> lock(mutex_);
 
+    if (!configPath || configPath[0] == '\0')
+        return AuthResult::error("Invalid config file path", 400);
+
     std::ofstream file(configPath);
     if (!file.is_open())
         return AuthResult::error("Cannot open config file for writing", 500);
@@ -1500,10 +1722,10 @@ AuthResult RBACEngine::saveToFile(const char* configPath) const {
     file << "  \"roles\": [\n";
     size_t ri = 0;
     for (const auto& [name, role] : roles_) {
-        file << "    {\"name\":\"" << role.name << "\""
-             << ",\"description\":\"" << role.description << "\""
+        file << "    {\"name\":\"" << jsonEscape(role.name) << "\""
+             << ",\"description\":\"" << jsonEscape(role.description) << "\""
              << ",\"permissions\":" << static_cast<uint32_t>(role.permissions)
-             << ",\"parent\":\"" << role.parentRole << "\""
+             << ",\"parent\":\"" << jsonEscape(role.parentRole) << "\""
              << ",\"builtin\":" << (role.isBuiltin ? "true" : "false")
              << "}";
         if (++ri < roles_.size()) file << ",";
@@ -1515,13 +1737,13 @@ AuthResult RBACEngine::saveToFile(const char* configPath) const {
     file << "  \"users\": [\n";
     size_t ui = 0;
     for (const auto& [id, user] : users_) {
-        file << "    {\"id\":\"" << user.id << "\""
-             << ",\"username\":\"" << user.username << "\""
-             << ",\"email\":\"" << user.email << "\""
+        file << "    {\"id\":\"" << jsonEscape(user.id) << "\""
+             << ",\"username\":\"" << jsonEscape(user.username) << "\""
+             << ",\"email\":\"" << jsonEscape(user.email) << "\""
              << ",\"active\":" << (user.isActive ? "true" : "false")
-             << ",\"roles\":[";
+             << ",\"roles\":[";    
         for (size_t r = 0; r < user.roles.size(); ++r) {
-            file << "\"" << user.roles[r] << "\"";
+            file << "\"" << jsonEscape(user.roles[r]) << "\"";
             if (r + 1 < user.roles.size()) file << ",";
         }
         file << "]}";
@@ -1534,9 +1756,9 @@ AuthResult RBACEngine::saveToFile(const char* configPath) const {
     file << "  \"ssoProviders\": [\n";
     size_t si = 0;
     for (const auto& [name, config] : ssoProviders_) {
-        file << "    {\"name\":\"" << config.name << "\""
+        file << "    {\"name\":\"" << jsonEscape(config.name) << "\""
              << ",\"type\":" << static_cast<int>(config.type)
-             << ",\"entityId\":\"" << config.entityId << "\""
+             << ",\"entityId\":\"" << jsonEscape(config.entityId) << "\""
              << ",\"enabled\":" << (config.enabled ? "true" : "false")
              << "}";
         if (++si < ssoProviders_.size()) file << ",";
@@ -1557,6 +1779,9 @@ AuthResult RBACEngine::saveToFile(const char* configPath) const {
          << "}\n";
 
     file << "}\n";
+    file.flush();
+    if (!file)
+        return AuthResult::error("Failed while writing config file", 500);
 
     return AuthResult::ok("Configuration saved");
 }
@@ -1574,6 +1799,9 @@ void RBACEngine::computeEffectivePermissions(User& user) const {
 }
 
 void RBACEngine::generateSessionToken(char* outToken, size_t tokenLen) const {
+    if (!outToken || tokenLen == 0)
+        return;
+
     // Generate cryptographically random token
     static const char chars[] =
         "abcdefghijklmnopqrstuvwxyz"
@@ -1581,31 +1809,56 @@ void RBACEngine::generateSessionToken(char* outToken, size_t tokenLen) const {
         "0123456789"
         "-_";
 
+    const size_t outLen = tokenLen - 1;
+    if (outLen == 0) {
+        outToken[0] = '\0';
+        return;
+    }
+
 #ifdef _WIN32
     HCRYPTPROV hProv = 0;
     if (CryptAcquireContextW(&hProv, nullptr, nullptr,
                               PROV_RSA_FULL, CRYPT_VERIFYCONTEXT)) {
         uint8_t randomBytes[128];
-        CryptGenRandom(hProv, static_cast<DWORD>(tokenLen - 1), randomBytes);
+        const size_t req = std::min(outLen, sizeof(randomBytes));
+        CryptGenRandom(hProv, static_cast<DWORD>(req), randomBytes);
         CryptReleaseContext(hProv, 0);
 
-        for (size_t i = 0; i < tokenLen - 1; i++) {
+        for (size_t i = 0; i < req; i++) {
             outToken[i] = chars[randomBytes[i] % (sizeof(chars) - 1)];
         }
-        outToken[tokenLen - 1] = '\0';
+        // Fill remaining bytes with PRNG to avoid stack buffer overflow for long outputs.
+        if (req < outLen) {
+            std::random_device rd;
+            std::mt19937 gen(rd());
+            std::uniform_int_distribution<int> dist(0, static_cast<int>(sizeof(chars) - 2));
+            for (size_t i = req; i < outLen; ++i) {
+                outToken[i] = chars[dist(gen)];
+            }
+        }
+        outToken[outLen] = '\0';
         return;
     }
 #else
     int fd = open("/dev/urandom", O_RDONLY);
     if (fd >= 0) {
         uint8_t randomBytes[128];
-        ssize_t n = read(fd, randomBytes, tokenLen - 1);
+        const size_t req = std::min(outLen, sizeof(randomBytes));
+        ssize_t n = read(fd, randomBytes, req);
         close(fd);
         if (n > 0) {
             for (size_t i = 0; i < static_cast<size_t>(n); i++) {
                 outToken[i] = chars[randomBytes[i] % (sizeof(chars) - 1)];
             }
-            outToken[n] = '\0';
+            if (static_cast<size_t>(n) < outLen) {
+                std::random_device rd;
+                std::mt19937 gen(rd());
+                std::uniform_int_distribution<int> dist(0, static_cast<int>(sizeof(chars) - 2));
+                for (size_t i = static_cast<size_t>(n); i < outLen; ++i) {
+                    outToken[i] = chars[dist(gen)];
+                }
+            }
+            outToken[outLen] = '\0';
             return;
         }
     }
@@ -1615,10 +1868,10 @@ void RBACEngine::generateSessionToken(char* outToken, size_t tokenLen) const {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<int> dist(0, sizeof(chars) - 2);
-    for (size_t i = 0; i < tokenLen - 1; i++) {
+    for (size_t i = 0; i < outLen; i++) {
         outToken[i] = chars[dist(gen)];
     }
-    outToken[tokenLen - 1] = '\0';
+    outToken[outLen] = '\0';
 }
 
 void RBACEngine::hashAuditEntry(AuditEntry& entry,

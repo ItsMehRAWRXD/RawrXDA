@@ -15,7 +15,7 @@
 // ============================================================================
 
 #include "shared_feature_dispatch.h"
-#include "../agentic/AgentOllamaClient.h"
+#include "../agentic/NativeInferenceClient.h"
 #include "voice_automation.hpp"
 #include "js_extension_host.hpp"
 #include <windows.h>
@@ -95,11 +95,11 @@ namespace {
 // ============================================================================
 // HELPER: Create Ollama client for CLI AI operations
 // ============================================================================
-static RawrXD::Agent::AgentOllamaClient createOllamaClientExt() {
-    RawrXD::Agent::OllamaConfig cfg;
+static RawrXD::Agent::NativeInferenceClient createOllamaClientExt() {
+    RawrXD::Agent::NativeInferenceConfig cfg;
     cfg.host = "127.0.0.1";
     cfg.port = 11434;
-    return RawrXD::Agent::AgentOllamaClient(cfg);
+    return RawrXD::Agent::NativeInferenceClient(cfg);
 }
 
 // Global model selection for AI handlers
@@ -168,7 +168,7 @@ CommandResult handleAIInlineComplete(const CommandContext& ctx) {
     }
     auto client = createOllamaClientExt();
     if (!client.TestConnection()) {
-        ctx.output("[AI] Ollama not available at 127.0.0.1:11434\n");
+        ctx.output("[AI] Ollama not available at 127.0.0.1:11435\n");
         return CommandResult::error("ai.inlineComplete: no ollama");
     }
     std::lock_guard<std::mutex> lock(g_aiModelState.mtx);
@@ -398,7 +398,7 @@ CommandResult handleAIModelSelect(const CommandContext& ctx) {
     }
     auto client = createOllamaClientExt();
     if (!client.TestConnection()) {
-        ctx.output("[AI] Ollama not available at 127.0.0.1:11434\n");
+        ctx.output("[AI] Ollama not available at 127.0.0.1:11435\n");
         return CommandResult::error("ai.modelSelect: no ollama");
     }
     if (ctx.args && ctx.args[0]) {
@@ -454,7 +454,7 @@ CommandResult handleToolsSettings(const CommandContext& ctx) {
         HANDLE hw = CreateFileA(".rawrxd_settings.json", GENERIC_WRITE, 0, nullptr,
                                 CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
         if (hw != INVALID_HANDLE_VALUE) {
-            const char* defaults = "{\n  \"theme\": \"dark\",\n  \"fontSize\": 14,\n  \"tabSize\": 4,\n  \"autoSave\": true,\n  \"ollamaUrl\": \"http://127.0.0.1:11434\"\n}\n";
+            const char* defaults = "{\n  \"theme\": \"dark\",\n  \"fontSize\": 14,\n  \"tabSize\": 4,\n  \"autoSave\": true,\n  \"ollamaUrl\": \"http://127.0.0.1:11435\"\n}\n";
             DWORD written = 0;
             WriteFile(hw, defaults, (DWORD)strlen(defaults), &written, nullptr);
             CloseHandle(hw);

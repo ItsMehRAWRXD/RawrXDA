@@ -3,6 +3,8 @@
 #include "../core/problems_aggregator.hpp"
 #include "../security/sbom_export.hpp"
 #include "../security/dast_bridge.hpp"
+#include "../core/enterprise_license.h"
+#include "../core/enterprise_feature_manager.hpp"
 
 #include <commdlg.h>
 #include <string>
@@ -173,9 +175,20 @@ void Win32IDE::ShowSecurityDashboard() {
               [](const auto& a, const auto& b) { return a.second > b.second; });
     if (hotFiles.size() > 5) hotFiles.resize(5);
 
+    auto& lic = RawrXD::EnterpriseLicense::Instance();
     std::string summary;
     summary += "=== RawrXD Security Dashboard ===\n\n";
-    summary += "Total Security Findings: " + std::to_string(all.size()) + "\n";
+    summary += "License Status: " + lic.GetStateString() + "\n";
+    
+    if (lic.IsGracePeriodActive()) {
+        summary += "!! OFFLINE GRACE PERIOD ACTIVE: " + std::to_string(lic.GetGracePeriodRemainingDays()) + " DAYS REMAINING !!\n";
+    }
+
+    if (lic.IsDebuggerPresent()) {
+        summary += "!! TAMPER/DEBUGGER DETECTED: AS-SET PROTECTION ACTIVE !!\n";
+    }
+
+    summary += "\nTotal Security Findings: " + std::to_string(all.size()) + "\n";
     summary += "  SAST:     " + std::to_string(sast.size()) + "\n";
     summary += "  SCA:      " + std::to_string(sca.size()) + "\n";
     summary += "  Secrets:  " + std::to_string(secrets.size()) + "\n";

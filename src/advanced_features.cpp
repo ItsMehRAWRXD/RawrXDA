@@ -218,7 +218,11 @@ std::vector<AdvancedFeatures::FileContext> AdvancedFeatures::ScanWorkspace(const
                 }
             }
         }
-    } catch (...) {}
+    } catch (const std::exception& e) {
+        std::cerr << "[ERROR] AdvancedFeatures::FindRelevantFiles exception: " << e.what() << std::endl;
+    } catch (...) {
+        std::cerr << "[ERROR] AdvancedFeatures::FindRelevantFiles unknown exception" << std::endl;
+    }
     
     return results;
 }

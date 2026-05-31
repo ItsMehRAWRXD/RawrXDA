@@ -47,7 +47,7 @@
 
 // Keep linkage visible to the ASM translation unit.
 extern "C" void matmul_kernel_avx2(float* A, float* B, float* C, int N, int M, int K, bool accumulate = false);
-extern "C" void ggml_gemm_q4_0(int M, int N, int K, const float* A, const uint8_t* Bq4, float scale, float* C);
+extern "C" void ggml_rxd_gemm_q4_0(int M, int N, int K, const float* A, const uint8_t* Bq4, float scale, float* C);
 
 namespace
 {
@@ -792,7 +792,7 @@ bool GGUFRunner::runInference(const std::string& prompt, float* outputBuffer)
         {
             if (context_.logits.size() != context_.vocabSize)
                 context_.logits.resize(context_.vocabSize);
-            ggml_gemm_q4_0(1, static_cast<int>(context_.vocabSize), static_cast<int>(context_.embedDim), xnorm.data(),
+            ggml_rxd_gemm_q4_0(1, static_cast<int>(context_.vocabSize), static_cast<int>(context_.embedDim), xnorm.data(),
                            context_.raw_q4_output.data(), 1.0f, context_.logits.data());
         }
         else if (context_.tok_embeddings.size() == static_cast<size_t>(context_.vocabSize * context_.embedDim))

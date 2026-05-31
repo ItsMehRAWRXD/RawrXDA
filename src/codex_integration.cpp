@@ -136,10 +136,6 @@ AnalysisResult analyzeBinary(const std::string& filePath) {
     
     file.close();
     
-    std::cout << "[Codex] Analyzed: " << filePath << " (" << result.architecture 
-              << ", .text=" << result.textSectionSize 
-              << ", strings=" << result.stringCount << ")" << std::endl;
-    
     return result;
 }
 

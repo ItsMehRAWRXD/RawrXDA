@@ -1,0 +1,6 @@
+ninja: Entering directory `build-ninja'
+[1/201] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Core.cpp.obj
+[2/201] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Accelerators.cpp.obj
+[3/201] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_CoreRuntimeSpine.cpp.obj
+[4/201] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Commands.cpp.obj
+[5/201] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_ModelLab.cpp.obj

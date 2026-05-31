@@ -1,4 +1,4 @@
-// Phase 2 Polish Features - Integration Example
+// Phase 2 Polish Features - Integration
 // Shows how to use all new widgets in the Win32/HTML-based IDE.
 // All Qt dependencies replaced with Win32 API + STL.
 
@@ -36,7 +36,7 @@ using BackendChangedCb   = std::function<void(int backendIndex)>;
 using TelemetryDecisionCb = std::function<void(bool enabled)>;
 
 // ============================================================================
-// INTEGRATION EXAMPLE 1: Diff Preview
+// INTEGRATION 1: Diff Preview
 // ============================================================================
 // Instead of QDockWidget, use an HWND panel child of the main window.
 // The diff content is rendered via the HTML/Monaco layer using postMessage.
@@ -102,7 +102,7 @@ void integrateDiffPreview(DiffPreviewPanel& panel) {
 }
 
 // ============================================================================
-// INTEGRATION EXAMPLE 2: Streaming Token Progress Bar
+// INTEGRATION 2: Streaming Token Progress Bar
 // ============================================================================
 // Instead of adding a QProgressBar to QStatusBar, use a Win32 progress
 // control in the status bar area, or report via console / HTML status line.
@@ -149,7 +149,7 @@ void integrateTokenProgress(StreamingTokenProgress& progress) {
 }
 
 // ============================================================================
-// INTEGRATION EXAMPLE 3: GPU Backend Selector
+// INTEGRATION 3: GPU Backend Selector
 // ============================================================================
 // Instead of a QComboBox in QToolBar, use a Win32 ComboBox or an HTML
 // dropdown rendered in the IDE toolbar area.
@@ -193,7 +193,7 @@ void integrateBackendSelector(GPUBackendSelector& selector) {
 }
 
 // ============================================================================
-// INTEGRATION EXAMPLE 4: Auto Model Download
+// INTEGRATION 4: Auto Model Download
 // ============================================================================
 // Instead of QDialog + QTimer::singleShot, use Win32 MessageBox or a
 // custom HWND dialog. Download via WinHTTP / libcurl.
@@ -243,7 +243,7 @@ void integrateAutoModelDownload() {
 }
 
 // ============================================================================
-// INTEGRATION EXAMPLE 5: Telemetry Opt-In
+// INTEGRATION 5: Telemetry Opt-In
 // ============================================================================
 // Instead of a QDialog with signals, use a Win32 dialog or a startup
 // prompt in the HTML layer with postMessage callback.

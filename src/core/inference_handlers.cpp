@@ -34,7 +34,12 @@
 #include "../gguf_loader.h"
 #include "../inference/ultra_fast_inference.h"
 #include "../inference/autonomous_inference.h"  // AutonomousInferenceEngine
+#include "../layer_offload_manager.hpp"
+#include "../gpu_enforcement.h"
 
+#include <algorithm>
+#include <cstdlib>
+#include <filesystem>
 #include <string>
 #include <vector>
 #include <mutex>
@@ -50,6 +55,26 @@ using namespace RawrXD;
 // ============================================================================
 
 namespace {
+
+bool parseEnvInt(const char* name, int minValue, int maxValue, int& outValue) {
+    if (!name || !name[0]) {
+        return false;
+    }
+    const char* raw = std::getenv(name);
+    if (!raw || !raw[0]) {
+        return false;
+    }
+    char* end = nullptr;
+    long parsed = std::strtol(raw, &end, 10);
+    if (end == raw || (end && *end != '\0')) {
+        return false;
+    }
+    if (parsed < minValue || parsed > maxValue) {
+        return false;
+    }
+    outValue = static_cast<int>(parsed);
+    return true;
+}
 
 struct InferenceState {
     std::mutex                                  mtx;
@@ -169,16 +194,99 @@ CommandResult handleInferenceRunSel(const CommandContext& ctx) {
         return CommandResult::failure("No model loaded");
     }
     
-    // TODO: Retrieve selected text from IDE via ctx.args or Win32 message
-    std::string selectedText = "TODO: Get selected text from editor";
-    
-    ctx.output("[INFERENCE] Executing with selected text: \"");
-    ctx.output(selectedText.c_str());
+    if (state.isRunning.load()) {
+        ctx.output("[INFERENCE] Inference already running. Use !stop to terminate.\n");
+        return CommandResult::failure("Already running");
+    }
+
+    // Use ctx.args as explicit prompt; otherwise query the focused Win32 edit control
+    // via EM_GETSEL so the user's current text selection becomes the prompt.
+    std::string selectedText;
+    if (ctx.args && ctx.args[0]) {
+        selectedText = ctx.args;
+    } else {
+        HWND hFocus = GetFocus();
+        if (hFocus) {
+            DWORD selStart = 0, selEnd = 0;
+            SendMessageA(hFocus, EM_GETSEL, reinterpret_cast<WPARAM>(&selStart),
+                         reinterpret_cast<LPARAM>(&selEnd));
+            if (selEnd > selStart && (selEnd - selStart) < 65536u) {
+                int len = GetWindowTextLengthA(hFocus);
+                if (len > 0 && static_cast<DWORD>(len) >= selEnd) {
+                    std::string buf(static_cast<size_t>(len) + 1, '\0');
+                    GetWindowTextA(hFocus, buf.data(), len + 1);
+                    buf.resize(static_cast<size_t>(len));
+                    selectedText = buf.substr(selStart, selEnd - selStart);
+                }
+            }
+        }
+    }
+
+    if (selectedText.empty()) {
+        ctx.output("[INFERENCE] No text selected and no prompt in ctx.args.\n");
+        return CommandResult::failure("No selection");
+    }
+
+    ctx.output("[INFERENCE] ───────────────────────────────────────────\n");
+    ctx.output("[INFERENCE] Model: ");
+    ctx.output(state.currentModelPath.c_str());
+    ctx.output("\n");
+    ctx.output("[INFERENCE] Ctx Size: ");
+    ctx.output(std::to_string(state.contextSize).c_str());
+    ctx.output(" | Temp: ");
+    ctx.output(std::to_string(state.temperature).c_str());
+    ctx.output(" | Max Tokens: ");
+    ctx.output(std::to_string(state.maxTokens).c_str());
+    ctx.output("\n");
+    ctx.output("[INFERENCE] Selected Prompt (");
+    ctx.output(std::to_string(selectedText.size()).c_str());
+    ctx.output(" chars): \"");
+    if (selectedText.size() > 120) {
+        ctx.output(selectedText.substr(0, 120).c_str());
+        ctx.output("...");
+    } else {
+        ctx.output(selectedText.c_str());
+    }
     ctx.output("\"\n");
-    
-    // Same execution logic as handleInferenceRun but with custom prompt
-    // (For brevity, calling handleInferenceRun - production would parameterize prompt)
-    return handleInferenceRun(ctx);
+    ctx.output("[INFERENCE] ───────────────────────────────────────────\n");
+
+    // Execute inference with the selected text as prompt in a background thread.
+    // (Inline execution — cannot delegate to handleInferenceRun which holds the same mutex.)
+    state.isRunning.store(true);
+    state.stopRequested.store(false);
+
+    std::thread([&state, selectedText, ctx]() {
+        try {
+            auto tokens = state.engine->generate(selectedText, state.maxTokens);
+
+            ctx.output("[INFERENCE] Generated ");
+            ctx.output(std::to_string(tokens.size()).c_str());
+            ctx.output(" tokens: ");
+
+            for (size_t i = 0; i < std::min(tokens.size(), size_t(20)); ++i) {
+                ctx.output(std::to_string(tokens[i]).c_str());
+                ctx.output(" ");
+            }
+            if (tokens.size() > 20) {
+                ctx.output("...");
+            }
+            ctx.output("\n");
+
+            state.totalInferences.fetch_add(1);
+            state.totalTokensGenerated.fetch_add(tokens.size());
+
+            ctx.output("[INFERENCE] \u2705 Inference complete.\n");
+
+        } catch (const std::exception& e) {
+            ctx.output("[INFERENCE] \u274c Error: ");
+            ctx.output(e.what());
+            ctx.output("\n");
+        }
+
+        state.isRunning.store(false);
+    }).detach();
+
+    return CommandResult::success();
 }
 
 // ============================================================================
@@ -195,7 +303,7 @@ CommandResult handleInferenceLoadRun(const CommandContext& ctx) {
     
     ZeroMemory(&ofn, sizeof(ofn));
     ofn.lStructSize = sizeof(ofn);
-    ofn.hwndOwner = NULL;  // TODO: Set to IDE main window handle
+    ofn.hwndOwner = ctx.hwnd ? static_cast<HWND>(ctx.hwnd) : GetForegroundWindow();
     ofn.lpstrFile = szFile;
     ofn.nMaxFile = sizeof(szFile);
     ofn.lpstrFilter = "GGUF Models (*.gguf)\0*.gguf\0All Files (*.*)\0*.*\0";
@@ -251,7 +359,66 @@ CommandResult handleInferenceLoadRun(const CommandContext& ctx) {
         inference::AutonomousInferenceEngine::InferenceConfig config;
         config.max_batch_size = 1;
         config.ctx_size = state.contextSize;
-        config.n_gpu_layers = 0;  // CPU-only for now
+        // GPU inference remains mandatory, but full offload can be unstable for
+        // larger models on fixed-VRAM cards. Use env override first, then fall
+        // back to an empirical layer split derived from model metadata.
+        int selectedGpuLayers = 999;
+        bool hasEnvOverride = parseEnvInt("RAWRXD_N_GPU_LAYERS", 1, 999, selectedGpuLayers)
+            || parseEnvInt("RAWRXD_GPU_LAYERS", 1, 999, selectedGpuLayers);
+        if (!hasEnvOverride) {
+            uint64_t vramBytes = rxd::gpu::status().vram_total_bytes;
+            if (vramBytes == 0) {
+                vramBytes = 16ULL * 1024 * 1024 * 1024;
+            }
+
+            MEMORYSTATUSEX memstat{};
+            memstat.dwLength = sizeof(memstat);
+            uint64_t sysRAM = GlobalMemoryStatusEx(&memstat) ? memstat.ullTotalPhys : 0;
+
+            const uint32_t layers = meta.layer_count;
+            const uint32_t kvHeads = (meta.head_count_kv > 0) ? meta.head_count_kv : meta.head_count;
+            const uint32_t headDim = (meta.embedding_dim > 0 && meta.head_count > 0)
+                ? (meta.embedding_dim / meta.head_count)
+                : 128;
+            const uint32_t ctxLen = (state.contextSize > 0)
+                ? static_cast<uint32_t>(state.contextSize)
+                : ((meta.context_length > 0) ? meta.context_length : 4096);
+
+            if (layers > 0 && kvHeads > 0) {
+                const std::error_code ec;
+                const uint64_t fileSize = static_cast<uint64_t>(std::filesystem::file_size(modelPath, ec));
+                if (!ec && fileSize > 0) {
+                    const auto split = RawrXD::computeOptimalGPULayers(
+                        fileSize,
+                        layers,
+                        kvHeads,
+                        headDim,
+                        ctxLen,
+                        vramBytes,
+                        sysRAM);
+                    selectedGpuLayers = std::max(1, std::min(999, static_cast<int>(split.gpuLayers)));
+
+                    char splitInfo[256];
+                    std::snprintf(splitInfo,
+                                  sizeof(splitInfo),
+                                  "[INFERENCE] Auto GPU layer split selected: %d/%u (stable=%s, est tg128=%.1f t/s)\n",
+                                  selectedGpuLayers,
+                                  split.totalLayers,
+                                  split.stable ? "YES" : "NO",
+                                  split.estGenerateTps);
+                    ctx.output(splitInfo);
+                }
+            }
+        } else {
+            char envInfo[128];
+            std::snprintf(envInfo,
+                          sizeof(envInfo),
+                          "[INFERENCE] Using RAWRXD_*_GPU_LAYERS override: %d\n",
+                          selectedGpuLayers);
+            ctx.output(envInfo);
+        }
+
+        config.n_gpu_layers = selectedGpuLayers;
         config.flash_attention = false;
         
         auto engine = std::make_unique<inference::UltraFastInferenceEngine>(config);
@@ -316,9 +483,54 @@ CommandResult handleInferenceConfig(const CommandContext& ctx) {
     auto& state = InferenceState::instance();
     std::lock_guard<std::mutex> lock(state.mtx);
     
-    // TODO: Show configuration dialog or parse from ctx.args
-    // For now, just display current config
-    
+    // Parse ctx.args for key=value pairs that update inference settings:
+    // ctx=<int>  temp=<float>  max_tokens=<int>  top_p=<float>  top_k=<int>
+    if (ctx.args && ctx.args[0]) {
+        std::istringstream ss(ctx.args);
+        std::string token;
+        int updates = 0;
+        while (ss >> token) {
+            const auto eq = token.find('=');
+            if (eq == std::string::npos) continue;
+            const std::string key = token.substr(0, eq);
+            const std::string val = token.substr(eq + 1);
+            try {
+                if (key == "ctx") {
+                    const int v = std::stoi(val);
+                    if (v < 64 || v > 131072) { ctx.output("[INFERENCE] ctx out of range [64,131072]\n"); continue; }
+                    state.contextSize = v; ++updates;
+                } else if (key == "temp") {
+                    const float v = std::stof(val);
+                    if (v < 0.0f || v > 10.0f) { ctx.output("[INFERENCE] temp out of range [0.0,10.0]\n"); continue; }
+                    state.temperature = v; ++updates;
+                } else if (key == "max_tokens") {
+                    const int v = std::stoi(val);
+                    if (v < 1 || v > 32768) { ctx.output("[INFERENCE] max_tokens out of range [1,32768]\n"); continue; }
+                    state.maxTokens = v; ++updates;
+                } else if (key == "top_p") {
+                    const float v = std::stof(val);
+                    if (v < 0.0f || v > 1.0f) { ctx.output("[INFERENCE] top_p out of range [0.0,1.0]\n"); continue; }
+                    state.topP = v; ++updates;
+                } else if (key == "top_k") {
+                    const int v = std::stoi(val);
+                    if (v < 1 || v > 1000) { ctx.output("[INFERENCE] top_k out of range [1,1000]\n"); continue; }
+                    state.topK = v; ++updates;
+                } else {
+                    ctx.output("[INFERENCE] Unknown key: ");
+                    ctx.output(key.c_str());
+                    ctx.output(" (valid: ctx temp max_tokens top_p top_k)\n");
+                }
+            } catch (...) {
+                ctx.output("[INFERENCE] Invalid value for: ");
+                ctx.output(key.c_str());
+                ctx.output("\n");
+            }
+        }
+        if (updates > 0) {
+            ctx.output("[INFERENCE] \u2705 Configuration updated.\n");
+        }
+    }
+
     ctx.output("[INFERENCE] Current Configuration:\n");
     ctx.output("[INFERENCE]   Context Size: ");
     ctx.output(std::to_string(state.contextSize).c_str());

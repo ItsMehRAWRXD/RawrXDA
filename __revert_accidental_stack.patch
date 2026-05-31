@@ -1,0 +1,445 @@
+diff --git a/src/win32app/mcp_hooks.asm b/src/win32app/mcp_hooks.asm
+index 863c75a0a..4252d14bb 100644
+--- a/src/win32app/mcp_hooks.asm
++++ b/src/win32app/mcp_hooks.asm
+@@ -6590,4 +6607,4 @@ Phase3Initialize PROC FRAME
+     .pushreg rdi
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -6728,4 +6745,4 @@ GenerateTokens PROC FRAME
+     .pushreg r12
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -6814,4 +6831,4 @@ AllocateKVSlot PROC FRAME
+     .pushreg r13
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -6955,4 +6972,4 @@ RegisterTool PROC FRAME
+     .pushreg rdi
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -7082,4 +7115,4 @@ Phase3Shutdown PROC FRAME
+     .pushreg rbx
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -12082,4 +12653,4 @@ INFINITY_InitializeStream PROC FRAME
+     .pushreg r15
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -14296,4 +14867,4 @@ CalibrateTSCHidden PROC FRAME
+     push rbx r12 r13 r14 r15
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -27101,4 +27672,4 @@ Embedding_Lookup PROC FRAME
+     .pushreg rdi
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -27155,4 +27726,4 @@ RMSNorm PROC FRAME
+     .pushreg rbx
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -27223,4 +27794,4 @@ Linear_Projection PROC FRAME
+     .pushreg r12
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -27292,4 +27863,4 @@ ApplyRotaryEmbeddings PROC FRAME
+     .pushreg rbx
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -27416,4 +27987,4 @@ ApplyCausalMask PROC FRAME
+     .pushreg rsi
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -27470,4 +28041,4 @@ SoftmaxRows PROC FRAME
+     .pushreg rdi
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -27579,4 +28150,4 @@ ApplyTemperature PROC FRAME
+     .pushreg rbx
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -27628,4 +28199,4 @@ MultinomialSample PROC FRAME
+     .pushreg rsi
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -28157,4 +28728,4 @@ FindSnapshotById PROC FRAME
+     .pushreg rsi
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -32760,4 +33331,4 @@ Dataset_Shuffle PROC FRAME
+     .pushreg rdi
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -32803,4 +33374,4 @@ Dataset_GetBatch PROC FRAME
+     .pushreg rbx
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -32864,4 +33435,4 @@ Model_Forward PROC FRAME
+     .pushreg rsi
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -32890,4 +33461,4 @@ CrossEntropyLoss PROC FRAME
+     .pushreg rbx
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -32915,4 +33486,4 @@ Model_Backward PROC FRAME
+     .pushreg rsi
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -32939,4 +33510,4 @@ Gradient_ClipByGlobalNorm PROC FRAME
+     .pushreg rbx
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -32964,4 +33535,4 @@ Optimizer_Step PROC FRAME
+     .pushreg rsi
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -32989,4 +33560,4 @@ UpdateLearningRate PROC FRAME
+     .pushreg rbx
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -35099,4 +35783,4 @@ KVCache_FindLRU PROC FRAME
+     .pushreg rbx
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -35145,4 +35829,4 @@ KVCache_Lookup PROC FRAME
+     .pushreg rbx
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -39282,4 +40189,4 @@ Titan_UpdateHeartbeat_Simplified PROC FRAME
+     .pushreg rbx
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -39448,4 +40355,4 @@ Titan_IsHeartbeatAlive PROC FRAME
+     .pushreg rbx
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -39481,4 +40388,4 @@ Titan_GetHeartbeatStats PROC FRAME
+     .pushreg rsi
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -39755,4 +40662,4 @@ Titan_LockPages PROC FRAME
+     .pushreg rsi
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -39981,4 +40888,4 @@ Titan_ReleaseSlot_Production PROC FRAME
+     .pushreg rsi
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -41184,4 +42091,4 @@ Titan_Shutdown_Real PROC FRAME
+     .pushreg rbx
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -41281,4 +42188,4 @@ Titan_LRU_Register_Slot PROC FRAME
+     .setframe rbp, 0
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -41334,4 +42241,4 @@ Titan_LRU_Touch_Slot PROC FRAME
+     .setframe rbp, 0
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -41934,4 +42841,4 @@ Titan_CleanupOrchestrator PROC FRAME
+     .pushreg rbx
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -41979,4 +42886,4 @@ Titan_CleanupOrchestratorInternal PROC FRAME
+     .pushreg rsi
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -42117,4 +43024,4 @@ Titan_ShutdownRingBuffer PROC FRAME
+     .pushreg rbx
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -42157,4 +43064,4 @@ Titan_AllocateRingBufferSpace PROC FRAME
+     .pushreg rdi
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -42230,4 +43137,4 @@ Titan_ReleaseRingBufferSpace PROC FRAME
+     .pushreg rsi
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -42410,4 +43317,4 @@ Titan_InsertJobIntoQueue PROC FRAME
+     .pushreg rdi
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -42487,4 +43394,4 @@ Titan_GetNextJob PROC FRAME
+     .pushreg rsi
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -42700,4 +43607,4 @@ Titan_ProcessInferenceJob PROC FRAME
+     .pushreg rsi
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -42837,4 +43744,4 @@ Titan_ProcessPatchJob PROC FRAME
+     .pushreg rsi
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -42901,4 +43808,4 @@ Titan_DetectConflict PROC FRAME
+     .pushreg r13
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -43016,4 +43923,4 @@ Titan_RecordConflict PROC FRAME
+     .pushreg r12
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -43108,4 +44015,4 @@ Titan_ReleaseConflict PROC FRAME
+     .pushreg rdi
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -43173,4 +44080,4 @@ Titan_ExecuteDMATransfer PROC FRAME
+     .pushreg rsi
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -43245,4 +44152,4 @@ Titan_DMA_LargeTransfer PROC FRAME
+     .pushreg rdi
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -43392,4 +44299,4 @@ Titan_StartHeartbeat PROC FRAME
+     .pushreg rbx
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -43415,4 +44322,4 @@ Titan_UpdateHeartbeat PROC FRAME
+     .pushreg rbx
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -43442,4 +44349,4 @@ Titan_CheckHeartbeats PROC FRAME
+     .pushreg rdi
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -43554,4 +44461,4 @@ Titan_DetectCPUFeatures PROC FRAME
+     .pushreg rbx
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -43634,4 +44541,4 @@ Titan_WaitForWorkers PROC FRAME
+     .pushreg rdi
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -58118,4 +59136,4 @@ native_softmax_avx2 PROC FRAME
+     .pushreg rsi
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -58233,4 +59251,4 @@ native_softmax_avx512 PROC FRAME
+     .pushreg rsi
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -58586,4 +59604,4 @@ dequant_q4_0_avx2 PROC FRAME
+     .pushreg rdi
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -58697,4 +59715,4 @@ dequant_q8_0_avx2 PROC FRAME
+     .pushreg rdi
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -169236,4 +170276,4 @@ ChatServer_Terminate PROC FRAME
+     .pushreg rbx
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -172134,4 +173173,4 @@ RawrXD_Streaming_Write proc frame
+     .pushreg r15
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -172237,4 +173276,4 @@ RawrXD_Streaming_Read proc frame
+     .pushreg r15
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -176297,4 +177333,4 @@ TITAN_PrefetchLayer PROC FRAME
+     push rbx rsi rdi r12 r13
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -176373,4 +177409,4 @@ TITAN_CheckGhostCache PROC FRAME
+     push rbx rsi rdi r12
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog
+@@ -176438,4 +177474,4 @@ TITAN_SyncLiveTheta PROC FRAME
+     push rbx rsi rdi
+-    sub rsp, 32
+-    .allocstack 32
++    sub rsp, 40
++    .allocstack 40
+     .endprolog

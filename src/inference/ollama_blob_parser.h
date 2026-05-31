@@ -141,10 +141,10 @@ private:
 //=============================================================================
 
 /**
- * @class OllamaBlobParser
+ * @class NativeBlobParser
  * @brief Main parser for extracting GGUF data from Ollama blobs
  */
-class OllamaBlobParser {
+class NativeBlobParser {
 public:
     struct ParseResult {
         bool success;
@@ -162,8 +162,8 @@ public:
         uint64_t metadata_count;
     };
     
-    OllamaBlobParser();
-    ~OllamaBlobParser();
+    NativeBlobParser();
+    ~NativeBlobParser();
     
     // Parse Ollama blob and prepare for GGUF loading
     ParseResult parseBlobToGGUF(const std::string& blob_path);
@@ -332,7 +332,7 @@ bool loadModelFromOllamaBlob(
     GGUFLoaderType& loader,
     const std::string& blob_path
 ) {
-    OllamaBlobParser parser;
+    NativeBlobParser parser;
     auto result = parser.parseBlobToGGUF(blob_path);
     
     if (!result.success) {

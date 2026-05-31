@@ -1,497 +1,537 @@
-#include "agent/quantum_agent_orchestrator.hpp"
-#include "agentic/AgentOllamaClient.h"
+// =============================================================================
+// test_orchestrator_modules.cpp — Regression Tests for Orchestrator Modules
+// =============================================================================
 
-#include <nlohmann/json.hpp>
-
-#include <algorithm>
-#include <cctype>
-#include <chrono>
-#include <cstring>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
 #include <string>
-#include <utility>
 #include <vector>
+#include <cassert>
+#include <cstdint>
+#include <chrono>
+#include <sstream>
+#include <fstream>
+#include <functional>
+#include <filesystem>
 
-#ifdef _WIN32
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <windows.h>
-#endif
+#include "ToolRegistry.h"
+#include "FIMPromptBuilder.h"
+#include "NativeInferenceClient.h"
+#include "AgentOrchestrator.h"
+#include "DiskRecoveryAgent.h"
 
-namespace {
+using namespace RawrXD::Agent;
+using namespace RawrXD::Recovery;
 
-void printUsage() {
-    std::cout
-        << "RawrXD-AutoFixCLI usage:\n"
-        << "  --autofix\n"
-        << "  --build-command <cmd>\n"
-        << "  [--workspace-root <path>]\n"
-        << "  [--workspace <path>]\n"
-        << "  [--max-attempts <n>]\n"
-        << "  [--telemetry-out <path>]\n"
-        << "  [--test-inference [prompt]]\n";
+static int g_testsPassed = 0;
+static int g_testsFailed = 0;
+static int g_testsSkipped = 0;
+
+struct TestResult {
+    bool passed;
+    std::string name;
+    std::string detail;
+    double elapsed_ms;
+};
+
+static std::vector<TestResult> g_results;
+
+#define TEST_ASSERT(cond, name) do { \
+    if (!(cond)) { \
+        g_testsFailed++; \
+        g_results.push_back({false, name, #cond, 0}); \
+        return; \
+    } \
+} while(0)
+
+#define TEST_ASSERT_EQ(a, b, name) do { \
+    if ((a) != (b)) { \
+        g_testsFailed++; \
+        g_results.push_back({false, name, "mismatch", 0}); \
+        return; \
+    } \
+} while(0)
+
+#define TEST_PASS(name) do { \
+    g_testsPassed++; \
+    g_results.push_back({true, name, "", 0}); \
+} while(0)
+
+#define TEST_SKIP(name, reason) do { \
+    g_testsSkipped++; \
+} while(0)
+
+// ==========================================================================
+// § 1. ToolRegistry — X-Macro Enum & Schema Generation
+// ==========================================================================
+
+void test_xmacro_enum_count() {
+    // Tool count may grow as new capabilities are added.
+    auto count = static_cast<uint32_t>(ToolId::_COUNT);
+    TEST_ASSERT(count >= 11, "X-Macro generates at least the baseline ToolId values");
+    TEST_PASS("xmacro_enum_count");
 }
 
-bool consumeValue(int& i, int argc, char* argv[], std::string& out) {
-    if (i + 1 >= argc || argv[i + 1] == nullptr) {
-        return false;
-    }
-    out = argv[++i];
-    return true;
+void test_registry_singleton() {
+    auto& reg1 = AgentToolRegistry::Instance();
+    auto& reg2 = AgentToolRegistry::Instance();
+    TEST_ASSERT(&reg1 == &reg2, "Registry is a singleton");
+    TEST_PASS("registry_singleton");
 }
 
-bool consumeCommandValue(int& i, int argc, char* argv[], std::string& out) {
-    if (i + 1 >= argc || argv[i + 1] == nullptr) {
-        return false;
+void test_registry_list_tools() {
+    auto& reg = AgentToolRegistry::Instance();
+    auto tools = reg.ListTools();
+    TEST_ASSERT(tools.size() >= 11, "ListTools returns at least the baseline tools");
+
+    // Check specific tool names exist
+    bool hasReadFile = false, hasDiskRecovery = false;
+    for (const auto& t : tools) {
+        if (t == "read_file") hasReadFile = true;
+        if (t == "disk_recovery") hasDiskRecovery = true;
     }
-
-    auto isCliFlag = [](const char* arg) {
-        if (arg == nullptr) {
-            return false;
-        }
-        return std::strcmp(arg, "--help") == 0 ||
-               std::strcmp(arg, "-h") == 0 ||
-               std::strcmp(arg, "--autofix") == 0 ||
-               std::strcmp(arg, "--test-inference") == 0 ||
-               std::strcmp(arg, "--build-command") == 0 ||
-               std::strcmp(arg, "--workspace-root") == 0 ||
-               std::strcmp(arg, "--workspace") == 0 ||
-               std::strcmp(arg, "--telemetry-out") == 0 ||
-               std::strcmp(arg, "--max-attempts") == 0;
-    };
-
-    std::string cmd;
-    for (int j = i + 1; j < argc; ++j) {
-        if (argv[j] == nullptr) {
-            continue;
-        }
-        if (isCliFlag(argv[j])) {
-            i = j - 1;
-            out = cmd;
-            return !out.empty();
-        }
-        if (!cmd.empty()) {
-            cmd.push_back(' ');
-        }
-        cmd.append(argv[j]);
-        i = j;
-    }
-
-    out = cmd;
-    return !out.empty();
+    TEST_ASSERT(hasReadFile, "read_file tool registered");
+    TEST_ASSERT(hasDiskRecovery, "disk_recovery tool registered");
+    TEST_PASS("registry_list_tools");
 }
 
-std::pair<int, std::string> runBuildWithCapture(const std::string& buildCommand,
-                                                const std::string& workspaceRoot) {
-    std::error_code ec;
-    const auto originalCwd = std::filesystem::current_path(ec);
-    if (!workspaceRoot.empty()) {
-        std::filesystem::current_path(workspaceRoot, ec);
-        if (ec) {
-            return {-1, "Failed to switch working directory: " + workspaceRoot};
-        }
+void test_registry_schemas_valid() {
+    auto& reg = AgentToolRegistry::Instance();
+    json schemas = reg.GetToolSchemas();
+    TEST_ASSERT(schemas.size() >= 11, "GetToolSchemas returns at least the baseline entries");
+
+    // Each schema should have type=function with function.name and function.parameters
+    for (size_t i = 0; i < schemas.size(); ++i) {
+        const auto& s = schemas[i];
+        TEST_ASSERT(s.contains("type"), "Schema has type field");
+        TEST_ASSERT(s.contains("function"), "Schema has function field");
+        const auto& fn = s["function"];
+        TEST_ASSERT(fn.contains("name"), "Function has name");
+        TEST_ASSERT(fn.contains("description"), "Function has description");
+        TEST_ASSERT(fn.contains("parameters"), "Function has parameters");
     }
-
-    std::string output;
-
-#ifdef _WIN32
-    SECURITY_ATTRIBUTES sa{}; sa.nLength = sizeof(sa); sa.bInheritHandle = TRUE;
-    HANDLE hRead = nullptr, hWrite = nullptr;
-    if (!CreatePipe(&hRead, &hWrite, &sa, 0)) {
-        if (!workspaceRoot.empty()) {
-            std::filesystem::current_path(originalCwd, ec);
-        }
-        return {-1, "Failed to create pipe"};
-    }
-    SetHandleInformation(hRead, HANDLE_FLAG_INHERIT, 0);
-
-    STARTUPINFOA si{}; si.cb = sizeof(si);
-    si.dwFlags = STARTF_USESTDHANDLES;
-    si.hStdOutput = hWrite; si.hStdError = hWrite;
-    PROCESS_INFORMATION pi{};
-
-    std::string cmdLine = "cmd /c " + buildCommand;
-    std::vector<char> cmdBuf(cmdLine.begin(), cmdLine.end());
-    cmdBuf.push_back('\0');
-
-    BOOL ok = CreateProcessA(nullptr, cmdBuf.data(), nullptr, nullptr, TRUE,
-                             CREATE_NO_WINDOW, nullptr,
-                             workspaceRoot.empty() ? nullptr : workspaceRoot.c_str(),
-                             &si, &pi);
-    CloseHandle(hWrite);
-
-    if (!ok) {
-        CloseHandle(hRead);
-        if (!workspaceRoot.empty()) std::filesystem::current_path(originalCwd, ec);
-        return {-1, "Failed to launch build command"};
-    }
-
-    char buffer[4096];
-    DWORD bytesRead = 0;
-    while (ReadFile(hRead, buffer, sizeof(buffer)-1, &bytesRead, nullptr) && bytesRead > 0) {
-        buffer[bytesRead] = '\0';
-        output.append(buffer, bytesRead);
-    }
-    CloseHandle(hRead);
-
-    WaitForSingleObject(pi.hProcess, 300000);
-    DWORD dwExitCode = 1;
-    GetExitCodeProcess(pi.hProcess, &dwExitCode);
-    CloseHandle(pi.hProcess);
-    CloseHandle(pi.hThread);
-
-    int exitCode = static_cast<int>(dwExitCode);
-#else
-    std::string wrapped = buildCommand + " 2>&1";
-    FILE* pipe = popen(wrapped.c_str(), "r");
-    if (!pipe) {
-        if (!workspaceRoot.empty()) {
-            std::filesystem::current_path(originalCwd, ec);
-        }
-        return {-1, "Failed to launch build command"};
-    }
-
-    char buffer[4096];
-    while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
-        output.append(buffer);
-    }
-
-    int exitCode = pclose(pipe);
-#endif
-
-    if (!workspaceRoot.empty()) {
-        std::filesystem::current_path(originalCwd, ec);
-    }
-
-    return {exitCode, output};
+    TEST_PASS("registry_schemas_valid");
 }
 
-bool removeIntentionalDemoBreakBlock(const std::string& workspaceRoot,
-                                     std::vector<std::string>& modifiedFiles) {
-    const std::filesystem::path testFile =
-        std::filesystem::path(workspaceRoot) / "tests" / "test_autonomous_pipeline.cpp";
-    if (!std::filesystem::exists(testFile)) {
-        return false;
+void test_registry_dispatch_read_file() {
+    auto& reg = AgentToolRegistry::Instance();
+
+    // Create a temp file for testing
+    std::string tempPath = (std::filesystem::temp_directory_path() / "rawrxd_test_read.txt").string();
+    {
+        std::ofstream ofs(tempPath);
+        ofs << "Hello, RawrXD!";
     }
 
-    std::ifstream in(testFile, std::ios::binary);
-    if (!in.is_open()) {
-        return false;
-    }
+    json args;
+    args["path"] = tempPath;
+    auto result = reg.Dispatch("read_file", args);
+    TEST_ASSERT(result.success, "read_file dispatch succeeds");
+    TEST_ASSERT(result.output == "Hello, RawrXD!", "read_file returns correct content");
+    TEST_ASSERT(result.elapsed_ms >= 0, "elapsed_ms is non-negative");
 
-    std::vector<std::string> lines;
-    std::string line;
-    while (std::getline(in, line)) {
-        if (!line.empty() && line.back() == '\r') {
-            line.pop_back();
-        }
-        lines.push_back(line);
-    }
-    in.close();
-
-    if (lines.empty()) {
-        return false;
-    }
-
-    size_t marker = std::string::npos;
-    for (size_t i = 0; i < lines.size(); ++i) {
-        if (lines[i].find("INTENTIONAL BREAK FOR DEMO") != std::string::npos) {
-            marker = i;
-            break;
-        }
-    }
-    if (marker == std::string::npos) {
-        return false;
-    }
-
-    size_t fn = std::string::npos;
-    for (size_t i = marker; i < std::min(lines.size(), marker + 16); ++i) {
-        if (lines[i].find("rawrxd_demo_break_function") != std::string::npos) {
-            fn = i;
-            break;
-        }
-    }
-    if (fn == std::string::npos) {
-        return false;
-    }
-
-    size_t start = std::min(marker, fn);
-    if (start > 0) {
-        bool prevBlank = true;
-        for (char ch : lines[start - 1]) {
-            if (!std::isspace(static_cast<unsigned char>(ch))) {
-                prevBlank = false;
-                break;
-            }
-        }
-        if (prevBlank) {
-            --start;
-        }
-    }
-
-    size_t end = fn;
-    int depth = 0;
-    bool sawOpen = false;
-    for (size_t i = fn; i < lines.size(); ++i) {
-        for (char ch : lines[i]) {
-            if (ch == '{') {
-                ++depth;
-                sawOpen = true;
-            } else if (ch == '}' && sawOpen) {
-                --depth;
-            }
-        }
-        if (sawOpen && depth <= 0) {
-            end = i;
-            break;
-        }
-    }
-
-    if (start >= lines.size() || end >= lines.size() || start > end) {
-        return false;
-    }
-
-    lines.erase(lines.begin() + static_cast<std::ptrdiff_t>(start),
-                lines.begin() + static_cast<std::ptrdiff_t>(end + 1));
-
-    std::ofstream out(testFile, std::ios::binary | std::ios::trunc);
-    if (!out.is_open()) {
-        return false;
-    }
-    for (size_t i = 0; i < lines.size(); ++i) {
-        out << lines[i];
-        if (i + 1 < lines.size()) {
-            out << '\n';
-        }
-    }
-    out.flush();
-
-    modifiedFiles.push_back(testFile.string());
-    return true;
+    // Cleanup
+    std::filesystem::remove(tempPath);
+    TEST_PASS("registry_dispatch_read_file");
 }
 
-} // namespace
+void test_registry_dispatch_write_file() {
+    auto& reg = AgentToolRegistry::Instance();
 
-static int runInferenceTest(int argc, char* argv[])
-{
-    using namespace RawrXD::Agent;
+    std::string tempPath = (std::filesystem::temp_directory_path() / "rawrxd_test_write.txt").string();
 
-    std::string prompt = "What is 2+2?";
-    for (int i = 1; i < argc; ++i) {
-        if (argv[i] == nullptr) continue;
-        if (std::strcmp(argv[i], "--test-inference") == 0) {
-            if (i + 1 < argc && argv[i + 1] && argv[i+1][0] != '-') {
-                prompt = argv[++i];
-            }
-            break;
-        }
-    }
+    json args;
+    args["path"] = tempPath;
+    args["content"] = "Written by test";
+    auto result = reg.Dispatch("write_file", args);
+    TEST_ASSERT(result.success, "write_file dispatch succeeds");
 
-    std::cout << "[InferenceTest] Prompt: " << prompt << "\n";
+    // Verify content
+    std::ifstream ifs(tempPath);
+    std::string content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
+    TEST_ASSERT(content == "Written by test", "write_file content is correct");
 
-    OllamaConfig cfg;
+    std::filesystem::remove(tempPath);
+    TEST_PASS("registry_dispatch_write_file");
+}
+
+void test_registry_dispatch_unknown_tool() {
+    auto& reg = AgentToolRegistry::Instance();
+
+    json args;
+    auto result = reg.Dispatch("nonexistent_tool", args);
+    TEST_ASSERT(!result.success, "Unknown tool returns failure");
+    TEST_ASSERT(result.output.find("Unknown tool") != std::string::npos, "Error mentions unknown");
+    TEST_PASS("registry_dispatch_unknown_tool");
+}
+
+void test_registry_validation_missing_required() {
+    auto& reg = AgentToolRegistry::Instance();
+
+    json emptyArgs;
+    auto result = reg.Dispatch("read_file", emptyArgs);
+    TEST_ASSERT(!result.success, "Missing required param returns failure");
+    TEST_ASSERT(result.output.find("path") != std::string::npos ||
+                result.output.find("Validation") != std::string::npos,
+                "Error mentions the missing parameter");
+    TEST_PASS("registry_validation_missing_required");
+}
+
+void test_registry_stats() {
+    auto& reg = AgentToolRegistry::Instance();
+
+    uint64_t invocations = reg.GetTotalInvocations();
+    uint64_t errors = reg.GetTotalErrors();
+    // After previous tests, should have some invocations
+    TEST_ASSERT(invocations > 0, "Invocation count > 0 after dispatches");
+    // We had at least one error (unknown tool, validation fail)
+    TEST_ASSERT(errors >= 1, "Error count tracks failures");
+    TEST_PASS("registry_stats");
+}
+
+void test_registry_system_prompt() {
+    auto& reg = AgentToolRegistry::Instance();
+
+    std::string prompt = reg.GetSystemPrompt("d:\\rawrxd", {"main.cpp", "ToolRegistry.h"});
+    TEST_ASSERT(!prompt.empty(), "System prompt is non-empty");
+    TEST_ASSERT(prompt.find("RawrXD Agent") != std::string::npos, "Prompt identifies as RawrXD Agent");
+    TEST_ASSERT(prompt.find("d:\\rawrxd") != std::string::npos, "Prompt includes CWD");
+    TEST_ASSERT(prompt.find("main.cpp") != std::string::npos, "Prompt lists open files");
+    TEST_PASS("registry_system_prompt");
+}
+
+// ==========================================================================
+// § 2. FIMPromptBuilder — Fill-in-Middle Prompt Construction
+// ==========================================================================
+
+void test_fim_build_basic() {
+    FIMPromptBuilder builder;
+    builder.SetFormat(FIMFormat::Qwen);
+    builder.SetMaxContextTokens(4096);
+
+    EditorContext ctx;
+    ctx.filename = "test.cpp";
+    ctx.filepath = "d:\\project\\test.cpp";
+    ctx.language = "cpp";
+    ctx.cursor_line = 2;
+    ctx.cursor_column = 0;
+    ctx.full_content = "#include <iostream>\n\nint main() { return 0; }\n";
+
+    auto result = builder.Build(ctx);
+    TEST_ASSERT(result.success, "FIM build succeeds");
+    TEST_ASSERT(!result.prompt.formatted_prompt.empty(), "Formatted prompt is non-empty");
+    TEST_ASSERT(result.prompt.estimated_tokens > 0, "Token estimate > 0");
+    TEST_PASS("fim_build_basic");
+}
+
+void test_fim_build_empty_content() {
+    FIMPromptBuilder builder;
+    EditorContext ctx;
+    ctx.full_content = "";
+    ctx.cursor_line = 0;
+
+    auto result = builder.Build(ctx);
+    TEST_ASSERT(!result.success, "Empty content returns failure");
+    TEST_ASSERT(result.error.find("Empty") != std::string::npos, "Error mentions empty");
+    TEST_PASS("fim_build_empty_content");
+}
+
+void test_fim_build_invalid_cursor() {
+    FIMPromptBuilder builder;
+    EditorContext ctx;
+    ctx.full_content = "some code";
+    ctx.cursor_line = -5;
+
+    auto result = builder.Build(ctx);
+    TEST_ASSERT(!result.success, "Negative cursor returns failure");
+    TEST_PASS("fim_build_invalid_cursor");
+}
+
+void test_fim_qwen_format_tokens() {
+    FIMPromptBuilder builder;
+    builder.SetFormat(FIMFormat::Qwen);
+    builder.SetMaxContextTokens(2048);
+
+    EditorContext ctx;
+    ctx.filename = "main.py";
+    ctx.filepath = "main.py";
+    ctx.language = "python";
+    ctx.cursor_line = 1;
+    ctx.cursor_column = 0;
+    ctx.full_content = "def hello():\n    pass\n";
+
+    auto result = builder.Build(ctx);
+    TEST_ASSERT(result.success, "Qwen FIM build succeeds");
+    // Qwen uses <|fim_prefix|> / <|fim_suffix|> / <|fim_middle|>
+    auto& fp = result.prompt.formatted_prompt;
+    TEST_ASSERT(fp.find("fim_prefix") != std::string::npos ||
+                fp.find("fim_suffix") != std::string::npos ||
+                fp.find("prefix") != std::string::npos,
+                "Formatted prompt contains FIM tokens");
+    TEST_PASS("fim_qwen_format_tokens");
+}
+
+void test_fim_build_from_parts() {
+    FIMPromptBuilder builder;
+    builder.SetFormat(FIMFormat::Qwen);
+    builder.SetMaxContextTokens(1024);
+
+    auto result = builder.BuildFromParts("int x = ", ";", "test.cpp");
+    TEST_ASSERT(result.success, "BuildFromParts succeeds");
+    TEST_ASSERT(result.prompt.prefix_lines >= 1, "Has prefix lines");
+    TEST_PASS("fim_build_from_parts");
+}
+
+void test_fim_prefix_ratio() {
+    FIMPromptBuilder builder;
+    builder.SetPrefixRatio(0.8f);
+    builder.SetMaxContextTokens(100);
+
+    // Create content large enough to require trimming
+    std::string bigContent;
+    for (int i = 0; i < 200; i++) bigContent += "line " + std::to_string(i) + "\n";
+
+    EditorContext ctx;
+    ctx.filename = "big.txt";
+    ctx.filepath = "big.txt";
+    ctx.cursor_line = 100;
+    ctx.cursor_column = 0;
+    ctx.full_content = bigContent;
+
+    auto result = builder.Build(ctx);
+    TEST_ASSERT(result.success, "Large content FIM build succeeds");
+    TEST_ASSERT(result.prompt.estimated_tokens <= 120, "Token count is reasonably bounded");
+    TEST_PASS("fim_prefix_ratio");
+}
+
+// ==========================================================================
+// § 3. NativeInferenceClient — Config Validation (no server needed)
+// ==========================================================================
+
+void test_ollama_config_defaults() {
+    NativeInferenceConfig cfg;
+    TEST_ASSERT(cfg.host == "127.0.0.1", "Default host is localhost");
+    TEST_ASSERT(cfg.port == 11434, "Default port is 11434");
+    TEST_ASSERT(!cfg.chat_model.empty(), "Default chat model is set");
+    TEST_ASSERT(!cfg.fim_model.empty(), "Default FIM model is set");
+    TEST_ASSERT(cfg.timeout_ms > 0, "Default timeout > 0");
+    TEST_PASS("ollama_config_defaults");
+}
+
+void test_ollama_client_construction() {
+    NativeInferenceConfig cfg;
     cfg.host = "127.0.0.1";
     cfg.port = 11434;
-    cfg.chat_model = "phi3:mini";
-    AgentOllamaClient client(cfg);
-    std::cout << "[InferenceTest] Using model: " << client.GetConfig().chat_model << "\n";
 
-    if (!client.TestConnection()) {
-        std::cerr << "[InferenceTest] Ollama connection failed (could not reach /api/version)\n";
-        auto models = client.ListModels();
-        std::cerr << "[InferenceTest] Ollama models returned: " << models.size() << "\n";
-        for (const auto& m : models) {
-            std::cerr << "  - " << m << "\n";
-        }
-        return 1;
-    }
-
-    auto version = client.GetVersion();
-    std::cout << "[InferenceTest] Ollama version: " << version << "\n";
-
-    std::vector<RawrXD::Agent::ChatMessage> msgs;
-    msgs.push_back({"system", "You are a helpful assistant."});
-    msgs.push_back({"user", prompt});
-
-    auto result = client.ChatSync(msgs, nlohmann::json::object());
-
-    if (!result.success) {
-        std::cerr << "[InferenceTest] ChatSync failed: " << result.error_message << "\n";
-        return 1;
-    }
-
-    std::cout << "[InferenceTest] Response: " << result.response << "\n";
-    std::cout << "[InferenceTest] Prompt tokens: " << result.prompt_tokens
-              << " completion tokens: " << result.completion_tokens << "\n";
-    if (result.response.empty()) {
-        std::cout << "[InferenceTest] WARNING: Response is empty string!\n";
-    }
-    return 0;
+    // Construction should not throw or crash
+    NativeInferenceClient client(cfg);
+    TEST_PASS("ollama_client_construction");
 }
 
-int main(int argc, char* argv[]) {
-    using namespace RawrXD::Quantum;
+void test_ollama_cancel_before_stream() {
+    NativeInferenceConfig cfg;
+    NativeInferenceClient client(cfg);
 
-    bool runAutoFix = false;
-    bool showHelp = false;
-    bool runInference = false;
-    std::string buildCommand;
-    std::string workspaceRoot = std::filesystem::current_path().string();
-    std::string telemetryOut = "healing_telemetry.json";
-    int requestedMaxAttempts = 3;
+    // Cancel when nothing is running should be safe
+    client.CancelStream();
+    TEST_PASS("ollama_cancel_before_stream");
+}
 
-    for (int i = 1; i < argc; ++i) {
-        if (argv[i] == nullptr) {
-            continue;
-        }
+// ==========================================================================
+// § 4. AgentOrchestrator — Session Management
+// ==========================================================================
 
-        if (std::strcmp(argv[i], "--help") == 0 || std::strcmp(argv[i], "-h") == 0) {
-            showHelp = true;
-        } else if (std::strcmp(argv[i], "--autofix") == 0) {
-            runAutoFix = true;
-        } else if (std::strcmp(argv[i], "--test-inference") == 0) {
-            runInference = true;
-        } else if (std::strcmp(argv[i], "--build-command") == 0) {
-            if (!consumeCommandValue(i, argc, argv, buildCommand)) {
-                std::cerr << "Missing value for --build-command\n";
-                return 2;
-            }
-        } else if (std::strcmp(argv[i], "--workspace-root") == 0 ||
-                   std::strcmp(argv[i], "--workspace") == 0) {
-            if (!consumeValue(i, argc, argv, workspaceRoot)) {
-                std::cerr << "Missing value for --workspace-root\n";
-                return 2;
-            }
-        } else if (std::strcmp(argv[i], "--telemetry-out") == 0) {
-            if (!consumeValue(i, argc, argv, telemetryOut)) {
-                std::cerr << "Missing value for --telemetry-out\n";
-                return 2;
-            }
-        } else if (std::strcmp(argv[i], "--max-attempts") == 0) {
-            std::string raw;
-            if (!consumeValue(i, argc, argv, raw)) {
-                std::cerr << "Missing value for --max-attempts\n";
-                return 2;
-            }
-            try {
-                requestedMaxAttempts = std::max(1, std::stoi(raw));
-            } catch (...) {
-                std::cerr << "Invalid integer for --max-attempts: " << raw << "\n";
-                return 2;
-            }
-        }
-    }
+void test_orchestrator_construction() {
+    // Should create without crashing
+    AgentOrchestrator orch;
+    TEST_PASS("orchestrator_construction");
+}
 
-    if (showHelp || (!runAutoFix && !runInference)) {
-        printUsage();
-        return showHelp ? 0 : 1;
-    }
+void test_orchestrator_config() {
+    AgentOrchestrator orch;
+    OrchestratorConfig cfg;
+    cfg.max_tool_rounds = 20;
+    cfg.max_conversation_tokens = 16000;
+    cfg.working_directory = "d:\\rawrxd";
+    cfg.auto_build_after_edit = true;
+    cfg.auto_diagnostics = true;
 
-    if (runInference) {
-        return runInferenceTest(argc, argv);
-    }
+    orch.SetConfig(cfg);
+    TEST_PASS("orchestrator_config");
+}
 
-    if (buildCommand.empty()) {
-        std::cerr << "Error: --build-command is required in --autofix mode\n";
-        return 2;
-    }
+void test_orchestrator_cancel() {
+    AgentOrchestrator orch;
 
-    auto started = std::chrono::steady_clock::now();
+    // Cancel when nothing is running should be safe
+    orch.Cancel();
+    TEST_PASS("orchestrator_cancel");
+}
 
-    ExecutionResult result{};
-    std::vector<std::string> prepassModified;
+// ==========================================================================
+// § 5. DiskRecoveryAgent — C++ Wrapper (no hardware required)
+// ==========================================================================
 
-    auto [preExit, preOutput] = runBuildWithCapture(buildCommand, workspaceRoot);
-    if (preExit == 0) {
-        result = ExecutionResult::ok("Build clean — no fixes needed");
-        result.agentCycleCount = 1;
-        result.todoItemsGenerated = 0;
-        result.todoItemsCompleted = 0;
-        result.iterationCount = 0;
-    } else {
-        bool prepassApplied = removeIntentionalDemoBreakBlock(workspaceRoot, prepassModified);
-        if (prepassApplied) {
-            auto [postExit, postOutput] = runBuildWithCapture(buildCommand, workspaceRoot);
-            if (postExit == 0) {
-                result.success = true;
-                result.detail = "Deterministic prepass repaired intentional demo break";
-                result.iterationCount = static_cast<int>(prepassModified.size());
-                result.agentCycleCount = 1;
-                result.todoItemsGenerated = 1;
-                result.todoItemsCompleted = 1;
-                result.filesModified = prepassModified;
-            } else {
-                result = ExecutionResult::error(
-                    "Deterministic prepass applied but build still failing\n" + postOutput);
-            }
-        }
+void test_recovery_agent_construction() {
+    DiskRecoveryAgent agent;
+    TEST_ASSERT(!agent.IsInitialized(), "Agent starts uninitialized");
+    TEST_ASSERT(!agent.IsKeyExtracted(), "No key extracted on construction");
+    TEST_ASSERT(agent.GetBridgeType() == BridgeType::Unknown, "Bridge type is Unknown");
+    TEST_PASS("recovery_agent_construction");
+}
 
-        if (!result.success) {
-            QuantumOrchestrator& orchestrator = globalQuantumOrchestrator();
-            ExecutionStrategy strategy = ExecutionStrategy::quantumStrategy();
-            strategy.bypassTimeLimits = false;
-            orchestrator.setStrategy(strategy);
+void test_recovery_agent_stats_uninitialized() {
+    DiskRecoveryAgent agent;
+    auto stats = agent.GetStats();
+    TEST_ASSERT(stats.goodSectors == 0, "Zero good sectors when uninitialized");
+    TEST_ASSERT(stats.badSectors == 0, "Zero bad sectors when uninitialized");
+    TEST_ASSERT(stats.currentLBA == 0, "Zero current LBA when uninitialized");
+    TEST_ASSERT(stats.totalSectors == 0, "Zero total sectors when uninitialized");
+    TEST_PASS("recovery_agent_stats_uninitialized");
+}
 
-            result = orchestrator.executeAutoFix(
-                buildCommand,
-                workspaceRoot,
-                requestedMaxAttempts);
+void test_recovery_agent_abort_safe() {
+    DiskRecoveryAgent agent;
+    // Abort on uninitialized agent should be safe (no-op)
+    agent.Abort();
+    TEST_PASS("recovery_agent_abort_safe");
+}
 
-            for (const auto& modified : prepassModified) {
-                if (std::find(result.filesModified.begin(), result.filesModified.end(), modified) ==
-                    result.filesModified.end()) {
-                    result.filesModified.push_back(modified);
-                }
-            }
-        }
-    }
+void test_recovery_agent_move_semantics() {
+    DiskRecoveryAgent agent1;
+    DiskRecoveryAgent agent2 = std::move(agent1);
+    TEST_ASSERT(!agent2.IsInitialized(), "Moved-to agent has same state");
+    TEST_PASS("recovery_agent_move_semantics");
+}
 
-    std::cout << "[RawrXD] executeAutoFix start\n";
-    std::cout << "[RawrXD] Build command: " << buildCommand << "\n";
-    std::cout << "[RawrXD] Workspace: " << workspaceRoot << "\n";
+void test_recovery_stats_progress() {
+    RecoveryStats stats;
+    stats.goodSectors = 100;
+    stats.badSectors = 5;
+    stats.currentLBA = 500;
+    stats.totalSectors = 1000;
 
-    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now() - started).count();
+    double pct = stats.ProgressPercent();
+    TEST_ASSERT(pct >= 49.9 && pct <= 50.1, "ProgressPercent computes correctly");
 
-    nlohmann::json telemetry = nlohmann::json::object();
-    const int attemptCount = result.agentCycleCount > 0 ? result.agentCycleCount : 1;
-    telemetry["attemptCount"] = attemptCount;
-    telemetry["requestedMaxAttempts"] = requestedMaxAttempts;
-    telemetry["totalDiagnosticsGenerated"] = result.todoItemsGenerated;
-    telemetry["totalDiagnosticsHandled"] = result.iterationCount;
-    telemetry["totalFixesStaged"] = result.todoItemsCompleted;
-    telemetry["finalStatus"] = result.success ? "success" : "failure";
-    telemetry["success"] = result.success;
-    telemetry["durationMs"] = static_cast<long long>(elapsed);
-    telemetry["detail"] = result.detail;
-    telemetry["filesModified"] = result.filesModified;
+    RecoveryStats empty;
+    empty.totalSectors = 0;
+    empty.currentLBA = 0;
+    TEST_ASSERT(empty.ProgressPercent() == 0.0, "Zero totalSectors gives 0%");
+    TEST_PASS("recovery_stats_progress");
+}
 
-    if (!telemetryOut.empty()) {
-        std::filesystem::path telemetryPath(telemetryOut);
-        if (telemetryPath.has_parent_path() && !telemetryPath.parent_path().empty()) {
-            std::error_code ec;
-            std::filesystem::create_directories(telemetryPath.parent_path(), ec);
-        }
+void test_recovery_result_factories() {
+    auto ok = RecoveryResult::ok("Success");
+    TEST_ASSERT(ok.success, "ok() returns success=true");
+    TEST_ASSERT(ok.detail == "Success", "ok() detail matches");
+    TEST_ASSERT(ok.errorCode == 0, "ok() errorCode is 0");
 
-        std::ofstream out(telemetryOut, std::ios::out | std::ios::trunc);
-        if (out.is_open()) {
-            out << telemetry.dump(2);
-            out.flush();
-        } else {
-            std::cerr << "[RawrXD] Warning: failed to write telemetry file: "
-                      << telemetryOut << "\n";
-        }
-    }
+    auto err = RecoveryResult::error("Failed", 42);
+    TEST_ASSERT(!err.success, "error() returns success=false");
+    TEST_ASSERT(err.errorCode == 42, "error() preserves errorCode");
+    TEST_PASS("recovery_result_factories");
+}
 
-    std::cout << "[RawrXD] Result: " << (result.success ? "SUCCESS" : "FAILURE") << "\n";
-    std::cout << "[RawrXD] Attempts used: " << attemptCount << "\n";
-    std::cout << "[RawrXD] Diagnostics generated: " << result.todoItemsGenerated << "\n";
-    std::cout << "[RawrXD] Diagnostics handled: " << result.iterationCount << "\n";
-    std::cout << "[RawrXD] Fixes staged: " << result.todoItemsCompleted << "\n";
-    std::cout << "[RawrXD] Duration(ms): " << elapsed << "\n";
+// ==========================================================================
+// § 6. ToolExecResult — Factory Pattern Validation
+// ==========================================================================
 
-    return result.success ? 0 : 1;
+void test_tool_exec_result_ok() {
+    auto r = ToolExecResult::ok("output data", 12.5);
+    TEST_ASSERT(r.success, "ok() is successful");
+    TEST_ASSERT(r.output == "output data", "ok() preserves output");
+    TEST_ASSERT(r.exit_code == 0, "ok() exit_code is 0");
+    TEST_ASSERT(r.elapsed_ms == 12.5, "ok() preserves elapsed_ms");
+    TEST_PASS("tool_exec_result_ok");
+}
+
+void test_tool_exec_result_error() {
+    auto r = ToolExecResult::error("bad things", -3);
+    TEST_ASSERT(!r.success, "error() is failure");
+    TEST_ASSERT(r.output == "bad things", "error() preserves message");
+    TEST_ASSERT(r.exit_code == -3, "error() preserves exit code");
+    TEST_PASS("tool_exec_result_error");
+}
+
+// ==========================================================================
+// § 7. Disk Recovery Tool Integration (via ToolRegistry dispatch)
+// ==========================================================================
+
+void test_disk_recovery_tool_stats_action() {
+    auto& reg = AgentToolRegistry::Instance();
+
+    json args;
+    args["action"] = "stats";
+    auto result = reg.Dispatch("disk_recovery", args);
+    // Should succeed even without hardware (returns zeroed stats)
+    TEST_ASSERT(result.success, "disk_recovery stats succeeds without hardware");
+    TEST_ASSERT(result.output.find("Good:") != std::string::npos, "Stats output has Good field");
+    TEST_PASS("disk_recovery_tool_stats_action");
+}
+
+void test_disk_recovery_tool_invalid_action() {
+    auto& reg = AgentToolRegistry::Instance();
+
+    json args;
+    args["action"] = "invalid_blah";
+    auto result = reg.Dispatch("disk_recovery", args);
+    TEST_ASSERT(!result.success, "Invalid action returns failure");
+    TEST_ASSERT(result.output.find("Unknown action") != std::string::npos, "Error mentions unknown");
+    TEST_PASS("disk_recovery_tool_invalid_action");
+}
+
+void test_disk_recovery_tool_missing_action() {
+    auto& reg = AgentToolRegistry::Instance();
+
+    json args;
+    auto result = reg.Dispatch("disk_recovery", args);
+    TEST_ASSERT(!result.success, "Missing action returns failure");
+    TEST_PASS("disk_recovery_tool_missing_action");
+}
+
+// ==========================================================================
+// Test Runner
+// ==========================================================================
+
+int main() {
+    test_xmacro_enum_count();
+    test_registry_singleton();
+    test_registry_list_tools();
+    test_registry_schemas_valid();
+    test_registry_dispatch_read_file();
+    test_registry_dispatch_write_file();
+    test_registry_dispatch_unknown_tool();
+    test_registry_validation_missing_required();
+    test_registry_stats();
+    test_registry_system_prompt();
+
+    test_fim_build_basic();
+    test_fim_build_empty_content();
+    test_fim_build_invalid_cursor();
+    test_fim_qwen_format_tokens();
+    test_fim_build_from_parts();
+    test_fim_prefix_ratio();
+
+    test_ollama_config_defaults();
+    test_ollama_client_construction();
+    test_ollama_cancel_before_stream();
+
+    test_orchestrator_construction();
+    test_orchestrator_config();
+    test_orchestrator_cancel();
+
+    test_recovery_agent_construction();
+    test_recovery_agent_stats_uninitialized();
+    test_recovery_agent_abort_safe();
+    test_recovery_agent_move_semantics();
+    test_recovery_stats_progress();
+    test_recovery_result_factories();
+
+    test_tool_exec_result_ok();
+    test_tool_exec_result_error();
+
+    test_disk_recovery_tool_stats_action();
+    test_disk_recovery_tool_invalid_action();
+    test_disk_recovery_tool_missing_action();
+
+    return g_testsFailed > 0 ? 1 : 0;
 }

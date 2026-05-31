@@ -225,7 +225,7 @@ link.exe /OUT:test.exe \
 // 1. Standard LLM response
 // 2. Sovereign cycle status appended
 
-// Example output:
+// Output:
 /*
 User: Hello
 Assistant: Hello! I'm RawrXD, your autonomous IDE. How can I help?

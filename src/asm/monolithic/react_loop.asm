@@ -66,8 +66,12 @@ PUBLIC ReAct_Abort
 ; Tool name strings (null-terminated)
 szTool_read_file    DB "read_file",      0
 szTool_write_file   DB "write_file",     0
+szTool_replace_in_file DB "replace_in_file", 0
 szTool_list_dir     DB "list_dir",       0
+szTool_list_directory DB "list_directory", 0
 szTool_run_command  DB "run_command",    0
+szTool_execute_command DB "execute_command", 0
+szTool_shell        DB "shell",          0
 szTool_search_code  DB "search_code",   0
 szTool_get_diag     DB "get_diagnostics",0
 szTool_get_symbols  DB "get_symbols",   0
@@ -863,6 +867,17 @@ PC_NotReadFile:
     jmp     PC_FindArgs
 PC_NotWriteFile:
 
+    ; replace_in_file
+    mov     rcx, rbx
+    lea     rdx, szTool_replace_in_file
+    call    StrCmp_Internal
+    test    eax, eax
+    jnz     PC_NotReplaceInFile
+    mov     byte ptr [rdi], '"'
+    mov     dword ptr [rsp+28h], TOOL_ID_WRITE_FILE
+    jmp     PC_FindArgs
+PC_NotReplaceInFile:
+
     ; list_dir
     mov     rcx, rbx
     lea     rdx, szTool_list_dir
@@ -874,6 +889,17 @@ PC_NotWriteFile:
     jmp     PC_FindArgs
 PC_NotListDir:
 
+    ; list_directory
+    mov     rcx, rbx
+    lea     rdx, szTool_list_directory
+    call    StrCmp_Internal
+    test    eax, eax
+    jnz     PC_NotListDirectory
+    mov     byte ptr [rdi], '"'
+    mov     dword ptr [rsp+28h], TOOL_ID_LIST_DIR
+    jmp     PC_FindArgs
+PC_NotListDirectory:
+
     ; run_command
     mov     rcx, rbx
     lea     rdx, szTool_run_command
@@ -884,6 +910,28 @@ PC_NotListDir:
     mov     dword ptr [rsp+28h], TOOL_ID_RUN_CMD
     jmp     PC_FindArgs
 PC_NotRunCmd:
+
+    ; execute_command
+    mov     rcx, rbx
+    lea     rdx, szTool_execute_command
+    call    StrCmp_Internal
+    test    eax, eax
+    jnz     PC_NotExecuteCommand
+    mov     byte ptr [rdi], '"'
+    mov     dword ptr [rsp+28h], TOOL_ID_RUN_CMD
+    jmp     PC_FindArgs
+PC_NotExecuteCommand:
+
+    ; shell
+    mov     rcx, rbx
+    lea     rdx, szTool_shell
+    call    StrCmp_Internal
+    test    eax, eax
+    jnz     PC_NotShell
+    mov     byte ptr [rdi], '"'
+    mov     dword ptr [rsp+28h], TOOL_ID_RUN_CMD
+    jmp     PC_FindArgs
+PC_NotShell:
 
     ; search_code
     mov     rcx, rbx

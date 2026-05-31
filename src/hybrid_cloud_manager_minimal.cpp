@@ -28,14 +28,14 @@ using namespace RawrXD;
 HybridCloudManager::HybridCloudManager(void* /*parent*/) {
     // Default local provider (Ollama) always available
     CloudProvider ollama;
-    ollama.providerId   = "ollama";
+    ollama.providerId   = "native";
     ollama.name         = "Ollama Local";
-    ollama.endpoint     = "http://127.0.0.1:11434";
+    ollama.endpoint     = "http://127.0.0.1:11435";
     ollama.isEnabled    = true;
     ollama.isHealthy    = true;
     ollama.costPerRequest = 0.0;
     ollama.averageLatency = 120.0;
-    providers["ollama"] = ollama;
+    providers["native"] = ollama;
 
     preferLocal           = true;
     cloudFallbackEnabled  = true;
@@ -224,7 +224,7 @@ HybridExecution HybridCloudManager::planExecution(const ExecutionRequest& reques
     // Cost gate: prefer local when cost limit would be exceeded
     if (!cloudFallbackEnabled || preferLocal) {
         plan.useCloud          = false;
-        plan.selectedProvider  = "ollama";
+        plan.selectedProvider  = "native";
         plan.selectedModel     = "local";
         plan.reasoning         = "Local preferred";
         plan.estimatedCost     = 0.0;
@@ -235,7 +235,7 @@ HybridExecution HybridCloudManager::planExecution(const ExecutionRequest& reques
 
     // Choose healthiest cloud provider
     for (const auto& [id, prov] : providers) {
-        if (prov.isEnabled && prov.isHealthy && id != "ollama") {
+        if (prov.isEnabled && prov.isHealthy && id != "native") {
             plan.useCloud          = true;
             plan.selectedProvider  = id;
             plan.selectedModel     = "default";
@@ -249,7 +249,7 @@ HybridExecution HybridCloudManager::planExecution(const ExecutionRequest& reques
 
     // Fallback to local
     plan.useCloud         = false;
-    plan.selectedProvider = "ollama";
+    plan.selectedProvider = "native";
     plan.selectedModel    = "local";
     plan.reasoning        = "No healthy cloud providers; using local";
     plan.estimatedCost    = 0.0;
@@ -368,7 +368,7 @@ ExecutionResult HybridCloudManager::executeOnCloud(const ExecutionRequest& r,
 }
 
 ExecutionResult HybridCloudManager::executeOnOllama(const ExecutionRequest& r) {
-    return executeCloud(r, "ollama", "llama3");
+    return executeCloud(r, "native", "llama3");
 }
 
 ExecutionResult HybridCloudManager::executeOnHuggingFace(const ExecutionRequest& r,
@@ -400,14 +400,14 @@ bool HybridCloudManager::shouldUseCloudExecution(const ExecutionRequest& request
     if (request.maxTokens > 32768) return true;             // Very large request → cloud
     if (costMetrics.todayCostUSD >= dailyCostLimit) return false;
     for (const auto& kv : providers) {
-        if (kv.second.isEnabled && kv.second.isHealthy && kv.first != "ollama") return true;
+        if (kv.second.isEnabled && kv.second.isHealthy && kv.first != "native") return true;
     }
     return false;
 }
 
 std::string HybridCloudManager::selectOptimalProvider(const ExecutionRequest& request) {
     double bestScore = -1.0;
-    std::string best = "ollama";
+    std::string best = "native";
     for (const auto& kv : providers) {
         if (!kv.second.isEnabled || !kv.second.isHealthy) continue;
         double score = calculateProviderScore(kv.second, request);
@@ -623,14 +623,127 @@ void HybridCloudManager::processPendingRequests() {
 // Event notifications (no-op — no Qt signals here)
 // ============================================================================
 
-void HybridCloudManager::executionStarted(const std::string& /*requestId*/) {}
-void HybridCloudManager::executionComplete(const ExecutionResult& /*result*/) {}
-void HybridCloudManager::providerHealthChanged(const std::string& /*providerId*/, bool /*isHealthy*/) {}
-void HybridCloudManager::costLimitReached(const std::string& /*limitType*/) {}
-void HybridCloudManager::failoverTriggered(const std::string& /*from*/, const std::string& /*to*/) {}
-void HybridCloudManager::cloudSwitched(bool /*usingCloud*/) {}
-void HybridCloudManager::errorOccurred(const std::string& /*error*/) {}
-void HybridCloudManager::healthCheckCompleted() {}
+void HybridCloudManager::executionStarted(const std::string& requestId) {
+    // Log execution start
+    ExecutionLogEntry entry;
+    entry.requestId = requestId;
+    entry.startTime = std::chrono::steady_clock::now();
+    entry.status = "running";
+    execution_log_[requestId] = entry;
+}
+
+void HybridCloudManager::executionComplete(const ExecutionResult& result) {
+    // Update execution log with completion status
+    auto it = execution_log_.find(result.requestId);
+    if (it != execution_log_.end()) {
+        it->second.endTime = std::chrono::steady_clock::now();
+        it->second.status = result.success ? "completed" : "failed";
+        it->second.result = result;
+    }
+    
+    // Update provider statistics
+    if (providers.count(result.providerId) > 0) {
+        providers[result.providerId].totalRequests++;
+        if (result.success) {
+            providers[result.providerId].successfulRequests++;
+        } else {
+            providers[result.providerId].failedRequests++;
+        }
+        // Update rolling average latency
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+            it->second.endTime - it->second.startTime).count();
+        providers[result.providerId].averageLatency = 
+            (providers[result.providerId].averageLatency * 0.9) + (elapsed * 0.1);
+    }
+}
+
+void HybridCloudManager::providerHealthChanged(const std::string& providerId, bool isHealthy) {
+    if (providers.count(providerId) > 0) {
+        providers[providerId].isHealthy = isHealthy;
+        providers[providerId].lastHealthCheck = std::chrono::steady_clock::now();
+        
+        if (!isHealthy) {
+            // Trigger failover if this was the active provider
+            if (currentlyUsingCloud && activeProviderId_ == providerId) {
+                failoverTriggered(providerId, "");
+            }
+        }
+    }
+}
+
+void HybridCloudManager::costLimitReached(const std::string& limitType) {
+    // Log cost limit breach and disable cloud fallback
+    cloudFallbackEnabled = false;
+    currentlyUsingCloud = false;
+    
+    // Notify via callback if registered
+    if (costLimitCallback_) {
+        costLimitCallback_(limitType);
+    }
+}
+
+void HybridCloudManager::failoverTriggered(const std::string& from, const std::string& to) {
+    // Attempt to find alternative provider
+    std::string bestAlternative;
+    double bestLatency = std::numeric_limits<double>::max();
+    
+    for (const auto& [id, provider] : providers) {
+        if (id != from && provider.isHealthy && provider.isEnabled) {
+            if (provider.averageLatency < bestLatency) {
+                bestLatency = provider.averageLatency;
+                bestAlternative = id;
+            }
+        }
+    }
+    
+    if (!bestAlternative.empty()) {
+        activeProviderId_ = bestAlternative;
+        currentlyUsingCloud = (bestAlternative != "native");
+    } else {
+        // No alternatives available, disable cloud
+        currentlyUsingCloud = false;
+        activeProviderId_ = "native";
+    }
+}
+
+void HybridCloudManager::cloudSwitched(bool usingCloud) {
+    currentlyUsingCloud = usingCloud;
+    
+    if (usingCloud) {
+        // Verify cloud provider is healthy before switching
+        if (!activeProviderId_.empty() && providers.count(activeProviderId_) > 0) {
+            if (!providers[activeProviderId_].isHealthy) {
+                // Revert to local
+                currentlyUsingCloud = false;
+                activeProviderId_ = "native";
+            }
+        }
+    }
+}
+
+void HybridCloudManager::errorOccurred(const std::string& error) {
+    // Log error and increment failure count
+    error_count_++;
+    last_error_ = error;
+    
+    // If too many errors, disable cloud temporarily
+    if (error_count_ > maxRetries * 2) {
+        cloudFallbackEnabled = false;
+        currentlyUsingCloud = false;
+        activeProviderId_ = "native";
+    }
+}
+
+void HybridCloudManager::healthCheckCompleted() {
+    // Reset error count on successful health check
+    error_count_ = 0;
+    
+    // Schedule next health check
+    if (healthCheckIntervalMs > 0) {
+        // In production: set timer for next health check
+        fprintf(stderr, "[HybridCloudManager] Health check completed, next in %d ms\n", healthCheckIntervalMs);
+    }
+}
 
 // ============================================================================
 // Private helpers
@@ -638,6 +751,11 @@ void HybridCloudManager::healthCheckCompleted() {}
 
 void HybridCloudManager::setupDefaultProviders() {
     // Ollama already added in constructor
+    // Ensure default providers are registered
+    if (m_providers.empty()) {
+        addProvider(std::make_shared<OllamaProvider>());
+    }
+    fprintf(stderr, "[HybridCloudManager] Default providers configured\n");
 }
 
 ExecutionResult HybridCloudManager::sendCloudRequest(const std::string& providerId,
@@ -704,7 +822,7 @@ void HybridCloudManager::recordCost(const std::string& providerId, double cost) 
 
 void HybridCloudManager::updateCostMetrics(const ExecutionResult& result) {
     ++costMetrics.totalRequests;
-    if (result.executionLocation == "local" || result.executionLocation == "ollama") {
+    if (result.executionLocation == "local" || result.executionLocation == "native") {
         ++costMetrics.localRequests;
     } else {
         ++costMetrics.cloudRequests;
@@ -740,7 +858,7 @@ std::string HybridCloudManager::getNextFallbackProvider(const std::string& curre
     for (const auto& kv : providers) {
         if (kv.first != current && kv.second.isEnabled && kv.second.isHealthy) return kv.first;
     }
-    return "ollama";
+    return "native";
 }
 
 bool HybridCloudManager::shouldRetry(int attemptNumber, const std::string& /*errorType*/) {

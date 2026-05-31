@@ -1,0 +1,97 @@
+﻿{
+    "summary":  {
+                    "timestamp_utc":  "2026-04-19T05:33:29.7045681Z",
+                    "repo_root":  "D:\\rawrxd",
+                    "build_dir":  "D:\\rawrxd\\build-win32",
+                    "model_roots":  [
+                                        "D:\\"
+                                    ],
+                    "scanned_models":  1,
+                    "successful_models":  1,
+                    "mapped_window_mb":  64,
+                    "one_addition_window_sweep_mb":  16,
+                    "actual_max_streamed":  {
+                                                "file":  "D:\\gptoss20b.gguf",
+                                                "size_bytes":  13793422144,
+                                                "size_gib":  12.846,
+                                                "largest_zone_bytes":  25539085312,
+                                                "largest_zone_gib":  23.785,
+                                                "observed_peak_bytes":  231543040,
+                                                "observed_peak_gib":  0.216,
+                                                "context_length":  131072,
+                                                "tps":  ""
+                                            },
+                    "estimated_current_ceiling":  {
+                                                      "file":  "D:\\gptoss20b.gguf",
+                                                      "estimated_max_bytes":  20840496399,
+                                                      "estimated_max_gib":  19.409
+                                                  },
+                    "estimated_one_addition_ceiling":  {
+                                                           "file":  "D:\\gptoss20b.gguf",
+                                                           "estimated_max_bytes":  7931101552852,
+                                                           "estimated_max_gib":  7386.414,
+                                                           "delta_bytes":  7910261056453,
+                                                           "delta_gib":  7367.005,
+                                                           "one_addition":  "mapped_window_view",
+                                                           "mapped_window_gib":  0.062
+                                                       },
+                    "estimated_best_one_addition_ceiling":  {
+                                                                "file":  "D:\\gptoss20b.gguf",
+                                                                "estimated_max_bytes":  31724406211411,
+                                                                "estimated_max_gib":  29545.656,
+                                                                "delta_bytes":  31703565715012,
+                                                                "delta_gib":  29526.246,
+                                                                "one_addition":  "mapped_window_view",
+                                                                "best_window_mb":  16
+                                                            }
+                },
+    "rows":  [
+                 {
+                     "File":  "D:\\gptoss20b.gguf",
+                     "SizeBytes":  13793422144,
+                     "SizeGiB":  12.846,
+                     "StreamExit":  0,
+                     "StreamPhase":  "ok",
+                     "Streamable":  true,
+                     "Arch":  "",
+                     "Layers":  24,
+                     "ContextLength":  131072,
+                     "Embed":  2880,
+                     "Vocab":  201088,
+                     "ZoneCount":  5,
+                     "LargestZoneBytes":  25539085312,
+                     "LargestZoneGiB":  23.785,
+                     "LargestZoneName":  "layers_0",
+                     "LargestTensorBytes":  1061683200,
+                     "LargestTensorGiB":  0.989,
+                     "ObservedPeakBytes":  231543040,
+                     "ObservedPeakGiB":  0.216,
+                     "WorkingBudgetBytes":  38587031552,
+                     "WorkingBudgetGiB":  35.937,
+                     "EstimatedCurrentMaxBytes":  20840496399,
+                     "EstimatedCurrentMaxGiB":  19.409,
+                     "OneAddition":  "mapped_window_view",
+                     "OneAdditionWindowBytes":  67108864,
+                     "OneAdditionWindowGiB":  0.062,
+                     "EstimatedOneAdditionMaxBytes":  7931101552852,
+                     "EstimatedOneAdditionMaxGiB":  7386.414,
+                     "EstimatedDeltaBytes":  7910261056453,
+                     "EstimatedDeltaGiB":  7367.005,
+                     "BestOneAdditionWindowMB":  16,
+                     "BestOneAdditionMaxBytes":  31724406211411,
+                     "BestOneAdditionMaxGiB":  29545.656,
+                     "BestOneAdditionDeltaBytes":  31703565715012,
+                     "BestOneAdditionDeltaGiB":  29526.246,
+                     "OneAdditionSweepMB":  "16",
+                     "OpenMs":  136.925,
+                     "ProbeMs":  117.39,
+                     "StreamDetail":  "streamability benchmark completed",
+                     "TpsExit":  "",
+                     "TpsPhase":  "",
+                     "Tps":  "",
+                     "TpsWallS":  "",
+                     "TpsSteps":  "",
+                     "TpsDetail":  ""
+                 }
+             ]
+}

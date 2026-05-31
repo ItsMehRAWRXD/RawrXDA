@@ -5,7 +5,7 @@
 #include "dequantize.hpp"
 #include "ggml-sycl/common.hpp"
 #include "ggml-sycl/presets.hpp"
-#include "ggml.h"
+#include "ggml_rxd_internal.h"
 
 
 static void cpy_1_f32_f32(const char * cxi, char * cdsti) {

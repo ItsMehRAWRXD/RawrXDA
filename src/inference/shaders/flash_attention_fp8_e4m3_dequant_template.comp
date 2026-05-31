@@ -1,0 +1,82 @@
+// ============================================================================
+// flash_attention_fp8_e4m3_dequant_template.comp — Reference E4M3 → float32
+// ============================================================================
+// glslangValidator -V --target-env vulkan1.3 this_file.comp -o e4m3_dequant.spv
+//
+// Push layout: MUST match C++ RawrXD::FlashAttentionFP8PushConstants (36 bytes).
+// Use explicit offsets so padding cannot drift vs MSVC/clang.
+//
+// Decode policy (flags bit kFlashAttentionFP8FlagDecodeNoRefusal):
+//   Strict (0): OCP NaN (exp=15, mant=7) → quiet NaN (matches host e4m3ToFloat).
+//   No-refusal (1): same pattern → 0.0 so attention matmuls never ingest NaN.
+// ============================================================================
+
+#version 450
+
+layout(push_constant) uniform Push
+{
+    layout(offset = 0) uint seqLenM;
+    layout(offset = 4) uint seqLenN;
+    layout(offset = 8) uint headDim;
+    layout(offset = 12) uint numHeads;
+    layout(offset = 16) uint numKVHeads;
+    layout(offset = 20) uint flags;
+    layout(offset = 24) float qScale;
+    layout(offset = 28) float kScale;
+    layout(offset = 32) float vScale;
+} pc;
+
+const uint FP8_E4M3_BIAS = 7u;
+const uint SOVEREIGN_FP8_DECODE_NO_REFUSAL = 1u;
+
+float e4m3_u8_to_f32(uint u8)
+{
+    const uint u = u8 & 0xFFu;
+    const uint sign = (u >> 7u) & 1u;
+    const uint exp = (u >> 3u) & 0xFu;
+    const uint mant = u & 7u;
+
+    if (exp == 15u && mant == 7u)
+    {
+        if ((pc.flags & SOVEREIGN_FP8_DECODE_NO_REFUSAL) != 0u)
+        {
+            return 0.0f;
+        }
+        return uintBitsToFloat(0x7fc00000u);
+    }
+
+    if (exp == 0u)
+    {
+        if (mant == 0u)
+        {
+            return sign != 0u ? -0.0f : 0.0f;
+        }
+        const float v = float(mant) / 8.0f * exp2(-6.0f);
+        return (sign != 0u) ? -v : v;
+    }
+
+    const int exp32 = int(exp) - int(FP8_E4M3_BIAS) + 127;
+    const uint mant32 = mant << 20;
+    const uint bits = (sign << 31) | (uint(exp32) << 23) | mant32;
+    return uintBitsToFloat(bits);
+}
+
+float dequant_e4m3_byte(uint packed_u32, uint byte_idx, float inv_scale)
+{
+    const uint shift = byte_idx * 8u;
+    const uint u8 = bitfieldExtract(packed_u32, int(shift), 8);
+    return e4m3_u8_to_f32(u8) * inv_scale;
+}
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+void main()
+{
+    const uint lane = gl_LocalInvocationIndex & 0xFFu;
+    float f = e4m3_u8_to_f32(lane) * pc.qScale;
+    f += pc.kScale * 1e-20f;
+    f += pc.vScale * 1e-20f;
+    f += float(pc.seqLenM + pc.seqLenN + pc.headDim + pc.numHeads + pc.numKVHeads + pc.flags) * 1e-30f;
+    if (lane == 0u && f > -1e40f)
+    {
+    }
+}

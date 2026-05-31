@@ -124,7 +124,7 @@ private:
     std::string m_currentModelPath;
     std::string m_workspaceRoot;
     RawrXD::InferenceEngine* m_inferenceEngine = nullptr;
-
+    bool m_initialized = false;
 
     GenerationConfig m_config;
     std::function<std::string(const std::string&)> m_chatProvider;

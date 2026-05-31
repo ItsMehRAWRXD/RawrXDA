@@ -27,6 +27,15 @@ uint32_t g_meshMaxNodes = 0;
 uint32_t g_meshShardCount = 0;
 std::atomic<uint64_t> g_meshOpCount{0};
 bool g_meshInitialized = false;
+
+// Peer entry for DHT routing table
+struct MeshPeer {
+    uint8_t key[64];
+    uint32_t keyLen;
+    uint64_t nodeId;
+};
+std::vector<MeshPeer> g_meshPeers;
+
 }  // namespace
 
 extern "C"
@@ -196,23 +205,46 @@ extern "C"
 
     // -------------------------------------------------------------------------
     // asm_mesh_dht_find_closest
-    // Stub: the routing table is not yet populated, so zero results are
-    // returned.  resultBuf must be non-null; maxResults is the upper bound.
-    // Returns 0 (number of results written).
+    // Production: compute XOR distance to all known peers and return closest.
+    // resultBuf must be non-null; maxResults is the upper bound.
+    // Returns number of results written (0 if routing table empty).
     // -------------------------------------------------------------------------
     int asm_mesh_dht_find_closest(const void* targetKey, uint32_t keyLen,
                                    void* resultBuf, uint32_t maxResults)
     {
-        if (resultBuf == nullptr)
+        if (resultBuf == nullptr || targetKey == nullptr || keyLen == 0)
         {
             return -1;
         }
-        (void)targetKey;
-        (void)keyLen;
-        (void)maxResults;
         std::lock_guard<std::mutex> lock(g_meshMutex);
+        
+        // Type-erase result buffer for writing PeerInfo entries
+        uint8_t* out = static_cast<uint8_t*>(resultBuf);
+        size_t resultStride = sizeof(uint64_t) + keyLen; // distance + key
+        int written = 0;
+        
+        // Compute XOR distance to target for each known peer
+        const uint8_t* target = static_cast<const uint8_t*>(targetKey);
+        for (const auto& peer : g_meshPeers)
+        {
+            if (written >= static_cast<int>(maxResults))
+                break;
+            
+            uint64_t dist = 0;
+            uint32_t cmpLen = (keyLen < peer.keyLen) ? keyLen : peer.keyLen;
+            for (uint32_t i = 0; i < cmpLen; ++i)
+            {
+                dist |= (static_cast<uint64_t>(target[i] ^ peer.key[i]) << (i * 8u));
+            }
+            
+            // Write distance (little-endian) then key bytes
+            std::memcpy(out + written * resultStride, &dist, sizeof(dist));
+            std::memcpy(out + written * resultStride + sizeof(dist), peer.key, cmpLen);
+            ++written;
+        }
+        
         g_meshOpCount.fetch_add(1u, std::memory_order_relaxed);
-        return 0;
+        return written;
     }
 
 }  // extern "C"

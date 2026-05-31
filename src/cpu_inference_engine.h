@@ -10,15 +10,18 @@
 #include <vector>
 
 
+#include "core/swarm_scheduler.hpp"
 #include "inference_engine.h"
 #include "plugins/MemoryPlugin.hpp"
 #include "rawrxd_inference.h"
+#include "cpu_inference_measurement_integration.h"
+
 
 
 namespace RawrXD
 {
 
-// Tensor data types — values match ggml_type from GGUF spec
+// Tensor data types — values match ggml_rxd_type from GGUF spec
 enum class TensorType
 {
     F32 = 0,    // 32-bit float
@@ -119,6 +122,25 @@ class CPUInferenceEngine : public InferenceEngine
     /** Single UTF-8 line for status bar / overlays: MoE pack + prepack counters (empty if no model). */
     [[nodiscard]] std::string MoEPackHudStatusLineUtf8() const;
 
+    /** Circular SDMA telemetry for Gemini-scale (1.8T+) kinetic streaming validation. */
+    struct SDMAKineticMetrics
+    {
+        std::uint64_t flip_count = 0;        ///< Window swap count (monotonic)
+        std::uint64_t wait_cycles = 0;       ///< RDTSC cycles spent in hardware sync
+        std::uint64_t cache_hits = 0;        ///< EMA predictor correct
+        std::uint64_t cache_misses = 0;      ///< EMA predictor miss (SDMA needed)
+        double cache_hit_rate = 0.0;         ///< hits / (hits + misses)
+        double avg_wait_ms = 0.0;            ///< Average latency per flip
+        bool within_32ms_target = false;     ///< Latency compliance check
+    };
+    [[nodiscard]] SDMAKineticMetrics QuerySDMATelemetry() const;
+    [[nodiscard]] std::string SDMAKineticHudStatusLineUtf8() const;
+
+    /** Expert heatmap snapshot for Win32 diagnostics (false if no model / no scheduler). */
+    [[nodiscard]] bool CaptureSwarmExpertHeatmap(const RawrXD::Swarm::ExpertHeatmapCaptureParams& params,
+                                                 RawrXD::Swarm::ExpertHeatmapSnapshot& out) const;
+    [[nodiscard]] std::uint64_t SwarmPlanGeneration() const;
+
     // Tokenization
     std::vector<int32_t> Tokenize(const std::string& text) override;
     std::string Detokenize(const std::vector<int32_t>& tokens) override;
@@ -132,6 +154,10 @@ class CPUInferenceEngine : public InferenceEngine
     // Inference
     // Explicit declarations for missing methods
     std::vector<float> Eval(const std::vector<int32_t>& input_tokens) override;
+    std::string DumpTokenTraceSummary(size_t lastNTokens = 128) const;
+    bool DumpTokenTracesToCSV(const std::string& filepath) const;
+    void ClearTokenTraceBuffer();
+    std::string DiagnoseToken(int32_t tokenId) const;
     void UpdateWeights(const std::vector<std::vector<float>>& layer_gradients, float learning_rate);
     void UpdateOutputWeights(const std::vector<float>& gradients, float learningRate);
 
@@ -176,6 +202,11 @@ class CPUInferenceEngine : public InferenceEngine
                                 std::function<void(const std::string&)> token_callback,
                                 std::function<void()> complete_callback,
                                 std::function<void(int32_t)> token_id_callback = nullptr);
+
+    // Cooperative cancellation for LocalGGUF backpressure
+    void RequestCancelGeneration();
+    void ResetCancelGeneration();
+    bool IsCancelGenerationRequested() const;
 
     // Titan assembly engine (RawrXD_Interconnect / static ASM) — toggable
     void SetUseTitanAssembly(bool use) { m_useTitanAssembly = use; }
@@ -250,6 +281,9 @@ class CPUInferenceEngine : public InferenceEngine
 
     // Model state
     bool m_modelLoaded = false;
+
+        // Corrected measurement & pattern recognition (Session 4)
+        std::unique_ptr<RawrXD::Inference::MeasurementCollector> m_measurement_collector;
     std::string m_lastLoadErrorMessage;
     int m_vocabSize = 0;
     int m_embeddingDim = 0;
@@ -269,6 +303,9 @@ class CPUInferenceEngine : public InferenceEngine
     bool m_swarmMode = false;
     int m_swarmChainDepth = 5;
     std::vector<std::unique_ptr<RawrXDInference>> m_swarmModels;
+
+    // Cooperative cancellation for LocalGGUF backpressure
+    std::atomic<bool> m_cancelGenerationRequested{false};
 
     // Model weights and Data
     std::unordered_map<std::string, Tensor> m_weights;

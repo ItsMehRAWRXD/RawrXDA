@@ -61,19 +61,67 @@ extern "C" {
 // ============================================================
 // PHASE STATE TRACKING
 // ============================================================
+enum class PhaseStatus {
+    PENDING = 0,
+    IN_PROGRESS = 1,
+    COMPLETED = 2,
+    FAILED = 3,
+    RETRYING = 4
+};
+
 struct PhaseState {
-    bool hal_done;
-    bool week1_done;
-    bool week23_done;
-    bool phase1_done;
-    bool phase2_done;
-    bool phase3_done;
-    bool phase4_done;
-    bool phase5_done;
+    PhaseStatus hal_status;
+    PhaseStatus week1_status;
+    PhaseStatus week23_status;
+    PhaseStatus phase1_status;
+    PhaseStatus phase2_status;
+    PhaseStatus phase3_status;
+    PhaseStatus phase4_status;
+    PhaseStatus phase5_status;
     
-    PhaseState() : hal_done(false), week1_done(false), week23_done(false),
-                   phase1_done(false), phase2_done(false), phase3_done(false),
-                   phase4_done(false), phase5_done(false) {}
+    int retry_count;
+    int last_error_code;
+    
+    PhaseState() : hal_status(PhaseStatus::PENDING), week1_status(PhaseStatus::PENDING),
+                   week23_status(PhaseStatus::PENDING), phase1_status(PhaseStatus::PENDING),
+                   phase2_status(PhaseStatus::PENDING), phase3_status(PhaseStatus::PENDING),
+                   phase4_status(PhaseStatus::PENDING), phase5_status(PhaseStatus::PENDING),
+                   retry_count(0), last_error_code(0) {}
+    
+    bool isComplete() const {
+        return hal_status == PhaseStatus::COMPLETED &&
+               week1_status == PhaseStatus::COMPLETED &&
+               week23_status == PhaseStatus::COMPLETED &&
+               phase1_status == PhaseStatus::COMPLETED &&
+               phase2_status == PhaseStatus::COMPLETED &&
+               phase3_status == PhaseStatus::COMPLETED &&
+               phase4_status == PhaseStatus::COMPLETED &&
+               phase5_status == PhaseStatus::COMPLETED;
+    }
+    
+    bool hasFailed() const {
+        return hal_status == PhaseStatus::FAILED ||
+               week1_status == PhaseStatus::FAILED ||
+               week23_status == PhaseStatus::FAILED ||
+               phase1_status == PhaseStatus::FAILED ||
+               phase2_status == PhaseStatus::FAILED ||
+               phase3_status == PhaseStatus::FAILED ||
+               phase4_status == PhaseStatus::FAILED ||
+               phase5_status == PhaseStatus::FAILED;
+    }
+    
+    int completedCount() const {
+        int count = 0;
+        if (hal_status == PhaseStatus::COMPLETED) count++;
+        if (week1_status == PhaseStatus::COMPLETED) count++;
+        if (week23_status == PhaseStatus::COMPLETED) count++;
+        if (phase1_status == PhaseStatus::COMPLETED) count++;
+        if (phase2_status == PhaseStatus::COMPLETED) count++;
+        if (phase3_status == PhaseStatus::COMPLETED) count++;
+        if (phase4_status == PhaseStatus::COMPLETED) count++;
+        if (phase5_status == PhaseStatus::COMPLETED) count++;
+        return count;
+    }
 };
 
 static PhaseState g_phase_state;
@@ -124,7 +172,7 @@ int Titan_Master_Init() {
             goto INIT_FAILED;
         }
         
-        g_phase_state.hal_done = true;
+        g_phase_state.hal_status = PhaseStatus::COMPLETED;
         LogMessage(LOG_INFO, "[INIT] HAL complete (%.0f ms)", (float)g_init_metrics.hal_time);
     }
     
@@ -136,16 +184,19 @@ int Titan_Master_Init() {
         LogMessage(LOG_INFO, "  - Resource manager");
         
         DWORD phase_start = GetTickCount();
+        g_phase_state.week1_status = PhaseStatus::IN_PROGRESS;
         
         result = Titan_Week1_Init();
         g_init_metrics.week1_time = GetTickCount() - phase_start;
         
         if (result != 0) {
+            g_phase_state.week1_status = PhaseStatus::FAILED;
+            g_phase_state.last_error_code = result;
             LogMessage(LOG_ERROR, "[INIT FAILED] Week 1 initialization failed with code: %d", result);
             goto INIT_FAILED;
         }
         
-        g_phase_state.week1_done = true;
+        g_phase_state.week1_status = PhaseStatus::COMPLETED;
         LogMessage(LOG_INFO, "[INIT] Week 1 complete (%.0f ms)", (float)g_init_metrics.week1_time);
     }
     
@@ -166,7 +217,7 @@ int Titan_Master_Init() {
             goto INIT_FAILED;
         }
         
-        g_phase_state.week23_done = true;
+        g_phase_state.week23_status = PhaseStatus::COMPLETED;
         LogMessage(LOG_INFO, "[INIT] Week 2-3 complete (%.0f ms)", (float)g_init_metrics.week23_time);
     }
     
@@ -187,7 +238,7 @@ int Titan_Master_Init() {
             goto INIT_FAILED;
         }
         
-        g_phase_state.phase1_done = true;
+        g_phase_state.phase1_status = PhaseStatus::COMPLETED;
         LogMessage(LOG_INFO, "[INIT] Phase 1 complete (%.0f ms)", (float)g_init_metrics.phase1_time);
     }
     
@@ -208,7 +259,7 @@ int Titan_Master_Init() {
             goto INIT_FAILED;
         }
         
-        g_phase_state.phase2_done = true;
+        g_phase_state.phase2_status = PhaseStatus::COMPLETED;
         LogMessage(LOG_INFO, "[INIT] Phase 2 complete (%.0f ms)", (float)g_init_metrics.phase2_time);
     }
     
@@ -229,7 +280,7 @@ int Titan_Master_Init() {
             goto INIT_FAILED;
         }
         
-        g_phase_state.phase3_done = true;
+        g_phase_state.phase3_status = PhaseStatus::COMPLETED;
         LogMessage(LOG_INFO, "[INIT] Phase 3 complete (%.0f ms)", (float)g_init_metrics.phase3_time);
     }
     
@@ -250,7 +301,7 @@ int Titan_Master_Init() {
             goto INIT_FAILED;
         }
         
-        g_phase_state.phase4_done = true;
+        g_phase_state.phase4_status = PhaseStatus::COMPLETED;
         LogMessage(LOG_INFO, "[INIT] Phase 4 complete (%.0f ms)", (float)g_init_metrics.phase4_time);
     }
     
@@ -271,7 +322,7 @@ int Titan_Master_Init() {
             goto INIT_FAILED;
         }
         
-        g_phase_state.phase5_done = true;
+        g_phase_state.phase5_status = PhaseStatus::COMPLETED;
         LogMessage(LOG_INFO, "[INIT] Phase 5 complete (%.0f ms)", (float)g_init_metrics.phase5_time);
     }
     
@@ -324,7 +375,7 @@ void Titan_Master_Shutdown() {
     // Shutdown in reverse order of initialization
     
     // Phase 5 shutdown
-    if (g_phase_state.phase5_done) {
+    if (g_phase_state.phase5_status == PhaseStatus::COMPLETED) {
         LogMessage(LOG_INFO, "[SHUTDOWN] Phase 5: Orchestration");
         try {
             Titan_Phase5_Shutdown();
@@ -333,11 +384,11 @@ void Titan_Master_Shutdown() {
         catch (...) {
             LogMessage(LOG_ERROR, "[SHUTDOWN ERROR] Phase 5 shutdown exception");
         }
-        g_phase_state.phase5_done = false;
+        g_phase_state.phase5_status = PhaseStatus::PENDING;
     }
     
     // Phase 4 shutdown
-    if (g_phase_state.phase4_done) {
+    if (g_phase_state.phase4_status == PhaseStatus::COMPLETED) {
         LogMessage(LOG_INFO, "[SHUTDOWN] Phase 4: I/O Pipeline");
         try {
             Titan_Phase4_Shutdown();
@@ -346,11 +397,11 @@ void Titan_Master_Shutdown() {
         catch (...) {
             LogMessage(LOG_ERROR, "[SHUTDOWN ERROR] Phase 4 shutdown exception");
         }
-        g_phase_state.phase4_done = false;
+        g_phase_state.phase4_status = PhaseStatus::PENDING;
     }
     
     // Phase 3 shutdown
-    if (g_phase_state.phase3_done) {
+    if (g_phase_state.phase3_status == PhaseStatus::COMPLETED) {
         LogMessage(LOG_INFO, "[SHUTDOWN] Phase 3: Agent Kernel");
         try {
             Titan_Phase3_Shutdown();
@@ -359,11 +410,11 @@ void Titan_Master_Shutdown() {
         catch (...) {
             LogMessage(LOG_ERROR, "[SHUTDOWN ERROR] Phase 3 shutdown exception");
         }
-        g_phase_state.phase3_done = false;
+        g_phase_state.phase3_status = PhaseStatus::PENDING;
     }
     
     // Phase 2 shutdown
-    if (g_phase_state.phase2_done) {
+    if (g_phase_state.phase2_status == PhaseStatus::COMPLETED) {
         LogMessage(LOG_INFO, "[SHUTDOWN] Phase 2: Model Selection");
         try {
             Titan_Phase2_Shutdown();
@@ -372,11 +423,11 @@ void Titan_Master_Shutdown() {
         catch (...) {
             LogMessage(LOG_ERROR, "[SHUTDOWN ERROR] Phase 2 shutdown exception");
         }
-        g_phase_state.phase2_done = false;
+        g_phase_state.phase2_status = PhaseStatus::PENDING;
     }
     
     // Phase 1 shutdown
-    if (g_phase_state.phase1_done) {
+    if (g_phase_state.phase1_status == PhaseStatus::COMPLETED) {
         LogMessage(LOG_INFO, "[SHUTDOWN] Phase 1: Hardware Detection");
         try {
             Titan_Phase1_Shutdown();
@@ -385,11 +436,11 @@ void Titan_Master_Shutdown() {
         catch (...) {
             LogMessage(LOG_ERROR, "[SHUTDOWN ERROR] Phase 1 shutdown exception");
         }
-        g_phase_state.phase1_done = false;
+        g_phase_state.phase1_status = PhaseStatus::PENDING;
     }
     
     // Week 2-3 shutdown
-    if (g_phase_state.week23_done) {
+    if (g_phase_state.week23_status == PhaseStatus::COMPLETED) {
         LogMessage(LOG_INFO, "[SHUTDOWN] Week 2-3: Model Infrastructure");
         try {
             Titan_Week2_3_Shutdown();
@@ -398,11 +449,11 @@ void Titan_Master_Shutdown() {
         catch (...) {
             LogMessage(LOG_ERROR, "[SHUTDOWN ERROR] Week 2-3 shutdown exception");
         }
-        g_phase_state.week23_done = false;
+        g_phase_state.week23_status = PhaseStatus::PENDING;
     }
     
     // Week 1 shutdown
-    if (g_phase_state.week1_done) {
+    if (g_phase_state.week1_status == PhaseStatus::COMPLETED) {
         LogMessage(LOG_INFO, "[SHUTDOWN] Week 1: Core Infrastructure");
         try {
             Titan_Week1_Shutdown();
@@ -411,11 +462,11 @@ void Titan_Master_Shutdown() {
         catch (...) {
             LogMessage(LOG_ERROR, "[SHUTDOWN ERROR] Week 1 shutdown exception");
         }
-        g_phase_state.week1_done = false;
+        g_phase_state.week1_status = PhaseStatus::PENDING;
     }
     
     // HAL shutdown
-    if (g_phase_state.hal_done) {
+    if (g_phase_state.hal_status == PhaseStatus::COMPLETED) {
         LogMessage(LOG_INFO, "[SHUTDOWN] Phase 0: Hardware Abstraction Layer");
         try {
             Titan_HAL_Shutdown();
@@ -424,7 +475,7 @@ void Titan_Master_Shutdown() {
         catch (...) {
             LogMessage(LOG_ERROR, "[SHUTDOWN ERROR] HAL shutdown exception");
         }
-        g_phase_state.hal_done = false;
+        g_phase_state.hal_status = PhaseStatus::PENDING;
     }
     
     LogMessage(LOG_INFO, "");
@@ -438,21 +489,21 @@ void Titan_Master_Shutdown() {
 // QUERY FUNCTIONS
 // ============================================================
 bool Titan_IsInitialized() {
-    return g_phase_state.phase5_done;
+    return g_phase_state.phase5_status == PhaseStatus::COMPLETED;
 }
 
 bool Titan_GetPhaseState(int phase, bool* out_completed) {
     if (!out_completed) return false;
     
     switch (phase) {
-        case 0: *out_completed = g_phase_state.hal_done; return true;
-        case 1: *out_completed = g_phase_state.week1_done; return true;
-        case 2: *out_completed = g_phase_state.week23_done; return true;
-        case 3: *out_completed = g_phase_state.phase1_done; return true;
-        case 4: *out_completed = g_phase_state.phase2_done; return true;
-        case 5: *out_completed = g_phase_state.phase3_done; return true;
-        case 6: *out_completed = g_phase_state.phase4_done; return true;
-        case 7: *out_completed = g_phase_state.phase5_done; return true;
+        case 0: *out_completed = g_phase_state.hal_status == PhaseStatus::COMPLETED; return true;
+        case 1: *out_completed = g_phase_state.week1_status == PhaseStatus::COMPLETED; return true;
+        case 2: *out_completed = g_phase_state.week23_status == PhaseStatus::COMPLETED; return true;
+        case 3: *out_completed = g_phase_state.phase1_status == PhaseStatus::COMPLETED; return true;
+        case 4: *out_completed = g_phase_state.phase2_status == PhaseStatus::COMPLETED; return true;
+        case 5: *out_completed = g_phase_state.phase3_status == PhaseStatus::COMPLETED; return true;
+        case 6: *out_completed = g_phase_state.phase4_status == PhaseStatus::COMPLETED; return true;
+        case 7: *out_completed = g_phase_state.phase5_status == PhaseStatus::COMPLETED; return true;
         default: return false;
     }
 }

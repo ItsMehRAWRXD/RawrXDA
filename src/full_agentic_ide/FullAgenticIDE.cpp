@@ -27,8 +27,8 @@ bool FullAgenticIDE::initialize(const FullAgenticIDEConfig& config) {
     if (!m_impl->bridge)
         return false;
     bool ok = m_impl->bridge->Initialize(config.frameworkPath, config.defaultModel);
-    if (ok && !config.ollamaServer.empty())
-        m_impl->bridge->SetOllamaServer(config.ollamaServer);
+    if (ok && !config.NativeInferenceServer.empty())
+        m_impl->bridge->SetOllamaServer(config.NativeInferenceServer);
     return ok;
 }
 

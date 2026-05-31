@@ -1,0 +1,9 @@
+{
+  "job_id": "smoke-script",
+  "camera_mode": "cinematic-pan",
+  "beats": [
+    {"index": 0, "start_frame": 0, "end_frame": 19, "text": "establishing castle"},
+    {"index": 1, "start_frame": 20, "end_frame": 39, "text": "torch corridor"},
+    {"index": 2, "start_frame": 40, "end_frame": 59, "text": "vampire approach"}
+  ]
+}

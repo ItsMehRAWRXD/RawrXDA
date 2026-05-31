@@ -11,6 +11,9 @@
 #include <atomic>
 #include <chrono>
 #include <cstring>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 namespace RawrXD::Sovereign {
 
@@ -99,8 +102,21 @@ void SovereignCore::autonomousLoopProc() {
         try {
             runCycle();
         } catch (const std::exception& e) {
-            // Log error, continue
-            // TODO: Wire to IDE error panel
+            // Log error to IDE error panel via OutputChannel
+            std::string msg = std::string("[Sovereign] Cycle error: ") + e.what();
+#ifdef _WIN32
+            OutputDebugStringA(msg.c_str());
+            // Post to IDE error panel if available
+            HWND hwnd = FindWindowA("RawrXD_IDE_Class", nullptr);
+            if (hwnd) {
+                constexpr UINT MSG_ERROR_PANEL = WM_USER + 0x3001;
+                COPYDATASTRUCT cds{};
+                cds.dwData = MSG_ERROR_PANEL;
+                cds.cbData = static_cast<DWORD>(msg.size() + 1);
+                cds.lpData = const_cast<char*>(msg.c_str());
+                SendMessageA(hwnd, WM_COPYDATA, 0, reinterpret_cast<LPARAM>(&cds));
+            }
+#endif
         }
         
         // Sleep between cycles

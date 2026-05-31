@@ -40,12 +40,21 @@ struct SplitTermPane {
     HANDLE hWritePipe = nullptr;
     HANDLE hStdinWrite = nullptr;
     std::unique_ptr<std::thread> readerThread;
-    bool running = false;
+    std::atomic<bool> running{false};
     std::string title;
     std::string shellExe;
     RECT bounds = {};              // relative to terminal panel
     float splitRatio = 0.5f;       // position of splitter (0.0 - 1.0)
     bool isFocused = false;
+
+    ~SplitTermPane() {
+        running = false;
+        if (readerThread && readerThread->joinable()) readerThread->join();
+        if (hProcess)    { TerminateProcess(hProcess, 0); CloseHandle(hProcess); }
+        if (hReadPipe)   CloseHandle(hReadPipe);
+        if (hWritePipe)  CloseHandle(hWritePipe);
+        if (hStdinWrite) CloseHandle(hStdinWrite);
+    }
 };
 
 // ─── Split Pane Manager State ────────────────────────────────────────────────

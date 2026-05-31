@@ -50,7 +50,7 @@ struct AgentLoopConfig {
     int maxSteps                = 8;        // Bounded step limit
     int maxTokensPerRequest     = 8192;     // Context window budget
     std::string model;                              // Active model tag
-    std::string ollamaBaseUrl   = "http://localhost:11434";
+    std::string nativeBaseUrl   = "http://localhost:11434";  // Default Ollama port
     std::string workingDirectory;
     std::vector<std::string> openFiles;
     bool dryRun                 = false;    // Log but don't execute tools

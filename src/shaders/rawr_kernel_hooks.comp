@@ -1,0 +1,77 @@
+#version 460
+
+// Hardened Sovereign persistent-kernel skeleton.
+// WDDM note: use bounded iterations per submit to avoid watchdog resets.
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, set = 0, binding = 0) buffer FlagsBuffer {
+    uint flags[];
+};
+
+layout(std430, set = 0, binding = 1) readonly buffer TokenRingBuffer {
+    uint token_ring_u32[];
+};
+
+layout(std430, set = 0, binding = 2) buffer KvCacheBuffer {
+    uint kv_cache_u32[];
+};
+
+layout(std430, set = 0, binding = 3) readonly buffer WeightsBuffer {
+    uint weights_u32[];
+};
+
+layout(rgba8, set = 0, binding = 4) uniform writeonly image2D glyph_atlas;
+
+layout(push_constant) uniform PersistentConfig {
+    uint token_ring_bytes;
+    uint glyph_width;
+    uint glyph_height;
+    uint max_iterations;
+} pc;
+
+const uint RF_NEW_DATA = 0u;
+const uint RF_DATA_SEQ = 1u;
+const uint RF_CONSUMED_SEQ = 2u;
+const uint RF_FRAME_READY = 3u;
+const uint RF_ERROR_CODE = 4u;
+const uint RF_SHUTDOWN = 5u;
+
+bool has_new_data() {
+    uint data_seq = atomicAdd(flags[RF_DATA_SEQ], 0u);
+    uint consumed_seq = atomicAdd(flags[RF_CONSUMED_SEQ], 0u);
+    return data_seq != consumed_seq;
+}
+
+void ingest_parse_stub(uint data_seq) {
+    // Placeholder: ingestion/parsing runs fully on GPU in final fused implementation.
+    // Keep this side-effect free except for deterministic state updates.
+    atomicExchange(flags[RF_CONSUMED_SEQ], data_seq);
+}
+
+void infer_sample_emit_stub() {
+    // Placeholder fused path: infer -> sample -> glyph write.
+    if (gl_GlobalInvocationID.x == 0u && pc.glyph_width > 0u && pc.glyph_height > 0u) {
+        imageStore(glyph_atlas, ivec2(0, 0), vec4(1.0, 1.0, 1.0, 1.0));
+        atomicAdd(flags[RF_FRAME_READY], 1u);
+    }
+}
+
+void main() {
+    if (gl_GlobalInvocationID.x != 0u) {
+        return;
+    }
+
+    for (uint iter = 0u; iter < pc.max_iterations; ++iter) {
+        if (atomicAdd(flags[RF_SHUTDOWN], 0u) != 0u) {
+            return;
+        }
+
+        if (has_new_data()) {
+            const uint data_seq = atomicAdd(flags[RF_DATA_SEQ], 0u);
+            ingest_parse_stub(data_seq);
+        }
+
+        infer_sample_emit_stub();
+    }
+}

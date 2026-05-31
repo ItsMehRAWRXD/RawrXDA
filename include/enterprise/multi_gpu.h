@@ -22,6 +22,7 @@
 #include <string>
 #include <vector>
 #include <mutex>
+#include <atomic>
 
 namespace RawrXD::Enterprise {
 
@@ -186,6 +187,10 @@ public:
     bool AllDevicesHealthy() const;
     MultiGPUResult RunHealthCheck();
 
+    // ---- Sentinel Cluster Signaling (Batch 8) ----
+    MultiGPUResult BroadcastSentinelSignal(uint32_t routeCode);
+    bool ConsumeSentinelSignal(uint32_t* outRouteCode);
+
     // ---- Status / Reporting ----
     std::string GenerateStatusReport() const;
     std::string GenerateTopologyReport() const;
@@ -207,6 +212,7 @@ private:
     std::vector<LayerAssignment> m_assignments;
     DispatchStats               m_dispatchStats;
     DispatchStrategy            m_strategy = DispatchStrategy::LayerParallel;
+    std::atomic<uint64_t>       m_lastConsumedSentinelEpoch{0};
 
     // Callbacks — raw pointers
     GPUHealthChangeFn           m_onHealthChange = nullptr;

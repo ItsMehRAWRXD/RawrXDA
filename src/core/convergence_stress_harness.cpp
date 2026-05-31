@@ -57,7 +57,7 @@ extern "C" {
     size_t KQuant_DequantizeQ6_K(const void* src, float* dst, size_t numElements);
     size_t KQuant_DequantizeQ2_K(const void* src, float* dst, size_t numElements);
     size_t KQuant_DequantizeQ3_K(const void* src, float* dst, size_t numElements);
-    size_t KQuant_Dispatch(int ggml_type, const void* src, float* dst, size_t numElements);
+    size_t KQuant_Dispatch(int ggml_rxd_type, const void* src, float* dst, size_t numElements);
 
     // Watchdog
     int asm_watchdog_init();
@@ -452,7 +452,7 @@ void ConvergenceStressHarness::runBoundaryInputs(int module) {
             r = KQuant_DequantizeQ3_K(fakeInput, output, 256);
             (void)r;
 
-            // Invalid ggml_type
+            // Invalid ggml_rxd_type
             r = KQuant_Dispatch(9999, fakeInput, output, 256);
             (void)r;
 

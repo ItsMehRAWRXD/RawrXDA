@@ -11,7 +11,7 @@ import { invokeRawrxdWasmChat, clearRawrxdWasmInferenceCache } from '../utils/ra
 import { workspaceRelativePath } from '../utils/workspacePathUtils';
 
 /**
- * Cursor / Copilot–style chat: WASM-first lane; optional agentic delegation to main `ai:invoke` (Electron).
+ * RawrXD dock chat: WASM-first lane; optional agentic delegation to main `ai:invoke` (Electron).
  */
 const CHAT_DRAFT_KEY = 'rawrxd.ide.chatDraft.v1';
 

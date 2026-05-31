@@ -135,6 +135,95 @@ bool VSIXLoader::LoadPluginFromDirectory(const std::filesystem::path& plugin_dir
         }
     }
     
+    // Parse contributes section (VS Code extension contributions)
+    if (manifest.contains("contributes")) {
+        const auto& contributes = manifest["contributes"];
+        
+        // Parse command contributions
+        if (contributes.contains("commands") && contributes["commands"].is_array()) {
+            for (const auto& cmd : contributes["commands"]) {
+                if (cmd.contains("command") && cmd.contains("title")) {
+                    plugin->contributedCommands.push_back({
+                        cmd["command"].get<std::string>(),
+                        cmd["title"].get<std::string>(),
+                        cmd.contains("category") ? cmd["category"].get<std::string>() : "",
+                        cmd.contains("icon") ? cmd["icon"].get<std::string>() : ""
+                    });
+                }
+            }
+        }
+        
+        // Parse keybindings
+        if (contributes.contains("keybindings") && contributes["keybindings"].is_array()) {
+            for (const auto& kb : contributes["keybindings"]) {
+                if (kb.contains("command") && kb.contains("key")) {
+                    plugin->contributedKeybindings.push_back({
+                        kb["command"].get<std::string>(),
+                        kb["key"].get<std::string>(),
+                        kb.contains("when") ? kb["when"].get<std::string>() : "",
+                        kb.contains("mac") ? kb["mac"].get<std::string>() : "",
+                        kb.contains("linux") ? kb["linux"].get<std::string>() : "",
+                        kb.contains("win") ? kb["win"].get<std::string>() : ""
+                    });
+                }
+            }
+        }
+        
+        // Parse menus
+        if (contributes.contains("menus") && contributes["menus"].is_object()) {
+            for (const auto& [menu_id, menu_items] : contributes["menus"].items()) {
+                if (menu_items.is_array()) {
+                    for (const auto& item : menu_items) {
+                        if (item.contains("command")) {
+                            plugin->contributedMenus[menu_id].push_back({
+                                item["command"].get<std::string>(),
+                                item.contains("group") ? item["group"].get<std::string>() : "",
+                                item.contains("when") ? item["when"].get<std::string>() : ""
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Parse views (sidebar panels, etc)
+        if (contributes.contains("views") && contributes["views"].is_object()) {
+            for (const auto& [container_id, views] : contributes["views"].items()) {
+                if (views.is_array()) {
+                    for (const auto& view : views) {
+                        if (view.contains("id")) {
+                            plugin->contributedViews.push_back({
+                                container_id,
+                                view["id"].get<std::string>(),
+                                view.contains("name") ? view["name"].get<std::string>() : "",
+                                view.contains("icon") ? view["icon"].get<std::string>() : ""
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Parse language support
+        if (contributes.contains("languages") && contributes["languages"].is_array()) {
+            for (const auto& lang : contributes["languages"]) {
+                if (lang.contains("id")) {
+                    plugin->contributedLanguages.push_back({
+                        lang["id"].get<std::string>(),
+                        lang.contains("aliases") ? lang["aliases"].get<std::vector<std::string>>() : std::vector<std::string>(),
+                        lang.contains("extensions") ? lang["extensions"].get<std::vector<std::string>>() : std::vector<std::string>(),
+                        lang.contains("filenames") ? lang["filenames"].get<std::vector<std::string>>() : std::vector<std::string>()
+                    });
+                }
+            }
+        }
+        
+        // Parse settings/configuration
+        if (contributes.contains("configuration")) {
+            plugin->contributedConfiguration = contributes["configuration"];
+        }
+    }
+    
     plugins_[plugin->id] = std::move(plugin);
     
     // Call onLoad if exists

@@ -125,7 +125,7 @@ struct RawrIPCHeader {
     uint32_t crc32;      // CRC32 of payload
 };
 
-// Example Payloads
+// Payloads
 struct MsgDebugEvent {
     uint32_t thread_id;
     uint64_t rip;

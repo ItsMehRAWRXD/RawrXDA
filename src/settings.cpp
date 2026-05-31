@@ -83,8 +83,8 @@ private:
     std::map<std::string, std::any> store_;
 };
 
-Settings::Settings() : settings_(new Impl("", "")) {
-    // In a real app we'd pass org/app names
+Settings::Settings() : settings_(new Impl("RawrXD", "RawrXD-IDE")) {
+    // Initialize with organization and application names
 }
 
 Settings::~Settings() {
@@ -118,7 +118,7 @@ MonacoSettings Settings::getMonacoSettings() {
         if (val.type() == typeid(bool)) s.minimapEnabled = std::any_cast<bool>(val);
         
     } catch (...) {
-        // Fallback to defaults on type mismatch
+        fprintf(stderr, "[Settings] Type mismatch, falling back to defaults\n");
     }
     
     // Refresh colors based on preset
@@ -187,8 +187,8 @@ bool Settings::SaveCompute(const AppState& state, const std::string& path) {
     std::ofstream ofs(path, std::ios::trunc);
     if (!ofs.is_open()) return false;
     ofs << "# RawrXD Model Loader Compute Settings\n";
-    // Real Write
-    ofs << "enable_gpu=" << (state.is_gpu_enabled ? "1" : "0") << "\n";
+    // Real Write — GPU inference is mandatory; persisted value is always 1.
+    ofs << "enable_gpu=1\n";
     ofs << "thread_count=" << state.thread_count << "\n";
     ofs << "vram_limit_mb=" << state.vram_limit_mb << "\n";
     return true;

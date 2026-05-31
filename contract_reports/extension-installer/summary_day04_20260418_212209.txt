@@ -1,0 +1,8 @@
+RawrXD Extension Installer expansion (days 1-15; day 15 adds integration gate)
+Day=4 Live=False LiveInstall=False Strict=True SkipIntegrationGate=False
+
+Label=day04_failure_recovery
+ExitCode=0
+OutFile=D:\rawrxd\contract_reports\extension-installer\20260418_212208_day04_failure_recovery.out.txt
+ErrFile=D:\rawrxd\contract_reports\extension-installer\20260418_212208_day04_failure_recovery.err.txt
+

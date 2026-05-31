@@ -43,10 +43,10 @@ RegistryCoverage getRegistryCoverage();
 const char* getRegistryVersionHash();
 
 // ============================================================================
-// STUB HANDLER DECLARATIONS — 286 new handlers
+// COMMAND HANDLER DECLARATIONS — 286 registered handlers
 // ============================================================================
-// These are generic stubs that report the command name.
-// Replace with real implementations as features are built.
+// Production implementations are in auto_feature_real_impl.cpp.
+// Declarations kept here for modular compilation.
 // ============================================================================
 
 CommandResult handleAgentConfigureModel(const CommandContext& ctx);

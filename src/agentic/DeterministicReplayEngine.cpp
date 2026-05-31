@@ -25,10 +25,10 @@
 #else
 #include <sys/stat.h>
 
-// SCAFFOLD_294: Deterministic replay engine
+// Deterministic Replay Engine Implementation
 
 
-// SCAFFOLD_070: DeterministicReplayEngine record/replay
+// DeterministicReplayEngine Record/Replay
 
 #endif
 

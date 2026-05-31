@@ -70,7 +70,7 @@ struct rhs_packing_info {
         size_t rhs_stride, const void * rhs, const void * bias, const void * scale, void * rhs_packed, size_t extra_bytes, const void * params);
 };
 
-struct ggml_kleidiai_kernels {
+struct ggml_rxd_kleidiai_kernels {
     kernel_info      gemm;
     lhs_packing_info gemm_lhs_info;
 
@@ -80,11 +80,11 @@ struct ggml_kleidiai_kernels {
     rhs_packing_info rhs_info;
 
     cpu_feature required_cpu;
-    ggml_type lhs_type;
-    ggml_type rhs_type;
-    ggml_type op_type;
+    ggml_rxd_type lhs_type;
+    ggml_rxd_type rhs_type;
+    ggml_rxd_type op_type;
 };
 
-ggml_kleidiai_kernels * ggml_kleidiai_select_kernels(cpu_feature cpu_features, const ggml_tensor * tensor);
-ggml_kleidiai_kernels * ggml_kleidiai_select_kernels_q4_0(cpu_feature features);
-ggml_kleidiai_kernels * ggml_kleidiai_select_kernels_q8_0(cpu_feature features);
+ggml_rxd_kleidiai_kernels * ggml_rxd_kleidiai_select_kernels(cpu_feature cpu_features, const ggml_rxd_tensor * tensor);
+ggml_rxd_kleidiai_kernels * ggml_rxd_kleidiai_select_kernels_q4_0(cpu_feature features);
+ggml_rxd_kleidiai_kernels * ggml_rxd_kleidiai_select_kernels_q8_0(cpu_feature features);

@@ -69,10 +69,10 @@ enum class HealingAction {
 
 // Agent Configuration
 struct AgentConfig {
-    bool enableAutoDiagnostics = true;
-    bool enableBeaconing = true;
-    bool enableSelfHealing = true;
-    bool enableReporting = true;
+    bool enableAutoDiagnostics = false;
+    bool enableBeaconing = false;
+    bool enableSelfHealing = false;
+    bool enableReporting = false;
     DWORD beaconIntervalMs = 1000;
     DWORD maxRecoveryAttempts = 3;
     DWORD recoveryTimeoutMs = 30000;

@@ -1,0 +1,90 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# RAWRXD_NEXUS CMake Integration
+# ═══════════════════════════════════════════════════════════════════════════
+
+# Add to existing CMakeLists.txt:
+
+# NEXUS Core Library
+add_library(rawrxd_nexus STATIC
+    src/core/rawrxd_nexus.c
+)
+
+target_include_directories(rawrxd_nexus PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core
+)
+
+target_link_libraries(rawrxd_nexus PUBLIC
+    rawrxd_core
+    rawrxd_swarm
+    m  # Math library for sqrt, pow, etc.
+)
+
+# Platform-specific libraries
+if(WIN32)
+    target_link_libraries(rawrxd_nexus PRIVATE kernel32)
+else()
+    target_link_libraries(rawrxd_nexus PRIVATE pthread)
+endif()
+
+# Compiler flags for performance
+if(MSVC)
+    target_compile_options(rawrxd_nexus PRIVATE
+        /O2      # Optimize for speed
+        /arch:AVX2  # AVX2 instructions
+        /fp:fast    # Fast floating point
+    )
+else()
+    target_compile_options(rawrxd_nexus PRIVATE
+        -O3
+        -march=native
+        -ffast-math
+    )
+endif()
+
+# ═══════════════════════════════════════════════════════════════════════════
+# NEXUS Test Executable
+# ═══════════════════════════════════════════════════════════════════════════
+
+add_executable(rawrxd_nexus_test
+    src/core/rawrxd_nexus_test.c
+)
+
+target_link_libraries(rawrxd_nexus_test PRIVATE
+    rawrxd_nexus
+    rawrxd_core
+    rawrxd_swarm
+)
+
+# Add test to CTest
+if(BUILD_TESTING)
+    add_test(NAME nexus_unit_tests COMMAND rawrxd_nexus_test)
+endif()
+
+# ═══════════════════════════════════════════════════════════════════════════
+# NEXUS Benchmark Executable
+# ═══════════════════════════════════════════════════════════════════════════
+
+add_executable(rawrxd_nexus_benchmark
+    src/core/rawrxd_nexus_benchmark.c
+)
+
+target_link_libraries(rawrxd_nexus_benchmark PRIVATE
+    rawrxd_nexus
+    rawrxd_core
+    rawrxd_swarm
+)
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Installation
+# ═══════════════════════════════════════════════════════════════════════════
+
+install(TARGETS rawrxd_nexus
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib
+    RUNTIME DESTINATION bin
+)
+
+install(FILES
+    src/core/rawrxd_nexus.h
+    DESTINATION include
+)

@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CommandTable xmlns="http://schemas.microsoft.com/VisualStudio/2005-10-18/CommandTable"
+              xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <Extern href="stdidcmd.h"/>
+  <Extern href="vsshlids.h"/>
+  <Extern href="msobtnid.h"/>
+
+  <Commands package="guidRawrXDPrometheusNativePkg">
+
+    <Menus>
+      <Menu guid="guidRawrXDPrometheusNativeCmdSet" id="IDM_RawrXD_Prometheus_Menu" priority="0x0100" type="Menu">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_MENU_TOOLS"/>
+        <Strings>
+          <ButtonText>&amp;RawrXD Prometheus</ButtonText>
+          <CommandName>RawrXD Prometheus</CommandName>
+        </Strings>
+      </Menu>
+    </Menus>
+
+    <Groups>
+      <Group guid="guidRawrXDPrometheusNativeCmdSet" id="IDG_RawrXD_Prometheus_Main" priority="0x0100">
+        <Parent guid="guidRawrXDPrometheusNativeCmdSet" id="IDM_RawrXD_Prometheus_Menu"/>
+      </Group>
+      <Group guid="guidRawrXDPrometheusNativeCmdSet" id="IDG_RawrXD_Prometheus_Models" priority="0x0200">
+        <Parent guid="guidRawrXDPrometheusNativeCmdSet" id="IDM_RawrXD_Prometheus_Menu"/>
+      </Group>
+      <Group guid="guidRawrXDPrometheusNativeCmdSet" id="IDG_RawrXD_Prometheus_Inference" priority="0x0300">
+        <Parent guid="guidRawrXDPrometheusNativeCmdSet" id="IDM_RawrXD_Prometheus_Menu"/>
+      </Group>
+    </Groups>
+
+    <Buttons>
+      <Button guid="guidRawrXDPrometheusNativeCmdSet" id="cmdidPrometheusOutputWindow" priority="0x0100" type="Button">
+        <Parent guid="guidRawrXDPrometheusNativeCmdSet" id="IDG_RawrXD_Prometheus_Main"/>
+        <Icon guid="guidImages" id="bmpPic1"/>
+        <Strings>
+          <ButtonText>&amp;Output Window</ButtonText>
+          <ToolTipText>Show Prometheus Output Window</ToolTipText>
+          <CommandName>PrometheusOutputWindow</CommandName>
+        </Strings>
+      </Button>
+
+      <Button guid="guidRawrXDPrometheusNativeCmdSet" id="cmdidPrometheusModelBrowser" priority="0x0101" type="Button">
+        <Parent guid="guidRawrXDPrometheusNativeCmdSet" id="IDG_RawrXD_Prometheus_Main"/>
+        <Icon guid="guidImages" id="bmpPic2"/>
+        <Strings>
+          <ButtonText>&amp;Model Browser</ButtonText>
+          <ToolTipText>Browse and manage AI models</ToolTipText>
+          <CommandName>PrometheusModelBrowser</CommandName>
+        </Strings>
+      </Button>
+
+      <Button guid="guidRawrXDPrometheusNativeCmdSet" id="cmdidPrometheusLoadModel" priority="0x0200" type="Button">
+        <Parent guid="guidRawrXDPrometheusNativeCmdSet" id="IDG_RawrXD_Prometheus_Models"/>
+        <Icon guid="guidImages" id="bmpPic3"/>
+        <Strings>
+          <ButtonText>&amp;Load Model...</ButtonText>
+          <ToolTipText>Load a GGUF model into Prometheus engine</ToolTipText>
+          <CommandName>PrometheusLoadModel</CommandName>
+        </Strings>
+      </Button>
+
+      <Button guid="guidRawrXDPrometheusNativeCmdSet" id="cmdidPrometheusUnloadModel" priority="0x0201" type="Button">
+        <Parent guid="guidRawrXDPrometheusNativeCmdSet" id="IDG_RawrXD_Prometheus_Models"/>
+        <Icon guid="guidImages" id="bmpPic4"/>
+        <Strings>
+          <ButtonText>&amp;Unload Model</ButtonText>
+          <ToolTipText>Unload the currently loaded model</ToolTipText>
+          <CommandName>PrometheusUnloadModel</CommandName>
+        </Strings>
+      </Button>
+
+      <Button guid="guidRawrXDPrometheusNativeCmdSet" id="cmdidPrometheusStartInference" priority="0x0300" type="Button">
+        <Parent guid="guidRawrXDPrometheusNativeCmdSet" id="IDG_RawrXD_Prometheus_Inference"/>
+        <Icon guid="guidImages" id="bmpPic5"/>
+        <Strings>
+          <ButtonText>&amp;Start Inference</ButtonText>
+          <ToolTipText>Start AI inference on selected text or file</ToolTipText>
+          <CommandName>PrometheusStartInference</CommandName>
+        </Strings>
+      </Button>
+
+      <Button guid="guidRawrXDPrometheusNativeCmdSet" id="cmdidPrometheusStopInference" priority="0x0301" type="Button">
+        <Parent guid="guidRawrXDPrometheusNativeCmdSet" id="IDG_RawrXD_Prometheus_Inference"/>
+        <Icon guid="guidImages" id="bmpPic6"/>
+        <Strings>
+          <ButtonText>S&amp;top Inference</ButtonText>
+          <ToolTipText>Stop current inference</ToolTipText>
+          <CommandName>PrometheusStopInference</CommandName>
+        </Strings>
+      </Button>
+
+      <Button guid="guidRawrXDPrometheusNativeCmdSet" id="cmdidPrometheusSettings" priority="0x0400" type="Button">
+        <Parent guid="guidRawrXDPrometheusNativeCmdSet" id="IDG_RawrXD_Prometheus_Main"/>
+        <Icon guid="guidImages" id="bmpPic7"/>
+        <Strings>
+          <ButtonText>&amp;Settings...</ButtonText>
+          <ToolTipText>Configure Prometheus engine settings</ToolTipText>
+          <CommandName>PrometheusSettings</CommandName>
+        </Strings>
+      </Button>
+    </Buttons>
+
+    <Bitmaps>
+      <Bitmap guid="guidImages" href="Resources\Images.png" usedList="bmpPic1, bmpPic2, bmpPic3, bmpPic4, bmpPic5, bmpPic6, bmpPic7"/>
+    </Bitmaps>
+
+  </Commands>
+
+  <Symbols>
+    <GuidSymbol name="guidRawrXDPrometheusNativePkg" value="{14d0a8c2-3e2f-4a5b-9c1d-8e7f6a5b4c3d}" />
+    <GuidSymbol name="guidRawrXDPrometheusNativeCmdSet" value="{25e1b9d3-4f3a-5b6c-0d2e-9f8a7b6c5d4e}" />
+
+    <GuidSymbol name="guidImages" value="{36f2cae5-5f4b-6c7d-1e3f-0a9b8c7d6e5f}" />
+    <IDSymbol name="bmpPic1" value="1" />
+    <IDSymbol name="bmpPic2" value="2" />
+    <IDSymbol name="bmpPic3" value="3" />
+    <IDSymbol name="bmpPic4" value="4" />
+    <IDSymbol name="bmpPic5" value="5" />
+    <IDSymbol name="bmpPic6" value="6" />
+    <IDSymbol name="bmpPic7" value="7" />
+
+    <IDSymbol name="IDM_RawrXD_Prometheus_Menu" value="0x1000" />
+    <IDSymbol name="IDG_RawrXD_Prometheus_Main" value="0x1100" />
+    <IDSymbol name="IDG_RawrXD_Prometheus_Models" value="0x1200" />
+    <IDSymbol name="IDG_RawrXD_Prometheus_Inference" value="0x1300" />
+
+    <IDSymbol name="cmdidPrometheusOutputWindow" value="0x0100" />
+    <IDSymbol name="cmdidPrometheusModelBrowser" value="0x0101" />
+    <IDSymbol name="cmdidPrometheusLoadModel" value="0x0200" />
+    <IDSymbol name="cmdidPrometheusUnloadModel" value="0x0201" />
+    <IDSymbol name="cmdidPrometheusStartInference" value="0x0300" />
+    <IDSymbol name="cmdidPrometheusStopInference" value="0x0301" />
+    <IDSymbol name="cmdidPrometheusSettings" value="0x0400" />
+  </Symbols>
+
+</CommandTable>

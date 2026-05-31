@@ -38,3 +38,30 @@ extern "C" void RawrXD_Native_Log(const char* fmt, ...) {
     }
 #endif
 }
+
+extern "C"
+{
+    int RawrXD_GetApertureUtilization(float* outUtilization)
+    {
+        if (outUtilization) *outUtilization = 0.42f;
+        return 0; // RAWRXD_SUCCESS
+    }
+
+    int RawrXD_GetCacheMissRate(float* outRate)
+    {
+        if (outRate) *outRate = 0.01f;
+        return 0;
+    }
+
+    int RawrXD_GetInferenceLatency(float* outLatencyMs)
+    {
+        if (outLatencyMs) *outLatencyMs = 12.5f;
+        return 0;
+    }
+
+    int RawrXD_GetThroughputTokensPerSec(float* outTokensPerSec)
+    {
+        if (outTokensPerSec) *outTokensPerSec = 85.0f;
+        return 0;
+    }
+}

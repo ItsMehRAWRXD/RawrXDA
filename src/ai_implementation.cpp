@@ -273,8 +273,8 @@ AIImplementation::AIImplementation(
 bool AIImplementation::initialize(const LLMConfig& config) {
     m_config = config;
 
-    const bool isLocalRuntime = (m_config.backend == "local" || m_config.backend == "ollama");
-    if (m_config.backend != "local" && m_config.backend != "ollama" && m_config.backend != "openai" &&
+    const bool isLocalRuntime = (m_config.backend == "local" || m_config.backend == "native");
+    if (m_config.backend != "local" && m_config.backend != "native" && m_config.backend != "openai" &&
         m_config.backend != "anthropic") {
         if (m_logger) {
             m_logger->error("AIImplementation", "Unsupported backend: " + m_config.backend);
@@ -367,15 +367,20 @@ bool AIImplementation::initialize(const LLMConfig& config) {
             return false;
         }
 
-        // Gate 2: Lock runtime lane — one backend, one lane, no silent routing
-        if (m_config.localBackendMode == "gpu-only") {
-            m_resolvedRuntimeLane = "gpu-only";
-        } else if (m_config.localBackendMode == "cpu-only") {
-            m_resolvedRuntimeLane = "cpu-only";
-        } else {
-            // auto-with-verified-fallback: GPU if VRAM sufficient, else CPU
-            m_resolvedRuntimeLane = gpuUsable ? "gpu-only" : "cpu-only";
+        // Gate 2: Lock runtime lane — GPU is MANDATORY. CPU-only and auto-fallback modes
+        // are rejected fail-closed: no silent CPU routing, no toggle.
+        if (!gpuUsable) {
+            if (m_logger) m_logger->error("AIImplementation",
+                "[GATE-2] GPU inference is mandatory but VRAM preflight reports GPU unusable; "
+                "refusing to fall back to CPU. Reason: " + preflightReason);
+            return false;
         }
+        if (m_config.localBackendMode == "cpu-only") {
+            if (m_logger) m_logger->error("AIImplementation",
+                "[GATE-2] localBackendMode=cpu-only is not permitted; GPU inference is mandatory.");
+            return false;
+        }
+        m_resolvedRuntimeLane = "gpu-only";
 
         // All 7 gates passed — startup banner: exactly one backend + one lane
         if (m_logger) {
@@ -387,7 +392,9 @@ bool AIImplementation::initialize(const LLMConfig& config) {
                 " endpoint=" + m_config.endpoint + " - READY");
         }
     } else {
-        m_resolvedRuntimeLane = "cpu-only";
+        // Remote/cloud backends still run their own GPU inference server-side; the local
+        // lane lock stays gpu-only so we never silently downgrade local execution.
+        m_resolvedRuntimeLane = "gpu-only";
         if (m_logger) {
             m_logger->info("AIImplementation",
                 "[BACKEND] backend=" + config.backend +
@@ -403,8 +410,8 @@ CompletionResponse AIImplementation::complete(const CompletionRequest& request) 
     CompletionResponse response;
 
     try {
-        if (m_config.backend == "ollama" || m_config.backend == "local") {
-            // Build Ollama request (simplified)
+        if (m_config.backend == "native" || m_config.backend == "local") {
+            // Build native inference request (simplified)
             std::string ollamaBody = "{\"model\":\"" + m_config.modelName + "\",\"prompt\":\"" + request.prompt + "\",\"stream\":false}";
 
             HTTPRequest httpReq;
@@ -416,7 +423,7 @@ CompletionResponse AIImplementation::complete(const CompletionRequest& request) 
             auto httpResp = m_httpClient->sendRequest(httpReq);
 
             if (httpResp.success) {
-                // Parse Ollama JSON response: {"response":"...","total_duration":...,"eval_count":N,...}
+                // Parse native inference JSON response: {"response":"...","total_duration":...,"eval_count":N,...}
                 std::string respBody = httpResp.body;
                 std::string completionText;
                 int evalCount = 0;
@@ -561,8 +568,8 @@ CompletionResponse AIImplementation::streamComplete(
     CompletionResponse response;
 
     try {
-        if (m_config.backend == "ollama" || m_config.backend == "local") {
-            // Build Ollama streaming request
+        if (m_config.backend == "native" || m_config.backend == "local") {
+            // Build native streaming request
             std::string ollamaBody = "{\"model\":\"" + m_config.modelName + 
                 "\",\"prompt\":\"" + request.prompt + "\",\"stream\":true}";
 
@@ -577,7 +584,7 @@ CompletionResponse AIImplementation::streamComplete(
             int totalTokens = 0;
 
             auto httpResp = m_httpClient->sendRequest(httpReq, [&](const std::string& chunk) {
-                // Ollama streams JSON lines: {"response":"token","done":false}
+                // Native streaming: JSON lines: {"response":"token","done":false}
                 // Parse each line for the "response" field
                 size_t respPos = chunk.find("\"response\":\"");
                 if (respPos != std::string::npos) {
@@ -791,7 +798,7 @@ bool AIImplementation::supportsToolCalling() const {
 
 bool AIImplementation::testConnectivity() {
     try {
-        if (m_config.backend == "ollama" || m_config.backend == "local") {
+        if (m_config.backend == "native" || m_config.backend == "local") {
             if (!m_config.allowRemoteFallback && !isLoopbackEndpoint(m_config.endpoint)) {
                 return false;
             }

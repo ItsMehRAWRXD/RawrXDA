@@ -8,14 +8,14 @@
 #include <functional>
 #include <string>
 #include <vector>
+#include <mutex>
 
 /**
- * Handles: caching search results/details/bundles, cache size/expiration,
- * air-gapped bundle loading.
+ * Handles: caching search results/details/bundles, cache size/expiration.
  */
 class OfflineCacheStore {
 public:
-    OfflineCacheStore() = default;
+    OfflineCacheStore();
     ~OfflineCacheStore();
 
     void cacheSearchResults(const std::string& query, const std::string& resultsJson);
@@ -24,23 +24,17 @@ public:
 
     std::string getCachedSearchResults(const std::string& query);
     std::string getCachedExtensionDetails(const std::string& extensionId);
-    std::string getCachedExtensionBundle(const std::string& extensionId);
+    bool hasCachedBundle(const std::string& extensionId);
 
     void clearCache();
     void setCacheSizeLimit(int64_t bytes);
-    void setCacheExpiration(int days);
+    void setCacheExpirationDays(int days);
     void cleanupExpiredEntries();
 
-    bool loadAirGappedBundle(const std::string& bundlePath);
-    bool exportExtensionBundle(const std::string& extensionId, const std::string& outputPath);
-    std::vector<std::string> listAvailableBundles();
-
     using BundleLoadedFn = std::function<void(const std::string& extensionId)>;
-    using BundleExportedFn = std::function<void(const std::string& extensionId, const std::string& outputPath)>;
     void setOnCacheCleared(std::function<void()> fn) { m_onCacheCleared = std::move(fn); }
     void setOnCacheSizeChanged(std::function<void(int64_t)> fn) { m_onCacheSizeChanged = std::move(fn); }
     void setOnBundleLoaded(BundleLoadedFn fn) { m_onBundleLoaded = std::move(fn); }
-    void setOnBundleExported(BundleExportedFn fn) { m_onBundleExported = std::move(fn); }
 
 private:
     struct CacheEntry {
@@ -53,19 +47,16 @@ private:
     std::string m_cacheDir;
     int64_t m_cacheSizeLimit = 0;
     int m_cacheExpirationDays = 30;
+    int64_t m_currentCacheSize = 0;
     std::vector<CacheEntry> m_cacheEntries;
+    std::mutex m_mutex;
 
-    bool initializeCacheDirectory();
+    void initializeCacheDirectory();
     std::string getCacheFilePath(const std::string& key);
     void updateCacheSize();
-    void removeExpiredEntries();
-    int64_t getDirectorySize(const std::string& dir);
-    bool compressFile(const std::string& inputPath, const std::string& outputPath);
-    bool decompressFile(const std::string& inputPath, const std::string& outputPath);
-    std::string hashKey(const std::string& key);
+    void enforceLimits();
 
     std::function<void()> m_onCacheCleared;
     std::function<void(int64_t)> m_onCacheSizeChanged;
     BundleLoadedFn m_onBundleLoaded;
-    BundleExportedFn m_onBundleExported;
 };

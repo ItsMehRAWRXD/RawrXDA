@@ -6,11 +6,15 @@
 #include <cstring>
 #include <algorithm>
 #include <cctype>
+#include <limits>
 
 // ---------------------------------------------------------------------------
 // GGUF binary format constants
 // ---------------------------------------------------------------------------
 static constexpr uint32_t GGUF_MAGIC = 0x46465547;  // "GGUF" little-endian
+static constexpr uint64_t GGUF_MAX_STRING_BYTES = 1024 * 1024;
+static constexpr uint64_t GGUF_MAX_ARRAY_ELEMENTS = 1ULL << 20;
+static constexpr uint64_t GGUF_MAX_METADATA_ENTRIES = 1ULL << 20;
 
 // GGUF value types
 enum GGUFValueType : uint32_t {
@@ -33,7 +37,7 @@ enum GGUFValueType : uint32_t {
 // Little-endian readers (safe, no alignment issues)
 // ---------------------------------------------------------------------------
 static uint32_t read_u32(std::ifstream& f) {
-    uint8_t b[4];
+    uint8_t b[4] = {};
     f.read(reinterpret_cast<char*>(b), 4);
     return static_cast<uint32_t>(b[0])
          | (static_cast<uint32_t>(b[1]) << 8)
@@ -42,7 +46,7 @@ static uint32_t read_u32(std::ifstream& f) {
 }
 
 static uint64_t read_u64(std::ifstream& f) {
-    uint8_t b[8];
+    uint8_t b[8] = {};
     f.read(reinterpret_cast<char*>(b), 8);
     uint64_t lo = static_cast<uint64_t>(b[0])
                 | (static_cast<uint64_t>(b[1]) << 8)
@@ -64,14 +68,94 @@ static float read_f32(std::ifstream& f) {
 
 static std::string read_gguf_string(std::ifstream& f) {
     uint64_t len = read_u64(f);
-    if (len == 0 || len > 1024 * 1024) return {};
+    if (!f.good() || len == 0 || len > GGUF_MAX_STRING_BYTES) return {};
     std::string s(static_cast<size_t>(len), '\0');
     f.read(s.data(), static_cast<std::streamsize>(len));
+    if (!f.good()) return {};
+    // Verify that the number of bytes actually read matches requested (catches truncated files)
+    if (static_cast<uint64_t>(f.gcount()) != len) return {};
     return s;
 }
 
+static bool is_supported_value_type(uint32_t vtype) {
+    switch (vtype) {
+        case GGUF_TYPE_UINT8:
+        case GGUF_TYPE_INT8:
+        case GGUF_TYPE_UINT16:
+        case GGUF_TYPE_INT16:
+        case GGUF_TYPE_UINT32:
+        case GGUF_TYPE_INT32:
+        case GGUF_TYPE_FLOAT32:
+        case GGUF_TYPE_BOOL:
+        case GGUF_TYPE_STRING:
+        case GGUF_TYPE_ARRAY:
+        case GGUF_TYPE_UINT64:
+        case GGUF_TYPE_INT64:
+        case GGUF_TYPE_FLOAT64:
+            return true;
+        default:
+            return false;
+    }
+}
+
+static bool parse_bounded_u32(const std::string& text,
+                              uint32_t minValue,
+                              uint32_t maxValue,
+                              uint32_t& outValue) {
+    if (text.empty()) return false;
+
+    size_t start = 0;
+    while (start < text.size() && std::isspace(static_cast<unsigned char>(text[start]))) {
+        ++start;
+    }
+    if (start >= text.size()) return false;
+
+    size_t end = start;
+    while (end < text.size() && std::isdigit(static_cast<unsigned char>(text[end]))) {
+        ++end;
+    }
+    if (end == start) return false;
+
+    const std::string digits = text.substr(start, end - start);
+    unsigned long long parsed = 0;
+    try {
+        parsed = std::stoull(digits);
+    } catch (...) {
+        return false;
+    }
+
+    if (parsed < minValue || parsed > maxValue || parsed > std::numeric_limits<uint32_t>::max()) {
+        return false;
+    }
+
+    outValue = static_cast<uint32_t>(parsed);
+    return true;
+}
+
+static VocabSizeDetection finalize_detection(GGUFVocabResolver& resolver,
+                                            VocabSizeDetection detection) {
+    if (detection.detectedSize == 0) {
+        detection.isConfident = false;
+        return detection;
+    }
+
+    detection.detectedSize = resolver.applySanityBounds(detection.detectedSize);
+    if (!resolver.isVocabSizeReasonable(detection.detectedSize, detection.modelFamily)) {
+        detection.isConfident = false;
+    }
+
+    return detection;
+}
+
 // Skip a GGUF typed value, returns false on failure
-static bool skip_gguf_value(std::ifstream& f, uint32_t vtype) {
+static bool skip_gguf_value(std::ifstream& f, uint32_t vtype, uint32_t depth = 0) {
+    constexpr uint32_t MAX_RECURSION_DEPTH = 16;  // Prevent stack exhaustion from deeply nested arrays
+    
+    if (depth > MAX_RECURSION_DEPTH) {
+        // Recursion limit exceeded; fail-closed
+        return false;
+    }
+    
     switch (vtype) {
         case GGUF_TYPE_UINT8:
         case GGUF_TYPE_INT8:
@@ -86,14 +170,24 @@ static bool skip_gguf_value(std::ifstream& f, uint32_t vtype) {
         case GGUF_TYPE_FLOAT64:  f.seekg(8, std::ios::cur); break;
         case GGUF_TYPE_STRING: {
             uint64_t len = read_u64(f);
+            if (!f.good() || len > GGUF_MAX_STRING_BYTES) return false;
+            std::streampos before = f.tellg();
             f.seekg(static_cast<std::streamoff>(len), std::ios::cur);
+            if (!f.good()) return false;  // Verify seek succeeded (catches truncated files)
+            std::streampos after = f.tellg();
+            if (after - before != static_cast<std::streamoff>(len)) return false;  // Verify full skip
             break;
         }
         case GGUF_TYPE_ARRAY: {
             uint32_t elemType = read_u32(f);
             uint64_t count    = read_u64(f);
+            if (!f.good() || !is_supported_value_type(elemType) || count > GGUF_MAX_ARRAY_ELEMENTS) {
+                return false;
+            }
             for (uint64_t i = 0; i < count && f.good(); ++i) {
-                skip_gguf_value(f, elemType);
+                if (!skip_gguf_value(f, elemType, depth + 1)) {  // Increment depth on recursion
+                    return false;
+                }
             }
             break;
         }
@@ -151,9 +245,14 @@ static std::string read_gguf_value_as_string(std::ifstream& f, uint32_t vtype) {
             // For arrays, record element count
             uint32_t elemType = read_u32(f);
             uint64_t count    = read_u64(f);
+            if (!f.good() || !is_supported_value_type(elemType) || count > GGUF_MAX_ARRAY_ELEMENTS) {
+                return "";
+            }
             std::string result = "[array:" + std::to_string(count) + "]";
             for (uint64_t i = 0; i < count && f.good(); ++i) {
-                skip_gguf_value(f, elemType);
+                if (!skip_gguf_value(f, elemType)) {
+                    return "";
+                }
             }
             return result;
         }
@@ -176,20 +275,31 @@ static bool read_gguf_metadata(const std::string& path,
     uint64_t tensorCnt  = read_u64(f);
     uint64_t kvCount    = read_u64(f);
 
+    if (!f.good() || version == 0 || kvCount > GGUF_MAX_METADATA_ENTRIES) {
+        return false;
+    }
+
     (void)version;
     (void)tensorCnt;
 
     for (uint64_t i = 0; i < kvCount && f.good(); ++i) {
         std::string key    = read_gguf_string(f);
         uint32_t    vtype  = read_u32(f);
+        if (!f.good() || key.empty() || !is_supported_value_type(vtype)) {
+            return false;
+        }
         std::string value  = read_gguf_value_as_string(f, vtype);
 
-        if (!key.empty()) {
+        if (!f.good()) {
+            return false;
+        }
+
+        if (!value.empty()) {
             outMeta[key] = value;
         }
     }
 
-    return !outMeta.empty();
+    return f.good() && !outMeta.empty();
 }
 
 // ---------------------------------------------------------------------------
@@ -275,23 +385,24 @@ VocabSizeDetection GGUFVocabResolver::detectVocabSize(
 
             // Try detecting from the merged metadata
             VocabSizeDetection result = detectFromMetadata(merged);
-            if (result.isConfident) return result;
+            if (result.isConfident) return finalize_detection(*this, result);
 
             // Try tensor dimensions
             result = detectFromTensorDimensions(merged);
-            if (result.isConfident) return result;
+            if (result.isConfident) return finalize_detection(*this, result);
 
             // Try TinyLlama special case
             result = detectForTinyLlama(merged);
-            if (result.isConfident) return result;
+            if (result.isConfident) return finalize_detection(*this, result);
 
             // Determine family and use expected size
             std::string family = determineModelFamily(merged, modelPath);
             if (!family.empty() && family != "unknown") {
                 auto it = expectedVocabSizes.find(family);
                 if (it != expectedVocabSizes.end()) {
-                    return createDetection("family_lookup", it->second, true,
-                                           {"general.architecture"}, family);
+                    return finalize_detection(*this,
+                        createDetection("family_lookup", it->second, true,
+                                        {"general.architecture"}, family));
                 }
             }
         }
@@ -299,20 +410,22 @@ VocabSizeDetection GGUFVocabResolver::detectVocabSize(
 
     // Strategy 2: Use provided metadata only
     VocabSizeDetection result = detectFromMetadata(metadata);
-    if (result.isConfident) return result;
+    if (result.isConfident) return finalize_detection(*this, result);
 
     result = detectFromTensorDimensions(metadata);
-    if (result.isConfident) return result;
+    if (result.isConfident) return finalize_detection(*this, result);
 
     // Strategy 3: Family-based fallback
     std::string family = determineModelFamily(metadata, modelPath);
     uint32_t specialSize = handleSpecialCases(family, metadata);
     if (specialSize != 0) {
-        return createDetection("special_case", specialSize, true, {}, family);
+        return finalize_detection(*this,
+            createDetection("special_case", specialSize, true, {}, family));
     }
 
     // Default fallback
-    return createDetection("default_fallback", 32000, false, {}, family);
+    return finalize_detection(*this,
+        createDetection("default_fallback", 32000, false, {}, family));
 }
 
 // ---------------------------------------------------------------------------
@@ -330,14 +443,12 @@ VocabSizeDetection GGUFVocabResolver::detectFromMetadata(
             size_t endPos = val.find(']', 7);
             if (endPos != std::string::npos) {
                 std::string countStr = val.substr(7, endPos - 7);
-                try {
-                    uint32_t count = static_cast<uint32_t>(std::stoul(countStr));
-                    if (count >= minVocabSize && count <= maxVocabSize) {
-                        std::string family = determineModelFamily(metadata, "");
-                        return createDetection("tokenizer.ggml.tokens", count, true,
-                                               {"tokenizer.ggml.tokens"}, family);
-                    }
-                } catch (...) { /* parse failure — fall through */ }
+                uint32_t count = 0;
+                if (parse_bounded_u32(countStr, minVocabSize, maxVocabSize, count)) {
+                    std::string family = determineModelFamily(metadata, "");
+                    return createDetection("tokenizer.ggml.tokens", count, true,
+                                           {"tokenizer.ggml.tokens"}, family);
+                }
             }
         }
     }
@@ -345,13 +456,11 @@ VocabSizeDetection GGUFVocabResolver::detectFromMetadata(
     // Check for explicit vocab_size in metadata
     auto vsIt = metadata.find("vocab_size");
     if (vsIt != metadata.end()) {
-        try {
-            uint32_t sz = static_cast<uint32_t>(std::stoul(vsIt->second));
-            if (sz >= minVocabSize && sz <= maxVocabSize) {
-                return createDetection("vocab_size_key", sz, true,
-                                       {"vocab_size"}, determineModelFamily(metadata, ""));
-            }
-        } catch (...) {}
+        uint32_t detected = 0;
+        if (parse_bounded_u32(vsIt->second, minVocabSize, maxVocabSize, detected)) {
+            return createDetection("vocab_size_key", detected, true,
+                                   {"vocab_size"}, determineModelFamily(metadata, ""));
+        }
     }
 
     return createDetection("metadata_miss", 0, false, {}, "");
@@ -368,13 +477,11 @@ VocabSizeDetection GGUFVocabResolver::detectFromTensorDimensions(
         auto it = metadata.find(key);
         if (it != metadata.end()) {
             // Shape string format depends on GGUF writer — try parsing first number
-            try {
-                uint32_t dim = static_cast<uint32_t>(std::stoul(it->second));
-                if (dim >= minVocabSize && dim <= maxVocabSize) {
-                    return createDetection("tensor_dimension", dim, true,
-                                           {key}, determineModelFamily(metadata, ""));
-                }
-            } catch (...) {}
+            uint32_t dim = 0;
+            if (parse_bounded_u32(it->second, minVocabSize, maxVocabSize, dim)) {
+                return createDetection("tensor_dimension", dim, true,
+                                       {key}, determineModelFamily(metadata, ""));
+            }
         }
     }
 

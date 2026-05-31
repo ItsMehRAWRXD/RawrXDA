@@ -7,6 +7,7 @@
  */
 
 #include "ai_completion_provider.h"
+#include "core/thread_lifecycle_registry.h"
 #include <iostream>
 #include <sstream>
 #include <thread>
@@ -146,7 +147,9 @@ void AICompletionProvider::requestCompletions(
 
     // Launch async thread
     std::thread([this]() {
+        REGISTER_THREAD("AICompletionProvider", "async completion request");
         this->onCompletionRequest();
+        RawrXD::Core::ThreadLifecycleRegistry::Instance().MarkExited(std::this_thread::get_id());
     }).detach();
 }
 
@@ -250,7 +253,7 @@ std::string AICompletionProvider::callModel(const std::string& prompt) {
     // WinHttp Implementation for "No Stub" Requirement
     std::string result;
     
-    // Parse URL (assuming m_modelEndpoint is simple like http://localhost:11434)
+    // Parse URL (assuming m_modelEndpoint is simple like http://localhost:11435)
     // We need to extract hostname and port.
     std::wstring wUrl_full = s2ws(m_modelEndpoint);
     URL_COMPONENTS urlComp;

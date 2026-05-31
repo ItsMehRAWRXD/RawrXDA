@@ -12,10 +12,10 @@
   Does not start HTTP/REPL. Use after: cmake --build <dir> --target RawrXD_Gold
 
 .PARAMETER BuildDir
-  CMake binary dir containing gold/RawrXD_Gold.exe (default: $RepoRoot/build-ninja).
+  CMake binary dir containing gold/RawrXD_Gold.exe. If empty, first configured dir among build-win32, build-ninja, build.
 
 .PARAMETER RepoRoot
-  Repository root; default: env RAWRXD_REPO_ROOT or D:\rawrxd per project conventions.
+  Repository root; default: env RAWRXD_REPO_ROOT or parent of this script's folder.
 #>
 param(
     [string]$BuildDir = "",
@@ -28,16 +28,47 @@ if (-not $RepoRoot) {
     $RepoRoot = $env:RAWRXD_REPO_ROOT
 }
 if (-not $RepoRoot) {
-    $RepoRoot = "D:\rawrxd"
+    $RepoRoot = Split-Path -Parent $PSScriptRoot
+}
+
+function Resolve-FirstCMakeBuildDir {
+    param([string]$Root, [string]$Prefer)
+    if ($Prefer -and (Test-Path -LiteralPath (Join-Path $Prefer "CMakeCache.txt"))) {
+        return (Resolve-Path -LiteralPath $Prefer).Path
+    }
+    foreach ($c in @(
+            (Join-Path $Root "build-win32"),
+            (Join-Path $Root "build-ninja"),
+            (Join-Path $Root "build-ninja-ctx2"),
+            (Join-Path $Root "build"))) {
+        if (Test-Path -LiteralPath (Join-Path $c "CMakeCache.txt")) {
+            return (Resolve-Path -LiteralPath $c).Path
+        }
+    }
+    return $null
 }
 
 if (-not $BuildDir) {
-    $BuildDir = Join-Path $RepoRoot "build-ninja"
+    $BuildDir = Resolve-FirstCMakeBuildDir -Root $RepoRoot -Prefer ""
+}
+if (-not $BuildDir) {
+    $BuildDir = Join-Path $RepoRoot "build-win32"
 }
 
-$goldExe = Join-Path $BuildDir "gold\RawrXD_Gold.exe"
-if (-not (Test-Path -LiteralPath $goldExe)) {
-    throw "Missing '$goldExe'. Build with: cmake --build `"$BuildDir`" --target RawrXD_Gold"
+function Find-GoldExe([string]$Bd) {
+    if (-not $Bd) { return $null }
+    foreach ($p in @(
+            (Join-Path $Bd "gold\Release\RawrXD_Gold.exe"),
+            (Join-Path $Bd "gold\Debug\RawrXD_Gold.exe"),
+            (Join-Path $Bd "gold\RawrXD_Gold.exe"))) {
+        if (Test-Path -LiteralPath $p) { return $p }
+    }
+    return $null
+}
+
+$goldExe = Find-GoldExe -Bd $BuildDir
+if (-not $goldExe) {
+    throw "Missing RawrXD_Gold.exe under '$BuildDir\gold' (tried Release/Debug/flat). Build with: cmake --build `"$BuildDir`" --target RawrXD_Gold"
 }
 
 $psi = [System.Diagnostics.ProcessStartInfo]::new()

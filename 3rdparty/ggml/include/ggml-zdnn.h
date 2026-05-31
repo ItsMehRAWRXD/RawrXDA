@@ -8,9 +8,9 @@ extern "C" {
 #endif
 
 // device buffer
-GGML_BACKEND_API ggml_backend_buffer_type_t ggml_backend_zdnn_buffer_type(void);
+GGML_RXD_BACKEND_API ggml_rxd_backend_buffer_type_t ggml_rxd_backend_zdnn_buffer_type(void);
 
-GGML_BACKEND_API ggml_backend_reg_t ggml_backend_zdnn_reg(void);
+GGML_RXD_BACKEND_API ggml_rxd_backend_reg_t ggml_rxd_backend_zdnn_reg(void);
 
 #ifdef __cplusplus
 }

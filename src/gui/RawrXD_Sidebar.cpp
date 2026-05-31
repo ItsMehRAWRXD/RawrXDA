@@ -58,7 +58,11 @@ void Sidebar::populate(const std::wstring& path) {
         for (const auto& entry : std::filesystem::directory_iterator(path)) {
             addFile(entry.path().filename().wstring());
         }
-    } catch (...) {}
+    } catch (const std::exception& e) {
+        OutputDebugStringA(("[RawrXD_Sidebar] directory iteration exception: " + std::string(e.what()) + "\n").c_str());
+    } catch (...) {
+        OutputDebugStringA("[RawrXD_Sidebar] directory iteration unknown exception\n");
+    }
 }
 
 }

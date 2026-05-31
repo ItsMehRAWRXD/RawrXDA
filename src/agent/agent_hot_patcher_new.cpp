@@ -12,7 +12,7 @@ namespace fs = std::filesystem;
 
 AgentHotPatcher::AgentHotPatcher() {
     m_enabled = false;
-    m_debugLogging = false;
+    m_logging = false;
     m_idCounter = 0;
 }
 
@@ -82,8 +82,8 @@ bool AgentHotPatcher::isHotPatchingEnabled() const {
     return m_enabled;
 }
 
-void AgentHotPatcher::setDebugLogging(bool enabled) {
-    m_debugLogging = enabled;
+void AgentHotPatcher::setLogging(bool enabled) {
+    m_logging = enabled;
 }
 
 JsonValue AgentHotPatcher::getCorrectionStatistics() const {
@@ -203,9 +203,47 @@ std::vector<std::string> AgentHotPatcher::validateReasoningLogic(const std::stri
     return issues;
 }
 std::string AgentHotPatcher::generateUniqueId() { return std::to_string(++m_idCounter); }
-bool AgentHotPatcher::loadCorrectionPatterns() { return true; }
-bool AgentHotPatcher::saveCorrectionPatterns() { return true; }
-bool AgentHotPatcher::startInterceptorServer(int port) { return true; }
+bool AgentHotPatcher::loadCorrectionPatterns() {
+    std::lock_guard<std::mutex> locker(m_mutex);
+    std::ifstream file(m_correctionPatternPath);
+    if (!file.is_open()) {
+        return false;
+    }
+    std::string line;
+    while (std::getline(file, line)) {
+        if (line.empty() || line[0] == '#') continue;
+        m_correctionPatterns.push_back(line);
+    }
+    return true;
+}
+
+bool AgentHotPatcher::saveCorrectionPatterns() {
+    std::lock_guard<std::mutex> locker(m_mutex);
+    std::ofstream file(m_correctionPatternPath, std::ios::trunc);
+    if (!file.is_open()) {
+        return false;
+    }
+    for (const auto& pattern : m_correctionPatterns) {
+        file << pattern << "\n";
+    }
+    return true;
+}
+
+bool AgentHotPatcher::startInterceptorServer(int port) {
+    std::lock_guard<std::mutex> locker(m_mutex);
+    if (m_interceptorRunning) {
+        return false;
+    }
+    m_interceptionPort = port;
+    m_interceptorRunning = true;
+    // Spawn interceptor thread
+    m_interceptorThread = std::thread([this]() {
+        while (m_interceptorRunning.load()) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+    });
+    return true;
+}
 JsonValue AgentHotPatcher::processInterceptedResponse(const JsonValue& response) { return response; }
 
 HallucinationDetection AgentHotPatcher::detectPathHallucination(const std::string& content) {

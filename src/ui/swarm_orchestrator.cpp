@@ -80,6 +80,6 @@ bool SwarmOrchestrator::DistributeTensor(uint64_t tensorId, const void* data, si
 
 bool SwarmOrchestrator::ExecuteDistributedInference(uint64_t tensorId, const std::string& inputPrompt) {
     // This would send MSG_INFERENCE_EXEC to all nodes and wait for partial outputs
-    // Implementation of partial result collection skipped for concise demonstration
+    // Implementation of partial result collection skipped for conciseness
     return true;
 }

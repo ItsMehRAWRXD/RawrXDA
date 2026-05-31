@@ -144,7 +144,7 @@ namespace RawrXD.Debugging
             var result = new ResolvedAddress();
             if (!_initialized)
             {
-                result.Error = InitializationError ?? "DbgHelp session is not initialized.";
+                if ($null -ne $InitializationError) { result.Error = $InitializationError } else { result.Error = "DbgHelp session is not initialized." }
                 return result;
             }
 

@@ -23,6 +23,7 @@
 #include "../core/unified_hotpatch_manager.hpp"
 #include "IDELogger.h"
 #include "Win32IDE.h"
+#include "../agentic/ToolRegistry.h"
 #include <algorithm>
 #include <atomic>
 #include <cctype>
@@ -36,6 +37,7 @@
 #include <vector>
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <nlohmann/json.hpp>
 
 // Forward: socket type
 using LocalServerSocket = SOCKET;
@@ -715,7 +717,14 @@ void Win32IDE::stopLocalServer()
     m_localServerRunning.store(false);
     if (m_localServerThread.joinable())
     {
-        m_localServerThread.join();
+        if (m_localServerThread.get_id() == std::this_thread::get_id())
+        {
+            m_localServerThread.detach();
+        }
+        else
+        {
+            m_localServerThread.join();
+        }
     }
     appendToOutput("[Server] Stopped", "General", OutputSeverity::Info);
 }
@@ -727,6 +736,9 @@ void Win32IDE::stopLocalServer()
 void Win32IDE::handleLocalServerClient(SOCKET clientFd)
 {
     LocalServerSocket client = clientFd;
+
+    static constexpr size_t kMaxHeaderBytes = 64u * 1024u;
+    static constexpr size_t kMaxRequestBodyBytes = 16u * 1024u * 1024u;
 
     // Read request
     std::string data;
@@ -743,6 +755,13 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd)
     while ((received = recv(client, buffer, sizeof(buffer), 0)) > 0)
     {
         data.append(buffer, buffer + received);
+        if (data.size() > kMaxHeaderBytes)
+        {
+            const std::string resp = LocalServerUtil::buildHttpResponse(413, "{\"error\":\"Request headers too large\"}");
+            LocalServerUtil::sendAll(client, resp);
+            closesocket(client);
+            return;
+        }
         if (data.find("\r\n\r\n") != std::string::npos)
             break;
     }
@@ -773,9 +792,24 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd)
         }
     }
 
+    if (contentLength > kMaxRequestBodyBytes)
+    {
+        const std::string resp = LocalServerUtil::buildHttpResponse(413, "{\"error\":\"Request body too large\"}");
+        LocalServerUtil::sendAll(client, resp);
+        closesocket(client);
+        return;
+    }
+
     while (body.size() < contentLength && (received = recv(client, buffer, sizeof(buffer), 0)) > 0)
     {
         body.append(buffer, buffer + received);
+        if (body.size() > kMaxRequestBodyBytes)
+        {
+            const std::string resp = LocalServerUtil::buildHttpResponse(413, "{\"error\":\"Request body too large\"}");
+            LocalServerUtil::sendAll(client, resp);
+            closesocket(client);
+            return;
+        }
     }
 
     // Parse method and path
@@ -1802,7 +1836,7 @@ void Win32IDE::handleModelBridgeUnloadEndpoint(SOCKET client)
 }
 
 // ============================================================================
-// OLLAMA: /api/tags — list loaded models
+// native: /api/tags — list loaded models
 // ============================================================================
 
 void Win32IDE::handleOllamaApiTags(SOCKET client)
@@ -1830,7 +1864,7 @@ void Win32IDE::handleOllamaApiTags(SOCKET client)
 }
 
 // ============================================================================
-// OLLAMA: /api/generate — generate text (streaming or non-streaming)
+// native: /api/generate — generate text (streaming or non-streaming)
 // ============================================================================
 
 void Win32IDE::handleOllamaApiGenerate(SOCKET client, const std::string& body)
@@ -2187,20 +2221,23 @@ std::vector<std::string> Win32IDE::getCandidateModelRootPaths()
     if (!programData.empty())
         addRoot(programData + "\\Ollama\\models");
 
-    // 3) Common custom locations (esp. on machines with big D: drives).
-    addRoot("D:\\OllamaModels");
-    addRoot("D:\\models");
+    // 3) Common custom locations (esp. on machines with big secondary drives).
+    // addRoot("D:\\OllamaModels");
+    // addRoot("D:\\models");
 
-    // 4) Portable folder next to the executable (bin\\models).
+    // 4) Portable folder next to the executable (models).
     char exePath[MAX_PATH] = {};
     DWORD n = GetModuleFileNameA(nullptr, exePath, MAX_PATH);
     if (n > 0 && n < MAX_PATH)
     {
         std::string exe(exePath, exePath + n);
         size_t slash = exe.find_last_of("\\/");
-        std::string dir = (slash == std::string::npos) ? std::string() : exe.substr(0, slash);
+        std::string dir = (slash == std::string::npos) ? std::string(".") : exe.substr(0, slash);
         if (!dir.empty())
+        {
             addRoot(dir + "\\models");
+            addRoot(dir + "\\dist"); // Often models live in dist/ too
+        }
     }
 
     return roots;
@@ -3575,7 +3612,7 @@ void Win32IDE::handleBackendActiveEndpoint(SOCKET client)
 }
 
 // POST /api/backend/switch — switch active backend
-// Body: {"backend": "Ollama"} or {"backend": "openai", "model": "gpt-4o", "apiKey": "sk-..."}
+// Body: {"backend": "native"} or {"backend": "openai", "model": "gpt-4o", "apiKey": "sk-..."}
 void Win32IDE::handleBackendSwitchEndpoint(SOCKET client, const std::string& body)
 {
     try
@@ -4924,11 +4961,35 @@ void Win32IDE::handleToolDispatchEndpoint(SOCKET client, const std::string& body
     }
     else
     {
-        std::string resp = LocalServerUtil::buildHttpResponse(
-            400, "{\"error\":\"unknown_tool\",\"message\":\"Unknown tool: " + LocalServerUtil::escapeJson(tool) +
-                     "\",\"available\":[\"read_file\",\"write_file\",\"list_directory\",\"delete_file\","
-                     "\"rename_file\",\"mkdir\",\"search_files\",\"stat_file\",\"copy_file\",\"move_file\","
-                     "\"execute_command\",\"git_status\"]}");
+        // Generic dispatch through production AgentToolRegistry so the HTTP tool surface
+        // stays consistent with autonomy and agentic tool execution.
+        nlohmann::json jargs = nlohmann::json::object();
+        try
+        {
+            jargs = nlohmann::json::parse(argsBody, nullptr, false);
+            if (!jargs.is_object())
+            {
+                jargs = nlohmann::json::object({{"value", jargs}});
+            }
+        }
+        catch (...)
+        {
+            jargs = nlohmann::json::object({{"raw", argsBody}});
+        }
+
+        RawrXD::Agent::ToolExecResult r = RawrXD::Agent::AgentToolRegistry::Instance().Dispatch(tool, jargs);
+
+        nlohmann::json respJ;
+        respJ["success"] = r.success;
+        respJ["tool"] = tool;
+        respJ["output"] = r.output;
+        respJ["elapsed_ms"] = r.elapsed_ms;
+        if (!r.success)
+        {
+            respJ["error"] = "tool_failed";
+        }
+
+        std::string resp = LocalServerUtil::buildHttpResponse(r.success ? 200 : 500, respJ.dump());
         LocalServerUtil::sendAll(client, resp);
     }
 

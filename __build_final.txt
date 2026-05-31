@@ -1,0 +1,91 @@
+[1/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\main_win32.cpp.obj
+[2/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE.cpp.obj
+[3/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Core.cpp.obj
+[4/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Accelerators.cpp.obj
+[5/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_CoreRuntimeSpine.cpp.obj
+[6/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Commands.cpp.obj
+[7/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_ModelLab.cpp.obj
+[8/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_VSCodeUI.cpp.obj
+[9/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_CopilotNativeGlue.cpp.obj
+[10/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Watchdog.cpp.obj
+[11/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_SyntaxHighlight.cpp.obj
+[12/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_VisionEncoder.cpp.obj
+[13/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Themes.cpp.obj
+[14/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_StreamingUX.cpp.obj
+[15/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Sidebar.cpp.obj
+[16/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_SidebarRuntime.cpp.obj
+[17/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Debugger.cpp.obj
+[18/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AutonomousDebugger.cpp.obj
+[19/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Annotations.cpp.obj
+[20/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_ReverseEngineering.cpp.obj
+[21/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Logger.cpp.obj
+[22/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AgenticBridge.cpp.obj
+[23/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\full_agentic_ide\FullAgenticIDE.cpp.obj
+[24/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AgentCommands.cpp.obj
+[25/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_CodeCompletion.cpp.obj
+[26/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_TabManager.cpp.obj
+[27/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Settings.cpp.obj
+[28/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AutonomousCommunicator.cpp.obj
+[29/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AgenticComposerUX.cpp.obj
+[30/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_ContextMentionParser.cpp.obj
+[31/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_UnifiedTelemetry.cpp.obj
+[32/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_PowerShell.cpp.obj
+[33/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_PowerShellPanel.cpp.obj
+[34/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Session.cpp.obj
+[35/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_ChatHistoryPersistence.cpp.obj
+[36/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FileOps.cpp.obj
+[37/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_DecompilerView.cpp.obj
+[38/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_NativePipeline.cpp.obj
+[39/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_ModelAnatomy.cpp.obj
+[40/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FeatureManifest.cpp.obj
+[41/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_GhostText.cpp.obj
+[42/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Titan_Heartbeat.cpp.obj
+[43/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_OutlinePanel.cpp.obj
+[44/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_GoToLine.cpp.obj
+[45/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_GoToSymbol.cpp.obj
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xutility(4924): warning C4244: '=': conversion from 'wchar_t' to 'char', possible loss of data
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xutility(4924): note: the template instantiation context (the oldest one first) is
+D:\rawrxd\src\win32app\Win32IDE_GoToSymbol.cpp(334): note: see reference to function template instantiation 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string<std::_String_iterator<std::_String_val<std::_Simple_types<_Elem>>>,0>(_Iter,_Iter,const _Alloc &)' being compiled
+        with
+        [
+            _Elem=wchar_t,
+            _Iter=std::_String_iterator<std::_String_val<std::_Simple_types<wchar_t>>>,
+            _Alloc=std::allocator<char>
+        ]
+D:\rawrxd\src\win32app\Win32IDE_GoToSymbol.cpp(334): note: see the first reference to 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string' in 'filterSymbols'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(862): note: see reference to function template instantiation 'void std::basic_string<char,std::char_traits<char>,std::allocator<char>>::_Construct_from_iter<wchar_t*,wchar_t*,_Size_type>(_Iter,const _Sent,_Size)' being compiled
+        with
+        [
+            _Size_type=unsigned __int64,
+            _Iter=wchar_t *,
+            _Sent=wchar_t *,
+            _Size=unsigned __int64
+        ]
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(1018): note: see reference to function template instantiation '_OutIt *std::_Copy_n_unchecked4<wchar_t*,_Size,char*>(_InIt,_SizeTy,_OutIt)' being compiled
+        with
+        [
+            _OutIt=char *,
+            _Size=unsigned __int64,
+            _InIt=wchar_t *,
+            _SizeTy=unsigned __int64
+        ]
+[46/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_StatusBarActions.cpp.obj
+[47/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_QuickOpen.cpp.obj
+[48/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_InferenceMetrics.cpp.obj
+[49/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_RenamePreview.cpp.obj
+[50/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Tier2Cosmetics.cpp.obj
+[51/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Tier1Cosmetics.cpp.obj
+[52/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Breadcrumbs.cpp.obj
+[53/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_PlanExecutor.cpp.obj
+[54/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FailureDetector.cpp.obj
+[55/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FailureIntelligence.cpp.obj
+[56/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_LocalServer.cpp.obj
+[57/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_BackendSwitcher.cpp.obj
+[58/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AIBackend.cpp.obj
+[59/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_LLMRouter.cpp.obj
+[60/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_LSPClient.cpp.obj
+[61/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_PeekOverlay.cpp.obj
+[62/193] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_CaretAnimation.cpp.obj
+User interrupt
+CMake Error: Generator: build tool execution failed, command was: C:/VS2022Enterprise/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe -j 1 RawrXD-Win32IDE
+^C

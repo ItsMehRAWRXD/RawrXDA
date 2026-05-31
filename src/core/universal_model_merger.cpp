@@ -687,7 +687,7 @@ void UniversalModelMerger::executeMergeInternal() {
                     // For ExpertSlotting, attention is shared across all experts
                     auto mergeResult = mergeAttentionLayers(layer, plan.experts);
                     if (!mergeResult.success && !isNorm) {
-                        // Non-fatal for norms, they can be averaged
+                        fprintf(stderr, "[UniversalModelMerger] Non-fatal merge error for norm tensor\n");
                     }
                 } else if (isMLP) {
                     // MoE MLP: concatenate expert MLP weights

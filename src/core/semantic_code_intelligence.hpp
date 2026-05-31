@@ -349,6 +349,9 @@ public:
                                                    uint32_t maxResults = 100) const;
     std::vector<const SymbolEntry*> getSymbolsInFile(const std::string& filePath) const;
 
+    // ── Contextual Intelligence ──
+    std::vector<std::string> queryRelatedSymbols(const std::string& query, uint32_t maxFiles = 20) const;
+
     // ── Indexing ──
     PatchResult indexFile(const std::string& filePath);
     PatchResult reindexFile(const std::string& filePath);

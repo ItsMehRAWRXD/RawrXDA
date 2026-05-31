@@ -46,7 +46,7 @@ struct ModelConfig {
 
 class ModelConfiguration {
 public:
-    explicit ModelConfiguration(OllamaClient* client);
+    explicit ModelConfiguration(NativeClient* client);
     
     /**
      * @brief Load available models from Ollama and create configurations
@@ -109,7 +109,7 @@ private:
     void categorizeModel(const OllamaModel& model, ModelConfig& config);
     void populateModelDetails(const OllamaModel& ollama_model, ModelConfig& config);
     
-    OllamaClient* m_client;
+    NativeClient* m_client;
     std::vector<ModelConfig> m_configs;
     std::map<std::string, ModelConfig*> m_model_map;
 };

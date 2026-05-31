@@ -1,0 +1,2 @@
+[RawrXD][GPU] Loaded ggml-vulkan.dll for Vulkan backend detection
+[RawrXD][FATAL] No GPU backend available (Vulkan/CUDA/HIP). GPU inference is REQUIRED and cannot be disabled. Install Vulkan runtime or a supported GPU driver and retry.

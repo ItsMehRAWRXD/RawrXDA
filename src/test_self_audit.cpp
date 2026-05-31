@@ -8,8 +8,8 @@
 #include <iostream>
 #include <memory>
 
-// Stub/Mock classes to satisfy shared_ptr requirements if real ones are heavy
-// But we try to use real where possible to simulate "Full Agentic"
+// Mock classes to satisfy shared_ptr requirements if real ones are heavy
+// Real implementations are used where possible to simulate full agentic mode
 
 using namespace RawrXD;
 

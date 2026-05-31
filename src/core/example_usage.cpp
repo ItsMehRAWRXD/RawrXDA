@@ -1,6 +1,6 @@
 /// =============================================================================
-/// example_usage.cpp
-/// Example usage of WebView2Container for Monaco Editor integration
+/// usage.cpp
+/// Usage of WebView2Container for Monaco Editor integration
 /// =============================================================================
 
 #include <windows.h>
@@ -127,14 +127,14 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         
         case WM_COMMAND: {
             switch (LOWORD(wParam)) {
-                case 1001: { // Menu item example
+                case 1001: { // Menu item
                     if (g_editorReady) {
                         WebView2Container_SetReadOnly(true);
                         MessageBoxA(hwnd, "Editor is now read-only", "Info", MB_OK);
                     }
                     break;
                 }
-                case 1002: { // Menu item example
+                case 1002: { // Menu item
                     if (g_editorReady) {
                         WebView2Container_SetReadOnly(false);
                         MessageBoxA(hwnd, "Editor is now editable", "Info", MB_OK);
@@ -198,7 +198,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 /// Build Instructions
 /// =============================================================================
 /// 
-/// To compile this example:
+/// To compile:
 /// 
 /// 1. Using Visual Studio:
 ///    - Create a new C++ Windows Desktop Application project
@@ -208,14 +208,14 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 ///      ole32.lib, oleaut32.lib, user32.lib, version.lib
 /// 
 /// 2. Using CMake:
-///    cmake -B build -DWEBVIEW2_BUILD_EXAMPLE=ON
+///    cmake -B build -DWEBVIEW2_BUILD=ON
 ///    cmake --build build
 /// 
 /// 3. Using g++/clang++ (with WebView2 SDK):
-///    g++ -std=c++17 example_usage.cpp WebView2Container_stubs.cpp \
+///    g++ -std=c++17 usage.cpp WebView2Container_stubs.cpp \\
 ///        -I"path/to/webview2/include" \
 ///        -L"path/to/webview2/lib" \
 ///        -lWebView2Loader.dll -lole32 -loleaut32 -luser32 -lversion \
-///        -o monaco_example.exe
+///        -o monaco.exe
 /// 
 /// =============================================================================

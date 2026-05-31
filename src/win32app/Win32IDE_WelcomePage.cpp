@@ -13,8 +13,9 @@
 // ============================================================================
 
 #include "Win32IDE.h"
-#include <sstream>
 #include <fstream>
+#include <sstream>
+
 
 // ============================================================================
 // FIRST LAUNCH DETECTION
@@ -23,7 +24,8 @@
 bool Win32IDE::isFirstLaunch()
 {
     char appDataPath[MAX_PATH] = {};
-    if (SHGetFolderPathA(nullptr, CSIDL_APPDATA, nullptr, 0, appDataPath) != S_OK) {
+    if (SHGetFolderPathA(nullptr, CSIDL_APPDATA, nullptr, 0, appDataPath) != S_OK)
+    {
         return true;
     }
     std::string markerPath = std::string(appDataPath) + "\\RawrXD\\.first_launch_done";
@@ -33,14 +35,16 @@ bool Win32IDE::isFirstLaunch()
 void Win32IDE::markFirstLaunchDone()
 {
     char appDataPath[MAX_PATH] = {};
-    if (SHGetFolderPathA(nullptr, CSIDL_APPDATA, nullptr, 0, appDataPath) != S_OK) return;
+    if (SHGetFolderPathA(nullptr, CSIDL_APPDATA, nullptr, 0, appDataPath) != S_OK)
+        return;
 
     std::string dir = std::string(appDataPath) + "\\RawrXD";
     CreateDirectoryA(dir.c_str(), nullptr);
 
     std::string markerPath = dir + "\\.first_launch_done";
     std::ofstream f(markerPath);
-    if (f) {
+    if (f)
+    {
         f << "1";
         f.close();
     }
@@ -54,19 +58,26 @@ std::string Win32IDE::generateWelcomeHTML()
 {
     // Build recent files list
     std::string recentFilesHtml;
-    for (size_t i = 0; i < m_recentFiles.size() && i < 10; i++) {
+    for (size_t i = 0; i < m_recentFiles.size() && i < 10; i++)
+    {
         const auto& path = m_recentFiles[i];
         // Extract filename
         size_t lastSlash = path.find_last_of("\\/");
         std::string name = (lastSlash != std::string::npos) ? path.substr(lastSlash + 1) : path;
-        recentFilesHtml += "<li class='recent-item' onclick=\"sendAction('openRecent:" + std::to_string(i) + "')\">"
+        recentFilesHtml += "<li class='recent-item' onclick=\"sendAction('openRecent:" + std::to_string(i) +
+                           "')\">"
                            "<span class='file-icon'>📄</span>"
-                           "<span class='file-name'>" + name + "</span>"
-                           "<span class='file-path'>" + path + "</span>"
+                           "<span class='file-name'>" +
+                           name +
+                           "</span>"
+                           "<span class='file-path'>" +
+                           path +
+                           "</span>"
                            "</li>";
     }
 
-    if (recentFilesHtml.empty()) {
+    if (recentFilesHtml.empty())
+    {
         recentFilesHtml = "<li class='recent-item empty'>No recent files</li>";
     }
 
@@ -357,9 +368,10 @@ body {
 
 <script>
 function sendAction(action) {
-    if (window.chrome && window.chrome.webview) {
-        window.chrome.webview.postMessage(JSON.stringify({ type: 'welcomeAction', action: action }));
-    }
+        if (window.chrome && window.chrome.webview)
+        {
+            window.chrome.webview.postMessage(JSON.stringify({type: 'welcomeAction', action: action}));
+        }
 }
 </script>
 </body>
@@ -374,7 +386,8 @@ function sendAction(action) {
 
 void Win32IDE::showWelcomePage()
 {
-    if (m_welcomePageShown) return;
+    if (m_welcomePageShown)
+        return;
 
     // Add a "Welcome" tab to the editor
     addTab("__welcome__", "Welcome");
@@ -384,20 +397,27 @@ void Win32IDE::showWelcomePage()
 
     // ── Try WebView2 rendering first ────────────────────────────────────
     bool usedWebView = false;
-    if (m_webView2) {
+    if (m_webView2)
+    {
         // Write HTML to temp file and navigate via file:// URL
         char tempPath[MAX_PATH];
-        if (GetTempPathA(MAX_PATH, tempPath)) {
+        if (GetTempPathA(MAX_PATH, tempPath))
+        {
             std::string htmlPath = std::string(tempPath) + "rawrxd_welcome.html";
             std::ofstream f(htmlPath);
-            if (f) {
+            if (f)
+            {
                 f << welcomeHtml;
                 f.close();
 
                 // Navigate WebView2 to the temp file
                 std::wstring wPath = L"file:///" + std::wstring(htmlPath.begin(), htmlPath.end());
                 // Replace backslashes with forward slashes for URL
-                for (auto& c : wPath) { if (c == L'\\') c = L'/'; }
+                for (auto& c : wPath)
+                {
+                    if (c == L'\\')
+                        c = L'/';
+                }
 
                 // The WebView2Container exposes ICoreWebView2* m_webview.
                 // We access it through the container's navigate method.
@@ -410,65 +430,68 @@ void Win32IDE::showWelcomePage()
     }
 
     // ── Fallback: Rich plain-text welcome in editor ─────────────────────
-    if (!usedWebView && m_hwndEditor) {
-        std::string plainText =
-            "╔══════════════════════════════════════════════════════════════╗\r\n"
-            "║           Welcome to RawrXD IDE                            ║\r\n"
-            "║  Advanced GGUF Model Loader with Live Hotpatching          ║\r\n"
-            "║  & Agentic Correction                                      ║\r\n"
-            "║  Build 2026.02  |  Powered by MASM64 + Win32               ║\r\n"
-            "╠══════════════════════════════════════════════════════════════╣\r\n"
-            "║                                                            ║\r\n"
-            "║  QUICK START                                               ║\r\n"
-            "║  ──────────                                                ║\r\n"
-            "║   Ctrl+N           New File                                ║\r\n"
-            "║   Ctrl+O           Open File                               ║\r\n"
-            "║   Ctrl+Shift+E     Open Explorer Sidebar                   ║\r\n"
-            "║   Ctrl+Shift+P     Command Palette                         ║\r\n"
-            "║   Ctrl+,           Settings                                ║\r\n"
-            "║   Ctrl+`           Toggle Terminal                         ║\r\n"
-            "║                                                            ║\r\n"
-            "║  AI FEATURES                                               ║\r\n"
-            "║  ───────────                                               ║\r\n"
-            "║   Ghost Text       Inline AI completions (Tab to accept)   ║\r\n"
-            "║   Copilot Chat     Ctrl+Shift+I — Ask AI questions         ║\r\n"
-            "║   Agentic Loop     Autonomous multi-step code generation   ║\r\n"
-            "║   Model Selector   Switch between local GGUF models        ║\r\n"
-            "║                                                            ║\r\n"
-            "║  DEBUG & TEST                                              ║\r\n"
-            "║  ────────────                                              ║\r\n"
-            "║   F5               Start Debugging (DbgEng/native)         ║\r\n"
-            "║   F9               Toggle Breakpoint                       ║\r\n"
-            "║   Ctrl+Shift+D     Debug Panel                             ║\r\n"
-            "║   Test Explorer    Discover & run CTest/pytest/native       ║\r\n"
-            "║                                                            ║\r\n"
-            "║  GIT INTEGRATION                                           ║\r\n"
-            "║  ───────────────                                           ║\r\n"
-            "║   Ctrl+Shift+G     Source Control Panel                    ║\r\n"
-            "║   Stage / Commit / Push / Pull / Stash / Branch            ║\r\n"
-            "║   Side-by-side diff viewer with LCS algorithm              ║\r\n"
-            "║                                                            ║\r\n"
-            "║  GETTING STARTED                                           ║\r\n"
-            "║  ───────────────                                           ║\r\n"
-            "║   1. Open or create files using the Explorer sidebar       ║\r\n"
-            "║   2. Load a GGUF model for AI-powered development          ║\r\n"
-            "║   3. Use Copilot Chat for code assistance                  ║\r\n"
-            "║   4. Install extensions from the marketplace               ║\r\n"
-            "║   5. Configure themes and settings via Ctrl+,              ║\r\n"
-            "║                                                            ║\r\n"
-            "║  Tip: Use 'View > Welcome' to show this page again.       ║\r\n"
-            "╚══════════════════════════════════════════════════════════════╝\r\n";
+    if (!usedWebView && m_hwndEditor)
+    {
+        std::string plainText = "╔══════════════════════════════════════════════════════════════╗\r\n"
+                                "║           Welcome to RawrXD IDE                            ║\r\n"
+                                "║  Advanced GGUF Model Loader with Live Hotpatching          ║\r\n"
+                                "║  & Agentic Correction                                      ║\r\n"
+                                "║  Build 2026.02  |  Powered by MASM64 + Win32               ║\r\n"
+                                "╠══════════════════════════════════════════════════════════════╣\r\n"
+                                "║                                                            ║\r\n"
+                                "║  QUICK START                                               ║\r\n"
+                                "║  ──────────                                                ║\r\n"
+                                "║   Ctrl+N           New File                                ║\r\n"
+                                "║   Ctrl+O           Open File                               ║\r\n"
+                                "║   Ctrl+Shift+E     Open Explorer Sidebar                   ║\r\n"
+                                "║   Ctrl+Shift+P     Command Palette                         ║\r\n"
+                                "║   Ctrl+,           Settings                                ║\r\n"
+                                "║   Ctrl+`           Toggle Terminal                         ║\r\n"
+                                "║                                                            ║\r\n"
+                                "║  AI FEATURES                                               ║\r\n"
+                                "║  ───────────                                               ║\r\n"
+                                "║   Ghost Text       Inline AI completions (Tab to accept)   ║\r\n"
+                                "║   Copilot Chat     Ctrl+Shift+I — Ask AI questions         ║\r\n"
+                                "║   Agentic Loop     Autonomous multi-step code generation   ║\r\n"
+                                "║   Model Selector   Switch between local GGUF models        ║\r\n"
+                                "║                                                            ║\r\n"
+                                "║  DEBUG & TEST                                              ║\r\n"
+                                "║  ────────────                                              ║\r\n"
+                                "║   F5               Start Debugging (DbgEng/native)         ║\r\n"
+                                "║   F9               Toggle Breakpoint                       ║\r\n"
+                                "║   Ctrl+Shift+D     Debug Panel                             ║\r\n"
+                                "║   Test Explorer    Discover & run CTest/pytest/native       ║\r\n"
+                                "║                                                            ║\r\n"
+                                "║  GIT INTEGRATION                                           ║\r\n"
+                                "║  ───────────────                                           ║\r\n"
+                                "║   Ctrl+Shift+G     Source Control Panel                    ║\r\n"
+                                "║   Stage / Commit / Push / Pull / Stash / Branch            ║\r\n"
+                                "║   Side-by-side diff viewer with LCS algorithm              ║\r\n"
+                                "║                                                            ║\r\n"
+                                "║  GETTING STARTED                                           ║\r\n"
+                                "║  ───────────────                                           ║\r\n"
+                                "║   1. Open or create files using the Explorer sidebar       ║\r\n"
+                                "║   2. Load a GGUF model for AI-powered development          ║\r\n"
+                                "║   3. Use Copilot Chat for code assistance                  ║\r\n"
+                                "║   4. Install extensions from the marketplace               ║\r\n"
+                                "║   5. Configure themes and settings via Ctrl+,              ║\r\n"
+                                "║                                                            ║\r\n"
+                                "║  Tip: Use 'View > Welcome' to show this page again.       ║\r\n"
+                                "╚══════════════════════════════════════════════════════════════╝\r\n";
 
         SetWindowTextA(m_hwndEditor, plainText.c_str());
     }
 
     // Write the welcome HTML to temp regardless (for manual browser preview)
-    if (!usedWebView) {
+    if (!usedWebView)
+    {
         char tempPath[MAX_PATH];
-        if (GetTempPathA(MAX_PATH, tempPath)) {
+        if (GetTempPathA(MAX_PATH, tempPath))
+        {
             std::string htmlPath = std::string(tempPath) + "rawrxd_welcome.html";
             std::ofstream f(htmlPath);
-            if (f) {
+            if (f)
+            {
                 f << welcomeHtml;
                 f.close();
                 RAWRXD_LOG_INFO("Win32IDE_WelcomePage") << "Welcome page HTML written to " << htmlPath;
@@ -488,7 +511,8 @@ void Win32IDE::showWelcomePage()
 void Win32IDE::closeWelcomePage()
 {
     int tabIdx = findTabByPath("__welcome__");
-    if (tabIdx >= 0) {
+    if (tabIdx >= 0)
+    {
         removeTab(tabIdx);
     }
     m_welcomePageShown = false;
@@ -500,58 +524,44 @@ void Win32IDE::closeWelcomePage()
 
 void Win32IDE::onWelcomeAction(const std::string& action)
 {
-    if (action == "newFile") {
+    if (action == "newFile")
+    {
         closeWelcomePage();
         newFile();
     }
-    else if (action == "openFile") {
+    else if (action == "openFile")
+    {
         closeWelcomePage();
         openFile();
     }
-    else if (action == "openFolder") {
-        closeWelcomePage();
-        // Open folder dialog
-        char folderPath[MAX_PATH] = {};
-        BROWSEINFOA bi = {};
-        bi.hwndOwner = m_hwndMain;
-        bi.lpszTitle = "Select Workspace Folder";
-        bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
-        PIDLIST_ABSOLUTE pidl = SHBrowseForFolderA(&bi);
-        if (pidl) {
-            if (SHGetPathFromIDListA(pidl, folderPath)) {
-                m_settings.workingDirectory = folderPath;
-                
-                // P0: Sync workspace context to agentic bridge
-                if (m_agenticBridge) {
-                    m_agenticBridge->SetWorkspaceRoot(folderPath);
-                    RAWRXD_LOG_INFO("Win32IDE_WelcomePage") << "Agent workspace context synced to: " << folderPath;
-                }
-
-                // Refresh file tree
-                SetCurrentDirectoryA(folderPath);
-            }
-            CoTaskMemFree(pidl);
-        }
+    else if (action == "openFolder")
+    {
+        openWorkspaceFolder();
     }
-    else if (action == "cloneRepo") {
+    else if (action == "cloneRepo")
+    {
         closeWelcomePage();
         // Show clone dialog (basic URL input)
         // Dispatched via command palette for now
         PostMessage(m_hwndMain, WM_COMMAND, 8001 /* IDM_GIT_CLONE */, 0);
     }
-    else if (action == "loadModel") {
+    else if (action == "loadModel")
+    {
         closeWelcomePage();
         openModel();
     }
-    else if (action == "settings") {
+    else if (action == "settings")
+    {
         showSettingsGUI();
     }
-    else if (action.find("openRecent:") == 0) {
+    else if (action.find("openRecent:") == 0)
+    {
         int idx = atoi(action.c_str() + 11);
         closeWelcomePage();
         openRecentFile(idx);
     }
-    else if (action.find("toggleWelcome:") == 0) {
+    else if (action.find("toggleWelcome:") == 0)
+    {
         bool checked = (action.find("true") != std::string::npos);
         m_settings.showWelcomeOnStartup = checked;
         saveSettings();

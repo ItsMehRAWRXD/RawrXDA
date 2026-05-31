@@ -475,8 +475,11 @@ public:
 // ─────────────────────────────────────────────────────────────────────────────
 
 void PrintUsage(const char* prog) {
-
-
+    std::cerr << "Usage: " << prog << " <model.gguf> <topology.json> [--output patched.gguf]\n"
+              << "\nInject burstzone metadata into GGUF for zero-latency cold load.\n"
+              << "  model.gguf      Source GGUF model file\n"
+              << "  topology.json   Drive topology configuration\n"
+              << "  --output        Optional output path (default: overwrites input)\n";
 }
 
 int main(int argc, char** argv) {

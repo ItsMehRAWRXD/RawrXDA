@@ -8,7 +8,7 @@
 // ============================================================================
 
 #include "multi_response_engine.h"
-#include "../agentic/AgentOllamaClient.h"
+#include "../agentic/NativeInferenceClient.h"
 
 #include <algorithm>
 #include <sstream>
@@ -16,10 +16,10 @@
 #include <cmath>
 #include <ctime>
 
-using RawrXD::Agent::AgentOllamaClient;
+using RawrXD::Agent::NativeInferenceClient;
 using RawrXD::Agent::ChatMessage;
 using RawrXD::Agent::InferenceResult;
-using RawrXD::Agent::OllamaConfig;
+using RawrXD::Agent::NativeInferenceConfig;
 
 // ────────────────────────────────────────────────────────────────────────────
 // Construction / Destruction
@@ -235,14 +235,14 @@ GeneratedResponse MultiResponseEngine::generateSingleResponse(const std::string&
     auto t0 = std::chrono::steady_clock::now();
 
     // Build the request payload. The actual HTTP call to the active backend
-    // is executed here via AgentOllamaClient so this engine returns real model output.
+    // is executed here via NativeInferenceClient so this engine returns real model output.
     std::string systemPrompt = buildSystemPrompt(tmpl);
 
-    OllamaConfig cfg;
+    NativeInferenceConfig cfg;
     cfg.temperature = tmpl.temperature;
     cfg.max_tokens = tmpl.maxTokens;
 
-    AgentOllamaClient client(cfg);
+    NativeInferenceClient client(cfg);
     std::vector<ChatMessage> messages;
     messages.push_back({"system", systemPrompt, "", json::array()});
     if (!context.empty()) {

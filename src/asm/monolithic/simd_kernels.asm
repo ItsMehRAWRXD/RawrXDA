@@ -19,7 +19,6 @@
 
 ; NOTE: Do NOT include rawrxd.inc — this file DEFINES PUBLIC symbols.
 EXTERN g_hasAVX512:DWORD
-EXTERN FlashAttention_Forward:PROC
 
 PUBLIC SIMD_RMSNorm
 PUBLIC SIMD_Softmax
@@ -31,6 +30,7 @@ PUBLIC SIMD_RoPE
 PUBLIC SIMD_SiLU
 PUBLIC SIMD_TextSearch
 PUBLIC SIMD_FlashAttention
+PUBLIC FlashAttention_Forward
 
 .const
 align 16
@@ -39,6 +39,14 @@ c_one           dd 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0
 c_rms_eps       dd 1.0e-6              ; RMSNorm epsilon
 c_neg_inf       dd 0FF800000h          ; -inf for softmax stability
 c_inv_sqrt_dim  dd 0.0883883h          ; 1/sqrt(128) ≈ 0.08839 — for head_dim=128
+c_flash_scale_32      dd 03E3504F3h
+c_flash_scale_64      dd 03E000000h
+c_flash_scale_128     dd 03DB504F3h
+c_flash_scale_256     dd 03D800000h
+c_flash_scale_default dd 03F800000h
+c_flash_one           dd 03F800000h
+c_flash_half          dd 03F000000h
+c_flash_neg_ten       dd 0C1200000h
 
 .data
 align 8
@@ -1444,6 +1452,261 @@ SIMD_TextSearch PROC FRAME
     pop     rbp
     ret
 SIMD_TextSearch ENDP
+
+_FlashApproxExp PROC
+    ; XMM0 = x, expected x <= 0 after (score - max).
+    ; Returns approximate exp(x) in XMM0 using a bounded quadratic.
+    xorps   xmm1, xmm1
+    comiss  xmm0, dword ptr [c_flash_neg_ten]
+    jb      @@too_small
+    movaps  xmm1, xmm0
+    mulss   xmm1, xmm1
+    mulss   xmm1, dword ptr [c_flash_half]
+    addss   xmm1, xmm0
+    addss   xmm1, dword ptr [c_flash_one]
+    xorps   xmm0, xmm0
+    comiss  xmm1, xmm0
+    jbe     @@too_small
+    movaps  xmm0, xmm1
+    ret
+@@too_small:
+    xorps   xmm0, xmm0
+    ret
+_FlashApproxExp ENDP
+
+; ────────────────────────────────────────────────────────────────
+; FlashAttention_Forward — scalar fallback implementation
+;   RCX = pQ [M x D], RDX = pK [N x D], R8 = pV [N x D], R9 = pOut [M x D]
+;   [rbp+30h] = M, [rbp+38h] = N, [rbp+40h] = head_dim
+; ────────────────────────────────────────────────────────────────
+FlashAttention_Forward PROC FRAME
+    push    rbp
+    .pushreg rbp
+    mov     rbp, rsp
+    .setframe rbp, 0
+    push    rbx
+    .pushreg rbx
+    push    rsi
+    .pushreg rsi
+    push    rdi
+    .pushreg rdi
+    push    r12
+    .pushreg r12
+    push    r13
+    .pushreg r13
+    push    r14
+    .pushreg r14
+    push    r15
+    .pushreg r15
+    sub     rsp, 58h
+    .allocstack 58h
+    .endprolog
+
+    mov     r12, rcx
+    mov     r13, rdx
+    mov     r14, r8
+    mov     r15, r9
+    test    r12, r12
+    jz      @@fa_invalid
+    test    r13, r13
+    jz      @@fa_invalid
+    test    r14, r14
+    jz      @@fa_invalid
+    test    r15, r15
+    jz      @@fa_invalid
+
+    mov     ebx, dword ptr [rbp+30h]      ; M
+    mov     eax, dword ptr [rbp+38h]      ; N
+    mov     dword ptr [rsp+20h], eax
+    mov     edi, dword ptr [rbp+40h]      ; D
+    test    ebx, ebx
+    jle     @@fa_invalid
+    test    eax, eax
+    jle     @@fa_invalid
+    test    edi, edi
+    jle     @@fa_invalid
+    cmp     ebx, 256
+    ja      @@fa_invalid
+    cmp     eax, 4096
+    ja      @@fa_invalid
+    cmp     edi, 512
+    ja      @@fa_invalid
+
+    movss   xmm6, dword ptr [c_flash_scale_default]
+    cmp     edi, 32
+    jne     @@fa_chk64
+    movss   xmm6, dword ptr [c_flash_scale_32]
+    jmp     @@fa_scale_ready
+@@fa_chk64:
+    cmp     edi, 64
+    jne     @@fa_chk128
+    movss   xmm6, dword ptr [c_flash_scale_64]
+    jmp     @@fa_scale_ready
+@@fa_chk128:
+    cmp     edi, 128
+    jne     @@fa_chk256
+    movss   xmm6, dword ptr [c_flash_scale_128]
+    jmp     @@fa_scale_ready
+@@fa_chk256:
+    cmp     edi, 256
+    jne     @@fa_scale_ready
+    movss   xmm6, dword ptr [c_flash_scale_256]
+
+@@fa_scale_ready:
+    xor     esi, esi                      ; row index m
+
+@@fa_row_loop:
+    cmp     esi, ebx
+    jge     @@fa_success
+
+    mov     eax, esi
+    imul    eax, edi
+    shl     rax, 2
+    lea     r10, [r12 + rax]              ; q_row
+    lea     r11, [r15 + rax]              ; out_row
+
+    mov     dword ptr [rsp+24h], 0FF800000h
+    xor     ecx, ecx                      ; key index n
+
+@@fa_max_loop:
+    cmp     ecx, dword ptr [rsp+20h]
+    jge     @@fa_zero_out
+    mov     eax, ecx
+    imul    eax, edi
+    shl     rax, 2
+    lea     r8, [r13 + rax]               ; k_row
+    xorps   xmm1, xmm1
+    xor     edx, edx                      ; dim index
+
+@@fa_dot1_loop:
+    cmp     edx, edi
+    jge     @@fa_dot1_done
+    movss   xmm0, dword ptr [r10 + rdx*4]
+    mulss   xmm0, dword ptr [r8 + rdx*4]
+    addss   xmm1, xmm0
+    inc     edx
+    jmp     @@fa_dot1_loop
+
+@@fa_dot1_done:
+    mulss   xmm1, xmm6
+    movss   xmm0, dword ptr [rsp+24h]
+    comiss  xmm1, xmm0
+    jbe     @@fa_max_next
+    movss   dword ptr [rsp+24h], xmm1
+
+@@fa_max_next:
+    inc     ecx
+    jmp     @@fa_max_loop
+
+@@fa_zero_out:
+    xor     eax, eax
+@@fa_zero_loop:
+    cmp     eax, edi
+    jge     @@fa_second_pass_init
+    mov     dword ptr [r11 + rax*4], 0
+    inc     eax
+    jmp     @@fa_zero_loop
+
+@@fa_second_pass_init:
+    xorps   xmm0, xmm0
+    movss   dword ptr [rsp+28h], xmm0     ; sum
+    xor     ecx, ecx
+
+@@fa_second_loop:
+    cmp     ecx, dword ptr [rsp+20h]
+    jge     @@fa_normalize_setup
+    mov     eax, ecx
+    imul    eax, edi
+    shl     rax, 2
+    lea     r8, [r13 + rax]               ; k_row
+    xorps   xmm1, xmm1
+    xor     edx, edx
+
+@@fa_dot2_loop:
+    cmp     edx, edi
+    jge     @@fa_dot2_done
+    movss   xmm0, dword ptr [r10 + rdx*4]
+    mulss   xmm0, dword ptr [r8 + rdx*4]
+    addss   xmm1, xmm0
+    inc     edx
+    jmp     @@fa_dot2_loop
+
+@@fa_dot2_done:
+    mulss   xmm1, xmm6
+    subss   xmm1, dword ptr [rsp+24h]
+    movaps  xmm0, xmm1
+    call    _FlashApproxExp
+    movss   dword ptr [rsp+2Ch], xmm0     ; weight
+    movss   xmm1, dword ptr [rsp+28h]
+    addss   xmm1, xmm0
+    movss   dword ptr [rsp+28h], xmm1
+
+    mov     eax, ecx
+    imul    eax, edi
+    shl     rax, 2
+    lea     r8, [r14 + rax]               ; v_row
+    xor     edx, edx
+
+@@fa_accum_loop:
+    cmp     edx, edi
+    jge     @@fa_second_next
+    movss   xmm1, dword ptr [r8 + rdx*4]
+    mulss   xmm1, dword ptr [rsp+2Ch]
+    addss   xmm1, dword ptr [r11 + rdx*4]
+    movss   dword ptr [r11 + rdx*4], xmm1
+    inc     edx
+    jmp     @@fa_accum_loop
+
+@@fa_second_next:
+    inc     ecx
+    jmp     @@fa_second_loop
+
+@@fa_normalize_setup:
+    xorps   xmm0, xmm0
+    movss   xmm2, dword ptr [rsp+28h]
+    comiss  xmm2, xmm0
+    jbe     @@fa_next_row
+    xor     eax, eax
+
+@@fa_norm_loop:
+    cmp     eax, edi
+    jge     @@fa_next_row
+    movss   xmm0, dword ptr [r11 + rax*4]
+    divss   xmm0, xmm2
+    movss   dword ptr [r11 + rax*4], xmm0
+    inc     eax
+    jmp     @@fa_norm_loop
+
+@@fa_next_row:
+    inc     esi
+    jmp     @@fa_row_loop
+
+@@fa_success:
+    xor     eax, eax
+    add     rsp, 58h
+    pop     r15
+    pop     r14
+    pop     r13
+    pop     r12
+    pop     rdi
+    pop     rsi
+    pop     rbx
+    pop     rbp
+    ret
+
+@@fa_invalid:
+    mov     eax, -1
+    add     rsp, 58h
+    pop     r15
+    pop     r14
+    pop     r13
+    pop     r12
+    pop     rdi
+    pop     rsi
+    pop     rbx
+    pop     rbp
+    ret
+FlashAttention_Forward ENDP
 
 ; ────────────────────────────────────────────────────────────────
 ; SIMD_FlashAttention — Hybrid Dispatcher for CPU

@@ -86,6 +86,92 @@ struct TokenProbs {
         sampled_id = vocab_size - 1;
         return sampled_id;
     }
+
+    // Shannon entropy in bits: H = -Σ p·log2(p).
+    // Low (1–3 bits)  → peaked distribution → draft likely accepted.
+    // High (>5 bits)  → diffuse distribution → draft likely rejected.
+    float entropy() const {
+        float h = 0.0f;
+        for (const float p : probs) {
+            if (p > 1e-10f) h -= p * std::log2f(p);
+        }
+        return h;
+    }
+
+    // Top-p (nucleus) sampling: keep smallest set of tokens whose
+    // cumulative probability ≥ p, zero out the rest.
+    void topP(float p) {
+        if (p >= 1.0f) return;
+        // Build (prob, index) pairs for the nonzero entries
+        std::vector<std::pair<float, uint32_t>> sorted;
+        sorted.reserve(vocab_size);
+        for (uint32_t i = 0; i < vocab_size; i++) {
+            if (probs[i] > 0.0f) sorted.push_back({probs[i], i});
+        }
+        std::sort(sorted.begin(), sorted.end(),
+                  [](auto& a, auto& b) { return a.first > b.first; });
+
+        float cumul = 0.0f;
+        size_t cutoff = sorted.size();
+        for (size_t i = 0; i < sorted.size(); ++i) {
+            cumul += sorted[i].first;
+            if (cumul >= p) { cutoff = i + 1; break; }
+        }
+        // Zero out everything beyond the nucleus
+        // Build a set of kept indices
+        std::vector<bool> keep(vocab_size, false);
+        for (size_t i = 0; i < cutoff; ++i)
+            keep[sorted[i].second] = true;
+        for (uint32_t i = 0; i < vocab_size; ++i)
+            if (!keep[i]) probs[i] = 0.0f;
+
+        // Re-normalize
+        float sum = 0.0f;
+        for (auto& v : probs) sum += v;
+        float inv = 1.0f / (sum + 1e-10f);
+        for (auto& v : probs) v *= inv;
+    }
+
+    // Min-p sampling: for each token, zero it if p(token) < min_p * p(max).
+    // Dynamically adjusts the cutoff based on the confidence of the best token.
+    void minP(float min_p) {
+        if (min_p <= 0.0f) return;
+        float max_prob = *std::max_element(probs.begin(), probs.end());
+        float threshold = min_p * max_prob;
+        for (uint32_t i = 0; i < vocab_size; ++i)
+            if (probs[i] < threshold) probs[i] = 0.0f;
+        // Re-normalize
+        float sum = 0.0f;
+        for (auto& v : probs) sum += v;
+        float inv = 1.0f / (sum + 1e-10f);
+        for (auto& v : probs) v *= inv;
+    }
+
+    // Repetition penalty: reduce probability of recently seen tokens.
+    // penalty > 1.0 penalizes, < 1.0 encourages. Applied to logits (pre-softmax).
+    void applyRepetitionPenalty(const uint32_t* context, uint32_t context_len,
+                                float penalty) {
+        if (penalty == 1.0f || context_len == 0) return;
+        for (uint32_t i = 0; i < context_len; ++i) {
+            uint32_t tid = context[i];
+            if (tid < vocab_size) {
+                // Apply multiplicative penalty to logit (pre-softmax prob)
+                // For post-softmax: convert, penalize, re-normalize
+                if (probs[tid] > 0.0f) {
+                    probs[tid] = (probs[tid] > 1e-10f)
+                        ? probs[tid] / penalty
+                        : 0.0f;
+                }
+            }
+        }
+        // Re-normalize
+        float sum = 0.0f;
+        for (auto& v : probs) sum += v;
+        if (sum > 0.0f) {
+            float inv = 1.0f / sum;
+            for (auto& v : probs) v *= inv;
+        }
+    }
 };
 
 // ================================================================
@@ -161,20 +247,84 @@ struct SpeculativeStats {
 class SpeculativeDecoder {
 public:
     struct Config {
-        uint32_t draft_lookahead   = 5;     // K: number of draft tokens per step
+        uint32_t draft_lookahead   = 5;     // K: initial number of draft tokens per step
         uint32_t vocab_size        = 32000;  // Vocabulary size
         uint32_t top_k             = 40;     // Top-K sampling parameter
         float    temperature       = 0.8f;   // Sampling temperature
         float    min_accept_prob   = 0.01f;  // Minimum probability to accept draft
         uint32_t max_tokens        = 2048;   // Maximum tokens to generate
         bool     greedy            = false;  // Greedy decoding (no sampling)
+
+        // ---- Adaptive lookahead control ----
+        // Automatically tunes K based on a rolling acceptance-rate window.
+        //
+        // Policy (evaluated every adapt_window target-model calls):
+        //   accept_rate > high_threshold  → K = min(K+1, max_lookahead)
+        //   accept_rate < low_threshold   → K = max(K-1, min_lookahead)
+        //
+        // When draft model is well-aligned (acceptance ~0.8+), growing K to 7–8
+        // amortizes more target-model calls per step, delivering the promised 2–3×
+        // throughput gain.  When diverging (acceptance ~0.4–), shrinking K to 1–2
+        // reduces wasted draft computation and corrects faster.
+        bool     adaptive_lookahead  = true;
+        uint32_t min_lookahead       = 1;
+        uint32_t max_lookahead       = 8;
+        uint32_t adapt_window        = 20;   // rolling window in target-model calls
+        float    high_threshold      = 0.80f; // acceptance rate → grow K
+        float    low_threshold       = 0.45f; // acceptance rate → shrink K
+
+        // ---- Token-budget draft pruner ----
+        // When remaining token budget falls to budget_margin or below, K is
+        // forced to 1 to avoid generating excess draft tokens that will be
+        // discarded anyway.  When budget < current K (but > budget_margin),
+        // K is clamped to the remaining count, preventing over-shoot waste.
+        uint32_t budget_margin       = 4;    // force K=1 when budget ≤ this
+
+        // ---- Entropy-based draft pruner ----
+        // Stops drafting early when the draft model's probability distribution
+        // is too diffuse (high Shannon entropy in bits).  A flat distribution
+        // means many tokens have similar probability → the target model is
+        // unlikely to agree with the draft → wasted target forward calls.
+        //
+        //   Low entropy (1–3 bits) → well-peaked → good draft quality.
+        //   High entropy (>5 bits) → ~32 equiprobable tokens → poor quality.
+        //
+        // Default 5.5 bits ≈ 46 effective equiprobable tokens.  Disable by
+        // setting entropy_pruning = false or threshold = FLT_MAX.
+        bool     entropy_pruning         = true;
+        float    draft_entropy_threshold = 5.5f;  // bits
+
+        // ---- Sampling pipeline ----
+        // Applied in order: temperature → topK → topP → minP → repetition penalty.
+        float    top_p              = 0.95f;  // Nucleus (top-p) threshold. 1.0 = disabled.
+        float    min_p              = 0.0f;   // Min-p dynamic cutoff.      0.0 = disabled.
+        float    repetition_penalty = 1.0f;   // >1.0 penalizes repeats.   1.0 = disabled.
+        uint32_t rep_penalty_window = 64;     // look-back window for rep penalty
     };
 
     SpeculativeDecoder(ILanguageModel* draft, ILanguageModel* target, Config cfg = {})
         : draft_(draft), target_(target), config_(cfg)
+        , current_lookahead_(cfg.draft_lookahead)
+        , rolling_accepted_(0), rolling_total_(0), rolling_window_steps_(0)
     {
         rng_.seed(std::random_device{}());
+
+        // Pre-allocate the hot-path probability pool once — eliminates ~2 MB of
+        // malloc/free per decode step (K=8, vocab=32 K).  Layout:
+        //   slots [0 .. max_lookahead-1]         → draft positions
+        //   slots [max_lookahead .. 2*max_lookahead] → target positions (+1 for correction)
+        const uint32_t pool_size = 2u * cfg.max_lookahead + 2u;
+        probs_pool_.reserve(pool_size);
+        for (uint32_t i = 0; i < pool_size; ++i)
+            probs_pool_.emplace_back(cfg.vocab_size);
+
+        draft_tokens_.reserve(cfg.max_lookahead);
+        seq_copy_.reserve(cfg.max_tokens + cfg.max_lookahead + 1u);
+        verify_seq_.reserve(cfg.max_tokens + cfg.max_lookahead + 1u);
     }
+
+    // Current active lookahead (changes dynamically when adaptive_lookahead=true).
+    uint32_t currentLookahead() const { return current_lookahead_; }
 
     // ================================================================
     // generate — Run speculative decoding to generate tokens
@@ -193,68 +343,65 @@ public:
         uint32_t generated = 0;
 
         while (generated < config_.max_tokens) {
-            // Step 1: Generate K draft tokens
-            std::vector<uint32_t> draft_tokens;
-            std::vector<TokenProbs> draft_probs;
-            draft_tokens.reserve(config_.draft_lookahead);
-            draft_probs.reserve(config_.draft_lookahead);
+            // Step 1: Generate K draft tokens using the *current adaptive* lookahead,
+            // clamped by token-budget pruner to avoid wasted draft computation near EOS.
+            const uint32_t remaining = config_.max_tokens - generated;
+            const uint32_t K = (remaining <= config_.budget_margin)
+                ? 1u
+                : std::min(current_lookahead_, remaining);
+            // Step 1: Draft tokens — pool slots, zero heap allocations.
+            // Entropy gate: stop early when the distribution is too diffuse.
+            draft_tokens_.clear();
+            seq_copy_.assign(sequence.begin(), sequence.end());
+            uint32_t actual_k = 0;   // may be < K when entropy pruning fires
 
-            auto seq_copy = sequence;
-            for (uint32_t k = 0; k < config_.draft_lookahead; k++) {
-                TokenProbs dp(config_.vocab_size);
-                draft_->forward(seq_copy.data(),
-                    static_cast<uint32_t>(seq_copy.size()), dp);
-                applyTemperature(dp);
-                dp.topK(config_.top_k);
+            for (uint32_t k = 0; k < K; ++k) {
+                TokenProbs& dp = draftSlot(k);
+                resetEntry(dp);
+                draft_->forward(seq_copy_.data(),
+                    static_cast<uint32_t>(seq_copy_.size()), dp);
+                applySampling(dp, seq_copy_);
 
-                uint32_t token = config_.greedy
-                    ? argmax(dp)
-                    : dp.sample(rng_);
+                // Entropy-based early exit: flat distribution = likely rejection.
+                if (config_.entropy_pruning &&
+                        dp.entropy() > config_.draft_entropy_threshold) {
+                    break;
+                }
 
-                draft_tokens.push_back(token);
-                draft_probs.push_back(std::move(dp));
-                seq_copy.push_back(token);
+                ++actual_k;
+                const uint32_t token = config_.greedy ? argmax(dp) : dp.sample(rng_);
+                draft_tokens_.push_back(token);
+                seq_copy_.push_back(token);
             }
 
-            stats_.total_draft_tokens.fetch_add(config_.draft_lookahead,
-                std::memory_order_relaxed);
+            stats_.total_draft_tokens.fetch_add(actual_k, std::memory_order_relaxed);
 
-            // Step 2: Verify all K tokens with target model in one pass
-            // Target evaluates sequence + all draft tokens
-            std::vector<TokenProbs> target_probs(config_.draft_lookahead + 1,
-                TokenProbs(config_.vocab_size));
-
-            // For efficiency, target model should support batch position evaluation
-            // Here we simulate with sequential calls (real impl would batch)
-            auto verify_seq = sequence;
-            for (uint32_t k = 0; k <= config_.draft_lookahead; k++) {
-                target_->forward(verify_seq.data(),
-                    static_cast<uint32_t>(verify_seq.size()), target_probs[k]);
-                applyTemperature(target_probs[k]);
-                target_probs[k].topK(config_.top_k);
-
-                if (k < config_.draft_lookahead) {
-                    verify_seq.push_back(draft_tokens[k]);
-                }
+            // Step 2: Verify actual_k tokens with target (actual_k+1 forward passes).
+            verify_seq_.assign(sequence.begin(), sequence.end());
+            for (uint32_t k = 0; k <= actual_k; ++k) {
+                TokenProbs& tp = targetSlot(k);
+                resetEntry(tp);
+                target_->forward(verify_seq_.data(),
+                    static_cast<uint32_t>(verify_seq_.size()), tp);
+                applySampling(tp, verify_seq_);
+                if (k < actual_k) verify_seq_.push_back(draft_tokens_[k]);
             }
 
             stats_.total_target_calls.fetch_add(1, std::memory_order_relaxed);
 
-            // Step 3: Accept/reject from left to right
+            // Step 3: Accept/reject from left to right.
             uint32_t accepted = 0;
-            for (uint32_t k = 0; k < config_.draft_lookahead; k++) {
-                uint32_t token = draft_tokens[k];
-                float p_target = target_probs[k].probs[token];
-                float p_draft = draft_probs[k].probs[token];
+            for (uint32_t k = 0; k < actual_k; ++k) {
+                const uint32_t token  = draft_tokens_[k];
+                const float p_target  = targetSlot(k).probs[token];
+                const float p_draft   = draftSlot(k).probs[token];
 
-                // Acceptance criterion: accept with probability min(1, p_target/p_draft)
-                float accept_ratio = (p_draft > 1e-10f)
+                const float accept_ratio = (p_draft > 1e-10f)
                     ? std::min(1.0f, p_target / p_draft)
                     : 0.0f;
 
                 if (config_.greedy) {
-                    // Greedy: accept if target's argmax matches draft
-                    if (argmax(target_probs[k]) == token) {
+                    if (argmax(targetSlot(k)) == token) {
                         accepted++;
                         sequence.push_back(token);
                         output[generated++] = token;
@@ -263,7 +410,6 @@ public:
                         break;
                     }
                 } else {
-                    // Stochastic acceptance
                     std::uniform_real_distribution<float> dist(0.0f, 1.0f);
                     if (dist(rng_) < accept_ratio) {
                         accepted++;
@@ -277,41 +423,33 @@ public:
             }
 
             stats_.accepted_tokens.fetch_add(accepted, std::memory_order_relaxed);
-            stats_.rejected_tokens.fetch_add(
-                config_.draft_lookahead - accepted, std::memory_order_relaxed);
+            stats_.rejected_tokens.fetch_add(actual_k - accepted, std::memory_order_relaxed);
 
-            // Step 4: If rejected early, sample correction token from target
-            if (accepted < config_.draft_lookahead &&
-                generated < config_.max_tokens) {
-                // Resample from adjusted distribution:
-                // p_adjusted(x) = max(0, p_target(x) - p_draft(x)) / Z
-                TokenProbs& tp = target_probs[accepted];
-                if (!config_.greedy && accepted < draft_probs.size()) {
-                    TokenProbs& dp = draft_probs[accepted];
-                    for (uint32_t i = 0; i < config_.vocab_size; i++) {
+            // Step 4: Resample correction token from adjusted target distribution.
+            if (accepted < actual_k && generated < config_.max_tokens) {
+                TokenProbs& tp = targetSlot(accepted);
+                if (!config_.greedy && accepted < actual_k) {
+                    TokenProbs& dp = draftSlot(accepted);
+                    for (uint32_t i = 0; i < config_.vocab_size; ++i) {
                         tp.probs[i] = std::max(0.0f, tp.probs[i] - dp.probs[i]);
                     }
-                    // Re-normalize
                     float sum = 0.0f;
-                    for (auto& p : tp.probs) sum += p;
+                    for (const auto& p : tp.probs) sum += p;
                     if (sum > 1e-10f) {
-                        float inv = 1.0f / sum;
+                        const float inv = 1.0f / sum;
                         for (auto& p : tp.probs) p *= inv;
                     }
                 }
-
-                uint32_t correction = config_.greedy
-                    ? argmax(tp)
-                    : tp.sample(rng_);
-
+                const uint32_t correction = config_.greedy ? argmax(tp) : tp.sample(rng_);
                 sequence.push_back(correction);
                 output[generated++] = correction;
             }
 
-            // Check for EOS
-            if (generated > 0 && output[generated - 1] == 2) { // EOS token = 2
-                break;
-            }
+            // Adaptive lookahead: update rolling window and adjust K if warranted.
+            adaptLookahead(accepted, actual_k);
+
+            // EOS check
+            if (generated > 0 && output[generated - 1] == 2) break;
         }
 
         auto t1 = std::chrono::high_resolution_clock::now();
@@ -335,11 +473,88 @@ private:
     SpeculativeStats stats_;
     std::mt19937     rng_;
 
+    // Adaptive lookahead state
+    uint32_t current_lookahead_;     // live K — may differ from config_.draft_lookahead
+    uint32_t rolling_accepted_;      // cumulative accepted tokens in current window
+    uint32_t rolling_total_;         // cumulative draft tokens in current window
+    uint32_t rolling_window_steps_;  // target-model calls in current window
+
+    // Hot-path pool — pre-allocated at construction, reused every decode step.
+    // Eliminates ~2 MB of malloc/free per decode step at K=8, vocab=32 K.
+    // Layout: slots [0..max_lookahead-1] = draft; [max_lookahead..2*max_lookahead] = target.
+    std::vector<TokenProbs> probs_pool_;
+    std::vector<uint32_t>   draft_tokens_;  // reusable per-step draft token list
+    std::vector<uint32_t>   seq_copy_;      // draft-phase sequence scratch buffer
+    std::vector<uint32_t>   verify_seq_;    // target-phase sequence scratch buffer
+
+    TokenProbs& draftSlot(uint32_t k)  { return probs_pool_[k]; }
+    TokenProbs& targetSlot(uint32_t k) { return probs_pool_[config_.max_lookahead + k]; }
+    static void resetEntry(TokenProbs& tp) {
+        std::fill(tp.probs.begin(), tp.probs.end(), 0.0f);
+        tp.top_indices.clear();
+        tp.sampled_id = 0;
+    }
+
+    // ================================================================
+    // adaptLookahead — called after each generation step.
+    //
+    // Accumulates acceptance statistics over a rolling window of
+    // `config_.adapt_window` target-model calls.  At window boundary,
+    // evaluates the mean acceptance rate and adjusts current_lookahead_:
+    //
+    //   rate ≥ high_threshold → K++ (draft is well-aligned, amortise more)
+    //   rate ≤ low_threshold  → K-- (draft is diverging, correct faster)
+    //   otherwise             → K unchanged
+    //
+    // K is always clamped to [min_lookahead, max_lookahead].
+    // ================================================================
+    void adaptLookahead(uint32_t accepted, uint32_t total) {
+        if (!config_.adaptive_lookahead || config_.adapt_window == 0) return;
+
+        rolling_accepted_ += accepted;
+        rolling_total_    += total;
+        rolling_window_steps_++;
+
+        if (rolling_window_steps_ < config_.adapt_window) return;
+
+        // Window boundary: compute rate and adjust K.
+        const float rate = (rolling_total_ > 0)
+            ? static_cast<float>(rolling_accepted_) / static_cast<float>(rolling_total_)
+            : 0.0f;
+
+        if (rate >= config_.high_threshold && current_lookahead_ < config_.max_lookahead) {
+            current_lookahead_++;
+        } else if (rate <= config_.low_threshold && current_lookahead_ > config_.min_lookahead) {
+            current_lookahead_--;
+        }
+
+        // Reset window counters.
+        rolling_accepted_     = 0;
+        rolling_total_        = 0;
+        rolling_window_steps_ = 0;
+    }
+
     void applyTemperature(TokenProbs& tp) {
         if (config_.temperature <= 0.0f || config_.temperature == 1.0f) return;
         float inv_t = 1.0f / config_.temperature;
         for (auto& p : tp.probs) p *= inv_t;
         tp.softmax();
+    }
+
+    // Full sampling pipeline: temperature → topK → topP → minP → repetition penalty
+    void applySampling(TokenProbs& tp, const std::vector<uint32_t>& seq) {
+        applyTemperature(tp);
+        tp.topK(config_.top_k);
+        if (config_.top_p < 1.0f)   tp.topP(config_.top_p);
+        if (config_.min_p > 0.0f)   tp.minP(config_.min_p);
+        if (config_.repetition_penalty != 1.0f && !seq.empty()) {
+            uint32_t window = config_.rep_penalty_window;
+            uint32_t start  = (seq.size() > window) ?
+                              static_cast<uint32_t>(seq.size() - window) : 0u;
+            tp.applyRepetitionPenalty(seq.data() + start,
+                                     static_cast<uint32_t>(seq.size() - start),
+                                     config_.repetition_penalty);
+        }
     }
 
     uint32_t argmax(const TokenProbs& tp) {

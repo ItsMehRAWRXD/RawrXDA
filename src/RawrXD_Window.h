@@ -1,11 +1,15 @@
 #pragma once
 #include "RawrXD_SignalSlot.h"
+#include "win32app/RawrXD_Layout.hpp"
 
 namespace RawrXD {
 
 class Window {
 protected:
     HWND hwnd = nullptr;
+    int m_width = 0;
+    int m_height = 0;
+    RXDLayoutEngine* m_layout = nullptr;
     static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
     
     // Event handlers - mapped from Windows messages

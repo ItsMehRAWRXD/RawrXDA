@@ -16,11 +16,11 @@ public:
     // Weights (pointers to mapped GGUF data — not owned)
     float* attn_norm;
     void* wq; void* wk; void* wv; void* wo;
-    ggml_type wq_type;
+    ggml_rxd_type wq_type;
     
     float* ffn_norm;
     void* w1; void* w2; void* w3;
-    ggml_type ffn_type;
+    ggml_rxd_type ffn_type;
     
     // ================================================================
     // KV Cache — Dual mode: int8 quantized (primary) + FP32 (legacy)

@@ -6,19 +6,19 @@
 // GGUF magic: "GGUF" = 0x46554747
 #define GGUF_MAGIC 0x46554747
 
-enum ggml_type {
-    GGML_TYPE_F32  = 0,
-    GGML_TYPE_F16  = 1,
-    GGML_TYPE_Q4_0 = 2,
-    GGML_TYPE_Q4_1 = 3,
-    GGML_TYPE_Q5_0 = 6,
-    GGML_TYPE_Q5_1 = 7,
-    GGML_TYPE_Q8_0 = 8,
-    GGML_TYPE_Q2_K = 14,
-    GGML_TYPE_Q3_K = 15,
-    GGML_TYPE_Q4_K = 16,
-    GGML_TYPE_Q5_K = 17,
-    GGML_TYPE_Q6_K = 18,
+enum ggml_rxd_type {
+    GGML_RXD_TYPE_F32  = 0,
+    GGML_RXD_TYPE_F16  = 1,
+    GGML_RXD_TYPE_Q4_0 = 2,
+    GGML_RXD_TYPE_Q4_1 = 3,
+    GGML_RXD_TYPE_Q5_0 = 6,
+    GGML_RXD_TYPE_Q5_1 = 7,
+    GGML_RXD_TYPE_Q8_0 = 8,
+    GGML_RXD_TYPE_Q2_K = 14,
+    GGML_RXD_TYPE_Q3_K = 15,
+    GGML_RXD_TYPE_Q4_K = 16,
+    GGML_RXD_TYPE_Q5_K = 17,
+    GGML_RXD_TYPE_Q6_K = 18,
 };
 
 // Quantized block structures
@@ -41,7 +41,7 @@ struct block_q8_0 {
 struct TensorInfo {
     std::string name;
     std::vector<uint64_t> dims;
-    ggml_type type;
+    ggml_rxd_type type;
     uint64_t offset;
     size_t size;
     void* data;

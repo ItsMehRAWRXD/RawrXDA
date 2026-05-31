@@ -8,6 +8,8 @@
 #include "logging/logger.h"
 #include "metrics/metrics.h"
 
+#include "VisionEncoder.h"
+
 enum class TaskType {
     COMPLETION,
     CHAT,
@@ -15,7 +17,8 @@ enum class TaskType {
     ANALYSIS,
     DOCUMENTATION,
     TESTING,
-    EMBEDDING
+    EMBEDDING,
+    VISION
 };
 
 enum class Complexity {

@@ -59,7 +59,7 @@ bool SentryIntegration::initialize() {
     m_dsn = getEnvVar("SENTRY_DSN");
     if (m_dsn.empty()) return false;
 
-    // Parse DSN: https://public@sentry.example.com/1
+    // Parse DSN: https://public@sentry.io/1
     // Simplified parsing
     size_t atPos = m_dsn.find('@');
     size_t slashPos = m_dsn.rfind('/');

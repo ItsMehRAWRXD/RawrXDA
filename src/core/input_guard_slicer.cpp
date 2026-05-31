@@ -26,6 +26,8 @@ InputGuardSlicer& InputGuardSlicer::instance() {
 
 InputGuardSlicer::InputGuardSlicer() {
     // Default config is set by InputGuardConfig constructor
+    m_config = InputGuardConfig();
+    m_initialized = true;
 }
 
 // ============================================================================

@@ -306,7 +306,7 @@ function Get-ModelPrimaryLanguage {
         "Custom-Model-v1" = "English"
     }
     
-    return $modelLangs[$Model] ?? "English"
+    if ($null -ne $modelLangs[$Model]) { return $modelLangs[$Model] } else { return "English" }
 }
 
 function Show-LanguageSupport {

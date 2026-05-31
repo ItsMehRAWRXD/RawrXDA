@@ -23,6 +23,7 @@
 #include <functional>
 #include <numeric>
 #include <chrono>
+#include <windows.h>
 
 namespace RawrXD {
 namespace AI {
@@ -111,7 +112,12 @@ public:
                 analyzeFile(pathStr);
                 ++count;
             }
-        } catch (...) {}
+        } catch (const std::exception& e) {
+            // Debug output disabled — use IDE logger if needed
+            (void)e;
+        } catch (...) {
+            // Debug output disabled — use IDE logger if needed
+        }
 
         // Build reverse include map
         for (auto& [path, dep] : m_graph) {

@@ -1,0 +1,149 @@
+RawrXD 11-axis audit (src/win32app only)
+Generated: 2026-04-15T22:32:57.2083483-04:00
+Files scanned: 433
+Skipped (>4MB): 1
+  skip src\win32app\mcp_hooks.asm
+
+=== 01_TODO_FIXME_HACK ===
+Files with hits: 4  Total matches (file-aggregated): 20
+      16  src\win32app\Win32IDE_DAPServer.cpp
+       2  src\win32app\Win32IDE_ExpressionEvaluator.cpp
+       1  src\win32app\main_win32.cpp
+       1  src\win32app\MainWindowSimple.cpp
+
+=== 02_STUB_UNIMPL ===
+Files with hits: 44  Total matches (file-aggregated): 351
+      60  src\win32app\SourceFileRegistry.cpp
+      41  src\win32app\Win32IDE_AuditDashboard.cpp
+      32  src\win32app\multi_file_search_stub.cpp
+      31  src\win32app\FileRegistry_Generated.cpp
+      30  src\win32app\Win32IDE_SnippetEngine.cpp
+      29  src\win32app\Win32IDE_logMessage_stub.cpp
+      21  src\win32app\benchmark_menu_stub.cpp
+      19  src\win32app\benchmark_runner_stub.cpp
+      12  src\win32app\digestion_engine_stub.cpp
+      12  src\win32app\Win32IDE_FeatureManifest.cpp
+       6  src\win32app\Win32IDE_Commands.cpp
+       5  src\win32app\Win32IDE_SubAgent.cpp
+       4  src\win32app\main_win32.cpp
+       4  src\win32app\Win32IDE_DAPServer.cpp
+       3  src\win32app\Win32IDE.cpp
+
+=== 03_NOOP_INCOMPLETE ===
+Files with hits: 15  Total matches (file-aggregated): 24
+       7  src\win32app\Win32IDE_Autonomy.cpp
+       2  src\win32app\Win32IDE_Core_HEAD.cpp
+       2  src\win32app\Win32IDE_Core.cpp
+       2  src\win32app\Win32IDE_Window.cpp
+       1  src\win32app\agentic_bridge_headless.cpp
+       1  src\win32app\AgentModeController.hpp
+       1  src\win32app\HeadlessIDE.cpp
+       1  src\win32app\Win32IDE_DAPServer.cpp
+       1  src\win32app\Win32IDE_HotpatchPanel.cpp
+       1  src\win32app\Win32IDE_MissingActions.cpp
+       1  src\win32app\Win32IDE_Mnemosyne.cpp
+       1  src\win32app\Win32IDE_Phase17_AgenticProfiler.h
+       1  src\win32app\Win32IDE_SettingsGUI.cpp
+       1  src\win32app\Win32IDE_VSCodeUI.cpp
+       1  src\win32app\Win32IDE.cpp
+
+=== 04_THROW ===
+Files with hits: 3  Total matches (file-aggregated): 6
+       3  src\win32app\Win32IDE_SyntaxHighlight.cpp
+       2  src\win32app\Win32IDE_SnippetEngine.cpp
+       1  src\win32app\Win32IDE_Refactoring.cpp
+
+=== 05_STDOUT_PRINTF ===
+Files with hits: 93  Total matches (file-aggregated): 785
+      72  src\win32app\main_win32.cpp
+      58  src\win32app\HeadlessIDE.cpp
+      51  src\win32app\IDEAutoHealerLauncher.cpp
+      42  src\win32app\Win32IDE_PDBSymbols.cpp
+      42  src\win32app\Win32IDE_Telemetry.cpp
+      33  src\win32app\Win32IDE_HotpatchWiring.cpp
+      30  src\win32app\Win32IDE_Tasks.cpp
+      29  src\win32app\VSIXInstaller.hpp
+      23  src\win32app\Win32IDE_AgentPanel.cpp
+      22  src\win32app\test_runner.cpp
+      18  src\win32app\Win32IDE.cpp
+      16  src\win32app\digestion_test_harness.cpp
+      14  src\win32app\Win32IDE_DiskRecovery.cpp
+      13  src\win32app\Win32IDE_Core_HEAD.cpp
+      13  src\win32app\Win32IDE_Core.cpp
+
+=== 06_RAW_NEW_DELETE ===
+Files with hits: 91  Total matches (file-aggregated): 258
+      20  src\win32app\Win32IDE.cpp
+      13  src\win32app\main_win32.cpp
+      11  src\win32app\Win32IDE_Commands.cpp
+      11  src\win32app\Win32IDE_Core.cpp
+      11  src\win32app\Win32IDE_Core_HEAD.cpp
+       9  src\win32app\Win32IDE_ModelManager.cpp
+       6  src\win32app\Win32IDE_WebView2.cpp
+       6  src\win32app\MainWindowSimple.cpp
+       5  src\win32app\Win32IDE_NetworkPanel.cpp
+       5  src\win32app\Win32IDE_Tier1Cosmetics.cpp
+       5  src\win32app\Win32IDE_VisionEncoder.cpp
+       5  src\win32app\AgenticBrowserLayer.cpp
+       4  src\win32app\Win32IDE_Tier2Cosmetics.cpp
+       4  src\win32app\HeadlessIDE.cpp
+       4  src\win32app\CircularBeaconSystem.h
+
+=== 07_QT_INCLUDES ===
+Files with hits: 0  Total matches (file-aggregated): 0
+
+=== 08_DISABLED_IF0 ===
+Files with hits: 3  Total matches (file-aggregated): 7
+       5  src\win32app\Win32IDE_AgentCommands.cpp
+       1  src\win32app\main_win32.cpp
+       1  src\win32app\Win32IDE_CursorParity.cpp
+
+=== 09_OUTPUTDEBUG ===
+Files with hits: 67  Total matches (file-aggregated): 673
+      99  src\win32app\Win32IDE_Core_HEAD.cpp
+      99  src\win32app\Win32IDE_Core.cpp
+      81  src\win32app\Win32IDE.cpp
+      65  src\win32app\main_win32.cpp
+      50  src\win32app\Win32IDE_InitSequence.cpp
+      37  src\win32app\IDEDiagnosticAutoHealer_Impl.cpp
+      24  src\win32app\IDEDiagnosticAutoHealer.cpp
+      21  src\win32app\OSExplorerInterceptor.cpp
+      16  src\win32app\AutonomousAgent.cpp
+      16  src\win32app\Win32IDE_Commands.cpp
+      15  src\win32app\CircularBeaconSystem.cpp
+      10  src\win32app\Win32IDE_Watchdog.cpp
+       8  src\win32app\Win32IDE_VoiceChat.cpp
+       7  src\win32app\Win32IDE_FlightRecorder.cpp
+       7  src\win32app\Win32IDE_WebView2.cpp
+
+=== 10_BLOCKING_WAIT ===
+Files with hits: 9  Total matches (file-aggregated): 12
+       4  src\win32app\AutonomousAgent.cpp
+       1  src\win32app\ContextWindowManager.cpp
+       1  src\win32app\RouterOperations.cpp
+       1  src\win32app\TodoManager.cpp
+       1  src\win32app\Win32IDE_BuildRunner.cpp
+       1  src\win32app\Win32IDE_ExpertHeatmapPanel.cpp
+       1  src\win32app\Win32IDE_Git.cpp
+       1  src\win32app\Win32IDE_Tasks.cpp
+       1  src\win32app\Win32TerminalManager.cpp
+
+=== 11_SECURITY_MARKERS ===
+Files with hits: 33  Total matches (file-aggregated): 96
+      19  src\win32app\Win32IDE_SecurityDashboard.cpp
+       6  src\win32app\Win32IDE_SecurityReport.cpp
+       6  src\win32app\SourceFileRegistry.cpp
+       5  src\win32app\Win32IDE_SwarmPanel.cpp
+       5  src\win32app\Win32IDE_Commands.h
+       4  src\win32app\Win32TerminalManager.cpp
+       4  src\win32app\Win32IDE_TestExplorerTree.cpp
+       3  src\win32app\Win32IDE.cpp
+       3  src\win32app\Win32IDE_Core.cpp
+       3  src\win32app\Win32IDE_Core_HEAD.cpp
+       3  src\win32app\Win32IDE_Hermes.cpp
+       3  src\win32app\FileRegistry_Generated.cpp
+       3  src\win32app\Win32IDE_AuditDashboard.cpp
+       3  src\win32app\TodoManager.cpp
+       2  src\win32app\Win32IDE_TerminalTabs.cpp
+
+

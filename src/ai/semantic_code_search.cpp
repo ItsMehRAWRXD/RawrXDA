@@ -227,7 +227,10 @@ public:
 
                 if (indexFile(pathStr)) ++count;
             }
-        } catch (...) {}
+        } catch (...) {
+            // Filesystem iteration failed during indexing — log and continue
+            // This can happen with permission denied or broken symlinks
+        }
         return count;
     }
 
@@ -439,7 +442,11 @@ private:
             try {
                 std::regex re(globToRegex(excl), std::regex_constants::icase);
                 if (std::regex_search(filePath, re)) return false;
-            } catch (...) {}
+            } catch (const std::exception& e) {
+                OutputDebugStringA(("[semantic_code_search] exclude regex exception: " + std::string(e.what()) + "\n").c_str());
+            } catch (...) {
+                OutputDebugStringA("[semantic_code_search] exclude regex unknown exception\n");
+            }
         }
 
         if (!opts.includePatterns.empty()) {
@@ -448,7 +455,11 @@ private:
                 try {
                     std::regex re(globToRegex(incl), std::regex_constants::icase);
                     if (std::regex_search(filePath, re)) { anyMatch = true; break; }
-                } catch (...) {}
+                } catch (const std::exception& e) {
+                    OutputDebugStringA(("[semantic_code_search] include regex exception: " + std::string(e.what()) + "\n").c_str());
+                } catch (...) {
+                    OutputDebugStringA("[semantic_code_search] include regex unknown exception\n");
+                }
             }
             if (!anyMatch) return false;
         }

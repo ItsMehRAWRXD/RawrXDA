@@ -1,11 +1,19 @@
-// Minimal agentic_ide_test.cpp - just test if including the header causes a crash
+// Minimal agentic_ide_test.cpp - smoke test for agentic IDE header compilation
 
 #include "agentic_ide.h"
+#include <iostream>
 
 int main(int argc, char** argv) {
-    void app(argc, argv);
+    (void)argc; (void)argv;
     
-    // If we get here, the header include didn't crash
+    std::cout << "[agentic_ide_test] Header compilation OK\n";
+    
+    // Verify AgenticIDE singleton can be instantiated
+    auto& ide = AgenticIDE::instance();
+    (void)ide;
+    
+    std::cout << "[agentic_ide_test] Singleton access OK\n";
+    std::cout << "[agentic_ide_test] PASS\n";
     
     return 0;
 }

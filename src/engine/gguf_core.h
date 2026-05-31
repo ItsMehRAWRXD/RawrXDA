@@ -32,5 +32,5 @@ private:
 
     bool parse();
     std::string readString(uint8_t*& ptr);
-    size_t ggml_nbytes(ggml_type type, size_t n);
+    size_t ggml_rxd_nbytes(ggml_rxd_type type, size_t n);
 };

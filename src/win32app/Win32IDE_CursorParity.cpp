@@ -28,11 +28,13 @@
 #include "agentic/agentic_composer_ux.h"
 #include "context/context_mention_parser.h"
 #include "context/semantic_index.h"
+#include "core/vector_index_persistence.h"
 #include "cursor_github_parity_bridge.h"
 #include "ide/language_plugin.h"
 #include "ide/refactoring_plugin.h"
 #include "ide/resource_generator.h"
 #include "multimodal/vision_encoder.h"
+#include "runtime/SemanticRetrieval.h"
 #include "telemetry/telemetry_export.h"
 
 // Go-to-definition / references → implemented in Win32IDE_LSPClient.cpp via
@@ -1091,7 +1093,29 @@ void Win32IDE::initSemanticIndex()
     if (m_semanticIndexInitialized)
         return;
     auto& idx = RawrXD::SemanticIndex::SemanticIndexEngine::Instance();
-    idx.Initialize(".");
+    std::string workspaceRoot = m_projectRoot;
+    if (workspaceRoot.empty())
+        workspaceRoot = m_explorerRootPath;
+    if (workspaceRoot.empty())
+        workspaceRoot = m_currentDirectory;
+    if (workspaceRoot.empty())
+        workspaceRoot = ".";
+    idx.Initialize(workspaceRoot);
+
+    std::string persistenceDetail;
+    const bool loaded = RawrXD::Core::VectorIndexPersistence::TryLoadSemanticIndexCache(
+        workspaceRoot,
+        &persistenceDetail);
+    if (loaded)
+    {
+        appendToOutput("[SemanticIndex] " + persistenceDetail, "System", OutputSeverity::Info);
+    }
+    else if (!persistenceDetail.empty())
+    {
+        appendToOutput("[SemanticIndex] " + persistenceDetail, "System", OutputSeverity::Debug);
+    }
+
+    RawrXD::Runtime::SemanticRetrieval::InstallSemanticIndexEmbeddingCallback();
     m_semanticIndexInitialized = true;
     RAWRXD_LOG_INFO("SemanticIndexEngine initialized");
 }

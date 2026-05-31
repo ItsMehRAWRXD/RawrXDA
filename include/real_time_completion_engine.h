@@ -43,6 +43,7 @@ private:
     // Performance tracking
     std::atomic<int64_t> m_totalRequests{0};
     std::atomic<int64_t> m_cacheHits{0};
+    std::atomic<int64_t> m_errorCount{0};
     std::vector<double> m_latencyHistory;
     mutable std::mutex m_latencyMutex;
 

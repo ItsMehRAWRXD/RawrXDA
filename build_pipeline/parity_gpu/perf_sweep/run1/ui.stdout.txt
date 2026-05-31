@@ -1,0 +1,552 @@
+[CPUInferenceEngine] Loading model: D:\phi3mini.gguf
+[CPUInferenceEngine] Stage: initialize backend (GPU will be attempted first, with CPU fallback)
+Selected GPU: AMD Radeon RX 7800 XT
+[RawrXD] Stage: loader.Load
+[RawrXD] Loading model from: D:\phi3mini.gguf
+[RawrXD] ⚡ INITIALIZING SOVEREIGN NEURAL HIVE-MIND SYSTEMS...
+[RawrXD] Policy bypass interceptor disabled: runtime binary patching is not permitted
+[RawrXD] ⚡ Speculative Swarm: Ready for 20x model chaining (600B+ aggregate)
+[RawrXD] ⚡ AVX-512 VPOPCNT: Ready for 0.8-bit weight reconstruction
+[RawrXD][BACKEND] backend=gpu-only result=ok reason=gpu preflight passed
+[RawrXD] ⚡ SOVEREIGN APERTURE: Reserved 2075 MB placeholder window (zero commit)
+[VMM] SeLockMemoryPrivilege not held; Large Pages disabled (falling back).
+[RawrXD] Stage: parse_header_metadata
+[RawrXD] ⚡ SOVEREIGN WINDOW 0-2 GB: Mapped 2075 MB at 000001F6FEEE0000 (2000+ TPS ready)
+[DEBUG] String key: general.architecture, value length: 4
+[DEBUG] String key: general.type, value length: 5
+[DEBUG] String key: general.name, value length: 24
+[DEBUG] String key: general.finetune, value length: 13
+[DEBUG] String key: general.basename, value length: 5
+[DEBUG] String key: general.size_label, value length: 4
+[DEBUG] String key: general.license, value length: 3
+[DEBUG] String key: general.license.link, value length: 78
+[DEBUG] Scalar key: phi3.context_length, type: 4, value: 131072
+[DEBUG] Scalar key: phi3.rope.scaling.original_context_length, type: 4, value: 4096
+[DEBUG] Scalar key: phi3.embedding_length, type: 4, value: 3072
+[DEBUG] Scalar key: phi3.feed_forward_length, type: 4, value: 8192
+[DEBUG] Scalar key: phi3.block_count, type: 4, value: 32
+[DEBUG] Scalar key: phi3.attention.head_count, type: 4, value: 32
+[DEBUG] Scalar key: phi3.attention.head_count_kv, type: 4, value: 32
+[DEBUG] Scalar key: phi3.rope.dimension_count, type: 4, value: 96
+[DEBUG] Scalar key: general.file_type, type: 4, value: 2
+[DEBUG] Scalar key: phi3.attention.sliding_window, type: 4, value: 262144
+[DEBUG] String key: tokenizer.ggml.model, value length: 5
+[DEBUG] String key: tokenizer.ggml.pre, value length: 7
+[DEBUG] tokenizer.ggml.tokens: atype=8, Alen=32064
+[DEBUG] Reserved 32064 for vocab
+[DEBUG] Scalar key: tokenizer.ggml.bos_token_id, type: 4, value: 1
+[DEBUG] Scalar key: tokenizer.ggml.eos_token_id, type: 4, value: 32000
+[DEBUG] Scalar key: tokenizer.ggml.unknown_token_id, type: 4, value: 0
+[DEBUG] Scalar key: tokenizer.ggml.padding_token_id, type: 4, value: 32000
+[DEBUG] String key: tokenizer.chat_template, value length: 407
+[DEBUG] Scalar key: general.quantization_version, type: 4, value: 2
+[DEBUG] Fallback: set vocab_size to vocab.size() = 32064
+[DEBUG] Final: vocab_size=32064, vocab.size()=32064
+[RawrXD] Stage: parse_tensor_index tensor_count=197
+[RawrXD] Stage: tensor_materialization mode=lazy tensor_count=197 indexed_storage=2.03 GB
+[RawrXD] Data starts at offset 738400
+[RawrXD] Stage: build_tensor_lookup_map
+[RawrXD] Model loaded successfully. VRAM used: 0.00 GB
+[RawrXD] Config: dim=3072, layers=32, heads=32, kv_heads=32, vocab=32064, ctx=131072, experts=0, experts_used=0
+[RawrXD] Tensor names in model (197 total):
+  [  0] type=2 dims=8192 3072 blk.0.ffn_down.weight
+  [  1] type=2 dims=3072 3072 blk.2.attn_output.weight
+  [  2] type=0 dims=3072 blk.2.ffn_norm.weight
+  [  3] type=2 dims=3072 9216 blk.16.attn_qkv.weight
+  [  4] type=0 dims=3072 blk.19.ffn_norm.weight
+  [  5] type=2 dims=3072 16384 blk.1.ffn_up.weight
+  [  6] type=2 dims=8192 3072 blk.22.ffn_down.weight
+  [  7] type=2 dims=3072 3072 blk.19.attn_output.weight
+  [  8] type=2 dims=3072 32064 token_embd.weight
+  [  9] type=2 dims=3072 3072 blk.9.attn_output.weight
+  [ 10] type=2 dims=3072 16384 blk.0.ffn_up.weight
+  [ 11] type=2 dims=3072 9216 blk.17.attn_qkv.weight
+  [ 12] type=2 dims=3072 3072 blk.12.attn_output.weight
+  [ 13] type=2 dims=3072 3072 blk.1.attn_output.weight
+  [ 14] type=0 dims=3072 blk.0.attn_norm.weight
+  [ 15] type=0 dims=3072 blk.22.ffn_norm.weight
+  ... (181 more)
+[RawrXD] Page pre-touch thread launched (2075 MB in background)
+[RawrXD] Config: dim=3072 layers=32 heads=32 kv_heads=32 vocab=32064 hidden=8192 ctx=2048
+[RawrXD] Stage: tokenizer.Load
+[Tokenizer] Loaded 32064 vocabulary entries from GGUF
+[RawrXD] Stage: transformer.Initialize
+[RawrXD] KV cache: 201326592 floats (805.3 MB per cache)
+[RawrXD] MEMSTATUS pre-probe: phys_avail=28543 MB, virt_avail=133947797 MB, commit_avail=32639 MB
+[RawrXD] KV cache attempt: ctx=2048, 201326592 floats (805.3 MB per cache)
+[RawrXD] KV cache final: ctx=2048, 201326592 floats (805.3 MB per cache)
+[RawrXD] Transformer Initialized. AVX-512 Kernels Linked.
+[RawrXD] Swarm plan: GGUF coalesced (35 slices total=2.03 GiB max=113.61 MiB avg=59.28 MiB)
+[RawrXD] Inference engine READY
+[CPUInferenceEngine] Model loaded successfully
+[CPUInferenceEngine] GenerateStreaming: input_tokens=5 max_tokens=16
+[Forward] ENTRY: tokens=5 start_pos=0
+[Forward] Config check: dim=3072 layers=32 hidden=8192 heads=32
+[Forward] GQA: dim=3072 heads=32 kv_heads=32 head_dim=96 kv_dim=3072 hidden=8192
+[MEM] Generation start: avail_phys=28526 MB, avail_virt=133946260 MB
+[MEM] KV footprint: k=768 MB, v=768 MB; tile_buf peak=16 MB
+[MEM] output.weight shard est: vocab=32064 * row_bytes(Q2_K)=1008 = 30 MB
+[Forward] Processing token 1/5
+[Forward] Token 1: embedding lookup for token=1
+[Forward] Token 1: calling GetTensorRow for embedding
+[Forward] Token 1: GetTensorRow returned true
+[Forward] Token 1: embedding lookup complete
+[Forward] Token 1: starting 32 transformer layers
+[Forward] Token 1: Layer 1/32 starting
+[Forward] Token 1: Layer 1 - getting attn_norm
+[Forward] Token 1: Layer 1 - applying RMSNorm
+[Forward] Token 1: Layer 1 - has_split_qkv=false
+[StreamingMatMul] FIRST CALL: tensor=blk.0.attn_qkv.weight K=3072 N=9216
+[Forward] Token 1: Layer 17/32 starting
+[HEARTBEAT] Layer 17/32 complete, elapsed 1036 ms
+[Forward] Token 1: Layer 32/32 starting
+[Forward] Processing token 2/5
+[Forward] Token 2: embedding lookup for token=14891
+[Forward] Token 2: calling GetTensorRow for embedding
+[RawrXD] Page pre-touch complete: 2075 MB model pages resident
+[Forward] Token 2: GetTensorRow returned true
+[Forward] Token 2: embedding lookup complete
+[Forward] Token 2: starting 32 transformer layers
+[Forward] Token 2: Layer 1/32 starting
+[Forward] Token 2: Layer 1 - getting attn_norm
+[Forward] Token 2: Layer 1 - applying RMSNorm
+[Forward] Token 2: Layer 1 - has_split_qkv=false
+[Forward] Token 2: Layer 17/32 starting
+[HEARTBEAT] Layer 17/32 complete, elapsed 50 ms
+[Forward] Token 2: Layer 32/32 starting
+[Forward] Processing token 3/5
+[Forward] Token 3: embedding lookup for token=3721
+[Forward] Token 3: calling GetTensorRow for embedding
+[Forward] Token 3: GetTensorRow returned true
+[Forward] Token 3: embedding lookup complete
+[Forward] Token 3: starting 32 transformer layers
+[Forward] Token 3: Layer 1/32 starting
+[Forward] Token 3: Layer 1 - getting attn_norm
+[Forward] Token 3: Layer 1 - applying RMSNorm
+[Forward] Token 3: Layer 1 - has_split_qkv=false
+[Forward] Token 3: Layer 17/32 starting
+[HEARTBEAT] Layer 17/32 complete, elapsed 50 ms
+[Forward] Token 3: Layer 32/32 starting
+[Forward] Processing token 4/5
+[Forward] Token 4: embedding lookup for token=29901
+[Forward] Token 4: calling GetTensorRow for embedding
+[Forward] Token 4: GetTensorRow returned true
+[Forward] Token 4: embedding lookup complete
+[Forward] Token 4: starting 32 transformer layers
+[Forward] Token 4: Layer 1/32 starting
+[Forward] Token 4: Layer 1 - getting attn_norm
+[Forward] Token 4: Layer 1 - applying RMSNorm
+[Forward] Token 4: Layer 1 - has_split_qkv=false
+[Forward] Token 4: Layer 17/32 starting
+[HEARTBEAT] Layer 17/32 complete, elapsed 47 ms
+[Forward] Token 4: Layer 32/32 starting
+[Forward] Processing token 5/5
+[Forward] Token 5: embedding lookup for token=7960
+[Forward] Token 5: calling GetTensorRow for embedding
+[Forward] Token 5: GetTensorRow returned true
+[Forward] Token 5: embedding lookup complete
+[Forward] Token 5: starting 32 transformer layers
+[Forward] Token 5: Layer 1/32 starting
+[Forward] Token 5: Layer 1 - getting attn_norm
+[Forward] Token 5: Layer 1 - applying RMSNorm
+[Forward] Token 5: Layer 1 - has_split_qkv=false
+[Forward] Token 5: Layer 17/32 starting
+[HEARTBEAT] Layer 17/32 complete, elapsed 46 ms
+[Forward] Token 5: Layer 32/32 starting
+[PHASE] tokens=5 total_acc=2299.3 ms
+[PHASE]   qkv_proj      559.5 ms   24.3%
+[PHASE]   rope_kv         8.4 ms    0.4%
+[PHASE]   attn_scores     0.6 ms    0.0%
+[PHASE]   attn_out      197.1 ms    8.6%
+[PHASE]   ffn          1529.6 ms   66.5%
+[PHASE]   output_proj     4.2 ms    0.2%
+[PHASE]   unaccounted    25.3 ms  (overhead / norms / residual)
+[PHASE]   per_token     459.9 ms avg
+[Forward] ENTRY: tokens=1 start_pos=5
+[Forward] Config check: dim=3072 layers=32 hidden=8192 heads=32
+[Forward] Processing token 1/1
+[Forward] Token 1: embedding lookup for token=29973
+[Forward] Token 1: calling GetTensorRow for embedding
+[Forward] Token 1: GetTensorRow returned true
+[Forward] Token 1: embedding lookup complete
+[Forward] Token 1: starting 32 transformer layers
+[Forward] Token 1: Layer 1/32 starting
+[Forward] Token 1: Layer 1 - getting attn_norm
+[Forward] Token 1: Layer 1 - applying RMSNorm
+[Forward] Token 1: Layer 1 - has_split_qkv=false
+[Forward] Token 1: Layer 17/32 starting
+[HEARTBEAT] Layer 17/32 complete, elapsed 48 ms
+[Forward] Token 1: Layer 32/32 starting
+[PHASE] tokens=1 total_acc=99.0 ms
+[PHASE]   qkv_proj       23.5 ms   23.7%
+[PHASE]   rope_kv         2.2 ms    2.2%
+[PHASE]   attn_scores     0.3 ms    0.3%
+[PHASE]   attn_out        8.6 ms    8.7%
+[PHASE]   ffn            60.5 ms   61.1%
+[PHASE]   output_proj     3.9 ms    4.0%
+[PHASE]   unaccounted     0.3 ms  (overhead / norms / residual)
+[PHASE]   per_token      99.0 ms avg
+[Forward] ENTRY: tokens=1 start_pos=6
+[Forward] Config check: dim=3072 layers=32 hidden=8192 heads=32
+[Forward] Processing token 1/1
+[Forward] Token 1: embedding lookup for token=3617
+[Forward] Token 1: calling GetTensorRow for embedding
+[Forward] Token 1: GetTensorRow returned true
+[Forward] Token 1: embedding lookup complete
+[Forward] Token 1: starting 32 transformer layers
+[Forward] Token 1: Layer 1/32 starting
+[Forward] Token 1: Layer 1 - getting attn_norm
+[Forward] Token 1: Layer 1 - applying RMSNorm
+[Forward] Token 1: Layer 1 - has_split_qkv=false
+[Forward] Token 1: Layer 17/32 starting
+[HEARTBEAT] Layer 17/32 complete, elapsed 75 ms
+[Forward] Token 1: Layer 32/32 starting
+[PHASE] tokens=1 total_acc=118.0 ms
+[PHASE]   qkv_proj       29.8 ms   25.2%
+[PHASE]   rope_kv         2.0 ms    1.7%
+[PHASE]   attn_scores     0.3 ms    0.3%
+[PHASE]   attn_out       11.2 ms    9.5%
+[PHASE]   ffn            70.6 ms   59.9%
+[PHASE]   output_proj     4.1 ms    3.5%
+[PHASE]   unaccounted     2.8 ms  (overhead / norms / residual)
+[PHASE]   per_token     118.0 ms avg
+[Forward] ENTRY: tokens=1 start_pos=7
+[Forward] Config check: dim=3072 layers=32 hidden=8192 heads=32
+[Forward] Processing token 1/1
+[Forward] Token 1: embedding lookup for token=596
+[Forward] Token 1: calling GetTensorRow for embedding
+[Forward] Token 1: GetTensorRow returned true
+[Forward] Token 1: embedding lookup complete
+[Forward] Token 1: starting 32 transformer layers
+[Forward] Token 1: Layer 1/32 starting
+[Forward] Token 1: Layer 1 - getting attn_norm
+[Forward] Token 1: Layer 1 - applying RMSNorm
+[Forward] Token 1: Layer 1 - has_split_qkv=false
+[Forward] Token 1: Layer 17/32 starting
+[HEARTBEAT] Layer 17/32 complete, elapsed 47 ms
+[Forward] Token 1: Layer 32/32 starting
+[PHASE] tokens=1 total_acc=92.4 ms
+[PHASE]   qkv_proj       21.3 ms   23.1%
+[PHASE]   rope_kv         1.7 ms    1.9%
+[PHASE]   attn_scores     0.4 ms    0.4%
+[PHASE]   attn_out        8.1 ms    8.7%
+[PHASE]   ffn            57.0 ms   61.7%
+[PHASE]   output_proj     4.0 ms    4.3%
+[PHASE]   unaccounted     0.3 ms  (overhead / norms / residual)
+[PHASE]   per_token      92.4 ms avg
+[Forward] ENTRY: tokens=1 start_pos=8
+[Forward] Config check: dim=3072 layers=32 hidden=8192 heads=32
+[Forward] Processing token 1/1
+[Forward] Token 1: embedding lookup for token=5155
+[Forward] Token 1: calling GetTensorRow for embedding
+[Forward] Token 1: GetTensorRow returned true
+[Forward] Token 1: embedding lookup complete
+[Forward] Token 1: starting 32 transformer layers
+[Forward] Token 1: Layer 1/32 starting
+[Forward] Token 1: Layer 1 - getting attn_norm
+[Forward] Token 1: Layer 1 - applying RMSNorm
+[Forward] Token 1: Layer 1 - has_split_qkv=false
+[Forward] Token 1: Layer 17/32 starting
+[HEARTBEAT] Layer 17/32 complete, elapsed 49 ms
+[Forward] Token 1: Layer 32/32 starting
+[PHASE] tokens=1 total_acc=93.7 ms
+[PHASE]   qkv_proj       21.7 ms   23.2%
+[PHASE]   rope_kv         1.7 ms    1.9%
+[PHASE]   attn_scores     0.4 ms    0.4%
+[PHASE]   attn_out        8.3 ms    8.9%
+[PHASE]   ffn            57.8 ms   61.7%
+[PHASE]   output_proj     3.7 ms    3.9%
+[PHASE]   unaccounted     0.3 ms  (overhead / norms / residual)
+[PHASE]   per_token      93.7 ms avg
+[Forward] ENTRY: tokens=1 start_pos=9
+[Forward] Config check: dim=3072 layers=32 hidden=8192 heads=32
+[Forward] Processing token 1/1
+[Forward] Token 1: embedding lookup for token=7960
+[Forward] Token 1: calling GetTensorRow for embedding
+[Forward] Token 1: GetTensorRow returned true
+[Forward] Token 1: embedding lookup complete
+[Forward] Token 1: starting 32 transformer layers
+[Forward] Token 1: Layer 1/32 starting
+[Forward] Token 1: Layer 1 - getting attn_norm
+[Forward] Token 1: Layer 1 - applying RMSNorm
+[Forward] Token 1: Layer 1 - has_split_qkv=false
+[Forward] Token 1: Layer 17/32 starting
+[HEARTBEAT] Layer 17/32 complete, elapsed 48 ms
+[Forward] Token 1: Layer 32/32 starting
+[PHASE] tokens=1 total_acc=92.1 ms
+[PHASE]   qkv_proj       21.2 ms   23.0%
+[PHASE]   rope_kv         1.8 ms    1.9%
+[PHASE]   attn_scores     0.5 ms    0.6%
+[PHASE]   attn_out        8.2 ms    8.9%
+[PHASE]   ffn            56.5 ms   61.4%
+[PHASE]   output_proj     3.9 ms    4.2%
+[PHASE]   unaccounted     0.6 ms  (overhead / norms / residual)
+[PHASE]   per_token      92.1 ms avg
+[Forward] ENTRY: tokens=1 start_pos=10
+[Forward] Config check: dim=3072 layers=32 hidden=8192 heads=32
+[Forward] Processing token 1/1
+[Forward] Token 1: embedding lookup for token=29892
+[Forward] Token 1: calling GetTensorRow for embedding
+[Forward] Token 1: GetTensorRow returned true
+[Forward] Token 1: embedding lookup complete
+[Forward] Token 1: starting 32 transformer layers
+[Forward] Token 1: Layer 1/32 starting
+[Forward] Token 1: Layer 1 - getting attn_norm
+[Forward] Token 1: Layer 1 - applying RMSNorm
+[Forward] Token 1: Layer 1 - has_split_qkv=false
+[Forward] Token 1: Layer 17/32 starting
+[HEARTBEAT] Layer 17/32 complete, elapsed 50 ms
+[Forward] Token 1: Layer 32/32 starting
+[PHASE] tokens=1 total_acc=92.9 ms
+[PHASE]   qkv_proj       21.7 ms   23.4%
+[PHASE]   rope_kv         2.0 ms    2.2%
+[PHASE]   attn_scores     0.5 ms    0.5%
+[PHASE]   attn_out        7.9 ms    8.6%
+[PHASE]   ffn            56.9 ms   61.3%
+[PHASE]   output_proj     3.8 ms    4.1%
+[PHASE]   unaccounted     0.2 ms  (overhead / norms / residual)
+[PHASE]   per_token      92.9 ms avg
+[Forward] ENTRY: tokens=1 start_pos=11
+[Forward] Config check: dim=3072 layers=32 hidden=8192 heads=32
+[Forward] Processing token 1/1
+[Forward] Token 1: embedding lookup for token=1363
+[Forward] Token 1: calling GetTensorRow for embedding
+[Forward] Token 1: GetTensorRow returned true
+[Forward] Token 1: embedding lookup complete
+[Forward] Token 1: starting 32 transformer layers
+[Forward] Token 1: Layer 1/32 starting
+[Forward] Token 1: Layer 1 - getting attn_norm
+[Forward] Token 1: Layer 1 - applying RMSNorm
+[Forward] Token 1: Layer 1 - has_split_qkv=false
+[Forward] Token 1: Layer 17/32 starting
+[HEARTBEAT] Layer 17/32 complete, elapsed 48 ms
+[Forward] Token 1: Layer 32/32 starting
+[PHASE] tokens=1 total_acc=90.4 ms
+[PHASE]   qkv_proj       20.6 ms   22.7%
+[PHASE]   rope_kv         1.8 ms    2.0%
+[PHASE]   attn_scores     0.6 ms    0.7%
+[PHASE]   attn_out        7.7 ms    8.5%
+[PHASE]   ffn            55.8 ms   61.7%
+[PHASE]   output_proj     4.0 ms    4.4%
+[PHASE]   unaccounted     0.2 ms  (overhead / norms / residual)
+[PHASE]   per_token      90.4 ms avg
+[Forward] ENTRY: tokens=1 start_pos=12
+[Forward] Config check: dim=3072 layers=32 hidden=8192 heads=32
+[Forward] Processing token 1/1
+[Forward] Token 1: embedding lookup for token=9826
+[Forward] Token 1: calling GetTensorRow for embedding
+[Forward] Token 1: GetTensorRow returned true
+[Forward] Token 1: embedding lookup complete
+[Forward] Token 1: starting 32 transformer layers
+[Forward] Token 1: Layer 1/32 starting
+[Forward] Token 1: Layer 1 - getting attn_norm
+[Forward] Token 1: Layer 1 - applying RMSNorm
+[Forward] Token 1: Layer 1 - has_split_qkv=false
+[Forward] Token 1: Layer 17/32 starting
+[HEARTBEAT] Layer 17/32 complete, elapsed 47 ms
+[Forward] Token 1: Layer 32/32 starting
+[PHASE] tokens=1 total_acc=89.0 ms
+[PHASE]   qkv_proj       20.7 ms   23.2%
+[PHASE]   rope_kv         1.8 ms    2.0%
+[PHASE]   attn_scores     0.7 ms    0.8%
+[PHASE]   attn_out        7.4 ms    8.3%
+[PHASE]   ffn            54.9 ms   61.7%
+[PHASE]   output_proj     3.5 ms    3.9%
+[PHASE]   unaccounted     0.6 ms  (overhead / norms / residual)
+[PHASE]   per_token      89.0 ms avg
+[Autopatch] tok=8 action=emergency-reset tps=2.5 pressure=0.000 depth=1 diag=NOMINAL
+[Forward] ENTRY: tokens=1 start_pos=13
+[Forward] Config check: dim=3072 layers=32 hidden=8192 heads=32
+[Forward] Processing token 1/1
+[Forward] Token 1: embedding lookup for token=591
+[Forward] Token 1: calling GetTensorRow for embedding
+[Forward] Token 1: GetTensorRow returned true
+[Forward] Token 1: embedding lookup complete
+[Forward] Token 1: starting 32 transformer layers
+[Forward] Token 1: Layer 1/32 starting
+[Forward] Token 1: Layer 1 - getting attn_norm
+[Forward] Token 1: Layer 1 - applying RMSNorm
+[Forward] Token 1: Layer 1 - has_split_qkv=false
+[Forward] Token 1: Layer 17/32 starting
+[HEARTBEAT] Layer 17/32 complete, elapsed 47 ms
+[Forward] Token 1: Layer 32/32 starting
+[PHASE] tokens=1 total_acc=89.5 ms
+[PHASE]   qkv_proj       20.2 ms   22.6%
+[PHASE]   rope_kv         1.8 ms    2.0%
+[PHASE]   attn_scores     0.8 ms    0.9%
+[PHASE]   attn_out        7.8 ms    8.7%
+[PHASE]   ffn            54.9 ms   61.3%
+[PHASE]   output_proj     4.0 ms    4.4%
+[PHASE]   unaccounted     0.4 ms  (overhead / norms / residual)
+[PHASE]   per_token      89.5 ms avg
+[Forward] ENTRY: tokens=1 start_pos=14
+[Forward] Config check: dim=3072 layers=32 hidden=8192 heads=32
+[Forward] Processing token 1/1
+[Forward] Token 1: embedding lookup for token=2355
+[Forward] Token 1: calling GetTensorRow for embedding
+[Forward] Token 1: GetTensorRow returned true
+[Forward] Token 1: embedding lookup complete
+[Forward] Token 1: starting 32 transformer layers
+[Forward] Token 1: Layer 1/32 starting
+[Forward] Token 1: Layer 1 - getting attn_norm
+[Forward] Token 1: Layer 1 - applying RMSNorm
+[Forward] Token 1: Layer 1 - has_split_qkv=false
+[Forward] Token 1: Layer 17/32 starting
+[HEARTBEAT] Layer 17/32 complete, elapsed 47 ms
+[Forward] Token 1: Layer 32/32 starting
+[PHASE] tokens=1 total_acc=89.8 ms
+[PHASE]   qkv_proj       20.5 ms   22.8%
+[PHASE]   rope_kv         1.8 ms    2.0%
+[PHASE]   attn_scores     0.9 ms    1.0%
+[PHASE]   attn_out        7.5 ms    8.3%
+[PHASE]   ffn            55.4 ms   61.7%
+[PHASE]   output_proj     3.8 ms    4.2%
+[PHASE]   unaccounted     0.7 ms  (overhead / norms / residual)
+[PHASE]   per_token      89.8 ms avg
+[Forward] ENTRY: tokens=1 start_pos=15
+[Forward] Config check: dim=3072 layers=32 hidden=8192 heads=32
+[Forward] Processing token 1/1
+[Forward] Token 1: embedding lookup for token=263
+[Forward] Token 1: calling GetTensorRow for embedding
+[Forward] Token 1: GetTensorRow returned true
+[Forward] Token 1: embedding lookup complete
+[Forward] Token 1: starting 32 transformer layers
+[Forward] Token 1: Layer 1/32 starting
+[Forward] Token 1: Layer 1 - getting attn_norm
+[Forward] Token 1: Layer 1 - applying RMSNorm
+[Forward] Token 1: Layer 1 - has_split_qkv=false
+[Forward] Token 1: Layer 17/32 starting
+[HEARTBEAT] Layer 17/32 complete, elapsed 49 ms
+[Forward] Token 1: Layer 32/32 starting
+[PHASE] tokens=1 total_acc=93.5 ms
+[PHASE]   qkv_proj       21.3 ms   22.8%
+[PHASE]   rope_kv         1.8 ms    2.0%
+[PHASE]   attn_scores     1.1 ms    1.1%
+[PHASE]   attn_out        8.1 ms    8.6%
+[PHASE]   ffn            57.1 ms   61.1%
+[PHASE]   output_proj     4.1 ms    4.4%
+[PHASE]   unaccounted    -0.1 ms  (overhead / norms / residual)
+[PHASE]   per_token      93.5 ms avg
+[Forward] ENTRY: tokens=1 start_pos=16
+[Forward] Config check: dim=3072 layers=32 hidden=8192 heads=32
+[Forward] Processing token 1/1
+[Forward] Token 1: embedding lookup for token=4266
+[Forward] Token 1: calling GetTensorRow for embedding
+[Forward] Token 1: GetTensorRow returned true
+[Forward] Token 1: embedding lookup complete
+[Forward] Token 1: starting 32 transformer layers
+[Forward] Token 1: Layer 1/32 starting
+[Forward] Token 1: Layer 1 - getting attn_norm
+[Forward] Token 1: Layer 1 - applying RMSNorm
+[Forward] Token 1: Layer 1 - has_split_qkv=false
+[Forward] Token 1: Layer 17/32 starting
+[HEARTBEAT] Layer 17/32 complete, elapsed 49 ms
+[Forward] Token 1: Layer 32/32 starting
+[PHASE] tokens=1 total_acc=91.4 ms
+[PHASE]   qkv_proj       20.5 ms   22.5%
+[PHASE]   rope_kv         2.0 ms    2.2%
+[PHASE]   attn_scores     1.1 ms    1.2%
+[PHASE]   attn_out        7.6 ms    8.3%
+[PHASE]   ffn            56.2 ms   61.5%
+[PHASE]   output_proj     3.9 ms    4.3%
+[PHASE]   unaccounted     0.7 ms  (overhead / norms / residual)
+[PHASE]   per_token      91.4 ms avg
+[Forward] ENTRY: tokens=1 start_pos=17
+[Forward] Config check: dim=3072 layers=32 hidden=8192 heads=32
+[Forward] Processing token 1/1
+[Forward] Token 1: embedding lookup for token=396
+[Forward] Token 1: calling GetTensorRow for embedding
+[Forward] Token 1: GetTensorRow returned true
+[Forward] Token 1: embedding lookup complete
+[Forward] Token 1: starting 32 transformer layers
+[Forward] Token 1: Layer 1/32 starting
+[Forward] Token 1: Layer 1 - getting attn_norm
+[Forward] Token 1: Layer 1 - applying RMSNorm
+[Forward] Token 1: Layer 1 - has_split_qkv=false
+[Forward] Token 1: Layer 17/32 starting
+[HEARTBEAT] Layer 17/32 complete, elapsed 46 ms
+[Forward] Token 1: Layer 32/32 starting
+[PHASE] tokens=1 total_acc=88.0 ms
+[PHASE]   qkv_proj       19.9 ms   22.6%
+[PHASE]   rope_kv         1.8 ms    2.0%
+[PHASE]   attn_scores     1.1 ms    1.2%
+[PHASE]   attn_out        7.3 ms    8.3%
+[PHASE]   ffn            54.2 ms   61.6%
+[PHASE]   output_proj     3.7 ms    4.2%
+[PHASE]   unaccounted     0.7 ms  (overhead / norms / residual)
+[PHASE]   per_token      88.0 ms avg
+[Forward] ENTRY: tokens=1 start_pos=18
+[Forward] Config check: dim=3072 layers=32 hidden=8192 heads=32
+[Forward] Processing token 1/1
+[Forward] Token 1: embedding lookup for token=29896
+[Forward] Token 1: calling GetTensorRow for embedding
+[Forward] Token 1: GetTensorRow returned true
+[Forward] Token 1: embedding lookup complete
+[Forward] Token 1: starting 32 transformer layers
+[Forward] Token 1: Layer 1/32 starting
+[Forward] Token 1: Layer 1 - getting attn_norm
+[Forward] Token 1: Layer 1 - applying RMSNorm
+[Forward] Token 1: Layer 1 - has_split_qkv=false
+[Forward] Token 1: Layer 17/32 starting
+[HEARTBEAT] Layer 17/32 complete, elapsed 47 ms
+[Forward] Token 1: Layer 32/32 starting
+[PHASE] tokens=1 total_acc=88.7 ms
+[PHASE]   qkv_proj       20.4 ms   23.0%
+[PHASE]   rope_kv         1.7 ms    2.0%
+[PHASE]   attn_scores     1.2 ms    1.3%
+[PHASE]   attn_out        7.4 ms    8.4%
+[PHASE]   ffn            54.0 ms   60.9%
+[PHASE]   output_proj     3.9 ms    4.4%
+[PHASE]   unaccounted     0.4 ms  (overhead / norms / residual)
+[PHASE]   per_token      88.7 ms avg
+[Forward] ENTRY: tokens=1 start_pos=19
+[Forward] Config check: dim=3072 layers=32 hidden=8192 heads=32
+[Forward] Processing token 1/1
+[Forward] Token 1: embedding lookup for token=29906
+[Forward] Token 1: calling GetTensorRow for embedding
+[Forward] Token 1: GetTensorRow returned true
+[Forward] Token 1: embedding lookup complete
+[Forward] Token 1: starting 32 transformer layers
+[Forward] Token 1: Layer 1/32 starting
+[Forward] Token 1: Layer 1 - getting attn_norm
+[Forward] Token 1: Layer 1 - applying RMSNorm
+[Forward] Token 1: Layer 1 - has_split_qkv=false
+[Forward] Token 1: Layer 17/32 starting
+[HEARTBEAT] Layer 17/32 complete, elapsed 47 ms
+[Forward] Token 1: Layer 32/32 starting
+[PHASE] tokens=1 total_acc=88.9 ms
+[PHASE]   qkv_proj       20.2 ms   22.7%
+[PHASE]   rope_kv         1.8 ms    2.0%
+[PHASE]   attn_scores     1.2 ms    1.4%
+[PHASE]   attn_out        7.6 ms    8.5%
+[PHASE]   ffn            54.2 ms   61.0%
+[PHASE]   output_proj     3.8 ms    4.3%
+[PHASE]   unaccounted     0.5 ms  (overhead / norms / residual)
+[PHASE]   per_token      88.9 ms avg
+[Forward] ENTRY: tokens=1 start_pos=20
+[Forward] Config check: dim=3072 layers=32 hidden=8192 heads=32
+[Forward] Processing token 1/1
+[Forward] Token 1: embedding lookup for token=29901
+[Forward] Token 1: calling GetTensorRow for embedding
+[Forward] Token 1: GetTensorRow returned true
+[Forward] Token 1: embedding lookup complete
+[Forward] Token 1: starting 32 transformer layers
+[Forward] Token 1: Layer 1/32 starting
+[Forward] Token 1: Layer 1 - getting attn_norm
+[Forward] Token 1: Layer 1 - applying RMSNorm
+[Forward] Token 1: Layer 1 - has_split_qkv=false
+[Forward] Token 1: Layer 17/32 starting
+[HEARTBEAT] Layer 17/32 complete, elapsed 47 ms
+[Forward] Token 1: Layer 32/32 starting
+[PHASE] tokens=1 total_acc=89.8 ms
+[PHASE]   qkv_proj       20.5 ms   22.8%
+[PHASE]   rope_kv         1.8 ms    2.0%
+[PHASE]   attn_scores     1.4 ms    1.5%
+[PHASE]   attn_out        7.7 ms    8.5%
+[PHASE]   ffn            54.8 ms   61.0%
+[PHASE]   output_proj     3.7 ms    4.1%
+[PHASE]   unaccounted     0.8 ms  (overhead / norms / residual)
+[PHASE]   per_token      89.8 ms avg
+? Get your questions ready, because today we got a special #12:
+[Autopatch] tok=16 action=emergency-reset tps=4.1 pressure=0.000 depth=1 diag=NOMINAL: No significant performance issues detected
+[Measurement] gate=block reason=insufficient_samples samples=14 rolling_tps=0.00 stddev=0.00

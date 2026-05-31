@@ -1,0 +1,102 @@
+smoke_test_measurement_integration 0 0
+e2e_integration_test 0 0
+agent_workflow_orchestrator_smoke 0 0
+agent_workflow_orchestrator_smoke 0 0
+test_ai_completions 0 0
+test_llm_connectivity 0 0
+test_tool_registry 0 0
+test_zero_retention_manager 0 0
+test_semantic_diff_analyzer 0 0
+test_ai_merge_resolver 0 0
+test_ide_model_autonomy 0 0
+test_extreme_memory_optimizer 0 0
+test_quality_corrector 0 0
+test_sandboxed_terminal 0 0
+test_agentic_file_operations 0 0
+model_registry_test 0 0
+test_gguf_integration 0 0
+test_engine_revolver 0 0
+test_swarm_scheduler_pin 0 0
+test_swarm_expert_heatmap_stress 0 0
+test_moe_mixture_reference 0 0
+test_moe_down_project_policy 0 0
+test_moe_plan_row_mixture_pack_cache 0 0
+test_moe_batched_down_project 0 0
+test_moe_pack_hud_metrics 0 0
+test_basic_profiler 0 0
+test_batch3_profiler_smoke 0 0
+test_state_subscription_engine_smoke 0 0
+test_ai_execution_guardrails_smoke 0 0
+test_ai_execution_guardrails_chaos 0 0
+test_safe_inference_session_integration 0 0
+test_kv_cache_ownership 0 0
+test_speculative_pipeline 0 0
+test_extension_host 0 0
+extension_host_smoke_test 0 0
+batch4_ipc_spec_ast_arb_smoke 0 0
+autocomplete_kernel_wire_smoke 0 0
+cross_repo_router_smoke 0 0
+autocomplete_p95_latency_harness 0 0
+titan_rx_hotpath_smoke 0 0
+test_sovereign_kernels 0 0
+bench_sovereign_kernels 0 0
+test_production_regression 0 0
+test_instructions_provider 0 0
+sovereign_assembler_smoke 0 0
+rawrengine_copilot_smoke 0 0
+win32ide_agentic_smoke 0 0
+win32ide_high_pressure_ui 0 0
+ollama_stream_routing_env_smoke 0 0
+production_readiness_expansion_quality_gate 1 567.132
+test_model_loader_streamer_smoke 0 0
+---
+smoke_test_measurement_integration
+e2e_integration_test
+agent_workflow_orchestrator_smoke
+agent_workflow_orchestrator_smoke
+test_ai_completions
+test_llm_connectivity
+test_tool_registry
+test_zero_retention_manager
+test_semantic_diff_analyzer
+test_ai_merge_resolver
+test_ide_model_autonomy
+test_extreme_memory_optimizer
+test_quality_corrector
+test_sandboxed_terminal
+test_agentic_file_operations
+model_registry_test
+test_gguf_integration
+test_engine_revolver
+test_swarm_scheduler_pin
+test_swarm_expert_heatmap_stress
+test_moe_mixture_reference
+test_moe_down_project_policy
+test_moe_plan_row_mixture_pack_cache
+test_moe_batched_down_project
+test_moe_pack_hud_metrics
+test_basic_profiler
+test_batch3_profiler_smoke
+test_state_subscription_engine_smoke
+test_ai_execution_guardrails_smoke
+test_ai_execution_guardrails_chaos
+test_safe_inference_session_integration
+test_kv_cache_ownership
+test_speculative_pipeline
+test_extension_host
+extension_host_smoke_test
+batch4_ipc_spec_ast_arb_smoke
+autocomplete_kernel_wire_smoke
+cross_repo_router_smoke
+autocomplete_p95_latency_harness
+titan_rx_hotpath_smoke
+test_sovereign_kernels
+bench_sovereign_kernels
+test_production_regression
+test_instructions_provider
+sovereign_assembler_smoke
+rawrengine_copilot_smoke
+win32ide_agentic_smoke
+test_model_loader_streamer_smoke
+win32ide_high_pressure_ui
+ollama_stream_routing_env_smoke

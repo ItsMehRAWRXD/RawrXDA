@@ -1,0 +1,36 @@
+[RawrXD][GPU] Parity CPU fallback ACTIVE — GPU gate bypassed for deterministic trace test only.
+[CLI PARITY-CPU] cmdRun: deterministic fallback active
+[CLI TOKEN] from 
+[CLI TOKEN] over 
+[CLI TOKEN] stream 
+[CLI TOKEN] fallback 
+[CLI TOKEN] fox 
+[CLI TOKEN] jumps 
+[CLI TOKEN] the 
+[CLI TOKEN] from 
+[CLI TOKEN] world. 
+[CLI TOKEN] verified. 
+[CLI TOKEN] Hello 
+[CLI TOKEN] fox 
+[CLI TOKEN] fallback 
+[CLI TOKEN] verified. 
+[CLI TOKEN] token 
+[CLI TOKEN] deterministic 
+[CLI TOKEN] the 
+[CLI TOKEN] from 
+[CLI TOKEN] world. 
+[CLI TOKEN] quick 
+[CLI TOKEN] Hello 
+[CLI TOKEN] brown 
+[CLI TOKEN] dog. 
+[CLI TOKEN] dog. 
+[CLI TOKEN] quick 
+[CLI TOKEN] fox 
+[CLI TOKEN] world. 
+[CLI TOKEN] token 
+[CLI TOKEN] Hello 
+[CLI TOKEN] token 
+[CLI TOKEN] over 
+[CLI TOKEN] RawrXD 
+[CLI TOKEN] <done=true>
+[CLI TRACE] wrote d:\rawrxd\build_pipeline\parity_cpu_cli_ui\cli.json (32 tokens, 129 ms) [parity-cpu]

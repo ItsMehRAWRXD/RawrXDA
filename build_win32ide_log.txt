@@ -1,0 +1,112 @@
+ninja: warning: premature end of file; recovering
+[1/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\bridge\SwarmIATRegistration.cpp.obj
+[2/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\RobustOllamaParser.cpp.obj
+[3/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\bridge\UnifiedModelMetadata.cpp.obj
+[4/815] Building RC object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\RawrXD-Win32IDE.rc.res
+[5/815] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\webview2_masm64_dispatcher.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\webview2_masm64_dispatcher.asm
+
+[6/815] Linking CXX shared library bin\RawrXD_MultiWindow_Kernel.dll
+[7/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\ui\debugger_core.cpp.obj
+[8/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\ui\webview2_bridge.cpp.obj
+[9/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\bridge\Win32SwarmBridge.cpp.obj
+[10/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\ui\agentic_bridge.cpp.obj
+[11/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\ui\RawrXD_MainLoop.cpp.obj
+[12/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\ErrorRecoveryManager.cpp.obj
+[13/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\overclock_governor.cpp.obj
+[14/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\RawrXD_ApertureManager.cpp.obj
+[15/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\SubAgentManager.cpp.obj
+[16/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\WindowManager.cpp.obj
+[17/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\HeadlessIDE_AutonomousWorkflowMode.cpp.obj
+[18/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\EditorOperations.cpp.obj
+[19/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\RouterOperations.cpp.obj
+[20/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\api_server.cpp.obj
+[21/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\quantum_agent_orchestrator.cpp.obj
+[22/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\gguf_factory\gguf_writer_minimal.cpp.obj
+[23/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DHAS_BRUTAL_GZIP_MASM=1 -DNOMINMAX -DRAWRXD_DISABLE_DUPLICATE_SHIMS=1 -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_HAS_SOVEREIGN_GPU_ASM=0 -DRAWRXD_HAS_TITAN_KERNEL=1 -DRAWRXD_INFRA_AVAILABLE=1 -DRAWRXD_LINK_ADVANCED_DEOBFUSCATOR_ASM=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=0 -DRAWRXD_LINK_CODEBASE_AUDIT_SYSTEM_ASM=0 -DRAWRXD_LINK_DUAL_ENGINE_QUANTUM_BEACON_ASM=0 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PATTERN_RECONSTRUCTOR_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=0 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_UNIFIED_OVERCLOCK_GOVERNOR_ASM=0 -DRAWRXD_LINK_VISION_PROJECTION_ASM=0 -DRAWRXD_MASM_CORE_NATIVE_BRIDGE=1 -DRAWRXD_PRODUCTION_STRIP_STUB_SOURCES=0 -DRAWRXD_STRICT_PRODUCTION_PROFILE=0 -DRAWRXD_USE_DEDICATED_CODELENS=1 -DRAWRXD_USE_DEDICATED_HOVER=1 -DRAWRXD_USE_DEDICATED_INLAY=1 -DRAWRXD_USE_DEDICATED_MINIMAP=1 -DRAWR_ENABLE_VULKAN=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_MODEL_ANATOMY=1 -DRAWR_HAS_QUICKJS=1 -DRAWR_HAS_RAWR_INFERENCE=0 -DRAWR_HAS_SOVEREIGN_ENGINES=0 -DRAWR_HAS_VULKAN=1 -DRAWR_QUICKJS_STUB=0 -DRAWR_SINGULARITY_LINKED=0 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -Id:\rawrxd\include -ID:\rawrxd\src\ggml-cpu -ID:\rawrxd\Ship -ID:\rawrxd\include -ID:\rawrxd\external\rawr_infra\Headers -ID:\rawrxd\external\rawr_infra\Source -ID:\rawrxd\src -ID:\rawrxd\src\inference -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\win32app -ID:\rawrxd\src\modules -ID:\rawrxd\src\utils -ID:\rawrxd\src\config -ID:\rawrxd\src\asm -ID:\rawrxd\src\lsp -ID:\rawrxd\src\plugin_system -ID:\rawrxd\src\ide -ID:\rawrxd\src\llm_adapter -ID:\rawrxd\src\auth -ID:\rawrxd\src\skill_system -ID:\rawrxd\src\context -ID:\rawrxd\src\multimodal_engine -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\collab -ID:\rawrxd\src\prometheus -ID:\rawrxd\3rdparty\quickjs_ng -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\src\reverse_engineering\pe_tools -ID:\rawrxd\src\..\include -ID:\rawrxd\src\..\3rdparty\ggml\include -ID:\rawrxd\src\. -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:ID:\rawrxd\Ship\webview2\build\native\include -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++latest -MT /GS- /sdl- /EHsc /W0 /arch:AVX2 /Z7 /O2 /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE.cpp.obj /Fdbin\RawrXD-Win32IDE.pdb /FS -c D:\rawrxd\src\win32app\Win32IDE.cpp
+D:\rawrxd\src\win32app\ModelConnection.h(83): error C2664: 'BOOL WinHttpCrackUrl(LPCWSTR,DWORD,DWORD,LPURL_COMPONENTS)': cannot convert argument 1 from 'const _Elem *' to 'LPCWSTR'
+        with
+        [
+            _Elem=char
+        ]
+D:\rawrxd\src\win32app\ModelConnection.h(83): note: Types pointed to are unrelated; conversion requires reinterpret_cast, C-style cast or parenthesized function-style cast
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um\winhttp.h(1584): note: see declaration of 'WinHttpCrackUrl'
+D:\rawrxd\src\win32app\ModelConnection.h(83): note: while trying to match the argument list '(const _Elem *, int, int, URL_COMPONENTS *)'
+        with
+        [
+            _Elem=char
+        ]
+D:\rawrxd\src\win32app\ModelConnection.h(186): error C3861: 'WinHttpCrackUrlA': identifier not found
+[24/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Core.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_Core.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DHAS_BRUTAL_GZIP_MASM=1 -DNOMINMAX -DRAWRXD_DISABLE_DUPLICATE_SHIMS=1 -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_HAS_SOVEREIGN_GPU_ASM=0 -DRAWRXD_HAS_TITAN_KERNEL=1 -DRAWRXD_INFRA_AVAILABLE=1 -DRAWRXD_LINK_ADVANCED_DEOBFUSCATOR_ASM=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=0 -DRAWRXD_LINK_CODEBASE_AUDIT_SYSTEM_ASM=0 -DRAWRXD_LINK_DUAL_ENGINE_QUANTUM_BEACON_ASM=0 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PATTERN_RECONSTRUCTOR_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=0 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_UNIFIED_OVERCLOCK_GOVERNOR_ASM=0 -DRAWRXD_LINK_VISION_PROJECTION_ASM=0 -DRAWRXD_MASM_CORE_NATIVE_BRIDGE=1 -DRAWRXD_PRODUCTION_STRIP_STUB_SOURCES=0 -DRAWRXD_STRICT_PRODUCTION_PROFILE=0 -DRAWRXD_USE_DEDICATED_CODELENS=1 -DRAWRXD_USE_DEDICATED_HOVER=1 -DRAWRXD_USE_DEDICATED_INLAY=1 -DRAWRXD_USE_DEDICATED_MINIMAP=1 -DRAWR_ENABLE_VULKAN=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_MODEL_ANATOMY=1 -DRAWR_HAS_QUICKJS=1 -DRAWR_HAS_RAWR_INFERENCE=0 -DRAWR_HAS_SOVEREIGN_ENGINES=0 -DRAWR_HAS_VULKAN=1 -DRAWR_QUICKJS_STUB=0 -DRAWR_SINGULARITY_LINKED=0 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -Id:\rawrxd\include -ID:\rawrxd\src\ggml-cpu -ID:\rawrxd\Ship -ID:\rawrxd\include -ID:\rawrxd\external\rawr_infra\Headers -ID:\rawrxd\external\rawr_infra\Source -ID:\rawrxd\src -ID:\rawrxd\src\inference -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\win32app -ID:\rawrxd\src\modules -ID:\rawrxd\src\utils -ID:\rawrxd\src\config -ID:\rawrxd\src\asm -ID:\rawrxd\src\lsp -ID:\rawrxd\src\plugin_system -ID:\rawrxd\src\ide -ID:\rawrxd\src\llm_adapter -ID:\rawrxd\src\auth -ID:\rawrxd\src\skill_system -ID:\rawrxd\src\context -ID:\rawrxd\src\multimodal_engine -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\collab -ID:\rawrxd\src\prometheus -ID:\rawrxd\3rdparty\quickjs_ng -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\src\reverse_engineering\pe_tools -ID:\rawrxd\src\..\include -ID:\rawrxd\src\..\3rdparty\ggml\include -ID:\rawrxd\src\. -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:ID:\rawrxd\Ship\webview2\build\native\include -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++latest -MT /GS- /sdl- /EHsc /W0 /arch:AVX2 /Z7 /O2 /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Core.cpp.obj /Fdbin\RawrXD-Win32IDE.pdb /FS -c D:\rawrxd\src\win32app\Win32IDE_Core.cpp
+D:\rawrxd\src\win32app\ModelConnection.h(78): error C2440: '=': cannot convert from 'char [256]' to 'LPWSTR'
+D:\rawrxd\src\win32app\ModelConnection.h(78): note: Types pointed to are unrelated; conversion requires reinterpret_cast, C-style cast or parenthesized function-style cast
+D:\rawrxd\src\win32app\ModelConnection.h(80): error C2440: '=': cannot convert from 'char [256]' to 'LPWSTR'
+D:\rawrxd\src\win32app\ModelConnection.h(80): note: Types pointed to are unrelated; conversion requires reinterpret_cast, C-style cast or parenthesized function-style cast
+D:\rawrxd\src\win32app\ModelConnection.h(83): error C2664: 'BOOL WinHttpCrackUrl(LPCWSTR,DWORD,DWORD,LPURL_COMPONENTS)': cannot convert argument 1 from 'const _Elem *' to 'LPCWSTR'
+        with
+        [
+            _Elem=char
+        ]
+D:\rawrxd\src\win32app\ModelConnection.h(83): note: Types pointed to are unrelated; conversion requires reinterpret_cast, C-style cast or parenthesized function-style cast
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um\winhttp.h(1584): note: see declaration of 'WinHttpCrackUrl'
+D:\rawrxd\src\win32app\ModelConnection.h(83): note: while trying to match the argument list '(const _Elem *, int, int, URL_COMPONENTS *)'
+        with
+        [
+            _Elem=char
+        ]
+D:\rawrxd\src\win32app\ModelConnection.h(92): error C2664: 'int MultiByteToWideChar(UINT,DWORD,LPCCH,int,LPWSTR,int)': cannot convert argument 3 from 'LPWSTR' to 'LPCCH'
+D:\rawrxd\src\win32app\ModelConnection.h(92): note: Types pointed to are unrelated; conversion requires reinterpret_cast, C-style cast or parenthesized function-style cast
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um\stringapiset.h(120): note: see declaration of 'MultiByteToWideChar'
+D:\rawrxd\src\win32app\ModelConnection.h(92): note: while trying to match the argument list '(int, int, LPWSTR, int, wchar_t [256], int)'
+D:\rawrxd\src\win32app\ModelConnection.h(93): error C2664: 'int MultiByteToWideChar(UINT,DWORD,LPCCH,int,LPWSTR,int)': cannot convert argument 3 from 'LPWSTR' to 'LPCCH'
+D:\rawrxd\src\win32app\ModelConnection.h(93): note: Types pointed to are unrelated; conversion requires reinterpret_cast, C-style cast or parenthesized function-style cast
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um\stringapiset.h(120): note: see declaration of 'MultiByteToWideChar'
+D:\rawrxd\src\win32app\ModelConnection.h(93): note: while trying to match the argument list '(int, int, LPWSTR, int, wchar_t [256], int)'
+D:\rawrxd\src\win32app\ModelConnection.h(174): error C2065: 'URL_COMPONENTSA': undeclared identifier
+D:\rawrxd\src\win32app\ModelConnection.h(174): error C2146: syntax error: missing ';' before identifier 'urlComp'
+D:\rawrxd\src\win32app\ModelConnection.h(174): error C2065: 'urlComp': undeclared identifier
+D:\rawrxd\src\win32app\ModelConnection.h(175): error C2065: 'urlComp': undeclared identifier
+D:\rawrxd\src\win32app\ModelConnection.h(176): error C2065: 'urlComp': undeclared identifier
+D:\rawrxd\src\win32app\ModelConnection.h(176): error C2065: 'urlComp': undeclared identifier
+D:\rawrxd\src\win32app\ModelConnection.h(181): error C2065: 'urlComp': undeclared identifier
+D:\rawrxd\src\win32app\ModelConnection.h(182): error C2065: 'urlComp': undeclared identifier
+D:\rawrxd\src\win32app\ModelConnection.h(183): error C2065: 'urlComp': undeclared identifier
+D:\rawrxd\src\win32app\ModelConnection.h(184): error C2065: 'urlComp': undeclared identifier
+D:\rawrxd\src\win32app\ModelConnection.h(186): error C2065: 'urlComp': undeclared identifier
+D:\rawrxd\src\win32app\ModelConnection.h(186): error C3861: 'WinHttpCrackUrlA': identifier not found
+D:\rawrxd\src\win32app\ModelConnection.h(192): error C2065: 'urlComp': undeclared identifier
+D:\rawrxd\src\win32app\ModelConnection.h(203): error C2065: 'urlComp': undeclared identifier
+D:\rawrxd\src\win32app\ModelConnection.h(203): error C2660: 'MultiByteToWideChar': function does not take 5 arguments
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um\stringapiset.h(120): note: see declaration of 'MultiByteToWideChar'
+D:\rawrxd\src\win32app\ModelConnection.h(203): note: while trying to match the argument list '(int, int, int, wchar_t [256], int)'
+D:\rawrxd\src\win32app\ModelConnection.h(205): error C2065: 'urlComp': undeclared identifier
+D:\rawrxd\src\win32app\ModelConnection.h(204): error C2660: 'WinHttpConnect': function does not take 3 arguments
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um\winhttp.h(1644): note: see declaration of 'WinHttpConnect'
+D:\rawrxd\src\win32app\ModelConnection.h(204): note: while trying to match the argument list '(HINTERNET, wchar_t [256], int)'
+[25/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\HeadlessIDE.cpp.obj
+[26/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Accelerators.cpp.obj
+[27/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_CoreRuntimeSpine.cpp.obj
+[28/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_ModelLab.cpp.obj
+[29/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Watchdog.cpp.obj
+[30/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\main_win32.cpp.obj
+[31/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_VSCodeUI.cpp.obj
+[32/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_CopilotNativeGlue.cpp.obj
+[33/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_SidebarRuntime.cpp.obj
+[34/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_VisionEncoder.cpp.obj
+[35/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Sidebar.cpp.obj
+[36/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_StreamingUX.cpp.obj
+[37/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_SyntaxHighlight.cpp.obj
+[38/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Themes.cpp.obj
+[39/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Debugger.cpp.obj
+[40/815] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Commands.cpp.obj
+ninja: build stopped: subcommand failed.

@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "anchors": {},
+  "keyAliases": {
+    "dev-local":          ["dev", "local-dev"],
+    "prod-release":       ["prod"],
+    "emergency-override": []
+  }
+}

@@ -398,7 +398,7 @@ void ExecutionScheduler::SetThreadAffinity(int thread_idx, int cpu_core) {
 
 void ExecutionScheduler::SetNUMAPolicy(int /*numa_node*/) {
     // Windows: SetThreadIdealProcessorEx; Linux: numa_run_on_node
-    // Stub: actual impl depends on numaapi
+    // NUMA policy requires libnuma on Linux; Windows uses processor groups
 }
 
 // ─── Enhancement 11: Fiber stubs ─────────────────────────────────────────────

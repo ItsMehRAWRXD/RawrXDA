@@ -1,0 +1,65 @@
+#version 450
+#extension GL_EXT_control_flow_attributes : enable
+#extension GL_EXT_shader_16bit_storage : require
+#extension GL_EXT_shader_8bit_storage : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int8 : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int16 : require
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+#extension GL_KHR_shader_subgroup_ballot : require
+
+layout(local_size_x = 64) in;
+layout(push_constant) uniform Push { uint M, N, K, stride_a, stride_b; } pc;
+
+struct block_q4_K { float16_t d; float16_t dmin; uint8_t scales[12]; uint8_t qs[128]; };
+struct block_q8_1 { float16_t d; float16_t s; int8_t qs[32]; };
+
+layout(set = 0, binding = 0) readonly  buffer A_buf { block_q4_K data_a[]; };
+layout(set = 0, binding = 1) readonly  buffer B_buf { block_q8_1 data_b[]; };
+layout(set = 0, binding = 2) buffer D_buf { float      data_d[]; };
+
+void get_scale_min_k4_inline(uint j, uint8_t s[12], out uint sc, out uint mn) {
+    if (j < 4u) {
+        sc = uint(s[j])      & 63u;
+        mn = uint(s[j + 4u]) & 63u;
+    } else {
+        sc = (uint(s[j + 4u]) & 0xFu) | ((uint(s[j - 4u]) >> 6) << 4);
+        mn = (uint(s[j + 4u]) >> 4)   | ((uint(s[j])      >> 6) << 4);
+    }
+}
+
+void main() {
+    uint lane = gl_SubgroupInvocationID;
+    uint row  = gl_WorkGroupID.x;
+    if (row >= pc.M) return;
+
+    block_q4_K blk = data_a[row];
+    float dw = float(blk.d), dm = float(blk.dmin);
+    float local_sum = 0.0;
+
+    [[unroll]]
+    for (uint i = 0u; i < 4u; i++) {
+        uint kloc = lane + i * 64u;
+        uint seg  = kloc / 64u;
+        uint pos  = kloc % 64u;
+        bool hi   = pos >= 32u;
+        uint l    = hi ? (pos - 32u) : pos;
+        uint sidx = seg * 2u + (hi ? 1u : 0u);
+        uint sc, mn;
+        get_scale_min_k4_inline(sidx, blk.scales, sc, mn);
+        float fsc = dw * float(sc), fmn = dm * float(mn);
+        uint q_byte = uint(blk.qs[seg * 32u + l]);
+        float qval  = hi ? float(q_byte >> 4) : float(q_byte & 0xFu);
+        float w     = fsc * qval - fmn;
+        block_q8_1 ablk = data_b[kloc / 32u];
+        float a = float(ablk.d) * float(int(ablk.qs[kloc % 32u]));
+        local_sum += w * a;
+    }
+
+    // Lane 0 manually sums all 64 lane partials via subgroupBroadcast.
+    float manual_sum = 0.0;
+    [[unroll]]
+    for (uint i = 0u; i < 64u; i++) {
+        manual_sum += subgroupBroadcast(local_sum, i);
+    }
+    if (subgroupElect()) data_d[row] = manual_sum;
+}

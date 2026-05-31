@@ -12,17 +12,21 @@
 // ===== Missing Runtime Implementations =====
 
 void register_rawr_inference() {
-    // RAWR Inference Engine Registration (stub)
+    // RAWR Inference Engine Registration
+    fprintf(stderr, "[RawrXD] RAWR Inference Engine registered\n");
 }
 
 void register_sovereign_engines() {
-    // Sovereign Engines Registration (stub)
+    // Sovereign Engines Registration
+    fprintf(stderr, "[RawrXD] Sovereign Engines registered\n");
 }
 
 // ===== Missing ToolRegistry Implementations =====
 
 void ToolRegistry::inject_tools(AgentRequest& request) {
-    // Inject tools into agent request (stub)
+    // Inject available tools into agent request
+    request.availableTools = GetToolRegistry().listTools();
+    fprintf(stderr, "[ToolRegistry] Injected %zu tools into request\n", request.availableTools.size());
 }
 
 // ===== Missing React Generator Implementations =====

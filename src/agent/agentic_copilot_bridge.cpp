@@ -17,11 +17,9 @@
 #endif
 
 AgenticCopilotBridge::AgenticCopilotBridge() {
-    fprintf(stderr, "[AgenticCopilotBridge] Constructing bridge\n");
 }
 
 AgenticCopilotBridge::~AgenticCopilotBridge() {
-    fprintf(stderr, "[AgenticCopilotBridge] Destroying bridge\n");
 }
 
 void AgenticCopilotBridge::initialize(AgenticEngine* engine, ChatInterface* chat, MultiTabEditor* editor, TerminalPool* terminals, AgenticExecutor* executor) {
@@ -31,30 +29,30 @@ void AgenticCopilotBridge::initialize(AgenticEngine* engine, ChatInterface* chat
     m_multiTabEditor = editor;
     m_terminalPool = terminals;
     m_agenticExecutor = executor;
-    fprintf(stderr, "[AgenticCopilotBridge] Initialized with all components\n");
+    // Initialized with all components
 }
 
 std::string AgenticCopilotBridge::generateCodeCompletion(const std::string& context, const std::string& prefix) {
     auto t0 = std::chrono::steady_clock::now();
     std::lock_guard<std::mutex> lock(m_mutex);
 
-    fprintf(stderr, "[AgenticCopilotBridge] Generating code completion for prefix: %s\n", prefix.c_str());
+    // Generating code completion
 
     try {
         if (!m_agenticEngine) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Agentic engine not initialized\n");
+            // Agentic engine not initialized
             if (onErrorOccurred) onErrorOccurred("Agentic engine not available for code completion");
             return std::string();
         }
 
         if (prefix.empty()) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Empty prefix provided for code completion\n");
+            // Empty prefix provided
             if (onErrorOccurred) onErrorOccurred("Prefix cannot be empty");
             return std::string();
         }
 
         if (context.size() > 100000) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Context exceeds maximum size (100KB)\n");
+            // Context exceeds maximum size
             if (onErrorOccurred) onErrorOccurred("Context size exceeds maximum allowed limit");
             return std::string();
         }
@@ -92,13 +90,12 @@ std::string AgenticCopilotBridge::generateCodeCompletion(const std::string& cont
         }
 
         int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
-        fprintf(stderr, "[Metrics] code_completion_latency_ms: %lld prefix_length: %zu context_length: %zu\n",
-                (long long)elapsed, prefix.length(), context.length());
+        (void)elapsed;
 
         if (onCompletionReady) onCompletionReady(completion);
         return completion;
     } catch (const std::exception& e) {
-        fprintf(stderr, "[CRIT] [AgenticCopilotBridge] Exception in generateCodeCompletion: %s\n", e.what());
+        // Exception
         if (onErrorOccurred) onErrorOccurred(std::string("Code completion failed: ") + e.what());
         return std::string();
     }
@@ -108,11 +105,11 @@ std::string AgenticCopilotBridge::analyzeActiveFile() {
     auto t0 = std::chrono::steady_clock::now();
     std::lock_guard<std::mutex> lock(m_mutex);
 
-    fprintf(stderr, "[AgenticCopilotBridge] Analyzing active file\n");
+    // Analyzing active file
 
     try {
         if (!m_multiTabEditor) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Editor not available for file analysis\n");
+            // Editor not available
             if (onErrorOccurred) onErrorOccurred("Editor not available");
             return "Editor not available.";
         }
@@ -127,13 +124,12 @@ std::string AgenticCopilotBridge::analyzeActiveFile() {
         );
 
         int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
-        fprintf(stderr, "[Metrics] file_analysis_latency_ms: %lld analysis_size_bytes: %zu\n",
-                (long long)elapsed, analysis.size());
+        (void)elapsed;
 
         if (onAnalysisReady) onAnalysisReady(analysis);
         return analysis;
     } catch (const std::exception& e) {
-        fprintf(stderr, "[CRIT] [AgenticCopilotBridge] Exception in analyzeActiveFile: %s\n", e.what());
+        // Exception
         if (onErrorOccurred) onErrorOccurred(std::string("File analysis failed: ") + e.what());
         return std::string();
     }
@@ -143,17 +139,17 @@ std::string AgenticCopilotBridge::suggestRefactoring(const std::string& code) {
     auto t0 = std::chrono::steady_clock::now();
     std::lock_guard<std::mutex> lock(m_mutex);
 
-    fprintf(stderr, "[AgenticCopilotBridge] Suggesting refactoring for code code_size=%zu\n", code.size());
+    // Suggesting refactoring
 
     try {
         if (!m_agenticEngine) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Agentic engine not initialized for refactoring\n");
+            // Agentic engine not initialized
             if (onErrorOccurred) onErrorOccurred("Agentic engine not available for refactoring");
             return std::string();
         }
 
         if (code.empty()) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Empty code provided for refactoring suggestion\n");
+            // Empty code provided for refactoring suggestion
             if (onErrorOccurred) onErrorOccurred("Code cannot be empty");
             return std::string();
         }
@@ -168,12 +164,11 @@ std::string AgenticCopilotBridge::suggestRefactoring(const std::string& code) {
         );
 
         int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
-        fprintf(stderr, "[Metrics] refactoring_suggestion_latency_ms: %lld suggestions_size_bytes: %zu\n",
-                (long long)elapsed, suggestions.size());
+        (void)elapsed;
 
         return suggestions;
     } catch (const std::exception& e) {
-        fprintf(stderr, "[CRIT] [AgenticCopilotBridge] Exception in suggestRefactoring: %s\n", e.what());
+        // Exception
         if (onErrorOccurred) onErrorOccurred(std::string("Refactoring suggestion failed: ") + e.what());
         return std::string();
     }
@@ -183,17 +178,17 @@ std::string AgenticCopilotBridge::generateTestsForCode(const std::string& code) 
     auto t0 = std::chrono::steady_clock::now();
     std::lock_guard<std::mutex> lock(m_mutex);
 
-    fprintf(stderr, "[AgenticCopilotBridge] Generating tests for code code_size=%zu\n", code.size());
+    // Generating tests
 
     try {
         if (!m_agenticEngine) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Agentic engine not initialized for test generation\n");
+            // Agentic engine not initialized
             if (onErrorOccurred) onErrorOccurred("Agentic engine not available for test generation");
             return std::string();
         }
 
         if (code.empty()) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Empty code provided for test generation\n");
+            // Empty code provided
             if (onErrorOccurred) onErrorOccurred("Code cannot be empty");
             return std::string();
         }
@@ -208,12 +203,11 @@ std::string AgenticCopilotBridge::generateTestsForCode(const std::string& code) 
         );
 
         int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
-        fprintf(stderr, "[Metrics] test_generation_latency_ms: %lld tests_size_bytes: %zu\n",
-                (long long)elapsed, tests.size());
+        (void)elapsed;
 
         return tests;
     } catch (const std::exception& e) {
-        fprintf(stderr, "[CRIT] [AgenticCopilotBridge] Exception in generateTestsForCode: %s\n", e.what());
+        // Exception
         if (onErrorOccurred) onErrorOccurred(std::string("Test generation failed: ") + e.what());
         return std::string();
     }
@@ -223,17 +217,16 @@ std::string AgenticCopilotBridge::askAgent(const std::string& question, const Js
     auto t0 = std::chrono::steady_clock::now();
     std::lock_guard<std::mutex> lock(m_mutex);
 
-    fprintf(stderr, "[AgenticCopilotBridge] Agent asked: %s\n", question.c_str());
+    // Agent asked
 
     try {
         if (!m_agenticEngine) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Agentic engine not initialized\n");
             if (onErrorOccurred) onErrorOccurred("Agent not available.");
             return "Agent not available.";
         }
 
         if (question.empty()) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Empty question provided to agent\n");
+            // Empty question provided
             if (onErrorOccurred) onErrorOccurred("Question cannot be empty");
             return std::string();
         }
@@ -281,13 +274,12 @@ std::string AgenticCopilotBridge::askAgent(const std::string& question, const Js
         m_lastConversationContext = response;
 
         int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
-        fprintf(stderr, "[Metrics] agent_query_latency_ms: %lld question_length: %zu conversation_size: %zu\n",
-                (long long)elapsed, question.length(), m_conversationHistory.size());
+        (void)elapsed;
 
         if (onAgentResponseReady) onAgentResponseReady(response);
         return response;
     } catch (const std::exception& e) {
-        fprintf(stderr, "[CRIT] [AgenticCopilotBridge] Exception in askAgent: %s\n", e.what());
+        // Exception
         if (onErrorOccurred) onErrorOccurred(std::string("Agent query failed: ") + e.what());
         return std::string();
     }
@@ -300,18 +292,13 @@ std::string AgenticCopilotBridge::continuePreviousConversation(const std::string
 std::string AgenticCopilotBridge::executeWithFailureRecovery(const std::string& prompt) {
     auto t0 = std::chrono::steady_clock::now();
     std::lock_guard<std::mutex> lock(m_mutex);
-
-    fprintf(stderr, "[AgenticCopilotBridge] Executing with failure recovery\n");
-
     try {
         if (!m_agenticEngine) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Agentic engine not initialized\n");
             if (onErrorOccurred) onErrorOccurred("Agentic engine not available");
             return std::string();
         }
 
         if (prompt.empty()) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Empty prompt provided for execution\n");
             if (onErrorOccurred) onErrorOccurred("Prompt cannot be empty");
             return std::string();
         }
@@ -321,17 +308,12 @@ std::string AgenticCopilotBridge::executeWithFailureRecovery(const std::string& 
 
         // Detect and correct any failures
         if (!detectAndCorrectFailure(response, context)) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Failed to correct response\n");
             if (onErrorOccurred) onErrorOccurred("Failed to automatically correct the response.");
         }
 
         int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
-        fprintf(stderr, "[Metrics] execution_with_recovery_latency_ms: %lld prompt_length: %zu\n",
-                (long long)elapsed, prompt.length());
-
         return response;
     } catch (const std::exception& e) {
-        fprintf(stderr, "[CRIT] [AgenticCopilotBridge] Exception in executeWithFailureRecovery: %s\n", e.what());
         if (onErrorOccurred) onErrorOccurred(std::string("Execution failed: ") + e.what());
         return std::string();
     }
@@ -342,9 +324,6 @@ std::string AgenticCopilotBridge::hotpatchResponse(const std::string& originalRe
     if (originalResponse.empty()) {
         return originalResponse;
     }
-
-    fprintf(stderr, "[AgenticCopilotBridge] Hotpatching response\n");
-
     double temp = 0.7;
     auto tIt = context.find("temperature");
     if (tIt != context.end()) {
@@ -384,7 +363,6 @@ bool AgenticCopilotBridge::detectAndCorrectFailure(std::string& response, const 
     }
 
     if (failureDetected) {
-        fprintf(stderr, "[AgenticCopilotBridge] Failure detected, attempting correction\n");
         response = hotpatchResponse(response, context);
         return true;
     }
@@ -395,13 +373,8 @@ bool AgenticCopilotBridge::detectAndCorrectFailure(std::string& response, const 
 JsonObject AgenticCopilotBridge::executeAgentTask(const JsonObject& task) {
     auto t0 = std::chrono::steady_clock::now();
     std::lock_guard<std::mutex> lock(m_mutex);
-
-    fprintf(stderr, "[AgenticCopilotBridge] Executing agent task: keys_count=%zu\n", task.size());
-
     try {
         if (!m_agenticExecutor) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Agent executor not available; using chat fallback\n");
-
             JsonObject result = task;
             result["status"] = "completed";
             result["execution_mode"] = "chat_fallback";
@@ -421,15 +394,11 @@ JsonObject AgenticCopilotBridge::executeAgentTask(const JsonObject& task) {
             result["timestamp"] = std::to_string(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
 
             int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
-            fprintf(stderr, "[Metrics] agent_task_execution_latency_ms: %lld task_keys_count: %zu mode: chat_fallback\n",
-                    (long long)elapsed, task.size());
-
             if (onTaskExecuted) onTaskExecuted(result);
             return result;
         }
 
         if (task.empty()) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Empty task provided to agent executor\n");
             if (onErrorOccurred) onErrorOccurred("Task cannot be empty");
             return JsonObject{{"error", "Task cannot be empty"}};
         }
@@ -440,13 +409,9 @@ JsonObject AgenticCopilotBridge::executeAgentTask(const JsonObject& task) {
         result["timestamp"] = std::to_string(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
 
         int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
-        fprintf(stderr, "[Metrics] agent_task_execution_latency_ms: %lld task_keys_count: %zu\n",
-                (long long)elapsed, task.size());
-
         if (onTaskExecuted) onTaskExecuted(result);
         return result;
     } catch (const std::exception& e) {
-        fprintf(stderr, "[CRIT] [AgenticCopilotBridge] Exception in executeAgentTask: %s\n", e.what());
         if (onErrorOccurred) onErrorOccurred(std::string("Task execution failed: ") + e.what());
         return JsonObject{{"error", e.what()}};
     }
@@ -455,18 +420,13 @@ JsonObject AgenticCopilotBridge::executeAgentTask(const JsonObject& task) {
 JsonArray AgenticCopilotBridge::planMultiStepTask(const std::string& goal) {
     auto t0 = std::chrono::steady_clock::now();
     std::lock_guard<std::mutex> lock(m_mutex);
-
-    fprintf(stderr, "[AgenticCopilotBridge] Planning multi-step task: %s\n", goal.c_str());
-
     try {
         if (!m_agenticEngine) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Agentic engine not initialized for planning\n");
             if (onErrorOccurred) onErrorOccurred("Agentic engine not available for task planning");
             return JsonArray();
         }
 
         if (goal.empty()) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Empty goal provided for task planning\n");
             if (onErrorOccurred) onErrorOccurred("Goal cannot be empty");
             return JsonArray();
         }
@@ -479,12 +439,8 @@ JsonArray AgenticCopilotBridge::planMultiStepTask(const std::string& goal) {
         plan.push_back(JsonObject{{"step", 4}, {"description", "Test and validate"}, {"status", "pending"}});
 
         int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
-        fprintf(stderr, "[Metrics] task_planning_latency_ms: %lld plan_steps: %zu goal_length: %zu\n",
-                (long long)elapsed, plan.size(), goal.length());
-
         return plan;
     } catch (const std::exception& e) {
-        fprintf(stderr, "[CRIT] [AgenticCopilotBridge] Exception in planMultiStepTask: %s\n", e.what());
         if (onErrorOccurred) onErrorOccurred(std::string("Task planning failed: ") + e.what());
         return JsonArray();
     }
@@ -493,24 +449,18 @@ JsonArray AgenticCopilotBridge::planMultiStepTask(const std::string& goal) {
 JsonObject AgenticCopilotBridge::transformCode(const std::string& code, const std::string& transformation) {
     auto t0 = std::chrono::steady_clock::now();
     std::lock_guard<std::mutex> lock(m_mutex);
-
-    fprintf(stderr, "[AgenticCopilotBridge] Transforming code with: %s\n", transformation.c_str());
-
     try {
         if (!m_agenticEngine) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Agentic engine not initialized for transformation\n");
             if (onErrorOccurred) onErrorOccurred("Agentic engine not available for code transformation");
             return JsonObject{{"error", "Agentic engine not available"}};
         }
 
         if (code.empty()) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Empty code provided for transformation\n");
             if (onErrorOccurred) onErrorOccurred("Code cannot be empty");
             return JsonObject{{"error", "Code cannot be empty"}};
         }
 
         if (transformation.empty()) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Empty transformation provided\n");
             if (onErrorOccurred) onErrorOccurred("Transformation cannot be empty");
             return JsonObject{{"error", "Transformation cannot be empty"}};
         }
@@ -522,12 +472,8 @@ JsonObject AgenticCopilotBridge::transformCode(const std::string& code, const st
         result["status"] = "success";
 
         int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
-        fprintf(stderr, "[Metrics] code_transformation_latency_ms: %lld original_code_length: %zu transformation_type: %s\n",
-                (long long)elapsed, code.length(), transformation.c_str());
-
         return result;
     } catch (const std::exception& e) {
-        fprintf(stderr, "[CRIT] [AgenticCopilotBridge] Exception in transformCode: %s\n", e.what());
         if (onErrorOccurred) onErrorOccurred(std::string("Code transformation failed: ") + e.what());
         return JsonObject{{"error", e.what()}};
     }
@@ -536,18 +482,13 @@ JsonObject AgenticCopilotBridge::transformCode(const std::string& code, const st
 std::string AgenticCopilotBridge::explainCode(const std::string& code) {
     auto t0 = std::chrono::steady_clock::now();
     std::lock_guard<std::mutex> lock(m_mutex);
-
-    fprintf(stderr, "[AgenticCopilotBridge] Explaining code code_size=%zu\n", code.size());
-
     try {
         if (!m_agenticEngine) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Agentic engine not initialized for code explanation\n");
             if (onErrorOccurred) onErrorOccurred("Agentic engine not available for code explanation");
             return std::string();
         }
 
         if (code.empty()) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Empty code provided for explanation\n");
             if (onErrorOccurred) onErrorOccurred("Code cannot be empty");
             return std::string();
         }
@@ -562,12 +503,8 @@ std::string AgenticCopilotBridge::explainCode(const std::string& code) {
         );
 
         int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
-        fprintf(stderr, "[Metrics] code_explanation_latency_ms: %lld code_length: %zu explanation_size: %zu\n",
-                (long long)elapsed, code.length(), explanation.size());
-
         return explanation;
     } catch (const std::exception& e) {
-        fprintf(stderr, "[CRIT] [AgenticCopilotBridge] Exception in explainCode: %s\n", e.what());
         if (onErrorOccurred) onErrorOccurred(std::string("Code explanation failed: ") + e.what());
         return std::string();
     }
@@ -576,18 +513,13 @@ std::string AgenticCopilotBridge::explainCode(const std::string& code) {
 std::string AgenticCopilotBridge::findBugs(const std::string& code) {
     auto t0 = std::chrono::steady_clock::now();
     std::lock_guard<std::mutex> lock(m_mutex);
-
-    fprintf(stderr, "[AgenticCopilotBridge] Finding bugs in code code_size=%zu\n", code.size());
-
     try {
         if (!m_agenticEngine) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Agentic engine not initialized for bug detection\n");
             if (onErrorOccurred) onErrorOccurred("Agentic engine not available for bug detection");
             return std::string();
         }
 
         if (code.empty()) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Empty code provided for bug detection\n");
             if (onErrorOccurred) onErrorOccurred("Code cannot be empty");
             return std::string();
         }
@@ -602,12 +534,8 @@ std::string AgenticCopilotBridge::findBugs(const std::string& code) {
 
         int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
         int issuesFound = static_cast<int>(std::count(bugs.begin(), bugs.end(), '\n'));
-        fprintf(stderr, "[Metrics] bug_detection_latency_ms: %lld code_length: %zu issues_found: %d\n",
-                (long long)elapsed, code.length(), issuesFound);
-
         return bugs;
     } catch (const std::exception& e) {
-        fprintf(stderr, "[CRIT] [AgenticCopilotBridge] Exception in findBugs: %s\n", e.what());
         if (onErrorOccurred) onErrorOccurred(std::string("Bug detection failed: ") + e.what());
         return std::string();
     }
@@ -616,24 +544,15 @@ std::string AgenticCopilotBridge::findBugs(const std::string& code) {
 void AgenticCopilotBridge::submitFeedback(const std::string& feedback, bool isPositive) {
     auto t0 = std::chrono::steady_clock::now();
     std::lock_guard<std::mutex> lock(m_mutex);
-
-    fprintf(stderr, "[AgenticCopilotBridge] Feedback received: %s Positive: %s\n",
-            feedback.c_str(), isPositive ? "true" : "false");
-
     try {
         if (feedback.empty()) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Empty feedback provided\n");
             if (onErrorOccurred) onErrorOccurred("Feedback cannot be empty");
             return;
         }
 
         int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
-        fprintf(stderr, "[Metrics] feedback_submission_latency_ms: %lld feedback_length: %zu sentiment: %s\n",
-                (long long)elapsed, feedback.length(), isPositive ? "positive" : "negative");
-
         if (onFeedbackSubmitted) onFeedbackSubmitted();
     } catch (const std::exception& e) {
-        fprintf(stderr, "[CRIT] [AgenticCopilotBridge] Exception in submitFeedback: %s\n", e.what());
         if (onErrorOccurred) onErrorOccurred(std::string("Feedback submission failed: ") + e.what());
     }
 }
@@ -641,18 +560,13 @@ void AgenticCopilotBridge::submitFeedback(const std::string& feedback, bool isPo
 void AgenticCopilotBridge::updateModel(const std::string& newModelPath) {
     auto t0 = std::chrono::steady_clock::now();
     std::lock_guard<std::mutex> lock(m_mutex);
-
-    fprintf(stderr, "[AgenticCopilotBridge] Updating model to: %s\n", newModelPath.c_str());
-
     try {
         if (newModelPath.empty()) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Empty model path provided for update\n");
             if (onErrorOccurred) onErrorOccurred("Model path cannot be empty");
             return;
         }
 
         if (!m_agenticEngine) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Agentic engine not available for model update\n");
             if (onErrorOccurred) onErrorOccurred("Agentic engine not available");
             return;
         }
@@ -684,17 +598,9 @@ void AgenticCopilotBridge::updateModel(const std::string& newModelPath) {
             if (onErrorOccurred) onErrorOccurred(std::string("Failed to load model: ") + newModelPath);
             return;
         }
-
-        fprintf(stderr, "[AgenticCopilotBridge] Model updated successfully to: %s Previous: %s\n",
-                newModelPath.c_str(), previousModel.c_str());
-
         int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
-        fprintf(stderr, "[Metrics] model_update_latency_ms: %lld model_path_length: %zu\n",
-                (long long)elapsed, newModelPath.length());
-
         if (onModelUpdated) onModelUpdated();
     } catch (const std::exception& e) {
-        fprintf(stderr, "[CRIT] [AgenticCopilotBridge] Exception in updateModel: %s\n", e.what());
         if (onErrorOccurred) onErrorOccurred(std::string("Model update failed: ") + e.what());
     }
 }
@@ -702,23 +608,16 @@ void AgenticCopilotBridge::updateModel(const std::string& newModelPath) {
 JsonObject AgenticCopilotBridge::trainModel(const std::string& datasetPath, const std::string& modelPath, const JsonObject& config) {
     auto t0 = std::chrono::steady_clock::now();
     std::lock_guard<std::mutex> lock(m_mutex);
-
-    fprintf(stderr, "[AgenticCopilotBridge] Starting model training from: %s to: %s\n",
-            datasetPath.c_str(), modelPath.c_str());
-
     try {
         if (!m_agenticEngine) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Agentic engine not available for training\n");
             return JsonObject{{"error", "Agentic Engine not available."}};
         }
 
         if (datasetPath.empty()) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Empty dataset path provided for training\n");
             return JsonObject{{"error", "Dataset path cannot be empty"}};
         }
 
         if (modelPath.empty()) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Empty model path provided for training\n");
             return JsonObject{{"error", "Model path cannot be empty"}};
         }
 
@@ -732,12 +631,8 @@ JsonObject AgenticCopilotBridge::trainModel(const std::string& datasetPath, cons
         result["timestamp"] = std::to_string(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
 
         int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
-        fprintf(stderr, "[Metrics] model_training_start_latency_ms: %lld config_keys: %zu\n",
-                (long long)elapsed, config.size());
-
         return result;
     } catch (const std::exception& e) {
-        fprintf(stderr, "[CRIT] [AgenticCopilotBridge] Exception in trainModel: %s\n", e.what());
         m_isTraining = false;
         return JsonObject{{"error", e.what()}};
     }
@@ -750,59 +645,47 @@ bool AgenticCopilotBridge::isTrainingModel() const {
 void AgenticCopilotBridge::showResponse(const std::string& response) {
     // Structured logging with timestamp and latency measurement
     auto t0 = std::chrono::steady_clock::now();
-    fprintf(stderr, "[AgenticCopilotBridge] Showing response in UI size=%zu\n", response.size());
     try {
         // the existing signal for UI components to consume
         if (onResponseReady) onResponseReady(response);
         // Additional metric: response display latency
         int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
-        fprintf(stderr, "[Metrics] response_display_latency_ms: %lld\n", (long long)elapsed);
     } catch (const std::exception& e) {
-        fprintf(stderr, "[WARN] [AgenticCopilotBridge] Exception while showing response: %s\n", e.what());
         if (onErrorOccurred) onErrorOccurred(std::string("Failed to show response: ") + e.what());
     }
 }
 
 void AgenticCopilotBridge::displayMessage(const std::string& message) {
     auto t0 = std::chrono::steady_clock::now();
-    fprintf(stderr, "[AgenticCopilotBridge] Displaying message: %s\n", message.c_str());
     try {
         if (onMessageDisplayed) onMessageDisplayed(message);
         int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
-        fprintf(stderr, "[Metrics] message_display_latency_ms: %lld\n", (long long)elapsed);
     } catch (const std::exception& e) {
-        fprintf(stderr, "[WARN] [AgenticCopilotBridge] Exception while displaying message: %s\n", e.what());
         if (onErrorOccurred) onErrorOccurred(std::string("Failed to display message: ") + e.what());
     }
 }
 
 void AgenticCopilotBridge::onChatMessage(const std::string& message) {
-    fprintf(stderr, "[AgenticCopilotBridge] Received chat message: %s\n", message.c_str());
     // Forward to the agent and capture the response for logging
     std::string response = askAgent(message);
-    fprintf(stderr, "[AgenticCopilotBridge] Agent response length: %zu\n", response.size());
     if (onChatMessageProcessed) onChatMessageProcessed(message, response);
 }
 
 void AgenticCopilotBridge::onModelLoaded(const std::string& modelPath) {
     auto t0 = std::chrono::steady_clock::now();
-    fprintf(stderr, "[AgenticCopilotBridge] Model loaded: %s\n", modelPath.c_str());
     // Notify UI and log metric
     displayMessage(std::string("Model loaded: ") + modelPath);
     int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
-    fprintf(stderr, "[Metrics] model_load_notification_latency_ms: %lld\n", (long long)elapsed);
     if (onModelLoadedCb) onModelLoadedCb(modelPath);
 }
 
 void AgenticCopilotBridge::onEditorContentChanged() {
-    fprintf(stderr, "[AgenticCopilotBridge] Editor content changed\n");
     // Debounce rapid changes using a timer (300ms)
     // Non-Qt: simple debounce using static timestamp
     static auto s_lastEditorChange = std::chrono::steady_clock::now();
     s_lastEditorChange = std::chrono::steady_clock::now();
     // Perform immediate analysis (no async timer)
     {
-        fprintf(stderr, "[INFO] [AgenticCopilotBridge] Triggering background analysis after debounce\n");
         // Run analysis on current editor content
         std::string analysis = analyzeActiveFile();
         if (!analysis.empty()) {
@@ -812,47 +695,30 @@ void AgenticCopilotBridge::onEditorContentChanged() {
 }
 
 void AgenticCopilotBridge::onTrainingProgress(int epoch, int totalEpochs, float loss, float perplexity) {
-    fprintf(stderr, "[AgenticCopilotBridge] Training progress: %d/%d Loss: %f Perplexity: %f\n",
-            epoch, totalEpochs, loss, perplexity);
-
     try {
         if (epoch < 0 || totalEpochs <= 0 || epoch > totalEpochs) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Invalid epoch values provided: %d %d\n",
-                    epoch, totalEpochs);
             return;
         }
 
         if (loss < 0 || perplexity < 0) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Invalid loss/perplexity values: %f %f\n",
-                    loss, perplexity);
             return;
         }
 
         float progress = (epoch * 100.0f) / totalEpochs;
-        fprintf(stderr, "[Metrics] training_progress: %.1f%% loss: %f perplexity: %f\n",
-                progress, loss, perplexity);
-
         if (onTrainingProgressCb) onTrainingProgressCb(epoch, totalEpochs, loss, perplexity);
     } catch (const std::exception& e) {
-        fprintf(stderr, "[CRIT] [AgenticCopilotBridge] Exception in onTrainingProgress: %s\n", e.what());
     }
 }
 
 void AgenticCopilotBridge::onTrainingCompleted(const std::string& modelPath, float finalPerplexity) {
     auto t0 = std::chrono::steady_clock::now();
-
-    fprintf(stderr, "[AgenticCopilotBridge] Training completed: %s Perplexity: %f\n",
-            modelPath.c_str(), finalPerplexity);
-
     try {
         if (modelPath.empty()) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Empty model path in training completion\n");
             if (onErrorOccurred) onErrorOccurred("Model path cannot be empty");
             return;
         }
 
         if (finalPerplexity < 0) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Invalid perplexity value: %f\n", finalPerplexity);
             if (onErrorOccurred) onErrorOccurred("Invalid perplexity value");
             return;
         }
@@ -860,12 +726,8 @@ void AgenticCopilotBridge::onTrainingCompleted(const std::string& modelPath, flo
         m_isTraining = false;
 
         int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
-        fprintf(stderr, "[Metrics] training_completion_latency_ms: %lld final_perplexity: %f model_path_length: %zu\n",
-                (long long)elapsed, finalPerplexity, modelPath.length());
-
         if (onTrainingCompletedCb) onTrainingCompletedCb(modelPath, finalPerplexity);
     } catch (const std::exception& e) {
-        fprintf(stderr, "[CRIT] [AgenticCopilotBridge] Exception in onTrainingCompleted: %s\n", e.what());
         m_isTraining = false;
         if (onErrorOccurred) onErrorOccurred(std::string("Training completion handler failed: ") + e.what());
     }
@@ -873,14 +735,11 @@ void AgenticCopilotBridge::onTrainingCompleted(const std::string& modelPath, flo
 
 std::string AgenticCopilotBridge::correctHallucinations(const std::string& response, const JsonObject& context) {
     auto t0 = std::chrono::steady_clock::now();
-    fprintf(stderr, "[AgenticCopilotBridge] Correcting hallucinations in response\n");
-
     // NOTE: Full JSON parsing would require a parser library (not available in json_types.hpp).
     // Basic validity check: ensure response looks like JSON before attempting correction.
     std::string trimmed = response;
     size_t start = trimmed.find_first_not_of(" \t\n\r");
     if (start == std::string::npos || (trimmed[start] != '{' && trimmed[start] != '[')) {
-        fprintf(stderr, "[AgenticCopilotBridge] Response not JSON, skipping correction\n");
         return response;
     }
 
@@ -892,26 +751,18 @@ std::string AgenticCopilotBridge::correctHallucinations(const std::string& respo
     //   2. Compare its keys with the context object
     //   3. Remove any keys not present in context (hallucinated content)
     //   4. Re-serialize the corrected object
-    fprintf(stderr, "[AgenticCopilotBridge] Response appears to be JSON, basic validation passed (full parser needed for key correction)\n");
-
     int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
-    fprintf(stderr, "[Metrics] hallucination_correction_latency_ms: %lld\n", (long long)elapsed);
     return response;
 }
 
 std::string AgenticCopilotBridge::enforceResponseFormat(const std::string& response, const std::string& format) {
     auto t0 = std::chrono::steady_clock::now();
-
-    fprintf(stderr, "[AgenticCopilotBridge] Enforcing response format: %s\n", format.c_str());
-
     try {
         if (response.empty()) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Empty response provided for format enforcement\n");
             return response;
         }
 
         if (format.empty()) {
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Empty format specification\n");
             return response;
         }
 
@@ -922,32 +773,22 @@ std::string AgenticCopilotBridge::enforceResponseFormat(const std::string& respo
             // Basic validity check: verify response looks like JSON.
             size_t start = response.find_first_not_of(" \t\n\r");
             if (start != std::string::npos && (response[start] == '{' || response[start] == '[')) {
-                fprintf(stderr, "[AgenticCopilotBridge] Response appears to be valid JSON format\n");
                 // In a full implementation: parse, compact, and re-serialize
             } else {
-                fprintf(stderr, "[WARN] [AgenticCopilotBridge] Response is not valid JSON, returning unchanged\n");
             }
         }
 
         int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
-        fprintf(stderr, "[Metrics] response_format_enforcement_latency_ms: %lld format: %s original_size: %zu formatted_size: %zu\n",
-                (long long)elapsed, format.c_str(), response.size(), formatted.size());
-
         return formatted;
     } catch (const std::exception& e) {
-        fprintf(stderr, "[CRIT] [AgenticCopilotBridge] Exception in enforceResponseFormat: %s\n", e.what());
         return response;
     }
 }
 
 std::string AgenticCopilotBridge::bypassRefusals(const std::string& response, const std::string& originalPrompt) {
     auto t0 = std::chrono::steady_clock::now();
-
-    fprintf(stderr, "[AgenticCopilotBridge] Checking for refusals in response\n");
-
     try {
         if (response.empty()) {
-            fprintf(stderr, "[AgenticCopilotBridge] Empty response, no refusal check needed\n");
             return response;
         }
 
@@ -970,20 +811,14 @@ std::string AgenticCopilotBridge::bypassRefusals(const std::string& response, co
         }
 
         if (refusalFound) {
-            fprintf(stderr, "[AgenticCopilotBridge] Refusal pattern detected: %s\n", matchedPattern.c_str());
-            fprintf(stderr, "[Metrics] refusal_detected: %s\n", matchedPattern.c_str());
+
             // In a real scenario, would attempt alternative phrasing or retry logic
         } else {
-            fprintf(stderr, "[AgenticCopilotBridge] No refusal patterns found in response\n");
         }
 
         int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
-        fprintf(stderr, "[Metrics] refusal_check_latency_ms: %lld refusal_found: %s\n",
-                (long long)elapsed, refusalFound ? "true" : "false");
-
         return response;
     } catch (const std::exception& e) {
-        fprintf(stderr, "[CRIT] [AgenticCopilotBridge] Exception in bypassRefusals: %s\n", e.what());
         return response;
     }
 }
@@ -1009,13 +844,9 @@ JsonObject AgenticCopilotBridge::buildExecutionContext() {
             context["viewportStartLine"] = 1;
             context["totalEditorLines"] = 1000;
             context["editorScrollPercentage"] = 0;
-            fprintf(stderr, "[AgenticCopilotBridge] Editor context collected: lines=%lld modified=%s\n",
-                    (long long)context["totalEditorLines"].toInt(),
-                    context["editorModified"].toBool() ? "true" : "false");
         } else {
             context["hasEditor"] = false;
             context["editorState"] = "unavailable";
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Editor not available for context\n");
         }
 
         if (m_terminalPool) {
@@ -1031,14 +862,9 @@ JsonObject AgenticCopilotBridge::buildExecutionContext() {
             context["lastCommandExitCode"] = 0;
             context["lastCommandDuration"] = 2500;
             context["terminalOutputBuffer"] = 10240;
-            fprintf(stderr, "[AgenticCopilotBridge] Terminal context collected: count=%lld capacity=%lld last_exit=%lld\n",
-                    (long long)context["terminalCount"].toInt(),
-                    (long long)context["terminalPoolCapacity"].toInt(),
-                    (long long)context["lastCommandExitCode"].toInt());
         } else {
             context["hasTerminals"] = false;
             context["terminalPoolState"] = "unavailable";
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] Terminal pool not available for context\n");
         }
 
         context["conversationHistorySize"] = static_cast<int64_t>(m_conversationHistory.size());
@@ -1066,16 +892,9 @@ JsonObject AgenticCopilotBridge::buildExecutionContext() {
         // Add execution environment metrics
         context["executionMode"] = m_hotpatchingEnabled ? "hotpatching_enabled" : "standard";
         context["trainingState"] = m_isTraining ? "training" : "idle";
-
-        fprintf(stderr, "[AgenticCopilotBridge] Full execution context built with all metrics\n");
-
         int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
-        fprintf(stderr, "[Metrics] build_execution_context_latency_ms: %lld context_keys: %zu\n",
-                (long long)elapsed, context.size());
-
         return context;
     } catch (const std::exception& e) {
-        fprintf(stderr, "[CRIT] [AgenticCopilotBridge] Exception in buildExecutionContext: %s\n", e.what());
         context["error"] = e.what();
         return context;
     }
@@ -1086,7 +905,6 @@ JsonObject AgenticCopilotBridge::buildCodeContext(const std::string& code) {
 
     try {
         if (code.empty()) {
-            fprintf(stderr, "[AgenticCopilotBridge] Empty code provided to buildCodeContext\n");
             return JsonObject{{"code", ""}, {"length", 0}, {"isEmpty", true}};
         }
 
@@ -1101,12 +919,8 @@ JsonObject AgenticCopilotBridge::buildCodeContext(const std::string& code) {
         context["isEmpty"] = false;
 
         int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
-        fprintf(stderr, "[Metrics] build_code_context_latency_ms: %lld code_length: %zu line_count: %d\n",
-                (long long)elapsed, code.length(), lineCount);
-
         return context;
     } catch (const std::exception& e) {
-        fprintf(stderr, "[CRIT] [AgenticCopilotBridge] Exception in buildCodeContext: %s\n", e.what());
         return JsonObject{{"error", e.what()}};
     }
 }
@@ -1180,18 +994,11 @@ JsonObject AgenticCopilotBridge::buildFileContext() {
             context["scrollSmoothness"] = 60;
             context["editLatency"] = 12;
             context["fileLoadTime"] = 150;
-
-            fprintf(stderr, "[AgenticCopilotBridge] File context built with editor data file: %s lines: %lld modified: %s\n",
-                    context["fileName"].toString().c_str(),
-                    (long long)context["lineCount"].toInt(),
-                    context["isModified"].toBool() ? "true" : "false");
         } else {
             context["hasEditor"] = false;
             context["editorState"] = "unavailable";
             context["fileName"] = "unknown";
             context["language"] = "unknown";
-
-            fprintf(stderr, "[WARN] [AgenticCopilotBridge] No editor available for file context\n");
         }
 
         // Universal context fields (always included)
@@ -1217,12 +1024,8 @@ JsonObject AgenticCopilotBridge::buildFileContext() {
         context["stats"] = stats;
 
         int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
-        fprintf(stderr, "[Metrics] build_file_context_latency_ms: %lld context_keys: %zu file_size_bytes: %lld\n",
-                (long long)elapsed, context.size(), (long long)context["byteSize"].toInt());
-
         return context;
     } catch (const std::exception& e) {
-        fprintf(stderr, "[CRIT] [AgenticCopilotBridge] Exception in buildFileContext: %s\n", e.what());
         context["error"] = e.what();
         context["timestamp"] = std::to_string(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
         return context;

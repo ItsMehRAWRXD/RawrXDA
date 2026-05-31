@@ -72,7 +72,7 @@ void dequantize_q8_0(const block_q8_0* src, float* dst, int n) {
 }
 
 // AVX-512 accelerated matrix multiplication for quantized tensors
-void ggml_vec_dot_q4_0_q8_0(const int n, float* restrict s, const void* restrict vx, const void* restrict vy) {
+void ggml_rxd_vec_dot_q4_0_q8_0(const int n, float* restrict s, const void* restrict vx, const void* restrict vy) {
     const block_q4_0* x = (const block_q4_0*)vx;
     const block_q8_0* y = (const block_q8_0*)vy;
 
@@ -95,7 +95,7 @@ void ggml_vec_dot_q4_0_q8_0(const int n, float* restrict s, const void* restrict
 }
 
 // AVX-512 optimized version (placeholder for MASM implementation)
-void ggml_vec_dot_q4_0_q8_0_avx512(const int n, float* restrict s, const void* restrict vx, const void* restrict vy) {
+void ggml_rxd_vec_dot_q4_0_q8_0_avx512(const int n, float* restrict s, const void* restrict vx, const void* restrict vy) {
     // This will be implemented in MASM for maximum performance
-    ggml_vec_dot_q4_0_q8_0(n, s, vx, vy);
+    ggml_rxd_vec_dot_q4_0_q8_0(n, s, vx, vy);
 }

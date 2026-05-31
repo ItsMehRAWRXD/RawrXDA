@@ -53,8 +53,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
         
     } catch (const std::exception& e) {
-        std::cerr << "Fatal Error: " << e.what() << std::endl;
-        // MessageBoxA(NULL, e.what(), "Fatal Error", MB_ICONERROR);
+        // Fatal error occurred
         return 1;
     }
 }

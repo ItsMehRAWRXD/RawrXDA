@@ -27,7 +27,11 @@
 #include <windows.h>
 #include <bcrypt.h>
 #include <shlwapi.h>
+#include <array>
+#include <cstdint>
+#include <iomanip>
 #include <mutex>
+#include <sstream>
 #include <algorithm>
 
 #pragma comment(lib, "bcrypt.lib")
@@ -52,9 +56,54 @@ extern "C" {
 
 // ============================================================================
 //  Thread safety mutex (singleton bridge is accessed from multiple threads)
+//  LAZY SINGLETON PATTERN to avoid SIOF
 // ============================================================================
 
-static std::mutex s_bridgeMutex;
+inline std::mutex& GetBridgeMutex() {
+    static std::mutex* inst = new std::mutex();
+    return *inst;
+}
+#define s_bridgeMutex GetBridgeMutex()
+
+namespace {
+
+std::string CamelliaBuildFingerprint() {
+#if defined(_MSC_FULL_VER)
+    return std::string("msvc-") + std::to_string(_MSC_FULL_VER) + "|" + __DATE__ + "|" + __TIME__;
+#else
+    return std::string("unknown-build|") + __DATE__ + "|" + __TIME__;
+#endif
+}
+
+std::string BytesToHex(const uint8_t* data, size_t len) {
+    std::ostringstream oss;
+    oss << std::hex << std::setfill('0');
+    for (size_t i = 0; i < len; ++i) {
+        oss << std::setw(2) << static_cast<unsigned int>(data[i]);
+    }
+    return oss.str();
+}
+
+void AppendCamelliaStartupTrace(const std::string& line) {
+    char tempPath[MAX_PATH] = {};
+    if (GetTempPathA(MAX_PATH, tempPath) == 0) {
+        return;
+    }
+
+    std::string tracePath = std::string(tempPath) + "rawrxd_camellia_e0_trace.log";
+    HANDLE hFile = CreateFileA(tracePath.c_str(), FILE_APPEND_DATA, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
+                               OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (hFile == INVALID_HANDLE_VALUE) {
+        return;
+    }
+
+    DWORD written = 0;
+    WriteFile(hFile, line.data(), static_cast<DWORD>(line.size()), &written, nullptr);
+    WriteFile(hFile, "\r\n", 2, &written, nullptr);
+    CloseHandle(hFile);
+}
+
+}  // namespace
 
 // ============================================================================
 //  IMPLEMENTATION
@@ -166,6 +215,35 @@ CamelliaResult Camellia256Bridge::selfTest() {
     std::lock_guard<std::mutex> lock(s_bridgeMutex);
 
     int result = asm_camellia256_self_test();
+    CamelliaEngineStatus status = {};
+    asm_camellia256_get_status(&status);
+
+    std::array<uint8_t, 32> hmacSnapshot = {};
+    const int hmacRc = asm_camellia256_get_hmac_key(hmacSnapshot.data());
+
+    std::ostringstream diag;
+    diag << "[Camellia][E0] phase=self_test"
+         << " thread_id=" << GetCurrentThreadId()
+         << " build_fp=" << CamelliaBuildFingerprint()
+         << " expected_e0=0x00000000"
+         << " actual_e0=0x" << std::hex << std::setw(8) << std::setfill('0')
+         << static_cast<uint32_t>(result)
+         << std::dec
+         << " self_test_rc=" << result
+         << " status_initialized=" << status.initialized
+         << " blocks_enc=" << status.blocksEncrypted
+         << " blocks_dec=" << status.blocksDecrypted
+         << " files_processed=" << status.filesProcessed
+         << " hmac_snapshot_rc=" << hmacRc;
+
+    if (hmacRc == 0) {
+        diag << " state256_hmac_hex=" << BytesToHex(hmacSnapshot.data(), hmacSnapshot.size());
+    }
+
+    const std::string diagLine = diag.str();
+    OutputDebugStringA((diagLine + "\n").c_str());
+    AppendCamelliaStartupTrace(diagLine);
+
     if (result != 0) {
         return CamelliaResult::error("RFC 3713 self-test FAILED — cipher corrupted", result);
     }

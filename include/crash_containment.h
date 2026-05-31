@@ -55,6 +55,12 @@ struct CrashReport {
     uint32_t lastAppliedPatchId;
     bool     patchRollbackAttempted;
     bool     patchRollbackSucceeded;
+
+    // Minidump diagnostics for RT-02 closure.
+    uint32_t miniDumpLastError;     // GetLastError() from last failed dump attempt
+    uint64_t miniDumpBytesWritten;  // Final observed dump size in bytes
+    bool     miniDumpViaWorkerThread;
+    bool     miniDumpFallbackInline;
 };
 
 // ============================================================================
@@ -69,6 +75,8 @@ struct CrashConfig {
     bool        enablePatchQuarantine = true;     // Quarantine faulting patches
     bool        showMessageBox  = true;           // Show crash dialog
     bool        terminateAfterDump = true;        // Exit after dump
+    bool        useDedicatedDumpThread = true;    // Isolate dump writing from faulting thread
+    uint32_t    dumpWorkerWaitMs = 5000;          // Wait for dedicated dump thread completion
 
     // Callback for custom crash handling (e.g., telemetry upload)
     void (*onCrashCallback)(const CrashReport* report, void* userData) = nullptr;

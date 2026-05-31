@@ -67,15 +67,15 @@ static void pad_f32_sycl(const float *src, float *dst, const int lp0,
         });
 }
 
-void ggml_sycl_op_pad(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
-    const ggml_tensor * src0 = dst->src[0];
+void ggml_rxd_sycl_op_pad(ggml_rxd_backend_sycl_context & ctx, ggml_rxd_tensor * dst) {
+    const ggml_rxd_tensor * src0 = dst->src[0];
     const float * src0_d = (const float *)src0->data;
     float * dst_d = (float *)dst->data;
     dpct::queue_ptr     stream = ctx.stream();
 
-    GGML_ASSERT(src0->type == GGML_TYPE_F32);
-    GGML_ASSERT(dst->type == GGML_TYPE_F32);
-    GGML_ASSERT(ggml_is_contiguous(src0));
+    GGML_RXD_ASSERT(src0->type == GGML_RXD_TYPE_F32);
+    GGML_RXD_ASSERT(dst->type == GGML_RXD_TYPE_F32);
+    GGML_RXD_ASSERT(ggml_rxd_is_contiguous(src0));
 
     const int32_t lp0 = ((const int32_t*)(dst->op_params))[0];
     const int32_t rp0 = ((const int32_t*)(dst->op_params))[1];
@@ -91,7 +91,7 @@ void ggml_sycl_op_pad(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
                  dst->ne[0], dst->ne[1], dst->ne[2], dst->ne[3], stream);
 }
 
-void ggml_sycl_pad(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
+void ggml_rxd_sycl_pad(ggml_rxd_backend_sycl_context & ctx, ggml_rxd_tensor * dst) {
     scope_op_debug_print scope_dbg_print(__func__, dst, /*num_src=*/1);
-    ggml_sycl_op_pad(ctx, dst);
+    ggml_rxd_sycl_op_pad(ctx, dst);
 }

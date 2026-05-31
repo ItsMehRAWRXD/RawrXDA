@@ -15,6 +15,39 @@
 #include <iomanip>
 #include <sstream>
 
+namespace {
+
+void replaceAllInPlace(std::string& text, const std::string& from, const std::string& to)
+{
+    if (from.empty()) return;
+    size_t startPos = 0;
+    while ((startPos = text.find(from, startPos)) != std::string::npos) {
+        text.replace(startPos, from.length(), to);
+        startPos += to.length();
+    }
+}
+
+std::string normalizePerspectiveText(const std::string& input)
+{
+    std::string out = input;
+
+    // Remove common first-person phrasing.
+    replaceAllInPlace(out, "I can help with that. Here's my analysis:\n\n", "Analysis:\n\n");
+    replaceAllInPlace(out, "I can help with that.", "");
+    replaceAllInPlace(out, "I'm unable to", "Unable to");
+    replaceAllInPlace(out, "I am unable to", "Unable to");
+    replaceAllInPlace(out, "I can't", "Cannot");
+    replaceAllInPlace(out, "I cannot", "Cannot");
+
+    // Remove common third-person assistant labels.
+    replaceAllInPlace(out, "Agent response to:", "Response:");
+    replaceAllInPlace(out, "Corrected response:", "Updated response:");
+
+    return out;
+}
+
+} // namespace
+
 AgenticCopilotBridge::AgenticCopilotBridge(void* parent)
     : void(parent)
 {
@@ -254,6 +287,7 @@ std::string AgenticCopilotBridge::hotpatchResponse(const std::string& originalRe
         patched = "Unable to generate response. Please rephrase your request.";
     }
 
+    patched = normalizePerspectiveText(patched);
 
     return patched;
 }
@@ -478,7 +512,7 @@ std::string AgenticCopilotBridge::bypassRefusals(const std::string& response, co
     }
     
     // Default: provide constructive response instead of refusal
-    return "I can help with that. Here's my analysis:\n\n" + response;
+    return "Analysis:\n\n" + response;
 }
 
 // ========== CONTEXT BUILDING ==========
@@ -554,7 +588,10 @@ void AgenticCopilotBridge::onModelLoaded(const std::string& modelPath)
 
 void AgenticCopilotBridge::onEditorContentChanged()
 {
-    // Could trigger auto-analysis or inline suggestions
+    // Trigger auto-analysis or inline suggestions when editor content changes
+    if (m_autoAnalysisEnabled) {
+        requestInlineSuggestions();
+    }
 }
 
 // ========== PRODUCTION FEATURES: USER FEEDBACK ==========
@@ -705,8 +742,9 @@ void AgenticCopilotBridge::showResponse(const std::string& response)
     std::string formattedResponse = std::string("[%1] Agent: %2")
         .toString("hh:mm:ss"), response);
     
-    // Use chat interface to display
-    m_chatInterface->addMessage("Agent", response);
+    // Use chat interface to display with neutral voice output.
+    const std::string normalized = normalizePerspectiveText(response);
+    m_chatInterface->addMessage("Response", normalized);
     
 }
 

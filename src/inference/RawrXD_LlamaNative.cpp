@@ -3,6 +3,7 @@
 // Target: llama.cpp b3506+ with Vulkan backend for RX 7800 XT
 
 #include "RawrXD_LlamaNative.h"
+#include "inference/pipeline_telemetry.hpp"
 #include <chrono>
 #include <cstring>
 #include <algorithm>
@@ -70,9 +71,8 @@ bool LlamaNativeBridge::Initialize(const wchar_t* dllDir) {
     std::wstring llamaPath = prefix + L"llama.dll";
     hLlama_ = LoadLibraryW(llamaPath.c_str());
     if (!hLlama_) {
-        DWORD err = GetLastError();
         std::stringstream ss;
-        ss << "Failed to load llama.dll (error " << err << "). "
+        ss << "Failed to load llama.dll (error " << GetLastError() << "). "
            << "Ensure llama.dll is in: " << (dllDir ? "specified directory" : "exe directory");
         SetError(ss.str().c_str());
         return false;
@@ -226,6 +226,10 @@ bool LlamaNativeBridge::LoadModel(const wchar_t* modelPath, int32_t gpuLayers, u
     cParams.n_threads = 8;        // 7800X3D optimal
     cParams.n_threads_batch = 8;
     cParams.flash_attn = true;    // Enable FlashAttention if available
+
+    // Apply KV cache quantization if configured
+    if (kvTypeK_ > 0) cParams.type_k = kvTypeK_;
+    if (kvTypeV_ > 0) cParams.type_v = kvTypeV_;
 
     // Create context
     ctx_ = fn_new_context(model_, cParams);
@@ -469,6 +473,164 @@ LlamaNativeBridge::GenerationResult LlamaNativeBridge::Generate(
     auto timeGenDone = std::chrono::high_resolution_clock::now();
     result.t_gen_ms = std::chrono::duration<double, std::milli>(timeGenDone - timePromptDone).count();
     result.success = true;
+    
+    // Record telemetry for the governor/dashboard
+    if (result.tokens_generated > 0 && result.t_gen_ms > 0) {
+        auto* telemetry = RawrXD::Inference::PipelineTelemetryCollector::Instance();
+        telemetry->RecordTokenBatch(
+            static_cast<size_t>(result.tokens_generated),
+            result.t_gen_ms
+        );
+    }
+
+    return result;
+}
+
+// ============================================================================
+// GenerateStream — token-by-token streaming with callback
+// ============================================================================
+LlamaNativeBridge::GenerationResult LlamaNativeBridge::GenerateStream(
+    const std::string& prompt,
+    TokenCallback on_token,
+    int32_t maxTokens,
+    float temperature,
+    float topP,
+    int32_t topK
+) {
+    GenerationResult result;
+
+    if (!ctx_) {
+        result.error = "Model not loaded";
+        return result;
+    }
+
+    auto timeStart = std::chrono::high_resolution_clock::now();
+
+    // Clear KV cache for fresh generation
+    ClearKVCache();
+
+    // Setup sampler chain
+    SetupSampler(temperature, topP, topK);
+
+    // ========================================================================
+    // 1. Tokenize prompt
+    // ========================================================================
+    int32_t nPromptTokens = fn_tokenize(
+        model_,
+        prompt.c_str(),
+        static_cast<int32_t>(prompt.length()),
+        tokenBuf_.data(),
+        static_cast<int32_t>(tokenBuf_.size()),
+        true,   // add_special (BOS)
+        false   // parse_special
+    );
+
+    if (nPromptTokens < 0) {
+        result.error = "Tokenization failed (prompt too long?)";
+        return result;
+    }
+    result.prompt_tokens = nPromptTokens;
+
+    // ========================================================================
+    // 2. Decode prompt tokens (fill KV cache)
+    // ========================================================================
+    for (int32_t i = 0; i < nPromptTokens; ++i) {
+        batch_.n_tokens = 1;
+        batch_.token[0] = tokenBuf_[i];
+        batch_.pos[0] = i;
+        batch_.n_seq_id[0] = 1;
+        batch_.seq_id[0][0] = 0;
+        batch_.logits[0] = (i == nPromptTokens - 1) ? 1 : 0;
+
+        int32_t decodeResult = fn_decode(ctx_, batch_);
+        if (decodeResult != 0) {
+            std::stringstream ss;
+            ss << "Decode failed at prompt token " << i << " (code " << decodeResult << ")";
+            result.error = ss.str();
+            return result;
+        }
+    }
+
+    auto timePromptDone = std::chrono::high_resolution_clock::now();
+    result.t_prompt_ms = std::chrono::duration<double, std::milli>(timePromptDone - timeStart).count();
+
+    // ========================================================================
+    // 3. Streaming generation loop
+    // ========================================================================
+    int32_t nPast = nPromptTokens;
+    result.text.reserve(maxTokens * 4);
+
+    for (int32_t i = 0; i < maxTokens; ++i) {
+        float* logits = fn_get_logits_ith(ctx_, -1);
+        if (!logits) {
+            result.error = "Failed to get logits";
+            break;
+        }
+
+        llama_token nextToken;
+        if (sampler_ && fn_sampler_sample) {
+            nextToken = fn_sampler_sample(sampler_, ctx_, -1);
+        } else {
+            int32_t vocabSize = modelInfo_.n_vocab > 0 ? modelInfo_.n_vocab : 32000;
+            nextToken = 0;
+            float maxLogit = logits[0];
+            for (int32_t v = 1; v < vocabSize; ++v) {
+                if (logits[v] > maxLogit) {
+                    maxLogit = logits[v];
+                    nextToken = v;
+                }
+            }
+        }
+
+        if (nextToken == modelInfo_.eos || nextToken == 2) {
+            break;
+        }
+
+        // Detokenize and stream
+        if (fn_token_to_piece) {
+            int32_t nChars = fn_token_to_piece(
+                model_, nextToken,
+                pieceBuf_.data(), static_cast<int32_t>(pieceBuf_.size()),
+                0, false
+            );
+            if (nChars > 0) {
+                std::string piece(pieceBuf_.data(), nChars);
+                result.text += piece;
+                if (on_token) {
+                    on_token(piece);
+                }
+            }
+        }
+
+        batch_.n_tokens = 1;
+        batch_.token[0] = nextToken;
+        batch_.pos[0] = nPast;
+        batch_.n_seq_id[0] = 1;
+        batch_.seq_id[0][0] = 0;
+        batch_.logits[0] = 1;
+
+        int32_t decodeResult = fn_decode(ctx_, batch_);
+        if (decodeResult != 0) {
+            result.error = "Generation decode failed";
+            break;
+        }
+
+        ++nPast;
+        ++result.tokens_generated;
+    }
+
+    auto timeGenDone = std::chrono::high_resolution_clock::now();
+    result.t_gen_ms = std::chrono::duration<double, std::milli>(timeGenDone - timePromptDone).count();
+    result.success = true;
+    
+    // Record telemetry for the governor/dashboard
+    if (result.tokens_generated > 0 && result.t_gen_ms > 0) {
+        auto* telemetry = RawrXD::Inference::PipelineTelemetryCollector::Instance();
+        telemetry->RecordTokenBatch(
+            static_cast<size_t>(result.tokens_generated),
+            result.t_gen_ms
+        );
+    }
 
     return result;
 }

@@ -36,7 +36,6 @@ EvalReport EvalFramework::runEvaluation(const std::vector<EvalTestCase>& cases)
     report.totalElapsedMs = 0;
 
     if (!m_executor) {
-        fprintf(stderr, "[EvalFramework] No executor set; returning empty report\n");
         return report;
     }
 
@@ -55,9 +54,6 @@ EvalReport EvalFramework::runEvaluation(const std::vector<EvalTestCase>& cases)
 
     if (report.totalRuns > 0)
         report.successRate = static_cast<double>(report.successCount) / static_cast<double>(report.totalRuns);
-
-    fprintf(stderr, "[EvalFramework] Evaluation complete: %d/%d passed (%.1f%%)\n",
-            report.successCount, report.totalRuns, report.successRate * 100.0);
 
     return report;
 }

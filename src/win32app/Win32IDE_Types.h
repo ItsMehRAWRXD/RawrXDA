@@ -14,7 +14,6 @@
 #include <windows.h>
 
 
-
 #include <cstdint>
 #include <functional>
 #include <map>
@@ -32,6 +31,15 @@
 // =============================================================================
 // Basic IDE / editor structures
 // =============================================================================
+
+enum class SnapState
+{
+    None = 0,
+    Compact = 1,
+    Standard = 2,
+    Wide = 3,
+    Custom = 4
+};
 
 struct EditorTab
 {
@@ -68,6 +76,15 @@ struct ModuleInfo
     bool loaded;
 };
 
+enum class TerminalPaneKind : std::uint8_t
+{
+    /// User-owned: command bar and interactive flows send stdin here.
+    UserInteractive = 0,
+    /// Agent/AI mirror: output-only from the user's perspective — typed commands in the bar are routed to a user
+    /// terminal instead.
+    AgentReadOnly = 1,
+};
+
 struct TerminalPane
 {
     int id;
@@ -75,8 +92,15 @@ struct TerminalPane
     std::unique_ptr<Win32TerminalManager> manager;
     std::string name;
     Win32TerminalManager::ShellType shellType;
+    TerminalPaneKind kind = TerminalPaneKind::UserInteractive;
     bool isActive;
     RECT bounds;
+    /// UTF-8 cwd passed to CreateProcess for this pane (or resolved at shell start).
+    std::string integratedWorkingDirectory;
+    /// Reassembly buffer for RAWRXD_CWD|…|END lines split across pipe reads.
+    std::string terminalCwdTelemetryCarry;
+    /// When cwd is inside a git work tree, branch from `git -C <cwd> rev-parse` (empty if unknown / not a repo).
+    std::string integratedGitBranchFromCwd;
 };
 
 // =============================================================================
@@ -423,7 +447,7 @@ struct IDESettings
     int aiMaxTokens = 512;
     int aiContextWindow = 4096;
     std::string aiModelPath;
-    std::string aiOllamaUrl = "http://localhost:11434";
+    std::string aiOllamaUrl = "http://localhost:11435";
     bool ghostTextEnabled = true;
     bool failureDetectorEnabled = true;
     int failureMaxRetries = 3;
@@ -460,6 +484,17 @@ struct IDESettings
     // Agent terminal isolation — when true, agent commands use a
     // dedicated terminal so user sessions are never interrupted.
     bool agentTerminalIsolated = true;
+
+    /// When enabled, agentic AI automatically analyzes the active file for context-aware completions and chat.
+    bool currentFileContextEnabled = true;
+
+    /// Integrated terminal RichEdit scrollback (character cap). Env RAWRXD_TERMINAL_SCROLLBACK_CHARS overrides when
+    /// set.
+    uint32_t integratedTerminalScrollbackChars = 2000000u;
+    /// Integrated terminal font size in points (RichEdit yHeight = pt * 20). IDEConfig: terminal.fontSize
+    int integratedTerminalFontSize = 13;
+    /// Integrated terminal font face (UTF-8). IDEConfig: terminal.fontFamily
+    std::string integratedTerminalFontFamily = "Consolas";
 
     // Settings GUI fields
     bool caretAnimationEnabled = true;

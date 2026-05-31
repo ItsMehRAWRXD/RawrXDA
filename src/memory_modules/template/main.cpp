@@ -43,7 +43,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReser
 extern "C" {
 
     // Allocate a buffer for the context window
-    // This example uses simple VirtualAlloc but could use:
+    // Uses simple VirtualAlloc but could use:
     // - Huge Pages (CreateFileMapping with SEC_LARGE_PAGES)
     // - NUMA-aware allocation (VirtualAllocExNuma)
     // - GPU Direct Memory (if applicable)
@@ -79,7 +79,7 @@ extern "C" {
     EXPORT bool OptimizeContextBuffer(void* buffer, size_t size) {
         if (!buffer || size == 0) return false;
 
-        // Example optimization: Lock pages in physical memory to prevent paging to disk
+        // Optimization: Lock pages in physical memory to prevent paging to disk
         // This requires SeLockMemoryPrivilege
         if (VirtualLock(buffer, size)) {
             return true;

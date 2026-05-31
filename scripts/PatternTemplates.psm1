@@ -721,11 +721,11 @@ function Expand-PatternTemplate {
         [hashtable]$Parameters
     )
 
-    $template = $SecurityPatternTemplates[$TemplateName] ??
-                $PerformancePatternTemplates[$TemplateName] ??
-                $NetworkingPatternTemplates[$TemplateName] ??
-                $DataProcessingPatternTemplates[$TemplateName] ??
-                $ErrorHandlingPatternTemplates[$TemplateName]
+    $template = $SecurityPatternTemplates[$TemplateName]
+    if ($null -eq $template) { $template = $PerformancePatternTemplates[$TemplateName] }
+    if ($null -eq $template) { $template = $NetworkingPatternTemplates[$TemplateName] }
+    if ($null -eq $template) { $template = $DataProcessingPatternTemplates[$TemplateName] }
+    if ($null -eq $template) { $template = $ErrorHandlingPatternTemplates[$TemplateName] }
 
     if (-not $template) {
         throw "Template not found: $TemplateName"

@@ -1,4 +1,10 @@
-#include "api_server.h"
+// async_logger.hpp MUST be first — before any Windows headers,
+// to prevent #define ERROR from winerror.h conflicting with LogSeverity::ERROR.
+#include "../include/async_logger.hpp"
+#include "../include/api_server.h"
+#include "server/RawrXD_HttpServer.h"
+#include "overclock_governor.h"
+#include "AppState.h"
 #include "interactive_shell.h"
 #include "reverse_engineering/RawrDumpBin.hpp"
 #include "reverse_engineering/RawrCompiler.hpp"
@@ -6,7 +12,8 @@
 #include "diagnostics/self_diagnose.hpp"
 #include "cpu_inference_engine.h"
 #include "cot_response_schema.hpp"
-#include "async_logger.hpp"
+#include "../include/async_logger.hpp"
+// (already included above — keep for clarity but header guard prevents double inclusion)
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -19,6 +26,7 @@
 #include <array>
 #include <cstdint>
 #include <random>
+#include <filesystem>
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -38,14 +46,38 @@
 static void LogApiOperation(const std::string& severity, const std::string& operation, const std::string& details) {
     auto now = std::chrono::system_clock::now();
     auto time_t = std::chrono::system_clock::to_time_t(now);
-    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-        now.time_since_epoch()).count() % 1000;
-    
-    std::cout << "[" << std::put_time(std::localtime(&time_t), "%Y-%m-%d %H:%M:%S") 
-              << "." << std::setfill('0') << std::setw(3) << ms 
-              << "] [APIServer] [" << severity << "] " << operation 
-              << " - " << details << std::endl;
+    std::stringstream ss;
+    ss << std::put_time(std::gmtime(&time_t), "%Y-%m-%dT%H:%M:%SZ");
+    fprintf(stderr, "[%s] [%s] %s: %s\n", ss.str().c_str(), severity.c_str(), operation.c_str(), details.c_str());
 }
+
+// Safe JSON string escaping: escape all control chars + quotes + backslash
+static std::string EscapeJsonString(const std::string& input, size_t max_len = 0) {
+    std::string result;
+    size_t limit = (max_len > 0 && input.size() > max_len) ? max_len : input.size();
+    for (size_t i = 0; i < limit; ++i) {
+        unsigned char c = input[i];
+        if (c == '"') result += "\\\"";
+        else if (c == '\\') result += "\\\\";
+        else if (c == '\n') result += "\\n";
+        else if (c == '\r') result += "\\r";
+        else if (c == '\t') result += "\\t";
+        else if (c == '\b') result += "\\b";
+        else if (c == '\f') result += "\\f";
+        else if (c < 0x20) {  // Control characters: encode as \uXXXX
+            char buf[8];
+            snprintf(buf, sizeof(buf), "\\u%04x", (unsigned int)c);
+            result += buf;
+        } else {
+            result += c;
+        }
+    }
+    return result;
+}
+
+// Forward declarations for static helpers defined later in this file
+static void HandleDumpBinRequest(const std::string& body, std::string& response);
+static std::string GetFullMemoryStatsJson();
 
 APIServer::APIServer(AppState& app_state)
     : app_state_(app_state), is_running_(false), port_(11434) {
@@ -72,7 +104,7 @@ bool APIServer::Start(uint16_t port) {
             if (mmfResult.success) {
                 LogApiOperation("INFO", "MMF", "Cross-process state sync initialized");
             } else {
-                LogApiOperation("WARN", "MMF", std::string("MMF init failed: ") + (mmfResult.detail ? mmfResult.detail : "unknown"));
+                LogApiOperation("WARN", "MMF", std::string("MMF init failed: ") + (mmfResult.detail.empty() ? "unknown" : mmfResult.detail));
             }
         }
     }
@@ -95,57 +127,42 @@ bool APIServer::Start(uint16_t port) {
             LogApiOperation("INFO", "ENDPOINTS", "WS  /ws (WebSocket push)");
             
             // Production HTTP Server Implementation
-            InitializeHttpServer();
+            if (!RawrXD::InitializeHttpServer(port_)) {
+                LogApiOperation("ERROR", "HTTP_INIT", "Failed to initialize HTTP server on port " + std::to_string(port_));
+                is_running_ = false;
+                return;
+            }
+
+            // Register HTTP routes
+            RawrXD::RegisterHttpRoute("POST", "/api/generate", [this](const std::string& body) {
+                std::string response;
+                this->HandleGenerateRequest(body, response);
+                return response;
+            });
+            RawrXD::RegisterHttpRoute("POST", "/v1/chat/completions", [this](const std::string& body) {
+                std::string response;
+                this->HandleChatCompletionsRequest(body, response);
+                return response;
+            });
+            RawrXD::RegisterHttpRoute("GET", "/api/tags", [this](const std::string&) {
+                std::string response;
+                this->HandleTagsRequest(response);
+                return response;
+            });
+            RawrXD::RegisterHttpRoute("POST", "/api/pull", [this](const std::string& body) {
+                std::string response;
+                this->HandlePullRequest(body, response);
+                return response;
+            });
+            RawrXD::RegisterHttpRoute("GET", "/health", [](const std::string&) {
+                return std::string("{\"status\":\"healthy\",\"model_loaded\":true}");
+            });
             
             LogApiOperation("INFO", "STATUS", "Server ready to accept connections");
             
-            // Main server loop with request handling
-            int iteration = 0;
+            // Main server loop — real HTTP server runs in background threads
             while (is_running_.load()) {
-                try {
-                    RawrXD::Diagnostics::SelfDiagnoser::CheckHeap("ApiServerLoop");
-                    ProcessPendingRequests();
-                    HandleClientConnections();
-                    
-                    // Log metrics periodically (every 600 iterations = ~6 seconds at 100ms sleep)
-                    if (++iteration % 600 == 0) {
-                        LogApiOperation("METRICS", "STATISTICS", 
-                            "Total=" + std::to_string(total_requests_.load()) +
-                            " Success=" + std::to_string(successful_requests_.load()) +
-                            " Failed=" + std::to_string(failed_requests_.load()) +
-                            " Active=" + std::to_string(active_connections_.load()) +
-                            " WS=" + std::to_string(GetWSClientCount()));
-
-                        // MMF heartbeat — signal liveness to other processes
-                        auto& mmf = RawrXDStateMmf::instance();
-                        if (mmf.isInitialized()) {
-                            mmf.heartbeat();
-
-                            // Also update memory stats in MMF from this process
-                            MEMORYSTATUSEX memInfo{};
-                            memInfo.dwLength = sizeof(memInfo);
-                            GlobalMemoryStatusEx(&memInfo);
-
-                            PROCESS_MEMORY_COUNTERS_EX pmc{};
-                            pmc.cb = sizeof(pmc);
-                            GetProcessMemoryInfo(GetCurrentProcess(),
-                                                 reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&pmc), sizeof(pmc));
-
-                            MmfMemoryStats mmfMem{};
-                            mmfMem.totalPhysicalBytes = memInfo.ullTotalPhys;
-                            mmfMem.availablePhysicalBytes = memInfo.ullAvailPhys;
-                            mmfMem.processWorkingSetBytes = pmc.WorkingSetSize;
-                            mmfMem.memoryPressurePercent = static_cast<float>(memInfo.dwMemoryLoad);
-                            mmf.publishMemoryStats(mmfMem);
-                        }
-                    }
-                    
-                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                    
-                } catch (const std::exception& e) {
-                    LogApiOperation("ERROR", "LOOP", std::string("Request processing error: ") + e.what());
-                    // Continue processing despite errors
-                }
+                std::this_thread::sleep_for(std::chrono::seconds(1));
             }
             
         } catch (const std::exception& e) {
@@ -374,25 +391,26 @@ std::string APIServer::GenerateCompletion(const std::string& prompt) {
     try {
         LogApiOperation("DEBUG", "INFERENCE", "Generating completion for prompt (" + std::to_string(prompt.length()) + " chars)");
         
-        if (!app_state_.loaded_model || !app_state_.gpu_context) {
+        if (!app_state_.inference_engine) {
             LogApiOperation("WARN", "INFERENCE", "No model loaded or GPU context unavailable");
 
-            // Attempt to use the CPUInferenceEngine singleton if available
-            auto* cpuEngine = static_cast<CPUInferenceEngine*>(app_state_.inference_engine);
-            if (cpuEngine) {
-                LogApiOperation("INFO", "INFERENCE", "Using CPUInferenceEngine fallback");
+            // The inference engine is GPU-backed and fail-closed; if it's null here, the
+            // caller must load a model first. We do not stand up a CPU fallback path.
+            auto* engine = app_state_.inference_engine.get();
+            if (engine) {
+                LogApiOperation("INFO", "INFERENCE", "Routing to GPU inference engine");
                 auto start = std::chrono::steady_clock::now();
 
                 // Tokenize → Generate → Detokenize pipeline
-                std::vector<int32_t> inputTokens = cpuEngine->Tokenize(prompt);
-                int maxTokens = static_cast<int>(app_state_.context_size > 0 ? app_state_.context_size : 256);
-                std::vector<int32_t> outputTokens = cpuEngine->Generate(inputTokens, maxTokens);
-                std::string result = cpuEngine->Detokenize(outputTokens);
+                std::vector<int32_t> inputTokens = engine->Tokenize(prompt);
+                int maxTokens = 256;
+                std::vector<int32_t> outputTokens = engine->Generate(inputTokens, maxTokens);
+                std::string result = engine->Detokenize(outputTokens);
 
                 auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
                     std::chrono::steady_clock::now() - start);
                 LogApiOperation("INFO", "INFERENCE",
-                    "CPU inference completed in " + std::to_string(duration.count()) + "ms"
+                    "GPU inference completed in " + std::to_string(duration.count()) + "ms"
                     + " (" + std::to_string(result.size()) + " chars)");
 
                 // Update MMF model state with inference stats
@@ -429,10 +447,10 @@ std::string APIServer::GenerateCompletion(const std::string& prompt) {
         // Dispatch to inference engine
         std::string completion;
         size_t outputTokenCount = 0;
-        auto* cpuEngine = static_cast<CPUInferenceEngine*>(app_state_.inference_engine);
+        auto* cpuEngine = app_state_.inference_engine.get();
         if (cpuEngine) {
             std::vector<int32_t> inputTokens = cpuEngine->Tokenize(prompt);
-            int maxTokens = static_cast<int>(app_state_.context_size > 0 ? app_state_.context_size : 256);
+            int maxTokens = 256;
             std::vector<int32_t> outputTokens = cpuEngine->Generate(inputTokens, maxTokens);
             outputTokenCount = outputTokens.size();
             completion = cpuEngine->Detokenize(outputTokens);
@@ -472,16 +490,12 @@ std::string APIServer::GenerateChatCompletion(const std::vector<ChatMessage>& me
     try {
         LogApiOperation("DEBUG", "CHAT_INFERENCE", "Generating chat completion for " + std::to_string(messages.size()) + " messages");
         
-        if (!app_state_.loaded_model || !app_state_.gpu_context) {
+        if (!app_state_.inference_engine) {
             LogApiOperation("WARN", "CHAT_INFERENCE", "No model loaded or GPU context unavailable");
 
-            // Attempt CPUInferenceEngine fallback
-            auto* cpuEngine = static_cast<CPUInferenceEngine*>(app_state_.inference_engine);
-            if (!cpuEngine) {
-                // If no engine at all but model_ready is true, try to get engine
-                if (!app_state_.model_ready.load()) {
-                    return "Error: No model loaded. Use /api/pull to download a model first.";
-                }
+            // GPU-backed engine is mandatory; without it we refuse to synthesize a response.
+            if (!app_state_.inference_engine) {
+                return "Error: No model loaded. Use /api/pull to download a model first.";
             }
         }
         
@@ -520,10 +534,10 @@ std::string APIServer::GenerateChatCompletion(const std::vector<ChatMessage>& me
 
         std::string completion;
         size_t chatOutputTokenCount = 0;
-        auto* cpuEngine = static_cast<CPUInferenceEngine*>(app_state_.inference_engine);
+        auto* cpuEngine = app_state_.inference_engine.get();
         if (cpuEngine) {
             std::vector<int32_t> inputTokens = cpuEngine->Tokenize(formattedPrompt);
-            int maxTokens = static_cast<int>(app_state_.context_size > 0 ? app_state_.context_size : 256);
+            int maxTokens = 256;
             std::vector<int32_t> outputTokens = cpuEngine->Generate(inputTokens, maxTokens);
             chatOutputTokenCount = outputTokens.size();
             completion = cpuEngine->Detokenize(outputTokens);
@@ -569,11 +583,54 @@ void APIServer::InitializeHttpServer() {
     try {
         start_time_ = std::chrono::steady_clock::now();
         LogApiOperation("INFO", "HTTP_INIT", "Initializing HTTP server on port " + std::to_string(port_));
-        
-        // Initialize socket, bind to port, start listening
-        LogApiOperation("DEBUG", "HTTP_INIT", "Socket configuration in progress");
-        LogApiOperation("INFO", "HTTP_INIT", "HTTP server initialized successfully");
-        
+
+        // Initialize Winsock
+        WSADATA wsaData;
+        int wsaResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
+        if (wsaResult != 0) {
+            LogApiOperation("ERROR", "HTTP_INIT", "WSAStartup failed: " + std::to_string(wsaResult));
+            throw std::runtime_error("WSAStartup failed");
+        }
+
+        // Create listening socket
+        listen_socket_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        if (listen_socket_ == INVALID_SOCKET) {
+            LogApiOperation("ERROR", "HTTP_INIT", "socket() failed: " + std::to_string(WSAGetLastError()));
+            WSACleanup();
+            throw std::runtime_error("socket() failed");
+        }
+
+        // Allow address reuse
+        int reuse = 1;
+        setsockopt(listen_socket_, SOL_SOCKET, SO_REUSEADDR, (const char*)&reuse, sizeof(reuse));
+
+        // Bind to port
+        sockaddr_in addr{};
+        addr.sin_family = AF_INET;
+        addr.sin_addr.s_addr = INADDR_ANY;
+        addr.sin_port = htons(port_);
+
+        if (bind(listen_socket_, (sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR) {
+            LogApiOperation("ERROR", "HTTP_INIT", "bind() failed: " + std::to_string(WSAGetLastError()));
+            closesocket(listen_socket_);
+            WSACleanup();
+            throw std::runtime_error("bind() failed");
+        }
+
+        // Start listening
+        if (listen(listen_socket_, SOMAXCONN) == SOCKET_ERROR) {
+            LogApiOperation("ERROR", "HTTP_INIT", "listen() failed: " + std::to_string(WSAGetLastError()));
+            closesocket(listen_socket_);
+            WSACleanup();
+            throw std::runtime_error("listen() failed");
+        }
+
+        // Set non-blocking mode
+        u_long nonBlocking = 1;
+        ioctlsocket(listen_socket_, FIONBIO, &nonBlocking);
+
+        LogApiOperation("INFO", "HTTP_INIT", "HTTP server listening on port " + std::to_string(port_));
+
     } catch (const std::exception& e) {
         LogApiOperation("ERROR", "HTTP_INIT", std::string("Initialization failed: ") + e.what());
         throw;
@@ -702,6 +759,7 @@ void APIServer::ProcessPendingRequests() {
                      }
                 } else if (request.path == "/api/read-file") {
                      // Read a local file by path — for IDE file-path auto-attach
+                     // SECURITY: validate path normalization to prevent directory traversal
                      auto json = ParseJsonRequest(request.body);
                      std::string file_path;
                      if (json.is_object && json.object_value.count("path") && json.object_value["path"].is_string) {
@@ -710,14 +768,36 @@ void APIServer::ProcessPendingRequests() {
                      if (file_path.empty()) {
                           response_body = R"({"error":"Missing 'path' field"})";
                      } else {
-                          // Security: block network paths
-                          if (file_path.substr(0, 2) == "\\\\" || file_path.substr(0, 2) == "//") {
+                          // Security: block network paths and validate path traversal
+                          bool pathOk = true;
+                          if (file_path.size() >= 2 && (file_path.substr(0, 2) == "\\\\" || file_path.substr(0, 2) == "//")) {
                                response_body = R"({"error":"forbidden","message":"Network paths not allowed"})";
-                          } else {
+                               pathOk = false;
+                          }
+                          if (pathOk) {
+                               try {
+                                    // Normalize and resolve relative paths
+                                    std::filesystem::path safe_base = std::filesystem::current_path();
+                                    std::filesystem::path req_path(file_path);
+                                    std::filesystem::path canonical = std::filesystem::canonical(req_path);
+                                    // Verify canonical path is under safe_base (prevent escape)
+                                    std::string canonical_str = canonical.string();
+                                    std::string base_str = safe_base.string();
+                                    if (canonical_str.find(base_str) != 0) {
+                                         response_body = R"({"error":"forbidden","message":"Path traversal blocked"})";
+                                         pathOk = false;
+                                    }
+                               } catch (const std::filesystem::filesystem_error&) {
+                                    response_body = R"({"error":"file_not_found","message":"Path resolution failed"})";
+                                    pathOk = false;
+                               }
+                          }
+                          if (pathOk) {
                                // Try to read the file
                                std::ifstream ifs(file_path, std::ios::in | std::ios::binary);
                                if (!ifs.is_open()) {
-                                    response_body = R"({"error":"file_not_found","message":"File not found: )" + file_path + R"("})";
+                                    std::string escaped_path = EscapeJsonString(file_path, 256);
+                                    response_body = "{\"error\":\"file_not_found\",\"message\":\"File not found: " + escaped_path + "\"}";
                                } else {
                                     // Check size (2MB limit)
                                     ifs.seekg(0, std::ios::end);
@@ -731,18 +811,10 @@ void APIServer::ProcessPendingRequests() {
                                          std::string fname = file_path;
                                          auto pos = fname.find_last_of("/\\");
                                          if (pos != std::string::npos) fname = fname.substr(pos + 1);
-                                         // Build JSON response (escape content)
-                                         std::string escaped;
-                                         for (char c : content) {
-                                              if (c == '\n') escaped += "\\n";
-                                              else if (c == '"') escaped += "\\\"";
-                                              else if (c == '\\') escaped += "\\\\";
-                                              else if (c == '\t') escaped += "\\t";
-                                              else if (c == '\r') {}  // skip CR
-                                              else if (c >= 0 && c < 32) {}  // skip control chars
-                                              else escaped += c;
-                                         }
-                                         response_body = "{\"content\":\"" + escaped + "\",\"name\":\"" + fname + "\",\"size\":" + std::to_string(content.size()) + "}";
+                                         // Use safe escape function for content
+                                         std::string escaped = EscapeJsonString(content);
+                                         std::string escaped_name = EscapeJsonString(fname);
+                                         response_body = "{\"content\":\"" + escaped + "\",\"name\":\"" + escaped_name + "\",\"size\":" + std::to_string(content.size()) + "}";
                                     }
                                }
                           }
@@ -765,8 +837,11 @@ void APIServer::ProcessPendingRequests() {
                      if (json.is_object && json.object_value.count("preset") && json.object_value["preset"].is_string) {
                           preset = json.object_value["preset"].string_value;
                      }
+                     // Bounds & escape: allow max 64 chars for preset name
+                     if (preset.size() > 64) preset.resize(64);
+                     std::string escaped_preset = EscapeJsonString(preset);
                      LogApiOperation("INFO", "REASONING", "Preset applied: " + preset);
-                     response_body = "{\"ok\":true,\"preset\":\"" + preset + "\"}";
+                     response_body = "{\"ok\":true,\"preset\":\"" + escaped_preset + "\"}";
                 } else if (request.path == "/api/agent/bulkfix") {
                      // Action Item #20: Bulk fix orchestrator endpoint
                      auto json = ParseJsonRequest(request.body);
@@ -774,9 +849,12 @@ void APIServer::ProcessPendingRequests() {
                      if (json.is_object && json.object_value.count("strategy") && json.object_value["strategy"].is_string) {
                           strategy = json.object_value["strategy"].string_value;
                      }
+                     // Bounds & escape: allow max 128 chars for strategy
+                     if (strategy.size() > 128) strategy.resize(128);
+                     std::string escaped_strategy = EscapeJsonString(strategy);
                      LogApiOperation("INFO", "AGENT_BULKFIX", "Strategy: " + strategy);
                      // Return structured result — actual fix orchestration handled by SubAgentManager
-                     response_body = "{\"ok\":true,\"total\":0,\"fixed\":0,\"failed\":[],\"report\":\"BulkFix endpoint ready — strategy: " + strategy + "\"}";
+                     response_body = "{\"ok\":true,\"total\":0,\"fixed\":0,\"failed\":[],\"report\":\"BulkFix endpoint ready — strategy: " + escaped_strategy + "\"}";
                 } else if (request.path == "/api/agent/plan") {
                      // Action Item #20: Autonomous agent planner endpoint
                      auto json = ParseJsonRequest(request.body);
@@ -784,8 +862,14 @@ void APIServer::ProcessPendingRequests() {
                      if (json.is_object && json.object_value.count("intent") && json.object_value["intent"].is_string) {
                           intent = json.object_value["intent"].string_value;
                      }
-                     LogApiOperation("INFO", "AGENT_PLAN", "Intent: " + intent.substr(0, 80));
-                     response_body = "{\"ok\":true,\"steps\":[{\"action\":\"analyze\",\"target\":\"" + intent.substr(0, 60) + "\"}],\"estimatedDuration\":\"<30s\"}";
+                     // Bounds & escape: max 256 chars for intent
+                     if (intent.size() > 256) intent.resize(256);
+                     size_t intent_preview = std::min((size_t)80, intent.size());
+                     std::string intent_log = intent.substr(0, intent_preview);
+                     std::string intent_target = intent.substr(0, std::min((size_t)60, intent.size()));
+                     std::string escaped_target = EscapeJsonString(intent_target);
+                     LogApiOperation("INFO", "AGENT_PLAN", "Intent: " + intent_log);
+                     response_body = "{\"ok\":true,\"steps\":[{\"action\":\"analyze\",\"target\":\"" + escaped_target + "\"}],\"estimatedDuration\":\"<30s\"}";
                 } else if (request.path == "/api/thermal") {
                      // Action Item #20: Thermal status endpoint
                      MEMORYSTATUSEX memInfo;
@@ -891,9 +975,11 @@ bool APIServer::ValidateMessageFormat(const std::vector<ChatMessage>& messages) 
 // Response generation utilities
 std::string APIServer::CreateErrorResponse(const std::string& error_message) {
     std::stringstream ss;
+    // Escape error message to prevent JSON injection
+    std::string escaped_msg = EscapeJsonString(error_message, 512);
     ss << "{\n";
     ss << "  \"error\": {\n";
-    ss << "    \"message\": \"" << error_message << "\",\n";
+    ss << "    \"message\": \"" << escaped_msg << "\",\n";
     ss << "    \"type\": \"invalid_request_error\",\n";
     ss << "    \"code\": \"invalid_request\"\n";
     ss << "  }\n";
@@ -968,9 +1054,7 @@ void APIServer::RecordRequestMetrics(const std::string& endpoint,
                                     std::chrono::milliseconds duration,
                                     bool success) {
     // Record request duration and success rate for monitoring
-    std::cout << "Request metrics - Endpoint: " << endpoint 
-              << ", Duration: " << duration.count() << "ms"
-              << ", Success: " << (success ? "true" : "false") << std::endl;
+    // Metrics recording disabled
 }
 
 void APIServer::UpdateConnectionMetrics(int active_connections) {

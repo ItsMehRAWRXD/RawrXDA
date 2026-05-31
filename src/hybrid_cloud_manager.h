@@ -7,8 +7,38 @@
 #include <chrono> 
 #include <memory>
 #include <unordered_map>
+#include <windows.h>
+#include <string>
+#include <vector>
+#include <unordered_map>
+#include <map>
+
 // Forward decl
 namespace RawrXD { class UniversalModelRouter; }
+
+// Execution result (forward declaration not sufficient, define first)
+struct ExecutionResult {
+    std::string requestId;
+    std::string executionLocation; // "local" or provider ID
+    std::string modelUsed;
+    std::string response;
+    int tokensUsed = 0;
+    double latencyMs = 0.0;
+    double cost = 0.0;
+    bool success = false;
+    std::string errorMessage;
+    std::chrono::system_clock::time_point completedAt;
+    nlohmann::json metadata;
+};
+
+// Execution log entry
+struct ExecutionLogEntry {
+    std::string requestId;
+    std::chrono::steady_clock::time_point startTime;
+    std::chrono::steady_clock::time_point endTime;
+    std::string status;
+    ExecutionResult result;
+};
 
 // Cloud provider information
 struct CloudProvider {
@@ -45,25 +75,11 @@ struct ExecutionRequest {
     std::string taskType;
     std::string prompt;
     std::string language;
+    std::string modelId;
     int maxTokens = 1024;
     double temperature = 0.7;
     nlohmann::json parameters;
     std::chrono::system_clock::time_point timestamp;
-};
-
-// Execution result
-struct ExecutionResult {
-    std::string requestId;
-    std::string executionLocation; // "local" or provider ID
-    std::string modelUsed;
-    std::string response;
-    int tokensUsed = 0;
-    double latencyMs = 0.0;
-    double cost = 0.0;
-    bool success = false;
-    std::string errorMessage;
-    std::chrono::system_clock::time_point completedAt;
-    nlohmann::json metadata;
 };
 
 // Hybrid execution decision
@@ -298,6 +314,11 @@ private:
     bool autoScalingEnabled = false;
     bool currentlyUsingCloud = false;
     double totalCostUSD = 0.0;            // Added from cpp
+    
+    std::string activeProviderId_;
+    int error_count_ = 0;
+    std::string last_error_;
+    std::unordered_map<std::string, ExecutionLogEntry> execution_log_;
     
     double dailyCostLimit = 10.0;
     double monthlyCostLimit = 100.0;

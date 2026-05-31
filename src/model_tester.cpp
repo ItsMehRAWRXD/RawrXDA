@@ -318,11 +318,11 @@ std::string ModelTester::makeOllamaRequest(
                     endpoint, payload.length());
 
 #ifdef _WIN32
-    // Use WinHTTP to call Ollama at localhost:11434
-    const char* ollamaHostEnv = std::getenv("OLLAMA_HOST");
+    // Use WinHTTP to call Ollama at localhost:11435
+    const char* ollamaHostEnv = std::getenv("RAWRXD_NATIVE_HOST");
     std::string hostStr = ollamaHostEnv ? ollamaHostEnv : "localhost";
     int port = 11434;
-    const char* portEnv = std::getenv("OLLAMA_PORT");
+    const char* portEnv = std::getenv("RAWRXD_NATIVE_PORT");
     if (portEnv) port = std::stoi(portEnv);
 
     std::wstring wHost(hostStr.begin(), hostStr.end());
@@ -366,7 +366,7 @@ std::string ModelTester::makeOllamaRequest(
                                     (DWORD)payload.size(), 0);
     if (!sent) {
         DWORD err = GetLastError();
-        if (m_logger) m_logger->error("WinHttpSendRequest failed: {} — is Ollama running on {}:{}?",
+        if (m_logger) m_logger->error("WinHttpSendRequest failed: {} — is native inference server running on {}:{}?",
                                        err, hostStr, port);
         WinHttpCloseHandle(hRequest);
         WinHttpCloseHandle(hConnect);

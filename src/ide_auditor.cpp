@@ -21,7 +21,6 @@ IDEAuditor& IDEAuditor::getInstance() {
 }
 
 IDEAuditor::IDEAuditor() {
-    spdlog::info("IDE Auditor created");
 }
 
 IDEAuditor::~IDEAuditor() {
@@ -67,8 +66,6 @@ RawrXD::Expected<void, AuditError> IDEAuditor::initialize(
     if (m_logFile.is_open()) {
         m_logFile << "=== IDE Audit Session Started ===\n";
     }
-    
-    spdlog::info("IDE Auditor initialized with all components");
     
     return {};
 }
@@ -128,10 +125,6 @@ RawrXD::Expected<BenchmarkResult, AuditError> IDEAuditor::benchmarkInference(
     // Cache result
     m_benchmarkCache[testPrompt] = result;
     
-    spdlog::info("Inference benchmark completed: {} ms, {} tokens/sec, {} accuracy",
-                result.inferenceLatency, result.tokenGenerationRate, 
-                result.codeCompletionAccuracy);
-    
     return result;
 }
 
@@ -155,7 +148,6 @@ RawrXD::Expected<CompetitiveResult, AuditError> IDEAuditor::compareWithGitHubCop
     std::string apiKey = env_api ? env_api : "";
     
     if (apiKey.empty()) {
-        spdlog::warn("GitHub Copilot API key not found, using cached results");
         // Use cached results if available
         auto it = m_comparisonCache.find("GitHub Copilot");
         if (it != m_comparisonCache.end()) {
@@ -246,9 +238,6 @@ RawrXD::Expected<CompetitiveResult, AuditError> IDEAuditor::compareWithGitHubCop
     m_comparisonCache["GitHub Copilot"] = result;
     
     logComparison("GitHub Copilot", result.performanceRatio);
-    
-    spdlog::info("GitHub Copilot comparison completed: {:.2f}x performance, {:.2f}x accuracy",
-                result.performanceRatio, result.accuracyRatio);
     
     return result;
 }
@@ -598,8 +587,6 @@ RawrXD::Expected<void, AuditError> IDEAuditor::generateReport(
                                m_totalAuditTime.load().count());
     m_sessionLog += std::format("Suggestions: {}\n", suggestions.size());
     
-    spdlog::info("Report generated: {}", path);
-    
     return {};
 }
 
@@ -687,8 +674,6 @@ void IDEAuditor::generateMarkdownReport(
     if (file.is_open()) {
         file << report.str();
     }
-    
-    spdlog::info("Markdown report generated: {}", path);
 }
 
 void IDEAuditor::generateHTMLReport(
@@ -731,8 +716,6 @@ void IDEAuditor::generateHTMLReport(
     report << "<p>Total Audits: " << m_totalAudits.load() << "</p>";
     
     report << "</body></html>";
-    
-    spdlog::info("HTML report generated: {}", path);
 }
 
 void IDEAuditor::generateJSONReport(
@@ -778,8 +761,6 @@ void IDEAuditor::generateJSONReport(
     if (file.is_open()) {
         file << report.dump(2);
     }
-    
-    spdlog::info("JSON report generated: {}", path);
 }
 
 void IDEAuditor::startMonitoring() {
@@ -788,8 +769,6 @@ void IDEAuditor::startMonitoring() {
     }
     
     m_monitoringThread = std::thread(&IDEAuditor::monitoringLoop, this);
-    
-    spdlog::info("IDE monitoring started");
 }
 
 void IDEAuditor::stopMonitoring() {
@@ -800,13 +779,9 @@ void IDEAuditor::stopMonitoring() {
     if (m_monitoringThread.joinable()) {
         m_monitoringThread.join();
     }
-    
-    spdlog::info("IDE monitoring stopped");
 }
 
 void IDEAuditor::monitoringLoop() {
-    spdlog::info("IDE monitoring thread started");
-    
     while (m_monitoring.load()) {
         collectRealTimeMetrics();
         analyzeTrends();
@@ -814,8 +789,6 @@ void IDEAuditor::monitoringLoop() {
         
         std::this_thread::sleep_for(std::chrono::seconds(5));
     }
-    
-    spdlog::info("IDE monitoring thread stopped");
 }
 
 void IDEAuditor::collectRealTimeMetrics() {
@@ -838,10 +811,23 @@ void IDEAuditor::collectRealTimeMetrics() {
 
 void IDEAuditor::analyzeTrends() {
     // Analyze performance trends over time
+    fprintf(stderr, "[IDEAuditor] Analyzing performance trends\n");
+    // Calculate trend slopes for key metrics
+    for (auto& [metric, values] : m_metricHistory) {
+        if (values.size() >= 2) {
+            float slope = (values.back() - values.front()) / static_cast<float>(values.size());
+            m_trends[metric] = slope;
+        }
+    }
 }
 
 void IDEAuditor::predictPerformance() {
-    // Predict future performance
+    // Predict future performance based on trends
+    fprintf(stderr, "[IDEAuditor] Predicting future performance\n");
+    for (const auto& [metric, slope] : m_trends) {
+        float current = m_metricHistory[metric].empty() ? 0.0f : m_metricHistory[metric].back();
+        m_predictions[metric] = current + slope * 10.0f; // Predict 10 samples ahead
+    }
 }
 
 std::string IDEAuditor::getTimestamp() const {
@@ -927,7 +913,6 @@ void IDEAuditor::logAction(const std::string& component, const std::string& acti
         m_logFile << ss.str();
         m_logFile.flush();
     }
-    spdlog::info("[{}] {}: {}", component, action, details);
 }
 
 void IDEAuditor::logError(const std::string& component, const std::string& error) {
@@ -945,7 +930,6 @@ void IDEAuditor::logError(const std::string& component, const std::string& error
         m_logFile << ss.str();
         m_logFile.flush();
     }
-    spdlog::error("[{}] {}", component, error);
 }
 
 json IDEAuditor::getStatus() const {

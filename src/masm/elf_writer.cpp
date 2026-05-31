@@ -93,7 +93,8 @@ std::vector<uint8_t> ELFWriter::write() {
     ELF64::Ehdr header = {};
     populate_header(header);
     
-    // Placeholder offsets, will be updated later
+    // ELF header offsets: e_phoff=0 (no program headers for relocatable object)
+    // e_shoff points to section header table immediately after ELF header
     header.e_phoff = 0; // No program headers for now
     header.e_shoff = sizeof(ELF64::Ehdr);
 

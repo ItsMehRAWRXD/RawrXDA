@@ -3,6 +3,10 @@
 #include <cassert>
 #include <commctrl.h>
 #include <cstring>
+
+extern "C" void Layout_CalculateAndApply(HWND hwnd, void* pIDE, int w, int h);
+extern "C" void Layout_GDI_Blit_Debug(HWND hwnd, void* pIDE);
+
 #include <shellscalingapi.h>  // GetDpiForWindow
 #include <windowsx.h>
 
@@ -41,7 +45,11 @@ bool Win32IDE::createWindow()
 
     if (!m_hwndMain)
     {
-        LOG_ERROR("Failed to create main window");
+        DWORD err = GetLastError();
+        char msg[256];
+        snprintf(msg, sizeof(msg), "Failed to create main window. Error=0x%08X", err);
+        LOG_ERROR(msg);
+        MessageBoxA(nullptr, msg, "RawrXD - CreateWindowExA Failure", MB_ICONERROR);
         return false;
     }
 
@@ -133,6 +141,9 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
             onSize(LOWORD(lParam), HIWORD(lParam));
             return 0;
 
+        case WM_ERASEBKGND:
+            return 1;
+
         case WM_COMMAND:
             onCommand(hwnd, LOWORD(wParam), (HWND)lParam, HIWORD(wParam));
             return 0;
@@ -145,6 +156,10 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
         // Kept as an explicit no-op hook so posted messages are acknowledged.
         case WM_USER + 100:
             LOG_INFO("WM_USER+100 received (reserved no-op)");
+            return 0;
+
+        case WM_APP + 1337:
+            handleNativeStreamTick(wParam, lParam);
             return 0;
 
         // Peek overlay: deferred navigate + tear-down (posted from PeekOverlayWindow — avoids destroying
@@ -171,46 +186,47 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
         // expensive runtime wiring cannot block WM_CREATE / CreateWindowEx.
         case WM_APP + 200:
         {
-            LOG_INFO("Deferred startup bootstrap running");
+            LOG_INFO("WM_APP+200: Deferred startup bootstrap");
 
-            // Initialize Agentic Bridge for AI features
-            initializeAgenticBridge();
+            // NOTE: initializeAgenticBridge() is NOT called here.
+            // deferredHeavyInitBody() on the background thread handles it.
+            // A second call here races on m_fullAgenticIDE / m_agenticBridge
+            // and was a confirmed root cause of the startup ACCESS_VIOLATION.
 
-            // Register Swarm Bridge with IAT (Closes Slot 20 Gap) and start swarm
-            if (RawrXD::Bridge::RegisterSwarmBridgeWithIAT())
+            // Register Swarm Bridge with IAT — idempotent via IsBridgeFullyHooked().
+            // If the bg thread committed all slots first, this is a fast no-op.
+            if (!RawrXD::Bridge::IsBridgeFullyHooked())
             {
-                RawrXD::Bridge::SwarmInitConfig config{};
-                config.structSize = sizeof(config);
-                config.maxSubAgents = 8;
-                config.taskTimeoutMs = 30000;
-                config.enableGPUWorkStealing = TRUE;
-                strcpy_s(config.coordinatorModel, "phi3:mini");
-                if (FAILED(RawrXD::Bridge::InitializeSwarmSystem(&config)))
+                if (RawrXD::Bridge::RegisterSwarmBridgeWithIAT())
                 {
-                    OutputDebugStringA("Win32IDE: Swarm system init failed\n");
+                    RawrXD::Bridge::SwarmInitConfig config{};
+                    config.structSize = sizeof(config);
+                    config.maxSubAgents = 8;
+                    config.taskTimeoutMs = 30000;
+                    config.enableGPUWorkStealing = TRUE;
+                    strcpy_s(config.coordinatorModel, "phi3:mini");
+                    if (FAILED(RawrXD::Bridge::InitializeSwarmSystem(&config)))
+                        OutputDebugStringA("Win32IDE: Swarm system init failed\n");
                 }
-            }
-            else
-            {
-                OutputDebugStringA("Win32IDE: Swarm bridge registration failed\n");
+                else
+                {
+                    OutputDebugStringA("Win32IDE: Swarm bridge registration failed\n");
+                }
             }
 
             // Kickstart Inference Engine (Native)
             if (!initializeInference())
-            {
                 LOG_ERROR("Failed to initialize Inference Engine on startup");
-            }
             else
-            {
                 LOG_INFO("Inference Engine initialized successfully");
-            }
-
-            // OrchestratorBridge startup path removed: initialization now relies on
-            // native orchestration flows instead of bridge-based Ollama wiring.
 
             // Initialize Ghost Text (FIM completions)
             initGhostText();
             LOG_INFO("Ghost text subsystem initialized");
+
+            // Initialize Neural Heatmap (Phase 2)
+            m_neuralHeatmap = std::make_unique<RawrXD::IDE::NeuralHeatmapRenderer>(hwnd);
+            m_neuralHeatmap->setVisible(true);
 
             // Refresh explorer contents after the app is already visible.
             PostMessage(hwnd, WM_APP + 201, 0, 0);
@@ -222,6 +238,51 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
             {
                 refreshFileTree();
             }
+            return 0;
+
+        // Safe cross-thread output append: lParam owns a heap-allocated std::string.
+        // Posted by AgentPanel_AppendToken (background IPC thread) → consumed on UI thread.
+        case WM_IDE_OUTPUT_APPEND_SAFE:
+        {
+            auto* payload = reinterpret_cast<std::string*>(lParam);
+            if (payload)
+            {
+                constexpr size_t kMaxOutputAppendBytes = 256 * 1024;
+                if (!payload->empty() && payload->size() <= kMaxOutputAppendBytes)
+                    appendToOutput(*payload, "Output", OutputSeverity::Info);
+                delete payload;
+            }
+            return 0;
+        }
+
+        case WM_COPILOT_RELOAD_PERSISTED_CHAT_SAFE:
+            reloadPersistedChatHistoryIntoUi();
+            return 0;
+
+        // Agent stream finalize: drain token buffer on UI thread (posted from inference threads).
+        case WM_AGENT_STREAM_FINALIZE_SAFE:
+        {
+            auto* payload = reinterpret_cast<std::string*>(lParam);
+            if (payload)
+            {
+                if (!payload->empty())
+                {
+                    appendToOutput(*payload, "Agent", OutputSeverity::Info);
+                }
+                appendToOutput("\n", "Agent", OutputSeverity::Info);
+                delete payload;
+            }
+            if (bridgeIsAgentPanelReady())
+            {
+                bridgeRefreshAgentDiff();
+            }
+            return 0;
+        }
+
+        // Deferred agent diff refresh (legacy path; prefer WM_AGENT_STREAM_FINALIZE_SAFE).
+        case WM_APP + 112:
+            if (bridgeIsAgentPanelReady())
+                bridgeRefreshAgentDiff();
             return 0;
 
         case WM_ACTIVATE:
@@ -263,16 +324,41 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
                 RECT rcClient;
                 GetClientRect(hwnd, &rcClient);
                 FillRect(hdc, &rcClient, (HBRUSH)GetStockObject(BLACK_BRUSH));
+
+                // Render Phase 2 Neural Heatmap overlay
+                if (m_neuralHeatmap && m_neuralHeatmap->isVisible())
+                {
+                    m_neuralHeatmap->render(hdc, rcClient);
+                }
+
                 EndPaint(hwnd, &ps);
             }
             return 0;
         }
     }
-    return DefWindowProc(hwnd, uMsg, wParam, lParam);
-}
-void Win32IDE::onCreate(HWND hwnd)
-{
-    LOG_INFO("Main Window Created: Initializing UI Components");
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Timer Message Handling (Phase 1C - Debug Hover)
+    // ────────────────────────────────────────────────────────────────────────
+    if (uMsg == WM_TIMER)
+    {
+        switch (wParam)
+        {
+            case 42001:  // HOVER_TIMER_ID (LSP Hover Timer)
+                onHoverTimer();
+                return 0;
+
+            case 0x2002:  // DEBUG_HOVER_TIMER_ID (Phase 1C - Debug Hover Timer)
+                onDebugHoverTimer();
+                return 0;
+        }
+    }
+
+    if (m_hwndSidebar && IsWindow(m_hwndSidebar) && m_hwndExplorerTree)
+    {
+        refreshFileTree();
+    }
+    return 0;
 
     // 1. Create Layout Components
     // Activity Bar (Leftmost strip)
@@ -377,7 +463,10 @@ void Win32IDE::onSize(int width, int height)
 
     int currentX = 0;
 
-    // 1. Activity Bar (Far Left)
+    // 1. MASM Pure Layout Recovery (Forcing the middle visibility)
+    Layout_CalculateAndApply(m_hwndMain, this, width, height);
+
+    // 2. Activity Bar (Far Left)
     int workspaceX = 0;
     int workspaceWidth = width;
 

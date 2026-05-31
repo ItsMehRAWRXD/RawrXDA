@@ -74,9 +74,6 @@ SelfCorrectionResult AgenticSelfCorrector::correct(
         if (onCorrectionLoop)
             onCorrectionLoop(attempt, ft, callbackContext);
 
-        fprintf(stderr, "[INFO] [SelfCorrector] Attempt %d/%d — failure: %s (confidence: %.2f)\n",
-                attempt, attemptsToUse, info.description.c_str(), info.confidence);
-
         // Step 2: Apply puppeteer correction
         CorrectionResult cr = m_puppeteer.correctResponse(currentOutput, userPrompt);
 
@@ -92,9 +89,7 @@ SelfCorrectionResult AgenticSelfCorrector::correct(
             }
             // Correction applied but still has issues — continue loop
         } else {
-            // Correction failed — log and continue
-            fprintf(stderr, "[WARN] [SelfCorrector] Attempt %d correction failed: %s\n",
-                    attempt, cr.diagnosticMessage.c_str());
+            // Correction failed — continue loop
         }
     }
 

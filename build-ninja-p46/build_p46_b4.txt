@@ -1,0 +1,9 @@
+[0/1] Re-running CMake...
+CMake Error at CMakeLists.txt:4624:
+  Parse error.  Expected a command name, got right paren with text ")".
+
+
+-- Configuring incomplete, errors occurred!
+ninja: error: rebuilding 'build.ninja': subcommand failed
+FAILED: build.ninja D:/rawrxd/build-ninja-p46/cmake_install.cmake D:/rawrxd/build-ninja-p46/src/reverse_engineering/cmake_install.cmake D:/rawrxd/build-ninja-p46/tests/cmake_install.cmake D:/rawrxd/build-ninja-p46/src/tools/cmake_install.cmake D:/rawrxd/build-ninja-p46/CTestTestfile.cmake D:/rawrxd/build-ninja-p46/tests/CTestTestfile.cmake D:/rawrxd/build-ninja-p46/src/tools/CTestTestfile.cmake 
+"C:\Program Files\CMake\bin\cmake.exe" --regenerate-during-build -SD:\rawrxd -BD:\rawrxd\build-ninja-p46

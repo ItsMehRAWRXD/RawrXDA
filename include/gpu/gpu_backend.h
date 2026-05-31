@@ -3,7 +3,7 @@
 
 #include <cstdio>
 
-// Move ggml_vk_init() into explicit GpuBackend::initialize() – return bool instead of abort().
+// Move ggml_rxd_vk_init() into explicit GpuBackend::initialize() – return bool instead of abort().
 // Graceful fallback: if no Vulkan → print log warning, switch to CPU and still load Phi-3 (slower but works).
 class GpuBackend
 {

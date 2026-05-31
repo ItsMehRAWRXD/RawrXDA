@@ -23,7 +23,9 @@ TerminalPool::~TerminalPool() {
         if (s.hPipeOut) CloseHandle((HANDLE)s.hPipeOut);
         if (s.hAttrList) free(s.hAttrList);
         if (s.hPC) {
-             // ClosePseudoConsole((HPCON)s.hPC); // Dynamic load needed usually
+            // Close pseudo console handle
+            ClosePseudoConsole((HPCON)s.hPC);
+            s.hPC = nullptr;
         }
     }
 }

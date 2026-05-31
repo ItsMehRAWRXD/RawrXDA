@@ -100,10 +100,10 @@ std::vector<GGUFBlobInfo> OllamaBlobDetector::DetectAllGGUFBlobs(const std::stri
 }
 
 // ============================================================================
-// OllamaBlobParser Implementation
+// NativeBlobParser Implementation
 // ============================================================================
 
-class OllamaBlobParser::Impl {
+class NativeBlobParser::Impl {
 public:
     struct GGUFHeader {
         uint32_t magic;
@@ -115,11 +115,11 @@ public:
     std::string last_error;
 };
 
-OllamaBlobParser::OllamaBlobParser() : pimpl(std::make_unique<Impl>()) {}
+NativeBlobParser::NativeBlobParser() : pimpl(std::make_unique<Impl>()) {}
 
-OllamaBlobParser::~OllamaBlobParser() = default;
+NativeBlobParser::~NativeBlobParser() = default;
 
-bool OllamaBlobParser::ParseGGUFHeader(
+bool NativeBlobParser::ParseGGUFHeader(
     const std::string& blob_path,
     uint64_t offset,
     GGUFHeader& header
@@ -158,7 +158,7 @@ bool OllamaBlobParser::ParseGGUFHeader(
     return true;
 }
 
-bool OllamaBlobParser::ExtractGGUFData(
+bool NativeBlobParser::ExtractGGUFData(
     const std::string& blob_path,
     uint64_t offset,
     const std::string& output_path
@@ -196,7 +196,7 @@ bool OllamaBlobParser::ExtractGGUFData(
     return true;
 }
 
-std::vector<std::string> OllamaBlobParser::ExtractMetadataKeys(
+std::vector<std::string> NativeBlobParser::ExtractMetadataKeys(
     const std::string& blob_path,
     uint64_t offset
 ) {

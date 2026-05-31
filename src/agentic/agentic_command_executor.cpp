@@ -39,19 +39,31 @@ CommandExecResult AgenticCommandExecutor::executeCommand(const std::string& comm
 
     if (requireApproval && !isAutoApproved(command)) {
         if (onApproval && !onApproval(command)) {
-            fprintf(stderr, "[AgenticCmdExec] Command rejected: %s\n", command.c_str());
             return res;
         }
     }
 
+static std::string quoteArgumentForShell(const std::string& arg) {
+    // Quote argument for safe shell execution
+    std::string quoted = "\"";
+    for (char c : arg) {
+        if (c == '"' || c == '\\') {
+            quoted += '\\';
+        }
+        quoted += c;
+    }
+    quoted += "\"";
+    return quoted;
+}
+
+    // Build command with properly quoted arguments to prevent injection
     std::string cmdline = command;
     for (const auto& arg : arguments) {
         cmdline += " ";
-        cmdline += arg;
+        cmdline += quoteArgumentForShell(arg);
     }
 
     if (onStarted) onStarted(command);
-    fprintf(stderr, "[AgenticCmdExec] Executing: %s\n", cmdline.c_str());
 
     SECURITY_ATTRIBUTES sa{};
     sa.nLength = sizeof(sa);
@@ -152,9 +164,6 @@ CommandExecResult AgenticCommandExecutor::executeCommand(const std::string& comm
         }
     }
 
-    fprintf(stderr, "[AgenticCmdExec] Finished: exit=%d success=%d\n",
-            res.exitCode, res.success ? 1 : 0);
-
     if (onFinished) onFinished(res.success, res.exitCode);
     return res;
 }
@@ -172,7 +181,6 @@ void AgenticCommandExecutor::cancelCommand()
         TerminateProcess(m_processHandle, 1);
         CloseHandle(m_processHandle);
         m_processHandle = nullptr;
-        fprintf(stderr, "[AgenticCmdExec] Command cancelled\n");
     }
 }
 
@@ -183,12 +191,28 @@ bool AgenticCommandExecutor::isAutoApproved(const std::string& command)
     std::transform(cmdLower.begin(), cmdLower.end(), cmdLower.begin(),
                   [](unsigned char c){ return static_cast<char>(std::tolower(c)); });
 
+    // Extract executable name from cmdline for whole-word matching (prevent substring injection)
+    std::string exeName;
+    size_t firstSpace = cmdline.find(' ');
+    if (firstSpace != std::string::npos) {
+        exeName = cmdline.substr(0, firstSpace);
+    } else {
+        exeName = cmdline;
+    }
+    std::transform(exeName.begin(), exeName.end(), exeName.begin(),
+                   [](unsigned char c){ return static_cast<char>(std::tolower(c)); });
+
     for (const auto& approved : m_autoApproveList) {
         std::string approvedLower = approved;
         std::transform(approvedLower.begin(), approvedLower.end(), approvedLower.begin(),
                        [](unsigned char c){ return static_cast<char>(std::tolower(c)); });
-        if (cmdLower.find(approvedLower) != std::string::npos) {
-            fprintf(stderr, "[AgenticCmdExec] Auto-approved: %s\n", command.c_str());
+        // Use whole-word matching: check if exeName ends with approved (with separator check)
+        if (exeName == approvedLower || 
+            (exeName.size() > approvedLower.size() && 
+             exeName.substr(exeName.size() - approvedLower.size()) == approvedLower &&
+             (exeName[exeName.size() - approvedLower.size() - 1] == '\\' || 
+              exeName[exeName.size() - approvedLower.size() - 1] == '/'))) {
+            // Auto-approved command
             return true;
         }
     }

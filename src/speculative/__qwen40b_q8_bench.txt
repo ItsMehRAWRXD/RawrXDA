@@ -1,0 +1,7 @@
+load_backend: loaded RPC backend from D:\llama-direct\vulkan\ggml-rpc.dll
+ggml_vulkan: Found 2 Vulkan devices:
+ggml_vulkan: 0 = AMD Radeon RX 7800 XT (AMD proprietary driver) | uma: 0 | fp16: 1 | bf16: 1 | warp size: 64 | shared memory: 32768 | int dot: 1 | matrix cores: KHR_coopmat
+ggml_vulkan: 1 = AMD Radeon(TM) Graphics (AMD proprietary driver) | uma: 1 | fp16: 1 | bf16: 0 | warp size: 32 | shared memory: 32768 | int dot: 1 | matrix cores: none
+load_backend: loaded Vulkan backend from D:\llama-direct\vulkan\ggml-vulkan.dll
+load_backend: loaded CPU backend from D:\llama-direct\vulkan\ggml-cpu-zen4.dll
+llama-bench: benchmark 1/2: starting

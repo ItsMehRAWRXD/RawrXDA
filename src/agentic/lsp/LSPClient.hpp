@@ -1,5 +1,6 @@
 #pragma once
 #include <windows.h>
+#include <psapi.h>
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -325,6 +326,10 @@ private:
 // ============================================================================
 class LSPClient {
 private:
+    static constexpr SIZE_T kNodeServerRecycleWorkingSetBytes = 1024ull * 1024ull * 1024ull;
+    static constexpr uint32_t kNodeServerRecycleRequestBudget = 256;
+    static constexpr uint32_t kTypeScriptServerMaxMemoryMb = 1024;
+
     HANDLE hProcess_ = nullptr;
     HANDLE hStdinRead_ = nullptr;
     HANDLE hStdinWrite_ = nullptr;
@@ -346,6 +351,9 @@ private:
     std::string serverPath_;
     std::string workspacePath_;
     std::string languageId_;
+    bool isNodeBasedServer_ = false;
+    uint32_t requestCountSinceStart_ = 0;
+    uint32_t recycleCount_ = 0;
 
     // Callbacks
     std::function<void(const std::string&, const std::vector<LSPDiagnostic>&)> onDiagnostics_;
@@ -364,6 +372,8 @@ public:
         serverPath_ = serverPath;
         workspacePath_ = workspacePath;
         languageId_ = languageId;
+        isNodeBasedServer_ = isNodeBasedServerPath_(serverPath_);
+        requestCountSinceStart_ = 0;
 
         SECURITY_ATTRIBUTES sa = { sizeof(SECURITY_ATTRIBUTES), nullptr, TRUE };
 
@@ -382,9 +392,10 @@ public:
         si.hStdError = hStdoutWrite_;
 
         PROCESS_INFORMATION pi;
+        std::string commandLine = buildCommandLine_(serverPath_);
         if (!CreateProcessA(
             nullptr,
-            (LPSTR)serverPath.c_str(),
+            commandLine.data(),
             nullptr, nullptr, TRUE,
             CREATE_NO_WINDOW,
             nullptr, nullptr,
@@ -393,7 +404,8 @@ public:
             log("Failed to start LSP server: " + serverPath);
             return false;
         }
-
+            log("Failed to start LSP server: " + serverPath_);
+            closeHandles();
         hProcess_ = pi.hProcess;
         CloseHandle(pi.hThread);
         running_ = true;
@@ -432,6 +444,11 @@ public:
         }
 
         closeHandles();
+        {
+            std::lock_guard<std::mutex> lock(responseMutex_);
+            pendingRequests_.clear();
+        }
+        requestCountSinceStart_ = 0;
         initialized_ = false;
     }
 
@@ -713,8 +730,10 @@ private:
     }
 
     // Send a request with callback
+public:
     void sendRequest(const std::string& method, const JsonValue& params,
                     std::function<void(const JsonValue&)> callback) {
+    maybeRecycleNodeServerForMemoryPressure_();
         auto msg = createRequest(method, params);
         int id = msg.get("id").asInt();
 
@@ -728,6 +747,7 @@ private:
 
     // Send a notification (no response expected)
     void sendNotification(const std::string& method, const JsonValue& params) {
+        maybeRecycleNodeServerForMemoryPressure_();
         auto msg = createNotification(method, params);
         sendMessage(msg);
     }
@@ -736,12 +756,26 @@ private:
     void sendMessage(const JsonValue& msg) {
         std::lock_guard<std::mutex> lock(sendMutex_);
 
+        if (!running_ || !hStdinWrite_) {
+            return;
+        }
+
         std::string content = msg.dump();
         std::string header = "Content-Length: " + std::to_string(content.length()) + "\r\n\r\n";
         std::string fullMessage = header + content;
 
         DWORD written;
-        WriteFile(hStdinWrite_, fullMessage.c_str(), (DWORD)fullMessage.length(), &written, nullptr);
+        if (!WriteFile(hStdinWrite_, fullMessage.c_str(), (DWORD)fullMessage.length(), &written, nullptr) ||
+            written != fullMessage.length()) {
+            running_ = false;
+            initialized_ = false;
+            log("LSP transport write failed; server marked offline");
+            return;
+        }
+
+        if (isNodeBasedServer_) {
+            ++requestCountSinceStart_;
+        }
     }
 
     // Reader thread loop
@@ -882,6 +916,80 @@ private:
         return sym;
     }
 
+    static bool isNodeBasedServerPath_(const std::string& serverPath) {
+        std::string lowered = serverPath;
+        for (char& c : lowered) c = (char)tolower((unsigned char)c);
+        return lowered.find("typescript-language-server") != std::string::npos ||
+               lowered.find("tsserver") != std::string::npos ||
+               lowered.find("node") != std::string::npos;
+    }
+
+    static bool containsArgInsensitive_(const std::string& value, const std::string& needle) {
+        std::string loweredValue = value;
+        std::string loweredNeedle = needle;
+        for (char& c : loweredValue) c = (char)tolower((unsigned char)c);
+        for (char& c : loweredNeedle) c = (char)tolower((unsigned char)c);
+        return loweredValue.find(loweredNeedle) != std::string::npos;
+    }
+
+    std::string buildCommandLine_(const std::string& serverPath) const {
+        if (!isNodeBasedServerPath_(serverPath)) {
+            return serverPath;
+        }
+
+        std::string commandLine = serverPath;
+        if (containsArgInsensitive_(serverPath, "typescript-language-server") &&
+            !containsArgInsensitive_(serverPath, "--tsserver-max-memory")) {
+            commandLine += " --tsserver-max-memory ";
+            commandLine += std::to_string(kTypeScriptServerMaxMemoryMb);
+        }
+        return commandLine;
+    }
+
+    SIZE_T currentProcessWorkingSetBytes_() const {
+        if (!hProcess_) {
+            return 0;
+        }
+
+        PROCESS_MEMORY_COUNTERS_EX pmc{};
+        if (!GetProcessMemoryInfo(hProcess_, reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&pmc), sizeof(pmc))) {
+            return 0;
+        }
+        return pmc.WorkingSetSize;
+    }
+
+    void maybeRecycleNodeServerForMemoryPressure_() {
+        if (!isNodeBasedServer_ || !running_ || !initialized_) {
+            return;
+        }
+
+        if ((requestCountSinceStart_ % 16u) != 0u &&
+            requestCountSinceStart_ < kNodeServerRecycleRequestBudget) {
+            return;
+        }
+
+        const SIZE_T workingSetBytes = currentProcessWorkingSetBytes_();
+        const bool recycleForPressure = workingSetBytes >= kNodeServerRecycleWorkingSetBytes;
+        const bool recycleForAge = requestCountSinceStart_ >= kNodeServerRecycleRequestBudget;
+        if (!recycleForPressure && !recycleForAge) {
+            return;
+        }
+
+        const std::string reason = recycleForPressure
+            ? ("working set " + std::to_string(static_cast<unsigned long long>(workingSetBytes / (1024ull * 1024ull))) +
+               " MiB reached recycle threshold")
+            : ("request budget " + std::to_string(requestCountSinceStart_) + " reached recycle threshold");
+        log("Preemptively recycling Node-based LSP server before heap exhaustion: " + reason);
+
+        shutdown();
+        if (start(serverPath_, workspacePath_, languageId_)) {
+            ++recycleCount_;
+            log("LSP server recycled successfully");
+        } else {
+            log("LSP server recycle failed");
+        }
+    }
+
     void closeHandles() {
         if (hStdinRead_) { CloseHandle(hStdinRead_); hStdinRead_ = nullptr; }
         if (hStdinWrite_) { CloseHandle(hStdinWrite_); hStdinWrite_ = nullptr; }
@@ -913,7 +1021,7 @@ private:
     std::vector<ServerConfig> knownServers_ = {
         {"cpp", "clangd", {".cpp", ".c", ".h", ".hpp", ".cc", ".cxx"}},
         {"python", "pylsp", {".py"}},
-        {"javascript", "typescript-language-server --stdio", {".js", ".ts", ".jsx", ".tsx"}},
+        {"javascript", "typescript-language-server --stdio --tsserver-max-memory 1024", {".js", ".ts", ".jsx", ".tsx"}},
         {"rust", "rust-analyzer", {".rs"}},
         {"go", "gopls", {".go"}},
     };

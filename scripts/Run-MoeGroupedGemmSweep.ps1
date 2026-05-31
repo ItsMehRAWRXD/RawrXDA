@@ -15,12 +15,44 @@ param(
 
 $ErrorActionPreference = "Stop"
 $repo = Split-Path -Parent $PSScriptRoot
-if (-not $BuildDir) {
-    $BuildDir = Join-Path $repo "build-ninja"
+
+function Resolve-FirstCMakeBuildDir {
+    param([string]$Root, [string]$Prefer)
+    if ($Prefer -and (Test-Path -LiteralPath (Join-Path $Prefer "CMakeCache.txt"))) {
+        return (Resolve-Path -LiteralPath $Prefer).Path
+    }
+    foreach ($c in @(
+            (Join-Path $Root "build-win32"),
+            (Join-Path $Root "build-ninja"),
+            (Join-Path $Root "build-ninja-ctx2"),
+            (Join-Path $Root "build"))) {
+        if (Test-Path -LiteralPath (Join-Path $c "CMakeCache.txt")) {
+            return (Resolve-Path -LiteralPath $c).Path
+        }
+    }
+    return $null
 }
-$exe = Join-Path $BuildDir "tests/moe_grouped_gemm_bench.exe"
-if (-not (Test-Path $exe)) {
-    Write-Error "Missing $exe — build with: cmake --build `"$BuildDir`" --target moe_grouped_gemm_bench"
+
+function Find-MoeBenchExe([string]$Bd) {
+    if (-not $Bd) { return $null }
+    foreach ($p in @(
+            (Join-Path $Bd "tests\Release\moe_grouped_gemm_bench.exe"),
+            (Join-Path $Bd "tests\Debug\moe_grouped_gemm_bench.exe"),
+            (Join-Path $Bd "tests\moe_grouped_gemm_bench.exe"))) {
+        if (Test-Path -LiteralPath $p) { return $p }
+    }
+    return $null
+}
+
+if (-not $BuildDir) {
+    $BuildDir = Resolve-FirstCMakeBuildDir -Root $repo -Prefer ""
+}
+if (-not $BuildDir) {
+    $BuildDir = Join-Path $repo "build-win32"
+}
+$exe = Find-MoeBenchExe -Bd $BuildDir
+if (-not $exe) {
+    Write-Error "Missing moe_grouped_gemm_bench.exe under $BuildDir\tests (Release/Debug/flat) — build with: cmake --build `"$BuildDir`" --target moe_grouped_gemm_bench"
 }
 
 if ($Sweep) {

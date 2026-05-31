@@ -1,0 +1,32 @@
+# 5-scenario Win32 IDE E2E smoke gate (deferred init, subclass/GDI, IPC framing, live extension IPC, copilot send)
+name: Smoke E2E Gate
+
+on:
+  pull_request:
+    branches: [main, dev, feature/*]
+  workflow_dispatch:
+
+jobs:
+  smoke-e2e:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Win32IDE (Ninja Release)
+        run: cmake -B build-win32 -G Ninja -DCMAKE_BUILD_TYPE=Release
+        shell: pwsh
+
+      - name: Build Win32 IDE and Scenario 4 IPC companions
+        run: cmake --build build-win32 --target RawrXD-Win32IDE RawrXDIpcPing RawrXD-ExtensionHost -j 8
+        shell: pwsh
+
+      - name: Execute 5-scenario smoke coordinator
+        run: |
+          $ErrorActionPreference = "Stop"
+          $bin = Join-Path $env:GITHUB_WORKSPACE "build-win32\bin\RawrXD-Win32IDE.exe"
+          if (-not (Test-Path $bin)) { throw "Missing IDE binary: $bin" }
+          & (Join-Path $env:GITHUB_WORKSPACE "tests\smoke_e2e\0_SmokeTestCoordinator.ps1") -BinaryPath $bin
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        shell: pwsh

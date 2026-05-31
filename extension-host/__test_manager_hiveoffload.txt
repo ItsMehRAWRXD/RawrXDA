@@ -1,0 +1,166 @@
+2026-04-15T16:51:58.202Z [AUDIT_OK] extension=extension-host-manager sink=C:\Users\HiH8e\AppData\Local\RawrXD\Logs\capability-lineage.log
+2026-04-15T16:51:58.208Z [SPAWN] extension=mock_echo pid=30408 policy=none manifest=none manifest_sig=none
+2026-04-15T16:51:58.208Z [READY] extension=mock_echo pid=30408 boot_ms=4
+2026-04-15T16:51:58.241Z [IPC_OK] extension=mock_echo type=compile ms=7 requestId=mock_echo-1776271918234-1 fallback=0
+2026-04-15T16:51:58.242Z [IPC_OK] extension=mock_echo type=runtime.signal ms=1 requestId=mock_echo-1776271918241-2 fallback=0
+2026-04-15T16:51:58.244Z [IPC_OK] extension=mock_echo type=hive.offload ms=1 requestId=mock_echo-1776271918243-3 fallback=0
+2026-04-15T16:51:58.244Z [SHUTDOWN] extension=mock_echo pid=30408 origin=host_request
+2026-04-15T16:51:58.298Z [SPAWN] extension=mock_echo pid=12508 policy=none manifest=none manifest_sig=none
+2026-04-15T16:51:58.299Z [READY] extension=mock_echo pid=12508 boot_ms=4
+2026-04-15T16:51:58.326Z [IPC_FAIL] extension=mock_echo type=compile error=pre_execution_auth_failed:preexec_broker_hash_mismatch
+2026-04-15T16:51:58.327Z [SHUTDOWN] extension=mock_echo pid=12508 origin=host_request
+2026-04-15T16:51:58.390Z [SPAWN] extension=mock_error-response pid=21568 policy=none manifest=none manifest_sig=none
+2026-04-15T16:51:58.390Z [READY] extension=mock_error-response pid=21568 boot_ms=3
+2026-04-15T16:51:58.428Z [IPC_FAIL] extension=mock_error-response type=compile error=mock_failure requestId=mock_error-response-1776271918417-1
+2026-04-15T16:51:58.428Z [SHUTDOWN] extension=mock_error-response pid=21568 origin=host_request
+2026-04-15T16:51:58.497Z [SPAWN] extension=mock_lsp-error-response pid=23540 policy=none manifest=none manifest_sig=none
+2026-04-15T16:51:58.497Z [READY] extension=mock_lsp-error-response pid=23540 boot_ms=3
+2026-04-15T16:51:58.530Z [IPC_FAIL] extension=mock_lsp-error-response type=compile error=lsp_error_code=0x0005:LSP_ERR_FRAME_OVERSIZE requestId=mock_lsp-error-response-1776271918524-1
+2026-04-15T16:51:58.530Z [SHUTDOWN] extension=mock_lsp-error-response pid=23540 origin=host_request
+2026-04-15T16:51:58.588Z [SPAWN] extension=mock_lsp-code-stderr pid=15632 policy=none manifest=none manifest_sig=none
+2026-04-15T16:51:58.588Z [READY] extension=mock_lsp-code-stderr pid=15632 boot_ms=3
+2026-04-15T16:51:58.618Z [IPC_FAIL] extension=mock_lsp-code-stderr type=stderr error=lsp_error_code=0x0004:LSP_ERR_HEADER_BAD_LENGTH lsp_error=LSP_ERR_HEADER_BAD_LENGTH
+2026-04-15T16:51:58.619Z [IPC_OK] extension=mock_lsp-code-stderr type=compile ms=4 requestId=mock_lsp-code-stderr-1776271918615-1 fallback=0
+2026-04-15T16:51:58.619Z [SHUTDOWN] extension=mock_lsp-code-stderr pid=15632 origin=host_request
+2026-04-15T16:51:58.682Z [SPAWN] extension=mock_malformed-json pid=5168 policy=none manifest=none manifest_sig=none
+2026-04-15T16:51:58.682Z [READY] extension=mock_malformed-json pid=5168 boot_ms=3
+2026-04-15T16:51:58.723Z [IPC_FAIL] extension=mock_malformed-json type=parse error=invalid_json_line
+2026-04-15T16:51:58.848Z [IPC_FAIL] extension=mock_malformed-json type=compile error=timeout requestId=mock_malformed-json-1776271918721-1 attempt=1
+2026-04-15T16:51:58.849Z [IPC_FAIL] extension=mock_malformed-json type=compile error=IPC_timeout_after_120ms requestId=mock_malformed-json-1776271918721-1
+2026-04-15T16:51:58.849Z [SHUTDOWN] extension=mock_malformed-json pid=5168 origin=host_request
+2026-04-15T16:51:58.916Z [SPAWN] extension=mock_invalid-envelope pid=29680 policy=none manifest=none manifest_sig=none
+2026-04-15T16:51:58.916Z [READY] extension=mock_invalid-envelope pid=29680 boot_ms=2
+2026-04-15T16:51:58.947Z [IPC_FAIL] extension=mock_invalid-envelope type=unknown error=unsupported_version requestId=mock_invalid-envelope-1776271918944-1
+2026-04-15T16:51:59.065Z [IPC_FAIL] extension=mock_invalid-envelope type=compile error=timeout requestId=mock_invalid-envelope-1776271918944-1 attempt=1
+2026-04-15T16:51:59.066Z [IPC_FAIL] extension=mock_invalid-envelope type=compile error=IPC_timeout_after_120ms requestId=mock_invalid-envelope-1776271918944-1
+2026-04-15T16:51:59.066Z [SHUTDOWN] extension=mock_invalid-envelope pid=29680 origin=host_request
+2026-04-15T16:51:59.128Z [SPAWN] extension=mock_timeout pid=17144 policy=none manifest=none manifest_sig=none
+2026-04-15T16:51:59.128Z [READY] extension=mock_timeout pid=17144 boot_ms=2
+2026-04-15T16:51:59.277Z [IPC_FAIL] extension=mock_timeout type=compile error=timeout_retrying requestId=mock_timeout-1776271919156-1 attempt=1
+2026-04-15T16:51:59.398Z [IPC_FAIL] extension=mock_timeout type=compile error=timeout requestId=mock_timeout-1776271919156-1 attempt=2
+2026-04-15T16:51:59.399Z [IPC_FAIL] extension=mock_timeout type=compile error=IPC_timeout_after_120ms requestId=mock_timeout-1776271919156-1
+2026-04-15T16:51:59.399Z [SHUTDOWN] extension=mock_timeout pid=17144 origin=host_request
+2026-04-15T16:51:59.462Z [SPAWN] extension=mock_exit-midflight pid=31048 policy=none manifest=none manifest_sig=none
+2026-04-15T16:51:59.462Z [READY] extension=mock_exit-midflight pid=31048 boot_ms=3
+2026-04-15T16:51:59.496Z [CRASH] extension=mock_exit-midflight pid=31048 exit_code=13 attempt=1
+2026-04-15T16:51:59.497Z [RESTART] extension=mock_exit-midflight attempt=1
+2026-04-15T16:51:59.497Z [IPC_FAIL] extension=mock_exit-midflight type=compile error=Process_exited_with_code_13 requestId=mock_exit-midflight-1776271919489-1
+2026-04-15T16:51:59.497Z [SHUTDOWN] extension=mock_exit-midflight pid=31048 origin=host_request
+2026-04-15T16:51:59.553Z [SPAWN] extension=mock_delayed pid=31268 policy=none manifest=none manifest_sig=none
+2026-04-15T16:51:59.553Z [READY] extension=mock_delayed pid=31268 boot_ms=3
+2026-04-15T16:51:59.686Z [IPC_FAIL] extension=mock_delayed type=compile error=timeout requestId=mock_delayed-1776271919580-1 attempt=1
+2026-04-15T16:51:59.687Z [IPC_FAIL] extension=mock_delayed type=compile error=IPC_timeout_after_100ms requestId=mock_delayed-1776271919580-1
+2026-04-15T16:51:59.884Z [IPC_FAIL] extension=mock_delayed type=compile error=unknown_request_id requestId=mock_delayed-1776271919580-1
+2026-04-15T16:52:00.051Z [SHUTDOWN] extension=mock_delayed pid=31268 origin=host_request
+2026-04-15T16:52:00.118Z [SPAWN] extension=mock_echo pid=8316 policy=none manifest=none manifest_sig=none
+2026-04-15T16:52:00.119Z [READY] extension=mock_echo pid=8316 boot_ms=4
+2026-04-15T16:52:00.152Z [SHUTDOWN] extension=mock_echo pid=8316 origin=host_request
+2026-04-15T16:52:00.213Z [SPAWN] extension=sandbox_probe pid=23744 policy=789499cfed199ddc manifest=none manifest_sig=none
+2026-04-15T16:52:00.213Z [READY] extension=sandbox_probe pid=23744 boot_ms=4
+2026-04-15T16:52:00.318Z [IPC_OK] extension=sandbox_probe type=file.read ms=64 requestId=sandbox_probe-1776271920254-1 fallback=0
+2026-04-15T16:52:00.322Z [IPC_OK] extension=sandbox_probe type=file.write ms=4 requestId=sandbox_probe-1776271920318-2 fallback=0
+2026-04-15T16:52:00.325Z [SECURITY_DENY] extension=sandbox_probe code=file_read_denied:_C:\Users\HiH8e\AppData\Local\Temp\rawrxd-sandbox-28bOLk\system\secret.txt:C:\Users\HiH8e\AppData\Local\Temp\rawrxd-sandbox-28bOLk\system\secret.txt detail=C:\Users\HiH8e\AppData\Local\Temp\rawrxd-sandbox-28bOLk\system\secret.txt count=1
+2026-04-15T16:52:00.325Z [IPC_FAIL] extension=sandbox_probe type=file.read error=file_read_denied:_C:\Users\HiH8e\AppData\Local\Temp\rawrxd-sandbox-28bOLk\system\secret.txt:C:\Users\HiH8e\AppData\Local\Temp\rawrxd-sandbox-28bOLk\system\secret.txt requestId=sandbox_probe-1776271920322-3
+2026-04-15T16:52:00.329Z [SECURITY_DENY] extension=sandbox_probe code=file_read_denied:_C:\Users\HiH8e\AppData\Local\Temp\rawrxd-sandbox-28bOLk\system\secret.txt:C:\Users\HiH8e\AppData\Local\Temp\rawrxd-sandbox-28bOLk\system\secret.txt detail=C:\Users\HiH8e\AppData\Local\Temp\rawrxd-sandbox-28bOLk\system\secret.txt count=2
+2026-04-15T16:52:00.329Z [IPC_FAIL] extension=sandbox_probe type=file.read error=file_read_denied:_C:\Users\HiH8e\AppData\Local\Temp\rawrxd-sandbox-28bOLk\system\secret.txt:C:\Users\HiH8e\AppData\Local\Temp\rawrxd-sandbox-28bOLk\system\secret.txt requestId=sandbox_probe-1776271920326-4
+2026-04-15T16:52:00.337Z [SECURITY_DENY] extension=sandbox_probe code=network_private_denied:_127.0.0.1:127.0.0.1 detail=127.0.0.1 count=3
+2026-04-15T16:52:00.338Z [IPC_FAIL] extension=sandbox_probe type=network.request error=network_private_denied:_127.0.0.1:127.0.0.1 requestId=sandbox_probe-1776271920329-5
+2026-04-15T16:52:00.369Z [SECURITY_DENY] extension=sandbox_probe code=process_spawn_denied:_cmd.exe:cmd.exe detail=cmd.exe count=4
+2026-04-15T16:52:00.370Z [IPC_FAIL] extension=sandbox_probe type=process.spawn error=process_spawn_denied:_cmd.exe:cmd.exe requestId=sandbox_probe-1776271920338-6
+2026-04-15T16:52:00.379Z [SECURITY_DENY] extension=sandbox_probe code=process_spawn_denied:_cmd.exe:cmd.exe detail=cmd.exe count=5
+2026-04-15T16:52:00.380Z [IPC_FAIL] extension=sandbox_probe type=process.exec error=process_spawn_denied:_cmd.exe:cmd.exe requestId=sandbox_probe-1776271920370-7
+2026-04-15T16:52:00.383Z [SECURITY_DENY] extension=sandbox_probe code=native_addon_denied:_ffi-napi:ffi-napi detail=ffi-napi count=6
+2026-04-15T16:52:00.384Z [IPC_FAIL] extension=sandbox_probe type=addon.load error=native_addon_denied:_ffi-napi:ffi-napi requestId=sandbox_probe-1776271920380-8
+2026-04-15T16:52:00.384Z [SHUTDOWN] extension=sandbox_probe pid=23744 origin=host_request
+2026-04-15T16:52:00.443Z [SPAWN] extension=sandbox_invalid_policy pid=3168 policy=none manifest=none manifest_sig=none
+2026-04-15T16:52:00.443Z [READY] extension=sandbox_invalid_policy pid=3168 boot_ms=4
+2026-04-15T16:52:00.505Z [SECURITY_DENY] extension=sandbox_invalid_policy code=invalid_policy detail=Sandbox_policy_JSON_is_invalid count=1
+2026-04-15T16:52:00.509Z [SECURITY_DENY] extension=sandbox_invalid_policy code=invalid_policy:invalid_policy:_Sandbox_policy_JSON_is_invalid detail=invalid_policy:_Sandbox_policy_JSON_is_invalid count=2
+2026-04-15T16:52:00.510Z [IPC_FAIL] extension=sandbox_invalid_policy type=file.read error=invalid_policy:invalid_policy:_Sandbox_policy_JSON_is_invalid requestId=sandbox_invalid_policy-1776271920469-1
+2026-04-15T16:52:00.510Z [SHUTDOWN] extension=sandbox_invalid_policy pid=3168 origin=host_request
+2026-04-15T16:52:00.579Z [SPAWN] extension=sandbox_violation_limit pid=21580 policy=3d4a895497ff7a01 manifest=none manifest_sig=none
+2026-04-15T16:52:00.580Z [READY] extension=sandbox_violation_limit pid=21580 boot_ms=4
+2026-04-15T16:52:00.637Z [SECURITY_DENY] extension=sandbox_violation_limit code=process_spawn_denied:_cmd.exe:cmd.exe detail=cmd.exe count=1
+2026-04-15T16:52:00.638Z [IPC_FAIL] extension=sandbox_violation_limit type=process.spawn error=process_spawn_denied:_cmd.exe:cmd.exe requestId=sandbox_violation_limit-1776271920606-1
+2026-04-15T16:52:00.640Z [SECURITY_DENY] extension=sandbox_violation_limit code=process_spawn_denied:_cmd.exe:cmd.exe detail=cmd.exe count=2
+2026-04-15T16:52:00.640Z [IPC_FAIL] extension=sandbox_violation_limit type=process.spawn error=process_spawn_denied:_cmd.exe:cmd.exe requestId=sandbox_violation_limit-1776271920638-2
+2026-04-15T16:52:00.643Z [SECURITY_DENY] extension=sandbox_violation_limit code=process_spawn_denied:_cmd.exe:cmd.exe detail=cmd.exe count=3
+2026-04-15T16:52:00.643Z [DISABLED] extension=sandbox_violation_limit reason=sandbox_violations_exceeded
+2026-04-15T16:52:00.643Z [IPC_FAIL] extension=sandbox_violation_limit type=process.spawn error=Extension_disabled_due_to_sandbox_violations requestId=sandbox_violation_limit-1776271920641-3
+2026-04-15T16:52:00.644Z [IPC_FAIL] extension=sandbox_violation_limit type=process.spawn error=unknown_request_id requestId=sandbox_violation_limit-1776271920641-3
+2026-04-15T16:52:00.649Z [SHUTDOWN] extension=sandbox_violation_limit pid=21580 origin=security_violation
+2026-04-15T16:52:00.912Z [SPAWN] extension=sandbox_resource_watchdog pid=30608 policy=none manifest=none manifest_sig=none
+2026-04-15T16:52:00.912Z [READY] extension=sandbox_resource_watchdog pid=30608 boot_ms=3
+2026-04-15T16:52:01.756Z [DISABLED] extension=sandbox_resource_watchdog reason=resource_limits_exceeded metric=working_set value=39833600 limit=1
+2026-04-15T16:52:01.756Z [SHUTDOWN] extension=sandbox_resource_watchdog pid=30608 origin=resource_watchdog
+2026-04-15T16:52:01.823Z [SPAWN] extension=vscode_api_probe pid=4008 policy=789499cfed199ddc manifest=none manifest_sig=none
+2026-04-15T16:52:01.823Z [READY] extension=vscode_api_probe pid=4008 boot_ms=3
+2026-04-15T16:52:01.865Z [IPC_OK] extension=vscode_api_probe type=vscode.command.roundtrip ms=15 requestId=vscode_api_probe-1776271921850-1 fallback=0
+2026-04-15T16:52:01.868Z [IPC_OK] extension=vscode_api_probe type=vscode.fs.write ms=3 requestId=vscode_api_probe-1776271921865-2 fallback=0
+2026-04-15T16:52:01.871Z [IPC_OK] extension=vscode_api_probe type=vscode.fs.read ms=3 requestId=vscode_api_probe-1776271921868-3 fallback=0
+2026-04-15T16:52:01.873Z [UI_NOTIFY] extension=vscode_api_probe level=info message=hello-slice
+2026-04-15T16:52:01.874Z [IPC_OK] extension=vscode_api_probe type=vscode.window.info ms=3 requestId=vscode_api_probe-1776271921871-4 fallback=0
+2026-04-15T16:52:01.876Z [SECURITY_DENY] extension=vscode_api_probe code=unsupported_or_unregistered_command:rawrxd.unknown.command detail=unsupported_or_unregistered_command:rawrxd.unknown.command count=1
+2026-04-15T16:52:01.877Z [IPC_FAIL] extension=vscode_api_probe type=vscode.command.execute_unknown error=unsupported_or_unregistered_command:rawrxd.unknown.command requestId=vscode_api_probe-1776271921874-5
+2026-04-15T16:52:01.878Z [IPC_FAIL] extension=vscode_api_probe type=vscode.unsupported.debug error=unsupported_api:debug.startDebugging requestId=vscode_api_probe-1776271921877-6
+2026-04-15T16:52:01.878Z [SHUTDOWN] extension=vscode_api_probe pid=4008 origin=host_request
+2026-04-15T16:52:01.946Z [SPAWN] extension=vscode_api_probe_manifest_ok pid=4740 policy=789499cfed199ddc manifest=6020b2882748bf87 manifest_sig=a0b361362548
+2026-04-15T16:52:01.946Z [READY] extension=vscode_api_probe_manifest_ok pid=4740 boot_ms=2
+2026-04-15T16:52:01.990Z [IPC_OK] extension=vscode_api_probe_manifest_ok type=vscode.command.roundtrip ms=19 requestId=vscode_api_probe_manifest_ok-1776271921971-1 fallback=0
+2026-04-15T16:52:01.990Z [SHUTDOWN] extension=vscode_api_probe_manifest_ok pid=4740 origin=host_request
+2026-04-15T16:52:02.052Z [SPAWN] extension=vscode_api_probe_manifest_bad_json pid=10372 policy=789499cfed199ddc manifest=none manifest_sig=none
+2026-04-15T16:52:02.052Z [READY] extension=vscode_api_probe_manifest_bad_json pid=10372 boot_ms=2
+2026-04-15T16:52:02.095Z [SECURITY_DENY] extension=vscode_api_probe_manifest_bad_json code=manifest_negotiation_failed:manifest_invalid_json detail=manifest_invalid_json count=1
+2026-04-15T16:52:02.096Z [IPC_FAIL] extension=vscode_api_probe_manifest_bad_json type=vscode.window.info error=manifest_negotiation_failed:manifest_invalid_json requestId=vscode_api_probe_manifest_bad_json-1776271922079-1
+2026-04-15T16:52:02.096Z [SHUTDOWN] extension=vscode_api_probe_manifest_bad_json pid=10372 origin=host_request
+2026-04-15T16:52:02.158Z [SPAWN] extension=vscode_api_probe_manifest_abi_mismatch pid=26048 policy=789499cfed199ddc manifest=c2ee88d69bbba4b3 manifest_sig=d8784c463cf0
+2026-04-15T16:52:02.158Z [READY] extension=vscode_api_probe_manifest_abi_mismatch pid=26048 boot_ms=3
+2026-04-15T16:52:02.202Z [SECURITY_DENY] extension=vscode_api_probe_manifest_abi_mismatch code=manifest_negotiation_failed:manifest_abi_mismatch detail=manifest_abi_mismatch count=1
+2026-04-15T16:52:02.203Z [IPC_FAIL] extension=vscode_api_probe_manifest_abi_mismatch type=vscode.window.info error=manifest_negotiation_failed:manifest_abi_mismatch requestId=vscode_api_probe_manifest_abi_mismatch-1776271922185-1
+2026-04-15T16:52:02.203Z [SHUTDOWN] extension=vscode_api_probe_manifest_abi_mismatch pid=26048 origin=host_request
+2026-04-15T16:52:02.264Z [SPAWN] extension=vscode_api_probe_manifest_unknown_cap pid=5132 policy=789499cfed199ddc manifest=aad08b47d5df98b3 manifest_sig=f05e8c29cd87
+2026-04-15T16:52:02.264Z [READY] extension=vscode_api_probe_manifest_unknown_cap pid=5132 boot_ms=3
+2026-04-15T16:52:02.310Z [SECURITY_DENY] extension=vscode_api_probe_manifest_unknown_cap code=manifest_negotiation_failed:manifest_unknown_capability:capability:unknown detail=manifest_unknown_capability:capability:unknown count=1
+2026-04-15T16:52:02.310Z [IPC_FAIL] extension=vscode_api_probe_manifest_unknown_cap type=vscode.window.info error=manifest_negotiation_failed:manifest_unknown_capability:capability:unknown requestId=vscode_api_probe_manifest_unknown_cap-1776271922291-1
+2026-04-15T16:52:02.311Z [SHUTDOWN] extension=vscode_api_probe_manifest_unknown_cap pid=5132 origin=host_request
+2026-04-15T16:52:02.370Z [SPAWN] extension=vscode_api_probe_manifest_version_high pid=22768 policy=789499cfed199ddc manifest=e4a81e88153a95e0 manifest_sig=83e62f1a3a54
+2026-04-15T16:52:02.371Z [READY] extension=vscode_api_probe_manifest_version_high pid=22768 boot_ms=4
+2026-04-15T16:52:02.418Z [SECURITY_DENY] extension=vscode_api_probe_manifest_version_high code=manifest_negotiation_failed:manifest_capability_version_mismatch:capability:commands@2>1 detail=manifest_capability_version_mismatch:capability:commands@2>1 count=1
+2026-04-15T16:52:02.418Z [IPC_FAIL] extension=vscode_api_probe_manifest_version_high type=vscode.window.info error=manifest_negotiation_failed:manifest_capability_version_mismatch:capability:commands@2>1 requestId=vscode_api_probe_manifest_version_high-1776271922397-1
+2026-04-15T16:52:02.419Z [SHUTDOWN] extension=vscode_api_probe_manifest_version_high pid=22768 origin=host_request
+2026-04-15T16:52:02.477Z [SPAWN] extension=sandbox_process_allowlist_signed pid=19712 policy=384918055afa688e manifest=b6286ab152f96d57 manifest_sig=620d41542498
+2026-04-15T16:52:02.477Z [READY] extension=sandbox_process_allowlist_signed pid=19712 boot_ms=3
+2026-04-15T16:52:02.553Z [IPC_OK] extension=sandbox_process_allowlist_signed type=process.exec ms=50 requestId=sandbox_process_allowlist_signed-1776271922503-1 fallback=0
+2026-04-15T16:52:02.556Z [SECURITY_DENY] extension=sandbox_process_allowlist_signed code=process_manifest_denied:powershell.exe detail=powershell.exe count=1
+2026-04-15T16:52:02.556Z [IPC_FAIL] extension=sandbox_process_allowlist_signed type=process.exec error=process_manifest_denied:powershell.exe requestId=sandbox_process_allowlist_signed-1776271922554-2
+2026-04-15T16:52:02.557Z [SHUTDOWN] extension=sandbox_process_allowlist_signed pid=19712 origin=host_request
+2026-04-15T16:52:02.613Z [SPAWN] extension=vscode_api_probe_manifest_process_allowlist_invalid pid=13776 policy=789499cfed199ddc manifest=17f23b364361a21d manifest_sig=8c5ce87f6d89
+2026-04-15T16:52:02.613Z [READY] extension=vscode_api_probe_manifest_process_allowlist_invalid pid=13776 boot_ms=3
+2026-04-15T16:52:02.659Z [SECURITY_DENY] extension=vscode_api_probe_manifest_process_allowlist_invalid code=manifest_negotiation_failed:manifest_process_allowlist_invalid_commands detail=manifest_process_allowlist_invalid_commands count=1
+2026-04-15T16:52:02.660Z [IPC_FAIL] extension=vscode_api_probe_manifest_process_allowlist_invalid type=vscode.window.info error=manifest_negotiation_failed:manifest_process_allowlist_invalid_commands requestId=vscode_api_probe_manifest_process_allowlist_invalid-1776271922640-1
+2026-04-15T16:52:02.660Z [SHUTDOWN] extension=vscode_api_probe_manifest_process_allowlist_invalid pid=13776 origin=host_request
+2026-04-15T16:52:02.721Z [SPAWN] extension=sandbox_network_allowlist_signed pid=23412 policy=8d79b9d20f32b427 manifest=146219fe0d91e418 manifest_sig=a37a38b7c965
+2026-04-15T16:52:02.721Z [READY] extension=sandbox_network_allowlist_signed pid=23412 boot_ms=3
+2026-04-15T16:52:02.774Z [IPC_OK] extension=sandbox_network_allowlist_signed type=network.request ms=28 requestId=sandbox_network_allowlist_signed-1776271922746-1 fallback=0
+2026-04-15T16:52:02.776Z [SECURITY_DENY] extension=sandbox_network_allowlist_signed code=network_manifest_denied:127.0.0.2 detail=127.0.0.2 count=1
+2026-04-15T16:52:02.776Z [IPC_FAIL] extension=sandbox_network_allowlist_signed type=network.request error=network_manifest_denied:127.0.0.2 requestId=sandbox_network_allowlist_signed-1776271922774-2
+2026-04-15T16:52:02.776Z [SHUTDOWN] extension=sandbox_network_allowlist_signed pid=23412 origin=host_request
+2026-04-15T16:52:02.844Z [SPAWN] extension=vscode_api_probe_manifest_network_allowlist_invalid pid=29816 policy=789499cfed199ddc manifest=553efec144d8dbba manifest_sig=bfc8f617a8ce
+2026-04-15T16:52:02.845Z [READY] extension=vscode_api_probe_manifest_network_allowlist_invalid pid=29816 boot_ms=4
+2026-04-15T16:52:02.894Z [SECURITY_DENY] extension=vscode_api_probe_manifest_network_allowlist_invalid code=manifest_negotiation_failed:manifest_network_allowlist_invalid_hosts detail=manifest_network_allowlist_invalid_hosts count=1
+2026-04-15T16:52:02.894Z [IPC_FAIL] extension=vscode_api_probe_manifest_network_allowlist_invalid type=vscode.window.info error=manifest_negotiation_failed:manifest_network_allowlist_invalid_hosts requestId=vscode_api_probe_manifest_network_allowlist_invalid-1776271922870-1
+2026-04-15T16:52:02.895Z [SHUTDOWN] extension=vscode_api_probe_manifest_network_allowlist_invalid pid=29816 origin=host_request
+2026-04-15T16:52:02.950Z [SPAWN] extension=sandbox_preexec_signed_ok pid=30668 policy=789499cfed199ddc manifest=none manifest_sig=none
+2026-04-15T16:52:02.950Z [READY] extension=sandbox_preexec_signed_ok pid=30668 boot_ms=3
+2026-04-15T16:52:02.999Z [IPC_OK] extension=sandbox_preexec_signed_ok type=file.read ms=23 requestId=sandbox_preexec_signed_ok-1776271922976-1 fallback=0
+2026-04-15T16:52:03.001Z [SHUTDOWN] extension=sandbox_preexec_signed_ok pid=30668 origin=host_request
+2026-04-15T16:52:03.058Z [SPAWN] extension=sandbox_preexec_signed_missing pid=22176 policy=789499cfed199ddc manifest=none manifest_sig=none
+2026-04-15T16:52:03.058Z [READY] extension=sandbox_preexec_signed_missing pid=22176 boot_ms=3
+2026-04-15T16:52:03.088Z [IPC_FAIL] extension=sandbox_preexec_signed_missing type=file.read error=pre_execution_auth_failed:preexec_signature_missing
+2026-04-15T16:52:03.088Z [SHUTDOWN] extension=sandbox_preexec_signed_missing pid=22176 origin=host_request
+2026-04-15T16:52:03.156Z [SPAWN] extension=sandbox_trace_probe pid=20652 policy=789499cfed199ddc manifest=none manifest_sig=none
+2026-04-15T16:52:03.157Z [READY] extension=sandbox_trace_probe pid=20652 boot_ms=4
+2026-04-15T16:52:03.204Z [IPC_OK] extension=sandbox_trace_probe type=file.write ms=22 requestId=sandbox_trace_probe-1776271923182-1 fallback=0
+2026-04-15T16:52:03.204Z [SHUTDOWN] extension=sandbox_trace_probe pid=20652 origin=host_request
+manager envelope + sandbox + vscode slice + manifest negotiation tests ok
+PASS

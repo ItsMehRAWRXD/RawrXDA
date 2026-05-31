@@ -42,34 +42,34 @@ struct powerpc_features {
     }
 };
 
-static int ggml_backend_cpu_powerpc_score() {
+static int ggml_rxd_backend_cpu_powerpc_score() {
     int score = 1;
     powerpc_features pf;
 
 // Platform scores
-#if defined(GGML_USE_POWER7)
+#if defined(GGML_RXD_USE_POWER7)
     if (pf.power_version < 7) { return 0; }
     score += 1<<1;
 #endif
-#if defined(GGML_USE_POWER8)
+#if defined(GGML_RXD_USE_POWER8)
     if (pf.power_version < 8) { return 0; }
     score += 1<<2;
 #endif
-#if defined(GGML_USE_POWER9)
+#if defined(GGML_RXD_USE_POWER9)
     if (pf.power_version < 9) { return 0; }
     score += 1<<3;
 #endif
-#if defined(GGML_USE_POWER10)
+#if defined(GGML_RXD_USE_POWER10)
     if (pf.power_version < 10) { return 0; }
     score += 1<<4;
 #endif
-#if defined(GGML_USE_POWER11)
+#if defined(GGML_RXD_USE_POWER11)
     if (pf.power_version < 11) { return 0; }
     score += 1<<5;
 #endif
 
 // Feature scores
-#if defined(GGML_USE_VSX)
+#if defined(GGML_RXD_USE_VSX)
     if (!pf.has_vsx) { return 0; }
     score += 1<<6;
 #endif
@@ -77,6 +77,8 @@ static int ggml_backend_cpu_powerpc_score() {
     return score;
 }
 
-GGML_BACKEND_DL_SCORE_IMPL(ggml_backend_cpu_powerpc_score)
+GGML_RXD_BACKEND_DL_SCORE_IMPL(ggml_rxd_backend_cpu_powerpc_score)
 
 #endif // defined(__powerpc64__) || defined(__ppc64__) || defined(__PPC64__)
+
+

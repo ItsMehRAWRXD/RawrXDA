@@ -1,0 +1,15 @@
+[Prometheus] Listening on port 9090 for /metrics...
+[headless] before_console_attach
+[headless] after_console_attach
+[headless] before_help_gate
+[headless] after_help_gate
+[headless] headless_block_enter
+[headless] parse_cmdline_begin
+[headless] parse_cmdline_end
+[headless] launch | argc=5 cmdline="--agent-prompt --prompt Read README.md" cwd="D:\rawrxd\build-ninja\bin"
+[headless] initialize_begin
+[AgentOllamaClient] Context decision requested=131072 env=0 system_max=131072 kv_max=167772 effective=118343 kv_bytes=9694658560 kv_per_token=81920 vram_budget=17179869184 kv_budget=9694708531 pressure_ratio=0.999995 pressure=1 adapted=1
+[headless] initialize_end | success=1 errorCode=0
+[headless] run_begin
+[AgentOllamaClient] Context decision requested=131072 env=0 system_max=131072 kv_max=167772 effective=118343 kv_bytes=9694658560 kv_per_token=81920 vram_budget=17179869184 kv_budget=9694708531 pressure_ratio=0.999995 pressure=1 adapted=1
+[headless] run_end | exitCode=0

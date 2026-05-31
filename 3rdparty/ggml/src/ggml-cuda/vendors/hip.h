@@ -6,9 +6,9 @@
 #include <hip/hip_fp16.h>
 #include <hip/hip_bf16.h>
 
-#if defined(GGML_HIP_ROCWMMA_FATTN)
+#if defined(GGML_RXD_HIP_ROCWMMA_FATTN)
 #include <rocwmma/rocwmma-version.hpp>
-#endif // defined(GGML_HIP_ROCWMMA_FATTN)
+#endif // defined(GGML_RXD_HIP_ROCWMMA_FATTN)
 
 #define CUBLAS_GEMM_DEFAULT HIPBLAS_GEMM_DEFAULT
 #define CUBLAS_GEMM_DEFAULT_TENSOR_OP HIPBLAS_GEMM_DEFAULT
@@ -24,7 +24,7 @@
 #define CU_MEM_ALLOCATION_TYPE_PINNED hipMemAllocationTypePinned
 #define CU_MEM_LOCATION_TYPE_DEVICE hipMemLocationTypeDevice
 #define CU_MEM_ACCESS_FLAGS_PROT_READWRITE hipMemAccessFlagsProtReadWrite
-#define CU_CHECK(fn) {hipError_t err = fn; if(err != hipSuccess) { GGML_ABORT("HipVMM Failure: %s\n", hipGetErrorString(err)); }}
+#define CU_CHECK(fn) {hipError_t err = fn; if(err != hipSuccess) { GGML_RXD_ABORT("HipVMM Failure: %s\n", hipGetErrorString(err)); }}
 #define __shfl_sync(mask, var, laneMask, width) __shfl(var, laneMask, width)
 #define __shfl_up_sync(mask, var, laneMask, width) __shfl_up(var, laneMask, width)
 #define __shfl_xor_sync(mask, var, laneMask, width) __shfl_xor(var, laneMask, width)

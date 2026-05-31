@@ -304,4 +304,12 @@ CommandResult handleTier1SplitFocusNext(const CommandContext& ctx);
 CommandResult handleTier1AutoUpdateCheck(const CommandContext& ctx);
 CommandResult handleTier1UpdateDismiss(const CommandContext& ctx);
 
+
+
+
+
+namespace RawrXD::Commands {
+}
+
+
 #endif // RAWRXD_SSOT_HANDLERS_H

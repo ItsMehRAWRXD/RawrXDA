@@ -6,20 +6,53 @@ on:
   pull_request:
   workflow_dispatch:   # allows the "Run workflow" button
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build-and-test:
     runs-on: windows-latest
-    defaults:
-      run:
-        working-directory: RawrXD-ModelLoader
     steps:
+      - name: Enable Git long paths
+        shell: pwsh
+        run: git config --system core.longpaths true
+
       - name: Checkout Code
         uses: actions/checkout@v4
+
+      - name: Resolve project paths
+        shell: pwsh
+        run: |
+          $candidate = Join-Path $env:GITHUB_WORKSPACE 'RawrXD-ModelLoader'
+          if (Test-Path (Join-Path $candidate 'scripts\build.ps1')) {
+            $root = $candidate
+          } elseif (Test-Path (Join-Path $env:GITHUB_WORKSPACE 'scripts\build.ps1')) {
+            $root = $env:GITHUB_WORKSPACE
+          } else {
+            Write-Host "Workspace contents (top level):"
+            Get-ChildItem -Path $env:GITHUB_WORKSPACE -Force
+            throw "Could not locate scripts/build.ps1 in workspace or RawrXD-ModelLoader subfolder."
+          }
+
+          $services = Join-Path $root 'services'
+          $hexmag = Join-Path $services 'hexmag'
+
+          if (-not (Test-Path $services)) { throw "Missing services directory at $services" }
+          if (-not (Test-Path $hexmag)) { throw "Missing hexmag directory at $hexmag" }
+
+          "RAWRXD_PROJECT_ROOT=$root" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "RAWRXD_SERVICES_DIR=$services" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "RAWRXD_HEXMAG_DIR=$hexmag" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+          Write-Host "Resolved project root: $root"
+          Write-Host "Resolved services dir: $services"
+          Write-Host "Resolved hexmag dir: $hexmag"
 
       - name: Add MSBuild
         uses: microsoft/setup-msbuild@v1.3
 
       - name: Build Win32 IDE
+        working-directory: ${{ env.RAWRXD_PROJECT_ROOT }}
         run: .\scripts\build.ps1 -Config Release -A x64
 
       - name: Set up Python
@@ -28,11 +61,11 @@ jobs:
           python-version: '3.11'
 
       - name: Install Python dependencies
-        working-directory: RawrXD-ModelLoader/services
+        working-directory: ${{ env.RAWRXD_SERVICES_DIR }}
         run: pip install -r requirements.txt
 
       - name: Start HexMag Test Swarm (background on port 8001)
-        working-directory: RawrXD-ModelLoader
+        working-directory: ${{ env.RAWRXD_HEXMAG_DIR }}
         shell: pwsh
         run: |
           Start-Process python -ArgumentList @('hexmag_engine.py', '--port', '8001') -NoNewWindow
@@ -42,7 +75,7 @@ jobs:
           } while ($r -ne 200)
 
       - name: Smoke-test /ask and /agent endpoints
-        working-directory: RawrXD-ModelLoader/services
+        working-directory: ${{ env.RAWRXD_SERVICES_DIR }}
         shell: pwsh
         run: python test_smoke.py
 

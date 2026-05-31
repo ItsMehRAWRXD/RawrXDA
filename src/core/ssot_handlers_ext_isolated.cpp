@@ -1,5 +1,5 @@
 #include "shared_feature_dispatch.h"
-#include "../agentic/AgentOllamaClient.h"
+#include "../agentic/NativeInferenceClient.h"
 #include "js_extension_host.hpp"
 
 #include <windows.h>
@@ -15,11 +15,11 @@
 
 namespace {
 
-RawrXD::Agent::AgentOllamaClient createOllamaClientExt() {
-    RawrXD::Agent::OllamaConfig cfg;
+RawrXD::Agent::NativeInferenceClient createOllamaClientExt() {
+    RawrXD::Agent::NativeInferenceConfig cfg;
     cfg.host = "127.0.0.1";
     cfg.port = 11434;
-    return RawrXD::Agent::AgentOllamaClient(cfg);
+    return RawrXD::Agent::NativeInferenceClient(cfg);
 }
 
 struct AIModelState {
@@ -111,7 +111,7 @@ CommandResult runAiPrompt(const CommandContext& ctx, const char* systemPrompt, c
 
     auto client = createOllamaClientExt();
     if (!client.TestConnection()) {
-        ctx.output("[AI] Ollama not available at 127.0.0.1:11434\n");
+        ctx.output("[AI] Ollama not available at 127.0.0.1:11435\n");
         return CommandResult::error(opName);
     }
 
@@ -162,7 +162,7 @@ CommandResult handleAIInlineComplete(const CommandContext& ctx) {
 
     auto client = createOllamaClientExt();
     if (!client.TestConnection()) {
-        ctx.output("[AI] Ollama not available at 127.0.0.1:11434\n");
+        ctx.output("[AI] Ollama not available at 127.0.0.1:11435\n");
         return CommandResult::error("ai.inlineComplete: no ollama");
     }
 
@@ -276,7 +276,7 @@ CommandResult handleAIModelSelect(const CommandContext& ctx) {
 
     auto client = createOllamaClientExt();
     if (!client.TestConnection()) {
-        ctx.output("[AI] Ollama not available at 127.0.0.1:11434\n");
+        ctx.output("[AI] Ollama not available at 127.0.0.1:11435\n");
         return CommandResult::error("ai.modelSelect: no ollama");
     }
 

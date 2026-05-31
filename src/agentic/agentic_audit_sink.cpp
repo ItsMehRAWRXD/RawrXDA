@@ -37,7 +37,7 @@ void agenticAuditEmit(const std::string& eventKind, const std::string& jsonLine)
         copy(eventKind, jsonLine);
         return;
     }
-    std::fprintf(stderr, "[AgenticAudit] %s %s\n", eventKind.c_str(), jsonLine.c_str());
+    // Audit logging disabled
 }
 
 }  // namespace Agentic

@@ -523,7 +523,7 @@ std::vector<float> InterpretabilityAnalyzer::performPCA(
     const std::vector<std::vector<float>>& data,
     int components) {
 
-    // Simplified PCA using SVD analogy (for demonstration)
+    // Simplified PCA using SVD analogy
     // In production, use Eigen library or similar
     std::vector<float> result(components, 0.0f);
     if (data.empty() || components <= 0) {

@@ -1,4 +1,4 @@
-# GGML_CPU_AUDIT.md
+# ggml_rxd_CPU_AUDIT.md
 
 ## Folder: `src/ggml-cpu/`
 
@@ -18,8 +18,8 @@ This folder contains CPU-specific tensor operations, quantization, threading, an
 - Quantization routines are implemented in C, with references to CPU and GPU-specific code.
 
 ### MASM Migration Targets
-- All CPU tensor ops (matmul, add, mul, etc.) to be replaced with MASM SIMD routines (`ggml_masm/tensor_ops.asm`).
-- Quantization/dequantization routines to be ported to MASM (`ggml_masm/quantization.asm`).
+- All CPU tensor ops (matmul, add, mul, etc.) to be replaced with MASM SIMD routines (`ggml_rxd_masm/tensor_ops.asm`).
+- Quantization/dequantization routines to be ported to MASM (`ggml_rxd_masm/quantization.asm`).
 - Threading and atomic operations to be refactored for MASM64 compatibility.
 - Remove all platform-specific threading and atomic dependencies in favor of MASM64 implementations.
 
@@ -28,3 +28,5 @@ This folder contains CPU-specific tensor operations, quantization, threading, an
 - [ ] Refactor CPU tensor ops to call MASM SIMD routines.
 - [ ] Port quantization routines to MASM.
 - [ ] Add regression and fuzz tests for MASM tensor ops and quantization.
+
+

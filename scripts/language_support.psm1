@@ -216,7 +216,7 @@ function Get-LanguageGreeting {
         'Arabic' = "👋 مرحبا! أنا مساعد RawrXD IDE! يمكنني مساعدتك باللغة العربية أو التبديل إلى لغتك المفضلة."
     }
 
-    return $greetings[$Language] ?? $greetings['English']
+    if ($null -ne $greetings[$Language]) { return $greetings[$Language] } else { return $greetings['English'] }
 }
 
 function Get-LanguageHelpMenu {

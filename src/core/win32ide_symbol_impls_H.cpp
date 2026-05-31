@@ -4,7 +4,7 @@
 #include <cstring>
 #include <immintrin.h>
 
-extern "C" void ggml_gemm_q4_0(int M, int N, int K,
+extern "C" void ggml_rxd_gemm_q4_0(int M, int N, int K,
                                 const float* A,
                                 const uint8_t* Bq4,
                                 float scale,

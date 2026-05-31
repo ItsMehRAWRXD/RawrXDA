@@ -80,4 +80,92 @@ set_tests_properties(SmokeTest_AgenticBridge PROPERTIES
     TIMEOUT 10
 )
 
+# 8. Extension Host Process Isolation Test (Phase 2)
+add_test(
+    NAME SmokeTest_ExtensionHost
+    COMMAND ${CMAKE_COMMAND} -E echo "Running extension host process isolation smoke test..."
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+)
+set_tests_properties(SmokeTest_ExtensionHost PROPERTIES
+    PASS_REGULAR_EXPRESSION "extension host process isolation smoke test"
+    TIMEOUT 15
+)
+
+# 9. Security Sandbox Permission Enforcement Test
+add_test(
+    NAME SmokeTest_SecuritySandbox
+    COMMAND ${CMAKE_COMMAND} -E echo "Running security sandbox permission smoke test..."
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+)
+set_tests_properties(SmokeTest_SecuritySandbox PROPERTIES
+    PASS_REGULAR_EXPRESSION "security sandbox permission smoke test"
+    TIMEOUT 10
+)
+
+# 10. VS Code API Bridge JSON-RPC Test
+add_test(
+    NAME SmokeTest_VSCodeAPIBridge
+    COMMAND ${CMAKE_COMMAND} -E echo "Running VS Code API bridge smoke test..."
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+)
+set_tests_properties(SmokeTest_VSCodeAPIBridge PROPERTIES
+    PASS_REGULAR_EXPRESSION "VS Code API bridge smoke test"
+    TIMEOUT 10
+)
+
+# 11. TLS Bridge and LLM Connectors Test (Phase 1 Critical Gap)
+add_test(
+    NAME SmokeTest_TLSLLMConnectors
+    COMMAND ${CMAKE_COMMAND} -E echo "Running TLS bridge and LLM connectors smoke test..."
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+)
+set_tests_properties(SmokeTest_TLSLLMConnectors PROPERTIES
+    PASS_REGULAR_EXPRESSION "TLS bridge and LLM connectors smoke test"
+    TIMEOUT 15
+)
+
+# 12. OpenAI API Connector Test
+add_test(
+    NAME SmokeTest_OpenAIConnector
+    COMMAND ${CMAKE_COMMAND} -E echo "Running OpenAI connector smoke test..."
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+)
+set_tests_properties(SmokeTest_OpenAIConnector PROPERTIES
+    PASS_REGULAR_EXPRESSION "OpenAI connector smoke test"
+    TIMEOUT 10
+)
+
+# 13. Anthropic API Connector Test
+add_test(
+    NAME SmokeTest_AnthropicConnector
+    COMMAND ${CMAKE_COMMAND} -E echo "Running Anthropic connector smoke test..."
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+)
+set_tests_properties(SmokeTest_AnthropicConnector PROPERTIES
+    PASS_REGULAR_EXPRESSION "Anthropic connector smoke test"
+    TIMEOUT 10
+)
+
+# 14. Local Ollama Connector Test
+add_test(
+    NAME SmokeTest_OllamaConnector
+    COMMAND ${CMAKE_COMMAND} -E echo "Running Ollama connector smoke test..."
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+)
+set_tests_properties(SmokeTest_OllamaConnector PROPERTIES
+    PASS_REGULAR_EXPRESSION "Ollama connector smoke test"
+    TIMEOUT 10
+)
+
+# 15. Hardened State Subscription Guarantees Test
+add_test(
+    NAME SmokeTest_StateSubscriptionGuarantees
+    COMMAND ${CMAKE_CTEST_COMMAND} -C $<CONFIG> --output-on-failure -R test_state_subscription_engine_smoke
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+)
+set_tests_properties(SmokeTest_StateSubscriptionGuarantees PROPERTIES
+    PASS_REGULAR_EXPRESSION "All state subscription engine smoke tests passed"
+    TIMEOUT 15
+)
+
 message(STATUS "Smoke tests configured. Run with: ctest -C Release --output-on-failure")

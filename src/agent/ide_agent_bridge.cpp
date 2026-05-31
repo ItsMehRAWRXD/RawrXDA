@@ -99,8 +99,6 @@ void IDEAgentBridge::initialize(const std::string& endpoint,
                                const std::string& apiKey)
 {
     m_invoker->setLLMBackend(backend, endpoint, apiKey);
-    fprintf(stderr, "[INFO] [IDEAgentBridge] Initialized with backend: %s at %s\n",
-            backend.c_str(), endpoint.c_str());
 }
 
 /**
@@ -115,8 +113,6 @@ void IDEAgentBridge::setProjectRoot(const std::string& root)
     ctx.dryRun = m_dryRun;
 
     m_executor->setContext(ctx);
-
-    fprintf(stderr, "[IDEAgentBridge] Project root set to: %s\n", root.c_str());
 }
 
 /**
@@ -144,7 +140,6 @@ void IDEAgentBridge::executeWish(const std::string& wish, bool requireApproval)
     m_retriesLeft = m_maxRetries;
     m_currentRetryBackoffMs = m_retryBackoffMs;
 
-    fprintf(stderr, "[IDEAgentBridge] Executing wish: %s\n", wish.c_str());
     m_invoker->invokeAsync(m_lastParams);
 }
 
@@ -167,7 +162,6 @@ void IDEAgentBridge::planWish(const std::string& wish)
     m_retriesLeft = m_maxRetries;
     m_currentRetryBackoffMs = m_retryBackoffMs;
 
-    fprintf(stderr, "[IDEAgentBridge] Planning wish: %s\n", wish.c_str());
     m_invoker->invokeAsync(m_lastParams);
 }
 
@@ -177,7 +171,6 @@ void IDEAgentBridge::planWish(const std::string& wish)
 void IDEAgentBridge::approvePlan()
 {
     if (!m_waitingForApproval) {
-        fprintf(stderr, "[WARN] [IDEAgentBridge] No plan waiting for approval\n");
         return;
     }
 
@@ -193,7 +186,6 @@ void IDEAgentBridge::rejectPlan()
     m_waitingForApproval = false;
     m_isExecuting = false;
     if (onExecutionCancelled) onExecutionCancelled();
-    fprintf(stderr, "[IDEAgentBridge] Plan rejected by user\n");
 }
 
 /**
@@ -208,8 +200,6 @@ void IDEAgentBridge::cancelExecution()
     m_isExecuting = false;
     m_waitingForApproval = false;
     if (onExecutionCancelled) onExecutionCancelled();
-
-    fprintf(stderr, "[IDEAgentBridge] Execution cancelled\n");
 }
 
 /**
@@ -222,8 +212,6 @@ void IDEAgentBridge::setDryRunMode(bool enabled)
     ExecutionContext ctx = m_executor->context();
     ctx.dryRun = enabled;
     m_executor->setContext(ctx);
-
-    fprintf(stderr, "[IDEAgentBridge] Dry-run mode: %s\n", enabled ? "ON" : "OFF");
 }
 
 /**
@@ -232,14 +220,12 @@ void IDEAgentBridge::setDryRunMode(bool enabled)
 void IDEAgentBridge::setStopOnError(bool stopOnError)
 {
     m_stopOnError = stopOnError;
-    fprintf(stderr, "[IDEAgentBridge] Stop on error: %s\n", stopOnError ? "YES" : "NO");
 }
 
 void IDEAgentBridge::setRetryPolicy(int maxRetries, int initialBackoffMs)
 {
     m_maxRetries = maxRetries;
     m_retryBackoffMs = initialBackoffMs;
-    fprintf(stderr, "[IDEAgentBridge] Retry policy: maxRetries=%d, backoff=%d ms\n", maxRetries, initialBackoffMs);
 }
 
 void IDEAgentBridge::retryPlanGeneration()
@@ -250,8 +236,6 @@ void IDEAgentBridge::retryPlanGeneration()
     m_retriesLeft--;
     if (m_currentRetryBackoffMs < 30000)
         m_currentRetryBackoffMs = (m_currentRetryBackoffMs * 2 <= 30000) ? m_currentRetryBackoffMs * 2 : 30000;
-
-    fprintf(stderr, "[IDEAgentBridge] Retrying plan generation in %d ms (%d left)\n", backoff, m_retriesLeft);
 
     // Join any previous retry thread before starting a new one
     if (m_retryThread.joinable()) {
@@ -317,9 +301,6 @@ void IDEAgentBridge::onActionCompleted(int index, bool success, const nlohmann::
     }
 
     if (onAgentExecutionProgress) onAgentExecutionProgress(index, description, success);
-
-    fprintf(stderr, "[IDEAgentBridge] Action %d completed: %s\n",
-            index + 1, success ? "OK" : "FAILED");
 }
 
 /**
@@ -327,8 +308,6 @@ void IDEAgentBridge::onActionCompleted(int index, bool success, const nlohmann::
  */
 void IDEAgentBridge::onActionFailed(int index, const std::string& error, bool recoverable)
 {
-    fprintf(stderr, "[WARN] [IDEAgentBridge] Action %d failed: %s\n", index, error.c_str());
-
     if (!recoverable) {
         m_isExecuting = false;
         if (onAgentError) onAgentError("Unrecoverable error in action " + std::to_string(index) + ": " + error, false);
@@ -348,7 +327,6 @@ void IDEAgentBridge::onPlanCompleted(bool success, const nlohmann::json& result)
 
     if (success) {
         recordExecution(m_currentPlan.wish, true, result, elapsedMs);
-        fprintf(stderr, "[INFO] [IDEAgentBridge] Plan completed successfully in %d ms\n", elapsedMs);
         if (onAgentCompleted) onAgentCompleted(result, elapsedMs);
     } else {
         recordExecution(m_currentPlan.wish, false, result, elapsedMs);
@@ -361,7 +339,6 @@ void IDEAgentBridge::onPlanCompleted(bool success, const nlohmann::json& result)
  */
 void IDEAgentBridge::onUserInputNeeded(const std::string& query, const std::vector<std::string>& options)
 {
-    fprintf(stderr, "[IDEAgentBridge] User input needed: %s\n", query.c_str());
     if (onUserInputRequested) onUserInputRequested(query, options);
 }
 
@@ -421,9 +398,6 @@ void IDEAgentBridge::executeCurrentPlan()
     m_executor->setContext(ctx);
     JsonValue actionsJson = JsonValue::parse(m_currentPlan.actions.dump());
     m_executor->executePlan(actionsJson, m_stopOnError);
-
-    fprintf(stderr, "[IDEAgentBridge] Plan execution started with %d actions\n",
-            static_cast<int>(m_currentPlan.actions.size()));
 }
 
 /**
@@ -457,8 +431,5 @@ void IDEAgentBridge::recordExecution(const std::string& wish,
     entry["result"] = result;
 
     m_executionHistory.push_back(entry);
-
-    fprintf(stderr, "[IDEAgentBridge] Execution recorded: %s in %d ms\n",
-            success ? "SUCCESS" : "FAILED", elapsedMs);
 }
 

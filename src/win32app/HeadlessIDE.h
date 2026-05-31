@@ -23,40 +23,40 @@
 // NO Qt. NO HWND. NO GDI. NO message loop.
 // ============================================================================
 
+#include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#include <windows.h>
 
 #ifdef ERROR
 #undef ERROR
 #endif
 
-#include <string>
-#include <vector>
 #include <array>
-#include <memory>
-#include <map>
-#include <unordered_map>
-#include <thread>
-#include <mutex>
 #include <atomic>
-#include <functional>
-#include <condition_variable>
 #include <climits>
+#include <condition_variable>
 #include <deque>
+#include <functional>
+#include <map>
+#include <memory>
+#include <mutex>
+#include <string>
+#include <thread>
+#include <unordered_map>
+#include <vector>
 
+#include "../agentic_engine.h"
+#include "../gguf_loader.h"
+#include "../model_source_resolver.h"
+#include "../modules/ExtensionLoader.hpp"
+#include "../modules/codex_ultimate.h"
+#include "../modules/engine_manager.h"
+#include "../streaming_gguf_loader.h"
 #include "IOutputSink.h"
 #include "Win32IDE_AgenticBridge.h"
 #include "Win32IDE_Autonomy.h"
 #include "Win32IDE_SubAgent.h"
 #include "multi_response_engine.h"
-#include "../agentic_engine.h"
-#include "../gguf_loader.h"
-#include "../streaming_gguf_loader.h"
-#include "../model_source_resolver.h"
-#include "../modules/engine_manager.h"
-#include "../modules/codex_ultimate.h"
-#include "../modules/ExtensionLoader.hpp"
 #include <nlohmann/json.hpp>
 
 // Forward declarations
@@ -64,7 +64,8 @@ class MultiResponseEngine;
 class SubAgentManager;
 class AgentHistoryRecorder;
 class AgenticEngine;
-struct AgentHistoryDeleter {
+struct AgentHistoryDeleter
+{
     void operator()(AgentHistoryRecorder* ptr) const;
 };
 struct AgentHistoryDeleter;
@@ -72,23 +73,21 @@ struct AgentHistoryDeleter;
 // ============================================================================
 // Headless initialization result
 // ============================================================================
-struct HeadlessResult {
+struct HeadlessResult
+{
     bool success;
     const char* detail;
     int errorCode;
 
-    static HeadlessResult ok(const char* msg = "OK") {
-        return { true, msg, 0 };
-    }
-    static HeadlessResult error(const char* msg, int code = -1) {
-        return { false, msg, code };
-    }
+    static HeadlessResult ok(const char* msg = "OK") { return {true, msg, 0}; }
+    static HeadlessResult error(const char* msg, int code = -1) { return {false, msg, code}; }
 };
 
 // ============================================================================
 // Headless run mode (how the main loop behaves)
 // ============================================================================
-enum class HeadlessRunMode {
+enum class HeadlessRunMode
+{
     Server,      // Start HTTP server, block until SIGINT/SIGTERM (default)
     REPL,        // Interactive console REPL with command processing
     SingleShot,  // Process one prompt from --prompt arg, print result, exit
@@ -98,34 +97,100 @@ enum class HeadlessRunMode {
 // ============================================================================
 // Headless configuration (parsed from argc/argv)
 // ============================================================================
-struct HeadlessConfig {
-    HeadlessRunMode mode           = HeadlessRunMode::Server;
-    int             port           = 11435;
-    std::string     bindAddress    = "127.0.0.1";
-    std::string     modelPath;            // --model <path>
-    std::string     prompt;               // --prompt <text> (SingleShot mode)
-    std::string     inputFile;            // --input <file>  (Batch mode)
-    std::string     outputFile;           // --output <file> (Batch mode)
-    std::string     settingsFile;         // --settings <file>
-    std::string     backend;              // --backend local|ollama|openai|claude|gemini
-    bool            verbose        = false;
-    bool            quiet          = false;
-    bool            jsonOutput     = false;  // --json: emit structured JSON
-    bool            enableRepl     = false;  // --repl: interactive mode
-    bool            enableServer   = true;   // --no-server: disable HTTP
-    int             maxTokens      = 2048;
-    float           temperature    = 0.7f;
-    std::string     ollamaHost     = "127.0.0.1";
-    int             ollamaPort     = 11434;
-    std::string     workingDir;             // --dir <path>
-    bool            listModelsOnly = false; // --list: list Ollama models and exit
+struct HeadlessConfig
+{
+    HeadlessRunMode mode = HeadlessRunMode::Server;
+    int port = 11435;
+    std::string bindAddress = "127.0.0.1";
+    std::string modelPath;     // --model <path>
+    std::string prompt;        // --prompt <text> (SingleShot mode)
+    std::string inputFile;     // --input <file>  (Batch mode)
+    std::string outputFile;    // --output <file> (Batch mode)
+    std::string settingsFile;  // --settings <file>
+    std::string backend;       // --backend local|ollama|openai|claude|gemini
+    bool verbose = false;
+    bool quiet = false;
+    bool jsonOutput = false;       // --json: emit structured JSON
+    bool exitAfterLoad = false;    // --exit-after-load: forensic one-shot
+    bool forensicMapOnly = false;  // --forensic-map-only: skip full GGUF parse and map probe only
+    bool enableRepl = false;       // --repl: interactive mode
+    bool enableServer = true;      // --no-server: disable HTTP
+    int maxTokens = 2048;
+    float temperature = 0.7f;
+    bool localGpuEnabled = true;   // --local-gpu on|off
+    std::string ollamaHost = "127.0.0.1";
+    int ollamaPort = 11434;
+    std::string workingDir;          // --dir <path>
+    bool listModelsOnly = false;     // --list: list Ollama models and exit
+    bool benchAttention = false;     // --bench-attention: run hidden flash-attention benchmark and exit
+    bool benchSweep = false;         // --bench-sweep: run hidden scaling sweep benchmark matrix and exit
+    int benchBatchSize = 1;          // --bench-batch
+    int benchSeqLen = 1024;          // --bench-seq-len
+    int benchHeadDim = 128;          // --bench-head-dim
+    int benchNumHeads = 32;          // --bench-heads
+    int benchWarmupIters = 1;        // --bench-warmup
+    int benchMeasureIters = 2;       // --bench-iters
+    bool benchMedianMode = false;    // --bench-median: report median iteration instead of mean
+    std::string benchCsvPath;        // --bench-csv <path>: append benchmark row to CSV
+    bool traceTokenSummary = false;  // --trace-token-summary: emit Titan token trace summary after single-shot
+    std::string traceTokenCsvPath;   // --trace-token-csv <path>: dump Titan token trace CSV after single-shot
+    /// When true (--agent-prompt), Ollama uses the multi-turn tool loop (parity with IDE agentic chat).
+    bool agentPromptMode = false;
+    /// Optional fixed Ollama model name (--ollama-model); overrides auto-pick from /api/tags. Env: RAWRXD_NATIVE_MODEL.
+    std::string ollamaModel;
+
+    // Wiring auto-mapper and CLI/GUI start-end coverage checks
+    bool autoMapWiring = false;
+    bool checkWiringBoundaries = false;
+    bool wiringIncludeLegacy = true;
+    int wiringReinspectPasses = 2;
+    std::string wiringReportPath;
+    std::string wiringSubmissionPath;
+
+    // Autonomous workflow execution mode (Phase 1 Agent Polish)
+    bool autonomousWorkflowMode = false;  // --autonomous: enable workflow execution mode
+    std::string workflowName;              // --workflow <name>: workflow to execute
+    std::string workflowStateFile;         // --state <file>: serialized workflow state to resume
+    bool workflowVerbose = false;          // --workflow-verbose: detailed workflow logging
+    std::string workflowOutputDir;         // --workflow-output <dir>: directory for workflow outputs
+};
+
+// ============================================================================
+// Streaming protocol contract for partial backend updates
+// ============================================================================
+enum class BackendRequestType
+{
+    GeneralInference = 0,
+    LSPCompletion = 1,
+    ArchitecturalReasoning = 2
+};
+
+struct StreamChunk
+{
+    uint64_t sequence_id = 0;
+    std::string token_delta;
+    bool is_final = false;
+};
+
+struct ExtendedBackendResult
+{
+    bool success = false;
+    BackendRequestType request_type = BackendRequestType::GeneralInference;
+    std::string final_text;
+    std::vector<StreamChunk> chunks;
+    uint64_t prompt_tokens = 0;
+    uint64_t completion_tokens = 0;
+    double tokens_per_sec = 0.0;
+    double latency_ms = 0.0;
+    std::string error;
 };
 
 // ============================================================================
 // HeadlessIDE — the headless surface class
 // ============================================================================
-class HeadlessIDE {
-public:
+class HeadlessIDE
+{
+  public:
     HeadlessIDE();
     ~HeadlessIDE();
 
@@ -153,21 +218,23 @@ public:
     bool isModelLoaded() const;
     std::string getLoadedModelName() const;
     std::string getModelInfo() const;
+    bool prepareInferenceBackend(const std::string& requestedModel = std::string());
 
     // ---- Inference ----
     std::string runInference(const std::string& prompt);
     std::string runInference(const std::string& prompt, int maxTokens, float temperature);
-    void runInferenceStreaming(const std::string& prompt,
-                               std::function<void(const char*, size_t)> tokenCallback);
+    void runInferenceStreaming(const std::string& prompt, std::function<void(const StreamChunk&)> chunkCallback);
+    void runInferenceStreaming(const std::string& prompt, std::function<void(const char*, size_t)> tokenCallback);
 
     // ---- Backend switcher (Phase 8B) ----
-    enum class AIBackendType {
-        LocalGGUF  = 0,
-        Ollama     = 1,
-        OpenAI     = 2,
-        Claude     = 3,
-        Gemini     = 4,
-        Count      = 5
+    enum class AIBackendType
+    {
+        LocalGGUF = 0,
+        Native = 1,      // Renamed from 'native' to avoid Windows macro conflict
+        OpenAI = 2,
+        Claude = 3,
+        Gemini = 4,
+        Count = 5
     };
     bool setActiveBackend(AIBackendType type);
     AIBackendType getActiveBackendType() const;
@@ -247,12 +314,13 @@ public:
     std::string getFullStatusDump() const;
     std::string getVersionString() const;
     uint64_t getUptimeMs() const;
+    std::string captureProfileBundleV1(const std::string& baselineLabel = "baseline_a", int sampleSeconds = 30);
 
     // ---- Instructions Context (Phase 34 — persistent across session) ----
     std::string getInstructionsContent() const;
     bool isInstructionsLoaded() const { return m_instructionsInitialized; }
 
-private:
+  private:
     // ---- Argument parsing ----
     HeadlessResult parseArgs(int argc, char* argv[]);
 
@@ -279,6 +347,10 @@ private:
     int runReplMode();
     int runSingleShotMode();
     int runBatchMode();
+    int runAttentionBenchMode();
+    int runScalingSweepMode();
+    int runWiringAuditMode();
+    int runAutonomousWorkflowMode();  // Phase 1: Execute serialized agent workflows
 
     // ---- REPL helpers ----
     void processReplCommand(const std::string& input);
@@ -288,104 +360,116 @@ private:
     // ---- Tool execution (parity with Win32 Agent > Run Tool; used by /api/tool and /run-tool) ----
     bool executeToolRepl(const std::string& toolName, const std::string& argsJson, std::string& outResult);
 
+    // ---- Agentic tool dispatch loop (for --agent-prompt mode) ----
+    std::string processInferenceWithToolLoop(const std::string& initialPrompt, const std::string& chatModel,
+                                             std::function<std::string(const std::string&)> ollamaPost,
+                                             int maxIterations = 5);
+
     // ---- HTTP server (delegating to Win32IDE_LocalServer logic) ----
     void serverLoop();
     void handleClient(SOCKET clientFd);
+
+    // SEH crash guard for detached client threads
+    static DWORD headlessHandleClientSafe(HeadlessIDE*, SOCKET);
 
     // ---- Shutdown ----
     void shutdownAll();
 
     // ---- State ----
-    HeadlessConfig                    m_config;
-    std::unique_ptr<IOutputSink>      m_outputSink;
-    std::atomic<bool>                 m_running{false};
-    std::atomic<bool>                 m_shutdownRequested{false};
+    HeadlessConfig m_config;
+    std::unique_ptr<IOutputSink> m_outputSink;
+    std::atomic<bool> m_running{false};
+    std::atomic<bool> m_shutdownRequested{false};
 
     // Engine pointers (not owned — same pattern as Win32IDE)
-    EngineManager*                    m_engineManager   = nullptr;
-    CodexUltimate*                    m_codexUltimate   = nullptr;
+    EngineManager* m_engineManager = nullptr;
+    CodexUltimate* m_codexUltimate = nullptr;
 
     // Subsystem initialized flags
-    bool m_winsockInitialized         = false;
-    bool m_backendManagerInitialized  = false;
-    bool m_routerInitialized          = false;
+    bool m_winsockInitialized = false;
+    bool m_backendManagerInitialized = false;
+    bool m_routerInitialized = false;
     bool m_failureDetectorInitialized = false;
-    bool m_agentHistoryInitialized    = false;
-    bool m_asmSemanticInitialized     = false;
-    bool m_lspInitialized             = false;
-    bool m_hybridBridgeInitialized    = false;
-    bool m_multiResponseInitialized   = false;
-    bool m_phase10Initialized         = false;
-    bool m_phase11Initialized         = false;
-    bool m_phase12Initialized         = false;
-    bool m_hotpatchInitialized        = false;
-    bool m_instructionsInitialized  = false;
+    bool m_agentHistoryInitialized = false;
+    bool m_asmSemanticInitialized = false;
+    bool m_lspInitialized = false;
+    bool m_hybridBridgeInitialized = false;
+    bool m_multiResponseInitialized = false;
+    bool m_phase10Initialized = false;
+    bool m_phase11Initialized = false;
+    bool m_phase12Initialized = false;
+    bool m_hotpatchInitialized = false;
+    bool m_instructionsInitialized = false;
+    bool m_headlessMinimal = true;
 
     // HTTP server state
-    std::atomic<bool>                 m_serverRunning{false};
-    std::thread                       m_serverThread;
-    SOCKET                            m_serverSocket = INVALID_SOCKET;
+    std::atomic<bool> m_serverRunning{false};
+    std::thread m_serverThread;
+    SOCKET m_serverSocket = INVALID_SOCKET;
 
     // GGUF model state
-    bool                              m_modelLoaded     = false;
-    std::string                       m_loadedModelPath;
-    std::string                       m_loadedModelName;
+    bool m_modelLoaded = false;
+    std::string m_loadedModelPath;
+    std::string m_loadedModelName;
+    bool m_orchestratorModelLoaded = false;
+    std::string m_orchestratorModelTag = "headless";
 
     // Active backend state
-    AIBackendType                     m_activeBackend   = AIBackendType::LocalGGUF;
-    uint64_t                          m_inferenceRequestCount = 0;
+    AIBackendType m_activeBackend = AIBackendType::LocalGGUF;
+    bool m_localGpuEnabled = true;
+    uint64_t m_inferenceRequestCount = 0;
 
     // Real subsystem instances (owned by HeadlessIDE)
     std::unique_ptr<MultiResponseEngine> m_multiResponse;
     std::unique_ptr<AgentHistoryRecorder, AgentHistoryDeleter> m_historyRecorder;
 
     // Agentic stack (101% parity with Win32 — chat, tool dispatch, subagent, chain, swarm)
-    std::unique_ptr<AgenticEngine>     m_agenticEngine;
-    std::unique_ptr<SubAgentManager>   m_subAgentManager;
+    std::unique_ptr<AgenticEngine> m_agenticEngine;
+    std::unique_ptr<SubAgentManager> m_subAgentManager;
 
     // Failure detection counters
-    uint64_t                          m_failureDetections = 0;
-    uint64_t                          m_failureRetries    = 0;
+    uint64_t m_failureDetections = 0;
+    uint64_t m_failureRetries = 0;
 
     // Agent history counters
-    uint64_t                          m_agentEventCount   = 0;
+    uint64_t m_agentEventCount = 0;
 
     // ASM semantic counters
-    uint32_t                          m_asmSymbolCount    = 0;
-    uint32_t                          m_asmFilesParsed    = 0;
+    uint32_t m_asmSymbolCount = 0;
+    uint32_t m_asmFilesParsed = 0;
 
     // LSP counters
-    uint32_t                          m_lspServerCount    = 0;
-    uint64_t                          m_lspCompletionCount = 0;
+    uint32_t m_lspServerCount = 0;
+    uint64_t m_lspCompletionCount = 0;
 
     // Hybrid bridge counters
-    uint64_t                          m_hybridCompletionCount = 0;
+    uint64_t m_hybridCompletionCount = 0;
 
     // Native debugger state
-    bool                              m_debugSessionActive    = false;
-    uint32_t                          m_debugBreakpointCount  = 0;
+    bool m_debugSessionActive = false;
+    uint32_t m_debugBreakpointCount = 0;
 
     // Experimental toggles (enabled via environment/config)
-    bool                              m_expHotpatchEnabled        = true;
-    bool                              m_expLayerEvictionEnabled   = true;
-    bool                              m_expGovernorEnabled        = true;
-    bool                              m_expQuantumTimeEnabled     = false;
-    bool                              m_expQuantumOrchEnabled     = false;
-    bool                              m_expQuantumMissingEnabled  = false;
+    bool m_expHotpatchEnabled = false;
+    bool m_expLayerEvictionEnabled = false;
+    bool m_expGovernorEnabled = false;
+    bool m_expQuantumTimeEnabled = false;
+    bool m_expQuantumOrchEnabled = false;
+    bool m_expQuantumMissingEnabled = false;
 
     // Experimental activation markers
-    bool                              m_expHotpatchActivated      = false;
-    bool                              m_expLayerEvictionActivated = false;
-    bool                              m_expGovernorActivated      = false;
-    bool                              m_expQuantumTimeActivated   = false;
-    bool                              m_expQuantumOrchActivated   = false;
-    bool                              m_expQuantumMissingActivated = false;
+    bool m_expHotpatchActivated = false;
+    bool m_expLayerEvictionActivated = false;
+    bool m_expGovernorActivated = false;
+    bool m_expQuantumTimeActivated = false;
+    bool m_expQuantumOrchActivated = false;
+    bool m_expQuantumMissingActivated = false;
 
     // Session
-    std::string                       m_sessionId;
-    uint64_t                          m_startEpochMs    = 0;
+    std::string m_sessionId;
+    uint64_t m_startEpochMs = 0;
 
     // Version
-    static constexpr const char*      VERSION = "20.0.0-headless-enterprise";
-    static constexpr const char*      BUILD_PHASE = "Phase 20 Enterprise";
+    static constexpr const char* VERSION = "20.0.0-headless-enterprise";
+    static constexpr const char* BUILD_PHASE = "Phase 20 Enterprise";
 };

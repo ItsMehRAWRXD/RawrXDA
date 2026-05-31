@@ -10,15 +10,15 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 
-#ifndef GGML_SYCL_PAD_HPP
-#define GGML_SYCL_PAD_HPP
+#ifndef GGML_RXD_SYCL_PAD_HPP
+#define GGML_RXD_SYCL_PAD_HPP
 
 #include "common.hpp"
 
 #define SYCL_PAD_BLOCK_SIZE 256
 
-void ggml_sycl_pad(ggml_backend_sycl_context & ctx, ggml_tensor * dst);
+void ggml_rxd_sycl_pad(ggml_rxd_backend_sycl_context & ctx, ggml_rxd_tensor * dst);
 
-void ggml_sycl_op_pad(ggml_backend_sycl_context & ctx, ggml_tensor * dst);
+void ggml_rxd_sycl_op_pad(ggml_rxd_backend_sycl_context & ctx, ggml_rxd_tensor * dst);
 
-#endif // GGML_SYCL_PAD_HPP
+#endif // GGML_RXD_SYCL_PAD_HPP

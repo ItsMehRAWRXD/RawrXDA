@@ -58,8 +58,56 @@ bool AgenticConfiguration::loadFromEnv(const std::string& filePath)
 
 bool AgenticConfiguration::loadFromYaml(const std::string& filePath)
 {
-    std::cerr << "[AgenticConfiguration] YAML loading not implemented" << std::endl;
-    return false;
+    try {
+        if (!std::filesystem::exists(filePath)) return false;
+        std::ifstream file(filePath);
+        if (!file.is_open()) return false;
+
+        std::string line;
+        while (std::getline(file, line)) {
+            // Skip empty lines, comments, and document markers
+            size_t first = line.find_first_not_of(" \t");
+            if (first == std::string::npos) continue;
+            if (line[first] == '#' || line[first] == '-') continue;
+            if (line.substr(first, 3) == "---" || line.substr(first, 3) == "...") continue;
+
+            // Find colon separator (key: value)
+            size_t colonPos = line.find(':');
+            if (colonPos == std::string::npos) continue;
+
+            std::string key = line.substr(first, colonPos - first);
+            // Trim trailing whitespace from key
+            size_t keyEnd = key.find_last_not_of(" \t");
+            if (keyEnd != std::string::npos)
+                key = key.substr(0, keyEnd + 1);
+
+            // Extract value (everything after colon, trimmed)
+            std::string value;
+            if (colonPos + 1 < line.size()) {
+                size_t valStart = line.find_first_not_of(" \t", colonPos + 1);
+                if (valStart != std::string::npos) {
+                    value = line.substr(valStart);
+                    // Strip trailing whitespace
+                    size_t valEnd = value.find_last_not_of(" \t\r\n");
+                    if (valEnd != std::string::npos)
+                        value = value.substr(0, valEnd + 1);
+                    // Strip surrounding quotes if present
+                    if (value.size() >= 2 &&
+                        ((value.front() == '"' && value.back() == '"') ||
+                         (value.front() == '\'' && value.back() == '\''))) {
+                        value = value.substr(1, value.size() - 2);
+                    }
+                }
+            }
+
+            if (!key.empty()) {
+                m_config[key] = ConfigValue{ConfigType::String, value, false, "", std::string(""), false, {}};
+            }
+        }
+        return true;
+    } catch (...) {
+        return false;
+    }
 }
 
 void AgenticConfiguration::loadDefaults()
@@ -182,9 +230,6 @@ void AgenticConfiguration::applyEnvironmentOverrides()
         const char* envVal = std::getenv(envKey.c_str());
         if (envVal && envVal[0] != '\0') {
             cfg.value = parseValue(envVal, cfg.type);
-            if (m_debugMode) {
-                fprintf(stderr, "[AgenticConfig] Override from env: %s=%s\n", key.c_str(), envVal);
-            }
         }
     }
 }
@@ -248,7 +293,13 @@ bool AgenticConfiguration::isFeatureEnabledForUser(const std::string& featureNam
             int minPct = std::stoi(toggle.rolloutPercentage.substr(0, dashPos));
             int maxPct = std::stoi(toggle.rolloutPercentage.substr(dashPos + 1));
             return hash >= minPct && hash < maxPct;
-        } catch (...) {}
+        } catch (const std::exception& e) {
+            std::cerr << "[ERROR] AgenticConfiguration rollout parse error: " << e.what() << std::endl;
+            return false;
+        } catch (...) {
+            std::cerr << "[ERROR] AgenticConfiguration rollout parse unknown exception" << std::endl;
+            return false;
+        }
     }
     return true;
 }

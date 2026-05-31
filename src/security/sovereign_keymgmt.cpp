@@ -24,7 +24,7 @@
 #pragma comment(lib, "bcrypt.lib")
 #endif
 
-// Stub license check for test mode
+// Conditional license check for test mode
 #ifdef BUILD_KEYMGMT_TEST
 #define LICENSE_CHECK(feature) true
 #else
@@ -407,12 +407,13 @@ private:
     std::vector<uint8_t> generateKeyMaterial(KeyType type) {
         if (type == KeyType::SIGNING) {
 #ifdef _WIN32
-            // Real RSA-2048 key pair via Windows CNG (BCrypt)
+            // Real RSA-4096 key pair via Windows CNG (BCrypt) for Sovereign Tier
             BCRYPT_ALG_HANDLE hAlg = nullptr;
             BCRYPT_KEY_HANDLE hKey = nullptr;
             NTSTATUS status = BCryptOpenAlgorithmProvider(&hAlg, BCRYPT_RSA_ALGORITHM, nullptr, 0);
             if (BCRYPT_SUCCESS(status) && hAlg) {
-                status = BCryptGenerateKeyPair(hAlg, &hKey, 2048, 0);
+                // Upgrade to 4096-bit for "The Cryptographic Heart" phase
+                status = BCryptGenerateKeyPair(hAlg, &hKey, 4096, 0);
                 if (BCRYPT_SUCCESS(status) && hKey) {
                     status = BCryptFinalizeKeyPair(hKey, 0);
                     if (BCRYPT_SUCCESS(status)) {
@@ -432,9 +433,9 @@ private:
                 }
                 BCryptCloseAlgorithmProvider(hAlg, 0);
             }
-            // Fallback when CNG fails
 #endif
-            std::vector<uint8_t> material(256);
+            // Fallback: 512 bytes for RSA-4096 private components
+            std::vector<uint8_t> material(512);
             std::random_device rd;
             std::mt19937 gen(rd());
             std::uniform_int_distribution<> dis(0, 255);

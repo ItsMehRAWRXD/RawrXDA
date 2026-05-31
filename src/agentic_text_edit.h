@@ -80,9 +80,14 @@ public:
     void setDocumentUri(const std::string& uri);
 
     /**
-     * Get document URI
+     * Set language ID explicitly (e.g., "cpp", "rust", "python")
      */
-    std::string documentUri() const { return m_documentUri; }
+    void setLanguageId(const std::string& languageId);
+
+    /**
+     * Get language ID
+     */
+    std::string languageId() const { return m_languageId; }
 
     /**
      * Enable/disable auto-completions

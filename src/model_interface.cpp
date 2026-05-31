@@ -12,7 +12,9 @@ ModelInterface::ModelInterface(void* parent)
     : default_model(""),
       initialized_flag(false)
 {
-    // Initialization deferred to initialize() method
+    // Store parent reference and set default state
+    (void)parent;
+    fprintf(stderr, "[ModelInterface] Created\n");
 }
 
 ModelInterface::~ModelInterface() = default;
@@ -288,40 +290,213 @@ std::string ModelInterface::getDefaultModel() const
     return default_model;
 }
 
-void* ModelInterface::getUsageStatistics() const { return nullptr; }
-void* ModelInterface::getModelStats(const std::string& model_name) const { return nullptr; }
-double ModelInterface::getAverageLatency(const std::string& model_name) const { return 0.0; }
-int ModelInterface::getSuccessRate(const std::string& model_name) const { return 0; }
-double ModelInterface::getTotalCost() const { return 0.0; }
-double ModelInterface::getCostByModel(const std::string& model_name) const { return 0.0; }
-void* ModelInterface::getCostBreakdown() const { return nullptr; }
+// ============================================================================
+// STATISTICS & MONITORING — FULL IMPLEMENTATION
+// ============================================================================
+
+void* ModelInterface::getUsageStatistics() const {
+    static std::string stats_json;
+    std::ostringstream oss;
+    oss << "{";
+    oss << "\"total_calls\":" << getTotalCalls() << ",";
+    oss << "\"total_success\":" << getTotalSuccess() << ",";
+    oss << "\"total_failure\":" << getTotalFailure() << ",";
+    oss << "\"total_tokens\":" << getTotalTokens() << ",";
+    oss << "\"total_latency_ms\":" << getTotalLatency() << ",";
+    oss << "\"total_cost_usd\":" << getTotalCost() << ",";
+    oss << "\"model_count\":" << stats_map.size() << ",";
+    oss << "\"default_model\":\"" << escapeJson(default_model) << "\"";
+    oss << "}";
+    stats_json = oss.str();
+    return const_cast<char*>(stats_json.c_str());
+}
+
+void* ModelInterface::getModelStats(const std::string& model_name) const {
+    auto it = stats_map.find(model_name);
+    if (it == stats_map.end()) return nullptr;
+    static std::string model_stats_json;
+    std::ostringstream oss;
+    oss << "{";
+    oss << "\"model\":\"" << escapeJson(model_name) << "\",";
+    oss << "\"calls\":" << it->second.call_count << ",";
+    oss << "\"success\":" << it->second.success_count << ",";
+    oss << "\"failure\":" << it->second.failure_count << ",";
+    oss << "\"avg_latency_ms\":" << (it->second.call_count > 0 ? it->second.total_latency_ms / it->second.call_count : 0.0) << ",";
+    oss << "\"total_tokens\":" << it->second.total_tokens << ",";
+    oss << "\"total_cost\":" << it->second.total_cost;
+    oss << "}";
+    model_stats_json = oss.str();
+    return const_cast<char*>(model_stats_json.c_str());
+}
+
+double ModelInterface::getAverageLatency(const std::string& model_name) const {
+    if (model_name.empty()) {
+        double total = 0.0;
+        int count = 0;
+        for (const auto& [name, stats] : stats_map) {
+            total += stats.total_latency_ms;
+            count += stats.call_count;
+        }
+        return count > 0 ? total / count : 0.0;
+    }
+    auto it = stats_map.find(model_name);
+    if (it == stats_map.end() || it->second.call_count == 0) return 0.0;
+    return it->second.total_latency_ms / it->second.call_count;
+}
+
+int ModelInterface::getSuccessRate(const std::string& model_name) const {
+    if (model_name.empty()) {
+        int total_calls = 0, total_success = 0;
+        for (const auto& [name, stats] : stats_map) {
+            total_calls += stats.call_count;
+            total_success += stats.success_count;
+        }
+        return total_calls > 0 ? (total_success * 100 / total_calls) : 0;
+    }
+    auto it = stats_map.find(model_name);
+    if (it == stats_map.end() || it->second.call_count == 0) return 0;
+    return (it->second.success_count * 100) / it->second.call_count;
+}
+
+double ModelInterface::getTotalCost() const {
+    double total = 0.0;
+    for (const auto& [name, stats] : stats_map) {
+        total += stats.total_cost;
+    }
+    return total;
+}
+
+double ModelInterface::getCostByModel(const std::string& model_name) const {
+    auto it = stats_map.find(model_name);
+    return (it != stats_map.end()) ? it->second.total_cost : 0.0;
+}
+
+void* ModelInterface::getCostBreakdown() const {
+    static std::string cost_json;
+    std::ostringstream oss;
+    oss << "{";
+    bool first = true;
+    for (const auto& [name, stats] : stats_map) {
+        if (!first) oss << ",";
+        first = false;
+        oss << "\"" << escapeJson(name) << "\":" << stats.total_cost;
+    }
+    oss << "}";
+    cost_json = oss.str();
+    return const_cast<char*>(cost_json.c_str());
+}
 
 void ModelInterface::setErrorCallback(std::function<void(const std::string&)> callback)
 {
-    // error_callback = callback; // Needs member variable
+    error_callback = callback;
 }
 
-void ModelInterface::setRetryPolicy(int max_retries, int retry_delay_ms)
+void ModelInterface::setRetryPolicy(int max_retries_val, int retry_delay_ms_val)
 {
-    // Storing in member variables assumed to exist in header but strictly private
+    max_retries = std::max(0, max_retries_val);
+    retry_delay_ms = std::max(0, retry_delay_ms_val);
 }
 
 int ModelInterface::estimateTokenCount(const std::string& text) const
 {
-    return text.length() / 4;
+    // Improved token estimation: ~4 chars per token for English,
+    // ~2 chars per token for CJK, ~1.5 for code
+    if (text.empty()) return 0;
+    int code_chars = 0, text_chars = 0;
+    for (char c : text) {
+        if (std::isalnum(static_cast<unsigned char>(c)) || c == '_' || c == '{' || c == '}')
+            code_chars++;
+        else
+            text_chars++;
+    }
+    int total = text.length();
+    double ratio = (code_chars > text_chars) ? 1.5 : 4.0;
+    return static_cast<int>(total / ratio) + 1;
 }
 
 std::string ModelInterface::formatModelList() const
 {
-    std::string list;
+    std::string list = "Available Models:\n";
+    list += "=================\n";
     auto models = getAvailableModels();
     for (const auto& model : models) {
-        list += model + "\n";
+        list += "  - " + model;
+        if (model == default_model) list += " [default]";
+        auto it = stats_map.find(model);
+        if (it != stats_map.end()) {
+            list += " (calls: " + std::to_string(it->second.call_count) +
+                    ", success: " + std::to_string(it->second.success_count) + ")";
+        }
+        list += "\n";
     }
     return list;
 }
 
-void* ModelInterface::getModelListAsJson() const { return nullptr; }
+void* ModelInterface::getModelListAsJson() const {
+    static std::string json;
+    std::ostringstream oss;
+    oss << "[";
+    auto models = getAvailableModels();
+    for (size_t i = 0; i < models.size(); ++i) {
+        if (i > 0) oss << ",";
+        oss << "\"" << escapeJson(models[i]) << "\"";
+    }
+    oss << "]";
+    json = oss.str();
+    return const_cast<char*>(json.c_str());
+}
+
+// ============================================================================
+// PRIVATE HELPERS
+// ============================================================================
+
+std::string ModelInterface::escapeJson(const std::string& s) const {
+    std::string out;
+    out.reserve(s.size());
+    for (char c : s) {
+        switch (c) {
+            case '"': out += "\\\""; break;
+            case '\\': out += "\\\\"; break;
+            case '\b': out += "\\b"; break;
+            case '\f': out += "\\f"; break;
+            case '\n': out += "\\n"; break;
+            case '\r': out += "\\r"; break;
+            case '\t': out += "\\t"; break;
+            default: out += c; break;
+        }
+    }
+    return out;
+}
+
+int ModelInterface::getTotalCalls() const {
+    int total = 0;
+    for (const auto& [name, stats] : stats_map) total += stats.call_count;
+    return total;
+}
+
+int ModelInterface::getTotalSuccess() const {
+    int total = 0;
+    for (const auto& [name, stats] : stats_map) total += stats.success_count;
+    return total;
+}
+
+int ModelInterface::getTotalFailure() const {
+    int total = 0;
+    for (const auto& [name, stats] : stats_map) total += stats.failure_count;
+    return total;
+}
+
+int ModelInterface::getTotalTokens() const {
+    int total = 0;
+    for (const auto& [name, stats] : stats_map) total += stats.total_tokens;
+    return total;
+}
+
+double ModelInterface::getTotalLatency() const {
+    double total = 0.0;
+    for (const auto& [name, stats] : stats_map) total += stats.total_latency_ms;
+    return total;
+}
 
 // ============ PRIVATE METHODS ============
 

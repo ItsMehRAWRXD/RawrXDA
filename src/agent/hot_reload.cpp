@@ -29,7 +29,6 @@ int runProcess(const std::string& cmdLine) {
     std::string cmd = cmdLine;
     if (!CreateProcessA(nullptr, cmd.data(), nullptr, nullptr,
                         TRUE, 0, nullptr, nullptr, &si, &pi)) {
-        fprintf(stderr, "[WARN] [HotReload] CreateProcess failed: %lu\n", GetLastError());
         return -1;
     }
     WaitForSingleObject(pi.hProcess, 60000);
@@ -49,35 +48,27 @@ int runProcess(const std::string& cmdLine) {
 HotReload::HotReload() {}
 
 bool HotReload::reloadQuant(const std::string& quantType) {
-    fprintf(stderr, "[INFO] [HotReload] Hot-reloading quantization: %s\n", quantType.c_str());
-
     std::string cmd = "cmake --build build --config Release --target quant_ladder_avx2";
     int rc = runProcess(cmd);
     if (rc != 0) {
         std::string err = "Build failed for quant_ladder_avx2 (exit " + std::to_string(rc) + ")";
-        fprintf(stderr, "[WARN] [HotReload] %s\n", err.c_str());
         if (onReloadFailed) onReloadFailed(err);
         return false;
     }
 
-    fprintf(stderr, "[INFO] [HotReload] Quant library rebuilt successfully\n");
     if (onQuantReloaded) onQuantReloaded(quantType);
     return true;
 }
 
 bool HotReload::reloadModule(const std::string& moduleName) {
-    fprintf(stderr, "[INFO] [HotReload] Hot-reloading module: %s\n", moduleName.c_str());
-
     std::string cmd = "cmake --build build --config Release --target " + moduleName;
     int rc = runProcess(cmd);
     if (rc != 0) {
         std::string err = "Build failed for " + moduleName + " (exit " + std::to_string(rc) + ")";
-        fprintf(stderr, "[WARN] [HotReload] %s\n", err.c_str());
         if (onReloadFailed) onReloadFailed(err);
         return false;
     }
 
-    fprintf(stderr, "[INFO] [HotReload] Module rebuilt: %s\n", moduleName.c_str());
     if (onModuleReloaded) onModuleReloaded(moduleName);
     return true;
 }

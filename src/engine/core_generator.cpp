@@ -694,10 +694,18 @@ bool UniversalGenerator::AddCustomTemplate(const ProjectTemplate& tmpl) {
 }
 
 bool UniversalGenerator::AddCustomLanguage(const LanguageConfig& config) {
-    // Find a matching LanguageType by name, or add to a custom bucket
-    // For now, log and return true — the config is stored via the programmatic API
-    std::cout << "[gen] Custom language '" << config.name << "' registered.\n";
-    return true;
+    if (config.name.empty()) return false;
+    // Find existing language type by name match and override its config
+    for (auto& [langType, langCfg] : language_configs) {
+        if (langCfg.name == config.name) {
+            langCfg = config;
+            std::cout << "[gen] Custom language '" << config.name << "' updated.\n";
+            return true;
+        }
+    }
+    std::cout << "[gen] Custom language '" << config.name
+              << "' has no matching LanguageType — not registered.\n";
+    return false;
 }
 
 // ----- Language-specific generators delegate to GenerateProject -----

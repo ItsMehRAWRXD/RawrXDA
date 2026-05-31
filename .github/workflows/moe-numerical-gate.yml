@@ -13,6 +13,7 @@ on:
       - "src/core/moe_down_project_policy.hpp"
       - "src/core/moe_plan_row_mixture_pack_cache.hpp"
       - "tests/moe_grouped_gemm_bench.cpp"
+      - "tests/test_moe_batched_down_project.cpp"
       - "src/rawrxd_transformer.cpp"
       - "src/rawrxd_transformer.h"
       - ".github/workflows/moe-numerical-gate.yml"
@@ -27,6 +28,7 @@ on:
       - "src/core/moe_down_project_policy.hpp"
       - "src/core/moe_plan_row_mixture_pack_cache.hpp"
       - "tests/moe_grouped_gemm_bench.cpp"
+      - "tests/test_moe_batched_down_project.cpp"
       - "src/rawrxd_transformer.cpp"
       - "src/rawrxd_transformer.h"
       - ".github/workflows/moe-numerical-gate.yml"
@@ -56,7 +58,7 @@ jobs:
       - name: Build MoE tools
         shell: pwsh
         run: |
-          cmake --build build-moe --target test_moe_mixture_reference test_moe_down_project_policy test_moe_plan_row_mixture_pack_cache moe_grouped_gemm_bench -j 4
+          cmake --build build-moe --target test_moe_mixture_reference test_moe_down_project_policy test_moe_plan_row_mixture_pack_cache test_moe_batched_down_project moe_grouped_gemm_bench -j 4
           if ($LASTEXITCODE -ne 0) { exit 1 }
 
       - name: Mixture parity (JSON report)
@@ -75,6 +77,12 @@ jobs:
         shell: pwsh
         run: |
           & "build-moe/tests/test_moe_plan_row_mixture_pack_cache.exe"
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: MoE batched down-project parity
+        shell: pwsh
+        run: |
+          & "build-moe/tests/test_moe_batched_down_project.exe"
           if ($LASTEXITCODE -ne 0) { exit 1 }
 
       - name: Grouped GEMM microbench (CSV)

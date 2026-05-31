@@ -1,0 +1,148 @@
+#version 450
+
+#extension GL_EXT_control_flow_attributes : enable
+#extension GL_EXT_shader_16bit_storage : require
+#extension GL_EXT_shader_8bit_storage : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int8 : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int16 : require
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+#extension GL_KHR_shader_subgroup_arithmetic : require
+
+// =============================================================================
+// FusedQ4K_Q81_TileGEMM - Specialized matrix multiplication
+// =============================================================================
+// Optimizations implemented:
+// 1. Cooperative Weight/Activation Loading via LDS (Local Data Share)
+// 2. Q8_1 Activation Support (quantized dot product)
+// 3. Double-buffered LDS prefetch to overlap compute with memory
+// 4. Subgroup reductions for efficient accumulation
+// =============================================================================
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(push_constant) uniform Push {
+    uint M;
+    uint N;
+    uint K;
+    uint stride_a_blocks;
+    uint stride_b;
+    uint stride_out;
+} pc;
+
+struct block_q4_K {
+    float16_t d;
+    float16_t dmin;
+    uint8_t   scales[12];
+    uint8_t   qs[128];
+};
+
+struct block_q8_1 {
+    float16_t d;
+    float16_t s;
+    int8_t    qs[32];
+};
+
+layout(set = 0, binding = 0) readonly  buffer A_buf { block_q4_K data_a[]; };
+layout(set = 0, binding = 1) readonly  buffer B_buf { block_q8_1 data_b[]; };
+layout(set = 0, binding = 2) writeonly buffer D_buf { float       data_d[]; };
+
+#define TILE_K 256
+#define TILE_M 64
+
+// Double buffered shared memory
+shared float s_a[2][TILE_K];
+shared float s_b[2][TILE_K];
+
+void get_scale_min_k4_inline(uint j, uint8_t scales[12], out uint sc, out uint mn) {
+    if (j < 4u) {
+        sc = uint(scales[j]) & 63u;
+        mn = uint(scales[j + 4u]) & 63u;
+    } else {
+        sc = (uint(scales[j + 4u]) & 0xFu) | ((uint(scales[j - 4u]) >> 6) << 4);
+        mn = (uint(scales[j + 4u]) >> 4)   | ((uint(scales[j])      >> 6) << 4);
+    }
+}
+
+// Cooperative load and dequantize: 64 lanes x 4 elements per lane = 256 elements
+void load_dequantize_q4k_tile(uint b, uint buf, uint row) {
+    uint lane = gl_LocalInvocationID.x;
+    block_q4_K blk = data_a[row * pc.stride_a_blocks + b];
+    float d = float(blk.d);
+    float dmin = float(blk.dmin);
+
+    // Each lane handles 4 elements. Segmented loading.
+    uint seg = lane / 16;       // 0, 1, 2, 3
+    uint l = (lane % 16) * 2;   // 0, 2, ..., 30
+
+    uint sc_lo, mn_lo, sc_hi, mn_hi;
+    get_scale_min_k4_inline(seg * 2u + 0u, blk.scales, sc_lo, mn_lo);
+    get_scale_min_k4_inline(seg * 2u + 1u, blk.scales, sc_hi, mn_hi);
+
+    float d1 = d * float(sc_lo); float m1 = dmin * float(mn_lo);
+    float d2 = d * float(sc_hi); float m2 = dmin * float(mn_hi);
+
+    uint qs_off = seg * 32u;
+    
+    // Low nibbles
+    uint qb0 = uint(blk.qs[qs_off + l]);
+    uint qb1 = uint(blk.qs[qs_off + l + 1]);
+    s_a[buf][seg * 64u + l] = d1 * float(qb0 & 0xFu) - m1;
+    s_a[buf][seg * 64u + l + 1] = d1 * float(qb1 & 0xFu) - m1;
+    
+    // High nibbles
+    s_a[buf][seg * 64u + 32u + l] = d2 * float(qb0 >> 4) - m2;
+    s_a[buf][seg * 64u + 32u + l + 1] = d2 * float(qb1 >> 4) - m2;
+}
+
+void load_dequantize_q81_tile(uint k_tile, uint buf) {
+    uint lane = gl_LocalInvocationID.x;
+    // TILE_K = 256. 256 / 32 = 8 blocks of Q8_1
+    uint blocks_to_load = 8;
+    uint block_idx_base = (k_tile * TILE_K) / 32;
+    
+    // Each lane loads 4 elements (4 * 64 = 256)
+    uint i = lane * 4;
+    uint b_idx = i / 32;
+    uint e_idx = i % 32;
+    
+    block_q8_1 blk = data_b[block_idx_base + b_idx];
+    float bd = float(blk.d);
+    
+    s_b[buf][i + 0] = bd * float(blk.qs[e_idx + 0]);
+    s_b[buf][i + 1] = bd * float(blk.qs[e_idx + 1]);
+    s_b[buf][i + 2] = bd * float(blk.qs[e_idx + 2]);
+    s_b[buf][i + 3] = bd * float(blk.qs[e_idx + 3]);
+}
+
+void main() {
+    uint row = gl_WorkGroupID.x * 64u + gl_LocalInvocationID.x;
+    if (row >= pc.M) return;
+
+    uint k_tiles = pc.stride_a_blocks; // already blocks/row
+    float acc = 0.0;
+
+    // Load first tile
+    load_dequantize_q4k_tile(0, 0, row);
+    load_dequantize_q81_tile(0, 0);
+    barrier();
+
+    for (uint t = 0; t < k_tiles; t++) {
+        uint curr = t % 2;
+        uint next = (t + 1) % 2;
+
+        if (t + 1 < k_tiles) {
+            load_dequantize_q4k_tile(t + 1, next, row);
+            load_dequantize_q81_tile(t+1, next);
+        }
+
+        // Each thread in Gemv-style processes its own row
+        // Using s_a and s_b from LDS
+        for (uint i = 0; i < TILE_K; i++) {
+            acc += s_a[curr][i] * s_b[curr][i];
+        }
+        
+        barrier(); // Wait for next tile load
+    }
+
+    data_d[row] = acc;
+}

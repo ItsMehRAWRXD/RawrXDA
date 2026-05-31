@@ -29,6 +29,7 @@
 #include <vector>
 #include <string>
 #include <cstring>
+#include <cstdlib>
 
 using namespace RawrXD::Debugger;
 
@@ -68,6 +69,115 @@ static void sendHttpError(SOCKET client, const std::string& message) {
          << s;
     std::string r = resp.str();
     send(client, r.c_str(), static_cast<int>(r.size()), 0);
+}
+
+static std::string wideToUtf8Local(const std::wstring& value) {
+    if (value.empty()) {
+        return {};
+    }
+
+    const int needed = WideCharToMultiByte(CP_UTF8, 0, value.c_str(), static_cast<int>(value.size()), nullptr, 0,
+                                           nullptr, nullptr);
+    if (needed <= 0) {
+        return {};
+    }
+
+    std::string out(static_cast<size_t>(needed), '\0');
+    WideCharToMultiByte(CP_UTF8, 0, value.c_str(), static_cast<int>(value.size()), out.data(), needed, nullptr,
+                        nullptr);
+    return out;
+}
+
+static bool readClipboardText(HWND owner, std::string& out, size_t maxLen = 1024) {
+    out.clear();
+    if (!IsClipboardFormatAvailable(CF_TEXT) || !OpenClipboard(owner)) {
+        return false;
+    }
+
+    bool ok = false;
+    HANDLE hData = GetClipboardData(CF_TEXT);
+    if (hData) {
+        const char* pText = static_cast<const char*>(GlobalLock(hData));
+        if (pText) {
+            out.assign(pText);
+            if (out.size() > maxLen) {
+                out.resize(maxLen);
+            }
+            GlobalUnlock(hData);
+            ok = !out.empty();
+        }
+    }
+
+    CloseClipboard();
+    return ok;
+}
+
+static bool tryParseUint32(const std::string& text, uint32_t& value) {
+    if (text.empty()) {
+        return false;
+    }
+
+    char* endPtr = nullptr;
+    unsigned long parsed = strtoul(text.c_str(), &endPtr, 10);
+    if (!endPtr || *endPtr != '\0' || parsed == 0 || parsed > 0xFFFFFFFFUL) {
+        return false;
+    }
+
+    value = static_cast<uint32_t>(parsed);
+    return true;
+}
+
+static bool getSelectedListViewText(HWND listView, int subItem, std::string& out) {
+    out.clear();
+    if (!listView) {
+        return false;
+    }
+
+    int selected = ListView_GetNextItem(listView, -1, LVNI_SELECTED);
+    if (selected < 0) {
+        return false;
+    }
+
+    char buffer[512] = {};
+    LVITEMA item = {};
+    item.iSubItem = subItem;
+    item.pszText = buffer;
+    item.cchTextMax = static_cast<int>(sizeof(buffer));
+    int copied = static_cast<int>(SendMessageA(listView, LVM_GETITEMTEXTA, static_cast<WPARAM>(selected),
+                                               reinterpret_cast<LPARAM>(&item)));
+    if (copied <= 0 || buffer[0] == '\0') {
+        return false;
+    }
+
+    out.assign(buffer);
+    return true;
+}
+
+static bool promptInputUtf8(Win32IDE* ide,
+                            const wchar_t* title,
+                            const wchar_t* prompt,
+                            std::string& out,
+                            size_t maxChars = 255) {
+    out.clear();
+    if (!ide || maxChars == 0) {
+        return false;
+    }
+
+    std::vector<wchar_t> wbuf(maxChars + 1, L'\0');
+    if (!ide->DialogBoxWithInput(title, prompt, wbuf.data(), wbuf.size())) {
+        return false;
+    }
+
+    std::wstring ws(wbuf.data());
+    size_t first = ws.find_first_not_of(L" \t\r\n");
+    if (first == std::wstring::npos) {
+        return false;
+    }
+    size_t last = ws.find_last_not_of(L" \t\r\n");
+    ws = ws.substr(first, last - first + 1);
+
+    out = wideToUtf8Local(ws);
+    return !out.empty();
 }
 
 // =============================================================================
@@ -112,6 +222,9 @@ void Win32IDE::shutdownPhase12() {
 // =============================================================================
 
 void Win32IDE::cmdDbgLaunch() {
+    auto& engine = NativeDebuggerEngine::Instance();
+    registerDebuggerEngineCallbacks();
+
     char exePath[MAX_PATH] = {};
     OPENFILENAMEA ofn = {};
     ofn.lStructSize = sizeof(ofn);
@@ -124,62 +237,60 @@ void Win32IDE::cmdDbgLaunch() {
 
     if (!GetOpenFileNameA(&ofn)) return;
 
-    DebugResult r = NativeDebuggerEngine::Instance().launchProcess(exePath);
+    DebugResult r = engine.launchProcess(exePath);
     if (r.success) {
         setCurrentBinaryForReverseEngineering(exePath);
+        syncDebuggerSessionStateFromEngine();
         appendToOutput("[Debug] Launched: " + std::string(exePath) + "\n");
         appendToOutput("[RE] Binary set for analysis (Reverse Engineering menu: Disassemble, DumpBin, CFG, etc.)\n", "Output", OutputSeverity::Info);
     } else {
+        syncDebuggerSessionStateFromEngine();
         appendToOutput("[Debug] Launch failed: " + std::string(r.detail) + "\n");
     }
 }
 
 void Win32IDE::cmdDbgAttach() {
-    // Simple input dialog for PID
-    char pidBuf[32] = {};
-    // Use a basic prompt via InputBox pattern
-    int result = 0;
-    // For simplicity, prompt the user in the output panel
-    appendToOutput("[Debug] Enter PID to attach to (use debug console):\n");
+    auto& engine = NativeDebuggerEngine::Instance();
+    registerDebuggerEngineCallbacks();
 
-    // In a real implementation, this would show a dialog.
-    // For now, we'll try to get PID from clipboard or last entered value.
-    if (IsClipboardFormatAvailable(CF_TEXT) && OpenClipboard(m_hwndMain)) {
-        HANDLE hData = GetClipboardData(CF_TEXT);
-        if (hData) {
-            char* pText = static_cast<char*>(GlobalLock(hData));
-            if (pText) {
-                strncpy(pidBuf, pText, sizeof(pidBuf) - 1);
-                GlobalUnlock(hData);
-            }
-        }
-        CloseClipboard();
-    }
+    // Input dialog for PID
+    wchar_t pidBuf[32] = {};
+    if (!DialogBoxWithInput(L"Attach to Process", L"Enter Process ID (PID):", pidBuf, 32))
+        return;
 
-    uint32_t pid = static_cast<uint32_t>(atoi(pidBuf));
+    uint32_t pid = static_cast<uint32_t>(_wtoi(pidBuf));
     if (pid == 0) {
-        appendToOutput("[Debug] Invalid PID. Copy a valid PID to clipboard and try again.\n");
+        appendToOutput("[Debug] Invalid PID.\n");
         return;
     }
 
-    DebugResult r = NativeDebuggerEngine::Instance().attachToProcess(pid);
+    DebugResult r = engine.attachToProcess(pid);
     if (r.success) {
+        syncDebuggerSessionStateFromEngine();
         std::ostringstream msg;
         msg << "[Debug] Attached to PID " << pid << "\n";
         appendToOutput(msg.str());
-        const std::string& path = NativeDebuggerEngine::Instance().getTargetPath();
+        const std::string& path = engine.getTargetPath();
         if (!path.empty()) {
             setCurrentBinaryForReverseEngineering(path);
             appendToOutput("[RE] Binary set from debug target (Reverse Engineering menu).\n", "Output", OutputSeverity::Info);
         }
     } else {
+        syncDebuggerSessionStateFromEngine();
         appendToOutput("[Debug] Attach failed: " + std::string(r.detail) + "\n");
     }
 }
 
 void Win32IDE::cmdDbgDetach() {
+    syncDebuggerSessionStateFromEngine();
+    if (m_debuggerAttached) {
+        detachDebugger();
+        return;
+    }
+
     DebugResult r = NativeDebuggerEngine::Instance().detach();
     appendToOutput("[Debug] " + std::string(r.detail) + "\n");
+    syncDebuggerSessionStateFromEngine();
 }
 
 // =============================================================================
@@ -187,33 +298,75 @@ void Win32IDE::cmdDbgDetach() {
 // =============================================================================
 
 void Win32IDE::cmdDbgGo() {
+    syncDebuggerSessionStateFromEngine();
+    if (m_debuggerAttached && m_debuggerPaused) {
+        resumeExecution();
+        return;
+    }
+
     DebugResult r = NativeDebuggerEngine::Instance().go();
     appendToOutput("[Debug] " + std::string(r.detail) + "\n");
+    syncDebuggerSessionStateFromEngine();
 }
 
 void Win32IDE::cmdDbgStepOver() {
+    syncDebuggerSessionStateFromEngine();
+    if (m_debuggerAttached) {
+        stepOverExecution();
+        return;
+    }
+
     DebugResult r = NativeDebuggerEngine::Instance().stepOver();
     appendToOutput("[Debug] " + std::string(r.detail) + "\n");
+    syncDebuggerSessionStateFromEngine();
 }
 
 void Win32IDE::cmdDbgStepInto() {
+    syncDebuggerSessionStateFromEngine();
+    if (m_debuggerAttached) {
+        stepIntoExecution();
+        return;
+    }
+
     DebugResult r = NativeDebuggerEngine::Instance().stepInto();
     appendToOutput("[Debug] " + std::string(r.detail) + "\n");
+    syncDebuggerSessionStateFromEngine();
 }
 
 void Win32IDE::cmdDbgStepOut() {
+    syncDebuggerSessionStateFromEngine();
+    if (m_debuggerAttached) {
+        stepOutExecution();
+        return;
+    }
+
     DebugResult r = NativeDebuggerEngine::Instance().stepOut();
     appendToOutput("[Debug] " + std::string(r.detail) + "\n");
+    syncDebuggerSessionStateFromEngine();
 }
 
 void Win32IDE::cmdDbgBreak() {
+    syncDebuggerSessionStateFromEngine();
+    if (m_debuggerAttached && !m_debuggerPaused) {
+        pauseExecution();
+        return;
+    }
+
     DebugResult r = NativeDebuggerEngine::Instance().breakExecution();
     appendToOutput("[Debug] " + std::string(r.detail) + "\n");
+    syncDebuggerSessionStateFromEngine();
 }
 
 void Win32IDE::cmdDbgKill() {
+    syncDebuggerSessionStateFromEngine();
+    if (m_debuggerAttached) {
+        stopDebugger();
+        return;
+    }
+
     DebugResult r = NativeDebuggerEngine::Instance().terminateTarget();
     appendToOutput("[Debug] " + std::string(r.detail) + "\n");
+    syncDebuggerSessionStateFromEngine();
 }
 
 // =============================================================================
@@ -221,29 +374,25 @@ void Win32IDE::cmdDbgKill() {
 // =============================================================================
 
 void Win32IDE::cmdDbgAddBP() {
-    // Parse address from clipboard or prompt
-    appendToOutput("[Debug] Adding breakpoint (enter address in hex, e.g. 0x7FF6A0001000)...\n");
-
-    // Try clipboard
-    char buf[64] = {};
-    if (IsClipboardFormatAvailable(CF_TEXT) && OpenClipboard(m_hwndMain)) {
-        HANDLE hData = GetClipboardData(CF_TEXT);
-        if (hData) {
-            char* pText = static_cast<char*>(GlobalLock(hData));
-            if (pText) {
-                strncpy(buf, pText, sizeof(buf) - 1);
-                GlobalUnlock(hData);
-            }
+    // Prompt first for production UX; clipboard is fallback only.
+    std::string rawInput;
+    if (!promptInputUtf8(this,
+                         L"Add Breakpoint",
+                         L"Enter address (e.g. 0x7FF6A0001000) or symbol name:",
+                         rawInput,
+                         255)) {
+        if (!readClipboardText(m_hwndMain, rawInput, 255)) {
+            appendToOutput("[Debug] Breakpoint input cancelled.\n");
+            return;
         }
-        CloseClipboard();
     }
 
     uint64_t addr = 0;
-    if (buf[0] == '0' && (buf[1] == 'x' || buf[1] == 'X')) {
-        addr = strtoull(buf + 2, nullptr, 16);
-    } else if (buf[0] != 0) {
+    if (rawInput.size() > 2 && rawInput[0] == '0' && (rawInput[1] == 'x' || rawInput[1] == 'X')) {
+        addr = strtoull(rawInput.c_str() + 2, nullptr, 16);
+    } else if (!rawInput.empty()) {
         // Try as symbol name
-        DebugResult r = NativeDebuggerEngine::Instance().addBreakpointBySymbol(buf);
+        DebugResult r = NativeDebuggerEngine::Instance().addBreakpointBySymbol(rawInput);
         appendToOutput("[Debug] " + std::string(r.detail) + "\n");
         return;
     }
@@ -260,41 +409,65 @@ void Win32IDE::cmdDbgAddBP() {
 }
 
 void Win32IDE::cmdDbgRemoveBP() {
-    // Remove breakpoint by ID (clipboard)
-    char buf[32] = {};
-    if (IsClipboardFormatAvailable(CF_TEXT) && OpenClipboard(m_hwndMain)) {
-        HANDLE hData = GetClipboardData(CF_TEXT);
-        if (hData) {
-            char* pText = static_cast<char*>(GlobalLock(hData));
-            if (pText) { strncpy(buf, pText, sizeof(buf) - 1); GlobalUnlock(hData); }
+    std::string selectedFile;
+    std::string selectedLine;
+    if (getSelectedListViewText(m_hwndDebuggerBreakpoints, 0, selectedFile) &&
+        getSelectedListViewText(m_hwndDebuggerBreakpoints, 1, selectedLine)) {
+        int line = atoi(selectedLine.c_str());
+        if (!selectedFile.empty() && line > 0) {
+            removeBreakpoint(selectedFile, line);
+            return;
         }
-        CloseClipboard();
     }
 
-    uint32_t id = static_cast<uint32_t>(atoi(buf));
+    // Fallback: remove by breakpoint ID from clipboard
+    std::string rawId;
+    if (!readClipboardText(m_hwndMain, rawId, 63)) {
+        appendToOutput("[Debug] Select a breakpoint row or copy numeric breakpoint ID to clipboard.\n");
+        return;
+    }
+
+    uint32_t id = 0;
+    if (!tryParseUint32(rawId, id)) {
+        appendToOutput("[Debug] Invalid breakpoint ID in clipboard.\n");
+        return;
+    }
+
     DebugResult r = NativeDebuggerEngine::Instance().removeBreakpoint(id);
     appendToOutput("[Debug] " + std::string(r.detail) + "\n");
 }
 
 void Win32IDE::cmdDbgEnableBP() {
-    char buf[32] = {};
-    if (IsClipboardFormatAvailable(CF_TEXT) && OpenClipboard(m_hwndMain)) {
-        HANDLE hData = GetClipboardData(CF_TEXT);
-        if (hData) {
-            char* pText = static_cast<char*>(GlobalLock(hData));
-            if (pText) { strncpy(buf, pText, sizeof(buf) - 1); GlobalUnlock(hData); }
+    std::string selectedFile;
+    std::string selectedLine;
+    if (getSelectedListViewText(m_hwndDebuggerBreakpoints, 0, selectedFile) &&
+        getSelectedListViewText(m_hwndDebuggerBreakpoints, 1, selectedLine)) {
+        int line = atoi(selectedLine.c_str());
+        if (!selectedFile.empty() && line > 0) {
+            setBreakpoint(selectedFile, line);
+            return;
         }
-        CloseClipboard();
     }
 
-    uint32_t id = static_cast<uint32_t>(atoi(buf));
+    // Fallback: enable by breakpoint ID from clipboard
+    std::string rawId;
+    if (!readClipboardText(m_hwndMain, rawId, 63)) {
+        appendToOutput("[Debug] Select a breakpoint row or copy numeric breakpoint ID to clipboard.\n");
+        return;
+    }
+
+    uint32_t id = 0;
+    if (!tryParseUint32(rawId, id)) {
+        appendToOutput("[Debug] Invalid breakpoint ID in clipboard.\n");
+        return;
+    }
+
     DebugResult r = NativeDebuggerEngine::Instance().enableBreakpoint(id, true);
     appendToOutput("[Debug] " + std::string(r.detail) + "\n");
 }
 
 void Win32IDE::cmdDbgClearBPs() {
-    DebugResult r = NativeDebuggerEngine::Instance().removeAllBreakpoints();
-    appendToOutput("[Debug] " + std::string(r.detail) + "\n");
+    clearAllBreakpoints();
 }
 
 void Win32IDE::cmdDbgListBPs() {
@@ -307,41 +480,48 @@ void Win32IDE::cmdDbgListBPs() {
 // =============================================================================
 
 void Win32IDE::cmdDbgAddWatch() {
-    char buf[256] = {};
-    if (IsClipboardFormatAvailable(CF_TEXT) && OpenClipboard(m_hwndMain)) {
-        HANDLE hData = GetClipboardData(CF_TEXT);
-        if (hData) {
-            char* pText = static_cast<char*>(GlobalLock(hData));
-            if (pText) { strncpy(buf, pText, sizeof(buf) - 1); GlobalUnlock(hData); }
+    std::string expression;
+    if (!promptInputUtf8(this, L"Add Watch", L"Enter watch expression:", expression, 255)) {
+        if (!readClipboardText(m_hwndMain, expression, 255) || expression.empty()) {
+            appendToOutput("[Debug] Add watch cancelled.\n");
+            return;
         }
-        CloseClipboard();
     }
 
-    if (buf[0] == 0) {
-        appendToOutput("[Debug] Copy watch expression to clipboard first.\n");
-        return;
-    }
-
-    uint32_t id = NativeDebuggerEngine::Instance().addWatch(buf);
-    std::ostringstream msg;
-    msg << "[Debug] Watch #" << id << " added: " << buf << "\n";
-    appendToOutput(msg.str());
+    addWatchExpression(expression);
 }
 
 void Win32IDE::cmdDbgRemoveWatch() {
-    char buf[32] = {};
-    if (IsClipboardFormatAvailable(CF_TEXT) && OpenClipboard(m_hwndMain)) {
-        HANDLE hData = GetClipboardData(CF_TEXT);
-        if (hData) {
-            char* pText = static_cast<char*>(GlobalLock(hData));
-            if (pText) { strncpy(buf, pText, sizeof(buf) - 1); GlobalUnlock(hData); }
-        }
-        CloseClipboard();
+    std::string selectedExpression;
+    if (getSelectedListViewText(m_hwndDebuggerWatch, 0, selectedExpression) && !selectedExpression.empty()) {
+        removeWatchExpression(selectedExpression);
+        return;
     }
 
-    uint32_t id = static_cast<uint32_t>(atoi(buf));
-    DebugResult r = NativeDebuggerEngine::Instance().removeWatch(id);
-    appendToOutput("[Debug] " + std::string(r.detail) + "\n");
+    std::string rawInput;
+    if (!readClipboardText(m_hwndMain, rawInput, 255) || rawInput.empty()) {
+        appendToOutput("[Debug] Copy watch expression or numeric watch ID to clipboard first.\n");
+        return;
+    }
+
+    auto& engine = NativeDebuggerEngine::Instance();
+    char* endPtr = nullptr;
+    unsigned long watchId = strtoul(rawInput.c_str(), &endPtr, 10);
+    if (endPtr && *endPtr == '\0' && watchId > 0) {
+        const auto& watches = engine.getWatches();
+        for (const auto& watch : watches) {
+            if (watch.id == static_cast<uint32_t>(watchId)) {
+                removeWatchExpression(watch.expression);
+                return;
+            }
+        }
+
+        DebugResult r = engine.removeWatch(static_cast<uint32_t>(watchId));
+        appendToOutput("[Debug] " + std::string(r.detail) + "\n");
+        return;
+    }
+
+    removeWatchExpression(rawInput);
 }
 
 // =============================================================================
@@ -371,72 +551,74 @@ void Win32IDE::cmdDbgStack() {
 }
 
 void Win32IDE::cmdDbgMemory() {
-    char buf[64] = {};
-    if (IsClipboardFormatAvailable(CF_TEXT) && OpenClipboard(m_hwndMain)) {
-        HANDLE hData = GetClipboardData(CF_TEXT);
-        if (hData) {
-            char* pText = static_cast<char*>(GlobalLock(hData));
-            if (pText) { strncpy(buf, pText, sizeof(buf) - 1); GlobalUnlock(hData); }
+    std::string input;
+    if (!promptInputUtf8(this,
+                         L"Inspect Memory",
+                         L"Enter address (hex, e.g. 0x7FF6A0001000):",
+                         input,
+                         63)) {
+        if (!readClipboardText(m_hwndMain, input, 63)) {
+            appendToOutput("[Debug] Memory inspection cancelled.\n");
+            return;
         }
-        CloseClipboard();
     }
 
     uint64_t addr = 0;
-    if (buf[0] == '0' && (buf[1] == 'x' || buf[1] == 'X')) {
-        addr = strtoull(buf + 2, nullptr, 16);
+    if (input.size() > 2 && input[0] == '0' && (input[1] == 'x' || input[1] == 'X')) {
+        addr = strtoull(input.c_str() + 2, nullptr, 16);
     } else {
-        addr = strtoull(buf, nullptr, 16);
+        addr = strtoull(input.c_str(), nullptr, 16);
     }
 
     if (addr == 0) {
-        appendToOutput("[Debug] Copy hex address to clipboard for memory dump.\n");
+        appendToOutput("[Debug] Invalid memory address.\n");
         return;
     }
 
-    uint8_t data[256] = {};
-    uint64_t bytesRead = 0;
-    DebugResult r = NativeDebuggerEngine::Instance().readMemory(addr, data, 256, &bytesRead);
-    if (!r.success) {
-        appendToOutput("[Debug] " + std::string(r.detail) + "\n");
-        return;
-    }
-
-    std::string hex = NativeDebuggerEngine::Instance().formatHexDump(addr, data, bytesRead);
-    appendToOutput("[Debug] Memory dump:\n" + hex);
+    debuggerInspectMemory(addr, 256);
 }
 
 void Win32IDE::cmdDbgDisasm() {
-    // Get address from clipboard or use current RIP
+    // Prompt for address first; fallback to clipboard or current RIP.
     uint64_t addr = 0;
 
-    char buf[64] = {};
-    if (IsClipboardFormatAvailable(CF_TEXT) && OpenClipboard(m_hwndMain)) {
-        HANDLE hData = GetClipboardData(CF_TEXT);
-        if (hData) {
-            char* pText = static_cast<char*>(GlobalLock(hData));
-            if (pText) { strncpy(buf, pText, sizeof(buf) - 1); GlobalUnlock(hData); }
+    std::string input;
+    if (promptInputUtf8(this,
+                        L"Disassemble",
+                        L"Enter start address (blank to use current RIP):",
+                        input,
+                        63)) {
+        if (!input.empty()) {
+            if (input.size() > 2 && input[0] == '0' && (input[1] == 'x' || input[1] == 'X')) {
+                addr = strtoull(input.c_str() + 2, nullptr, 16);
+            } else {
+                addr = strtoull(input.c_str(), nullptr, 16);
+            }
         }
-        CloseClipboard();
-    }
-
-    if (buf[0] != 0) {
-        if (buf[0] == '0' && (buf[1] == 'x' || buf[1] == 'X')) {
-            addr = strtoull(buf + 2, nullptr, 16);
-        } else {
-            addr = strtoull(buf, nullptr, 16);
+    } else {
+        std::string clip;
+        if (readClipboardText(m_hwndMain, clip, 63) && !clip.empty()) {
+            if (clip.size() > 2 && clip[0] == '0' && (clip[1] == 'x' || clip[1] == 'X')) {
+                addr = strtoull(clip.c_str() + 2, nullptr, 16);
+            } else {
+                addr = strtoull(clip.c_str(), nullptr, 16);
+            }
         }
     }
 
     if (addr == 0) {
-        // Use current RIP
+        // Use current RIP when no address provided or parse failed.
         RegisterSnapshot snap;
         NativeDebuggerEngine::Instance().captureRegisters(snap);
         addr = snap.rip;
-    }
-
-    if (addr == 0) {
-        appendToOutput("[Debug] No address for disassembly. Copy hex address to clipboard.\n");
-        return;
+        if (addr == 0) {
+            appendToOutput("[Debug] No address for disassembly.\n");
+            return;
+        } else {
+            std::ostringstream hint;
+            hint << "[Debug] Disassembly using current RIP: 0x" << std::hex << addr << "\n";
+            appendToOutput(hint.str());
+        }
     }
 
     std::vector<DisassembledInstruction> insts;
@@ -497,74 +679,68 @@ void Win32IDE::cmdDbgThreads() {
 }
 
 void Win32IDE::cmdDbgSwitchThread() {
-    char buf[32] = {};
-    if (IsClipboardFormatAvailable(CF_TEXT) && OpenClipboard(m_hwndMain)) {
-        HANDLE hData = GetClipboardData(CF_TEXT);
-        if (hData) {
-            char* pText = static_cast<char*>(GlobalLock(hData));
-            if (pText) { strncpy(buf, pText, sizeof(buf) - 1); GlobalUnlock(hData); }
+    std::string input;
+    if (!promptInputUtf8(this, L"Switch Thread", L"Enter thread ID (decimal):", input, 63)) {
+        if (!readClipboardText(m_hwndMain, input, 63)) {
+            appendToOutput("[Debug] Thread switch cancelled.\n");
+            return;
         }
-        CloseClipboard();
     }
 
-    uint32_t tid = static_cast<uint32_t>(atoi(buf));
+    uint32_t tid = static_cast<uint32_t>(atoi(input.c_str()));
     if (tid == 0) {
-        appendToOutput("[Debug] Copy thread ID to clipboard first.\n");
+        appendToOutput("[Debug] Invalid thread ID.\n");
         return;
     }
 
     DebugResult r = NativeDebuggerEngine::Instance().switchThread(tid);
     appendToOutput("[Debug] " + std::string(r.detail) + "\n");
+    if (r.success) {
+        syncDebuggerSessionStateFromEngine();
+        updateVariables();
+        updateCallStack();
+        updateMemoryView();
+    }
 }
 
 void Win32IDE::cmdDbgEvaluate() {
-    char buf[256] = {};
-    if (IsClipboardFormatAvailable(CF_TEXT) && OpenClipboard(m_hwndMain)) {
-        HANDLE hData = GetClipboardData(CF_TEXT);
-        if (hData) {
-            char* pText = static_cast<char*>(GlobalLock(hData));
-            if (pText) { strncpy(buf, pText, sizeof(buf) - 1); GlobalUnlock(hData); }
+    std::string expression;
+    if (!promptInputUtf8(this, L"Evaluate Expression", L"Enter expression to evaluate:", expression, 255)) {
+        if (!readClipboardText(m_hwndMain, expression, 255)) {
+            appendToOutput("[Debug] Evaluate cancelled.\n");
+            return;
         }
-        CloseClipboard();
     }
 
-    if (buf[0] == 0) {
-        appendToOutput("[Debug] Copy expression to clipboard for evaluation.\n");
+    if (expression.empty()) {
+        appendToOutput("[Debug] Expression is empty.\n");
         return;
     }
 
-    EvalResult result;
-    DebugResult r = NativeDebuggerEngine::Instance().evaluate(buf, result);
-    if (!r.success) {
-        appendToOutput("[Debug] Eval error: " + std::string(r.detail) + "\n");
-        return;
-    }
-
-    appendToOutput("[Debug] " + result.expression + " = " + result.value + "\n");
+    debuggerEvaluateExpression(expression);
 }
 
 void Win32IDE::cmdDbgSetRegister() {
-    appendToOutput("[Debug] Set register: Copy 'regname=value' to clipboard (e.g. rax=0x1234).\n");
-
-    char buf[64] = {};
-    if (IsClipboardFormatAvailable(CF_TEXT) && OpenClipboard(m_hwndMain)) {
-        HANDLE hData = GetClipboardData(CF_TEXT);
-        if (hData) {
-            char* pText = static_cast<char*>(GlobalLock(hData));
-            if (pText) { strncpy(buf, pText, sizeof(buf) - 1); GlobalUnlock(hData); }
+    std::string input;
+    if (!promptInputUtf8(this,
+                         L"Set Register",
+                         L"Enter register assignment (e.g. rax=0x1234):",
+                         input,
+                         127)) {
+        if (!readClipboardText(m_hwndMain, input, 127)) {
+            appendToOutput("[Debug] Set register cancelled.\n");
+            return;
         }
-        CloseClipboard();
     }
 
     // Parse "regname=value"
-    char* eq = strchr(buf, '=');
-    if (!eq) {
+    size_t eqPos = input.find('=');
+    if (eqPos == std::string::npos) {
         appendToOutput("[Debug] Format: regname=value (e.g. rax=0x1234)\n");
         return;
     }
-    *eq = 0;
-    std::string regName = buf;
-    std::string valStr = eq + 1;
+    std::string regName = input.substr(0, eqPos);
+    std::string valStr = input.substr(eqPos + 1);
 
     uint64_t value = 0;
     if (valStr.size() > 2 && valStr[0] == '0' && (valStr[1] == 'x' || valStr[1] == 'X')) {
@@ -578,22 +754,24 @@ void Win32IDE::cmdDbgSetRegister() {
 }
 
 void Win32IDE::cmdDbgSearchMemory() {
-    appendToOutput("[Debug] Memory search: Copy hex pattern to clipboard (e.g. CC9090CC).\n");
-
-    char buf[256] = {};
-    if (IsClipboardFormatAvailable(CF_TEXT) && OpenClipboard(m_hwndMain)) {
-        HANDLE hData = GetClipboardData(CF_TEXT);
-        if (hData) {
-            char* pText = static_cast<char*>(GlobalLock(hData));
-            if (pText) { strncpy(buf, pText, sizeof(buf) - 1); GlobalUnlock(hData); }
+    std::string hexStr;
+    if (!promptInputUtf8(this,
+                         L"Search Memory",
+                         L"Enter hex byte pattern (e.g. CC9090CC):",
+                         hexStr,
+                         255)) {
+        if (!readClipboardText(m_hwndMain, hexStr, 255)) {
+            appendToOutput("[Debug] Memory search cancelled.\n");
+            return;
         }
-        CloseClipboard();
     }
 
-    if (buf[0] == 0) return;
+    if (hexStr.empty()) {
+        appendToOutput("[Debug] Empty memory search pattern.\n");
+        return;
+    }
 
     // Parse hex string into bytes
-    std::string hexStr = buf;
     std::vector<uint8_t> pattern;
     for (size_t i = 0; i + 1 < hexStr.size(); i += 2) {
         char byte[3] = { hexStr[i], hexStr[i + 1], 0 };
@@ -629,22 +807,24 @@ void Win32IDE::cmdDbgSearchMemory() {
 }
 
 void Win32IDE::cmdDbgSymbolPath() {
-    char buf[512] = {};
-    if (IsClipboardFormatAvailable(CF_TEXT) && OpenClipboard(m_hwndMain)) {
-        HANDLE hData = GetClipboardData(CF_TEXT);
-        if (hData) {
-            char* pText = static_cast<char*>(GlobalLock(hData));
-            if (pText) { strncpy(buf, pText, sizeof(buf) - 1); GlobalUnlock(hData); }
+    std::string symbolPath;
+    if (!promptInputUtf8(this,
+                         L"Set Symbol Path",
+                         L"Enter symbol path (e.g. srv*C:\\Symbols*https://msdl.microsoft.com/download/symbols):",
+                         symbolPath,
+                         511)) {
+        if (!readClipboardText(m_hwndMain, symbolPath, 511)) {
+            appendToOutput("[Debug] Symbol path update cancelled.\n");
+            return;
         }
-        CloseClipboard();
     }
 
-    if (buf[0] == 0) {
-        appendToOutput("[Debug] Copy symbol path to clipboard first.\n");
+    if (symbolPath.empty()) {
+        appendToOutput("[Debug] Symbol path is empty.\n");
         return;
     }
 
-    DebugResult r = NativeDebuggerEngine::Instance().setSymbolPath(buf);
+    DebugResult r = NativeDebuggerEngine::Instance().setSymbolPath(symbolPath);
     appendToOutput("[Debug] " + std::string(r.detail) + "\n");
 }
 
@@ -780,6 +960,16 @@ void Win32IDE::handleDbgLaunchEndpoint(SOCKET client, const std::string& body) {
         size_t qEnd = body.find('"', qStart + 1);
         if (qStart != std::string::npos && qEnd != std::string::npos) {
             args = body.substr(qStart + 1, qEnd - qStart - 1);
+        }
+    }
+
+    size_t wdPos = body.find("\"workingDir\"");
+    if (wdPos != std::string::npos) {
+        size_t colonPos = body.find(':', wdPos);
+        size_t qStart = body.find('"', colonPos + 1);
+        size_t qEnd = body.find('"', qStart + 1);
+        if (qStart != std::string::npos && qEnd != std::string::npos) {
+            workDir = body.substr(qStart + 1, qEnd - qStart - 1);
         }
     }
 

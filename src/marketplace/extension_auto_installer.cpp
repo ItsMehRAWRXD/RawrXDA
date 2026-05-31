@@ -10,6 +10,7 @@
 #include <fstream>
 #include <filesystem>
 #include <algorithm>
+#include <cstdlib>
 #include <cstring>
 
 #ifdef _WIN32
@@ -22,6 +23,14 @@
 
 namespace RawrXD {
 namespace Extensions {
+
+namespace {
+
+void eraseValue(std::vector<std::string>& values, const std::string& value) {
+    values.erase(std::remove(values.begin(), values.end(), value), values.end());
+}
+
+} // namespace
 
 // ============================================================================
 // Singleton
@@ -67,6 +76,9 @@ ExtensionAutoInstaller::~ExtensionAutoInstaller() {
 void ExtensionAutoInstaller::loadInstallState() {
     std::lock_guard<std::mutex> lock(mutex_);
 
+    installed_.clear();
+    pending_.clear();
+
     std::ifstream file(installStatePath_);
     if (!file.is_open()) {
         firstRunComplete_ = false;
@@ -83,17 +95,23 @@ void ExtensionAutoInstaller::loadInstallState() {
 
     while (std::getline(file, line)) {
         if (!line.empty() && line[0] != '#') {
-            installed_.push_back(line);
+            if (std::find(installed_.begin(), installed_.end(), line) == installed_.end()) {
+                installed_.push_back(line);
+            }
         }
     }
 }
 
 void ExtensionAutoInstaller::saveInstallState() {
     std::lock_guard<std::mutex> lock(mutex_);
+    writeInstallStateLocked();
+}
 
-    // Ensure directory exists
+void ExtensionAutoInstaller::writeInstallStateLocked() {
     std::filesystem::path statePath(installStatePath_);
-    std::filesystem::create_directories(statePath.parent_path());
+    if (!statePath.parent_path().empty()) {
+        std::filesystem::create_directories(statePath.parent_path());
+    }
 
     std::ofstream file(installStatePath_);
     if (!file.is_open()) return;
@@ -150,7 +168,9 @@ void ExtensionAutoInstaller::emitProgress(const InstallProgress& progress,
 
 AutoInstallResult ExtensionAutoInstaller::installSingleExtension(
     const std::string& extensionId,
-    InstallProgressCallback callback)
+    InstallProgressCallback callback,
+    int currentIndex,
+    int totalExtensions)
 {
     // Parse extensionId: "publisher.extensionName"
     size_t dotPos = extensionId.find('.');
@@ -163,20 +183,32 @@ AutoInstallResult ExtensionAutoInstaller::installSingleExtension(
 
     // Step 1: Query marketplace
     {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (std::find(pending_.begin(), pending_.end(), extensionId) == pending_.end()) {
+            pending_.push_back(extensionId);
+        }
+    }
+
+    // Step 1: Query marketplace
+    {
         InstallProgress progress{};
         progress.stage = InstallProgress::Stage::Querying;
         progress.extensionId = extensionId.c_str();
-        progress.currentIndex = 0;
-        progress.totalExtensions = 1;
+        progress.currentIndex = currentIndex;
+        progress.totalExtensions = totalExtensions;
         progress.detail = "Querying VS Code Marketplace...";
         emitProgress(progress, callback);
     }
 
     VSCodeMarketplace::MarketplaceEntry entry;
     if (!VSCodeMarketplace::GetById(extensionId, entry)) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        eraseValue(pending_, extensionId);
         InstallProgress progress{};
         progress.stage = InstallProgress::Stage::Failed;
         progress.extensionId = extensionId.c_str();
+        progress.currentIndex = currentIndex;
+        progress.totalExtensions = totalExtensions;
         progress.detail = "Extension not found in marketplace";
         emitProgress(progress, callback);
         return AutoInstallResult::error("Extension not found in marketplace", 2);
@@ -187,20 +219,34 @@ AutoInstallResult ExtensionAutoInstaller::installSingleExtension(
         InstallProgress progress{};
         progress.stage = InstallProgress::Stage::Downloading;
         progress.extensionId = extensionId.c_str();
+        progress.currentIndex = currentIndex;
+        progress.totalExtensions = totalExtensions;
         progress.detail = "Downloading .vsix package...";
         emitProgress(progress, callback);
     }
 
-    std::string tempDir = ".rawrxd\\temp\\";
-    std::filesystem::create_directories(tempDir);
-    std::string vsixPath = tempDir + extensionId + "-" + entry.version + ".vsix";
+    // Create a unique per-worker temp directory to prevent collision when
+    // multiple parallel workers download/install at the same time.
+    // e.g. .rawrxd/temp/<PID>_<seq>/
+    static std::atomic<uint64_t> s_tempSeq{0};
+    const uint64_t workerSeq = s_tempSeq.fetch_add(1, std::memory_order_relaxed);
+    std::string workerTemp = ".rawrxd\\temp\\" +
+                             std::to_string(static_cast<unsigned long>(GetCurrentProcessId())) +
+                             "_" + std::to_string(workerSeq) + "\\";
+    std::filesystem::create_directories(workerTemp);
+    std::string vsixPath = workerTemp + extensionId + "-" + entry.version + ".vsix";
 
     if (!VSCodeMarketplace::DownloadVsix(publisher, extensionName, entry.version, vsixPath)) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        eraseValue(pending_, extensionId);
         InstallProgress progress{};
         progress.stage = InstallProgress::Stage::Failed;
         progress.extensionId = extensionId.c_str();
+        progress.currentIndex = currentIndex;
+        progress.totalExtensions = totalExtensions;
         progress.detail = "Failed to download .vsix";
         emitProgress(progress, callback);
+        { std::error_code ec; std::filesystem::remove_all(workerTemp, ec); }
         return AutoInstallResult::error("Failed to download .vsix", 3);
     }
 
@@ -209,16 +255,23 @@ AutoInstallResult ExtensionAutoInstaller::installSingleExtension(
         InstallProgress progress{};
         progress.stage = InstallProgress::Stage::Installing;
         progress.extensionId = extensionId.c_str();
+        progress.currentIndex = currentIndex;
+        progress.totalExtensions = totalExtensions;
         progress.detail = "Installing extension...";
         emitProgress(progress, callback);
     }
 
     if (!RawrXD::VSIXInstaller::Install(vsixPath)) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        eraseValue(pending_, extensionId);
         InstallProgress progress{};
         progress.stage = InstallProgress::Stage::Failed;
         progress.extensionId = extensionId.c_str();
+        progress.currentIndex = currentIndex;
+        progress.totalExtensions = totalExtensions;
         progress.detail = "Failed to install .vsix";
         emitProgress(progress, callback);
+        { std::error_code ec; std::filesystem::remove_all(workerTemp, ec); }
         return AutoInstallResult::error("Failed to install .vsix", 4);
     }
 
@@ -227,6 +280,8 @@ AutoInstallResult ExtensionAutoInstaller::installSingleExtension(
         InstallProgress progress{};
         progress.stage = InstallProgress::Stage::Verifying;
         progress.extensionId = extensionId.c_str();
+        progress.currentIndex = currentIndex;
+        progress.totalExtensions = totalExtensions;
         progress.detail = "Verifying installation...";
         emitProgress(progress, callback);
     }
@@ -234,10 +289,11 @@ AutoInstallResult ExtensionAutoInstaller::installSingleExtension(
     // Step 5: Mark as installed
     {
         std::lock_guard<std::mutex> lock(mutex_);
+        eraseValue(pending_, extensionId);
         if (std::find(installed_.begin(), installed_.end(), extensionId) == installed_.end()) {
             installed_.push_back(extensionId);
         }
-        saveInstallState();
+        writeInstallStateLocked();
     }
 
     // Step 6: Complete
@@ -245,6 +301,8 @@ AutoInstallResult ExtensionAutoInstaller::installSingleExtension(
         InstallProgress progress{};
         progress.stage = InstallProgress::Stage::Complete;
         progress.extensionId = extensionId.c_str();
+        progress.currentIndex = currentIndex;
+        progress.totalExtensions = totalExtensions;
         progress.detail = "Installation complete";
         emitProgress(progress, callback);
     }
@@ -252,6 +310,7 @@ AutoInstallResult ExtensionAutoInstaller::installSingleExtension(
     AutoInstallResult result = AutoInstallResult::ok(1);
     result.installedIds.push_back(extensionId);
     result.detail = "Successfully installed " + extensionId;
+    { std::error_code ec; std::filesystem::remove_all(workerTemp, ec); }
     return result;
 }
 
@@ -268,7 +327,7 @@ AutoInstallResult ExtensionAutoInstaller::installExtension(
         return AutoInstallResult::error("Extension already installed", 0);
     }
 
-    return installSingleExtension(extensionId, callback);
+    return installSingleExtension(extensionId, callback, 1, 1);
 }
 
 AutoInstallResult ExtensionAutoInstaller::installExtensions(
@@ -288,12 +347,7 @@ AutoInstallResult ExtensionAutoInstaller::installExtensions(
             continue;
         }
 
-        // Update progress context
-        InstallProgress progress{};
-        progress.currentIndex = index;
-        progress.totalExtensions = (int)extensionIds.size();
-
-        AutoInstallResult singleResult = installSingleExtension(id, callback);
+        AutoInstallResult singleResult = installSingleExtension(id, callback, index, (int)extensionIds.size());
         if (singleResult.success) {
             result.installedCount++;
             result.installedIds.push_back(id);

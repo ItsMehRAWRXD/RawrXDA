@@ -1,11 +1,13 @@
 .code
 
-; void SwarmLink_FastCopySIMD(void* dest, const void* src, size_t numBytes);
+; Legacy local copy routine retained for reference/testing.
+; Keep symbol distinct from exported consensus implementation.
+; void SwarmLink_FastCopySIMD_Legacy(void* dest, const void* src, size_t numBytes);
 ; rcx = dest
 ; rdx = src
 ; r8 = numBytes ( assumed multiple of 64 bytes for page-aligned fast path)
 
-SwarmLink_FastCopySIMD PROC
+SwarmLink_FastCopySIMD_Legacy PROC
     ; Save volatile registers used
     push rbp
     mov rbp, rsp
@@ -38,6 +40,6 @@ copy_done:
     mov rsp, rbp
     pop rbp
     ret
-SwarmLink_FastCopySIMD ENDP
+SwarmLink_FastCopySIMD_Legacy ENDP
 
 END

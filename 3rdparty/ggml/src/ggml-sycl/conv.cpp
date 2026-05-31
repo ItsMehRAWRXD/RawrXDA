@@ -71,27 +71,27 @@ static void conv_transpose_1d_f32_f32_sycl(
         });
 }
 
-void ggml_sycl_op_conv_transpose_1d(ggml_backend_sycl_context & ctx, ggml_tensor *dst) {
+void ggml_rxd_sycl_op_conv_transpose_1d(ggml_rxd_backend_sycl_context & ctx, ggml_rxd_tensor *dst) {
     scope_op_debug_print scope_dbg_print(__func__, dst, /*num_src=*/2);
-    const ggml_tensor *src0 = dst->src[0];
-    const ggml_tensor *src1 = dst->src[1];
+    const ggml_rxd_tensor *src0 = dst->src[0];
+    const ggml_rxd_tensor *src1 = dst->src[1];
     const float * src0_d = (const float *)src0->data;
     const float * src1_d = (const float *)src1->data;
 
     float * dst_d = (float *)dst->data;
     dpct::queue_ptr stream = ctx.stream();
 
-    GGML_ASSERT(src0->type == GGML_TYPE_F32);
-    GGML_ASSERT( dst->type == GGML_TYPE_F32);
+    GGML_RXD_ASSERT(src0->type == GGML_RXD_TYPE_F32);
+    GGML_RXD_ASSERT( dst->type == GGML_RXD_TYPE_F32);
 
-    GGML_ASSERT(ggml_is_contiguous(src0));
-    GGML_ASSERT(ggml_is_contiguous(src1));
+    GGML_RXD_ASSERT(ggml_rxd_is_contiguous(src0));
+    GGML_RXD_ASSERT(ggml_rxd_is_contiguous(src1));
 
     const int32_t * opts = (const int32_t *)dst->op_params;
 
     const int s0 = opts[0];
 
-    const int64_t output_size = ggml_nelements(dst);
+    const int64_t output_size = ggml_rxd_nelements(dst);
 
     conv_transpose_1d_f32_f32_sycl(s0, output_size,
         src0->ne[0], src0->ne[1], src0->ne[2],

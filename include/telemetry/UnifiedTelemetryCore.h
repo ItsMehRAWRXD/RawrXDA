@@ -54,6 +54,7 @@
 #include <functional>
 #include <chrono>
 #include <cstdint>
+#include "sovereign_stats_block_v2.h"
 
 namespace RawrXD {
 namespace Telemetry {
@@ -263,6 +264,11 @@ public:
     // ---- Utility (public for exporters) ----
     static uint64_t NowMs();
 
+    // ---- Sovereign V2 Integration ----
+    void SetSovereignBlock(SovereignStatsBlockV2* block) {
+        m_sovBlock = block;
+    }
+
 private:
     UnifiedTelemetryCore();
     ~UnifiedTelemetryCore();
@@ -298,6 +304,8 @@ private:
     // Prometheus metrics cache
     mutable std::mutex              m_promMutex;
     std::map<std::string, PrometheusMetric> m_prometheusMetrics;
+
+    SovereignStatsBlockV2*          m_sovBlock = nullptr;
 
     // Previous ASM counters (for delta computation)
     ASMCounterSet                   m_prevASM;

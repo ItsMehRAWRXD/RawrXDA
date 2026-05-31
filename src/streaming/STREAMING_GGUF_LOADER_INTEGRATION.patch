@@ -1,0 +1,132 @@
+// Integration patch for StreamingGGUFLoader
+// File: src/streaming_gguf_loader.h
+// Add these members to StreamingGGUFLoader class:
+
+private:
+    bool use_mapped_window_;
+    std::unique_ptr<MappedWindowStreamer> mapped_streamer_;
+    
+    // Helper to determine if mapped windows should be used
+    bool ShouldUseMappedWindow() const;
+
+---
+
+// File: src/streaming_gguf_loader.cpp
+// In StreamingGGUFLoader constructor, add:
+
+StreamingGGUFLoader::StreamingGGUFLoader()
+    : is_open_(false), 
+      current_zone_memory_(0), 
+      max_zone_memory_mb_(GGUFConstants::DEFAULT_ZONE_MEMORY_MB),
+      use_mapped_window_(false),
+      mapped_streamer_(nullptr)
+{
+    std::memset(&header_, 0, sizeof(GGUFHeader));
+}
+
+---
+
+// In StreamingGGUFLoader::Open() method, after AssignTensorsToZones():
+
+    // Check if we should use mapped window streaming
+    if (ShouldUseMappedWindow())
+    {
+        use_mapped_window_ = true;
+        mapped_streamer_ = std::make_unique<MappedWindowStreamer>(
+            GGUFConstants::DEFAULT_ZONE_MEMORY_MB / 8);  // 64 MB window
+        
+        if (!mapped_streamer_->Open(filepath))
+        {
+            std::cerr << "⚠️  Mapped window streaming failed, falling back to zone loader" << std::endl;
+            use_mapped_window_ = false;
+            mapped_streamer_.reset();
+        }
+    }
+
+    std::cout << "✅ GGUF Model opened" << (use_mapped_window_ ? " [mapped window]" : " [zone-based]") << std::endl;
+    std::cout << "   Streaming mode: " << (use_mapped_window_ ? "MAPPED_WINDOW" : "ZONE_BASED") << std::endl;
+
+---
+
+// New helper method in StreamingGGUFLoader:
+
+bool StreamingGGUFLoader::ShouldUseMappedWindow() const
+{
+    // Use mapped window if any zone would exceed 2 GiB (practical limit for whole-zone)
+    if (zones_.empty()) return false;
+    
+    for (const auto& zone : zones_)
+    {
+        if (zone.size_bytes > 2ULL * 1024 * 1024 * 1024)
+        {
+            std::cerr << "📌 Large zone detected (" << (zone.size_bytes / (1024ULL*1024*1024)) 
+                      << " GiB), switching to mapped window streaming" << std::endl;
+            return true;
+        }
+    }
+    return false;
+}
+
+---
+
+// Update Close() method to handle mapped window:
+
+bool StreamingGGUFLoader::Close()
+{
+    if (file_.is_open())
+    {
+        file_.close();
+    }
+    if (mapped_streamer_)
+    {
+        mapped_streamer_->Close();
+        mapped_streamer_.reset();
+    }
+    is_open_ = false;
+    use_mapped_window_ = false;
+    tensor_index_.clear();
+    zones_.clear();
+    active_zones_.clear();
+    current_zone_ = "";
+    return true;
+}
+
+---
+
+// New public method to query streaming mode:
+
+bool StreamingGGUFLoader::IsUsingMappedWindow() const
+{
+    return use_mapped_window_;
+}
+
+---
+
+// Update tensor access to use mapped window when available:
+
+const uint8_t* StreamingGGUFLoader::GetTensorDataPtr(
+    const std::string& tensor_name, 
+    size_t& out_size)
+{
+    auto it = tensor_index_.find(tensor_name);
+    if (it == tensor_index_.end()) return nullptr;
+
+    const TensorInfo& tensor = it->second;
+    out_size = tensor.size_bytes;
+
+    if (use_mapped_window_)
+    {
+        // Use mapped window for tensor access
+        uint8_t* ptr = mapped_streamer_->MapRegion(tensor.file_offset, tensor.size_bytes);
+        if (ptr)
+        {
+            return ptr;
+        }
+        // Fallback to zone-based if mapping fails
+        std::cerr << "⚠️  Mapped window failed for tensor, falling back to zone loader\n";
+        use_mapped_window_ = false;
+    }
+    
+    // Fall back to zone-based loading (existing code)
+    return GetZoneDataPtr(tensor_name);
+}

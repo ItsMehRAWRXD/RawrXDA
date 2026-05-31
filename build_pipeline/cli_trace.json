@@ -1,0 +1,11 @@
+{
+  "source": "cli",
+  "model": "dummy-model",
+  "prompt": "hello parity world",
+  "started_ms": 1777881177152,
+  "first_token_ms": 0,
+  "completed_ms": 1,
+  "token_count": 32,
+  "error": "",
+  "tokens": ["Hello ", "world. ", "dog. ", "quick ", "fox ", "Test ", "over ", "token ", "stream ", "deterministic ", "quick ", "verified. ", "stream ", "the ", "quick ", "jumps ", "token ", "fox ", "verified. ", "jumps ", "Hello ", "world. ", "lazy ", "lane.\n", "stream ", "RawrXD ", "jumps ", "lane.\n", "fallback ", "dog. ", "verified. ", "lane.\n"]
+}

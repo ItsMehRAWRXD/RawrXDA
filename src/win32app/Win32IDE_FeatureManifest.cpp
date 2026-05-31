@@ -294,11 +294,11 @@ static FeatureEntry g_featureManifest[] = {
     
     {"file.modelUnified", "Unified Model Load", "Universal model loader (any source)",
      FeatureCategory::FileOps, 1034, "", "Win32IDE_FileOps.cpp",
-     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Real, nullptr},
     
     {"file.quickLoad", "Quick Load Model", "One-click model load from local cache",
      FeatureCategory::FileOps, 1035, "", "Win32IDE_FileOps.cpp",
-     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Real, nullptr},
 
     // ========================== EDITING ==========================
     {"edit.undo", "Undo", "Undo last editing action",
@@ -766,7 +766,7 @@ static FeatureEntry g_featureManifest[] = {
     
     {"subagent.todoList", "Agent Todo List", "Track agent task progress (TodoItem)",
      FeatureCategory::SubAgent, 4112, "", "Win32IDE_SubAgent.cpp",
-     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Real, nullptr},
 
     // ========================== SWARM COMPILATION ==========================
     {"swarm.panel", "Swarm Panel", "Distributed compilation control panel",
@@ -972,7 +972,7 @@ static FeatureEntry g_featureManifest[] = {
 
     {"ui.chatPanel", "Chat Panel", "Main chat interface with conversation management",
      FeatureCategory::AIMode, 44017, "", "Win32IDE_ChatPanel.cpp",
-        FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, testCommandRoutes},
+        FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Real, testCommandRoutes},
 
     {"telemetry.perf", "Performance Telemetry", "Real-time performance monitoring and metrics collection",
      FeatureCategory::Telemetry, 44018, "", "Win32IDE_PerfTelemetry.cpp",

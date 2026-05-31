@@ -1,5 +1,6 @@
 #include "Win32IDE.h"
 #include "HeadlessIDE.h"
+#include "RouterOperations.h"
 #include "../../include/rawrxd_version.h"
 #include "../../include/final_gauntlet.h"
 #include "../../include/crash_containment.h"
@@ -53,6 +54,11 @@ static bool hasHeadlessFlag(LPSTR lpCmdLine) {
 // ============================================================================
 // Parse WinMain command line into argc/argv for headless mode
 // ============================================================================
+// Bounds: cap argument count and individual token size to prevent DoS via
+// a crafted shortcut/registry launch key.
+static constexpr size_t kMaxCmdArgs    = 64;     // hard cap on # of arguments
+static constexpr size_t kMaxTokenBytes = 4096;   // hard cap on single-token length
+
 static void parseCmdLine(LPSTR lpCmdLine, int& argc, char**& argv) {
     static std::vector<std::string> args;
     static std::vector<char*> ptrs;
@@ -66,18 +72,26 @@ static void parseCmdLine(LPSTR lpCmdLine, int& argc, char**& argv) {
         std::istringstream iss(cmdLine);
         std::string token;
         while (iss >> token) {
+            if (args.size() >= kMaxCmdArgs) break;  // DoS guard: cap argument count
             // Handle quoted arguments
             if (!token.empty() && token.front() == '"') {
                 token = token.substr(1);
                 std::string rest;
-                while (token.back() != '"' && std::getline(iss, rest, '"')) {
-                    token += " " + rest;
+                // Guard: token may be empty after substr(1) — calling .back() on an
+                // empty string is UB.  Also bound accumulation to prevent memory DoS.
+                while ((token.empty() || token.back() != '"') &&
+                       token.size() < kMaxTokenBytes &&
+                       std::getline(iss, rest, '"')) {
+                    token += ' ';
+                    token += rest;
                 }
                 if (!token.empty() && token.back() == '"') {
                     token.pop_back();
                 }
+                // Clamp in case we hit kMaxTokenBytes mid-accumulation
+                if (token.size() > kMaxTokenBytes) token.resize(kMaxTokenBytes);
             }
-            args.push_back(token);
+            args.push_back(std::move(token));
         }
     }
 
@@ -131,8 +145,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
         crashCfg.enableMiniDump = true;
         crashCfg.enablePatchRollback = true;
         crashCfg.enablePatchQuarantine = true;
-        crashCfg.showMessageBox = true;
-        crashCfg.terminateAfterDump = true;
+        crashCfg.showMessageBox = false;   // CrashReporter dialog handles UI
+        crashCfg.terminateAfterDump = false; // CrashReporter filter terminates
         crashCfg.onCrashCallback = nullptr;
         crashCfg.callbackUserData = nullptr;
         RawrXD::Crash::Install(crashCfg);
@@ -266,32 +280,20 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
 
     // ========================================================================
     // COMPONENT INITIALIZATION — Phase 35: New IDE Components
-    // Initialize the newly implemented components: CaretAnimation, AgentOllamaClient, ModelDiscovery
+    // Initialize the newly implemented components: CaretAnimation, NativeInferenceClient, ModelDiscovery
     // ========================================================================
     {
         ide.initCaretAnimation();
         OutputDebugStringA("[main_win32] CaretAnimation initialized\n");
+    }
 
-        ide.initAgentOllamaClient();
-        OutputDebugStringA("[main_win32] AgentOllamaClient initialized\n");
-
-        ide.initModelDiscovery();
-        OutputDebugStringA("[main_win32] ModelDiscovery initialized\n");
-
-        ide.initEnterpriseStressTests();
-        OutputDebugStringA("[main_win32] EnterpriseStressTests initialized\n");
-
-        ide.initializeCoreRuntimeSpine();
-        OutputDebugStringA("[main_win32] Core runtime spine initialized\n");
-
-        ide.initRefactoringPlugin();
-        OutputDebugStringA("[main_win32] RefactoringPlugin initialized\n");
-
-        ide.initLanguagePlugin();
-        OutputDebugStringA("[main_win32] LanguagePlugin initialized\n");
-
-        ide.initResourceGenerator();
-        OutputDebugStringA("[main_win32] ResourceGenerator initialized\n");
+    // ========================================================================
+    // LSP CLIENT INITIALIZATION - Phase 9A
+    // ========================================================================
+    {
+        ide.initLSPClient();
+        ide.startAllLSPServers();
+        OutputDebugStringA("[main_win32] LSP Client initialized and servers started\n");
     }
 
     // ========================================================================
@@ -357,8 +359,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
         }
     }
 
-    // Show window and force layout
-    ide.showWindow();
+    // Show window through the unified safe visibility path.
+    ide.showMainWindowSafe();
 
     // Parity-audit: start the visibility watchdog (2 s interval)
     ide.startVisibilityWatchdog();
@@ -401,6 +403,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
             OutputDebugStringA(err);
         }
     }
+
+    // Register Editor Commands
+    RawrXD::Win32App::RouterOperations::Instance().RegisterEditorCommands();
 
     // ========================================================================
     // MASM SUBSYSTEM INITIALIZATION — Cathedral Bridge
@@ -671,10 +676,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
     // Cleanup engine resources (IDE no longer holds pointers to these)
     try {
         delete codex;
-    } catch (...) {}
+    } catch (const std::exception& e) {
+        OutputDebugStringA((std::string("[InitSequence] codex cleanup exception: ") + e.what() + "\n").c_str());
+    } catch (...) {
+        OutputDebugStringA("[InitSequence] codex cleanup unknown exception\n");
+    }
     try {
         delete engine_mgr;
-    } catch (...) {}
+    } catch (const std::exception& e) {
+        OutputDebugStringA((std::string("[InitSequence] engine_mgr cleanup exception: ") + e.what() + "\n").c_str());
+    } catch (...) {
+        OutputDebugStringA("[InitSequence] engine_mgr cleanup unknown exception\n");
+    }
 
     // ========================================================================
     // CRASH CONTAINMENT UNINSTALL — Cathedral teardown

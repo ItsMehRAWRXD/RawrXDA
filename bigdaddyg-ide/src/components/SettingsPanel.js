@@ -27,7 +27,7 @@ const KEYBOARD_ACTION_LABELS = {
 const tabs = [
   { id: 'general', label: 'General' },
   { id: 'ai', label: 'AI & models' },
-  { id: 'copilot', label: 'Copilot / Cursor' },
+  { id: 'copilot', label: 'AI / Agent' },
   { id: 'accessibility', label: 'Accessibility' },
   { id: 'noise', label: 'Noise & feedback' },
   { id: 'keys', label: 'Keyboard' }
@@ -130,7 +130,7 @@ const SettingsPanel = ({ open, onClose, settings, setSettings }) => {
               {tab === 'general' && (
                 <>
                   <p className="text-gray-400 text-xs">
-                    RawrXD shell — Cursor / Copilot–style preferences (persisted locally).
+                    RawrXD shell — AI / agent preferences (persisted locally).
                   </p>
                   <div className="text-[10px] text-gray-500 border border-gray-700/80 rounded p-2 bg-gray-950/40 space-y-2">
                     <p>

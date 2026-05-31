@@ -483,7 +483,13 @@ void ModelGuidedPlanner::parse_plan_from_model_output(const std::string& modelOu
                         try {
                             currentStep.priorSteps.push_back(
                                 static_cast<uint32_t>(std::stoul(depStr.substr(ds))));
-                        } catch (...) {}
+                        } catch (const std::exception& e) {
+                            LogMessage(WARN, "ModelGuidedPlanner: failed to parse dependency '%s': %s",
+                                       depStr.c_str(), e.what());
+                        } catch (...) {
+                            LogMessage(WARN, "ModelGuidedPlanner: failed to parse dependency '%s'",
+                                       depStr.c_str());
+                        }
                     }
                 }
             } else if (keyword == "CONFIDENCE") {

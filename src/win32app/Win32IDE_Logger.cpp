@@ -4,6 +4,8 @@
 #include <sstream>
 #include <iomanip>
 #include <ctime>
+#include <windows.h>
+#include <vector>
 
 // Global log file
 static std::ofstream g_logFile;
@@ -15,22 +17,89 @@ void Win32IDE::initializeLogging() {
     
     InitializeCriticalSection(&g_logMutex);
     
-    // Create logs directory
-    CreateDirectoryA("logs", NULL);
+    // Attempt to initialize logging with multiple fallback strategies
+    std::vector<std::string> candidateDirs = {
+        "logs",                    // Primary: local logs directory
+        ".",                       // Fallback 1: current directory
+        ""                         // Fallback 2: no subdirectory
+    };
     
-    // Open log file with timestamp
-    time_t now = time(nullptr);
-    struct tm timeinfo;
-    localtime_s(&timeinfo, &now);
+    // Try to get TEMP directory as additional fallback
+    char tempPath[MAX_PATH] = {};
+    if (GetTempPathA(sizeof(tempPath), tempPath)) {
+        std::string tempDir = tempPath;
+        size_t lastSlash = tempDir.find_last_of("\\/");
+        if (lastSlash != std::string::npos) {
+            tempDir = tempDir.substr(0, lastSlash);
+        }
+        candidateDirs.push_back(tempDir);
+    }
     
-    char filename[256];
-    strftime(filename, sizeof(filename), "logs\\RawrXD_IDE_%Y%m%d_%H%M%S.log", &timeinfo);
+    char filename[MAX_PATH] = {};
+    bool logFileOpened = false;
     
-    g_logFile.open(filename, std::ios::out | std::ios::app);
+    for (const auto& dir : candidateDirs) {
+        // Generate timestamp once
+        time_t now = time(nullptr);
+        struct tm timeinfo;
+        localtime_s(&timeinfo, &now);
+        
+        char logFilename[256];
+        strftime(logFilename, sizeof(logFilename), "RawrXD_IDE_%Y%m%d_%H%M%S.log", &timeinfo);
+        
+        // Build full path
+        if (dir.empty()) {
+            strncpy_s(filename, sizeof(filename), logFilename, _TRUNCATE);
+        } else {
+            DWORD dirAttrs = GetFileAttributesA(dir.c_str());
+            
+            // If directory doesn't exist, try to create it (but don't fail if it already exists)
+            if (dirAttrs == INVALID_FILE_ATTRIBUTES) {
+                if (!CreateDirectoryA(dir.c_str(), NULL)) {
+                    DWORD createErr = GetLastError();
+                    // ERROR_ALREADY_EXISTS is OK
+                    if (createErr != ERROR_ALREADY_EXISTS) {
+                        continue;  // Try next directory
+                    }
+                }
+            } else if (!(dirAttrs & FILE_ATTRIBUTE_DIRECTORY)) {
+                continue;  // Path exists but is not a directory
+            }
+            
+            // Check write permissions by testing file creation
+            char testFilePath[MAX_PATH] = {};
+            snprintf(testFilePath, sizeof(testFilePath), "%s\\.rawrxd_write_test", dir.c_str());
+            HANDLE testHandle = CreateFileA(testFilePath, GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_TEMPORARY, NULL);
+            if (testHandle != INVALID_HANDLE_VALUE) {
+                CloseHandle(testHandle);
+                DeleteFileA(testFilePath);  // Clean up test file
+            } else {
+                continue;  // No write permissions in this directory
+            }
+            
+            snprintf(filename, sizeof(filename), "%s\\%s", dir.c_str(), logFilename);
+        }
+        
+        // Attempt to open log file
+        g_logFile.open(filename, std::ios::out | std::ios::app);
+        if (g_logFile.is_open() && g_logFile.good()) {
+            logFileOpened = true;
+            break;  // Success!
+        } else {
+            g_logFile.clear();  // Clear any error flags
+        }
+    }
+    
     g_logInitialized = true;
     
-    logMessage("SYSTEM", "=== RawrXD IDE Logging Initialized ===");
-    logMessage("SYSTEM", "Log file: " + std::string(filename));
+    if (logFileOpened) {
+        logMessage("SYSTEM", "=== RawrXD IDE Logging Initialized ===");
+        logMessage("SYSTEM", "Log file: " + std::string(filename));
+    } else {
+        // Even if file couldn't be opened, logging is still "initialized" (will use debug output only)
+        OutputDebugStringA("WARNING: Could not open log file in any candidate directory; using debug output only\n");
+        logMessage("SYSTEM", "=== RawrXD IDE Logging Initialized (Debug Output Mode) ===");
+    }
 }
 
 void Win32IDE::logMessage(const std::string& category, const std::string& message) {

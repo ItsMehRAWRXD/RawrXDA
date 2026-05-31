@@ -107,29 +107,50 @@ uint32_t PDB_ScanPublics(const void* streamData, uint32_t streamSize,
 uint32_t PDB_BuildPageList(const void* directory, uint32_t streamIndex,
                             uint32_t numStreams, const uint32_t* streamSizes,
                             uint32_t* pagesOut, uint32_t maxPages) {
-    // Walk the stream directory to extract page numbers for the given stream.
-    // Directory layout: uint32_t numStreams, uint32_t sizes[numStreams], then page arrays.
-    const uint32_t* dir = static_cast<const uint32_t*>(directory);
+    if (!directory || !streamSizes || !pagesOut || maxPages == 0) {
+        return 0;
+    }
+    if (streamIndex >= numStreams) {
+        return 0;
+    }
 
-    // Skip numStreams + streamSizes[]
-    uint32_t pageListStart = 1 + numStreams;
-
-    // Walk to the correct stream's page list
-    for (uint32_t i = 0; i < streamIndex && i < numStreams; ++i) {
-        uint32_t sz = streamSizes[i];
-        if (sz != 0 && sz != 0xFFFFFFFF) {
-            // We don't know blockSize here so we can't compute page count.
-            // This fallback is not used in practice (parseStreamDirectory does its own walk).
-            // Return 0 to indicate fallback not applicable.
-            (void)pageListStart;
+    // Directory layout: [numStreams][sizes...][page-number arrays...]
+    // Fallback does not receive MSF block size; use deterministic policy.
+    uint32_t pageSize = 4096;
+    if (const char* env = std::getenv("RAWRXD_PDB_PAGE_SIZE")) {
+        const uint32_t parsed = static_cast<uint32_t>(std::strtoul(env, nullptr, 10));
+        if (parsed == 512 || parsed == 1024 || parsed == 2048 || parsed == 4096) {
+            pageSize = parsed;
         }
     }
 
-    // This function is not actually called in the C++ parser path
-    // (parseStreamDirectory handles its own page list extraction).
-    // Provide stub that returns 0 pages.
-    (void)dir; (void)pagesOut; (void)maxPages;
-    return 0;
+    auto pagesForStream = [pageSize](uint32_t sizeBytes) -> uint32_t {
+        if (sizeBytes == 0 || sizeBytes == 0xFFFFFFFFu) {
+            return 0;
+        }
+        return (sizeBytes + (pageSize - 1u)) / pageSize;
+    };
+
+    const uint32_t* dir = static_cast<const uint32_t*>(directory);
+    const uint32_t pageListStart = 1u + numStreams;
+
+    uint32_t skipPages = 0;
+    for (uint32_t i = 0; i < streamIndex; ++i) {
+        skipPages += pagesForStream(streamSizes[i]);
+    }
+
+    const uint32_t streamPages = pagesForStream(streamSizes[streamIndex]);
+    if (streamPages == 0) {
+        return 0;
+    }
+
+    const uint32_t outCount = std::min(streamPages, maxPages);
+    const uint32_t* src = dir + pageListStart + skipPages;
+    for (uint32_t i = 0; i < outCount; ++i) {
+        pagesOut[i] = src[i];
+    }
+
+    return outCount;
 }
 
 uint32_t PDB_GuidToHex(const uint8_t guid[16], char* out, uint32_t maxLen) {
@@ -1150,7 +1171,11 @@ PDBSymbolServer::PDBSymbolServer() {
 }
 
 PDBSymbolServer::~PDBSymbolServer() {
-    // Nothing to clean up — WinHTTP handles are per-request
+    // Cleanup WinHTTP handles
+    if (m_hSession) {
+        WinHttpCloseHandle(m_hSession);
+        m_hSession = nullptr;
+    }
 }
 
 // ============================================================================

@@ -1332,7 +1332,7 @@ g_heartbeat_active      DWORD   0       ; 0=stopped, 1=active
 g_heartbeat_last_tsc    QWORD   0       ; TSC at last heartbeat tick
 g_heartbeat_threshold   QWORD   0       ; Max TSC delta before declaring dead (5 sec worth of cycles)
 
-ALIGN 32
+ALIGN 16
 sm_exp_hi       REAL4 8 DUP(88.3762626647949)
 sm_exp_lo       REAL4 8 DUP(-88.3762626647949)
 sm_log2ef       REAL4 8 DUP(1.44269504088896341)

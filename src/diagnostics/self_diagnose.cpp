@@ -48,12 +48,37 @@ namespace {
     char g_logPath[kLogPathCapacity] = "D:\\rawrxd\\crash_diag.txt";
     volatile LONG g_installState = 0;
     volatile LONG g_symbolsInitialized = 0;
-    std::atomic<std::uint32_t> g_phaseValue{static_cast<std::uint32_t>(InitPhase::Entry)};
+    // LAZY SINGLETON: std::atomic with initializer has non-trivial constructor
+    inline std::atomic<std::uint32_t>& GetPhaseValue() {
+        static std::atomic<std::uint32_t>* inst = new std::atomic<std::uint32_t>(static_cast<std::uint32_t>(InitPhase::Entry));
+        return *inst;
+    }
+    #define g_phaseValue GetPhaseValue()
 
-    std::mutex g_allocMutex;
+    // LAZY SINGLETON PATTERN: Avoid SIOF - std::mutex has non-trivial constructor
+    // These must be lazy-initialized to ensure C runtime locale is ready.
+    inline std::mutex& GetAllocMutex() {
+        static std::mutex* inst = new std::mutex();
+        return *inst;
+    }
+    #define g_allocMutex GetAllocMutex()
+
+    // std::array with default initialization is trivially constructible (safe for static)
     std::array<AllocationRecord, 8192> g_allocs{};
-    std::mutex g_vtMutex;
+
+    inline std::mutex& GetVtMutex() {
+        static std::mutex* inst = new std::mutex();
+        return *inst;
+    }
+    #define g_vtMutex GetVtMutex()
+
     std::array<VTableRecord, 2048> g_vtRecords{};
+
+    inline std::mutex& GetLogMutex() {
+        static std::mutex* inst = new std::mutex();
+        return *inst;
+    }
+    #define g_logMutex GetLogMutex()
 
     void SafeCopyPath(const char* src) {
         if (!src || !*src) {
@@ -67,6 +92,8 @@ namespace {
         if (!text) {
             return;
         }
+
+        std::lock_guard<std::mutex> lock(g_logMutex);  // Thread-safe file access
 
         HANDLE file = CreateFileA(
             g_logPath,
@@ -444,11 +471,28 @@ void* SelfDiagnoser::GuardAlloc(std::size_t size, const char* tag, const char* f
     RecordAlloc(user, size, file, line, tag);
     return user;
 #else
-    (void)size;
-    (void)tag;
-    (void)file;
-    (void)line;
-    return nullptr;
+    // POSIX fallback: use aligned_alloc with guard pages via mmap
+    size_t total = size + 2 * 0x1000 + sizeof(AllocMeta);
+    void* mem = mmap(nullptr, total, PROT_READ | PROT_WRITE,
+                     MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (mem == MAP_FAILED) {
+        return nullptr;
+    }
+    mprotect(mem, 0x1000, PROT_NONE);
+    BYTE* user = static_cast<BYTE*>(mem) + 0x1000 + sizeof(AllocMeta);
+    mprotect(user + aligned, 0x1000, PROT_NONE);
+
+    auto* meta = reinterpret_cast<AllocMeta*>(user - sizeof(AllocMeta));
+    meta->magic = kAllocMagic;
+    meta->size = size;
+    meta->file = file;
+    meta->line = line;
+    meta->tag = tag;
+    meta->base = mem;
+
+    std::memset(user, 0xAA, size);
+    RecordAlloc(user, size, file, line, tag);
+    return user;
 #endif
 }
 
@@ -607,7 +651,7 @@ void SelfDiagnoser::LogStackTrace(
 
     WalkStack(ctx);
 #else
-    (void)ctx;
+    if (ctx) { /* non-Windows stack walk not implemented */ }
 #endif
 }
 

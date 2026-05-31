@@ -5,11 +5,18 @@
 #include <unordered_map>
 #include <vector>
 
+// std::expected is C++23; the project builds MSVC as C++23, but some indexers may not have <expected>.
+// Forward declare for headers; definition lives in translation units that include <expected>.
+namespace std
+{
+template <class T, class E> class expected;
+}  // namespace std
+
 
 #include <array>
 #include <functional>
 #include <mutex>
-#ifdef RAWR_ENABLE_VULKAN
+#if defined(RAWR_HAS_VULKAN) && RAWR_HAS_VULKAN
 #include <vulkan/vulkan.h>
 #else
 // Standard Win32/CPU build - Vulkan handles not needed
@@ -47,6 +54,12 @@ struct Tensor
 
     // CPU Float cache for reference implementation
     std::vector<float> cpuFloatData;
+    
+    // Mapped window fallback for large tensors (>1GB) - avoids 2GB std::vector limit
+    void* cpuFloatMappedBase = nullptr;  // Base of mapped region (for UnmapViewOfFile)
+    size_t cpuFloatMappedSize = 0;       // Size of mapped region
+    float* cpuFloatMappedPtr = nullptr;  // Actual data pointer (may be offset from base)
+    bool usesMappedWindow = false;       // True if using mapped window instead of vector
 };
 
 /// File-backed byte span for a tensor (Swarm / prefetch planning). Offsets are relative to GGUF payload.
@@ -98,8 +111,19 @@ class RawrXDModelLoader
 
     bool Load(const wchar_t* path, VkDevice device, VkPhysicalDevice physDevice);
     float* GetTensor(const std::string& name);
+    /// Like GetTensor(), but returns a structured failure message.
+    [[nodiscard]] std::expected<float*, std::string> GetTensorExpected(const std::string& name);
+    /// Hotpatch indirection for tensors that may be evicted/reloaded (MoE experts).
+    /// Returns a stable atomic slot (pointer value may change); callers should not cache the pointer value.
+    [[nodiscard]] std::expected<std::atomic<float*>*, std::string> GetTensorHotSlot(const std::string& name);
     bool GetTensorRow(const std::string& name, size_t rowIndex, float* out, size_t cols);
     bool StreamingMatMul(const std::string& name, const float* x, float* y, size_t K, size_t N);
+    /// Fused gate+up GEMV: computes both gate and up tensors in a single pool dispatch,
+    /// loading x once per block pair.  Both tensors must be Q4_0 with the same K and N.
+    /// h_gate and h_up are output vectors of length N.  Falls back to two StreamingMatMul
+    /// calls if the tensors are not both Q4_0 (e.g. unsupported type or missing).
+    bool StreamingFusedGateUp(const std::string& gate_name, const std::string& up_name,
+                              const float* x, float* h_gate, float* h_up, size_t K, size_t N);
     void ReleaseTensor(const std::string& name);
     void SetLoadErrorCallback(ModelLoadErrorCallback callback);
     const std::string& GetLastLoadErrorMessage() const;
@@ -109,6 +133,7 @@ class RawrXDModelLoader
     void* GetCurrentViewBase() const;
     void* GetCurrentView() const;
     void SetPrefetchEnabled(bool enabled) { m_prefetchEnabled = enabled; }
+    bool IsPrefetchEnabled() const { return m_prefetchEnabled; }
     void SetWorkingSetLockEnabled(bool enabled) { m_workingSetLockEnabled = enabled; }
     void SetSilencePrivilegeWarnings(bool enabled) { m_silencePrivilegeWarnings = enabled; }
     bool HintRange(uint64_t offset, size_t size);
@@ -125,6 +150,11 @@ class RawrXDModelLoader
     bool m_workingSetLockEnabled = false;
     bool m_workingSetLocked = false;
     bool m_silencePrivilegeWarnings = false;
+
+    // Cached incidental window: avoids repeated MapViewOfFile/UnmapViewOfFile
+    void* m_incCache = nullptr;    // MapViewOfFile base
+    uint64_t m_incCacheStart = 0;  // file offset of cached map start
+    size_t m_incCacheSize = 0;     // size of cached region
 
     // Sliding window memory mapping for large files
     void* virtualBase;    // Reserved virtual address space
@@ -158,6 +188,9 @@ class RawrXDModelLoader
     uint64_t m_streamingRangeStart = 0;
     uint64_t m_streamingRangeEnd = 0;
     size_t m_streamingLockedWindowSize = 0;
+    size_t m_streamingPressureCapBytes = 0;
+    std::uint32_t m_prefetchOomFailureStreak = 0;
+    bool m_prefetchSuppressedForStreaming = false;
 
     /// Serialize compute window (MapWindow) vs prefetch window (MapPrefetchWindow) for safe dual mapping.
     mutable std::mutex m_slidingWindowMutex;
@@ -188,9 +221,12 @@ class RawrXDModelLoader
     int n_heads_kv = 0;
     int n_ctx = 0;
     int vocab_size = 0;
-    int n_ffn = 0;  // feed_forward_length (0 = infer from dim*4)
+    std::vector<std::string> vocab;  // Token strings from GGUF
+    int n_ffn = 0;                   // feed_forward_length (0 = infer from dim*4)
     int n_experts = 0;
     int n_experts_used = 0;
+    int eos_token_id = 2;  // from tokenizer.ggml.eos_token_id
+    int bos_token_id = 1;  // from tokenizer.ggml.bos_token_id
     std::string m_metadataArchitecture;
     std::string m_metadataTokenizerModel;
     uint32_t m_metadataFileType = 0xFFFFFFFFu;  // GGUF file_type identifier
@@ -216,15 +252,27 @@ class RawrXDModelLoader
     int getKVHeads() const { return n_heads_kv; }
     int getCtx() const { return n_ctx; }
     int getVocabSize() const { return vocab_size; }
+    const std::vector<std::string>& getVocab() const { return vocab; }
     int getFFNDim() const { return n_ffn; }
     int getExperts() const { return n_experts; }
     /// MoE metadata (`expert_used_count`); 0 if unset — callers may fall back to a small default.
     int getExpertsUsedCount() const { return n_experts_used; }
+    int getEOSTokenId() const { return eos_token_id; }
+    int getBOSTokenId() const { return bos_token_id; }
     /// True if \p name appears in the loaded tensor map (does not materialize weights).
     [[nodiscard]] bool hasTensorNamed(const std::string& name) const;
 
   private:
     std::unordered_map<std::string, Tensor> m_tensors;
+
+    // --- Minimal hotpatch + expert cache (MoE) ---
+    std::unordered_map<std::string, std::atomic<float*>> m_hotTensorPtrs;
+    std::unordered_map<std::string, std::uint64_t> m_hotLastTouch;
+    std::uint64_t m_hotClock = 1;
+    std::uint64_t m_expertCacheBudgetBytes = 512ull * 1024ull * 1024ull;  // 512 MiB default
+
+    [[nodiscard]] bool isMoEExpertTensorName_(const std::string& name) const;
+    void evictExpertCacheIfNeeded_();
 
   public:
     // Helpers
@@ -252,6 +300,10 @@ class RawrXDModelLoader
     void DequantChunkQ6_K(Tensor& t, void* blocks, size_t chunkElements, size_t offset);
     void UploadChunkF32(Tensor& t, void* data, size_t chunkElements, size_t offset);
     void UploadToGPU(Tensor& t);
+
+    // Mapped window allocation for large tensors (>1GB) - avoids 2GB std::vector limit
+    bool AllocateTensorFloatData(Tensor& t, size_t elementCount);
+    void FreeTensorFloatData(Tensor& t);
 
     // Sliding window mapping helpers
     bool InitializeSlidingWindow(uint64_t fileSize);
@@ -281,16 +333,21 @@ class RawrXDModelLoader
     void recordSwarmPinBackoffCycle() const;
     bool MapIncidentalWindow(uint64_t offset, size_t size, void*& viewBase, uint8_t*& dataPtr);
     void UnmapIncidentalWindow(void* viewBase);
+    void FlushIncidentalCache();
     void BeginStreamingRange(uint64_t offset, size_t size);
     void EndStreamingRange();
-    // Internal demonstration / self-test helper
+    // Internal self-test helper
     void RunInternalSelfTest();
 
-    // Sovereign capabilities demonstration
+    // Sovereign capabilities
     void DemonstrateSovereignCapabilities();
 
     // Backend mode and file type validation
     bool IsSupportedFileType(uint32_t fileType) const;
     bool ResolveBackendModeAndPreflight(const wchar_t* path, uint64_t modelBytes, std::string& lane,
                                         std::string& reason);
+    
+    // Large tensor allocation (>1GB) using mapped window fallback - avoids 2GB std::vector limit
+    bool AllocateLargeTensorWindow(Tensor& t, size_t elementCount);
+    void FreeLargeTensorWindow(Tensor& t);
 };

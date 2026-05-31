@@ -60,7 +60,7 @@ void Window::create(Window* parent_, const String& title, DWORD style, DWORD exS
     
     HWND hwnd_ = CreateWindowExW(exStyle, className, title.c_str(), style,
                     CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
-                    parentHwnd, nullptr, GetModuleHandleW(nullptr), this);
+                    nullptr, nullptr, GetModuleHandleW(nullptr), this);
     
     if (hwnd_ && !hwnd) {
         hwnd = hwnd_;
@@ -144,14 +144,41 @@ void Window::paintEvent(PAINTSTRUCT& ps) {
 }
 
 void Window::resizeEvent(int w, int h) {
-    // Default: resize children?
+    // Resize children and update layout
+    m_width = w;
+    m_height = h;
+    if (m_layout) {
+        m_layout->Update(hwnd);
+    }
 }
 
-void Window::mousePressEvent(int x, int y, int button) {}
-void Window::mouseReleaseEvent(int x, int y, int button) {}
-void Window::mouseMoveEvent(int x, int y, int mods) {}
-void Window::keyPressEvent(int key, int mods) {}
-void Window::charEvent(wchar_t c) {}
+void Window::mousePressEvent(int x, int y, int button) {
+    (void)x; (void)y;
+    if (button == 1) {
+        // Left click: focus window
+        SetFocus(hwnd);
+    }
+}
+
+void Window::mouseReleaseEvent(int x, int y, int button) {
+    (void)x; (void)y; (void)button;
+    // Release handling
+}
+
+void Window::mouseMoveEvent(int x, int y, int mods) {
+    (void)x; (void)y; (void)mods;
+    // Track mouse for hover effects
+}
+
+void Window::keyPressEvent(int key, int mods) {
+    (void)key; (void)mods;
+    // Key handling for shortcuts
+}
+
+void Window::charEvent(wchar_t c) {
+    (void)c;
+    // Character input handling
+}
 
 void Window::closeEvent() {
     DestroyWindow(hwnd);

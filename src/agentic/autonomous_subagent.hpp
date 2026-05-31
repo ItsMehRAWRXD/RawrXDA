@@ -1,2 +1,3 @@
 #pragma once
-// Stub for autonomous_subagent.hpp
+// Forward to the canonical implementation in src/agent/
+#include "../agent/autonomous_subagent.hpp"

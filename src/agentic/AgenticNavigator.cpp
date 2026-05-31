@@ -1,10 +1,213 @@
 #include "../../include/agentic/AgenticNavigator.h"
-#include "../win32app/Win32IDE.h"
+#include "../win32app/PendingEditReview.h"
+
 #include <windows.h>
+#include <richedit.h>
 #include <chrono>
 #include <thread>
 #include <algorithm>
 #include <random>
+
+namespace {
+
+bool IsRichEditClassName(const std::string& className) {
+    if (className.empty()) {
+        return false;
+    }
+
+    std::string upper = className;
+    std::transform(upper.begin(), upper.end(), upper.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
+    return upper.find("RICHEDIT") != std::string::npos || upper == "MSFTEDIT";
+}
+
+bool IsUndoPreservingEditControl(const RawrXD::Agentic::UIElement& element) {
+    return element.className == "Edit" || element.className == "EDIT" ||
+           element.className == "Scintilla" || IsRichEditClassName(element.className);
+}
+
+struct SelectionSnapshot {
+    LONG start = 0;
+    LONG end = 0;
+    bool valid = false;
+    bool richEdit = false;
+    bool standardEdit = false;
+};
+
+bool IsSingleLineEditControl(const RawrXD::Agentic::UIElement& element) {
+    if (!element.handle || !IsWindow(element.handle)) {
+        return false;
+    }
+    if (!(element.className == "Edit" || element.className == "EDIT")) {
+        return false;
+    }
+
+    const LONG_PTR style = GetWindowLongPtrA(element.handle, GWL_STYLE);
+    return (style & ES_MULTILINE) == 0;
+}
+
+SelectionSnapshot CaptureSelectionSnapshot(const RawrXD::Agentic::UIElement& element) {
+    SelectionSnapshot snapshot{};
+    snapshot.richEdit = IsRichEditClassName(element.className);
+    snapshot.standardEdit = (element.className == "Edit" || element.className == "EDIT");
+
+    if (!element.handle || !IsWindow(element.handle) || element.className == "Scintilla") {
+        return snapshot;
+    }
+
+    if (snapshot.richEdit) {
+        CHARRANGE range{};
+        SendMessageA(element.handle, EM_EXGETSEL, 0, reinterpret_cast<LPARAM>(&range));
+        snapshot.start = range.cpMin;
+        snapshot.end = range.cpMax;
+        snapshot.valid = range.cpMin >= 0 && range.cpMax >= range.cpMin;
+        return snapshot;
+    }
+
+    if (snapshot.standardEdit) {
+        DWORD start = 0;
+        DWORD end = 0;
+        SendMessageA(element.handle, EM_GETSEL, reinterpret_cast<WPARAM>(&start), reinterpret_cast<LPARAM>(&end));
+        snapshot.start = static_cast<LONG>(start);
+        snapshot.end = static_cast<LONG>(end);
+        snapshot.valid = snapshot.end >= snapshot.start;
+    }
+
+    return snapshot;
+}
+
+std::string ReadControlText(HWND hwnd) {
+    if (!hwnd || !IsWindow(hwnd)) {
+        return {};
+    }
+
+    const int length = GetWindowTextLengthA(hwnd);
+    if (length <= 0) {
+        return {};
+    }
+
+    std::string text(static_cast<size_t>(length) + 1, '\0');
+    GetWindowTextA(hwnd, text.data(), length + 1);
+    text.resize(static_cast<size_t>(length));
+    return text;
+}
+
+std::string ExtractSelectionText(const RawrXD::Agentic::UIElement& element, const SelectionSnapshot& snapshot) {
+    if (!snapshot.valid || snapshot.end <= snapshot.start || !element.handle || !IsWindow(element.handle)) {
+        return {};
+    }
+
+    if (snapshot.richEdit) {
+        TEXTRANGEA range{};
+        CHARRANGE chars{};
+        chars.cpMin = snapshot.start;
+        chars.cpMax = snapshot.end;
+        range.chrg = chars;
+        std::string text(static_cast<size_t>(snapshot.end - snapshot.start) + 1, '\0');
+        range.lpstrText = text.data();
+        SendMessageA(element.handle, EM_GETTEXTRANGE, 0, reinterpret_cast<LPARAM>(&range));
+        text.resize(static_cast<size_t>(snapshot.end - snapshot.start));
+        return text;
+    }
+
+    const std::string full = ReadControlText(element.handle);
+    if (snapshot.start < 0 || snapshot.start > static_cast<LONG>(full.size())) {
+        return {};
+    }
+    const size_t start = static_cast<size_t>(snapshot.start);
+    const size_t end = static_cast<size_t>((std::min)(snapshot.end, static_cast<LONG>(full.size())));
+    return full.substr(start, end - start);
+}
+
+bool QueuePendingEditForElement(const RawrXD::Agentic::UIElement& element,
+                                const SelectionSnapshot& snapshot,
+                                const std::string& text,
+                                bool replaceAll) {
+    HWND root = GetAncestor(element.handle, GA_ROOT);
+    if (!root || !IsWindow(root)) {
+        return false;
+    }
+
+    auto* request = new RawrXD::Review::PendingEditRequest();
+    request->type = replaceAll || (snapshot.valid && snapshot.start != snapshot.end)
+                        ? RawrXD::Review::EditType::Replace
+                        : RawrXD::Review::EditType::Insert;
+    request->source = RawrXD::Review::EditSource::Agent;
+    request->targetHandle = element.handle;
+    request->replaceAll = replaceAll;
+    request->createdTickMs = GetTickCount64();
+    request->newText = text;
+
+    if (replaceAll) {
+        const std::string oldText = ReadControlText(element.handle);
+        request->oldText = oldText;
+        request->oldRange.cpMin = 0;
+        request->oldRange.cpMax = static_cast<LONG>(oldText.size());
+    } else {
+        request->oldRange.cpMin = snapshot.start;
+        request->oldRange.cpMax = snapshot.end;
+        request->oldText = ExtractSelectionText(element, snapshot);
+    }
+
+    if (!PostMessageA(root, RawrXD::Review::WM_USER_EDIT_REVIEW_REQUIRED, 0, reinterpret_cast<LPARAM>(request))) {
+        delete request;
+        return false;
+    }
+
+    return true;
+}
+
+void RestoreCaretAfterInsert(const RawrXD::Agentic::UIElement& element,
+                             const SelectionSnapshot& snapshot,
+                             size_t insertedBytes,
+                             bool replaceAll) {
+    if (!element.handle || !IsWindow(element.handle) || element.className == "Scintilla") {
+        return;
+    }
+
+    const LONG anchor = replaceAll ? 0 : (snapshot.valid ? snapshot.start : 0);
+    const LONG caret = anchor + static_cast<LONG>(insertedBytes);
+
+    if (snapshot.richEdit) {
+        CHARRANGE range{};
+        range.cpMin = caret;
+        range.cpMax = caret;
+        SendMessageA(element.handle, EM_EXSETSEL, 0, reinterpret_cast<LPARAM>(&range));
+        SendMessageA(element.handle, EM_SCROLLCARET, 0, 0);
+        return;
+    }
+
+    if (snapshot.standardEdit) {
+        SendMessageA(element.handle, EM_SETSEL, caret, caret);
+        SendMessageA(element.handle, EM_SCROLLCARET, 0, 0);
+    }
+}
+
+bool ReplaceTextWithUndoGroup(const RawrXD::Agentic::UIElement& element,
+                              const std::string& text,
+                              bool replaceAll) {
+    if (!element.handle || !IsWindow(element.handle)) {
+        return false;
+    }
+
+    const bool isRichEdit = IsRichEditClassName(element.className);
+    const SelectionSnapshot selection = CaptureSelectionSnapshot(element);
+
+    if (replaceAll) {
+        SendMessageA(element.handle, EM_SETSEL, 0, static_cast<LPARAM>(-1));
+    }
+
+    SendMessageA(element.handle, EM_REPLACESEL, TRUE, reinterpret_cast<LPARAM>(text.c_str()));
+    RestoreCaretAfterInsert(element, selection, text.size(), replaceAll);
+
+    if (isRichEdit) {
+        SendMessageA(element.handle, EM_STOPGROUPTYPING, 0, 0);
+    }
+
+    return true;
+}
+
+} // namespace
 
 namespace RawrXD {
 namespace Agentic {
@@ -454,7 +657,7 @@ std::vector<UIElement> AgenticNavigator::detectElementsDirectAPI() {
         if (elem.className == "Button" || elem.className == "BUTTON") {
             elem.type = "button";
         } else if (elem.className == "Edit" || elem.className == "EDIT" ||
-                   elem.className == "Scintilla") {
+                   elem.className == "Scintilla" || IsRichEditClassName(elem.className)) {
             elem.type = "textbox";
         } else if (elem.className == "SysTreeView32") {
             elem.type = "treeview";
@@ -508,16 +711,22 @@ NavigationResult AgenticNavigator::clickElementDirectAPI(const UIElement& elemen
 }
 
 NavigationResult AgenticNavigator::sendTextDirectAPI(const UIElement& element, const std::string& text) {
-    // Send text via WM_SETTEXT for edit controls, WM_CHAR for others
+    // Send text via EM_REPLACESEL for edit controls so native undo/redo remains intact.
     if (!element.handle || !IsWindow(element.handle)) {
         return createResult(false, "Invalid window handle for text send", element.handle);
     }
     
     SetFocus(element.handle);
     
-    // Try WM_SETTEXT first (works for Edit, RichEdit, ComboBox controls)
-    if (element.type == "textbox" || element.type == "combobox" ||
-        element.className == "Edit" || element.className == "EDIT") {
+    if (IsUndoPreservingEditControl(element)) {
+        const bool replaceAll = IsSingleLineEditControl(element);
+        const SelectionSnapshot snapshot = CaptureSelectionSnapshot(element);
+        if (QueuePendingEditForElement(element, snapshot, text, replaceAll)) {
+            return createResult(true, "Queued " + std::to_string(text.size()) + " chars for review in " + element.name,
+                                element.handle);
+        }
+        ReplaceTextWithUndoGroup(element, text, replaceAll);
+    } else if (element.type == "combobox" || element.className == "ComboBox" || element.className == "COMBOBOX") {
         SendMessageA(element.handle, WM_SETTEXT, 0, reinterpret_cast<LPARAM>(text.c_str()));
     } else {
         // Fallback: send individual WM_CHAR messages
@@ -569,17 +778,24 @@ NavigationResult AgenticNavigator::clickElementIDECommands(const UIElement& elem
 }
 
 NavigationResult AgenticNavigator::sendTextIDECommands(const UIElement& element, const std::string& text) {
-    // Send text via EM_REPLACESEL for edit controls (preserves undo), WM_SETTEXT as fallback
+    // Send text via EM_REPLACESEL for edit controls and group each tool-driven
+    // insertion into a single undo step.
     if (!element.handle || !IsWindow(element.handle)) {
         return createResult(false, "Invalid handle for IDE command text", element.handle);
     }
     
     SetFocus(element.handle);
     
-    if (element.type == "textbox" || element.className == "Edit" || 
-        element.className == "EDIT" || element.className == "Scintilla") {
-        // Use EM_REPLACESEL to insert at cursor position (supports undo)
-        SendMessageA(element.handle, EM_REPLACESEL, TRUE, reinterpret_cast<LPARAM>(text.c_str()));
+    if (IsUndoPreservingEditControl(element)) {
+        const bool replaceAll = IsSingleLineEditControl(element);
+        const SelectionSnapshot snapshot = CaptureSelectionSnapshot(element);
+        if (QueuePendingEditForElement(element, snapshot, text, replaceAll)) {
+            return createResult(true,
+                                "Queued IDE command text (" + std::to_string(text.size()) + " chars) for review in " +
+                                    element.name,
+                                element.handle);
+        }
+        ReplaceTextWithUndoGroup(element, text, replaceAll);
     } else {
         SendMessageA(element.handle, WM_SETTEXT, 0, reinterpret_cast<LPARAM>(text.c_str()));
     }

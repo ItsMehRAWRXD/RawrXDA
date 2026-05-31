@@ -53,7 +53,7 @@ cmake --build build --config Release --target RawrEngine
 # REST on port 8080; open gui/ide_chatbot.html or use standalone_interface.html
 ```
 
-- **Standalone Web Bridge (Qt-free):** Serves HTML UIs and talks to GGUF/inference over TCP. See **docs/RAWRXD_IDE_DOCUMENTARY_OVERVIEW.md** §4.
+- **Standalone Web Bridge (Qt-free):** Serves HTML UIs and talks to GGUF/inference over TCP. See **`docs/INFERENCE_PATH_MATRIX.md`** and **`docs/LOCALHOST_COMMUNICATION_MAP.md`** for ports and path wiring.
 - **rawrxd-monaco-gen:** Generates Vite/Monaco/Tailwind React IDEs; those *are* IDE front-ends driven by the same backend.
 
 ---

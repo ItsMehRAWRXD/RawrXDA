@@ -18,11 +18,11 @@ void HandleAutonomousCommunicator(void* idePtr) {
         }
     }
 
-    // Generate a status report as a demo
+    // Generate a status report
     auto report = comm.generateReport(RawrXD::Autonomy::ReportType::Standup);
     std::string markdown = comm.reportToMarkdown(report);
 
-    // Show the report in a message box (for demo purposes)
+    // Show the report in a message box
     MessageBoxA(NULL, markdown.c_str(), "Autonomous Communicator - Status Report",
                MB_ICONINFORMATION | MB_OK);
 

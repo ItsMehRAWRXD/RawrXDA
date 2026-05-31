@@ -41,7 +41,7 @@ public:
 
     // Generate simple embeddings (placeholder - replace with real model)
     std::vector<float> generate_embedding(const std::string& text) {
-        // Simple hash-based embedding for demonstration
+        // Simple hash-based embedding
         // Replace with actual transformer-based embeddings
         std::vector<float> embedding(384, 0.0f); // 384-dim embedding
 

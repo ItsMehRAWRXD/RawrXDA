@@ -39,7 +39,7 @@ AgenticToolExecutor::AgenticToolExecutor(const std::string& workspace_root)
     , m_allow_outside_workspace(false)
 {
     m_git_client = std::make_unique<Tools::GitClient>(workspace_root);
-    m_ollama_client = std::make_unique<OllamaClient>("http://localhost:11434");
+    m_ollama_client = std::make_unique<NativeClient>("http://localhost:11434");  // Default Ollama port
 }
 
 AgenticToolExecutor::~AgenticToolExecutor() = default;

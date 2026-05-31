@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <condition_variable>
+#include <mutex>
 
 #ifdef _WIN32
 #include <sapi.h>
@@ -37,11 +38,12 @@
 // Singleton accessor
 // ============================================================================
 static std::unique_ptr<VoiceAutomation> g_voiceAutomation;
+static std::once_flag s_voiceAutoOnce;
 
 VoiceAutomation& getVoiceAutomation() {
-    if (!g_voiceAutomation) {
+    std::call_once(s_voiceAutoOnce, []() {
         g_voiceAutomation = std::make_unique<VoiceAutomation>();
-    }
+    });
     return *g_voiceAutomation;
 }
 

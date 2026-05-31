@@ -45,6 +45,14 @@ public:
         return mapped_view != NULL;
     }
     
+    bool Open(const std::string& path) { return Load(path); }
+    void Close() {
+        if (mapped_view) { UnmapViewOfFile(mapped_view); mapped_view = NULL; }
+        if (hMapping) { CloseHandle(hMapping); hMapping = NULL; }
+        if (hFile != INVALID_HANDLE_VALUE) { CloseHandle(hFile); hFile = INVALID_HANDLE_VALUE; }
+        file_size = 0;
+    }
+    
     void* get_data() const { return mapped_view; }
     size_t get_size() const { return file_size; }
 };

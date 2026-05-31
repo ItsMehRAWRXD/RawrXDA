@@ -1,6 +1,6 @@
 {
-  "OllamaHost": "http://localhost:11434",
-  "OllamaModel": "huihui_ai/llama3.3-abliterated:latest",
+  "OllamaHost": "http://localhost:11435",
+  "OllamaModel": "headless-default",
   "EnableThreading": true,
   "EnableStreaming": true,
   "EnableSecurity": true

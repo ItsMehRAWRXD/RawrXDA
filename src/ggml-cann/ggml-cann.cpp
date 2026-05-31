@@ -22,11 +22,11 @@
 
 #include "ggml-cann.h"
 
-#include "ggml-backend-impl.h"
+#include "ggml-backend-impl_rxd_internal.h"
 #include "ggml-cann/aclnn_ops.h"
 #include "ggml-cann/common.h"
-#include "ggml-impl.h"
-#include "ggml.h"
+#include "ggml-impl_rxd_internal.h"
+#include "ggml_rxd_internal.h"
 
 #include <acl/acl.h>
 #include <aclnnop/aclnn_trans_matmul_weight.h>
@@ -43,7 +43,7 @@
 
 #define GGML_COMMON_DECL_C
 
-#include "ggml-common.h"
+#include "ggml-common_rxd_internal.h"
 
 #define GGML_CANN_NAME "CANN"
 

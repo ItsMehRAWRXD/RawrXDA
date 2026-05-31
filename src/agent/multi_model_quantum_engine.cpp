@@ -99,8 +99,6 @@ inline double calculate_consensus_entropy(const std::vector<std::string>& respon
 MultiModelQuantumEngine::MultiModelQuantumEngine()
     : startup_time_(std::chrono::system_clock::now()),
       quantum_random_generator_(QUANTUM_SEED) {
-    
-    std::cout << "[MultiModelEngine] Quantum Multi-Model Engine initializing..." << std::endl;
     performance_stats_ = {};
 }
 
@@ -110,13 +108,11 @@ MultiModelQuantumEngine::~MultiModelQuantumEngine() {
 
 bool MultiModelQuantumEngine::initialize(uint8_t max_models, bool enable_quantum_enhancement, bool enable_load_balancing) {
     if (initialized_.load()) {
-        std::cout << "[MultiModelEngine] Already initialized" << std::endl;
         return true;
     }
     
     try {
         if (max_models == 0 || max_models > MAX_SUPPORTED_MODELS) {
-            std::cerr << "[MultiModelEngine] Invalid max_models: " << static_cast<uint32_t>(max_models) << std::endl;
             return false;
         }
         
@@ -145,24 +141,15 @@ bool MultiModelQuantumEngine::initialize(uint8_t max_models, bool enable_quantum
         
         initialized_ = true;
         
-        std::cout << "[MultiModelEngine] Initialization complete" << std::endl;
-        std::cout << "  - Maximum models: " << static_cast<uint32_t>(max_models_) << std::endl;
-        std::cout << "  - Quantum optimization: " << (quantum_optimization_enabled_ ? "enabled" : "disabled") << std::endl;
-        std::cout << "  - Load balancing: " << (load_balancing_enabled_ ? "enabled" : "disabled") << std::endl;
-        std::cout << "  - Worker threads: " << thread_count << std::endl;
-        
         return true;
         
     } catch (const std::exception& e) {
-        std::cerr << "[MultiModelEngine] Initialization failed: " << e.what() << std::endl;
         return false;
     }
 }
 
 void MultiModelQuantumEngine::shutdown() {
     if (!initialized_.load()) return;
-    
-    std::cout << "[MultiModelEngine] Shutting down..." << std::endl;
     
     shutting_down_ = true;
     
@@ -200,30 +187,24 @@ void MultiModelQuantumEngine::shutdown() {
     
     initialized_ = false;
     shutting_down_ = false;
-    
-    std::cout << "[MultiModelEngine] Shutdown complete" << std::endl;
 }
 
 bool MultiModelQuantumEngine::add_model(const ModelConfiguration& config) {
     if (!initialized_.load()) {
-        std::cerr << "[MultiModelEngine] Engine not initialized" << std::endl;
         return false;
     }
     
     std::lock_guard<std::mutex> lock(models_mutex_);
     
     if (models_.size() >= max_models_) {
-        std::cerr << "[MultiModelEngine] Maximum model limit reached: " << static_cast<uint32_t>(max_models_) << std::endl;
         return false;
     }
     
     if (config.model_id.empty()) {
-        std::cerr << "[MultiModelEngine] Model ID cannot be empty" << std::endl;
         return false;
     }
     
     if (models_.find(config.model_id) != models_.end()) {
-        std::cerr << "[MultiModelEngine] Model already exists: " << config.model_id << std::endl;
         return false;
     }
     
@@ -231,9 +212,6 @@ bool MultiModelQuantumEngine::add_model(const ModelConfiguration& config) {
     model_config.last_used = std::chrono::system_clock::now();
     
     models_[config.model_id] = model_config;
-    
-    std::cout << "[MultiModelEngine] Added model: " << config.model_id 
-              << " (" << config.model_name << ")" << std::endl;
     
     return true;
 }
@@ -247,7 +225,6 @@ bool MultiModelQuantumEngine::remove_model(const std::string& model_id) {
     }
     
     models_.erase(it);
-    std::cout << "[MultiModelEngine] Removed model: " << model_id << std::endl;
     
     return true;
 }
@@ -272,8 +249,6 @@ MultiModelExecutionResult MultiModelQuantumEngine::execute_multi_model_request(c
         return MultiModelExecutionResult::error_result(request.request_id, "Engine not initialized");
     }
     
-    std::cout << "[MultiModelEngine] Executing multi-model request: " << request.request_id << std::endl;
-    
     auto start_time = std::chrono::system_clock::now();
     MultiModelExecutionResult result;
     result.request_id = request.request_id;
@@ -287,9 +262,6 @@ MultiModelExecutionResult MultiModelQuantumEngine::execute_multi_model_request(c
         }
         
         result.participating_models = selected_models;
-        
-        std::cout << "[MultiModelEngine] Selected " << selected_models.size() 
-                  << " models for execution" << std::endl;
         
         // Execute based on mode
         std::vector<std::future<ModelExecutionResult>> futures;
@@ -495,9 +467,6 @@ MultiModelExecutionResult MultiModelQuantumEngine::execute_multi_model_request(c
             update_model_metrics(model_result.model_id, model_result);
         }
         
-        std::cout << "[MultiModelEngine] Execution complete: " << result.request_id 
-                  << " (success: " << result.success << ", consensus: " << result.consensus_achieved << ")" << std::endl;
-        
     } catch (const std::exception& e) {
         result.success = false;
         result.error_message = std::string("Execution error: ") + e.what();
@@ -505,8 +474,6 @@ MultiModelExecutionResult MultiModelQuantumEngine::execute_multi_model_request(c
         
         std::lock_guard<std::mutex> lock(stats_mutex_);
         performance_stats_.failed_requests++;
-        
-        std::cerr << "[MultiModelEngine] Execution failed: " << e.what() << std::endl;
     }
     
     return result;
@@ -836,7 +803,6 @@ ModelExecutionResult MultiModelQuantumEngine::execute_single_model(const std::st
         }
         
         // Simulate model execution (in production, this would make actual API calls)
-        std::cout << "[MultiModelEngine] Executing on model: " << model_id << std::endl;
         
         // Simulate processing time based on model characteristics
         auto processing_time = std::chrono::milliseconds(
@@ -987,20 +953,16 @@ void MultiModelQuantumEngine::worker_thread_function() {
         try {
             task();
         } catch (const std::exception& e) {
-            std::cerr << "[MultiModelEngine] Worker thread error: " << e.what() << std::endl;
+            // Worker thread error
         }
     }
 }
 
 void MultiModelQuantumEngine::apply_reverse_engineered_optimizations() {
-    std::cout << "[MultiModelEngine] Applying reverse-engineered optimizations..." << std::endl;
-    
     // Optimize memory alignment for quantum calculations
     // Set optimal thread priorities for model execution
     // Configure CPU affinity for better cache performance
     // Apply platform-specific optimizations
-    
-    std::cout << "[MultiModelEngine] Reverse-engineered optimizations applied" << std::endl;
 }
 
 void MultiModelQuantumEngine::apply_platform_specific_optimizations() {

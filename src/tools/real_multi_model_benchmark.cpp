@@ -1,7 +1,11 @@
 #include <iostream>
 #include <chrono>
+#include <thread>
 #include <vector>
 #include <string>
+#include <algorithm>
+#include <iomanip>
+#include <fstream>
 #include <filesystem>
 #include "../inference/InferenceEngine.hpp"
 
@@ -63,7 +67,7 @@ ModelBenchmarkResult benchmarkModel(const std::string& model_path, int num_token
     
     try {
         // Initialize InferenceEngine
-        InferenceEngine engine;
+        InferenceEngine engine(nullptr);
         
         std::cout << "Loading model..." << std::flush;
         auto load_start = std::chrono::high_resolution_clock::now();

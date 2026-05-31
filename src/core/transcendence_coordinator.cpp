@@ -11,8 +11,11 @@
 
 #include "transcendence_coordinator.hpp"
 #include <cstring>
+#include <fstream>
+#include <vector>
 
 #ifdef _WIN32
+#include <windows.h>
 extern "C" unsigned __int64 __rdtsc();
 #pragma intrinsic(__rdtsc)
 #define RDTSC() __rdtsc()
@@ -22,6 +25,28 @@ extern "C" unsigned __int64 __rdtsc();
 #endif
 
 namespace rawrxd {
+
+namespace {
+using TitanVerifyManifestFn = uint32_t (*)(const char*, uint32_t, const uint8_t*);
+
+static uint32_t TitanVerifyManifestDispatch(const char* data, uint32_t size, const uint8_t* expectedSig) {
+#ifdef _WIN32
+    static TitanVerifyManifestFn fn = []() -> TitanVerifyManifestFn {
+        HMODULE mod = GetModuleHandleW(nullptr);
+        if (!mod) return nullptr;
+        return reinterpret_cast<TitanVerifyManifestFn>(GetProcAddress(mod, "TITAN_VerifyManifestIntegrity"));
+    }();
+
+    if (fn) {
+        return fn(data, size, expectedSig);
+    }
+#endif
+    (void)data;
+    (void)size;
+    (void)expectedSig;
+    return 1;
+}
+} // namespace
 
 // ============================================================================
 //  Singleton
@@ -47,6 +72,35 @@ PatchResult TranscendenceCoordinator::initializeAll() {
     std::lock_guard<std::mutex> lock(m_mutex);
     if (m_emergencyStopped)
         return PatchResult::error("Emergency stop active — reset required", -99);
+
+    // BATCH 2: Manifest Integrity & SHA-256 Signing
+    // Verify resource_manifest.json before booting any transcendence phases
+    {
+        std::ifstream ifs("resource_manifest.json", std::ios::binary | std::ios::ate);
+        if (ifs.is_open()) {
+            size_t size = ifs.tellg();
+            if (size >= 32) { // Allow headers + min sig (32b)
+                std::vector<char> buffer(size);
+                ifs.seekg(0, std::ios::beg);
+                ifs.read(buffer.data(), size);
+                
+                // Assume the last 32 bytes are the SHA-256 signature
+                uint32_t manifestSize = static_cast<uint32_t>(size - 32);
+                const uint8_t* expectedSig = reinterpret_cast<const uint8_t*>(buffer.data() + manifestSize);
+                
+                uint32_t titanStatus = TitanVerifyManifestDispatch(buffer.data(), manifestSize, expectedSig);
+                if (titanStatus == 0xDEAD) {
+                    m_emergencyStopped = true;
+                    // BATCH 4: Automated 0xDEAD detection signal
+                    return PatchResult::error("MANIFEST CORRUPTION DETECTED: Engine lockdown (0xDEAD)", -666);
+                }
+            } else {
+                // Too small, trigger lockdown
+                m_emergencyStopped = true;
+                return PatchResult::error("MANIFEST TOO SMALL: Triggering lockdown (0xDEAD)", -667);
+            }
+        }
+    }
 
     m_initTimestamp = RDTSC();
     std::memset(&m_stats, 0, sizeof(m_stats));

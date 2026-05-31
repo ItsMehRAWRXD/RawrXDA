@@ -24,6 +24,7 @@
 #include <thread>
 #include <memory>
 #include <unordered_map>
+#include <deque>
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
@@ -166,6 +167,43 @@ public:
         shutdownRequested.store(true);
         if (healthCheckThread.joinable()) {
             healthCheckThread.join();
+        }
+    }
+
+    // ---- BATCH 14: FABRIC TELEMETRY & PREDICTIVE ANOMALY DETECTION ----
+    struct FabricLatencyModel {
+        std::deque<double> latencies;
+        double rollingMean = 0.0;
+        double rollingStdDev = 0.0;
+        const size_t maxWindow = 1000;
+        std::mutex modelMutex;
+
+        void AddSample(double ms) {
+            std::lock_guard<std::mutex> lock(modelMutex);
+            latencies.push_back(ms);
+            if (latencies.size() > maxWindow) latencies.pop_front();
+
+            // Simple incremental stats for 1.5% deviation check
+            double sum = 0;
+            for (double v : latencies) sum += v;
+            rollingMean = sum / latencies.size();
+        }
+
+        bool IsAnomalous(double current, double threshold = 0.015) {
+            std::lock_guard<std::mutex> lock(modelMutex);
+            if (latencies.size() < 100) return false; // Need baseline
+            double deviation = std::abs(current - rollingMean) / rollingMean;
+            return deviation > threshold;
+        }
+    } m_fabricModel;
+
+    void UpdateFabricTelemetry(double latencyMs) {
+        m_fabricModel.AddSample(latencyMs);
+        if (m_fabricModel.IsAnomalous(latencyMs)) {
+            // Signal MitM Detection via the Heuristic Gate
+            // This would normally call SentinelWatchdog::triggerLockdown with a 
+            // specific "Interposer Detected" reason.
+            printf("[TITAN] MITM DETECTION: Infinity Fabric Latency Anomaly detected (%.3f ms)\n", latencyMs);
         }
     }
 };
@@ -431,9 +469,9 @@ void healthCheckWorker(MultiGPUManagerImpl* impl) {
             
             // Log health state changes
             if (wasHealthy && !currentlyHealthy) {
-                // Device became unhealthy - could log or emit event
+                fprintf(stderr, "[MultiGPUManager] Device %d became unhealthy\n", deviceId);
             } else if (!wasHealthy && currentlyHealthy) {
-                // Device recovered - could log or emit event
+                fprintf(stderr, "[MultiGPUManager] Device %d recovered\n", deviceId);
             }
         }
     }
@@ -522,6 +560,12 @@ MultiGPUManager& MultiGPUManager::Instance() {
     }
     static MultiGPUManager instance;
     return instance;
+}
+
+void MultiGPUManager::UpdateFabricTelemetry(double latencyMs) {
+    if (g_impl) {
+        g_impl->UpdateFabricTelemetry(latencyMs);
+    }
 }
 
 MultiGPUResult MultiGPUManager::Initialize() {

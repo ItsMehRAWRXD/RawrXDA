@@ -9,7 +9,7 @@
 #include <unordered_map>
 #include <vector>
 
-// GGML tensor types (numeric values match llama.cpp / ggml_type)
+// GGML tensor types (numeric values match llama.cpp / ggml_rxd_type)
 enum class GgmlType : uint32_t
 {
     F32 = 0,

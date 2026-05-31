@@ -25,20 +25,20 @@ void AgenticCopilotBridge::initialize(AgenticEngine* engine, ChatInterface* chat
     // Zero-Touch: Initialize self-healing core on bridge startup
     PatchResult res = AgentSelfHealingOrchestrator::instance().initialize();
     if (!res.success) {
-        std::cerr << "[ZeroTouch] Self-healing initialization failed: " << res.message << std::endl;
+    // Self-healing initialization
     } else {
-        std::cout << "[ZeroTouch] Autonomous orchestrator online (Parity Mode: Active)" << std::endl;
+    // Autonomous orchestrator online
     }
 }
 
 std::string AgenticCopilotBridge::executeWithFailureRecovery(const std::string& prompt) {
     auto start = std::chrono::steady_clock::now();
-    std::cout << "[ZeroTouch] Executing with autonomous recovery: " << prompt.substr(0, 50) << "..." << std::endl;
+    // Executing with autonomous recovery
 
     // Step 1: Run pre-execution healing cycle to ensure environment stability
     SelfHealReport preReport = AgentSelfHealingOrchestrator::instance().runHealingCycle();
     if (preReport.bugsFixed > 0) {
-        std::cout << "[ZeroTouch] Pre-execution: Fixed " << preReport.bugsFixed << " stability issues." << std::endl;
+        // Fixed stability issues
     }
 
     std::string response;
@@ -46,8 +46,12 @@ std::string AgenticCopilotBridge::executeWithFailureRecovery(const std::string& 
         // Step 2: Invoke primary agentic engine
         if (!m_agenticEngine) return "Error: Engine offline";
         
-        // Mocking engine call for now
-        response = "Primary response for: " + prompt;
+        // Invoke primary agentic engine with fallback
+        if (m_agenticEngine) {
+            response = m_agenticEngine->process(prompt);
+        } else {
+            response = "Error: Engine not initialized";
+        }
 
         // Step 3: Hotpatch and validate response
         JsonValue ctx = JsonValue::createObject();
@@ -55,18 +59,18 @@ std::string AgenticCopilotBridge::executeWithFailureRecovery(const std::string& 
         ctx["timestamp"] = (int)time(NULL);
         
         if (detectAndCorrectFailure(response, ctx)) {
-             std::cout << "[ZeroTouch] Response corrected via AgentHotPatcher logic." << std::endl;
+             // Response corrected via AgentHotPatcher
         }
 
     } catch (const std::exception& e) {
-        std::cerr << "[ZeroTouch] Execution crash: " << e.what() << ". Attempting emergency heal..." << std::endl;
+        // Execution crash, attempting emergency heal
         AgentSelfHealingOrchestrator::instance().runHealingCycle();
         response = "Recovery completed. Please retry the prompt.";
     }
 
     auto end = std::chrono::steady_clock::now();
     long long elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-    std::cout << "[ZeroTouch] Task completed in " << elapsed << "ms" << std::endl;
+    // Task completed
 
     return response;
 }
@@ -95,5 +99,5 @@ void AgenticCopilotBridge::analysisReady(const std::string& result) {
 }
 
 void AgenticCopilotBridge::errorOccurred(const std::string& error) {
-    std::cerr << "[AgenticCopilot] Error: " << error << std::endl;
+    // Error
 }

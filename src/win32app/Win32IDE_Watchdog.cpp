@@ -15,51 +15,8 @@
 // (called from onDestroy so it never outlives the HWND).
 
 #include "Win32IDE.h"
+#include "WindowVisibilityHelpers.h"
 #include <cassert>
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  Helper: check whether a window rect is completely outside any monitor's
-//  work area.  Returns true if the window should be recentered.
-// ─────────────────────────────────────────────────────────────────────────────
-static bool IsWindowOffScreen(HWND hwnd)
-{
-    RECT wr = {};
-    if (!GetWindowRect(hwnd, &wr)) return false;
-
-    // HMONITOR nearest to the window — if the intersection is empty, off-screen.
-    HMONITOR hMon = MonitorFromRect(&wr, MONITOR_DEFAULTTONULL);
-    if (hMon == nullptr) return true;      // NULL = no overlap with any monitor
-
-    MONITORINFO mi = { sizeof(mi) };
-    if (!GetMonitorInfoA(hMon, &mi)) return false;
-
-    // Require at least 100 px of the title bar to be on-screen
-    RECT intersect = {};
-    RECT titleBarStrip = { wr.left, wr.top, wr.right, wr.top + 30 };
-    return !IntersectRect(&intersect, &titleBarStrip, &mi.rcWork);
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  Recenter the window on the primary monitor's work area.
-// ─────────────────────────────────────────────────────────────────────────────
-static void RecenterWindow(HWND hwnd)
-{
-    RECT wa = {};
-    SystemParametersInfo(SPI_GETWORKAREA, 0, &wa, 0);
-    int waW = wa.right  - wa.left;
-    int waH = wa.bottom - wa.top;
-
-    RECT wr = {};
-    GetWindowRect(hwnd, &wr);
-    int winW = wr.right  - wr.left;
-    int winH = wr.bottom - wr.top;
-
-    int newX = wa.left + (waW - winW) / 2;
-    int newY = wa.top  + (waH - winH) / 2;
-
-    SetWindowPos(hwnd, nullptr, newX, newY, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
-    OutputDebugStringA("[Watchdog] Window recentered\n");
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Thread body — runs every 2 000 ms
@@ -97,11 +54,11 @@ DWORD WINAPI Win32IDE::VisibilityWatchdogThread(LPVOID param)
             PostMessage(hwnd, WM_APP + 1, SW_SHOW, 0);
         }
 
-        // ── 3. Off-screen recovery ───────────────────────────────────────────
-        if (IsWindowOffScreen(hwnd)) {
-            OutputDebugStringA("[Watchdog] Window off-screen — recentering\n");
-            RecenterWindow(hwnd);   // SetWindowPos — always safe cross-thread
-        }
+        // ── 3. Off-screen / bad placement recovery ──────────────────────────
+        RawrXD::Win32Visibility::LogPlacementSnapshot(hwnd, "watchdog:before");
+        if (RawrXD::Win32Visibility::NormalizePlacementForVisibility(hwnd))
+            OutputDebugStringA("[Watchdog] Placement normalized\n");
+        RawrXD::Win32Visibility::LogPlacementSnapshot(hwnd, "watchdog:after");
 
         // ── 4. Degenerate client rect — force re-layout ──────────────────────
         // SAFETY: Use PostMessage instead of SendMessage.

@@ -56,10 +56,11 @@ if (-not (Test-Path $modulePath)) {
     exit 1
 }
 
-# Remove #requires statements temporarily for IDE execution
+# Remove #requires and Export-ModuleMember statements for IDE execution
 $moduleContent = Get-Content $modulePath -Raw
 $moduleContent = $moduleContent -replace '#Requires -Version 5.1', ''
 $moduleContent = $moduleContent -replace '#Requires -RunAsAdministrator', ''
+$moduleContent = [regex]::Replace($moduleContent, '(?s)Export-ModuleMember\s*-Function\s*@\(.*?\)', '')
 
 # Import using Invoke-Expression to bypass #requires
 Invoke-Expression $moduleContent
@@ -93,7 +94,7 @@ try {
     $logPath = "C:\RawrXD\Logs"
     $backupPath = "C:\RawrXD\Backups"
     
-    Initialize-AutonomousState -SourcePath $sourcePath -TargetPath $targetPath -LogPath $logPath -BackupPath $backupPath
+    Initialize-AutonomousAgentState -SourcePath $sourcePath -TargetPath $targetPath -LogPath $logPath -BackupPath $backupPath
     Write-Host "✓ Autonomous agent state initialized successfully" -ForegroundColor Green
     Write-Host "  Source: $sourcePath" -ForegroundColor White
     Write-Host "  Target: $targetPath" -ForegroundColor White
@@ -153,15 +154,20 @@ Write-Host ""
 Write-Host "Starting autonomous testing..." -ForegroundColor Cyan
 try {
     $testing = Start-AutonomousTesting
-    $successRate = [Math]::Round(($testing.TestsPassed / $testing.Tests.Count * 100), 2)
+    $skippedCount = if ($null -ne $testing.TestsSkipped) { [int]$testing.TestsSkipped } else { 0 }
+    $testedCount = $testing.Tests.Count - $skippedCount
+    $successRate = if ($testedCount -gt 0) { [Math]::Round(($testing.TestsPassed / $testedCount * 100), 2) } else { 0 }
     
     Write-Host "✓ Autonomous testing completed successfully" -ForegroundColor Green
-    Write-Host "  Tests Passed: $($testing.TestsPassed)" -ForegroundColor White
-    Write-Host "  Tests Failed: $($testing.TestsFailed)" -ForegroundColor White
-    Write-Host "  Success Rate: $successRate%" -ForegroundColor White
-    Write-Host "  Duration: $($testing.Duration)s" -ForegroundColor White
+    Write-Host "  Tests Passed:  $($testing.TestsPassed)" -ForegroundColor White
+    Write-Host "  Tests Skipped: $skippedCount" -ForegroundColor Gray
+    Write-Host "  Tests Failed:  $($testing.TestsFailed)" -ForegroundColor White
+    Write-Host "  Success Rate:  $successRate% (of $testedCount tested)" -ForegroundColor White
+    Write-Host "  Duration:      $($testing.Duration)s" -ForegroundColor White
     
-    if ($successRate -lt 80) {
+    if ($testing.TestsFailed -gt 0) {
+        Write-Host "⚠ $($testing.TestsFailed) test(s) failed" -ForegroundColor Yellow
+    } elseif ($successRate -lt 80) {
         Write-Host "⚠ Success rate below 80% threshold" -ForegroundColor Yellow
     }
 } catch {

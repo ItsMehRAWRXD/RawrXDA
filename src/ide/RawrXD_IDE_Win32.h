@@ -102,6 +102,7 @@
 #define IDM_VIEW_FULLSCREEN         2404
 #define IDM_VIEW_DARK_THEME         2405
 #define IDM_VIEW_LIGHT_THEME        2406
+#define IDM_VIEW_MINIMONACO         2407
 
 /* Help */
 #define IDM_HELP_ABOUT              2501
@@ -252,6 +253,12 @@ typedef struct RawrXD_IDE {
 
     /* RichEdit DLL path (for logging) */
     WCHAR           richEditDll[MAX_PATH];
+
+    /* MiniMonaco Editor */
+    HWND            hWndMiniMonaco;
+    BOOL            showMiniMonaco;
+    BOOL            useMiniMonaco;   /* TRUE = MiniMonaco, FALSE = RichEdit */
+    struct MiniMonacoEditor* miniMonacoEd;
 
 } RawrXD_IDE;
 

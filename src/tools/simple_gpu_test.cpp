@@ -70,7 +70,7 @@ int main(int argc, char* argv[]) {
     
     try {
         // Initialize engine
-        InferenceEngine engine;
+        InferenceEngine engine(nullptr);
         
         // Load model
         auto load_start = std::chrono::high_resolution_clock::now();

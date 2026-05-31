@@ -12,6 +12,7 @@
 #include "engine_iface.h"
 #include "agent_modes.h"
 #include "tool_registry.h"
+#include "context_config.h"
 
 #include "modules/react_generator.h"
 
@@ -26,6 +27,7 @@ namespace MemoryPlugins { void init(size_t); }
 
 #if RAWR_HAS_RAWR_INFERENCE
 void register_rawr_inference();
+void register_git_mcp_tools();
 #endif
 #if RAWR_HAS_SOVEREIGN_ENGINES
 #include "engine/sovereign_engines.h"
@@ -45,17 +47,6 @@ struct RuntimeState {
 static RuntimeState g_state;
 static std::unordered_map<std::string, Engine*> engines;
 
-Engine* EngineRegistry::get(const std::string& name) {
-    if (engines.find(name) != engines.end()) {
-        return engines[name];
-    }
-    return nullptr;
-}
-
-void EngineRegistry::register_engine(Engine* e) {
-    engines[e->name()] = e;
-}
-
 std::string get_active_engine_name() {
     if (g_state.active_engine) return g_state.active_engine->name();
     return "None";
@@ -64,6 +55,7 @@ std::string get_active_engine_name() {
 void init_runtime() {
 #if RAWR_HAS_RAWR_INFERENCE
     register_rawr_inference();
+    register_git_mcp_tools();
 #endif
 #if RAWR_HAS_SOVEREIGN_ENGINES
     register_sovereign_engines();
@@ -74,10 +66,24 @@ void init_runtime() {
         g_state.active_engine = engines.begin()->second;
     }
     g_state.current_mode = AgentMode::ASK;
-    g_state.context_limit = 4096;
+    const RawrXD::ContextDecision initCtx = RawrXD::ResolveContextDecision(RawrXD::ContextLimits::DEFAULT);
+    g_state.context_limit = static_cast<size_t>(initCtx.effective);
     g_state.deep_thinking = false;
     g_state.deep_research = false;
     g_state.no_refusal = false;
+
+    std::cerr << "[ContextConfig] runtime init requested=" << initCtx.requested
+              << " env=" << (initCtx.env_override_applied ? initCtx.env_override_value : 0)
+              << " system_max=" << initCtx.system_safe_max
+              << " kv_max=" << initCtx.kv_safe_max
+              << " effective=" << initCtx.effective
+              << " kv_bytes=" << initCtx.estimated_kv_bytes
+              << " kv_per_token=" << initCtx.kv_bytes_per_token
+              << " vram_budget=" << initCtx.vram_budget_bytes
+              << " kv_budget=" << initCtx.kv_budget_bytes
+              << " pressure_ratio=" << initCtx.pressure_ratio
+              << " pressure=" << (initCtx.pressure_detected ? 1 : 0)
+              << " adapted=" << (initCtx.adapted ? 1 : 0) << "\n";
     
     // Initialize global subsystems
     memory_system_init(g_state.context_limit);
@@ -101,7 +107,27 @@ void set_engine(const std::string& engine_name) {
 void set_deep_thinking(bool v) { g_state.deep_thinking = v; }
 void set_deep_research(bool v) { g_state.deep_research = v; }
 void set_no_refusal(bool v) { g_state.no_refusal = v; }
-void set_context(size_t tokens) { g_state.context_limit = tokens; }
+void set_context(size_t tokens) {
+    const RawrXD::ContextDecision decision =
+        RawrXD::ResolveContextDecision(static_cast<int32_t>(tokens));
+    const size_t oldValue = g_state.context_limit;
+    g_state.context_limit = static_cast<size_t>(decision.effective);
+
+    if (oldValue != g_state.context_limit || static_cast<int32_t>(tokens) != decision.effective) {
+        std::cerr << "[ContextConfig] set_context requested=" << tokens
+                  << " env=" << (decision.env_override_applied ? decision.env_override_value : 0)
+                  << " system_max=" << decision.system_safe_max
+                  << " kv_max=" << decision.kv_safe_max
+                  << " effective=" << decision.effective
+                  << " kv_bytes=" << decision.estimated_kv_bytes
+                  << " kv_per_token=" << decision.kv_bytes_per_token
+                  << " vram_budget=" << decision.vram_budget_bytes
+                  << " kv_budget=" << decision.kv_budget_bytes
+                  << " pressure_ratio=" << decision.pressure_ratio
+                  << " pressure=" << (decision.pressure_detected ? 1 : 0)
+                  << " adapted=" << (decision.adapted ? 1 : 0) << "\n";
+    }
+}
 
 void runtime_load_model(const std::string& path) {
     if (g_state.active_engine) {
@@ -153,5 +179,36 @@ std::string process_prompt(const std::string& input) {
     // Track output in memory system
     g_memory_system.PushContext(result);
 
+    return result;
+}
+
+std::string process_prompt_stream(const std::string& input,
+                                 const std::function<bool(const std::string&)>& on_chunk) {
+    if (!g_state.active_engine) {
+        return "Error: No engine loaded.";
+    }
+
+    AgentRequest req;
+    req.mode = g_state.current_mode;
+    req.prompt = input;
+    req.deep_thinking = g_state.deep_thinking;
+    req.deep_research = g_state.deep_research;
+    req.no_refusal = g_state.no_refusal;
+    req.context_limit = g_state.context_limit;
+
+    ToolRegistry::inject_tools(req);
+    g_memory_system.PushContext(input);
+
+    std::string result;
+    auto fanout = [&](const std::string& chunk) {
+        result += chunk;
+        if (on_chunk) {
+            return on_chunk(chunk);
+        }
+        return true;
+    };
+
+    g_state.active_engine->infer_stream(req, fanout);
+    g_memory_system.PushContext(result);
     return result;
 }

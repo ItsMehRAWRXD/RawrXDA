@@ -8,7 +8,15 @@
 #include "../../include/startup_phase_registry.h"
 #include <algorithm>
 #include <cctype>
+#include <cstdio>
 #include <fstream>
+
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#endif
 
 namespace RawrXD
 {
@@ -19,26 +27,41 @@ static std::vector<std::string> s_defaultOrder;
 static std::unordered_map<std::string, PhaseFn> s_lazyPhases;
 static std::unordered_set<std::string> s_lazyPhaseNames;
 static std::unordered_set<std::string> s_lazyPhaseRun;
+static std::string s_phaseOrderFileOverride;
+
+static char s_startupSessionId[96] = {};
+
+void ensureStartupSessionId() noexcept
+{
+    if (s_startupSessionId[0] != '\0')
+        return;
+#ifdef _WIN32
+    std::snprintf(s_startupSessionId, sizeof(s_startupSessionId), "rxd-%lu-%016llx",
+                  static_cast<unsigned long>(GetCurrentProcessId()), static_cast<unsigned long long>(GetTickCount64()));
+#else
+    std::snprintf(s_startupSessionId, sizeof(s_startupSessionId), "rxd-session");
+#endif
+}
+
+const char* getStartupSessionId() noexcept
+{
+    ensureStartupSessionId();
+    return s_startupSessionId;
+}
+
+void setPhaseOrderFileOverride(std::string absoluteOrEmpty)
+{
+    s_phaseOrderFileOverride = std::move(absoluteOrEmpty);
+}
 
 static void initDefaultOrder()
 {
     if (!s_defaultOrder.empty())
         return;
     s_defaultOrder = {
-        "init_common_controls",
-        "first_run_gauntlet",
-        "vsix_loader",
-        "plugin_signature",
-        "creating_ide_instance",
-        "createWindow",
-        "enterprise_license",
-        "showWindow",
-        "integrated_runtime",
-        "camellia_init",
-        "masm_init",
-        "swarm",
-        "auto_update",
-        "layout",
+        "init_common_controls", "first_run_gauntlet", "vsix_loader", "plugin_signature",    "creating_ide_instance",
+        "createWindow",         "enterprise_license", "showWindow",  "extension_bootstrap", "integrated_runtime",
+        "camellia_init",        "masm_init",          "swarm",       "auto_update",         "layout",
         "message_loop_entered",
     };
     s_lazyPhaseNames = {};
@@ -47,8 +70,17 @@ static void initDefaultOrder()
 std::vector<std::string> getPhaseOrder()
 {
     initDefaultOrder();
-    std::string path = "config/startup_phases.txt";
-    std::ifstream f(path);
+    std::ifstream f;
+    if (!s_phaseOrderFileOverride.empty())
+    {
+        f.open(s_phaseOrderFileOverride);
+    }
+    std::string path;
+    if (!f.is_open())
+    {
+        path = "config/startup_phases.txt";
+        f.open(path);
+    }
     if (!f.is_open())
     {
         path = "startup_phases.txt";

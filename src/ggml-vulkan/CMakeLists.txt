@@ -89,6 +89,10 @@ if (Vulkan_FOUND)
     target_link_libraries(ggml-vulkan PRIVATE Vulkan::Vulkan)
     target_include_directories(ggml-vulkan PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
+    # Set GGML_BACKEND_BUILD and GGML_BACKEND_SHARED for proper API export
+    target_compile_definitions(ggml-vulkan PRIVATE GGML_BACKEND_BUILD)
+    target_compile_definitions(ggml-vulkan PUBLIC GGML_BACKEND_SHARED)
+
     # Workaround to the "can't dereference invalidated vector iterator" bug in clang-cl debug build
     # Posssibly relevant: https://stackoverflow.com/questions/74748276/visual-studio-no-displays-the-correct-length-of-stdvector
     if (MSVC AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
@@ -146,12 +150,55 @@ if (Vulkan_FOUND)
         message(STATUS "vulkan-shaders-gen toolchain file: ${HOST_CMAKE_TOOLCHAIN_FILE}")
     endif()
 
+    # Find Windows SDK tools (rc.exe, mt.exe)
+    if(MSVC)
+        # Try to find Windows SDK
+        if(EXISTS "D:/Program Files (x86)/Windows Kits/10")
+            set(_WIN10_SDK_ROOT "D:/Program Files (x86)/Windows Kits/10")
+        elseif(EXISTS "C:/Program Files (x86)/Windows Kits/10")
+            set(_WIN10_SDK_ROOT "C:/Program Files (x86)/Windows Kits/10")
+        endif()
+        
+        if(DEFINED _WIN10_SDK_ROOT)
+            # Find the latest Windows SDK version
+            file(GLOB _SDK_VERSIONS "${_WIN10_SDK_ROOT}/bin/10.0.*")
+            if(_SDK_VERSIONS)
+                list(SORT _SDK_VERSIONS)
+                list(GET _SDK_VERSIONS -1 _LATEST_SDK)
+                get_filename_component(_SDK_VER "${_LATEST_SDK}" NAME)
+                
+                # Set Windows SDK paths for ExternalProject
+                set(_WIN_SDK_BIN "${_WIN10_SDK_ROOT}/bin/${_SDK_VER}/x64")
+                set(_WIN_SDK_INCLUDE "${_WIN10_SDK_ROOT}/Include/${_SDK_VER}")
+                set(_WIN_SDK_LIB "${_WIN10_SDK_ROOT}/Lib/${_SDK_VER}")
+                
+                # Find rc.exe and mt.exe
+                if(EXISTS "${_WIN_SDK_BIN}/rc.exe")
+                    set(CMAKE_RC_COMPILER "${_WIN_SDK_BIN}/rc.exe")
+                    list(APPEND VULKAN_SHADER_GEN_CMAKE_ARGS -DCMAKE_RC_COMPILER=${CMAKE_RC_COMPILER})
+                endif()
+                if(EXISTS "${_WIN_SDK_BIN}/mt.exe")
+                    set(CMAKE_MT_COMPILER "${_WIN_SDK_BIN}/mt.exe")
+                    list(APPEND VULKAN_SHADER_GEN_CMAKE_ARGS -DCMAKE_MT_COMPILER=${CMAKE_MT_COMPILER})
+                endif()
+                
+                # Pass Windows SDK paths to ExternalProject
+                list(APPEND VULKAN_SHADER_GEN_CMAKE_ARGS 
+                    -DCMAKE_SYSTEM_VERSION=${_SDK_VER}
+                    -DCMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION=${_SDK_VER}
+                )
+            endif()
+        endif()
+    endif()
+
     ExternalProject_Add(
         vulkan-shaders-gen
         SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vulkan-shaders
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/$<CONFIG>
                    -DCMAKE_INSTALL_BINDIR=.
                    -DCMAKE_BUILD_TYPE=$<CONFIG>
+                   -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+                   -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
                    ${VULKAN_SHADER_GEN_CMAKE_ARGS}
 
         BUILD_COMMAND ${CMAKE_COMMAND} --build . --config $<CONFIG>

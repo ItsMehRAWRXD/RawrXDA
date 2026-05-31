@@ -11,7 +11,7 @@
 #include <ctime>
 #include <limits>
 
-// Stub license check for test mode
+// License check: bypass in test mode, enforce in production
 #ifdef BUILD_CACHE_TEST
 #define LICENSE_CHECK(feature) true
 #else

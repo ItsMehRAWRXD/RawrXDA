@@ -31,7 +31,6 @@ bool RegisterSwarmBridgeWithIAT() {
     auto getHook = reinterpret_cast<GetHookFn>(GetProcAddress(self, "RAWRXD_GetHook"));
 
     if (!installHook) {
-        OutputDebugStringA("[SwarmIAT] runtime_patcher not present - skipping IAT bind");
         return false;
     }
 
@@ -39,8 +38,6 @@ bool RegisterSwarmBridgeWithIAT() {
     bool success = installHook("Win32IDE_initializeSwarmSystem", initProc) != 0;
 
     if (success) {
-        OutputDebugStringA("[SwarmIAT] Slot 20 bound to Win32IDE_initializeSwarmSystem\n");
-
         if (getHook) {
             // --- UI Slots 21-23 ---
             installHook("Win32IDE_createAcceleratorTable", (void*)&Win32IDE_createAcceleratorTable);
@@ -77,18 +74,12 @@ bool RegisterSwarmBridgeWithIAT() {
 
             // --- Slot 54: Swarm Execution ---
             auto* execProc = reinterpret_cast<void*>(&Win32IDE_executeSwarmTask);
-            if (installHook("Win32IDE_executeSwarmTask", execProc)) {
-                OutputDebugStringA("[SwarmIAT] Slot 54 bound to Win32IDE_executeSwarmTask\n");
-            }
+            installHook("Win32IDE_executeSwarmTask", execProc);
             
             // --- Slot 55: Swarm Shutdown ---
             auto* shutProc = reinterpret_cast<void*>(&Win32IDE_shutdownSwarmSystem);
-            if (installHook("Win32IDE_shutdownSwarmSystem", shutProc)) {
-                OutputDebugStringA("[SwarmIAT] Slot 55 bound to Win32IDE_shutdownSwarmSystem\n");
-            }
+            installHook("Win32IDE_shutdownSwarmSystem", shutProc);
         }
-    } else {
-        OutputDebugStringA("[SwarmIAT] FAILED to bind slot 20\n");
     }
 
     return success;

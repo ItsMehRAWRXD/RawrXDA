@@ -153,29 +153,46 @@ void Win32IDE::createExtensionsPanel() {
     SendMessageA(hwndAvailable, LB_ADDSTRING, 0, (LPARAM)"JavaScript/TypeScript");
 }
 
-// Switch sidebar view based on activity bar button
-void Win32IDE::setSidebarView(int viewID) {
-    m_currentSidebarView = (SidebarView)viewID;
-    
-    switch (viewID) {
-        case IDC_ACTBAR_EXPLORER:
-            if (m_hwndSidebarContent) ShowWindow(m_hwndSidebarContent, SW_SHOW);
+// Switch sidebar view based on the semantic SidebarView enum used by the live command/session paths.
+void Win32IDE::setSidebarView(SidebarView view) {
+    m_currentSidebarView = view;
+
+    if (m_hwndSidebarContent) {
+        DestroyWindow(m_hwndSidebarContent);
+        m_hwndSidebarContent = nullptr;
+    }
+
+    if (m_hwndFileExplorer) {
+        DestroyWindow(m_hwndFileExplorer);
+        m_hwndFileExplorer = nullptr;
+    }
+
+    switch (view) {
+        case SidebarView::Explorer:
+            createFileExplorer();
             break;
-        case IDC_ACTBAR_SEARCH:
+        case SidebarView::Search:
             createSearchPanel();
             break;
-        case IDC_ACTBAR_SCM:
+        case SidebarView::SourceControl:
             createGitPanel();
             break;
-        case IDC_ACTBAR_DEBUG:
+        case SidebarView::RunDebug:
             createProblemsPanel();
             break;
-        case IDC_ACTBAR_EXTENSIONS:
+        case SidebarView::Extensions:
             createExtensionsPanel();
             break;
+        case SidebarView::DiskRecovery:
+        case SidebarView::None:
+        default:
+            break;
     }
-    
-    InvalidateRect(m_hwndSidebar, nullptr, TRUE);
+
+    if (m_hwndSidebar) {
+        InvalidateRect(m_hwndSidebar, nullptr, TRUE);
+        UpdateWindow(m_hwndSidebar);
+    }
 }
 
 // Refresh git status from git command
@@ -188,8 +205,8 @@ void Win32IDE::refreshGitStatus() {
     sa.nLength = sizeof(sa);
     sa.bInheritHandle = TRUE;
     
-    HANDLE hReadPipe, hWritePipe;
-    CreatePipe(&hReadPipe, &hWritePipe, &sa, 0);
+    HANDLE hReadPipe = nullptr, hWritePipe = nullptr;
+    if (!CreatePipe(&hReadPipe, &hWritePipe, &sa, 0)) return;
     
     STARTUPINFOA si = {};
     si.cb = sizeof(si);

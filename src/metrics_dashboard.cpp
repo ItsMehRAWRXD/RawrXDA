@@ -344,7 +344,28 @@ void MetricsDashboard::updateRequestCountTable()
 
 void MetricsDashboard::updateErrorLog()
 {
-    // Placeholder for error log updates
+    // Collect and display recent error entries from adapter
+    if (!m_adapter) return;
+    
+    auto errors = m_adapter->getRecentErrors(50); // Last 50 errors
+    
+    // Clear existing error display
+    // (Error log table would be updated here in full implementation)
+    
+    int errorCount = 0;
+    int warningCount = 0;
+    for (const auto& err : errors) {
+        if (err.level == "ERROR") errorCount++;
+        else if (err.level == "WARNING") warningCount++;
+    }
+    
+    // Update error summary labels if available
+    if (m_error_count_label) {
+        m_error_count_label->setText(std::to_string(errorCount));
+    }
+    if (m_warning_count_label) {
+        m_warning_count_label->setText(std::to_string(warningCount));
+    }
 }
 
 void MetricsDashboard::updateProviderStatus()

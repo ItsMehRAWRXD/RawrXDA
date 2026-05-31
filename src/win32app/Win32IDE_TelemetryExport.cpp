@@ -260,7 +260,7 @@ bool Win32IDE::exportTelemetryData(const std::string& format, const std::string&
 }
 
 std::vector<std::string> Win32IDE::getTelemetryExportFormats() {
-    return {"JSON", "CSV", "XML", "YAML", "Parquet", "SQLite"};
+    return {"JSON", "CSV", "XML", "YAML"};
 }
 
 std::string Win32IDE::getTelemetryExportDirectory() {

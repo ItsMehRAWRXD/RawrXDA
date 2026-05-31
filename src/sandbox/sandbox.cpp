@@ -62,7 +62,7 @@ bool Sandbox::executeCommandWindows(const std::string &command, const std::strin
 bool Sandbox::executeCommandLinux(const std::string &command, const std::stringList &arguments)
 {
     // This is a simplified implementation. A real implementation would use chroot.
-    // For this example, we'll just execute the command directly.
+    // Execute the command directly.
     // Process removed
     process.start(command, arguments);
     

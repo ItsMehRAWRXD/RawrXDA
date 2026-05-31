@@ -179,25 +179,25 @@ struct bin_bcast_sycl {
             size_t s02 = nb02 / sizeof(src0_t);
             size_t s03 = nb03 / sizeof(src0_t);
 
-            GGML_UNUSED(s00);
+            GGML_RXD_UNUSED(s00);
 
-            GGML_ASSERT(nb0 % sizeof(dst_t) == 0);
-            GGML_ASSERT(nb1 % sizeof(dst_t) == 0);
-            GGML_ASSERT(nb2 % sizeof(dst_t) == 0);
-            GGML_ASSERT(nb3 % sizeof(dst_t) == 0);
+            GGML_RXD_ASSERT(nb0 % sizeof(dst_t) == 0);
+            GGML_RXD_ASSERT(nb1 % sizeof(dst_t) == 0);
+            GGML_RXD_ASSERT(nb2 % sizeof(dst_t) == 0);
+            GGML_RXD_ASSERT(nb3 % sizeof(dst_t) == 0);
 
-            GGML_ASSERT(nb00 % sizeof(src0_t) == 0);
-            GGML_ASSERT(nb01 % sizeof(src0_t) == 0);
-            GGML_ASSERT(nb02 % sizeof(src0_t) == 0);
-            GGML_ASSERT(nb03 % sizeof(src0_t) == 0);
+            GGML_RXD_ASSERT(nb00 % sizeof(src0_t) == 0);
+            GGML_RXD_ASSERT(nb01 % sizeof(src0_t) == 0);
+            GGML_RXD_ASSERT(nb02 % sizeof(src0_t) == 0);
+            GGML_RXD_ASSERT(nb03 % sizeof(src0_t) == 0);
 
-            GGML_ASSERT(nb10 % sizeof(src1_t) == 0);
-            GGML_ASSERT(nb11 % sizeof(src1_t) == 0);
-            GGML_ASSERT(nb12 % sizeof(src1_t) == 0);
-            GGML_ASSERT(nb13 % sizeof(src1_t) == 0);
+            GGML_RXD_ASSERT(nb10 % sizeof(src1_t) == 0);
+            GGML_RXD_ASSERT(nb11 % sizeof(src1_t) == 0);
+            GGML_RXD_ASSERT(nb12 % sizeof(src1_t) == 0);
+            GGML_RXD_ASSERT(nb13 % sizeof(src1_t) == 0);
 
-            GGML_ASSERT(s0 == 1);
-            GGML_ASSERT(s10 == 1);
+            GGML_RXD_ASSERT(s0 == 1);
+            GGML_RXD_ASSERT(s10 == 1);
 
             const int block_size = 128;
 
@@ -260,86 +260,86 @@ struct bin_bcast_sycl {
 };
 
 template <class op>
-inline void ggml_sycl_op_bin_bcast(ggml_backend_sycl_context & ctx, const ggml_tensor * src0, const ggml_tensor * src1,
-                                   ggml_tensor * dst) {
+inline void ggml_rxd_sycl_op_bin_bcast(ggml_rxd_backend_sycl_context & ctx, const ggml_rxd_tensor * src0, const ggml_rxd_tensor * src1,
+                                   ggml_rxd_tensor * dst) {
     dpct::queue_ptr main_stream = ctx.stream();
-    GGML_TENSOR_BINARY_OP_LOCALS
+    GGML_RXD_TENSOR_BINARY_OP_LOCALS
 
-    if (src0->type == GGML_TYPE_F32 && src1->type == GGML_TYPE_F32 && dst->type == GGML_TYPE_F32) {
+    if (src0->type == GGML_RXD_TYPE_F32 && src1->type == GGML_RXD_TYPE_F32 && dst->type == GGML_RXD_TYPE_F32) {
         op()((const float *) src0->data, (const float *) src1->data, (float *) dst->data, ne00, ne01, ne02, ne03, ne10,
              ne11, ne12, ne13, ne0, ne1, ne2, ne3, nb00, nb01, nb02, nb03, nb10, nb11, nb12, nb13, nb0, nb1, nb2, nb3,
-             ggml_is_contiguous(src0), ggml_is_contiguous(src1), ggml_is_contiguous(dst), main_stream);
-    } else if (src0->type == GGML_TYPE_F16 && src1->type == GGML_TYPE_F16 && dst->type == GGML_TYPE_F16) {
+             ggml_rxd_is_contiguous(src0), ggml_rxd_is_contiguous(src1), ggml_rxd_is_contiguous(dst), main_stream);
+    } else if (src0->type == GGML_RXD_TYPE_F16 && src1->type == GGML_RXD_TYPE_F16 && dst->type == GGML_RXD_TYPE_F16) {
         op()((const sycl::half *) src0->data, (const sycl::half *) src1->data, (sycl::half *) dst->data, ne00, ne01,
              ne02, ne03, ne10, ne11, ne12, ne13, ne0, ne1, ne2, ne3, nb00, nb01, nb02, nb03, nb10, nb11, nb12, nb13,
-             nb0, nb1, nb2, nb3, ggml_is_contiguous(src0), ggml_is_contiguous(src1), ggml_is_contiguous(dst),
+             nb0, nb1, nb2, nb3, ggml_rxd_is_contiguous(src0), ggml_rxd_is_contiguous(src1), ggml_rxd_is_contiguous(dst),
              main_stream);
-    } else if (src0->type == GGML_TYPE_F16 && src1->type == GGML_TYPE_F32 && dst->type == GGML_TYPE_F16) {
+    } else if (src0->type == GGML_RXD_TYPE_F16 && src1->type == GGML_RXD_TYPE_F32 && dst->type == GGML_RXD_TYPE_F16) {
         op()((const sycl::half *) src0->data, (const float *) src1->data, (sycl::half *) dst->data, ne00, ne01, ne02,
              ne03, ne10, ne11, ne12, ne13, ne0, ne1, ne2, ne3, nb00, nb01, nb02, nb03, nb10, nb11, nb12, nb13, nb0, nb1,
-             nb2, nb3, ggml_is_contiguous(src0), ggml_is_contiguous(src1), ggml_is_contiguous(dst), main_stream);
-    } else if (src0->type == GGML_TYPE_I32 && src1->type == GGML_TYPE_I32 && dst->type == GGML_TYPE_I32) {
+             nb2, nb3, ggml_rxd_is_contiguous(src0), ggml_rxd_is_contiguous(src1), ggml_rxd_is_contiguous(dst), main_stream);
+    } else if (src0->type == GGML_RXD_TYPE_I32 && src1->type == GGML_RXD_TYPE_I32 && dst->type == GGML_RXD_TYPE_I32) {
         op()((const int32_t *) src0->data, (const int32_t *) src1->data, (int32_t *) dst->data, ne00, ne01, ne02, ne03,
              ne10, ne11, ne12, ne13, ne0, ne1, ne2, ne3, nb00, nb01, nb02, nb03, nb10, nb11, nb12, nb13, nb0, nb1, nb2,
-             nb3, ggml_is_contiguous(src0), ggml_is_contiguous(src1), ggml_is_contiguous(dst), main_stream);
-    } else if (src0->type == GGML_TYPE_I16 && src1->type == GGML_TYPE_I16 && dst->type == GGML_TYPE_I16) {
+             nb3, ggml_rxd_is_contiguous(src0), ggml_rxd_is_contiguous(src1), ggml_rxd_is_contiguous(dst), main_stream);
+    } else if (src0->type == GGML_RXD_TYPE_I16 && src1->type == GGML_RXD_TYPE_I16 && dst->type == GGML_RXD_TYPE_I16) {
         op()((const int16_t *) src0->data, (const int16_t *) src1->data, (int16_t *) dst->data, ne00, ne01, ne02, ne03,
              ne10, ne11, ne12, ne13, ne0, ne1, ne2, ne3, nb00, nb01, nb02, nb03, nb10, nb11, nb12, nb13, nb0, nb1, nb2,
-             nb3, ggml_is_contiguous(src0), ggml_is_contiguous(src1), ggml_is_contiguous(dst), main_stream);
+             nb3, ggml_rxd_is_contiguous(src0), ggml_rxd_is_contiguous(src1), ggml_rxd_is_contiguous(dst), main_stream);
     } else {
-        fprintf(stderr, "%s: unsupported types: dst: %s, src0: %s, src1: %s\n", __func__, ggml_type_name(dst->type),
-                ggml_type_name(src0->type), ggml_type_name(src1->type));
-        GGML_ABORT("fatal error");
+        fprintf(stderr, "%s: unsupported types: dst: %s, src0: %s, src1: %s\n", __func__, ggml_rxd_type_name(dst->type),
+                ggml_rxd_type_name(src0->type), ggml_rxd_type_name(src1->type));
+        GGML_RXD_ABORT("fatal error");
     }
 }
 
-inline void ggml_sycl_op_add(ggml_backend_sycl_context & ctx, ggml_tensor *dst) {
+inline void ggml_rxd_sycl_op_add(ggml_rxd_backend_sycl_context & ctx, ggml_rxd_tensor *dst) {
 
-    ggml_sycl_op_bin_bcast<bin_bcast_sycl<op_add>>(ctx, dst->src[0], dst->src[1], dst);
+    ggml_rxd_sycl_op_bin_bcast<bin_bcast_sycl<op_add>>(ctx, dst->src[0], dst->src[1], dst);
 }
 
-inline void ggml_sycl_op_sub(ggml_backend_sycl_context & ctx, ggml_tensor *dst) {
+inline void ggml_rxd_sycl_op_sub(ggml_rxd_backend_sycl_context & ctx, ggml_rxd_tensor *dst) {
 
-    ggml_sycl_op_bin_bcast<bin_bcast_sycl<op_sub>>(ctx, dst->src[0], dst->src[1], dst);
+    ggml_rxd_sycl_op_bin_bcast<bin_bcast_sycl<op_sub>>(ctx, dst->src[0], dst->src[1], dst);
 }
 
-inline void ggml_sycl_op_mul(ggml_backend_sycl_context & ctx, ggml_tensor *dst) {
+inline void ggml_rxd_sycl_op_mul(ggml_rxd_backend_sycl_context & ctx, ggml_rxd_tensor *dst) {
 
-    ggml_sycl_op_bin_bcast<bin_bcast_sycl<op_mul>>(ctx, dst->src[0], dst->src[1], dst);
+    ggml_rxd_sycl_op_bin_bcast<bin_bcast_sycl<op_mul>>(ctx, dst->src[0], dst->src[1], dst);
 }
 
-inline void ggml_sycl_op_div(ggml_backend_sycl_context & ctx, ggml_tensor *dst) {
+inline void ggml_rxd_sycl_op_div(ggml_rxd_backend_sycl_context & ctx, ggml_rxd_tensor *dst) {
 
-    ggml_sycl_op_bin_bcast<bin_bcast_sycl<op_div>>(ctx, dst->src[0], dst->src[1], dst);
+    ggml_rxd_sycl_op_bin_bcast<bin_bcast_sycl<op_div>>(ctx, dst->src[0], dst->src[1], dst);
 }
 
-inline void ggml_sycl_op_repeat(ggml_backend_sycl_context & ctx, ggml_tensor *dst) {
-    ggml_sycl_op_bin_bcast<bin_bcast_sycl<op_repeat>>(ctx, dst, dst->src[0], dst);
+inline void ggml_rxd_sycl_op_repeat(ggml_rxd_backend_sycl_context & ctx, ggml_rxd_tensor *dst) {
+    ggml_rxd_sycl_op_bin_bcast<bin_bcast_sycl<op_repeat>>(ctx, dst, dst->src[0], dst);
 }
 
 
-void ggml_sycl_add(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
+void ggml_rxd_sycl_add(ggml_rxd_backend_sycl_context & ctx, ggml_rxd_tensor * dst) {
     scope_op_debug_print scope_dbg_print(__func__, dst, /*num_src=*/2);
-    ggml_sycl_op_add(ctx, dst);
+    ggml_rxd_sycl_op_add(ctx, dst);
 }
 
-void ggml_sycl_sub(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
+void ggml_rxd_sycl_sub(ggml_rxd_backend_sycl_context & ctx, ggml_rxd_tensor * dst) {
     scope_op_debug_print scope_dbg_print(__func__, dst, /*num_src=*/2);
-    ggml_sycl_op_sub(ctx, dst);
+    ggml_rxd_sycl_op_sub(ctx, dst);
 }
 
-void ggml_sycl_mul(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
+void ggml_rxd_sycl_mul(ggml_rxd_backend_sycl_context & ctx, ggml_rxd_tensor * dst) {
     scope_op_debug_print scope_dbg_print(__func__, dst, /*num_src=*/2);
-    ggml_sycl_op_mul(ctx, dst);
+    ggml_rxd_sycl_op_mul(ctx, dst);
 }
 
-void ggml_sycl_div(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
+void ggml_rxd_sycl_div(ggml_rxd_backend_sycl_context & ctx, ggml_rxd_tensor * dst) {
     scope_op_debug_print scope_dbg_print(__func__, dst, /*num_src=*/2);
-    ggml_sycl_op_div(ctx, dst);
+    ggml_rxd_sycl_op_div(ctx, dst);
 }
 
-void ggml_sycl_repeat(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
+void ggml_rxd_sycl_repeat(ggml_rxd_backend_sycl_context & ctx, ggml_rxd_tensor * dst) {
     scope_op_debug_print scope_dbg_print(__func__, dst, /*num_src=*/1);
-    ggml_sycl_op_repeat(ctx, dst);
+    ggml_rxd_sycl_op_repeat(ctx, dst);
 }
 

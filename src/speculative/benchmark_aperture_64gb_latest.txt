@@ -1,0 +1,11 @@
+RawrXD Aperture Bypass Benchmark
+================================
+Target: 64GB DDR5 + 16GB VRAM system
+Aperture pool: 48 GB
+
+=== RawrXD Aperture Bypass Benchmark (64GB System) ===
+System RAM: 64 GB
+VRAM: 16 GB
+Aperture Pool: 48 GB
+
+FAILED: Could not initialize sovereign bridge

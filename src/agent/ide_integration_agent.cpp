@@ -1,5 +1,6 @@
 // ide_integration_agent.cpp — Autonomous IDE orchestration agent
 #include "ide_integration_agent.h"
+#include "../asm/ai_agent_masm_bridge.hpp"
 #include <sstream>
 #include <algorithm>
 #include <iostream>
@@ -36,7 +37,7 @@ void IDEIntegrationAgent::executeCommand(const std::string& command) {
 
 void IDEIntegrationAgent::processVoiceCommand(const std::string& transcribedText) {
     // Voice commands would match against a more natural grammar
-    // For example: "Install GitHub Copilot" -> action=install-extension, params={ext=github-copilot}
+    // Pattern: "Install GitHub Copilot" -> action=install-extension, params={ext=github-copilot}
     executeCommand(transcribedText);
 }
 
@@ -159,6 +160,46 @@ void IDEIntegrationAgent::changeState(AgentState newState) {
 
 IDEIntegrationAgent::ParsedCommand IDEIntegrationAgent::parseCommand(const std::string& command) {
     ParsedCommand result;
+
+    if (!command.empty() && command[0] == '/') {
+        char actionBuf[64] = {0};
+        char argBuf[1024] = {0};
+        const uint64_t cmdId = masm_parse_slash_command(command.c_str(), actionBuf, argBuf, sizeof(argBuf));
+        if (cmdId != 0) {
+            std::string arg = argBuf;
+            if (cmdId == 1) {
+                result.action = "analyze-file";
+                result.parameters["file"] = arg;
+            } else if (cmdId == 2) {
+                result.action = "run-command";
+                result.parameters["command"] = arg;
+            } else if (cmdId == 3) {
+                result.action = "analyze-file";
+                result.parameters["file"] = arg;
+            } else if (cmdId == 4) {
+                result.action = "analyze-file";
+                result.parameters["query"] = arg;
+            } else if (cmdId == 5) {
+                result.action = "generate-tests";
+                result.parameters["file"] = arg;
+            } else if (cmdId == 6) {
+                result.action = "refactor-code";
+                result.parameters["type"] = arg;
+            } else if (cmdId == 7) {
+                result.action = "switch-provider";
+                result.parameters["provider"] = arg;
+            } else if (cmdId == 8) {
+                result.action = "install-extension";
+                result.parameters["extension"] = arg;
+            } else if (cmdId == 9) {
+                result.action = "create-file";
+                result.parameters["name"] = arg;
+            } else {
+                result.action = actionBuf;
+            }
+            return result;
+        }
+    }
 
     // Simple command parser - in production would use NLP
     std::istringstream iss(command);

@@ -1,0 +1,67 @@
+{
+  "deck": {
+    "title": "RawrXD — Inference Router & Terminal Parity",
+    "subtitle": "Competitive framing · Ollama / vLLM positioning · April 2026",
+    "footnote": "Chart numbers are illustrative for narrative decks; benchmark on your own fleet before procurement."
+  },
+  "positioning": {
+    "intro": "Ollama optimizes for single-node developer experience. vLLM optimizes for batched GPU serving. RawrXD targets IDE-embedded agent loops, native Win32 shell fidelity, and toolchain-adjacent inference—not a drop-in replacement for either, but the control plane that unifies them inside the editor.",
+    "columns": ["Ollama", "vLLM", "RawrXD"],
+    "rows": [
+      {
+        "label": "Primary fit",
+        "values": [
+          "Local pull & chat; minimal ops",
+          "Multi-tenant API throughput; PagedAttention",
+          "IDE-native agents, terminal mirroring, GGUF + bridge"
+        ]
+      },
+      {
+        "label": "Operational surface",
+        "values": [
+          "CLI + REST on :11434",
+          "OpenAI-compatible server; k8s common",
+          "Win32 UI + optional local servers; agent tool plane"
+        ]
+      },
+      {
+        "label": "Differentiator",
+        "values": [
+          "Fastest time-to-hello for devs",
+          "SLO-driven serving & tensor parallel",
+          "Cursor/VS Code terminal parity + read-only agent pane"
+        ]
+      }
+    ]
+  },
+  "charts": [
+    {
+      "type": "bar",
+      "id": "throughput",
+      "title": "Representative throughput (7B-class, tokens/s, indicative)",
+      "labels": ["Ollama", "vLLM", "RawrXD native path"],
+      "values": [92, 2100, 78],
+      "colors": ["#94a3b8", "#818cf8", "#f0abfc"]
+    },
+    {
+      "type": "bar",
+      "id": "ttft",
+      "title": "Time-to-first-token (ms, lower is better — illustrative)",
+      "labels": ["Ollama", "vLLM", "RawrXD"],
+      "values": [45, 28, 52],
+      "colors": ["#94a3b8", "#818cf8", "#f0abfc"]
+    }
+  ],
+  "timeSeries": {
+    "title": "Agent tool round-trip p95 (ms) — sprint trend",
+    "labels": ["T1", "T2", "T3", "T4", "T5"],
+    "datasets": [
+      {
+        "label": "p95 latency",
+        "data": [220, 180, 140, 110, 88],
+        "borderColor": "#f59e0b",
+        "fill": false
+      }
+    ]
+  }
+}

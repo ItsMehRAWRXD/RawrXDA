@@ -1,6 +1,6 @@
-#include "ggml-impl.h"
+#include "ggml-impl_rxd_internal.h"
 #include "ggml-blas.h"
-#include "ggml-backend-impl.h"
+#include "ggml-backend-impl_rxd_internal.h"
 
 #include <future>
 #include <vector>

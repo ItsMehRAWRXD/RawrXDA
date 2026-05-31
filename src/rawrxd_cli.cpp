@@ -13,6 +13,9 @@
 #include "modules/engine_manager.h"
 #include "modules/codex_ultimate.h"
 #include "diagnostics/self_diagnose.hpp"
+#include "rxa_packer.h"
+#include "prometheus_lowmem.h"
+#include "prometheus/kimi_loader.h"
 #include <iostream>
 #include <thread>
 #include <atomic>
@@ -64,6 +67,8 @@ struct CLIState : public AppState {
     bool is_gpu_enabled = false;
     int thread_count = 4;
     int vram_limit_mb = 2048;
+    bool enable_prometheus = false;
+    bool enable_kimi = false;
 };
 
 void EnsureDirectories() {
@@ -108,7 +113,7 @@ std::string QueryOllamaAPI(
             0);
 
         if (!hConnect) {
-            std::cerr << "[HTTP] Failed to connect to Ollama at localhost:11434\n";
+            std::cerr << "[HTTP] Failed to connect to Ollama at localhost:11435\n";
             WinHttpCloseHandle(hSession);
             return "";
         }
@@ -267,7 +272,7 @@ int main(int argc, char** argv) {
         else if (arg == "--mode" && i + 1 < argc) {
             std::string mode = argv[++i];
             if (mode == "local") {
-                // Already setting model via --model
+                fprintf(stderr, "[RawrXD-CLI] Local mode selected\n");
             } else if (mode == "distributed") {
                 state.enable_max_mode = true;
                 state.enable_overclock_governor = true;
@@ -321,6 +326,25 @@ int main(int argc, char** argv) {
             state.engine_manager->LoadEngine("engines/" + engine_id, engine_id);
             state.engine_manager->SwitchEngine(engine_id);
         }
+        else if (arg == "--pack" && i + 2 < argc) {
+            std::string ggufPath = argv[++i];
+            std::string rxaPath  = argv[++i];
+            std::string err;
+            if (RawrXD::PackGgufToRxaDefault(ggufPath, rxaPath, &err)) {
+                std::cout << "[Pack] OK: " << ggufPath << " -> " << rxaPath << std::endl;
+            } else {
+                std::cerr << "[Pack] FAILED: " << err << std::endl;
+            }
+            return 0;
+        }
+        else if (arg == "--prometheus" && i + 1 < argc) {
+            state.model_path = argv[++i];
+            state.enable_prometheus = true;
+        }
+        else if (arg == "--kimi" && i + 1 < argc) {
+            state.model_path = argv[++i];
+            state.enable_kimi = true;
+        }
         else if (arg == "--help") {
             std::cout << R"(
 RawrXD CLI v6.0 - Ultimate AI Shell
@@ -335,7 +359,7 @@ Options:
   --max-mode              Enable max mode (32K+ context)
   --deep-thinking         Enable deep thinking mode
   --deep-research         Enable deep research mode
-  --no-refusal            Enable no refusal mode
+    --no-refusal            Enable direct-response mode
   --autocorrect           Enable auto-correction
   --context-size <size>   Set context size (4k/32k/64k/128k/256k/512k/1m)
   --governor              Enable overclock governor
@@ -343,6 +367,9 @@ Options:
   --top-p <value>         Set top-p (default: 0.9)
   --max-tokens <value>    Set max tokens (default: 2048)
   --engine <id>           Pre-select engine (800b-5drive, codex-ultimate, rawrxd-compiler)
+  --pack <gguf> <rxa>     Pack GGUF into RXA archive (Brutal GZIP)
+  --prometheus <path>     Load model with Prometheus low-memory config
+  --kimi <path>           Load Kimi model with hardware auto-tuning
   --help                  Show this help
 
 ENGINE-SPECIFIC:
@@ -374,7 +401,7 @@ MODE TOGGLES:
   /maxmode <on|off>       - Toggle max mode
   /deepthinking <on|off>  - Toggle deep thinking
   /deepresearch <on|off>  - Toggle deep research
-  /norefusal <on|off>     - Toggle no refusal
+    /norefusal <on|off>     - Toggle direct-response mode
   /autocorrect <on|off>   - Toggle auto-correction
 
 SHELL COMMANDS:
@@ -407,30 +434,75 @@ For more help: https://github.com/ItsMehRAWRXD/RawrXD/wiki
     state.memory_manager = std::make_unique<MemoryManager>();
     state.memory_manager->SetContextSize(state.context_size);
     
-    // Initialize inference engine
-    state.inference_engine = std::make_shared<RawrXD::CPUInferenceEngine>();
-    
-    // Load model
-    while (!state.loaded_model) {
-        if (state.model_path.empty()) {
-            std::cout << "Enter model path (GGUF/Blob): ";
-            std::getline(std::cin, state.model_path);
-            if (state.model_path.empty()) continue;
-        }
-        
-        // Remove quotes
-        if (!state.model_path.empty() && state.model_path.front() == '"') 
-            state.model_path.erase(0, 1);
-        if (!state.model_path.empty() && state.model_path.back() == '"') 
-            state.model_path.pop_back();
-        
-        std::cout << "[Loading] " << state.model_path << "..." << std::endl;
-        if (state.inference_engine->LoadModel(state.model_path)) {
+    // Initialize inference engine (Prometheus low-memory path if requested)
+    if (state.enable_kimi) {
+        auto hw = Prometheus::HardwareProfile::detect();
+        std::cerr << "[Kimi] Detected hardware: " << hw.summary() << "\n";
+
+        auto result = Prometheus::KimiLoader::loadModel(state.model_path, hw);
+        if (result.success) {
             state.loaded_model = true;
-            std::cout << "[Success] Model loaded: " << state.model_path << std::endl;
+            std::cout << "[Success] Kimi model loaded: " << state.model_path << std::endl;
         } else {
-            std::cerr << "[Error] Failed to load model: " << state.model_path << std::endl;
-            state.model_path.clear();
+            std::cerr << "[Error] Kimi load failed: " << result.error << "\nFalling back to standard engine\n";
+            state.enable_kimi = false;
+        }
+    }
+
+    if (!state.loaded_model && state.enable_prometheus) {
+        Prometheus::LowMemoryConfig promCfg;
+        promCfg.modelQuant = Prometheus::LowMemoryConfig::QuantLevel::Q4_K;
+        promCfg.kvQuant    = Prometheus::LowMemoryConfig::QuantLevel::INT4;
+        promCfg.gpuLayers = 12;
+        promCfg.maxContext = static_cast<uint32_t>(state.context_size);
+        promCfg.slidingWindow = 8192;
+        promCfg.kvCacheBudget = 16384;
+        promCfg.speculativeDecoding = true;
+        promCfg.draftModelSize = 1;
+        promCfg.speculativeTokens = 4;
+
+        std::cerr << "[Prometheus] Low-memory mode for 64GB RAM + 16GB GPU\n";
+        std::cerr << "[Prometheus] Estimated model RAM: "
+                  << (promCfg.estimateModelMemory() / (1024.0 * 1024.0 * 1024.0)) << " GB\n";
+        std::cerr << "[Prometheus] Estimated GPU VRAM:  "
+                  << (promCfg.estimateGPUMemory() / (1024.0 * 1024.0 * 1024.0)) << " GB\n";
+
+        auto prom = Prometheus::PrometheusLowMemory::create(state.model_path, promCfg);
+        if (prom) {
+            state.loaded_model = true;
+            std::cout << "[Success] Prometheus model loaded: " << state.model_path << std::endl;
+            // Note: Prometheus path uses its own engine; agentic engine will use local inference
+        } else {
+            std::cerr << "[Error] Prometheus load failed, falling back to standard engine\n";
+            state.enable_prometheus = false;
+        }
+    }
+
+    if (!state.loaded_model) {
+        state.inference_engine = std::make_shared<RawrXD::CPUInferenceEngine>();
+
+        // Load model
+        while (!state.loaded_model) {
+            if (state.model_path.empty()) {
+                std::cout << "Enter model path (GGUF/Blob): ";
+                std::getline(std::cin, state.model_path);
+                if (state.model_path.empty()) continue;
+            }
+
+            // Remove quotes
+            if (!state.model_path.empty() && state.model_path.front() == '"')
+                state.model_path.erase(0, 1);
+            if (!state.model_path.empty() && state.model_path.back() == '"')
+                state.model_path.pop_back();
+
+            std::cout << "[Loading] " << state.model_path << "..." << std::endl;
+            if (state.inference_engine->LoadModel(state.model_path)) {
+                state.loaded_model = true;
+                std::cout << "[Success] Model loaded: " << state.model_path << std::endl;
+            } else {
+                std::cerr << "[Error] Failed to load model: " << state.model_path << std::endl;
+                state.model_path.clear();
+            }
         }
     }
     
@@ -453,7 +525,7 @@ For more help: https://github.com/ItsMehRAWRXD/RawrXD/wiki
     // Initialize API server
     state.api_server = std::make_unique<APIServer>(state);
     state.api_server->Start(11434);
-    std::cout << "[API] Server started on http://localhost:11434" << std::endl;
+    std::cout << "[API] Server started on http://localhost:11435" << std::endl;
     
     // Initialize governor if requested
     if (state.enable_overclock_governor) {
@@ -504,7 +576,8 @@ For more help: https://github.com/ItsMehRAWRXD/RawrXD/wiki
                           std::cout << output;
                       },
                       [](const std::string& input) {
-                          // Input handling is done by shell
+                          // Process shell input
+                          fprintf(stderr, "[RawrXD-CLI] Input: %s\n", input.c_str());
                       }
     );
     

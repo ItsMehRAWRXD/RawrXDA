@@ -1,5 +1,6 @@
 #include "ai_completion_provider_real.hpp"
-#include "../cpu_inference_engine.h"
+#include "../agentic/SovereignInferenceClient.h"
+#include "../agentic/AgentOllamaClient.h"
 #include <iostream>
 #include <algorithm>
 #include <chrono>
@@ -43,27 +44,27 @@ AICompletionProvider::~AICompletionProvider() {
     if (m_streaming) {
         cancelStreaming();
     }
-    void* model_ptr = m_modelHandle;
-    if (m_modelHandle) {
-        auto* engine = static_cast<CPUInference::CPUInferenceEngine*>(m_modelHandle);
-        delete engine;
-    }
-    if (m_tokenizerHandle && m_tokenizerHandle != model_ptr) {
-        auto* tok = static_cast<CPUInference::CPUInferenceEngine*>(m_tokenizerHandle);
-        delete tok;
-    }
-    m_modelHandle = nullptr;
-    m_tokenizerHandle = nullptr;
+    // SovereignInferenceClient cleaned up by unique_ptr
 }
 
-bool AICompletionProvider::initialize(const std::string& modelPath, const std::string& tokenizerPath) {
-    if (!loadModel(modelPath)) {
-        std::cerr << "[AICompletion] Failed to load model: " << modelPath << std::endl;
-        return false;
-    }
+bool AICompletionProvider::initialize(const std::string& modelPath, const std::string& /*tokenizerPath*/) {
+    return loadModel(modelPath);
+}
 
-    if (!loadTokenizer(tokenizerPath)) {
-        std::cerr << "[AICompletion] Failed to load tokenizer: " << tokenizerPath << std::endl;
+bool AICompletionProvider::loadModel(const std::string& modelPath) {
+    RawrXD::Agent::SovereignModelConfig cfg;
+    cfg.model_path = modelPath;
+    cfg.context_size = 4096;      // Completion contexts are smaller
+    cfg.n_batch = 256;
+    cfg.n_gpu_layers = 99;        // Max GPU offload
+    cfg.temperature = 0.2f;       // Lower for deterministic completions
+    cfg.max_tokens = 64;          // Short completions
+    cfg.enable_speculative = true;
+    cfg.draft_tokens = 3;
+
+    m_sovereignClient = std::make_unique<RawrXD::Agent::SovereignInferenceClient>(cfg);
+    if (!m_sovereignClient->LoadModel(modelPath)) {
+        m_sovereignClient.reset();
         return false;
     }
 
@@ -71,35 +72,9 @@ bool AICompletionProvider::initialize(const std::string& modelPath, const std::s
     return true;
 }
 
-bool AICompletionProvider::loadModel(const std::string& modelPath) {
-    std::cout << "[AICompletion] Loading model: " << modelPath << std::endl;
-    auto* engine = new CPUInference::CPUInferenceEngine();
-    if (!engine->LoadModel(modelPath)) {
-        delete engine;
-        return false;
-    }
-    m_modelHandle = engine;
-    if (!m_tokenizerHandle) {
-        m_tokenizerHandle = engine;
-    }
-    return true;
-}
-
-bool AICompletionProvider::loadTokenizer(const std::string& tokenizerPath) {
-    std::cout << "[AICompletion] Loading tokenizer: " << tokenizerPath << std::endl;
-    if (m_modelHandle) {
-        m_tokenizerHandle = m_modelHandle;
-        return true;
-    }
-    if (!tokenizerPath.empty()) {
-        auto* engine = new CPUInference::CPUInferenceEngine();
-        if (engine->LoadModel(tokenizerPath)) {
-            m_tokenizerHandle = engine;
-            return true;
-        }
-        delete engine;
-    }
-    return false;
+bool AICompletionProvider::loadTokenizer(const std::string& /*tokenizerPath*/) {
+    // Tokenizer is built into llama.cpp via llama_tokenize
+    return m_initialized;
 }
 
 std::vector<AICompletionProvider::CompletionSuggestion> AICompletionProvider::getCompletions(
@@ -345,20 +320,38 @@ std::vector<AICompletionProvider::CompletionSuggestion> AICompletionProvider::pe
 ) {
     std::vector<CompletionSuggestion> suggestions;
 
-    auto* engine = static_cast<CPUInference::CPUInferenceEngine*>(m_modelHandle);
-    std::string generated;
-    if (engine && engine->IsModelLoaded()) {
-        std::vector<int32_t> tokens = engine->Tokenize(prompt);
-        engine->GenerateStreaming(
-            tokens,
-            params.maxNewTokens,
-            [&generated](const std::string& token) { generated += token; },
-            []() {},
-            nullptr
-        );
+    if (!m_sovereignClient || !m_sovereignClient->IsLoaded()) {
+        // Fallback to keyword matching if model not loaded
+        size_t lastSpace = prompt.find_last_of(" \t\n(");
+        std::string partial = (lastSpace != std::string::npos) ? prompt.substr(lastSpace + 1) : prompt;
+        for (const auto& [lang, keywords] : m_keywords) {
+            for (const auto& keyword : keywords) {
+                if (keyword.find(partial) == 0) {
+                    CompletionSuggestion suggestion;
+                    suggestion.text = keyword;
+                    suggestion.description = "Language keyword";
+                    suggestion.type = "keyword";
+                    suggestion.confidence = 0.8f;
+                    suggestion.priority = 10;
+                    suggestions.push_back(suggestion);
+                }
+            }
+        }
+        return suggestions;
     }
-    
-    // Extract partial word from prompt
+
+    // Use SovereignInferenceClient for streaming generation
+    std::string generated;
+    std::vector<RawrXD::Agent::ChatMessage> messages;
+    messages.push_back({"system", "You are a code completion engine. Respond with ONLY the completion text, no explanations."});
+    messages.push_back({"user", prompt});
+
+    auto res = m_sovereignClient->ChatSync(messages);
+    if (res.success) {
+        generated = res.response;
+    }
+
+    // Extract partial word from prompt for fallback matching
     size_t lastSpace = prompt.find_last_of(" \t\n(");
     std::string partial = (lastSpace != std::string::npos) ? prompt.substr(lastSpace + 1) : prompt;
 
@@ -432,11 +425,8 @@ int AICompletionProvider::estimateTokenCount(const std::string& text) const {
 }
 
 std::vector<int> AICompletionProvider::tokenizeText(const std::string& text) {
-    auto* engine = static_cast<CPUInference::CPUInferenceEngine*>(m_tokenizerHandle);
-    if (engine && engine->IsModelLoaded()) {
-        std::vector<int32_t> t = engine->Tokenize(text);
-        return std::vector<int>(t.begin(), t.end());
-    }
+    // SovereignInferenceClient uses llama.cpp tokenization internally
+    // Return byte-level tokens as fallback
     std::vector<int> tokens;
     tokens.reserve(text.size());
     for (unsigned char c : text) {
@@ -446,11 +436,6 @@ std::vector<int> AICompletionProvider::tokenizeText(const std::string& text) {
 }
 
 std::string AICompletionProvider::detokenize(const std::vector<int>& tokens) {
-    auto* engine = static_cast<CPUInference::CPUInferenceEngine*>(m_tokenizerHandle);
-    if (engine && engine->IsModelLoaded()) {
-        std::vector<int32_t> t(tokens.begin(), tokens.end());
-        return engine->Detokenize(t);
-    }
     std::string result;
     for (int token : tokens) {
         if (token >= 0 && token < 256) {

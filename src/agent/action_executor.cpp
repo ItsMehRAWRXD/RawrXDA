@@ -48,9 +48,23 @@ ActionExecutor::ActionExecutor()
 ActionExecutor::~ActionExecutor()
 {
     cancelExecution();
-    std::lock_guard<std::mutex> lock(m_threadMutex);
-    if (m_executionThread.joinable()) {
-        m_executionThread.join();
+    // Acquire the lock only to extract joinability + id, then release before
+    // joining. Holding the lock across join() causes EDEADLK if the thread
+    // itself tries to acquire m_threadMutex during teardown.
+    std::thread toJoin;
+    {
+        std::lock_guard<std::mutex> lock(m_threadMutex);
+        if (m_executionThread.joinable() &&
+            m_executionThread.get_id() != std::this_thread::get_id()) {
+            toJoin = std::move(m_executionThread);
+        } else if (m_executionThread.joinable()) {
+            // Destructor called from within the execution thread — detach to
+            // avoid self-join (EDEADLK / undefined behaviour).
+            m_executionThread.detach();
+        }
+    }
+    if (toJoin.joinable()) {
+        toJoin.join();
     }
 }
 
@@ -64,8 +78,6 @@ ActionExecutor::~ActionExecutor()
 void ActionExecutor::setContext(const ExecutionContext& context)
 {
     m_context = context;
-    fprintf(stderr, "[ActionExecutor] Context set - projectRoot: %s\n",
-            m_context.projectRoot.c_str());
 }
 
 /**
@@ -73,8 +85,6 @@ void ActionExecutor::setContext(const ExecutionContext& context)
  */
 bool ActionExecutor::executeAction(Action& action)
 {
-    fprintf(stderr, "[ActionExecutor] Executing action: %s\n", action.description.c_str());
-
     switch (action.type) {
     case ActionType::FileEdit:
         return handleFileEdit(action);
@@ -112,11 +122,24 @@ void ActionExecutor::executePlan(const JsonValue& actions, bool stopOnError)
     m_context.totalActions = static_cast<int>(actions.size());
     notifyPlanStarted(static_cast<int>(actions.size()));
 
-    // Join any previous background thread
+    // Join any previous background thread, but guard against self-join:
+    // handleRecursiveAgent (or any in-thread callback) may call executePlan
+    // re-entrantly, which would make the current thread join itself → EDEADLK.
     {
-        std::lock_guard<std::mutex> lock(m_threadMutex);
-        if (m_executionThread.joinable()) {
-            m_executionThread.join();
+        std::thread toJoin;
+        {
+            std::lock_guard<std::mutex> lock(m_threadMutex);
+            if (m_executionThread.joinable() &&
+                m_executionThread.get_id() != std::this_thread::get_id()) {
+                toJoin = std::move(m_executionThread);
+            } else if (m_executionThread.joinable()) {
+                // Re-entrant call from within the thread: detach the old
+                // instance so we can safely start a new one.
+                m_executionThread.detach();
+            }
+        }
+        if (toJoin.joinable()) {
+            toJoin.join();
         }
     }
 
@@ -127,7 +150,7 @@ void ActionExecutor::executePlan(const JsonValue& actions, bool stopOnError)
 
         for (size_t i = 0; i < actions.size() && !m_cancelled.load(); ++i) {
             if (!actions[i].isObject()) {
-                fprintf(stderr, "[ActionExecutor] Invalid action at index %zu\n", i);
+                // Invalid action at index
                 overallSuccess = false;
                 if (m_stopOnError) break;
                 continue;
@@ -162,7 +185,7 @@ void ActionExecutor::executePlan(const JsonValue& actions, bool stopOnError)
                 notifyActionFailed(static_cast<int>(i), action.error, m_stopOnError);
 
                 if (m_stopOnError) {
-                    fprintf(stderr, "[ActionExecutor] Stopping due to error\n");
+                    // Stopping due to error
                     break;
                 }
             }
@@ -194,7 +217,7 @@ void ActionExecutor::cancelExecution()
         }
     }
 #endif
-    fprintf(stderr, "[ActionExecutor] Execution cancelled\n");
+    // Execution cancelled
 }
 
 /**
@@ -210,12 +233,12 @@ bool ActionExecutor::rollbackAction(int actionIndex)
 
     // Only file edits are rollbackable
     if (action.type != ActionType::FileEdit) {
-        fprintf(stderr, "[ActionExecutor] Action type not rollbackable\n");
+        // Action type not rollbackable
         return false;
     }
 
     if (m_backups.find(action.target) == m_backups.end()) {
-        fprintf(stderr, "[ActionExecutor] No backup found for %s\n", action.target.c_str());
+        // No backup found
         return false;
     }
 
@@ -273,7 +296,7 @@ bool ActionExecutor::handleFileEdit(Action& action)
 
     // Create backup
     if (!createBackup(filePath)) {
-        fprintf(stderr, "[ActionExecutor] Failed to backup %s\n", filePath.c_str());
+        // Failed to backup
     }
 
     if (editAction == "create") {
@@ -614,7 +637,7 @@ bool ActionExecutor::createBackup(const std::string& filePath)
     bool success = fs::copy_file(filePath, backupPath, ec);
     if (success) {
         m_backups[filePath] = backupPath;
-        fprintf(stderr, "[ActionExecutor] Backup created: %s\n", backupPath.c_str());
+        // Backup created
     }
 
     return success;
@@ -637,7 +660,7 @@ bool ActionExecutor::restoreFromBackup(const std::string& filePath)
         return false;
     }
 
-    fprintf(stderr, "[ActionExecutor] Restored from backup: %s\n", backupPath.c_str());
+    // Restored from backup
     return true;
 }
 
@@ -682,13 +705,13 @@ bool ActionExecutor::validateFileEditSafety(const std::string& filePath, const s
     if (filePath.find("C:\\Windows") != std::string::npos ||
         filePath.find("/etc/") != std::string::npos ||
         filePath.find("/System/") != std::string::npos) {
-        fprintf(stderr, "[ActionExecutor] Blocked system file modification: %s\n", filePath.c_str());
+        // Blocked system file modification
         return false;
     }
 
     // For delete operations, require explicit confirmation
     if (action == "delete") {
-        fprintf(stderr, "[ActionExecutor] File deletion requires explicit approval: %s\n", filePath.c_str());
+        // File deletion requires explicit approval
         // In real implementation, would query user
         return false;
     }
@@ -997,13 +1020,13 @@ void ActionExecutor::notifyUserInputNeeded(const std::string& query, const std::
 
 void ActionExecutor::onActionTaskFinished()
 {
-    fprintf(stderr, "[ActionExecutor] Action task finished\n");
+    // Action task finished
     // Process completion of current action task
 }
 
 void ActionExecutor::onProcessFinished(int exitCode, int exitStatus)
 {
-    fprintf(stderr, "[ActionExecutor] Process finished with exit code: %d status: %d\n",
+    // Process finished
             exitCode, exitStatus);
     // Process completion of external process execution
 }

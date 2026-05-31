@@ -28,6 +28,7 @@ namespace RawrXD {
     class LSPClient;
     class PlanOrchestrator;
     class Editor;
+    class CollaborationManager;
 }
 
 namespace RawrXD {
@@ -75,6 +76,7 @@ private:
     std::shared_ptr<UniversalModelRouter> m_modelRouter;
     std::shared_ptr<LSPClient> m_lspClient;
     std::shared_ptr<PlanOrchestrator> m_planOrchestrator;
+    std::shared_ptr<CollaborationManager> m_collabManager;
     
     Editor* m_guiEditor = nullptr;
     std::string m_workspaceRoot;
@@ -115,6 +117,7 @@ std::shared_ptr<T> AgenticIDE::getComponent() const {
     if constexpr (std::is_same_v<T, UniversalModelRouter>) return m_modelRouter;
     if constexpr (std::is_same_v<T, LSPClient>) return m_lspClient;
     if constexpr (std::is_same_v<T, PlanOrchestrator>) return m_planOrchestrator;
+    if constexpr (std::is_same_v<T, CollaborationManager>) return m_collabManager;
     return nullptr;
 }
 

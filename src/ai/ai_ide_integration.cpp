@@ -8,6 +8,14 @@
 #include <fstream>
 #include <filesystem>
 #include <cstdlib>
+#include <cstring>
+#include <vector>
+#include <limits>
+
+#ifdef _WIN32
+#include <wincrypt.h>
+#pragma comment(lib, "crypt32.lib")
+#endif
 
 #pragma comment(lib, "comctl32.lib")
 
@@ -105,6 +113,132 @@ constexpr int ID_CHAT_HISTORY = 5001;
 constexpr int ID_CHAT_INPUT = 5002;
 constexpr int ID_CHAT_SEND = 5003;
 constexpr int ID_AGENT_STATUS = 6001;
+
+bool TryParseInt(const std::string& value, int& out) {
+    try {
+        size_t consumed = 0;
+        const long long parsed = std::stoll(value, &consumed, 10);
+        if (consumed != value.size()) {
+            return false;
+        }
+        if (parsed < static_cast<long long>(std::numeric_limits<int>::min()) ||
+            parsed > static_cast<long long>(std::numeric_limits<int>::max())) {
+            return false;
+        }
+        out = static_cast<int>(parsed);
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
+std::string HexEncode(const uint8_t* data, size_t size) {
+    static constexpr char kHex[] = "0123456789ABCDEF";
+    std::string out;
+    out.resize(size * 2);
+    for (size_t i = 0; i < size; ++i) {
+        out[i * 2] = kHex[(data[i] >> 4) & 0x0F];
+        out[i * 2 + 1] = kHex[data[i] & 0x0F];
+    }
+    return out;
+}
+
+bool HexValue(char c, uint8_t& out) {
+    if (c >= '0' && c <= '9') {
+        out = static_cast<uint8_t>(c - '0');
+        return true;
+    }
+    if (c >= 'A' && c <= 'F') {
+        out = static_cast<uint8_t>(c - 'A' + 10);
+        return true;
+    }
+    if (c >= 'a' && c <= 'f') {
+        out = static_cast<uint8_t>(c - 'a' + 10);
+        return true;
+    }
+    return false;
+}
+
+bool HexDecode(const std::string& hex, std::vector<uint8_t>& out) {
+    if ((hex.size() % 2) != 0) {
+        return false;
+    }
+
+    out.clear();
+    out.reserve(hex.size() / 2);
+    for (size_t i = 0; i < hex.size(); i += 2) {
+        uint8_t hi = 0;
+        uint8_t lo = 0;
+        if (!HexValue(hex[i], hi) || !HexValue(hex[i + 1], lo)) {
+            out.clear();
+            return false;
+        }
+        out.push_back(static_cast<uint8_t>((hi << 4) | lo));
+    }
+    return true;
+}
+
+bool ProtectForSettings(const std::string& plaintext, std::string& outHex) {
+#ifdef _WIN32
+    const char* entropyText = "RawrXD.AISettings.v1";
+    DATA_BLOB entropy{};
+    entropy.pbData = reinterpret_cast<BYTE*>(const_cast<char*>(entropyText));
+    entropy.cbData = static_cast<DWORD>(strlen(entropyText));
+
+    DATA_BLOB in{};
+    in.pbData = reinterpret_cast<BYTE*>(const_cast<char*>(plaintext.data()));
+    in.cbData = static_cast<DWORD>(plaintext.size());
+
+    DATA_BLOB encrypted{};
+    const BOOL ok = CryptProtectData(&in, L"RawrXD AI API Key", &entropy, nullptr, nullptr,
+                                     CRYPTPROTECT_UI_FORBIDDEN, &encrypted);
+    if (!ok) {
+        return false;
+    }
+
+    outHex = HexEncode(encrypted.pbData, encrypted.cbData);
+    LocalFree(encrypted.pbData);
+    return true;
+#else
+    (void)plaintext;
+    outHex.clear();
+    return false;
+#endif
+}
+
+bool UnprotectFromSettings(const std::string& hexCiphertext, std::string& outPlaintext) {
+#ifdef _WIN32
+    std::vector<uint8_t> encrypted;
+    if (!HexDecode(hexCiphertext, encrypted)) {
+        return false;
+    }
+
+    const char* entropyText = "RawrXD.AISettings.v1";
+    DATA_BLOB entropy{};
+    entropy.pbData = reinterpret_cast<BYTE*>(const_cast<char*>(entropyText));
+    entropy.cbData = static_cast<DWORD>(strlen(entropyText));
+
+    DATA_BLOB in{};
+    in.pbData = encrypted.data();
+    in.cbData = static_cast<DWORD>(encrypted.size());
+
+    DATA_BLOB decrypted{};
+    const BOOL ok = CryptUnprotectData(&in, nullptr, &entropy, nullptr, nullptr,
+                                       CRYPTPROTECT_UI_FORBIDDEN, &decrypted);
+    if (!ok) {
+        return false;
+    }
+
+    outPlaintext.assign(reinterpret_cast<const char*>(decrypted.pbData),
+                        reinterpret_cast<const char*>(decrypted.pbData) + decrypted.cbData);
+    LocalFree(decrypted.pbData);
+    return true;
+#else
+    (void)hexCiphertext;
+    outPlaintext.clear();
+    return false;
+#endif
+}
 } // namespace
 
 namespace RawrXD {
@@ -608,18 +742,29 @@ void AIIDEIntegration::SwitchToModel(const std::string& model_name) {
 
 CodeContext AIIDEIntegration::GetCurrentCodeContext() {
     CodeContext context;
-    context.file_content = GetCurrentFileContent();
-    context.selected_text = GetSelectedText();
-    context.language = GetCurrentLanguage();
     
-    // Get cursor position
-    DWORD sel_start, sel_end;
-    SendMessage(m_editor_control, EM_GETSEL, (WPARAM)&sel_start, (LPARAM)&sel_end);
-    
-    // Convert character position to line/column
-    context.cursor_line = (int)SendMessage(m_editor_control, EM_LINEFROMCHAR, sel_start, 0);
-    int line_start = (int)SendMessage(m_editor_control, EM_LINEINDEX, context.cursor_line, 0);
-    context.cursor_column = (int)(sel_start - line_start);
+    // Only gather editor context if current file context is enabled
+    if (m_settings.current_file_context_enabled) {
+        context.file_content = GetCurrentFileContent();
+        context.selected_text = GetSelectedText();
+        context.language = GetCurrentLanguage();
+        
+        // Get cursor position
+        DWORD sel_start, sel_end;
+        SendMessage(m_editor_control, EM_GETSEL, (WPARAM)&sel_start, (LPARAM)&sel_end);
+        
+        // Convert character position to line/column
+        context.cursor_line = (int)SendMessage(m_editor_control, EM_LINEFROMCHAR, sel_start, 0);
+        int line_start = (int)SendMessage(m_editor_control, EM_LINEINDEX, context.cursor_line, 0);
+        context.cursor_column = (int)(sel_start - line_start);
+    } else {
+        // Context disabled: return empty context with cursor at origin
+        context.file_content = "";
+        context.selected_text = "";
+        context.language = "text";
+        context.cursor_line = 0;
+        context.cursor_column = 0;
+    }
 
     return context;
 }
@@ -745,6 +890,7 @@ void AIIDEIntegration::LoadSettings() {
     m_settings.preferred_provider = ModelProvider::Local_GGUF;
     m_settings.api_key = "";
     m_settings.api_endpoint = "";
+    m_settings.current_file_context_enabled = true;
 
     const char* appdata = std::getenv("APPDATA");
     std::filesystem::path cfg_dir = appdata ? std::filesystem::path(appdata) / "RawrXD" : std::filesystem::current_path();
@@ -753,6 +899,7 @@ void AIIDEIntegration::LoadSettings() {
     std::ifstream in(cfg_path);
     if (!in.is_open()) return;
 
+    std::string encryptedApiKey;
     std::string line;
     while (std::getline(in, line)) {
         auto eq = line.find('=');
@@ -761,13 +908,32 @@ void AIIDEIntegration::LoadSettings() {
         std::string val = line.substr(eq + 1);
 
         if (key == "auto_inline_completion") m_settings.auto_inline_completion = (val == "1");
-        else if (key == "inline_trigger_delay_ms") m_settings.inline_trigger_delay_ms = std::stoi(val);
+        else if (key == "inline_trigger_delay_ms") {
+            int parsed = 0;
+            if (TryParseInt(val, parsed) && parsed >= 50 && parsed <= 10000) {
+                m_settings.inline_trigger_delay_ms = parsed;
+            }
+        }
         else if (key == "show_confidence_scores") m_settings.show_confidence_scores = (val == "1");
         else if (key == "multi_line_suggestions") m_settings.multi_line_suggestions = (val == "1");
         else if (key == "preferred_model") m_settings.preferred_model = val;
-        else if (key == "preferred_provider") m_settings.preferred_provider = static_cast<ModelProvider>(std::stoi(val));
-        else if (key == "api_key") m_settings.api_key = val;
+        else if (key == "preferred_provider") {
+            int parsed = 0;
+            if (TryParseInt(val, parsed)) {
+                m_settings.preferred_provider = static_cast<ModelProvider>(parsed);
+            }
+        }
+        else if (key == "api_key") m_settings.api_key = val; // Legacy fallback (plaintext)
+        else if (key == "api_key_enc") encryptedApiKey = val;
         else if (key == "api_endpoint") m_settings.api_endpoint = val;
+        else if (key == "current_file_context") m_settings.current_file_context_enabled = (val == "1");
+    }
+
+    if (!encryptedApiKey.empty()) {
+        std::string decrypted;
+        if (UnprotectFromSettings(encryptedApiKey, decrypted)) {
+            m_settings.api_key = std::move(decrypted);
+        }
     }
 }
 
@@ -786,8 +952,14 @@ void AIIDEIntegration::SaveSettings() {
     out << "multi_line_suggestions=" << (m_settings.multi_line_suggestions ? "1" : "0") << "\n";
     out << "preferred_model=" << m_settings.preferred_model << "\n";
     out << "preferred_provider=" << static_cast<int>(m_settings.preferred_provider) << "\n";
-    out << "api_key=" << m_settings.api_key << "\n";
+    std::string encryptedApiKey;
+    if (!m_settings.api_key.empty() && ProtectForSettings(m_settings.api_key, encryptedApiKey)) {
+        out << "api_key_enc=" << encryptedApiKey << "\n";
+    } else {
+        out << "api_key_enc=\n";
+    }
     out << "api_endpoint=" << m_settings.api_endpoint << "\n";
+    out << "current_file_context=" << (m_settings.current_file_context_enabled ? "1" : "0") << "\n";
 }
 
 void AIIDEIntegration::ShowSettingsDialog() {
@@ -849,6 +1021,230 @@ LRESULT CALLBACK AIIDEIntegration::EditPromptProc(HWND hwnd, UINT msg, WPARAM wP
 
 LRESULT CALLBACK AIIDEIntegration::AgentPanelProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     return DefWindowProc(hwnd, msg, wParam, lParam);
+}
+
+// ============================================================================
+// Sovereign Cursor Integration
+// ============================================================================
+
+bool AIIDEIntegration::InitializeSovereignCursor() {
+    if (m_sovereign_cursor_initialized) return true;
+
+    SovereignCursorConfig cfg;
+    cfg.modelPath = m_settings.preferred_model.empty()
+                        ? "models/phi3-mini-q4.gguf"
+                        : m_settings.preferred_model;
+    cfg.contextSize = 8192;
+    cfg.temperature = 0.2f;
+    cfg.maxTokens = 2048;
+    cfg.autoSuggest = m_settings.auto_inline_completion;
+    cfg.debounceMs = static_cast<uint32_t>(m_settings.inline_trigger_delay_ms);
+    cfg.speculativeDecode = true;
+    cfg.draftTokens = 5;
+
+    m_sovereign_cursor = std::make_unique<SovereignCursor>(cfg);
+
+    // Set callbacks
+    m_sovereign_cursor->SetSuggestionCallback(
+        [this](const AISuggestion& suggestion) {
+            OnSovereignSuggestion(suggestion);
+        });
+    m_sovereign_cursor->SetProgressCallback(
+        [this](const std::string& status) {
+            UpdateSovereignCursorStatus(status);
+        });
+
+    if (!m_sovereign_cursor->Initialize()) {
+        m_sovereign_cursor.reset();
+        return false;
+    }
+
+    m_sovereign_cursor_initialized = true;
+    CreateSovereignCursorPanel();
+    return true;
+}
+
+void AIIDEIntegration::ShutdownSovereignCursor() {
+    if (m_sovereign_cursor) {
+        m_sovereign_cursor->Shutdown();
+        m_sovereign_cursor.reset();
+    }
+    m_sovereign_cursor_initialized = false;
+
+    if (m_sovereign_cursor_panel) {
+        DestroyWindow(m_sovereign_cursor_panel);
+        m_sovereign_cursor_panel = nullptr;
+        m_sovereign_cursor_status = nullptr;
+    }
+}
+
+void AIIDEIntegration::TriggerSovereignCompletion() {
+    if (!InitializeSovereignCursor()) return;
+    m_sovereign_cursor->RequestCompletion();
+}
+
+void AIIDEIntegration::TriggerSovereignInlineSuggestion() {
+    if (!InitializeSovereignCursor()) return;
+    m_sovereign_cursor->RequestInlineSuggestion();
+}
+
+void AIIDEIntegration::TriggerSovereignRefactor() {
+    if (!InitializeSovereignCursor()) return;
+    m_sovereign_cursor->RequestRefactoring();
+}
+
+void AIIDEIntegration::TriggerSovereignExplain() {
+    if (!InitializeSovereignCursor()) return;
+    m_sovereign_cursor->RequestExplanation();
+}
+
+void AIIDEIntegration::TriggerSovereignFix() {
+    if (!InitializeSovereignCursor()) return;
+    m_sovereign_cursor->RequestFix();
+}
+
+void AIIDEIntegration::TriggerSovereignDiff(const std::wstring& instruction) {
+    if (!InitializeSovereignCursor()) return;
+    int len = WideCharToMultiByte(CP_UTF8, 0, instruction.c_str(), -1, nullptr, 0, nullptr, nullptr);
+    std::string utf8(len - 1, 0);
+    WideCharToMultiByte(CP_UTF8, 0, instruction.c_str(), -1, &utf8[0], len, nullptr, nullptr);
+    m_sovereign_cursor->RequestDiff(utf8);
+}
+
+void AIIDEIntegration::AcceptSovereignSuggestion() {
+    if (m_sovereign_suggestion_visible && !m_sovereign_current_suggestion.text.empty()) {
+        if (m_sovereign_current_suggestion.isDiff) {
+            ApplySovereignSuggestion(m_sovereign_current_suggestion);
+        } else {
+            InsertTextAtCursor(m_sovereign_current_suggestion.text);
+        }
+        m_sovereign_suggestion_visible = false;
+    }
+}
+
+void AIIDEIntegration::RejectSovereignSuggestion() {
+    m_sovereign_suggestion_visible = false;
+    HideInlineSuggestion();
+}
+
+void AIIDEIntegration::ShowSovereignCursorPanel() {
+    if (!m_sovereign_cursor_panel) {
+        CreateSovereignCursorPanel();
+    }
+    if (m_sovereign_cursor_panel) {
+        ShowWindow(m_sovereign_cursor_panel, SW_SHOW);
+    }
+}
+
+void AIIDEIntegration::HideSovereignCursorPanel() {
+    if (m_sovereign_cursor_panel) {
+        ShowWindow(m_sovereign_cursor_panel, SW_HIDE);
+    }
+}
+
+void AIIDEIntegration::UpdateSovereignCursorStatus(const std::string& status) {
+    if (m_sovereign_cursor_status) {
+        SetWindowTextA(m_sovereign_cursor_status, status.c_str());
+    }
+}
+
+bool AIIDEIntegration::IsSovereignCursorReady() const {
+    return m_sovereign_cursor_initialized && m_sovereign_cursor && m_sovereign_cursor->IsReady();
+}
+
+void AIIDEIntegration::CreateSovereignCursorPanel() {
+    if (m_sovereign_cursor_panel) return;
+
+    RECT rc;
+    GetClientRect(m_main_window, &rc);
+    int width = 320;
+    int height = 140;
+    int x = 10;
+    int y = rc.bottom - height - 10;
+
+    m_sovereign_cursor_panel = CreateWindowExW(
+        WS_EX_CLIENTEDGE, L"STATIC", L"Sovereign Cursor",
+        WS_CHILD | WS_VISIBLE, x, y, width, height,
+        m_main_window, nullptr, GetModuleHandleW(nullptr), nullptr);
+
+    if (!m_sovereign_cursor_panel) return;
+
+    CreateWindowExW(0, L"STATIC", L"Status:",
+                    WS_CHILD | WS_VISIBLE, 10, 10, 50, 20,
+                    m_sovereign_cursor_panel, nullptr,
+                    GetModuleHandleW(nullptr), nullptr);
+
+    m_sovereign_cursor_status = CreateWindowExW(
+        0, L"STATIC", L"Idle",
+        WS_CHILD | WS_VISIBLE, 65, 10, width - 80, 20,
+        m_sovereign_cursor_panel, nullptr,
+        GetModuleHandleW(nullptr), nullptr);
+
+    CreateWindowExW(0, L"BUTTON", L"Complete",
+                    WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+                    10, 40, 90, 26, m_sovereign_cursor_panel,
+                    reinterpret_cast<HMENU>(7001),
+                    GetModuleHandleW(nullptr), nullptr);
+
+    CreateWindowExW(0, L"BUTTON", L"Refactor",
+                    WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+                    110, 40, 90, 26, m_sovereign_cursor_panel,
+                    reinterpret_cast<HMENU>(7002),
+                    GetModuleHandleW(nullptr), nullptr);
+
+    CreateWindowExW(0, L"BUTTON", L"Explain",
+                    WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+                    210, 40, 90, 26, m_sovereign_cursor_panel,
+                    reinterpret_cast<HMENU>(7003),
+                    GetModuleHandleW(nullptr), nullptr);
+
+    CreateWindowExW(0, L"BUTTON", L"Fix",
+                    WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+                    10, 75, 90, 26, m_sovereign_cursor_panel,
+                    reinterpret_cast<HMENU>(7004),
+                    GetModuleHandleW(nullptr), nullptr);
+
+    CreateWindowExW(0, L"BUTTON", L"Accept",
+                    WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+                    110, 75, 90, 26, m_sovereign_cursor_panel,
+                    reinterpret_cast<HMENU>(7005),
+                    GetModuleHandleW(nullptr), nullptr);
+
+    CreateWindowExW(0, L"BUTTON", L"Reject",
+                    WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+                    210, 75, 90, 26, m_sovereign_cursor_panel,
+                    reinterpret_cast<HMENU>(7006),
+                    GetModuleHandleW(nullptr), nullptr);
+}
+
+void AIIDEIntegration::OnSovereignSuggestion(const AISuggestion& suggestion) {
+    m_sovereign_current_suggestion = suggestion;
+    m_sovereign_suggestion_visible = true;
+
+    if (!suggestion.text.empty()) {
+        if (suggestion.isDiff) {
+            ShowInlineSuggestion(suggestion);
+        } else {
+            // For inline suggestions, show ghost text
+            AISuggestion ghost;
+            ghost.suggestion_text = suggestion.text;
+            ShowInlineSuggestion(ghost);
+        }
+    }
+}
+
+void AIIDEIntegration::ApplySovereignSuggestion(const AISuggestion& suggestion) {
+    if (suggestion.isDiff && !suggestion.hunks.empty()) {
+        // Apply each hunk via editor control
+        for (const auto& hunk : suggestion.hunks) {
+            // Set selection to the range to replace
+            CHARRANGE range;
+            range.cpMin = static_cast<LONG>(hunk.oldStart);
+            range.cpMax = static_cast<LONG>(hunk.oldStart + hunk.oldLength);
+            SendMessage(m_editor_control, EM_EXSETSEL, 0, (LPARAM)&range);
+            ReplaceSelection(hunk.newText);
+        }
+    }
 }
 
 } // namespace AI

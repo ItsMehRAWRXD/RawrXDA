@@ -226,7 +226,7 @@ static void launch_soft_max_kernels(const float *           x,
                             dpct_local_acc_ct1
                                 .get_multi_ptr<sycl::access::decorated::no>()
                                 .get());
-                        GGML_UNUSED(item_ct1);
+                        GGML_RXD_UNUSED(item_ct1);
                     });
             });
             return true;
@@ -252,7 +252,7 @@ static void launch_soft_max_kernels(const float *           x,
                         dpct_local_acc_ct1
                             .get_multi_ptr<sycl::access::decorated::no>()
                             .get());
-                    GGML_UNUSED(item_ct1);
+                    GGML_RXD_UNUSED(item_ct1);
                 });
     });
 }
@@ -263,7 +263,7 @@ static void soft_max_f32_sycl(const float *x, const T *mask,
                               const soft_max_params &params,
                               dpct::queue_ptr stream, int device) {
     int nth = WARP_SIZE;
-    int max_block_size = ggml_sycl_info().max_work_group_sizes[device];
+    int max_block_size = ggml_rxd_sycl_info().max_work_group_sizes[device];
     const int64_t ncols_x = params.ncols;
 
     while (nth < ncols_x && nth < max_block_size) nth *= 2;
@@ -272,10 +272,10 @@ static void soft_max_f32_sycl(const float *x, const T *mask,
     const dpct::dim3 block_dims(nth, 1, 1);
     const dpct::dim3 block_nums(params.ne01, params.ne02, params.ne03);
     const size_t nbytes_shared =
-        (GGML_PAD(ncols_x, WARP_SIZE) + WARP_SIZE) * sizeof(float);
+        (GGML_RXD_PAD(ncols_x, WARP_SIZE) + WARP_SIZE) * sizeof(float);
 
     const int id       = get_current_device_id();
-    const size_t smpbo = ggml_sycl_info().devices[id].smpbo;
+    const size_t smpbo = ggml_rxd_sycl_info().devices[id].smpbo;
 
     if (nbytes_shared <= smpbo) {
         launch_soft_max_kernels<32, 64, 128, 256, 512, 1024, 2048, 4096>(
@@ -296,7 +296,7 @@ static void soft_max_f32_sycl(const float *x, const T *mask,
                         dpct_local_acc_ct1
                             .get_multi_ptr<sycl::access::decorated::no>()
                             .get());
-                    GGML_UNUSED(item_ct1);
+                    GGML_RXD_UNUSED(item_ct1);
                 });
         });
     }
@@ -315,16 +315,16 @@ static void soft_max_back_f32_sycl(const float *   grad,
     stream->parallel_for(sycl::nd_range<3>(block_nums * block_dims, block_dims),
                          [=](sycl::nd_item<3> item_ct1) {
                              soft_max_back_f32(grad, dstf, dst, ncols, scale);
-                             GGML_UNUSED(item_ct1);
+                             GGML_RXD_UNUSED(item_ct1);
                          });
 }
 
-void ggml_sycl_op_soft_max(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
+void ggml_rxd_sycl_op_soft_max(ggml_rxd_backend_sycl_context & ctx, ggml_rxd_tensor * dst) {
     scope_op_debug_print scope_dbg_print(__func__, dst, /*num_src=*/2);
 
-    const ggml_tensor * src0 = dst->src[0];
-    const ggml_tensor * src1 = dst->src[1];
-    const ggml_tensor * src2 = dst->src[2];
+    const ggml_rxd_tensor * src0 = dst->src[0];
+    const ggml_rxd_tensor * src1 = dst->src[1];
+    const ggml_rxd_tensor * src2 = dst->src[2];
 
     const float * src0_d = (const float *) src0->data;
     const void  * src1_d = src1 ? (const void *) src1->data : nullptr;
@@ -333,13 +333,13 @@ void ggml_sycl_op_soft_max(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
 
     dpct::queue_ptr stream = ctx.stream();
 
-    GGML_ASSERT(src0->type == GGML_TYPE_F32);
-    GGML_ASSERT( dst->type == GGML_TYPE_F32);
+    GGML_RXD_ASSERT(src0->type == GGML_RXD_TYPE_F32);
+    GGML_RXD_ASSERT( dst->type == GGML_RXD_TYPE_F32);
 
     // src1 contains mask and it is optional
-    GGML_ASSERT(!src1 || src1->type == GGML_TYPE_F16 || src1->type == GGML_TYPE_F32);
+    GGML_RXD_ASSERT(!src1 || src1->type == GGML_RXD_TYPE_F16 || src1->type == GGML_RXD_TYPE_F32);
 
-    const int64_t nrows_x = ggml_nrows(src0);
+    const int64_t nrows_x = ggml_rxd_nrows(src0);
     const int64_t nrows_y = src0->ne[1];
 
     const int64_t ne00 = src0->ne[0];
@@ -350,7 +350,7 @@ void ggml_sycl_op_soft_max(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
     memcpy(&scale,    (const float *) dst->op_params + 0, sizeof(float));
     memcpy(&max_bias, (const float *) dst->op_params + 1, sizeof(float));
 
-    const bool use_f16 = (src1 && src1->type == GGML_TYPE_F16);
+    const bool use_f16 = (src1 && src1->type == GGML_RXD_TYPE_F16);
 
     const int64_t nb11 = src1 ? src1->nb[1] : 1;
     const int64_t nb12 = src1 ? src1->nb[2] : 1;
@@ -396,10 +396,10 @@ void ggml_sycl_op_soft_max(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
     }
 }
 
-void ggml_sycl_op_soft_max_back(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
+void ggml_rxd_sycl_op_soft_max_back(ggml_rxd_backend_sycl_context & ctx, ggml_rxd_tensor * dst) {
     scope_op_debug_print scope_dbg_print(__func__, dst, /*num_src=*/2);
-    const ggml_tensor * src0 = dst->src[0]; // grad
-    const ggml_tensor * src1 = dst->src[1]; // forward pass output
+    const ggml_rxd_tensor * src0 = dst->src[0]; // grad
+    const ggml_rxd_tensor * src1 = dst->src[1]; // forward pass output
 
     const float * src0_d = (const float *) src0->data;
     const float * src1_d = (const float *) src1->data;
@@ -407,12 +407,12 @@ void ggml_sycl_op_soft_max_back(ggml_backend_sycl_context & ctx, ggml_tensor * d
 
     dpct::queue_ptr stream = ctx.stream();
 
-    GGML_ASSERT(src0->type == GGML_TYPE_F32);
-    GGML_ASSERT(src1->type == GGML_TYPE_F32);
-    GGML_ASSERT( dst->type == GGML_TYPE_F32);
+    GGML_RXD_ASSERT(src0->type == GGML_RXD_TYPE_F32);
+    GGML_RXD_ASSERT(src1->type == GGML_RXD_TYPE_F32);
+    GGML_RXD_ASSERT( dst->type == GGML_RXD_TYPE_F32);
 
     const int64_t ncols = src0->ne[0];
-    const int64_t nrows = ggml_nrows(src0);
+    const int64_t nrows = ggml_rxd_nrows(src0);
 
     float scale    = 1.0f;
     float max_bias = 0.0f;
@@ -420,7 +420,7 @@ void ggml_sycl_op_soft_max_back(ggml_backend_sycl_context & ctx, ggml_tensor * d
     memcpy(&scale,    (const float *) dst->op_params + 0, sizeof(float));
     memcpy(&max_bias, (const float *) dst->op_params + 1, sizeof(float));
 
-    GGML_ASSERT(max_bias == 0.0f);
+    GGML_RXD_ASSERT(max_bias == 0.0f);
 
     soft_max_back_f32_sycl(src0_d, src1_d, dst_d, ncols, nrows, scale, stream);
 }

@@ -33,7 +33,7 @@ public:
         ComputeBackend requested_backend,
         uint64_t estimated_vram_required = 0);
 
-    static bool validateQuantizationSupport(uint32_t ggml_type);
+    static bool validateQuantizationSupport(uint32_t ggml_rxd_type);
 
 private:
     static bool validateFileAccessAndMagic(const std::string& path, std::string& out_error);

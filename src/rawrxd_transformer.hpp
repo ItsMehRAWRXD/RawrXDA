@@ -371,20 +371,40 @@ public:
     
     float* GetScratchBuffer(size_t size) { static float buf[8192]; return buf; }
     
-    uint16_t* GetKCache(uint32_t layer, uint32_t head, size_t pos) { return nullptr; }
-    
-    void AccumulateWeightedSum(uint16_t* out, float* scores, uint32_t layer, uint32_t head, size_t len) {}
-    
-    void CreateGPUBuffer(VkBuffer& buf, VkDeviceMemory& mem, size_t size, bool deviceLocal) {
-        // Simple create
-        VkBufferCreateInfo bufInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-        bufInfo.size = size;
-        bufInfo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-        vkCreateBuffer(device, &bufInfo, nullptr, &buf);
-        // Alloc omitted
+uint16_t* GetKCache(uint32_t layer, uint32_t head, size_t pos) {
+        if (!kv_cache_buffer || layer >= config.n_layers || head >= config.n_heads) return nullptr;
+        size_t head_dim = config.dim / config.n_heads;
+        size_t layer_offset = layer * config.n_heads * config.max_seq_len * head_dim;
+        size_t head_offset = head * config.max_seq_len * head_dim;
+        size_t pos_offset = pos * head_dim;
+        return kv_cache_buffer + layer_offset + head_offset + pos_offset;
     }
 
-    void FinalLogitsToCPU(uint16_t* x, float* logits) {}
+    void AccumulateWeightedSum(uint16_t* out, float* scores, uint32_t layer, uint32_t head, size_t len) {
+        if (!out || !scores || layer >= config.n_layers || head >= config.n_heads) return;
+        size_t head_dim = config.dim / config.n_heads;
+        std::vector<float> accum(head_dim, 0.0f);
+        for (size_t t = 0; t < len; ++t) {
+            uint16_t* v = GetVCache(layer, head, t);
+            if (!v) continue;
+            float score = scores[t];
+            for (size_t d = 0; d < head_dim; ++d) {
+                accum[d] += score * static_cast<float>(v[d]);
+            }
+        }
+        for (size_t d = 0; d < head_dim; ++d) {
+            out[d] = static_cast<uint16_t>(std::clamp(accum[d], 0.0f, 65535.0f));
+        }
+    }
+
+    void FinalLogitsToCPU(uint16_t* x, float* logits) {
+        if (!x || !logits) return;
+        // Dequantize from uint16_t (assumed scaled) to float logits
+        const float scale = 1.0f / 65535.0f;
+        for (size_t i = 0; i < config.vocab_size; ++i) {
+            logits[i] = static_cast<float>(x[i]) * scale;
+        }
+    }
     
     float DotProduct(uint16_t* a, uint16_t* b, size_t dim) { return 0.0f; }
 

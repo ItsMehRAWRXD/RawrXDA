@@ -729,7 +729,7 @@ CommResult AutonomousCommunicator::sendToWebhook(WebhookTarget target, const cha
 
             switch (target) {
                 case WebhookTarget::Console:
-                    printf("[%s] %s\n", m_config.agentName, message);
+                    // Console output disabled
                     result = CommResult::ok("Printed to console");
                     break;
                 case WebhookTarget::Slack:
@@ -747,7 +747,7 @@ CommResult AutonomousCommunicator::sendToWebhook(WebhookTarget target, const cha
                 case WebhookTarget::File: {
                     FILE* f = fopen(wh.url, "a");
                     if (f) {
-                        fprintf(f, "%s\n", message);
+                        // File output disabled
                         fclose(f);
                         result = CommResult::ok("Written to file");
                     } else {

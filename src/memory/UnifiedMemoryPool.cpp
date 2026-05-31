@@ -16,6 +16,41 @@
 
 namespace RawrXD {
 
+namespace {
+enum class BackingKind : uint8_t {
+    Unknown = 0,
+    VirtualAlloc = 1,
+    AlignedHeap = 2,
+};
+
+std::mutex g_backingMutex;
+std::unordered_map<void*, BackingKind> g_backingKind;
+
+void trackBacking(void* ptr, BackingKind kind)
+{
+    if (!ptr) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(g_backingMutex);
+    g_backingKind[ptr] = kind;
+}
+
+BackingKind takeBacking(void* ptr)
+{
+    if (!ptr) {
+        return BackingKind::Unknown;
+    }
+    std::lock_guard<std::mutex> lock(g_backingMutex);
+    auto it = g_backingKind.find(ptr);
+    if (it == g_backingKind.end()) {
+        return BackingKind::Unknown;
+    }
+    const BackingKind kind = it->second;
+    g_backingKind.erase(it);
+    return kind;
+}
+} // namespace
+
 UnifiedMemoryPool* UnifiedMemoryPool::s_instance = nullptr;
 
 // ─── Constructor / Destructor ────────────────────────────────────────────────
@@ -811,25 +846,106 @@ void UnifiedMemoryPool::FreeCPU(void* ptr) {
 }
 
 void* UnifiedMemoryPool::AllocGPU(size_t bytes) {
-    // Stub: in a real implementation, call VulkanCompute::AllocateBuffer
-    (void)bytes;
-    return nullptr;
+    if (bytes == 0) {
+        return nullptr;
+    }
+
+    const size_t aligned = AlignToCacheLine(bytes);
+
+#ifdef _WIN32
+    // User-mode deterministic fallback for VRAM tier: reserve pageable host memory.
+    void* pVirtual = VirtualAlloc(nullptr, aligned, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    if (pVirtual) {
+        std::memset(pVirtual, 0, aligned);
+        trackBacking(pVirtual, BackingKind::VirtualAlloc);
+        return pVirtual;
+    }
+#endif
+
+    void* pHeap = nullptr;
+#ifdef _MSC_VER
+    pHeap = _aligned_malloc(aligned, 64);
+#else
+    ::posix_memalign(&pHeap, 64, aligned);
+#endif
+    if (!pHeap) {
+        return nullptr;
+    }
+
+    std::memset(pHeap, 0, aligned);
+    trackBacking(pHeap, BackingKind::AlignedHeap);
+    return pHeap;
 }
 
 void UnifiedMemoryPool::FreeGPU(void* ptr) {
-    // Stub: in a real implementation, call VulkanCompute free
-    (void)ptr;
+    if (!ptr) {
+        return;
+    }
+
+    const BackingKind kind = takeBacking(ptr);
+#ifdef _WIN32
+    if (kind == BackingKind::VirtualAlloc) {
+        (void)VirtualFree(ptr, 0, MEM_RELEASE);
+        return;
+    }
+#endif
+
+#ifdef _MSC_VER
+    _aligned_free(ptr);
+#else
+    ::free(ptr);
+#endif
 }
 
 void* UnifiedMemoryPool::AllocDisk(size_t bytes, const std::string& /*tag*/) {
-    // Stub: create a temp file and mmap it
-    (void)bytes;
-    return nullptr;
+    if (bytes == 0) {
+        return nullptr;
+    }
+
+    const size_t aligned = AlignToCacheLine(bytes);
+
+#ifdef _WIN32
+    void* pVirtual = VirtualAlloc(nullptr, aligned, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    if (pVirtual) {
+        std::memset(pVirtual, 0, aligned);
+        trackBacking(pVirtual, BackingKind::VirtualAlloc);
+        return pVirtual;
+    }
+#endif
+
+    void* pHeap = nullptr;
+#ifdef _MSC_VER
+    pHeap = _aligned_malloc(aligned, 64);
+#else
+    ::posix_memalign(&pHeap, 64, aligned);
+#endif
+    if (!pHeap) {
+        return nullptr;
+    }
+
+    std::memset(pHeap, 0, aligned);
+    trackBacking(pHeap, BackingKind::AlignedHeap);
+    return pHeap;
 }
 
 void UnifiedMemoryPool::FreeDisk(void* ptr) {
-    // Stub: unmap and delete temp file
-    (void)ptr;
+    if (!ptr) {
+        return;
+    }
+
+    const BackingKind kind = takeBacking(ptr);
+#ifdef _WIN32
+    if (kind == BackingKind::VirtualAlloc) {
+        (void)VirtualFree(ptr, 0, MEM_RELEASE);
+        return;
+    }
+#endif
+
+#ifdef _MSC_VER
+    _aligned_free(ptr);
+#else
+    ::free(ptr);
+#endif
 }
 
 } // namespace RawrXD

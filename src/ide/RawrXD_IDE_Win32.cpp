@@ -16,6 +16,7 @@
 
 #include "RawrXD_IDE_Win32.h"
 #include "ide_completion.h"
+#include "minimonaco_bridge.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -427,6 +428,19 @@ void RawrXD_IDE_CreateControls(RawrXD_IDE* ide) {
         IDE_SetRichEditFont(ide->hWndEditor, L"Consolas", 11, ide->theme.fgText);
     }
 
+    /* ── MiniMonaco Editor (initially hidden) ────────────────────────────── */
+    ide->miniMonacoEd = minimonaco_create(hWnd, 0, 0, 0, 0);
+    if (ide->miniMonacoEd) {
+        ide->hWndMiniMonaco = minimonaco_hwnd(ide->miniMonacoEd);
+        minimonaco_hide(ide->miniMonacoEd);
+        if (ide->isDarkTheme) {
+            minimonaco_set_dark_theme(ide->miniMonacoEd);
+        } else {
+            minimonaco_set_light_theme(ide->miniMonacoEd);
+        }
+        minimonaco_set_font(ide->miniMonacoEd, L"Consolas", 11);
+    }
+
     /* ── Output Panel ─────────────────────────────────────────────────── */
     ide->hWndOutput = CreateWindowExW(
         WS_EX_CLIENTEDGE,
@@ -520,6 +534,7 @@ HMENU RawrXD_IDE_CreateMenuBar(RawrXD_IDE* ide) {
     AppendMenuW(hView, MF_STRING | MF_CHECKED,  IDM_VIEW_FILEBROWSER, L"File &Browser\tCtrl+E");
     AppendMenuW(hView, MF_STRING | MF_CHECKED,  IDM_VIEW_OUTPUT,      L"&Output Panel\tCtrl+`");
     AppendMenuW(hView, MF_STRING | MF_CHECKED,  IDM_VIEW_WIDGET,      L"&Widget Panel");
+    AppendMenuW(hView, MF_STRING | MF_UNCHECKED, IDM_VIEW_MINIMONACO,  L"&MiniMonaco Editor");
     AppendMenuW(hView, MF_SEPARATOR, 0, NULL);
     AppendMenuW(hView, MF_STRING, IDM_VIEW_FULLSCREEN, L"&Fullscreen\tF11");
     AppendMenuW(hView, MF_SEPARATOR, 0, NULL);
@@ -774,8 +789,15 @@ LRESULT CALLBACK RawrXD_IDE_WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM l
                     ctx.hParentWnd = ide->hWndEditor;
                     ctx.x = screenX;
                     ctx.y = screenY;
-                    ctx.current_line = currentLine;
-                    ctx.model = L"codellama:7b";
+                    /* Convert wide line to UTF-8 for completion API */
+                    int utf8Len = WideCharToMultiByte(CP_UTF8, 0, currentLine, -1, NULL, 0, NULL, NULL);
+                    if (utf8Len > 0) {
+                        char* utf8Line = new char[utf8Len];
+                        WideCharToMultiByte(CP_UTF8, 0, currentLine, -1, utf8Line, utf8Len, NULL, NULL);
+                        ctx.current_line = utf8Line;
+                        delete[] utf8Line;
+                    }
+                    ctx.model = "codellama:7b";
                     ctx.on_select = nullptr;
                     
                     IDECompletion::RequestCompletion(ctx);
@@ -916,9 +938,28 @@ void RawrXD_IDE_LayoutPanes(RawrXD_IDE* ide) {
 
     /* Code editor */
     if (ide->hWndEditor) {
-        hdwp = DeferWindowPos(hdwp, ide->hWndEditor, NULL,
-                              centerX, 0, centerW, editorH,
-                              SWP_NOZORDER | SWP_SHOWWINDOW);
+        if (ide->useMiniMonaco) {
+            hdwp = DeferWindowPos(hdwp, ide->hWndEditor, NULL,
+                                  0, 0, 0, 0,
+                                  SWP_NOZORDER | SWP_HIDEWINDOW | SWP_NOMOVE | SWP_NOSIZE);
+        } else {
+            hdwp = DeferWindowPos(hdwp, ide->hWndEditor, NULL,
+                                  centerX, 0, centerW, editorH,
+                                  SWP_NOZORDER | SWP_SHOWWINDOW);
+        }
+    }
+
+    /* MiniMonaco editor */
+    if (ide->hWndMiniMonaco) {
+        if (ide->useMiniMonaco) {
+            hdwp = DeferWindowPos(hdwp, ide->hWndMiniMonaco, NULL,
+                                  centerX, 0, centerW, editorH,
+                                  SWP_NOZORDER | SWP_SHOWWINDOW);
+        } else {
+            hdwp = DeferWindowPos(hdwp, ide->hWndMiniMonaco, NULL,
+                                  0, 0, 0, 0,
+                                  SWP_NOZORDER | SWP_HIDEWINDOW | SWP_NOMOVE | SWP_NOSIZE);
+        }
     }
 
     /* Output panel */
@@ -1054,6 +1095,21 @@ void RawrXD_IDE_OnCommand(RawrXD_IDE* ide, WORD cmdId, WORD notifyCode, HWND hCt
         ide->showWidget = !ide->showWidget;
         CheckMenuItem(ide->hMenuBar, IDM_VIEW_WIDGET,
                       ide->showWidget ? MF_CHECKED : MF_UNCHECKED);
+        RawrXD_IDE_LayoutPanes(ide);
+        InvalidateRect(ide->hWndMain, NULL, TRUE);
+        break;
+
+    case IDM_VIEW_MINIMONACO:
+        ide->useMiniMonaco = !ide->useMiniMonaco;
+        CheckMenuItem(ide->hMenuBar, IDM_VIEW_MINIMONACO,
+                      ide->useMiniMonaco ? MF_CHECKED : MF_UNCHECKED);
+        if (ide->useMiniMonaco && ide->miniMonacoEd) {
+            /* Sync text from RichEdit to MiniMonaco */
+            WCHAR buf[65536] = {0};
+            GetWindowTextW(ide->hWndEditor, buf, 65536);
+            minimonaco_set_text(ide->miniMonacoEd, buf);
+            minimonaco_set_focus(ide->miniMonacoEd);
+        }
         RawrXD_IDE_LayoutPanes(ide);
         InvalidateRect(ide->hWndMain, NULL, TRUE);
         break;
@@ -1249,6 +1305,9 @@ BOOL RawrXD_IDE_FileNew(RawrXD_IDE* ide) {
             return FALSE;
     }
     SetWindowTextW(ide->hWndEditor, L"");
+    if (ide->miniMonacoEd) {
+        minimonaco_clear(ide->miniMonacoEd);
+    }
     ide->currentFilePath[0] = L'\0';
     ide->isModified = FALSE;
     ide->isUntitled = TRUE;
@@ -1384,6 +1443,9 @@ BOOL RawrXD_IDE_LoadFile(RawrXD_IDE* ide, const WCHAR* path) {
     if (wideText) {
         /* Set text into editor. Use streaming for large files. */
         SetWindowTextW(ide->hWndEditor, wideText);
+        if (ide->miniMonacoEd) {
+            minimonaco_set_text(ide->miniMonacoEd, wideText);
+        }
         HeapFree(GetProcessHeap(), 0, wideText);
     }
 
@@ -1405,27 +1467,39 @@ BOOL RawrXD_IDE_LoadFile(RawrXD_IDE* ide, const WCHAR* path) {
 }
 
 BOOL RawrXD_IDE_SaveFile(RawrXD_IDE* ide, const WCHAR* path) {
-    /* Get text length */
-    GETTEXTLENGTHEX gtl;
-    gtl.flags    = GTL_DEFAULT | GTL_NUMCHARS;
-    gtl.codepage = 1200; /* Unicode */
-    int textLen = (int)SendMessage(ide->hWndEditor, EM_GETTEXTLENGTHEX, (WPARAM)&gtl, 0);
-    if (textLen <= 0) textLen = GetWindowTextLengthW(ide->hWndEditor);
+    WCHAR* wideText = NULL;
+    int textLen = 0;
 
-    WCHAR* wideText = (WCHAR*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY,
+    if (ide->useMiniMonaco && ide->miniMonacoEd) {
+        /* Get text from MiniMonaco */
+        textLen = minimonaco_line_count(ide->miniMonacoEd) * 256 + 65536; /* rough estimate */
+        wideText = (WCHAR*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY,
+                                     (textLen + 2) * sizeof(WCHAR));
+        if (!wideText) return FALSE;
+        minimonaco_get_text(ide->miniMonacoEd, wideText, textLen);
+    } else {
+        /* Get text length */
+        GETTEXTLENGTHEX gtl;
+        gtl.flags    = GTL_DEFAULT | GTL_NUMCHARS;
+        gtl.codepage = 1200; /* Unicode */
+        textLen = (int)SendMessage(ide->hWndEditor, EM_GETTEXTLENGTHEX, (WPARAM)&gtl, 0);
+        if (textLen <= 0) textLen = GetWindowTextLengthW(ide->hWndEditor);
+
+        wideText = (WCHAR*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY,
                                         (textLen + 2) * sizeof(WCHAR));
-    if (!wideText) return FALSE;
+        if (!wideText) return FALSE;
 
-    /* Try EM_GETTEXTEX first (RichEdit), fallback GetWindowTextW */
-    GETTEXTEX gte;
-    gte.cb            = (DWORD)((textLen + 1) * sizeof(WCHAR));
-    gte.flags         = GT_DEFAULT;
-    gte.codepage      = 1200;
-    gte.lpDefaultChar  = NULL;
-    gte.lpUsedDefChar  = NULL;
-    LRESULT got = SendMessage(ide->hWndEditor, EM_GETTEXTEX, (WPARAM)&gte, (LPARAM)wideText);
-    if (got <= 0) {
-        GetWindowTextW(ide->hWndEditor, wideText, textLen + 1);
+        /* Try EM_GETTEXTEX first (RichEdit), fallback GetWindowTextW */
+        GETTEXTEX gte;
+        gte.cb            = (DWORD)((textLen + 1) * sizeof(WCHAR));
+        gte.flags         = GT_DEFAULT;
+        gte.codepage      = 1200;
+        gte.lpDefaultChar  = NULL;
+        gte.lpUsedDefChar  = NULL;
+        LRESULT got = SendMessage(ide->hWndEditor, EM_GETTEXTEX, (WPARAM)&gte, (LPARAM)wideText);
+        if (got <= 0) {
+            GetWindowTextW(ide->hWndEditor, wideText, textLen + 1);
+        }
     }
 
     /* Convert to UTF-8 */
@@ -1507,27 +1581,51 @@ static void IDE_AutoDetectEncoding(const BYTE* data, DWORD size, DWORD* outEncod
  * EDIT OPERATIONS
  *=========================================================================*/
 void RawrXD_IDE_EditUndo(RawrXD_IDE* ide) {
-    SendMessage(ide->hWndEditor, EM_UNDO, 0, 0);
+    if (ide->useMiniMonaco && ide->miniMonacoEd) {
+        minimonaco_undo(ide->miniMonacoEd);
+    } else {
+        SendMessage(ide->hWndEditor, EM_UNDO, 0, 0);
+    }
 }
 
 void RawrXD_IDE_EditRedo(RawrXD_IDE* ide) {
-    SendMessage(ide->hWndEditor, EM_REDO, 0, 0);
+    if (ide->useMiniMonaco && ide->miniMonacoEd) {
+        minimonaco_redo(ide->miniMonacoEd);
+    } else {
+        SendMessage(ide->hWndEditor, EM_REDO, 0, 0);
+    }
 }
 
 void RawrXD_IDE_EditCut(RawrXD_IDE* ide) {
-    SendMessage(ide->hWndEditor, WM_CUT, 0, 0);
+    if (ide->useMiniMonaco && ide->miniMonacoEd) {
+        minimonaco_cut(ide->miniMonacoEd);
+    } else {
+        SendMessage(ide->hWndEditor, WM_CUT, 0, 0);
+    }
 }
 
 void RawrXD_IDE_EditCopy(RawrXD_IDE* ide) {
-    SendMessage(ide->hWndEditor, WM_COPY, 0, 0);
+    if (ide->useMiniMonaco && ide->miniMonacoEd) {
+        minimonaco_copy(ide->miniMonacoEd);
+    } else {
+        SendMessage(ide->hWndEditor, WM_COPY, 0, 0);
+    }
 }
 
 void RawrXD_IDE_EditPaste(RawrXD_IDE* ide) {
-    SendMessage(ide->hWndEditor, WM_PASTE, 0, 0);
+    if (ide->useMiniMonaco && ide->miniMonacoEd) {
+        minimonaco_paste(ide->miniMonacoEd);
+    } else {
+        SendMessage(ide->hWndEditor, WM_PASTE, 0, 0);
+    }
 }
 
 void RawrXD_IDE_EditSelectAll(RawrXD_IDE* ide) {
-    SendMessage(ide->hWndEditor, EM_SETSEL, 0, -1);
+    if (ide->useMiniMonaco && ide->miniMonacoEd) {
+        minimonaco_select_all(ide->miniMonacoEd);
+    } else {
+        SendMessage(ide->hWndEditor, EM_SETSEL, 0, -1);
+    }
 }
 
 void RawrXD_IDE_EditFind(RawrXD_IDE* ide) {
@@ -1594,7 +1692,7 @@ static INT_PTR CALLBACK GoToLineDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPAR
 /* Build GoToLine dialog template in memory (no .rc dependency) */
 static INT_PTR ShowGoToLineDialog(HWND hParent, int totalLines) {
     /* DLGTEMPLATE + 3 controls: static label, edit box, OK button */
-    _Alignas(4) BYTE dlgBuf[1024];
+    alignas(4) BYTE dlgBuf[1024];
     ZeroMemory(dlgBuf, sizeof(dlgBuf));
     BYTE* p = dlgBuf;
 
@@ -2406,7 +2504,7 @@ static int IDE_Main(HINSTANCE hInstance) {
             L"RawrXD IDE - Completion Ready", MB_OK | MB_ICONINFORMATION);
     } else {
         MessageBoxW(NULL, 
-            L"⚠ Ollama not detected at localhost:11434\n\n"
+            L"⚠ Ollama not detected at localhost:11435\n\n"
             L"To enable AI completions:\n"
             L"1. Install Ollama from https://ollama.ai\n"
             L"2. Run: ollama serve\n"

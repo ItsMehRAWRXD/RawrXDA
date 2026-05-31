@@ -13,56 +13,52 @@
 // Integration: Menu → Load Image → Encode → Display Results
 // ============================================================================
 
-#include "Win32IDE.h"
 #include "IDELogger.h"
-#include <commdlg.h>
-#include <shlobj.h>
-#include <gdiplus.h>
-#include <vector>
-#include <string>
-#include <memory>
+#include "Win32IDE.h"
 #include <algorithm>
+#include <commdlg.h>
+#include <gdiplus.h>
+#include <memory>
+#include <objidl.h>  // IStream for GDI+
+#include <shlobj.h>
+#include <string>
+#include <vector>
+
 
 // Link GDI+ for image loading
 #pragma comment(lib, "gdiplus.lib")
 
 // Vision encoder includes
-#include "../core/vision_encoder.hpp"
 #include "../core/vision_embedding_cache.hpp"
+#include "../core/vision_encoder.hpp"
+
 
 using namespace RawrXD::Vision;
 
 // ============================================================================
 // Vision Encoder Window Class
 // ============================================================================
-class VisionEncoderWindow {
-public:
+class VisionEncoderWindow
+{
+  public:
     static const char* CLASS_NAME;
 
     VisionEncoderWindow(HINSTANCE hInstance, HWND hwndParent)
-        : hInstance_(hInstance), hwndParent_(hwndParent), hwnd_(nullptr),
-          currentImage_(nullptr), imageWidth_(0), imageHeight_(0) {
+        : hInstance_(hInstance), hwndParent_(hwndParent), hwnd_(nullptr), currentImage_(nullptr), imageWidth_(0),
+          imageHeight_(0)
+    {
         registerClass();
     }
 
-    ~VisionEncoderWindow() {
-        cleanup();
-    }
+    ~VisionEncoderWindow() { cleanup(); }
 
-    bool create() {
-        hwnd_ = CreateWindowExA(
-            WS_EX_CLIENTEDGE,
-            CLASS_NAME,
-            "Vision Encoder",
-            WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-            CW_USEDEFAULT, CW_USEDEFAULT, 800, 600,
-            hwndParent_,
-            nullptr,
-            hInstance_,
-            this
-        );
+    bool create()
+    {
+        hwnd_ = CreateWindowExA(WS_EX_CLIENTEDGE, CLASS_NAME, "Vision Encoder", WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+                                CW_USEDEFAULT, CW_USEDEFAULT, 800, 600, hwndParent_, nullptr, hInstance_, this);
 
-        if (!hwnd_) {
+        if (!hwnd_)
+        {
             LOG_ERROR("Failed to create vision encoder window");
             return false;
         }
@@ -77,21 +73,26 @@ public:
         return true;
     }
 
-    void show() {
-        if (hwnd_) {
+    void show()
+    {
+        if (hwnd_)
+        {
             ShowWindow(hwnd_, SW_SHOW);
             UpdateWindow(hwnd_);
         }
     }
 
-    void hide() {
-        if (hwnd_) {
+    void hide()
+    {
+        if (hwnd_)
+        {
             ShowWindow(hwnd_, SW_HIDE);
         }
     }
 
     // Load image from file
-    bool loadImageFromFile() {
+    bool loadImageFromFile()
+    {
         OPENFILENAMEA ofn = {};
         char szFile[MAX_PATH] = {};
 
@@ -103,7 +104,8 @@ public:
         ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
         ofn.lpstrTitle = "Select Image for Vision Analysis";
 
-        if (GetOpenFileNameA(&ofn)) {
+        if (GetOpenFileNameA(&ofn))
+        {
             return loadImage(szFile);
         }
 
@@ -111,14 +113,17 @@ public:
     }
 
     // Load image from clipboard
-    bool loadImageFromClipboard() {
-        if (!OpenClipboard(hwnd_)) {
+    bool loadImageFromClipboard()
+    {
+        if (!OpenClipboard(hwnd_))
+        {
             LOG_ERROR("Failed to open clipboard");
             return false;
         }
 
         HANDLE hData = GetClipboardData(CF_DIB);
-        if (!hData) {
+        if (!hData)
+        {
             CloseClipboard();
             LOG_ERROR("No bitmap data in clipboard");
             return false;
@@ -126,7 +131,8 @@ public:
 
         // Convert DIB to GDI+ bitmap
         BITMAPINFO* bmi = (BITMAPINFO*)GlobalLock(hData);
-        if (!bmi) {
+        if (!bmi)
+        {
             CloseClipboard();
             return false;
         }
@@ -137,9 +143,11 @@ public:
         GlobalUnlock(hData);
         CloseClipboard();
 
-        if (hBitmap) {
+        if (hBitmap)
+        {
             currentImage_ = new Gdiplus::Bitmap(hBitmap, nullptr);
-            if (currentImage_->GetLastStatus() == Gdiplus::Ok) {
+            if (currentImage_->GetLastStatus() == Gdiplus::Ok)
+            {
                 imageWidth_ = currentImage_->GetWidth();
                 imageHeight_ = currentImage_->GetHeight();
                 updateImageDisplay();
@@ -150,7 +158,7 @@ public:
         return false;
     }
 
-private:
+  private:
     HINSTANCE hInstance_;
     HWND hwndParent_;
     HWND hwnd_;
@@ -167,7 +175,8 @@ private:
     int imageWidth_;
     int imageHeight_;
 
-    void registerClass() {
+    void registerClass()
+    {
         WNDCLASSA wc = {};
         wc.lpfnWndProc = windowProc;
         wc.hInstance = hInstance_;
@@ -178,46 +187,30 @@ private:
         RegisterClassA(&wc);
     }
 
-    void createControls() {
+    void createControls()
+    {
         // Load File button
-        hwndLoadFile_ = CreateWindowA(
-            "BUTTON", "Load Image File",
-            WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
-            10, 10, 120, 30,
-            hwnd_, (HMENU)IDC_LOAD_FILE, hInstance_, nullptr
-        );
+        hwndLoadFile_ =
+            CreateWindowA("BUTTON", "Load Image File", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, 10, 10,
+                          120, 30, hwnd_, (HMENU)IDC_LOAD_FILE, hInstance_, nullptr);
 
         // Load Clipboard button
-        hwndLoadClipboard_ = CreateWindowA(
-            "BUTTON", "Load from Clipboard",
-            WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-            140, 10, 120, 30,
-            hwnd_, (HMENU)IDC_LOAD_CLIPBOARD, hInstance_, nullptr
-        );
+        hwndLoadClipboard_ =
+            CreateWindowA("BUTTON", "Load from Clipboard", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON, 140, 10,
+                          120, 30, hwnd_, (HMENU)IDC_LOAD_CLIPBOARD, hInstance_, nullptr);
 
         // Analyze button
-        hwndAnalyze_ = CreateWindowA(
-            "BUTTON", "Analyze Image",
-            WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-            270, 10, 120, 30,
-            hwnd_, (HMENU)IDC_ANALYZE, hInstance_, nullptr
-        );
+        hwndAnalyze_ = CreateWindowA("BUTTON", "Analyze Image", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON, 270,
+                                     10, 120, 30, hwnd_, (HMENU)IDC_ANALYZE, hInstance_, nullptr);
 
         // Image display area (static control)
-        hwndImage_ = CreateWindowA(
-            "STATIC", "",
-            WS_VISIBLE | WS_CHILD | SS_OWNERDRAW,
-            10, 50, 380, 300,
-            hwnd_, (HMENU)IDC_IMAGE_DISPLAY, hInstance_, nullptr
-        );
+        hwndImage_ = CreateWindowA("STATIC", "", WS_VISIBLE | WS_CHILD | SS_OWNERDRAW, 10, 50, 380, 300, hwnd_,
+                                   (HMENU)IDC_IMAGE_DISPLAY, hInstance_, nullptr);
 
         // Results text area
-        hwndResults_ = CreateWindowA(
-            "EDIT", "",
-            WS_VISIBLE | WS_CHILD | WS_VSCROLL | ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL,
-            400, 50, 380, 480,
-            hwnd_, (HMENU)IDC_RESULTS, hInstance_, nullptr
-        );
+        hwndResults_ =
+            CreateWindowA("EDIT", "", WS_VISIBLE | WS_CHILD | WS_VSCROLL | ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL,
+                          400, 50, 380, 480, hwnd_, (HMENU)IDC_RESULTS, hInstance_, nullptr);
 
         // Set fonts
         HFONT hFont = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
@@ -227,11 +220,13 @@ private:
         SendMessage(hwndResults_, WM_SETFONT, (WPARAM)hFont, TRUE);
     }
 
-    bool loadImage(const std::string& path) {
+    bool loadImage(const std::string& path)
+    {
         cleanup();
 
         currentImage_ = new Gdiplus::Bitmap(std::wstring(path.begin(), path.end()).c_str());
-        if (currentImage_->GetLastStatus() != Gdiplus::Ok) {
+        if (currentImage_->GetLastStatus() != Gdiplus::Ok)
+        {
             delete currentImage_;
             currentImage_ = nullptr;
             LOG_ERROR("Failed to load image: " + path);
@@ -250,21 +245,26 @@ private:
         return true;
     }
 
-    void updateImageDisplay() {
-        if (hwndImage_) {
+    void updateImageDisplay()
+    {
+        if (hwndImage_)
+        {
             InvalidateRect(hwndImage_, nullptr, TRUE);
         }
     }
 
-    void analyzeImage() {
-        if (!currentImage_) {
+    void analyzeImage()
+    {
+        if (!currentImage_)
+        {
             MessageBoxA(hwnd_, "No image loaded", "Error", MB_OK | MB_ICONERROR);
             return;
         }
 
         // Convert GDI+ bitmap to ImageBuffer
         ImageBuffer imgBuf;
-        if (!convertBitmapToImageBuffer(*currentImage_, imgBuf)) {
+        if (!convertBitmapToImageBuffer(*currentImage_, imgBuf))
+        {
             MessageBoxA(hwnd_, "Failed to convert image", "Error", MB_OK | MB_ICONERROR);
             return;
         }
@@ -272,14 +272,16 @@ private:
         // Get vision encoder instance
         VisionEncoder& encoder = VisionEncoder::instance();
 
-        if (!encoder.isReady()) {
+        if (!encoder.isReady())
+        {
             // Try to load default model
             VisionModelConfig config;
-            config.modelPath = "models/vision/clip-vit-l14.gguf"; // Default path
+            config.modelPath = "models/vision/clip-vit-l14.gguf";  // Default path
             config.useGPU = true;
 
             VisionResult result = encoder.loadModel(config);
-            if (!result.success) {
+            if (!result.success)
+            {
                 std::string msg = "Failed to load vision model: " + std::string(result.detail);
                 MessageBoxA(hwnd_, msg.c_str(), "Error", MB_OK | MB_ICONERROR);
                 ImagePreprocessor::freeBuffer(imgBuf);
@@ -293,30 +295,36 @@ private:
         // Generate description
         std::string description;
         VisionResult descResult = encoder.describeImage(imgBuf, description);
-        if (descResult.success) {
+        if (descResult.success)
+        {
             results += "Description: " + description + "\n\n";
-        } else {
+        }
+        else
+        {
             results += "Description failed: " + std::string(descResult.detail) + "\n\n";
         }
 
         // Extract code if it looks like a screenshot
         std::string code;
         VisionResult codeResult = encoder.extractCodeFromScreenshot(imgBuf, code);
-        if (codeResult.success && !code.empty()) {
+        if (codeResult.success && !code.empty())
+        {
             results += "Extracted Code:\n" + code + "\n\n";
         }
 
         // Extract diagram structure
         std::string diagramJson;
         VisionResult diagramResult = encoder.extractDiagramStructure(imgBuf, diagramJson);
-        if (diagramResult.success && !diagramJson.empty()) {
+        if (diagramResult.success && !diagramJson.empty())
+        {
             results += "Diagram Structure (JSON):\n" + diagramJson + "\n\n";
         }
 
         // Create multimodal prompt
         VisionTextPair multimodal;
         VisionResult mmResult = encoder.createMultiModalPrompt(imgBuf, "Analyze this image", multimodal);
-        if (mmResult.success) {
+        if (mmResult.success)
+        {
             results += "Multimodal Prompt:\n" + multimodal.textPrompt + "\n\n";
             results += "Relevance Score: " + std::to_string(multimodal.relevanceScore) + "\n";
         }
@@ -325,7 +333,8 @@ private:
         ImagePreprocessor::freeBuffer(imgBuf);
     }
 
-    bool convertBitmapToImageBuffer(Gdiplus::Bitmap& bitmap, ImageBuffer& output) {
+    bool convertBitmapToImageBuffer(Gdiplus::Bitmap& bitmap, ImageBuffer& output)
+    {
         // Get bitmap dimensions
         int width = bitmap.GetWidth();
         int height = bitmap.GetHeight();
@@ -342,7 +351,8 @@ private:
         // Lock bitmap bits
         Gdiplus::Rect rect(0, 0, width, height);
         Gdiplus::BitmapData bitmapData;
-        if (bitmap.LockBits(&rect, Gdiplus::ImageLockModeRead, PixelFormat24bppRGB, &bitmapData) != Gdiplus::Ok) {
+        if (bitmap.LockBits(&rect, Gdiplus::ImageLockModeRead, PixelFormat24bppRGB, &bitmapData) != Gdiplus::Ok)
+        {
             delete[] output.data;
             return false;
         }
@@ -350,12 +360,14 @@ private:
         // Copy data (GDI+ gives BGR, we want RGB)
         uint8_t* src = (uint8_t*)bitmapData.Scan0;
         uint8_t* dst = output.data;
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
                 // BGR to RGB conversion
-                dst[0] = src[2]; // R
-                dst[1] = src[1]; // G
-                dst[2] = src[0]; // B
+                dst[0] = src[2];  // R
+                dst[1] = src[1];  // G
+                dst[2] = src[0];  // B
                 src += 3;
                 dst += 3;
             }
@@ -365,36 +377,46 @@ private:
         return true;
     }
 
-    void cleanup() {
-        if (currentImage_) {
+    void cleanup()
+    {
+        if (currentImage_)
+        {
             delete currentImage_;
             currentImage_ = nullptr;
         }
         imageWidth_ = imageHeight_ = 0;
     }
 
-    static LRESULT CALLBACK windowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    static LRESULT CALLBACK windowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+    {
         VisionEncoderWindow* pThis = nullptr;
 
-        if (uMsg == WM_CREATE) {
+        if (uMsg == WM_CREATE)
+        {
             CREATESTRUCT* pCreate = (CREATESTRUCT*)lParam;
             pThis = (VisionEncoderWindow*)pCreate->lpCreateParams;
             SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)pThis);
-        } else {
+        }
+        else
+        {
             pThis = (VisionEncoderWindow*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
         }
 
-        if (pThis) {
+        if (pThis)
+        {
             return pThis->handleMessage(hwnd, uMsg, wParam, lParam);
         }
 
         return DefWindowProcA(hwnd, uMsg, wParam, lParam);
     }
 
-    LRESULT handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-        switch (uMsg) {
+    LRESULT handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+    {
+        switch (uMsg)
+        {
             case WM_COMMAND:
-                switch (LOWORD(wParam)) {
+                switch (LOWORD(wParam))
+                {
                     case IDC_LOAD_FILE:
                         loadImageFromFile();
                         break;
@@ -408,7 +430,8 @@ private:
                 break;
 
             case WM_DRAWITEM:
-                if (wParam == IDC_IMAGE_DISPLAY) {
+                if (wParam == IDC_IMAGE_DISPLAY)
+                {
                     drawImage((DRAWITEMSTRUCT*)lParam);
                     return TRUE;
                 }
@@ -436,8 +459,10 @@ private:
         return DefWindowProcA(hwnd, uMsg, wParam, lParam);
     }
 
-    void drawImage(DRAWITEMSTRUCT* pDraw) {
-        if (!currentImage_) return;
+    void drawImage(DRAWITEMSTRUCT* pDraw)
+    {
+        if (!currentImage_)
+            return;
 
         HDC hdc = pDraw->hDC;
         RECT rc = pDraw->rcItem;
@@ -449,7 +474,8 @@ private:
         // Convert Gdiplus::Bitmap to HBITMAP
         currentImage_->GetHBITMAP(Gdiplus::Color::White, &hBitmap);
 
-        if (hBitmap) {
+        if (hBitmap)
+        {
             HBITMAP hOld = (HBITMAP)SelectObject(hdcMem, hBitmap);
 
             // Calculate scaling to fit the control
@@ -466,8 +492,8 @@ private:
             int y = (ctrlHeight - drawHeight) / 2;
 
             // Draw the bitmap
-            StretchBlt(hdc, rc.left + x, rc.top + y, drawWidth, drawHeight,
-                      hdcMem, 0, 0, imageWidth_, imageHeight_, SRCCOPY);
+            StretchBlt(hdc, rc.left + x, rc.top + y, drawWidth, drawHeight, hdcMem, 0, 0, imageWidth_, imageHeight_,
+                       SRCCOPY);
 
             SelectObject(hdcMem, hOld);
             DeleteObject(hBitmap);
@@ -476,7 +502,8 @@ private:
         DeleteDC(hdcMem);
     }
 
-    enum {
+    enum
+    {
         IDC_LOAD_FILE = 1001,
         IDC_LOAD_CLIPBOARD = 1002,
         IDC_ANALYZE = 1003,
@@ -493,10 +520,13 @@ const char* VisionEncoderWindow::CLASS_NAME = "RawrXD_VisionEncoder";
 
 static std::unique_ptr<VisionEncoderWindow> g_visionWindow;
 
-void Win32IDE::showVisionEncoder() {
-    if (!g_visionWindow) {
+void Win32IDE::showVisionEncoder()
+{
+    if (!g_visionWindow)
+    {
         g_visionWindow = std::make_unique<VisionEncoderWindow>(m_hInstance, m_hwndMain);
-        if (!g_visionWindow->create()) {
+        if (!g_visionWindow->create())
+        {
             LOG_ERROR("Failed to create vision encoder window");
             g_visionWindow.reset();
             return;
@@ -506,26 +536,34 @@ void Win32IDE::showVisionEncoder() {
     g_visionWindow->show();
 }
 
-void Win32IDE::hideVisionEncoder() {
-    if (g_visionWindow) {
+void Win32IDE::hideVisionEncoder()
+{
+    if (g_visionWindow)
+    {
         g_visionWindow->hide();
     }
 }
 
-void Win32IDE::initVisionEncoder() {
+void Win32IDE::initVisionEncoder()
+{
     // Initialize vision encoder singleton
     VisionEncoder& encoder = VisionEncoder::instance();
 
     // Check if model is available
-    if (!encoder.isReady()) {
+    if (!encoder.isReady())
+    {
         LOG_INFO("Vision encoder initialized but no model loaded yet");
-    } else {
+    }
+    else
+    {
         LOG_INFO("Vision encoder ready with model");
     }
 }
 
-void Win32IDE::shutdownVisionEncoder() {
-    if (g_visionWindow) {
+void Win32IDE::shutdownVisionEncoder()
+{
+    if (g_visionWindow)
+    {
         g_visionWindow.reset();
     }
 

@@ -1,51 +1,108 @@
 #ifndef AI_DEBUGGER_H
 #define AI_DEBUGGER_H
 
-// C++20, no Qt. Breakpoint → collect debug info → prompt → model → fix. Callbacks replace signals.
+// AI-Assisted Debug Agent — NativeDebuggerEngine Backend
+// Production debug agent using DbgEng COM for AI-assisted debugging.
+// Integrates with SovereignInferenceClient for LLM-powered analysis.
+// NO SOURCE FILE IS TO BE SIMPLIFIED
 
 #include <string>
 #include <vector>
-#include <map>
+#include <cstdint>
 #include <memory>
-#include <functional>
 
-struct AIDebuggerImpl;
+namespace RawrXD {
+namespace Agent {
+    class SovereignInferenceClient;
+}
+namespace Debugger {
+    enum class BreakpointType : uint32_t;
+}
+namespace Debug {
 
-class AIDebugger
-{
+struct ExceptionInfo {
+    uint32_t    code;
+    const char* name;
+    const char* description;
+    const char* commonCause;
+};
+
+class AIDebugAgent {
 public:
-    using BreakpointHitFn   = std::function<void(const std::string& filePath, int lineNumber, const std::string& debugInfoJson)>;
-    using FixSuggestedFn   = std::function<void(const std::string& diff)>;
-    using DebuggingFinishedFn = std::function<void()>;
+    static AIDebugAgent& Instance();
 
-    AIDebugger() = default;
-    ~AIDebugger();
+    // ---- Sovereign Inference Integration ----
+    void SetInferenceClient(std::shared_ptr<RawrXD::Agent::SovereignInferenceClient> client);
+    bool HasInferenceClient() const;
 
-    void setOnBreakpointHit(BreakpointHitFn f)   { m_onBreakpointHit = std::move(f); }
-    void setOnFixSuggested(FixSuggestedFn f)     { m_onFixSuggested = std::move(f); }
-    void setOnDebuggingFinished(DebuggingFinishedFn f) { m_onDebuggingFinished = std::move(f); }
+    // ---- Session Management ----
+    struct LaunchResult {
+        bool success;
+        std::string detail;
+        uint32_t pid;
+    };
 
-    bool startDebugging(const std::string& executablePath, const std::vector<std::string>& arguments = {});
-    void setBreakpoint(const std::string& filePath, int lineNumber);
-    void continueExecution();
-    void stopDebugging();
+    LaunchResult LaunchTarget(const std::string& exePath,
+                               const std::string& args = "",
+                               const std::string& workDir = "");
+    LaunchResult AttachToProcess(uint32_t pid);
+
+    // ---- Exception Analysis ----
+    struct ExceptionAnalysis {
+        uint32_t exceptionCode;
+        std::string exceptionName;
+        std::string description;
+        std::string commonCause;
+        uint64_t faultAddress;
+        std::string faultSymbol;
+        std::string faultModule;
+        std::string stackSummary;
+        std::string registerSummary;
+        std::string hypothesis;
+        std::vector<std::string> suggestedActions;
+    };
+
+    ExceptionAnalysis AnalyzeLastException();
+    std::string FormatAnalysisForLLM(const ExceptionAnalysis& analysis);
+
+    // ---- Breakpoint Suggestions ----
+    struct BreakpointSuggestion {
+        std::string symbol;
+        std::string reason;
+        Debugger::BreakpointType type;
+    };
+
+    std::vector<BreakpointSuggestion> SuggestBreakpoints(const std::string& context);
+
+    // ---- Memory Analysis ----
+    struct MemoryAnalysis {
+        uint64_t address;
+        std::string hexDump;
+        std::string interpretation;
+        bool isCodeRegion;
+        bool isStackRegion;
+        bool isHeapRegion;
+        std::string nearestSymbol;
+    };
+
+    MemoryAnalysis AnalyzeMemoryRegion(uint64_t address, uint32_t size = 256);
+    std::string DisassembleWithAnnotations(uint64_t address, uint32_t lineCount = 20);
+    std::string CaptureDebugSnapshot();
+
+    // ---- AI-Powered Analysis ----
+    std::string GenerateAIHypothesis(const ExceptionAnalysis& analysis);
+    std::vector<std::string> GenerateAISuggestedActions(const ExceptionAnalysis& analysis);
+    std::vector<BreakpointSuggestion> GenerateAIBreakpointSuggestions(const std::string& context);
 
 private:
-    void onGdbReadyRead();
-    void onGdbFinished(int exitCode, int exitStatus);
-    void parseGdbOutput(const std::string& output);
-    void sendGdbCommand(const std::string& command);
-    std::string collectDebugInfo();
-    void requestFixFromModel(const std::string& debugInfoJson);
+    AIDebugAgent() = default;
+    AIDebugAgent(const AIDebugAgent&) = delete;
+    AIDebugAgent& operator=(const AIDebugAgent&) = delete;
 
-    std::unique_ptr<AIDebuggerImpl> m_impl;
-    std::string m_executablePath;
-    bool m_isRunning = false;
-    std::map<std::string, int> m_breakpoints;
-
-    BreakpointHitFn   m_onBreakpointHit;
-    FixSuggestedFn    m_onFixSuggested;
-    DebuggingFinishedFn m_onDebuggingFinished;
+    std::shared_ptr<RawrXD::Agent::SovereignInferenceClient> m_inferenceClient;
 };
+
+} // namespace Debug
+} // namespace RawrXD
 
 #endif // AI_DEBUGGER_H

@@ -6,6 +6,22 @@
 #include <sstream>
 #include <iomanip>
 
+namespace {
+int64_t toUnixMillis(const TimePoint& tp)
+{
+    return std::chrono::duration_cast<std::chrono::milliseconds>(tp.time_since_epoch()).count();
+}
+
+TimePoint fromUnixMillis(const nlohmann::json& value, const TimePoint& fallback = std::chrono::system_clock::now())
+{
+    if (!value.is_number_integer()) {
+        return fallback;
+    }
+
+    return TimePoint(std::chrono::milliseconds(value.get<int64_t>()));
+}
+}
+
 // ===== STATIC HELPERS =====
 
 // Const overloads (actual implementation)
@@ -45,12 +61,10 @@ AgenticLoopState::AgenticLoopState()
     , m_constraints(nlohmann::json::object())
     , m_lastSnapshot(nlohmann::json::object())
 {
-    fprintf(stderr, "[AgenticLoopState] Initialized - Ready for iterative reasoning\n");
 }
 
 AgenticLoopState::~AgenticLoopState()
 {
-    fprintf(stderr, "[AgenticLoopState] Destroyed - Cleaned up %zu iterations\n", m_iterations.size());
 }
 
 // ===== ITERATION MANAGEMENT =====
@@ -63,17 +77,13 @@ void AgenticLoopState::startIteration(const std::string& goal)
     iteration.currentPhase = ReasoningPhase::Analysis;
     iteration.status = IterationStatus::InProgress;
     iteration.goalStatement = goal;
+        iteration.goal = goal;
     iteration.contextSnapshot = getAllMemory();
     iteration.successScore = 0.0f;
     iteration.errorCount = 0;
 
     m_iterations.push_back(iteration);
     m_currentStatus = IterationStatus::InProgress;
-
-    if (m_debugMode) {
-        fprintf(stderr, "[AgenticLoopState] Started iteration %d - %s\n",
-                iteration.iterationNumber, goal.c_str());
-    }
 }
 
 void AgenticLoopState::endIteration(IterationStatus status, const std::string& result)
@@ -93,11 +103,6 @@ void AgenticLoopState::endIteration(IterationStatus status, const std::string& r
 
     m_currentStatus = status;
     m_lastUpdateTime = std::chrono::system_clock::now();
-
-    if (m_debugMode) {
-        fprintf(stderr, "[AgenticLoopState] Ended iteration %d - Status: %s\n",
-                iteration.iterationNumber, statusToString(status).c_str());
-    }
 }
 
 AgenticLoopState::Iteration* AgenticLoopState::getCurrentIteration()
@@ -114,11 +119,6 @@ void AgenticLoopState::setCurrentPhase(ReasoningPhase phase)
     m_currentPhase = phase;
     m_lastPhaseStarted = phase;
     m_lastUpdateTime = std::chrono::system_clock::now();
-
-    if (m_debugMode) {
-        fprintf(stderr, "[AgenticLoopState] Phase transitioned to %s\n",
-                phaseToString(phase).c_str());
-    }
 }
 
 float AgenticLoopState::getPhaseProgress() const
@@ -189,17 +189,9 @@ void AgenticLoopState::recordDecision(
     decision.retryCount = 0;
 
     m_iterations.back().decisions.push_back(decision);
-
-    if (m_debugMode) {
-        fprintf(stderr, "[AgenticLoopState] Recorded decision: %s - Confidence: %.2f\n",
-                description.c_str(), confidence);
-    }
 }
 
-void AgenticLoopState::recordDecisionOutcome(
-    int decisionIndex,
-    const nlohmann::json& outcome,
-    bool success)
+void AgenticLoopState::recordDecisionOutcome(int decisionIndex, const nlohmann::json& outcome, bool success)
 {
     if (m_iterations.empty() ||
         decisionIndex >= static_cast<int>(m_iterations.back().decisions.size())) {
@@ -209,17 +201,11 @@ void AgenticLoopState::recordDecisionOutcome(
     auto& decision = m_iterations.back().decisions[decisionIndex];
     decision.outcome = outcome;
     decision.success = success;
-
-    if (m_debugMode) {
-        fprintf(stderr, "[AgenticLoopState] Decision outcome recorded - Success: %s\n",
-                success ? "true" : "false");
-    }
 }
 
 std::vector<AgenticLoopState::Decision> AgenticLoopState::getDecisionHistory(int limit) const
 {
     std::vector<Decision> allDecisions;
-
     for (const auto& iteration : m_iterations) {
         for (const auto& decision : iteration.decisions) {
             allDecisions.push_back(decision);
@@ -294,11 +280,6 @@ void AgenticLoopState::recordError(
     if (m_errorHistory.size() > 100) {
         m_errorHistory.pop_front();
     }
-
-    if (m_debugMode) {
-        fprintf(stderr, "[AgenticLoopState] Error recorded: %s - %s\n",
-                errorType.c_str(), message.c_str());
-    }
 }
 
 void AgenticLoopState::recordErrorRecovery(
@@ -311,16 +292,6 @@ void AgenticLoopState::recordErrorRecovery(
     auto& error = m_errorHistory[errorIndex];
     error.recoveryStrategy = strategy;
     error.recoverySucceeded = succeeded;
-
-    if (m_debugMode) {
-        fprintf(stderr, "[AgenticLoopState] Error recovery recorded - Strategy: %s - Success: %s\n",
-                strategy.c_str(), succeeded ? "true" : "false");
-    }
-}
-
-const std::deque<AgenticLoopState::ErrorRecord>& AgenticLoopState::getErrorHistory(size_t limit) const
-{
-    return m_errorHistory;
 }
 
 float AgenticLoopState::getErrorRate() const
@@ -388,14 +359,8 @@ bool AgenticLoopState::restoreFromSnapshot(const nlohmann::json& snapshot)
     }
     m_lastSnapshot = snapshot;
 
-    if (m_debugMode) {
-        fprintf(stderr, "[AgenticLoopState] Restored from snapshot\n");
-    }
-
     return true;
 }
-
-// ===== MEMORY MANAGEMENT =====
 
 void AgenticLoopState::addToMemory(const std::string& key, const nlohmann::json& value)
 {
@@ -513,9 +478,7 @@ void AgenticLoopState::addConstraint(const std::string& key, const std::string& 
 
 void AgenticLoopState::removeConstraint(const std::string& key)
 {
-    // The current minimal json.hpp stub lacks erase().
-    // TODO: Implement erase in json.hpp or replace with std::map for constraints.
-    // m_constraints.erase(key);
+    m_constraints.erase(key);
 }
 
 bool AgenticLoopState::validateAgainstConstraints(const nlohmann::json& action) const
@@ -611,12 +574,87 @@ std::string AgenticLoopState::getStateAsSummary() const
 std::string AgenticLoopState::serializeState() const
 {
     nlohmann::json state = nlohmann::json::object();
+    state["schemaVersion"] = 2;
     state["phase"] = phaseToString(m_currentPhase);
     state["status"] = statusToString(m_currentStatus);
     state["goal"] = m_currentGoal;
     state["metrics"] = getMetrics();
     state["memory"] = getAllMemory();
     state["constraints"] = m_constraints;
+    state["progress"] = {
+        {"current", m_progressCurrent},
+        {"total", m_progressTotal}
+    };
+    state["appliedStrategies"] = m_appliedStrategies;
+    state["suggestedStrategies"] = m_suggestedStrategies;
+    state["stateStartTimeMs"] = toUnixMillis(m_stateStartTime);
+    state["lastUpdateTimeMs"] = toUnixMillis(m_lastUpdateTime);
+    state["lastPhaseStarted"] = phaseToString(m_lastPhaseStarted);
+    state["lastPhaseFinished"] = phaseToString(m_lastPhaseFinished);
+    state["lastSnapshot"] = m_lastSnapshot;
+    state["snapshotHistory"] = m_snapshotHistory;
+
+    nlohmann::json iterations = nlohmann::json::array();
+    for (const auto& iteration : m_iterations) {
+        nlohmann::json iterationJson;
+        iterationJson["iterationNumber"] = iteration.iterationNumber;
+        iterationJson["startTimeMs"] = toUnixMillis(iteration.startTime);
+        iterationJson["endTimeMs"] = toUnixMillis(iteration.endTime);
+        iterationJson["currentPhase"] = phaseToString(iteration.currentPhase);
+        iterationJson["status"] = statusToString(iteration.status);
+        iterationJson["goalStatement"] = iteration.goalStatement;
+        iterationJson["contextSnapshot"] = iteration.contextSnapshot;
+        iterationJson["successScore"] = iteration.successScore;
+        iterationJson["errorCount"] = iteration.errorCount;
+        iterationJson["resultSummary"] = iteration.resultSummary;
+        iterationJson["appliedStrategies"] = iteration.appliedStrategies;
+        iterationJson["goal"] = iteration.goal;
+        iterationJson["outcome"] = iteration.outcome;
+        iterationJson["reasoning"] = iteration.reasoning;
+        iterationJson["error"] = iteration.error;
+
+        nlohmann::json decisions = nlohmann::json::array();
+        for (const auto& decision : iteration.decisions) {
+            decisions.push_back({
+                {"timestampMs", toUnixMillis(decision.timestamp)},
+                {"phase", phaseToString(decision.phase)},
+                {"description", decision.description},
+                {"reasoning", decision.reasoning},
+                {"confidence", decision.confidence},
+                {"success", decision.success},
+                {"retryCount", decision.retryCount},
+                {"outcome", decision.outcome}
+            });
+        }
+        iterationJson["decisions"] = std::move(decisions);
+        iterations.push_back(std::move(iterationJson));
+    }
+    state["iterations"] = std::move(iterations);
+
+    nlohmann::json contextWindow = nlohmann::json::array();
+    for (const auto& iteration : m_contextWindow) {
+        contextWindow.push_back({
+            {"iterationNumber", iteration.iterationNumber},
+            {"goalStatement", iteration.goalStatement},
+            {"status", statusToString(iteration.status)}
+        });
+    }
+    state["contextWindow"] = std::move(contextWindow);
+
+    nlohmann::json errorHistory = nlohmann::json::array();
+    for (const auto& error : m_errorHistory) {
+        errorHistory.push_back({
+            {"timestampMs", toUnixMillis(error.timestamp)},
+            {"errorType", error.errorType},
+            {"errorMessage", error.errorMessage},
+            {"stackTrace", error.stackTrace},
+            {"phase", phaseToString(error.phase)},
+            {"recoveryAttempt", error.recoveryAttempt},
+            {"recoverySucceeded", error.recoverySucceeded},
+            {"recoveryStrategy", error.recoveryStrategy}
+        });
+    }
+    state["errorHistory"] = std::move(errorHistory);
 
     return state.dump();
 }
@@ -627,6 +665,13 @@ bool AgenticLoopState::deserializeState(const std::string& jsonStr)
         nlohmann::json state = nlohmann::json::parse(jsonStr);
         if (!state.is_object()) return false;
 
+        m_iterations.clear();
+        m_contextWindow.clear();
+        m_errorHistory.clear();
+        m_snapshotHistory.clear();
+        m_appliedStrategies.clear();
+        m_suggestedStrategies.clear();
+
         if (state.contains("phase") && state["phase"].is_string())
             m_currentPhase = stringToPhase(state["phase"].get<std::string>());
         if (state.contains("status") && state["status"].is_string())
@@ -634,42 +679,129 @@ bool AgenticLoopState::deserializeState(const std::string& jsonStr)
         if (state.contains("goal") && state["goal"].is_string())
             m_currentGoal = state["goal"].get<std::string>();
 
+        if (state.contains("memory") && state["memory"].is_object()) {
+            m_memory.clear();
+            const auto& memObj = state["memory"];
+            for (const auto& [key, value] : memObj.items()) {
+                m_memory[key] = value;
+            }
+        }
+
+        if (state.contains("constraints") && state["constraints"].is_object()) {
+            m_constraints = state["constraints"];
+        }
+
+        if (state.contains("progress") && state["progress"].is_object()) {
+            m_progressCurrent = state["progress"].value("current", 0);
+            m_progressTotal = state["progress"].value("total", 0);
+        }
+
+        if (state.contains("appliedStrategies") && state["appliedStrategies"].is_array()) {
+            m_appliedStrategies = state["appliedStrategies"].get<std::vector<std::string>>();
+        }
+
+        if (state.contains("suggestedStrategies") && state["suggestedStrategies"].is_array()) {
+            m_suggestedStrategies = state["suggestedStrategies"].get<std::vector<std::string>>();
+        }
+
+        m_stateStartTime = fromUnixMillis(state.value<int64_t>("stateStartTimeMs", 0), std::chrono::system_clock::now());
+        m_lastUpdateTime = fromUnixMillis(state.value<int64_t>("lastUpdateTimeMs", 0), std::chrono::system_clock::now());
+
+        if (state.contains("lastPhaseStarted") && state["lastPhaseStarted"].is_string()) {
+            m_lastPhaseStarted = stringToPhase(state["lastPhaseStarted"].get<std::string>());
+        }
+        if (state.contains("lastPhaseFinished") && state["lastPhaseFinished"].is_string()) {
+            m_lastPhaseFinished = stringToPhase(state["lastPhaseFinished"].get<std::string>());
+        }
+
+        m_lastSnapshot = state.value("lastSnapshot", nlohmann::json::object());
+        if (state.contains("snapshotHistory") && state["snapshotHistory"].is_array()) {
+            m_snapshotHistory = state["snapshotHistory"].get<std::vector<nlohmann::json>>();
+        }
+
+        if (state.contains("iterations") && state["iterations"].is_array()) {
+            for (const auto& iterationJson : state["iterations"]) {
+                if (!iterationJson.is_object()) {
+                    continue;
+                }
+
+                Iteration iteration;
+                iteration.iterationNumber = iterationJson.value("iterationNumber", 0);
+                iteration.startTime = fromUnixMillis(iterationJson.value<int64_t>("startTimeMs", 0), std::chrono::system_clock::now());
+                iteration.endTime = fromUnixMillis(iterationJson.value<int64_t>("endTimeMs", 0), iteration.startTime);
+                iteration.currentPhase = stringToPhase(iterationJson.value("currentPhase", std::string("Analysis")));
+                iteration.status = stringToStatus(iterationJson.value("status", std::string("NotStarted")));
+                iteration.goalStatement = iterationJson.value("goalStatement", "");
+                iteration.contextSnapshot = iterationJson.value("contextSnapshot", nlohmann::json::object());
+                iteration.successScore = iterationJson.value("successScore", 0.0f);
+                iteration.errorCount = iterationJson.value("errorCount", 0);
+                iteration.resultSummary = iterationJson.value("resultSummary", "");
+                iteration.appliedStrategies = iterationJson.value("appliedStrategies", std::vector<std::string>{});
+                iteration.goal = iterationJson.value("goal", iteration.goalStatement);
+                iteration.outcome = iterationJson.value("outcome", "");
+                iteration.reasoning = iterationJson.value("reasoning", "");
+                iteration.error = iterationJson.value("error", "");
+
+                if (iterationJson.contains("decisions") && iterationJson["decisions"].is_array()) {
+                    for (const auto& decisionJson : iterationJson["decisions"]) {
+                        if (!decisionJson.is_object()) {
+                            continue;
+                        }
+
+                        Decision decision;
+                        decision.timestamp = fromUnixMillis(decisionJson.value<int64_t>("timestampMs", 0), std::chrono::system_clock::now());
+                        decision.phase = stringToPhase(decisionJson.value("phase", std::string("Analysis")));
+                        decision.description = decisionJson.value("description", "");
+                        decision.reasoning = decisionJson.value("reasoning", nlohmann::json::object());
+                        decision.confidence = decisionJson.value("confidence", 0.0f);
+                        decision.success = decisionJson.value("success", false);
+                        decision.retryCount = decisionJson.value("retryCount", 0);
+                        decision.outcome = decisionJson.value("outcome", nlohmann::json::object());
+                        iteration.decisions.push_back(std::move(decision));
+                    }
+                }
+
+                m_iterations.push_back(std::move(iteration));
+            }
+        }
+
+        if (state.contains("contextWindow") && state["contextWindow"].is_array()) {
+            for (const auto& contextJson : state["contextWindow"]) {
+                if (!contextJson.is_object()) {
+                    continue;
+                }
+
+                Iteration contextIteration;
+                contextIteration.iterationNumber = contextJson.value("iterationNumber", 0);
+                contextIteration.goalStatement = contextJson.value("goalStatement", "");
+                contextIteration.status = stringToStatus(contextJson.value("status", std::string("NotStarted")));
+                m_contextWindow.push_back(std::move(contextIteration));
+            }
+        }
+
+        if (state.contains("errorHistory") && state["errorHistory"].is_array()) {
+            for (const auto& errorJson : state["errorHistory"]) {
+                if (!errorJson.is_object()) {
+                    continue;
+                }
+
+                ErrorRecord error;
+                error.timestamp = fromUnixMillis(errorJson.value<int64_t>("timestampMs", 0), std::chrono::system_clock::now());
+                error.errorType = errorJson.value("errorType", "");
+                error.errorMessage = errorJson.value("errorMessage", "");
+                error.stackTrace = errorJson.value("stackTrace", "");
+                error.phase = stringToPhase(errorJson.value("phase", std::string("Analysis")));
+                error.recoveryAttempt = errorJson.value("recoveryAttempt", 0);
+                error.recoverySucceeded = errorJson.value("recoverySucceeded", false);
+                error.recoveryStrategy = errorJson.value("recoveryStrategy", "");
+                m_errorHistory.push_back(std::move(error));
+            }
+        }
+
         return true;
     } catch (...) {
         return false;
     }
-}
-
-// ===== DEBUGGING =====
-
-std::string AgenticLoopState::generateDebugReport() const
-{
-    std::string report;
-    report += "=== AGENTIC LOOP STATE DEBUG REPORT ===\n\n";
-
-    report += "ITERATIONS:\n";
-    for (const auto& iteration : m_iterations) {
-        report += "  " + std::to_string(iteration.iterationNumber) + ". "
-                + iteration.goalStatement + " - "
-                + statusToString(iteration.status) + "\n";
-        report += "     Decisions: " + std::to_string(iteration.decisions.size())
-                + ", Errors: " + std::to_string(iteration.errorCount) + "\n";
-    }
-
-    report += "\nERRORS:\n";
-    for (const auto& error : m_errorHistory) {
-        report += "  [" + timePointToHMS(error.timestamp) + "] "
-                + error.errorType + " - "
-                + error.errorMessage + "\n";
-    }
-
-    report += "\nMETRICS:\n";
-    nlohmann::json metrics = getMetrics();
-    for (auto it = metrics.begin(); it != metrics.end(); ++it) {
-        report += "  " + it.key() + ": " + it.value().dump() + "\n";
-    }
-
-    return report;
 }
 
 // ===== HELPER METHODS =====

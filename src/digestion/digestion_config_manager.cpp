@@ -238,12 +238,20 @@ nlohmann::json DigestionConfigManager::parseScalar(const std::string& value) {
         size_t pos = 0;
         int v = std::stoi(trimmed, &pos);
         if (pos == trimmed.size()) return v;
-    } catch (...) {}
+    } catch (const std::exception& e) {
+        OutputDebugStringA(("[digestion_config_manager] stoi exception: " + std::string(e.what()) + "\n").c_str());
+    } catch (...) {
+        OutputDebugStringA("[digestion_config_manager] stoi unknown exception\n");
+    }
     try {
         size_t pos = 0;
         double v = std::stod(trimmed, &pos);
         if (pos == trimmed.size()) return v;
-    } catch (...) {}
+    } catch (const std::exception& e) {
+        OutputDebugStringA(("[digestion_config_manager] stod exception: " + std::string(e.what()) + "\n").c_str());
+    } catch (...) {
+        OutputDebugStringA("[digestion_config_manager] stod unknown exception\n");
+    }
 
     std::string cleaned = trimmed;
     if (cleaned.size() >= 2 && ((cleaned.front() == '"' && cleaned.back() == '"') || (cleaned.front() == '\'' && cleaned.back() == '\'')))

@@ -13,6 +13,7 @@
 #include "intel_gpu_accelerator.h"
 #include "arm64_gpu_accelerator.h"
 #include "cerebras_wse_accelerator.h"
+#include "nvidia_cuda_accelerator.h"
 #include "flash_attention.h"
 #include "../../include/enterprise_license.h"
 
@@ -76,6 +77,10 @@ AcceleratorRouter::AcceleratorRouter()
     m_backends[static_cast<int>(RouterBackendType::CPU_Fallback)].backendName = "CPU (AVX-512/NEON/SVE2)";
     m_backends[static_cast<int>(RouterBackendType::CPU_Fallback)].thermalLimitC = 100;
     m_backends[static_cast<int>(RouterBackendType::CPU_Fallback)].available = true; // CPU always available
+
+    m_backends[static_cast<int>(RouterBackendType::NVIDIA_CUDA)].type = RouterBackendType::NVIDIA_CUDA;
+    m_backends[static_cast<int>(RouterBackendType::NVIDIA_CUDA)].backendName = "NVIDIA CUDA (Driver API)";
+    m_backends[static_cast<int>(RouterBackendType::NVIDIA_CUDA)].thermalLimitC = 90;
 }
 
 AcceleratorRouter::~AcceleratorRouter() { shutdown(); }
@@ -95,8 +100,6 @@ RouterResult AcceleratorRouter::initialize() {
     }
     std::lock_guard<std::mutex> lock(m_mutex);
 
-    std::cout << "[Router] AcceleratorRouter initializing — probing all backends...\n";
-
     // Probe all hardware backends
     probeAllBackends();
 
@@ -109,43 +112,36 @@ RouterResult AcceleratorRouter::initialize() {
     if (m_backends[static_cast<int>(RouterBackendType::AMD_XDNA)].available) {
         bestLocal = RouterBackendType::AMD_XDNA;
         availCount++;
-        std::cout << "[Router] ✓ AMD XDNA backend available\n";
     }
     if (m_backends[static_cast<int>(RouterBackendType::Intel_Xe)].available) {
         if (bestLocal == RouterBackendType::CPU_Fallback) {
             bestLocal = RouterBackendType::Intel_Xe;
         }
         availCount++;
-        std::cout << "[Router] ✓ Intel Xe backend available\n";
     }
     if (m_backends[static_cast<int>(RouterBackendType::ARM64_Adreno)].available) {
         if (bestLocal == RouterBackendType::CPU_Fallback) {
             bestLocal = RouterBackendType::ARM64_Adreno;
         }
         availCount++;
-        std::cout << "[Router] ✓ ARM64 Adreno GPU backend available\n";
     }
     if (m_backends[static_cast<int>(RouterBackendType::ARM64_NPU)].available) {
         availCount++;
-        std::cout << "[Router] ✓ ARM64 Hexagon NPU backend available\n";
+    }
+    if (m_backends[static_cast<int>(RouterBackendType::NVIDIA_CUDA)].available) {
+        if (bestLocal == RouterBackendType::CPU_Fallback) {
+            bestLocal = RouterBackendType::NVIDIA_CUDA;
+        }
+        availCount++;
     }
     if (m_backends[static_cast<int>(RouterBackendType::Cerebras_WSE)].available) {
         availCount++;
-        std::cout << "[Router] ✓ Cerebras WSE backend available (remote)\n";
     }
     // CPU is always counted
     availCount++;
-    std::cout << "[Router] ✓ CPU fallback always available\n";
 
     m_activeBackend.store(bestLocal, std::memory_order_release);
     m_initialized.store(true, std::memory_order_release);
-
-    std::cout << "[Router] AcceleratorRouter initialized.\n"
-              << "  Available backends: " << availCount << "\n"
-              << "  Active backend: " << getBackendName(bestLocal) << "\n"
-              << "  Local GPU min bytes: " << m_localGPUMinBytes << "\n"
-              << "  Remote min bytes: " << m_remoteMinBytes << "\n"
-              << "  NPU min bytes: " << m_npuMinBytes << "\n";
 
     return RouterResult::ok("Router initialized", bestLocal);
 }
@@ -154,18 +150,9 @@ void AcceleratorRouter::shutdown() {
     if (!m_initialized.load(std::memory_order_acquire)) return;
     std::lock_guard<std::mutex> lock(m_mutex);
 
-    std::cout << "[Router] AcceleratorRouter shutting down.\n";
-    std::cout << "  Total submissions: " << m_stats.totalSubmissions.load() << "\n";
-    std::cout << "  Total successes:   " << m_stats.totalSuccesses.load() << "\n";
-    std::cout << "  Total failures:    " << m_stats.totalFailures.load() << "\n";
-    std::cout << "  Total fallbacks:   " << m_stats.totalFallbacks.load() << "\n";
-    std::cout << "  Thermal throttles: " << m_stats.thermalThrottleEvents.load() << "\n";
-
     // We do NOT shut down individual backends — they manage their own lifecycle
     m_activeBackend.store(RouterBackendType::None, std::memory_order_release);
     m_initialized.store(false, std::memory_order_release);
-
-    std::cout << "[Router] Shutdown complete.\n";
 }
 
 // ============================================================================
@@ -296,6 +283,7 @@ RouterResult AcceleratorRouter::submitTo(RouterBackendType backend,
     case RouterBackendType::ARM64_Adreno:   return dispatchToARM64GPU(task);
     case RouterBackendType::ARM64_NPU:      return dispatchToARM64NPU(task);
     case RouterBackendType::Cerebras_WSE:   return dispatchToCerebras(task);
+    case RouterBackendType::NVIDIA_CUDA:    return dispatchToNVIDIA(task);
     case RouterBackendType::CPU_Fallback:   return dispatchToCPU(task);
     default:
         return RouterResult::error("Unknown backend type", -6);
@@ -870,6 +858,7 @@ RouterBackendType AcceleratorRouter::autoSelectBackend(const RouterInferenceTask
 
         // Check local GPUs
         RouterBackendType localGPUs[] = {
+            RouterBackendType::NVIDIA_CUDA,
             RouterBackendType::AMD_XDNA,
             RouterBackendType::Intel_Xe,
             RouterBackendType::ARM64_Adreno
@@ -897,7 +886,13 @@ RouterBackendType AcceleratorRouter::autoSelectBackend(const RouterInferenceTask
         return bestBackend;
     }
 
-    // === Standard priority cascade: AMD → Intel → ARM64 GPU → CPU ===
+    // === Standard priority cascade: NVIDIA → AMD → Intel → ARM64 GPU → CPU ===
+    if (m_backends[static_cast<int>(RouterBackendType::NVIDIA_CUDA)].available &&
+        m_backends[static_cast<int>(RouterBackendType::NVIDIA_CUDA)].enabled &&
+        checkThermal(RouterBackendType::NVIDIA_CUDA)) {
+        return RouterBackendType::NVIDIA_CUDA;
+    }
+
     if (m_backends[static_cast<int>(RouterBackendType::AMD_XDNA)].available &&
         m_backends[static_cast<int>(RouterBackendType::AMD_XDNA)].enabled &&
         checkThermal(RouterBackendType::AMD_XDNA)) {
@@ -949,6 +944,9 @@ RouterBackendType AcceleratorRouter::cascadeFallback(RouterBackendType failed) c
     switch (failed) {
     case RouterBackendType::Cerebras_WSE:
         // Remote failed — try local GPUs
+        if (m_backends[static_cast<int>(RouterBackendType::NVIDIA_CUDA)].available &&
+            m_backends[static_cast<int>(RouterBackendType::NVIDIA_CUDA)].enabled)
+            return RouterBackendType::NVIDIA_CUDA;
         if (m_backends[static_cast<int>(RouterBackendType::AMD_XDNA)].available &&
             m_backends[static_cast<int>(RouterBackendType::AMD_XDNA)].enabled)
             return RouterBackendType::AMD_XDNA;
@@ -1035,7 +1033,6 @@ RouterResult AcceleratorRouter::enableBackend(RouterBackendType type) {
     }
 
     m_backends[idx].enabled = true;
-    std::cout << "[Router] Backend enabled: " << getBackendName(type) << "\n";
     return RouterResult::ok("Backend enabled", type);
 }
 
@@ -1050,12 +1047,10 @@ RouterResult AcceleratorRouter::disableBackend(RouterBackendType type) {
     }
 
     m_backends[idx].enabled = false;
-    std::cout << "[Router] Backend disabled: " << getBackendName(type) << "\n";
 
     // If we just disabled the active backend, switch to auto
     if (m_activeBackend.load() == type) {
         m_forcedBackend.store(RouterBackendType::Auto, std::memory_order_release);
-        std::cout << "[Router] Active backend disabled — switching to auto-select\n";
     }
 
     return RouterResult::ok("Backend disabled", type);
@@ -1134,7 +1129,7 @@ RouterResult AcceleratorRouter::pollThermals() {
         }
     }
 
-    // AMD/Intel: DXGI adapter thermal query would go here in production
+    // AMD/Intel/NVIDIA: DXGI adapter thermal query would go here in production
     // For now, assume operating within limits unless hardware-specific driver APIs are loaded
     // In production: use AMD ADL SDK or Intel IGCL for actual temperature polling
 
@@ -1144,9 +1139,6 @@ RouterResult AcceleratorRouter::pollThermals() {
         if (m_backends[i].available && m_backends[i].enabled) {
             if (m_backends[i].currentTempC >= m_backends[i].thermalLimitC) {
                 anyThrottled = true;
-                std::cout << "[Router] THERMAL WARNING: " << m_backends[i].backendName
-                          << " at " << m_backends[i].currentTempC << "°C (limit: "
-                          << m_backends[i].thermalLimitC << "°C)\n";
 
                 if (m_thermalCb) {
                     m_thermalCb(m_backends[i].type, m_backends[i].currentTempC,
@@ -1340,8 +1332,8 @@ void AcceleratorRouter::probeAllBackends() {
     probeAMD();
     probeIntel();
     probeARM64();
+    probeNVIDIA();
     probeCerebras();
-
     // CPU is always available
     m_backends[static_cast<int>(RouterBackendType::CPU_Fallback)].available = true;
     m_backends[static_cast<int>(RouterBackendType::CPU_Fallback)].enabled = true;
@@ -1350,8 +1342,6 @@ void AcceleratorRouter::probeAllBackends() {
 }
 
 void AcceleratorRouter::probeAMD() {
-    std::cout << "[Router] Probing AMD XDNA backend...\n";
-
     AMDGPUAccelerator& amd = AMDGPUAccelerator::instance();
 
     // Check if already initialized
@@ -1360,9 +1350,6 @@ void AcceleratorRouter::probeAMD() {
         uint32_t vendorId = amd.getVendorId();
         if (vendorId == 0x1002) { // AMD vendor ID
             m_backends[static_cast<int>(RouterBackendType::AMD_XDNA)].available = true;
-            std::cout << "[Router]   AMD GPU detected: " << amd.getGPUName()
-                      << " (" << amd.getComputeUnits() << " CUs, "
-                      << (amd.getVRAMBytes() / (1024*1024)) << " MB VRAM)\n";
             return;
         }
     }
@@ -1371,10 +1358,8 @@ void AcceleratorRouter::probeAMD() {
     AccelResult r = amd.initialize(GPUBackend::Auto);
     if (r.success && amd.getVendorId() == 0x1002) {
         m_backends[static_cast<int>(RouterBackendType::AMD_XDNA)].available = true;
-        std::cout << "[Router]   AMD GPU initialized: " << amd.getGPUName() << "\n";
     } else {
         m_backends[static_cast<int>(RouterBackendType::AMD_XDNA)].available = false;
-        std::cout << "[Router]   AMD GPU not available: " << r.detail << "\n";
     }
 }
 
@@ -1387,9 +1372,6 @@ void AcceleratorRouter::probeIntel() {
         uint32_t vendorId = intel.getVendorId();
         if (vendorId == 0x8086) { // Intel vendor ID
             m_backends[static_cast<int>(RouterBackendType::Intel_Xe)].available = true;
-            std::cout << "[Router]   Intel GPU detected: " << intel.getGPUName()
-                      << " (" << intel.getEUCount() << " EUs, "
-                      << (intel.getVRAMBytes() / (1024*1024)) << " MB VRAM)\n";
             return;
         }
     }
@@ -1397,10 +1379,8 @@ void AcceleratorRouter::probeIntel() {
     IntelAccelResult r = intel.initialize(IntelGPUBackend::Auto);
     if (r.success && intel.getVendorId() == 0x8086) {
         m_backends[static_cast<int>(RouterBackendType::Intel_Xe)].available = true;
-        std::cout << "[Router]   Intel GPU initialized: " << intel.getGPUName() << "\n";
     } else {
         m_backends[static_cast<int>(RouterBackendType::Intel_Xe)].available = false;
-        std::cout << "[Router]   Intel GPU not available: " << r.detail << "\n";
     }
 }
 
@@ -1443,13 +1423,10 @@ void AcceleratorRouter::probeARM64() {
 }
 
 void AcceleratorRouter::probeCerebras() {
-    std::cout << "[Router] Probing Cerebras WSE backend...\n";
-
     CerebrasWSEAccelerator& cerebras = CerebrasWSEAccelerator::instance();
 
     if (cerebras.isInitialized()) {
         m_backends[static_cast<int>(RouterBackendType::Cerebras_WSE)].available = true;
-        std::cout << "[Router]   Cerebras WSE already connected\n";
         return;
     }
 
@@ -1457,7 +1434,676 @@ void AcceleratorRouter::probeCerebras() {
     // The user must call cerebras.connect(endpoint) before the router can use it
     // We just check if it's been initialized elsewhere
     m_backends[static_cast<int>(RouterBackendType::Cerebras_WSE)].available = false;
-    std::cout << "[Router]   Cerebras WSE not connected (requires manual connect)\n";
+}
+
+// ============================================================================
+// Backend Probing — NVIDIA CUDA (Phase 31)
+// ============================================================================
+
+void AcceleratorRouter::probeNVIDIA() {
+    NvidiaCudaAccelerator& nvidia = NvidiaCudaAccelerator::instance();
+
+    if (nvidia.isInitialized()) {
+        m_backends[static_cast<int>(RouterBackendType::NVIDIA_CUDA)].available = true;
+        return;
+    }
+
+    NvidiaAccelResult r = nvidia.initialize(0);
+    if (r.success) {
+        m_backends[static_cast<int>(RouterBackendType::NVIDIA_CUDA)].available = true;
+
+        // Update peak TFLOPS estimate
+        m_stats.peakLocalTFLOPS = std::max(m_stats.peakLocalTFLOPS, nvidia.getStats().peakTFLOPS);
+    } else {
+        m_backends[static_cast<int>(RouterBackendType::NVIDIA_CUDA)].available = false;
+    }
+}
+
+// ============================================================================
+// Backend-Specific Dispatch — NVIDIA CUDA (Phase 31)
+// ============================================================================
+
+RouterResult AcceleratorRouter::dispatchToNVIDIA(const RouterInferenceTask& task) {
+    NvidiaCudaAccelerator& nvidia = NvidiaCudaAccelerator::instance();
+
+    if (!nvidia.isInitialized()) {
+        return RouterResult::error("NVIDIA GPU not initialized", -60);
+    }
+
+    if (!nvidia.isGPUEnabled()) {
+        return RouterResult::error("NVIDIA GPU disabled", -61);
+    }
+
+    // Map DispatchScope to NvidiaAccelScope
+    NvidiaAccelScope nvidiaScope = NvidiaAccelScope::Inference;
+    switch (task.scope) {
+    case DispatchScope::Inference:        nvidiaScope = NvidiaAccelScope::Inference; break;
+    case DispatchScope::Quantization:     nvidiaScope = NvidiaAccelScope::Quantization; break;
+    case DispatchScope::ModelSurgery:     nvidiaScope = NvidiaAccelScope::ModelSurgery; break;
+    case DispatchScope::SwarmCompute:     nvidiaScope = NvidiaAccelScope::SwarmCompute; break;
+    case DispatchScope::KVCache:          nvidiaScope = NvidiaAccelScope::KVCache; break;
+    case DispatchScope::Embedding:        nvidiaScope = NvidiaAccelScope::Embedding; break;
+    case DispatchScope::SymbolResolution: nvidiaScope = NvidiaAccelScope::All; break;
+    case DispatchScope::All:              nvidiaScope = NvidiaAccelScope::All; break;
+    }
+
+    if (!nvidia.isScopeEnabled(nvidiaScope)) {
+        return RouterResult::error("NVIDIA GPU scope disabled", -62);
+    }
+
+    // Dispatch based on kernel name
+    NvidiaAccelResult nvidiaResult = NvidiaAccelResult::error("No matching NVIDIA kernel");
+
+    if (task.kernelName) {
+        const char* k = task.kernelName;
+        if (strncmp(k, "matmul", 6) == 0 || strncmp(k, "gemm", 4) == 0) {
+            // For router-level dispatch, create temporary GPU buffers
+            // Caller should manage buffers directly for best performance
+            NvidiaGPUBuffer aBuf{}, bBuf{}, cBuf{};
+
+            // Estimate dimensions from buffer sizes
+            uint64_t inputFloats = task.inputSizeBytes / sizeof(float);
+            uint64_t outputFloats = task.outputSizeBytes / sizeof(float);
+            uint32_t dim = static_cast<uint32_t>(std::sqrt(static_cast<double>(outputFloats)));
+            if (dim == 0) dim = 1;
+            uint32_t M = dim, N = dim, K = dim;
+
+            nvidia.allocGPU(M * K * sizeof(float), aBuf);
+            nvidia.allocGPU(K * N * sizeof(float), bBuf);
+            nvidia.allocGPU(M * N * sizeof(float), cBuf);
+
+            if (aBuf.devicePtr && bBuf.devicePtr && cBuf.devicePtr) {
+                nvidia.copyToGPU(aBuf, task.inputData, std::min((uint64_t)(M * K * sizeof(float)), task.inputSizeBytes));
+                if (task.inputSizeBytes > M * K * sizeof(float)) {
+                    nvidia.copyToGPU(bBuf, reinterpret_cast<const char*>(task.inputData) + M * K * sizeof(float),
+                                     std::min((uint64_t)(K * N * sizeof(float)), task.inputSizeBytes - M * K * sizeof(float)));
+                }
+
+                nvidiaResult = nvidia.dispatchMatMul(aBuf, bBuf, cBuf, M, N, K);
+
+                if (nvidiaResult.success && task.outputData) {
+                    nvidia.copyFromGPU(task.outputData, cBuf, std::min((uint64_t)(M * N * sizeof(float)), task.outputSizeBytes));
+                }
+            }
+
+            nvidia.freeGPU(aBuf);
+            nvidia.freeGPU(bBuf);
+            nvidia.freeGPU(cBuf);
+        } else if (strncmp(k, "softmax", 7) == 0) {
+            NvidiaGPUBuffer inBuf{}, outBuf{};
+            uint32_t count = static_cast<uint32_t>(task.inputSizeBytes / sizeof(float));
+            nvidia.allocGPU(task.inputSizeBytes, inBuf);
+            nvidia.allocGPU(task.outputSizeBytes, outBuf);
+
+            if (inBuf.devicePtr && outBuf.devicePtr) {
+                nvidia.copyToGPU(inBuf, task.inputData, task.inputSizeBytes);
+                nvidiaResult = nvidia.dispatchSoftmax(inBuf, outBuf, 1, count);
+                if (nvidiaResult.success && task.outputData) {
+                    nvidia.copyFromGPU(task.outputData, outBuf, task.outputSizeBytes);
+                }
+            }
+
+            nvidia.freeGPU(inBuf);
+            nvidia.freeGPU(outBuf);
+        } else if (strncmp(k, "rmsnorm", 7) == 0 || strncmp(k, "layernorm", 9) == 0) {
+            NvidiaGPUBuffer inBuf{}, wBuf{}, outBuf{};
+            uint32_t count = static_cast<uint32_t>(task.inputSizeBytes / sizeof(float));
+            nvidia.allocGPU(task.inputSizeBytes, inBuf);
+            nvidia.allocGPU(task.inputSizeBytes, wBuf);  // weights same size
+            nvidia.allocGPU(task.outputSizeBytes, outBuf);
+
+            if (inBuf.devicePtr && wBuf.devicePtr && outBuf.devicePtr) {
+                nvidia.copyToGPU(inBuf, task.inputData, task.inputSizeBytes);
+                // Weights assumed to be ones for router-level dispatch
+                std::vector<float> ones(count, 1.0f);
+                nvidia.copyToGPU(wBuf, ones.data(), count * sizeof(float));
+                nvidiaResult = nvidia.dispatchRMSNorm(inBuf, wBuf, outBuf, count, 1e-5f);
+                if (nvidiaResult.success && task.outputData) {
+                    nvidia.copyFromGPU(task.outputData, outBuf, task.outputSizeBytes);
+                }
+            }
+
+            nvidia.freeGPU(inBuf);
+            nvidia.freeGPU(wBuf);
+            nvidia.freeGPU(outBuf);
+        } else if (strncmp(k, "rope", 4) == 0) {
+            // RoPE operates in-place on Q/K tensor
+            NvidiaGPUBuffer qkBuf{};
+            nvidia.allocGPU(task.inputSizeBytes, qkBuf);
+
+            if (qkBuf.devicePtr) {
+                nvidia.copyToGPU(qkBuf, task.inputData, task.inputSizeBytes);
+
+                // Infer dimensions: inputSizeBytes = seqLen * headDim * sizeof(float)
+                // Estimate headDim from batch/output context, default 128
+                uint32_t headDim = 128;
+                uint32_t totalFloats = static_cast<uint32_t>(task.inputSizeBytes / sizeof(float));
+                uint32_t seqLen = (headDim > 0) ? totalFloats / headDim : 1;
+                if (seqLen == 0) seqLen = 1;
+
+                nvidiaResult = nvidia.dispatchRoPE(qkBuf, seqLen, headDim, 0);
+
+                if (nvidiaResult.success && task.outputData) {
+                    nvidia.copyFromGPU(task.outputData, qkBuf, task.outputSizeBytes);
+                }
+            }
+
+            nvidia.freeGPU(qkBuf);
+        } else if (strncmp(k, "attention", 9) == 0 || strncmp(k, "flash_attn", 10) == 0) {
+            // Fused scaled dot-product attention
+            // Expects packed input: Q[seqM*headDim] | K[seqN*headDim] | V[seqN*headDim]
+            // Output: O[seqM*headDim]
+            uint32_t headDim = 128;  // default, override via task metadata
+            uint32_t seqN = 0;
+            uint32_t seqM = 0;
+
+            // Infer dimensions from buffer sizes
+            // inputSizeBytes = (seqM*headDim + seqN*headDim + seqN*headDim) * sizeof(float)
+            // outputSizeBytes = seqM * headDim * sizeof(float)
+            uint32_t outFloats = static_cast<uint32_t>(task.outputSizeBytes / sizeof(float));
+            seqM = outFloats / headDim;
+            if (seqM == 0) seqM = 1;
+            uint32_t inFloats = static_cast<uint32_t>(task.inputSizeBytes / sizeof(float));
+            uint32_t kvFloats = inFloats - seqM * headDim;
+            seqN = kvFloats / (2 * headDim);
+            if (seqN == 0) seqN = seqM;  // self-attention default
+
+            float scale = 1.0f / std::sqrt(static_cast<float>(headDim));
+            bool causal = true;  // default to causal for autoregressive
+
+            uint64_t qBytes = seqM * headDim * sizeof(float);
+            uint64_t kBytes = seqN * headDim * sizeof(float);
+            uint64_t vBytes = seqN * headDim * sizeof(float);
+            uint64_t oBytes = seqM * headDim * sizeof(float);
+
+            NvidiaGPUBuffer qBuf{}, kBuf{}, vBuf{}, oBuf{};
+            nvidia.allocGPU(qBytes, qBuf);
+            nvidia.allocGPU(kBytes, kBuf);
+            nvidia.allocGPU(vBytes, vBuf);
+            nvidia.allocGPU(oBytes, oBuf);
+
+            if (qBuf.devicePtr && kBuf.devicePtr && vBuf.devicePtr && oBuf.devicePtr) {
+                const char* src = reinterpret_cast<const char*>(task.inputData);
+                nvidia.copyToGPU(qBuf, src, qBytes);
+                nvidia.copyToGPU(kBuf, src + qBytes, kBytes);
+                nvidia.copyToGPU(vBuf, src + qBytes + kBytes, vBytes);
+
+                nvidiaResult = nvidia.dispatchAttention(qBuf, kBuf, vBuf, oBuf,
+                                                        seqM, seqN, headDim, scale, causal);
+
+                if (nvidiaResult.success && task.outputData) {
+                    nvidia.copyFromGPU(task.outputData, oBuf, std::min(oBytes, task.outputSizeBytes));
+                }
+            }
+
+            nvidia.freeGPU(qBuf);
+            nvidia.freeGPU(kBuf);
+            nvidia.freeGPU(vBuf);
+            nvidia.freeGPU(oBuf);
+        } else if (strncmp(k, "kv_init", 7) == 0) {
+            // Initialize KV-cache: input contains NvidiaKVCacheConfig
+            if (task.inputSizeBytes >= sizeof(NvidiaKVCacheConfig)) {
+                const NvidiaKVCacheConfig* cfg =
+                    reinterpret_cast<const NvidiaKVCacheConfig*>(task.inputData);
+                nvidiaResult = nvidia.initKVCache(*cfg);
+            } else {
+                nvidiaResult = NvidiaAccelResult::error("kv_init: input too small for config");
+            }
+        } else if (strncmp(k, "kv_append", 9) == 0) {
+            // Append one token's K/V for all layers/heads.
+            // Input: [numLayers * numHeads * 2] contiguous rows of [headDim] floats
+            // Layout: for each layer, for each head: key_row, value_row
+            if (!nvidia.isKVCacheReady()) {
+                nvidiaResult = NvidiaAccelResult::error("kv_append: cache not initialized");
+            } else {
+                const auto& cache = nvidia.getKVCache();
+                uint32_t hd = cache.config.headDim;
+                uint64_t rowPairBytes = 2ULL * hd * sizeof(float);
+                uint64_t expectedBytes = cache.config.numLayers * cache.config.numHeads * rowPairBytes;
+                if (task.inputSizeBytes < expectedBytes) {
+                    nvidiaResult = NvidiaAccelResult::error("kv_append: input buffer too small");
+                } else {
+                    const float* ptr = reinterpret_cast<const float*>(task.inputData);
+                    nvidiaResult = NvidiaAccelResult::ok("KV append complete");
+                    for (uint32_t l = 0; l < cache.config.numLayers && nvidiaResult.success; ++l) {
+                        for (uint32_t h = 0; h < cache.config.numHeads && nvidiaResult.success; ++h) {
+                            nvidiaResult = nvidia.appendKV(l, h, ptr, ptr + hd);
+                            ptr += 2 * hd;
+                        }
+                    }
+                    if (nvidiaResult.success)
+                        nvidia.advanceKVPos();
+                }
+            }
+        } else if (strncmp(k, "kv_attn", 7) == 0 || strncmp(k, "cached_attention", 16) == 0) {
+            // Cached attention: Q[1, headDim] → O[1, headDim] using cached K/V
+            // Input: Q (headDim floats) + layer index (uint32_t) + head index (uint32_t)
+            if (!nvidia.isKVCacheReady()) {
+                nvidiaResult = NvidiaAccelResult::error("kv_attn: cache not initialized");
+            } else {
+                const auto& cache = nvidia.getKVCache();
+                uint32_t hd = cache.config.headDim;
+                uint64_t qBytes = hd * sizeof(float);
+                uint64_t metaBytes = 2 * sizeof(uint32_t);  // layer, head indices
+
+                if (task.inputSizeBytes < qBytes + metaBytes) {
+                    nvidiaResult = NvidiaAccelResult::error("kv_attn: input too small");
+                } else {
+                    const char* raw = reinterpret_cast<const char*>(task.inputData);
+                    uint32_t layer, head;
+                    memcpy(&layer, raw + qBytes, sizeof(uint32_t));
+                    memcpy(&head, raw + qBytes + sizeof(uint32_t), sizeof(uint32_t));
+
+                    NvidiaGPUBuffer qBuf{}, oBuf{};
+                    nvidia.allocGPU(qBytes, qBuf);
+                    nvidia.allocGPU(qBytes, oBuf);
+
+                    if (qBuf.devicePtr && oBuf.devicePtr) {
+                        nvidia.copyToGPU(qBuf, raw, qBytes);
+                        float scale = 1.0f / std::sqrt(static_cast<float>(hd));
+                        nvidiaResult = nvidia.dispatchCachedAttention(
+                            qBuf, oBuf, layer, head, scale, true);
+                        if (nvidiaResult.success && task.outputData)
+                            nvidia.copyFromGPU(task.outputData, oBuf, std::min(qBytes, task.outputSizeBytes));
+                    }
+
+                    nvidia.freeGPU(qBuf);
+                    nvidia.freeGPU(oBuf);
+                }
+            }
+        } else if (strncmp(k, "kv_reset", 8) == 0) {
+            nvidia.resetKVCache();
+            nvidiaResult = NvidiaAccelResult::ok("KV-cache reset");
+        } else if (strncmp(k, "kv_free", 7) == 0) {
+            nvidiaResult = nvidia.freeKVCache();
+        } else if (strncmp(k, "weight_upload", 13) == 0) {
+            // Upload raw weight tensor to GPU. Input = raw weight data.
+            // Kernel name encodes format: weight_upload_f32, weight_upload_q4_0, etc.
+            NvidiaWeightFormat fmt = NvidiaWeightFormat::Raw;
+            if (strstr(k, "f32"))       fmt = NvidiaWeightFormat::F32;
+            else if (strstr(k, "f16"))  fmt = NvidiaWeightFormat::F16;
+            else if (strstr(k, "q4_0")) fmt = NvidiaWeightFormat::Q4_0;
+            else if (strstr(k, "q8_0")) fmt = NvidiaWeightFormat::Q8_0;
+
+            // Weight name is passed via kernelName suffix or task metadata
+            // For router-level dispatch, use a generic name based on buffer ID
+            std::string wname = "weight_" + std::to_string(nvidia.getWeightMap().weights.size());
+            std::vector<uint64_t> shape;
+            uint64_t elems = task.inputSizeBytes / sizeof(float);
+            shape.push_back(elems);
+
+            nvidiaResult = nvidia.uploadWeight(wname, task.inputData, task.inputSizeBytes,
+                                               fmt, shape);
+        } else if (strncmp(k, "weight_free_all", 15) == 0) {
+            nvidiaResult = nvidia.freeAllWeights();
+        } else if (strncmp(k, "argmax", 6) == 0) {
+            // GPU argmax over logits buffer
+            NvidiaGPUBuffer logitsBuf{};
+            uint32_t vocabSize = static_cast<uint32_t>(task.inputSizeBytes / sizeof(float));
+            nvidia.allocGPU(task.inputSizeBytes, logitsBuf);
+            if (logitsBuf.devicePtr) {
+                nvidia.copyToGPU(logitsBuf, task.inputData, task.inputSizeBytes);
+                uint32_t tokenId = 0;
+                nvidiaResult = nvidia.dispatchArgmax(logitsBuf, vocabSize, tokenId);
+                if (nvidiaResult.success && task.outputData && task.outputSizeBytes >= sizeof(uint32_t)) {
+                    *static_cast<uint32_t*>(task.outputData) = tokenId;
+                }
+            } else {
+                nvidiaResult = NvidiaAccelResult::error("Argmax buffer alloc failed");
+            }
+            nvidia.freeGPU(logitsBuf);
+        } else if (strncmp(k, "sample", 6) == 0) {
+            // Sampling with config: logits in, token ID out
+            NvidiaGPUBuffer logitsBuf{};
+            uint32_t vocabSize = static_cast<uint32_t>(task.inputSizeBytes / sizeof(float));
+            nvidia.allocGPU(task.inputSizeBytes, logitsBuf);
+            if (logitsBuf.devicePtr) {
+                nvidia.copyToGPU(logitsBuf, task.inputData, task.inputSizeBytes);
+                NvidiaSamplerConfig samplerCfg;
+                uint32_t tokenId = 0;
+                nvidiaResult = nvidia.dispatchSample(logitsBuf, vocabSize, samplerCfg,
+                                                    nullptr, 0, tokenId);
+                if (nvidiaResult.success && task.outputData && task.outputSizeBytes >= sizeof(uint32_t)) {
+                    *static_cast<uint32_t*>(task.outputData) = tokenId;
+                }
+            } else {
+                nvidiaResult = NvidiaAccelResult::error("Sample buffer alloc failed");
+            }
+            nvidia.freeGPU(logitsBuf);
+        } else if (strncmp(k, "stream_pool_init", 16) == 0) {
+            // Initialize the multi-stream pipeline pool (call once before pipelined ops)
+            nvidiaResult = nvidia.initStreamPool();
+        } else if (strncmp(k, "stream_pool_destroy", 19) == 0) {
+            nvidiaResult = nvidia.destroyStreamPool();
+        } else if (strncmp(k, "generate_pipelined", 18) == 0) {
+            // Pipelined autoregressive generation: prompt token IDs in, generated IDs out.
+            // inputData:  uint32_t[] prompt token IDs
+            // outputData: uint32_t[] generated token IDs  (caller must allocate enough)
+            // outputSizeBytes: capacity of output buffer in bytes
+            if (!task.inputData || task.inputSizeBytes == 0) {
+                nvidiaResult = NvidiaAccelResult::error("generate_pipelined: no prompt tokens");
+            } else {
+                uint32_t promptCount = static_cast<uint32_t>(task.inputSizeBytes / sizeof(uint32_t));
+                std::vector<uint32_t> prompt(
+                    static_cast<const uint32_t*>(task.inputData),
+                    static_cast<const uint32_t*>(task.inputData) + promptCount);
+
+                NvidiaGenerationConfig genCfg;
+                NvidiaGenerationResult genRes = nvidia.generateTokensPipelined(prompt, genCfg);
+
+                if (genRes.success) {
+                    if (task.outputData && task.outputSizeBytes >= sizeof(uint32_t)) {
+                        uint32_t copyCount = static_cast<uint32_t>(
+                            std::min(genRes.tokens.size(),
+                                     task.outputSizeBytes / sizeof(uint32_t)));
+                        memcpy(task.outputData, genRes.tokens.data(),
+                               copyCount * sizeof(uint32_t));
+                    }
+                    nvidiaResult = NvidiaAccelResult::ok(genRes.detail);
+                    nvidiaResult.elapsedMs = genRes.totalMs;
+                } else {
+                    nvidiaResult = NvidiaAccelResult::error(genRes.detail);
+                }
+            }
+        } else if (strncmp(k, "benchmark_generation", 20) == 0) {
+            // Benchmark sync vs pipelined generation for greedy + stochastic modes.
+            // inputData:  uint32_t[] prompt token IDs
+            // outputData: double[10]
+            //   [0] greedySyncMs, [1] greedyPipeMs, [2] greedySpeedup,
+            //   [3] greedySyncTPS, [4] greedyPipeTPS,
+            //   [5] stochSyncMs,  [6] stochPipeMs, [7] stochSpeedup,
+            //   [8] stochSyncTPS, [9] stochPipeTPS
+            // Optional extended outputData: double[18]
+            //   [10] greedySyncCI95Ms, [11] greedyPipeCI95Ms,
+            //   [12] stochSyncCI95Ms,  [13] stochPipeCI95Ms,
+            //   [14] greedySyncStdMs,  [15] greedyPipeStdMs,
+            //   [16] stochSyncStdMs,   [17] stochPipeStdMs
+            if (!task.inputData || task.inputSizeBytes == 0) {
+                nvidiaResult = NvidiaAccelResult::error("benchmark_generation: no prompt tokens");
+            } else {
+                uint32_t promptCount = static_cast<uint32_t>(task.inputSizeBytes / sizeof(uint32_t));
+                std::vector<uint32_t> prompt(
+                    static_cast<const uint32_t*>(task.inputData),
+                    static_cast<const uint32_t*>(task.inputData) + promptCount);
+
+                uint32_t runs = (task.batchSize > 0) ? task.batchSize : 3;
+                if (runs > 20) runs = 20; // keep benchmark bounded
+
+                struct BenchOut {
+                    double avgMs;
+                    double avgTps;
+                    double stdMs;
+                    double stdTps;
+                    double ci95Ms;
+                    double ci95Tps;
+                    bool   ok;
+                };
+
+                auto runBench = [&](bool pipelined, float temperature) -> BenchOut {
+                    BenchOut out{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, true};
+                    double sumMs = 0.0, sumSqMs = 0.0;
+                    double sumTps = 0.0, sumSqTps = 0.0;
+                    for (uint32_t i = 0; i < runs; ++i) {
+                        NvidiaGenerationConfig cfg;
+                        cfg.maxTokens = 100;
+                        cfg.sampler.temperature = temperature;
+                        cfg.sampler.topK = 40;
+                        cfg.sampler.topP = 0.95f;
+
+                        NvidiaGenerationResult r = pipelined
+                            ? nvidia.generateTokensPipelined(prompt, cfg)
+                            : nvidia.generateTokens(prompt, cfg);
+                        if (!r.success) {
+                            out.ok = false;
+                            return out;
+                        }
+                        sumMs += r.totalMs;
+                        sumSqMs += r.totalMs * r.totalMs;
+                        sumTps += r.tokPerSec;
+                        sumSqTps += r.tokPerSec * r.tokPerSec;
+                    }
+                    double n = static_cast<double>(runs);
+                    out.avgMs = sumMs / n;
+                    out.avgTps = sumTps / n;
+
+                    if (runs > 1) {
+                        double varMs = (sumSqMs - (sumMs * sumMs) / n) / (n - 1.0);
+                        double varTps = (sumSqTps - (sumTps * sumTps) / n) / (n - 1.0);
+                        if (varMs < 0.0) varMs = 0.0;
+                        if (varTps < 0.0) varTps = 0.0;
+                        out.stdMs = std::sqrt(varMs);
+                        out.stdTps = std::sqrt(varTps);
+                        out.ci95Ms = 1.96 * out.stdMs / std::sqrt(n);
+                        out.ci95Tps = 1.96 * out.stdTps / std::sqrt(n);
+                    }
+                    return out;
+                };
+
+                // Greedy mode benchmark (temperature 0.0)
+                BenchOut greedySync = runBench(false, 0.0f);
+                if (!greedySync.ok) {
+                    nvidiaResult = NvidiaAccelResult::error("benchmark_generation: greedy sync failed");
+                } else {
+                    nvidia.initStreamPool(); // idempotent if already initialized
+                    BenchOut greedyPipe = runBench(true, 0.0f);
+                    if (!greedyPipe.ok) {
+                        nvidiaResult = NvidiaAccelResult::error("benchmark_generation: greedy pipeline failed");
+                    } else {
+                        // Stochastic mode benchmark (temperature 0.7)
+                        BenchOut stochSync = runBench(false, 0.7f);
+                        if (!stochSync.ok) {
+                            nvidiaResult = NvidiaAccelResult::error("benchmark_generation: stochastic sync failed");
+                        } else {
+                            BenchOut stochPipe = runBench(true, 0.7f);
+                            if (!stochPipe.ok) {
+                                nvidiaResult = NvidiaAccelResult::error("benchmark_generation: stochastic pipeline failed");
+                            } else {
+                                double greedySpeedup = (greedyPipe.avgMs > 0.0)
+                                    ? (greedySync.avgMs / greedyPipe.avgMs) : 0.0;
+                                double stochSpeedup = (stochPipe.avgMs > 0.0)
+                                    ? (stochSync.avgMs / stochPipe.avgMs) : 0.0;
+
+                                if (task.outputData && task.outputSizeBytes >= 10 * sizeof(double)) {
+                                    double* out = static_cast<double*>(task.outputData);
+                                    out[0] = greedySync.avgMs;
+                                    out[1] = greedyPipe.avgMs;
+                                    out[2] = greedySpeedup;
+                                    out[3] = greedySync.avgTps;
+                                    out[4] = greedyPipe.avgTps;
+                                    out[5] = stochSync.avgMs;
+                                    out[6] = stochPipe.avgMs;
+                                    out[7] = stochSpeedup;
+                                    out[8] = stochSync.avgTps;
+                                    out[9] = stochPipe.avgTps;
+
+                                    if (task.outputSizeBytes >= 18 * sizeof(double)) {
+                                        out[10] = greedySync.ci95Ms;
+                                        out[11] = greedyPipe.ci95Ms;
+                                        out[12] = stochSync.ci95Ms;
+                                        out[13] = stochPipe.ci95Ms;
+                                        out[14] = greedySync.stdMs;
+                                        out[15] = greedyPipe.stdMs;
+                                        out[16] = stochSync.stdMs;
+                                        out[17] = stochPipe.stdMs;
+                                    }
+                                }
+
+                                nvidiaResult = NvidiaAccelResult::ok("Generation benchmark complete");
+                                nvidiaResult.elapsedMs = greedyPipe.avgMs + stochPipe.avgMs;
+                                nvidiaResult.throughputGFLOPS = (greedySpeedup + stochSpeedup) * 0.5;
+                            }
+                        }
+                    }
+                }
+            }
+        } else if (strncmp(k, "benchmark_long_context", 22) == 0) {
+            // Long-context stress benchmark: sync vs pipelined over increasing prompt lengths.
+            // inputData:  uint32_t[] base prompt token IDs (must be non-empty)
+            // outputData: double[36] where each step uses 6 doubles:
+            //   [step*6 + 0] = contextLength
+            //   [step*6 + 1] = syncMs
+            //   [step*6 + 2] = pipeMs
+            //   [step*6 + 3] = syncTPS
+            //   [step*6 + 4] = pipeTPS
+            //   [step*6 + 5] = speedup (syncMs / pipeMs)
+            // Optional extended outputData: double[72] where each step uses 12 doubles:
+            //   [step*12 + 0..5]  = same base metrics as above
+            //   [step*12 + 6]     = syncStdMs
+            //   [step*12 + 7]     = pipeStdMs
+            //   [step*12 + 8]     = syncCI95Ms
+            //   [step*12 + 9]     = pipeCI95Ms
+            //   [step*12 + 10]    = syncStdTPS
+            //   [step*12 + 11]    = pipeStdTPS
+            // Steps are fixed: 128, 256, 512, 1024, 2048, 4096 tokens.
+            if (!task.inputData || task.inputSizeBytes == 0) {
+                nvidiaResult = NvidiaAccelResult::error("benchmark_long_context: no base prompt tokens");
+            } else {
+                uint32_t baseCount = static_cast<uint32_t>(task.inputSizeBytes / sizeof(uint32_t));
+                if (baseCount == 0) {
+                    nvidiaResult = NvidiaAccelResult::error("benchmark_long_context: empty base prompt");
+                } else {
+                    std::vector<uint32_t> basePrompt(
+                        static_cast<const uint32_t*>(task.inputData),
+                        static_cast<const uint32_t*>(task.inputData) + baseCount);
+
+                    uint32_t runs = (task.batchSize > 0) ? task.batchSize : 3;
+                    if (runs > 10) runs = 10; // keep runtime bounded
+
+                    static constexpr uint32_t kSteps[] = {128, 256, 512, 1024, 2048, 4096};
+                    static constexpr uint32_t kStepCount = sizeof(kSteps) / sizeof(kSteps[0]);
+                    const bool extendedStats = (task.outputSizeBytes >= (kStepCount * 12 * sizeof(double)));
+
+                    if (!task.outputData || task.outputSizeBytes < (kStepCount * 6 * sizeof(double))) {
+                        nvidiaResult = NvidiaAccelResult::error("benchmark_long_context: output buffer too small");
+                    } else {
+                        nvidia.initStreamPool(); // idempotent
+
+                        double* out = static_cast<double*>(task.outputData);
+                        bool ok = true;
+
+                        for (uint32_t s = 0; s < kStepCount && ok; ++s) {
+                            uint32_t ctxLen = kSteps[s];
+
+                            std::vector<uint32_t> prompt;
+                            prompt.reserve(ctxLen);
+                            while (prompt.size() < ctxLen) {
+                                size_t toCopy = std::min<size_t>(basePrompt.size(), ctxLen - prompt.size());
+                                prompt.insert(prompt.end(), basePrompt.begin(), basePrompt.begin() + toCopy);
+                            }
+
+                            double syncMs = 0.0;
+                            double pipeMs = 0.0;
+                            double syncTps = 0.0;
+                            double pipeTps = 0.0;
+                            double syncSqMs = 0.0;
+                            double pipeSqMs = 0.0;
+                            double syncSqTps = 0.0;
+                            double pipeSqTps = 0.0;
+
+                            for (uint32_t r = 0; r < runs && ok; ++r) {
+                                NvidiaGenerationConfig cfg;
+                                cfg.maxTokens = 64;
+                                cfg.sampler.temperature = 0.7f;
+                                cfg.sampler.topK = 40;
+                                cfg.sampler.topP = 0.95f;
+
+                                NvidiaGenerationResult rs = nvidia.generateTokens(prompt, cfg);
+                                if (!rs.success) {
+                                    ok = false;
+                                    nvidiaResult = NvidiaAccelResult::error("benchmark_long_context: sync run failed");
+                                    break;
+                                }
+
+                                NvidiaGenerationResult rp = nvidia.generateTokensPipelined(prompt, cfg);
+                                if (!rp.success) {
+                                    ok = false;
+                                    nvidiaResult = NvidiaAccelResult::error("benchmark_long_context: pipelined run failed");
+                                    break;
+                                }
+
+                                syncMs += rs.totalMs;
+                                pipeMs += rp.totalMs;
+                                syncTps += rs.tokPerSec;
+                                pipeTps += rp.tokPerSec;
+                                syncSqMs += rs.totalMs * rs.totalMs;
+                                pipeSqMs += rp.totalMs * rp.totalMs;
+                                syncSqTps += rs.tokPerSec * rs.tokPerSec;
+                                pipeSqTps += rp.tokPerSec * rp.tokPerSec;
+                            }
+
+                            if (!ok) break;
+
+                            syncMs /= static_cast<double>(runs);
+                            pipeMs /= static_cast<double>(runs);
+                            syncTps /= static_cast<double>(runs);
+                            pipeTps /= static_cast<double>(runs);
+                            double speedup = (pipeMs > 0.0) ? (syncMs / pipeMs) : 0.0;
+
+                            double syncStdMs = 0.0, pipeStdMs = 0.0;
+                            double syncCi95Ms = 0.0, pipeCi95Ms = 0.0;
+                            double syncStdTps = 0.0, pipeStdTps = 0.0;
+                            if (runs > 1) {
+                                double n = static_cast<double>(runs);
+                                double varSyncMs = (syncSqMs - (syncMs * runs) * (syncMs * runs) / n) / (n - 1.0);
+                                double varPipeMs = (pipeSqMs - (pipeMs * runs) * (pipeMs * runs) / n) / (n - 1.0);
+                                double varSyncTps = (syncSqTps - (syncTps * runs) * (syncTps * runs) / n) / (n - 1.0);
+                                double varPipeTps = (pipeSqTps - (pipeTps * runs) * (pipeTps * runs) / n) / (n - 1.0);
+                                if (varSyncMs < 0.0) varSyncMs = 0.0;
+                                if (varPipeMs < 0.0) varPipeMs = 0.0;
+                                if (varSyncTps < 0.0) varSyncTps = 0.0;
+                                if (varPipeTps < 0.0) varPipeTps = 0.0;
+                                syncStdMs = std::sqrt(varSyncMs);
+                                pipeStdMs = std::sqrt(varPipeMs);
+                                syncStdTps = std::sqrt(varSyncTps);
+                                pipeStdTps = std::sqrt(varPipeTps);
+                                syncCi95Ms = 1.96 * syncStdMs / std::sqrt(n);
+                                pipeCi95Ms = 1.96 * pipeStdMs / std::sqrt(n);
+                            }
+
+                            if (extendedStats) {
+                                out[s * 12 + 0] = static_cast<double>(ctxLen);
+                                out[s * 12 + 1] = syncMs;
+                                out[s * 12 + 2] = pipeMs;
+                                out[s * 12 + 3] = syncTps;
+                                out[s * 12 + 4] = pipeTps;
+                                out[s * 12 + 5] = speedup;
+                                out[s * 12 + 6] = syncStdMs;
+                                out[s * 12 + 7] = pipeStdMs;
+                                out[s * 12 + 8] = syncCi95Ms;
+                                out[s * 12 + 9] = pipeCi95Ms;
+                                out[s * 12 + 10] = syncStdTps;
+                                out[s * 12 + 11] = pipeStdTps;
+                            } else {
+                                out[s * 6 + 0] = static_cast<double>(ctxLen);
+                                out[s * 6 + 1] = syncMs;
+                                out[s * 6 + 2] = pipeMs;
+                                out[s * 6 + 3] = syncTps;
+                                out[s * 6 + 4] = pipeTps;
+                                out[s * 6 + 5] = speedup;
+                            }
+                        }
+
+                        if (ok) {
+                            nvidiaResult = NvidiaAccelResult::ok("Long-context benchmark complete");
+                        }
+                    }
+                }
+            }
+        } else {
+            nvidiaResult = NvidiaAccelResult::error("Unknown NVIDIA kernel");
+        }
+    } else {
+        nvidiaResult = NvidiaAccelResult::error("No kernel name specified");
+    }
+
+    if (!nvidiaResult.success) {
+        return RouterResult::error(nvidiaResult.detail, nvidiaResult.errorCode);
+    }
+
+    RouterResult r = RouterResult::ok(nvidiaResult.detail, RouterBackendType::NVIDIA_CUDA);
+    r.throughputGFLOPS = nvidiaResult.throughputGFLOPS;
+    r.elapsedMs = nvidiaResult.elapsedMs;
+    return r;
 }
 
 // ============================================================================

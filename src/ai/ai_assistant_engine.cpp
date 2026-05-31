@@ -1,1438 +1,537 @@
-#include "ai_assistant_engine.h"
-#include "../cpu_inference_engine.h"
-#include "../asm/ai_agent_masm_bridge.hpp"
-#include "../core/unified_hotpatch_manager.hpp"
-#include <sstream>
+// =============================================================================
+// test_orchestrator_modules.cpp — Regression Tests for Orchestrator Modules
+// =============================================================================
+
+#include <string>
+#include <vector>
+#include <cassert>
+#include <cstdint>
 #include <chrono>
-#include <iomanip>
-#include <algorithm>
-#include <random>
-#include <condition_variable>
-#include <filesystem>
-#include <unordered_set>
-#include <unordered_map>
+#include <sstream>
 #include <fstream>
-#include <set>
-#include <cctype>
-#include <cstdlib>
-#include <atomic>
-#include <memory>
-#include <windows.h>
-#include <winhttp.h>
-#include "../gguf_loader.h"
+#include <functional>
+#include <filesystem>
 
-#pragma comment(lib, "winhttp.lib")
+#include "ToolRegistry.h"
+#include "FIMPromptBuilder.h"
+#include "NativeInferenceClient.h"
+#include "AgentOrchestrator.h"
+#include "DiskRecoveryAgent.h"
 
-// MASM Bridge for AI operations
-static std::unique_ptr<AiMasmBridge> g_aiMasmBridge;
-static std::atomic<bool> g_aiMasmInitialized{false};
-static std::atomic<uint64_t> g_aiTensorOpsCompleted{0};
-static std::atomic<uint64_t> g_aiMasmCycles{0};
+using namespace RawrXD::Agent;
+using namespace RawrXD::Recovery;
 
-namespace RawrXD {
-namespace AI {
+static int g_testsPassed = 0;
+static int g_testsFailed = 0;
+static int g_testsSkipped = 0;
 
-// Forward declaration for helper
-static void ai_completion_callback(const void* result_data, size_t result_size) {
-    if (result_data && result_size > 0) {
-        g_aiTensorOpsCompleted.fetch_add(1, std::memory_order_relaxed);
-        // This callback would process completed MASM tensor operations
-    }
+struct TestResult {
+    bool passed;
+    std::string name;
+    std::string detail;
+    double elapsed_ms;
+};
+
+static std::vector<TestResult> g_results;
+
+#define TEST_ASSERT(cond, name) do { \
+    if (!(cond)) { \
+        g_testsFailed++; \
+        g_results.push_back({false, name, #cond, 0}); \
+        return; \
+    } \
+} while(0)
+
+#define TEST_ASSERT_EQ(a, b, name) do { \
+    if ((a) != (b)) { \
+        g_testsFailed++; \
+        g_results.push_back({false, name, "mismatch", 0}); \
+        return; \
+    } \
+} while(0)
+
+#define TEST_PASS(name) do { \
+    g_testsPassed++; \
+    g_results.push_back({true, name, "", 0}); \
+} while(0)
+
+#define TEST_SKIP(name, reason) do { \
+    g_testsSkipped++; \
+} while(0)
+
+// ==========================================================================
+// § 1. ToolRegistry — X-Macro Enum & Schema Generation
+// ==========================================================================
+
+void test_xmacro_enum_count() {
+    // Tool count may grow as new capabilities are added.
+    auto count = static_cast<uint32_t>(ToolId::_COUNT);
+    TEST_ASSERT(count >= 11, "X-Macro generates at least the baseline ToolId values");
+    TEST_PASS("xmacro_enum_count");
 }
 
-// Forward declaration for helper
-std::string GetCurrentTimestamp();
-std::string EscapeJSON(const std::string& str);
-
-namespace {
-constexpr char kBackendCpuOnly[] = "cpu-only";
-constexpr char kBackendGpuOnly[] = "gpu-only";
-constexpr char kBackendAutoVerifiedFallback[] = "auto-with-verified-fallback";
-
-std::string ToLowerCopy(std::string s) {
-    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) {
-        return static_cast<char>(std::tolower(c));
-    });
-    return s;
+void test_registry_singleton() {
+    auto& reg1 = AgentToolRegistry::Instance();
+    auto& reg2 = AgentToolRegistry::Instance();
+    TEST_ASSERT(&reg1 == &reg2, "Registry is a singleton");
+    TEST_PASS("registry_singleton");
 }
 
-bool IsTruthy(const std::string& value) {
-    const std::string v = ToLowerCopy(value);
-    return v == "1" || v == "true" || v == "yes" || v == "on";
+void test_registry_list_tools() {
+    auto& reg = AgentToolRegistry::Instance();
+    auto tools = reg.ListTools();
+    TEST_ASSERT(tools.size() >= 11, "ListTools returns at least the baseline tools");
+
+    // Check specific tool names exist
+    bool hasReadFile = false, hasDiskRecovery = false;
+    for (const auto& t : tools) {
+        if (t == "read_file") hasReadFile = true;
+        if (t == "disk_recovery") hasDiskRecovery = true;
+    }
+    TEST_ASSERT(hasReadFile, "read_file tool registered");
+    TEST_ASSERT(hasDiskRecovery, "disk_recovery tool registered");
+    TEST_PASS("registry_list_tools");
 }
 
-void LogBackendSelection(const std::string& backend, bool success, const std::string& reason) {
-    std::cerr << "[BackendSelect] backend=" << backend
-              << " status=" << (success ? "success" : "fail")
-              << " reason=" << reason << std::endl;
+void test_registry_schemas_valid() {
+    auto& reg = AgentToolRegistry::Instance();
+    json schemas = reg.GetToolSchemas();
+    TEST_ASSERT(schemas.size() >= 11, "GetToolSchemas returns at least the baseline entries");
+
+    // Each schema should have type=function with function.name and function.parameters
+    for (size_t i = 0; i < schemas.size(); ++i) {
+        const auto& s = schemas[i];
+        TEST_ASSERT(s.contains("type"), "Schema has type field");
+        TEST_ASSERT(s.contains("function"), "Schema has function field");
+        const auto& fn = s["function"];
+        TEST_ASSERT(fn.contains("name"), "Function has name");
+        TEST_ASSERT(fn.contains("description"), "Function has description");
+        TEST_ASSERT(fn.contains("parameters"), "Function has parameters");
+    }
+    TEST_PASS("registry_schemas_valid");
 }
 
-bool HasGgufExtension(const std::string& path) {
-    const std::filesystem::path p(path);
-    const std::string ext = ToLowerCopy(p.extension().string());
-    return ext == ".gguf";
-}
-
-bool HasValidGgufMagic(const std::string& path) {
-    std::ifstream in(path, std::ios::binary);
-    if (!in.is_open()) {
-        return false;
-    }
-    uint32_t magic = 0;
-    in.read(reinterpret_cast<char*>(&magic), sizeof(magic));
-    return in.gcount() == static_cast<std::streamsize>(sizeof(magic)) && magic == 0x46554747U;
-}
-
-std::set<int> ParseIntAllowlist(const std::string& csv) {
-    std::set<int> out;
-    std::stringstream ss(csv);
-    std::string item;
-    while (std::getline(ss, item, ',')) {
-        item.erase(std::remove_if(item.begin(), item.end(), [](unsigned char c) { return std::isspace(c) != 0; }), item.end());
-        if (item.empty()) {
-            continue;
-        }
-        try {
-            out.insert(std::stoi(item));
-        } catch (...) {
-        }
-    }
-    return out;
-}
-
-std::string GetBackendMode(const ModelConfig& config) {
-    auto it = config.custom_params.find("backend_mode");
-    if (it == config.custom_params.end() || it->second.empty()) {
-        return kBackendAutoVerifiedFallback;
-    }
-    return ToLowerCopy(it->second);
-}
-
-bool IsLocalEndpoint(const std::string& endpoint) {
-    std::wstring w = ToWide(endpoint);
-    if (w.empty()) {
-        return false;
-    }
-
-    URL_COMPONENTSW parts;
-    ZeroMemory(&parts, sizeof(parts));
-    parts.dwStructSize = sizeof(parts);
-    parts.dwSchemeLength = static_cast<DWORD>(-1);
-    parts.dwHostNameLength = static_cast<DWORD>(-1);
-    parts.dwUrlPathLength = static_cast<DWORD>(-1);
-    parts.dwExtraInfoLength = static_cast<DWORD>(-1);
-    if (!WinHttpCrackUrl(w.c_str(), 0, 0, &parts)) {
-        return false;
-    }
-
-    std::wstring host(parts.lpszHostName, parts.dwHostNameLength);
-    std::string hostUtf8;
-    if (!host.empty()) {
-        int bytes = WideCharToMultiByte(CP_UTF8, 0, host.c_str(), static_cast<int>(host.size()), nullptr, 0, nullptr, nullptr);
-        if (bytes > 0) {
-            hostUtf8.resize(bytes);
-            WideCharToMultiByte(CP_UTF8, 0, host.c_str(), static_cast<int>(host.size()), &hostUtf8[0], bytes, nullptr, nullptr);
-        }
-    }
-
-    const std::string h = ToLowerCopy(hostUtf8);
-    return h == "localhost" || h == "127.0.0.1" || h == "::1";
-}
-
-std::wstring ToWide(const std::string& input) {
-    if (input.empty()) return std::wstring();
-    int size = MultiByteToWideChar(CP_UTF8, 0, input.c_str(), static_cast<int>(input.size()), nullptr, 0);
-    if (size <= 0) return std::wstring();
-    std::wstring out(size, L'\0');
-    MultiByteToWideChar(CP_UTF8, 0, input.c_str(), static_cast<int>(input.size()), &out[0], size);
-    return out;
-}
-
-std::string WinHttpRequest(const std::string& url,
-                           const std::wstring& method,
-                           const std::string& payload,
-                           const std::vector<std::wstring>& headers) {
-    URL_COMPONENTSW parts;
-    ZeroMemory(&parts, sizeof(parts));
-    parts.dwStructSize = sizeof(parts);
-    parts.dwSchemeLength = static_cast<DWORD>(-1);
-    parts.dwHostNameLength = static_cast<DWORD>(-1);
-    parts.dwUrlPathLength = static_cast<DWORD>(-1);
-    parts.dwExtraInfoLength = static_cast<DWORD>(-1);
-
-    std::wstring url_w = ToWide(url);
-    if (url_w.empty()) return "";
-    if (!WinHttpCrackUrl(url_w.c_str(), 0, 0, &parts)) {
-        return "";
-    }
-
-    std::wstring host(parts.lpszHostName, parts.dwHostNameLength);
-    std::wstring path(parts.lpszUrlPath, parts.dwUrlPathLength);
-    if (parts.dwExtraInfoLength > 0) {
-        path.append(parts.lpszExtraInfo, parts.dwExtraInfoLength);
-    }
-
-    HINTERNET session = WinHttpOpen(L"RawrXD/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
-                                    WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
-    if (!session) return "";
-
-    HINTERNET connect = WinHttpConnect(session, host.c_str(), parts.nPort, 0);
-    if (!connect) {
-        WinHttpCloseHandle(session);
-        return "";
-    }
-
-    DWORD flags = (parts.nScheme == INTERNET_SCHEME_HTTPS) ? WINHTTP_FLAG_SECURE : 0;
-    HINTERNET request = WinHttpOpenRequest(connect, method.c_str(), path.c_str(), nullptr,
-                                           WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, flags);
-    if (!request) {
-        WinHttpCloseHandle(connect);
-        WinHttpCloseHandle(session);
-        return "";
-    }
-
-    for (const auto& header : headers) {
-        WinHttpAddRequestHeaders(request, header.c_str(), -1L, WINHTTP_ADDREQ_FLAG_ADD);
-    }
-
-    BOOL ok = WinHttpSendRequest(request,
-                                 WINHTTP_NO_ADDITIONAL_HEADERS,
-                                 0,
-                                 payload.empty() ? WINHTTP_NO_REQUEST_DATA : (LPVOID)payload.data(),
-                                 static_cast<DWORD>(payload.size()),
-                                 static_cast<DWORD>(payload.size()),
-                                 0);
-    if (!ok || !WinHttpReceiveResponse(request, nullptr)) {
-        WinHttpCloseHandle(request);
-        WinHttpCloseHandle(connect);
-        WinHttpCloseHandle(session);
-        return "";
-    }
-
-    std::string body;
-    DWORD size = 0;
-    while (WinHttpQueryDataAvailable(request, &size) && size > 0) {
-        std::vector<char> buf(size + 1, 0);
-        DWORD read = 0;
-        if (!WinHttpReadData(request, buf.data(), size, &read) || read == 0) break;
-        body.append(buf.data(), read);
-    }
-
-    WinHttpCloseHandle(request);
-    WinHttpCloseHandle(connect);
-    WinHttpCloseHandle(session);
-    return body;
-}
-} // namespace
-
-// ============================================================================
-// AIAssistantEngine Implementation
-// ============================================================================
-
-AIAssistantEngine::AIAssistantEngine()
-    : m_initialized(false)
-    , m_shutdown_requested(false)
-    , m_total_suggestions(0)
-    , m_accepted_suggestions(0)
-    , m_rejected_suggestions(0)
-{
-}
-
-AIAssistantEngine::~AIAssistantEngine() {
-    Shutdown();
-}
-
-bool AIAssistantEngine::Initialize(const ModelConfig& config) {
-    if (m_initialized) return true;
-
-    m_current_config = config;
-
-    // Create appropriate backend based on provider
-    switch (config.provider) {
-        case ModelProvider::Local_GGUF:
-            m_backend = std::make_unique<GGUFBackend>();
-            LogBackendSelection("local_gguf", true, "selected provider");
-            break;
-        case ModelProvider::Ollama:
-            m_backend = std::make_unique<OllamaBackend>();
-            LogBackendSelection("ollama", true, "selected provider");
-            break;
-        case ModelProvider::OpenAI_Compatible:
-        case ModelProvider::Anthropic:
-            m_backend = std::make_unique<OpenAIBackend>();
-            LogBackendSelection("openai_compatible", true, "selected provider");
-            break;
-        default:
-            LogBackendSelection("unknown", false, "unsupported model provider");
-            if (m_error_callback) {
-                m_error_callback("Unsupported model provider");
-            }
-            return false;
-    }
-
-    if (!m_backend->Initialize(config)) {
-        LogBackendSelection("backend_init", false, "backend initialize returned false");
-        if (m_error_callback) {
-            m_error_callback("Failed to initialize model backend");
-        }
-        return false;
-    }
-
-    // Start worker threads for async operations
-    int num_threads = std::thread::hardware_concurrency();
-    for (int i = 0; i < num_threads; ++i) {
-        m_worker_threads.emplace_back(&AIAssistantEngine::WorkerThread, this);
-    }
-
-    m_initialized = true;
-    return true;
-}
-
-void AIAssistantEngine::Shutdown() {
-    if (!m_initialized) return;
-
-    m_shutdown_requested = true;
-    m_queue_cv.notify_all();
-
-    for (auto& thread : m_worker_threads) {
-        if (thread.joinable()) {
-            thread.join();
-        }
-    }
-
-    if (m_backend) {
-        m_backend->Shutdown();
-    }
-
-    m_initialized = false;
-}
-
-bool AIAssistantEngine::LoadModel(const std::string& model_path) {
-    ModelConfig config = m_current_config;
-    config.model_name = model_path;
-    return SwitchModel(config);
-}
-
-bool AIAssistantEngine::SwitchModel(const ModelConfig& new_config) {
-    if (m_backend) {
-        m_backend->Shutdown();
-    }
-
-    return Initialize(new_config);
-}
-
-std::vector<std::string> AIAssistantEngine::ListAvailableModels() const {
-    std::vector<std::string> models;
-    std::unordered_set<std::string> seen;
-
-    auto addModel = [&](const std::string& name) {
-        if (!name.empty() && seen.insert(name).second) {
-            models.push_back(name);
-        }
-    };
-
-    auto addDir = [&](const std::string& dir) {
-        if (!dir.empty()) {
-            std::filesystem::path p(dir);
-            if (!p.is_absolute()) {
-                p = std::filesystem::current_path() / p;
-            }
-            std::error_code ec;
-            if (std::filesystem::exists(p, ec)) {
-                for (auto it = std::filesystem::recursive_directory_iterator(p, ec);
-                     it != std::filesystem::recursive_directory_iterator(); ++it) {
-                    if (ec) break;
-                    if (!it->is_regular_file()) continue;
-                    auto ext = it->path().extension().string();
-                    std::transform(ext.begin(), ext.end(), ext.begin(), [](char c) { return static_cast<char>(std::tolower(c)); });
-                    if (ext == ".gguf") {
-                        addModel(it->path().string());
-                    }
-                }
-            }
-        }
-    };
-
-    if (const char* env = std::getenv("RAWRXD_MODELS_DIR")) {
-        std::string envDirs(env);
-        size_t start = 0;
-        while (start < envDirs.size()) {
-            size_t end = envDirs.find(';', start);
-            if (end == std::string::npos) end = envDirs.size();
-            addDir(envDirs.substr(start, end - start));
-            start = end + 1;
-        }
-    }
-
-    auto it = m_current_config.custom_params.find("models_dir");
-    if (it != m_current_config.custom_params.end()) {
-        addDir(it->second);
-    }
-
-    addDir("models");
-    addDir("Modelfiles");
-    addDir("RawrXD-ModelLoader");
-
-    if (m_current_config.provider == ModelProvider::Ollama) {
-        std::string endpoint = m_current_config.api_endpoint.empty()
-            ? "http://localhost:11434/api/tags"
-            : m_current_config.api_endpoint;
-
-        auto queryOllama = [&](const std::string& url) {
-            URL_COMPONENTSW parts;
-            ZeroMemory(&parts, sizeof(parts));
-            parts.dwStructSize = sizeof(parts);
-            parts.dwSchemeLength = static_cast<DWORD>(-1);
-            parts.dwHostNameLength = static_cast<DWORD>(-1);
-            parts.dwUrlPathLength = static_cast<DWORD>(-1);
-            parts.dwExtraInfoLength = static_cast<DWORD>(-1);
-
-            std::wstring url_w = ToWide(url);
-            if (url_w.empty()) return;
-            if (!WinHttpCrackUrl(url_w.c_str(), 0, 0, &parts)) return;
-
-            std::wstring host(parts.lpszHostName, parts.dwHostNameLength);
-            std::wstring path(parts.lpszUrlPath, parts.dwUrlPathLength);
-            if (parts.dwExtraInfoLength > 0) {
-                path.append(parts.lpszExtraInfo, parts.dwExtraInfoLength);
-            }
-
-            HINTERNET session = WinHttpOpen(L"RawrXD/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
-                                            WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
-            if (!session) return;
-            HINTERNET connect = WinHttpConnect(session, host.c_str(), parts.nPort, 0);
-            if (!connect) { WinHttpCloseHandle(session); return; }
-            DWORD flags = (parts.nScheme == INTERNET_SCHEME_HTTPS) ? WINHTTP_FLAG_SECURE : 0;
-            HINTERNET request = WinHttpOpenRequest(connect, L"GET", path.c_str(), nullptr,
-                                                   WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, flags);
-            if (!request) { WinHttpCloseHandle(connect); WinHttpCloseHandle(session); return; }
-            BOOL ok = WinHttpSendRequest(request, WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0);
-            if (!ok || !WinHttpReceiveResponse(request, nullptr)) {
-                WinHttpCloseHandle(request);
-                WinHttpCloseHandle(connect);
-                WinHttpCloseHandle(session);
-                return;
-            }
-
-            std::string body;
-            DWORD size = 0;
-            while (WinHttpQueryDataAvailable(request, &size) && size > 0) {
-                std::vector<char> buf(size + 1, 0);
-                DWORD read = 0;
-                if (!WinHttpReadData(request, buf.data(), size, &read) || read == 0) break;
-                body.append(buf.data(), read);
-            }
-
-            WinHttpCloseHandle(request);
-            WinHttpCloseHandle(connect);
-            WinHttpCloseHandle(session);
-
-            size_t pos = 0;
-            while ((pos = body.find("\"name\":\"", pos)) != std::string::npos) {
-                pos += 8;
-                size_t end = body.find("\"", pos);
-                if (end == std::string::npos) break;
-                addModel("ollama:" + body.substr(pos, end - pos));
-                pos = end + 1;
-            }
-        };
-
-        queryOllama(endpoint);
-    }
-
-    return models;
-}
-
-// ============================================================================
-// Inline Completion (GitHub Copilot style)
-// ============================================================================
-
-void AIAssistantEngine::RequestInlineCompletion(const CodeContext& context,
-                                                SuggestionCallback callback) {
-    if (!m_initialized) {
-        if (m_error_callback) {
-            m_error_callback("AI engine not initialized");
-        }
-        return;
-    }
-
-    m_cancel_inline = false;
-
-    // Enqueue async task
-    EnqueueTask([this, context, callback]() {
-        ProcessInlineRequest(context, callback);
-    });
-}
-
-void AIAssistantEngine::ProcessInlineRequest(const CodeContext& context,
-                                             SuggestionCallback callback) {
-    if (m_cancel_inline) {
-        return;
-    }
-    std::string prompt = BuildPrompt(context, AssistanceMode::InlineComplete);
-    std::string response = CallModel(prompt, 150);  // Shorter for inline suggestions
-
-    if (m_cancel_inline) {
-        return;
-    }
-
-    AISuggestion suggestion = ParseInlineSuggestion(response, context);
-    
-    if (callback) {
-        callback(suggestion);
-    }
-
-    m_total_suggestions++;
-}
-
-AISuggestion AIAssistantEngine::ParseInlineSuggestion(const std::string& model_response,
-                                                      const CodeContext& context) {
-    AISuggestion suggestion;
-    suggestion.insert_line = context.cursor_line;
-    suggestion.insert_column = context.cursor_column;
-
-    // Extract code from response (remove markdown, explanations)
-    std::string clean_response = model_response;
-    
-    // Remove ```language and ``` markers
-    size_t start = clean_response.find("```");
-    if (start != std::string::npos) {
-        size_t newline = clean_response.find('\n', start);
-        if (newline != std::string::npos) {
-            clean_response = clean_response.substr(newline + 1);
-        }
-        size_t end = clean_response.rfind("```");
-        if (end != std::string::npos) {
-            clean_response = clean_response.substr(0, end);
-        }
-    }
-
-    // Trim whitespace
-    clean_response.erase(0, clean_response.find_first_not_of(" \t\n\r"));
-    clean_response.erase(clean_response.find_last_not_of(" \t\n\r") + 1);
-
-    suggestion.suggestion_text = clean_response;
-    suggestion.is_multiline = (std::count(clean_response.begin(), clean_response.end(), '\n') > 0);
-
-    float confidence = 0.5f;
-    if (clean_response.size() > 20) confidence += 0.2f;
-    if (clean_response.size() > 80) confidence += 0.1f;
-    if (suggestion.is_multiline) confidence += 0.1f;
-    if (clean_response.find("TODO") != std::string::npos || clean_response.find("FIXME") != std::string::npos) {
-        confidence -= 0.3f;
-    }
-    if (clean_response.find("???") != std::string::npos) confidence -= 0.2f;
-    if (confidence < 0.05f) confidence = 0.05f;
-    if (confidence > 0.99f) confidence = 0.99f;
-    suggestion.confidence = confidence;
-    suggestion.reasoning = "AI-generated code completion";
-
-    return suggestion;
-}
-
-void AIAssistantEngine::AcceptSuggestion(const AISuggestion& suggestion) {
-    m_accepted_suggestions++;
-    // Log for future training/fine-tuning
-    AddRecentEdit("Accepted: " + suggestion.suggestion_text.substr(0, 50));
-}
-
-void AIAssistantEngine::RejectSuggestion(const AISuggestion& suggestion) {
-    m_rejected_suggestions++;
-}
-
-void AIAssistantEngine::CancelInlineCompletion() {
-    m_cancel_inline = true;
-}
-
-// ============================================================================
-// Chat Mode (Cursor Chat / Copilot Chat)
-// ============================================================================
-
-std::string AIAssistantEngine::StartChatSession() {
-    std::lock_guard<std::mutex> lock(m_chat_mutex);
-    
-    // Generate unique session ID
-    auto now = std::chrono::system_clock::now();
-    auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
-        now.time_since_epoch()).count();
-    std::string session_id = "chat_" + std::to_string(timestamp);
-
-    m_chat_sessions[session_id] = std::vector<ChatMessage>();
-
-    // Add system message
-    ChatMessage system_msg;
-    system_msg.role = ChatMessage::Role::System;
-    system_msg.content = "You are an expert coding assistant integrated into the RawrXD IDE. "
-                        "Help the user with code questions, debugging, refactoring, and implementation. "
-                        "Be concise and practical. Provide code examples when relevant.";
-    system_msg.timestamp = GetCurrentTimestamp();
-    m_chat_sessions[session_id].push_back(system_msg);
-
-    return session_id;
-}
-
-void AIAssistantEngine::SendChatMessage(const std::string& session_id,
-                                       const std::string& message,
-                                       const CodeContext& context,
-                                       ChatCallback callback) {
-    if (!m_initialized) {
-        if (m_error_callback) {
-            m_error_callback("AI engine not initialized");
-        }
-        return;
-    }
-
-    EnqueueTask([this, session_id, message, context, callback]() {
-        ProcessChatRequest(session_id, message, context, callback);
-    });
-}
-
-void AIAssistantEngine::ProcessChatRequest(const std::string& session_id,
-                                          const std::string& message,
-                                          const CodeContext& context,
-                                          ChatCallback callback) {
-    std::lock_guard<std::mutex> lock(m_chat_mutex);
-
-    // Add user message to history
-    ChatMessage user_msg;
-    user_msg.role = ChatMessage::Role::User;
-    user_msg.content = message;
-    user_msg.timestamp = GetCurrentTimestamp();
-    m_chat_sessions[session_id].push_back(user_msg);
-
-    // Build prompt with conversation history and context
-    std::stringstream prompt_ss;
-    
-    // Add conversation history
-    for (const auto& msg : m_chat_sessions[session_id]) {
-        if (msg.role == ChatMessage::Role::System) {
-            prompt_ss << "System: " << msg.content << "\n\n";
-        } else if (msg.role == ChatMessage::Role::User) {
-            prompt_ss << "User: " << msg.content << "\n\n";
-        } else {
-            prompt_ss << "Assistant: " << msg.content << "\n\n";
-        }
-    }
-
-    // Add code context if available
-    if (!context.selected_text.empty()) {
-        prompt_ss << "\nSelected Code:\n```" << context.language << "\n"
-                  << context.selected_text << "\n```\n\n";
-    }
-
-    prompt_ss << "Assistant: ";
-
-    // Call model
-    std::string response = CallModel(prompt_ss.str(), 1024);
-
-    // Add assistant response to history
-    ChatMessage assistant_msg;
-    assistant_msg.role = ChatMessage::Role::Assistant;
-    assistant_msg.content = response;
-    assistant_msg.timestamp = GetCurrentTimestamp();
-    m_chat_sessions[session_id].push_back(assistant_msg);
-
-    if (callback) {
-        callback(assistant_msg);
-    }
-}
-
-std::vector<ChatMessage> AIAssistantEngine::GetChatHistory(const std::string& session_id) const {
-    std::lock_guard<std::mutex> lock(const_cast<std::mutex&>(m_chat_mutex));
-    auto it = m_chat_sessions.find(session_id);
-    if (it != m_chat_sessions.end()) {
-        return it->second;
-    }
-    return {};
-}
-
-void AIAssistantEngine::ClearChatSession(const std::string& session_id) {
-    std::lock_guard<std::mutex> lock(m_chat_mutex);
-    m_chat_sessions.erase(session_id);
-}
-
-// ============================================================================
-// Inline Edit Mode (Cursor Cmd+K style)
-// ============================================================================
-
-void AIAssistantEngine::RequestEdit(const std::string& instruction,
-                                   const CodeContext& context,
-                                   EditCallback callback) {
-    if (!m_initialized) {
-        if (m_error_callback) {
-            m_error_callback("AI engine not initialized");
-        }
-        return;
-    }
-
-    EnqueueTask([this, instruction, context, callback]() {
-        ProcessEditRequest(instruction, context, callback);
-    });
-}
-
-void AIAssistantEngine::ProcessEditRequest(const std::string& instruction,
-                                          const CodeContext& context,
-                                          EditCallback callback) {
-    std::stringstream prompt_ss;
-    prompt_ss << "You are a code editing assistant. The user has selected code and wants to edit it.\n\n";
-    prompt_ss << "Original Code:\n```" << context.language << "\n"
-              << context.selected_text << "\n```\n\n";
-    prompt_ss << "User Instruction: " << instruction << "\n\n";
-    prompt_ss << "Provide the edited code. Only output the code, no explanations:\n```" 
-              << context.language << "\n";
-
-    std::string response = CallModel(prompt_ss.str(), 512);
-    EditOperation edit = ParseEditOperation(response, context);
-    edit.instruction = instruction;
-
-    if (callback) {
-        callback(edit);
-    }
-}
-
-EditOperation AIAssistantEngine::ParseEditOperation(const std::string& model_response,
-                                                   const CodeContext& context) {
-    EditOperation edit;
-    edit.original_text = context.selected_text;
-    edit.start_line = context.cursor_line;
-    
-    // Count lines in selected text
-    int line_count = std::count(context.selected_text.begin(), context.selected_text.end(), '\n');
-    edit.end_line = context.cursor_line + line_count;
-
-    // Extract code from response
-    std::string clean_response = model_response;
-    size_t start = clean_response.find("```");
-    if (start != std::string::npos) {
-        size_t newline = clean_response.find('\n', start);
-        if (newline != std::string::npos) {
-            clean_response = clean_response.substr(newline + 1);
-        }
-        size_t end = clean_response.rfind("```");
-        if (end != std::string::npos) {
-            clean_response = clean_response.substr(0, end);
-        }
-    }
-
-    clean_response.erase(0, clean_response.find_first_not_of(" \t\n\r"));
-    clean_response.erase(clean_response.find_last_not_of(" \t\n\r") + 1);
-
-    edit.new_text = clean_response;
-    edit.confidence = 0.90f;
-
-    return edit;
-}
-
-void AIAssistantEngine::ApplyEdit(const EditOperation& edit) {
-    AddRecentEdit("Applied edit: " + edit.instruction);
+void test_registry_dispatch_read_file() {
+    auto& reg = AgentToolRegistry::Instance();
+
+    // Create a temp file for testing
+    std::string tempPath = (std::filesystem::temp_directory_path() / "rawrxd_test_read.txt").string();
     {
-        std::lock_guard<std::mutex> lock(m_edit_mutex);
-        m_edit_history.push_back(edit);
+        std::ofstream ofs(tempPath);
+        ofs << "Hello, RawrXD!";
     }
+
+    json args;
+    args["path"] = tempPath;
+    auto result = reg.Dispatch("read_file", args);
+    TEST_ASSERT(result.success, "read_file dispatch succeeds");
+    TEST_ASSERT(result.output == "Hello, RawrXD!", "read_file returns correct content");
+    TEST_ASSERT(result.elapsed_ms >= 0, "elapsed_ms is non-negative");
+
+    // Cleanup
+    std::filesystem::remove(tempPath);
+    TEST_PASS("registry_dispatch_read_file");
 }
 
-void AIAssistantEngine::UndoLastEdit() {
-    EditOperation last;
-    {
-        std::lock_guard<std::mutex> lock(m_edit_mutex);
-        if (m_edit_history.empty()) {
-            return;
-        }
-        last = m_edit_history.back();
-        m_edit_history.pop_back();
-    }
-    AddRecentEdit("Undid edit: " + last.instruction);
+void test_registry_dispatch_write_file() {
+    auto& reg = AgentToolRegistry::Instance();
+
+    std::string tempPath = (std::filesystem::temp_directory_path() / "rawrxd_test_write.txt").string();
+
+    json args;
+    args["path"] = tempPath;
+    args["content"] = "Written by test";
+    auto result = reg.Dispatch("write_file", args);
+    TEST_ASSERT(result.success, "write_file dispatch succeeds");
+
+    // Verify content
+    std::ifstream ifs(tempPath);
+    std::string content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
+    TEST_ASSERT(content == "Written by test", "write_file content is correct");
+
+    std::filesystem::remove(tempPath);
+    TEST_PASS("registry_dispatch_write_file");
 }
 
-// ============================================================================
-// Agent Mode (Autonomous coding)
-// ============================================================================
+void test_registry_dispatch_unknown_tool() {
+    auto& reg = AgentToolRegistry::Instance();
 
-std::string AIAssistantEngine::CreateAgentTask(const std::string& task_description,
-                                              const CodeContext& context) {
-    std::lock_guard<std::mutex> lock(m_agent_mutex);
-
-    auto now = std::chrono::system_clock::now();
-    auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
-        now.time_since_epoch()).count();
-    std::string task_id = "agent_" + std::to_string(timestamp);
-
-    AgentTask task;
-    task.task_id = task_id;
-    task.description = task_description;
-    task.status = AgentTask::Status::Pending;
-    task.current_step = 0;
-
-    m_agent_tasks[task_id] = task;
-    m_agent_controls[task_id] = std::make_shared<AgentControl>();
-    return task_id;
+    json args;
+    auto result = reg.Dispatch("nonexistent_tool", args);
+    TEST_ASSERT(!result.success, "Unknown tool returns failure");
+    TEST_ASSERT(result.output.find("Unknown tool") != std::string::npos, "Error mentions unknown");
+    TEST_PASS("registry_dispatch_unknown_tool");
 }
 
-void AIAssistantEngine::StartAgent(const std::string& task_id, AgentCallback callback) {
-    EnqueueTask([this, task_id, callback]() {
-        ProcessAgentTask(task_id);
-        if (callback) {
-            callback(GetAgentStatus(task_id));
-        }
-    });
+void test_registry_validation_missing_required() {
+    auto& reg = AgentToolRegistry::Instance();
+
+    json emptyArgs;
+    auto result = reg.Dispatch("read_file", emptyArgs);
+    TEST_ASSERT(!result.success, "Missing required param returns failure");
+    TEST_ASSERT(result.output.find("path") != std::string::npos ||
+                result.output.find("Validation") != std::string::npos,
+                "Error mentions the missing parameter");
+    TEST_PASS("registry_validation_missing_required");
 }
 
-void AIAssistantEngine::ProcessAgentTask(const std::string& task_id) {
-    std::lock_guard<std::mutex> lock(m_agent_mutex);
+void test_registry_stats() {
+    auto& reg = AgentToolRegistry::Instance();
 
-    auto it = m_agent_tasks.find(task_id);
-    if (it == m_agent_tasks.end()) return;
-
-    auto controlIt = m_agent_controls.find(task_id);
-    if (controlIt == m_agent_controls.end()) {
-        m_agent_controls[task_id] = std::make_shared<AgentControl>();
-        controlIt = m_agent_controls.find(task_id);
-    }
-    auto control = controlIt->second;
-
-    AgentTask& task = it->second;
-    task.status = AgentTask::Status::Running;
-
-    // Step 1: Generate plan
-    std::stringstream plan_prompt;
-    plan_prompt << "You are an autonomous coding agent. Break down this task into steps:\n\n";
-    plan_prompt << "Task: " << task.description << "\n\n";
-    plan_prompt << "Provide a numbered list of concrete steps to complete this task:\n";
-
-    std::string plan_response = CallModel(plan_prompt.str(), 512);
-    task.plan = plan_response;
-
-    // Parse steps from response
-    std::istringstream iss(plan_response);
-    std::string line;
-    while (std::getline(iss, line)) {
-        if (!line.empty() && (line[0] == '1' || line[0] == '2' || line[0] == '3' ||
-                             line[0] == '4' || line[0] == '5')) {
-            task.steps.push_back(line);
-        }
-    }
-
-    std::map<std::string, std::string> context_snapshot;
-    std::vector<std::string> recent_edits;
-    {
-        std::lock_guard<std::mutex> ctx_lock(m_context_mutex);
-        context_snapshot = m_workspace_context;
-        recent_edits = m_recent_edits;
-    }
-
-    for (size_t i = 0; i < task.steps.size(); ++i) {
-        if (control->stop) {
-            task.status = AgentTask::Status::Failed;
-            task.error_message = "Stopped by user";
-            return;
-        }
-
-        {
-            std::unique_lock<std::mutex> pause_lock(control->mutex);
-            control->cv.wait(pause_lock, [&]() { return !control->pause || control->stop; });
-        }
-
-        if (control->stop) {
-            task.status = AgentTask::Status::Failed;
-            task.error_message = "Stopped by user";
-            return;
-        }
-
-        task.current_step = static_cast<int>(i + 1);
-
-        std::stringstream step_prompt;
-        step_prompt << "You are an autonomous coding agent.\n";
-        step_prompt << "Task: " << task.description << "\n";
-        step_prompt << "Current Step: " << task.steps[i] << "\n\n";
-        if (!context_snapshot.empty()) {
-            step_prompt << "Workspace Context:\n";
-            int count = 0;
-            for (const auto& kv : context_snapshot) {
-                step_prompt << "File: " << kv.first << "\n";
-                step_prompt << kv.second << "\n\n";
-                if (++count >= 3) break;
-            }
-        }
-        if (!recent_edits.empty()) {
-            step_prompt << "Recent Edits:\n";
-            for (const auto& edit : recent_edits) {
-                step_prompt << "- " << edit << "\n";
-            }
-        }
-        step_prompt << "Provide the concrete code or instructions to apply for this step.\n";
-
-        std::string step_response = CallModel(step_prompt.str(), 512);
-
-        EditOperation op;
-        op.instruction = task.steps[i];
-        op.original_text = "";
-        op.new_text = step_response;
-        op.start_line = 0;
-        op.end_line = 0;
-        op.confidence = 0.75f;
-        task.applied_edits.push_back(op);
-    }
-
-    task.status = AgentTask::Status::Completed;
+    uint64_t invocations = reg.GetTotalInvocations();
+    uint64_t errors = reg.GetTotalErrors();
+    // After previous tests, should have some invocations
+    TEST_ASSERT(invocations > 0, "Invocation count > 0 after dispatches");
+    // We had at least one error (unknown tool, validation fail)
+    TEST_ASSERT(errors >= 1, "Error count tracks failures");
+    TEST_PASS("registry_stats");
 }
 
-void AIAssistantEngine::PauseAgent(const std::string& task_id) {
-    std::lock_guard<std::mutex> lock(m_agent_mutex);
-    auto it = m_agent_tasks.find(task_id);
-    if (it == m_agent_tasks.end()) return;
-    auto controlIt = m_agent_controls.find(task_id);
-    if (controlIt == m_agent_controls.end()) return;
-    bool new_state = !controlIt->second->pause.load();
-    controlIt->second->pause = new_state;
-    if (!new_state) {
-        controlIt->second->cv.notify_all();
-        it->second.status = AgentTask::Status::Running;
-    } else {
-        it->second.status = AgentTask::Status::Pending;
-    }
+void test_registry_system_prompt() {
+    auto& reg = AgentToolRegistry::Instance();
+
+    std::string prompt = reg.GetSystemPrompt("d:\\rawrxd", {"main.cpp", "ToolRegistry.h"});
+    TEST_ASSERT(!prompt.empty(), "System prompt is non-empty");
+    TEST_ASSERT(prompt.find("RawrXD Agent") != std::string::npos, "Prompt identifies as RawrXD Agent");
+    TEST_ASSERT(prompt.find("d:\\rawrxd") != std::string::npos, "Prompt includes CWD");
+    TEST_ASSERT(prompt.find("main.cpp") != std::string::npos, "Prompt lists open files");
+    TEST_PASS("registry_system_prompt");
 }
 
-void AIAssistantEngine::StopAgent(const std::string& task_id) {
-    std::lock_guard<std::mutex> lock(m_agent_mutex);
-    auto it = m_agent_tasks.find(task_id);
-    if (it != m_agent_tasks.end()) {
-        it->second.status = AgentTask::Status::Failed;
-        it->second.error_message = "Stopped by user";
-    }
-    auto controlIt = m_agent_controls.find(task_id);
-    if (controlIt != m_agent_controls.end()) {
-        controlIt->second->stop = true;
-        controlIt->second->cv.notify_all();
-    }
+// ==========================================================================
+// § 2. FIMPromptBuilder — Fill-in-Middle Prompt Construction
+// ==========================================================================
+
+void test_fim_build_basic() {
+    FIMPromptBuilder builder;
+    builder.SetFormat(FIMFormat::Qwen);
+    builder.SetMaxContextTokens(4096);
+
+    EditorContext ctx;
+    ctx.filename = "test.cpp";
+    ctx.filepath = "d:\\project\\test.cpp";
+    ctx.language = "cpp";
+    ctx.cursor_line = 2;
+    ctx.cursor_column = 0;
+    ctx.full_content = "#include <iostream>\n\nint main() { return 0; }\n";
+
+    auto result = builder.Build(ctx);
+    TEST_ASSERT(result.success, "FIM build succeeds");
+    TEST_ASSERT(!result.prompt.formatted_prompt.empty(), "Formatted prompt is non-empty");
+    TEST_ASSERT(result.prompt.estimated_tokens > 0, "Token estimate > 0");
+    TEST_PASS("fim_build_basic");
 }
 
-AgentTask AIAssistantEngine::GetAgentStatus(const std::string& task_id) const {
-    std::lock_guard<std::mutex> lock(const_cast<std::mutex&>(m_agent_mutex));
-    auto it = m_agent_tasks.find(task_id);
-    if (it != m_agent_tasks.end()) {
-        return it->second;
-    }
-    return AgentTask{};
+void test_fim_build_empty_content() {
+    FIMPromptBuilder builder;
+    EditorContext ctx;
+    ctx.full_content = "";
+    ctx.cursor_line = 0;
+
+    auto result = builder.Build(ctx);
+    TEST_ASSERT(!result.success, "Empty content returns failure");
+    TEST_ASSERT(result.error.find("Empty") != std::string::npos, "Error mentions empty");
+    TEST_PASS("fim_build_empty_content");
 }
 
-// ============================================================================
-// Code Analysis
-// ============================================================================
+void test_fim_build_invalid_cursor() {
+    FIMPromptBuilder builder;
+    EditorContext ctx;
+    ctx.full_content = "some code";
+    ctx.cursor_line = -5;
 
-std::string AIAssistantEngine::ExplainCode(const std::string& code, const std::string& language) {
-    std::stringstream prompt;
-    prompt << "Explain this " << language << " code in clear, concise terms:\n\n```" 
-           << language << "\n" << code << "\n```\n\nExplanation:\n";
-    return CallModel(prompt.str(), 512);
+    auto result = builder.Build(ctx);
+    TEST_ASSERT(!result.success, "Negative cursor returns failure");
+    TEST_PASS("fim_build_invalid_cursor");
 }
 
-std::vector<std::string> AIAssistantEngine::SuggestRefactorings(const std::string& code,
-                                                                const std::string& language) {
-    std::stringstream prompt;
-    prompt << "Suggest specific refactorings for this " << language << " code:\n\n```"
-           << language << "\n" << code << "\n```\n\n";
-    prompt << "List 3-5 concrete refactoring suggestions, one per line:\n";
-    
-    std::string response = CallModel(prompt.str(), 512);
-    
-    // Parse line-separated suggestions
-    std::vector<std::string> suggestions;
-    std::istringstream iss(response);
-    std::string line;
-    while (std::getline(iss, line)) {
-        if (!line.empty() && line.find_first_not_of(" \t") != std::string::npos) {
-            suggestions.push_back(line);
-        }
-    }
-    return suggestions;
+void test_fim_qwen_format_tokens() {
+    FIMPromptBuilder builder;
+    builder.SetFormat(FIMFormat::Qwen);
+    builder.SetMaxContextTokens(2048);
+
+    EditorContext ctx;
+    ctx.filename = "main.py";
+    ctx.filepath = "main.py";
+    ctx.language = "python";
+    ctx.cursor_line = 1;
+    ctx.cursor_column = 0;
+    ctx.full_content = "def hello():\n    pass\n";
+
+    auto result = builder.Build(ctx);
+    TEST_ASSERT(result.success, "Qwen FIM build succeeds");
+    // Qwen uses <|fim_prefix|> / <|fim_suffix|> / <|fim_middle|>
+    auto& fp = result.prompt.formatted_prompt;
+    TEST_ASSERT(fp.find("fim_prefix") != std::string::npos ||
+                fp.find("fim_suffix") != std::string::npos ||
+                fp.find("prefix") != std::string::npos,
+                "Formatted prompt contains FIM tokens");
+    TEST_PASS("fim_qwen_format_tokens");
 }
 
-std::string AIAssistantEngine::GenerateTests(const std::string& code, const std::string& language) {
-    std::stringstream prompt;
-    prompt << "Generate comprehensive unit tests for this " << language << " code:\n\n```"
-           << language << "\n" << code << "\n```\n\nTests:\n```" << language << "\n";
-    return CallModel(prompt.str(), 1024);
+void test_fim_build_from_parts() {
+    FIMPromptBuilder builder;
+    builder.SetFormat(FIMFormat::Qwen);
+    builder.SetMaxContextTokens(1024);
+
+    auto result = builder.BuildFromParts("int x = ", ";", "test.cpp");
+    TEST_ASSERT(result.success, "BuildFromParts succeeds");
+    TEST_ASSERT(result.prompt.prefix_lines >= 1, "Has prefix lines");
+    TEST_PASS("fim_build_from_parts");
 }
 
-std::string AIAssistantEngine::GenerateDocumentation(const std::string& code,
-                                                    const std::string& language) {
-    std::stringstream prompt;
-    prompt << "Generate documentation comments for this " << language << " code:\n\n```"
-           << language << "\n" << code << "\n```\n\nDocumented code:\n```" << language << "\n";
-    return CallModel(prompt.str(), 1024);
+void test_fim_prefix_ratio() {
+    FIMPromptBuilder builder;
+    builder.SetPrefixRatio(0.8f);
+    builder.SetMaxContextTokens(100);
+
+    // Create content large enough to require trimming
+    std::string bigContent;
+    for (int i = 0; i < 200; i++) bigContent += "line " + std::to_string(i) + "\n";
+
+    EditorContext ctx;
+    ctx.filename = "big.txt";
+    ctx.filepath = "big.txt";
+    ctx.cursor_line = 100;
+    ctx.cursor_column = 0;
+    ctx.full_content = bigContent;
+
+    auto result = builder.Build(ctx);
+    TEST_ASSERT(result.success, "Large content FIM build succeeds");
+    TEST_ASSERT(result.prompt.estimated_tokens <= 120, "Token count is reasonably bounded");
+    TEST_PASS("fim_prefix_ratio");
 }
 
-std::vector<std::string> AIAssistantEngine::FindBugs(const std::string& code,
-                                                     const std::string& language) {
-    std::stringstream prompt;
-    prompt << "Analyze this " << language << " code for bugs, security issues, and anti-patterns:\n\n```"
-           << language << "\n" << code << "\n```\n\n";
-    prompt << "List each issue found, one per line:\n";
-    
-    std::string response = CallModel(prompt.str(), 512);
-    
-    std::vector<std::string> bugs;
-    std::istringstream iss(response);
-    std::string line;
-    while (std::getline(iss, line)) {
-        if (!line.empty() && line.find_first_not_of(" \t") != std::string::npos) {
-            bugs.push_back(line);
-        }
-    }
-    return bugs;
+// ==========================================================================
+// § 3. NativeInferenceClient — Config Validation (no server needed)
+// ==========================================================================
+
+void test_ollama_config_defaults() {
+    NativeInferenceConfig cfg;
+    TEST_ASSERT(cfg.host == "127.0.0.1", "Default host is localhost");
+    TEST_ASSERT(cfg.port == 11434, "Default port is 11434");
+    TEST_ASSERT(!cfg.chat_model.empty(), "Default chat model is set");
+    TEST_ASSERT(!cfg.fim_model.empty(), "Default FIM model is set");
+    TEST_ASSERT(cfg.timeout_ms > 0, "Default timeout > 0");
+    TEST_PASS("ollama_config_defaults");
 }
 
-std::string AIAssistantEngine::OptimizeCode(const std::string& code, const std::string& language) {
-    std::stringstream prompt;
-    prompt << "Optimize this " << language << " code for performance:\n\n```"
-           << language << "\n" << code << "\n```\n\nOptimized code:\n```" << language << "\n";
-    return CallModel(prompt.str(), 1024);
+void test_ollama_client_construction() {
+    NativeInferenceConfig cfg;
+    cfg.host = "127.0.0.1";
+    cfg.port = 11434;
+
+    // Construction should not throw or crash
+    NativeInferenceClient client(cfg);
+    TEST_PASS("ollama_client_construction");
 }
 
-// ============================================================================
-// Context Management
-// ============================================================================
+void test_ollama_cancel_before_stream() {
+    NativeInferenceConfig cfg;
+    NativeInferenceClient client(cfg);
 
-void AIAssistantEngine::UpdateWorkspaceContext(const std::map<std::string, std::string>& files) {
-    std::lock_guard<std::mutex> lock(m_context_mutex);
-    m_workspace_context = files;
+    // Cancel when nothing is running should be safe
+    client.CancelStream();
+    TEST_PASS("ollama_cancel_before_stream");
 }
 
-void AIAssistantEngine::AddRecentEdit(const std::string& edit_description) {
-    std::lock_guard<std::mutex> lock(m_context_mutex);
-    m_recent_edits.push_back(edit_description);
-    if (m_recent_edits.size() > 50) {  // Keep last 50 edits
-        m_recent_edits.erase(m_recent_edits.begin());
-    }
+// ==========================================================================
+// § 4. AgentOrchestrator — Session Management
+// ==========================================================================
+
+void test_orchestrator_construction() {
+    // Should create without crashing
+    AgentOrchestrator orch;
+    TEST_PASS("orchestrator_construction");
 }
 
-void AIAssistantEngine::ClearContext() {
-    std::lock_guard<std::mutex> lock(m_context_mutex);
-    m_workspace_context.clear();
-    m_recent_edits.clear();
+void test_orchestrator_config() {
+    AgentOrchestrator orch;
+    OrchestratorConfig cfg;
+    cfg.max_tool_rounds = 20;
+    cfg.max_conversation_tokens = 16000;
+    cfg.working_directory = "d:\\rawrxd";
+    cfg.auto_build_after_edit = true;
+    cfg.auto_diagnostics = true;
+
+    orch.SetConfig(cfg);
+    TEST_PASS("orchestrator_config");
 }
 
-// ============================================================================
-// Internal Methods
-// ============================================================================
+void test_orchestrator_cancel() {
+    AgentOrchestrator orch;
 
-std::string AIAssistantEngine::BuildPrompt(const CodeContext& context,
-                                          AssistanceMode mode,
-                                          const std::string& user_input) {
-    std::stringstream prompt;
-
-    switch (mode) {
-        case AssistanceMode::InlineComplete:
-            prompt << "Complete the following " << context.language << " code:\n\n";
-            
-            // Add file content before cursor
-            if (!context.file_content.empty()) {
-                std::istringstream iss(context.file_content);
-                std::string line;
-                int current_line = 0;
-                while (std::getline(iss, line) && current_line < context.cursor_line) {
-                    prompt << line << "\n";
-                    current_line++;
-                }
-                // Add current line up to cursor
-                if (current_line == context.cursor_line) {
-                    prompt << line.substr(0, context.cursor_column);
-                }
-            }
-            
-            prompt << "<CURSOR>";  // Mark cursor position
-            prompt << "\n\nComplete the code at <CURSOR> position. Only provide the completion:\n";
-            break;
-
-        case AssistanceMode::ChatMode:
-            prompt << user_input;  // Chat mode handled separately
-            break;
-
-        case AssistanceMode::EditMode:
-            prompt << user_input;  // Edit mode handled separately
-            break;
-
-        default:
-            prompt << user_input;
-            break;
-    }
-
-    return prompt.str();
+    // Cancel when nothing is running should be safe
+    orch.Cancel();
+    TEST_PASS("orchestrator_cancel");
 }
 
-std::string AIAssistantEngine::CallModel(const std::string& prompt, int max_tokens) {
-    if (!m_backend || !m_backend->IsReady()) {
-        return "Error: Model not ready";
-    }
+// ==========================================================================
+// § 5. DiskRecoveryAgent — C++ Wrapper (no hardware required)
+// ==========================================================================
 
-    try {
-        return m_backend->Generate(prompt, max_tokens);
-    } catch (const std::exception& e) {
-        if (m_error_callback) {
-            m_error_callback(std::string("Model generation error: ") + e.what());
-        }
-        return "";
-    }
+void test_recovery_agent_construction() {
+    DiskRecoveryAgent agent;
+    TEST_ASSERT(!agent.IsInitialized(), "Agent starts uninitialized");
+    TEST_ASSERT(!agent.IsKeyExtracted(), "No key extracted on construction");
+    TEST_ASSERT(agent.GetBridgeType() == BridgeType::Unknown, "Bridge type is Unknown");
+    TEST_PASS("recovery_agent_construction");
 }
 
-void AIAssistantEngine::WorkerThread() {
-    while (!m_shutdown_requested) {
-        std::function<void()> task;
-        
-        {
-            std::unique_lock<std::mutex> lock(m_queue_mutex);
-            m_queue_cv.wait(lock, [this]() {
-                return !m_task_queue.empty() || m_shutdown_requested;
-            });
-
-            if (m_shutdown_requested) break;
-
-            if (!m_task_queue.empty()) {
-                task = std::move(m_task_queue.front());
-                m_task_queue.pop();
-            }
-        }
-
-        if (task) {
-            task();
-        }
-    }
+void test_recovery_agent_stats_uninitialized() {
+    DiskRecoveryAgent agent;
+    auto stats = agent.GetStats();
+    TEST_ASSERT(stats.goodSectors == 0, "Zero good sectors when uninitialized");
+    TEST_ASSERT(stats.badSectors == 0, "Zero bad sectors when uninitialized");
+    TEST_ASSERT(stats.currentLBA == 0, "Zero current LBA when uninitialized");
+    TEST_ASSERT(stats.totalSectors == 0, "Zero total sectors when uninitialized");
+    TEST_PASS("recovery_agent_stats_uninitialized");
 }
 
-void AIAssistantEngine::EnqueueTask(std::function<void()> task) {
-    {
-        std::lock_guard<std::mutex> lock(m_queue_mutex);
-        m_task_queue.push(std::move(task));
-    }
-    m_queue_cv.notify_one();
+void test_recovery_agent_abort_safe() {
+    DiskRecoveryAgent agent;
+    // Abort on uninitialized agent should be safe (no-op)
+    agent.Abort();
+    TEST_PASS("recovery_agent_abort_safe");
 }
 
-std::string GetCurrentTimestamp() {
-    auto now = std::chrono::system_clock::now();
-    auto time = std::chrono::system_clock::to_time_t(now);
-    std::stringstream ss;
-    ss << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S");
-    return ss.str();
+void test_recovery_agent_move_semantics() {
+    DiskRecoveryAgent agent1;
+    DiskRecoveryAgent agent2 = std::move(agent1);
+    TEST_ASSERT(!agent2.IsInitialized(), "Moved-to agent has same state");
+    TEST_PASS("recovery_agent_move_semantics");
 }
 
-// ============================================================================
-// GGUFBackend Implementation
-// ============================================================================
+void test_recovery_stats_progress() {
+    RecoveryStats stats;
+    stats.goodSectors = 100;
+    stats.badSectors = 5;
+    stats.currentLBA = 500;
+    stats.totalSectors = 1000;
 
-bool GGUFBackend::Initialize(const ModelConfig& config) {
-    const std::string backendMode = GetBackendMode(config);
-    if (backendMode != kBackendCpuOnly &&
-        backendMode != kBackendGpuOnly &&
-        backendMode != kBackendAutoVerifiedFallback) {
-        LogBackendSelection("local_gguf", false, "invalid backend_mode; expected cpu-only, gpu-only, or auto-with-verified-fallback");
-        return false;
-    }
+    double pct = stats.ProgressPercent();
+    TEST_ASSERT(pct >= 49.9 && pct <= 50.1, "ProgressPercent computes correctly");
 
-    if (backendMode == kBackendGpuOnly) {
-        LogBackendSelection("local_gguf", false, "gpu-only requested but this build has no verified GGUF GPU backend");
-        return false;
-    }
-
-    if (!HasGgufExtension(config.model_name)) {
-        LogBackendSelection("local_gguf", false, "model format rejected: only .gguf is allowed");
-        return false;
-    }
-
-    {
-        std::ifstream file(config.model_name, std::ios::binary);
-        if (!file.is_open()) {
-            LogBackendSelection("local_gguf", false, "permission denied for runtime user");
-            return false;
-        }
-    }
-
-    if (!HasValidGgufMagic(config.model_name)) {
-        LogBackendSelection("local_gguf", false, "invalid GGUF header magic");
-        return false;
-    }
-
-    GGUFLoader loader;
-    try {
-        if (!loader.Open(config.model_name) || !loader.ParseMetadata()) {
-            LogBackendSelection("local_gguf", false, "unable to parse GGUF metadata");
-            return false;
-        }
-    } catch (const std::exception& ex) {
-        LogBackendSelection("local_gguf", false, std::string("GGUF parse failed: ") + ex.what());
-        return false;
-    }
-
-    const auto metadata = loader.GetMetadata();
-    auto fileTypeIt = metadata.kv_pairs.find("general.file_type");
-    if (fileTypeIt == metadata.kv_pairs.end()) {
-        LogBackendSelection("local_gguf", false, "unsupported quant: missing general.file_type metadata");
-        return false;
-    }
-
-    int fileType = -1;
-    try {
-        fileType = std::stoi(fileTypeIt->second);
-    } catch (...) {
-        LogBackendSelection("local_gguf", false, "unsupported quant: invalid general.file_type metadata");
-        return false;
-    }
-
-    std::set<int> quantAllowlist = {1, 2, 3, 7, 8, 9, 10, 11, 12, 13, 14};
-    auto allowlistIt = config.custom_params.find("allowed_quant_file_types");
-    if (allowlistIt != config.custom_params.end() && !allowlistIt->second.empty()) {
-        const std::set<int> parsed = ParseIntAllowlist(allowlistIt->second);
-        if (!parsed.empty()) {
-            quantAllowlist = parsed;
-        }
-    }
-
-    if (quantAllowlist.find(fileType) == quantAllowlist.end()) {
-        LogBackendSelection("local_gguf", false, "unsupported quant");
-        return false;
-    }
-
-    auto requiredTokenizerModel = config.custom_params.find("tokenizer_model");
-    auto requiredTokenizerPre = config.custom_params.find("tokenizer_pre");
-    if (requiredTokenizerModel == config.custom_params.end() || requiredTokenizerPre == config.custom_params.end()) {
-        LogBackendSelection("local_gguf", false, "tokenizer/config pairing required: tokenizer_model and tokenizer_pre must be configured");
-        return false;
-    }
-
-    auto tokenizerModelIt = metadata.kv_pairs.find("tokenizer.ggml.model");
-    auto tokenizerPreIt = metadata.kv_pairs.find("tokenizer.ggml.pre");
-    if (tokenizerModelIt == metadata.kv_pairs.end() || tokenizerPreIt == metadata.kv_pairs.end()) {
-        LogBackendSelection("local_gguf", false, "tokenizer/config mismatch: required tokenizer metadata missing");
-        return false;
-    }
-
-    if (tokenizerModelIt->second != requiredTokenizerModel->second || tokenizerPreIt->second != requiredTokenizerPre->second) {
-        LogBackendSelection("local_gguf", false, "tokenizer/config mismatch");
-        return false;
-    }
-
-    auto requiredTokenizerVersion = config.custom_params.find("tokenizer_version");
-    if (requiredTokenizerVersion != config.custom_params.end()) {
-        auto modelVersion = metadata.kv_pairs.find("general.quantization_version");
-        if (modelVersion == metadata.kv_pairs.end() || modelVersion->second != requiredTokenizerVersion->second) {
-            LogBackendSelection("local_gguf", false, "tokenizer/config version mismatch");
-            return false;
-        }
-    }
-
-    std::error_code ec;
-    const uint64_t modelBytes = static_cast<uint64_t>(std::filesystem::file_size(config.model_name, ec));
-    if (ec || modelBytes == 0) {
-        LogBackendSelection("local_gguf", false, "failed to stat model file for memory preflight");
-        return false;
-    }
-
-    MEMORYSTATUSEX mem{};
-    mem.dwLength = sizeof(mem);
-    if (!GlobalMemoryStatusEx(&mem)) {
-        LogBackendSelection("local_gguf", false, "memory preflight failed: unable to query RAM status");
-        return false;
-    }
-
-    const uint64_t ramHeadroom = static_cast<uint64_t>(static_cast<long double>(mem.ullTotalPhys) * 0.20L);
-    const uint64_t workingSetEstimate = static_cast<uint64_t>(static_cast<long double>(modelBytes) * 1.25L);
-    const uint64_t required = workingSetEstimate + ramHeadroom;
-    if (mem.ullAvailPhys < required) {
-        LogBackendSelection("local_gguf", false, "memory preflight failed: insufficient RAM headroom");
-        return false;
-    }
-
-    if (backendMode == kBackendAutoVerifiedFallback) {
-        LogBackendSelection("local_gguf", true, "auto-with-verified-fallback resolved to cpu-only; verified GPU backend not available");
-    } else {
-        LogBackendSelection("local_gguf", true, "cpu-only backend selected");
-    }
-
-    m_engine = std::make_unique<CPUInference::CPUInferenceEngine>();
-    if (!m_engine->LoadModel(config.model_name)) {
-        LogBackendSelection("local_gguf", false, "engine failed to load GGUF model");
-        return false;
-    }
-
-    m_ready = true;
-    return true;
+    RecoveryStats empty;
+    empty.totalSectors = 0;
+    empty.currentLBA = 0;
+    TEST_ASSERT(empty.ProgressPercent() == 0.0, "Zero totalSectors gives 0%");
+    TEST_PASS("recovery_stats_progress");
 }
 
-std::string GGUFBackend::Generate(const std::string& prompt, int max_tokens) {
-    if (!m_ready || !m_engine) {
-        return "";
-    }
+void test_recovery_result_factories() {
+    auto ok = RecoveryResult::ok("Success");
+    TEST_ASSERT(ok.success, "ok() returns success=true");
+    TEST_ASSERT(ok.detail == "Success", "ok() detail matches");
+    TEST_ASSERT(ok.errorCode == 0, "ok() errorCode is 0");
 
-    // Tokenize prompt
-    std::vector<int32_t> tokens = m_engine->Tokenize(prompt);
-
-    // Generate response
-    std::string response;
-    m_engine->GenerateStreaming(
-        tokens,
-        max_tokens,
-        [&response](const std::string& token) {
-            response += token;
-        },
-        []() {},  // Complete callback
-        nullptr   // Token ID callback
-    );
-
-    return response;
+    auto err = RecoveryResult::error("Failed", 42);
+    TEST_ASSERT(!err.success, "error() returns success=false");
+    TEST_ASSERT(err.errorCode == 42, "error() preserves errorCode");
+    TEST_PASS("recovery_result_factories");
 }
 
-void GGUFBackend::Shutdown() {
-    m_engine.reset();
-    m_ready = false;
+// ==========================================================================
+// § 6. ToolExecResult — Factory Pattern Validation
+// ==========================================================================
+
+void test_tool_exec_result_ok() {
+    auto r = ToolExecResult::ok("output data", 12.5);
+    TEST_ASSERT(r.success, "ok() is successful");
+    TEST_ASSERT(r.output == "output data", "ok() preserves output");
+    TEST_ASSERT(r.exit_code == 0, "ok() exit_code is 0");
+    TEST_ASSERT(r.elapsed_ms == 12.5, "ok() preserves elapsed_ms");
+    TEST_PASS("tool_exec_result_ok");
 }
 
-// ============================================================================
-// OllamaBackend Implementation
-// ============================================================================
-
-bool OllamaBackend::Initialize(const ModelConfig& config) {
-    m_endpoint = config.api_endpoint.empty() ? "http://localhost:11434/api/generate" : config.api_endpoint;
-    m_model_name = config.model_name;
-
-    const bool allowRemote = IsTruthy(config.custom_params.count("allow_remote_endpoint")
-                                          ? config.custom_params.at("allow_remote_endpoint")
-                                          : "false");
-    if (!allowRemote && !IsLocalEndpoint(m_endpoint)) {
-        LogBackendSelection("ollama", false, "remote endpoint blocked; local host endpoint required");
-        m_ready = false;
-        return false;
-    }
-
-    std::string tags_url = m_endpoint;
-    size_t api_pos = tags_url.find("/api/");
-    if (api_pos != std::string::npos) {
-        tags_url = tags_url.substr(0, api_pos) + "/api/tags";
-    } else if (!tags_url.empty() && tags_url.back() == '/') {
-        tags_url += "api/tags";
-    } else {
-        tags_url += "/api/tags";
-    }
-
-    std::string tags = WinHttpRequest(tags_url, L"GET", "", {L"Accept: application/json"});
-    if (tags.empty()) {
-        LogBackendSelection("ollama", false, "local endpoint not reachable at startup");
-        m_ready = false;
-        return false;
-    }
-
-    m_ready = !m_model_name.empty();
-    if (!m_ready) {
-        LogBackendSelection("ollama", false, "model name is empty");
-        return false;
-    }
-
-    LogBackendSelection("ollama", true, "local endpoint verified");
-    return m_ready;
+void test_tool_exec_result_error() {
+    auto r = ToolExecResult::error("bad things", -3);
+    TEST_ASSERT(!r.success, "error() is failure");
+    TEST_ASSERT(r.output == "bad things", "error() preserves message");
+    TEST_ASSERT(r.exit_code == -3, "error() preserves exit code");
+    TEST_PASS("tool_exec_result_error");
 }
 
-std::string OllamaBackend::Generate(const std::string& prompt, int max_tokens) {
-    if (!m_ready) return "";
+// ==========================================================================
+// § 7. Disk Recovery Tool Integration (via ToolRegistry dispatch)
+// ==========================================================================
 
-    // Build JSON payload
-    std::stringstream json;
-    json << "{"
-         << "\"model\":\"" << m_model_name << "\","
-         << "\"prompt\":\"" << EscapeJSON(prompt) << "\","
-         << "\"stream\":false,"
-         << "\"options\":{\"num_predict\":" << max_tokens << "}"
-         << "}";
+void test_disk_recovery_tool_stats_action() {
+    auto& reg = AgentToolRegistry::Instance();
 
-    std::string response_json = SendHTTPRequest(json.str());
-    
-    // Parse response (simple extraction, should use proper JSON parser)
-    size_t response_pos = response_json.find("\"response\":\"");
-    if (response_pos != std::string::npos) {
-        size_t start = response_pos + 12;
-        size_t end = response_json.find("\"", start);
-        if (end != std::string::npos) {
-            return response_json.substr(start, end - start);
-        }
-    }
-
-    return "";
+    json args;
+    args["action"] = "stats";
+    auto result = reg.Dispatch("disk_recovery", args);
+    // Should succeed even without hardware (returns zeroed stats)
+    TEST_ASSERT(result.success, "disk_recovery stats succeeds without hardware");
+    TEST_ASSERT(result.output.find("Good:") != std::string::npos, "Stats output has Good field");
+    TEST_PASS("disk_recovery_tool_stats_action");
 }
 
-std::string OllamaBackend::SendHTTPRequest(const std::string& json_payload) {
-    return WinHttpRequest(m_endpoint, L"POST", json_payload, {L"Content-Type: application/json"});
+void test_disk_recovery_tool_invalid_action() {
+    auto& reg = AgentToolRegistry::Instance();
+
+    json args;
+    args["action"] = "invalid_blah";
+    auto result = reg.Dispatch("disk_recovery", args);
+    TEST_ASSERT(!result.success, "Invalid action returns failure");
+    TEST_ASSERT(result.output.find("Unknown action") != std::string::npos, "Error mentions unknown");
+    TEST_PASS("disk_recovery_tool_invalid_action");
 }
 
-void OllamaBackend::Shutdown() {
-    m_ready = false;
+void test_disk_recovery_tool_missing_action() {
+    auto& reg = AgentToolRegistry::Instance();
+
+    json args;
+    auto result = reg.Dispatch("disk_recovery", args);
+    TEST_ASSERT(!result.success, "Missing action returns failure");
+    TEST_PASS("disk_recovery_tool_missing_action");
 }
 
-// ============================================================================
-// OpenAIBackend Implementation
-// ============================================================================
+// ==========================================================================
+// Test Runner
+// ==========================================================================
 
-bool OpenAIBackend::Initialize(const ModelConfig& config) {
-    m_endpoint = config.api_endpoint.empty() ? "https://api.openai.com/v1/chat/completions" : config.api_endpoint;
-    m_api_key = config.api_key;
-    m_model_name = config.model_name.empty() ? "gpt-4" : config.model_name;
-    
-    m_ready = !m_api_key.empty();
-    return m_ready;
+int main() {
+    test_xmacro_enum_count();
+    test_registry_singleton();
+    test_registry_list_tools();
+    test_registry_schemas_valid();
+    test_registry_dispatch_read_file();
+    test_registry_dispatch_write_file();
+    test_registry_dispatch_unknown_tool();
+    test_registry_validation_missing_required();
+    test_registry_stats();
+    test_registry_system_prompt();
+
+    test_fim_build_basic();
+    test_fim_build_empty_content();
+    test_fim_build_invalid_cursor();
+    test_fim_qwen_format_tokens();
+    test_fim_build_from_parts();
+    test_fim_prefix_ratio();
+
+    test_ollama_config_defaults();
+    test_ollama_client_construction();
+    test_ollama_cancel_before_stream();
+
+    test_orchestrator_construction();
+    test_orchestrator_config();
+    test_orchestrator_cancel();
+
+    test_recovery_agent_construction();
+    test_recovery_agent_stats_uninitialized();
+    test_recovery_agent_abort_safe();
+    test_recovery_agent_move_semantics();
+    test_recovery_stats_progress();
+    test_recovery_result_factories();
+
+    test_tool_exec_result_ok();
+    test_tool_exec_result_error();
+
+    test_disk_recovery_tool_stats_action();
+    test_disk_recovery_tool_invalid_action();
+    test_disk_recovery_tool_missing_action();
+
+    return g_testsFailed > 0 ? 1 : 0;
 }
-
-std::string OpenAIBackend::Generate(const std::string& prompt, int max_tokens) {
-    if (!m_ready) return "";
-
-    // Build JSON payload (OpenAI Chat Completion format)
-    std::stringstream json;
-    json << "{"
-         << "\"model\":\"" << m_model_name << "\","
-         << "\"messages\":[{\"role\":\"user\",\"content\":\"" << EscapeJSON(prompt) << "\"}],"
-         << "\"max_tokens\":" << max_tokens
-         << "}";
-
-    std::string response_json = SendHTTPRequest(json.str());
-    
-    // Parse response
-    size_t content_pos = response_json.find("\"content\":\"");
-    if (content_pos != std::string::npos) {
-        size_t start = content_pos + 11;
-        size_t end = response_json.find("\"", start);
-        if (end != std::string::npos) {
-            return response_json.substr(start, end - start);
-        }
-    }
-
-    return "";
-}
-
-std::string OpenAIBackend::SendHTTPRequest(const std::string& json_payload) {
-    std::wstring auth = L"Authorization: Bearer " + ToWide(m_api_key);
-    return WinHttpRequest(m_endpoint, L"POST", json_payload, {L"Content-Type: application/json", auth});
-}
-
-void OpenAIBackend::Shutdown() {
-    m_ready = false;
-}
-
-// Helper function
-std::string EscapeJSON(const std::string& str) {
-    std::string escaped;
-    for (char c : str) {
-        switch (c) {
-            case '"': escaped += "\\\""; break;
-            case '\\': escaped += "\\\\"; break;
-            case '\n': escaped += "\\n"; break;
-            case '\r': escaped += "\\r"; break;
-            case '\t': escaped += "\\t"; break;
-            default:
-                if (static_cast<unsigned char>(c) < 0x20) {
-                    escaped += "?";
-                } else {
-                    escaped += c;
-                }
-                break;
-        }
-    }
-    return escaped;
-}
-
-} // namespace AI
-} // namespace RawrXD

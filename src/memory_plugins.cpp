@@ -13,7 +13,7 @@ void mem_init(MemoryPlugin& m, size_t tokens){
 void mem_push(MemoryPlugin& m,const std::string& s){
     m.history.push_back(s);
     // Simple count-based eviction for now, should be token based
-    while(m.history.size() > 100) // arbitrary limit for example if token counting isn't implemented here
+    while(m.history.size() > 100) // arbitrary limit if token counting isn't implemented here
         m.history.pop_front();
 }
 

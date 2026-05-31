@@ -4,8 +4,9 @@
 
 
 TodoDock::TodoDock(TodoManager* todoManager, void* parent) 
-    : void(parent), todoManager_(todoManager), treeWidget_(nullptr) {
-    // Lightweight constructor - defer Qt widget creation
+    : m_parent(parent), todoManager_(todoManager), treeWidget_(nullptr) {
+    // Initialize todo dock
+    m_initialized = false;
 }
 
 void TodoDock::initialize() {

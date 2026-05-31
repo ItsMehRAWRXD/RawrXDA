@@ -8,6 +8,51 @@
 #include <regex>
 #include <thread>
 #include <atomic>
+#include <memory>
+#include <mutex>
+#include <unordered_map>
+
+namespace {
+
+std::mutex g_buildRunnerLivenessMutex;
+std::unordered_map<Win32IDE*, std::weak_ptr<std::atomic<bool>>> g_buildRunnerLiveness;
+
+std::shared_ptr<std::atomic<bool>> getBuildRunnerLivenessToken(Win32IDE* ide)
+{
+    if (!ide)
+        return nullptr;
+    std::lock_guard<std::mutex> lock(g_buildRunnerLivenessMutex);
+    auto it = g_buildRunnerLiveness.find(ide);
+    if (it != g_buildRunnerLiveness.end())
+    {
+        if (auto existing = it->second.lock())
+            return existing;
+    }
+    auto token = std::make_shared<std::atomic<bool>>(true);
+    g_buildRunnerLiveness[ide] = token;
+    return token;
+}
+
+inline bool isBuildRunnerOwnerAlive(const std::shared_ptr<std::atomic<bool>>& token)
+{
+    return token && token->load(std::memory_order_acquire);
+}
+
+} // namespace
+
+void ClearBuildRunnerState(Win32IDE* ide)
+{
+    if (!ide)
+        return;
+    std::lock_guard<std::mutex> lock(g_buildRunnerLivenessMutex);
+    auto it = g_buildRunnerLiveness.find(ide);
+    if (it != g_buildRunnerLiveness.end())
+    {
+        if (auto token = it->second.lock())
+            token->store(false, std::memory_order_release);
+        g_buildRunnerLiveness.erase(it);
+    }
+}
 
 namespace {
 
@@ -74,7 +119,9 @@ void Win32IDE::runBuildInBackground(const std::string& workingDir, const std::st
         ? "cmake --build build --config Release"
         : buildCommand;
 
-    std::thread([this, workingDir, cmd]() {
+    auto buildOwnerLiveness = getBuildRunnerLivenessToken(this);
+
+    std::thread([this, workingDir, cmd, buildOwnerLiveness]() {
         SECURITY_ATTRIBUTES sa = { sizeof(sa), nullptr, TRUE };
         HANDLE hRead = nullptr, hWrite = nullptr;
         if (!CreatePipe(&hRead, &hWrite, &sa, 0)) return;
@@ -97,7 +144,8 @@ void Win32IDE::runBuildInBackground(const std::string& workingDir, const std::st
         CloseHandle(hWrite);
         if (!ok) {
             CloseHandle(hRead);
-            appendBuildOutput(this, "[Build] CreateProcess failed.");
+            if (isBuildRunnerOwnerAlive(buildOwnerLiveness))
+                appendBuildOutput(this, "[Build] CreateProcess failed.");
             return;
         }
 
@@ -114,7 +162,8 @@ void Win32IDE::runBuildInBackground(const std::string& workingDir, const std::st
                 std::string line = lineBuf.substr(0, pos);
                 lineBuf.erase(0, pos + 1);
                 if (!line.empty() && line.back() == '\r') line.pop_back();
-                appendBuildOutput(this, line);
+                if (isBuildRunnerOwnerAlive(buildOwnerLiveness))
+                    appendBuildOutput(this, line);
                 parseAndReport(line, this);
             }
         }
@@ -122,7 +171,10 @@ void Win32IDE::runBuildInBackground(const std::string& workingDir, const std::st
         WaitForSingleObject(pi.hProcess, INFINITE);
         CloseHandle(pi.hProcess);
         CloseHandle(hRead);
-        appendBuildOutput(this, "[Build] Done.");
-        refreshProblemsView();
+        if (isBuildRunnerOwnerAlive(buildOwnerLiveness))
+        {
+            appendBuildOutput(this, "[Build] Done.");
+            refreshProblemsView();
+        }
     }).detach();
 }

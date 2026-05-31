@@ -1,7 +1,7 @@
 #include "ggml-metal.h"
 
-#include "ggml-impl.h"
-#include "ggml-backend-impl.h"
+#include "ggml-impl_rxd_internal.h"
+#include "ggml-backend-impl_rxd_internal.h"
 
 #include "ggml-metal-device.h"
 #include "ggml-metal-context.h"

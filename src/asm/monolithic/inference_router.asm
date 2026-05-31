@@ -32,6 +32,8 @@ PUBLIC InferenceRouter_LoadVocab
 PUBLIC g_routerBackend
 PUBLIC g_routerReady
 PUBLIC g_routerAbort
+PUBLIC g_vocabLoaded
+PUBLIC g_vocabCount
 
 ; ── Inference engine imports (inference.asm) ─────────────────────
 EXTERN RunInference:PROC
@@ -205,6 +207,10 @@ InferenceRouter_Init PROC FRAME
     call    InferenceRouter_LoadVocab
     test    eax, eax
     jz      @iri_vocab_done
+
+    ; If GGUF vocab cannot be loaded, local model readiness is not reliable.
+    ; Keep ASCII vocab for fallback token decoding, but route AUTO away from LOCAL.
+    mov     g_hasLocalModel, 0
 
 @iri_build_ascii:
     ; Fallback: build ASCII byte-level vocab (token 0-255 → single byte)
@@ -645,16 +651,22 @@ InferenceRouter_Generate PROC FRAME
 
 @rg_tokenize_done:
     mov     r12d, ecx                    ; r12d = prompt token count
+    test    r12d, r12d
+    jz      @rg_local_fallback
 
     ; ── Feed tokens through RunInference ──
     ; Clear KV cache for fresh context
     call    ClearKVCache
 
-    ; Set up inference context
-    lea     rcx, g_inferCtx              ; pContext
-    mov     edx, MAX_GEN_TOKENS          ; tokenCount
-    lea     r8, g_tokenOutBuf            ; pOutputBuf
+    ; Call native inference with tokenized prompt.
+    lea     rcx, g_promptTokens          ; pInputTokens (DWORD ids)
+    mov     edx, r12d                    ; inputCount
+    lea     r8, g_tokenOutBuf            ; pOutputBuf (DWORD ids)
+    mov     r9d, MAX_GEN_TOKENS          ; maxOutputTokens
     call    RunInference
+    test    eax, eax
+    jle     @rg_local_fallback
+    mov     r12d, eax                    ; generated token count
 
     ; Check abort after inference
     cmp     g_routerAbort, 1
@@ -668,7 +680,7 @@ InferenceRouter_Generate PROC FRAME
     xor     r14d, r14d                   ; token index
 
 @rg_detokenize:
-    cmp     r14d, MAX_GEN_TOKENS
+    cmp     r14d, r12d
     jge     @rg_detok_done
     cmp     ebx, r13d
     jge     @rg_detok_done               ; output buffer full

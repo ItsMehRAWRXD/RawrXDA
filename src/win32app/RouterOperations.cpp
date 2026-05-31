@@ -2,6 +2,7 @@
 // RouterOperations.cpp — Implementation
 // ============================================================================
 #include "RouterOperations.h"
+#include "EditorOperations.h"
 #include <windows.h>
 #include <chrono>
 #include <shellapi.h>
@@ -193,6 +194,10 @@ bool RouterOperations::RegisterCommandWithArgs(const CommandContext& context, Co
 
     m_commands[context.id] = entry;
     return true;
+}
+
+void RouterOperations::RegisterEditorCommands() {
+    EditorOperations::Instance().RegisterCommands();
 }
 
 bool RouterOperations::UnregisterCommand(const std::string& commandId)

@@ -43,7 +43,6 @@ void BackupManager::start(int intervalMinutes) {
         m_running = true;
         // In a real app this would start a background thread
         // std::thread(&BackupManager::autoBackupLoop, this).detach();
-        std::cout << "[BackupManager] Started auto-backup service (Interval: " << intervalMinutes << "m)" << std::endl;
     }
 }
 
@@ -89,7 +88,6 @@ std::string BackupManager::createBackup(BackupType type, const std::string& targ
              return destPath.string();
         }
     } catch (const std::exception& e) {
-        std::cerr << "[BackupManager] Backup failed: " << e.what() << std::endl;
         return "";
     }
 
@@ -123,7 +121,19 @@ std::vector<BackupManager::BackupInfo> BackupManager::listBackups() const {
 }
 
 void BackupManager::cleanOldBackups(int daysToKeep) {
-    // Walk directory and remove old folders
+    if (daysToKeep <= 0) return;
+    auto now = std::chrono::system_clock::now();
+    auto cutoff = now - std::chrono::hours(24 * daysToKeep);
+    
+    std::error_code ec;
+    for (const auto& entry : std::filesystem::directory_iterator(m_backupDir, ec)) {
+        if (entry.is_directory()) {
+            auto lastWrite = entry.last_write_time();
+            if (lastWrite < cutoff) {
+                std::filesystem::remove_all(entry.path(), ec);
+            }
+        }
+    }
 }
 
 std::string BackupManager::generateBackupId() const {

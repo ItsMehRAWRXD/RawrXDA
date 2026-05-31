@@ -34,7 +34,7 @@ public:
         Initialization = 0,
         ProblemAnalysis = 1,
         ContextGathering = 2,
-        HypothesiGeneration = 3,
+        HypothesisGeneration = 3,
         ExperimentationRun = 4,
         ResultEvaluation = 5,
         SelfCorrection = 6,

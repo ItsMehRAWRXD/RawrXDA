@@ -41,6 +41,7 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
+#include <winhttp.h>
 #include <cstdint>
 #include <cstddef>
 
@@ -529,8 +530,9 @@ private:
     PDBResult   downloadFile(const wchar_t* url, const wchar_t* destPath);
 
     SymbolServerConfig          m_config;
-    PDBDownloadProgressCallback m_progressFn    = nullptr;
-    void*                       m_progressData  = nullptr;
+    HINTERNET                   m_hSession    = nullptr;
+    PDBDownloadProgressCallback m_progressFn  = nullptr;
+    void*                       m_progressData = nullptr;
 };
 
 // ============================================================================

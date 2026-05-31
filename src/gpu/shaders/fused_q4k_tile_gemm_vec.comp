@@ -1,0 +1,131 @@
+#version 450
+
+#extension GL_EXT_control_flow_attributes : enable
+#extension GL_EXT_shader_16bit_storage : require
+#extension GL_EXT_shader_8bit_storage : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int8 : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int16 : require
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+
+// =============================================================================
+// FusedQ4K_TileGEMM_Vec - thin GEMV vertical slice for tiled-vs-GEMV bench.
+// =============================================================================
+// Scope (Phase 1, falsifiable slice):
+//   - 1 thread = 1 output row.
+//   - Activations: FP32 (no Q8_1 yet -- removes a parity variable).
+//   - Weights:    Q4_K, byte-exact ggml block_q4_K layout.
+//   - Dequant logic mirrors ggml-org/llama.cpp ggml-quants.c
+//       dequantize_row_q4_K + get_scale_min_k4.
+// Out of scope here:
+//   - Q8_1 activation pipeline       (Phase 2)
+//   - LDS tiling / cooperative dequant (Phase 3)
+//   - MFMA / wave-level optimization (Phase 4)
+//   - Replacing the existing GEMV path (Phase 5)
+// =============================================================================
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+// Explicit, locked ABI for the test slice. Do not reuse with other kernels yet.
+layout(push_constant) uniform Push {
+    uint M;              // output rows
+    uint N;              // expected = 1 (single token / GEMV)
+    uint K;              // inner dim, must be multiple of 256
+    uint stride_a_blocks;// Q4_K blocks per row of A (== K / 256)
+    uint stride_b;       // unused for N=1 (kept for future)
+    uint stride_out;     // unused for N=1 (kept for future)
+} pc;
+
+// Q4_K block: ggml byte-exact layout = 144 bytes
+//   ggml_half d;            // 2  super-block scale for scales
+//   ggml_half dmin;         // 2  super-block scale for mins
+//   uint8_t   scales[12];   // 12 6-bit packed scales+mins (8 of each)
+//   uint8_t   qs[128];      // 128 4-bit quants (256 values)
+struct block_q4_K {
+    float16_t d;
+    float16_t dmin;
+    uint8_t   scales[12];
+    uint8_t   qs[128];
+};
+
+layout(set = 0, binding = 0) readonly  buffer A_buf { block_q4_K data_a[]; };
+layout(set = 0, binding = 1) readonly  buffer B_buf { float       data_b[]; };
+layout(set = 0, binding = 2) writeonly buffer D_buf { float       data_d[]; };
+
+// ggml get_scale_min_k4 (j in [0,8))
+//   if (j < 4) { d = q[j] & 63;        m = q[j+4] & 63; }
+//   else       { d = (q[j+4]&0xF) | ((q[j-4]>>6)<<4);
+//                m = (q[j+4]>>4)  | ((q[j  ]>>6)<<4); }
+void get_scale_min_k4_inline(uint j, uint8_t s0, uint8_t s1, uint8_t s2, uint8_t s3,
+                             uint8_t s4, uint8_t s5, uint8_t s6, uint8_t s7,
+                             uint8_t s8, uint8_t s9, uint8_t s10, uint8_t s11,
+                             out uint sc, out uint mn) {
+    // Pack the 12 scale bytes into a small switchable accessor. Rolled into
+    // explicit ifs to keep the SPIR-V compact and avoid dynamic indexing into
+    // a uint8_t function-arg array (not portable across drivers).
+    uint q[12];
+    q[0]=uint(s0); q[1]=uint(s1); q[2]=uint(s2);  q[3]=uint(s3);
+    q[4]=uint(s4); q[5]=uint(s5); q[6]=uint(s6);  q[7]=uint(s7);
+    q[8]=uint(s8); q[9]=uint(s9); q[10]=uint(s10);q[11]=uint(s11);
+    if (j < 4u) {
+        sc = q[j]      & 63u;
+        mn = q[j + 4u] & 63u;
+    } else {
+        sc = (q[j + 4u] & 0xFu) | ((q[j - 4u] >> 6) << 4);
+        mn = (q[j + 4u] >> 4)   | ((q[j]      >> 6) << 4);
+    }
+}
+
+void main() {
+    uint row = gl_WorkGroupID.x * 64u + gl_LocalInvocationID.x;
+    if (row >= pc.M) return;
+
+    uint kblocks = pc.stride_a_blocks; // == pc.K / 256
+    float acc = 0.0;
+
+    for (uint b = 0u; b < kblocks; b++) {
+        block_q4_K blk = data_a[row * kblocks + b];
+        float d    = float(blk.d);
+        float dmin = float(blk.dmin);
+
+        // Mirror ggml's dequantize_row_q4_K loop:
+        //   for (j = 0; j < QK_K; j += 64) {
+        //     get_scale_min_k4(is+0); d1,m1
+        //     get_scale_min_k4(is+1); d2,m2
+        //     for (l=0..32) y[j+l]    = d1*(q[l]   & 0xF) - m1;
+        //     for (l=0..32) y[j+32+l] = d2*(q[l]   >> 4)  - m2;
+        //     q += 32; is += 2;
+        //   }
+        for (uint seg = 0u; seg < 4u; seg++) {
+            uint sc_lo, mn_lo, sc_hi, mn_hi;
+            get_scale_min_k4_inline(
+                seg * 2u + 0u,
+                blk.scales[0], blk.scales[1], blk.scales[2],  blk.scales[3],
+                blk.scales[4], blk.scales[5], blk.scales[6],  blk.scales[7],
+                blk.scales[8], blk.scales[9], blk.scales[10], blk.scales[11],
+                sc_lo, mn_lo);
+            get_scale_min_k4_inline(
+                seg * 2u + 1u,
+                blk.scales[0], blk.scales[1], blk.scales[2],  blk.scales[3],
+                blk.scales[4], blk.scales[5], blk.scales[6],  blk.scales[7],
+                blk.scales[8], blk.scales[9], blk.scales[10], blk.scales[11],
+                sc_hi, mn_hi);
+
+            float d1 = d * float(sc_lo); float m1 = dmin * float(mn_lo);
+            float d2 = d * float(sc_hi); float m2 = dmin * float(mn_hi);
+
+            uint qs_off = seg * 32u;       // 32 packed bytes per segment
+            uint k_base = b * 256u + seg * 64u;
+
+            [[unroll]]
+            for (uint l = 0u; l < 32u; l++) {
+                uint qb = uint(blk.qs[qs_off + l]);
+                float w_lo = d1 * float(qb & 0xFu) - m1;
+                float w_hi = d2 * float(qb >> 4)   - m2;
+                acc += w_lo * data_b[k_base + l];
+                acc += w_hi * data_b[k_base + 32u + l];
+            }
+        }
+    }
+
+    data_d[row] = acc;
+}

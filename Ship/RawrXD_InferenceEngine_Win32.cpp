@@ -22,6 +22,168 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <cstdarg>
+#include <intrin.h>
+
+// ── Last-error scratch buffer ─────────────────────────────────────────────────
+// Thread-safety note: the DLL is single-engine and callers already serialise
+// through CRITICAL_SECTION; plain static char[] is sufficient.
+static char g_lastEngineError[512] = {};
+
+static void SetLastEngineError(const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(g_lastEngineError, sizeof(g_lastEngineError), fmt, args);
+    va_end(args);
+    g_lastEngineError[sizeof(g_lastEngineError) - 1] = '\0';
+}
+
+static void ClearLastEngineError() {
+    g_lastEngineError[0] = '\0';
+}
+
+// ── Native bridge loading + kernel mode gate ───────────────────────────────
+enum class KernelMode {
+    Auto,
+    Stub,
+    Bridge
+};
+
+static HMODULE g_bridgeModule = nullptr;
+static int (*g_bridgeForward)(void*, int*, int, float*) = nullptr;
+static int (*g_bridgeSample)(float*, int, float, float, int) = nullptr;
+static int (*g_bridgeLoadModel)(const char*) = nullptr;
+static void (*g_bridgeCleanup)(void) = nullptr;
+static int (*g_bridgeDetokenize)(const int32_t*, int, char*, int) = nullptr;
+static std::once_flag g_bridgeInitOnce;
+
+static void InitBridgeOnce() {
+    g_bridgeModule = LoadLibraryW(L"RawrXD_NativeModelBridge.dll");
+    if (!g_bridgeModule) {
+        return;
+    }
+
+    g_bridgeForward = (int (*)(void*, int*, int, float*))GetProcAddress(g_bridgeModule, "ForwardPass");
+    g_bridgeSample = (int (*)(float*, int, float, float, int))GetProcAddress(g_bridgeModule, "SampleNext");
+    g_bridgeLoadModel = (int (*)(const char*))GetProcAddress(g_bridgeModule, "LoadModelNative");
+    g_bridgeCleanup = (void (*)(void))GetProcAddress(g_bridgeModule, "CleanupMathTables");
+
+    // Optional bridge API for proper text decoding from token IDs.
+    g_bridgeDetokenize = (int (*)(const int32_t*, int, char*, int))GetProcAddress(g_bridgeModule, "Detokenize");
+    if (!g_bridgeDetokenize) {
+        g_bridgeDetokenize = (int (*)(const int32_t*, int, char*, int))GetProcAddress(g_bridgeModule, "TokensToText");
+    }
+    if (!g_bridgeDetokenize) {
+        g_bridgeDetokenize = (int (*)(const int32_t*, int, char*, int))GetProcAddress(g_bridgeModule, "TokenIdsToText");
+    }
+}
+
+static bool EnsureBridgeLoaded() {
+    std::call_once(g_bridgeInitOnce, InitBridgeOnce);
+    return g_bridgeModule != nullptr;
+}
+
+static KernelMode GetKernelMode() {
+    char mode[32] = {};
+    DWORD len = GetEnvironmentVariableA("RAWRXD_KERNEL_MODE", mode, static_cast<DWORD>(sizeof(mode)));
+    if (len > 0 && len < sizeof(mode)) {
+        if (_stricmp(mode, "stub") == 0) {
+            return KernelMode::Stub;
+        }
+        if (_stricmp(mode, "bridge") == 0) {
+            return KernelMode::Bridge;
+        }
+    }
+    return KernelMode::Auto;
+}
+
+static bool IsTruthyEnv(const char* value) {
+    if (!value || !value[0]) return false;
+    return (_stricmp(value, "1") == 0) || (_stricmp(value, "true") == 0) ||
+           (_stricmp(value, "yes") == 0) || (_stricmp(value, "on") == 0);
+}
+
+static bool WantsNativeKernels() {
+    // Primary gate for Phase 1 kernel bridge.
+    char nativeGate[32] = {};
+    const DWORD nativeLen = GetEnvironmentVariableA(
+        "RAWRXD_USE_NATIVE_KERNELS", nativeGate, static_cast<DWORD>(sizeof(nativeGate)));
+    if (nativeLen > 0 && nativeLen < sizeof(nativeGate)) {
+        return IsTruthyEnv(nativeGate);
+    }
+
+    // Backward-compat override for earlier lane selector.
+    const KernelMode mode = GetKernelMode();
+    if (mode == KernelMode::Bridge) return true;
+    if (mode == KernelMode::Stub) return false;
+    return false;
+}
+
+static bool CpuSupportsAvx2() {
+    int info[4] = {0, 0, 0, 0};
+    __cpuid(info, 1);
+
+    const bool osxsave = (info[2] & (1 << 27)) != 0;
+    const bool avx = (info[2] & (1 << 28)) != 0;
+    if (!osxsave || !avx) {
+        return false;
+    }
+
+    const unsigned long long xcr0 = _xgetbv(0);
+    const bool xmmYmmEnabled = (xcr0 & 0x6) == 0x6;
+    if (!xmmYmmEnabled) {
+        return false;
+    }
+
+    int ext[4] = {0, 0, 0, 0};
+    __cpuidex(ext, 7, 0);
+    const bool avx2 = (ext[1] & (1 << 5)) != 0;
+    return avx2;
+}
+
+static std::string SanitizeForChatOutput(const std::string& input) {
+    std::string out;
+    out.reserve(input.size());
+
+    size_t nonPrintable = 0;
+    for (unsigned char ch : input) {
+        if (ch == '\r' || ch == '\n' || ch == '\t') {
+            out.push_back(static_cast<char>(ch));
+            continue;
+        }
+
+        if (ch >= 32 && ch <= 126) {
+            out.push_back(static_cast<char>(ch));
+        } else {
+            nonPrintable++;
+            out.push_back(' ');
+        }
+    }
+
+    // Collapse repeated spaces to keep the chat panel readable.
+    std::string compact;
+    compact.reserve(out.size());
+    bool lastSpace = false;
+    for (char c : out) {
+        const bool isSpace = (c == ' ');
+        if (isSpace && lastSpace) {
+            continue;
+        }
+        compact.push_back(c);
+        lastSpace = isSpace;
+    }
+
+    // If output is mostly binary noise, provide deterministic readable text.
+    if (!input.empty() && nonPrintable * 3 > input.size() * 2) {
+        return "[NativeKernelOutput] non-text token stream suppressed";
+    }
+
+    if (compact.empty()) {
+        return "[NativeKernelOutput] empty";
+    }
+
+    return compact;
+}
 
 // Structures matching Qt interface
 struct ModelMetrics {
@@ -62,6 +224,185 @@ struct InferenceResult {
     uint32_t request_id;
 };
 
+struct ProcessorOutput {
+    std::string generated_text;
+    size_t tokens_used = 0;
+};
+
+class IInferenceProcessor {
+public:
+    virtual ~IInferenceProcessor() = default;
+    virtual const char* Name() const = 0;
+    virtual bool Generate(const InferenceRequest& request,
+                          int contextWindow,
+                          bool modelLoaded,
+                          ProcessorOutput& out,
+                          std::string& error) = 0;
+};
+
+class StubProcessor final : public IInferenceProcessor {
+public:
+    const char* Name() const override { return "stub"; }
+
+    bool Generate(const InferenceRequest& request,
+                  int contextWindow,
+                  bool modelLoaded,
+                  ProcessorOutput& out,
+                  std::string& error) override {
+        (void)contextWindow;
+        (void)modelLoaded;
+        (void)error;
+        out.generated_text = request.prompt;
+        out.tokens_used = request.max_tokens > 50 ? 50 : static_cast<size_t>(request.max_tokens);
+        return true;
+    }
+};
+
+class NativeKernelProcessor final : public IInferenceProcessor {
+public:
+    const char* Name() const override { return "native_bridge"; }
+
+    bool Generate(const InferenceRequest& request,
+                  int contextWindow,
+                  bool modelLoaded,
+                  ProcessorOutput& out,
+                  std::string& error) override {
+        if (!modelLoaded) {
+            error = "model not loaded";
+            return false;
+        }
+        if (!EnsureBridgeLoaded() || !g_bridgeForward) {
+            error = "RawrXD_NativeModelBridge.dll missing ForwardPass";
+            return false;
+        }
+
+        std::vector<int> inputTokens;
+        inputTokens.reserve(request.prompt.size());
+        for (unsigned char ch : request.prompt) {
+            inputTokens.push_back(static_cast<int>(ch));
+        }
+        if (inputTokens.size() > static_cast<size_t>(contextWindow)) {
+            inputTokens.erase(inputTokens.begin(),
+                              inputTokens.begin() + (inputTokens.size() - contextWindow));
+        }
+
+        std::vector<float> logits(32000, 0.0f);
+        std::vector<int32_t> generatedTokenIds;
+        generatedTokenIds.reserve(std::min(request.max_tokens, static_cast<size_t>(2048)));
+
+        int fwdResult = g_bridgeForward(nullptr, inputTokens.data(),
+                                        static_cast<int>(inputTokens.size()), logits.data());
+        if (fwdResult != 0) {
+            error = "ForwardPass failed with code " + std::to_string(fwdResult);
+            return false;
+        }
+
+        size_t generated = 0;
+        const size_t maxGen = std::min(request.max_tokens, static_cast<size_t>(2048));
+        for (size_t i = 0; i < maxGen; i++) {
+            int nextToken = -1;
+            if (g_bridgeSample) {
+                nextToken = g_bridgeSample(logits.data(), 32000,
+                                           request.temperature, request.top_p, 40);
+            } else {
+                float maxLogit = -1e30f;
+                for (int v = 0; v < 32000; v++) {
+                    if (logits[v] > maxLogit) maxLogit = logits[v];
+                }
+
+                const float temp = request.temperature > 0.01f ? request.temperature : 0.01f;
+                float sumExp = 0.0f;
+                for (int v = 0; v < 32000; v++) {
+                    logits[v] = expf((logits[v] - maxLogit) / temp);
+                    sumExp += logits[v];
+                }
+                if (sumExp <= 0.0f) {
+                    error = "invalid logits softmax sum";
+                    return false;
+                }
+                for (int v = 0; v < 32000; v++) {
+                    logits[v] /= sumExp;
+                }
+
+                struct TokenProb {
+                    int id;
+                    float prob;
+                };
+                std::vector<TokenProb> sorted;
+                sorted.reserve(32000);
+                for (int v = 0; v < 32000; v++) {
+                    sorted.push_back({v, logits[v]});
+                }
+                std::sort(sorted.begin(), sorted.end(),
+                          [](const TokenProb& a, const TokenProb& b) { return a.prob > b.prob; });
+
+                float cumProb = 0.0f;
+                const float topP = request.top_p;
+                size_t cutoff = sorted.size();
+                for (size_t j = 0; j < sorted.size(); j++) {
+                    cumProb += sorted[j].prob;
+                    if (cumProb >= topP) {
+                        cutoff = j + 1;
+                        break;
+                    }
+                }
+
+                float r = static_cast<float>(rand()) / RAND_MAX;
+                float accum = 0.0f;
+                float nucleusSum = 0.0f;
+                for (size_t j = 0; j < cutoff; j++) {
+                    nucleusSum += sorted[j].prob;
+                }
+                if (nucleusSum <= 0.0f) {
+                    error = "invalid nucleus probability sum";
+                    return false;
+                }
+
+                for (size_t j = 0; j < cutoff; j++) {
+                    accum += sorted[j].prob / nucleusSum;
+                    if (accum >= r) {
+                        nextToken = sorted[j].id;
+                        break;
+                    }
+                }
+                if (nextToken < 0) {
+                    nextToken = sorted[0].id;
+                }
+            }
+
+            if (nextToken <= 0 || nextToken == 2) {
+                break;
+            }
+            generatedTokenIds.push_back(static_cast<int32_t>(nextToken));
+            generated++;
+
+            int singleToken = nextToken;
+            fwdResult = g_bridgeForward(nullptr, &singleToken, 1, logits.data());
+            if (fwdResult != 0) {
+                break;
+            }
+        }
+
+        if (!generatedTokenIds.empty() && g_bridgeDetokenize) {
+            std::vector<char> decoded(64 * 1024, 0);
+            const int wrote = g_bridgeDetokenize(generatedTokenIds.data(),
+                                                 static_cast<int>(generatedTokenIds.size()),
+                                                 decoded.data(),
+                                                 static_cast<int>(decoded.size()));
+            if (wrote > 0) {
+                out.generated_text.assign(decoded.data(), decoded.data() + wrote);
+                out.generated_text = SanitizeForChatOutput(out.generated_text);
+            } else {
+                out.generated_text = "[NativeKernelOutput] detokenize failed";
+            }
+        } else {
+            out.generated_text = "[NativeKernelOutput] token stream generated; bridge detokenizer export unavailable";
+        }
+        out.tokens_used = generated;
+        return true;
+    }
+};
+
 class RawrXDInferenceEngine {
 private:
     // Synchronization
@@ -88,10 +429,31 @@ private:
     int m_contextWindow;
     size_t m_batchSize;
     std::atomic<uint32_t> m_requestCounter;
+    bool m_nativeKernelsRequested;
+    bool m_avx2Available;
+    std::unique_ptr<IInferenceProcessor> m_processor;
     
     // Callbacks
     mutable std::function<void(const wchar_t*)> m_progressCallback;
     mutable std::function<void(const wchar_t*)> m_errorCallback;
+
+    void ConfigureProcessor() {
+        m_nativeKernelsRequested = WantsNativeKernels();
+        m_avx2Available = CpuSupportsAvx2();
+
+        if (m_nativeKernelsRequested && m_avx2Available) {
+            EnsureBridgeLoaded();
+            if (g_bridgeForward) {
+                m_processor = std::make_unique<NativeKernelProcessor>();
+                return;
+            }
+            SetLastEngineError("Native kernel bridge requested but bridge DLL/ForwardPass not available; falling back to stub");
+        } else if (m_nativeKernelsRequested && !m_avx2Available) {
+            SetLastEngineError("Native kernel bridge requested but AVX2 unsupported; falling back to stub");
+        }
+
+        m_processor = std::make_unique<StubProcessor>();
+    }
     
     // Worker thread function
     static DWORD WINAPI WorkerThreadProc(LPVOID param) {
@@ -143,144 +505,31 @@ private:
         result.request_id = request.request_id;
         result.tokens_used = 0;
         
-        // ====================================================================
-        // Production GGUF Inference Pipeline
-        // Step 1: Tokenize prompt (byte-level BPE approximation)
-        // ====================================================================
-        std::vector<int> inputTokens;
-        inputTokens.reserve(request.prompt.size());
-        
-        // Byte-level tokenization: each UTF-8 byte maps to a token ID
-        // Production models use BPE merge tables loaded from GGUF metadata;
-        // this byte-level fallback ensures inference works with any model
-        for (unsigned char ch : request.prompt) {
-            inputTokens.push_back(static_cast<int>(ch));
+        if (!m_processor) {
+            ConfigureProcessor();
         }
-        
-        // Clamp to context window
-        if (inputTokens.size() > static_cast<size_t>(m_contextWindow)) {
-            inputTokens.erase(inputTokens.begin(), 
-                inputTokens.begin() + (inputTokens.size() - m_contextWindow));
-        }
-        
-        // ====================================================================
-        // Step 2: Try external model bridge DLL for forward pass
-        // ====================================================================
-        typedef int (*ForwardPassFn)(void*, int*, int, float*);
-        typedef int (*SampleNextFn)(float*, int, float, float, int);
-        
-        HMODULE hBridge = LoadLibraryW(L"RawrXD_NativeModelBridge.dll");
-        ForwardPassFn pfnForward = nullptr;
-        SampleNextFn pfnSample = nullptr;
-        
-        if (hBridge) {
-            pfnForward = (ForwardPassFn)GetProcAddress(hBridge, "ForwardPass");
-            pfnSample = (SampleNextFn)GetProcAddress(hBridge, "SampleNext");
-        }
-        
-        if (pfnForward && m_modelLoaded) {
-            // Real model forward pass via native bridge
-            std::vector<float> logits(32000, 0.0f);
-            std::string generatedText;
-            
-            int fwdResult = pfnForward(nullptr, inputTokens.data(), 
-                (int)inputTokens.size(), logits.data());
-            
-            if (fwdResult == 0) {
-                // Autoregressive generation loop
-                size_t maxGen = std::min(request.max_tokens, (size_t)2048);
-                for (size_t i = 0; i < maxGen; i++) {
-                    // Sample next token
-                    int nextToken = -1;
-                    
-                    if (pfnSample) {
-                        nextToken = pfnSample(logits.data(), 32000, 
-                            request.temperature, request.top_p, 40);
-                    } else {
-                        // Manual sampling: temperature-scaled softmax + top-k
-                        float maxLogit = -1e30f;
-                        for (int v = 0; v < 32000; v++) {
-                            if (logits[v] > maxLogit) maxLogit = logits[v];
-                        }
-                        
-                        // Apply temperature
-                        float temp = request.temperature > 0.01f ? request.temperature : 0.01f;
-                        float sumExp = 0.0f;
-                        for (int v = 0; v < 32000; v++) {
-                            logits[v] = expf((logits[v] - maxLogit) / temp);
-                            sumExp += logits[v];
-                        }
-                        
-                        // Normalize to probabilities
-                        for (int v = 0; v < 32000; v++) {
-                            logits[v] /= sumExp;
-                        }
-                        
-                        // Top-p (nucleus) sampling
-                        struct TokenProb { int id; float prob; };
-                        std::vector<TokenProb> sorted;
-                        sorted.reserve(32000);
-                        for (int v = 0; v < 32000; v++) {
-                            sorted.push_back({v, logits[v]});
-                        }
-                        std::sort(sorted.begin(), sorted.end(),
-                            [](const TokenProb& a, const TokenProb& b) { return a.prob > b.prob; });
-                        
-                        float cumProb = 0.0f;
-                        float topP = request.top_p;
-                        size_t cutoff = sorted.size();
-                        for (size_t j = 0; j < sorted.size(); j++) {
-                            cumProb += sorted[j].prob;
-                            if (cumProb >= topP) {
-                                cutoff = j + 1;
-                                break;
-                            }
-                        }
-                        
-                        // Random selection from nucleus
-                        float r = static_cast<float>(rand()) / RAND_MAX;
-                        float accum = 0.0f;
-                        // Renormalize
-                        float nucleusSum = 0.0f;
-                        for (size_t j = 0; j < cutoff; j++) nucleusSum += sorted[j].prob;
-                        
-                        for (size_t j = 0; j < cutoff; j++) {
-                            accum += sorted[j].prob / nucleusSum;
-                            if (accum >= r) {
-                                nextToken = sorted[j].id;
-                                break;
-                            }
-                        }
-                        if (nextToken < 0) nextToken = sorted[0].id;
-                    }
-                    
-                    // EOS check (token 2 is common EOS in llama-style models)
-                    if (nextToken <= 0 || nextToken == 2) break;
-                    
-                    // Detokenize: byte-level
-                    if (nextToken < 256) {
-                        generatedText += static_cast<char>(nextToken);
-                    }
-                    
-                    result.tokens_used++;
-                    
-                    // Run next forward pass with the generated token
-                    int singleToken = nextToken;
-                    fwdResult = pfnForward(nullptr, &singleToken, 1, logits.data());
-                    if (fwdResult != 0) break;
-                }
-                
-                result.generated_text = generatedText;
-            } else {
-                result.generated_text = "[Forward pass failed - error code: " + std::to_string(fwdResult) + "]";
-            }
+
+        ProcessorOutput generated;
+        std::string generateError;
+        const bool ok = m_processor && m_processor->Generate(
+            request, m_contextWindow, m_modelLoaded, generated, generateError);
+
+        if (ok) {
+            result.generated_text = std::move(generated.generated_text);
+            result.tokens_used = generated.tokens_used;
         } else {
-            // ================================================================
-            // Step 3: Fallback - echo-based response when no model bridge
-            // This allows the engine to function for testing without a model
-            // ================================================================
-            result.generated_text = request.prompt;
-            result.tokens_used = request.max_tokens > 50 ? 50 : (int)request.max_tokens;
+            if (GetKernelMode() == KernelMode::Bridge || m_nativeKernelsRequested) {
+                result.generated_text = "[KernelBridgeError] " +
+                    (generateError.empty() ? "Native processor failed" : generateError);
+                result.tokens_used = 0;
+            } else {
+                StubProcessor stub;
+                ProcessorOutput fallback;
+                std::string ignored;
+                stub.Generate(request, m_contextWindow, m_modelLoaded, fallback, ignored);
+                result.generated_text = std::move(fallback.generated_text);
+                result.tokens_used = fallback.tokens_used;
+            }
         }
         
         result.latency_ms = static_cast<double>(GetTickCount64() - startTick);
@@ -297,7 +546,9 @@ public:
         : m_shutdown(false), m_modelLoaded(false), 
           m_temperature(0.7f), m_top_p(0.95f), 
           m_contextWindow(4096), m_batchSize(32),
-          m_requestCounter(1000) {
+          m_requestCounter(1000),
+          m_nativeKernelsRequested(false),
+          m_avx2Available(false) {
         
         InitializeCriticalSection(&m_criticalSection);
         InitializeCriticalSection(&m_cacheCriticalSection);
@@ -306,6 +557,8 @@ public:
         
         ZeroMemory(m_modelPath, sizeof(m_modelPath));
         ZeroMemory(m_workerThreads, sizeof(m_workerThreads));
+
+        ConfigureProcessor();
         
         // Start worker threads
         for (int i = 0; i < 4; i++) {
@@ -333,12 +586,31 @@ public:
     
     // Exported API
     bool LoadModel(const wchar_t* path) {
-        if (!path) return false;
+        if (!path) {
+            SetLastEngineError("LoadModel: null path");
+            return false;
+        }
+        if (!path[0]) {
+            SetLastEngineError("LoadModel: empty path");
+            return false;
+        }
+
+        const DWORD attrs = GetFileAttributesW(path);
+        if (attrs == INVALID_FILE_ATTRIBUTES) {
+            SetLastEngineError("LoadModel: file not found or inaccessible");
+            return false;
+        }
+        if ((attrs & FILE_ATTRIBUTE_DIRECTORY) != 0) {
+            SetLastEngineError("LoadModel: path points to a directory, expected file");
+            return false;
+        }
         
         EnterCriticalSection(&m_criticalSection);
         wcscpy_s(m_modelPath, MAX_PATH, path);
         m_modelLoaded = true;
         LeaveCriticalSection(&m_criticalSection);
+
+        ClearLastEngineError();
         
         if (m_progressCallback) {
             m_progressCallback(L"Model loaded successfully");
@@ -348,7 +620,10 @@ public:
     }
     
     uint32_t SubmitInference(const char* prompt, size_t max_tokens) {
-        if (!m_modelLoaded) return 0;
+        if (!m_modelLoaded) {
+            SetLastEngineError("SubmitInference: no model loaded");
+            return 0;
+        }
         
         uint32_t requestId = m_requestCounter.fetch_add(1);
         
@@ -365,6 +640,8 @@ public:
         LeaveCriticalSection(&m_criticalSection);
         
         SetEvent(m_queueEvent);
+
+        ClearLastEngineError();
         
         return requestId;
     }
@@ -487,13 +764,16 @@ extern "C" {
     
     __declspec(dllexport) bool __stdcall InferenceEngine_LoadModel(void* engine, const wchar_t* path) {
         RawrXDInferenceEngine* e = static_cast<RawrXDInferenceEngine*>(engine);
-        return e ? e->LoadModel(path) : false;
+        if (!e) { SetLastEngineError("InferenceEngine_LoadModel: null engine handle"); return false; }
+        return e->LoadModel(path);
     }
-    
+
     __declspec(dllexport) uint32_t __stdcall InferenceEngine_SubmitInference(
         void* engine, const char* prompt, size_t maxTokens) {
         RawrXDInferenceEngine* e = static_cast<RawrXDInferenceEngine*>(engine);
-        return e ? e->SubmitInference(prompt, maxTokens) : 0;
+        if (!e) { SetLastEngineError("InferenceEngine_SubmitInference: null engine handle"); return 0; }
+        if (!prompt || !prompt[0]) { SetLastEngineError("InferenceEngine_SubmitInference: empty prompt"); return 0; }
+        return e->SubmitInference(prompt, maxTokens);
     }
     
     __declspec(dllexport) bool __stdcall InferenceEngine_GetResult(
@@ -522,26 +802,13 @@ extern "C" {
         if (e) e->SetTemperature(temp);
     }
 
-    // ------------------------------------------------------------------------
-    // Compatibility exports for RawrXD_Win32_IDE (LoadModel/UnloadModel/ForwardPass/SampleNext)
-    // ------------------------------------------------------------------------
-    static HMODULE s_hBridge = nullptr;
-    static int (*s_pfnForward)(void*, int*, int, float*) = nullptr;
-    static int (*s_pfnSample)(float*, int, float, float, int) = nullptr;
-    static int (*s_pfnLoadModel)(const char*) = nullptr;
-    static void (*s_pfnCleanup)(void) = nullptr;
-
-    static void EnsureBridge() {
-        if (s_hBridge) return;
-        s_hBridge = LoadLibraryW(L"RawrXD_NativeModelBridge.dll");
-        if (s_hBridge) {
-            s_pfnForward = (int (*)(void*, int*, int, float*))GetProcAddress(s_hBridge, "ForwardPass");
-            s_pfnSample = (int (*)(float*, int, float, float, int))GetProcAddress(s_hBridge, "SampleNext");
-            s_pfnLoadModel = (int (*)(const char*))GetProcAddress(s_hBridge, "LoadModelNative");
-            s_pfnCleanup = (void (*)(void))GetProcAddress(s_hBridge, "CleanupMathTables");
-        }
+    __declspec(dllexport) const char* __stdcall InferenceEngine_GetLastError() {
+        return g_lastEngineError[0] ? g_lastEngineError : "No error recorded";
     }
 
+    // -------------------------------------------------------------------------
+    // Compatibility exports for RawrXD_Win32_IDE (LoadModel/UnloadModel/ForwardPass/SampleNext)
+    // ------------------------------------------------------------------------
     static std::string WideToUtf8(const wchar_t* path) {
         if (!path || !*path) return "";
         int n = WideCharToMultiByte(CP_UTF8, 0, path, -1, nullptr, 0, nullptr, nullptr);
@@ -554,10 +821,10 @@ extern "C" {
     __declspec(dllexport) void* __stdcall LoadModel(const wchar_t* path) {
         if (!path) return nullptr;
         if (!g_engine) g_engine = new RawrXDInferenceEngine();
-        EnsureBridge();
-        if (s_pfnLoadModel) {
+        EnsureBridgeLoaded();
+        if (g_bridgeLoadModel) {
             std::string utf8 = WideToUtf8(path);
-            if (s_pfnLoadModel(utf8.c_str()) != 0) return nullptr;
+            if (g_bridgeLoadModel(utf8.c_str()) != 0) return nullptr;
         }
         g_engine->LoadModel(path);
         return g_engine;
@@ -565,20 +832,20 @@ extern "C" {
 
     __declspec(dllexport) void __stdcall UnloadModel(void* ctx) {
         (void)ctx;
-        if (s_pfnCleanup) s_pfnCleanup();
+        if (g_bridgeCleanup) g_bridgeCleanup();
     }
 
     __declspec(dllexport) int __stdcall ForwardPass(void* ctx, int* tokens, int n_tokens, float* logits) {
         (void)ctx;
-        EnsureBridge();
-        if (!s_pfnForward) return -1;
-        return s_pfnForward(nullptr, tokens, n_tokens, logits);
+        EnsureBridgeLoaded();
+        if (!g_bridgeForward) return -1;
+        return g_bridgeForward(nullptr, tokens, n_tokens, logits);
     }
 
     __declspec(dllexport) int __stdcall SampleNext(float* logits, int vocab_size, float temperature, float top_p, int top_k) {
-        EnsureBridge();
-        if (!s_pfnSample) return -1;
-        return s_pfnSample(logits, vocab_size, temperature, top_p, top_k);
+        EnsureBridgeLoaded();
+        if (!g_bridgeSample) return -1;
+        return g_bridgeSample(logits, vocab_size, temperature, top_p, top_k);
     }
 }
 

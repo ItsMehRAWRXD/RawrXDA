@@ -84,7 +84,9 @@ ToolResult ToolRegistry::executeTool(
 
 ToolResult ToolRegistry::executeInternal(
     const std::string& name, const std::map<std::string, std::string>& args, const ToolContext& ctx) {
-    (void)ctx;
+    if (!ctx.traceId.empty()) {
+        fprintf(stderr, "[ToolRegistry] traceId: %s\n", ctx.traceId.c_str());
+    }
     ToolResult result;
     result.executionContext.status = ToolExecutionStatus::Running;
     const auto start = std::chrono::steady_clock::now();

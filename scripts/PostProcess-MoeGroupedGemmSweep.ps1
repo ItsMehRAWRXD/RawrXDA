@@ -1,5 +1,5 @@
 # Build decision_surface.csv (all rows + work_product) and grouped_thresholds.csv (aggregates for grouped_faster).
-# Usage: .\PostProcess-MoeGroupedGemmSweep.ps1 -InputCsv build-ninja\moe_grouped_gemm_sweep.csv
+# Usage: .\PostProcess-MoeGroupedGemmSweep.ps1 -InputCsv build-win32\moe_grouped_gemm_sweep.csv  (or build-ninja\...)
 param(
     [Parameter(Mandatory = $true)]
     [string] $InputCsv,

@@ -1,19 +1,19 @@
-#define GGML_COMMON_IMPL_C
-#include "ggml-common.h"
+#define GGML_RXD_COMMON_IMPL_C
+#include "ggml-common_rxd_internal.h"
 #include "ggml-quants.h"
-#include "ggml-impl.h"
-#include "ggml-cpu.h"
+#include "ggml-impl_rxd_internal.h"
+#include "ggml-cpu_rxd_internal.h"
 #include "simd-mappings.h"
 
-#include "../../quants.h"
-#include "../../ggml-cpu-impl.h"
+#include "../quants.h"
+#include "../ggml-cpu-impl.h"
 
 #include <math.h>
 #include <string.h>
 #include <assert.h>
 #include <float.h>
 #include <stdlib.h> // for qsort
-#include <stdio.h>  // for GGML_ASSERT
+#include <stdio.h>  // for GGML_RXD_ASSERT
 
 #define GROUP_MAX_EPS 1e-15f
 #define GROUP_MAX_EPS_IQ3_XXS 1e-8f
@@ -21,7 +21,7 @@
 #define GROUP_MAX_EPS_IQ1_M 1e-7f
 #define GROUP_MAX_EPS_IQ1_S 1e-12f
 
-#define UNUSED GGML_UNUSED
+#define UNUSED GGML_RXD_UNUSED
 
 #if defined(__VXE__) || defined(__VXE2__)
 #define B1(c,s,n)  0x ## n ## c ,  0x ## n ## s
@@ -44,12 +44,12 @@ static const uint8x16_t v_kperm = (const uint8x16_t){
 };
 #endif
 
-void quantize_row_q8_0(const float * GGML_RESTRICT x, void * GGML_RESTRICT vy, int64_t k) {
-    assert(QK8_0 == 32);
-    assert(k % QK8_0 == 0);
-    const int nb = k / QK8_0;
+void quantize_row_q8_0(const float * GGML_RXD_RESTRICT x, void * GGML_RXD_RESTRICT vy, int64_t k) {
+    assert(GGML_RXD_QK8_0 == 32);
+    assert(k % GGML_RXD_QK8_0 == 0);
+    const int nb = k / GGML_RXD_QK8_0;
 
-    block_q8_0 * GGML_RESTRICT y = vy;
+    block_q8_0 * GGML_RXD_RESTRICT y = vy;
 
 #if defined(__VXE__) || defined(__VXE2__)
     for (int i = 0; i < nb; i++) {
@@ -71,7 +71,7 @@ void quantize_row_q8_0(const float * GGML_RESTRICT x, void * GGML_RESTRICT vy, i
         const float d = amax / ((1 << 7) - 1);
         const float id = d ? 1.0f / d : 0.0f;
 
-        y[i].d = GGML_CPU_FP32_TO_FP16(d);
+        y[i].d = GGML_RXD_CPU_FP32_TO_FP16(d);
 
         for (int j = 0; j < 8; j++) {
             const float32x4_t v = vec_mul(srcv[j], vec_splats(id));
@@ -85,17 +85,17 @@ void quantize_row_q8_0(const float * GGML_RESTRICT x, void * GGML_RESTRICT vy, i
         }
     }
 #else
-    GGML_UNUSED(nb);
+    GGML_RXD_UNUSED(nb);
     // scalar
     quantize_row_q8_0_ref(x, y, k);
 #endif
 }
 
-void quantize_row_q8_1(const float * GGML_RESTRICT x, void * GGML_RESTRICT vy, int64_t k) {
+void quantize_row_q8_1(const float * GGML_RXD_RESTRICT x, void * GGML_RXD_RESTRICT vy, int64_t k) {
     assert(k % QK8_1 == 0);
     const int nb = k / QK8_1;
 
-    block_q8_1 * GGML_RESTRICT y = vy;
+    block_q8_1 * GGML_RXD_RESTRICT y = vy;
 
 #if defined(__VXE__) || defined(__VXE2__)
     for (int i = 0; i < nb; i++) {
@@ -117,7 +117,7 @@ void quantize_row_q8_1(const float * GGML_RESTRICT x, void * GGML_RESTRICT vy, i
         const float d = amax / ((1 << 7) - 1);
         const float id = d ? 1.0f / d : 0.0f;
 
-        y[i].d = GGML_CPU_FP32_TO_FP16(d);
+        y[i].d = GGML_RXD_CPU_FP32_TO_FP16(d);
 
         int32x4_t acc = vec_splats(0);
 
@@ -134,10 +134,10 @@ void quantize_row_q8_1(const float * GGML_RESTRICT x, void * GGML_RESTRICT vy, i
             acc = vec_add(acc, vi);
         }
 
-        y[i].s = GGML_CPU_FP32_TO_FP16(d * (acc[0] + acc[1] + acc[2] + acc[3]));
+        y[i].s = GGML_RXD_CPU_FP32_TO_FP16(d * (acc[0] + acc[1] + acc[2] + acc[3]));
     }
 #else
-    GGML_UNUSED(nb);
+    GGML_RXD_UNUSED(nb);
     // scalar
     quantize_row_q8_1_ref(x, y, k);
 #endif
@@ -146,8 +146,8 @@ void quantize_row_q8_1(const float * GGML_RESTRICT x, void * GGML_RESTRICT vy, i
 
 //===================================== Dot products =================================
 
-void ggml_vec_dot_q4_0_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc) {
-    const int qk = QK8_0;
+void ggml_rxd_vec_dot_q4_0_q8_0(int n, float * GGML_RXD_RESTRICT s, size_t bs, const void * GGML_RXD_RESTRICT vx, size_t bx, const void * GGML_RXD_RESTRICT vy, size_t by, int nrc) {
+    const int qk = GGML_RXD_QK8_0;
     const int nb = n / qk;
 
     assert(n % qk == 0);
@@ -157,8 +157,8 @@ void ggml_vec_dot_q4_0_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const voi
     UNUSED(by);
     UNUSED(bs);
 
-    const block_q4_0 * GGML_RESTRICT x = vx;
-    const block_q8_0 * GGML_RESTRICT y = vy;
+    const block_q4_0 * GGML_RXD_RESTRICT x = vx;
+    const block_q8_0 * GGML_RXD_RESTRICT y = vy;
 
     int ib = 0;
     float sumf = 0;
@@ -178,7 +178,7 @@ void ggml_vec_dot_q4_0_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const voi
         const int8x16_t v_xhs = vec_sub(v_xh, v_s);
 
         const int8x16_t v_yl = vec_xl(0      , y[ib].qs);
-        const int8x16_t v_yh = vec_xl(QK8_0/2, y[ib].qs);
+        const int8x16_t v_yh = vec_xl(GGML_RXD_QK8_0/2, y[ib].qs);
 
         const int16x8_t v_xylso = vec_mulo(v_xls, v_yl);
         const int16x8_t v_xylse = vec_mule(v_xls, v_yl);
@@ -188,7 +188,7 @@ void ggml_vec_dot_q4_0_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const voi
         int16x8_t v_xy_ = v_xylso + v_xylse + v_xyhso + v_xyhse; v_xy_ += vec_reve(v_xy_);
 
         const float32x4_t v_xy = vec_float(vec_unpackh(v_xy_));
-        const float32x4_t v_d = vec_splats(GGML_CPU_FP16_TO_FP32(x[ib].d) * GGML_CPU_FP16_TO_FP32(y[ib].d));
+        const float32x4_t v_d = vec_splats(GGML_RXD_CPU_FP16_TO_FP32(x[ib].d) * GGML_RXD_CPU_FP16_TO_FP32(y[ib].d));
 
         acc = vec_madd(v_xy, v_d, acc);
     }
@@ -201,11 +201,11 @@ void ggml_vec_dot_q4_0_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const voi
     UNUSED(y);
     UNUSED(ib);
     UNUSED(sumf);
-    ggml_vec_dot_q4_0_q8_0_generic(n, s, bs, vx, bx, vy, by, nrc);
+    ggml_rxd_vec_dot_q4_0_q8_0_generic(n, s, bs, vx, bx, vy, by, nrc);
 #endif
 }
 
-void ggml_vec_dot_q4_1_q8_1(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc) {
+void ggml_rxd_vec_dot_q4_1_q8_1(int n, float * GGML_RXD_RESTRICT s, size_t bs, const void * GGML_RXD_RESTRICT vx, size_t bx, const void * GGML_RXD_RESTRICT vy, size_t by, int nrc) {
     const int qk = QK8_1;
     const int nb = n / qk;
 
@@ -216,8 +216,8 @@ void ggml_vec_dot_q4_1_q8_1(int n, float * GGML_RESTRICT s, size_t bs, const voi
     UNUSED(by);
     UNUSED(bs);
 
-    const block_q4_1 * GGML_RESTRICT x = vx;
-    const block_q8_1 * GGML_RESTRICT y = vy;
+    const block_q4_1 * GGML_RXD_RESTRICT x = vx;
+    const block_q8_1 * GGML_RXD_RESTRICT y = vy;
 
     int ib = 0;
     float sumf = 0;
@@ -233,7 +233,7 @@ void ggml_vec_dot_q4_1_q8_1(int n, float * GGML_RESTRICT s, size_t bs, const voi
         __builtin_prefetch(x[ib].qs, 0, 1);
         __builtin_prefetch(y[ib].qs, 0, 1);
 
-        summs += GGML_CPU_FP16_TO_FP32(x[ib].m) * GGML_CPU_FP16_TO_FP32(y[ib].s);
+        summs += GGML_RXD_CPU_FP16_TO_FP32(x[ib].m) * GGML_RXD_CPU_FP16_TO_FP32(y[ib].s);
 
         const uint8x16_t v_x = vec_xl(0, x[ib].qs);
         const int8x16_t v_xl = (const int8x16_t)(v_x & v_m);
@@ -242,10 +242,10 @@ void ggml_vec_dot_q4_1_q8_1(int n, float * GGML_RESTRICT s, size_t bs, const voi
         const int8x16_t v_yl = vec_xl(0      , y[ib].qs);
         const int8x16_t v_yh = vec_xl(QK8_1/2, y[ib].qs);
 
-        const int32x4_t v_xy_ = ggml_vec_dot(ggml_vec_dot(vec_splats(0), v_xl, v_yl), v_xh, v_yh);
+        const int32x4_t v_xy_ = ggml_rxd_vec_dot(ggml_rxd_vec_dot(vec_splats(0), v_xl, v_yl), v_xh, v_yh);
         const float32x4_t v_xy = vec_float(v_xy_);
 
-        const float32x4_t v_d = vec_splats(GGML_CPU_FP16_TO_FP32(x[ib].d) * GGML_CPU_FP16_TO_FP32(y[ib].d));
+        const float32x4_t v_d = vec_splats(GGML_RXD_CPU_FP16_TO_FP32(x[ib].d) * GGML_RXD_CPU_FP16_TO_FP32(y[ib].d));
 
         acc = vec_madd(v_xy, v_d, acc);
     }
@@ -258,24 +258,24 @@ void ggml_vec_dot_q4_1_q8_1(int n, float * GGML_RESTRICT s, size_t bs, const voi
     UNUSED(y);
     UNUSED(ib);
     UNUSED(sumf);
-    ggml_vec_dot_q4_1_q8_1_generic(n, s, bs, vx, bx, vy, by, nrc);
+    ggml_rxd_vec_dot_q4_1_q8_1_generic(n, s, bs, vx, bx, vy, by, nrc);
 #endif
 }
 
-void ggml_vec_dot_mxfp4_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc) {
+void ggml_rxd_vec_dot_mxfp4_q8_0(int n, float * GGML_RXD_RESTRICT s, size_t bs, const void * GGML_RXD_RESTRICT vx, size_t bx, const void * GGML_RXD_RESTRICT vy, size_t by, int nrc) {
     assert(nrc == 1);
     UNUSED(nrc);
     UNUSED(bx);
     UNUSED(by);
     UNUSED(bs);
     assert(n % QK_MXFP4 == 0);
-    static_assert(QK_MXFP4 == QK8_0, "QK_MXFP4 and QK8_0 must be the same");
+    static_assert(QK_MXFP4 == GGML_RXD_QK8_0, "QK_MXFP4 and GGML_RXD_QK8_0 must be the same");
 
     const int qk = QK_MXFP4;
     const int nb = n / qk;
 
-    const block_mxfp4 * GGML_RESTRICT x = vx;
-    const block_q8_0  * GGML_RESTRICT y = vy;
+    const block_mxfp4 * GGML_RXD_RESTRICT x = vx;
+    const block_q8_0  * GGML_RXD_RESTRICT y = vy;
 
     int ib = 0;
     float sumf = 0.0f;
@@ -288,10 +288,10 @@ void ggml_vec_dot_mxfp4_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const vo
 
     #pragma GCC unroll 8
     for (; ib + 1 < nb; ib += 2) {
-        const block_mxfp4 * GGML_RESTRICT x0 = &x[ib + 0];
-        const block_mxfp4 * GGML_RESTRICT x1 = &x[ib + 1];
-        const block_q8_0  * GGML_RESTRICT y0 = &y[ib + 0];
-        const block_q8_0  * GGML_RESTRICT y1 = &y[ib + 1];
+        const block_mxfp4 * GGML_RXD_RESTRICT x0 = &x[ib + 0];
+        const block_mxfp4 * GGML_RXD_RESTRICT x1 = &x[ib + 1];
+        const block_q8_0  * GGML_RXD_RESTRICT y0 = &y[ib + 0];
+        const block_q8_0  * GGML_RXD_RESTRICT y1 = &y[ib + 1];
 
         const uint8x16_t v_x0 = vec_xl(0, x0->qs);
         const uint8x16_t v_x1 = vec_xl(0, x1->qs);
@@ -307,26 +307,26 @@ void ggml_vec_dot_mxfp4_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const vo
         v_x1h = vec_perm(v_k, v_k, (uchar8x16_t)v_x1h);
 
         const int8x16_t v_y0l = vec_xl(0,       y0->qs);
-        const int8x16_t v_y0h = vec_xl(QK8_0/2, y0->qs);
+        const int8x16_t v_y0h = vec_xl(GGML_RXD_QK8_0/2, y0->qs);
         const int8x16_t v_y1l = vec_xl(0,       y1->qs);
-        const int8x16_t v_y1h = vec_xl(QK8_0/2, y1->qs);
+        const int8x16_t v_y1h = vec_xl(GGML_RXD_QK8_0/2, y1->qs);
 
-        const int32x4_t v_xy0 = ggml_vec_dot(ggml_vec_dot(vec_splats(0), v_x0l, v_y0l), v_x0h, v_y0h);
-        const int32x4_t v_xy1 = ggml_vec_dot(ggml_vec_dot(vec_splats(0), v_x1l, v_y1l), v_x1h, v_y1h);
+        const int32x4_t v_xy0 = ggml_rxd_vec_dot(ggml_rxd_vec_dot(vec_splats(0), v_x0l, v_y0l), v_x0h, v_y0h);
+        const int32x4_t v_xy1 = ggml_rxd_vec_dot(ggml_rxd_vec_dot(vec_splats(0), v_x1l, v_y1l), v_x1h, v_y1h);
 
         const float32x4_t v_xy0f = vec_float(v_xy0);
         const float32x4_t v_xy1f = vec_float(v_xy1);
 
-        const float32x4_t v_d0 = vec_splats(GGML_E8M0_TO_FP32_HALF(x0->e) * GGML_CPU_FP16_TO_FP32(y0->d));
-        const float32x4_t v_d1 = vec_splats(GGML_E8M0_TO_FP32_HALF(x1->e) * GGML_CPU_FP16_TO_FP32(y1->d));
+        const float32x4_t v_d0 = vec_splats(GGML_RXD_E8M0_TO_FP32_HALF(x0->e) * GGML_RXD_CPU_FP16_TO_FP32(y0->d));
+        const float32x4_t v_d1 = vec_splats(GGML_RXD_E8M0_TO_FP32_HALF(x1->e) * GGML_RXD_CPU_FP16_TO_FP32(y1->d));
 
         v_acc = vec_madd(v_xy0f, v_d0, v_acc);
         v_acc = vec_madd(v_xy1f, v_d1, v_acc);
     }
 
     for (; ib < nb; ++ib) {
-        const block_mxfp4 * GGML_RESTRICT x0 = &x[ib + 0];
-        const block_q8_0  * GGML_RESTRICT y0 = &y[ib + 0];
+        const block_mxfp4 * GGML_RXD_RESTRICT x0 = &x[ib + 0];
+        const block_q8_0  * GGML_RXD_RESTRICT y0 = &y[ib + 0];
 
         const uint8x16_t v_x = vec_xl(0, x0->qs);
 
@@ -337,12 +337,12 @@ void ggml_vec_dot_mxfp4_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const vo
         v_xh = vec_perm(v_k, v_k, (uchar8x16_t)v_xh);
 
         const int8x16_t v_yl = vec_xl(0,       y0->qs);
-        const int8x16_t v_yh = vec_xl(QK8_0/2, y0->qs);
+        const int8x16_t v_yh = vec_xl(GGML_RXD_QK8_0/2, y0->qs);
 
-        const int32x4_t v_xy = ggml_vec_dot(ggml_vec_dot(vec_splats(0), v_xl, v_yl), v_xh, v_yh);
+        const int32x4_t v_xy = ggml_rxd_vec_dot(ggml_rxd_vec_dot(vec_splats(0), v_xl, v_yl), v_xh, v_yh);
         const float32x4_t v_xyf = vec_float(v_xy);
 
-        const float32x4_t v_d = vec_splats(GGML_E8M0_TO_FP32_HALF(x0->e) * GGML_CPU_FP16_TO_FP32(y0->d));
+        const float32x4_t v_d = vec_splats(GGML_RXD_E8M0_TO_FP32_HALF(x0->e) * GGML_RXD_CPU_FP16_TO_FP32(y0->d));
         v_acc = vec_madd(v_xyf, v_d, v_acc);
     }
 
@@ -353,12 +353,12 @@ void ggml_vec_dot_mxfp4_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const vo
     UNUSED(y);
     UNUSED(ib);
     UNUSED(sumf);
-    ggml_vec_dot_mxfp4_q8_0_generic(n, s, bs, vx, bx, vy, by, nrc);
+    ggml_rxd_vec_dot_mxfp4_q8_0_generic(n, s, bs, vx, bx, vy, by, nrc);
 #endif
 }
 
-void ggml_vec_dot_q5_0_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc) {
-    const int qk = QK8_0;
+void ggml_rxd_vec_dot_q5_0_q8_0(int n, float * GGML_RXD_RESTRICT s, size_t bs, const void * GGML_RXD_RESTRICT vx, size_t bx, const void * GGML_RXD_RESTRICT vy, size_t by, int nrc) {
+    const int qk = GGML_RXD_QK8_0;
     const int nb = n / qk;
 
     assert(n % qk == 0);
@@ -369,8 +369,8 @@ void ggml_vec_dot_q5_0_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const voi
     UNUSED(by);
     UNUSED(bs);
 
-    const block_q5_0 * GGML_RESTRICT x = vx;
-    const block_q8_0 * GGML_RESTRICT y = vy;
+    const block_q5_0 * GGML_RXD_RESTRICT x = vx;
+    const block_q8_0 * GGML_RXD_RESTRICT y = vy;
 
     int ib = 0;
     float sumf = 0.0f;
@@ -386,10 +386,10 @@ void ggml_vec_dot_q5_0_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const voi
 
     #pragma GCC unroll 4
     for (; ib + 1 < nb; ib += 2) {
-        const block_q5_0 * GGML_RESTRICT x0 = &x[ib + 0];
-        const block_q5_0 * GGML_RESTRICT x1 = &x[ib + 1];
-        const block_q8_0 * GGML_RESTRICT y0 = &y[ib + 0];
-        const block_q8_0 * GGML_RESTRICT y1 = &y[ib + 1];
+        const block_q5_0 * GGML_RXD_RESTRICT x0 = &x[ib + 0];
+        const block_q5_0 * GGML_RXD_RESTRICT x1 = &x[ib + 1];
+        const block_q8_0 * GGML_RXD_RESTRICT y0 = &y[ib + 0];
+        const block_q8_0 * GGML_RXD_RESTRICT y1 = &y[ib + 1];
 
         memcpy(&qh0, x0->qh, sizeof(qh0));
         memcpy(&qh1, x1->qh, sizeof(qh1));
@@ -429,18 +429,18 @@ void ggml_vec_dot_q5_0_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const voi
         const int8x16_t v_x1hf = vec_sub(v_x1h, v_qh1h);
 
         const int8x16_t v_y0l = vec_xl(0,       (const int8_t *)y0->qs);
-        const int8x16_t v_y0h = vec_xl(QK8_0/2, (const int8_t *)y0->qs);
+        const int8x16_t v_y0h = vec_xl(GGML_RXD_QK8_0/2, (const int8_t *)y0->qs);
         const int8x16_t v_y1l = vec_xl(0,       (const int8_t *)y1->qs);
-        const int8x16_t v_y1h = vec_xl(QK8_0/2, (const int8_t *)y1->qs);
+        const int8x16_t v_y1h = vec_xl(GGML_RXD_QK8_0/2, (const int8_t *)y1->qs);
 
-        const int32x4_t v_xy0 = ggml_vec_dot(ggml_vec_dot(vec_splats(0), v_x0lf, v_y0l), v_x0hf, v_y0h);
-        const int32x4_t v_xy1 = ggml_vec_dot(ggml_vec_dot(vec_splats(0), v_x1lf, v_y1l), v_x1hf, v_y1h);
+        const int32x4_t v_xy0 = ggml_rxd_vec_dot(ggml_rxd_vec_dot(vec_splats(0), v_x0lf, v_y0l), v_x0hf, v_y0h);
+        const int32x4_t v_xy1 = ggml_rxd_vec_dot(ggml_rxd_vec_dot(vec_splats(0), v_x1lf, v_y1l), v_x1hf, v_y1h);
 
         const float32x4_t v_xy0f = vec_float(v_xy0);
         const float32x4_t v_xy1f = vec_float(v_xy1);
 
-        const float32x4_t v_d0 = vec_splats(GGML_CPU_FP16_TO_FP32(x0->d) * GGML_CPU_FP16_TO_FP32(y0->d));
-        const float32x4_t v_d1 = vec_splats(GGML_CPU_FP16_TO_FP32(x1->d) * GGML_CPU_FP16_TO_FP32(y1->d));
+        const float32x4_t v_d0 = vec_splats(GGML_RXD_CPU_FP16_TO_FP32(x0->d) * GGML_RXD_CPU_FP16_TO_FP32(y0->d));
+        const float32x4_t v_d1 = vec_splats(GGML_RXD_CPU_FP16_TO_FP32(x1->d) * GGML_RXD_CPU_FP16_TO_FP32(y1->d));
 
         v_sum0 = vec_madd(v_xy0f, v_d0, v_sum0);
         v_sum1 = vec_madd(v_xy1f, v_d1, v_sum1);
@@ -450,8 +450,8 @@ void ggml_vec_dot_q5_0_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const voi
 
     #pragma GCC unroll 4
     for (; ib < nb; ++ib) {
-        const block_q5_0 * GGML_RESTRICT x0 = &x[ib];
-        const block_q8_0 * GGML_RESTRICT y0 = &y[ib];
+        const block_q5_0 * GGML_RXD_RESTRICT x0 = &x[ib];
+        const block_q8_0 * GGML_RXD_RESTRICT y0 = &y[ib];
 
         uint32_t qh;
         memcpy(&qh, x0->qh, sizeof(qh));
@@ -477,12 +477,12 @@ void ggml_vec_dot_q5_0_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const voi
         const int8x16_t v_xhf = vec_sub(v_xh, v_qhh);
 
         const int8x16_t v_yl = vec_xl(0,       (const int8_t *)y0->qs);
-        const int8x16_t v_yh = vec_xl(QK8_0/2, (const int8_t *)y0->qs);
+        const int8x16_t v_yh = vec_xl(GGML_RXD_QK8_0/2, (const int8_t *)y0->qs);
 
-        const int32x4_t v_xy = ggml_vec_dot(ggml_vec_dot(vec_splats(0), v_xlf, v_yl), v_xhf, v_yh);
+        const int32x4_t v_xy = ggml_rxd_vec_dot(ggml_rxd_vec_dot(vec_splats(0), v_xlf, v_yl), v_xhf, v_yh);
         const float32x4_t v_xyf = vec_float(v_xy);
 
-        const float32x4_t v_d = vec_splats(GGML_CPU_FP16_TO_FP32(x0->d) * GGML_CPU_FP16_TO_FP32(y0->d));
+        const float32x4_t v_d = vec_splats(GGML_RXD_CPU_FP16_TO_FP32(x0->d) * GGML_RXD_CPU_FP16_TO_FP32(y0->d));
         const float32x4_t v_acc = vec_madd(v_xyf, v_d, vec_splats(0.0f));
 
         sumf += vec_hsum_f32x4(v_acc);
@@ -495,11 +495,11 @@ void ggml_vec_dot_q5_0_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const voi
     UNUSED(y);
     UNUSED(ib);
     UNUSED(sumf);
-    ggml_vec_dot_q5_0_q8_0_generic(n, s, bs, vx, bx, vy, by, nrc);
+    ggml_rxd_vec_dot_q5_0_q8_0_generic(n, s, bs, vx, bx, vy, by, nrc);
 #endif
 }
 
-void ggml_vec_dot_q5_1_q8_1(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc) {
+void ggml_rxd_vec_dot_q5_1_q8_1(int n, float * GGML_RXD_RESTRICT s, size_t bs, const void * GGML_RXD_RESTRICT vx, size_t bx, const void * GGML_RXD_RESTRICT vy, size_t by, int nrc) {
     const int qk = QK8_1;
     const int nb = n / qk;
 
@@ -511,8 +511,8 @@ void ggml_vec_dot_q5_1_q8_1(int n, float * GGML_RESTRICT s, size_t bs, const voi
     UNUSED(by);
     UNUSED(bs);
 
-    const block_q5_1 * GGML_RESTRICT x = vx;
-    const block_q8_1 * GGML_RESTRICT y = vy;
+    const block_q5_1 * GGML_RXD_RESTRICT x = vx;
+    const block_q8_1 * GGML_RXD_RESTRICT y = vy;
 
     int ib = 0;
     float sumf = 0.0f;
@@ -534,13 +534,13 @@ void ggml_vec_dot_q5_1_q8_1(int n, float * GGML_RESTRICT s, size_t bs, const voi
 
     #pragma GCC unroll 4
     for (; ib + 1 < nb; ib += 2) {
-        const block_q5_1 * GGML_RESTRICT x0 = &x[ib + 0];
-        const block_q5_1 * GGML_RESTRICT x1 = &x[ib + 1];
-        const block_q8_1 * GGML_RESTRICT y0 = &y[ib + 0];
-        const block_q8_1 * GGML_RESTRICT y1 = &y[ib + 1];
+        const block_q5_1 * GGML_RXD_RESTRICT x0 = &x[ib + 0];
+        const block_q5_1 * GGML_RXD_RESTRICT x1 = &x[ib + 1];
+        const block_q8_1 * GGML_RXD_RESTRICT y0 = &y[ib + 0];
+        const block_q8_1 * GGML_RXD_RESTRICT y1 = &y[ib + 1];
 
-        summs0 += GGML_CPU_FP16_TO_FP32(x0->m) * GGML_CPU_FP16_TO_FP32(y0->s);
-        summs1 += GGML_CPU_FP16_TO_FP32(x1->m) * GGML_CPU_FP16_TO_FP32(y1->s);
+        summs0 += GGML_RXD_CPU_FP16_TO_FP32(x0->m) * GGML_RXD_CPU_FP16_TO_FP32(y0->s);
+        summs1 += GGML_RXD_CPU_FP16_TO_FP32(x1->m) * GGML_RXD_CPU_FP16_TO_FP32(y1->s);
 
         memcpy(&qh0, x0->qh, sizeof(qh0));
         memcpy(&qh1, x1->qh, sizeof(qh1));
@@ -584,14 +584,14 @@ void ggml_vec_dot_q5_1_q8_1(int n, float * GGML_RESTRICT s, size_t bs, const voi
         const int8x16_t v_y1l = vec_xl(0      , y1->qs);
         const int8x16_t v_y1h = vec_xl(QK8_1/2, y1->qs);
 
-        const int32x4_t v_xy0 = ggml_vec_dot(ggml_vec_dot(vec_splats(0), v_x0lf, v_y0l), v_x0hf, v_y0h);
-        const int32x4_t v_xy1 = ggml_vec_dot(ggml_vec_dot(vec_splats(0), v_x1lf, v_y1l), v_x1hf, v_y1h);
+        const int32x4_t v_xy0 = ggml_rxd_vec_dot(ggml_rxd_vec_dot(vec_splats(0), v_x0lf, v_y0l), v_x0hf, v_y0h);
+        const int32x4_t v_xy1 = ggml_rxd_vec_dot(ggml_rxd_vec_dot(vec_splats(0), v_x1lf, v_y1l), v_x1hf, v_y1h);
 
         const float32x4_t v_xy0f = vec_float(v_xy0);
         const float32x4_t v_xy1f = vec_float(v_xy1);
 
-        const float32x4_t v_d0 = vec_splats(GGML_CPU_FP16_TO_FP32(x0->d) * GGML_CPU_FP16_TO_FP32(y0->d));
-        const float32x4_t v_d1 = vec_splats(GGML_CPU_FP16_TO_FP32(x1->d) * GGML_CPU_FP16_TO_FP32(y1->d));
+        const float32x4_t v_d0 = vec_splats(GGML_RXD_CPU_FP16_TO_FP32(x0->d) * GGML_RXD_CPU_FP16_TO_FP32(y0->d));
+        const float32x4_t v_d1 = vec_splats(GGML_RXD_CPU_FP16_TO_FP32(x1->d) * GGML_RXD_CPU_FP16_TO_FP32(y1->d));
 
         v_sum0 = vec_madd(v_xy0f, v_d0, v_sum0);
         v_sum1 = vec_madd(v_xy1f, v_d1, v_sum1);
@@ -601,10 +601,10 @@ void ggml_vec_dot_q5_1_q8_1(int n, float * GGML_RESTRICT s, size_t bs, const voi
 
     #pragma GCC unroll 4
     for (; ib < nb; ++ib) {
-        const block_q5_1 * GGML_RESTRICT x0 = &x[ib];
-        const block_q8_1 * GGML_RESTRICT y0 = &y[ib];
+        const block_q5_1 * GGML_RXD_RESTRICT x0 = &x[ib];
+        const block_q8_1 * GGML_RXD_RESTRICT y0 = &y[ib];
 
-        float summs = GGML_CPU_FP16_TO_FP32(x0->m) * GGML_CPU_FP16_TO_FP32(y0->s);
+        float summs = GGML_RXD_CPU_FP16_TO_FP32(x0->m) * GGML_RXD_CPU_FP16_TO_FP32(y0->s);
 
         uint32_t qh;
         memcpy(&qh, x0->qh, sizeof(qh));
@@ -632,10 +632,10 @@ void ggml_vec_dot_q5_1_q8_1(int n, float * GGML_RESTRICT s, size_t bs, const voi
         const int8x16_t v_yl = vec_xl(0      , y0->qs);
         const int8x16_t v_yh = vec_xl(QK8_1/2, y0->qs);
 
-        const int32x4_t v_xy = ggml_vec_dot(ggml_vec_dot(vec_splats(0), v_xlf, v_yl), v_xhf, v_yh);
+        const int32x4_t v_xy = ggml_rxd_vec_dot(ggml_rxd_vec_dot(vec_splats(0), v_xlf, v_yl), v_xhf, v_yh);
         const float32x4_t v_xyf = vec_float(v_xy);
 
-        const float32x4_t v_d = vec_splats(GGML_CPU_FP16_TO_FP32(x0->d) * GGML_CPU_FP16_TO_FP32(y0->d));
+        const float32x4_t v_d = vec_splats(GGML_RXD_CPU_FP16_TO_FP32(x0->d) * GGML_RXD_CPU_FP16_TO_FP32(y0->d));
         const float32x4_t v_acc = vec_madd(v_xyf, v_d, v_acc);
 
         sumf += vec_hsum_f32x4(v_acc) + summs;
@@ -648,12 +648,12 @@ void ggml_vec_dot_q5_1_q8_1(int n, float * GGML_RESTRICT s, size_t bs, const voi
     UNUSED(y);
     UNUSED(ib);
     UNUSED(sumf);
-    ggml_vec_dot_q5_1_q8_1_generic(n, s, bs, vx, bx, vy, by, nrc);
+    ggml_rxd_vec_dot_q5_1_q8_1_generic(n, s, bs, vx, bx, vy, by, nrc);
 #endif
 }
 
-void ggml_vec_dot_q8_0_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc) {
-    const int qk = QK8_0;
+void ggml_rxd_vec_dot_q8_0_q8_0(int n, float * GGML_RXD_RESTRICT s, size_t bs, const void * GGML_RXD_RESTRICT vx, size_t bx, const void * GGML_RXD_RESTRICT vy, size_t by, int nrc) {
+    const int qk = GGML_RXD_QK8_0;
     const int nb = n / qk;
 
     assert(n % qk == 0);
@@ -663,8 +663,8 @@ void ggml_vec_dot_q8_0_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const voi
     UNUSED(by);
     UNUSED(bs);
 
-    const block_q8_0 * GGML_RESTRICT x = vx;
-    const block_q8_0 * GGML_RESTRICT y = vy;
+    const block_q8_0 * GGML_RXD_RESTRICT x = vx;
+    const block_q8_0 * GGML_RXD_RESTRICT y = vy;
 
     int ib = 0;
     float sumf = 0;
@@ -678,13 +678,13 @@ void ggml_vec_dot_q8_0_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const voi
         __builtin_prefetch(y[ib].qs, 0, 1);
 
         const int8x16_t v_xl = vec_xl(0      , x[ib].qs);
-        const int8x16_t v_xh = vec_xl(QK8_0/2, x[ib].qs);
+        const int8x16_t v_xh = vec_xl(GGML_RXD_QK8_0/2, x[ib].qs);
         const int8x16_t v_yl = vec_xl(0      , y[ib].qs);
-        const int8x16_t v_yh = vec_xl(QK8_0/2, y[ib].qs);
+        const int8x16_t v_yh = vec_xl(GGML_RXD_QK8_0/2, y[ib].qs);
 
-        const int32x4_t v_xy_ = ggml_vec_dot(ggml_vec_dot(vec_splats(0), v_xl, v_yl), v_xh, v_yh);
+        const int32x4_t v_xy_ = ggml_rxd_vec_dot(ggml_rxd_vec_dot(vec_splats(0), v_xl, v_yl), v_xh, v_yh);
         const float32x4_t v_xy = vec_float(v_xy_);
-        const float32x4_t v_d = vec_splats(GGML_CPU_FP16_TO_FP32(x[ib].d) * GGML_CPU_FP16_TO_FP32(y[ib].d));
+        const float32x4_t v_d = vec_splats(GGML_RXD_CPU_FP16_TO_FP32(x[ib].d) * GGML_RXD_CPU_FP16_TO_FP32(y[ib].d));
 
         acc = vec_madd(v_xy, v_d, acc);
     }
@@ -698,12 +698,12 @@ void ggml_vec_dot_q8_0_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const voi
     UNUSED(y);
     UNUSED(ib);
     UNUSED(sumf);
-    ggml_vec_dot_q8_0_q8_0_generic(n, s, bs, vx, bx, vy, by, nrc);
+    ggml_rxd_vec_dot_q8_0_q8_0_generic(n, s, bs, vx, bx, vy, by, nrc);
 #endif
 }
 
-void ggml_vec_dot_q3_K_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc) {
-    assert(n % QK_K == 0);
+void ggml_rxd_vec_dot_q3_K_q8_K(int n, float * GGML_RXD_RESTRICT s, size_t bs, const void * GGML_RXD_RESTRICT vx, size_t bx, const void * GGML_RXD_RESTRICT vy, size_t by, int nrc) {
+    assert(n % GGML_RXD_QK_K == 0);
     assert(nrc == 1);
     UNUSED(nrc);
     UNUSED(bx);
@@ -713,10 +713,10 @@ void ggml_vec_dot_q3_K_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const voi
     const uint32_t kmask1 = 0x03030303;
     const uint32_t kmask2 = 0x0f0f0f0f;
 
-    const block_q3_K * GGML_RESTRICT x = vx;
-    const block_q8_K * GGML_RESTRICT y = vy;
+    const block_q3_K * GGML_RXD_RESTRICT x = vx;
+    const block_q8_K * GGML_RXD_RESTRICT y = vy;
 
-    const int nb = n / QK_K;
+    const int nb = n / GGML_RXD_QK_K;
 
 #if defined(__VXE__) || defined(__VXE2__)
     uint32_t aux[3];
@@ -739,7 +739,7 @@ void ggml_vec_dot_q3_K_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const voi
     float sum = 0;
 
     for (int i = 0; i < nb; ++i) {
-        const float d = y[i].d * GGML_CPU_FP16_TO_FP32(x[i].d);
+        const float d = y[i].d * GGML_RXD_CPU_FP16_TO_FP32(x[i].d);
 
         const uint8_t * restrict x0l = x[i].qs;
         const uint8_t * restrict x0h = x[i].hmask;
@@ -759,7 +759,7 @@ void ggml_vec_dot_q3_K_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const voi
         int8_t * scale = (int8_t *)utmp;
         for (int j = 0; j < 16; ++j) scale[j] -= 32;
 
-        for (int j = 0; j < QK_K/128; ++j) {
+        for (int j = 0; j < GGML_RXD_QK_K/128; ++j) {
             int32x4_t isum0, isum1, isum2, isum3;
 
             q3b[0] = vec_xl(0 , x0l);
@@ -786,10 +786,10 @@ void ggml_vec_dot_q3_K_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const voi
             q3bytes[2] = vec_sub((int8x16_t)vec_and(vec_sr(q3b[0], 2), v_3m), (int8x16_t)q3h[2]);
             q3bytes[3] = vec_sub((int8x16_t)vec_and(vec_sr(q3b[1], 2), v_3m), (int8x16_t)q3h[3]);
 
-            isum0 = ggml_vec_dot(v_z, q3bytes[0], q8bytes[0]);
-            isum1 = ggml_vec_dot(v_z, q3bytes[1], q8bytes[1]);
-            isum2 = ggml_vec_dot(v_z, q3bytes[2], q8bytes[2]);
-            isum3 = ggml_vec_dot(v_z, q3bytes[3], q8bytes[3]);
+            isum0 = ggml_rxd_vec_dot(v_z, q3bytes[0], q8bytes[0]);
+            isum1 = ggml_rxd_vec_dot(v_z, q3bytes[1], q8bytes[1]);
+            isum2 = ggml_rxd_vec_dot(v_z, q3bytes[2], q8bytes[2]);
+            isum3 = ggml_rxd_vec_dot(v_z, q3bytes[3], q8bytes[3]);
 
             isum += (isum0[0] + isum0[1] + isum0[2] + isum0[3]) * scale[0];
             isum += (isum1[0] + isum1[1] + isum1[2] + isum1[3]) * scale[1];
@@ -808,10 +808,10 @@ void ggml_vec_dot_q3_K_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const voi
             q3bytes[2] = vec_sub((int8x16_t)vec_and(vec_sr(q3b[0], 6), v_3m), (int8x16_t)q3h[2]);
             q3bytes[3] = vec_sub((int8x16_t)vec_and(vec_sr(q3b[1], 6), v_3m), (int8x16_t)q3h[3]);
 
-            isum0 = ggml_vec_dot(v_z, q3bytes[0], q8bytes[4]);
-            isum1 = ggml_vec_dot(v_z, q3bytes[1], q8bytes[5]);
-            isum2 = ggml_vec_dot(v_z, q3bytes[2], q8bytes[6]);
-            isum3 = ggml_vec_dot(v_z, q3bytes[3], q8bytes[7]);
+            isum0 = ggml_rxd_vec_dot(v_z, q3bytes[0], q8bytes[4]);
+            isum1 = ggml_rxd_vec_dot(v_z, q3bytes[1], q8bytes[5]);
+            isum2 = ggml_rxd_vec_dot(v_z, q3bytes[2], q8bytes[6]);
+            isum3 = ggml_rxd_vec_dot(v_z, q3bytes[3], q8bytes[7]);
 
             isum += vec_hsum_i32x4(isum0) * scale[0];
             isum += vec_hsum_i32x4(isum1) * scale[1];
@@ -837,22 +837,22 @@ void ggml_vec_dot_q3_K_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const voi
     UNUSED(x);
     UNUSED(y);
     UNUSED(nb);
-    ggml_vec_dot_q3_K_q8_K_generic(n, s, bs, vx, bx, vy, by, nrc);
+    ggml_rxd_vec_dot_q3_K_q8_K_generic(n, s, bs, vx, bx, vy, by, nrc);
 #endif
 }
 
-void ggml_vec_dot_q4_K_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc) {
-    assert(n % QK_K == 0);
+void ggml_rxd_vec_dot_q4_K_q8_K(int n, float * GGML_RXD_RESTRICT s, size_t bs, const void * GGML_RXD_RESTRICT vx, size_t bx, const void * GGML_RXD_RESTRICT vy, size_t by, int nrc) {
+    assert(n % GGML_RXD_QK_K == 0);
     assert(nrc == 1);
     UNUSED(nrc);
     UNUSED(bx);
     UNUSED(by);
     UNUSED(bs);
 
-    const block_q4_K * GGML_RESTRICT x = vx;
-    const block_q8_K * GGML_RESTRICT y = vy;
+    const block_q4_K * GGML_RXD_RESTRICT x = vx;
+    const block_q8_K * GGML_RXD_RESTRICT y = vy;
 
-    const int nb = n / QK_K;
+    const int nb = n / GGML_RXD_QK_K;
 
     static const uint32_t kmask1 = 0x3f3f3f3f;
     static const uint32_t kmask2 = 0x0f0f0f0f;
@@ -871,8 +871,8 @@ void ggml_vec_dot_q4_K_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const voi
     float sumf = 0;
 
     for (int i = 0; i < nb; ++i) {
-        const float d = y[i].d * GGML_CPU_FP16_TO_FP32(x[i].d);
-        const float dmin = y[i].d * GGML_CPU_FP16_TO_FP32(x[i].dmin);
+        const float d = y[i].d * GGML_RXD_CPU_FP16_TO_FP32(x[i].d);
+        const float dmin = y[i].d * GGML_RXD_CPU_FP16_TO_FP32(x[i].dmin);
 
         const int16x8_t v_ysumsl = vec_xl(0 , y[i].bsums);
         const int16x8_t v_ysumsh = vec_xl(16, y[i].bsums);
@@ -895,13 +895,13 @@ void ggml_vec_dot_q4_K_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const voi
         sumf -= dmin * (v_mins[0] + v_mins[1] + v_mins[2] + v_mins[3]);
 
         const uint8_t * scales = (const uint8_t *)utmp;
-        const uint8_t * GGML_RESTRICT x0 = x[i].qs;
-        const int8_t  * GGML_RESTRICT y0 = y[i].qs;
+        const uint8_t * GGML_RXD_RESTRICT x0 = x[i].qs;
+        const int8_t  * GGML_RXD_RESTRICT y0 = y[i].qs;
 
         int32_t sumi1 = 0;
         int32_t sumi2 = 0;
 
-        for (int j = 0; j < QK_K/64; ++j) {
+        for (int j = 0; j < GGML_RXD_QK_K/64; ++j) {
             v_x[0] = vec_xl(0 , x0);
             v_x[1] = vec_xl(16, x0);
             x0 += 32;
@@ -913,7 +913,7 @@ void ggml_vec_dot_q4_K_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const voi
             v_xl[0] = (int8x16_t)vec_and(v_x[0], v_lm);
             v_xl[1] = (int8x16_t)vec_and(v_x[1], v_lm);
 
-            const int32x4_t p1 = ggml_vec_dot(ggml_vec_dot(v_z, v_xl[0], v_y[0]), v_xl[1], v_y[1]);
+            const int32x4_t p1 = ggml_rxd_vec_dot(ggml_rxd_vec_dot(v_z, v_xl[0], v_y[0]), v_xl[1], v_y[1]);
             sumi1 += vec_hsum_i32x4(p1) * scales[2*j+0];
 
             v_y[0] = vec_xl(0 , y0);
@@ -923,7 +923,7 @@ void ggml_vec_dot_q4_K_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const voi
             v_xl[0] = (int8x16_t)vec_sr(v_x[0], 4);
             v_xl[1] = (int8x16_t)vec_sr(v_x[1], 4);
 
-            const int32x4_t p2 = ggml_vec_dot(ggml_vec_dot(v_z, v_xl[0], v_y[0]), v_xl[1], v_y[1]);
+            const int32x4_t p2 = ggml_rxd_vec_dot(ggml_rxd_vec_dot(v_z, v_xl[0], v_y[0]), v_xl[1], v_y[1]);
             sumi2 += vec_hsum_i32x4(p2) * scales[2*j+1];
         }
 
@@ -940,22 +940,22 @@ void ggml_vec_dot_q4_K_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const voi
     UNUSED(kmask2);
     UNUSED(kmask3);
     UNUSED(utmp);
-    ggml_vec_dot_q4_K_q8_K_generic(n, s, bs, vx, bx, vy, by, nrc);
+    ggml_rxd_vec_dot_q4_K_q8_K_generic(n, s, bs, vx, bx, vy, by, nrc);
 #endif
 }
 
-void ggml_vec_dot_q5_K_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy,  size_t by, int nrc) {
-    assert(n % QK_K == 0);
+void ggml_rxd_vec_dot_q5_K_q8_K(int n, float * GGML_RXD_RESTRICT s, size_t bs, const void * GGML_RXD_RESTRICT vx, size_t bx, const void * GGML_RXD_RESTRICT vy,  size_t by, int nrc) {
+    assert(n % GGML_RXD_QK_K == 0);
     assert(nrc == 1);
     UNUSED(nrc);
     UNUSED(bx);
     UNUSED(by);
     UNUSED(bs);
 
-    const block_q5_K * GGML_RESTRICT x = vx;
-    const block_q8_K * GGML_RESTRICT y = vy;
+    const block_q5_K * GGML_RXD_RESTRICT x = vx;
+    const block_q8_K * GGML_RXD_RESTRICT y = vy;
 
-    const int nb = n / QK_K;
+    const int nb = n / GGML_RXD_QK_K;
 
     static const uint32_t kmask1 = 0x3f3f3f3f;
     static const uint32_t kmask2 = 0x0f0f0f0f;
@@ -985,8 +985,8 @@ void ggml_vec_dot_q5_K_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const voi
     float sumf = 0;
 
     for (int i = 0; i < nb; ++i) {
-        const float d = y[i].d * GGML_CPU_FP16_TO_FP32(x[i].d);
-        const float dmin = y[i].d * GGML_CPU_FP16_TO_FP32(x[i].dmin);
+        const float d = y[i].d * GGML_RXD_CPU_FP16_TO_FP32(x[i].d);
+        const float dmin = y[i].d * GGML_RXD_CPU_FP16_TO_FP32(x[i].dmin);
 
         const int16x8_t v_ysumsl = vec_xl(0 , y[i].bsums);
         const int16x8_t v_ysumsh = vec_xl(16, y[i].bsums);
@@ -1009,15 +1009,15 @@ void ggml_vec_dot_q5_K_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const voi
         const int32_t mins = vec_hsum_i32x4(v_mins);
 
         const uint8_t * scales = (const uint8_t *)utmp;
-        const uint8_t * GGML_RESTRICT x0l = x[i].qs;
-        const uint8_t * GGML_RESTRICT x0h = x[i].qh;
-        const int8_t  * GGML_RESTRICT y0 = y[i].qs;
+        const uint8_t * GGML_RXD_RESTRICT x0l = x[i].qs;
+        const uint8_t * GGML_RXD_RESTRICT x0h = x[i].qh;
+        const int8_t  * GGML_RXD_RESTRICT y0 = y[i].qs;
 
         v_xh[0] = vec_xl(0 , x0h);
         v_xh[1] = vec_xl(16, x0h);
 
         int32_t sumi = 0;
-        for (int j = 0; j < QK_K/64; ++j) {
+        for (int j = 0; j < GGML_RXD_QK_K/64; ++j) {
             v_xl[0] = vec_xl(0 , x0l);
             v_xl[1] = vec_xl(16, x0l);
             x0l += 32;
@@ -1040,8 +1040,8 @@ void ggml_vec_dot_q5_K_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const voi
             q5b[2] = (int8x16_t)vec_or(vec_sr(v_xl[0], 4), q5h[2]);
             q5b[3] = (int8x16_t)vec_or(vec_sr(v_xl[1], 4), q5h[3]);
 
-            int32x4_t sumi0 = ggml_vec_dot(ggml_vec_dot(v_z, q5b[0], v_y[0]), q5b[1], v_y[1]);
-            int32x4_t sumi1 = ggml_vec_dot(ggml_vec_dot(v_z, q5b[2], v_y[2]), q5b[3], v_y[3]);
+            int32x4_t sumi0 = ggml_rxd_vec_dot(ggml_rxd_vec_dot(v_z, q5b[0], v_y[0]), q5b[1], v_y[1]);
+            int32x4_t sumi1 = ggml_rxd_vec_dot(ggml_rxd_vec_dot(v_z, q5b[2], v_y[2]), q5b[3], v_y[3]);
 
             sumi += vec_hsum_i32x4(sumi0) * *scales++;
             sumi += vec_hsum_i32x4(sumi1) * *scales++;
@@ -1060,22 +1060,22 @@ void ggml_vec_dot_q5_K_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const voi
     UNUSED(kmask2);
     UNUSED(kmask3);
     UNUSED(utmp);
-    ggml_vec_dot_q5_K_q8_K_generic(n, s, bs, vx, bx, vy, by, nrc);
+    ggml_rxd_vec_dot_q5_K_q8_K_generic(n, s, bs, vx, bx, vy, by, nrc);
 #endif
 }
 
-void ggml_vec_dot_q6_K_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc) {
-    assert(n % QK_K == 0);
+void ggml_rxd_vec_dot_q6_K_q8_K(int n, float * GGML_RXD_RESTRICT s, size_t bs, const void * GGML_RXD_RESTRICT vx, size_t bx, const void * GGML_RXD_RESTRICT vy, size_t by, int nrc) {
+    assert(n % GGML_RXD_QK_K == 0);
     assert(nrc == 1);
     UNUSED(nrc);
     UNUSED(bx);
     UNUSED(by);
     UNUSED(bs);
 
-    const block_q6_K * GGML_RESTRICT x = vx;
-    const block_q8_K * GGML_RESTRICT y = vy;
+    const block_q6_K * GGML_RXD_RESTRICT x = vx;
+    const block_q8_K * GGML_RXD_RESTRICT y = vy;
 
-    const int nb = n / QK_K;
+    const int nb = n / GGML_RXD_QK_K;
 
 #if defined(__VXE__) || defined(__VXE2__)
     float sum = 0;
@@ -1094,13 +1094,13 @@ void ggml_vec_dot_q6_K_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const voi
     int8x16_t  v_y[4];
 
     for (int i = 0; i < nb; ++i) {
-        const float d_all = GGML_CPU_FP16_TO_FP32(x[i].d);
+        const float d_all = GGML_RXD_CPU_FP16_TO_FP32(x[i].d);
 
-        const uint8_t * GGML_RESTRICT x0l = x[i].ql;
-        const uint8_t * GGML_RESTRICT x0h = x[i].qh;
-        const int8_t  * GGML_RESTRICT y0 = y[i].qs;
+        const uint8_t * GGML_RXD_RESTRICT x0l = x[i].ql;
+        const uint8_t * GGML_RXD_RESTRICT x0h = x[i].qh;
+        const int8_t  * GGML_RXD_RESTRICT y0 = y[i].qs;
 
-        const int8_t  * GGML_RESTRICT scale = x[i].scales;
+        const int8_t  * GGML_RXD_RESTRICT scale = x[i].scales;
 
         const int16x8_t v_ysumsl = vec_xl(0 , y[i].bsums);
         const int16x8_t v_ysumsh = vec_xl(16, y[i].bsums);
@@ -1118,7 +1118,7 @@ void ggml_vec_dot_q6_K_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const voi
         const int32_t mins = vec_hsum_i32x4(v_mins);
 
         int32_t isum = 0;
-        for (int j = 0; j < QK_K/128; ++j) {
+        for (int j = 0; j < GGML_RXD_QK_K/128; ++j) {
             // Load model upper 2 bits
             v_xh[0] = vec_xl(0 , x0h);
             v_xh[1] = vec_xl(16, x0h);
@@ -1150,10 +1150,10 @@ void ggml_vec_dot_q6_K_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const voi
             q6b[2] = (int8x16_t)(vec_or(vec_and(v_xl[2], v_lm), q6h[2]));
             q6b[3] = (int8x16_t)(vec_or(vec_and(v_xl[3], v_lm), q6h[3]));
 
-            int32x4_t summs0 = ggml_vec_dot(v_z, q6b[0], v_y[0]);
-            int32x4_t summs1 = ggml_vec_dot(v_z, q6b[1], v_y[1]);
-            int32x4_t summs2 = ggml_vec_dot(v_z, q6b[2], v_y[2]);
-            int32x4_t summs3 = ggml_vec_dot(v_z, q6b[3], v_y[3]);
+            int32x4_t summs0 = ggml_rxd_vec_dot(v_z, q6b[0], v_y[0]);
+            int32x4_t summs1 = ggml_rxd_vec_dot(v_z, q6b[1], v_y[1]);
+            int32x4_t summs2 = ggml_rxd_vec_dot(v_z, q6b[2], v_y[2]);
+            int32x4_t summs3 = ggml_rxd_vec_dot(v_z, q6b[3], v_y[3]);
 
             isum += vec_hsum_i32x4(summs0) * scale[0] +
                     vec_hsum_i32x4(summs1) * scale[1] +
@@ -1184,10 +1184,10 @@ void ggml_vec_dot_q6_K_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const voi
             q6b[2] = (int8x16_t)(vec_or(vec_sr(v_xl[2], 4), q6h[2]));
             q6b[3] = (int8x16_t)(vec_or(vec_sr(v_xl[3], 4), q6h[3]));
 
-            summs0 = ggml_vec_dot(v_z, q6b[0], v_y[0]);
-            summs1 = ggml_vec_dot(v_z, q6b[1], v_y[1]);
-            summs2 = ggml_vec_dot(v_z, q6b[2], v_y[2]);
-            summs3 = ggml_vec_dot(v_z, q6b[3], v_y[3]);
+            summs0 = ggml_rxd_vec_dot(v_z, q6b[0], v_y[0]);
+            summs1 = ggml_rxd_vec_dot(v_z, q6b[1], v_y[1]);
+            summs2 = ggml_rxd_vec_dot(v_z, q6b[2], v_y[2]);
+            summs3 = ggml_rxd_vec_dot(v_z, q6b[3], v_y[3]);
 
             isum += vec_hsum_i32x4(summs0) * scale[0] +
                     vec_hsum_i32x4(summs1) * scale[1] +
@@ -1206,7 +1206,7 @@ void ggml_vec_dot_q6_K_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const voi
     UNUSED(x);
     UNUSED(y);
     UNUSED(nb);
-    ggml_vec_dot_q6_K_q8_K_generic(n, s, bs, vx, bx, vy, by, nrc);
+    ggml_rxd_vec_dot_q6_K_q8_K_generic(n, s, bs, vx, bx, vy, by, nrc);
 #endif
 }
 
@@ -1247,18 +1247,18 @@ void ggml_vec_dot_q6_K_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const voi
 // };
 // #endif
 
-// void ggml_vec_dot_iq2_xxs_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc) {
-//     assert(n % QK_K == 0);
+// void ggml_rxd_vec_dot_iq2_xxs_q8_K(int n, float * GGML_RXD_RESTRICT s, size_t bs, const void * GGML_RXD_RESTRICT vx, size_t bx, const void * GGML_RXD_RESTRICT vy, size_t by, int nrc) {
+//     assert(n % GGML_RXD_QK_K == 0);
 //     assert(nrc == 1);
 //     UNUSED(nrc);
 //     UNUSED(bx);
 //     UNUSED(by);
 //     UNUSED(bs);
 
-//     const block_iq2_xxs * GGML_RESTRICT x = vx;
-//     const block_q8_K    * GGML_RESTRICT y = vy;
+//     const block_iq2_xxs * GGML_RXD_RESTRICT x = vx;
+//     const block_q8_K    * GGML_RXD_RESTRICT y = vy;
 
-//     const int nb = n / QK_K;
+//     const int nb = n / GGML_RXD_QK_K;
 
 // #if defined(__VXE__) || defined(__VXE2__)
 //    const uint64_t * signs64 = (const uint64_t *)keven_signs_q2xs;
@@ -1269,13 +1269,13 @@ void ggml_vec_dot_q6_K_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const voi
 //    float sumf = 0;
 
 //    for (int i = 0; i < nb; ++i) {
-//        const float d = GGML_CPU_FP16_TO_FP32(x[i].d) * y[i].d;
-//        const uint16_t * GGML_RESTRICT q2 = x[i].qs;
-//        const int8_t   * GGML_RESTRICT q8 = y[i].qs;
+//        const float d = GGML_RXD_CPU_FP16_TO_FP32(x[i].d) * y[i].d;
+//        const uint16_t * GGML_RXD_RESTRICT q2 = x[i].qs;
+//        const int8_t   * GGML_RXD_RESTRICT q8 = y[i].qs;
 
 //        float sumf1 = 0, sumf2 = 0;
 
-//        for (int ib32 = 0; ib32 < QK_K/32; ib += 2) {
+//        for (int ib32 = 0; ib32 < GGML_RXD_QK_K/32; ib += 2) {
 //            int8x16_t q8b0 = vec_xl( 0, q8);
 //            int8x16_t qb81 = vec_xl(16, q8);
 //            int8x16_t q8b2 = vec_xl(32, q8);
@@ -1300,8 +1300,8 @@ void ggml_vec_dot_q6_K_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const voi
 //            q2u2 = vec_mul(q2u2, q2s2);
 //            q2u3 = vec_mul(q2u3, q2s3);
 
-//            const int32x4_t p1 = ggml_vec_dot(ggml_vec_dot(vec_splat_s32(0), q2u0, q8b0), q2u1, q8b1);
-//            const int32x4_t p2 = ggml_vec_dot(ggml_vec_dot(vec_splat_s32(0), q2u2, q8b2), q2u3, q8b3);
+//            const int32x4_t p1 = ggml_rxd_vec_dot(ggml_rxd_vec_dot(vec_splat_s32(0), q2u0, q8b0), q2u1, q8b1);
+//            const int32x4_t p2 = ggml_rxd_vec_dot(ggml_rxd_vec_dot(vec_splat_s32(0), q2u2, q8b2), q2u3, q8b3);
 
 //            sumf1 += (p1[0] + p1[1] + p1[2] + p1[3]) * (0.5f + (aux32[1] >> 28));
 //            sumf2 += (p2[0] + p2[1] + p2[2] + p2[3]) * (0.5f + (aux32[3] >> 28));
@@ -1319,11 +1319,11 @@ void ggml_vec_dot_q6_K_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const voi
 
 //     float sumf = 0.f;
 //     for (int i = 0; i < nb; ++i) {
-//         const float d = GGML_CPU_FP16_TO_FP32(x[i].d) * y[i].d;
-//         const uint16_t * GGML_RESTRICT q2 = x[i].qs;
-//         const int8_t   * GGML_RESTRICT q8 = y[i].qs;
+//         const float d = GGML_RXD_CPU_FP16_TO_FP32(x[i].d) * y[i].d;
+//         const uint16_t * GGML_RXD_RESTRICT q2 = x[i].qs;
+//         const int8_t   * GGML_RXD_RESTRICT q8 = y[i].qs;
 //         int32_t bsum = 0;
-//         for (int ib32 = 0; ib32 < QK_K/32; ++ib32) {
+//         for (int ib32 = 0; ib32 < GGML_RXD_QK_K/32; ++ib32) {
 //             memcpy(aux32, q2, 2*sizeof(uint32_t));
 //             q2 += 4;
 //             const uint32_t ls = 2*(aux32[1] >> 28) + 1;
@@ -1344,19 +1344,19 @@ void ggml_vec_dot_q6_K_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const voi
 // #endif
 // }
 
-void ggml_vec_dot_iq4_nl_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc) {
+void ggml_rxd_vec_dot_iq4_nl_q8_0(int n, float * GGML_RXD_RESTRICT s, size_t bs, const void * GGML_RXD_RESTRICT vx, size_t bx, const void * GGML_RXD_RESTRICT vy, size_t by, int nrc) {
     assert(nrc == 1);
     UNUSED(nrc);
     UNUSED(bx);
     UNUSED(by);
     UNUSED(bs);
-    assert(n % QK4_NL == 0);
-    static_assert(QK4_NL == QK8_0, "QK4_NL and QK8_0 must be the same");
+    assert(n % GGML_RXD_QK4_NL == 0);
+    static_assert(GGML_RXD_QK4_NL == GGML_RXD_QK8_0, "GGML_RXD_QK4_NL and GGML_RXD_QK8_0 must be the same");
 
-    const block_iq4_nl * GGML_RESTRICT x = vx;
-    const block_q8_0   * GGML_RESTRICT y = vy;
+    const block_iq4_nl * GGML_RXD_RESTRICT x = vx;
+    const block_q8_0   * GGML_RXD_RESTRICT y = vy;
 
-    const int nb = n / QK4_NL;
+    const int nb = n / GGML_RXD_QK4_NL;
 
     int ib = 0;
     float sumf = 0;
@@ -1366,8 +1366,8 @@ void ggml_vec_dot_iq4_nl_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const v
     const uint8x16_t v_m = vec_splat_u8(0x0F);
 
     for (; ib < nb; ++ib) {
-        const block_iq4_nl * GGML_RESTRICT x0 = &x[ib];
-        const block_q8_0   * GGML_RESTRICT y0 = &y[ib];
+        const block_iq4_nl * GGML_RXD_RESTRICT x0 = &x[ib];
+        const block_q8_0   * GGML_RXD_RESTRICT y0 = &y[ib];
 
         const uint8x16_t v_x = vec_xl(0, x0->qs);
         int8x16_t v_xl = (int8x16_t)vec_and(v_x, v_m);
@@ -1377,10 +1377,10 @@ void ggml_vec_dot_iq4_nl_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const v
         v_xh = vec_perm(v_k, v_k, (uchar8x16_t)v_xh);
 
         const int8x16_t v_yl = vec_xl(0      , y0->qs);
-        const int8x16_t v_yh = vec_xl(QK8_0/2, y0->qs);
-        const int32x4_t v_xy = ggml_vec_dot(ggml_vec_dot(vec_splats(0), v_xl, v_yl), v_xh, v_yh);
+        const int8x16_t v_yh = vec_xl(GGML_RXD_QK8_0/2, y0->qs);
+        const int32x4_t v_xy = ggml_rxd_vec_dot(ggml_rxd_vec_dot(vec_splats(0), v_xl, v_yl), v_xh, v_yh);
 
-        sumf += GGML_CPU_FP16_TO_FP32(x0->d) * GGML_CPU_FP16_TO_FP32(y0->d) * vec_hsum_i32x4(v_xy);
+        sumf += GGML_RXD_CPU_FP16_TO_FP32(x0->d) * GGML_RXD_CPU_FP16_TO_FP32(y0->d) * vec_hsum_i32x4(v_xy);
     }
 
     *s = sumf;
@@ -1390,22 +1390,22 @@ void ggml_vec_dot_iq4_nl_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const v
     UNUSED(nb);
     UNUSED(ib);
     UNUSED(sumf);
-    ggml_vec_dot_iq4_nl_q8_0_generic(n, s, bs, vx, bx, vy, by, nrc);
+    ggml_rxd_vec_dot_iq4_nl_q8_0_generic(n, s, bs, vx, bx, vy, by, nrc);
 #endif
 }
 
-void ggml_vec_dot_iq4_xs_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc) {
+void ggml_rxd_vec_dot_iq4_xs_q8_K(int n, float * GGML_RXD_RESTRICT s, size_t bs, const void * GGML_RXD_RESTRICT vx, size_t bx, const void * GGML_RXD_RESTRICT vy, size_t by, int nrc) {
     assert(nrc == 1);
     UNUSED(nrc);
     UNUSED(bx);
     UNUSED(by);
     UNUSED(bs);
-    assert(n % QK_K == 0);
+    assert(n % GGML_RXD_QK_K == 0);
 
-    const block_iq4_xs * GGML_RESTRICT x = vx;
-    const block_q8_K   * GGML_RESTRICT y = vy;
+    const block_iq4_xs * GGML_RXD_RESTRICT x = vx;
+    const block_q8_K   * GGML_RXD_RESTRICT y = vy;
 
-    const int nb = n / QK_K;
+    const int nb = n / GGML_RXD_QK_K;
 
 #if defined(__VXE__) || defined(__VXE2__)
     const int8x16_t v_k = vec_xl(0, kvalues_iq4nl);
@@ -1414,15 +1414,15 @@ void ggml_vec_dot_iq4_xs_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const v
     float sumf = 0;
 
     for (int ibl = 0; ibl < nb; ++ibl) {
-        const uint8_t * GGML_RESTRICT q4 = x[ibl].qs;
-        const int8_t  * GGML_RESTRICT q8 = y[ibl].qs;
+        const uint8_t * GGML_RXD_RESTRICT q4 = x[ibl].qs;
+        const int8_t  * GGML_RXD_RESTRICT q8 = y[ibl].qs;
 
         uint16_t h = x[ibl].scales_h;
 
         int sumi1 = 0, sumi2 = 0;
-        for (int ib = 0; ib < QK_K/64; ++ib) {
+        for (int ib = 0; ib < GGML_RXD_QK_K/64; ++ib) {
             const uint8x16_t v_x0 = vec_xl(0       , q4);
-            const uint8x16_t v_x1 = vec_xl(QK4_NL/2, q4);
+            const uint8x16_t v_x1 = vec_xl(GGML_RXD_QK4_NL/2, q4);
             q4 += 32;
 
             int8x16_t v_x0l = (int8x16_t)vec_and(v_x0, v_m);
@@ -1441,8 +1441,8 @@ void ggml_vec_dot_iq4_xs_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const v
             const int8x16_t v_y3 = vec_xl(48, q8);
             q8 += 64;
 
-            int32x4_t vsumi0 = ggml_vec_dot(ggml_vec_dot(vec_splats(0), v_x0l, v_y0), v_x0h, v_y1);
-            int32x4_t vsumi1 = ggml_vec_dot(ggml_vec_dot(vec_splats(0), v_x1l, v_y2), v_x1h, v_y3);
+            int32x4_t vsumi0 = ggml_rxd_vec_dot(ggml_rxd_vec_dot(vec_splats(0), v_x0l, v_y0), v_x0h, v_y1);
+            int32x4_t vsumi1 = ggml_rxd_vec_dot(ggml_rxd_vec_dot(vec_splats(0), v_x1l, v_y2), v_x1h, v_y3);
 
             int ls1 = ((x[ibl].scales_l[ib] & 0xF) | ((h << 4) & 0x30)) - 32;
             int ls2 = ((x[ibl].scales_l[ib] >>  4) | ((h << 2) & 0x30)) - 32;
@@ -1453,7 +1453,7 @@ void ggml_vec_dot_iq4_xs_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const v
             sumi2 += vec_hsum_i32x4(vsumi1) * ls2;
         }
 
-        sumf += GGML_CPU_FP16_TO_FP32(x[ibl].d) * y[ibl].d * (sumi1 + sumi2);
+        sumf += GGML_RXD_CPU_FP16_TO_FP32(x[ibl].d) * y[ibl].d * (sumi1 + sumi2);
     }
 
     *s = sumf;
@@ -1462,7 +1462,9 @@ void ggml_vec_dot_iq4_xs_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const v
     UNUSED(x);
     UNUSED(y);
     UNUSED(nb);
-    ggml_vec_dot_iq4_xs_q8_K_generic(n, s, bs, vx, bx, vy, by, nrc);
+    ggml_rxd_vec_dot_iq4_xs_q8_K_generic(n, s, bs, vx, bx, vy, by, nrc);
 #endif
 }
+
+
 

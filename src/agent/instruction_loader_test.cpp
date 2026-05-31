@@ -53,7 +53,6 @@ public:
 
         // Cleanup
         std::filesystem::remove(tmp);
-        fprintf(stderr, "[INFO] InstructionLoaderTest::testLoadAndReload PASSED\n");
     }
 };
 

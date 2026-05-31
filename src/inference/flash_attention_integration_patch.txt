@@ -1,0 +1,155 @@
+// ============================================================================
+// FLASH ATTENTION INTEGRATION PATCH
+// ============================================================================
+// This file provides the patch to integrate FlashAttention into rawr_monolith_v2.cpp
+// 
+// Integration Point: Replace attention_head() function in rawr_monolith_v2.cpp
+// Strategy: Use UnifiedAttentionDispatch() from flash_attention_integration.cpp
+// ============================================================================
+
+// ============================================================================
+// PATCH INSTRUCTIONS FOR rawr_monolith_v2.cpp
+// ============================================================================
+// 
+// STEP 1: Add include at the top of rawr_monolith_v2.cpp (after existing includes)
+// 
+// #include "flash_attention_integration.cpp"
+// 
+// STEP 2: Replace the attention_head() function (around line 811) with:
+// 
+// std::vector<float> attention_head(const std::vector<float>& q,
+//                                   const std::vector<std::vector<float>>& K_cache,
+//                                   const std::vector<std::vector<float>>& V_cache,
+//                                   int head_idx) {
+//     // Try FlashAttention first (if available)
+//     // Note: This requires all heads to be processed together, so we'll use
+//     // the unified dispatch from the integration layer
+//     
+//     // For single-head attention, fall back to standard implementation
+//     // FlashAttention is optimized for multi-head attention
+//     int seq_len = K_cache.size();
+//     std::vector<float> scores(seq_len);
+//     
+//     // Q·K^T / sqrt(d)
+//     float scale = 1.0f / sqrtf((float)head_dim);
+//     for (int i = 0; i < seq_len; i++) {
+//         float dot = 0;
+//         for (int j = 0; j < head_dim; j++)
+//             dot += q[head_idx * head_dim + j] * K_cache[i][head_idx * head_dim + j];
+//         scores[i] = dot * scale;
+//     }
+//     
+//     // Causal mask (already handled by only attending to past tokens)
+//     
+//     // Softmax
+//     float maxv = *std::max_element(scores.begin(), scores.end());
+//     float sum = 0;
+//     for (auto& v : scores) { v = expf(v - maxv); sum += v; }
+//     for (auto& v : scores) v /= sum;
+//     
+//     // Softmax(QK^T) · V
+//     std::vector<float> out(head_dim, 0);
+//     for (int i = 0; i < seq_len; i++)
+//         for (int j = 0; j < head_dim; j++)
+//             out[j] += scores[i] * V_cache[i][head_idx * head_dim + j];
+//     return out;
+// }
+// 
+// STEP 3: Modify forward_layer() function (around line 840) to use FlashAttention:
+// 
+// // Multi-head attention
+// std::vector<float> attn_out(dim, 0);
+// 
+// // Try FlashAttention for multi-head attention
+// bool flashAttentionUsed = false;
+// 
+// // Check if FlashAttention is available
+// if (RawrXD::IsFlashAttentionAvailable()) {
+//     // Use unified dispatch for all heads at once
+//     attn_out = RawrXD::monolith::UnifiedAttentionDispatch(
+//         q, K_cache, V_cache, n_heads, head_dim, pos + 1, true
+//     );
+//     flashAttentionUsed = true;
+// }
+// 
+// // Fall back to standard attention if FlashAttention not available
+// if (!flashAttentionUsed) {
+//     for (int h = 0; h < n_heads; h++) {
+//         auto head_result = attention_head(q, K_cache, V_cache, h);
+//         for (int d = 0; d < head_dim; d++)
+//             attn_out[h * head_dim + d] = head_result[d];
+//     }
+// }
+// 
+// ============================================================================
+
+// ============================================================================
+// ALTERNATIVE: Minimal Integration (Preserve Original Structure)
+// ============================================================================
+// 
+// If you want to preserve the original structure and only add FlashAttention
+// as an optimization, use this approach:
+// 
+// // In forward_layer() function, after QKV projections:
+// 
+// // Multi-head attention with FlashAttention optimization
+// std::vector<float> attn_out(dim, 0);
+// 
+// // Try FlashAttention first
+// if (RawrXD::IsFlashAttentionAvailable()) {
+//     // Prepare contiguous buffers for FlashAttention
+//     // FlashAttention expects: Q, K, V as [batch, heads, seq, head_dim]
+//     // For single-token generation: batch=1, seqM=1, seqN=pos+1
+//     
+//     // Note: This requires reorganizing K_cache and V_cache from
+//     // [seq_len][n_heads * head_dim] to [n_heads][seq_len][head_dim]
+//     // The integration layer handles this reorganization
+//     
+//     attn_out = RawrXD::monolith::UnifiedAttentionDispatch(
+//         q, K_cache, V_cache, n_heads, head_dim, pos + 1, true
+//     );
+// } else {
+//     // Standard multi-head attention
+//     for (int h = 0; h < n_heads; h++) {
+//         auto head_result = attention_head(q, K_cache, V_cache, h);
+//         for (int d = 0; d < head_dim; d++)
+//             attn_out[h * head_dim + d] = head_result[d];
+//     }
+// }
+// 
+// ============================================================================
+
+// ============================================================================
+// PERFORMANCE CONSIDERATIONS
+// ============================================================================
+// 
+// FlashAttention provides the most benefit when:
+// 1. Sequence length is long (> 512 tokens)
+// 2. Multiple heads are processed together
+// 3. Memory bandwidth is the bottleneck
+// 
+// For short sequences or single-head attention, the overhead of
+// reorganizing data for FlashAttention may outweigh the benefits.
+// 
+// The integration layer automatically falls back to standard attention
+// when FlashAttention is not available or when it would be slower.
+// 
+// ============================================================================
+
+// ============================================================================
+// TESTING RECOMMENDATIONS
+// ============================================================================
+// 
+// After integration, test with:
+// 
+// 1. Short sequences (< 128 tokens) - should use standard attention
+// 2. Medium sequences (128-512 tokens) - FlashAttention may be used
+// 3. Long sequences (> 512 tokens) - FlashAttention should be used
+// 
+// Verify:
+// - Output correctness matches standard attention
+// - Performance improvement for long sequences
+// - Graceful fallback when FlashAttention unavailable
+// - No memory leaks or crashes
+// 
+// ============================================================================

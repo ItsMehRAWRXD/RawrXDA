@@ -495,8 +495,10 @@ function Write-SigningAttestation {
     foreach ($f in $SignedFiles) {
         $hash = (Get-FileHash -Path $f -Algorithm SHA256).Hash
         $sig  = Get-AuthenticodeSignature -FilePath $f -ErrorAction SilentlyContinue
+        $resolvedPath = Resolve-Path $f -Relative -ErrorAction SilentlyContinue
+        if ($null -eq $resolvedPath) { $resolvedPath = $f }
         $attestation.files += @{
-            path       = (Resolve-Path $f -Relative -ErrorAction SilentlyContinue) ?? $f
+            path       = $resolvedPath
             sha256     = $hash
             size_bytes = (Get-Item $f).Length
             signer     = if ($sig -and $sig.SignerCertificate) { $sig.SignerCertificate.Subject } else { "unknown" }

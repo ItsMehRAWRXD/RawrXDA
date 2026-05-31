@@ -16,9 +16,11 @@ struct SwarmInitConfig {
 #pragma pack(pop)
 
 // Structure for internal swarm context tracking
+// Uses type-erased void* pointers to break circular dependencies
+// between Bridge, Agentic, and Inference subsystems
 struct SwarmContext {
-    void* topology; // Placeholder for Agentic::SwarmTopology
-    void* coordinator; // Placeholder for Inference::RawrXDInference
+    void* topology;     // Type-erased Agentic::SwarmTopology* (set by InitializeSwarmSystemImpl)
+    void* coordinator;  // Type-erased Inference::RawrXDInference* (set by InitializeSwarmSystemImpl)
     uint64_t creationTime;
 };
 

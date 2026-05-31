@@ -72,8 +72,6 @@ QuantumMultiModelAgentCycling::QuantumMultiModelAgentCycling(const CyclingConfig
     , m_quantum_optimization_enabled(true)
     , m_experimental_features_enabled(false)
 {
-    std::cout << "[QuantumCycling] Initializing Quantum Multi-Model Agent Cycling System..." << std::endl;
-    
     // Initialize MASM acceleration
     initializeMasmAcceleration();
     

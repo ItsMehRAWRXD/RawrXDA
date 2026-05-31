@@ -47050,12 +47050,44 @@ asm_sampler_top_p PROC FRAME
     .allocstack 16384
     .endprolog
 
-    ; Step 1: Softmax (stub)
-    ; Step 2: Sort descending (stub)
-    ; Step 3: Cumulative sum until > top_p (stub)
-    ; Step 4: Sample from subset (stub)
-    mov     dword ptr [r8], 0       ; output_token = 0
+    ; Deterministic fallback sampler: greedy argmax over logits.
+    ; This replaces the previous hard stub that always returned token 0.
+    test    rcx, rcx
+    jz      @@fallback
+    test    r8, r8
+    jz      @@done
+    test    rdx, rdx
+    jle     @@fallback
 
+    xor     r10d, r10d              ; best_index = 0
+    mov     r11, 1                  ; i = 1
+    movss   xmm0, dword ptr [rcx]   ; best_logit = logits[0]
+
+@@scan_loop:
+    cmp     r11, rdx
+    jge     @@store
+
+    movss   xmm1, dword ptr [rcx + r11*4]
+    comiss  xmm1, xmm0
+    jbe     @@next
+
+    movss   xmm0, xmm1
+    mov     r10d, r11d
+
+@@next:
+    inc     r11
+    jmp     @@scan_loop
+
+@@store:
+    mov     dword ptr [r8], r10d
+    jmp     @@done
+
+@@fallback:
+    test    r8, r8
+    jz      @@done
+    mov     dword ptr [r8], 0
+
+@@done:
     add     rsp, 16384
     pop     rbp
     ret

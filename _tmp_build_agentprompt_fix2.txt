@@ -1,0 +1,195 @@
+ninja: Entering directory `d:\rawrxd\build'
+[0/1] Re-running CMake...
+-- [SDK Fix] INCLUDE = C:/VS2022Enterprise/VC/Tools/MSVC/14.50.35717/include;C:/Program Files (x86)/Windows Kits/10/Include/10.0.22621.0/ucrt;C:/Program Files (x86)/Windows Kits/10/Include/10.0.22621.0/shared;C:/Program Files (x86)/Windows Kits/10/Include/10.0.22621.0/um
+-- [SDK Fix] LIB     = C:/VS2022Enterprise/VC/Tools/MSVC/14.50.35717/lib/x64;C:/VS2022Enterprise/VC/Tools/MSVC/14.50.35717/lib/onecore/x64;C:/Program Files (x86)/Windows Kits/10/Lib/10.0.22621.0/ucrt/x64;C:/Program Files (x86)/Windows Kits/10/Lib/10.0.22621.0/um/x64
+-- [SDK Fix] MT      = C:/Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x64/mt.exe
+-- [RuntimeProvider] RawrXD-RuntimeProviderStress target added
+-- RawrXD v14.7.3 Target Configured - Zero Bloat Mode
+-- [Build Paths] MSVC CRT: C:/VS2022Enterprise/VC/Tools/MSVC/14.50.35717
+-- [Build Paths] SDK 10.0.22621.0: ucrt + um + shared
+-- MASM64 enabled: ASM kernels will be compiled
+-- [SSOT Ownership] RawrEngine provider=AUTO (CORE=0 EXT=0 AUTO=1 STUBS=0 FEATURES=0)
+-- [RawrEngine LaneB] Using curated headless core sources
+-- [CommandAudit] Audit targets available: audit-registry, audit-registry-ci
+-- CMAKE_SYSTEM_PROCESSOR: AMD64
+-- CMAKE_GENERATOR_PLATFORM: 
+-- GGML_SYSTEM_ARCH: x86
+-- Defining GGML targets inline (submodule not found)
+-- [RE] Deobfuscator MASM64 targets registered
+-- [RE] Model reverse pipeline MASM64 target registered
+-- [RE] Omega v3 MASM32 target registered
+-- [RE] Reverser compiler NASM targets registered
+-- [RE] Reverse Engineering Suite configured:
+--   C++ Library:       RawrXD-RE-Library (pe_tools/re_tools.cpp)
+--   Headers:           4 HPP files (Codex, Compiler, DumpBin, ReverseEngine)
+--   Omega Suite:       19 ASM files across v3/v4/v5/v7 + src_variants
+--   Deobfuscator:      3 ASM files + 1 INC + build/test
+--   Reverser Compiler: 11 ASM + 6 tests + 1 .rev source
+--   PE Tools:          re_tools.cpp/h (PE analyzer + inline compiler)
+--   Model Reverse:     model-llm-harvester.asm
+--   Security Toolkit:  RawrXD_IDE_unified.asm
+--   RE Modules:        gpu_dma_complete_reverse_engineered.asm
+-- [Gold] Standalone deployment target: RawrXD_Gold.exe (all MASM linked)
+-- [MASM] Using prebuilt RawrXD_AgenticOrchestrator.obj
+-- [MASM] Using prebuilt RawrXD_Camellia256.obj
+-- [MASM] Using prebuilt RawrXD_SelfHost_Engine.obj
+-- [MASM] Using prebuilt RawrXD_Hotpatch_Kernel.obj
+-- [MASM] Using prebuilt RawrXD_Pyre_Compute.obj
+-- [NanoQuant] DISABLED — enable with -DRAWR_ENABLE_NANOQUANT=ON
+-- [Vulkan] Found SDK: C:/VulkanSDK/1.4.328.1/include
+-- [Phase 6] Standalone inference engine target: RawrXD-InferenceEngine
+-- [Serve] RawrXD-ServeInference DLL target added (CPUInferenceEngine plugin)
+-- [Titan] GGML bridge scaffold disabled (set -DRAWR_ENABLE_GGML_LINK=ON to enable opt-in lane)
+-- [Titan] Omega HIP full kernel set disabled (set -DRAWRXD_ENABLE_OMEGA_HIP_FULL_KERNEL_SET=ON to opt in)
+-- [Titan] RAWRXD_INLINE_DISPATCH=0 (baseline dispatcher)
+-- [Titan] RAWRXD_ENABLE_OMEGA_HIP=AUTO -> ON (AUTO matched RDNA3 target (AMD Radeon RX 7800 XT;AMD Radeon(TM) Graphics))
+-- [Titan] RawrXD_Titan DLL target wired: 99-export lane + aperture kernels (swap + AVX-512 dispatch + header verify)
+-- MultiWindow Kernel DLL target enabled
+-- DynamicPromptEngine DLL target enabled (Unity/Unreal compatible)
+-- Win32IDE: Real lane - using isolated handlers + runtime handlers
+-- [Win32IDE] Sovereign GPU ASM disabled — skipping src/asm/gpu/* (set -DRAWRXD_LINK_GPU_SOVEREIGN_ASM=ON to enable)
+-- [Win32IDE] Agentic stub fallback enabled by RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK=ON
+-- [Win32IDE] Stub policy enforcement relaxed (RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK=ON)
+-- [Infra] Win32IDE wired to D:/rawrxd/external/rawr_infra
+-- QuickJS found: JS extension host enabled
+CMake Warning at CMakeLists.txt:5328 (message):
+  singularity_core.lib not found at
+  D:/rawrxd/build/asm_obj/singularity_core.lib — Win32IDE links without it
+  (place lib after MASM build).
+
+
+-- [Win32IDE] Monolithic ASM obj pack disabled (RAWRXD_LINK_WIN32IDE_MONOLITHIC_OBJS=OFF)
+-- [Win32IDE] GGML DLL staging enabled from D:/llama.cpp/build/bin
+-- RawrXD-Crypto skipped (requires WIN32 + MSVC + MASM + uac_bypass_impl_stub.cpp)
+-- [SSOT] Stub lane guard disabled (set RAWRXD_ENABLE_MISSING_HANDLER_STUBS=ON to enable).
+-- [CI] self_test_gate target available (cmake --build . --target self_test_gate)
+-- [CI] RAWR_ASAN=OFF
+-- RawrXD-AutoFixCLI skipped (cpu_inference_engine_autofix_stub.cpp missing)
+-- [Phase C] GPU Benchmark target: RawrXD-Benchmark
+-- [DecodeProbe] CPUInferenceEngine decode micro-benchmark target: RawrXD-DecodeMicroBench
+-- [Phase 31.8] Router benchmark runner target: RawrXD-RouterBenchRunner
+-- [Phase D] Fused Layer Benchmark target: RawrXD-FusedBenchmark
+-- [Phase E] KV Cache Benchmark target: RawrXD-KVBenchmark
+-- [Phase 9] Query Fusion Benchmark target: RawrXD-QueryFusionBenchmark
+-- [Smoke] RawrXD-TpsSmoke target (Run-TpsSmoke.ps1)
+-- [MemoryBench] RawrXD-MemoryBench target registered (cmake --build ... --target RawrXD-MemoryBench)
+-- [Analysis] RawrXD-ModelAnalysis target (Implant_Model_Analysis.ps1 / ANALYSIS_QUICKSTART.md)
+-- [Analysis] Win32IDE linked to RawrXD-ModelAnalysisLib (RAWR_HAS_MODEL_ANATOMY)
+-- [RuntimeTruth] Target: RawrXD-RuntimeTruthProbe
+-- [MCPSmoke] Target: MCP-ModelSmoke
+-- [ExtSmoke] Target: ExtensionInstallerSmoke  (offline + --live)
+-- [BackendOrchestrator] Smoke test target: BackendOrchestratorShardSmoke
+-- [ContextDecision] Harness target: RawrXD-ContextDecisionHarness
+-- [AgenticOrchestrator] Smoke test target: agentic_orchestrator_smoke_test (build with: cmake --build . --target agentic_orchestrator_smoke_test)
+-- [IntelligentReview] Smoke test target: intelligent_review_smoke_test (build with: cmake --build . --target intelligent_review_smoke_test)
+-- [FP8Quantization] Test target: test_fp8_quantization (build with: cmake --build . --target test_fp8_quantization)
+-- [FP8Verifier] Test target: test_fp8_verifier (build with: cmake --build . --target test_fp8_verifier)
+-- [FP8Verifier] Sampling hook test: test_fp8_sampling_hook
+-- [FP8] AVX-512 kernel: fp8_avx512_kernel
+-- [FP8] AVX-512 test: test_fp8_avx512
+-- [FlowControl] Credit-based test: test_credit_based_flow_control
+-- [FlowControl] Credit governor test: test_credit_governor
+-- [Integration] Pipeline harness: test_pipeline_integration
+-- [Integration] Rust parser harness: test_rust_parser_integration
+-- [Dashboard] Pipeline telemetry TUI: pipeline_dashboard
+-- [Smoke] Hotpatch tool smoke test: test_hotpatch_tools_smoke
+-- [FP8] Fused kernel test: test_fused_fp8_quantizer
+-- [ContextFusion] Harness target: context_fusion_harness (build with: cmake --build . --target context_fusion_harness)
+-- [TLSBridge] Smoke test target: tls_bridge_smoke_test (build with: cmake --build . --target tls_bridge_smoke_test)
+-- [SovereignAssembler] Smoke target: sovereign_assembler_smoke (cmake --build . --target sovereign_assembler_smoke)
+-- [SovereignAssembler] Run gate: sovereign_assembler_smoke_run (cmake --build . --target sovereign_assembler_smoke_run)
+-- [Tools] Native address resolver target enabled: address_resolver_native (smoke targets: address_resolver_native_smoke, address_resolver_native_smoke_soft, address_resolver_native_smoke_minimal)
+-- [Integration Test] ExtensionScheduler_Integration_Test target added
+-- [Sovereign Test] SovereignFP8_Test target added (RX 7800 XT high-throughput validation)
+-- [TPS Harness] TPS_Measurement target added - produces first measurable throughput number
+-- [TPS Simple] TPS_Simple target added - pure SPSC queue measurement
+-- [TPS Minimal] TPS_Minimal target added - produces first measurable throughput number
+-- [TokenPipeline Fixed] TokenPipeline_Fixed target added - deadlock-free SPSC queue
+-- [Pipeline Hardened] Pipeline_Hardened target added - backpressure + speculative decoder
+-- [Pipeline 3Stage] Pipeline_3Stage target added - 3-stage lock-free with flow control
+-- [Pipeline EndToEnd+FP8] Pipeline_EndToEnd_FP8 target added - 3-stage + FP8 Stage 3
+-- [Pipeline FP8 NonBlocking] Pipeline_FP8_NonBlocking target added - non-blocking egress with partial flush
+-- [Pipeline FP8 AVX2] Pipeline_FP8_AVX2 target added - AVX2 vectorized FP8 (8x throughput)
+-- [Pipeline FP8 AVX2 Hardened] Production flow control with <5% drop rate target
+-- [Pipeline FP8 AVX2 Sync] End-to-end rate matching with blocking backpressure
+-- [Pipeline FP8 AVX2 Stable] Minimal working version with proper flow control
+-- [FP8 Scalar vs AVX2] Direct performance comparison benchmark
+-- [Fused Decode + FP8] Kernel fusion benchmark - 69% memory bandwidth reduction
+-- [Pipeline Adaptive Governor] Self-tuning speculation targeting 85% success rate
+-- [Pipeline FP8 AVX2 Credit] Explicit credit-based flow control
+-- [Pipeline FP8 AVX2 Credit Fixed] Working credit-based flow control
+-- [Pipeline FP8 AVX2 Windowed] Amortized credit system with 4096-token windows
+-- [Pipeline Hybrid Credit] Hybrid credit governor - deterministic + elastic
+-- ========================================
+-- Registering Tests with CTest
+-- ========================================
+--   ✓ Registered agent_workflow_orchestrator_smoke
+--   ✓ Added test_ai_completions
+--   ✓ Added test_llm_connectivity
+--   ✓ Added test_tool_registry
+--   ✓ Added test_zero_retention_manager
+--   ✓ Added test_semantic_diff_analyzer
+--   ✓ Added test_ai_merge_resolver
+--   ✓ Added test_ide_model_autonomy
+--   ✓ Added test_extreme_memory_optimizer
+--   ✓ Added test_quality_corrector
+--   ✓ Added test_sandboxed_terminal
+--   ✓ Added test_agentic_file_operations
+--   ✓ Added smoke_split_answers_toggle
+--   ✓ Added agentic_repair_stress_test
+--   ✓ Added test_adaptive_credit_governor
+--   ✓ Added model_registry_test
+--   ✓ Added test_gguf_integration
+--   ✓ Added test_engine_revolver
+--   ✓ Added test_swarm_scheduler_pin
+--   ✓ Added test_swarm_expert_heatmap_stress
+--   ✓ Added test_moe_mixture_reference
+--   ✓ Added test_moe_down_project_policy
+--   ✓ Added test_moe_plan_row_mixture_pack_cache
+--   ✓ Added test_moe_batched_down_project
+--   ✓ Added test_moe_pack_hud_metrics
+--   ✓ Added moe_grouped_gemm_bench (manual / CI microbench; not registered in CTest)
+--   ✓ Added test_basic_profiler
+--   ✓ Added test_batch3_profiler_smoke
+--   ✓ Added test_state_subscription_engine_smoke
+--   ✓ Added test_ai_execution_guardrails_smoke
+--   ✓ Added test_ai_execution_guardrails_chaos
+--   ✓ Added test_safe_inference_session_integration
+--   ✓ Added test_kv_cache_ownership
+--   ✓ Added test_speculative_pipeline
+--   ✓ Added test_extension_host
+--   ✓ Added extension_host_smoke_test
+--   ✓ Added batch4_ipc_spec_ast_arb_smoke
+--   ✓ Added autocomplete_kernel_wire_smoke
+--   ✓ Added autocomplete_kernel_compile_guard
+--   ✓ Added cross_repo_router_smoke
+--   ✓ Added autocomplete_p95_latency_harness
+--   ✓ Added titan_rx_hotpath_smoke
+--   ✓ Added test_sovereign_kernels
+--   ✓ Added bench_sovereign_kernels
+--   ✓ Added test_production_regression (Qt-free regression suite)
+--   ✓ Added test_instructions_provider
+--   ✓ Registered sovereign_assembler_smoke (SovereignAssembler PE smoke)
+--   ✓ Registered rawrengine_copilot_smoke (RawrEngine --copilot-smoke)
+--   ✓ Registered win32ide_agentic_smoke (RawrXD-Win32IDE --agentic-smoke)
+--   ✓ Registered win32ide_high_pressure_ui (Win32IDE concurrent UI/LSP/model pressure)
+--   ✓ Registered ollama_stream_routing_env_smoke (RAWRXD_STREAM_* routing)
+--   ✓ Registered production_readiness_expansion_quality_gate (retry-hardened build of self_test_gate)
+-- ========================================
+-- Test Suite Registration Complete
+-- Run tests: ctest --output-on-failure -C Release
+-- Run specific: ctest -R <name> -V -C Release
+-- ========================================
+--   ✓ Added test_model_loader_streamer_smoke
+-- [Eval] RawrXD-SWEBench target added (Gate 5 — pass@1 benchmark harness)
+-- [Serve] RawrXD-Serve target added (Ollama-compatible HTTP server + CLI)
+-- [Parity] RawrXD-ParityUIDriver target added (headless UI-side parity driver)
+-- Configuring done (1.0s)
+-- Generating done (0.3s)
+-- Build files have been written to: D:/rawrxd/build
+[1/197] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE.cpp.obj
+[2/197] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_ReverseEngineering.cpp.obj
+[3/197] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Logger.cpp.obj
+[4/197] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AgenticBridge.cpp.obj
+[5/197] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\full_agentic_ide\FullAgenticIDE.cpp.obj
+[6/197] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AgentCommands.cpp.obj

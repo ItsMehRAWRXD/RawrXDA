@@ -181,6 +181,8 @@ SchedulerResult DeterministicScheduler::runUntilIdle() {
             for (const auto& b : m_barriers) {
                 if (b.atTick == tick && !b.reached) {
                     // Barrier will be processed in stepTick
+                    b.reached = true;
+                    fprintf(stderr, "[DeterministicScheduler] Barrier reached at tick %llu\n", tick);
                 }
             }
         }

@@ -62,7 +62,7 @@ static bool handleCLI(LPWSTR cmdLine)
             printf("  --mode=local        Local inference mode\n");
             printf("  --model=<path>      Path to .gguf model file\n");
             printf("  --prompt=<text>     Prompt for local inference\n");
-            printf("  --ollama-test       Test Ollama bridge on :11434\n");
+            printf("  --ollama-test       Test Ollama bridge on :11435\n");
             printf("  --verbose           Enable verbose logging\n");
             if (fout)
                 fclose(fout);
@@ -79,7 +79,7 @@ static bool handleCLI(LPWSTR cmdLine)
             
             // Initialize OrchestratorBridge for Ollama testing
             auto& orchBridge = RawrXD::Agent::OrchestratorBridge::Instance();
-            if (orchBridge.Initialize(".", "http://localhost:11434")) {
+            if (orchBridge.Initialize(".", "http://localhost:11435")) {
                 printf("✓ OrchestratorBridge initialized successfully\n");
                 
                 // Test basic chat

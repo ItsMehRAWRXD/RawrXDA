@@ -1,12 +1,14 @@
 // Chat Workspace - Agentic chat interface
 #include "chat_workspace.h"
+#include <windows.h>
 
-ChatWorkspace::ChatWorkspace(void* parent) : void(parent) {
-    // Lightweight constructor - defer Qt widget creation
+ChatWorkspace::ChatWorkspace(void* parent) : m_parent(parent) {
+    // Lightweight constructor - defer widget creation
+    m_initialized = false;
 }
 
 void ChatWorkspace::initialize() {
-    void* layout = new void(this);
-    layout->addWidget(new void("Chat Workspace"));
+    m_initialized = true;
+    fprintf(stderr, "[ChatWorkspace] Initialized\n");
 }
 

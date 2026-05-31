@@ -4,7 +4,7 @@
       "backend": "OLLAMA_LOCAL",
       "model_id": "huihui_ai/llama3.3-abliterated:latest",
       "api_key": "",
-      "endpoint": "http://localhost:11434",
+      "endpoint": "http://localhost:11435",
       "description": "Llama 3.3 70B abliterated via Ollama — 42GB Q4_K_M quantized 70B model",
       "parameters": {
         "max_tokens": "4096",
@@ -18,7 +18,7 @@
       "backend": "OLLAMA_LOCAL",
       "model_id": "gpt-oss:120b",
       "api_key": "",
-      "endpoint": "http://localhost:11434",
+      "endpoint": "http://localhost:11435",
       "description": "GPT-OSS 120B via Ollama — 65GB full parameter model",
       "parameters": {
         "max_tokens": "4096",
@@ -32,7 +32,7 @@
       "backend": "OLLAMA_LOCAL",
       "model_id": "quantumide-q4km",
       "api_key": "",
-      "endpoint": "http://localhost:11434",
+      "endpoint": "http://localhost:11435",
       "description": "Local QuantumIDE Q4 model via Ollama",
       "parameters": {
         "max_tokens": "4096",
@@ -44,7 +44,7 @@
       "backend": "OLLAMA_LOCAL",
       "model_id": "neural-chat",
       "api_key": "",
-      "endpoint": "http://localhost:11434",
+      "endpoint": "http://localhost:11435",
       "description": "Local Ollama API endpoint",
       "parameters": {
         "max_tokens": "2048",

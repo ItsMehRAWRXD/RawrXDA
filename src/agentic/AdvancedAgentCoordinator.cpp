@@ -1,4 +1,6 @@
 #include "AdvancedAgentCoordinator.h"
+#include "LockFreeAgentCoordinator.h"
+#include "core/thread_lifecycle_registry.h"
 #include <algorithm>
 #include <numeric>
 #include <random>
@@ -20,6 +22,12 @@ AdvancedAgentCoordinator& AdvancedAgentCoordinator::instance() {
 
 bool AdvancedAgentCoordinator::initialize(const ScalingPolicy& scaling,
                                         const RedundancyConfig& redundancy) {
+    // Initialize lock-free coordinator (NEW)
+    m_lockFreeCoord = &LockFreeAgentCoordinator::instance();
+    if (!m_lockFreeCoord->initialize()) {
+        return false;
+    }
+
     std::lock_guard<std::mutex> lock(m_mutex);
 
     m_scalingPolicy = scaling;
@@ -27,24 +35,40 @@ bool AdvancedAgentCoordinator::initialize(const ScalingPolicy& scaling,
     m_running = true;
 
     // Start background threads
-    m_scalingThread = std::thread(&AdvancedAgentCoordinator::scalingLoop, this);
-    m_healthMonitorThread = std::thread(&AdvancedAgentCoordinator::healthMonitoringLoop, this);
-    m_recoveryThread = std::thread(&AdvancedAgentCoordinator::recoveryLoop, this);
-
-    std::cout << "[AdvancedAgentCoordinator] Initialized with " << scaling.minAgents
-              << " min agents, " << redundancy.replicationFactor << "x redundancy" << std::endl;
+    m_scalingThread = std::thread([this]() {
+        REGISTER_THREAD("AdvancedAgentCoordinator", "scaling loop");
+        scalingLoop();
+        RawrXD::Core::ThreadLifecycleRegistry::Instance().MarkExited(std::this_thread::get_id());
+    });
+    m_healthMonitorThread = std::thread([this]() {
+        REGISTER_THREAD("AdvancedAgentCoordinator", "health monitor");
+        healthMonitoringLoop();
+        RawrXD::Core::ThreadLifecycleRegistry::Instance().MarkExited(std::this_thread::get_id());
+    });
+    m_recoveryThread = std::thread([this]() {
+        REGISTER_THREAD("AdvancedAgentCoordinator", "recovery loop");
+        recoveryLoop();
+        RawrXD::Core::ThreadLifecycleRegistry::Instance().MarkExited(std::this_thread::get_id());
+    });
 
     return true;
+}
+
+AdvancedAgentCoordinator::~AdvancedAgentCoordinator() {
+    shutdown();
 }
 
 void AdvancedAgentCoordinator::shutdown() {
     m_running = false;
 
+    // Shutdown lock-free coordinator (NEW)
+    if (m_lockFreeCoord) {
+        m_lockFreeCoord->shutdown();
+    }
+
     if (m_scalingThread.joinable()) m_scalingThread.join();
     if (m_healthMonitorThread.joinable()) m_healthMonitorThread.join();
     if (m_recoveryThread.joinable()) m_recoveryThread.join();
-
-    std::cout << "[AdvancedAgentCoordinator] Shutdown complete" << std::endl;
 }
 
 // =============================================================================
@@ -148,8 +172,6 @@ void AdvancedAgentCoordinator::updateAgentHealth(const std::string& agentId, boo
     health.isHealthy = (health.consecutiveFailures < 3);
 
     if (!health.isHealthy) {
-        std::cout << "[HealthMonitor] Agent " << agentId << " marked unhealthy: "
-                  << health.failureReason << std::endl;
     }
 }
 
@@ -175,7 +197,6 @@ void AdvancedAgentCoordinator::quarantineUnhealthyAgent(const std::string& agent
 
     if (m_agentHealth.count(agentId)) {
         m_agentHealth[agentId].isHealthy = false;
-        std::cout << "[HealthMonitor] Quarantined agent: " << agentId << std::endl;
 
         // Trigger recovery process
         handleAgentFailure(agentId, "Health check failed");
@@ -227,10 +248,6 @@ void AdvancedAgentCoordinator::markTaskCompleted(const std::string& taskId) {
         auto& dep = m_taskDependencies[taskId];
         dep.completed = true;
         dep.completionTime = std::chrono::steady_clock::now();
-
-        // Notify dependents (could trigger more tasks)
-        std::cout << "[DependencyManager] Task " << taskId << " completed, "
-                  << dep.dependents.size() << " dependents notified" << std::endl;
     }
 
     cleanupCompletedDependencies();
@@ -247,9 +264,6 @@ void AdvancedAgentCoordinator::submitTask(std::shared_ptr<AgentTask> task, TaskP
     m_taskQueue.push(pTask);
 
     m_taskAvailable.notify_one();
-
-    std::cout << "[TaskScheduler] Submitted task " << task->id
-              << " with priority " << static_cast<int>(priority) << std::endl;
 }
 
 std::shared_ptr<AgentTask> AdvancedAgentCoordinator::getNextTask() {
@@ -271,17 +285,38 @@ std::shared_ptr<AgentTask> AdvancedAgentCoordinator::getNextTask() {
 void AdvancedAgentCoordinator::reprioritizeTask(const std::string& taskId, TaskPriority newPriority) {
     std::lock_guard<std::mutex> lock(m_mutex);
 
-    // This is a simplified implementation - in practice, we'd need to rebuild the priority queue
-    std::cout << "[TaskScheduler] Reprioritized task " << taskId
-              << " to priority " << static_cast<int>(newPriority) << std::endl;
+    // Rebuild the priority queue with the target task's priority changed
+    std::priority_queue<PrioritizedTask> rebuilt;
+    bool found = false;
+    auto copy = m_taskQueue;
+    while (!copy.empty()) {
+        auto pt = copy.top();
+        copy.pop();
+        if (pt.task && pt.task->id == taskId) {
+            pt.priority = newPriority;
+            found = true;
+        }
+        rebuilt.push(pt);
+    }
+    if (found) {
+        m_taskQueue = std::move(rebuilt);
+        // Task reprioritized
+    }
 }
 
 std::vector<std::shared_ptr<AgentTask>> AdvancedAgentCoordinator::getTasksByPriority(TaskPriority priority) const {
     std::lock_guard<std::mutex> lock(m_mutex);
 
     std::vector<std::shared_ptr<AgentTask>> tasks;
-    // This would require iterating through the priority queue, which is complex
-    // For now, return empty vector as this is a demonstration
+    // Copy the queue and pop all items to find matches — priority_queue has no iterator
+    auto copy = m_taskQueue;
+    while (!copy.empty()) {
+        const auto& pt = copy.top();
+        if (pt.priority == priority) {
+            tasks.push_back(pt.task);
+        }
+        copy.pop();
+    }
     return tasks;
 }
 
@@ -383,13 +418,13 @@ void AdvancedAgentCoordinator::evaluateScalingNeeds() {
 }
 
 bool AdvancedAgentCoordinator::scaleUp(int additionalAgents) {
-    std::cout << "[ScalingManager] Scaling up by " << additionalAgents << " agents" << std::endl;
+    // Scaling up agents
     // Implementation would create new agent instances
     return true;
 }
 
 bool AdvancedAgentCoordinator::scaleDown(int removeAgents) {
-    std::cout << "[ScalingManager] Scaling down by " << removeAgents << " agents" << std::endl;
+    // Scaling down agents
     // Implementation would gracefully shutdown agents
     return true;
 }
@@ -433,9 +468,6 @@ void AdvancedAgentCoordinator::handleAgentFailure(const std::string& agentId, co
 
     m_activeRecoveries.push_back(recovery);
 
-    std::cout << "[FaultTolerance] Handling failure of agent " << agentId
-              << ": " << reason << std::endl;
-
     // Start recovery process
     redistributeOrphanedTasks(agentId);
 }
@@ -444,18 +476,15 @@ void AdvancedAgentCoordinator::redistributeOrphanedTasks(const std::string& fail
     // Find healthy agents to redistribute to
     auto healthyAgents = getHealthyAgents();
     if (healthyAgents.empty()) {
-        std::cout << "[FaultTolerance] No healthy agents available for redistribution" << std::endl;
+        // No healthy agents available for redistribution
         return;
     }
 
     // In a real implementation, this would redistribute actual tasks
-    std::cout << "[FaultTolerance] Redistributing tasks from " << failedAgentId
-              << " to " << healthyAgents.size() << " healthy agents" << std::endl;
+    // Redistributing tasks from failed agent
 }
 
 bool AdvancedAgentCoordinator::attemptRecovery(const std::string& agentId) {
-    std::cout << "[FaultTolerance] Attempting recovery of agent " << agentId << std::endl;
-
     // Find the recovery record
     auto it = std::find_if(m_activeRecoveries.begin(), m_activeRecoveries.end(),
                           [&agentId](const FailureRecovery& r) {
@@ -474,7 +503,6 @@ bool AdvancedAgentCoordinator::attemptRecovery(const std::string& agentId) {
                 m_agentHealth[agentId].isHealthy = true;
                 m_agentHealth[agentId].consecutiveFailures = 0;
             }
-            std::cout << "[FaultTolerance] Successfully recovered agent " << agentId << std::endl;
         }
 
         return recovered;
@@ -535,29 +563,56 @@ AgentMetrics AdvancedAgentCoordinator::getCoordinatorMetrics() const {
 
 void AdvancedAgentCoordinator::scalingLoop() {
     while (m_running) {
+        CHECK_SHUTDOWN_AND_RETURN();
         std::this_thread::sleep_for(std::chrono::seconds(30));
         evaluateScalingNeeds();
     }
 }
 
 void AdvancedAgentCoordinator::healthMonitoringLoop() {
+    // Stale threshold: agents that have had real task activity but have not
+    // reported back within this window are presumed dead and quarantined.
+    // Freshly-registered agents with no tasks yet are exempt (totalTasksProcessed==0).
+    static constexpr int kStaleThresholdSec = 120;
+
     while (m_running) {
+        CHECK_SHUTDOWN_AND_RETURN();
         std::this_thread::sleep_for(std::chrono::seconds(60));
 
-        // Unrestricted mode: keep agents available and only refresh heartbeat timestamps.
-        std::lock_guard<std::mutex> lock(m_mutex);
-        auto now = std::chrono::steady_clock::now();
-        for (auto& [agentId, health] : m_agentHealth) {
-            (void)agentId;
-            health.isHealthy = true;
-            health.failureReason.clear();
-            health.lastHealthCheck = now;
+        std::vector<std::string> toQuarantine;
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            auto now = std::chrono::steady_clock::now();
+            for (auto& [agentId, health] : m_agentHealth) {
+                if (!health.isHealthy) continue;  // already quarantined
+
+                // Only check staleness for agents that have actually received tasks.
+                // Idle-registered agents (no tasks yet) start their staleness clock
+                // from first registration; we skip them until work flows through.
+                if (health.totalTasksProcessed == 0) continue;
+
+                auto elapsedSec = std::chrono::duration_cast<std::chrono::seconds>(
+                    now - health.lastHealthCheck).count();
+
+                if (elapsedSec > kStaleThresholdSec) {
+                    health.isHealthy = false;
+                    health.failureReason = "stale: no activity for "
+                        + std::to_string(elapsedSec) + "s";
+                    toQuarantine.push_back(agentId);
+                }
+            }
+        }
+
+        // Trigger recovery outside the lock so handleAgentFailure can re-acquire it.
+        for (const auto& agentId : toQuarantine) {
+            handleAgentFailure(agentId, "stale heartbeat timeout");
         }
     }
 }
 
 void AdvancedAgentCoordinator::recoveryLoop() {
     while (m_running) {
+        CHECK_SHUTDOWN_AND_RETURN();
         std::this_thread::sleep_for(std::chrono::seconds(10));
 
         std::lock_guard<std::mutex> lock(m_mutex);

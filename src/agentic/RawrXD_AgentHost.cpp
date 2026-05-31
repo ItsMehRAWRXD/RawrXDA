@@ -33,8 +33,6 @@ public:
     
     void ProcessTask(const std::string& task) {
         currentState = State::Thinking;
-        // Simulate LLM/Prompt Builder interaction
-        std::cout << "[Agent:" << agentId << "] Analyzing task: " << task << std::endl;
         
         // Self-Healing Logic for Symbol Resolution
         if (task.find("Repair") != std::string::npos || task.find("Alloc") != std::string::npos) {
@@ -46,9 +44,28 @@ public:
         currentState = State::Executing;
         // Trigger MASM kernel if RE task
         if (task.find("DMA") != std::string::npos) {
-             std::cout << "[Agent:" << agentId << "] Offloading to Titan DMA Core..." << std::endl;
-             // Placeholder for real context
-             Titan_PerformDMA(nullptr, nullptr, 0); 
+             // Real DMA context: use task payload as source data
+             std::vector<unsigned char> src(task.begin(), task.end());
+             std::vector<unsigned char> dst(src.size(), 0);
+             
+             if (!src.empty()) {
+                 Titan_PerformDMA(src.data(), dst.data(), src.size());
+                 
+                 // Verify DMA transfer integrity
+                 bool match = true;
+                 for (size_t i = 0; i < src.size(); ++i) {
+                     if (src[i] != dst[i]) {
+                         match = false;
+                         break;
+                     }
+                 }
+                 
+                 if (!match) {
+                     // Attempt self-healing: re-resolve and retry
+                     healer.ResolveSymbol("Titan_PerformDMA");
+                     Titan_PerformDMA(src.data(), dst.data(), src.size());
+                 }
+             }
         }
         
         currentState = State::Completed;
@@ -76,7 +93,6 @@ public:
     }
 
     void Run() {
-        std::cout << "[Host] Coordinator stabilized. Entering autonomous loop." << std::endl;
         while (running) {
             std::string currentTask;
             {

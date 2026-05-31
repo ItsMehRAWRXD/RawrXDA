@@ -297,7 +297,13 @@ private:
     void initSemanticIndex() {
         // Get current file from parent IDE
         // This would need to be passed from the main IDE
-        currentFile_ = "current_file.cpp"; // Placeholder
+        // Try to get the current file from the parent IDE window title
+        char titleBuf[MAX_PATH] = {};
+        if (hwndParent_) GetWindowTextA(hwndParent_, titleBuf, MAX_PATH);
+        std::string title(titleBuf);
+        auto dashPos = title.find(" - ");
+        currentFile_ = (dashPos != std::string::npos && dashPos > 0)
+            ? title.substr(0, dashPos) : "current_file.cpp";
 
         // Update symbol list
         updateSymbolList();
@@ -355,7 +361,16 @@ private:
     }
 
     void cleanup() {
-        // Cleanup resources if needed
+        if (hwndSearch_)       DestroyWindow(hwndSearch_);
+        if (hwndSymbolList_)   DestroyWindow(hwndSymbolList_);
+        if (hwndResults_)      DestroyWindow(hwndResults_);
+        if (hwndIndexFile_)    DestroyWindow(hwndIndexFile_);
+        if (hwndGoToDef_)      DestroyWindow(hwndGoToDef_);
+        if (hwndFindRefs_)     DestroyWindow(hwndFindRefs_);
+        if (hwndTypeHierarchy_) DestroyWindow(hwndTypeHierarchy_);
+        hwndSearch_ = hwndSymbolList_ = hwndResults_ = nullptr;
+        hwndIndexFile_ = hwndGoToDef_ = hwndFindRefs_ = hwndTypeHierarchy_ = nullptr;
+        currentFile_.clear();
     }
 
     static LRESULT CALLBACK windowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {

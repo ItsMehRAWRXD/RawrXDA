@@ -78,7 +78,6 @@ std::string getClipboardText() {
 #endif
 
 std::string readLineFromConsole(const std::string& prompt) {
-    fprintf(stderr, "%s", prompt.c_str());
     std::string line;
     if (!std::getline(std::cin, line)) return {};
     return line;
@@ -93,7 +92,6 @@ std::string AutoBootstrap::grabWish() {
     // 1. Environment variable (CI / voice assistant / automation)
     const char* envWish = std::getenv("RAWRXD_WISH");
     if (envWish && envWish[0]) {
-        fprintf(stderr, "[INFO] [AutoBootstrap] Wish from env-var: %s\n", envWish);
         return envWish;
     }
 
@@ -102,7 +100,6 @@ std::string AutoBootstrap::grabWish() {
     {
         std::string clip = getClipboardText();
         if (!clip.empty() && clip.size() < 200 && clip.find('\n') == std::string::npos) {
-            fprintf(stderr, "[INFO] [AutoBootstrap] Wish from clipboard: %s\n", clip.c_str());
             return clip;
         }
     }
@@ -112,7 +109,6 @@ std::string AutoBootstrap::grabWish() {
     std::string typed = readLineFromConsole(
         "[RawrXD Agent] What should I build / fix / ship? > ");
     if (!typed.empty()) {
-        fprintf(stderr, "[INFO] [AutoBootstrap] Wish from console: %s\n", typed.c_str());
         return typed;
     }
 
@@ -127,14 +123,12 @@ void AutoBootstrap::start() {
 
 void AutoBootstrap::startWithWishInternal(const std::string& wish) {
     if (wish.empty()) {
-        fprintf(stderr, "[WARN] [AutoBootstrap] No wish received, aborting\n");
         return;
     }
 
     if (onWishReceived) onWishReceived(wish);
 
     if (!safetyGate(wish)) {
-        fprintf(stderr, "[WARN] [AutoBootstrap] Safety gate rejected wish\n");
         return;
     }
 
@@ -142,7 +136,6 @@ void AutoBootstrap::startWithWishInternal(const std::string& wish) {
     json plan = planner.plan(wish);
 
     if (plan.empty() || !plan.is_array()) {
-        fprintf(stderr, "[WARN] [AutoBootstrap] Planner returned empty plan\n");
         if (onExecutionCompleted) onExecutionCompleted(false);
         return;
     }
@@ -160,7 +153,6 @@ bool AutoBootstrap::safetyGate(const std::string& wish) {
 
     for (const auto& word : blacklist) {
         if (containsCI(wish, word)) {
-            fprintf(stderr, "[CRIT] [AutoBootstrap] Blocked dangerous op: %s\n", word.c_str());
             return false;
         }
     }
@@ -173,12 +165,10 @@ bool AutoBootstrap::safetyGate(const std::string& wish) {
     if ((autoApprove && (std::string(autoApprove) == "1" || std::string(autoApprove) == "true")) ||
         (ci && std::string(ci) == "true") ||
         gh) {
-        fprintf(stderr, "[INFO] [AutoBootstrap] Safety gate auto-approved (CI context)\n");
         return true;
     }
 
     // Ask user
-    fprintf(stderr, "[AutoBootstrap] Autonomously execute:\n  %s\nProceed? [y/N] > ", wish.c_str());
     std::string answer;
     std::getline(std::cin, answer);
     return (!answer.empty() && (answer[0] == 'y' || answer[0] == 'Y'));
@@ -194,8 +184,6 @@ void AutoBootstrap::executePlan(const std::string& wish, const nlohmann::json& p
         std::string type = v.value("type", "unknown");
         summary += "  - " + type + "\n";
     }
-    fprintf(stderr, "[INFO] [AutoBootstrap] Execution plan for: %s\n%s",
-            wish.c_str(), summary.c_str());
     if (onPlanGenerated) onPlanGenerated(summary);
 
     // Execute in background
@@ -207,7 +195,6 @@ void AutoBootstrap::executePlan(const std::string& wish, const nlohmann::json& p
 
         for (const auto& v : plan) {
             std::string type = v.value("type", "");
-            fprintf(stderr, "[INFO] [AutoBootstrap] Executing task: %s\n", type.c_str());
 
             if (type == "add_kernel") {
                 success = patch.addKernel(v.value("target", ""), v.value("template", ""));
@@ -251,12 +238,9 @@ void AutoBootstrap::executePlan(const std::string& wish, const nlohmann::json& p
                     v.value("quant", ""), v.value("kernel", ""),
                     v.value("gpu", ""),
                     v.value("tps", 0.0), v.value("ppl", 0.0));
-            } else {
-                fprintf(stderr, "[WARN] [AutoBootstrap] Unknown task type: %s\n", type.c_str());
             }
 
             if (!success) {
-                fprintf(stderr, "[WARN] [AutoBootstrap] Task failed: %s\n", type.c_str());
                 break;
             }
         }

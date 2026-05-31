@@ -63,13 +63,13 @@ static void kernel_ssm_conv(
     });
 }
 
-void ggml_sycl_ssm_conv(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
-    ggml_tensor * src0 = dst->src[0];
-    ggml_tensor * src1 = dst->src[1];
+void ggml_rxd_sycl_ssm_conv(ggml_rxd_backend_sycl_context & ctx, ggml_rxd_tensor * dst) {
+    ggml_rxd_tensor * src0 = dst->src[0];
+    ggml_rxd_tensor * src1 = dst->src[1];
 
-    GGML_ASSERT(src0->type == GGML_TYPE_F32);
-    GGML_ASSERT(src1->type == GGML_TYPE_F32);
-    GGML_ASSERT(dst->type  == GGML_TYPE_F32);
+    GGML_RXD_ASSERT(src0->type == GGML_RXD_TYPE_F32);
+    GGML_RXD_ASSERT(src1->type == GGML_RXD_TYPE_F32);
+    GGML_RXD_ASSERT(dst->type  == GGML_RXD_TYPE_F32);
 
     const int d_conv   = src1->ne[0];
     const int ncs      = src0->ne[0];
@@ -77,18 +77,18 @@ void ggml_sycl_ssm_conv(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
     const int n_t      = dst->ne[1];
     const int n_s      = dst->ne[2];
 
-    GGML_ASSERT(src0->ne[0] == d_conv - 1 + n_t);
-    GGML_ASSERT(src0->ne[1] == d_inner);
-    GGML_ASSERT(src1->ne[1] == d_inner);
+    GGML_RXD_ASSERT(src0->ne[0] == d_conv - 1 + n_t);
+    GGML_RXD_ASSERT(src0->ne[1] == d_inner);
+    GGML_RXD_ASSERT(src1->ne[1] == d_inner);
 
-    GGML_ASSERT(dst->ne[0] == d_inner);
-    GGML_ASSERT(dst->ne[1] == n_t);
-    GGML_ASSERT(dst->ne[2] == n_s);
+    GGML_RXD_ASSERT(dst->ne[0] == d_inner);
+    GGML_RXD_ASSERT(dst->ne[1] == n_t);
+    GGML_RXD_ASSERT(dst->ne[2] == n_s);
 
-    GGML_ASSERT(src0->nb[0] == sizeof(float));
-    GGML_ASSERT(src1->nb[0] == sizeof(float));
+    GGML_RXD_ASSERT(src0->nb[0] == sizeof(float));
+    GGML_RXD_ASSERT(src1->nb[0] == sizeof(float));
 
-    GGML_ASSERT(src0->nb[1] == src0->ne[0] * static_cast<int>(sizeof(float)));
+    GGML_RXD_ASSERT(src0->nb[1] == src0->ne[0] * static_cast<int>(sizeof(float)));
 
     const int src_stride_inner = ncs;
     const int src_stride_seq   = ncs * d_inner;
@@ -102,7 +102,7 @@ void ggml_sycl_ssm_conv(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
         const float *weights  = static_cast<const float *>(src1->data);
         float *dst_data       = static_cast<float *>(dst->data);
 
-        GGML_ASSERT(src_data && weights && dst_data);
+        GGML_RXD_ASSERT(src_data && weights && dst_data);
 
         kernel_ssm_conv(
             *q,
