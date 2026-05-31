@@ -563,14 +563,46 @@ jsonrpc_recv PROC FRAME
     cmp     ebx, r13d
     jge     @@recv_fail         ; Content-Length not found
 
-    ; Check for 'C','o','n','t'
-    cmp     BYTE PTR [rsi+rbx], 'C'
+    ; Need at least 16 bytes for full "Content-Length: " prefix
+    mov     eax, r13d
+    sub     eax, 16
+    cmp     ebx, eax
+    jg      @@next_cl
+
+    cmp     BYTE PTR [rsi+rbx+0], 'C'
     jne     @@next_cl
     cmp     BYTE PTR [rsi+rbx+1], 'o'
     jne     @@next_cl
+    cmp     BYTE PTR [rsi+rbx+2], 'n'
+    jne     @@next_cl
+    cmp     BYTE PTR [rsi+rbx+3], 't'
+    jne     @@next_cl
+    cmp     BYTE PTR [rsi+rbx+4], 'e'
+    jne     @@next_cl
+    cmp     BYTE PTR [rsi+rbx+5], 'n'
+    jne     @@next_cl
+    cmp     BYTE PTR [rsi+rbx+6], 't'
+    jne     @@next_cl
+    cmp     BYTE PTR [rsi+rbx+7], '-'
+    jne     @@next_cl
     cmp     BYTE PTR [rsi+rbx+8], 'L'
     jne     @@next_cl
-    ; Found "Content-L" — skip to after ": "
+    cmp     BYTE PTR [rsi+rbx+9], 'e'
+    jne     @@next_cl
+    cmp     BYTE PTR [rsi+rbx+10], 'n'
+    jne     @@next_cl
+    cmp     BYTE PTR [rsi+rbx+11], 'g'
+    jne     @@next_cl
+    cmp     BYTE PTR [rsi+rbx+12], 't'
+    jne     @@next_cl
+    cmp     BYTE PTR [rsi+rbx+13], 'h'
+    jne     @@next_cl
+    cmp     BYTE PTR [rsi+rbx+14], ':'
+    jne     @@next_cl
+    cmp     BYTE PTR [rsi+rbx+15], ' '
+    jne     @@next_cl
+
+    ; Found full "Content-Length: " prefix
     lea     rcx, [rsi+rbx+16]   ; past "Content-Length: "
     call    atoi_simple
     mov     rbx, rax            ; rbx = content length
