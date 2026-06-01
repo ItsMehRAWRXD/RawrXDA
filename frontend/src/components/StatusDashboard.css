@@ -1,0 +1,186 @@
+/**
+ * StatusDashboard.css
+ * Styling for the Status & Health Dashboard component.
+ */
+
+.dashboard-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu',
+    'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  background: #fafafa;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-container.connecting {
+  opacity: 0.6;
+  color: #666;
+}
+
+/* Status Bar */
+.status-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-left: 4px solid #999;
+  background: #ffffff;
+  border-radius: 4px;
+}
+
+.status-bar .icon {
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.status-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.status-bar .label {
+  font-weight: 600;
+  font-size: 14px;
+  color: #1f2937;
+}
+
+.status-bar .description {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* Metadata */
+.metadata {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: #f3f4f6;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.meta-item {
+  font-family: 'Monaco', 'Courier New', monospace;
+}
+
+/* Fault Panel */
+.fault-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 4px;
+  color: #7f1d1d;
+}
+
+.fault-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.fault-icon {
+  font-size: 18px;
+}
+
+.fault-title {
+  color: #dc2626;
+}
+
+.fault-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fault-row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.fault-label {
+  font-weight: 500;
+  color: #b91c1c;
+}
+
+.fault-value {
+  font-family: 'Monaco', 'Courier New', monospace;
+  background: rgba(255, 255, 255, 0.5);
+  padding: 2px 4px;
+  border-radius: 2px;
+  word-break: break-all;
+  color: #7f1d1d;
+}
+
+.fault-action {
+  font-family: 'Monaco', 'Courier New', monospace;
+  padding: 2px 4px;
+  border-radius: 2px;
+  background: #fed7aa;
+  color: #92400e;
+}
+
+.fault-flag {
+  font-weight: 600;
+}
+
+.fault-flag.yes {
+  color: #dc2626;
+}
+
+.fault-flag.no {
+  color: #059669;
+}
+
+.fault-note {
+  margin-top: 4px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.7);
+  border-left: 2px solid #dc2626;
+  border-radius: 2px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #7f1d1d;
+}
+
+/* Ready Panel */
+.ready-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 4px;
+  color: #166534;
+}
+
+.ready-message {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.recommended-model {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.model-label {
+  font-weight: 500;
+}
