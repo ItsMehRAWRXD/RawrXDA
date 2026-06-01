@@ -697,6 +697,92 @@ body,
   font-style: italic;
 }
 
+.hitl-enforcement {
+  color: #991b1b;
+  font-weight: 700;
+}
+
+.hitl-audit-entry-governance {
+  border-left: 3px solid #ef4444;
+  background: #fef2f2;
+}
+
+.hitl-audit-governance-badge {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+  background: #ef4444;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+/* ---------------------------------------------------------------------------
+ * Governance Banner (AgentPanel)
+ * --------------------------------------------------------------------------- */
+
+.agent-governance-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  background: #fef2f2;
+}
+
+.agent-governance-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #991b1b;
+}
+
+.agent-governance-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.agent-governance-chip {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.agent-governance-chip.risk-low {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.agent-governance-chip.risk-medium {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.agent-governance-chip.risk-high {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.agent-button-breakglass {
+  border-color: #ef4444;
+  background: #dc2626;
+  color: #ffffff;
+  font-size: 10px;
+  padding: 4px 8px;
+  align-self: flex-start;
+}
+
+.agent-button-breakglass:hover {
+  background: #b91c1c;
+}
+
 /* ---------------------------------------------------------------------------
  * HITL Audit Panel
  * --------------------------------------------------------------------------- */

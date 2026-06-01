@@ -6,7 +6,8 @@ export type AuditEventKind =
   | 'ENGINE_PAUSED'
   | 'ENGINE_RESUMED'
   | 'EXECUTION_RESULT'
-  | 'TELEMETRY';
+  | 'TELEMETRY'
+  | 'GOVERNANCE_ENFORCED';
 
 export interface AuditEvent {
   id: string;

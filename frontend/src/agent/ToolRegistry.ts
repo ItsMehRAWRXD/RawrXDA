@@ -1,4 +1,5 @@
 import { LowRiskToolAdapter } from './LowRiskToolAdapter';
+import { governanceEnforcer } from '../telemetry/GovernanceEnforcer';
 
 export type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH';
 
@@ -115,3 +116,65 @@ export const TOOL_REGISTRY_BY_NAME: Record<string, ToolDefinition> = DEFAULT_TOO
     acc[tool.name] = tool;
     return acc;
   }, {});
+
+/**
+ * StatefulRegistry
+ * Day 18: Dynamic Override Layer — wraps the static registry with runtime
+ * permission ratcheting driven by the GovernanceEnforcer.
+ *
+ * All consumers should call getEffectiveRiskLevel() instead of reading
+ * tool.riskLevel directly, so that demotions are respected.
+ */
+export class StatefulRegistry {
+  private baseRegistry: Record<string, ToolDefinition>;
+
+  constructor(baseRegistry: Record<string, ToolDefinition> = TOOL_REGISTRY_BY_NAME) {
+    this.baseRegistry = { ...baseRegistry };
+  }
+
+  public getTool(name: string): ToolDefinition | undefined {
+    return this.baseRegistry[name];
+  }
+
+  public getToolNames(): string[] {
+    return Object.keys(this.baseRegistry).sort();
+  }
+
+  public getEffectiveRiskLevel(toolName: string): RiskLevel {
+    const tool = this.baseRegistry[toolName];
+    if (!tool) {
+      return 'HIGH';
+    }
+    return governanceEnforcer.getEffectiveRiskLevel(toolName, tool.riskLevel);
+  }
+
+  public getEffectiveTool(toolName: string): ToolDefinition | undefined {
+    const tool = this.baseRegistry[toolName];
+    if (!tool) {
+      return undefined;
+    }
+    const effectiveRisk = this.getEffectiveRiskLevel(toolName);
+    if (effectiveRisk === tool.riskLevel) {
+      return tool;
+    }
+    return {
+      ...tool,
+      riskLevel: effectiveRisk,
+    };
+  }
+
+  public listTools(): ToolDefinition[] {
+    return Object.values(this.baseRegistry).map((tool) => {
+      const effectiveRisk = this.getEffectiveRiskLevel(tool.name);
+      if (effectiveRisk === tool.riskLevel) {
+        return tool;
+      }
+      return {
+        ...tool,
+        riskLevel: effectiveRisk,
+      };
+    });
+  }
+}
+
+export const statefulRegistry = new StatefulRegistry();

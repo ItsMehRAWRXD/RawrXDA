@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { auditLogService, AuditEvent } from '../telemetry/AuditLogService';
+import { governanceEnforcer } from '../telemetry/GovernanceEnforcer';
 
 const formatTime = (epochMs: number): string => {
   const d = new Date(epochMs);
@@ -35,11 +36,27 @@ const renderSummary = (event: AuditEvent): string => {
     return `${event.toolName ?? 'tool'} -> ${event.executionStatus ?? 'UNKNOWN'}`;
   }
 
+  if (event.kind === 'GOVERNANCE_ENFORCED') {
+    return `Governance enforced: ${event.toolName ?? 'tool'} ${event.message ?? ''}`;
+  }
+
   return `${event.telemetryType ?? 'TELEMETRY'} ${event.telemetrySeverity ?? ''}`.trim();
+};
+
+const renderEnforcementBadge = (event: AuditEvent): React.ReactNode | null => {
+  if (event.kind !== 'GOVERNANCE_ENFORCED') {
+    return null;
+  }
+  return (
+    <span className="hitl-audit-governance-badge">
+      AUTO
+    </span>
+  );
 };
 
 export const HitlAuditPanel: React.FC = () => {
   const [events, setEvents] = useState<AuditEvent[]>(() => auditLogService.getEvents());
+  const [enforcementCount, setEnforcementCount] = useState(0);
 
   const complianceSnapshot = auditLogService.exportComplianceReport();
 
@@ -47,8 +64,12 @@ export const HitlAuditPanel: React.FC = () => {
     const unsubscribe = auditLogService.onChange((next) => {
       setEvents(next);
     });
+    const unsubEnforcement = governanceEnforcer.onEnforcement(() => {
+      setEnforcementCount(governanceEnforcer.getOverrides().length);
+    });
     return () => {
       unsubscribe();
+      unsubEnforcement();
     };
   }, []);
 
@@ -97,6 +118,9 @@ export const HitlAuditPanel: React.FC = () => {
         <span>Writes: {complianceSnapshot.analyzedWriteOperations}</span>
         <span className="hitl-compliant">Compliant: {complianceSnapshot.compliantWriteOperations}</span>
         <span className="hitl-suspicious">Suspicious: {complianceSnapshot.suspiciousWriteOperations}</span>
+        {enforcementCount > 0 && (
+          <span className="hitl-enforcement">Enforced: {enforcementCount}</span>
+        )}
       </div>
 
       {events.length === 0 && <div className="hitl-audit-empty">No HITL events yet.</div>}
@@ -104,9 +128,10 @@ export const HitlAuditPanel: React.FC = () => {
       {events.length > 0 && (
         <div className="hitl-audit-log">
           {events.map((event) => (
-            <div key={event.id} className="hitl-audit-entry">
+            <div key={event.id} className={`hitl-audit-entry ${event.kind === 'GOVERNANCE_ENFORCED' ? 'hitl-audit-entry-governance' : ''}`}>
               <div className="hitl-audit-entry-top">
                 <span className="hitl-audit-kind">{event.kind}</span>
+                {renderEnforcementBadge(event)}
                 <span className="hitl-audit-time">{formatTime(event.timestamp)}</span>
               </div>
               <div className="hitl-audit-summary">{renderSummary(event)}</div>

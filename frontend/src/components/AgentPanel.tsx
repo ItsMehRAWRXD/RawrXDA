@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { agenticController, AgentStatus, ProposedToolCall } from '../agent/AgenticController';
 import { ToolExecutionResult } from '../agent/ToolRegistry';
+import { governanceEnforcer, ToolOverride } from '../telemetry/GovernanceEnforcer';
 
 const TOOL_DEFAULT = 'read_file';
 
@@ -16,6 +17,7 @@ export const AgentPanel: React.FC = () => {
   const [lastProposal, setLastProposal] = useState<ProposalRecord | null>(null);
   const [pendingApproval, setPendingApproval] = useState<ProposalRecord | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [overrides, setOverrides] = useState<ToolOverride[]>(governanceEnforcer.getOverrides());
 
   const tools = useMemo(() => agenticController.getToolNames(), []);
 
@@ -35,9 +37,14 @@ export const AgentPanel: React.FC = () => {
       setIsSubmitting(false);
     });
 
+    const unsubEnforcement = governanceEnforcer.onEnforcement(() => {
+      setOverrides(governanceEnforcer.getOverrides());
+    });
+
     return () => {
       unsubStatus();
       unsubProposal();
+      unsubEnforcement();
     };
   }, []);
 
@@ -80,6 +87,13 @@ export const AgentPanel: React.FC = () => {
     await agenticController.resolvePendingProposal(pendingApproval.proposal.id, approve);
   };
 
+  const handleBreakGlass = () => {
+    if (window.confirm('Break Glass: Clear all automatic governance overrides? This restores baseline risk levels.')) {
+      agenticController.resetGovernance();
+      setOverrides(governanceEnforcer.getOverrides());
+    }
+  };
+
   return (
     <div className="agent-panel">
       <div className="agent-panel-header">
@@ -91,6 +105,22 @@ export const AgentPanel: React.FC = () => {
         <span>HITL: {agenticController.getHitlMode()}</span>
         <span>Tools: {agenticController.getToolCount()}</span>
       </div>
+
+      {overrides.length > 0 && (
+        <div className="agent-governance-banner">
+          <div className="agent-governance-title">Governance Active</div>
+          <div className="agent-governance-list">
+            {overrides.map((o) => (
+              <span key={o.toolName} className={`agent-governance-chip risk-${o.enforcedRiskLevel.toLowerCase()}`}>
+                {o.toolName} → {o.enforcedRiskLevel}
+              </span>
+            ))}
+          </div>
+          <button className="agent-button agent-button-breakglass" onClick={handleBreakGlass}>
+            Break Glass Reset
+          </button>
+        </div>
+      )}
 
       <label className="agent-label" htmlFor="agent-tool-select">Tool Proposal</label>
       <select

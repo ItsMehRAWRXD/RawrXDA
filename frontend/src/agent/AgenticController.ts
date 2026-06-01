@@ -1,8 +1,9 @@
 import { TelemetrySink } from '../telemetry/TelemetrySink';
 import { auditLogService } from '../telemetry/AuditLogService';
 import { engineService } from '../engine/EngineService';
+import { governanceEnforcer } from '../telemetry/GovernanceEnforcer';
 import { HitlGate } from './HitlGate';
-import { DEFAULT_TOOL_REGISTRY, ToolDefinition, ToolExecutionResult } from './ToolRegistry';
+import { DEFAULT_TOOL_REGISTRY, ToolDefinition, ToolExecutionResult, statefulRegistry } from './ToolRegistry';
 
 export type AgentStatus =
   | 'IDLE'
@@ -45,6 +46,16 @@ export class AgenticController {
       return acc;
     }, {});
     this.hitlGate = hitlGate;
+    governanceEnforcer.start();
+    governanceEnforcer.onEnforcement((event) => {
+      void TelemetrySink.log(
+        {
+          type: 'STREAM_BLOCK',
+          severity: event.action === 'HARD_LOCK' ? 'CRITICAL' : 'HIGH',
+        },
+        `GOVERNANCE_ENFORCE:${event.toolName}:${event.action}`
+      );
+    });
   }
 
   public getStatus(): AgentStatus {
@@ -65,6 +76,17 @@ export class AgenticController {
 
   public getPendingApprovalCount(): number {
     return this.pendingApprovals.size;
+  }
+
+  public resetGovernance(): void {
+    governanceEnforcer.reset();
+    void TelemetrySink.log(
+      {
+        type: 'MODE_CHANGE',
+        severity: 'LOW',
+      },
+      'GOVERNANCE_RESET:human_break_glass'
+    );
   }
 
   public onStatusChange(callback: StatusCallback): () => void {
@@ -117,12 +139,13 @@ export class AgenticController {
 
     this.setStatus('THINKING');
 
+    const effectiveRisk = statefulRegistry.getEffectiveRiskLevel(toolName);
     const proposal: ProposedToolCall = {
       id: `proposal-${Date.now()}`,
       toolName,
       params,
       reason,
-      riskLevel: tool.riskLevel,
+      riskLevel: effectiveRisk,
       proposedAt: Date.now(),
     };
 
@@ -138,7 +161,7 @@ export class AgenticController {
 
     this.setStatus('TOOL_PROPOSAL');
 
-    const decision = await this.hitlGate.evaluate(tool.name, tool.riskLevel);
+    const decision = await this.hitlGate.evaluate(tool.name, effectiveRisk);
     if (!decision.allowExecution) {
       this.pendingApprovals.set(proposal.id, { proposal, tool });
       await this.updateApprovalPauseState(true);
