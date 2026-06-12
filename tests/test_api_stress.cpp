@@ -2,17 +2,9 @@
  * API Server Stress Test — Concurrent Bearer Auth + Rate Limit Validation
  * Tests: deadlock-free concurrent access, token validation, rate limiting
  */
-
-// White-box testing: expose private members for stress validation
-#define private public
-#define protected public
-
 #include "../include/api_server.h"
 #include "../src/AppState.h"
-
-#undef private
-#undef protected
-
+#include "../src/overclock_governor.h"
 #include <iostream>
 #include <thread>
 #include <vector>
@@ -20,6 +12,23 @@
 #include <chrono>
 #include <cassert>
 #include <cstring>
+
+// White-box test harness: friend of APIServer for accessing private members
+class APIServerStressTest {
+public:
+    static bool ValidateRequest(APIServer& server, const HttpRequest& req) {
+        return server.ValidateRequest(req);
+    }
+    static bool CheckRateLimit(APIServer& server, const std::string& client_id) {
+        return server.CheckRateLimit(client_id);
+    }
+    static void UpdateRateLimit(APIServer& server, const std::string& client_id) {
+        server.UpdateRateLimit(client_id);
+    }
+    static JsonValue ParseJsonRequest(APIServer& server, const std::string& req) {
+        return server.ParseJsonRequest(req);
+    }
+};
 
 // Minimal HTTP client for stress testing
 static bool HttpPost(const std::string& host, uint16_t port,
@@ -63,10 +72,10 @@ static bool TestBearerAuth() {
     HttpRequest req4 = req1;
     req4.headers["Authorization"] = "Basic rawrxd-dev-key-2026";
 
-    bool ok1 = server.ValidateRequest(req1);
-    bool ok2 = server.ValidateRequest(req2);
-    bool ok3 = server.ValidateRequest(req3);
-    bool ok4 = server.ValidateRequest(req4);
+    bool ok1 = APIServerStressTest::ValidateRequest(server, req1);
+    bool ok2 = APIServerStressTest::ValidateRequest(server, req2);
+    bool ok3 = APIServerStressTest::ValidateRequest(server, req3);
+    bool ok4 = APIServerStressTest::ValidateRequest(server, req4);
 
     std::cout << "  Bearer auth valid token:   " << (ok1 ? "PASS" : "FAIL") << "\n";
     std::cout << "  Bearer auth missing:       " << (!ok2 ? "PASS" : "FAIL") << "\n";
@@ -98,7 +107,7 @@ static bool TestConcurrentValidation() {
 
         for (int i = 0; i < kIterations; ++i) {
             auto start = std::chrono::steady_clock::now();
-            bool ok = server.ValidateRequest(req);
+            bool ok = APIServerStressTest::ValidateRequest(server, req);
             auto elapsed = std::chrono::steady_clock::now() - start;
 
             // Deadlock detection: any call taking > 5s is a deadlock
@@ -148,9 +157,9 @@ static bool TestRateLimitStress() {
 
     auto t0 = std::chrono::steady_clock::now();
     for (int i = 0; i < kBurst; ++i) {
-        if (server.CheckRateLimit(client_id)) {
+        if (APIServerStressTest::CheckRateLimit(server, client_id)) {
             ++allowed;
-            server.UpdateRateLimit(client_id);
+            APIServerStressTest::UpdateRateLimit(server, client_id);
         } else {
             ++blocked;
         }
@@ -184,7 +193,7 @@ static bool TestJsonParsingStress() {
     int parsed = 0;
     int rejected = 0;
     for (const auto& p : payloads) {
-        auto jv = server.ParseJsonRequest(p);
+        auto jv = APIServerStressTest::ParseJsonRequest(server, p);
         if (jv.is_object) {
             ++parsed;
         } else {

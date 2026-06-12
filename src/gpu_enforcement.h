@@ -38,6 +38,10 @@ void require();
 // Returns the cached status. Calls require() if not yet initialized.
 const Status& status();
 
+// Query GPU status without triggering require() abort — safe for spillover probes.
+// Returns current status if initialized, otherwise returns zeroed Status{Backend::None}.
+Status query();
+
 // Returns true once require() has succeeded. Never returns true without a GPU.
 bool active();
 

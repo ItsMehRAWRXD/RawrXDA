@@ -56,6 +56,8 @@
 #include <cstdint>
 #include "sovereign_stats_block_v2.h"
 
+using sov::SovereignStatsBlockV2;
+
 namespace RawrXD {
 namespace Telemetry {
 

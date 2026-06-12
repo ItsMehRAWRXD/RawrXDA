@@ -259,6 +259,9 @@ class AgenticPlanningOrchestrator
     nlohmann::json getApprovalQueueJson() const;
     nlohmann::json getExecutionStatusJson() const;
 
+    // Persistence stub for Win32IDE_Core.cpp WM_ENDSESSION
+    void flushPersistenceSnapshotNow() {}
+
   private:
     struct ApprovalGate
     {

@@ -352,7 +352,8 @@ std::string BuildGhostPromptContext(const std::string& editorContext, const std:
 // ============================================================================
 std::string BuildProjectScopedGhostContext(Win32IDE* ide,
                                             const std::string& editorContext,
-                                            const std::string& linePrefix)
+                                            const std::string& linePrefix,
+                                            const std::string& currentFile)
 {
     std::string prompt = BuildGhostPromptContext(editorContext, linePrefix);
 
@@ -360,7 +361,6 @@ std::string BuildProjectScopedGhostContext(Win32IDE* ide,
         return prompt;
 
     // Inject current file identity
-    const std::string& currentFile = ide->getCurrentFile();
     if (!currentFile.empty())
     {
         size_t pos = prompt.find("### Continue inline:");
@@ -696,6 +696,8 @@ bool Win32IDE::startTitanAgentInferenceAsync(const std::string& prefix,
 {
     // Fire-and-forget thread: Ollama FIM → stream tokens to UI
     std::thread([this, prefix, suffix]() {
+        const uint64_t requestStartMs = GetTickCount64();
+        bool firstTokenReceived = false;
         HINTERNET hSession = WinHttpOpen(L"RawrXD-Ghost/1.0",
             WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
             WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
@@ -774,6 +776,24 @@ bool Win32IDE::startTitanAgentInferenceAsync(const std::string& prefix,
                 std::string token = jsonUnescapeGhost(line.substr(p, e - p));
                 if (!token.empty() && m_hwndMain)
                 {
+                    // TTFT instrumentation: first token marks end of TTFT window
+                    if (!firstTokenReceived)
+                    {
+                        firstTokenReceived = true;
+                        const double ttftMs = static_cast<double>(GetTickCount64() - requestStartMs);
+                        {
+                            std::lock_guard<std::mutex> lock(m_ghostTextCacheMutex);
+                            m_ghostTextMetrics.lastTtftMs = ttftMs;
+                            m_ghostTextMetrics.lastProviderName = "Ollama-FIM";
+                            if (m_ghostTextMetrics.ttftSamples == 0)
+                                m_ghostTextMetrics.avgTtftMs = ttftMs;
+                            else
+                                m_ghostTextMetrics.avgTtftMs = (m_ghostTextMetrics.avgTtftMs * m_ghostTextMetrics.ttftSamples + ttftMs) / (m_ghostTextMetrics.ttftSamples + 1);
+                            m_ghostTextMetrics.ttftSamples++;
+                        }
+                        LOG_INFO("[GhostText] Ollama TTFT=" + std::to_string(ttftMs) + "ms");
+                    }
+
                     // Post to UI thread for ghost text rendering
                     char* heapToken = _strdup(token.c_str());
                     if (heapToken)
@@ -1562,7 +1582,7 @@ void Win32IDE::triggerSpeculativePrefetch()
     const uint64_t prefetchGeneration = g_speculativePrefetchGeneration.load();
     
     // Fire speculative prefetch in background
-    std::string contextCopy = BuildProjectScopedGhostContext(this, context, linePrefix);
+    std::string contextCopy = BuildProjectScopedGhostContext(this, context, linePrefix, m_currentFile);
     std::string suffixCopy = suffix;
     std::string langCopy = language;
     std::string fileCopy = m_currentFile;
@@ -1680,7 +1700,7 @@ void Win32IDE::onGhostTextTimer()
     lastSemantic = nowTick;
 
     // Semantic bridge: enrich the prompt context with nearest indexed code context.
-    context = BuildGhostPromptContext(context, linePrefix);
+    context = BuildProjectScopedGhostContext(this, context, linePrefix, m_currentFile);
     m_ghostTextRequestLinePrefix = linePrefix;
 
     // Get current line/column for positioning
@@ -2012,6 +2032,7 @@ Win32IDE::GhostTextCacheEntry Win32IDE::requestGhostTextCompletion(const std::st
 
         if (provider == GhostProviderKind::Agentic)
         {
+            const auto agenticStart = std::chrono::high_resolution_clock::now();
             if (!m_deferredHeavyInitComplete.load(std::memory_order_acquire))
             {
                 lastReason = "deferred init not complete; skipping Agentic provider";
@@ -2059,10 +2080,23 @@ Win32IDE::GhostTextCacheEntry Win32IDE::requestGhostTextCompletion(const std::st
             const std::string promptPrefix = providerContext.substr(providerContext.size() - prefixWindow, prefixWindow);
             const rawrxd::CompletionResult result = rawrxd::requestInlineCompletion(promptPrefix, editorContext);
             const std::string bridged = trimGhostText(result.suggestion);
+            const auto agenticEnd = std::chrono::high_resolution_clock::now();
+            const auto agenticMs = std::chrono::duration_cast<std::chrono::milliseconds>(agenticEnd - agenticStart).count();
             if (result.success && !bridged.empty())
             {
-                std::lock_guard<std::mutex> lock(m_ghostTextCacheMutex);
-                m_ghostTextMetrics.localWins++;
+                LOG_INFO("[GhostText] Agentic provider succeeded in " + std::to_string(agenticMs) + "ms");
+                {
+                    std::lock_guard<std::mutex> lock(m_ghostTextCacheMutex);
+                    m_ghostTextMetrics.lastTtftMs = static_cast<double>(agenticMs);
+                    m_ghostTextMetrics.lastProviderName = "Agentic";
+                    m_ghostTextMetrics.lastProviderLatencyMs = static_cast<double>(agenticMs);
+                    if (m_ghostTextMetrics.ttftSamples == 0)
+                        m_ghostTextMetrics.avgTtftMs = static_cast<double>(agenticMs);
+                    else
+                        m_ghostTextMetrics.avgTtftMs = (m_ghostTextMetrics.avgTtftMs * m_ghostTextMetrics.ttftSamples + static_cast<double>(agenticMs)) / (m_ghostTextMetrics.ttftSamples + 1);
+                    m_ghostTextMetrics.ttftSamples++;
+                    m_ghostTextMetrics.localWins++;
+                }
                 return GhostTextCacheEntry{bridged, result.planId, result.sessionId, !result.planId.empty(), 0};
             }
             lastReason = result.success ? "Agentic provider returned empty suggestion" : "Agentic provider failed";
@@ -2360,6 +2394,7 @@ std::string Win32IDE::requestTitanGhostTextCompletion(const std::string& context
     }
 
     RAWRXD_INFERENCE_HANDLE inferenceHandle = 0;
+    const uint64_t titanRequestStartMs = GetTickCount64();
     if (g_titanGhost.inferAsync(prompt.c_str(), prompt.size(), &inferenceHandle) != RAWRXD_SUCCESS)
     {
         uint64_t lastGhostSeq = m_agenticBridge ? m_agenticBridge->GetLastGhostSeq() : 0;
@@ -2373,6 +2408,7 @@ std::string Win32IDE::requestTitanGhostTextCompletion(const std::string& context
     setActiveTitanGhostInference(inferenceHandle, expectedSeq);
 
     const RAWRXD_STATUS waitStatus = g_titanGhost.waitForInference(inferenceHandle, 12000);
+    const uint64_t titanCompletionMs = GetTickCount64() - titanRequestStartMs;
     clearActiveTitanGhostInference(inferenceHandle);
     if (streamToUi)
     {
@@ -2411,6 +2447,21 @@ std::string Win32IDE::requestTitanGhostTextCompletion(const std::string& context
                  " gaps=" + std::to_string(gapCount) + " packets=" + std::to_string(packetCount));
         return "";
     }
+
+    // TTFT instrumentation for Titan path
+    {
+        std::lock_guard<std::mutex> lock(m_ghostTextCacheMutex);
+        m_ghostTextMetrics.lastTtftMs = static_cast<double>(titanCompletionMs);
+        m_ghostTextMetrics.lastProviderName = "Titan-DLL";
+        m_ghostTextMetrics.lastProviderLatencyMs = static_cast<double>(titanCompletionMs);
+        if (m_ghostTextMetrics.ttftSamples == 0)
+            m_ghostTextMetrics.avgTtftMs = static_cast<double>(titanCompletionMs);
+        else
+            m_ghostTextMetrics.avgTtftMs = (m_ghostTextMetrics.avgTtftMs * m_ghostTextMetrics.ttftSamples + static_cast<double>(titanCompletionMs)) / (m_ghostTextMetrics.ttftSamples + 1);
+        m_ghostTextMetrics.ttftSamples++;
+    }
+    LOG_INFO("[GhostText] Titan latency=" + std::to_string(titanCompletionMs) + "ms");
+
     return trimGhostText(completion);
 }
 
@@ -3551,7 +3602,7 @@ void Win32IDE::renderGhostText(HDC hdc)
 // KEY HANDLER — intercepts Tab/Esc in editor subclass
 // ============================================================================
 
-bool Win32IDE::handleGhostTextKey(UINT vk)
+bool Win32IDE::handleGhostTextKey(UINT vk, bool ctrlDown, bool shiftDown)
 {
     if (vk == VK_ESCAPE)
     {

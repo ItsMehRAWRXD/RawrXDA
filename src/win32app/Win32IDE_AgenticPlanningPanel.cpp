@@ -55,7 +55,7 @@ std::string narrowFromWide(const std::wstring& ws)
 }  // namespace
 
 
-namespace Win32IDE
+namespace AgenticPanelNS
 {
 
 // ============================================================================
@@ -640,11 +640,11 @@ void Win32IDE_AgenticPlanningPanel::showToastStatus(const std::wstring& text)
     addLogEntry(narrowFromWide(text));
 }
 
-}  // namespace Win32IDE
+}  // namespace AgenticPanelNS
 
 extern "C" HWND Win32IDE_ShowAgenticPlanningPanel(HWND hParent)
 {
-    auto* panel = Win32IDE::GetAgenticPlanningPanel();
+    auto* panel = AgenticPanelNS::GetAgenticPlanningPanel();
     if (!panel)
     {
         return nullptr;

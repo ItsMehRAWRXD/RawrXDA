@@ -3485,6 +3485,12 @@ class Win32IDE
         uint64_t lspWins = 0;
         double lastLatencyMs = 0.0;
         double avgLatencyMs = 0.0;
+        // TTFT (Time-To-First-Token) instrumentation
+        double lastTtftMs = 0.0;      // Time from request to first token arrival
+        double avgTtftMs = 0.0;       // Rolling average TTFT
+        uint64_t ttftSamples = 0;       // Number of TTFT samples collected
+        double lastProviderLatencyMs = 0.0; // Provider-specific latency (Titan/Ollama/Agentic)
+        std::string lastProviderName;       // Which provider served the last request
     };
 
     // Ghost Text state

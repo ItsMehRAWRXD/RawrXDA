@@ -32,15 +32,23 @@
 // AI Edit / Rollback types
 // =============================================================================
 
+enum class AIEditOp : uint8_t {
+    Replace = 0,
+    Create = 1,
+    Delete = 2
+};
+
 struct AIFileRollbackRecord {
-    std::string filePath;
+    std::string path;
     std::string originalContent;
     std::string modifiedContent;
+    AIEditOp op = AIEditOp::Replace;
     uint64_t timestamp = 0;
 };
 
 struct AIEditTransaction {
     std::string description;
+    std::vector<AIFileRollbackRecord> files;
     std::vector<AIFileRollbackRecord> records;
     bool committed = false;
 };
@@ -528,6 +536,10 @@ struct IDESettings
     bool modelPrefetchEnabled = true;
     bool modelWorkingSetLockEnabled = false;
     bool silencePrivilegeWarnings = true;
+
+    // HexMag service integration
+    bool hexmagGgufFallbackEnabled = false;
+    bool hexmagRouteCopilotPanel = false;
 };
 
 struct LocalServerStats

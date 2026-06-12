@@ -220,6 +220,21 @@ const Status& status() {
     return g_status;
 }
 
+Status query() {
+    // Safe probe: if already initialized, return cached status without triggering require()
+    if (g_active.load(std::memory_order_acquire)) {
+        return g_status;
+    }
+    // Not initialized yet — return zeroed status without aborting
+    Status empty{};
+    empty.active = Backend::None;
+    empty.device_count = 0;
+    empty.device_name[0] = '\0';
+    empty.vram_total_bytes = 0;
+    empty.vram_free_bytes = 0;
+    return empty;
+}
+
 bool active() {
     return g_active.load(std::memory_order_acquire);
 }

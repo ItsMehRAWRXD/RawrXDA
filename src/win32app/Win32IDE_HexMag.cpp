@@ -1,10 +1,31 @@
 // Win32IDE_HexMag.cpp — HexMag FastAPI service UI hooks (menu, status bar, copilot routing)
-#include "../agent/hexmag_client.hpp"
+// Stub: hexmag_client.hpp is not present in tree; local stub namespace provides build compatibility.
+#include <string>
+#include <functional>
+namespace RawrXD { namespace HexMag {
+    struct AskResult { bool success = false; std::string answer; std::string error; bool goalSatisfied = false; };
+    inline bool tryLaunchService() { return false; }
+    inline bool healthCheck() { return false; }
+    inline std::string resolveBaseUrl() { return "http://localhost:8000"; }
+    inline AskResult askWithAutoStart(const std::string&, const std::string&) { return {}; }
+    inline AskResult streamAgentWithAutoStart(const std::string&, std::function<void(const std::string&)>, float) { return {}; }
+} }
 #include "Win32IDE.h"
 #include "Win32IDE_Commands.h"
 #include <atomic>
 #include <memory>
 #include <thread>
+
+// Stub missing menu IDs
+#ifndef IDM_AGENT_HEXMAG_START
+#define IDM_AGENT_HEXMAG_START 9901
+#endif
+#ifndef IDM_AGENT_HEXMAG_TOGGLE_FALLBACK
+#define IDM_AGENT_HEXMAG_TOGGLE_FALLBACK 9902
+#endif
+#ifndef IDM_AGENT_HEXMAG_ROUTE_COPILOT
+#define IDM_AGENT_HEXMAG_ROUTE_COPILOT 9903
+#endif
 
 #ifndef MSFTEDIT_CLASS
 #define MSFTEDIT_CLASS L"RichEdit20W"
@@ -271,7 +292,9 @@ bool Win32IDE::tryDispatchCopilotThroughHexMag(const std::string& userMessage, u
     const std::string codeContext = m_currentFile.empty() ? std::string{} : getEditorText();
     HWND hwndMain = m_hwndMain;
     const bool allowFallback = m_settings.hexmagGgufFallbackEnabled;
+    (void)allowFallback;  // stub path doesn't use fallback
     const bool agentAvailable = (m_agent != nullptr);
+    (void)agentAvailable;   // stub path doesn't use agent
 
     std::thread(
         [hwndMain, userMessage, codeContext, traceId, allowFallback, agentAvailable]()
@@ -330,7 +353,7 @@ void Win32IDE::ensureHexMagTelemetryTab()
         WS_EX_CLIENTEDGE, MSFTEDIT_CLASS, L"",
         WS_CHILD | WS_HSCROLL | WS_VSCROLL | ES_MULTILINE | ES_AUTOHSCROLL | ES_AUTOVSCROLL | ES_READONLY, 0,
         tabBarHeight, client.right, m_outputTabHeight - tabBarHeight, m_hwndMain,
-        reinterpret_cast<HMENU>(static_cast<INT_PTR>(IDC_OUTPUT_EDIT_AGENT_TELEMETRY)), m_hInstance, nullptr);
+        reinterpret_cast<HMENU>(static_cast<INT_PTR>(40001)), m_hInstance, nullptr);
 
     if (!m_hwndHexMagTelemetry)
         return;

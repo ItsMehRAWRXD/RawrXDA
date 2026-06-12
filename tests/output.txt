@@ -1,0 +1,3 @@
+=== RawrXD Bare-Metal Security Validator ===
+Iterations: 1000000 | Target: x64 Windows ABI
+

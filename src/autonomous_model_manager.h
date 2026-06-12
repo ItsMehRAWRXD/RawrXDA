@@ -7,6 +7,8 @@
 namespace RawrXD {
 
 namespace AST {
+#ifndef RAWRXD_AST_NODETYPE_DEFINED
+#define RAWRXD_AST_NODETYPE_DEFINED
 enum class NodeType {
     Unknown,
     Function,
@@ -14,6 +16,7 @@ enum class NodeType {
     Type,
     Module
 };
+#endif
 } // namespace AST
 
 class AutonomousModelManager {

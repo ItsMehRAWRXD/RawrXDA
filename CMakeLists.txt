@@ -449,6 +449,8 @@ if(RAWR_HAS_MASM)
         src/asm/Titan_MoE_SparseGather.asm
         # P0 Gaps: Vector Indexing & Search
         src/asm/RawrXD_AVX512_VectorSearch.asm
+        # SymbolProcessor: high-speed AST scanner (POD symbol table traversal)
+        src/asm/SymbolProcessor.asm
         # Sovereign terminal capture with anonymous pipe ring buffer
         src/asm/terminal_pipe_engine.asm
         # AVX-512 cosine similarity kernel for HNSW vector indexing
@@ -1629,6 +1631,15 @@ set(RAWR_ENGINE_SOURCES
     src/win32app/bulk_fix_orchestrator_laneb_stub.cpp
     src/agentic/StreamingResultChannel.cpp
     src/agentic/observability/Logger.cpp
+    src/agentic/SubAgentManager.cpp
+    src/core/rawrxd_subsystem_api.cpp
+    src/core/rawrxd_subsys_modes_a.cpp
+    src/core/rawrxd_subsys_modes_b.cpp
+    src/core/rawrxd_subsys_modes_c.cpp
+    src/core/camellia256_bridge.cpp
+    src/core/self_host_engine.cpp
+    src/core/rawrxd_spengine_quadbuf_bridge.cpp
+    src/core/gold_link_closure_v2.cpp
 )
 message(STATUS "[RawrEngine LaneB] Using curated headless core sources")
 
@@ -2963,6 +2974,7 @@ set(INFERENCE_ENGINE_SOURCES
     src/agentic/ErrorRecoveryManager.cpp
     src/inference/PerformanceMonitor.cpp
     src/inference/rawr_inference_autopatch_loop.cpp
+    src/gpu_enforcement.cpp
     src/ai/fast_spec.cpp
     src/ai/fast_spec_inference_bridge.cpp
     src/gguf_loader.cpp

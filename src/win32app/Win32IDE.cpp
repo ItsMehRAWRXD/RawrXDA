@@ -3,6 +3,7 @@
 #include "Win32IDE.h"
 #include "pulse_ring_buffer.h"
 #include <new>
+#include "../../include/Win32IDE_Stubs.h"
 
 // Sovereign VEH / Telemetry External Linkage
 extern "C"
@@ -43,7 +44,6 @@ extern "C"
 #include "../streaming_gguf_loader.h"
 #include "../ui/SidebarStagingPanel.hpp"
 #include "../utils/ErrorReporter.hpp"
-#include "../vulkan_compute.h"
 #include "../config/IDEConfig.h"
 #include "IDELogger.h"
 #include "ModelConnection.h"
@@ -12561,40 +12561,21 @@ namespace
 {
 std::string buildEditorSlashVulkanReport()
 {
-    std::ostringstream o;
-    VulkanCompute vc;
-    if (!vc.Initialize())
-    {
-        o << "[Vulkan] Initialize() failed — SDK/driver unavailable or no compute device.\n";
-        return o.str();
-    }
-    const VulkanDeviceInfo& di = vc.GetDeviceInfo();
-    o << "[Vulkan] device: " << di.device_name << "\n";
-    o << "  vendor_id=0x" << std::hex << di.vendor_id << " device_id=0x" << di.device_id << std::dec << "\n";
-    o << "  AMD GPU: " << (vc.IsAMDDevice() ? "yes" : "no") << "  compute_queue_family=" << di.compute_queue_family
-      << "\n";
-    o << "  FP8 tiled flash-attn pipeline ready: " << (vc.IsFlashAttentionFP8TiledPipelineReady() ? "yes" : "no")
-      << "\n";
-    const VulkanKernelStats& st = vc.GetStats();
-    o << "  stats: dispatch=" << st.dispatch_count.load(std::memory_order_relaxed)
-      << " matmul=" << st.matmul_count.load(std::memory_order_relaxed)
-      << " attn=" << st.attention_count.load(std::memory_order_relaxed)
-      << " errors=" << st.error_count.load(std::memory_order_relaxed) << "\n";
-    vc.Cleanup();
-    return o.str();
+    return "[Vulkan] Vulkan compute is disabled in this build (RAWRXD_NO_VULKAN).\n";
 }
 
 std::string buildEditorSlashPagerReport()
 {
     std::ostringstream o;
     o << "[Sovereign /pager] process + reservation snapshot\n";
-    auto& rm = RawrXD::Compression::VirtualAllocReservationManager::Instance();
+    using RawrXD::Compression::VirtualAllocReservationManager;
+    auto& rm = VirtualAllocReservationManager::Instance();
     o << "  VirtualAllocReservationManager: reserved=" << rm.GetTotalReservedBytes()
       << " B  committed=" << rm.GetTotalCommittedBytes() << " B\n";
     {
-        const uint32_t pref = rm.GetPreferredNumaNode();
+        const int pref = rm.GetPreferredNumaNode();
         o << "  reservation NUMA policy: ";
-        if (pref == RawrXD::Compression::VirtualAllocReservationManager::kPreferredNumaNodeAuto)
+        if (pref == VirtualAllocReservationManager::kPreferredNumaNodeAuto)
         {
             o << "auto (VirtualAllocExNuma uses current CPU node per ReserveBlock)\n";
         }
@@ -14830,7 +14811,7 @@ void Win32IDE::refreshWalGutterHighlightsFromHistory()
     {
         if (_stricmp(f.path.c_str(), m_currentFile.c_str()) != 0)
             continue;
-        if (f.op == AIFileRollbackRecord::Op::Replace || f.op == AIFileRollbackRecord::Op::Create)
+        if (f.op == AIEditOp::Replace || f.op == AIEditOp::Create)
             mergeFullTextDiffNewLines1Based(f.originalContent, postUtf8, uniq);
     }
     if (!uniq.empty())

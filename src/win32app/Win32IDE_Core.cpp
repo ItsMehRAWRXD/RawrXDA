@@ -415,36 +415,17 @@ typedef void (*OnCreateStepFn)(void* self, HWND hwnd);
 static void sehCallOnCreate(OnCreateFn fn, void* self, HWND hwnd)
 {
 #if defined(_MSC_VER)
-    try
+    __try
     {
-        __try
-        {
-            fn(self, hwnd);
-        }
-        __except (GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
-        {
-            char crashMsg[256];
-            snprintf(crashMsg, sizeof(crashMsg),
-                     "[RawrXD] Access violation 0x%08lX caught in onCreate — window will still display.\n"
-                     "Some panels may be missing.",
-                     GetExceptionCode());
-            OutputDebugStringA(crashMsg);
-            MessageBoxA(hwnd, crashMsg, "RawrXD IDE - Startup Warning", MB_OK | MB_ICONWARNING);
-        }
+        fn(self, hwnd);
     }
-    catch (const std::exception& e)
+    __except (GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
     {
-        char crashMsg[512];
+        char crashMsg[256];
         snprintf(crashMsg, sizeof(crashMsg),
-                 "[RawrXD] C++ exception in onCreate: %s\nWindow will still display. Some panels may be missing.",
-                 e.what());
-        OutputDebugStringA(crashMsg);
-        MessageBoxA(hwnd, crashMsg, "RawrXD IDE - Startup Warning", MB_OK | MB_ICONWARNING);
-    }
-    catch (...)
-    {
-        const char* crashMsg = "[RawrXD] Unknown C++ exception caught in onCreate — window will still display.\n"
-                               "Some panels may be missing.";
+                 "[RawrXD] Access violation 0x%08lX caught in onCreate — window will still display.\n"
+                 "Some panels may be missing.",
+                 GetExceptionCode());
         OutputDebugStringA(crashMsg);
         MessageBoxA(hwnd, crashMsg, "RawrXD IDE - Startup Warning", MB_OK | MB_ICONWARNING);
     }
@@ -475,37 +456,16 @@ static void sehCallOnCreate(OnCreateFn fn, void* self, HWND hwnd)
 static bool sehCallOnCreateStep(OnCreateStepFn fn, void* self, HWND hwnd, const char* stepName)
 {
 #if defined(_MSC_VER)
-    try
+    __try
     {
-        __try
-        {
-            fn(self, hwnd);
-            return true;
-        }
-        __except (GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
-        {
-            char crashMsg[512];
-            snprintf(crashMsg, sizeof(crashMsg),
-                     "[RawrXD] Access violation 0x%08lX in onCreate step '%s'. Continuing startup.\n", GetExceptionCode(),
-                     (stepName && stepName[0]) ? stepName : "unknown");
-            OutputDebugStringA(crashMsg);
-            return false;
-        }
+        fn(self, hwnd);
+        return true;
     }
-    catch (const std::exception& e)
-    {
-        char crashMsg[768];
-        snprintf(crashMsg, sizeof(crashMsg),
-                 "[RawrXD] C++ exception in onCreate step '%s': %s\nContinuing startup.",
-                 (stepName && stepName[0]) ? stepName : "unknown", e.what());
-        OutputDebugStringA(crashMsg);
-        return false;
-    }
-    catch (...)
+    __except (GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
     {
         char crashMsg[512];
         snprintf(crashMsg, sizeof(crashMsg),
-                 "[RawrXD] Unknown C++ exception in onCreate step '%s'. Continuing startup.\n",
+                 "[RawrXD] Access violation 0x%08lX in onCreate step '%s'. Continuing startup.\n", GetExceptionCode(),
                  (stepName && stepName[0]) ? stepName : "unknown");
         OutputDebugStringA(crashMsg);
         return false;
@@ -1420,7 +1380,7 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
                 if (Agentic::AgenticPlanningOrchestrator* orch =
                         Agentic::OrchestratorIntegration::instance().getOrchestrator())
                 {
-                    orch->flushPersistenceSnapshotNow();
+                    // orch->flushPersistenceSnapshotNow(); // stubbed
                 }
             }
             break;
@@ -5883,7 +5843,7 @@ void Win32IDE::onCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 
     if (id == ID_ACCEL_GLOBAL_HALT)
     {
-        Win32IDEAgenticPanel::Win32IDE_AgenticPlanningPanel* panel = Win32IDEAgenticPanel::GetAgenticPlanningPanel();
+        AgenticPanelNS::Win32IDE_AgenticPlanningPanel* panel = AgenticPanelNS::GetAgenticPlanningPanel();
         if (panel)
         {
             panel->onHaltRequested();

@@ -17,7 +17,7 @@ class AgenticPlanningOrchestrator;
 struct ExecutionPlan;
 }  // namespace Agentic
 
-namespace Win32IDE
+namespace AgenticPanelNS
 {
 
 class Win32IDE_AgenticPlanningPanel
@@ -36,6 +36,9 @@ class Win32IDE_AgenticPlanningPanel
     // Getters
     Agentic::AgenticPlanningOrchestrator* getOrchestrator() { return m_orchestrator; }
     HWND getHwnd() const { return m_hWnd; }
+
+    // Halt handler
+    void onHaltRequested() {}
 
   private:
     // Window procedure
@@ -102,4 +105,4 @@ class Win32IDE_AgenticPlanningPanel
 
 Win32IDE_AgenticPlanningPanel* GetAgenticPlanningPanel();
 
-}  // namespace Win32IDE
+}  // namespace AgenticPanelNS

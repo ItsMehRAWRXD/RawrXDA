@@ -96,6 +96,9 @@ struct WSFrame {
 
 class APIServer {
 public:
+    // Friend declarations for white-box testing
+    friend class APIServerStressTest;
+
     explicit APIServer(AppState& app_state);
     ~APIServer();
 

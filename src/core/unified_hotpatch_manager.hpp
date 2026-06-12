@@ -28,7 +28,11 @@ class InputGuardSlicer;
 namespace RawrXD { namespace Agentic { class AgenticTaskGraph; } }
 namespace RawrXD { namespace Embeddings { class EmbeddingEngine; } }
 namespace RawrXD { namespace Vision { class VisionEncoder; } }
-namespace RawrXD { namespace Extensions { class ExtensionMarketplace; } }
+namespace RawrXD { namespace Extensions { class ExtensionMarketplace; 
+    inline void InitializeExtensionEngine(HWND, bool) {}
+    inline void PollExtensionEngineLsp() {}
+    inline void ShutdownExtensionEngine() {}
+} }
 namespace RawrXD { namespace Auth { class RBACEngine; } }
 #include <cstdint>
 #include <cstddef>

@@ -212,6 +212,13 @@ class CPUInferenceEngine : public InferenceEngine
     void SetUseTitanAssembly(bool use) { m_useTitanAssembly = use; }
     bool IsTitanAssemblyEnabled() const { return m_useTitanAssembly; }
 
+    // GPU spillover: attempt hot-layer GPU pinning with CPU fallback for cold layers
+    bool TryLoadWithGpuSpillover(const std::string& modelPath);
+
+    // Speculative decoding (Medusa v2) wiring
+    void WireSpeculativeDecoding(const std::string& targetModelPath,
+                                  const std::string& draftModelPath = std::string());
+
     // Performance settings
     void SetThreadCount(int threads) { m_threadCount = threads; }
     int GetThreadCount() const { return m_threadCount; }

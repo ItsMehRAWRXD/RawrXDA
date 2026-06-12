@@ -9,5 +9,9 @@ inline std::string getProgrammaticDepth(const std::string& ctx) {
     return "";
 }
 
+inline int programmaticMutationDepth() {
+    return 0;
+}
+
 } // namespace wal_gutter
 } // namespace rawrxd

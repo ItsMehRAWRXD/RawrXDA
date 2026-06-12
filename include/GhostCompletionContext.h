@@ -4,6 +4,7 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <optional>
 
 namespace rawrxd {
 namespace ghost_completion {
@@ -34,7 +35,39 @@ struct GhostCompletionContext {
         ctx.lspRunning = lspOk;
         return ctx;
     }
+
+    std::string toPromptFragment(size_t maxLen = 4096) const {
+        std::string result = "File: " + filePath + "\n";
+        result += "Language: " + language + "\n";
+        if (!symbolNames.empty()) {
+            result += "Symbols: ";
+            for (const auto& sym : symbolNames) {
+                result += sym + " ";
+            }
+            result += "\n";
+        }
+        if (!surroundingLines.empty()) {
+            result += "Context:\n" + surroundingLines + "\n";
+        }
+        if (result.size() > maxLen) {
+            result.resize(maxLen);
+        }
+        return result;
+    }
 };
+
+struct StructuredAiFixPayload {
+    std::vector<std::string> edits;
+    std::string explanation;
+};
+
+inline std::optional<StructuredAiFixPayload> tryParseStructuredAiFixFromModelResponse(const std::string& /*response*/) {
+    return std::nullopt;
+}
+
+inline std::optional<std::string> applyStructuredAiLineDiffsUtf8(const std::string& before, const std::vector<std::string>& /*edits*/) {
+    return before;
+}
 
 } // namespace ghost_completion
 } // namespace rawrxd
