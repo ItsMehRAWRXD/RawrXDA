@@ -8864,6 +8864,18 @@ set_target_properties(k2_009_token_embedding_lookup PROPERTIES RUNTIME_OUTPUT_DI
 target_link_libraries(k2_009_token_embedding_lookup PRIVATE InferenceEngine)
 add_test(NAME k2_009_token_embedding_lookup COMMAND k2_009_token_embedding_lookup WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/tests")
 
+add_executable(k2_010_real_embedding_transformer_integration tests/k2_010_real_embedding_transformer_integration.cpp
+    src/deep2/K2TokenEmbedding.cpp
+    src/deep2/K2MLAWeights.cpp
+    src/deep2/K2GlobalTensorIndex.cpp
+    src/deep2/KimiK2Config.cpp
+    src/deep2/GGUFLoader.cpp
+    src/core/memory_stubs.cpp
+    src/core/link_stubs.cpp)
+set_target_properties(k2_010_real_embedding_transformer_integration PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests")
+target_link_libraries(k2_010_real_embedding_transformer_integration PRIVATE InferenceEngine)
+add_test(NAME k2_010_real_embedding_transformer_integration COMMAND k2_010_real_embedding_transformer_integration WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/tests")
+
 set(B004_TRANSFORMER_ROUTER_STREAMING_SOURCES
     tests/b004_transformer_router_streaming_integration.cpp
     src/cpu_inference_engine.cpp

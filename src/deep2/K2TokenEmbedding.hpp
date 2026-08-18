@@ -64,7 +64,8 @@ public:
 private:
     Config config_;
     const GlobalTensorIndex* index_ = nullptr;
-    const GlobalTensorRef* ref_ = nullptr;
+    GlobalTensorRef ref_;
+    bool hasRef_ = false;
     std::string tensorName_;
 
     std::size_t currentResidency_ = 0;
