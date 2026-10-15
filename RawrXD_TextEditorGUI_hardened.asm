@@ -60,8 +60,8 @@ rect dd 4 dup(0)
 WndProc PROC FRAME
     push rbx
     .pushreg rbx
-    sub rsp, 40
-    .allocstack 40
+    sub rsp, 48
+    .allocstack 48
     .endprolog
     mov rbx, rcx
     cmp edx, WM_CREATE
@@ -138,7 +138,7 @@ ondestroy:
     call PostQuitMessage
     xor eax, eax
 wndexit:
-    add rsp, 40
+    add rsp, 48
     pop rbx
     ret
 WndProc ENDP
