@@ -34,6 +34,7 @@
 #include <cstring>
 #include <cstdio>
 #include <mutex>
+#include <condition_variable>
 #include <atomic>
 #include <thread>
 #include <chrono>
@@ -471,56 +472,90 @@ public:
 #ifndef RAWRXD_HAS_QTIMER_COMPAT
 #define RAWRXD_HAS_QTIMER_COMPAT
 
+
 class QTimer {
-    std::function<void()>   m_callback;
-    std::atomic<bool>       m_running{false};
-    std::thread             m_thread;
-    int                     m_interval = 0;
-    bool                    m_singleShot = false;
+    // No Qt event loop: callbacks execute on the timer worker thread.
+    // Callers touching HWND must marshal through PostMessage.
+    mutable std::mutex mutex_;
+    std::condition_variable cv_;
+    std::thread worker_;
+    std::function<void()> callback_;
+    int interval_ms_ = 1;
+    uint64_t revision_ = 0;
+    bool single_shot_ = false;
+    bool stopping_ = true;
+    bool running_ = false;
 
 public:
-    QTimer(QObject* parent = nullptr) { (void)parent; }
+    explicit QTimer(QObject* parent = nullptr) { (void)parent; }
+    QTimer(const QTimer&) = delete;
+    QTimer& operator=(const QTimer&) = delete;
     ~QTimer() { stop(); }
-    
-    void setInterval(int ms) { m_interval = ms; }
-    int interval() const { return m_interval; }
-    void setSingleShot(bool ss) { m_singleShot = ss; }
-    bool isActive() const { return m_running.load(); }
-    
-    // Connect timeout signal 
-    void onTimeout(std::function<void()> fn) { m_callback = fn; }
-    
+
+    void onTimeout(std::function<void()> fn) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        callback_ = std::move(fn);
+    }
+    void setInterval(int ms) {
+        { std::lock_guard<std::mutex> lock(mutex_);
+          interval_ms_ = std::max(1, ms); ++revision_; }
+        cv_.notify_all();
+    }
+    int interval() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return interval_ms_;
+    }
+    void setSingleShot(bool value) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        single_shot_ = value;
+    }
+    bool isActive() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return running_;
+    }
     void start(int ms = -1) {
-        if (ms >= 0) m_interval = ms;
+        // A callback may stop its timer; restarting on the same worker
+        // would require joining itself and is intentionally rejected.
+        if (worker_.joinable() && worker_.get_id() == std::this_thread::get_id())
+            return;
         stop();
-        m_running = true;
-        m_thread = std::thread([this]() {
-            while (m_running.load()) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(m_interval));
-                if (m_running.load() && m_callback) {
-                    m_callback();
-                }
-                if (m_singleShot) {
-                    m_running = false;
-                    break;
-                }
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (ms >= 0) interval_ms_ = std::max(1, ms);
+            stopping_ = false;
+            running_ = true;
+        }
+        worker_ = std::thread([this] {
+            std::unique_lock<std::mutex> lock(mutex_);
+            while (!stopping_) {
+                auto revision = revision_;
+                if (cv_.wait_for(lock, std::chrono::milliseconds(interval_ms_),
+                    [this,revision] { return stopping_ || revision_ != revision; }))
+                    continue;
+                auto fn = callback_;
+                auto once = single_shot_;
+                lock.unlock();
+                if (fn) fn();
+                lock.lock();
+                if (once) { stopping_ = true; break; }
             }
+            running_ = false;
         });
-        m_thread.detach();
     }
-    
     void stop() {
-        m_running = false;
+        { std::lock_guard<std::mutex> lock(mutex_); stopping_ = true; }
+        cv_.notify_all();
+        if (worker_.joinable() && worker_.get_id() != std::this_thread::get_id())
+            worker_.join();
+        { std::lock_guard<std::mutex> lock(mutex_); running_ = false; }
     }
-    
     static void singleShot(int ms, std::function<void()> fn) {
-        std::thread([ms, fn]() {
-            std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+        std::thread([ms, fn = std::move(fn)] {
+            std::this_thread::sleep_for(std::chrono::milliseconds(std::max(0, ms)));
             if (fn) fn();
-        }).detach();
+        }).detach(); // captures no QTimer; caller owns captured objects
     }
 };
-
 #endif // RAWRXD_HAS_QTIMER_COMPAT
 
 // ============================================================================

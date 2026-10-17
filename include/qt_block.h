@@ -35,6 +35,7 @@
 #include <filesystem>
 #include <chrono>
 #include <atomic>
+#include <condition_variable>
 #include <cstdint>
 #include <cstring>
 #include <iostream>
@@ -220,10 +221,46 @@ public:
     QVariant(const char* v) : val_(QString(v)) {}
     bool isValid() const { return val_.has_value(); }
     bool isNull() const { return !val_.has_value(); }
-    int toInt(bool* ok = nullptr) const { try { int v = std::any_cast<int>(val_); if(ok)*ok=true; return v; } catch(...) { if(ok)*ok=false; return 0; } }
-    double toDouble(bool* ok = nullptr) const { try { double v = std::any_cast<double>(val_); if(ok)*ok=true; return v; } catch(...) { if(ok)*ok=false; return 0; } }
-    bool toBool() const { try { return std::any_cast<bool>(val_); } catch(...) { return false; } }
-    QString toString() const { try { return std::any_cast<QString>(val_); } catch(...) { return {}; } }
+    int toInt(bool* ok = nullptr) const {
+        try {
+            int v = val_.type() == typeid(int) ? std::any_cast<int>(val_)
+                : val_.type() == typeid(bool) ? int(std::any_cast<bool>(val_))
+                : val_.type() == typeid(double) ? int(std::any_cast<double>(val_))
+                : std::stoi(std::string(std::any_cast<QString>(val_)));
+            if (ok) *ok = true;
+            return v;
+        } catch (...) { if (ok) *ok = false; return 0; }
+    }
+    double toDouble(bool* ok = nullptr) const {
+        try {
+            double v = val_.type() == typeid(double) ? std::any_cast<double>(val_)
+                : val_.type() == typeid(int) ? double(std::any_cast<int>(val_))
+                : std::stod(std::string(std::any_cast<QString>(val_)));
+            if (ok) *ok = true;
+            return v;
+        } catch (...) { if (ok) *ok = false; return 0; }
+    }
+    bool toBool() const {
+        if (val_.type() == typeid(bool)) return std::any_cast<bool>(val_);
+        if (val_.type() == typeid(int)) return std::any_cast<int>(val_) != 0;
+        if (val_.type() == typeid(QString)) {
+            auto s = std::any_cast<QString>(val_).toLower();
+            return s == "1" || s == "true" || s == "yes";
+        }
+        return false;
+    }
+    QString toString() const {
+        if (val_.type() == typeid(QString)) return std::any_cast<QString>(val_);
+        if (val_.type() == typeid(int)) return QString::number(std::any_cast<int>(val_));
+        if (val_.type() == typeid(double)) {
+            std::ostringstream os; os.precision(17); os << std::any_cast<double>(val_);
+            return QString(os.str());
+        }
+        if (val_.type() == typeid(bool)) return std::any_cast<bool>(val_) ? QString("true") : QString("false");
+        if (val_.type() == typeid(QByteArray)) return QString(std::any_cast<QByteArray>(val_));
+        return {};
+    }
+    const std::type_info& type() const noexcept { return val_.type(); }
     QByteArray toByteArray() const { try { return std::any_cast<QByteArray>(val_); } catch(...) { return {}; } }
     template<typename T> static QVariant fromValue(const T& v) { QVariant q; q.val_ = v; return q; }
     template<typename T> T value() const { try { return std::any_cast<T>(val_); } catch(...) { return T{}; } }
@@ -807,9 +844,94 @@ class QTabBar : public QWidget { public: QTabBar(QWidget* p = nullptr) : QWidget
 #ifndef QTIMER_H
 #define QTIMER_H
 class QTimer : public QObject {
-public: QTimer(QObject* p = nullptr) : QObject(p) {} void start(int) {} void stop() {} void setInterval(int) {} int interval() const { return 0; }
-    bool isActive() const { return false; } void setSingleShot(bool) {} bool isSingleShot() const { return false; }
-    static void singleShot(int, QObject*, const char*) {} int remainingTime() const { return 0; }
+    // No Qt event loop: callbacks execute on the timer worker thread.
+    // Callers touching HWND must marshal through PostMessage.
+    mutable std::mutex mutex_;
+    std::condition_variable cv_;
+    std::thread worker_;
+    std::function<void()> callback_;
+    int interval_ms_ = 1;
+    uint64_t revision_ = 0;
+    bool single_shot_ = false;
+    bool stopping_ = true;
+    bool running_ = false;
+
+public:
+    explicit QTimer(QObject* parent = nullptr) : QObject(parent) {}
+    QTimer(const QTimer&) = delete;
+    QTimer& operator=(const QTimer&) = delete;
+    ~QTimer() override { stop(); }
+
+    void onTimeout(std::function<void()> fn) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        callback_ = std::move(fn);
+    }
+    void setInterval(int ms) {
+        { std::lock_guard<std::mutex> lock(mutex_);
+          interval_ms_ = std::max(1, ms); ++revision_; }
+        cv_.notify_all();
+    }
+    int interval() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return interval_ms_;
+    }
+    void setSingleShot(bool value) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        single_shot_ = value;
+    }
+    bool isSingleShot() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return single_shot_;
+    }
+    int remainingTime() const { return isActive() ? interval() : -1; }
+    // No MOC slot lookup exists in the native runtime. Reject this form.
+    static void singleShot(int, QObject*, const char*) = delete;
+    bool isActive() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return running_;
+    }
+    void start(int ms = -1) {
+        // A callback may stop its timer; restarting on the same worker
+        // would require joining itself and is intentionally rejected.
+        if (worker_.joinable() && worker_.get_id() == std::this_thread::get_id())
+            return;
+        stop();
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (ms >= 0) interval_ms_ = std::max(1, ms);
+            stopping_ = false;
+            running_ = true;
+        }
+        worker_ = std::thread([this] {
+            std::unique_lock<std::mutex> lock(mutex_);
+            while (!stopping_) {
+                auto revision = revision_;
+                if (cv_.wait_for(lock, std::chrono::milliseconds(interval_ms_),
+                    [this,revision] { return stopping_ || revision_ != revision; }))
+                    continue;
+                auto fn = callback_;
+                auto once = single_shot_;
+                lock.unlock();
+                if (fn) fn();
+                lock.lock();
+                if (once) { stopping_ = true; break; }
+            }
+            running_ = false;
+        });
+    }
+    void stop() {
+        { std::lock_guard<std::mutex> lock(mutex_); stopping_ = true; }
+        cv_.notify_all();
+        if (worker_.joinable() && worker_.get_id() != std::this_thread::get_id())
+            worker_.join();
+        { std::lock_guard<std::mutex> lock(mutex_); running_ = false; }
+    }
+    static void singleShot(int ms, std::function<void()> fn) {
+        std::thread([ms, fn = std::move(fn)] {
+            std::this_thread::sleep_for(std::chrono::milliseconds(std::max(0, ms)));
+            if (fn) fn();
+        }).detach(); // captures no QTimer; caller owns captured objects
+    }
 };
 #endif
 #ifndef QTHREAD_H
@@ -918,13 +1040,162 @@ public: QIODevice(QObject* p = nullptr) : QObject(p) {} virtual bool open(int) {
 #endif
 #ifndef QSETTINGS_H
 #define QSETTINGS_H
-class QSettings { std::map<std::string, QVariant> store_;
-public: QSettings(const QString& = {}, const QString& = {}) {} QSettings(int, int, const QString& = {}, const QString& = {}) {}
-    void setValue(const QString& key, const QVariant& val) { store_[key] = val; }
-    QVariant value(const QString& key, const QVariant& def = {}) const { auto it = store_.find(key); return it != store_.end() ? it->second : def; }
-    bool contains(const QString& key) const { return store_.find(key) != store_.end(); } void remove(const QString& key) { store_.erase(key); }
-    void beginGroup(const QString&) {} void endGroup() {} QStringList allKeys() const { QStringList r; for(auto& p : store_) r.push_back(QString(p.first)); return r; } void sync() {}
-    enum Scope { UserScope, SystemScope }; enum Format { NativeFormat, IniFormat, InvalidFormat };
+// Native STL-backed settings store, persisted in the user's application-data dir.
+// Hex encoding preserves binary values and avoids newline/delimiter injection.
+// This adapter is not a full Qt QSettings API or Qt INI file parser.
+class QSettings {
+public:
+    enum Scope { UserScope, SystemScope };
+    enum Format { NativeFormat, IniFormat, InvalidFormat };
+    enum Status { NoError, AccessError, FormatError };
+    QSettings(const QString& org = {}, const QString& app = {}) { init(org, app); }
+    QSettings(int, int, const QString& org = {}, const QString& app = {}) { init(org, app); }
+    QSettings(const QSettings&) = delete;
+    QSettings& operator=(const QSettings&) = delete;
+    ~QSettings() { sync(); }
+
+    void setValue(const QString& key, const QVariant& val) {
+        char tag = 's';
+        if (val.type() == typeid(int)) tag = 'i';
+        else if (val.type() == typeid(double)) tag = 'd';
+        else if (val.type() == typeid(bool)) tag = 'b';
+        else if (val.type() == typeid(QByteArray)) tag = 'a';
+        std::string data = tag == 'b' ? (val.toBool() ? "1" : "0")
+            : tag == 'a' ? std::string(val.toByteArray()) : std::string(val.toString());
+        store_[fullKey(key)] = {tag, std::move(data)};
+        sync();
+    }
+    QVariant value(const QString& key, const QVariant& def = {}) const {
+        auto it = store_.find(fullKey(key));
+        if (it == store_.end()) return def;
+        const auto& rec = it->second;
+        try {
+            if (rec.first == 'i') return QVariant(std::stoi(rec.second));
+            if (rec.first == 'd') return QVariant(std::stod(rec.second));
+            if (rec.first == 'b') return QVariant(rec.second == "1");
+            if (rec.first == 'a') return QVariant::fromValue(QByteArray(rec.second));
+            return QVariant(QString(rec.second));
+        } catch (...) { return def; }
+    }
+    bool contains(const QString& key) const { return store_.count(fullKey(key)) != 0; }
+    void remove(const QString& key) {
+        auto target = fullKey(key);
+        for (auto it = store_.begin(); it != store_.end();) {
+            if (it->first == target ||
+               (it->first.size() > target.size() && it->first.compare(0, target.size(), target) == 0 &&
+                it->first[target.size()] == '/')) it = store_.erase(it);
+            else ++it;
+        }
+        sync();
+    }
+    void beginGroup(const QString& group) { groups_.push_back(std::string(group)); }
+    void endGroup() { if (!groups_.empty()) groups_.pop_back(); }
+    QStringList allKeys() const {
+        QStringList result;
+        auto prefix = prefixKey();
+        for (const auto& entry : store_)
+            if (entry.first.compare(0, prefix.size(), prefix) == 0)
+                result.push_back(QString(entry.first.substr(prefix.size())));
+        return result;
+    }
+    Status status() const { return status_; }
+    void sync() {
+        std::error_code ec;
+        std::filesystem::create_directories(path_.parent_path(), ec);
+        if (ec) { status_ = AccessError; return; }
+        auto tmp = path_; tmp += ".tmp";
+        {
+            std::ofstream os(tmp, std::ios::binary | std::ios::trunc);
+            if (!os) { status_ = AccessError; return; }
+            for (const auto& [key, val] : store_)
+                os << hex(key) << '\t' << val.first << '\t' << hex(val.second) << '\n';
+            os.flush();
+            if (!os) { status_ = AccessError; return; }
+        }
+#ifdef _WIN32
+        if (!MoveFileExW(tmp.c_str(), path_.c_str(),
+                 MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
+            status_ = AccessError;
+            std::filesystem::remove(tmp, ec);
+            return;
+        }
+#else
+        std::filesystem::rename(tmp, path_, ec);
+        if (ec) { status_ = AccessError; return; }
+#endif
+        status_ = NoError;
+    }
+private:
+    std::filesystem::path path_;
+    std::map<std::string, std::pair<char,std::string>> store_;
+    std::vector<std::string> groups_;
+    Status status_ = NoError;
+
+    static std::string safeName(const QString& name, const char* fallback) {
+        std::string result;
+        for (unsigned char c : std::string(name)) {
+            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+                (c >= '0' && c <= '9') || c == '_' || c == '-' || c == '.')
+                result += char(c);
+            else result += '_';
+        }
+        if (result.empty() || result == "." || result == "..") return fallback;
+        return result;
+    }
+    static std::string hex(const std::string& input) {
+        const char* h = "0123456789ABCDEF";
+        std::string out; out.reserve(input.size() * 2);
+        for (unsigned char c : input) { out += h[c >> 4]; out += h[c & 15]; }
+        return out;
+    }
+    static bool unhex(const std::string& input, std::string& output) {
+        if (input.size() & 1) return false;
+        auto nib = [](char c) -> int {
+            if (c >= '0' && c <= '9') return c - '0';
+            if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+            if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+            return -1;
+        };
+        output.clear(); output.reserve(input.size() / 2);
+        for (size_t i = 0; i < input.size(); i += 2) {
+            int a = nib(input[i]), b = nib(input[i+1]);
+            if (a < 0 || b < 0) return false;
+            output += char((a << 4) | b);
+        }
+        return true;
+    }
+    std::string prefixKey() const {
+        std::string out;
+        for (const auto& group : groups_) out += group + "/";
+        return out;
+    }
+    std::string fullKey(const QString& key) const { return prefixKey() + std::string(key); }
+    void init(const QString& org, const QString& app) {
+        const char* root = std::getenv("APPDATA");
+        if (!root || !*root) root = std::getenv("USERPROFILE");
+        std::filesystem::path base = root && *root ? std::filesystem::path(root)
+                                                  : std::filesystem::temp_directory_path();
+        path_ = base / safeName(org, "RawrXD") / (safeName(app, "RawrXD") + ".settings");
+        std::ifstream is(path_, std::ios::binary);
+        if (!is) return;
+        std::string line;
+        while (std::getline(is, line)) {
+            auto p = line.find('\t');
+            auto q = p == std::string::npos ? p : line.find('\t', p+1);
+            if (p == std::string::npos || q == std::string::npos || q != p+2) {
+                status_ = FormatError; continue;
+            }
+            char tag = line[p+1];
+            if (tag != 'i' && tag != 'd' && tag != 'b' && tag != 'a' && tag != 's') {
+                status_ = FormatError; continue;
+            }
+            std::string key, val;
+            if (!unhex(line.substr(0,p),key) || !unhex(line.substr(q+1),val)) {
+                status_ = FormatError; continue;
+            }
+            store_[std::move(key)] = {tag,std::move(val)};
+        }
+    }
 };
 #endif
 #ifndef QSTANDARDPATHS_H
