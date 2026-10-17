@@ -35,6 +35,7 @@
 #include <filesystem>
 #include <chrono>
 #include <atomic>
+#include <condition_variable>
 #include <cstdint>
 #include <cstring>
 #include <iostream>
@@ -807,9 +808,94 @@ class QTabBar : public QWidget { public: QTabBar(QWidget* p = nullptr) : QWidget
 #ifndef QTIMER_H
 #define QTIMER_H
 class QTimer : public QObject {
-public: QTimer(QObject* p = nullptr) : QObject(p) {} void start(int) {} void stop() {} void setInterval(int) {} int interval() const { return 0; }
-    bool isActive() const { return false; } void setSingleShot(bool) {} bool isSingleShot() const { return false; }
-    static void singleShot(int, QObject*, const char*) {} int remainingTime() const { return 0; }
+    // No Qt event loop: callbacks execute on the timer worker thread.
+    // Callers touching HWND must marshal through PostMessage.
+    mutable std::mutex mutex_;
+    std::condition_variable cv_;
+    std::thread worker_;
+    std::function<void()> callback_;
+    int interval_ms_ = 1;
+    uint64_t revision_ = 0;
+    bool single_shot_ = false;
+    bool stopping_ = true;
+    bool running_ = false;
+
+public:
+    explicit QTimer(QObject* parent = nullptr) : QObject(parent) {}
+    QTimer(const QTimer&) = delete;
+    QTimer& operator=(const QTimer&) = delete;
+    ~QTimer() override { stop(); }
+
+    void onTimeout(std::function<void()> fn) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        callback_ = std::move(fn);
+    }
+    void setInterval(int ms) {
+        { std::lock_guard<std::mutex> lock(mutex_);
+          interval_ms_ = std::max(1, ms); ++revision_; }
+        cv_.notify_all();
+    }
+    int interval() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return interval_ms_;
+    }
+    void setSingleShot(bool value) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        single_shot_ = value;
+    }
+    bool isSingleShot() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return single_shot_;
+    }
+    int remainingTime() const { return isActive() ? interval() : -1; }
+    // No MOC slot lookup exists in the native runtime. Reject this form.
+    static void singleShot(int, QObject*, const char*) = delete;
+    bool isActive() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return running_;
+    }
+    void start(int ms = -1) {
+        // A callback may stop its timer; restarting on the same worker
+        // would require joining itself and is intentionally rejected.
+        if (worker_.joinable() && worker_.get_id() == std::this_thread::get_id())
+            return;
+        stop();
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (ms >= 0) interval_ms_ = std::max(1, ms);
+            stopping_ = false;
+            running_ = true;
+        }
+        worker_ = std::thread([this] {
+            std::unique_lock<std::mutex> lock(mutex_);
+            while (!stopping_) {
+                auto revision = revision_;
+                if (cv_.wait_for(lock, std::chrono::milliseconds(interval_ms_),
+                    [this,revision] { return stopping_ || revision_ != revision; }))
+                    continue;
+                auto fn = callback_;
+                auto once = single_shot_;
+                lock.unlock();
+                if (fn) fn();
+                lock.lock();
+                if (once) { stopping_ = true; break; }
+            }
+            running_ = false;
+        });
+    }
+    void stop() {
+        { std::lock_guard<std::mutex> lock(mutex_); stopping_ = true; }
+        cv_.notify_all();
+        if (worker_.joinable() && worker_.get_id() != std::this_thread::get_id())
+            worker_.join();
+        { std::lock_guard<std::mutex> lock(mutex_); running_ = false; }
+    }
+    static void singleShot(int ms, std::function<void()> fn) {
+        std::thread([ms, fn = std::move(fn)] {
+            std::this_thread::sleep_for(std::chrono::milliseconds(std::max(0, ms)));
+            if (fn) fn();
+        }).detach(); // captures no QTimer; caller owns captured objects
+    }
 };
 #endif
 #ifndef QTHREAD_H
