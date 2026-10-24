@@ -591,13 +591,61 @@ EditorEngineResult WebView2EditorEngine::clearGhostText() {
 // ============================================================================
 // Input — WebView2 handles input internally via Chromium
 // ============================================================================
-bool WebView2EditorEngine::onKeyDown(WPARAM, LPARAM) { return false; }
-bool WebView2EditorEngine::onChar(WCHAR) { return false; }
-bool WebView2EditorEngine::onMouseWheel(int, int, int) { return false; }
-bool WebView2EditorEngine::onLButtonDown(int, int, WPARAM) { return false; }
-bool WebView2EditorEngine::onLButtonUp(int, int) { return false; }
-bool WebView2EditorEngine::onMouseMove(int, int, WPARAM) { return false; }
-bool WebView2EditorEngine::onIMEComposition(HWND, WPARAM, LPARAM) { return false; }
+bool WebView2EditorEngine::onKeyDown(WPARAM wParam, LPARAM lParam) {
+    if (!m_hwndContainer) {
+        return false;
+    }
+    m_stats.keyEventsProcessed++;
+    SendMessageW(m_hwndContainer, WM_KEYDOWN, wParam, lParam);
+    return true;
+}
+bool WebView2EditorEngine::onChar(WCHAR ch) {
+    if (!m_hwndContainer) {
+        return false;
+    }
+    m_stats.keyEventsProcessed++;
+    SendMessageW(m_hwndContainer, WM_CHAR, static_cast<WPARAM>(ch), 1);
+    return true;
+}
+bool WebView2EditorEngine::onMouseWheel(int delta, int x, int y) {
+    if (!m_hwndContainer) {
+        return false;
+    }
+    const WPARAM wParam = MAKEWPARAM(0, static_cast<UINT>(static_cast<SHORT>(delta)));
+    const LPARAM lParam = MAKELPARAM(x, y);
+    SendMessageW(m_hwndContainer, WM_MOUSEWHEEL, wParam, lParam);
+    return true;
+}
+bool WebView2EditorEngine::onLButtonDown(int x, int y, WPARAM modifiers) {
+    if (!m_hwndContainer) {
+        return false;
+    }
+    SetFocus(m_hwndContainer);
+    SendMessageW(m_hwndContainer, WM_LBUTTONDOWN, modifiers, MAKELPARAM(x, y));
+    return true;
+}
+bool WebView2EditorEngine::onLButtonUp(int x, int y) {
+    if (!m_hwndContainer) {
+        return false;
+    }
+    SendMessageW(m_hwndContainer, WM_LBUTTONUP, 0, MAKELPARAM(x, y));
+    return true;
+}
+bool WebView2EditorEngine::onMouseMove(int x, int y, WPARAM modifiers) {
+    if (!m_hwndContainer) {
+        return false;
+    }
+    SendMessageW(m_hwndContainer, WM_MOUSEMOVE, modifiers, MAKELPARAM(x, y));
+    return true;
+}
+bool WebView2EditorEngine::onIMEComposition(HWND hwnd, WPARAM wParam, LPARAM lParam) {
+    HWND target = hwnd ? hwnd : m_hwndContainer;
+    if (!target) {
+        return false;
+    }
+    SendMessageW(target, WM_IME_COMPOSITION, wParam, lParam);
+    return true;
+}
 
 // ============================================================================
 // Callbacks
