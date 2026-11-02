@@ -1,0 +1,34 @@
+﻿STORAGE_AUDIT_001 BATCH1_DELETE_RECEIPT
+ASOF_UTC=2026-11-02T11:30:38.1488833Z
+AUTHORIZATION=STORAGE_AUDIT_001_BATCH_1_ONLY
+PROMOTE=0
+CERTIFIED=0
+TIP_CLIMB=HOLD
+
+=== PRE ===
+Target=F:\rawrxd\dummy_200b.gguf
+LogicalBytes=429496729600
+AllocatedBytes=429496729600
+Sparse=False
+HeaderAllZero=True
+FileId=0x0005000000026c94
+NumberOfLinks=1
+ProcessCmdlineMatches=0
+UniqueRequiredFixture=NO
+InventoryCanonicalPath=F:\rawrxd\dummy_200b.gguf
+FreeBytesBefore=95729106944
+FreeGiBBefore=89.15
+
+=== DELETE ===
+Scope=SINGLE_FILE_ONLY
+ParentDirectoryDelete=FORBIDDEN_NOT_DONE
+TargetAbsentAfterDelete=True
+
+=== POST ===
+FreeBytesAfter=525225836544
+FreeGiBAfter=489.15
+RecoveredBytes=429496729600
+RecoveredGiB=400.00
+G_dummy_untouched=YES
+OtherCleanup=NONE
+STATUS=BATCH1_COMPLETE

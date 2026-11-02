@@ -1,0 +1,4 @@
+F:\rawrxd\benchmark_results\benchmark_20260719_162222.csv:8:"dummy_200b.gguf","400","144.7356972","2.76","OK"
+F:\rawrxd\evidence\gate5_head_repro_2026-10-14\PARITY_RECEIPTS.txt:72:  G07 DeepSeek-671B: no real 671B GGUF on disk (dummy_200b.gguf = zero placeholder).
+F:\rawrxd\evidence\LARGE_MODEL_SMOKE_20261020\rawr_cli_backend_20261020T1520\models.json:10:    "dummy_200b.gguf (409600 MB)",
+99:`models/` (170 GB), root `*.gguf` (incl. `dummy_200b.gguf` 400 GB dummy, `DeepSeek-V2-Lite*`,

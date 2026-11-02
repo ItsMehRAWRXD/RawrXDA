@@ -1,0 +1,10 @@
+F_volume_serial=0x66a37175
+G_volume_serial=0x8ae8e0db
+F_rawrxd=F:\rawrxd
+G_rawrxd=G:\~dev\rawrxd
+both_have_dummy_200b=true
+both_dummy_logical=429496729600
+both_dummy_allocated=429496729600
+both_dummy_header=all_zero_not_GGUF_magic
+distinct_file_ids=true
+overlap=CONTENT_LIKELY_MIRRORED_OR_COPIED_SEPARATE_PHYSICAL_COPIES

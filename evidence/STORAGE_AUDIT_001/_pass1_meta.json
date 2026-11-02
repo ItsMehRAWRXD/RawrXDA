@@ -1,0 +1,8 @@
+﻿{
+    "elapsed_sec_pass1":  1.1,
+    "files_ge_1MiB":  0,
+    "enum_errors":  0,
+    "total_files_seen":  0,
+    "sampling_rule":  "All files \u003e=1MiB inventoried individually with allocation; files \u003c1MiB rolled up per parent directory in _small_file_rollups.csv",
+    "total_logical_bytes_seen":  0
+}

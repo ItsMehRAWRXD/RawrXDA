@@ -1,0 +1,7 @@
+﻿# INVENTORY_SCOPE / sampling rule
+
+- Full recursive enumeration of F:\rawrxd completed: files=1851573 logical_total~848.94 GiB errors=0
+- STORAGE_INVENTORY.csv lists every file with logical_bytes >= 1 MiB (~15674 rows)
+- Files < 1 MiB are not listed individually; included only in ENUMERATE_DONE totals
+- allocated_bytes: measured via fsutil file layout for all files >= 1 GiB (LARGEST_FILES.csv); for smaller rows assumed equal to logical unless probed
+- DUPLICATES: size-grouped files >= 100 MiB; SHA256 for <=8 GiB; QUICK fingerprint for larger; ERROR-hash false groups removed; DeepSeek same-size pair excluded after full SHA mismatch

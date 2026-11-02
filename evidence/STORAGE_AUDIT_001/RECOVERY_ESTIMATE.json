@@ -1,0 +1,38 @@
+﻿{
+    "asof_utc":  "2026-11-02T10:42:43.2938830Z",
+    "promote":  0,
+    "certified":  0,
+    "volume_free_gib":  89.16,
+    "volume_used_gib":  3636.74,
+    "inventory_files_total":  1851573,
+    "inventory_logical_gib":  848.94,
+    "inventory_ge_1MiB_rows":  15674,
+    "notes":  [
+                  "Physical recovery excludes hard-link double-counting.",
+                  "G:\\~dev\\rawrxd\\dummy_200b.gguf is SEPARATE 400 GiB on G: â€” NOT in F: recovery.",
+                  "DeepSeek root vs DIAGNOSTIC_REPAIRED are NOT content duplicates (full SHA differs).",
+                  "LOW = dummy_200b + __run_output\u003e=1GiB + tmp_model-00001 (LFS retained).",
+                  "tmp_safetensors/ under MED until per-shard LFS mapping fully confirmed.",
+                  "NO DELETIONS. PROMOTE=0 CERTIFIED=0"
+              ],
+    "low_risk":  {
+                     "description":  "Verified disposable: synthetic dummy, multi-GiB run logs, redundant tmp_model (LFS kept)",
+                     "bytes":  452594340404,
+                     "gib":  421.51,
+                     "components":  {
+                                        "dummy_200b_gguf":  429496729600,
+                                        "run_output_logs_ge_1gib":  14502723396,
+                                        "tmp_model_00001_safetensors":  8594887408
+                                    }
+                 },
+    "medium_risk":  {
+                        "description":  "Duplicate reap/calibration fixtures, corrupted_test extras, tmp_safetensors, old builds",
+                        "bytes":  38211553746,
+                        "gib":  35.59
+                    },
+    "high_risk":  {
+                      "description":  "Unique models, sealed evidence, source, manifests",
+                      "recoverable_gib":  0,
+                      "action":  "KEEP"
+                  }
+}
